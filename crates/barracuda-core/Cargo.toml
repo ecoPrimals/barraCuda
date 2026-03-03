@@ -1,0 +1,17 @@
+[package]
+name = "barracuda-core"
+description = "Core device management and primal lifecycle for BarraCUDA — Cross-platform Unified Dispatch Arithmetic"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+sourdough-core = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+blake3 = { workspace = true }

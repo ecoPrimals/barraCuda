@@ -1,0 +1,44 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/barracuda-core",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/ecoPrimals/barraCuda"
+authors = ["ecoPrimals Project"]
+rust-version = "1.80"
+
+[workspace.dependencies]
+# Core primal traits
+sourdough-core = { path = "../sourDough/crates/sourdough-core" }
+
+# Async runtime
+tokio = { version = "1.40", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+thiserror = "2.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# GPU
+wgpu = "24"
+bytemuck = { version = "1.14", features = ["derive"] }
+naga = "24"
+
+# Numerics
+num-traits = "0.2"
+rayon = "1.8"
+rand = "0.8"
+
+# Cryptographic hashing (for provenance, not crypto operations)
+blake3 = "1.5"

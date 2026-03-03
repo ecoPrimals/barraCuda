@@ -1,7 +1,7 @@
 # barraCuda
 
-**Version**: 0.1.0 (pre-extraction scaffold)
-**Status**: Scaffold — pending extraction from ToadStool S88+
+**Version**: 0.2.0
+**Status**: Standalone — extracted from ToadStool (S89), all tests passing
 **License**: AGPL-3.0-or-later
 
 ---

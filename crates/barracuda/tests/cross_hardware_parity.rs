@@ -279,6 +279,7 @@ async fn test_softmax_gpu_cpu_parity() {
 
 // ─── ToadStool Guided Device Selection ───────────────────────────────────────
 
+#[cfg(feature = "toadstool")]
 #[tokio::test]
 async fn test_toadstool_guided_device_selection() {
     use barracuda::device::{discover_devices, select_best_device, HardwareWorkload};

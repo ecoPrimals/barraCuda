@@ -611,6 +611,7 @@ fn test_kernel_router_npu_fallback() {
 // ToadStool Device Selection Integration
 // ============================================================================
 
+#[cfg(feature = "toadstool")]
 #[tokio::test]
 async fn test_toadstool_device_selection_integration() {
     if !common::run_gpu_resilient_async(|| async {

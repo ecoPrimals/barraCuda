@@ -74,6 +74,10 @@ debug-pppm = []
 unidirectional = []
 
 [[bin]]
+name = "validate_gpu"
+required-features = ["gpu"]
+
+[[bin]]
 name = "bench_fp64_ratio"
 required-features = ["gpu"]
 
@@ -84,6 +88,10 @@ required-features = ["gpu"]
 [[bin]]
 name = "bench_f64_builtins"
 required-features = ["gpu"]
+
+[[example]]
+name = "npu_integration"
+required-features = ["npu-akida"]
 
 [[bench]]
 name = "unidirectional_benchmark"

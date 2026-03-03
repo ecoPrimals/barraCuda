@@ -256,6 +256,7 @@ async fn test_gpu_to_cpu_fallback() {
     println!("\n  Fallback chain: PASS\n");
 }
 
+#[cfg(feature = "toadstool")]
 #[test]
 fn test_device_selection_fallback_chain() {
     use barracuda::device::{select_best_device, select_device_prefer, HardwareWorkload};

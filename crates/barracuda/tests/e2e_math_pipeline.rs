@@ -1,3 +1,4 @@
+#![cfg(feature = "toadstool")]
 //! E2E Math Pipeline Tests
 //!
 //! End-to-end tests verifying the complete Barracuda + ToadStool pipeline:

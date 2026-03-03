@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/barracuda-core",
+    "crates/barracuda",
 ]
 
 [workspace.package]
@@ -10,7 +11,7 @@ edition = "2021"
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/ecoPrimals/barraCuda"
 authors = ["ecoPrimals Project"]
-rust-version = "1.80"
+rust-version = "1.87"
 
 [workspace.dependencies]
 # Core primal traits
@@ -30,10 +31,16 @@ thiserror = "2.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-# GPU
-wgpu = "24"
+# GPU — version 22 matches toadStool's barracuda source
+wgpu = { version = "22", default-features = false, features = [
+    "wgsl",
+    "dx12",
+    "metal",
+    "webgpu",
+    "vulkan-portability",
+] }
 bytemuck = { version = "1.14", features = ["derive"] }
-naga = "24"
+naga = { version = "22.1", features = ["wgsl-in", "spv-out"] }
 
 # Numerics
 num-traits = "0.2"
@@ -42,3 +49,13 @@ rand = "0.8"
 
 # Cryptographic hashing (for provenance, not crypto operations)
 blake3 = "1.5"
+
+# Utilities
+etcetera = "0.8"
+half = "2.4"
+async-trait = "0.1"
+
+# Dev/test
+tempfile = "3.8"
+approx = "0.5"
+proptest = "1.4"

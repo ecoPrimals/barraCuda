@@ -1,6 +1,6 @@
 [package]
 name = "barracuda-core"
-description = "Core device management and primal lifecycle for BarraCUDA — Cross-platform Unified Dispatch Arithmetic"
+description = "Core primal lifecycle for barraCuda — BARrier-free Rust Abstracted Cross-platform Unified Dimensional Algebra"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,6 +10,7 @@ rust-version.workspace = true
 
 [dependencies]
 sourdough-core = { workspace = true }
+barracuda = { path = "../barracuda", default-features = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }

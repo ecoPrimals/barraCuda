@@ -1,0 +1,62 @@
+// Generic Element-wise Addition: C = A + B
+// 
+// TEMPLATE FILE - generates precision-specific shaders
+// Placeholders: {{SCALAR}}, {{VEC2}}, {{VEC4}}
+//
+// Generated variants:
+//   - elementwise_add_f16.wgsl ({{SCALAR}}=f16, {{VEC4}}=vec4<f16>)
+//   - elementwise_add_f32.wgsl ({{SCALAR}}=f32, {{VEC4}}=vec4<f32>)  
+//   - elementwise_add_f64.wgsl ({{SCALAR}}=f64, {{VEC4}}=f64 - no vec4 for f64)
+//
+// The SAME algorithm runs on CPU (via num-traits) and GPU (via templated WGSL)
+
+// =============================================================================
+// SCALAR VERSION (baseline, works for all precisions)
+// =============================================================================
+
+@group(0) @binding(0) var<storage, read> a: array<{{SCALAR}}>;
+@group(0) @binding(1) var<storage, read> b: array<{{SCALAR}}>;
+@group(0) @binding(2) var<storage, read_write> output: array<{{SCALAR}}>;
+
+@compute @workgroup_size(256)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let idx = global_id.x;
+    
+    if (idx >= arrayLength(&output)) {
+        return;
+    }
+    
+    // Algorithm: C[i] = A[i] + B[i]
+    // This exact operation runs on CPU (Rust) and GPU (WGSL)
+    output[idx] = a[idx] + b[idx];
+}
+
+// =============================================================================
+// VECTORIZED VERSION (f32/f16 only - f64 lacks vec4 support)
+// Only included when {{HAS_VEC4}} is true
+// =============================================================================
+{{#if HAS_VEC4}}
+
+struct Params {
+    size: u32,
+    _pad1: u32,
+    _pad2: u32,
+    _pad3: u32,
+}
+
+@group(0) @binding(0) var<storage, read> a_vec: array<{{VEC4}}>;
+@group(0) @binding(1) var<storage, read> b_vec: array<{{VEC4}}>;
+@group(0) @binding(2) var<storage, read_write> output_vec: array<{{VEC4}}>;
+@group(0) @binding(3) var<uniform> params: Params;
+
+@compute @workgroup_size(64)
+fn main_vectorized(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let idx = global_id.x;
+    let vec_count = params.size / 4u;
+    
+    if (idx < vec_count) {
+        // Process 4 elements as vec4 (coalesced memory access)
+        output_vec[idx] = a_vec[idx] + b_vec[idx];
+    }
+}
+{{/if}}

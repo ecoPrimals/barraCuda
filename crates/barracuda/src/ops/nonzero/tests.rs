@@ -1,0 +1,78 @@
+//! Tests for NonZero operation
+
+use super::NonZero;
+use crate::device::test_pool::get_test_device_if_gpu_available;
+use crate::tensor::Tensor;
+
+#[tokio::test]
+async fn test_nonzero_basic() {
+    let Some(device) = get_test_device_if_gpu_available().await else {
+        return;
+    };
+    let input = Tensor::from_vec_on(vec![0.0, 1.0, 0.0, 2.0, 0.0], vec![5], device.clone())
+        .await
+        .unwrap();
+
+    let result = NonZero::new(input).unwrap().execute().unwrap();
+    let indices = result.to_vec().unwrap();
+    assert_eq!(indices.len(), 2);
+    assert_eq!(indices[0] as u32, 1);
+    assert_eq!(indices[1] as u32, 3);
+}
+
+#[tokio::test]
+async fn test_nonzero_all_zero() {
+    let Some(device) = get_test_device_if_gpu_available().await else {
+        return;
+    };
+    let input = Tensor::from_vec_on(vec![0.0, 0.0, 0.0], vec![3], device.clone())
+        .await
+        .unwrap();
+
+    let result = NonZero::new(input).unwrap().execute().unwrap();
+    assert_eq!(result.shape(), &[0]);
+}
+
+#[tokio::test]
+async fn test_nonzero_all_nonzero() {
+    let Some(device) = get_test_device_if_gpu_available().await else {
+        return;
+    };
+    let input = Tensor::from_vec_on(vec![1.0, 2.0, 3.0], vec![3], device.clone())
+        .await
+        .unwrap();
+
+    let result = NonZero::new(input).unwrap().execute().unwrap();
+    let indices = result.to_vec().unwrap();
+    assert_eq!(indices.len(), 3);
+}
+
+#[tokio::test]
+async fn test_nonzero_2d() {
+    let Some(device) = get_test_device_if_gpu_available().await else {
+        return;
+    };
+    let input = Tensor::from_vec_on(
+        vec![0.0, 1.0, 0.0, 2.0, 0.0, 3.0],
+        vec![2, 3],
+        device.clone(),
+    )
+    .await
+    .unwrap();
+
+    let result = NonZero::new(input).unwrap().execute().unwrap();
+    let indices = result.to_vec().unwrap();
+    assert_eq!(indices.len(), 3);
+}
+
+#[tokio::test]
+async fn test_nonzero_empty() {
+    let Some(device) = get_test_device_if_gpu_available().await else {
+        return;
+    };
+    let input = Tensor::from_vec_on(vec![], vec![0], device.clone())
+        .await
+        .unwrap();
+
+    assert!(NonZero::new(input).is_err());
+}

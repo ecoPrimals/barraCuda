@@ -1,0 +1,211 @@
+//! Complex Conjugate Operation
+//!
+//! **Operation**: conj(a + bi) = a - bi
+//! **Complexity**: O(1) - trivial (one negation)
+//! **CRITICAL**: Required for FFT normalization and inverse operations
+
+use crate::device::{DeviceCapabilities, WorkloadType};
+use crate::error::{BarracudaError, Result};
+use crate::tensor::Tensor;
+use wgpu::util::DeviceExt;
+
+pub struct ComplexConj {
+    input: Tensor,
+    pipeline: wgpu::ComputePipeline,
+    bind_group_layout: wgpu::BindGroupLayout,
+}
+
+impl ComplexConj {
+    pub fn new(input: Tensor) -> Result<Self> {
+        let shape = input.shape();
+        if shape.last() != Some(&2) {
+            return Err(BarracudaError::Device(
+                "Complex tensor must have last dimension = 2".to_string(),
+            ));
+        }
+
+        let device = input.device();
+        let shader = device
+            .device
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("Complex Conj Shader"),
+                source: wgpu::ShaderSource::Wgsl(include_str!("conj.wgsl").into()),
+            });
+
+        let bind_group_layout =
+            device
+                .device
+                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("Complex Conj Bind Group Layout"),
+                    entries: &[
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 0,
+                            visibility: wgpu::ShaderStages::COMPUTE,
+                            ty: wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Storage { read_only: true },
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
+                        },
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 1,
+                            visibility: wgpu::ShaderStages::COMPUTE,
+                            ty: wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Storage { read_only: false },
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
+                        },
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 2,
+                            visibility: wgpu::ShaderStages::COMPUTE,
+                            ty: wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Uniform,
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
+                        },
+                    ],
+                });
+
+        let pipeline_layout =
+            device
+                .device
+                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                    label: Some("Complex Conj Pipeline Layout"),
+                    bind_group_layouts: &[&bind_group_layout],
+                    push_constant_ranges: &[],
+                });
+
+        let pipeline = device
+            .device
+            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("Complex Conj Pipeline"),
+                layout: Some(&pipeline_layout),
+                module: &shader,
+                entry_point: "main",
+                cache: None,
+                compilation_options: Default::default(),
+            });
+
+        Ok(Self {
+            input,
+            pipeline,
+            bind_group_layout,
+        })
+    }
+
+    pub fn execute(self) -> Result<Tensor> {
+        let device = self.input.device();
+        let num_elements = self.input.len();
+
+        let output_buffer = device.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Complex Conj Output"),
+            size: (num_elements * std::mem::size_of::<f32>()) as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+
+        let params = [num_elements as u32 / 2];
+        let params_buffer = device
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Complex Conj Params"),
+                contents: bytemuck::cast_slice(&params),
+                usage: wgpu::BufferUsages::UNIFORM,
+            });
+
+        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Complex Conj Bind Group"),
+            layout: &self.bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: self.input.buffer().as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: output_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: params_buffer.as_entire_binding(),
+                },
+            ],
+        });
+
+        let mut encoder = device
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Complex Conj Encoder"),
+            });
+
+        {
+            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("Complex Conj Compute Pass"),
+                timestamp_writes: None,
+            });
+
+            compute_pass.set_pipeline(&self.pipeline);
+            compute_pass.set_bind_group(0, &bind_group, &[]);
+
+            let caps = DeviceCapabilities::from_device(device);
+            let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::ElementWise);
+            let num_complex = num_elements / 2;
+            let workgroups = (num_complex as u32).div_ceil(optimal_wg_size);
+
+            compute_pass.dispatch_workgroups(workgroups, 1, 1);
+        }
+
+        device.submit_and_poll(Some(encoder.finish()));
+
+        Ok(Tensor::from_buffer(
+            output_buffer,
+            self.input.shape().to_vec(),
+            device.clone(),
+        ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_complex_conj() {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
+            return;
+        };
+
+        // conj(3+4i) = 3-4i
+        let data = vec![3.0f32, 4.0];
+        let tensor = Tensor::from_data(&data, vec![1, 2], device.clone()).unwrap();
+
+        let op = ComplexConj::new(tensor).unwrap();
+        let result = op.execute().unwrap();
+
+        let result_data = result.to_vec().unwrap();
+        assert!((result_data[0] - 3.0).abs() < 1e-6);
+        assert!((result_data[1] - (-4.0)).abs() < 1e-6);
+    }
+
+    #[tokio::test]
+    async fn test_complex_conj_twice() {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
+            return;
+        };
+        // conj(conj(z)) = z
+        let data = vec![3.0f32, 4.0];
+        let tensor = Tensor::from_data(&data, vec![1, 2], device.clone()).unwrap();
+        let conj1 = ComplexConj::new(tensor).unwrap().execute().unwrap();
+        let conj2 = ComplexConj::new(conj1).unwrap().execute().unwrap();
+        let result = conj2.to_vec().unwrap();
+        assert!((result[0] - 3.0).abs() < 1e-6);
+        assert!((result[1] - 4.0).abs() < 1e-6);
+    }
+}

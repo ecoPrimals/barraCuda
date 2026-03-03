@@ -1,0 +1,90 @@
+[package]
+name = "barracuda"
+version = "0.2.0"
+edition = "2021"
+authors = ["ecoPrimals Project"]
+description = "barraCuda — BARrier-free Rust Abstracted Cross-platform Unified Dimensional Algebra. Vendor-agnostic GPU compute via WGSL."
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/ecoPrimals/barraCuda"
+keywords = ["gpu", "tensor", "compute", "webgpu", "wgsl"]
+categories = ["science", "hardware-support"]
+rust-version = "1.87"
+
+[dependencies]
+thiserror = { workspace = true }
+
+# GPU compute (WebGPU - vendor-agnostic)
+wgpu = { workspace = true, optional = true }
+bytemuck = { workspace = true, optional = true }
+naga = { workspace = true, optional = true }
+
+# Async runtime
+tokio = { workspace = true }
+async-trait = { workspace = true }
+
+# ToadStool hardware layer (optional — only needed when running inside toadStool)
+toadstool-core = { path = "../../../phase1/toadStool/crates/toadstool-core", optional = true }
+
+# NPU support (optional — only needed for Akida neuromorphic hardware)
+akida-driver = { path = "../../../phase1/toadStool/crates/neuromorphic/akida-driver", optional = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Utilities
+etcetera = { workspace = true }
+serde = { workspace = true }
+serde_json = "1.0"
+rand = { workspace = true }
+rayon = { workspace = true }
+blake3 = { workspace = true }
+num-traits = { workspace = true }
+half = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+tokio = { version = "1.35", features = ["full"] }
+approx = { workspace = true }
+proptest = { workspace = true }
+wgpu = { workspace = true }
+
+[lints.clippy]
+unwrap_used = "warn"
+
+[features]
+default = ["gpu"]
+
+gpu = ["dep:wgpu", "dep:bytemuck", "dep:naga"]
+
+# ToadStool integration (optional — for running as part of toadStool workspace)
+toadstool = ["dep:toadstool-core"]
+
+# NPU support (optional — for Akida neuromorphic hardware)
+npu-akida = ["dep:akida-driver"]
+
+serde = []
+parallel = []
+tpu = []
+cloud-tpu = ["tpu"]
+coral-tpu = ["tpu"]
+mock-tpu = ["tpu"]
+benchmarks = []
+cuda-comparison = ["benchmarks"]
+debug-pppm = []
+unidirectional = []
+
+[[bin]]
+name = "bench_fp64_ratio"
+required-features = ["gpu"]
+
+[[bin]]
+name = "bench_wgsize_nvk"
+required-features = ["gpu"]
+
+[[bin]]
+name = "bench_f64_builtins"
+required-features = ["gpu"]
+
+[[bench]]
+name = "unidirectional_benchmark"
+harness = false

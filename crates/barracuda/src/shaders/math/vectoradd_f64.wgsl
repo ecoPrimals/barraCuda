@@ -1,0 +1,25 @@
+// VectorAdd: C = A * alpha + B (f64 canonical)
+// CUDA equivalent: cublas::axpy
+// Use cases: Gradient updates, residual connections
+
+@group(0) @binding(0) var<storage, read> a: array<f64>;
+@group(0) @binding(1) var<storage, read> b: array<f64>;
+@group(0) @binding(2) var<storage, read_write> output: array<f64>;
+
+struct Params {
+    size: u32,
+    alpha: f64,
+}
+@group(0) @binding(3) var<uniform> params: Params;
+
+@compute @workgroup_size(256)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let idx = global_id.x;
+    
+    if (idx >= params.size) {
+        return;
+    }
+    
+    // C = A * alpha + B
+    output[idx] = a[idx] * params.alpha + b[idx];
+}

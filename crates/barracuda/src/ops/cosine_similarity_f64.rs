@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Cosine Similarity (f64) — GPU-Accelerated via WGSL
 //!
 //! Computes cosine similarity: sim(a,b) = (a·b) / (||a|| * ||b||)

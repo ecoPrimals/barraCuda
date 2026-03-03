@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! F64 polyfill injection and driver-specific patching.
 //!
 //! Handles:
@@ -17,7 +18,7 @@ pub(crate) const SIN_COS_F64_SAFE_PREAMBLE: &str = r#"
 fn sin_f64_safe(x: f64) -> f64 {
     let pi = 3.14159265358979323846;
     let two_pi = 6.28318530717958647692;
-    var t = x % two_pi;
+    var t = x - floor(x / two_pi) * two_pi;
     if (t < 0.0) { t = t + two_pi; }
     if (t > pi) { t = t - two_pi; }
     let t2 = t * t;

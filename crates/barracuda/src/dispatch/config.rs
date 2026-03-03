@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Dispatch configuration and routing logic.
 
 use std::collections::HashMap;

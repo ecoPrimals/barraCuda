@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! IoULoss - Intersection over Union loss
 //!
 //! **Canonical BarraCuda Pattern**: Struct with new/execute

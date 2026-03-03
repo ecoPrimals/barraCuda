@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Device Chaos Tests
 //!
 //! Tests resilience under adverse conditions:

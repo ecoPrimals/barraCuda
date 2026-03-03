@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Device routing and selection logic.
 //!
 //! Routes workloads to the appropriate hardware based on the nature of the

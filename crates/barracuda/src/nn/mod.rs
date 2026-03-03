@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! High-level Neural Network Training API
 //!
 //! Production-ready interface for building and training deep neural networks.

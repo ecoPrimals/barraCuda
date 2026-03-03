@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! L1 Loss - Mean Absolute Error - Pure WGSL
 //!
 //! **Deep Debt Principles**:

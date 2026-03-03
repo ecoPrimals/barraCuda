@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 use super::*;
 
 fn create_spd_tridiagonal(n: usize) -> CsrMatrix {

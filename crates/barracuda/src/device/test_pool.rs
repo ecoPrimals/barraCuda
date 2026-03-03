@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Test device pool — dual-backend with automatic recovery
 //!
 //! **Architecture**: Math is the contract, hardware is the target.
@@ -522,7 +523,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_cpu_device_available() {
         // On systems with llvmpipe, CPU device should work
         if let Some(dev) = get_test_cpu_device() {

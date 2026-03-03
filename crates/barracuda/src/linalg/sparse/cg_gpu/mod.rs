@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU-accelerated Conjugate Gradient Solver (f64)
 //!
 //! **Deep Debt Principles**:

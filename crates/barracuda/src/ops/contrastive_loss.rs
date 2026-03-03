@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Contrastive Loss - GPU-accelerated NT-Xent for self-supervised learning
 //!
 //! **Deep Debt Principles**:

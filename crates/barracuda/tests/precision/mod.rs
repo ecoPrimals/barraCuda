@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Precision Tests - FP32 accuracy validation
 //!
 //! **Purpose**: Validate numerical correctness against CPU reference

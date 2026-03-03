@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Operations module - Pure WGSL operations
 //!
 //! **Pure WGSL Architecture**:
@@ -588,7 +589,8 @@ pub mod ssim;
 pub mod tversky_loss;
 pub mod wasserstein_loss;
 
-// Modern WGSL re-exports
+// ── Re-exports: Operation traits and structs for use as `Op::run(tensor)` ──
+// These are the primary API surface. Each op lives in its submodule; docs are on the source.
 pub use abs_wgsl::Abs;
 pub use add::Add;
 pub use argmax_wgsl::Argmax;
@@ -626,7 +628,6 @@ pub use pad_wgsl::Pad;
 pub use pow_wgsl::Pow;
 pub use prod::Prod;
 pub use reciprocal_wgsl::Reciprocal;
-/// Re-exports
 pub use relu::ReLU;
 pub use round_wgsl::Round;
 pub use scatter_nd::ScatterNd;

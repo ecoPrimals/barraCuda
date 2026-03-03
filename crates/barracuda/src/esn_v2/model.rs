@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! ESN model - training, prediction, and weight management
 
 use crate::device::{Auto, Device, WgpuDevice, WorkloadHint};

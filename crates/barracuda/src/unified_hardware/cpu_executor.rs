@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! CPU executor — always-available fallback compute device.
 //!
 //! Runtime CPU discovery via `std::thread::available_parallelism()` (pure Rust).

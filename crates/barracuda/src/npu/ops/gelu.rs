@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! NPU GELU - WGSL Universal Compute with Event Optimization
 //!
 //! Uses the same WGSL shader as GPU/CPU for GELU activation,
@@ -60,9 +61,9 @@ pub fn npu_gelu(input: &[f32]) -> Result<Vec<f32>> {
     use crate::tensor::Tensor;
 
     run_with_sync_device(|device| {
-        // Create tensor from raw data
+        // Create tensor from raw data (zero-copy: from_data borrows slice)
         let input_len = input.len();
-        let tensor = Tensor::from_vec_on_sync(input.to_vec(), vec![input_len], device)?;
+        let tensor = Tensor::from_data(input, vec![input_len], device)?;
 
         // Execute GELU using WGSL shader (same as GPU/CPU!)
         // This uses ops/gelu.rs → shaders/gelu.wgsl

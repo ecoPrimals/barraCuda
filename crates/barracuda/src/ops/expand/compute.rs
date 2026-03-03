@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU compute operations for Expand
 //!
 //! This module contains broadcasting shape computation, stride calculation,
@@ -34,48 +35,52 @@ pub fn compute_broadcast_shape(
 
     let mut broadcasted_input_shape = vec![1; target_rank];
 
-    if target_rank > input_rank {
-        // Pad at the back (right): [3] → [3, 1] for target [3, 5]
-        for (i, &dim) in input_shape.iter().enumerate() {
-            broadcasted_input_shape[i] = dim;
-        }
-    } else if target_rank == input_rank {
-        // Same rank: check if dimensions are compatible
-        // For [3] → [9]: this will be handled specially in execute_expand
-        // For validation here, we allow it if target is a multiple of input (1D case)
-        let mut compatible = true;
-        for i in (0..target_rank).rev() {
-            let input_dim = input_shape[i];
-            let target_dim = target_shape[i];
-            if input_dim != target_dim && input_dim != 1 && target_dim != 1 {
-                // Special case: if this is the last (only) dimension and target is a multiple of input
-                // This will be handled specially in execute_expand by reshaping
-                if i == target_rank - 1 && target_rank == 1 && target_dim.is_multiple_of(input_dim)
-                {
-                    // Allow it - will be handled in execute_expand
-                    compatible = true;
-                    break;
-                } else {
-                    compatible = false;
-                    break;
-                }
-            }
-        }
-
-        if compatible {
-            broadcasted_input_shape = input_shape.to_vec();
-        } else {
-            // Try back-padding
+    match target_rank.cmp(&input_rank) {
+        std::cmp::Ordering::Greater => {
             for (i, &dim) in input_shape.iter().enumerate() {
                 broadcasted_input_shape[i] = dim;
             }
         }
-    } else {
-        // target_rank < input_rank: shouldn't happen for expand, but handle it
-        let offset = target_rank.saturating_sub(input_rank);
-        for (i, &dim) in input_shape.iter().enumerate() {
-            if offset + i < target_rank {
-                broadcasted_input_shape[offset + i] = dim;
+        std::cmp::Ordering::Equal => {
+            // Same rank: check if dimensions are compatible
+            // For [3] → [9]: this will be handled specially in execute_expand
+            // For validation here, we allow it if target is a multiple of input (1D case)
+            let mut compatible = true;
+            for i in (0..target_rank).rev() {
+                let input_dim = input_shape[i];
+                let target_dim = target_shape[i];
+                if input_dim != target_dim && input_dim != 1 && target_dim != 1 {
+                    // Special case: if this is the last (only) dimension and target is a multiple of input
+                    // This will be handled specially in execute_expand by reshaping
+                    if i == target_rank - 1
+                        && target_rank == 1
+                        && target_dim.is_multiple_of(input_dim)
+                    {
+                        // Allow it - will be handled in execute_expand
+                        compatible = true;
+                        break;
+                    } else {
+                        compatible = false;
+                        break;
+                    }
+                }
+            }
+
+            if compatible {
+                broadcasted_input_shape = input_shape.to_vec();
+            } else {
+                // Try back-padding
+                for (i, &dim) in input_shape.iter().enumerate() {
+                    broadcasted_input_shape[i] = dim;
+                }
+            }
+        }
+        std::cmp::Ordering::Less => {
+            let offset = target_rank.saturating_sub(input_rank);
+            for (i, &dim) in input_shape.iter().enumerate() {
+                if offset + i < target_rank {
+                    broadcasted_input_shape[offset + i] = dim;
+                }
             }
         }
     }

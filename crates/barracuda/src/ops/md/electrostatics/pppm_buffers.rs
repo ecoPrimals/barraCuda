@@ -1,8 +1,10 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! PPPM GPU buffer helpers
 //!
 //! Extracted from pppm_gpu.rs for modularity (Feb 14, 2026).
 //! Delegates to `crate::linalg::sparse::SparseBuffers` for shared implementation (Feb 15, 2026).
 
+use crate::device::WgpuDevice;
 use crate::error::Result;
 use crate::linalg::sparse::SparseBuffers;
 use wgpu::util::DeviceExt;
@@ -41,22 +43,20 @@ impl PppmBuffers {
 
     /// Read f64 buffer back to CPU (sync; async wrapper for API compatibility)
     pub async fn read_f64(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        device: &WgpuDevice,
         buffer: &wgpu::Buffer,
         count: usize,
     ) -> Result<Vec<f64>> {
-        SparseBuffers::read_f64_raw(device, queue, buffer, count)
+        SparseBuffers::read_f64_raw(device, buffer, count)
     }
 
     /// Read i32 buffer back to CPU (sync; async wrapper for API compatibility)
     pub async fn read_i32(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        device: &WgpuDevice,
         buffer: &wgpu::Buffer,
         count: usize,
     ) -> Result<Vec<i32>> {
-        SparseBuffers::read_i32_raw(device, queue, buffer, count)
+        SparseBuffers::read_i32_raw(device, buffer, count)
     }
 }
 

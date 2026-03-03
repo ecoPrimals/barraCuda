@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Coulomb Force Calculation (f64)
 //!
 //! **Physics**: Electrostatic interactions between charged particles

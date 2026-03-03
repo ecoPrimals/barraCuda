@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Test data generators and helpers for FHE shader unit tests.
 
 use barracuda::ops::fhe_ntt::compute_primitive_root;

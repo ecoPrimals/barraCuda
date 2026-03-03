@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Adafactor Optimizer - GPU-accelerated Memory-Efficient Adaptive Learning Rates
 //!
 //! **Deep Debt Principles**:

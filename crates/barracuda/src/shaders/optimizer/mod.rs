@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! WGSL ILP Optimizer — Phase 3 of the Sovereign Compute Evolution.
 //!
 //! Processes `@ilp_region` and `@unroll_hint` annotations in WGSL shaders

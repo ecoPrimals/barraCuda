@@ -1,8 +1,8 @@
 # barraCuda Specification
 
-**Version**: 0.1.0
-**Date**: March 2, 2026
-**Status**: RFC — pending extraction from ToadStool
+**Version**: 0.2.0
+**Date**: March 3, 2026
+**Status**: Active — standalone primal (extracted from ToadStool S89)
 **Origin**: ToadStool S88 budding proposal
 
 ---

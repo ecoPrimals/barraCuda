@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Resource Quota Management for GPU Compute
 //!
 //! Provides VRAM budget enforcement and resource tracking for multi-tenant

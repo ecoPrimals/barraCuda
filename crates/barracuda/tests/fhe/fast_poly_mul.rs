@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Fast polynomial multiplication tests (NTT-based).
 
 use super::helpers::*;

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Performance regression tests for FHE shaders.
 
 use super::helpers::*;

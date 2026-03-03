@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU Driver Profile — data-driven shader specialisation.
 //!
 //! This module answers the question **"who is driving the hardware?"** and

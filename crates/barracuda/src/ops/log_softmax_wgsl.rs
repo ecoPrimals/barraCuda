@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Log-Softmax — GPU-resident, pipeline-cached, batchable
 //!
 //! `log_softmax(x_i) = x_i − log(Σ exp(x_j))` (numerically stable)

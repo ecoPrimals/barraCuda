@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Fault Tests: Error Propagation
 //!
 //! Test that errors propagate correctly through pipelines

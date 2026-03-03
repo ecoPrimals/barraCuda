@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Scalar arithmetic and random tensor generation.
 //!
 //! Extracted from `tensor/mod.rs` to keep files under the 1 000-line limit.

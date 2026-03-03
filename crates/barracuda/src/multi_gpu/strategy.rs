@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Pool implementations and device selection strategy.
 
 use super::topology::{GpuDriver, GpuInfo, GpuVendor, WorkloadType};

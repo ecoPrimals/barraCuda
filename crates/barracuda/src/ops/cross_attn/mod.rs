@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Cross Attention - Encoder-Decoder Attention
 //!
 //! **Deep Debt Principles**:

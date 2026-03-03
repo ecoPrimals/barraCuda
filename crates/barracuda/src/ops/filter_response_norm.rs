@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Filter Response Normalization (FRN) - Normalization without batch dependency
 //!
 //! **Canonical BarraCuda Pattern**: Struct with new/execute

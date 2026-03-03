@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! HillFunctionF64 — element-wise Hill kinetic activation (f64 precision)
 //!
 //! `Hill(x, K, n) = xⁿ / (Kⁿ + xⁿ)`

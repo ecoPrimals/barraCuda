@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Gather ND - N-dimensional gather operation - Pure WGSL
 //!
 //! Deep Debt Principles:

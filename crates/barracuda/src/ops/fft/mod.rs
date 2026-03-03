@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Fast Fourier Transform (FFT) Operations
 //!
 //! **Purpose**: Complex FFT for wave physics and frequency analysis

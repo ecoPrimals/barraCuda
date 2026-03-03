@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Unified Math Base - Hardware-Agnostic Mathematical Primitives
 //!
 //! **Philosophy**: Define WHAT to compute, not HOW

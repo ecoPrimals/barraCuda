@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Device topology detection: vendor, driver, and capability classification.
 //!
 //! Extracted from multi_gpu.rs for separation of concerns.

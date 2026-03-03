@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! NPU Softmax - WGSL Universal Compute with Event Optimization
 //!
 //! Uses the same WGSL shader as GPU/CPU for softmax activation,
@@ -65,16 +66,17 @@ pub fn npu_softmax(logits: &[f32], temperature: f32) -> Result<Vec<f32>> {
 
     use crate::tensor::Tensor;
 
-    // Apply temperature scaling if needed (before device access)
-    let scaled_logits = if (temperature - 1.0).abs() > 1e-6 {
-        logits.iter().map(|&x| x / temperature).collect()
+    // Apply temperature scaling if needed (zero-copy when temp==1)
+    let (data_slice, _owned): (&[f32], Option<Vec<f32>>) = if (temperature - 1.0).abs() > 1e-6 {
+        let owned: Vec<f32> = logits.iter().map(|&x| x / temperature).collect();
+        (owned.as_slice(), Some(owned))
     } else {
-        logits.to_vec()
+        (logits, None)
     };
-    let logits_len = scaled_logits.len();
+    let logits_len = data_slice.len();
 
     crate::device::test_pool::run_with_sync_device(|device| {
-        let tensor = Tensor::from_vec_on_sync(scaled_logits, vec![logits_len], device)?;
+        let tensor = Tensor::from_data(data_slice, vec![logits_len], device)?;
         let result_tensor = tensor.softmax()?;
         let output = result_tensor.to_vec()?;
 

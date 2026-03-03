@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU microarchitecture detection — name-based identification of GPU families.
 //!
 //! Maps adapter names (e.g. "NVIDIA GeForce RTX 4090") to `GpuArch` for

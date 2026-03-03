@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! CPU Thomas algorithm (O(n) sequential) — test/validation only.
 //!
 //! Production path uses GPU serial solver. This reference implementation

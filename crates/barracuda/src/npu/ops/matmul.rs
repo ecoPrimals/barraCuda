@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! NPU MatMul - WGSL Universal Compute with Event Optimization
 //!
 //! Uses the same WGSL shader as GPU/CPU for matrix multiplication,
@@ -106,9 +107,9 @@ pub fn npu_matmul(
     // Get device from shared pool (thread-safe concurrent access)
     let device = get_test_device_sync();
 
-    // Block on async tensor creation
-    let tensor_a = Tensor::from_vec_on_sync(a.to_vec(), vec![m, k], device.clone())?;
-    let tensor_b = Tensor::from_vec_on_sync(b.to_vec(), vec![k, n], device)?;
+    // Create tensors (zero-copy: from_data borrows slices)
+    let tensor_a = Tensor::from_data(a, vec![m, k], device.clone())?;
+    let tensor_b = Tensor::from_data(b, vec![k, n], device)?;
 
     // Execute matmul using WGSL shader (same as GPU/CPU!)
     // This uses ops/matmul.rs → shaders/matmul.wgsl

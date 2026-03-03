@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! NPU Executor - Neuromorphic Processor Implementation via Akida
 //!
 //! **Philosophy**: Bridge Akida neuromorphic operations to unified architecture

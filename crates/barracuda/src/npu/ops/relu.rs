@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! NPU ReLU - WGSL Universal Compute with Event Optimization
 //!
 //! Uses the same WGSL shader as GPU/CPU for ReLU activation,
@@ -64,7 +65,7 @@ pub fn npu_relu(input: &[f32]) -> Result<Vec<f32>> {
 
     run_with_sync_device(|device| {
         let input_len = input.len();
-        let tensor = Tensor::from_vec_on_sync(input.to_vec(), vec![input_len], device)?;
+        let tensor = Tensor::from_data(input, vec![input_len], device)?;
         let result_tensor = tensor.relu()?;
         let output = result_tensor.to_vec()?;
 

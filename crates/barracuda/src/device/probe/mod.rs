@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Runtime GPU capability probing for f64 built-in functions
 //!
 //! Dispatches tiny test shaders to empirically verify hardware capabilities
@@ -53,7 +54,7 @@ pub async fn probe_f64_builtins(device: &WgpuDevice) -> F64BuiltinCapabilities {
 
     let mut caps = F64BuiltinCapabilities::none();
     for probe in PROBES {
-        let ok = run_single_probe(device.device(), device.queue(), probe).await;
+        let ok = run_single_probe(device, probe).await;
         match probe.name {
             "basic_f64" => caps.basic_f64 = ok,
             "exp" => caps.exp = ok,
@@ -93,7 +94,7 @@ pub async fn probe_f64_exp_capable(device: &WgpuDevice) -> bool {
     }
 
     // Run exp probe only (index 1) for legacy single-function API
-    let capable = run_single_probe(device.device(), device.queue(), &PROBES[1]).await;
+    let capable = run_single_probe(device, &PROBES[1]).await;
     insert_exp_only(key, capable);
     capable
 }

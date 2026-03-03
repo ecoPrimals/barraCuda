@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! BarraCuda NPU Integration Examples
 //!
 //! Demonstrates using NPU operations for real ML inference.
@@ -143,7 +144,14 @@ pub fn example_transformer_block() -> Result<()> {
         .collect();
 
     println!("\nFFN Layer 1: MatMul (8 → 32)...");
-    let mut npu = NpuMlBackend::new().unwrap_or_else(|_| panic!("NPU required for this example"));
+    let mut npu = match NpuMlBackend::new() {
+        Ok(npu) => npu,
+        Err(e) => {
+            println!("⚠️  No NPU available: {}", e);
+            println!("   Transformer example requires NPU\n");
+            return Ok(());
+        }
+    };
 
     let ffn1 = matmul::npu_matmul(&normed, &w1, 1, hidden_size, ffn_size, &mut npu)?;
 

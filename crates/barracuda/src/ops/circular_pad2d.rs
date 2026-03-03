@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Circular pad 2D operation - Circular/wrap padding for 2D tensors
 //!
 //! Wraps edges around (toroidal topology)

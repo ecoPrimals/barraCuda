@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! KmdGroupingF64 — Kendrick Mass Defect homologue grouping (f64)
 //!
 //! Computes `[KM, NKM, KMD]` per ion.  Ions with matching NKM and KMD within
@@ -230,6 +231,7 @@ fn bgl_entry(idx: u32, ty: wgpu::BufferBindingType) -> wgpu::BindGroupLayoutEntr
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::device::test_pool::get_test_device_if_gpu_available;

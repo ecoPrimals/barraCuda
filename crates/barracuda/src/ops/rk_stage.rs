@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Runge-Kutta Stage Evaluation — CPU-Orchestrated RK4/RK45
 //!
 //! Single-trajectory ODE integration with Dormand-Prince adaptive stepping.
@@ -325,6 +326,7 @@ impl RkIntegrator {
 pub use super::batched_ode_rk4::{BatchedOdeRK4F64, BatchedRk4Config};
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::device::test_pool::get_test_device_sync;

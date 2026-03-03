@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GATConv - Graph Attention Networks (Pure WGSL)
 //!
 //! Attention-based graph convolution with learnable attention coefficients

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Variance/Std Reduction (f64) — GPU-Accelerated via WGSL
 //!
 //! Computes variance and standard deviation of f64 arrays using

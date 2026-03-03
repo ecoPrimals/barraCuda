@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Precision Tests: Core Operations
 //!
 //! Validate FP32 precision for matmul, add, mul, etc.

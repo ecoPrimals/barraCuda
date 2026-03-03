@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! MFCC - Mel-Frequency Cepstral Coefficients
 //!
 //! Extracts MFCC features from audio.

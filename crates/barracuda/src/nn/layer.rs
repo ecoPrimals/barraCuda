@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Neural Network Layer Types
 //!
 //! Layer definitions for building neural networks.

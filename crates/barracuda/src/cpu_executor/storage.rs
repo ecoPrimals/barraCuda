@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! CPU tensor storage implementation
 
 use crate::error::Result;

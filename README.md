@@ -1,8 +1,9 @@
 # barraCuda
 
-**Version**: 0.2.0
-**Status**: Standalone — extracted from ToadStool (S89), all tests passing
+**Version**: 0.3.0
+**Status**: Active primal — fully concurrent, all quality gates passing
 **License**: AGPL-3.0-or-later
+**MSRV**: 1.87
 
 ---
 
@@ -25,26 +26,68 @@ results.
 
 ### Key capabilities
 
-- **766+ WGSL shaders** spanning scientific compute domains
+- **767 WGSL shaders** spanning scientific compute domains
+- **1,026 Rust source files**, 29 integration test suites, 5 examples, 5 binaries
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
   cross-vendor FHE GPU implementation in existence.
 - **Lattice QCD** — SU(3) gauge theory, staggered Dirac, CG solver, HMC
 - **Spectral analysis** — Anderson localization, Lanczos eigensolver
-- **Molecular dynamics** — Yukawa, VV integrator, cell-list neighbor search
-- **Linear algebra** — dense, sparse (CSR SpMV), eigensolvers, L-BFGS
+- **Molecular dynamics** — Yukawa, PPPM, VV integrator, cell-list neighbor search
+- **Linear algebra** — dense, sparse (CSR SpMV, CG, BiCGStab), eigensolvers, L-BFGS
 - **Statistics** — bootstrap, jackknife, diversity indices, hydrology
 - **Bioinformatics** — Smith-Waterman, HMM, phylogenetics, genomic ops
 - **ML ops** — matmul, softmax, attention, ESN reservoir computing
 - **Sovereign shader compilation** — naga IR optimizer, SPIR-V passthrough
+- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC for primal-to-primal and external consumers
+- **UniBin CLI** — single `barracuda` binary with `server`, `doctor`, `validate`, `version`
 
 ### Design principles
 
 1. **Math is universal, precision is silicon** — one WGSL source, any precision
 2. **Vendor-agnostic** — same binary, identical results on any GPU
 3. **Sovereign** — zero external SDK dependency for correctness or performance
-4. **AGPL-3.0** — free as in freedom
+4. **Pure Rust** — `#![deny(unsafe_code)]`, exactly 2 wgpu FFI calls (pipeline cache + SPIR-V)
+5. **Fully concurrent** — all GPU access serialized via `WgpuDevice::lock()`, device creation serialized globally
+6. **AGPL-3.0** — free as in freedom
+
+---
+
+## Architecture
+
+barraCuda is a library crate (`barracuda`) wrapped by a primal lifecycle crate
+(`barracuda-core`) that exposes IPC, tarpc, and the UniBin CLI. Springs and
+other consumers `cargo add barracuda`. toadStool orchestrates above it;
+barraCuda owns the math.
+
+```
+Your Code / Springs
+    |
+    v
+barracuda (umbrella crate)
+    |-- Pure Math: linalg, special, numerical, spectral, stats, sample
+    |-- GPU Math: ops, tensor, shaders, interpolate, optimize
+    |-- Compute Fabric: device, staging, pipeline, dispatch, multi_gpu
+    |-- Domain Models: nn, snn, esn, pde, genomics (feature-gated)
+    |
+    v
+barracuda-core (primal lifecycle)
+    |-- IPC: JSON-RPC 2.0 (text) + tarpc (binary)
+    |-- UniBin CLI: server, doctor, validate, version
+    |-- sourdough-core: PrimalLifecycle, PrimalHealth
+    |
+    v
+wgpu (WebGPU)
+    |
+    +-- Vulkan (NVIDIA, AMD, Intel)
+    +-- Metal (Apple)
+    +-- DX12 (Windows)
+    +-- Software rasterizer (CPU fallback / CI)
+```
+
+See `specs/ARCHITECTURE_DEMARCATION.md` for the full barraCuda / toadStool
+boundary definition.
 
 ---
 
@@ -52,74 +95,215 @@ results.
 
 ```
 barraCuda/
-├── Cargo.toml                   # Workspace manifest
-├── README.md                    # You are here
-├── CONVENTIONS.md               # Coding standards
-├── CHANGELOG.md                 # SemVer changelog
+├── Cargo.toml                       # Workspace manifest
+├── deny.toml                        # cargo-deny (license + advisory audit)
+├── rustfmt.toml                     # Formatting config
+├── README.md                        # You are here
+├── CONTRIBUTING.md                  # How to contribute
+├── CONVENTIONS.md                   # Coding standards (-> sourDough)
+├── CHANGELOG.md                     # SemVer changelog
+├── BREAKING_CHANGES.md              # Migration notes
+├── LICENSE                          # AGPL-3.0-or-later
+├── .github/workflows/ci.yml        # CI: fmt, clippy, deny, doc, test, coverage
 ├── crates/
-│   ├── barracuda-core/          # Primal lifecycle + device management
-│   ├── barracuda-tensor/        # Tensor operations, buffer management
-│   ├── barracuda-ops/           # GPU ops, shaders, ComputeDispatch
-│   ├── barracuda-fhe/           # FHE NTT, INTT, pointwise mod-mul
-│   ├── barracuda-linalg/        # Dense + sparse linear algebra
-│   ├── barracuda-spectral/      # Anderson, Lanczos, spectral analysis
-│   ├── barracuda-esn/           # Multi-head ESN, reservoir computing
-│   └── barracuda/               # Umbrella crate (re-exports all)
-├── specs/
-│   ├── BARRACUDA_SPECIFICATION.md
-│   ├── SOVEREIGN_COMPUTE.md
-│   └── BUDDING_PLAN.md
-└── tests/
-    ├── gpu_validation.rs        # FHE + QCD canary suite
-    ├── cross_vendor.rs          # Multi-adapter parity
-    └── integration.rs           # Full pipeline tests
+│   ├── barracuda-core/              # Primal lifecycle wrapper
+│   │   ├── src/lib.rs               # BarraCudaPrimal: start/stop/health
+│   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport
+│   │   ├── src/rpc.rs               # tarpc service definition (10 endpoints)
+│   │   └── src/bin/barracuda.rs     # UniBin CLI
+│   └── barracuda/                   # Umbrella crate — all math + GPU
+│       ├── src/
+│       │   ├── lib.rs               # Module declarations + prelude
+│       │   ├── error.rs             # BarracudaError (19 variants incl. DeviceLost)
+│       │   ├── linalg/              # Dense/sparse linear algebra
+│       │   ├── special/             # Special functions (erf, gamma, Bessel)
+│       │   ├── numerical/           # Gradients, integration, ODE
+│       │   ├── spectral/            # Anderson, Lanczos, eigensolve
+│       │   ├── stats/               # Bootstrap, regression, distributions
+│       │   ├── sample/              # LHS, Sobol, Metropolis, sparsity
+│       │   ├── ops/                 # GPU ops (matmul, softmax, FHE, bio)
+│       │   ├── tensor/              # GPU tensor type
+│       │   ├── shaders/             # 767 WGSL shaders (see shaders/README.md)
+│       │   ├── device/              # WgpuDevice, capabilities, test pool
+│       │   ├── staging/             # Ring buffers, unidirectional pipelines
+│       │   ├── pipeline/            # ComputeDispatch, batched pipelines
+│       │   ├── dispatch/            # Size-based CPU/GPU routing
+│       │   ├── multi_gpu/           # GpuPool, MultiDevicePool, load balancing
+│       │   ├── unified_hardware/    # Unified CPU/GPU/NPU abstraction
+│       │   └── ...                  # + nn, snn, esn, pde, genomics, vision
+│       ├── examples/                # 5 runnable examples
+│       ├── tests/                   # 29 integration test suites
+│       └── src/bin/                 # validate_gpu, bench_*
+└── specs/
+    ├── BARRACUDA_SPECIFICATION.md   # Crate architecture + IPC contract
+    └── ARCHITECTURE_DEMARCATION.md  # barraCuda vs toadStool boundaries
 ```
-
-**Note**: This scaffold defines the target structure. The actual code lives in
-`ecoPrimals/phase1/toadStool/crates/barracuda/` until extraction is complete.
 
 ---
 
-## GPU Validation Canary
+## Quality Gates
 
-barraCuda uses FHE + lattice QCD as a mathematically rigorous GPU stack
-validation suite:
+```bash
+cargo fmt --all -- --check              # formatting
+cargo clippy --workspace -- -D warnings # lints (pedantic in Cargo.toml)
+cargo deny check                        # license + advisory audit
+cargo doc --workspace --no-deps         # documentation
+cargo build --workspace                 # compilation
+cargo test --workspace --lib            # 2,848 unit tests
+cargo llvm-cov --workspace --lib        # 79% line coverage (unit tests)
+```
 
-| Test | Pass criteria | What it validates |
-|------|--------------|-------------------|
-| FHE NTT round-trip | Bit-perfect: INTT(NTT(p)) == p | u32/u64 emulation, modular arithmetic |
-| FHE polynomial mul | Matches symbolic reference | Buffer pipeline, dispatch, compilation |
-| SU(3) unitarity | < DF64 epsilon | DF64 matrix multiply, complex arithmetic |
-| Plaquette expectation | Within statistical error | Full pipeline under sustained load |
-| CG convergence | Within reference ± 2 iterations | Iterative solver precision |
+All gates are enforced in `.github/workflows/ci.yml`.
 
-Any consumer runs `barracuda validate-gpu` to verify their GPU is trustworthy
-for scientific compute.
+---
+
+## IPC Protocol
+
+barraCuda exposes a dual-protocol IPC interface per wateringHole standards:
+
+**JSON-RPC 2.0** (primary, text, newline-delimited TCP/Unix socket):
+
+| Method | Description |
+|--------|-------------|
+| `barracuda.device.list` | List available compute devices |
+| `barracuda.device.probe` | Probe device capabilities and limits |
+| `barracuda.health.check` | Health check (name, version, status) |
+| `barracuda.tolerances.get` | Numerical tolerances for a named operation |
+| `barracuda.validate.gpu_stack` | GPU validation suite |
+| `barracuda.compute.dispatch` | Dispatch a compute shader |
+| `barracuda.tensor.create` | Create a tensor on device |
+| `barracuda.tensor.matmul` | Matrix multiply two tensors |
+| `barracuda.fhe.ntt` | FHE Number Theoretic Transform |
+| `barracuda.fhe.pointwise_mul` | FHE pointwise polynomial multiplication |
+
+**tarpc** (optional, binary, high-throughput primal-to-primal):
+
+Same 10 endpoints with strongly-typed Rust signatures. Enabled via
+`barracuda server --tarpc-bind 127.0.0.1:9001`.
+
+---
+
+## UniBin CLI
+
+```bash
+# Start IPC server (JSON-RPC on TCP)
+barracuda server --bind 127.0.0.1:9000
+
+# Start with tarpc alongside JSON-RPC
+barracuda server --bind 127.0.0.1:9000 --tarpc-bind 127.0.0.1:9001
+
+# Start with Unix socket
+barracuda server --unix /tmp/barracuda.sock
+
+# Health check and device diagnostics
+barracuda doctor
+
+# GPU validation suite
+barracuda validate
+barracuda validate --extended
+
+# Version info
+barracuda version
+```
+
+---
+
+## Feature Flags
+
+| Feature | Default | Description |
+|---------|---------|-------------|
+| `gpu` | Yes | GPU compute via wgpu/WGSL. |
+| `domain-models` | Yes | All domain modules (nn, snn, esn, pde, genomics, vision, timeseries). |
+| `domain-nn` | via umbrella | Neural network training API. |
+| `domain-snn` | via umbrella | Spiking neural networks. |
+| `domain-esn` | via umbrella | Echo state networks (reservoir computing). |
+| `domain-pde` | via umbrella | PDE solvers (Richards, Crank-Nicolson). |
+| `domain-genomics` | via umbrella | Bioinformatics and genomics API. |
+| `domain-vision` | via umbrella | Computer vision pipelines. |
+| `domain-timeseries` | via umbrella | Time series analysis (implies `domain-esn`). |
+| `toadstool` | No | Optional toadStool integration. |
+| `npu-akida` | No | Akida neuromorphic NPU support. |
+| `parallel` | No | Rayon parallelism hints. |
+
+### Common dependency configurations
+
+```toml
+# Full (default) — everything
+barracuda = { path = "../barraCuda/crates/barracuda" }
+
+# Math + GPU only — no domain models (fastest compile)
+barracuda = { path = "../barraCuda/crates/barracuda", default-features = false, features = ["gpu"] }
+
+# Pure CPU math — no GPU at all (sub-2s compile)
+barracuda = { path = "../barraCuda/crates/barracuda", default-features = false }
+```
+
+---
+
+## Development Setup
+
+### Prerequisites
+
+- **Rust 1.87+** (`rustup update stable`)
+- **GPU drivers** (Vulkan-capable: NVIDIA 525+, Mesa 23+, or Apple Metal)
+- **llvmpipe** (optional, for headless CI — `sudo apt install mesa-vulkan-drivers`)
+- **cargo-deny** (`cargo install cargo-deny`)
+- **cargo-llvm-cov** (`cargo install cargo-llvm-cov`, for coverage)
+
+### Sibling repositories
+
+```
+ecoPrimals/
+├── barraCuda/          # This repo
+├── sourDough/          # Required (workspace dep for primal traits)
+├── wateringHole/       # Ecosystem standards and genomeBin manifest
+├── phase1/toadStool/   # Optional (only if toadstool feature enabled)
+└── ...Springs          # Consumers
+```
+
+### Build and test
+
+```bash
+cargo build --workspace
+cargo test --workspace --lib
+cargo run -p barracuda-core --bin barracuda -- doctor
+```
 
 ---
 
 ## Relationship to ecoPrimals
 
-barraCuda is a **NUCLEUS foundation primal**. It composes with:
+barraCuda is a **NUCLEUS foundation primal** registered in `wateringHole/genomeBin/manifest.toml`.
 
-- **BearDog** (crypto) — FHE key generation + barraCuda GPU compute = sovereign
-  encrypted computation
-- **ToadStool** (orchestration) — primal lifecycle, IPC routing, biomeOS
-- **Springs** (validation) — 5 domain-specific projects that consume and validate
-  barraCuda primitives across physics, biology, agriculture, ML, and earth science
+- **toadStool** (orchestration) — routes compute to the best hardware. barraCuda
+  is the execution layer; toadStool is the orchestration layer.
+- **bearDog** (crypto) — FHE key generation + barraCuda GPU compute = sovereign
+  encrypted computation.
+- **songBird** (network) — toadStool uses songBird for multi-node distribution.
+  barraCuda does not depend on songBird directly.
+- **Springs** (validation) — domain-specific projects that consume barraCuda.
 
-barraCuda knows only itself. It discovers other primals at runtime via
-capability-based IPC (JSON-RPC 2.0).
+### Dependency direction
 
----
-
-## Quick Start
-
-```bash
-cargo build
-cargo test
+```
+Springs ──> barraCuda (direct cargo dep)
+toadStool ──> barraCuda (as compute backend)
+bearDog ··> barraCuda (for FHE math)
+barraCuda ──> sourDough (primal traits only)
 ```
 
+barraCuda has ZERO dependencies on toadStool, songBird, bearDog, or nestGate.
+
 ---
 
-**Created with SourDough. Budding from ToadStool S88.**
+## Specs
+
+| Document | Purpose |
+|----------|---------|
+| `specs/BARRACUDA_SPECIFICATION.md` | Crate architecture, IPC contract, shader pipeline |
+| `specs/ARCHITECTURE_DEMARCATION.md` | barraCuda vs toadStool boundary definition |
+| `crates/barracuda/src/shaders/README.md` | Shader organization |
+
+---
+
+**Created with sourDough. Budded from toadStool S88-S89. Evolved to standalone primal.**

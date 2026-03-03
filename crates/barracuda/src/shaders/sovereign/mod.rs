@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Sovereign Compiler — Phase 4 of the Sovereign Compute Evolution.
 //!
 //! Drives naga as a library to parse WGSL into a typed IR (`naga::Module`),

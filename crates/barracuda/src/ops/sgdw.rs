@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! SGDW - SGD with Decoupled Weight Decay (Pure WGSL)
 //!
 //! More principled weight decay than L2 regularization

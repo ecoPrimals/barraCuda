@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Permute - Pure WGSL
 //!
 //! Deep Debt Principles:

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Compute scheduler — selects best hardware for each operation.
 
 use crate::error::Result;

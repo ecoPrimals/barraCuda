@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Force Interpolation for PPPM
 //!
 //! Interpolates the mesh potential back to particle positions to compute

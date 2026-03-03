@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Numerical integration via trapezoidal rule
 
 /// WGSL kernel for trapezoidal-rule numerical integration (f64).

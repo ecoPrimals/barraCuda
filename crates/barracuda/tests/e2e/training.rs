@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! E2E Tests: Training Pipelines
 //!
 //! Tests forward → loss → backward → optimizer workflows

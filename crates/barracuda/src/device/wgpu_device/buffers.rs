@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Buffer allocation and data transfer — generic read_buffer<T: Pod> + typed helpers
 
 use super::WgpuDevice;
@@ -18,8 +19,8 @@ impl WgpuDevice {
             return Ok(Vec::new());
         }
         if self.is_lost() {
-            return Err(BarracudaError::device(
-                "GPU device lost — cannot read buffer",
+            return Err(BarracudaError::device_lost(
+                "cannot read buffer — device lost",
             ));
         }
         let byte_size = (count * std::mem::size_of::<T>()) as u64;
@@ -42,8 +43,8 @@ impl WgpuDevice {
         self.submit_and_poll_inner(Some(encoder.finish()));
 
         if self.is_lost() {
-            return Err(BarracudaError::device(
-                "GPU device lost during readback copy",
+            return Err(BarracudaError::device_lost(
+                "device lost during readback copy",
             ));
         }
 
@@ -67,8 +68,8 @@ impl WgpuDevice {
             return Ok(Vec::new());
         }
         if self.is_lost() {
-            return Err(BarracudaError::device(
-                "GPU device lost — cannot map buffer",
+            return Err(BarracudaError::device_lost(
+                "cannot map buffer — device lost",
             ));
         }
         let slice = staging.slice(..);

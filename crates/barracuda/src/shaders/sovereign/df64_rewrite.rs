@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! DF64 Infix Rewrite Pass — Sovereign Compiler Phase 5.
 //!
 //! Uses naga for type analysis and source-span-guided text replacement

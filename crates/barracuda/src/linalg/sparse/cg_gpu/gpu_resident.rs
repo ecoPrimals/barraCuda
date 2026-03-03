@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU-resident Conjugate Gradient solver
 //!
 //! Scalar values (α, β, ρ) remain on GPU; residual read only every `check_interval` iterations.

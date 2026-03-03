@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! FHE Rotation Operation (CKKS Scheme)
 //!
 //! **Purpose**: Rotate ciphertext slots for SIMD operations

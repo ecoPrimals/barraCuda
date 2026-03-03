@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Fault Injection Tests for Scientific Computing Operations
 //!
 //! **Philosophy**:

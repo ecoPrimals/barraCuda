@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Fractional max pool 2D operation - Stochastic pooling with non-integer pooling ratios
 //!
 //! Improves generalization by introducing randomness

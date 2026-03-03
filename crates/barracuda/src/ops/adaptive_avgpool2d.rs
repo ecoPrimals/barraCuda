@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Adaptive Average Pooling 2D - Output-size-driven pooling
 //!
 //! **Deep Debt Evolution**: Modernized from trait-based to direct `impl Tensor`

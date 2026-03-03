@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Matrix Rank - Compute rank of matrix (GPU implementation)
 //!
 //! **Deep Debt Principles**:

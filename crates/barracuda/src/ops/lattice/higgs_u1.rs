@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! U(1) Abelian Higgs model HMC force GPU operator.
 //!
 //! Computes the leapfrog half-kick to gauge and Higgs momenta for a 2D U(1)

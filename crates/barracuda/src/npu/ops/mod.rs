@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! NPU Operations Module - Extended NPU Coverage
 //!
 //! **Mission**: Provide NPU-accelerated implementations of common operations

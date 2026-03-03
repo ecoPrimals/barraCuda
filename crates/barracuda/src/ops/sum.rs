@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Sum reduction - Pure WGSL
 //!
 //! Deep Debt Principles:

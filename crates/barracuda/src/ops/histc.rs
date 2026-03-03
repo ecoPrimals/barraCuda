@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Histc - Histogram with custom bins (Pure WGSL)
 //!
 //! Computes histogram of input values into specified bins

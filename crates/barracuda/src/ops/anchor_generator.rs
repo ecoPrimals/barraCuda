@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Anchor Generator - Generate anchor boxes
 //!
 //! Creates anchor boxes for object detection.

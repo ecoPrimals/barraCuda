@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! CutMix data augmentation operation
 //!
 //! CutMix: Cuts and pastes patches between training images

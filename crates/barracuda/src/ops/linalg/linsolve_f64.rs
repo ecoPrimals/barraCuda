@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Linear System Solve (f64) — Full double-precision GPU Gaussian elimination
 //!
 //! **Deep Debt Principles**:

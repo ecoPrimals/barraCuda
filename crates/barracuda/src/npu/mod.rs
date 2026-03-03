@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! NPU Backend Module for BarraCuda v2.0
 //!
 //! Event-driven ML execution on Akida neuromorphic processors.

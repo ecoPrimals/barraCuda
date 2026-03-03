@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Spin-Orbit Coupling (f64) — GPU-Accelerated HFB Term
 //!
 //! Computes diagonal spin-orbit corrections to the HFB Hamiltonian.

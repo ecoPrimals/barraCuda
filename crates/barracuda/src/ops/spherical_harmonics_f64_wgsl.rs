@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! SPHERICAL HARMONICS F64 - Real spherical harmonics Y_l^m - f64 precision WGSL
 //!
 //! Deep Debt Principles apply.

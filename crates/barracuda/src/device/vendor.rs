@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Canonical GPU vendor ID constants.
 //!
 //! Every place in BarraCuda that branches on `caps.vendor` or

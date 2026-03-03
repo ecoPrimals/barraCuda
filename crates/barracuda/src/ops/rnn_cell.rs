@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! RNN Cell - Basic recurrent neural network cell
 //!
 //! **Canonical BarraCuda Pattern**: Struct with new/execute

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! E2E Tests: Computer Vision Architectures
 //!
 //! Tests ResNet, YOLO, object detection pipelines

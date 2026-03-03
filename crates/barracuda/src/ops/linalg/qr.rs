@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! QR Decomposition
 //!
 //! Factors a matrix A into the product of an orthogonal matrix Q and

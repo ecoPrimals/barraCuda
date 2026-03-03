@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Repeat - Repeat tensor along dimensions - Pure WGSL
 //!
 //! Deep Debt Principles:

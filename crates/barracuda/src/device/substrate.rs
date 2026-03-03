@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Substrate Selection - Explicit Hardware Targeting
 //!
 //! **Deep Debt Principles**:

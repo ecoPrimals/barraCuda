@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! WGSL shader template constants for precision-generic code generation
 
 /// Element-wise addition: C = A + B

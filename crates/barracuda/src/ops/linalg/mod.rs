@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Linear Algebra Operations
 //!
 //! **Deep Debt Compliant Linear Algebra Module**

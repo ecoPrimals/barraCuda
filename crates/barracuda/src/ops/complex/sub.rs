@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Complex Subtraction Operation
 //!
 //! **Operation**: (a + bi) - (c + di) = (a-c) + (b-d)i

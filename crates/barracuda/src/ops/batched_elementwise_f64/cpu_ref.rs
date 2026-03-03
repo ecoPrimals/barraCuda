@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! CPU reference implementations for batched element-wise ops.
 //!
 //! Used for tests and validation against GPU results.

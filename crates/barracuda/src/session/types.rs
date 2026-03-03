@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! TensorSession — internal types: op enum, params structs, matmul tier
 
 use crate::device::capabilities::DeviceCapabilities;

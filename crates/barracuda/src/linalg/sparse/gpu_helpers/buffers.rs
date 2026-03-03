@@ -1,10 +1,11 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Buffer creation and I/O for sparse GPU solvers.
 //!
 //! Single responsibility: buffer allocation, readback, and copy operations.
 //! Reused by CG, BiCGSTAB, and other sparse solvers.
 
 use crate::device::WgpuDevice;
-use crate::error::{BarracudaError, Result};
+use crate::error::Result;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
@@ -58,115 +59,22 @@ impl SparseBuffers {
         })
     }
 
-    /// Poll a raw wgpu::Device with device-lost protection.
-    fn poll_raw_safe(device: &wgpu::Device) -> Result<()> {
-        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            device.poll(wgpu::Maintain::Wait);
-        }));
-        result.map_err(|payload| {
-            let msg = payload
-                .downcast_ref::<String>()
-                .map(|s| s.as_str())
-                .or_else(|| payload.downcast_ref::<&str>().copied())
-                .unwrap_or("unknown");
-            BarracudaError::device(format!("GPU device lost during poll: {msg}"))
-        })
-    }
-
-    /// Read f64 data from GPU buffer (raw device/queue)
+    /// Read f64 data from GPU buffer (synchronized via WgpuDevice)
     pub fn read_f64_raw(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        device: &WgpuDevice,
         buffer: &wgpu::Buffer,
         count: usize,
     ) -> Result<Vec<f64>> {
-        let staging = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("f64 staging"),
-            size: (count * 8) as u64,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("f64 readback"),
-        });
-        encoder.copy_buffer_to_buffer(buffer, 0, &staging, 0, (count * 8) as u64);
-        queue.submit(Some(encoder.finish()));
-
-        let slice = staging.slice(..);
-        let (sender, receiver) = std::sync::mpsc::channel();
-        slice.map_async(wgpu::MapMode::Read, move |result| {
-            let _ = sender.send(result);
-        });
-        Self::poll_raw_safe(device)?;
-        receiver
-            .recv()
-            .map_err(|_| BarracudaError::execution_failed("buffer mapping channel closed"))?
-            .map_err(|e| BarracudaError::execution_failed(e.to_string()))?;
-
-        let data = slice.get_mapped_range();
-        let result: Vec<f64> = data
-            .chunks_exact(8)
-            .map(|chunk| {
-                f64::from_le_bytes(
-                    chunk
-                        .try_into()
-                        .expect("chunks_exact(8) yields 8-byte chunks"),
-                )
-            })
-            .collect();
-        drop(data);
-        staging.unmap();
-
-        Ok(result)
+        device.read_buffer::<f64>(buffer, count)
     }
 
-    /// Read i32 data from GPU buffer (raw device/queue)
+    /// Read i32 data from GPU buffer (synchronized via WgpuDevice)
     pub fn read_i32_raw(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        device: &WgpuDevice,
         buffer: &wgpu::Buffer,
         count: usize,
     ) -> Result<Vec<i32>> {
-        let staging = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("i32 staging"),
-            size: (count * 4) as u64,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("i32 readback"),
-        });
-        encoder.copy_buffer_to_buffer(buffer, 0, &staging, 0, (count * 4) as u64);
-        queue.submit(Some(encoder.finish()));
-
-        let slice = staging.slice(..);
-        let (sender, receiver) = std::sync::mpsc::channel();
-        slice.map_async(wgpu::MapMode::Read, move |result| {
-            let _ = sender.send(result);
-        });
-        Self::poll_raw_safe(device)?;
-        receiver
-            .recv()
-            .map_err(|_| BarracudaError::execution_failed("buffer mapping channel closed"))?
-            .map_err(|e| BarracudaError::execution_failed(e.to_string()))?;
-
-        let data = slice.get_mapped_range();
-        let result: Vec<i32> = data
-            .chunks_exact(4)
-            .map(|chunk| {
-                i32::from_le_bytes(
-                    chunk
-                        .try_into()
-                        .expect("chunks_exact(4) yields 4-byte chunks"),
-                )
-            })
-            .collect();
-        drop(data);
-        staging.unmap();
-
-        Ok(result)
+        device.read_buffer::<i32>(buffer, count)
     }
 
     /// Create a u32 storage buffer from usize data (for CSR indices)
@@ -198,7 +106,7 @@ impl SparseBuffers {
         buffer: &wgpu::Buffer,
         count: usize,
     ) -> Result<Vec<f64>> {
-        Self::read_f64_raw(&device.device, &device.queue, buffer, count)
+        Self::read_f64_raw(device.as_ref(), buffer, count)
     }
 
     /// Write f64 data to GPU buffer

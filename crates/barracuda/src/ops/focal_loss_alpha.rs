@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Focal Loss with class weighting
 //!
 //! **Pure WGSL**: Single implementation via WebGPU shader

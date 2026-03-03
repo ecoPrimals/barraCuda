@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Fault Tests: Boundary Cases
 //!
 //! Test edge cases: zero sizes, max values, special floats

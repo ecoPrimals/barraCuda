@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! BETA - Beta function B(a,b) - Pure WGSL
 //!
 //! Deep Debt Principles:

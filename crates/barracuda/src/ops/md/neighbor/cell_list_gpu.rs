@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU-Resident Cell-List Construction
 //!
 //! Three-pass GPU pipeline that builds a spatially sorted particle index table

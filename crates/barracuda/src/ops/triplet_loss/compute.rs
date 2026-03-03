@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU compute operations for Triplet Loss
 //!
 //! This module contains the GPU execution for triplet loss computation

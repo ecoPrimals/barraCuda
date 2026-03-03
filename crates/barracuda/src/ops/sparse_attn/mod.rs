@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Sparse Attention - GPU-accelerated with strided sparse pattern
 //!
 //! **Deep Debt Principles**:

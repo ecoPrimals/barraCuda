@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! NPU Bridge - Tensor ↔ NPU API Conversion
 //!
 //! **Phase 3 Bridge**: Connects unified Tensor API with NPU operations.

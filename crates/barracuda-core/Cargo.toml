@@ -13,6 +13,15 @@ sourdough-core = { workspace = true }
 barracuda = { path = "../barracuda", default-features = true }
 tokio = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 blake3 = { workspace = true }
+clap = { workspace = true }
+tarpc = { workspace = true }
+futures = { workspace = true }
+
+[[bin]]
+name = "barracuda"
+path = "src/bin/barracuda.rs"

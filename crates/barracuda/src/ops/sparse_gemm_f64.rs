@@ -34,7 +34,7 @@ pub struct SparseGemmF64<'a> {
     pub b_cols: usize,
 }
 
-impl<'a> SparseGemmF64<'a> {
+impl SparseGemmF64<'_> {
     pub fn execute(&self, device: &Arc<WgpuDevice>) -> Result<Vec<f64>> {
         let m = self.csr.n_rows;
         let k = self.csr.n_cols;

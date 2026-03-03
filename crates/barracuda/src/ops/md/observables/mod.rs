@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Observable Computation for Molecular Dynamics — Shader-First Architecture.
 //!
 //! All underlying math originates as f64 WGSL shaders. High-level analysis

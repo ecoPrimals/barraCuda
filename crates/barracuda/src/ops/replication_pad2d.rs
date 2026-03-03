@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! ReplicationPad2D - Padding by replicating edge pixels
 //!
 //! Pads by repeating border values.

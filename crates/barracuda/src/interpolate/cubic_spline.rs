@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Cubic Spline Interpolation
 //!
 //! Natural and clamped cubic spline interpolation for smooth function approximation.

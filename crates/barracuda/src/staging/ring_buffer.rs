@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU Ring Buffer for Streaming Data
 //!
 //! A lock-free ring buffer for staging data between CPU and GPU

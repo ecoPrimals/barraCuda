@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Triplet Loss - GPU-accelerated metric learning loss
 //!
 //! **Deep Debt Principles**:

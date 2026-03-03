@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! BFGS Quasi-Newton Optimizer
 //!
 //! The Broyden-Fletcher-Goldfarb-Shanno (BFGS) algorithm is a quasi-Newton

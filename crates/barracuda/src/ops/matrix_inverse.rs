@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Matrix Inverse - Compute inverse of square matrix
 //!
 //! **Canonical BarraCuda Pattern**: Struct with new/execute

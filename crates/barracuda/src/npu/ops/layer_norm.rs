@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! NPU LayerNorm - WGSL Universal Compute with Event Optimization
 //!
 //! Uses the same WGSL shader as GPU/CPU for layer normalization,
@@ -74,12 +75,10 @@ pub fn npu_layer_norm(input: &[f32], gamma: &[f32], beta: &[f32], eps: f32) -> R
     use crate::tensor::Tensor;
 
     run_with_sync_device(|device| {
-        let input_tensor = Tensor::from_vec_on_sync(input.to_vec(), vec![n], device)?;
+        let input_tensor = Tensor::from_data(input, vec![n], device)?;
         let normalized_tensor = input_tensor.layer_norm_wgsl(eps)?;
-        let gamma_tensor =
-            Tensor::from_vec_on_sync(gamma.to_vec(), vec![n], normalized_tensor.device().clone())?;
-        let beta_tensor =
-            Tensor::from_vec_on_sync(beta.to_vec(), vec![n], normalized_tensor.device().clone())?;
+        let gamma_tensor = Tensor::from_data(gamma, vec![n], normalized_tensor.device().clone())?;
+        let beta_tensor = Tensor::from_data(beta, vec![n], normalized_tensor.device().clone())?;
         let result_tensor = normalized_tensor.mul(&gamma_tensor)?.add(&beta_tensor)?;
         let output = result_tensor.to_vec()?;
 

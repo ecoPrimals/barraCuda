@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! CPU path for SparsitySampler algorithm.
 
 use crate::device::WgpuDevice;
@@ -14,6 +15,8 @@ use super::SparsitySamplerConfig;
 use crate::error::{BarracudaError, Result};
 
 /// Run a batch of NM solvers on the true objective (fallback when surrogate fails).
+///
+/// Solvers run in parallel via rayon when the objective is `Send + Sync`.
 pub(crate) fn run_nm_batch<F>(
     f: &F,
     bounds: &[(f64, f64)],
@@ -22,17 +25,24 @@ pub(crate) fn run_nm_batch<F>(
     cache: &mut EvaluationCache,
 ) -> Result<SolverResult>
 where
-    F: Fn(&[f64]) -> f64,
+    F: Fn(&[f64]) -> f64 + Sync,
 {
+    use rayon::prelude::*;
+
     let seed = config.seed.wrapping_add((iter as u64 + 1) * 10007);
     let points = latin_hypercube(config.n_solvers, bounds, seed)?;
+
+    let results: Vec<_> = points
+        .par_iter()
+        .map(|x0| {
+            crate::optimize::nelder_mead(f, x0, bounds, config.max_eval_per_solver, config.tol)
+        })
+        .collect::<std::result::Result<Vec<_>, _>>()?;
 
     let mut best_x = vec![0.0; bounds.len()];
     let mut best_f = f64::INFINITY;
 
-    for x0 in &points {
-        let (x_star, f_star, _) =
-            crate::optimize::nelder_mead(f, x0, bounds, config.max_eval_per_solver, config.tol)?;
+    for (x_star, f_star, _) in results {
         cache.record(x_star.clone(), f_star);
         if f_star < best_f {
             best_f = f_star;
@@ -56,8 +66,9 @@ pub fn sparsity_sampler<F>(
     config: &SparsitySamplerConfig,
 ) -> Result<SparsitySamplerResult>
 where
-    F: Fn(&[f64]) -> f64,
+    F: Fn(&[f64]) -> f64 + Sync,
 {
+    use rayon::prelude::*;
     if bounds.is_empty() {
         return Err(BarracudaError::InvalidInput {
             message: "bounds must be non-empty".to_string(),
@@ -163,35 +174,41 @@ where
         let iter_seed = config.seed.wrapping_add((iter as u64 + 1) * 10007);
         let candidate_points = latin_hypercube(config.n_solvers, bounds, iter_seed)?;
 
-        let mut iter_best_f = f64::INFINITY;
         let n_direct = config.n_direct_solvers.min(candidate_points.len());
 
-        for (i, x0) in candidate_points.iter().enumerate() {
-            if i < n_direct {
-                let (x_star, f_star, _) = crate::optimize::nelder_mead(
-                    &f,
-                    x0,
-                    bounds,
-                    config.max_eval_per_solver,
-                    config.tol,
-                )?;
-                cache.record(x_star, f_star);
-                if f_star < iter_best_f {
-                    iter_best_f = f_star;
+        // Run direct and surrogate-guided solvers in parallel via rayon.
+        let solver_results: Vec<_> = candidate_points
+            .par_iter()
+            .enumerate()
+            .map(|(i, x0)| {
+                if i < n_direct {
+                    let (x_star, f_star, evals) = crate::optimize::nelder_mead(
+                        &f,
+                        x0,
+                        bounds,
+                        config.max_eval_per_solver,
+                        config.tol,
+                    )?;
+                    Ok((x_star, f_star, evals))
+                } else {
+                    let (x_star, _, evals) = crate::optimize::nelder_mead(
+                        surrogate_objective,
+                        x0,
+                        bounds,
+                        config.max_eval_per_solver,
+                        config.tol,
+                    )?;
+                    let f_true = f(&x_star);
+                    Ok((x_star, f_true, evals))
                 }
-            } else {
-                let (x_star, _, _) = crate::optimize::nelder_mead(
-                    surrogate_objective,
-                    x0,
-                    bounds,
-                    config.max_eval_per_solver,
-                    config.tol,
-                )?;
-                let f_true = f(&x_star);
-                cache.record(x_star, f_true);
-                if f_true < iter_best_f {
-                    iter_best_f = f_true;
-                }
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        let mut iter_best_f = f64::INFINITY;
+        for (x_star, f_star, _) in solver_results {
+            cache.record(x_star, f_star);
+            if f_star < iter_best_f {
+                iter_best_f = f_star;
             }
         }
 

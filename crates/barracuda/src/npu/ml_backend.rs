@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! NPU ML Backend - Event-Driven ML Execution
 //!
 //! Executes ML inference on Akida neuromorphic processors using

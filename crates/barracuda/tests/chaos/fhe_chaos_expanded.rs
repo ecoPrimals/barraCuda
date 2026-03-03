@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! FHE Chaos Tests - Expanded Coverage
 //! 
 //! Additional chaos tests for remaining operations:

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Standard Jacobi sweep — multi-dispatch variant (all matrix sizes)
 //!
 //! Iterates over (p,q) pairs, dispatching compute angles → rotate A → update blocks → rotate V

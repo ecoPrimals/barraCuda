@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Pipeline and BGL helpers for batched Nelder-Mead GPU.
 
 use crate::device::compute_pipeline::uniform_bgl_entry;

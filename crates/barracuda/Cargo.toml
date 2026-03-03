@@ -49,12 +49,96 @@ proptest = { workspace = true }
 wgpu = { workspace = true }
 
 [lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
 unwrap_used = "warn"
+module_name_repetitions = "allow"
+doc_markdown = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+cast_precision_loss = "allow"
+cast_lossless = "allow"
+similar_names = "allow"
+must_use_candidate = "allow"
+return_self_not_must_use = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+unreadable_literal = "allow"
+items_after_statements = "allow"
+too_many_arguments = "allow"
+needless_range_loop = "allow"
+wrong_self_convention = "allow"
+if_same_then_else = "allow"
+unused_async = "allow"
+too_many_lines = "allow"
+wildcard_imports = "allow"
+struct_excessive_bools = "allow"
+fn_params_excessive_bools = "allow"
+match_same_arms = "allow"
+implicit_hasher = "allow"
+default_trait_access = "allow"
+struct_field_names = "allow"
+enum_glob_use = "allow"
+redundant_closure_for_method_calls = "allow"
+option_if_let_else = "allow"
+manual_let_else = "allow"
+cast_possible_wrap = "allow"
+many_single_char_names = "allow"
+needless_pass_by_value = "allow"
+needless_raw_string_hashes = "allow"
+unnecessary_wraps = "allow"
+bool_to_int_with_if = "allow"
+unused_self = "allow"
+map_unwrap_or = "allow"
+cloned_instead_of_copied = "allow"
+no_effect_underscore_binding = "allow"
+format_push_string = "allow"
+uninlined_format_args = "allow"
+manual_midpoint = "allow"
+doc_comment_double_space_linebreaks = "allow"
+if_not_else = "allow"
+single_match_else = "allow"
+pub_underscore_fields = "allow"
+trivially_copy_pass_by_ref = "allow"
+float_cmp = "allow"
+unnecessary_literal_bound = "allow"
+redundant_else = "allow"
+missing_fields_in_debug = "allow"
+explicit_iter_loop = "allow"
+range_plus_one = "allow"
+match_wildcard_for_single_variants = "allow"
+used_underscore_binding = "allow"
+inline_always = "allow"
+inconsistent_struct_constructor = "allow"
+
+[lints.rust]
+missing_docs = "allow"
 
 [features]
-default = ["gpu"]
+default = ["gpu", "domain-models"]
 
 gpu = ["dep:wgpu", "dep:bytemuck", "dep:naga"]
+
+# Domain model umbrella — enables all domain-specific modules.
+# Disable with default-features = false to get pure math + GPU compute only.
+# Individual domain features allow selective compilation for consumers
+# that only need specific domains (e.g., hotSpring enables domain-pde).
+domain-models = [
+    "domain-esn",
+    "domain-genomics",
+    "domain-nn",
+    "domain-pde",
+    "domain-snn",
+    "domain-timeseries",
+    "domain-vision",
+]
+domain-esn = []
+domain-genomics = []
+domain-nn = []
+domain-pde = []
+domain-snn = []
+domain-timeseries = ["domain-esn"]
+domain-vision = []
 
 # ToadStool integration (optional — for running as part of toadStool workspace)
 toadstool = ["dep:toadstool-core"]

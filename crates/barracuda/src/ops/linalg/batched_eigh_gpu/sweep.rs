@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Core sweep pass execution for Jacobi eigensolver
 
 use crate::device::WgpuDevice;

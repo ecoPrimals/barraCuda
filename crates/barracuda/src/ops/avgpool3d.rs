@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! AvgPool3D - 3D Average Pooling
 //!
 //! **Deep Debt Principles**:

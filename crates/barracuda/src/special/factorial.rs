@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Factorial function
 
 /// WGSL kernel for factorial computation (f64).

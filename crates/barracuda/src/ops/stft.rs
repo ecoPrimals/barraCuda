@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! STFT - Short-Time Fourier Transform
 //!
 //! Converts time-domain signal to time-frequency representation.

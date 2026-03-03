@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Crank-Nicolson scheme for 1D diffusion equations
 //!
 //! Implements the implicit Crank-Nicolson method for solving the heat equation

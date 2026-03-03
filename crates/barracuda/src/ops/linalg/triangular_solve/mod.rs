@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Triangular Solve - Forward/Backward Substitution - Pure WGSL
 //!
 //! **Deep Debt Principles**:

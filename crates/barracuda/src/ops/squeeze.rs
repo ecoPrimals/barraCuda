@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Squeeze operation - Remove dimensions of size 1
 //! Pure WGSL implementation
 
@@ -226,11 +227,9 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        // Verify data preservation
+        // Verify data preservation (zero-copy: from_data borrows slice)
         let input_data = vec![1.0, 2.0, 3.0, 4.0];
-        let input = Tensor::from_vec_on(input_data.clone(), vec![1, 4, 1], device)
-            .await
-            .unwrap();
+        let input = Tensor::from_data(&input_data, vec![1, 4, 1], device).unwrap();
         let result = input.squeeze().unwrap();
 
         assert_eq!(result.shape(), &[4]);

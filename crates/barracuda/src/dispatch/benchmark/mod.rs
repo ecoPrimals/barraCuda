@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Benchmark suite for empirically determining CPU/GPU dispatch thresholds
 //!
 //! This module provides tools to benchmark operations at various input sizes

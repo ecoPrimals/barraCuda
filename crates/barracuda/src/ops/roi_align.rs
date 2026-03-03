@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! ROI Align - Region of Interest Align (Pure WGSL)
 //!
 //! Extracts fixed-size feature maps from regions using bilinear interpolation

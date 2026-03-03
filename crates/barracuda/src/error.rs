@@ -1,64 +1,94 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Error types for barraCuda
 //!
 //! **Deep Debt Excellence**: Rich error context, zero panic paths
 
 use thiserror::Error;
 
+/// Result type alias for barraCuda operations.
 pub type Result<T> = std::result::Result<T, BarracudaError>;
 
+/// Unified error type for barraCuda.
+///
+/// Use the constructor helpers (`shape_mismatch`, `gpu`, etc.) instead of
+/// constructing variants directly. Check `is_device_lost()` for retriable failures.
 #[derive(Error, Debug)]
 pub enum BarracudaError {
+    /// Device initialization or selection failed.
     #[error("Device error: {0}")]
     Device(String),
 
+    /// Tensor shapes don't match for a binary op (e.g. matmul dimensions).
     #[error("Shape mismatch: expected {expected:?}, got {actual:?}")]
     ShapeMismatch {
         expected: Vec<usize>,
         actual: Vec<usize>,
     },
 
+    /// Shape violates constraints (e.g. non-positive dim, wrong rank).
     #[error("Invalid shape: expected {expected:?}, got {actual:?}")]
     InvalidShape {
         expected: Vec<usize>,
         actual: Vec<usize>,
     },
 
+    /// Operation rejected due to semantic rules (e.g. incompatible strides).
     #[error("Invalid operation: {op} - {reason}")]
     InvalidOperation { op: String, reason: String },
 
+    /// GPU runtime error (buffer map, submit, general GPU failure).
     #[error("GPU error: {0}")]
     Gpu(String),
 
+    /// GPU device was lost (driver reset, TDR, hardware fault).
+    ///
+    /// This is a retriable failure: the operation can succeed on a fresh device.
+    /// Callers should use `is_device_lost()` to detect this and either retry
+    /// with a new device or propagate the error for pool-level recovery.
+    #[error("GPU device lost: {0}")]
+    DeviceLost(String),
+
+    /// WGSL shader failed to compile (syntax, validation).
     #[error("Shader compilation error: {0}")]
     ShaderCompilation(String),
 
+    /// GPU or host memory allocation failed.
     #[error("Out of memory: {0}")]
     OutOfMemory(String),
 
+    /// Operation not supported on the selected device (e.g. f64 on CPU).
     #[error("Operation not supported on device: {op} on {device}")]
     UnsupportedOperation { op: String, device: String },
 
+    /// Invalid user input (negative stride, out-of-range index).
     #[error("Invalid input: {message}")]
     InvalidInput { message: String },
 
+    /// Kernel or executor execution failed.
     #[error("Execution error: {message}")]
     ExecutionError { message: String },
 
+    /// Requested device unavailable (no adapter, backend disabled).
     #[error("Device not available: {device} - {reason}")]
     DeviceNotAvailable { device: String, reason: String },
 
+    /// No executor registered for this operation (dispatch failure).
     #[error("No available executor for operation: {operation}")]
     NoAvailableExecutor { operation: String },
 
+    /// Unexpected internal state (logic bug, use when panicking is inappropriate).
     #[error("Internal error: {0}")]
     Internal(String),
 
+    /// Numerical failure (NaN, overflow, singular matrix).
     #[error("Numerical error: {message}")]
     Numerical { message: String },
 
+    /// Resource quota exceeded (concurrent ops, buffer pool).
     #[error("Resource exhausted: {0}")]
     ResourceExhausted(String),
 
+    /// Requested allocation exceeds device safe limit.
     #[error("Device limit exceeded: {message} (requested {requested_bytes} bytes, safe limit {safe_limit_bytes} bytes)")]
     DeviceLimitExceeded {
         message: String,
@@ -66,9 +96,11 @@ pub enum BarracudaError {
         safe_limit_bytes: u64,
     },
 
+    /// Feature not yet implemented.
     #[error("Not implemented: {feature}")]
     NotImplemented { feature: String },
 
+    /// I/O failure (file read, write).
     #[error("IO error: {context}")]
     Io {
         context: String,
@@ -76,6 +108,7 @@ pub enum BarracudaError {
         source: std::sync::Arc<std::io::Error>,
     },
 
+    /// JSON parse/serialize error (config, checkpoint).
     #[error("JSON error: {context}")]
     Json { context: String, detail: String },
 }
@@ -147,14 +180,27 @@ impl BarracudaError {
         }
     }
 
+    /// Construct a device-lost error.
+    pub fn device_lost(msg: impl Into<String>) -> Self {
+        Self::DeviceLost(msg.into())
+    }
+
     /// Returns `true` when this error indicates the GPU device was lost.
     ///
     /// Device loss is a transient hardware failure — the operation can be
     /// retried on a fresh device. Callers (and the test infrastructure)
     /// use this to distinguish retriable failures from logic bugs.
     pub fn is_device_lost(&self) -> bool {
+        if matches!(self, Self::DeviceLost(_)) {
+            return true;
+        }
         let msg = self.to_string();
         msg.contains("device lost") || msg.contains("Device lost")
+    }
+
+    /// Returns `true` when this error is retriable (device lost or transient GPU failure).
+    pub fn is_retriable(&self) -> bool {
+        self.is_device_lost()
     }
 
     /// Wrap any `Display` error as a GPU error with contextual message.
@@ -389,6 +435,28 @@ mod tests {
         let r: Result<i32> = Err(BarracudaError::Internal("test".into()));
         let Err(e) = r else { panic!("expected Err") };
         assert!(e.to_string().contains("Internal error"));
+    }
+
+    #[test]
+    fn device_lost_variant_constructs_and_is_detected() {
+        let e = BarracudaError::device_lost("GPU reset");
+        assert!(e.is_device_lost());
+        assert!(e.is_retriable());
+        assert!(e.to_string().contains("GPU reset"));
+    }
+
+    #[test]
+    fn device_lost_detected_from_gpu_string() {
+        let e = BarracudaError::gpu("GPU device lost during submit");
+        assert!(e.is_device_lost());
+        assert!(e.is_retriable());
+    }
+
+    #[test]
+    fn non_device_lost_is_not_retriable() {
+        let e = BarracudaError::gpu("timeout");
+        assert!(!e.is_device_lost());
+        assert!(!e.is_retriable());
     }
 
     #[test]

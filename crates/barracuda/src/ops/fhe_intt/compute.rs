@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU compute operations for FHE Inverse Number Theoretic Transform
 //!
 //! This module contains the GPU execution logic for INTT transformation,

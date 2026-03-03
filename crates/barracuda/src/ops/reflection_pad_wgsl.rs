@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Reflection Pad - Pad tensor with reflection - Pure WGSL
 //!
 //! Deep Debt Principles:

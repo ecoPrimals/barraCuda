@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Logsumexp - Numerically stable log-sum-exp - Pure WGSL
 //!
 //! Deep Debt Principles:

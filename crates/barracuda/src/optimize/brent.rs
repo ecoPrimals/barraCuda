@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Brent's root-finding algorithm
 //!
 //! Combines the reliability of bisection with the speed of inverse quadratic

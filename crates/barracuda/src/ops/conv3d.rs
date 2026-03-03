@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Conv3D - 3D Convolution
 //! Pure WGSL implementation
 //!

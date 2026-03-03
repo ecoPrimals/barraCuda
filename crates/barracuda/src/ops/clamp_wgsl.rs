@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Clamp - Clamp values between min and max - Pure WGSL
 //!
 //! Deep Debt Principles:

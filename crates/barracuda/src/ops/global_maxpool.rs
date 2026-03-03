@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Global Max Pooling Operation - Spatial reduction to single value
 //!
 //! **Deep Debt Evolution**: Modernized from trait-based to direct `impl Tensor`

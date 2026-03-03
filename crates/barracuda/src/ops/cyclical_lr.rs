@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Cyclical learning rate operation
 //!
 //! Cycles learning rate between bounds for better convergence

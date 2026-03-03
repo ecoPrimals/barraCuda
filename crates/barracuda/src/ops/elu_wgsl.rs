@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! ELU — GPU-resident, pipeline-cached, batchable
 //!
 //! Deep Debt Principles:

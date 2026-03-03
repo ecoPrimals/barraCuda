@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Optimization algorithms for parameter fitting and model calibration
 //!
 //! This module provides both gradient-free and gradient-based optimization

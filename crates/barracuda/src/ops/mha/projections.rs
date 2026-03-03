@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Decomposed projection operations for Multi-Head Attention.
 //!
 //! Instead of fusing matmul + head reshape into a single kernel (which causes

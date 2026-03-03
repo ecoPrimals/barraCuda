@@ -1,0 +1,7 @@
+# barraCuda — rustfmt configuration
+# Aligned with ecoPrimals ecosystem standards (matches toadStool)
+edition = "2021"
+max_width = 100
+tab_spaces = 4
+use_field_init_shorthand = true
+use_try_shorthand = true

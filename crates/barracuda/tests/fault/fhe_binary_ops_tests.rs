@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! FHE Fault Tests - Remaining Operations
 //! 
 //! Additional fault tests for: fhe_pointwise_mul, fhe_fast_poly_mul,

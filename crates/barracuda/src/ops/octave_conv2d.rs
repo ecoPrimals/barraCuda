@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! OctaveConv2D - Octave Convolution 2D
 //!
 //! **Deep Debt Principles**:

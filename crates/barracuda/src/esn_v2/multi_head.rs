@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Multi-head ESN: shared reservoir with per-head readouts (hotSpring 36-head concept).
 //!
 //! `HeadKind` provides a domain-agnostic head classification system:

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Scaled Dot-Product Attention - Transformer core operation
 //!
 //! ## Deep Debt Principles

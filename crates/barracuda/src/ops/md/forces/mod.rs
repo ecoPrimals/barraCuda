@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Force Kernels Module
 //!
 //! Implementations of fundamental force calculations for molecular dynamics:

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Device Capability Detection — Runtime Hardware Limits (wgpu).
 //!
 //! Answers "what can this wgpu device do?" by querying the adapter at

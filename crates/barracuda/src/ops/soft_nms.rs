@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Soft NMS - Soft Non-Maximum Suppression
 //!
 //! Reduces scores of overlapping boxes instead of removing them.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GeluApproximate - Pure WGSL
 //!
 //! Deep Debt Principles:

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU-Accelerated Velocity Autocorrelation Function (VACF)
 //!
 //! **Physics**: C(τ) = <v(t) · v(t+τ)> / <v(0)·v(0)>
@@ -216,7 +217,7 @@ impl VacfGpu {
 }
 
 fn n_particles_u32(n: usize) -> u32 {
-    debug_assert!(n <= u32::MAX as usize, "n_particles must fit in u32");
+    debug_assert!(u32::try_from(n).is_ok(), "n_particles must fit in u32");
     n as u32
 }
 

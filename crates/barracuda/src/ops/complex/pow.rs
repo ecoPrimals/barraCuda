@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Complex Power z^n
 
 use crate::device::{DeviceCapabilities, WorkloadType};

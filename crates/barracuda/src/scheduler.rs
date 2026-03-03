@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Unified Scheduler - Automatic Hardware Selection
 //!
 //! **Philosophy**: Pick the best hardware for each operation automatically

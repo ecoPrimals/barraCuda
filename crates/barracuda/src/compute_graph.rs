@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Compute Graph - Lazy Execution for Operation Batching
 //!
 //! **Problem**: wgpu has significant per-dispatch overhead (~50-100μs).
@@ -69,6 +70,7 @@ pub enum RecordedOp {
 /// Records operations without executing them, then batches
 /// all operations into a single command buffer submission.
 pub struct ComputeGraph {
+    wgpu_device: Arc<WgpuDevice>,
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
     device_name: String,
@@ -81,6 +83,7 @@ impl ComputeGraph {
     pub fn new(wgpu_device: &WgpuDevice) -> Self {
         let optimal_wg = wgpu_device.optimal_workgroup_size();
         Self {
+            wgpu_device: Arc::new(wgpu_device.clone()),
             device: wgpu_device.device.clone(),
             queue: wgpu_device.queue.clone(),
             device_name: wgpu_device.name().to_string(),
@@ -306,23 +309,13 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
             }
         }
 
-        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            self.queue.submit(Some(encoder.finish()));
-            self.device.poll(wgpu::Maintain::Wait);
-        }));
+        self.wgpu_device
+            .submit_and_poll_inner(Some(encoder.finish()));
         self.ops.clear();
-        if let Err(payload) = result {
-            let msg = payload
-                .downcast_ref::<String>()
-                .map(|s| s.as_str())
-                .or_else(|| payload.downcast_ref::<&str>().copied())
-                .unwrap_or("unknown");
-            if msg.contains("lost") || msg.contains("Lost") || msg.contains("Parent device") {
-                return Err(crate::error::BarracudaError::device(
-                    "GPU device lost during compute graph execution",
-                ));
-            }
-            std::panic::resume_unwind(payload);
+        if self.wgpu_device.is_lost() {
+            return Err(crate::error::BarracudaError::device(
+                "GPU device lost during compute graph execution",
+            ));
         }
 
         Ok(())

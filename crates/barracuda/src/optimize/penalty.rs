@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Adaptive penalty functions for constrained optimization
 //!
 //! Provides data-driven penalty scaling that adapts to the objective landscape.

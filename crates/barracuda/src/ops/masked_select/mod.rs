@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Masked Select - Pure WGSL
 //!
 //! Deep Debt Principles:

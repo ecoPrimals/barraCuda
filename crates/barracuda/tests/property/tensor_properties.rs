@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Property-based tests for tensor operations
 //!
 //! Tests mathematical properties that should always hold:

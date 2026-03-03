@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Chaos Tests: Stress Testing
 //!
 //! Test operations under memory pressure and large inputs

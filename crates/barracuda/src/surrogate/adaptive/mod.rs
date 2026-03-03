@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Adaptive dispatch for RBF surrogate training
 //!
 //! Implements dual-precision training strategy:
@@ -330,8 +331,8 @@ async fn compute_distances_gpu(
     n_dim: usize,
     device: Arc<WgpuDevice>,
 ) -> Result<Vec<f64>> {
-    // Create GPU tensor from training data
-    let tensor = Tensor::from_vec_on(x_f32.to_vec(), vec![n, n_dim], device).await?;
+    // Create GPU tensor (zero-copy: from_data borrows slice)
+    let tensor = Tensor::from_data(x_f32, vec![n, n_dim], device)?;
 
     // Compute pairwise distances using cdist shader
     // For self-distance matrix, input_a == input_b

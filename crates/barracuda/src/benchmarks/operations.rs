@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Benchmark Operations - Real operation benchmarks
 //!
 //! Provides benchmarking implementations for different operation categories.

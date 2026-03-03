@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! 1D gradient computation: df/dx
 
 use super::super::fd_common::{create_staging_buffer, FdPipelineBuilder, FD_WORKGROUP_SIZE};

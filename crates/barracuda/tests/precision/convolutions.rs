@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Precision Tests: Convolutions
 //!
 //! Validate FP32 precision for Conv2D, pooling operations

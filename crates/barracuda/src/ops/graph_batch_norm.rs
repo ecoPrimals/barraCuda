@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Graph Batch Normalization - Batch normalization adapted for graph data (Pure WGSL)
 //!
 //! Normalizes node features across the batch and feature dimensions

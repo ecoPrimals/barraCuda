@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Tensor Split - Pure WGSL
 //!
 //! Deep Debt Principles:

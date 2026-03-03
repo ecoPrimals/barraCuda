@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Dispatch semaphore — gates concurrent dispatch volume.
 //!
 //! The device knows its own concurrency budget: CPU/software backends

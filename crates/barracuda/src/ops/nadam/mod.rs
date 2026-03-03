@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! NAdam Optimizer - GPU-accelerated Nesterov-accelerated Adam
 //!
 //! **Deep Debt Principles**:

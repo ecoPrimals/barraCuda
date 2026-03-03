@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Elastic transform operation - Elastic deformation for data augmentation
 //!
 //! Elastic deformations: Random displacement fields for image augmentation

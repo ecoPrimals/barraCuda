@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU compute operations for FHE Number Theoretic Transform
 //!
 //! This module contains the GPU execution logic for NTT transformation,
@@ -228,7 +229,8 @@ impl FheNtt {
         }
 
         // After each stage we swap, so current_input always references the last written buffer.
-        let final_buffer = if std::ptr::eq(current_input, &intermediate_buffer) {
+        let final_buffer = if std::ptr::eq(current_input, std::ptr::from_ref(&intermediate_buffer))
+        {
             intermediate_buffer
         } else {
             output_buffer

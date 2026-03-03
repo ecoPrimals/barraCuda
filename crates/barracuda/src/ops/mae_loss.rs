@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! MAE Loss - GPU-accelerated Mean Absolute Error Loss
 //!
 //! **Deep Debt Principles**:

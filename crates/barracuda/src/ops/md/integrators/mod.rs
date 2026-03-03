@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Time Integrators Module
 //!
 //! Implementations of numerical integration schemes for ODEs/PDEs:

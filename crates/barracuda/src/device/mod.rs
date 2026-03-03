@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Device module - Unified Hardware Abstraction
 //!
 //! **Phase 2: Unified Device Architecture**:
@@ -117,15 +118,26 @@ impl DeviceSelection {
 }
 
 /// What kind of work needs to be done (hardware routing level)
+///
+/// Used by the kernel router and device selection to pick optimal hardware.
+/// Each variant maps to different backend preferences (e.g. NPU for spiking, GPU for dense matmul).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HardwareWorkload {
+    /// General tensor ops (matmul, elementwise) — GPU preferred.
     TensorOps,
+    /// Dense neural networks (MLP, attention) — GPU preferred.
     NeuralNetwork,
+    /// Spiking neural networks — NPU preferred when available.
     SpikingNetwork,
+    /// Reservoir computing / ESN — GPU or CPU depending on size.
     ReservoirComputing,
+    /// Sequence alignment, k-mer analysis — GPU for batch, CPU for small.
     Genomics,
+    /// Phylogenetics, HMM, Smith-Waterman — GPU batch preferred.
     Bioinformatics,
+    /// PDE/ODE, FFT, sparse solvers — GPU f64 preferred.
     ScientificCompute,
+    /// FHE polynomial ops (NTT, key switch) — GPU preferred.
     HomomorphicEncryption,
 }
 

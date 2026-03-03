@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Channel Shuffle - Rearrange CNN channels - Pure WGSL
 //!
 //! **Deep Debt Principles**:

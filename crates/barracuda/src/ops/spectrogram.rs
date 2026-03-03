@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Spectrogram - Power spectrogram computation
 //!
 //! Computes magnitude squared of STFT.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Comprehensive tests for buffer pooling system
 //!
 //! Test categories:
@@ -261,7 +262,7 @@ async fn fault_pool_survives_device_poll() {
     let buf2 = ctx.acquire_pooled_output(2000);
 
     // Device operations (poll)
-    device.device().poll(wgpu::Maintain::Wait);
+    let _ = device.poll_safe();
 
     // Buffers should still be valid
     assert!(buf1.size() >= 4000);

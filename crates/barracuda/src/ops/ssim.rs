@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! SSIM - Structural Similarity Index (Wang et al.)
 //!
 //! Perceptual similarity metric for images.

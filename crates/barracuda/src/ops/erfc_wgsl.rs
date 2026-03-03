@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! ERFC - Complementary error function operation - Pure WGSL
 //!
 //! Deep Debt Principles:

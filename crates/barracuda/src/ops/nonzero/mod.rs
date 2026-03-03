@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! NonZero - GPU prefix sum implementation
 //!
 //! **Deep Debt Principles**:

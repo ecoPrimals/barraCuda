@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Fault Injection Tests - Error scenarios and graceful degradation
 //!
 //! **Purpose**: Validate error handling under failure conditions

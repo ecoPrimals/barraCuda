@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! BESSEL J0 - Bessel function of the first kind, order 0
 //!
 //! J₀(x) for cylindrical coordinate physics. Uses rational polynomial

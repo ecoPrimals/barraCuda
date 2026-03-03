@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Lattice shaders absorbed from hotSpring (Feb 2026).
 //!
 //! These WGSL shaders are self-contained and available for GPU-resident

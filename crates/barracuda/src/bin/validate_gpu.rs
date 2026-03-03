@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! barraCuda GPU Validation Binary
 //!
 //! Runs the canary suite to verify GPU compute correctness before
@@ -23,10 +24,7 @@ struct ValidationResult {
     elapsed: std::time::Duration,
 }
 
-fn u64_to_tensor(
-    poly: &[u64],
-    device: &Arc<WgpuDevice>,
-) -> Result<Tensor, BarracudaError> {
+fn u64_to_tensor(poly: &[u64], device: &Arc<WgpuDevice>) -> Result<Tensor, BarracudaError> {
     let u32_pairs: Vec<u32> = poly
         .iter()
         .flat_map(|&x| [(x & 0xFFFF_FFFF) as u32, (x >> 32) as u32])
@@ -98,9 +96,7 @@ async fn validate_fhe_ntt_roundtrip(
 }
 
 /// FHE pointwise modular multiplication
-async fn validate_fhe_pointwise_mul(
-    device: &Arc<WgpuDevice>,
-) -> ValidationResult {
+async fn validate_fhe_pointwise_mul(device: &Arc<WgpuDevice>) -> ValidationResult {
     let name = "FHE pointwise mod-mul (mod 12289)".to_string();
     let start = Instant::now();
 
@@ -278,10 +274,7 @@ async fn main() -> Result<(), BarracudaError> {
     let device = match WgpuDevice::new().await {
         Ok(dev) => {
             let info = dev.adapter_info();
-            println!(
-                "Device: {} ({:?})\n",
-                info.name, info.device_type
-            );
+            println!("Device: {} ({:?})\n", info.name, info.device_type);
             Arc::new(dev)
         }
         Err(e) => {
@@ -295,12 +288,8 @@ async fn main() -> Result<(), BarracudaError> {
     results.push(validate_device_probe(&device).await);
     results.push(validate_matmul(&device).await);
     results.push(validate_df64_precision(&device).await);
-    results.push(
-        validate_fhe_ntt_roundtrip(&device, 4, 17, 4).await,
-    );
-    results.push(
-        validate_fhe_ntt_roundtrip(&device, 8, 12289, 11).await,
-    );
+    results.push(validate_fhe_ntt_roundtrip(&device, 4, 17, 4).await);
+    results.push(validate_fhe_ntt_roundtrip(&device, 8, 12289, 11).await);
     results.push(validate_fhe_pointwise_mul(&device).await);
 
     println!("Results:");
@@ -322,7 +311,10 @@ async fn main() -> Result<(), BarracudaError> {
         }
     }
 
-    println!("\n{passed} passed, {failed} failed out of {} tests", results.len());
+    println!(
+        "\n{passed} passed, {failed} failed out of {} tests",
+        results.len()
+    );
 
     if failed > 0 {
         println!("\nGPU validation FAILED — do not trust this device for scientific compute.");

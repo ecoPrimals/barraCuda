@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! HERMITE F64 - Physicist's Hermite polynomials - f64 precision WGSL
 //!
 //! Deep Debt Principles:

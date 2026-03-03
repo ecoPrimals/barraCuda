@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Flash Attention - Memory-efficient attention mechanism
 //!
 //! **Deep Debt Principles**:

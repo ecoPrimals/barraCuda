@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Direct round-based optimization sampler
 //!
 //! Unlike surrogate-guided optimization (SparsitySampler), this module runs

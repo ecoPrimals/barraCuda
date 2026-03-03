@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Gamma and Incomplete Gamma Functions — CPU reference implementations.
 //!
 //! **Shader-first architecture**: These functions have f64 WGSL equivalents in

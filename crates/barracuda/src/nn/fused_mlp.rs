@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Fused MLP forward pass — BatchedEncoder for single-submit across all layers.
 
 use crate::device::BatchedEncoder;

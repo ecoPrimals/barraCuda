@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Circular Pad - Pad with circular wrapping - Pure WGSL
 //!
 //! Deep Debt Principles:

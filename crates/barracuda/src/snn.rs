@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! High-level Spiking Neural Network (SNN) API
 //!
 //! **EVOLVED**: Pure Rust spike processing - No specialized WGSL shaders!

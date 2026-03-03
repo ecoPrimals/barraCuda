@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Cumulative Product (f64) - GPU-accelerated prefix product
 //!
 //! Computes cumulative product along a dimension in double precision.

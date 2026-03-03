@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Benchmark operation runners — CPU/GPU execution for threshold calibration
 
 use crate::device::WgpuDevice;

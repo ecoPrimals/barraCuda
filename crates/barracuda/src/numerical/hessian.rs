@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Numerical Hessian computation via finite differences
 
 /// Numerical Hessian via central finite differences.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Device creation and adapter selection
 //!
 //! **Why this file is large (~640 lines)**: Single concern—"how do I obtain a
@@ -9,6 +10,13 @@ use super::WgpuDevice;
 use crate::device::probe;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
+
+/// Global serialization guard for wgpu device creation.
+///
+/// Vulkan drivers (especially NVK/nouveau) can segfault when concurrent
+/// `request_device` calls race on the kernel DRM file descriptor. This
+/// mutex ensures all device creation across the entire process is serial.
+static DEVICE_CREATION_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 /// Environment variable for adapter selection
 pub const ADAPTER_ENV_VAR: &str = "BARRACUDA_GPU_ADAPTER";
@@ -69,7 +77,11 @@ impl WgpuDevice {
                 tracing::warn!("GPU device lost (flagged for pool recovery): {msg}");
                 return;
             }
-            panic!("wgpu uncaptured error: {msg}");
+            // Flag the device as lost for any uncaptured error — the device is
+            // in an indeterminate state and should be replaced rather than
+            // crashing the process.
+            flag.store(true, std::sync::atomic::Ordering::Release);
+            tracing::error!("wgpu uncaptured error (device flagged lost): {msg}");
         }));
     }
 
@@ -77,11 +89,17 @@ impl WgpuDevice {
         if !device.features().contains(wgpu::Features::PIPELINE_CACHE) {
             return None;
         }
-        // SAFETY: wgpu::Device::create_pipeline_cache is unsafe because when `data` is
-        // `Some(...)`, it must have been returned from PipelineCache::get_data and match
-        // the adapter's pipeline_cache_key; corrupted or cross-version data could cause
-        // driver UB. We pass `data: None` — empty initial cache, no untrusted input.
-        // Invariants satisfied: no serialized blob to validate; fresh cache creation only.
+        // SAFETY: wgpu::Device::create_pipeline_cache is unsafe (wgpu API constraint).
+        // - Why unsafe: When `data` is Some(...), it must have been returned from
+        //   PipelineCache::get_data and match the adapter's pipeline_cache_key; corrupted,
+        //   cross-version, or cross-adapter data could cause driver UB.
+        // - Invariants we maintain: We pass `data: None` — empty initial cache only. No
+        //   serialized blob to validate; no untrusted or persisted input.
+        // - What could go wrong: If we ever passed Some(data), wrong data could cause
+        //   driver crashes, GPU hangs, or undefined behavior. We avoid this by never
+        //   passing data.
+        // - Minimum unsafe surface: wgpu 22.x has no safe alternative; this is the only
+        //   way to create a pipeline cache. Our use case (fresh cache) is the safest.
         #[allow(unsafe_code)]
         Some(Arc::new(unsafe {
             device.create_pipeline_cache(&wgpu::PipelineCacheDescriptor {
@@ -180,6 +198,7 @@ impl WgpuDevice {
         );
 
         let required_features = negotiate_features(&adapter, &DESIRED_FEATURES);
+        let _creation_guard = DEVICE_CREATION_LOCK.lock().await;
         let (device, queue) = adapter
             .request_device(
                 &wgpu::DeviceDescriptor {
@@ -192,6 +211,7 @@ impl WgpuDevice {
             )
             .await
             .map_err(|e| BarracudaError::device(format!("Failed to create CPU device: {e}")))?;
+        drop(_creation_guard);
 
         Ok(Self::assemble(device, queue, adapter_info))
     }
@@ -224,6 +244,7 @@ impl WgpuDevice {
         );
 
         let required_features = negotiate_features(&adapter, &DESIRED_FEATURES_EXTENDED);
+        let _creation_guard = DEVICE_CREATION_LOCK.lock().await;
         let (device, queue) = adapter
             .request_device(
                 &wgpu::DeviceDescriptor {
@@ -236,6 +257,7 @@ impl WgpuDevice {
             )
             .await
             .map_err(|e| BarracudaError::device(format!("Failed to create device: {e}")))?;
+        drop(_creation_guard);
 
         let actual_limits = device.limits();
         tracing::info!(
@@ -508,6 +530,7 @@ impl WgpuDevice {
         );
 
         let required_features = negotiate_features(adapter, &DESIRED_FEATURES_EXTENDED);
+        let _creation_guard = DEVICE_CREATION_LOCK.lock().await;
         let (device, queue) = adapter
             .request_device(
                 &wgpu::DeviceDescriptor {
@@ -520,6 +543,7 @@ impl WgpuDevice {
             )
             .await
             .map_err(|e| BarracudaError::device(format!("Failed to create device: {e}")))?;
+        drop(_creation_guard);
 
         Ok(Self::assemble(device, queue, info))
     }
@@ -566,6 +590,7 @@ impl WgpuDevice {
             tracing::info!("  SPIRV_SHADER_PASSTHROUGH: enabled (sovereign compiler active)");
         }
 
+        let _creation_guard = DEVICE_CREATION_LOCK.lock().await;
         let (device, queue) = adapter
             .request_device(
                 &wgpu::DeviceDescriptor {
@@ -578,6 +603,7 @@ impl WgpuDevice {
             )
             .await
             .map_err(|e| BarracudaError::device(format!("Failed to create device: {e}")))?;
+        drop(_creation_guard);
 
         let wgpu_device = Self::assemble(device, queue, adapter_info);
 

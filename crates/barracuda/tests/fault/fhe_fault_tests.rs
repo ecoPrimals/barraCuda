@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! FHE Fault Tests - Invalid Inputs & Boundary Cases
 //!
 //! **Purpose**: Validate error handling for all FHE operations

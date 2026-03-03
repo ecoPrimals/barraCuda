@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Async Submission System for BarraCuda
 //!
 //! Provides non-blocking GPU submission with operation batching.
@@ -40,15 +41,16 @@
 //! submitter.wait_for(index);
 //! ```
 
+use super::WgpuDevice;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 /// Async GPU submission manager
 ///
 /// Batches GPU operations and provides non-blocking submission tracking.
+/// Holds `Arc<WgpuDevice>` to synchronize submit/poll via `WgpuDevice::lock()`.
 pub struct AsyncSubmitter {
-    device: Arc<wgpu::Device>,
-    queue: Arc<wgpu::Queue>,
+    device: Arc<WgpuDevice>,
     /// Pending command buffers to be submitted
     pending: Mutex<Vec<wgpu::CommandBuffer>>,
     /// Submission counter for tracking work
@@ -59,10 +61,9 @@ pub struct AsyncSubmitter {
 
 impl AsyncSubmitter {
     /// Create a new async submitter
-    pub fn new(device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>) -> Self {
+    pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self {
             device,
-            queue,
             pending: Mutex::new(Vec::with_capacity(16)),
             submission_index: AtomicU64::new(0),
             completed_index: AtomicU64::new(0),
@@ -86,11 +87,12 @@ impl AsyncSubmitter {
     where
         F: FnOnce(&mut wgpu::CommandEncoder),
     {
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("AsyncSubmitter encoder"),
-            });
+        let mut encoder =
+            self.device
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("AsyncSubmitter encoder"),
+                });
         f(&mut encoder);
         self.queue(encoder.finish());
     }
@@ -98,6 +100,7 @@ impl AsyncSubmitter {
     /// Submit all pending command buffers
     ///
     /// Returns a submission index that can be used to track completion.
+    /// Holds `WgpuDevice::lock()` during submit to prevent concurrent access.
     pub fn submit_all(&self) -> u64 {
         let mut pending = self.pending.lock().expect("pending mutex poisoned");
         if pending.is_empty() {
@@ -107,16 +110,17 @@ impl AsyncSubmitter {
         // Get new submission index
         let index = self.submission_index.fetch_add(1, Ordering::SeqCst) + 1;
 
-        // Submit all pending buffers in one call
+        // Submit all pending buffers in one call — hold lock for submit
         let buffers: Vec<_> = pending.drain(..).collect();
-        self.queue.submit(buffers);
+        let _guard = self.device.lock();
+        self.device.queue().submit(buffers);
 
         // Register a callback to update completed index when done
         let completed = Arc::new(AtomicU64::new(0));
         let completed_clone = completed.clone();
         let idx = index;
 
-        self.queue.on_submitted_work_done(move || {
+        self.device.queue().on_submitted_work_done(move || {
             completed_clone.store(idx, Ordering::SeqCst);
         });
 
@@ -126,9 +130,11 @@ impl AsyncSubmitter {
     /// Submit a single command buffer immediately
     ///
     /// Use when you need immediate submission without batching.
+    /// Holds `WgpuDevice::lock()` during submit.
     pub fn submit_immediate(&self, command_buffer: wgpu::CommandBuffer) -> u64 {
         let index = self.submission_index.fetch_add(1, Ordering::SeqCst) + 1;
-        self.queue.submit(Some(command_buffer));
+        let _guard = self.device.lock();
+        self.device.queue().submit(Some(command_buffer));
         index
     }
 
@@ -142,23 +148,26 @@ impl AsyncSubmitter {
     /// Check if work at the given index is complete
     ///
     /// Note: This is approximate. For precise synchronization, use `wait_for()`.
+    /// Holds `WgpuDevice::lock()` during non-blocking poll.
     pub fn is_complete(&self, index: u64) -> bool {
-        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            self.device.poll(wgpu::Maintain::Poll);
-        }));
+        if !self.device.is_lost() {
+            let _guard = self.device.lock();
+            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                self.device.device().poll(wgpu::Maintain::Poll);
+            }));
+        }
         self.completed_index.load(Ordering::SeqCst) >= index
     }
 
     /// Wait for work at the given index to complete
     ///
     /// Blocks until all GPU work up to and including the given index is done.
+    /// Uses `poll_safe()` to respect the device lock.
     pub fn wait_for(&self, index: u64) {
         if self.completed_index.load(Ordering::SeqCst) >= index {
             return;
         }
-        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            self.device.poll(wgpu::Maintain::Wait);
-        }));
+        let _ = self.device.poll_safe();
     }
 
     /// Wait for all pending work to complete
@@ -183,10 +192,12 @@ impl AsyncSubmitter {
 /// Async buffer read operation
 ///
 /// Wraps a wgpu buffer read that can be awaited without blocking.
+/// Holds `Arc<WgpuDevice>` to synchronize poll via `WgpuDevice::lock()`.
 ///
 /// Uses `std::sync::mpsc` (stdlib) instead of `futures::channel::oneshot`
 /// — no external async runtime required for the channel itself.
 pub struct AsyncReadback {
+    device: Arc<WgpuDevice>,
     staging_buffer: wgpu::Buffer,
     size_bytes: u64,
     receiver: std::sync::mpsc::Receiver<Result<(), wgpu::BufferAsyncError>>,
@@ -196,26 +207,29 @@ impl AsyncReadback {
     /// Create a new async readback operation
     ///
     /// Copies from source buffer to staging and initiates async map.
-    pub fn new(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        source: &wgpu::Buffer,
-        size_bytes: u64,
-    ) -> Self {
+    /// Holds `WgpuDevice::lock()` during submit to prevent concurrent access.
+    pub fn new(device: &WgpuDevice, source: &wgpu::Buffer, size_bytes: u64) -> Self {
+        let device = Arc::new(device.clone());
+
         // Create staging buffer
-        let staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        let staging_buffer = device.device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("AsyncReadback staging"),
             size: size_bytes,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
-        // Copy source to staging
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("AsyncReadback copy"),
-        });
+        // Copy source to staging — hold lock for submit
+        let mut encoder = device
+            .device()
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("AsyncReadback copy"),
+            });
         encoder.copy_buffer_to_buffer(source, 0, &staging_buffer, 0, size_bytes);
-        queue.submit(Some(encoder.finish()));
+        {
+            let _guard = device.lock();
+            device.queue().submit(Some(encoder.finish()));
+        }
 
         // Start async map — stdlib mpsc, capacity 1 (single result, no blocking).
         let (sender, receiver) =
@@ -227,6 +241,7 @@ impl AsyncReadback {
             });
 
         Self {
+            device,
             staging_buffer,
             size_bytes,
             receiver,
@@ -234,23 +249,32 @@ impl AsyncReadback {
     }
 
     /// Poll the device and check if data is ready (non-blocking).
-    pub fn poll(&self, device: &wgpu::Device) -> bool {
-        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            device.poll(wgpu::Maintain::Poll);
-        }));
+    /// Holds `WgpuDevice::lock()` during poll.
+    pub fn poll(&self) -> bool {
+        if !self.device.is_lost() {
+            let _guard = self.device.lock();
+            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                self.device.device().poll(wgpu::Maintain::Poll);
+            }));
+        }
         self.receiver.try_recv().is_ok()
     }
 
     /// Poll the device until the buffer is ready (async-safe cooperative poll).
     ///
     /// Yields to the Tokio executor between device polls to avoid starving
-    /// other tasks. Uses `mpsc::try_recv()` — no futures dependency needed.
-    async fn poll_until_ready(&mut self, device: &wgpu::Device) -> Result<(), String> {
+    /// other tasks. Holds `WgpuDevice::lock()` during each poll.
+    async fn poll_until_ready(&mut self) -> Result<(), String> {
         loop {
-            let poll_ok = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                device.poll(wgpu::Maintain::Poll);
-            }))
-            .is_ok();
+            let poll_ok = if !self.device.is_lost() {
+                let _guard = self.device.lock();
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    self.device.device().poll(wgpu::Maintain::Poll);
+                }))
+                .is_ok()
+            } else {
+                false
+            };
 
             if !poll_ok {
                 return Err("GPU device lost during poll".to_string());
@@ -273,8 +297,8 @@ impl AsyncReadback {
     /// Wait for data and read as f32 (async-safe)
     ///
     /// Uses cooperative polling that yields to the async executor.
-    pub async fn read_f32(mut self, device: &wgpu::Device) -> Result<Vec<f32>, String> {
-        self.poll_until_ready(device).await?;
+    pub async fn read_f32(mut self) -> Result<Vec<f32>, String> {
+        self.poll_until_ready().await?;
 
         // Read data
         let data = self.staging_buffer.slice(..).get_mapped_range();
@@ -288,8 +312,8 @@ impl AsyncReadback {
     }
 
     /// Wait for data and read as f64 (async-safe)
-    pub async fn read_f64(mut self, device: &wgpu::Device) -> Result<Vec<f64>, String> {
-        self.poll_until_ready(device).await?;
+    pub async fn read_f64(mut self) -> Result<Vec<f64>, String> {
+        self.poll_until_ready().await?;
 
         let data = self.staging_buffer.slice(..).get_mapped_range();
         // Allocation required: mapped range is dropped before return; caller receives owned Vec
@@ -302,8 +326,8 @@ impl AsyncReadback {
     }
 
     /// Wait for data and read as u32 (async-safe)
-    pub async fn read_u32(mut self, device: &wgpu::Device) -> Result<Vec<u32>, String> {
-        self.poll_until_ready(device).await?;
+    pub async fn read_u32(mut self) -> Result<Vec<u32>, String> {
+        self.poll_until_ready().await?;
 
         let data = self.staging_buffer.slice(..).get_mapped_range();
         // Allocation required: mapped range is dropped before return; caller receives owned Vec
@@ -316,8 +340,8 @@ impl AsyncReadback {
     }
 
     /// Wait for data and read as raw bytes (async-safe)
-    pub async fn read_bytes(mut self, device: &wgpu::Device) -> Result<Vec<u8>, String> {
-        self.poll_until_ready(device).await?;
+    pub async fn read_bytes(mut self) -> Result<Vec<u8>, String> {
+        self.poll_until_ready().await?;
 
         let data = self.staging_buffer.slice(..).get_mapped_range();
         let result = data.to_vec();
@@ -330,13 +354,11 @@ impl AsyncReadback {
 
     /// Blocking read as f32 (for sync contexts).
     ///
-    /// `device.poll(Wait)` guarantees the map callback has fired, so `recv()`
-    /// returns immediately — no async runtime needed.
-    pub fn read_f32_blocking(self, device: &wgpu::Device) -> Result<Vec<f32>, String> {
-        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            device.poll(wgpu::Maintain::Wait);
-        }))
-        .map_err(|_| "GPU device lost during blocking poll".to_string())?;
+    /// Uses `poll_safe()` so the map callback fires before `recv()` — no async runtime needed.
+    pub fn read_f32_blocking(self) -> Result<Vec<f32>, String> {
+        self.device
+            .poll_safe()
+            .map_err(|_| "GPU device lost during blocking poll".to_string())?;
 
         self.receiver
             .recv()
@@ -352,11 +374,10 @@ impl AsyncReadback {
     }
 
     /// Blocking read as f64 (for sync contexts).
-    pub fn read_f64_blocking(self, device: &wgpu::Device) -> Result<Vec<f64>, String> {
-        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            device.poll(wgpu::Maintain::Wait);
-        }))
-        .map_err(|_| "GPU device lost during blocking poll".to_string())?;
+    pub fn read_f64_blocking(self) -> Result<Vec<f64>, String> {
+        self.device
+            .poll_safe()
+            .map_err(|_| "GPU device lost during blocking poll".to_string())?;
 
         self.receiver
             .recv()
@@ -388,10 +409,7 @@ mod tests {
             return; // Skip if no GPU available
         };
 
-        let submitter = AsyncSubmitter::new(
-            Arc::clone(&wgpu_device.device),
-            Arc::clone(&wgpu_device.queue),
-        );
+        let submitter = AsyncSubmitter::new(Arc::clone(&wgpu_device));
         assert_eq!(submitter.pending_count(), 0);
         assert_eq!(submitter.current_index(), 0);
     }

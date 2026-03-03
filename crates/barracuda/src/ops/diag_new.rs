@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Diag - Extract matrix diagonal - Pure WGSL
 //!
 //! **Deep Debt Principles**:

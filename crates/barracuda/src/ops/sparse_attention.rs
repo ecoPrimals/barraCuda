@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Sparse Attention - Strided attention pattern
 //!
 //! Only attends to every k-th token (stride).

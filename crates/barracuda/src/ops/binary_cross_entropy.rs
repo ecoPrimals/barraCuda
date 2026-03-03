@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Binary Cross Entropy Loss
 //! Pure WGSL implementation
 

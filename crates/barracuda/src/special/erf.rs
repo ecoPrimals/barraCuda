@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Error function and complementary error function
 //!
 //! Implements erf(x) and erfc(x) using rational polynomial approximations

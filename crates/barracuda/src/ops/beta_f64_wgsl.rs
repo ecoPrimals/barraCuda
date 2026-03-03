@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! BETA F64 - Beta function B(a,b) = Γ(a)Γ(b)/Γ(a+b) - f64 precision
 //!
 //! Deep Debt Principles:

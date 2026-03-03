@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Universal Substrate Cache Hierarchy
 //!
 //! **RUNTIME DISCOVERY, NOT VENDOR HARDCODING**
@@ -314,7 +315,6 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 "#;
 
         let wgpu_device = device.device();
-        let queue = device.queue();
 
         // Create test buffers
         let data: Vec<f32> = (0..elements).map(|i| i as f32 * 0.001).collect();
@@ -388,7 +388,8 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
         let workgroups = (elements as u32).div_ceil(256).min(65_535);
 
-        let run_pass = |poll: bool| {
+        // Hold WgpuDevice::lock() for all submit/poll via submit_and_poll_inner
+        let run_pass = || {
             let mut enc =
                 wgpu_device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
             {
@@ -397,21 +398,28 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
                 p.set_bind_group(0, &bind_group, &[]);
                 p.dispatch_workgroups(workgroups, 1, 1);
             }
-            queue.submit(Some(enc.finish()));
-            if poll {
-                wgpu_device.poll(wgpu::Maintain::Wait);
-            }
+            device.submit_and_poll_inner(Some(enc.finish()));
         };
 
+        // Warmup: submit 3 command buffers, then poll once
+        let mut warmup_buffers = Vec::with_capacity(3);
         for _ in 0..3 {
-            run_pass(false);
+            let mut enc =
+                wgpu_device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+            {
+                let mut p = enc.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
+                p.set_pipeline(&pipeline);
+                p.set_bind_group(0, &bind_group, &[]);
+                p.dispatch_workgroups(workgroups, 1, 1);
+            }
+            warmup_buffers.push(enc.finish());
         }
-        wgpu_device.poll(wgpu::Maintain::Wait);
+        device.submit_and_poll_inner(warmup_buffers);
 
         let iterations = 10;
         let start = Instant::now();
         for _ in 0..iterations {
-            run_pass(true);
+            run_pass();
         }
 
         let elapsed = start.elapsed();

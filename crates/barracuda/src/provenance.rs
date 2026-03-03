@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Cross-Spring Provenance Tags (L-005)
 //!
 //! Metadata for absorbed code from hotSpring, wetSpring, and neuralSpring.

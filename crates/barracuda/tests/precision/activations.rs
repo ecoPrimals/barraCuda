@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Precision Tests: Activation Functions
 //!
 //! Validate FP32 precision for GELU, Sigmoid, Tanh, etc.

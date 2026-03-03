@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! 1D Fast Fourier Transform Operation
 //!
 //! **Evolution**: Adapted from FheNtt (80% Rust structure reuse!)

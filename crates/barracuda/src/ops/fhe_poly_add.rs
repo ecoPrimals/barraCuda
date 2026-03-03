@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! FHE Polynomial Addition Operation
 //!
 //! **Purpose**: Add two FHE ciphertext polynomials on GPU

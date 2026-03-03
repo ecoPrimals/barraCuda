@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! SINH - Hyperbolic sine operation - Pure WGSL
 //!
 //! Deep Debt Principles:

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! PPPM compute with CPU FFT (k-space)
 
 use crate::error::{BarracudaError, Result};
@@ -45,9 +46,10 @@ pub async fn compute_with_kspace(
     let mesh_size = kx * ky * kz;
     let o3 = order * order * order;
 
-    let (device, queue, layouts, pipelines) = (
+    let (device, queue, wgpu_device, layouts, pipelines) = (
         pppm.device(),
         pppm.queue(),
+        pppm.wgpu_device(),
         pppm.layouts(),
         pppm.pipelines(),
     );
@@ -153,11 +155,11 @@ pub async fn compute_with_kspace(
     }
     queue.submit(Some(encoder.finish()));
 
-    let coeffs = SparseBuffers::read_f64_raw(device, queue, &coeffs_buffer, coeffs_size)?;
-    let derivs = SparseBuffers::read_f64_raw(device, queue, &derivs_buffer, coeffs_size)?;
-    let base_idx = SparseBuffers::read_i32_raw(device, queue, &base_idx_buffer, n * 3)?;
+    let coeffs = SparseBuffers::read_f64_raw(wgpu_device.as_ref(), &coeffs_buffer, coeffs_size)?;
+    let derivs = SparseBuffers::read_f64_raw(wgpu_device.as_ref(), &derivs_buffer, coeffs_size)?;
+    let base_idx = SparseBuffers::read_i32_raw(wgpu_device.as_ref(), &base_idx_buffer, n * 3)?;
     let per_particle_mesh =
-        SparseBuffers::read_f64_raw(device, queue, &per_particle_mesh_buffer, n * o3)?;
+        SparseBuffers::read_f64_raw(wgpu_device.as_ref(), &per_particle_mesh_buffer, n * o3)?;
 
     let mut charge_mesh = vec![0.0f64; mesh_size];
     for i in 0..n {
@@ -313,8 +315,8 @@ pub async fn compute_with_kspace(
     }
     queue.submit(Some(encoder.finish()));
 
-    let forces = SparseBuffers::read_f64_raw(device, queue, &forces_buffer, n * 3)?;
-    let pe_values = SparseBuffers::read_f64_raw(device, queue, &pe_buffer, n)?;
+    let forces = SparseBuffers::read_f64_raw(wgpu_device.as_ref(), &forces_buffer, n * 3)?;
+    let pe_values = SparseBuffers::read_f64_raw(wgpu_device.as_ref(), &pe_buffer, n)?;
     let pos_arrays: Vec<[f64; 3]> = positions
         .chunks_exact(3)
         .map(|c| [c[0], c[1], c[2]])

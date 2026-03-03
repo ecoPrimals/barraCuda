@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! # barraCuda: Hardware-Agnostic Tensor Compute
 //!
 //! **Deep Debt Excellence**: Zero duplication, pure capability-based compute
@@ -10,7 +11,7 @@
 //! - ✅ **Zero Duplication**: Single WGSL implementation per operation
 //! - ✅ **Runtime Discovery**: wgpu selects best available backend
 //! - ✅ **Simple**: No separate CPU code, no trait abstractions
-//! - ✅ **Pure Rust**: Zero unsafe in barraCuda core, zero FFI
+//! - ✅ **Minimal unsafe**: Exactly 2 wgpu FFI calls (pipeline cache, SPIR-V passthrough); no C FFI
 //!
 //! ## Architecture
 //!
@@ -63,22 +64,7 @@
 //! - Zero duplication: One implementation per op
 
 #![deny(unsafe_code)]
-// Zero unsafe in barraCuda core!
-// Ops documentation uses math variables like [N], [M], [batch_size] which
-// rustdoc interprets as links. These are intentional mathematical notation.
 #![allow(rustdoc::broken_intra_doc_links)]
-// Ops layer uses parameter-heavy GPU dispatch functions - refactoring to config
-// structs is a future evolution (tracked in specs/BARRACUDA_UNIVERSAL_COMPUTE_EVOLUTION.md)
-#![allow(clippy::too_many_arguments)]
-// Scoring/indexing loops in ops - will evolve to iterator patterns
-#![allow(clippy::needless_range_loop)]
-// Op types use `to_*` methods on Copy types for GPU dispatch serialization
-#![allow(clippy::wrong_self_convention)]
-// Some if-blocks are structurally identical but semantically different (e.g., kldiv_loss)
-#![allow(clippy::if_same_then_else)]
-// GPU dispatch, benchmark harness, and trait impls use async fn for future await (e.g., async
-// queue submission). Most ops are sync compute today; removing async would break trait signatures.
-#![allow(clippy::unused_async)]
 
 // ── CPU-only modules (always available, no GPU dependency) ────────────────────
 pub mod error;
@@ -104,9 +90,9 @@ pub mod cpu_executor;
 pub mod device;
 #[cfg(feature = "gpu")]
 pub mod dispatch;
-#[cfg(feature = "gpu")]
+#[cfg(all(feature = "gpu", feature = "domain-esn"))]
 pub mod esn_v2;
-#[cfg(feature = "gpu")]
+#[cfg(all(feature = "gpu", feature = "domain-genomics"))]
 pub mod genomics;
 #[cfg(feature = "gpu")]
 pub mod gpu_executor;
@@ -114,7 +100,7 @@ pub mod gpu_executor;
 pub mod interpolate;
 #[cfg(feature = "gpu")]
 pub mod multi_gpu;
-#[cfg(feature = "gpu")]
+#[cfg(all(feature = "gpu", feature = "domain-nn"))]
 pub mod nn;
 #[cfg(feature = "gpu")]
 pub mod npu;
@@ -124,7 +110,7 @@ pub mod npu_executor;
 pub mod ops;
 #[cfg(feature = "gpu")]
 pub mod optimize;
-#[cfg(feature = "gpu")]
+#[cfg(all(feature = "gpu", feature = "domain-pde"))]
 pub mod pde;
 #[cfg(feature = "gpu")]
 pub mod pipeline;
@@ -139,16 +125,16 @@ pub mod scheduler;
 pub mod session;
 #[cfg(feature = "gpu")]
 pub mod shaders;
-#[cfg(feature = "gpu")]
+#[cfg(all(feature = "gpu", feature = "domain-snn"))]
 pub mod snn;
 pub mod spectral;
 #[cfg(feature = "gpu")]
 pub mod tensor;
-#[cfg(feature = "gpu")]
+#[cfg(all(feature = "gpu", feature = "domain-timeseries"))]
 pub mod timeseries;
 #[cfg(feature = "gpu")]
 pub mod utils;
-#[cfg(feature = "gpu")]
+#[cfg(all(feature = "gpu", feature = "domain-vision"))]
 pub mod vision;
 #[cfg(feature = "gpu")]
 pub mod workload;
@@ -190,7 +176,11 @@ pub use ops::bio::{
     UniFracPropagateGpu,
 };
 
-/// Prelude: Common imports for using barracuda
+/// Prelude: Common imports for using barracuda.
+///
+/// `use barracuda::prelude::*` brings in `Tensor`, `Device`, `Result`, and domain-specific
+/// types (ESN, genomics, NN, SNN) when their features are enabled. Use this for application
+/// code; use explicit paths when you need to avoid name collisions.
 pub mod prelude {
     pub use crate::error::{BarracudaError, Result};
 
@@ -206,9 +196,9 @@ pub mod prelude {
         batch_fitness_substrate, dispatch_for, dispatch_with_transfer_cost, hmm_substrate,
         ode_substrate, pairwise_substrate, spatial_substrate, DispatchConfig, DispatchTarget,
     };
-    #[cfg(feature = "gpu")]
+    #[cfg(all(feature = "gpu", feature = "domain-esn"))]
     pub use crate::esn_v2::{ESNConfig, ESN};
-    #[cfg(feature = "gpu")]
+    #[cfg(all(feature = "gpu", feature = "domain-genomics"))]
     pub use crate::genomics::{
         CompositionReport, MotifMatch, QualityReport, SequenceAnalyzer, SequenceConfig,
     };
@@ -218,7 +208,7 @@ pub mod prelude {
     pub use crate::multi_gpu::{
         DeviceLease, DeviceRequirements, GpuPool, GpuVendor, MultiDevicePool, WorkloadConfig,
     };
-    #[cfg(feature = "gpu")]
+    #[cfg(all(feature = "gpu", feature = "domain-nn"))]
     pub use crate::nn::{Layer, LossFunction, Optimizer};
     #[cfg(feature = "gpu")]
     pub use crate::npu::EventCodec;
@@ -228,7 +218,7 @@ pub mod prelude {
     pub use crate::resource_quota::{presets as quota_presets, QuotaTracker, ResourceQuota};
     #[cfg(feature = "gpu")]
     pub use crate::session::{SessionTensor, TensorSession};
-    #[cfg(feature = "gpu")]
+    #[cfg(all(feature = "gpu", feature = "domain-snn"))]
     pub use crate::snn::{SNNConfig, SNNLayer, SpikingNetwork};
     #[cfg(feature = "gpu")]
     pub use crate::staging::{

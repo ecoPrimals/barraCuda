@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! NORM_PPF - Inverse Normal CDF (Probit) - Pure WGSL
 //!
 //! Deep Debt Principles:

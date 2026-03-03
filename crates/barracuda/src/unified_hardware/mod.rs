@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Unified Hardware Base — Universal Compute Abstraction
 //!
 //! Hardware executes math, math doesn't know hardware.

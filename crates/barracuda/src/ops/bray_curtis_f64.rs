@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Bray-Curtis Distance (f64) — GPU-Accelerated All-Pairs Distance Matrix
 //!
 //! ABSORBED from wetSpring (Feb 16, 2026) — general-purpose distance metric

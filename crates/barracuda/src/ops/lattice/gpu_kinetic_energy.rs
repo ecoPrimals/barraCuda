@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU per-link kinetic energy from HMC momenta.
 
 use crate::device::compute_pipeline::ComputeDispatch;

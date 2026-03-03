@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! DIGAMMA F64 - Digamma function ψ(x) = Γ'(x)/Γ(x) - f64 precision
 //!
 //! Deep Debt Principles:
@@ -174,6 +175,7 @@ impl DigammaF64 {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::device::test_pool::get_test_device_if_f64_gpu_available;
@@ -200,27 +202,40 @@ mod tests {
 
     #[tokio::test]
     async fn test_digamma_recurrence() {
+        let run = |device: std::sync::Arc<crate::device::WgpuDevice>| {
+            let digamma = DigammaF64::new(device)?;
+            // ψ(x+1) = ψ(x) + 1/x
+            for x in [1.0, 2.0, 3.0, 4.5, 7.3] {
+                let result = digamma.digamma(&[x, x + 1.0])?;
+                let psi_x = result[0];
+                let psi_x1 = result[1];
+
+                assert!(
+                    (psi_x1 - psi_x - 1.0 / x).abs() < 1e-6,
+                    "ψ({}) + 1/{} = {} should equal ψ({}) = {}",
+                    x,
+                    x,
+                    psi_x + 1.0 / x,
+                    x + 1.0,
+                    psi_x1
+                );
+            }
+            Ok::<(), crate::error::BarracudaError>(())
+        };
+
         let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
-
-        let digamma = DigammaF64::new(device).unwrap();
-
-        // ψ(x+1) = ψ(x) + 1/x
-        for x in [1.0, 2.0, 3.0, 4.5, 7.3] {
-            let result = digamma.digamma(&[x, x + 1.0]).unwrap();
-            let psi_x = result[0];
-            let psi_x1 = result[1];
-
-            assert!(
-                (psi_x1 - psi_x - 1.0 / x).abs() < 1e-6,
-                "ψ({}) + 1/{} = {} should equal ψ({}) = {}",
-                x,
-                x,
-                psi_x + 1.0 / x,
-                x + 1.0,
-                psi_x1
-            );
+        match run(device) {
+            Ok(()) => {}
+            Err(e) if e.is_device_lost() => {
+                tracing::warn!("device lost in digamma recurrence, retrying");
+                let fresh = get_test_device_if_f64_gpu_available()
+                    .await
+                    .expect("f64 GPU unavailable on retry");
+                run(fresh).expect("failed on retry after device recovery");
+            }
+            Err(e) => panic!("test failed: {e}"),
         }
     }
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Tests for Cross Attention
 //!
 //! Validates encoder-decoder attention with asymmetric sequence lengths.

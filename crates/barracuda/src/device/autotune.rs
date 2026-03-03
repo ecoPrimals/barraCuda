@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Auto-Tuning Runtime for BarraCuda
 //!
 //! Discovers optimal GPU parameters at runtime through calibration.
@@ -14,6 +15,15 @@ use std::sync::RwLock;
 use std::time::Instant;
 
 use wgpu::util::DeviceExt;
+
+/// Trait for GPU devices that support calibration (submit+poll under lock).
+/// Implemented by WgpuDevice to avoid circular dependency.
+pub(crate) trait GpuDeviceForCalibration {
+    fn device(&self) -> &wgpu::Device;
+    fn name(&self) -> &str;
+    /// Submit commands and poll, holding the GPU lock. Used during calibration.
+    fn submit_and_poll_calibration(&self, commands: impl IntoIterator<Item = wgpu::CommandBuffer>);
+}
 
 /// Calibration result for a specific GPU
 #[derive(Debug, Clone)]
@@ -90,12 +100,11 @@ impl AutoTuner {
     }
 
     /// Get calibration for a device, or calibrate if needed
-    pub fn get_or_calibrate(
+    pub(crate) fn get_or_calibrate(
         &self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        device_name: &str,
+        wgpu_device: &impl GpuDeviceForCalibration,
     ) -> GpuCalibration {
+        let device_name = wgpu_device.name();
         // Check cache first
         {
             let cals = self
@@ -108,7 +117,7 @@ impl AutoTuner {
         }
 
         // Need to calibrate
-        let cal = self.calibrate_device(device, queue, device_name);
+        let cal = self.calibrate_device(wgpu_device);
 
         // Cache it
         {
@@ -126,12 +135,9 @@ impl AutoTuner {
     }
 
     /// Perform calibration for a device
-    fn calibrate_device(
-        &self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        device_name: &str,
-    ) -> GpuCalibration {
+    fn calibrate_device(&self, wgpu_device: &impl GpuDeviceForCalibration) -> GpuCalibration {
+        let device = wgpu_device.device();
+        let device_name = wgpu_device.name();
         // Test workgroup sizes
         let wg_sizes = [32, 64, 128, 256];
         let test_size = 4_000_000usize;
@@ -140,7 +146,7 @@ impl AutoTuner {
         let mut best_bw = 0.0f64;
 
         for &wg_size in &wg_sizes {
-            if let Some(bw) = self.measure_bandwidth(device, queue, wg_size, test_size) {
+            if let Some(bw) = self.measure_bandwidth(wgpu_device, wg_size, test_size) {
                 if bw > best_bw {
                     best_bw = bw;
                     best_wg = wg_size;
@@ -149,7 +155,7 @@ impl AutoTuner {
         }
 
         // Measure dispatch overhead with optimal WG
-        let overhead = self.measure_overhead(device, queue, best_wg);
+        let overhead = self.measure_overhead(wgpu_device, best_wg);
 
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -169,11 +175,11 @@ impl AutoTuner {
     /// Measure bandwidth for a given workgroup size
     fn measure_bandwidth(
         &self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        wgpu_device: &impl GpuDeviceForCalibration,
         workgroup_size: u32,
         size: usize,
     ) -> Option<f64> {
+        let device = wgpu_device.device();
         let shader_src = format!(
             r#"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
@@ -299,9 +305,8 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
                 pass.set_bind_group(0, &bind_group, &[]);
                 pass.dispatch_workgroups(workgroups, 1, 1);
             }
-            queue.submit(Some(encoder.finish()));
+            wgpu_device.submit_and_poll_calibration(Some(encoder.finish()));
         }
-        device.poll(wgpu::Maintain::Wait);
 
         // Measure
         let iterations = 10;
@@ -316,8 +321,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
                 pass.set_bind_group(0, &bind_group, &[]);
                 pass.dispatch_workgroups(workgroups, 1, 1);
             }
-            queue.submit(Some(encoder.finish()));
-            device.poll(wgpu::Maintain::Wait);
+            wgpu_device.submit_and_poll_calibration(Some(encoder.finish()));
         }
 
         let elapsed = start.elapsed();
@@ -333,10 +337,10 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
     /// Measure dispatch overhead
     fn measure_overhead(
         &self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        wgpu_device: &impl GpuDeviceForCalibration,
         workgroup_size: u32,
     ) -> f64 {
+        let device = wgpu_device.device();
         // Use tiny workload to measure pure overhead
         let size = 1024usize;
 
@@ -417,9 +421,8 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
                 pass.set_bind_group(0, &bind_group, &[]);
                 pass.dispatch_workgroups(workgroups, 1, 1);
             }
-            queue.submit(Some(encoder.finish()));
+            wgpu_device.submit_and_poll_calibration(Some(encoder.finish()));
         }
-        device.poll(wgpu::Maintain::Wait);
 
         // Measure many iterations
         let iterations = 100;
@@ -434,8 +437,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
                 pass.set_bind_group(0, &bind_group, &[]);
                 pass.dispatch_workgroups(workgroups, 1, 1);
             }
-            queue.submit(Some(encoder.finish()));
-            device.poll(wgpu::Maintain::Wait);
+            wgpu_device.submit_and_poll_calibration(Some(encoder.finish()));
         }
 
         let elapsed = start.elapsed();
@@ -463,20 +465,15 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
     }
 
     /// Force recalibration
-    pub fn recalibrate(
-        &self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        device_name: &str,
-    ) -> GpuCalibration {
-        let cal = self.calibrate_device(device, queue, device_name);
+    pub(crate) fn recalibrate(&self, wgpu_device: &impl GpuDeviceForCalibration) -> GpuCalibration {
+        let cal = self.calibrate_device(wgpu_device);
 
         {
             let mut cals = self
                 .calibrations
                 .write()
                 .expect("calibrations RwLock poisoned");
-            cals.insert(device_name.to_string(), cal.clone());
+            cals.insert(wgpu_device.name().to_string(), cal.clone());
         }
 
         self.save_cache();

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! LEGENDRE F64 - Legendre polynomials and associated Legendre functions - f64 precision WGSL
 //!
 //! Deep Debt Principles:

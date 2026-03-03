@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! ALiBi Position Encoding - GPU-accelerated
 //!
 //! **Deep Debt Principles**:

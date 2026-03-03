@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! CORRELATION F64 - Pearson correlation coefficient - f64 precision
 //!
 //! Deep Debt Principles:

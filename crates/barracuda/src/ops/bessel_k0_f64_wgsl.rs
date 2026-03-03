@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! BESSEL K0 F64 - Modified Bessel function of third kind, order 0 - f64 precision WGSL
 //!
 //! Deep Debt Principles apply. See bessel_j0_f64_wgsl.rs for details.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! ERF - Error function operation - Pure WGSL
 //!
 //! Deep Debt Principles:

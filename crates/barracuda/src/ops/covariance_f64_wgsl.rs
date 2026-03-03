@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! COVARIANCE F64 - Covariance computation - f64 precision
 //!
 //! Deep Debt Principles:

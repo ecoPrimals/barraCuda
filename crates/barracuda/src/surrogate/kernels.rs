@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! RBF kernel functions
 
 /// Radial basis function kernel types

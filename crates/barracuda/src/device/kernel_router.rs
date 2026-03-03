@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Compute Kernel Routing - Unified Math Language → Hardware-Specific Implementation
 //!
 //! **Evolution (Feb 15, 2026)**: Completes the NPU pipeline!

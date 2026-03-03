@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Preconditioned Conjugate Gradient solver (Jacobi/diagonal preconditioning)
 //!
 //! M = diag(A) → z = M⁻¹r = r / diag(A). Typically halves iteration count.

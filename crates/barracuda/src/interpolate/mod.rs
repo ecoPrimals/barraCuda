@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Interpolation methods
 //!
 //! This module provides various interpolation methods for approximating

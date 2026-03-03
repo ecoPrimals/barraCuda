@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Velocity-Verlet Time Integration
 //!
 //! **Physics**: Symplectic integrator for classical MD

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! CPU implementations of Conv2D, MaxPool2D, and AvgPool2D.
 //!
 //! Extracted from `cpu_executor.rs` for file-size compliance and logical separation.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Auto-Tensor - Scheduler-Aware Tensor Operations
 //!
 //! **Purpose**: High-level API that automatically selects optimal hardware

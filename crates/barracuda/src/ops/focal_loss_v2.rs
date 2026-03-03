@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Focal Loss v2 - Enhanced focal loss with alpha balancing
 //!
 //! **Canonical BarraCuda Pattern**: Struct with new/execute

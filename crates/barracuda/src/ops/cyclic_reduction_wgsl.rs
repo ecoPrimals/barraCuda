@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Cyclic Reduction for Tridiagonal Systems (WGSL GPU Implementation)
 //!
 //! **Why this file is large (~650 lines)**: Single algorithm—cyclic reduction

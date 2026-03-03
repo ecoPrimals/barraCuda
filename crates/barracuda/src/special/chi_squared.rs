@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Chi-Squared Distribution
 //!
 //! The chi-squared distribution with k degrees of freedom is the distribution

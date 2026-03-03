@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Sparse linear algebra for large-scale scientific computing
 //!
 //! Provides sparse matrix representations and solvers for problems where

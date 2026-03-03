@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 use crate::device::DeviceCapabilities;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;

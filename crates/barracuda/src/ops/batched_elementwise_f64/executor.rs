@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Batched element-wise GPU executor for f64 operations.
 
 #[cfg(test)]

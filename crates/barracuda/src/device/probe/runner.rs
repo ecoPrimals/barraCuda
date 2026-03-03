@@ -1,18 +1,17 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Core probe runner — compile, dispatch, validate
 //!
 //! Runs a single probe shader and returns whether it produced the expected result.
 
 use super::probes::ProbeShader;
+use crate::device::WgpuDevice;
 
 /// Run a single probe shader, catching compilation and dispatch errors.
 ///
 /// Returns `true` if the shader compiled, dispatched, and produced the expected
 /// numeric result. Returns `false` on any failure.
-pub(super) async fn run_single_probe(
-    device: &wgpu::Device,
-    queue: &wgpu::Queue,
-    probe: &ProbeShader,
-) -> bool {
+pub(super) async fn run_single_probe(wgpu_device: &WgpuDevice, probe: &ProbeShader) -> bool {
+    let device = wgpu_device.device();
     // Phase 1: shader compilation
     device.push_error_scope(wgpu::ErrorFilter::Validation);
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -90,7 +89,7 @@ pub(super) async fn run_single_probe(
         pass.dispatch_workgroups(1, 1, 1);
     }
     enc.copy_buffer_to_buffer(&out_buf, 0, &staging, 0, 8);
-    queue.submit(Some(enc.finish()));
+    wgpu_device.submit_and_poll_inner(Some(enc.finish()));
 
     if device.pop_error_scope().await.is_some() {
         return false;
@@ -103,10 +102,7 @@ pub(super) async fn run_single_probe(
     slice.map_async(wgpu::MapMode::Read, move |r| {
         let _ = tx.send(r);
     });
-    let poll_ok = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        device.poll(wgpu::Maintain::Wait);
-    }))
-    .is_ok();
+    let poll_ok = wgpu_device.poll_safe().is_ok();
 
     if !poll_ok || rx.recv().ok().and_then(|r| r.ok()).is_none() {
         return false;

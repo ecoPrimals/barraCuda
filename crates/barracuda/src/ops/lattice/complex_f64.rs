@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! WGSL f64 complex arithmetic library.
 //!
 //! Provides the `WGSL_COMPLEX64` string constant that must be prepended to any

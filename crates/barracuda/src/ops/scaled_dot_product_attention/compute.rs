@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU compute operations for Scaled Dot-Product Attention
 //!
 //! This module contains the GPU execution logic for scaled dot-product attention,

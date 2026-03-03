@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Finite-Difference Common Utilities
 //!
 //! **Smart Refactoring**: Shared infrastructure for all FD operators

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Shader compilation pipeline: type substitution, downcast, template expansion.
 //!
 //! Handles f64 → f32/f16/df64 text-based transforms and `{{SCALAR}}` template

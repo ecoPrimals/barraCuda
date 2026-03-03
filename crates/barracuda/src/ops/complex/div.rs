@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Complex Division Operation
 //!
 //! **Operation**: (a+bi)/(c+di) = (a+bi)(c-di)/(c²+d²)

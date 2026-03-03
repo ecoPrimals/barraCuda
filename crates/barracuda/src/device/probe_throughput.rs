@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! f64 throughput ratio probing — metalForge discovery
 //!
 //! Runs FMA microbenchmarks in f32 and f64 to measure the actual throughput
@@ -126,7 +127,6 @@ async fn run_throughput_probe(device: &WgpuDevice, use_f64: bool) -> Option<f64>
     };
 
     let wgpu_dev = device.device();
-    let queue = device.queue();
     let elem_size: u64 = if use_f64 { 8 } else { 4 };
     let num_elements: u64 = 256 * 1024;
     let buf_size = num_elements * elem_size;
@@ -198,13 +198,15 @@ async fn run_throughput_probe(device: &WgpuDevice, use_f64: bool) -> Option<f64>
         pass.dispatch_workgroups(workgroups, 1, 1);
     };
 
+    // Hold WgpuDevice::lock() for all submit/poll to prevent concurrent access
+    let mut warmup_buffers = Vec::with_capacity(3);
     for _ in 0..3 {
         let mut enc =
             wgpu_dev.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
         dispatch(&mut enc);
-        queue.submit(Some(enc.finish()));
+        warmup_buffers.push(enc.finish());
     }
-    wgpu_dev.poll(wgpu::Maintain::Wait);
+    device.submit_and_poll_inner(warmup_buffers);
 
     let iterations = 20;
     let start = std::time::Instant::now();
@@ -212,8 +214,7 @@ async fn run_throughput_probe(device: &WgpuDevice, use_f64: bool) -> Option<f64>
         let mut enc =
             wgpu_dev.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
         dispatch(&mut enc);
-        queue.submit(Some(enc.finish()));
-        wgpu_dev.poll(wgpu::Maintain::Wait);
+        device.submit_and_poll_inner(Some(enc.finish()));
     }
     let elapsed = start.elapsed().as_secs_f64() / iterations as f64;
 

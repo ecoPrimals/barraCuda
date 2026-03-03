@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Generic Precision Shader System
 //!
 //! Provides compile-time and runtime shader generation for any precision type.

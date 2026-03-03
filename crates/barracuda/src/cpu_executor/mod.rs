@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! CPU Executor - Native Rust Implementation with SIMD
 //!
 //! **Philosophy**: Always available, well-optimized fallback

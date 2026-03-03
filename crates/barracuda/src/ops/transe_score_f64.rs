@@ -37,7 +37,7 @@ pub struct TranseScoreF64<'a> {
     pub tails: &'a [u32],
 }
 
-impl<'a> TranseScoreF64<'a> {
+impl TranseScoreF64<'_> {
     pub fn execute(&self, device: &Arc<WgpuDevice>) -> Result<Vec<f64>> {
         let n_triples = self.heads.len();
         if n_triples != self.rels.len() || n_triples != self.tails.len() {

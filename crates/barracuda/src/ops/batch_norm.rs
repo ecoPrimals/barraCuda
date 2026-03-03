@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! BatchNorm operation - Batch normalization
 //! Pure WGSL implementation
 //!

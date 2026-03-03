@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Integration test for fast polynomial multiplication
 //!
 //! Tests the complete NTT-based fast polynomial multiplication pipeline

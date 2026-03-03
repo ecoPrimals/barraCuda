@@ -1,0 +1,18 @@
+# barraCuda — Cargo configuration
+
+# GPU tests share a single device — high parallelism causes device-lost.
+# 4 threads is the sweet spot: fast enough for CI, safe enough for GPU tests.
+# Override: RUST_TEST_THREADS=N cargo test
+[env]
+RUST_TEST_THREADS = { value = "4", force = false }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[profile.release-fast]
+inherits = "release"
+opt-level = 3

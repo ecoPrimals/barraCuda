@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Unidirectional Compute Pipeline
 //!
 //! Fire-and-forget API for streaming data through GPU compute.
@@ -190,7 +191,7 @@ impl BandwidthThrottler {
         // Check if we'd exceed target
         if self.window_bytes + bytes > self.target_bps {
             // Calculate required delay
-            let remaining = self.window_duration - elapsed;
+            let remaining = self.window_duration.saturating_sub(elapsed);
             Some(remaining)
         } else {
             // Don't record here - caller must call record() after transfer

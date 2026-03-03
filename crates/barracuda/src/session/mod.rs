@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! TensorSession — Automatic Operation Batching
 //!
 //! **Problem**: Individual tensor operations have ~250 μs overhead each.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! F64 Built-in Capability Survey
 //!
 //! Probes every f64 WGSL built-in on the selected GPU and reports which are

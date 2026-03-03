@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Multi-GPU Workload Distribution
 //!
 //! Provides load balancing and parallel execution across multiple GPUs.

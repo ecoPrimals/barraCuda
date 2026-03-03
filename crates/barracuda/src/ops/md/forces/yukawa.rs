@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Yukawa Force Calculation
 //!
 //! **Physics**: Screened electrostatic interactions (Debye screening)

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU compute pipeline builder — eliminates bind-group/pipeline boilerplate.
 //!
 //! The ~80 lines of create_bind_group_layout → create_bind_group →

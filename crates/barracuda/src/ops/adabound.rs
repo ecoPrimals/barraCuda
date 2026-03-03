@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! AdaBound Optimizer - GPU-accelerated Adaptive Gradient Methods with Dynamic Bound
 //!
 //! **Deep Debt Principles**:

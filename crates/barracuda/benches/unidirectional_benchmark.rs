@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Unidirectional Pipeline Benchmark
 //!
 //! Compares traditional bidirectional GPU patterns vs unidirectional streaming.

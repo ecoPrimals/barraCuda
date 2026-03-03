@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! VARIANCE F64 - Variance and standard deviation - f64 precision
 //!
 //! Deep Debt Principles:

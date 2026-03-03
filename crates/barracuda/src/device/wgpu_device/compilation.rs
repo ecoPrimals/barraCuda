@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Shader compilation — WGSL, SPIR-V, f64, DF64, universal precision pipelines
 
 use super::WgpuDevice;
@@ -26,13 +27,17 @@ impl WgpuDevice {
         spirv_words: &[u32],
         label: Option<&str>,
     ) -> wgpu::ShaderModule {
-        // SAFETY: create_shader_module_spirv is unsafe because it passes binary data
-        // to the backend as-is; malformed SPIR-V could cause driver crash or UB.
-        // Invariants: SPIR-V is produced by SovereignCompiler (naga IR → spv::Writer)
-        // from naga::valid::Validator-approved module. No external/untrusted input.
-        // Why not WGSL? Sovereign compiler bypasses NAK for NVK/Vulkan passthrough;
-        // SPIR-V is required for that optimization path. Violation: untrusted or
-        // malformed SPIR-V could cause GPU driver UB, crashes, or security issues.
+        // SAFETY: wgpu::Device::create_shader_module_spirv is unsafe (wgpu API constraint).
+        // - Why unsafe: Passes SPIR-V binary to the backend as-is; wgpu does not validate
+        //   it. Malformed or malicious SPIR-V could cause driver crash, GPU hang, or UB.
+        // - Invariants we maintain: SPIR-V is produced by SovereignCompiler (naga IR →
+        //   spv::Writer) from naga::valid::Validator-approved module. No external or
+        //   untrusted input. Callers must ensure spirv_words came from our compiler.
+        // - What could go wrong: Untrusted/malformed SPIR-V → driver crash, GPU UB,
+        //   or security issues (e.g. out-of-bounds access in shader).
+        // - Minimum unsafe surface: wgpu 22.x has no safe SPIR-V API; create_shader_module
+        //   (WGSL) validates via naga but we need SPIR-V passthrough for NVK/Vulkan
+        //   optimization (Sovereign compiler bypasses NAK). This is the only path.
         #[allow(unsafe_code)]
         unsafe {
             self.device

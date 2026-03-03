@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! barraCuda error types.
 //!
 //! Unified error handling for GPU device management, shader compilation,

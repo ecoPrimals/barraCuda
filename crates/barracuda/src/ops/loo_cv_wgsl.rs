@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Leave-One-Out Cross-Validation for kernel methods - Pure WGSL
 //!
 //! Deep Debt Principles:

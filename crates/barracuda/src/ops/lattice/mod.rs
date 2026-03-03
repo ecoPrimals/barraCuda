@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Lattice QCD / gauge field theory GPU primitives
 //!
 //! All math runs on GPU via WGSL shaders. CPU reference implementations exist

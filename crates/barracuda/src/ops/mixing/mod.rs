@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Vector Mixing Operations for Self-Consistent Field Solvers
 //!
 //! **Physics-Agnostic Mixing Primitives**

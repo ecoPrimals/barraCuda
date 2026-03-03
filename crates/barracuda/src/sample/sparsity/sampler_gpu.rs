@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU path for SparsitySampler algorithm.
 
 use crate::optimize::eval_record::EvaluationCache;
@@ -18,7 +19,7 @@ pub async fn sparsity_sampler_gpu<F>(
     config: &SparsitySamplerConfig,
 ) -> Result<SparsitySamplerResult>
 where
-    F: Fn(&[f64]) -> f64,
+    F: Fn(&[f64]) -> f64 + Sync,
 {
     if bounds.is_empty() {
         return Err(BarracudaError::InvalidInput {

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! PPPM Parameter Configuration
 //!
 //! Provides automatic parameter selection for desired accuracy.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Weighted Dot Product (f64) — GPU-Accelerated via WGSL
 //!
 //! Computes weighted inner products: result = Σ_k w[k] · a[k] · b[k]

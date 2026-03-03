@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Boltzmann Sampling (f64) — wateringHole V69
 //!
 //! GPU-accelerated Boltzmann (softmax) sampling with temperature.

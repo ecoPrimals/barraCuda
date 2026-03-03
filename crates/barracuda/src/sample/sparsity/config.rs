@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! SparsitySampler configuration and penalty filter types.
 
 use crate::surrogate::RBFKernel;

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU helpers for sparse linear algebra
 //!
 //! This module provides common utilities for GPU-accelerated sparse solvers,

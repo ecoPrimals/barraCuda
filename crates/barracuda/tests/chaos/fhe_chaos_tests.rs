@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! FHE Chaos Tests - Random inputs, stress testing, concurrent execution
 //!
 //! **Purpose**: Find edge case bugs through systematic randomization and stress

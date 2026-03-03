@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Core compute execution and tensor storage abstractions.
 //!
 //! These traits define the hardware-agnostic interface that CPU, GPU, TPU,

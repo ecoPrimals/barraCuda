@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Pure WGSL device - hardware-agnostic compute via WebGPU
 //!
 //! **Pure WGSL Architecture**:
@@ -19,7 +20,7 @@ mod dispatch;
 
 pub(crate) use dispatch::{concurrency_budget, DispatchPermit, DispatchSemaphore};
 
-use super::autotune::{GpuCalibration, GLOBAL_TUNER};
+use super::autotune::{GpuCalibration, GpuDeviceForCalibration, GLOBAL_TUNER};
 use crate::error::Result;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -44,6 +45,20 @@ pub struct WgpuDevice {
     gpu_lock: Arc<std::sync::Mutex<()>>,
     /// Limits concurrent dispatches based on device capability.
     dispatch_semaphore: Arc<DispatchSemaphore>,
+}
+
+impl GpuDeviceForCalibration for WgpuDevice {
+    fn device(&self) -> &wgpu::Device {
+        &self.device
+    }
+
+    fn name(&self) -> &str {
+        &self.adapter_info.name
+    }
+
+    fn submit_and_poll_calibration(&self, commands: impl IntoIterator<Item = wgpu::CommandBuffer>) {
+        self.submit_and_poll_inner(commands);
+    }
 }
 
 impl WgpuDevice {
@@ -153,7 +168,7 @@ impl WgpuDevice {
     /// converted to `Err` instead of panicking the caller's thread.
     pub fn poll_safe(&self) -> Result<()> {
         if self.is_lost() {
-            return Err(crate::error::BarracudaError::device("GPU device lost"));
+            return Err(crate::error::BarracudaError::device_lost("device lost"));
         }
         let _guard = self.lock();
         self.poll_safe_unlocked()
@@ -297,12 +312,12 @@ impl WgpuDevice {
 
     /// Get calibration for this device
     pub fn get_calibration(&self) -> GpuCalibration {
-        GLOBAL_TUNER.get_or_calibrate(&self.device, &self.queue, &self.adapter_info.name)
+        GLOBAL_TUNER.get_or_calibrate(self)
     }
 
     /// Force recalibration
     pub fn recalibrate(&self) -> GpuCalibration {
-        GLOBAL_TUNER.recalibrate(&self.device, &self.queue, &self.adapter_info.name)
+        GLOBAL_TUNER.recalibrate(self)
     }
 
     /// Get optimal workgroup size for this device
@@ -310,11 +325,7 @@ impl WgpuDevice {
         self.calibration
             .as_ref()
             .map(|c| c.optimal_workgroup_size)
-            .unwrap_or_else(|| {
-                GLOBAL_TUNER
-                    .get_or_calibrate(&self.device, &self.queue, &self.adapter_info.name)
-                    .optimal_workgroup_size
-            })
+            .unwrap_or_else(|| GLOBAL_TUNER.get_or_calibrate(self).optimal_workgroup_size)
     }
 
     /// Get measured peak bandwidth for this device (GB/s)

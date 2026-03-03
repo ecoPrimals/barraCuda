@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Adaptive Instance Normalization (AdaIN) - Style transfer
 //!
 //! Transfers style from one image to another.

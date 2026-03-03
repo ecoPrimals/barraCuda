@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU-accelerated PPPM/Ewald electrostatics (universal via WGSL)
 //!
 //! This module provides hardware-agnostic PPPM using WGSL shaders that run
@@ -28,7 +29,7 @@ use pipelines::{PppmBindGroupLayouts, PppmPipelines};
 pub struct PppmGpu {
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
-    adapter_info: wgpu::AdapterInfo,
+    wgpu_device: Arc<WgpuDevice>,
     params: PppmParams,
     greens: GreensFunction,
     pipelines: PppmPipelines,
@@ -37,7 +38,7 @@ pub struct PppmGpu {
 
 impl PppmGpu {
     /// Create from a WgpuDevice (preferred - driver-aware f64 compilation).
-    pub async fn from_device(wgpu_device: &WgpuDevice, params: PppmParams) -> Result<Self> {
+    pub async fn from_device(wgpu_device: &Arc<WgpuDevice>, params: PppmParams) -> Result<Self> {
         let greens = GreensFunction::new(&params);
         let bspline_module = wgpu_device.compile_shader_f64(shaders::BSPLINE, Some("pppm_bspline"));
         let charge_spread_module =
@@ -52,7 +53,7 @@ impl PppmGpu {
         Self::build_from_modules(
             wgpu_device.device_arc(),
             wgpu_device.queue_arc(),
-            wgpu_device.adapter_info().clone(),
+            Arc::clone(wgpu_device),
             params,
             greens,
             bspline_module,
@@ -117,20 +118,23 @@ impl PppmGpu {
             source: wgpu::ShaderSource::Wgsl(erfc_forces_shader.into()),
         });
 
-        let synthetic_info = wgpu::AdapterInfo {
-            name: "Legacy PPPM Device".to_string(),
-            vendor: 0,
-            device: 0,
-            device_type: wgpu::DeviceType::Other,
-            driver: if is_nvk { "nvk" } else { "unknown" }.to_string(),
-            driver_info: "created via deprecated new_with_driver()".to_string(),
-            backend: wgpu::Backend::Vulkan,
-        };
-
+        let wgpu_device = Arc::new(WgpuDevice::from_existing(
+            device.clone(),
+            queue.clone(),
+            wgpu::AdapterInfo {
+                name: "Legacy PPPM Device".to_string(),
+                vendor: 0,
+                device: 0,
+                device_type: wgpu::DeviceType::Other,
+                driver: if is_nvk { "nvk" } else { "unknown" }.to_string(),
+                driver_info: "created via deprecated new_with_driver()".to_string(),
+                backend: wgpu::Backend::Vulkan,
+            },
+        ));
         Self::build_from_modules(
             device,
             queue,
-            synthetic_info,
+            wgpu_device,
             params,
             greens,
             bspline_module,
@@ -145,7 +149,7 @@ impl PppmGpu {
     async fn build_from_modules(
         device: Arc<wgpu::Device>,
         queue: Arc<wgpu::Queue>,
-        adapter_info: wgpu::AdapterInfo,
+        wgpu_device: Arc<WgpuDevice>,
         params: PppmParams,
         greens: GreensFunction,
         bspline_module: wgpu::ShaderModule,
@@ -167,7 +171,7 @@ impl PppmGpu {
         Ok(Self {
             device,
             queue,
-            adapter_info,
+            wgpu_device,
             params,
             greens,
             pipelines,
@@ -191,16 +195,8 @@ impl PppmGpu {
         &self.queue
     }
 
-    pub(crate) fn device_arc(&self) -> Arc<wgpu::Device> {
-        Arc::clone(&self.device)
-    }
-
-    pub(crate) fn queue_arc(&self) -> Arc<wgpu::Queue> {
-        Arc::clone(&self.queue)
-    }
-
-    pub(crate) fn adapter_info(&self) -> &wgpu::AdapterInfo {
-        &self.adapter_info
+    pub(crate) fn wgpu_device(&self) -> &Arc<WgpuDevice> {
+        &self.wgpu_device
     }
 
     pub(crate) fn layouts(&self) -> &PppmBindGroupLayouts {
@@ -404,8 +400,9 @@ impl PppmGpu {
             }
             std::panic::resume_unwind(payload);
         }
-        let forces = SparseBuffers::read_f64_raw(&self.device, &self.queue, &forces_buffer, n * 3)?;
-        let pe_values = SparseBuffers::read_f64_raw(&self.device, &self.queue, &pe_buffer, n)?;
+        let forces =
+            SparseBuffers::read_f64_raw(self.wgpu_device().as_ref(), &forces_buffer, n * 3)?;
+        let pe_values = SparseBuffers::read_f64_raw(self.wgpu_device().as_ref(), &pe_buffer, n)?;
         let total_energy: f64 = pe_values.iter().sum();
         Ok((forces, total_energy))
     }
@@ -560,7 +557,7 @@ mod tests {
         let pppm = PppmGpu::from_device(&device, params)
             .await
             .expect("GPU PPPM create failed");
-        let (device_ref, queue) = (pppm.device(), pppm.queue());
+        let (device_ref, queue, wgpu_dev) = (pppm.device(), pppm.queue(), pppm.wgpu_device());
         let positions_buffer = SparseBuffers::f64_from_slice_raw(device_ref, "pos", &positions);
         let coeffs_buffer = SparseBuffers::f64_zeros_raw(device_ref, "coeffs", 2 * order * 3);
         let derivs_buffer = SparseBuffers::f64_zeros_raw(device_ref, "derivs", 2 * order * 3);
@@ -613,10 +610,10 @@ mod tests {
         queue.submit(Some(enc.finish()));
 
         let gpu_coeffs =
-            SparseBuffers::read_f64_raw(device_ref, queue, &coeffs_buffer, 2 * order * 3).unwrap();
+            SparseBuffers::read_f64_raw(wgpu_dev.as_ref(), &coeffs_buffer, 2 * order * 3).unwrap();
         let gpu_derivs =
-            SparseBuffers::read_f64_raw(device_ref, queue, &derivs_buffer, 2 * order * 3).unwrap();
-        let gpu_base = SparseBuffers::read_i32_raw(device_ref, queue, &base_idx_buffer, 6).unwrap();
+            SparseBuffers::read_f64_raw(wgpu_dev.as_ref(), &derivs_buffer, 2 * order * 3).unwrap();
+        let gpu_base = SparseBuffers::read_i32_raw(wgpu_dev.as_ref(), &base_idx_buffer, 6).unwrap();
 
         for d in 0..3 {
             for k in 0..order {

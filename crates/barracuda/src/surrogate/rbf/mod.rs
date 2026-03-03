@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Radial basis function surrogate for expensive function approximation
 
 use super::kernels::RBFKernel;
@@ -506,36 +507,31 @@ pub fn loo_cv_optimal_smoothing(
         });
     }
 
-    let mut results = Vec::with_capacity(grid.len());
-    let mut best_smoothing = grid[0];
-    let mut best_rmse = f64::INFINITY;
+    // Parallelize grid search: each smoothing value trains an independent
+    // surrogate and computes LOO-CV RMSE. The GPU device (Arc) is shared
+    // safely across threads since wgpu is internally synchronized.
+    use rayon::prelude::*;
 
-    for &s in grid {
-        // Train surrogate with this smoothing
-        let surrogate = match RBFSurrogate::train(device.clone(), x_data, y_data, kernel, s) {
-            Ok(surr) => surr,
-            Err(_) => continue, // Skip invalid configurations
-        };
-
-        // Compute LOO-CV RMSE
-        let rmse = match surrogate.loo_cv_rmse() {
-            Ok(r) if r.is_finite() => r,
-            _ => continue, // Skip non-finite RMSE
-        };
-
-        results.push((s, rmse));
-
-        if rmse < best_rmse {
-            best_rmse = rmse;
-            best_smoothing = s;
-        }
-    }
+    let results: Vec<(f64, f64)> = grid
+        .par_iter()
+        .filter_map(|&s| {
+            let surrogate = RBFSurrogate::train(device.clone(), x_data, y_data, kernel, s).ok()?;
+            let rmse = surrogate.loo_cv_rmse().ok().filter(|r| r.is_finite())?;
+            Some((s, rmse))
+        })
+        .collect();
 
     if results.is_empty() {
         return Err(BarracudaError::ExecutionError {
             message: "No valid smoothing values found during grid search".into(),
         });
     }
+
+    let (best_smoothing, best_rmse) = results
+        .iter()
+        .copied()
+        .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Greater))
+        .unwrap_or((grid[0], f64::INFINITY));
 
     Ok(LooSmoothing {
         smoothing: best_smoothing,

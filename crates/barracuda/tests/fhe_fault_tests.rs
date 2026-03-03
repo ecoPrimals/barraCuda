@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+#![allow(clippy::unwrap_used)]
 //! FHE Fault Injection Tests
 //!
 //! Tests error paths explicitly — verifying graceful degradation, never panics,

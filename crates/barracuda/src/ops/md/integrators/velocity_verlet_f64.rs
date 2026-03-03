@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! VELOCITY-VERLET F64 — Symplectic integrator — f64 WGSL shader dispatch
 //!
 //! All math originates as `velocity_verlet_f64.wgsl`.

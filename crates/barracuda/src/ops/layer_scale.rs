@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! LayerScale - Per-layer learnable scaling
 //!
 //! **Canonical BarraCuda Pattern**: Struct with new/execute

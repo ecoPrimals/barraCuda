@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Wilson plaquette GPU operation for SU(3) lattice gauge theory.
 //!
 //! Computes `Re Tr(U_p) / 3` for all 6 plane orientations at every site on a

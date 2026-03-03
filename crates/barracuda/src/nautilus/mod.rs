@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Nautilus Shell — evolutionary reservoir computing via board ensembles.
 //!
 //! Provenance: ecoPrimals/primalTools/bingoCube → toadStool standalone absorption.

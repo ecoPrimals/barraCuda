@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! math_f64 WGSL injection: dependency graph, extraction, and injection logic
 //!
 //! ## Fossil vs. Active functions

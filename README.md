@@ -1,4 +1,4 @@
-# BarraCUDA — Cross-platform Unified Dispatch Arithmetic
+# barraCuda
 
 **Version**: 0.1.0 (pre-extraction scaffold)
 **Status**: Scaffold — pending extraction from ToadStool S88+
@@ -8,22 +8,20 @@
 
 ## The Name
 
-**BarraCUDA** = **Barra**ge of **C**ross-platform **U**nified **D**ispatch **A**rithmetic
+**barraCuda** — *BARrier-free Rust Abstracted Cross-platform Unified Dimensional Algebra*
 
-Named after the barracuda — a fast, sleek predator of the deep.
-
-**CUDA** in this context stands for **Cross-platform Unified Dispatch Arithmetic**,
-not NVIDIA's "Compute Unified Device Architecture." BarraCUDA has zero NVIDIA
-dependencies, zero CUDA SDK usage, and runs on any GPU vendor via WGSL/wgpu.
+More concept than exact acronym. The barracuda stands still until it strikes —
+fast, silent, instant. That's the compute model: sovereign math that waits on
+any GPU, then executes instantly across any vendor's silicon.
 
 ---
 
-## What is BarraCUDA?
+## What is barraCuda?
 
-BarraCUDA is the **sovereign math engine** for the ecoPrimals ecosystem. It
-provides GPU-accelerated scientific computing across any vendor's hardware —
-Intel, AMD, NVIDIA, Apple, software renderers — using WGSL shaders compiled
-through wgpu.
+barraCuda is the **sovereign math engine** for the ecoPrimals ecosystem. It
+provides GPU-accelerated scientific computing across any vendor's hardware
+using WGSL shaders compiled through wgpu. One source, any GPU, identical
+results.
 
 ### Key capabilities
 
@@ -44,8 +42,8 @@ through wgpu.
 ### Design principles
 
 1. **Math is universal, precision is silicon** — one WGSL source, any precision
-2. **Cross-vendor by default** — same binary, identical results on any GPU
-3. **Sovereign** — zero vendor SDK dependency for correctness or performance
+2. **Vendor-agnostic** — same binary, identical results on any GPU
+3. **Sovereign** — zero external SDK dependency for correctness or performance
 4. **AGPL-3.0** — free as in freedom
 
 ---
@@ -84,7 +82,7 @@ barraCuda/
 
 ## GPU Validation Canary
 
-BarraCUDA uses FHE + lattice QCD as a mathematically rigorous GPU stack
+barraCuda uses FHE + lattice QCD as a mathematically rigorous GPU stack
 validation suite:
 
 | Test | Pass criteria | What it validates |
@@ -102,15 +100,15 @@ for scientific compute.
 
 ## Relationship to ecoPrimals
 
-BarraCUDA is a **NUCLEUS foundation primal**. It composes with:
+barraCuda is a **NUCLEUS foundation primal**. It composes with:
 
-- **BearDog** (crypto) — FHE key generation + BarraCUDA GPU compute = sovereign
+- **BearDog** (crypto) — FHE key generation + barraCuda GPU compute = sovereign
   encrypted computation
 - **ToadStool** (orchestration) — primal lifecycle, IPC routing, biomeOS
 - **Springs** (validation) — 5 domain-specific projects that consume and validate
-  BarraCUDA primitives across physics, biology, agriculture, ML, and earth science
+  barraCuda primitives across physics, biology, agriculture, ML, and earth science
 
-BarraCUDA knows only itself. It discovers other primals at runtime via
+barraCuda knows only itself. It discovers other primals at runtime via
 capability-based IPC (JSON-RPC 2.0).
 
 ---

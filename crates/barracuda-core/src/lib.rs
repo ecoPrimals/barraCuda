@@ -1,22 +1,16 @@
-//! # `BarraCUDA` Core
+//! # barraCuda Core
 //!
-//! Core device management and primal lifecycle for `BarraCUDA` —
-//! **C**ross-platform **U**nified **D**ispatch **A**rithmetic.
+//! Core device management and primal lifecycle for barraCuda —
+//! *BARrier-free Rust Abstracted Cross-platform Unified Dimensional Algebra*.
 //!
-//! `BarraCUDA` is the sovereign math engine for the ecoPrimals ecosystem.
+//! barraCuda is the sovereign math engine for the ecoPrimals ecosystem.
 //! It provides GPU-accelerated scientific computing across any vendor's
 //! hardware via WGSL shaders compiled through wgpu.
-//!
-//! ## Naming
-//!
-//! "CUDA" in `BarraCUDA` stands for **C**ross-platform **U**nified **D**ispatch
-//! **A**rithmetic — not NVIDIA's "Compute Unified Device Architecture."
-//! `BarraCUDA` has zero code, zero dependencies, and zero API compatibility
-//! with NVIDIA CUDA.
 
 #![warn(missing_docs)]
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
+#![allow(clippy::doc_markdown)]
 
 pub mod error;
 
@@ -25,17 +19,17 @@ use sourdough_core::{
     PrimalError, PrimalHealth, PrimalLifecycle, PrimalState,
 };
 
-/// `BarraCUDA` primal — sovereign GPU compute engine.
+/// barraCuda primal — sovereign GPU compute engine.
 ///
 /// Manages GPU device discovery, shader compilation, and compute dispatch
-/// across any vendor's hardware. Composes with `BearDog` (crypto) for FHE
-/// and with `ToadStool` (orchestration) for workload routing.
+/// across any vendor's hardware. Composes with BearDog (crypto) for FHE
+/// and with ToadStool (orchestration) for workload routing.
 pub struct BarraCudaPrimal {
     state: PrimalState,
 }
 
 impl BarraCudaPrimal {
-    /// Create a new `BarraCUDA` primal instance.
+    /// Create a new barraCuda primal instance.
     #[must_use]
     pub fn new() -> Self {
         Self {

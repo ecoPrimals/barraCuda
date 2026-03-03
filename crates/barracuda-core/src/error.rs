@@ -1,12 +1,14 @@
-//! `BarraCUDA` error types.
+//! barraCuda error types.
 //!
 //! Unified error handling for GPU device management, shader compilation,
 //! tensor operations, and compute dispatch.
 
-/// Result type alias for `BarraCUDA` operations.
+#![allow(clippy::doc_markdown)]
+
+/// Result type alias for barraCuda operations.
 pub type Result<T> = std::result::Result<T, BarracudaError>;
 
-/// Errors that can occur during `BarraCUDA` operations.
+/// Errors that can occur during barraCuda operations.
 #[derive(Debug, thiserror::Error)]
 pub enum BarracudaError {
     /// GPU device was lost (transient — can retry on fresh device).

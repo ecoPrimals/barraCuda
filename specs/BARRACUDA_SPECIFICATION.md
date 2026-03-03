@@ -1,4 +1,4 @@
-# BarraCUDA Specification
+# barraCuda Specification
 
 **Version**: 0.1.0
 **Date**: March 2, 2026
@@ -7,30 +7,21 @@
 
 ---
 
-## Name and Trademark
+## Name
 
-**BarraCUDA** = **Barra**ge of **C**ross-platform **U**nified **D**ispatch **A**rithmetic
+**barraCuda** — *BARrier-free Rust Abstracted Cross-platform Unified Dimensional Algebra*
 
-| | BarraCUDA (ecoPrimals) | CUDA (NVIDIA) |
-|---|---|---|
-| **Full name** | Cross-platform Unified Dispatch Arithmetic | Compute Unified Device Architecture |
-| **Vendor** | None (cross-vendor) | NVIDIA only |
-| **GPU API** | WGSL via wgpu (Vulkan, Metal, DX12, WebGPU) | CUDA Runtime/Driver API |
-| **Shader language** | WGSL | CUDA C/C++ (PTX) |
-| **License** | AGPL-3.0-or-later | Proprietary |
-| **f64 strategy** | DF64 emulation + native where available | Native f64 |
-| **FHE support** | GPU via 32-bit modular reduction | Not built-in |
+More concept than exact acronym. The barracuda stands still until it strikes —
+fast, silent, instant math across any silicon.
 
-BarraCUDA has zero code, zero dependencies, and zero API compatibility with
-NVIDIA's CUDA. The name "BarraCUDA" refers to the barracuda fish and the
-backronym above. All references in documentation, code, and specs should use
-"BarraCUDA" (with the fish identity) to avoid confusion.
+barraCuda is vendor-agnostic. It runs on any GPU via WGSL/wgpu — Vulkan, Metal,
+DX12, WebGPU. One source, any backend, identical results.
 
 ---
 
 ## Purpose
 
-BarraCUDA is the sovereign math engine for the ecoPrimals ecosystem. It provides:
+barraCuda is the sovereign math engine for the ecoPrimals ecosystem. It provides:
 
 1. **Universal GPU compute** — one WGSL source runs on any GPU vendor
 2. **Scientific precision** — DF64 emulation for double-precision on consumer GPUs
@@ -69,7 +60,7 @@ and passes tests without GPU hardware (llvmpipe software renderer).
 
 ### Primal interface
 
-BarraCUDA exposes IPC endpoints via JSON-RPC 2.0:
+barraCuda exposes IPC endpoints via JSON-RPC 2.0:
 
 ```
 barracuda.device.list           → [{adapter, vendor, features, limits}]
@@ -95,7 +86,7 @@ WGSL source
   → GPU driver compile
 ```
 
-This is the sovereign compiler path. No vendor SDK is needed for correctness.
+Sovereign compiler path. No external SDK needed for correctness.
 
 ---
 
@@ -115,7 +106,7 @@ This is the sovereign compiler path. No vendor SDK is needed for correctness.
 
 ## Extraction Plan
 
-BarraCUDA currently lives at `ecoPrimals/phase1/toadStool/crates/barracuda/`.
+barraCuda currently lives at `ecoPrimals/phase1/toadStool/crates/barracuda/`.
 Extraction follows the phases defined in `toadStool/specs/BARRACUDA_PRIMAL_BUDDING.md`.
 
 ### Phase 0 — Decouple (current)

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Elementwise subtraction at DF64 precision (f32-pair, ~48-bit mantissa).
 // Input/output as vec2<f32> where .x = hi, .y = lo.
 // Requires: df64_core.wgsl (auto-injected by compile_shader_df64)

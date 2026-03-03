@@ -93,7 +93,6 @@ impl Covariance {
 
     /// CPU reference implementation
     #[cfg(test)]
-    #[allow(dead_code)]
     fn covariance_cpu(&self, x: &[f32], y: &[f32], ddof: u32) -> f32 {
         let n = x.len() as f32;
         let mean_x: f32 = x.iter().sum::<f32>() / n;

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 //! Multi-stage pipeline dispatch across substrates.
 //!
@@ -241,8 +241,8 @@ impl ResolvedPipeline<'_> {
     }
 
     pub fn print_summary(&self) {
-        println!("Pipeline: {}", self.name);
-        println!(
+        tracing::info!("Pipeline: {}", self.name);
+        tracing::info!(
             "  Stages: {} | Transfer overhead: {}µs | Optimal: {}",
             self.stages.len(),
             self.total_transfer_us,
@@ -255,9 +255,11 @@ impl ResolvedPipeline<'_> {
                 TransferStrategy::HostBounce => "←HOST←",
                 TransferStrategy::None => "",
             };
-            println!(
+            tracing::info!(
                 "  [{i}] {:<30} → {:<20} {transfer_str} ({:?})",
-                rs.stage.name, sub_name, rs.reason,
+                rs.stage.name,
+                sub_name,
+                rs.reason,
             );
         }
     }

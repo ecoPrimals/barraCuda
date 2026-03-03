@@ -34,13 +34,11 @@ impl BesselK0F64 {
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn k0_cpu(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| Self::k0_scalar(xi)).collect()
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn i0_small(x: f64) -> f64 {
         let y = x / 3.75;
         let t = y * y;
@@ -51,7 +49,6 @@ impl BesselK0F64 {
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn k0_scalar(x: f64) -> f64 {
         if x <= 0.0 {
             return f64::INFINITY;

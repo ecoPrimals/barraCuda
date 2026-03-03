@@ -12,8 +12,8 @@
 //!
 //! # Philosophy
 //!
-//! ToadStool treats WGSL as the "unified math language" for arbitrary computation.
-//! When a workload can be accelerated by NPU/TPU hardware, we route to
+//! barraCuda treats WGSL as the "unified math language" for arbitrary computation.
+//! When a workload can be accelerated by specialized hardware, we route to
 //! hardware-specific implementations. Otherwise, WGSL runs on GPU/CPU.
 //!
 //! This is NOT a compiler (WGSL → NPU bytecode). NPUs run pre-compiled models,

@@ -100,19 +100,30 @@ pub struct ValidationResult {
 pub struct DispatchResult {
     /// Status of the dispatch.
     pub status: String,
-    /// Shader that was dispatched.
-    pub shader: String,
-    /// Entry point used.
-    pub entry_point: String,
+    /// Tensor ID (if operation created/returned a tensor).
+    pub tensor_id: Option<String>,
+    /// Shape of the result tensor (if applicable).
+    pub shape: Option<Vec<usize>>,
+    /// Read-back data (for "read" operations).
+    pub data: Option<Vec<f32>>,
 }
 
-/// FHE operation result.
+/// FHE NTT result with transformed coefficients.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FheResult {
+pub struct FheNttResult {
     /// Status of the operation.
     pub status: String,
-    /// Modulus used.
-    pub modulus: u64,
+    /// Transformed coefficients.
+    pub result: Vec<u64>,
+}
+
+/// FHE pointwise multiplication result.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FhePointwiseMulResult {
+    /// Status of the operation.
+    pub status: String,
+    /// Product coefficients.
+    pub result: Vec<u64>,
 }
 
 /// Matmul result.
@@ -120,10 +131,10 @@ pub struct FheResult {
 pub struct MatmulResult {
     /// Status of the operation.
     pub status: String,
-    /// Left-hand tensor ID.
-    pub lhs_id: String,
-    /// Right-hand tensor ID.
-    pub rhs_id: String,
+    /// Result tensor ID.
+    pub result_id: String,
+    /// Shape of the result tensor.
+    pub shape: Vec<usize>,
 }
 
 /// barraCuda tarpc service.
@@ -147,20 +158,38 @@ pub trait BarraCudaService {
     /// Run GPU stack validation.
     async fn validate_gpu_stack() -> ValidationResult;
 
-    /// Dispatch a compute shader.
-    async fn compute_dispatch(shader: String, entry_point: String) -> DispatchResult;
+    /// Dispatch a named compute operation (zeros, ones, read).
+    async fn compute_dispatch(
+        op: String,
+        shape: Option<Vec<usize>>,
+        tensor_id: Option<String>,
+    ) -> DispatchResult;
 
-    /// Create a tensor on the device.
-    async fn tensor_create(shape: Vec<usize>, dtype: String) -> TensorHandle;
+    /// Create a tensor on the device with optional initial data.
+    async fn tensor_create(
+        shape: Vec<usize>,
+        dtype: String,
+        data: Option<Vec<f32>>,
+    ) -> TensorHandle;
 
-    /// Matrix multiply two tensors.
+    /// Matrix multiply two tensors by ID.
     async fn tensor_matmul(lhs_id: String, rhs_id: String) -> MatmulResult;
 
     /// FHE Number Theoretic Transform.
-    async fn fhe_ntt(modulus: u64, degree: u64) -> FheResult;
+    async fn fhe_ntt(
+        modulus: u64,
+        degree: u64,
+        root_of_unity: u64,
+        coefficients: Vec<u64>,
+    ) -> FheNttResult;
 
     /// FHE pointwise polynomial multiplication.
-    async fn fhe_pointwise_mul(modulus: u64) -> FheResult;
+    async fn fhe_pointwise_mul(
+        modulus: u64,
+        degree: u64,
+        a: Vec<u64>,
+        b: Vec<u64>,
+    ) -> FhePointwiseMulResult;
 }
 
 /// tarpc server implementation that delegates to `BarraCudaPrimal`.
@@ -247,32 +276,108 @@ impl BarraCudaService for BarraCudaServer {
     }
 
     async fn validate_gpu_stack(self, _: tarpc::context::Context) -> ValidationResult {
+        let Some(dev) = self.primal.device() else {
+            return ValidationResult {
+                gpu_available: false,
+                status: "no_device".to_string(),
+                message: "No GPU device available".to_string(),
+            };
+        };
+
+        let matmul_pass = {
+            let eye = vec![1.0, 0.0, 0.0, 1.0];
+            let inp = vec![1.0, 2.0, 3.0, 4.0];
+            barracuda::tensor::Tensor::from_data(&eye, vec![2, 2], dev.clone())
+                .and_then(|e| {
+                    let i = barracuda::tensor::Tensor::from_data(&inp, vec![2, 2], dev.clone())?;
+                    i.matmul(&e)
+                })
+                .and_then(|r| r.to_vec())
+                .map(|v| v.iter().zip(&inp).all(|(a, b)| (a - b).abs() < 1e-4))
+                .unwrap_or(false)
+        };
+
         ValidationResult {
-            gpu_available: self.primal.device().is_some(),
-            status: if self.primal.device().is_some() {
-                "validation_available".to_string()
-            } else {
-                "no_device".to_string()
-            },
-            message: "Use `barracuda validate` CLI for full GPU stack validation".to_string(),
+            gpu_available: true,
+            status: if matmul_pass { "pass" } else { "partial_fail" }.to_string(),
+            message: format!(
+                "matmul_identity: {}",
+                if matmul_pass { "pass" } else { "fail" }
+            ),
         }
     }
 
     async fn compute_dispatch(
         self,
         _: tarpc::context::Context,
-        shader: String,
-        entry_point: String,
+        op: String,
+        shape: Option<Vec<usize>>,
+        tensor_id: Option<String>,
     ) -> DispatchResult {
-        DispatchResult {
-            status: if self.primal.device().is_some() {
-                "accepted"
-            } else {
-                "no_device"
+        let Some(dev) = self.primal.device() else {
+            return DispatchResult {
+                status: "no_device".to_string(),
+                tensor_id: None,
+                shape: None,
+                data: None,
+            };
+        };
+
+        match op.as_str() {
+            "zeros" | "ones" => {
+                let s = shape.unwrap_or_else(|| vec![1]);
+                let elements: usize = s.iter().product();
+                let fill = if op == "ones" { 1.0f32 } else { 0.0f32 };
+                let values = vec![fill; elements];
+                match barracuda::tensor::Tensor::from_data(&values, s.clone(), dev.clone()) {
+                    Ok(tensor) => {
+                        let tid = self.primal.store_tensor(tensor);
+                        DispatchResult {
+                            status: "completed".to_string(),
+                            tensor_id: Some(tid),
+                            shape: Some(s),
+                            data: None,
+                        }
+                    }
+                    Err(e) => DispatchResult {
+                        status: format!("error: {e}"),
+                        tensor_id: None,
+                        shape: Some(s),
+                        data: None,
+                    },
+                }
             }
-            .to_string(),
-            shader,
-            entry_point,
+            "read" => {
+                let tid = tensor_id.unwrap_or_default();
+                match self.primal.get_tensor(&tid) {
+                    Some(tensor) => match tensor.to_vec() {
+                        Ok(values) => DispatchResult {
+                            status: "completed".to_string(),
+                            tensor_id: Some(tid),
+                            shape: Some(tensor.shape().to_vec()),
+                            data: Some(values),
+                        },
+                        Err(e) => DispatchResult {
+                            status: format!("error: {e}"),
+                            tensor_id: Some(tid),
+                            shape: None,
+                            data: None,
+                        },
+                    },
+                    None => DispatchResult {
+                        status: "tensor_not_found".to_string(),
+                        tensor_id: Some(tid),
+                        shape: None,
+                        data: None,
+                    },
+                }
+            }
+            _ => DispatchResult {
+                status: "unknown_op".to_string(),
+                tensor_id: None,
+                shape: None,
+                data: None,
+            },
         }
     }
 
@@ -281,17 +386,36 @@ impl BarraCudaService for BarraCudaServer {
         _: tarpc::context::Context,
         shape: Vec<usize>,
         dtype: String,
+        data: Option<Vec<f32>>,
     ) -> TensorHandle {
         let elements: usize = shape.iter().product();
-        let tensor_id = blake3::hash(format!("tensor:{shape:?}:{elements}").as_bytes()).to_hex()
-            [..16]
-            .to_string();
 
-        TensorHandle {
-            tensor_id,
-            shape,
-            elements,
-            dtype,
+        let Some(dev) = self.primal.device() else {
+            return TensorHandle {
+                tensor_id: String::new(),
+                shape,
+                elements,
+                dtype,
+            };
+        };
+
+        let values = data.unwrap_or_else(|| vec![0.0f32; elements]);
+        match barracuda::tensor::Tensor::from_data(&values, shape.clone(), dev.clone()) {
+            Ok(tensor) => {
+                let tensor_id = self.primal.store_tensor(tensor);
+                TensorHandle {
+                    tensor_id,
+                    shape,
+                    elements,
+                    dtype,
+                }
+            }
+            Err(_) => TensorHandle {
+                tensor_id: String::new(),
+                shape,
+                elements,
+                dtype,
+            },
         }
     }
 
@@ -301,39 +425,194 @@ impl BarraCudaService for BarraCudaServer {
         lhs_id: String,
         rhs_id: String,
     ) -> MatmulResult {
-        MatmulResult {
-            status: if self.primal.device().is_some() {
-                "accepted"
-            } else {
-                "no_device"
-            }
-            .to_string(),
-            lhs_id,
-            rhs_id,
+        let lhs = self.primal.get_tensor(&lhs_id);
+        let rhs = self.primal.get_tensor(&rhs_id);
+
+        match (lhs, rhs) {
+            (Some(l), Some(r)) => match l.matmul_ref(&r) {
+                Ok(result) => {
+                    let result_shape = result.shape().to_vec();
+                    let result_id = self.primal.store_tensor(result);
+                    MatmulResult {
+                        status: "completed".to_string(),
+                        result_id,
+                        shape: result_shape,
+                    }
+                }
+                Err(e) => MatmulResult {
+                    status: format!("error: {e}"),
+                    result_id: String::new(),
+                    shape: vec![],
+                },
+            },
+            _ => MatmulResult {
+                status: "tensor_not_found".to_string(),
+                result_id: String::new(),
+                shape: vec![],
+            },
         }
     }
 
-    async fn fhe_ntt(self, _: tarpc::context::Context, modulus: u64, _degree: u64) -> FheResult {
-        FheResult {
-            status: if self.primal.device().is_some() {
-                "accepted"
-            } else {
-                "no_device"
+    async fn fhe_ntt(
+        self,
+        _: tarpc::context::Context,
+        modulus: u64,
+        degree: u64,
+        root_of_unity: u64,
+        coefficients: Vec<u64>,
+    ) -> FheNttResult {
+        let Some(dev) = self.primal.device() else {
+            return FheNttResult {
+                status: "no_device".to_string(),
+                result: vec![],
+            };
+        };
+
+        let u32_pairs: Vec<u32> = coefficients
+            .iter()
+            .flat_map(|&x| [x as u32, (x >> 32) as u32])
+            .collect();
+        let f32_bits: Vec<f32> = u32_pairs.iter().map(|&x| f32::from_bits(x)).collect();
+
+        let tensor = match barracuda::tensor::Tensor::from_data(
+            &f32_bits,
+            vec![coefficients.len() * 2],
+            dev.clone(),
+        ) {
+            Ok(t) => t,
+            Err(e) => {
+                return FheNttResult {
+                    status: format!("error: {e}"),
+                    result: vec![],
+                }
             }
-            .to_string(),
+        };
+
+        let ntt = match barracuda::ops::fhe_ntt::FheNtt::new(
+            tensor,
+            degree as u32,
             modulus,
+            root_of_unity,
+        ) {
+            Ok(n) => n,
+            Err(e) => {
+                return FheNttResult {
+                    status: format!("error: {e}"),
+                    result: vec![],
+                }
+            }
+        };
+
+        match ntt.execute() {
+            Ok(result_tensor) => match result_tensor.to_vec_u32() {
+                Ok(u32_data) => {
+                    let result_u64: Vec<u64> = u32_data
+                        .chunks(2)
+                        .map(|c| {
+                            u64::from(c[0]) | (u64::from(c.get(1).copied().unwrap_or(0)) << 32)
+                        })
+                        .collect();
+                    FheNttResult {
+                        status: "completed".to_string(),
+                        result: result_u64,
+                    }
+                }
+                Err(e) => FheNttResult {
+                    status: format!("error: {e}"),
+                    result: vec![],
+                },
+            },
+            Err(e) => FheNttResult {
+                status: format!("error: {e}"),
+                result: vec![],
+            },
         }
     }
 
-    async fn fhe_pointwise_mul(self, _: tarpc::context::Context, modulus: u64) -> FheResult {
-        FheResult {
-            status: if self.primal.device().is_some() {
-                "accepted"
-            } else {
-                "no_device"
+    async fn fhe_pointwise_mul(
+        self,
+        _: tarpc::context::Context,
+        modulus: u64,
+        degree: u64,
+        a: Vec<u64>,
+        b: Vec<u64>,
+    ) -> FhePointwiseMulResult {
+        let Some(dev) = self.primal.device() else {
+            return FhePointwiseMulResult {
+                status: "no_device".to_string(),
+                result: vec![],
+            };
+        };
+
+        let convert_to_tensor =
+            |poly: &[u64], label: &str| -> std::result::Result<barracuda::tensor::Tensor, String> {
+                let u32_pairs: Vec<u32> = poly
+                    .iter()
+                    .flat_map(|&x| [x as u32, (x >> 32) as u32])
+                    .collect();
+                let f32_bits: Vec<f32> = u32_pairs.iter().map(|&x| f32::from_bits(x)).collect();
+                barracuda::tensor::Tensor::from_data(&f32_bits, vec![poly.len() * 2], dev.clone())
+                    .map_err(|e| format!("{label}: {e}"))
+            };
+
+        let tensor_a = match convert_to_tensor(&a, "input_a") {
+            Ok(t) => t,
+            Err(e) => {
+                return FhePointwiseMulResult {
+                    status: format!("error: {e}"),
+                    result: vec![],
+                }
             }
-            .to_string(),
+        };
+
+        let tensor_b = match convert_to_tensor(&b, "input_b") {
+            Ok(t) => t,
+            Err(e) => {
+                return FhePointwiseMulResult {
+                    status: format!("error: {e}"),
+                    result: vec![],
+                }
+            }
+        };
+
+        let mul = match barracuda::ops::fhe_pointwise_mul::FhePointwiseMul::new(
+            tensor_a,
+            tensor_b,
+            degree as u32,
             modulus,
+        ) {
+            Ok(m) => m,
+            Err(e) => {
+                return FhePointwiseMulResult {
+                    status: format!("error: {e}"),
+                    result: vec![],
+                }
+            }
+        };
+
+        match mul.execute() {
+            Ok(result_tensor) => match result_tensor.to_vec_u32() {
+                Ok(u32_data) => {
+                    let result_u64: Vec<u64> = u32_data
+                        .chunks(2)
+                        .map(|c| {
+                            u64::from(c[0]) | (u64::from(c.get(1).copied().unwrap_or(0)) << 32)
+                        })
+                        .collect();
+                    FhePointwiseMulResult {
+                        status: "completed".to_string(),
+                        result: result_u64,
+                    }
+                }
+                Err(e) => FhePointwiseMulResult {
+                    status: format!("error: {e}"),
+                    result: vec![],
+                },
+            },
+            Err(e) => FhePointwiseMulResult {
+                status: format!("error: {e}"),
+                result: vec![],
+            },
         }
     }
 }

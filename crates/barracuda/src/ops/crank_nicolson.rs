@@ -212,7 +212,6 @@ impl CrankNicolson {
 
     /// CPU reference implementation (Thomas algorithm)
     #[cfg(test)]
-    #[allow(dead_code)]
     fn solve_cpu(
         &self,
         u0: &[f32],

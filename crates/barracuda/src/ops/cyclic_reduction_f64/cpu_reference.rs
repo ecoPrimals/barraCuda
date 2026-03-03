@@ -6,7 +6,6 @@
 
 /// Thomas algorithm for tridiagonal systems (O(n) sequential).
 #[cfg(test)]
-#[allow(dead_code)]
 pub fn solve_cpu_thomas(a: &[f64], b: &[f64], c: &[f64], d: &[f64]) -> Vec<f64> {
     let n = b.len();
     let mut c_prime = vec![0.0f64; n];

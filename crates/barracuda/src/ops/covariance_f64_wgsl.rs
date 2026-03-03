@@ -116,7 +116,6 @@ impl CovarianceF64 {
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn covariance_cpu(x: &[f64], y: &[f64], ddof: usize) -> f64 {
         let n = x.len();
         if n <= ddof {

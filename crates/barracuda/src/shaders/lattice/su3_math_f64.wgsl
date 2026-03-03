@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // SU(3) pure-math library (no buffer I/O — safe for shader composition).
 // Depends on complex_f64.wgsl (prepend before this file).
 //

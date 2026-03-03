@@ -12,6 +12,13 @@ use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
 
+/// Maximum tarpc frame length. `usize::MAX` allows arbitrarily large
+/// payloads — tighten this if DoS protection is needed at the transport layer.
+const TARPC_MAX_FRAME_LENGTH: usize = usize::MAX;
+
+/// Maximum concurrent tarpc connections processed simultaneously.
+const TARPC_MAX_CONCURRENT_CONNECTIONS: usize = 10;
+
 /// IPC server for barraCuda primal.
 ///
 /// Serves both JSON-RPC 2.0 (text, newline-delimited) and tarpc (binary,
@@ -46,7 +53,9 @@ impl IpcServer {
         let local_addr = listener.local_addr();
         tracing::info!("barraCuda tarpc listening on tcp://{local_addr}");
 
-        listener.config_mut().max_frame_length(usize::MAX);
+        listener
+            .config_mut()
+            .max_frame_length(TARPC_MAX_FRAME_LENGTH);
 
         let server = BarraCudaServer::new(Arc::clone(&self.primal));
 
@@ -60,7 +69,7 @@ impl IpcServer {
                     async {}
                 })
             })
-            .buffer_unordered(10)
+            .buffer_unordered(TARPC_MAX_CONCURRENT_CONNECTIONS)
             .for_each(|()| async {})
             .await;
 

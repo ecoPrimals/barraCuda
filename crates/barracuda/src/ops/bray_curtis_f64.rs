@@ -231,7 +231,6 @@ impl BrayCurtisF64 {
 
     /// CPU fallback for small inputs
     #[cfg(test)]
-    #[allow(dead_code)]
     fn condensed_distance_matrix_cpu(
         &self,
         samples: &[f64],

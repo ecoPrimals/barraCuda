@@ -9,10 +9,10 @@ See: `../sourDough/CONVENTIONS.md` for complete guidelines.
 - **Edition**: 2021
 - **MSRV**: 1.87
 - **Linting**: `warn(clippy::all, clippy::pedantic)` — configured in `Cargo.toml` `[lints]`
-- **Docs**: `#![warn(missing_docs)]` (pending full coverage pass)
+- **Docs**: `#![warn(missing_docs)]` — `cargo doc --workspace --no-deps` clean with `-D warnings`
 - **Unsafe**: `#![deny(unsafe_code)]`
 - **Max file size**: 1000 LOC
-- **Test coverage**: 90%+ target (currently 79% unit, growing)
+- **Test coverage**: 90%+ target (currently ~80% unit, growing; remaining gap is GPU-only code)
 
 ## Error Handling
 

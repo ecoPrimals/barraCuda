@@ -1,23 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! NPU Backend Module for BarraCuda v2.0
+//! NPU Backend Module
 //!
-//! Event-driven ML execution on Akida neuromorphic processors.
-//!
-//! **Deep Debt Principles**:
-//! - Pure Rust (using akida-driver)
-//! - Runtime discovery (no hardcoded devices)
-//! - Capability-based configuration
-//! - Zero unsafe code
-//! - Measured performance (not simulated)
+//! Event codec and constants for neuromorphic processor integration.
+//! Actual hardware execution is handled by the consuming primal or orchestrator.
 
 pub mod constants;
 pub mod event_codec;
-#[cfg(feature = "npu-akida")]
-pub mod ml_backend;
-#[cfg(feature = "npu-akida")]
-pub mod ops;
 
 pub use constants as npu_constants;
 pub use event_codec::EventCodec;
-#[cfg(feature = "npu-akida")]
-pub use ml_backend::NpuMlBackend;

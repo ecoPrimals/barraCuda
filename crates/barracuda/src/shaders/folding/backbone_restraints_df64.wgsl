@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // backbone_restraints_df64.wgsl — Harmonic restraints on backbone atoms
 //
 // E = 0.5 * k * (x - x_ref)^2 per coordinate

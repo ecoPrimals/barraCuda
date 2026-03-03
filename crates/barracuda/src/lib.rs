@@ -212,8 +212,6 @@ pub mod prelude {
     pub use crate::nn::{Layer, LossFunction, Optimizer};
     #[cfg(feature = "gpu")]
     pub use crate::npu::EventCodec;
-    #[cfg(all(feature = "gpu", feature = "npu-akida"))]
-    pub use crate::npu::NpuMlBackend;
     #[cfg(feature = "gpu")]
     pub use crate::resource_quota::{presets as quota_presets, QuotaTracker, ResourceQuota};
     #[cfg(feature = "gpu")]

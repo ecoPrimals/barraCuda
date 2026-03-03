@@ -198,17 +198,14 @@ impl BenchmarkSuite {
 
     /// Run all benchmarks
     pub async fn run_all(&mut self) -> Result<()> {
-        println!("🚀 Starting BarraCuda vs CUDA Benchmark Suite");
-        println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        println!();
+        tracing::info!("Starting BarraCuda vs CUDA Benchmark Suite");
 
         // Discover hardware
         let hardware = self.discover_hardware().await?;
-        println!("📊 Discovered {} compute device(s)", hardware.len());
+        tracing::info!("Discovered {} compute device(s)", hardware.len());
         for hw in &hardware {
-            println!("   • {hw}");
+            tracing::info!("  {hw}");
         }
-        println!();
 
         // Run operation benchmarks
         self.benchmark_matrix_operations().await?;
@@ -239,7 +236,7 @@ impl BenchmarkSuite {
     }
 
     async fn benchmark_matrix_operations(&mut self) -> Result<()> {
-        println!("📐 Matrix Operations");
+        tracing::info!("Matrix Operations");
 
         // Small sizes that complete quickly for CI/testing
         let quick_sizes: &[(usize, usize, usize)] =
@@ -254,7 +251,7 @@ impl BenchmarkSuite {
     }
 
     async fn benchmark_activations(&mut self) -> Result<()> {
-        println!("⚡ Activation Functions");
+        tracing::info!("Activation Functions");
 
         let activation_ops = ["ReLU", "GELU", "SiLU", "Sigmoid", "Tanh"];
         let sizes = [10_000, 100_000, 1_000_000];
@@ -271,7 +268,7 @@ impl BenchmarkSuite {
     }
 
     async fn benchmark_reductions(&mut self) -> Result<()> {
-        println!("📉 Reduction Operations");
+        tracing::info!("Reduction Operations");
 
         // Reduction benchmark using sum operation
         let sizes = [10_000usize, 100_000, 1_000_000, 10_000_000];
@@ -334,7 +331,7 @@ impl BenchmarkSuite {
     }
 
     async fn benchmark_convolutions(&mut self) -> Result<()> {
-        println!("🔲 Convolution Operations");
+        tracing::info!("Convolution Operations");
 
         // Basic 1D convolution benchmark
         let input_sizes = [1024usize, 4096, 16_384];
@@ -506,8 +503,27 @@ fn cpu_conv1d(input: &[f32], kernel: &[f32]) -> Vec<f32> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use std::time::Duration;
+
+    fn make_result(op: &str, hw: &str, framework: Framework, median_ms: f64) -> BenchmarkResult {
+        let median = Duration::from_secs_f64(median_ms / 1000.0);
+        BenchmarkResult {
+            operation: op.to_string(),
+            hardware: hw.to_string(),
+            framework,
+            median_time: median,
+            mean_time: median,
+            std_dev: Duration::from_millis(1),
+            min_time: median,
+            max_time: median,
+            throughput: 1000.0 / median_ms,
+            bandwidth_gbps: 0.0,
+            tflops: 0.0,
+        }
+    }
 
     #[test]
     fn test_benchmark_config_default() {
@@ -521,5 +537,82 @@ mod tests {
     fn test_framework_display() {
         assert_eq!(Framework::BarraCuda.to_string(), "BarraCuda");
         assert_eq!(Framework::CUDA.to_string(), "CUDA");
+    }
+
+    #[test]
+    fn test_comparison_result_new_with_cuda() {
+        let barracuda = make_result("MatMul", "CPU", Framework::BarraCuda, 10.0);
+        let cuda = make_result("MatMul", "CPU", Framework::CUDA, 5.0);
+        let cmp = ComparisonResult::new(barracuda, Some(cuda));
+        // CUDA is 2x faster: cuda_secs/barracuda_secs = 5/10 = 0.5, parity = 50%
+        assert!((cmp.speedup - 0.5).abs() < 1e-6);
+        assert!((cmp.parity_percent - 50.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_comparison_result_new_without_cuda() {
+        let barracuda = make_result("MatMul", "CPU", Framework::BarraCuda, 10.0);
+        let cmp = ComparisonResult::new(barracuda, None);
+        assert_eq!(cmp.parity_percent, 100.0);
+        assert_eq!(cmp.speedup, 0.0);
+    }
+
+    #[test]
+    fn test_achieves_parity() {
+        let barracuda = make_result("MatMul", "CPU", Framework::BarraCuda, 10.0);
+        let cuda_95 = make_result("MatMul", "CPU", Framework::CUDA, 9.5);
+        let cuda_80 = make_result("MatMul", "CPU", Framework::CUDA, 8.0);
+        let cmp_95 = ComparisonResult::new(barracuda.clone(), Some(cuda_95));
+        let cmp_80 = ComparisonResult::new(barracuda, Some(cuda_80));
+        assert!(cmp_95.achieves_parity(90.0));
+        assert!(!cmp_80.achieves_parity(90.0));
+    }
+
+    #[test]
+    fn test_benchmark_suite_new_and_summary() {
+        let config = BenchmarkConfig::default();
+        let suite = BenchmarkSuite::new(config);
+        let summary = suite.summary();
+        assert_eq!(summary.total_operations, 0);
+        assert_eq!(summary.ops_at_90_parity, 0);
+        assert_eq!(summary.ops_at_95_parity, 0);
+        assert_eq!(summary.ops_at_98_parity, 0);
+        assert!((summary.mean_parity_percent - 0.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_benchmark_summary_display() {
+        let summary = BenchmarkSummary {
+            total_operations: 5,
+            ops_at_90_parity: 4,
+            ops_at_95_parity: 3,
+            ops_at_98_parity: 2,
+            mean_parity_percent: 92.5,
+        };
+        let s = summary.to_string();
+        assert!(s.contains("Benchmark Summary"));
+        assert!(s.contains("Total Operations: 5"));
+        assert!(s.contains("≥90% Parity"));
+        assert!(s.contains("Mean Parity: 92.50%"));
+    }
+
+    #[test]
+    fn test_precision_variants() {
+        assert_eq!(Precision::FP16, Precision::FP16);
+        assert_eq!(Precision::FP32, Precision::FP32);
+        assert_eq!(Precision::FP64, Precision::FP64);
+        assert_eq!(Precision::INT8, Precision::INT8);
+        assert!(Precision::FP32 != Precision::FP64);
+    }
+
+    #[test]
+    fn test_cpu_conv1d() {
+        let input = vec![1.0f32, 2.0, 3.0, 4.0, 5.0];
+        let kernel = vec![1.0f32, 0.0, 1.0];
+        let out = super::cpu_conv1d(&input, &kernel);
+        assert_eq!(out.len(), 3);
+        assert!((out[0] - 4.0).abs() < 1e-6);
+        assert!((out[1] - 6.0).abs() < 1e-6);
+        assert!((out[2] - 8.0).abs() < 1e-6);
     }
 }

@@ -323,7 +323,6 @@ impl YukawaCellListF64 {
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn build_cell_list(
         &self,
         positions: &[f64],
@@ -363,7 +362,6 @@ impl YukawaCellListF64 {
 
     /// CPU reference (test/validation only — production always dispatches shader).
     #[cfg(test)]
-    #[allow(dead_code)]
     fn compute_cpu(
         &self,
         positions: &[f64],
@@ -440,13 +438,11 @@ impl YukawaCellListF64 {
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn pbc_delta(&self, delta: f64, box_size: f64) -> f64 {
         delta - box_size * (delta / box_size).round()
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn get_neighbor_cells(&self, cell_idx: usize, params: &CellListParams) -> Vec<usize> {
         let nx = params.n_cells[0];
         let ny = params.n_cells[1];

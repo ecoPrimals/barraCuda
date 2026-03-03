@@ -257,52 +257,6 @@ async fn test_gpu_to_cpu_fallback() {
     println!("\n  Fallback chain: PASS\n");
 }
 
-#[cfg(feature = "toadstool")]
-#[test]
-fn test_device_selection_fallback_chain() {
-    use barracuda::device::{select_best_device, select_device_prefer, HardwareWorkload};
-
-    println!("\n=== Device Selection Fallback Chain ===\n");
-
-    // Test that selection always returns something usable
-    let workloads = vec![
-        HardwareWorkload::TensorOps,
-        HardwareWorkload::ScientificCompute,
-        HardwareWorkload::SpikingNetwork,
-    ];
-
-    for workload in workloads {
-        match select_best_device(workload) {
-            Ok(selection) => {
-                println!("  {:?} -> {:?}", workload, selection);
-            }
-            Err(e) => {
-                panic!("Device selection should never fail: {}", e);
-            }
-        }
-    }
-
-    // Test explicit preferences with fallback
-    let preferences = vec![
-        DeviceSelection::Gpu,
-        DeviceSelection::Npu,
-        DeviceSelection::Cpu,
-    ];
-
-    for pref in preferences {
-        match select_device_prefer(pref) {
-            Ok(selection) => {
-                println!("  Prefer {:?} -> Got {:?}", pref, selection);
-            }
-            Err(e) => {
-                panic!("Device preference should never fail: {}", e);
-            }
-        }
-    }
-
-    println!("\n  Device selection fallback: PASS\n");
-}
-
 // ============================================================================
 // Stress Tests
 // ============================================================================

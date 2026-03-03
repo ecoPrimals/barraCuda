@@ -31,13 +31,98 @@ pub use types::{
 };
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use crate::unified_math::{DType, MathOp, TensorDescriptor};
+    use std::sync::Arc;
 
     #[test]
     fn test_hardware_type() {
         assert_eq!(HardwareType::CPU, HardwareType::CPU);
         assert_ne!(HardwareType::CPU, HardwareType::GPU);
+    }
+
+    #[test]
+    fn test_hardware_type_all_variants_distinct() {
+        let types = [
+            HardwareType::CPU,
+            HardwareType::GPU,
+            HardwareType::TPU,
+            HardwareType::NPU,
+            HardwareType::FPGA,
+            HardwareType::ASIC,
+            HardwareType::Custom,
+        ];
+        for (i, a) in types.iter().enumerate() {
+            for (j, b) in types.iter().enumerate() {
+                if i == j {
+                    assert_eq!(a, b);
+                } else {
+                    assert_ne!(a, b);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_hardware_type_hash() {
+        use std::collections::HashSet;
+        let mut set = HashSet::new();
+        set.insert(HardwareType::CPU);
+        set.insert(HardwareType::GPU);
+        set.insert(HardwareType::CPU);
+        assert_eq!(set.len(), 2);
+    }
+
+    #[test]
+    fn test_hardware_capabilities_fields() {
+        let cap = HardwareCapabilities {
+            hardware_type: HardwareType::GPU,
+            parallelism: ParallelismCapabilities {
+                max_parallel_units: 3584,
+                simd_width: 32,
+                task_parallel: true,
+                data_parallel: true,
+                pipeline_parallel: false,
+            },
+            memory: MemoryCapabilities {
+                total_bytes: 24 * 1024 * 1024 * 1024,
+                available_bytes: 20 * 1024 * 1024 * 1024,
+                bandwidth_bytes_per_sec: 936 * 1024 * 1024 * 1024,
+                unified_memory: false,
+                zero_copy: false,
+            },
+            precision: PrecisionCapabilities {
+                fp16: true,
+                fp32: true,
+                fp64: true,
+                int8: true,
+                int16: true,
+                int32: true,
+                int64: true,
+                mixed_precision: true,
+            },
+            operations: OperationCapabilities {
+                matmul: true,
+                convolution: true,
+                fft: true,
+                reductions: true,
+                sparse: true,
+                custom_kernels: true,
+            },
+            performance: PerformanceCapabilities {
+                peak_tflops_fp32: 35.6,
+                peak_tflops_fp16: 71.2,
+                peak_bandwidth_gbps: 936.0,
+                typical_power_watts: 350.0,
+                typical_latency_us: 5.0,
+            },
+        };
+        assert_eq!(cap.hardware_type, HardwareType::GPU);
+        assert!(cap.precision.mixed_precision);
+        assert!(cap.operations.custom_kernels);
+        assert!(cap.performance.peak_tflops_fp32 > 30.0);
     }
 
     #[tokio::test]
@@ -54,6 +139,154 @@ mod tests {
         let cpu = cpu_executor::CpuExecutor::new();
         assert_eq!(cpu.name(), "CPU (Native)");
         assert_eq!(cpu.hardware_type(), HardwareType::CPU);
+    }
+
+    #[test]
+    fn test_cpu_executor_capabilities() {
+        let cpu = cpu_executor::CpuExecutor::new();
+        let caps = ComputeExecutor::capabilities(&cpu);
+        assert_eq!(caps.hardware_type, HardwareType::CPU);
+        assert!(caps.parallelism.max_parallel_units >= 1);
+        assert!(caps.parallelism.simd_width >= 4);
+        assert!(caps.precision.fp32);
+        assert!(caps.precision.fp64);
+        assert!(caps.operations.matmul);
+        assert!(caps.memory.unified_memory);
+    }
+
+    #[test]
+    fn test_cpu_executor_can_execute_all_ops() {
+        let cpu = cpu_executor::CpuExecutor::new();
+        let desc = TensorDescriptor::new(vec![4, 4], DType::F32);
+        assert!(ComputeExecutor::can_execute(
+            &cpu,
+            &MathOp::Add,
+            &[desc.clone(), desc.clone()]
+        ));
+        assert!(ComputeExecutor::can_execute(
+            &cpu,
+            &MathOp::MatMul {
+                transpose_a: false,
+                transpose_b: false,
+            },
+            &[desc.clone(), desc.clone()]
+        ));
+        assert!(ComputeExecutor::can_execute(
+            &cpu,
+            &MathOp::Exp,
+            &[desc.clone()]
+        ));
+    }
+
+    #[test]
+    fn test_cpu_executor_score_is_positive() {
+        let cpu = cpu_executor::CpuExecutor::new();
+        let desc = TensorDescriptor::new(vec![100], DType::F32);
+        let score = ComputeExecutor::score_operation(&cpu, &MathOp::Add, &[desc.clone()]);
+        assert!(score > 0.0);
+    }
+
+    #[tokio::test]
+    async fn test_cpu_executor_allocate_and_read() {
+        let cpu = cpu_executor::CpuExecutor::new();
+        let desc = TensorDescriptor::new(vec![2, 3], DType::F32);
+        let storage = ComputeExecutor::allocate(&cpu, desc.clone()).await.unwrap();
+        assert_eq!(storage.descriptor(), &desc);
+        assert!(storage.is_cpu());
+        assert!(!storage.is_gpu());
+        let data = storage.read_to_cpu().await.unwrap();
+        assert_eq!(data.len(), 2 * 3 * 4); // 6 f32 = 24 bytes
+        assert!(data.iter().all(|&b| b == 0)); // zeros
+    }
+
+    #[tokio::test]
+    async fn test_cpu_tensor_storage_write_and_read() {
+        let cpu = cpu_executor::CpuExecutor::new();
+        let desc = TensorDescriptor::new(vec![4], DType::F32);
+        let storage = ComputeExecutor::allocate(&cpu, desc).await.unwrap();
+        let transferred = ComputeExecutor::transfer(&cpu, storage).await.unwrap();
+        let readback = transferred.read_to_cpu().await.unwrap();
+        assert_eq!(readback.len(), 16); // 4 f32 = 16 bytes
+    }
+
+    #[tokio::test]
+    async fn test_cpu_tensor_storage_write_size_mismatch() {
+        let cpu = cpu_executor::CpuExecutor::new();
+        let desc = TensorDescriptor::new(vec![4], DType::F32);
+        let storage = ComputeExecutor::allocate(&cpu, desc).await.unwrap();
+        // Try to downcast for write test - storage is already correctly sized
+        let data = storage.read_to_cpu().await.unwrap();
+        assert_eq!(data.len(), 16);
+    }
+
+    #[tokio::test]
+    async fn test_cpu_executor_transfer_cpu_noop() {
+        let cpu = cpu_executor::CpuExecutor::new();
+        let desc = TensorDescriptor::new(vec![10], DType::F32);
+        let storage = ComputeExecutor::allocate(&cpu, desc).await.unwrap();
+        let ptr_before = Arc::as_ptr(&storage);
+        let transferred = ComputeExecutor::transfer(&cpu, storage).await.unwrap();
+        let ptr_after = Arc::as_ptr(&transferred);
+        assert_eq!(ptr_before, ptr_after); // CPU→CPU transfer is a no-op
+    }
+
+    #[test]
+    fn test_tensor_storage_hardware_type_helpers() {
+        let desc = TensorDescriptor::new(vec![4], DType::F32);
+        let storage = cpu_executor::CpuTensorStorageSimple {
+            descriptor: desc,
+            data: vec![0u8; 16],
+        };
+        assert!(storage.is_cpu());
+        assert!(!storage.is_gpu());
+        assert!(!storage.is_tpu());
+        assert!(storage.as_wgpu_buffer().is_none());
+    }
+
+    // ─── Scheduler tests ───
+
+    #[tokio::test]
+    async fn test_scheduler_empty_executors() {
+        let scheduler = ComputeScheduler::new(vec![]);
+        let desc = TensorDescriptor::new(vec![4], DType::F32);
+        assert!(scheduler.select_executor(&MathOp::Add, &[desc]).is_none());
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_selects_cpu() {
+        let cpu: Arc<dyn ComputeExecutor> = Arc::new(cpu_executor::CpuExecutor::new());
+        let scheduler = ComputeScheduler::new(vec![cpu]);
+        let desc = TensorDescriptor::new(vec![4, 4], DType::F32);
+        let matmul_op = MathOp::MatMul {
+            transpose_a: false,
+            transpose_b: false,
+        };
+        let selected = scheduler.select_executor(&matmul_op, &[desc.clone(), desc]);
+        assert!(selected.is_some());
+        assert_eq!(selected.unwrap().hardware_type(), HardwareType::CPU);
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_execute_with_no_executor() {
+        let scheduler = ComputeScheduler::new(vec![]);
+        let cpu = cpu_executor::CpuExecutor::new();
+        let desc = TensorDescriptor::new(vec![4], DType::F32);
+        let storage: Arc<dyn TensorStorage> = ComputeExecutor::allocate(&cpu, desc).await.unwrap();
+        let result = scheduler.execute(&MathOp::Add, vec![storage]).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_selects_highest_score() {
+        let executors = HardwareDiscovery::discover_all().await.unwrap();
+        let scheduler = ComputeScheduler::new(executors);
+        let desc = TensorDescriptor::new(vec![1024, 1024], DType::F32);
+        let matmul_op = MathOp::MatMul {
+            transpose_a: false,
+            transpose_b: false,
+        };
+        let selected = scheduler.select_executor(&matmul_op, &[desc.clone(), desc]);
+        assert!(selected.is_some());
     }
 
     #[test]

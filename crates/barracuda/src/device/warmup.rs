@@ -2,7 +2,7 @@
 //! Shader Warmup System - "Mise en Place" for GPU Computing
 //!
 //! Pre-compiles commonly used shader patterns before task execution.
-//! ToadStool learns which operations are used and warms the cache proactively.
+//! barraCuda learns which operations are used and warms the cache proactively.
 //!
 //! ## Why This Matters
 //!
@@ -16,7 +16,7 @@
 //!
 //! ```text
 //! ┌─────────────────────────────────────────────────────────────────┐
-//! │  ToadStool Task Orchestrator                                     │
+//! │  barraCuda Shader Warmup                                         │
 //! │                                                                  │
 //! │  1. Receive workload description                                 │
 //! │  2. Analyze required operations (add, mul, matmul, reduce, etc.) │
@@ -384,7 +384,7 @@ pub fn warmup_pool(
             "╔══════════════════════════════════════════════════════════════════════════════╗"
         );
         println!(
-            "║  ToadStool Mise en Place - Shader Warmup                                      ║"
+            "║  barraCuda Mise en Place - Shader Warmup                                      ║"
         );
         println!(
             "╚══════════════════════════════════════════════════════════════════════════════╝\n"

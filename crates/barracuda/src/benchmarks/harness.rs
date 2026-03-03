@@ -22,7 +22,7 @@ impl Harness {
         F: FnMut() -> Fut,
         Fut: std::future::Future<Output = Result<()>>,
     {
-        println!("Running: {name}");
+        tracing::info!("Running: {name}");
 
         // Warmup
         for _ in 0..self.config.warmup_iterations {
@@ -71,5 +71,43 @@ impl Harness {
             bandwidth_gbps: 0.0,
             tflops: 0.0,
         })
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_harness_run_basic() {
+        let config = super::super::BenchmarkConfig {
+            warmup_iterations: 2,
+            measurement_iterations: 5,
+            ..Default::default()
+        };
+        let harness = Harness::new(config);
+        let result = harness.run("test_op", || async { Ok(()) }).await.unwrap();
+        assert!(result.throughput > 0.0);
+        assert_eq!(result.operation, "test_op");
+    }
+
+    #[tokio::test]
+    async fn test_harness_run_with_work() {
+        let config = super::super::BenchmarkConfig {
+            warmup_iterations: 2,
+            measurement_iterations: 5,
+            ..Default::default()
+        };
+        let harness = Harness::new(config);
+        let result = harness
+            .run("work_op", || async {
+                let _: f32 = vec![0.0f32; 1000].iter().sum();
+                Ok(())
+            })
+            .await
+            .unwrap();
+        assert!(result.throughput > 0.0);
+        assert_eq!(result.operation, "work_op");
     }
 }

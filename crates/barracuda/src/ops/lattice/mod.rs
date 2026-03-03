@@ -184,7 +184,7 @@ impl NeighborMode {
     /// site (x=1, y=0, z=0, t=0) has index 1, and site (x=0, y=0, z=0, t=1)
     /// has index 64.
     ///
-    /// **Note for springs**: hotSpring and toadStool both use x-fastest.
+    /// **Note for springs**: hotSpring and barraCuda both use x-fastest.
     /// If your physics uses z-fastest ordering, transpose your data before
     /// passing to precomputed neighbor tables, or use `OnTheFly` mode.
     ///

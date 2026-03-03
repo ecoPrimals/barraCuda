@@ -199,9 +199,9 @@ Springs
         └─► nestGate (storage)
 ```
 
-barraCuda has ZERO required dependencies on toadStool. The `toadstool` feature
-flag in barraCuda enables optional integration (e.g., `DeviceSelection` from
-`toadstool-core`) but is off by default.
+barraCuda has ZERO dependencies on toadStool. The `toadstool` feature flag was
+removed in v0.3.0 — barraCuda is fully untangled. Device discovery uses
+`WgpuDevice::new()` / `Auto::new()` directly via wgpu.
 
 toadStool's `runtime/adaptive` crate tunes barraCuda operations but has ZERO
 code coupling to barraCuda:
@@ -257,7 +257,7 @@ different layers.
 
 | barraCuda Module | toadStool Crate | Overlap | Layer |
 |------------------|-----------------|---------|-------|
-| `device/` | `toadstool-core` | None | barraCuda: wgpu device API. toadStool: OS-level `/sys` hardware discovery. |
+| `device/` | `toadstool-core` | None | barraCuda: wgpu device API (standalone). toadStool: OS-level `/sys` hardware discovery. No dependency between them. |
 | `multi_gpu/` | `runtime/gpu` | None | barraCuda: wgpu-only GpuPool in-process. toadStool: multi-framework (CUDA/ROCm/etc) orchestration. |
 | `scheduler/` | `runtime/orchestration` | None | barraCuda: per-op executor scoring. toadStool: workload-level substrate selection. |
 | `workload/` | `runtime/orchestration` | None | barraCuda: data/workload characteristics. toadStool: resource and performance requirements. |

@@ -31,7 +31,7 @@ thiserror = "2.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-# GPU — version 22 matches toadStool's barracuda source
+# GPU compute (vendor-agnostic via WebGPU)
 wgpu = { version = "22", default-features = false, features = [
     "wgsl",
     "dx12",
@@ -48,7 +48,8 @@ rayon = "1.8"
 rand = "0.8"
 
 # Cryptographic hashing (for provenance, not crypto operations)
-blake3 = "1.5"
+# 'pure' feature: no C SIMD assembly, fully pure Rust dependency chain
+blake3 = { version = "1.5", features = ["pure"] }
 
 # Utilities
 etcetera = "0.8"

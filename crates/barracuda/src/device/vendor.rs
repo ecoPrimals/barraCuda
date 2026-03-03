@@ -43,3 +43,48 @@ pub fn vendor_name(id: u32) -> &'static str {
         _ => "Unknown",
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_vendor_constants() {
+        let ids = [
+            VENDOR_NVIDIA,
+            VENDOR_AMD,
+            VENDOR_INTEL,
+            VENDOR_APPLE,
+            VENDOR_ARM,
+            VENDOR_QUALCOMM,
+            VENDOR_IMAGINATION,
+            VENDOR_SOFTWARE,
+        ];
+        for (i, &a) in ids.iter().enumerate() {
+            for (j, &b) in ids.iter().enumerate() {
+                if i != j {
+                    assert_ne!(a, b, "Vendor IDs must be distinct");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_vendor_name_known() {
+        assert_eq!(vendor_name(VENDOR_NVIDIA), "NVIDIA");
+        assert_eq!(vendor_name(VENDOR_AMD), "AMD");
+        assert_eq!(vendor_name(VENDOR_INTEL), "Intel");
+        assert_eq!(vendor_name(VENDOR_APPLE), "Apple");
+        assert_eq!(vendor_name(VENDOR_ARM), "ARM Mali");
+        assert_eq!(vendor_name(VENDOR_QUALCOMM), "Qualcomm Adreno");
+        assert_eq!(vendor_name(VENDOR_IMAGINATION), "ImgTec PowerVR");
+        assert_eq!(vendor_name(VENDOR_SOFTWARE), "Software (CPU)");
+    }
+
+    #[test]
+    fn test_vendor_name_unknown() {
+        assert_eq!(vendor_name(0xDEADBEEF), "Unknown");
+        assert_eq!(vendor_name(0x1234), "Unknown");
+    }
+}

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 //! Validation harness for barracuda validation binaries.
 //!
@@ -217,10 +217,10 @@ pub fn gpu_required() -> bool {
 /// Otherwise, prints a skip message and exits 0.
 pub fn exit_no_gpu() -> ! {
     if gpu_required() {
-        eprintln!("  FAIL: no GPU adapter (BARRACUDA_REQUIRE_GPU=1)");
+        tracing::error!("FAIL: no GPU adapter (BARRACUDA_REQUIRE_GPU=1)");
         process::exit(1);
     }
-    eprintln!("  0/0 checks — skipping gracefully (no GPU adapter)");
+    tracing::info!("0/0 checks — skipping gracefully (no GPU adapter)");
     process::exit(0);
 }
 
@@ -239,6 +239,7 @@ macro_rules! require {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -294,5 +295,39 @@ mod tests {
         // Unless BARRACUDA_REQUIRE_GPU is set, should be false
         std::env::remove_var("BARRACUDA_REQUIRE_GPU");
         assert!(!gpu_required());
+    }
+
+    #[test]
+    fn test_tolerance_mode_display() {
+        assert_eq!(ToleranceMode::Absolute.to_string(), "abs");
+        assert_eq!(ToleranceMode::Relative.to_string(), "rel");
+        assert_eq!(ToleranceMode::UpperBound.to_string(), "<");
+        assert_eq!(ToleranceMode::LowerBound.to_string(), ">");
+    }
+
+    #[test]
+    fn test_check_rel_with_zero_expected() {
+        let mut h = ValidationHarness::new("test");
+        h.check_rel("zero_expected_pass", 0.0001, 0.0, 0.01);
+        h.check_rel("zero_expected_fail", 1.0, 0.0, 0.01);
+        assert!(h.checks[0].passed);
+        assert!(!h.checks[1].passed);
+    }
+
+    #[test]
+    fn test_empty_harness() {
+        let h = ValidationHarness::new("empty");
+        assert!(h.all_passed());
+        assert_eq!(h.passed_count(), 0);
+        assert_eq!(h.total_count(), 0);
+    }
+
+    #[test]
+    fn test_check_bool_false() {
+        let mut h = ValidationHarness::new("test");
+        h.check_bool("x", false);
+        assert_eq!(h.passed_count(), 0);
+        assert_eq!(h.total_count(), 1);
+        assert!(!h.all_passed());
     }
 }

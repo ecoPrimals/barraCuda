@@ -10,7 +10,7 @@
 //! Set `BARRACUDA_TEST_BACKEND=gpu` to run all tests on GPU (workload testing).
 //! Set `BARRACUDA_GPU_ADAPTER=<name|index>` to pin the GPU adapter.
 //!
-//! The test suite IS a workload test of toadstool — test failures reveal
+//! The test suite IS a workload test of barraCuda — test failures reveal
 //! runtime flaws that would appear in production under sustained load.
 
 use crate::device::WgpuDevice;

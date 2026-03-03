@@ -143,7 +143,6 @@ impl BatchedElementwiseF64 {
 
     /// CPU fallback for small batches
     #[cfg(test)]
-    #[allow(dead_code)]
     fn execute_cpu(
         &self,
         data: &[f64],

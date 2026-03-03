@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 //! Moving Window Statistics — GPU-accelerated sliding window mean/var/min/max
 //!

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // GPU-resident Gaussian random fermion field generation via PCG hash PRNG.
 //
 // Each thread generates one site's fermion field: 3 colors × (re, im) = 6 f64.

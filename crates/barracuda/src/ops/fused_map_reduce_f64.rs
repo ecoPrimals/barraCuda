@@ -302,7 +302,6 @@ impl FusedMapReduceF64 {
 
     /// CPU fallback for small arrays (faster due to no dispatch overhead)
     #[cfg(test)]
-    #[allow(dead_code)]
     fn execute_cpu(
         &self,
         data: &[f64],

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Parameter structs for the 5 biological ODE systems.
 //!
 //! Each struct carries the kinetic constants for one model and provides

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // laplacian_f64.wgsl — Graph Laplacian: L = D - A (f64 canonical)
 //

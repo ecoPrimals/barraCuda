@@ -278,45 +278,6 @@ async fn test_softmax_gpu_cpu_parity() {
     println!("  PASS: GPU and CPU produce identical softmax results");
 }
 
-// ─── ToadStool Guided Device Selection ───────────────────────────────────────
-
-#[cfg(feature = "toadstool")]
-#[tokio::test]
-async fn test_toadstool_guided_device_selection() {
-    use barracuda::device::{discover_devices, select_best_device, HardwareWorkload};
-
-    // ToadStool discovers hardware
-    let hw = discover_devices().expect("ToadStool discovery failed");
-    println!("ToadStool discovered {} devices", hw.device_count());
-    for device in hw.devices() {
-        println!("  - {} ({:?})", device.name, device.hardware_type);
-    }
-
-    // ToadStool recommends device for tensor ops
-    let selection =
-        select_best_device(HardwareWorkload::TensorOps).expect("Device selection failed");
-    println!("ToadStool recommends: {:?} for TensorOps", selection);
-
-    // BarraCuda creates device from recommendation
-    let device = WgpuDevice::from_selection(selection).await.unwrap();
-    println!(
-        "BarraCuda device: {} ({:?})",
-        device.name(),
-        device.device_type()
-    );
-
-    // Verify it works by running a simple operation
-    let data = vec![1.0, 2.0, 3.0, 4.0];
-    let device_arc = Arc::new(device);
-    let tensor = Tensor::from_vec_on(data.clone(), vec![2, 2], device_arc)
-        .await
-        .unwrap();
-    let result = tensor.to_vec().unwrap();
-    assert_eq!(result, data);
-
-    println!("  ToadStool -> BarraCuda integration: PASS");
-}
-
 // ─── Performance Comparison (not parity) ─────────────────────────────────────
 
 #[tokio::test]

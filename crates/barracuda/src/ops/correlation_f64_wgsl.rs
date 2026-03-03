@@ -111,7 +111,6 @@ impl CorrelationF64 {
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn correlation_cpu(x: &[f64], y: &[f64]) -> f64 {
         let n = x.len();
         if n == 0 {

@@ -36,9 +36,9 @@ cargo deny check
 | `crates/barracuda/` | Umbrella crate — all math, GPU ops, compute fabric |
 | `crates/barracuda-core/` | Primal lifecycle, IPC, tarpc, UniBin CLI |
 | `crates/barracuda/src/shaders/` | 767 WGSL shaders (see `shaders/README.md`) |
-| `crates/barracuda/examples/` | 5 runnable examples |
+| `crates/barracuda/examples/` | 4 runnable examples |
 | `crates/barracuda/tests/` | 29 integration test suites |
-| `crates/barracuda/src/bin/` | 5 binaries (validate_gpu, bench_*) |
+| `crates/barracuda/src/bin/` | 4 binaries (validate_gpu, bench_*) |
 | `crates/barracuda-core/src/bin/` | `barracuda` UniBin CLI binary |
 | `specs/` | Architecture specs and design documents |
 
@@ -187,7 +187,8 @@ cargo check -p barracuda --no-default-features
 |----------|----------|---------------|
 | Unit tests | `src/**/*.rs` (`#[cfg(test)]`) | Individual functions, shaders |
 | Integration | `tests/*.rs` | Cross-module pipelines |
-| E2E | `tests/scientific_e2e_tests.rs` | Full device-to-result flows |
+| E2E (compute) | `tests/scientific_e2e_tests.rs` | Full device-to-result flows |
+| E2E (IPC) | `barracuda-core/tests/ipc_e2e.rs` | TCP server, JSON-RPC wire protocol, multi-request |
 | Chaos | `tests/scientific_chaos_tests.rs` | Random failures, recovery |
 | Fault injection | `tests/fhe_fault_tests.rs` | Error paths, graceful degradation |
 | Cross-hardware | `tests/cross_hardware_parity.rs` | Multi-adapter parity |
@@ -208,7 +209,7 @@ WGPU_BACKEND=vulkan WGPU_ADAPTER_NAME=llvmpipe cargo test -p barracuda
 ## Code Style
 
 - Follow `CONVENTIONS.md` (inherits from sourDough)
-- `#![deny(unsafe_code)]` — zero unsafe in barraCuda
+- `#![deny(unsafe_code)]` in barracuda-core — minimize unsafe across the codebase
 - `cargo fmt` before committing
 - `cargo clippy --workspace -- -D warnings` must be clean
 - No `anyhow` — use `thiserror` with `BarracudaError`
@@ -236,8 +237,6 @@ WGPU_BACKEND=vulkan WGPU_ADAPTER_NAME=llvmpipe cargo test -p barracuda
 
 - `gpu` gates all GPU-dependent code (device, tensor, shaders, ops)
 - `domain-*` gates domain-specific models independently
-- `toadstool` gates optional toadStool integration
-- `npu-akida` gates optional NPU hardware support
 
 When adding new code, ask: "Does this compile with `--no-default-features`?"
 Pure math modules must work without GPU. GPU modules must work without

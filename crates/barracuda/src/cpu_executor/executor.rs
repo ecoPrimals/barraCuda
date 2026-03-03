@@ -118,7 +118,7 @@ impl CpuExecutor {
 
     pub(crate) fn read_f32(storage: &dyn TensorStorage) -> Result<Vec<f32>> {
         let rt = tokio::runtime::Handle::try_current()
-            .map(|h| h.block_on(storage.read_to_cpu()))
+            .map(|h| tokio::task::block_in_place(|| h.block_on(storage.read_to_cpu())))
             .unwrap_or_else(|_| {
                 tokio::runtime::Runtime::new()
                     .map_err(|e| crate::error::BarracudaError::device(e.to_string()))

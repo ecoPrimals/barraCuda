@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 //! Pseudofermion action for dynamical fermion HMC (Papers 10-12).
 //!

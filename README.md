@@ -1,7 +1,7 @@
 # barraCuda
 
-**Version**: 0.3.0
-**Status**: Active primal — fully concurrent, all quality gates passing
+**Version**: 0.3.1
+**Status**: Standalone primal — zero cross-dependencies, fully concurrent, all quality gates passing
 **License**: AGPL-3.0-or-later
 **MSRV**: 1.87
 
@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **767 WGSL shaders** spanning scientific compute domains
-- **1,026 Rust source files**, 29 integration test suites, 5 examples, 5 binaries
+- **957 Rust source files**, 29 integration test suites, 4 examples, 5 binaries
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -48,7 +48,7 @@ results.
 1. **Math is universal, precision is silicon** — one WGSL source, any precision
 2. **Vendor-agnostic** — same binary, identical results on any GPU
 3. **Sovereign** — zero external SDK dependency for correctness or performance
-4. **Pure Rust** — `#![deny(unsafe_code)]`, exactly 2 wgpu FFI calls (pipeline cache + SPIR-V)
+4. **Pure Rust** — `#![deny(unsafe_code)]` in barracuda-core, exactly 2 wgpu FFI calls (pipeline cache + SPIR-V), zero dependencies on toadStool or any other primal
 5. **Fully concurrent** — all GPU access serialized via `WgpuDevice::lock()`, device creation serialized globally
 6. **AGPL-3.0** — free as in freedom
 
@@ -109,7 +109,7 @@ barraCuda/
 │   ├── barracuda-core/              # Primal lifecycle wrapper
 │   │   ├── src/lib.rs               # BarraCudaPrimal: start/stop/health
 │   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport
-│   │   ├── src/rpc.rs               # tarpc service definition (10 endpoints)
+│   │   ├── src/rpc.rs               # tarpc service definition (10 endpoints, parity with JSON-RPC)
 │   │   └── src/bin/barracuda.rs     # UniBin CLI
 │   └── barracuda/                   # Umbrella crate — all math + GPU
 │       ├── src/
@@ -131,7 +131,7 @@ barraCuda/
 │       │   ├── multi_gpu/           # GpuPool, MultiDevicePool, load balancing
 │       │   ├── unified_hardware/    # Unified CPU/GPU/NPU abstraction
 │       │   └── ...                  # + nn, snn, esn, pde, genomics, vision
-│       ├── examples/                # 5 runnable examples
+│       ├── examples/                # 4 runnable examples
 │       ├── tests/                   # 29 integration test suites
 │       └── src/bin/                 # validate_gpu, bench_*
 └── specs/
@@ -149,8 +149,8 @@ cargo clippy --workspace -- -D warnings # lints (pedantic in Cargo.toml)
 cargo deny check                        # license + advisory audit
 cargo doc --workspace --no-deps         # documentation
 cargo build --workspace                 # compilation
-cargo test --workspace --lib            # 2,848 unit tests
-cargo llvm-cov --workspace --lib        # 79% line coverage (unit tests)
+cargo test --workspace --lib            # 2,965 unit tests
+cargo llvm-cov --workspace --lib        # ~80% line coverage (unit tests)
 ```
 
 All gates are enforced in `.github/workflows/ci.yml`.
@@ -178,7 +178,8 @@ barraCuda exposes a dual-protocol IPC interface per wateringHole standards:
 
 **tarpc** (optional, binary, high-throughput primal-to-primal):
 
-Same 10 endpoints with strongly-typed Rust signatures. Enabled via
+Same 10 endpoints with strongly-typed Rust signatures and full parameter
+parity with the JSON-RPC handlers. Enabled via
 `barracuda server --tarpc-bind 127.0.0.1:9001`.
 
 ---
@@ -221,8 +222,7 @@ barracuda version
 | `domain-genomics` | via umbrella | Bioinformatics and genomics API. |
 | `domain-vision` | via umbrella | Computer vision pipelines. |
 | `domain-timeseries` | via umbrella | Time series analysis (implies `domain-esn`). |
-| `toadstool` | No | Optional toadStool integration. |
-| `npu-akida` | No | Akida neuromorphic NPU support. |
+| `serde` | No | Serde derive support. |
 | `parallel` | No | Rayon parallelism hints. |
 
 ### Common dependency configurations
@@ -257,7 +257,6 @@ ecoPrimals/
 ├── barraCuda/          # This repo
 ├── sourDough/          # Required (workspace dep for primal traits)
 ├── wateringHole/       # Ecosystem standards and genomeBin manifest
-├── phase1/toadStool/   # Optional (only if toadstool feature enabled)
 └── ...Springs          # Consumers
 ```
 

@@ -147,3 +147,69 @@ impl ReportGenerator {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use crate::benchmarks::{BenchmarkResult, ComparisonResult, Framework};
+    use std::time::Duration;
+
+    fn make_result(op: &str, hw: &str, framework: Framework, median_ms: f64) -> BenchmarkResult {
+        let median = Duration::from_secs_f64(median_ms / 1000.0);
+        BenchmarkResult {
+            operation: op.to_string(),
+            hardware: hw.to_string(),
+            framework,
+            median_time: median,
+            mean_time: median,
+            std_dev: Duration::from_millis(1),
+            min_time: median,
+            max_time: median,
+            throughput: 1000.0 / median_ms,
+            bandwidth_gbps: 0.0,
+            tflops: 0.0,
+        }
+    }
+
+    #[test]
+    fn test_empty_report() {
+        let gen = ReportGenerator::new(vec![]);
+        let md = gen.generate_markdown();
+        assert!(md.contains("No benchmark results"));
+    }
+
+    #[test]
+    fn test_report_with_results() {
+        let barracuda = make_result("MatMul", "CPU", Framework::BarraCuda, 10.0);
+        let results = vec![ComparisonResult::new(barracuda, None)];
+        let gen = ReportGenerator::new(results);
+        let md = gen.generate_markdown();
+        assert!(md.contains("MatMul"));
+    }
+
+    #[test]
+    fn test_report_with_cuda_comparison() {
+        let barracuda = make_result("MatMul", "CPU", Framework::BarraCuda, 10.0);
+        let cuda = make_result("MatMul", "CPU", Framework::CUDA, 8.0);
+        let results = vec![ComparisonResult::new(barracuda, Some(cuda))];
+        let gen = ReportGenerator::new(results);
+        let md = gen.generate_markdown();
+        assert!(md.contains("MatMul"));
+        assert!(md.contains("parity") || md.contains("Parity"));
+        assert!(md.contains("≥90%") || md.contains("90%"));
+    }
+
+    #[test]
+    fn test_save_to_file() {
+        let barracuda = make_result("MatMul", "CPU", Framework::BarraCuda, 10.0);
+        let results = vec![ComparisonResult::new(barracuda, None)];
+        let gen = ReportGenerator::new(results);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("report.md");
+        gen.save_to_file(&path).unwrap();
+        assert!(path.exists());
+        let content = std::fs::read_to_string(&path).unwrap();
+        assert!(content.contains("MatMul"));
+    }
+}

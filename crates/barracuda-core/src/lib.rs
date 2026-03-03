@@ -8,6 +8,7 @@
 //! management. On `start()`, it discovers GPU hardware and initializes the
 //! device pool. Health checks report device availability.
 
+#![deny(unsafe_code)]
 #![warn(missing_docs)]
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
@@ -30,16 +31,18 @@ use sourdough_core::{
     health::{HealthReport, HealthStatus},
     PrimalError, PrimalHealth, PrimalLifecycle, PrimalState,
 };
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 /// barraCuda primal — sovereign GPU compute engine.
 ///
 /// Manages GPU device discovery, shader compilation, and compute dispatch
-/// across any vendor's hardware. Composes with BearDog (crypto) for FHE
-/// and with ToadStool (orchestration) for workload routing.
+/// across any vendor's hardware. Holds a tensor store for IPC-created
+/// tensors that persist across requests.
 pub struct BarraCudaPrimal {
     state: PrimalState,
     device: Option<Arc<barracuda::device::WgpuDevice>>,
+    tensors: Mutex<HashMap<String, Arc<barracuda::tensor::Tensor>>>,
 }
 
 impl BarraCudaPrimal {
@@ -49,6 +52,7 @@ impl BarraCudaPrimal {
         Self {
             state: PrimalState::Created,
             device: None,
+            tensors: Mutex::new(HashMap::new()),
         }
     }
 
@@ -56,6 +60,30 @@ impl BarraCudaPrimal {
     #[must_use]
     pub fn device(&self) -> Option<&Arc<barracuda::device::WgpuDevice>> {
         self.device.as_ref()
+    }
+
+    /// Store a tensor and return its handle ID.
+    pub fn store_tensor(&self, tensor: barracuda::tensor::Tensor) -> String {
+        let tensor_arc = Arc::new(tensor);
+        let id = blake3::hash(
+            format!("{:p}:{}", Arc::as_ptr(&tensor_arc), self.tensor_count()).as_bytes(),
+        )
+        .to_hex()[..16]
+            .to_string();
+        if let Ok(mut store) = self.tensors.lock() {
+            store.insert(id.clone(), tensor_arc);
+        }
+        id
+    }
+
+    /// Look up a tensor by ID.
+    pub fn get_tensor(&self, id: &str) -> Option<Arc<barracuda::tensor::Tensor>> {
+        self.tensors.lock().ok()?.get(id).cloned()
+    }
+
+    /// Number of tensors currently stored.
+    pub fn tensor_count(&self) -> usize {
+        self.tensors.lock().map(|s| s.len()).unwrap_or(0)
     }
 }
 

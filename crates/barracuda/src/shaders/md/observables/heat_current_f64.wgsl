@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // heat_current_f64.wgsl — Per-particle heat current contribution (f64)
 //

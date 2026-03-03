@@ -387,24 +387,6 @@ mod tests {
         assert_eq!(read_data, data);
     }
 
-    #[cfg(feature = "toadstool")]
-    #[tokio::test]
-    async fn test_from_selection_gpu() {
-        use super::super::toadstool_integration::DeviceSelection;
-        if let Ok(device) = WgpuDevice::from_selection(DeviceSelection::Gpu).await {
-            assert!(!device.is_cpu());
-        }
-    }
-
-    #[cfg(feature = "toadstool")]
-    #[tokio::test]
-    async fn test_from_selection_cpu() {
-        use super::super::toadstool_integration::DeviceSelection;
-        if let Ok(device) = WgpuDevice::from_selection(DeviceSelection::Cpu).await {
-            assert!(device.is_cpu());
-        }
-    }
-
     #[tokio::test]
     async fn test_adapter_selector_auto() {
         let _ = WgpuDevice::with_adapter_selector("auto").await;

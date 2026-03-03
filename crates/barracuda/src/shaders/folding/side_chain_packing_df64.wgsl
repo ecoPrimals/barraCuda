@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // side_chain_packing_df64.wgsl — Rotamer scoring for side chain placement
 //
 // E_rotamer = sum over atom pairs: LJ + Coulomb + clash penalty

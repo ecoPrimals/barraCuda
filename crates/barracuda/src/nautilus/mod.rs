@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Nautilus Shell — evolutionary reservoir computing via board ensembles.
 //!
-//! Provenance: ecoPrimals/primalTools/bingoCube → toadStool standalone absorption.
-//! ToadStool maintains standalone nautilus capabilities. Other primals (beardog,
-//! songbird) may still use bingoCube directly for inter-primal handshakes.
+//! Provenance: ecoPrimals/primalTools/bingoCube → toadStool → barraCuda.
+//! barraCuda maintains standalone nautilus capabilities. Other primals (bearDog,
+//! songBird) may still use bingoCube directly for inter-primal handshakes.
 
 pub mod board;
 pub mod brain;

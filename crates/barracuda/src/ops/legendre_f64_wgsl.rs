@@ -77,13 +77,11 @@ impl LegendreF64 {
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn legendre_cpu(&self, x: &[f64], n: u32) -> Vec<f64> {
         x.iter().map(|&xi| Self::legendre_scalar(n, xi)).collect()
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn assoc_legendre_cpu(&self, x: &[f64], n: u32, m: u32) -> Vec<f64> {
         x.iter()
             .map(|&xi| Self::assoc_legendre_scalar(n, m, xi))
@@ -114,7 +112,6 @@ impl LegendreF64 {
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn double_factorial(m: u32) -> f64 {
         if m == 0 {
             return 1.0;
@@ -127,7 +124,6 @@ impl LegendreF64 {
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn assoc_legendre_scalar(n: u32, m: u32, x: f64) -> f64 {
         if m > n {
             return 0.0;

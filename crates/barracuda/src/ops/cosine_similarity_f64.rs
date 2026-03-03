@@ -136,7 +136,6 @@ impl CosineSimilarityF64 {
 
     /// CPU reference implementation (all pairs)
     #[cfg(test)]
-    #[allow(dead_code)]
     fn all_pairs_cpu(&self, vectors_a: &[Vec<f64>], vectors_b: &[Vec<f64>]) -> Vec<f64> {
         let mut result = Vec::with_capacity(vectors_a.len() * vectors_b.len());
         for va in vectors_a {

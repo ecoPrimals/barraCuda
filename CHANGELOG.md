@@ -5,6 +5,36 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - March 3, 2026
+
+### Added
+- **73 new tests** — cpu_executor dispatch (Conv2D, MaxPool2D, AvgPool2D, BatchMatMul, all ops),
+  benchmarks (harness, operations, report), device/vendor, validation, cubic_spline
+- **tarpc/JSON-RPC parity** — tarpc service now has matching parameters and full implementations
+  for `fhe_ntt`, `fhe_pointwise_mul`, `compute_dispatch`, `tensor_create`
+
+### Changed
+- **blake3 pure feature** — `features = ["pure"]` eliminates C SIMD compilation dependency
+- **IPC transport constants** — extracted `TARPC_MAX_FRAME_LENGTH`, `TARPC_MAX_CONCURRENT_CONNECTIONS`
+- **println → tracing** — 14 `println!` calls in library code migrated to `tracing::info!`
+  (benchmarks/harness, benchmarks/mod, multi_gpu/pipeline_dispatch)
+- **Placeholder errors** — `channel_shuffle_wgsl` and `diag_new` replaced misleading
+  `InvalidShape { expected: vec![0,0,...] }` with descriptive `InvalidInput { message }`
+- **tarpc `MatmulResult`** — `lhs_id` renamed to `result_id` with `shape` field added
+- **tarpc `DispatchResult`** — redesigned with `tensor_id`, `shape`, `data` fields
+- **tarpc FHE types** — split into `FheNttResult` and `FhePointwiseMulResult` with coefficient vectors
+
+### Removed
+- Unused `_vta_buffer` GPU allocation in `qr_gpu.rs`
+
+### Quality
+- 2,965 unit tests passing, 0 failures
+- ~80% line coverage (all CPU-testable code covered; remaining gap is GPU-only)
+- `cargo fmt --check` clean
+- `cargo clippy --workspace -- -D warnings` clean
+- `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` clean
+- 3-config check clean (pure math, GPU, full)
+
 ## [0.3.0] - March 3, 2026
 
 ### Added
@@ -16,6 +46,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `barracuda` registered in `wateringHole/genomeBin/manifest.toml`
 - `.github/workflows/ci.yml` — full CI pipeline (fmt, clippy, deny, doc, test, coverage)
 - `rustfmt.toml`, `deny.toml`, `.cargo/config.toml`
+
+### Removed — Complete toadStool Untangle (S89)
+- **`toadstool-core` dependency** — removed from Cargo.toml, zero cross-deps on any primal
+- **`akida-driver` dependency** — removed from Cargo.toml
+- **`toadstool` feature flag** — removed entirely
+- **`npu-akida` feature flag** — removed entirely
+- **`toadstool_integration.rs`** — deleted (hardware discovery/routing via toadStool)
+- **`npu/ml_backend.rs`** — deleted (Akida NPU execution layer)
+- **`npu/ops/`** — deleted (6 files: matmul, softmax, relu, gelu, layer_norm, mod)
+- **`npu_integration` example** — deleted (required akida-driver)
+- **`e2e_math_pipeline.rs`** — deleted (entire file gated on toadstool)
+- **toadstool-gated tests** — removed from chaos, cross_hardware_parity, hardware_verification
+- **Dead feature flags** — removed `tpu`, `cloud-tpu`, `coral-tpu`, `mock-tpu`, `cuda-comparison`
 
 ### Changed
 - **GPU synchronization** — all 11 lock bypass paths fixed; every GPU operation now routes through
@@ -39,9 +82,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Digamma recurrence test resilience to transient GPU device loss
 
 ### Quality
-- 2,848 unit tests passing, 0 failures
+- 2,965 unit tests + 8 IPC E2E tests passing, 0 failures
 - 29 integration test suites compiling and passing
-- 79% line coverage (unit tests via llvm-cov)
+- ~80% line coverage (unit tests via llvm-cov)
+- Cross-dependencies on toadStool: **ZERO**
 - `cargo clippy --workspace -- -D warnings` clean
 - `cargo fmt --all` clean
 - `cargo deny check` clean

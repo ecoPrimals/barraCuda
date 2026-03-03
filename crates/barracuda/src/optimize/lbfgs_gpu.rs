@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 //! GPU-accelerated batched L-BFGS optimizer.
 //!
@@ -16,10 +16,8 @@ use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
 
 // Shader sources for future full-GPU dispatch path (currently CPU-orchestrated).
-#[allow(dead_code)]
-const WGSL_TWO_LOOP: &str = include_str!("../shaders/optimizer/lbfgs_two_loop_f64.wgsl");
-#[allow(dead_code)]
-const WGSL_BATCH_GRAD: &str = include_str!("../shaders/optimizer/batch_gradient_f64.wgsl");
+const _WGSL_TWO_LOOP: &str = include_str!("../shaders/optimizer/lbfgs_two_loop_f64.wgsl");
+const _WGSL_BATCH_GRAD: &str = include_str!("../shaders/optimizer/batch_gradient_f64.wgsl");
 
 /// Configuration for batched GPU L-BFGS.
 #[derive(Debug, Clone)]
@@ -69,14 +67,11 @@ pub struct LbfgsGpuResult {
 /// Solves `batch_size` independent problems in parallel. Each problem evaluates
 /// its objective function via a user-supplied closure that produces `f64` values
 /// from a flat `[batch_size * n]` buffer of points.
-pub struct LbfgsGpu {
-    #[allow(dead_code)]
-    device: Arc<WgpuDevice>,
-}
+pub struct LbfgsGpu;
 
 impl LbfgsGpu {
-    pub fn new(device: Arc<WgpuDevice>) -> Self {
-        Self { device }
+    pub fn new(_device: Arc<WgpuDevice>) -> Self {
+        Self
     }
 
     /// Run batched L-BFGS optimization.

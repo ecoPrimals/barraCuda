@@ -2,7 +2,7 @@
 //! CPU executor — always-available fallback compute device.
 //!
 //! Runtime CPU discovery via `std::thread::available_parallelism()` (pure Rust).
-//! Memory/bandwidth are conservative estimates; higher-level code (e.g. toadstool)
+//! Memory/bandwidth are conservative estimates; higher-level orchestrators
 //! with sysinfo can override via capability overrides.
 
 use crate::error::Result;
@@ -155,8 +155,8 @@ impl ComputeExecutor for CpuExecutor {
 
 /// Simple CPU tensor storage for the scheduler path.
 pub(crate) struct CpuTensorStorageSimple {
-    descriptor: TensorDescriptor,
-    data: Vec<u8>,
+    pub(crate) descriptor: TensorDescriptor,
+    pub(crate) data: Vec<u8>,
 }
 
 // NOTE(async-dyn): #[async_trait] required — native async fn in trait is not dyn-compatible

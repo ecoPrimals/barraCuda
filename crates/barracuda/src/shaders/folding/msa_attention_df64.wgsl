@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // msa_attention_df64.wgsl — Multiple sequence alignment attention (row/column)
 //
 // Combined row+column: score = Q*K^T / sqrt(d)

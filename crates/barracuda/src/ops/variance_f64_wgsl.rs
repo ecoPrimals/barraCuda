@@ -137,7 +137,6 @@ impl VarianceF64 {
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn variance_cpu(data: &[f64], ddof: usize) -> f64 {
         let n = data.len();
         if n <= ddof {

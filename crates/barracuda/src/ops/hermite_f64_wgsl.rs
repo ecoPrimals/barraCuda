@@ -68,13 +68,11 @@ impl HermiteF64 {
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn hermite_cpu(&self, x: &[f64], n: u32) -> Vec<f64> {
         x.iter().map(|&xi| Self::hermite_scalar(n, xi)).collect()
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn hermite_function_cpu(&self, x: &[f64], n: u32) -> Vec<f64> {
         x.iter()
             .map(|&xi| Self::hermite_function_scalar(n, xi))
@@ -82,7 +80,6 @@ impl HermiteF64 {
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn hermite_scalar(n: u32, x: f64) -> f64 {
         if n == 0 {
             return 1.0;
@@ -104,7 +101,6 @@ impl HermiteF64 {
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn hermite_function_scalar(n: u32, x: f64) -> f64 {
         let h_n = Self::hermite_scalar(n, x);
         let two_n = 1u64 << n.min(62); // Avoid overflow

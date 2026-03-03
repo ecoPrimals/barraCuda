@@ -105,7 +105,6 @@ impl BetaF64 {
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn beta_cpu(&self, pairs: &[f64]) -> Vec<f64> {
         pairs
             .chunks(2)
@@ -114,7 +113,6 @@ impl BetaF64 {
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn beta_scalar(a: f64, b: f64) -> f64 {
         if a <= 0.0 || b <= 0.0 {
             return f64::NAN;

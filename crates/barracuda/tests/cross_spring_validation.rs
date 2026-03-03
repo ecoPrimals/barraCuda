@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 //! Cross-spring validation harness for barracuda primitives.
 //!
@@ -8,7 +8,7 @@
 //! documented tolerances.
 //!
 //! Provenance: wetSpring V86 `validate_cross_spring_evolution_modern`
-//! pattern → adopted as toadStool standard test harness.
+//! pattern → adopted as barraCuda standard test harness.
 //!
 //! Run: `cargo test --test cross_spring_validation`
 

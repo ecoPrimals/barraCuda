@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // simulated_annealing_df64.wgsl — SA acceptance with Metropolis criterion
 //
 // accept = exp(-(E_new - E_old) / kT) > random(0,1)

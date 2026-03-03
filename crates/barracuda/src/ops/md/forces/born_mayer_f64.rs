@@ -178,7 +178,6 @@ impl BornMayerForceF64 {
 
     /// CPU reference (test/validation only).
     #[cfg(test)]
-    #[allow(dead_code)]
     fn compute_cpu(
         &self,
         positions: &[f64],
@@ -232,7 +231,6 @@ impl BornMayerForceF64 {
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn compute_cpu_with_energy(
         &self,
         positions: &[f64],

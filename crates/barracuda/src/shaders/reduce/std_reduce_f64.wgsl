@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Standard Deviation Reduction (f64) - Two-pass std at double precision
 //
 // Input: array<f64>, params: {n: u32, mean: f64}

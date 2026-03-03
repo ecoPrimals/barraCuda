@@ -261,51 +261,8 @@ impl Tensor {
     /// Unlike [`matmul`](Self::matmul), this borrows `self` so it can be
     /// reused in recurrent architectures (ESN, LSTM) without cloning.
     pub fn matmul_ref(&self, other: &Self) -> Result<Self> {
-        #[cfg(feature = "npu-akida")]
-        if self.should_use_npu_for_matmul(other) {
-            tracing::debug!("Routing matmul_ref to NPU (sparse or energy priority)");
-            return self.clone().matmul_npu(other);
-        }
-
         tracing::debug!("Routing matmul_ref to WGSL (GPU/CPU)");
         MatMul::new(self, other).execute()
-    }
-
-    #[cfg(feature = "npu-akida")]
-    fn should_use_npu_for_matmul(&self, _other: &Self) -> bool {
-        use crate::ops::npu_bridge::is_npu_available;
-
-        if !is_npu_available() {
-            return false;
-        }
-
-        false
-    }
-
-    /// Execute matmul on NPU
-    ///
-    /// **Phase 3**: Bridge to NPU operations via npu_bridge
-    ///
-    /// **Deep Debt**:
-    /// - Uses npu_bridge for conversion (Tensor ↔ f32)
-    /// - Preserves device for future operations
-    /// - Graceful fallback on error
-    #[cfg(feature = "npu-akida")]
-    fn matmul_npu(&self, other: &Self) -> Result<Self> {
-        use crate::npu::ops::matmul::npu_matmul;
-        use crate::ops::npu_bridge::{tensor_to_npu_data, with_npu_backend};
-
-        let m = self.shape()[0];
-        let k = self.shape()[1];
-        let n = other.shape()[1];
-
-        let a_data = tensor_to_npu_data(self)?;
-        let b_data = tensor_to_npu_data(other)?;
-
-        let result_data = with_npu_backend(|npu| npu_matmul(&a_data, &b_data, m, k, n, npu))?;
-
-        let device = self.device().clone();
-        Tensor::from_vec_on_sync(result_data, vec![m, n], device)
     }
 }
 

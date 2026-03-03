@@ -27,7 +27,7 @@
 //!
 //! Same math runs on:
 //! - Current GPUs (fp32)
-//! - Future fp64 GPUs (seamless transition via ToadStool dispatch)
+//! - Future fp64 GPUs (seamless transition via wgpu backend selection)
 //! - Quantum sequential compute (same algorithm, different substrate)
 
 use crate::device::wgpu_device::WgpuDevice;

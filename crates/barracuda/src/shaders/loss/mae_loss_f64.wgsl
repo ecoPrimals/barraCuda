@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // MAE Loss (f64) - Mean Absolute Error at double precision
 //
 // output = sum(|pred - target|) / n

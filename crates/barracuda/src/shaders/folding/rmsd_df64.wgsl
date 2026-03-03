@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // rmsd_df64.wgsl — Root Mean Square Deviation between two structures (Kabsch alignment)
 //
 // RMSD = sqrt(mean((x_i - y_i)^2)) after optimal superposition.

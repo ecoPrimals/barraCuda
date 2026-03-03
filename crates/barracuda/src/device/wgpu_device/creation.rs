@@ -269,24 +269,6 @@ impl WgpuDevice {
         Ok(Self::assemble(device, queue, info))
     }
 
-    /// Create device from ToadStool hardware selection
-    #[cfg(feature = "toadstool")]
-    pub async fn from_selection(
-        selection: super::super::toadstool_integration::DeviceSelection,
-    ) -> Result<Self> {
-        use super::super::toadstool_integration::DeviceSelection;
-        match selection {
-            DeviceSelection::Gpu => Self::new_gpu().await,
-            DeviceSelection::Cpu => Self::new_cpu().await,
-            DeviceSelection::Npu => {
-                tracing::info!(
-                    "NPU selected but WGSL not supported on NPU; falling back to best WGPU adapter"
-                );
-                Self::new().await
-            }
-        }
-    }
-
     /// Capability-scored adapter discovery.
     ///
     /// Scores all available adapters by hardware capabilities (discrete > integrated,

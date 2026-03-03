@@ -20,8 +20,6 @@ struct ValidationResult {
     name: String,
     passed: bool,
     detail: String,
-    #[allow(dead_code)]
-    elapsed: std::time::Duration,
 }
 
 fn u64_to_tensor(poly: &[u64], device: &Arc<WgpuDevice>) -> Result<Tensor, BarracudaError> {
@@ -78,19 +76,16 @@ async fn validate_fhe_ntt_roundtrip(
             name,
             passed: true,
             detail: format!("bit-perfect in {elapsed:.2?}"),
-            elapsed,
         },
         Ok(false) => ValidationResult {
             name,
             passed: false,
             detail: "INTT(NTT(p)) != p".into(),
-            elapsed,
         },
         Err(e) => ValidationResult {
             name,
             passed: false,
             detail: format!("error: {e}"),
-            elapsed,
         },
     }
 }
@@ -127,19 +122,16 @@ async fn validate_fhe_pointwise_mul(device: &Arc<WgpuDevice>) -> ValidationResul
             name,
             passed: true,
             detail: format!("exact in {elapsed:.2?}"),
-            elapsed,
         },
         Ok(false) => ValidationResult {
             name,
             passed: false,
             detail: "product mismatch".into(),
-            elapsed,
         },
         Err(e) => ValidationResult {
             name,
             passed: false,
             detail: format!("error: {e}"),
-            elapsed,
         },
     }
 }
@@ -179,19 +171,16 @@ async fn validate_matmul(device: &Arc<WgpuDevice>) -> ValidationResult {
             name,
             passed: true,
             detail: format!("I*A == A in {elapsed:.2?}"),
-            elapsed,
         },
         Ok(false) => ValidationResult {
             name,
             passed: false,
             detail: "identity matmul drift > 1e-5".into(),
-            elapsed,
         },
         Err(e) => ValidationResult {
             name,
             passed: false,
             detail: format!("error: {e}"),
-            elapsed,
         },
     }
 }
@@ -224,19 +213,16 @@ async fn validate_df64_precision(device: &Arc<WgpuDevice>) -> ValidationResult {
             name,
             passed: true,
             detail: format!("precision OK in {elapsed:.2?}"),
-            elapsed,
         },
         Ok(false) => ValidationResult {
             name,
             passed: false,
             detail: "precision drift".into(),
-            elapsed,
         },
         Err(e) => ValidationResult {
             name,
             passed: false,
             detail: format!("error: {e}"),
-            elapsed,
         },
     }
 }
@@ -248,7 +234,7 @@ async fn validate_device_probe(device: &Arc<WgpuDevice>) -> ValidationResult {
 
     let info = device.adapter_info();
     let limits = device.device().limits();
-    let elapsed = start.elapsed();
+    let _elapsed = start.elapsed();
 
     let detail = format!(
         "{} ({:?}), max_buf={}MB, max_wg={}",
@@ -262,7 +248,6 @@ async fn validate_device_probe(device: &Arc<WgpuDevice>) -> ValidationResult {
         name,
         passed: true,
         detail,
-        elapsed,
     }
 }
 

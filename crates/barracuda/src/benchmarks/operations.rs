@@ -267,3 +267,76 @@ fn cpu_activation(data: &[f32], operation: &str) -> Vec<f32> {
         _ => data.to_vec(), // Identity for unknown ops
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cpu_matmul_small() {
+        let a = vec![1.0f32, 2.0, 3.0, 4.0];
+        let b = vec![1.0f32, 0.0, 0.0, 0.0, 1.0, 0.0];
+        let c = super::cpu_matmul(&a, &b, 2, 3, 2);
+        assert_eq!(c.len(), 6);
+        assert!((c[0] - 1.0).abs() < 1e-5);
+        assert!((c[1] - 2.0).abs() < 1e-5);
+        assert!((c[2] - 0.0).abs() < 1e-5);
+        assert!((c[3] - 3.0).abs() < 1e-5);
+        assert!((c[4] - 4.0).abs() < 1e-5);
+        assert!((c[5] - 0.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_cpu_matmul_identity() {
+        let identity = vec![1.0f32, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
+        let a = vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0];
+        let c = super::cpu_matmul(&a, &identity, 3, 3, 3);
+        for (i, &v) in a.iter().enumerate() {
+            assert!((c[i] - v).abs() < 1e-5);
+        }
+    }
+
+    #[test]
+    fn test_cpu_activation_relu() {
+        let data = vec![-1.0f32, 0.0, 1.0, 2.0];
+        let out = super::cpu_activation(&data, "ReLU");
+        assert!((out[0] - 0.0).abs() < 1e-6);
+        assert!((out[1] - 0.0).abs() < 1e-6);
+        assert!((out[2] - 1.0).abs() < 1e-6);
+        assert!((out[3] - 2.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_cpu_activation_sigmoid() {
+        let data = vec![0.0f32];
+        let out = super::cpu_activation(&data, "Sigmoid");
+        assert!((out[0] - 0.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_cpu_activation_unknown() {
+        let data = vec![1.0f32, 2.0, 3.0];
+        let out = super::cpu_activation(&data, "UnknownOp");
+        assert_eq!(out, data);
+    }
+
+    #[tokio::test]
+    async fn test_benchmark_barracuda_matmul() {
+        let config = BenchmarkConfig {
+            warmup_iterations: 2,
+            measurement_iterations: 3,
+            ..Default::default()
+        };
+        let (barracuda, _cuda) = benchmark_matmul(&config, 4, 4, 4).await.unwrap();
+        assert_eq!(barracuda.operation, "MatMul");
+        assert!(barracuda.median_time.as_secs_f64() > 0.0);
+        assert!(barracuda.throughput > 0.0);
+        assert!(barracuda.tflops >= 0.0);
+    }
+
+    #[test]
+    fn test_matmul_sizes_non_empty() {
+        assert!(!MATMUL_SIZES.is_empty());
+    }
+}

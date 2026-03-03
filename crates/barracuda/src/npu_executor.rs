@@ -20,25 +20,23 @@ pub(crate) mod npu_defaults {
     pub const SRAM_PER_BOARD_BYTES: u64 = 4 * 1024 * 1024;
     pub const AVAILABLE_PER_BOARD_BYTES: u64 = 3 * 1024 * 1024;
     pub const ON_CHIP_BANDWIDTH_BYTES_SEC: u64 = 10 * 1024 * 1024 * 1024;
-    #[allow(dead_code)]
-    pub const NPU_LATENCY_THRESHOLD: usize = 128;
+    pub const _NPU_LATENCY_THRESHOLD: usize = 128;
 }
 
 /// NPU operation efficiency factors for scheduler scoring.
 /// Values represent relative efficiency vs GPU for each op class on neuromorphic hardware.
-#[allow(dead_code)] // Op-specific efficiency used when scheduler does per-op scoring
 mod npu_efficiency {
     /// Nominal equivalence value for NPU in TFLOPS terms. NPUs use spike counts, not TFLOPS;
     /// this constant provides a nominal value for the unified scheduler interface.
     pub(super) const NPU_EQUIVALENT_TFLOPS: f64 = 0.001;
-    /// MatMul/BatchMatMul efficiency on NPU (sparse matrix ops).
-    pub(super) const MATMUL_EFFICIENCY: f64 = 0.85;
-    /// Conv2D efficiency on NPU (neuromorphic convolutions).
-    pub(super) const CONV2D_EFFICIENCY: f64 = 0.90;
-    /// Sigmoid/Tanh efficiency (spike coding).
-    pub(super) const ACTIVATION_EFFICIENCY: f64 = 0.70;
-    /// ReduceSum/ReduceMax/ReduceMin efficiency (spike counting).
-    pub(super) const REDUCE_EFFICIENCY: f64 = 0.75;
+    /// MatMul/BatchMatMul efficiency on NPU (sparse matrix ops). Reserved for per-op scoring.
+    pub(super) const _MATMUL_EFFICIENCY: f64 = 0.85;
+    /// Conv2D efficiency on NPU (neuromorphic convolutions). Reserved for per-op scoring.
+    pub(super) const _CONV2D_EFFICIENCY: f64 = 0.90;
+    /// Sigmoid/Tanh efficiency (spike coding). Reserved for per-op scoring.
+    pub(super) const _ACTIVATION_EFFICIENCY: f64 = 0.70;
+    /// ReduceSum/ReduceMax/ReduceMin efficiency (spike counting). Reserved for per-op scoring.
+    pub(super) const _REDUCE_EFFICIENCY: f64 = 0.75;
 }
 
 use crate::device::akida_executor::AkidaExecutor;

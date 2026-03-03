@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Double-float (f32-pair) arithmetic for GPU FP32 core saturation.
 //
 // Represents f64-precision values as (hi: f32, lo: f32) where val ≈ hi + lo.

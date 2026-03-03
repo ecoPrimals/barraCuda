@@ -11,7 +11,7 @@
 //!
 //! 1. **Discovery Tests** - Verify all hardware is detected
 //! 2. **Parity Tests** - Same math produces same results across vendors
-//! 3. **Routing Tests** - ToadStool routes to correct hardware
+//! 3. **Routing Tests** - barraCuda routes to correct hardware
 //! 4. **Performance Tests** - Verify expected performance characteristics
 //!
 //! ## Running Tests
@@ -606,42 +606,6 @@ fn test_kernel_router_npu_fallback() {
     }
 
     println!("✓ NPU workloads correctly handle fallback");
-}
-
-// ============================================================================
-// ToadStool Device Selection Integration
-// ============================================================================
-
-#[cfg(feature = "toadstool")]
-#[tokio::test]
-async fn test_toadstool_device_selection_integration() {
-    if !common::run_gpu_resilient_async(|| async {
-        use barracuda::device::{discover_devices, select_best_device};
-
-        let hw = discover_devices().expect("Hardware discovery failed");
-
-        println!("\n=== ToadStool Device Selection ===\n");
-        println!("Discovered {} devices:", hw.device_count());
-        for device in hw.devices() {
-            println!("  - {} ({:?})", device.name, device.hardware_type);
-        }
-
-        let workloads = vec![
-            HardwareWorkload::TensorOps,
-            HardwareWorkload::ScientificCompute,
-            HardwareWorkload::SpikingNetwork,
-            HardwareWorkload::ReservoirComputing,
-        ];
-
-        for workload in workloads {
-            let selection = select_best_device(workload).expect("Selection failed");
-            println!("  {:?} -> {:?}", workload, selection);
-        }
-
-        println!("\n  ToadStool device selection: PASS\n");
-    }) {
-        return;
-    }
 }
 
 // ============================================================================

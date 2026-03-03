@@ -115,14 +115,6 @@ impl QrGpu {
             mapped_at_creation: false,
         });
 
-        // Create vTA buffer (temporary for apply_householder, reserved for future optimization)
-        let _vta_buffer = device.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("QR vTA Buffer"),
-            size: (n * 4) as u64,
-            usage: wgpu::BufferUsages::STORAGE,
-            mapped_at_creation: false,
-        });
-
         for k in 0..k_max {
             let params: [u32; 4] = [m, n, k, 0];
             let params_buffer = device.create_uniform_buffer("QR Params", &params);

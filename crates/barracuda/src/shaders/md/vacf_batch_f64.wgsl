@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // vacf_batch_f64.wgsl — Velocity Autocorrelation Function (f64)
 //

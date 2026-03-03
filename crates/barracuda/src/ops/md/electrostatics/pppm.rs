@@ -225,7 +225,6 @@ impl Pppm {
 
     /// CPU 3D FFT using dimension-wise 1D FFTs (test only)
     #[cfg(test)]
-    #[allow(dead_code)]
     fn fft_3d_cpu(
         &self,
         data: &mut [f64],

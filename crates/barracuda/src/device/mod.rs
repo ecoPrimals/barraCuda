@@ -37,8 +37,6 @@ pub mod registry; // Physical device tracking with backend preference (Feb 16, 2
 mod routing;
 pub mod substrate;
 pub mod tensor_context;
-#[cfg(feature = "toadstool")]
-pub mod toadstool_integration;
 pub mod tpu;
 pub mod unified;
 pub mod vendor; // Canonical GPU vendor ID constants (single source of truth)
@@ -81,11 +79,6 @@ pub use registry::{
     PhysicalDevice, PhysicalDeviceId,
 };
 pub use substrate::{Substrate, SubstrateCapability, SubstrateType};
-#[cfg(feature = "toadstool")]
-pub use toadstool_integration::{
-    discover_devices, hardware_report, has_gpu, has_npu, select_best_device, select_device_prefer,
-    HardwareReport,
-};
 pub use tpu::{TpuDevice, TpuGeneration, TpuInfo};
 pub use unified::{Capability, Device, DeviceContext, DeviceInfo, WorkloadHint};
 pub use wgpu_device::WgpuDevice;

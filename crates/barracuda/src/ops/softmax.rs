@@ -138,30 +138,10 @@ impl Softmax {
 
 // Convenience method on Tensor
 impl Tensor {
-    /// Apply Softmax activation with automatic NPU routing.
+    /// Apply Softmax activation.
     pub fn softmax(self) -> Result<Self> {
-        #[cfg(feature = "npu-akida")]
-        if crate::ops::npu_bridge::should_route_to_npu(&self, None) {
-            tracing::debug!("Routing softmax to NPU");
-            return self.softmax_npu();
-        }
-
         tracing::debug!("Routing softmax to WGSL");
         Softmax::new(self)?.execute()
-    }
-
-    #[cfg(feature = "npu-akida")]
-    fn softmax_npu(&self) -> Result<Self> {
-        use crate::npu::ops::softmax::npu_softmax;
-        use crate::ops::npu_bridge::tensor_to_npu_data;
-
-        let data = tensor_to_npu_data(self)?;
-        let result_data = npu_softmax(&data, 1.0)?;
-
-        let device = self.device().clone();
-        let shape = self.shape().to_vec();
-
-        Tensor::from_vec_on_sync(result_data, shape, device)
     }
 }
 

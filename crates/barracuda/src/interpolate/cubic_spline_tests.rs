@@ -196,3 +196,108 @@ fn test_two_points() {
     assert!((spline.eval(0.5).unwrap() - 1.0).abs() < 1e-10);
     assert!((spline.derivative(0.5).unwrap() - 2.0).abs() < 1e-10);
 }
+
+#[test]
+fn test_not_a_knot_boundary() {
+    let x = vec![0.0, 1.0, 2.0, 3.0, 4.0];
+    let y = vec![0.0, 1.0, 0.5, 1.5, 1.0];
+
+    let spline = CubicSpline::new(&x, &y, SplineBoundary::NotAKnot).unwrap();
+
+    for (xi, yi) in x.iter().zip(y.iter()) {
+        let y_eval = spline.eval(*xi).unwrap();
+        assert!(
+            (y_eval - yi).abs() < 1e-10,
+            "Not-a-knot spline should pass through data points"
+        );
+    }
+}
+
+#[test]
+fn test_not_a_knot_fallback_small_n() {
+    let x = vec![0.0, 1.0, 2.0];
+    let y = vec![0.0, 1.0, 0.0];
+
+    let spline = CubicSpline::new(&x, &y, SplineBoundary::NotAKnot).unwrap();
+
+    let y_eval = spline.eval(1.0).unwrap();
+    assert!((y_eval - 1.0).abs() < 1e-10);
+}
+
+#[test]
+fn test_eval_many() {
+    let x = vec![0.0, 1.0, 2.0, 3.0];
+    let y = vec![0.0, 1.0, 2.0, 3.0];
+
+    let spline = CubicSpline::natural(&x, &y).unwrap();
+
+    let x_eval = vec![0.5, 1.0, 1.5, 2.5];
+    let results = spline.eval_many(&x_eval).unwrap();
+
+    assert_eq!(results.len(), 4);
+    for (&xi, &yi) in x_eval.iter().zip(results.iter()) {
+        assert!(
+            (yi - xi).abs() < 1e-10,
+            "eval_many should match eval: {yi} vs {xi}"
+        );
+    }
+}
+
+#[test]
+fn test_second_derivative_at_points() {
+    let x = vec![0.0, 1.0, 2.0, 3.0];
+    let y = vec![0.0, 1.0, 2.0, 3.0];
+
+    let spline = CubicSpline::natural(&x, &y).unwrap();
+
+    for &xi in &[0.5, 1.5, 2.5] {
+        let d2 = spline.second_derivative(xi).unwrap();
+        assert!(
+            d2.abs() < 1e-8,
+            "Second derivative of linear data should be ~0: got {d2}"
+        );
+    }
+}
+
+#[test]
+fn test_partial_integration() {
+    let x = vec![0.0, 1.0, 2.0, 3.0];
+    let y = vec![0.0, 1.0, 2.0, 3.0];
+
+    let spline = CubicSpline::natural(&x, &y).unwrap();
+
+    // Integrate x from 0 to 1 = 0.5
+    let integral = spline.integrate(0.0, 1.0).unwrap();
+    assert!(
+        (integral - 0.5).abs() < 1e-8,
+        "Integral of x from 0 to 1 should be 0.5: got {integral}"
+    );
+}
+
+#[test]
+fn test_accessors() {
+    let x = vec![0.0, 1.0, 2.0];
+    let y = vec![0.0, 1.0, 0.0];
+
+    let spline = CubicSpline::natural(&x, &y).unwrap();
+
+    assert_eq!(spline.x_data(), &[0.0, 1.0, 2.0]);
+    assert_eq!(spline.y_data(), &[0.0, 1.0, 0.0]);
+    assert_eq!(spline.second_derivatives().len(), 3);
+}
+
+#[test]
+fn test_quadratic_integration() {
+    // y = x^2, integral from 0 to 2 = 8/3
+    let x: Vec<f64> = (0..=10).map(|i| i as f64 * 0.2).collect();
+    let y: Vec<f64> = x.iter().map(|&xi| xi * xi).collect();
+
+    let spline = CubicSpline::natural(&x, &y).unwrap();
+
+    let integral = spline.integrate(0.0, 2.0).unwrap();
+    let expected = 8.0 / 3.0;
+    assert!(
+        (integral - expected).abs() < 0.01,
+        "Integral of x^2 from 0 to 2 should be ~2.667: got {integral}"
+    );
+}

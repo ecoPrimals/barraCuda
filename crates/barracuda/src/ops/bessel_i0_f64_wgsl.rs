@@ -34,13 +34,11 @@ impl BesselI0F64 {
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn i0_cpu(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| Self::i0_scalar(xi)).collect()
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn i0_scalar(x: f64) -> f64 {
         let ax = x.abs();
         if ax < 3.75 {

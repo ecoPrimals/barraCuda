@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Parallel sum reduction at DF64 precision (f32-pair).
 // Requires: df64_core.wgsl (auto-injected by compile_shader_df64)
 

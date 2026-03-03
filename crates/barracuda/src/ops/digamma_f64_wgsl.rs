@@ -106,13 +106,11 @@ impl DigammaF64 {
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn digamma_cpu(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| Self::digamma_scalar(xi)).collect()
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn digamma_scalar(x: f64) -> f64 {
         use std::f64::consts::PI;
 
@@ -142,7 +140,6 @@ impl DigammaF64 {
     }
 
     #[cfg(test)]
-    #[allow(dead_code)]
     fn digamma_asymptotic(x: f64) -> f64 {
         let inv_x = 1.0 / x;
         let inv_x2 = inv_x * inv_x;

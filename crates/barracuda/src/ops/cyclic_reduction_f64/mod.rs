@@ -236,7 +236,7 @@ impl CyclicReductionF64 {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Serial PL"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let serial_pipeline =
@@ -246,7 +246,7 @@ impl CyclicReductionF64 {
                     label: Some("Serial Pipeline"),
                     layout: Some(&pl),
                     module: &shader,
-                    entry_point: "solve_serial_f64",
+                    entry_point: Some("solve_serial_f64"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -309,7 +309,7 @@ impl CyclicReductionF64 {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&serial_pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(1, 1, 1);
         }
 
@@ -457,7 +457,7 @@ impl CyclicReductionF64 {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Cyclic Reduction PL"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         // Create pipelines for reduction and substitution
@@ -468,7 +468,7 @@ impl CyclicReductionF64 {
                     label: Some("Reduction Pipeline"),
                     layout: Some(&pl),
                     module: &shader,
-                    entry_point: "reduction_f64",
+                    entry_point: Some("reduction_f64"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -480,7 +480,7 @@ impl CyclicReductionF64 {
                     label: Some("Substitution Pipeline"),
                     layout: Some(&pl),
                     module: &shader,
-                    entry_point: "substitution_f64",
+                    entry_point: Some("substitution_f64"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -551,7 +551,7 @@ impl CyclicReductionF64 {
                     timestamp_writes: None,
                 });
                 pass.set_pipeline(&reduction_pipeline);
-                pass.set_bind_group(0, &bg, &[]);
+                pass.set_bind_group(0, Some(&bg), &[]);
                 pass.dispatch_workgroups(n_workgroups.max(1) as u32, 1, 1);
             }
 
@@ -621,7 +621,7 @@ impl CyclicReductionF64 {
                     timestamp_writes: None,
                 });
                 pass.set_pipeline(&substitution_pipeline);
-                pass.set_bind_group(0, &bg, &[]);
+                pass.set_bind_group(0, Some(&bg), &[]);
                 pass.dispatch_workgroups(n_workgroups.max(1) as u32, 1, 1);
             }
 

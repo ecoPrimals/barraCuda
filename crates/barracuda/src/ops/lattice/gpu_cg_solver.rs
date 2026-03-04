@@ -166,7 +166,7 @@ impl GpuCgSolver {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some(&format!("{label}:layout")),
                     bind_group_layouts: &[bgl],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
             device
                 .device
@@ -174,7 +174,7 @@ impl GpuCgSolver {
                     label: Some(label),
                     layout: Some(&layout),
                     module,
-                    entry_point: "main",
+                    entry_point: Some("main"),
                     compilation_options: Default::default(),
                     cache: None,
                 })
@@ -362,7 +362,7 @@ impl GpuCgSolver {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.dot_pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(self.n_pairs.div_ceil(CG_WG), 1, 1);
         }
         self.device.submit_and_poll(Some(enc.finish()));
@@ -419,7 +419,7 @@ impl GpuCgSolver {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.axpy_pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(self.n_f64.div_ceil(CG_WG), 1, 1);
         }
         self.device.submit_and_poll(Some(enc.finish()));
@@ -475,7 +475,7 @@ impl GpuCgSolver {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.xpay_pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(self.n_f64.div_ceil(CG_WG), 1, 1);
         }
         self.device.submit_and_poll(Some(enc.finish()));

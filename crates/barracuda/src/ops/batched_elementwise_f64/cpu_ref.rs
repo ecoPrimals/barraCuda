@@ -99,12 +99,18 @@ pub fn turc_et0_cpu(rs_mj: f64, t_mean: f64, rh_mean: f64) -> f64 {
     (0.013 * (t_mean / (t_mean + 15.0)) * (rs_cal + 50.0) * c_rh).max(0.0)
 }
 
-/// Hamon (1963) ET₀ — temperature + daylength only (CPU reference)
-/// ET₀ = 0.55 * D² * e_sat / 100
+/// Hamon (1963) ET₀ — temperature + daylength only (CPU reference).
+///
+/// PET (mm/day) = 13.97 × D² × Pt
+/// where D = daylight_hours / 12, Pt = 4.95 × exp(0.062 × T) / 100
+/// (Pt approximates saturated vapor density in g/cm³; 13.97 = 0.55 × 25.4
+/// converts the original inches/day to mm/day.)
+///
+/// Reference: Hamon (1963), "Estimating potential evapotranspiration", ASCE.
 pub fn hamon_et0_cpu(t_mean: f64, daylight_hours: f64) -> f64 {
     let d_ratio = daylight_hours / 12.0;
-    let e_sat = 6.108 * (17.27 * t_mean / (t_mean + 237.3)).exp();
-    (0.55 * d_ratio * d_ratio * e_sat / 100.0).max(0.0)
+    let pt = 4.95 * (0.062 * t_mean).exp() / 100.0;
+    (13.97 * d_ratio * d_ratio * pt).max(0.0)
 }
 
 /// Pedotransfer polynomial — Horner form (CPU reference)

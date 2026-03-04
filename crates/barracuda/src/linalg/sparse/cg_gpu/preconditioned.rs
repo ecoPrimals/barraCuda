@@ -4,6 +4,7 @@
 //! M = diag(A) → z = M⁻¹r = r / diag(A). Typically halves iteration count.
 
 use super::{CgGpu, CgGpuResult};
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use crate::linalg::sparse::csr::CsrMatrix;
@@ -80,7 +81,7 @@ impl CgGpu {
         let ap_buffer = SparseBuffers::f64_zeros(&device, "PCG Ap", n);
 
         // Scalar buffers
-        let num_workgroups = n.div_ceil(256);
+        let num_workgroups = n.div_ceil(WORKGROUP_SIZE_1D as usize);
         let partial_sums_buffer = SparseBuffers::f64_zeros(&device, "PCG partial", num_workgroups);
         let rz_buffer = SparseBuffers::f64_zeros(&device, "PCG rz", 1);
         let rz_new_buffer = SparseBuffers::f64_zeros(&device, "PCG rz_new", 1);
@@ -132,11 +133,11 @@ impl CgGpu {
                         &wgpu::PipelineLayoutDescriptor {
                             label: Some("Precond PL"),
                             bind_group_layouts: &[&precond_bgl],
-                            push_constant_ranges: &[],
+                            immediate_size: 0,
                         },
                     )),
                     module: &vector_ops_shader,
-                    entry_point: "precond_f64",
+                    entry_point: Some("precond_f64"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -481,7 +482,7 @@ impl CgGpu {
                     &mut pass,
                     &precond_pipeline,
                     &precond_bg,
-                    (n as u32).div_ceil(256),
+                    (n as u32).div_ceil(WORKGROUP_SIZE_1D),
                     1,
                     1,
                 );
@@ -530,7 +531,7 @@ impl CgGpu {
                     &mut pass,
                     &pl.spmv,
                     &spmv_bg,
-                    (n as u32).div_ceil(256),
+                    (n as u32).div_ceil(WORKGROUP_SIZE_1D),
                     1,
                     1,
                 );
@@ -568,7 +569,7 @@ impl CgGpu {
                     &mut pass,
                     &pl.update_xr,
                     &update_xr_bg,
-                    (n as u32).div_ceil(256),
+                    (n as u32).div_ceil(WORKGROUP_SIZE_1D),
                     1,
                     1,
                 );
@@ -583,7 +584,7 @@ impl CgGpu {
                     &mut pass,
                     &precond_pipeline,
                     &precond_bg,
-                    (n as u32).div_ceil(256),
+                    (n as u32).div_ceil(WORKGROUP_SIZE_1D),
                     1,
                     1,
                 );
@@ -621,7 +622,7 @@ impl CgGpu {
                     &mut pass,
                     &pl.update_p,
                     &update_p_bg,
-                    (n as u32).div_ceil(256),
+                    (n as u32).div_ceil(WORKGROUP_SIZE_1D),
                     1,
                     1,
                 );

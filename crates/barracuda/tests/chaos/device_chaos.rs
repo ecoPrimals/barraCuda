@@ -317,7 +317,7 @@ async fn test_rapid_allocation_deallocation() {
 async fn test_interleaved_multi_device_operations() {
     println!("\n=== Interleaved Multi-Device Operations ===\n");
 
-    let adapters = WgpuDevice::enumerate_adapters();
+    let adapters = WgpuDevice::enumerate_adapters().await;
     let discrete_gpus: Vec<_> = adapters
         .iter()
         .enumerate()

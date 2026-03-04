@@ -55,8 +55,7 @@ impl DeviceFingerprint {
         let mut backend_hasher = std::collections::hash_map::DefaultHasher::new();
         format!("{:?}:{:?}", adapter_info.backend, adapter_info.device_type)
             .hash(&mut backend_hasher);
-        // Also include the wgpu global_id for uniqueness within the same instance
-        device.global_id().hash(&mut backend_hasher);
+        device.hash(&mut backend_hasher);
         let backend_hash = backend_hasher.finish();
 
         Self {
@@ -366,14 +365,14 @@ impl PipelineCache {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label,
             bind_group_layouts: &[&layout],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
         let pipeline = Arc::new(
             device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
                 label,
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point,
+                entry_point: Some(entry_point),
                 cache: None,
                 compilation_options: Default::default(),
             }),
@@ -443,6 +442,10 @@ mod tests {
             driver: "test".to_string(),
             driver_info: "1.0".to_string(),
             backend: wgpu::Backend::Vulkan,
+            device_pci_bus_id: String::new(),
+            subgroup_min_size: 1,
+            subgroup_max_size: 128,
+            transient_saves_memory: false,
         };
 
         let fp1 = DeviceFingerprint::from_adapter_info(&adapter_info);
@@ -460,6 +463,10 @@ mod tests {
             driver: "nvidia".to_string(),
             driver_info: "1.0".to_string(),
             backend: wgpu::Backend::Vulkan,
+            device_pci_bus_id: String::new(),
+            subgroup_min_size: 1,
+            subgroup_max_size: 128,
+            transient_saves_memory: false,
         };
 
         let amd = wgpu::AdapterInfo {
@@ -470,6 +477,10 @@ mod tests {
             driver: "radv".to_string(),
             driver_info: "1.0".to_string(),
             backend: wgpu::Backend::Vulkan,
+            device_pci_bus_id: String::new(),
+            subgroup_min_size: 1,
+            subgroup_max_size: 128,
+            transient_saves_memory: false,
         };
 
         let fp_nvidia = DeviceFingerprint::from_adapter_info(&nvidia);

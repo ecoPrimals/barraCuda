@@ -23,7 +23,7 @@ impl GpuPool {
     }
 
     pub async fn with_config(config: WorkloadConfig) -> Result<Self> {
-        let adapters = WgpuDevice::enumerate_adapters();
+        let adapters = WgpuDevice::enumerate_adapters().await;
         let mut devices = Vec::new();
         let mut info = Vec::new();
 
@@ -334,7 +334,7 @@ impl MultiDevicePool {
     }
 
     pub async fn with_config(config: WorkloadConfig) -> Result<Self> {
-        let adapters = WgpuDevice::enumerate_adapters();
+        let adapters = WgpuDevice::enumerate_adapters().await;
         let mut devices = Vec::new();
         let mut info = Vec::new();
         let mut device_busy = Vec::new();

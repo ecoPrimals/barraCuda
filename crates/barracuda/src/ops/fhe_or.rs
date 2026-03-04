@@ -114,13 +114,9 @@ pub async fn create_fhe_bit_tensor(
 #[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
-    #[expect(unused_imports, reason = "conditional imports")]
     use super::*;
 
     use crate::ops::fhe_and::create_fhe_bit_tensor;
-
-    #[expect(unused_imports, reason = "conditional imports")]
-    use wgpu::util::DeviceExt;
 
     #[tokio::test]
     async fn test_fhe_or_ones() {

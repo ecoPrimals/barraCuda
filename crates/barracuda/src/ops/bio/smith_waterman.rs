@@ -19,6 +19,7 @@
 //! wetSpring handoff §Shader Design 1 (Feb 2026) — used by `bio::sate_alignment`
 //! for phylogenetic multiple sequence alignment (Liu 2009 SATé).
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::error::Result;
@@ -203,7 +204,7 @@ impl SmithWatermanGpu {
                     usage: wgpu::BufferUsages::STORAGE,
                 });
 
-            let wg = cells.div_ceil(256);
+            let wg = cells.div_ceil(WORKGROUP_SIZE_1D);
             ComputeDispatch::new(dev, "SW BandedF64")
                 .shader(SHADER, "main")
                 .f64()

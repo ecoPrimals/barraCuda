@@ -34,6 +34,7 @@
 //! wetSpring handoff §Shader Design 3 (Feb 2026) — targets Exp019 PhyloNet-HMM
 //! and Liu 2014 maximum-likelihood phylogenetics.
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::error::Result;
@@ -252,7 +253,7 @@ impl FelsensteinGpu {
                 .storage_read(3, &right_buf)
                 .storage_read(4, &tp_buf)
                 .storage_rw(5, &lik_buf)
-                .dispatch(total.div_ceil(256), 1, 1)
+                .dispatch(total.div_ceil(WORKGROUP_SIZE_1D), 1, 1)
                 .submit();
         }
 

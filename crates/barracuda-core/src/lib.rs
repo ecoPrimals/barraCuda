@@ -16,14 +16,38 @@
 #![warn(missing_docs)]
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
-#![expect(clippy::doc_markdown, reason = "legacy")]
-#![expect(clippy::module_name_repetitions, reason = "legacy")]
-#![expect(clippy::unused_async, reason = "legacy")]
-#![expect(clippy::must_use_candidate, reason = "legacy")]
-#![expect(clippy::missing_errors_doc, reason = "legacy")]
-#![expect(clippy::redundant_closure_for_method_calls, reason = "legacy")]
-#![expect(clippy::result_large_err, reason = "legacy")]
-#![expect(clippy::cast_possible_truncation, reason = "legacy")]
+#![expect(
+    clippy::doc_markdown,
+    reason = "domain terms like barraCuda, wgpu, WebGPU"
+)]
+#![expect(
+    clippy::module_name_repetitions,
+    reason = "primal module names are intentionally descriptive"
+)]
+#![expect(
+    clippy::unused_async,
+    reason = "PrimalLifecycle trait requires async for consistency"
+)]
+#![expect(
+    clippy::must_use_candidate,
+    reason = "IPC handlers return values consumed by framework"
+)]
+#![expect(
+    clippy::missing_errors_doc,
+    reason = "error types are self-documenting via thiserror"
+)]
+#![expect(
+    clippy::redundant_closure_for_method_calls,
+    reason = "clarity in IPC handler chains"
+)]
+#![expect(
+    clippy::result_large_err,
+    reason = "BarracudaCoreError carries diagnostic context"
+)]
+#![expect(
+    clippy::cast_possible_truncation,
+    reason = "tensor dimensions validated upstream"
+)]
 
 pub mod error;
 pub mod health;

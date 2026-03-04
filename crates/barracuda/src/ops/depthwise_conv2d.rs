@@ -126,7 +126,7 @@ impl DepthwiseConv2D {
                 label: Some("DepthwiseConv2D Pipeline"),
                 layout: None,
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -170,7 +170,7 @@ impl DepthwiseConv2D {
                 timestamp_writes: None,
             });
             compute_pass.set_pipeline(&pipeline);
-            compute_pass.set_bind_group(0, &bind_group, &[]);
+            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
 
             let workgroups_x = out_width.div_ceil(16) as u32;
             let workgroups_y = out_height.div_ceil(16) as u32;

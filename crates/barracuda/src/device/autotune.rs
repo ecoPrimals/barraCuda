@@ -163,7 +163,7 @@ impl AutoTuner {
             .unwrap_or(0);
 
         GpuCalibration {
-            device_id: format!("{:?}", device.global_id()),
+            device_id: format!("{device:?}"),
             device_name: device_name.to_string(),
             optimal_workgroup_size: best_wg,
             peak_bandwidth_gbps: best_bw,
@@ -281,14 +281,14 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
         let pl = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
             bind_group_layouts: &[&bgl],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
 
         let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: None,
             layout: Some(&pl),
             module: &shader,
-            entry_point: "main",
+            entry_point: Some("main"),
             cache: None,
             compilation_options: Default::default(),
         });
@@ -302,7 +302,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
             {
                 let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
                 pass.set_pipeline(&pipeline);
-                pass.set_bind_group(0, &bind_group, &[]);
+                pass.set_bind_group(0, Some(&bind_group), &[]);
                 pass.dispatch_workgroups(workgroups, 1, 1);
             }
             wgpu_device.submit_and_poll_calibration(Some(encoder.finish()));
@@ -318,7 +318,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
             {
                 let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
                 pass.set_pipeline(&pipeline);
-                pass.set_bind_group(0, &bind_group, &[]);
+                pass.set_bind_group(0, Some(&bind_group), &[]);
                 pass.dispatch_workgroups(workgroups, 1, 1);
             }
             wgpu_device.submit_and_poll_calibration(Some(encoder.finish()));
@@ -397,14 +397,14 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
         let pl = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
             bind_group_layouts: &[&bgl],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
 
         let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: None,
             layout: Some(&pl),
             module: &shader,
-            entry_point: "main",
+            entry_point: Some("main"),
             cache: None,
             compilation_options: Default::default(),
         });
@@ -418,7 +418,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
             {
                 let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
                 pass.set_pipeline(&pipeline);
-                pass.set_bind_group(0, &bind_group, &[]);
+                pass.set_bind_group(0, Some(&bind_group), &[]);
                 pass.dispatch_workgroups(workgroups, 1, 1);
             }
             wgpu_device.submit_and_poll_calibration(Some(encoder.finish()));
@@ -434,7 +434,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
             {
                 let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
                 pass.set_pipeline(&pipeline);
-                pass.set_bind_group(0, &bind_group, &[]);
+                pass.set_bind_group(0, Some(&bind_group), &[]);
                 pass.dispatch_workgroups(workgroups, 1, 1);
             }
             wgpu_device.submit_and_poll_calibration(Some(encoder.finish()));

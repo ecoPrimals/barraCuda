@@ -26,7 +26,7 @@
 //! - Phase 3 ✓  ILP reorderer + loop unroller wired into `compile_shader_f64()`
 //! - Phase 4    Specialised codegen — deferred until upstream bottleneck confirmed
 //!
-//! Reference: `docs/specs/SOVEREIGN_COMPUTE_EVOLUTION.md`
+//! Reference: phases described above; originated from toadStool sovereign compute spec.
 
 mod architectures;
 mod workarounds;

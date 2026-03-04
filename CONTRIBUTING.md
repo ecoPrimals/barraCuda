@@ -8,7 +8,7 @@ This guide covers everything you need to start contributing.
 ## Quick Start
 
 ```bash
-# Prerequisites: Rust 1.87+, GPU drivers or llvmpipe
+# Prerequisites: Rust 1.87+, GPU drivers or llvmpipe, cargo-deny
 git clone https://github.com/ecoPrimals/barraCuda.git
 cd barraCuda
 
@@ -24,6 +24,7 @@ cargo test -p barracuda --lib
 cargo fmt --all -- --check
 cargo clippy --workspace -- -D warnings
 cargo deny check
+cargo doc --workspace --no-deps
 ```
 
 ---
@@ -52,7 +53,8 @@ the conventions in `src/shaders/README.md`:
 
 - Name: `snake_case.wgsl` (e.g., `shaders/math/my_op.wgsl`)
 - Binding group 0 for inputs, binding group 0 for outputs (sequential bindings)
-- Workgroup size: `@workgroup_size(256)` unless benchmarks justify otherwise
+- Workgroup size: `@workgroup_size(256)` for general elementwise,
+  `@workgroup_size(64)` for physics/lattice/memory-heavy (see `CONVENTIONS.md`)
 - Include `fn main(@builtin(global_invocation_id) gid: vec3<u32>)` entry point
 - Use `{{SCALAR}}` template for multi-precision support when applicable
 
@@ -69,7 +71,10 @@ static MY_OP_SHADER: LazyLock<&str> = LazyLock::new(|| {
 ### 3. Write the Rust dispatch function
 
 ```rust
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
+
 pub async fn my_op(device: &WgpuDevice, input: &Tensor) -> Result<Tensor> {
+    let workgroups = (input.len() as u32).div_ceil(WORKGROUP_SIZE_1D);
     let dispatch = ComputeDispatch::new(device)
         .shader(&MY_OP_SHADER)
         .input_tensor(input)
@@ -225,8 +230,10 @@ WGPU_BACKEND=vulkan WGPU_ADAPTER_NAME=llvmpipe cargo test -p barracuda
 - `#![deny(unsafe_code)]` in barracuda-core — minimize unsafe across the codebase
 - `cargo fmt` before committing
 - `cargo clippy --workspace -- -D warnings` must be clean
+- Suppressions: `#[expect(clippy::lint, reason = "...")]` — never `#[allow]`
 - No `anyhow` — use `thiserror` with `BarracudaError`
 - No `println!` in library code — use `tracing`
+- No `Arc<wgpu::Device>` / `Arc<wgpu::Queue>` — wgpu 28 types are `Clone`
 
 ### Error handling
 

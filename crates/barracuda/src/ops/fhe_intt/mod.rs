@@ -185,7 +185,7 @@ impl FheIntt {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("FHE INTT Pipeline Layout"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         // Butterfly pipeline
@@ -196,7 +196,7 @@ impl FheIntt {
                     label: Some("FHE INTT Butterfly Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader,
-                    entry_point: "main",
+                    entry_point: Some("main"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -209,7 +209,7 @@ impl FheIntt {
                     label: Some("FHE INTT Bit Reverse Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader,
-                    entry_point: "bit_reverse",
+                    entry_point: Some("bit_reverse"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -222,7 +222,7 @@ impl FheIntt {
                     label: Some("FHE INTT Scale Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader,
-                    entry_point: "scale_by_n",
+                    entry_point: Some("scale_by_n"),
                     cache: None,
                     compilation_options: Default::default(),
                 });

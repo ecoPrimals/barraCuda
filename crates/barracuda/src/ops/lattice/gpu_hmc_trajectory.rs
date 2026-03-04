@@ -8,6 +8,7 @@
 //! All math runs on GPU. The host loop only reads scalar reduction results
 //! for convergence checks and the accept/reject decision.
 
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use crate::pipeline::ReduceScalarPipeline;
@@ -48,8 +49,8 @@ impl Default for GpuHmcConfig {
             mass: 0.1,
             n_md_steps: 20,
             dt: 0.02,
-            cg_tol: 1e-8,
-            cg_max_iter: 5000,
+            cg_tol: super::constants::CG_TOL_DEFAULT,
+            cg_max_iter: super::constants::CG_MAX_ITER_DEFAULT,
             n_flavors_over_4: 2,
         }
     }
@@ -193,6 +194,7 @@ pub struct GpuHmcTrajectory {
     volume: u32,
     n_links: u32,
     leapfrog: GpuHmcLeapfrog,
+    omelyan: super::omelyan_integrator::OmelyanIntegrator,
     gauge_force: Su3HmcForce,
     wilson_action: GpuWilsonAction,
     kinetic: GpuKineticEnergy,
@@ -201,15 +203,27 @@ pub struct GpuHmcTrajectory {
     cg_solver: GpuCgSolver,
     action_reducer: ReduceScalarPipeline,
     energy_reducer: ReduceScalarPipeline,
+    host_rng: std::cell::RefCell<HostRng>,
 }
 
 impl GpuHmcTrajectory {
     pub fn new(device: Arc<WgpuDevice>, config: GpuHmcConfig) -> Result<Self> {
+        Self::with_seed(device, config, 42)
+    }
+
+    /// Create with an explicit host RNG seed for reproducible Metropolis.
+    pub fn with_seed(device: Arc<WgpuDevice>, config: GpuHmcConfig, seed: u64) -> Result<Self> {
         let volume = config.nt * config.nx * config.ny * config.nz;
         let n_links = volume * 4;
+        let leapfrog = GpuHmcLeapfrog::new(device.clone(), volume)?;
+        let omelyan = super::omelyan_integrator::OmelyanIntegrator::new(GpuHmcLeapfrog::new(
+            device.clone(),
+            volume,
+        )?);
 
         Ok(Self {
-            leapfrog: GpuHmcLeapfrog::new(device.clone(), volume)?,
+            leapfrog,
+            omelyan,
             gauge_force: Su3HmcForce::new(
                 device.clone(),
                 config.nt,
@@ -241,6 +255,7 @@ impl GpuHmcTrajectory {
             config,
             volume,
             n_links,
+            host_rng: std::cell::RefCell::new(HostRng::new(seed)),
         })
     }
 
@@ -281,26 +296,19 @@ impl GpuHmcTrajectory {
 
         let mut total_cg_iters = 0;
 
-        // Generate pseudofermion fields: η → φ = D†η
+        // Generate pseudofermion fields: η ~ N(0,1), then φ = D†η
+        let dirac_heatbath = super::dirac::StaggeredDirac::new(self.device.clone(), self.volume)?;
         for phi_buf in &bufs.phi_fields {
             self.heatbath.generate(&bufs.eta, &bufs.rng_sites)?;
-            self.cg_solver.solve(
-                &bufs.eta,
-                &bufs.cg,
+            dirac_heatbath.dispatch(
+                self.config.mass,
+                -1.0, // hop_sign = -1 for D†
                 &bufs.links,
+                &bufs.eta,
+                phi_buf,
                 &bufs.nbr,
                 &bufs.phases,
-                self.config.mass,
-                self.config.cg_tol,
-                self.config.cg_max_iter,
             )?;
-            // φ = D†η: apply D† to eta into phi
-            // Actually we need to compute D† on the eta directly via Dirac dispatch
-            // For heatbath, the standard approach: generate Gaussian η, then φ = D†η
-            // We use the Dirac with hop_sign = -1.0 (adjoint)
-            let n_bytes = (self.volume as usize * 6 * std::mem::size_of::<f64>()) as u64;
-            // Copy eta to phi directly as the source field, then apply D†
-            self.copy_buffer_sized(&bufs.eta, phi_buf, n_bytes);
         }
 
         // Compute initial gauge action S_G
@@ -344,8 +352,8 @@ impl GpuHmcTrajectory {
 
         let h_old = kinetic_before + gauge_action_before + fermion_action_before;
 
-        // Leapfrog integration
-        self.leapfrog_integration(bufs, &mut total_cg_iters)?;
+        // Omelyan 2MN integration (O(ε⁴) energy conservation)
+        self.omelyan_integration(bufs, &mut total_cg_iters)?;
 
         // Compute final Hamiltonian
         self.wilson_action
@@ -379,8 +387,7 @@ impl GpuHmcTrajectory {
         let accepted = if delta_h <= 0.0 {
             true
         } else {
-            // Simple accept probability — use host PRNG for single random number
-            let r: f64 = simple_host_random();
+            let r: f64 = self.host_rng.borrow_mut().uniform();
             r < (-delta_h).exp()
         };
 
@@ -410,46 +417,22 @@ impl GpuHmcTrajectory {
         })
     }
 
-    fn leapfrog_integration(&self, bufs: &GpuHmcBuffers, total_cg_iters: &mut usize) -> Result<()> {
-        let half_dt = 0.5 * self.config.dt;
+    /// Omelyan 2MN integration with force recomputation between steps.
+    ///
+    /// Uses π(λε) → U(ε/2) → π((1-2λ)ε) → U(ε/2) → π(λε) per step,
+    /// achieving O(ε⁴) energy conservation vs O(ε²) for plain leapfrog.
+    fn omelyan_integration(&self, bufs: &GpuHmcBuffers, total_cg_iters: &mut usize) -> Result<()> {
         let dt = self.config.dt;
 
-        // Half momentum kick
-        self.compute_total_force(bufs, total_cg_iters)?;
-        self.leapfrog.momentum_kick(
-            &bufs.links,
-            &bufs.momenta,
-            &bufs.total_force,
-            &bufs.rng_links,
-            self.volume,
-            half_dt,
-        )?;
-
-        for step in 0..self.config.n_md_steps {
-            // Full link update
-            self.leapfrog.link_update(
+        for _ in 0..self.config.n_md_steps {
+            self.compute_total_force(bufs, total_cg_iters)?;
+            self.omelyan.step(
                 &bufs.links,
                 &bufs.momenta,
                 &bufs.total_force,
                 &bufs.rng_links,
                 self.volume,
                 dt,
-            )?;
-
-            // Momentum kick (full except last = half)
-            let p_dt = if step < self.config.n_md_steps - 1 {
-                dt
-            } else {
-                half_dt
-            };
-            self.compute_total_force(bufs, total_cg_iters)?;
-            self.leapfrog.momentum_kick(
-                &bufs.links,
-                &bufs.momenta,
-                &bufs.total_force,
-                &bufs.rng_links,
-                self.volume,
-                p_dt,
             )?;
         }
 
@@ -546,7 +529,7 @@ impl GpuHmcTrajectory {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("hmc_dot:layout"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
         let pipeline =
             self.device
@@ -555,7 +538,7 @@ impl GpuHmcTrajectory {
                     label: Some("hmc_dot:pipeline"),
                     layout: Some(&layout),
                     module: &module,
-                    entry_point: "main",
+                    entry_point: Some("main"),
                     compilation_options: Default::default(),
                     cache: None,
                 });
@@ -600,8 +583,8 @@ impl GpuHmcTrajectory {
         {
             let mut pass = enc.begin_compute_pass(&Default::default());
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bg, &[]);
-            pass.dispatch_workgroups(n_pairs.div_ceil(64), 1, 1);
+            pass.set_bind_group(0, Some(&bg), &[]);
+            pass.dispatch_workgroups(n_pairs.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
         }
         self.device.submit_and_poll(Some(enc.finish()));
 
@@ -633,7 +616,7 @@ impl GpuHmcTrajectory {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("force_add:layout"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
         let pipeline =
             self.device
@@ -642,7 +625,7 @@ impl GpuHmcTrajectory {
                     label: Some("force_add:pipeline"),
                     layout: Some(&layout),
                     module: &module,
-                    entry_point: "main",
+                    entry_point: Some("main"),
                     compilation_options: Default::default(),
                     cache: None,
                 });
@@ -683,8 +666,8 @@ impl GpuHmcTrajectory {
         {
             let mut pass = enc.begin_compute_pass(&Default::default());
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bg, &[]);
-            pass.dispatch_workgroups(n.div_ceil(64), 1, 1);
+            pass.set_bind_group(0, Some(&bg), &[]);
+            pass.dispatch_workgroups(n.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
         }
         self.device.submit_and_poll(Some(enc.finish()));
         Ok(())
@@ -719,13 +702,23 @@ struct AxpyParamsLocal {
     alpha: f64,
 }
 
-fn simple_host_random() -> f64 {
-    use std::time::SystemTime;
-    let nanos = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap_or_default()
-        .subsec_nanos();
-    (nanos as f64) / 4_294_967_295.0
+/// Seeded host-side PRNG for Metropolis accept/reject.
+///
+/// Uses the lattice LCG (Knuth MMIX) with a mutable seed that the caller
+/// advances across trajectories for reproducible accept/reject decisions.
+pub struct HostRng {
+    state: u64,
+}
+
+impl HostRng {
+    pub fn new(seed: u64) -> Self {
+        Self { state: seed.max(1) }
+    }
+
+    /// Draw a uniform f64 in [0, 1).
+    pub fn uniform(&mut self) -> f64 {
+        super::constants::lcg_uniform_f64(&mut self.state)
+    }
 }
 
 fn storage_bgl(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {

@@ -69,7 +69,7 @@ impl ComplexLog {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("PL"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
         let pipeline = device
             .device
@@ -77,7 +77,7 @@ impl ComplexLog {
                 label: Some("Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -131,7 +131,7 @@ impl ComplexLog {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             let caps = DeviceCapabilities::from_device(device);
             let wg =
                 ((n / 2) as u32).div_ceil(caps.optimal_workgroup_size(WorkloadType::ElementWise));

@@ -143,7 +143,7 @@ impl BatchToleranceSearchF64 {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("TolSearch PL"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
         let pipeline = dev
             .device
@@ -151,7 +151,7 @@ impl BatchToleranceSearchF64 {
                 label: Some("TolSearch Pipeline"),
                 layout: Some(&pl),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -165,7 +165,7 @@ impl BatchToleranceSearchF64 {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(s.div_ceil(16), r.div_ceil(16), 1);
         }
         dev.submit_and_poll(Some(encoder.finish()));

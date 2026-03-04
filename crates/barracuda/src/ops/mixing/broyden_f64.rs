@@ -116,7 +116,7 @@ impl LinearMixer {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("linear_mixer_layout"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline = device
@@ -125,7 +125,7 @@ impl LinearMixer {
                 label: Some("linear_mixer_pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader_module,
-                entry_point: "mix_linear",
+                entry_point: Some("mix_linear"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -245,7 +245,7 @@ impl LinearMixer {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups(
                 self.vec_dim.div_ceil(WORKGROUP_SIZE_1D as usize) as u32,
                 1,

@@ -140,8 +140,8 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let wind  = max(base_inputs[4] * (1.0 + uncertainties[4] * box_muller(&state)), 0.5);
     let sun   = max(base_inputs[5] * (1.0 + uncertainties[5] * box_muller(&state)), 0.0);
 
-    output[idx] = compute_et0(tmax, tmin, rhmax, rhmin, wind, sun,
-                              base_inputs[6], base_inputs[7], base_inputs[8]);
+    output[idx] = max(compute_et0(tmax, tmin, rhmax, rhmin, wind, sun,
+                              base_inputs[6], base_inputs[7], base_inputs[8]), 0.0);
 
     seeds[seed_base]      = state.x;
     seeds[seed_base + 1u] = state.y;

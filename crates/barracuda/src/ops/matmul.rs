@@ -222,7 +222,7 @@ impl<'a> MatMul<'a> {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&*bind_group), &[]);
             pass.dispatch_workgroups(wg_x, wg_y, 1);
             drop(params_buf);
         })?;

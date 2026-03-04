@@ -52,13 +52,12 @@ impl BesselJ0F64 {
         self.j0_gpu(x)
     }
 
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
+    #[expect(dead_code, reason = "tests")]
     #[cfg(test)]
     fn j0_cpu(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| Self::j0_scalar(xi)).collect()
     }
 
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn j0_scalar(x: f64) -> f64 {
         let ax = x.abs();

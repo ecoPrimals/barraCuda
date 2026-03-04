@@ -36,8 +36,8 @@ impl Default for PseudofermionConfig {
     fn default() -> Self {
         Self {
             mass: 0.1,
-            cg_tol: 1e-8,
-            cg_max_iter: 5000,
+            cg_tol: super::constants::CG_TOL_DEFAULT,
+            cg_max_iter: super::constants::CG_MAX_ITER_DEFAULT,
         }
     }
 }

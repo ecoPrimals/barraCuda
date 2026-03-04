@@ -145,7 +145,7 @@ impl BatchedEighGpu {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("SingleDispatch PL"),
                     bind_group_layouts: &[&bgl],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline = device
@@ -154,7 +154,7 @@ impl BatchedEighGpu {
                 label: Some("SingleDispatch Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "batched_eigh_single_dispatch",
+                entry_point: Some("batched_eigh_single_dispatch"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -191,7 +191,7 @@ impl BatchedEighGpu {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups((batch_size as u32).div_ceil(wave_size), 1, 1);
         }
         device.submit_and_poll(Some(encoder.finish()));
@@ -298,7 +298,7 @@ impl BatchedEighGpu {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("SingleDispatch PL (buffers)"),
                     bind_group_layouts: &[&bgl],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline = device
@@ -307,7 +307,7 @@ impl BatchedEighGpu {
                 label: Some("SingleDispatch Pipeline (buffers)"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "batched_eigh_single_dispatch",
+                entry_point: Some("batched_eigh_single_dispatch"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -344,7 +344,7 @@ impl BatchedEighGpu {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups((batch_size as u32).div_ceil(wave_size), 1, 1);
         }
         device.submit_and_poll(Some(encoder.finish()));

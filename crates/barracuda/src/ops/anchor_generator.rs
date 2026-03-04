@@ -212,7 +212,7 @@ impl AnchorGenerator {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("AnchorGenerator Pipeline Layout"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let compute_pipeline =
@@ -222,7 +222,7 @@ impl AnchorGenerator {
                     label: Some("AnchorGenerator Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
-                    entry_point: "main",
+                    entry_point: Some("main"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -238,7 +238,7 @@ impl AnchorGenerator {
                 timestamp_writes: None,
             });
             compute_pass.set_pipeline(&compute_pipeline);
-            compute_pass.set_bind_group(0, &bind_group, &[]);
+            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
 
             let workgroups_x = (self.feature_w as u32).div_ceil(16);
             let workgroups_y = (self.feature_h as u32).div_ceil(16);

@@ -418,17 +418,17 @@ fn batched_compute(
         }
         case 16u: {
             // HamonEt0: Hamon (1963) — temperature + daylength only
-            // ET₀ = 0.55 * (N/12)² * exp(T_mean / 16.78)  [inches/day → mm/day * 25.4]
-            // Simplified: ET₀ = 0.55 * D² * e_sat / 100  (Hamon 1963, mm/day)
-            // where D = daylight hours / 12, e_sat = 6.108 * exp(17.27*T/(T+237.3))
+            // PET (mm/day) = 13.97 × D² × Pt
+            // where D = daylight / 12, Pt = 4.95 × exp(0.062 × T) / 100
+            // (13.97 = 0.55 × 25.4 converts inches/day → mm/day)
             // input: [T_mean, daylight_hours]
             let t_mean = input[base + 0u];
             let daylight = input[base + 1u];
             let zero = t_mean - t_mean;
 
             let d_ratio = daylight / (zero + 12.0);
-            let e_sat = (zero + 6.108) * exp_f64((zero + 17.27) * t_mean / (t_mean + (zero + 237.3)));
-            var et0 = (zero + 0.55) * d_ratio * d_ratio * e_sat / (zero + 100.0);
+            let pt = (zero + 4.95) * exp_f64((zero + 0.062) * t_mean) / (zero + 100.0);
+            var et0 = (zero + 13.97) * d_ratio * d_ratio * pt;
             if (et0 < zero) { et0 = zero; }
             output[batch_idx] = et0;
         }

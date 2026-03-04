@@ -202,7 +202,6 @@ impl Tensor {
 #[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
-    #[expect(unused_imports, reason = "conditional imports")]
     use super::*;
 
     #[tokio::test]

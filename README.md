@@ -1,6 +1,6 @@
 # barraCuda
 
-**Version**: 0.3.2
+**Version**: 0.3.3
 **Status**: Standalone primal — zero cross-dependencies, fully concurrent, all quality gates passing
 **License**: AGPL-3.0-or-later
 **MSRV**: 1.87
@@ -39,7 +39,7 @@ results.
 - **Statistics** — bootstrap, jackknife, diversity indices, hydrology
 - **Bioinformatics** — Smith-Waterman, HMM, phylogenetics, genomic ops
 - **ML ops** — matmul, softmax, attention, ESN reservoir computing
-- **Sovereign shader compilation** — naga IR optimizer, SPIR-V passthrough
+- **Sovereign shader compilation** — naga 28 IR optimizer, SPIR-V passthrough via `create_shader_module_passthrough`
 - **JSON-RPC 2.0 + tarpc** — dual-protocol IPC for primal-to-primal and external consumers
 - **UniBin CLI** — single `barracuda` binary with `server`, `doctor`, `validate`, `version`
 
@@ -48,8 +48,8 @@ results.
 1. **Math is universal, precision is silicon** — one WGSL source, any precision
 2. **Vendor-agnostic** — same binary, identical results on any GPU
 3. **Sovereign** — zero external SDK dependency for correctness or performance
-4. **Pure Rust** — `#![deny(unsafe_code)]` in barracuda-core, exactly 2 wgpu FFI calls (pipeline cache + SPIR-V), zero dependencies on any other primal (lifecycle and health traits internalized from sourDough scaffold)
-5. **Fully concurrent** — `GuardedDeviceHandle` + atomic encoder barrier prevents wgpu-core races without lock contention; all tests pass at 16 threads on llvmpipe
+4. **Pure Rust** — `#![deny(unsafe_code)]` in barracuda-core, exactly 2 wgpu FFI calls (pipeline cache + SPIR-V passthrough), zero dependencies on any other primal (lifecycle and health traits internalized from sourDough scaffold)
+5. **Fully concurrent** — `GuardedDeviceHandle` + atomic encoder barrier prevents wgpu-core races without lock contention; wgpu 28 `Device`/`Queue` are `Clone` — zero `Arc` overhead for handle sharing; all tests pass at 16 threads on llvmpipe
 6. **AGPL-3.0** — free as in freedom
 
 ---
@@ -78,7 +78,7 @@ barracuda-core (primal lifecycle)
     |-- lifecycle + health: PrimalLifecycle, PrimalHealth (owned)
     |
     v
-wgpu (WebGPU)
+wgpu 28 (WebGPU)
     |
     +-- Vulkan (NVIDIA, AMD, Intel)
     +-- Metal (Apple)
@@ -164,7 +164,7 @@ count on finish or drop, making the barrier leak-proof.
 
 ```bash
 cargo fmt --all -- --check              # formatting
-cargo clippy --workspace -- -D warnings # lints (pedantic in Cargo.toml)
+cargo clippy --workspace -- -D warnings # lints (pedantic in Cargo.toml, #[expect] verified)
 cargo deny check                        # license + advisory audit
 cargo doc --workspace --no-deps         # documentation
 cargo build --workspace                 # compilation

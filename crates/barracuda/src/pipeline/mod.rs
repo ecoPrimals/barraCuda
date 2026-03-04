@@ -387,7 +387,7 @@ impl ComputePipeline {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&stage.pipeline);
-            pass.set_bind_group(0, &stage.bind_group, &[]);
+            pass.set_bind_group(0, Some(&stage.bind_group), &[]);
             pass.dispatch_workgroups(stage.workgroups.0, stage.workgroups.1, stage.workgroups.2);
         }
 

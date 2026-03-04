@@ -36,8 +36,10 @@ enum Commands {
         tarpc_bind: Option<String>,
 
         /// Use Unix socket instead of TCP for JSON-RPC.
+        /// Defaults to `$XDG_RUNTIME_DIR/barracuda/barracuda.sock` if
+        /// flag is present without a value.
         #[cfg(unix)]
-        #[arg(long)]
+        #[arg(long, num_args = 0..=1, default_missing_value = "__default__")]
         unix: Option<String>,
     },
 
@@ -94,7 +96,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
             #[cfg(unix)]
             if let Some(path) = unix {
-                server.serve_unix(std::path::Path::new(&path)).await?;
+                let sock_path = if path == "__default__" {
+                    barracuda_core::ipc::IpcServer::default_socket_path()
+                } else {
+                    std::path::PathBuf::from(&path)
+                };
+                server.serve_unix(&sock_path).await?;
                 return Ok(());
             }
 

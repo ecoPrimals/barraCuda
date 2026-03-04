@@ -55,7 +55,7 @@ impl GpuHmcLeapfrog {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("GpuHmcLeapfrog:layout"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let make_pipeline = |entry: &str, label: &str| {
@@ -65,7 +65,7 @@ impl GpuHmcLeapfrog {
                     label: Some(label),
                     layout: Some(&layout),
                     module: &module,
-                    entry_point: entry,
+                    entry_point: Some(entry),
                     compilation_options: Default::default(),
                     cache: None,
                 })
@@ -221,7 +221,7 @@ impl GpuHmcLeapfrog {
                 timestamp_writes: None,
             });
             pass.set_pipeline(pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(self.n_links.div_ceil(WG), 1, 1);
         }
         self.device.submit_and_poll(Some(enc.finish()));

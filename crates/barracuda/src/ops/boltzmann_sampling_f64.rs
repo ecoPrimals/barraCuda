@@ -5,6 +5,7 @@
 
 use std::sync::Arc;
 
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
@@ -108,7 +109,11 @@ impl BoltzmannSamplingGpu {
             .storage_rw(2, &out_buf)
             .uniform(3, &params_buf)
             .storage_read(4, &temp_buf)
-            .dispatch(batch_size.div_ceil(64) as u32, 1, 1)
+            .dispatch(
+                batch_size.div_ceil(WORKGROUP_SIZE_COMPACT as usize) as u32,
+                1,
+                1,
+            )
             .submit();
 
         let indices = device.read_buffer_u32(&out_buf, batch_size)?;

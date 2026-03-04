@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Pipeline and BGL helpers for batched Nelder-Mead GPU.
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::uniform_bgl_entry;
 use crate::device::WgpuDevice;
 use bytemuck::{Pod, Zeroable};
@@ -145,7 +146,7 @@ pub fn run_centroid_reflect(
         .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("nm_pl"),
             bind_group_layouts: &[bgl],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
     let bg = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("nm_bg"),
@@ -183,7 +184,7 @@ pub fn run_centroid_reflect(
             label: Some(entry),
             layout: Some(&pl),
             module: shader,
-            entry_point: entry,
+            entry_point: Some(entry),
             cache: device.pipeline_cache(),
             compilation_options: Default::default(),
         });
@@ -196,8 +197,12 @@ pub fn run_centroid_reflect(
             timestamp_writes: None,
         });
         pass.set_pipeline(&pipeline);
-        pass.set_bind_group(0, &bg, &[]);
-        pass.dispatch_workgroups((n_problems * n).div_ceil(256) as u32, 1, 1);
+        pass.set_bind_group(0, Some(&bg), &[]);
+        pass.dispatch_workgroups(
+            (n_problems * n).div_ceil(WORKGROUP_SIZE_1D as usize) as u32,
+            1,
+            1,
+        );
     }
     device.submit_and_poll_inner(Some(enc.finish()));
 }
@@ -221,7 +226,7 @@ pub fn run_contract(
         .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("nm_contract_pl"),
             bind_group_layouts: &[bgl],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
     let bg = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("nm_contract_bg"),
@@ -263,7 +268,7 @@ pub fn run_contract(
             label: Some("batched_contract"),
             layout: Some(&pl),
             module: shader,
-            entry_point: "batched_contract",
+            entry_point: Some("batched_contract"),
             cache: device.pipeline_cache(),
             compilation_options: Default::default(),
         });
@@ -276,8 +281,12 @@ pub fn run_contract(
             timestamp_writes: None,
         });
         pass.set_pipeline(&pipeline);
-        pass.set_bind_group(0, &bg, &[]);
-        pass.dispatch_workgroups((n_problems * n).div_ceil(256) as u32, 1, 1);
+        pass.set_bind_group(0, Some(&bg), &[]);
+        pass.dispatch_workgroups(
+            (n_problems * n).div_ceil(WORKGROUP_SIZE_1D as usize) as u32,
+            1,
+            1,
+        );
     }
     device.submit_and_poll_inner(Some(enc.finish()));
 }
@@ -362,7 +371,7 @@ pub fn run_shrink(
         .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("nm_shrink_pl"),
             bind_group_layouts: &[bgl],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
     let bg = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("nm_shrink_bg"),
@@ -388,7 +397,7 @@ pub fn run_shrink(
             label: Some("batched_shrink"),
             layout: Some(&pl),
             module: shader,
-            entry_point: "batched_shrink",
+            entry_point: Some("batched_shrink"),
             cache: device.pipeline_cache(),
             compilation_options: Default::default(),
         });
@@ -401,8 +410,12 @@ pub fn run_shrink(
             timestamp_writes: None,
         });
         pass.set_pipeline(&pipeline);
-        pass.set_bind_group(0, &bg, &[]);
-        pass.dispatch_workgroups((n_problems * n_points * n).div_ceil(256) as u32, 1, 1);
+        pass.set_bind_group(0, Some(&bg), &[]);
+        pass.dispatch_workgroups(
+            (n_problems * n_points * n).div_ceil(WORKGROUP_SIZE_1D as usize) as u32,
+            1,
+            1,
+        );
     }
     device.submit_and_poll_inner(Some(enc.finish()));
 }

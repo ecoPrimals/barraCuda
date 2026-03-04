@@ -14,10 +14,24 @@ type PendingOp = Box<dyn FnOnce(&mut wgpu::CommandEncoder) + Send>;
 static GLOBAL_CONTEXTS: LazyLock<RwLock<HashMap<DeviceFingerprint, Arc<TensorContext>>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
 
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 struct BindGroupKey {
     layout_sig: BindGroupLayoutSignature,
-    buffer_ids: Vec<wgpu::Id<wgpu::Buffer>>,
+    buffer_hashes: Vec<u64>,
+}
+
+impl std::hash::Hash for BindGroupKey {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.layout_sig.hash(state);
+        self.buffer_hashes.hash(state);
+    }
+}
+
+fn buffer_identity(buf: &wgpu::Buffer) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    buf.hash(&mut h);
+    h.finish()
 }
 
 /// TensorContext - accelerated tensor operations via internal pooling
@@ -37,7 +51,7 @@ impl TensorContext {
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self {
             buffer_pool: BufferPool::new(
-                device.device_arc(),
+                device.device_clone(),
                 device.gpu_lock_arc(),
                 device.active_encoders_arc(),
             ),
@@ -112,10 +126,10 @@ impl TensorContext {
         buffers: &[&wgpu::Buffer],
         label: Option<&str>,
     ) -> Arc<wgpu::BindGroup> {
-        let buffer_ids: Vec<_> = buffers.iter().map(|b| b.global_id()).collect();
+        let buffer_hashes: Vec<_> = buffers.iter().map(|b| buffer_identity(b)).collect();
         let key = BindGroupKey {
             layout_sig,
-            buffer_ids,
+            buffer_hashes,
         };
 
         // Fast path — read lock (the common case: already cached).

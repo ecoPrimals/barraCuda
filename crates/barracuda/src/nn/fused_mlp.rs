@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Fused MLP forward pass — BatchedEncoder for single-submit across all layers.
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::BatchedEncoder;
 use crate::error::{BarracudaError, Result};
 use crate::shaders::precision::downcast_f64_to_f32;
@@ -141,7 +142,13 @@ pub async fn fused_mlp(
                 .dispatch("fused_mlp_relu", &RELU_F32, "main")
                 .storage_read(0, out_buf)
                 .storage_rw(1, out_buf)
-                .workgroups(((batch * out_features) as u32).div_ceil(256).max(1), 1, 1);
+                .workgroups(
+                    ((batch * out_features) as u32)
+                        .div_ceil(WORKGROUP_SIZE_1D)
+                        .max(1),
+                    1,
+                    1,
+                );
         }
         prev_input = out_buf;
     }

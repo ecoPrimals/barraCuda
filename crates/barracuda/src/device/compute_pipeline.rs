@@ -192,7 +192,7 @@ impl<'a> ComputeDispatch<'a> {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some(self.label),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let pipeline =
@@ -202,7 +202,7 @@ impl<'a> ComputeDispatch<'a> {
                     label: Some(self.label),
                     layout: Some(&pl),
                     module: &module,
-                    entry_point: self.entry_point,
+                    entry_point: Some(self.entry_point),
                     cache: self.device.pipeline_cache(),
                     compilation_options: Default::default(),
                 });
@@ -220,7 +220,7 @@ impl<'a> ComputeDispatch<'a> {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(self.workgroups.0, self.workgroups.1, self.workgroups.2);
         }
 

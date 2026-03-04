@@ -10,6 +10,7 @@
 //!
 //! wetSpring handoff v6, `dnds_batch_f64.wgsl` — 9/9 GPU checks PASS.
 
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
@@ -73,7 +74,12 @@ impl DnDsBatchF64 {
                     super::snp::bg_entry(6, omega_out),
                 ],
             });
-        super::snp::submit(&self.device, &self.pipeline, &bg, n_pairs.div_ceil(64));
+        super::snp::submit(
+            &self.device,
+            &self.pipeline,
+            &bg,
+            n_pairs.div_ceil(WORKGROUP_SIZE_COMPACT),
+        );
         Ok(())
     }
 }

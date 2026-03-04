@@ -138,7 +138,7 @@ impl Mul {
             });
 
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&*bind_group), &[]);
 
             // Use vendor-optimized workgroup size
             let workgroups = (size as u32).div_ceil(workgroup_size);

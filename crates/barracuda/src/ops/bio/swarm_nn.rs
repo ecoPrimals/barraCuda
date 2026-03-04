@@ -13,6 +13,7 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 
 pub const WGSL_SWARM_NN_FORWARD: &str = include_str!("../../shaders/bio/swarm_nn_forward.wgsl");
@@ -102,7 +103,7 @@ impl SwarmNnGpu {
         let layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("SwarmNn Layout"),
             bind_group_layouts: &[&bgl],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
 
         let module = device.compile_shader_f64(WGSL_SWARM_NN_FORWARD_F64, Some("SwarmNn f64"));
@@ -111,7 +112,7 @@ impl SwarmNnGpu {
             label: Some("SwarmNn Pipeline"),
             layout: Some(&layout),
             module: &module,
-            entry_point: "main",
+            entry_point: Some("main"),
             compilation_options: Default::default(),
             cache: None,
         });
@@ -180,8 +181,8 @@ impl SwarmNnGpu {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bg, &[]);
-            pass.dispatch_workgroups(total.div_ceil(256), 1, 1);
+            pass.set_bind_group(0, Some(&bg), &[]);
+            pass.dispatch_workgroups(total.div_ceil(WORKGROUP_SIZE_1D), 1, 1);
         }
         q.submit(std::iter::once(encoder.finish()));
     }

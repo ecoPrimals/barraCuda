@@ -12,6 +12,7 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 
@@ -52,7 +53,7 @@ impl PairwiseL2Gpu {
         });
 
         let n_pairs = n * (n - 1) / 2;
-        let wg_count = n_pairs.div_ceil(256);
+        let wg_count = n_pairs.div_ceil(WORKGROUP_SIZE_1D);
 
         ComputeDispatch::new(&self.device, "PairwiseL2")
             .shader(&WGSL_PAIRWISE_L2, "main")

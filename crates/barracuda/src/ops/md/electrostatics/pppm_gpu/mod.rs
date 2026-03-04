@@ -16,6 +16,7 @@ mod shaders;
 
 use std::sync::Arc;
 
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use crate::linalg::sparse::SparseBuffers;
@@ -27,8 +28,8 @@ use pipelines::{PppmBindGroupLayouts, PppmPipelines};
 
 /// GPU-accelerated PPPM solver
 pub struct PppmGpu {
-    device: Arc<wgpu::Device>,
-    queue: Arc<wgpu::Queue>,
+    device: wgpu::Device,
+    queue: wgpu::Queue,
     wgpu_device: Arc<WgpuDevice>,
     params: PppmParams,
     greens: GreensFunction,
@@ -51,8 +52,8 @@ impl PppmGpu {
             wgpu_device.compile_shader_f64(shaders::ERFC_FORCES, Some("pppm_erfc_forces"));
 
         Self::build_from_modules(
-            wgpu_device.device_arc(),
-            wgpu_device.queue_arc(),
+            wgpu_device.device_clone(),
+            wgpu_device.queue_clone(),
             Arc::clone(wgpu_device),
             params,
             greens,
@@ -70,12 +71,11 @@ impl PppmGpu {
         since = "0.3.0",
         note = "Use from_device() for proper adapter detection"
     )]
-    pub async fn new(
-        device: Arc<wgpu::Device>,
-        queue: Arc<wgpu::Queue>,
-        params: PppmParams,
-    ) -> Result<Self> {
-        #[allow(deprecated)]
+    pub async fn new(device: wgpu::Device, queue: wgpu::Queue, params: PppmParams) -> Result<Self> {
+        #[expect(
+            deprecated,
+            reason = "forwarding to deprecated constructor during migration"
+        )]
         Self::new_with_driver(device, queue, params, false).await
     }
 
@@ -85,8 +85,8 @@ impl PppmGpu {
         note = "Use from_device() for proper adapter detection"
     )]
     pub async fn new_with_driver(
-        device: Arc<wgpu::Device>,
-        queue: Arc<wgpu::Queue>,
+        device: wgpu::Device,
+        queue: wgpu::Queue,
         params: PppmParams,
         is_nvk: bool,
     ) -> Result<Self> {
@@ -129,6 +129,10 @@ impl PppmGpu {
                 driver: if is_nvk { "nvk" } else { "unknown" }.to_string(),
                 driver_info: "created via deprecated new_with_driver()".to_string(),
                 backend: wgpu::Backend::Vulkan,
+                device_pci_bus_id: String::new(),
+                subgroup_min_size: 1,
+                subgroup_max_size: 128,
+                transient_saves_memory: false,
             },
         ));
         Self::build_from_modules(
@@ -147,8 +151,8 @@ impl PppmGpu {
     }
 
     async fn build_from_modules(
-        device: Arc<wgpu::Device>,
-        queue: Arc<wgpu::Queue>,
+        device: wgpu::Device,
+        queue: wgpu::Queue,
         wgpu_device: Arc<WgpuDevice>,
         params: PppmParams,
         greens: GreensFunction,
@@ -344,7 +348,7 @@ impl PppmGpu {
                 .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
                     label: Some("PPPM Encoder"),
                 });
-        let particle_workgroups = (n as u32).div_ceil(64);
+        let particle_workgroups = (n as u32).div_ceil(WORKGROUP_SIZE_COMPACT);
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -352,7 +356,7 @@ impl PppmGpu {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipelines.bspline);
-            pass.set_bind_group(0, &bspline_bind_group, &[]);
+            pass.set_bind_group(0, Some(&bspline_bind_group), &[]);
             pass.dispatch_workgroups(particle_workgroups, 1, 1);
         }
         {
@@ -361,7 +365,7 @@ impl PppmGpu {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipelines.charge_spread);
-            pass.set_bind_group(0, &charge_spread_bind_group, &[]);
+            pass.set_bind_group(0, Some(&charge_spread_bind_group), &[]);
             pass.dispatch_workgroups(particle_workgroups, 1, 1);
         }
         {
@@ -370,7 +374,7 @@ impl PppmGpu {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipelines.erfc_forces);
-            pass.set_bind_group(0, &erfc_bind_group, &[]);
+            pass.set_bind_group(0, Some(&erfc_bind_group), &[]);
             pass.dispatch_workgroups(particle_workgroups, 1, 1);
         }
         {
@@ -379,7 +383,7 @@ impl PppmGpu {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipelines.self_energy);
-            pass.set_bind_group(0, &erfc_bind_group, &[]);
+            pass.set_bind_group(0, Some(&erfc_bind_group), &[]);
             pass.dispatch_workgroups(particle_workgroups, 1, 1);
         }
 
@@ -589,7 +593,7 @@ mod tests {
         {
             let mut pass = enc.begin_compute_pass(&Default::default());
             pass.set_pipeline(&pppm.pipelines().bspline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(1, 1, 1);
         }
         queue.submit(Some(enc.finish()));

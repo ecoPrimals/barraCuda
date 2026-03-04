@@ -7,6 +7,11 @@
 version = 2
 # v2: vulnerability, unmaintained, unsound, notice all default to deny
 yanked = "warn"
+# paste (RUSTSEC-2024-0436): transitive via wgpu → metal → paste.
+# Unmaintained but no security impact; tracking upstream wgpu fix.
+# opentelemetry_api (RUSTSEC-2024-0387): transitive via tarpc → opentelemetry.
+# Merged into opentelemetry crate; awaiting tarpc upgrade.
+ignore = ["RUSTSEC-2024-0436", "RUSTSEC-2024-0387"]
 
 [licenses]
 version = 2

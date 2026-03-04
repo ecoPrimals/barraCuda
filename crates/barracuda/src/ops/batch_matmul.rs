@@ -85,7 +85,7 @@ impl BatchMatMul {
                 label: Some("BatchMatMul Pipeline"),
                 layout: None,
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -125,7 +125,7 @@ impl BatchMatMul {
                 timestamp_writes: None,
             });
             compute_pass.set_pipeline(&pipeline);
-            compute_pass.set_bind_group(0, &bind_group, &[]);
+            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
 
             // Dispatch with 2D grid for matrix dimensions + batch dimension
             let workgroups_x = n.div_ceil(16) as u32;

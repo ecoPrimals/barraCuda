@@ -13,6 +13,7 @@
 //! - ✅ Capability-based dispatch
 //! - ✅ O(N) scaling via cell decomposition
 
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
@@ -60,7 +61,7 @@ impl YukawaCellListF64 {
                 label: Some("YukawaCellListF64 Pipeline"),
                 layout: None,
                 module: &shader_module,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -210,7 +211,7 @@ impl YukawaCellListF64 {
                 ],
             });
 
-        let n_workgroups = (n as u32).div_ceil(64);
+        let n_workgroups = (n as u32).div_ceil(WORKGROUP_SIZE_COMPACT);
         let mut encoder = self
             .device
             .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
@@ -223,7 +224,7 @@ impl YukawaCellListF64 {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups(n_workgroups, 1, 1);
         }
 
@@ -319,7 +320,7 @@ impl YukawaCellListF64 {
         Ok((sorted_positions, particle_indices, cell_start, cell_count))
     }
 
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
+    #[expect(dead_code, reason = "tests")]
     #[cfg(test)]
     fn build_cell_list(
         &self,
@@ -359,7 +360,7 @@ impl YukawaCellListF64 {
     }
 
     /// CPU reference (test/validation only — production always dispatches shader).
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
+    #[expect(dead_code, reason = "tests")]
     #[cfg(test)]
     fn compute_cpu(
         &self,
@@ -436,13 +437,11 @@ impl YukawaCellListF64 {
         (forces, energies)
     }
 
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn pbc_delta(&self, delta: f64, box_size: f64) -> f64 {
         delta - box_size * (delta / box_size).round()
     }
 
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn get_neighbor_cells(&self, cell_idx: usize, params: &CellListParams) -> Vec<usize> {
         let nx = params.n_cells[0];

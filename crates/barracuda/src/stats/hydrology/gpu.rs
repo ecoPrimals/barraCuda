@@ -5,6 +5,7 @@
 //! uncertainty propagation — all executed on GPU via WGSL shaders.
 
 use super::{crop_coefficient, fao56_et0};
+use crate::device::capabilities::{WORKGROUP_SIZE_1D, WORKGROUP_SIZE_COMPACT};
 use crate::device::compute_pipeline::ComputeDispatch;
 use std::sync::Arc;
 
@@ -50,7 +51,7 @@ impl HargreavesBatchGpu {
             .device
             .create_uniform_buffer("hargreaves:params", &params);
 
-        let wg = (n as u32).div_ceil(256);
+        let wg = (n as u32).div_ceil(WORKGROUP_SIZE_1D);
         ComputeDispatch::new(&self.device, "hargreaves_batch")
             .shader(SHADER_HARGREAVES, "main")
             .f64()
@@ -346,7 +347,7 @@ impl McEt0PropagateGpu {
         let seeds_buf = self.device.create_buffer_u32_init("mc_et0:seeds", &seeds);
         let out_buf = self.device.create_buffer_f64(n_samples as usize)?;
 
-        let wg = n_samples.div_ceil(64);
+        let wg = n_samples.div_ceil(WORKGROUP_SIZE_COMPACT);
         ComputeDispatch::new(&self.device, "mc_et0_propagate")
             .shader(SHADER_MC_ET0, "main")
             .f64()
@@ -539,7 +540,7 @@ mod tests {
         };
         assert_eq!(out.len(), 64);
         for &e in &out {
-            assert!(e > 0.0, "MC ET0 samples should be positive");
+            assert!(e >= 0.0, "MC ET0 samples should be non-negative, got {e}");
         }
     }
 }

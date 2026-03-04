@@ -256,14 +256,14 @@ pub fn sparse_matmul_quantized(
     let pipeline_layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Sparse MatMul Pipeline Layout"),
         bind_group_layouts: &[&bind_group_layout],
-        push_constant_ranges: &[],
+        immediate_size: 0,
     });
 
     let pipeline = d.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
         label: Some("Sparse MatMul Pipeline"),
         layout: Some(&pipeline_layout),
         module: &shader,
-        entry_point: "sparse_matmul_quantized",
+        entry_point: Some("sparse_matmul_quantized"),
         cache: None,
         compilation_options: Default::default(),
     });
@@ -278,7 +278,7 @@ pub fn sparse_matmul_quantized(
             timestamp_writes: None,
         });
         cpass.set_pipeline(&pipeline);
-        cpass.set_bind_group(0, &bind_group, &[]);
+        cpass.set_bind_group(0, Some(&bind_group), &[]);
         // Deep Debt Evolution: Capability-based dispatch
         // Note: This function uses raw wgpu::Device, so we use device limits for capability awareness
         let limits = d.limits();

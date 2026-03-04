@@ -184,7 +184,7 @@ impl FocalLossV2 {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("FocalLossV2 Pipeline Layout"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let compute_pipeline =
@@ -194,7 +194,7 @@ impl FocalLossV2 {
                     label: Some("FocalLossV2 Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
-                    entry_point: "main",
+                    entry_point: Some("main"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -210,7 +210,7 @@ impl FocalLossV2 {
                 timestamp_writes: None,
             });
             compute_pass.set_pipeline(&compute_pipeline);
-            compute_pass.set_bind_group(0, &bind_group, &[]);
+            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
             // Deep Debt Evolution: Capability-based dispatch
             let caps = DeviceCapabilities::from_device(device);
             let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::Reduction);

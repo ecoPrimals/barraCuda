@@ -18,6 +18,7 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 
 static WGSL_SPATIAL_PAYOFF: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
@@ -84,7 +85,7 @@ impl SpatialPayoffGpu {
         let layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("SpatialPayoff Layout"),
             bind_group_layouts: &[&bgl],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
 
         let module = d.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -96,7 +97,7 @@ impl SpatialPayoffGpu {
             label: Some("SpatialPayoff Pipeline"),
             layout: Some(&layout),
             module: &module,
-            entry_point: "spatial_payoff",
+            entry_point: Some("spatial_payoff"),
             compilation_options: Default::default(),
             cache: None,
         });
@@ -168,8 +169,8 @@ impl SpatialPayoffGpu {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bg, &[]);
-            pass.dispatch_workgroups(total.div_ceil(256), 1, 1);
+            pass.set_bind_group(0, Some(&bg), &[]);
+            pass.dispatch_workgroups(total.div_ceil(WORKGROUP_SIZE_1D), 1, 1);
         }
         q.submit(std::iter::once(encoder.finish()));
     }

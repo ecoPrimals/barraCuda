@@ -247,12 +247,13 @@ impl DeviceRegistry {
 
     /// Discover all devices and build the registry
     pub fn discover() -> Self {
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });
 
-        let adapters: Vec<wgpu::Adapter> = instance.enumerate_adapters(wgpu::Backends::all());
+        let adapters: Vec<wgpu::Adapter> =
+            pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all()));
         let adapter_infos: Vec<wgpu::AdapterInfo> = adapters.iter().map(|a| a.get_info()).collect();
 
         let mut devices: HashMap<PhysicalDeviceId, PhysicalDevice> = HashMap::new();

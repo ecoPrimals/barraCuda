@@ -12,6 +12,7 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 
 static WGSL_PAIRWISE_HAMMING: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
@@ -76,7 +77,7 @@ impl PairwiseHammingGpu {
         let layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("PairwiseHamming Layout"),
             bind_group_layouts: &[&bgl],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
 
         let module = d.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -88,7 +89,7 @@ impl PairwiseHammingGpu {
             label: Some("PairwiseHamming Pipeline"),
             layout: Some(&layout),
             module: &module,
-            entry_point: "pairwise_hamming",
+            entry_point: Some("pairwise_hamming"),
             compilation_options: Default::default(),
             cache: None,
         });
@@ -153,8 +154,8 @@ impl PairwiseHammingGpu {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bg, &[]);
-            pass.dispatch_workgroups(n_pairs.div_ceil(256), 1, 1);
+            pass.set_bind_group(0, Some(&bg), &[]);
+            pass.dispatch_workgroups(n_pairs.div_ceil(WORKGROUP_SIZE_1D), 1, 1);
         }
         q.submit(std::iter::once(encoder.finish()));
     }

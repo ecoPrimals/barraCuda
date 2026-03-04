@@ -102,11 +102,11 @@ fn resolve_gpu_adapter_selector() -> String {
             return v.split(',').next().unwrap_or("auto").to_string();
         }
     }
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
         backends: wgpu::Backends::all(),
         ..Default::default()
     });
-    for adapter in instance.enumerate_adapters(wgpu::Backends::all()) {
+    for adapter in pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all())) {
         let info = adapter.get_info();
         if info.device_type == wgpu::DeviceType::DiscreteGpu
             && adapter.features().contains(wgpu::Features::SHADER_F64)

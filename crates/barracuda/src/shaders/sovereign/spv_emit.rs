@@ -22,6 +22,7 @@ pub fn emit_spirv(module: &naga::Module, info: &ModuleInfo) -> Result<Vec<u32>, 
         binding_map: spv::BindingMap::default(),
         zero_initialize_workgroup_memory: spv::ZeroInitializeWorkgroupMemoryMode::Polyfill,
         debug_info: None,
+        ..Default::default()
     };
 
     let mut words = Vec::new();

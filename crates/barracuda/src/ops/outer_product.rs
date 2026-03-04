@@ -156,7 +156,7 @@ impl OuterProduct {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("OuterProduct Pipeline Layout"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline = device
@@ -165,7 +165,7 @@ impl OuterProduct {
                 label: Some("OuterProduct Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -180,7 +180,7 @@ impl OuterProduct {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             let workgroups_x = (size_b as u32).div_ceil(16);
             let workgroups_y = (size_a as u32).div_ceil(16);
             pass.dispatch_workgroups(workgroups_x, workgroups_y, 1);

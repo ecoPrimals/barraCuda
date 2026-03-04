@@ -51,7 +51,7 @@ impl CrossEntropy {
                 label: Some("Cross Entropy Pipeline"),
                 layout: None,
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -87,7 +87,7 @@ impl CrossEntropy {
                 timestamp_writes: None,
             });
             compute_pass.set_pipeline(&pipeline);
-            compute_pass.set_bind_group(0, &bind_group, &[]);
+            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
             // Deep Debt Evolution: Capability-based dispatch
             // Cross entropy loss is a reduction over prediction elements
             let caps = DeviceCapabilities::from_device(device);

@@ -200,7 +200,7 @@ impl FheKeySwitch {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("FHE Key Switch Pipeline Layout"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline_decompose =
@@ -210,7 +210,7 @@ impl FheKeySwitch {
                     label: Some("FHE Key Switch Decompose Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
-                    entry_point: "decompose_base_b",
+                    entry_point: Some("decompose_base_b"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -222,7 +222,7 @@ impl FheKeySwitch {
                     label: Some("FHE Key Switch Accumulate Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
-                    entry_point: "accumulate_switched",
+                    entry_point: Some("accumulate_switched"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -323,7 +323,7 @@ impl FheKeySwitch {
                 timestamp_writes: None,
             });
             compute_pass.set_pipeline(&self.pipeline_decompose);
-            compute_pass.set_bind_group(0, &bind_group, &[]);
+            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
             compute_pass.dispatch_workgroups(num_workgroups, 1, 1);
         }
 
@@ -333,7 +333,7 @@ impl FheKeySwitch {
                 timestamp_writes: None,
             });
             accumulate_pass.set_pipeline(&self.pipeline_accumulate);
-            accumulate_pass.set_bind_group(0, &bind_group, &[]);
+            accumulate_pass.set_bind_group(0, Some(&bind_group), &[]);
             accumulate_pass.dispatch_workgroups(num_workgroups, 1, 1);
         }
 

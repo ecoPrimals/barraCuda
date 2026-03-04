@@ -1,7 +1,7 @@
 # barraCuda Specification
 
-**Version**: 0.3.1
-**Date**: March 3, 2026
+**Version**: 0.3.3
+**Date**: March 4, 2026
 **Status**: Active — standalone primal, fully untangled from toadStool (S89)
 **Origin**: toadStool S88 budding proposal
 

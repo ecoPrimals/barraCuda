@@ -39,6 +39,7 @@
 //! - Saad, Y. (2003). Iterative Methods for Sparse Linear Systems
 
 use super::csr::CsrMatrix;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
@@ -134,7 +135,7 @@ impl BiCgStabGpu {
         let _temp_buffer = Self::create_zero_f64_buffer(&device, "BiCG temp", n); // For SpMV output
 
         // Partial sums buffer for dot products
-        let num_workgroups = n.div_ceil(256);
+        let num_workgroups = n.div_ceil(WORKGROUP_SIZE_1D as usize);
         let _partial_sums_buffer =
             Self::create_zero_f64_buffer(&device, "BiCG partial", num_workgroups);
 
@@ -153,7 +154,7 @@ impl BiCgStabGpu {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("SpMV PL"),
                 bind_group_layouts: &[&spmv_bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let dot_pl = device
@@ -161,7 +162,7 @@ impl BiCgStabGpu {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Dot PL"),
                 bind_group_layouts: &[&dot_bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let spmv_pipeline =
@@ -171,7 +172,7 @@ impl BiCgStabGpu {
                     label: Some("SpMV f64"),
                     layout: Some(&spmv_pl),
                     module: &spmv_shader,
-                    entry_point: "spmv_f64",
+                    entry_point: Some("spmv_f64"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -183,7 +184,7 @@ impl BiCgStabGpu {
                     label: Some("Dot f64"),
                     layout: Some(&dot_pl),
                     module: &dot_reduce_shader,
-                    entry_point: "dot_f64",
+                    entry_point: Some("dot_f64"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -289,8 +290,8 @@ impl BiCgStabGpu {
                     timestamp_writes: None,
                 });
                 pass.set_pipeline(&spmv_pipeline);
-                pass.set_bind_group(0, &spmv_p_bg, &[]);
-                pass.dispatch_workgroups((n as u32).div_ceil(256), 1, 1);
+                pass.set_bind_group(0, Some(&spmv_p_bg), &[]);
+                pass.dispatch_workgroups((n as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1);
             }
             device.submit_and_poll(Some(encoder.finish()));
 
@@ -377,8 +378,8 @@ impl BiCgStabGpu {
                     timestamp_writes: None,
                 });
                 pass.set_pipeline(&spmv_pipeline);
-                pass.set_bind_group(0, &spmv_s_bg, &[]);
-                pass.dispatch_workgroups((n as u32).div_ceil(256), 1, 1);
+                pass.set_bind_group(0, Some(&spmv_s_bg), &[]);
+                pass.dispatch_workgroups((n as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1);
             }
             device.submit_and_poll(Some(encoder.finish()));
 

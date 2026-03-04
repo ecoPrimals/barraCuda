@@ -216,7 +216,7 @@ impl Put {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("Put Pipeline Layout"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let compute_pipeline =
@@ -226,7 +226,7 @@ impl Put {
                     label: Some("Put Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
-                    entry_point: "main",
+                    entry_point: Some("main"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -242,7 +242,7 @@ impl Put {
                 timestamp_writes: None,
             });
             compute_pass.set_pipeline(&compute_pipeline);
-            compute_pass.set_bind_group(0, &bind_group, &[]);
+            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
 
             // Dispatch using standard 1D shader workgroup size (256)
             let caps = DeviceCapabilities::from_device(device);

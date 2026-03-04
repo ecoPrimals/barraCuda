@@ -217,7 +217,7 @@ fn bench_shader_inner(
         .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
             bind_group_layouts: &[&bind_group_layout],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
 
     let pipeline = device
@@ -226,7 +226,7 @@ fn bench_shader_inner(
             label: Some(label),
             layout: Some(&pipeline_layout),
             module: &module,
-            entry_point: "main",
+            entry_point: Some("main"),
             compilation_options: wgpu::PipelineCompilationOptions::default(),
             cache: None,
         });
@@ -262,7 +262,7 @@ fn bench_shader_inner(
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
         device.submit_and_poll(Some(encoder.finish()));
@@ -279,7 +279,7 @@ fn bench_shader_inner(
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
         device.submit_and_poll(Some(encoder.finish()));

@@ -12,6 +12,7 @@
 //! neuralSpring S69, `hmm_backward_log_f64.wgsl` + `hmm_viterbi_f64.wgsl`.
 //! Polyfill required for Ada Lovelace (uses f64 exp/log in `log_sum_exp2`).
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::error::Result;
@@ -79,7 +80,7 @@ impl HmmBatchForwardF64 {
             .device
             .create_uniform_buffer("HmmForward:params", &params);
 
-        let wg_count = n_seqs.div_ceil(256);
+        let wg_count = n_seqs.div_ceil(WORKGROUP_SIZE_1D);
         ComputeDispatch::new(&self.device, "hmm_forward")
             .shader(SHADER, "main")
             .f64()
@@ -233,7 +234,7 @@ impl HmmForwardLogF32 {
             .device
             .create_uniform_buffer("HmmForwardLogF32:params", &params);
 
-        let wg_count = n_states.div_ceil(256);
+        let wg_count = n_states.div_ceil(WORKGROUP_SIZE_1D);
         ComputeDispatch::new(&self.device, "hmm_forward_log_f32")
             .shader(WGSL_HMM_FORWARD_LOG_F32, "hmm_forward_log")
             .storage_read(0, alpha_prev)
@@ -273,7 +274,7 @@ impl HmmForwardLogF64 {
             .device
             .create_uniform_buffer("HmmForwardLogF64:params", &params);
 
-        let wg_count = n_states.div_ceil(256);
+        let wg_count = n_states.div_ceil(WORKGROUP_SIZE_1D);
         ComputeDispatch::new(&self.device, "hmm_forward_log_f64")
             .shader(WGSL_HMM_FORWARD_LOG_F64, "hmm_forward_log")
             .f64()

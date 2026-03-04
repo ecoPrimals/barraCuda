@@ -275,7 +275,7 @@ impl GemmCachedF64 {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("GemmCached PL"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
         let src = GemmF64::wgsl_shader_for_device(dev);
         let shader = dev.compile_shader_f64(&src, Some("GemmCached"));
@@ -284,7 +284,7 @@ impl GemmCachedF64 {
                 label: Some("GemmCached Pipeline"),
                 layout: Some(&pl),
                 module: &shader,
-                entry_point: "gemm_f64",
+                entry_point: Some("gemm_f64"),
                 cache: None,
                 compilation_options: Default::default(),
             },
@@ -401,7 +401,7 @@ impl GemmCachedF64 {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(wg_x, wg_y, wg_z);
         }
         dev.submit_and_poll(Some(encoder.finish()));

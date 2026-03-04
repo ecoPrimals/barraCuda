@@ -6,6 +6,7 @@
 
 use std::sync::Arc;
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 
@@ -206,7 +207,7 @@ impl<'a> PeakDetectF64<'a> {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("PeakDetect PL"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
         let pipeline = device
             .device
@@ -214,12 +215,12 @@ impl<'a> PeakDetectF64<'a> {
                 label: Some("PeakDetect Pipeline"),
                 layout: Some(&pl),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
 
-        let workgroups = (n as u32).div_ceil(256);
+        let workgroups = (n as u32).div_ceil(WORKGROUP_SIZE_1D);
         let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
             label: Some("PeakDetect Encoder"),
         });
@@ -229,7 +230,7 @@ impl<'a> PeakDetectF64<'a> {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
 

@@ -288,7 +288,7 @@ impl SageConv {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("SAGEConv Pipeline Layout"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         // Create encoder
@@ -304,7 +304,7 @@ impl SageConv {
                     label: Some("SAGEConv Aggregate Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
-                    entry_point: "aggregate",
+                    entry_point: Some("aggregate"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -315,7 +315,7 @@ impl SageConv {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&aggregate_pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             // Deep Debt Evolution: Capability-based dispatch
             let caps = DeviceCapabilities::from_device(device);
             let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::MatMul);
@@ -331,7 +331,7 @@ impl SageConv {
                     label: Some("SAGEConv Transform Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
-                    entry_point: "apply_transform",
+                    entry_point: Some("apply_transform"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -342,7 +342,7 @@ impl SageConv {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&transform_pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             // Deep Debt Evolution: Capability-based dispatch
             let caps = DeviceCapabilities::from_device(device);
             let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::MatMul);
@@ -359,7 +359,7 @@ impl SageConv {
                         label: Some("SAGEConv Normalize Pipeline"),
                         layout: Some(&pipeline_layout),
                         module: &shader_module,
-                        entry_point: "normalize_output",
+                        entry_point: Some("normalize_output"),
                         cache: None,
                         compilation_options: Default::default(),
                     });
@@ -370,7 +370,7 @@ impl SageConv {
                     timestamp_writes: None,
                 });
                 pass.set_pipeline(&normalize_pipeline);
-                pass.set_bind_group(0, &bind_group, &[]);
+                pass.set_bind_group(0, Some(&bind_group), &[]);
                 // Deep Debt Evolution: Capability-based dispatch
                 let caps = DeviceCapabilities::from_device(device);
                 let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::MatMul);

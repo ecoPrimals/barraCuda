@@ -157,7 +157,7 @@ impl MaxPool2D {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("MaxPool2D PL"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline = device
@@ -166,7 +166,7 @@ impl MaxPool2D {
                 label: Some("MaxPool2D Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -181,7 +181,7 @@ impl MaxPool2D {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             let workgroups_x = (output_width as u32).div_ceil(16);
             let workgroups_y = (output_height as u32).div_ceil(16);
             pass.dispatch_workgroups(workgroups_x, workgroups_y, 1);

@@ -363,7 +363,7 @@ impl CrankNicolson {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("CN PL"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let rhs_pipeline =
@@ -373,7 +373,7 @@ impl CrankNicolson {
                     label: Some("CN RHS Pipeline"),
                     layout: Some(&pl),
                     module: &shader,
-                    entry_point: "compute_rhs",
+                    entry_point: Some("compute_rhs"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -430,7 +430,7 @@ impl CrankNicolson {
                     timestamp_writes: None,
                 });
                 pass.set_pipeline(&rhs_pipeline);
-                pass.set_bind_group(0, &bg, &[]);
+                pass.set_bind_group(0, Some(&bg), &[]);
                 pass.dispatch_workgroups(n_workgroups as u32, 1, 1);
             }
 

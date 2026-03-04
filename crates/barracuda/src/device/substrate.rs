@@ -141,12 +141,12 @@ impl Substrate {
     ///
     /// **Deep Debt**: Runtime discovery, no hardcoding
     pub fn discover_all() -> Result<Vec<Self>> {
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });
 
-        let adapters = instance.enumerate_adapters(wgpu::Backends::all());
+        let adapters = pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all()));
 
         let mut substrates = Vec::new();
         let mut type_counts = std::collections::HashMap::new();

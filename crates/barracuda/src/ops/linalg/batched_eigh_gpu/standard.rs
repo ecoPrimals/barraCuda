@@ -8,7 +8,7 @@ use super::params::{BatchedEighParams, ParallelSweepParams};
 use super::pipelines::create_eigh_pipelines;
 use super::sweep::run_sweep_pass;
 use super::BatchedEighGpu;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::capabilities::{WORKGROUP_SIZE_1D, WORKGROUP_SIZE_COMPACT};
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
@@ -138,7 +138,7 @@ impl BatchedEighGpu {
                     timestamp_writes: None,
                 });
                 pass.set_pipeline(&pipelines.init_v_pipeline);
-                pass.set_bind_group(0, &init_bg, &[]);
+                pass.set_bind_group(0, Some(&init_bg), &[]);
                 let wg_xy = nu.div_ceil(16);
                 pass.dispatch_workgroups(wg_xy, wg_xy, batch_u);
             }
@@ -185,25 +185,25 @@ impl BatchedEighGpu {
                         &device,
                         &sweep_bg,
                         &pipelines.compute_angles_pipeline,
-                        (batch_u.div_ceil(64), 1, 1),
+                        (batch_u.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1),
                     );
                     run_sweep_pass(
                         &device,
                         &sweep_bg,
                         &pipelines.rotate_a_pipeline,
-                        (nu.div_ceil(64), batch_u, 1),
+                        (nu.div_ceil(WORKGROUP_SIZE_COMPACT), batch_u, 1),
                     );
                     run_sweep_pass(
                         &device,
                         &sweep_bg,
                         &pipelines.update_blocks_pipeline,
-                        (batch_u.div_ceil(64), 1, 1),
+                        (batch_u.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1),
                     );
                     run_sweep_pass(
                         &device,
                         &sweep_bg,
                         &pipelines.rotate_v_pipeline,
-                        (nu.div_ceil(64), batch_u, 1),
+                        (nu.div_ceil(WORKGROUP_SIZE_COMPACT), batch_u, 1),
                     );
                 }
             }
@@ -220,7 +220,7 @@ impl BatchedEighGpu {
                     timestamp_writes: None,
                 });
                 pass.set_pipeline(&pipelines.extract_pipeline);
-                pass.set_bind_group(0, &init_bg, &[]);
+                pass.set_bind_group(0, Some(&init_bg), &[]);
                 pass.dispatch_workgroups(nu.div_ceil(WORKGROUP_SIZE_1D), batch_u, 1);
             }
             device.submit_and_poll(Some(encoder.finish()));
@@ -301,7 +301,7 @@ impl BatchedEighGpu {
                     timestamp_writes: None,
                 });
                 pass.set_pipeline(&pipelines.init_v_pipeline);
-                pass.set_bind_group(0, &init_bg, &[]);
+                pass.set_bind_group(0, Some(&init_bg), &[]);
                 let wg_xy = nu.div_ceil(16);
                 pass.dispatch_workgroups(wg_xy, wg_xy, batch_u);
             }
@@ -347,25 +347,25 @@ impl BatchedEighGpu {
                         device,
                         &sweep_bg,
                         &pipelines.compute_angles_pipeline,
-                        (batch_u.div_ceil(64), 1, 1),
+                        (batch_u.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1),
                     );
                     run_sweep_pass(
                         device,
                         &sweep_bg,
                         &pipelines.rotate_a_pipeline,
-                        (nu.div_ceil(64), batch_u, 1),
+                        (nu.div_ceil(WORKGROUP_SIZE_COMPACT), batch_u, 1),
                     );
                     run_sweep_pass(
                         device,
                         &sweep_bg,
                         &pipelines.update_blocks_pipeline,
-                        (batch_u.div_ceil(64), 1, 1),
+                        (batch_u.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1),
                     );
                     run_sweep_pass(
                         device,
                         &sweep_bg,
                         &pipelines.rotate_v_pipeline,
-                        (nu.div_ceil(64), batch_u, 1),
+                        (nu.div_ceil(WORKGROUP_SIZE_COMPACT), batch_u, 1),
                     );
                 }
             }
@@ -381,7 +381,7 @@ impl BatchedEighGpu {
                     timestamp_writes: None,
                 });
                 pass.set_pipeline(&pipelines.extract_pipeline);
-                pass.set_bind_group(0, &init_bg, &[]);
+                pass.set_bind_group(0, Some(&init_bg), &[]);
                 pass.dispatch_workgroups(nu.div_ceil(WORKGROUP_SIZE_1D), batch_u, 1);
             }
             device.submit_and_poll(Some(encoder.finish()));

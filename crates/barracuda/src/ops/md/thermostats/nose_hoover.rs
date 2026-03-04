@@ -29,6 +29,7 @@
 //! - ✅ Zero unsafe code
 //! - ✅ f64 precision
 
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
@@ -244,7 +245,7 @@ impl NoseHooverHalfKick {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("NH HalfKick PL"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline = device
@@ -253,7 +254,7 @@ impl NoseHooverHalfKick {
                 label: Some("NH HalfKick Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -288,9 +289,9 @@ impl NoseHooverHalfKick {
             });
 
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
 
-            let workgroups = (self.n_particles as u32).div_ceil(64);
+            let workgroups = (self.n_particles as u32).div_ceil(WORKGROUP_SIZE_COMPACT);
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
 

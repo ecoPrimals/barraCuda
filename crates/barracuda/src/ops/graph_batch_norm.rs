@@ -245,7 +245,7 @@ impl GraphBatchNorm {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("GraphBatchNorm Pipeline Layout"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         // Create encoder
@@ -261,7 +261,7 @@ impl GraphBatchNorm {
                     label: Some("GraphBatchNorm Mean Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
-                    entry_point: "compute_mean",
+                    entry_point: Some("compute_mean"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -272,7 +272,7 @@ impl GraphBatchNorm {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&mean_pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             // Deep Debt Evolution: Capability-based dispatch
             let caps = DeviceCapabilities::from_device(device);
             let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::Reduction);
@@ -288,7 +288,7 @@ impl GraphBatchNorm {
                     label: Some("GraphBatchNorm Variance Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
-                    entry_point: "compute_variance",
+                    entry_point: Some("compute_variance"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -299,7 +299,7 @@ impl GraphBatchNorm {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&variance_pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             // Deep Debt Evolution: Capability-based dispatch
             let caps = DeviceCapabilities::from_device(device);
             let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::Reduction);
@@ -315,7 +315,7 @@ impl GraphBatchNorm {
                     label: Some("GraphBatchNorm Normalize Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
-                    entry_point: "normalize",
+                    entry_point: Some("normalize"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -326,7 +326,7 @@ impl GraphBatchNorm {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&normalize_pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             // Deep Debt Evolution: Capability-based dispatch
             let caps = DeviceCapabilities::from_device(device);
             let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::Reduction);

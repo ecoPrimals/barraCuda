@@ -239,7 +239,7 @@ impl Correlation {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Correlation PL"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let pipeline =
@@ -249,7 +249,7 @@ impl Correlation {
                     label: Some("Correlation Pipeline"),
                     layout: Some(&pl),
                     module: &shader,
-                    entry_point: "main",
+                    entry_point: Some("main"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -293,7 +293,7 @@ impl Correlation {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             let n_workgroups = num_pairs.div_ceil(WORKGROUP_SIZE_1D as usize);
             pass.dispatch_workgroups(n_workgroups as u32, 1, 1);
         }

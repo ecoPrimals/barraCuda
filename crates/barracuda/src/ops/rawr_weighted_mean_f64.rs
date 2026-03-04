@@ -5,6 +5,7 @@
 
 use std::sync::Arc;
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
@@ -119,7 +120,7 @@ impl RawrWeightedMeanGpu {
         };
         let params_buf = device.create_uniform_buffer("rawr:params", &params);
 
-        let wg_count = n_resamples.div_ceil(256) as u32;
+        let wg_count = n_resamples.div_ceil(WORKGROUP_SIZE_1D as usize) as u32;
 
         ComputeDispatch::new(&device, "rawr_weighted_mean_f64")
             .shader(WGSL_RAWR_WEIGHTED_MEAN_F64, "main")

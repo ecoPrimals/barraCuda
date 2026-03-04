@@ -66,13 +66,13 @@ impl HermiteF64 {
         self.hermite_function_gpu(x, n)
     }
 
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
+    #[expect(dead_code, reason = "tests")]
     #[cfg(test)]
     fn hermite_cpu(&self, x: &[f64], n: u32) -> Vec<f64> {
         x.iter().map(|&xi| Self::hermite_scalar(n, xi)).collect()
     }
 
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
+    #[expect(dead_code, reason = "tests")]
     #[cfg(test)]
     fn hermite_function_cpu(&self, x: &[f64], n: u32) -> Vec<f64> {
         x.iter()
@@ -80,7 +80,6 @@ impl HermiteF64 {
             .collect()
     }
 
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn hermite_scalar(n: u32, x: f64) -> f64 {
         if n == 0 {
@@ -102,7 +101,6 @@ impl HermiteF64 {
         h_curr
     }
 
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn hermite_function_scalar(n: u32, x: f64) -> f64 {
         let h_n = Self::hermite_scalar(n, x);

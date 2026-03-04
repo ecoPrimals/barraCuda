@@ -167,14 +167,14 @@ impl ReplicationPad2D {
         let pipeline_layout = device.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("ReplicationPad2D Pipeline Layout"),
             bind_group_layouts: &[&bind_group_layout],
-            push_constant_ranges: &[],
+                    immediate_size: 0,
         });
 
         let compute_pipeline = device.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("ReplicationPad2D Pipeline"),
             layout: Some(&pipeline_layout),
             module: &shader_module,
-            entry_point: "main",
+            entry_point: Some("main"),
         cache: None,
         compilation_options: Default::default(),
         });
@@ -190,7 +190,7 @@ impl ReplicationPad2D {
                 timestamp_writes: None,
             });
             compute_pass.set_pipeline(&compute_pipeline);
-            compute_pass.set_bind_group(0, &bind_group, &[]);
+            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
             
             let workgroups_x = (out_width as u32 + 15) / 16;
             let workgroups_y = (out_height as u32 + 15) / 16;

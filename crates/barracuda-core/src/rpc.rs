@@ -137,12 +137,48 @@ pub struct MatmulResult {
     pub shape: Vec<usize>,
 }
 
+/// Primal identity for runtime capability-based discovery.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrimalInfo {
+    /// Primal name.
+    pub primal: String,
+    /// Primal version.
+    pub version: String,
+    /// IPC protocol.
+    pub protocol: String,
+    /// Method namespace.
+    pub namespace: String,
+    /// License identifier.
+    pub license: String,
+}
+
+/// Capability advertisement for runtime discovery.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrimalCapabilities {
+    /// Domain capabilities (gpu_compute, tensor_ops, fhe, etc.).
+    pub domains: Vec<String>,
+    /// Available JSON-RPC methods.
+    pub methods: Vec<String>,
+    /// Whether a GPU is available.
+    pub gpu_available: bool,
+    /// Whether f64 shaders work.
+    pub f64_shaders: bool,
+    /// Whether SPIR-V passthrough is available.
+    pub spirv_passthrough: bool,
+}
+
 /// barraCuda tarpc service.
 ///
 /// Mirrors the JSON-RPC 2.0 endpoints with strongly-typed signatures.
 /// All methods follow the semantic naming standard: `barracuda.{domain}.{operation}`.
 #[tarpc::service]
 pub trait BarraCudaService {
+    /// Primal identity — for runtime discovery, not hardcoded names.
+    async fn primal_info() -> PrimalInfo;
+
+    /// Advertise capabilities for capability-based routing.
+    async fn primal_capabilities() -> PrimalCapabilities;
+
     /// List available compute devices.
     async fn device_list() -> Vec<DeviceInfo>;
 
@@ -205,7 +241,73 @@ impl BarraCudaServer {
     }
 }
 
+/// Pack u64 coefficients into a wgpu-compatible tensor (u64 → split u32 pairs → f32 bits).
+fn u64_to_tensor(
+    coeffs: &[u64],
+    dev: &std::sync::Arc<barracuda::device::WgpuDevice>,
+) -> std::result::Result<barracuda::tensor::Tensor, barracuda::error::BarracudaError> {
+    let f32_bits: Vec<f32> = coeffs
+        .iter()
+        .flat_map(|&x| [f32::from_bits(x as u32), f32::from_bits((x >> 32) as u32)])
+        .collect();
+    barracuda::tensor::Tensor::from_data(&f32_bits, vec![coeffs.len() * 2], dev.clone())
+}
+
+/// Unpack u32 pairs back into u64 coefficients.
+fn u32_pairs_to_u64(data: &[u32]) -> Vec<u64> {
+    data.chunks(2)
+        .map(|c| u64::from(c[0]) | (u64::from(c.get(1).copied().unwrap_or(0)) << 32))
+        .collect()
+}
+
 impl BarraCudaService for BarraCudaServer {
+    async fn primal_info(self, _: tarpc::context::Context) -> PrimalInfo {
+        PrimalInfo {
+            primal: "barraCuda".into(),
+            version: env!("CARGO_PKG_VERSION").into(),
+            protocol: "json-rpc-2.0".into(),
+            namespace: "barracuda".into(),
+            license: "AGPL-3.0-or-later".into(),
+        }
+    }
+
+    async fn primal_capabilities(self, _: tarpc::context::Context) -> PrimalCapabilities {
+        let has_gpu = self.primal.device().is_some();
+        let has_f64 = self.primal.device().is_some_and(|d| d.has_f64_shaders());
+        let has_spirv = self
+            .primal
+            .device()
+            .is_some_and(|d| d.has_spirv_passthrough());
+
+        PrimalCapabilities {
+            domains: vec![
+                "gpu_compute".into(),
+                "tensor_ops".into(),
+                "fhe".into(),
+                "molecular_dynamics".into(),
+                "lattice_qcd".into(),
+                "statistics".into(),
+                "hydrology".into(),
+                "bio".into(),
+            ],
+            methods: vec![
+                "barracuda.device.list".into(),
+                "barracuda.device.probe".into(),
+                "barracuda.health.check".into(),
+                "barracuda.tolerances.get".into(),
+                "barracuda.validate.gpu_stack".into(),
+                "barracuda.compute.dispatch".into(),
+                "barracuda.tensor.create".into(),
+                "barracuda.tensor.matmul".into(),
+                "barracuda.fhe.ntt".into(),
+                "barracuda.fhe.pointwise_mul".into(),
+            ],
+            gpu_available: has_gpu,
+            f64_shaders: has_f64,
+            spirv_passthrough: has_spirv,
+        }
+    }
+
     async fn device_list(self, _: tarpc::context::Context) -> Vec<DeviceInfo> {
         let mut devices = Vec::new();
         if let Some(dev) = self.primal.device() {
@@ -463,22 +565,12 @@ impl BarraCudaService for BarraCudaServer {
     ) -> FheNttResult {
         let Some(dev) = self.primal.device() else {
             return FheNttResult {
-                status: "no_device".to_string(),
+                status: "no_device".into(),
                 result: vec![],
             };
         };
 
-        let u32_pairs: Vec<u32> = coefficients
-            .iter()
-            .flat_map(|&x| [x as u32, (x >> 32) as u32])
-            .collect();
-        let f32_bits: Vec<f32> = u32_pairs.iter().map(|&x| f32::from_bits(x)).collect();
-
-        let tensor = match barracuda::tensor::Tensor::from_data(
-            &f32_bits,
-            vec![coefficients.len() * 2],
-            dev.clone(),
-        ) {
+        let tensor = match u64_to_tensor(&coefficients, dev) {
             Ok(t) => t,
             Err(e) => {
                 return FheNttResult {
@@ -503,24 +595,10 @@ impl BarraCudaService for BarraCudaServer {
             }
         };
 
-        match ntt.execute() {
-            Ok(result_tensor) => match result_tensor.to_vec_u32() {
-                Ok(u32_data) => {
-                    let result_u64: Vec<u64> = u32_data
-                        .chunks(2)
-                        .map(|c| {
-                            u64::from(c[0]) | (u64::from(c.get(1).copied().unwrap_or(0)) << 32)
-                        })
-                        .collect();
-                    FheNttResult {
-                        status: "completed".to_string(),
-                        result: result_u64,
-                    }
-                }
-                Err(e) => FheNttResult {
-                    status: format!("error: {e}"),
-                    result: vec![],
-                },
+        match ntt.execute().and_then(|t| t.to_vec_u32()) {
+            Ok(u32_data) => FheNttResult {
+                status: "completed".into(),
+                result: u32_pairs_to_u64(&u32_data),
             },
             Err(e) => FheNttResult {
                 status: format!("error: {e}"),
@@ -539,23 +617,12 @@ impl BarraCudaService for BarraCudaServer {
     ) -> FhePointwiseMulResult {
         let Some(dev) = self.primal.device() else {
             return FhePointwiseMulResult {
-                status: "no_device".to_string(),
+                status: "no_device".into(),
                 result: vec![],
             };
         };
 
-        let convert_to_tensor =
-            |poly: &[u64], label: &str| -> std::result::Result<barracuda::tensor::Tensor, String> {
-                let u32_pairs: Vec<u32> = poly
-                    .iter()
-                    .flat_map(|&x| [x as u32, (x >> 32) as u32])
-                    .collect();
-                let f32_bits: Vec<f32> = u32_pairs.iter().map(|&x| f32::from_bits(x)).collect();
-                barracuda::tensor::Tensor::from_data(&f32_bits, vec![poly.len() * 2], dev.clone())
-                    .map_err(|e| format!("{label}: {e}"))
-            };
-
-        let tensor_a = match convert_to_tensor(&a, "input_a") {
+        let tensor_a = match u64_to_tensor(&a, dev) {
             Ok(t) => t,
             Err(e) => {
                 return FhePointwiseMulResult {
@@ -564,8 +631,7 @@ impl BarraCudaService for BarraCudaServer {
                 }
             }
         };
-
-        let tensor_b = match convert_to_tensor(&b, "input_b") {
+        let tensor_b = match u64_to_tensor(&b, dev) {
             Ok(t) => t,
             Err(e) => {
                 return FhePointwiseMulResult {
@@ -590,24 +656,10 @@ impl BarraCudaService for BarraCudaServer {
             }
         };
 
-        match mul.execute() {
-            Ok(result_tensor) => match result_tensor.to_vec_u32() {
-                Ok(u32_data) => {
-                    let result_u64: Vec<u64> = u32_data
-                        .chunks(2)
-                        .map(|c| {
-                            u64::from(c[0]) | (u64::from(c.get(1).copied().unwrap_or(0)) << 32)
-                        })
-                        .collect();
-                    FhePointwiseMulResult {
-                        status: "completed".to_string(),
-                        result: result_u64,
-                    }
-                }
-                Err(e) => FhePointwiseMulResult {
-                    status: format!("error: {e}"),
-                    result: vec![],
-                },
+        match mul.execute().and_then(|t| t.to_vec_u32()) {
+            Ok(u32_data) => FhePointwiseMulResult {
+                status: "completed".into(),
+                result: u32_pairs_to_u64(&u32_data),
             },
             Err(e) => FhePointwiseMulResult {
                 status: format!("error: {e}"),

@@ -19,6 +19,12 @@ pub const LCG_53_DIVISOR: f64 = (1u64 << 53) as f64;
 /// Division guard for lattice CG/reunitarization.
 pub const LATTICE_DIVISION_GUARD: f64 = 1e-30;
 
+/// Default maximum CG solver iterations for D†D inversions.
+pub const CG_MAX_ITER_DEFAULT: usize = 5000;
+
+/// Default CG convergence tolerance for lattice solvers.
+pub const CG_TOL_DEFAULT: f64 = 1e-8;
+
 /// Advance the LCG state by one step.
 #[inline]
 pub const fn lcg_step(seed: &mut u64) {

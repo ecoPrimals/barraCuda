@@ -133,7 +133,7 @@ impl Trace {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("Trace PL"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline = device
@@ -142,7 +142,7 @@ impl Trace {
                 label: Some("Trace Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -158,7 +158,7 @@ impl Trace {
             });
 
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
 
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
@@ -266,7 +266,7 @@ impl Trace {
                     .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                         label: Some("Trace Reduce PL"),
                         bind_group_layouts: &[&bind_group_layout_2],
-                        push_constant_ranges: &[],
+                        immediate_size: 0,
                     });
 
             let pipeline_2 =
@@ -276,7 +276,7 @@ impl Trace {
                         label: Some("Trace Reduce Pipeline"),
                         layout: Some(&pipeline_layout_2),
                         module: &reduce_shader,
-                        entry_point: "main",
+                        entry_point: Some("main"),
                         cache: None,
                         compilation_options: Default::default(),
                     });
@@ -292,7 +292,7 @@ impl Trace {
                 });
 
                 pass_2.set_pipeline(&pipeline_2);
-                pass_2.set_bind_group(0, &bind_group_2, &[]);
+                pass_2.set_bind_group(0, Some(&bind_group_2), &[]);
                 // Deep Debt Evolution: Capability-based dispatch for reduction pass
                 let caps_2 = DeviceCapabilities::from_device(device);
                 let optimal_wg_size_2 = caps_2.optimal_workgroup_size(WorkloadType::Reduction);

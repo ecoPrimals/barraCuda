@@ -134,7 +134,7 @@ async fn test_solver_buffers_hfb_pattern() {
 #[tokio::test]
 async fn test_solver_buffers_multiple_solvers() {
     let device = barracuda::device::test_pool::get_test_device().await;
-    let pool = barracuda::device::tensor_context::BufferPool::new_standalone(device.device_arc());
+    let pool = barracuda::device::tensor_context::BufferPool::new_standalone(device.device_clone());
 
     // Pin buffers for two different solvers
     let _hfb_buffers = pool

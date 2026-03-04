@@ -234,7 +234,7 @@ impl CumprodF64 {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("CumprodF64 Pipeline Layout"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline = device
@@ -243,7 +243,7 @@ impl CumprodF64 {
                 label: Some("CumprodF64 Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: self.entry_point(),
+                entry_point: Some(self.entry_point()),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -263,7 +263,7 @@ impl CumprodF64 {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
 

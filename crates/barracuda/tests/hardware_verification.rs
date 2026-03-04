@@ -58,7 +58,7 @@ struct NpuInfo {
 
 impl HardwareInventory {
     fn discover() -> Self {
-        let adapters = WgpuDevice::enumerate_adapters();
+        let adapters = pollster::block_on(WgpuDevice::enumerate_adapters());
 
         let mut gpus = Vec::new();
         for (idx, info) in adapters.iter().enumerate() {

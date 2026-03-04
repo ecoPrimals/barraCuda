@@ -185,6 +185,8 @@ fn mark_roots_from_statement(stmt: &Statement, live: &mut [bool]) {
                     live[result.index()] = true;
                 }
                 naga::RayQueryFunction::Terminate => {}
+                naga::RayQueryFunction::GenerateIntersection { .. }
+                | naga::RayQueryFunction::ConfirmIntersection => {}
             }
         }
         Statement::SubgroupBallot { result, predicate } => {
@@ -213,12 +215,19 @@ fn mark_roots_from_statement(stmt: &Statement, live: &mut [bool]) {
                 | naga::GatherMode::Shuffle(h)
                 | naga::GatherMode::ShuffleDown(h)
                 | naga::GatherMode::ShuffleUp(h)
-                | naga::GatherMode::ShuffleXor(h) => {
+                | naga::GatherMode::ShuffleXor(h)
+                | naga::GatherMode::QuadBroadcast(h) => {
                     live[h.index()] = true;
                 }
+                naga::GatherMode::QuadSwap(_) => {}
             }
         }
-        Statement::Break | Statement::Continue | Statement::Kill | Statement::Barrier(_) => {}
+        Statement::Break
+        | Statement::Continue
+        | Statement::Kill
+        | Statement::ControlBarrier(_)
+        | Statement::MemoryBarrier(_)
+        | Statement::ImageAtomic { .. } => {}
     }
 }
 

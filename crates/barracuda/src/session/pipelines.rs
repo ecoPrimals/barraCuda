@@ -82,7 +82,7 @@ impl SessionPipelines {
                 label: Some(label),
                 layout: None,
                 module: &module,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             })

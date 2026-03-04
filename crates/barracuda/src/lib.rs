@@ -64,7 +64,10 @@
 //! - Zero duplication: One implementation per op
 
 #![deny(unsafe_code)]
-#![expect(rustdoc::broken_intra_doc_links, reason = "legacy")]
+#![expect(
+    rustdoc::broken_intra_doc_links,
+    reason = "cross-crate links to barracuda-core types"
+)]
 
 // ── CPU-only modules (always available, no GPU dependency) ────────────────────
 pub mod error;

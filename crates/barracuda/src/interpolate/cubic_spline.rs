@@ -29,6 +29,7 @@
 //! - Numerical Recipes, 3rd Edition, Section 3.3
 //! - De Boor, "A Practical Guide to Splines"
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 
@@ -251,7 +252,7 @@ impl CubicSpline {
             .storage_read(2, &coefs_buf)
             .storage_rw(3, &result_buf)
             .uniform(4, &params_buf)
-            .dispatch((n_query as u32).div_ceil(256), 1, 1)
+            .dispatch((n_query as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1)
             .submit();
 
         let mut enc = device.create_encoder_guarded(&Default::default());

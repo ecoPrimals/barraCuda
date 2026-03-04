@@ -9,6 +9,7 @@
 //!
 //! wetSpring handoff v6, `ani_batch_f64.wgsl` — 7/7 GPU checks PASS.
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
@@ -51,7 +52,7 @@ impl AniBatchF64 {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("AniBatch:layout"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
         let pipeline = device
             .device
@@ -59,7 +60,7 @@ impl AniBatchF64 {
                 label: Some("AniBatch:pipeline"),
                 layout: Some(&layout),
                 module: &module,
-                entry_point: "main",
+                entry_point: Some("main"),
                 compilation_options: Default::default(),
                 cache: None,
             });
@@ -115,8 +116,8 @@ impl AniBatchF64 {
         {
             let mut pass = enc.begin_compute_pass(&Default::default());
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bg, &[]);
-            pass.dispatch_workgroups(n_pairs.div_ceil(256), 1, 1);
+            pass.set_bind_group(0, Some(&bg), &[]);
+            pass.dispatch_workgroups(n_pairs.div_ceil(WORKGROUP_SIZE_1D), 1, 1);
         }
         self.device.submit_and_poll(Some(enc.finish()));
         Ok(())

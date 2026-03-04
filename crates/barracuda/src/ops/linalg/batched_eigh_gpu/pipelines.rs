@@ -76,7 +76,7 @@ pub(crate) fn create_eigh_pipelines(
         .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Batched Init V PL"),
             bind_group_layouts: &[&init_bgl],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
 
     let init_v_pipeline = device
@@ -85,7 +85,7 @@ pub(crate) fn create_eigh_pipelines(
             label: Some("Batched Init V"),
             layout: Some(&init_pl),
             module: shader,
-            entry_point: "batched_init_V",
+            entry_point: Some("batched_init_V"),
             cache: None,
             compilation_options: Default::default(),
         });
@@ -97,7 +97,7 @@ pub(crate) fn create_eigh_pipelines(
                 label: Some("Batched Extract Eigenvalues"),
                 layout: Some(&init_pl),
                 module: shader,
-                entry_point: "batched_extract_eigenvalues",
+                entry_point: Some("batched_extract_eigenvalues"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -155,7 +155,7 @@ pub(crate) fn create_eigh_pipelines(
         .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Parallel Sweep PL"),
             bind_group_layouts: &[&sweep_bgl],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
 
     let compute_angles_pipeline =
@@ -165,7 +165,7 @@ pub(crate) fn create_eigh_pipelines(
                 label: Some("Parallel Compute Angles"),
                 layout: Some(&sweep_pl),
                 module: shader,
-                entry_point: "parallel_compute_angles",
+                entry_point: Some("parallel_compute_angles"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -177,7 +177,7 @@ pub(crate) fn create_eigh_pipelines(
                 label: Some("Parallel Rotate A"),
                 layout: Some(&sweep_pl),
                 module: shader,
-                entry_point: "parallel_rotate_A",
+                entry_point: Some("parallel_rotate_A"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -189,7 +189,7 @@ pub(crate) fn create_eigh_pipelines(
                 label: Some("Parallel Update Blocks"),
                 layout: Some(&sweep_pl),
                 module: shader,
-                entry_point: "parallel_update_blocks",
+                entry_point: Some("parallel_update_blocks"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -201,7 +201,7 @@ pub(crate) fn create_eigh_pipelines(
                 label: Some("Parallel Rotate V"),
                 layout: Some(&sweep_pl),
                 module: shader,
-                entry_point: "parallel_rotate_V",
+                entry_point: Some("parallel_rotate_V"),
                 cache: None,
                 compilation_options: Default::default(),
             });

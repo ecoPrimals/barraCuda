@@ -49,7 +49,7 @@ fn assert_close(label: &str, a: &[f32], b: &[f32], tol: f32) {
 
 #[tokio::test]
 async fn test_enumerate_all_adapters() {
-    let adapters = WgpuDevice::enumerate_adapters();
+    let adapters = WgpuDevice::enumerate_adapters().await;
 
     println!("WGPU Adapter Report:");
     println!("  Total adapters: {}", adapters.len());

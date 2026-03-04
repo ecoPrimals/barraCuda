@@ -77,7 +77,7 @@ impl ComplexExp {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("Complex Exp Pipeline Layout"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline = device
@@ -86,7 +86,7 @@ impl ComplexExp {
                 label: Some("Complex Exp Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -148,7 +148,7 @@ impl ComplexExp {
             });
 
             compute_pass.set_pipeline(&self.pipeline);
-            compute_pass.set_bind_group(0, &bind_group, &[]);
+            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
 
             let caps = DeviceCapabilities::from_device(device);
             let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::ElementWise);

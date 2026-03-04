@@ -161,7 +161,7 @@ impl CylindricalGradient {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups(total.div_ceil(FD_WORKGROUP_SIZE as usize) as u32, 1, 1);
         }
 
@@ -346,7 +346,7 @@ impl CylindricalLaplacian {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups(total.div_ceil(FD_WORKGROUP_SIZE as usize) as u32, 1, 1);
         }
 

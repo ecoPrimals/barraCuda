@@ -80,10 +80,9 @@ impl Drop for TensorSession {
 mod tests {
     use super::*;
     use crate::device::test_pool::get_test_device;
-    use std::sync::Arc;
 
-    async fn create_test_device() -> Arc<wgpu::Device> {
-        get_test_device().await.device.inner_arc()
+    async fn create_test_device() -> wgpu::Device {
+        get_test_device().await.device_clone()
     }
 
     #[tokio::test]

@@ -5,6 +5,22 @@ and the migration path.
 
 ## Pre-1.0 (current)
 
+### 0.3.3
+
+| Change | Migration |
+|--------|-----------|
+| **wgpu 22 → 28** — `Maintain::Wait` / `MaintainBase::Poll` removed | Replace `Maintain::Wait` with `PollType::Wait` and `MaintainBase::Poll` with `PollType::Poll`. `device.poll()` now returns `Result<(), wgpu::Error>`. |
+| **naga 22.1 → 28** — new IR variants | If matching on `naga::Statement` / `naga::Expression`, add wildcard arms for new variants (`SubgroupBallot`, `SubgroupCollectiveOperation`, `RayQuery`, etc.). |
+| `device_arc()` → `device_clone()` returns `wgpu::Device` (was `Arc<wgpu::Device>`) | wgpu 28 `Device` implements `Clone` internally. Replace `.device_arc()` with `.device_clone()`. The returned type is `wgpu::Device`, not `Arc<wgpu::Device>`. |
+| `queue_arc()` → `queue_clone()` returns `wgpu::Queue` (was `Arc<wgpu::Queue>`) | Same as above. Replace `.queue_arc()` with `.queue_clone()`. |
+| `inner_arc()` removed from `GuardedDeviceHandle` | `GuardedDeviceHandle` derefs to `wgpu::Device`. Use `device.device.clone()` if you need an owned `wgpu::Device` (cheap — internally `Arc`-wrapped). |
+| `PppmGpu::new()` / `new_with_driver()` take `wgpu::Device` + `wgpu::Queue` (were `Arc<...>`) | Pass plain `wgpu::Device` and `wgpu::Queue` values. Remove `Arc::new(...)` wrappers. |
+| `ComputeGraph` stores `wgpu::Queue` (was `Arc<wgpu::Queue>`) | No migration needed for most callers. Direct field access changes type from `Arc<wgpu::Queue>` to `wgpu::Queue`. |
+| `create_shader_module_spirv()` → `create_shader_module_passthrough()` | Rename call sites. Function semantics are identical. |
+| `on_uncaptured_error` handler is `Arc<dyn UncapturedErrorHandler>` (was `Box<dyn Fn(...)>`) | Implement `UncapturedErrorHandler` trait on your error handler struct and wrap in `Arc`. |
+| Workgroup dispatch uses named constants | If you used `div_ceil(64)` or `div_ceil(256)` directly, import `WORKGROUP_SIZE_COMPACT` (64) or `WORKGROUP_SIZE_1D` (256) from `device::capabilities`. |
+| tokio workspace version → 1.49 | If your crate uses `tokio = { workspace = true }`, you get 1.49 automatically. |
+
 ### 0.3.2
 
 | Change | Migration |
@@ -15,9 +31,9 @@ and the migration path.
 | `encoding_guard()` returns `()` (was previously a guard struct) | Remove `let _guard = device.encoding_guard()` patterns. Call `device.encoding_guard()` directly, and pair with `device.encoding_complete()` when done. |
 | `gpu_lock_arc()` returns `Arc<Mutex<()>>` (was `Arc<RwLock<()>>`) | Change `.write()` to `.lock()` and `.try_write()` to `.try_lock()`. |
 | `BufferPool::new()` takes additional `Arc<AtomicU32>` parameter for active encoder count | Pass `device.active_encoders_arc()` as the third argument. |
-| `WgpuDevice::device` field is now `GuardedDeviceHandle` (was `Arc<wgpu::Device>`) | `GuardedDeviceHandle` derefs to `wgpu::Device`; use `device.device.inner_arc()` if you need `Arc<wgpu::Device>`. All `create_*` calls are auto-guarded — remove manual `encoding_guard()` / `encoding_complete()` pairs around resource creation. |
+| `WgpuDevice::device` field is now `GuardedDeviceHandle` (was `Arc<wgpu::Device>`) | `GuardedDeviceHandle` derefs to `wgpu::Device`. All `create_*` calls are auto-guarded — remove manual `encoding_guard()` / `encoding_complete()` pairs around resource creation. Use `.device_clone()` (0.3.3+) for an owned handle. |
 | `async-trait` removed — trait methods return `BoxFuture` | Replace `#[async_trait] async fn` with `fn method() -> BoxFuture<'_, Result<T>>` using `Box::pin(async move { ... })`. Import `BoxFuture` from `barracuda_core::unified_hardware::traits`. |
-| `ComputeGraph::device` field is now `GuardedDeviceHandle` | Use `.inner_arc()` if you need the underlying `Arc<wgpu::Device>`. |
+| `ComputeGraph::device` field is now `GuardedDeviceHandle` | Use `.device_clone()` (0.3.3+) for an owned `wgpu::Device`. |
 
 ### 0.3.1
 

@@ -140,7 +140,7 @@ impl Attention {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("Attention Matmul PL"),
                     bind_group_layouts: &[&bgl_matmul],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline_matmul =
@@ -150,7 +150,7 @@ impl Attention {
                     label: Some("Attention Matmul Pipeline"),
                     layout: Some(&pipeline_layout_matmul),
                     module: &shader_matmul,
-                    entry_point: "main",
+                    entry_point: Some("main"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -165,7 +165,7 @@ impl Attention {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline_matmul);
-            pass.set_bind_group(0, &bg_matmul, &[]);
+            pass.set_bind_group(0, Some(&bg_matmul), &[]);
 
             let caps = DeviceCapabilities::from_device(device);
             let _optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::MatMul);
@@ -251,7 +251,7 @@ impl Attention {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("Attention Softmax PL"),
                     bind_group_layouts: &[&bgl_softmax],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline_softmax =
@@ -261,7 +261,7 @@ impl Attention {
                     label: Some("Attention Softmax Pipeline"),
                     layout: Some(&pipeline_layout_softmax),
                     module: &shader_softmax,
-                    entry_point: "main",
+                    entry_point: Some("main"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -272,7 +272,7 @@ impl Attention {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline_softmax);
-            pass.set_bind_group(0, &bg_softmax, &[]);
+            pass.set_bind_group(0, Some(&bg_softmax), &[]);
 
             // Softmax: one thread per [batch, head, query_pos] row
             let caps = DeviceCapabilities::from_device(device);
@@ -369,7 +369,7 @@ impl Attention {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("Attention Apply PL"),
                     bind_group_layouts: &[&bgl_apply],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline_apply =
@@ -379,7 +379,7 @@ impl Attention {
                     label: Some("Attention Apply Pipeline"),
                     layout: Some(&pipeline_layout_apply),
                     module: &shader_apply,
-                    entry_point: "main",
+                    entry_point: Some("main"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -390,7 +390,7 @@ impl Attention {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline_apply);
-            pass.set_bind_group(0, &bg_apply, &[]);
+            pass.set_bind_group(0, Some(&bg_apply), &[]);
 
             let caps = DeviceCapabilities::from_device(device);
             let _optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::MatMul);

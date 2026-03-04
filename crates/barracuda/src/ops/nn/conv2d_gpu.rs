@@ -7,6 +7,7 @@
 
 use std::sync::Arc;
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use crate::tensor::Tensor;
@@ -144,7 +145,7 @@ impl Conv2dGpu {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("conv2d_gpu PL"),
                     bind_group_layouts: &[&bgl],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline = device
@@ -153,7 +154,7 @@ impl Conv2dGpu {
                 label: Some("conv2d_gpu"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -167,8 +168,8 @@ impl Conv2dGpu {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
-            pass.dispatch_workgroups((output_size as u32).div_ceil(256), 1, 1);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
+            pass.dispatch_workgroups((output_size as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1);
         }
         device.submit_and_poll(Some(encoder.finish()));
 

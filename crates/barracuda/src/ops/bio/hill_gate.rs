@@ -12,6 +12,7 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 
 pub const WGSL_HILL_GATE: &str = include_str!("../../shaders/bio/hill_gate.wgsl");
@@ -94,7 +95,7 @@ impl HillGateGpu {
         let layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("HillGate Layout"),
             bind_group_layouts: &[&bgl],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
 
         let module = device.compile_shader_f64(WGSL_HILL_GATE_F64, Some("HillGate f64"));
@@ -103,7 +104,7 @@ impl HillGateGpu {
             label: Some("HillGate Pipeline"),
             layout: Some(&layout),
             module: &module,
-            entry_point: "main",
+            entry_point: Some("main"),
             compilation_options: Default::default(),
             cache: None,
         });
@@ -134,9 +135,9 @@ impl HillGateGpu {
         });
 
         let workgroups = if params.mode == 0 {
-            params.n_a.div_ceil(256)
+            params.n_a.div_ceil(WORKGROUP_SIZE_1D)
         } else {
-            (params.n_a * params.n_b).div_ceil(256)
+            (params.n_a * params.n_b).div_ceil(WORKGROUP_SIZE_1D)
         };
 
         let bg = d.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -173,7 +174,7 @@ impl HillGateGpu {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
         q.submit(std::iter::once(encoder.finish()));

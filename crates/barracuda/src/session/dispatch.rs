@@ -5,6 +5,8 @@
 //! All functions here are `impl TensorSession` — Rust allows splitting
 //! impl blocks across sibling modules.
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
+
 use super::types::{
     AttentionParams, HeadReshapeParams, LayerNormParams, MatMulParams, MatMulTier, ScaleParams,
     SessionOp,
@@ -139,7 +141,7 @@ impl TensorSession {
                 let (wg_x, wg_y) = tier.dispatch(*m, *n);
                 let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
                 pass.set_pipeline(pipeline);
-                pass.set_bind_group(0, &bg, &[]);
+                pass.set_bind_group(0, Some(&bg), &[]);
                 pass.dispatch_workgroups(wg_x, wg_y, 1);
             }
 
@@ -150,7 +152,12 @@ impl TensorSession {
                     &self.pipelines.relu_pl,
                     &[&self.buffers[*input], &self.buffers[*output]],
                 );
-                self.dispatch_1d(encoder, &self.pipelines.relu_pl, &bg, size.div_ceil(256));
+                self.dispatch_1d(
+                    encoder,
+                    &self.pipelines.relu_pl,
+                    &bg,
+                    size.div_ceil(WORKGROUP_SIZE_1D),
+                );
             }
             SessionOp::Gelu { input, output } => {
                 let size = self.elem_count(*output) as u32;
@@ -159,7 +166,12 @@ impl TensorSession {
                     &self.pipelines.gelu_pl,
                     &[&self.buffers[*input], &self.buffers[*output], &size_buf],
                 );
-                self.dispatch_1d(encoder, &self.pipelines.gelu_pl, &bg, size.div_ceil(256));
+                self.dispatch_1d(
+                    encoder,
+                    &self.pipelines.gelu_pl,
+                    &bg,
+                    size.div_ceil(WORKGROUP_SIZE_1D),
+                );
             }
             SessionOp::Softmax { input, output } => {
                 let size = self.elem_count(*output) as u32;
@@ -191,7 +203,12 @@ impl TensorSession {
                     &[&self.buffers[*input], &self.buffers[*output], &params_buf],
                 );
                 let rows = (total / feature_size).max(1);
-                self.dispatch_1d(encoder, &self.pipelines.lnrm_pl, &bg, rows.div_ceil(256));
+                self.dispatch_1d(
+                    encoder,
+                    &self.pipelines.lnrm_pl,
+                    &bg,
+                    rows.div_ceil(WORKGROUP_SIZE_1D),
+                );
             }
 
             // ── Attention (3-pass SDPA) ───────────────────────────────────
@@ -240,7 +257,7 @@ impl TensorSession {
                     encoder,
                     &self.pipelines.sdpa_scores_pl,
                     &bg1,
-                    total1.div_ceil(256),
+                    total1.div_ceil(WORKGROUP_SIZE_1D),
                 );
 
                 let bg2 = self.auto_bind_group(
@@ -252,7 +269,7 @@ impl TensorSession {
                     encoder,
                     &self.pipelines.attn_softmax_pl,
                     &bg2,
-                    total2.div_ceil(256),
+                    total2.div_ceil(WORKGROUP_SIZE_1D),
                 );
 
                 let bg3 = self.auto_bind_group(
@@ -268,7 +285,7 @@ impl TensorSession {
                     let mut pass =
                         encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
                     pass.set_pipeline(&self.pipelines.attn_apply_pl);
-                    pass.set_bind_group(0, &bg3, &[]);
+                    pass.set_bind_group(0, Some(&bg3), &[]);
                     pass.dispatch_workgroups(
                         head_dim.div_ceil(16),
                         seq_len.div_ceil(16),
@@ -304,7 +321,7 @@ impl TensorSession {
                     encoder,
                     &self.pipelines.head_split_pl,
                     &bg,
-                    total.div_ceil(256),
+                    total.div_ceil(WORKGROUP_SIZE_1D),
                 );
             }
             SessionOp::HeadConcat {
@@ -333,7 +350,7 @@ impl TensorSession {
                     encoder,
                     &self.pipelines.head_concat_pl,
                     &bg,
-                    total.div_ceil(256),
+                    total.div_ceil(WORKGROUP_SIZE_1D),
                 );
             }
         }
@@ -380,7 +397,7 @@ impl TensorSession {
         let wg = workgroups.clamp(1, 65535);
         let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
         pass.set_pipeline(pipeline);
-        pass.set_bind_group(0, bg, &[]);
+        pass.set_bind_group(0, Some(bg), &[]);
         pass.dispatch_workgroups(wg, 1, 1);
     }
 

@@ -95,7 +95,7 @@ impl HiggsU1HmcForce {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("HiggsU1:layout"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let pipeline = device
@@ -104,7 +104,7 @@ impl HiggsU1HmcForce {
                 label: Some("HiggsU1:pipeline"),
                 layout: Some(&layout),
                 module: &module,
-                entry_point: "hmc_half_kick",
+                entry_point: Some("hmc_half_kick"),
                 compilation_options: Default::default(),
                 cache: None,
             });
@@ -209,7 +209,7 @@ impl HiggsU1HmcForce {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(self.volume.div_ceil(HIGGS_WG), 1, 1);
         }
         self.device.submit_and_poll(Some(enc.finish()));

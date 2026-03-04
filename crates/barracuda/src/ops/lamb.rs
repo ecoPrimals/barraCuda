@@ -325,7 +325,7 @@ impl Lamb {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("LAMB Pipeline Layout"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         // Create encoder
@@ -341,7 +341,7 @@ impl Lamb {
                     label: Some("LAMB Adam Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
-                    entry_point: "compute_adam_step",
+                    entry_point: Some("compute_adam_step"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -352,7 +352,7 @@ impl Lamb {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&adam_pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             // Deep Debt Evolution: Capability-based dispatch
             let caps = DeviceCapabilities::from_device(device);
             let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::ElementWise);
@@ -368,7 +368,7 @@ impl Lamb {
                     label: Some("LAMB Trust Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
-                    entry_point: "apply_trust_ratio",
+                    entry_point: Some("apply_trust_ratio"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -379,7 +379,7 @@ impl Lamb {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&trust_pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             // Deep Debt Evolution: Capability-based dispatch
             // Trust ratio computation is a reduction over parameters
             let caps = DeviceCapabilities::from_device(device);

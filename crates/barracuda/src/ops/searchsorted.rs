@@ -185,7 +185,7 @@ impl SearchSorted {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("SearchSorted Pipeline Layout"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline = device
@@ -194,7 +194,7 @@ impl SearchSorted {
                 label: Some("SearchSorted Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -209,7 +209,7 @@ impl SearchSorted {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             // Deep Debt Evolution: Capability-based dispatch
             let caps = DeviceCapabilities::from_device(device);
             let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::ElementWise);
@@ -313,7 +313,7 @@ impl SearchSorted {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("SearchSorted Convert Pipeline Layout"),
                     bind_group_layouts: &[&convert_bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let convert_pipeline =
@@ -323,7 +323,7 @@ impl SearchSorted {
                     label: Some("SearchSorted Convert Pipeline"),
                     layout: Some(&convert_pipeline_layout),
                     module: &convert_shader,
-                    entry_point: "main",
+                    entry_point: Some("main"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -338,7 +338,7 @@ impl SearchSorted {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&convert_pipeline);
-            pass.set_bind_group(0, &convert_bind_group, &[]);
+            pass.set_bind_group(0, Some(&convert_bind_group), &[]);
             // Deep Debt Evolution: Capability-based dispatch
             let caps = DeviceCapabilities::from_device(device);
             let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::ElementWise);

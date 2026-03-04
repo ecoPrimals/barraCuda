@@ -131,12 +131,12 @@ async fn run_throughput_probe(device: &WgpuDevice, use_f64: bool) -> Option<f64>
     let num_elements: u64 = 256 * 1024;
     let buf_size = num_elements * elem_size;
 
-    wgpu_dev.push_error_scope(wgpu::ErrorFilter::Validation);
+    let scope1 = wgpu_dev.push_error_scope(wgpu::ErrorFilter::Validation);
     let shader = wgpu_dev.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("throughput_probe"),
         source: wgpu::ShaderSource::Wgsl(shader_src.into()),
     });
-    if wgpu_dev.pop_error_scope().await.is_some() {
+    if scope1.pop().await.is_some() {
         return None;
     }
 
@@ -164,19 +164,19 @@ async fn run_throughput_probe(device: &WgpuDevice, use_f64: bool) -> Option<f64>
     let pl = wgpu_dev.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: None,
         bind_group_layouts: &[&bgl],
-        push_constant_ranges: &[],
+        immediate_size: 0,
     });
 
-    wgpu_dev.push_error_scope(wgpu::ErrorFilter::Validation);
+    let scope2 = wgpu_dev.push_error_scope(wgpu::ErrorFilter::Validation);
     let pipeline = wgpu_dev.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
         label: Some("throughput_probe"),
         layout: Some(&pl),
         module: &shader,
-        entry_point: "main",
+        entry_point: Some("main"),
         cache: None,
         compilation_options: Default::default(),
     });
-    if wgpu_dev.pop_error_scope().await.is_some() {
+    if scope2.pop().await.is_some() {
         return None;
     }
 
@@ -194,7 +194,7 @@ async fn run_throughput_probe(device: &WgpuDevice, use_f64: bool) -> Option<f64>
     let dispatch = |enc: &mut wgpu::CommandEncoder| {
         let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
         pass.set_pipeline(&pipeline);
-        pass.set_bind_group(0, &bg, &[]);
+        pass.set_bind_group(0, Some(&bg), &[]);
         pass.dispatch_workgroups(workgroups, 1, 1);
     };
 

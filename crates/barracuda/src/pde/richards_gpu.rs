@@ -14,6 +14,7 @@
 //! Provenance: airSpring V045 → toadStool absorption
 
 use super::richards::{RichardsBc, RichardsConfig, RichardsResult};
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
@@ -163,7 +164,7 @@ impl RichardsGpu {
         let d_buf = create_rw("Richards d");
         let h_new_buf = create_rw("Richards h_new");
 
-        let wg = n.div_ceil(64) as u32;
+        let wg = n.div_ceil(WORKGROUP_SIZE_COMPACT as usize) as u32;
         let mut total_picard = 0usize;
 
         for _step in 0..n_steps {

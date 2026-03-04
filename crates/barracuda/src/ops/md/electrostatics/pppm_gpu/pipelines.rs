@@ -4,8 +4,6 @@
 //! Extracted from pppm_layouts for pppm_gpu modularity.
 //! Contains all bind group layout definitions and compute pipeline creation.
 
-use std::sync::Arc;
-
 /// PPPM bind group layout helpers (for creating individual layouts)
 pub struct PppmLayouts;
 
@@ -138,7 +136,7 @@ pub struct PppmPipelines {
 
 impl PppmPipelines {
     pub fn new(
-        device: &Arc<wgpu::Device>,
+        device: &wgpu::Device,
         layouts: &PppmBindGroupLayouts,
         bspline_module: &wgpu::ShaderModule,
         charge_spread_module: &wgpu::ShaderModule,
@@ -152,11 +150,11 @@ impl PppmPipelines {
                 &device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("pppm_bspline_layout"),
                     bind_group_layouts: &[&layouts.bspline],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 }),
             ),
             module: bspline_module,
-            entry_point: "main",
+            entry_point: Some("main"),
             cache: None,
             compilation_options: Default::default(),
         });
@@ -167,11 +165,11 @@ impl PppmPipelines {
                 &device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("pppm_charge_spread_layout"),
                     bind_group_layouts: &[&layouts.charge_spread],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 }),
             ),
             module: charge_spread_module,
-            entry_point: "spread_per_particle",
+            entry_point: Some("spread_per_particle"),
             cache: None,
             compilation_options: Default::default(),
         });
@@ -182,11 +180,11 @@ impl PppmPipelines {
                 &device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("pppm_greens_apply_layout"),
                     bind_group_layouts: &[&layouts.greens_apply],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 }),
             ),
             module: greens_apply_module,
-            entry_point: "main",
+            entry_point: Some("main"),
             cache: None,
             compilation_options: Default::default(),
         });
@@ -197,11 +195,11 @@ impl PppmPipelines {
                 &device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("pppm_force_interp_layout"),
                     bind_group_layouts: &[&layouts.force_interp],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 }),
             ),
             module: force_interp_module,
-            entry_point: "main",
+            entry_point: Some("main"),
             cache: None,
             compilation_options: Default::default(),
         });
@@ -212,11 +210,11 @@ impl PppmPipelines {
                 &device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("pppm_erfc_forces_layout"),
                     bind_group_layouts: &[&layouts.erfc_forces],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 }),
             ),
             module: erfc_forces_module,
-            entry_point: "main",
+            entry_point: Some("main"),
             cache: None,
             compilation_options: Default::default(),
         });
@@ -227,11 +225,11 @@ impl PppmPipelines {
                 &device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("pppm_self_energy_layout"),
                     bind_group_layouts: &[&layouts.erfc_forces],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 }),
             ),
             module: erfc_forces_module,
-            entry_point: "self_energy",
+            entry_point: Some("self_energy"),
             cache: None,
             compilation_options: Default::default(),
         });

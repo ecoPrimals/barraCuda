@@ -125,7 +125,7 @@ impl VacfGpu {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("VACF PL"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
         let pipeline = gpu_d
             .device
@@ -133,7 +133,7 @@ impl VacfGpu {
                 label: Some("VACF Pipeline"),
                 layout: Some(&pl_layout),
                 module: &module,
-                entry_point: "vacf_pair",
+                entry_point: Some("vacf_pair"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -166,7 +166,7 @@ impl VacfGpu {
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(wg_x, wg_y, 1);
         }
         gpu_d.submit_and_poll(Some(encoder.finish()));

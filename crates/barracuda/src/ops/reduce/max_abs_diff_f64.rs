@@ -141,7 +141,7 @@ impl MaxAbsDiffF64 {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("MaxAbsDiff PL"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                    immediate_size: 0,
             });
 
         let pipeline =
@@ -151,7 +151,7 @@ impl MaxAbsDiffF64 {
                     label: Some("max_abs_diff_f64"),
                     layout: Some(&pl),
                     module: &shader,
-                    entry_point: "max_abs_diff_f64",
+                    entry_point: Some("max_abs_diff_f64"),
                 cache: None,
                 compilation_options: Default::default(),
                 });
@@ -233,7 +233,7 @@ impl MaxAbsDiffF64 {
                     timestamp_writes: None,
                 });
                 pass.set_pipeline(&pipeline);
-                pass.set_bind_group(0, &bg, &[]);
+                pass.set_bind_group(0, Some(&bg), &[]);
                 pass.dispatch_workgroups(n_workgroups as u32, 1, 1);
             }
             device.submit_and_poll(Some(encoder.finish()));
@@ -252,7 +252,7 @@ impl MaxAbsDiffF64 {
                     label: Some("max_reduce_pass2"),
                     layout: Some(&pl),
                     module: &shader,
-                    entry_point: "max_reduce_pass2",
+                    entry_point: Some("max_reduce_pass2"),
                 cache: None,
                 compilation_options: Default::default(),
                 });
@@ -317,7 +317,7 @@ impl MaxAbsDiffF64 {
                     timestamp_writes: None,
                 });
                 pass.set_pipeline(&pipeline2);
-                pass.set_bind_group(0, &bg2, &[]);
+                pass.set_bind_group(0, Some(&bg2), &[]);
                 pass.dispatch_workgroups(n_workgroups2 as u32, 1, 1);
             }
             device.submit_and_poll(Some(encoder.finish()));

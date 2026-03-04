@@ -15,6 +15,7 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::error::Result;
@@ -153,7 +154,7 @@ impl BatchedMultinomialGpu {
             .storage_read(1, &cumul_buf)
             .storage_rw(2, &seeds_buf)
             .storage_rw(3, &counts_buf)
-            .dispatch(n_reps.div_ceil(64), 1, 1)
+            .dispatch(n_reps.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
             .submit();
 
         let counts = self

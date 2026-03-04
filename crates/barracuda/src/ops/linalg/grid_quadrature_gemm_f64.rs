@@ -230,7 +230,7 @@ impl GridQuadratureGemm {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("GridQuadGEMM PL"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let pipeline =
@@ -240,7 +240,7 @@ impl GridQuadratureGemm {
                     label: Some(entry_point),
                     layout: Some(&pl),
                     module: &shader,
-                    entry_point,
+                    entry_point: Some(entry_point),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -346,7 +346,7 @@ impl GridQuadratureGemm {
                     timestamp_writes: None,
                 });
                 pass.set_pipeline(&pipeline);
-                pass.set_bind_group(0, &bg, &[]);
+                pass.set_bind_group(0, Some(&bg), &[]);
                 pass.dispatch_workgroups(wg_x, wg_y, 1);
             }
             self.device.submit_and_poll(Some(encoder.finish()));

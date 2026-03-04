@@ -31,24 +31,20 @@ impl WgpuDevice {
         spirv_words: &[u32],
         label: Option<&str>,
     ) -> wgpu::ShaderModule {
-        // SAFETY: wgpu::Device::create_shader_module_spirv is unsafe (wgpu API constraint).
-        // - Why unsafe: Passes SPIR-V binary to the backend as-is; wgpu does not validate
-        //   it. Malformed or malicious SPIR-V could cause driver crash, GPU hang, or UB.
-        // - Invariants we maintain: SPIR-V is produced by SovereignCompiler (naga IR →
-        //   spv::Writer) from naga::valid::Validator-approved module. No external or
-        //   untrusted input. Callers must ensure spirv_words came from our compiler.
-        // - What could go wrong: Untrusted/malformed SPIR-V → driver crash, GPU UB,
-        //   or security issues (e.g. out-of-bounds access in shader).
-        // - Minimum unsafe surface: wgpu 22.x has no safe SPIR-V API; create_shader_module
-        //   (WGSL) validates via naga but we need SPIR-V passthrough for NVK/Vulkan
-        //   optimization (Sovereign compiler bypasses NAK). This is the only path.
+        // SAFETY: create_shader_module_passthrough passes binary directly to the driver.
+        // Invariants: SPIR-V is produced by SovereignCompiler (naga IR → spv::Writer)
+        // from Validator-approved modules. No external or untrusted input.
         self.encoding_guard();
-        #[allow(unsafe_code)]
+        #[expect(
+            unsafe_code,
+            reason = "SPIR-V passthrough bypasses wgpu shader validation"
+        )]
         let module = unsafe {
             self.device
-                .create_shader_module_spirv(&wgpu::ShaderModuleDescriptorSpirV {
+                .create_shader_module_passthrough(wgpu::ShaderModuleDescriptorPassthrough {
                     label,
-                    source: std::borrow::Cow::Borrowed(spirv_words),
+                    spirv: Some(std::borrow::Cow::Borrowed(spirv_words)),
+                    ..Default::default()
                 })
         };
         self.encoding_complete();

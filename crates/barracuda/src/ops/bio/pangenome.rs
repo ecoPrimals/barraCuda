@@ -9,6 +9,7 @@
 //!
 //! wetSpring handoff v6, `pangenome_classify.wgsl` — 6/6 GPU checks PASS.
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
@@ -67,7 +68,12 @@ impl PangenomeClassifyGpu {
                     super::snp::bg_entry(3, count_out),
                 ],
             });
-        super::snp::submit(&self.device, &self.pipeline, &bg, n_genes.div_ceil(256));
+        super::snp::submit(
+            &self.device,
+            &self.pipeline,
+            &bg,
+            n_genes.div_ceil(WORKGROUP_SIZE_1D),
+        );
         Ok(())
     }
 }

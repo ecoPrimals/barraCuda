@@ -18,9 +18,13 @@ pub const HIGH_PERFORMANCE_MIN_INVOCATIONS: u32 = 1024;
 /// Bytes per megabyte (for display formatting).
 const BYTES_PER_MB: u64 = 1024 * 1024;
 
-/// Standard 1D shader workgroup size.
-/// Matches `@workgroup_size(256)` in all 1D WGSL shaders.
+/// Standard 1D shader workgroup size for high-throughput elementwise ops.
+/// Matches `@workgroup_size(256)` in WGSL shaders.
 pub const WORKGROUP_SIZE_1D: u32 = 256;
+
+/// Compact 1D workgroup size for physics/lattice shaders with high register pressure.
+/// Matches `@workgroup_size(64)` in MD, lattice QCD, and observable WGSL shaders.
+pub const WORKGROUP_SIZE_COMPACT: u32 = 64;
 
 /// Standard 2D shader workgroup size per dimension.
 /// Matches `@workgroup_size(16, 16)` in all 2D WGSL shaders.

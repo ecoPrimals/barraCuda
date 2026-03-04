@@ -100,7 +100,7 @@ impl ReduceScalarPipeline {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("ReduceScalar:PL"),
                     bind_group_layouts: &[&bgl],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let sum_pipeline =
@@ -110,7 +110,7 @@ impl ReduceScalarPipeline {
                     label: Some("sum_reduce_f64"),
                     layout: Some(&pipeline_layout),
                     module: &module,
-                    entry_point: "sum_reduce_f64",
+                    entry_point: Some("sum_reduce_f64"),
                     compilation_options: Default::default(),
                     cache: None,
                 });
@@ -295,7 +295,7 @@ impl ReduceScalarPipeline {
                     .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                         label: Some("ReduceScalar:PL:alt"),
                         bind_group_layouts: &[&bgl],
-                        push_constant_ranges: &[],
+                        immediate_size: 0,
                     });
             Some(
                 self.device
@@ -304,7 +304,7 @@ impl ReduceScalarPipeline {
                         label: Some(entry),
                         layout: Some(&layout),
                         module: &module,
-                        entry_point: entry,
+                        entry_point: Some(entry),
                         compilation_options: Default::default(),
                         cache: None,
                     }),
@@ -326,7 +326,7 @@ impl ReduceScalarPipeline {
             });
             let pl = pass2_pipeline.as_ref().unwrap_or(&self.sum_pipeline);
             pass.set_pipeline(pl);
-            pass.set_bind_group(0, &bg_pass1, &[]);
+            pass.set_bind_group(0, Some(&bg_pass1), &[]);
             pass.dispatch_workgroups(n_partial, 1, 1);
         }
         {
@@ -336,7 +336,7 @@ impl ReduceScalarPipeline {
             });
             let pl = pass2_pipeline.as_ref().unwrap_or(&self.sum_pipeline);
             pass.set_pipeline(pl);
-            pass.set_bind_group(0, &self.sum_bg_pass2, &[]);
+            pass.set_bind_group(0, Some(&self.sum_bg_pass2), &[]);
             pass.dispatch_workgroups(1, 1, 1);
         }
 

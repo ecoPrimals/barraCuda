@@ -10,6 +10,7 @@
 //!
 //! wetSpring handoff v6, `snp_calling_f64.wgsl` — 5/5 GPU checks PASS.
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
@@ -83,7 +84,7 @@ impl SnpCallingF64 {
             &self.device,
             &self.pipeline,
             &bg,
-            alignment_length.div_ceil(256),
+            alignment_length.div_ceil(WORKGROUP_SIZE_1D),
         );
         Ok(())
     }
@@ -130,7 +131,7 @@ pub(super) fn make_layout(
         .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some(label),
             bind_group_layouts: &[bgl],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         })
 }
 
@@ -147,7 +148,7 @@ pub(super) fn make_pipeline(
             label: Some(label),
             layout: Some(layout),
             module,
-            entry_point: entry,
+            entry_point: Some(entry),
             compilation_options: Default::default(),
             cache: None,
         })
@@ -181,7 +182,7 @@ pub(super) fn submit(
     {
         let mut pass = enc.begin_compute_pass(&Default::default());
         pass.set_pipeline(pipeline);
-        pass.set_bind_group(0, bg, &[]);
+        pass.set_bind_group(0, Some(bg), &[]);
         pass.dispatch_workgroups(wg_x, 1, 1);
     }
     device.submit_and_poll(Some(enc.finish()));

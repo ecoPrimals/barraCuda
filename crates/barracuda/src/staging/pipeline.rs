@@ -154,7 +154,7 @@ impl StreamingPipeline {
             });
             for stage in &self.stages {
                 pass.set_pipeline(&stage.pipeline);
-                pass.set_bind_group(0, &stage.bind_group, &[]);
+                pass.set_bind_group(0, Some(&*stage.bind_group), &[]);
                 pass.dispatch_workgroups(
                     stage.workgroups.0,
                     stage.workgroups.1,
@@ -191,7 +191,7 @@ impl StreamingPipeline {
             });
             for stage in &self.stages {
                 pass.set_pipeline(&stage.pipeline);
-                pass.set_bind_group(0, &stage.bind_group, &[]);
+                pass.set_bind_group(0, Some(&*stage.bind_group), &[]);
                 pass.dispatch_workgroups(
                     stage.workgroups.0,
                     stage.workgroups.1,
@@ -281,7 +281,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("test_pl"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
         let pipeline = device
             .device
@@ -289,7 +289,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
                 label: Some("test_pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });

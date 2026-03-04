@@ -76,7 +76,7 @@ impl StaggeredDirac {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("StaggeredDirac:layout"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let pipeline = device
@@ -85,7 +85,7 @@ impl StaggeredDirac {
                 label: Some("StaggeredDirac:pipeline"),
                 layout: Some(&layout),
                 module: &module,
-                entry_point: "dirac",
+                entry_point: Some("dirac"),
                 compilation_options: Default::default(),
                 cache: None,
             });
@@ -178,7 +178,7 @@ impl StaggeredDirac {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(self.volume.div_ceil(DIRAC_WG), 1, 1);
         }
         self.device.submit_and_poll(Some(enc.finish()));

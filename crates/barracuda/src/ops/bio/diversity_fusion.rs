@@ -17,6 +17,7 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::error::Result;
@@ -99,7 +100,7 @@ impl DiversityFusionGpu {
             .uniform(0, &params_buf)
             .storage_read(1, &abundances_buf)
             .storage_rw(2, &results_buf)
-            .dispatch(params.n_samples.div_ceil(64), 1, 1)
+            .dispatch(params.n_samples.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
             .submit();
 
         let raw = self.device.read_buffer_f64(&results_buf, n_samples * 3)?;

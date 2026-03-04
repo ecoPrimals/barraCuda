@@ -162,7 +162,7 @@ impl MatrixRank {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("MatrixRank Pipeline Layout"),
                     bind_group_layouts: &[&unified_bgl],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let copy_pipeline =
@@ -172,7 +172,7 @@ impl MatrixRank {
                     label: Some("MatrixRank Copy Pipeline"),
                     layout: Some(&unified_pipeline_layout),
                     module: &shader,
-                    entry_point: "copy_matrix",
+                    entry_point: Some("copy_matrix"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -187,7 +187,7 @@ impl MatrixRank {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&copy_pipeline);
-            pass.set_bind_group(0, &unified_bind_group, &[]);
+            pass.set_bind_group(0, Some(&unified_bind_group), &[]);
             // Deep Debt Evolution: Capability-based dispatch
             let caps = DeviceCapabilities::from_device(device);
             let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::MatMul);
@@ -205,7 +205,7 @@ impl MatrixRank {
                     label: Some("MatrixRank Gaussian Pipeline"),
                     layout: Some(&unified_pipeline_layout),
                     module: &shader,
-                    entry_point: "gaussian_elimination",
+                    entry_point: Some("gaussian_elimination"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -216,7 +216,7 @@ impl MatrixRank {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&gaussian_pipeline);
-            pass.set_bind_group(0, &unified_bind_group, &[]);
+            pass.set_bind_group(0, Some(&unified_bind_group), &[]);
             // Deep Debt Evolution: Capability-based dispatch
             // Dispatch one workgroup per pivot row (algorithm-specific pattern)
             // For Gaussian elimination, we dispatch one workgroup per row
@@ -236,7 +236,7 @@ impl MatrixRank {
                     label: Some("MatrixRank Count Pipeline"),
                     layout: Some(&unified_pipeline_layout),
                     module: &shader,
-                    entry_point: "count_rank",
+                    entry_point: Some("count_rank"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -247,7 +247,7 @@ impl MatrixRank {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&count_pipeline);
-            pass.set_bind_group(0, &unified_bind_group, &[]);
+            pass.set_bind_group(0, Some(&unified_bind_group), &[]);
             // Deep Debt Evolution: Capability-based dispatch
             // Count rank scans through rows to count non-zero rows (reduction)
             let caps = DeviceCapabilities::from_device(device);

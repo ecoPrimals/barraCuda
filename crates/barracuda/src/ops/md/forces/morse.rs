@@ -211,7 +211,7 @@ impl MorseForce {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("Morse PL"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline = device
@@ -220,7 +220,7 @@ impl MorseForce {
                 label: Some("Morse Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -271,7 +271,7 @@ impl MorseForce {
             });
 
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
 
             let workgroups = (n_bonds as u32).div_ceil(WORKGROUP_SIZE_1D);
             pass.dispatch_workgroups(workgroups, 1, 1);

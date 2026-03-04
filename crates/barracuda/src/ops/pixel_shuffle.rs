@@ -159,7 +159,7 @@ impl PixelShuffle {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("pixel_shuffle_pipeline_layout"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline = device
@@ -168,7 +168,7 @@ impl PixelShuffle {
                 label: Some("pixel_shuffle_pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -202,7 +202,7 @@ impl PixelShuffle {
                 timestamp_writes: None,
             });
             compute_pass.set_pipeline(&pipeline);
-            compute_pass.set_bind_group(0, &bind_group, &[]);
+            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
 
             // Deep Debt Evolution: Capability-based dispatch
             let caps = DeviceCapabilities::from_device(device);

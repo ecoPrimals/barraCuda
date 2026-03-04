@@ -72,10 +72,10 @@ pub mod hmc_force_su3;
 pub mod omelyan_integrator;
 pub mod plaquette;
 
-// CPU reference implementations — test-only
-#[expect(clippy::unwrap_used, reason = "tests")]
-#[cfg(test)]
+/// LCG PRNG and lattice constants (used at runtime by `HostRng`).
 pub mod constants;
+
+// CPU reference implementations — test-only
 #[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 pub mod cpu_complex;

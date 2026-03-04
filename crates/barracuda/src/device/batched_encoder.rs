@@ -137,7 +137,7 @@ impl<'a> BatchedEncoder<'a> {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some(pass.label),
                     bind_group_layouts: &[&bgl],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
             let pipeline = dev
                 .device
@@ -145,7 +145,7 @@ impl<'a> BatchedEncoder<'a> {
                     label: Some(pass.label),
                     layout: Some(&pl),
                     module: &module,
-                    entry_point: pass.entry_point,
+                    entry_point: Some(pass.entry_point),
                     cache: dev.pipeline_cache(),
                     compilation_options: Default::default(),
                 });
@@ -154,7 +154,7 @@ impl<'a> BatchedEncoder<'a> {
                 timestamp_writes: None,
             });
             cpass.set_pipeline(&pipeline);
-            cpass.set_bind_group(0, &bg, &[]);
+            cpass.set_bind_group(0, Some(&bg), &[]);
             cpass.dispatch_workgroups(pass.workgroups.0, pass.workgroups.1, pass.workgroups.2);
         }
 

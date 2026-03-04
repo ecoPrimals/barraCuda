@@ -144,9 +144,9 @@ pub fn detect_akida_boards() -> Result<AkidaCapabilities> {
 #[derive(Debug, Clone)]
 struct PcieDevice {
     address: String,
-    #[expect(dead_code, reason = "legacy")] // Fields used for future expansion
+    #[expect(dead_code, reason = "populated during PCIe scan, used for diagnostics")]
     vendor_id: u16,
-    #[expect(dead_code, reason = "legacy")] // Fields used for future expansion
+    #[expect(dead_code, reason = "populated during PCIe scan, used for diagnostics")]
     device_id: u16,
 }
 

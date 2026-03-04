@@ -166,7 +166,7 @@ impl<'a> FdPipelineBuilder<'a> {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some(&format!("{}_layout", self.label_prefix)),
                 bind_group_layouts: &[&bind_group_layout],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let pipeline = self
@@ -175,7 +175,7 @@ impl<'a> FdPipelineBuilder<'a> {
                 label: Some(&format!("{}_pipeline", self.label_prefix)),
                 layout: Some(&pipeline_layout),
                 module: &shader_module,
-                entry_point,
+                entry_point: Some(entry_point),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -231,7 +231,7 @@ impl<'a> FdComputeRunner<'a> {
                 timestamp_writes: None,
             });
             pass.set_pipeline(self.pipeline);
-            pass.set_bind_group(0, &self.bind_group, &[]);
+            pass.set_bind_group(0, Some(&self.bind_group), &[]);
             pass.dispatch_workgroups(self.workgroups, 1, 1);
         }
 
@@ -262,7 +262,7 @@ impl<'a> FdComputeRunner<'a> {
                 timestamp_writes: None,
             });
             pass.set_pipeline(self.pipeline);
-            pass.set_bind_group(0, &self.bind_group, &[]);
+            pass.set_bind_group(0, Some(&self.bind_group), &[]);
             pass.dispatch_workgroups(self.workgroups, 1, 1);
         }
 

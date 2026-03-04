@@ -264,7 +264,7 @@ impl CoulombForceF64 {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: None,
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
         let pipeline = dev
             .device
@@ -272,7 +272,7 @@ impl CoulombForceF64 {
                 label: Some("Coulomb f64 Pipeline"),
                 layout: Some(&pl),
                 module: &shader,
-                entry_point,
+                entry_point: Some(entry_point),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -283,7 +283,7 @@ impl CoulombForceF64 {
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups((n as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1);
         }
 
@@ -360,7 +360,7 @@ impl CoulombForceF64 {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: None,
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
         let pipeline = dev
             .device
@@ -368,7 +368,7 @@ impl CoulombForceF64 {
                 label: Some("Coulomb f64 Energy Pipeline"),
                 layout: Some(&pl),
                 module: &shader,
-                entry_point: "coulomb_with_energy_f64",
+                entry_point: Some("coulomb_with_energy_f64"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -379,7 +379,7 @@ impl CoulombForceF64 {
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups((n as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1);
         }
 

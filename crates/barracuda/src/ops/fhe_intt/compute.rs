@@ -129,7 +129,7 @@ impl FheIntt {
             });
 
             compute_pass.set_pipeline(self.pipeline_bit_reverse());
-            compute_pass.set_bind_group(0, &bind_group, &[]);
+            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
 
             let workgroup_size = 256u32;
             let num_workgroups = self.degree().div_ceil(workgroup_size);
@@ -193,7 +193,7 @@ impl FheIntt {
                     });
 
                 compute_pass.set_pipeline(self.pipeline_butterfly());
-                compute_pass.set_bind_group(0, &stage_bind_group, &[]);
+                compute_pass.set_bind_group(0, Some(&stage_bind_group), &[]);
 
                 let num_butterflies = self.degree() / 2;
                 let workgroup_size = 256u32;
@@ -272,7 +272,7 @@ impl FheIntt {
             });
 
             compute_pass.set_pipeline(self.pipeline_scale());
-            compute_pass.set_bind_group(0, &scale_bind_group, &[]);
+            compute_pass.set_bind_group(0, Some(&scale_bind_group), &[]);
 
             let workgroup_size = 256u32;
             let num_workgroups = self.degree().div_ceil(workgroup_size);

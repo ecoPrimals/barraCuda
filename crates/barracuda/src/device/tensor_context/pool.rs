@@ -69,7 +69,7 @@ impl Drop for PooledBuffer {
 /// Inner pool structure (separate to allow Weak references)
 pub(crate) struct BufferPoolInner {
     pub pools: RwLock<HashMap<usize, Vec<wgpu::Buffer>>>,
-    pub device: Arc<wgpu::Device>,
+    pub device: wgpu::Device,
     /// Serializes poll against submit (shared with WgpuDevice::gpu_lock).
     poll_lock: Arc<Mutex<()>>,
     /// Counts live GuardedEncoders — poll skips when > 0.
@@ -180,7 +180,7 @@ pub struct BufferPool {
 
 impl BufferPool {
     pub fn new(
-        device: Arc<wgpu::Device>,
+        device: wgpu::Device,
         poll_lock: Arc<Mutex<()>>,
         active_encoders: Arc<AtomicU32>,
     ) -> Self {
@@ -199,7 +199,7 @@ impl BufferPool {
     }
 
     /// Create a pool with its own independent locks (for tests/standalone use).
-    pub fn new_standalone(device: Arc<wgpu::Device>) -> Self {
+    pub fn new_standalone(device: wgpu::Device) -> Self {
         Self::new(
             device,
             Arc::new(Mutex::new(())),
@@ -240,7 +240,7 @@ impl BufferPool {
             Err(std::sync::TryLockError::Poisoned(e)) => e.into_inner(),
         };
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            self.inner.device.poll(wgpu::MaintainBase::Poll);
+            let _ = self.inner.device.poll(wgpu::PollType::Poll);
         }));
 
         let drained: Vec<(wgpu::Buffer, usize)> = {

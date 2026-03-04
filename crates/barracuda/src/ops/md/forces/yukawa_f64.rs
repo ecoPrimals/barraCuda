@@ -12,6 +12,7 @@
 //! - ✅ Zero unsafe code
 //! - ✅ f64 precision
 
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::error::{BarracudaError, Result};
@@ -146,7 +147,7 @@ impl YukawaForceF64 {
             }
         };
 
-        let workgroups = (n as u32).div_ceil(64);
+        let workgroups = (n as u32).div_ceil(WORKGROUP_SIZE_COMPACT);
         ComputeDispatch::new(device, "Yukawa F64")
             .shader(&shader_src, "main")
             .f64()

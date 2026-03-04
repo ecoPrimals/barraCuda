@@ -18,6 +18,8 @@
 use crate::error::{BarracudaError, Result};
 
 #[cfg(feature = "gpu")]
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
+#[cfg(feature = "gpu")]
 use crate::device::compute_pipeline::ComputeDispatch;
 
 /// Bootstrap confidence interval result.
@@ -419,7 +421,7 @@ impl BootstrapMeanGpu {
             .create_buffer_f64_init("bootstrap_mean:data", data);
         let out_buf = self.device.create_buffer_f64(n_bootstrap as usize)?;
 
-        let wg_count = n_bootstrap.div_ceil(256);
+        let wg_count = n_bootstrap.div_ceil(WORKGROUP_SIZE_1D);
         ComputeDispatch::new(&self.device, "bootstrap_mean")
             .shader(super::WGSL_BOOTSTRAP_MEAN_F64, "main")
             .f64()

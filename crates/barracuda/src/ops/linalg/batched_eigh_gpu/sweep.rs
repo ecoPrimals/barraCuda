@@ -20,7 +20,7 @@ pub(crate) fn run_sweep_pass(
             timestamp_writes: None,
         });
         pass.set_pipeline(pipeline);
-        pass.set_bind_group(0, sweep_bg, &[]);
+        pass.set_bind_group(0, Some(sweep_bg), &[]);
         pass.dispatch_workgroups(dispatch.0, dispatch.1, dispatch.2);
     }
     device.submit_and_poll(Some(encoder.finish()));

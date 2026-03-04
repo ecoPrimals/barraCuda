@@ -13,6 +13,7 @@
 use std::sync::Arc;
 
 use super::{MhaParams, MultiHeadAttention};
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use crate::tensor::Tensor;
@@ -143,7 +144,7 @@ impl MultiHeadAttention {
         });
 
         let pipeline = Self::make_pipeline(device, &shader, &bgl, "head_split");
-        let workgroups = (total as u32).div_ceil(256);
+        let workgroups = (total as u32).div_ceil(WORKGROUP_SIZE_1D);
 
         let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
             label: Some("head_split"),
@@ -154,7 +155,7 @@ impl MultiHeadAttention {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
         device.submit_and_poll(Some(encoder.finish()));
@@ -228,7 +229,7 @@ impl MultiHeadAttention {
         });
 
         let pipeline = Self::make_pipeline(device, &shader, &bgl, "head_concat");
-        let workgroups = (total as u32).div_ceil(256);
+        let workgroups = (total as u32).div_ceil(WORKGROUP_SIZE_1D);
 
         let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
             label: Some("head_concat"),
@@ -239,7 +240,7 @@ impl MultiHeadAttention {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
         device.submit_and_poll(Some(encoder.finish()));
@@ -288,7 +289,7 @@ impl MultiHeadAttention {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some(label),
                 bind_group_layouts: &[bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
         device
             .device
@@ -296,7 +297,7 @@ impl MultiHeadAttention {
                 label: Some(label),
                 layout: Some(&layout),
                 module: shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             })

@@ -76,37 +76,33 @@ impl IpcServer {
         Ok(())
     }
 
-    /// Start listening on TCP (JSON-RPC 2.0). Returns the bound address.
+    /// Start listening on TCP (JSON-RPC 2.0) with graceful shutdown on
+    /// SIGINT/SIGTERM per wateringHole `UNIBIN_ARCHITECTURE_STANDARD.md`.
     pub async fn serve_tcp(&self, addr: &str) -> Result<()> {
         let listener = TcpListener::bind(addr).await?;
         let local_addr = listener.local_addr()?;
         tracing::info!("barraCuda IPC listening on tcp://{local_addr}");
 
         loop {
-            let (stream, peer) = listener.accept().await?;
-            tracing::debug!("IPC connection from {peer}");
-            let primal = Arc::clone(&self.primal);
-
-            tokio::spawn(async move {
-                let (reader, mut writer) = stream.into_split();
-                let mut lines = BufReader::new(reader).lines();
-
-                while let Ok(Some(line)) = lines.next_line().await {
-                    let response = handle_line(&primal, &line).await;
-                    let mut json = serde_json::to_string(&response).unwrap_or_else(|_| {
-                        r#"{"jsonrpc":"2.0","error":{"code":-32603,"message":"Serialization error"},"id":null}"#.to_string()
+            tokio::select! {
+                result = listener.accept() => {
+                    let (stream, peer) = result?;
+                    tracing::debug!("IPC connection from {peer}");
+                    let primal = Arc::clone(&self.primal);
+                    tokio::spawn(async move {
+                        handle_stream(primal, stream).await;
                     });
-                    json.push('\n');
-
-                    if writer.write_all(json.as_bytes()).await.is_err() {
-                        break;
-                    }
                 }
-            });
+                () = shutdown_signal() => {
+                    tracing::info!("Shutdown signal received, stopping TCP server");
+                    break;
+                }
+            }
         }
+        Ok(())
     }
 
-    /// Start listening on a Unix domain socket.
+    /// Start listening on a Unix domain socket with graceful shutdown.
     #[cfg(unix)]
     pub async fn serve_unix(&self, path: &std::path::Path) -> Result<()> {
         if path.exists() {
@@ -120,26 +116,86 @@ impl IpcServer {
         tracing::info!("barraCuda IPC listening on unix://{}", path.display());
 
         loop {
-            let (stream, _) = listener.accept().await?;
-            let primal = Arc::clone(&self.primal);
-
-            tokio::spawn(async move {
-                let (reader, mut writer) = stream.into_split();
-                let mut lines = BufReader::new(reader).lines();
-
-                while let Ok(Some(line)) = lines.next_line().await {
-                    let response = handle_line(&primal, &line).await;
-                    let mut json = serde_json::to_string(&response).unwrap_or_else(|_| {
-                        r#"{"jsonrpc":"2.0","error":{"code":-32603,"message":"Serialization error"},"id":null}"#.to_string()
+            tokio::select! {
+                result = listener.accept() => {
+                    let (stream, _) = result?;
+                    let primal = Arc::clone(&self.primal);
+                    tokio::spawn(async move {
+                        let (reader, mut writer) = stream.into_split();
+                        let mut lines = BufReader::new(reader).lines();
+                        while let Ok(Some(line)) = lines.next_line().await {
+                            let response = handle_line(&primal, &line).await;
+                            let mut json = serde_json::to_string(&response).unwrap_or_else(|_| {
+                                SERIALIZATION_ERROR.to_string()
+                            });
+                            json.push('\n');
+                            if writer.write_all(json.as_bytes()).await.is_err() {
+                                break;
+                            }
+                        }
                     });
-                    json.push('\n');
-
-                    if writer.write_all(json.as_bytes()).await.is_err() {
-                        break;
-                    }
                 }
-            });
+                () = shutdown_signal() => {
+                    tracing::info!("Shutdown signal received, stopping Unix server");
+                    break;
+                }
+            }
         }
+
+        if path.exists() {
+            std::fs::remove_file(path).ok();
+        }
+        Ok(())
+    }
+
+    /// Resolve the default IPC socket path per wateringHole standards.
+    ///
+    /// Prefers `$XDG_RUNTIME_DIR/barracuda/barracuda.sock`, falls back to
+    /// `$TMPDIR/barracuda/barracuda.sock` via `std::env::temp_dir()`.
+    #[cfg(unix)]
+    pub fn default_socket_path() -> std::path::PathBuf {
+        let base = std::env::var("XDG_RUNTIME_DIR")
+            .map_or_else(|_| std::env::temp_dir(), std::path::PathBuf::from);
+        base.join("barracuda").join("barracuda.sock")
+    }
+}
+
+const SERIALIZATION_ERROR: &str =
+    r#"{"jsonrpc":"2.0","error":{"code":-32603,"message":"Serialization error"},"id":null}"#;
+
+/// Handle a single TCP connection (newline-delimited JSON-RPC).
+async fn handle_stream(primal: Arc<BarraCudaPrimal>, stream: tokio::net::TcpStream) {
+    let (reader, mut writer) = stream.into_split();
+    let mut lines = BufReader::new(reader).lines();
+
+    while let Ok(Some(line)) = lines.next_line().await {
+        let response = handle_line(&primal, &line).await;
+        let mut json =
+            serde_json::to_string(&response).unwrap_or_else(|_| SERIALIZATION_ERROR.to_string());
+        json.push('\n');
+        if writer.write_all(json.as_bytes()).await.is_err() {
+            break;
+        }
+    }
+}
+
+/// Wait for SIGINT (Ctrl-C) or SIGTERM for graceful shutdown.
+async fn shutdown_signal() {
+    let ctrl_c = tokio::signal::ctrl_c();
+
+    #[cfg(unix)]
+    {
+        let mut sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to register SIGTERM handler");
+        tokio::select! {
+            _ = ctrl_c => {}
+            _ = sigterm.recv() => {}
+        }
+    }
+
+    #[cfg(not(unix))]
+    {
+        ctrl_c.await.ok();
     }
 }
 

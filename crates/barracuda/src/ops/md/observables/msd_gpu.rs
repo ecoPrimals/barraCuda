@@ -50,7 +50,7 @@ impl MsdGpu {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("MSD:layout"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let pipeline = device
@@ -59,7 +59,7 @@ impl MsdGpu {
                 label: Some("MSD:pipeline"),
                 layout: Some(&layout),
                 module: &module,
-                entry_point: "main",
+                entry_point: Some("main"),
                 compilation_options: Default::default(),
                 cache: None,
             });
@@ -155,7 +155,7 @@ impl MsdGpu {
             {
                 let mut pass = enc.begin_compute_pass(&Default::default());
                 pass.set_pipeline(&self.pipeline);
-                pass.set_bind_group(0, &bg, &[]);
+                pass.set_bind_group(0, Some(&bg), &[]);
                 pass.dispatch_workgroups((total as u32).div_ceil(WG), 1, 1);
             }
             enc.copy_buffer_to_buffer(&out_buf, 0, &rb, 0, out_size.max(8));

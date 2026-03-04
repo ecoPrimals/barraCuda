@@ -2,6 +2,8 @@
 //! GPU-accelerated histogram via atomic binning.
 
 #[cfg(feature = "gpu")]
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
+#[cfg(feature = "gpu")]
 use crate::device::compute_pipeline::ComputeDispatch;
 #[cfg(feature = "gpu")]
 use crate::device::WgpuDevice;
@@ -105,7 +107,7 @@ impl HistogramGpu {
             .device
             .create_buffer_f64_init("histogram:values", values);
 
-        let wg_count = n_values.div_ceil(256);
+        let wg_count = n_values.div_ceil(WORKGROUP_SIZE_1D);
         ComputeDispatch::new(&self.device, "histogram")
             .shader(super::WGSL_HISTOGRAM_F64, "histogram")
             .f64()
@@ -144,7 +146,7 @@ impl HistogramGpu {
             .device
             .create_buffer_f32_init("histogram:values", &values_f32);
 
-        let wg_count = n_values.div_ceil(256);
+        let wg_count = n_values.div_ceil(WORKGROUP_SIZE_1D);
         ComputeDispatch::new(&self.device, "histogram_f32")
             .shader(super::WGSL_HISTOGRAM_F32.as_str(), "histogram")
             .storage_read(0, &values_buf)

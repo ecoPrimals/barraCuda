@@ -3,6 +3,7 @@
 
 use std::sync::Arc;
 
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::error::{BarracudaError, Result};
 use crate::linalg::sparse::SparseBuffers;
 use crate::ops::fft::Fft3DF64;
@@ -137,7 +138,7 @@ pub async fn compute_with_kspace_gpu(
             },
         ],
     });
-    let particle_workgroups = (n as u32).div_ceil(64);
+    let particle_workgroups = (n as u32).div_ceil(WORKGROUP_SIZE_COMPACT);
 
     let mut encoder = wgpu_device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
         label: Some("PPPM Phase 1 GPU"),
@@ -148,7 +149,7 @@ pub async fn compute_with_kspace_gpu(
             timestamp_writes: None,
         });
         pass.set_pipeline(&pipelines.bspline);
-        pass.set_bind_group(0, &bspline_bind_group, &[]);
+        pass.set_bind_group(0, Some(&bspline_bind_group), &[]);
         pass.dispatch_workgroups(particle_workgroups, 1, 1);
     }
     {
@@ -157,7 +158,7 @@ pub async fn compute_with_kspace_gpu(
             timestamp_writes: None,
         });
         pass.set_pipeline(&pipelines.charge_spread);
-        pass.set_bind_group(0, &charge_spread_bind_group, &[]);
+        pass.set_bind_group(0, Some(&charge_spread_bind_group), &[]);
         pass.dispatch_workgroups(particle_workgroups, 1, 1);
     }
     queue.submit(Some(encoder.finish()));
@@ -307,7 +308,7 @@ pub async fn compute_with_kspace_gpu(
             timestamp_writes: None,
         });
         pass.set_pipeline(&pipelines.force_interp);
-        pass.set_bind_group(0, &force_interp_bind_group, &[]);
+        pass.set_bind_group(0, Some(&force_interp_bind_group), &[]);
         pass.dispatch_workgroups(particle_workgroups, 1, 1);
     }
     {
@@ -316,7 +317,7 @@ pub async fn compute_with_kspace_gpu(
             timestamp_writes: None,
         });
         pass.set_pipeline(&pipelines.erfc_forces);
-        pass.set_bind_group(0, &erfc_bind_group, &[]);
+        pass.set_bind_group(0, Some(&erfc_bind_group), &[]);
         pass.dispatch_workgroups(particle_workgroups, 1, 1);
     }
     {
@@ -325,7 +326,7 @@ pub async fn compute_with_kspace_gpu(
             timestamp_writes: None,
         });
         pass.set_pipeline(&pipelines.self_energy);
-        pass.set_bind_group(0, &erfc_bind_group, &[]);
+        pass.set_bind_group(0, Some(&erfc_bind_group), &[]);
         pass.dispatch_workgroups(particle_workgroups, 1, 1);
     }
     queue.submit(Some(encoder.finish()));

@@ -16,6 +16,8 @@ pub async fn dispatch(
     id: Value,
 ) -> JsonRpcResponse {
     match method {
+        "barracuda.primal.info" => primal_info(primal, id),
+        "barracuda.primal.capabilities" => primal_capabilities(primal, id),
         "barracuda.device.list" => device_list(primal, id).await,
         "barracuda.device.probe" => device_probe(primal, id).await,
         "barracuda.health.check" => health_check(primal, id).await,
@@ -28,6 +30,66 @@ pub async fn dispatch(
         "barracuda.fhe.pointwise_mul" => fhe_pointwise_mul(primal, params, id).await,
         _ => JsonRpcResponse::error(id, METHOD_NOT_FOUND, format!("Unknown method: {method}")),
     }
+}
+
+/// `barracuda.primal.info` — Primal identity for runtime discovery.
+///
+/// Other primals call this method (not hardcoded names) to identify barraCuda.
+fn primal_info(_primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({
+            "primal": "barraCuda",
+            "version": env!("CARGO_PKG_VERSION"),
+            "protocol": "json-rpc-2.0",
+            "namespace": "barracuda",
+            "license": "AGPL-3.0-or-later",
+        }),
+    )
+}
+
+/// `barracuda.primal.capabilities` — Advertise capabilities for discovery.
+///
+/// Returns the set of capabilities this primal provides at runtime. Other
+/// primals use this to discover what barraCuda can do (capability-based
+/// routing) rather than relying on hardcoded primal names.
+fn primal_capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
+    let has_gpu = primal.device().is_some();
+    let has_f64 = primal.device().is_some_and(|d| d.has_f64_shaders());
+    let has_spirv = primal.device().is_some_and(|d| d.has_spirv_passthrough());
+
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({
+            "domains": [
+                "gpu_compute",
+                "tensor_ops",
+                "fhe",
+                "molecular_dynamics",
+                "lattice_qcd",
+                "statistics",
+                "hydrology",
+                "bio",
+            ],
+            "methods": [
+                "barracuda.device.list",
+                "barracuda.device.probe",
+                "barracuda.health.check",
+                "barracuda.tolerances.get",
+                "barracuda.validate.gpu_stack",
+                "barracuda.compute.dispatch",
+                "barracuda.tensor.create",
+                "barracuda.tensor.matmul",
+                "barracuda.fhe.ntt",
+                "barracuda.fhe.pointwise_mul",
+            ],
+            "hardware": {
+                "gpu_available": has_gpu,
+                "f64_shaders": has_f64,
+                "spirv_passthrough": has_spirv,
+            },
+        }),
+    )
 }
 
 /// `barracuda.device.list` — Enumerate available compute devices.

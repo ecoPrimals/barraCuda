@@ -27,6 +27,7 @@
 //! - Numerical Recipes, 3rd Edition, Chapter 6.2
 //! - NIST/SEMATECH e-Handbook of Statistical Methods
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use crate::special::gamma::{ln_gamma, regularized_gamma_p, regularized_gamma_q};
 
@@ -363,7 +364,7 @@ impl ChiSquaredBatchGpu {
         let params = Chi2GpuParams { size: n as u32, df };
         let params_buf = self.device.create_uniform_buffer("chi2:params", &params);
 
-        let wg = (n as u32).div_ceil(256);
+        let wg = (n as u32).div_ceil(WORKGROUP_SIZE_1D);
         ComputeDispatch::new(&self.device, "chi_squared_f64")
             .shader(WGSL_CHI_SQUARED_F64, "main")
             .f64()

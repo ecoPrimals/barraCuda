@@ -149,7 +149,7 @@ impl MatrixPower {
                     .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                         label: Some("MatrixPower Identity Pipeline Layout"),
                         bind_group_layouts: &[&bind_group_layout],
-                        push_constant_ranges: &[],
+                        immediate_size: 0,
                     });
 
             // Create pipeline
@@ -160,7 +160,7 @@ impl MatrixPower {
                         label: Some("MatrixPower Identity Pipeline"),
                         layout: Some(&pipeline_layout),
                         module: &shader_module,
-                        entry_point: "init_identity",
+                        entry_point: Some("init_identity"),
                         cache: None,
                         compilation_options: Default::default(),
                     });
@@ -177,7 +177,7 @@ impl MatrixPower {
                 });
 
                 pass.set_pipeline(&pipeline);
-                pass.set_bind_group(0, &bind_group, &[]);
+                pass.set_bind_group(0, Some(&bind_group), &[]);
 
                 // Dispatch using standard 2D shader workgroup size (16, 16)
                 let caps = DeviceCapabilities::from_device(device);

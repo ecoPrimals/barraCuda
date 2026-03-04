@@ -2,8 +2,9 @@
 //! Nautilus Shell — evolutionary reservoir computing via board ensembles.
 //!
 //! Provenance: ecoPrimals/primalTools/bingoCube → toadStool → barraCuda.
-//! barraCuda maintains standalone nautilus capabilities. Other primals (bearDog,
-//! songBird) may still use bingoCube directly for inter-primal handshakes.
+//! barraCuda maintains standalone nautilus capabilities. Other primals
+//! discover each other at runtime via capability-based registration;
+//! no primal names are hardcoded here.
 
 pub mod board;
 pub mod brain;

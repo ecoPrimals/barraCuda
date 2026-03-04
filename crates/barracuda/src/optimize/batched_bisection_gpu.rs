@@ -29,6 +29,7 @@
 //! // roots ≈ [1.414, 1.732, 2.236]
 //! ```
 
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
@@ -352,7 +353,7 @@ impl BatchedBisectionGpu {
             .device
             .create_uniform_buffer("BatchedBisection config", &config);
 
-        let n_workgroups = batch_size.div_ceil(64);
+        let n_workgroups = batch_size.div_ceil(WORKGROUP_SIZE_COMPACT as usize);
         ComputeDispatch::new(self.device.as_ref(), entry_point)
             .shader(Self::wgsl_shader(), entry_point)
             .f64()

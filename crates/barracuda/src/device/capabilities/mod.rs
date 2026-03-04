@@ -31,6 +31,7 @@ pub use device_info::{Capability, DeviceInfo};
 pub use wgpu_caps::{
     optimal_workgroup_size_arch, workgroup_size_2d_for_arch, workgroup_size_for_arch,
     DeviceCapabilities, WorkloadType, FHE_MIN_BUFFER_SIZE, WORKGROUP_SIZE_1D, WORKGROUP_SIZE_2D,
+    WORKGROUP_SIZE_COMPACT,
 };
 
 #[expect(clippy::unwrap_used, reason = "tests")]

@@ -137,7 +137,7 @@ impl FheNtt {
             });
 
             compute_pass.set_pipeline(self.pipeline_bit_reverse());
-            compute_pass.set_bind_group(0, &bind_group, &[]);
+            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
 
             // Dispatch: one thread per coefficient
             let workgroup_size = 256u32;
@@ -207,7 +207,7 @@ impl FheNtt {
                     });
 
                 compute_pass.set_pipeline(self.pipeline_butterfly());
-                compute_pass.set_bind_group(0, &stage_bind_group, &[]);
+                compute_pass.set_bind_group(0, Some(&stage_bind_group), &[]);
 
                 // Dispatch: one thread per butterfly (N/2 butterflies per stage)
                 let num_butterflies = self.degree() / 2;

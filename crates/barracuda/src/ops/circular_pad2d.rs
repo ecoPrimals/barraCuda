@@ -176,7 +176,7 @@ impl CircularPad2d {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("CircularPad2d Pipeline Layout"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline = device
@@ -185,7 +185,7 @@ impl CircularPad2d {
                 label: Some("CircularPad2d Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -202,7 +202,7 @@ impl CircularPad2d {
             });
 
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
 
             // Dispatch workgroups (8x8x1 workgroup size)
             let workgroups_x = (out_width as u32).div_ceil(8);

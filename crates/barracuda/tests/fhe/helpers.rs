@@ -28,7 +28,7 @@ pub const KNOWN_ROOTS: &[(u32, u64, u64)] = &[
 ];
 
 /// Compute modular inverse: a^(-1) mod m
-#[expect(dead_code, reason = "legacy")]
+#[expect(dead_code, reason = "test utility for FHE INTT validation")]
 pub fn mod_inverse(a: u64, m: u64) -> u64 {
     // Extended Euclidean algorithm
     let (mut old_r, mut r) = (a as i128, m as i128);
@@ -127,7 +127,10 @@ pub fn u32_pairs_to_poly(pairs: &[u32]) -> Vec<u64> {
 }
 
 /// FHE-friendly primes for testing
-#[expect(dead_code, reason = "legacy")]
+#[expect(
+    dead_code,
+    reason = "shared test constants for parameterized FHE tests"
+)]
 pub const TEST_PRIMES: &[u64] = &[
     17,    // Tiny (for fast tests)
     97,    // Small
@@ -136,5 +139,8 @@ pub const TEST_PRIMES: &[u64] = &[
 ];
 
 /// Common test degrees (powers of 2)
-#[expect(dead_code, reason = "legacy")]
+#[expect(
+    dead_code,
+    reason = "shared test constants for parameterized FHE tests"
+)]
 pub const TEST_DEGREES: &[usize] = &[4, 8, 16, 32, 64, 128, 256, 512, 1024];

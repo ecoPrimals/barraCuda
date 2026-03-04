@@ -175,7 +175,7 @@ impl FhePolyAdd {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("FHE Poly Add Pipeline Layout"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         // Create compute pipeline
@@ -185,7 +185,7 @@ impl FhePolyAdd {
                 label: Some("FHE Poly Add Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "fhe_poly_add",
+                entry_point: Some("fhe_poly_add"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -289,7 +289,7 @@ impl FhePolyAdd {
                 timestamp_writes: None,
             });
             cpass.set_pipeline(&self.pipeline);
-            cpass.set_bind_group(0, &bind_group, &[]);
+            cpass.set_bind_group(0, Some(&bind_group), &[]);
 
             // Deep Debt Evolution: Capability-based dispatch
             let caps = DeviceCapabilities::from_device(device);
@@ -328,10 +328,8 @@ pub async fn create_fhe_poly_tensor(
 #[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
-    #[expect(unused_imports, reason = "conditional imports")]
     use super::*;
 
-    #[expect(unused_imports, reason = "conditional imports")]
     #[tokio::test]
     async fn test_fhe_poly_add_basic() {
         let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await

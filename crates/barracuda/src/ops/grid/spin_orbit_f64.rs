@@ -28,6 +28,7 @@
 //! let h_so = so.compute_with_density(&wf_squared, &density, &r_grid, &ls_factors, dr, w0)?;
 //! ```
 
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
@@ -327,7 +328,7 @@ impl SpinOrbitGpu {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("SpinOrbit PL"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let pipeline =
@@ -337,7 +338,7 @@ impl SpinOrbitGpu {
                     label: Some("SpinOrbit Pipeline"),
                     layout: Some(&pl),
                     module: &shader,
-                    entry_point,
+                    entry_point: Some(entry_point),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -459,7 +460,7 @@ impl SpinOrbitGpu {
 
         // Execute
         let n_threads = batch_size * n_states;
-        let n_workgroups = n_threads.div_ceil(64);
+        let n_workgroups = n_threads.div_ceil(WORKGROUP_SIZE_COMPACT as usize);
         {
             let mut encoder = self
                 .device
@@ -472,7 +473,7 @@ impl SpinOrbitGpu {
                     timestamp_writes: None,
                 });
                 pass.set_pipeline(&pipeline);
-                pass.set_bind_group(0, &bg, &[]);
+                pass.set_bind_group(0, Some(&bg), &[]);
                 pass.dispatch_workgroups(n_workgroups as u32, 1, 1);
             }
             self.device.submit_and_poll(Some(encoder.finish()));

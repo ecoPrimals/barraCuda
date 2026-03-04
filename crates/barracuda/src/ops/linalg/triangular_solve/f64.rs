@@ -152,7 +152,7 @@ impl TriangularSolveF64 {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("TriangularSolve F64 PL"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline = device
@@ -161,7 +161,7 @@ impl TriangularSolveF64 {
                 label: Some("TriangularSolve F64 Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "triangular_solve_f64",
+                entry_point: Some("triangular_solve_f64"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -177,7 +177,7 @@ impl TriangularSolveF64 {
             });
 
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups(1, 1, 1);
         }
 
@@ -335,7 +335,7 @@ impl TriangularSolveF64 {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("TriangularSolve Transpose F64 PL"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline = device
@@ -344,7 +344,7 @@ impl TriangularSolveF64 {
                 label: Some("TriangularSolve Transpose F64 Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "triangular_solve_transpose_f64",
+                entry_point: Some("triangular_solve_transpose_f64"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -360,7 +360,7 @@ impl TriangularSolveF64 {
             });
 
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups(1, 1, 1);
         }
 

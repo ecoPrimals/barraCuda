@@ -283,7 +283,7 @@ impl GcnConv {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("GCNConv Pipeline Layout"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         // Create encoder
@@ -299,7 +299,7 @@ impl GcnConv {
                     label: Some("GCNConv Transform Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
-                    entry_point: "transform_features",
+                    entry_point: Some("transform_features"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -310,7 +310,7 @@ impl GcnConv {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&transform_pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             // Deep Debt Evolution: Capability-based dispatch
             let caps = DeviceCapabilities::from_device(device);
             let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::MatMul);
@@ -326,7 +326,7 @@ impl GcnConv {
                     label: Some("GCNConv Aggregate Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
-                    entry_point: "aggregate",
+                    entry_point: Some("aggregate"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -337,7 +337,7 @@ impl GcnConv {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&aggregate_pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             // Deep Debt Evolution: Capability-based dispatch
             let caps = DeviceCapabilities::from_device(device);
             let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::MatMul);
@@ -354,7 +354,7 @@ impl GcnConv {
                         label: Some("GCNConv Self Loops Pipeline"),
                         layout: Some(&pipeline_layout),
                         module: &shader_module,
-                        entry_point: "add_self_loops",
+                        entry_point: Some("add_self_loops"),
                         cache: None,
                         compilation_options: Default::default(),
                     });
@@ -365,7 +365,7 @@ impl GcnConv {
                     timestamp_writes: None,
                 });
                 pass.set_pipeline(&self_loops_pipeline);
-                pass.set_bind_group(0, &bind_group, &[]);
+                pass.set_bind_group(0, Some(&bind_group), &[]);
                 // Deep Debt Evolution: Capability-based dispatch
                 let caps = DeviceCapabilities::from_device(device);
                 let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::MatMul);

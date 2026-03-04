@@ -23,6 +23,7 @@
 //! Building blocks (`PrngXoshiro`, `SumReduceF64`) already present;
 //! this shader composes them into a complete single-kernel SSA.
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::error::Result;
@@ -218,7 +219,7 @@ impl GillespieGpu {
             });
 
         // ── Dispatch (f64-aware: exp/log patching + ILP optimizer) ─────────────
-        let wg = (n_t as u32).div_ceil(256);
+        let wg = (n_t as u32).div_ceil(WORKGROUP_SIZE_1D);
         ComputeDispatch::new(dev, "gillespie_ssa")
             .shader(
                 include_str!("../../shaders/bio/gillespie_ssa_f64.wgsl"),

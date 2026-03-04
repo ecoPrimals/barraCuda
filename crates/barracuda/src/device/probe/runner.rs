@@ -13,17 +13,17 @@ use crate::device::WgpuDevice;
 pub(super) async fn run_single_probe(wgpu_device: &WgpuDevice, probe: &ProbeShader) -> bool {
     let device = wgpu_device.device();
     // Phase 1: shader compilation
-    device.push_error_scope(wgpu::ErrorFilter::Validation);
+    let scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some(probe.name),
         source: wgpu::ShaderSource::Wgsl(probe.wgsl.into()),
     });
-    if device.pop_error_scope().await.is_some() {
+    if scope.pop().await.is_some() {
         return false;
     }
 
     // Phase 2: pipeline and buffers
-    device.push_error_scope(wgpu::ErrorFilter::Validation);
+    let scope2 = device.push_error_scope(wgpu::ErrorFilter::Validation);
 
     let out_buf = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("probe_out"),
@@ -53,13 +53,13 @@ pub(super) async fn run_single_probe(wgpu_device: &WgpuDevice, probe: &ProbeShad
     let pl = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: None,
         bind_group_layouts: &[&bgl],
-        push_constant_ranges: &[],
+        immediate_size: 0,
     });
     let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
         label: Some(probe.name),
         layout: Some(&pl),
         module: &shader,
-        entry_point: "probe",
+        entry_point: Some("probe"),
         cache: None,
         compilation_options: Default::default(),
     });
@@ -72,12 +72,12 @@ pub(super) async fn run_single_probe(wgpu_device: &WgpuDevice, probe: &ProbeShad
         }],
     });
 
-    if device.pop_error_scope().await.is_some() {
+    if scope2.pop().await.is_some() {
         return false;
     }
 
     // Phase 3: dispatch
-    device.push_error_scope(wgpu::ErrorFilter::OutOfMemory);
+    let scope3 = device.push_error_scope(wgpu::ErrorFilter::OutOfMemory);
     let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
     {
         let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -85,13 +85,13 @@ pub(super) async fn run_single_probe(wgpu_device: &WgpuDevice, probe: &ProbeShad
             timestamp_writes: None,
         });
         pass.set_pipeline(&pipeline);
-        pass.set_bind_group(0, &bg, &[]);
+        pass.set_bind_group(0, Some(&bg), &[]);
         pass.dispatch_workgroups(1, 1, 1);
     }
     enc.copy_buffer_to_buffer(&out_buf, 0, &staging, 0, 8);
     wgpu_device.submit_and_poll_inner(Some(enc.finish()));
 
-    if device.pop_error_scope().await.is_some() {
+    if scope3.pop().await.is_some() {
         return false;
     }
 

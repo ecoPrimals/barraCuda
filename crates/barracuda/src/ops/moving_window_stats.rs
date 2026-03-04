@@ -7,6 +7,7 @@
 //!
 //! Provenance: airSpring precision agriculture / wetSpring monitoring
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
@@ -176,14 +177,14 @@ impl MovingWindowStats {
         let pipeline_layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("mw_pl"),
             bind_group_layouts: &[&bgl],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
 
         let pipeline = d.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("moving_window_stats"),
             layout: Some(&pipeline_layout),
             module: &module,
-            entry_point: "moving_window_stats",
+            entry_point: Some("moving_window_stats"),
             compilation_options: Default::default(),
             cache: None,
         });
@@ -219,7 +220,7 @@ impl MovingWindowStats {
             ],
         });
 
-        let workgroups = n_out.div_ceil(256);
+        let workgroups = n_out.div_ceil(WORKGROUP_SIZE_1D);
 
         let mut encoder = self
             .device
@@ -232,7 +233,7 @@ impl MovingWindowStats {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
 

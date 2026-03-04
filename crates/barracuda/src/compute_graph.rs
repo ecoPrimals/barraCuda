@@ -72,7 +72,7 @@ pub enum RecordedOp {
 pub struct ComputeGraph {
     wgpu_device: Arc<WgpuDevice>,
     device: crate::device::wgpu_device::GuardedDeviceHandle,
-    queue: Arc<wgpu::Queue>,
+    queue: wgpu::Queue,
     device_name: String,
     ops: Vec<RecordedOp>,
     optimal_workgroup_size: u32,
@@ -388,7 +388,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: None,
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let pipeline = self
@@ -397,7 +397,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
                 label: None,
                 layout: Some(&pipeline_layout),
                 module: shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -409,7 +409,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
     }
@@ -456,7 +456,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: None,
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let pipeline = self
@@ -465,7 +465,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
                 label: None,
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -473,7 +473,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups(workgroups.0, workgroups.1, workgroups.2);
         }
     }

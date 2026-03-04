@@ -89,7 +89,7 @@ pub(super) async fn execute_dispatch(
     inputs: Vec<Arc<dyn TensorStorage>>,
     executor: &GpuExecutor,
 ) -> Result<Arc<dyn TensorStorage>> {
-    let device = executor.device_arc();
+    let device = executor.wgpu_device_arc();
 
     let output_tensor: crate::tensor::Tensor = match op {
         // ── Unary ops ───────────────────────────────────────────────────
@@ -181,7 +181,7 @@ pub(super) async fn execute_dispatch(
             crate::tensor::Tensor::from_data(
                 &result,
                 inputs[0].descriptor().shape.clone(),
-                executor.device_arc().clone(),
+                executor.wgpu_device_arc().clone(),
             )?
         }
 

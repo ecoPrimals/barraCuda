@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::WgpuDevice;
 
 pub const WGSL_RK45_ADAPTIVE: &str = include_str!("../shaders/numerical/rk45_adaptive.wgsl");
@@ -61,7 +62,7 @@ impl Rk45AdaptiveGpu {
         let layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("RK45 Layout"),
             bind_group_layouts: &[&bgl],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
 
         let module = device.compile_shader_f64(WGSL_RK45_ADAPTIVE_F64, Some("RK45 f64"));
@@ -70,7 +71,7 @@ impl Rk45AdaptiveGpu {
             label: Some("RK45 Pipeline"),
             layout: Some(&layout),
             module: &module,
-            entry_point: "rk45_step",
+            entry_point: Some("rk45_step"),
             compilation_options: Default::default(),
             cache: None,
         });
@@ -161,8 +162,8 @@ impl Rk45AdaptiveGpu {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bg, &[]);
-            pass.dispatch_workgroups(n_systems.div_ceil(64), 1, 1);
+            pass.set_bind_group(0, Some(&bg), &[]);
+            pass.dispatch_workgroups(n_systems.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
         }
         q.submit(std::iter::once(encoder.finish()));
     }

@@ -163,7 +163,7 @@ pub struct GpuResidentCgConfig {
 impl Default for GpuResidentCgConfig {
     fn default() -> Self {
         Self {
-            max_iterations: 5000,
+            max_iterations: super::constants::CG_MAX_ITER_DEFAULT,
             tolerance: 1e-12,
             vector_length: 0,
         }

@@ -77,7 +77,7 @@ impl VacfBatchGpu {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("VacfBatch Layout"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let pipeline = device
@@ -86,7 +86,7 @@ impl VacfBatchGpu {
                 label: Some("VacfBatch Pipeline"),
                 layout: Some(&layout),
                 module: &module,
-                entry_point: "main",
+                entry_point: Some("main"),
                 compilation_options: Default::default(),
                 cache: None,
             });
@@ -157,7 +157,7 @@ impl VacfBatchGpu {
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(n_particles.div_ceil(WG), 1, 1);
         }
         self.device.submit_and_poll(Some(encoder.finish()));
@@ -197,7 +197,7 @@ impl StressVirialGpu {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("StressVirial Layout"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let pipeline = device
@@ -206,7 +206,7 @@ impl StressVirialGpu {
                 label: Some("StressVirial Pipeline"),
                 layout: Some(&layout),
                 module: &module,
-                entry_point: "main",
+                entry_point: Some("main"),
                 compilation_options: Default::default(),
                 cache: None,
             });
@@ -266,7 +266,7 @@ impl StressVirialGpu {
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(n_particles.div_ceil(WG), 1, 1);
         }
         self.device.submit_and_poll(Some(encoder.finish()));

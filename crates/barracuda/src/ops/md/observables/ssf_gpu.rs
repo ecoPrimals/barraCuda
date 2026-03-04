@@ -19,6 +19,7 @@
 //!
 //! This makes real-time SSF monitoring feasible during production runs.
 
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
@@ -175,7 +176,7 @@ impl SsfGpu {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("SSF PL"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         // Choose entry point based on problem size
@@ -189,7 +190,7 @@ impl SsfGpu {
                 label: Some("SSF Pipeline"),
                 layout: Some(&pl),
                 module: &shader,
-                entry_point,
+                entry_point: Some(entry_point),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -227,8 +228,8 @@ impl SsfGpu {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bg, &[]);
-            let workgroups = (n_k_vectors as u32).div_ceil(64);
+            pass.set_bind_group(0, Some(&bg), &[]);
+            let workgroups = (n_k_vectors as u32).div_ceil(WORKGROUP_SIZE_COMPACT);
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
         device.submit_and_poll(Some(encoder.finish()));

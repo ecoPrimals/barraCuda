@@ -59,7 +59,7 @@ impl GpuPseudofermionHeatbath {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("GpuPfHeatbath:layout"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let pipeline = device
@@ -68,7 +68,7 @@ impl GpuPseudofermionHeatbath {
                 label: Some("GpuPfHeatbath:pipeline"),
                 layout: Some(&layout),
                 module: &module,
-                entry_point: "heatbath_noise",
+                entry_point: Some("heatbath_noise"),
                 compilation_options: Default::default(),
                 cache: None,
             });
@@ -136,7 +136,7 @@ impl GpuPseudofermionHeatbath {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(self.volume.div_ceil(WG), 1, 1);
         }
         self.device.submit_and_poll(Some(enc.finish()));
@@ -196,7 +196,7 @@ impl GpuPseudofermionForce {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("GpuPfForce:layout"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let pipeline = device
@@ -205,7 +205,7 @@ impl GpuPseudofermionForce {
                 label: Some("GpuPfForce:pipeline"),
                 layout: Some(&layout),
                 module: &module,
-                entry_point: "pseudofermion_force_kernel",
+                entry_point: Some("pseudofermion_force_kernel"),
                 compilation_options: Default::default(),
                 cache: None,
             });
@@ -293,7 +293,7 @@ impl GpuPseudofermionForce {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(self.volume.div_ceil(WG), 1, 1);
         }
         self.device.submit_and_poll(Some(enc.finish()));

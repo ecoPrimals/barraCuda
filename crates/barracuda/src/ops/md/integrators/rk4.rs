@@ -194,7 +194,7 @@ impl Rk4 {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("RK4 PL"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let pipeline = device
@@ -203,7 +203,7 @@ impl Rk4 {
                 label: Some("RK4 Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -250,7 +250,7 @@ impl Rk4 {
             });
 
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
 
             let workgroups = (n_particles as u32).div_ceil(WORKGROUP_SIZE_1D);
             pass.dispatch_workgroups(workgroups, 1, 1);

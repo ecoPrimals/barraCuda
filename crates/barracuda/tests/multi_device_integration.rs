@@ -30,7 +30,7 @@ use wgpu::util::DeviceExt;
 
 #[tokio::test]
 async fn test_enumerate_all_gpus() {
-    let adapters = WgpuDevice::enumerate_adapters();
+    let adapters = WgpuDevice::enumerate_adapters().await;
 
     println!("\n=== Available GPU Adapters ===");
     for adapter in &adapters {
@@ -60,7 +60,7 @@ async fn test_enumerate_all_gpus() {
 
 #[tokio::test]
 async fn test_device_creation_for_all_adapters() {
-    let adapters = WgpuDevice::enumerate_adapters();
+    let adapters = WgpuDevice::enumerate_adapters().await;
 
     println!("\n=== Testing Device Creation for Each Adapter ===");
 
@@ -112,7 +112,7 @@ async fn test_device_creation_for_all_adapters() {
 #[tokio::test]
 async fn test_multi_device_pool_discovers_both_gpus() {
     // Print all available adapters first
-    let adapters = WgpuDevice::enumerate_adapters();
+    let adapters = WgpuDevice::enumerate_adapters().await;
     println!("\n=== All Adapters (before pool creation) ===");
     for (idx, adapter) in adapters.iter().enumerate() {
         println!(

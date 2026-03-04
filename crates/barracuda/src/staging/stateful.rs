@@ -197,7 +197,7 @@ impl StatefulPipeline {
             });
             for k in chain {
                 pass.set_pipeline(&k.pipeline);
-                pass.set_bind_group(0, &k.bind_group, &[]);
+                pass.set_bind_group(0, Some(&*k.bind_group), &[]);
                 pass.dispatch_workgroups(k.workgroups.0, k.workgroups.1, k.workgroups.2);
             }
             // `pass` drop ends the compute pass before the copy below.
@@ -323,7 +323,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("test_pl"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
         let pipeline = device
             .device
@@ -331,7 +331,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
                 label: Some("test_pipeline"),
                 layout: Some(&layout),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });

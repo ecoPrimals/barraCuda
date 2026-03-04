@@ -4,6 +4,8 @@
 //! Provenance: groundSpring `drift.rs` / `quasispecies.rs` -> toadStool absorption (S70).
 
 #[cfg(feature = "gpu")]
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
+#[cfg(feature = "gpu")]
 use crate::device::compute_pipeline::ComputeDispatch;
 #[cfg(feature = "gpu")]
 use crate::device::WgpuDevice;
@@ -69,7 +71,7 @@ impl KimuraGpu {
         };
         let params_buf = self.device.create_uniform_buffer("kimura:params", &params);
 
-        let wg_count = (n as u32).div_ceil(256);
+        let wg_count = (n as u32).div_ceil(WORKGROUP_SIZE_1D);
         ComputeDispatch::new(&self.device, "kimura_fixation")
             .shader(SHADER_KIMURA, "main")
             .f64()

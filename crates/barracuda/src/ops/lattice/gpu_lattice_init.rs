@@ -54,7 +54,7 @@ impl GpuLatticeInit {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("GpuLatticeInit:layout"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let cold_pipeline =
@@ -64,7 +64,7 @@ impl GpuLatticeInit {
                     label: Some("GpuLatticeInit:cold"),
                     layout: Some(&layout),
                     module: &module,
-                    entry_point: "cold_start",
+                    entry_point: Some("cold_start"),
                     compilation_options: Default::default(),
                     cache: None,
                 });
@@ -76,7 +76,7 @@ impl GpuLatticeInit {
                     label: Some("GpuLatticeInit:hot"),
                     layout: Some(&layout),
                     module: &module,
-                    entry_point: "hot_start",
+                    entry_point: Some("hot_start"),
                     compilation_options: Default::default(),
                     cache: None,
                 });
@@ -185,7 +185,7 @@ impl GpuLatticeInit {
                 timestamp_writes: None,
             });
             pass.set_pipeline(pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(self.n_links.div_ceil(WG), 1, 1);
         }
         self.device.submit_and_poll(Some(enc.finish()));

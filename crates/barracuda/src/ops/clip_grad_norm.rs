@@ -175,7 +175,7 @@ impl ClipGradNorm {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("ClipGradNorm Pipeline Layout"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let compute_pipeline_norm =
@@ -185,7 +185,7 @@ impl ClipGradNorm {
                     label: Some("ClipGradNorm Norm Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
-                    entry_point: "compute_norm",
+                    entry_point: Some("compute_norm"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -197,7 +197,7 @@ impl ClipGradNorm {
                     label: Some("ClipGradNorm Norm Final Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
-                    entry_point: "compute_norm_final",
+                    entry_point: Some("compute_norm_final"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -209,7 +209,7 @@ impl ClipGradNorm {
                     label: Some("ClipGradNorm Clip Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
-                    entry_point: "clip_gradients",
+                    entry_point: Some("clip_gradients"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -226,7 +226,7 @@ impl ClipGradNorm {
                 timestamp_writes: None,
             });
             compute_pass.set_pipeline(&compute_pipeline_norm);
-            compute_pass.set_bind_group(0, &bind_group, &[]);
+            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
             compute_pass.dispatch_workgroups(num_workgroups, 1, 1);
         }
 
@@ -237,7 +237,7 @@ impl ClipGradNorm {
                 timestamp_writes: None,
             });
             compute_pass.set_pipeline(&compute_pipeline_norm_final);
-            compute_pass.set_bind_group(0, &bind_group, &[]);
+            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
             compute_pass.dispatch_workgroups(1, 1, 1);
         }
 
@@ -248,7 +248,7 @@ impl ClipGradNorm {
                 timestamp_writes: None,
             });
             compute_pass.set_pipeline(&compute_pipeline_clip);
-            compute_pass.set_bind_group(0, &bind_group, &[]);
+            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
             let workgroups = caps.dispatch_1d(size as u32);
             compute_pass.dispatch_workgroups(workgroups, 1, 1);
         }

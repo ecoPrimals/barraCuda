@@ -10,6 +10,7 @@
 //!
 //! Provenance: wetSpring handoff v5 → ToadStool absorption.
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -58,7 +59,7 @@ impl RfBatchInferenceGpu {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("RfBatch PL"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let pipeline = device
@@ -67,7 +68,7 @@ impl RfBatchInferenceGpu {
                 label: Some("RfBatch Pipeline"),
                 layout: Some(&pl),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -132,7 +133,7 @@ impl RfBatchInferenceGpu {
             });
 
         let total = n_samples * n_trees;
-        let workgroups = total.div_ceil(256);
+        let workgroups = total.div_ceil(WORKGROUP_SIZE_1D);
 
         let mut encoder = self
             .device
@@ -146,7 +147,7 @@ impl RfBatchInferenceGpu {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
 

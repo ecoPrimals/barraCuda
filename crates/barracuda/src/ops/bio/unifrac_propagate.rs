@@ -15,6 +15,7 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::WgpuDevice;
 
 pub const WGSL_UNIFRAC_PROPAGATE: &str = include_str!("../../shaders/bio/unifrac_propagate.wgsl");
@@ -98,7 +99,7 @@ impl UniFracPropagateGpu {
         let layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("UniFrac Layout"),
             bind_group_layouts: &[&bgl],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
 
         let module = device.compile_shader_f64(WGSL_UNIFRAC_PROPAGATE, Some("UniFrac Shader"));
@@ -107,7 +108,7 @@ impl UniFracPropagateGpu {
             label: Some("UniFrac LeafInit Pipeline"),
             layout: Some(&layout),
             module: &module,
-            entry_point: "unifrac_leaf_init",
+            entry_point: Some("unifrac_leaf_init"),
             compilation_options: Default::default(),
             cache: None,
         });
@@ -116,7 +117,7 @@ impl UniFracPropagateGpu {
             label: Some("UniFrac Propagate Pipeline"),
             layout: Some(&layout),
             module: &module,
-            entry_point: "unifrac_propagate_level",
+            entry_point: Some("unifrac_propagate_level"),
             compilation_options: Default::default(),
             cache: None,
         });
@@ -145,7 +146,11 @@ impl UniFracPropagateGpu {
             sample_mat_buf,
             node_sums_buf,
         );
-        self.dispatch_pipeline(&self.leaf_init_pipeline, &bg, config.n_leaves.div_ceil(64));
+        self.dispatch_pipeline(
+            &self.leaf_init_pipeline,
+            &bg,
+            config.n_leaves.div_ceil(WORKGROUP_SIZE_COMPACT),
+        );
     }
 
     /// Propagate one tree level (call bottom-up per level).
@@ -164,7 +169,11 @@ impl UniFracPropagateGpu {
             sample_mat_buf,
             node_sums_buf,
         );
-        self.dispatch_pipeline(&self.propagate_pipeline, &bg, config.n_nodes.div_ceil(64));
+        self.dispatch_pipeline(
+            &self.propagate_pipeline,
+            &bg,
+            config.n_nodes.div_ceil(WORKGROUP_SIZE_COMPACT),
+        );
     }
 
     fn create_bind_group(
@@ -229,7 +238,7 @@ impl UniFracPropagateGpu {
                 timestamp_writes: None,
             });
             pass.set_pipeline(pipeline);
-            pass.set_bind_group(0, bg, &[]);
+            pass.set_bind_group(0, Some(bg), &[]);
             pass.dispatch_workgroups(workgroups_x, 1, 1);
         }
         q.submit(std::iter::once(encoder.finish()));

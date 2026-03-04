@@ -168,7 +168,7 @@ impl GpuExecutor {
     }
 
     /// Get Arc to WgpuDevice (for internal dispatch use)
-    pub(crate) fn device_arc(&self) -> &Arc<WgpuDevice> {
+    pub(crate) fn wgpu_device_arc(&self) -> &Arc<WgpuDevice> {
         &self.device
     }
 }

@@ -21,6 +21,7 @@
 //! wetSpring handoff §Shader Design 2 (Feb 2026) — validated on sklearn
 //! export: 65 nodes × 28 features, 744 samples, 100% prediction parity.
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::error::Result;
@@ -200,7 +201,7 @@ impl TreeInferenceGpu {
             .storage_read(6, &pred_buf)
             .storage_read(7, &offsets_buf)
             .storage_rw(8, &output_buf)
-            .dispatch(total_threads.div_ceil(256), 1, 1)
+            .dispatch(total_threads.div_ceil(WORKGROUP_SIZE_1D), 1, 1)
             .submit();
 
         dev.read_buffer_u32(&output_buf, n_samples * n_trees)

@@ -10,6 +10,7 @@
 //!
 //! wetSpring handoff v6, `quality_filter.wgsl` — 88 pipeline checks PASS.
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
@@ -109,7 +110,12 @@ impl QualityFilterGpu {
                     super::snp::bg_entry(4, results),
                 ],
             });
-        super::snp::submit(&self.device, &self.pipeline, &bg, n_reads.div_ceil(256));
+        super::snp::submit(
+            &self.device,
+            &self.pipeline,
+            &bg,
+            n_reads.div_ceil(WORKGROUP_SIZE_1D),
+        );
         Ok(())
     }
 }

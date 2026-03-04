@@ -22,21 +22,23 @@ static DEVICE_CREATION_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_
 pub const ADAPTER_ENV_VAR: &str = "BARRACUDA_GPU_ADAPTER";
 
 /// Desired features to negotiate with any adapter.
-const DESIRED_FEATURES: [wgpu::Features; 4] = [
-    wgpu::Features::SHADER_F64,
-    wgpu::Features::SHADER_F16,
-    wgpu::Features::PIPELINE_CACHE,
-    wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
-];
+fn desired_features() -> Vec<wgpu::Features> {
+    vec![
+        wgpu::Features::SHADER_F64,
+        wgpu::Features::SHADER_F16,
+        wgpu::Features::PIPELINE_CACHE,
+    ]
+}
 
 /// Extended feature set that also includes TIMESTAMP_QUERY (for benchmarks).
-const DESIRED_FEATURES_EXTENDED: [wgpu::Features; 5] = [
-    wgpu::Features::SHADER_F64,
-    wgpu::Features::SHADER_F16,
-    wgpu::Features::TIMESTAMP_QUERY,
-    wgpu::Features::PIPELINE_CACHE,
-    wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
-];
+fn desired_features_extended() -> Vec<wgpu::Features> {
+    vec![
+        wgpu::Features::SHADER_F64,
+        wgpu::Features::SHADER_F16,
+        wgpu::Features::TIMESTAMP_QUERY,
+        wgpu::Features::PIPELINE_CACHE,
+    ]
+}
 
 /// Negotiate features: request everything the adapter supports from `wanted`.
 fn negotiate_features(adapter: &wgpu::Adapter, wanted: &[wgpu::Features]) -> wgpu::Features {
@@ -70,16 +72,13 @@ impl WgpuDevice {
         lost_flag: &Arc<std::sync::atomic::AtomicBool>,
     ) {
         let flag = Arc::clone(lost_flag);
-        device.on_uncaptured_error(Box::new(move |error| {
-            let msg = error.to_string();
+        device.on_uncaptured_error(Arc::new(move |error: wgpu::Error| {
+            let msg = format!("{error}");
             if msg.contains("lost") || msg.contains("Lost") || msg.contains("Parent device") {
                 flag.store(true, std::sync::atomic::Ordering::Release);
                 tracing::warn!("GPU device lost (flagged for pool recovery): {msg}");
                 return;
             }
-            // Validation errors do NOT flag the device as lost — they're
-            // recoverable and should not poison the shared device for other
-            // concurrent operations.
             tracing::warn!("wgpu uncaptured error (non-fatal): {msg}");
         }));
     }
@@ -88,18 +87,14 @@ impl WgpuDevice {
         if !device.features().contains(wgpu::Features::PIPELINE_CACHE) {
             return None;
         }
-        // SAFETY: wgpu::Device::create_pipeline_cache is unsafe (wgpu API constraint).
-        // - Why unsafe: When `data` is Some(...), it must have been returned from
-        //   PipelineCache::get_data and match the adapter's pipeline_cache_key; corrupted,
-        //   cross-version, or cross-adapter data could cause driver UB.
-        // - Invariants we maintain: We pass `data: None` — empty initial cache only. No
-        //   serialized blob to validate; no untrusted or persisted input.
-        // - What could go wrong: If we ever passed Some(data), wrong data could cause
-        //   driver crashes, GPU hangs, or undefined behavior. We avoid this by never
-        //   passing data.
-        // - Minimum unsafe surface: wgpu 22.x has no safe alternative; this is the only
-        //   way to create a pipeline cache. Our use case (fresh cache) is the safest.
-        #[allow(unsafe_code)]
+        // SAFETY: `create_pipeline_cache` is still unsafe in wgpu 28 because
+        // loading blob data from disk can cause UB if the data is corrupt.
+        // We pass `data: None` (fresh cache only) so no untrusted blob
+        // can reach the driver.
+        #[expect(
+            unsafe_code,
+            reason = "wgpu 28 pipeline cache init requires unsafe even with data: None"
+        )]
         Some(Arc::new(unsafe {
             device.create_pipeline_cache(&wgpu::PipelineCacheDescriptor {
                 label: Some("barraCuda pipeline cache"),
@@ -117,8 +112,8 @@ impl WgpuDevice {
         let budget = super::concurrency_budget(adapter_info.device_type);
         let active_encoders = Arc::new(std::sync::atomic::AtomicU32::new(0));
         let wgpu_device = Self {
-            device: super::GuardedDeviceHandle::new(Arc::new(device), active_encoders.clone()),
-            queue: Arc::new(queue),
+            device: super::GuardedDeviceHandle::new(device, active_encoders.clone()),
+            queue,
             adapter_info,
             calibration: None,
             pipeline_cache,
@@ -136,7 +131,7 @@ impl WgpuDevice {
     /// Prefers discrete GPU via `HighPerformance` power preference.
     /// Falls back to integrated GPU, then software rasterizer.
     pub async fn new() -> Result<Self> {
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });
@@ -147,7 +142,7 @@ impl WgpuDevice {
                 force_fallback_adapter: false,
             })
             .await
-            .ok_or_else(|| BarracudaError::device("No WGPU adapter found"))?;
+            .map_err(|e| BarracudaError::device(format!("No WGPU adapter found: {e}")))?;
         Self::from_adapter(adapter).await
     }
 
@@ -181,11 +176,11 @@ impl WgpuDevice {
     ///
     /// Use this constructor in tests and any pipeline that runs on CPU/llvmpipe.
     pub async fn new_cpu_relaxed() -> Result<Self> {
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });
-        let adapters = instance.enumerate_adapters(wgpu::Backends::all());
+        let adapters = instance.enumerate_adapters(wgpu::Backends::all()).await;
         let adapter = adapters
             .into_iter()
             .find(|a| a.get_info().device_type == wgpu::DeviceType::Cpu)
@@ -198,18 +193,17 @@ impl WgpuDevice {
             adapter_info.device_type
         );
 
-        let required_features = negotiate_features(&adapter, &DESIRED_FEATURES);
+        let required_features = negotiate_features(&adapter, &desired_features());
         let _creation_guard = DEVICE_CREATION_LOCK.lock().await;
         let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: Some("barraCuda cpu-relaxed"),
-                    required_features,
-                    required_limits: wgpu::Limits::downlevel_defaults(),
-                    memory_hints: Default::default(),
-                },
-                None,
-            )
+            .request_device(&wgpu::DeviceDescriptor {
+                label: Some("barraCuda cpu-relaxed"),
+                required_features,
+                required_limits: wgpu::Limits::downlevel_defaults(),
+                memory_hints: Default::default(),
+                experimental_features: Default::default(),
+                trace: Default::default(),
+            })
             .await
             .map_err(|e| BarracudaError::device(format!("Failed to create CPU device: {e}")))?;
         drop(_creation_guard);
@@ -224,7 +218,7 @@ impl WgpuDevice {
 
     /// Create device with custom limits
     pub async fn new_with_limits(limits: wgpu::Limits) -> Result<Self> {
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });
@@ -235,7 +229,7 @@ impl WgpuDevice {
                 force_fallback_adapter: false,
             })
             .await
-            .ok_or_else(|| BarracudaError::device("No WGPU adapter found"))?;
+            .map_err(|e| BarracudaError::device(format!("No WGPU adapter found: {e}")))?;
 
         let info = adapter.get_info();
         tracing::info!(
@@ -244,18 +238,17 @@ impl WgpuDevice {
             info.device_type
         );
 
-        let required_features = negotiate_features(&adapter, &DESIRED_FEATURES_EXTENDED);
+        let required_features = negotiate_features(&adapter, &desired_features_extended());
         let _creation_guard = DEVICE_CREATION_LOCK.lock().await;
         let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: Some("BarraCuda custom-limits device"),
-                    required_features,
-                    required_limits: limits,
-                    memory_hints: Default::default(),
-                },
-                None,
-            )
+            .request_device(&wgpu::DeviceDescriptor {
+                label: Some("BarraCuda custom-limits device"),
+                required_features,
+                required_limits: limits,
+                memory_hints: Default::default(),
+                experimental_features: Default::default(),
+                trace: Default::default(),
+            })
             .await
             .map_err(|e| BarracudaError::device(format!("Failed to create device: {e}")))?;
         drop(_creation_guard);
@@ -334,13 +327,14 @@ impl WgpuDevice {
     }
 
     /// List all available WGPU adapters (raw, may include duplicates)
-    pub fn enumerate_adapters() -> Vec<wgpu::AdapterInfo> {
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+    pub async fn enumerate_adapters() -> Vec<wgpu::AdapterInfo> {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });
         instance
             .enumerate_adapters(wgpu::Backends::all())
+            .await
             .iter()
             .map(|a| a.get_info())
             .collect()
@@ -430,7 +424,7 @@ impl WgpuDevice {
             return Self::new().await;
         }
 
-        let adapters = Self::enumerate_adapters();
+        let adapters = Self::enumerate_adapters().await;
         if adapters.is_empty() {
             return Err(BarracudaError::device("No adapters available"));
         }
@@ -473,7 +467,7 @@ impl WgpuDevice {
     ///
     /// Prefers `HighPerformance` adapter within the specified backends.
     pub async fn new_with_backend(backends: wgpu::Backends) -> Result<Self> {
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends,
             ..Default::default()
         });
@@ -485,18 +479,20 @@ impl WgpuDevice {
                 force_fallback_adapter: false,
             })
             .await
-            .ok_or_else(|| BarracudaError::device("No WGPU adapter found for requested backend"))?;
+            .map_err(|e| {
+                BarracudaError::device(format!("No WGPU adapter found for requested backend: {e}"))
+            })?;
 
         Self::from_adapter(adapter).await
     }
 
     /// Create device from a specific adapter index
     pub async fn from_adapter_index(index: usize) -> Result<Self> {
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });
-        let adapters: Vec<wgpu::Adapter> = instance.enumerate_adapters(wgpu::Backends::all());
+        let adapters: Vec<wgpu::Adapter> = instance.enumerate_adapters(wgpu::Backends::all()).await;
         if index >= adapters.len() {
             return Err(BarracudaError::device(format!(
                 "Adapter index {index} out of bounds (only {} adapters available)",
@@ -512,18 +508,17 @@ impl WgpuDevice {
             info.device_type
         );
 
-        let required_features = negotiate_features(adapter, &DESIRED_FEATURES_EXTENDED);
+        let required_features = negotiate_features(adapter, &desired_features_extended());
         let _creation_guard = DEVICE_CREATION_LOCK.lock().await;
         let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: Some("BarraCuda device"),
-                    required_features,
-                    required_limits: super::super::tensor_context::science_limits(),
-                    memory_hints: Default::default(),
-                },
-                None,
-            )
+            .request_device(&wgpu::DeviceDescriptor {
+                label: Some("BarraCuda device"),
+                required_features,
+                required_limits: super::super::tensor_context::science_limits(),
+                memory_hints: Default::default(),
+                experimental_features: Default::default(),
+                trace: Default::default(),
+            })
             .await
             .map_err(|e| BarracudaError::device(format!("Failed to create device: {e}")))?;
         drop(_creation_guard);
@@ -536,12 +531,12 @@ impl WgpuDevice {
     where
         F: Fn(&wgpu::AdapterInfo) -> bool,
     {
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends,
             ..Default::default()
         });
 
-        let adapters = instance.enumerate_adapters(backends);
+        let adapters = instance.enumerate_adapters(backends).await;
         if adapters.is_empty() {
             return Err(BarracudaError::device(
                 "No WGPU adapters found (need GPU or CPU software rasterizer)",
@@ -565,25 +560,21 @@ impl WgpuDevice {
             adapter_info.device_type
         );
 
-        let required_features = negotiate_features(&adapter, &DESIRED_FEATURES_EXTENDED);
+        let required_features = negotiate_features(&adapter, &desired_features_extended());
         if required_features.contains(wgpu::Features::SHADER_F64) {
             tracing::info!("  SHADER_F64: enabled");
-        }
-        if required_features.contains(wgpu::Features::SPIRV_SHADER_PASSTHROUGH) {
-            tracing::info!("  SPIRV_SHADER_PASSTHROUGH: enabled (sovereign compiler active)");
         }
 
         let _creation_guard = DEVICE_CREATION_LOCK.lock().await;
         let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: Some("barraCuda Device"),
-                    required_features,
-                    required_limits: super::super::tensor_context::science_limits(),
-                    memory_hints: Default::default(),
-                },
-                None,
-            )
+            .request_device(&wgpu::DeviceDescriptor {
+                label: Some("barraCuda Device"),
+                required_features,
+                required_limits: super::super::tensor_context::science_limits(),
+                memory_hints: Default::default(),
+                experimental_features: Default::default(),
+                trace: Default::default(),
+            })
             .await
             .map_err(|e| BarracudaError::device(format!("Failed to create device: {e}")))?;
         drop(_creation_guard);
@@ -608,10 +599,13 @@ impl WgpuDevice {
         Ok(wgpu_device)
     }
 
-    /// Create WgpuDevice from existing wgpu device and queue
+    /// Create WgpuDevice from existing wgpu device and queue.
+    ///
+    /// In wgpu 28 `Device` and `Queue` are Clone (internally Arc'd),
+    /// so no outer Arc is needed.
     pub fn from_existing(
-        device: Arc<wgpu::Device>,
-        queue: Arc<wgpu::Queue>,
+        device: wgpu::Device,
+        queue: wgpu::Queue,
         adapter_info: wgpu::AdapterInfo,
     ) -> Self {
         let lost = Arc::new(std::sync::atomic::AtomicBool::new(false));
@@ -638,7 +632,7 @@ impl WgpuDevice {
         since = "0.3.0",
         note = "Use from_existing() with real AdapterInfo; synthetic info breaks driver detection"
     )]
-    pub fn from_existing_simple(device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>) -> Self {
+    pub fn from_existing_simple(device: wgpu::Device, queue: wgpu::Queue) -> Self {
         Self::from_existing(
             device,
             queue,
@@ -650,6 +644,10 @@ impl WgpuDevice {
                 driver: "external".to_string(),
                 driver_info: "wrapped from existing wgpu resources".to_string(),
                 backend: wgpu::Backend::Vulkan,
+                device_pci_bus_id: String::new(),
+                subgroup_min_size: 1,
+                subgroup_max_size: 128,
+                transient_saves_memory: false,
             },
         )
     }

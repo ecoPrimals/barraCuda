@@ -351,12 +351,35 @@ fn hmm_forward_step_gpu(
 }
 
 // -----------------------------------------------------------------------------
+// Dispatch decision
+// -----------------------------------------------------------------------------
+
+/// Returns `Some(dev)` when the global config wants the GPU path for `op_name`
+/// at the given `input_size`, otherwise `None`.
+fn gpu_if_eligible<'a>(
+    device: Option<&'a Arc<WgpuDevice>>,
+    input_size: usize,
+    op_name: &str,
+) -> Option<&'a Arc<WgpuDevice>> {
+    let cfg = global_config();
+    device.filter(|_| cfg.should_use_gpu(input_size, op_name))
+}
+
+/// Variant that takes an explicit config (for tests / tuning).
+fn gpu_if_eligible_cfg<'a>(
+    device: Option<&'a Arc<WgpuDevice>>,
+    input_size: usize,
+    op_name: &str,
+    config: &DispatchConfig,
+) -> Option<&'a Arc<WgpuDevice>> {
+    device.filter(|_| config.should_use_gpu(input_size, op_name))
+}
+
+// -----------------------------------------------------------------------------
 // Dispatch API
 // -----------------------------------------------------------------------------
 
-/// Matrix multiply dispatch: C = A[m×k] × B[k×n].
-///
-/// Uses GPU when device is provided and input size exceeds threshold.
+/// Matrix multiply dispatch: C = A[m*k] * B[k*n].
 pub fn matmul_dispatch(
     a: &[f64],
     b: &[f64],
@@ -365,117 +388,69 @@ pub fn matmul_dispatch(
     n: usize,
     device: Option<&Arc<WgpuDevice>>,
 ) -> Result<Vec<f64>> {
-    let input_size = m.max(n).max(k);
-    let config = global_config();
-    let use_gpu = device.is_some() && config.should_use_gpu(input_size, "matmul");
-
-    if use_gpu {
-        if let Some(dev) = device {
-            return matmul_gpu(a, b, m, k, n, dev);
-        }
+    if let Some(dev) = gpu_if_eligible(device, m.max(n).max(k), "matmul") {
+        return matmul_gpu(a, b, m, k, n, dev);
     }
     Ok(matmul_cpu(a, b, m, k, n))
 }
 
 /// Frobenius norm dispatch: sqrt(sum of squares).
 pub fn frobenius_norm_dispatch(a: &[f64], device: Option<&Arc<WgpuDevice>>) -> Result<f64> {
-    let input_size = a.len();
-    let config = global_config();
-    let use_gpu = device.is_some() && config.should_use_gpu(input_size, "frobenius_norm");
-
-    if use_gpu {
-        if let Some(dev) = device {
-            return frobenius_norm_gpu(a, dev);
-        }
+    if let Some(dev) = gpu_if_eligible(device, a.len(), "frobenius_norm") {
+        return frobenius_norm_gpu(a, dev);
     }
     Ok(frobenius_norm_cpu(a))
 }
 
-/// Transpose dispatch: [rows×cols] → [cols×rows].
+/// Transpose dispatch: [rows*cols] -> [cols*rows].
 pub fn transpose_dispatch(
     a: &[f64],
     rows: usize,
     cols: usize,
     device: Option<&Arc<WgpuDevice>>,
 ) -> Result<Vec<f64>> {
-    let input_size = rows * cols;
-    let config = global_config();
-    let use_gpu = device.is_some() && config.should_use_gpu(input_size, "transpose");
-
-    if use_gpu {
-        if let Some(dev) = device {
-            return transpose_gpu(a, rows, cols, dev);
-        }
+    if let Some(dev) = gpu_if_eligible(device, rows * cols, "transpose") {
+        return transpose_gpu(a, rows, cols, dev);
     }
     Ok(transpose_cpu(a, rows, cols))
 }
 
 /// Softmax dispatch: exp(x) / sum(exp(x)).
 pub fn softmax_dispatch(x: &[f64], device: Option<&Arc<WgpuDevice>>) -> Result<Vec<f64>> {
-    let input_size = x.len();
-    let config = global_config();
-    let use_gpu = device.is_some() && config.should_use_gpu(input_size, "softmax");
-
-    if use_gpu {
-        if let Some(dev) = device {
-            return softmax_gpu(x, dev);
-        }
+    if let Some(dev) = gpu_if_eligible(device, x.len(), "softmax") {
+        return softmax_gpu(x, dev);
     }
     Ok(softmax_cpu(x))
 }
 
 /// GELU activation dispatch.
 pub fn gelu_dispatch(x: &[f64], device: Option<&Arc<WgpuDevice>>) -> Result<Vec<f64>> {
-    let input_size = x.len();
-    let config = global_config();
-    let use_gpu = device.is_some() && config.should_use_gpu(input_size, "gelu");
-
-    if use_gpu {
-        if let Some(dev) = device {
-            return gelu_gpu(x, dev);
-        }
+    if let Some(dev) = gpu_if_eligible(device, x.len(), "gelu") {
+        return gelu_gpu(x, dev);
     }
     Ok(gelu_cpu(x))
 }
 
 /// L2 (Euclidean) distance dispatch between two vectors.
 pub fn l2_distance_dispatch(a: &[f64], b: &[f64], device: Option<&Arc<WgpuDevice>>) -> Result<f64> {
-    let input_size = a.len().min(b.len());
-    let config = global_config();
-    let use_gpu = device.is_some() && config.should_use_gpu(input_size, "l2_distance");
-
-    if use_gpu {
-        if let Some(dev) = device {
-            return l2_distance_gpu(a, b, dev);
-        }
+    if let Some(dev) = gpu_if_eligible(device, a.len().min(b.len()), "l2_distance") {
+        return l2_distance_gpu(a, b, dev);
     }
     Ok(l2_distance_cpu(a, b))
 }
 
 /// Mean reduction dispatch.
 pub fn mean_dispatch(data: &[f64], device: Option<&Arc<WgpuDevice>>) -> Result<f64> {
-    let input_size = data.len();
-    let config = global_config();
-    let use_gpu = device.is_some() && config.should_use_gpu(input_size, "mean");
-
-    if use_gpu {
-        if let Some(dev) = device {
-            return mean_gpu(data, dev);
-        }
+    if let Some(dev) = gpu_if_eligible(device, data.len(), "mean") {
+        return mean_gpu(data, dev);
     }
     Ok(mean_cpu(data))
 }
 
 /// Variance (population) dispatch.
 pub fn variance_dispatch(data: &[f64], device: Option<&Arc<WgpuDevice>>) -> Result<f64> {
-    let input_size = data.len();
-    let config = global_config();
-    let use_gpu = device.is_some() && config.should_use_gpu(input_size, "variance");
-
-    if use_gpu {
-        if let Some(dev) = device {
-            return variance_gpu(data, dev);
-        }
+    if let Some(dev) = gpu_if_eligible(device, data.len(), "variance") {
+        return variance_gpu(data, dev);
     }
     Ok(variance_cpu(data))
 }
@@ -490,14 +465,8 @@ pub fn hmm_forward_dispatch(
     n_states: usize,
     device: Option<&Arc<WgpuDevice>>,
 ) -> Result<(Vec<f64>, f64)> {
-    let input_size = n_states * n_states + n_states;
-    let config = global_config();
-    let use_gpu = device.is_some() && config.should_use_gpu(input_size, "hmm");
-
-    if use_gpu {
-        if let Some(dev) = device {
-            return hmm_forward_step_gpu(alpha_prev, transition, emission_col, n_states, dev);
-        }
+    if let Some(dev) = gpu_if_eligible(device, n_states * n_states + n_states, "hmm") {
+        return hmm_forward_step_gpu(alpha_prev, transition, emission_col, n_states, dev);
     }
     Ok(hmm_forward_step_cpu(
         alpha_prev,
@@ -521,13 +490,8 @@ pub fn matmul_dispatch_with_config(
     device: Option<&Arc<WgpuDevice>>,
     config: &DispatchConfig,
 ) -> Result<Vec<f64>> {
-    let input_size = m.max(n).max(k);
-    let use_gpu = device.is_some() && config.should_use_gpu(input_size, "matmul");
-
-    if use_gpu {
-        if let Some(dev) = device {
-            return matmul_gpu(a, b, m, k, n, dev);
-        }
+    if let Some(dev) = gpu_if_eligible_cfg(device, m.max(n).max(k), "matmul", config) {
+        return matmul_gpu(a, b, m, k, n, dev);
     }
     Ok(matmul_cpu(a, b, m, k, n))
 }

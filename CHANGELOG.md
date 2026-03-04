@@ -5,6 +5,53 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - March 4, 2026
+
+### Changed
+- **wgpu 22 → 28 + naga 22.1 → 28** — major GPU stack upgrade. All wgpu API
+  changes propagated across the codebase (~800 call-site updates):
+  - `Maintain::Wait` / `MaintainBase::Poll` → `PollType::Wait` / `PollType::Poll`
+  - `create_shader_module_spirv` → `create_shader_module_passthrough`
+  - `push_constant_ranges` removed; `immediate_size` added to `PipelineLayoutDescriptor`
+  - `entry_point` now `Option<&str>` in pipeline descriptors
+  - `set_bind_group` second argument now `Option<&BindGroup>`
+  - `request_adapter` returns `Result` (was `Option`)
+  - `DeviceDescriptor` gains `experimental_features` and `trace` fields
+  - `on_uncaptured_error` handler evolved to `Arc<dyn UncapturedErrorHandler>`
+  - `pop_error_scope` → `ErrorScopeGuard` pattern via `push_error_scope().pop()`
+  - Naga IR: new `Statement` / `Expression` variants for barriers, atomics, ray queries
+- **`Arc<wgpu::Device>` / `Arc<wgpu::Queue>` removed** — wgpu 28 makes `Device` and
+  `Queue` internally `Clone`. Removed redundant `Arc` wrappers from `GuardedDeviceHandle`,
+  `WgpuDevice`, `BufferPool`, `PppmGpu`, `ComputeGraph`, and `PppmPipelines`.
+  `device_arc()` → `device_clone()`, `queue_arc()` → `queue_clone()`,
+  `inner_arc()` removed, `from_existing()` takes plain types
+- **tokio 1.40 → 1.49** — workspace dependency bumped to current stable
+- **Dependency alignment** — `serde_json` now uses `workspace = true` in barracuda
+  crate; tokio dev-dependency aligned with workspace (was pinned to 1.35)
+- **Workgroup size constants** — introduced `WORKGROUP_SIZE_COMPACT = 64` alongside
+  existing `WORKGROUP_SIZE_1D = 256` in `device::capabilities`. Replaced ~80 bare
+  `div_ceil(64)` and `div_ceil(256)` magic numbers across 68 files with named constants
+- **Lint cleanup** — fixed 33 unfulfilled `#[expect]` annotations: removed stale
+  `dead_code` / `unused_imports` expectations, correctly classified dead entry-point
+  functions vs. transitively-live helpers, removed unused `wgpu::util::DeviceExt` imports
+
+### Fixed
+- `wgpu::Id` removed in wgpu 28 — replaced `buffer.global_id()` with stable hash and
+  `device.global_id()` with `format!("{device:?}")` / `device.hash()`
+- `wgpu::Features::SPIRV_SHADER_PASSTHROUGH` constant removed — `has_spirv_passthrough()`
+  now checks `adapter_info.backend == Backend::Vulkan` (SPIR-V passthrough is a Cargo feature)
+- `enumerate_adapters()` now async — all call sites updated with `.await` or `pollster::block_on`
+- `AdapterInfo` new required fields (`device_pci_bus_id`, `subgroup_min_size`,
+  `subgroup_max_size`, `transient_saves_memory`) — populated in all manual constructors
+
+### Quality
+- `cargo check --workspace --all-features` clean (1723 `missing_docs` only)
+- `cargo clippy --workspace --all-features` — zero non-doc warnings
+- `cargo deny check` — advisories/bans/licenses/sources OK
+- `cargo fmt --all` clean
+- 112/112 device tests passing
+- Zero unfulfilled `#[expect]` annotations in test profile
+
 ## [0.3.2] - March 3, 2026
 
 ### Added
@@ -173,4 +220,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial scaffold via sourDough
 - `barracuda-core` primal lifecycle (PrimalLifecycle, PrimalHealth)
 - `BarracudaError` type with device, shader, shape, dispatch variants
-- Workspace configuration (wgpu 22, naga 22.1, AGPL-3.0-or-later)
+- Workspace configuration (wgpu 22, naga 22.1, AGPL-3.0-or-later) — upgraded to wgpu 28 + naga 28 in 0.3.3

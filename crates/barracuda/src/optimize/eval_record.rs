@@ -374,28 +374,20 @@ mod tests {
 
     #[test]
     fn test_save_load_roundtrip() {
-        use std::fs;
-
         let mut cache = EvaluationCache::new();
         cache.record(vec![1.0, 2.0], 5.0);
         cache.record(vec![3.0, 4.0], 2.0); // best
         cache.record(vec![5.0, 6.0], 8.0);
 
-        let temp_path = "/tmp/barracuda_test_cache.json";
+        let tmp = tempfile::NamedTempFile::new().expect("Failed to create temp file");
+        let temp_path = tmp.path().to_str().expect("non-UTF-8 path");
 
-        // Save
         cache.save(temp_path).expect("Failed to save");
-
-        // Load
         let loaded = EvaluationCache::load(temp_path).expect("Failed to load");
 
-        // Verify
         assert_eq!(loaded.len(), 3);
         assert_eq!(loaded.best_f(), Some(2.0));
         assert_eq!(loaded.best_x(), Some(vec![3.0, 4.0].as_slice()));
-
-        // Cleanup
-        fs::remove_file(temp_path).ok();
     }
 
     #[test]
@@ -406,19 +398,16 @@ mod tests {
 
     #[test]
     fn test_load_or_new_existing() {
-        use std::fs;
-
         let mut original = EvaluationCache::new();
         original.record(vec![1.0], 42.0);
 
-        let temp_path = "/tmp/barracuda_test_cache_existing.json";
+        let tmp = tempfile::NamedTempFile::new().expect("Failed to create temp file");
+        let temp_path = tmp.path().to_str().expect("non-UTF-8 path");
         original.save(temp_path).expect("Failed to save");
 
         let loaded = EvaluationCache::load_or_new(temp_path);
         assert_eq!(loaded.len(), 1);
         assert_eq!(loaded.best_f(), Some(42.0));
-
-        fs::remove_file(temp_path).ok();
     }
 
     #[test]
@@ -436,21 +425,17 @@ mod tests {
 
     #[test]
     fn test_recompute_best_on_load() {
-        use std::fs;
-
         let mut cache = EvaluationCache::new();
         cache.record(vec![0.0], 100.0);
         cache.record(vec![1.0], 1.0); // best
         cache.record(vec![2.0], 50.0);
 
-        let temp_path = "/tmp/barracuda_test_recompute.json";
+        let tmp = tempfile::NamedTempFile::new().expect("Failed to create temp file");
+        let temp_path = tmp.path().to_str().expect("non-UTF-8 path");
         cache.save(temp_path).expect("Failed to save");
 
-        // Load and verify best was recomputed
         let loaded = EvaluationCache::load(temp_path).expect("Failed to load");
         assert_eq!(loaded.best_f(), Some(1.0));
         assert_eq!(loaded.best_x(), Some(vec![1.0].as_slice()));
-
-        fs::remove_file(temp_path).ok();
     }
 }

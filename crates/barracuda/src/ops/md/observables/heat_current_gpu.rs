@@ -54,7 +54,7 @@ impl HeatCurrentGpu {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("HeatCurrent:layout"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let pipeline = device
@@ -63,7 +63,7 @@ impl HeatCurrentGpu {
                 label: Some("HeatCurrent:pipeline"),
                 layout: Some(&layout),
                 module: &module,
-                entry_point: "heat_current",
+                entry_point: Some("heat_current"),
                 compilation_options: Default::default(),
                 cache: None,
             });
@@ -144,7 +144,7 @@ impl HeatCurrentGpu {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(n.div_ceil(WG), 1, 1);
         }
         self.device.submit_and_poll(Some(enc.finish()));

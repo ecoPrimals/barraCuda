@@ -80,7 +80,7 @@ impl BrayCurtisF64 {
                 label: Some("BrayCurtisF64 Pipeline"),
                 layout: None,
                 module: &shader_module,
-                entry_point: "bray_curtis_pairs",
+                entry_point: Some("bray_curtis_pairs"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -193,7 +193,7 @@ impl BrayCurtisF64 {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             // Dispatch: ceil(n_pairs / 256) workgroups
             let n_workgroups = n_pairs.div_ceil(WORKGROUP_SIZE_1D as usize);
             pass.dispatch_workgroups(n_workgroups as u32, 1, 1);

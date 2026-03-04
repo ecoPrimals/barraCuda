@@ -19,6 +19,7 @@
 //! `[μ, K_cap, d_n, k_ai, d_ai, k_h, K_h, n_h, d_h, k_dgc, k_rep, k_pde, k_act,
 //!   k_bio, K_bio, n_bio, d_bio]`
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
@@ -212,7 +213,7 @@ impl BatchedOdeRK4F64 {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("BatchedOdeRK4 PL"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
         let pipeline = dev
             .device
@@ -220,7 +221,7 @@ impl BatchedOdeRK4F64 {
                 label: Some("BatchedOdeRK4 Pipeline"),
                 layout: Some(&pl),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 cache: None,
                 compilation_options: Default::default(),
             });
@@ -234,8 +235,8 @@ impl BatchedOdeRK4F64 {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bg, &[]);
-            pass.dispatch_workgroups((b as u32).div_ceil(256), 1, 1);
+            pass.set_bind_group(0, Some(&bg), &[]);
+            pass.dispatch_workgroups((b as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1);
         }
         dev.submit_and_poll(Some(encoder.finish()));
 

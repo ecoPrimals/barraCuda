@@ -10,6 +10,7 @@
 //!
 //! wetSpring handoff v6, `dada2_e_step.wgsl` — 88 pipeline checks PASS.
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
@@ -91,7 +92,12 @@ impl Dada2EStepGpu {
                 ],
             });
         let total_pairs = n_seqs * n_centers;
-        super::snp::submit(&self.device, &self.pipeline, &bg, total_pairs.div_ceil(256));
+        super::snp::submit(
+            &self.device,
+            &self.pipeline,
+            &bg,
+            total_pairs.div_ceil(WORKGROUP_SIZE_1D),
+        );
         Ok(())
     }
 }

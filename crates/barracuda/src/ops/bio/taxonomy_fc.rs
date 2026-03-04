@@ -94,7 +94,7 @@ impl TaxonomyFcGpu {
         let layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("TaxonomyFC Layout"),
             bind_group_layouts: &[&bgl],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
 
         let module = device.compile_shader_f64(WGSL_TAXONOMY_FC, Some("TaxonomyFC Shader"));
@@ -103,7 +103,7 @@ impl TaxonomyFcGpu {
             label: Some("TaxonomyFC Pipeline"),
             layout: Some(&layout),
             module: &module,
-            entry_point: "taxonomy_fc",
+            entry_point: Some("taxonomy_fc"),
             compilation_options: Default::default(),
             cache: None,
         });
@@ -184,7 +184,7 @@ impl TaxonomyFcGpu {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(n_queries.div_ceil(16), n_taxa.div_ceil(16), 1);
         }
         q.submit(std::iter::once(encoder.finish()));

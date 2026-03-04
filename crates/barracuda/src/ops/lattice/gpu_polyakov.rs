@@ -55,7 +55,7 @@ impl GpuPolyakovLoop {
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("GpuPolyakovLoop:layout"),
                 bind_group_layouts: &[&bgl],
-                push_constant_ranges: &[],
+                immediate_size: 0,
             });
 
         let pipeline = device
@@ -64,7 +64,7 @@ impl GpuPolyakovLoop {
                 label: Some("GpuPolyakovLoop:pipeline"),
                 layout: Some(&layout),
                 module: &module,
-                entry_point: "polyakov_loop_kernel",
+                entry_point: Some("polyakov_loop_kernel"),
                 compilation_options: Default::default(),
                 cache: None,
             });
@@ -136,7 +136,7 @@ impl GpuPolyakovLoop {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bg, &[]);
+            pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(self.spatial_vol.div_ceil(WG), 1, 1);
         }
         self.device.submit_and_poll(Some(enc.finish()));

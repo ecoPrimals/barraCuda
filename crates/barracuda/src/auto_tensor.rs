@@ -99,311 +99,112 @@ impl AutoContext {
         Tensor::from_data(&data, shape, device.clone())
     }
 
-    /// Matrix multiplication with automatic device selection
+    /// Matrix multiplication with automatic device selection.
     ///
-    /// **Deep Debt**: Scheduler picks CPU for small, GPU for large
+    /// Scheduler picks CPU for small, GPU for large.
     pub fn matmul(&self, a: &Tensor, b: &Tensor) -> Result<Tensor> {
-        // Convert to descriptor for scheduling
-        let desc_a = TensorDescriptor::new(a.shape().to_vec(), DType::F32);
-        let desc_b = TensorDescriptor::new(b.shape().to_vec(), DType::F32);
         let op = MathOp::MatMul {
             transpose_a: false,
             transpose_b: false,
         };
-
-        // Ask scheduler for optimal device
-        let executor = self.scheduler.select_executor(&op, &[desc_a, desc_b]);
-        let hw_type = executor.hardware_type();
-
-        tracing::info!(
-            "MatMul {}×{} → {} (score: {:.3})",
-            a.shape()[0],
-            a.shape()[1],
-            executor.name(),
-            executor.score_operation(
-                &op,
-                &[
-                    TensorDescriptor::new(a.shape().to_vec(), DType::F32),
-                    TensorDescriptor::new(b.shape().to_vec(), DType::F32)
-                ]
-            )
-        );
-
-        // Get optimal device from pool
-        let optimal_device = self
-            .devices
-            .get(&hw_type)
-            .or_else(|| self.devices.values().next())
-            .ok_or_else(|| crate::error::BarracudaError::device("No device available"))?;
-
-        // Transfer tensors if needed (copy to optimal device)
-        let a_on_device = if Arc::ptr_eq(a.device(), optimal_device) {
-            a.clone()
-        } else {
-            // Transfer to optimal device
-            self.transfer_tensor(a, optimal_device)?
-        };
-
-        let b_on_device = if Arc::ptr_eq(b.device(), optimal_device) {
-            b.clone()
-        } else {
-            self.transfer_tensor(b, optimal_device)?
-        };
-
-        // Execute on optimal device
-        a_on_device.matmul(&b_on_device)
+        self.dispatch_binary(op, a, b, |a, b| a.matmul(&b))
     }
 
-    /// Element-wise ReLU with automatic device selection
+    /// Element-wise ReLU with automatic device selection.
     pub fn relu(&self, input: &Tensor) -> Result<Tensor> {
-        let desc = TensorDescriptor::new(input.shape().to_vec(), DType::F32);
-        let op = MathOp::ReLU;
-
-        let executor = self
-            .scheduler
-            .select_executor(&op, std::slice::from_ref(&desc));
-        let hw_type = executor.hardware_type();
-
-        tracing::info!(
-            "ReLU [{}] → {} (score: {:.3})",
-            input.shape().iter().product::<usize>(),
-            executor.name(),
-            executor.score_operation(&op, &[desc])
-        );
-
-        let optimal_device = self
-            .devices
-            .get(&hw_type)
-            .or_else(|| self.devices.values().next())
-            .ok_or_else(|| crate::error::BarracudaError::device("No device available"))?;
-
-        let input_on_device = if Arc::ptr_eq(input.device(), optimal_device) {
-            input.clone()
-        } else {
-            self.transfer_tensor(input, optimal_device)?
-        };
-
-        input_on_device.relu()
+        self.dispatch_unary(MathOp::ReLU, input, |t| t.relu())
     }
 
-    /// 2D Convolution with automatic device selection
+    /// 2D Convolution with automatic device selection.
     pub fn conv2d(&self, input: &Tensor, kernel: &Tensor) -> Result<Tensor> {
-        let desc_input = TensorDescriptor::new(input.shape().to_vec(), DType::F32);
-        let desc_kernel = TensorDescriptor::new(kernel.shape().to_vec(), DType::F32);
         let op = MathOp::Conv2D {
             stride: (1, 1),
             padding: (0, 0),
             dilation: (1, 1),
             groups: 1,
         };
-
-        let executor = self
-            .scheduler
-            .select_executor(&op, &[desc_input.clone(), desc_kernel.clone()]);
-        let hw_type = executor.hardware_type();
-
-        tracing::info!(
-            "Conv2D {:?} * {:?} → {} (score: {:.3})",
-            input.shape(),
-            kernel.shape(),
-            executor.name(),
-            executor.score_operation(&op, &[desc_input, desc_kernel])
-        );
-
-        let optimal_device = self
-            .devices
-            .get(&hw_type)
-            .or_else(|| self.devices.values().next())
-            .ok_or_else(|| crate::error::BarracudaError::device("No device available"))?;
-
-        let input_on_device = if Arc::ptr_eq(input.device(), optimal_device) {
-            input.clone()
-        } else {
-            self.transfer_tensor(input, optimal_device)?
-        };
-
-        let kernel_on_device = if Arc::ptr_eq(kernel.device(), optimal_device) {
-            kernel.clone()
-        } else {
-            self.transfer_tensor(kernel, optimal_device)?
-        };
-
-        input_on_device.conv2d(&kernel_on_device)
+        self.dispatch_binary(op, input, kernel, |a, b| a.conv2d(&b))
     }
 
-    /// Element-wise addition with automatic device selection
+    /// Element-wise addition with automatic device selection.
     pub fn add(&self, a: &Tensor, b: &Tensor) -> Result<Tensor> {
-        let desc_a = TensorDescriptor::new(a.shape().to_vec(), DType::F32);
-        let desc_b = TensorDescriptor::new(b.shape().to_vec(), DType::F32);
-        let op = MathOp::Add;
-
-        let executor = self.scheduler.select_executor(&op, &[desc_a, desc_b]);
-        let hw_type = executor.hardware_type();
-
-        let optimal_device = self
-            .devices
-            .get(&hw_type)
-            .or_else(|| self.devices.values().next())
-            .ok_or_else(|| crate::error::BarracudaError::device("No device available"))?;
-
-        let a_on_device = if Arc::ptr_eq(a.device(), optimal_device) {
-            a.clone()
-        } else {
-            self.transfer_tensor(a, optimal_device)?
-        };
-
-        let b_on_device = if Arc::ptr_eq(b.device(), optimal_device) {
-            b.clone()
-        } else {
-            self.transfer_tensor(b, optimal_device)?
-        };
-
-        a_on_device.add(&b_on_device)
+        self.dispatch_binary(MathOp::Add, a, b, |a, b| a.add(&b))
     }
 
-    /// Element-wise subtraction with automatic device selection
+    /// Element-wise subtraction with automatic device selection.
     pub fn sub(&self, a: &Tensor, b: &Tensor) -> Result<Tensor> {
-        let desc_a = TensorDescriptor::new(a.shape().to_vec(), DType::F32);
-        let desc_b = TensorDescriptor::new(b.shape().to_vec(), DType::F32);
-        let op = MathOp::Sub;
-
-        let executor = self.scheduler.select_executor(&op, &[desc_a, desc_b]);
-        let hw_type = executor.hardware_type();
-
-        let optimal_device = self
-            .devices
-            .get(&hw_type)
-            .or_else(|| self.devices.values().next())
-            .ok_or_else(|| crate::error::BarracudaError::device("No device available"))?;
-
-        let a_on_device = if Arc::ptr_eq(a.device(), optimal_device) {
-            a.clone()
-        } else {
-            self.transfer_tensor(a, optimal_device)?
-        };
-
-        let b_on_device = if Arc::ptr_eq(b.device(), optimal_device) {
-            b.clone()
-        } else {
-            self.transfer_tensor(b, optimal_device)?
-        };
-
-        a_on_device.sub(&b_on_device)
+        self.dispatch_binary(MathOp::Sub, a, b, |a, b| a.sub(&b))
     }
 
-    /// Element-wise multiplication with automatic device selection
+    /// Element-wise multiplication with automatic device selection.
     pub fn mul(&self, a: &Tensor, b: &Tensor) -> Result<Tensor> {
-        let desc_a = TensorDescriptor::new(a.shape().to_vec(), DType::F32);
-        let desc_b = TensorDescriptor::new(b.shape().to_vec(), DType::F32);
-        let op = MathOp::Mul;
-
-        let executor = self.scheduler.select_executor(&op, &[desc_a, desc_b]);
-        let hw_type = executor.hardware_type();
-
-        let optimal_device = self
-            .devices
-            .get(&hw_type)
-            .or_else(|| self.devices.values().next())
-            .ok_or_else(|| crate::error::BarracudaError::device("No device available"))?;
-
-        let a_on_device = if Arc::ptr_eq(a.device(), optimal_device) {
-            a.clone()
-        } else {
-            self.transfer_tensor(a, optimal_device)?
-        };
-
-        let b_on_device = if Arc::ptr_eq(b.device(), optimal_device) {
-            b.clone()
-        } else {
-            self.transfer_tensor(b, optimal_device)?
-        };
-
-        a_on_device.mul(&b_on_device)
+        self.dispatch_binary(MathOp::Mul, a, b, |a, b| a.mul(&b))
     }
 
-    /// Element-wise division with automatic device selection
+    /// Element-wise division with automatic device selection.
     pub fn div(&self, a: &Tensor, b: &Tensor) -> Result<Tensor> {
-        let desc_a = TensorDescriptor::new(a.shape().to_vec(), DType::F32);
-        let desc_b = TensorDescriptor::new(b.shape().to_vec(), DType::F32);
-        let op = MathOp::Div;
-
-        let executor = self.scheduler.select_executor(&op, &[desc_a, desc_b]);
-        let hw_type = executor.hardware_type();
-
-        let optimal_device = self
-            .devices
-            .get(&hw_type)
-            .or_else(|| self.devices.values().next())
-            .ok_or_else(|| crate::error::BarracudaError::device("No device available"))?;
-
-        let a_on_device = if Arc::ptr_eq(a.device(), optimal_device) {
-            a.clone()
-        } else {
-            self.transfer_tensor(a, optimal_device)?
-        };
-
-        let b_on_device = if Arc::ptr_eq(b.device(), optimal_device) {
-            b.clone()
-        } else {
-            self.transfer_tensor(b, optimal_device)?
-        };
-
-        a_on_device.div(&b_on_device)
+        self.dispatch_binary(MathOp::Div, a, b, |a, b| a.div(&b))
     }
 
-    /// Sigmoid activation with automatic device selection
+    /// Sigmoid activation with automatic device selection.
     pub fn sigmoid(&self, input: &Tensor) -> Result<Tensor> {
-        let desc = TensorDescriptor::new(input.shape().to_vec(), DType::F32);
-        let op = MathOp::Sigmoid;
-
-        let executor = self.scheduler.select_executor(&op, &[desc]);
-        let hw_type = executor.hardware_type();
-
-        let optimal_device = self
-            .devices
-            .get(&hw_type)
-            .or_else(|| self.devices.values().next())
-            .ok_or_else(|| crate::error::BarracudaError::device("No device available"))?;
-
-        let input_on_device = if Arc::ptr_eq(input.device(), optimal_device) {
-            input.clone()
-        } else {
-            self.transfer_tensor(input, optimal_device)?
-        };
-
-        input_on_device.sigmoid()
+        self.dispatch_unary(MathOp::Sigmoid, input, |t| t.sigmoid())
     }
 
-    /// Tanh activation with automatic device selection
+    /// Tanh activation with automatic device selection.
     pub fn tanh(&self, input: &Tensor) -> Result<Tensor> {
-        let desc = TensorDescriptor::new(input.shape().to_vec(), DType::F32);
-        let op = MathOp::Tanh;
-
-        let executor = self.scheduler.select_executor(&op, &[desc]);
-        let hw_type = executor.hardware_type();
-
-        let optimal_device = self
-            .devices
-            .get(&hw_type)
-            .or_else(|| self.devices.values().next())
-            .ok_or_else(|| crate::error::BarracudaError::device("No device available"))?;
-
-        let input_on_device = if Arc::ptr_eq(input.device(), optimal_device) {
-            input.clone()
-        } else {
-            self.transfer_tensor(input, optimal_device)?
-        };
-
-        input_on_device.tanh()
+        self.dispatch_unary(MathOp::Tanh, input, |t| t.tanh())
     }
 
-    /// Transfer tensor to different device
-    fn transfer_tensor(&self, tensor: &Tensor, target_device: &Arc<WgpuDevice>) -> Result<Tensor> {
-        // Read data from source device
-        let data = tensor.to_vec()?;
+    /// Resolve the optimal device for a scheduled operation.
+    fn resolve_device(&self, hw_type: HardwareType) -> Result<&Arc<WgpuDevice>> {
+        self.devices
+            .get(&hw_type)
+            .or_else(|| self.devices.values().next())
+            .ok_or_else(|| crate::error::BarracudaError::device("No device available"))
+    }
 
-        // Create on target device
-        Tensor::from_data(&data, tensor.shape().to_vec(), target_device.clone())
+    /// Ensure a tensor lives on the target device, transferring if necessary.
+    fn ensure_on_device(&self, tensor: &Tensor, target: &Arc<WgpuDevice>) -> Result<Tensor> {
+        if Arc::ptr_eq(tensor.device(), target) {
+            Ok(tensor.clone())
+        } else {
+            let data = tensor.to_vec()?;
+            Tensor::from_data(&data, tensor.shape().to_vec(), target.clone())
+        }
+    }
+
+    /// Schedule and dispatch a binary (two-tensor) operation.
+    fn dispatch_binary(
+        &self,
+        op: MathOp,
+        a: &Tensor,
+        b: &Tensor,
+        f: impl FnOnce(Tensor, Tensor) -> Result<Tensor>,
+    ) -> Result<Tensor> {
+        let descs = [
+            TensorDescriptor::new(a.shape().to_vec(), DType::F32),
+            TensorDescriptor::new(b.shape().to_vec(), DType::F32),
+        ];
+        let hw = self.scheduler.select_executor(&op, &descs).hardware_type();
+        let dev = self.resolve_device(hw)?;
+        let a_dev = self.ensure_on_device(a, dev)?;
+        let b_dev = self.ensure_on_device(b, dev)?;
+        f(a_dev, b_dev)
+    }
+
+    /// Schedule and dispatch a unary (single-tensor) operation.
+    fn dispatch_unary(
+        &self,
+        op: MathOp,
+        input: &Tensor,
+        f: impl FnOnce(Tensor) -> Result<Tensor>,
+    ) -> Result<Tensor> {
+        let desc = TensorDescriptor::new(input.shape().to_vec(), DType::F32);
+        let hw = self.scheduler.select_executor(&op, &[desc]).hardware_type();
+        let dev = self.resolve_device(hw)?;
+        let on_dev = self.ensure_on_device(input, dev)?;
+        f(on_dev)
     }
 
     /// Get scheduler reference

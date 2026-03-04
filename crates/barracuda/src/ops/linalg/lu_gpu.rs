@@ -96,13 +96,13 @@ impl LuGpu {
         let pl = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
             bind_group_layouts: &[bgl],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
         device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some(entry_point),
             layout: Some(&pl),
             module: shader,
-            entry_point,
+            entry_point: Some(entry_point),
             cache: None,
             compilation_options: Default::default(),
         })
@@ -137,7 +137,7 @@ impl LuGpu {
         {
             let mut p = enc.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
             p.set_pipeline(pipeline);
-            p.set_bind_group(0, bg, &[]);
+            p.set_bind_group(0, Some(bg), &[]);
             p.dispatch_workgroups(wg.0, wg.1, wg.2);
         }
         dev.submit_and_poll(Some(enc.finish()));

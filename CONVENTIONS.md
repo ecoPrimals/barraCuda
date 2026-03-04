@@ -7,6 +7,7 @@ the sourDough scaffold. barraCuda owns its own standards.
 
 - **Edition**: 2021
 - **MSRV**: 1.87
+- **GPU stack**: wgpu 28, naga 28 — `Device` and `Queue` are `Clone` (no `Arc` wrappers)
 - **Linting**: `warn(clippy::all, clippy::pedantic)` — configured in `Cargo.toml` `[lints]`
 - **Suppressions**: `#[expect(clippy::lint, reason = "...")]` — compile-time verified, never `#[allow]`
 - **Docs**: `#![warn(missing_docs)]` — `cargo doc --workspace --no-deps` clean with `-D warnings`
@@ -44,6 +45,41 @@ barraCuda uses a three-layer concurrency model for wgpu-core safety:
 - Use `GuardedEncoder` (via `create_encoder_guarded()`) for RAII encoder lifecycle
 - Device creation serialized via `DEVICE_CREATION_LOCK`
 - Device-lost flag only set for genuine device-lost errors, not validation errors
+
+## Workgroup Sizes
+
+Dispatch workgroup counts must use named constants from `device::capabilities`,
+never magic number literals:
+
+| Constant | Value | Use case |
+|----------|-------|----------|
+| `WORKGROUP_SIZE_1D` | 256 | General-purpose 1D elementwise shaders |
+| `WORKGROUP_SIZE_COMPACT` | 64 | Physics, lattice, and memory-heavy shaders |
+| `WORKGROUP_SIZE_2D` | 16 | 2D dispatch (16×16 = 256 threads) |
+
+These constants define the Rust-side `div_ceil()` divisor. The matching
+`@workgroup_size(N)` in each WGSL shader must agree — changing a constant
+requires updating the corresponding shader.
+
+```rust
+use crate::device::capabilities::{WORKGROUP_SIZE_1D, WORKGROUP_SIZE_COMPACT};
+
+let workgroups = (n as u32).div_ceil(WORKGROUP_SIZE_1D);       // 256-thread shaders
+let workgroups = (n as u32).div_ceil(WORKGROUP_SIZE_COMPACT);  // 64-thread shaders
+```
+
+## Device Handle Patterns
+
+wgpu 28 makes `Device` and `Queue` internally `Clone` (cheap `Arc` under the hood).
+Do **not** wrap them in `Arc<wgpu::Device>` or `Arc<wgpu::Queue>`.
+
+```rust
+let device: wgpu::Device = wgpu_device.device_clone();
+let queue: wgpu::Queue = wgpu_device.queue_clone();
+```
+
+`GuardedDeviceHandle` derefs to `wgpu::Device` and auto-protects all `create_*`
+calls with the atomic encoder barrier.
 
 ## IPC
 

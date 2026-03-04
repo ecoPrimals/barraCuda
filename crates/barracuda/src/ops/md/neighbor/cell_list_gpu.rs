@@ -476,7 +476,7 @@ fn make_pipeline(
         .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some(label),
             bind_group_layouts: &[bgl],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
     device
         .device
@@ -484,7 +484,7 @@ fn make_pipeline(
             label: Some(label),
             layout: Some(&layout),
             module,
-            entry_point: entry,
+            entry_point: Some(entry),
             compilation_options: Default::default(),
             cache: None,
         })
@@ -558,7 +558,7 @@ fn dispatch_pass(
         timestamp_writes: None,
     });
     pass.set_pipeline(pl);
-    pass.set_bind_group(0, bg, &[]);
+    pass.set_bind_group(0, Some(bg), &[]);
     pass.dispatch_workgroups(x, y, z);
 }
 

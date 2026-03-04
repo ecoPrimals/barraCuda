@@ -148,7 +148,7 @@ impl Gradient2D {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups(self.nx.div_ceil(16) as u32, self.ny.div_ceil(16) as u32, 1);
         }
 

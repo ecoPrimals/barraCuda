@@ -129,7 +129,7 @@ impl ELU {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&*bind_group), &[]);
             pass.dispatch_workgroups(workgroups, 1, 1);
             drop(params_buf);
         })?;

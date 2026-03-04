@@ -4,6 +4,8 @@
 //! Provenance: groundSpring `jackknife.rs` -> toadStool absorption (S70).
 
 #[cfg(feature = "gpu")]
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
+#[cfg(feature = "gpu")]
 use crate::device::compute_pipeline::ComputeDispatch;
 #[cfg(feature = "gpu")]
 use crate::device::WgpuDevice;
@@ -65,7 +67,7 @@ impl JackknifeMeanGpu {
             .device
             .create_buffer_f64_init("jackknife_mean:full_sum", &[full_sum]);
 
-        let wg_count = (n as u32).div_ceil(256);
+        let wg_count = (n as u32).div_ceil(WORKGROUP_SIZE_1D);
         ComputeDispatch::new(&self.device, "jackknife_mean")
             .shader(SHADER_JACKKNIFE, "main")
             .f64()

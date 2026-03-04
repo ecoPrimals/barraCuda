@@ -41,7 +41,7 @@ async fn main() {
     println!("==========================================================\n");
 
     // ── List all visible adapters ─────────────────────────────────────────
-    let adapters = WgpuDevice::enumerate_adapters();
+    let adapters = WgpuDevice::enumerate_adapters().await;
     println!("Available GPU adapters:");
     for (i, info) in adapters.iter().enumerate() {
         println!(

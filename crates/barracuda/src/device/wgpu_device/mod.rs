@@ -17,181 +17,15 @@ mod capabilities;
 mod compilation;
 mod creation;
 mod dispatch;
+mod guard;
 
 pub(crate) use dispatch::{concurrency_budget, DispatchPermit, DispatchSemaphore};
+pub use guard::{GuardedDeviceHandle, GuardedEncoder};
 
 use super::autotune::{GpuCalibration, GpuDeviceForCalibration, GLOBAL_TUNER};
 use crate::error::Result;
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
-
-/// RAII command encoder that prevents `device.poll()` from running.
-///
-/// While this encoder exists, an atomic counter is non-zero, which causes
-/// poll to spin-wait. Multiple `GuardedEncoder`s can coexist with zero
-/// contention (just atomic increments). Encoding is never blocked.
-///
-/// Call `.finish()` to consume the encoder, decrement the counter, and
-/// obtain a `wgpu::CommandBuffer` ready for submission.
-pub struct GuardedEncoder {
-    encoder: Option<wgpu::CommandEncoder>,
-    active_encoders: Arc<std::sync::atomic::AtomicU32>,
-}
-
-impl std::ops::Deref for GuardedEncoder {
-    type Target = wgpu::CommandEncoder;
-    fn deref(&self) -> &Self::Target {
-        self.encoder.as_ref().expect("encoder already finished")
-    }
-}
-
-impl std::ops::DerefMut for GuardedEncoder {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.encoder.as_mut().expect("encoder already finished")
-    }
-}
-
-impl GuardedEncoder {
-    /// Finish encoding and decrement the active encoder count.
-    pub fn finish(mut self) -> wgpu::CommandBuffer {
-        let cmd = self
-            .encoder
-            .take()
-            .expect("encoder already finished")
-            .finish();
-        self.active_encoders.fetch_sub(1, Ordering::Release);
-        cmd
-    }
-}
-
-impl Drop for GuardedEncoder {
-    fn drop(&mut self) {
-        if self.encoder.is_some() {
-            self.active_encoders.fetch_sub(1, Ordering::Release);
-        }
-    }
-}
-
-/// Wrapper around `Arc<wgpu::Device>` that auto-protects `create_*` calls.
-///
-/// Inherent methods shadow `wgpu::Device::create_*`, incrementing the
-/// active-encoder counter before the call and decrementing after. This
-/// prevents `device.poll()` from racing with resource creation on software
-/// rasterizers (llvmpipe). Non-create methods pass through via `Deref`.
-#[derive(Clone)]
-pub struct GuardedDeviceHandle {
-    inner: Arc<wgpu::Device>,
-    active_encoders: Arc<AtomicU32>,
-}
-
-impl std::fmt::Debug for GuardedDeviceHandle {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("GuardedDeviceHandle")
-            .field("inner", &"<wgpu::Device>")
-            .finish()
-    }
-}
-
-impl std::ops::Deref for GuardedDeviceHandle {
-    type Target = wgpu::Device;
-    fn deref(&self) -> &wgpu::Device {
-        &self.inner
-    }
-}
-
-impl GuardedDeviceHandle {
-    pub(crate) fn new(inner: Arc<wgpu::Device>, active_encoders: Arc<AtomicU32>) -> Self {
-        Self {
-            inner,
-            active_encoders,
-        }
-    }
-
-    /// Get the underlying `Arc<wgpu::Device>` for ownership sharing.
-    pub(crate) fn inner_arc(&self) -> Arc<wgpu::Device> {
-        self.inner.clone()
-    }
-
-    fn guard(&self) {
-        self.active_encoders.fetch_add(1, Ordering::Acquire);
-    }
-
-    fn unguard(&self) {
-        self.active_encoders.fetch_sub(1, Ordering::Release);
-    }
-
-    pub fn create_buffer(&self, desc: &wgpu::BufferDescriptor<'_>) -> wgpu::Buffer {
-        self.guard();
-        let r = self.inner.create_buffer(desc);
-        self.unguard();
-        r
-    }
-
-    pub fn create_buffer_init(&self, desc: &wgpu::util::BufferInitDescriptor<'_>) -> wgpu::Buffer {
-        self.guard();
-        let r = self.inner.create_buffer_init(desc);
-        self.unguard();
-        r
-    }
-
-    pub fn create_bind_group_layout(
-        &self,
-        desc: &wgpu::BindGroupLayoutDescriptor<'_>,
-    ) -> wgpu::BindGroupLayout {
-        self.guard();
-        let r = self.inner.create_bind_group_layout(desc);
-        self.unguard();
-        r
-    }
-
-    pub fn create_bind_group(&self, desc: &wgpu::BindGroupDescriptor<'_>) -> wgpu::BindGroup {
-        self.guard();
-        let r = self.inner.create_bind_group(desc);
-        self.unguard();
-        r
-    }
-
-    pub fn create_pipeline_layout(
-        &self,
-        desc: &wgpu::PipelineLayoutDescriptor<'_>,
-    ) -> wgpu::PipelineLayout {
-        self.guard();
-        let r = self.inner.create_pipeline_layout(desc);
-        self.unguard();
-        r
-    }
-
-    pub fn create_compute_pipeline(
-        &self,
-        desc: &wgpu::ComputePipelineDescriptor<'_>,
-    ) -> wgpu::ComputePipeline {
-        self.guard();
-        let r = self.inner.create_compute_pipeline(desc);
-        self.unguard();
-        r
-    }
-
-    pub fn create_shader_module(
-        &self,
-        desc: wgpu::ShaderModuleDescriptor<'_>,
-    ) -> wgpu::ShaderModule {
-        self.guard();
-        let r = self.inner.create_shader_module(desc);
-        self.unguard();
-        r
-    }
-
-    pub fn create_command_encoder(
-        &self,
-        desc: &wgpu::CommandEncoderDescriptor<'_>,
-    ) -> wgpu::CommandEncoder {
-        self.guard();
-        let r = self.inner.create_command_encoder(desc);
-        self.unguard();
-        r
-    }
-}
 
 /// WebGPU device - executes WGSL on any hardware
 ///
@@ -207,7 +41,7 @@ impl GuardedDeviceHandle {
 #[derive(Debug, Clone)]
 pub struct WgpuDevice {
     pub(crate) device: GuardedDeviceHandle,
-    pub(crate) queue: Arc<wgpu::Queue>,
+    pub(crate) queue: wgpu::Queue,
     pub(crate) adapter_info: wgpu::AdapterInfo,
     calibration: Option<GpuCalibration>,
     /// Vulkan pipeline cache — avoids re-compiling identical SPIR-V to machine code.
@@ -278,13 +112,11 @@ impl WgpuDevice {
 
     /// Check if the Sovereign Compiler's SPIR-V passthrough path is available.
     ///
-    /// Returns `true` when `wgpu::Features::SPIRV_SHADER_PASSTHROUGH` was
-    /// granted at device creation — typically available on Vulkan backends
-    /// (NVK, RADV, proprietary NVIDIA).
+    /// In wgpu 28 SPIR-V passthrough is gated by the `spirv` cargo feature
+    /// on the wgpu crate (always enabled in our workspace). The Vulkan
+    /// backend is required at runtime for the driver to accept SPIR-V.
     pub fn has_spirv_passthrough(&self) -> bool {
-        self.device
-            .features()
-            .contains(wgpu::Features::SPIRV_SHADER_PASSTHROUGH)
+        self.adapter_info.backend == wgpu::Backend::Vulkan
     }
 
     /// Access underlying wgpu device
@@ -292,9 +124,9 @@ impl WgpuDevice {
         &self.device
     }
 
-    /// Get Arc-wrapped device (for shared ownership)
-    pub fn device_arc(&self) -> Arc<wgpu::Device> {
-        self.device.inner_arc()
+    /// Get a clone of the wgpu device (cheap — internally Arc-wrapped in wgpu 28).
+    pub fn device_clone(&self) -> wgpu::Device {
+        (*self.device).clone()
     }
 
     /// Get the shared GPU lock (for components that call `device.poll` directly).
@@ -346,10 +178,7 @@ impl WgpuDevice {
     ) -> GuardedEncoder {
         self.active_encoders.fetch_add(1, Ordering::Acquire);
         let encoder = self.device.create_command_encoder(desc);
-        GuardedEncoder {
-            encoder: Some(encoder),
-            active_encoders: self.active_encoders.clone(),
-        }
+        GuardedEncoder::new(encoder, self.active_encoders.clone())
     }
 
     /// Get adapter info (for capability detection)
@@ -369,8 +198,8 @@ impl WgpuDevice {
         &self.queue
     }
 
-    /// Get Arc to command queue
-    pub fn queue_arc(&self) -> Arc<wgpu::Queue> {
+    /// Get a clone of the command queue (cheap — internally Arc-wrapped in wgpu 28).
+    pub fn queue_clone(&self) -> wgpu::Queue {
         self.queue.clone()
     }
 
@@ -385,7 +214,7 @@ impl WgpuDevice {
 
     /// Poll the device for completed work, catching device-lost panics.
     ///
-    /// Every `device.poll(Maintain::Wait)` call site in barracuda should
+    /// Every `device.poll(PollType::Wait)` call site in barracuda should
     /// go through this method (or its `_nonblocking` variant) so that a
     /// driver-level device loss is consistently caught, flagged, and
     /// converted to `Err` instead of panicking the caller's thread.
@@ -400,7 +229,10 @@ impl WgpuDevice {
         self.brief_encoder_wait();
         let device = self.device.clone();
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
-            device.poll(wgpu::Maintain::Wait);
+            let _ = device.poll(wgpu::PollType::Wait {
+                submission_index: None,
+                timeout: None,
+            });
         }));
         match result {
             Ok(()) => Ok(()),
@@ -461,7 +293,7 @@ impl WgpuDevice {
             return;
         };
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            self.device.poll(wgpu::MaintainBase::Poll);
+            let _ = self.device.poll(wgpu::PollType::Poll);
         }));
     }
 
@@ -527,7 +359,10 @@ impl WgpuDevice {
         {
             let device = self.device.clone();
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
-                device.poll(wgpu::Maintain::Wait);
+                let _ = device.poll(wgpu::PollType::Wait {
+                    submission_index: None,
+                    timeout: None,
+                });
             }));
             if let Err(payload) = result {
                 if Self::is_device_lost_panic(&payload) {
@@ -568,7 +403,7 @@ impl WgpuDevice {
                     label: Some("barraCuda Pipeline"),
                     layout: None,
                     module: &shader,
-                    entry_point: "main",
+                    entry_point: Some("main"),
                     cache: self.pipeline_cache(),
                     compilation_options: Default::default(),
                 });
@@ -586,7 +421,7 @@ impl WgpuDevice {
                 });
                 pass.set_pipeline(&pipeline);
                 for (i, bg) in bind_groups.iter().enumerate() {
-                    pass.set_bind_group(i as u32, bg, &[]);
+                    pass.set_bind_group(i as u32, Some(*bg), &[]);
                 }
                 pass.dispatch_workgroups(workgroups.0, workgroups.1, workgroups.2);
             }
@@ -657,7 +492,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_enumerate_adapters() {
-        let adapters = WgpuDevice::enumerate_adapters();
+        let adapters = WgpuDevice::enumerate_adapters().await;
         assert!(
             !adapters.is_empty(),
             "WGPU should find at least one adapter"
@@ -684,7 +519,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_adapter_selector_index() {
-        let adapters = WgpuDevice::enumerate_adapters();
+        let adapters = WgpuDevice::enumerate_adapters().await;
         if adapters.is_empty() {
             return;
         }
@@ -695,7 +530,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_adapter_selector_name_match() {
-        let adapters = WgpuDevice::enumerate_adapters();
+        let adapters = WgpuDevice::enumerate_adapters().await;
         if adapters.is_empty() {
             return;
         }
@@ -710,7 +545,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_adapter_selector_fallthrough() {
-        let adapters = WgpuDevice::enumerate_adapters();
+        let adapters = WgpuDevice::enumerate_adapters().await;
         let large_index = (adapters.len() + 1000).to_string();
         if let Err(e) = WgpuDevice::with_adapter_selector(&large_index).await {
             assert!(e.to_string().contains("No adapter matches"));

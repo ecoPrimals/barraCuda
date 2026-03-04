@@ -4,6 +4,7 @@
 //!
 //! Provenance: neuralSpring S69 → toadStool absorption.
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::error::Result;
@@ -90,7 +91,7 @@ pub fn linear_regression(
         .storage_read(1, &y_buf)
         .storage_rw(2, &out_buf)
         .uniform(3, &params_buf)
-        .dispatch(b.div_ceil(256), 1, 1)
+        .dispatch(b.div_ceil(WORKGROUP_SIZE_1D), 1, 1)
         .submit();
 
     device.read_f64_buffer(&out_buf, out_len)

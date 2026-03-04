@@ -5,7 +5,7 @@
 //! requests over the wire, and assert on the responses. This exercises the
 //! full transport pipeline: serialization, framing, dispatch, and response.
 
-#![allow(clippy::unwrap_used)]
+#![expect(clippy::unwrap_used, reason = "E2E tests use unwrap for clarity")]
 
 use serde_json::{json, Value};
 use std::sync::Arc;

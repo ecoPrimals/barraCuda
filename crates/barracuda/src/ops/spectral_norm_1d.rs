@@ -211,7 +211,7 @@ impl SpectralNorm1D {
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("SpectralNorm1D Pipeline Layout"),
                     bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                 });
 
         let compute_pipeline =
@@ -221,7 +221,7 @@ impl SpectralNorm1D {
                     label: Some("SpectralNorm1D Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
-                    entry_point: "normalize_weights",
+                    entry_point: Some("normalize_weights"),
                     cache: None,
                     compilation_options: Default::default(),
                 });
@@ -239,7 +239,7 @@ impl SpectralNorm1D {
                 timestamp_writes: None,
             });
             compute_pass.set_pipeline(&compute_pipeline);
-            compute_pass.set_bind_group(0, &bind_group, &[]);
+            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
             // Deep Debt Evolution: Capability-based dispatch
             let caps = DeviceCapabilities::from_device(device);
             let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::Reduction);

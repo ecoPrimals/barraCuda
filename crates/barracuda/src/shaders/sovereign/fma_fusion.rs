@@ -271,6 +271,7 @@ pub(crate) fn visit_operands<F: FnMut(Handle<Expression>)>(expr: &Expression, mu
         }
         Expression::ImageQuery { image, .. } => f(image),
         Expression::RayQueryGetIntersection { query, .. } => f(query),
+        Expression::RayQueryVertexPositions { .. } => {}
         // Leaf expressions — no operands
         Expression::Literal(_)
         | Expression::Constant(_)

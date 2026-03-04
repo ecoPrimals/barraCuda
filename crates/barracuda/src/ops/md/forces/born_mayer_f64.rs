@@ -16,7 +16,6 @@ use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 const WGSL_DF64_CORE: &str = include_str!("../../../shaders/math/df64_core.wgsl");
 const WGSL_DF64_TRANSCENDENTALS: &str =
@@ -177,6 +176,7 @@ impl BornMayerForceF64 {
     }
 
     /// CPU reference (test/validation only).
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn compute_cpu(
         &self,
@@ -230,6 +230,7 @@ impl BornMayerForceF64 {
         forces
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn compute_cpu_with_energy(
         &self,
@@ -293,6 +294,7 @@ impl BornMayerForceF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

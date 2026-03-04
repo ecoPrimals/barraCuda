@@ -64,7 +64,7 @@
 //! - Zero duplication: One implementation per op
 
 #![deny(unsafe_code)]
-#![allow(rustdoc::broken_intra_doc_links)]
+#![expect(rustdoc::broken_intra_doc_links, reason = "legacy")]
 
 // ── CPU-only modules (always available, no GPU dependency) ────────────────────
 pub mod error;

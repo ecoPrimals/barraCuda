@@ -10,7 +10,6 @@
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -200,11 +199,9 @@ impl SearchSorted {
                 compilation_options: Default::default(),
             });
 
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("SearchSorted Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("SearchSorted Encoder"),
+        });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -331,12 +328,9 @@ impl SearchSorted {
                     compilation_options: Default::default(),
                 });
 
-        let mut convert_encoder =
-            device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("SearchSorted Convert Encoder"),
-                });
+        let mut convert_encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("SearchSorted Convert Encoder"),
+        });
 
         {
             let mut pass = convert_encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -362,6 +356,7 @@ impl SearchSorted {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Error handling tests for FHE validation.
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 use barracuda::device::WgpuDevice;
 use barracuda::ops::fhe_ntt::FheNtt;
 use barracuda::ops::fhe_poly_add::create_fhe_poly_tensor;

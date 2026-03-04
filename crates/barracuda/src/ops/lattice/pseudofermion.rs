@@ -321,6 +321,7 @@ fn kinetic_energy(momenta: &[Su3Matrix]) -> f64 {
     t
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -26,7 +26,6 @@ use crate::device::WgpuDevice;
 use crate::error::Result;
 use crate::ops::md::observables::{compute_vacf, Vacf};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 const VACF_SHADER: &str = include_str!("vacf_f64.wgsl");
 const WG: u32 = 16;
@@ -161,11 +160,9 @@ impl VacfGpu {
         let wg_x = (actual_lag as u32).div_ceil(WG);
         let wg_y = (n_frames as u32).div_ceil(WG);
 
-        let mut encoder = gpu_d
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("VACF"),
-            });
+        let mut encoder = gpu_d.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("VACF"),
+        });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
             pass.set_pipeline(&pipeline);
@@ -236,6 +233,7 @@ fn storage_bgl(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -248,6 +248,7 @@ fn next_power_of_2(n: usize) -> usize {
     p.max(8) // Minimum mesh size of 8
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

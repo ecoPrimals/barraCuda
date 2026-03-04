@@ -4,7 +4,6 @@
 use crate::error::Result;
 use crate::unified_hardware::{HardwareType, TensorStorage};
 use crate::unified_math::TensorDescriptor;
-use async_trait::async_trait;
 
 /// CPU tensor storage implementation
 pub(super) struct CpuTensorStorage {
@@ -22,8 +21,6 @@ impl CpuTensorStorage {
     }
 }
 
-// NOTE(async-dyn): #[async_trait] required — native async fn in trait is not dyn-compatible
-#[async_trait]
 impl TensorStorage for CpuTensorStorage {
     fn descriptor(&self) -> &TensorDescriptor {
         &self.descriptor
@@ -33,21 +30,30 @@ impl TensorStorage for CpuTensorStorage {
         HardwareType::CPU
     }
 
-    async fn read_to_cpu(&self) -> Result<Vec<u8>> {
-        Ok(self.data.clone())
+    fn read_to_cpu(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<u8>>> + Send + '_>> {
+        let data = self.data.clone();
+        Box::pin(async move { Ok(data) })
     }
 
-    async fn write_from_cpu(&mut self, data: &[u8]) -> Result<()> {
-        if data.len() != self.data.len() {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: format!(
-                    "Data size mismatch: expected {}, got {}",
-                    self.data.len(),
-                    data.len()
-                ),
-            });
-        }
-        self.data.copy_from_slice(data);
-        Ok(())
+    fn write_from_cpu(
+        &mut self,
+        data: &[u8],
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
+        let data = data.to_vec();
+        Box::pin(async move {
+            if data.len() != self.data.len() {
+                return Err(crate::error::BarracudaError::InvalidInput {
+                    message: format!(
+                        "Data size mismatch: expected {}, got {}",
+                        self.data.len(),
+                        data.len()
+                    ),
+                });
+            }
+            self.data.copy_from_slice(&data);
+            Ok(())
+        })
     }
 }

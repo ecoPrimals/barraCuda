@@ -159,7 +159,7 @@ async fn handle_line(primal: &BarraCudaPrimal, line: &str) -> JsonRpcResponse {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[expect(clippy::unwrap_used, reason = "suppressed")]
 mod tests {
     use super::*;
 

@@ -13,7 +13,6 @@ use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 const SHADER: &str = include_str!("kinetic_energy_f64.wgsl");
 const WG: u32 = 256;
@@ -88,7 +87,7 @@ impl KineticEnergyF64 {
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        let mut enc = d.create_command_encoder(&Default::default());
+        let mut enc = self.device.create_encoder_guarded(&Default::default());
         enc.copy_buffer_to_buffer(&ke_buf, 0, &rb, 0, out_size);
         self.device.submit_and_poll(Some(enc.finish()));
 
@@ -112,6 +111,7 @@ impl KineticEnergyF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

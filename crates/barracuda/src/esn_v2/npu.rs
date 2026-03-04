@@ -41,7 +41,11 @@ pub struct NpuReadoutWeights {
 /// // Dequantize: (q - zero_point) * scale ≈ original
 /// ```
 #[must_use]
-#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    reason = "NPU API"
+)]
 pub fn quantize_affine_i8_f64(values: &[f64]) -> (Vec<i8>, f64, i64) {
     if values.is_empty() {
         return (Vec::new(), 1.0, 0);
@@ -75,7 +79,7 @@ fn round(x: f64) -> f64 {
 ///
 /// `x = (q - zero_point) * scale`
 #[must_use]
-#[allow(clippy::cast_precision_loss)]
+#[expect(clippy::cast_precision_loss, reason = "suppressed")]
 pub fn dequantize_affine_i8_f64(quantized: &[i8], scale: f64, zero_point: i64) -> Vec<f64> {
     quantized
         .iter()
@@ -83,6 +87,7 @@ pub fn dequantize_affine_i8_f64(quantized: &[i8], scale: f64, zero_point: i64) -
         .collect()
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

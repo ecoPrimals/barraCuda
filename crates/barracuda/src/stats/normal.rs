@@ -73,7 +73,10 @@ pub fn norm_pdf(x: f64) -> f64 {
 /// assert!((norm_ppf(0.5) - 0.0).abs() < 1e-10);
 /// assert!((norm_ppf(0.975) - 1.96).abs() < 1e-2);
 /// ```
-#[allow(clippy::excessive_precision)] // Acklam's algorithm coefficients - precision is intentional
+#[expect(
+    clippy::excessive_precision,
+    reason = "Acklam algorithm coefficients; precision intentional"
+)]
 pub fn norm_ppf(p: f64) -> f64 {
     if p <= 0.0 {
         return f64::NEG_INFINITY;
@@ -177,6 +180,7 @@ pub fn norm_ppf_general(p: f64, mu: f64, sigma: f64) -> f64 {
     mu + sigma * norm_ppf(p)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

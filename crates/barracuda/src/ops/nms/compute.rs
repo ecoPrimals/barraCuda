@@ -14,7 +14,6 @@ use crate::device::WgpuDevice;
 use crate::error::Result;
 use crate::tensor::Tensor;
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 impl NMS {
     /// Execute NMS on a given GPU device.

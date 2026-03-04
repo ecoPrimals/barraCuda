@@ -238,8 +238,7 @@ impl LinearMixer {
         // Dispatch
         let mut encoder = self
             .device
-            .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor { label: None });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("linear_mix"),
@@ -268,7 +267,7 @@ impl LinearMixer {
             0,
             (self.vec_dim * std::mem::size_of::<f64>()) as u64,
         );
-        self.device.queue().submit(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
 
         self.device
             .map_staging_buffer::<f64>(&staging_buffer, self.vec_dim)
@@ -514,6 +513,7 @@ fn solve_symmetric_positive(m: usize, a: &mut [f64], b: &mut [f64]) {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

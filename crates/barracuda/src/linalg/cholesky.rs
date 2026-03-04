@@ -203,6 +203,7 @@ pub fn cholesky_f64_cpu(a: &[f64], n: usize) -> Result<CholeskyDecomposition> {
     Ok(CholeskyDecomposition { l, n })
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -266,7 +267,7 @@ mod tests {
         let chol = cholesky_f64_cpu(&a, 3).unwrap();
 
         // Verify L·Lᵀ = A
-        let mut llt = vec![0.0; 9];
+        let mut llt = [0.0; 9];
         for i in 0..3 {
             for j in 0..3 {
                 for k in 0..3 {
@@ -293,7 +294,7 @@ mod tests {
         let inv = chol.inverse().unwrap();
 
         // A * A⁻¹ = I
-        let mut aa_inv = vec![0.0; 4];
+        let mut aa_inv = [0.0; 4];
         for i in 0..2 {
             for j in 0..2 {
                 for k in 0..2 {

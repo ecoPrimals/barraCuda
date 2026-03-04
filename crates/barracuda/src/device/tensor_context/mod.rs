@@ -75,6 +75,7 @@ impl Drop for TensorSession {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -82,13 +83,13 @@ mod tests {
     use std::sync::Arc;
 
     async fn create_test_device() -> Arc<wgpu::Device> {
-        Arc::clone(&get_test_device().await.device)
+        get_test_device().await.device.inner_arc()
     }
 
     #[tokio::test]
     async fn test_buffer_pool_basic_acquire_release() {
         let device = create_test_device().await;
-        let pool = BufferPool::new(device);
+        let pool = BufferPool::new_standalone(device);
         let buf1 = pool.acquire(1024);
         assert!(buf1.size() >= 1024);
         let size = buf1.size();
@@ -103,7 +104,7 @@ mod tests {
     #[tokio::test]
     async fn test_buffer_pool_power_of_two_bucketing() {
         let device = create_test_device().await;
-        let pool = BufferPool::new(device);
+        let pool = BufferPool::new_standalone(device);
         assert_eq!(pool.acquire(1000).size(), 1024);
         assert_eq!(pool.acquire(1025).size(), 2048);
         assert_eq!(pool.acquire(100).size(), 256);
@@ -112,7 +113,7 @@ mod tests {
     #[tokio::test]
     async fn test_buffer_pool_multiple_buckets() {
         let device = create_test_device().await;
-        let pool = BufferPool::new(device);
+        let pool = BufferPool::new_standalone(device);
         let buf_256 = pool.acquire(256);
         let buf_1024 = pool.acquire(1024);
         let buf_4096 = pool.acquire(4096);
@@ -127,7 +128,7 @@ mod tests {
     #[tokio::test]
     async fn test_pooled_buffer_auto_return() {
         let device = create_test_device().await;
-        let pool = BufferPool::new(device);
+        let pool = BufferPool::new_standalone(device);
         let (allocs_before, reuses_before) = pool.stats();
         {
             let _ = pool.acquire_pooled(1024);
@@ -185,7 +186,7 @@ mod tests {
     #[tokio::test]
     async fn test_pin_solver_buffers_basic() {
         let device = create_test_device().await;
-        let pool = BufferPool::new(device);
+        let pool = BufferPool::new_standalone(device);
         let buffers = pool
             .pin_solver_buffers(
                 "test_solver",
@@ -203,7 +204,7 @@ mod tests {
     #[tokio::test]
     async fn test_pin_solver_buffers_duplicate_id_error() {
         let device = create_test_device().await;
-        let pool = BufferPool::new(device);
+        let pool = BufferPool::new_standalone(device);
         pool.pin_solver_buffers("solver_a", &[("buf", BufferDescriptor::new(256))])
             .expect("first pin");
         assert!(pool

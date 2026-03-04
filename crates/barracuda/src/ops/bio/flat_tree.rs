@@ -407,6 +407,7 @@ fn build_from_edges(edges: &[(usize, usize, f64)]) -> (Vec<i32>, Vec<f64>, usize
     (parent, branch_length, n_leaves)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

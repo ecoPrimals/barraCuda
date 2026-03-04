@@ -11,7 +11,6 @@
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// Tile operation (repeat tensor along dimensions)
 pub struct Tile {
@@ -298,11 +297,9 @@ impl Tile {
                 });
 
         // Execute compute shader
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Tile Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("Tile Encoder"),
+        });
 
         {
             let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -329,6 +326,7 @@ impl Tile {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

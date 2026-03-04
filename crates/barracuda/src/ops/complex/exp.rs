@@ -8,7 +8,6 @@
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 pub struct ComplexExp {
     input: Tensor,
@@ -138,11 +137,9 @@ impl ComplexExp {
             ],
         });
 
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Complex Exp Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("Complex Exp Encoder"),
+        });
 
         {
             let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -171,6 +168,7 @@ impl ComplexExp {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

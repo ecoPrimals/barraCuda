@@ -12,7 +12,6 @@
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// Graph Attention Network Convolution
 pub struct GatConv {
@@ -285,11 +284,9 @@ impl GatConv {
                 });
 
         // Create encoder
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("GATConv Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("GATConv Encoder"),
+        });
 
         // Output buffer is already zero-initialized by create_buffer_f32
 
@@ -357,6 +354,7 @@ impl GatConv {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

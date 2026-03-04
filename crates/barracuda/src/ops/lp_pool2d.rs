@@ -12,7 +12,6 @@ use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// Lp Pool 2D operation
 pub struct LpPool2D {
@@ -150,6 +149,7 @@ impl LpPool2D {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

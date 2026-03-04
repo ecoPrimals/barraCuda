@@ -119,8 +119,7 @@ impl Gradient1D {
 
         let mut encoder = self
             .device
-            .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor { label: None });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("grad1d"),
@@ -134,7 +133,7 @@ impl Gradient1D {
         let buffer_size = (self.n * std::mem::size_of::<f64>()) as u64;
         let staging = create_staging_buffer(self.device.device(), buffer_size, "grad1d_staging");
         encoder.copy_buffer_to_buffer(&output_buffer, 0, &staging, 0, buffer_size);
-        self.device.queue().submit(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
 
         self.device.map_staging_buffer::<f64>(&staging, self.n)
     }

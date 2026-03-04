@@ -16,7 +16,6 @@
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -162,11 +161,9 @@ impl AdaBound {
 
         // Copy params to writable buffer using GPU copy
         let params_buffer = device.create_buffer_f32(size)?;
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("AdaBound Buffer Copy Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("AdaBound Buffer Copy Encoder"),
+        });
         encoder.copy_buffer_to_buffer(self.params.buffer(), 0, &params_buffer, 0, byte_size);
 
         // Copy or create m buffer (GPU copy or zero initialization)
@@ -307,11 +304,9 @@ impl AdaBound {
             ],
         });
 
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("adabound_encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("adabound_encoder"),
+        });
 
         {
             let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -385,6 +380,7 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

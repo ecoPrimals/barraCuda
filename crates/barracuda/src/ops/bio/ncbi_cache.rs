@@ -11,10 +11,13 @@ use etcetera::BaseStrategy;
 
 use crate::error::{BarracudaError, Result};
 
+/// Package name for cache directory (derived from Cargo metadata, not hardcoded).
+const PRIMAL_NAME: &str = env!("CARGO_PKG_NAME");
+
 /// Local cache for NCBI accession data (sequences, annotations, etc.).
 ///
-/// Uses XDG cache dir by default (`$XDG_CACHE_HOME/barracuda/ncbi/` or
-/// `~/.cache/barracuda/ncbi/`). Accepts explicit cache dir for tests.
+/// Uses XDG cache dir by default (`$XDG_CACHE_HOME/<package>/ncbi/` or
+/// `~/.cache/<package>/ncbi/`). Accepts explicit cache dir for tests.
 #[derive(Debug, Clone)]
 pub struct NcbiCache {
     cache_dir: PathBuf,
@@ -23,7 +26,7 @@ pub struct NcbiCache {
 impl NcbiCache {
     /// Create a new cache. If `cache_dir` is `None`, uses XDG-compliant default.
     ///
-    /// Default: `$XDG_CACHE_HOME/barracuda/ncbi/` or `~/.cache/barracuda/ncbi/`.
+    /// Default: `$XDG_CACHE_HOME/<package>/ncbi/` or `~/.cache/<package>/ncbi/`.
     pub fn new(cache_dir: Option<PathBuf>) -> Result<Self> {
         let base = match cache_dir {
             Some(p) => p,
@@ -34,7 +37,7 @@ impl NcbiCache {
             }
         };
         Ok(Self {
-            cache_dir: base.join(env!("CARGO_PKG_NAME")).join("ncbi"),
+            cache_dir: base.join(PRIMAL_NAME).join("ncbi"),
         })
     }
 
@@ -122,6 +125,7 @@ fn sanitize_filename(accession: &str) -> String {
         .collect()
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -177,7 +181,7 @@ mod tests {
     fn default_cache_dir_uses_xdg() {
         let cache = NcbiCache::new(None).expect("new");
         let path = cache.cache_path("NM_001234");
-        assert!(path.to_string_lossy().contains("barracuda"));
+        assert!(path.to_string_lossy().contains(PRIMAL_NAME));
         assert!(path.to_string_lossy().contains("ncbi"));
         assert!(path.to_string_lossy().contains("NM_001234"));
     }

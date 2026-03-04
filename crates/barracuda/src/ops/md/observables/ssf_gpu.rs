@@ -24,7 +24,6 @@ use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::f64::consts::PI;
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// Parameters for SSF shader
 #[repr(C)]
@@ -219,11 +218,9 @@ impl SsfGpu {
         });
 
         // Execute
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("SSF Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("SSF Encoder"),
+        });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("SSF Pass"),
@@ -378,6 +375,7 @@ impl SsfGpu {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -424,7 +422,7 @@ mod tests {
         let box_side = 10.0;
 
         // Pseudo-random positions using irrational multipliers
-        #[allow(clippy::approx_constant)]
+        #[expect(clippy::approx_constant, reason = "physics constant")]
         let (mult_a, mult_b, mult_c) = (1.618, 2.718, 3.141);
         let mut positions: Vec<f64> = Vec::with_capacity(n * 3);
         for i in 0..n {
@@ -461,7 +459,7 @@ mod tests {
         let n = 100;
         let box_side = 10.0;
 
-        #[allow(clippy::approx_constant)]
+        #[expect(clippy::approx_constant, reason = "physics constant")]
         let (mult_a, mult_b, mult_c) = (1.618, 2.718, 3.141);
         let mut positions: Vec<f64> = Vec::with_capacity(n * 3);
         for i in 0..n {
@@ -551,7 +549,7 @@ mod tests {
         let box_side = 10.0;
 
         // Pseudo-random positions using irrational multipliers
-        #[allow(clippy::approx_constant)]
+        #[expect(clippy::approx_constant, reason = "physics constant")]
         let (mult_a, mult_b, mult_c) = (1.618, 2.718, 3.141);
         let mut positions: Vec<f64> = Vec::with_capacity(n * 3);
         for i in 0..n {

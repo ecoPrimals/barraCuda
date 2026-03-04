@@ -19,6 +19,7 @@
 //! - Reasonable performance (<10x slowdown)
 //! - Correct results (spot checks)
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 mod common;
 
 use barracuda::ops::complex::*;

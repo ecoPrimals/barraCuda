@@ -111,7 +111,7 @@ impl JsonRpcRequest {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[expect(clippy::unwrap_used, reason = "suppressed")]
 mod tests {
     use super::*;
 

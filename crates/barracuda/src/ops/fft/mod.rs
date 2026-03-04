@@ -72,6 +72,7 @@ pub mod fft_3d_f64;
 pub mod ifft_1d;
 pub mod rfft;
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;
 

@@ -86,6 +86,7 @@ pub fn gcd(mut a: usize, mut b: usize) -> usize {
     a
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -106,7 +107,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
+    #[expect(clippy::float_cmp, reason = "tests")]
     fn almost_mathieu_lambda_zero_free_lattice() {
         let (d, e) = almost_mathieu_hamiltonian(50, 0.0, GOLDEN_RATIO, 0.0);
         assert!(d.iter().all(|&x| x == 0.0));

@@ -14,7 +14,6 @@ use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 const SHADER: &str = include_str!("rdf_histogram_f64.wgsl");
 const WG: u32 = 64;
@@ -104,9 +103,11 @@ impl RdfHistogramF64 {
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        let mut enc = d.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("RDF:enc"),
-        });
+        let mut enc = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("RDF:enc"),
+            });
         enc.copy_buffer_to_buffer(&hist_buf, 0, &readback, 0, (n_bins * 4) as u64);
         self.device.submit_and_poll(Some(enc.finish()));
 
@@ -152,6 +153,7 @@ impl RdfHistogramF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

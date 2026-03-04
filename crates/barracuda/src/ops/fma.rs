@@ -139,11 +139,9 @@ impl Fma {
         );
 
         // Encode and execute
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("FMA Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("FMA Encoder"),
+        });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -187,6 +185,7 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -211,7 +210,7 @@ mod tests {
         let result = output.to_vec().unwrap();
 
         // d = a * b + c
-        let expected = vec![12.0, 24.0, 36.0, 48.0, 60.0];
+        let expected = [12.0, 24.0, 36.0, 48.0, 60.0];
         for (i, (&r, &e)) in result.iter().zip(expected.iter()).enumerate() {
             assert!((r - e).abs() < 1e-6, "Mismatch at {}: {} vs {}", i, r, e);
         }

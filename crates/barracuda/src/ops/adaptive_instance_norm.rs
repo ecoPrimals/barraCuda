@@ -13,7 +13,6 @@
 
 use crate::error::Result;
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// f64 is the canonical source — math is universal, precision is silicon.
 const SHADER_F64: &str = include_str!("../shaders/norm/adaptive_instance_norm_f64.wgsl");
@@ -233,11 +232,9 @@ impl AdaptiveInstanceNorm {
                 });
 
         // Execute compute shader
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("AdaptiveInstanceNorm Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("AdaptiveInstanceNorm Encoder"),
+        });
 
         {
             let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -280,9 +277,10 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
+    #[expect(unused_imports, reason = "conditional imports")]
     use super::*;
     // No longer needed - using Tensor method API
     use crate::device::test_pool::get_test_device_if_gpu_available;

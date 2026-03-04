@@ -156,6 +156,7 @@ pub fn laguerre_all(n_max: usize, alpha: f64, x: f64) -> Vec<f64> {
     result
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

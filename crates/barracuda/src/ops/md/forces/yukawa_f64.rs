@@ -16,7 +16,6 @@ use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 const WGSL_DF64_CORE: &str = include_str!("../../../shaders/math/df64_core.wgsl");
 const WGSL_DF64_TRANSCENDENTALS: &str =
@@ -165,6 +164,7 @@ impl YukawaForceF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -279,6 +279,7 @@ pub fn chi2_decomposed_weighted(
     })
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

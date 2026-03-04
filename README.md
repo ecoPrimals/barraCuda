@@ -1,6 +1,6 @@
 # barraCuda
 
-**Version**: 0.3.1
+**Version**: 0.3.2
 **Status**: Standalone primal — zero cross-dependencies, fully concurrent, all quality gates passing
 **License**: AGPL-3.0-or-later
 **MSRV**: 1.87
@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **767 WGSL shaders** spanning scientific compute domains
-- **957 Rust source files**, 29 integration test suites, 4 examples, 5 binaries
+- **1,023 Rust source files**, 61 integration test suites, 4 examples, 5 binaries
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -48,8 +48,8 @@ results.
 1. **Math is universal, precision is silicon** — one WGSL source, any precision
 2. **Vendor-agnostic** — same binary, identical results on any GPU
 3. **Sovereign** — zero external SDK dependency for correctness or performance
-4. **Pure Rust** — `#![deny(unsafe_code)]` in barracuda-core, exactly 2 wgpu FFI calls (pipeline cache + SPIR-V), zero dependencies on toadStool or any other primal
-5. **Fully concurrent** — all GPU access serialized via `WgpuDevice::lock()`, device creation serialized globally
+4. **Pure Rust** — `#![deny(unsafe_code)]` in barracuda-core, exactly 2 wgpu FFI calls (pipeline cache + SPIR-V), zero dependencies on any other primal (lifecycle and health traits internalized from sourDough scaffold)
+5. **Fully concurrent** — `GuardedDeviceHandle` + atomic encoder barrier prevents wgpu-core races without lock contention; all tests pass at 16 threads on llvmpipe
 6. **AGPL-3.0** — free as in freedom
 
 ---
@@ -75,7 +75,7 @@ barracuda (umbrella crate)
 barracuda-core (primal lifecycle)
     |-- IPC: JSON-RPC 2.0 (text) + tarpc (binary)
     |-- UniBin CLI: server, doctor, validate, version
-    |-- sourdough-core: PrimalLifecycle, PrimalHealth
+    |-- lifecycle + health: PrimalLifecycle, PrimalHealth (owned)
     |
     v
 wgpu (WebGPU)
@@ -100,7 +100,7 @@ barraCuda/
 ├── rustfmt.toml                     # Formatting config
 ├── README.md                        # You are here
 ├── CONTRIBUTING.md                  # How to contribute
-├── CONVENTIONS.md                   # Coding standards (-> sourDough)
+├── CONVENTIONS.md                   # Coding standards
 ├── CHANGELOG.md                     # SemVer changelog
 ├── BREAKING_CHANGES.md              # Migration notes
 ├── LICENSE                          # AGPL-3.0-or-later
@@ -124,7 +124,7 @@ barraCuda/
 │       │   ├── ops/                 # GPU ops (matmul, softmax, FHE, bio)
 │       │   ├── tensor/              # GPU tensor type
 │       │   ├── shaders/             # 767 WGSL shaders (see shaders/README.md)
-│       │   ├── device/              # WgpuDevice, capabilities, test pool
+│       │   ├── device/              # WgpuDevice, concurrency, test pool
 │       │   ├── staging/             # Ring buffers, unidirectional pipelines
 │       │   ├── pipeline/            # ComputeDispatch, batched pipelines
 │       │   ├── dispatch/            # Size-based CPU/GPU routing
@@ -132,12 +132,31 @@ barraCuda/
 │       │   ├── unified_hardware/    # Unified CPU/GPU/NPU abstraction
 │       │   └── ...                  # + nn, snn, esn, pde, genomics, vision
 │       ├── examples/                # 4 runnable examples
-│       ├── tests/                   # 29 integration test suites
+│       ├── tests/                   # 60 integration test suites
 │       └── src/bin/                 # validate_gpu, bench_*
 └── specs/
     ├── BARRACUDA_SPECIFICATION.md   # Crate architecture + IPC contract
     └── ARCHITECTURE_DEMARCATION.md  # barraCuda vs toadStool boundaries
 ```
+
+---
+
+## Concurrency Model
+
+barraCuda's GPU access uses a three-layer concurrency model that prevents
+wgpu-core internal races without lock contention:
+
+1. **`active_encoders: AtomicU32`** — lock-free counter incremented during
+   any wgpu-core activity (buffer creation, shader compilation, command
+   encoding). Multiple threads increment simultaneously with zero contention.
+2. **`gpu_lock: Mutex<()>`** — serializes `queue.submit()` and `device.poll()`
+   against each other. Before poll, a bounded yield loop waits for active
+   encoders to reach zero (encoding is CPU-speed microsecond work).
+3. **`dispatch_semaphore`** — hardware-aware cap (2 for CPU/llvmpipe, 8 for
+   discrete GPU) preventing driver overload.
+
+`GuardedEncoder` is an RAII wrapper that auto-decrements the active encoder
+count on finish or drop, making the barrier leak-proof.
 
 ---
 
@@ -149,7 +168,7 @@ cargo clippy --workspace -- -D warnings # lints (pedantic in Cargo.toml)
 cargo deny check                        # license + advisory audit
 cargo doc --workspace --no-deps         # documentation
 cargo build --workspace                 # compilation
-cargo test --workspace --lib            # 2,965 unit tests
+cargo test --workspace --lib            # 1,791+ test functions
 cargo llvm-cov --workspace --lib        # ~80% line coverage (unit tests)
 ```
 
@@ -255,7 +274,7 @@ barracuda = { path = "../barraCuda/crates/barracuda", default-features = false }
 ```
 ecoPrimals/
 ├── barraCuda/          # This repo
-├── sourDough/          # Required (workspace dep for primal traits)
+├── sourDough/          # Scaffold reference (no runtime dependency)
 ├── wateringHole/       # Ecosystem standards and genomeBin manifest
 └── ...Springs          # Consumers
 ```
@@ -288,10 +307,11 @@ barraCuda is a **NUCLEUS foundation primal** registered in `wateringHole/genomeB
 Springs ──> barraCuda (direct cargo dep)
 toadStool ──> barraCuda (as compute backend)
 bearDog ··> barraCuda (for FHE math)
-barraCuda ──> sourDough (primal traits only)
+barraCuda ──> (standalone — lifecycle/health internalized from sourDough scaffold)
 ```
 
-barraCuda has ZERO dependencies on toadStool, songBird, bearDog, or nestGate.
+barraCuda has ZERO dependencies on toadStool, songBird, bearDog, nestGate, or sourDough.
+Lifecycle and health traits are modeled on the ecoPrimals pattern but fully owned by barraCuda.
 
 ---
 

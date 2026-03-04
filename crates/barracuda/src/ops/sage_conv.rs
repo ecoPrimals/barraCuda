@@ -12,7 +12,6 @@
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// GraphSAGE Convolution
 pub struct SageConv {
@@ -293,11 +292,9 @@ impl SageConv {
                 });
 
         // Create encoder
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("SAGEConv Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("SAGEConv Encoder"),
+        });
 
         // Step 1: Aggregate neighbors
         let aggregate_pipeline =
@@ -392,6 +389,7 @@ impl SageConv {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

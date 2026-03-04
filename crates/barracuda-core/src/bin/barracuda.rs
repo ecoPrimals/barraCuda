@@ -5,9 +5,10 @@
 //! - One binary named after the primal
 //! - Subcommands: `server`, `doctor`, `validate`, `version`
 
+use barracuda_core::health::PrimalHealth;
+use barracuda_core::lifecycle::PrimalLifecycle;
 use barracuda_core::BarraCudaPrimal;
 use clap::{Parser, Subcommand};
-use sourdough_core::{PrimalHealth, PrimalLifecycle};
 use std::sync::Arc;
 
 #[derive(Parser)]
@@ -81,7 +82,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
             let server = barracuda_core::ipc::IpcServer::new(Arc::clone(&primal));
 
-            // Spawn tarpc binary RPC server if requested.
             if let Some(ref tarpc_addr) = tarpc_bind {
                 let tarpc_server = barracuda_core::ipc::IpcServer::new(Arc::clone(&primal));
                 let tarpc_addr = tarpc_addr.clone();
@@ -117,7 +117,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             println!("================");
             println!("Name:    {}", report.name);
             println!("Version: {}", report.version);
-            println!("Status:  {:?}", report.status);
+            println!("Status:  {}", report.status);
 
             if let Some(dev) = primal.device() {
                 let info = dev.adapter_info();

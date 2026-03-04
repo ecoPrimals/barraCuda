@@ -20,11 +20,11 @@
 //! cargo test -p barracuda --test hardware_verification -- --nocapture
 //! ```
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 mod common;
 
 use barracuda::device::{
-    ComputeWorkload, Device, DeviceSelection, HardwareWorkload, KernelRouter, KernelTarget,
-    WgpuDevice,
+    ComputeWorkload, Device, DeviceSelection, KernelRouter, KernelTarget, WgpuDevice,
 };
 use barracuda::tensor::Tensor;
 use std::collections::HashMap;

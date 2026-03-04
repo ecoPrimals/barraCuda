@@ -6,7 +6,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.3.2"
 edition = "2021"
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/ecoPrimals/barraCuda"
@@ -14,9 +14,6 @@ authors = ["ecoPrimals Project"]
 rust-version = "1.87"
 
 [workspace.dependencies]
-# Core primal traits
-sourdough-core = { path = "../sourDough/crates/sourdough-core" }
-
 # Async runtime
 tokio = { version = "1.40", features = ["full"] }
 
@@ -45,7 +42,7 @@ naga = { version = "22.1", features = ["wgsl-in", "spv-out"] }
 # Numerics
 num-traits = "0.2"
 rayon = "1.8"
-rand = "0.8"
+rand = "0.9"
 
 # Cryptographic hashing (for provenance, not crypto operations)
 # 'pure' feature: no C SIMD assembly, fully pure Rust dependency chain
@@ -54,7 +51,6 @@ blake3 = { version = "1.5", features = ["pure"] }
 # Utilities
 etcetera = "0.8"
 half = "2.4"
-async-trait = "0.1"
 
 # CLI
 clap = { version = "4", features = ["derive"] }

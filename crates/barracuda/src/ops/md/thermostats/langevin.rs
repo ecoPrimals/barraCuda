@@ -26,7 +26,6 @@
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 use rand::Rng;
-use wgpu::util::DeviceExt;
 
 /// Langevin thermostat parameters
 ///
@@ -150,9 +149,9 @@ impl LangevinStep {
     ) -> Result<Tensor> {
         // Box-Muller transform for Gaussian samples
         let mut noise_data = Vec::with_capacity(n_particles * 3);
-        for _ in 0..(n_particles * 3 / 2 + 1) {
-            let u1: f64 = rng.gen::<f64>().max(1e-30);
-            let u2: f64 = rng.gen();
+        for _ in 0..=(n_particles * 3 / 2) {
+            let u1: f64 = rng.random::<f64>().max(1e-30);
+            let u2: f64 = rng.random();
             let r = (-2.0 * u1.ln()).sqrt();
             let theta = 2.0 * std::f64::consts::PI * u2;
             noise_data.push(r * theta.cos());
@@ -291,11 +290,9 @@ impl LangevinStep {
             ],
         });
 
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Langevin Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("Langevin Encoder"),
+        });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -316,6 +313,7 @@ impl LangevinStep {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -350,7 +348,7 @@ mod tests {
             return;
         };
 
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let noise = LangevinStep::generate_noise(100, &device, &mut rng).unwrap();
 
         assert_eq!(noise.shape(), &[100, 3]);

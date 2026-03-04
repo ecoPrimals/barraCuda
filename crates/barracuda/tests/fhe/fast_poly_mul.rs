@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Fast polynomial multiplication tests (NTT-based).
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 use super::helpers::*;
 use barracuda::device::WgpuDevice;
 use barracuda::ops::fhe_fast_poly_mul::FheFastPolyMul;
@@ -9,7 +10,10 @@ use std::sync::Arc;
 
 /// Naive polynomial multiplication mod (X^N - 1) — cyclic convolution.
 /// Standard NTT implements cyclic convolution, not negacyclic (X^N+1).
-#[allow(clippy::needless_range_loop)] // indices i,j needed for computing k = (i+j) % degree
+#[expect(
+    clippy::needless_range_loop,
+    reason = "indices i,j needed for k = (i+j) % degree"
+)]
 fn naive_poly_multiply(a: &[u64], b: &[u64], degree: usize, modulus: u64) -> Vec<u64> {
     let mut result = vec![0u64; degree];
 

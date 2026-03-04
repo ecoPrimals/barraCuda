@@ -225,7 +225,8 @@ pub struct UnidirectionalPipeline {
     /// Input throttler (for simulation)
     input_throttler: Option<BandwidthThrottler>,
     /// Output throttler for bandwidth simulation (Phase 5+ parity with input_throttler).
-    #[allow(dead_code)] // Phase 5+: parity with input_throttler for bandwidth simulation
+    #[expect(dead_code, reason = "legacy")]
+    // Phase 5+: parity with input_throttler for bandwidth simulation
     output_throttler: Option<BandwidthThrottler>,
     /// Pipeline start time (for throughput calculation)
     start_time: Instant,
@@ -453,6 +454,7 @@ impl std::fmt::Debug for UnidirectionalPipeline {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

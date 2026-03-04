@@ -11,7 +11,6 @@
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -121,11 +120,9 @@ impl RMSNorm {
         });
 
         // Execute
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("RMSNorm Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("RMSNorm Encoder"),
+        });
         {
             let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("RMSNorm Pass"),
@@ -159,6 +156,7 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -198,15 +196,15 @@ mod tests {
             return;
         };
         // Single sample
-        let input = Tensor::from_data(&vec![1.0, 2.0, 3.0], vec![1, 3], device.clone()).unwrap();
-        let gamma = Tensor::from_data(&vec![1.0, 1.0, 1.0], vec![3], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![1, 3], device.clone()).unwrap();
+        let gamma = Tensor::from_data(&[1.0, 1.0, 1.0], vec![3], device.clone()).unwrap();
         let result = input.rmsnorm(gamma, 1e-6).unwrap();
         let output = result.to_vec().unwrap();
         assert_eq!(output.len(), 3);
 
         // Small epsilon
-        let input = Tensor::from_data(&vec![1.0, 1.0], vec![1, 2], device.clone()).unwrap();
-        let gamma = Tensor::from_data(&vec![1.0, 1.0], vec![2], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 1.0], vec![1, 2], device.clone()).unwrap();
+        let gamma = Tensor::from_data(&[1.0, 1.0], vec![2], device.clone()).unwrap();
         let result = input.rmsnorm(gamma, 1e-8).unwrap();
         let output = result.to_vec().unwrap();
         assert!(output.iter().all(|&x| x.is_finite()));
@@ -226,8 +224,8 @@ mod tests {
         assert_eq!(output.len(), 100);
 
         // Different gamma values
-        let input = Tensor::from_data(&vec![1.0; 4], vec![1, 4], device.clone()).unwrap();
-        let gamma = Tensor::from_data(&vec![0.5, 1.0, 1.5, 2.0], vec![4], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0; 4], vec![1, 4], device.clone()).unwrap();
+        let gamma = Tensor::from_data(&[0.5, 1.0, 1.5, 2.0], vec![4], device.clone()).unwrap();
         let result = input.rmsnorm(gamma, 1e-6).unwrap();
         let output = result.to_vec().unwrap();
         assert!(output.iter().all(|&x| x.is_finite()));
@@ -241,7 +239,7 @@ mod tests {
         // 100 samples, 10 features
         let input_data: Vec<f32> = (0..1000).map(|i| i as f32).collect();
         let input = Tensor::from_data(&input_data, vec![100, 10], device.clone()).unwrap();
-        let gamma = Tensor::from_data(&vec![1.0; 10], vec![10], device.clone()).unwrap();
+        let gamma = Tensor::from_data(&[1.0; 10], vec![10], device.clone()).unwrap();
         let result = input.rmsnorm(gamma, 1e-6).unwrap();
         let output = result.to_vec().unwrap();
         assert_eq!(output.len(), 1000);
@@ -253,9 +251,8 @@ mod tests {
             return;
         };
         // Verify normalization behavior
-        let input =
-            Tensor::from_data(&vec![2.0, 2.0, 2.0, 2.0], vec![1, 4], device.clone()).unwrap();
-        let gamma = Tensor::from_data(&vec![1.0, 1.0, 1.0, 1.0], vec![4], device.clone()).unwrap();
+        let input = Tensor::from_data(&[2.0, 2.0, 2.0, 2.0], vec![1, 4], device.clone()).unwrap();
+        let gamma = Tensor::from_data(&[1.0, 1.0, 1.0, 1.0], vec![4], device.clone()).unwrap();
         let result = input.rmsnorm(gamma, 1e-6).unwrap();
         let output = result.to_vec().unwrap();
 

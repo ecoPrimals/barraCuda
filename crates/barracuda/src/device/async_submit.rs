@@ -48,7 +48,7 @@ use std::sync::{Arc, Mutex};
 /// Async GPU submission manager
 ///
 /// Batches GPU operations and provides non-blocking submission tracking.
-/// Holds `Arc<WgpuDevice>` to synchronize submit/poll via `WgpuDevice::lock()`.
+/// wgpu's `Queue` and `Device` are thread-safe — no external lock needed.
 pub struct AsyncSubmitter {
     device: Arc<WgpuDevice>,
     /// Pending command buffers to be submitted
@@ -100,19 +100,19 @@ impl AsyncSubmitter {
     /// Submit all pending command buffers
     ///
     /// Returns a submission index that can be used to track completion.
-    /// Holds `WgpuDevice::lock()` during submit to prevent concurrent access.
+    /// Serialized via `gpu_lock` to prevent wgpu-core storage races.
     pub fn submit_all(&self) -> u64 {
         let mut pending = self.pending.lock().expect("pending mutex poisoned");
         if pending.is_empty() {
             return self.submission_index.load(Ordering::SeqCst);
         }
 
-        // Get new submission index
         let index = self.submission_index.fetch_add(1, Ordering::SeqCst) + 1;
 
-        // Submit all pending buffers in one call — hold lock for submit
         let buffers: Vec<_> = pending.drain(..).collect();
-        let _guard = self.device.lock();
+        let lock = self.device.gpu_lock_arc();
+        let _guard = lock.lock().unwrap_or_else(|e| e.into_inner());
+        self.device.brief_encoder_wait();
         self.device.queue().submit(buffers);
 
         // Register a callback to update completed index when done
@@ -129,11 +129,12 @@ impl AsyncSubmitter {
 
     /// Submit a single command buffer immediately
     ///
-    /// Use when you need immediate submission without batching.
-    /// Holds `WgpuDevice::lock()` during submit.
+    /// Serialized via `gpu_lock` to prevent wgpu-core storage races.
     pub fn submit_immediate(&self, command_buffer: wgpu::CommandBuffer) -> u64 {
         let index = self.submission_index.fetch_add(1, Ordering::SeqCst) + 1;
-        let _guard = self.device.lock();
+        let lock = self.device.gpu_lock_arc();
+        let _guard = lock.lock().unwrap_or_else(|e| e.into_inner());
+        self.device.brief_encoder_wait();
         self.device.queue().submit(Some(command_buffer));
         index
     }
@@ -148,14 +149,8 @@ impl AsyncSubmitter {
     /// Check if work at the given index is complete
     ///
     /// Note: This is approximate. For precise synchronization, use `wait_for()`.
-    /// Holds `WgpuDevice::lock()` during non-blocking poll.
     pub fn is_complete(&self, index: u64) -> bool {
-        if !self.device.is_lost() {
-            let _guard = self.device.lock();
-            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                self.device.device().poll(wgpu::Maintain::Poll);
-            }));
-        }
+        self.device.poll_nonblocking();
         self.completed_index.load(Ordering::SeqCst) >= index
     }
 
@@ -192,7 +187,7 @@ impl AsyncSubmitter {
 /// Async buffer read operation
 ///
 /// Wraps a wgpu buffer read that can be awaited without blocking.
-/// Holds `Arc<WgpuDevice>` to synchronize poll via `WgpuDevice::lock()`.
+/// wgpu's `Device::poll` is thread-safe — no external lock needed.
 ///
 /// Uses `std::sync::mpsc` (stdlib) instead of `futures::channel::oneshot`
 /// — no external async runtime required for the channel itself.
@@ -207,38 +202,49 @@ impl AsyncReadback {
     /// Create a new async readback operation
     ///
     /// Copies from source buffer to staging and initiates async map.
-    /// Holds `WgpuDevice::lock()` during submit to prevent concurrent access.
+    /// Thread-safe: wgpu's `Queue::submit` handles internal synchronization.
     pub fn new(device: &WgpuDevice, source: &wgpu::Buffer, size_bytes: u64) -> Self {
         let device = Arc::new(device.clone());
 
-        // Create staging buffer
-        let staging_buffer = device.device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some("AsyncReadback staging"),
-            size: size_bytes,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        // Copy source to staging — hold lock for submit
-        let mut encoder = device
-            .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("AsyncReadback copy"),
+        let (staging_buffer, commands) = {
+            device.encoding_guard();
+            let staging = device.device().create_buffer(&wgpu::BufferDescriptor {
+                label: Some("AsyncReadback staging"),
+                size: size_bytes,
+                usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
             });
-        encoder.copy_buffer_to_buffer(source, 0, &staging_buffer, 0, size_bytes);
+
+            let mut encoder =
+                device
+                    .device()
+                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("AsyncReadback copy"),
+                    });
+            encoder.copy_buffer_to_buffer(source, 0, &staging, 0, size_bytes);
+            let cmds = encoder.finish();
+            device.encoding_complete();
+            (staging, cmds)
+        };
+
         {
-            let _guard = device.lock();
-            device.queue().submit(Some(encoder.finish()));
+            let lock = device.gpu_lock_arc();
+            let _guard = lock.lock().unwrap_or_else(|e| e.into_inner());
+            device.brief_encoder_wait();
+            device.queue().submit(Some(commands));
         }
 
-        // Start async map — stdlib mpsc, capacity 1 (single result, no blocking).
         let (sender, receiver) =
             std::sync::mpsc::sync_channel::<std::result::Result<(), wgpu::BufferAsyncError>>(1);
-        staging_buffer
-            .slice(..)
-            .map_async(wgpu::MapMode::Read, move |result| {
-                sender.send(result).ok();
-            });
+        {
+            device.encoding_guard();
+            staging_buffer
+                .slice(..)
+                .map_async(wgpu::MapMode::Read, move |result| {
+                    sender.send(result).ok();
+                });
+            device.encoding_complete();
+        }
 
         Self {
             device,
@@ -249,32 +255,22 @@ impl AsyncReadback {
     }
 
     /// Poll the device and check if data is ready (non-blocking).
-    /// Holds `WgpuDevice::lock()` during poll.
     pub fn poll(&self) -> bool {
-        if !self.device.is_lost() {
-            let _guard = self.device.lock();
-            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                self.device.device().poll(wgpu::Maintain::Poll);
-            }));
-        }
+        self.device.poll_nonblocking();
         self.receiver.try_recv().is_ok()
     }
 
     /// Poll the device until the buffer is ready (async-safe cooperative poll).
     ///
     /// Yields to the Tokio executor between device polls to avoid starving
-    /// other tasks. Holds `WgpuDevice::lock()` during each poll.
+    /// other tasks. Poll is serialized via `poll_lock` to prevent wgpu-core
+    /// cleanup races.
     async fn poll_until_ready(&mut self) -> Result<(), String> {
         loop {
-            let poll_ok = if !self.device.is_lost() {
-                let _guard = self.device.lock();
-                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                    self.device.device().poll(wgpu::Maintain::Poll);
-                }))
-                .is_ok()
-            } else {
-                false
-            };
+            let poll_ok = !self.device.is_lost();
+            if poll_ok {
+                self.device.poll_nonblocking();
+            }
 
             if !poll_ok {
                 return Err("GPU device lost during poll".to_string());
@@ -398,6 +394,7 @@ impl AsyncReadback {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

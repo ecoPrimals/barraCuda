@@ -8,8 +8,6 @@
 
 use std::sync::Arc;
 
-use wgpu::util::DeviceExt;
-
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 
@@ -165,11 +163,9 @@ impl TranseScoreF64<'_> {
                 compilation_options: Default::default(),
             });
 
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("transe"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("transe"),
+        });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("transe"),
@@ -242,6 +238,7 @@ fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

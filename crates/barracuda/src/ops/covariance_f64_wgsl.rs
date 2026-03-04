@@ -16,7 +16,6 @@ use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -115,6 +114,7 @@ impl CovarianceF64 {
         Ok(result[0])
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn covariance_cpu(x: &[f64], y: &[f64], ddof: usize) -> f64 {
         let n = x.len();
@@ -136,6 +136,7 @@ impl CovarianceF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

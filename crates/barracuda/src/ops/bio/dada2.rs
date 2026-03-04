@@ -54,7 +54,7 @@ impl Dada2EStepGpu {
     /// * `center_indices` — `[n_centers]` u32 center sequence indices
     /// * `log_err` — `[4 × 4 × 42 = 672]` f64 precomputed log error table
     /// * `scores` — `[n_seqs × n_centers]` f64 output
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, reason = "API")]
     pub fn dispatch(
         &self,
         n_seqs: u32,

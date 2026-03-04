@@ -69,6 +69,7 @@ pub fn compute_vacf_batch(
     device.read_f64_buffer(&out_buf, n_lags)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -177,7 +177,7 @@ pub(super) fn submit(
     bg: &wgpu::BindGroup,
     wg_x: u32,
 ) {
-    let mut enc = device.device.create_command_encoder(&Default::default());
+    let mut enc = device.create_encoder_guarded(&Default::default());
     {
         let mut pass = enc.begin_compute_pass(&Default::default());
         pass.set_pipeline(pipeline);

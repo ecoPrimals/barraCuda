@@ -10,6 +10,7 @@
 //!
 //! All tests skip gracefully when no GPU is present (CI / headless environments).
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 use barracuda::device::test_pool;
 use barracuda::ops::fhe_intt::{compute_inverse_root, FheIntt};
 use barracuda::ops::fhe_key_switch::FheKeySwitch;

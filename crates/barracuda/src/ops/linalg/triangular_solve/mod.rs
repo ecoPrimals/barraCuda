@@ -45,6 +45,7 @@
 
 mod f32;
 mod f64;
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;
 

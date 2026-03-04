@@ -228,6 +228,7 @@ fn minimum_image(d: f64, box_len: f64) -> f64 {
     d - box_len * (d / box_len).round()
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

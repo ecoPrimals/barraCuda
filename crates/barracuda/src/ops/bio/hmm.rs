@@ -55,7 +55,7 @@ impl HmmBatchForwardF64 {
     }
 
     /// Dispatch the forward pass on GPU-resident buffers.
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, reason = "API")]
     pub fn dispatch(
         &self,
         n_states: u32,
@@ -288,6 +288,7 @@ impl HmmForwardLogF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

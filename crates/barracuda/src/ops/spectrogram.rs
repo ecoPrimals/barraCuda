@@ -14,7 +14,6 @@
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// f64 is the canonical source — math is universal, precision is silicon.
 static SHADER_F64: &str = include_str!("../shaders/audio/spectrogram_f64.wgsl");
@@ -165,11 +164,9 @@ impl Spectrogram {
                 });
 
         // Execute compute shader
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Spectrogram Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("Spectrogram Encoder"),
+        });
 
         {
             let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -202,12 +199,13 @@ impl Spectrogram {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::device::test_pool::get_test_device_if_gpu_available;
     use crate::tensor::Tensor;
-    #[allow(unused_imports)]
+    #[expect(unused_imports, reason = "conditional imports")]
     use std::sync::Arc;
 
     #[tokio::test]

@@ -13,7 +13,6 @@
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// Graph Batch Normalization
 pub struct GraphBatchNorm {
@@ -250,11 +249,9 @@ impl GraphBatchNorm {
                 });
 
         // Create encoder
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("GraphBatchNorm Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("GraphBatchNorm Encoder"),
+        });
 
         // Step 1: Compute mean
         let mean_pipeline =
@@ -347,6 +344,7 @@ impl GraphBatchNorm {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

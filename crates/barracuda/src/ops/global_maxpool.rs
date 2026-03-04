@@ -34,7 +34,6 @@
 use crate::device::{ComputeDispatch, DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -160,6 +159,7 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -203,14 +203,14 @@ mod tests {
             return;
         };
         // Single 1x1 spatial
-        let input = Tensor::from_data(&vec![42.0, 99.0], vec![1, 2, 1, 1], device.clone()).unwrap();
+        let input = Tensor::from_data(&[42.0, 99.0], vec![1, 2, 1, 1], device.clone()).unwrap();
         let result = input.global_maxpool().unwrap();
         let output = result.to_vec().unwrap();
         assert_eq!(output.len(), 2);
         assert!(output.iter().all(|&x| x.is_finite()));
 
         // All same values
-        let input = Tensor::from_data(&vec![5.0; 2 * 3 * 3], vec![1, 2, 3, 3], device).unwrap();
+        let input = Tensor::from_data(&[5.0; 2 * 3 * 3], vec![1, 2, 3, 3], device).unwrap();
         let result = input.global_maxpool().unwrap();
         let output = result.to_vec().unwrap();
         assert_eq!(output.len(), 2);
@@ -264,7 +264,7 @@ mod tests {
         };
         // Known max with varying values
         let input = Tensor::from_data(
-            &vec![1.0, 5.0, 3.0, 2.0], // Max = 5.0
+            &[1.0, 5.0, 3.0, 2.0], // Max = 5.0
             vec![1, 1, 2, 2],
             device,
         )

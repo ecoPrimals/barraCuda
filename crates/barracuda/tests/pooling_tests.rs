@@ -10,6 +10,7 @@
 //! issues when devices are dropped while the global pipeline cache retains
 //! references to their layouts/pipelines.
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 use barracuda::device::{get_device_context, WgpuDevice};
 use barracuda::prelude::*;
 use std::sync::Arc;

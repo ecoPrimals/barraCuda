@@ -9,8 +9,6 @@
 
 use std::sync::Arc;
 
-use wgpu::util::DeviceExt;
-
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use crate::linalg::sparse::CsrMatrix;
@@ -153,11 +151,9 @@ impl SparseGemmF64<'_> {
                 compilation_options: Default::default(),
             });
 
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("spmm"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("spmm"),
+        });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("spmm"),
@@ -236,6 +232,7 @@ fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

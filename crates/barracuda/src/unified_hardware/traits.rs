@@ -6,14 +6,16 @@
 
 use crate::error::Result;
 use crate::unified_math::{MathOp, TensorDescriptor};
-use async_trait::async_trait;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 
 use super::types::{HardwareCapabilities, HardwareType};
 
+/// Boxed future for dyn-safe async trait methods.
+pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
+
 /// Universal compute executor — any device that can execute mathematical operations.
-// NOTE(async-dyn): #[async_trait] required — native async fn in trait is not dyn-compatible
-#[async_trait]
 pub trait ComputeExecutor: Send + Sync {
     fn name(&self) -> &str;
     fn hardware_type(&self) -> HardwareType;
@@ -21,25 +23,29 @@ pub trait ComputeExecutor: Send + Sync {
     fn can_execute(&self, op: &MathOp, inputs: &[TensorDescriptor]) -> bool;
     fn score_operation(&self, op: &MathOp, inputs: &[TensorDescriptor]) -> f64;
 
-    async fn execute(
+    fn execute(
         &self,
         op: &MathOp,
         inputs: Vec<Arc<dyn TensorStorage>>,
-    ) -> Result<Arc<dyn TensorStorage>>;
+    ) -> BoxFuture<'_, Result<Arc<dyn TensorStorage>>>;
 
-    async fn allocate(&self, descriptor: TensorDescriptor) -> Result<Arc<dyn TensorStorage>>;
+    fn allocate(
+        &self,
+        descriptor: TensorDescriptor,
+    ) -> BoxFuture<'_, Result<Arc<dyn TensorStorage>>>;
 
-    async fn transfer(&self, tensor: Arc<dyn TensorStorage>) -> Result<Arc<dyn TensorStorage>>;
+    fn transfer(
+        &self,
+        tensor: Arc<dyn TensorStorage>,
+    ) -> BoxFuture<'_, Result<Arc<dyn TensorStorage>>>;
 }
 
 /// Hardware-agnostic tensor storage — data can live on any device.
-// NOTE(async-dyn): #[async_trait] required — native async fn in trait is not dyn-compatible
-#[async_trait]
 pub trait TensorStorage: Send + Sync {
     fn descriptor(&self) -> &TensorDescriptor;
     fn hardware_type(&self) -> HardwareType;
-    async fn read_to_cpu(&self) -> Result<Vec<u8>>;
-    async fn write_from_cpu(&mut self, data: &[u8]) -> Result<()>;
+    fn read_to_cpu(&self) -> BoxFuture<'_, Result<Vec<u8>>>;
+    fn write_from_cpu(&mut self, data: &[u8]) -> BoxFuture<'_, Result<()>>;
 
     fn is_cpu(&self) -> bool {
         self.hardware_type() == HardwareType::CPU

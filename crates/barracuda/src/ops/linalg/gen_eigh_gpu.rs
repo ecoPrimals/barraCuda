@@ -416,6 +416,7 @@ fn back_transform_eigenvectors(l: &[f64], eigenvectors_c: &[f64], n: usize) -> V
     result
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -375,6 +375,63 @@ fn batched_compute(
             let x = input[base + 6u];
             output[batch_idx] = ((((a5 * x + a4) * x + a3) * x + a2) * x + a1) * x + a0;
         }
+        case 14u: {
+            // MakkinkEt0: Makkink (1957) — radiation-based, Netherlands standard
+            // ET₀ = 0.61 * (Δ/(Δ+γ)) * Rs/λ − 0.12
+            // input: [Rs, T_mean, elevation]
+            let rs_mj = input[base + 0u];
+            let t_mean = input[base + 1u];
+            let elev = input[base + 2u];
+            let zero = t_mean - t_mean;
+
+            // Atmospheric pressure P (kPa) — FAO-56 Eq. 7
+            let p = (zero + 101.3) * pow_f64(((zero + 293.0) - (zero + 0.0065) * elev) / (zero + 293.0), zero + 5.26);
+            let gamma = (zero + 0.000665) * p;
+
+            // Δ — slope of saturation vapour pressure curve at T_mean
+            let e_t = (zero + 0.6108) * exp_f64((zero + 17.27) * t_mean / (t_mean + (zero + 237.3)));
+            let delta = (zero + 4098.0) * e_t / pow_f64(t_mean + (zero + 237.3), zero + 2.0);
+
+            let lambda = zero + 2.45;  // MJ/kg (latent heat of vaporization)
+            var et0 = (zero + 0.61) * (delta / (delta + gamma)) * rs_mj / lambda - (zero + 0.12);
+            if (et0 < zero) { et0 = zero; }
+            output[batch_idx] = et0;
+        }
+        case 15u: {
+            // TurcEt0: Turc (1961) — radiation + temperature, humid climates
+            // ET₀ = 0.013 * (T/(T+15)) * (Rs*23.8846 + 50) * C_rh
+            // C_rh = 1.0 if RH ≥ 50%, else (1 + (50−RH)/70)
+            // input: [Rs (MJ/m²/day), T_mean (°C), RH_mean (%)]
+            let rs_mj = input[base + 0u];
+            let t_mean = input[base + 1u];
+            let rh = input[base + 2u];
+            let zero = t_mean - t_mean;
+
+            let rs_cal = rs_mj * (zero + 23.8846);  // MJ → cal/cm²/day
+            var c_rh = zero + 1.0;
+            if (rh < (zero + 50.0)) {
+                c_rh = (zero + 1.0) + ((zero + 50.0) - rh) / (zero + 70.0);
+            }
+            var et0 = (zero + 0.013) * (t_mean / (t_mean + (zero + 15.0))) * (rs_cal + (zero + 50.0)) * c_rh;
+            if (et0 < zero) { et0 = zero; }
+            output[batch_idx] = et0;
+        }
+        case 16u: {
+            // HamonEt0: Hamon (1963) — temperature + daylength only
+            // ET₀ = 0.55 * (N/12)² * exp(T_mean / 16.78)  [inches/day → mm/day * 25.4]
+            // Simplified: ET₀ = 0.55 * D² * e_sat / 100  (Hamon 1963, mm/day)
+            // where D = daylight hours / 12, e_sat = 6.108 * exp(17.27*T/(T+237.3))
+            // input: [T_mean, daylight_hours]
+            let t_mean = input[base + 0u];
+            let daylight = input[base + 1u];
+            let zero = t_mean - t_mean;
+
+            let d_ratio = daylight / (zero + 12.0);
+            let e_sat = (zero + 6.108) * exp_f64((zero + 17.27) * t_mean / (t_mean + (zero + 237.3)));
+            var et0 = (zero + 0.55) * d_ratio * d_ratio * e_sat / (zero + 100.0);
+            if (et0 < zero) { et0 = zero; }
+            output[batch_idx] = et0;
+        }
         default: {
             // Identity / passthrough first element
             output[batch_idx] = input[base];

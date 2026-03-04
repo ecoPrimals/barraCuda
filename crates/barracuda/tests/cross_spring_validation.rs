@@ -19,7 +19,7 @@ use barracuda::spectral::anderson::{
 use barracuda::stats::hydrology::fao56_et0;
 
 /// Tolerance registry by domain (mirrors wetSpring `tolerances/` structure).
-#[allow(dead_code)]
+#[expect(dead_code, reason = "legacy")]
 mod tolerances {
     pub const SPECTRAL_R: f64 = 0.05;
     pub const LYAPUNOV_RELATIVE: f64 = 0.1;

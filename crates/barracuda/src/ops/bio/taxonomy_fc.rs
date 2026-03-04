@@ -173,9 +173,11 @@ impl TaxonomyFcGpu {
             ],
         });
 
-        let mut encoder = d.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("TaxonomyFC Encoder"),
-        });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("TaxonomyFC Encoder"),
+            });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("TaxonomyFC Pass"),
@@ -189,6 +191,7 @@ impl TaxonomyFcGpu {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

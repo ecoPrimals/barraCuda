@@ -8,6 +8,7 @@
 //!
 //! This is the core proof that "any math on any hardware" works.
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 use barracuda::device::WgpuDevice;
 use barracuda::tensor::Tensor;
 use std::sync::Arc;

@@ -10,6 +10,7 @@
 //!
 //! These tests validate the hotSpring Feb 16 2026 evolution targets.
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 use barracuda::device::tensor_context::{BufferDescriptor, TensorContext};
 use barracuda::ops::linalg::GridQuadratureGemm;
 use barracuda::ops::MaxAbsDiffF64;
@@ -133,7 +134,7 @@ async fn test_solver_buffers_hfb_pattern() {
 #[tokio::test]
 async fn test_solver_buffers_multiple_solvers() {
     let device = barracuda::device::test_pool::get_test_device().await;
-    let pool = barracuda::device::tensor_context::BufferPool::new(device.device_arc());
+    let pool = barracuda::device::tensor_context::BufferPool::new_standalone(device.device_arc());
 
     // Pin buffers for two different solvers
     let _hfb_buffers = pool

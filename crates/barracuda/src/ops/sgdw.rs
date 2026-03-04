@@ -19,7 +19,6 @@ static SHADER_F32: std::sync::LazyLock<String> =
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// SGD with Decoupled Weight Decay
 pub struct SGDW {
@@ -95,11 +94,9 @@ impl SGDW {
         let parameters_buffer = device.create_buffer_f32(size)?;
 
         // Copy parameters buffer using GPU copy
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("SGDW Buffer Copy Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("SGDW Buffer Copy Encoder"),
+        });
         encoder.copy_buffer_to_buffer(
             self.parameters.buffer(),
             0,
@@ -270,11 +267,9 @@ impl SGDW {
             });
 
         // Encode and execute
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("SGDW Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("SGDW Encoder"),
+        });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -307,6 +302,7 @@ impl SGDW {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

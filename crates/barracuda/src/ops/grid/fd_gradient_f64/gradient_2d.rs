@@ -141,8 +141,7 @@ impl Gradient2D {
 
         let mut encoder = self
             .device
-            .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor { label: None });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("grad2d"),
@@ -168,7 +167,7 @@ impl Gradient2D {
 
         encoder.copy_buffer_to_buffer(&grad_x_buffer, 0, &staging_x, 0, buffer_size);
         encoder.copy_buffer_to_buffer(&grad_y_buffer, 0, &staging_y, 0, buffer_size);
-        self.device.queue().submit(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
 
         let grad_x = self.device.map_staging_buffer::<f64>(&staging_x, total)?;
         let grad_y = self.device.map_staging_buffer::<f64>(&staging_y, total)?;

@@ -189,6 +189,7 @@ where
     })
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -228,5 +229,74 @@ mod tests {
         let data = [2.0, 4.0, 6.0, 8.0];
         let result = jackknife(&data, |d| d.iter().sum::<f64>() / d.len() as f64).unwrap();
         assert!((result.estimate - 5.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_jackknife_generalized_too_few_elements() {
+        assert!(jackknife(&[], |d| d.iter().sum::<f64>() / d.len().max(1) as f64).is_none());
+        assert!(jackknife(&[1.0], |d| d.iter().sum::<f64>()).is_none());
+    }
+
+    #[test]
+    fn test_jackknife_generalized_variance_statistic() {
+        fn variance(d: &[f64]) -> f64 {
+            let n = d.len() as f64;
+            if n < 2.0 {
+                return 0.0;
+            }
+            let mean: f64 = d.iter().sum::<f64>() / n;
+            d.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / (n - 1.0)
+        }
+        let data = [1.0, 2.0, 3.0, 4.0, 5.0];
+        let result = jackknife(&data, variance).unwrap();
+        assert!(result.variance >= 0.0);
+        assert!(result.std_error >= 0.0);
+    }
+
+    #[test]
+    fn test_jackknife_mean_variance_large_dataset() {
+        // Use data with roughly constant variance (uniform [0,1]) so std_error ∝ 1/√n
+        let n = 150;
+        let data: Vec<f64> = (0..n).map(|i| (i % 10) as f64 / 10.0).collect();
+        let result = jackknife_mean_variance(&data).unwrap();
+        let expected_mean: f64 = data.iter().sum::<f64>() / n as f64;
+        assert!((result.estimate - expected_mean).abs() < 1e-10);
+        let small_result = jackknife_mean_variance(&data[..20]).unwrap();
+        assert!(
+            result.std_error < small_result.std_error,
+            "std_error should decrease with n (large n={} vs small n=20)",
+            n
+        );
+    }
+
+    #[test]
+    fn test_jackknife_mean_variance_negative_values() {
+        let data = [-5.0, -2.0, 0.0, 3.0, 4.0];
+        let result = jackknife_mean_variance(&data).unwrap();
+        assert!((result.estimate - 0.0).abs() < 1e-12);
+        assert!(result.variance >= 0.0);
+    }
+
+    #[cfg(feature = "gpu")]
+    #[tokio::test]
+    async fn test_jackknife_gpu_dispatch() {
+        let Some(device) = crate::device::test_pool::get_test_device_if_f64_gpu_available().await
+        else {
+            return;
+        };
+        let data = [1.0, 2.0, 3.0, 4.0, 5.0];
+        let cpu_result = jackknife_mean_variance(&data).unwrap();
+        let gpu = match super::JackknifeMeanGpu::new(device) {
+            Ok(g) => g,
+            Err(e) if e.is_device_lost() => return,
+            Err(e) => panic!("unexpected: {e}"),
+        };
+        let gpu_result = match gpu.dispatch(&data) {
+            Ok(r) => r,
+            Err(e) if e.is_device_lost() => return,
+            Err(e) => panic!("unexpected: {e}"),
+        };
+        assert!((cpu_result.estimate - gpu_result.estimate).abs() < 1e-10);
+        assert!((cpu_result.variance - gpu_result.variance).abs() < 1e-10);
     }
 }

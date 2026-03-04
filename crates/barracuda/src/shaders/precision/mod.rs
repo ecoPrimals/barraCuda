@@ -442,6 +442,7 @@ impl ShaderTemplate {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "precision_tests.rs"]
 mod tests;

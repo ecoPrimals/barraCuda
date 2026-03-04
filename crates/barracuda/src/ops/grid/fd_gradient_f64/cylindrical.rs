@@ -154,8 +154,7 @@ impl CylindricalGradient {
 
         let mut encoder = self
             .device
-            .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor { label: None });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("cyl_grad"),
@@ -181,7 +180,7 @@ impl CylindricalGradient {
 
         encoder.copy_buffer_to_buffer(&grad_rho_buffer, 0, &staging_rho, 0, buffer_size);
         encoder.copy_buffer_to_buffer(&grad_z_buffer, 0, &staging_z, 0, buffer_size);
-        self.device.queue().submit(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
 
         let grad_rho = self.device.map_staging_buffer::<f64>(&staging_rho, total)?;
         let grad_z = self.device.map_staging_buffer::<f64>(&staging_z, total)?;
@@ -340,8 +339,7 @@ impl CylindricalLaplacian {
 
         let mut encoder = self
             .device
-            .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor { label: None });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("cyl_lap"),
@@ -360,7 +358,7 @@ impl CylindricalLaplacian {
         });
 
         encoder.copy_buffer_to_buffer(&laplacian_buffer, 0, &staging, 0, buffer_size);
-        self.device.queue().submit(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
 
         self.device.map_staging_buffer::<f64>(&staging, total)
     }

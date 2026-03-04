@@ -30,8 +30,8 @@ pub use types::{
     ParallelismCapabilities, PerformanceCapabilities, PrecisionCapabilities,
 };
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::unified_math::{DType, MathOp, TensorDescriptor};
@@ -174,7 +174,7 @@ mod tests {
         assert!(ComputeExecutor::can_execute(
             &cpu,
             &MathOp::Exp,
-            &[desc.clone()]
+            std::slice::from_ref(&desc)
         ));
     }
 
@@ -182,7 +182,8 @@ mod tests {
     fn test_cpu_executor_score_is_positive() {
         let cpu = cpu_executor::CpuExecutor::new();
         let desc = TensorDescriptor::new(vec![100], DType::F32);
-        let score = ComputeExecutor::score_operation(&cpu, &MathOp::Add, &[desc.clone()]);
+        let score =
+            ComputeExecutor::score_operation(&cpu, &MathOp::Add, std::slice::from_ref(&desc));
         assert!(score > 0.0);
     }
 

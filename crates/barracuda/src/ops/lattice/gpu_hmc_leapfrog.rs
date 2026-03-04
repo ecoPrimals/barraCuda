@@ -150,7 +150,7 @@ impl GpuHmcLeapfrog {
         )
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, reason = "API")]
     fn dispatch(
         &self,
         pipeline: &wgpu::ComputePipeline,
@@ -212,8 +212,7 @@ impl GpuHmcLeapfrog {
 
         let mut enc = self
             .device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
                 label: Some(&format!("GpuHmcLeapfrog:{label}:enc")),
             });
         {
@@ -260,6 +259,7 @@ fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

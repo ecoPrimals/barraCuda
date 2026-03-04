@@ -11,7 +11,6 @@ use crate::device::DeviceCapabilities;
 use crate::error::{BarracudaError, Result};
 use crate::ops::matmul::MatMul;
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 pub struct MatrixPower {
     input: Tensor,
@@ -167,12 +166,9 @@ impl MatrixPower {
                     });
 
             // Encode and execute
-            let mut encoder =
-                device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("MatrixPower Identity Encoder"),
-                    });
+            let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("MatrixPower Identity Encoder"),
+            });
 
             {
                 let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -223,6 +219,7 @@ impl MatrixPower {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

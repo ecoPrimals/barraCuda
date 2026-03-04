@@ -132,11 +132,9 @@ pub(super) fn read_buffer_u32_last(
         mapped_at_creation: false,
     });
 
-    let mut encoder = device
-        .device
-        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Read Buffer Last Encoder"),
-        });
+    let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+        label: Some("Read Buffer Last Encoder"),
+    });
     encoder.copy_buffer_to_buffer(
         buffer,
         ((size - 1) * std::mem::size_of::<u32>()) as u64,

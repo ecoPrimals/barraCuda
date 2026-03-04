@@ -55,6 +55,7 @@
 
 mod compute;
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;
 
@@ -94,7 +95,7 @@ impl AdamW {
     /// Create new AdamW optimizer operation
     ///
     /// **Deep Debt**: Validates all inputs for shape compatibility
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, reason = "API")]
     pub fn new(
         params: Tensor,
         gradients: Tensor,
@@ -260,7 +261,7 @@ impl Tensor {
     ///
     /// # Note
     /// AdamW is superior to Adam for large models due to decoupled weight decay!
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, reason = "API")]
     pub fn adamw(
         self,
         gradients: &Self,

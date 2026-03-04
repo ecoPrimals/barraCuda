@@ -7,7 +7,6 @@
 
 use crate::error::Result;
 use crate::unified_math::{MathOp, TensorDescriptor};
-use async_trait::async_trait;
 use std::sync::Arc;
 
 use super::traits::{ComputeExecutor, TensorStorage};
@@ -88,7 +87,7 @@ impl CpuExecutor {
         }
     }
 
-    pub(crate) fn name(&self) -> &str {
+    pub(crate) fn name(&self) -> &'static str {
         "CPU (Native)"
     }
 
@@ -97,8 +96,6 @@ impl CpuExecutor {
     }
 }
 
-// NOTE(async-dyn): #[async_trait] required — native async fn in trait is not dyn-compatible
-#[async_trait]
 impl ComputeExecutor for CpuExecutor {
     fn name(&self) -> &str {
         self.name()
@@ -120,36 +117,55 @@ impl ComputeExecutor for CpuExecutor {
         0.5
     }
 
-    async fn execute(
+    fn execute(
         &self,
         op: &MathOp,
         inputs: Vec<Arc<dyn TensorStorage>>,
-    ) -> Result<Arc<dyn TensorStorage>> {
-        if inputs.is_empty() {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: "No inputs provided".to_string(),
-            });
-        }
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Arc<dyn TensorStorage>>> + Send + '_>,
+    > {
+        let op = op.clone();
         let standalone = crate::cpu_executor::CpuExecutor::new();
-        standalone.execute(op, inputs).await
+        Box::pin(async move {
+            if inputs.is_empty() {
+                return Err(crate::error::BarracudaError::InvalidInput {
+                    message: "No inputs provided".to_string(),
+                });
+            }
+            standalone.execute(&op, inputs).await
+        })
     }
 
-    async fn allocate(&self, descriptor: TensorDescriptor) -> Result<Arc<dyn TensorStorage>> {
+    fn allocate(
+        &self,
+        descriptor: TensorDescriptor,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Arc<dyn TensorStorage>>> + Send + '_>,
+    > {
         let byte_size = descriptor.numel * descriptor.dtype.size_bytes();
-        Ok(Arc::new(CpuTensorStorageSimple {
-            descriptor,
-            data: vec![0u8; byte_size],
-        }))
+        Box::pin(async move {
+            Ok(Arc::new(CpuTensorStorageSimple {
+                descriptor,
+                data: vec![0u8; byte_size],
+            }) as Arc<dyn TensorStorage>)
+        })
     }
 
-    async fn transfer(&self, tensor: Arc<dyn TensorStorage>) -> Result<Arc<dyn TensorStorage>> {
-        if tensor.is_cpu() {
-            Ok(tensor)
-        } else {
-            let data = tensor.read_to_cpu().await?;
-            let descriptor = tensor.descriptor().clone();
-            Ok(Arc::new(CpuTensorStorageSimple { descriptor, data }))
-        }
+    fn transfer(
+        &self,
+        tensor: Arc<dyn TensorStorage>,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Arc<dyn TensorStorage>>> + Send + '_>,
+    > {
+        Box::pin(async move {
+            if tensor.is_cpu() {
+                Ok(tensor)
+            } else {
+                let data = tensor.read_to_cpu().await?;
+                let descriptor = tensor.descriptor().clone();
+                Ok(Arc::new(CpuTensorStorageSimple { descriptor, data }) as Arc<dyn TensorStorage>)
+            }
+        })
     }
 }
 
@@ -159,8 +175,6 @@ pub(crate) struct CpuTensorStorageSimple {
     pub(crate) data: Vec<u8>,
 }
 
-// NOTE(async-dyn): #[async_trait] required — native async fn in trait is not dyn-compatible
-#[async_trait]
 impl TensorStorage for CpuTensorStorageSimple {
     fn descriptor(&self) -> &TensorDescriptor {
         &self.descriptor
@@ -170,21 +184,30 @@ impl TensorStorage for CpuTensorStorageSimple {
         HardwareType::CPU
     }
 
-    async fn read_to_cpu(&self) -> Result<Vec<u8>> {
-        Ok(self.data.clone())
+    fn read_to_cpu(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<u8>>> + Send + '_>> {
+        let data = self.data.clone();
+        Box::pin(async move { Ok(data) })
     }
 
-    async fn write_from_cpu(&mut self, data: &[u8]) -> Result<()> {
-        if data.len() != self.data.len() {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: format!(
-                    "Data size mismatch: expected {}, got {}",
-                    self.data.len(),
-                    data.len()
-                ),
-            });
-        }
-        self.data.copy_from_slice(data);
-        Ok(())
+    fn write_from_cpu(
+        &mut self,
+        data: &[u8],
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
+        let data = data.to_vec();
+        Box::pin(async move {
+            if data.len() != self.data.len() {
+                return Err(crate::error::BarracudaError::InvalidInput {
+                    message: format!(
+                        "Data size mismatch: expected {}, got {}",
+                        self.data.len(),
+                        data.len()
+                    ),
+                });
+            }
+            self.data.copy_from_slice(&data);
+            Ok(())
+        })
     }
 }

@@ -533,6 +533,7 @@ impl SequenceAnalyzer {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "genomics_tests.rs"]
 mod tests;

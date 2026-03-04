@@ -339,11 +339,11 @@ impl PppmGpu {
             ],
         });
 
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("PPPM Encoder"),
-            });
+        let mut encoder =
+            self.wgpu_device
+                .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                    label: Some("PPPM Encoder"),
+                });
         let particle_workgroups = (n as u32).div_ceil(64);
 
         {
@@ -383,23 +383,7 @@ impl PppmGpu {
             pass.dispatch_workgroups(particle_workgroups, 1, 1);
         }
 
-        let submit_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            self.queue.submit(Some(encoder.finish()));
-            self.device.poll(wgpu::Maintain::Wait);
-        }));
-        if let Err(payload) = submit_result {
-            let msg = payload
-                .downcast_ref::<String>()
-                .map(|s| s.as_str())
-                .or_else(|| payload.downcast_ref::<&str>().copied())
-                .unwrap_or("unknown");
-            if msg.contains("lost") || msg.contains("Lost") || msg.contains("Parent device") {
-                return Err(crate::error::BarracudaError::device(
-                    "GPU device lost during PPPM computation",
-                ));
-            }
-            std::panic::resume_unwind(payload);
-        }
+        self.wgpu_device.submit_and_poll(Some(encoder.finish()));
         let forces =
             SparseBuffers::read_f64_raw(self.wgpu_device().as_ref(), &forces_buffer, n * 3)?;
         let pe_values = SparseBuffers::read_f64_raw(self.wgpu_device().as_ref(), &pe_buffer, n)?;
@@ -429,6 +413,7 @@ impl PppmGpu {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -600,7 +585,7 @@ mod tests {
                 },
             ],
         });
-        let mut enc = device_ref.create_command_encoder(&Default::default());
+        let mut enc = wgpu_dev.create_encoder_guarded(&Default::default());
         {
             let mut pass = enc.begin_compute_pass(&Default::default());
             pass.set_pipeline(&pppm.pipelines().bspline);

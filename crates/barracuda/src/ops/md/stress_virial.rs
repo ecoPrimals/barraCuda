@@ -75,6 +75,7 @@ pub fn compute_stress_virial(
     ])
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

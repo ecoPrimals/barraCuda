@@ -13,7 +13,6 @@ use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// f64 Real spherical harmonics evaluator Y_l^m(θ, φ)
 pub struct SphericalHarmonicsF64 {
@@ -50,6 +49,7 @@ impl SphericalHarmonicsF64 {
         self.ylm_gpu(theta_phi, l, m)
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn ylm_cpu(&self, theta_phi: &[f64], l: u32, m: i32) -> Vec<f64> {
         let size = theta_phi.len() / 2;
@@ -64,6 +64,7 @@ impl SphericalHarmonicsF64 {
         result
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn factorial(n: u32) -> f64 {
         match n {
@@ -72,6 +73,7 @@ impl SphericalHarmonicsF64 {
         }
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn double_factorial(m: u32) -> f64 {
         if m == 0 {
@@ -80,6 +82,7 @@ impl SphericalHarmonicsF64 {
         (1..=m).map(|k| (2 * k - 1) as f64).product()
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn assoc_legendre(l: u32, m: u32, x: f64) -> f64 {
         if m > l {
@@ -124,6 +127,7 @@ impl SphericalHarmonicsF64 {
         pl_m1
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn ylm_scalar(l: u32, m: i32, theta: f64, phi: f64) -> f64 {
         let abs_m = m.unsigned_abs();
@@ -213,6 +217,7 @@ impl SphericalHarmonicsF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

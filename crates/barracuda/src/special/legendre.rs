@@ -152,7 +152,7 @@ pub fn legendre_all(n: usize, x: f64) -> Vec<f64> {
 /// // P₂⁰(x) = P₂(x) = (3x²-1)/2
 /// assert!((assoc_legendre(2, 0, 0.5) - (-0.125)).abs() < 1e-14);
 /// ```
-#[allow(clippy::manual_is_multiple_of)] // is_multiple_of is nightly-only
+#[expect(clippy::manual_is_multiple_of, reason = "suppressed")] // is_multiple_of is nightly-only
 pub fn assoc_legendre(n: usize, m: i32, x: f64) -> f64 {
     let m_abs = m.unsigned_abs() as usize;
 
@@ -238,6 +238,7 @@ pub fn assoc_legendre_batch(n: usize, m: i32, x: &[f64]) -> Vec<f64> {
     x.iter().map(|&xi| assoc_legendre(n, m, xi)).collect()
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

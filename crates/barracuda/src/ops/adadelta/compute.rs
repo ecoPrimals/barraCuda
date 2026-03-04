@@ -8,7 +8,6 @@ use super::{AdaDelta, AdaDeltaParams};
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 impl AdaDelta {
     /// Execute AdaDelta optimizer step (GPU single-pass)
@@ -237,11 +236,9 @@ impl AdaDelta {
             ],
         });
 
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("adadelta_encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("adadelta_encoder"),
+        });
 
         {
             let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {

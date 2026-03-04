@@ -384,9 +384,11 @@ impl CellListGpu {
         });
 
         // ── Single submit ────────────────────────────────────────────────────
-        let mut enc = dev.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("CellListGpu:build"),
-        });
+        let mut enc = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("CellListGpu:build"),
+            });
 
         dispatch_pass(
             &mut enc,
@@ -560,6 +562,7 @@ fn dispatch_pass(
     pass.dispatch_workgroups(x, y, z);
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

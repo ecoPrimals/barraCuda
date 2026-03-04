@@ -373,6 +373,7 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod unit_tests {
     use super::*;
@@ -422,6 +423,7 @@ mod unit_tests {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "filter_tests.rs"]
 mod tests;

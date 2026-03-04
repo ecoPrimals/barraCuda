@@ -216,6 +216,7 @@ pub fn qr_least_squares(a: &[f64], m: usize, n: usize, b: &[f64]) -> Result<Vec<
     qr.solve_least_squares(b)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -280,8 +281,8 @@ mod tests {
         // A^T A = [[3, 6], [6, 14]]
         // A^T b = [5, 11]
 
-        let ata = vec![3.0, 6.0, 6.0, 14.0];
-        let atb = vec![5.0, 11.0];
+        let ata = [3.0, 6.0, 6.0, 14.0];
+        let atb = [5.0, 11.0];
 
         let lhs0 = ata[0] * x[0] + ata[1] * x[1];
         let lhs1 = ata[2] * x[0] + ata[3] * x[1];

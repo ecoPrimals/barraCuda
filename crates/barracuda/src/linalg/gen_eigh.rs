@@ -377,6 +377,7 @@ pub fn gen_eigh_identity_b(a: &[f64], n: usize) -> Result<GenEighDecomposition> 
     })
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -232,6 +232,7 @@ pub fn maximin_distance(points: &[Vec<f64>]) -> f64 {
     min_dist
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -258,7 +259,7 @@ mod tests {
         let samples = latin_hypercube(10, &bounds, 42).unwrap();
 
         // Check that each interval [0,1), [1,2), ..., [9,10] has exactly one sample
-        let mut intervals_used = vec![false; 10];
+        let mut intervals_used = [false; 10];
         for point in &samples {
             let interval = (point[0] as usize).min(9);
             assert!(

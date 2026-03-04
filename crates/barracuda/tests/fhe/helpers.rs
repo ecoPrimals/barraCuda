@@ -28,6 +28,7 @@ pub const KNOWN_ROOTS: &[(u32, u64, u64)] = &[
 ];
 
 /// Compute modular inverse: a^(-1) mod m
+#[expect(dead_code, reason = "legacy")]
 pub fn mod_inverse(a: u64, m: u64) -> u64 {
     // Extended Euclidean algorithm
     let (mut old_r, mut r) = (a as i128, m as i128);
@@ -59,7 +60,7 @@ pub fn find_root_of_unity(degree: u32, modulus: u64) -> Option<u64> {
 
     // NTT requires q ≡ 1 (mod 2*degree). If satisfied, use compute_primitive_root.
     let two_n = 2u64 * degree as u64;
-    if (modulus - 1) % two_n == 0 {
+    if (modulus - 1).is_multiple_of(two_n) {
         let root = compute_primitive_root(degree, modulus);
         // Verify it's a valid primitive N-th root (omega^N = 1, omega^(N/2) != 1)
         let mut power = 1u64;
@@ -102,7 +103,7 @@ pub fn find_root_of_unity(degree: u32, modulus: u64) -> Option<u64> {
 /// Use these for tests to avoid invalid combinations.
 pub fn modulus_supports_degree(modulus: u64, degree: u32) -> bool {
     let two_n = 2u64 * degree as u64;
-    (modulus - 1) % two_n == 0
+    (modulus - 1).is_multiple_of(two_n)
 }
 
 /// Helper to read tensor back as u64 polynomial
@@ -126,6 +127,7 @@ pub fn u32_pairs_to_poly(pairs: &[u32]) -> Vec<u64> {
 }
 
 /// FHE-friendly primes for testing
+#[expect(dead_code, reason = "legacy")]
 pub const TEST_PRIMES: &[u64] = &[
     17,    // Tiny (for fast tests)
     97,    // Small
@@ -134,4 +136,5 @@ pub const TEST_PRIMES: &[u64] = &[
 ];
 
 /// Common test degrees (powers of 2)
+#[expect(dead_code, reason = "legacy")]
 pub const TEST_DEGREES: &[usize] = &[4, 8, 16, 32, 64, 128, 256, 512, 1024];

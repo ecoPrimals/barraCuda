@@ -78,6 +78,7 @@ impl RBFKernel {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -115,5 +116,41 @@ mod tests {
         let kernel = RBFKernel::Cubic;
         assert_eq!(kernel.eval(0.0), 0.0);
         assert_eq!(kernel.eval(2.0), 8.0);
+    }
+
+    #[test]
+    fn test_inverse_multiquadric_kernel() {
+        let kernel = RBFKernel::InverseMultiquadric { epsilon: 1.0 };
+        assert!((kernel.eval(0.0) - 1.0).abs() < 1e-14);
+        assert!((kernel.eval(1.0) - (1.0 / 2.0_f64.sqrt())).abs() < 1e-14);
+    }
+
+    #[test]
+    fn test_quintic_kernel() {
+        let kernel = RBFKernel::Quintic;
+        assert_eq!(kernel.eval(0.0), 0.0);
+        assert_eq!(kernel.eval(2.0), 32.0);
+    }
+
+    #[test]
+    fn test_kernel_names() {
+        assert_eq!(RBFKernel::ThinPlateSpline.name(), "ThinPlateSpline");
+        assert_eq!(RBFKernel::Gaussian { epsilon: 0.5 }.name(), "Gaussian");
+        assert_eq!(
+            RBFKernel::Multiquadric { epsilon: 1.0 }.name(),
+            "Multiquadric"
+        );
+        assert_eq!(
+            RBFKernel::InverseMultiquadric { epsilon: 1.0 }.name(),
+            "InverseMultiquadric"
+        );
+        assert_eq!(RBFKernel::Cubic.name(), "Cubic");
+        assert_eq!(RBFKernel::Quintic.name(), "Quintic");
+    }
+
+    #[test]
+    fn test_tps_kernel_near_zero() {
+        let kernel = RBFKernel::ThinPlateSpline;
+        assert_eq!(kernel.eval(1e-15), 0.0);
     }
 }

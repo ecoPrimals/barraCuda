@@ -203,6 +203,7 @@ fn resolve_passthrough_deps(
         .collect()
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

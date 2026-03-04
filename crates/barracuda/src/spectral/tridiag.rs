@@ -193,6 +193,7 @@ fn inverse_iteration_tridiag(diagonal: &[f64], off_diag: &[f64], lambda: f64) ->
     x
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -257,7 +258,7 @@ mod tests {
         for k in 0..3 {
             let v: Vec<f64> = (0..3).map(|i| vecs[i * 3 + k]).collect();
             // T*v
-            let mut tv = vec![0.0; 3];
+            let mut tv = [0.0; 3];
             tv[0] = d[0] * v[0] + e[0] * v[1];
             tv[1] = e[0] * v[0] + d[1] * v[1] + e[1] * v[2];
             tv[2] = e[1] * v[1] + d[2] * v[2];

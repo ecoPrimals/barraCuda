@@ -18,7 +18,6 @@
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// f64 is the canonical source — math is universal, precision is silicon.
 const SHADER_F64: &str = include_str!("../shaders/linalg/trace_f64.wgsl");
@@ -148,11 +147,9 @@ impl Trace {
                 compilation_options: Default::default(),
             });
 
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Trace Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("Trace Encoder"),
+        });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -284,12 +281,9 @@ impl Trace {
                         compilation_options: Default::default(),
                     });
 
-            let mut encoder_2 =
-                device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("Trace Reduce Encoder"),
-                    });
+            let mut encoder_2 = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("Trace Reduce Encoder"),
+            });
 
             {
                 let mut pass_2 = encoder_2.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -323,6 +317,7 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

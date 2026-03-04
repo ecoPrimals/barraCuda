@@ -19,7 +19,6 @@ use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 const SHADER: &str = include_str!("../shaders/science/richards_picard_f64.wgsl");
 
@@ -169,12 +168,11 @@ impl RichardsGpu {
 
         for _step in 0..n_steps {
             // Copy h → h_old
-            let mut enc =
-                self.device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("Richards copy h→h_old"),
-                    });
+            let mut enc = self
+                .device
+                .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Richards copy h→h_old"),
+                });
             enc.copy_buffer_to_buffer(&h_buf, 0, &h_old_buf, 0, buf_size);
             self.device.submit_and_poll(Some(enc.finish()));
 
@@ -266,6 +264,7 @@ impl RichardsGpu {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

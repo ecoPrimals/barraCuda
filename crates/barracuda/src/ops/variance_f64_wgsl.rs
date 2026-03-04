@@ -16,7 +16,6 @@ use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// Simple variance reduction variant (scalar path).
 pub fn wgsl_variance_simple() -> &'static str {
@@ -136,6 +135,7 @@ impl VarianceF64 {
         Ok(self.sample_variance(data)?.sqrt())
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn variance_cpu(data: &[f64], ddof: usize) -> f64 {
         let n = data.len();
@@ -151,6 +151,7 @@ impl VarianceF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

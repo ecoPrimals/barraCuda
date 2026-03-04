@@ -179,3 +179,88 @@ async fn test_tensor_3d_roundtrip() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_tensor_from_data_with_device() {
+    let device = crate::device::test_pool::get_test_device().await;
+    let data = [1.0f32, 2.0, 3.0, 4.0];
+    let tensor = Tensor::from_data(&data, vec![4], device).unwrap();
+    assert_eq!(tensor.to_vec().unwrap(), vec![1.0, 2.0, 3.0, 4.0]);
+}
+
+#[tokio::test]
+async fn test_tensor_new_empty() {
+    let device = crate::device::test_pool::get_test_device().await;
+    let tensor = Tensor::new(vec![], vec![0], device);
+    assert!(tensor.is_empty());
+    assert_eq!(tensor.len(), 0);
+}
+
+#[tokio::test]
+async fn test_tensor_try_arc_buffer() {
+    let tensor = Tensor::zeros(vec![4]).await.unwrap();
+    let arc = tensor.try_arc_buffer();
+    assert!(arc.is_some());
+}
+
+#[tokio::test]
+async fn test_tensor_is_pooled() {
+    let tensor = Tensor::zeros(vec![4]).await.unwrap();
+    assert!(!tensor.is_pooled());
+}
+
+#[tokio::test]
+async fn test_tensor_with_name() {
+    let tensor = Tensor::zeros(vec![2]).await.unwrap().with_name("my_tensor");
+    assert_eq!(tensor.name(), Some("my_tensor"));
+}
+
+#[tokio::test]
+async fn test_tensor_from_vec_on_sync_shape_mismatch() {
+    let device = crate::device::test_pool::get_test_device().await;
+    let result = Tensor::from_vec_on_sync(vec![1.0, 2.0, 3.0], vec![2, 2], device);
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_tensor_reshape_mismatch() {
+    let tensor = Tensor::ones(vec![2, 3]).await.unwrap();
+    let result = tensor.reshape(vec![3, 3]);
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_tensor_deep_clone() {
+    let tensor = Tensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], vec![4])
+        .await
+        .unwrap();
+    let cloned = tensor.deep_clone().unwrap();
+    assert_eq!(tensor.to_vec().unwrap(), cloned.to_vec().unwrap());
+    assert_eq!(tensor.shape(), cloned.shape());
+}
+
+#[tokio::test]
+async fn test_tensor_from_f64_data() {
+    let device = crate::device::test_pool::get_test_device().await;
+    let data = [1.0f64, 2.0, 3.0, 4.0];
+    let tensor = Tensor::from_f64_data(&data, vec![4], device).unwrap();
+    let out = tensor.to_f64_vec().unwrap();
+    assert_eq!(out.len(), 4);
+    assert!((out[0] - 1.0).abs() < 1e-10);
+}
+
+#[tokio::test]
+async fn test_tensor_display() {
+    let tensor = Tensor::zeros(vec![2, 3]).await.unwrap();
+    let s = format!("{tensor}");
+    assert!(s.contains("Tensor"));
+    assert!(s.contains("[2, 3]"));
+}
+
+#[tokio::test]
+async fn test_tensor_debug() {
+    let tensor = Tensor::zeros(vec![2]).await.unwrap();
+    let s = format!("{:?}", tensor);
+    assert!(s.contains("shape"));
+    assert!(s.contains("len"));
+}

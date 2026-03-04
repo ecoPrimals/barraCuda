@@ -308,6 +308,7 @@ fn log_hypergeometric_absent(big_n: u64, ni: u64, n: u64) -> f64 {
     log_ratio
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

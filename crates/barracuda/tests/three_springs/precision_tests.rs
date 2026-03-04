@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Precision tests: f64 accuracy vs CPU reference.
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 use super::*;
 use barracuda::ops::fused_map_reduce_f64::FusedMapReduceF64;
 

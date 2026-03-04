@@ -12,7 +12,6 @@
 //! - CPU: Pure Rust execution
 //! - GPU: WGSL shaders via wgpu
 //! - NPU: Akida neuromorphic
-//! - TPU: Tensor Processing Units (future)
 //! - Auto: Smart selection
 
 use crate::error::Result;
@@ -37,7 +36,6 @@ pub mod registry; // Physical device tracking with backend preference (Feb 16, 2
 mod routing;
 pub mod substrate;
 pub mod tensor_context;
-pub mod tpu;
 pub mod unified;
 pub mod vendor; // Canonical GPU vendor ID constants (single source of truth)
 pub mod warmup;
@@ -79,7 +77,6 @@ pub use registry::{
     PhysicalDevice, PhysicalDeviceId,
 };
 pub use substrate::{Substrate, SubstrateCapability, SubstrateType};
-pub use tpu::{TpuDevice, TpuGeneration, TpuInfo};
 pub use unified::{Capability, Device, DeviceContext, DeviceInfo, WorkloadHint};
 pub use wgpu_device::WgpuDevice;
 
@@ -149,7 +146,7 @@ impl Auto {
     /// This enables parallel tests and concurrent GPU workloads without resource exhaustion.
     ///
     /// **Architecture**: Uses LazyLock-based pool (Rust 1.80+) for idiomatic lazy initialization.
-    #[allow(clippy::new_ret_no_self)]
+    #[expect(clippy::new_ret_no_self, reason = "suppressed")]
     pub async fn new() -> Result<Arc<WgpuDevice>> {
         Ok(test_pool::get_test_device().await)
     }

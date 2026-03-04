@@ -53,6 +53,7 @@ pub const WGSL_ESN_RESERVOIR_UPDATE_F64: &str =
 /// f64 version of the readout for universal math library portability.
 pub const WGSL_ESN_READOUT_F64: &str = include_str!("../shaders/ml/esn_readout_f64.wgsl");
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -5,6 +5,64 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - March 3, 2026
+
+### Added
+- **3 new ET₀ operations** — `MakkinkEt0` (op 14), `TurcEt0` (op 15), `HamonEt0` (op 16)
+  with WGSL shader implementations and CPU reference functions
+- **`GuardedDeviceHandle`** — RAII-wrapped `wgpu::Device` that automatically protects all
+  `create_*` calls with atomic encoder barriers, eliminating wgpu-core races codebase-wide
+
+### Removed
+- **`sourdough-core` dependency** — lifecycle (`PrimalLifecycle`, `PrimalState`) and health
+  (`PrimalHealth`, `HealthStatus`, `HealthReport`) traits internalized into `barracuda-core`.
+  barraCuda is now fully standalone with zero cross-primal dependencies
+- **`async-trait` dependency** — replaced with native `BoxFuture` type alias and `Box::pin`
+  for object-safe async trait methods
+- **Dead feature flags** — `tpu`, `cloud-tpu`, `coral-tpu`, `mock-tpu`, `unidirectional`
+- **`tpu.rs` module and `unidirectional_benchmark.rs`** — dead code removed
+- **`sourDough` CI checkout** — removed all 6 `actions/checkout@v4` steps from CI
+
+### Changed
+- **GPU concurrency overhaul** — replaced `WgpuDevice::lock()` RwLock with a three-layer model:
+  `active_encoders: AtomicU32` for lock-free encoder tracking, `gpu_lock: Mutex<()>` for
+  submit/poll serialization, and a bounded yield loop (`brief_encoder_wait`) before poll
+- **`GuardedEncoder` redesign** — now an RAII wrapper holding `Option<CommandEncoder>` and the
+  `active_encoders` Arc; auto-decrements on finish or drop, making the barrier leak-proof
+- **`encoding_guard()` / `encoding_complete()`** — explicit atomic increment/decrement pair
+  applied to all `WgpuDevice` buffer creation, shader compilation, and `ComputeDispatch::submit`
+  to prevent wgpu-core races between resource creation and `device.poll()`
+- **Device-lost discrimination** — `on_uncaptured_error`, `submit_commands`, `poll_safe`, and
+  `submit_and_poll_inner` now only flag `lost = true` for genuine device-lost errors; validation
+  errors are logged or re-panicked without poisoning the shared device for other threads
+- **`BufferPool` concurrency** — `poll_lock` changed to `Mutex`, `drain_pending` checks
+  `active_encoders` before attempting non-blocking poll, `allocate_new` protected with
+  encoding guard
+- **`AsyncSubmitter` / `AsyncReadback`** — updated from `RwLock::write()` to `Mutex::lock()`,
+  added `brief_encoder_wait()` before submissions
+- **`#[allow]` → `#[expect]`** — converted all clippy suppressions to `#[expect(reason)]`
+  for compile-time verification of necessity
+- **`rand` 0.8 → 0.9** — updated to latest rand crate
+- **Clippy tightening** — reduced bulk `Cargo.toml` allows, fixed `type_complexity` with
+  `BoxFuture` type alias, resolved `deref`, `range_plus_one`, struct field order warnings
+
+### Fixed
+- wgpu-core "Buffer does not exist" panics under concurrent GPU access
+- Cascading `DeviceLost` failures from transient validation errors on shared test devices
+- `RwLock` convoy effect causing test hangs at 16+ threads on llvmpipe
+- Unprotected `device.device.create_*()` calls in `expand`, `ComputeDispatch`, buffer and
+  shader creation racing with `device.poll()`
+- NVK reciprocal bug in 3 WGSL shaders — replaced `/ f64(4294967296.0)` with reciprocal
+  multiplication `* f64(2.3283064365386963e-10)` for numerical stability on NVIDIA Vulkan
+
+### Quality
+- 1,791+ test functions, 0 concurrency-related failures at 16 threads on llvmpipe
+- ~80% line coverage (all CPU-testable code covered; remaining gap is GPU-only)
+- `cargo fmt --check` clean
+- `cargo clippy --workspace` clean (zero warnings)
+- `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` clean
+- 3-config check clean (pure math, GPU, full)
+
 ## [0.3.1] - March 3, 2026
 
 ### Added

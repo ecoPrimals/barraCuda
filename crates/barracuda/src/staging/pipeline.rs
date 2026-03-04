@@ -141,12 +141,11 @@ impl StreamingPipeline {
             ));
         }
 
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some(&format!("{}:encoder", self.label)),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some(&format!("{}:encoder", self.label)),
+            });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -179,12 +178,11 @@ impl StreamingPipeline {
             ));
         }
 
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some(&format!("{}:iter_encoder", self.label)),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some(&format!("{}:iter_encoder", self.label)),
+            });
 
         for _ in 0..n {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -230,6 +228,7 @@ impl StreamingPipeline {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

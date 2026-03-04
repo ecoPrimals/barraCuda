@@ -9,7 +9,6 @@ authors.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-sourdough-core = { workspace = true }
 barracuda = { path = "../barracuda", default-features = true }
 tokio = { workspace = true }
 serde = { workspace = true }

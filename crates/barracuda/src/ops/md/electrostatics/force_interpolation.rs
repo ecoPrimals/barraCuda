@@ -191,6 +191,7 @@ fn wrap_position(pos: [f64; 3], box_dims: [f64; 3]) -> [f64; 3] {
     ]
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

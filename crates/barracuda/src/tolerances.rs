@@ -244,6 +244,7 @@ pub const BIO_PHYLOGENETIC: Tolerance = Tolerance {
     justification: "branch-length accumulation over tree; float rounding per edge",
 };
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

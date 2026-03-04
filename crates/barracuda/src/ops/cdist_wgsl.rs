@@ -182,7 +182,7 @@ pub fn compute_distances_f64_gpu(
         usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
         mapped_at_creation: false,
     });
-    let mut enc = d.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+    let mut enc = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
         label: Some("cdist_f64:copy"),
     });
     enc.copy_buffer_to_buffer(&out_buf, 0, &readback, 0, out_size);
@@ -192,6 +192,7 @@ pub fn compute_distances_f64_gpu(
     Ok(result)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

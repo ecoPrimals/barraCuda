@@ -123,6 +123,7 @@ pub fn expect_size(label: &str, expected: usize, actual: usize) -> BarracudaResu
     })
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -206,7 +207,7 @@ mod tests {
         let err = expect_size("dim", 10, 5);
         assert!(err.is_err());
         let msg = format!("{:?}", err.unwrap_err());
-        assert!(msg.contains("10") && msg.contains("5"));
+        assert!(msg.contains("10") && msg.contains('5'));
     }
 
     #[test]

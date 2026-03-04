@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Point-wise multiplication unit tests (NTT domain).
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 use super::helpers::*;
 use barracuda::device::WgpuDevice;
 use barracuda::ops::fhe_ntt::FheNtt;

@@ -7,7 +7,6 @@ use crate::shaders::precision::downcast_f64_to_f32;
 use crate::tensor::Tensor;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 const LINEAR_F64: &str = include_str!("../shaders/misc/linear_f64.wgsl");
 const RELU_F64: &str = include_str!("../shaders/activation/relu_f64.wgsl");

@@ -142,9 +142,11 @@ impl KmerHistogramGpu {
             ],
         });
 
-        let mut encoder = d.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("KmerHistogram Encoder"),
-        });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("KmerHistogram Encoder"),
+            });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("KmerHistogram Pass"),
@@ -158,6 +160,7 @@ impl KmerHistogramGpu {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

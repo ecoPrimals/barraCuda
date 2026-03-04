@@ -12,7 +12,6 @@ use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::DeviceCapabilities;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// f64 is the canonical source — f32 derived via downcast_f64_to_f32 when needed.
 const SHADER_F64: &str = include_str!("../shaders/math/slice_assign_f64.wgsl");
@@ -157,6 +156,7 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -274,6 +274,7 @@ pub struct CellStats {
     pub mean_occupancy: f64,
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

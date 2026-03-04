@@ -154,7 +154,7 @@ pub fn extract_wgsl_function(source: &str, name: &str) -> Option<String> {
     let mut doc_start = fn_start;
     let before = &source[..fn_start];
     if let Some(last_newline) = before.rfind('\n') {
-        let prev_lines: Vec<&str> = before[..last_newline + 1].lines().rev().take(5).collect();
+        let prev_lines: Vec<&str> = before[..=last_newline].lines().rev().take(5).collect();
         for (i, line) in prev_lines.iter().enumerate() {
             let trimmed = line.trim();
             if trimmed.starts_with("///") || trimmed.starts_with("//") || trimmed.is_empty() {

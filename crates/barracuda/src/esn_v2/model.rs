@@ -122,8 +122,8 @@ impl ESN {
 
         for i in 0..size {
             for j in 0..size {
-                if rng.gen::<f32>() < config.connectivity {
-                    matrix[i * size + j] = rng.gen_range(-1.0..1.0);
+                if rng.random::<f32>() < config.connectivity {
+                    matrix[i * size + j] = rng.random_range(-1.0..1.0);
                 }
             }
         }
@@ -145,7 +145,7 @@ impl ESN {
     ) -> BarracudaResult<Tensor> {
         let mut rng = rand::rngs::StdRng::seed_from_u64(config.seed + 1);
         let weights: Vec<f32> = (0..(config.reservoir_size * config.input_size))
-            .map(|_| rng.gen::<f32>() - 0.5)
+            .map(|_| rng.random::<f32>() - 0.5)
             .collect();
 
         Tensor::from_vec_on(
@@ -564,6 +564,7 @@ impl ESN {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "model_tests.rs"]
 mod tests;

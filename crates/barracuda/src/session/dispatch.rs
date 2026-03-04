@@ -11,7 +11,6 @@ use super::types::{
 };
 use super::TensorSession;
 use bytemuck::bytes_of;
-use wgpu::util::DeviceExt;
 
 impl TensorSession {
     /// Dispatch a single recorded op into the command encoder.

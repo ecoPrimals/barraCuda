@@ -124,6 +124,7 @@ pub fn compile_folding_shader(device: &WgpuDevice, op: FoldingOp) -> Result<wgpu
     Ok(device.compile_shader_df64(source, Some(label)))
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

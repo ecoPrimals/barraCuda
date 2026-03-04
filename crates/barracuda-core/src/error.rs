@@ -1,81 +1,60 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! barraCuda error types.
+//! barraCuda-core error types.
 //!
-//! Unified error handling for GPU device management, shader compilation,
-//! tensor operations, and compute dispatch.
+//! Unified error handling for primal lifecycle, health, IPC, and GPU
+//! device management. Replaces the sourDough scaffold `PrimalError` with
+//! barraCuda-owned types.
 
-#![allow(clippy::doc_markdown)]
+/// Result type alias for barraCuda-core operations.
+pub type Result<T> = std::result::Result<T, BarracudaCoreError>;
 
-/// Result type alias for barraCuda operations.
-pub type Result<T> = std::result::Result<T, BarracudaError>;
-
-/// Errors that can occur during barraCuda operations.
+/// Errors that can occur during barraCuda primal operations.
 #[derive(Debug, thiserror::Error)]
-pub enum BarracudaError {
-    /// GPU device was lost (transient — can retry on fresh device).
-    #[error("device lost: {0}")]
-    DeviceLost(String),
+pub enum BarracudaCoreError {
+    /// Lifecycle error (start/stop/reload).
+    #[error("lifecycle error: {0}")]
+    Lifecycle(String),
 
-    /// GPU device creation or feature negotiation failed.
+    /// Health check error.
+    #[error("health error: {0}")]
+    Health(String),
+
+    /// IPC / transport error.
+    #[error("ipc error: {0}")]
+    Ipc(String),
+
+    /// GPU device error (delegated from barracuda library).
     #[error("device error: {0}")]
     Device(String),
 
-    /// Shader compilation failed.
-    #[error("shader compilation: {0}")]
-    ShaderCompilation(String),
+    /// I/O error.
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
 
-    /// Tensor shape mismatch between operands.
-    #[error("shape mismatch: expected {expected:?}, got {actual:?}")]
-    ShapeMismatch {
-        /// Expected shape.
-        expected: Vec<usize>,
-        /// Actual shape.
-        actual: Vec<usize>,
-    },
-
-    /// Invalid operation for the given inputs.
-    #[error("invalid op '{op}': {reason}")]
-    InvalidOp {
-        /// Operation name.
-        op: String,
-        /// Why the operation is invalid.
-        reason: String,
-    },
-
-    /// Buffer or memory allocation failure.
-    #[error("buffer error: {0}")]
-    Buffer(String),
-
-    /// Compute dispatch failure.
-    #[error("dispatch error: {0}")]
-    Dispatch(String),
+    /// Serialization error.
+    #[error("serialization error: {0}")]
+    Serialization(String),
 }
 
-impl BarracudaError {
-    /// Returns `true` when this error indicates the GPU device was lost.
-    ///
-    /// Device loss is a transient hardware failure — the operation can be
-    /// retried on a fresh device.
-    #[must_use]
-    pub fn is_device_lost(&self) -> bool {
-        matches!(self, Self::DeviceLost(_)) || {
-            let msg = self.to_string();
-            msg.contains("device lost") || msg.contains("Device lost")
-        }
+impl BarracudaCoreError {
+    /// Create a lifecycle error.
+    pub fn lifecycle(msg: impl Into<String>) -> Self {
+        Self::Lifecycle(msg.into())
     }
 
-    /// Create a shape mismatch error.
-    #[must_use]
-    pub fn shape_mismatch(expected: Vec<usize>, actual: Vec<usize>) -> Self {
-        Self::ShapeMismatch { expected, actual }
+    /// Create a health error.
+    pub fn health(msg: impl Into<String>) -> Self {
+        Self::Health(msg.into())
     }
 
-    /// Create an invalid operation error.
-    pub fn invalid_op(op: impl Into<String>, reason: impl Into<String>) -> Self {
-        Self::InvalidOp {
-            op: op.into(),
-            reason: reason.into(),
-        }
+    /// Create an IPC error.
+    pub fn ipc(msg: impl Into<String>) -> Self {
+        Self::Ipc(msg.into())
+    }
+
+    /// Create a device error.
+    pub fn device(msg: impl Into<String>) -> Self {
+        Self::Device(msg.into())
     }
 }
 
@@ -84,26 +63,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_device_lost_detection() {
-        let err = BarracudaError::DeviceLost("adapter reset".into());
-        assert!(err.is_device_lost());
-
-        let err = BarracudaError::Device("device lost during execution".into());
-        assert!(err.is_device_lost());
-
-        let err = BarracudaError::ShaderCompilation("syntax error".into());
-        assert!(!err.is_device_lost());
+    fn test_lifecycle_error() {
+        let err = BarracudaCoreError::lifecycle("cannot start");
+        assert!(err.to_string().contains("lifecycle"));
+        assert!(err.to_string().contains("cannot start"));
     }
 
     #[test]
-    fn test_shape_mismatch() {
-        let err = BarracudaError::shape_mismatch(vec![3, 4], vec![5, 6]);
-        assert!(err.to_string().contains("shape mismatch"));
+    fn test_health_error() {
+        let err = BarracudaCoreError::health("check failed");
+        assert!(err.to_string().contains("health"));
     }
 
     #[test]
-    fn test_invalid_op() {
-        let err = BarracudaError::invalid_op("matmul", "inner dimensions don't match");
-        assert!(err.to_string().contains("matmul"));
+    fn test_io_error() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "not found");
+        let err: BarracudaCoreError = io_err.into();
+        assert!(matches!(err, BarracudaCoreError::Io(_)));
     }
 }

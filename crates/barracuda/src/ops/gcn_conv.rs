@@ -12,7 +12,6 @@
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// Graph Convolutional Network Convolution
 pub struct GcnConv {
@@ -288,11 +287,9 @@ impl GcnConv {
                 });
 
         // Create encoder
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("GCNConv Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("GCNConv Encoder"),
+        });
 
         // Step 1: Transform features
         let transform_pipeline =
@@ -387,6 +384,7 @@ impl GcnConv {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

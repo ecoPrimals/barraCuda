@@ -187,7 +187,7 @@ impl PixelUnshuffle {
             ],
         });
 
-        let mut encoder = device.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
             label: Some("pixel_unshuffle_encoder"),
         });
 
@@ -228,6 +228,7 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

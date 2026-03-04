@@ -13,7 +13,6 @@
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// Rectified Adam Optimizer
 pub struct RAdam {
@@ -128,11 +127,9 @@ impl RAdam {
         let parameters_buffer = device.create_buffer_f32(size)?;
 
         // Copy parameters buffer using GPU copy
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("RAdam Buffer Copy Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("RAdam Buffer Copy Encoder"),
+        });
         encoder.copy_buffer_to_buffer(
             self.parameters.buffer(),
             0,
@@ -326,11 +323,9 @@ impl RAdam {
             });
 
         // Encode and execute
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("RAdam Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("RAdam Encoder"),
+        });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -365,6 +360,7 @@ impl RAdam {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

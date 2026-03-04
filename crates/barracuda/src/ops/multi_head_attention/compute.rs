@@ -8,7 +8,6 @@
 use super::{MHAProjectionParams, MultiHeadAttention};
 use crate::device::{DeviceCapabilities, WgpuDevice, WorkloadType};
 use crate::error::Result;
-use wgpu::util::DeviceExt;
 
 const SHADER_F64: &str = include_str!("../../shaders/attention/mha_projection_f64.wgsl");
 static SHADER_F32: std::sync::LazyLock<String> =

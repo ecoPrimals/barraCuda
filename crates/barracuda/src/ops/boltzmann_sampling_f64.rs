@@ -9,7 +9,6 @@ use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
-use wgpu::util::DeviceExt;
 
 /// WGSL shader for Boltzmann sampling.
 pub const WGSL_BOLTZMANN_SAMPLING_F64: &str =
@@ -117,6 +116,7 @@ impl BoltzmannSamplingGpu {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

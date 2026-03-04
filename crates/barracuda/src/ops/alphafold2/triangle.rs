@@ -84,6 +84,7 @@ pub fn triangle_mul_incoming(
     device.read_f64_buffer(&out_buf, total)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

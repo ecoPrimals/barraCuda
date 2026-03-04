@@ -216,12 +216,13 @@ impl UniFracPropagateGpu {
         bg: &wgpu::BindGroup,
         workgroups_x: u32,
     ) {
-        let d = self.device.device();
         let q = self.device.queue();
 
-        let mut encoder = d.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("UniFrac Encoder"),
-        });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("UniFrac Encoder"),
+            });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("UniFrac Pass"),
@@ -235,6 +236,7 @@ impl UniFracPropagateGpu {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

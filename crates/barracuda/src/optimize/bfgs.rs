@@ -82,8 +82,8 @@ impl BfgsConfig {
     /// Create a new configuration with specified tolerances.
     pub fn new(gtol: f64, max_iter: usize) -> Self {
         Self {
-            gtol,
             max_iter,
+            gtol,
             ..Default::default()
         }
     }
@@ -388,6 +388,7 @@ where
     bfgs(f, &grad_f, x0, config)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

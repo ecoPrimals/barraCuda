@@ -15,7 +15,6 @@ use crate::device::tensor_context::get_device_context;
 use crate::device::DeviceCapabilities;
 use crate::error::Result;
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// Large-matrix threshold for activating the evolved GPU shader.
 /// Below this, the 16×16 tiled shader maintains higher SM occupancy.
@@ -266,6 +265,7 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -111,10 +111,7 @@ impl AniBatchF64 {
                 ],
             });
 
-        let mut enc = self
-            .device
-            .device
-            .create_command_encoder(&Default::default());
+        let mut enc = self.device.create_encoder_guarded(&Default::default());
         {
             let mut pass = enc.begin_compute_pass(&Default::default());
             pass.set_pipeline(&self.pipeline);

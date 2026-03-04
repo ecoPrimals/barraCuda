@@ -325,8 +325,8 @@ impl RkIntegrator {
 // See `batched_ode_rk4.rs` for implementation and documentation.
 pub use super::batched_ode_rk4::{BatchedOdeRK4F64, BatchedRk4Config};
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::device::test_pool::get_test_device_sync;

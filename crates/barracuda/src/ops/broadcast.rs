@@ -5,7 +5,6 @@
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// f64 is the canonical source — f32 derived via downcast_f64_to_f32 when needed.
 const SHADER_F64: &str = include_str!("../shaders/tensor/broadcast_f64.wgsl");
@@ -163,11 +162,9 @@ impl Broadcast {
         });
 
         // Execute
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Broadcast Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("Broadcast Encoder"),
+        });
         {
             let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("Broadcast Pass"),
@@ -201,6 +198,7 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

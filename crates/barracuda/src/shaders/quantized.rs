@@ -218,6 +218,7 @@ pub fn gemv_quantized_cpu(
     y
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

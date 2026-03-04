@@ -163,6 +163,7 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -175,19 +176,11 @@ mod tests {
         };
 
         // 2x3 * 3x2 = 2x2
-        let a = Tensor::from_data(
-            &vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
-            vec![2, 3],
-            device.clone(),
-        )
-        .unwrap();
+        let a =
+            Tensor::from_data(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3], device.clone()).unwrap();
 
-        let b = Tensor::from_data(
-            &vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
-            vec![3, 2],
-            device.clone(),
-        )
-        .unwrap();
+        let b =
+            Tensor::from_data(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![3, 2], device.clone()).unwrap();
 
         let result = a.matmul_tiled(&b).unwrap();
         let output = result.to_vec().unwrap();

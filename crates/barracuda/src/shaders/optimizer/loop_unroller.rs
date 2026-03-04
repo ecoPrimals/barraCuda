@@ -344,6 +344,7 @@ fn substitute_loop_var(line: &str, var_name: &str, iter: u32) -> String {
     out
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

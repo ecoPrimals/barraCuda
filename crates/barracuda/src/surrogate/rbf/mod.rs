@@ -52,12 +52,13 @@ pub struct RBFSurrogate {
     smoothing: f64,
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;
 
 impl RBFSurrogate {
     /// Construct from pre-computed parts (used by adaptive dispatch).
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, reason = "API")]
     pub(crate) fn from_parts(
         device: Arc<WgpuDevice>,
         train_x: Vec<f64>,
@@ -156,7 +157,6 @@ impl RBFSurrogate {
         let n_dim = x_data[0].len();
 
         // Flatten training data (can't use extend_from_slice due to nested structure)
-        #[allow(clippy::manual_memcpy)]
         let train_x: Vec<f64> = x_data.iter().flat_map(|row| row.iter().copied()).collect();
 
         // Compute pairwise distances on GPU
@@ -252,7 +252,6 @@ impl RBFSurrogate {
         }
 
         // Flatten evaluation points (can't use extend_from_slice due to nested structure)
-        #[allow(clippy::manual_memcpy)]
         let eval_x: Vec<f64> = x_eval.iter().flat_map(|row| row.iter().copied()).collect();
 
         // Compute distances on GPU

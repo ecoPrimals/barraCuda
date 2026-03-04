@@ -25,6 +25,9 @@
 //! - `Op::ThornthwaiteEt0` (11): Thornthwaite monthly ET₀
 //! - `Op::Gdd` (12): Growing Degree Days (use aux_param for T_base)
 //! - `Op::PedotransferPolynomial` (13): Polynomial evaluation (Horner, degree ≤5)
+//! - `Op::MakkinkEt0` (14): Makkink (1957) ET₀ — radiation-based
+//! - `Op::TurcEt0` (15): Turc (1961) ET₀ — radiation + temperature
+//! - `Op::HamonEt0` (16): Hamon (1963) ET₀ — temperature + daylength
 //!
 //! # Example
 //!
@@ -47,8 +50,9 @@ pub use op::{Op, StationDayInput, WaterBalanceInput};
 
 // Re-export CPU reference implementations for external validation
 pub use cpu_ref::{
-    hargreaves_et0_cpu, kc_climate_adjust_cpu, pedotransfer_polynomial_cpu, thornthwaite_et0_cpu,
-    van_genuchten_k_cpu, van_genuchten_theta_cpu,
+    hamon_et0_cpu, hargreaves_et0_cpu, kc_climate_adjust_cpu, makkink_et0_cpu,
+    pedotransfer_polynomial_cpu, thornthwaite_et0_cpu, turc_et0_cpu, van_genuchten_k_cpu,
+    van_genuchten_theta_cpu,
 };
 
 /// Monte Carlo uncertainty propagation wrapper around FAO-56 ET₀.
@@ -57,6 +61,7 @@ pub use cpu_ref::{
 pub const WGSL_MC_ET0_PROPAGATE_F64: &str =
     include_str!("../../shaders/bio/mc_et0_propagate_f64.wgsl");
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -180,6 +185,38 @@ mod tests {
         assert_eq!(Op::ThornthwaiteEt0.stride(), 5);
         assert_eq!(Op::Gdd.stride(), 1);
         assert_eq!(Op::PedotransferPolynomial.stride(), 7);
+        assert_eq!(Op::MakkinkEt0.stride(), 3);
+        assert_eq!(Op::TurcEt0.stride(), 3);
+        assert_eq!(Op::HamonEt0.stride(), 2);
+    }
+
+    #[test]
+    fn test_makkink_et0_cpu() {
+        let et0 = makkink_et0_cpu(18.0, 20.0, 100.0);
+        assert!(
+            et0 > 0.5 && et0 < 8.0,
+            "Makkink ET₀={et0} mm/day, expected 0.5-8"
+        );
+    }
+
+    #[test]
+    fn test_turc_et0_cpu() {
+        let et0 = turc_et0_cpu(18.0, 20.0, 60.0);
+        assert!(
+            et0 > 1.0 && et0 < 15.0,
+            "Turc ET₀={et0} mm/day, expected 1-15"
+        );
+        let et0_dry = turc_et0_cpu(18.0, 20.0, 30.0);
+        assert!(et0_dry > et0, "dry air should increase Turc ET₀");
+    }
+
+    #[test]
+    fn test_hamon_et0_cpu() {
+        let et0 = hamon_et0_cpu(20.0, 14.0);
+        assert!(
+            et0 > 0.5 && et0 < 10.0,
+            "Hamon ET₀={et0} mm/day, expected 0.5-10"
+        );
     }
 
     #[test]

@@ -20,11 +20,12 @@ use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod cpu_reference;
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;
 
@@ -276,11 +277,9 @@ impl CoulombForceF64 {
                 compilation_options: Default::default(),
             });
 
-        let mut encoder = dev
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Coulomb f64 Encoder"),
-            });
+        let mut encoder = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("Coulomb f64 Encoder"),
+        });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
             pass.set_pipeline(&pipeline);
@@ -374,11 +373,9 @@ impl CoulombForceF64 {
                 compilation_options: Default::default(),
             });
 
-        let mut encoder = dev
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Coulomb f64 Energy Encoder"),
-            });
+        let mut encoder = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("Coulomb f64 Energy Encoder"),
+        });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
             pass.set_pipeline(&pipeline);

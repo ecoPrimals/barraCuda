@@ -28,7 +28,6 @@ use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 // ─── GPU params struct (matches WGSL GillespieParams layout) ─────────────────
 
@@ -125,7 +124,7 @@ impl GillespieGpu {
     /// - `prng_seeds`    : xoshiro128** initial state [T × 4 u32]
     /// - `n_trajectories`: number of parallel trajectories T
     /// - `config`        : simulation parameters
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, reason = "API")]
     pub fn simulate(
         &self,
         rate_k: &[f64],
@@ -250,6 +249,7 @@ impl GillespieGpu {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

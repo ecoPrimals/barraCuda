@@ -375,12 +375,11 @@ impl ComputePipeline {
 
     /// Execute all pipeline stages with a single GPU submit
     pub fn execute(&self) -> Result<()> {
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Pipeline Encoder"),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("Pipeline Encoder"),
+            });
 
         for stage in &self.stages {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -413,12 +412,11 @@ impl ComputePipeline {
             mapped_at_creation: false,
         });
 
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Pipeline Read"),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("Pipeline Read"),
+            });
         encoder.copy_buffer_to_buffer(buffer, 0, &staging, 0, size as u64);
         self.device.submit_and_poll(Some(encoder.finish()));
 
@@ -461,12 +459,11 @@ impl ComputePipeline {
             mapped_at_creation: false,
         });
 
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Pipeline Read"),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("Pipeline Read"),
+            });
         encoder.copy_buffer_to_buffer(buffer, 0, &staging, 0, size as u64);
         self.device.submit_and_poll(Some(encoder.finish()));
 
@@ -509,6 +506,7 @@ impl ComputePipeline {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

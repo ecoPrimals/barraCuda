@@ -97,6 +97,7 @@ pub fn split_workgroups(total: u32) -> (u32, u32, u32) {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod split_workgroups_tests {
     use super::split_workgroups;

@@ -7,7 +7,6 @@
 use super::FheNtt;
 use crate::error::Result;
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 impl FheNtt {
     /// Execute NTT transformation
@@ -92,11 +91,9 @@ impl FheNtt {
         };
 
         // Command encoder
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("NTT Command Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("NTT Command Encoder"),
+        });
 
         // ============================================================
         // Pass 1: Bit-reversal permutation
@@ -163,11 +160,9 @@ impl FheNtt {
         for stage in 0..num_stages {
             // Create new encoder for this stage (ensures sequential execution)
             let mut stage_encoder =
-                device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some(&format!("NTT Stage {stage} Encoder")),
-                    });
+                device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                    label: Some(&format!("NTT Stage {stage} Encoder")),
+                });
 
             // Update params for this stage
             let stage_params = NttParams { stage, ..params };

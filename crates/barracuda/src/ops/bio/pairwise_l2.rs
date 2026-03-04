@@ -64,6 +64,7 @@ impl PairwiseL2Gpu {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::{PairwiseL2Gpu, WGSL_PAIRWISE_L2};

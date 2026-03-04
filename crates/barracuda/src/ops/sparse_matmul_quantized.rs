@@ -268,7 +268,7 @@ pub fn sparse_matmul_quantized(
         compilation_options: Default::default(),
     });
 
-    let mut encoder = d.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+    let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
         label: Some("Sparse MatMul Encoder"),
     });
 
@@ -316,6 +316,7 @@ pub fn sparse_matmul_quantized(
     device.map_staging_buffer::<f32>(&staging_buffer, output_size as usize)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -362,16 +363,7 @@ mod tests {
             return;
         };
         let empty: Vec<i8> = vec![];
-        assert!(sparse_matmul_quantized(
-            device.as_ref(),
-            &empty,
-            &vec![],
-            &vec![],
-            &vec![1],
-            1,
-            1.0
-        )
-        .is_err());
+        assert!(sparse_matmul_quantized(device.as_ref(), &empty, &[], &[], &[1], 1, 1.0).is_err());
     }
 
     #[tokio::test]

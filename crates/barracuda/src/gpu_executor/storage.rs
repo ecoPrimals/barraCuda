@@ -12,7 +12,6 @@ use crate::device::WgpuDevice;
 use crate::error::Result;
 use crate::unified_hardware::{HardwareType, TensorStorage};
 use crate::unified_math::{DType, TensorDescriptor};
-use async_trait::async_trait;
 use std::sync::Arc;
 
 /// GPU tensor storage for the `ComputeExecutor` scheduler interface.
@@ -71,12 +70,11 @@ impl GpuTensorStorage {
             // Synchronous upload — the Tensor's content is already on GPU;
             // copy_buffer_to_buffer moves it without touching the CPU.
             let byte_size = (numel * dtype.size_bytes()) as u64;
-            let mut enc =
-                new.device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("GpuTensorStorage copy"),
-                    });
+            let mut enc = new
+                .device
+                .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                    label: Some("GpuTensorStorage copy"),
+                });
             enc.copy_buffer_to_buffer(tensor.buffer(), 0, &new.buffer, 0, byte_size);
             new.device.submit_and_poll(Some(enc.finish()));
             new
@@ -84,8 +82,6 @@ impl GpuTensorStorage {
     }
 }
 
-// NOTE(async-dyn): #[async_trait] required — native async fn in trait is not dyn-compatible
-#[async_trait]
 impl TensorStorage for GpuTensorStorage {
     fn descriptor(&self) -> &TensorDescriptor {
         &self.descriptor
@@ -102,46 +98,56 @@ impl TensorStorage for GpuTensorStorage {
         Some(self.buffer.clone())
     }
 
-    async fn read_to_cpu(&self) -> Result<Vec<u8>> {
+    fn read_to_cpu(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<u8>>> + Send + '_>> {
+        let device = self.device.clone();
+        let buffer = self.buffer.clone();
         let numel = self.descriptor.numel;
         let elem_size = self.descriptor.dtype.size_bytes();
-        let byte_size = (numel * elem_size) as u64;
-
-        // Staging buffer for map-read
-        let staging = self.device.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("GpuTensorStorage read staging"),
-            size: byte_size.max(4),
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("GpuTensorStorage read"),
-                });
-        encoder.copy_buffer_to_buffer(&self.buffer, 0, &staging, 0, byte_size);
-        self.device.submit_and_poll(Some(encoder.finish()));
-
-        let slice = staging.slice(..);
-        let (tx, rx) = std::sync::mpsc::channel();
-        slice.map_async(wgpu::MapMode::Read, move |r| {
-            let _ = tx.send(r);
-        });
-        self.device.poll_safe()?;
-        rx.recv()
-            .map_err(|_| crate::error::BarracudaError::Gpu("map_async channel closed".to_string()))?
-            .map_err(|e| crate::error::BarracudaError::Gpu(format!("Buffer map failed: {e:?}")))?;
-
-        let data = slice.get_mapped_range().to_vec();
-        staging.unmap();
-        Ok(data)
+        Box::pin(async move {
+            let byte_size = (numel * elem_size) as u64;
+            let staging = device.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("GpuTensorStorage read staging"),
+                size: byte_size.max(4),
+                usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+            let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("GpuTensorStorage read"),
+            });
+            encoder.copy_buffer_to_buffer(&buffer, 0, &staging, 0, byte_size);
+            device.submit_and_poll(Some(encoder.finish()));
+            let slice = staging.slice(..);
+            let (tx, rx) = std::sync::mpsc::channel();
+            slice.map_async(wgpu::MapMode::Read, move |r| {
+                let _ = tx.send(r);
+            });
+            device.poll_safe()?;
+            rx.recv()
+                .map_err(|_| {
+                    crate::error::BarracudaError::Gpu("map_async channel closed".to_string())
+                })?
+                .map_err(|e| {
+                    crate::error::BarracudaError::Gpu(format!("Buffer map failed: {e:?}"))
+                })?;
+            let data = slice.get_mapped_range().to_vec();
+            staging.unmap();
+            Ok(data)
+        })
     }
 
     /// Upload raw bytes from CPU to the GPU buffer.
-    async fn write_from_cpu(&mut self, data: &[u8]) -> Result<()> {
-        self.device.queue.write_buffer(&self.buffer, 0, data);
-        Ok(())
+    fn write_from_cpu(
+        &mut self,
+        data: &[u8],
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
+        let device = self.device.clone();
+        let buffer = self.buffer.clone();
+        let data = data.to_vec();
+        Box::pin(async move {
+            device.queue.write_buffer(&buffer, 0, &data);
+            Ok(())
+        })
     }
 }

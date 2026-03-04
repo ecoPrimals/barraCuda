@@ -186,7 +186,6 @@ impl CubicSpline {
         device: &crate::device::WgpuDevice,
     ) -> Result<Vec<f64>> {
         use bytemuck::{Pod, Zeroable};
-        use wgpu::util::DeviceExt;
 
         #[repr(C)]
         #[derive(Copy, Clone, Pod, Zeroable)]
@@ -255,7 +254,7 @@ impl CubicSpline {
             .dispatch((n_query as u32).div_ceil(256), 1, 1)
             .submit();
 
-        let mut enc = d.create_command_encoder(&Default::default());
+        let mut enc = device.create_encoder_guarded(&Default::default());
         let rb = d.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Spline:rb"),
             size: out_size,
@@ -514,6 +513,7 @@ fn integrate_segment(x: &[f64], y: &[f64], y2: &[f64], i: usize, x0: f64, x1: f6
     h * (linear_part + cubic_left + cubic_right)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "cubic_spline_tests.rs"]
 mod tests;

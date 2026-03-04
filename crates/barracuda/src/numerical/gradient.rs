@@ -82,6 +82,7 @@ pub fn gradient_1d(f: &[f64], dx: f64) -> Vec<f64> {
     grad
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -105,7 +106,7 @@ mod tests {
         // 2nd-order stencils are EXACT for quadratic functions!
         let y = vec![0.0, 1.0, 4.0, 9.0, 16.0];
         let grad = gradient_1d(&y, 1.0);
-        let expected = vec![0.0, 2.0, 4.0, 6.0, 8.0];
+        let expected = [0.0, 2.0, 4.0, 6.0, 8.0];
 
         for (i, (&g, &e)) in grad.iter().zip(expected.iter()).enumerate() {
             assert!((g - e).abs() < 1e-10, "grad[{i}] = {g}, expected {e}");
@@ -128,7 +129,7 @@ mod tests {
         //   grad[4] = (3*64 - 4*27 + 8) / 2 = (192 - 108 + 8) / 2 = 46 (true: 48)
         let y = vec![0.0, 1.0, 8.0, 27.0, 64.0];
         let grad = gradient_1d(&y, 1.0);
-        let expected = vec![-2.0, 4.0, 13.0, 28.0, 46.0];
+        let expected = [-2.0, 4.0, 13.0, 28.0, 46.0];
 
         for (i, (&g, &e)) in grad.iter().zip(expected.iter()).enumerate() {
             assert!((g - e).abs() < 1e-10, "grad[{i}] = {g}, expected {e}");
@@ -172,7 +173,7 @@ mod tests {
         // True dy/dx = 4x → [0, 2, 4, 6, 8]
         let y = vec![0.0, 0.5, 2.0, 4.5, 8.0];
         let grad = gradient_1d(&y, 0.5);
-        let expected = vec![0.0, 2.0, 4.0, 6.0, 8.0];
+        let expected = [0.0, 2.0, 4.0, 6.0, 8.0];
 
         for (i, (&g, &e)) in grad.iter().zip(expected.iter()).enumerate() {
             assert!((g - e).abs() < 1e-10, "grad[{i}] = {g}, expected {e}");

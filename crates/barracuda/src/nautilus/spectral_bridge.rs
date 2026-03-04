@@ -131,6 +131,7 @@ fn level_spacing_ratio_from_sorted(eigs: &[f64]) -> f64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

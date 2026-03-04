@@ -249,6 +249,7 @@ pub fn cg_solve(
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

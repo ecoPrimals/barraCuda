@@ -13,7 +13,6 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 use bytemuck::{Pod, Zeroable};
-use wgpu::util::DeviceExt;
 
 /// GPU shader for fused layer normalization (single-pass mean+var, normalize+affine).
 pub fn wgsl_layernorm_fused() -> &'static str {
@@ -206,6 +205,7 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

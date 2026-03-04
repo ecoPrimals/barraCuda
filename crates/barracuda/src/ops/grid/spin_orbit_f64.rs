@@ -32,7 +32,6 @@ use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// Parameters for spin-orbit shader
 #[repr(C)]
@@ -211,7 +210,7 @@ impl SpinOrbitGpu {
         )
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, reason = "API")]
     fn compute_internal(
         &self,
         wf_squared: &[f64],
@@ -462,12 +461,11 @@ impl SpinOrbitGpu {
         let n_threads = batch_size * n_states;
         let n_workgroups = n_threads.div_ceil(64);
         {
-            let mut encoder =
-                self.device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("SpinOrbit Encoder"),
-                    });
+            let mut encoder = self
+                .device
+                .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                    label: Some("SpinOrbit Encoder"),
+                });
             {
                 let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                     label: Some("SpinOrbit Pass"),
@@ -504,6 +502,7 @@ pub fn compute_ls_factor(l: u32, j: f64) -> f64 {
     (j * (j + 1.0) - l_f * (l_f + 1.0) - 0.75) / 2.0
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "spin_orbit_f64_tests.rs"]
 mod tests;

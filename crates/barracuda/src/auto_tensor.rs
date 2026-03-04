@@ -237,9 +237,7 @@ impl AutoContext {
         let desc_b = TensorDescriptor::new(b.shape().to_vec(), DType::F32);
         let op = MathOp::Add;
 
-        let executor = self
-            .scheduler
-            .select_executor(&op, &[desc_a.clone(), desc_b]);
+        let executor = self.scheduler.select_executor(&op, &[desc_a, desc_b]);
         let hw_type = executor.hardware_type();
 
         let optimal_device = self
@@ -269,9 +267,7 @@ impl AutoContext {
         let desc_b = TensorDescriptor::new(b.shape().to_vec(), DType::F32);
         let op = MathOp::Sub;
 
-        let executor = self
-            .scheduler
-            .select_executor(&op, &[desc_a.clone(), desc_b]);
+        let executor = self.scheduler.select_executor(&op, &[desc_a, desc_b]);
         let hw_type = executor.hardware_type();
 
         let optimal_device = self
@@ -301,9 +297,7 @@ impl AutoContext {
         let desc_b = TensorDescriptor::new(b.shape().to_vec(), DType::F32);
         let op = MathOp::Mul;
 
-        let executor = self
-            .scheduler
-            .select_executor(&op, &[desc_a.clone(), desc_b]);
+        let executor = self.scheduler.select_executor(&op, &[desc_a, desc_b]);
         let hw_type = executor.hardware_type();
 
         let optimal_device = self
@@ -333,9 +327,7 @@ impl AutoContext {
         let desc_b = TensorDescriptor::new(b.shape().to_vec(), DType::F32);
         let op = MathOp::Div;
 
-        let executor = self
-            .scheduler
-            .select_executor(&op, &[desc_a.clone(), desc_b]);
+        let executor = self.scheduler.select_executor(&op, &[desc_a, desc_b]);
         let hw_type = executor.hardware_type();
 
         let optimal_device = self
@@ -425,6 +417,7 @@ impl AutoContext {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

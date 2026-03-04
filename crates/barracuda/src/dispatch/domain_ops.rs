@@ -5,7 +5,11 @@
 //! thresholds. Each wrapper checks device availability and input size before
 //! choosing the execution path.
 
-#![allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+#![expect(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    reason = "dispatch API"
+)]
 
 use crate::device::WgpuDevice;
 use crate::dispatch::config::{global_config, DispatchConfig};
@@ -528,6 +532,7 @@ pub fn matmul_dispatch_with_config(
     Ok(matmul_cpu(a, b, m, k, n))
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

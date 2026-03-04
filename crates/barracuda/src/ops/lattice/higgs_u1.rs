@@ -200,8 +200,7 @@ impl HiggsU1HmcForce {
 
         let mut enc = self
             .device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
                 label: Some("HiggsU1:enc"),
             });
         {
@@ -251,6 +250,7 @@ fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -333,7 +333,7 @@ mod tests {
                 usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             });
-            let mut enc = device.device.create_command_encoder(&Default::default());
+            let mut enc = device.create_encoder_guarded(&Default::default());
             enc.copy_buffer_to_buffer(src, 0, &staging, 0, buf_bytes as u64);
             device.submit_and_poll(Some(enc.finish()));
             let n_f64 = buf_bytes / std::mem::size_of::<f64>();

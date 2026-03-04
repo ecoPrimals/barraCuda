@@ -9,7 +9,6 @@ use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// f64 Modified Bessel K0 function evaluator
 pub struct BesselK0F64 {
@@ -33,11 +32,13 @@ impl BesselK0F64 {
         self.k0_gpu(x)
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn k0_cpu(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| Self::k0_scalar(xi)).collect()
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn i0_small(x: f64) -> f64 {
         let y = x / 3.75;
@@ -48,6 +49,7 @@ impl BesselK0F64 {
                     + t * (1.2067492 + t * (0.2659732 + t * (0.0360768 + t * 0.0045813)))))
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn k0_scalar(x: f64) -> f64 {
         if x <= 0.0 {
@@ -129,6 +131,7 @@ impl BesselK0F64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -144,7 +147,7 @@ mod tests {
         };
         let bessel = BesselK0F64::new(device)?;
         let x = vec![0.5, 1.0, 2.0, 5.0];
-        let expected = vec![
+        let expected = [
             0.9244190712276659,
             0.4210244382407084,
             0.1138938727495334,

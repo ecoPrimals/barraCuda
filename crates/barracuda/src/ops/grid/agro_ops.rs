@@ -247,6 +247,7 @@ pub fn batched_crop_pipeline(
     Ok((soil_water_out, drainage))
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

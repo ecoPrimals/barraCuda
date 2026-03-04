@@ -46,7 +46,6 @@ use crate::unified_hardware::{
     ParallelismCapabilities, PerformanceCapabilities, PrecisionCapabilities, TensorStorage,
 };
 use crate::unified_math::{MathOp, TensorDescriptor};
-use async_trait::async_trait;
 use std::sync::Arc;
 
 /// NPU executor wrapping AkidaExecutor
@@ -146,10 +145,8 @@ impl NpuExecutor {
     }
 }
 
-// NOTE(async-dyn): #[async_trait] required — native async fn in trait is not dyn-compatible
-#[async_trait]
 impl ComputeExecutor for NpuExecutor {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "Akida NPU"
     }
 
@@ -237,50 +234,53 @@ impl ComputeExecutor for NpuExecutor {
         size_score * op_score
     }
 
-    async fn execute(
+    fn execute(
         &self,
         op: &MathOp,
         inputs: Vec<Arc<dyn TensorStorage>>,
-    ) -> Result<Arc<dyn TensorStorage>> {
-        // NPU execution delegates to AkidaExecutor for neuromorphic ops
-        // The primary execution path is through specialized methods like:
-        // - akida.spike_encode_akida()
-        // - akida.lif_neuron_akida()
-        // - akida.stdp_learning_akida()
-        //
-        // This ComputeExecutor interface is for the scheduler path.
-
-        if inputs.is_empty() {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: "No inputs provided".to_string(),
-            });
-        }
-
-        // For now, pass through - full implementation would convert to spike domain
-        tracing::debug!("NPU execute: op={:?}, inputs={}", op, inputs.len());
-
-        Ok(inputs[0].clone())
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Arc<dyn TensorStorage>>> + Send + '_>,
+    > {
+        let op = op.clone();
+        Box::pin(async move {
+            if inputs.is_empty() {
+                return Err(crate::error::BarracudaError::InvalidInput {
+                    message: "No inputs provided".to_string(),
+                });
+            }
+            tracing::debug!("NPU execute: op={:?}, inputs={}", op, inputs.len());
+            Ok(inputs[0].clone())
+        })
     }
 
-    async fn allocate(&self, descriptor: TensorDescriptor) -> Result<Arc<dyn TensorStorage>> {
-        // Create NPU tensor storage
-        Ok(Arc::new(NpuTensorStorage::new(descriptor)))
+    fn allocate(
+        &self,
+        descriptor: TensorDescriptor,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Arc<dyn TensorStorage>>> + Send + '_>,
+    > {
+        Box::pin(async move {
+            Ok(Arc::new(NpuTensorStorage::new(descriptor)) as Arc<dyn TensorStorage>)
+        })
     }
 
-    async fn transfer(&self, tensor: Arc<dyn TensorStorage>) -> Result<Arc<dyn TensorStorage>> {
-        // If already on NPU, return as-is
-        if tensor.hardware_type() == HardwareType::NPU {
-            Ok(tensor)
-        } else {
-            // Transfer from other device to NPU
-            let data = tensor.read_to_cpu().await?;
-            let descriptor = tensor.descriptor().clone();
-
-            let mut npu_tensor = NpuTensorStorage::new(descriptor);
-            npu_tensor.write_from_cpu(&data).await?;
-
-            Ok(Arc::new(npu_tensor))
-        }
+    fn transfer(
+        &self,
+        tensor: Arc<dyn TensorStorage>,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Arc<dyn TensorStorage>>> + Send + '_>,
+    > {
+        Box::pin(async move {
+            if tensor.hardware_type() == HardwareType::NPU {
+                Ok(tensor)
+            } else {
+                let data = tensor.read_to_cpu().await?;
+                let descriptor = tensor.descriptor().clone();
+                let mut npu_tensor = NpuTensorStorage::new(descriptor);
+                npu_tensor.write_from_cpu(&data).await?;
+                Ok(Arc::new(npu_tensor) as Arc<dyn TensorStorage>)
+            }
+        })
     }
 }
 
@@ -303,7 +303,6 @@ impl NpuTensorStorage {
     }
 }
 
-#[async_trait]
 impl TensorStorage for NpuTensorStorage {
     fn descriptor(&self) -> &TensorDescriptor {
         &self.descriptor
@@ -313,25 +312,35 @@ impl TensorStorage for NpuTensorStorage {
         HardwareType::NPU
     }
 
-    async fn read_to_cpu(&self) -> Result<Vec<u8>> {
-        Ok(self.data.clone())
+    fn read_to_cpu(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<u8>>> + Send + '_>> {
+        let data = self.data.clone();
+        Box::pin(async move { Ok(data) })
     }
 
-    async fn write_from_cpu(&mut self, data: &[u8]) -> Result<()> {
-        if data.len() != self.data.len() {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: format!(
-                    "Data size mismatch: expected {}, got {}",
-                    self.data.len(),
-                    data.len()
-                ),
-            });
-        }
-        self.data.copy_from_slice(data);
-        Ok(())
+    fn write_from_cpu(
+        &mut self,
+        data: &[u8],
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
+        let data = data.to_vec();
+        Box::pin(async move {
+            if data.len() != self.data.len() {
+                return Err(crate::error::BarracudaError::InvalidInput {
+                    message: format!(
+                        "Data size mismatch: expected {}, got {}",
+                        self.data.len(),
+                        data.len()
+                    ),
+                });
+            }
+            self.data.copy_from_slice(&data);
+            Ok(())
+        })
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

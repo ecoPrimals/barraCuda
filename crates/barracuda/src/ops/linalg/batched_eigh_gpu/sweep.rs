@@ -11,11 +11,9 @@ pub(crate) fn run_sweep_pass(
     pipeline: &wgpu::ComputePipeline,
     dispatch: (u32, u32, u32),
 ) {
-    let mut encoder = device
-        .device
-        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Jacobi sweep pass"),
-        });
+    let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+        label: Some("Jacobi sweep pass"),
+    });
     {
         let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
             label: Some("Jacobi sweep sub-pass"),

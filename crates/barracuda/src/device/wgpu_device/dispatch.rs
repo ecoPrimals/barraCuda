@@ -73,6 +73,7 @@ pub(crate) fn concurrency_budget(device_type: wgpu::DeviceType) -> usize {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -5,6 +5,7 @@
 //! **Coverage**: Random dimensions, concurrent operations, stress tests  
 //! **Deep Debt**: Discover failures through chaos, no hardcoded assumptions
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 use barracuda::ops::{
     fhe_ntt::FheNtt, fhe_intt::FheIntt, fhe_modulus_switch::FheModulusSwitch,
 };
@@ -20,8 +21,8 @@ async fn test_device() -> Arc<barracuda::device::WgpuDevice> {
 
 /// Helper to create random polynomial tensor
 async fn random_tensor_u64(device: &barracuda::device::WgpuDevice, degree: usize) -> Tensor {
-    let mut rng = rand::thread_rng();
-    let data: Vec<u32> = (0..degree * 2).map(|_| rng.gen::<u32>() % 1000).collect();
+    let mut rng = rand::rng();
+    let data: Vec<u32> = (0..degree * 2).map(|_| rng.random::<u32>() % 1000).collect();
     Tensor::from_u32(&data, vec![degree * 2], device.clone())
         .await
         .expect("Failed to create tensor")
@@ -78,7 +79,7 @@ async fn test_fhe_intt_random_values() {
 #[tokio::test]
 async fn test_modulus_switch_random_ratios() {
     let device = test_device().await;
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     
     // Test random modulus reduction ratios
     for _ in 0..20 {
@@ -87,7 +88,7 @@ async fn test_modulus_switch_random_ratios() {
         // Random large modulus
         let q_old = 1152921504606584833u64;
         // Random smaller modulus (50-90% of old)
-        let reduction_factor = rng.gen_range(2..10);
+        let reduction_factor = rng.random_range(2..10);
         let q_new = q_old / reduction_factor;
         
         let result = FheModulusSwitch::new(
@@ -104,11 +105,11 @@ async fn test_modulus_switch_random_ratios() {
 #[tokio::test]
 async fn test_fhe_operations_random_valid_inputs() {
     let device = test_device().await;
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     
     // Test 100 random valid operation combinations
     for _ in 0..100 {
-        let degree_pow = rng.gen_range(2..10); // 2^2 to 2^9 (4 to 512)
+        let degree_pow = rng.random_range(2..10); // 2^2 to 2^9 (4 to 512)
         let degree = 2usize.pow(degree_pow);
         
         let poly = random_tensor_u64(&*device, degree).await;

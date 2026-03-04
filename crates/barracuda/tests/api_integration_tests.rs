@@ -4,6 +4,7 @@
 //! Tests that validate APIs work together seamlessly.
 //! Deep debt compliant - zero unsafe, production-ready.
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 use barracuda::esn_v2::{ESNConfig, ESN};
 use barracuda::genomics::{SequenceAnalyzer, SequenceConfig};
 use barracuda::snn::{SNNLayer, SpikingNetwork};
@@ -52,7 +53,7 @@ async fn test_esn_timeseries_integration() {
 /// Train a network on preprocessed images
 /// NOTE: NeuralNetwork API was removed - test disabled until API is re-implemented
 #[tokio::test]
-#[ignore]
+#[ignore = "NeuralNetwork API was removed - test disabled until API is re-implemented"]
 async fn test_nn_vision_integration() {
     let Some(device) = barracuda::device::test_pool::get_test_device_if_gpu_available().await
     else {
@@ -75,8 +76,8 @@ async fn test_nn_vision_integration() {
     assert_eq!(processed.len(), 1);
 
     let flattened: Vec<f32> = processed[0].iter().take(784).copied().collect();
-    let _input = vec![flattened];
-    let _target = vec![vec![1.0; 10]];
+    let _input = [flattened];
+    let _target = [vec![1.0; 10]];
 
     println!("✅ Vision pipeline: Image preprocessing verified");
 }
@@ -98,7 +99,7 @@ async fn test_snn_neuromorphic() {
         .build();
 
     // Sparse spike inputs (event-driven)
-    let spike_times = vec![1.0, 5.0, 10.0, 15.0, 20.0];
+    let spike_times = [1.0, 5.0, 10.0, 15.0, 20.0];
     let input_spikes: Vec<f32> = (0..100)
         .map(|t| {
             if spike_times.contains(&(t as f32 / 5.0)) {

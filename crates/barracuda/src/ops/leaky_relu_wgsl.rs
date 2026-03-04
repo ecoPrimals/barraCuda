@@ -22,7 +22,6 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 use bytemuck::{Pod, Zeroable};
-use wgpu::util::DeviceExt;
 
 /// f64 canonical — f32 derived via downcast when needed.
 const WGSL_LEAKY_RELU_SIMPLE_F64: &str =

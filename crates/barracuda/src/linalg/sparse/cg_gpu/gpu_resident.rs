@@ -12,7 +12,6 @@ use crate::linalg::sparse::gpu_helpers::{
     cg_dispatch_pass, CgPipelineSet, SparseBindGroupLayouts, SparseBuffers,
 };
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 impl CgGpu {
     /// Solve Ax = b using GPU-resident Conjugate Gradient (reduced CPU sync)
@@ -387,12 +386,9 @@ impl CgGpu {
 
         // Initialize: compute rᵀr and store in rz_buffer
         {
-            let mut encoder =
-                device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("Init rz"),
-                    });
+            let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("Init rz"),
+            });
             {
                 let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                     label: Some("Dot rr Pass"),
@@ -421,12 +417,9 @@ impl CgGpu {
             // 6. β = rz_new / rz, update rz
             // 7. p = r + β*p
 
-            let mut encoder =
-                device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("CG iter"),
-                    });
+            let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("CG iter"),
+            });
 
             // 1. SpMV: Ap = A * p
             {

@@ -221,6 +221,7 @@ async fn run_throughput_probe(device: &WgpuDevice, use_f64: bool) -> Option<f64>
     Some(elapsed)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

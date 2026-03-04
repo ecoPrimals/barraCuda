@@ -180,6 +180,7 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -196,10 +197,9 @@ mod tests {
             return;
         };
         let predictions =
-            Tensor::from_data(&vec![0.9, 0.1, 0.8, 0.2], vec![4], device.clone()).unwrap();
+            Tensor::from_data(&[0.9, 0.1, 0.8, 0.2], vec![4], device.clone()).unwrap();
 
-        let targets =
-            Tensor::from_data(&vec![1.0, 0.0, 1.0, 0.0], vec![4], device.clone()).unwrap();
+        let targets = Tensor::from_data(&[1.0, 0.0, 1.0, 0.0], vec![4], device.clone()).unwrap();
 
         let result = predictions.focal_loss(&targets, 0.25, 2.0).unwrap();
         let loss = result.to_vec().unwrap();
@@ -215,15 +215,15 @@ mod tests {
             return;
         };
         // Perfect predictions
-        let predictions = Tensor::from_data(&vec![1.0, 0.0, 1.0], vec![3], device.clone()).unwrap();
-        let targets = Tensor::from_data(&vec![1.0, 0.0, 1.0], vec![3], device.clone()).unwrap();
+        let predictions = Tensor::from_data(&[1.0, 0.0, 1.0], vec![3], device.clone()).unwrap();
+        let targets = Tensor::from_data(&[1.0, 0.0, 1.0], vec![3], device.clone()).unwrap();
         let result = predictions.focal_loss(&targets, 0.25, 2.0).unwrap();
         let loss = result.to_vec().unwrap();
         assert_eq!(loss.len(), 3); // Verify operation completed
 
         // Single element
-        let predictions = Tensor::from_data(&vec![0.7], vec![1], device.clone()).unwrap();
-        let targets = Tensor::from_data(&vec![1.0], vec![1], device).unwrap();
+        let predictions = Tensor::from_data(&[0.7], vec![1], device.clone()).unwrap();
+        let targets = Tensor::from_data(&[1.0], vec![1], device).unwrap();
         let result = predictions.focal_loss(&targets, 0.5, 2.0).unwrap();
         let loss = result.to_vec().unwrap();
         assert_eq!(loss.len(), 1);
@@ -235,8 +235,8 @@ mod tests {
             return;
         };
         // Different alpha values
-        let predictions = Tensor::from_data(&vec![0.6, 0.4], vec![2], device.clone()).unwrap();
-        let targets = Tensor::from_data(&vec![1.0, 0.0], vec![2], device.clone()).unwrap();
+        let predictions = Tensor::from_data(&[0.6, 0.4], vec![2], device.clone()).unwrap();
+        let targets = Tensor::from_data(&[1.0, 0.0], vec![2], device.clone()).unwrap();
         let result1 = predictions.clone().focal_loss(&targets, 0.25, 2.0).unwrap();
         let loss1 = result1.to_vec().unwrap();
 
@@ -276,8 +276,8 @@ mod tests {
             return;
         };
         // Gamma parameter effect
-        let predictions = Tensor::from_data(&vec![0.5, 0.9], vec![2], device.clone()).unwrap();
-        let targets = Tensor::from_data(&vec![1.0, 1.0], vec![2], device.clone()).unwrap();
+        let predictions = Tensor::from_data(&[0.5, 0.9], vec![2], device.clone()).unwrap();
+        let targets = Tensor::from_data(&[1.0, 1.0], vec![2], device.clone()).unwrap();
 
         // Low gamma
         let result_low = predictions.clone().focal_loss(&targets, 0.25, 0.5).unwrap();

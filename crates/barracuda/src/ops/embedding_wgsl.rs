@@ -11,7 +11,6 @@
 use crate::device::{ComputeDispatch, DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// Embedding operation - Lookup embeddings from a weight matrix
 pub struct Embedding {
@@ -121,6 +120,7 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

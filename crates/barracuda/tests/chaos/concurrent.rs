@@ -4,6 +4,7 @@
 //! Test parallel operation execution for race conditions
 //! **Deep Debt**: Thread-safe, no data races, Arc safety
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 use barracuda::device::test_pool::get_test_device;
 use barracuda::ops::*;
 use futures::future::join_all;

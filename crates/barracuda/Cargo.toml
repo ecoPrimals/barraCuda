@@ -1,6 +1,6 @@
 [package]
 name = "barracuda"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2021"
 authors = ["ecoPrimals Project"]
 description = "barraCuda — BARrier-free Rust Abstracted Cross-platform Unified Dimensional Algebra. Vendor-agnostic GPU compute via WGSL."
@@ -20,7 +20,6 @@ naga = { workspace = true, optional = true }
 
 # Async runtime
 tokio = { workspace = true }
-async-trait = { workspace = true }
 
 # Logging
 tracing = { workspace = true }
@@ -46,64 +45,70 @@ wgpu = { workspace = true }
 all = { level = "warn", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
 unwrap_used = "warn"
-module_name_repetitions = "allow"
-doc_markdown = "allow"
+# Casting — pervasive in GPU compute (u32↔usize↔f32↔f64 constantly)
 cast_possible_truncation = "allow"
 cast_sign_loss = "allow"
 cast_precision_loss = "allow"
 cast_lossless = "allow"
-similar_names = "allow"
-must_use_candidate = "allow"
-return_self_not_must_use = "allow"
+cast_possible_wrap = "allow"
+# Doc — evolving, not yet enforced
+doc_markdown = "allow"
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
-unreadable_literal = "allow"
+# Naming — wgpu/physics APIs use domain-specific names
+module_name_repetitions = "allow"
+similar_names = "allow"
+struct_field_names = "allow"
+many_single_char_names = "allow"
+# Style — subjective pedantic lints
+must_use_candidate = "allow"
+return_self_not_must_use = "allow"
 items_after_statements = "allow"
 too_many_arguments = "allow"
-needless_range_loop = "allow"
-wrong_self_convention = "allow"
-if_same_then_else = "allow"
-unused_async = "allow"
 too_many_lines = "allow"
 wildcard_imports = "allow"
-struct_excessive_bools = "allow"
-fn_params_excessive_bools = "allow"
-match_same_arms = "allow"
-implicit_hasher = "allow"
-default_trait_access = "allow"
-struct_field_names = "allow"
 enum_glob_use = "allow"
-redundant_closure_for_method_calls = "allow"
 option_if_let_else = "allow"
 manual_let_else = "allow"
-cast_possible_wrap = "allow"
-many_single_char_names = "allow"
+single_match_else = "allow"
+if_not_else = "allow"
+redundant_else = "allow"
+match_same_arms = "allow"
+match_wildcard_for_single_variants = "allow"
+default_trait_access = "allow"
+# Numeric — scientific compute uses raw literals and float comparisons
+unreadable_literal = "allow"
+float_cmp = "allow"
+manual_midpoint = "allow"
+# GPU/async patterns
+unused_async = "allow"
 needless_pass_by_value = "allow"
-needless_raw_string_hashes = "allow"
 unnecessary_wraps = "allow"
-bool_to_int_with_if = "allow"
 unused_self = "allow"
-map_unwrap_or = "allow"
+trivially_copy_pass_by_ref = "allow"
+# Struct/function complexity
+struct_excessive_bools = "allow"
+fn_params_excessive_bools = "allow"
+implicit_hasher = "allow"
+pub_underscore_fields = "allow"
+missing_fields_in_debug = "allow"
+inline_always = "allow"
+wrong_self_convention = "allow"
+# Formatting — scientific code uses specific formats
+uninlined_format_args = "allow"
+doc_comment_double_space_linebreaks = "allow"
+# Re-allowed: high-volume warnings not worth fixing in bulk
+needless_raw_string_hashes = "allow"
+redundant_closure_for_method_calls = "allow"
+bool_to_int_with_if = "allow"
 cloned_instead_of_copied = "allow"
+map_unwrap_or = "allow"
 no_effect_underscore_binding = "allow"
 format_push_string = "allow"
-uninlined_format_args = "allow"
-manual_midpoint = "allow"
-doc_comment_double_space_linebreaks = "allow"
-if_not_else = "allow"
-single_match_else = "allow"
-pub_underscore_fields = "allow"
-trivially_copy_pass_by_ref = "allow"
-float_cmp = "allow"
-unnecessary_literal_bound = "allow"
-redundant_else = "allow"
-missing_fields_in_debug = "allow"
+if_same_then_else = "allow"
+needless_range_loop = "allow"
 explicit_iter_loop = "allow"
-range_plus_one = "allow"
-match_wildcard_for_single_variants = "allow"
 used_underscore_binding = "allow"
-inline_always = "allow"
-inconsistent_struct_constructor = "allow"
 
 [lints.rust]
 missing_docs = "allow"
@@ -138,14 +143,6 @@ serde = []
 parallel = []
 benchmarks = []
 debug-pppm = []
-unidirectional = []
-
-# TPU stubs (no external deps — gated code only, for future hardware)
-tpu = []
-cloud-tpu = ["tpu"]
-coral-tpu = ["tpu"]
-mock-tpu = ["tpu"]
-
 [[bin]]
 name = "validate_gpu"
 required-features = ["gpu"]
@@ -162,6 +159,3 @@ required-features = ["gpu"]
 name = "bench_f64_builtins"
 required-features = ["gpu"]
 
-[[bench]]
-name = "unidirectional_benchmark"
-harness = false

@@ -18,7 +18,6 @@ use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -105,11 +104,13 @@ impl DigammaF64 {
         Ok(result)
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn digamma_cpu(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| Self::digamma_scalar(xi)).collect()
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn digamma_scalar(x: f64) -> f64 {
         use std::f64::consts::PI;
@@ -139,6 +140,7 @@ impl DigammaF64 {
         result + Self::digamma_asymptotic(y)
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn digamma_asymptotic(x: f64) -> f64 {
         let inv_x = 1.0 / x;
@@ -171,8 +173,8 @@ impl DigammaF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::device::test_pool::get_test_device_if_f64_gpu_available;

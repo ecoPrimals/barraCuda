@@ -20,8 +20,8 @@ async fn test_device() -> Arc<barracuda::device::WgpuDevice> {
 }
 
 async fn random_tensor_u64(device: &barracuda::device::WgpuDevice, degree: usize) -> Tensor {
-    let mut rng = rand::thread_rng();
-    let data: Vec<u32> = (0..degree * 2).map(|_| rng.gen::<u32>() % 1000).collect();
+    let mut rng = rand::rng();
+    let data: Vec<u32> = (0..degree * 2).map(|_| rng.random::<u32>() % 1000).collect();
     Tensor::from_u32(&data, vec![degree * 2], device.clone())
         .await
         .expect("Failed to create tensor")
@@ -34,13 +34,13 @@ async fn random_tensor_u64(device: &barracuda::device::WgpuDevice, degree: usize
 #[tokio::test]
 async fn test_extract_random_indices() {
     let device = test_device().await;
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     
     // Test 100 random extractions
     for _ in 0..100 {
         let degree = 64;
         let poly = random_tensor_u64(&*device, degree).await;
-        let index = rng.gen_range(0..degree as u32);
+        let index = rng.random_range(0..degree as u32);
         
         let result = FheExtract::new(poly, degree as u32, index);
         assert!(result.is_ok(), "Extract failed for random index {}", index);
@@ -88,12 +88,12 @@ async fn test_extract_concurrent() {
 #[tokio::test]
 async fn test_rotate_random_rotations() {
     let device = test_device().await;
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     
     // Test 100 random rotations
     for _ in 0..100 {
         let poly = random_tensor_u64(&*device, 64).await;
-        let rotation = rng.gen_range(-50..50);
+        let rotation = rng.random_range(-50..50);
         
         let result = FheRotate::new(poly, 64, rotation, 1152921504606584833u64);
         assert!(result.is_ok(), "Rotate failed for rotation {}", rotation);
@@ -141,13 +141,13 @@ async fn test_rotate_concurrent() {
 #[tokio::test]
 async fn test_key_switch_random_params() {
     let device = test_device().await;
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     
     // Test 50 random parameter combinations
     for _ in 0..50 {
         let poly = random_tensor_u64(&*device, 32).await;
-        let base = rng.gen_range(256..65536);
-        let levels = rng.gen_range(2..8);
+        let base = rng.random_range(256..65536);
+        let levels = rng.random_range(2..8);
         
         let result = FheKeySwitch::new(
             poly,

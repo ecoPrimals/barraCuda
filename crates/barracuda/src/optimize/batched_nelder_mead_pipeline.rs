@@ -4,7 +4,6 @@
 use crate::device::compute_pipeline::uniform_bgl_entry;
 use crate::device::WgpuDevice;
 use bytemuck::{Pod, Zeroable};
-use wgpu::util::DeviceExt;
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -188,11 +187,9 @@ pub fn run_centroid_reflect(
             cache: device.pipeline_cache(),
             compilation_options: Default::default(),
         });
-    let mut enc = device
-        .device
-        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("nm_enc"),
-        });
+    let mut enc = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+        label: Some("nm_enc"),
+    });
     {
         let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor {
             label: None,
@@ -270,11 +267,9 @@ pub fn run_contract(
             cache: device.pipeline_cache(),
             compilation_options: Default::default(),
         });
-    let mut enc = device
-        .device
-        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("nm_contract_enc"),
-        });
+    let mut enc = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+        label: Some("nm_contract_enc"),
+    });
     {
         let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor {
             label: None,
@@ -397,11 +392,9 @@ pub fn run_shrink(
             cache: device.pipeline_cache(),
             compilation_options: Default::default(),
         });
-    let mut enc = device
-        .device
-        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("nm_shrink_enc"),
-        });
+    let mut enc = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+        label: Some("nm_shrink_enc"),
+    });
     {
         let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor {
             label: None,

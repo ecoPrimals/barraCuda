@@ -103,6 +103,7 @@ pub fn screened_coulomb_eigenvalues(
     Ok(all_eigenvalues.into_iter().take(n_eig).collect())
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

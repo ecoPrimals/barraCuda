@@ -13,7 +13,6 @@
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// Morse potential force calculation for bonded interactions
 ///
@@ -90,11 +89,9 @@ impl MorseForce {
         });
 
         // Clear atomic buffer to zero
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Morse Clear Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("Morse Clear Encoder"),
+        });
         encoder.clear_buffer(&atomic_buffer, 0, None);
         device.submit_and_poll(Some(encoder.finish()));
 
@@ -263,11 +260,9 @@ impl MorseForce {
             ],
         });
 
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Morse Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("Morse Encoder"),
+        });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -303,6 +298,7 @@ impl MorseForce {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

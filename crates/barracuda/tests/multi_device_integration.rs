@@ -17,6 +17,7 @@
 //! cargo test -p barracuda --test multi_device_integration -- --nocapture
 //! ```
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 use barracuda::device::WgpuDevice;
 use barracuda::multi_gpu::{DeviceRequirements, GpuVendor, MultiDevicePool, WorkloadConfig};
 use barracuda::resource_quota::{presets, ResourceQuota};

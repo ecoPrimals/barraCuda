@@ -13,7 +13,6 @@ const SHADER_F64: &str = include_str!("../../shaders/math/expand_f64.wgsl");
 static SHADER_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// Compute broadcasted input shape following NumPy broadcasting rules
 ///
@@ -178,7 +177,8 @@ pub fn execute_expand(input: Tensor, target_shape: Vec<usize>) -> Result<Tensor>
 
     let output_buffer = device.create_buffer_f32(output_size)?;
 
-    // Create buffers for shapes and strides
+    device.encoding_guard();
+
     let input_shape_buffer = device
         .device
         .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -405,7 +405,9 @@ pub fn execute_expand(input: Tensor, target_shape: Vec<usize>) -> Result<Tensor>
         pass.dispatch_workgroups(workgroups, 1, 1);
     }
 
-    device.submit_and_poll(Some(encoder.finish()));
+    let commands = encoder.finish();
+    device.encoding_complete();
+    device.submit_and_poll(Some(commands));
 
     Ok(Tensor::from_buffer(
         output_buffer,
@@ -414,6 +416,7 @@ pub fn execute_expand(input: Tensor, target_shape: Vec<usize>) -> Result<Tensor>
     ))
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

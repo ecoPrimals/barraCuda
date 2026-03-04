@@ -186,6 +186,7 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -206,7 +207,7 @@ mod tests {
         let output = lhs.add(&rhs).unwrap();
         let result = output.to_vec().unwrap();
 
-        let expected = vec![11.0, 22.0, 33.0, 44.0, 55.0];
+        let expected = [11.0, 22.0, 33.0, 44.0, 55.0];
         for (i, (&r, &e)) in result.iter().zip(expected.iter()).enumerate() {
             assert!((r - e).abs() < 1e-6, "Mismatch at {}: {} vs {}", i, r, e);
         }

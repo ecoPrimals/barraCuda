@@ -7,8 +7,6 @@
 
 use std::sync::Arc;
 
-use wgpu::util::DeviceExt;
-
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use crate::tensor::Tensor;
@@ -160,11 +158,9 @@ impl Conv2dGpu {
                 compilation_options: Default::default(),
             });
 
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("conv2d_gpu"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("conv2d_gpu"),
+        });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("conv2d_gpu"),
@@ -221,6 +217,7 @@ fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

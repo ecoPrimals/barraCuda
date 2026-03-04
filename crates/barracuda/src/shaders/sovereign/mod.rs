@@ -126,6 +126,7 @@ pub enum SovereignError {
     SpirvEmit(String),
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

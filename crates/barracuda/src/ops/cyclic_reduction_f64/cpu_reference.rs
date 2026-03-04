@@ -5,6 +5,7 @@
 //! can be used for unit test validation.
 
 /// Thomas algorithm for tridiagonal systems (O(n) sequential).
+#[expect(dead_code, clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 pub fn solve_cpu_thomas(a: &[f64], b: &[f64], c: &[f64], d: &[f64]) -> Vec<f64> {
     let n = b.len();

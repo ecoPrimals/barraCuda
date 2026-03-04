@@ -17,7 +17,6 @@ use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 const WGSL_DF64_CORE: &str = include_str!("../../../shaders/math/df64_core.wgsl");
 const WGSL_DF64_TRANSCENDENTALS: &str =
@@ -167,9 +166,7 @@ fn reduce_bond_forces(
             | wgpu::BufferUsages::COPY_DST,
         mapped_at_creation: false,
     });
-    let mut enc_clear = dev
-        .device
-        .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+    let mut enc_clear = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor { label: None });
     enc_clear.clear_buffer(&particle_forces_buf, 0, None);
     dev.submit_and_poll(Some(enc_clear.finish()));
 
@@ -335,6 +332,7 @@ impl MorseForceF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "morse_f64_tests.rs"]
 mod tests;

@@ -120,6 +120,7 @@ impl RotaryEmbedding {
 
 // Note: Tensor::rotary_embedding() is implemented in rope.rs to avoid duplication
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

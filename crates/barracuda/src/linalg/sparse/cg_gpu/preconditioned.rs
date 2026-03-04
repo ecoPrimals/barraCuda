@@ -11,7 +11,6 @@ use crate::linalg::sparse::gpu_helpers::{
     cg_dispatch_pass, CgPipelineSet, SparseBindGroupLayouts, SparseBuffers,
 };
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 impl CgGpu {
     /// Solve Ax = b using Preconditioned Conjugate Gradient (GPU-resident)
@@ -468,12 +467,9 @@ impl CgGpu {
 
         // Initialize: z₀ = M⁻¹r₀, p₀ = z₀, compute r₀ᵀz₀
         {
-            let mut encoder =
-                device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("PCG init"),
-                    });
+            let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("PCG init"),
+            });
 
             // z = M⁻¹r (apply preconditioner)
             {
@@ -497,12 +493,9 @@ impl CgGpu {
             SparseBuffers::copy_f64(&device, &z_buffer, &p_buffer, n);
 
             // Compute rᵀz
-            let mut encoder =
-                device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("Init rz"),
-                    });
+            let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("Init rz"),
+            });
             {
                 let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                     label: Some("Dot rz Pass"),
@@ -523,12 +516,9 @@ impl CgGpu {
         // Main PCG iteration
         let mut last_residual = 1.0;
         for iter in 0..max_iter {
-            let mut encoder =
-                device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("PCG iter"),
-                    });
+            let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("PCG iter"),
+            });
 
             // 1. Ap = A * p
             {
@@ -641,12 +631,9 @@ impl CgGpu {
 
             // Check convergence
             if (iter + 1) % check_interval == 0 || iter == max_iter - 1 {
-                let mut encoder =
-                    device
-                        .device
-                        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                            label: Some("Check convergence"),
-                        });
+                let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Check convergence"),
+                });
                 {
                     let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                         label: Some("Dot rr"),

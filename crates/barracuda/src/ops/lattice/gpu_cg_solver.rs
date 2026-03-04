@@ -206,7 +206,7 @@ impl GpuCgSolver {
     ///
     /// All buffers must be GPU-resident. `x` is zeroed at start.
     /// `links_buf`, `nbr_buf`, `phases_buf` come from `DiracGpuLayout`.
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, reason = "API")]
     pub fn solve(
         &self,
         b_buf: &wgpu::Buffer,
@@ -298,10 +298,7 @@ impl GpuCgSolver {
     }
 
     fn copy_buffer(&self, src: &wgpu::Buffer, dst: &wgpu::Buffer, size: u64) {
-        let mut enc = self
-            .device
-            .device
-            .create_command_encoder(&Default::default());
+        let mut enc = self.device.create_encoder_guarded(&Default::default());
         enc.copy_buffer_to_buffer(src, 0, dst, 0, size);
         self.device.submit_and_poll(Some(enc.finish()));
     }
@@ -356,8 +353,7 @@ impl GpuCgSolver {
 
         let mut enc = self
             .device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
                 label: Some("cg_dot:enc"),
             });
         {
@@ -414,8 +410,7 @@ impl GpuCgSolver {
 
         let mut enc = self
             .device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
                 label: Some("cg_axpy:enc"),
             });
         {
@@ -471,8 +466,7 @@ impl GpuCgSolver {
 
         let mut enc = self
             .device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
                 label: Some("cg_xpay:enc"),
             });
         {
@@ -519,6 +513,7 @@ fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

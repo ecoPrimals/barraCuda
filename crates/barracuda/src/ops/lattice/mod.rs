@@ -73,16 +73,22 @@ pub mod omelyan_integrator;
 pub mod plaquette;
 
 // CPU reference implementations — test-only
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 pub mod constants;
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 pub mod cpu_complex;
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 pub mod cpu_dirac;
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 pub mod cpu_su3;
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 pub mod pseudofermion;
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 pub mod wilson;
 
@@ -230,7 +236,6 @@ impl NeighborMode {
             Self::OnTheFly => return None,
             Self::PrecomputedBuffer(t) => t,
         };
-        use wgpu::util::DeviceExt;
         let buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -242,6 +247,7 @@ impl NeighborMode {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod action_density_tests {
     use super::action_density;
@@ -264,6 +270,7 @@ mod action_density_tests {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod neighbor_tests {
     use super::NeighborMode;

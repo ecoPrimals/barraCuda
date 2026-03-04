@@ -44,8 +44,8 @@ pub fn vendor_name(id: u32) -> &'static str {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

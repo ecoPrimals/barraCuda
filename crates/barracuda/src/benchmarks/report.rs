@@ -148,8 +148,8 @@ impl ReportGenerator {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::benchmarks::{BenchmarkResult, ComparisonResult, Framework};

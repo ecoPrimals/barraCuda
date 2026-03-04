@@ -162,9 +162,11 @@ impl HillGateGpu {
             ],
         });
 
-        let mut encoder = d.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("HillGate Encoder"),
-        });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("HillGate Encoder"),
+            });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("HillGate Pass"),
@@ -178,6 +180,7 @@ impl HillGateGpu {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::{HillGateGpu, HillGateParams, WGSL_HILL_GATE, WGSL_HILL_GATE_F64};

@@ -224,6 +224,7 @@ impl Pppm {
     }
 
     /// CPU 3D FFT using dimension-wise 1D FFTs (test only)
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn fft_3d_cpu(
         &self,
@@ -305,6 +306,7 @@ impl Pppm {
     }
 
     /// CPU 1D FFT (Cooley-Tukey radix-2)
+    #[expect(clippy::unwrap_used, reason = "suppressed")]
     #[cfg(test)]
     fn fft_1d_cpu(&self, data: &mut [f64], n: usize, inverse: bool) {
         // Bit-reversal permutation
@@ -381,6 +383,7 @@ impl std::fmt::Display for PppmError {
 
 impl std::error::Error for PppmError {}
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

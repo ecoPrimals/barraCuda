@@ -19,6 +19,7 @@
 //! - Recovery strategies
 //! - Comprehensive logging
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 mod common;
 
 use barracuda::ops::fhe_ntt::FheNtt;

@@ -16,7 +16,6 @@
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// Result of particle sorting by cell: (sorted_positions, particle_indices, cell_start, cell_count)
 pub type CellSortResult = (Vec<f64>, Vec<usize>, Vec<u32>, Vec<u32>);
@@ -212,12 +211,11 @@ impl YukawaCellListF64 {
             });
 
         let n_workgroups = (n as u32).div_ceil(64);
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("YCL Encoder"),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("YCL Encoder"),
+            });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -256,12 +254,11 @@ impl YukawaCellListF64 {
             mapped_at_creation: false,
         });
 
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("YCL Copy"),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("YCL Copy"),
+            });
         encoder.copy_buffer_to_buffer(buffer, 0, &staging, 0, (count * 8) as u64);
         self.device.submit_and_poll(Some(encoder.finish()));
 
@@ -322,6 +319,7 @@ impl YukawaCellListF64 {
         Ok((sorted_positions, particle_indices, cell_start, cell_count))
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn build_cell_list(
         &self,
@@ -361,6 +359,7 @@ impl YukawaCellListF64 {
     }
 
     /// CPU reference (test/validation only — production always dispatches shader).
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn compute_cpu(
         &self,
@@ -437,11 +436,13 @@ impl YukawaCellListF64 {
         (forces, energies)
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn pbc_delta(&self, delta: f64, box_size: f64) -> f64 {
         delta - box_size * (delta / box_size).round()
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn get_neighbor_cells(&self, cell_idx: usize, params: &CellListParams) -> Vec<usize> {
         let nx = params.n_cells[0];
@@ -470,6 +471,7 @@ impl YukawaCellListF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

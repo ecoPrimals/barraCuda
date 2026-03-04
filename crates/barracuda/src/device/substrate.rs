@@ -108,11 +108,16 @@ pub struct Substrate {
 
 impl Substrate {
     /// Create substrate descriptor
-    pub fn new(substrate_type: SubstrateType, name: String, backend: String, index: usize) -> Self {
+    pub fn new(
+        substrate_type: SubstrateType,
+        name: impl Into<String>,
+        backend: impl Into<String>,
+        index: usize,
+    ) -> Self {
         Self {
             substrate_type,
-            name,
-            backend,
+            name: name.into(),
+            backend: backend.into(),
             index,
             capabilities: Vec::new(),
         }
@@ -291,6 +296,7 @@ impl std::fmt::Display for SubstrateType {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

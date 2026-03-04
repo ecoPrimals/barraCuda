@@ -131,6 +131,7 @@ pub fn erfc_batch(x: &[f64]) -> Vec<f64> {
     x.iter().map(|&v| erfc(v)).collect()
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

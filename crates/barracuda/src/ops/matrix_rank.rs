@@ -10,7 +10,6 @@
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// f64 is the canonical source — math is universal, precision is silicon.
 const SHADER_F64: &str = include_str!("../shaders/linalg/matrix_rank_f64.wgsl");
@@ -178,11 +177,9 @@ impl MatrixRank {
                     compilation_options: Default::default(),
                 });
 
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("MatrixRank Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("MatrixRank Encoder"),
+        });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -269,12 +266,9 @@ impl MatrixRank {
             mapped_at_creation: false,
         });
 
-        let mut read_encoder =
-            device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("MatrixRank Read Encoder"),
-                });
+        let mut read_encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("MatrixRank Read Encoder"),
+        });
         read_encoder.copy_buffer_to_buffer(
             &rank_buffer,
             0,
@@ -289,6 +283,7 @@ impl MatrixRank {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

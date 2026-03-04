@@ -12,8 +12,6 @@
 
 use std::sync::Arc;
 
-use wgpu::util::DeviceExt;
-
 use super::{MhaParams, MultiHeadAttention};
 use crate::device::WgpuDevice;
 use crate::error::Result;
@@ -147,11 +145,9 @@ impl MultiHeadAttention {
         let pipeline = Self::make_pipeline(device, &shader, &bgl, "head_split");
         let workgroups = (total as u32).div_ceil(256);
 
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("head_split"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("head_split"),
+        });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("head_split"),
@@ -234,11 +230,9 @@ impl MultiHeadAttention {
         let pipeline = Self::make_pipeline(device, &shader, &bgl, "head_concat");
         let workgroups = (total as u32).div_ceil(256);
 
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("head_concat"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("head_concat"),
+        });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("head_concat"),

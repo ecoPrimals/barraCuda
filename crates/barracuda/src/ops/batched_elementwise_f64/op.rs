@@ -61,6 +61,21 @@ pub enum Op {
     /// Input per batch: `[a0, a1, a2, a3, a4, a5, x]`
     /// Output: polynomial evaluated at x
     PedotransferPolynomial = 13,
+
+    /// Makkink (1957) ET₀ — radiation-based, Netherlands standard
+    /// Input per batch: `[Rs, T_mean, elevation]`
+    /// Output: ET₀ (mm/day)
+    MakkinkEt0 = 14,
+
+    /// Turc (1961) ET₀ — radiation + temperature, humid climates
+    /// Input per batch: `[Rs, T_mean, RH_mean]`
+    /// Output: ET₀ (mm/day)
+    TurcEt0 = 15,
+
+    /// Hamon (1963) ET₀ — temperature + daylength only
+    /// Input per batch: `[T_mean, daylight_hours]`
+    /// Output: ET₀ (mm/day)
+    HamonEt0 = 16,
 }
 
 impl Op {
@@ -80,6 +95,9 @@ impl Op {
             Op::ThornthwaiteEt0 => 5,
             Op::Gdd => 1,
             Op::PedotransferPolynomial => 7,
+            Op::MakkinkEt0 => 3,
+            Op::TurcEt0 => 3,
+            Op::HamonEt0 => 2,
         }
     }
 }

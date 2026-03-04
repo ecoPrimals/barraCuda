@@ -319,6 +319,7 @@ pub async fn batched_nelder_mead_gpu(
     Ok(results)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "batched_nelder_mead_gpu_tests.rs"]
 mod tests;

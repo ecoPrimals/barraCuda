@@ -376,7 +376,7 @@ pub fn relative_reconstruction_error(v: &[f64], result: &NmfResult) -> f64 {
 }
 
 #[cfg(test)]
-#[allow(clippy::expect_used, clippy::unwrap_used)]
+#[expect(clippy::expect_used, clippy::unwrap_used, reason = "suppressed")]
 mod tests {
     use super::*;
 

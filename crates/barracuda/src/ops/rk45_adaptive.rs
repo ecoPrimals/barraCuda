@@ -89,7 +89,7 @@ impl Rk45AdaptiveGpu {
     /// `new_state_buf`: `[n_systems × dim]` f64 — output state (5th order)
     /// `error_buf`:     `[n_systems × dim]` f64 — per-variable absolute error
     /// `scratch_buf`:   `[n_systems × dim × 8]` f64 — k-stage + tmp workspace
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, reason = "API")]
     pub fn dispatch(
         &self,
         state_buf: &wgpu::Buffer,
@@ -150,9 +150,11 @@ impl Rk45AdaptiveGpu {
             ],
         });
 
-        let mut encoder = d.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("RK45"),
-        });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("RK45"),
+            });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("RK45 Pass"),

@@ -22,7 +22,6 @@ use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// Parameters for cosine similarity shader
 #[repr(C)]
@@ -115,6 +114,7 @@ impl CosineSimilarityF64 {
     }
 
     /// CPU reference implementation (single pair)
+    #[expect(clippy::unwrap_used, reason = "suppressed")]
     #[cfg(test)]
     fn similarity_cpu(&self, a: &[f64], b: &[f64]) -> f64 {
         let mut dot = 0.0f64;
@@ -135,6 +135,7 @@ impl CosineSimilarityF64 {
     }
 
     /// CPU reference implementation (all pairs)
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn all_pairs_cpu(&self, vectors_a: &[Vec<f64>], vectors_b: &[Vec<f64>]) -> Vec<f64> {
         let mut result = Vec::with_capacity(vectors_a.len() * vectors_b.len());
@@ -220,6 +221,7 @@ impl CosineSimilarityF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

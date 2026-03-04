@@ -144,9 +144,9 @@ pub fn detect_akida_boards() -> Result<AkidaCapabilities> {
 #[derive(Debug, Clone)]
 struct PcieDevice {
     address: String,
-    #[allow(dead_code)] // Fields used for future expansion
+    #[expect(dead_code, reason = "legacy")] // Fields used for future expansion
     vendor_id: u16,
-    #[allow(dead_code)] // Fields used for future expansion
+    #[expect(dead_code, reason = "legacy")] // Fields used for future expansion
     device_id: u16,
 }
 
@@ -378,6 +378,7 @@ fn detect_akida_sdk_version() -> Option<String> {
     None
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

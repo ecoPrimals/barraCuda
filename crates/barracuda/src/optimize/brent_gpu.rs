@@ -18,7 +18,6 @@ use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// Built-in residual function selector for batched Brent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -274,12 +273,11 @@ impl BrentGpu {
             mapped_at_creation: false,
         });
 
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Brent u32 readback"),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("Brent u32 readback"),
+            });
         encoder.copy_buffer_to_buffer(buffer, 0, &staging, 0, (count * 4) as u64);
         self.device.submit_and_poll(Some(encoder.finish()));
 
@@ -306,6 +304,7 @@ impl BrentGpu {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

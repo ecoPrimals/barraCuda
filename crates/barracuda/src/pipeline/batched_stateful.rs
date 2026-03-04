@@ -17,7 +17,6 @@
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// GPU-resident state buffer for sequential multi-step dispatches.
 ///
@@ -146,6 +145,7 @@ impl BatchedStatefulF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -177,13 +177,25 @@ mod tests {
         let initial = vec![10.0, 20.0];
         let mut stateful = BatchedStatefulF64::new(device, 2, 1, &initial).unwrap();
 
-        assert!(std::ptr::eq(stateful.state_in(), &stateful.state_a));
-        assert!(std::ptr::eq(stateful.state_out(), &stateful.state_b));
+        assert!(std::ptr::eq(
+            stateful.state_in(),
+            &raw const stateful.state_a
+        ));
+        assert!(std::ptr::eq(
+            stateful.state_out(),
+            &raw const stateful.state_b
+        ));
 
         stateful.swap();
 
-        assert!(std::ptr::eq(stateful.state_in(), &stateful.state_b));
-        assert!(std::ptr::eq(stateful.state_out(), &stateful.state_a));
+        assert!(std::ptr::eq(
+            stateful.state_in(),
+            &raw const stateful.state_b
+        ));
+        assert!(std::ptr::eq(
+            stateful.state_out(),
+            &raw const stateful.state_a
+        ));
     }
 
     #[tokio::test]

@@ -46,11 +46,9 @@ impl AdamW {
         let v_out_buffer = device.create_buffer_f32(size)?;
 
         // Copy initial params, m, v to output buffers (will be updated in-place)
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("AdamW Copy Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("AdamW Copy Encoder"),
+        });
         encoder.copy_buffer_to_buffer(
             self.params().buffer(),
             0,
@@ -191,11 +189,9 @@ impl AdamW {
             });
 
         // Execute
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("AdamW Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("AdamW Encoder"),
+        });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {

@@ -315,8 +315,7 @@ impl ReduceScalarPipeline {
 
         let mut enc = self
             .device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
                 label: Some("ReduceScalar"),
             });
 
@@ -380,6 +379,7 @@ fn bgl_entry(binding: u32, ty: wgpu::BufferBindingType) -> wgpu::BindGroupLayout
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

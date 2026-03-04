@@ -32,7 +32,7 @@ fn hash_u32(link_idx: u32, seq: u32) -> u32 {
 
 fn uniform_f64(link_idx: u32, seq: u32) -> f64 {
     let v = hash_u32(link_idx, seq);
-    return (f64(v) + f64(0.5)) / f64(4294967296.0);
+    return (f64(v) + f64(0.5)) * f64(2.3283064365386963e-10);
 }
 
 fn box_muller_cos(u1: f64, u2: f64) -> f64 {

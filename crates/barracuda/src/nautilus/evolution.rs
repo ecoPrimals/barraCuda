@@ -58,7 +58,7 @@ pub fn evolve(
             let mut sel = Vec::new();
             while sel.len() < pop_size {
                 let best: usize = (0..*k)
-                    .map(|_| rng.gen_range(0..parents.len()))
+                    .map(|_| rng.random_range(0..parents.len()))
                     .max_by(|&a, &b| {
                         fitness[a]
                             .partial_cmp(&fitness[b])
@@ -73,7 +73,7 @@ pub fn evolve(
             let sum: f64 = fitness.iter().map(|f| f.max(0.0) + 1e-10).sum();
             let mut sel = Vec::new();
             for _ in 0..pop_size {
-                let r: f64 = rng.gen();
+                let r: f64 = rng.random();
                 let mut acc = 0.0;
                 let mut pushed = false;
                 for (i, &f) in fitness.iter().enumerate() {
@@ -105,9 +105,9 @@ pub fn evolve(
 
     // Crossover + mutation for rest
     while next.len() < pop_size {
-        let a_idx = rng.gen_range(0..parents.len());
-        let b_idx = rng.gen_range(0..parents.len());
-        let child = if rng.gen::<f64>() < config.crossover_rate && a_idx != b_idx {
+        let a_idx = rng.random_range(0..parents.len());
+        let b_idx = rng.random_range(0..parents.len());
+        let child = if rng.random::<f64>() < config.crossover_rate && a_idx != b_idx {
             crossover_columns(&parents[a_idx], &parents[b_idx], rng)
         } else {
             parents[a_idx].clone()
@@ -126,7 +126,7 @@ pub fn crossover_columns(a: &Board, b: &Board, rng: &mut impl Rng) -> Board {
     let l = a.config.grid_size;
     let mut cells = a.cells.clone();
     for k in 0..l {
-        if rng.gen::<bool>() {
+        if rng.random::<bool>() {
             for row in 0..l {
                 cells[row][k] = b.cells[row][k];
             }
@@ -146,12 +146,12 @@ pub fn mutate(board: &mut Board, rate: f64, rng: &mut impl Rng) {
         let col_lo = range * (k as u32);
         let col_hi = range * ((k + 1) as u32);
         for row in 0..l {
-            if rng.gen::<f64>() < rate {
+            if rng.random::<f64>() < rate {
                 let used: std::collections::HashSet<u32> =
                     (0..l).map(|r| board.cells[r][k]).collect();
                 let available: Vec<u32> = (col_lo..col_hi).filter(|v| !used.contains(v)).collect();
                 if !available.is_empty() {
-                    let new_val = available[rng.gen_range(0..available.len())];
+                    let new_val = available[rng.random_range(0..available.len())];
                     board.cells[row][k] = new_val;
                 }
             }
@@ -160,7 +160,7 @@ pub fn mutate(board: &mut Board, rate: f64, rng: &mut impl Rng) {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(clippy::expect_used, clippy::unwrap_used, reason = "suppressed")]
 mod tests {
     use rand::rngs::StdRng;
     use rand::SeedableRng;

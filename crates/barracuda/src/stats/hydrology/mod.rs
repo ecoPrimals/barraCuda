@@ -281,6 +281,7 @@ pub fn fao56_et0(
     Some(numerator / denominator)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

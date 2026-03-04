@@ -19,7 +19,6 @@ use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// Parameters for cyclic reduction shader
 #[repr(C)]
@@ -298,12 +297,11 @@ impl CyclicReductionF64 {
                 ],
             });
 
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Serial Encoder"),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("Serial Encoder"),
+            });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -541,12 +539,11 @@ impl CyclicReductionF64 {
             let n_threads = n_padded >> (step + 1);
             let n_workgroups = n_threads.div_ceil(workgroup_size);
 
-            let mut encoder =
-                self.device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("Reduction Encoder"),
-                    });
+            let mut encoder = self
+                .device
+                .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Reduction Encoder"),
+                });
 
             {
                 let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -612,12 +609,11 @@ impl CyclicReductionF64 {
             let n_threads = n_padded >> (step + 1);
             let n_workgroups = n_threads.div_ceil(workgroup_size);
 
-            let mut encoder =
-                self.device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("Substitution Encoder"),
-                    });
+            let mut encoder = self
+                .device
+                .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Substitution Encoder"),
+                });
 
             {
                 let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -640,12 +636,11 @@ impl CyclicReductionF64 {
             mapped_at_creation: false,
         });
 
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Copy Encoder"),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("Copy Encoder"),
+            });
         encoder.copy_buffer_to_buffer(&d_buf, 0, &staging, 0, (n * 8) as u64);
         self.device.submit_and_poll(Some(encoder.finish()));
 
@@ -654,8 +649,10 @@ impl CyclicReductionF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod cpu_reference;
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;

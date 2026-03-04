@@ -6,8 +6,6 @@
 
 use std::sync::Arc;
 
-use wgpu::util::DeviceExt;
-
 use crate::device::WgpuDevice;
 use crate::error::Result;
 
@@ -222,11 +220,9 @@ impl<'a> PeakDetectF64<'a> {
             });
 
         let workgroups = (n as u32).div_ceil(256);
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("PeakDetect Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("PeakDetect Encoder"),
+        });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("PeakDetect Pass"),
@@ -363,6 +359,7 @@ fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

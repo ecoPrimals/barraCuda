@@ -225,6 +225,7 @@ fn row_dot(u: &Su3Matrix, r1: usize, r2: usize) -> Complex64 {
     s
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

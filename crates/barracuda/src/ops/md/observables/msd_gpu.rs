@@ -10,7 +10,6 @@ use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 const SHADER: &str = include_str!("msd_f64.wgsl");
 const WG: u32 = 256;
@@ -152,7 +151,7 @@ impl MsdGpu {
                 mapped_at_creation: false,
             });
 
-            let mut enc = d.create_command_encoder(&Default::default());
+            let mut enc = self.device.create_encoder_guarded(&Default::default());
             {
                 let mut pass = enc.begin_compute_pass(&Default::default());
                 pass.set_pipeline(&self.pipeline);
@@ -199,6 +198,7 @@ fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

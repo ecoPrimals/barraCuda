@@ -288,6 +288,7 @@ pub fn monod(x: f64, r: f64, k: f64) -> f64 {
     r * x / (k + x)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

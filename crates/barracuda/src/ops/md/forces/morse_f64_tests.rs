@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 use super::*;
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
-#[allow(dead_code)]
+#[expect(dead_code, reason = "legacy")]
 impl MorseForceF64 {
     fn compute_cpu(&self, positions: &[f64], bonds: &[MorseBond]) -> Vec<f64> {
         let n_particles = positions.len() / 3;
@@ -86,8 +87,9 @@ impl MorseForceF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
-#[allow(dead_code)]
+#[expect(dead_code, reason = "legacy")]
 fn bond_geometry(positions: &[f64], bond: &MorseBond) -> (f64, f64, f64, f64) {
     let dx = positions[bond.j as usize * 3] - positions[bond.i as usize * 3];
     let dy = positions[bond.j as usize * 3 + 1] - positions[bond.i as usize * 3 + 1];

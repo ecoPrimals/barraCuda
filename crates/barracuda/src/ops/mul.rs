@@ -127,11 +127,9 @@ impl Mul {
         );
 
         // Encode and execute
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Mul Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("Mul Encoder"),
+        });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -165,6 +163,7 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -185,7 +184,7 @@ mod tests {
         let output = lhs.mul(&rhs).unwrap();
         let result = output.to_vec().unwrap();
 
-        let expected = vec![2.0, 6.0, 12.0, 20.0, 30.0];
+        let expected = [2.0, 6.0, 12.0, 20.0, 30.0];
         for (&r, &e) in result.iter().zip(expected.iter()) {
             assert!((r - e).abs() < 1e-5);
         }

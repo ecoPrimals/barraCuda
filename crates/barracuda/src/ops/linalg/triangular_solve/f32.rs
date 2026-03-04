@@ -196,11 +196,9 @@ impl TriangularSolve {
             });
 
         // Create command encoder
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("TriangularSolve Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("TriangularSolve Encoder"),
+        });
 
         // Execute compute pass
         {

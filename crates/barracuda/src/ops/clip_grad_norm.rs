@@ -19,7 +19,6 @@ const SHADER_F64: &str = include_str!("../shaders/gradient/clip_grad_norm_f64.wg
 use crate::device::DeviceCapabilities;
 use crate::error::Result;
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// Clip gradient by norm operation
 pub struct ClipGradNorm {
@@ -216,11 +215,9 @@ impl ClipGradNorm {
                 });
 
         // Execute compute shaders
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("ClipGradNorm Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("ClipGradNorm Encoder"),
+        });
 
         // Pass 1: Compute per-workgroup sum of squares (workgroup tree reduction)
         {
@@ -267,6 +264,7 @@ impl ClipGradNorm {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

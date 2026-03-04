@@ -120,8 +120,11 @@ impl<'a> ComputeDispatch<'a> {
     ///
     /// Holds a dispatch permit for the full compile→bind→submit lifecycle,
     /// respecting the device's hardware-aware concurrency budget.
+    /// All resource creation is covered by the encoder barrier to prevent
+    /// wgpu-core races between poll cleanup and resource allocation.
     pub fn submit(self) {
         let _permit = self.device.acquire_dispatch();
+        self.device.encoding_guard();
         let source = self
             .shader_source
             .expect("ComputeDispatch: shader source required");
@@ -221,7 +224,9 @@ impl<'a> ComputeDispatch<'a> {
             pass.dispatch_workgroups(self.workgroups.0, self.workgroups.1, self.workgroups.2);
         }
 
-        self.device.submit_and_poll_inner(Some(encoder.finish()));
+        let commands = encoder.finish();
+        self.device.encoding_complete();
+        self.device.submit_and_poll_inner(Some(commands));
     }
 }
 

@@ -183,12 +183,11 @@ impl StatefulPipeline {
         }
 
         let label = self.config.label.as_deref().unwrap_or("StatefulPipeline");
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some(&format!("{label}:iter")),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some(&format!("{label}:iter")),
+            });
 
         // All iterations encoded into one command buffer — single GPU submit.
         for _iter in 0..iterations {
@@ -273,6 +272,7 @@ impl StatefulPipeline {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

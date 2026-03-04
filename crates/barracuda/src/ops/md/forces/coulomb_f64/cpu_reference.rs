@@ -5,6 +5,7 @@
 //! are used for unit test validation against the GPU output.
 
 /// CPU reference for Coulomb forces (test/validation only).
+#[expect(dead_code, clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 pub fn compute_cpu(positions: &[f64], charges: &[f64], k: f64, cutoff: f64, eps: f64) -> Vec<f64> {
     let n = charges.len();
@@ -51,6 +52,7 @@ pub fn compute_cpu(positions: &[f64], charges: &[f64], k: f64, cutoff: f64, eps:
 }
 
 /// CPU reference for Coulomb forces with potential energy (test/validation only).
+#[expect(dead_code, clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 pub fn compute_cpu_with_energy(
     positions: &[f64],

@@ -5,6 +5,20 @@ and the migration path.
 
 ## Pre-1.0 (current)
 
+### 0.3.2
+
+| Change | Migration |
+|--------|-----------|
+| `sourdough-core` dependency removed; `PrimalLifecycle`, `PrimalHealth`, `PrimalState`, `HealthStatus`, `HealthReport` are now in `barracuda_core::lifecycle` and `barracuda_core::health` | Replace `use sourdough_core::{PrimalLifecycle, ...}` with `use barracuda_core::lifecycle::PrimalLifecycle` and `use barracuda_core::health::PrimalHealth`. Error type is now `BarracudaCoreError` instead of `PrimalError`. |
+| `WgpuDevice::lock()` removed; GPU serialization now uses `gpu_lock: Mutex<()>` + `active_encoders: AtomicU32` | If you called `device.lock()`, switch to `device.encoding_guard()` / `device.encoding_complete()` pairs, or use `ComputeDispatch` which handles this automatically. |
+| `GuardedEncoder` no longer has a lifetime parameter; `encoder` field is `Option<CommandEncoder>` | Call `guarded.finish()` to get `CommandBuffer` (consumes the guard). Drop also auto-decrements the encoder count. |
+| `encoding_guard()` returns `()` (was previously a guard struct) | Remove `let _guard = device.encoding_guard()` patterns. Call `device.encoding_guard()` directly, and pair with `device.encoding_complete()` when done. |
+| `gpu_lock_arc()` returns `Arc<Mutex<()>>` (was `Arc<RwLock<()>>`) | Change `.write()` to `.lock()` and `.try_write()` to `.try_lock()`. |
+| `BufferPool::new()` takes additional `Arc<AtomicU32>` parameter for active encoder count | Pass `device.active_encoders_arc()` as the third argument. |
+| `WgpuDevice::device` field is now `GuardedDeviceHandle` (was `Arc<wgpu::Device>`) | `GuardedDeviceHandle` derefs to `wgpu::Device`; use `device.device.inner_arc()` if you need `Arc<wgpu::Device>`. All `create_*` calls are auto-guarded — remove manual `encoding_guard()` / `encoding_complete()` pairs around resource creation. |
+| `async-trait` removed — trait methods return `BoxFuture` | Replace `#[async_trait] async fn` with `fn method() -> BoxFuture<'_, Result<T>>` using `Box::pin(async move { ... })`. Import `BoxFuture` from `barracuda_core::unified_hardware::traits`. |
+| `ComputeGraph::device` field is now `GuardedDeviceHandle` | Use `.inner_arc()` if you need the underlying `Arc<wgpu::Device>`. |
+
 ### 0.3.1
 
 | Change | Migration |
@@ -42,7 +56,7 @@ consumers migrating from toadStool should know:
 | `NpuMlBackend` | Always compiled (via `akida-driver`) | Removed — NPU execution is orchestrator's responsibility |
 | `npu::ops::*` | Always compiled | Removed — NPU ops live in the consuming primal |
 | `is_npu_available()` | Checks hardware | Use `detect_akida_boards()` (returns empty if none) |
-| GPU access | Direct `device.device()` / `device.queue()` calls common | All access via synchronized `WgpuDevice` methods |
+| GPU access | Direct `device.device()` / `device.queue()` calls common | All access via synchronized `WgpuDevice` methods with atomic encoder barrier |
 | Device creation | Unguarded | Serialized via global `DEVICE_CREATION_LOCK` |
 | MSRV | 1.80 | 1.87 |
 

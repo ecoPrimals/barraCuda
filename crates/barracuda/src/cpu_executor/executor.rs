@@ -25,7 +25,6 @@ use crate::unified_hardware::{
     ParallelismCapabilities, PerformanceCapabilities, PrecisionCapabilities, TensorStorage,
 };
 use crate::unified_math::{MathOp, TensorDescriptor};
-use async_trait::async_trait;
 use rayon::prelude::*;
 use std::sync::Arc;
 
@@ -233,10 +232,8 @@ impl Default for CpuExecutor {
     }
 }
 
-// NOTE(async-dyn): #[async_trait] required — native async fn in trait is not dyn-compatible
-#[async_trait]
 impl ComputeExecutor for CpuExecutor {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "CPU (Native Rust + SIMD)"
     }
 
@@ -285,27 +282,44 @@ impl ComputeExecutor for CpuExecutor {
         }
     }
 
-    async fn execute(
+    fn execute(
         &self,
         op: &MathOp,
         inputs: Vec<Arc<dyn TensorStorage>>,
-    ) -> Result<Arc<dyn TensorStorage>> {
-        super::ops::dispatch(self, op, inputs)
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Arc<dyn TensorStorage>>> + Send + '_>,
+    > {
+        let result = super::ops::dispatch(self, op, inputs);
+        Box::pin(async move { result })
     }
 
-    async fn allocate(&self, descriptor: TensorDescriptor) -> Result<Arc<dyn TensorStorage>> {
-        Ok(Arc::new(CpuTensorStorage::new(descriptor)))
+    fn allocate(
+        &self,
+        descriptor: TensorDescriptor,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Arc<dyn TensorStorage>>> + Send + '_>,
+    > {
+        Box::pin(async move {
+            Ok(Arc::new(CpuTensorStorage::new(descriptor)) as Arc<dyn TensorStorage>)
+        })
     }
 
-    async fn transfer(&self, tensor: Arc<dyn TensorStorage>) -> Result<Arc<dyn TensorStorage>> {
-        if tensor.is_cpu() {
-            Ok(tensor)
-        } else {
-            let data = tensor.read_to_cpu().await?;
-            let descriptor = tensor.descriptor().clone();
-            let mut cpu_tensor = CpuTensorStorage::new(descriptor);
-            cpu_tensor.write_from_cpu(&data).await?;
-            Ok(Arc::new(cpu_tensor))
-        }
+    fn transfer(
+        &self,
+        tensor: Arc<dyn TensorStorage>,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Arc<dyn TensorStorage>>> + Send + '_>,
+    > {
+        Box::pin(async move {
+            if tensor.is_cpu() {
+                Ok(tensor)
+            } else {
+                let data = tensor.read_to_cpu().await?;
+                let descriptor = tensor.descriptor().clone();
+                let mut cpu_tensor = CpuTensorStorage::new(descriptor);
+                cpu_tensor.write_from_cpu(&data).await?;
+                Ok(Arc::new(cpu_tensor) as Arc<dyn TensorStorage>)
+            }
+        })
     }
 }

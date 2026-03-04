@@ -15,7 +15,6 @@ use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 const SHADER_F64: &str = include_str!("../shaders/augmentation/random_affine_f64.wgsl");
 static SHADER_F32: std::sync::LazyLock<String> =
@@ -200,9 +199,10 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
+    #[expect(unused_imports, reason = "conditional imports")]
     use super::*;
 
     #[tokio::test]

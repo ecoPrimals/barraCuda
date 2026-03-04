@@ -3,7 +3,6 @@
 
 use super::WgpuDevice;
 use crate::error::{BarracudaError, Result};
-use wgpu::util::DeviceExt;
 
 impl WgpuDevice {
     /// Read typed values from a GPU buffer.
@@ -34,11 +33,9 @@ impl WgpuDevice {
             mapped_at_creation: false,
         });
 
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("readback"),
-            });
+        let mut encoder = self.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("readback"),
+        });
         encoder.copy_buffer_to_buffer(buffer, 0, &staging, 0, byte_size);
         self.submit_and_poll_inner(Some(encoder.finish()));
 
@@ -57,8 +54,6 @@ impl WgpuDevice {
     /// and polled (e.g., via `submit_and_poll`). This handles the
     /// `map_async` → `poll` → `get_mapped_range` → `unmap` dance that
     /// was previously duplicated across ~40 ops.
-    ///
-    /// Holds the GPU lock for the poll to prevent concurrent device access.
     pub fn map_staging_buffer<T: bytemuck::Pod>(
         &self,
         staging: &wgpu::Buffer,
@@ -74,9 +69,11 @@ impl WgpuDevice {
         }
         let slice = staging.slice(..);
         let (sender, receiver) = std::sync::mpsc::channel();
+        self.encoding_guard();
         slice.map_async(wgpu::MapMode::Read, move |result| {
             let _ = sender.send(result);
         });
+        self.encoding_complete();
 
         self.poll_safe()?;
 
@@ -85,11 +82,12 @@ impl WgpuDevice {
             .map_err(|_| BarracudaError::execution_failed("GPU buffer mapping channel closed"))?
             .map_err(|e| BarracudaError::execution_failed(e.to_string()))?;
 
+        self.encoding_guard();
         let data = slice.get_mapped_range();
-        // Allocation required: mapped range is dropped before return; caller receives owned Vec
         let result: Vec<T> = bytemuck::cast_slice(&data).to_vec();
         drop(data);
         staging.unmap();
+        self.encoding_complete();
 
         Ok(result)
     }
@@ -108,8 +106,10 @@ impl WgpuDevice {
 
     /// Write data to buffer (f32)
     pub fn write_buffer_f32(&self, buffer: &wgpu::Buffer, data: &[f32]) -> Result<()> {
+        self.encoding_guard();
         self.queue
             .write_buffer(buffer, 0, bytemuck::cast_slice(data));
+        self.encoding_complete();
         Ok(())
     }
 
@@ -125,66 +125,85 @@ impl WgpuDevice {
 
     /// Create storage buffer (convenience helper)
     pub fn create_storage_buffer(&self, label: &str, data: &[u8]) -> wgpu::Buffer {
-        self.device
+        self.encoding_guard();
+        let buf = self
+            .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some(label),
                 contents: data,
                 usage: wgpu::BufferUsages::STORAGE
                     | wgpu::BufferUsages::COPY_SRC
                     | wgpu::BufferUsages::COPY_DST,
-            })
+            });
+        self.encoding_complete();
+        buf
     }
 
     /// Create uniform buffer (convenience helper)
     pub fn create_uniform_buffer<T: bytemuck::Pod>(&self, label: &str, data: &T) -> wgpu::Buffer {
-        self.device
+        self.encoding_guard();
+        let buf = self
+            .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some(label),
                 contents: bytemuck::bytes_of(data),
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            })
+            });
+        self.encoding_complete();
+        buf
     }
 
     /// Allocate buffer for f32 data
     pub fn create_buffer_f32(&self, size: usize) -> Result<wgpu::Buffer> {
-        Ok(self.device.create_buffer(&wgpu::BufferDescriptor {
+        self.encoding_guard();
+        let buf = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("barraCuda Buffer"),
             size: (size * std::mem::size_of::<f32>()) as u64,
             usage: wgpu::BufferUsages::STORAGE
                 | wgpu::BufferUsages::COPY_DST
                 | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
-        }))
+        });
+        self.encoding_complete();
+        Ok(buf)
     }
 
     /// Create storage buffer initialized with u32 data.
     pub fn create_buffer_u32_init(&self, label: &str, data: &[u32]) -> wgpu::Buffer {
-        self.device
+        self.encoding_guard();
+        let buf = self
+            .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some(label),
                 contents: bytemuck::cast_slice(data),
                 usage: wgpu::BufferUsages::STORAGE
                     | wgpu::BufferUsages::COPY_SRC
                     | wgpu::BufferUsages::COPY_DST,
-            })
+            });
+        self.encoding_complete();
+        buf
     }
 
     /// Allocate buffer for u32 data
     pub fn create_buffer_u32(&self, size: usize) -> Result<wgpu::Buffer> {
-        Ok(self.device.create_buffer(&wgpu::BufferDescriptor {
+        self.encoding_guard();
+        let buf = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("barraCuda U32 Buffer"),
             size: (size * std::mem::size_of::<u32>()) as u64,
             usage: wgpu::BufferUsages::STORAGE
                 | wgpu::BufferUsages::COPY_DST
                 | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
-        }))
+        });
+        self.encoding_complete();
+        Ok(buf)
     }
 
     /// Allocate zero-initialized buffer for u32 data
     pub fn create_buffer_u32_zeros(&self, size: usize) -> Result<wgpu::Buffer> {
+        self.encoding_guard();
         let zeros = vec![0u32; size];
-        Ok(self
+        let buf = self
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("barraCuda U32 Zeros Buffer"),
@@ -192,50 +211,65 @@ impl WgpuDevice {
                 usage: wgpu::BufferUsages::STORAGE
                     | wgpu::BufferUsages::COPY_DST
                     | wgpu::BufferUsages::COPY_SRC,
-            }))
+            });
+        self.encoding_complete();
+        Ok(buf)
     }
 
     /// Create storage buffer initialized with f32 data.
     pub fn create_buffer_f32_init(&self, label: &str, data: &[f32]) -> wgpu::Buffer {
-        self.device
+        self.encoding_guard();
+        let buf = self
+            .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some(label),
                 contents: bytemuck::cast_slice(data),
                 usage: wgpu::BufferUsages::STORAGE
                     | wgpu::BufferUsages::COPY_SRC
                     | wgpu::BufferUsages::COPY_DST,
-            })
+            });
+        self.encoding_complete();
+        buf
     }
 
     /// Write data to buffer (f64)
     pub fn write_buffer_f64(&self, buffer: &wgpu::Buffer, data: &[f64]) -> Result<()> {
+        self.encoding_guard();
         self.queue
             .write_buffer(buffer, 0, bytemuck::cast_slice(data));
+        self.encoding_complete();
         Ok(())
     }
 
     /// Create storage buffer initialized with f64 data.
     pub fn create_buffer_f64_init(&self, label: &str, data: &[f64]) -> wgpu::Buffer {
-        self.device
+        self.encoding_guard();
+        let buf = self
+            .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some(label),
                 contents: bytemuck::cast_slice(data),
                 usage: wgpu::BufferUsages::STORAGE
                     | wgpu::BufferUsages::COPY_SRC
                     | wgpu::BufferUsages::COPY_DST,
-            })
+            });
+        self.encoding_complete();
+        buf
     }
 
     /// Allocate buffer for f64 data
     pub fn create_buffer_f64(&self, size: usize) -> Result<wgpu::Buffer> {
-        Ok(self.device.create_buffer(&wgpu::BufferDescriptor {
+        self.encoding_guard();
+        let buf = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("barraCuda F64 Buffer"),
             size: (size * std::mem::size_of::<f64>()) as u64,
             usage: wgpu::BufferUsages::STORAGE
                 | wgpu::BufferUsages::COPY_DST
                 | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
-        }))
+        });
+        self.encoding_complete();
+        Ok(buf)
     }
 
     // ── f32 buffer ergonomic helpers (hotSpring ESN GPU dispatch absorption) ───
@@ -245,14 +279,17 @@ impl WgpuDevice {
     /// Equivalent to `create_buffer_f32` with a descriptive label.
     /// For ESN and other f32 GPU pipelines.
     pub fn create_f32_rw_buffer(&self, label: &str, count: usize) -> Result<wgpu::Buffer> {
-        Ok(self.device.create_buffer(&wgpu::BufferDescriptor {
+        self.encoding_guard();
+        let buf = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some(label),
             size: (count * std::mem::size_of::<f32>()) as u64,
             usage: wgpu::BufferUsages::STORAGE
                 | wgpu::BufferUsages::COPY_DST
                 | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
-        }))
+        });
+        self.encoding_complete();
+        Ok(buf)
     }
 
     /// Create an f32 output buffer (GPU write → CPU read).

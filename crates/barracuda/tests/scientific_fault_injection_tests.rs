@@ -19,6 +19,7 @@
 //! - Recovery strategies
 //! - Comprehensive validation
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 mod common;
 
 use barracuda::ops::complex::*;

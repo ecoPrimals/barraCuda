@@ -16,7 +16,6 @@ pub(crate) static SHADER_F32: std::sync::LazyLock<String> = std::sync::LazyLock:
 
 use crate::error::Result;
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// SILU operation
 pub struct SILU {
@@ -151,11 +150,9 @@ impl SILU {
                 });
 
         // Execute compute shader
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("SILU Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("SILU Encoder"),
+        });
 
         {
             let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {

@@ -299,6 +299,7 @@ pub type FilterStage<T> = Stage<T, T>;
 /// Convenience type alias for transform stages
 pub type TransformStage<T, U> = Stage<T, U>;
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

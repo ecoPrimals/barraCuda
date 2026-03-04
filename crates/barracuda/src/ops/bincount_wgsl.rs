@@ -136,11 +136,9 @@ impl Bincount {
                 compilation_options: Default::default(),
             });
 
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Bincount Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("Bincount Encoder"),
+        });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -173,6 +171,7 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -183,7 +182,7 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        let input_data = vec![0u32, 1, 1, 2, 2, 2];
+        let input_data = [0u32, 1, 1, 2, 2, 2];
         // Convert u32 to f32 for Tensor
         let input_f32: Vec<f32> = input_data.iter().map(|&x| x as f32).collect();
         let input = Tensor::from_vec_on(input_f32, vec![6], device.clone())
@@ -207,7 +206,7 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        let input_data = vec![0u32, 0, 5, 5, 5];
+        let input_data = [0u32, 0, 5, 5, 5];
         // Convert u32 to f32 for Tensor
         let input_f32: Vec<f32> = input_data.iter().map(|&x| x as f32).collect();
         let input = Tensor::from_vec_on(input_f32, vec![5], device.clone())

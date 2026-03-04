@@ -91,7 +91,7 @@ pub struct SeasonalGpuParams {
 
 impl SeasonalGpuParams {
     /// Construct with all physical parameters; padding is set automatically.
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, reason = "API")]
     pub fn new(
         cell_count: u32,
         day_of_year: u32,
@@ -359,5 +359,187 @@ impl McEt0PropagateGpu {
             .submit();
 
         self.device.read_f64_buffer(&out_buf, n_samples as usize)
+    }
+}
+
+#[expect(clippy::unwrap_used, reason = "tests")]
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::device::test_pool;
+
+    #[test]
+    fn test_seasonal_gpu_params_new() {
+        let p = SeasonalGpuParams::new(
+            10,    // cell_count
+            187,   // day_of_year
+            30,    // stage_length
+            15,    // day_in_stage
+            0.3,   // kc_prev
+            1.2,   // kc_next
+            100.0, // taw_default
+            0.5,   // raw_fraction
+            0.4,   // field_capacity
+        );
+        assert_eq!(p.cell_count, 10);
+        assert_eq!(p.day_of_year, 187);
+        assert_eq!(p.stage_length, 30);
+        assert_eq!(p.day_in_stage, 15);
+        assert!((p.kc_prev - 0.3).abs() < 1e-12);
+        assert!((p.kc_next - 1.2).abs() < 1e-12);
+        assert!((p.taw_default - 100.0).abs() < 1e-12);
+        assert!((p.raw_fraction - 0.5).abs() < 1e-12);
+        assert!((p.field_capacity - 0.4).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_seasonal_pipeline_execute_cpu() {
+        // cell_weather: 9 f64 per cell [tmax, tmin, rh_max, rh_min, wind_2m, rs, elev, lat, soil_moisture_prev]
+        // 2 cells, 18 values total. Use FAO-56 Example 18–style inputs for cell 1.
+        let cell_weather: Vec<f64> = vec![
+            // Cell 1: tmax, tmin, rh_max, rh_min, wind_2m, rs, elev, lat, theta_prev
+            21.5, 12.3, 84.0, 63.0, 2.78, 22.07, 100.0, 50.8, 30.0, // Cell 2
+            25.0, 15.0, 75.0, 55.0, 3.0, 24.0, 150.0, 45.0, 80.0,
+        ];
+        let out = SeasonalPipelineF64::execute_cpu(
+            &cell_weather,
+            0.3,   // kc_prev
+            1.2,   // kc_next
+            15,    // day_in_stage
+            30,    // stage_length
+            100.0, // taw_default
+            0.5,   // raw_fraction
+            150.0, // field_capacity (mm)
+            187,   // doy
+        );
+        assert_eq!(out.len(), 2);
+        for o in &out {
+            assert!(o.et0 > 0.0, "ET0 should be positive, got {}", o.et0);
+            assert!(
+                o.kc >= 0.0 && o.kc <= 2.0,
+                "Kc should be in valid range, got {}",
+                o.kc
+            );
+            assert!(
+                o.stress >= 0.0 && o.stress <= 1.0,
+                "stress should be in [0,1], got {}",
+                o.stress
+            );
+            assert!(
+                o.theta_new >= 0.0 && o.theta_new <= 150.0,
+                "theta_new clamped to field_capacity"
+            );
+        }
+    }
+
+    #[test]
+    fn test_fao56_base_inputs_construction() {
+        let base = Fao56BaseInputs {
+            t_max: 21.5,
+            t_min: 12.3,
+            rh_max: 84.0,
+            rh_min: 63.0,
+            wind_kmh: 10.0,
+            sun_hours: 12.0,
+            latitude: 50.8,
+            altitude: 100.0,
+            day_of_year: 187.0,
+        };
+        assert!((base.t_max - 21.5).abs() < 1e-12);
+        assert!((base.latitude - 50.8).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_fao56_uncertainties_construction() {
+        let uncert = Fao56Uncertainties {
+            sigma_t_max: 1.0,
+            sigma_t_min: 1.0,
+            sigma_rh_max: 5.0,
+            sigma_rh_min: 5.0,
+            sigma_wind_frac: 0.1,
+            sigma_sun_frac: 0.1,
+        };
+        assert!((uncert.sigma_t_max - 1.0).abs() < 1e-12);
+        assert!((uncert.sigma_wind_frac - 0.1).abs() < 1e-12);
+    }
+
+    #[tokio::test]
+    async fn test_hargreaves_batch_gpu_dispatch() {
+        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let Ok(gpu) = HargreavesBatchGpu::new(device) else {
+            return;
+        };
+        let ra = vec![30.0, 35.0, 40.0];
+        let t_max = vec![28.0, 32.0, 35.0];
+        let t_min = vec![15.0, 18.0, 20.0];
+        let Ok(out) = gpu.dispatch(&ra, &t_max, &t_min) else {
+            return;
+        };
+        assert_eq!(out.len(), 3);
+        for &e in &out {
+            assert!(e > 0.0, "Hargreaves ET0 should be positive");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_seasonal_pipeline_gpu_dispatch() {
+        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let Ok(gpu) = SeasonalPipelineF64::new(device) else {
+            return;
+        };
+        let cell_weather: Vec<f64> = vec![
+            21.5, 12.3, 84.0, 63.0, 2.78, 22.07, 100.0, 50.8, 30.0, 25.0, 15.0, 75.0, 55.0, 3.0,
+            24.0, 150.0, 45.0, 80.0,
+        ];
+        let params = SeasonalGpuParams::new(2, 187, 30, 15, 0.3, 1.2, 100.0, 0.5, 150.0);
+        let Ok(out) = gpu.dispatch(&cell_weather, &params) else {
+            return;
+        };
+        assert_eq!(out.len(), 2);
+        for o in &out {
+            assert!(o.et0 > 0.0);
+            assert!(o.kc >= 0.0 && o.kc <= 2.0);
+            assert!(o.stress >= 0.0 && o.stress <= 1.0);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_mc_et0_propagate_gpu_dispatch() {
+        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let Ok(gpu) = McEt0PropagateGpu::new(device) else {
+            return;
+        };
+        let base = Fao56BaseInputs {
+            t_max: 21.5,
+            t_min: 12.3,
+            rh_max: 84.0,
+            rh_min: 63.0,
+            wind_kmh: 10.0,
+            sun_hours: 12.0,
+            latitude: 50.8,
+            altitude: 100.0,
+            day_of_year: 187.0,
+        };
+        let uncert = Fao56Uncertainties {
+            sigma_t_max: 0.5,
+            sigma_t_min: 0.5,
+            sigma_rh_max: 2.0,
+            sigma_rh_min: 2.0,
+            sigma_wind_frac: 0.05,
+            sigma_sun_frac: 0.05,
+        };
+        let Ok(out) = gpu.dispatch(&base, &uncert, 64) else {
+            return;
+        };
+        assert_eq!(out.len(), 64);
+        for &e in &out {
+            assert!(e > 0.0, "MC ET0 samples should be positive");
+        }
     }
 }

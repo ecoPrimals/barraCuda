@@ -245,12 +245,12 @@ impl BarraCudaService for BarraCudaServer {
     }
 
     async fn health_check(self, _: tarpc::context::Context) -> HealthReport {
-        use sourdough_core::PrimalHealth;
+        use crate::health::PrimalHealth;
         match self.primal.health_check().await {
             Ok(report) => HealthReport {
                 name: report.name.clone(),
                 version: report.version.clone(),
-                status: format!("{:?}", report.status),
+                status: format!("{}", report.status),
             },
             Err(e) => HealthReport {
                 name: "barraCuda".to_string(),
@@ -618,7 +618,7 @@ impl BarraCudaService for BarraCudaServer {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[expect(clippy::unwrap_used, reason = "suppressed")]
 mod tests {
     use super::*;
 
@@ -637,6 +637,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(clippy::float_cmp, reason = "tests")]
     fn test_tolerances() {
         let tol = Tolerances {
             name: "fhe".to_string(),

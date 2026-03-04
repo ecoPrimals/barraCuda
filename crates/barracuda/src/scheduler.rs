@@ -23,9 +23,6 @@ use crate::unified_hardware::{ComputeExecutor, HardwareType};
 use crate::unified_math::{MathOp, TensorDescriptor};
 use std::sync::Arc;
 
-#[cfg(feature = "tpu")]
-use crate::device::TpuDevice;
-
 /// Unified compute scheduler
 ///
 /// Automatically discovers and manages all available compute hardware
@@ -62,23 +59,7 @@ impl UnifiedScheduler {
             }
         }
 
-        // 3. Try to discover TPU (when hardware available)
-        #[cfg(feature = "tpu")]
-        {
-            match TpuDevice::new().await {
-                Ok(tpu) => {
-                    println!("  ✅ TPU: {}", tpu.name());
-                    // Pending: TpuExecutor must implement ComputeExecutor trait and wrap TpuDevice.
-                    // Dependency chain: TpuDevice -> TpuExecutor (new) -> executors.push().
-                    // Blocked until TpuExecutor exists and satisfies unified_hardware::ComputeExecutor.
-                }
-                Err(_) => {
-                    println!("  ℹ️  No TPU available");
-                }
-            }
-        }
-
-        // 4. Try to discover NPU (Akida) - always available in barracuda
+        // 3. Try to discover NPU (Akida) - always available in barracuda
         {
             use crate::device::detect_akida_boards;
             match detect_akida_boards() {
@@ -216,6 +197,7 @@ impl UnifiedScheduler {
 /// # Ok(())
 /// # }
 /// ```
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

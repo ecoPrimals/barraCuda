@@ -14,7 +14,6 @@
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// 1D Complex FFT operation (f64 precision)
 ///
@@ -147,12 +146,9 @@ impl Fft1DF64 {
 
         // Copy input to working buffer
         {
-            let mut encoder =
-                device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("FFT 1D f64 Copy Encoder"),
-                    });
+            let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("FFT 1D f64 Copy Encoder"),
+            });
             encoder.copy_buffer_to_buffer(self.input.buffer(), 0, &working_buffer, 0, buffer_size);
             device.submit_and_poll(std::iter::once(encoder.finish()));
         }
@@ -180,12 +176,9 @@ impl Fft1DF64 {
 
         // Copy result back to working buffer
         {
-            let mut encoder =
-                device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("FFT 1D f64 Copy Encoder 2"),
-                    });
+            let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("FFT 1D f64 Copy Encoder 2"),
+            });
             encoder.copy_buffer_to_buffer(&output_buffer, 0, &working_buffer, 0, buffer_size);
             device.submit_and_poll(std::iter::once(encoder.finish()));
         }
@@ -215,12 +208,9 @@ impl Fft1DF64 {
 
             // Ping-pong: copy output to working for next stage
             if stage < log_n - 1 {
-                let mut encoder =
-                    device
-                        .device
-                        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                            label: Some(&format!("FFT 1D f64 Copy Stage {stage}")),
-                        });
+                let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                    label: Some(&format!("FFT 1D f64 Copy Stage {stage}")),
+                });
                 encoder.copy_buffer_to_buffer(&output_buffer, 0, &working_buffer, 0, buffer_size);
                 device.submit_and_poll(std::iter::once(encoder.finish()));
             }
@@ -249,6 +239,7 @@ struct Fft64Params {
     _padding: u32,
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -288,7 +279,7 @@ mod tests {
     #[test]
     fn test_power_of_2_validation() {
         fn is_power_of_two(n: usize) -> bool {
-            n != 0 && (n & (n - 1)) == 0
+            n.is_power_of_two()
         }
         assert!(is_power_of_two(16));
         assert!(is_power_of_two(256));

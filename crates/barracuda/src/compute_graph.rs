@@ -71,7 +71,7 @@ pub enum RecordedOp {
 /// all operations into a single command buffer submission.
 pub struct ComputeGraph {
     wgpu_device: Arc<WgpuDevice>,
-    device: Arc<wgpu::Device>,
+    device: crate::device::wgpu_device::GuardedDeviceHandle,
     queue: Arc<wgpu::Queue>,
     device_name: String,
     ops: Vec<RecordedOp>,
@@ -171,11 +171,11 @@ impl ComputeGraph {
             return Ok(());
         }
 
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("ComputeGraph Batch"),
-            });
+        let mut encoder =
+            self.wgpu_device
+                .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                    label: Some("ComputeGraph Batch"),
+                });
 
         let add_shader = self.compile_elementwise("output[idx] = a[idx] + b[idx];", "Add");
         let mul_shader = self.compile_elementwise("output[idx] = a[idx] * b[idx];", "Mul");
@@ -479,11 +479,11 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::device::test_pool;
-    use wgpu::util::DeviceExt;
 
     #[tokio::test]
     async fn test_compute_graph_batching() {

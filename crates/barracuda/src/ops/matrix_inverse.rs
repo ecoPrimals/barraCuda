@@ -38,6 +38,7 @@ impl MatrixInverse {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -57,7 +58,7 @@ mod tests {
         let result = inv.to_vec().unwrap();
         assert_eq!(result.len(), 4);
         // Verify: M * M^{-1} ≈ I
-        let prod = vec![
+        let prod = [
             4.0 * result[0] + 7.0 * result[2],
             4.0 * result[1] + 7.0 * result[3],
             2.0 * result[0] + 6.0 * result[2],

@@ -9,7 +9,6 @@ use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 const SHADER_BATCHED_ELEMENTWISE_F64: &str =
     include_str!("../../shaders/science/batched_elementwise_f64.wgsl");
@@ -142,6 +141,7 @@ impl BatchedElementwiseF64 {
     }
 
     /// CPU fallback for small batches
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn execute_cpu(
         &self,
@@ -258,6 +258,11 @@ impl BatchedElementwiseF64 {
                     data[base + 5],
                     data[base + 6],
                 ),
+                Op::MakkinkEt0 => {
+                    cpu_ref::makkink_et0_cpu(data[base], data[base + 1], data[base + 2])
+                }
+                Op::TurcEt0 => cpu_ref::turc_et0_cpu(data[base], data[base + 1], data[base + 2]),
+                Op::HamonEt0 => cpu_ref::hamon_et0_cpu(data[base], data[base + 1]),
             };
             results.push(result);
         }

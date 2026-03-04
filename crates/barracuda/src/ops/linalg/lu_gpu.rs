@@ -35,7 +35,6 @@ use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// GPU-accelerated LU decomposition
 ///
@@ -134,9 +133,7 @@ impl LuGpu {
         bg: &wgpu::BindGroup,
         wg: (u32, u32, u32),
     ) {
-        let mut enc = dev
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+        let mut enc = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor { label: None });
         {
             let mut p = enc.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
             p.set_pipeline(pipeline);
@@ -373,6 +370,7 @@ impl LuGpu {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

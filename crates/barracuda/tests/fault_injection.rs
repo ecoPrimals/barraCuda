@@ -15,6 +15,7 @@
 //! 3. Releases resources properly on failure
 //! 4. Provides meaningful recovery paths
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 mod common;
 
 use barracuda::device::{Device, KernelRouter};

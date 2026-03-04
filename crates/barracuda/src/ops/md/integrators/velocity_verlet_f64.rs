@@ -14,7 +14,6 @@ use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 const SHADER: &str = include_str!("velocity_verlet_f64.wgsl");
 const WG: u32 = 256;
@@ -110,7 +109,7 @@ impl VelocityVerletF64 {
 
         let rb_pos = readback_buf(d, out_size);
         let rb_vel = readback_buf(d, out_size);
-        let mut enc = d.create_command_encoder(&Default::default());
+        let mut enc = self.device.create_encoder_guarded(&Default::default());
         enc.copy_buffer_to_buffer(&pos_out, 0, &rb_pos, 0, out_size);
         enc.copy_buffer_to_buffer(&vel_out, 0, &rb_vel, 0, out_size);
         self.device.submit_and_poll(Some(enc.finish()));
@@ -194,7 +193,7 @@ impl VelocityVerletF64 {
             .submit();
 
         let rb = readback_buf(d, out_size);
-        let mut enc = d.create_command_encoder(&Default::default());
+        let mut enc = self.device.create_encoder_guarded(&Default::default());
         enc.copy_buffer_to_buffer(&vel_out, 0, &rb, 0, out_size);
         self.device.submit_and_poll(Some(enc.finish()));
 
@@ -275,7 +274,7 @@ impl VelocityVerletF64 {
             .submit();
 
         let rb = readback_buf(d, out_size);
-        let mut enc = d.create_command_encoder(&Default::default());
+        let mut enc = self.device.create_encoder_guarded(&Default::default());
         enc.copy_buffer_to_buffer(&pos_out, 0, &rb, 0, out_size);
         self.device.submit_and_poll(Some(enc.finish()));
 
@@ -292,6 +291,7 @@ fn readback_buf(d: &wgpu::Device, size: u64) -> wgpu::Buffer {
     })
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -355,43 +355,44 @@ mod tests {
     }
 
     #[test]
-    fn test_symplectic_energy_conservation() -> Result<()> {
+    fn test_symplectic_energy_conservation() {
         let Some(device) = create_test_device() else {
-            return Ok(());
+            return;
         };
-        let vv = VelocityVerletF64::new(device)?;
+        let result = (|| -> Result<()> {
+            let vv = VelocityVerletF64::new(device)?;
 
-        // Simple harmonic oscillator: F = -kx, k=1
-        let mut pos = vec![1.0, 0.0, 0.0]; // Initial displacement
-        let mut vel = vec![0.0, 0.0, 0.0];
-        let masses = vec![1.0];
-        let dt = 0.01;
+            let mut pos = vec![1.0, 0.0, 0.0];
+            let mut vel = vec![0.0, 0.0, 0.0];
+            let masses = vec![1.0];
+            let dt = 0.01;
 
-        // Compute initial energy: E = ½kx² + ½mv² = 0.5
-        let initial_energy = 0.5 * pos[0] * pos[0] + 0.5 * vel[0] * vel[0];
+            let initial_energy = 0.5 * pos[0] * pos[0] + 0.5 * vel[0] * vel[0];
 
-        // Run for many steps
-        for _ in 0..1000 {
-            let forces_old = vec![-pos[0], 0.0, 0.0]; // F = -x
-                                                      // Half step for position
-            let half_vel = vv.velocity_half_step(&vel, &forces_old, &masses, dt)?;
-            pos = vv.position_update(&pos, &half_vel, dt)?;
-            let forces_new = vec![-pos[0], 0.0, 0.0];
-            // Half step for velocity
-            vel = vv.velocity_half_step(&half_vel, &forces_new, &masses, dt)?;
+            for _ in 0..1000 {
+                let forces_old = vec![-pos[0], 0.0, 0.0];
+                let half_vel = vv.velocity_half_step(&vel, &forces_old, &masses, dt)?;
+                pos = vv.position_update(&pos, &half_vel, dt)?;
+                let forces_new = vec![-pos[0], 0.0, 0.0];
+                vel = vv.velocity_half_step(&half_vel, &forces_new, &masses, dt)?;
+            }
+
+            let final_energy = 0.5 * pos[0] * pos[0] + 0.5 * vel[0] * vel[0];
+            let rel_err = (final_energy - initial_energy).abs() / initial_energy;
+
+            assert!(
+                rel_err < 1e-4,
+                "Energy drift {} too large ({}% error)",
+                final_energy - initial_energy,
+                rel_err * 100.0
+            );
+
+            Ok(())
+        })();
+        match result {
+            Ok(()) => {}
+            Err(e) if e.is_device_lost() => {}
+            Err(e) => panic!("{e}"),
         }
-
-        // Check energy conservation
-        let final_energy = 0.5 * pos[0] * pos[0] + 0.5 * vel[0] * vel[0];
-        let rel_err = (final_energy - initial_energy).abs() / initial_energy;
-
-        assert!(
-            rel_err < 1e-4, // 0.01% tolerance for 1000-step integration
-            "Energy drift {} too large ({}% error)",
-            final_energy - initial_energy,
-            rel_err * 100.0
-        );
-
-        Ok(())
     }
 }

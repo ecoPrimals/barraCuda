@@ -124,12 +124,9 @@ impl Quantize {
         });
 
         // Copy output to staging buffer (compute completed via ComputeDispatch above)
-        let mut copy_encoder =
-            device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Quantize Copy Encoder"),
-                });
+        let mut copy_encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("Quantize Copy Encoder"),
+        });
         copy_encoder.copy_buffer_to_buffer(
             &output_buffer,
             0,
@@ -173,6 +170,7 @@ pub fn quantize_affine_i8(input: Tensor) -> Result<(Tensor, f32, f32)> {
     Ok((quantized, scale, zero_point))
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

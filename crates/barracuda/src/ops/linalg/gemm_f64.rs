@@ -21,7 +21,6 @@ use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 const WGSL_DF64_CORE: &str = include_str!("../../shaders/math/df64_core.wgsl");
 const GEMM_SHADER_DF64: &str = include_str!("../../shaders/linalg/gemm_df64.wgsl");
@@ -393,11 +392,9 @@ impl GemmCachedF64 {
         let wg_y = (n as u32).div_ceil(tile);
         let wg_z = batch_size as u32;
 
-        let mut encoder = dev
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("GemmCached Encoder"),
-            });
+        let mut encoder = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("GemmCached Encoder"),
+        });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("GemmCached Pass"),
@@ -454,6 +451,7 @@ fn bgl_uniform(idx: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

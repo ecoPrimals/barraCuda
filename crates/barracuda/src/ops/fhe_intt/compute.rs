@@ -7,7 +7,6 @@
 use super::FheIntt;
 use crate::error::Result;
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 impl FheIntt {
     /// Execute INTT transformation
@@ -87,11 +86,9 @@ impl FheIntt {
         };
 
         // Command encoder
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("INTT Command Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("INTT Command Encoder"),
+        });
 
         // Pass 1: Bit-reversal
         let params_buffer = device
@@ -150,11 +147,9 @@ impl FheIntt {
         for stage in 0..num_stages {
             // Create separate encoder for each stage
             let mut stage_encoder =
-                device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some(&format!("INTT Stage {stage} Encoder")),
-                    });
+                device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                    label: Some(&format!("INTT Stage {stage} Encoder")),
+                });
 
             let stage_params = InttParams { stage, ..params };
 
@@ -266,11 +261,9 @@ impl FheIntt {
             ],
         });
 
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("INTT Scaling Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("INTT Scaling Encoder"),
+        });
 
         {
             let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {

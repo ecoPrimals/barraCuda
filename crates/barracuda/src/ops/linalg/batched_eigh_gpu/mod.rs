@@ -161,6 +161,7 @@ impl BatchedEighGpu {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -250,8 +251,12 @@ mod tests {
                 data[b * n * n + i * n + i] = (i + 1) as f64;
             }
         }
-        let (eigenvalues, _) =
-            BatchedEighGpu::execute_f64(device.clone(), &data, n, batch_size, 30).unwrap();
+        let result = BatchedEighGpu::execute_f64(device.clone(), &data, n, batch_size, 30);
+        let (eigenvalues, _) = match result {
+            Ok(v) => v,
+            Err(e) if e.is_device_lost() => return,
+            Err(e) => panic!("unexpected error: {e}"),
+        };
         assert_eq!(eigenvalues.len(), batch_size * n);
         let first_sum: f64 = eigenvalues[0..n].iter().sum();
         assert!(

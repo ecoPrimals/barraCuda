@@ -11,6 +11,7 @@ mod gradient_1d;
 mod gradient_2d;
 mod laplacian_2d;
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;
 

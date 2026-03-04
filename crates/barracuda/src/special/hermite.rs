@@ -157,6 +157,7 @@ pub fn hermite_normalized(n: usize, x: f64) -> f64 {
     hermite(n, x) * (-x * x / 2.0).exp() / norm
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

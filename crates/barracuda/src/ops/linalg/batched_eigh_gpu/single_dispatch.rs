@@ -11,7 +11,6 @@ use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use crate::shaders::precision::ShaderTemplate;
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 impl BatchedEighGpu {
     /// **SINGLE-DISPATCH** batched eigenvalue decomposition — eliminates poll bottleneck
@@ -183,11 +182,9 @@ impl BatchedEighGpu {
             ],
         });
 
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("SingleDispatch Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("SingleDispatch Encoder"),
+        });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("SingleDispatch Pass"),
@@ -338,11 +335,9 @@ impl BatchedEighGpu {
             ],
         });
 
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("SingleDispatch Encoder (buffers)"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("SingleDispatch Encoder (buffers)"),
+        });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("SingleDispatch Pass (buffers)"),

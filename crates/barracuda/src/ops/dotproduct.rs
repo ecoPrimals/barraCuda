@@ -125,6 +125,7 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -136,9 +137,9 @@ mod tests {
             return;
         };
 
-        let a = Tensor::from_data(&vec![1.0, 2.0, 3.0, 4.0], vec![4], device.clone()).unwrap();
+        let a = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![4], device.clone()).unwrap();
 
-        let b = Tensor::from_data(&vec![1.0, 1.0, 1.0, 1.0], vec![4], device.clone()).unwrap();
+        let b = Tensor::from_data(&[1.0, 1.0, 1.0, 1.0], vec![4], device.clone()).unwrap();
 
         let result = a.dotproduct(&b).unwrap();
         let partial_sums = result.to_vec().unwrap();
@@ -165,17 +166,15 @@ mod tests {
         };
 
         // Zero vectors
-        let zero_a = Tensor::from_data(&vec![0.0; 8], vec![8], device.clone()).unwrap();
-        let zero_b = Tensor::from_data(&vec![0.0; 8], vec![8], device.clone()).unwrap();
+        let zero_a = Tensor::from_data(&[0.0; 8], vec![8], device.clone()).unwrap();
+        let zero_b = Tensor::from_data(&[0.0; 8], vec![8], device.clone()).unwrap();
         let result = zero_a.dotproduct(&zero_b).unwrap();
         let total: f32 = result.to_vec().unwrap().iter().sum();
         assert!((total - 0.0).abs() < 0.1); // Relaxed tolerance
 
         // Orthogonal vectors (perpendicular)
-        let ortho_a =
-            Tensor::from_data(&vec![1.0, 0.0, 0.0, 0.0], vec![4], device.clone()).unwrap();
-        let ortho_b =
-            Tensor::from_data(&vec![0.0, 1.0, 0.0, 0.0], vec![4], device.clone()).unwrap();
+        let ortho_a = Tensor::from_data(&[1.0, 0.0, 0.0, 0.0], vec![4], device.clone()).unwrap();
+        let ortho_b = Tensor::from_data(&[0.0, 1.0, 0.0, 0.0], vec![4], device.clone()).unwrap();
         let result = ortho_a.dotproduct(&ortho_b).unwrap();
         let total: f32 = result.to_vec().unwrap().iter().sum();
         assert!((total - 0.0).abs() < 0.1); // Relaxed tolerance
@@ -189,8 +188,8 @@ mod tests {
         };
 
         // Single element
-        let single_a = Tensor::from_data(&vec![5.0], vec![1], device.clone()).unwrap();
-        let single_b = Tensor::from_data(&vec![3.0], vec![1], device.clone()).unwrap();
+        let single_a = Tensor::from_data(&[5.0], vec![1], device.clone()).unwrap();
+        let single_b = Tensor::from_data(&[3.0], vec![1], device.clone()).unwrap();
         let result = single_a.dotproduct(&single_b).unwrap();
         let partial_sums = result.to_vec().unwrap();
         assert!(!partial_sums.is_empty(), "Should produce partial sums");
@@ -242,9 +241,9 @@ mod tests {
         };
 
         // Test with fractional values
-        let a = Tensor::from_data(&vec![0.1, 0.2, 0.3, 0.4, 0.5], vec![5], device.clone()).unwrap();
+        let a = Tensor::from_data(&[0.1, 0.2, 0.3, 0.4, 0.5], vec![5], device.clone()).unwrap();
 
-        let b = Tensor::from_data(&vec![1.0, 2.0, 3.0, 4.0, 5.0], vec![5], device.clone()).unwrap();
+        let b = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0, 5.0], vec![5], device.clone()).unwrap();
 
         let result = a.dotproduct(&b).unwrap();
         let total: f32 = result.to_vec().unwrap().iter().sum();
@@ -253,9 +252,8 @@ mod tests {
         assert!(total > 0.0 && total < 10.0);
 
         // Test negative values
-        let neg_a =
-            Tensor::from_data(&vec![1.0, -1.0, 1.0, -1.0], vec![4], device.clone()).unwrap();
-        let neg_b = Tensor::from_data(&vec![1.0, 1.0, 1.0, 1.0], vec![4], device.clone()).unwrap();
+        let neg_a = Tensor::from_data(&[1.0, -1.0, 1.0, -1.0], vec![4], device.clone()).unwrap();
+        let neg_b = Tensor::from_data(&[1.0, 1.0, 1.0, 1.0], vec![4], device.clone()).unwrap();
         let result = neg_a.dotproduct(&neg_b).unwrap();
         let total: f32 = result.to_vec().unwrap().iter().sum();
         // Should be close to 0 (cancellation), but allow tolerance

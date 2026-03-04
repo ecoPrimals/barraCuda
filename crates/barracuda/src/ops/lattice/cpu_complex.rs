@@ -122,7 +122,7 @@ impl MulAssign for Complex64 {
 impl Div for Complex64 {
     type Output = Self;
     #[inline]
-    #[allow(clippy::suspicious_arithmetic_impl)]
+    #[expect(clippy::suspicious_arithmetic_impl, reason = "suppressed")]
     fn div(self, rhs: Self) -> Self {
         let d = rhs.abs_sq();
         Self {
@@ -153,6 +153,7 @@ impl fmt::Display for Complex64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

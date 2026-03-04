@@ -19,6 +19,7 @@
 //! - Performance within expected bounds
 //! - Round-trip validation (A → B → A)
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 mod common;
 
 use barracuda::ops::complex::*;

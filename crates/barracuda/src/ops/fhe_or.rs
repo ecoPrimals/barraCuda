@@ -111,14 +111,15 @@ pub async fn create_fhe_bit_tensor(
     Tensor::from_data_pod(&poly_u32, vec![poly_u32.len()], device)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
+    #[expect(unused_imports, reason = "conditional imports")]
     use super::*;
 
     use crate::ops::fhe_and::create_fhe_bit_tensor;
 
-    #[allow(unused_imports)]
+    #[expect(unused_imports, reason = "conditional imports")]
     use wgpu::util::DeviceExt;
 
     #[tokio::test]
@@ -148,7 +149,7 @@ mod tests {
             mapped_at_creation: false,
         });
 
-        let mut encoder = device.device.create_command_encoder(&Default::default());
+        let mut encoder = device.create_encoder_guarded(&Default::default());
         encoder.copy_buffer_to_buffer(
             result_tensor.buffer(),
             0,

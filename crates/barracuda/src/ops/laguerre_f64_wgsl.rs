@@ -18,7 +18,6 @@ use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// f64 Generalized Laguerre polynomial evaluator L_n^(α)(x)
 ///
@@ -60,6 +59,7 @@ impl LaguerreF64 {
         self.laguerre(x, n, 0.0)
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn laguerre_cpu(&self, x: &[f64], n: u32, alpha: f64) -> Vec<f64> {
         x.iter()
@@ -67,6 +67,7 @@ impl LaguerreF64 {
             .collect()
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn laguerre_scalar(n: u32, alpha: f64, x: f64) -> f64 {
         if n == 0 {
@@ -152,6 +153,7 @@ impl LaguerreF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

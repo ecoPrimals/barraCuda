@@ -184,6 +184,7 @@ pub fn band_edges_parallel(
     Ok((band_min, band_max))
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

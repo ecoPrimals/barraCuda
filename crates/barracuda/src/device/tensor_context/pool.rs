@@ -10,7 +10,7 @@
 use crate::error::{BarracudaError, Result};
 use std::collections::HashMap;
 use std::ops::Deref;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, RwLock, Weak};
 
 /// A buffer that automatically returns to its pool when dropped.
@@ -70,6 +70,10 @@ impl Drop for PooledBuffer {
 pub(crate) struct BufferPoolInner {
     pub pools: RwLock<HashMap<usize, Vec<wgpu::Buffer>>>,
     pub device: Arc<wgpu::Device>,
+    /// Serializes poll against submit (shared with WgpuDevice::gpu_lock).
+    poll_lock: Arc<Mutex<()>>,
+    /// Counts live GuardedEncoders — poll skips when > 0.
+    active_encoders: Arc<AtomicU32>,
     pub allocations: AtomicUsize,
     pub reuses: AtomicUsize,
     pub solver_buffers: RwLock<HashMap<String, SolverBufferSet>>,
@@ -175,11 +179,17 @@ pub struct BufferPool {
 }
 
 impl BufferPool {
-    pub fn new(device: Arc<wgpu::Device>) -> Self {
+    pub fn new(
+        device: Arc<wgpu::Device>,
+        poll_lock: Arc<Mutex<()>>,
+        active_encoders: Arc<AtomicU32>,
+    ) -> Self {
         Self {
             inner: Arc::new(BufferPoolInner {
                 pools: RwLock::new(HashMap::new()),
                 device,
+                poll_lock,
+                active_encoders,
                 allocations: AtomicUsize::new(0),
                 reuses: AtomicUsize::new(0),
                 solver_buffers: RwLock::new(HashMap::new()),
@@ -188,16 +198,47 @@ impl BufferPool {
         }
     }
 
+    /// Create a pool with its own independent locks (for tests/standalone use).
+    pub fn new_standalone(device: Arc<wgpu::Device>) -> Self {
+        Self::new(
+            device,
+            Arc::new(Mutex::new(())),
+            Arc::new(AtomicU32::new(0)),
+        )
+    }
+
     fn bucket_size(size: usize) -> usize {
         let min_size = 256;
         let size = size.max(min_size);
         size.next_power_of_two()
     }
 
-    /// Move pending buffers back into the available pool after a
-    /// non-blocking device poll confirms completed GPU work.
-    /// Called automatically before every `acquire` / `acquire_pooled`.
+    /// Try to move pending buffers back into the available pool.
+    ///
+    /// Uses `try_write()` on the poll_lock so it **never blocks encoding**.
+    /// If encoding is in progress (read locks held), the drain is skipped
+    /// entirely — buffers stay pending until the next drain attempt.
+    ///
+    /// Uses `MaintainBase::Poll` (non-blocking) to check for GPU completion
+    /// without stalling. Buffers whose GPU work hasn't finished remain pending.
     pub fn drain_pending(&self) {
+        let pending_count = self
+            .inner
+            .pending
+            .lock()
+            .expect("pending lock poisoned")
+            .len();
+        if pending_count == 0 {
+            return;
+        }
+        if self.inner.active_encoders.load(Ordering::Acquire) > 0 {
+            return;
+        }
+        let _guard = match self.inner.poll_lock.try_lock() {
+            Ok(g) => g,
+            Err(std::sync::TryLockError::WouldBlock) => return,
+            Err(std::sync::TryLockError::Poisoned(e)) => e.into_inner(),
+        };
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             self.inner.device.poll(wgpu::MaintainBase::Poll);
         }));
@@ -247,14 +288,17 @@ impl BufferPool {
 
     fn allocate_new(&self, bucket: usize) -> wgpu::Buffer {
         self.inner.allocations.fetch_add(1, Ordering::Relaxed);
-        self.inner.device.create_buffer(&wgpu::BufferDescriptor {
+        self.inner.active_encoders.fetch_add(1, Ordering::Acquire);
+        let buf = self.inner.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Pooled Buffer"),
             size: bucket as u64,
             usage: wgpu::BufferUsages::STORAGE
                 | wgpu::BufferUsages::COPY_SRC
                 | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
-        })
+        });
+        self.inner.active_encoders.fetch_sub(1, Ordering::Release);
+        buf
     }
 
     pub fn release(&self, buffer: wgpu::Buffer) {

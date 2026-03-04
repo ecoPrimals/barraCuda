@@ -101,8 +101,8 @@ impl EsnClassifier {
 
         for i in 0..size {
             for j in 0..size {
-                if rng.gen::<f64>() < config.sparsity {
-                    matrix[i * size + j] = rng.gen_range(-1.0..1.0);
+                if rng.random::<f64>() < config.sparsity {
+                    matrix[i * size + j] = rng.random_range(-1.0..1.0);
                 }
             }
         }
@@ -119,7 +119,7 @@ impl EsnClassifier {
 
     fn init_input_weights(config: &EsnConfig, rng: &mut rand::rngs::StdRng) -> Vec<f64> {
         (0..(config.reservoir_size * config.input_size))
-            .map(|_| rng.gen_range(-0.5..0.5))
+            .map(|_| rng.random_range(-0.5..0.5))
             .collect()
     }
 
@@ -357,6 +357,7 @@ fn validate_esn_config(config: &EsnConfig) -> Result<()> {
     Ok(())
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

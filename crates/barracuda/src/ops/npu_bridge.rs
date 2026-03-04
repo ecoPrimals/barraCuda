@@ -63,6 +63,7 @@ pub fn should_use_npu(data: &[f32], priority: crate::workload::Priority) -> bool
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

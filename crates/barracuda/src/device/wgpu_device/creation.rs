@@ -77,11 +77,10 @@ impl WgpuDevice {
                 tracing::warn!("GPU device lost (flagged for pool recovery): {msg}");
                 return;
             }
-            // Flag the device as lost for any uncaptured error — the device is
-            // in an indeterminate state and should be replaced rather than
-            // crashing the process.
-            flag.store(true, std::sync::atomic::Ordering::Release);
-            tracing::error!("wgpu uncaptured error (device flagged lost): {msg}");
+            // Validation errors do NOT flag the device as lost — they're
+            // recoverable and should not poison the shared device for other
+            // concurrent operations.
+            tracing::warn!("wgpu uncaptured error (non-fatal): {msg}");
         }));
     }
 
@@ -116,14 +115,16 @@ impl WgpuDevice {
         Self::install_error_handler(&device, &lost);
         let pipeline_cache = Self::make_pipeline_cache(&device);
         let budget = super::concurrency_budget(adapter_info.device_type);
+        let active_encoders = Arc::new(std::sync::atomic::AtomicU32::new(0));
         let wgpu_device = Self {
-            device: Arc::new(device),
+            device: super::GuardedDeviceHandle::new(Arc::new(device), active_encoders.clone()),
             queue: Arc::new(queue),
             adapter_info,
             calibration: None,
             pipeline_cache,
             lost,
             gpu_lock: Arc::new(std::sync::Mutex::new(())),
+            active_encoders,
             dispatch_semaphore: Arc::new(super::DispatchSemaphore::new(budget)),
         };
         probe::seed_cache_from_heuristics(&wgpu_device);
@@ -617,14 +618,16 @@ impl WgpuDevice {
         Self::install_error_handler(&device, &lost);
         let pipeline_cache = Self::make_pipeline_cache(&device);
         let budget = super::concurrency_budget(adapter_info.device_type);
+        let active_encoders = Arc::new(std::sync::atomic::AtomicU32::new(0));
         let wgpu_device = Self {
-            device,
+            device: super::GuardedDeviceHandle::new(device, active_encoders.clone()),
             queue,
             adapter_info,
             calibration: None,
             pipeline_cache,
             lost,
             gpu_lock: Arc::new(std::sync::Mutex::new(())),
+            active_encoders,
             dispatch_semaphore: Arc::new(super::DispatchSemaphore::new(budget)),
         };
         probe::seed_cache_from_heuristics(&wgpu_device);

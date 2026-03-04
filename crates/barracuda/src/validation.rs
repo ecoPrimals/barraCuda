@@ -238,8 +238,8 @@ macro_rules! require {
     };
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -329,5 +329,33 @@ mod tests {
         assert_eq!(h.passed_count(), 0);
         assert_eq!(h.total_count(), 1);
         assert!(!h.all_passed());
+    }
+
+    #[test]
+    fn test_gpu_required_when_set_to_1() {
+        std::env::set_var("BARRACUDA_REQUIRE_GPU", "1");
+        assert!(gpu_required());
+        std::env::remove_var("BARRACUDA_REQUIRE_GPU");
+    }
+
+    #[test]
+    fn test_gpu_required_when_set_to_true() {
+        std::env::set_var("BARRACUDA_REQUIRE_GPU", "true");
+        assert!(gpu_required());
+        std::env::remove_var("BARRACUDA_REQUIRE_GPU");
+    }
+
+    #[test]
+    fn test_gpu_required_case_insensitive() {
+        std::env::set_var("BARRACUDA_REQUIRE_GPU", "TRUE");
+        assert!(gpu_required());
+        std::env::remove_var("BARRACUDA_REQUIRE_GPU");
+    }
+
+    #[test]
+    fn test_gpu_required_false_when_other_value() {
+        std::env::set_var("BARRACUDA_REQUIRE_GPU", "0");
+        assert!(!gpu_required());
+        std::env::remove_var("BARRACUDA_REQUIRE_GPU");
     }
 }

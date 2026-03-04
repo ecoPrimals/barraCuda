@@ -14,6 +14,7 @@
 //! 3. **Fallback Chains** - GPU → CPU fallback
 //! 4. **Recovery** - Re-initialization after failure
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 use barracuda::device::{Device, DeviceSelection, KernelRouter, WgpuDevice};
 use barracuda::multi_gpu::{DeviceRequirements, MultiDevicePool};
 use barracuda::resource_quota::{presets, ResourceQuota};

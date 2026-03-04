@@ -96,6 +96,7 @@ pub fn linear_regression(
     device.read_f64_buffer(&out_buf, out_len)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

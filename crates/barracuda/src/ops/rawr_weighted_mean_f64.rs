@@ -9,7 +9,6 @@ use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
-use wgpu::util::DeviceExt;
 
 /// WGSL shader for RAWR weighted mean.
 pub const WGSL_RAWR_WEIGHTED_MEAN_F64: &str =
@@ -155,6 +154,7 @@ impl RawrWeightedMeanGpu {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -290,6 +290,7 @@ pub fn eigh_f64(a: &[f64], n: usize) -> Result<EighDecomposition> {
     })
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -386,7 +387,7 @@ mod tests {
         let eig = eigh_f64(&a, 2).unwrap();
 
         // V^T V should be identity
-        let mut vtv = vec![0.0; 4];
+        let mut vtv = [0.0; 4];
         for i in 0..2 {
             for j in 0..2 {
                 for k in 0..2 {

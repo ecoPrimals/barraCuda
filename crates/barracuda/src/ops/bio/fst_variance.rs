@@ -149,6 +149,7 @@ pub fn fst_variance_decomposition(
     Ok(FstResult { fst, f_is, f_it })
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,10 +1,8 @@
 # barraCuda — Cargo configuration
 
-# GPU tests share a single device — high parallelism causes device-lost.
-# 4 threads is the sweet spot: fast enough for CI, safe enough for GPU tests.
-# Override: RUST_TEST_THREADS=N cargo test
+# No thread cap — the RwLock-guarded encoding model ensures correctness
+# at any concurrency level. Override with RUST_TEST_THREADS=N if needed.
 [env]
-RUST_TEST_THREADS = { value = "4", force = false }
 
 [profile.release]
 opt-level = "z"

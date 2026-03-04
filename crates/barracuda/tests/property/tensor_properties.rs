@@ -7,6 +7,7 @@
 //! - Identity: a + 0 = a
 //! - Distributivity: a * (b + c) = a*b + a*c
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 use barracuda::device::WgpuDevice;
 use barracuda::tensor::Tensor;
 use proptest::prelude::*;

@@ -37,7 +37,6 @@ use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// Parameters for grid quadrature GEMM shader
 #[repr(C)]
@@ -336,12 +335,11 @@ impl GridQuadratureGemm {
 
         // Execute
         {
-            let mut encoder =
-                self.device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("GridQuadGEMM encoder"),
-                    });
+            let mut encoder = self
+                .device
+                .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                    label: Some("GridQuadGEMM encoder"),
+                });
             {
                 let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                     label: Some("GridQuadGEMM pass"),
@@ -359,6 +357,7 @@ impl GridQuadratureGemm {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

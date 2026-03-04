@@ -138,6 +138,7 @@ fn apply_activation(values: &mut [f64], activation: Activation) {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

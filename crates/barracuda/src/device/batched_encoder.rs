@@ -76,12 +76,11 @@ impl<'a> BatchedEncoder<'a> {
     /// Create encoder, record passes, and submit in one call.
     pub fn submit(self) {
         let _permit = self.device.acquire_dispatch();
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("BatchedEncoder"),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("BatchedEncoder"),
+            });
 
         let dev = &self.device;
         for pass in &self.passes {

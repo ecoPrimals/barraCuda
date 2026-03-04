@@ -102,6 +102,7 @@ pub fn effective_rank(eigenvalues: &[f64]) -> f64 {
     entropy.exp()
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -252,7 +253,7 @@ mod tests {
     fn test_disordered_laplacian_centered() {
         // Sum of disorder terms (diagonal additions) is zero
         let l = vec![1.0, 0.0, 0.0, 1.0];
-        let h = vec![1.0, 2.0, 3.0]; // mean = 2
+        let h = [1.0, 2.0, 3.0]; // mean = 2
         let result = disordered_laplacian(&l, 2, &h[..2], 1.0);
         // h[0]-mean=-1, h[1]-mean=0; diagonal adds: -1 and 0
         // Original diag: 1, 1 -> result: 0, 1

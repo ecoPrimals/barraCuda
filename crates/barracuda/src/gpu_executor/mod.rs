@@ -22,7 +22,6 @@ use crate::unified_hardware::{
     ParallelismCapabilities, PerformanceCapabilities, PrecisionCapabilities, TensorStorage,
 };
 use crate::unified_math::{MathOp, TensorDescriptor};
-use async_trait::async_trait;
 use std::sync::Arc;
 
 pub(crate) use storage::GpuTensorStorage;
@@ -174,8 +173,6 @@ impl GpuExecutor {
     }
 }
 
-// NOTE(async-dyn): #[async_trait] required — native async fn in trait is not dyn-compatible
-#[async_trait]
 impl ComputeExecutor for GpuExecutor {
     fn name(&self) -> &str {
         self.device.name()
@@ -283,45 +280,62 @@ impl ComputeExecutor for GpuExecutor {
         }
     }
 
-    async fn execute(
+    fn execute(
         &self,
         op: &MathOp,
         inputs: Vec<Arc<dyn TensorStorage>>,
-    ) -> Result<Arc<dyn TensorStorage>> {
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Arc<dyn TensorStorage>>> + Send + '_>,
+    > {
         if inputs.is_empty() {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: "GpuExecutor::execute: no inputs provided".to_string(),
+            return Box::pin(async move {
+                Err(crate::error::BarracudaError::InvalidInput {
+                    message: "GpuExecutor::execute: no inputs provided".to_string(),
+                })
             });
         }
-
-        dispatch::execute_dispatch(op, inputs, self).await
+        let op = op.clone();
+        let device = self.device.clone();
+        Box::pin(async move {
+            let executor = GpuExecutor::from_device_arc(device);
+            dispatch::execute_dispatch(&op, inputs, &executor).await
+        })
     }
 
-    async fn allocate(&self, descriptor: TensorDescriptor) -> Result<Arc<dyn TensorStorage>> {
-        // Create GPU tensor storage
-        Ok(Arc::new(GpuTensorStorage::new(
-            descriptor,
-            self.device.clone(),
-        )))
+    fn allocate(
+        &self,
+        descriptor: TensorDescriptor,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Arc<dyn TensorStorage>>> + Send + '_>,
+    > {
+        let device = self.device.clone();
+        Box::pin(async move {
+            Ok(Arc::new(GpuTensorStorage::new(descriptor, device)) as Arc<dyn TensorStorage>)
+        })
     }
 
-    async fn transfer(&self, tensor: Arc<dyn TensorStorage>) -> Result<Arc<dyn TensorStorage>> {
-        // If already on GPU, return as-is
-        if tensor.is_gpu() {
-            Ok(tensor)
-        } else {
-            // Transfer from other device to GPU
-            let data = tensor.read_to_cpu().await?;
-            let descriptor = tensor.descriptor().clone();
-
-            let mut gpu_tensor = GpuTensorStorage::new(descriptor, self.device.clone());
-            gpu_tensor.write_from_cpu(&data).await?;
-
-            Ok(Arc::new(gpu_tensor))
-        }
+    fn transfer(
+        &self,
+        tensor: Arc<dyn TensorStorage>,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Arc<dyn TensorStorage>>> + Send + '_>,
+    > {
+        let device = self.device.clone();
+        Box::pin(async move {
+            if tensor.is_gpu() {
+                Ok(tensor)
+            } else {
+                let data = tensor.read_to_cpu().await?;
+                let descriptor = tensor.descriptor().clone();
+                let mut gpu_tensor = GpuTensorStorage::new(descriptor, device);
+                gpu_tensor.write_from_cpu(&data).await?;
+                Ok(Arc::new(gpu_tensor) as Arc<dyn TensorStorage>)
+            }
+        })
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

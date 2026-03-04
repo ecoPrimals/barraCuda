@@ -17,7 +17,6 @@ use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -104,6 +103,7 @@ impl BetaF64 {
         Ok(result)
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn beta_cpu(&self, pairs: &[f64]) -> Vec<f64> {
         pairs
@@ -112,6 +112,7 @@ impl BetaF64 {
             .collect()
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn beta_scalar(a: f64, b: f64) -> f64 {
         if a <= 0.0 || b <= 0.0 {
@@ -154,6 +155,7 @@ impl BetaF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

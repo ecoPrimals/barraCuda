@@ -41,7 +41,6 @@ use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 const FMR_WORKGROUP_SIZE: usize = 256;
 const FMR_MAX_SINGLE_PASS_WORKGROUPS: usize = 256;
@@ -195,8 +194,7 @@ impl FusedMapReduceF64 {
             // Copy pass 1 output to partials_buffer so pass 2 reads from a distinct buffer
             let mut copy_enc =
                 self.device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
                         label: Some("FMR Copy"),
                     });
             copy_enc.copy_buffer_to_buffer(
@@ -256,12 +254,11 @@ impl FusedMapReduceF64 {
             mapped_at_creation: false,
         });
 
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("FMR Copy Encoder"),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("FMR Copy Encoder"),
+            });
         encoder.copy_buffer_to_buffer(buffer, 0, &staging, 0, (n_partials * 8) as u64);
         self.device.submit_and_poll(Some(encoder.finish()));
 
@@ -287,12 +284,11 @@ impl FusedMapReduceF64 {
             mapped_at_creation: false,
         });
 
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("FMR Result Encoder"),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("FMR Result Encoder"),
+            });
         encoder.copy_buffer_to_buffer(buffer, 0, &staging, 0, 8);
         self.device.submit_and_poll(Some(encoder.finish()));
 
@@ -301,6 +297,7 @@ impl FusedMapReduceF64 {
     }
 
     /// CPU fallback for small arrays (faster due to no dispatch overhead)
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn execute_cpu(
         &self,
@@ -414,6 +411,7 @@ impl FusedMapReduceF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "fused_map_reduce_f64_tests.rs"]
 mod tests;

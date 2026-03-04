@@ -132,7 +132,7 @@ pub async fn compute_with_kspace(
     });
     let particle_workgroups = (n as u32).div_ceil(64);
 
-    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+    let mut encoder = wgpu_device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
         label: Some("PPPM Phase 1"),
     });
     {
@@ -283,7 +283,7 @@ pub async fn compute_with_kspace(
         ],
     });
 
-    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+    let mut encoder = wgpu_device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
         label: Some("PPPM Phase 3"),
     });
     {

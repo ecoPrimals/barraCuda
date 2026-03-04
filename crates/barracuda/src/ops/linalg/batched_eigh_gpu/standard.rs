@@ -12,7 +12,6 @@ use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 impl BatchedEighGpu {
     /// Execute batched eigenvalue decomposition on GPU with full f64 precision
@@ -130,12 +129,9 @@ impl BatchedEighGpu {
 
         // Step 1: Initialize V = Identity for all matrices
         {
-            let mut encoder =
-                device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("Init V Encoder"),
-                    });
+            let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("Init V Encoder"),
+            });
             {
                 let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                     label: Some("Init V Pass"),
@@ -215,12 +211,9 @@ impl BatchedEighGpu {
 
         // Step 3: Extract eigenvalues from diagonal of A
         {
-            let mut encoder =
-                device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("Extract Eigenvalues"),
-                    });
+            let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("Extract Eigenvalues"),
+            });
             {
                 let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                     label: Some("Extract Eigenvalues Pass"),
@@ -299,12 +292,9 @@ impl BatchedEighGpu {
         });
 
         {
-            let mut encoder =
-                device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("Init V Encoder (buffers)"),
-                    });
+            let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("Init V Encoder (buffers)"),
+            });
             {
                 let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                     label: Some("Init V Pass (buffers)"),
@@ -382,12 +372,9 @@ impl BatchedEighGpu {
         }
 
         {
-            let mut encoder =
-                device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("Extract Eigenvalues (buffers)"),
-                    });
+            let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("Extract Eigenvalues (buffers)"),
+            });
             {
                 let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                     label: Some("Extract Eigenvalues Pass (buffers)"),

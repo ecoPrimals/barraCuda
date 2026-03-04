@@ -11,7 +11,7 @@
 //! (NVK, NVVM Ada), `compile_shader_f64` / `for_driver_auto` will automatically
 //! patch these to `exp_f64()` / `log_f64()` via the transcendental workaround.
 
-#![allow(clippy::needless_raw_string_hashes)]
+#![expect(clippy::needless_raw_string_hashes, reason = "WGSL readability")]
 
 use super::params::*;
 use crate::numerical::ode_generic::OdeSystem;

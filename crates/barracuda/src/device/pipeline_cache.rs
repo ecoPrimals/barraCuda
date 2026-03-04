@@ -428,6 +428,7 @@ pub fn clear_global_cache() {
     GLOBAL_CACHE.clear();
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

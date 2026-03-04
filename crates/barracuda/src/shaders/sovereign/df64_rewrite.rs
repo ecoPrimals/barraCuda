@@ -445,6 +445,7 @@ pub fn rewrite_f64_infix_full(f64_source: &str) -> Result<String, String> {
     Ok(format!("{DF64_BRIDGE_FUNCTIONS}\n{resolved}"))
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -377,6 +377,7 @@ pub fn crank_nicolson_step(
     tridiagonal_solve(&a, &b, &c, &rhs)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

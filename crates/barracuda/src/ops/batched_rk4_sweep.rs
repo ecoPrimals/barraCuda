@@ -256,6 +256,7 @@ impl BatchedRK4F64 {
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

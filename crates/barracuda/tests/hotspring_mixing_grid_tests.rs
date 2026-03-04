@@ -3,6 +3,7 @@
 //!
 //! LinearMixer, BroydenMixer, Gradient1D, Gradient2D, Laplacian2D, Cylindrical.
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 mod common;
 
 use barracuda::ops::grid::{

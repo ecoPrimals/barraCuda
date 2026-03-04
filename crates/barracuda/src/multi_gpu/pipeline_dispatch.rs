@@ -301,6 +301,7 @@ fn find_cpu_fallback(substrates: &[Substrate]) -> Option<&Substrate> {
         .find(|s| s.substrate_type == SubstrateType::Cpu)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

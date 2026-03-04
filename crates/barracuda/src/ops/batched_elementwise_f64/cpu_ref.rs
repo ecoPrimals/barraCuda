@@ -76,6 +76,37 @@ pub fn thornthwaite_et0_cpu(
         * (days_in_month_d / 30.0)
 }
 
+/// Makkink (1957) ET₀ — radiation-based, Netherlands standard (CPU reference)
+/// ET₀ = 0.61 * (Δ/(Δ+γ)) * Rs/λ − 0.12
+pub fn makkink_et0_cpu(rs_mj: f64, t_mean: f64, elevation: f64) -> f64 {
+    let p = 101.3 * ((293.0 - 0.0065 * elevation) / 293.0).powf(5.26);
+    let gamma = 0.000665 * p;
+    let e_t = 0.6108 * (17.27 * t_mean / (t_mean + 237.3)).exp();
+    let delta = 4098.0 * e_t / (t_mean + 237.3_f64).powi(2);
+    let lambda = 2.45;
+    (0.61 * (delta / (delta + gamma)) * rs_mj / lambda - 0.12).max(0.0)
+}
+
+/// Turc (1961) ET₀ — radiation + temperature, humid climates (CPU reference)
+/// ET₀ = 0.013 * (T/(T+15)) * (Rs_cal + 50) * C_rh
+pub fn turc_et0_cpu(rs_mj: f64, t_mean: f64, rh_mean: f64) -> f64 {
+    let rs_cal = rs_mj * 23.8846;
+    let c_rh = if rh_mean < 50.0 {
+        1.0 + (50.0 - rh_mean) / 70.0
+    } else {
+        1.0
+    };
+    (0.013 * (t_mean / (t_mean + 15.0)) * (rs_cal + 50.0) * c_rh).max(0.0)
+}
+
+/// Hamon (1963) ET₀ — temperature + daylength only (CPU reference)
+/// ET₀ = 0.55 * D² * e_sat / 100
+pub fn hamon_et0_cpu(t_mean: f64, daylight_hours: f64) -> f64 {
+    let d_ratio = daylight_hours / 12.0;
+    let e_sat = 6.108 * (17.27 * t_mean / (t_mean + 237.3)).exp();
+    (0.55 * d_ratio * d_ratio * e_sat / 100.0).max(0.0)
+}
+
 /// Pedotransfer polynomial — Horner form (CPU reference)
 /// y = a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*a5))))
 pub fn pedotransfer_polynomial_cpu(
@@ -90,6 +121,7 @@ pub fn pedotransfer_polynomial_cpu(
     ((((a5 * x + a4) * x + a3) * x + a2) * x + a1) * x + a0
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 /// FAO-56 Penman-Monteith ET₀ (CPU reference)
 pub(crate) fn fao56_et0_cpu(
@@ -169,6 +201,7 @@ pub(crate) fn fao56_et0_cpu(
     numerator / denominator
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 /// Water balance daily update (CPU reference)
 pub(crate) fn water_balance_cpu(

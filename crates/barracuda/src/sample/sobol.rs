@@ -392,6 +392,7 @@ pub fn sobol_sequence_from(n: usize, dim: usize, start_index: u64) -> Result<Vec
     Ok(gen.generate(n))
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

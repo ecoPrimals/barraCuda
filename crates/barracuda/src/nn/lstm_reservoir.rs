@@ -95,7 +95,7 @@ impl LstmReservoir {
             let mut w_ih = Vec::with_capacity(4 * hidden_size);
             for _ in 0..(4 * hidden_size) {
                 let row: Vec<f64> = (0..in_dim)
-                    .map(|_| rng.gen_range(-1.0..1.0) * scale_ih)
+                    .map(|_| rng.random_range(-1.0..1.0) * scale_ih)
                     .collect();
                 w_ih.push(row);
             }
@@ -103,7 +103,7 @@ impl LstmReservoir {
             let mut w_hh = Vec::with_capacity(4 * hidden_size);
             for _ in 0..(4 * hidden_size) {
                 let row: Vec<f64> = (0..hidden_size)
-                    .map(|_| rng.gen_range(-1.0..1.0) * scale_hh)
+                    .map(|_| rng.random_range(-1.0..1.0) * scale_hh)
                     .collect();
                 w_hh.push(row);
             }
@@ -240,6 +240,7 @@ fn sigmoid(x: &mut [f64]) {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -44,6 +44,7 @@ mod strategy;
 mod topology;
 mod types;
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;
 

@@ -33,6 +33,7 @@ pub use wgpu_caps::{
     DeviceCapabilities, WorkloadType, FHE_MIN_BUFFER_SIZE, WORKGROUP_SIZE_1D, WORKGROUP_SIZE_2D,
 };
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

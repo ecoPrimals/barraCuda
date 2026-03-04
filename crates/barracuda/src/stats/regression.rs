@@ -76,7 +76,7 @@ impl FitResult {
 ///
 /// Returns `None` if fewer than 2 points or the system is singular.
 #[must_use]
-#[allow(clippy::many_single_char_names)]
+#[expect(clippy::many_single_char_names, reason = "suppressed")]
 pub fn fit_linear(x: &[f64], y: &[f64]) -> Option<FitResult> {
     let n = x.len() as f64;
     if x.len() < 2 || x.len() != y.len() {
@@ -109,7 +109,11 @@ pub fn fit_linear(x: &[f64], y: &[f64]) -> Option<FitResult> {
 ///
 /// Returns `None` if fewer than 3 points or the system is singular.
 #[must_use]
-#[allow(clippy::many_single_char_names, clippy::similar_names)]
+#[expect(
+    clippy::many_single_char_names,
+    clippy::similar_names,
+    reason = "math notation"
+)]
 pub fn fit_quadratic(x: &[f64], y: &[f64]) -> Option<FitResult> {
     let n = x.len() as f64;
     if x.len() < 3 || x.len() != y.len() {
@@ -276,6 +280,7 @@ fn cramer_3x3(m: [[f64; 3]; 3], rhs: [f64; 3]) -> Option<(f64, f64, f64)> {
     Some((inv * det3(&m0), inv * det3(&m1), inv * det3(&m2)))
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

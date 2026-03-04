@@ -87,6 +87,7 @@ where
     Ok((a + b) / 2.0)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -81,6 +81,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 }
 ";
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

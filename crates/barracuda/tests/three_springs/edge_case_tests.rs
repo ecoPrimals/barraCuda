@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Edge case tests: Chaos (stress) and Fault (error handling).
 
+#![expect(clippy::unwrap_used, reason = "tests")]
 use super::*;
 use barracuda::ops::fused_map_reduce_f64::FusedMapReduceF64;
 use barracuda::ops::kriging_f64::{KrigingF64, VariogramModel};

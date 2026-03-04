@@ -34,6 +34,7 @@ mod result;
 mod sampler;
 mod sampler_gpu;
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;
 

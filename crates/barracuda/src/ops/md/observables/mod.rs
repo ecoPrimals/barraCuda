@@ -434,6 +434,7 @@ pub fn validate_energy(
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -497,7 +498,7 @@ mod tests {
         let mut z = 0.0;
 
         // Pseudo-random multipliers (deliberately close to golden ratio and e)
-        #[allow(clippy::approx_constant)]
+        #[expect(clippy::approx_constant, reason = "physics constant")]
         let (mult_phi, mult_e) = (1.618, 2.718);
         for frame in 0..n_frames {
             snapshots.push(vec![x, y, z]);

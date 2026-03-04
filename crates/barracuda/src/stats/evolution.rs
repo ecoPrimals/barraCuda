@@ -152,6 +152,7 @@ pub fn detection_threshold(abundance: f64, target_power: f64) -> u64 {
     d.ceil() as u64
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

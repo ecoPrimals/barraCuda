@@ -51,7 +51,6 @@ use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// Parameters for Bray-Curtis shader
 #[repr(C)]
@@ -182,12 +181,11 @@ impl BrayCurtisF64 {
             });
 
         // Execute
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("BC Encoder"),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("BC Encoder"),
+            });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -216,12 +214,11 @@ impl BrayCurtisF64 {
             mapped_at_creation: false,
         });
 
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("BC Copy Encoder"),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("BC Copy Encoder"),
+            });
         encoder.copy_buffer_to_buffer(buffer, 0, &staging, 0, (count * 8) as u64);
         self.device.submit_and_poll(Some(encoder.finish()));
 
@@ -230,6 +227,7 @@ impl BrayCurtisF64 {
     }
 
     /// CPU fallback for small inputs
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn condensed_distance_matrix_cpu(
         &self,
@@ -271,6 +269,7 @@ impl BrayCurtisF64 {
 }
 
 /// CPU reference: Bray-Curtis distance between samples i and j
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 fn bray_curtis_cpu(samples: &[f64], i: usize, j: usize, n_features: usize) -> f64 {
     let base_i = i * n_features;
@@ -294,6 +293,7 @@ fn bray_curtis_cpu(samples: &[f64], i: usize, j: usize, n_features: usize) -> f6
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

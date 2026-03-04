@@ -15,7 +15,7 @@ async fn test_transpose_basic() {
     let output = input.transpose().unwrap();
     let result = output.to_vec().unwrap();
 
-    let expected = vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0];
+    let expected = [1.0, 4.0, 2.0, 5.0, 3.0, 6.0];
     assert_eq!(output.shape(), &[3, 2]);
     for (i, (&r, &e)) in result.iter().zip(expected.iter()).enumerate() {
         assert!(

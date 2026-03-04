@@ -12,14 +12,13 @@ This guide covers everything you need to start contributing.
 git clone https://github.com/ecoPrimals/barraCuda.git
 cd barraCuda
 
-# Ensure sibling repos are present (sourDough is required)
-ls ../sourDough/  # must exist
+# No sibling repos required — barraCuda is fully standalone
 
 # Build
 cargo build --workspace
 
-# Test (limit threads to avoid GPU contention)
-RUST_TEST_THREADS=4 cargo test -p barracuda
+# Test (fully concurrent — no thread limiting needed)
+cargo test -p barracuda --lib
 
 # Quality gate
 cargo fmt --all -- --check
@@ -37,7 +36,7 @@ cargo deny check
 | `crates/barracuda-core/` | Primal lifecycle, IPC, tarpc, UniBin CLI |
 | `crates/barracuda/src/shaders/` | 767 WGSL shaders (see `shaders/README.md`) |
 | `crates/barracuda/examples/` | 4 runnable examples |
-| `crates/barracuda/tests/` | 29 integration test suites |
+| `crates/barracuda/tests/` | 60 integration test suites |
 | `crates/barracuda/src/bin/` | 4 binaries (validate_gpu, bench_*) |
 | `crates/barracuda-core/src/bin/` | `barracuda` UniBin CLI binary |
 | `specs/` | Architecture specs and design documents |
@@ -136,13 +135,30 @@ Domain modules (`nn`, `pde`, `genomics`, etc.) are feature-gated. To add one:
 
 ---
 
-## GPU Access Protocol
+## GPU Concurrency Protocol
 
-All GPU operations MUST go through `WgpuDevice` synchronized methods:
+barraCuda's GPU access uses a three-layer concurrency model. All contributors
+must follow these rules to prevent wgpu-core races:
+
+### The three layers
+
+1. **`active_encoders: AtomicU32`** — lock-free counter incremented before any
+   wgpu-core activity (buffer creation, shader compilation, command encoding)
+   and decremented afterward. Call `device.encoding_guard()` /
+   `device.encoding_complete()`, or use `GuardedEncoder` for RAII.
+2. **`gpu_lock: Mutex<()>`** — serializes `queue.submit()` and `device.poll()`.
+   Before proceeding, `brief_encoder_wait()` yields until active encoders reach
+   zero (microsecond-scale CPU work, never blocks).
+3. **`dispatch_semaphore`** — hardware-aware cap (2 for CPU/llvmpipe, 8 for
+   discrete GPU) preventing driver overload.
+
+### Rules
 
 - **Submit work**: `device.submit_and_poll_inner(...)` — never call `queue.submit()` directly
 - **Read back**: `device.read_buffer::<T>(buffer, count)` — never map buffers manually
 - **Poll**: `device.poll_safe()` — never call `device.device().poll()` directly
+- **Resource creation**: `GuardedDeviceHandle` auto-protects all `device.device.create_*()` calls
+  with atomic encoder barriers — no manual guarding needed
 - **Device creation**: serialized via global `DEVICE_CREATION_LOCK`
 
 Bypassing these methods causes non-deterministic crashes under concurrent load.
@@ -153,10 +169,7 @@ If you need raw access for a new pattern, add a method to `WgpuDevice`.
 ## Running Tests
 
 ```bash
-# All tests (limit threads for GPU stability)
-RUST_TEST_THREADS=4 cargo test -p barracuda
-
-# Unit tests only (fastest)
+# All unit tests (fully concurrent, no thread limiting needed)
 cargo test -p barracuda --lib
 
 # Specific test suite
@@ -208,7 +221,7 @@ WGPU_BACKEND=vulkan WGPU_ADAPTER_NAME=llvmpipe cargo test -p barracuda
 
 ## Code Style
 
-- Follow `CONVENTIONS.md` (inherits from sourDough)
+- Follow `CONVENTIONS.md`
 - `#![deny(unsafe_code)]` in barracuda-core — minimize unsafe across the codebase
 - `cargo fmt` before committing
 - `cargo clippy --workspace -- -D warnings` must be clean
@@ -278,7 +291,7 @@ docs(shaders): update README with audio shader section
    cargo check --no-default-features
    cargo check --no-default-features --features gpu
    cargo check
-   RUST_TEST_THREADS=4 cargo test -p barracuda
+   cargo test -p barracuda --lib
    ```
 4. Push and open PR
 5. PR description: what changed, why, how to test
@@ -303,7 +316,7 @@ barraCuda is organized in layers:
 `nn`, `snn`, `esn_v2`, `pde`, `genomics`, `vision`, `timeseries`
 
 **Layer 5 — Primal Lifecycle** (`barracuda-core`):
-IPC (JSON-RPC 2.0), tarpc, UniBin CLI, sourDough traits
+IPC (JSON-RPC 2.0), tarpc, UniBin CLI, lifecycle/health traits
 
 Code in layer N may depend on layers 1..N-1 but never on N+1.
 

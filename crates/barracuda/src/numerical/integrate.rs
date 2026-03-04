@@ -154,6 +154,7 @@ pub fn trapz_product(f: &[f64], g1: &[f64], g2: &[f64], x: &[f64], weights: &[f6
     Ok(integral)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

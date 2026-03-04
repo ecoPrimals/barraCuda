@@ -14,7 +14,6 @@ use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// Reduction operation for pairwise GPU computation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -181,11 +180,9 @@ impl BatchPairReduceF64 {
                 compilation_options: Default::default(),
             });
 
-        let mut encoder = dev
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("PairReduce Encoder"),
-            });
+        let mut encoder = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("PairReduce Encoder"),
+        });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("PairReduce Pass"),
@@ -214,6 +211,7 @@ fn bgl_entry(idx: u32, ty: wgpu::BufferBindingType) -> wgpu::BindGroupLayoutEntr
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

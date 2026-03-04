@@ -54,7 +54,6 @@ use crate::tensor::Tensor;
 use pipelines::SessionPipelines;
 use std::sync::Arc;
 use types::{MatMulTier, SessionOp};
-use wgpu::util::DeviceExt;
 
 // ─── TensorSession ─────────────────────────────────────────────────────────────
 
@@ -415,12 +414,11 @@ impl TensorSession {
             return Ok(());
         }
 
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("TensorSession Batch"),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("TensorSession Batch"),
+            });
 
         for op in &self.ops {
             self.dispatch_op(&mut encoder, op);
@@ -475,6 +473,7 @@ impl TensorSession {
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

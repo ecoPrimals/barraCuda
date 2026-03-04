@@ -224,8 +224,7 @@ impl MaxAbsDiffF64 {
         {
             let mut encoder =
                 device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
                         label: Some("MaxAbsDiff pass 1"),
                     });
             {
@@ -309,8 +308,7 @@ impl MaxAbsDiffF64 {
         {
             let mut encoder =
                 device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
                         label: Some("MaxAbsDiff pass 2"),
                     });
             {
@@ -340,6 +338,7 @@ impl MaxAbsDiffF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

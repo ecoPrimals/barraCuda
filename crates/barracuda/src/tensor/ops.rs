@@ -55,7 +55,7 @@ impl Tensor {
     /// ```
     pub async fn randn(shape: Vec<usize>) -> Result<Self> {
         use rand::SeedableRng;
-        let mut rng = rand::rngs::StdRng::from_entropy();
+        let mut rng = rand::rngs::StdRng::from_os_rng();
         Self::randn_with_rng(shape, &mut rng).await
     }
 
@@ -71,8 +71,8 @@ impl Tensor {
 
         let mut data = Vec::with_capacity(size);
         for _ in 0..(size / 2) {
-            let u1: f32 = rng.gen::<f32>().max(1e-10);
-            let u2: f32 = rng.gen();
+            let u1: f32 = rng.random::<f32>().max(1e-10);
+            let u2: f32 = rng.random();
 
             let r = (-2.0 * u1.ln()).sqrt();
             let theta = 2.0 * std::f32::consts::PI * u2;
@@ -82,8 +82,8 @@ impl Tensor {
         }
 
         if size % 2 == 1 {
-            let u1: f32 = rng.gen::<f32>().max(1e-10);
-            let u2: f32 = rng.gen();
+            let u1: f32 = rng.random::<f32>().max(1e-10);
+            let u2: f32 = rng.random();
             data.push((-2.0 * u1.ln()).sqrt() * (2.0 * std::f32::consts::PI * u2).cos());
         }
 
@@ -98,14 +98,14 @@ impl Tensor {
     /// ```
     pub async fn rand(shape: Vec<usize>) -> Result<Self> {
         use rand::SeedableRng;
-        let mut rng = rand::rngs::StdRng::from_entropy();
+        let mut rng = rand::rngs::StdRng::from_os_rng();
         Self::rand_with_rng(shape, &mut rng).await
     }
 
     /// Random uniform tensor with a caller-supplied RNG.
     pub async fn rand_with_rng<R: rand::Rng>(shape: Vec<usize>, rng: &mut R) -> Result<Self> {
         let size: usize = shape.iter().product();
-        let data: Vec<f32> = (0..size).map(|_| rng.gen()).collect();
+        let data: Vec<f32> = (0..size).map(|_| rng.random()).collect();
         Self::from_vec(data, shape).await
     }
 

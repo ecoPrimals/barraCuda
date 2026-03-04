@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
-#[allow(clippy::module_inception)]
+#[expect(clippy::module_inception, reason = "suppressed")]
 mod tests {
     use crate::device::test_pool::get_test_device_if_gpu_available;
     use crate::ops::unique::Unique;

@@ -169,8 +169,7 @@ impl StaggeredDirac {
 
         let mut enc = self
             .device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
                 label: Some("StaggeredDirac:enc"),
             });
         {
@@ -299,6 +298,7 @@ fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

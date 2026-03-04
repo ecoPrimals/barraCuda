@@ -36,7 +36,11 @@ pub struct TensorContext {
 impl TensorContext {
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self {
-            buffer_pool: BufferPool::new(device.device_arc()),
+            buffer_pool: BufferPool::new(
+                device.device_arc(),
+                device.gpu_lock_arc(),
+                device.active_encoders_arc(),
+            ),
             device,
             bind_group_cache: RwLock::new(HashMap::new()),
             pending_ops: Mutex::new(Vec::new()),
@@ -83,14 +87,20 @@ impl TensorContext {
             self.ops_batched.fetch_add(1, Ordering::Relaxed);
             Ok(())
         } else {
-            let mut encoder =
-                self.device
-                    .device()
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("TensorContext Immediate"),
-                    });
-            op(&mut encoder);
-            self.device.queue().submit(Some(encoder.finish()));
+            let commands = {
+                self.device.encoding_guard();
+                let mut encoder =
+                    self.device
+                        .device()
+                        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                            label: Some("TensorContext Immediate"),
+                        });
+                op(&mut encoder);
+                let cmds = encoder.finish();
+                self.device.encoding_complete();
+                cmds
+            };
+            self.device.submit_commands(Some(commands));
             self.ops_executed.fetch_add(1, Ordering::Relaxed);
             Ok(())
         }
@@ -168,16 +178,22 @@ impl TensorContext {
             return Ok(());
         }
 
-        let mut encoder =
-            self.device
-                .device()
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("TensorContext Batch Encoder"),
-                });
-        for op in pending.drain(..) {
-            op(&mut encoder);
-        }
-        self.device.queue().submit(Some(encoder.finish()));
+        let commands = {
+            self.device.encoding_guard();
+            let mut encoder =
+                self.device
+                    .device()
+                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("TensorContext Batch Encoder"),
+                    });
+            for op in pending.drain(..) {
+                op(&mut encoder);
+            }
+            let cmds = encoder.finish();
+            self.device.encoding_complete();
+            cmds
+        };
+        self.device.submit_commands(Some(commands));
         Ok(())
     }
 

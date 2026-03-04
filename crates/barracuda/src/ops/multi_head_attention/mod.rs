@@ -26,6 +26,7 @@
 
 mod compute;
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;
 
@@ -176,11 +177,9 @@ impl MultiHeadAttention {
         let device = self.query.device();
 
         // Create command encoder for all passes
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("MultiHeadAttention Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("MultiHeadAttention Encoder"),
+        });
 
         // ═══════════════════════════════════════════════════════════════
         // PASS 1-3: Project Q, K, V through weight matrices
@@ -221,11 +220,9 @@ impl MultiHeadAttention {
         // ═══════════════════════════════════════════════════════════════
         // PASS 5: Project concatenated heads through output matrix
         // ═══════════════════════════════════════════════════════════════
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("MultiHeadAttention Output Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("MultiHeadAttention Output Encoder"),
+        });
 
         let output_buffer = compute::execute_output_projection(
             &self,

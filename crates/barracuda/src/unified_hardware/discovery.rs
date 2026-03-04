@@ -23,11 +23,6 @@ impl HardwareDiscovery {
             executors.extend(gpu_executors);
         }
 
-        #[cfg(feature = "tpu")]
-        if let Ok(tpu_executors) = Self::discover_tpus().await {
-            executors.extend(tpu_executors);
-        }
-
         if let Ok(npu_executors) = Self::discover_npus().await {
             executors.extend(npu_executors);
         }
@@ -55,12 +50,6 @@ impl HardwareDiscovery {
         }
     }
 
-    #[cfg(feature = "tpu")]
-    async fn discover_tpus() -> Result<Vec<Arc<dyn ComputeExecutor>>> {
-        debug!("TPU discovery: hardware not available in this environment");
-        Ok(Vec::new())
-    }
-
     async fn discover_npus() -> Result<Vec<Arc<dyn ComputeExecutor>>> {
         match crate::npu_executor::NpuExecutor::new() {
             Ok(executor) => {
@@ -76,5 +65,35 @@ impl HardwareDiscovery {
                 Ok(Vec::new())
             }
         }
+    }
+}
+
+#[expect(clippy::unwrap_used, reason = "tests")]
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::unified_hardware::HardwareType;
+
+    #[tokio::test]
+    async fn test_discover_all_includes_cpu() {
+        let executors = HardwareDiscovery::discover_all().await.unwrap();
+        assert!(
+            !executors.is_empty(),
+            "discover_all should return at least one executor (CPU always available)"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_cpu_executor_is_always_first() {
+        let executors = HardwareDiscovery::discover_all().await.unwrap();
+        assert!(
+            !executors.is_empty(),
+            "discover_all should return at least one executor"
+        );
+        assert_eq!(
+            executors[0].hardware_type(),
+            HardwareType::CPU,
+            "CPU executor should always be first"
+        );
     }
 }

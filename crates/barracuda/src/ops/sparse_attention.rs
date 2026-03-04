@@ -83,6 +83,7 @@ pub async fn sparse_attention(
     Ok(output)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

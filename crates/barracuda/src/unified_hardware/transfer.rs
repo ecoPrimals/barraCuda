@@ -211,3 +211,87 @@ impl PcieBridge {
         }
     }
 }
+
+#[expect(clippy::unwrap_used, reason = "tests")]
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_transfer_cost_estimated_us() {
+        let cost = TransferCost {
+            latency_us: 5.0,
+            bandwidth_gbps: 31.5,
+        };
+        let us = cost.estimated_us(1_000_000);
+        assert!(us > 5.0);
+        assert!(us < 100.0);
+    }
+
+    #[test]
+    fn test_bandwidth_tier_detect_additional_adapters() {
+        assert_eq!(
+            BandwidthTier::detect_from_adapter_name("NVIDIA H200"),
+            BandwidthTier::NvLink
+        );
+        assert_eq!(
+            BandwidthTier::detect_from_adapter_name("NVIDIA B100"),
+            BandwidthTier::PciE5x16
+        );
+        assert_eq!(
+            BandwidthTier::detect_from_adapter_name("SwiftShader"),
+            BandwidthTier::SharedMemory
+        );
+        assert_eq!(
+            BandwidthTier::detect_from_adapter_name("Intel Arc A770"),
+            BandwidthTier::PciE4x16
+        );
+        assert_eq!(
+            BandwidthTier::detect_from_adapter_name("AMD MI250"),
+            BandwidthTier::PciE4x16
+        );
+    }
+
+    #[test]
+    fn test_bandwidth_tier_latency() {
+        assert!((BandwidthTier::SharedMemory.latency_us() - 0.1).abs() < 0.01);
+        assert!((BandwidthTier::NvLink.latency_us() - 1.0).abs() < 0.01);
+        assert!((BandwidthTier::PciE4x16.latency_us() - PCIE_DMA_LATENCY_US).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_mixed_substrate_gpu_to_npu() {
+        let sub = mixed_substrate_with_tier(
+            100_000.0,
+            1_048_576,
+            HardwareType::GPU,
+            HardwareType::NPU,
+            BandwidthTier::PciE4x16,
+        );
+        assert_eq!(sub, MixedSubstrate::GpuToNpu);
+    }
+
+    #[test]
+    fn test_mixed_substrate_npu_to_gpu() {
+        let sub = mixed_substrate_with_tier(
+            100_000.0,
+            1_048_576,
+            HardwareType::NPU,
+            HardwareType::GPU,
+            BandwidthTier::PciE4x16,
+        );
+        assert_eq!(sub, MixedSubstrate::NpuToGpu);
+    }
+
+    #[test]
+    fn test_mixed_substrate_unknown_hardware_type() {
+        let sub = mixed_substrate_with_tier(
+            100.0,
+            1024,
+            HardwareType::Custom,
+            HardwareType::Custom,
+            BandwidthTier::PciE4x16,
+        );
+        assert_eq!(sub, MixedSubstrate::CpuOnly);
+    }
+}

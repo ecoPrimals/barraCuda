@@ -9,7 +9,6 @@ use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// f64 Bessel J1 function evaluator
 pub struct BesselJ1F64 {
@@ -34,11 +33,13 @@ impl BesselJ1F64 {
         self.j1_gpu(x)
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn j1_cpu(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| Self::j1_scalar(xi)).collect()
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn j1_scalar(x: f64) -> f64 {
         let ax = x.abs();
@@ -145,6 +146,7 @@ impl BesselJ1F64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -175,7 +177,7 @@ mod tests {
         };
         let bessel = BesselJ1F64::new(device)?;
         let x = vec![1.0, 2.0, 5.0];
-        let expected = vec![0.4400505857449335, 0.5767248077568734, -0.3275791375914652];
+        let expected = [0.4400505857449335, 0.5767248077568734, -0.3275791375914652];
         let result = bessel.j1(&x)?;
         for (i, &val) in result.iter().enumerate() {
             assert!(

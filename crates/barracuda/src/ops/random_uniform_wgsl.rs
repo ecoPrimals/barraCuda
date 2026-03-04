@@ -12,7 +12,6 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// Uniform random sampling (GPU accelerated)
 pub struct RandomUniformGpu {
@@ -168,11 +167,9 @@ impl RandomUniformGpu {
                 compilation_options: Default::default(),
             });
 
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("RandomUniform Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("RandomUniform Encoder"),
+        });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -207,6 +204,7 @@ pub fn random_uniform_gpu(
     RandomUniformGpu::new(device, n_samples, bounds, seed).generate()
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

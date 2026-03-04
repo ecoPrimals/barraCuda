@@ -28,7 +28,6 @@
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// GPU-resident Nelder-Mead result
 #[derive(Debug, Clone)]
@@ -402,6 +401,7 @@ impl NelderMeadGpu {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     // Note: Full GPU tests require a device. These are compilation/API tests.
@@ -415,8 +415,8 @@ mod tests {
     #[test]
     fn test_simplex_init() {
         // Test initialization logic (doesn't need GPU)
-        let _x0 = vec![1.0, 2.0];
-        let _bounds = vec![(0.0, 10.0), (0.0, 10.0)];
+        let _x0 = [1.0, 2.0];
+        let _bounds = [(0.0, 10.0), (0.0, 10.0)];
 
         // Would need device for full test
         // This verifies the algorithm compiles

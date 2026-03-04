@@ -205,6 +205,7 @@ fn is_low_bandwidth_npu(s: &Substrate) -> bool {
     s.substrate_type == SubstrateType::Npu && s.name.to_uppercase().contains("AKD1000")
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

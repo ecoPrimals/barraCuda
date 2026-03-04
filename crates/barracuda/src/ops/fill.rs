@@ -6,7 +6,6 @@ use crate::device::{DeviceCapabilities, WgpuDevice, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// f64 is the canonical source — math is universal, precision is silicon.
 const SHADER_F64: &str = include_str!("../shaders/misc/fill_f64.wgsl");
@@ -114,12 +113,11 @@ impl Fill {
             });
 
         // Execute
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Fill Encoder"),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("Fill Encoder"),
+            });
         {
             let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("Fill Pass"),
@@ -159,6 +157,7 @@ impl Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

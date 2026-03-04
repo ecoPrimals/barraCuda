@@ -33,9 +33,8 @@ use crate::error::{BarracudaError, Result};
 /// Lanczos coefficients for gamma function (g=7)
 ///
 /// These are high-precision constants from Numerical Recipes - intentionally exact.
-#[allow(clippy::excessive_precision)]
 const LANCZOS_G: f64 = 7.0;
-#[allow(clippy::excessive_precision)]
+#[expect(clippy::excessive_precision, reason = "Numerical Recipes constants")]
 const LANCZOS_COEFFS: [f64; 9] = [
     0.999_999_999_999_809_93,
     676.520_368_121_885_1,
@@ -459,6 +458,7 @@ pub fn ln_beta(a: f64, b: f64) -> Result<f64> {
     Ok(ln_gamma(a)? + ln_gamma(b)? - ln_gamma(a + b)?)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "gamma_tests.rs"]
 mod tests;

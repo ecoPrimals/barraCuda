@@ -205,7 +205,7 @@ async fn test_cholesky_f64_reconstruction() {
     let l = CholeskyF64::execute(device, &a, n).unwrap();
 
     // Manual L·Lᵀ multiplication
-    let mut reconstruction = vec![0.0f64; 4];
+    let mut reconstruction = [0.0f64; 4];
     for i in 0..n {
         for j in 0..n {
             let mut sum = 0.0;
@@ -250,7 +250,7 @@ async fn test_cholesky_f64_3x3() {
     assert!(l[8] > 0.0);
 
     // Verify L·Lᵀ = A
-    let mut recon = vec![0.0f64; 9];
+    let mut recon = [0.0f64; 9];
     for i in 0..n {
         for j in 0..n {
             let mut sum = 0.0;

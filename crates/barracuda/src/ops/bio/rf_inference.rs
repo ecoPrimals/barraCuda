@@ -13,7 +13,6 @@
 use crate::device::WgpuDevice;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 const SHADER: &str = include_str!("../../shaders/ml/rf_batch_inference.wgsl");
 
@@ -135,12 +134,11 @@ impl RfBatchInferenceGpu {
         let total = n_samples * n_trees;
         let workgroups = total.div_ceil(256);
 
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("RfBatch Encoder"),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("RfBatch Encoder"),
+            });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {

@@ -11,7 +11,6 @@
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// Stack operation
 pub struct Stack {
@@ -80,11 +79,9 @@ impl Stack {
         let input_buffer = device.create_buffer_f32(input_size)?;
 
         // Copy each tensor buffer directly to the concatenated buffer
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Stack Copy Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("Stack Copy Encoder"),
+        });
 
         for (i, tensor) in self.tensors.iter().enumerate() {
             let offset = i * tensor_size * std::mem::size_of::<f32>();
@@ -213,11 +210,9 @@ impl Stack {
             });
 
         // Encode and execute
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Stack Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("Stack Encoder"),
+        });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -245,6 +240,7 @@ impl Stack {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

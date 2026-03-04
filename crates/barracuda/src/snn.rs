@@ -209,11 +209,11 @@ impl SNNBuilder {
                     w.clone()
                 } else {
                     // Auto-initialize sparse random weights
-                    let mut rng = rand::rngs::StdRng::from_entropy();
+                    let mut rng = rand::rngs::StdRng::from_os_rng();
                     let mut weights = vec![0.0; input_size * output_size];
                     for w in &mut weights {
-                        if rng.gen::<f32>() < *sparsity {
-                            *w = rng.gen_range(-1.0..1.0);
+                        if rng.random::<f32>() < *sparsity {
+                            *w = rng.random_range(-1.0..1.0);
                         }
                     }
                     weights
@@ -381,14 +381,14 @@ impl SpikingNetwork {
 
             SNNLayer::RateEncoder { max_rate } => {
                 // Rate encoding: continuous → spikes
-                let mut rng = rand::rngs::StdRng::from_entropy();
+                let mut rng = rand::rngs::StdRng::from_os_rng();
                 let dt = self.config.dt;
 
                 let spikes: Vec<f32> = input
                     .iter()
                     .map(|&value| {
                         let spike_prob = value.abs() * max_rate * dt / 1000.0; // Convert to probability
-                        if rng.gen::<f32>() < spike_prob {
+                        if rng.random::<f32>() < spike_prob {
                             1.0
                         } else {
                             0.0
@@ -417,6 +417,7 @@ impl SpikingNetwork {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -480,9 +481,9 @@ mod tests {
             .build();
 
         // Process sequence
-        network.process_step(&vec![1.0, 0.0]).unwrap();
-        network.process_step(&vec![0.0, 1.0]).unwrap();
-        let output = network.process_step(&vec![1.0, 0.0]).unwrap();
+        network.process_step(&[1.0, 0.0]).unwrap();
+        network.process_step(&[0.0, 1.0]).unwrap();
+        let output = network.process_step(&[1.0, 0.0]).unwrap();
 
         // Should sum over last 3 frames
         assert_eq!(output[0], 2.0); // Two 1.0s in first channel
@@ -552,7 +553,7 @@ mod tests {
             .build();
 
         // Process some input
-        network.process_step(&vec![0.5; 5]).unwrap();
+        network.process_step(&[0.5; 5]).unwrap();
 
         // Reset
         network.reset();

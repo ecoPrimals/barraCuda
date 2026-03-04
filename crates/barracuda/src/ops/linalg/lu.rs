@@ -73,7 +73,10 @@ impl LuDecomposition {
     /// Compute the determinant of the original matrix.
     ///
     /// det(A) = (-1)^swaps × ∏ U[i,i]
-    #[allow(clippy::manual_is_multiple_of)] // is_multiple_of is nightly-only
+    #[expect(
+        clippy::manual_is_multiple_of,
+        reason = "is_multiple_of is nightly-only"
+    )]
     pub fn det(&self) -> f64 {
         let mut det = if self.num_swaps % 2 == 0 { 1.0 } else { -1.0 };
         for i in 0..self.n {
@@ -256,6 +259,7 @@ pub fn lu_inverse(a: &[f64], n: usize) -> Result<Vec<f64>> {
     lu.inverse()
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

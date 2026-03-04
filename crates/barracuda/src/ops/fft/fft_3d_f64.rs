@@ -19,7 +19,6 @@ use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use std::collections::HashMap;
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
@@ -241,11 +240,9 @@ impl Fft3DF64 {
 
         // Copy buf_b → buf_a (bit-reversed data into working buffer)
         {
-            let mut encoder = dev
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("FFT3D Copy BR"),
-                });
+            let mut encoder = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("FFT3D Copy BR"),
+            });
             encoder.copy_buffer_to_buffer(buf_b, 0, buf_a, 0, buffer_bytes);
             dev.submit_and_poll(std::iter::once(encoder.finish()));
         }
@@ -280,11 +277,9 @@ impl Fft3DF64 {
 
             // Ping-pong: copy output to working for next stage
             if stage < log_n - 1 {
-                let mut encoder =
-                    dev.device
-                        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                            label: Some("FFT3D Copy Stage"),
-                        });
+                let mut encoder = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                    label: Some("FFT3D Copy Stage"),
+                });
                 encoder.copy_buffer_to_buffer(buf_b, 0, buf_a, 0, buffer_bytes);
                 dev.submit_and_poll(std::iter::once(encoder.finish()));
             }
@@ -292,11 +287,9 @@ impl Fft3DF64 {
 
         // After last butterfly, result is in buf_b. Copy back to buf_a for next axis.
         {
-            let mut encoder = dev
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("FFT3D Copy Final"),
-                });
+            let mut encoder = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("FFT3D Copy Final"),
+            });
             encoder.copy_buffer_to_buffer(buf_b, 0, buf_a, 0, buffer_bytes);
             dev.submit_and_poll(std::iter::once(encoder.finish()));
         }
@@ -307,6 +300,7 @@ impl Fft3DF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

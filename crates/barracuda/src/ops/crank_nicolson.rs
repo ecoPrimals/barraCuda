@@ -24,7 +24,6 @@ use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// Parameters for Crank-Nicolson shader
 #[repr(C)]
@@ -211,6 +210,7 @@ impl CrankNicolson {
     }
 
     /// CPU reference implementation (Thomas algorithm)
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn solve_cpu(
         &self,
@@ -413,12 +413,11 @@ impl CrankNicolson {
 
         for _step in 0..n_steps {
             // Compute RHS on GPU
-            let mut encoder =
-                self.device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("CN RHS Encoder"),
-                    });
+            let mut encoder = self
+                .device
+                .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                    label: Some("CN RHS Encoder"),
+                });
 
             // Upload current u
             self.device
@@ -447,8 +446,7 @@ impl CrankNicolson {
 
             let mut encoder2 =
                 self.device
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
                         label: Some("Copy Encoder"),
                     });
             encoder2.copy_buffer_to_buffer(&rhs_buf, 0, &staging, 0, (n * 4) as u64);
@@ -481,6 +479,7 @@ impl CrankNicolson {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

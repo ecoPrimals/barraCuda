@@ -13,7 +13,6 @@
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// 1D Inverse Complex FFT operation
 pub struct Ifft1D {

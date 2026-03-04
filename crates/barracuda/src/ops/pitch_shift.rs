@@ -14,7 +14,6 @@
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 const SHADER_F64: &str = include_str!("../shaders/audio/pitch_shift_f64.wgsl");
 static SHADER_F32: std::sync::LazyLock<String> =
@@ -106,6 +105,7 @@ impl PitchShift {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

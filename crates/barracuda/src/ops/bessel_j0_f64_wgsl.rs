@@ -18,7 +18,6 @@ use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// f64 Bessel J0 function evaluator
 ///
@@ -53,11 +52,13 @@ impl BesselJ0F64 {
         self.j0_gpu(x)
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn j0_cpu(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| Self::j0_scalar(xi)).collect()
     }
 
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn j0_scalar(x: f64) -> f64 {
         let ax = x.abs();
@@ -162,6 +163,7 @@ impl BesselJ0F64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -198,7 +200,7 @@ mod tests {
 
         // Known values from tables
         let x = vec![1.0, 2.0, 5.0, 10.0];
-        let expected = vec![
+        let expected = [
             0.7651976865579666,  // J₀(1)
             0.2238907791412357,  // J₀(2)
             -0.1775967713143383, // J₀(5)

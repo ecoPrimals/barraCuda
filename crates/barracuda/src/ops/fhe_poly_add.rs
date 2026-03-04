@@ -14,7 +14,6 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 /// FHE polynomial addition operation
 ///
@@ -280,11 +279,9 @@ impl FhePolyAdd {
         });
 
         // Execute compute shader
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("FHE Poly Add Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("FHE Poly Add Encoder"),
+        });
 
         {
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -328,14 +325,13 @@ pub async fn create_fhe_poly_tensor(
     Tensor::from_data_pod(&poly_u32, vec![poly_u32.len()], device)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
+    #[expect(unused_imports, reason = "conditional imports")]
     use super::*;
 
-    #[allow(unused_imports)]
-    use wgpu::util::DeviceExt;
-
+    #[expect(unused_imports, reason = "conditional imports")]
     #[tokio::test]
     async fn test_fhe_poly_add_basic() {
         let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
@@ -368,7 +364,7 @@ mod tests {
             mapped_at_creation: false,
         });
 
-        let mut encoder = device.device.create_command_encoder(&Default::default());
+        let mut encoder = device.create_encoder_guarded(&Default::default());
         encoder.copy_buffer_to_buffer(
             result_tensor.buffer(),
             0,
@@ -422,7 +418,7 @@ mod tests {
             mapped_at_creation: false,
         });
 
-        let mut encoder = device.device.create_command_encoder(&Default::default());
+        let mut encoder = device.create_encoder_guarded(&Default::default());
         encoder.copy_buffer_to_buffer(
             result_tensor.buffer(),
             0,

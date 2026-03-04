@@ -6,11 +6,15 @@ use super::WgpuDevice;
 impl WgpuDevice {
     /// Compile WGSL shader
     pub fn compile_shader(&self, source: &str, label: Option<&str>) -> wgpu::ShaderModule {
-        self.device
+        self.encoding_guard();
+        let module = self
+            .device
             .create_shader_module(wgpu::ShaderModuleDescriptor {
                 label,
                 source: wgpu::ShaderSource::Wgsl(source.into()),
-            })
+            });
+        self.encoding_complete();
+        module
     }
 
     /// Compile a pre-built SPIR-V binary into a shader module.
@@ -38,14 +42,17 @@ impl WgpuDevice {
         // - Minimum unsafe surface: wgpu 22.x has no safe SPIR-V API; create_shader_module
         //   (WGSL) validates via naga but we need SPIR-V passthrough for NVK/Vulkan
         //   optimization (Sovereign compiler bypasses NAK). This is the only path.
+        self.encoding_guard();
         #[allow(unsafe_code)]
-        unsafe {
+        let module = unsafe {
             self.device
                 .create_shader_module_spirv(&wgpu::ShaderModuleDescriptorSpirV {
                     label,
                     source: std::borrow::Cow::Borrowed(spirv_words),
                 })
-        }
+        };
+        self.encoding_complete();
+        module
     }
 
     /// Compile an f64 WGSL shader with automatic driver-aware patching and ILP optimization.

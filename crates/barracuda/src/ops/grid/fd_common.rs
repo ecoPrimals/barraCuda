@@ -223,8 +223,7 @@ impl<'a> FdComputeRunner<'a> {
 
         let mut encoder = self
             .device
-            .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor { label: None });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -238,7 +237,7 @@ impl<'a> FdComputeRunner<'a> {
 
         let staging = create_staging_buffer(self.device.device(), buffer_size, "staging");
         encoder.copy_buffer_to_buffer(output_buffer, 0, &staging, 0, buffer_size);
-        self.device.queue().submit(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
 
         self.device
             .map_staging_buffer::<f64>(&staging, output_count)
@@ -255,8 +254,7 @@ impl<'a> FdComputeRunner<'a> {
 
         let mut encoder = self
             .device
-            .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor { label: None });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -272,7 +270,7 @@ impl<'a> FdComputeRunner<'a> {
         let staging_b = create_staging_buffer(self.device.device(), buffer_size, "staging_b");
         encoder.copy_buffer_to_buffer(output_buffer_a, 0, &staging_a, 0, buffer_size);
         encoder.copy_buffer_to_buffer(output_buffer_b, 0, &staging_b, 0, buffer_size);
-        self.device.queue().submit(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
 
         let result_a = self
             .device

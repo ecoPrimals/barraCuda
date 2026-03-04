@@ -22,18 +22,191 @@ pub(crate) use dispatch::{concurrency_budget, DispatchPermit, DispatchSemaphore}
 
 use super::autotune::{GpuCalibration, GpuDeviceForCalibration, GLOBAL_TUNER};
 use crate::error::Result;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
+use wgpu::util::DeviceExt;
+
+/// RAII command encoder that prevents `device.poll()` from running.
+///
+/// While this encoder exists, an atomic counter is non-zero, which causes
+/// poll to spin-wait. Multiple `GuardedEncoder`s can coexist with zero
+/// contention (just atomic increments). Encoding is never blocked.
+///
+/// Call `.finish()` to consume the encoder, decrement the counter, and
+/// obtain a `wgpu::CommandBuffer` ready for submission.
+pub struct GuardedEncoder {
+    encoder: Option<wgpu::CommandEncoder>,
+    active_encoders: Arc<std::sync::atomic::AtomicU32>,
+}
+
+impl std::ops::Deref for GuardedEncoder {
+    type Target = wgpu::CommandEncoder;
+    fn deref(&self) -> &Self::Target {
+        self.encoder.as_ref().expect("encoder already finished")
+    }
+}
+
+impl std::ops::DerefMut for GuardedEncoder {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.encoder.as_mut().expect("encoder already finished")
+    }
+}
+
+impl GuardedEncoder {
+    /// Finish encoding and decrement the active encoder count.
+    pub fn finish(mut self) -> wgpu::CommandBuffer {
+        let cmd = self
+            .encoder
+            .take()
+            .expect("encoder already finished")
+            .finish();
+        self.active_encoders.fetch_sub(1, Ordering::Release);
+        cmd
+    }
+}
+
+impl Drop for GuardedEncoder {
+    fn drop(&mut self) {
+        if self.encoder.is_some() {
+            self.active_encoders.fetch_sub(1, Ordering::Release);
+        }
+    }
+}
+
+/// Wrapper around `Arc<wgpu::Device>` that auto-protects `create_*` calls.
+///
+/// Inherent methods shadow `wgpu::Device::create_*`, incrementing the
+/// active-encoder counter before the call and decrementing after. This
+/// prevents `device.poll()` from racing with resource creation on software
+/// rasterizers (llvmpipe). Non-create methods pass through via `Deref`.
+#[derive(Clone)]
+pub struct GuardedDeviceHandle {
+    inner: Arc<wgpu::Device>,
+    active_encoders: Arc<AtomicU32>,
+}
+
+impl std::fmt::Debug for GuardedDeviceHandle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GuardedDeviceHandle")
+            .field("inner", &"<wgpu::Device>")
+            .finish()
+    }
+}
+
+impl std::ops::Deref for GuardedDeviceHandle {
+    type Target = wgpu::Device;
+    fn deref(&self) -> &wgpu::Device {
+        &self.inner
+    }
+}
+
+impl GuardedDeviceHandle {
+    pub(crate) fn new(inner: Arc<wgpu::Device>, active_encoders: Arc<AtomicU32>) -> Self {
+        Self {
+            inner,
+            active_encoders,
+        }
+    }
+
+    /// Get the underlying `Arc<wgpu::Device>` for ownership sharing.
+    pub(crate) fn inner_arc(&self) -> Arc<wgpu::Device> {
+        self.inner.clone()
+    }
+
+    fn guard(&self) {
+        self.active_encoders.fetch_add(1, Ordering::Acquire);
+    }
+
+    fn unguard(&self) {
+        self.active_encoders.fetch_sub(1, Ordering::Release);
+    }
+
+    pub fn create_buffer(&self, desc: &wgpu::BufferDescriptor<'_>) -> wgpu::Buffer {
+        self.guard();
+        let r = self.inner.create_buffer(desc);
+        self.unguard();
+        r
+    }
+
+    pub fn create_buffer_init(&self, desc: &wgpu::util::BufferInitDescriptor<'_>) -> wgpu::Buffer {
+        self.guard();
+        let r = self.inner.create_buffer_init(desc);
+        self.unguard();
+        r
+    }
+
+    pub fn create_bind_group_layout(
+        &self,
+        desc: &wgpu::BindGroupLayoutDescriptor<'_>,
+    ) -> wgpu::BindGroupLayout {
+        self.guard();
+        let r = self.inner.create_bind_group_layout(desc);
+        self.unguard();
+        r
+    }
+
+    pub fn create_bind_group(&self, desc: &wgpu::BindGroupDescriptor<'_>) -> wgpu::BindGroup {
+        self.guard();
+        let r = self.inner.create_bind_group(desc);
+        self.unguard();
+        r
+    }
+
+    pub fn create_pipeline_layout(
+        &self,
+        desc: &wgpu::PipelineLayoutDescriptor<'_>,
+    ) -> wgpu::PipelineLayout {
+        self.guard();
+        let r = self.inner.create_pipeline_layout(desc);
+        self.unguard();
+        r
+    }
+
+    pub fn create_compute_pipeline(
+        &self,
+        desc: &wgpu::ComputePipelineDescriptor<'_>,
+    ) -> wgpu::ComputePipeline {
+        self.guard();
+        let r = self.inner.create_compute_pipeline(desc);
+        self.unguard();
+        r
+    }
+
+    pub fn create_shader_module(
+        &self,
+        desc: wgpu::ShaderModuleDescriptor<'_>,
+    ) -> wgpu::ShaderModule {
+        self.guard();
+        let r = self.inner.create_shader_module(desc);
+        self.unguard();
+        r
+    }
+
+    pub fn create_command_encoder(
+        &self,
+        desc: &wgpu::CommandEncoderDescriptor<'_>,
+    ) -> wgpu::CommandEncoder {
+        self.guard();
+        let r = self.inner.create_command_encoder(desc);
+        self.unguard();
+        r
+    }
+}
 
 /// WebGPU device - executes WGSL on any hardware
 ///
-/// Concurrency is self-managed: `dispatch_semaphore` limits how many
-/// operations can be in-flight simultaneously based on device type.
-/// `gpu_lock` serializes the actual submit+poll to prevent wgpu state
-/// corruption. Together they prevent both driver overload and data races.
+/// Concurrency model (atomic barrier + Mutex):
+/// - `active_encoders` is an `AtomicU32` counting live `GuardedEncoder`s.
+///   Encoding is **never blocked** — just an atomic increment on creation
+///   and decrement on finish/drop.
+/// - `gpu_lock` is a `Mutex<()>` that serializes submit and poll against
+///   each other. Poll additionally spin-waits until `active_encoders == 0`
+///   to prevent wgpu-core storage races between poll cleanup and encoding.
+/// - `dispatch_semaphore` limits how many operations can be in-flight
+///   simultaneously based on device type (prevents driver overload).
 #[derive(Debug, Clone)]
 pub struct WgpuDevice {
-    pub(crate) device: Arc<wgpu::Device>,
+    pub(crate) device: GuardedDeviceHandle,
     pub(crate) queue: Arc<wgpu::Queue>,
     pub(crate) adapter_info: wgpu::AdapterInfo,
     calibration: Option<GpuCalibration>,
@@ -41,8 +214,10 @@ pub struct WgpuDevice {
     pipeline_cache: Option<Arc<wgpu::PipelineCache>>,
     /// Set when the GPU reports a device-lost error.
     pub(crate) lost: Arc<AtomicBool>,
-    /// Serializes GPU operations (submit, poll, map) across threads.
+    /// Serializes submit+poll to prevent wgpu-core storage races.
     gpu_lock: Arc<std::sync::Mutex<()>>,
+    /// Counts live GuardedEncoders — poll waits for this to reach zero.
+    active_encoders: Arc<std::sync::atomic::AtomicU32>,
     /// Limits concurrent dispatches based on device capability.
     dispatch_semaphore: Arc<DispatchSemaphore>,
 }
@@ -119,7 +294,62 @@ impl WgpuDevice {
 
     /// Get Arc-wrapped device (for shared ownership)
     pub fn device_arc(&self) -> Arc<wgpu::Device> {
-        self.device.clone()
+        self.device.inner_arc()
+    }
+
+    /// Get the shared GPU lock (for components that call `device.poll` directly).
+    pub(crate) fn gpu_lock_arc(&self) -> Arc<std::sync::Mutex<()>> {
+        self.gpu_lock.clone()
+    }
+
+    /// Get the active encoder counter (for BufferPool poll coordination).
+    pub(crate) fn active_encoders_arc(&self) -> Arc<std::sync::atomic::AtomicU32> {
+        self.active_encoders.clone()
+    }
+
+    /// Increment active encoder count (encoding phase barrier).
+    ///
+    /// While any encoder is active, `device.poll()` will spin-wait.
+    /// This is lock-free and never blocks the caller.
+    pub fn encoding_guard(&self) {
+        self.active_encoders.fetch_add(1, Ordering::Acquire);
+    }
+
+    /// Decrement active encoder count (encoding phase complete).
+    pub fn encoding_complete(&self) {
+        self.active_encoders.fetch_sub(1, Ordering::Release);
+    }
+
+    /// Bounded wait for active encoders to finish.
+    ///
+    /// Encoding is CPU work (recording commands into a buffer), so it
+    /// completes in microseconds. A brief yield loop avoids the
+    /// wgpu-core race where poll/cleanup overlaps with encoding, without
+    /// risking starvation even at 128+ threads.
+    pub(crate) fn brief_encoder_wait(&self) {
+        for _ in 0..256 {
+            if self.active_encoders.load(Ordering::Acquire) == 0 {
+                return;
+            }
+            std::thread::yield_now();
+        }
+    }
+
+    /// Create a command encoder protected by the active-encoder barrier.
+    ///
+    /// The returned `GuardedEncoder` increments the active encoder count,
+    /// preventing `device.poll()` from running. Encoding is lock-free and
+    /// never blocks other threads. Call `.finish()` to release.
+    pub fn create_encoder_guarded(
+        &self,
+        desc: &wgpu::CommandEncoderDescriptor<'_>,
+    ) -> GuardedEncoder {
+        self.active_encoders.fetch_add(1, Ordering::Acquire);
+        let encoder = self.device.create_command_encoder(desc);
+        GuardedEncoder {
+            encoder: Some(encoder),
+            active_encoders: self.active_encoders.clone(),
+        }
     }
 
     /// Get adapter info (for capability detection)
@@ -144,13 +374,6 @@ impl WgpuDevice {
         self.queue.clone()
     }
 
-    /// Acquire the GPU operation lock. All code that touches `queue.submit`,
-    /// `device.poll`, or `map_async` + `get_mapped_range` must hold this lock.
-    /// Returns an RAII guard that releases on drop.
-    pub fn lock(&self) -> std::sync::MutexGuard<'_, ()> {
-        self.gpu_lock.lock().unwrap_or_else(|e| e.into_inner())
-    }
-
     /// Acquire a dispatch permit from the device's concurrency budget.
     ///
     /// Hold this for the entire compile→bind→submit lifecycle of an
@@ -166,19 +389,15 @@ impl WgpuDevice {
     /// go through this method (or its `_nonblocking` variant) so that a
     /// driver-level device loss is consistently caught, flagged, and
     /// converted to `Err` instead of panicking the caller's thread.
+    ///
+    /// Serialized via `gpu_lock`: wgpu-core's internal resource tracking
+    /// on software rasterizers can race under concurrent submit/poll.
     pub fn poll_safe(&self) -> Result<()> {
         if self.is_lost() {
             return Err(crate::error::BarracudaError::device_lost("device lost"));
         }
-        let _guard = self.lock();
-        self.poll_safe_unlocked()
-    }
-
-    /// Like `poll_safe` but does NOT acquire the gpu_lock.
-    ///
-    /// Use when the caller already holds the lock (e.g., inside
-    /// `submit_and_poll_inner` after submit completes).
-    fn poll_safe_unlocked(&self) -> Result<()> {
+        let _guard = self.gpu_lock.lock().unwrap_or_else(|e| e.into_inner());
+        self.brief_encoder_wait();
         let device = self.device.clone();
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
             device.poll(wgpu::Maintain::Wait);
@@ -186,21 +405,61 @@ impl WgpuDevice {
         match result {
             Ok(()) => Ok(()),
             Err(payload) => {
-                self.lost.store(true, Ordering::Release);
-                let msg = Self::panic_message(&payload);
-                tracing::warn!("poll_safe: device lost: {msg}");
-                Err(crate::error::BarracudaError::device(format!(
-                    "GPU device lost during poll: {msg}"
-                )))
+                if Self::is_device_lost_panic(&payload) {
+                    self.lost.store(true, Ordering::Release);
+                    tracing::warn!("poll_safe: device lost: {}", Self::panic_message(&payload));
+                    return Err(crate::error::BarracudaError::device_lost("device lost"));
+                }
+                tracing::warn!(
+                    "poll_safe: wgpu panic (non-fatal): {}",
+                    Self::panic_message(&payload)
+                );
+                Ok(())
             }
         }
     }
 
+    /// Submit command buffers without polling for completion.
+    ///
+    /// Serialized via `gpu_lock` to prevent wgpu-core storage races on
+    /// software rasterizers. Use when the caller will poll separately
+    /// (e.g. via `poll_safe()` or `map_staging_buffer()`).
+    pub fn submit_commands(&self, commands: impl IntoIterator<Item = wgpu::CommandBuffer>) {
+        if self.is_lost() {
+            return;
+        }
+        let _guard = self.gpu_lock.lock().unwrap_or_else(|e| e.into_inner());
+        self.brief_encoder_wait();
+        let queue = self.queue.clone();
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+            queue.submit(commands);
+        }));
+        if let Err(payload) = result {
+            if Self::is_device_lost_panic(&payload) {
+                self.lost.store(true, Ordering::Release);
+                tracing::warn!(
+                    "submit_commands: device lost (flagged): {}",
+                    Self::panic_message(&payload)
+                );
+                return;
+            }
+            std::panic::resume_unwind(payload);
+        }
+    }
+
     /// Non-blocking poll variant for drain/housekeeping paths.
+    ///
+    /// Serialized via `gpu_lock` to prevent wgpu-core cleanup races.
     pub fn poll_nonblocking(&self) {
         if self.is_lost() {
             return;
         }
+        if self.active_encoders.load(Ordering::Acquire) > 0 {
+            return;
+        }
+        let Ok(_guard) = self.gpu_lock.try_lock() else {
+            return;
+        };
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             self.device.poll(wgpu::MaintainBase::Poll);
         }));
@@ -233,9 +492,11 @@ impl WgpuDevice {
     /// Submit without acquiring a dispatch permit.
     /// Use when the caller already holds a `DispatchPermit`.
     ///
-    /// Device-lost panics from wgpu are caught and converted to a
-    /// `lost` flag. Subsequent readback will see the lost state and
-    /// return an error instead of panicking the test thread.
+    /// Submit and poll use SEPARATE write-lock acquisitions. This allows
+    /// other threads to interleave their submits between our submit and poll,
+    /// dramatically reducing lock-convoy stalls on software rasterizers.
+    /// poll(Wait) processes ALL pending work, so interleaved submits from
+    /// other threads are completed too.
     pub(crate) fn submit_and_poll_inner(
         &self,
         commands: impl IntoIterator<Item = wgpu::CommandBuffer>,
@@ -243,21 +504,42 @@ impl WgpuDevice {
         if self.is_lost() {
             return;
         }
-        let _guard = self.lock();
-        let queue = self.queue.clone();
-        let device = self.device.clone();
-        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
-            queue.submit(commands);
-            device.poll(wgpu::Maintain::Wait);
-        }));
-        if let Err(payload) = result {
-            self.lost.store(true, Ordering::Release);
-            let msg = Self::panic_message(&payload);
-            if Self::is_device_lost_panic(&payload) {
-                tracing::warn!("submit_and_poll: device lost (flagged, not panicking): {msg}");
-                return;
+        let _guard = self.gpu_lock.lock().unwrap_or_else(|e| e.into_inner());
+        self.brief_encoder_wait();
+        {
+            let queue = self.queue.clone();
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+                queue.submit(commands);
+            }));
+            if let Err(payload) = result {
+                if Self::is_device_lost_panic(&payload) {
+                    self.lost.store(true, Ordering::Release);
+                    tracing::warn!(
+                        "submit_and_poll: device lost during submit: {}",
+                        Self::panic_message(&payload)
+                    );
+                    return;
+                }
+                std::panic::resume_unwind(payload);
             }
-            std::panic::resume_unwind(payload);
+        }
+        self.brief_encoder_wait();
+        {
+            let device = self.device.clone();
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+                device.poll(wgpu::Maintain::Wait);
+            }));
+            if let Err(payload) = result {
+                if Self::is_device_lost_panic(&payload) {
+                    self.lost.store(true, Ordering::Release);
+                    tracing::warn!(
+                        "submit_and_poll: device lost during poll: {}",
+                        Self::panic_message(&payload)
+                    );
+                    return;
+                }
+                std::panic::resume_unwind(payload);
+            }
         }
     }
 
@@ -269,6 +551,7 @@ impl WgpuDevice {
     /// Execute WGSL compute shader
     ///
     /// Acquires a dispatch permit for the full compile→submit lifecycle.
+    /// Holds encoding read-guard during compile/encode, releases before submit.
     pub fn execute_compute(
         &self,
         shader_source: &str,
@@ -276,37 +559,43 @@ impl WgpuDevice {
         workgroups: (u32, u32, u32),
     ) -> Result<()> {
         let _permit = self.acquire_dispatch();
-        let shader = self.compile_shader(shader_source, Some("barraCuda Operation"));
-        let pipeline = self
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("barraCuda Pipeline"),
-                layout: None,
-                module: &shader,
-                entry_point: "main",
-                cache: self.pipeline_cache(),
-                compilation_options: Default::default(),
-            });
+        let commands = {
+            self.encoding_guard();
+            let shader = self.compile_shader(shader_source, Some("barraCuda Operation"));
+            let pipeline = self
+                .device
+                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                    label: Some("barraCuda Pipeline"),
+                    layout: None,
+                    module: &shader,
+                    entry_point: "main",
+                    cache: self.pipeline_cache(),
+                    compilation_options: Default::default(),
+                });
 
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("barraCuda Encoder"),
-            });
+            let mut encoder = self
+                .device
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("barraCuda Encoder"),
+                });
 
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("barraCuda Compute"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            for (i, bg) in bind_groups.iter().enumerate() {
-                pass.set_bind_group(i as u32, bg, &[]);
+            {
+                let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: Some("barraCuda Compute"),
+                    timestamp_writes: None,
+                });
+                pass.set_pipeline(&pipeline);
+                for (i, bg) in bind_groups.iter().enumerate() {
+                    pass.set_bind_group(i as u32, bg, &[]);
+                }
+                pass.dispatch_workgroups(workgroups.0, workgroups.1, workgroups.2);
             }
-            pass.dispatch_workgroups(workgroups.0, workgroups.1, workgroups.2);
-        }
 
-        self.submit_and_poll_inner(Some(encoder.finish()));
+            let cmds = encoder.finish();
+            self.encoding_complete();
+            cmds
+        };
+        self.submit_and_poll_inner(Some(commands));
         Ok(())
     }
 
@@ -347,6 +636,7 @@ impl WgpuDevice {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -92,6 +92,7 @@ impl Covariance {
     }
 
     /// CPU reference implementation
+    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
     fn covariance_cpu(&self, x: &[f32], y: &[f32], ddof: u32) -> f32 {
         let n = x.len() as f32;
@@ -109,7 +110,6 @@ impl Covariance {
 
     fn covariance_gpu(&self, x: &[f32], y: &[f32], ddof: u32) -> Result<f32> {
         let n = x.len();
-        use wgpu::util::DeviceExt;
 
         let x_buf = self
             .device
@@ -157,12 +157,11 @@ impl Covariance {
             mapped_at_creation: false,
         });
 
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Covariance Copy"),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("Covariance Copy"),
+            });
         encoder.copy_buffer_to_buffer(&output_buf, 0, &staging, 0, 4);
         self.device.submit_and_poll(Some(encoder.finish()));
 
@@ -171,6 +170,7 @@ impl Covariance {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

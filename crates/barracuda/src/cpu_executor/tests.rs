@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! CPU executor tests
 
-#![allow(clippy::unwrap_used)]
-
 use super::executor::CpuExecutor;
 use super::storage::CpuTensorStorage;
 use crate::unified_hardware::{ComputeExecutor, HardwareType, TensorStorage};

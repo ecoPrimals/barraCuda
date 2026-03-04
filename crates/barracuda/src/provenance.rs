@@ -5,14 +5,34 @@
 //! Enables traceability of feature origins across the ecoPrimals ecosystem.
 
 /// Provenance metadata for absorbed items.
+///
+/// Origin names are validated structurally (non-empty, ASCII alphanumeric)
+/// rather than checked against a hardcoded allowlist. Any ecoPrimals primal
+/// can be an origin — barraCuda discovers peers at runtime.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ProvenanceTag {
-    /// Source Spring (hotSpring, wetSpring, neuralSpring)
+    /// Source primal (e.g. "hotSpring", "wetSpring", "neuralSpring")
     pub origin: &'static str,
     /// Absorbed session or handoff identifier
     pub absorbed_session: &'static str,
     /// Human-readable description
     pub description: &'static str,
+}
+
+impl ProvenanceTag {
+    /// Validates that all fields are structurally correct.
+    ///
+    /// Checks non-empty strings and ASCII-safe origin names.
+    /// Does NOT check against a hardcoded allowlist — any valid primal name is accepted.
+    pub fn is_valid(&self) -> bool {
+        !self.origin.is_empty()
+            && !self.absorbed_session.is_empty()
+            && !self.description.is_empty()
+            && self
+                .origin
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'_')
+    }
 }
 
 // ─── hotSpring provenance ─────────────────────────────────────────────────────
@@ -121,30 +141,17 @@ pub const ALL_TAGS: &[ProvenanceTag] = &[
     PROV_RK45_ADAPTIVE,
 ];
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn all_tags_have_non_empty_fields() {
-        for tag in ALL_TAGS {
-            assert!(!tag.origin.is_empty(), "origin empty for {tag:?}");
-            assert!(
-                !tag.absorbed_session.is_empty(),
-                "absorbed_session empty for {tag:?}"
-            );
-            assert!(!tag.description.is_empty(), "description empty for {tag:?}");
-        }
-    }
-
-    #[test]
-    fn known_origins() {
-        let valid = ["hotSpring", "wetSpring", "neuralSpring"];
+    fn all_tags_are_structurally_valid() {
         for tag in ALL_TAGS {
             assert!(
-                valid.contains(&tag.origin),
-                "unknown origin: {}",
-                tag.origin
+                tag.is_valid(),
+                "structurally invalid provenance tag: {tag:?}"
             );
         }
     }

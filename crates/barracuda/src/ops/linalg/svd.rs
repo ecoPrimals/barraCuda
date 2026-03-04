@@ -364,6 +364,7 @@ pub fn svd_pinv(a: &[f64], m: usize, n: usize, tol: f64) -> Result<Vec<f64>> {
     Ok(svd.pseudoinverse(tol))
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -444,7 +445,7 @@ mod tests {
 
         // A * A⁺ * A should equal A
         // First compute A * A⁺
-        let mut aa_pinv = vec![0.0; 4];
+        let mut aa_pinv = [0.0; 4];
         for i in 0..2 {
             for j in 0..2 {
                 for k in 0..2 {
@@ -454,7 +455,7 @@ mod tests {
         }
 
         // Then compute (A * A⁺) * A
-        let mut result = vec![0.0; 4];
+        let mut result = [0.0; 4];
         for i in 0..2 {
             for j in 0..2 {
                 for k in 0..2 {
@@ -517,7 +518,7 @@ mod tests {
 
         // Verify this is a least squares solution
         // The residual r = b - Ax should be orthogonal to column space of A
-        let mut ax = vec![0.0; 3];
+        let mut ax = [0.0; 3];
         for i in 0..3 {
             for j in 0..2 {
                 ax[i] += a[i * 2 + j] * x[j];
@@ -526,7 +527,7 @@ mod tests {
 
         // Compute A^T * (b - Ax)
         let r: Vec<f64> = (0..3).map(|i| b[i] - ax[i]).collect();
-        let mut atr = vec![0.0; 2];
+        let mut atr = [0.0; 2];
         for j in 0..2 {
             for i in 0..3 {
                 atr[j] += a[i * 2 + j] * r[i];

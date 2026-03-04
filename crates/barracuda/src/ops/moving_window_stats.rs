@@ -221,9 +221,11 @@ impl MovingWindowStats {
 
         let workgroups = n_out.div_ceil(256);
 
-        let mut encoder = d.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("mw_enc"),
-        });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("mw_enc"),
+            });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("mw_pass"),
@@ -270,6 +272,7 @@ impl MovingWindowStats {
         })
     }
 
+    #[expect(clippy::unwrap_used, reason = "suppressed")]
     #[cfg(test)]
     fn compute_cpu(input: &[f32], window_size: usize) -> MovingWindowResult {
         let n_out = input.len() - window_size + 1;
@@ -304,6 +307,7 @@ impl MovingWindowStats {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

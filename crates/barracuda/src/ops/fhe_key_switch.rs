@@ -65,7 +65,6 @@
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// FHE Key Switching operation
 ///
@@ -310,11 +309,9 @@ impl FheKeySwitch {
         });
 
         // ✅ GPU EXECUTION: Decompose ciphertext component
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("FHE Key Switch Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("FHE Key Switch Encoder"),
+        });
 
         let caps = DeviceCapabilities::from_device(device);
         let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::FHE);
@@ -350,6 +347,7 @@ impl FheKeySwitch {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

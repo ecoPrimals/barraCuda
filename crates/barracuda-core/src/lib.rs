@@ -7,30 +7,35 @@
 //! This crate wraps the `barracuda` compute library with primal lifecycle
 //! management. On `start()`, it discovers GPU hardware and initializes the
 //! device pool. Health checks report device availability.
+//!
+//! Lifecycle and health types are owned by barraCuda, modeled on the
+//! ecoPrimals pattern (sourDough scaffold). Mature primals internalize
+//! their lifecycle — no runtime dependency on sourDough.
 
 #![deny(unsafe_code)]
 #![warn(missing_docs)]
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::doc_markdown)]
-#![allow(clippy::module_name_repetitions)]
-#![allow(clippy::unused_async)]
-#![allow(clippy::must_use_candidate)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::redundant_closure_for_method_calls)]
-#![allow(clippy::result_large_err)]
-#![allow(clippy::cast_possible_truncation)]
+#![expect(clippy::doc_markdown, reason = "legacy")]
+#![expect(clippy::module_name_repetitions, reason = "legacy")]
+#![expect(clippy::unused_async, reason = "legacy")]
+#![expect(clippy::must_use_candidate, reason = "legacy")]
+#![expect(clippy::missing_errors_doc, reason = "legacy")]
+#![expect(clippy::redundant_closure_for_method_calls, reason = "legacy")]
+#![expect(clippy::result_large_err, reason = "legacy")]
+#![expect(clippy::cast_possible_truncation, reason = "legacy")]
 
 pub mod error;
+pub mod health;
 pub mod ipc;
+pub mod lifecycle;
 pub mod rpc;
 
 pub use barracuda;
 
-use sourdough_core::{
-    health::{HealthReport, HealthStatus},
-    PrimalError, PrimalHealth, PrimalLifecycle, PrimalState,
-};
+use error::BarracudaCoreError;
+use health::{HealthReport, HealthStatus, PrimalHealth};
+use lifecycle::{PrimalLifecycle, PrimalState};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -98,9 +103,11 @@ impl PrimalLifecycle for BarraCudaPrimal {
         self.state
     }
 
-    async fn start(&mut self) -> Result<(), PrimalError> {
+    async fn start(&mut self) -> Result<(), BarracudaCoreError> {
         if !self.state.can_start() {
-            return Err(PrimalError::lifecycle("Cannot start from current state"));
+            return Err(BarracudaCoreError::lifecycle(
+                "Cannot start from current state",
+            ));
         }
 
         tracing::info!("barraCuda: discovering compute devices...");
@@ -124,9 +131,11 @@ impl PrimalLifecycle for BarraCudaPrimal {
         Ok(())
     }
 
-    async fn stop(&mut self) -> Result<(), PrimalError> {
+    async fn stop(&mut self) -> Result<(), BarracudaCoreError> {
         if !self.state.can_stop() {
-            return Err(PrimalError::lifecycle("Cannot stop from current state"));
+            return Err(BarracudaCoreError::lifecycle(
+                "Cannot stop from current state",
+            ));
         }
         self.device = None;
         self.state = PrimalState::Stopped;
@@ -145,7 +154,7 @@ impl PrimalHealth for BarraCudaPrimal {
         }
     }
 
-    async fn health_check(&self) -> Result<HealthReport, PrimalError> {
+    async fn health_check(&self) -> Result<HealthReport, BarracudaCoreError> {
         let mut report = HealthReport::new("barraCuda", env!("CARGO_PKG_VERSION"))
             .with_status(self.health_status());
 
@@ -193,7 +202,6 @@ mod tests {
         let mut primal = BarraCudaPrimal::new();
         primal.start().await.unwrap();
 
-        // Device should be available (at least llvmpipe/CPU backend)
         if primal.device().is_some() {
             assert!(primal.health_status().is_healthy());
         }

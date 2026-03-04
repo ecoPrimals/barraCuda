@@ -217,11 +217,9 @@ impl TopK {
             });
 
         // Execute
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("TopK Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("TopK Encoder"),
+        });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -250,11 +248,9 @@ impl TopK {
             mapped_at_creation: false,
         });
 
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("TopK Copy Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("TopK Copy Encoder"),
+        });
         encoder.copy_buffer_to_buffer(
             &output_buffer,
             0,
@@ -306,6 +302,7 @@ impl Tensor {
 // TESTS
 // ═══════════════════════════════════════════════════════════════
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -502,8 +502,8 @@ fn cpu_conv1d(input: &[f32], kernel: &[f32]) -> Vec<f32> {
     output
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use std::time::Duration;

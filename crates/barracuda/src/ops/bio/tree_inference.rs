@@ -26,7 +26,6 @@ use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 // ─── GPU params (matches WGSL TreeParams) ────────────────────────────────────
 
@@ -208,6 +207,7 @@ impl TreeInferenceGpu {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

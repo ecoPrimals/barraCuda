@@ -17,7 +17,6 @@ use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 const WGSL_DF64_CORE: &str = include_str!("../../../shaders/math/df64_core.wgsl");
 const WGSL_DF64_TRANSCENDENTALS: &str =
@@ -155,6 +154,7 @@ impl LennardJonesF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

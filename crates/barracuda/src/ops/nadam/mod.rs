@@ -53,6 +53,7 @@
 
 mod compute;
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;
 
@@ -92,7 +93,7 @@ impl Nadam {
     /// Create new NAdam optimizer operation
     ///
     /// **Deep Debt**: Validates all inputs for shape compatibility
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, reason = "API")]
     pub fn new(
         weights: Tensor,
         gradients: Tensor,
@@ -255,7 +256,7 @@ impl Tensor {
     /// ```rust,ignore
     /// let (w, m, v) = weights.nadam(&grad, &m, &v, 0.001, 0.9, 0.999, 1e-8, 0.0, 1)?;
     /// ```
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, reason = "API")]
     pub fn nadam(
         self,
         gradients: &Self,

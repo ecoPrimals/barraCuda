@@ -4,13 +4,13 @@
 # ecoBin compliance: pure Rust, no banned C wrappers
 
 [advisories]
-vulnerability = "deny"
-unmaintained = "warn"
+version = 2
+# v2: vulnerability, unmaintained, unsound, notice all default to deny
 yanked = "warn"
-notice = "warn"
 
 [licenses]
-unlicensed = "deny"
+version = 2
+# v2: unlicensed and copyleft default to deny
 allow = [
     "MIT",
     "Apache-2.0",
@@ -21,12 +21,12 @@ allow = [
     "Zlib",
     "Unicode-3.0",
     "Unicode-DFS-2016",
+    "AGPL-3.0",
     "AGPL-3.0-or-later",
     "BSL-1.0",
     "CC0-1.0",
     "MPL-2.0",
 ]
-copyleft = "warn"
 
 [[licenses.clarify]]
 name = "ring"

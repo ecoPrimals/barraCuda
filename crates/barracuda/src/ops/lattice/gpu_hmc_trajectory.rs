@@ -596,10 +596,7 @@ impl GpuHmcTrajectory {
                 ],
             });
 
-        let mut enc = self
-            .device
-            .device
-            .create_command_encoder(&Default::default());
+        let mut enc = self.device.create_encoder_guarded(&Default::default());
         {
             let mut pass = enc.begin_compute_pass(&Default::default());
             pass.set_pipeline(&pipeline);
@@ -682,10 +679,7 @@ impl GpuHmcTrajectory {
                 ],
             });
 
-        let mut enc = self
-            .device
-            .device
-            .create_command_encoder(&Default::default());
+        let mut enc = self.device.create_encoder_guarded(&Default::default());
         {
             let mut pass = enc.begin_compute_pass(&Default::default());
             pass.set_pipeline(&pipeline);
@@ -702,10 +696,7 @@ impl GpuHmcTrajectory {
     }
 
     fn copy_buffer_sized(&self, src: &wgpu::Buffer, dst: &wgpu::Buffer, size: u64) {
-        let mut enc = self
-            .device
-            .device
-            .create_command_encoder(&Default::default());
+        let mut enc = self.device.create_encoder_guarded(&Default::default());
         enc.copy_buffer_to_buffer(src, 0, dst, 0, size);
         self.device.submit_and_poll(Some(enc.finish()));
     }
@@ -763,6 +754,7 @@ fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "gpu_hmc_trajectory_tests.rs"]
 mod tests;

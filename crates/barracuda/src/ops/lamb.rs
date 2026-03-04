@@ -13,7 +13,6 @@
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
-use wgpu::util::DeviceExt;
 
 /// Layer-wise Adaptive Moments optimizer
 pub struct Lamb {
@@ -129,11 +128,9 @@ impl Lamb {
         let parameters_buffer = device.create_buffer_f32(size)?;
 
         // Copy parameters buffer using GPU copy
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("LAMB Buffer Copy Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("LAMB Buffer Copy Encoder"),
+        });
         encoder.copy_buffer_to_buffer(
             self.parameters.buffer(),
             0,
@@ -332,11 +329,9 @@ impl Lamb {
                 });
 
         // Create encoder
-        let mut encoder = device
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("LAMB Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("LAMB Encoder"),
+        });
 
         // Step 1: Compute Adam step
         let adam_pipeline =
@@ -411,6 +406,7 @@ impl Lamb {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

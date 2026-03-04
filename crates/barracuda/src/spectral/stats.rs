@@ -177,6 +177,7 @@ pub fn detect_bands(eigenvalues: &[f64], gap_factor: f64) -> Vec<(f64, f64)> {
     bands
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -194,7 +195,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
+    #[expect(clippy::float_cmp, reason = "tests")]
     fn level_spacing_ratio_two_eigenvalues() {
         let evals = vec![0.0, 1.0];
         let r = level_spacing_ratio(&evals);

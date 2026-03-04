@@ -487,6 +487,7 @@ impl TimeSeriesAnalyzer {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "timeseries_tests.rs"]
 mod tests;

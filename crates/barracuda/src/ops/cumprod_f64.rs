@@ -253,11 +253,9 @@ impl CumprodF64 {
         let total_pairs = (outer_size * inner_size) as u32;
         let workgroups = total_pairs.div_ceil(workgroup_size);
 
-        let mut encoder = device
-            .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("CumprodF64 Encoder"),
-            });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("CumprodF64 Encoder"),
+        });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -269,7 +267,7 @@ impl CumprodF64 {
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        device.queue().submit(std::iter::once(encoder.finish()));
+        device.submit_commands(std::iter::once(encoder.finish()));
 
         // Create output tensor
         Ok(Tensor::from_buffer(
@@ -308,6 +306,7 @@ impl CumprodF64 {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

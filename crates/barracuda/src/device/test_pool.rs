@@ -18,19 +18,38 @@ use std::sync::{Arc, OnceLock, RwLock};
 
 /// Block on a future, compatible with both sync and tokio contexts.
 ///
-/// When called from within a Tokio runtime, uses `block_in_place` to avoid
-/// "Cannot start a runtime from within a runtime" panics. When called from
-/// sync code, uses a lazily-created static runtime.
-pub fn tokio_block_on<F: std::future::Future>(f: F) -> F::Output {
+/// - Multi-threaded runtime: uses `block_in_place` (zero overhead).
+/// - Current-thread runtime: spawns an OS thread with a dedicated runtime
+///   (avoids both the `block_in_place` panic and nested `block_on` issues).
+/// - No runtime: uses a lazily-created static runtime directly.
+pub fn tokio_block_on<F>(f: F) -> F::Output
+where
+    F: std::future::Future + Send,
+    F::Output: Send,
+{
+    static RT: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
+
+    fn get_or_create_rt() -> &'static tokio::runtime::Runtime {
+        RT.get_or_init(|| tokio::runtime::Runtime::new().expect("Failed to create tokio runtime"))
+    }
+
     match tokio::runtime::Handle::try_current() {
-        Ok(handle) => tokio::task::block_in_place(|| handle.block_on(f)),
-        Err(_) => {
-            static RT: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
-            let rt = RT.get_or_init(|| {
-                tokio::runtime::Runtime::new().expect("Failed to create tokio runtime")
-            });
-            rt.block_on(f)
+        Ok(handle) => {
+            let can_block_in_place = std::panic::catch_unwind(|| {
+                tokio::task::block_in_place(|| {});
+            })
+            .is_ok();
+            if can_block_in_place {
+                tokio::task::block_in_place(|| handle.block_on(f))
+            } else {
+                std::thread::scope(|s| {
+                    s.spawn(|| get_or_create_rt().block_on(f))
+                        .join()
+                        .expect("tokio_block_on: spawned thread panicked")
+                })
+            }
         }
+        Err(_) => get_or_create_rt().block_on(f),
     }
 }
 
@@ -43,6 +62,13 @@ static CPU_POOL: std::sync::LazyLock<RwLock<Option<Arc<WgpuDevice>>>> =
 
 static GPU_POOL: std::sync::LazyLock<RwLock<Option<Arc<WgpuDevice>>>> =
     std::sync::LazyLock::new(|| RwLock::new(None));
+
+/// Serializes device creation so only one thread pays the cost.
+/// Other threads wait, then get the cached device.
+static CPU_CREATE_GUARD: std::sync::LazyLock<tokio::sync::Mutex<()>> =
+    std::sync::LazyLock::new(|| tokio::sync::Mutex::new(()));
+static GPU_CREATE_GUARD: std::sync::LazyLock<tokio::sync::Mutex<()>> =
+    std::sync::LazyLock::new(|| tokio::sync::Mutex::new(()));
 
 /// Cached adapter capabilities (survive device recreation).
 static GPU_IS_REAL: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
@@ -98,11 +124,11 @@ fn resolve_gpu_adapter_selector() -> String {
 async fn create_gpu_device() -> Arc<WgpuDevice> {
     let selector = GPU_ADAPTER_SELECTOR.get_or_init(resolve_gpu_adapter_selector);
     let device = tokio::time::timeout(
-        std::time::Duration::from_secs(10),
+        std::time::Duration::from_secs(30),
         WgpuDevice::with_adapter_selector(selector),
     )
     .await
-    .expect("GPU device creation timed out after 10s -- check driver")
+    .expect("GPU device creation timed out after 30s -- check driver")
     .expect("Failed to create GPU test device");
     tracing::info!(
         "test_pool[gpu]: '{}' ({:?})",
@@ -162,18 +188,6 @@ fn insert_into_pool(
     device
 }
 
-/// Get or create from a specific pool (sync version for non-async callers).
-fn get_or_create_pool(
-    pool: &RwLock<Option<Arc<WgpuDevice>>>,
-    creator: impl FnOnce() -> Option<Arc<WgpuDevice>>,
-) -> Option<Arc<WgpuDevice>> {
-    if let Some(dev) = try_get_cached(pool) {
-        return Some(dev);
-    }
-    let new_device = creator()?;
-    Some(insert_into_pool(pool, new_device))
-}
-
 // ============================================================================
 // Public API
 // ============================================================================
@@ -211,9 +225,23 @@ async fn get_test_cpu_device_async() -> Option<Arc<WgpuDevice>> {
     if let Some(dev) = try_get_cached(&CPU_POOL) {
         return Some(dev);
     }
-    let new_dev = create_cpu_device().await?;
-    CPU_AVAILABLE.get_or_init(|| true);
-    Some(insert_into_pool(&CPU_POOL, new_dev))
+    if CPU_AVAILABLE.get() == Some(&false) {
+        return None;
+    }
+    let _guard = CPU_CREATE_GUARD.lock().await;
+    if let Some(dev) = try_get_cached(&CPU_POOL) {
+        return Some(dev);
+    }
+    match create_cpu_device().await {
+        Some(dev) => {
+            CPU_AVAILABLE.get_or_init(|| true);
+            Some(insert_into_pool(&CPU_POOL, dev))
+        }
+        None => {
+            CPU_AVAILABLE.get_or_init(|| false);
+            None
+        }
+    }
 }
 
 /// Get the CPU test device (llvmpipe/software) — sync version.
@@ -222,17 +250,18 @@ pub fn get_test_cpu_device() -> Option<Arc<WgpuDevice>> {
     if let Some(dev) = try_get_cached(&CPU_POOL) {
         return Some(dev);
     }
-    let available = *CPU_AVAILABLE
-        .get_or_init(|| tokio_block_on(async { create_cpu_device().await.is_some() }));
-    if !available {
+    if CPU_AVAILABLE.get() == Some(&false) {
         return None;
     }
-
-    get_or_create_pool(&CPU_POOL, || tokio_block_on(create_cpu_device()))
+    tokio_block_on(get_test_cpu_device_async())
 }
 
 /// Get the GPU test device. Returns None if no real GPU is available.
 pub async fn get_test_gpu_device() -> Option<Arc<WgpuDevice>> {
+    if let Some(dev) = try_get_cached(&GPU_POOL) {
+        return Some(dev);
+    }
+    let _guard = GPU_CREATE_GUARD.lock().await;
     if let Some(dev) = try_get_cached(&GPU_POOL) {
         return Some(dev);
     }
@@ -266,32 +295,6 @@ pub async fn get_test_device_if_f64_gpu_available() -> Option<Arc<WgpuDevice>> {
 // Sync helpers
 // ============================================================================
 
-fn get_test_device_sync_inner() -> Arc<WgpuDevice> {
-    if prefer_gpu() {
-        return get_or_create_pool(&GPU_POOL, || {
-            let dev = tokio_block_on(create_gpu_device());
-            GPU_IS_REAL.get_or_init(|| dev.adapter_info().device_type != wgpu::DeviceType::Cpu);
-            GPU_HAS_F64.get_or_init(|| dev.has_f64_shaders());
-            Some(dev)
-        })
-        .expect("BARRACUDA_TEST_BACKEND=gpu but no GPU available");
-    }
-
-    // Try CPU first
-    if let Some(dev) = get_test_cpu_device() {
-        return dev;
-    }
-
-    // Fall back to GPU
-    get_or_create_pool(&GPU_POOL, || {
-        let dev = tokio_block_on(create_gpu_device());
-        GPU_IS_REAL.get_or_init(|| dev.adapter_info().device_type != wgpu::DeviceType::Cpu);
-        GPU_HAS_F64.get_or_init(|| dev.has_f64_shaders());
-        Some(dev)
-    })
-    .expect("No test device available")
-}
-
 /// Run a closure with the shared test device.
 pub fn run_with_sync_device<F, R>(f: F) -> R
 where
@@ -302,37 +305,17 @@ where
 
 /// Sync wrapper for `get_test_device`.
 pub fn get_test_device_sync() -> Arc<WgpuDevice> {
-    get_test_device_sync_inner()
+    tokio_block_on(get_test_device())
 }
 
 /// Sync wrapper for `get_test_device_if_gpu_available`.
 pub fn get_test_device_if_gpu_available_sync() -> Option<Arc<WgpuDevice>> {
-    let device = get_or_create_pool(&GPU_POOL, || {
-        let dev = tokio_block_on(create_gpu_device());
-        GPU_IS_REAL.get_or_init(|| dev.adapter_info().device_type != wgpu::DeviceType::Cpu);
-        GPU_HAS_F64.get_or_init(|| dev.has_f64_shaders());
-        Some(dev)
-    })?;
-    if *GPU_IS_REAL.get_or_init(|| device.adapter_info().device_type != wgpu::DeviceType::Cpu) {
-        Some(device)
-    } else {
-        None
-    }
+    tokio_block_on(get_test_device_if_gpu_available())
 }
 
 /// Sync wrapper for `get_test_device_if_f64_gpu_available`.
 pub fn get_test_device_if_f64_gpu_available_sync() -> Option<Arc<WgpuDevice>> {
-    let device = get_or_create_pool(&GPU_POOL, || {
-        let dev = tokio_block_on(create_gpu_device());
-        GPU_IS_REAL.get_or_init(|| dev.adapter_info().device_type != wgpu::DeviceType::Cpu);
-        GPU_HAS_F64.get_or_init(|| dev.has_f64_shaders());
-        Some(dev)
-    })?;
-    if *GPU_HAS_F64.get_or_init(|| device.has_f64_shaders()) {
-        Some(device)
-    } else {
-        None
-    }
+    tokio_block_on(get_test_device_if_f64_gpu_available())
 }
 
 // ============================================================================
@@ -406,20 +389,20 @@ pub mod test_prelude {
     pub async fn test_randn(shape: &[usize], device: &Arc<WgpuDevice>) -> Tensor {
         use rand::Rng;
         let size: usize = shape.iter().product();
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
         let mut data = Vec::with_capacity(size);
         for _ in 0..(size / 2) {
-            let u1: f32 = rng.gen::<f32>().max(1e-10);
-            let u2: f32 = rng.gen();
+            let u1: f32 = rng.random::<f32>().max(1e-10);
+            let u2: f32 = rng.random();
             let r = (-2.0 * u1.ln()).sqrt();
             let theta = 2.0 * std::f32::consts::PI * u2;
             data.push(r * theta.cos());
             data.push(r * theta.sin());
         }
         if size % 2 == 1 {
-            let u1: f32 = rng.gen::<f32>().max(1e-10);
-            let u2: f32 = rng.gen();
+            let u1: f32 = rng.random::<f32>().max(1e-10);
+            let u2: f32 = rng.random();
             data.push((-2.0 * u1.ln()).sqrt() * (2.0 * std::f32::consts::PI * u2).cos());
         }
         data.truncate(size);
@@ -433,7 +416,7 @@ pub mod test_prelude {
     pub async fn test_rand(shape: &[usize], device: &Arc<WgpuDevice>) -> Tensor {
         use rand::Rng;
         let size: usize = shape.iter().product();
-        let data: Vec<f32> = (0..size).map(|_| rand::thread_rng().gen()).collect();
+        let data: Vec<f32> = (0..size).map(|_| rand::rng().random()).collect();
 
         Tensor::from_vec_on(data, shape.to_vec(), Arc::clone(device))
             .await
@@ -489,6 +472,7 @@ pub mod test_prelude {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

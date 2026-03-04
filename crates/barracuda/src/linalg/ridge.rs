@@ -196,6 +196,7 @@ fn cholesky_factor(a: &[f64], n: usize) -> Option<Vec<f64>> {
     Some(l)
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

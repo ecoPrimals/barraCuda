@@ -199,8 +199,6 @@ impl Tensor {
         shape: Vec<usize>,
         device: Arc<WgpuDevice>,
     ) -> Result<Self> {
-        use wgpu::util::DeviceExt;
-
         // Generate unique label to avoid buffer caching/collision
         let label = format!(
             "Tensor Data {}",
@@ -232,8 +230,6 @@ impl Tensor {
     ///
     /// This is used by WGSL operations to return computed results.
     pub fn new(data: Vec<f32>, shape: Vec<usize>, device: Arc<WgpuDevice>) -> Self {
-        use wgpu::util::DeviceExt;
-
         // Handle empty data: create a minimum-size buffer for WebGPU compatibility
         let buffer = if data.is_empty() {
             device.device.create_buffer(&wgpu::BufferDescriptor {
@@ -288,12 +284,11 @@ impl Tensor {
         let size = self.len();
         let new_buffer = self.device.create_buffer_f32(size)?;
 
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Tensor Deep Clone Encoder"),
-                });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("Tensor Deep Clone Encoder"),
+            });
 
         encoder.copy_buffer_to_buffer(
             self.buffer(),
@@ -525,6 +520,7 @@ impl std::fmt::Display for Tensor {
     }
 }
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "tensor_tests.rs"]
 mod tests;

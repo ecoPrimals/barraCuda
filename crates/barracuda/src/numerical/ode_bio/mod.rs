@@ -25,5 +25,6 @@ pub use params::{
 };
 pub use systems::{BistableOde, CapacitorOde, CooperationOde, MultiSignalOde, PhageDefenseOde};
 
+#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;

@@ -5,6 +5,7 @@
 //! kernel with 5 accumulators (sum_x, sum_y, sum_xx, sum_yy, sum_xy).
 //! Absorbed from Kokkos parallel_reduce with JoinOp patterns.
 
+use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
 use crate::device::WgpuDevice;
@@ -14,6 +15,24 @@ use std::sync::Arc;
 
 /// Fused 5-accumulator correlation shader.
 const SHADER_FUSED: &str = include_str!("../shaders/stats/correlation_full_f64.wgsl");
+/// DF64 variant — same 5-accumulator algorithm, DF64 core-streaming arithmetic.
+const SHADER_FUSED_DF64: &str = include_str!("../shaders/stats/correlation_full_df64.wgsl");
+/// DF64 core arithmetic library (f32-pair).
+const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
+
+/// Select the fused correlation shader based on the device's FP64 strategy.
+fn fused_shader_for_device(device: &WgpuDevice) -> &'static str {
+    let profile = GpuDriverProfile::from_device(device);
+    match profile.fp64_strategy() {
+        Fp64Strategy::Native | Fp64Strategy::Concurrent => SHADER_FUSED,
+        Fp64Strategy::Hybrid => {
+            static DF64_COMBINED: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+                format!("enable f64;\n{DF64_CORE}\n{SHADER_FUSED_DF64}")
+            });
+            &DF64_COMBINED
+        }
+    }
+}
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -119,10 +138,11 @@ impl CorrelationF64 {
             Some("CorrFused BG"),
         );
 
+        let shader_src = fused_shader_for_device(&self.device);
         let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
             self.device.device(),
             adapter_info,
-            SHADER_FUSED,
+            shader_src,
             layout_sig,
             "main",
             Some("CorrFused Pipeline"),

@@ -31,7 +31,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`BindGroupLayoutSignature::three_input_reduction()`** — layout for 3-input
   reduction ops like weighted dot (3 read, 1 rw, 1 uniform)
 
+- **DF64 fused mean+variance shader** (`shaders/reduce/mean_variance_df64.wgsl`) — Welford
+  algorithm with all accumulation in DF64 (f32-pair, ~48-bit mantissa). Uses `df64_from_f64()`
+  for buffer I/O and DF64 arithmetic for the grid-stride + tree reduction hot path.
+  Enables ~10x throughput on consumer GPUs (1:64 fp64:fp32 ratio)
+- **DF64 fused correlation shader** (`shaders/stats/correlation_full_df64.wgsl`) — 5-accumulator
+  Pearson correlation with all accumulation in DF64. Same algorithm as the f64 variant but
+  routes arithmetic through DF64 core-streaming
+- **`ComputeDispatch::df64()`** — DF64 shader compilation path for the compute dispatch
+  builder, prepending df64_core + df64_transcendentals to the shader source
+
 ### Changed
+- **DF64 precision tier evolution** — 15 f64 ops now participate in the three-tier
+  precision model (f32 / DF64 / f64). `Fp64Strategy` from `GpuDriverProfile` selects
+  the optimal shader at dispatch time:
+  - **Native/Concurrent** GPUs (Titan V, V100, MI250): use native f64 shaders (unchanged)
+  - **Hybrid** GPUs (consumer RTX 40xx, RDNA3, Intel Arc): use DF64 core-streaming variants
+    that run polynomial/accumulation arithmetic on the f32 core array (~10x throughput)
+- **Fused ops** — `variance_f64`, `correlation_f64` select between dedicated f64 and DF64
+  fused shaders based on `Fp64Strategy`
+- **Reduction/stats ops** — `covariance_f64`, `cosine_similarity_f64`, `weighted_dot_f64`
+  use naga-guided `rewrite_f64_infix_full()` to auto-generate DF64 bridge variants. Infix
+  f64 arithmetic routes through DF64; buffer format stays `array<f64>` (no marshalling)
+- **Special functions** — `bessel_i0/j0/j1/k0`, `digamma_f64`, `beta_f64`, `hermite_f64`
+  use the same naga-guided auto-rewrite. Polynomial evaluation runs in DF64; builtins
+  (`exp`, `sqrt`, `abs`) remain native f64
+- **`batched_elementwise_f64`** — `Fp64Strategy::Hybrid` path pre-injects math_f64
+  polyfills, applies naga-guided DF64 rewrite, and compiles via `compile_shader_df64()`.
+  Falls back to native f64 if the rewriter can't handle the shader complexity
 - **10 additional f64 ops evolved to TensorContext path** — `covariance_f64`,
   `bessel_i0`, `bessel_j0`, `bessel_j1`, `bessel_k0`, `digamma_f64`, `beta_f64`,
   `hermite_f64`, `cosine_similarity_f64`, `weighted_dot_f64` migrated from raw

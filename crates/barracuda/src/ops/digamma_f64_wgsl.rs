@@ -4,6 +4,7 @@
 //! ψ(x) = Γ'(x)/Γ(x), the logarithmic derivative of the Gamma function.
 //! Applications: Fisher information, Bayesian statistics, neural network regularization
 
+use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
 use crate::device::WgpuDevice;
@@ -11,6 +12,24 @@ use crate::error::Result;
 use std::sync::Arc;
 
 const SHADER: &str = include_str!("../shaders/special/digamma_f64.wgsl");
+const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
+
+/// Select shader based on FP64 strategy: native f64 or DF64 auto-rewrite.
+fn shader_for_device(device: &WgpuDevice) -> &'static str {
+    let profile = GpuDriverProfile::from_device(device);
+    match profile.fp64_strategy() {
+        Fp64Strategy::Native | Fp64Strategy::Concurrent => SHADER,
+        Fp64Strategy::Hybrid => {
+            static DF64_SOURCE: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+                match crate::shaders::sovereign::df64_rewrite::rewrite_f64_infix_full(SHADER) {
+                    Ok(src) => format!("enable f64;\n{DF64_CORE}\n{src}"),
+                    Err(_) => SHADER.to_string(),
+                }
+            });
+            &DF64_SOURCE
+        }
+    }
+}
 
 /// f64 Digamma function evaluator — pipeline-cached
 ///
@@ -79,10 +98,11 @@ impl DigammaF64 {
             Some("Digamma BG"),
         );
 
+        let shader_src = shader_for_device(&self.device);
         let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
             self.device.device(),
             adapter_info,
-            SHADER,
+            shader_src,
             layout_sig,
             "main",
             Some("Digamma Pipeline"),

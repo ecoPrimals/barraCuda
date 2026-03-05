@@ -5,6 +5,7 @@
 //! Absorbed from Kokkos parallel_reduce patterns: one kernel, zero intermediate
 //! CPU round-trips for chained statistics.
 
+use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
 use crate::device::WgpuDevice;
@@ -14,6 +15,27 @@ use std::sync::Arc;
 
 /// Fused mean+variance f64 shader (Welford single-pass).
 const SHADER_FUSED: &str = include_str!("../shaders/reduce/mean_variance_f64.wgsl");
+/// DF64 variant — same Welford algorithm, DF64 core-streaming arithmetic.
+const SHADER_FUSED_DF64: &str = include_str!("../shaders/reduce/mean_variance_df64.wgsl");
+/// DF64 core arithmetic library (f32-pair).
+const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
+
+/// Select the fused shader based on the device's FP64 strategy.
+///
+/// Native/Concurrent: use the native f64 Welford shader.
+/// Hybrid: use the DF64 variant (polynomial accumulation on f32 cores).
+fn fused_shader_for_device(device: &WgpuDevice) -> &'static str {
+    let profile = GpuDriverProfile::from_device(device);
+    match profile.fp64_strategy() {
+        Fp64Strategy::Native | Fp64Strategy::Concurrent => SHADER_FUSED,
+        Fp64Strategy::Hybrid => {
+            static DF64_COMBINED: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+                format!("enable f64;\n{DF64_CORE}\n{SHADER_FUSED_DF64}")
+            });
+            &DF64_COMBINED
+        }
+    }
+}
 
 /// Simple variance reduction variant (scalar path).
 pub fn wgsl_variance_simple() -> &'static str {
@@ -117,10 +139,11 @@ impl VarianceF64 {
             Some("FusedMeanVar BG"),
         );
 
+        let shader_src = fused_shader_for_device(&self.device);
         let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
             self.device.device(),
             adapter_info,
-            SHADER_FUSED,
+            shader_src,
             layout_sig,
             "main",
             Some("FusedMeanVar Pipeline"),

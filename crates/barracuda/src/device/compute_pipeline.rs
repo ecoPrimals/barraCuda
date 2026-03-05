@@ -43,6 +43,7 @@ pub struct ComputeDispatch<'a> {
     entry_point: &'a str,
     workgroups: (u32, u32, u32),
     f64_shader: bool,
+    df64_shader: bool,
 }
 
 impl<'a> ComputeDispatch<'a> {
@@ -56,6 +57,7 @@ impl<'a> ComputeDispatch<'a> {
             entry_point: "main",
             workgroups: (1, 1, 1),
             f64_shader: false,
+            df64_shader: false,
         }
     }
 
@@ -69,6 +71,15 @@ impl<'a> ComputeDispatch<'a> {
     /// Use f64 shader compilation path (with precision patching + ILP optimizer).
     pub fn f64(mut self) -> Self {
         self.f64_shader = true;
+        self
+    }
+
+    /// Use DF64 shader compilation path (f32-pair arithmetic, ~48-bit mantissa).
+    ///
+    /// The source must already contain DF64 bridge functions (from naga rewrite).
+    /// This method prepends df64_core + df64_transcendentals and compiles.
+    pub fn df64(mut self) -> Self {
+        self.df64_shader = true;
         self
     }
 
@@ -181,7 +192,9 @@ impl<'a> ComputeDispatch<'a> {
                 entries: &bg_entries,
             });
 
-        let module = if self.f64_shader {
+        let module = if self.df64_shader {
+            self.device.compile_shader_df64(source, Some(self.label))
+        } else if self.f64_shader {
             self.device.compile_shader_f64(source, Some(self.label))
         } else {
             self.device.compile_shader(source, Some(self.label))

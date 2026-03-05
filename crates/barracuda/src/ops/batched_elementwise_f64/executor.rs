@@ -5,6 +5,7 @@
 use super::cpu_ref;
 use super::op::{Op, StationDayInput, WaterBalanceInput};
 use crate::device::compute_pipeline::ComputeDispatch;
+use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
@@ -12,6 +13,20 @@ use std::sync::Arc;
 
 const SHADER_BATCHED_ELEMENTWISE_F64: &str =
     include_str!("../../shaders/science/batched_elementwise_f64.wgsl");
+
+/// Try to build a DF64-rewritten variant of the batched elementwise shader.
+///
+/// Pre-injects math_f64 polyfills so naga can validate, then rewrites
+/// f64 infix ops to DF64 bridge calls. Returns `None` if the naga
+/// rewriter can't handle this shader's complexity.
+fn df64_shader_source() -> Option<&'static str> {
+    static DF64_SOURCE: std::sync::LazyLock<Option<String>> = std::sync::LazyLock::new(|| {
+        use crate::shaders::precision::ShaderTemplate;
+        let with_polyfills = ShaderTemplate::with_math_f64_auto(SHADER_BATCHED_ELEMENTWISE_F64);
+        crate::shaders::sovereign::df64_rewrite::rewrite_f64_infix_full(&with_polyfills).ok()
+    });
+    DF64_SOURCE.as_deref()
+}
 
 /// Parameters for batched elementwise shader
 #[repr(C)]
@@ -122,14 +137,30 @@ impl BatchedElementwiseF64 {
                     usage: wgpu::BufferUsages::UNIFORM,
                 });
 
-        ComputeDispatch::new(&self.device, "batched_elementwise_f64")
-            .shader(SHADER_BATCHED_ELEMENTWISE_F64, "batched_compute")
-            .f64()
-            .storage_read(0, &input_buffer)
-            .storage_rw(1, &output_buffer)
-            .uniform(2, &params_buffer)
-            .dispatch(batch_size as u32, 1, 1)
-            .submit();
+        let profile = GpuDriverProfile::from_device(&self.device);
+        let use_df64 = matches!(profile.fp64_strategy(), Fp64Strategy::Hybrid)
+            && df64_shader_source().is_some();
+
+        if use_df64 {
+            let src = df64_shader_source().expect("checked above");
+            ComputeDispatch::new(&self.device, "batched_elementwise_df64")
+                .shader(src, "batched_compute")
+                .df64()
+                .storage_read(0, &input_buffer)
+                .storage_rw(1, &output_buffer)
+                .uniform(2, &params_buffer)
+                .dispatch(batch_size as u32, 1, 1)
+                .submit();
+        } else {
+            ComputeDispatch::new(&self.device, "batched_elementwise_f64")
+                .shader(SHADER_BATCHED_ELEMENTWISE_F64, "batched_compute")
+                .f64()
+                .storage_read(0, &input_buffer)
+                .storage_rw(1, &output_buffer)
+                .uniform(2, &params_buffer)
+                .dispatch(batch_size as u32, 1, 1)
+                .submit();
+        }
 
         // Read results
         self.read_results(&output_buffer, batch_size)

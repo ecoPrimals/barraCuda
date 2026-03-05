@@ -280,7 +280,6 @@ fn cramer_3x3(m: [[f64; 3]; 3], rhs: [f64; 3]) -> Option<(f64, f64, f64)> {
     Some((inv * det3(&m0), inv * det3(&m1), inv * det3(&m2)))
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

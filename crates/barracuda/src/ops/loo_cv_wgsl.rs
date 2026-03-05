@@ -21,6 +21,7 @@ pub struct LooCv {
 }
 
 impl LooCv {
+    /// Create LOO-CV residuals from hat matrix, targets, and predictions.
     pub fn new(hat_matrix: Tensor, y: Tensor, predictions: Tensor) -> Self {
         Self {
             hat_matrix,
@@ -38,6 +39,7 @@ impl LooCv {
         SHADER.as_str()
     }
 
+    /// Compute leave-one-out cross-validation residuals.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.hat_matrix.device();
         let n: usize = self.y.shape().iter().product();
@@ -200,7 +202,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

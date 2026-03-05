@@ -13,9 +13,13 @@ use crate::error::Result;
 /// A detected peak with its properties.
 #[derive(Debug, Clone)]
 pub struct DetectedPeak {
+    /// Index in the signal
     pub index: usize,
+    /// Peak height (signal value at peak)
     pub height: f64,
+    /// Prominence (vertical distance to higher peak)
     pub prominence: f64,
+    /// Width at half-prominence
     pub width: f64,
 }
 
@@ -33,6 +37,7 @@ pub struct PeakDetectF64<'a> {
 }
 
 impl<'a> PeakDetectF64<'a> {
+    /// Create a peak detector with minimum peak distance.
     #[must_use]
     pub fn new(signal: &'a [f64], distance: usize) -> Self {
         Self {
@@ -44,24 +49,28 @@ impl<'a> PeakDetectF64<'a> {
         }
     }
 
+    /// Set minimum peak height threshold.
     #[must_use]
     pub fn height(mut self, min_height: f64) -> Self {
         self.height = Some(min_height);
         self
     }
 
+    /// Set minimum prominence threshold.
     #[must_use]
     pub fn prominence(mut self, min_prominence: f64) -> Self {
         self.prominence = Some(min_prominence);
         self
     }
 
+    /// Set minimum width threshold.
     #[must_use]
     pub fn width(mut self, min_width: f64) -> Self {
         self.width = Some(min_width);
         self
     }
 
+    /// Run peak detection on the GPU.
     pub fn execute(&self, device: &Arc<WgpuDevice>) -> Result<Vec<DetectedPeak>> {
         let n = self.signal.len();
         if n == 0 {
@@ -360,7 +369,6 @@ fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

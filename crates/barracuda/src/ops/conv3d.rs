@@ -38,6 +38,7 @@ struct Conv3DParams {
     _pad: u32,
 }
 
+/// 3D convolution for volumetric/spatiotemporal data.
 pub struct Conv3D {
     input: Tensor,
     weight: Tensor,
@@ -48,6 +49,7 @@ pub struct Conv3D {
 }
 
 impl Conv3D {
+    /// Creates a new Conv3D. Input shape: [B, C_in, D, H, W]; weight: [C_out, C_in, kD, kH, kW].
     pub fn new(
         input: Tensor,
         weight: Tensor,
@@ -73,10 +75,11 @@ impl Conv3D {
                     "../shaders/conv/conv3d_f64.wgsl"
                 ))
             });
-            SHADER.as_str()
+            std::sync::LazyLock::force(&SHADER).as_str()
         }
     }
 
+    /// Executes 3D convolution and returns the output tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -240,7 +243,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

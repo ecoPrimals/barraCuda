@@ -6,8 +6,11 @@
 /// Result of Boltzmann/Metropolis MCMC sampling.
 #[derive(Debug, Clone)]
 pub struct BoltzmannResult {
+    /// Loss values at each step (including initial).
     pub losses: Vec<f64>,
+    /// Fraction of proposed steps that were accepted.
     pub acceptance_rate: f64,
+    /// Final parameter values after all steps.
     pub final_params: Vec<f64>,
 }
 
@@ -112,7 +115,6 @@ pub fn boltzmann_sampling(
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -26,7 +26,7 @@
 //! - Phase 3 ✓  ILP reorderer + loop unroller wired into `compile_shader_f64()`
 //! - Phase 4    Specialised codegen — deferred until upstream bottleneck confirmed
 //!
-//! Reference: phases described above; originated from toadStool sovereign compute spec.
+//! Reference: phases described above; originated from orchestration layer sovereign compute spec.
 
 mod architectures;
 mod workarounds;
@@ -44,11 +44,17 @@ use crate::error::{BarracudaError, Result};
 /// GPU driver/compiler identity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DriverKind {
+    /// NVIDIA proprietary (NVVM/PTXAS)
     NvidiaProprietary,
+    /// Mesa NVK (open-source NVIDIA Vulkan)
     Nvk,
+    /// Mesa RADV (AMD Vulkan)
     Radv,
+    /// Intel ANV
     Intel,
+    /// Software rasterizer
     Software,
+    /// Unknown driver
     Unknown,
 }
 
@@ -65,6 +71,7 @@ pub enum CompilerKind {
     Anv,
     /// Software rasterizer (llvmpipe, swiftshader)
     Software,
+    /// Unknown compiler
     Unknown,
 }
 
@@ -89,16 +96,22 @@ pub enum Fp64Rate {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EigensolveStrategy {
     /// Warp-packed: 32 independent matrices per workgroup (NVIDIA)
-    WarpPacked { wg_size: u32 },
+    WarpPacked {
+        /// Workgroup size (typically 32)
+        wg_size: u32,
+    },
     /// Wave-packed: 64 independent matrices per workgroup (AMD)
-    WavePacked { wave_size: u32 },
+    WavePacked {
+        /// Wavefront size (typically 64)
+        wave_size: u32,
+    },
     /// Standard: one matrix per workgroup
     Standard,
 }
 
 // ── FP64 execution strategy ──────────────────────────────────────────────────
 
-/// Hardware-adaptive FP64 execution strategy (hotSpring core-streaming discovery).
+/// Hardware-adaptive FP64 execution strategy (physics domain core-streaming discovery).
 ///
 /// On compute-class GPUs (Titan V, V100, MI250) with 1:2 FP64:FP32 hardware,
 /// native `f64` is fastest. On consumer GPUs (1:64 ratio), routing bulk math
@@ -137,10 +150,15 @@ pub enum Fp64Strategy {
 /// ```
 #[derive(Debug, Clone)]
 pub struct GpuDriverProfile {
+    /// Driver identity
     pub driver: DriverKind,
+    /// Shader compiler backend
     pub compiler: CompilerKind,
+    /// GPU microarchitecture
     pub arch: GpuArch,
+    /// FP64 hardware rate classification
     pub fp64_rate: Fp64Rate,
+    /// Active workarounds for this driver/arch
     pub workarounds: Vec<Workaround>,
 }
 
@@ -164,7 +182,7 @@ impl GpuDriverProfile {
 
     /// Optimal eigensolve dispatch strategy for this driver/arch combination.
     ///
-    /// hotSpring measured 2.2× NVK speedup with warp-packing (Titan V, Feb 2026).
+    /// Physics domain measured 2.2× NVK speedup with warp-packing (Titan V, Feb 2026).
     /// Neutral on proprietary NVIDIA (scheduler already handles wg1 efficiently).
     ///
     /// ### AMD RDNA2/RDNA3 (ACO compiler)
@@ -206,7 +224,7 @@ impl GpuDriverProfile {
     /// Whether `pow(f64, f64)` needs software substitution on this driver.
     ///
     /// Ada Lovelace (SM89) with the proprietary NVIDIA driver cannot compile
-    /// native f64 pow/exp/log. Discovered by wetSpring on RTX 4070 (Feb 2026).
+    /// native f64 pow/exp/log. Discovered by marine biology domain on RTX 4070 (Feb 2026).
     pub fn needs_pow_f64_workaround(&self) -> bool {
         self.workarounds
             .contains(&Workaround::NvvmAdaF64Transcendentals)
@@ -255,7 +273,7 @@ impl GpuDriverProfile {
     /// Probe-informed FP64 strategy. Overrides heuristic when the runtime
     /// probe shows f64 compilation actually fails (NAK, NVVM).
     ///
-    /// groundSpring V35/V37 discovery: NAK and NVVM advertise `SHADER_F64`
+    /// Earth science domain V35/V37 discovery: NAK and NVVM advertise `SHADER_F64`
     /// but cannot compile f64 WGSL. The probe provides ground truth.
     pub fn fp64_strategy_probed(
         &self,
@@ -433,7 +451,6 @@ impl fmt::Display for GpuDriverProfile {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

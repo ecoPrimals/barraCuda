@@ -13,20 +13,27 @@ use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub, SubAssign};
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[must_use]
 pub struct Complex64 {
+    /// Real part
     pub re: f64,
+    /// Imaginary part
     pub im: f64,
 }
 
 impl Complex64 {
+    /// Zero: 0 + 0i
     pub const ZERO: Self = Self { re: 0.0, im: 0.0 };
+    /// One: 1 + 0i
     pub const ONE: Self = Self { re: 1.0, im: 0.0 };
+    /// Imaginary unit: 0 + 1i
     pub const I: Self = Self { re: 0.0, im: 1.0 };
 
+    /// Create a complex number from real and imaginary parts.
     #[inline]
     pub const fn new(re: f64, im: f64) -> Self {
         Self { re, im }
     }
 
+    /// Complex conjugate.
     #[inline]
     pub fn conj(self) -> Self {
         Self {
@@ -35,16 +42,19 @@ impl Complex64 {
         }
     }
 
+    /// Squared magnitude: |z|².
     #[inline]
     pub fn abs_sq(self) -> f64 {
         self.re.mul_add(self.re, self.im * self.im)
     }
 
+    /// Magnitude: |z|.
     #[inline]
     pub fn abs(self) -> f64 {
         self.abs_sq().sqrt()
     }
 
+    /// Complex exponential e^z.
     #[inline]
     pub fn exp(self) -> Self {
         let r = self.re.exp();
@@ -54,6 +64,7 @@ impl Complex64 {
         }
     }
 
+    /// Scale by real scalar: z * s.
     #[inline]
     pub fn scale(self, s: f64) -> Self {
         Self {
@@ -122,7 +133,7 @@ impl MulAssign for Complex64 {
 impl Div for Complex64 {
     type Output = Self;
     #[inline]
-    #[expect(clippy::suspicious_arithmetic_impl, reason = "suppressed")]
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn div(self, rhs: Self) -> Self {
         let d = rhs.abs_sq();
         Self {
@@ -153,7 +164,6 @@ impl fmt::Display for Complex64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

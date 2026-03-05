@@ -28,6 +28,7 @@ pub struct GcnConv {
 }
 
 impl GcnConv {
+    /// Create GCN (Graph Convolutional Network) layer.
     pub fn new(
         node_features: Tensor,
         edge_index: Vec<(usize, usize)>,
@@ -99,6 +100,7 @@ impl GcnConv {
         }
     }
 
+    /// Execute GCN convolution.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.node_features.device();
         // Convert edge_index to u32 pairs
@@ -384,7 +386,6 @@ impl GcnConv {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

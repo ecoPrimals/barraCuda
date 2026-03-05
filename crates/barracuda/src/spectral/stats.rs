@@ -13,11 +13,11 @@ use crate::stats::marchenko_pastur_bounds;
 /// Spectral phase based on outlier fraction beyond Marchenko-Pastur upper bound.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum SpectralPhase {
-    /// < 5% outliers beyond MP upper bound
+    /// &lt; 5% outliers beyond MP upper bound (localized).
     Bulk,
-    /// 5–20% outliers
+    /// 5–20% outliers (edge of chaos).
     EdgeOfChaos,
-    /// > 20% outliers
+    /// &gt; 20% outliers (chaotic).
     Chaotic,
 }
 
@@ -74,10 +74,15 @@ pub fn classify_spectral_phase(eigenvalues: &[f64], marchenko_upper: f64) -> Spe
 /// Spectral analysis result with bandwidth, condition number, and phase.
 #[derive(Debug, Clone)]
 pub struct SpectralAnalysis {
+    /// Eigenvalues (sorted).
     pub eigenvalues: Vec<f64>,
+    /// Spectral bandwidth (max - min).
     pub bandwidth: f64,
+    /// Condition number (max|λ| / min|λ|).
     pub condition_number: f64,
+    /// Classified spectral phase.
     pub phase: SpectralPhase,
+    /// Marchenko-Pastur upper bound used for phase classification.
     pub marchenko_upper: f64,
 }
 
@@ -177,7 +182,6 @@ pub fn detect_bands(eigenvalues: &[f64], gap_factor: f64) -> Vec<(f64, f64)> {
     bands
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

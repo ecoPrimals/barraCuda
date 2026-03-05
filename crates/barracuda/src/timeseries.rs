@@ -42,23 +42,34 @@ use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result as BarracudaResult};
 use crate::esn_v2::{ESNConfig, ESN};
 
-/// Time series model types (capability-based, runtime-configured)
+/// Time series model types (capability-based, runtime-configured).
 #[derive(Debug, Clone)]
 pub enum TimeSeriesModel {
-    /// Echo State Network (recommended for complex patterns)
+    /// Echo State Network (recommended for complex patterns).
     ESN {
+        /// Reservoir size.
         reservoir_size: usize,
+        /// Spectral radius (typically 0.9–0.99).
         spectral_radius: f32,
     },
 
-    /// Simple Moving Average (good for smoothing)
-    MovingAverage { window: usize },
+    /// Simple Moving Average (good for smoothing).
+    MovingAverage {
+        /// Window size.
+        window: usize,
+    },
 
-    /// Exponential Smoothing (good for trending data)
-    ExponentialSmoothing { alpha: f32 },
+    /// Exponential Smoothing (good for trending data).
+    ExponentialSmoothing {
+        /// Smoothing factor (0–1).
+        alpha: f32,
+    },
 
-    /// Weighted Moving Average (custom weights)
-    WeightedMovingAverage { weights: Vec<f32> },
+    /// Weighted Moving Average (custom weights).
+    WeightedMovingAverage {
+        /// Per-position weights.
+        weights: Vec<f32>,
+    },
 }
 
 /// Forecast configuration
@@ -155,7 +166,7 @@ pub struct TimeSeriesAnalyzer {
 }
 
 impl TimeSeriesAnalyzer {
-    /// Create new analyzer
+    /// Create a new time series analyzer.
     pub fn new(device: &WgpuDevice) -> Self {
         Self {
             device: device.clone(),
@@ -170,13 +181,13 @@ impl TimeSeriesAnalyzer {
         &self.device
     }
 
-    /// Add model to analyzer
+    /// Add a model to the analyzer.
     pub fn add_model(mut self, model: TimeSeriesModel) -> Self {
         self.models.push(model);
         self
     }
 
-    /// Build analyzer (initializes models)
+    /// Build the analyzer (initializes models).
     pub async fn build(mut self) -> BarracudaResult<Self> {
         // Initialize ESN if requested
         for model in &self.models {
@@ -487,7 +498,6 @@ impl TimeSeriesAnalyzer {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "timeseries_tests.rs"]
 mod tests;

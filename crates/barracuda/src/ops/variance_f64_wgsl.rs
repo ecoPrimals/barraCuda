@@ -135,8 +135,8 @@ impl VarianceF64 {
         Ok(self.sample_variance(data)?.sqrt())
     }
 
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn variance_cpu(data: &[f64], ddof: usize) -> f64 {
         let n = data.len();
         if n <= ddof {
@@ -151,7 +151,6 @@ impl VarianceF64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

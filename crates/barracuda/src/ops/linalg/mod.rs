@@ -133,6 +133,7 @@ pub struct SymmetrizeGpu {
 }
 
 impl SymmetrizeGpu {
+    /// Create a GPU symmetrize executor for the given device.
     pub fn new(device: std::sync::Arc<crate::device::WgpuDevice>) -> crate::error::Result<Self> {
         Ok(Self { device })
     }
@@ -168,6 +169,7 @@ pub struct LaplacianGpu {
 }
 
 impl LaplacianGpu {
+    /// Create a GPU graph Laplacian executor for the given device.
     pub fn new(device: std::sync::Arc<crate::device::WgpuDevice>) -> crate::error::Result<Self> {
         Ok(Self { device })
     }
@@ -197,7 +199,6 @@ impl LaplacianGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

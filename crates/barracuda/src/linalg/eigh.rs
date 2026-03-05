@@ -290,7 +290,6 @@ pub fn eigh_f64(a: &[f64], n: usize) -> Result<EighDecomposition> {
     })
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

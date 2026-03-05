@@ -13,22 +13,29 @@ use std::sync::Arc;
 
 const SHADER_HARGREAVES: &str = include_str!("../../shaders/science/hargreaves_batch_f64.wgsl");
 
+/// Uniform buffer parameters for the Hargreaves batch ET₀ shader.
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct HargreavesGpuParams {
+    /// Number of days (length of ra, t_max, t_min arrays).
     n_days: u32,
     _pad: [u32; 3],
 }
 
+/// GPU-accelerated batch Hargreaves reference evapotranspiration (ET₀).
+///
+/// Computes FAO Hargreaves ET₀ for multiple days in a single dispatch.
 pub struct HargreavesBatchGpu {
     device: Arc<crate::device::WgpuDevice>,
 }
 
 impl HargreavesBatchGpu {
+    /// Create a new Hargreaves batch GPU executor.
     pub fn new(device: Arc<crate::device::WgpuDevice>) -> crate::error::Result<Self> {
         Ok(Self { device })
     }
 
+    /// Dispatch Hargreaves ET₀ for all days. Returns ET₀ values (mm/day).
     pub fn dispatch(
         &self,
         ra: &[f64],
@@ -77,14 +84,23 @@ const SHADER_SEASONAL: &str = include_str!("../../shaders/science/seasonal_pipel
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct SeasonalGpuParams {
+    /// Number of spatial cells.
     pub cell_count: u32,
+    /// Day of year (1–365).
     pub day_of_year: u32,
+    /// Length of current growth stage in days.
     pub stage_length: u32,
+    /// Day within current stage.
     pub day_in_stage: u32,
+    /// Crop coefficient at start of stage.
     pub kc_prev: f64,
+    /// Crop coefficient at end of stage.
     pub kc_next: f64,
+    /// Total available water (mm).
     pub taw_default: f64,
+    /// Readily available water fraction.
     pub raw_fraction: f64,
+    /// Field capacity (mm).
     pub field_capacity: f64,
     _pad0: u32,
     _pad1: u32,
@@ -123,10 +139,15 @@ impl SeasonalGpuParams {
 /// Output from one cell of the seasonal pipeline.
 #[derive(Debug, Clone, Copy)]
 pub struct SeasonalOutput {
+    /// Reference evapotranspiration (mm/day).
     pub et0: f64,
+    /// Crop coefficient.
     pub kc: f64,
+    /// Crop evapotranspiration (mm/day).
     pub etc: f64,
+    /// Updated soil moisture (mm).
     pub theta_new: f64,
+    /// Water stress factor (0 = none, 1 = full stress).
     pub stress: f64,
 }
 
@@ -147,10 +168,12 @@ pub struct SeasonalPipelineF64 {
 }
 
 impl SeasonalPipelineF64 {
+    /// Create a new seasonal pipeline executor.
     pub fn new(device: Arc<crate::device::WgpuDevice>) -> crate::error::Result<Self> {
         Ok(Self { device })
     }
 
+    /// Dispatch the fused seasonal pipeline for all cells.
     pub fn dispatch(
         &self,
         cell_weather: &[f64],
@@ -250,25 +273,40 @@ const SHADER_MC_ET0: &str = include_str!("../../shaders/bio/mc_et0_propagate_f64
 /// Base meteorological inputs for a single site-day (9 f64).
 #[derive(Debug, Clone, Copy)]
 pub struct Fao56BaseInputs {
+    /// Maximum air temperature (°C).
     pub t_max: f64,
+    /// Minimum air temperature (°C).
     pub t_min: f64,
+    /// Maximum relative humidity (%).
     pub rh_max: f64,
+    /// Minimum relative humidity (%).
     pub rh_min: f64,
+    /// Wind speed at 2 m (km/h).
     pub wind_kmh: f64,
+    /// Sunshine hours.
     pub sun_hours: f64,
+    /// Latitude (degrees).
     pub latitude: f64,
+    /// Altitude (m).
     pub altitude: f64,
+    /// Day of year (1–365).
     pub day_of_year: f64,
 }
 
 /// Uncertainty (σ) for each perturbed input.
 #[derive(Debug, Clone, Copy)]
 pub struct Fao56Uncertainties {
+    /// Std dev for max temperature perturbation (°C).
     pub sigma_t_max: f64,
+    /// Std dev for min temperature perturbation (°C).
     pub sigma_t_min: f64,
+    /// Std dev for max RH perturbation (%).
     pub sigma_rh_max: f64,
+    /// Std dev for min RH perturbation (%).
     pub sigma_rh_min: f64,
+    /// Fractional std dev for wind speed.
     pub sigma_wind_frac: f64,
+    /// Fractional std dev for sunshine hours.
     pub sigma_sun_frac: f64,
 }
 
@@ -293,6 +331,7 @@ pub struct McEt0PropagateGpu {
 }
 
 impl McEt0PropagateGpu {
+    /// Create a new Monte Carlo ET₀ propagation executor.
     pub fn new(device: Arc<crate::device::WgpuDevice>) -> crate::error::Result<Self> {
         Ok(Self { device })
     }
@@ -363,7 +402,6 @@ impl McEt0PropagateGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

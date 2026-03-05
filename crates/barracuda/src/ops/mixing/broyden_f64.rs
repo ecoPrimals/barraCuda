@@ -513,7 +513,6 @@ fn solve_symmetric_positive(m: usize, a: &mut [f64], b: &mut [f64]) {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

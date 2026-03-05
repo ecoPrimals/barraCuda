@@ -75,7 +75,6 @@ impl WeightedDotF64 {
     }
 
     /// CPU reference implementation
-    #[expect(clippy::unwrap_used, reason = "suppressed")]
     #[cfg(test)]
     fn weighted_dot_cpu(&self, weights: &[f64], a: &[f64], b: &[f64]) -> f64 {
         weights
@@ -182,7 +181,6 @@ impl WeightedDotF64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

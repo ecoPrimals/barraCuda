@@ -35,16 +35,24 @@ struct Conv2dGpuParams {
 
 /// Full NCHW Conv2D on GPU with stride, padding, dilation, groups.
 pub struct Conv2dGpu {
+    /// Input tensor [N, C_in, H, W].
     pub input: Tensor,
+    /// Kernel [C_out, C_in/groups, K_h, K_w].
     pub kernel: Tensor,
+    /// Optional bias [C_out].
     pub bias: Option<Tensor>,
+    /// Stride (vertical, horizontal).
     pub stride: (usize, usize),
+    /// Padding (vertical, horizontal).
     pub padding: (usize, usize),
+    /// Dilation (vertical, horizontal).
     pub dilation: (usize, usize),
+    /// Number of groups (depthwise when groups == C_in).
     pub groups: usize,
 }
 
 impl Conv2dGpu {
+    /// Execute Conv2D on GPU; returns output tensor [N, C_out, H_out, W_out].
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let in_shape = self.input.shape();
@@ -218,7 +226,6 @@ fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

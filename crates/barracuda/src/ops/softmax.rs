@@ -23,6 +23,7 @@ pub(crate) static SHADER_SOFTMAX_SIMPLE_F32: std::sync::LazyLock<String> =
 
 /// f64 canonical — basic softmax (multi-pass).
 const WGSL_SOFTMAX_BASIC_F64: &str = include_str!("../shaders/activation/softmax_f64.wgsl");
+/// WGSL shader for basic softmax (f64 downcast to f32 when needed).
 pub static WGSL_SOFTMAX_BASIC: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(WGSL_SOFTMAX_BASIC_F64)
 });
@@ -144,7 +145,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

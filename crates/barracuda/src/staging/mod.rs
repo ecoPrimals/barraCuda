@@ -38,7 +38,6 @@ pub use unidirectional::{
     WorkUnit,
 };
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

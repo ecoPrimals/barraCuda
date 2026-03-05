@@ -58,6 +58,7 @@ pub struct VacfBatchGpu {
 }
 
 impl VacfBatchGpu {
+    /// Create a batched VACF GPU pipeline.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let module = device.compile_shader_f64(VACF_BATCH_SHADER, Some("vacf_batch_f64"));
 
@@ -177,6 +178,7 @@ pub struct StressVirialGpu {
 }
 
 impl StressVirialGpu {
+    /// Create a stress-virial GPU pipeline.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let module = device.compile_shader_f64(STRESS_VIRIAL_SHADER, Some("stress_virial_f64"));
 
@@ -284,15 +286,22 @@ impl StressVirialGpu {
 /// slots. After production, the flat buffer is passed directly to
 /// [`VacfBatchGpu`] for correlation.
 pub struct GpuVelocityRing {
+    /// Flat GPU buffer holding all velocity snapshots
     pub flat_buf: wgpu::Buffer,
+    /// Number of snapshot slots in the ring
     pub n_slots: usize,
+    /// Current write index (ring position)
     pub write_idx: usize,
+    /// Total snapshots stored (capped at n_slots)
     pub total_stored: usize,
+    /// Number of particles per snapshot
     pub n_particles: usize,
+    /// Stride per snapshot (n_particles * 3)
     pub stride: usize,
 }
 
 impl GpuVelocityRing {
+    /// Create a velocity ring buffer for the given particle count and slot count.
     pub fn new(device: &WgpuDevice, n_particles: usize, n_slots: usize) -> Self {
         let stride = n_particles * 3;
         let total_f64 = n_slots * stride;
@@ -364,7 +373,6 @@ fn uniform_bgl_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

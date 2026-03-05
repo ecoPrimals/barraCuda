@@ -27,12 +27,14 @@ struct SplitParams {
     _pad2: u32,
 }
 
+/// Tensor splitting operation along the last dimension.
 pub struct Split {
     input: Tensor,
     split_point: usize,
 }
 
 impl Split {
+    /// Creates a new split operation at the given point along the last dimension.
     pub fn new(input: Tensor, split_point: usize) -> Self {
         Self { input, split_point }
     }
@@ -41,6 +43,7 @@ impl Split {
         &SHADER_F32
     }
 
+    /// Executes the split and returns the two output tensors.
     pub fn execute(self) -> Result<(Tensor, Tensor)> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -104,7 +107,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

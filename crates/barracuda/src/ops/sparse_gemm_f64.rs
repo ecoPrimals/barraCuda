@@ -28,12 +28,16 @@ struct SpmmParams {
 /// Computes `C = A × B` where `A` is CSR `[M, K]` and `B` is dense `[K, N]`.
 /// Returns `C` as a flat `Vec<f64>` in row-major order `[M, N]`.
 pub struct SparseGemmF64<'a> {
+    /// CSR sparse matrix [M, K].
     pub csr: &'a CsrMatrix,
+    /// Dense matrix B [K, N] in row-major order.
     pub dense_b: &'a [f64],
+    /// Number of columns in B (N).
     pub b_cols: usize,
 }
 
 impl SparseGemmF64<'_> {
+    /// Execute sparse-dense matrix multiplication on GPU.
     pub fn execute(&self, device: &Arc<WgpuDevice>) -> Result<Vec<f64>> {
         let m = self.csr.n_rows;
         let k = self.csr.n_cols;
@@ -233,7 +237,6 @@ fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

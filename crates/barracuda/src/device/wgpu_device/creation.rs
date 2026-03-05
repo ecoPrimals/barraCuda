@@ -628,6 +628,9 @@ impl WgpuDevice {
         wgpu_device
     }
 
+    /// Create WgpuDevice from existing wgpu Device and Queue (deprecated).
+    ///
+    /// Uses synthetic AdapterInfo; prefer `from_existing()` with real adapter info.
     #[deprecated(
         since = "0.3.0",
         note = "Use from_existing() with real AdapterInfo; synthetic info breaks driver detection"

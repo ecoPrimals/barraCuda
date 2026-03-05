@@ -13,9 +13,11 @@
 use std::collections::HashMap;
 
 mod thresholds {
+    /// Near-zero threshold for sparsity detection.
     pub const NEAR_ZERO: f32 = 0.01;
     pub const HIGH_SPARSITY: f32 = 0.75;
     pub const LOW_SPARSITY: f32 = 0.25;
+    /// Canonical sparsity threshold for NPU routing (re-exported).
     pub const NPU_SPARSITY_THRESHOLD: f32 = 0.50;
     pub const RELU_THRESHOLD_SPARSITY: f32 = 0.75;
     pub const RELU_MASK_SPARSITY: f32 = 0.60;
@@ -50,8 +52,11 @@ pub enum WorkloadType {
 /// Compute device types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ComputeDevice {
+    /// Central processing unit (host)
     CPU,
+    /// Graphics processing unit (discrete or integrated)
     GPU,
+    /// Neural processing unit (dedicated inference accelerator)
     NPU,
 }
 
@@ -467,7 +472,6 @@ impl DeviceSelector {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "workload_tests.rs"]
 mod tests;

@@ -107,6 +107,7 @@ impl GuardedDeviceHandle {
         self.active_encoders.fetch_sub(1, Ordering::Release);
     }
 
+    /// Create a buffer (guarded against poll races).
     pub fn create_buffer(&self, desc: &wgpu::BufferDescriptor<'_>) -> wgpu::Buffer {
         self.guard();
         let r = self.inner.create_buffer(desc);
@@ -114,6 +115,7 @@ impl GuardedDeviceHandle {
         r
     }
 
+    /// Create and initialize a buffer (guarded).
     pub fn create_buffer_init(&self, desc: &wgpu::util::BufferInitDescriptor<'_>) -> wgpu::Buffer {
         self.guard();
         let r = self.inner.create_buffer_init(desc);
@@ -121,6 +123,7 @@ impl GuardedDeviceHandle {
         r
     }
 
+    /// Create a bind group layout (guarded).
     pub fn create_bind_group_layout(
         &self,
         desc: &wgpu::BindGroupLayoutDescriptor<'_>,
@@ -131,6 +134,7 @@ impl GuardedDeviceHandle {
         r
     }
 
+    /// Create a bind group (guarded).
     pub fn create_bind_group(&self, desc: &wgpu::BindGroupDescriptor<'_>) -> wgpu::BindGroup {
         self.guard();
         let r = self.inner.create_bind_group(desc);
@@ -138,6 +142,7 @@ impl GuardedDeviceHandle {
         r
     }
 
+    /// Create a pipeline layout (guarded).
     pub fn create_pipeline_layout(
         &self,
         desc: &wgpu::PipelineLayoutDescriptor<'_>,
@@ -148,6 +153,7 @@ impl GuardedDeviceHandle {
         r
     }
 
+    /// Create a compute pipeline (guarded).
     pub fn create_compute_pipeline(
         &self,
         desc: &wgpu::ComputePipelineDescriptor<'_>,
@@ -158,6 +164,7 @@ impl GuardedDeviceHandle {
         r
     }
 
+    /// Create a shader module (guarded).
     pub fn create_shader_module(
         &self,
         desc: wgpu::ShaderModuleDescriptor<'_>,
@@ -168,6 +175,7 @@ impl GuardedDeviceHandle {
         r
     }
 
+    /// Create a command encoder (guarded).
     pub fn create_command_encoder(
         &self,
         desc: &wgpu::CommandEncoderDescriptor<'_>,

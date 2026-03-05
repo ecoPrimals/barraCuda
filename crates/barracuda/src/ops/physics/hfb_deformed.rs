@@ -9,16 +9,22 @@
 use crate::device::WgpuDevice;
 use std::sync::Arc;
 
+/// WGSL source for deformed BCS occupations and particle number.
 pub const WGSL_DEFORMED_BCS: &str =
     include_str!("../../shaders/science/hfb_deformed/deformed_bcs_f64.wgsl");
+/// WGSL source for deformed density computation.
 pub const WGSL_DEFORMED_DENSITY: &str =
     include_str!("../../shaders/science/hfb_deformed/deformed_density_f64.wgsl");
+/// WGSL source for deformed energy integrand and reduction.
 pub const WGSL_DEFORMED_ENERGY: &str =
     include_str!("../../shaders/science/hfb_deformed/deformed_energy_f64.wgsl");
+/// WGSL source for deformed Hamiltonian construction.
 pub const WGSL_DEFORMED_HAMILTONIAN: &str =
     include_str!("../../shaders/science/hfb_deformed/deformed_hamiltonian_f64.wgsl");
+/// WGSL source for deformed potential computation.
 pub const WGSL_DEFORMED_POTENTIAL: &str =
     include_str!("../../shaders/science/hfb_deformed/deformed_potential_f64.wgsl");
+/// WGSL source for deformed wavefunction evaluation.
 pub const WGSL_DEFORMED_WAVEFUNCTION: &str =
     include_str!("../../shaders/science/hfb_deformed/deformed_wavefunction_f64.wgsl");
 
@@ -31,16 +37,17 @@ pub struct DeformedHfbPipeline {
 }
 
 impl DeformedHfbPipeline {
+    /// Create a deformed HFB pipeline for the given device.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self { device }
     }
 
+    /// Reference to the underlying wgpu device.
     pub fn device(&self) -> &Arc<WgpuDevice> {
         &self.device
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -59,7 +59,6 @@
 
 mod compute;
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;
 
@@ -326,6 +325,10 @@ fn mod_pow(mut base: u64, mut exp: u64, modulus: u64) -> u64 {
     result
 }
 
+/// Compute a primitive N-th root of unity in Z_modulus.
+///
+/// Requires modulus ≡ 1 (mod degree). Returns a fallback value if not satisfied.
+#[must_use]
 pub fn compute_primitive_root(degree: u32, modulus: u64) -> u64 {
     let n = degree as u64;
     if modulus < 2 || n == 0 {

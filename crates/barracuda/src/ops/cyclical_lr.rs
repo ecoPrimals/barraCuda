@@ -34,8 +34,11 @@ pub struct CyclicalLr {
 /// Cyclical learning rate mode
 #[derive(Copy, Clone, Debug)]
 pub enum CyclicalLrMode {
+    /// Linear cycle between base and max LR.
     Triangular = 0,
+    /// Halve max LR each cycle.
     Triangular2 = 1,
+    /// Exponentially decaying range.
     ExpRange = 2,
 }
 
@@ -228,7 +231,6 @@ impl CyclicalLr {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

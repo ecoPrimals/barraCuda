@@ -14,15 +14,18 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
-/// Aggregation type for global pooling
+/// Aggregation type for global pooling.
 #[derive(Debug, Clone, Copy)]
 pub enum AggregationType {
+    /// Sum over nodes.
     Sum,
+    /// Mean over nodes.
     Mean,
+    /// Max over nodes.
     Max,
 }
 
-/// Global Pooling operation
+/// Global pooling operation (graph-level aggregation).
 pub struct GlobalPooling {
     node_features: Tensor,
     num_nodes: usize,
@@ -31,6 +34,7 @@ pub struct GlobalPooling {
 }
 
 impl GlobalPooling {
+    /// Create global pooling with the given aggregation type.
     pub fn new(node_features: Tensor, aggregation_type: AggregationType) -> Result<Self> {
         let node_shape = node_features.shape();
         if node_shape.len() != 2 {
@@ -62,6 +66,7 @@ impl GlobalPooling {
         }
     }
 
+    /// Execute global pooling and return the output tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.node_features.device();
         // Create output buffer
@@ -215,7 +220,6 @@ impl GlobalPooling {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

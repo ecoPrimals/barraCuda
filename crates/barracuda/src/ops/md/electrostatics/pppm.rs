@@ -224,8 +224,8 @@ impl Pppm {
     }
 
     /// CPU 3D FFT using dimension-wise 1D FFTs (test only)
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn fft_3d_cpu(
         &self,
         data: &mut [f64],
@@ -306,7 +306,6 @@ impl Pppm {
     }
 
     /// CPU 1D FFT (Cooley-Tukey radix-2)
-    #[expect(clippy::unwrap_used, reason = "suppressed")]
     #[cfg(test)]
     fn fft_1d_cpu(&self, data: &mut [f64], n: usize, inverse: bool) {
         // Bit-reversal permutation
@@ -362,7 +361,12 @@ impl Pppm {
 #[derive(Debug, Clone)]
 pub enum PppmError {
     /// Position and charge array sizes don't match
-    SizeMismatch { positions: usize, charges: usize },
+    SizeMismatch {
+        /// Number of position entries
+        positions: usize,
+        /// Number of charge entries
+        charges: usize,
+    },
     /// FFT computation failed
     FftError(String),
 }
@@ -383,7 +387,6 @@ impl std::fmt::Display for PppmError {
 
 impl std::error::Error for PppmError {}
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

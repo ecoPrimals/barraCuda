@@ -19,12 +19,14 @@ struct OuterProductParams {
     _pad2: u32,
 }
 
+/// Outer product of two 1D vectors producing a 2D matrix.
 pub struct OuterProduct {
     vec_a: Tensor,
     vec_b: Tensor,
 }
 
 impl OuterProduct {
+    /// Creates a new outer product. Both inputs must be 1D vectors.
     pub fn new(vec_a: Tensor, vec_b: Tensor) -> Result<Self> {
         if vec_a.shape().len() != 1 {
             return Err(BarracudaError::invalid_op(
@@ -54,6 +56,7 @@ impl OuterProduct {
         }
     }
 
+    /// Executes the outer product and returns the result matrix.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.vec_a.device();
         let size_a = self.vec_a.len();
@@ -196,7 +199,6 @@ impl OuterProduct {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

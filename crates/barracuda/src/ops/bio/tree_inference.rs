@@ -83,9 +83,11 @@ impl FlatForest {
         }
     }
 
+    /// Number of trees in the forest.
     pub fn n_trees(&self) -> usize {
         self.tree_offsets.len()
     }
+    /// Total number of nodes across all trees.
     pub fn n_nodes(&self) -> usize {
         self.left_child.len()
     }
@@ -122,6 +124,7 @@ pub struct TreeInferenceGpu {
 }
 
 impl TreeInferenceGpu {
+    /// Create tree inference operator for the given device.
     pub fn new(device: &WgpuDevice) -> Self {
         Self {
             device: Arc::new(device.clone()),
@@ -208,7 +211,6 @@ impl TreeInferenceGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -19,6 +19,7 @@ use wgpu::util::DeviceExt;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::WgpuDevice;
 
+/// WGSL source for adaptive RK45 (f32).
 pub const WGSL_RK45_ADAPTIVE: &str = include_str!("../shaders/numerical/rk45_adaptive.wgsl");
 
 /// f64 version for universal math library portability.
@@ -44,6 +45,7 @@ pub struct Rk45AdaptiveGpu {
 }
 
 impl Rk45AdaptiveGpu {
+    /// Create an adaptive RK45 GPU kernel for regulatory network ODEs.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 

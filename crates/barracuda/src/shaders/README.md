@@ -1,6 +1,6 @@
 # BarraCuda WGSL Shader Library
 
-**767 Production WGSL Shaders** | Universal Precision (f16/f32/f64/DF64) | Cross-Vendor Compatible
+**692 Production WGSL Shaders** | Universal Precision (f16/f32/f64/DF64) | Cross-Vendor Compatible
 
 ---
 
@@ -10,34 +10,43 @@ All shaders are organized by function category for easy discovery and reuse.
 
 ```
 src/shaders/
-├── activation/       37  Non-linear activations (ReLU, GELU, Swish, Sigmoid, etc.)
-├── attention/         8  Attention mechanisms (MHA, GQA, Flash, Causal, etc.)
+├── activation/       40  Non-linear activations (ReLU, GELU, Swish, Sigmoid, etc.)
+├── attention/        19  Attention mechanisms (MHA, GQA, Flash, Causal, etc.)
 ├── audio/             9  Audio/signal processing (STFT, MFCC, Mel, Griffin-Lim, etc.)
 ├── augmentation/     10  Data augmentation (CutMix, Mixup, Random transforms, etc.)
+├── bio/              39  Bioinformatics (Smith-Waterman, HMM, phylogenetics, etc.)
 ├── conv/             11  Convolution operations (1D/2D/3D, Depthwise, Dilated, etc.)
 ├── detection/         5  Object detection primitives (NMS, Anchors, BBox, IoU, etc.)
 ├── dropout/           2  Regularization (Dropout, Spatial dropout)
+├── folding/          15  Protein folding (AlphaFold2 components)
 ├── gnn/               6  Graph neural networks (GCN, GAT, GIN, SAGE, etc.)
 ├── gradient/          1  Gradient manipulation (Clip norm, clip value)
-├── interpolation/     2  Interpolation kernels (RBF, LOO-CV)
-├── linalg/           11  Linear algebra (Cholesky, Eigh, LinSolve, Inverse, etc.)
-├── loss/             31  Loss functions (Focal, Dice, IoU, BCE, MSE, etc.)
-├── math/             68  Element-wise math (Trig, Exp, Log, Floor, Sqrt, etc.)
-├── misc/             56  Utilities (MatMul, Embedding, Quantize, etc.)
-├── norm/             27  Normalization (BatchNorm, LayerNorm, GroupNorm, etc.)
-├── optimizer/        13  Weight update rules (Adam, SGD, RMSProp, etc.)
+├── grid/              9  Grid/mesh operations
+├── interpolation/     3  Interpolation kernels (RBF, LOO-CV)
+├── lattice/          36  Lattice QCD (SU(3), Wilson, Dirac, HMC)
+├── linalg/           32  Linear algebra (Cholesky, Eigh, LinSolve, Inverse, etc.)
+├── loss/             34  Loss functions (Focal, Dice, IoU, BCE, MSE, etc.)
+├── math/            106  Element-wise math (Trig, Exp, Log, Floor, Sqrt, etc.)
+├── md/                5  Molecular dynamics (forces, integrators, PBC)
+├── misc/             74  Utilities (MatMul, Embedding, Quantize, etc.)
+├── ml/                8  Machine learning (ESN, reservoir, etc.)
+├── norm/             28  Normalization (BatchNorm, LayerNorm, GroupNorm, etc.)
+├── numerical/         7  Numerical methods (ODE, integration)
+├── optimizer/        18  Weight update rules (Adam, SGD, RMSProp, etc.)
 ├── pooling/          17  Spatial reduction (MaxPool, AvgPool, Adaptive, etc.)
-├── reduce/           14  Tensor reduction (Sum, Mean, Argmax, Logsumexp, etc.)
+├── reduce/           28  Tensor reduction (Sum, Mean, Argmax, Logsumexp, etc.)
 ├── rnn/               4  Recurrent networks (LSTM, GRU, BiLSTM)
-├── special/           5  Special functions (Bessel J0/J1/I0/K0, Spherical harmonics)
-└── tensor/           41  Shape manipulation (Concat, Slice, Reshape, Transpose, etc.)
+├── sample/            4  Sampling methods (LHS, Sobol, etc.)
+├── science/          16  Scientific compute (batched elementwise, hydrology, etc.)
+├── sparse/            5  Sparse linear algebra (SpMV, CG)
+├── special/          40  Special functions (Bessel, Gamma, Erf, etc.)
+├── spectral/          3  Spectral analysis (Anderson, Lanczos)
+├── stats/             5  Statistical operations (bootstrap, diversity, etc.)
+└── tensor/           43  Shape manipulation (Concat, Slice, Reshape, Transpose, etc.)
 ```
 
-**Plus specialized subdirectories:**
-- `complex/` (10 shaders in `src/ops/complex/`) -- Complex number arithmetic
-- `fft/` (2 shaders in `src/ops/fft/`) -- Fast Fourier transforms
-- `fhe/` (13 shaders in `src/ops/`) -- Fully homomorphic encryption
-- `md/` (9 shaders in `src/ops/md/`) -- Molecular dynamics (forces, integrators, PBC)
+**3 additional template/tooling directories** (`precision/`, `sovereign/`, `templates/`)
+contain shader templates and DF64 rewrite infrastructure rather than standalone shaders.
 
 ---
 

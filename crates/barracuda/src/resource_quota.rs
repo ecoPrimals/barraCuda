@@ -543,7 +543,6 @@ pub mod presets {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "resource_quota_tests.rs"]
 mod tests;

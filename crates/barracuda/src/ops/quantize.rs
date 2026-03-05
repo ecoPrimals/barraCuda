@@ -170,7 +170,6 @@ pub fn quantize_affine_i8(input: Tensor) -> Result<(Tensor, f32, f32)> {
     Ok((quantized, scale, zero_point))
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

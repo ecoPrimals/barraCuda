@@ -29,6 +29,7 @@ pub struct InverseF64 {
 }
 
 impl InverseF64 {
+    /// Creates a new f64 matrix inverse calculator for the given WGPU device.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self { device }
     }
@@ -85,7 +86,6 @@ impl InverseF64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

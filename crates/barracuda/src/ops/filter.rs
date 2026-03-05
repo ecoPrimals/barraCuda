@@ -57,11 +57,17 @@ pub struct FilterResult {
 /// Predicate operation for element-wise filtering.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FilterOperation {
+    /// Keep elements where `x > threshold`.
     GreaterThan,
+    /// Keep elements where `x < threshold`.
     LessThan,
+    /// Keep elements where `x == threshold` (within epsilon).
     Equal,
+    /// Keep elements where `x != threshold` (beyond epsilon).
     NotEqual,
+    /// Keep elements where `x >= threshold`.
     GreaterOrEqual,
+    /// Keep elements where `x <= threshold`.
     LessOrEqual,
 }
 
@@ -122,6 +128,7 @@ impl Filter {
         include_str!("../shaders/misc/prefix_sum.wgsl")
     }
 
+    /// Create a filter with the given input, operation, and threshold.
     pub fn new(input: Tensor, operation: FilterOperation, threshold: f32) -> Self {
         Self {
             input,
@@ -131,6 +138,7 @@ impl Filter {
         }
     }
 
+    /// Set equality/inequality tolerance (default 1e-5).
     pub fn with_epsilon(mut self, eps: f32) -> Self {
         self.epsilon = eps;
         self
@@ -373,7 +381,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod unit_tests {
     use super::*;
@@ -423,7 +430,6 @@ mod unit_tests {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "filter_tests.rs"]
 mod tests;

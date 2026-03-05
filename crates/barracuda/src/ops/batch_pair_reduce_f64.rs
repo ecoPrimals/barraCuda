@@ -18,8 +18,11 @@ use std::sync::Arc;
 /// Reduction operation for pairwise GPU computation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PairReduceOp {
+    /// Dot product: Σ A[i,d]·B[j,d]
     DotProduct = 0,
+    /// Squared L2: Σ (A[i,d]-B[j,d])²
     SquaredL2 = 1,
+    /// L1 distance: Σ |A[i,d]-B[j,d]|
     L1Distance = 2,
     /// Σ log(a/b) — DADA2 error-model log-likelihood
     LogSumExpDiff = 3,
@@ -211,7 +214,6 @@ fn bgl_entry(idx: u32, ty: wgpu::BufferBindingType) -> wgpu::BindGroupLayoutEntr
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

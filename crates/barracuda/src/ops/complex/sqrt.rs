@@ -5,6 +5,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
+/// Complex square root via polar form: √z = √|z| · exp(i·arg(z)/2).
 pub struct ComplexSqrt {
     input: Tensor,
     pipeline: wgpu::ComputePipeline,
@@ -12,6 +13,7 @@ pub struct ComplexSqrt {
 }
 
 impl ComplexSqrt {
+    /// Create complex square root operation. Input must have last dim = 2 (re, im).
     pub fn new(input: Tensor) -> Result<Self> {
         if input.shape().last() != Some(&2) {
             return Err(BarracudaError::Device(
@@ -88,6 +90,7 @@ impl ComplexSqrt {
         })
     }
 
+    /// Execute complex square root on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let num_elements = self.input.len();
@@ -147,7 +150,6 @@ impl ComplexSqrt {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

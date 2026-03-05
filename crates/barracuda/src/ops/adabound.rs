@@ -31,6 +31,7 @@ struct AdaBoundParams {
     step: u32,
 }
 
+/// AdaBound optimizer — adaptive gradients with dynamic learning rate bounds.
 pub struct AdaBound {
     gradients: Tensor,
     params: Tensor,
@@ -45,6 +46,7 @@ pub struct AdaBound {
 }
 
 impl AdaBound {
+    /// Create AdaBound optimizer. Smoothly transitions from Adam to SGD.
     pub fn new(
         params: Tensor,
         gradients: Tensor,
@@ -140,6 +142,7 @@ impl AdaBound {
         }
     }
 
+    /// Execute AdaBound step. Returns (updated_params, m, v).
     pub fn execute(self) -> Result<(Tensor, Tensor, Tensor)> {
         let device = self.params.device();
         let size = self.params.shape().iter().product::<usize>();
@@ -380,7 +383,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -23,6 +23,7 @@ pub struct Histc {
 }
 
 impl Histc {
+    /// Create histogram with given bin count and value range.
     pub fn new(input: Tensor, num_bins: usize, min_val: f32, max_val: f32) -> Result<Self> {
         if num_bins == 0 {
             return Err(BarracudaError::invalid_op(
@@ -55,6 +56,7 @@ impl Histc {
         &SHADER
     }
 
+    /// Execute histogram computation.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_size = self.input.shape().iter().product::<usize>();
@@ -225,7 +227,6 @@ impl Histc {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

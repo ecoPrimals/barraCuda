@@ -402,11 +402,16 @@ impl BatchedBisectionGpu {
             .map_err(|e| BarracudaError::execution_failed(e.to_string()))?;
 
         let data = slice.get_mapped_range();
-        // SAFETY: chunks_exact(4) guarantees exactly 4-byte chunks
+        // chunks_exact(4) guarantees exactly 4-byte chunks
         let result: Vec<u32> = data
             .chunks_exact(4)
-            .map(|chunk| u32::from_le_bytes(chunk.try_into().expect("chunks_exact(4) invariant")))
-            .collect();
+            .map(|chunk| {
+                let arr: [u8; 4] = chunk.try_into().map_err(|_| {
+                    BarracudaError::Internal("chunks_exact(4) invariant violated".to_string())
+                })?;
+                Ok(u32::from_le_bytes(arr))
+            })
+            .collect::<Result<Vec<_>>>()?;
         drop(data);
         staging.unmap();
 
@@ -414,7 +419,6 @@ impl BatchedBisectionGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "batched_bisection_gpu_tests.rs"]
 mod tests;

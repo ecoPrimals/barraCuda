@@ -30,20 +30,25 @@ impl Default for BoardConfig {
 /// Reservoir input: discrete (Bingo-style) or continuous (hash-projected).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ReservoirInput {
+    /// Discrete Bingo-style input (cell values that match).
     Discrete(Vec<u32>),
+    /// Continuous features (hash-projected to activations).
     Continuous(Vec<f64>),
 }
 
 /// Response vector from a board (L² activations).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResponseVector {
+    /// Activation values (length L²).
     pub activations: Vec<f64>,
 }
 
 /// BingoCube board: L×L grid with column-range constraints.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Board {
+    /// Cell values [row][col]; each column has unique values in its range.
     pub cells: Vec<Vec<u32>>,
+    /// Board configuration.
     pub config: BoardConfig,
 }
 
@@ -120,7 +125,6 @@ impl Board {
 }
 
 #[cfg(test)]
-#[expect(clippy::expect_used, clippy::unwrap_used, reason = "suppressed")]
 mod tests {
     use super::*;
 

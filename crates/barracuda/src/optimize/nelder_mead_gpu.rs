@@ -53,6 +53,7 @@ pub struct NelderMeadGpuResult {
 /// `project_bounds`, `bitonic_sort_step`.
 const WGSL_SIMPLEX_OPS_F64: &str = include_str!("../shaders/optimizer/simplex_ops_f64.wgsl");
 
+/// WGSL shader for Nelder-Mead simplex operations (f64 downcast to f32 when needed).
 pub static WGSL_SIMPLEX_OPS: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     crate::shaders::precision::downcast_f64_to_f32(WGSL_SIMPLEX_OPS_F64)
 });
@@ -401,7 +402,6 @@ impl NelderMeadGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     // Note: Full GPU tests require a device. These are compilation/API tests.

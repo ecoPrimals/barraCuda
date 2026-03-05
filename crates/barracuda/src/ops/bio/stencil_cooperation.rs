@@ -19,6 +19,7 @@ use wgpu::util::DeviceExt;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 
+/// WGSL source for stencil cooperation (f32).
 pub const WGSL_STENCIL_COOPERATION: &str =
     include_str!("../../shaders/bio/stencil_cooperation.wgsl");
 
@@ -45,6 +46,7 @@ pub struct StencilCooperationGpu {
 }
 
 impl StencilCooperationGpu {
+    /// Create stencil cooperation kernel.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 
@@ -182,7 +184,6 @@ fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

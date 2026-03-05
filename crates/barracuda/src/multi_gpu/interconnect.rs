@@ -83,8 +83,11 @@ impl BandwidthTier {
 /// A link between two substrates with transfer characteristics.
 #[derive(Debug, Clone)]
 pub struct Link {
+    /// Source substrate index.
     pub from: usize,
+    /// Destination substrate index.
     pub to: usize,
+    /// Bandwidth tier for this link.
     pub tier: BandwidthTier,
 }
 
@@ -205,7 +208,6 @@ fn is_low_bandwidth_npu(s: &Substrate) -> bool {
     s.substrate_type == SubstrateType::Npu && s.name.to_uppercase().contains("AKD1000")
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

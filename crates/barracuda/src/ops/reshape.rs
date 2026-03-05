@@ -36,6 +36,7 @@ pub static WGSL_RESHAPE: std::sync::LazyLock<String> = std::sync::LazyLock::new(
 pub struct ReshapeParams {
     /// Total number of elements (for validation)
     pub num_elements: u32,
+    /// Padding for uniform buffer alignment.
     pub _padding: [u32; 3],
 }
 
@@ -94,7 +95,6 @@ pub async fn reshape(
     Ok(input.to_vec())
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

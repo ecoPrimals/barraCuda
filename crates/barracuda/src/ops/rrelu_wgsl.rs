@@ -41,6 +41,7 @@ pub struct RReLU {
 }
 
 impl RReLU {
+    /// Create a Randomized Leaky ReLU operation with the given slope bounds and seed.
     pub fn new(input: Tensor, lower: f32, upper: f32, seed: u32) -> Self {
         Self {
             input,
@@ -54,6 +55,7 @@ impl RReLU {
         &SHADER_F32
     }
 
+    /// Execute the RReLU activation and return the result tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -144,7 +146,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

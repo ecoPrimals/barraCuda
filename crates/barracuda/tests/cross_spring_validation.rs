@@ -7,7 +7,7 @@
 //! a specific primitive with known inputs and verifies against
 //! documented tolerances.
 //!
-//! Provenance: wetSpring V86 `validate_cross_spring_evolution_modern`
+//! Provenance: marine-bio domain `validate_cross_spring_evolution_modern`
 //! pattern → adopted as barraCuda standard test harness.
 //!
 //! Run: `cargo test --test cross_spring_validation`
@@ -18,7 +18,7 @@ use barracuda::spectral::anderson::{
 };
 use barracuda::stats::hydrology::fao56_et0;
 
-/// Tolerance registry by domain (mirrors wetSpring `tolerances/` structure).
+/// Tolerance registry by domain (mirrors marine-bio `tolerances/` structure).
 #[expect(
     dead_code,
     reason = "tolerance constants used selectively per test case"
@@ -45,7 +45,7 @@ fn check_anderson_1d_localization() -> CheckResult {
     let passed = gamma > 0.0;
     CheckResult {
         name: "anderson_1d_localization",
-        origin: "hotSpring/wetSpring",
+        origin: "physics_validation/marine_bio",
         passed,
         detail: format!("γ = {gamma:.6} (should be > 0)"),
     }
@@ -59,7 +59,7 @@ fn check_anderson_3d_structure() -> CheckResult {
     let passed = mat.n == n && mat.nnz() == expected_nnz;
     CheckResult {
         name: "anderson_3d_structure",
-        origin: "hotSpring",
+        origin: "lattice_qcd",
         passed,
         detail: format!("n={}, nnz={} (expected {})", mat.n, mat.nnz(), expected_nnz),
     }
@@ -73,7 +73,7 @@ fn check_anderson_4d_structure() -> CheckResult {
     let passed = mat.n == n && mat.nnz() == expected_nnz;
     CheckResult {
         name: "anderson_4d_structure",
-        origin: "hotSpring (Exp 026)",
+        origin: "physics_validation",
         passed,
         detail: format!("n={}, nnz={} (expected {})", mat.n, mat.nnz(), expected_nnz),
     }
@@ -89,7 +89,7 @@ fn check_anderson_eigenvalues_bounded() -> CheckResult {
         min >= -(clean_bw + disorder_half + 1.0) && max <= (clean_bw + disorder_half + 1.0);
     CheckResult {
         name: "anderson_eigenvalues_bounded",
-        origin: "hotSpring/wetSpring",
+        origin: "physics_validation/marine_bio",
         passed,
         detail: format!("min={min:.3}, max={max:.3}"),
     }
@@ -103,7 +103,7 @@ fn check_fao56_et0() -> CheckResult {
     };
     CheckResult {
         name: "fao56_et0_range",
-        origin: "airSpring",
+        origin: "atmospheric_science",
         passed,
         detail: format!("ET₀ = {et0:?} (should be 0..20 mm/day)"),
     }
@@ -117,7 +117,7 @@ fn check_brent_sqrt2() -> CheckResult {
     };
     CheckResult {
         name: "brent_sqrt2",
-        origin: "airSpring",
+        origin: "atmospheric_science",
         passed,
         detail: format!("{result:?}"),
     }
@@ -137,7 +137,7 @@ fn check_lbfgs_quadratic() -> CheckResult {
     };
     CheckResult {
         name: "lbfgs_quadratic",
-        origin: "neuralSpring",
+        origin: "ml_inference",
         passed,
         detail: format!("{result:?}"),
     }
@@ -150,7 +150,7 @@ fn check_spectral_features() -> CheckResult {
     let passed = feat.bandwidth > 0.0 && feat.level_spacing_ratio > 0.0;
     CheckResult {
         name: "spectral_nautilus_bridge",
-        origin: "neuralSpring",
+        origin: "ml_inference",
         passed,
         detail: format!(
             "r={:.3}, bw={:.3}, phase={:?}",

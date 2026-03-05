@@ -18,14 +18,17 @@
 /// WGSL source for the three CG kernels (separate entry points).
 pub const WGSL_CG_KERNELS_F64: &str = include_str!("../../shaders/lattice/cg_kernels_f64.wgsl");
 
-// GPU-resident CG shaders (alpha/beta on GPU, no per-iteration readback).
-// Absorbed from hotSpring lattice QCD (Feb 2026).
+/// WGSL sum-reduction shader for CG inner products.
 pub const WGSL_SUM_REDUCE_F64: &str = include_str!("../../shaders/lattice/sum_reduce_f64.wgsl");
+/// WGSL shader to compute CG step size alpha.
 pub const WGSL_CG_COMPUTE_ALPHA_F64: &str =
     include_str!("../../shaders/lattice/cg_compute_alpha_f64.wgsl");
+/// WGSL shader to compute CG direction scaling beta.
 pub const WGSL_CG_COMPUTE_BETA_F64: &str =
     include_str!("../../shaders/lattice/cg_compute_beta_f64.wgsl");
+/// WGSL shader to update solution x and residual r.
 pub const WGSL_CG_UPDATE_XR_F64: &str = include_str!("../../shaders/lattice/cg_update_xr_f64.wgsl");
+/// WGSL shader to update search direction p.
 pub const WGSL_CG_UPDATE_P_F64: &str = include_str!("../../shaders/lattice/cg_update_p_f64.wgsl");
 
 /// WGSL fragment: real part of complex dot product.
@@ -81,7 +84,6 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 }
 ";
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -16,6 +16,7 @@ struct WeightNormParams {
     _padding: [u32; 2],
 }
 
+/// Weight normalization: reparameterizes weights as w = g * (v / ||v||).
 pub struct WeightNorm {
     v: Tensor,
     g: Tensor,
@@ -201,7 +202,6 @@ impl WeightNorm {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

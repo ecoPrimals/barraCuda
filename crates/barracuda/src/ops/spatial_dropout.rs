@@ -36,6 +36,7 @@ struct SpatialDropoutParams {
     _padding2: u32,
 }
 
+/// Channel-wise spatial dropout for convolutional networks.
 pub struct SpatialDropout {
     input: Tensor,
     mask: Tensor,
@@ -44,6 +45,7 @@ pub struct SpatialDropout {
 }
 
 impl SpatialDropout {
+    /// Creates a new spatial dropout operation. Mask shape must be [B, C].
     pub fn new(input: Tensor, mask: Tensor, drop_prob: f32, training: bool) -> Result<Self> {
         // Validate input shape: must be 4D [B, C, H, W]
         let input_shape = input.shape();
@@ -85,6 +87,7 @@ impl SpatialDropout {
         &SHADER_F32
     }
 
+    /// Executes spatial dropout and returns the output tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -252,7 +255,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

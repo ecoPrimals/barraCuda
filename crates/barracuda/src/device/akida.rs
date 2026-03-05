@@ -378,7 +378,6 @@ fn detect_akida_sdk_version() -> Option<String> {
     None
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -32,6 +32,7 @@ struct TransposedConv2DParams {
     _pad: u32,
 }
 
+/// Transposed 2D convolution (deconvolution) for learnable upsampling.
 pub struct TransposedConv2D {
     input: Tensor,
     weight: Tensor,
@@ -42,6 +43,7 @@ pub struct TransposedConv2D {
 }
 
 impl TransposedConv2D {
+    /// Creates a new transposed conv2d operation.
     pub fn new(
         input: Tensor,
         weight: Tensor,
@@ -71,6 +73,7 @@ impl TransposedConv2D {
         }
     }
 
+    /// Executes the transposed convolution and returns the upsampled output.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -221,7 +224,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

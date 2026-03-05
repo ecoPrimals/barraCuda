@@ -64,7 +64,6 @@ pub fn marchenko_pastur_bounds(gamma: f64) -> (f64, f64) {
     (lambda_min, lambda_max)
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

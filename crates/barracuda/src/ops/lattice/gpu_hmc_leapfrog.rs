@@ -32,6 +32,7 @@ pub struct GpuHmcLeapfrog {
 }
 
 impl GpuHmcLeapfrog {
+    /// Create HMC leapfrog integrator for given lattice volume.
     pub fn new(device: Arc<WgpuDevice>, volume: u32) -> Result<Self> {
         let n_links = volume * 4;
         let src = format!("{}{}", su3_extended_preamble(), SHADER_BODY);
@@ -228,6 +229,7 @@ impl GpuHmcLeapfrog {
         Ok(())
     }
 
+    /// Number of gauge links (volume × 4).
     pub fn n_links(&self) -> u32 {
         self.n_links
     }
@@ -259,7 +261,6 @@ fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

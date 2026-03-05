@@ -68,7 +68,6 @@ pub(crate) static ATTENTION_SOFTMAX_F32: std::sync::LazyLock<String> =
         crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(ATTENTION_SOFTMAX_F64)
     });
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;
 

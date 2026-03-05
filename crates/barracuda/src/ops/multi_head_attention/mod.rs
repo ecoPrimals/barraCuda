@@ -26,7 +26,6 @@
 
 mod compute;
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;
 
@@ -34,14 +33,19 @@ use crate::error::Result;
 use crate::ops::scaled_dot_product_attention::ScaledDotProductAttention;
 use crate::tensor::Tensor;
 
-/// MHA projection parameters
+/// MHA projection parameters (WGSL uniform layout).
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct MHAProjectionParams {
+    /// Batch size
     pub batch_size: u32,
+    /// Sequence length
     pub seq_len: u32,
+    /// Model dimension (embedding size)
     pub d_model: u32,
+    /// Number of attention heads
     pub num_heads: u32,
+    /// Dimension per head (d_model / num_heads)
     pub head_dim: u32,
 }
 

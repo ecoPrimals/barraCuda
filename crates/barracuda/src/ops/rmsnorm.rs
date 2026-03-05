@@ -21,6 +21,7 @@ struct RMSNormParams {
     _padding: u32,
 }
 
+/// Root Mean Square normalization (used in LLaMA, GPT-NeoX, T5).
 pub struct RMSNorm {
     input: Tensor,
     gamma: Tensor, // Scale parameters
@@ -28,6 +29,7 @@ pub struct RMSNorm {
 }
 
 impl RMSNorm {
+    /// Creates a new RMSNorm operation. Gamma is the scale parameter.
     pub fn new(input: Tensor, gamma: Tensor, epsilon: f32) -> Self {
         Self {
             input,
@@ -47,6 +49,7 @@ impl RMSNorm {
         }
     }
 
+    /// Executes RMS normalization and returns the output tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -156,7 +159,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

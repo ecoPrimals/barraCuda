@@ -32,6 +32,7 @@ struct DiceLossParams {
     _padding: [u32; 2],
 }
 
+/// Dice loss for medical image segmentation (handles class imbalance).
 pub struct DiceLoss {
     predicted: Tensor,
     target: Tensor,
@@ -39,6 +40,7 @@ pub struct DiceLoss {
 }
 
 impl DiceLoss {
+    /// Creates a new Dice loss. Smooth prevents division by zero.
     pub fn new(predicted: Tensor, target: Tensor, smooth: f32) -> Result<Self> {
         if predicted.shape() != target.shape() {
             return Err(BarracudaError::shape_mismatch(
@@ -60,9 +62,10 @@ impl DiceLoss {
                 "../shaders/loss/dice_loss_f64.wgsl"
             ))
         });
-        &SHADER
+        std::sync::LazyLock::force(&SHADER).as_str()
     }
 
+    /// Executes Dice loss and returns a scalar loss tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predicted.device();
         let size = self.predicted.len();
@@ -209,7 +212,6 @@ impl DiceLoss {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -216,7 +216,6 @@ pub fn qr_least_squares(a: &[f64], m: usize, n: usize, b: &[f64]) -> Result<Vec<
     qr.solve_least_squares(b)
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -15,12 +15,14 @@ use crate::device::DeviceCapabilities;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Xoshiro128** PRNG for GPU random number generation.
 pub struct PrngXoshiro {
     seeds: Tensor,
     offset: u32,
 }
 
 impl PrngXoshiro {
+    /// Creates a new PRNG with the given seeds tensor (u32) and offset.
     pub fn new(seeds: Tensor, offset: u32) -> Self {
         Self { seeds, offset }
     }
@@ -43,6 +45,7 @@ impl PrngXoshiro {
         include_str!("../shaders/misc/prng_xoshiro_f64.wgsl")
     }
 
+    /// Executes the PRNG and returns random values in [0, 1).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.seeds.device();
         let seed_count: usize = self.seeds.shape().iter().product();
@@ -199,7 +202,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

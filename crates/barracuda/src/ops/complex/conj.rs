@@ -9,6 +9,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
+/// Complex conjugate: conj(a+bi) = a-bi.
 pub struct ComplexConj {
     input: Tensor,
     pipeline: wgpu::ComputePipeline,
@@ -16,6 +17,7 @@ pub struct ComplexConj {
 }
 
 impl ComplexConj {
+    /// Create complex conjugate operation. Input must have last dim = 2 (re, im).
     pub fn new(input: Tensor) -> Result<Self> {
         let shape = input.shape();
         if shape.last() != Some(&2) {
@@ -98,6 +100,7 @@ impl ComplexConj {
         })
     }
 
+    /// Execute complex conjugate on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let num_elements = self.input.len();
@@ -168,7 +171,6 @@ impl ComplexConj {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

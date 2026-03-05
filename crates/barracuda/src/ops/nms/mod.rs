@@ -24,28 +24,32 @@ pub const WGSL_IOU_F64: &str = include_str!("../../shaders/misc/iou_f64.wgsl");
 
 mod compute;
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;
 
-/// Bounding box representation
+/// Bounding box representation (xyxy format).
 #[derive(Clone, Debug)]
 pub struct BoundingBox {
+    /// Left x coordinate.
     pub x1: f32,
+    /// Top y coordinate.
     pub y1: f32,
+    /// Right x coordinate.
     pub x2: f32,
+    /// Bottom y coordinate.
     pub y2: f32,
+    /// Detection confidence score.
     pub score: f32,
 }
 
-/// NMS operation
+/// Non-maximum suppression operation.
 pub struct NMS {
     boxes: Vec<BoundingBox>,
     iou_threshold: f32,
 }
 
 impl NMS {
-    /// Create NMS operation
+    /// Create an NMS operation with the given boxes and IoU threshold.
     pub fn new(boxes: Vec<BoundingBox>, iou_threshold: f32) -> Result<Self> {
         if !(0.0..=1.0).contains(&iou_threshold) {
             return Err(BarracudaError::invalid_op(

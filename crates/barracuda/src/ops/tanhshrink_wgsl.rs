@@ -32,6 +32,7 @@ pub struct Tanhshrink {
 }
 
 impl Tanhshrink {
+    /// Creates a Tanhshrink operation for the given input tensor.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }

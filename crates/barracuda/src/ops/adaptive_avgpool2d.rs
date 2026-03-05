@@ -45,6 +45,7 @@ struct AdaptiveAvgPool2DParams {
     out_width: u32,
 }
 
+/// Adaptive average pooling 2D with output-size-driven kernel.
 pub struct AdaptiveAvgPool2D {
     input: Tensor,
     output_size: (usize, usize),
@@ -62,6 +63,7 @@ impl AdaptiveAvgPool2D {
         }
     }
 
+    /// Execute adaptive average pooling and return the result tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -169,7 +171,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

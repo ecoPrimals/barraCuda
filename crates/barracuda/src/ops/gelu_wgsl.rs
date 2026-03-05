@@ -35,6 +35,7 @@ pub struct GELU {
 }
 
 impl GELU {
+    /// Creates a GELU operation for the given input tensor.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }

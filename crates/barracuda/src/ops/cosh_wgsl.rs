@@ -13,11 +13,13 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Element-wise hyperbolic cosine.
 pub struct Cosh {
     input: Tensor,
 }
 
 impl Cosh {
+    /// Create a cosh operation.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -31,6 +33,7 @@ impl Cosh {
         &SHADER
     }
 
+    /// Execute hyperbolic cosine on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -162,12 +165,12 @@ impl Cosh {
 }
 
 impl Tensor {
+    /// Compute element-wise hyperbolic cosine.
     pub fn cosh(self) -> Result<Self> {
         Cosh::new(self).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

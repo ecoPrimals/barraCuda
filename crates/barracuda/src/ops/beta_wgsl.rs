@@ -28,6 +28,7 @@ impl Beta {
         include_str!("../shaders/special/beta.wgsl")
     }
 
+    /// Execute Beta function B(a,b) = Γ(a)Γ(b)/Γ(a+b) on input pairs.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_size: usize = self.input.shape().iter().product();
@@ -168,7 +169,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

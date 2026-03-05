@@ -35,6 +35,7 @@ pub struct Dada2EStepGpu {
 }
 
 impl Dada2EStepGpu {
+    /// Creates a new DADA2 E-step GPU kernel for the given device.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         let module = device.compile_shader_f64(SHADER, Some("dada2_e_step"));
         let bgl = super::snp::make_bgl(&device, &[true, true, true, true, true, false]);

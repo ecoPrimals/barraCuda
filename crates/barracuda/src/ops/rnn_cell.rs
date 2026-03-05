@@ -13,15 +13,20 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
+/// RNN cell weight matrices and biases.
 #[derive(Clone)]
 pub struct RNNWeights {
+    /// Input-to-hidden weights (hidden_size × input_size).
     pub w_ih: Vec<f32>,
+    /// Hidden-to-hidden weights (hidden_size × hidden_size).
     pub w_hh: Vec<f32>,
+    /// Input bias (hidden_size).
     pub b_ih: Vec<f32>,
+    /// Hidden bias (hidden_size).
     pub b_hh: Vec<f32>,
 }
 
-/// RNN Cell operation
+/// RNN cell operation (h_t = tanh(W_ih x + b_ih + W_hh h + b_hh)).
 pub struct RNNCell {
     input: Tensor,
     prev_hidden: Tensor,
@@ -32,7 +37,7 @@ pub struct RNNCell {
 }
 
 impl RNNCell {
-    /// Create a new RNN cell operation
+    /// Create a new RNN cell operation.
     pub fn new(
         input: Tensor,
         prev_hidden: Tensor,
@@ -126,7 +131,7 @@ impl RNNCell {
         &SHADER
     }
 
-    /// Execute the RNN cell operation
+    /// Execute the RNN cell and return the new hidden state.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let output_size = self.batch_size * self.hidden_size;
@@ -380,7 +385,6 @@ impl RNNCell {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

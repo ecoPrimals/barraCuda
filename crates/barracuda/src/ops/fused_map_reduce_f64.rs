@@ -297,8 +297,8 @@ impl FusedMapReduceF64 {
     }
 
     /// CPU fallback for small arrays (faster due to no dispatch overhead)
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn execute_cpu(
         &self,
         data: &[f64],
@@ -411,7 +411,6 @@ impl FusedMapReduceF64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "fused_map_reduce_f64_tests.rs"]
 mod tests;

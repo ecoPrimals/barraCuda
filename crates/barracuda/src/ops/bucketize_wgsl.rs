@@ -20,12 +20,14 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Assign values to buckets based on boundary thresholds.
 pub struct Bucketize {
     input: Tensor,
     boundaries: Vec<f32>,
 }
 
 impl Bucketize {
+    /// Create a bucketize operation. Boundaries must be sorted.
     pub fn new(input: Tensor, boundaries: Vec<f32>) -> Self {
         Self { input, boundaries }
     }
@@ -39,6 +41,7 @@ impl Bucketize {
         &SHADER
     }
 
+    /// Execute bucketize on GPU. Returns bucket indices as f32.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_size = self.input.len();
@@ -183,12 +186,12 @@ impl Bucketize {
 }
 
 impl Tensor {
+    /// Map values to bucket indices based on boundaries.
     pub fn bucketize_wgsl(self, boundaries: Vec<f32>) -> Result<Self> {
         Bucketize::new(self, boundaries).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

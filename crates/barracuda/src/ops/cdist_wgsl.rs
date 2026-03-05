@@ -23,13 +23,18 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Distance metric for pairwise distance computation.
 #[derive(Clone, Copy)]
 pub enum DistanceMetric {
+    /// L2 (Euclidean) distance.
     Euclidean = 0,
+    /// L1 (Manhattan) distance.
     Manhattan = 1,
+    /// Cosine distance (1 - cosine similarity).
     Cosine = 2,
 }
 
+/// Pairwise distance computation between two sets of vectors.
 pub struct Cdist {
     input_a: Tensor,
     input_b: Tensor,
@@ -37,6 +42,7 @@ pub struct Cdist {
 }
 
 impl Cdist {
+    /// Create a cdist op with two input tensors and distance metric.
     pub fn new(input_a: Tensor, input_b: Tensor, metric: DistanceMetric) -> Self {
         Self {
             input_a,
@@ -53,6 +59,7 @@ impl Cdist {
         include_str!("../shaders/misc/cdist_f64.wgsl")
     }
 
+    /// Execute pairwise distance computation on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input_a.device();
         let shape_a = self.input_a.shape();
@@ -108,6 +115,7 @@ impl Cdist {
 }
 
 impl Tensor {
+    /// Compute pairwise distances to another tensor; returns [M, N] distance matrix.
     pub fn cdist_wgsl(self, other: Tensor, metric: DistanceMetric) -> Result<Self> {
         Cdist::new(self, other, metric).execute()
     }
@@ -192,7 +200,6 @@ pub fn compute_distances_f64_gpu(
     Ok(result)
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -13,11 +13,13 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Element-wise inverse hyperbolic sine: asinh(x).
 pub struct Asinh {
     input: Tensor,
 }
 
 impl Asinh {
+    /// Create an asinh operation.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -31,6 +33,7 @@ impl Asinh {
         &SHADER
     }
 
+    /// Execute asinh on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -162,12 +165,12 @@ impl Asinh {
 }
 
 impl Tensor {
+    /// Compute element-wise asinh(x).
     pub fn asinh(self) -> Result<Self> {
         Asinh::new(self).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

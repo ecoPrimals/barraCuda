@@ -25,6 +25,7 @@ pub struct GraphBatchNorm {
 }
 
 impl GraphBatchNorm {
+    /// Create graph batch normalization.
     pub fn new(input: Tensor, gamma: Tensor, beta: Tensor, epsilon: f32) -> Result<Self> {
         let input_shape = input.shape();
         if input_shape.len() != 2 {
@@ -83,6 +84,7 @@ impl GraphBatchNorm {
         }
     }
 
+    /// Execute graph batch normalization.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         // Create intermediate buffers for mean and variance
@@ -344,7 +346,6 @@ impl GraphBatchNorm {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

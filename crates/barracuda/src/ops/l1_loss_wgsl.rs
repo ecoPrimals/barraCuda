@@ -27,12 +27,14 @@ const SHADER_F64: &str = include_str!("../shaders/loss/l1_loss_f64.wgsl");
 static SHADER_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
 
+/// Mean Absolute Error (L1) loss.
 pub struct L1Loss {
     predictions: Tensor,
     targets: Tensor,
 }
 
 impl L1Loss {
+    /// Create an L1 loss operation between predictions and targets.
     pub fn new(predictions: Tensor, targets: Tensor) -> Self {
         Self {
             predictions,
@@ -44,6 +46,7 @@ impl L1Loss {
         &SHADER_F32
     }
 
+    /// Execute L1 loss computation on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size = self.predictions.len();
@@ -188,12 +191,12 @@ impl L1Loss {
 }
 
 impl Tensor {
+    /// Compute element-wise L1 loss (absolute error) against targets.
     pub fn l1_loss_wgsl(self, targets: Tensor) -> Result<Self> {
         L1Loss::new(self, targets).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

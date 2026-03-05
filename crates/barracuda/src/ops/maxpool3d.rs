@@ -38,6 +38,7 @@ struct MaxPool3DParams {
     _padding: u32,
 }
 
+/// 3D max pooling for volumetric data (video, medical imaging).
 pub struct MaxPool3D {
     input: Tensor,
     kernel_size: (usize, usize, usize),
@@ -46,6 +47,7 @@ pub struct MaxPool3D {
 }
 
 impl MaxPool3D {
+    /// Creates a new MaxPool3D. Input must be 5D [B, C, D, H, W].
     pub fn new(
         input: Tensor,
         kernel_size: (usize, usize, usize),
@@ -96,6 +98,7 @@ impl MaxPool3D {
         }
     }
 
+    /// Executes 3D max pooling and returns the output tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -271,7 +274,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -70,6 +70,7 @@ impl NormCdf {
         &SHADER
     }
 
+    /// Execute normal CDF or PDF on the input tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -228,7 +229,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

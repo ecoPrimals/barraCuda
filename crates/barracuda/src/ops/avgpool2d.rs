@@ -16,6 +16,7 @@ struct AvgPool2DParams {
     pad_w: u32,
 }
 
+/// Average pooling for 2D tensors (WGSL implementation).
 pub struct AvgPool2D {
     input: Tensor,
     pool_size: usize,
@@ -25,6 +26,7 @@ pub struct AvgPool2D {
 }
 
 impl AvgPool2D {
+    /// Create average pooling without padding.
     pub fn new(input: Tensor, pool_size: usize, stride: usize) -> Self {
         Self {
             input,
@@ -35,6 +37,7 @@ impl AvgPool2D {
         }
     }
 
+    /// Create average pooling with explicit padding.
     pub fn with_padding(
         input: Tensor,
         pool_size: usize,
@@ -62,6 +65,7 @@ impl AvgPool2D {
         }
     }
 
+    /// Execute average pooling and return the output tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 
@@ -198,10 +202,12 @@ impl AvgPool2D {
 }
 
 impl Tensor {
+    /// Apply 2D average pooling.
     pub fn avgpool2d(self, pool_size: usize, stride: usize) -> Result<Self> {
         AvgPool2D::new(self, pool_size, stride).execute()
     }
 
+    /// Apply 2D average pooling with explicit padding.
     pub fn avgpool2d_padded(
         self,
         pool_size: usize,
@@ -213,7 +219,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

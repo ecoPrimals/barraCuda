@@ -12,12 +12,14 @@ use crate::error::{BarracudaError, Result};
 use crate::ops::matmul::MatMul;
 use crate::tensor::Tensor;
 
+/// Matrix exponentiation by squaring (A^n for integer n ≥ 0).
 pub struct MatrixPower {
     input: Tensor,
     power: i32,
 }
 
 impl MatrixPower {
+    /// Creates a new matrix power operation. Matrix must be square; power must be non-negative.
     pub fn new(input: Tensor, power: i32) -> Result<Self> {
         let shape = input.shape();
         if shape.len() < 2 {
@@ -56,6 +58,7 @@ impl MatrixPower {
         &SHADER
     }
 
+    /// Executes matrix exponentiation and returns A^power.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -219,7 +222,6 @@ impl MatrixPower {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

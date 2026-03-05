@@ -235,7 +235,6 @@ pub fn bessel_k0_batch(x: &[f64]) -> Vec<f64> {
     x.iter().map(|&v| bessel_k0(v)).collect()
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

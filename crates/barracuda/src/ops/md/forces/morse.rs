@@ -27,6 +27,7 @@ pub struct MorseForce {
 }
 
 impl MorseForce {
+    /// Create a Morse force calculator for bonded interactions with per-bond parameters.
     pub fn new(
         positions: Tensor,
         bond_pairs: Tensor,
@@ -72,6 +73,7 @@ impl MorseForce {
         })
     }
 
+    /// Compute Morse forces for all particles and return the force tensor [N, 3].
     pub fn execute(self) -> Result<Tensor> {
         let device = self.positions.device();
         let n_particles = self.positions.shape()[0];
@@ -298,7 +300,6 @@ impl MorseForce {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

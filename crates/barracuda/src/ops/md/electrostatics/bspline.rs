@@ -304,7 +304,6 @@ fn bspline_ft_squared(xi: f64, order: usize) -> f64 {
     sinc.powi(2 * order as i32)
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

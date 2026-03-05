@@ -376,6 +376,7 @@ struct BootstrapGpuParams {
     _pad: u32, // align to 16 bytes for uniform buffer
 }
 
+/// GPU-parallel bootstrap mean estimation.
 #[cfg(feature = "gpu")]
 pub struct BootstrapMeanGpu {
     device: std::sync::Arc<crate::device::WgpuDevice>,
@@ -383,6 +384,7 @@ pub struct BootstrapMeanGpu {
 
 #[cfg(feature = "gpu")]
 impl BootstrapMeanGpu {
+    /// Create a GPU bootstrap mean executor for the given device.
     pub fn new(device: std::sync::Arc<crate::device::WgpuDevice>) -> crate::error::Result<Self> {
         Ok(Self { device })
     }
@@ -435,7 +437,6 @@ impl BootstrapMeanGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

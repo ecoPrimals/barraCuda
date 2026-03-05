@@ -86,7 +86,6 @@ pub fn gcd(mut a: usize, mut b: usize) -> usize {
     a
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -22,13 +22,18 @@ static SHADER_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(SHADER_F64)
 });
 
-/// Window type enumeration
+/// Window type for signal processing (reduces spectral leakage).
 #[derive(Clone, Copy)]
 pub enum WindowType {
+    /// Hann (raised cosine) window.
     Hann,
+    /// Hamming window.
     Hamming,
+    /// Blackman window.
     Blackman,
+    /// Bartlett (triangular) window.
     Bartlett,
+    /// Rectangular (boxcar) window.
     Rectangular,
 }
 
@@ -44,7 +49,7 @@ impl WindowType {
     }
 }
 
-/// WindowFunction operation
+/// Window function operation (WGSL).
 pub struct WindowFunction {
     length: usize,
     window_type: WindowType,
@@ -52,7 +57,7 @@ pub struct WindowFunction {
 }
 
 impl WindowFunction {
-    /// Create a new window function operation
+    /// Create a new window function operation.
     pub fn new(
         length: usize,
         window_type: WindowType,
@@ -75,7 +80,7 @@ impl WindowFunction {
         &SHADER_F32
     }
 
-    /// Execute the window function operation
+    /// Execute the window function and return the output tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = &self.device;
 
@@ -205,7 +210,6 @@ impl WindowFunction {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

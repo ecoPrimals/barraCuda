@@ -104,8 +104,8 @@ impl DigammaF64 {
         Ok(result)
     }
 
-    #[expect(dead_code, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn digamma_cpu(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| Self::digamma_scalar(xi)).collect()
     }
@@ -171,7 +171,6 @@ impl DigammaF64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

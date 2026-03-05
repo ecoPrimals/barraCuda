@@ -7,16 +7,34 @@
 /// Optimizer types (capability-based)
 #[derive(Debug, Clone)]
 pub enum Optimizer {
-    /// Adam optimizer
+    /// Adam optimizer with learning rate, betas, and epsilon.
     Adam {
+        /// Learning rate.
         lr: f32,
+        /// Beta parameters (typically 0.9, 0.999).
         betas: (f32, f32),
+        /// Numerical stability epsilon.
         eps: f32,
     },
-    /// AdaGrad optimizer
-    AdaGrad { lr: f32, eps: f32 },
-    /// AdaDelta optimizer
-    AdaDelta { rho: f32, eps: f32 },
-    /// SGD with momentum
-    SGD { lr: f32, momentum: f32 },
+    /// AdaGrad optimizer.
+    AdaGrad {
+        /// Learning rate.
+        lr: f32,
+        /// Numerical stability epsilon.
+        eps: f32,
+    },
+    /// AdaDelta optimizer.
+    AdaDelta {
+        /// Decay factor rho.
+        rho: f32,
+        /// Numerical stability epsilon.
+        eps: f32,
+    },
+    /// SGD with momentum.
+    SGD {
+        /// Learning rate.
+        lr: f32,
+        /// Momentum factor.
+        momentum: f32,
+    },
 }

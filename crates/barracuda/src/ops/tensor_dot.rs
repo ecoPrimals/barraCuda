@@ -24,6 +24,7 @@ struct TensorDotParams {
     b_contract_stride: u32,
 }
 
+/// Full tensor contraction along specified axes.
 pub struct TensorDot {
     tensor_a: Tensor,
     tensor_b: Tensor,
@@ -32,6 +33,7 @@ pub struct TensorDot {
 }
 
 impl TensorDot {
+    /// Creates a new tensor dot operation. `axes_a` and `axes_b` specify contraction axes.
     pub fn new(
         tensor_a: Tensor,
         tensor_b: Tensor,
@@ -107,6 +109,7 @@ impl TensorDot {
         }
     }
 
+    /// Executes the tensor contraction and returns the result.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.tensor_a.device();
         let shape_a = self.tensor_a.shape();
@@ -287,7 +290,6 @@ impl TensorDot {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

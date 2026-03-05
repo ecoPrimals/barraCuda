@@ -26,6 +26,7 @@ pub struct BornMayerForce {
 }
 
 impl BornMayerForce {
+    /// Create a Born-Mayer force calculator with per-particle amplitude and range parameters.
     pub fn new(
         positions: Tensor,
         amplitudes: Tensor,
@@ -61,6 +62,7 @@ impl BornMayerForce {
         })
     }
 
+    /// Compute Born-Mayer repulsive forces for all particles and return the force tensor [N, 3].
     pub fn execute(self) -> Result<Tensor> {
         let device = self.positions.device();
         let n_particles = self.positions.shape()[0];
@@ -237,7 +239,6 @@ impl BornMayerForce {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

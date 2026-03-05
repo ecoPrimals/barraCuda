@@ -58,6 +58,7 @@ pub struct BiCgStabGpuResult {
 }
 
 impl BiCgStabGpuResult {
+    /// Returns true if the solver converged.
     pub fn is_ok(&self) -> bool {
         self.converged
     }
@@ -606,7 +607,6 @@ impl BiCgStabGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

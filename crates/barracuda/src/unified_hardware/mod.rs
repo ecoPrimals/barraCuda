@@ -30,7 +30,6 @@ pub use types::{
     ParallelismCapabilities, PerformanceCapabilities, PrecisionCapabilities,
 };
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

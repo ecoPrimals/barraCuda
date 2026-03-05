@@ -5,6 +5,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
+/// Complex power z^n via polar form.
 pub struct ComplexPow {
     input: Tensor,
     exponent: f32,
@@ -13,6 +14,7 @@ pub struct ComplexPow {
 }
 
 impl ComplexPow {
+    /// Create complex power operation. Input must have last dim = 2 (re, im).
     pub fn new(input: Tensor, exponent: f32) -> Result<Self> {
         if input.shape().last() != Some(&2) {
             return Err(BarracudaError::Device(
@@ -90,6 +92,7 @@ impl ComplexPow {
         })
     }
 
+    /// Execute complex power on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let n = self.input.len();
@@ -157,7 +160,6 @@ impl ComplexPow {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

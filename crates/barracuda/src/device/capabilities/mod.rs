@@ -34,7 +34,6 @@ pub use wgpu_caps::{
     WORKGROUP_SIZE_COMPACT,
 };
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

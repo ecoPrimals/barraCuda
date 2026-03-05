@@ -31,6 +31,7 @@ struct JaccardParams {
     n_genes: u32,
 }
 
+/// GPU pairwise Jaccard similarity computation.
 pub struct PairwiseJaccardGpu {
     pipeline: wgpu::ComputePipeline,
     bgl: wgpu::BindGroupLayout,
@@ -38,6 +39,7 @@ pub struct PairwiseJaccardGpu {
 }
 
 impl PairwiseJaccardGpu {
+    /// Create pairwise Jaccard similarity calculator.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 

@@ -32,6 +32,7 @@ pub struct AniBatchF64 {
 }
 
 impl AniBatchF64 {
+    /// Creates a new batch ANI GPU kernel for the given device.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         let module = device.compile_shader_f64(SHADER, Some("ani_batch_f64"));
         let bgl = device

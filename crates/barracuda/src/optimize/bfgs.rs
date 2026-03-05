@@ -42,6 +42,7 @@ pub static WGSL_BFGS_UPDATE: std::sync::LazyLock<String> = std::sync::LazyLock::
 /// Entry points: `central_difference`, `forward_difference`, `generate_perturbed_points`.
 const WGSL_BATCH_GRADIENT_F64: &str = include_str!("../shaders/optimizer/batch_gradient_f64.wgsl");
 
+/// WGSL batch gradient shader (f32, downcast from f64).
 pub static WGSL_BATCH_GRADIENT: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     crate::shaders::precision::downcast_f64_to_f32(WGSL_BATCH_GRADIENT_F64)
 });
@@ -59,6 +60,7 @@ pub struct BfgsConfig {
     pub ftol: f64,
     /// Line search parameters (c1, c2 for Wolfe conditions)
     pub c1: f64,
+    /// Second Wolfe condition parameter (curvature)
     pub c2: f64,
     /// Maximum line search iterations
     pub max_linesearch: usize,
@@ -388,7 +390,6 @@ where
     bfgs(f, &grad_f, x0, config)
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -24,6 +24,7 @@ struct ChunkParams {
     _pad1: u32,
 }
 
+/// Split tensor into chunks along a dimension.
 pub struct Chunk {
     input: Tensor,
     chunks: usize,
@@ -31,6 +32,7 @@ pub struct Chunk {
 }
 
 impl Chunk {
+    /// Creates a new chunk operation. Splits into `chunks` chunks along `dim`.
     pub fn new(input: Tensor, chunks: usize, dim: usize) -> Result<Self> {
         if chunks == 0 {
             return Err(BarracudaError::invalid_op(
@@ -60,10 +62,11 @@ impl Chunk {
                     "../shaders/tensor/chunk_f64.wgsl"
                 ))
             });
-            &S
+            std::sync::LazyLock::force(&S).as_str()
         }
     }
 
+    /// Executes chunking and returns a vector of chunk tensors.
     pub fn execute(self) -> Result<Vec<Tensor>> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -229,7 +232,6 @@ impl Chunk {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

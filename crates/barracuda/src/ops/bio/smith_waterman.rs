@@ -105,6 +105,7 @@ pub struct SmithWatermanGpu {
 }
 
 impl SmithWatermanGpu {
+    /// Create Smith-Waterman aligner.
     pub fn new(device: &WgpuDevice) -> Self {
         Self {
             device: Arc::new(device.clone()),
@@ -244,7 +245,6 @@ impl SmithWatermanGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

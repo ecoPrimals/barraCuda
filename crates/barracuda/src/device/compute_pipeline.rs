@@ -46,6 +46,7 @@ pub struct ComputeDispatch<'a> {
 }
 
 impl<'a> ComputeDispatch<'a> {
+    /// Creates a new compute dispatch builder for the given device and label.
     pub fn new(device: &'a WgpuDevice, label: &'a str) -> Self {
         Self {
             device,

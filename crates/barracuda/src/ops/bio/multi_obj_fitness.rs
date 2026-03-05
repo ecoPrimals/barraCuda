@@ -14,6 +14,7 @@ use wgpu::util::DeviceExt;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 
+/// WGSL source for multi-objective fitness (f32).
 pub const WGSL_MULTI_OBJ_FITNESS: &str = include_str!("../../shaders/bio/multi_obj_fitness.wgsl");
 
 /// f64 version for universal math library portability.
@@ -37,6 +38,7 @@ pub struct MultiObjFitnessGpu {
 }
 
 impl MultiObjFitnessGpu {
+    /// Create multi-objective fitness GPU kernel.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 
@@ -167,7 +169,6 @@ impl MultiObjFitnessGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

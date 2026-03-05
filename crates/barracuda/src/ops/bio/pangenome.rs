@@ -32,6 +32,7 @@ pub struct PangenomeClassifyGpu {
 }
 
 impl PangenomeClassifyGpu {
+    /// Create pangenome classifier.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         let module = device.compile_shader_f64(SHADER, Some("pangenome_classify"));
         let bgl = super::snp::make_bgl(&device, &[true, false, false]);
@@ -45,6 +46,7 @@ impl PangenomeClassifyGpu {
         })
     }
 
+    /// Dispatch pangenome classification.
     pub fn dispatch(
         &self,
         n_genes: u32,

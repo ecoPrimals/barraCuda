@@ -8,7 +8,7 @@
 //! ## Transport
 //!
 //! Primary: Unix domain socket at `$XDG_RUNTIME_DIR/barracuda/barracuda.sock`
-//! Fallback: TCP on `BARRACUDA_IPC_PORT` (default: ephemeral)
+//! Fallback: TCP on `127.0.0.1:{BARRACUDA_IPC_PORT}` if set, else `127.0.0.1:0` (ephemeral)
 //!
 //! ## Endpoints
 //!

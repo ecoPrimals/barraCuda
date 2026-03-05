@@ -6,12 +6,14 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Add a dimension of size 1 at the given axis.
 pub struct Unsqueeze {
     input: Tensor,
     axis: usize,
 }
 
 impl Unsqueeze {
+    /// Create an unsqueeze operation inserting a dimension at `axis`.
     pub fn new(input: Tensor, axis: usize) -> Self {
         Self { input, axis }
     }
@@ -25,6 +27,7 @@ impl Unsqueeze {
         &S
     }
 
+    /// Execute the unsqueeze operation on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.len();
@@ -128,12 +131,12 @@ impl Unsqueeze {
 }
 
 impl Tensor {
+    /// Add a dimension of size 1 at the given axis.
     pub fn unsqueeze(self, axis: usize) -> Result<Self> {
         Unsqueeze::new(self, axis).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

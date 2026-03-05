@@ -9,6 +9,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
+/// Complex absolute value (magnitude): |a + bi| = sqrt(a² + b²).
 pub struct ComplexAbs {
     input: Tensor,
     pipeline: wgpu::ComputePipeline,
@@ -16,6 +17,7 @@ pub struct ComplexAbs {
 }
 
 impl ComplexAbs {
+    /// Creates a new complex abs. Input last dimension must be 2 (real, imag).
     pub fn new(input: Tensor) -> Result<Self> {
         let shape = input.shape();
         if shape.last() != Some(&2) {
@@ -98,6 +100,7 @@ impl ComplexAbs {
         })
     }
 
+    /// Executes complex abs and returns real-valued magnitudes.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let num_elements = self.input.len();
@@ -175,7 +178,6 @@ impl ComplexAbs {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

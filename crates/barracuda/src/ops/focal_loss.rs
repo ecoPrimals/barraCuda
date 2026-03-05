@@ -57,6 +57,7 @@ struct FocalLossParams {
     _pad5: [u32; 4],
 }
 
+/// Focal loss for imbalanced classification (down-weights easy examples).
 pub struct FocalLoss {
     predictions: Tensor,
     targets: Tensor,
@@ -74,6 +75,7 @@ impl FocalLoss {
         &SHADER
     }
 
+    /// Execute focal loss computation and return the result tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size = self.predictions.shape().iter().product::<usize>();
@@ -180,7 +182,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

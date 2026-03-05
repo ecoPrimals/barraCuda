@@ -53,12 +53,14 @@ struct ContrastiveLossParams {
     _padding: u32,
 }
 
+/// NT-Xent contrastive loss for self-supervised learning (SimCLR, MoCo).
 pub struct ContrastiveLoss {
     embeddings: Tensor,
     temperature: f32,
 }
 
 impl ContrastiveLoss {
+    /// Creates a new contrastive loss. Embeddings shape: [batch*2, embed_dim]; temperature typically 0.1–0.5.
     pub fn new(embeddings: Tensor, temperature: f32) -> Result<Self> {
         // Validate 2D input
         if embeddings.shape().len() != 2 {
@@ -99,9 +101,10 @@ impl ContrastiveLoss {
                 "../shaders/loss/contrastive_loss_f64.wgsl"
             ))
         });
-        SHADER.as_str()
+        std::sync::LazyLock::force(&SHADER).as_str()
     }
 
+    /// Executes contrastive loss and returns per-sample loss tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.embeddings.device();
         let batch_total = self.embeddings.shape()[0];
@@ -178,7 +181,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

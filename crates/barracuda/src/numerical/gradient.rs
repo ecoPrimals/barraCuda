@@ -82,7 +82,6 @@ pub fn gradient_1d(f: &[f64], dx: f64) -> Vec<f64> {
     grad
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -32,10 +32,10 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-/// Global device registry (lazily initialized)
+/// Global device registry (lazily initialized on first access).
 static GLOBAL_REGISTRY: OnceLock<DeviceRegistry> = OnceLock::new();
 
-/// Backend preference order for ecoPrimals
+/// Backend preference order for ecoPrimals (Vulkan preferred for f64 support).
 /// Vulkan is preferred for cross-platform compatibility and f64 support
 const BACKEND_PREFERENCE: &[wgpu::Backend] = &[
     wgpu::Backend::Vulkan,        // Best f64 support, cross-platform
@@ -71,16 +71,19 @@ pub struct PhysicalDevice {
     pub capabilities: DeviceCapabilities,
 }
 
-/// Unique identifier for a physical device
+/// Unique identifier for a physical device.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PhysicalDeviceId {
+    /// PCI vendor ID
     pub vendor_id: u32,
+    /// PCI device ID
     pub device_id: u32,
-    /// Normalized device name (for deduplication when device_id is 0)
+    /// Normalized device name hash (for deduplication when device_id is 0)
     pub name_hash: u64,
 }
 
 impl PhysicalDeviceId {
+    /// Build ID from wgpu adapter info.
     pub fn from_adapter_info(info: &wgpu::AdapterInfo) -> Self {
         // OpenGL backends sometimes report device_id=0
         // In that case, use the device name for deduplication
@@ -151,12 +154,16 @@ impl PhysicalDeviceId {
     }
 }
 
-/// Information about a specific backend for a device
+/// Information about a specific backend for a device.
 #[derive(Debug, Clone)]
 pub struct BackendInfo {
+    /// Graphics API backend (Vulkan, Metal, DX12, etc.)
     pub backend: wgpu::Backend,
-    pub adapter_index: usize, // Index in wgpu's adapter list
+    /// Index in wgpu's adapter list
+    pub adapter_index: usize,
+    /// Driver name string
     pub driver: String,
+    /// Driver info string (version, etc.)
     pub driver_info: String,
 }
 
@@ -185,20 +192,29 @@ pub struct DeviceCapabilities {
     pub compute_capability: f32,
 }
 
-/// Known device vendors
+/// Known device vendors (by PCI vendor ID).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DeviceVendor {
+    /// NVIDIA
     Nvidia,
+    /// AMD
     Amd,
+    /// Intel
     Intel,
+    /// Apple
     Apple,
+    /// Qualcomm
     Qualcomm,
+    /// ARM
     Arm,
-    Software, // CPU/software rasterizer
+    /// CPU/software rasterizer
+    Software,
+    /// Unknown vendor
     Unknown,
 }
 
 impl DeviceVendor {
+    /// Map PCI vendor ID to vendor enum.
     pub fn from_vendor_id(id: u32) -> Self {
         match id {
             0x10DE => Self::Nvidia,
@@ -212,6 +228,7 @@ impl DeviceVendor {
         }
     }
 
+    /// Human-readable vendor name.
     pub fn name(&self) -> &'static str {
         match self {
             Self::Nvidia => "NVIDIA",
@@ -581,7 +598,6 @@ impl DeviceRegistry {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

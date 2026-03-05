@@ -17,6 +17,7 @@ struct CenterLossParams {
     _padding: u32,
 }
 
+/// Center loss for metric learning: penalizes intra-class variance.
 pub struct CenterLoss {
     features: Tensor,
     centers: Tensor,
@@ -240,7 +241,6 @@ impl CenterLoss {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

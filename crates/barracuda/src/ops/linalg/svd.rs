@@ -364,7 +364,6 @@ pub fn svd_pinv(a: &[f64], m: usize, n: usize, tol: f64) -> Result<Vec<f64>> {
     Ok(svd.pseudoinverse(tol))
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

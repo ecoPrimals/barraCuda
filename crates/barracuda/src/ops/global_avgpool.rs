@@ -21,11 +21,13 @@ struct GlobalAvgPoolParams {
     width: u32,
 }
 
+/// Global average pooling — reduces spatial dimensions to 1×1.
 pub struct GlobalAvgPool {
     input: Tensor,
 }
 
 impl GlobalAvgPool {
+    /// Creates a new global average pool. Input must be 4D [B, C, H, W].
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -41,6 +43,7 @@ impl GlobalAvgPool {
         }
     }
 
+    /// Executes global average pooling and returns [B, C, 1, 1].
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -91,7 +94,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

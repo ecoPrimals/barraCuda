@@ -47,8 +47,11 @@ struct LanczosParams {
 /// Result of one Lanczos iteration.
 #[derive(Debug, Clone)]
 pub struct LanczosIterationResult {
+    /// Diagonal element α_k = v_k^T A v_k.
     pub alpha: f64,
+    /// Off-diagonal norm β_k = ||w|| after orthogonalization.
     pub beta: f64,
+    /// Next Lanczos vector v_{k+1} = w / β_k.
     pub v_next: Vec<f64>,
 }
 
@@ -58,7 +61,9 @@ pub struct LanczosIterationResult {
 /// T is symmetric tridiagonal with T[i,i] = alpha[i], T[i,i+1] = T[i+1,i] = beta[i].
 #[derive(Debug, Clone)]
 pub struct LanczosTridiagonal {
+    /// Diagonal elements α_0..α_{K-1}.
     pub alpha: Vec<f64>,
+    /// Off-diagonal elements β_0..β_{K-2}.
     pub beta: Vec<f64>,
 }
 
@@ -155,7 +160,6 @@ where
     Ok(LanczosTridiagonal { alpha, beta })
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

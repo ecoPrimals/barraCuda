@@ -24,6 +24,7 @@ pub struct RoiPool {
 }
 
 impl RoiPool {
+    /// Create an ROI pool operation with the given features, ROIs, and output dimensions.
     pub fn new(
         features: Tensor,
         rois: Tensor,
@@ -74,6 +75,7 @@ impl RoiPool {
         }
     }
 
+    /// Execute ROI pooling and return the pooled feature maps.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.features.device();
         let features_shape = self.features.shape();
@@ -253,7 +255,6 @@ impl RoiPool {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

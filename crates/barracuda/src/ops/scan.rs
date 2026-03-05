@@ -40,6 +40,7 @@ struct ScanParams {
     exclusive: u32,
 }
 
+/// Prefix sum (cumulative sum) operation.
 pub struct Scan {
     input: Tensor,
     exclusive: bool,
@@ -57,6 +58,7 @@ impl Scan {
         }
     }
 
+    /// Execute the prefix sum and return the result tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.shape().iter().product::<usize>();
@@ -141,7 +143,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

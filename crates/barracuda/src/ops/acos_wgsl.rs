@@ -13,11 +13,13 @@ use crate::device::DeviceCapabilities;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Element-wise inverse cosine: acos(x), valid for x ∈ [-1, 1].
 pub struct Acos {
     input: Tensor,
 }
 
 impl Acos {
+    /// Create an acos operation.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -31,6 +33,7 @@ impl Acos {
         &SHADER
     }
 
+    /// Execute acos on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -160,12 +163,12 @@ impl Acos {
 }
 
 impl Tensor {
+    /// Compute element-wise acos(x).
     pub fn acos(self) -> Result<Self> {
         Acos::new(self).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

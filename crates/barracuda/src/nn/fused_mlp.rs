@@ -29,6 +29,7 @@ struct LinearParams {
 /// Activation for MLP layers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Activation {
+    /// Rectified Linear Unit: max(0, x)
     ReLU,
 }
 

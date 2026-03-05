@@ -348,7 +348,6 @@ where
     Ok(result.y_final)
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "rk45_tests.rs"]
 mod tests;

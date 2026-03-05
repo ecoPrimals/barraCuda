@@ -6,6 +6,11 @@
 
 use crate::error::Result;
 
+/// Strided sparse attention: attends only to every k-th token to reduce complexity.
+///
+/// # Arguments
+/// * `query`, `key`, `value` - Attention tensors (batch, heads, seq_len, head_dim)
+/// * `stride` - Attend to positions 0, stride, 2*stride, ...
 pub async fn sparse_attention(
     _device: &wgpu::Device,
     _queue: &wgpu::Queue,
@@ -83,7 +88,6 @@ pub async fn sparse_attention(
     Ok(output)
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

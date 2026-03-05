@@ -59,6 +59,13 @@ pub struct UnidirectionalConfig {
 const DEFAULT_INPUT_BUFFER_BYTES: usize = 128 * 1024 * 1024;
 const DEFAULT_OUTPUT_BUFFER_BYTES: usize = 16 * 1024 * 1024;
 const DEFAULT_INPUT_BW_FRACTION: f64 = 0.9;
+const BYTES_PER_MB: usize = 1024 * 1024;
+#[cfg(test)]
+const LARGE_INPUT_BUFFER_MB: usize = 256;
+#[cfg(test)]
+const LARGE_OUTPUT_BUFFER_MB: usize = 32;
+#[cfg(test)]
+const THROTTLE_TEST_BPS: u64 = 1000;
 
 impl Default for UnidirectionalConfig {
     fn default() -> Self {
@@ -77,8 +84,8 @@ impl UnidirectionalConfig {
     /// Create config with custom buffer sizes
     pub fn with_sizes(input_mb: usize, output_mb: usize) -> Self {
         Self {
-            input_buffer_size: input_mb * 1024 * 1024,
-            output_buffer_size: output_mb * 1024 * 1024,
+            input_buffer_size: input_mb * BYTES_PER_MB,
+            output_buffer_size: output_mb * BYTES_PER_MB,
             ..Default::default()
         }
     }
@@ -456,7 +463,6 @@ impl std::fmt::Debug for UnidirectionalPipeline {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -470,9 +476,16 @@ mod tests {
 
     #[test]
     fn test_config_with_sizes() {
-        let config = UnidirectionalConfig::with_sizes(256, 32);
-        assert_eq!(config.input_buffer_size, 256 * 1024 * 1024);
-        assert_eq!(config.output_buffer_size, 32 * 1024 * 1024);
+        let config =
+            UnidirectionalConfig::with_sizes(LARGE_INPUT_BUFFER_MB, LARGE_OUTPUT_BUFFER_MB);
+        assert_eq!(
+            config.input_buffer_size,
+            LARGE_INPUT_BUFFER_MB * BYTES_PER_MB
+        );
+        assert_eq!(
+            config.output_buffer_size,
+            LARGE_OUTPUT_BUFFER_MB * BYTES_PER_MB
+        );
     }
 
     #[test]
@@ -488,7 +501,7 @@ mod tests {
 
     #[test]
     fn test_bandwidth_throttler() {
-        let mut throttler = BandwidthThrottler::new(1000); // 1000 bytes/sec
+        let mut throttler = BandwidthThrottler::new(THROTTLE_TEST_BPS);
 
         // First 500 bytes should pass
         assert!(throttler.check(500).is_none());

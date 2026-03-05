@@ -27,6 +27,7 @@ pub struct SageConv {
 }
 
 impl SageConv {
+    /// Create a GraphSAGE convolution with node features, edge index, weights, and degrees.
     pub fn new(
         node_features: Tensor,
         edge_index: Vec<(usize, usize)>,
@@ -94,6 +95,7 @@ impl SageConv {
         }
     }
 
+    /// Execute the GraphSAGE convolution and return the output node features.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.node_features.device();
         // Convert edge_index to u32 pairs
@@ -389,7 +391,6 @@ impl SageConv {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

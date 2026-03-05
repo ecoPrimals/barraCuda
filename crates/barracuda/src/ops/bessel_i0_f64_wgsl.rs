@@ -16,6 +16,7 @@ pub struct BesselI0F64 {
 }
 
 impl BesselI0F64 {
+    /// Creates a new I₀ Bessel function evaluator for the given WGPU device.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -32,8 +33,8 @@ impl BesselI0F64 {
         self.i0_gpu(x)
     }
 
-    #[expect(dead_code, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn i0_cpu(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| Self::i0_scalar(xi)).collect()
     }
@@ -118,7 +119,6 @@ impl BesselI0F64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

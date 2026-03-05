@@ -17,6 +17,7 @@ struct FocalLossAlphaParams {
     _padding: u32,
 }
 
+/// Focal loss with per-class alpha weighting for imbalanced classification.
 pub struct FocalLossAlpha {
     predictions: Tensor,
     targets: Tensor,
@@ -126,7 +127,6 @@ impl FocalLossAlpha {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

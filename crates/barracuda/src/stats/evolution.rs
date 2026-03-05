@@ -35,6 +35,7 @@ pub struct KimuraGpu {
 
 #[cfg(feature = "gpu")]
 impl KimuraGpu {
+    /// Creates a new GPU-accelerated Kimura fixation probability batch from a WGPU device.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -154,7 +155,6 @@ pub fn detection_threshold(abundance: f64, target_power: f64) -> u64 {
     d.ceil() as u64
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

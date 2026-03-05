@@ -34,11 +34,13 @@ struct DeterminantParams {
     _padding: [u32; 2],
 }
 
+/// Matrix determinant computation (2x2, 3x3, or NxN via LU).
 pub struct Determinant {
     input: Tensor,
 }
 
 impl Determinant {
+    /// Create a determinant operation for a square matrix (or batch of matrices).
     pub fn new(input: Tensor) -> Result<Self> {
         // Verify square matrix
         let shape = input.shape();
@@ -120,7 +122,6 @@ impl Determinant {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -8,6 +8,10 @@
 
 use crate::error::Result;
 
+/// ALiBi position encoding: adds position-dependent bias to attention scores.
+///
+/// No position embeddings needed — bias encodes position directly.
+/// Head-specific slopes follow geometric sequence.
 pub async fn alibi_position(
     _device: &wgpu::Device,
     _queue: &wgpu::Queue,
@@ -43,7 +47,6 @@ pub async fn alibi_position(
     Ok(output)
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

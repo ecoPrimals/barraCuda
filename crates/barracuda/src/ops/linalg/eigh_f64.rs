@@ -44,10 +44,12 @@ pub const WGSL_EIGH_F64: &str = include_str!("../../shaders/linalg/eigh_f64.wgsl
 /// Eigenvalues in ascending order; eigenvectors as columns of V (row-major).
 #[derive(Debug, Clone)]
 pub struct EighDecompositionF64 {
+    /// Eigenvalues in ascending order
     pub eigenvalues: Vec<f64>,
     /// Eigenvectors as columns of V (n×n, row-major).
     /// Column j is the eigenvector for `eigenvalues[j]`.
     pub eigenvectors: Vec<f64>,
+    /// Matrix dimension (n×n)
     pub n: usize,
 }
 
@@ -340,7 +342,6 @@ fn ql_implicit(diag_in: &[f64], off_in: &[f64], n: usize) -> (Vec<f64>, Vec<f64>
     (d, z)
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

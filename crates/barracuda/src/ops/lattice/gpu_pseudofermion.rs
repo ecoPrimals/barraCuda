@@ -39,6 +39,7 @@ pub struct GpuPseudofermionHeatbath {
 }
 
 impl GpuPseudofermionHeatbath {
+    /// Create a heatbath operator for the given lattice volume.
     pub fn new(device: Arc<WgpuDevice>, volume: u32) -> Result<Self> {
         let src = format!("{WGSL_COMPLEX64}\n{WGSL_LCG_F64}\n{HEATBATH_SHADER}");
         let module = device.compile_shader_f64(&src, Some("pf_heatbath"));
@@ -143,6 +144,7 @@ impl GpuPseudofermionHeatbath {
         Ok(())
     }
 
+    /// Return the lattice volume.
     pub fn volume(&self) -> u32 {
         self.volume
     }
@@ -173,6 +175,7 @@ pub struct GpuPseudofermionForce {
 }
 
 impl GpuPseudofermionForce {
+    /// Create a pseudofermion force operator for the given lattice dimensions.
     pub fn new(device: Arc<WgpuDevice>, nt: u32, nx: u32, ny: u32, nz: u32) -> Result<Self> {
         let volume = nt * nx * ny * nz;
         let src = format!("{}{}", su3_preamble(), FORCE_SHADER);
@@ -300,6 +303,7 @@ impl GpuPseudofermionForce {
         Ok(())
     }
 
+    /// Lattice volume.
     pub fn volume(&self) -> u32 {
         self.volume
     }
@@ -331,7 +335,6 @@ fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

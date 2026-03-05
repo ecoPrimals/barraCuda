@@ -5,16 +5,16 @@ use super::topology::{GpuDriver, GpuVendor};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
 
-/// Workload distribution configuration
+/// Workload distribution configuration.
 #[derive(Debug, Clone)]
 pub struct WorkloadConfig {
-    /// Maximum parallel tasks
+    /// Maximum parallel tasks across devices.
     pub max_parallel: usize,
-    /// Prefer discrete GPUs
+    /// Prefer discrete GPUs over integrated.
     pub prefer_discrete: bool,
-    /// Exclude software renderer
+    /// Exclude software renderer (e.g. llvmpipe).
     pub exclude_software: bool,
-    /// Minimum GFLOPS to include
+    /// Minimum GFLOPS to include a device.
     pub min_gflops: f64,
 }
 
@@ -29,17 +29,23 @@ impl Default for WorkloadConfig {
     }
 }
 
-/// Device selection requirements for advanced pool acquisition
+/// Device selection requirements for advanced pool acquisition.
 #[derive(Debug, Clone, Default)]
 pub struct DeviceRequirements {
+    /// Minimum VRAM in bytes.
     pub min_vram_bytes: Option<u64>,
+    /// Preferred GPU vendor.
     pub preferred_vendor: Option<GpuVendor>,
+    /// Exclude software renderer.
     pub exclude_software: bool,
+    /// Require discrete GPU.
     pub require_discrete: bool,
+    /// Minimum GFLOPS.
     pub min_gflops: Option<f64>,
 }
 
 impl DeviceRequirements {
+    /// Create requirements with software excluded by default.
     pub fn new() -> Self {
         Self {
             exclude_software: true,
@@ -47,35 +53,41 @@ impl DeviceRequirements {
         }
     }
 
+    /// Require minimum VRAM in bytes.
     #[must_use]
     pub fn with_min_vram_bytes(mut self, bytes: u64) -> Self {
         self.min_vram_bytes = Some(bytes);
         self
     }
 
+    /// Require minimum VRAM in gigabytes.
     #[must_use]
     pub fn with_min_vram_gb(self, gb: u64) -> Self {
         self.with_min_vram_bytes(gb * 1024 * 1024 * 1024)
     }
 
+    /// Prefer NVIDIA GPUs.
     #[must_use]
     pub fn prefer_nvidia(mut self) -> Self {
         self.preferred_vendor = Some(GpuVendor::Nvidia);
         self
     }
 
+    /// Prefer AMD GPUs.
     #[must_use]
     pub fn prefer_amd(mut self) -> Self {
         self.preferred_vendor = Some(GpuVendor::Amd);
         self
     }
 
+    /// Require discrete (non-integrated) GPU.
     #[must_use]
     pub fn require_discrete(mut self) -> Self {
         self.require_discrete = true;
         self
     }
 
+    /// Require minimum GFLOPS.
     #[must_use]
     pub fn with_min_gflops(mut self, gflops: f64) -> Self {
         self.min_gflops = Some(gflops);
@@ -119,16 +131,23 @@ impl DeviceRequirements {
     }
 }
 
-/// Per-device metadata for the advanced pool
+/// Per-device metadata for the advanced pool.
 #[derive(Debug, Clone)]
 pub struct DeviceInfo {
+    /// Adapter index in enumeration.
     pub index: usize,
     pub(crate) pool_index: usize,
+    /// Device name (e.g. "NVIDIA GeForce RTX 4090").
     pub name: String,
+    /// GPU vendor.
     pub vendor: GpuVendor,
+    /// Driver type (e.g. Nvk, Cuda).
     pub driver: GpuDriver,
+    /// Estimated VRAM in bytes.
     pub vram_bytes: u64,
+    /// Estimated FP32 GFLOPS.
     pub estimated_gflops: f64,
+    /// True if discrete (not integrated).
     pub is_discrete: bool,
     pub(crate) allocations: Arc<AtomicUsize>,
     pub(crate) allocated_bytes: Arc<AtomicU64>,
@@ -136,22 +155,27 @@ pub struct DeviceInfo {
 }
 
 impl DeviceInfo {
+    /// Returns true if device is currently in use.
     pub fn is_busy(&self) -> bool {
         self.busy.load(Ordering::Relaxed)
     }
 
+    /// Number of active buffer allocations.
     pub fn allocation_count(&self) -> usize {
         self.allocations.load(Ordering::Relaxed)
     }
 
+    /// Total allocated bytes on this device.
     pub fn allocated_bytes(&self) -> u64 {
         self.allocated_bytes.load(Ordering::Relaxed)
     }
 
+    /// Estimated available VRAM (total minus allocated).
     pub fn available_vram_bytes(&self) -> u64 {
         self.vram_bytes.saturating_sub(self.allocated_bytes())
     }
 
+    /// VRAM usage as percentage (0–100).
     pub fn usage_percent(&self) -> f64 {
         if self.vram_bytes == 0 {
             return 0.0;
@@ -159,6 +183,7 @@ impl DeviceInfo {
         (self.allocated_bytes() as f64 / self.vram_bytes as f64) * 100.0
     }
 
+    /// Returns true if native f64 shader builtins are supported.
     pub fn supports_f64_builtins(&self) -> bool {
         !matches!(self.driver, GpuDriver::Nvk | GpuDriver::Software)
     }

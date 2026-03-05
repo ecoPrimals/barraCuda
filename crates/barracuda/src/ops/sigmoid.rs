@@ -26,6 +26,7 @@ pub struct Sigmoid {
 }
 
 impl Sigmoid {
+    /// Creates a Sigmoid operation for the given input tensor.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }

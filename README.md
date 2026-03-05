@@ -26,8 +26,8 @@ results.
 
 ### Key capabilities
 
-- **767 WGSL shaders** spanning scientific compute domains
-- **1,023 Rust source files**, 61 integration test suites, 4 examples, 5 binaries
+- **692 WGSL shaders** spanning scientific compute domains
+- **1,026 Rust source files**, 62 integration test suites, 3,471 test functions
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -39,7 +39,7 @@ results.
 - **Statistics** — bootstrap, jackknife, diversity indices, hydrology
 - **Bioinformatics** — Smith-Waterman, HMM, phylogenetics, genomic ops
 - **ML ops** — matmul, softmax, attention, ESN reservoir computing
-- **Sovereign shader compilation** — naga 28 IR optimizer, SPIR-V passthrough via `create_shader_module_passthrough`
+- **Sovereign shader compilation** — naga 28 IR optimizer, SPIR-V passthrough
 - **JSON-RPC 2.0 + tarpc** — dual-protocol IPC for primal-to-primal and external consumers
 - **UniBin CLI** — single `barracuda` binary with `server`, `doctor`, `validate`, `version`
 
@@ -131,8 +131,8 @@ barraCuda/
 │       │   ├── multi_gpu/           # GpuPool, MultiDevicePool, load balancing
 │       │   ├── unified_hardware/    # Unified CPU/GPU/NPU abstraction
 │       │   └── ...                  # + nn, snn, esn, pde, genomics, vision
-│       ├── examples/                # 4 runnable examples
-│       ├── tests/                   # 60 integration test suites
+│       ├── examples/                # Runnable examples
+│       ├── tests/                   # 62 integration test suites
 │       └── src/bin/                 # validate_gpu, bench_*
 └── specs/
     ├── BARRACUDA_SPECIFICATION.md   # Crate architecture + IPC contract
@@ -164,12 +164,12 @@ count on finish or drop, making the barrier leak-proof.
 
 ```bash
 cargo fmt --all -- --check              # formatting
-cargo clippy --workspace -- -D warnings # lints (pedantic in Cargo.toml, #[expect] verified)
+cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (pedantic, all clean)
 cargo deny check                        # license + advisory audit
-cargo doc --workspace --no-deps         # documentation
+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo test --workspace --lib            # 1,791+ test functions
-cargo llvm-cov --workspace --lib        # ~80% line coverage (unit tests)
+cargo test --workspace --lib            # 3,471 test functions
+cargo llvm-cov --workspace --lib        # 80%+ line coverage (CI enforced --fail-under 80)
 ```
 
 All gates are enforced in `.github/workflows/ci.yml`.

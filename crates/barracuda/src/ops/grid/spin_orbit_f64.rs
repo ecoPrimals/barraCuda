@@ -503,7 +503,6 @@ pub fn compute_ls_factor(l: u32, j: f64) -> f64 {
     (j * (j + 1.0) - l_f * (l_f + 1.0) - 0.75) / 2.0
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "spin_orbit_f64_tests.rs"]
 mod tests;

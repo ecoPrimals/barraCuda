@@ -105,12 +105,12 @@ impl GpuWilsonAction {
         Ok(())
     }
 
+    /// Lattice volume.
     pub fn volume(&self) -> u32 {
         self.volume
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

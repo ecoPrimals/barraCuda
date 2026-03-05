@@ -6,11 +6,13 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Remove dimensions of size 1 from a tensor.
 pub struct Squeeze {
     input: Tensor,
 }
 
 impl Squeeze {
+    /// Create a squeeze operation.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -26,6 +28,7 @@ impl Squeeze {
         }
     }
 
+    /// Execute the squeeze operation, removing dimensions of size 1.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.len();
@@ -140,12 +143,12 @@ impl Squeeze {
 }
 
 impl Tensor {
+    /// Remove dimensions of size 1 from this tensor.
     pub fn squeeze(self) -> Result<Self> {
         Squeeze::new(self).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

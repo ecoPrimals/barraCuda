@@ -57,12 +57,16 @@ impl Default for BenchmarkConfig {
     }
 }
 
-/// Precision for benchmarks
+/// Precision for benchmarks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Precision {
+    /// 16-bit floating point
     FP16,
+    /// 32-bit floating point
     FP32,
+    /// 64-bit floating point
     FP64,
+    /// 8-bit integer
     INT8,
 }
 
@@ -103,12 +107,16 @@ pub struct BenchmarkResult {
     pub tflops: f64,
 }
 
-/// Framework identifier
+/// Framework identifier for benchmark comparison.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Framework {
+    /// BarraCuda (WGSL/WebGPU)
     BarraCuda,
+    /// Native CUDA
     CUDA,
+    /// PyTorch with CUDA backend
     PyTorchCUDA,
+    /// TensorFlow with CUDA backend
     TensorFlowCUDA,
 }
 
@@ -148,7 +156,7 @@ pub struct ComparisonResult {
 }
 
 impl ComparisonResult {
-    /// Create comparison from two results
+    /// Create comparison from BarraCuda and optional CUDA results.
     pub fn new(barracuda: BenchmarkResult, cuda: Option<BenchmarkResult>) -> Self {
         let operation = barracuda.operation.clone();
         let hardware = barracuda.hardware.clone();
@@ -181,7 +189,7 @@ impl ComparisonResult {
     }
 }
 
-/// Benchmark suite for all operations
+/// Benchmark suite for all operations (BarraCuda vs CUDA).
 pub struct BenchmarkSuite {
     config: BenchmarkConfig,
     results: Vec<ComparisonResult>,
@@ -441,13 +449,18 @@ impl BenchmarkSuite {
     }
 }
 
-/// Benchmark summary statistics
+/// Benchmark summary statistics.
 #[derive(Debug, Clone)]
 pub struct BenchmarkSummary {
+    /// Total operations benchmarked
     pub total_operations: usize,
+    /// Operations achieving ≥90% parity
     pub ops_at_90_parity: usize,
+    /// Operations achieving ≥95% parity
     pub ops_at_95_parity: usize,
+    /// Operations achieving ≥98% parity
     pub ops_at_98_parity: usize,
+    /// Mean parity percentage
     pub mean_parity_percent: f64,
 }
 
@@ -502,7 +515,6 @@ fn cpu_conv1d(input: &[f32], kernel: &[f32]) -> Vec<f32> {
     output
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

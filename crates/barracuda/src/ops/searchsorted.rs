@@ -20,6 +20,7 @@ struct SearchSortedParams {
     _pad1: u32,
 }
 
+/// GPU parallel binary search for insertion indices in a sorted array.
 pub struct SearchSorted {
     sorted: Tensor,
     values: Tensor,
@@ -27,6 +28,7 @@ pub struct SearchSorted {
 }
 
 impl SearchSorted {
+    /// Creates a new searchsorted operation. `side_right` selects left (false) or right (true) insertion.
     pub fn new(sorted: Tensor, values: Tensor, side_right: bool) -> Result<Self> {
         if sorted.is_empty() {
             return Err(BarracudaError::invalid_op(
@@ -84,6 +86,7 @@ impl SearchSorted {
         std::sync::LazyLock::force(&SHADER).as_str()
     }
 
+    /// Executes the binary search and returns insertion indices as f32 tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.sorted.device();
         let sorted_size = self.sorted.len();
@@ -356,7 +359,6 @@ impl SearchSorted {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -66,14 +66,14 @@ impl HermiteF64 {
         self.hermite_function_gpu(x, n)
     }
 
-    #[expect(dead_code, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn hermite_cpu(&self, x: &[f64], n: u32) -> Vec<f64> {
         x.iter().map(|&xi| Self::hermite_scalar(n, xi)).collect()
     }
 
-    #[expect(dead_code, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn hermite_function_cpu(&self, x: &[f64], n: u32) -> Vec<f64> {
         x.iter()
             .map(|&xi| Self::hermite_function_scalar(n, xi))
@@ -176,7 +176,6 @@ impl HermiteF64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

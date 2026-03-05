@@ -227,8 +227,8 @@ impl BrayCurtisF64 {
     }
 
     /// CPU fallback for small inputs
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn condensed_distance_matrix_cpu(
         &self,
         samples: &[f64],
@@ -269,7 +269,6 @@ impl BrayCurtisF64 {
 }
 
 /// CPU reference: Bray-Curtis distance between samples i and j
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 fn bray_curtis_cpu(samples: &[f64], i: usize, j: usize, n_features: usize) -> f64 {
     let base_i = i * n_features;
@@ -293,7 +292,6 @@ fn bray_curtis_cpu(samples: &[f64], i: usize, j: usize, n_features: usize) -> f6
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -101,6 +101,7 @@ impl BindingNode {
 /// control flow, comments, blank lines).
 #[derive(Debug, Clone)]
 pub struct PassthroughNode {
+    /// The raw source line.
     pub source_line: String,
     /// If this store references a named binding, record the dep so the
     /// scheduler knows the store must come after the producer.
@@ -109,13 +110,17 @@ pub struct PassthroughNode {
 
 // ─── Node kind ────────────────────────────────────────────────────────────────
 
+/// Node in the dependency graph: either a let binding or passthrough statement.
 #[derive(Debug, Clone)]
 pub enum Node {
+    /// A `let name = expr;` binding.
     Binding(BindingNode),
+    /// A non-let statement (store, assignment, control flow).
     Passthrough(PassthroughNode),
 }
 
 impl Node {
+    /// Return the raw source line for this node.
     pub fn source_line(&self) -> &str {
         match self {
             Node::Binding(b) => &b.source_line,
@@ -133,6 +138,7 @@ impl Node {
 /// whose results it consumes in its RHS expression.
 #[derive(Debug)]
 pub struct WgslDependencyGraph {
+    /// All nodes (bindings and passthroughs) in parse order.
     pub nodes: Vec<Node>,
 }
 
@@ -180,10 +186,13 @@ impl WgslDependencyGraph {
     }
 
     /// Return the number of nodes (bindings + passthroughs).
+    #[must_use]
     pub fn len(&self) -> usize {
         self.nodes.len()
     }
 
+    /// Return true if the graph has no nodes.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.nodes.is_empty()
     }
@@ -281,7 +290,6 @@ fn contains_identifier(text: &str, name: &str) -> bool {
     false
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

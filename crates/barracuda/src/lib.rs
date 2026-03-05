@@ -64,6 +64,11 @@
 //! - Zero duplication: One implementation per op
 
 #![deny(unsafe_code)]
+#![cfg_attr(
+    test,
+    expect(clippy::unwrap_used, reason = "test code uses unwrap for brevity"),
+    allow(clippy::large_stack_arrays)
+)]
 #![expect(
     rustdoc::broken_intra_doc_links,
     reason = "cross-crate links to barracuda-core types"

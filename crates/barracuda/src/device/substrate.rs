@@ -48,9 +48,15 @@ pub enum SubstrateCapability {
     /// f32 compute
     F32Compute,
     /// Integer quantized inference at a given bit width (NPU)
-    QuantizedInference { bits: u8 },
+    QuantizedInference {
+        /// Quantization bit width (e.g. 8 for int8)
+        bits: u8,
+    },
     /// Batch inference with amortized dispatch (NPU)
-    BatchInference { max_batch: u32 },
+    BatchInference {
+        /// Maximum batch size for amortized dispatch
+        max_batch: u32,
+    },
     /// Weight mutation without full reprogramming (NPU)
     WeightMutation,
     /// Scalar reduction pipeline
@@ -296,7 +302,6 @@ impl std::fmt::Display for SubstrateType {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

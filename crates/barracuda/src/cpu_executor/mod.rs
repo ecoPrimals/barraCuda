@@ -18,7 +18,6 @@
 mod executor;
 mod ops;
 mod storage;
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;
 

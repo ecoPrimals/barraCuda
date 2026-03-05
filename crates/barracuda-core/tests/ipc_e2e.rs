@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+#![allow(clippy::unwrap_used, clippy::single_match_else)]
 //! End-to-end IPC tests for barraCuda JSON-RPC 2.0 over TCP.
 //!
 //! These tests start a real TCP server, connect as a client, send JSON-RPC

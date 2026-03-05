@@ -31,6 +31,7 @@ pub struct GpuKineticEnergy {
 }
 
 impl GpuKineticEnergy {
+    /// Create kinetic energy calculator for given lattice volume.
     pub fn new(device: Arc<WgpuDevice>, volume: u32) -> Result<Self> {
         let n_links = volume * 4;
 
@@ -88,12 +89,12 @@ impl GpuKineticEnergy {
         Ok(())
     }
 
+    /// Number of gauge links (volume × 4).
     pub fn n_links(&self) -> u32 {
         self.n_links
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

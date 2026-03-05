@@ -70,10 +70,14 @@ pub struct RichardsGpu {
 }
 
 impl RichardsGpu {
+    /// Create a GPU-accelerated Richards PDE solver.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self { device }
     }
 
+    /// Solve the Richards equation for the given configuration and initial conditions.
+    ///
+    /// Returns the final pressure head `h`, volumetric water content `theta`, and iteration counts.
     pub fn solve(
         &self,
         config: &RichardsConfig,
@@ -265,7 +269,6 @@ impl RichardsGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

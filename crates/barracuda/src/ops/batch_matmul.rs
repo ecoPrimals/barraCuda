@@ -20,12 +20,14 @@ struct BatchMatMulParams {
     k: u32, // cols of A / rows of B
 }
 
+/// Batched matrix multiplication — A[batch,m,k] × B[batch,k,n].
 pub struct BatchMatMul {
     a: Tensor,
     b: Tensor,
 }
 
 impl BatchMatMul {
+    /// Create batched matmul. A: [batch,m,k], B: [batch,k,n].
     pub fn new(a: Tensor, b: Tensor) -> Self {
         Self { a, b }
     }
@@ -39,6 +41,7 @@ impl BatchMatMul {
         &SHADER
     }
 
+    /// Execute batched matrix multiplication on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.a.device();
         let a_shape = self.a.shape();
@@ -159,7 +162,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

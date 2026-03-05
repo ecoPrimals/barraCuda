@@ -17,6 +17,7 @@ use wgpu::util::DeviceExt;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 
+/// WGSL source for batch fitness evaluation (f32).
 pub const WGSL_BATCH_FITNESS_EVAL: &str = include_str!("../../shaders/ml/batch_fitness_eval.wgsl");
 
 /// f64 version for universal math library portability.
@@ -38,6 +39,7 @@ pub struct BatchFitnessGpu {
 }
 
 impl BatchFitnessGpu {
+    /// Create batch fitness GPU kernel.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 
@@ -179,7 +181,6 @@ impl BatchFitnessGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -547,7 +547,6 @@ pub fn jacobi_solve(a: &CsrMatrix, b: &[f64], tol: f64, max_iter: usize) -> Resu
     })
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "solvers_tests.rs"]
 mod tests;

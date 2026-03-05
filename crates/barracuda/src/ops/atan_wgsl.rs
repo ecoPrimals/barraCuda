@@ -12,11 +12,13 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Element-wise inverse tangent: atan(x).
 pub struct Atan {
     input: Tensor,
 }
 
 impl Atan {
+    /// Create an atan operation.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -30,6 +32,7 @@ impl Atan {
         &SHADER
     }
 
+    /// Execute atan on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -160,12 +163,12 @@ impl Atan {
 }
 
 impl Tensor {
+    /// Compute element-wise atan(x).
     pub fn atan(self) -> Result<Self> {
         Atan::new(self).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

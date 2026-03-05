@@ -26,17 +26,26 @@ struct TranseParams {
 /// Entities and relations are flat `[count, dim]` row-major f64 embeddings.
 /// Triple indices are `(head, relation, tail)` tuples indexing into them.
 pub struct TranseScoreF64<'a> {
+    /// Flat entity embeddings [n_entities * dim].
     pub entities: &'a [f64],
+    /// Flat relation embeddings [n_relations * dim].
     pub relations: &'a [f64],
+    /// Number of entities.
     pub n_entities: usize,
+    /// Number of relations.
     pub n_relations: usize,
+    /// Embedding dimension.
     pub dim: usize,
+    /// Head entity indices per triple.
     pub heads: &'a [u32],
+    /// Relation indices per triple.
     pub rels: &'a [u32],
+    /// Tail entity indices per triple.
     pub tails: &'a [u32],
 }
 
 impl TranseScoreF64<'_> {
+    /// Run TransE scoring on GPU; returns one score per triple.
     pub fn execute(&self, device: &Arc<WgpuDevice>) -> Result<Vec<f64>> {
         let n_triples = self.heads.len();
         if n_triples != self.rels.len() || n_triples != self.tails.len() {
@@ -239,7 +248,6 @@ fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -14,6 +14,7 @@ use super::cpu_complex::Complex64;
 #[derive(Clone, Copy, Debug)]
 #[must_use]
 pub struct Su3Matrix {
+    /// 3×3 matrix elements (row-major)
     pub m: [[Complex64; 3]; 3],
 }
 
@@ -61,6 +62,7 @@ impl Sub for Su3Matrix {
 }
 
 impl Su3Matrix {
+    /// Identity matrix.
     pub const IDENTITY: Self = Self {
         m: [
             [Complex64::ONE, Complex64::ZERO, Complex64::ZERO],
@@ -69,10 +71,12 @@ impl Su3Matrix {
         ],
     };
 
+    /// Zero matrix.
     pub const ZERO: Self = Self {
         m: [[Complex64::ZERO; 3]; 3],
     };
 
+    /// Hermitian adjoint U†.
     pub fn adjoint(self) -> Self {
         let mut r = Self::ZERO;
         for i in 0..3 {
@@ -83,14 +87,17 @@ impl Su3Matrix {
         r
     }
 
+    /// Trace: sum of diagonal elements.
     pub fn trace(self) -> Complex64 {
         self.m[0][0] + self.m[1][1] + self.m[2][2]
     }
 
+    /// Real part of trace.
     pub fn re_trace(self) -> f64 {
         self.m[0][0].re + self.m[1][1].re + self.m[2][2].re
     }
 
+    /// Scale by real scalar.
     pub fn scale(self, s: f64) -> Self {
         let mut r = Self::ZERO;
         for i in 0..3 {
@@ -101,6 +108,7 @@ impl Su3Matrix {
         r
     }
 
+    /// Scale by complex scalar.
     pub fn scale_complex(self, s: Complex64) -> Self {
         let mut r = Self::ZERO;
         for i in 0..3 {
@@ -111,6 +119,7 @@ impl Su3Matrix {
         r
     }
 
+    /// Frobenius norm squared.
     pub fn norm_sq(self) -> f64 {
         let mut s = 0.0;
         for i in 0..3 {
@@ -225,7 +234,6 @@ fn row_dot(u: &Su3Matrix, r1: usize, r2: usize) -> Complex64 {
     s
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -26,12 +26,14 @@ struct TrilParams {
     _pad1: u32,
 }
 
+/// Lower triangular matrix extraction operation.
 pub struct Tril {
     input: Tensor,
     diagonal: i32,
 }
 
 impl Tril {
+    /// Creates a new tril operation. `diagonal` selects which diagonal to include (0 = main).
     pub fn new(input: Tensor, diagonal: i32) -> Result<Self> {
         let shape = input.shape();
         if shape.len() < 2 {
@@ -48,6 +50,7 @@ impl Tril {
         &SHADER_F32
     }
 
+    /// Executes the tril operation and returns the lower triangular result.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -177,7 +180,6 @@ impl Tril {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

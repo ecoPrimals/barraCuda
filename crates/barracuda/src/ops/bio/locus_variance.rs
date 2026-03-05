@@ -36,6 +36,7 @@ pub struct LocusVarianceGpu {
 }
 
 impl LocusVarianceGpu {
+    /// Creates a new per-locus allele frequency variance GPU kernel for the given device.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 
@@ -157,7 +158,6 @@ impl LocusVarianceGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

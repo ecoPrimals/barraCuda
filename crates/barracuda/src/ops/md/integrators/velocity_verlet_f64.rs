@@ -36,6 +36,7 @@ pub struct VelocityVerletF64 {
 }
 
 impl VelocityVerletF64 {
+    /// Create f64 Velocity-Verlet integrator.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -291,7 +292,6 @@ fn readback_buf(d: &wgpu::Device, size: u64) -> wgpu::Buffer {
     })
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

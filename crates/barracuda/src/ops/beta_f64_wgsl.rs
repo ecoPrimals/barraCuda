@@ -103,8 +103,8 @@ impl BetaF64 {
         Ok(result)
     }
 
-    #[expect(dead_code, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn beta_cpu(&self, pairs: &[f64]) -> Vec<f64> {
         pairs
             .chunks(2)
@@ -154,7 +154,6 @@ impl BetaF64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

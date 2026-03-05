@@ -114,7 +114,6 @@ impl CosineSimilarityF64 {
     }
 
     /// CPU reference implementation (single pair)
-    #[expect(clippy::unwrap_used, reason = "suppressed")]
     #[cfg(test)]
     fn similarity_cpu(&self, a: &[f64], b: &[f64]) -> f64 {
         let mut dot = 0.0f64;
@@ -135,8 +134,8 @@ impl CosineSimilarityF64 {
     }
 
     /// CPU reference implementation (all pairs)
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn all_pairs_cpu(&self, vectors_a: &[Vec<f64>], vectors_b: &[Vec<f64>]) -> Vec<f64> {
         let mut result = Vec::with_capacity(vectors_a.len() * vectors_b.len());
         for va in vectors_a {
@@ -221,7 +220,6 @@ impl CosineSimilarityF64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

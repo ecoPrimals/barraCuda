@@ -27,6 +27,7 @@ pub struct GatConv {
 }
 
 impl GatConv {
+    /// Create GAT (Graph Attention) convolution.
     pub fn new(
         node_features: Tensor,
         edge_index: Vec<(usize, usize)>,
@@ -96,6 +97,7 @@ impl GatConv {
         }
     }
 
+    /// Execute GAT convolution.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.node_features.device();
         // Convert edge_index to u32 pairs
@@ -354,7 +356,6 @@ impl GatConv {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

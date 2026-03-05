@@ -183,10 +183,12 @@ impl PppmGpu {
         })
     }
 
+    /// Get PPPM parameters.
     pub fn params(&self) -> &PppmParams {
         &self.params
     }
 
+    /// Get the Greens function for PPPM.
     pub fn greens(&self) -> &GreensFunction {
         &self.greens
     }
@@ -211,6 +213,7 @@ impl PppmGpu {
         &self.pipelines
     }
 
+    /// Compute forces and total energy (short-range erfc only, no k-space).
     pub async fn compute(&self, positions: &[f64], charges: &[f64]) -> Result<(Vec<f64>, f64)> {
         let n = charges.len();
         if positions.len() != n * 3 {
@@ -395,11 +398,13 @@ impl PppmGpu {
         Ok((forces, total_energy))
     }
 
+    /// Compute electrostatic forces only (short-range).
     pub async fn compute_forces(&self, positions: &[f64], charges: &[f64]) -> Result<Vec<f64>> {
         let (forces, _) = self.compute(positions, charges).await?;
         Ok(forces)
     }
 
+    /// Compute forces and energy with k-space (full PPPM).
     pub async fn compute_with_kspace(
         &self,
         positions: &[f64],
@@ -408,6 +413,7 @@ impl PppmGpu {
         kspace::compute_with_kspace(self, positions, charges).await
     }
 
+    /// Compute forces and energy with GPU-accelerated k-space.
     pub async fn compute_with_kspace_gpu(
         &self,
         positions: &[f64],
@@ -417,7 +423,6 @@ impl PppmGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

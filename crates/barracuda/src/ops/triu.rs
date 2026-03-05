@@ -26,12 +26,14 @@ struct TriuParams {
     _pad1: u32,
 }
 
+/// Upper triangular matrix extraction operation.
 pub struct Triu {
     input: Tensor,
     diagonal: i32,
 }
 
 impl Triu {
+    /// Creates a new triu operation. `diagonal` selects which diagonal to include (0 = main).
     pub fn new(input: Tensor, diagonal: i32) -> Result<Self> {
         let shape = input.shape();
         if shape.len() < 2 {
@@ -48,6 +50,7 @@ impl Triu {
         &SHADER_F32
     }
 
+    /// Executes the triu operation and returns the upper triangular result.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -177,7 +180,6 @@ impl Triu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

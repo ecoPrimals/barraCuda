@@ -27,6 +27,7 @@ pub struct RAdam {
 }
 
 impl RAdam {
+    /// Create an RAdam optimizer step with the given parameters and optional momentum/variance.
     pub fn new(
         parameters: Tensor,
         gradients: Tensor,
@@ -118,6 +119,7 @@ impl RAdam {
         }
     }
 
+    /// Execute one RAdam optimization step. Returns (updated_params, updated_momentum, updated_variance).
     pub fn execute(self) -> Result<(Tensor, Tensor, Tensor)> {
         let device = self.parameters.device();
         let size = self.parameters.shape().iter().product::<usize>();
@@ -360,7 +362,6 @@ impl RAdam {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

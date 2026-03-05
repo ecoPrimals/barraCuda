@@ -43,7 +43,7 @@ pub enum Precision {
 }
 
 impl Precision {
-    /// WGSL scalar type name
+    /// WGSL scalar type name.
     pub fn scalar(&self) -> &'static str {
         match self {
             Precision::F16 => "f16",
@@ -53,7 +53,7 @@ impl Precision {
         }
     }
 
-    /// WGSL vec2 type name (or scalar for f64 which lacks native vec support)
+    /// WGSL vec2 type name (or scalar for f64 which lacks native vec support).
     pub fn vec2(&self) -> &'static str {
         match self {
             Precision::F16 => "vec2<f16>",
@@ -63,7 +63,7 @@ impl Precision {
         }
     }
 
-    /// WGSL vec4 type name (or scalar for f64/df64)
+    /// WGSL vec4 type name (or scalar for f64/df64).
     pub fn vec4(&self) -> &'static str {
         match self {
             Precision::F16 => "vec4<f16>",
@@ -73,12 +73,12 @@ impl Precision {
         }
     }
 
-    /// Whether this precision supports vectorized operations (vec4)
+    /// Whether this precision supports vectorized operations (vec4).
     pub fn has_vec4(&self) -> bool {
         matches!(self, Precision::F16 | Precision::F32)
     }
 
-    /// Bytes per element
+    /// Bytes per element.
     pub fn bytes_per_element(&self) -> usize {
         match self {
             Precision::F16 => 2,
@@ -88,7 +88,7 @@ impl Precision {
         }
     }
 
-    /// Required wgpu feature for this precision
+    /// Required wgpu feature for this precision.
     pub fn required_feature(&self) -> Option<wgpu::Features> {
         match self {
             Precision::F16 => Some(wgpu::Features::SHADER_F16),
@@ -98,7 +98,7 @@ impl Precision {
         }
     }
 
-    /// Whether this is an f64-class precision (native f64 or df64 emulation)
+    /// Whether this is an f64-class precision (native f64 or df64 emulation).
     pub fn is_f64_class(&self) -> bool {
         matches!(self, Precision::F64 | Precision::Df64)
     }
@@ -231,76 +231,93 @@ fn df64_pack(v: Df64) -> vec2<f32> { return vec2<f32>(v.hi, v.lo); }
 fn df64_unpack(v: vec2<f32>) -> Df64 { return Df64(v.x, v.y); }
 "#;
 
-/// Shader template with precision placeholders
+/// Shader template with precision placeholders.
 pub struct ShaderTemplate {
     template: &'static str,
 }
 
 impl ShaderTemplate {
+    /// Create a new shader template.
     pub const fn new(template: &'static str) -> Self {
         Self { template }
     }
 
+    /// Render the template for the given precision.
     pub fn render(&self, precision: Precision) -> String {
         compiler::expand_template(self.template, precision)
     }
 
+    /// Generate elementwise-add shader for the given precision.
     pub fn elementwise_add(precision: Precision) -> String {
         Self::new(TEMPLATE_ELEMENTWISE_ADD).render(precision)
     }
 
+    /// Generate elementwise-mul shader for the given precision.
     pub fn elementwise_mul(precision: Precision) -> String {
         Self::new(TEMPLATE_ELEMENTWISE_MUL).render(precision)
     }
 
+    /// Generate FMA (fused multiply-add) shader for the given precision.
     pub fn elementwise_fma(precision: Precision) -> String {
         Self::new(TEMPLATE_ELEMENTWISE_FMA).render(precision)
     }
 
+    /// Generate dot-product shader for the given precision.
     pub fn dot_product(precision: Precision) -> String {
         Self::new(TEMPLATE_DOT_PRODUCT).render(precision)
     }
 
+    /// Generate elementwise-sub shader for the given precision.
     pub fn elementwise_sub(precision: Precision) -> String {
         Self::new(TEMPLATE_ELEMENTWISE_SUB).render(precision)
     }
 
+    /// Generate elementwise-abs shader for the given precision.
     pub fn elementwise_abs(precision: Precision) -> String {
         Self::new(TEMPLATE_ELEMENTWISE_ABS).render(precision)
     }
 
+    /// Generate elementwise-neg shader for the given precision.
     pub fn elementwise_neg(precision: Precision) -> String {
         Self::new(TEMPLATE_ELEMENTWISE_NEG).render(precision)
     }
 
+    /// Generate elementwise-clamp shader for the given precision.
     pub fn elementwise_clamp(precision: Precision) -> String {
         Self::new(TEMPLATE_ELEMENTWISE_CLAMP).render(precision)
     }
 
+    /// Generate reduce-sum shader for the given precision.
     pub fn reduce_sum(precision: Precision) -> String {
         Self::new(TEMPLATE_REDUCE_SUM).render(precision)
     }
 
+    /// Generate reduce-mean shader for the given precision.
     pub fn reduce_mean(precision: Precision) -> String {
         Self::new(TEMPLATE_REDUCE_MEAN).render(precision)
     }
 
+    /// Generate MSE loss shader for the given precision.
     pub fn mse_loss(precision: Precision) -> String {
         Self::new(TEMPLATE_MSE_LOSS).render(precision)
     }
 
+    /// Generate MAE loss shader for the given precision.
     pub fn mae_loss(precision: Precision) -> String {
         Self::new(TEMPLATE_MAE_LOSS).render(precision)
     }
 
+    /// Generate SAXPY (y = αx + y) shader for the given precision.
     pub fn saxpy(precision: Precision) -> String {
         Self::new(TEMPLATE_SAXPY).render(precision)
     }
 
+    /// Full math_f64 polyfill preamble for shaders.
     pub fn math_f64_preamble() -> String {
         polyfill::math_f64_preamble()
     }
 
+    /// Prepend math_f64 preamble to a shader body.
     pub fn with_math_f64(shader_body: &str) -> String {
         format!(
             "{}\n\n// User shader:\n{}",
@@ -318,6 +335,7 @@ impl ShaderTemplate {
         Self::for_driver_auto(shader_body, device.needs_f64_exp_log_workaround())
     }
 
+    /// Alias for `for_device`; patches shader for the device.
     pub fn for_device_auto(shader_body: &str, device: &crate::device::WgpuDevice) -> String {
         Self::for_driver_auto(shader_body, device.needs_f64_exp_log_workaround())
     }
@@ -340,10 +358,12 @@ impl ShaderTemplate {
             )
     }
 
+    /// Replace legacy fossil_f64 calls with native WGSL.
     pub fn substitute_fossil_f64(shader_body: &str) -> String {
         polyfill::substitute_fossil_f64(shader_body)
     }
 
+    /// Patch shader for driver (exp/log workaround, f64 polyfills, ILP optimize).
     pub fn for_driver_auto(shader_body: &str, needs_exp_log_workaround: bool) -> String {
         // Strip `enable f64;` — naga handles f64 via capability flags, not directives.
         let stripped = shader_body
@@ -398,6 +418,7 @@ impl ShaderTemplate {
         crate::shaders::optimizer::WgslOptimizer::new(profile.latency_model()).optimize(&injected)
     }
 
+    /// Inject only the math_f64 functions used by the shader.
     pub fn with_math_f64_auto(shader_body: &str) -> String {
         use math_f64::F64_FUNCTION_ORDER;
         let mut used_functions = Vec::new();
@@ -421,28 +442,32 @@ impl ShaderTemplate {
         )
     }
 
+    /// Generate math_f64 preamble for a subset of functions.
     pub fn math_f64_subset(functions: &[&str]) -> String {
         polyfill::math_f64_subset(functions)
     }
 
+    /// Returns true if shader defines the given function.
     pub fn shader_defines_function(shader_body: &str, func_name: &str) -> bool {
         polyfill::shader_defines_function(shader_body, func_name)
     }
 
+    /// Returns true if shader defines the given module-level variable.
     pub fn shader_defines_module_var(shader_body: &str, var_name: &str) -> bool {
         polyfill::shader_defines_module_var(shader_body, var_name)
     }
 
+    /// Inject f64 polyfills into shader (no driver-specific patching).
     pub fn with_math_f64_safe(shader_body: &str) -> String {
         polyfill::inject_f64_polyfills(shader_body, None)
     }
 
+    /// Alias for `with_math_f64_safe`; injects f64 polyfills.
     pub fn with_math_f64_auto_safe(shader_body: &str) -> String {
         polyfill::inject_f64_polyfills(shader_body, None)
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "precision_tests.rs"]
 mod tests;

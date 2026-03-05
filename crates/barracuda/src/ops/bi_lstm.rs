@@ -18,6 +18,7 @@ struct BiLSTMParams {
     direction: u32, // 0 = forward, 1 = backward
 }
 
+/// Bidirectional LSTM: processes sequence in forward and backward directions.
 pub struct BiLSTM {
     input: Tensor,
     weight_ih: Tensor,
@@ -321,7 +322,6 @@ impl BiLSTM {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

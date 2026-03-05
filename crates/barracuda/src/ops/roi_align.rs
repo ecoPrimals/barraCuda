@@ -25,6 +25,7 @@ pub struct RoiAlign {
 }
 
 impl RoiAlign {
+    /// Create ROI align with pooled size and spatial scale.
     pub fn new(
         features: Tensor,
         rois: Tensor,
@@ -77,6 +78,7 @@ impl RoiAlign {
         }
     }
 
+    /// Execute ROI align pooling.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.features.device();
         let features_shape = self.features.shape();
@@ -256,7 +258,6 @@ impl RoiAlign {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

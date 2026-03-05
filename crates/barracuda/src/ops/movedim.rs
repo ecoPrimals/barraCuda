@@ -22,6 +22,7 @@ struct MoveDimParams {
     _padding: [u32; 4],
 }
 
+/// Dimension reordering operation (move source dimension to destination).
 pub struct MoveDim {
     input: Tensor,
     source_dim: usize,
@@ -29,6 +30,7 @@ pub struct MoveDim {
 }
 
 impl MoveDim {
+    /// Creates a new movedim operation. Moves `source_dim` to `dest_dim`.
     pub fn new(input: Tensor, source_dim: usize, dest_dim: usize) -> Result<Self> {
         let shape = input.shape();
         let num_dims = shape.len();
@@ -72,6 +74,7 @@ impl MoveDim {
         }
     }
 
+    /// Executes dimension reordering and returns the result tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -153,7 +156,6 @@ impl MoveDim {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -52,12 +52,14 @@ enum MatMulTier {
     GpuEvolved32,
 }
 
+/// Matrix multiplication with tiered kernel selection.
 pub struct MatMul<'a> {
     lhs: &'a Tensor,
     rhs: &'a Tensor,
 }
 
 impl<'a> MatMul<'a> {
+    /// Creates a new matmul for lhs × rhs.
     pub fn new(lhs: &'a Tensor, rhs: &'a Tensor) -> Self {
         Self { lhs, rhs }
     }
@@ -107,6 +109,7 @@ impl<'a> MatMul<'a> {
         }
     }
 
+    /// Executes matrix multiplication and returns the result.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.lhs.device();
 
@@ -265,7 +268,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

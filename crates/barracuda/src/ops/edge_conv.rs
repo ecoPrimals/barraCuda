@@ -19,6 +19,7 @@ struct EdgeConvParams {
     num_edges: u32,
 }
 
+/// Edge convolution for graph neural networks (Dynamic Graph CNN).
 pub struct EdgeConv {
     node_features: Tensor,
     /// CSR row offsets: [num_nodes + 1] entries
@@ -286,7 +287,6 @@ impl EdgeConv {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

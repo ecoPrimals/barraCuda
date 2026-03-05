@@ -62,6 +62,7 @@ struct SmoothL1LossParams {
     _padding: [u32; 2],
 }
 
+/// Smooth L1 (Huber-like) loss for robust regression.
 pub struct SmoothL1Loss {
     predictions: Tensor,
     targets: Tensor,
@@ -69,6 +70,7 @@ pub struct SmoothL1Loss {
 }
 
 impl SmoothL1Loss {
+    /// Creates a new smooth L1 loss. `beta` is the threshold between quadratic and linear regions.
     pub fn new(predictions: Tensor, targets: Tensor, beta: f32) -> Result<Self> {
         // Validate shapes match
         if predictions.shape() != targets.shape() {
@@ -97,6 +99,7 @@ impl SmoothL1Loss {
         &SHADER_F32
     }
 
+    /// Executes the smooth L1 loss computation and returns the loss tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size = self.predictions.shape().iter().product::<usize>();
@@ -283,7 +286,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

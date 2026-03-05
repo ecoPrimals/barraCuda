@@ -41,6 +41,7 @@ pub struct WrightFisherGpu {
 }
 
 impl WrightFisherGpu {
+    /// Creates a new Wright-Fisher drift+selection GPU kernel for the given device.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 
@@ -182,7 +183,6 @@ fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

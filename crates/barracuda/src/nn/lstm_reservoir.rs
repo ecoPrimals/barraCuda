@@ -68,7 +68,9 @@ pub struct LstmLayerWeights {
 /// LSTM reservoir with JSON weight serialization.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LstmReservoir {
+    /// Reservoir configuration (sizes, layers, etc.)
     pub config: LstmReservoirConfig,
+    /// Per-layer weights (input, forget, cell, output gates)
     pub layers: Vec<LstmLayerWeights>,
 }
 
@@ -240,7 +242,6 @@ fn sigmoid(x: &mut [f64]) {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -13,11 +13,13 @@ use crate::device::DeviceCapabilities;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Element-wise inverse hyperbolic cosine: acosh(x), valid for x ≥ 1.
 pub struct Acosh {
     input: Tensor,
 }
 
 impl Acosh {
+    /// Create an acosh operation.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -31,6 +33,7 @@ impl Acosh {
         &SHADER
     }
 
+    /// Execute acosh on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -161,12 +164,12 @@ impl Acosh {
 }
 
 impl Tensor {
+    /// Compute element-wise acosh(x).
     pub fn acosh(self) -> Result<Self> {
         Acosh::new(self).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

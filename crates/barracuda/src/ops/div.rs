@@ -18,12 +18,14 @@ const WGSL_DIV_F64: &str = include_str!("../shaders/math/elementwise_div_f64.wgs
 static SHADER_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(WGSL_DIV_F64));
 
+/// Element-wise division: output = lhs / rhs.
 pub struct Div {
     lhs: Tensor,
     rhs: Tensor,
 }
 
 impl Div {
+    /// Create a division operation. Shapes must match.
     pub fn new(lhs: Tensor, rhs: Tensor) -> Result<Self> {
         if lhs.shape() != rhs.shape() {
             return Err(BarracudaError::shape_mismatch(
@@ -38,6 +40,7 @@ impl Div {
         &SHADER_F32
     }
 
+    /// Execute element-wise division on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.lhs.device();
         let size = self.lhs.len();
@@ -151,12 +154,12 @@ impl Div {
 }
 
 impl Tensor {
+    /// Divide by another tensor element-wise. Shapes must match.
     pub fn div(&self, other: &Tensor) -> Result<Self> {
         Div::new(self.clone(), other.clone())?.execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

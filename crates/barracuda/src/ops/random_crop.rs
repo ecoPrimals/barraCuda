@@ -25,6 +25,7 @@ struct RandomCropParams {
     _padding: [u32; 2],
 }
 
+/// Random crop augmentation: crops images to specified size at per-batch positions.
 pub struct RandomCrop {
     input: Tensor,
     crop_positions: Tensor,
@@ -138,7 +139,6 @@ impl RandomCrop {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

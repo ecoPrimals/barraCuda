@@ -17,6 +17,7 @@ struct ChamferDistanceParams {
     direction: u32, // 0 = X→Y, 1 = Y→X, 2 = bidirectional
 }
 
+/// Chamfer distance between point clouds (X→Y, Y→X, or bidirectional).
 pub struct ChamferDistance {
     points_x: Tensor,
     points_y: Tensor,
@@ -124,7 +125,6 @@ impl ChamferDistance {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

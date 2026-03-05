@@ -17,6 +17,7 @@ struct CosineSimilarityParams {
     _padding: u32,
 }
 
+/// Cosine similarity between pairs of vectors: cos(θ) = (A·B)/(||A|| ||B||).
 pub struct CosineSimilarity {
     vectors_a: Tensor,
     vectors_b: Tensor,
@@ -99,7 +100,6 @@ impl CosineSimilarity {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

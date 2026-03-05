@@ -27,6 +27,7 @@ pub struct LennardJonesForce {
 }
 
 impl LennardJonesForce {
+    /// Create a Lennard-Jones force calculator with per-particle σ and ε parameters.
     pub fn new(
         positions: Tensor,
         sigmas: Tensor,
@@ -62,6 +63,7 @@ impl LennardJonesForce {
         })
     }
 
+    /// Compute Lennard-Jones forces for all particles and return the force tensor [N, 3].
     pub fn execute(self) -> Result<Tensor> {
         let device = self.positions.device();
         let n_particles = self.positions.shape()[0];
@@ -117,7 +119,6 @@ impl LennardJonesForce {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

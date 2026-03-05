@@ -22,6 +22,7 @@ pub struct SphericalHarmonics {
 }
 
 impl SphericalHarmonics {
+    /// Create spherical harmonics Y_l^m evaluation for (θ, φ) angle pairs.
     pub fn new(theta_phi: Tensor, l: u32, m: i32) -> Self {
         Self { theta_phi, l, m }
     }
@@ -30,6 +31,7 @@ impl SphericalHarmonics {
         include_str!("../shaders/special/spherical_harmonics.wgsl")
     }
 
+    /// Evaluate Y_l^m(θ, φ) for all (θ, φ) pairs in the input.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.theta_phi.device();
         let total_elements: usize = self.theta_phi.shape().iter().product();
@@ -185,7 +187,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

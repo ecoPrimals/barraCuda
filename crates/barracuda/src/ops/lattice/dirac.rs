@@ -193,6 +193,7 @@ impl StaggeredDirac {
 /// Flattens 4D lattice topology, gauge links, neighbor tables, and staggered
 /// phases into contiguous arrays ready for GPU upload.
 pub struct DiracGpuLayout {
+    /// Lattice volume (product of dims)
     pub volume: usize,
     /// `[V × 4 × 18]` f64 — gauge links (SU(3) row-major, re/im interleaved)
     pub links_flat: Vec<f64>,
@@ -298,7 +299,6 @@ fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

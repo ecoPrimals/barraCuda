@@ -13,26 +13,45 @@
 /// `OdeSystem` in this module — the monostable version lives in wetSpring.
 #[derive(Debug, Clone)]
 pub struct QsBiofilmParams {
+    /// Maximum specific growth rate (h⁻¹).
     pub mu_max: f64,
+    /// Carrying capacity (cells/mL).
     pub k_cap: f64,
+    /// Specific death rate (h⁻¹).
     pub death_rate: f64,
+    /// Autoinducer production rate.
     pub k_ai_prod: f64,
+    /// Autoinducer degradation rate (h⁻¹).
     pub d_ai: f64,
+    /// Maximum HapR transcription rate.
     pub k_hapr_max: f64,
+    /// Half-saturation for AI activation of HapR.
     pub k_hapr_ai: f64,
+    /// Hill coefficient for HapR induction by AI.
     pub n_hapr: f64,
+    /// HapR degradation rate (h⁻¹).
     pub d_hapr: f64,
+    /// Basal diguanylate cyclase (DGC) activity.
     pub k_dgc_basal: f64,
+    /// HapR repression strength on DGC.
     pub k_dgc_rep: f64,
+    /// Basal phosphodiesterase (PDE) activity.
     pub k_pde_basal: f64,
+    /// HapR activation strength on PDE.
     pub k_pde_act: f64,
+    /// c-di-GMP degradation rate (h⁻¹).
     pub d_cdg: f64,
+    /// Maximum biofilm production rate.
     pub k_bio_max: f64,
+    /// Half-saturation for c-di-GMP activation of biofilm production.
     pub k_bio_cdg: f64,
+    /// Hill coefficient for biofilm induction by c-di-GMP.
     pub n_bio: f64,
+    /// Biofilm matrix degradation rate (h⁻¹).
     pub d_bio: f64,
 }
 
+/// Number of parameters in the QS biofilm model (flat buffer size).
 pub const QS_BIOFILM_N_PARAMS: usize = 18;
 
 impl Default for QsBiofilmParams {
@@ -61,6 +80,7 @@ impl Default for QsBiofilmParams {
 }
 
 impl QsBiofilmParams {
+    /// Packs parameters into a flat array for GPU buffer upload.
     #[must_use]
     pub const fn to_flat(&self) -> [f64; QS_BIOFILM_N_PARAMS] {
         [
@@ -85,6 +105,10 @@ impl QsBiofilmParams {
         ]
     }
 
+    /// Reconstructs parameters from a flat array (e.g. from GPU buffer).
+    ///
+    /// # Panics
+    /// Panics if `flat.len() < QS_BIOFILM_N_PARAMS`.
     #[must_use]
     pub fn from_flat(flat: &[f64]) -> Self {
         assert!(
@@ -120,25 +144,43 @@ impl QsBiofilmParams {
 /// its output to biofilm, motility, and rugose phenotypic channels.
 #[derive(Debug, Clone)]
 pub struct CapacitorParams {
+    /// Maximum specific growth rate (h⁻¹).
     pub mu_max: f64,
+    /// Carrying capacity (cells/mL).
     pub k_cap: f64,
+    /// Specific death rate (h⁻¹).
     pub death_rate: f64,
+    /// c-di-GMP production rate.
     pub k_cdg_prod: f64,
+    /// c-di-GMP degradation rate (h⁻¹).
     pub d_cdg: f64,
+    /// VpsR charge rate (c-di-GMP uptake into capacitor).
     pub k_vpsr_charge: f64,
+    /// VpsR discharge rate (release from capacitor).
     pub k_vpsr_discharge: f64,
+    /// Hill coefficient for VpsR response.
     pub n_vpsr: f64,
+    /// Half-saturation for c-di-GMP activation of VpsR.
     pub k_vpsr_cdg: f64,
+    /// Weight of biofilm channel in phenotypic distribution.
     pub w_biofilm: f64,
+    /// Weight of motility channel in phenotypic distribution.
     pub w_motility: f64,
+    /// Weight of rugose channel in phenotypic distribution.
     pub w_rugose: f64,
+    /// Biofilm phenotype decay rate (h⁻¹).
     pub d_bio: f64,
+    /// Motility phenotype decay rate (h⁻¹).
     pub d_mot: f64,
+    /// Rugose phenotype decay rate (h⁻¹).
     pub d_rug: f64,
+    /// Stress-induced amplification factor for phenotypic switching.
     pub stress_factor: f64,
 }
 
+/// Number of state variables in the capacitor model.
 pub const CAPACITOR_N_VARS: usize = 6;
+/// Number of parameters in the capacitor model (flat buffer size).
 pub const CAPACITOR_N_PARAMS: usize = 16;
 
 impl Default for CapacitorParams {
@@ -165,6 +207,7 @@ impl Default for CapacitorParams {
 }
 
 impl CapacitorParams {
+    /// Packs parameters into a flat array for GPU buffer upload.
     #[must_use]
     pub const fn to_flat(&self) -> [f64; CAPACITOR_N_PARAMS] {
         [
@@ -187,6 +230,8 @@ impl CapacitorParams {
         ]
     }
 
+    /// Reconstructs parameters from a flat array (e.g. from GPU buffer).
+    ///
     /// # Panics
     /// Panics if `flat.len() < CAPACITOR_N_PARAMS`.
     #[must_use]
@@ -221,22 +266,37 @@ impl CapacitorParams {
 /// Cooperative QS game theory: cooperators vs cheaters with frequency-dependent fitness.
 #[derive(Debug, Clone)]
 pub struct CooperationParams {
+    /// Cooperator growth rate (h⁻¹).
     pub mu_coop: f64,
+    /// Cheater growth rate (h⁻¹).
     pub mu_cheat: f64,
+    /// Carrying capacity (cells/mL).
     pub k_cap: f64,
+    /// Specific death rate (h⁻¹).
     pub death_rate: f64,
+    /// Autoinducer production rate.
     pub k_ai_prod: f64,
+    /// Autoinducer degradation rate (h⁻¹).
     pub d_ai: f64,
+    /// Maximum benefit from cooperation.
     pub benefit: f64,
+    /// Half-saturation for benefit response.
     pub k_benefit: f64,
+    /// Cost of cooperation.
     pub cost: f64,
+    /// Basal biofilm production rate.
     pub k_bio: f64,
+    /// Half-saturation for AI activation of biofilm.
     pub k_bio_ai: f64,
+    /// Dispersal bonus for biofilm producers.
     pub dispersal_bonus: f64,
+    /// Biofilm degradation rate (h⁻¹).
     pub d_bio: f64,
 }
 
+/// Number of state variables in the cooperation model.
 pub const COOPERATION_N_VARS: usize = 4;
+/// Number of parameters in the cooperation model (flat buffer size).
 pub const COOPERATION_N_PARAMS: usize = 13;
 
 impl Default for CooperationParams {
@@ -260,6 +320,7 @@ impl Default for CooperationParams {
 }
 
 impl CooperationParams {
+    /// Packs parameters into a flat array for GPU buffer upload.
     #[must_use]
     pub const fn to_flat(&self) -> [f64; COOPERATION_N_PARAMS] {
         [
@@ -279,6 +340,8 @@ impl CooperationParams {
         ]
     }
 
+    /// Reconstructs parameters from a flat array (e.g. from GPU buffer).
+    ///
     /// # Panics
     /// Panics if `flat.len() < COOPERATION_N_PARAMS`.
     #[must_use]
@@ -310,33 +373,59 @@ impl CooperationParams {
 /// Dual-signal QS regulatory network: CAI-1 + AI-2 converge on `HapR`.
 #[derive(Debug, Clone)]
 pub struct MultiSignalParams {
+    /// Maximum specific growth rate (h⁻¹).
     pub mu_max: f64,
+    /// Carrying capacity (cells/mL).
     pub k_cap: f64,
+    /// Specific death rate (h⁻¹).
     pub death_rate: f64,
+    /// CAI-1 autoinducer production rate.
     pub k_cai1_prod: f64,
+    /// CAI-1 degradation rate (h⁻¹).
     pub d_cai1: f64,
+    /// CqsS receptor sensitivity (CAI-1 sensing).
     pub k_cqs: f64,
+    /// AI-2 autoinducer production rate.
     pub k_ai2_prod: f64,
+    /// AI-2 degradation rate (h⁻¹).
     pub d_ai2: f64,
+    /// LuxPQ receptor sensitivity (AI-2 sensing).
     pub k_luxpq: f64,
+    /// LuxO phosphorylation rate.
     pub k_luxo_phos: f64,
+    /// Phosphorylated LuxO degradation rate (h⁻¹).
     pub d_luxo_p: f64,
+    /// Maximum HapR transcription rate.
     pub k_hapr_max: f64,
+    /// Hill coefficient for HapR repression.
     pub n_repress: f64,
+    /// Half-saturation for LuxO-P repression of HapR.
     pub k_repress: f64,
+    /// HapR degradation rate (h⁻¹).
     pub d_hapr: f64,
+    /// Basal diguanylate cyclase (DGC) activity.
     pub k_dgc_basal: f64,
+    /// HapR repression strength on DGC.
     pub k_dgc_rep: f64,
+    /// Basal phosphodiesterase (PDE) activity.
     pub k_pde_basal: f64,
+    /// HapR activation strength on PDE.
     pub k_pde_act: f64,
+    /// c-di-GMP degradation rate (h⁻¹).
     pub d_cdg: f64,
+    /// Maximum biofilm production rate.
     pub k_bio_max: f64,
+    /// Half-saturation for c-di-GMP activation of biofilm production.
     pub k_bio_cdg: f64,
+    /// Hill coefficient for biofilm induction by c-di-GMP.
     pub n_bio: f64,
+    /// Biofilm matrix degradation rate (h⁻¹).
     pub d_bio: f64,
 }
 
+/// Number of state variables in the multi-signal model.
 pub const MULTI_SIGNAL_N_VARS: usize = 7;
+/// Number of parameters in the multi-signal model (flat buffer size).
 pub const MULTI_SIGNAL_N_PARAMS: usize = 24;
 
 impl Default for MultiSignalParams {
@@ -371,6 +460,7 @@ impl Default for MultiSignalParams {
 }
 
 impl MultiSignalParams {
+    /// Packs parameters into a flat array for GPU buffer upload.
     #[must_use]
     pub const fn to_flat(&self) -> [f64; MULTI_SIGNAL_N_PARAMS] {
         [
@@ -401,6 +491,8 @@ impl MultiSignalParams {
         ]
     }
 
+    /// Reconstructs parameters from a flat array (e.g. from GPU buffer).
+    ///
     /// # Panics
     /// Panics if `flat.len() < MULTI_SIGNAL_N_PARAMS`.
     #[must_use]
@@ -444,13 +536,19 @@ impl MultiSignalParams {
 /// from biofilm state creates hysteresis.
 #[derive(Debug, Clone)]
 pub struct BistableParams {
+    /// Base QS biofilm parameters (shared with monostable model).
     pub base: QsBiofilmParams,
+    /// Feedback strength: biofilm → c-di-GMP production amplification.
     pub alpha_fb: f64,
+    /// Hill coefficient for positive feedback.
     pub n_fb: f64,
+    /// Half-saturation for feedback activation by biofilm state.
     pub k_fb: f64,
 }
 
+/// Number of state variables in the bistable model.
 pub const BISTABLE_N_VARS: usize = 5;
+/// Number of parameters in the bistable model (flat buffer size).
 pub const BISTABLE_N_PARAMS: usize = 21;
 
 impl Default for BistableParams {
@@ -472,6 +570,7 @@ impl Default for BistableParams {
 }
 
 impl BistableParams {
+    /// Packs parameters into a flat array for GPU buffer upload.
     #[must_use]
     pub fn to_flat(&self) -> [f64; BISTABLE_N_PARAMS] {
         let base = self.base.to_flat();
@@ -483,6 +582,8 @@ impl BistableParams {
         out
     }
 
+    /// Reconstructs parameters from a flat array (e.g. from GPU buffer).
+    ///
     /// # Panics
     /// Panics if `flat.len() < BISTABLE_N_PARAMS`.
     #[must_use]
@@ -506,20 +607,33 @@ impl BistableParams {
 /// at a growth cost.
 #[derive(Debug, Clone)]
 pub struct PhageDefenseParams {
+    /// Maximum specific growth rate (h⁻¹).
     pub mu_max: f64,
+    /// Growth cost of DCD deaminase defense (fractional reduction).
     pub defense_cost: f64,
+    /// Half-saturation for resource-limited growth.
     pub k_resource: f64,
+    /// Yield coefficient (biomass per unit resource consumed).
     pub yield_coeff: f64,
+    /// Phage adsorption rate (mL·h⁻¹ per cell).
     pub adsorption_rate: f64,
+    /// Phage burst size (virions per infected cell).
     pub burst_size: f64,
+    /// Fraction of phage inactivated by DCD defense.
     pub defense_efficiency: f64,
+    /// Phage decay rate (h⁻¹).
     pub phage_decay: f64,
+    /// Resource inflow rate (chemostat).
     pub resource_inflow: f64,
+    /// Resource dilution rate (h⁻¹).
     pub resource_dilution: f64,
+    /// Specific death rate (h⁻¹).
     pub death_rate: f64,
 }
 
+/// Number of state variables in the phage defense model.
 pub const PHAGE_DEFENSE_N_VARS: usize = 4;
+/// Number of parameters in the phage defense model (flat buffer size).
 pub const PHAGE_DEFENSE_N_PARAMS: usize = 11;
 
 impl Default for PhageDefenseParams {
@@ -541,6 +655,7 @@ impl Default for PhageDefenseParams {
 }
 
 impl PhageDefenseParams {
+    /// Packs parameters into a flat array for GPU buffer upload.
     #[must_use]
     pub const fn to_flat(&self) -> [f64; PHAGE_DEFENSE_N_PARAMS] {
         [
@@ -558,6 +673,8 @@ impl PhageDefenseParams {
         ]
     }
 
+    /// Reconstructs parameters from a flat array (e.g. from GPU buffer).
+    ///
     /// # Panics
     /// Panics if `flat.len() < PHAGE_DEFENSE_N_PARAMS`.
     #[must_use]

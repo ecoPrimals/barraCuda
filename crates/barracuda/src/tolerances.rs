@@ -8,9 +8,13 @@
 /// Tolerance descriptor with absolute and relative bounds plus justification.
 #[derive(Debug, Clone, Copy)]
 pub struct Tolerance {
+    /// Identifier for this tolerance.
     pub name: &'static str,
+    /// Absolute tolerance threshold.
     pub abs_tol: f64,
+    /// Relative tolerance threshold.
     pub rel_tol: f64,
+    /// Mathematical justification for the chosen values.
     pub justification: &'static str,
 }
 
@@ -244,7 +248,6 @@ pub const BIO_PHYLOGENETIC: Tolerance = Tolerance {
     justification: "branch-length accumulation over tree; float rounding per edge",
 };
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

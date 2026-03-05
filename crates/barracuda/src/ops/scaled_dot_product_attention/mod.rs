@@ -39,7 +39,6 @@
 
 mod compute;
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;
 
@@ -61,15 +60,21 @@ pub fn wgsl_sdpa_single_kernel() -> &'static str {
     &WGSL_SDPA_SINGLE_KERNEL_F32
 }
 
-/// Attention parameters
+/// Attention parameters for shader uniform binding.
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct AttentionParams {
+    /// Batch dimension size.
     pub batch_size: u32,
+    /// Number of attention heads.
     pub num_heads: u32,
+    /// Query sequence length.
     pub q_seq_len: u32,
+    /// Key/value sequence length.
     pub kv_seq_len: u32,
+    /// Dimension per head.
     pub head_dim: u32,
+    /// Padding for alignment.
     pub _padding: [u32; 3],
 }
 

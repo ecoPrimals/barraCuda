@@ -34,7 +34,7 @@ use crate::device::driver_profile::GpuDriverProfile;
 /// Output of the sovereign compiler pipeline.
 #[derive(Debug)]
 pub enum SovereignOutput {
-    /// Optimized SPIR-V binary, ready for `SPIRV_SHADER_PASSTHROUGH`.
+    /// Optimized SPIR-V binary (words), ready for `SPIRV_SHADER_PASSTHROUGH`.
     Spirv(Vec<u32>),
 }
 
@@ -116,17 +116,19 @@ impl SovereignCompiler {
 /// Errors from the sovereign compiler pipeline.
 #[derive(Debug, thiserror::Error)]
 pub enum SovereignError {
+    /// WGSL source failed to parse.
     #[error("WGSL parse failed: {0}")]
     Parse(String),
 
+    /// Optimized naga module failed validation.
     #[error("Module validation failed after optimization: {0}")]
     Validation(String),
 
+    /// SPIR-V emission from validated module failed.
     #[error("SPIR-V emission failed: {0}")]
     SpirvEmit(String),
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

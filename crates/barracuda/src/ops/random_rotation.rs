@@ -27,6 +27,7 @@ struct RandomRotationParams {
     _pad6: u32,
 }
 
+/// Random rotation augmentation: rotates images by per-batch rotation matrices.
 pub struct RandomRotation {
     input: Tensor,
     rotation_matrices: Tensor,
@@ -247,7 +248,6 @@ impl RandomRotation {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

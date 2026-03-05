@@ -29,11 +29,13 @@ struct PairwiseL2Params {
     dim: u32,
 }
 
+/// GPU pairwise L2 distance computation.
 pub struct PairwiseL2Gpu {
     device: Arc<WgpuDevice>,
 }
 
 impl PairwiseL2Gpu {
+    /// Create pairwise L2 distance calculator.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self { device }
     }
@@ -65,7 +67,6 @@ impl PairwiseL2Gpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::{PairwiseL2Gpu, WGSL_PAIRWISE_L2};

@@ -16,6 +16,7 @@ pub struct Fft2D {
 }
 
 impl Fft2D {
+    /// Create 2D FFT for [rows, cols, 2] complex input (powers of 2).
     pub fn new(input: Tensor, rows: u32, cols: u32) -> Result<Self> {
         let shape = input.shape();
 
@@ -40,6 +41,7 @@ impl Fft2D {
         Ok(Self { input, rows, cols })
     }
 
+    /// Execute 2D FFT (row-wise then column-wise).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 
@@ -134,7 +136,6 @@ impl Fft2D {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

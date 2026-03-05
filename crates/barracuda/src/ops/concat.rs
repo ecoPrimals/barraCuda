@@ -11,12 +11,14 @@ const SHADER_F64: &str = include_str!("../shaders/tensor/concat_f64.wgsl");
 static SHADER_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
 
+/// Concatenate two tensors along the last dimension.
 pub struct Concat {
     lhs: Tensor,
     rhs: Tensor,
 }
 
 impl Concat {
+    /// Create a concat operation.
     pub fn new(lhs: Tensor, rhs: Tensor) -> Self {
         Self { lhs, rhs }
     }
@@ -25,6 +27,7 @@ impl Concat {
         &SHADER_F32
     }
 
+    /// Execute concatenation on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.lhs.device();
         let size1 = self.lhs.len();
@@ -50,12 +53,12 @@ impl Concat {
 }
 
 impl Tensor {
+    /// Concatenate with another tensor along the last dimension.
     pub fn concat(self, other: &Self) -> Result<Self> {
         Concat::new(self, other.clone()).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -44,6 +44,7 @@ struct GlobalMaxPoolParams {
     width: u32,
 }
 
+/// Global max pooling: reduce spatial dimensions to 1×1 per channel.
 pub struct GlobalMaxPool {
     input: Tensor,
 }
@@ -60,6 +61,7 @@ impl GlobalMaxPool {
         }
     }
 
+    /// Execute global max pooling over spatial dimensions.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -159,7 +161,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

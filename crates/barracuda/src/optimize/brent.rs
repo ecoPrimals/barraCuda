@@ -352,7 +352,6 @@ where
     Ok((x, fx, max_iter))
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

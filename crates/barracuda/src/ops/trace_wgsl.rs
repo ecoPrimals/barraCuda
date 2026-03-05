@@ -26,11 +26,13 @@ const SHADER_F64: &str = include_str!("../shaders/linalg/trace_f64.wgsl");
 static SHADER_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
 
+/// Sum of diagonal elements of a square matrix.
 pub struct Trace {
     input: Tensor,
 }
 
 impl Trace {
+    /// Create a trace operation for the given square matrix.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -39,6 +41,7 @@ impl Trace {
         &SHADER_F32
     }
 
+    /// Execute trace (sum of diagonal elements) on a square matrix.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -312,12 +315,12 @@ impl Trace {
 }
 
 impl Tensor {
+    /// Compute the trace (sum of diagonal elements) of this square matrix.
     pub fn trace_wgsl(self) -> Result<Self> {
         Trace::new(self).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

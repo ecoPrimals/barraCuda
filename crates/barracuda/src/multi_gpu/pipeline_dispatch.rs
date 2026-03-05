@@ -34,11 +34,14 @@ pub enum TransferStrategy {
 /// A workload descriptor: what capabilities a stage requires.
 #[derive(Debug, Clone)]
 pub struct StageWorkload {
+    /// Human-readable workload name.
     pub name: String,
+    /// Capabilities the substrate must satisfy.
     pub required_capabilities: Vec<SubstrateCapability>,
 }
 
 impl StageWorkload {
+    /// Create a workload with required capabilities.
     pub fn new(name: impl Into<String>, caps: Vec<SubstrateCapability>) -> Self {
         Self {
             name: name.into(),
@@ -50,9 +53,13 @@ impl StageWorkload {
 /// A single stage in a multi-substrate pipeline.
 #[derive(Debug)]
 pub struct PipelineStage {
+    /// Stage name for logging.
     pub name: String,
+    /// Workload and capability requirements.
     pub workload: StageWorkload,
+    /// Output buffer size for transfer cost estimation.
     pub output_bytes: u64,
+    /// Policy when preferred substrate is unavailable.
     pub fallback: FallbackPolicy,
 }
 
@@ -70,38 +77,53 @@ pub enum FallbackPolicy {
 /// How a stage was resolved during planning.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StageResolution {
+    /// Preferred substrate assigned.
     Optimal,
+    /// Fallback substrate used.
     Degraded,
+    /// Stage skipped (fallback policy was Skip).
     Skipped,
 }
 
 /// A resolved pipeline stage with substrate assignment.
 #[derive(Debug)]
 pub struct ResolvedStage<'a> {
+    /// The pipeline stage.
     pub stage: &'a PipelineStage,
+    /// Assigned substrate (None if skipped).
     pub substrate: Option<&'a Substrate>,
+    /// Transfer strategy from previous stage.
     pub transfer: TransferStrategy,
+    /// Estimated transfer time (microseconds).
     pub transfer_cost_us: u64,
+    /// How this stage was resolved.
     pub reason: StageResolution,
 }
 
 /// Builder for multi-substrate pipelines.
 #[derive(Debug)]
 pub struct SubstratePipeline {
+    /// Pipeline name for logging.
     pub name: String,
+    /// Ordered stages.
     pub stages: Vec<PipelineStage>,
 }
 
 /// A resolved pipeline ready for execution.
 #[derive(Debug)]
 pub struct ResolvedPipeline<'a> {
+    /// Pipeline name.
     pub name: &'a str,
+    /// Resolved stages with substrate assignments.
     pub stages: Vec<ResolvedStage<'a>>,
+    /// Total estimated transfer overhead (microseconds).
     pub total_transfer_us: u64,
+    /// True if all stages got their preferred substrate.
     pub fully_optimal: bool,
 }
 
 impl SubstratePipeline {
+    /// Create a new pipeline builder.
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -202,6 +224,7 @@ impl SubstratePipeline {
 }
 
 impl PipelineStage {
+    /// Create a new pipeline stage.
     pub fn new(name: impl Into<String>, workload: StageWorkload, output_bytes: u64) -> Self {
         Self {
             name: name.into(),
@@ -211,6 +234,7 @@ impl PipelineStage {
         }
     }
 
+    /// Set fallback policy when preferred substrate is unavailable.
     #[must_use]
     pub const fn with_fallback(mut self, policy: FallbackPolicy) -> Self {
         self.fallback = policy;
@@ -219,11 +243,13 @@ impl PipelineStage {
 }
 
 impl ResolvedPipeline<'_> {
+    /// Returns true if all stages have a substrate assigned.
     #[must_use]
     pub fn all_assigned(&self) -> bool {
         self.stages.iter().all(|s| s.substrate.is_some())
     }
 
+    /// Number of stages using peer-to-peer transfer.
     #[must_use]
     pub fn p2p_transfer_count(&self) -> usize {
         self.stages
@@ -232,6 +258,7 @@ impl ResolvedPipeline<'_> {
             .count()
     }
 
+    /// Number of stages that used fallback substrate.
     #[must_use]
     pub fn degraded_count(&self) -> usize {
         self.stages
@@ -240,6 +267,7 @@ impl ResolvedPipeline<'_> {
             .count()
     }
 
+    /// Log pipeline summary to tracing.
     pub fn print_summary(&self) {
         tracing::info!("Pipeline: {}", self.name);
         tracing::info!(
@@ -301,7 +329,6 @@ fn find_cpu_fallback(substrates: &[Substrate]) -> Option<&Substrate> {
         .find(|s| s.substrate_type == SubstrateType::Cpu)
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

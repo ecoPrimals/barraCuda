@@ -28,22 +28,28 @@ use super::cpu_su3::Su3Matrix;
 /// Links are stored as `links[site * 4 + mu]` where mu ∈ {0,1,2,3}
 /// represents the four spacetime directions.
 pub struct Lattice {
+    /// Lattice dimensions [nx, ny, nz, nt]
     pub dims: [usize; 4],
+    /// SU(3) link variables (volume × 4)
     pub links: Vec<Su3Matrix>,
+    /// Inverse bare coupling β = 6/g²
     pub beta: f64,
 }
 
 impl Lattice {
+    /// Total lattice volume (nx × ny × nz × nt).
     #[must_use]
     pub const fn volume(&self) -> usize {
         self.dims[0] * self.dims[1] * self.dims[2] * self.dims[3]
     }
 
+    /// Linear index from 4D coordinates.
     #[must_use]
     pub const fn site_index(&self, x: [usize; 4]) -> usize {
         x[0] + self.dims[0] * (x[1] + self.dims[1] * (x[2] + self.dims[2] * x[3]))
     }
 
+    /// 4D coordinates from linear index.
     #[must_use]
     pub const fn site_coords(&self, idx: usize) -> [usize; 4] {
         let x0 = idx % self.dims[0];
@@ -55,6 +61,7 @@ impl Lattice {
         [x0, x1, x2, x3]
     }
 
+    /// Neighbor site in direction μ (forward or backward with PBC).
     #[must_use]
     pub const fn neighbor(&self, x: [usize; 4], mu: usize, forward: bool) -> [usize; 4] {
         let mut y = x;
@@ -66,16 +73,19 @@ impl Lattice {
         y
     }
 
+    /// Get link variable at site x in direction μ.
     pub fn link(&self, x: [usize; 4], mu: usize) -> Su3Matrix {
         let idx = self.site_index(x);
         self.links[idx * 4 + mu]
     }
 
+    /// Set link variable at site x in direction μ.
     pub fn set_link(&mut self, x: [usize; 4], mu: usize, u: Su3Matrix) {
         let idx = self.site_index(x);
         self.links[idx * 4 + mu] = u;
     }
 
+    /// Cold start: all links = identity.
     #[must_use]
     pub fn cold_start(dims: [usize; 4], beta: f64) -> Self {
         let vol = dims[0] * dims[1] * dims[2] * dims[3];
@@ -86,6 +96,7 @@ impl Lattice {
         }
     }
 
+    /// Hot start: random links near identity.
     #[must_use]
     pub fn hot_start(dims: [usize; 4], beta: f64, seed: u64) -> Self {
         let vol = dims[0] * dims[1] * dims[2] * dims[3];
@@ -96,6 +107,7 @@ impl Lattice {
         Self { dims, links, beta }
     }
 
+    /// Plaquette P_μν(x) = U_μ(x) U_ν(x+μ) U_μ†(x+ν) U_ν†(x).
     pub fn plaquette(&self, x: [usize; 4], mu: usize, nu: usize) -> Su3Matrix {
         let x_mu = self.neighbor(x, mu, true);
         let x_nu = self.neighbor(x, nu, true);
@@ -106,6 +118,7 @@ impl Lattice {
         u1 * u2 * u3 * u4
     }
 
+    /// Volume-averaged plaquette ⟨Re Tr P / 3⟩.
     #[must_use]
     pub fn average_plaquette(&self) -> f64 {
         let vol = self.volume();
@@ -124,6 +137,7 @@ impl Lattice {
         sum / count as f64
     }
 
+    /// Staple sum for link (x, μ) used in gauge force.
     pub fn staple(&self, x: [usize; 4], mu: usize) -> Su3Matrix {
         let mut s = Su3Matrix::ZERO;
         let x_mu = self.neighbor(x, mu, true);
@@ -144,6 +158,7 @@ impl Lattice {
         s
     }
 
+    /// Wilson gauge action S = β Σ (1 - Re Tr P / 3).
     #[must_use]
     pub fn wilson_action(&self) -> f64 {
         let vol = self.volume();
@@ -160,6 +175,7 @@ impl Lattice {
         self.beta * sum
     }
 
+    /// Gauge force dS/dU_μ(x) (traceless antihermitian).
     pub fn gauge_force(&self, x: [usize; 4], mu: usize) -> Su3Matrix {
         let u = self.link(x, mu);
         let v = self.staple(x, mu);
@@ -211,7 +227,6 @@ impl Lattice {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

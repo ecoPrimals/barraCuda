@@ -20,12 +20,14 @@ struct BroadcastParams {
     _padding: [u32; 2],
 }
 
+/// NumPy-style broadcasting to expand tensor dimensions.
 pub struct Broadcast {
     input: Tensor,
     target_shape: Vec<usize>,
 }
 
 impl Broadcast {
+    /// Creates a new broadcast. Expands input to match target_shape.
     pub fn new(input: Tensor, target_shape: Vec<usize>) -> Self {
         Self {
             input,
@@ -34,7 +36,7 @@ impl Broadcast {
     }
 
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        std::sync::LazyLock::force(&SHADER_F32).as_str()
     }
 
     /// Compute input strides for broadcasting.
@@ -66,6 +68,7 @@ impl Broadcast {
         strides
     }
 
+    /// Executes the broadcast and returns the expanded tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let output_size: usize = self.target_shape.iter().product();
@@ -198,7 +201,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

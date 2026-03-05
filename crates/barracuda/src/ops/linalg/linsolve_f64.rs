@@ -33,6 +33,7 @@ pub struct LinSolveF64 {
 }
 
 impl LinSolveF64 {
+    /// Creates a new f64 linear system solver for the given WGPU device.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self { device }
     }
@@ -104,7 +105,6 @@ impl LinSolveF64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

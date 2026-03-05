@@ -53,23 +53,51 @@ use std::sync::Arc;
 pub enum VariogramModel {
     /// Spherical variogram: most common, bounded
     /// γ(h) = c0 + c * (1.5*h/a - 0.5*(h/a)³) for h ≤ a
-    Spherical { nugget: f64, sill: f64, range: f64 },
+    Spherical {
+        /// Nugget effect (variance at zero distance)
+        nugget: f64,
+        /// Sill (total variance at range)
+        sill: f64,
+        /// Range (distance at which sill is reached)
+        range: f64,
+    },
 
     /// Exponential variogram: unbounded, reaches sill asymptotically
     /// γ(h) = c0 + c * (1 - exp(-3h/a))
-    Exponential { nugget: f64, sill: f64, range: f64 },
+    Exponential {
+        /// Nugget effect (variance at zero distance)
+        nugget: f64,
+        /// Sill (total variance at range)
+        sill: f64,
+        /// Range (practical range ≈ a/3)
+        range: f64,
+    },
 
     /// Gaussian variogram: very smooth, continuous phenomena
     /// γ(h) = c0 + c * (1 - exp(-3(h/a)²))
-    Gaussian { nugget: f64, sill: f64, range: f64 },
+    Gaussian {
+        /// Nugget effect (variance at zero distance)
+        nugget: f64,
+        /// Sill (total variance at range)
+        sill: f64,
+        /// Range (practical range ≈ a/√3)
+        range: f64,
+    },
 
     /// Linear variogram: simple, bounded
     /// γ(h) = c0 + c * h/a for h ≤ a
-    Linear { nugget: f64, sill: f64, range: f64 },
+    Linear {
+        /// Nugget effect (variance at zero distance)
+        nugget: f64,
+        /// Sill (total variance at range)
+        sill: f64,
+        /// Range (distance at which sill is reached)
+        range: f64,
+    },
 }
 
 impl VariogramModel {
-    /// Get variogram parameters (nugget, sill, range, model_id)
+    /// Get variogram parameters (nugget, sill, range, model_id).
     pub fn params(&self) -> (f64, f64, f64, u32) {
         match self {
             VariogramModel::Spherical {
@@ -95,7 +123,7 @@ impl VariogramModel {
         }
     }
 
-    /// Compute variogram value γ(h) for distance h
+    /// Compute variogram value γ(h) for distance h.
     pub fn gamma(&self, h: f64) -> f64 {
         if h <= 0.0 {
             return 0.0;
@@ -135,14 +163,14 @@ impl VariogramModel {
         }
     }
 
-    /// Compute covariance C(h) = sill - γ(h)
+    /// Compute covariance C(h) = sill - γ(h).
     pub fn covariance(&self, h: f64) -> f64 {
         let (_, sill, _, _) = self.params();
         sill - self.gamma(h)
     }
 }
 
-/// Result of kriging interpolation
+/// Result of kriging interpolation.
 #[derive(Debug, Clone)]
 pub struct KrigingResult {
     /// Interpolated values at target points
@@ -153,7 +181,7 @@ pub struct KrigingResult {
     pub weights: Vec<Vec<f64>>,
 }
 
-/// Ordinary Kriging interpolator
+/// Ordinary Kriging interpolator.
 pub struct KrigingF64 {
     device: Arc<WgpuDevice>,
 }
@@ -452,7 +480,6 @@ impl KrigingF64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

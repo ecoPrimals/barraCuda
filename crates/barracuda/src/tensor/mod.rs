@@ -520,7 +520,6 @@ impl std::fmt::Display for Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "tensor_tests.rs"]
 mod tests;

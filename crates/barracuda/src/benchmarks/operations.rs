@@ -268,7 +268,6 @@ fn cpu_activation(data: &[f32], operation: &str) -> Vec<f32> {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

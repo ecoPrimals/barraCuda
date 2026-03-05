@@ -178,6 +178,9 @@ fn tolerances_get(params: &Value, id: Value) -> JsonRpcResponse {
 }
 
 /// `barracuda.validate.gpu_stack` — Run GPU validation suite.
+///
+/// Uses 2×2 identity matrix: minimal size that validates matmul path without
+/// unnecessary GPU memory/transfer overhead. Aligned with tarpc validate_gpu_stack.
 async fn validate_gpu_stack(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
     let Some(dev) = primal.device() else {
         return JsonRpcResponse::error(id, INTERNAL_ERROR, "No GPU device available");
@@ -185,20 +188,17 @@ async fn validate_gpu_stack(primal: &BarraCudaPrimal, id: Value) -> JsonRpcRespo
 
     let mut results = Vec::new();
 
-    // Matmul validation: 4x4 identity
+    // Matmul validation: 2×2 identity (minimal, fast, validates GPU stack)
+    let dev_arc = std::sync::Arc::new(dev);
     let matmul_pass = {
-        let data: Vec<f32> = vec![
-            1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-        ];
-        let input = vec![
-            1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
-        ];
+        let eye = vec![1.0, 0.0, 0.0, 1.0];
+        let input = vec![1.0, 2.0, 3.0, 4.0];
         match (
-            barracuda::tensor::Tensor::from_data(&data, vec![4, 4], dev.clone()),
-            barracuda::tensor::Tensor::from_data(&input, vec![4, 4], dev.clone()),
+            barracuda::tensor::Tensor::from_data(&eye, vec![2, 2], dev_arc.clone()),
+            barracuda::tensor::Tensor::from_data(&input, vec![2, 2], dev_arc.clone()),
         ) {
-            (Ok(eye), Ok(inp)) => inp
-                .matmul(&eye)
+            (Ok(eye_t), Ok(inp)) => inp
+                .matmul(&eye_t)
                 .and_then(|out| out.to_vec())
                 .is_ok_and(|v| v.iter().zip(&input).all(|(a, b)| (a - b).abs() < 1e-4)),
             _ => false,
@@ -209,7 +209,7 @@ async fn validate_gpu_stack(primal: &BarraCudaPrimal, id: Value) -> JsonRpcRespo
     // Tensor round-trip validation
     let roundtrip_pass = {
         let data = vec![std::f32::consts::PI, 2.71, 1.41, 0.57];
-        barracuda::tensor::Tensor::from_data(&data, vec![4], dev.clone())
+        barracuda::tensor::Tensor::from_data(&data, vec![4], dev_arc.clone())
             .and_then(|t| t.to_vec())
             .is_ok_and(|v| v.iter().zip(&data).all(|(a, b)| (a - b).abs() < 1e-6))
     };
@@ -254,7 +254,8 @@ async fn compute_dispatch(primal: &BarraCudaPrimal, params: &Value, id: Value) -
                 .iter()
                 .filter_map(|v| v.as_u64().map(|n| n as usize))
                 .collect();
-            match barracuda::tensor::Tensor::zeros_on(shape_vec.clone(), dev.clone()).await {
+            let dev_arc = std::sync::Arc::new(dev);
+            match barracuda::tensor::Tensor::zeros_on(shape_vec.clone(), dev_arc).await {
                 Ok(t) => {
                     let tensor_id = primal.store_tensor(t);
                     JsonRpcResponse::success(
@@ -275,7 +276,8 @@ async fn compute_dispatch(primal: &BarraCudaPrimal, params: &Value, id: Value) -
                 .iter()
                 .filter_map(|v| v.as_u64().map(|n| n as usize))
                 .collect();
-            match barracuda::tensor::Tensor::ones_on(shape_vec.clone(), dev.clone()).await {
+            let dev_arc = std::sync::Arc::new(dev);
+            match barracuda::tensor::Tensor::ones_on(shape_vec.clone(), dev_arc).await {
                 Ok(t) => {
                     let tensor_id = primal.store_tensor(t);
                     JsonRpcResponse::success(
@@ -361,7 +363,7 @@ async fn tensor_create(primal: &BarraCudaPrimal, params: &Value, id: Value) -> J
         );
     }
 
-    match barracuda::tensor::Tensor::from_data(&data, shape_vec.clone(), dev.clone()) {
+    match barracuda::tensor::Tensor::from_data(&data, shape_vec.clone(), std::sync::Arc::new(dev)) {
         Ok(tensor) => {
             let tensor_id = primal.store_tensor(tensor);
             JsonRpcResponse::success(
@@ -454,17 +456,20 @@ async fn fhe_ntt(primal: &BarraCudaPrimal, params: &Value, id: Value) -> JsonRpc
         .collect();
     let f32_bits: Vec<f32> = u32_pairs.iter().map(|&x| f32::from_bits(x)).collect();
 
-    let input_tensor =
-        match barracuda::tensor::Tensor::from_data(&f32_bits, vec![poly.len() * 2], dev.clone()) {
-            Ok(t) => t,
-            Err(e) => {
-                return JsonRpcResponse::error(
-                    id,
-                    INTERNAL_ERROR,
-                    format!("Tensor creation failed: {e}"),
-                )
-            }
-        };
+    let input_tensor = match barracuda::tensor::Tensor::from_data(
+        &f32_bits,
+        vec![poly.len() * 2],
+        std::sync::Arc::new(dev.clone()),
+    ) {
+        Ok(t) => t,
+        Err(e) => {
+            return JsonRpcResponse::error(
+                id,
+                INTERNAL_ERROR,
+                format!("Tensor creation failed: {e}"),
+            )
+        }
+    };
 
     let ntt = match barracuda::ops::fhe_ntt::FheNtt::new(
         input_tensor,
@@ -542,8 +547,12 @@ async fn fhe_pointwise_mul(primal: &BarraCudaPrimal, params: &Value, id: Value) 
             .flat_map(|&x| [(x & 0xFFFF_FFFF) as u32, (x >> 32) as u32])
             .collect();
         let f32_bits: Vec<f32> = u32_pairs.iter().map(|&x| f32::from_bits(x)).collect();
-        barracuda::tensor::Tensor::from_data(&f32_bits, vec![poly.len() * 2], dev.clone())
-            .map_err(|e| e.to_string())
+        barracuda::tensor::Tensor::from_data(
+            &f32_bits,
+            vec![poly.len() * 2],
+            std::sync::Arc::new(dev.clone()),
+        )
+        .map_err(|e| e.to_string())
     };
 
     let (a_tensor, b_tensor) = match (to_tensor(&a), to_tensor(&b)) {

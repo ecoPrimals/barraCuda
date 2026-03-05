@@ -17,7 +17,6 @@ pub use bind_group_layouts::SparseBindGroupLayouts;
 pub use buffers::SparseBuffers;
 pub use pipelines::{cg_dispatch_pass, CgPipelineSet, SparsePipelines};
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     #[test]

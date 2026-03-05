@@ -3,13 +3,18 @@
 //!
 //! Extracted from multi_gpu.rs for separation of concerns.
 
-/// GPU vendor
+/// GPU vendor classification for capability-based routing.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum GpuVendor {
+    /// NVIDIA GPUs (GeForce, RTX, Quadro, Tesla, etc.)
     Nvidia,
+    /// AMD GPUs (Radeon, RDNA, CDNA)
     Amd,
+    /// Intel GPUs (Iris, Arc)
     Intel,
+    /// Software rasterizer (llvmpipe, SwiftShader, CPU)
     Software,
+    /// Unknown or unrecognized vendor
     Unknown,
 }
 
@@ -60,14 +65,20 @@ impl GpuVendor {
     }
 }
 
-/// GPU driver type (affects f64 builtin support)
+/// GPU driver type (affects f64 builtin support).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum GpuDriver {
+    /// NVIDIA proprietary driver (NVVM/PTXAS)
     NvidiaProprietary,
+    /// Mesa NVK (open-source NVIDIA Vulkan)
     Nvk,
+    /// Mesa RADV (AMD Vulkan)
     Radv,
+    /// Intel ANV driver
     Intel,
+    /// Software rasterizer
     Software,
+    /// Unknown driver
     Unknown,
 }
 
@@ -109,30 +120,41 @@ impl GpuDriver {
     }
 }
 
-/// Workload classification for intelligent GPU routing
+/// Workload classification for intelligent GPU routing.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum WorkloadType {
+    /// High-throughput streaming workloads (matmul, conv)
     Streaming,
+    /// Iterative workloads (CG, eigensolve) with convergence checks
     Iterative,
+    /// Workloads requiring native f64 builtins (exp, log, pow)
     F64Builtins,
 }
 
-/// GPU information for load balancing
+/// GPU information for load balancing and workload routing.
 #[derive(Debug, Clone)]
 pub struct GpuInfo {
+    /// Device index in the adapter list
     pub index: usize,
+    /// Human-readable device name
     pub name: String,
+    /// GPU vendor classification
     pub vendor: GpuVendor,
+    /// Driver type (affects f64 support)
     pub driver: GpuDriver,
+    /// Estimated peak GFLOPS for capacity weighting
     pub gflops: f64,
+    /// Whether the GPU is currently busy
     pub busy: bool,
 }
 
 impl GpuInfo {
+    /// Returns true if this GPU supports native f64 builtins (exp, log, pow).
     pub fn supports_f64_builtins(&self) -> bool {
         !matches!(self.driver, GpuDriver::Nvk | GpuDriver::Software)
     }
 
+    /// Returns true if this GPU is suitable for compute workloads (≥500 GFLOPS).
     pub fn is_compute_capable(&self) -> bool {
         matches!(
             self.vendor,

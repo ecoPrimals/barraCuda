@@ -40,17 +40,24 @@ struct MapParams {
     operation: u32,
 }
 
+/// Element-wise map operation (square, sqrt, abs, negate, reciprocal).
 pub struct Map {
     input: Tensor,
     operation: MapOperation,
 }
 
+/// Element-wise map operations.
 #[derive(Debug, Clone, Copy)]
 pub enum MapOperation {
+    /// Square: x².
     Square,
+    /// Square root.
     Sqrt,
+    /// Absolute value.
     Abs,
+    /// Negate: -x.
     Negate,
+    /// Reciprocal: 1/x.
     Reciprocal,
 }
 
@@ -76,6 +83,7 @@ impl Map {
         std::sync::LazyLock::force(&SHADER).as_str()
     }
 
+    /// Execute the map operation on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.shape().iter().product::<usize>();
@@ -144,7 +152,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -25,6 +25,7 @@ pub struct Rk4 {
 }
 
 impl Rk4 {
+    /// Creates an RK4 integrator with positions, velocities, accelerations, and time step.
     pub fn new(
         positions: Tensor,
         velocities: Tensor,
@@ -268,7 +269,6 @@ impl Rk4 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

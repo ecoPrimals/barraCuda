@@ -10,7 +10,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Semaphore};
 
-/// Pool of GPU devices for parallel execution
+/// Pool of GPU devices for parallel execution.
 pub struct GpuPool {
     devices: Vec<Arc<WgpuDevice>>,
     info: Vec<GpuInfo>,
@@ -18,10 +18,12 @@ pub struct GpuPool {
 }
 
 impl GpuPool {
+    /// Create a pool with default workload config.
     pub async fn new() -> Result<Self> {
         Self::with_config(WorkloadConfig::default()).await
     }
 
+    /// Create a pool with the given workload config.
     pub async fn with_config(config: WorkloadConfig) -> Result<Self> {
         let adapters = WgpuDevice::enumerate_adapters().await;
         let mut devices = Vec::new();
@@ -97,18 +99,22 @@ impl GpuPool {
         })
     }
 
+    /// Number of devices in the pool.
     pub fn device_count(&self) -> usize {
         self.devices.len()
     }
 
+    /// Device metadata for all devices in the pool.
     pub fn devices(&self) -> &[GpuInfo] {
         &self.info
     }
 
+    /// Get device by index.
     pub fn device(&self, index: usize) -> Option<Arc<WgpuDevice>> {
         self.devices.get(index).cloned()
     }
 
+    /// Route a workload to the best available device.
     pub fn route(&self, workload: WorkloadType) -> Option<(Arc<WgpuDevice>, GpuInfo)> {
         if self.devices.is_empty() {
             return None;
@@ -143,6 +149,7 @@ impl GpuPool {
         }
     }
 
+    /// Acquire a device for the workload, holding a semaphore permit.
     pub async fn route_acquire(
         &self,
         workload: WorkloadType,
@@ -159,6 +166,7 @@ impl GpuPool {
         Ok((device, info, permit))
     }
 
+    /// Execute a function on the first available device.
     pub async fn execute<F, T>(&self, f: F) -> Result<T>
     where
         F: FnOnce(Arc<WgpuDevice>) -> Result<T> + Send + 'static,
@@ -179,6 +187,7 @@ impl GpuPool {
             .map_err(|e| crate::error::BarracudaError::device(format!("Task error: {e}")))?
     }
 
+    /// Map data across devices in parallel (round-robin).
     pub async fn parallel_map<T, R, F>(&self, data: Vec<T>, f: F) -> Result<Vec<R>>
     where
         T: Send + 'static,
@@ -225,6 +234,7 @@ impl GpuPool {
         Ok(output)
     }
 
+    /// Human-readable pool summary.
     pub fn summary(&self) -> String {
         let total_gflops: f64 = self.info.iter().map(|g| g.gflops).sum();
         let nvidia_count = self
@@ -266,7 +276,7 @@ impl MultiDevicePoolInner {
     }
 }
 
-/// Lease of a device from the multi-device pool; releases on drop
+/// Lease of a device from the multi-device pool; releases on drop.
 pub struct DeviceLease {
     device: Arc<WgpuDevice>,
     info: DeviceInfo,
@@ -276,18 +286,22 @@ pub struct DeviceLease {
 }
 
 impl DeviceLease {
+    /// The leased device.
     pub fn device(&self) -> &Arc<WgpuDevice> {
         &self.device
     }
 
+    /// Device metadata.
     pub fn info(&self) -> &DeviceInfo {
         &self.info
     }
 
+    /// Optional quota tracker for allocation limits.
     pub fn quota_tracker(&self) -> Option<&Arc<QuotaTracker>> {
         self.quota_tracker.as_ref()
     }
 
+    /// Track an allocation against quota and device stats.
     pub fn track_allocation(&self, bytes: u64) -> Result<()> {
         if let Some(tracker) = &self.quota_tracker {
             tracker.try_allocate(bytes)?;
@@ -299,6 +313,7 @@ impl DeviceLease {
         Ok(())
     }
 
+    /// Track a deallocation.
     pub fn track_deallocation(&self, bytes: u64) {
         if let Some(tracker) = &self.quota_tracker {
             tracker.deallocate(bytes);
@@ -329,10 +344,12 @@ pub struct MultiDevicePool {
 }
 
 impl MultiDevicePool {
+    /// Create a pool with default config.
     pub async fn new() -> Result<Self> {
         Self::with_config(WorkloadConfig::default()).await
     }
 
+    /// Create a pool with the given workload config.
     pub async fn with_config(config: WorkloadConfig) -> Result<Self> {
         let adapters = WgpuDevice::enumerate_adapters().await;
         let mut devices = Vec::new();
@@ -475,18 +492,22 @@ impl MultiDevicePool {
         })
     }
 
+    /// Number of devices in the pool.
     pub fn device_count(&self) -> usize {
         self.inner.devices.len()
     }
 
+    /// Device metadata for all devices.
     pub fn devices(&self) -> &[DeviceInfo] {
         &self.inner.info
     }
 
+    /// Acquire a device matching the requirements.
     pub async fn acquire(&self, requirements: &DeviceRequirements) -> Result<DeviceLease> {
         self.acquire_with_quota(requirements, None).await
     }
 
+    /// Acquire with an optional resource quota.
     pub async fn acquire_with_quota(
         &self,
         requirements: &DeviceRequirements,
@@ -533,14 +554,17 @@ impl MultiDevicePool {
         })
     }
 
+    /// Acquire any available device.
     pub async fn acquire_any(&self) -> Result<DeviceLease> {
         self.acquire(&DeviceRequirements::new()).await
     }
 
+    /// Get device by index.
     pub fn device(&self, index: usize) -> Option<Arc<WgpuDevice>> {
         self.inner.devices.get(index).cloned()
     }
 
+    /// Execute a function on a device matching requirements.
     pub async fn execute<F, T>(&self, requirements: &DeviceRequirements, f: F) -> Result<T>
     where
         F: FnOnce(Arc<WgpuDevice>) -> Result<T> + Send + 'static,
@@ -554,6 +578,7 @@ impl MultiDevicePool {
             .map_err(|e| BarracudaError::device(format!("Task error: {e}")))?
     }
 
+    /// Human-readable pool summary.
     pub fn summary(&self) -> String {
         let total_vram: u64 = self.inner.info.iter().map(|d| d.vram_bytes).sum();
         let allocated_vram: u64 = self.inner.info.iter().map(|d| d.allocated_bytes()).sum();
@@ -590,6 +615,7 @@ impl MultiDevicePool {
         )
     }
 
+    /// Per-device status strings for diagnostics.
     pub fn device_status(&self) -> Vec<String> {
         self.inner
             .info

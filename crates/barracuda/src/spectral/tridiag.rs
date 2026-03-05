@@ -193,7 +193,6 @@ fn inverse_iteration_tridiag(diagonal: &[f64], off_diag: &[f64], lambda: f64) ->
     x
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

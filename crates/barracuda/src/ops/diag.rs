@@ -38,18 +38,23 @@ struct DiagParams {
     _pad: u32,
 }
 
+/// Diagonal extract or create operation.
 pub struct Diag {
     input: Tensor,
     mode: DiagMode,
 }
 
+/// Mode for diagonal operation.
 #[derive(Debug, Clone, Copy)]
 pub enum DiagMode {
-    Extract, // Matrix → Vector (extract diagonal)
-    Create,  // Vector → Matrix (create diagonal matrix)
+    /// Extract diagonal from matrix to vector.
+    Extract,
+    /// Create diagonal matrix from vector.
+    Create,
 }
 
 impl Diag {
+    /// Create a new diagonal operation.
     pub fn new(input: Tensor, mode: DiagMode) -> Result<Self> {
         let shape = input.shape();
 
@@ -89,6 +94,7 @@ impl Diag {
         &SHADER_F32
     }
 
+    /// Execute the diagonal operation and return the output tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -136,7 +142,6 @@ impl Diag {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

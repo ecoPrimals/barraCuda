@@ -34,6 +34,7 @@ pub struct Hardtanh {
 }
 
 impl Hardtanh {
+    /// Creates a Hardtanh operation for the given input tensor.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }

@@ -14,6 +14,7 @@ use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
+/// WGSL shader for moving window mean/variance/min/max (f32, downcast from f64).
 pub static WGSL_MOVING_WINDOW_STATS: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
         "../shaders/stats/moving_window_f64.wgsl"
@@ -32,18 +33,23 @@ struct MovingWindowParams {
 /// Result of a moving window statistics computation.
 #[derive(Debug, Clone)]
 pub struct MovingWindowResult {
+    /// Mean per window.
     pub mean: Vec<f32>,
+    /// Variance per window.
     pub variance: Vec<f32>,
+    /// Minimum per window.
     pub min: Vec<f32>,
+    /// Maximum per window.
     pub max: Vec<f32>,
 }
 
-/// GPU-accelerated moving window statistics.
+/// GPU-accelerated moving window statistics (mean, variance, min, max).
 pub struct MovingWindowStats {
     device: Arc<WgpuDevice>,
 }
 
 impl MovingWindowStats {
+    /// Create a moving window stats instance for the given device.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self { device }
     }
@@ -273,7 +279,6 @@ impl MovingWindowStats {
         })
     }
 
-    #[expect(clippy::unwrap_used, reason = "suppressed")]
     #[cfg(test)]
     fn compute_cpu(input: &[f32], window_size: usize) -> MovingWindowResult {
         let n_out = input.len() - window_size + 1;
@@ -308,7 +313,6 @@ impl MovingWindowStats {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

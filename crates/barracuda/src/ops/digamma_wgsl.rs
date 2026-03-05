@@ -18,6 +18,7 @@ pub struct Digamma {
 }
 
 impl Digamma {
+    /// Create digamma operation for the given input tensor.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -26,6 +27,7 @@ impl Digamma {
         include_str!("../shaders/special/digamma.wgsl")
     }
 
+    /// Execute digamma ψ(x) on the input.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -161,7 +163,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

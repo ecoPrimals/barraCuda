@@ -16,6 +16,7 @@ use wgpu::util::DeviceExt;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 
+/// WGSL source for swarm NN forward pass (f32).
 pub const WGSL_SWARM_NN_FORWARD: &str = include_str!("../../shaders/bio/swarm_nn_forward.wgsl");
 
 /// f64 version for universal math library portability.
@@ -30,16 +31,25 @@ pub static WGSL_SWARM_NN_SCORES: std::sync::LazyLock<String> = std::sync::LazyLo
     crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(WGSL_SWARM_NN_SCORES_F64)
 });
 
+/// Parameters for swarm NN forward pass.
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct SwarmNnParams {
+    /// Number of neural network controllers
     pub n_controllers: u32,
+    /// Number of evaluations per controller
     pub n_evals: u32,
+    /// Input dimension
     pub input_dim: u32,
+    /// Hidden layer dimension
     pub hidden_dim: u32,
+    /// Output dimension
     pub output_dim: u32,
+    /// Padding for alignment
     pub _pad0: u32,
+    /// Padding for alignment
     pub _pad1: u32,
+    /// Padding for alignment
     pub _pad2: u32,
 }
 
@@ -51,6 +61,7 @@ pub struct SwarmNnGpu {
 }
 
 impl SwarmNnGpu {
+    /// Create a new swarm NN GPU kernel.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 
@@ -188,7 +199,6 @@ impl SwarmNnGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

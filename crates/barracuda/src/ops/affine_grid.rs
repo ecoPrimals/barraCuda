@@ -26,6 +26,7 @@ struct AffineGridParams {
     align_corners: u32,
 }
 
+/// Affine grid generator for spatial transformer networks.
 pub struct AffineGrid {
     theta: Tensor,
     size: (usize, usize),
@@ -33,6 +34,7 @@ pub struct AffineGrid {
 }
 
 impl AffineGrid {
+    /// Create affine grid. Theta must be [B, 2, 3] affine matrices.
     pub fn new(theta: Tensor, size: (usize, usize), align_corners: bool) -> Result<Self> {
         // Validate theta shape: must be [B, 2, 3] for affine matrices
         let shape = theta.shape();
@@ -70,6 +72,7 @@ impl AffineGrid {
         &SHADER
     }
 
+    /// Execute affine grid generation on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.theta.device();
         let shape = self.theta.shape();
@@ -218,7 +221,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -17,12 +17,14 @@ struct Conv2DParams {
     kernel_height: u32,
 }
 
+/// 2D convolution: output[h,w] = sum over kernel of input * kernel.
 pub struct Conv2D {
     input: Tensor,
     kernel: Tensor,
 }
 
 impl Conv2D {
+    /// Create a 2D convolution. Input [H,W], kernel [Kh,Kw].
     pub fn new(input: Tensor, kernel: Tensor) -> Self {
         Self { input, kernel }
     }
@@ -34,6 +36,7 @@ impl Conv2D {
         SHADER.as_str()
     }
 
+    /// Execute 2D convolution on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 
@@ -186,12 +189,12 @@ impl Conv2D {
 }
 
 impl Tensor {
+    /// Apply 2D convolution with the given kernel.
     pub fn conv2d(self, kernel: &Self) -> Result<Self> {
         Conv2D::new(self, kernel.clone()).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

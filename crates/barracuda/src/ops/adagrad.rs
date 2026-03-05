@@ -58,6 +58,7 @@ struct AdaGradParams {
     _padding: u32,
 }
 
+/// AdaGrad optimizer — per-parameter adaptive learning rates.
 pub struct AdaGrad {
     weights: Tensor,
     gradients: Tensor,
@@ -66,6 +67,7 @@ pub struct AdaGrad {
 }
 
 impl AdaGrad {
+    /// Create AdaGrad optimizer. Good for sparse gradients.
     pub fn new(
         weights: Tensor,
         gradients: Tensor,
@@ -115,6 +117,7 @@ impl AdaGrad {
         std::sync::LazyLock::force(&SHADER).as_str()
     }
 
+    /// Execute AdaGrad step. Returns (updated_weights, accumulated).
     pub fn execute(self) -> Result<(Tensor, Tensor)> {
         let device = self.weights.device();
         let size = self.weights.shape().iter().product::<usize>();
@@ -367,7 +370,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

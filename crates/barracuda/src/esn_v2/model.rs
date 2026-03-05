@@ -14,19 +14,25 @@ use super::npu::{quantize_affine_i8_f64, NpuReadoutWeights};
 /// Serializable ESN weight snapshot for cross-run / cross-device deployment.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ExportedWeights {
+    /// Input-to-reservoir weights (reservoir_size × input_size).
     pub w_in: Vec<f32>,
+    /// Reservoir recurrent weights (reservoir_size × reservoir_size).
     pub w_res: Vec<f32>,
+    /// Readout weights (reservoir_size × output_size), None if untrained.
     pub w_out: Option<Vec<f32>>,
-    /// Metadata for cross-device/cross-run reconstruction
+    /// Input dimension for cross-device reconstruction.
     #[serde(default)]
     pub input_size: usize,
+    /// Reservoir size for cross-device reconstruction.
     #[serde(default)]
     pub reservoir_size: usize,
+    /// Output dimension for cross-device reconstruction.
     #[serde(default)]
     pub output_size: usize,
+    /// Leak rate for cross-device reconstruction.
     #[serde(default)]
     pub leak_rate: f32,
-    /// Optional head labels for multi-head ESN
+    /// Optional head labels for multi-head ESN.
     #[serde(default)]
     pub head_labels: Vec<String>,
 }
@@ -564,7 +570,6 @@ impl ESN {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "model_tests.rs"]
 mod tests;

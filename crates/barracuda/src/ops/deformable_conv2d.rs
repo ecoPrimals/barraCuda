@@ -34,6 +34,7 @@ struct DeformableConv2DParams {
     deform_groups: u32,
 }
 
+/// Deformable 2D convolution with learnable sampling offsets.
 pub struct DeformableConv2D {
     input: Tensor,
     offset: Tensor,
@@ -47,6 +48,7 @@ pub struct DeformableConv2D {
 }
 
 impl DeformableConv2D {
+    /// Creates a new deformable conv2d. Input must be 4D [B, C, H, W].
     pub fn new(
         input: Tensor,
         offset: Tensor,
@@ -94,10 +96,11 @@ impl DeformableConv2D {
                     "../shaders/conv/deformable_conv2d_f64.wgsl"
                 ))
             });
-            SHADER.as_str()
+            std::sync::LazyLock::force(&SHADER).as_str()
         }
     }
 
+    /// Executes deformable conv2d and returns the output tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -333,7 +336,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

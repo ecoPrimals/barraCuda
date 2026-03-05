@@ -59,8 +59,8 @@ impl LaguerreF64 {
         self.laguerre(x, n, 0.0)
     }
 
-    #[expect(dead_code, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn laguerre_cpu(&self, x: &[f64], n: u32, alpha: f64) -> Vec<f64> {
         x.iter()
             .map(|&xi| Self::laguerre_scalar(n, alpha, xi))
@@ -152,7 +152,6 @@ impl LaguerreF64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

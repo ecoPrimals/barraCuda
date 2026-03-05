@@ -8,11 +8,13 @@ use crate::device::DeviceCapabilities;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Modified Bessel function of the third kind, order 0: K₀(x).
 pub struct BesselK0 {
     input: Tensor,
 }
 
 impl BesselK0 {
+    /// Create a Bessel K0 operation.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -21,6 +23,7 @@ impl BesselK0 {
         include_str!("../shaders/special/bessel_k0.wgsl")
     }
 
+    /// Execute Bessel K0 on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -149,12 +152,12 @@ impl BesselK0 {
 }
 
 impl Tensor {
+    /// Compute element-wise K₀(x). Returns infinity for x ≤ 0.
     pub fn bessel_k0(self) -> Result<Self> {
         BesselK0::new(self).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

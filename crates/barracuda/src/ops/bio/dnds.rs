@@ -33,6 +33,7 @@ pub struct DnDsBatchF64 {
 }
 
 impl DnDsBatchF64 {
+    /// Create dN/dS batch calculator.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         let module = device.compile_shader_f64(SHADER, Some("dnds_batch_f64"));
         let bgl = super::snp::make_bgl(&device, &[true, true, true, false, false, false]);
@@ -45,6 +46,7 @@ impl DnDsBatchF64 {
         })
     }
 
+    /// Dispatch dN/dS computation for codon sequence pairs.
     pub fn dispatch(
         &self,
         n_pairs: u32,

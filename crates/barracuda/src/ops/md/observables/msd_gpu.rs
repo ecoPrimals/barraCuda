@@ -31,6 +31,7 @@ pub struct MsdGpu {
 }
 
 impl MsdGpu {
+    /// Creates a new GPU MSD calculator for the given WGPU device.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         let module = device.compile_shader_f64(SHADER, Some("msd_f64"));
 
@@ -198,7 +199,6 @@ fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

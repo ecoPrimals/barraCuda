@@ -17,6 +17,7 @@ struct BoxIoUParams {
     _padding: u32,
 }
 
+/// Intersection over Union between pairs of bounding boxes.
 pub struct BoxIoU {
     boxes_a: Tensor,
     boxes_b: Tensor,
@@ -112,7 +113,6 @@ impl BoxIoU {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

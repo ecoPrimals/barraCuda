@@ -22,12 +22,14 @@ use crate::device::DeviceCapabilities;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Spatial transformer sampling: sample input at grid coordinates.
 pub struct GridSample {
     input: Tensor,
     grid: Tensor,
 }
 
 impl GridSample {
+    /// Create a grid sample operation. Input [B,C,H,W], grid [B,H_out,W_out,2].
     pub fn new(input: Tensor, grid: Tensor) -> Self {
         Self { input, grid }
     }
@@ -41,6 +43,7 @@ impl GridSample {
         &SHADER
     }
 
+    /// Execute grid sampling on GPU with bilinear interpolation.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -215,12 +218,12 @@ impl GridSample {
 }
 
 impl Tensor {
+    /// Sample this tensor at grid coordinates. Uses bilinear interpolation.
     pub fn grid_sample_wgsl(self, grid: Tensor) -> Result<Self> {
         GridSample::new(self, grid).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

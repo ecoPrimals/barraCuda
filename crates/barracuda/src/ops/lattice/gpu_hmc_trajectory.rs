@@ -25,16 +25,27 @@ use super::hmc_force_su3::Su3HmcForce;
 /// Configuration for a GPU HMC trajectory.
 #[derive(Clone, Debug)]
 pub struct GpuHmcConfig {
+    /// Temporal lattice extent.
     pub nt: u32,
+    /// Spatial lattice extent (x).
     pub nx: u32,
+    /// Spatial lattice extent (y).
     pub ny: u32,
+    /// Spatial lattice extent (z).
     pub nz: u32,
+    /// Gauge coupling β = 6/g².
     pub beta: f64,
+    /// Staggered fermion mass.
     pub mass: f64,
+    /// Number of molecular dynamics steps per trajectory.
     pub n_md_steps: usize,
+    /// MD step size (leapfrog dt).
     pub dt: f64,
+    /// Conjugate gradient tolerance for pseudofermion inversion.
     pub cg_tol: f64,
+    /// Maximum CG iterations.
     pub cg_max_iter: usize,
+    /// Number of fermion flavors / 4 (e.g. 2 for 8 flavors).
     pub n_flavors_over_4: usize,
 }
 
@@ -59,35 +70,58 @@ impl Default for GpuHmcConfig {
 /// Result of a GPU HMC trajectory.
 #[derive(Clone, Debug)]
 pub struct GpuHmcResult {
+    /// Whether the Metropolis step accepted the new configuration.
     pub accepted: bool,
+    /// Change in Hamiltonian H_new − H_old.
     pub delta_h: f64,
+    /// Wilson gauge action S_G = β × (sum of plaquettes).
     pub gauge_action: f64,
+    /// Fermion action S_F = Σ φ†(D†D)⁻¹φ.
     pub fermion_action: f64,
+    /// Kinetic energy of link momenta.
     pub kinetic_energy: f64,
+    /// Total CG iterations across the trajectory.
     pub total_cg_iterations: usize,
 }
 
 /// GPU-resident buffer set for the full HMC trajectory.
 pub struct GpuHmcBuffers {
+    /// SU(3) gauge links (4 directions × volume).
     pub links: wgpu::Buffer,
+    /// Backup of links for Metropolis reject rollback.
     pub links_backup: wgpu::Buffer,
+    /// Canonical momenta conjugate to links.
     pub momenta: wgpu::Buffer,
+    /// Gauge force from Wilson plaquettes.
     pub gauge_force: wgpu::Buffer,
+    /// Fermion force from pseudofermion determinant.
     pub fermion_force: wgpu::Buffer,
+    /// Gauge + fermion force (accumulated).
     pub total_force: wgpu::Buffer,
+    /// Wilson action per site (for reduction).
     pub action_per_site: wgpu::Buffer,
+    /// Kinetic energy per link (for reduction).
     pub energy_per_link: wgpu::Buffer,
+    /// RNG seeds for link momenta generation.
     pub rng_links: wgpu::Buffer,
+    /// RNG seeds for pseudofermion heatbath.
     pub rng_sites: wgpu::Buffer,
+    /// Neighbor indices (staggered Dirac).
     pub nbr: wgpu::Buffer,
+    /// Staggered phases.
     pub phases: wgpu::Buffer,
+    /// Pseudofermion fields φ = (D†)⁻¹η.
     pub phi_fields: Vec<wgpu::Buffer>,
+    /// Gaussian noise η for heatbath.
     pub eta: wgpu::Buffer,
+    /// Temporary buffer for Dirac application.
     pub dirac_tmp: wgpu::Buffer,
+    /// Conjugate gradient solver buffers.
     pub cg: GpuCgBuffers,
 }
 
 impl GpuHmcBuffers {
+    /// Allocate all GPU buffers for the given HMC config.
     pub fn new(device: &WgpuDevice, config: &GpuHmcConfig) -> Result<Self> {
         use crate::device::driver_profile::GpuDriverProfile;
 
@@ -207,6 +241,7 @@ pub struct GpuHmcTrajectory {
 }
 
 impl GpuHmcTrajectory {
+    /// Create a new HMC trajectory engine with default RNG seed.
     pub fn new(device: Arc<WgpuDevice>, config: GpuHmcConfig) -> Result<Self> {
         Self::with_seed(device, config, 42)
     }
@@ -711,6 +746,7 @@ pub struct HostRng {
 }
 
 impl HostRng {
+    /// Create a new RNG with the given seed.
     pub fn new(seed: u64) -> Self {
         Self { state: seed.max(1) }
     }
@@ -747,7 +783,6 @@ fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "gpu_hmc_trajectory_tests.rs"]
 mod tests;

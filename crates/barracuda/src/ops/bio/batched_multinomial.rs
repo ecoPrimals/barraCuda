@@ -18,7 +18,7 @@ use wgpu::util::DeviceExt;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
-use crate::error::Result;
+use crate::error::{BarracudaError, Result};
 
 /// WGSL shader source for batched multinomial sampling (f64 probabilities).
 pub const WGSL_BATCHED_MULTINOMIAL_F64: &str =
@@ -102,8 +102,18 @@ impl BatchedMultinomialGpu {
                 })
                 .collect(),
             None => {
-                let s = seeds.expect("seeds required when config.seed is None");
-                assert_eq!(s.len(), n_reps as usize * 4);
+                let s = seeds.ok_or_else(|| BarracudaError::InvalidInput {
+                    message: "seeds required when config.seed is None".to_string(),
+                })?;
+                if s.len() != n_reps as usize * 4 {
+                    return Err(BarracudaError::InvalidInput {
+                        message: format!(
+                            "seeds length {} must equal n_reps * 4 = {}",
+                            s.len(),
+                            n_reps as usize * 4
+                        ),
+                    });
+                }
                 s.clone()
             }
         };
@@ -185,7 +195,6 @@ pub fn multinomial_sample_cpu(
     counts
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

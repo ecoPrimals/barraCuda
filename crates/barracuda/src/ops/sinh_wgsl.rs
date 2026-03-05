@@ -13,11 +13,13 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Element-wise hyperbolic sine.
 pub struct Sinh {
     input: Tensor,
 }
 
 impl Sinh {
+    /// Create a sinh operation.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -31,6 +33,7 @@ impl Sinh {
         &SHADER
     }
 
+    /// Execute hyperbolic sine on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -162,12 +165,12 @@ impl Sinh {
 }
 
 impl Tensor {
+    /// Compute element-wise hyperbolic sine.
     pub fn sinh(self) -> Result<Self> {
         Sinh::new(self).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

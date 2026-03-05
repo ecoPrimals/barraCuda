@@ -12,12 +12,14 @@ const SHADER_F64: &str = include_str!("../shaders/misc/gt_f64.wgsl");
 static SHADER_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
 
+/// Element-wise greater-than comparison: output = lhs > rhs.
 pub struct Gt {
     lhs: Tensor,
     rhs: Tensor,
 }
 
 impl Gt {
+    /// Create a greater-than comparison operation.
     pub fn new(lhs: Tensor, rhs: Tensor) -> Self {
         Self { lhs, rhs }
     }
@@ -25,6 +27,7 @@ impl Gt {
         &SHADER_F32
     }
 
+    /// Execute greater-than comparison on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.lhs.device();
         let size = self.lhs.len();
@@ -136,12 +139,12 @@ impl Gt {
 }
 
 impl Tensor {
+    /// Element-wise greater-than comparison. Returns 1.0 where true, 0.0 where false.
     pub fn gt(self, other: &Self) -> Result<Self> {
         Gt::new(self, other.clone()).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -30,6 +30,7 @@ struct Conv1DParams {
     out_length: u32,
 }
 
+/// 1D convolution for sequences (time-series, NLP, audio).
 pub struct Conv1D {
     input: Tensor,
     weight: Tensor,
@@ -40,6 +41,7 @@ pub struct Conv1D {
 }
 
 impl Conv1D {
+    /// Creates a new Conv1D. Input shape: [B, C_in, L]; weight: [C_out, C_in, K].
     pub fn new(
         input: Tensor,
         weight: Tensor,
@@ -62,9 +64,10 @@ impl Conv1D {
         static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
             crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(SHADER_F64)
         });
-        SHADER.as_str()
+        std::sync::LazyLock::force(&SHADER).as_str()
     }
 
+    /// Executes 1D convolution and returns the output tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -205,7 +208,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

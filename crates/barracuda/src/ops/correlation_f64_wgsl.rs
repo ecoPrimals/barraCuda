@@ -109,8 +109,8 @@ impl CorrelationF64 {
         Ok(result[0])
     }
 
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn correlation_cpu(x: &[f64], y: &[f64]) -> f64 {
         let n = x.len();
         if n == 0 {
@@ -143,7 +143,6 @@ impl CorrelationF64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

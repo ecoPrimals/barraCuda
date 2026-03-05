@@ -42,13 +42,13 @@ impl Default for PenaltyConfig {
 }
 
 impl PenaltyConfig {
-    /// Create a new config with custom minimum penalty.
+    /// Set custom minimum penalty value.
     pub fn with_min(mut self, min: f64) -> Self {
         self.min_penalty = min;
         self
     }
 
-    /// Create a new config with custom safety margin.
+    /// Set custom safety margin multiplier.
     pub fn with_margin(mut self, margin: f64) -> Self {
         self.safety_margin = margin;
         self
@@ -62,10 +62,13 @@ pub struct AdaptivePenalty {
     pub raw_penalty: f64,
     /// Transformed penalty (log if use_log)
     pub penalty: f64,
-    /// Statistics about the feasible values
+    /// Maximum objective value among feasible points
     pub feasible_max: f64,
+    /// Minimum objective value among feasible points
     pub feasible_min: f64,
+    /// Mean objective value among feasible points
     pub feasible_mean: f64,
+    /// Number of feasible points used
     pub n_feasible: usize,
 }
 
@@ -291,7 +294,6 @@ where
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

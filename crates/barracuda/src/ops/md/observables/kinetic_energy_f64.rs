@@ -32,6 +32,7 @@ pub struct KineticEnergyF64 {
 }
 
 impl KineticEnergyF64 {
+    /// Creates a new kinetic energy calculator for the given WGPU device.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -111,7 +112,6 @@ impl KineticEnergyF64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

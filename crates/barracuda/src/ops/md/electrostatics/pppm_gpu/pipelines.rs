@@ -4,7 +4,7 @@
 //! Extracted from pppm_layouts for pppm_gpu modularity.
 //! Contains all bind group layout definitions and compute pipeline creation.
 
-/// PPPM bind group layout helpers (for creating individual layouts)
+/// PPPM bind group layout helpers for creating individual bind group layouts.
 pub struct PppmLayouts;
 
 impl PppmLayouts {
@@ -34,6 +34,7 @@ impl PppmLayouts {
         }
     }
 
+    /// B-spline charge assignment bind group layout.
     pub fn bspline(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("pppm_bspline_bgl"),
@@ -47,6 +48,7 @@ impl PppmLayouts {
         })
     }
 
+    /// Charge spreading to grid bind group layout.
     pub fn charge_spread(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("pppm_charge_spread_bgl"),
@@ -60,6 +62,7 @@ impl PppmLayouts {
         })
     }
 
+    /// Greens function application bind group layout.
     pub fn greens_apply(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("pppm_greens_apply_bgl"),
@@ -74,6 +77,7 @@ impl PppmLayouts {
         })
     }
 
+    /// Force interpolation from grid bind group layout.
     pub fn force_interp(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("pppm_force_interp_bgl"),
@@ -89,6 +93,7 @@ impl PppmLayouts {
         })
     }
 
+    /// Real-space erfc forces bind group layout.
     pub fn erfc_forces(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("pppm_erfc_forces_bgl"),
@@ -103,16 +108,22 @@ impl PppmLayouts {
     }
 }
 
-/// PPPM bind group layout collection
+/// PPPM bind group layout collection for all pipeline stages.
 pub struct PppmBindGroupLayouts {
+    /// B-spline charge assignment layout
     pub bspline: wgpu::BindGroupLayout,
+    /// Charge spreading layout
     pub charge_spread: wgpu::BindGroupLayout,
+    /// Greens function application layout
     pub greens_apply: wgpu::BindGroupLayout,
+    /// Force interpolation layout
     pub force_interp: wgpu::BindGroupLayout,
+    /// Real-space erfc forces layout
     pub erfc_forces: wgpu::BindGroupLayout,
 }
 
 impl PppmBindGroupLayouts {
+    /// Create all PPPM bind group layouts for a device.
     pub fn new(device: &wgpu::Device) -> Self {
         Self {
             bspline: PppmLayouts::bspline(device),
@@ -124,17 +135,24 @@ impl PppmBindGroupLayouts {
     }
 }
 
-/// PPPM compute pipeline collection
+/// PPPM compute pipeline collection for all electrostatics stages.
 pub struct PppmPipelines {
+    /// B-spline charge assignment pipeline
     pub bspline: wgpu::ComputePipeline,
+    /// Charge spreading pipeline
     pub charge_spread: wgpu::ComputePipeline,
+    /// Greens function application pipeline
     pub greens_apply: wgpu::ComputePipeline,
+    /// Force interpolation pipeline
     pub force_interp: wgpu::ComputePipeline,
+    /// Real-space erfc forces pipeline
     pub erfc_forces: wgpu::ComputePipeline,
+    /// Self-energy correction pipeline
     pub self_energy: wgpu::ComputePipeline,
 }
 
 impl PppmPipelines {
+    /// Create all PPPM compute pipelines from shader modules.
     pub fn new(
         device: &wgpu::Device,
         layouts: &PppmBindGroupLayouts,

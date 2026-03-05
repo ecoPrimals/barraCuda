@@ -99,7 +99,6 @@ pub async fn probe_f64_exp_capable(device: &WgpuDevice) -> bool {
     capable
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

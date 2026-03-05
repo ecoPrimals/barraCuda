@@ -60,22 +60,32 @@ struct XpayParams {
 /// Result of a GPU CG solve.
 #[derive(Clone, Debug)]
 pub struct GpuCgResult {
+    /// Whether the solver converged
     pub converged: bool,
+    /// Number of iterations performed
     pub iterations: usize,
+    /// Final residual squared
     pub residual_sq: f64,
 }
 
 /// GPU-resident buffers for the CG solver workspace.
 pub struct GpuCgBuffers {
+    /// Solution vector
     pub x: wgpu::Buffer,
+    /// Residual vector
     pub r: wgpu::Buffer,
+    /// Search direction
     pub p: wgpu::Buffer,
+    /// A·p workspace
     pub ap: wgpu::Buffer,
+    /// Temporary for Dirac application
     pub tmp: wgpu::Buffer,
+    /// Dot product reduction output
     pub dot_out: wgpu::Buffer,
 }
 
 impl GpuCgBuffers {
+    /// Create GPU buffers for the given lattice volume.
     pub fn new(device: &WgpuDevice, volume: usize) -> Self {
         let field_bytes = (volume * 6 * std::mem::size_of::<f64>()) as u64;
         let dot_bytes = (volume * 3 * std::mem::size_of::<f64>()) as u64;
@@ -124,6 +134,7 @@ pub struct GpuCgSolver {
 }
 
 impl GpuCgSolver {
+    /// Create a GPU CG solver for the given lattice volume.
     pub fn new(device: Arc<WgpuDevice>, volume: u32) -> Result<Self> {
         let dirac = StaggeredDirac::new(device.clone(), volume)?;
         let n_f64 = volume * 6; // 3 color × 2 (re/im)
@@ -482,6 +493,7 @@ impl GpuCgSolver {
         Ok(())
     }
 
+    /// Lattice volume (number of sites).
     pub fn volume(&self) -> u32 {
         self.volume
     }
@@ -513,7 +525,6 @@ fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

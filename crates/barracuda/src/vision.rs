@@ -36,35 +36,59 @@ use crate::error::{BarracudaError, Result as BarracudaResult};
 #[derive(Debug, Clone)]
 pub enum Transform {
     /// Normalize with mean and std (per-channel) - Future: use ops::normalize
-    Normalize { mean: [f32; 3], std: [f32; 3] },
+    Normalize {
+        /// Per-channel mean (e.g. [0.485, 0.456, 0.406] for ImageNet)
+        mean: [f32; 3],
+        /// Per-channel standard deviation
+        std: [f32; 3],
+    },
 
     /// Resize to target dimensions - Future: use ops::interpolate
-    Resize { width: usize, height: usize },
+    Resize {
+        /// Target width in pixels
+        width: usize,
+        /// Target height in pixels
+        height: usize,
+    },
 
     /// Random crop (for data augmentation)
-    RandomCrop { size: usize },
+    RandomCrop {
+        /// Crop size (square side length)
+        size: usize,
+    },
 
     /// Random horizontal flip
     RandomFlip,
 
     /// Cutmix augmentation (training only) - See ops::cutmix
-    Cutmix { alpha: f32 },
+    Cutmix {
+        /// Beta distribution parameter for mix ratio
+        alpha: f32,
+    },
 
     /// Mixup augmentation (training only) - See ops::mixup
-    Mixup { alpha: f32 },
+    Mixup {
+        /// Beta distribution parameter for mix ratio
+        alpha: f32,
+    },
 
     /// Padding (reflect, replicate, constant) - Future: use ops::pad
     Pad {
-        padding: [usize; 4], // [top, bottom, left, right]
+        /// Padding amounts [top, bottom, left, right]
+        padding: [usize; 4],
+        /// Border fill mode
         mode: PadMode,
     },
 }
 
-/// Padding modes
+/// Padding modes for image borders.
 #[derive(Debug, Clone, Copy)]
 pub enum PadMode {
+    /// Fill with constant value
     Constant(f32),
+    /// Reflect pixels at boundary
     Reflect,
+    /// Replicate edge pixels
     Replicate,
 }
 
@@ -235,15 +259,19 @@ impl VisionPipeline {
 
 /// Image batch for training
 pub struct ImageBatch {
-    /// Batch of images (N×H×W×C)
+    /// Batch of images (N×H×W×C), each image flattened as H×W×C
     pub images: Vec<Vec<f32>>,
 
-    /// Batch of labels
+    /// Batch of labels (one per image)
     pub labels: Vec<f32>,
 
-    /// Image dimensions
+    /// Image height in pixels
     pub height: usize,
+
+    /// Image width in pixels
     pub width: usize,
+
+    /// Number of channels (e.g. 3 for RGB)
     pub channels: usize,
 }
 
@@ -295,7 +323,6 @@ impl ImageBatch {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

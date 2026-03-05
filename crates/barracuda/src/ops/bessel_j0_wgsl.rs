@@ -8,11 +8,13 @@ use crate::device::DeviceCapabilities;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Bessel function of the first kind, order 0: J₀(x).
 pub struct BesselJ0 {
     input: Tensor,
 }
 
 impl BesselJ0 {
+    /// Create a Bessel J0 operation.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -21,6 +23,7 @@ impl BesselJ0 {
         include_str!("../shaders/special/bessel_j0.wgsl")
     }
 
+    /// Execute Bessel J0 on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -149,12 +152,12 @@ impl BesselJ0 {
 }
 
 impl Tensor {
+    /// Compute element-wise J₀(x). J₀(0) = 1.
     pub fn bessel_j0(self) -> Result<Self> {
         BesselJ0::new(self).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

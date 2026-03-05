@@ -238,7 +238,6 @@ pub fn assoc_legendre_batch(n: usize, m: i32, x: &[f64]) -> Vec<f64> {
     x.iter().map(|&xi| assoc_legendre(n, m, xi)).collect()
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -27,10 +27,13 @@
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
+/// Distance metric for PBC calculations.
 #[derive(Clone, Copy)]
 pub enum DistanceMetric {
-    Euclidean = 0, // L2 norm
-    Manhattan = 1, // L1 norm
+    /// L2 (Euclidean) norm.
+    Euclidean = 0,
+    /// L1 (Manhattan) norm.
+    Manhattan = 1,
 }
 
 /// PBC Distance Calculation Operation
@@ -313,7 +316,6 @@ impl PbcDistance {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

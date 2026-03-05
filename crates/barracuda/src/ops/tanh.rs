@@ -26,6 +26,7 @@ pub struct Tanh {
 }
 
 impl Tanh {
+    /// Creates a Tanh operation for the given input tensor.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }

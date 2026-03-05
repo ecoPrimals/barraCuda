@@ -9,6 +9,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
+/// Complex exponential: exp(z) = exp(re)·[cos(im) + i·sin(im)] (Euler's formula).
 pub struct ComplexExp {
     input: Tensor,
     pipeline: wgpu::ComputePipeline,
@@ -16,6 +17,7 @@ pub struct ComplexExp {
 }
 
 impl ComplexExp {
+    /// Create complex exp operation. Input must have last dim = 2 (re, im).
     pub fn new(input: Tensor) -> Result<Self> {
         let shape = input.shape();
         if shape.last() != Some(&2) {
@@ -98,6 +100,7 @@ impl ComplexExp {
         })
     }
 
+    /// Execute complex exponential on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let num_elements = self.input.len();
@@ -168,7 +171,6 @@ impl ComplexExp {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -35,10 +35,10 @@ cargo doc --workspace --no-deps
 |------|---------|
 | `crates/barracuda/` | Umbrella crate — all math, GPU ops, compute fabric |
 | `crates/barracuda-core/` | Primal lifecycle, IPC, tarpc, UniBin CLI |
-| `crates/barracuda/src/shaders/` | 767 WGSL shaders (see `shaders/README.md`) |
-| `crates/barracuda/examples/` | 4 runnable examples |
-| `crates/barracuda/tests/` | 60 integration test suites |
-| `crates/barracuda/src/bin/` | 4 binaries (validate_gpu, bench_*) |
+| `crates/barracuda/src/shaders/` | 692 WGSL shaders (see `shaders/README.md`) |
+| `crates/barracuda/examples/` | Runnable examples |
+| `crates/barracuda/tests/` | 62 integration test suites |
+| `crates/barracuda/src/bin/` | Binaries (validate_gpu, bench_*) |
 | `crates/barracuda-core/src/bin/` | `barracuda` UniBin CLI binary |
 | `specs/` | Architecture specs and design documents |
 
@@ -230,7 +230,7 @@ WGPU_BACKEND=vulkan WGPU_ADAPTER_NAME=llvmpipe cargo test -p barracuda
 - `#![deny(unsafe_code)]` in barracuda-core — minimize unsafe across the codebase
 - `cargo fmt` before committing
 - `cargo clippy --workspace -- -D warnings` must be clean
-- Suppressions: `#[expect(clippy::lint, reason = "...")]` — never `#[allow]`
+- Suppressions: `#[expect(clippy::lint, reason = "...")]` — compile-time verified; `#[allow]` only when lint may or may not fire depending on context
 - No `anyhow` — use `thiserror` with `BarracudaError`
 - No `println!` in library code — use `tracing`
 - No `Arc<wgpu::Device>` / `Arc<wgpu::Queue>` — wgpu 28 types are `Clone`

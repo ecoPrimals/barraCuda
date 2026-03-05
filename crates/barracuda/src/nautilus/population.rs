@@ -8,15 +8,20 @@ use super::board::{Board, BoardConfig, ReservoirInput};
 /// Fitness record for a board.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FitnessRecord {
+    /// Index of the board in the population.
     pub board_idx: usize,
+    /// Pearson correlation fitness (0–1).
     pub pearson_r: f64,
 }
 
 /// Population of boards with fitness tracking.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Population {
+    /// Board individuals.
     pub boards: Vec<Board>,
+    /// Current generation number.
     pub generation: usize,
+    /// Fitness records (one per board).
     pub fitness: Vec<FitnessRecord>,
 }
 
@@ -106,7 +111,6 @@ impl Population {
 }
 
 #[cfg(test)]
-#[expect(clippy::expect_used, clippy::unwrap_used, reason = "suppressed")]
 mod tests {
     use super::*;
 

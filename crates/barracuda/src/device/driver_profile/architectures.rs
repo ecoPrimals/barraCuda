@@ -32,6 +32,7 @@ pub enum GpuArch {
     AppleM,
     /// Software rasterizer
     Software,
+    /// Unknown GPU architecture
     Unknown,
 }
 

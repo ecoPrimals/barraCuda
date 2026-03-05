@@ -56,6 +56,7 @@ struct HuberLossParams {
     _padding: u32,
 }
 
+/// Huber loss for robust regression (quadratic for small errors, linear for large).
 pub struct HuberLoss {
     predictions: Tensor,
     targets: Tensor,
@@ -67,6 +68,7 @@ impl HuberLoss {
         &SHADER_F32
     }
 
+    /// Execute Huber loss computation and return the result tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size = self.predictions.shape().iter().product::<usize>();
@@ -160,7 +162,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

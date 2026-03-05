@@ -31,7 +31,7 @@ struct QualityFilterParams {
     _pad: u32,
 }
 
-/// GPU-parallel quality trimming for FASTQ reads.
+/// GPU-parallel quality trimming for FASTQ reads (leading, trailing, sliding window).
 pub struct QualityFilterGpu {
     device: Arc<WgpuDevice>,
     pipeline: wgpu::ComputePipeline,
@@ -41,11 +41,17 @@ pub struct QualityFilterGpu {
 /// Configuration for quality filtering.
 #[derive(Debug, Clone)]
 pub struct QualityConfig {
+    /// Minimum Phred quality for leading trim.
     pub leading_min_quality: u32,
+    /// Minimum Phred quality for trailing trim.
     pub trailing_min_quality: u32,
+    /// Minimum average quality in sliding window.
     pub window_min_quality: u32,
+    /// Sliding window size.
     pub window_size: u32,
+    /// Minimum read length after trimming.
     pub min_length: u32,
+    /// Phred offset (33 for Sanger/Illumina 1.8+).
     pub phred_offset: u32,
 }
 
@@ -63,6 +69,7 @@ impl Default for QualityConfig {
 }
 
 impl QualityFilterGpu {
+    /// Create quality filter pipeline for the given device.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         let module = device.compile_shader_f64(SHADER, Some("quality_filter"));
         let bgl = super::snp::make_bgl(&device, &[true, true, true, false]);
@@ -76,6 +83,7 @@ impl QualityFilterGpu {
         })
     }
 
+    /// Dispatch quality filter kernel with given config and buffers.
     pub fn dispatch(
         &self,
         n_reads: u32,

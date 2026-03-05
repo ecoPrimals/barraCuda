@@ -14,7 +14,7 @@ const SHADER_F64: &str = include_str!("../shaders/misc/fill_f64.wgsl");
 static SHADER_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
 
-/// Meshgrid shader (expand coords to grid).
+/// Returns the WGSL meshgrid shader (expand coords to grid).
 pub fn wgsl_meshgrid() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
@@ -31,6 +31,7 @@ struct FillParams {
     _padding: [f32; 7],
 }
 
+/// Fill tensor with a constant value.
 pub struct Fill {
     shape: Vec<usize>,
     value: f32,
@@ -38,6 +39,7 @@ pub struct Fill {
 }
 
 impl Fill {
+    /// Creates a new fill operation with the given shape and value.
     pub fn new(shape: Vec<usize>, value: f32, device: Arc<WgpuDevice>) -> Self {
         Self {
             shape,
@@ -50,6 +52,7 @@ impl Fill {
         &SHADER_F32
     }
 
+    /// Executes the fill and returns a tensor of the given shape filled with the value.
     pub fn execute(self) -> Result<Tensor> {
         let size: usize = self.shape.iter().product();
 
@@ -157,7 +160,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

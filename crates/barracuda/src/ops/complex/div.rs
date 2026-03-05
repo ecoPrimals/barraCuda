@@ -7,6 +7,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
+/// Complex division: (a+bi)/(c+di) = (a+bi)(c-di)/(c²+d²).
 pub struct ComplexDiv {
     input_a: Tensor,
     input_b: Tensor,
@@ -15,6 +16,7 @@ pub struct ComplexDiv {
 }
 
 impl ComplexDiv {
+    /// Create complex division operation. Both inputs must have last dim = 2 and same shape.
     pub fn new(input_a: Tensor, input_b: Tensor) -> Result<Self> {
         if input_a.shape() != input_b.shape() {
             return Err(BarracudaError::Device(
@@ -115,6 +117,7 @@ impl ComplexDiv {
         })
     }
 
+    /// Execute complex division on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input_a.device();
         let num_elements = self.input_a.len();
@@ -185,7 +188,6 @@ impl ComplexDiv {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

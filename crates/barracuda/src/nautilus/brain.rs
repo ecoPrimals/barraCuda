@@ -16,23 +16,37 @@ fn obs_to_input(o: &BetaObservation) -> ReservoirInput {
     ])
 }
 
+/// Observation from an HMC trajectory used for brain training.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BetaObservation {
+    /// Gauge coupling β.
     pub beta: f64,
+    /// Average plaquette value.
     pub plaquette: f64,
+    /// Mean CG iterations per trajectory.
     pub cg_iters: f64,
+    /// Metropolis acceptance rate.
     pub acceptance: f64,
+    /// Mean |ΔH| (Hamiltonian drift).
     pub delta_h_abs: f64,
+    /// Quenched plaquette (if precomputed).
     pub quenched_plaq: Option<f64>,
+    /// Quenched plaquette variance.
     pub quenched_plaq_var: Option<f64>,
+    /// Anderson acceleration residual (if available).
     pub anderson_r: Option<f64>,
+    /// Minimum eigenvalue from Anderson (if available).
     pub anderson_lambda_min: Option<f64>,
 }
 
+/// Monitors effective population size drift to detect evolutionary stagnation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DriftMonitor {
+    /// History of Nₑ×S (effective size × selection) per generation.
     pub ne_s_history: Vec<f64>,
+    /// Threshold below which drift is flagged.
     pub drift_threshold: f64,
+    /// Number of recent generations to check.
     pub window: usize,
 }
 
@@ -47,10 +61,12 @@ impl Default for DriftMonitor {
 }
 
 impl DriftMonitor {
+    /// Record Nₑ×S for the given generation.
     pub fn record(&mut self, generation: &GenerationRecord, pop_size: usize) {
         self.ne_s_history
             .push((pop_size as f64 * generation.best_fitness) / (1.0 + generation.best_fitness));
     }
+    /// Returns true if recent generations show stagnation.
     pub fn is_drifting(&self) -> bool {
         self.ne_s_history.len() >= self.window
             && self.ne_s_history[self.ne_s_history.len() - self.window..]
@@ -59,10 +75,14 @@ impl DriftMonitor {
     }
 }
 
+/// Configuration for the Nautilus evolutionary optimizer brain.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NautilusBrainConfig {
+    /// Reservoir/shell configuration.
     pub shell_config: ShellConfig,
+    /// Generations to evolve per training call.
     pub generations_per_train: usize,
+    /// Minimum observations before training is allowed.
     pub min_observations: usize,
 }
 
@@ -76,16 +96,23 @@ impl Default for NautilusBrainConfig {
     }
 }
 
+/// Evolutionary optimizer brain that predicts HMC observables from β.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NautilusBrain {
+    /// Brain configuration.
     pub config: NautilusBrainConfig,
+    /// Reservoir computing shell (evolved boards).
     pub shell: NautilusShell,
+    /// Observed (β, plaquette, CG iters, acceptance) from HMC runs.
     pub observations: Vec<BetaObservation>,
+    /// Whether training has been performed.
     pub trained: bool,
+    /// Drift monitor for evolutionary stagnation.
     pub drift: DriftMonitor,
 }
 
 impl NautilusBrain {
+    /// Create a new brain with the given config and instance name.
     pub fn new(config: NautilusBrainConfig, instance_name: &str) -> Self {
         let shell = NautilusShell::from_seed(
             config.shell_config.clone(),
@@ -101,10 +128,12 @@ impl NautilusBrain {
         }
     }
 
+    /// Record an HMC observation for training.
     pub fn observe(&mut self, obs: BetaObservation) {
         self.observations.push(obs);
     }
 
+    /// Evolve the shell and train on observations. Returns MSE if trained.
     pub fn train(&mut self) -> Option<f64> {
         if self.observations.len() < self.config.min_observations {
             return None;
@@ -128,6 +157,7 @@ impl NautilusBrain {
         Some(mse)
     }
 
+    /// Predict (CG iters, plaquette, acceptance) for a given β.
     pub fn predict_dynamical(
         &self,
         beta: f64,
@@ -142,6 +172,7 @@ impl NautilusBrain {
         ]))?;
         (pred.len() >= 3).then(|| (pred[0], pred[1], pred[2]))
     }
+    /// Score candidate β values by predicted quality.
     pub fn screen_candidates(&self, betas: &[f64]) -> Vec<(f64, f64)> {
         betas
             .iter()
@@ -156,6 +187,7 @@ impl NautilusBrain {
             .collect()
     }
 
+    /// Detect β values where prediction error spikes (concept boundaries).
     pub fn detect_concept_edges(&mut self) -> Vec<(f64, f64)> {
         if self.observations.len() < self.config.min_observations {
             return Vec::new();
@@ -186,19 +218,21 @@ impl NautilusBrain {
         }
         edges
     }
+    /// Returns true if the shell is drifting (stagnating).
     pub fn is_drifting(&self) -> bool {
         self.drift.is_drifting()
     }
+    /// Serialize brain to JSON.
     pub fn to_json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string(self)
     }
+    /// Deserialize brain from JSON.
     pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(json)
     }
 }
 
 #[cfg(test)]
-#[expect(clippy::expect_used, clippy::unwrap_used, reason = "suppressed")]
 mod tests {
     use super::*;
 

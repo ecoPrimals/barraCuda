@@ -259,7 +259,6 @@ pub fn lu_inverse(a: &[f64], n: usize) -> Result<Vec<f64>> {
     lu.inverse()
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

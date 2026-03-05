@@ -320,7 +320,6 @@ pub fn model_for_arch(arch: super::capabilities::GpuArch) -> Box<dyn LatencyMode
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

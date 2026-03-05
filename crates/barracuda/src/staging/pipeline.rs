@@ -26,6 +26,7 @@ pub struct Stage {
 }
 
 impl Stage {
+    /// Create a new compute stage with the given pipeline, bind group, and workgroup dimensions.
     pub fn new(
         label: impl Into<String>,
         pipeline: Arc<wgpu::ComputePipeline>,
@@ -60,6 +61,7 @@ pub struct StageLink {
 }
 
 impl StageLink {
+    /// Create a new stage link connecting two pipeline stages.
     pub fn new(label: impl Into<String>, buffer: wgpu::Buffer, size: u64) -> Self {
         Self {
             buffer,
@@ -92,6 +94,7 @@ pub struct PipelineBuilder {
 }
 
 impl PipelineBuilder {
+    /// Create a new pipeline builder for the given device.
     pub fn new(device: Arc<WgpuDevice>, label: impl Into<String>) -> Self {
         Self {
             device,
@@ -228,7 +231,6 @@ impl StreamingPipeline {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

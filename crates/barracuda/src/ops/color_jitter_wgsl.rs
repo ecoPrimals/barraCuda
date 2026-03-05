@@ -27,6 +27,7 @@ const SHADER_F64: &str = include_str!("../shaders/augmentation/color_jitter_f64.
 static SHADER_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
 
+/// Image color augmentation: brightness, contrast, saturation, hue.
 pub struct ColorJitter {
     input: Tensor,
     brightness: f32,
@@ -36,6 +37,7 @@ pub struct ColorJitter {
 }
 
 impl ColorJitter {
+    /// Create a color jitter operation. Expects [B, C, H, W] input.
     pub fn new(input: Tensor, brightness: f32, contrast: f32, saturation: f32, hue: f32) -> Self {
         Self {
             input,
@@ -50,6 +52,7 @@ impl ColorJitter {
         &SHADER_F32
     }
 
+    /// Execute color jitter on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -206,6 +209,7 @@ impl ColorJitter {
 }
 
 impl Tensor {
+    /// Apply color jitter augmentation. Expects [B, C, H, W].
     pub fn color_jitter_wgsl(
         self,
         brightness: f32,
@@ -217,7 +221,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

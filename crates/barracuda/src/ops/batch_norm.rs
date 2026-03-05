@@ -9,14 +9,14 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// f64 canonical — BatchNorm with running mean/var (training mode, CNN).
 const WGSL_BATCHNORM_TRAINING_F64: &str = include_str!("../shaders/norm/batchnorm_f64.wgsl");
+/// f32 batch norm shader (training mode, running mean/var).
 pub static WGSL_BATCHNORM_TRAINING: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(WGSL_BATCHNORM_TRAINING_F64)
 });
 
-/// f64 canonical — 2D batch normalization (NCHW format, per-channel stats).
 const WGSL_BATCH_NORM_2D_F64: &str = include_str!("../shaders/norm/batch_norm2d_f64.wgsl");
+/// f32 2D batch norm shader (NCHW format, per-channel stats).
 pub static WGSL_BATCH_NORM_2D: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(WGSL_BATCH_NORM_2D_F64)
 });
@@ -54,12 +54,14 @@ struct BatchNormParams {
     _padding: [f32; 7],
 }
 
+/// Per-tensor batch normalization (WGSL).
 pub struct BatchNorm {
     input: Tensor,
     epsilon: f32,
 }
 
 impl BatchNorm {
+    /// Create batch norm with given epsilon for numerical stability.
     pub fn new(input: Tensor, epsilon: f32) -> Self {
         Self { input, epsilon }
     }
@@ -68,6 +70,7 @@ impl BatchNorm {
         &SHADER_BATCH_NORM_F32
     }
 
+    /// Execute batch normalization and return the output tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.len();
@@ -197,12 +200,12 @@ impl BatchNorm {
 }
 
 impl Tensor {
+    /// Apply per-tensor batch normalization.
     pub fn batch_norm(self, epsilon: f32) -> Result<Self> {
         BatchNorm::new(self, epsilon).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

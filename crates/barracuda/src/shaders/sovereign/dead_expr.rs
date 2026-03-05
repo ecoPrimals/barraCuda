@@ -231,7 +231,6 @@ fn mark_roots_from_statement(stmt: &Statement, live: &mut [bool]) {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

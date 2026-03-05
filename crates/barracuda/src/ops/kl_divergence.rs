@@ -49,12 +49,14 @@ struct KLDivergenceParams {
     _padding: [u32; 2],
 }
 
+/// Kullback-Leibler divergence KL(P||Q) = Σ P(i) * log(P(i)/Q(i)).
 pub struct KLDivergence {
     predicted: Tensor,
     target: Tensor,
 }
 
 impl KLDivergence {
+    /// Creates a new KL divergence. Shapes must match.
     pub fn new(predicted: Tensor, target: Tensor) -> Result<Self> {
         // Validate shapes match
         if predicted.shape() != target.shape() {
@@ -71,6 +73,7 @@ impl KLDivergence {
         include_str!("../shaders/loss/kl_divergence.wgsl")
     }
 
+    /// Executes KL divergence and returns a scalar loss tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predicted.device();
         let size = self.predicted.shape().iter().product::<usize>();
@@ -258,7 +261,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

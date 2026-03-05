@@ -25,6 +25,7 @@ struct RandomErasingParams {
     _pad6: u32,
 }
 
+/// Random erasing augmentation: erases rectangular regions in images.
 pub struct RandomErasing {
     input: Tensor,
     erase_boxes: Tensor,
@@ -249,7 +250,6 @@ impl RandomErasing {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

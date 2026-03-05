@@ -62,7 +62,6 @@ pub fn moving_window_stats_f64(data: &[f64], window_size: usize) -> Option<Movin
     })
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

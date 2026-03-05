@@ -54,8 +54,11 @@ pub type HeadGroup = HeadKind;
 /// Configuration for a head within a group.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct HeadConfig {
+    /// Head domain/group.
     pub group: HeadKind,
+    /// Human-readable label.
     pub label: String,
+    /// Output dimension for this head.
     pub output_size: usize,
 }
 

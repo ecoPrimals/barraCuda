@@ -123,7 +123,6 @@ pub fn expect_size(label: &str, expected: usize, actual: usize) -> BarracudaResu
     })
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

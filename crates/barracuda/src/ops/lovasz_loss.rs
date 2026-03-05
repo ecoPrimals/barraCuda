@@ -53,12 +53,14 @@ struct LovaszLossParams {
     _padding: [u32; 2],
 }
 
+/// Lovász-Softmax loss for IoU-optimized segmentation.
 pub struct LovaszLoss {
     predictions: Tensor,
     targets: Tensor,
 }
 
 impl LovaszLoss {
+    /// Creates a new Lovász loss. Shapes must match.
     pub fn new(predictions: Tensor, targets: Tensor) -> Result<Self> {
         // Validate shapes match
         if predictions.shape() != targets.shape() {
@@ -80,9 +82,10 @@ impl LovaszLoss {
                 "../shaders/loss/lovasz_loss_f64.wgsl"
             ))
         });
-        &SHADER
+        std::sync::LazyLock::force(&SHADER).as_str()
     }
 
+    /// Executes Lovász loss and returns the loss tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size = self.predictions.shape().iter().product::<usize>();
@@ -270,7 +273,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

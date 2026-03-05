@@ -5,6 +5,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
+/// Complex natural logarithm: log(z) = log|z| + i·arg(z).
 pub struct ComplexLog {
     input: Tensor,
     pipeline: wgpu::ComputePipeline,
@@ -12,6 +13,7 @@ pub struct ComplexLog {
 }
 
 impl ComplexLog {
+    /// Create complex log operation. Input must have last dim = 2 (re, im).
     pub fn new(input: Tensor) -> Result<Self> {
         if input.shape().last() != Some(&2) {
             return Err(BarracudaError::Device(
@@ -88,6 +90,7 @@ impl ComplexLog {
         })
     }
 
+    /// Execute complex logarithm on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let n = self.input.len();
@@ -146,7 +149,6 @@ impl ComplexLog {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

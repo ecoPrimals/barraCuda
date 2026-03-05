@@ -7,14 +7,21 @@
 use crate::device::WgpuDevice;
 use std::sync::Arc;
 
-/// CG-specific pipelines (SpMV, dot, reduce, update_xr, update_p, alpha, beta)
+/// CG-specific pipelines (SpMV, dot, reduce, update_xr, update_p, alpha, beta).
 pub struct CgPipelineSet {
+    /// Sparse matrix-vector product pipeline
     pub spmv: wgpu::ComputePipeline,
+    /// Dot product pipeline
     pub dot: wgpu::ComputePipeline,
+    /// Final reduction pipeline
     pub reduce: wgpu::ComputePipeline,
+    /// Update x and r vectors
     pub update_xr: wgpu::ComputePipeline,
+    /// Update search direction p
     pub update_p: wgpu::ComputePipeline,
+    /// Compute CG step size alpha
     pub compute_alpha: wgpu::ComputePipeline,
+    /// Compute CG step size beta
     pub compute_beta: wgpu::ComputePipeline,
 }
 
@@ -159,7 +166,7 @@ impl CgPipelineSet {
     }
 }
 
-/// Helper to dispatch a compute pass (reduces verbosity in CG iteration)
+/// Helper to dispatch a compute pass (reduces verbosity in CG iteration).
 #[inline(always)]
 pub fn cg_dispatch_pass(
     pass: &mut wgpu::ComputePass<'_>,
@@ -174,15 +181,18 @@ pub fn cg_dispatch_pass(
     pass.dispatch_workgroups(x, y, z);
 }
 
-/// Pipeline builder for sparse operations
+/// Pipeline builder for sparse operations.
 pub struct SparsePipelines {
+    /// Sparse matrix-vector product pipeline
     pub spmv: wgpu::ComputePipeline,
+    /// Dot product pipeline
     pub dot: wgpu::ComputePipeline,
+    /// Final reduction pipeline
     pub reduce: wgpu::ComputePipeline,
 }
 
 impl SparsePipelines {
-    /// Create common sparse pipelines from shader module
+    /// Create common sparse pipelines from shader module.
     pub fn new(
         device: &Arc<WgpuDevice>,
         shader: &wgpu::ShaderModule,

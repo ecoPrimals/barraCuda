@@ -24,6 +24,7 @@ struct DilatedConv2DParams {
     _padding: u32,
 }
 
+/// 2D convolution with dilation (atrous convolution).
 pub struct DilatedConv2D {
     input: Tensor,
     weight: Tensor,
@@ -34,6 +35,7 @@ pub struct DilatedConv2D {
 }
 
 impl DilatedConv2D {
+    /// Creates a new dilated conv2d. Input must be 4D [B, C, H, W].
     pub fn new(
         input: Tensor,
         weight: Tensor,
@@ -80,10 +82,11 @@ impl DilatedConv2D {
                     "../shaders/conv/dilated_conv2d_f64.wgsl"
                 ))
             });
-            SHADER.as_str()
+            std::sync::LazyLock::force(&SHADER).as_str()
         }
     }
 
+    /// Executes dilated conv2d and returns the output tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let in_shape = self.input.shape();
@@ -297,7 +300,6 @@ impl DilatedConv2D {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

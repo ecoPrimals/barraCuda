@@ -35,6 +35,7 @@ pub struct SnpCallingF64 {
 }
 
 impl SnpCallingF64 {
+    /// Create SNP calling pipeline.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         let module = device.compile_shader_f64(SHADER, Some("snp_calling_f64"));
         let bgl = make_bgl(&device, &[true, false, false, false, false]);
@@ -47,6 +48,7 @@ impl SnpCallingF64 {
         })
     }
 
+    /// Dispatch SNP calling for alignment.
     pub fn dispatch(
         &self,
         alignment_length: u32,

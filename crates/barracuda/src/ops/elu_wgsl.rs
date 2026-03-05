@@ -26,7 +26,7 @@ use crate::error::Result;
 use crate::tensor::Tensor;
 use bytemuck::{Pod, Zeroable};
 
-/// Simple ELU variant (single-pass, no vectorization).
+/// Returns the simple ELU WGSL shader (single-pass, no vectorization).
 pub fn wgsl_elu_simple() -> &'static str {
     &SHADER_ELU_SIMPLE_F32
 }
@@ -48,6 +48,7 @@ pub struct ELU {
 }
 
 impl ELU {
+    /// Creates ELU with default alpha (1.0).
     pub fn new(input: Tensor) -> Self {
         Self {
             input,
@@ -55,6 +56,7 @@ impl ELU {
         }
     }
 
+    /// Creates ELU with custom alpha.
     pub fn with_alpha(input: Tensor, alpha: f32) -> Self {
         Self { input, alpha }
     }
@@ -63,6 +65,7 @@ impl ELU {
         &SHADER_F32
     }
 
+    /// Executes ELU activation and returns the output tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();

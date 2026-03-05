@@ -12,12 +12,14 @@ const SHADER_F64: &str = include_str!("../shaders/misc/eq_f64.wgsl");
 static SHADER_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
 
+/// Element-wise equality operation (WGSL).
 pub struct Eq {
     lhs: Tensor,
     rhs: Tensor,
 }
 
 impl Eq {
+    /// Create an element-wise equality operation.
     pub fn new(lhs: Tensor, rhs: Tensor) -> Self {
         Self { lhs, rhs }
     }
@@ -26,6 +28,7 @@ impl Eq {
         &SHADER_F32
     }
 
+    /// Execute element-wise equality and return the output tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.lhs.device();
         let size = self.lhs.len();
@@ -48,12 +51,12 @@ impl Eq {
 }
 
 impl Tensor {
+    /// Element-wise equality (1.0 where equal, 0.0 where not).
     pub fn eq(self, other: &Self) -> Result<Self> {
         Eq::new(self, other.clone()).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

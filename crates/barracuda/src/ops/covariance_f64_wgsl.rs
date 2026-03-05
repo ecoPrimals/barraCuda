@@ -114,8 +114,8 @@ impl CovarianceF64 {
         Ok(result[0])
     }
 
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn covariance_cpu(x: &[f64], y: &[f64], ddof: usize) -> f64 {
         let n = x.len();
         if n <= ddof {
@@ -136,7 +136,6 @@ impl CovarianceF64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

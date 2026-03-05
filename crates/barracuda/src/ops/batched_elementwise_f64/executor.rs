@@ -141,8 +141,8 @@ impl BatchedElementwiseF64 {
     }
 
     /// CPU fallback for small batches
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn execute_cpu(
         &self,
         data: &[f64],

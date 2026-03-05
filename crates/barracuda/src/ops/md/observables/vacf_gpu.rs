@@ -233,7 +233,6 @@ fn storage_bgl(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

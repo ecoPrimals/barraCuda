@@ -127,7 +127,6 @@ pub fn pedotransfer_polynomial_cpu(
     ((((a5 * x + a4) * x + a3) * x + a2) * x + a1) * x + a0
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 /// FAO-56 Penman-Monteith ET₀ (CPU reference)
 pub(crate) fn fao56_et0_cpu(
@@ -207,7 +206,6 @@ pub(crate) fn fao56_et0_cpu(
     numerator / denominator
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 /// Water balance daily update (CPU reference)
 pub(crate) fn water_balance_cpu(

@@ -68,7 +68,7 @@ impl Default for SequenceConfig {
     }
 }
 
-/// Region of interest in a sequence
+/// Region of interest in a sequence.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Region {
     /// Start position (0-indexed)
@@ -81,17 +81,22 @@ pub struct Region {
     pub annotation: String,
 }
 
-/// Nucleotide composition counts
+/// Nucleotide composition counts.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct NucleotideCounts {
+    /// Adenine count.
     pub a: usize,
+    /// Thymine/Uracil count.
     pub t: usize,
+    /// Guanine count.
     pub g: usize,
+    /// Cytosine count.
     pub c: usize,
-    pub n: usize, // Unknown/N bases
+    /// Unknown/N bases count.
+    pub n: usize,
 }
 
-/// Composition analysis report
+/// Composition analysis report.
 #[derive(Debug, Clone)]
 pub struct CompositionReport {
     /// GC content as fraction (0.0-1.0)
@@ -107,7 +112,7 @@ pub struct CompositionReport {
     pub nucleotide_counts: NucleotideCounts,
 }
 
-/// Motif match result
+/// Motif match result.
 #[derive(Debug, Clone)]
 pub struct MotifMatch {
     /// Pattern that matched
@@ -120,7 +125,7 @@ pub struct MotifMatch {
     pub count: usize,
 }
 
-/// Quality report for sequence validation
+/// Quality report for sequence validation.
 #[derive(Debug, Clone)]
 pub struct QualityReport {
     /// Whether sequence passes quality filters
@@ -533,7 +538,6 @@ impl SequenceAnalyzer {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "genomics_tests.rs"]
 mod tests;

@@ -25,42 +25,62 @@ use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
 
-/// Recorded operation in the compute graph
+/// Recorded operation in the compute graph.
 #[derive(Debug)]
 pub enum RecordedOp {
     /// Element-wise add: output = a + b
     Add {
+        /// First input buffer
         input_a: wgpu::Buffer,
+        /// Second input buffer
         input_b: wgpu::Buffer,
+        /// Output buffer
         output: wgpu::Buffer,
+        /// Element count
         size: usize,
     },
     /// Element-wise multiply: output = a * b
     Mul {
+        /// First input buffer
         input_a: wgpu::Buffer,
+        /// Second input buffer
         input_b: wgpu::Buffer,
+        /// Output buffer
         output: wgpu::Buffer,
+        /// Element count
         size: usize,
     },
     /// Fused multiply-add: output = a * b + c
     Fma {
+        /// First input buffer
         input_a: wgpu::Buffer,
+        /// Second input buffer
         input_b: wgpu::Buffer,
+        /// Third input buffer
         input_c: wgpu::Buffer,
+        /// Output buffer
         output: wgpu::Buffer,
+        /// Element count
         size: usize,
     },
     /// Scale: output = a * scalar
     Scale {
+        /// Input buffer
         input: wgpu::Buffer,
+        /// Scale factor
         scalar: f32,
+        /// Output buffer
         output: wgpu::Buffer,
+        /// Element count
         size: usize,
     },
     /// Custom shader operation
     Custom {
+        /// WGSL shader source
         shader_source: String,
+        /// Input/output buffers
         buffers: Vec<wgpu::Buffer>,
+        /// Workgroup counts (x, y, z)
         workgroups: (u32, u32, u32),
     },
 }
@@ -479,7 +499,6 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

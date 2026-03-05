@@ -17,20 +17,30 @@ pub struct InstanceId(pub String);
 /// Record for one generation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenerationRecord {
+    /// Generation number
     pub generation: usize,
+    /// Mean population fitness
     pub mean_fitness: f64,
+    /// Best individual fitness
     pub best_fitness: f64,
+    /// Population size
     pub pop_size: usize,
+    /// Origin instance ID
     pub origin: InstanceId,
+    /// Training set size
     pub training_size: usize,
 }
 
 /// Shell configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShellConfig {
+    /// Board configuration.
     pub board_config: BoardConfig,
+    /// Population size
     pub pop_size: usize,
+    /// Evolution parameters
     pub evolution: EvolutionConfig,
+    /// Ridge regression regularization
     pub lambda: f64,
 }
 
@@ -48,11 +58,17 @@ impl Default for ShellConfig {
 /// Nautilus shell: population + readout + history.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NautilusShell {
+    /// Shell configuration
     pub config: ShellConfig,
+    /// Reservoir population
     pub population: Population,
+    /// Linear readout layer
     pub readout: LinearReadout,
+    /// Generation history
     pub history: Vec<GenerationRecord>,
+    /// Current origin instance
     pub origin: InstanceId,
+    /// Lineage chain
     pub lineage: Vec<InstanceId>,
 }
 
@@ -180,7 +196,6 @@ impl NautilusShell {
 }
 
 #[cfg(test)]
-#[expect(clippy::expect_used, clippy::unwrap_used, reason = "suppressed")]
 mod tests {
     use super::*;
 

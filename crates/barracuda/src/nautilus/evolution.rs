@@ -9,16 +9,22 @@ use super::board::Board;
 /// Selection method for evolution.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SelectionMethod {
+    /// Keep top k individuals.
     Elitism(usize),
+    /// Tournament selection with k participants.
     Tournament(usize),
+    /// Fitness-proportional (roulette wheel) selection.
     RouletteWheel,
 }
 
 /// Evolution configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvolutionConfig {
+    /// Selection method.
     pub selection: SelectionMethod,
+    /// Mutation probability per cell.
     pub mutation_rate: f64,
+    /// Crossover probability when selecting two parents.
     pub crossover_rate: f64,
 }
 
@@ -160,7 +166,6 @@ pub fn mutate(board: &mut Board, rate: f64, rng: &mut impl Rng) {
 }
 
 #[cfg(test)]
-#[expect(clippy::expect_used, clippy::unwrap_used, reason = "suppressed")]
 mod tests {
     use rand::rngs::StdRng;
     use rand::SeedableRng;

@@ -10,9 +10,13 @@ use crate::error::Result;
 /// Linear readout with ridge regression.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LinearReadout {
+    /// Trained weights (None until trained).
     pub weights: Option<Vec<f64>>,
+    /// Input feature dimension.
     pub input_dim: usize,
+    /// Output dimension.
     pub output_dim: usize,
+    /// Ridge regularization parameter.
     pub lambda: f64,
 }
 

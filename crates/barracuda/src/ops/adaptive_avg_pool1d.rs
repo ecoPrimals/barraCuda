@@ -24,12 +24,14 @@ struct AdaptiveAvgPool1DParams {
     out_length: u32,
 }
 
+/// 1D adaptive average pooling — fixed output length regardless of input.
 pub struct AdaptiveAvgPool1D {
     input: Tensor,
     output_length: usize,
 }
 
 impl AdaptiveAvgPool1D {
+    /// Create adaptive avg pool. Input must be 3D [B, C, L].
     pub fn new(input: Tensor, output_length: usize) -> Result<Self> {
         // Validate input shape: must be 3D [B, C, L]
         let shape = input.shape();
@@ -64,6 +66,7 @@ impl AdaptiveAvgPool1D {
         }
     }
 
+    /// Execute adaptive average pooling on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -205,7 +208,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

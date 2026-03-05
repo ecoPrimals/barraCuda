@@ -21,9 +21,12 @@ pub struct Upsample {
     align_corners: bool,
 }
 
+/// Upsampling interpolation mode.
 #[derive(Debug, Clone, Copy)]
 pub enum UpsampleMode {
+    /// Nearest-neighbor interpolation.
     Nearest,
+    /// Bilinear interpolation.
     Bilinear,
 }
 
@@ -254,7 +257,6 @@ impl Upsample {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

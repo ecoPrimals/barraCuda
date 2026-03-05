@@ -28,6 +28,7 @@ pub struct YukawaForce {
 }
 
 impl YukawaForce {
+    /// Create a Yukawa force calculator with positions, charges, and screening parameters.
     pub fn new(
         positions: Tensor,
         charges: Tensor,
@@ -69,6 +70,7 @@ impl YukawaForce {
         })
     }
 
+    /// Execute Yukawa force computation.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.positions.device();
         let n_particles = self.positions.shape()[0];
@@ -235,7 +237,6 @@ impl YukawaForce {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

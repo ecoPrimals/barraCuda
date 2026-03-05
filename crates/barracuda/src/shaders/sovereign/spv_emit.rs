@@ -36,7 +36,6 @@ pub fn emit_spirv(module: &naga::Module, info: &ModuleInfo) -> Result<Vec<u32>, 
     Ok(words)
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

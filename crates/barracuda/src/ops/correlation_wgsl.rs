@@ -99,8 +99,8 @@ impl Correlation {
     }
 
     /// CPU reference implementation
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn correlate_cpu(&self, x: &[f32], y: &[f32]) -> f32 {
         let n = x.len() as f32;
         let mean_x: f32 = x.iter().sum::<f32>() / n;
@@ -321,7 +321,6 @@ impl Correlation {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

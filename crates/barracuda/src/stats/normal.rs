@@ -180,7 +180,6 @@ pub fn norm_ppf_general(p: f64, mu: f64, sigma: f64) -> f64 {
     mu + sigma * norm_ppf(p)
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

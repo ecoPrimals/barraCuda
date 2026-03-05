@@ -39,6 +39,7 @@ struct OctaveConv2DParams {
     path: u32, // 0=H→H, 1=H→L, 2=L→H, 3=L→L
 }
 
+/// Octave convolution 2D operator (high/low frequency paths).
 pub struct OctaveConv2D {
     input_high: Option<Tensor>,
     input_low: Option<Tensor>,
@@ -50,15 +51,21 @@ pub struct OctaveConv2D {
     path: OctaveConvPath,
 }
 
+/// Convolution path for octave convolution (high/low frequency routing).
 #[derive(Clone, Copy)]
 pub enum OctaveConvPath {
+    /// High-frequency input → high-frequency output.
     HighToHigh,
+    /// High-frequency input → low-frequency output (downsample).
     HighToLow,
+    /// Low-frequency input → high-frequency output (upsample).
     LowToHigh,
+    /// Low-frequency input → low-frequency output.
     LowToLow,
 }
 
 impl OctaveConv2D {
+    /// Create octave conv2d with inputs, weights, and path.
     pub fn new(
         input_high: Option<Tensor>,
         input_low: Option<Tensor>,
@@ -119,6 +126,7 @@ impl OctaveConv2D {
         }
     }
 
+    /// Run octave convolution on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = match (&self.input_high, &self.input_low) {
             (Some(h), _) => h.device(),
@@ -477,7 +485,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

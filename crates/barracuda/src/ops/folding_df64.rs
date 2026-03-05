@@ -9,32 +9,47 @@ use crate::error::Result;
 
 // ── Shader sources ──
 
+/// WGSL source for torsion angle computation (DF64).
 pub const WGSL_TORSION_ANGLES_DF64: &str =
     include_str!("../shaders/folding/torsion_angles_df64.wgsl");
+/// WGSL source for pairwise distance matrix (DF64).
 pub const WGSL_DISTANCE_MATRIX_DF64: &str =
     include_str!("../shaders/folding/distance_matrix_df64.wgsl");
+/// WGSL source for RMSD computation (DF64).
 pub const WGSL_RMSD_DF64: &str = include_str!("../shaders/folding/rmsd_df64.wgsl");
+/// WGSL source for contact map from distance matrix (DF64).
 pub const WGSL_CONTACT_MAP_DF64: &str = include_str!("../shaders/folding/contact_map_df64.wgsl");
+/// WGSL source for Lennard-Jones potential (DF64).
 pub const WGSL_LENNARD_JONES_DF64: &str =
     include_str!("../shaders/folding/lennard_jones_df64.wgsl");
+/// WGSL source for Coulomb electrostatic energy (DF64).
 pub const WGSL_COULOMB_ELECTROSTATIC_DF64: &str =
     include_str!("../shaders/folding/coulomb_electrostatic_df64.wgsl");
+/// WGSL source for hydrogen bond energy (DF64).
 pub const WGSL_HYDROGEN_BOND_DF64: &str =
     include_str!("../shaders/folding/hydrogen_bond_df64.wgsl");
+/// WGSL source for solvation energy (DF64).
 pub const WGSL_SOLVATION_ENERGY_DF64: &str =
     include_str!("../shaders/folding/solvation_energy_df64.wgsl");
+/// WGSL source for gradient descent step (DF64).
 pub const WGSL_GRADIENT_DESCENT_DF64: &str =
     include_str!("../shaders/folding/gradient_descent_df64.wgsl");
+/// WGSL source for simulated annealing (DF64).
 pub const WGSL_SIMULATED_ANNEALING_DF64: &str =
     include_str!("../shaders/folding/simulated_annealing_df64.wgsl");
+/// WGSL source for backbone restraints (DF64).
 pub const WGSL_BACKBONE_RESTRAINTS_DF64: &str =
     include_str!("../shaders/folding/backbone_restraints_df64.wgsl");
+/// WGSL source for side chain packing (DF64).
 pub const WGSL_SIDE_CHAIN_PACKING_DF64: &str =
     include_str!("../shaders/folding/side_chain_packing_df64.wgsl");
+/// WGSL source for MSA attention (DF64).
 pub const WGSL_MSA_ATTENTION_DF64: &str =
     include_str!("../shaders/folding/msa_attention_df64.wgsl");
+/// WGSL source for pair representation (DF64).
 pub const WGSL_PAIR_REPRESENTATION_DF64: &str =
     include_str!("../shaders/folding/pair_representation_df64.wgsl");
+/// WGSL source for structure module (DF64).
 pub const WGSL_STRUCTURE_MODULE_DF64: &str =
     include_str!("../shaders/folding/structure_module_df64.wgsl");
 
@@ -124,7 +139,6 @@ pub fn compile_folding_shader(device: &WgpuDevice, op: FoldingOp) -> Result<wgpu
     Ok(device.compile_shader_df64(source, Some(label)))
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

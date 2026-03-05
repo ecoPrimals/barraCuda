@@ -31,6 +31,7 @@ pub struct SparseMatVec {
 }
 
 impl SparseMatVec {
+    /// Create sparse matvec from CSR format (values, col_indices, row_ptrs) and dense vector.
     pub fn new(values: Tensor, col_indices: Vec<u32>, row_ptrs: Vec<u32>, vector: Tensor) -> Self {
         Self {
             values,
@@ -44,6 +45,7 @@ impl SparseMatVec {
         include_str!("../shaders/misc/sparse_matvec.wgsl")
     }
 
+    /// Execute sparse matrix-vector product.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.values.device();
         let num_rows = self.row_ptrs.len() - 1;
@@ -237,7 +239,6 @@ impl SparseMatVec {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

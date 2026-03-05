@@ -12,11 +12,13 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Numerically stable log-sum-exp reduction.
 pub struct LogsumexpWgsl {
     input: Tensor,
 }
 
 impl LogsumexpWgsl {
+    /// Create a logsumexp operation.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -25,6 +27,7 @@ impl LogsumexpWgsl {
         include_str!("../shaders/math/logsumexp.wgsl")
     }
 
+    /// Execute log-sum-exp on GPU. Returns a scalar tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -153,12 +156,12 @@ impl LogsumexpWgsl {
 }
 
 impl Tensor {
+    /// Compute log(sum(exp(x))) numerically stably.
     pub fn logsumexp_wgsl(self) -> Result<Self> {
         LogsumexpWgsl::new(self).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

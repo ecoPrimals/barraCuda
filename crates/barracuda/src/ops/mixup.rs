@@ -22,6 +22,7 @@ struct MixupParams {
     mix_idx: u32,
 }
 
+/// Mixup augmentation: mixes two training examples with weight lambda.
 pub struct Mixup {
     input: Tensor,
     lambda: f32,
@@ -106,7 +107,6 @@ impl Mixup {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

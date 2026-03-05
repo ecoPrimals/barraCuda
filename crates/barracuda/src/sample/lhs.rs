@@ -232,7 +232,6 @@ pub fn maximin_distance(points: &[Vec<f64>]) -> f64 {
     min_dist
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

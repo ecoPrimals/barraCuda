@@ -28,6 +28,7 @@ pub struct VelocityVerlet {
 }
 
 impl VelocityVerlet {
+    /// Create Velocity-Verlet integrator with given state tensors.
     pub fn new(
         positions: Tensor,
         velocities: Tensor,
@@ -313,7 +314,6 @@ impl VelocityVerlet {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

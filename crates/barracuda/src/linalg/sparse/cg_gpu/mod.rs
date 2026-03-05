@@ -54,6 +54,7 @@ pub struct CgGpuResult {
 }
 
 impl CgGpuResult {
+    /// Returns true if the solver converged.
     pub fn is_ok(&self) -> bool {
         self.converged
     }
@@ -91,7 +92,6 @@ impl CgGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

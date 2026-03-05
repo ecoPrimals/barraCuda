@@ -17,9 +17,11 @@ use std::sync::{LazyLock, Mutex};
 /// f64-to-f32 throughput ratio discovered by probing.
 #[derive(Debug, Clone, Copy)]
 pub struct F64ThroughputRatio {
+    /// Measured f64 GFLOPS.
     pub f64_gflops: f64,
+    /// Measured f32 GFLOPS.
     pub f32_gflops: f64,
-    /// f32_gflops / f64_gflops — higher means worse f64 relative performance
+    /// f32_gflops / f64_gflops — higher means worse f64 relative performance.
     pub ratio: f64,
 }
 
@@ -221,7 +223,6 @@ async fn run_throughput_probe(device: &WgpuDevice, use_f64: bool) -> Option<f64>
     Some(elapsed)
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

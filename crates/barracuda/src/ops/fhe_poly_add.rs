@@ -325,7 +325,6 @@ pub async fn create_fhe_poly_tensor(
     Tensor::from_data_pod(&poly_u32, vec![poly_u32.len()], device)
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

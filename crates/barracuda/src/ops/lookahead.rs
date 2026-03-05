@@ -9,9 +9,11 @@
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
-/// Lookahead optimizer state
+/// Lookahead optimizer state.
 pub struct LookaheadState {
+    /// Slow weights (updated every k steps).
     pub slow_weights: Tensor,
+    /// Step counter for sync frequency.
     pub k_counter: usize,
 }
 
@@ -105,7 +107,6 @@ impl Lookahead {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

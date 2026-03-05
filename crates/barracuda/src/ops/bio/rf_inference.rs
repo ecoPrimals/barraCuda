@@ -37,6 +37,7 @@ pub struct RfBatchInferenceGpu {
 }
 
 impl RfBatchInferenceGpu {
+    /// Creates a new batch Random Forest inference GPU kernel for the given device.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let shader = device.compile_shader(SHADER, Some("RfBatchInference"));
 

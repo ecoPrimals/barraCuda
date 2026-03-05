@@ -70,7 +70,6 @@ pub fn anderson_conductance(
     Ok(transmission.clamp(0.0, 1.0))
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

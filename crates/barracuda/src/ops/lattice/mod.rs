@@ -76,19 +76,14 @@ pub mod plaquette;
 pub mod constants;
 
 // CPU reference implementations — test-only
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 pub mod cpu_complex;
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 pub mod cpu_dirac;
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 pub mod cpu_su3;
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 pub mod pseudofermion;
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 pub mod wilson;
 
@@ -247,7 +242,6 @@ impl NeighborMode {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod action_density_tests {
     use super::action_density;
@@ -270,7 +264,6 @@ mod action_density_tests {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod neighbor_tests {
     use super::NeighborMode;

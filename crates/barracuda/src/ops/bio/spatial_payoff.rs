@@ -36,6 +36,7 @@ struct PayoffParams {
     _pad: u32,
 }
 
+/// GPU spatial payoff (evolutionary game) computation.
 pub struct SpatialPayoffGpu {
     pipeline: wgpu::ComputePipeline,
     bgl: wgpu::BindGroupLayout,
@@ -43,6 +44,7 @@ pub struct SpatialPayoffGpu {
 }
 
 impl SpatialPayoffGpu {
+    /// Create spatial payoff calculator.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 

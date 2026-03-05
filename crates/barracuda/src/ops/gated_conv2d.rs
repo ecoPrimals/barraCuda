@@ -34,6 +34,7 @@ struct GatedConv2DParams {
     _padding2: u32,
 }
 
+/// Gated 2D convolution (PixelCNN/WaveNet style: tanh(W_f*x) ⊙ sigmoid(W_g*x)).
 pub struct GatedConv2D {
     input: Tensor,
     weight_feature: Tensor,
@@ -46,6 +47,7 @@ pub struct GatedConv2D {
 }
 
 impl GatedConv2D {
+    /// Creates a new gated conv2d. Input must be 4D [B, C, H, W].
     pub fn new(
         input: Tensor,
         weight_feature: Tensor,
@@ -91,10 +93,11 @@ impl GatedConv2D {
                     "../shaders/conv/gated_conv2d_f64.wgsl"
                 ))
             });
-            SHADER.as_str()
+            std::sync::LazyLock::force(&SHADER).as_str()
         }
     }
 
+    /// Executes gated conv2d and returns the output tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -335,7 +338,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

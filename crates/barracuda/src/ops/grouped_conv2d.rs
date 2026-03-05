@@ -25,6 +25,7 @@ pub struct GroupedConv2D {
 }
 
 impl GroupedConv2D {
+    /// Create grouped 2D convolution (channels split into independent groups).
     pub fn new(
         input: Tensor,
         kernel: Tensor,
@@ -113,6 +114,7 @@ impl GroupedConv2D {
         }
     }
 
+    /// Execute grouped convolution.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -347,7 +349,6 @@ impl GroupedConv2D {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

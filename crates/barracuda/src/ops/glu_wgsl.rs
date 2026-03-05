@@ -28,11 +28,13 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Gated Linear Unit: output = a ⊙ sigmoid(b) where input = [a, b].
 pub struct GLU {
     input: Tensor,
 }
 
 impl GLU {
+    /// Create a GLU operation. Input size must be even.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -41,6 +43,7 @@ impl GLU {
         &SHADER_F32
     }
 
+    /// Execute GLU on GPU. Output is half the input size.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.len();
@@ -178,12 +181,12 @@ impl GLU {
 }
 
 impl Tensor {
+    /// Apply Gated Linear Unit. Splits input in half; output = first_half ⊙ sigmoid(second_half).
     pub fn glu_wgsl(self) -> Result<Self> {
         GLU::new(self).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

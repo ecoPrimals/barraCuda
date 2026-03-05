@@ -23,12 +23,14 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Nearest-neighbor interpolation for 4D tensors [batch, channels, height, width].
 pub struct InterpolateNearest {
     input: Tensor,
     output_size: (usize, usize), // (height, width)
 }
 
 impl InterpolateNearest {
+    /// Create interpolator with target (height, width).
     pub fn new(input: Tensor, output_size: (usize, usize)) -> Self {
         Self { input, output_size }
     }
@@ -42,6 +44,7 @@ impl InterpolateNearest {
         &SHADER
     }
 
+    /// Execute nearest-neighbor interpolation on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -185,12 +188,12 @@ impl InterpolateNearest {
 }
 
 impl Tensor {
+    /// Resize image using nearest-neighbor sampling. Expects [B, C, H, W].
     pub fn interpolate_nearest_wgsl(self, output_size: (usize, usize)) -> Result<Self> {
         InterpolateNearest::new(self, output_size).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

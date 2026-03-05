@@ -97,6 +97,7 @@ pub struct LayerNorm {
 }
 
 impl LayerNorm {
+    /// Create layer norm with given epsilon for numerical stability.
     pub fn new(input: Tensor, epsilon: f32) -> Self {
         Self { input, epsilon }
     }
@@ -205,7 +206,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

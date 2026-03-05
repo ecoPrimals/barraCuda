@@ -28,6 +28,7 @@ struct DepthwiseConv2DParams {
     out_width: u32,
 }
 
+/// Depthwise 2D convolution (one filter per channel, MobileNet-style).
 pub struct DepthwiseConv2D {
     input: Tensor,
     weight: Tensor,
@@ -37,6 +38,7 @@ pub struct DepthwiseConv2D {
 }
 
 impl DepthwiseConv2D {
+    /// Creates a new depthwise conv2d. Weight shape: [channels, 1, kh, kw].
     pub fn new(
         input: Tensor,
         weight: Tensor,
@@ -60,10 +62,11 @@ impl DepthwiseConv2D {
                     "../shaders/conv/depthwise_conv2d_f64.wgsl"
                 ))
             });
-            SHADER.as_str()
+            std::sync::LazyLock::force(&SHADER).as_str()
         }
     }
 
+    /// Executes depthwise conv2d and returns the output tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -205,7 +208,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

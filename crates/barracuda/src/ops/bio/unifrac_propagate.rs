@@ -18,17 +18,24 @@ use wgpu::util::DeviceExt;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::WgpuDevice;
 
+/// WGSL source for UniFrac tree propagation (leaf init + propagate_level).
 pub const WGSL_UNIFRAC_PROPAGATE: &str = include_str!("../../shaders/bio/unifrac_propagate.wgsl");
 
+/// Configuration for UniFrac tree propagation.
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct UniFracConfig {
+    /// Total number of nodes in the tree.
     pub n_nodes: u32,
+    /// Number of samples (columns in sample matrix).
     pub n_samples: u32,
+    /// Number of leaf nodes.
     pub n_leaves: u32,
+    /// Padding for alignment.
     pub _pad: u32,
 }
 
+/// GPU pipeline for UniFrac tree propagation (leaf init + level-wise propagate).
 pub struct UniFracPropagateGpu {
     leaf_init_pipeline: wgpu::ComputePipeline,
     propagate_pipeline: wgpu::ComputePipeline,
@@ -37,6 +44,7 @@ pub struct UniFracPropagateGpu {
 }
 
 impl UniFracPropagateGpu {
+    /// Create the UniFrac propagation pipeline for the given device.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 
@@ -245,7 +253,6 @@ impl UniFracPropagateGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

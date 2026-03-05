@@ -78,9 +78,13 @@ struct GridSearch3dParams {
 /// Result of a 3D grid search: minimum value and its (x, y, z) indices.
 #[derive(Debug, Clone, Copy)]
 pub struct GridSearchResult {
+    /// Minimum value found.
     pub min_value: f64,
+    /// X index of minimum.
     pub min_ix: u32,
+    /// Y index of minimum.
     pub min_iy: u32,
+    /// Z index of minimum.
     pub min_iz: u32,
 }
 
@@ -184,7 +188,6 @@ pub fn band_edges_parallel(
     Ok((band_min, band_max))
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

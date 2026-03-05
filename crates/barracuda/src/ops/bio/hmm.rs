@@ -45,12 +45,13 @@ struct HmmParams {
     n_seqs: u32,
 }
 
-/// Batch HMM forward pass on GPU.
+/// Batch HMM forward pass on GPU (log-domain, f64).
 pub struct HmmBatchForwardF64 {
     device: Arc<WgpuDevice>,
 }
 
 impl HmmBatchForwardF64 {
+    /// Create batch HMM forward pipeline for the given device.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -149,8 +150,11 @@ struct HmmViterbiParams {
 /// Viterbi decoding result.
 #[derive(Debug, Clone)]
 pub struct ViterbiResult {
+    /// Most likely state sequence.
     pub path: Vec<u32>,
+    /// Viterbi delta values (max log-prob at each step).
     pub delta: Vec<f64>,
+    /// Backpointer (psi) for traceback.
     pub psi: Vec<u32>,
 }
 
@@ -216,6 +220,7 @@ pub struct HmmForwardLogF32 {
 }
 
 impl HmmForwardLogF32 {
+    /// Create log-domain HMM forward (f32) pipeline.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -256,6 +261,7 @@ pub struct HmmForwardLogF64 {
 }
 
 impl HmmForwardLogF64 {
+    /// Create log-domain HMM forward (f64) pipeline.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -289,7 +295,6 @@ impl HmmForwardLogF64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

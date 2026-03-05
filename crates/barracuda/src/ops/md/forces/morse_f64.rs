@@ -206,6 +206,7 @@ fn reduce_bond_forces(
 }
 
 impl MorseForceF64 {
+    /// Create Morse potential force calculator.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -332,7 +333,6 @@ impl MorseForceF64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "morse_f64_tests.rs"]
 mod tests;

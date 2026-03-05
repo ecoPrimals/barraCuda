@@ -34,6 +34,7 @@ pub struct Hardsigmoid {
 }
 
 impl Hardsigmoid {
+    /// Creates a Hardsigmoid operation for the given input tensor.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }

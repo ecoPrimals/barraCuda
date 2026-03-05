@@ -256,7 +256,6 @@ pub fn should_stop_early(history: &[f64], improvement_threshold: f64, patience: 
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

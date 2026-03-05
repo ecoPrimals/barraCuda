@@ -320,8 +320,8 @@ impl YukawaCellListF64 {
         Ok((sorted_positions, particle_indices, cell_start, cell_count))
     }
 
-    #[expect(dead_code, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn build_cell_list(
         &self,
         positions: &[f64],
@@ -360,8 +360,8 @@ impl YukawaCellListF64 {
     }
 
     /// CPU reference (test/validation only — production always dispatches shader).
-    #[expect(dead_code, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn compute_cpu(
         &self,
         positions: &[f64],
@@ -470,7 +470,6 @@ impl YukawaCellListF64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

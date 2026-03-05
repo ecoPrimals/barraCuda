@@ -21,18 +21,26 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Activation {
+    /// ReLU: max(0, x).
     Relu,
+    /// Hyperbolic tangent.
     Tanh,
+    /// Sigmoid: 1 / (1 + exp(-x)).
     Sigmoid,
+    /// GELU approximation.
     Gelu,
+    /// Identity (no activation).
     Identity,
 }
 
 /// A single dense layer: y = W·x + b
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DenseLayer {
+    /// Weight matrix (row-major: out_size × in_size).
     pub weight: Vec<Vec<f64>>,
+    /// Bias vector (length out_size).
     pub bias: Vec<f64>,
+    /// Activation applied after affine transform.
     pub activation: Activation,
 }
 
@@ -42,6 +50,7 @@ pub struct DenseLayer {
 /// Inference is pure CPU — for GPU inference, dispatch via Tensor ops.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimpleMlp {
+    /// Ordered dense layers.
     pub layers: Vec<DenseLayer>,
 }
 
@@ -138,7 +147,6 @@ fn apply_activation(values: &mut [f64], activation: Activation) {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

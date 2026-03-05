@@ -72,12 +72,16 @@ use std::sync::Arc;
 /// that wires your GPU-resident buffers.  The same chain can be reused across
 /// many calls to [`StatefulPipeline::run_iterations`].
 pub struct KernelDispatch {
+    /// Pre-compiled compute pipeline.
     pub pipeline: Arc<wgpu::ComputePipeline>,
+    /// Bind group wiring GPU buffers.
     pub bind_group: Arc<wgpu::BindGroup>,
+    /// Workgroup counts (x, y, z).
     pub workgroups: (u32, u32, u32),
 }
 
 impl KernelDispatch {
+    /// Create a new kernel dispatch unit.
     pub fn new(
         pipeline: Arc<wgpu::ComputePipeline>,
         bind_group: Arc<wgpu::BindGroup>,
@@ -272,7 +276,6 @@ impl StatefulPipeline {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -9,6 +9,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
+/// Complex subtraction: (a+bi) - (c+di) = (a-c) + (b-d)i.
 pub struct ComplexSub {
     input_a: Tensor,
     input_b: Tensor,
@@ -17,6 +18,7 @@ pub struct ComplexSub {
 }
 
 impl ComplexSub {
+    /// Creates a new complex sub. Both inputs must have last dim = 2 and same shape.
     pub fn new(input_a: Tensor, input_b: Tensor) -> Result<Self> {
         if input_a.shape() != input_b.shape() {
             return Err(BarracudaError::Device(
@@ -122,6 +124,7 @@ impl ComplexSub {
         })
     }
 
+    /// Executes complex subtraction and returns the result.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input_a.device();
         let num_elements = self.input_a.len();
@@ -196,7 +199,6 @@ impl ComplexSub {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

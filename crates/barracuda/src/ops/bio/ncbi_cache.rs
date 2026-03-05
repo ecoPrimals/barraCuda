@@ -125,7 +125,6 @@ fn sanitize_filename(accession: &str) -> String {
         .collect()
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

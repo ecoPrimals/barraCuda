@@ -13,6 +13,10 @@
 //! their lifecycle — no runtime dependency on sourDough.
 
 #![deny(unsafe_code)]
+#![cfg_attr(
+    test,
+    expect(clippy::unwrap_used, reason = "test code uses unwrap for brevity")
+)]
 #![warn(missing_docs)]
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
@@ -70,7 +74,7 @@ use std::sync::{Arc, Mutex};
 /// tensors that persist across requests.
 pub struct BarraCudaPrimal {
     state: PrimalState,
-    device: Option<Arc<barracuda::device::WgpuDevice>>,
+    device: Option<barracuda::device::WgpuDevice>,
     tensors: Mutex<HashMap<String, Arc<barracuda::tensor::Tensor>>>,
 }
 
@@ -86,9 +90,10 @@ impl BarraCudaPrimal {
     }
 
     /// Access the compute device (available after `start()`).
+    /// Returns a clone for sharing across handlers; WgpuDevice is cheap to clone.
     #[must_use]
-    pub fn device(&self) -> Option<&Arc<barracuda::device::WgpuDevice>> {
-        self.device.as_ref()
+    pub fn device(&self) -> Option<barracuda::device::WgpuDevice> {
+        self.device.clone()
     }
 
     /// Store a tensor and return its handle ID.
@@ -144,7 +149,7 @@ impl PrimalLifecycle for BarraCudaPrimal {
                     info.name,
                     info.device_type,
                 );
-                self.device = Some(dev);
+                self.device = Some(dev.as_ref().clone());
             }
             Err(e) => {
                 tracing::warn!("barraCuda: no GPU device available ({e}), running CPU-only");

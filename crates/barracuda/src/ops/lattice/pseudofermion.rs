@@ -27,8 +27,11 @@ use super::wilson::Lattice;
 /// Configuration for pseudofermion HMC.
 #[derive(Clone, Debug)]
 pub struct PseudofermionConfig {
+    /// Fermion mass
     pub mass: f64,
+    /// CG solver tolerance
     pub cg_tol: f64,
+    /// Maximum CG iterations
     pub cg_max_iter: usize,
 }
 
@@ -129,11 +132,17 @@ fn staggered_phase_local(x: [usize; 4], mu: usize) -> f64 {
 /// Dynamical fermion HMC configuration.
 #[derive(Clone, Debug)]
 pub struct DynamicalHmcConfig {
+    /// Number of MD steps per trajectory
     pub n_md_steps: usize,
+    /// MD step size
     pub dt: f64,
+    /// Random seed
     pub seed: u64,
+    /// Pseudofermion config
     pub fermion: PseudofermionConfig,
+    /// Gauge coupling β = 6/g²
     pub beta: f64,
+    /// Number of flavor quarters (n_flavors/4)
     pub n_flavors_over_4: usize,
 }
 
@@ -153,11 +162,17 @@ impl Default for DynamicalHmcConfig {
 /// Result of a dynamical fermion HMC trajectory.
 #[derive(Clone, Debug)]
 pub struct DynamicalHmcResult {
+    /// Whether the trajectory was accepted
     pub accepted: bool,
+    /// ΔH = H_new - H_old
     pub delta_h: f64,
+    /// Average plaquette after trajectory
     pub plaquette: f64,
+    /// Gauge action (before or after depending on accept)
     pub gauge_action: f64,
+    /// Fermion action (before or after depending on accept)
     pub fermion_action: f64,
+    /// Total CG iterations across all pseudofermions
     pub cg_iterations: usize,
 }
 
@@ -321,7 +336,6 @@ fn kinetic_energy(momenta: &[Su3Matrix]) -> f64 {
     t
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

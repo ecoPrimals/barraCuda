@@ -102,15 +102,19 @@ impl BufferPoolInner {
     }
 }
 
-/// Descriptor for creating a pinned solver buffer
+/// Descriptor for creating a pinned solver buffer.
 #[derive(Debug, Clone)]
 pub struct BufferDescriptor {
+    /// Buffer size in bytes.
     pub size: u64,
+    /// wgpu buffer usage flags.
     pub usage: wgpu::BufferUsages,
+    /// Optional debug label.
     pub label: Option<String>,
 }
 
 impl BufferDescriptor {
+    /// Create a descriptor with default storage + copy usage.
     pub fn new(size: u64) -> Self {
         Self {
             size,
@@ -121,26 +125,30 @@ impl BufferDescriptor {
         }
     }
 
+    /// Descriptor for an f64 array of given count.
     pub fn f64_array(count: usize) -> Self {
         Self::new((count * std::mem::size_of::<f64>()) as u64)
     }
 
+    /// Descriptor for an f32 array of given count.
     pub fn f32_array(count: usize) -> Self {
         Self::new((count * std::mem::size_of::<f32>()) as u64)
     }
 
+    /// Set the buffer label.
     pub fn with_label(mut self, label: impl Into<String>) -> Self {
         self.label = Some(label.into());
         self
     }
 
+    /// Set buffer usage flags.
     pub fn with_usage(mut self, usage: wgpu::BufferUsages) -> Self {
         self.usage = usage;
         self
     }
 }
 
-/// A set of buffers pinned for the lifetime of a solver
+/// A set of buffers pinned for the lifetime of a solver.
 #[derive(Debug)]
 pub struct SolverBufferSet {
     solver_id: String,
@@ -148,26 +156,32 @@ pub struct SolverBufferSet {
 }
 
 impl SolverBufferSet {
+    /// Get a buffer by name.
     pub fn get(&self, name: &str) -> Option<&wgpu::Buffer> {
         self.buffers.get(name).map(|b| b.as_ref())
     }
 
+    /// Get a buffer as Arc by name.
     pub fn get_arc(&self, name: &str) -> Option<Arc<wgpu::Buffer>> {
         self.buffers.get(name).cloned()
     }
 
+    /// Solver identifier.
     pub fn solver_id(&self) -> &str {
         &self.solver_id
     }
 
+    /// Iterator over buffer names.
     pub fn buffer_names(&self) -> impl Iterator<Item = &str> {
         self.buffers.keys().map(|s| s.as_str())
     }
 
+    /// Number of buffers in the set.
     pub fn len(&self) -> usize {
         self.buffers.len()
     }
 
+    /// Returns true if the set has no buffers.
     pub fn is_empty(&self) -> bool {
         self.buffers.is_empty()
     }
@@ -179,6 +193,7 @@ pub struct BufferPool {
 }
 
 impl BufferPool {
+    /// Create a new buffer pool with shared locks.
     pub fn new(
         device: wgpu::Device,
         poll_lock: Arc<Mutex<()>>,
@@ -253,6 +268,7 @@ impl BufferPool {
         }
     }
 
+    /// Acquire a pooled buffer (returns to pool on drop).
     pub fn acquire_pooled(&self, size_bytes: usize) -> PooledBuffer {
         self.drain_pending();
 
@@ -268,6 +284,7 @@ impl BufferPool {
         PooledBuffer::new(buffer, Arc::downgrade(&self.inner), bucket)
     }
 
+    /// Acquire a buffer (does not return to pool; call release explicitly).
     pub fn acquire(&self, size_bytes: usize) -> wgpu::Buffer {
         self.drain_pending();
 
@@ -301,6 +318,7 @@ impl BufferPool {
         buf
     }
 
+    /// Return a buffer to the pool for reuse.
     pub fn release(&self, buffer: wgpu::Buffer) {
         let bucket = Self::bucket_size(buffer.size() as usize);
         self.inner
@@ -312,6 +330,7 @@ impl BufferPool {
             .push(buffer);
     }
 
+    /// Returns (allocations, reuses).
     pub fn stats(&self) -> (usize, usize) {
         (
             self.inner.allocations.load(Ordering::Relaxed),
@@ -319,6 +338,7 @@ impl BufferPool {
         )
     }
 
+    /// Pin buffers for a solver; returns error if solver already has buffers.
     pub fn pin_solver_buffers(
         &self,
         solver_id: &str,
@@ -366,6 +386,7 @@ impl BufferPool {
         })
     }
 
+    /// Release pinned buffers for a solver. Returns true if buffers were released.
     pub fn release_solver_buffers(&self, solver_id: &str) -> bool {
         let mut solver_buffers = self
             .inner
@@ -375,6 +396,7 @@ impl BufferPool {
         solver_buffers.remove(solver_id).is_some()
     }
 
+    /// Get pinned buffers for a solver (cloned).
     pub fn get_solver_buffers(&self, solver_id: &str) -> Option<SolverBufferSet> {
         let solver_buffers = self
             .inner
@@ -387,6 +409,7 @@ impl BufferPool {
         })
     }
 
+    /// Returns true if solver has pinned buffers.
     pub fn has_solver_buffers(&self, solver_id: &str) -> bool {
         let solver_buffers = self
             .inner
@@ -396,6 +419,7 @@ impl BufferPool {
         solver_buffers.contains_key(solver_id)
     }
 
+    /// All solver IDs with pinned buffers.
     pub fn solver_ids(&self) -> Vec<String> {
         let solver_buffers = self
             .inner

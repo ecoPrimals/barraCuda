@@ -159,7 +159,6 @@ pub fn diversity_fusion_cpu(abundances: &[f64], n_species: usize) -> Vec<Diversi
         .collect()
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -55,10 +55,15 @@ impl Default for LbfgsGpuConfig {
 /// Result from one problem in the batch.
 #[derive(Debug, Clone)]
 pub struct LbfgsGpuResult {
+    /// Optimized solution vector (length n).
     pub x: Vec<f64>,
+    /// Final objective function value.
     pub f_val: f64,
+    /// Gradient at the solution.
     pub gradient: Vec<f64>,
+    /// Number of iterations taken.
     pub iterations: usize,
+    /// Whether the problem converged.
     pub converged: bool,
 }
 
@@ -70,6 +75,7 @@ pub struct LbfgsGpuResult {
 pub struct LbfgsGpu;
 
 impl LbfgsGpu {
+    /// Create a new batched L-BFGS optimizer for the given device.
     pub fn new(_device: Arc<WgpuDevice>) -> Self {
         Self
     }
@@ -351,7 +357,6 @@ fn two_loop_cpu(
     q
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

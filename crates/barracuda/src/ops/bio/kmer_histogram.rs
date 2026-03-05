@@ -14,6 +14,7 @@ use wgpu::util::DeviceExt;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 
+/// WGSL shader for k-mer histogram computation (atomic increments).
 pub const WGSL_KMER_HISTOGRAM: &str = include_str!("../../shaders/bio/kmer_histogram.wgsl");
 
 #[repr(C)]
@@ -25,6 +26,7 @@ struct KmerConfig {
     _pad1: u32,
 }
 
+/// GPU kernel for k-mer histogram: counts occurrences into 4^k bins.
 pub struct KmerHistogramGpu {
     pipeline: wgpu::ComputePipeline,
     bgl: wgpu::BindGroupLayout,
@@ -32,6 +34,7 @@ pub struct KmerHistogramGpu {
 }
 
 impl KmerHistogramGpu {
+    /// Create a k-mer histogram GPU kernel.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 
@@ -161,7 +164,6 @@ impl KmerHistogramGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -206,7 +206,6 @@ fn compute_g(
     coulomb * ewald_factor * (influence / coulomb).clamp(0.0, 10.0)
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

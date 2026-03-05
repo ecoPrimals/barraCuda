@@ -458,7 +458,6 @@ pub fn ln_beta(a: f64, b: f64) -> Result<f64> {
     Ok(ln_gamma(a)? + ln_gamma(b)? - ln_gamma(a + b)?)
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "gamma_tests.rs"]
 mod tests;

@@ -20,12 +20,14 @@ use crate::device::DeviceCapabilities;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Count occurrences of non-negative integer values.
 pub struct Bincount {
     input: Tensor,
     num_bins: Option<usize>,
 }
 
 impl Bincount {
+    /// Create a bincount operation. num_bins defaults to 256 if None.
     pub fn new(input: Tensor, num_bins: Option<usize>) -> Self {
         Self { input, num_bins }
     }
@@ -39,6 +41,7 @@ impl Bincount {
         &SHADER
     }
 
+    /// Execute bincount on GPU. Returns counts as f32.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_size = self.input.len();
@@ -166,12 +169,12 @@ impl Bincount {
 }
 
 impl Tensor {
+    /// Count value occurrences into bins. Input values as f32 (cast from u32).
     pub fn bincount_wgsl(self, num_bins: Option<usize>) -> Result<Self> {
         Bincount::new(self, num_bins).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

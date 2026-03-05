@@ -53,7 +53,12 @@ pub enum SplineBoundary {
     #[default]
     Natural,
     /// Clamped spline: S'(x) = value at endpoints
-    Clamped { left: f64, right: f64 },
+    Clamped {
+        /// Derivative at left endpoint
+        left: f64,
+        /// Derivative at right endpoint
+        right: f64,
+    },
     /// Not-a-knot: third derivative continuous at second and second-to-last points
     NotAKnot,
 }
@@ -514,7 +519,6 @@ fn integrate_segment(x: &[f64], y: &[f64], y2: &[f64], i: usize, x0: f64, x1: f6
     h * (linear_part + cubic_left + cubic_right)
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "cubic_spline_tests.rs"]
 mod tests;

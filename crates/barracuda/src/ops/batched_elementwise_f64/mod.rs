@@ -61,7 +61,6 @@ pub use cpu_ref::{
 pub const WGSL_MC_ET0_PROPAGATE_F64: &str =
     include_str!("../../shaders/bio/mc_et0_propagate_f64.wgsl");
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

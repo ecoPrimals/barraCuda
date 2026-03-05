@@ -13,17 +13,26 @@ pub enum RBFKernel {
     /// Gaussian: φ(r) = exp(-ε²r²)
     ///
     /// Popular general-purpose kernel. Requires shape parameter ε.
-    Gaussian { epsilon: f64 },
+    Gaussian {
+        /// Shape parameter controlling kernel width.
+        epsilon: f64,
+    },
 
     /// Multiquadric: φ(r) = √(1 + ε²r²)
     ///
     /// Good for scattered data interpolation.
-    Multiquadric { epsilon: f64 },
+    Multiquadric {
+        /// Shape parameter.
+        epsilon: f64,
+    },
 
     /// Inverse multiquadric: φ(r) = 1/√(1 + ε²r²)
     ///
     /// Produces smoother interpolants than multiquadric.
-    InverseMultiquadric { epsilon: f64 },
+    InverseMultiquadric {
+        /// Shape parameter.
+        epsilon: f64,
+    },
 
     /// Cubic: φ(r) = r³
     ///
@@ -78,7 +87,6 @@ impl RBFKernel {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

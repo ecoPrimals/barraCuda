@@ -33,6 +33,7 @@ pub struct SGDW {
 }
 
 impl SGDW {
+    /// Create SGD with decoupled weight decay.
     pub fn new(
         parameters: Tensor,
         gradients: Tensor,
@@ -85,6 +86,7 @@ impl SGDW {
         &SHADER_F32
     }
 
+    /// Execute SGDW optimizer step.
     pub fn execute(self) -> Result<(Tensor, Tensor)> {
         let device = self.parameters.device();
         let size = self.parameters.shape().iter().product::<usize>();
@@ -302,7 +304,6 @@ impl SGDW {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

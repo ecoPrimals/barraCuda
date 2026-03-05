@@ -21,20 +21,29 @@ pub enum BarracudaError {
     /// Tensor shapes don't match for a binary op (e.g. matmul dimensions).
     #[error("Shape mismatch: expected {expected:?}, got {actual:?}")]
     ShapeMismatch {
+        /// Expected shape dimensions.
         expected: Vec<usize>,
+        /// Actual shape dimensions received.
         actual: Vec<usize>,
     },
 
     /// Shape violates constraints (e.g. non-positive dim, wrong rank).
     #[error("Invalid shape: expected {expected:?}, got {actual:?}")]
     InvalidShape {
+        /// Expected shape dimensions.
         expected: Vec<usize>,
+        /// Actual shape dimensions received.
         actual: Vec<usize>,
     },
 
     /// Operation rejected due to semantic rules (e.g. incompatible strides).
     #[error("Invalid operation: {op} - {reason}")]
-    InvalidOperation { op: String, reason: String },
+    InvalidOperation {
+        /// Name of the operation that failed.
+        op: String,
+        /// Reason the operation was rejected.
+        reason: String,
+    },
 
     /// GPU runtime error (buffer map, submit, general GPU failure).
     #[error("GPU error: {0}")]
@@ -58,23 +67,42 @@ pub enum BarracudaError {
 
     /// Operation not supported on the selected device (e.g. f64 on CPU).
     #[error("Operation not supported on device: {op} on {device}")]
-    UnsupportedOperation { op: String, device: String },
+    UnsupportedOperation {
+        /// Name of the unsupported operation.
+        op: String,
+        /// Device on which the operation is not supported.
+        device: String,
+    },
 
     /// Invalid user input (negative stride, out-of-range index).
     #[error("Invalid input: {message}")]
-    InvalidInput { message: String },
+    InvalidInput {
+        /// Description of the invalid input.
+        message: String,
+    },
 
     /// Kernel or executor execution failed.
     #[error("Execution error: {message}")]
-    ExecutionError { message: String },
+    ExecutionError {
+        /// Description of the execution failure.
+        message: String,
+    },
 
     /// Requested device unavailable (no adapter, backend disabled).
     #[error("Device not available: {device} - {reason}")]
-    DeviceNotAvailable { device: String, reason: String },
+    DeviceNotAvailable {
+        /// Device identifier that was requested.
+        device: String,
+        /// Reason the device is unavailable.
+        reason: String,
+    },
 
     /// No executor registered for this operation (dispatch failure).
     #[error("No available executor for operation: {operation}")]
-    NoAvailableExecutor { operation: String },
+    NoAvailableExecutor {
+        /// Name of the operation that has no executor.
+        operation: String,
+    },
 
     /// Unexpected internal state (logic bug, use when panicking is inappropriate).
     #[error("Internal error: {0}")]
@@ -82,7 +110,10 @@ pub enum BarracudaError {
 
     /// Numerical failure (NaN, overflow, singular matrix).
     #[error("Numerical error: {message}")]
-    Numerical { message: String },
+    Numerical {
+        /// Description of the numerical failure.
+        message: String,
+    },
 
     /// Resource quota exceeded (concurrent ops, buffer pool).
     #[error("Resource exhausted: {0}")]
@@ -91,47 +122,65 @@ pub enum BarracudaError {
     /// Requested allocation exceeds device safe limit.
     #[error("Device limit exceeded: {message} (requested {requested_bytes} bytes, safe limit {safe_limit_bytes} bytes)")]
     DeviceLimitExceeded {
+        /// Human-readable description of the limit exceeded.
         message: String,
+        /// Number of bytes requested.
         requested_bytes: u64,
+        /// Device's safe allocation limit in bytes.
         safe_limit_bytes: u64,
     },
 
     /// Feature not yet implemented.
     #[error("Not implemented: {feature}")]
-    NotImplemented { feature: String },
+    NotImplemented {
+        /// Name of the unimplemented feature.
+        feature: String,
+    },
 
     /// I/O failure (file read, write).
     #[error("IO error: {context}")]
     Io {
+        /// Context describing the I/O operation that failed.
         context: String,
+        /// The underlying I/O error.
         #[source]
         source: std::sync::Arc<std::io::Error>,
     },
 
     /// JSON parse/serialize error (config, checkpoint).
     #[error("JSON error: {context}")]
-    Json { context: String, detail: String },
+    Json {
+        /// Context describing where the JSON error occurred.
+        context: String,
+        /// Additional error details.
+        detail: String,
+    },
 }
 
 impl BarracudaError {
+    /// Construct a device error.
     pub fn device(msg: impl Into<String>) -> Self {
         Self::Device(msg.into())
     }
 
+    /// Construct a device-not-found error.
     pub fn device_not_found(msg: impl Into<String>) -> Self {
         Self::Device(msg.into())
     }
 
+    /// Construct an execution failure error.
     pub fn execution_failed(msg: impl Into<String>) -> Self {
         Self::ExecutionError {
             message: msg.into(),
         }
     }
 
+    /// Construct a shape mismatch error.
     pub fn shape_mismatch(expected: Vec<usize>, actual: Vec<usize>) -> Self {
         Self::ShapeMismatch { expected, actual }
     }
 
+    /// Construct an invalid operation error.
     pub fn invalid_op(op: impl Into<String>, reason: impl Into<String>) -> Self {
         Self::InvalidOperation {
             op: op.into(),
@@ -139,18 +188,22 @@ impl BarracudaError {
         }
     }
 
+    /// Construct a GPU runtime error.
     pub fn gpu(msg: impl Into<String>) -> Self {
         Self::Gpu(msg.into())
     }
 
+    /// Construct a shader compilation error.
     pub fn shader_compilation(msg: impl Into<String>) -> Self {
         Self::ShaderCompilation(msg.into())
     }
 
+    /// Construct an out-of-memory error.
     pub fn oom(msg: impl Into<String>) -> Self {
         Self::OutOfMemory(msg.into())
     }
 
+    /// Construct an unsupported operation error.
     pub fn unsupported(op: impl Into<String>, device: impl Into<String>) -> Self {
         Self::UnsupportedOperation {
             op: op.into(),
@@ -158,14 +211,17 @@ impl BarracudaError {
         }
     }
 
+    /// Construct an invalid shape error.
     pub fn invalid_shape(expected: Vec<usize>, actual: Vec<usize>) -> Self {
         Self::InvalidShape { expected, actual }
     }
 
+    /// Construct a resource exhausted error.
     pub fn resource_exhausted(msg: impl Into<String>) -> Self {
         Self::ResourceExhausted(msg.into())
     }
 
+    /// Construct an I/O error with context.
     pub fn io(context: impl Into<String>, source: std::io::Error) -> Self {
         Self::Io {
             context: context.into(),
@@ -173,6 +229,7 @@ impl BarracudaError {
         }
     }
 
+    /// Construct a JSON parse/serialize error.
     pub fn json(context: impl Into<String>, detail: impl Into<String>) -> Self {
         Self::Json {
             context: context.into(),
@@ -224,7 +281,6 @@ impl From<std::io::Error> for BarracudaError {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

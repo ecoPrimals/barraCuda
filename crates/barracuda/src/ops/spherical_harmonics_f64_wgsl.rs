@@ -20,6 +20,7 @@ pub struct SphericalHarmonicsF64 {
 }
 
 impl SphericalHarmonicsF64 {
+    /// Creates a new f64 spherical harmonics evaluator for the given WGPU device.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -49,8 +50,8 @@ impl SphericalHarmonicsF64 {
         self.ylm_gpu(theta_phi, l, m)
     }
 
-    #[expect(dead_code, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn ylm_cpu(&self, theta_phi: &[f64], l: u32, m: i32) -> Vec<f64> {
         let size = theta_phi.len() / 2;
         let _abs_m = m.unsigned_abs(); // Used in GPU path
@@ -213,7 +214,6 @@ impl SphericalHarmonicsF64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

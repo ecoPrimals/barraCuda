@@ -84,35 +84,67 @@ pub enum MathOp {
     // REDUCTION OPERATIONS (reduce along dimension)
     // ═══════════════════════════════════════════════════════════
     /// Sum reduction: ∑x
-    ReduceSum { dim: Option<usize>, keepdim: bool },
+    ReduceSum {
+        /// Dimension along which to reduce; `None` reduces all.
+        dim: Option<usize>,
+        /// Whether to keep the reduced dimension with size 1.
+        keepdim: bool,
+    },
 
     /// Mean reduction: mean(x)
-    ReduceMean { dim: Option<usize>, keepdim: bool },
+    ReduceMean {
+        /// Dimension along which to reduce; `None` reduces all.
+        dim: Option<usize>,
+        /// Whether to keep the reduced dimension with size 1.
+        keepdim: bool,
+    },
 
     /// Max reduction: max(x)
-    ReduceMax { dim: Option<usize>, keepdim: bool },
+    ReduceMax {
+        /// Dimension along which to reduce; `None` reduces all.
+        dim: Option<usize>,
+        /// Whether to keep the reduced dimension with size 1.
+        keepdim: bool,
+    },
 
     /// Min reduction: min(x)
-    ReduceMin { dim: Option<usize>, keepdim: bool },
+    ReduceMin {
+        /// Dimension along which to reduce; `None` reduces all.
+        dim: Option<usize>,
+        /// Whether to keep the reduced dimension with size 1.
+        keepdim: bool,
+    },
 
     /// Product reduction: ∏x
-    ReduceProd { dim: Option<usize>, keepdim: bool },
+    ReduceProd {
+        /// Dimension along which to reduce; `None` reduces all.
+        dim: Option<usize>,
+        /// Whether to keep the reduced dimension with size 1.
+        keepdim: bool,
+    },
 
     // ═══════════════════════════════════════════════════════════
     // MATRIX OPERATIONS
     // ═══════════════════════════════════════════════════════════
     /// Matrix multiply: C = A @ B
     MatMul {
+        /// Whether to transpose the first matrix.
         transpose_a: bool,
+        /// Whether to transpose the second matrix.
         transpose_b: bool,
     },
 
     /// Matrix transpose: Aᵀ
-    Transpose { perm: Vec<usize> },
+    Transpose {
+        /// Permutation of dimension indices.
+        perm: Vec<usize>,
+    },
 
     /// Batch matrix multiply: [C₁, C₂, ...] = [A₁, A₂, ...] @ [B₁, B₂, ...]
     BatchMatMul {
+        /// Whether to transpose the first matrix in each batch.
         transpose_a: bool,
+        /// Whether to transpose the second matrix in each batch.
         transpose_b: bool,
     },
 
@@ -120,22 +152,42 @@ pub enum MathOp {
     // SHAPE OPERATIONS
     // ═══════════════════════════════════════════════════════════
     /// Reshape: change shape without copying data
-    Reshape { new_shape: Vec<i64> },
+    Reshape {
+        /// Target shape dimensions (-1 for inferred).
+        new_shape: Vec<i64>,
+    },
 
     /// Broadcast: expand shape by repeating values
-    Broadcast { target_shape: Vec<usize> },
+    Broadcast {
+        /// Target shape to broadcast to.
+        target_shape: Vec<usize>,
+    },
 
     /// Squeeze: remove dimensions of size 1
-    Squeeze { dims: Option<Vec<usize>> },
+    Squeeze {
+        /// Dimensions to squeeze; `None` squeezes all size-1 dims.
+        dims: Option<Vec<usize>>,
+    },
 
     /// Unsqueeze: add dimensions of size 1
-    Unsqueeze { dims: Vec<usize> },
+    Unsqueeze {
+        /// Dimensions at which to insert size-1.
+        dims: Vec<usize>,
+    },
 
     /// Concat: join tensors along dimension
-    Concat { dim: usize },
+    Concat {
+        /// Dimension along which to concatenate.
+        dim: usize,
+    },
 
     /// Split: split tensor along dimension
-    Split { dim: usize, sizes: Vec<usize> },
+    Split {
+        /// Dimension along which to split.
+        dim: usize,
+        /// Size of each split chunk.
+        sizes: Vec<usize>,
+    },
 
     // ═══════════════════════════════════════════════════════════
     // ACTIVATION FUNCTIONS
@@ -150,7 +202,10 @@ pub enum MathOp {
     Tanh,
 
     /// Softmax: eˣⁱ / ∑eˣʲ
-    Softmax { dim: i64 },
+    Softmax {
+        /// Dimension along which to apply softmax.
+        dim: i64,
+    },
 
     /// GELU: x * Φ(x) where Φ is standard normal CDF
     GELU,
@@ -160,23 +215,33 @@ pub enum MathOp {
     // ═══════════════════════════════════════════════════════════
     /// 2D Convolution
     Conv2D {
+        /// Stride (height, width).
         stride: (usize, usize),
+        /// Padding (height, width).
         padding: (usize, usize),
+        /// Dilation (height, width).
         dilation: (usize, usize),
+        /// Number of groups for grouped convolution.
         groups: usize,
     },
 
     /// 2D Max Pooling
     MaxPool2D {
+        /// Kernel size (height, width).
         kernel_size: (usize, usize),
+        /// Stride (height, width).
         stride: (usize, usize),
+        /// Padding (height, width).
         padding: (usize, usize),
     },
 
     /// 2D Average Pooling
     AvgPool2D {
+        /// Kernel size (height, width).
         kernel_size: (usize, usize),
+        /// Stride (height, width).
         stride: (usize, usize),
+        /// Padding (height, width).
         padding: (usize, usize),
     },
 }
@@ -217,41 +282,67 @@ pub trait MathPrimitive {
 /// Unary operation type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOp {
+    /// Negate: y = -x
     Negate,
+    /// Absolute value: y = |x|
     Abs,
+    /// Square: y = x²
     Square,
+    /// Square root: y = √x
     Sqrt,
+    /// Reciprocal: y = 1/x
     Reciprocal,
+    /// Exponential: y = eˣ
     Exp,
+    /// Natural log: y = ln(x)
     Log,
+    /// Sine: y = sin(x)
     Sin,
+    /// Cosine: y = cos(x)
     Cos,
+    /// Tangent: y = tan(x)
     Tan,
+    /// ReLU: max(0, x)
     ReLU,
+    /// Sigmoid: 1 / (1 + e⁻ˣ)
     Sigmoid,
+    /// Tanh: (eˣ - e⁻ˣ) / (eˣ + e⁻ˣ)
     Tanh,
+    /// GELU: x * Φ(x) where Φ is standard normal CDF
     GELU,
 }
 
 /// Binary operation type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinaryOp {
+    /// Addition: z = x + y
     Add,
+    /// Subtraction: z = x - y
     Sub,
+    /// Multiplication: z = x * y
     Mul,
+    /// Division: z = x / y
     Div,
+    /// Power: z = xʸ
     Pow,
+    /// Maximum: z = max(x, y)
     Max,
+    /// Minimum: z = min(x, y)
     Min,
 }
 
 /// Reduction operation type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReduceOp {
+    /// Sum reduction: ∑x
     Sum,
+    /// Mean reduction: mean(x)
     Mean,
+    /// Max reduction: max(x)
     Max,
+    /// Min reduction: min(x)
     Min,
+    /// Product reduction: ∏x
     Prod,
 }
 
@@ -274,7 +365,7 @@ pub struct TensorDescriptor {
 }
 
 impl TensorDescriptor {
-    /// Create new tensor descriptor
+    /// Create a new tensor descriptor from shape and data type.
     pub fn new(shape: Vec<usize>, dtype: DType) -> Self {
         let numel = shape.iter().product();
         let strides = Self::compute_strides(&shape);
@@ -286,7 +377,7 @@ impl TensorDescriptor {
         }
     }
 
-    /// Compute strides for contiguous tensor
+    /// Compute strides for a contiguous tensor of the given shape.
     fn compute_strides(shape: &[usize]) -> Vec<usize> {
         let mut strides = vec![1; shape.len()];
         for i in (0..shape.len().saturating_sub(1)).rev() {
@@ -295,22 +386,22 @@ impl TensorDescriptor {
         strides
     }
 
-    /// Get rank (number of dimensions)
+    /// Returns the rank (number of dimensions).
     pub fn rank(&self) -> usize {
         self.shape.len()
     }
 
-    /// Check if tensor is scalar
+    /// Returns `true` if the tensor is a scalar (single element).
     pub fn is_scalar(&self) -> bool {
         self.numel == 1
     }
 
-    /// Check if tensor is vector
+    /// Returns `true` if the tensor is a vector (rank 1).
     pub fn is_vector(&self) -> bool {
         self.rank() == 1
     }
 
-    /// Check if tensor is matrix
+    /// Returns `true` if the tensor is a matrix (rank 2).
     pub fn is_matrix(&self) -> bool {
         self.rank() == 2
     }
@@ -319,17 +410,24 @@ impl TensorDescriptor {
 /// Data type enumeration
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DType {
+    /// 32-bit floating point
     F32,
+    /// 64-bit floating point
     F64,
+    /// 32-bit signed integer
     I32,
+    /// 64-bit signed integer
     I64,
+    /// 32-bit unsigned integer
     U32,
+    /// 64-bit unsigned integer
     U64,
+    /// Boolean
     Bool,
 }
 
 impl DType {
-    /// Get size in bytes
+    /// Returns the size in bytes of a single element of this type.
     pub fn size_bytes(&self) -> usize {
         match self {
             DType::F32 | DType::I32 | DType::U32 => 4,
@@ -358,7 +456,7 @@ pub struct OpNode {
 }
 
 impl OpNode {
-    /// Create new operation node
+    /// Create a new operation node.
     pub fn new(op: MathOp, inputs: Vec<TensorDescriptor>, output: TensorDescriptor) -> Self {
         Self {
             op,
@@ -368,14 +466,13 @@ impl OpNode {
         }
     }
 
-    /// Set operation name
+    /// Set the operation name for debugging.
     pub fn with_name(mut self, name: impl Into<String>) -> Self {
         self.name = Some(name.into());
         self
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

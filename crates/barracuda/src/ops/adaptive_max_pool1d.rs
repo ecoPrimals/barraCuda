@@ -24,12 +24,14 @@ struct AdaptiveMaxPool1DParams {
     out_length: u32,
 }
 
+/// 1D adaptive max pooling — fixed output length regardless of input.
 pub struct AdaptiveMaxPool1D {
     input: Tensor,
     output_length: usize,
 }
 
 impl AdaptiveMaxPool1D {
+    /// Create adaptive max pool. Input must be 3D [B, C, L].
     pub fn new(input: Tensor, output_length: usize) -> Result<Self> {
         // Validate input shape: must be 3D [B, C, L]
         let shape = input.shape();
@@ -64,6 +66,7 @@ impl AdaptiveMaxPool1D {
         }
     }
 
+    /// Execute adaptive max pooling on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -205,7 +208,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

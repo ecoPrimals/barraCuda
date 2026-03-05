@@ -265,7 +265,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "cholesky_tests.rs"]
 mod tests;

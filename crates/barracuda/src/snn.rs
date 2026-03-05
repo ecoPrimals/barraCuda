@@ -52,7 +52,7 @@
 use crate::error::{BarracudaError, Result as BarracudaResult};
 use rand::{Rng, SeedableRng};
 
-/// Configuration for spiking neural network
+/// Configuration for spiking neural network.
 #[derive(Debug, Clone)]
 pub struct SNNConfig {
     /// Input encoding parameters
@@ -79,18 +79,24 @@ impl Default for SNNConfig {
     }
 }
 
-/// Input encoding strategy (capability-based)
+/// Input encoding strategy (capability-based).
 #[derive(Debug, Clone)]
 pub enum EncodingType {
     /// Rate coding: intensity → spike frequency
-    Rate { max_rate: f32 },
+    Rate {
+        /// Maximum spike rate (Hz)
+        max_rate: f32,
+    },
     /// Temporal coding: value → spike timing
     Temporal,
     /// Population coding: distributed representation
-    Population { n_neurons: usize },
+    Population {
+        /// Number of neurons in population
+        n_neurons: usize,
+    },
 }
 
-/// Output decoding strategy (capability-based)
+/// Output decoding strategy (capability-based).
 #[derive(Debug, Clone)]
 pub enum DecodingType {
     /// Rate decoding: spike frequency → intensity
@@ -101,27 +107,41 @@ pub enum DecodingType {
     PopulationVector,
 }
 
-/// SNN layer types (all capability-based)
+/// SNN layer types (all capability-based).
 #[derive(Debug, Clone)]
 pub enum SNNLayer {
     /// Leaky Integrate-and-Fire neurons
     LIF {
+        /// Number of neurons in the layer
         size: usize,
+        /// Membrane time constant (ms)
         tau: f32,
+        /// Spike threshold
         threshold: f32,
+        /// Reset potential after spike
         reset: f32,
     },
     /// Temporal pooling (aggregation over time)
-    TemporalPool { window_size: usize },
+    TemporalPool {
+        /// Number of time steps to aggregate
+        window_size: usize,
+    },
     /// Sparse linear transformation
     SparseLinear {
+        /// Input dimension
         input_size: usize,
+        /// Output dimension
         output_size: usize,
+        /// Fraction of non-zero weights (0.0–1.0)
         sparsity: f32,
-        weights: Option<Vec<f32>>, // None = auto-initialize
+        /// Weight matrix (row-major); `None` = auto-initialize
+        weights: Option<Vec<f32>>,
     },
     /// Rate encoding layer
-    RateEncoder { max_rate: f32 },
+    RateEncoder {
+        /// Maximum spike rate (Hz)
+        max_rate: f32,
+    },
     /// Rate decoding layer
     RateDecoder,
 }
@@ -161,7 +181,7 @@ pub struct SpikingNetwork {
     states: Vec<LayerState>,
 }
 
-/// Builder for constructing SNNs
+/// Builder for constructing SNNs.
 pub struct SNNBuilder {
     layers: Vec<SNNLayer>,
     config: SNNConfig,
@@ -175,13 +195,17 @@ impl SNNBuilder {
         }
     }
 
-    /// Add a layer to the network
+    /// Add a layer to the network.
     pub fn add_layer(mut self, layer: SNNLayer) -> Self {
         self.layers.push(layer);
         self
     }
 
-    /// Build the network
+    /// Build the network, initializing layer states and weights.
+    ///
+    /// For [`SNNLayer::SparseLinear`] layers without explicit weights,
+    /// auto-initializes sparse random weights based on the sparsity parameter.
+    #[must_use]
     pub fn build(self) -> SpikingNetwork {
         let mut states = Vec::new();
 
@@ -233,12 +257,12 @@ impl SNNBuilder {
 }
 
 impl SpikingNetwork {
-    /// Create a network builder
+    /// Create a network builder.
     pub fn builder() -> SNNBuilder {
         SNNBuilder::new(SNNConfig::default())
     }
 
-    /// Create a network builder with config
+    /// Create a network builder with config.
     pub fn builder_with_config(config: SNNConfig) -> SNNBuilder {
         SNNBuilder::new(config)
     }
@@ -407,7 +431,7 @@ impl SpikingNetwork {
         }
     }
 
-    /// Reset all layer states
+    /// Reset all layer states.
     pub fn reset(&mut self) {
         for state in &mut self.states {
             state.membrane.fill(0.0);
@@ -417,7 +441,6 @@ impl SpikingNetwork {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

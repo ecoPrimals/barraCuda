@@ -109,6 +109,7 @@ pub struct GillespieGpu {
 }
 
 impl GillespieGpu {
+    /// Create Gillespie SSA simulator.
     pub fn new(device: &WgpuDevice) -> Self {
         Self {
             device: Arc::new(device.clone()),
@@ -250,7 +251,6 @@ impl GillespieGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

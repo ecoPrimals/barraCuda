@@ -244,13 +244,17 @@ impl BarraCudaServer {
 /// Pack u64 coefficients into a wgpu-compatible tensor (u64 → split u32 pairs → f32 bits).
 fn u64_to_tensor(
     coeffs: &[u64],
-    dev: &std::sync::Arc<barracuda::device::WgpuDevice>,
+    dev: &barracuda::device::WgpuDevice,
 ) -> std::result::Result<barracuda::tensor::Tensor, barracuda::error::BarracudaError> {
     let f32_bits: Vec<f32> = coeffs
         .iter()
         .flat_map(|&x| [f32::from_bits(x as u32), f32::from_bits((x >> 32) as u32)])
         .collect();
-    barracuda::tensor::Tensor::from_data(&f32_bits, vec![coeffs.len() * 2], dev.clone())
+    barracuda::tensor::Tensor::from_data(
+        &f32_bits,
+        vec![coeffs.len() * 2],
+        std::sync::Arc::new(dev.clone()),
+    )
 }
 
 /// Unpack u32 pairs back into u64 coefficients.
@@ -377,6 +381,9 @@ impl BarraCudaService for BarraCudaServer {
         }
     }
 
+    /// Run GPU stack validation via matmul identity test.
+    /// Uses 2×2 identity matrix: minimal size that validates matmul path without
+    /// unnecessary GPU memory/transfer overhead.
     async fn validate_gpu_stack(self, _: tarpc::context::Context) -> ValidationResult {
         let Some(dev) = self.primal.device() else {
             return ValidationResult {
@@ -386,12 +393,14 @@ impl BarraCudaService for BarraCudaServer {
             };
         };
 
+        let dev_arc = std::sync::Arc::new(dev);
         let matmul_pass = {
             let eye = vec![1.0, 0.0, 0.0, 1.0];
             let inp = vec![1.0, 2.0, 3.0, 4.0];
-            barracuda::tensor::Tensor::from_data(&eye, vec![2, 2], dev.clone())
+            barracuda::tensor::Tensor::from_data(&eye, vec![2, 2], dev_arc.clone())
                 .and_then(|e| {
-                    let i = barracuda::tensor::Tensor::from_data(&inp, vec![2, 2], dev.clone())?;
+                    let i =
+                        barracuda::tensor::Tensor::from_data(&inp, vec![2, 2], dev_arc.clone())?;
                     i.matmul(&e)
                 })
                 .and_then(|r| r.to_vec())
@@ -425,13 +434,14 @@ impl BarraCudaService for BarraCudaServer {
             };
         };
 
+        let dev_arc = std::sync::Arc::new(dev);
         match op.as_str() {
             "zeros" | "ones" => {
                 let s = shape.unwrap_or_else(|| vec![1]);
                 let elements: usize = s.iter().product();
                 let fill = if op == "ones" { 1.0f32 } else { 0.0f32 };
                 let values = vec![fill; elements];
-                match barracuda::tensor::Tensor::from_data(&values, s.clone(), dev.clone()) {
+                match barracuda::tensor::Tensor::from_data(&values, s.clone(), dev_arc) {
                     Ok(tensor) => {
                         let tid = self.primal.store_tensor(tensor);
                         DispatchResult {
@@ -502,7 +512,8 @@ impl BarraCudaService for BarraCudaServer {
         };
 
         let values = data.unwrap_or_else(|| vec![0.0f32; elements]);
-        match barracuda::tensor::Tensor::from_data(&values, shape.clone(), dev.clone()) {
+        match barracuda::tensor::Tensor::from_data(&values, shape.clone(), std::sync::Arc::new(dev))
+        {
             Ok(tensor) => {
                 let tensor_id = self.primal.store_tensor(tensor);
                 TensorHandle {
@@ -570,7 +581,7 @@ impl BarraCudaService for BarraCudaServer {
             };
         };
 
-        let tensor = match u64_to_tensor(&coefficients, dev) {
+        let tensor = match u64_to_tensor(&coefficients, &dev) {
             Ok(t) => t,
             Err(e) => {
                 return FheNttResult {
@@ -622,7 +633,7 @@ impl BarraCudaService for BarraCudaServer {
             };
         };
 
-        let tensor_a = match u64_to_tensor(&a, dev) {
+        let tensor_a = match u64_to_tensor(&a, &dev) {
             Ok(t) => t,
             Err(e) => {
                 return FhePointwiseMulResult {
@@ -631,7 +642,7 @@ impl BarraCudaService for BarraCudaServer {
                 }
             }
         };
-        let tensor_b = match u64_to_tensor(&b, dev) {
+        let tensor_b = match u64_to_tensor(&b, &dev) {
             Ok(t) => t,
             Err(e) => {
                 return FhePointwiseMulResult {

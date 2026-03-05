@@ -6,23 +6,33 @@ use super::types::HardwareType;
 /// Mixed dispatch substrate — cross-device routing for GPU ↔ NPU ↔ CPU.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MixedSubstrate {
+    /// Compute and data remain on GPU
     GpuOnly,
+    /// Compute and data remain on CPU
     CpuOnly,
+    /// Compute and data remain on NPU
     NpuOnly,
+    /// Data transfer from GPU to CPU for compute
     GpuToCpu,
+    /// Data transfer from CPU to GPU for compute
     CpuToGpu,
+    /// Data transfer from GPU to NPU for compute
     GpuToNpu,
+    /// Data transfer from NPU to GPU for compute
     NpuToGpu,
 }
 
 /// Estimated transfer cost for cross-device data movement.
 #[derive(Debug, Clone, Copy)]
 pub struct TransferCost {
+    /// One-way latency in microseconds
     pub latency_us: f64,
+    /// Bandwidth in GB/s
     pub bandwidth_gbps: f64,
 }
 
 impl TransferCost {
+    /// Estimate total transfer time in microseconds for `bytes` bytes.
     #[must_use]
     pub fn estimated_us(&self, bytes: usize) -> f64 {
         self.latency_us + (bytes as f64) / (self.bandwidth_gbps * 1000.0)
@@ -60,6 +70,7 @@ pub enum BandwidthTier {
 }
 
 impl BandwidthTier {
+    /// Bandwidth in GB/s for this interconnect tier.
     #[must_use]
     pub const fn bandwidth_gbps(self) -> f64 {
         match self {
@@ -72,6 +83,7 @@ impl BandwidthTier {
         }
     }
 
+    /// One-way transfer latency in microseconds.
     #[must_use]
     pub const fn latency_us(self) -> f64 {
         match self {
@@ -81,6 +93,7 @@ impl BandwidthTier {
         }
     }
 
+    /// Transfer cost (latency + bandwidth) for this tier.
     #[must_use]
     pub const fn transfer_cost(self) -> TransferCost {
         TransferCost {
@@ -188,12 +201,16 @@ pub fn mixed_substrate_with_tier(
 
 /// PCIe bridge for GPU↔NPU transfer cost estimation.
 pub struct PcieBridge {
+    /// Whether peer-to-peer DMA is available
     pub p2p_available: bool,
+    /// Source device label for diagnostics
     pub source_label: String,
+    /// Target device label for diagnostics
     pub target_label: String,
 }
 
 impl PcieBridge {
+    /// Detect P2P availability between GPU and NPU (placeholder).
     #[must_use]
     pub fn detect_p2p() -> Self {
         Self {
@@ -203,6 +220,7 @@ impl PcieBridge {
         }
     }
 
+    /// Return transfer cost for the given byte count.
     #[must_use]
     pub fn transfer_cost(&self, _bytes: usize) -> TransferCost {
         TransferCost {
@@ -212,7 +230,6 @@ impl PcieBridge {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

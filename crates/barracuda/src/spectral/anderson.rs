@@ -700,7 +700,6 @@ impl LcgRng {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "anderson_tests.rs"]
 mod tests;

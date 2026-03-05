@@ -35,6 +35,7 @@ pub struct LogSoftmax {
 }
 
 impl LogSoftmax {
+    /// Create a log-softmax operation along the last dimension.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -43,6 +44,7 @@ impl LogSoftmax {
         &SHADER_F32
     }
 
+    /// Execute log-softmax and return the result tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -133,7 +135,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

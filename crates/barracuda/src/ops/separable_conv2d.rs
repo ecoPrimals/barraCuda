@@ -33,6 +33,7 @@ struct SeparableConv2DParams {
     mode: u32, // 0 = depthwise, 1 = pointwise
 }
 
+/// Depthwise separable 2D convolution (depthwise + pointwise).
 pub struct SeparableConv2D {
     input: Tensor,
     weight: Tensor,
@@ -43,13 +44,17 @@ pub struct SeparableConv2D {
     mode: SeparableConvMode,
 }
 
+/// Mode for separable convolution: depthwise (per-channel) or pointwise (1×1).
 #[derive(Clone, Copy)]
 pub enum SeparableConvMode {
+    /// Depthwise: each channel convolved independently with its own kernel.
     Depthwise,
+    /// Pointwise: 1×1 convolution mixing channels.
     Pointwise,
 }
 
 impl SeparableConv2D {
+    /// Create a new separable convolution operation.
     pub fn new(
         input: Tensor,
         weight: Tensor,
@@ -97,6 +102,7 @@ impl SeparableConv2D {
         }
     }
 
+    /// Execute the separable convolution and return the output tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -308,7 +314,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -12,12 +12,14 @@ static SHADER_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(SHADER_F64)
 });
 
+/// Binary cross-entropy loss (scalar reduction).
 pub struct BinaryCrossEntropy {
     predictions: Tensor,
     targets: Tensor,
 }
 
 impl BinaryCrossEntropy {
+    /// Create binary cross-entropy loss.
     pub fn new(predictions: Tensor, targets: Tensor) -> Self {
         Self {
             predictions,
@@ -29,6 +31,7 @@ impl BinaryCrossEntropy {
         &SHADER_F32
     }
 
+    /// Execute binary cross-entropy on GPU. Returns scalar loss.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
 
@@ -110,7 +113,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

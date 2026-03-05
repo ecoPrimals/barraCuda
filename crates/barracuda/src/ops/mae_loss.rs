@@ -45,12 +45,14 @@ struct MAELossParams {
     _padding: [u32; 2],
 }
 
+/// Mean absolute error loss for robust regression.
 pub struct MAELoss {
     predictions: Tensor,
     targets: Tensor,
 }
 
 impl MAELoss {
+    /// Creates a new MAE loss. Shapes must match.
     pub fn new(predictions: Tensor, targets: Tensor) -> Result<Self> {
         // Validate shapes match
         if predictions.shape() != targets.shape() {
@@ -75,6 +77,7 @@ impl MAELoss {
         include_str!("../shaders/loss/mae_loss_f64.wgsl")
     }
 
+    /// Executes MAE loss and returns a scalar loss tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size = self.predictions.shape().iter().product::<usize>();
@@ -258,7 +261,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -38,6 +38,7 @@ struct AvgPool3DParams {
     _padding: u32,
 }
 
+/// 3D average pooling for volumetric data (video, medical imaging).
 pub struct AvgPool3D {
     input: Tensor,
     kernel_size: (usize, usize, usize),
@@ -46,6 +47,7 @@ pub struct AvgPool3D {
 }
 
 impl AvgPool3D {
+    /// Create 3D avg pool. Input must be 5D [B, C, D, H, W].
     pub fn new(
         input: Tensor,
         kernel_size: (usize, usize, usize),
@@ -102,6 +104,7 @@ impl AvgPool3D {
         }
     }
 
+    /// Execute 3D average pooling on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -277,7 +280,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -114,10 +114,12 @@ impl Fft3DF64 {
         })
     }
 
+    /// Compute forward 3D FFT (time → frequency domain).
     pub async fn forward(&self, data: &[f64]) -> Result<Vec<f64>> {
         self.execute_internal(data, false).await
     }
 
+    /// Compute inverse 3D FFT (frequency → time domain).
     pub async fn inverse(&self, data: &[f64]) -> Result<Vec<f64>> {
         self.execute_internal(data, true).await
     }
@@ -295,12 +297,12 @@ impl Fft3DF64 {
         }
     }
 
+    /// Return (nx, ny, nz) dimensions.
     pub fn dims(&self) -> (usize, usize, usize) {
         (self.nx, self.ny, self.nz)
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

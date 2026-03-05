@@ -18,11 +18,14 @@ pub type ColorVector = [Complex64; 3];
 
 /// Staggered fermion field: one `ColorVector` per lattice site.
 pub struct FermionField {
+    /// Color vectors at each site
     pub data: Vec<ColorVector>,
+    /// Lattice volume (number of sites)
     pub volume: usize,
 }
 
 impl FermionField {
+    /// Create a zero fermion field.
     pub fn zeros(volume: usize) -> Self {
         Self {
             data: vec![[Complex64::ZERO; 3]; volume],
@@ -30,6 +33,7 @@ impl FermionField {
         }
     }
 
+    /// Create a random fermion field (for testing).
     pub fn random(volume: usize, seed: u64) -> Self {
         use super::constants::lcg_uniform_f64;
         let mut rng = seed;
@@ -44,6 +48,7 @@ impl FermionField {
         Self { data, volume }
     }
 
+    /// Inner product: <self|other>.
     pub fn dot(&self, other: &Self) -> Complex64 {
         let mut sum = Complex64::ZERO;
         for (a, b) in self.data.iter().zip(other.data.iter()) {
@@ -54,10 +59,12 @@ impl FermionField {
         sum
     }
 
+    /// Squared norm: Re<self|self>.
     pub fn norm_sq(&self) -> f64 {
         self.dot(self).re
     }
 
+    /// In-place: self += a * x.
     pub fn axpy(&mut self, a: Complex64, x: &Self) {
         for (si, xi) in self.data.iter_mut().zip(x.data.iter()) {
             for c in 0..3 {
@@ -66,6 +73,7 @@ impl FermionField {
         }
     }
 
+    /// Copy data from another field.
     pub fn copy_from(&mut self, other: &Self) {
         self.data.copy_from_slice(&other.data);
     }
@@ -171,9 +179,13 @@ pub fn apply_dirac_sq(lattice: &Lattice, psi: &FermionField, mass: f64) -> Fermi
 /// CG solver result.
 #[derive(Clone, Debug)]
 pub struct CgResult {
+    /// Whether the solver converged
     pub converged: bool,
+    /// Number of iterations performed
     pub iterations: usize,
+    /// Final residual norm
     pub final_residual: f64,
+    /// Initial residual norm
     pub initial_residual: f64,
 }
 
@@ -249,7 +261,6 @@ pub fn cg_solve(
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

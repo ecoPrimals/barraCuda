@@ -21,6 +21,7 @@ pub struct Normalize {
 }
 
 impl Normalize {
+    /// Create an L2 normalization operation along the given dimension.
     pub fn new(input: Tensor, dim: usize, epsilon: f32) -> Result<Self> {
         let input_shape = input.shape();
         if dim >= input_shape.len() {
@@ -55,6 +56,7 @@ impl Normalize {
         }
     }
 
+    /// Execute L2 normalization and return the result tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -210,7 +212,6 @@ impl Normalize {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -27,9 +27,10 @@ struct Cli {
 enum Commands {
     /// Start the barraCuda IPC server.
     Server {
-        /// TCP bind address for JSON-RPC (default: 127.0.0.1:0).
-        #[arg(long, default_value = "127.0.0.1:0")]
-        bind: String,
+        /// TCP bind address for JSON-RPC.
+        /// Default: 127.0.0.1:0, or 127.0.0.1:{BARRACUDA_IPC_PORT} if that env var is set.
+        #[arg(long)]
+        bind: Option<String>,
 
         /// TCP bind address for tarpc binary RPC (default: disabled).
         #[arg(long)]
@@ -105,7 +106,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 return Ok(());
             }
 
-            server.serve_tcp(&bind).await?;
+            let bind_addr = bind.unwrap_or_else(|| {
+                std::env::var("BARRACUDA_IPC_PORT")
+                    .map(|port| format!("127.0.0.1:{port}"))
+                    .unwrap_or_else(|_| "127.0.0.1:0".to_string())
+            });
+            server.serve_tcp(&bind_addr).await?;
         }
 
         Commands::Doctor => {

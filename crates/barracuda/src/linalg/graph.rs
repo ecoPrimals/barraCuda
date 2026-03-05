@@ -102,7 +102,6 @@ pub fn effective_rank(eigenvalues: &[f64]) -> f64 {
     entropy.exp()
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

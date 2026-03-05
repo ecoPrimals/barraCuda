@@ -34,6 +34,7 @@ struct CastParams {
     max_val: f32,
 }
 
+/// Type conversion with multiple modes (identity, f32↔int, clamp, bool).
 pub struct Cast {
     input: Tensor,
     mode: CastMode,
@@ -42,6 +43,7 @@ pub struct Cast {
 }
 
 impl Cast {
+    /// Creates a cast with identity mode (no-op).
     pub fn new(input: Tensor) -> Self {
         Self {
             input,
@@ -79,9 +81,10 @@ impl Cast {
                 "../shaders/misc/cast_f64.wgsl"
             ))
         });
-        &SHADER
+        std::sync::LazyLock::force(&SHADER).as_str()
     }
 
+    /// Executes the cast and returns the converted tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.len();
@@ -226,7 +229,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

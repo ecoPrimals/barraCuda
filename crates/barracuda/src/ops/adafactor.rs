@@ -31,6 +31,7 @@ struct AdafactorParams {
     step: u32,
 }
 
+/// Adafactor optimizer — memory-efficient adaptive learning rates.
 pub struct Adafactor {
     gradients: Tensor,
     params: Tensor,
@@ -47,6 +48,7 @@ pub struct Adafactor {
 }
 
 impl Adafactor {
+    /// Create Adafactor optimizer with factorized second moment.
     pub fn new(
         params: Tensor,
         gradients: Tensor,
@@ -146,6 +148,7 @@ impl Adafactor {
         }
     }
 
+    /// Execute Adafactor step. Returns (updated_params, m, v).
     pub fn execute(self) -> Result<(Tensor, Tensor, Tensor)> {
         let device = self.params.device();
         let size = self.params.shape().iter().product::<usize>();
@@ -392,7 +395,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -14,6 +14,11 @@ use super::traits::ComputeExecutor;
 pub struct HardwareDiscovery;
 
 impl HardwareDiscovery {
+    /// Discovers CPU, GPU, and NPU executors at runtime.
+    ///
+    /// Returns a vector of executors with CPU always first, followed by any
+    /// available GPUs and NPUs. Failures to discover a device type are logged
+    /// but do not cause an error; that device type is simply omitted.
     pub async fn discover_all() -> Result<Vec<Arc<dyn ComputeExecutor>>> {
         let mut executors: Vec<Arc<dyn ComputeExecutor>> = Vec::new();
 
@@ -68,7 +73,6 @@ impl HardwareDiscovery {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

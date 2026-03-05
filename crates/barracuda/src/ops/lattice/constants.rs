@@ -48,7 +48,6 @@ pub fn lcg_gaussian(seed: &mut u64) -> f64 {
     (-2.0 * u1.max(LATTICE_DIVISION_GUARD).ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos()
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -30,7 +30,9 @@ struct AndersonParams {
 /// Result of Anderson coupling construction.
 #[derive(Debug, Clone)]
 pub struct AndersonResult {
+    /// On-site energies (diagonal of Hamiltonian).
     pub diagonal: Vec<f64>,
+    /// Hopping matrix elements (off-diagonal).
     pub off_diagonal: Vec<f64>,
 }
 
@@ -83,7 +85,6 @@ pub fn anderson_coupling(
     })
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

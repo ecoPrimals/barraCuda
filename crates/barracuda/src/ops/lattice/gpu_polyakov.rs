@@ -33,6 +33,7 @@ pub struct GpuPolyakovLoop {
 }
 
 impl GpuPolyakovLoop {
+    /// Create Polyakov loop calculator for given lattice dimensions.
     pub fn new(device: Arc<WgpuDevice>, nt: u32, nx: u32, ny: u32, nz: u32) -> Result<Self> {
         let volume = nt * nx * ny * nz;
         let spatial_vol = nx * ny * nz;
@@ -143,6 +144,7 @@ impl GpuPolyakovLoop {
         Ok(())
     }
 
+    /// Spatial volume (nx × ny × nz).
     pub fn spatial_vol(&self) -> u32 {
         self.spatial_vol
     }
@@ -174,7 +176,6 @@ fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -28,6 +28,7 @@ pub struct ReLU {
 }
 
 impl ReLU {
+    /// Creates a ReLU operation for the given input tensor.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }

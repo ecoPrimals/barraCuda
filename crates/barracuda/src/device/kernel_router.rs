@@ -68,9 +68,11 @@ const MATMUL_MEDIUM_DIM: usize = 64;
 pub enum ComputeWorkload {
     /// Dense matrix operations (matmul, conv) - always GPU/CPU
     DenseMatmul {
-        /// Matrix dimensions for tuning
+        /// Rows of output matrix (M)
         m: usize,
+        /// Columns of output matrix (N)
         n: usize,
+        /// Inner dimension (K)
         k: usize,
     },
 
@@ -91,25 +93,46 @@ pub enum ComputeWorkload {
     },
 
     /// FFT computation - always GPU (butterfly stages are parallel)
-    FFT { size: usize, batch_count: usize },
+    FFT {
+        /// FFT size (number of points)
+        size: usize,
+        /// Number of batched FFTs
+        batch_count: usize,
+    },
 
     /// Physics force computation - always GPU (needs arbitrary WGSL)
     PhysicsForce {
+        /// Number of particles
         particle_count: usize,
+        /// Force kernel name (e.g. "lennard_jones")
         force_type: String,
     },
 
     /// Eigenvalue decomposition - GPU for large, CPU for small
-    Eigendecomp { matrix_size: usize },
+    Eigendecomp {
+        /// Matrix dimension (N×N)
+        matrix_size: usize,
+    },
 
     /// Linear system solve - GPU for large, CPU for small
-    LinearSolve { system_size: usize },
+    LinearSolve {
+        /// System dimension (N×N)
+        system_size: usize,
+    },
 
     /// Binary pre-screening / filtering - NPU ideal (ultra-low power)
-    BinaryPrescreen { input_count: usize, threshold: f64 },
+    BinaryPrescreen {
+        /// Number of inputs to screen
+        input_count: usize,
+        /// Threshold for binary decision
+        threshold: f64,
+    },
 
     /// Generic WGSL operation - always GPU/CPU
-    GenericWgsl { shader_name: String },
+    GenericWgsl {
+        /// Shader module name or path
+        shader_name: String,
+    },
 }
 
 /// Target hardware for kernel execution
@@ -432,7 +455,8 @@ impl KernelRouter {
         self.npu_models.insert(name.to_string(), info);
     }
 
-    /// Get list of available NPU models
+    /// Get list of available NPU model names.
+    #[must_use]
     pub fn available_npu_models(&self) -> Vec<&str> {
         self.npu_models.keys().map(|s| s.as_str()).collect()
     }
@@ -449,7 +473,6 @@ impl Default for KernelRouter {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -35,6 +35,7 @@ pub struct JackknifeMeanGpu {
 
 #[cfg(feature = "gpu")]
 impl JackknifeMeanGpu {
+    /// Creates a new GPU-accelerated jackknife mean estimator from a WGPU device.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -191,7 +192,6 @@ where
     })
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

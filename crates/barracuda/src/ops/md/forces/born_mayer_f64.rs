@@ -33,6 +33,7 @@ pub struct BornMayerForceF64 {
 }
 
 impl BornMayerForceF64 {
+    /// Create Born-Mayer force calculator.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -176,8 +177,8 @@ impl BornMayerForceF64 {
     }
 
     /// CPU reference (test/validation only).
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn compute_cpu(
         &self,
         positions: &[f64],
@@ -230,8 +231,8 @@ impl BornMayerForceF64 {
         forces
     }
 
-    #[expect(dead_code, clippy::unwrap_used, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn compute_cpu_with_energy(
         &self,
         positions: &[f64],
@@ -294,7 +295,6 @@ impl BornMayerForceF64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

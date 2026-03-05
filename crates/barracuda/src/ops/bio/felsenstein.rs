@@ -67,6 +67,7 @@ pub struct PhyloTree {
 }
 
 impl PhyloTree {
+    /// Number of nodes in the tree.
     pub fn n_nodes(&self) -> usize {
         self.left_child.len()
     }
@@ -148,6 +149,7 @@ impl FelsensteinResult {
 }
 
 impl FelsensteinGpu {
+    /// Create Felsenstein pruner for given device.
     pub fn new(device: &WgpuDevice) -> Self {
         Self {
             device: Arc::new(device.clone()),
@@ -268,7 +270,6 @@ impl FelsensteinGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

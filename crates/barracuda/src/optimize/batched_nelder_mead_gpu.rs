@@ -12,12 +12,19 @@ use crate::optimize::batched_nelder_mead_pipeline::{
 /// Configuration for a single Nelder-Mead problem in the batch.
 #[derive(Clone)]
 pub struct BatchNelderMeadConfig {
+    /// Problem dimension
     pub dims: usize,
+    /// Maximum iterations per problem
     pub max_iters: usize,
+    /// Convergence tolerance
     pub tol: f64,
+    /// Reflection coefficient
     pub alpha: f64,
+    /// Expansion coefficient
     pub gamma: f64,
+    /// Contraction coefficient
     pub rho: f64,
+    /// Shrink coefficient
     pub sigma: f64,
 }
 
@@ -38,15 +45,26 @@ impl Default for BatchNelderMeadConfig {
 /// Result for one problem in the batch.
 #[derive(Debug, Clone)]
 pub struct NelderMeadResult {
+    /// Best point found
     pub best_point: Vec<f64>,
+    /// Objective value at best point
     pub best_value: f64,
+    /// Iterations performed
     pub iterations: usize,
+    /// Whether optimization converged
     pub converged: bool,
 }
 
 const WGSL_SIMPLEX: &str = include_str!("../shaders/optimizer/simplex_ops_f64.wgsl");
 
 /// Run N independent Nelder-Mead optimizations in parallel on the GPU.
+///
+/// # Arguments
+/// * `device` - WGPU device for GPU dispatch
+/// * `config` - Nelder-Mead parameters per problem
+/// * `n_problems` - Number of optimization problems
+/// * `initial_simplices` - Flat array of initial simplex vertices: `[n_problems × (dims+1) × dims]` f64
+/// * `f_values` - Callback to evaluate objective at batched points
 pub async fn batched_nelder_mead_gpu(
     device: &WgpuDevice,
     config: &BatchNelderMeadConfig,
@@ -319,7 +337,6 @@ pub async fn batched_nelder_mead_gpu(
     Ok(results)
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 #[path = "batched_nelder_mead_gpu_tests.rs"]
 mod tests;

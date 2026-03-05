@@ -35,6 +35,7 @@ pub struct RdfHistogramF64 {
 }
 
 impl RdfHistogramF64 {
+    /// Creates a new RDF histogram calculator for the given WGPU device.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -153,7 +154,6 @@ impl RdfHistogramF64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -88,7 +88,6 @@ pub fn sparse_eigh_largest(matrix: &CsrMatrix, k: usize, seed: u64) -> Result<Sp
     Ok(result)
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

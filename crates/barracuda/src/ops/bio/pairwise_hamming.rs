@@ -28,6 +28,7 @@ struct HammingParams {
     seq_len: u32,
 }
 
+/// GPU pairwise Hamming distance computation.
 pub struct PairwiseHammingGpu {
     pipeline: wgpu::ComputePipeline,
     bgl: wgpu::BindGroupLayout,
@@ -35,6 +36,7 @@ pub struct PairwiseHammingGpu {
 }
 
 impl PairwiseHammingGpu {
+    /// Create pairwise Hamming distance calculator.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 

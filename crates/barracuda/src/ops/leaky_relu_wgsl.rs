@@ -49,6 +49,7 @@ pub struct LeakyRelu {
 }
 
 impl LeakyRelu {
+    /// Create LeakyReLU with default slope (0.01).
     pub fn new(input: Tensor) -> Self {
         Self {
             input,
@@ -56,6 +57,7 @@ impl LeakyRelu {
         }
     }
 
+    /// Create LeakyReLU with custom negative slope α.
     pub fn with_slope(input: Tensor, negative_slope: f32) -> Self {
         Self {
             input,
@@ -67,6 +69,7 @@ impl LeakyRelu {
         &SHADER_F32
     }
 
+    /// Execute LeakyReLU on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();

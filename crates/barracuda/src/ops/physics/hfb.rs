@@ -9,14 +9,19 @@
 use crate::device::WgpuDevice;
 use std::sync::Arc;
 
+/// WGSL source for BCS bisection (gap equation solver).
 pub const WGSL_BCS_BISECTION: &str =
     include_str!("../../shaders/science/hfb/bcs_bisection_f64.wgsl");
+/// WGSL source for batched HFB density computation.
 pub const WGSL_HFB_DENSITY: &str =
     include_str!("../../shaders/science/hfb/batched_hfb_density_f64.wgsl");
+/// WGSL source for batched HFB energy integrands.
 pub const WGSL_HFB_ENERGY: &str =
     include_str!("../../shaders/science/hfb/batched_hfb_energy_f64.wgsl");
+/// WGSL source for batched HFB Hamiltonian construction.
 pub const WGSL_HFB_HAMILTONIAN: &str =
     include_str!("../../shaders/science/hfb/batched_hfb_hamiltonian_f64.wgsl");
+/// WGSL source for batched HFB potentials.
 pub const WGSL_HFB_POTENTIALS: &str =
     include_str!("../../shaders/science/hfb/batched_hfb_potentials_f64.wgsl");
 
@@ -29,16 +34,17 @@ pub struct HfbPipeline {
 }
 
 impl HfbPipeline {
+    /// Create an HFB pipeline for the given device.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self { device }
     }
 
+    /// Reference to the underlying wgpu device.
     pub fn device(&self) -> &Arc<WgpuDevice> {
         &self.device
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

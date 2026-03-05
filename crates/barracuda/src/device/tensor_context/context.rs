@@ -48,6 +48,7 @@ pub struct TensorContext {
 }
 
 impl TensorContext {
+    /// Create a new tensor context for the device.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self {
             buffer_pool: BufferPool::new(
@@ -66,29 +67,35 @@ impl TensorContext {
         }
     }
 
+    /// Start batching operations (defer submit until end_batch).
     pub fn begin_batch(&self) {
         self.batching.store(true, Ordering::SeqCst);
     }
 
+    /// End batching and submit all pending operations.
     pub fn end_batch(&self) -> Result<()> {
         self.batching.store(false, Ordering::SeqCst);
         self.sync()
     }
 
+    /// Returns true if batching is active.
     pub fn is_batching(&self) -> bool {
         self.batching.load(Ordering::SeqCst)
     }
 
+    /// Acquire an output buffer (f32 elements). Does not return to pool.
     pub fn acquire_output_buffer(&self, size_elements: usize) -> wgpu::Buffer {
         self.buffer_pool
             .acquire(size_elements * std::mem::size_of::<f32>())
     }
 
+    /// Acquire a pooled output buffer (returns to pool on drop).
     pub fn acquire_pooled_output(&self, size_elements: usize) -> super::pool::PooledBuffer {
         self.buffer_pool
             .acquire_pooled(size_elements * std::mem::size_of::<f32>())
     }
 
+    /// Record an operation (immediate or batched).
     pub fn record_operation<F>(&self, op: F) -> Result<()>
     where
         F: FnOnce(&mut wgpu::CommandEncoder) + Send + 'static,
@@ -120,6 +127,7 @@ impl TensorContext {
         }
     }
 
+    /// Get or create a bind group from layout signature and buffers.
     pub fn get_or_create_bind_group(
         &self,
         layout_sig: BindGroupLayoutSignature,
@@ -177,15 +185,18 @@ impl TensorContext {
             .clone()
     }
 
+    /// Acquire a buffer (f32 elements).
     pub fn acquire_buffer(&self, size_elements: usize) -> wgpu::Buffer {
         self.buffer_pool
             .acquire(size_elements * std::mem::size_of::<f32>())
     }
 
+    /// Return a buffer to the pool for reuse.
     pub fn release_buffer(&self, buffer: wgpu::Buffer) {
         self.buffer_pool.release(buffer);
     }
 
+    /// Submit all pending batched operations.
     pub fn sync(&self) -> Result<()> {
         let mut pending = self.pending_ops.lock().expect("pending_ops poisoned");
         if pending.is_empty() {
@@ -211,14 +222,17 @@ impl TensorContext {
         Ok(())
     }
 
+    /// The underlying device.
     pub fn device(&self) -> &Arc<WgpuDevice> {
         &self.device
     }
 
+    /// The buffer pool.
     pub fn buffer_pool(&self) -> &BufferPool {
         &self.buffer_pool
     }
 
+    /// Pin buffers for a solver (held until release_solver_buffers).
     pub fn pin_solver_buffers(
         &self,
         solver_id: &str,
@@ -227,14 +241,17 @@ impl TensorContext {
         self.buffer_pool.pin_solver_buffers(solver_id, buffers)
     }
 
+    /// Release pinned buffers for a solver.
     pub fn release_solver_buffers(&self, solver_id: &str) -> bool {
         self.buffer_pool.release_solver_buffers(solver_id)
     }
 
+    /// Get pinned buffers for a solver.
     pub fn get_solver_buffers(&self, solver_id: &str) -> Option<SolverBufferSet> {
         self.buffer_pool.get_solver_buffers(solver_id)
     }
 
+    /// Get context statistics.
     pub fn stats(&self) -> TensorContextStats {
         let (allocs, reuses) = self.buffer_pool.stats();
         TensorContextStats {
@@ -248,14 +265,20 @@ impl TensorContext {
     }
 }
 
-/// TensorContext statistics
+/// TensorContext statistics.
 #[derive(Debug, Clone)]
 pub struct TensorContextStats {
+    /// Number of new buffer allocations.
     pub buffer_allocations: usize,
+    /// Number of buffer reuses from pool.
     pub buffer_reuses: usize,
+    /// Bind group cache hits.
     pub bind_group_cache_hits: usize,
+    /// Bind group cache misses.
     pub bind_group_cache_misses: usize,
+    /// Operations executed immediately.
     pub ops_executed: usize,
+    /// Operations batched (deferred).
     pub ops_batched: usize,
 }
 

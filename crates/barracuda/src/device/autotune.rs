@@ -489,6 +489,7 @@ impl Default for AutoTuner {
 
 // Global auto-tuner instance (singleton pattern via std::sync::LazyLock)
 // Evolved from lazy_static to pure std (Rust 1.80+)
+/// Global auto-tuner instance for runtime GPU parameter calibration.
 pub static GLOBAL_TUNER: std::sync::LazyLock<AutoTuner> = std::sync::LazyLock::new(|| {
     // Try to use a standard cache location
     let cache_dir = std::env::var("XDG_CACHE_HOME")
@@ -511,7 +512,6 @@ pub static GLOBAL_TUNER: std::sync::LazyLock<AutoTuner> = std::sync::LazyLock::n
     AutoTuner::with_cache(cache_path)
 });
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

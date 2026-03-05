@@ -27,12 +27,14 @@ struct MatrixRankParams {
     _pad1: u32,
 }
 
+/// Matrix rank computation via Gaussian elimination on GPU.
 pub struct MatrixRank {
     input: Tensor,
     tolerance: f32,
 }
 
 impl MatrixRank {
+    /// Creates a new matrix rank operation. Tolerance controls numerical rank threshold.
     pub fn new(input: Tensor, tolerance: f32) -> Result<Self> {
         let shape = input.shape();
         if shape.len() < 2 {
@@ -49,6 +51,7 @@ impl MatrixRank {
         &SHADER_F32
     }
 
+    /// Executes rank computation and returns the matrix rank.
     pub fn execute(self) -> Result<usize> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -283,7 +286,6 @@ impl MatrixRank {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

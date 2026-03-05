@@ -56,6 +56,7 @@ impl Default for EsnConfig {
 /// Serializable ESN snapshot for JSON round-trip.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsnWeights {
+    /// ESN configuration.
     pub config: EsnConfig,
     /// Input-to-reservoir weights (reservoir_size × input_size, row-major)
     pub w_in: Vec<f64>,
@@ -65,14 +66,18 @@ pub struct EsnWeights {
     pub w_out: Option<Vec<f64>>,
 }
 
-/// Echo State Network classifier.
+/// Echo State Network classifier with ridge regression readout.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsnClassifier {
+    /// ESN configuration.
     pub config: EsnConfig,
     #[serde(skip)]
     state: Vec<f64>,
+    /// Input-to-reservoir weights.
     pub w_in: Vec<f64>,
+    /// Reservoir recurrent weights.
     pub w_res: Vec<f64>,
+    /// Readout weights (None if untrained).
     pub w_out: Option<Vec<f64>>,
 }
 
@@ -357,7 +362,6 @@ fn validate_esn_config(config: &EsnConfig) -> Result<()> {
     Ok(())
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

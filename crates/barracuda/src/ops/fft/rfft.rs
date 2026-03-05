@@ -104,7 +104,6 @@ impl Rfft {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -154,7 +153,7 @@ mod tests {
         assert!((dc_real - (n as f32)).abs() < 1e-4, "DC component = N");
 
         // All other components should be ~0
-        for i in 1..((n / 2) + 1) {
+        for i in 1..=(n / 2) {
             let mag = (spectrum_data[i * 2].powi(2) + spectrum_data[i * 2 + 1].powi(2)).sqrt();
             assert!(mag < 1e-3, "Non-DC components near zero");
         }

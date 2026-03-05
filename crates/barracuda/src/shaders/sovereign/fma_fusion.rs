@@ -289,7 +289,6 @@ pub(crate) fn visit_operands<F: FnMut(Handle<Expression>)>(expr: &Expression, mu
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

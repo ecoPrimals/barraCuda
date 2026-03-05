@@ -239,7 +239,6 @@ struct Fft64Params {
     _padding: u32,
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -14,6 +14,8 @@ struct Binding<'a> {
 }
 
 /// A single compute pass within a batched submission.
+///
+/// Holds shader source, bindings, and workgroup counts for one dispatch.
 pub struct BatchedPass<'a> {
     label: &'a str,
     shader_source: &'a str,
@@ -46,6 +48,7 @@ pub struct BatchedPassBuilder<'a, 'b> {
 }
 
 impl<'a> BatchedEncoder<'a> {
+    /// Create a new batched encoder for the given device.
     pub fn new(device: &'a WgpuDevice) -> Self {
         Self {
             device,
@@ -163,11 +166,13 @@ impl<'a> BatchedEncoder<'a> {
 }
 
 impl<'a, 'b> BatchedPassBuilder<'a, 'b> {
+    /// Use f64 precision for this pass.
     pub fn f64(mut self) -> Self {
         self.pass.f64_shader = true;
         self
     }
 
+    /// Add a read-only storage buffer binding.
     pub fn storage_read(mut self, index: u32, buffer: &'a wgpu::Buffer) -> Self {
         self.pass.bindings.push(Binding {
             index,
@@ -178,6 +183,7 @@ impl<'a, 'b> BatchedPassBuilder<'a, 'b> {
         self
     }
 
+    /// Add a read-write storage buffer binding.
     pub fn storage_rw(mut self, index: u32, buffer: &'a wgpu::Buffer) -> Self {
         self.pass.bindings.push(Binding {
             index,
@@ -188,6 +194,7 @@ impl<'a, 'b> BatchedPassBuilder<'a, 'b> {
         self
     }
 
+    /// Add a uniform buffer binding.
     pub fn uniform(mut self, index: u32, buffer: &'a wgpu::Buffer) -> Self {
         self.pass.bindings.push(Binding {
             index,
@@ -198,6 +205,7 @@ impl<'a, 'b> BatchedPassBuilder<'a, 'b> {
         self
     }
 
+    /// Set workgroup counts and add this pass to the batch.
     pub fn workgroups(mut self, x: u32, y: u32, z: u32) -> &'b mut BatchedEncoder<'a> {
         self.pass.workgroups = (x, y, z);
         self.encoder.passes.push(self.pass);

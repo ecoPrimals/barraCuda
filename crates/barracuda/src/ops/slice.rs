@@ -19,6 +19,7 @@ struct SliceParams {
     _padding: [u32; 2],
 }
 
+/// Slice operation — extracts a contiguous subregion from a 1D tensor.
 pub struct Slice {
     input: Tensor,
     start: usize,
@@ -26,6 +27,12 @@ pub struct Slice {
 }
 
 impl Slice {
+    /// Create a slice operation.
+    ///
+    /// # Arguments
+    /// * `input` - Input tensor (1D)
+    /// * `start` - Start index (inclusive)
+    /// * `length` - Number of elements to extract
     pub fn new(input: Tensor, start: usize, length: usize) -> Self {
         Self {
             input,
@@ -38,6 +45,7 @@ impl Slice {
         &SHADER_F32
     }
 
+    /// Execute slice operation (extract contiguous region from input).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let output_buffer = device.create_buffer_f32(self.length)?;
@@ -167,12 +175,12 @@ impl Slice {
 }
 
 impl Tensor {
+    /// Extract a contiguous subregion [start..start+length] from this 1D tensor.
     pub fn slice(self, start: usize, length: usize) -> Result<Self> {
         Slice::new(self, start, length).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

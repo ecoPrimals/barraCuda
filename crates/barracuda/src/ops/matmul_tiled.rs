@@ -41,6 +41,7 @@ struct MatmulTiledParams {
     n: u32,
 }
 
+/// Tiled matrix multiplication for cache-efficient GPU matmul.
 pub struct MatmulTiled {
     a: Tensor,
     b: Tensor,
@@ -56,6 +57,7 @@ impl MatmulTiled {
         &SHADER
     }
 
+    /// Execute tiled matrix multiplication and return the result tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.a.device();
         let a_shape = self.a.shape();
@@ -163,7 +165,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

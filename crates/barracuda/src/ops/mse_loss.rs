@@ -6,12 +6,14 @@ use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Mean squared error loss between predictions and targets.
 pub struct MseLoss {
     predictions: Tensor,
     targets: Tensor,
 }
 
 impl MseLoss {
+    /// Creates a new MSE loss. Shapes must match.
     pub fn new(predictions: Tensor, targets: Tensor) -> Self {
         Self {
             predictions,
@@ -28,6 +30,7 @@ impl MseLoss {
         include_str!("../shaders/loss/mse_loss_f64.wgsl")
     }
 
+    /// Executes MSE loss and returns a scalar loss tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size: usize = self.predictions.shape().iter().product();
@@ -56,7 +59,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

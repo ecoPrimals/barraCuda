@@ -496,7 +496,6 @@ pub fn matmul_dispatch_with_config(
     Ok(matmul_cpu(a, b, m, k, n))
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

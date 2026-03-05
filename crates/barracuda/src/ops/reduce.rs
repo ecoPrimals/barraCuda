@@ -42,16 +42,22 @@ struct ReduceParams {
     _pad1: u32,
 }
 
+/// Reduction operation (sum, max, min, mean) over tensor elements.
 pub struct Reduce {
     input: Tensor,
     operation: ReduceOperation,
 }
 
+/// Reduction operation for tensor aggregation.
 #[derive(Debug, Clone, Copy)]
 pub enum ReduceOperation {
+    /// Sum of all elements.
     Sum,
+    /// Maximum element.
     Max,
+    /// Minimum element.
     Min,
+    /// Mean (average) of elements.
     Mean,
 }
 
@@ -78,6 +84,7 @@ impl Reduce {
         }
     }
 
+    /// Execute reduction on GPU; returns partial results (one per workgroup).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.shape().iter().product::<usize>();
@@ -175,7 +182,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

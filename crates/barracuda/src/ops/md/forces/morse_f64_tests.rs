@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 use super::*;
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
-#[expect(dead_code, reason = "CPU reference for GPU validation")]
 impl MorseForceF64 {
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn compute_cpu(&self, positions: &[f64], bonds: &[MorseBond]) -> Vec<f64> {
         let n_particles = positions.len() / 3;
         let mut forces = vec![0.0f64; n_particles * 3];
@@ -22,6 +21,7 @@ impl MorseForceF64 {
         forces
     }
 
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn compute_cpu_with_energy(
         &self,
         positions: &[f64],

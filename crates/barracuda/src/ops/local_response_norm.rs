@@ -30,6 +30,7 @@ struct LocalResponseNormParams {
     k: f32,
 }
 
+/// Local response normalization (AlexNet-style LRN).
 pub struct LocalResponseNorm {
     input: Tensor,
     size: usize,
@@ -39,6 +40,7 @@ pub struct LocalResponseNorm {
 }
 
 impl LocalResponseNorm {
+    /// Creates a new LRN. Size is the normalization window; alpha, beta, k are formula parameters.
     pub fn new(input: Tensor, size: usize, alpha: f32, beta: f32, k: f32) -> Result<Self> {
         // Validate input shape: must be 4D [B, C, H, W]
         let shape = input.shape();
@@ -74,6 +76,7 @@ impl LocalResponseNorm {
         std::sync::LazyLock::force(&SHADER).as_str()
     }
 
+    /// Executes LRN and returns the normalized tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -228,7 +231,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

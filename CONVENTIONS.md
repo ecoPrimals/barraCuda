@@ -9,8 +9,8 @@ the sourDough scaffold. barraCuda owns its own standards.
 - **MSRV**: 1.87
 - **GPU stack**: wgpu 28, naga 28 — `Device` and `Queue` are `Clone` (no `Arc` wrappers)
 - **Linting**: `warn(clippy::all, clippy::pedantic)` — configured in `Cargo.toml` `[lints]`
-- **Suppressions**: `#[expect(clippy::lint, reason = "...")]` — compile-time verified, never `#[allow]`
-- **Docs**: `#![warn(missing_docs)]` — `cargo doc --workspace --no-deps` clean with `-D warnings`
+- **Suppressions**: `#[expect(clippy::lint, reason = "...")]` — compile-time verified; `#[allow]` only for context-dependent lints (e.g. `suspicious_arithmetic_impl` in complex division, `unwrap_used` in integration tests outside `cfg_attr(test)` scope)
+- **Docs**: `#![warn(missing_docs)]` — `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` clean
 - **Unsafe**: `#![deny(unsafe_code)]`
 - **Max file size**: 1000 LOC
 - **Test coverage**: 90%+ target (currently ~80% unit, growing; remaining gap is GPU-only code)

@@ -22,6 +22,7 @@ pub struct Laplacian {
 }
 
 impl Laplacian {
+    /// Creates a Laplacian stencil for a 3D field with given grid spacing.
     pub fn new(field: Tensor, grid_spacing: f32) -> Result<Self> {
         let shape = field.shape();
         if shape.len() != 3 {
@@ -200,7 +201,6 @@ impl Laplacian {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

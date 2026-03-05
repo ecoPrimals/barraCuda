@@ -30,12 +30,14 @@ struct PixelShuffleParams {
     upscale_factor: u32,
 }
 
+/// Pixel shuffle (depth to space) for super-resolution networks.
 pub struct PixelShuffle {
     input: Tensor,
     upscale_factor: usize,
 }
 
 impl PixelShuffle {
+    /// Creates a new pixel shuffle. Input channels must be divisible by upscale_factor².
     pub fn new(input: Tensor, upscale_factor: usize) -> Result<Self> {
         // Validate input shape: must be 4D [B, C*r^2, H, W]
         let shape = input.shape();
@@ -78,6 +80,7 @@ impl PixelShuffle {
         }
     }
 
+    /// Executes pixel shuffle and returns the rearranged tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -233,7 +236,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

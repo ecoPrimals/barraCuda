@@ -14,6 +14,7 @@ use wgpu::util::DeviceExt;
 
 use crate::device::WgpuDevice;
 
+/// WGSL shader for taxonomy naive Bayes fully-connected classification.
 pub const WGSL_TAXONOMY_FC: &str = include_str!("../../shaders/bio/taxonomy_fc.wgsl");
 
 #[repr(C)]
@@ -25,6 +26,7 @@ struct TaxConfig {
     _pad: u32,
 }
 
+/// GPU kernel for taxonomy naive Bayes log-posterior scores.
 pub struct TaxonomyFcGpu {
     pipeline: wgpu::ComputePipeline,
     bgl: wgpu::BindGroupLayout,
@@ -32,6 +34,7 @@ pub struct TaxonomyFcGpu {
 }
 
 impl TaxonomyFcGpu {
+    /// Create a taxonomy FC GPU kernel.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 
@@ -191,7 +194,6 @@ impl TaxonomyFcGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

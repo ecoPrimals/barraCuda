@@ -239,7 +239,6 @@ fn partial_maximin(samples: &[Vec<f64>], row1: usize, row2: usize, current_min: 
     min_dist
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

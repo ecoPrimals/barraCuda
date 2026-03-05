@@ -339,7 +339,6 @@ fn compute_ranks(x: &[f64]) -> Vec<f64> {
     ranks
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

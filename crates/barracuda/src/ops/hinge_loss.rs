@@ -55,6 +55,7 @@ struct HingeLossParams {
     _padding: [u32; 2],
 }
 
+/// SVM-style hinge loss for max-margin classification.
 pub struct HingeLoss {
     predictions: Tensor,
     targets: Tensor,
@@ -62,6 +63,7 @@ pub struct HingeLoss {
 }
 
 impl HingeLoss {
+    /// Creates a new hinge loss. Margin is typically 1.0 for standard SVM.
     pub fn new(predictions: Tensor, targets: Tensor, margin: f32) -> Result<Self> {
         // Validate shapes match
         if predictions.shape() != targets.shape() {
@@ -90,6 +92,7 @@ impl HingeLoss {
         &SHADER_F32
     }
 
+    /// Executes hinge loss and returns the loss tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size = self.predictions.shape().iter().product::<usize>();
@@ -161,7 +164,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

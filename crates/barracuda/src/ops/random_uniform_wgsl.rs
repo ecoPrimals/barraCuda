@@ -204,7 +204,6 @@ pub fn random_uniform_gpu(
     RandomUniformGpu::new(device, n_samples, bounds, seed).generate()
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

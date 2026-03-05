@@ -27,6 +27,7 @@ pub struct GinConv {
 }
 
 impl GinConv {
+    /// Create GIN (Graph Isomorphism Network) convolution.
     pub fn new(
         node_features: Tensor,
         edge_index: Vec<(usize, usize)>,
@@ -96,6 +97,7 @@ impl GinConv {
         }
     }
 
+    /// Execute GIN convolution.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.node_features.device();
         // Convert edge_index to u32 pairs
@@ -353,7 +355,6 @@ impl GinConv {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -12,11 +12,13 @@ use crate::device::DeviceCapabilities;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Element-wise log-gamma function ln(Γ(x)).
 pub struct Lgamma {
     input: Tensor,
 }
 
 impl Lgamma {
+    /// Create a lgamma operation.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -30,6 +32,7 @@ impl Lgamma {
         &SHADER
     }
 
+    /// Execute log-gamma on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -159,12 +162,12 @@ impl Lgamma {
 }
 
 impl Tensor {
+    /// Compute element-wise ln(Γ(x)).
     pub fn lgamma(self) -> Result<Self> {
         Lgamma::new(self).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

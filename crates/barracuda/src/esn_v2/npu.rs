@@ -87,7 +87,6 @@ pub fn dequantize_affine_i8_f64(quantized: &[i8], scale: f64, zero_point: i64) -
         .collect()
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

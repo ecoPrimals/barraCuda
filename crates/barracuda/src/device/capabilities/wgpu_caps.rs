@@ -334,10 +334,15 @@ impl DeviceCapabilities {
 /// Workload types for optimal configuration
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum WorkloadType {
+    /// Element-wise ops (activation, etc.).
     ElementWise,
+    /// Matrix multiplication.
     MatMul,
+    /// Reduction ops (sum, max, etc.).
     Reduction,
+    /// Fully homomorphic encryption workloads.
     FHE,
+    /// Convolution operations.
     Convolution,
 }
 

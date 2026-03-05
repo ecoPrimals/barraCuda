@@ -17,6 +17,7 @@ use std::sync::Arc;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
 
+/// WGSL shader source for batch Inverse Participation Ratio (f64 downcast to f32 when needed).
 pub static WGSL_BATCH_IPR: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
         "../shaders/spectral/batch_ipr_f64.wgsl"
@@ -30,6 +31,7 @@ struct IprParams {
     n_vectors: u32,
 }
 
+/// GPU compute pipeline for batch Inverse Participation Ratio.
 pub struct BatchIprGpu {
     pipeline: wgpu::ComputePipeline,
     bgl: wgpu::BindGroupLayout,
@@ -37,6 +39,7 @@ pub struct BatchIprGpu {
 }
 
 impl BatchIprGpu {
+    /// Creates a new batch IPR pipeline for the given device.
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 

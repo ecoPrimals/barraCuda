@@ -19,11 +19,14 @@ const SHADER_F64: &str = include_str!("../shaders/math/slice_assign_f64.wgsl");
 static SHADER_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
 
-/// Slice assignment parameters
+/// Slice assignment parameters.
 #[derive(Debug, Clone)]
 pub struct SliceRange {
+    /// Start index (inclusive).
     pub start: usize,
+    /// End index (exclusive).
     pub end: usize,
+    /// Stride between elements.
     pub stride: usize,
 }
 
@@ -156,7 +159,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

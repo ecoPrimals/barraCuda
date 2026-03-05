@@ -218,7 +218,6 @@ pub fn tridiagonal_solve_batch(
         .collect()
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

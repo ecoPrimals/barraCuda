@@ -16,6 +16,7 @@ struct GIoULossParams {
     _padding: [u32; 2],
 }
 
+/// Generalized IoU loss for object detection (considers smallest enclosing box).
 pub struct GIoULoss {
     pred_boxes: Tensor,
     target_boxes: Tensor,
@@ -113,7 +114,6 @@ impl GIoULoss {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

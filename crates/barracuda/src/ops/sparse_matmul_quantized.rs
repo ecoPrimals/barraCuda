@@ -316,7 +316,6 @@ pub fn sparse_matmul_quantized(
     device.map_staging_buffer::<f32>(&staging_buffer, output_size as usize)
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -346,7 +346,6 @@ pub fn dispatch_with_transfer_cost(
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

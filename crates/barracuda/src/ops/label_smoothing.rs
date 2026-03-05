@@ -18,6 +18,7 @@ struct LabelSmoothingParams {
     _padding: u32,
 }
 
+/// Label smoothing: prevents overconfidence by smoothing hard one-hot labels.
 pub struct LabelSmoothing {
     labels: Tensor,
     num_classes: u32,
@@ -105,7 +106,6 @@ impl LabelSmoothing {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

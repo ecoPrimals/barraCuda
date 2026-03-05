@@ -42,6 +42,7 @@ pub struct HistogramGpu {
 
 #[cfg(feature = "gpu")]
 impl HistogramGpu {
+    /// Creates a new GPU-accelerated histogram from a WGPU device.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }

@@ -47,7 +47,6 @@ use crate::tensor::Tensor;
 
 mod projections;
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;
 

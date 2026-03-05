@@ -21,11 +21,9 @@ use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod cpu_reference;
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;
 

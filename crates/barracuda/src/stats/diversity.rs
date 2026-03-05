@@ -164,10 +164,15 @@ pub fn pielou_evenness(counts: &[f64]) -> f64 {
 /// Alpha diversity summary for a single sample.
 #[derive(Debug, Clone)]
 pub struct AlphaDiversity {
+    /// Observed species count.
     pub observed: f64,
+    /// Shannon entropy.
     pub shannon: f64,
+    /// Simpson diversity index.
     pub simpson: f64,
+    /// Chao1 richness estimator.
     pub chao1: f64,
+    /// Pielou evenness.
     pub evenness: f64,
 }
 
@@ -308,7 +313,6 @@ fn log_hypergeometric_absent(big_n: u64, ni: u64, n: u64) -> f64 {
     log_ratio
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

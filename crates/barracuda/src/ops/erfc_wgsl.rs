@@ -12,11 +12,13 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Complementary error function operation (WGSL).
 pub struct Erfc {
     input: Tensor,
 }
 
 impl Erfc {
+    /// Create a complementary error function operation.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -30,6 +32,7 @@ impl Erfc {
         &SHADER
     }
 
+    /// Execute the complementary error function and return the output tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -160,12 +163,12 @@ impl Erfc {
 }
 
 impl Tensor {
+    /// Apply element-wise complementary error function.
     pub fn erfc(self) -> Result<Self> {
         Erfc::new(self).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

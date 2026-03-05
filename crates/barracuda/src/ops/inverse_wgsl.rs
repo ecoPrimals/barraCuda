@@ -22,11 +22,13 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
+/// Matrix inversion via Gauss-Jordan elimination.
 pub struct Inverse {
     input: Tensor,
 }
 
 impl Inverse {
+    /// Create an inverse operation for a square matrix.
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -35,6 +37,7 @@ impl Inverse {
         include_str!("../shaders/linalg/inverse.wgsl")
     }
 
+    /// Execute matrix inversion on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -181,12 +184,12 @@ impl Inverse {
 }
 
 impl Tensor {
+    /// Compute the matrix inverse. Input must be square.
     pub fn inverse_wgsl(self) -> Result<Self> {
         Inverse::new(self).execute()
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

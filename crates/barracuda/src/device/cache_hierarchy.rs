@@ -499,11 +499,16 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 pub enum CacheResidency {
     /// Data fits in cache
     Resident {
+        /// Cache level name (e.g. "L2", "L3")
         cache_level: &'static str,
+        /// Fraction of cache utilized (0.0–1.0)
         utilization: f64,
     },
     /// Data exceeds cache, DRAM-bound
-    DramBound { overflow_bytes: u64 },
+    DramBound {
+        /// Bytes that overflow the largest cache
+        overflow_bytes: u64,
+    },
 }
 
 /// Tile configuration for cache-aware execution

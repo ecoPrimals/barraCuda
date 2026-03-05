@@ -19,6 +19,7 @@ pub struct Fft3D {
 }
 
 impl Fft3D {
+    /// Create 3D FFT for [nx, ny, nz, 2] complex input (powers of 2).
     pub fn new(input: Tensor, nx: u32, ny: u32, nz: u32) -> Result<Self> {
         let shape = input.shape();
 
@@ -47,6 +48,7 @@ impl Fft3D {
         Ok(Self { input, nx, ny, nz })
     }
 
+    /// Execute 3D FFT (X, Y, Z passes).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 
@@ -136,7 +138,6 @@ impl Fft3D {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

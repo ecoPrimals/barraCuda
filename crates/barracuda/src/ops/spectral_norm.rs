@@ -16,6 +16,7 @@ struct SpectralNormParams {
     _padding: u32,
 }
 
+/// Spectral normalization: normalizes weights by their spectral norm (largest singular value).
 pub struct SpectralNorm {
     weight: Tensor,
     u: Tensor,
@@ -226,7 +227,6 @@ impl SpectralNorm {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

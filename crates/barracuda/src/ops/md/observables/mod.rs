@@ -46,27 +46,39 @@ use std::f64::consts::PI;
 /// RDF result: g(r) binned at discrete r values
 #[derive(Clone, Debug)]
 pub struct Rdf {
+    /// Radial distances (bin centers)
     pub r_values: Vec<f64>,
+    /// Pair correlation function g(r) at each r
     pub g_values: Vec<f64>,
+    /// Bin width
     pub dr: f64,
 }
 
 /// VACF result: C(t) at discrete lag times
 #[derive(Clone, Debug)]
 pub struct Vacf {
+    /// Lag times
     pub t_values: Vec<f64>,
+    /// Normalized autocorrelation C(t)/C(0)
     pub c_values: Vec<f64>,
+    /// Diffusion coefficient from Green-Kubo integral
     pub diffusion_coeff: f64,
 }
 
 /// Energy validation result
 #[derive(Clone, Debug)]
 pub struct EnergyValidation {
+    /// Mean total energy (after skip)
     pub mean_total: f64,
+    /// Standard deviation of total energy
     pub std_total: f64,
+    /// Drift percentage from initial to final
     pub drift_pct: f64,
+    /// Mean temperature (if computed)
     pub mean_temperature: f64,
+    /// Standard deviation of temperature
     pub std_temperature: f64,
+    /// Whether drift is within acceptable threshold
     pub passed: bool,
 }
 
@@ -232,7 +244,7 @@ pub fn compute_ssf(
     sk_values
 }
 
-/// Mean-Squared Displacement (MSD) result
+/// Mean-Squared Displacement (MSD) result.
 #[derive(Clone, Debug)]
 pub struct Msd {
     /// Lag times τ in reduced units
@@ -434,7 +446,6 @@ pub fn validate_energy(
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

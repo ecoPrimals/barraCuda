@@ -264,6 +264,14 @@ pub fn chi_squared_f64(observed: &[f64], expected: &[f64]) -> Result<f64> {
     chi_squared_statistic(observed, expected)
 }
 
+/// Compute chi-squared statistic Σ (observed - expected)² / expected.
+///
+/// # Arguments
+/// * `observed` - Observed frequencies
+/// * `expected` - Expected frequencies (must be positive)
+///
+/// # Returns
+/// Chi-squared statistic value
 pub fn chi_squared_statistic(observed: &[f64], expected: &[f64]) -> Result<f64> {
     if observed.len() != expected.len() {
         return Err(BarracudaError::InvalidInput {
@@ -335,7 +343,9 @@ pub struct ChiSquaredBatchGpu {
 /// Results from batched chi-squared evaluation.
 #[derive(Debug, Clone)]
 pub struct ChiSquaredBatchResult {
+    /// Probability density function values.
     pub pdf: Vec<f64>,
+    /// Cumulative distribution function values.
     pub cdf: Vec<f64>,
 }
 
@@ -349,6 +359,7 @@ struct Chi2GpuParams {
 
 #[cfg(feature = "gpu")]
 impl ChiSquaredBatchGpu {
+    /// Create a batched chi-squared GPU executor.
     pub fn new(device: std::sync::Arc<crate::device::WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -381,7 +392,6 @@ impl ChiSquaredBatchGpu {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

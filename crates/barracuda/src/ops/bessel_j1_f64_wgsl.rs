@@ -16,6 +16,7 @@ pub struct BesselJ1F64 {
 }
 
 impl BesselJ1F64 {
+    /// Creates a new J₁ Bessel function evaluator for the given WGPU device.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -33,8 +34,8 @@ impl BesselJ1F64 {
         self.j1_gpu(x)
     }
 
-    #[expect(dead_code, reason = "tests")]
     #[cfg(test)]
+    #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn j1_cpu(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| Self::j1_scalar(xi)).collect()
     }
@@ -145,7 +146,6 @@ impl BesselJ1F64 {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -52,12 +52,14 @@ struct BCELossParams {
     _padding: u32,
 }
 
+/// Binary cross-entropy loss for binary classification.
 pub struct BCELoss {
     predictions: Tensor,
     targets: Tensor,
 }
 
 impl BCELoss {
+    /// Create BCE loss. Predictions and targets must have matching shapes.
     pub fn new(predictions: Tensor, targets: Tensor) -> Result<Self> {
         // Validate shapes match
         if predictions.shape() != targets.shape() {
@@ -77,6 +79,7 @@ impl BCELoss {
         &SHADER_F32
     }
 
+    /// Execute BCE loss computation on GPU.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size = self.predictions.shape().iter().product::<usize>();
@@ -149,7 +152,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

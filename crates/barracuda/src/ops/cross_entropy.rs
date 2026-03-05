@@ -12,12 +12,14 @@ static SHADER_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(SHADER_F64)
 });
 
+/// Cross entropy loss for classification.
 pub struct CrossEntropy {
     predictions: Tensor,
     targets: Tensor,
 }
 
 impl CrossEntropy {
+    /// Creates a new cross entropy loss. Shapes must match.
     pub fn new(predictions: Tensor, targets: Tensor) -> Self {
         Self {
             predictions,
@@ -26,9 +28,10 @@ impl CrossEntropy {
     }
 
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        std::sync::LazyLock::force(&SHADER_F32).as_str()
     }
 
+    /// Executes cross entropy loss and returns a scalar loss tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size: usize = self.predictions.shape().iter().product();
@@ -110,7 +113,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

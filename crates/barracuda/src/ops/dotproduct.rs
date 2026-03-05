@@ -40,6 +40,7 @@ struct DotProductParams {
     size: u32,
 }
 
+/// Vector inner product (dot product) operation.
 pub struct DotProduct {
     a: Tensor,
     b: Tensor,
@@ -55,6 +56,7 @@ impl DotProduct {
         &SHADER
     }
 
+    /// Execute dot product and return partial sums (or final scalar if single workgroup).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.a.device();
         let size = self.a.shape().iter().product::<usize>();
@@ -125,7 +127,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

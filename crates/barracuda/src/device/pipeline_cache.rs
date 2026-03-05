@@ -94,6 +94,7 @@ pub struct ShaderKey {
 }
 
 impl ShaderKey {
+    /// Create a shader cache key from source and device fingerprint.
     pub fn new(source: &str, device_fingerprint: DeviceFingerprint) -> Self {
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         source.hash(&mut hasher);
@@ -170,6 +171,7 @@ pub struct BindGroupLayoutKey {
 }
 
 impl BindGroupLayoutKey {
+    /// Create a bind group layout cache key.
     pub fn new(signature: BindGroupLayoutSignature, device_fingerprint: DeviceFingerprint) -> Self {
         Self {
             signature,
@@ -188,6 +190,7 @@ pub struct PipelineKey {
 }
 
 impl PipelineKey {
+    /// Create a pipeline cache key from shader source, layout, entry point, and device.
     pub fn new(
         shader_source: &str,
         layout_signature: BindGroupLayoutSignature,
@@ -224,6 +227,7 @@ pub struct PipelineCache {
 }
 
 impl PipelineCache {
+    /// Create an empty pipeline cache.
     pub fn new() -> Self {
         Self {
             shaders: RwLock::new(HashMap::new()),
@@ -409,13 +413,17 @@ impl Default for PipelineCache {
 /// Cache statistics
 #[derive(Debug, Clone)]
 pub struct CacheStats {
+    /// Number of cached shader modules.
     pub shaders: usize,
+    /// Number of cached bind group layouts.
     pub layouts: usize,
+    /// Number of cached compute pipelines.
     pub pipelines: usize,
 }
 
-// Global pipeline cache (singleton pattern via std::sync::LazyLock)
-// Evolved from lazy_static to pure std (Rust 1.80+)
+/// Global pipeline cache (singleton pattern via std::sync::LazyLock).
+///
+/// Evolved from lazy_static to pure std (Rust 1.80+).
 pub static GLOBAL_CACHE: std::sync::LazyLock<PipelineCache> =
     std::sync::LazyLock::new(PipelineCache::new);
 
@@ -427,7 +435,6 @@ pub fn clear_global_cache() {
     GLOBAL_CACHE.clear();
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

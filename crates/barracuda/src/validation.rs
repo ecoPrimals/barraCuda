@@ -41,22 +41,31 @@ impl std::fmt::Display for ToleranceMode {
 /// A single validation check with result tracking.
 #[derive(Debug, Clone)]
 pub struct Check {
+    /// Human-readable label for the check
     pub label: String,
+    /// Whether the check passed
     pub passed: bool,
+    /// Observed value from the test
     pub observed: f64,
+    /// Expected value for comparison
     pub expected: f64,
+    /// Tolerance threshold (interpretation depends on `mode`)
     pub tolerance: f64,
+    /// How the tolerance is applied
     pub mode: ToleranceMode,
 }
 
 /// Accumulates validation checks and produces a summary with exit code.
 #[derive(Debug, Default)]
 pub struct ValidationHarness {
+    /// Name of the validation suite (e.g. "matmul_validation")
     pub name: String,
+    /// Accumulated checks
     pub checks: Vec<Check>,
 }
 
 impl ValidationHarness {
+    /// Create a new validation harness with the given suite name.
     #[must_use]
     pub fn new(name: &str) -> Self {
         Self {
@@ -148,16 +157,19 @@ impl ValidationHarness {
         }
     }
 
+    /// Number of checks that passed.
     #[must_use]
     pub fn passed_count(&self) -> usize {
         self.checks.iter().filter(|c| c.passed).count()
     }
 
+    /// Total number of checks.
     #[must_use]
     pub fn total_count(&self) -> usize {
         self.checks.len()
     }
 
+    /// Returns true if all checks passed.
     #[must_use]
     pub fn all_passed(&self) -> bool {
         self.checks.iter().all(|c| c.passed)
@@ -238,7 +250,6 @@ macro_rules! require {
     };
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

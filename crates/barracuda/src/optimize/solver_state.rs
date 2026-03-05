@@ -351,7 +351,6 @@ fn project_bounds(x: &[f64], bounds: &[(f64, f64)]) -> Vec<f64> {
         .collect()
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

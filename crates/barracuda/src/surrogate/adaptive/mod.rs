@@ -527,6 +527,5 @@ fn compute_distances_f32_promoted(
     distances
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests;

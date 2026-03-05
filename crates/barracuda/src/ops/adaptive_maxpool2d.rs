@@ -45,6 +45,7 @@ struct AdaptiveMaxPool2DParams {
     out_width: u32,
 }
 
+/// Adaptive max pooling 2D with output-size-driven kernel.
 pub struct AdaptiveMaxPool2D {
     input: Tensor,
     output_size: (usize, usize),
@@ -62,6 +63,7 @@ impl AdaptiveMaxPool2D {
         }
     }
 
+    /// Execute adaptive max pooling and return the result tensor.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -169,7 +171,6 @@ impl Tensor {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

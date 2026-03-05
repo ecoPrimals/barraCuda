@@ -28,6 +28,7 @@ pub struct Lamb {
 }
 
 impl Lamb {
+    /// Create a LAMB optimizer step with the given parameters and optional momentum/variance.
     pub fn new(
         parameters: Tensor,
         gradients: Tensor,
@@ -119,6 +120,7 @@ impl Lamb {
         std::sync::LazyLock::force(&SHADER).as_str()
     }
 
+    /// Execute LAMB optimizer step.
     pub fn execute(self) -> Result<(Tensor, Tensor, Tensor)> {
         let device = self.parameters.device();
         let size = self.parameters.shape().iter().product::<usize>();
@@ -406,7 +408,6 @@ impl Lamb {
     }
 }
 
-#[expect(clippy::unwrap_used, reason = "tests")]
 #[cfg(test)]
 mod tests {
     use super::*;

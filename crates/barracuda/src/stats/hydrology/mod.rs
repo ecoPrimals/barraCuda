@@ -140,7 +140,7 @@ pub fn thornthwaite_heat_index(monthly_temps: &[f64; 12]) -> f64 {
 /// Radiation-based method requiring only solar radiation and temperature.
 /// Popular in the Netherlands and northern Europe.
 ///
-/// `ET₀ = 0.61 · Δ/(Δ+γ) · Rs/λ − 0.012`
+/// `ET₀ = 0.61 · Δ/(Δ+γ) · Rs/λ − 0.12`
 ///
 /// Returns `None` if `rs < 0`.
 ///
@@ -156,7 +156,7 @@ pub fn makkink_et0(t_mean: f64, rs: f64) -> Option<f64> {
     let delta = 4098.0 * e_tmean / (t_mean + 237.3).powi(2);
     let gamma = 0.0674;
     let lambda = 2.45;
-    let et0 = 0.61 * (delta / (delta + gamma)) * (rs / lambda) - 0.012;
+    let et0 = 0.61 * (delta / (delta + gamma)) * (rs / lambda) - 0.12;
     Some(et0.max(0.0))
 }
 

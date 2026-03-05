@@ -1,34 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! DIGAMMA F64 - Digamma function ψ(x) = Γ'(x)/Γ(x) - f64 precision
+//! Digamma ψ(x) (f64) — GPU-resident, pipeline-cached, buffer-pooled
 //!
-//! Deep Debt Principles:
-//! - Self-knowledge: Operation knows its computation
-//! - Zero hardcoding: Hardware-agnostic implementation
-//! - Modern idiomatic Rust: Safe, zero unsafe code
-//!
-//! Note: Uses GPU for f64 log/sin/cos when available.
-//!
-//! Applications:
-//! - Fisher information
-//! - Bayesian statistics
-//! - Neural network regularization
+//! ψ(x) = Γ'(x)/Γ(x), the logarithmic derivative of the Gamma function.
+//! Applications: Fisher information, Bayesian statistics, neural network regularization
 
-use crate::device::compute_pipeline::ComputeDispatch;
+use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
+use crate::device::tensor_context::get_device_context;
 use crate::device::WgpuDevice;
 use crate::error::Result;
-use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
-#[repr(C)]
-#[derive(Copy, Clone, Pod, Zeroable)]
-struct Params {
-    size: u32,
-    _pad0: u32,
-    _pad1: u32,
-    _pad2: u32,
-}
+const SHADER: &str = include_str!("../shaders/special/digamma_f64.wgsl");
 
-/// f64 Digamma function evaluator
+/// f64 Digamma function evaluator — pipeline-cached
 ///
 /// Computes ψ(x) = d/dx ln(Γ(x)) using reflection + recurrence + asymptotic expansion.
 pub struct DigammaF64 {
@@ -36,10 +20,6 @@ pub struct DigammaF64 {
 }
 
 impl DigammaF64 {
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/special/digamma_f64.wgsl")
-    }
-
     /// Create new Digamma f64 operation
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
@@ -56,52 +36,70 @@ impl DigammaF64 {
         if x.is_empty() {
             return Ok(vec![]);
         }
+        self.dispatch_elementwise(x)
+    }
 
+    fn dispatch_elementwise(&self, x: &[f64]) -> Result<Vec<f64>> {
         let n = x.len();
+        let ctx = get_device_context(&self.device);
+        let adapter_info = self.device.adapter_info();
+
+        let input_buf = self
+            .device
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Digamma Input"),
+                contents: bytemuck::cast_slice(x),
+                usage: wgpu::BufferUsages::STORAGE,
+            });
+
+        let output_buf = ctx.acquire_pooled_output_f64(n);
+
+        #[repr(C)]
+        #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+        struct Params {
+            size: u32,
+            _pad0: u32,
+            _pad1: u32,
+            _pad2: u32,
+        }
+
         let params = Params {
             size: n as u32,
             _pad0: 0,
             _pad1: 0,
             _pad2: 0,
         };
+        let params_buf = self.device.create_uniform_buffer("Digamma Params", &params);
 
-        let input_buf = self
-            .device
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("DigammaF64 Input"),
-                contents: bytemuck::cast_slice(x),
-                usage: wgpu::BufferUsages::STORAGE,
+        let layout_sig = BindGroupLayoutSignature::reduction();
+        let bind_group = ctx.get_or_create_bind_group(
+            layout_sig,
+            &[&input_buf, &output_buf, &params_buf],
+            Some("Digamma BG"),
+        );
+
+        let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
+            self.device.device(),
+            adapter_info,
+            SHADER,
+            layout_sig,
+            "main",
+            Some("Digamma Pipeline"),
+        );
+
+        let workgroups = n.div_ceil(256) as u32;
+        ctx.record_operation(move |encoder| {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("Digamma Pass"),
+                timestamp_writes: None,
             });
+            pass.set_pipeline(&pipeline);
+            pass.set_bind_group(0, Some(&*bind_group), &[]);
+            pass.dispatch_workgroups(workgroups, 1, 1);
+        })?;
 
-        let output_size = std::mem::size_of_val(x);
-        let output_buf = self.device.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("DigammaF64 Output"),
-            size: output_size as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-
-        let params_buf = self
-            .device
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("DigammaF64 Params"),
-                contents: bytemuck::bytes_of(&params),
-                usage: wgpu::BufferUsages::UNIFORM,
-            });
-
-        ComputeDispatch::new(self.device.as_ref(), "DigammaF64")
-            .shader(Self::wgsl_shader(), "main")
-            .f64()
-            .storage_read(0, &input_buf)
-            .storage_rw(1, &output_buf)
-            .uniform(2, &params_buf)
-            .dispatch_1d(n as u32)
-            .submit();
-
-        let result: Vec<f64> = self.device.read_buffer_f64(&output_buf, n)?;
-        Ok(result)
+        self.device.read_buffer_f64(&output_buf, n)
     }
 
     #[cfg(test)]
@@ -114,7 +112,6 @@ impl DigammaF64 {
     fn digamma_scalar(x: f64) -> f64 {
         use std::f64::consts::PI;
 
-        // Non-positive integer: pole
         if x <= 0.0 && x == x.floor() {
             return f64::NAN;
         }
@@ -122,20 +119,17 @@ impl DigammaF64 {
         let mut y = x;
         let mut result = 0.0;
 
-        // Reflection formula for x < 0
         if y < 0.0 {
             let cot_pi_y = (PI * y).cos() / (PI * y).sin();
             result -= PI * cot_pi_y;
             y = 1.0 - y;
         }
 
-        // Recurrence to shift to larger argument
         while y < 6.0 {
             result -= 1.0 / y;
             y += 1.0;
         }
 
-        // Asymptotic expansion for y >= 6
         result + Self::digamma_asymptotic(y)
     }
 
@@ -144,7 +138,6 @@ impl DigammaF64 {
         let inv_x = 1.0 / x;
         let inv_x2 = inv_x * inv_x;
 
-        // Bernoulli number coefficients
         const B2: f64 = 1.0 / 12.0;
         const B4: f64 = -1.0 / 120.0;
         const B6: f64 = 1.0 / 252.0;
@@ -184,7 +177,6 @@ mod tests {
 
         let digamma = DigammaF64::new(device).unwrap();
 
-        // ψ(1) = -γ (Euler-Mascheroni constant)
         let euler_mascheroni = 0.5772156649015329;
         let result = digamma.digamma(&[1.0]).unwrap();
 
@@ -200,7 +192,6 @@ mod tests {
     async fn test_digamma_recurrence() {
         let run = |device: std::sync::Arc<crate::device::WgpuDevice>| {
             let digamma = DigammaF64::new(device)?;
-            // ψ(x+1) = ψ(x) + 1/x
             for x in [1.0, 2.0, 3.0, 4.5, 7.3] {
                 let result = digamma.digamma(&[x, x + 1.0])?;
                 let psi_x = result[0];
@@ -243,7 +234,6 @@ mod tests {
 
         let digamma = DigammaF64::new(device).unwrap();
 
-        // ψ(2) = 1 - γ
         let euler_mascheroni = 0.5772156649015329;
         let result = digamma.digamma(&[2.0]).unwrap();
         let expected = 1.0 - euler_mascheroni;
@@ -255,7 +245,6 @@ mod tests {
             expected
         );
 
-        // ψ(1/2) = -γ - 2*ln(2)
         let result = digamma.digamma(&[0.5]).unwrap();
         let expected = -euler_mascheroni - 2.0 * 2.0_f64.ln();
 
@@ -275,13 +264,10 @@ mod tests {
 
         let digamma = DigammaF64::new(device).unwrap();
 
-        // For large x, ψ(x) ≈ ln(x) - 1/(2x)
         let x = 100.0;
         let result = digamma.digamma(&[x]).unwrap();
         let approx = x.ln() - 0.5 / x;
 
-        // The actual value is more accurate than the simple approximation
-        // Asymptotic expansion includes higher order terms that improve accuracy
         assert!(
             (result[0] - approx).abs() < 1e-4,
             "ψ({}) = {}, asymptotic approx = {}",

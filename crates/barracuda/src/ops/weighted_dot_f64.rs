@@ -1,24 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Weighted Dot Product (f64) — GPU-Accelerated via WGSL
+//! Weighted Dot Product (f64) — GPU-resident, pipeline-cached, buffer-pooled
 //!
 //! Computes weighted inner products: result = Σ_k w[k] · a[k] · b[k]
 //!
 //! **Use cases**:
 //! - Galerkin methods: <φ_i|W|φ_j>
 //! - FEM assembly: element matrices
-//! - Nuclear physics: potential matrix elements (validated by hotSpring)
+//! - Nuclear physics: potential matrix elements
 //! - Energy integrals: ∫ρ(r)V(r)dr via quadrature
-//!
-//! **Deep Debt Principles**:
-//! - Pure WGSL implementation (hardware-agnostic)
-//! - Full f64 precision for scientific computing
-//! - Safe Rust wrapper (no unsafe code)
 
-use crate::device::compute_pipeline::ComputeDispatch;
+use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
+use crate::device::tensor_context::get_device_context;
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
+
+const SHADER: &str = include_str!("../shaders/reduce/weighted_dot_f64.wgsl");
 
 /// Parameters for weighted dot product
 #[repr(C)]
@@ -30,16 +28,12 @@ struct DotParams {
     _pad2: u32,
 }
 
-/// GPU-accelerated f64 weighted dot product
+/// GPU-accelerated f64 weighted dot product — pipeline-cached, buffer-pooled
 pub struct WeightedDotF64 {
     device: Arc<WgpuDevice>,
 }
 
 impl WeightedDotF64 {
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/reduce/weighted_dot_f64.wgsl")
-    }
-
     /// Create a new WeightedDotF64 orchestrator
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
@@ -98,7 +92,6 @@ impl WeightedDotF64 {
             return Ok(0.0);
         }
 
-        // Use weights = 1.0
         let ones = vec![1.0f64; n];
         self.weighted_dot_gpu(&ones, a, b)
     }
@@ -112,13 +105,14 @@ impl WeightedDotF64 {
         let n = weights.len();
         let workgroup_size = 256;
         let n_workgroups = n.div_ceil(workgroup_size);
+        let ctx = get_device_context(&self.device);
+        let adapter_info = self.device.adapter_info();
 
-        // Create buffers
         let weights_buf =
             self.device
                 .device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Weights"),
+                    label: Some("WDot Weights"),
                     contents: bytemuck::cast_slice(weights),
                     usage: wgpu::BufferUsages::STORAGE,
                 });
@@ -127,7 +121,7 @@ impl WeightedDotF64 {
             .device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Vec A"),
+                label: Some("WDot A"),
                 contents: bytemuck::cast_slice(a),
                 usage: wgpu::BufferUsages::STORAGE,
             });
@@ -136,17 +130,12 @@ impl WeightedDotF64 {
             .device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Vec B"),
+                label: Some("WDot B"),
                 contents: bytemuck::cast_slice(b),
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
-        let result_buf = self.device.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Partial Sums"),
-            size: (n_workgroups * 8) as u64, // f64 = 8 bytes
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
+        let output_buf = ctx.acquire_pooled_output_f64(n_workgroups);
 
         let params = DotParams {
             n: n as u32,
@@ -154,28 +143,36 @@ impl WeightedDotF64 {
             _pad1: 0,
             _pad2: 0,
         };
+        let params_buf = self.device.create_uniform_buffer("WDot Params", &params);
 
-        let params_buf = self
-            .device
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Params"),
-                contents: bytemuck::bytes_of(&params),
-                usage: wgpu::BufferUsages::UNIFORM,
+        let layout_sig = BindGroupLayoutSignature::three_input_reduction();
+        let bind_group = ctx.get_or_create_bind_group(
+            layout_sig,
+            &[&weights_buf, &a_buf, &b_buf, &output_buf, &params_buf],
+            Some("WDot BG"),
+        );
+
+        let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
+            self.device.device(),
+            adapter_info,
+            SHADER,
+            layout_sig,
+            "weighted_dot_parallel",
+            Some("WDot Pipeline"),
+        );
+
+        let wg = n_workgroups as u32;
+        ctx.record_operation(move |encoder| {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("WDot Pass"),
+                timestamp_writes: None,
             });
+            pass.set_pipeline(&pipeline);
+            pass.set_bind_group(0, Some(&*bind_group), &[]);
+            pass.dispatch_workgroups(wg, 1, 1);
+        })?;
 
-        ComputeDispatch::new(self.device.as_ref(), "Weighted Dot f64")
-            .shader(Self::wgsl_shader(), "weighted_dot_parallel")
-            .f64()
-            .uniform(0, &params_buf)
-            .storage_read(1, &weights_buf)
-            .storage_read(2, &a_buf)
-            .storage_read(3, &b_buf)
-            .storage_rw(4, &result_buf)
-            .dispatch(n_workgroups as u32, 1, 1)
-            .submit();
-
-        let partial_sums: Vec<f64> = self.device.read_buffer_f64(&result_buf, n_workgroups)?;
+        let partial_sums: Vec<f64> = self.device.read_buffer_f64(&output_buf, n_workgroups)?;
         let result: f64 = partial_sums.iter().sum();
         Ok(result)
     }
@@ -200,7 +197,6 @@ mod tests {
         let a = vec![1.0, 2.0, 3.0];
         let b = vec![1.0, 1.0, 1.0];
 
-        // Expected: 1*1*1 + 2*2*1 + 3*3*1 = 1 + 4 + 9 = 14
         let result = op.weighted_dot(&w, &a, &b).unwrap();
         assert!((result - 14.0).abs() < 1e-10);
     }

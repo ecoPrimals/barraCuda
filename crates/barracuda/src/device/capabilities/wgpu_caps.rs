@@ -132,6 +132,17 @@ pub struct DeviceCapabilities {
     /// Override for `gpu_dispatch_threshold()`. `None` uses the default per
     /// device type. Set via `with_gpu_dispatch_threshold()`.
     pub gpu_dispatch_threshold_override: Option<usize>,
+
+    /// Minimum subgroup (warp/wavefront) size reported by the adapter.
+    /// NVIDIA: 32, AMD RDNA: 32/64, Intel: 8-32, Apple: 32.
+    /// Zero if the adapter does not report subgroup info.
+    pub subgroup_min_size: u32,
+
+    /// Maximum subgroup (warp/wavefront) size reported by the adapter.
+    pub subgroup_max_size: u32,
+
+    /// Whether the device supports native f64 shader operations.
+    pub f64_shaders: bool,
 }
 
 impl DeviceCapabilities {
@@ -163,6 +174,9 @@ impl DeviceCapabilities {
             backend: adapter_info.backend,
             vendor: adapter_info.vendor,
             gpu_dispatch_threshold_override: None,
+            subgroup_min_size: adapter_info.subgroup_min_size,
+            subgroup_max_size: adapter_info.subgroup_max_size,
+            f64_shaders: device.has_f64_shaders(),
         }
     }
 
@@ -329,6 +343,27 @@ impl DeviceCapabilities {
         matches!(self.device_type, wgpu::DeviceType::DiscreteGpu)
             && self.max_compute_invocations_per_workgroup >= HIGH_PERFORMANCE_MIN_INVOCATIONS
     }
+
+    /// Whether the adapter reports subgroup (warp/wavefront) sizes.
+    ///
+    /// True when `subgroup_min_size > 0`, indicating the driver exposes
+    /// subgroup metadata. Note: WGSL subgroup intrinsics require a future
+    /// wgpu feature flag (`SUBGROUP`) that is not yet stabilized.
+    pub fn has_subgroup_info(&self) -> bool {
+        self.subgroup_min_size > 0
+    }
+
+    /// Preferred subgroup size for reduction shaders.
+    ///
+    /// Returns the max subgroup size (to maximise lane utilisation in
+    /// tree reductions), or `None` when not reported.
+    pub fn preferred_subgroup_size(&self) -> Option<u32> {
+        if self.subgroup_max_size > 0 {
+            Some(self.subgroup_max_size)
+        } else {
+            None
+        }
+    }
 }
 
 /// Workload types for optimal configuration
@@ -412,7 +447,22 @@ impl fmt::Display for DeviceCapabilities {
             self.optimal_workgroup_size_2d(WorkloadType::Convolution)
         )?;
         writeln!(f)?;
+        if self.has_subgroup_info() {
+            writeln!(
+                f,
+                "Subgroup: {}-{} lanes",
+                self.subgroup_min_size, self.subgroup_max_size,
+            )?;
+        } else {
+            writeln!(f, "Subgroup: not reported")?;
+        }
+        writeln!(f)?;
         writeln!(f, "Features:")?;
+        writeln!(
+            f,
+            "  f64 shaders: {}",
+            if self.f64_shaders { "Yes" } else { "No" }
+        )?;
         writeln!(
             f,
             "  FHE Support: {}",

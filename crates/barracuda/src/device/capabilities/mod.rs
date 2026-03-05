@@ -57,6 +57,9 @@ mod tests {
             backend: wgpu::Backend::Vulkan,
             vendor: VENDOR_NVIDIA,
             gpu_dispatch_threshold_override: None,
+            subgroup_min_size: 32,
+            subgroup_max_size: 32,
+            f64_shaders: true,
         };
 
         let workloads = vec![
@@ -105,6 +108,9 @@ mod tests {
             backend: wgpu::Backend::Vulkan,
             vendor: VENDOR_NVIDIA,
             gpu_dispatch_threshold_override: None,
+            subgroup_min_size: 32,
+            subgroup_max_size: 32,
+            f64_shaders: true,
         };
 
         assert!(caps_supported.supports_fhe());
@@ -122,6 +128,9 @@ mod tests {
             backend: wgpu::Backend::Vulkan,
             vendor: VENDOR_INTEL,
             gpu_dispatch_threshold_override: None,
+            subgroup_min_size: 8,
+            subgroup_max_size: 32,
+            f64_shaders: true,
         };
 
         assert!(!caps_limited.supports_fhe());

@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! BESSEL K0 F64 - Modified Bessel function of third kind, order 0 - f64 precision WGSL
+//! Bessel K₀ (f64) — GPU-resident, pipeline-cached, buffer-pooled
 //!
-//! Deep Debt Principles apply. See bessel_j0_f64_wgsl.rs for details.
-//!
+//! Modified Bessel function of third kind, order 0.
 //! Applications: Yukawa potential, screened Coulomb, Green's functions
 
-use crate::device::compute_pipeline::ComputeDispatch;
+use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
+use crate::device::tensor_context::get_device_context;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
 
-/// f64 Modified Bessel K0 function evaluator
+const SHADER: &str = include_str!("../shaders/special/bessel_k0_f64.wgsl");
+
+/// f64 Modified Bessel K0 function evaluator — pipeline-cached
 pub struct BesselK0F64 {
     device: Arc<WgpuDevice>,
 }
@@ -21,16 +23,77 @@ impl BesselK0F64 {
         Ok(Self { device })
     }
 
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/special/bessel_k0_f64.wgsl")
-    }
-
     /// Compute K₀(x) for each element (x > 0)
     pub fn k0(&self, x: &[f64]) -> Result<Vec<f64>> {
         if x.is_empty() {
             return Ok(vec![]);
         }
-        self.k0_gpu(x)
+        self.dispatch_elementwise(x)
+    }
+
+    fn dispatch_elementwise(&self, x: &[f64]) -> Result<Vec<f64>> {
+        let size = x.len();
+        let ctx = get_device_context(&self.device);
+        let adapter_info = self.device.adapter_info();
+
+        let input_buf = self
+            .device
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("BesselK0 Input"),
+                contents: bytemuck::cast_slice(x),
+                usage: wgpu::BufferUsages::STORAGE,
+            });
+
+        let output_buf = ctx.acquire_pooled_output_f64(size);
+
+        #[repr(C)]
+        #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+        struct Metadata {
+            size: u32,
+            _pad0: u32,
+            _pad1: u32,
+            _pad2: u32,
+        }
+
+        let metadata = Metadata {
+            size: size as u32,
+            _pad0: 0,
+            _pad1: 0,
+            _pad2: 0,
+        };
+        let params_buf = self
+            .device
+            .create_uniform_buffer("BesselK0 Params", &metadata);
+
+        let layout_sig = BindGroupLayoutSignature::reduction();
+        let bind_group = ctx.get_or_create_bind_group(
+            layout_sig,
+            &[&input_buf, &output_buf, &params_buf],
+            Some("BesselK0 BG"),
+        );
+
+        let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
+            self.device.device(),
+            adapter_info,
+            SHADER,
+            layout_sig,
+            "main",
+            Some("BesselK0 Pipeline"),
+        );
+
+        let workgroups = size.div_ceil(256) as u32;
+        ctx.record_operation(move |encoder| {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("BesselK0 Pass"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&pipeline);
+            pass.set_bind_group(0, Some(&*bind_group), &[]);
+            pass.dispatch_workgroups(workgroups, 1, 1);
+        })?;
+
+        self.device.read_buffer_f64(&output_buf, size)
     }
 
     #[cfg(test)]
@@ -71,62 +134,6 @@ impl BesselK0F64 {
                             + t * (0.00587872 + t * (-0.00251540 + t * 0.00053208)))));
             (-x).exp() * p / x.sqrt()
         }
-    }
-
-    fn k0_gpu(&self, x: &[f64]) -> Result<Vec<f64>> {
-        let size = x.len();
-
-        let input_buf = self
-            .device
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Bessel K0 f64 Input"),
-                contents: bytemuck::cast_slice(x),
-                usage: wgpu::BufferUsages::STORAGE,
-            });
-
-        let output_buf = self.device.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Bessel K0 f64 Output"),
-            size: std::mem::size_of_val(x) as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-
-        #[repr(C)]
-        #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-        struct Metadata {
-            size: u32,
-            _pad0: u32,
-            _pad1: u32,
-            _pad2: u32,
-        }
-
-        let metadata = Metadata {
-            size: size as u32,
-            _pad0: 0,
-            _pad1: 0,
-            _pad2: 0,
-        };
-        let metadata_buf =
-            self.device
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Bessel K0 f64 Metadata"),
-                    contents: bytemuck::bytes_of(&metadata),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                });
-
-        ComputeDispatch::new(self.device.as_ref(), "Bessel K0 f64")
-            .shader(Self::wgsl_shader(), "main")
-            .f64()
-            .storage_read(0, &input_buf)
-            .storage_rw(1, &output_buf)
-            .uniform(2, &metadata_buf)
-            .dispatch_1d(size as u32)
-            .submit();
-
-        let result: Vec<f64> = self.device.read_buffer_f64(&output_buf, size)?;
-        Ok(result)
     }
 }
 
@@ -173,7 +180,6 @@ mod tests {
         let bessel = BesselK0F64::new(device)?;
         let x = vec![5.0, 10.0, 15.0];
         let result = bessel.k0(&x)?;
-        // K0 decays exponentially
         assert!(result[0] > result[1], "K0 should decrease");
         assert!(result[1] > result[2], "K0 should decrease");
         Ok(())

@@ -161,6 +161,26 @@ impl BindGroupLayoutSignature {
             uniform_buffers: 0,
         }
     }
+
+    /// Two-input reduction with params: covariance, correlation, cosine similarity
+    /// (2 read, 1 rw, 1 uniform). Equivalent to `matmul()` layout.
+    pub fn two_input_reduction() -> Self {
+        Self {
+            read_only_buffers: 2,
+            read_write_buffers: 1,
+            uniform_buffers: 1,
+        }
+    }
+
+    /// Three-input reduction with params: weighted dot product
+    /// (3 read, 1 rw, 1 uniform).
+    pub fn three_input_reduction() -> Self {
+        Self {
+            read_only_buffers: 3,
+            read_write_buffers: 1,
+            uniform_buffers: 1,
+        }
+    }
 }
 
 /// Key for caching bind group layouts (includes device fingerprint)

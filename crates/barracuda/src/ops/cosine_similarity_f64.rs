@@ -1,27 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Cosine Similarity (f64) — GPU-Accelerated via WGSL
+//! Cosine Similarity (f64) — GPU-resident, pipeline-cached, buffer-pooled
 //!
 //! Computes cosine similarity: sim(a,b) = (a·b) / (||a|| * ||b||)
 //!
 //! **Use cases**:
-//! - MS2 spectral matching in analytical chemistry (wetSpring)
+//! - MS2 spectral matching in analytical chemistry
 //! - High-precision similarity search
 //! - Biological sequence comparison
 //!
 //! **Note**: For large batches, `GemmF64 + FusedMapReduceF64` is often faster.
 //! This dedicated shader is optimal for single-pair or small-batch queries
 //! where GEMM overhead dominates.
-//!
-//! **Deep Debt Principles**:
-//! - Pure WGSL implementation (hardware-agnostic)
-//! - Full f64 precision for science-grade accuracy
-//! - Safe Rust wrapper (no unsafe code)
 
-use crate::device::compute_pipeline::ComputeDispatch;
+use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
+use crate::device::tensor_context::get_device_context;
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
+
+const SHADER: &str = include_str!("../shaders/math/cosine_similarity_f64.wgsl");
 
 /// Parameters for cosine similarity shader
 #[repr(C)]
@@ -33,16 +31,12 @@ struct CosineParams {
     _padding: u32,
 }
 
-/// GPU-accelerated f64 cosine similarity
+/// GPU-accelerated f64 cosine similarity — pipeline-cached, buffer-pooled
 pub struct CosineSimilarityF64 {
     device: Arc<WgpuDevice>,
 }
 
 impl CosineSimilarityF64 {
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/math/cosine_similarity_f64.wgsl")
-    }
-
     /// Create a new CosineSimilarityF64 orchestrator
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
@@ -94,7 +88,6 @@ impl CosineSimilarityF64 {
             return Ok(vec![]);
         }
 
-        // Validate dimensions
         for (i, v) in vectors_a.iter().enumerate() {
             if v.len() != dim {
                 return Err(BarracudaError::InvalidInput {
@@ -154,17 +147,17 @@ impl CosineSimilarityF64 {
     ) -> Result<Vec<f64>> {
         let num_a = vectors_a.len();
         let num_b = vectors_b.len();
+        let ctx = get_device_context(&self.device);
+        let adapter_info = self.device.adapter_info();
 
-        // Flatten vectors into contiguous arrays
         let a_flat: Vec<f64> = vectors_a.iter().flat_map(|v| v.iter().cloned()).collect();
         let b_flat: Vec<f64> = vectors_b.iter().flat_map(|v| v.iter().cloned()).collect();
 
-        // Create buffers
         let a_buf = self
             .device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Vectors A"),
+                label: Some("CosSim A"),
                 contents: bytemuck::cast_slice(&a_flat),
                 usage: wgpu::BufferUsages::STORAGE,
             });
@@ -173,18 +166,13 @@ impl CosineSimilarityF64 {
             .device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Vectors B"),
+                label: Some("CosSim B"),
                 contents: bytemuck::cast_slice(&b_flat),
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
         let output_size = num_a * num_b;
-        let output_buf = self.device.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Output"),
-            size: (output_size * 8) as u64, // f64 = 8 bytes
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
+        let output_buf = ctx.acquire_pooled_output_f64(output_size);
 
         let params = CosineParams {
             num_vectors_a: num_a as u32,
@@ -192,31 +180,37 @@ impl CosineSimilarityF64 {
             vector_dim: dim as u32,
             _padding: 0,
         };
+        let params_buf = self.device.create_uniform_buffer("CosSim Params", &params);
 
-        let params_buf = self
-            .device
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Params"),
-                contents: bytemuck::bytes_of(&params),
-                usage: wgpu::BufferUsages::UNIFORM,
+        let layout_sig = BindGroupLayoutSignature::two_input_reduction();
+        let bind_group = ctx.get_or_create_bind_group(
+            layout_sig,
+            &[&a_buf, &b_buf, &output_buf, &params_buf],
+            Some("CosSim BG"),
+        );
+
+        let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
+            self.device.device(),
+            adapter_info,
+            SHADER,
+            layout_sig,
+            "main",
+            Some("CosSim Pipeline"),
+        );
+
+        let wg_x = num_a.div_ceil(16) as u32;
+        let wg_y = num_b.div_ceil(16) as u32;
+        ctx.record_operation(move |encoder| {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("CosSim Pass"),
+                timestamp_writes: None,
             });
+            pass.set_pipeline(&pipeline);
+            pass.set_bind_group(0, Some(&*bind_group), &[]);
+            pass.dispatch_workgroups(wg_x, wg_y, 1);
+        })?;
 
-        let wg_x = num_a.div_ceil(16);
-        let wg_y = num_b.div_ceil(16);
-
-        ComputeDispatch::new(self.device.as_ref(), "Cosine Similarity f64")
-            .shader(Self::wgsl_shader(), "main")
-            .f64()
-            .storage_read(0, &a_buf)
-            .storage_read(1, &b_buf)
-            .storage_rw(2, &output_buf)
-            .uniform(3, &params_buf)
-            .dispatch(wg_x as u32, wg_y as u32, 1)
-            .submit();
-
-        let results: Vec<f64> = self.device.read_buffer_f64(&output_buf, output_size)?;
-        Ok(results)
+        self.device.read_buffer_f64(&output_buf, output_size)
     }
 }
 
@@ -293,11 +287,10 @@ mod tests {
 
         let result = op.all_pairs(&vectors_a, &vectors_b, 2).unwrap();
 
-        // Expected: [[1, 0, 0.707], [0, 1, 0.707]]
-        assert!((result[0] - 1.0).abs() < 1e-8); // sim([1,0], [1,0]) = 1
-        assert!(result[1].abs() < 1e-8); // sim([1,0], [0,1]) = 0
+        assert!((result[0] - 1.0).abs() < 1e-8);
+        assert!(result[1].abs() < 1e-8);
         let sqrt2_inv = 1.0 / 2.0_f64.sqrt();
-        assert!((result[2] - sqrt2_inv).abs() < 1e-8); // sim([1,0], [1,1]) = 1/√2
+        assert!((result[2] - sqrt2_inv).abs() < 1e-8);
     }
 
     #[test]
@@ -314,7 +307,6 @@ mod tests {
         let gpu_sim = op.similarity(&a, &b).unwrap();
         let cpu_sim = op.similarity_cpu(&a, &b);
 
-        // GPU and CPU use different reduction orderings, expect ~1e-6 relative error
         let rel_tol = 1e-6;
         let abs_tol = 1e-10;
         let diff = (gpu_sim - cpu_sim).abs();

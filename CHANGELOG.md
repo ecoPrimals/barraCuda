@@ -22,12 +22,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   GPU pass
 - **`TensorContext::acquire_pooled_output_f64()`** — f64-sized pooled buffer allocation
 - **`TensorContext::acquire_pooled_bytes()`** — raw byte-sized pooled buffer allocation
+- **Subgroup capability detection** — `DeviceCapabilities` now reports
+  `subgroup_min_size`, `subgroup_max_size`, `f64_shaders`, with `has_subgroup_info()`
+  and `preferred_subgroup_size()` accessors. Prep work for wgpu subgroup intrinsics
+  when stabilized upstream
+- **`BindGroupLayoutSignature::two_input_reduction()`** — layout for 2-input
+  reduction/correlation ops (2 read, 1 rw, 1 uniform)
+- **`BindGroupLayoutSignature::three_input_reduction()`** — layout for 3-input
+  reduction ops like weighted dot (3 read, 1 rw, 1 uniform)
 
 ### Changed
+- **10 additional f64 ops evolved to TensorContext path** — `covariance_f64`,
+  `bessel_i0`, `bessel_j0`, `bessel_j1`, `bessel_k0`, `digamma_f64`, `beta_f64`,
+  `hermite_f64`, `cosine_similarity_f64`, `weighted_dot_f64` migrated from raw
+  `ComputeDispatch` with per-call buffer allocation to `TensorContext` with pooled
+  buffers, pipeline cache, and bind group cache. Total migrated: 15 ops
 - **Stats ops evolved to TensorContext path** — `mean.rs`, `sum.rs`, `prod.rs`
   migrated from raw `ComputeDispatch` with per-call buffer allocation to
   `TensorContext` with pooled buffers, pipeline cache, and bind group cache.
   Eliminates per-op buffer allocation overhead in steady state
+- **Weighted dot shader binding order** — reordered `weighted_dot_f64.wgsl` group 0
+  bindings to match `BindGroupLayoutSignature` convention (read → rw → uniform)
 - **`VarianceF64` fused dispatch** — evolved from 2-pass (mean → deviation) via
   `ComputeDispatch` to single-pass Welford via `TensorContext` + pipeline cache
 - **`CorrelationF64` fused dispatch** — evolved from multi-dispatch via

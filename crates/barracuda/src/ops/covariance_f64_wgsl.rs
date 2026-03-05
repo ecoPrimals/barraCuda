@@ -1,21 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! COVARIANCE F64 - Covariance computation - f64 precision
+//! Covariance (f64) — GPU-resident, pipeline-cached, buffer-pooled
 //!
-//! Deep Debt Principles:
-//! - Self-knowledge: Operation knows its computation
-//! - Zero hardcoding: Hardware-agnostic implementation
-//! - Modern idiomatic Rust: Safe, zero unsafe code
+//! Evolved from per-call buffer allocation to pooled TensorContext path
+//! with cached pipelines and bind groups.
 //!
-//! Applications:
-//! - Portfolio theory
-//! - PCA
-//! - Kalman filters
+//! Applications: portfolio theory, PCA, Kalman filters
 
-use crate::device::compute_pipeline::ComputeDispatch;
+use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
+use crate::device::tensor_context::get_device_context;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
+
+const SHADER: &str = include_str!("../shaders/special/covariance_f64.wgsl");
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -26,16 +24,12 @@ struct Params {
     ddof: u32,
 }
 
-/// f64 Covariance evaluator
+/// f64 Covariance evaluator — pipeline-cached, buffer-pooled
 pub struct CovarianceF64 {
     device: Arc<WgpuDevice>,
 }
 
 impl CovarianceF64 {
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/special/covariance_f64.wgsl")
-    }
-
     /// Create new Covariance f64 operation
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
@@ -58,6 +52,9 @@ impl CovarianceF64 {
         }
 
         let n = x.len();
+        let ctx = get_device_context(&self.device);
+        let adapter_info = self.device.adapter_info();
+
         let params = Params {
             size: n as u32,
             num_pairs: 1,
@@ -69,7 +66,7 @@ impl CovarianceF64 {
             .device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("CovarianceF64 X"),
+                label: Some("CovF64 X"),
                 contents: bytemuck::cast_slice(x),
                 usage: wgpu::BufferUsages::STORAGE,
             });
@@ -78,39 +75,42 @@ impl CovarianceF64 {
             .device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("CovarianceF64 Y"),
+                label: Some("CovF64 Y"),
                 contents: bytemuck::cast_slice(y),
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
-        let output_size = std::mem::size_of::<f64>();
-        let output_buf = self.device.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("CovarianceF64 Output"),
-            size: output_size as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
+        let output_buf = ctx.acquire_pooled_output_f64(1);
 
-        let params_buf = self
-            .device
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("CovarianceF64 Params"),
-                contents: bytemuck::bytes_of(&params),
-                usage: wgpu::BufferUsages::UNIFORM,
+        let params_buf = self.device.create_uniform_buffer("CovF64 Params", &params);
+
+        let layout_sig = BindGroupLayoutSignature::two_input_reduction();
+        let bind_group = ctx.get_or_create_bind_group(
+            layout_sig,
+            &[&x_buf, &y_buf, &output_buf, &params_buf],
+            Some("CovF64 BG"),
+        );
+
+        let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
+            self.device.device(),
+            adapter_info,
+            SHADER,
+            layout_sig,
+            "main",
+            Some("CovF64 Pipeline"),
+        );
+
+        ctx.record_operation(move |encoder| {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("CovF64 Pass"),
+                timestamp_writes: None,
             });
+            pass.set_pipeline(&pipeline);
+            pass.set_bind_group(0, Some(&*bind_group), &[]);
+            pass.dispatch_workgroups(1, 1, 1);
+        })?;
 
-        ComputeDispatch::new(self.device.as_ref(), "CovarianceF64")
-            .shader(Self::wgsl_shader(), "main")
-            .f64()
-            .storage_read(0, &x_buf)
-            .storage_read(1, &y_buf)
-            .storage_rw(2, &output_buf)
-            .uniform(3, &params_buf)
-            .dispatch(1, 1, 1)
-            .submit();
-
-        let result: Vec<f64> = self.device.read_buffer_f64(&output_buf, 1)?;
+        let result = self.device.read_buffer_f64(&output_buf, 1)?;
         Ok(result[0])
     }
 
@@ -122,7 +122,6 @@ impl CovarianceF64 {
             return 0.0;
         }
 
-        // Two-pass for numerical stability
         let mean_x: f64 = x.iter().sum::<f64>() / n as f64;
         let mean_y: f64 = y.iter().sum::<f64>() / n as f64;
 
@@ -149,9 +148,8 @@ mod tests {
 
         let cov = CovarianceF64::new(device).unwrap();
 
-        // Positive correlation: both increase together
         let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let y = vec![2.0, 4.0, 6.0, 8.0, 10.0]; // y = 2x
+        let y = vec![2.0, 4.0, 6.0, 8.0, 10.0];
         let result = cov.covariance(&x, &y).unwrap();
 
         assert!(
@@ -169,9 +167,8 @@ mod tests {
 
         let cov = CovarianceF64::new(device).unwrap();
 
-        // Negative correlation: one increases, other decreases
         let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let y = vec![10.0, 8.0, 6.0, 4.0, 2.0]; // y = -2x + 12
+        let y = vec![10.0, 8.0, 6.0, 4.0, 2.0];
         let result = cov.covariance(&x, &y).unwrap();
 
         assert!(
@@ -189,9 +186,8 @@ mod tests {
 
         let cov = CovarianceF64::new(device).unwrap();
 
-        // No correlation: independent
         let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let y = vec![3.0, 3.0, 3.0, 3.0, 3.0]; // constant
+        let y = vec![3.0, 3.0, 3.0, 3.0, 3.0];
         let result = cov.covariance(&x, &y).unwrap();
 
         assert!(
@@ -209,11 +205,9 @@ mod tests {
 
         let cov = CovarianceF64::new(device).unwrap();
 
-        // Cov(X, X) = Var(X)
         let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let cov_xx = cov.covariance(&x, &x).unwrap();
 
-        // Population variance = 2
         assert!(
             (cov_xx - 2.0).abs() < 1e-10,
             "Cov(X,X) = {}, expected variance = 2.0",
@@ -232,7 +226,6 @@ mod tests {
         let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let y = vec![1.0, 2.0, 3.0, 4.0, 5.0];
 
-        // Sample Cov(X,X) = sample variance = 10/4 = 2.5
         let result = cov.sample_covariance(&x, &y).unwrap();
 
         assert!(

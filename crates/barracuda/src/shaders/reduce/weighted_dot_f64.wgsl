@@ -30,11 +30,11 @@ struct DotParams {
     _pad2: u32,
 }
 
-@group(0) @binding(0) var<uniform> params: DotParams;
-@group(0) @binding(1) var<storage, read> weights: array<f64>;
-@group(0) @binding(2) var<storage, read> vec_a: array<f64>;
-@group(0) @binding(3) var<storage, read> vec_b: array<f64>;
-@group(0) @binding(4) var<storage, read_write> result: array<f64>;  // [1] for simple, [n_wg] for parallel
+@group(0) @binding(0) var<storage, read> weights: array<f64>;
+@group(0) @binding(1) var<storage, read> vec_a: array<f64>;
+@group(0) @binding(2) var<storage, read> vec_b: array<f64>;
+@group(0) @binding(3) var<storage, read_write> result: array<f64>;  // [1] for simple, [n_wg] for parallel
+@group(0) @binding(4) var<uniform> params: DotParams;
 
 @compute @workgroup_size(1)
 fn weighted_dot_simple(@builtin(global_invocation_id) gid: vec3<u32>) {

@@ -1,25 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! BESSEL J0 F64 - Bessel function of first kind, order 0 - f64 precision WGSL
+//! Bessel J₀ (f64) — GPU-resident, pipeline-cached, buffer-pooled
 //!
-//! Deep Debt Principles:
-//! - Self-knowledge: Operation knows its computation
-//! - Zero hardcoding: Hardware-agnostic implementation
-//! - Modern idiomatic Rust: Safe, zero unsafe code
-//! - Complete implementation: Production-ready, no mocks
-//! - Hardware-agnostic: Pure WGSL for universal compute
-//!
-//! Applications:
-//! - Cylindrical wave propagation
-//! - Fourier-Bessel transforms
-//! - Diffraction patterns
-//! - Heat conduction in cylinders
+//! Bessel function of first kind, order 0.
+//! Applications: cylindrical wave propagation, Fourier-Bessel transforms,
+//! diffraction patterns, heat conduction in cylinders
 
-use crate::device::compute_pipeline::ComputeDispatch;
+use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
+use crate::device::tensor_context::get_device_context;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
 
-/// f64 Bessel J0 function evaluator
+const SHADER: &str = include_str!("../shaders/special/bessel_j0_f64.wgsl");
+
+/// f64 Bessel J0 function evaluator — pipeline-cached
 ///
 /// Computes J₀(x) using rational polynomial approximation
 /// with full f64 precision.
@@ -33,10 +27,6 @@ impl BesselJ0F64 {
         Ok(Self { device })
     }
 
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/special/bessel_j0_f64.wgsl")
-    }
-
     /// Compute J₀(x) for each element
     ///
     /// # Arguments
@@ -48,8 +38,72 @@ impl BesselJ0F64 {
         if x.is_empty() {
             return Ok(vec![]);
         }
+        self.dispatch_elementwise(x)
+    }
 
-        self.j0_gpu(x)
+    fn dispatch_elementwise(&self, x: &[f64]) -> Result<Vec<f64>> {
+        let size = x.len();
+        let ctx = get_device_context(&self.device);
+        let adapter_info = self.device.adapter_info();
+
+        let input_buf = self
+            .device
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("BesselJ0 Input"),
+                contents: bytemuck::cast_slice(x),
+                usage: wgpu::BufferUsages::STORAGE,
+            });
+
+        let output_buf = ctx.acquire_pooled_output_f64(size);
+
+        #[repr(C)]
+        #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+        struct Metadata {
+            size: u32,
+            _pad0: u32,
+            _pad1: u32,
+            _pad2: u32,
+        }
+
+        let metadata = Metadata {
+            size: size as u32,
+            _pad0: 0,
+            _pad1: 0,
+            _pad2: 0,
+        };
+        let params_buf = self
+            .device
+            .create_uniform_buffer("BesselJ0 Params", &metadata);
+
+        let layout_sig = BindGroupLayoutSignature::reduction();
+        let bind_group = ctx.get_or_create_bind_group(
+            layout_sig,
+            &[&input_buf, &output_buf, &params_buf],
+            Some("BesselJ0 BG"),
+        );
+
+        let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
+            self.device.device(),
+            adapter_info,
+            SHADER,
+            layout_sig,
+            "main",
+            Some("BesselJ0 Pipeline"),
+        );
+
+        let workgroups = size.div_ceil(256) as u32;
+        ctx.record_operation(move |encoder| {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("BesselJ0 Pass"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&pipeline);
+            pass.set_bind_group(0, Some(&*bind_group), &[]);
+            pass.dispatch_workgroups(workgroups, 1, 1);
+        })?;
+
+        self.device.read_buffer_f64(&output_buf, size)
     }
 
     #[cfg(test)]
@@ -62,7 +116,6 @@ impl BesselJ0F64 {
     fn j0_scalar(x: f64) -> f64 {
         let ax = x.abs();
         if ax >= 8.0 {
-            // Asymptotic form
             let z = 8.0 / ax;
             let z2 = z * z;
             let z4 = z2 * z2;
@@ -82,7 +135,6 @@ impl BesselJ0F64 {
             let xx = ax - pi_over_4;
             inv_sqrt_x * (pv * xx.cos() - qv * xx.sin())
         } else {
-            // Rational approximation
             let z = x * x;
             let z2 = z * z;
             let z3 = z2 * z;
@@ -102,63 +154,6 @@ impl BesselJ0F64 {
 
             p / q
         }
-    }
-
-    fn j0_gpu(&self, x: &[f64]) -> Result<Vec<f64>> {
-        let size = x.len();
-
-        let input_buf = self
-            .device
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Bessel J0 f64 Input"),
-                contents: bytemuck::cast_slice(x),
-                usage: wgpu::BufferUsages::STORAGE,
-            });
-
-        let output_buf = self.device.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Bessel J0 f64 Output"),
-            size: std::mem::size_of_val(x) as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-
-        #[repr(C)]
-        #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-        struct Metadata {
-            size: u32,
-            _pad0: u32,
-            _pad1: u32,
-            _pad2: u32,
-        }
-
-        let metadata = Metadata {
-            size: size as u32,
-            _pad0: 0,
-            _pad1: 0,
-            _pad2: 0,
-        };
-
-        let metadata_buf =
-            self.device
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Bessel J0 f64 Metadata"),
-                    contents: bytemuck::bytes_of(&metadata),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                });
-
-        ComputeDispatch::new(self.device.as_ref(), "Bessel J0 f64")
-            .shader(Self::wgsl_shader(), "main")
-            .f64()
-            .storage_read(0, &input_buf)
-            .storage_rw(1, &output_buf)
-            .uniform(2, &metadata_buf)
-            .dispatch_1d(size as u32)
-            .submit();
-
-        let result: Vec<f64> = self.device.read_buffer_f64(&output_buf, size)?;
-        Ok(result)
     }
 }
 
@@ -180,7 +175,6 @@ mod tests {
         let x = vec![0.0];
         let result = bessel.j0(&x)?;
 
-        // J₀(0) = 1 (relax tolerance for rational approximation)
         assert!(
             (result[0] - 1.0).abs() < 1e-6,
             "J₀(0) = {}, expected 1",
@@ -196,13 +190,12 @@ mod tests {
         };
         let bessel = BesselJ0F64::new(device)?;
 
-        // Known values from tables
         let x = vec![1.0, 2.0, 5.0, 10.0];
         let expected = [
-            0.7651976865579666,  // J₀(1)
-            0.2238907791412357,  // J₀(2)
-            -0.1775967713143383, // J₀(5)
-            -0.2459357644513483, // J₀(10)
+            0.7651976865579666,
+            0.2238907791412357,
+            -0.1775967713143383,
+            -0.2459357644513483,
         ];
 
         let result = bessel.j0(&x)?;
@@ -226,7 +219,6 @@ mod tests {
         };
         let bessel = BesselJ0F64::new(device)?;
 
-        // J₀(-x) = J₀(x) (even function)
         let x = vec![-3.0, -2.0, -1.0, 1.0, 2.0, 3.0];
         let result = bessel.j0(&x)?;
 
@@ -243,12 +235,10 @@ mod tests {
         };
         let bessel = BesselJ0F64::new(device)?;
 
-        // Large input to trigger GPU path
         let x: Vec<f64> = (0..1000).map(|i| i as f64 * 0.02).collect();
         let result = bessel.j0(&x)?;
 
         assert_eq!(result.len(), 1000);
-        // J₀(0) = 1 (relax tolerance for rational approximation)
         assert!(
             (result[0] - 1.0).abs() < 1e-6,
             "J₀(0) = {}, expected 1",

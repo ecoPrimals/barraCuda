@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! BESSEL J1 F64 - Bessel function of first kind, order 1 - f64 precision WGSL
+//! Bessel J₁ (f64) — GPU-resident, pipeline-cached, buffer-pooled
 //!
-//! Deep Debt Principles apply. See bessel_j0_f64_wgsl.rs for details.
-//!
-//! Applications: Electromagnetic wave propagation, antenna patterns
+//! Bessel function of first kind, order 1.
+//! Applications: electromagnetic wave propagation, antenna patterns
 
-use crate::device::compute_pipeline::ComputeDispatch;
+use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
+use crate::device::tensor_context::get_device_context;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
 
-/// f64 Bessel J1 function evaluator
+const SHADER: &str = include_str!("../shaders/special/bessel_j1_f64.wgsl");
+
+/// f64 Bessel J1 function evaluator — pipeline-cached
 pub struct BesselJ1F64 {
     device: Arc<WgpuDevice>,
 }
@@ -21,17 +23,77 @@ impl BesselJ1F64 {
         Ok(Self { device })
     }
 
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/special/bessel_j1_f64.wgsl")
-    }
-
     /// Compute J₁(x) for each element
     pub fn j1(&self, x: &[f64]) -> Result<Vec<f64>> {
         if x.is_empty() {
             return Ok(vec![]);
         }
+        self.dispatch_elementwise(x)
+    }
 
-        self.j1_gpu(x)
+    fn dispatch_elementwise(&self, x: &[f64]) -> Result<Vec<f64>> {
+        let size = x.len();
+        let ctx = get_device_context(&self.device);
+        let adapter_info = self.device.adapter_info();
+
+        let input_buf = self
+            .device
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("BesselJ1 Input"),
+                contents: bytemuck::cast_slice(x),
+                usage: wgpu::BufferUsages::STORAGE,
+            });
+
+        let output_buf = ctx.acquire_pooled_output_f64(size);
+
+        #[repr(C)]
+        #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+        struct Metadata {
+            size: u32,
+            _pad0: u32,
+            _pad1: u32,
+            _pad2: u32,
+        }
+
+        let metadata = Metadata {
+            size: size as u32,
+            _pad0: 0,
+            _pad1: 0,
+            _pad2: 0,
+        };
+        let params_buf = self
+            .device
+            .create_uniform_buffer("BesselJ1 Params", &metadata);
+
+        let layout_sig = BindGroupLayoutSignature::reduction();
+        let bind_group = ctx.get_or_create_bind_group(
+            layout_sig,
+            &[&input_buf, &output_buf, &params_buf],
+            Some("BesselJ1 BG"),
+        );
+
+        let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
+            self.device.device(),
+            adapter_info,
+            SHADER,
+            layout_sig,
+            "main",
+            Some("BesselJ1 Pipeline"),
+        );
+
+        let workgroups = size.div_ceil(256) as u32;
+        ctx.record_operation(move |encoder| {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("BesselJ1 Pass"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&pipeline);
+            pass.set_bind_group(0, Some(&*bind_group), &[]);
+            pass.dispatch_workgroups(workgroups, 1, 1);
+        })?;
+
+        self.device.read_buffer_f64(&output_buf, size)
     }
 
     #[cfg(test)]
@@ -87,62 +149,6 @@ impl BesselJ1F64 {
 
             x * (p / q)
         }
-    }
-
-    fn j1_gpu(&self, x: &[f64]) -> Result<Vec<f64>> {
-        let size = x.len();
-
-        let input_buf = self
-            .device
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Bessel J1 f64 Input"),
-                contents: bytemuck::cast_slice(x),
-                usage: wgpu::BufferUsages::STORAGE,
-            });
-
-        let output_buf = self.device.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Bessel J1 f64 Output"),
-            size: std::mem::size_of_val(x) as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-
-        #[repr(C)]
-        #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-        struct Metadata {
-            size: u32,
-            _pad0: u32,
-            _pad1: u32,
-            _pad2: u32,
-        }
-
-        let metadata = Metadata {
-            size: size as u32,
-            _pad0: 0,
-            _pad1: 0,
-            _pad2: 0,
-        };
-        let metadata_buf =
-            self.device
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Bessel J1 f64 Metadata"),
-                    contents: bytemuck::bytes_of(&metadata),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                });
-
-        ComputeDispatch::new(self.device.as_ref(), "Bessel J1 f64")
-            .shader(Self::wgsl_shader(), "main")
-            .f64()
-            .storage_read(0, &input_buf)
-            .storage_rw(1, &output_buf)
-            .uniform(2, &metadata_buf)
-            .dispatch_1d(size as u32)
-            .submit();
-
-        let result: Vec<f64> = self.device.read_buffer_f64(&output_buf, size)?;
-        Ok(result)
     }
 }
 

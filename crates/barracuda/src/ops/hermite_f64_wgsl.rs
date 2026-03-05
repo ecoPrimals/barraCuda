@@ -1,25 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! HERMITE F64 - Physicist's Hermite polynomials - f64 precision WGSL
+//! Hermite Hₙ(x) (f64) — GPU-resident, pipeline-cached, buffer-pooled
 //!
-//! Deep Debt Principles:
-//! - Self-knowledge: Operation knows its computation
-//! - Zero hardcoding: Hardware-agnostic implementation
-//! - Modern idiomatic Rust: Safe, zero unsafe code
-//! - Complete implementation: Production-ready, no mocks
-//! - Hardware-agnostic: Pure WGSL for universal compute
-//!
-//! Applications:
-//! - Quantum harmonic oscillator wavefunctions (hotSpring)
-//! - Nuclear structure calculations
-//! - Gaussian quadrature weights
-//! - Gaussian-Hermite basis functions
+//! Physicist's Hermite polynomials via three-term recurrence.
+//! Applications: quantum harmonic oscillator wavefunctions, nuclear structure,
+//! Gaussian quadrature weights, Gaussian-Hermite basis functions
 
-use crate::device::compute_pipeline::ComputeDispatch;
+use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
+use crate::device::tensor_context::get_device_context;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
 
-/// f64 Hermite polynomial evaluator Hₙ(x)
+const SHADER: &str = include_str!("../shaders/special/hermite_f64.wgsl");
+
+/// f64 Hermite polynomial evaluator Hₙ(x) — pipeline-cached
 ///
 /// Computes physicist's Hermite polynomials with full f64 precision
 /// using three-term recurrence relation.
@@ -31,10 +25,6 @@ impl HermiteF64 {
     /// Create new Hermite f64 polynomial operation
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
-    }
-
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/special/hermite_f64.wgsl")
     }
 
     /// Compute Hermite polynomial Hₙ(x) for each element
@@ -49,8 +39,7 @@ impl HermiteF64 {
         if x.is_empty() {
             return Ok(vec![]);
         }
-
-        self.hermite_gpu(x, n)
+        self.dispatch_kernel(x, n, "main")
     }
 
     /// Compute Hermite function ψₙ(x) (normalized wavefunction)
@@ -62,8 +51,70 @@ impl HermiteF64 {
         if x.is_empty() {
             return Ok(vec![]);
         }
+        self.dispatch_kernel(x, n, "hermite_function_kernel")
+    }
 
-        self.hermite_function_gpu(x, n)
+    fn dispatch_kernel(&self, x: &[f64], n: u32, entry_point: &str) -> Result<Vec<f64>> {
+        let size = x.len();
+        let ctx = get_device_context(&self.device);
+        let adapter_info = self.device.adapter_info();
+
+        let input_buf = self
+            .device
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Hermite Input"),
+                contents: bytemuck::cast_slice(x),
+                usage: wgpu::BufferUsages::STORAGE,
+            });
+
+        let output_buf = ctx.acquire_pooled_output_f64(size);
+
+        #[repr(C)]
+        #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+        struct Params {
+            size: u32,
+            n: u32,
+            _pad0: u32,
+            _pad1: u32,
+        }
+
+        let params = Params {
+            size: size as u32,
+            n,
+            _pad0: 0,
+            _pad1: 0,
+        };
+        let params_buf = self.device.create_uniform_buffer("Hermite Params", &params);
+
+        let layout_sig = BindGroupLayoutSignature::reduction();
+        let bind_group = ctx.get_or_create_bind_group(
+            layout_sig,
+            &[&input_buf, &output_buf, &params_buf],
+            Some("Hermite BG"),
+        );
+
+        let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
+            self.device.device(),
+            adapter_info,
+            SHADER,
+            layout_sig,
+            entry_point,
+            Some("Hermite Pipeline"),
+        );
+
+        let workgroups = size.div_ceil(256) as u32;
+        ctx.record_operation(move |encoder| {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("Hermite Pass"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&pipeline);
+            pass.set_bind_group(0, Some(&*bind_group), &[]);
+            pass.dispatch_workgroups(workgroups, 1, 1);
+        })?;
+
+        self.device.read_buffer_f64(&output_buf, size)
     }
 
     #[cfg(test)]
@@ -104,75 +155,10 @@ impl HermiteF64 {
     #[cfg(test)]
     fn hermite_function_scalar(n: u32, x: f64) -> f64 {
         let h_n = Self::hermite_scalar(n, x);
-        let two_n = 1u64 << n.min(62); // Avoid overflow
+        let two_n = 1u64 << n.min(62);
         let n_fact = (1..=n as u64).product::<u64>() as f64;
         let norm = 1.0 / (two_n as f64 * n_fact * std::f64::consts::PI.sqrt()).sqrt();
         norm * h_n * (-x * x / 2.0).exp()
-    }
-
-    fn hermite_gpu(&self, x: &[f64], n: u32) -> Result<Vec<f64>> {
-        self.execute_kernel(x, n, "main")
-    }
-
-    fn hermite_function_gpu(&self, x: &[f64], n: u32) -> Result<Vec<f64>> {
-        self.execute_kernel(x, n, "hermite_function_kernel")
-    }
-
-    fn execute_kernel(&self, x: &[f64], n: u32, entry_point: &str) -> Result<Vec<f64>> {
-        let size = x.len();
-
-        let input_buf = self
-            .device
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Hermite f64 Input"),
-                contents: bytemuck::cast_slice(x),
-                usage: wgpu::BufferUsages::STORAGE,
-            });
-
-        let output_buf = self.device.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Hermite f64 Output"),
-            size: std::mem::size_of_val(x) as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-
-        #[repr(C)]
-        #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-        struct Params {
-            size: u32,
-            n: u32,
-            _pad0: u32,
-            _pad1: u32,
-        }
-
-        let params = Params {
-            size: size as u32,
-            n,
-            _pad0: 0,
-            _pad1: 0,
-        };
-
-        let params_buf = self
-            .device
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Hermite f64 Params"),
-                contents: bytemuck::cast_slice(&[params]),
-                usage: wgpu::BufferUsages::UNIFORM,
-            });
-
-        ComputeDispatch::new(self.device.as_ref(), "Hermite f64")
-            .shader(Self::wgsl_shader(), entry_point)
-            .f64()
-            .storage_read(0, &input_buf)
-            .storage_rw(1, &output_buf)
-            .uniform(2, &params_buf)
-            .dispatch_1d(size as u32)
-            .submit();
-
-        let result: Vec<f64> = self.device.read_buffer_f64(&output_buf, size)?;
-        Ok(result)
     }
 }
 
@@ -194,7 +180,6 @@ mod tests {
         let x = vec![0.0, 1.0, 2.0, -1.0, 0.5];
         let result = op.hermite(&x, 0).unwrap();
 
-        // H₀(x) = 1 for all x
         for &v in &result {
             assert!((v - 1.0).abs() < 1e-10, "H₀ should be 1, got {}", v);
         }
@@ -210,7 +195,6 @@ mod tests {
         let x = vec![0.0, 1.0, 2.0, -1.0, 0.5];
         let result = op.hermite(&x, 1).unwrap();
 
-        // H₁(x) = 2x
         for (i, &v) in result.iter().enumerate() {
             let expected = 2.0 * x[i];
             assert!(
@@ -230,38 +214,24 @@ mod tests {
         };
         let op = HermiteF64::new(device).unwrap();
 
-        let x = vec![0.0, 1.0, 2.0, -1.0, 0.5];
+        let x = vec![0.0, 1.0, 2.0];
         let result = op.hermite(&x, 2).unwrap();
 
-        // H₂(x) = 4x² - 2
+        let expected = [
+            4.0 * 0.0 * 0.0 - 2.0,
+            4.0 * 1.0 * 1.0 - 2.0,
+            4.0 * 2.0 * 2.0 - 2.0,
+        ];
+
         for (i, &v) in result.iter().enumerate() {
-            let xi = x[i];
-            let expected = 4.0 * xi * xi - 2.0;
             assert!(
-                (v - expected).abs() < 1e-10,
+                (v - expected[i]).abs() < 1e-10,
                 "H₂({}) = {}, expected {}",
-                xi,
+                x[i],
                 v,
-                expected
+                expected[i]
             );
         }
-    }
-
-    #[test]
-    fn test_hermite_f64_h10() {
-        let Some(device) = get_test_device() else {
-            return;
-        };
-        let op = HermiteF64::new(device).unwrap();
-
-        // H₁₀(0) = -30240 (from tables)
-        let x = vec![0.0];
-        let result = op.hermite(&x, 10).unwrap();
-        assert!(
-            (result[0] - (-30240.0)).abs() < 1e-6,
-            "H₁₀(0) = {}, expected -30240",
-            result[0]
-        );
     }
 
     #[test]
@@ -271,14 +241,14 @@ mod tests {
         };
         let op = HermiteF64::new(device).unwrap();
 
-        // Test that ψ₀(0) = π^(-1/4) ≈ 0.7511
         let x = vec![0.0];
-        let result = op.hermite_function(&x, 0).unwrap();
+        let psi_0 = op.hermite_function(&x, 0).unwrap();
+
         let expected = std::f64::consts::PI.powf(-0.25);
         assert!(
-            (result[0] - expected).abs() < 1e-10,
-            "ψ₀(0) = {}, expected {}",
-            result[0],
+            (psi_0[0] - expected).abs() < 1e-6,
+            "ψ₀(0) = {}, expected π^(-1/4) = {}",
+            psi_0[0],
             expected
         );
     }

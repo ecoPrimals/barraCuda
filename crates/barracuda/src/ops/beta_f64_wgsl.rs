@@ -1,22 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! BETA F64 - Beta function B(a,b) = Γ(a)Γ(b)/Γ(a+b) - f64 precision
+//! Beta B(a,b) (f64) — GPU-resident, pipeline-cached, buffer-pooled
 //!
-//! Deep Debt Principles:
-//! - Self-knowledge: Operation knows its computation
-//! - Zero hardcoding: Hardware-agnostic implementation
-//! - Modern idiomatic Rust: Safe, zero unsafe code
-//!
-//! Applications:
-//! - Beta distributions
-//! - Bayesian statistics
-//! - Binomial coefficients
-//! - ML/statistics
+//! B(a,b) = Γ(a)Γ(b)/Γ(a+b), computed via log-gamma for stability.
+//! Applications: Beta distributions, Bayesian statistics, binomial coefficients
 
-use crate::device::compute_pipeline::ComputeDispatch;
+use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
+use crate::device::tensor_context::get_device_context;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
+
+const SHADER: &str = include_str!("../shaders/special/beta_f64.wgsl");
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -27,7 +22,7 @@ struct Params {
     _pad2: u32,
 }
 
-/// f64 Beta function evaluator
+/// f64 Beta function evaluator — pipeline-cached
 ///
 /// Computes B(a,b) = Γ(a)Γ(b)/Γ(a+b) using log-gamma for stability.
 pub struct BetaF64 {
@@ -35,10 +30,6 @@ pub struct BetaF64 {
 }
 
 impl BetaF64 {
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/special/beta_f64.wgsl")
-    }
-
     /// Create new Beta f64 operation
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
@@ -57,6 +48,9 @@ impl BetaF64 {
         }
 
         let num_pairs = pairs.len() / 2;
+        let ctx = get_device_context(&self.device);
+        let adapter_info = self.device.adapter_info();
+
         let params = Params {
             size: num_pairs as u32,
             _pad0: 0,
@@ -68,39 +62,43 @@ impl BetaF64 {
             .device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("BetaF64 Input"),
+                label: Some("Beta Input"),
                 contents: bytemuck::cast_slice(pairs),
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
-        let output_size = num_pairs * std::mem::size_of::<f64>();
-        let output_buf = self.device.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("BetaF64 Output"),
-            size: output_size as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
+        let output_buf = ctx.acquire_pooled_output_f64(num_pairs);
 
-        let params_buf = self
-            .device
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("BetaF64 Params"),
-                contents: bytemuck::bytes_of(&params),
-                usage: wgpu::BufferUsages::UNIFORM,
+        let params_buf = self.device.create_uniform_buffer("Beta Params", &params);
+
+        let layout_sig = BindGroupLayoutSignature::reduction();
+        let bind_group = ctx.get_or_create_bind_group(
+            layout_sig,
+            &[&input_buf, &output_buf, &params_buf],
+            Some("Beta BG"),
+        );
+
+        let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
+            self.device.device(),
+            adapter_info,
+            SHADER,
+            layout_sig,
+            "main",
+            Some("Beta Pipeline"),
+        );
+
+        let workgroups = num_pairs.div_ceil(256) as u32;
+        ctx.record_operation(move |encoder| {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("Beta Pass"),
+                timestamp_writes: None,
             });
+            pass.set_pipeline(&pipeline);
+            pass.set_bind_group(0, Some(&*bind_group), &[]);
+            pass.dispatch_workgroups(workgroups, 1, 1);
+        })?;
 
-        ComputeDispatch::new(self.device.as_ref(), "BetaF64")
-            .shader(Self::wgsl_shader(), "main")
-            .f64()
-            .storage_read(0, &input_buf)
-            .storage_rw(1, &output_buf)
-            .uniform(2, &params_buf)
-            .dispatch_1d(num_pairs as u32)
-            .submit();
-
-        let result: Vec<f64> = self.device.read_buffer_f64(&output_buf, num_pairs)?;
-        Ok(result)
+        self.device.read_buffer_f64(&output_buf, num_pairs)
     }
 
     #[cfg(test)]
@@ -117,7 +115,6 @@ impl BetaF64 {
         if a <= 0.0 || b <= 0.0 {
             return f64::NAN;
         }
-        // B(a,b) = exp(lgamma(a) + lgamma(b) - lgamma(a+b))
         use std::f64::consts::PI;
 
         fn lgamma(x: f64) -> f64 {
@@ -127,7 +124,6 @@ impl BetaF64 {
             if x < 0.5 {
                 return (PI / (PI * x).sin()).ln() - lgamma(1.0 - x);
             }
-            // Lanczos approximation
             let g = 7.0;
             let x_shifted = x - 1.0;
             let mut sum = 0.999_999_999_999_809_9;
@@ -167,7 +163,6 @@ mod tests {
 
         let beta = BetaF64::new(device).unwrap();
 
-        // B(a,b) = B(b,a)
         let pairs = vec![2.0, 3.0, 3.0, 2.0];
         let result = beta.beta(&pairs).unwrap();
 
@@ -187,7 +182,6 @@ mod tests {
 
         let beta = BetaF64::new(device).unwrap();
 
-        // B(1,1) = 1
         let pairs = vec![1.0, 1.0];
         let result = beta.beta(&pairs).unwrap();
         assert!(
@@ -196,7 +190,6 @@ mod tests {
             result[0]
         );
 
-        // B(2,2) = 1/6
         let pairs = vec![2.0, 2.0];
         let result = beta.beta(&pairs).unwrap();
         let expected = 1.0 / 6.0;
@@ -207,7 +200,6 @@ mod tests {
             expected
         );
 
-        // B(3,3) = 1/30
         let pairs = vec![3.0, 3.0];
         let result = beta.beta(&pairs).unwrap();
         let expected = 1.0 / 30.0;
@@ -227,7 +219,6 @@ mod tests {
 
         let beta = BetaF64::new(device).unwrap();
 
-        // B(n, 1) = 1/n for positive integer n
         for n in 1..=5 {
             let pairs = vec![n as f64, 1.0];
             let result = beta.beta(&pairs).unwrap();

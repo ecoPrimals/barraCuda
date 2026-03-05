@@ -1,6 +1,6 @@
 # BarraCuda WGSL Shader Library
 
-**692 Production WGSL Shaders** | Universal Precision (f16/f32/f64/DF64) | Cross-Vendor Compatible
+**694 Production WGSL Shaders** | Universal Precision (f16/f32/f64/DF64) | Cross-Vendor Compatible
 
 ---
 

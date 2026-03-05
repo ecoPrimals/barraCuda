@@ -1,21 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! VARIANCE F64 - Variance and standard deviation - f64 precision
+//! Fused mean+variance (f64) — single-pass Welford, GPU-resident, pipeline-cached
 //!
-//! Deep Debt Principles:
-//! - Self-knowledge: Operation knows its computation
-//! - Zero hardcoding: Hardware-agnostic implementation
-//! - Modern idiomatic Rust: Safe, zero unsafe code
-//!
-//! Applications:
-//! - Statistics
-//! - Normalization
-//! - Feature scaling
+//! Evolved from separate mean+deviation passes to a single fused dispatch.
+//! Absorbed from Kokkos parallel_reduce patterns: one kernel, zero intermediate
+//! CPU round-trips for chained statistics.
 
-use crate::device::compute_pipeline::ComputeDispatch;
+use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
+use crate::device::tensor_context::get_device_context;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
+
+/// Fused mean+variance f64 shader (Welford single-pass).
+const SHADER_FUSED: &str = include_str!("../shaders/reduce/mean_variance_f64.wgsl");
 
 /// Simple variance reduction variant (scalar path).
 pub fn wgsl_variance_simple() -> &'static str {
@@ -32,105 +30,121 @@ pub const WGSL_VARIANCE_SPECIAL: &str = include_str!("../shaders/special/varianc
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
-struct Params {
-    size: u32,
-    num_vectors: u32,
-    stride: u32,
+struct FusedParams {
+    n: u32,
     ddof: u32,
-    mode: u32,
     _pad0: u32,
     _pad1: u32,
-    _pad2: u32,
 }
 
-/// f64 Variance/StdDev evaluator
+/// f64 Variance/StdDev evaluator — fused single-pass Welford
 pub struct VarianceF64 {
     device: Arc<WgpuDevice>,
 }
 
 impl VarianceF64 {
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/special/variance_f64.wgsl")
-    }
-
-    /// Create new Variance f64 operation
+    /// Create new Variance f64 operation.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
-    /// Compute variance of a vector (population variance, ddof=0)
+    /// Compute variance of a vector (population variance, ddof=0).
     pub fn variance(&self, data: &[f64]) -> Result<f64> {
         self.variance_ddof(data, 0)
     }
 
-    /// Compute sample variance (ddof=1)
+    /// Compute sample variance (ddof=1).
     pub fn sample_variance(&self, data: &[f64]) -> Result<f64> {
         self.variance_ddof(data, 1)
     }
 
-    /// Compute variance with specified degrees of freedom adjustment
+    /// Compute variance with specified degrees of freedom adjustment.
+    ///
+    /// Uses a fused mean+variance Welford shader — single GPU dispatch,
+    /// no intermediate readback between mean and deviation passes.
     pub fn variance_ddof(&self, data: &[f64], ddof: usize) -> Result<f64> {
         if data.is_empty() || data.len() <= ddof {
             return Ok(0.0);
         }
 
+        let result = self.fused_mean_variance(data, ddof)?;
+        Ok(result[1])
+    }
+
+    /// Compute mean and variance together in a single GPU pass.
+    ///
+    /// Returns `[mean, variance]`.
+    pub fn mean_variance(&self, data: &[f64], ddof: usize) -> Result<[f64; 2]> {
+        if data.is_empty() || data.len() <= ddof {
+            return Ok([0.0, 0.0]);
+        }
+
+        let result = self.fused_mean_variance(data, ddof)?;
+        Ok([result[0], result[1]])
+    }
+
+    /// GPU-resident fused mean+variance — single Welford pass.
+    fn fused_mean_variance(&self, data: &[f64], ddof: usize) -> Result<Vec<f64>> {
         let n = data.len();
-        let params = Params {
-            size: n as u32,
-            num_vectors: 1,
-            stride: n as u32,
-            ddof: ddof as u32,
-            mode: 0,
-            _pad0: 0,
-            _pad1: 0,
-            _pad2: 0,
-        };
+        let ctx = get_device_context(&self.device);
+        let adapter_info = self.device.adapter_info();
 
         let input_buf = self
             .device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("VarianceF64 Input"),
+                label: Some("FusedMeanVar Input"),
                 contents: bytemuck::cast_slice(data),
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
-        let output_size = std::mem::size_of::<f64>();
-        let output_buf = self.device.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("VarianceF64 Output"),
-            size: output_size as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
+        let output_buf = ctx.acquire_pooled_output_f64(2);
 
+        let params = FusedParams {
+            n: n as u32,
+            ddof: ddof as u32,
+            _pad0: 0,
+            _pad1: 0,
+        };
         let params_buf = self
             .device
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("VarianceF64 Params"),
-                contents: bytemuck::bytes_of(&params),
-                usage: wgpu::BufferUsages::UNIFORM,
+            .create_uniform_buffer("FusedMeanVar Params", &params);
+
+        let layout_sig = BindGroupLayoutSignature::reduction();
+        let bind_group = ctx.get_or_create_bind_group(
+            layout_sig,
+            &[&input_buf, &output_buf, &params_buf],
+            Some("FusedMeanVar BG"),
+        );
+
+        let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
+            self.device.device(),
+            adapter_info,
+            SHADER_FUSED,
+            layout_sig,
+            "main",
+            Some("FusedMeanVar Pipeline"),
+        );
+
+        ctx.record_operation(move |encoder| {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("FusedMeanVar Pass"),
+                timestamp_writes: None,
             });
+            pass.set_pipeline(&pipeline);
+            pass.set_bind_group(0, Some(&*bind_group), &[]);
+            pass.dispatch_workgroups(1, 1, 1);
+        })?;
 
-        ComputeDispatch::new(self.device.as_ref(), "VarianceF64")
-            .shader(Self::wgsl_shader(), "main")
-            .f64()
-            .storage_read(0, &input_buf)
-            .storage_rw(1, &output_buf)
-            .uniform(2, &params_buf)
-            .dispatch(1, 1, 1)
-            .submit();
-
-        let result: Vec<f64> = self.device.read_buffer_f64(&output_buf, 1)?;
-        Ok(result[0])
+        self.device.read_buffer_f64(&output_buf, 2)
     }
 
-    /// Compute standard deviation (population, ddof=0)
+    /// Compute standard deviation (population, ddof=0).
     pub fn std_dev(&self, data: &[f64]) -> Result<f64> {
         Ok(self.variance(data)?.sqrt())
     }
 
-    /// Compute sample standard deviation (ddof=1)
+    /// Compute sample standard deviation (ddof=1).
     pub fn sample_std_dev(&self, data: &[f64]) -> Result<f64> {
         Ok(self.sample_variance(data)?.sqrt())
     }
@@ -142,11 +156,8 @@ impl VarianceF64 {
         if n <= ddof {
             return 0.0;
         }
-
-        // Two-pass for numerical stability
         let mean: f64 = data.iter().sum::<f64>() / n as f64;
         let var_sum: f64 = data.iter().map(|x| (x - mean).powi(2)).sum();
-
         var_sum / (n - ddof) as f64
     }
 }
@@ -163,10 +174,6 @@ mod tests {
         };
 
         let var = VarianceF64::new(device).unwrap();
-
-        // Variance of [1, 2, 3, 4, 5] with mean=3
-        // Σ(x-μ)² = 4+1+0+1+4 = 10
-        // Population variance = 10/5 = 2
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let result = var.variance(&data).unwrap();
 
@@ -184,8 +191,6 @@ mod tests {
         };
 
         let var = VarianceF64::new(device).unwrap();
-
-        // Sample variance = 10/4 = 2.5
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let result = var.sample_variance(&data).unwrap();
 
@@ -203,7 +208,6 @@ mod tests {
         };
 
         let var = VarianceF64::new(device).unwrap();
-
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let result = var.std_dev(&data).unwrap();
         let expected = 2.0_f64.sqrt();
@@ -223,8 +227,6 @@ mod tests {
         };
 
         let var = VarianceF64::new(device).unwrap();
-
-        // Variance of constant array is 0
         let data = vec![5.0; 100];
         let result = var.variance(&data).unwrap();
 
@@ -232,6 +234,52 @@ mod tests {
             result.abs() < 1e-10,
             "Variance of constant = {}, expected 0.0",
             result
+        );
+    }
+
+    #[tokio::test]
+    async fn test_fused_mean_variance() {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
+            return;
+        };
+
+        let var = VarianceF64::new(device).unwrap();
+        let data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        let [mean, variance] = var.mean_variance(&data, 0).unwrap();
+
+        assert!((mean - 3.0).abs() < 1e-10, "Mean = {}, expected 3.0", mean);
+        assert!(
+            (variance - 2.0).abs() < 1e-10,
+            "Variance = {}, expected 2.0",
+            variance
+        );
+    }
+
+    #[tokio::test]
+    async fn test_fused_mean_variance_large() {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
+            return;
+        };
+
+        let var = VarianceF64::new(device).unwrap();
+        let n = 10_000;
+        let data: Vec<f64> = (0..n).map(|i| i as f64).collect();
+        let [mean, variance] = var.mean_variance(&data, 0).unwrap();
+
+        let expected_mean = (n - 1) as f64 / 2.0;
+        let expected_var = ((n * n - 1) as f64) / 12.0;
+
+        assert!(
+            (mean - expected_mean).abs() / expected_mean < 1e-10,
+            "Mean = {}, expected {}",
+            mean,
+            expected_mean
+        );
+        assert!(
+            (variance - expected_var).abs() / expected_var < 1e-6,
+            "Variance = {}, expected {}",
+            variance,
+            expected_var
         );
     }
 }

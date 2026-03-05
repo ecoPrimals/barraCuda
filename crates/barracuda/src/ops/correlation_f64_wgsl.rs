@@ -1,70 +1,87 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! CORRELATION F64 - Pearson correlation coefficient - f64 precision
+//! Fused Pearson correlation (f64) — 5-accumulator single-pass, GPU-resident
 //!
-//! Deep Debt Principles:
-//! - Self-knowledge: Operation knows its computation
-//! - Zero hardcoding: Hardware-agnostic implementation
-//! - Modern idiomatic Rust: Safe, zero unsafe code
-//!
-//! Applications:
-//! - Signal correlation
-//! - Feature selection
-//! - Portfolio analysis
+//! Evolved from multi-dispatch mean→deviation→covariance to a single fused
+//! kernel with 5 accumulators (sum_x, sum_y, sum_xx, sum_yy, sum_xy).
+//! Absorbed from Kokkos parallel_reduce with JoinOp patterns.
 
-use crate::device::compute_pipeline::ComputeDispatch;
+use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
+use crate::device::tensor_context::get_device_context;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
+/// Fused 5-accumulator correlation shader.
+const SHADER_FUSED: &str = include_str!("../shaders/stats/correlation_full_f64.wgsl");
+
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
 struct Params {
-    size: u32,
-    num_pairs: u32,
-    stride: u32,
-    _pad: u32,
+    n: u32,
+    _pad0: u32,
+    _pad1: u32,
+    _pad2: u32,
 }
 
-/// f64 Pearson correlation evaluator
+/// Full correlation result from a single fused dispatch.
+#[derive(Debug, Clone, Copy)]
+pub struct CorrelationResult {
+    /// Mean of the x vector.
+    pub mean_x: f64,
+    /// Mean of the y vector.
+    pub mean_y: f64,
+    /// Population variance of x.
+    pub var_x: f64,
+    /// Population variance of y.
+    pub var_y: f64,
+    /// Pearson correlation coefficient.
+    pub pearson_r: f64,
+}
+
+/// f64 Pearson correlation evaluator — fused single-pass.
 pub struct CorrelationF64 {
     device: Arc<WgpuDevice>,
 }
 
 impl CorrelationF64 {
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/special/correlation_f64.wgsl")
-    }
-
-    /// Create new Correlation f64 operation
+    /// Create new Correlation f64 operation.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
-    /// Compute Pearson correlation coefficient between two vectors
+    /// Compute Pearson correlation coefficient between two vectors.
     ///
-    /// r = Σ(x-μx)(y-μy) / sqrt(Σ(x-μx)² * Σ(y-μy)²)
+    /// r = cov(x,y) / (std(x) * std(y))
     ///
-    /// # Returns
-    /// Correlation coefficient in range [-1, 1]
+    /// Single GPU dispatch — no intermediate readbacks.
     pub fn correlation(&self, x: &[f64], y: &[f64]) -> Result<f64> {
+        Ok(self.correlation_full(x, y)?.pearson_r)
+    }
+
+    /// Compute full correlation statistics in a single fused dispatch.
+    ///
+    /// Returns means, variances, and Pearson r — all from one kernel launch.
+    pub fn correlation_full(&self, x: &[f64], y: &[f64]) -> Result<CorrelationResult> {
         if x.len() != y.len() || x.is_empty() {
-            return Ok(0.0);
+            return Ok(CorrelationResult {
+                mean_x: 0.0,
+                mean_y: 0.0,
+                var_x: 0.0,
+                var_y: 0.0,
+                pearson_r: 0.0,
+            });
         }
 
         let n = x.len();
-        let params = Params {
-            size: n as u32,
-            num_pairs: 1,
-            stride: n as u32,
-            _pad: 0,
-        };
+        let ctx = get_device_context(&self.device);
+        let adapter_info = self.device.adapter_info();
 
         let x_buf = self
             .device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("CorrelationF64 X"),
+                label: Some("CorrFused X"),
                 contents: bytemuck::cast_slice(x),
                 usage: wgpu::BufferUsages::STORAGE,
             });
@@ -73,40 +90,63 @@ impl CorrelationF64 {
             .device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("CorrelationF64 Y"),
+                label: Some("CorrFused Y"),
                 contents: bytemuck::cast_slice(y),
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
-        let output_size = std::mem::size_of::<f64>();
-        let output_buf = self.device.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("CorrelationF64 Output"),
-            size: output_size as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
+        let output_buf = ctx.acquire_pooled_output_f64(5);
 
+        let params = Params {
+            n: n as u32,
+            _pad0: 0,
+            _pad1: 0,
+            _pad2: 0,
+        };
         let params_buf = self
             .device
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("CorrelationF64 Params"),
-                contents: bytemuck::bytes_of(&params),
-                usage: wgpu::BufferUsages::UNIFORM,
+            .create_uniform_buffer("CorrFused Params", &params);
+
+        let layout_sig = BindGroupLayoutSignature {
+            read_only_buffers: 2,
+            read_write_buffers: 1,
+            uniform_buffers: 1,
+        };
+
+        let bind_group = ctx.get_or_create_bind_group(
+            layout_sig,
+            &[&x_buf, &y_buf, &output_buf, &params_buf],
+            Some("CorrFused BG"),
+        );
+
+        let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
+            self.device.device(),
+            adapter_info,
+            SHADER_FUSED,
+            layout_sig,
+            "main",
+            Some("CorrFused Pipeline"),
+        );
+
+        ctx.record_operation(move |encoder| {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("CorrFused Pass"),
+                timestamp_writes: None,
             });
+            pass.set_pipeline(&pipeline);
+            pass.set_bind_group(0, Some(&*bind_group), &[]);
+            pass.dispatch_workgroups(1, 1, 1);
+        })?;
 
-        ComputeDispatch::new(self.device.as_ref(), "CorrelationF64")
-            .shader(Self::wgsl_shader(), "main")
-            .f64()
-            .storage_read(0, &x_buf)
-            .storage_read(1, &y_buf)
-            .storage_rw(2, &output_buf)
-            .uniform(3, &params_buf)
-            .dispatch(1, 1, 1)
-            .submit();
+        let result = self.device.read_buffer_f64(&output_buf, 5)?;
 
-        let result: Vec<f64> = self.device.read_buffer_f64(&output_buf, 1)?;
-        Ok(result[0])
+        Ok(CorrelationResult {
+            mean_x: result[0],
+            mean_y: result[1],
+            var_x: result[2],
+            var_y: result[3],
+            pearson_r: result[4],
+        })
     }
 
     #[cfg(test)]
@@ -116,16 +156,11 @@ impl CorrelationF64 {
         if n == 0 {
             return 0.0;
         }
-
-        // Compute means
         let mean_x: f64 = x.iter().sum::<f64>() / n as f64;
         let mean_y: f64 = y.iter().sum::<f64>() / n as f64;
-
-        // Compute covariance and variances
         let mut cov = 0.0;
         let mut var_x = 0.0;
         let mut var_y = 0.0;
-
         for (xi, yi) in x.iter().zip(y.iter()) {
             let dx = xi - mean_x;
             let dy = yi - mean_y;
@@ -133,12 +168,10 @@ impl CorrelationF64 {
             var_x += dx * dx;
             var_y += dy * dy;
         }
-
         let denom = (var_x * var_y).sqrt();
         if denom < 1e-15 {
-            return 0.0; // Avoid division by zero
+            return 0.0;
         }
-
         cov / denom
     }
 }
@@ -155,10 +188,8 @@ mod tests {
         };
 
         let corr = CorrelationF64::new(device).unwrap();
-
-        // Perfect positive correlation (r = 1)
         let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let y = vec![2.0, 4.0, 6.0, 8.0, 10.0]; // y = 2x
+        let y = vec![2.0, 4.0, 6.0, 8.0, 10.0];
         let result = corr.correlation(&x, &y).unwrap();
 
         assert!(
@@ -175,10 +206,8 @@ mod tests {
         };
 
         let corr = CorrelationF64::new(device).unwrap();
-
-        // Perfect negative correlation (r = -1)
         let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let y = vec![10.0, 8.0, 6.0, 4.0, 2.0]; // y = -2x + 12
+        let y = vec![10.0, 8.0, 6.0, 4.0, 2.0];
         let result = corr.correlation(&x, &y).unwrap();
 
         assert!(
@@ -195,8 +224,6 @@ mod tests {
         };
 
         let corr = CorrelationF64::new(device).unwrap();
-
-        // Correlation with self is always 1
         let x = vec![1.0, 3.0, 7.0, 2.5, 9.0];
         let result = corr.correlation(&x, &x).unwrap();
 
@@ -214,8 +241,6 @@ mod tests {
         };
 
         let corr = CorrelationF64::new(device).unwrap();
-
-        // Nearly uncorrelated data (using orthogonal vectors)
         let x = vec![1.0, 0.0, -1.0, 0.0];
         let y = vec![0.0, 1.0, 0.0, -1.0];
         let result = corr.correlation(&x, &y).unwrap();
@@ -234,8 +259,6 @@ mod tests {
         };
 
         let corr = CorrelationF64::new(device).unwrap();
-
-        // Test with various random-ish data
         let x = vec![2.3, 5.1, 1.2, 8.7, 3.3, 6.8, 4.2];
         let y = vec![1.5, 4.2, 2.8, 7.1, 5.5, 3.9, 6.1];
         let result = corr.correlation(&x, &y).unwrap();
@@ -244,6 +267,44 @@ mod tests {
             (-1.0..=1.0).contains(&result),
             "Correlation must be in [-1, 1], got {}",
             result
+        );
+    }
+
+    #[tokio::test]
+    async fn test_correlation_full_returns_all_stats() {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
+            return;
+        };
+
+        let corr = CorrelationF64::new(device).unwrap();
+        let x = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        let y = vec![2.0, 4.0, 6.0, 8.0, 10.0];
+        let result = corr.correlation_full(&x, &y).unwrap();
+
+        assert!(
+            (result.mean_x - 3.0).abs() < 1e-10,
+            "mean_x = {}",
+            result.mean_x
+        );
+        assert!(
+            (result.mean_y - 6.0).abs() < 1e-10,
+            "mean_y = {}",
+            result.mean_y
+        );
+        assert!(
+            (result.var_x - 2.0).abs() < 1e-10,
+            "var_x = {}",
+            result.var_x
+        );
+        assert!(
+            (result.var_y - 8.0).abs() < 1e-10,
+            "var_y = {}",
+            result.var_y
+        );
+        assert!(
+            (result.pearson_r - 1.0).abs() < 1e-10,
+            "r = {}",
+            result.pearson_r
         );
     }
 }

@@ -26,7 +26,7 @@ results.
 
 ### Key capabilities
 
-- **692 WGSL shaders** spanning scientific compute domains
+- **694 WGSL shaders** spanning scientific compute domains
 - **1,026 Rust source files**, 62 integration test suites, 3,471 test functions
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular

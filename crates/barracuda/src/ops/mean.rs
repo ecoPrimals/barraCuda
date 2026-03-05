@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Mean reduction - Pure WGSL
+//! Mean reduction — GPU-resident, pipeline-cached, buffer-pooled
 //!
-//! Deep Debt Principles:
-//! - Self-knowledge: Operation knows its computation
-//! - Zero hardcoding: Hardware-agnostic implementation
-//! - Modern idiomatic Rust: Safe, zero unsafe code
-//! - Complete implementation: Production-ready, no mocks
-//! - Hardware-agnostic: Pure WGSL for universal compute
+//! Evolved from per-call buffer allocation to pooled TensorContext path.
+//! Dimension-wise results stay GPU-resident; global reductions do a single
+//! scalar readback.
 
-use crate::device::compute_pipeline::ComputeDispatch;
+use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
+use crate::device::tensor_context::get_device_context;
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
@@ -29,12 +27,12 @@ pub const WGSL_MEAN_REDUCE_F64: &str = include_str!("../shaders/reduce/mean_redu
 /// Mean reduction operation
 pub struct Mean {
     input: Tensor,
-    dim: Option<usize>, // None = global mean, Some(d) = mean along dimension d
-    keepdim: bool,      // Whether to keep dimension with size 1
+    dim: Option<usize>,
+    keepdim: bool,
 }
 
 impl Mean {
-    /// Create a new mean operation
+    /// Create a new mean operation.
     pub fn new(input: Tensor, dim: Option<usize>, keepdim: bool) -> Self {
         Self {
             input,
@@ -51,26 +49,20 @@ impl Mean {
         &WGSL_MEAN_DIM_F32
     }
 
-    /// Execute the mean operation
+    /// Execute the mean operation.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
         let input_buffer = self.input.buffer();
+        let ctx = get_device_context(device);
+        let adapter_info = device.adapter_info();
 
         match self.dim {
             None => {
-                // Global mean reduction — single-workgroup shader that loops
-                // over all elements internally (workgroup_size=1).
                 let size: usize = shape.iter().product();
 
-                let output_buffer = device.device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Mean Reduce Output"),
-                    size: std::mem::size_of::<f32>() as u64,
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-                    mapped_at_creation: false,
-                });
+                let output_buffer = ctx.acquire_pooled_output(1);
 
-                // Create uniform buffer for parameters
                 #[repr(C)]
                 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
                 struct Params {
@@ -80,19 +72,36 @@ impl Mean {
                 let params = Params { size: size as u32 };
                 let params_buffer = device.create_uniform_buffer("Mean Reduce Params", &params);
 
-                ComputeDispatch::new(device, "mean_reduce")
-                    .shader(Self::wgsl_shader_reduce(), "mean_reduce")
-                    .storage_read(0, input_buffer)
-                    .storage_rw(1, &output_buffer)
-                    .uniform(2, &params_buffer)
-                    .dispatch(1, 1, 1)
-                    .submit();
+                let layout_sig = BindGroupLayoutSignature::reduction();
+                let bind_group = ctx.get_or_create_bind_group(
+                    layout_sig,
+                    &[input_buffer, &output_buffer, &params_buffer],
+                    Some("Mean BG"),
+                );
+
+                let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
+                    device.device(),
+                    adapter_info,
+                    Self::wgsl_shader_reduce(),
+                    layout_sig,
+                    "mean_reduce",
+                    Some("Mean Pipeline"),
+                );
+
+                ctx.record_operation(move |encoder| {
+                    let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                        label: Some("Mean Pass"),
+                        timestamp_writes: None,
+                    });
+                    pass.set_pipeline(&pipeline);
+                    pass.set_bind_group(0, Some(&*bind_group), &[]);
+                    pass.dispatch_workgroups(1, 1, 1);
+                })?;
 
                 let result = device.read_buffer_f32(&output_buffer, 1)?;
                 Ok(Tensor::new(result, vec![], device.clone()))
             }
             Some(dim) => {
-                // Dimension-wise mean reduction
                 if dim >= shape.len() {
                     return Err(crate::error::BarracudaError::InvalidInput {
                         message: format!("Dimension {dim} out of range for shape {shape:?}"),
@@ -104,15 +113,8 @@ impl Mean {
                 let inner_size: usize = shape[dim + 1..].iter().product();
                 let output_size = outer_size * inner_size;
 
-                // Create output buffer
-                let output_buffer = device.device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Mean Dim Output"),
-                    size: (output_size * std::mem::size_of::<f32>()) as u64,
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-                    mapped_at_creation: false,
-                });
+                let output_buffer = ctx.acquire_pooled_output(output_size);
 
-                // Create uniform buffer for parameters
                 #[repr(C)]
                 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
                 struct Params {
@@ -132,18 +134,35 @@ impl Mean {
                 let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::Reduction);
                 let workgroups = (output_size as u32).div_ceil(optimal_wg_size);
 
-                ComputeDispatch::new(device, "mean_dim")
-                    .shader(Self::wgsl_shader_dim(), "main")
-                    .storage_read(0, input_buffer)
-                    .storage_rw(1, &output_buffer)
-                    .uniform(2, &params_buffer)
-                    .dispatch(workgroups.max(1), 1, 1)
-                    .submit();
+                let layout_sig = BindGroupLayoutSignature::reduction();
+                let bind_group = ctx.get_or_create_bind_group(
+                    layout_sig,
+                    &[input_buffer, &output_buffer, &params_buffer],
+                    Some("Mean Dim BG"),
+                );
 
-                // Read back results
+                let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
+                    device.device(),
+                    adapter_info,
+                    Self::wgsl_shader_dim(),
+                    layout_sig,
+                    "main",
+                    Some("Mean Dim Pipeline"),
+                );
+
+                let wg = workgroups.max(1);
+                ctx.record_operation(move |encoder| {
+                    let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                        label: Some("Mean Dim Pass"),
+                        timestamp_writes: None,
+                    });
+                    pass.set_pipeline(&pipeline);
+                    pass.set_bind_group(0, Some(&*bind_group), &[]);
+                    pass.dispatch_workgroups(wg, 1, 1);
+                })?;
+
                 let output_data = device.read_buffer_f32(&output_buffer, output_size)?;
 
-                // Calculate output shape
                 let mut output_shape = shape.to_vec();
                 if self.keepdim {
                     output_shape[dim] = 1;
@@ -158,22 +177,17 @@ impl Mean {
 }
 
 impl Tensor {
-    /// Compute mean (global reduction)
+    /// Compute mean (global reduction).
     pub fn mean(&self) -> Result<Self> {
         Mean::new(self.clone(), None, false).execute()
     }
 
-    /// Compute mean along a dimension
-    ///
-    /// # Arguments
-    ///
-    /// * `dim` - Dimension to compute mean along
-    /// * `keepdim` - Whether to keep the reduced dimension with size 1
+    /// Compute mean along a dimension.
     pub fn mean_dim(&self, dim: usize, keepdim: bool) -> Result<Self> {
         Mean::new(self.clone(), Some(dim), keepdim).execute()
     }
 
-    /// Compute mean (legacy method for backward compatibility)
+    /// Compute mean (legacy method for backward compatibility).
     pub fn mean_wgsl(self, dim: Option<usize>) -> Result<Self> {
         match dim {
             None => Mean::new(self, None, false).execute(),
@@ -217,7 +231,6 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        // All zeros
         let input_data = vec![0.0, 0.0, 0.0];
         let input = Tensor::from_vec_on(input_data.clone(), vec![3], device.clone())
             .await
@@ -225,7 +238,6 @@ mod tests {
         let result = input.mean().unwrap().to_vec().unwrap();
         assert!(result[0].abs() < 1e-6);
 
-        // All same value
         let input_data = vec![5.0, 5.0, 5.0, 5.0];
         let input = Tensor::from_vec_on(input_data.clone(), vec![4], device)
             .await
@@ -292,26 +304,22 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        // Test 2D tensor: [[1, 2, 3], [4, 5, 6]]
         let input_data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let input = Tensor::from_vec_on(input_data.clone(), vec![2, 3], device.clone())
             .await
             .unwrap();
 
-        // Mean along dim 0 (columns): [2.5, 3.5, 4.5]
         let result = input.mean_dim(0, false).unwrap().to_vec().unwrap();
         assert_eq!(result.len(), 3);
         assert!((result[0] - 2.5).abs() < 1e-4);
         assert!((result[1] - 3.5).abs() < 1e-4);
         assert!((result[2] - 4.5).abs() < 1e-4);
 
-        // Mean along dim 1 (rows): [2.0, 5.0]
         let result = input.mean_dim(1, false).unwrap().to_vec().unwrap();
         assert_eq!(result.len(), 2);
         assert!((result[0] - 2.0).abs() < 1e-4);
         assert!((result[1] - 5.0).abs() < 1e-4);
 
-        // Mean along dim 0 with keepdim: [[2.5, 3.5, 4.5]]
         let result = input.mean_dim(0, true).unwrap();
         assert_eq!(result.shape(), &[1, 3]);
     }

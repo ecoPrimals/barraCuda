@@ -95,6 +95,17 @@ impl TensorContext {
             .acquire_pooled(size_elements * std::mem::size_of::<f32>())
     }
 
+    /// Acquire a pooled output buffer sized for f64 elements.
+    pub fn acquire_pooled_output_f64(&self, size_elements: usize) -> super::pool::PooledBuffer {
+        self.buffer_pool
+            .acquire_pooled(size_elements * std::mem::size_of::<f64>())
+    }
+
+    /// Acquire a pooled output buffer with explicit byte size.
+    pub fn acquire_pooled_bytes(&self, size_bytes: usize) -> super::pool::PooledBuffer {
+        self.buffer_pool.acquire_pooled(size_bytes)
+    }
+
     /// Record an operation (immediate or batched).
     pub fn record_operation<F>(&self, op: F) -> Result<()>
     where

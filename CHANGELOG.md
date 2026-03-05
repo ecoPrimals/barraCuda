@@ -7,7 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Fused mean+variance shader** (`shaders/reduce/mean_variance_f64.wgsl`) — single-pass
+  Welford algorithm with grid-stride loop and workgroup tree reduction. Computes both
+  mean and variance in one GPU dispatch, eliminating intermediate CPU round-trips.
+  Absorbed from Kokkos `parallel_reduce` patterns
+- **Fused correlation shader** (`shaders/stats/correlation_full_f64.wgsl`) — 5-accumulator
+  single-pass Pearson correlation (sum_x, sum_y, sum_xx, sum_yy, sum_xy). Returns
+  mean_x, mean_y, var_x, var_y, and pearson_r from a single kernel launch. Absorbed
+  from Kokkos `parallel_reduce` with `JoinOp` patterns
+- **`CorrelationResult` struct** — rich return type from fused correlation with all
+  five statistics (means, variances, Pearson r) from a single dispatch
+- **`VarianceF64::mean_variance()`** — returns `[mean, variance]` from a single fused
+  GPU pass
+- **`TensorContext::acquire_pooled_output_f64()`** — f64-sized pooled buffer allocation
+- **`TensorContext::acquire_pooled_bytes()`** — raw byte-sized pooled buffer allocation
+
 ### Changed
+- **Stats ops evolved to TensorContext path** — `mean.rs`, `sum.rs`, `prod.rs`
+  migrated from raw `ComputeDispatch` with per-call buffer allocation to
+  `TensorContext` with pooled buffers, pipeline cache, and bind group cache.
+  Eliminates per-op buffer allocation overhead in steady state
+- **`VarianceF64` fused dispatch** — evolved from 2-pass (mean → deviation) via
+  `ComputeDispatch` to single-pass Welford via `TensorContext` + pipeline cache
+- **`CorrelationF64` fused dispatch** — evolved from multi-dispatch via
+  `ComputeDispatch` to single 5-accumulator pass via `TensorContext` + pipeline cache
 - **Comprehensive codebase audit** — full pass across all quality gates, sovereignty,
   documentation, error handling, and idiomatic Rust patterns (736 files changed)
 - **Documentation completeness** — added `///` doc comments to all undocumented `pub`

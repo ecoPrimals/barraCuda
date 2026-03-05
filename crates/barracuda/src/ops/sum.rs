@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Sum reduction - Pure WGSL
+//! Sum reduction — GPU-resident, pipeline-cached, buffer-pooled
 //!
-//! Deep Debt Principles:
-//! - Self-knowledge: Operation knows its computation
-//! - Zero hardcoding: Hardware-agnostic implementation
-//! - Modern idiomatic Rust: Safe, zero unsafe code
-//! - Complete implementation: Production-ready, no mocks
-//! - Hardware-agnostic: Pure WGSL for universal compute
+//! Evolved from per-call buffer allocation to pooled TensorContext path.
+//! Dimension-wise results stay GPU-resident; global reductions do a single
+//! scalar readback.
 
-use crate::device::compute_pipeline::ComputeDispatch;
+use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
+use crate::device::tensor_context::get_device_context;
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
@@ -24,12 +22,12 @@ static WGSL_SUM_DIM_F32: std::sync::LazyLock<String> =
 /// Sum reduction operation
 pub struct Sum {
     input: Tensor,
-    dim: Option<usize>, // None = global sum, Some(d) = sum along dimension d
-    keepdim: bool,      // Whether to keep dimension with size 1
+    dim: Option<usize>,
+    keepdim: bool,
 }
 
 impl Sum {
-    /// Create a new sum operation
+    /// Create a new sum operation.
     pub fn new(input: Tensor, dim: Option<usize>, keepdim: bool) -> Self {
         Self {
             input,
@@ -38,40 +36,31 @@ impl Sum {
         }
     }
 
-    /// Get the WGSL shader source for global reduction
     fn wgsl_shader_reduce() -> &'static str {
         include_str!("../shaders/reduce/sum_reduce.wgsl")
     }
 
-    /// Get the WGSL shader source for dimension-wise reduction
     fn wgsl_shader_dim() -> &'static str {
         &WGSL_SUM_DIM_F32
     }
 
-    /// Execute the sum operation
+    /// Execute the sum operation.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
         let input_buffer = self.input.buffer();
+        let ctx = get_device_context(device);
+        let adapter_info = device.adapter_info();
 
         match self.dim {
             None => {
-                // Global sum reduction
                 let size: usize = shape.iter().product();
-                // Deep Debt Evolution: Capability-based dispatch
                 let caps = DeviceCapabilities::from_device(device);
                 let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::Reduction);
                 let num_workgroups = (size as u32).div_ceil(optimal_wg_size);
 
-                // Create output buffer for partial results
-                let output_buffer = device.device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Sum Reduce Output"),
-                    size: (num_workgroups as usize * std::mem::size_of::<f32>()) as u64,
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-                    mapped_at_creation: false,
-                });
+                let output_buffer = ctx.acquire_pooled_output(num_workgroups as usize);
 
-                // Create uniform buffer for parameters
                 #[repr(C)]
                 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
                 struct Params {
@@ -81,26 +70,40 @@ impl Sum {
                 let params = Params { size: size as u32 };
                 let params_buffer = device.create_uniform_buffer("Sum Reduce Params", &params);
 
-                ComputeDispatch::new(device, "sum_reduce")
-                    .shader(Self::wgsl_shader_reduce(), "main")
-                    .storage_read(0, input_buffer)
-                    .storage_rw(1, &output_buffer)
-                    .uniform(2, &params_buffer)
-                    .dispatch(num_workgroups.max(1), 1, 1)
-                    .submit();
+                let layout_sig = BindGroupLayoutSignature::reduction();
+                let bind_group = ctx.get_or_create_bind_group(
+                    layout_sig,
+                    &[input_buffer, &output_buffer, &params_buffer],
+                    Some("Sum BG"),
+                );
 
-                // Read back partial results and reduce them on CPU
-                // For now, we'll do a simple CPU reduction of partial results
-                // In production, you might want to do a second GPU pass
+                let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
+                    device.device(),
+                    adapter_info,
+                    Self::wgsl_shader_reduce(),
+                    layout_sig,
+                    "main",
+                    Some("Sum Pipeline"),
+                );
+
+                let wg = num_workgroups.max(1);
+                ctx.record_operation(move |encoder| {
+                    let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                        label: Some("Sum Pass"),
+                        timestamp_writes: None,
+                    });
+                    pass.set_pipeline(&pipeline);
+                    pass.set_bind_group(0, Some(&*bind_group), &[]);
+                    pass.dispatch_workgroups(wg, 1, 1);
+                })?;
+
                 let partial_results =
                     device.read_buffer_f32(&output_buffer, num_workgroups as usize)?;
                 let global_sum: f32 = partial_results.iter().sum();
 
-                // Return scalar tensor
                 Ok(Tensor::new(vec![global_sum], vec![], device.clone()))
             }
             Some(dim) => {
-                // Dimension-wise sum reduction
                 if dim >= shape.len() {
                     return Err(crate::error::BarracudaError::InvalidInput {
                         message: format!("Dimension {dim} out of range for shape {shape:?}"),
@@ -112,15 +115,8 @@ impl Sum {
                 let inner_size: usize = shape[dim + 1..].iter().product();
                 let output_size = outer_size * inner_size;
 
-                // Create output buffer
-                let output_buffer = device.device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Sum Dim Output"),
-                    size: (output_size * std::mem::size_of::<f32>()) as u64,
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-                    mapped_at_creation: false,
-                });
+                let output_buffer = ctx.acquire_pooled_output(output_size);
 
-                // Create uniform buffer for parameters
                 #[repr(C)]
                 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
                 struct Params {
@@ -140,18 +136,35 @@ impl Sum {
                 let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::Reduction);
                 let workgroups = (output_size as u32).div_ceil(optimal_wg_size);
 
-                ComputeDispatch::new(device, "sum_dim")
-                    .shader(Self::wgsl_shader_dim(), "main")
-                    .storage_read(0, input_buffer)
-                    .storage_rw(1, &output_buffer)
-                    .uniform(2, &params_buffer)
-                    .dispatch(workgroups.max(1), 1, 1)
-                    .submit();
+                let layout_sig = BindGroupLayoutSignature::reduction();
+                let bind_group = ctx.get_or_create_bind_group(
+                    layout_sig,
+                    &[input_buffer, &output_buffer, &params_buffer],
+                    Some("Sum Dim BG"),
+                );
 
-                // Read back results
+                let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
+                    device.device(),
+                    adapter_info,
+                    Self::wgsl_shader_dim(),
+                    layout_sig,
+                    "main",
+                    Some("Sum Dim Pipeline"),
+                );
+
+                let wg = workgroups.max(1);
+                ctx.record_operation(move |encoder| {
+                    let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                        label: Some("Sum Dim Pass"),
+                        timestamp_writes: None,
+                    });
+                    pass.set_pipeline(&pipeline);
+                    pass.set_bind_group(0, Some(&*bind_group), &[]);
+                    pass.dispatch_workgroups(wg, 1, 1);
+                })?;
+
                 let output_data = device.read_buffer_f32(&output_buffer, output_size)?;
 
-                // Calculate output shape
                 let mut output_shape = shape.to_vec();
                 if self.keepdim {
                     output_shape[dim] = 1;
@@ -166,22 +179,17 @@ impl Sum {
 }
 
 impl Tensor {
-    /// Compute sum (global reduction)
+    /// Compute sum (global reduction).
     pub fn sum(&self) -> Result<Self> {
         Sum::new(self.clone(), None, false).execute()
     }
 
-    /// Compute sum along a dimension
-    ///
-    /// # Arguments
-    ///
-    /// * `dim` - Dimension to sum along
-    /// * `keepdim` - Whether to keep the reduced dimension with size 1
+    /// Compute sum along a dimension.
     pub fn sum_dim(&self, dim: usize, keepdim: bool) -> Result<Self> {
         Sum::new(self.clone(), Some(dim), keepdim).execute()
     }
 
-    /// Compute sum (legacy method for backward compatibility)
+    /// Compute sum (legacy method for backward compatibility).
     pub fn sum_wgsl(self, dim: Option<usize>) -> Result<Self> {
         match dim {
             None => Sum::new(self, None, false).execute(),
@@ -224,7 +232,6 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        // All zeros
         let input_data = vec![0.0, 0.0, 0.0];
         let input = Tensor::from_vec_on(input_data.clone(), vec![3], device.clone())
             .await
@@ -232,7 +239,6 @@ mod tests {
         let result = input.sum().unwrap().to_vec().unwrap();
         assert!(result[0].abs() < 1e-6);
 
-        // Mixed positive/negative
         let input_data = vec![5.0, -3.0, 2.0, -4.0];
         let input = Tensor::from_vec_on(input_data.clone(), vec![4], device)
             .await
@@ -254,7 +260,6 @@ mod tests {
         let result = input.sum().unwrap().to_vec().unwrap();
         let expected = sum_cpu(&input_data);
 
-        // Use relative error for large sums
         let rel_error = if expected.abs() > 1e-5 {
             (result[0] - expected).abs() / expected.abs()
         } else {
@@ -307,26 +312,22 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        // Test 2D tensor: [[1, 2, 3], [4, 5, 6]]
         let input_data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let input = Tensor::from_vec_on(input_data.clone(), vec![2, 3], device.clone())
             .await
             .unwrap();
 
-        // Sum along dim 0 (columns): [5, 7, 9]
         let result = input.sum_dim(0, false).unwrap().to_vec().unwrap();
         assert_eq!(result.len(), 3);
         assert!((result[0] - 5.0).abs() < 1e-4);
         assert!((result[1] - 7.0).abs() < 1e-4);
         assert!((result[2] - 9.0).abs() < 1e-4);
 
-        // Sum along dim 1 (rows): [6, 15]
         let result = input.sum_dim(1, false).unwrap().to_vec().unwrap();
         assert_eq!(result.len(), 2);
         assert!((result[0] - 6.0).abs() < 1e-4);
         assert!((result[1] - 15.0).abs() < 1e-4);
 
-        // Sum along dim 0 with keepdim: [[5, 7, 9]]
         let result = input.sum_dim(0, true).unwrap();
         assert_eq!(result.shape(), &[1, 3]);
     }

@@ -41,6 +41,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`ComputeDispatch::df64()`** — DF64 shader compilation path for the compute dispatch
   builder, prepending df64_core + df64_transcendentals to the shader source
 
+### Fixed
+- **DF64 naga rewriter NAK/NVK compound assignment bug** — `rewrite_f64_infix_full()` now
+  correctly handles compound assignments (`+=`, `-=`, `*=`, `/=`), named expression references
+  (`let` bindings), and Load expressions with invalid naga spans. Before this fix, compound
+  assignments desugared into bare expressions (destroying the assignment), and named variables
+  expanded into their full expression trees. Root cause: naga IR represents `let` bindings as
+  expression handles (not variable references) and compound assignments as `Store(ptr, Binary(op,
+  Load(ptr), rhs))` where the Load has no source span. The rewriter now carries per-function
+  context (`RewriteCtx`) with `named_expressions`, `local_var_names`, and
+  `compound_targets` maps. Resolves the P1 from hotSpring's DF64 NAK handoff
+
 ### Changed
 - **DF64 precision tier evolution** — 15 f64 ops now participate in the three-tier
   precision model (f32 / DF64 / f64). `Fp64Strategy` from `GpuDriverProfile` selects
@@ -79,6 +90,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Documentation completeness** — added `///` doc comments to all undocumented `pub`
   items across ~300 files, resolving all `missing_docs` warnings. `RUSTDOCFLAGS="-D warnings"`
   now passes clean
+- **Bind address evolution** — IPC bind address resolved via priority chain:
+  `--bind` flag → `BARRACUDA_IPC_BIND` → `BARRACUDA_IPC_HOST`:`BARRACUDA_IPC_PORT` →
+  `127.0.0.1:0`. Eliminates hardcoded `127.0.0.1` while keeping secure localhost default
+- **Smart file refactoring** — `multi_gpu/strategy.rs` (639 lines) split into
+  `gpu_pool.rs` (basic round-robin pool) and `multi_device_pool.rs` (advanced quota-based
+  selection). `driver_profile/mod.rs` tests extracted to `tests.rs`. Barrel modules
+  (`ops/mod.rs`) and single-concern files (`creation.rs`) kept as-is per analysis
+- **Async discovery evolution** — `Substrate::discover_all_async()` and
+  `DeviceRegistry::discover_async()` provide non-blocking alternatives to the sync
+  `pollster::block_on` variants. Async contexts now avoid executor thread starvation
 - **Sovereignty compliance** — replaced all hardcoded primal names (`hotSpring`,
   `wetSpring`, `neuralSpring`, `toadStool`) in production code and tests with
   capability-based identifiers (`lattice_qcd`, `marine_bio`, `ml_inference`,

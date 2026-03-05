@@ -38,7 +38,9 @@
 //! - Capability-based device discovery
 //! - Proper error handling (Result types, no panics)
 
+mod gpu_pool;
 pub mod interconnect;
+mod multi_device_pool;
 pub mod pipeline_dispatch;
 mod strategy;
 mod topology;

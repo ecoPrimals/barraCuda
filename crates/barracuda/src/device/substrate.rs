@@ -143,9 +143,24 @@ impl Substrate {
             .join(", ")
     }
 
-    /// Discover all available substrates
+    /// Discover all available substrates (async).
     ///
-    /// **Deep Debt**: Runtime discovery, no hardcoding
+    /// Prefer this over [`discover_all_sync`] when running inside a tokio context
+    /// to avoid blocking the executor thread.
+    pub async fn discover_all_async() -> Result<Vec<Self>> {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::all(),
+            ..Default::default()
+        });
+
+        let adapters = instance.enumerate_adapters(wgpu::Backends::all()).await;
+        Self::build_substrates(adapters)
+    }
+
+    /// Discover all available substrates (sync convenience wrapper).
+    ///
+    /// Uses `pollster::block_on` — avoid calling from within an async runtime.
+    /// Prefer [`discover_all_async`] in async contexts.
     pub fn discover_all() -> Result<Vec<Self>> {
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
@@ -153,7 +168,10 @@ impl Substrate {
         });
 
         let adapters = pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all()));
+        Self::build_substrates(adapters)
+    }
 
+    fn build_substrates(adapters: Vec<wgpu::Adapter>) -> Result<Vec<Self>> {
         let mut substrates = Vec::new();
         let mut type_counts = std::collections::HashMap::new();
 

@@ -34,8 +34,10 @@
 
 use naga::proc::TypeResolution;
 use naga::valid::FunctionInfo;
-use naga::{Arena, BinaryOperator, Expression, Handle, TypeInner, UnaryOperator};
-use std::collections::HashSet;
+use naga::{
+    Arena, BinaryOperator, Expression, Handle, LocalVariable, Statement, TypeInner, UnaryOperator,
+};
+use std::collections::{HashMap, HashSet};
 
 /// Bridge functions that accept f64, compute in Df64, return f64.
 /// These get prepended to the shader source after the df64 core library.
@@ -56,6 +58,83 @@ struct Replacement {
     span_start: usize,
     span_end: usize,
     text: String,
+}
+
+/// Per-function context for the rewriter. Carries named expressions,
+/// local variable names, and compound assignment detection results
+/// so that `build_bridge_text` can emit correct references.
+struct RewriteCtx<'a> {
+    expressions: &'a Arena<Expression>,
+    fi: &'a FunctionInfo,
+    module: &'a naga::Module,
+    consumed_by_f64_op: HashSet<Handle<Expression>>,
+    /// Expression handle → name from `let` bindings (naga `named_expressions`)
+    expr_names: HashMap<Handle<Expression>, String>,
+    /// Local variable handle → name for `var` bindings
+    local_var_names: HashMap<Handle<LocalVariable>, String>,
+    /// Binary expression handles from compound assignments → target variable name.
+    /// When `fx += expr` desugars to `Store(ptr, Binary(Add, Load(ptr), expr))`,
+    /// the Binary handle maps to `"fx"` so we can emit `fx = bridge(fx, rhs)`.
+    compound_targets: HashMap<Handle<Expression>, String>,
+}
+
+impl<'a> RewriteCtx<'a> {
+    fn from_function(
+        func: &'a naga::Function,
+        fi: &'a FunctionInfo,
+        module: &'a naga::Module,
+    ) -> Self {
+        let expressions = &func.expressions;
+
+        let expr_names: HashMap<_, _> = func
+            .named_expressions
+            .iter()
+            .map(|(h, name)| (*h, name.clone()))
+            .collect();
+
+        let local_var_names: HashMap<_, _> = func
+            .local_variables
+            .iter()
+            .filter_map(|(h, lv)| lv.name.as_ref().map(|n| (h, n.clone())))
+            .collect();
+
+        let mut consumed_by_f64_op = HashSet::new();
+        for (_handle, expr) in expressions.iter() {
+            match *expr {
+                Expression::Binary { op, left, right }
+                    if is_rewritable_op(op) && is_f64_expr(left, fi, module) =>
+                {
+                    consumed_by_f64_op.insert(left);
+                    consumed_by_f64_op.insert(right);
+                }
+                Expression::Unary {
+                    op: UnaryOperator::Negate,
+                    expr: inner,
+                } if is_f64_expr(inner, fi, module) => {
+                    consumed_by_f64_op.insert(inner);
+                }
+                _ => {}
+            }
+        }
+
+        let mut compound_targets = HashMap::new();
+        find_compound_assignments(
+            &func.body,
+            expressions,
+            &local_var_names,
+            &mut compound_targets,
+        );
+
+        Self {
+            expressions,
+            fi,
+            module,
+            consumed_by_f64_op,
+            expr_names,
+            local_var_names,
+            compound_targets,
+        }
+    }
 }
 
 /// Rewrite f64 infix arithmetic to route through DF64 computation.
@@ -84,12 +163,14 @@ pub fn rewrite_f64_infix_to_df64(f64_source: &str) -> Result<String, String> {
 
     for (ep_idx, ep) in module.entry_points.iter().enumerate() {
         let fi = info.get_entry_point(ep_idx);
-        collect_f64_infix_ops(&ep.function.expressions, fi, &module, &mut replacements);
+        let ctx = RewriteCtx::from_function(&ep.function, fi, &module);
+        collect_f64_infix_ops(&ctx, &mut replacements);
     }
 
     for (fh, func) in module.functions.iter() {
         let fi = &info[fh];
-        collect_f64_infix_ops(&func.expressions, fi, &module, &mut replacements);
+        let ctx = RewriteCtx::from_function(func, fi, &module);
+        collect_f64_infix_ops(&ctx, &mut replacements);
     }
 
     if replacements.is_empty() {
@@ -174,6 +255,67 @@ pub fn count_f64_infix_ops(f64_source: &str) -> Result<usize, String> {
     Ok(count)
 }
 
+/// Walk a naga [`Block`] to find compound assignments (`x += expr`,
+/// `x -= expr`, etc.) and record the Binary expression handle →
+/// target variable name mapping.
+///
+/// Compound assignments desugar in naga as:
+///   `Store { pointer, value: Binary(op, Load { pointer }, rhs) }`
+/// The Binary's left operand is a `Load` from the same pointer as the
+/// Store target. The variable name comes from the `LocalVariable`.
+fn find_compound_assignments(
+    block: &naga::Block,
+    expressions: &Arena<Expression>,
+    local_var_names: &HashMap<Handle<LocalVariable>, String>,
+    out: &mut HashMap<Handle<Expression>, String>,
+) {
+    for stmt in block.iter() {
+        match *stmt {
+            Statement::Store { pointer, value } => {
+                if let Expression::Binary { left, .. } = expressions[value] {
+                    if let Expression::Load {
+                        pointer: load_ptr, ..
+                    } = expressions[left]
+                    {
+                        if load_ptr == pointer {
+                            if let Expression::LocalVariable(lv) = expressions[pointer] {
+                                if let Some(name) = local_var_names.get(&lv) {
+                                    out.insert(value, name.clone());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Statement::Block(ref inner) => {
+                find_compound_assignments(inner, expressions, local_var_names, out);
+            }
+            Statement::If {
+                ref accept,
+                ref reject,
+                ..
+            } => {
+                find_compound_assignments(accept, expressions, local_var_names, out);
+                find_compound_assignments(reject, expressions, local_var_names, out);
+            }
+            Statement::Loop {
+                ref body,
+                ref continuing,
+                ..
+            } => {
+                find_compound_assignments(body, expressions, local_var_names, out);
+                find_compound_assignments(continuing, expressions, local_var_names, out);
+            }
+            Statement::Switch { ref cases, .. } => {
+                for case in cases {
+                    find_compound_assignments(&case.body, expressions, local_var_names, out);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
 /// Returns the bridge function definitions that must be prepended when
 /// `rewrite_f64_infix_to_df64` has produced replacements.
 pub fn bridge_functions() -> &'static str {
@@ -208,54 +350,44 @@ fn count_f64_ops_in(
 /// Collect ALL f64 infix operations and build their replacements.
 /// Each infix op gets replaced with a bridge function call that keeps
 /// the f64 type system while routing through DF64 computation.
-fn collect_f64_infix_ops(
-    expressions: &Arena<Expression>,
-    fi: &FunctionInfo,
-    module: &naga::Module,
-    out: &mut Vec<Replacement>,
-) {
-    // Find which handles are consumed as operands of another f64 infix op.
-    // We need this to decide whether to use recursive building for nested ops.
-    let mut consumed_by_f64_op: HashSet<Handle<Expression>> = HashSet::new();
-    for (_handle, expr) in expressions.iter() {
-        match *expr {
-            Expression::Binary { op, left, right }
-                if is_rewritable_op(op) && is_f64_expr(left, fi, module) =>
-            {
-                consumed_by_f64_op.insert(left);
-                consumed_by_f64_op.insert(right);
-            }
-            Expression::Unary {
-                op: UnaryOperator::Negate,
-                expr: inner,
-            } if is_f64_expr(inner, fi, module) => {
-                consumed_by_f64_op.insert(inner);
-            }
-            _ => {}
-        }
-    }
-
+fn collect_f64_infix_ops(ctx: &RewriteCtx, out: &mut Vec<Replacement>) {
     // Collect root f64 ops (not consumed by another f64 op).
-    // Use recursive builder to handle nested expressions correctly.
-    for (handle, expr) in expressions.iter() {
-        if consumed_by_f64_op.contains(&handle) {
+    for (handle, expr) in ctx.expressions.iter() {
+        if ctx.consumed_by_f64_op.contains(&handle) {
             continue;
         }
 
-        let is_f64_op = match *expr {
-            Expression::Binary { op, left, .. } => {
-                is_rewritable_op(op) && is_f64_expr(left, fi, module)
-            }
-            Expression::Unary {
-                op: UnaryOperator::Negate,
-                expr: inner,
-            } => is_f64_expr(inner, fi, module),
-            _ => false,
-        };
+        if !is_f64_op_expr(expr, ctx.fi, ctx.module) {
+            continue;
+        }
 
-        if is_f64_op {
-            if let Some(span_range) = expressions.get_span(handle).to_range() {
-                let text = build_bridge_text(handle, expressions, fi, module, &consumed_by_f64_op);
+        if let Some(span_range) = ctx.expressions.get_span(handle).to_range() {
+            let text = build_bridge_text(handle, ctx);
+            out.push(Replacement {
+                span_start: span_range.start,
+                span_end: span_range.end,
+                text,
+            });
+        }
+    }
+
+    // Also collect consumed f64 ops whose span doesn't overlap with any root.
+    // These are in separate statements (e.g. `let x = a + b; let y = x * c;`).
+    for (handle, expr) in ctx.expressions.iter() {
+        if !ctx.consumed_by_f64_op.contains(&handle) {
+            continue;
+        }
+
+        if !is_f64_op_expr(expr, ctx.fi, ctx.module) {
+            continue;
+        }
+
+        if let Some(span_range) = ctx.expressions.get_span(handle).to_range() {
+            let overlaps = out
+                .iter()
+                .any(|r| span_range.start < r.span_end && span_range.end > r.span_start);
+            if !overlaps {
+                let text = build_bridge_text(handle, ctx);
                 out.push(Replacement {
                     span_start: span_range.start,
                     span_end: span_range.end,
@@ -264,42 +396,18 @@ fn collect_f64_infix_ops(
             }
         }
     }
+}
 
-    // Also collect non-root f64 ops whose span doesn't overlap with any root.
-    // These are in separate statements (e.g. `let x = a + b; let y = x * c;`).
-    for (handle, expr) in expressions.iter() {
-        if !consumed_by_f64_op.contains(&handle) {
-            continue;
+fn is_f64_op_expr(expr: &Expression, fi: &FunctionInfo, module: &naga::Module) -> bool {
+    match *expr {
+        Expression::Binary { op, left, .. } => {
+            is_rewritable_op(op) && is_f64_expr(left, fi, module)
         }
-
-        let is_f64_op = match *expr {
-            Expression::Binary { op, left, .. } => {
-                is_rewritable_op(op) && is_f64_expr(left, fi, module)
-            }
-            Expression::Unary {
-                op: UnaryOperator::Negate,
-                expr: inner,
-            } => is_f64_expr(inner, fi, module),
-            _ => false,
-        };
-
-        if is_f64_op {
-            if let Some(span_range) = expressions.get_span(handle).to_range() {
-                // Check if this span overlaps with any existing replacement
-                let overlaps = out
-                    .iter()
-                    .any(|r| span_range.start < r.span_end && span_range.end > r.span_start);
-                if !overlaps {
-                    let text =
-                        build_bridge_text(handle, expressions, fi, module, &consumed_by_f64_op);
-                    out.push(Replacement {
-                        span_start: span_range.start,
-                        span_end: span_range.end,
-                        text,
-                    });
-                }
-            }
-        }
+        Expression::Unary {
+            op: UnaryOperator::Negate,
+            expr: inner,
+        } => is_f64_expr(inner, fi, module),
+        _ => false,
     }
 }
 
@@ -308,18 +416,17 @@ fn collect_f64_infix_ops(
 /// For nested f64 ops within the same expression tree (e.g. `(a+b)*c`),
 /// recursively builds: `_df64_mul_f64(_df64_add_f64(a, b), c)`.
 ///
-/// For leaves (non-f64-op operands), uses the original source text.
-/// Since bridge functions accept f64 and return f64, the type system is preserved.
-fn build_bridge_text(
-    handle: Handle<Expression>,
-    expressions: &Arena<Expression>,
-    fi: &FunctionInfo,
-    module: &naga::Module,
-    consumed: &HashSet<Handle<Expression>>,
-) -> String {
-    match expressions[handle] {
+/// Uses naga `named_expressions` to reference `let` bindings by name
+/// instead of expanding their full expression trees. This prevents
+/// cross-statement inlining and ensures variable names stay intact.
+///
+/// For compound assignments (`+=`, `-=`), prefixes the output with
+/// `var = ` to preserve the assignment semantics that naga's desugaring
+/// would otherwise destroy.
+fn build_bridge_text(handle: Handle<Expression>, ctx: &RewriteCtx) -> String {
+    match ctx.expressions[handle] {
         Expression::Binary { op, left, right }
-            if is_rewritable_op(op) && is_f64_expr(left, fi, module) =>
+            if is_rewritable_op(op) && is_f64_expr(left, ctx.fi, ctx.module) =>
         {
             let op_name = match op {
                 BinaryOperator::Add => "_df64_add_f64",
@@ -332,44 +439,67 @@ fn build_bridge_text(
                 BinaryOperator::LessEqual => "_df64_lte_f64",
                 _ => unreachable!("is_rewritable_op checked"),
             };
-            let left_text = if consumed.contains(&left) {
-                build_bridge_text(left, expressions, fi, module, consumed)
+            let left_text = resolve_operand(left, ctx);
+            let right_text = resolve_operand(right, ctx);
+            let bridge_call = format!("{op_name}({left_text}, {right_text})");
+
+            if let Some(var_name) = ctx.compound_targets.get(&handle) {
+                format!("{var_name} = {bridge_call}")
             } else {
-                leaf_text(left, expressions)
-            };
-            let right_text = if consumed.contains(&right) {
-                build_bridge_text(right, expressions, fi, module, consumed)
-            } else {
-                leaf_text(right, expressions)
-            };
-            format!("{op_name}({left_text}, {right_text})")
+                bridge_call
+            }
         }
         Expression::Unary {
             op: UnaryOperator::Negate,
             expr: inner,
-        } if is_f64_expr(inner, fi, module) => {
-            let inner_text = if consumed.contains(&inner) {
-                build_bridge_text(inner, expressions, fi, module, consumed)
-            } else {
-                leaf_text(inner, expressions)
-            };
+        } if is_f64_expr(inner, ctx.fi, ctx.module) => {
+            let inner_text = resolve_operand(inner, ctx);
             format!("_df64_neg_f64({inner_text})")
         }
-        _ => leaf_text(handle, expressions),
+        _ => leaf_text(handle, ctx),
     }
 }
 
-/// Extract source text for a leaf expression via its naga span.
-/// Encodes the span as a `__SPAN__start__end` marker that `resolve_spans`
-/// later replaces with actual source text.
-fn leaf_text(handle: Handle<Expression>, expressions: &Arena<Expression>) -> String {
-    if let Some(span_range) = expressions.get_span(handle).to_range() {
-        if span_range.start <= span_range.end {
+/// Resolve an operand to its text representation.
+///
+/// Priority chain:
+/// 1. Named expression (`let` binding) → use the name directly
+/// 2. Consumed f64 op → recursively build bridge text
+/// 3. Leaf → span text or LocalVariable name fallback
+fn resolve_operand(handle: Handle<Expression>, ctx: &RewriteCtx) -> String {
+    if let Some(name) = ctx.expr_names.get(&handle) {
+        return name.clone();
+    }
+
+    if ctx.consumed_by_f64_op.contains(&handle) {
+        return build_bridge_text(handle, ctx);
+    }
+
+    leaf_text(handle, ctx)
+}
+
+/// Extract source text for a leaf expression.
+///
+/// Priority chain:
+/// 1. Valid naga span → `__SPAN__start__end` marker (resolved later)
+/// 2. `Load` of a `LocalVariable` → variable name (handles compound assignments
+///    where the implicit Load has no source span)
+/// 3. Fallback → `f64(0.0)` (safe default that won't break compilation)
+fn leaf_text(handle: Handle<Expression>, ctx: &RewriteCtx) -> String {
+    if let Some(span_range) = ctx.expressions.get_span(handle).to_range() {
+        if span_range.start < span_range.end {
             return format!("__SPAN__{}__{}", span_range.start, span_range.end);
         }
     }
-    // Undefined or invalid span — emit a safe f64 zero that won't break compilation.
-    // This is a fallback; real shaders should always have valid spans.
+
+    if let Expression::Load { pointer, .. } = ctx.expressions[handle] {
+        if let Expression::LocalVariable(lv) = ctx.expressions[pointer] {
+            if let Some(name) = ctx.local_var_names.get(&lv) {
+                return name.clone();
+            }
+        }
+    }
+
     String::from("f64(0.0)")
 }
 
@@ -851,5 +981,173 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         dedup_overlapping(&mut replacements);
         assert_eq!(replacements.len(), 1, "nested should be deduped");
         assert_eq!(replacements[0].text, "outer", "outermost should survive");
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // NAK/NVK stress tests — patterns from hotSpring Yukawa handoff
+    // ══════════════════════════════════════════════════════════════
+
+    /// Yukawa-pattern: compound assignments (+=, -=) on f64 accumulators.
+    /// hotSpring found that naga-guided rewrite of compound assignments
+    /// produced invalid SPIR-V on NVK/NAK. Verify our rewriter handles them.
+    #[test]
+    fn test_nak_compound_assignment() {
+        let wgsl = r#"
+@group(0) @binding(0) var<storage, read> input: array<f64>;
+@group(0) @binding(1) var<storage, read_write> output: array<f64>;
+@group(0) @binding(2) var<uniform> n: u32;
+
+@compute @workgroup_size(256)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let i = gid.x;
+    if i >= n { return; }
+    var acc: f64 = 0.0;
+    for (var j = 0u; j < n; j = j + 1u) {
+        if i == j { continue; }
+        let dx = input[j] - input[i];
+        let r2 = dx * dx;
+        acc += dx / r2;
+    }
+    output[i] = acc;
+}
+"#;
+        let result = rewrite_f64_infix_full(wgsl);
+        assert!(
+            result.is_ok(),
+            "Yukawa compound-assign pattern should rewrite: {result:?}"
+        );
+        let src = result.unwrap();
+        assert!(
+            src.contains("_df64_sub_f64(") || src.contains("_df64_add_f64("),
+            "should contain bridge calls, got:\n{src}"
+        );
+    }
+
+    /// Yukawa-pattern: f64 comparisons (>, <) with continue in loops.
+    #[test]
+    fn test_nak_comparison_with_continue() {
+        let wgsl = r#"
+@group(0) @binding(0) var<storage, read> pos: array<f64>;
+@group(0) @binding(1) var<storage, read_write> forces: array<f64>;
+@group(0) @binding(2) var<uniform> n: u32;
+
+@compute @workgroup_size(256)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let i = gid.x;
+    if i >= n { return; }
+    var fx: f64 = 0.0;
+    let cutoff_sq: f64 = 9.0;
+    for (var j = 0u; j < n; j = j + 1u) {
+        if i == j { continue; }
+        let dx = pos[j] - pos[i];
+        let r2 = dx * dx;
+        if r2 > cutoff_sq { continue; }
+        let r = sqrt(r2);
+        let force = exp(-r) / r2;
+        fx += force * dx;
+    }
+    forces[i] = fx;
+}
+"#;
+        let result = rewrite_f64_infix_full(wgsl);
+        assert!(
+            result.is_ok(),
+            "comparison+continue pattern should rewrite: {result:?}"
+        );
+        let src = result.unwrap();
+        assert!(
+            src.contains("_df64_gt_f64(") || src.contains("_df64_mul_f64("),
+            "should contain comparison or arithmetic bridges, got:\n{src}"
+        );
+    }
+
+    /// Full Yukawa-like force kernel with all NAK-problematic patterns:
+    /// compound +=/-=, f64 comparisons, continue, sqrt, exp, nested ops.
+    /// Must produce valid WGSL when combined with df64_core + df64_transcendentals.
+    #[test]
+    fn test_nak_yukawa_full_validates() {
+        let wgsl = r#"
+struct Params {
+    n: u32,
+    _pad0: u32,
+    cutoff: f64,
+    cutoff_sq: f64,
+}
+
+@group(0) @binding(0) var<storage, read> positions: array<f64>;
+@group(0) @binding(1) var<storage, read_write> forces: array<f64>;
+@group(0) @binding(2) var<storage, read_write> pe_buf: array<f64>;
+@group(0) @binding(3) var<uniform> params: Params;
+
+@compute @workgroup_size(256)
+fn yukawa_force(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let i = gid.x;
+    if i >= params.n { return; }
+
+    let xi = positions[i * 3u];
+    let yi = positions[i * 3u + 1u];
+    let zi = positions[i * 3u + 2u];
+
+    var fx: f64 = 0.0;
+    var fy: f64 = 0.0;
+    var fz: f64 = 0.0;
+    var pe: f64 = 0.0;
+
+    for (var j = 0u; j < params.n; j = j + 1u) {
+        if i == j { continue; }
+
+        let dx = positions[j * 3u] - xi;
+        let dy = positions[j * 3u + 1u] - yi;
+        let dz = positions[j * 3u + 2u] - zi;
+        let r2 = dx * dx + dy * dy + dz * dz;
+
+        if r2 > params.cutoff_sq { continue; }
+
+        let r = sqrt(r2);
+        let exp_r = exp(-r);
+        let inv_r = 1.0 / r;
+        let force_mag = exp_r * inv_r * inv_r * (1.0 + r);
+
+        fx += force_mag * dx * inv_r;
+        fy += force_mag * dy * inv_r;
+        fz += force_mag * dz * inv_r;
+        pe += exp_r * inv_r;
+    }
+
+    forces[i * 3u] = fx;
+    forces[i * 3u + 1u] = fy;
+    forces[i * 3u + 2u] = fz;
+    pe_buf[i] = pe * 0.5;
+}
+"#;
+        let rewritten = rewrite_f64_infix_full(wgsl);
+        assert!(
+            rewritten.is_ok(),
+            "Yukawa force kernel should rewrite successfully: {rewritten:?}"
+        );
+
+        let src = rewritten.unwrap();
+        assert!(src.contains("_df64_mul_f64("), "should have mul bridges");
+        assert!(src.contains("_df64_add_f64("), "should have add bridges");
+        assert!(src.contains("_df64_sub_f64("), "should have sub bridges");
+        assert!(src.contains("_df64_div_f64("), "should have div bridges");
+        assert!(
+            src.contains("_df64_gt_f64("),
+            "should have comparison bridges"
+        );
+
+        // Validate the rewritten source compiles with df64 core
+        const DF64_CORE: &str = include_str!("../../shaders/math/df64_core.wgsl");
+        const DF64_TRANS: &str = include_str!("../../shaders/math/df64_transcendentals.wgsl");
+        let full = format!("{DF64_CORE}\n{DF64_TRANS}\n{src}");
+
+        let module = naga::front::wgsl::parse_str(&full)
+            .unwrap_or_else(|e| panic!("should parse: {e}\n\nSource:\n{full}"));
+        let mut v = naga::valid::Validator::new(
+            naga::valid::ValidationFlags::all(),
+            naga::valid::Capabilities::all(),
+        );
+        v.validate(&module)
+            .unwrap_or_else(|e| panic!("should validate: {e}\n\nSource:\n{full}"));
     }
 }

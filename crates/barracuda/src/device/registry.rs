@@ -262,7 +262,25 @@ impl DeviceRegistry {
         GLOBAL_REGISTRY.get_or_init(Self::discover)
     }
 
-    /// Discover all devices and build the registry
+    /// Discover all devices and build the registry (async).
+    ///
+    /// Prefer this over [`discover`] when running inside a tokio context
+    /// to avoid blocking the executor thread.
+    pub async fn discover_async() -> Self {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::all(),
+            ..Default::default()
+        });
+
+        let adapters = instance.enumerate_adapters(wgpu::Backends::all()).await;
+        let adapter_infos: Vec<wgpu::AdapterInfo> = adapters.iter().map(|a| a.get_info()).collect();
+        Self::build_from_adapters(adapter_infos)
+    }
+
+    /// Discover all devices and build the registry (sync).
+    ///
+    /// Uses `pollster::block_on` — avoid calling from within an async runtime.
+    /// Prefer [`discover_async`] in async contexts.
     pub fn discover() -> Self {
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
@@ -272,7 +290,10 @@ impl DeviceRegistry {
         let adapters: Vec<wgpu::Adapter> =
             pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all()));
         let adapter_infos: Vec<wgpu::AdapterInfo> = adapters.iter().map(|a| a.get_info()).collect();
+        Self::build_from_adapters(adapter_infos)
+    }
 
+    fn build_from_adapters(adapter_infos: Vec<wgpu::AdapterInfo>) -> Self {
         let mut devices: HashMap<PhysicalDeviceId, PhysicalDevice> = HashMap::new();
         let mut device_order: Vec<PhysicalDeviceId> = Vec::new();
 

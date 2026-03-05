@@ -28,7 +28,8 @@ enum Commands {
     /// Start the barraCuda IPC server.
     Server {
         /// TCP bind address for JSON-RPC.
-        /// Default: 127.0.0.1:0, or 127.0.0.1:{BARRACUDA_IPC_PORT} if that env var is set.
+        /// Resolved in order: `--bind`, `BARRACUDA_IPC_BIND`,
+        /// `BARRACUDA_IPC_HOST`:`BARRACUDA_IPC_PORT`, or `127.0.0.1:0` (ephemeral).
         #[arg(long)]
         bind: Option<String>,
 
@@ -107,9 +108,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             }
 
             let bind_addr = bind.unwrap_or_else(|| {
+                if let Ok(addr) = std::env::var("BARRACUDA_IPC_BIND") {
+                    return addr;
+                }
+                let host =
+                    std::env::var("BARRACUDA_IPC_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
                 std::env::var("BARRACUDA_IPC_PORT")
-                    .map(|port| format!("127.0.0.1:{port}"))
-                    .unwrap_or_else(|_| "127.0.0.1:0".to_string())
+                    .map(|port| format!("{host}:{port}"))
+                    .unwrap_or_else(|_| format!("{host}:0"))
             });
             server.serve_tcp(&bind_addr).await?;
         }

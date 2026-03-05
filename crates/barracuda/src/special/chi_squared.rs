@@ -27,6 +27,7 @@
 //! - Numerical Recipes, 3rd Edition, Chapter 6.2
 //! - NIST/SEMATECH e-Handbook of Statistical Methods
 
+#[cfg(feature = "gpu")]
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use crate::special::gamma::{ln_gamma, regularized_gamma_p, regularized_gamma_q};

@@ -28,6 +28,9 @@ pub struct FheOr {
 
 impl FheOr {
     /// Create a new FHE OR gate operation
+    /// # Errors
+    /// Returns [`Err`] if polynomial lengths do not match `degree`, tensors are on different
+    /// devices, or modulus is zero.
     pub fn new(poly_a: Tensor, poly_b: Tensor, degree: u32, modulus: u64) -> Result<Self> {
         if poly_a.len() != degree as usize || poly_b.len() != degree as usize {
             return Err(BarracudaError::Device(format!(
@@ -59,6 +62,8 @@ impl FheOr {
     }
 
     /// Execute the OR gate on two encrypted polynomials
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.poly_a.device();
 
@@ -92,7 +97,7 @@ impl FheOr {
             .storage_rw(2, &result_buffer)
             .uniform(3, &params_buffer)
             .dispatch_1d(self.degree)
-            .submit();
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             result_buffer,
@@ -103,6 +108,10 @@ impl FheOr {
 }
 
 /// Helper: Create FHE bit tensor from u64 coefficients (for bitwise ops)
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation or data upload fails (e.g. device lost).
 pub async fn create_fhe_bit_tensor(
     poly: &[u64],
     device: Arc<crate::device::WgpuDevice>,

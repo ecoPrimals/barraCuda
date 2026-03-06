@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Device topology detection: vendor, driver, and capability classification.
 //!
-//! Extracted from multi_gpu.rs for separation of concerns.
+//! Extracted from `multi_gpu.rs` for separation of concerns.
 
 /// GPU vendor classification for capability-based routing.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum GpuVendor {
-    /// NVIDIA GPUs (GeForce, RTX, Quadro, Tesla, etc.)
+    /// NVIDIA GPUs (`GeForce`, RTX, Quadro, Tesla, etc.)
     Nvidia,
     /// AMD GPUs (Radeon, RDNA, CDNA)
     Amd,
     /// Intel GPUs (Iris, Arc)
     Intel,
-    /// Software rasterizer (llvmpipe, SwiftShader, CPU)
+    /// Software rasterizer (llvmpipe, `SwiftShader`, CPU)
     Software,
     /// Unknown or unrecognized vendor
     Unknown,
@@ -25,6 +25,7 @@ const VENDOR_ID_INTEL: u32 = 0x8086;
 
 impl GpuVendor {
     /// Detect vendor from PCI vendor ID (preferred - no string matching)
+    #[must_use]
     pub fn from_vendor_id(vendor_id: u32) -> Self {
         match vendor_id {
             VENDOR_ID_NVIDIA => Self::Nvidia,
@@ -36,6 +37,7 @@ impl GpuVendor {
     }
 
     /// Detect vendor from device name string
+    #[must_use]
     pub fn from_name(name: &str) -> Self {
         let lower = name.to_lowercase();
         if lower.contains("nvidia")
@@ -84,6 +86,7 @@ pub enum GpuDriver {
 
 impl GpuDriver {
     /// Detect driver type from adapter info strings
+    #[must_use]
     pub fn from_adapter_info(name: &str, driver: &str, driver_info: &str) -> Self {
         let name_lower = name.to_lowercase();
         let driver_lower = driver.to_lowercase();
@@ -150,11 +153,13 @@ pub struct GpuInfo {
 
 impl GpuInfo {
     /// Returns true if this GPU supports native f64 builtins (exp, log, pow).
+    #[must_use]
     pub fn supports_f64_builtins(&self) -> bool {
         !matches!(self.driver, GpuDriver::Nvk | GpuDriver::Software)
     }
 
     /// Returns true if this GPU is suitable for compute workloads (≥500 GFLOPS).
+    #[must_use]
     pub fn is_compute_capable(&self) -> bool {
         matches!(
             self.vendor,

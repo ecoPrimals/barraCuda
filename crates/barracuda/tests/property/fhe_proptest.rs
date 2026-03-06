@@ -18,7 +18,7 @@ use proptest::prelude::*;
 
 /// Modular multiplication using u128 to avoid overflow.
 fn mod_mul(a: u64, b: u64, modulus: u64) -> u64 {
-    ((a as u128 * b as u128) % modulus as u128) as u64
+    ((u128::from(a) * u128::from(b)) % u128::from(modulus)) as u64
 }
 
 /// Modular exponentiation by repeated squaring.
@@ -117,8 +117,8 @@ proptest! {
     /// Barrett reduction matches naive modulo.
     #[test]
     fn prop_barrett_matches_naive(
-        a in 0u64..u32::MAX as u64,
-        modulus in 1u64..=u16::MAX as u64,
+        a in 0u64..u64::from(u32::MAX),
+        modulus in 1u64..=u64::from(u16::MAX),
     ) {
         prop_assert_eq!(barrett_reduce(a, modulus), a % modulus);
     }
@@ -170,14 +170,14 @@ fn test_known_ntt_params_have_valid_primitive_roots() {
     for &(modulus, degree) in NTT_PARAMS {
         // Verify (modulus, degree) satisfies the NTT constraint.
         assert!(
-            (modulus - 1) % (2 * degree as u64) == 0,
+            (modulus - 1) % (2 * u64::from(degree)) == 0,
             "modulus={modulus} does not satisfy q ≡ 1 (mod 2·{degree})"
         );
 
         // The library must produce a valid primitive degree-th root.
         let root = compute_primitive_root(degree, modulus);
         assert!(
-            is_primitive_root(root, degree as u64, modulus),
+            is_primitive_root(root, u64::from(degree), modulus),
             "compute_primitive_root({degree}, {modulus}) = {root} — not a primitive root"
         );
     }
@@ -190,7 +190,7 @@ fn test_ntt_primitive_root_pow_degree_is_one() {
     // For each known-good pair, root^degree ≡ 1 (defining property of NTT root).
     for &(modulus, degree) in NTT_PARAMS {
         let root = compute_primitive_root(degree, modulus);
-        let result = mod_pow(root, degree as u64, modulus);
+        let result = mod_pow(root, u64::from(degree), modulus);
         assert_eq!(
             result, 1,
             "root^{degree} mod {modulus} should be 1 for root={root}, got {result}"

@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! IoULoss - Intersection over Union loss
+//! `IoULoss` - Intersection over Union loss
 //!
-//! **Canonical BarraCuda Pattern**: Struct with new/execute
+//! **Canonical `BarraCuda` Pattern**: Struct with new/execute
 //!
-//! Direct optimization of IoU metric.
+//! Direct optimization of `IoU` metric.
 //! Used in segmentation and object detection.
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::DeviceCapabilities;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
-/// IoU Loss operation
+/// `IoU` Loss operation
 pub struct IoULoss {
     predictions: Tensor,
     targets: Tensor,
@@ -19,7 +19,12 @@ pub struct IoULoss {
 }
 
 impl IoULoss {
-    /// Create a new IoU loss operation
+    /// Create a new `IoU` loss operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(predictions: Tensor, targets: Tensor, smooth: f32) -> Result<Self> {
         // Validate shapes match
         if predictions.shape() != targets.shape() {
@@ -46,7 +51,12 @@ impl IoULoss {
         &SHADER
     }
 
-    /// Execute the IoU loss operation
+    /// Execute the `IoU` loss operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size = self.predictions.len();
@@ -93,7 +103,7 @@ impl IoULoss {
             .storage_rw(4, &output_buffer)
             .uniform(5, &params_buffer)
             .dispatch(workgroups, 1, 1)
-            .submit();
+            .submit()?;
 
         ComputeDispatch::new(device, "iou_loss_pass2")
             .shader(Self::wgsl_shader(), "compute_loss")
@@ -104,7 +114,7 @@ impl IoULoss {
             .storage_rw(4, &output_buffer)
             .uniform(5, &params_buffer)
             .dispatch(1, 1, 1)
-            .submit();
+            .submit()?;
 
         let output_data = crate::utils::read_buffer(device, &output_buffer, 1)?;
         Ok(Tensor::new(output_data, vec![1], device.clone()))

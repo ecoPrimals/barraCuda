@@ -26,6 +26,7 @@ pub struct FermionField {
 
 impl FermionField {
     /// Create a zero fermion field.
+    #[must_use]
     pub fn zeros(volume: usize) -> Self {
         Self {
             data: vec![[Complex64::ZERO; 3]; volume],
@@ -34,6 +35,7 @@ impl FermionField {
     }
 
     /// Create a random fermion field (for testing).
+    #[must_use]
     pub fn random(volume: usize, seed: u64) -> Self {
         use super::constants::lcg_uniform_f64;
         let mut rng = seed;
@@ -60,6 +62,7 @@ impl FermionField {
     }
 
     /// Squared norm: Re<self|self>.
+    #[must_use]
     pub fn norm_sq(&self) -> f64 {
         self.dot(self).re
     }
@@ -81,11 +84,7 @@ impl FermionField {
 
 fn staggered_phase(x: [usize; 4], mu: usize) -> f64 {
     let sum: usize = x.iter().take(mu).sum();
-    if sum.is_multiple_of(2) {
-        1.0
-    } else {
-        -1.0
-    }
+    if sum.is_multiple_of(2) { 1.0 } else { -1.0 }
 }
 
 fn su3_times_vec(u: &Su3Matrix, v: &ColorVector) -> ColorVector {
@@ -108,7 +107,8 @@ fn su3_dagger_times_vec(u: &Su3Matrix, v: &ColorVector) -> ColorVector {
     result
 }
 
-/// Apply staggered Dirac operator: out = D_st × psi
+/// Apply staggered Dirac operator: out = `D_st` × psi
+#[must_use]
 pub fn apply_dirac(lattice: &Lattice, psi: &FermionField, mass: f64) -> FermionField {
     let vol = lattice.volume();
     let mut result = FermionField::zeros(vol);
@@ -139,6 +139,7 @@ pub fn apply_dirac(lattice: &Lattice, psi: &FermionField, mass: f64) -> FermionF
 }
 
 /// Apply D† (adjoint of staggered Dirac operator).
+#[must_use]
 pub fn apply_dirac_adjoint(lattice: &Lattice, psi: &FermionField, mass: f64) -> FermionField {
     let vol = lattice.volume();
     let mut result = FermionField::zeros(vol);
@@ -169,6 +170,7 @@ pub fn apply_dirac_adjoint(lattice: &Lattice, psi: &FermionField, mass: f64) -> 
 }
 
 /// Apply D†D (positive definite, for CG).
+#[must_use]
 pub fn apply_dirac_sq(lattice: &Lattice, psi: &FermionField, mass: f64) -> FermionField {
     let dpsi = apply_dirac(lattice, psi, mass);
     apply_dirac_adjoint(lattice, &dpsi, mass)

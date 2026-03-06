@@ -22,7 +22,8 @@ pub struct IndexSelect {
 }
 
 impl IndexSelect {
-    /// Create a new IndexSelect operation
+    /// Create a new `IndexSelect` operation
+    #[must_use]
     pub fn new(input: Tensor, dim: usize, indices: Vec<usize>) -> Self {
         Self {
             input,
@@ -44,6 +45,11 @@ impl IndexSelect {
     }
 
     /// Execute the index select operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -264,6 +270,11 @@ impl Tensor {
     /// # Returns
     ///
     /// Tensor with selected elements
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn index_select_wgsl(self, dim: usize, indices: Vec<usize>) -> Result<Self> {
         IndexSelect::new(self, dim, indices).execute()
     }

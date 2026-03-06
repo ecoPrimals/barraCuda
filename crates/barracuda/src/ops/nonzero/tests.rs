@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Tests for NonZero operation
+//! Tests for `NonZero` operation
 
 use super::NonZero;
 use crate::device::test_pool::get_test_device_if_gpu_available;

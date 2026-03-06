@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! math_f64 WGSL injection: dependency graph, extraction, and injection logic
+//! `math_f64` WGSL injection: dependency graph, extraction, and injection logic
 //!
 //! ## Fossil vs. Active functions
 //!
 //! Fossil functions are superseded by native WGSL f64 builtins on all
-//! SHADER_F64 hardware (probe-confirmed Feb 2026, RTX 3090 + RX 6950 XT).
+//! `SHADER_F64` hardware (probe-confirmed Feb 2026, RTX 3090 + RX 6950 XT).
 //! `inject_missing_math_f64` skips fossils — new shaders must use native
 //! WGSL builtins directly. `ShaderTemplate::substitute_fossil_f64()` rewrites
 //! legacy `abs_f64(` → `abs(` etc. for shaders that still use old names.
 
-/// Functions superseded by native WGSL f64 builtins on all SHADER_F64 hardware.
-/// ShaderTemplate will NOT inject these. Call `substitute_fossil_f64()` to
+/// Functions superseded by native WGSL f64 builtins on all `SHADER_F64` hardware.
+/// `ShaderTemplate` will NOT inject these. Call `substitute_fossil_f64()` to
 /// rewrite legacy fossil calls to their native equivalents.
 pub const F64_FOSSIL_FUNCTIONS: &[(&str, &str)] = &[
     ("abs_f64", "abs"),
@@ -25,7 +25,7 @@ pub const F64_FOSSIL_FUNCTIONS: &[(&str, &str)] = &[
     ("sqrt_f64", "sqrt"),
 ];
 
-/// Function dependency map for math_f64.wgsl.
+/// Function dependency map for `math_f64.wgsl`.
 ///
 /// Active functions reference only other active functions — fossil calls in
 /// their bodies have been replaced with native WGSL builtins directly.

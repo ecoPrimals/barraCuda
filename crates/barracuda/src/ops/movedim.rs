@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! MoveDim - Complete dimension reordering
+//! `MoveDim` - Complete dimension reordering
 //!
 //! **Deep Debt Principles**:
 //! - Complete implementation: Full dimension reordering, not simplified copy
@@ -31,6 +31,11 @@ pub struct MoveDim {
 
 impl MoveDim {
     /// Creates a new movedim operation. Moves `source_dim` to `dest_dim`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor, source_dim: usize, dest_dim: usize) -> Result<Self> {
         let shape = input.shape();
         let num_dims = shape.len();
@@ -75,6 +80,11 @@ impl MoveDim {
     }
 
     /// Executes dimension reordering and returns the result tensor.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -146,7 +156,7 @@ impl MoveDim {
             .storage_read(6, &dim_mapping_buffer)
             .storage_rw(7, &output_buffer)
             .dispatch_1d(total_size as u32)
-            .submit();
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,

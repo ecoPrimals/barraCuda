@@ -9,8 +9,8 @@
 //! - N-body simulations
 //! - Long-time energy conservation
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -37,11 +37,15 @@ pub struct VelocityVerletF64 {
 
 impl VelocityVerletF64 {
     /// Create f64 Velocity-Verlet integrator.
+    /// # Errors
+    /// Returns [`Err`] if device initialization fails (currently always succeeds).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Full Velocity-Verlet step on GPU.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, staging buffer mapping fails, or the device is lost.
     pub fn step(
         &self,
         positions: &[f64],
@@ -106,7 +110,7 @@ impl VelocityVerletF64 {
             .storage_rw(6, &vel_out)
             .uniform(7, &params_buf)
             .dispatch(wg_count, 1, 1)
-            .submit();
+            .submit()?;
 
         let rb_pos = readback_buf(d, out_size);
         let rb_vel = readback_buf(d, out_size);
@@ -122,6 +126,8 @@ impl VelocityVerletF64 {
     }
 
     /// Half-step velocity update on GPU (first half of leapfrog).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, staging buffer mapping fails, or the device is lost.
     pub fn velocity_half_step(
         &self,
         velocities: &[f64],
@@ -149,18 +155,8 @@ impl VelocityVerletF64 {
             usage: wgpu::BufferUsages::STORAGE,
         });
         let out_size = (n3 * 8) as u64;
-        let dummy_ro = d.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("VV:hv_dummy_ro"),
-            size: out_size.max(8),
-            usage: wgpu::BufferUsages::STORAGE,
-            mapped_at_creation: false,
-        });
-        let dummy_rw = d.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("VV:hv_dummy_rw"),
-            size: out_size.max(8),
-            usage: wgpu::BufferUsages::STORAGE,
-            mapped_at_creation: false,
-        });
+        let ph_ro = self.device.placeholder_buffer();
+        let ph_rw = self.device.placeholder_buffer_rw();
         let vel_out = d.create_buffer(&wgpu::BufferDescriptor {
             label: Some("VV:hv_out"),
             size: out_size,
@@ -182,16 +178,16 @@ impl VelocityVerletF64 {
         ComputeDispatch::new(&self.device, "VV:half_vel")
             .shader(SHADER, "velocity_half_step")
             .f64()
-            .storage_read(0, &dummy_ro)
+            .storage_read(0, ph_ro)
             .storage_read(1, &vel_buf)
             .storage_read(2, &forces_buf)
-            .storage_read(3, &dummy_ro)
+            .storage_read(3, ph_ro)
             .storage_read(4, &mass_buf)
-            .storage_rw(5, &dummy_rw)
+            .storage_rw(5, ph_rw)
             .storage_rw(6, &vel_out)
             .uniform(7, &params_buf)
             .dispatch(wg_count, 1, 1)
-            .submit();
+            .submit()?;
 
         let rb = readback_buf(d, out_size);
         let mut enc = self.device.create_encoder_guarded(&Default::default());
@@ -202,6 +198,8 @@ impl VelocityVerletF64 {
     }
 
     /// Position update on GPU using velocities.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, staging buffer mapping fails, or the device is lost.
     pub fn position_update(
         &self,
         positions: &[f64],
@@ -223,18 +221,8 @@ impl VelocityVerletF64 {
             usage: wgpu::BufferUsages::STORAGE,
         });
         let out_size = (n3 * 8) as u64;
-        let dummy_ro = d.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("VV:pu_dummy_ro"),
-            size: out_size.max(8),
-            usage: wgpu::BufferUsages::STORAGE,
-            mapped_at_creation: false,
-        });
-        let dummy_rw = d.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("VV:pu_dummy_rw"),
-            size: out_size.max(8),
-            usage: wgpu::BufferUsages::STORAGE,
-            mapped_at_creation: false,
-        });
+        let ph_ro = self.device.placeholder_buffer();
+        let ph_rw = self.device.placeholder_buffer_rw();
         let pos_out = d.create_buffer(&wgpu::BufferDescriptor {
             label: Some("VV:pu_out"),
             size: out_size,
@@ -252,27 +240,20 @@ impl VelocityVerletF64 {
             usage: wgpu::BufferUsages::UNIFORM,
         });
 
-        let mass_dummy = d.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("VV:pu_md"),
-            size: 8,
-            usage: wgpu::BufferUsages::STORAGE,
-            mapped_at_creation: false,
-        });
-
         let wg_count = (n as u32).div_ceil(WG);
         ComputeDispatch::new(&self.device, "VV:pos_update")
             .shader(SHADER, "position_update")
             .f64()
             .storage_read(0, &pos_buf)
             .storage_read(1, &vel_buf)
-            .storage_read(2, &dummy_ro)
-            .storage_read(3, &dummy_ro)
-            .storage_read(4, &mass_dummy)
+            .storage_read(2, ph_ro)
+            .storage_read(3, ph_ro)
+            .storage_read(4, ph_ro)
             .storage_rw(5, &pos_out)
-            .storage_rw(6, &dummy_rw)
+            .storage_rw(6, ph_rw)
             .uniform(7, &params_buf)
             .dispatch(wg_count, 1, 1)
-            .submit();
+            .submit()?;
 
         let rb = readback_buf(d, out_size);
         let mut enc = self.device.create_encoder_guarded(&Default::default());

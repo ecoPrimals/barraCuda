@@ -153,21 +153,18 @@ pub struct SequenceAnalyzer {
 
 impl SequenceAnalyzer {
     /// Create a new sequence analyzer
-    ///
     /// **No device needed** - Pure Rust string processing!
+    #[must_use]
     pub fn new(config: SequenceConfig) -> Self {
         Self { config }
     }
 
     /// Calculate GC content (pure Rust - faster than GPU for typical sequences!)
-    ///
     /// # Arguments
-    ///
     /// * `sequence` - DNA/RNA sequence (ASCII: A, T/U, G, C, N)
-    ///
     /// # Returns
-    ///
     /// GC content as fraction (0.0-1.0)
+    #[must_use]
     pub fn gc_content(&self, sequence: &[u8]) -> f32 {
         if sequence.is_empty() {
             return 0.0;
@@ -182,16 +179,12 @@ impl SequenceAnalyzer {
     }
 
     /// Find low-complexity regions using sliding window
-    ///
     /// Low-complexity = regions with few unique bases (e.g., "AAAAAAA", "ATATATATAT")
-    ///
     /// # Arguments
-    ///
     /// * `sequence` - DNA/RNA sequence
-    ///
     /// # Returns
-    ///
     /// List of low-complexity regions
+    #[must_use]
     pub fn find_low_complexity_regions(&self, sequence: &[u8]) -> Vec<Region> {
         let mut regions = Vec::new();
 
@@ -240,14 +233,11 @@ impl SequenceAnalyzer {
     }
 
     /// Count nucleotide occurrences
-    ///
     /// # Arguments
-    ///
     /// * `sequence` - DNA/RNA sequence
-    ///
     /// # Returns
-    ///
     /// Nucleotide counts (A, T/U, G, C, N)
+    #[must_use]
     pub fn count_nucleotides(&self, sequence: &[u8]) -> NucleotideCounts {
         let mut counts = NucleotideCounts::default();
 
@@ -266,14 +256,12 @@ impl SequenceAnalyzer {
     }
 
     /// Analyze sequence composition
-    ///
     /// # Arguments
-    ///
     /// * `sequence` - DNA/RNA sequence (ASCII: A, T/U, G, C, N)
-    ///
     /// # Returns
-    ///
     /// Comprehensive composition report
+    /// # Errors
+    /// Returns [`Err`] if the sequence is empty.
     pub fn analyze_composition(&self, sequence: &[u8]) -> BarracudaResult<CompositionReport> {
         if sequence.is_empty() {
             return Err(BarracudaError::InvalidInput {
@@ -295,17 +283,13 @@ impl SequenceAnalyzer {
     }
 
     /// Find pattern in sequence (Boyer-Moore-inspired algorithm)
-    ///
     /// **Pure Rust** - Faster than GPU for typical sequences!
-    ///
     /// # Arguments
-    ///
     /// * `sequence` - DNA/RNA sequence to search
     /// * `pattern` - Pattern to find
-    ///
     /// # Returns
-    ///
     /// List of match positions (0-indexed)
+    #[must_use]
     pub fn find_pattern(&self, sequence: &[u8], pattern: &[u8]) -> Vec<usize> {
         if pattern.is_empty() || pattern.len() > sequence.len() {
             return Vec::new();
@@ -333,15 +317,13 @@ impl SequenceAnalyzer {
     }
 
     /// Find multiple motifs/patterns in sequence
-    ///
     /// # Arguments
-    ///
     /// * `sequence` - DNA/RNA sequence to search
     /// * `patterns` - Patterns to find
-    ///
     /// # Returns
-    ///
     /// List of motif matches with positions
+    /// # Errors
+    /// Returns [`Err`] if the sequence is empty or no patterns are provided.
     pub fn find_motifs(
         &self,
         sequence: &[u8],
@@ -380,17 +362,13 @@ impl SequenceAnalyzer {
     }
 
     /// Batch find motifs across multiple sequences (parallel with Rayon)
-    ///
     /// **Hardware-agnostic parallel processing** - uses all CPU cores!
-    ///
     /// # Arguments
-    ///
     /// * `sequences` - Multiple DNA/RNA sequences
     /// * `patterns` - Patterns to find
-    ///
     /// # Returns
-    ///
     /// Matches for each sequence
+    #[must_use]
     pub fn find_motifs_batch(
         &self,
         sequences: &[&[u8]],
@@ -413,14 +391,12 @@ impl SequenceAnalyzer {
     }
 
     /// Perform quality control on sequence
-    ///
     /// # Arguments
-    ///
     /// * `sequence` - Sequence to validate
-    ///
     /// # Returns
-    ///
     /// Quality report with pass/fail and issues
+    /// # Errors
+    /// Returns [`Err`] if composition analysis fails (e.g., empty sequence).
     pub fn quality_filter(&self, sequence: &[u8]) -> BarracudaResult<QualityReport> {
         if sequence.is_empty() {
             return Ok(QualityReport {
@@ -487,14 +463,11 @@ impl SequenceAnalyzer {
     }
 
     /// Batch quality control across multiple sequences (parallel with Rayon)
-    ///
     /// # Arguments
-    ///
     /// * `sequences` - Multiple DNA/RNA sequences
-    ///
     /// # Returns
-    ///
     /// Quality reports for each sequence
+    #[must_use]
     pub fn quality_filter_batch(&self, sequences: &[&[u8]]) -> Vec<BarracudaResult<QualityReport>> {
         if self.config.parallel_batch {
             // Parallel processing with Rayon
@@ -513,16 +486,12 @@ impl SequenceAnalyzer {
     }
 
     /// Batch GC content calculation (parallel with Rayon)
-    ///
     /// **Hardware-agnostic** - uses all available CPU cores!
-    ///
     /// # Arguments
-    ///
     /// * `sequences` - Multiple DNA/RNA sequences
-    ///
     /// # Returns
-    ///
     /// GC content for each sequence
+    #[must_use]
     pub fn gc_content_batch(&self, sequences: &[&[u8]]) -> Vec<f32> {
         if self.config.parallel_batch {
             // Parallel processing with Rayon

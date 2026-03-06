@@ -4,10 +4,10 @@
 //! Modified Bessel function of first kind, order 0.
 //! Applications: Kaiser windows, cylindrical heat conduction, neutron diffusion
 
+use crate::device::WgpuDevice;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
 
@@ -38,11 +38,21 @@ pub struct BesselI0F64 {
 
 impl BesselI0F64 {
     /// Creates a new I₀ Bessel function evaluator for the given WGPU device.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Compute I₀(x) for each element
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn i0(&self, x: &[f64]) -> Result<Vec<f64>> {
         if x.is_empty() {
             return Ok(vec![]);

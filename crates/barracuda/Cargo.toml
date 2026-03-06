@@ -28,7 +28,6 @@ tracing = { workspace = true }
 pollster = { workspace = true }
 
 # Utilities
-etcetera = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 rand = { workspace = true }
@@ -163,3 +162,7 @@ required-features = ["gpu"]
 name = "bench_f64_builtins"
 required-features = ["gpu"]
 
+[[bench]]
+name = "kokkos_parity"
+harness = false
+required-features = ["gpu"]

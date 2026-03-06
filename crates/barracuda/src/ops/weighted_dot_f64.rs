@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Weighted Dot Product (f64) — GPU-resident, pipeline-cached, buffer-pooled
 //!
-//! Computes weighted inner products: result = Σ_k w[k] · a[k] · b[k]
+//! Computes weighted inner products: result = `Σ_k` w[k] · a[k] · b[k]
 //!
 //! **Use cases**:
-//! - Galerkin methods: <φ_i|W|φ_j>
+//! - Galerkin methods: <`φ_i|W|φ_j`>
 //! - FEM assembly: element matrices
 //! - Nuclear physics: potential matrix elements
 //! - Energy integrals: ∫ρ(r)V(r)dr via quadrature
 
+use crate::device::WgpuDevice;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
-use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -53,20 +53,23 @@ pub struct WeightedDotF64 {
 }
 
 impl WeightedDotF64 {
-    /// Create a new WeightedDotF64 orchestrator
+    /// Create a new `WeightedDotF64` orchestrator
+    /// # Errors
+    /// Returns [`Err`] if the device is invalid or unavailable.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Compute weighted dot product: Σ w[i] * a[i] * b[i]
-    ///
     /// # Arguments
     /// * `weights` - Weight vector
     /// * `a` - First vector
     /// * `b` - Second vector
-    ///
     /// # Returns
     /// The weighted dot product as a single f64
+    /// # Errors
+    /// Returns [`Err`] if vector lengths do not match, buffer allocation fails,
+    /// GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn weighted_dot(&self, weights: &[f64], a: &[f64], b: &[f64]) -> Result<f64> {
         let n = weights.len();
         if a.len() != n || b.len() != n {
@@ -99,6 +102,9 @@ impl WeightedDotF64 {
     }
 
     /// Unweighted dot product: Σ a[i] * b[i]
+    /// # Errors
+    /// Returns [`Err`] if vector lengths do not match, buffer allocation fails,
+    /// GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn dot(&self, a: &[f64], b: &[f64]) -> Result<f64> {
         let n = a.len();
         if b.len() != n {
@@ -116,6 +122,9 @@ impl WeightedDotF64 {
     }
 
     /// Squared L2 norm: Σ a[i]²
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or buffer
+    /// readback fails (e.g. device lost).
     pub fn norm_squared(&self, a: &[f64]) -> Result<f64> {
         self.dot(a, a)
     }
@@ -265,9 +274,7 @@ mod tests {
 
         assert!(
             (gpu_result - cpu_result).abs() < 1e-8,
-            "GPU: {}, CPU: {}",
-            gpu_result,
-            cpu_result
+            "GPU: {gpu_result}, CPU: {cpu_result}"
         );
     }
 }

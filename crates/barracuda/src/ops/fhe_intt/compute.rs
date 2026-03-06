@@ -10,19 +10,17 @@ use crate::tensor::Tensor;
 
 impl FheIntt {
     /// Execute INTT transformation
-    ///
     /// Returns a new tensor containing the coefficient-domain representation.
-    ///
     /// ## Algorithm
-    ///
     /// 1. Bit-reversal permutation
     /// 2. log₂(N) butterfly stages (using inverse twiddle factors)
     /// 3. Scale by N^(-1) mod q
-    ///
     /// ## Complexity
-    ///
     /// - Time: O(N log N)
     /// - Space: O(N) temporary buffers
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input().device();
 

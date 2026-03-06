@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Fused MLP forward pass — BatchedEncoder for single-submit across all layers.
+//! Fused MLP forward pass — `BatchedEncoder` for single-submit across all layers.
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::BatchedEncoder;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use crate::shaders::precision::downcast_f64_to_f32;
 use crate::tensor::Tensor;
@@ -33,7 +33,13 @@ pub enum Activation {
     ReLU,
 }
 
-/// Run a fused MLP forward pass using BatchedEncoder (single submit).
+/// Run a fused MLP forward pass using `BatchedEncoder` (single submit).
+///
+/// # Errors
+///
+/// Returns [`Err`] if weights/biases lengths mismatch, shape validation fails,
+/// or buffer allocation, GPU dispatch, or readback fails (e.g. device lost or
+/// out of memory).
 pub async fn fused_mlp(
     input: &Tensor,
     weights: &[Tensor],
@@ -58,7 +64,7 @@ pub async fn fused_mlp(
     let shape = input.shape();
     if shape.len() != 2 {
         return Err(BarracudaError::InvalidInput {
-            message: format!("fused_mlp: input must be 2D, got {:?}", shape),
+            message: format!("fused_mlp: input must be 2D, got {shape:?}"),
         });
     }
     let batch = shape[0];
@@ -71,7 +77,7 @@ pub async fn fused_mlp(
         let w_shape = w.shape();
         let (out_features, in_feat) = if w_shape.len() != 2 {
             return Err(BarracudaError::InvalidInput {
-                message: format!("fused_mlp: weight[{}] must be 2D", i),
+                message: format!("fused_mlp: weight[{i}] must be 2D"),
             });
         } else if w_shape[1] == in_features {
             (w_shape[0], w_shape[1])
@@ -79,17 +85,17 @@ pub async fn fused_mlp(
             (w_shape[1], w_shape[0])
         } else {
             return Err(BarracudaError::InvalidInput {
-                message: format!("fused_mlp: weight[{}] shape {:?} incompatible", i, w_shape),
+                message: format!("fused_mlp: weight[{i}] shape {w_shape:?} incompatible"),
             });
         };
         if b.shape() != [out_features] {
             return Err(BarracudaError::InvalidInput {
-                message: format!("fused_mlp: bias[{}] shape mismatch", i),
+                message: format!("fused_mlp: bias[{i}] shape mismatch"),
             });
         }
         layer_dims.push((in_feat, out_features));
         let buf = device.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some(&format!("fused_mlp_layer_{}", i)),
+            label: Some(&format!("fused_mlp_layer_{i}")),
             size: ((batch * out_features) * 4) as u64,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
@@ -125,7 +131,7 @@ pub async fn fused_mlp(
         .enumerate()
     {
         let out_buf = &layer_buffers[i];
-        batch_enc
+        let _ = batch_enc
             .dispatch("fused_mlp_linear", &LINEAR_F32, "main")
             .uniform(0, &params_buffers[i])
             .storage_read(1, prev_input)
@@ -139,7 +145,7 @@ pub async fn fused_mlp(
             );
 
         if matches!(activation, Activation::ReLU) {
-            batch_enc
+            let _ = batch_enc
                 .dispatch("fused_mlp_relu", &RELU_F32, "main")
                 .storage_read(0, out_buf)
                 .storage_rw(1, out_buf)

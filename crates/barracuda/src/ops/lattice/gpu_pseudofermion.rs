@@ -4,7 +4,7 @@
 //! The heatbath generates Gaussian noise η; the actual φ = D†η is performed
 //! by dispatching the staggered Dirac operator from `dirac.rs`.
 //!
-//! The fermion force computes dS_F/dU from CG solution fields.
+//! The fermion force computes `dS_F/dU` from CG solution fields.
 
 use crate::device::WgpuDevice;
 use crate::error::Result;
@@ -40,6 +40,8 @@ pub struct GpuPseudofermionHeatbath {
 
 impl GpuPseudofermionHeatbath {
     /// Create a heatbath operator for the given lattice volume.
+    /// # Errors
+    /// Returns [`Err`] if shader compilation fails, buffer allocation fails, or the device is lost.
     pub fn new(device: Arc<WgpuDevice>, volume: u32) -> Result<Self> {
         let src = format!("{WGSL_COMPLEX64}\n{WGSL_LCG_F64}\n{HEATBATH_SHADER}");
         let module = device.compile_shader_f64(&src, Some("pf_heatbath"));
@@ -100,9 +102,10 @@ impl GpuPseudofermionHeatbath {
     }
 
     /// Generate Gaussian noise into `eta_buf`.
-    ///
     /// * `eta_buf`     — `[V × 6]` f64 (3 colors × 2)
     /// * `rng_buf`     — `[V]` u64 (per-site RNG state)
+    /// # Errors
+    /// Returns [`Err`] if buffer sizes are invalid for the volume, command submission fails, or the device is lost.
     pub fn generate(&self, eta_buf: &wgpu::Buffer, rng_buf: &wgpu::Buffer) -> Result<()> {
         let bg = self
             .device
@@ -145,6 +148,7 @@ impl GpuPseudofermionHeatbath {
     }
 
     /// Return the lattice volume.
+    #[must_use]
     pub fn volume(&self) -> u32 {
         self.volume
     }
@@ -165,7 +169,7 @@ struct PFForceParams {
     _pad2: u32,
 }
 
-/// GPU pseudofermion force: dS_F/dU from CG solution fields.
+/// GPU pseudofermion force: `dS_F/dU` from CG solution fields.
 pub struct GpuPseudofermionForce {
     device: Arc<WgpuDevice>,
     volume: u32,
@@ -176,6 +180,8 @@ pub struct GpuPseudofermionForce {
 
 impl GpuPseudofermionForce {
     /// Create a pseudofermion force operator for the given lattice dimensions.
+    /// # Errors
+    /// Returns [`Err`] if shader compilation fails, buffer allocation fails, or the device is lost.
     pub fn new(device: Arc<WgpuDevice>, nt: u32, nx: u32, ny: u32, nz: u32) -> Result<Self> {
         let volume = nt * nx * ny * nz;
         let src = format!("{}{}", su3_preamble(), FORCE_SHADER);
@@ -243,11 +249,12 @@ impl GpuPseudofermionForce {
     }
 
     /// Compute pseudofermion force for all links.
-    ///
     /// * `links_buf`   — `[V × 4 × 18]` f64
     /// * `x_field_buf` — `[V × 6]` f64 (CG solution)
     /// * `y_field_buf` — `[V × 6]` f64 (D·X)
     /// * `force_buf`   — `[V × 4 × 18]` f64 (output)
+    /// # Errors
+    /// Returns [`Err`] if buffer sizes are invalid for the volume, command submission fails, or the device is lost.
     pub fn compute(
         &self,
         links_buf: &wgpu::Buffer,
@@ -304,6 +311,7 @@ impl GpuPseudofermionForce {
     }
 
     /// Lattice volume.
+    #[must_use]
     pub fn volume(&self) -> u32 {
         self.volume
     }

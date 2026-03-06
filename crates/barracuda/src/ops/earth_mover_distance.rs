@@ -31,6 +31,8 @@ pub struct EarthMoverDistance {
 
 impl EarthMoverDistance {
     /// Create Earth Mover's Distance operation
+    /// # Errors
+    /// Returns [`Err`] if dist1 and dist2 shapes do not match.
     pub fn new(dist1: Tensor, dist2: Tensor) -> Result<Self> {
         if dist1.shape() != dist2.shape() {
             return Err(BarracudaError::invalid_op(
@@ -57,6 +59,9 @@ impl EarthMoverDistance {
     }
 
     /// Execute Earth Mover's Distance on tensors
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.dist1.device().clone();
         let size = self.dist1.len();
@@ -89,7 +94,7 @@ impl EarthMoverDistance {
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)
             .dispatch(workgroups, 1, 1)
-            .submit();
+            .submit()?;
 
         // Create output tensor (scalar)
         Ok(Tensor::from_buffer(output_buffer, vec![1], device.clone()))
@@ -118,7 +123,7 @@ mod tests {
             .unwrap();
 
         let result = EarthMoverDistance::new(dist1, dist2)
-            .and_then(|t| t.execute())
+            .and_then(super::EarthMoverDistance::execute)
             .and_then(|t| t.to_vec());
         let Ok(result) = result else { return };
         assert_eq!(result.len(), 1);

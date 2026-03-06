@@ -5,8 +5,8 @@
 //! including prefix sum computation, mask conversion, and the main selection logic.
 
 use super::MaskedSelect;
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::DeviceCapabilities;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
 use bytemuck::{Pod, Zeroable};
@@ -24,8 +24,8 @@ struct ScanConfig {
 }
 
 /// Compute GPU prefix sum for boolean mask.
-/// Returns (prefix_sum_buffer, total_count).
-/// Uses exclusive scan: total = scan_out[N-1] + flags_in[N-1].
+/// Returns (`prefix_sum_buffer`, `total_count`).
+/// Uses exclusive scan: total = `scan_out`[N-1] + `flags_in`[N-1].
 pub(super) fn compute_prefix_sum_gpu(
     device: &Arc<crate::device::WgpuDevice>,
     mask_buffer: &wgpu::Buffer,
@@ -56,7 +56,7 @@ pub(super) fn compute_prefix_sum_gpu(
         .storage_rw(2, &prefix_sum_buffer)
         .storage_rw(3, &scratch_buffer)
         .dispatch(n_groups.max(1), 1, 1)
-        .submit();
+        .submit()?;
 
     // Pass 2: add workgroup offsets (only when n_groups > 1)
     if n_groups > 1 {
@@ -67,7 +67,7 @@ pub(super) fn compute_prefix_sum_gpu(
             .storage_rw(2, &prefix_sum_buffer)
             .storage_rw(3, &scratch_buffer)
             .dispatch(1, 1, 1)
-            .submit();
+            .submit()?;
     }
 
     // Total = scan_out[N-1] + flags_in[N-1] (exclusive scan + last flag)
@@ -111,7 +111,7 @@ pub(super) fn convert_mask_gpu(
         .storage_read(1, input_mask_buffer)
         .storage_rw(2, mask_buffer)
         .dispatch(workgroups, 1, 1)
-        .submit();
+        .submit()?;
 
     Ok(())
 }
@@ -202,7 +202,7 @@ pub(super) fn execute_masked_select(op: MaskedSelect) -> Result<Tensor> {
         .storage_read(3, &prefix_sum_buffer)
         .storage_rw(4, &output_buffer)
         .dispatch(workgroups, 1, 1)
-        .submit();
+        .submit()?;
 
     let output_data = crate::utils::read_buffer(device, &output_buffer, output_size)?;
     Ok(Tensor::new(output_data, vec![output_size], device.clone()))

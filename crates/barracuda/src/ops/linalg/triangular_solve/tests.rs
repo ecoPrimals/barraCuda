@@ -121,10 +121,7 @@ async fn test_cholesky_solve_pipeline() {
     for (i, (&expected, &actual)) in b_expected.iter().zip(ax_data.iter()).enumerate() {
         assert!(
             (expected - actual).abs() < 1e-4,
-            "A·x verification failed at index {}: expected {}, got {}",
-            i,
-            expected,
-            actual
+            "A·x verification failed at index {i}: expected {expected}, got {actual}"
         );
     }
 }

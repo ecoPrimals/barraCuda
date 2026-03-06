@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Grouped Conv2D - Convolution with channel groups (Pure WGSL)
+//! Grouped `Conv2D` - Convolution with channel groups (Pure WGSL)
 //!
 //! Divides input/output channels into groups, reducing parameters
-//! Used in ResNeXt, ShuffleNet, MobileNet architectures
+//! Used in `ResNeXt`, `ShuffleNet`, `MobileNet` architectures
 //!
 //! **Deep Debt Principles**:
 //! - Pure WGSL implementation (no CPU code)
@@ -26,6 +26,11 @@ pub struct GroupedConv2D {
 
 impl GroupedConv2D {
     /// Create grouped 2D convolution (channels split into independent groups).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         input: Tensor,
         kernel: Tensor,
@@ -50,7 +55,7 @@ impl GroupedConv2D {
             ));
         }
 
-        let _batch_size = input_shape[0];
+        let _ = input_shape[0];
         let in_channels = input_shape[1];
         let in_height = input_shape[2];
         let in_width = input_shape[3];
@@ -90,8 +95,10 @@ impl GroupedConv2D {
             }
         }
 
-        let _out_height = (in_height + 2 * padding - kernel_size) / stride + 1;
-        let _out_width = (in_width + 2 * padding - kernel_size) / stride + 1;
+        let _ = (
+            (in_height + 2 * padding - kernel_size) / stride + 1,
+            (in_width + 2 * padding - kernel_size) / stride + 1,
+        );
 
         Ok(Self {
             input,
@@ -115,6 +122,11 @@ impl GroupedConv2D {
     }
 
     /// Execute grouped convolution.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();

@@ -30,9 +30,9 @@
 //!
 //! - Golub & Van Loan, "Matrix Computations", Algorithm 5.2.1
 
+use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 use std::sync::Arc;
@@ -46,9 +46,9 @@ pub struct QrGpu {
 
 impl QrGpu {
     /// Create new GPU QR decomposition operation
-    ///
     /// # Arguments
     /// * `input` - Matrix [M, N] in row-major order
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -62,16 +62,15 @@ impl QrGpu {
     }
 
     /// Execute QR decomposition on GPU
-    ///
     /// # Returns
     /// Tuple (R, tau) where:
     /// - R: Upper triangular matrix (stored in-place in A)
     /// - tau: Householder scalars for Q reconstruction
-    ///
-    /// Q can be reconstructed from the stored Householder vectors and tau values.
-    ///
+    ///   Q can be reconstructed from the stored Householder vectors and tau values.
     /// # Errors
-    /// - Returns error if input is not 2D
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
+    /// Also returns [`Err`] if input is not 2D.
     pub fn execute(self) -> Result<(Tensor, Vec<f32>)> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -129,7 +128,7 @@ impl QrGpu {
                 .storage_rw(2, &v_buffer)
                 .storage_rw(3, &tau_buffer)
                 .dispatch(1, 1, 1)
-                .submit();
+                .submit()?;
 
             ComputeDispatch::new(device, "qr_compute_householder")
                 .shader(Self::wgsl_shader_f32(), "compute_householder")
@@ -138,7 +137,7 @@ impl QrGpu {
                 .storage_rw(2, &v_buffer)
                 .storage_rw(3, &tau_buffer)
                 .dispatch(rows.div_ceil(WORKGROUP_SIZE_1D), 1, 1)
-                .submit();
+                .submit()?;
 
             if sub_cols > 0 {
                 ComputeDispatch::new(device, "qr_apply_householder")
@@ -148,7 +147,7 @@ impl QrGpu {
                     .storage_rw(2, &v_buffer)
                     .storage_rw(3, &tau_buffer)
                     .dispatch(sub_cols.div_ceil(16), sub_rows.div_ceil(16), 1)
-                    .submit();
+                    .submit()?;
             }
 
             ComputeDispatch::new(device, "qr_update_column_k")
@@ -158,7 +157,7 @@ impl QrGpu {
                 .storage_rw(2, &v_buffer)
                 .storage_rw(3, &tau_buffer)
                 .dispatch(rows.div_ceil(WORKGROUP_SIZE_1D), 1, 1)
-                .submit();
+                .submit()?;
         }
 
         // Read back results
@@ -180,20 +179,22 @@ impl QrGpu {
     }
 
     /// Execute QR decomposition on GPU with full f64 precision
-    ///
     /// This is the **preferred method** - uses native WGSL f64 via SPIR-V/Vulkan,
     /// achieving 1:2-3 FP64 performance (not 1:32 like CUDA consumer GPUs).
-    ///
     /// # Arguments
-    /// * `device` - WgpuDevice to execute on
+    /// * `device` - `WgpuDevice` to execute on
     /// * `data` - Matrix [M × N] in row-major order (f64)
     /// * `m` - Number of rows
     /// * `n` - Number of columns
-    ///
     /// # Returns
     /// Tuple (R, tau) where:
     /// - R: Upper triangular matrix as `Vec<f64>`
     /// - tau: Householder scalars for Q reconstruction
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute_f64(
         device: Arc<WgpuDevice>,
         data: &[f64],
@@ -237,7 +238,7 @@ impl QrGpu {
                 .storage_rw(2, &v_buffer)
                 .storage_rw(3, &tau_buffer)
                 .dispatch(1, 1, 1)
-                .submit();
+                .submit()?;
 
             ComputeDispatch::new(device.as_ref(), "qr_f64_compute_householder")
                 .shader(Self::wgsl_shader_f64(), "compute_householder")
@@ -248,7 +249,7 @@ impl QrGpu {
                 .storage_rw(3, &tau_buffer)
                 .storage_read(4, &v_buffer)
                 .dispatch(rows.div_ceil(WORKGROUP_SIZE_1D), 1, 1)
-                .submit();
+                .submit()?;
 
             if cols_remaining > 0 {
                 ComputeDispatch::new(device.as_ref(), "qr_f64_compute_vTA")
@@ -260,7 +261,7 @@ impl QrGpu {
                     .storage_rw(3, &w_buffer)
                     .storage_read(4, &tau_buffer)
                     .dispatch(cols_remaining, 1, 1)
-                    .submit();
+                    .submit()?;
 
                 ComputeDispatch::new(device.as_ref(), "qr_f64_apply_householder")
                     .shader(Self::wgsl_shader_f64(), "apply_householder")
@@ -271,7 +272,7 @@ impl QrGpu {
                     .storage_rw(3, &w_buffer)
                     .storage_read(4, &tau_buffer)
                     .dispatch(cols_remaining.div_ceil(16), rows.div_ceil(16), 1)
-                    .submit();
+                    .submit()?;
             }
 
             ComputeDispatch::new(device.as_ref(), "qr_f64_update_column_k")
@@ -283,7 +284,7 @@ impl QrGpu {
                 .storage_rw(3, &w_buffer)
                 .storage_read(4, &tau_buffer)
                 .dispatch(rows.div_ceil(WORKGROUP_SIZE_1D), 1, 1)
-                .submit();
+                .submit()?;
         }
 
         // Read back results

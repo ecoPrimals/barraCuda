@@ -6,10 +6,10 @@
 //!
 //! # Methods
 //!
-//! - **gradient_1d**: Finite-difference gradients (3-point stencil)
+//! - **`gradient_1d`**: Finite-difference gradients (3-point stencil)
 //! - **trapz**: Trapezoidal integration
-//! - **trapz_product**: Weighted product integration
-//! - **rk45_solve**: Adaptive Runge-Kutta ODE solver
+//! - **`trapz_product`**: Weighted product integration
+//! - **`rk45_solve`**: Adaptive Runge-Kutta ODE solver
 //!
 //! # Examples
 //!
@@ -56,11 +56,12 @@ pub use ode_bio::{
     MultiSignalOde, MultiSignalParams, PhageDefenseOde, PhageDefenseParams, QsBiofilmParams,
 };
 pub use ode_generic::{BatchedOdeRK4, OdeSystem};
-pub use rk45::{rk45_at, rk45_solve, Rk45Config, Rk45Result};
+pub use rk45::{Rk45Config, Rk45Result, rk45_at, rk45_solve};
 
 /// WGSL shader: parallel central-difference Hessian column computation
 /// WGSL kernel for Hessian column extraction via finite differences.
 #[cfg(feature = "gpu")]
+#[must_use]
 pub fn wgsl_hessian_column() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         crate::shaders::precision::downcast_f64_to_f32(include_str!(

@@ -76,11 +76,16 @@ pub struct LbfgsGpu;
 
 impl LbfgsGpu {
     /// Create a new batched L-BFGS optimizer for the given device.
+    #[must_use]
     pub fn new(_device: Arc<WgpuDevice>) -> Self {
         Self
     }
 
     /// Run batched L-BFGS optimization.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if n or `batch_size` is 0, x0 length mismatch, or if the optimization fails.
     ///
     /// `f_batch` evaluates all `batch_size` objective functions in parallel:
     /// given a `[batch_size * n]` flat array of points, returns `[batch_size]`

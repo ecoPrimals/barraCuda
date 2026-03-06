@@ -29,13 +29,13 @@ pub struct Rfft {
 
 impl Rfft {
     /// Create a new RFFT operation
-    ///
     /// # Arguments
     /// * `input` - Real-valued signal tensor (shape: [N])
     /// * `degree` - FFT degree (must be power of 2)
-    ///
     /// # Returns
     /// Complex spectrum with N/2+1 points (exploiting conjugate symmetry)
+    /// # Errors
+    /// Returns [`Err`] if degree is not a power of 2, input is not 1D, or input size ≠ degree.
     pub fn new(input: Tensor, degree: u32) -> Result<Self> {
         // Validate degree is power of 2
         if degree == 0 || (degree & (degree - 1)) != 0 {
@@ -63,14 +63,15 @@ impl Rfft {
     }
 
     /// Execute RFFT operation
-    ///
     /// # Strategy
     /// 1. Convert real signal to complex (real + 0i)
     /// 2. Compute full complex FFT
     /// 3. Extract N/2+1 unique points (exploit symmetry)
-    ///
     /// # Returns
     /// Complex spectrum tensor (shape: [N/2+1, 2])
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let n = self.degree as usize;
@@ -214,7 +215,7 @@ mod tests {
         let _spectrum = rfft.execute().unwrap();
         let elapsed = start.elapsed();
 
-        println!("✅ RFFT {} points: {:?}", n, elapsed);
+        println!("✅ RFFT {n} points: {elapsed:?}");
 
         // Should complete in reasonable time (benefit from symmetry exploitation)
         // Software rasterizer (llvmpipe) is much slower than real GPU; allow generous timeout

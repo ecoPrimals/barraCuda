@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! SinkhornDistance - Pure WGSL
+//! `SinkhornDistance` - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -23,6 +23,9 @@ pub struct SinkhornDistance {
 
 impl SinkhornDistance {
     /// Create a new Sinkhorn distance operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         dist1: Tensor,
         dist2: Tensor,
@@ -69,6 +72,9 @@ impl SinkhornDistance {
     }
 
     /// Execute the Sinkhorn distance operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.dist1.device();
 

@@ -21,12 +21,13 @@ pub struct F64ThroughputRatio {
     pub f64_gflops: f64,
     /// Measured f32 GFLOPS.
     pub f32_gflops: f64,
-    /// f32_gflops / f64_gflops — higher means worse f64 relative performance.
+    /// `f32_gflops` / `f64_gflops` — higher means worse f64 relative performance.
     pub ratio: f64,
 }
 
 impl F64ThroughputRatio {
     /// Classify the f64 capability tier based on measured ratio.
+    #[must_use]
     pub fn tier(&self) -> F64Tier {
         match self.ratio {
             r if r <= 2.5 => F64Tier::Native,
@@ -97,6 +98,7 @@ pub async fn probe_f64_throughput_ratio(device: &WgpuDevice) -> Option<F64Throug
 }
 
 /// Read cached f64 throughput ratio.
+#[must_use]
 pub fn cached_f64_ratio(device: &WgpuDevice) -> Option<F64ThroughputRatio> {
     lock_cache(&F64_RATIO_CACHE)
         .get(&adapter_key(device))

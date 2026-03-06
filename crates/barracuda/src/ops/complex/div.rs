@@ -17,6 +17,11 @@ pub struct ComplexDiv {
 
 impl ComplexDiv {
     /// Create complex division operation. Both inputs must have last dim = 2 and same shape.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input_a: Tensor, input_b: Tensor) -> Result<Self> {
         if input_a.shape() != input_b.shape() {
             return Err(BarracudaError::Device(
@@ -118,6 +123,11 @@ impl ComplexDiv {
     }
 
     /// Execute complex division on GPU.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input_a.device();
         let num_elements = self.input_a.len();

@@ -49,14 +49,14 @@ fn test_math_f64_subset() {
 
 #[test]
 fn test_math_f64_auto_detection() {
-    let shader = r#"
+    let shader = r"
             @compute @workgroup_size(256)
             fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                 let a = sqrt_f64(input[id.x]);
                 let b = exp_f64(input[id.x]);
                 output[id.x] = a + b;
             }
-        "#;
+        ";
     let full_shader = ShaderTemplate::with_math_f64_auto(shader);
     // sqrt_f64 is fossil but still in the library — with_math_f64_auto includes it
     assert!(full_shader.contains("fn sqrt_f64"));
@@ -70,12 +70,12 @@ fn test_math_f64_auto_detection() {
 
 #[test]
 fn test_math_f64_auto_no_functions() {
-    let shader = r#"
+    let shader = r"
             @compute @workgroup_size(256)
             fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                 output[id.x] = input[id.x] * 2.0;
             }
-        "#;
+        ";
     let full_shader = ShaderTemplate::with_math_f64_auto(shader);
     assert!(full_shader.contains("output[id.x] = input[id.x] * 2.0"));
     assert!(!full_shader.contains("fn sqrt_f64"));
@@ -83,14 +83,14 @@ fn test_math_f64_auto_no_functions() {
 
 #[test]
 fn test_shader_defines_function() {
-    let shader = r#"
+    let shader = r"
             fn f64_const(x: f64, c: f32) -> f64 {
                 return x - x + f64(c);
             }
-        "#;
+        ";
     assert!(ShaderTemplate::shader_defines_function(shader, "f64_const"));
     assert!(!ShaderTemplate::shader_defines_function(shader, "sqrt_f64"));
-    let shader_space = r#"fn sqrt_f64 (x: f64) -> f64 { return x; }"#;
+    let shader_space = r"fn sqrt_f64 (x: f64) -> f64 { return x; }";
     assert!(ShaderTemplate::shader_defines_function(
         shader_space,
         "sqrt_f64"
@@ -99,26 +99,26 @@ fn test_shader_defines_function() {
 
 #[test]
 fn test_shader_defines_module_var() {
-    let shader_module_scope = r#"
+    let shader_module_scope = r"
 let zero = 0.0;
 fn main() { }
-"#;
+";
     assert!(ShaderTemplate::shader_defines_module_var(
         shader_module_scope,
         "zero"
     ));
-    let shader_local = r#"
+    let shader_local = r"
 fn main() {
     let zero = x - x;
 }
-"#;
+";
     assert!(!ShaderTemplate::shader_defines_module_var(
         shader_local,
         "zero"
     ));
-    let shader_const = r#"
+    let shader_const = r"
 const EPSILON: f64 = 1e-15;
-"#;
+";
     assert!(ShaderTemplate::shader_defines_module_var(
         shader_const,
         "EPSILON"
@@ -129,12 +129,12 @@ const EPSILON: f64 = 1e-15;
 fn test_safe_injects_only_called_functions() {
     // Fossil functions (sqrt_f64) are NOT injected — native sqrt() handles them.
     // Active fallbacks (cbrt_f64) ARE injected when called.
-    let fossil_shader = r#"
+    let fossil_shader = r"
             @compute @workgroup_size(256)
             fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                 output[id.x] = sqrt_f64(input[id.x]);
             }
-        "#;
+        ";
     let fossil_result = ShaderTemplate::with_math_f64_safe(fossil_shader);
     assert!(
         !fossil_result.contains("fn sqrt_f64"),
@@ -145,12 +145,12 @@ fn test_safe_injects_only_called_functions() {
         "no injection means no preamble"
     );
 
-    let active_shader = r#"
+    let active_shader = r"
             @compute @workgroup_size(256)
             fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                 output[id.x] = cbrt_f64(input[id.x]);
             }
-        "#;
+        ";
     let active_result = ShaderTemplate::with_math_f64_safe(active_shader);
     assert!(
         active_result.contains("fn cbrt_f64"),
@@ -162,12 +162,12 @@ fn test_safe_injects_only_called_functions() {
 
 #[test]
 fn test_safe_no_injection_for_native_calls() {
-    let shader = r#"
+    let shader = r"
             @compute @workgroup_size(256)
             fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                 output[id.x] = sqrt(input[id.x]);
             }
-        "#;
+        ";
     let result = ShaderTemplate::with_math_f64_safe(shader);
     assert!(!result.contains("fn f64_const"));
 }
@@ -206,6 +206,7 @@ fn test_sin_cos_taylor_workaround_asin_acos_protected() {
             Workaround::NvkLogF64Crash,
             Workaround::NvkSinCosF64Imprecise,
         ],
+        adapter_key: String::new(),
     };
     let shader = "let a = sin(x); let b = cos(y); let c = asin(z); let d = acos(w);";
     let result = ShaderTemplate::for_driver_profile(shader, true, &nvk_profile);
@@ -234,14 +235,14 @@ fn test_sin_cos_taylor_workaround_asin_acos_protected() {
 #[test]
 fn test_for_driver_auto_applies_fossil_substitution() {
     // for_driver_auto should substitute fossils AND apply exp/log workaround
-    let legacy_shader = r#"
+    let legacy_shader = r"
             @compute @workgroup_size(256)
             fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                 let s = sqrt_f64(input[id.x]);
                 let e = exp(s);
                 output[id.x] = s + e;
             }
-        "#;
+        ";
     let result = ShaderTemplate::for_driver_auto(legacy_shader, true);
     // sqrt_f64 → sqrt (fossil substitution)
     assert!(
@@ -259,7 +260,7 @@ fn test_for_driver_auto_applies_fossil_substitution() {
 
 #[test]
 fn test_safe_partial_definitions_respected() {
-    let shader = r#"
+    let shader = r"
             fn f64_const(x: f64, c: f32) -> f64 {
                 return x - x + f64(c);
             }
@@ -268,7 +269,7 @@ fn test_safe_partial_definitions_respected() {
             fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                 output[id.x] = exp_f64(f64_const(input[id.x], 1.0));
             }
-        "#;
+        ";
     let result = ShaderTemplate::with_math_f64_safe(shader);
     assert_eq!(result.matches("fn f64_const").count(), 1);
     assert!(result.contains("fn exp_f64"));
@@ -276,7 +277,7 @@ fn test_safe_partial_definitions_respected() {
 
 #[test]
 fn test_safe_all_defined_no_injection() {
-    let shader = r#"
+    let shader = r"
             fn f64_const(x: f64, c: f32) -> f64 {
                 return x - x + f64(c);
             }
@@ -285,14 +286,14 @@ fn test_safe_all_defined_no_injection() {
             fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                 output[id.x] = f64_const(input[id.x], 1.0);
             }
-        "#;
+        ";
     let result = ShaderTemplate::with_math_f64_safe(shader);
     assert_eq!(result.matches("fn f64_const").count(), 1);
 }
 
 #[test]
 fn test_driver_workaround_with_partial_definitions() {
-    let shader = r#"
+    let shader = r"
             fn f64_const(x: f64, c: f32) -> f64 {
                 return x - x + f64(c);
             }
@@ -304,7 +305,7 @@ fn test_driver_workaround_with_partial_definitions() {
                 let v = exp(-input[id.x]);
                 output[id.x] = erfc_f64(v);
             }
-        "#;
+        ";
     let result = ShaderTemplate::for_driver_auto(shader, true);
     assert!(result.contains("exp_f64("));
     assert!(result.contains("fn exp_f64"));
@@ -314,12 +315,12 @@ fn test_driver_workaround_with_partial_definitions() {
 
 #[test]
 fn test_driver_workaround_disabled() {
-    let shader = r#"
+    let shader = r"
             @compute @workgroup_size(256)
             fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                 output[id.x] = exp(input[id.x]);
             }
-        "#;
+        ";
     let result = ShaderTemplate::for_driver_auto(shader, false);
     assert!(result.contains("exp("));
     assert!(!result.contains("exp_f64("));
@@ -338,7 +339,7 @@ fn test_precision_df64() {
 
 #[test]
 fn test_downcast_f64_to_f32_elementwise() {
-    let f64_source = r#"
+    let f64_source = r"
 @group(0) @binding(0) var<storage, read> a: array<f64>;
 @group(0) @binding(1) var<storage, read> b: array<f64>;
 @group(0) @binding(2) var<storage, read_write> output: array<f64>;
@@ -351,7 +352,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     if (idx >= arrayLength(&output)) { return; }
     output[idx] = a[idx] + b[idx];
 }
-"#;
+";
     let f32_source = downcast_f64_to_f32(f64_source);
     assert!(f32_source.contains("array<f32>"));
     assert!(!f32_source.contains("array<f64>"));
@@ -361,14 +362,14 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 
 #[test]
 fn test_downcast_f64_to_f32_with_transcendentals() {
-    let f64_source = r#"
+    let f64_source = r"
 @group(0) @binding(0) var<storage, read> input: array<f64>;
 @group(0) @binding(1) var<storage, read_write> output: array<f64>;
 @compute @workgroup_size(256)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     output[gid.x] = exp_f64(input[gid.x]) + sin_f64(input[gid.x]);
 }
-"#;
+";
     let f32_source = downcast_f64_to_f32_with_transcendentals(f64_source);
     assert!(f32_source.contains("array<f32>"));
     assert!(f32_source.contains("exp(input"));
@@ -379,7 +380,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 
 #[test]
 fn test_downcast_preserves_u32_and_structure() {
-    let f64_source = r#"
+    let f64_source = r"
 struct Params { size: u32, _pad1: u32, _pad2: u32, _pad3: u32, }
 @group(0) @binding(0) var<storage, read> input: array<f64>;
 @group(0) @binding(1) var<uniform> params: Params;
@@ -388,7 +389,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     if (gid.x >= params.size) { return; }
     let val: f64 = input[gid.x];
 }
-"#;
+";
     let f32_source = downcast_f64_to_f32(f64_source);
     assert!(f32_source.contains("size: u32"));
     assert!(f32_source.contains("vec3<u32>"));
@@ -405,13 +406,13 @@ fn test_template_renders_df64() {
 
 #[test]
 fn test_downcast_clamps_f64_range_sentinels() {
-    let f64_source = r#"
+    let f64_source = r"
 var max_val: f64 = -1e308;
 var min_val: f64 = 1e308;
 const DBL_MAX: f64 = 1.7976931348623157e+308;
 const NEG_DBL_MAX: f64 = -1.7976931348623157e+308;
 var approx: f64 = -1e300;
-"#;
+";
     let f32_source = downcast_f64_to_f32(f64_source);
     assert!(!f32_source.contains("1e308"), "f64 sentinel survived");
     assert!(!f32_source.contains("1e300"), "f64 sentinel survived");
@@ -421,14 +422,14 @@ var approx: f64 = -1e300;
 
 #[test]
 fn test_downcast_f64_to_df64_types() {
-    let f64_source = r#"
+    let f64_source = r"
 @group(0) @binding(0) var<storage, read> input: array<f64>;
 @group(0) @binding(1) var<storage, read_write> output: array<f64>;
 
 fn process(val: f64) -> f64 {
     return val;
 }
-"#;
+";
     let df64 = downcast_f64_to_df64(f64_source);
     assert!(
         df64.contains("array<vec2<f32>>"),
@@ -444,11 +445,11 @@ fn process(val: f64) -> f64 {
 
 #[test]
 fn test_downcast_f64_to_df64_constructors() {
-    let f64_source = r#"
+    let f64_source = r"
 let zero: f64 = f64(0.0);
 let one: f64 = f64(1.0);
 let half: f64 = f64(0.5);
-"#;
+";
     let df64 = downcast_f64_to_df64(f64_source);
     assert!(
         df64.contains("df64_from_f32(0.0)"),
@@ -470,13 +471,13 @@ let half: f64 = f64(0.5);
 
 #[test]
 fn test_downcast_f64_to_df64_transcendentals() {
-    let f64_source = r#"
+    let f64_source = r"
 let y = exp_f64(x);
 let z = sin_f64(x);
 let w = sqrt_f64(x);
 let v = tanh_f64(x);
 let a = abs_f64(x);
-"#;
+";
     let df64 = downcast_f64_to_df64(f64_source);
     assert!(df64.contains("exp_df64("), "exp_f64 → exp_df64");
     assert!(df64.contains("sin_df64("), "sin_f64 → sin_df64");
@@ -540,20 +541,16 @@ fn test_op_preamble_all_precisions_consistent() {
         Precision::Df64,
     ] {
         let p = prec.op_preamble();
-        assert!(p.contains("fn op_add("), "{:?} missing op_add", prec);
-        assert!(p.contains("fn op_mul("), "{:?} missing op_mul", prec);
-        assert!(p.contains("fn op_zero("), "{:?} missing op_zero", prec);
-        assert!(
-            p.contains("alias Scalar"),
-            "{:?} missing Scalar alias",
-            prec
-        );
+        assert!(p.contains("fn op_add("), "{prec:?} missing op_add");
+        assert!(p.contains("fn op_mul("), "{prec:?} missing op_mul");
+        assert!(p.contains("fn op_zero("), "{prec:?} missing op_zero");
+        assert!(p.contains("alias Scalar"), "{prec:?} missing Scalar alias");
     }
 }
 
 #[test]
 fn test_downcast_f64_to_df64_preserves_u32() {
-    let f64_source = r#"
+    let f64_source = r"
 struct Params { size: u32, }
 @group(0) @binding(0) var<storage, read> input: array<f64>;
 @compute @workgroup_size(256)
@@ -561,7 +558,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let idx = gid.x;
     if (idx >= params.size) { return; }
 }
-"#;
+";
     let df64 = downcast_f64_to_df64(f64_source);
     assert!(df64.contains("size: u32"), "u32 fields preserved");
     assert!(df64.contains("vec3<u32>"), "u32 builtins preserved");
@@ -569,7 +566,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 }
 
 /// A universal shader written with op_* functions — works at ALL precisions.
-const UNIVERSAL_ELEMENTWISE_ADD: &str = r#"
+const UNIVERSAL_ELEMENTWISE_ADD: &str = r"
 @group(0) @binding(0) var<storage, read> a: array<Scalar>;
 @group(0) @binding(1) var<storage, read> b: array<Scalar>;
 @group(0) @binding(2) var<storage, read_write> output: array<Scalar>;
@@ -580,7 +577,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     if (idx >= arrayLength(&output)) { return; }
     output[idx] = op_add(a[idx], b[idx]);
 }
-"#;
+";
 
 /// Prove the universal shader is valid WGSL at f32 precision via naga parse.
 #[cfg(feature = "gpu")]
@@ -615,7 +612,7 @@ fn test_universal_shader_validates_f64() {
 }
 
 /// Prove the universal shader is valid WGSL at DF64 precision via naga parse.
-/// The DF64 path: df64_core + df64_transcendentals + op_preamble + shader.
+/// The DF64 path: `df64_core` + `df64_transcendentals` + `op_preamble` + shader.
 #[cfg(feature = "gpu")]
 #[test]
 fn test_universal_shader_validates_df64() {
@@ -634,8 +631,8 @@ fn test_universal_shader_validates_df64() {
         .expect("DF64 universal shader should validate");
 }
 
-/// Universal shader with more complex math — reduction with op_add.
-const UNIVERSAL_REDUCE_SUM: &str = r#"
+/// Universal shader with more complex math — reduction with `op_add`.
+const UNIVERSAL_REDUCE_SUM: &str = r"
 var<workgroup> wg_buf: array<Scalar, 256>;
 
 @group(0) @binding(0) var<storage, read> input: array<Scalar>;
@@ -666,7 +663,7 @@ fn main(
         output[wid.x] = wg_buf[0];
     }
 }
-"#;
+";
 
 /// Prove the universal reduce shader validates at all 3 main precisions.
 #[cfg(feature = "gpu")]
@@ -750,8 +747,8 @@ fn test_op_preamble_pack_unpack_all_precisions() {
         Precision::Df64,
     ] {
         let p = prec.op_preamble();
-        assert!(p.contains("fn op_pack("), "{:?} missing op_pack", prec);
-        assert!(p.contains("fn op_unpack("), "{:?} missing op_unpack", prec);
+        assert!(p.contains("fn op_pack("), "{prec:?} missing op_pack");
+        assert!(p.contains("fn op_unpack("), "{prec:?} missing op_unpack");
     }
 }
 
@@ -801,7 +798,7 @@ fn test_clamp_f64_range_handles_all_patterns() {
 // ══════════════════════════════════════════════════════════════════════
 
 /// Universal shader with comparison ops validates at all precisions.
-const UNIVERSAL_COMPARISON: &str = r#"
+const UNIVERSAL_COMPARISON: &str = r"
 @group(0) @binding(0) var<storage, read> a: array<Scalar>;
 @group(0) @binding(1) var<storage, read> b: array<Scalar>;
 @group(0) @binding(2) var<storage, read_write> output: array<Scalar>;
@@ -816,7 +813,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         output[idx] = b[idx];
     }
 }
-"#;
+";
 
 #[cfg(feature = "gpu")]
 #[test]
@@ -849,7 +846,7 @@ fn test_e2e_comparison_shader_all_precisions() {
 }
 
 /// Universal shader with pack/unpack validates at DF64.
-const UNIVERSAL_PACK_UNPACK: &str = r#"
+const UNIVERSAL_PACK_UNPACK: &str = r"
 @group(0) @binding(0) var<storage, read> input: array<StorageType>;
 @group(0) @binding(1) var<storage, read_write> output: array<StorageType>;
 
@@ -861,7 +858,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let result = op_add(val, op_one());
     output[idx] = op_pack(result);
 }
-"#;
+";
 
 #[cfg(feature = "gpu")]
 #[test]
@@ -883,7 +880,7 @@ fn test_e2e_pack_unpack_df64() {
 /// E2E: f64 canonical shader with transcendentals downcasts to f32 correctly.
 #[test]
 fn test_e2e_transcendental_downcast_f32() {
-    let f64_shader = r#"
+    let f64_shader = r"
 @group(0) @binding(0) var<storage, read> input: array<f64>;
 @group(0) @binding(1) var<storage, read_write> output: array<f64>;
 
@@ -897,7 +894,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     if (idx >= arrayLength(&output)) { return; }
     output[idx] = activate(input[idx]);
 }
-"#;
+";
     let f32_source = downcast_f64_to_f32_with_transcendentals(f64_shader);
     assert!(f32_source.contains("array<f32>"), "storage downcast");
     assert!(f32_source.contains("tanh("), "tanh_f64 → tanh");

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! 1D gradient computation: df/dx
 
-use super::super::fd_common::{create_staging_buffer, FdPipelineBuilder, FD_WORKGROUP_SIZE};
+use super::super::fd_common::{FD_WORKGROUP_SIZE, FdPipelineBuilder, create_staging_buffer};
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
@@ -18,6 +18,11 @@ pub struct Gradient1D {
 
 impl Gradient1D {
     /// Create a new 1D gradient operator
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>, n: usize, dx: f64) -> Result<Self> {
         if n == 0 {
             return Err(BarracudaError::invalid_op(
@@ -41,6 +46,11 @@ impl Gradient1D {
     }
 
     /// Compute gradient df/dx
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub async fn compute(&self, input: &[f64]) -> Result<Vec<f64>> {
         if input.len() != self.n {
             return Err(BarracudaError::InvalidInput {

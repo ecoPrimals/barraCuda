@@ -4,22 +4,24 @@
 //! M = diag(A) → z = M⁻¹r = r / diag(A). Typically halves iteration count.
 
 use super::{CgGpu, CgGpuResult};
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use crate::linalg::sparse::csr::CsrMatrix;
 use crate::linalg::sparse::gpu_helpers::{
-    cg_dispatch_pass, CgPipelineSet, SparseBindGroupLayouts, SparseBuffers,
+    CgPipelineSet, SparseBindGroupLayouts, SparseBuffers, cg_dispatch_pass,
 };
 use std::sync::Arc;
 
 impl CgGpu {
     /// Solve Ax = b using Preconditioned Conjugate Gradient (GPU-resident)
-    ///
     /// This version uses Jacobi (diagonal) preconditioning for faster convergence.
     /// M = diag(A) → z = M⁻¹r = r / diag(A)
-    ///
     /// Preconditioning typically halves the iteration count for poorly-conditioned matrices.
+    /// # Errors
+    /// Returns [`Err`] if the matrix is not square, if `b.len() != n`, or if
+    /// buffer allocation, GPU dispatch, or readback fails (e.g. device lost or
+    /// out of memory).
     pub fn solve_preconditioned(
         device: Arc<WgpuDevice>,
         a: &CsrMatrix,

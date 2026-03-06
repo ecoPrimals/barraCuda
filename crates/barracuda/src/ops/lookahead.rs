@@ -29,13 +29,15 @@ pub struct Lookahead {
 
 impl Lookahead {
     /// Create a new Lookahead optimizer
-    ///
     /// ## Parameters
-    ///
     /// - `fast_weights`: Current fast weights (Tensor)
-    /// - `slow_weights`: Slow weights (Tensor, same shape as fast_weights)
+    /// - `slow_weights`: Slow weights (Tensor, same shape as `fast_weights`)
     /// - `k`: Sync frequency (update slow weights every k steps)
     /// - `alpha`: Slow weights step size (interpolation factor)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
+    /// Also returns [`Err`] if shape validation fails.
     pub fn new(fast_weights: Tensor, slow_weights: Tensor, k: usize, alpha: f32) -> Result<Self> {
         if fast_weights.len() != slow_weights.len() {
             return Err(BarracudaError::Device(format!(
@@ -66,9 +68,11 @@ impl Lookahead {
     }
 
     /// Execute one Lookahead step
-    ///
     /// Updates slow weights every k steps, otherwise returns fast weights.
     /// Returns the weights to use for the current step.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(mut self) -> Result<Tensor> {
         self.state.k_counter += 1;
 
@@ -97,6 +101,7 @@ impl Lookahead {
     }
 
     /// Get current state (for checkpointing)
+    #[must_use]
     pub fn state(&self) -> &LookaheadState {
         &self.state
     }

@@ -33,6 +33,7 @@
 /// // First zero of J₀ is at x ≈ 2.4048
 /// assert!(bessel_j0(2.4048).abs() < 0.001);
 /// ```
+#[must_use]
 pub fn bessel_j0(x: f64) -> f64 {
     // Special case: J₀(0) = 1 exactly
     if x == 0.0 {
@@ -87,6 +88,7 @@ pub fn bessel_j0(x: f64) -> f64 {
 /// // J₁(1) ≈ 0.4400505857
 /// assert!((bessel_j1(1.0) - 0.4400505857).abs() < 1e-7);
 /// ```
+#[must_use]
 pub fn bessel_j1(x: f64) -> f64 {
     let ax = x.abs();
 
@@ -113,11 +115,7 @@ pub fn bessel_j1(x: f64) -> f64 {
                 + y * (0.8449199096e-5 + y * (-0.88228987e-6 + y * 0.105787412e-6)));
         let result =
             (std::f64::consts::FRAC_2_PI / ax).sqrt() * (xx.cos() * ans1 - z * xx.sin() * ans2);
-        if x < 0.0 {
-            -result
-        } else {
-            result
-        }
+        if x < 0.0 { -result } else { result }
     }
 }
 
@@ -141,6 +139,7 @@ pub fn bessel_j1(x: f64) -> f64 {
 /// // I₀(1) ≈ 1.2660658778
 /// assert!((bessel_i0(1.0) - 1.2660658778).abs() < 1e-7);
 /// ```
+#[must_use]
 pub fn bessel_i0(x: f64) -> f64 {
     // Special case: I₀(0) = 1 exactly
     if x == 0.0 {
@@ -190,6 +189,7 @@ pub fn bessel_i0(x: f64) -> f64 {
 /// // K₀(x) decays exponentially
 /// assert!(bessel_k0(5.0) < 0.01);
 /// ```
+#[must_use]
 pub fn bessel_k0(x: f64) -> f64 {
     if x <= 0.0 {
         return f64::INFINITY;
@@ -216,21 +216,25 @@ pub fn bessel_k0(x: f64) -> f64 {
 }
 
 /// Compute J₀ for a batch of values (CPU path).
+#[must_use]
 pub fn bessel_j0_batch(x: &[f64]) -> Vec<f64> {
     x.iter().map(|&v| bessel_j0(v)).collect()
 }
 
 /// Compute J₁ for a batch of values (CPU path).
+#[must_use]
 pub fn bessel_j1_batch(x: &[f64]) -> Vec<f64> {
     x.iter().map(|&v| bessel_j1(v)).collect()
 }
 
 /// Compute I₀ for a batch of values (CPU path).
+#[must_use]
 pub fn bessel_i0_batch(x: &[f64]) -> Vec<f64> {
     x.iter().map(|&v| bessel_i0(v)).collect()
 }
 
 /// Compute K₀ for a batch of values (CPU path).
+#[must_use]
 pub fn bessel_k0_batch(x: &[f64]) -> Vec<f64> {
     x.iter().map(|&v| bessel_k0(v)).collect()
 }

@@ -18,7 +18,7 @@
 //! ```
 //!
 //! Without this helper, every use site duplicates 12+ lines of boilerplate:
-//! two bind groups, two dispatches, one copy, one map_async, one poll.
+//! two bind groups, two dispatches, one copy, one `map_async`, one poll.
 //! With it:
 //!
 //! ```rust,ignore
@@ -43,7 +43,7 @@ const WORKGROUP_SIZE: u32 = 256;
 /// Two-pass f64 reduction pipeline returning a single scalar.
 ///
 /// Allocated once; call [`sum_f64`], [`max_f64`], or [`min_f64`] as many times
-/// as needed.  All intermediate buffers and the MAP_READ staging buffer are
+/// as needed.  All intermediate buffers and the `MAP_READ` staging buffer are
 /// reused across calls — no per-call allocation.
 ///
 /// Supports arrays up to `n` elements (fixed at construction time).  If you need
@@ -67,6 +67,8 @@ impl ReduceScalarPipeline {
     const SHADER: &'static str = include_str!("../shaders/reduce/sum_reduce_f64.wgsl");
 
     /// Build a reduction pipeline for arrays of up to `n` f64 elements.
+    /// # Errors
+    /// Returns [`Err`] if shader compilation fails or the device is lost.
     pub fn new(device: Arc<WgpuDevice>, n: usize) -> Result<Self> {
         let n_u32 = n as u32;
         let n_partial = n_u32.div_ceil(WORKGROUP_SIZE) as usize;
@@ -220,30 +222,35 @@ impl ReduceScalarPipeline {
     }
 
     /// Compute `Σ input[0..n]` in f64 precision.
-    ///
     /// Dispatches two GPU passes (N → partials → 1 scalar) and reads back
     /// exactly 8 bytes.  `input` must be a STORAGE buffer of at least `n × 8`
     /// bytes with `COPY_SRC` usage if chained after another kernel, or `STORAGE`
     /// usage if written directly.
+    /// # Errors
+    /// Returns [`Err`] if GPU buffer mapping or readback fails (e.g., device lost).
     pub fn sum_f64(&self, input: &wgpu::Buffer) -> Result<f64> {
         self.reduce(input, "sum_reduce_f64")
     }
 
     /// Compute `max input[0..n]` in f64 precision.
+    /// # Errors
+    /// Returns [`Err`] if GPU buffer mapping or readback fails (e.g., device lost).
     pub fn max_f64(&self, input: &wgpu::Buffer) -> Result<f64> {
         self.reduce(input, "max_reduce_f64")
     }
 
     /// Compute `min input[0..n]` in f64 precision.
+    /// # Errors
+    /// Returns [`Err`] if GPU buffer mapping or readback fails (e.g., device lost).
     pub fn min_f64(&self, input: &wgpu::Buffer) -> Result<f64> {
         self.reduce(input, "min_reduce_f64")
     }
 
     /// Return the GPU-side scalar output buffer (for pipeline chaining).
-    ///
     /// After the most recent [`sum_f64`] / [`max_f64`] / [`min_f64`] call, this
     /// buffer contains the result as a single f64.  Pass it to subsequent GPU
     /// kernels to avoid any CPU readback at all.
+    #[must_use]
     pub fn scalar_buffer(&self) -> &wgpu::Buffer {
         &self.scalar_output
     }

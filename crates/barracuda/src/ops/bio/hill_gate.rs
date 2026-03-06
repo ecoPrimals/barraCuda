@@ -2,7 +2,7 @@
 
 //! Hill Gate — Two-input Hill AND gate (f64 pipeline).
 //!
-//! Computes f(a, b) = vmax × H(a, K_a, n_a) × H(b, K_b, n_b) where
+//! Computes f(a, b) = vmax × H(a, `K_a`, `n_a`) × H(b, `K_b`, `n_b`) where
 //! H(x, K, n) = x^n / (K^n + x^n) is the Hill function. Used for regulatory
 //! network signal integration.
 //!
@@ -12,8 +12,8 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 
 /// WGSL source for f32 Hill gate (paired or grid mode).
 pub const WGSL_HILL_GATE: &str = include_str!("../../shaders/bio/hill_gate.wgsl");
@@ -33,13 +33,13 @@ pub struct HillGateParams {
     pub mode: u32,
     /// Padding for alignment
     pub _pad: u32,
-    /// Hill coefficient K_a for input A
+    /// Hill coefficient `K_a` for input A
     pub k_a: f64,
-    /// Hill coefficient K_b for input B
+    /// Hill coefficient `K_b` for input B
     pub k_b: f64,
-    /// Precomputed n_a^exponent
+    /// Precomputed `n_a^exponent`
     pub n_a_exp: f64,
-    /// Precomputed n_b^exponent
+    /// Precomputed `n_b^exponent`
     pub n_b_exp: f64,
     /// Maximum output value
     pub vmax: f64,
@@ -56,6 +56,7 @@ pub struct HillGateGpu {
 
 impl HillGateGpu {
     /// Create new Hill gate GPU kernel.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 
@@ -130,7 +131,7 @@ impl HillGateGpu {
     }
 
     /// Compute Hill gate. Mode 0: paired (output[i] = f(a[i], b[i])).
-    /// Mode 1: grid (output[ix*n_b + iy] = f(a[ix], b[iy])).
+    /// Mode 1: grid (output[ix*`n_b` + iy] = f(a[ix], b[iy])).
     pub fn dispatch(
         &self,
         input_a: &wgpu::Buffer,

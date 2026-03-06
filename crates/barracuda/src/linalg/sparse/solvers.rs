@@ -6,7 +6,7 @@
 //! # Methods
 //!
 //! - **CG** (Conjugate Gradient): Best for symmetric positive definite (SPD)
-//! - **BiCGSTAB**: For general non-symmetric systems
+//! - **`BiCGSTAB`**: For general non-symmetric systems
 //! - **Jacobi**: Simple iteration, good for diagonally dominant systems
 //! - **Gauss-Seidel**: Faster than Jacobi for many problems
 //!
@@ -50,18 +50,21 @@ impl Default for SolverConfig {
 
 impl SolverConfig {
     /// Create with custom tolerance
+    #[must_use]
     pub fn with_tolerance(mut self, tol: f64) -> Self {
         self.tolerance = tol;
         self
     }
 
     /// Create with custom max iterations
+    #[must_use]
     pub fn with_max_iterations(mut self, max: usize) -> Self {
         self.max_iterations = max;
         self
     }
 
     /// Disable preconditioning
+    #[must_use]
     pub fn no_preconditioner(mut self) -> Self {
         self.use_preconditioner = false;
         self
@@ -83,6 +86,7 @@ pub struct SolverResult {
 
 impl SolverResult {
     /// Check if solve was successful
+    #[must_use]
     pub fn is_ok(&self) -> bool {
         self.converged
     }
@@ -148,6 +152,11 @@ fn apply_preconditioner(diag: &[f64], r: &[f64], z: &mut [f64]) {
 ///
 /// assert!(result.converged);
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if the matrix is not square, if `b.len() != n`, or if
+/// [`matvec`](super::csr::CsrMatrix::matvec) fails during iteration.
 pub fn cg_solve(a: &CsrMatrix, b: &[f64], tol: f64, max_iter: usize) -> Result<SolverResult> {
     let config = SolverConfig::default()
         .with_tolerance(tol)
@@ -156,6 +165,11 @@ pub fn cg_solve(a: &CsrMatrix, b: &[f64], tol: f64, max_iter: usize) -> Result<S
 }
 
 /// Conjugate Gradient with configuration
+///
+/// # Errors
+///
+/// Returns [`Err`] if the matrix is not square, if `b.len() != n`, or if [`matvec`](super::csr::CsrMatrix::matvec)
+/// fails during iteration.
 pub fn cg_solve_with_config(
     a: &CsrMatrix,
     b: &[f64],
@@ -264,7 +278,7 @@ pub fn cg_solve_with_config(
     })
 }
 
-/// BiCGSTAB solver for general non-symmetric matrices
+/// `BiCGSTAB` solver for general non-symmetric matrices
 ///
 /// Solves Ax = b where A is any square matrix.
 ///
@@ -292,6 +306,11 @@ pub fn cg_solve_with_config(
 ///
 /// assert!(result.converged);
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if the matrix is not square, if `b.len() != n`, if [`matvec`](super::csr::CsrMatrix::matvec)
+/// fails, or if `BiCGSTAB` breaks down (rho = 0, `r_hat·v` = 0, or omega = 0).
 pub fn bicgstab_solve(a: &CsrMatrix, b: &[f64], tol: f64, max_iter: usize) -> Result<SolverResult> {
     let config = SolverConfig::default()
         .with_tolerance(tol)
@@ -299,7 +318,12 @@ pub fn bicgstab_solve(a: &CsrMatrix, b: &[f64], tol: f64, max_iter: usize) -> Re
     bicgstab_solve_with_config(a, b, &config)
 }
 
-/// BiCGSTAB with configuration
+/// `BiCGSTAB` with configuration
+///
+/// # Errors
+///
+/// Returns [`Err`] if the matrix is not square, if `b.len() != n`, if [`matvec`](super::csr::CsrMatrix::matvec)
+/// fails, or if `BiCGSTAB` breaks down (rho = 0, `r_hat·v` = 0, or omega = 0).
 pub fn bicgstab_solve_with_config(
     a: &CsrMatrix,
     b: &[f64],
@@ -467,6 +491,11 @@ pub fn bicgstab_solve_with_config(
 /// * `b` - Right-hand side vector
 /// * `tol` - Convergence tolerance
 /// * `max_iter` - Maximum iterations
+///
+/// # Errors
+///
+/// Returns [`Err`] if the matrix is not square or `b.len() != n` (dimension mismatch), if any
+/// diagonal element is zero, or if [`matvec`](super::csr::CsrMatrix::matvec) fails during iteration.
 pub fn jacobi_solve(a: &CsrMatrix, b: &[f64], tol: f64, max_iter: usize) -> Result<SolverResult> {
     let n = a.n_rows;
     if a.n_cols != n || b.len() != n {

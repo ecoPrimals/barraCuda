@@ -24,6 +24,11 @@ pub struct Unfold {
 
 impl Unfold {
     /// Create a new unfold operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         input: Tensor,
         kernel_size: (usize, usize),
@@ -60,6 +65,9 @@ impl Unfold {
     }
 
     /// Execute the unfold operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -140,7 +148,7 @@ impl Unfold {
             .storage_read(1, input_buffer)
             .storage_rw(2, &output_buffer)
             .dispatch(workgroups_x, workgroups_y, workgroups_z)
-            .submit();
+            .submit()?;
 
         // Return tensor without reading back (zero-copy)
         Ok(Tensor::from_buffer(

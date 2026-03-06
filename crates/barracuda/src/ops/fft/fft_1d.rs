@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! 1D Fast Fourier Transform Operation
 //!
-//! **Evolution**: Adapted from FheNtt (80% Rust structure reuse!)
+//! **Evolution**: Adapted from `FheNtt` (80% Rust structure reuse!)
 //! **Performance**: ~10x faster than NTT (native float vs U64 emulation)
 //! **CRITICAL**: Unblocks PPPM, structure factors, all wave physics
 
@@ -20,16 +20,14 @@ pub struct Fft1D {
 
 impl Fft1D {
     /// Create a new 1D FFT operation
-    ///
     /// ## Parameters
-    ///
     /// - `input`: Complex tensor (shape [..., N, 2] where last dim is (real, imag))
     /// - `degree`: FFT size N (must be power of 2)
-    ///
     /// ## Constraints
-    ///
     /// - N must be a power of 2 (for Cooley-Tukey radix-2 FFT)
     /// - Input must have last dimension = 2 (complex representation)
+    /// # Errors
+    /// Returns [`Err`] if input last dimension is not 2, or degree is not a power of 2.
     pub fn new(input: Tensor, degree: u32) -> Result<Self> {
         // Validate input
         let shape = input.shape();
@@ -73,20 +71,18 @@ impl Fft1D {
     }
 
     /// Execute FFT transformation
-    ///
     /// Returns a new tensor containing the frequency-domain representation.
-    ///
     /// ## Algorithm
-    ///
     /// 1. Bit-reversal permutation (preprocessing)
     /// 2. log₂(N) butterfly stages (Cooley-Tukey FFT)
     /// 3. Each stage processes N/2 butterflies in parallel
-    ///
     /// ## Complexity
-    ///
     /// - Time: O(N log N)
     /// - Space: O(N) temporary buffer
     /// - GPU parallelism: N/2 threads per stage
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 
@@ -150,7 +146,7 @@ impl Fft1D {
             .storage_read(2, &twiddle_buffer)
             .uniform(3, &params_buffer)
             .dispatch_1d(self.degree)
-            .submit();
+            .submit()?;
 
         // ============================================================
         // Pass 2-N: Butterfly stages (log₂(N) stages)
@@ -175,7 +171,7 @@ impl Fft1D {
                 .storage_read(2, &twiddle_buffer)
                 .uniform(3, &stage_params_buffer)
                 .dispatch_1d(self.degree / 2)
-                .submit();
+                .submit()?;
 
             // Ping-pong buffers for next stage
             std::mem::swap(&mut current_input, &mut current_output);

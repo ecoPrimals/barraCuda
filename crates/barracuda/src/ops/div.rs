@@ -26,6 +26,8 @@ pub struct Div {
 
 impl Div {
     /// Create a division operation. Shapes must match.
+    /// # Errors
+    /// Returns [`Err`] if lhs and rhs shapes differ.
     pub fn new(lhs: Tensor, rhs: Tensor) -> Result<Self> {
         if lhs.shape() != rhs.shape() {
             return Err(BarracudaError::shape_mismatch(
@@ -41,6 +43,8 @@ impl Div {
     }
 
     /// Execute element-wise division on GPU.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.lhs.device();
         let size = self.lhs.len();
@@ -155,6 +159,8 @@ impl Div {
 
 impl Tensor {
     /// Divide by another tensor element-wise. Shapes must match.
+    /// # Errors
+    /// Returns [`Err`] if shapes differ, buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn div(&self, other: &Tensor) -> Result<Self> {
         Div::new(self.clone(), other.clone())?.execute()
     }
@@ -269,10 +275,7 @@ mod tests {
         for (i, (&gpu, &cpu)) in gpu_result.iter().zip(cpu_result.iter()).enumerate() {
             assert!(
                 (gpu - cpu).abs() < 1e-6,
-                "Error at {}: GPU={}, CPU={}",
-                i,
-                gpu,
-                cpu
+                "Error at {i}: GPU={gpu}, CPU={cpu}"
             );
         }
     }

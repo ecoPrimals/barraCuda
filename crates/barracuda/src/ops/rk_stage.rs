@@ -24,6 +24,7 @@ use std::sync::Arc;
 /// WGSL kernel for GPU-parallel multi-system RK4 integration (f32).
 ///
 /// For f64 structured ODE batches, see [`BatchedOdeRK4F64`].
+#[must_use]
 pub fn wgsl_rk4_parallel() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
@@ -74,10 +75,11 @@ pub type OdeFunction = Box<dyn Fn(f64, &[f64]) -> Vec<f64> + Send + Sync>;
 
 impl RkIntegrator {
     /// Create a new RK integrator backed by the given GPU device.
-    ///
     /// The device is stored for future GPU-accelerated linear combination
     /// kernels (stage preparation, error estimation) when state dimension
     /// is large enough to amortize dispatch overhead.
+    /// # Errors
+    /// Returns [`Err`] if device initialization fails.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -89,7 +91,6 @@ impl RkIntegrator {
     }
 
     /// Integrate ODE system using RK45 (Dormand-Prince) with adaptive stepping
-    ///
     /// # Arguments
     /// * `f` - ODE function: dy/dt = f(t, y)
     /// * `t0` - Initial time
@@ -97,9 +98,10 @@ impl RkIntegrator {
     /// * `t_end` - Final time
     /// * `h_init` - Initial step size
     /// * `tol` - Error tolerance for adaptive stepping
-    ///
     /// # Returns
     /// (times, states) - Vectors of time points and corresponding states
+    /// # Errors
+    /// Returns [`Err`] if state vector is empty.
     pub fn integrate_adaptive(
         &self,
         f: &OdeFunction,
@@ -120,6 +122,8 @@ impl RkIntegrator {
     }
 
     /// Fixed-step RK4 integration (simpler, no error estimation)
+    /// # Errors
+    /// Returns [`Err`] if state vector is empty.
     pub fn integrate_fixed(
         &self,
         f: &OdeFunction,
@@ -351,9 +355,7 @@ mod tests {
 
         assert!(
             (final_y - expected).abs() < 1e-4,
-            "y(2) = {}, expected {}",
-            final_y,
-            expected
+            "y(2) = {final_y}, expected {expected}"
         );
         assert!(*times.last().unwrap() >= 2.0 - 1e-10);
     }
@@ -376,18 +378,13 @@ mod tests {
         let final_x = states.last().unwrap()[0];
         assert!(
             (final_x + 1.0).abs() < 0.01,
-            "x(π) = {}, expected -1",
-            final_x
+            "x(π) = {final_x}, expected -1"
         );
 
         // Check conservation: x² + (x')² = 1
         for state in &states {
             let energy = state[0].powi(2) + state[1].powi(2);
-            assert!(
-                (energy - 1.0).abs() < 0.01,
-                "Energy = {}, expected 1",
-                energy
-            );
+            assert!((energy - 1.0).abs() < 0.01, "Energy = {energy}, expected 1");
         }
 
         assert!(*times.last().unwrap() >= std::f64::consts::PI - 0.01);

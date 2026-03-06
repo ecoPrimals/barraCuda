@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! ReLU — GPU-resident, pipeline-cached, bind-group-cached, batchable
+//! `ReLU` — GPU-resident, pipeline-cached, bind-group-cached, batchable
 //!
-//! f64 canonical — f32 derived via downcast_f64_to_f32 when needed.
+//! f64 canonical — f32 derived via `downcast_f64_to_f32` when needed.
 //!
 //! Deep Debt Principles:
 //! - Zero hardcoding: Capability-based workgroup dispatch
-//! - Batchable: routes through TensorContext::record_operation()
+//! - Batchable: routes through `TensorContext::record_operation()`
 //! - Zero-copy output: buffer pool, no GPU→CPU→GPU round-trip
-//! - Pipeline cached: GLOBAL_CACHE eliminates recompilation overhead
-//! - Bind-group cached: get_or_create_bind_group() reuses BG for same tensor pair
+//! - Pipeline cached: `GLOBAL_CACHE` eliminates recompilation overhead
+//! - Bind-group cached: `get_or_create_bind_group()` reuses BG for same tensor pair
 
 /// f64 is the canonical source — math is universal, precision is silicon.
 const SHADER_F64: &str = include_str!("../shaders/activation/relu_f64.wgsl");
@@ -22,13 +22,14 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// ReLU: `max(0, x)`
+/// `ReLU`: `max(0, x)`
 pub struct ReLU {
     input: Tensor,
 }
 
 impl ReLU {
-    /// Creates a ReLU operation for the given input tensor.
+    /// Creates a `ReLU` operation for the given input tensor.
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -37,11 +38,16 @@ impl ReLU {
         &SHADER_F32
     }
 
-    /// Execute ReLU.
+    /// Execute `ReLU`.
     ///
     /// - Output stays GPU-resident (no readback).
     /// - Pipeline and bind group compiled/built once and cached globally.
     /// - Dispatch batched when inside `TensorSession`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.len();
@@ -92,7 +98,12 @@ impl ReLU {
 }
 
 impl Tensor {
-    /// Compute ReLU element-wise (GPU-resident, pipeline-cached, batchable).
+    /// Compute `ReLU` element-wise (GPU-resident, pipeline-cached, batchable).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn relu(self) -> Result<Self> {
         ReLU::new(self).execute()
     }

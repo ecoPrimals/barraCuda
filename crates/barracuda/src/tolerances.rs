@@ -224,7 +224,7 @@ pub const PHYSICS_LYAPUNOV: Tolerance = Tolerance {
 // diversity tolerances (wetSpring cross-spring)
 // ═══════════════════════════════════════════════════════════════════
 
-/// Shannon diversity index H' = -Σ p_i ln(p_i).
+/// Shannon diversity index H' = -Σ `p_i` `ln(p_i)`.
 pub const BIO_DIVERSITY_SHANNON: Tolerance = Tolerance {
     name: "bio_diversity_shannon",
     abs_tol: 1e-8,
@@ -232,7 +232,7 @@ pub const BIO_DIVERSITY_SHANNON: Tolerance = Tolerance {
     justification: "log accumulation over S species; well-conditioned for p_i > 0",
 };
 
-/// Simpson diversity index 1 - Σ p_i².
+/// Simpson diversity index 1 - Σ `p_i²`.
 pub const BIO_DIVERSITY_SIMPSON: Tolerance = Tolerance {
     name: "bio_diversity_simpson",
     abs_tol: 1e-10,
@@ -240,13 +240,128 @@ pub const BIO_DIVERSITY_SIMPSON: Tolerance = Tolerance {
     justification: "sum-of-squares; exact integer arithmetic when from counts",
 };
 
-/// Phylogenetic distance metrics (UniFrac, patristic).
+/// Phylogenetic distance metrics (`UniFrac`, patristic).
 pub const BIO_PHYLOGENETIC: Tolerance = Tolerance {
     name: "bio_phylogenetic",
     abs_tol: 1e-6,
     rel_tol: 1e-4,
     justification: "branch-length accumulation over tree; float rounding per edge",
 };
+
+// ═══════════════════════════════════════════════════════════════════
+// Tiered tolerance architecture (absorbed from groundSpring V74)
+//
+// 13 tiers from strictest (machine precision) to loosest (equilibrium
+// convergence).  Each tier has a semantic name and documented purpose.
+// Springs select the tier that matches their physics, not an ad-hoc number.
+// ═══════════════════════════════════════════════════════════════════
+
+/// Deterministic operations: bit-exact or rounding error only.
+pub const DETERMINISM: Tolerance = Tolerance {
+    name: "tol::DETERMINISM",
+    abs_tol: 0.0,
+    rel_tol: f64::EPSILON,
+    justification: "pure data movement or integer arithmetic; no floating-point accumulation",
+};
+
+/// Machine precision: single f64 operation.
+pub const MACHINE: Tolerance = Tolerance {
+    name: "tol::MACHINE",
+    abs_tol: 1e-15,
+    rel_tol: 1e-15,
+    justification: "one f64 multiply/add; unit roundoff ~1.1e-16",
+};
+
+/// Accumulation: O(sqrt(n)) rounding from n f64 additions.
+pub const ACCUMULATION: Tolerance = Tolerance {
+    name: "tol::ACCUMULATION",
+    abs_tol: 1e-12,
+    rel_tol: 1e-12,
+    justification: "sum/dot-product of ~10^6 terms; error ~sqrt(n)·eps",
+};
+
+/// Transcendental: exp, log, sin, cos minimax polynomials.
+pub const TRANSCENDENTAL: Tolerance = Tolerance {
+    name: "tol::TRANSCENDENTAL",
+    abs_tol: 1e-10,
+    rel_tol: 1e-10,
+    justification: "range-reduced minimax with ~12 correct digits",
+};
+
+/// Iterative solver: CG, `BiCGSTAB` convergence criterion.
+pub const ITERATIVE: Tolerance = Tolerance {
+    name: "tol::ITERATIVE",
+    abs_tol: 1e-8,
+    rel_tol: 1e-8,
+    justification: "iterative solver residual; problem-dependent conditioning",
+};
+
+/// Statistical: variance, correlation, bootstrap estimation.
+pub const STATISTICAL: Tolerance = Tolerance {
+    name: "tol::STATISTICAL",
+    abs_tol: 1e-6,
+    rel_tol: 1e-4,
+    justification: "finite-sample statistics; dominated by sampling error not arithmetic",
+};
+
+/// Stochastic: PRNG-dependent quantities (Monte Carlo averages).
+pub const STOCHASTIC: Tolerance = Tolerance {
+    name: "tol::STOCHASTIC",
+    abs_tol: 1e-3,
+    rel_tol: 1e-2,
+    justification: "Monte Carlo; error ~1/sqrt(N_samples); PRNG seed sensitive",
+};
+
+/// Equilibrium: convergence of SCF/MD thermalization.
+pub const EQUILIBRIUM: Tolerance = Tolerance {
+    name: "tol::EQUILIBRIUM",
+    abs_tol: 1.0,
+    rel_tol: 1e-2,
+    justification: "thermodynamic equilibrium; fluctuations dominate",
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// Epsilon guards (absorbed from groundSpring V74)
+//
+// Named constants for division/log/sqrt guards that prevent
+// catastrophic cancellation or division-by-zero.  Use these instead
+// of ad-hoc "1e-15" or "1e-10" literals scattered through code.
+// ═══════════════════════════════════════════════════════════════════
+
+/// Epsilon guard constants for safe arithmetic.
+pub mod eps {
+    /// Minimum denominator for safe division.
+    pub const SAFE_DIV: f64 = 1e-15;
+
+    /// Floor for SSA (stochastic simulation) propensity sums.
+    pub const SSA_FLOOR: f64 = 1e-30;
+
+    /// Underflow guard for `exp()` arguments.
+    pub const UNDERFLOW: f64 = -700.0;
+
+    /// Overflow guard for `exp()` arguments.
+    pub const OVERFLOW: f64 = 700.0;
+
+    /// Guard for `log()` arguments (must be > 0).
+    pub const LOG_FLOOR: f64 = 1e-300;
+
+    /// Guard for `sqrt()` arguments (must be >= 0).
+    pub const SQRT_FLOOR: f64 = 0.0;
+
+    /// Guard for density values (must be non-negative).
+    pub const DENSITY_FLOOR: f64 = 1e-20;
+
+    /// Guard for probability values (must be in [0, 1]).
+    pub const PROB_FLOOR: f64 = 1e-15;
+
+    /// Overflow-safe midpoint: `(a + b) / 2` without overflow.
+    ///
+    /// Uses `a + (b - a) / 2` which is safe even when `a + b` overflows.
+    #[must_use]
+    pub fn midpoint(a: f64, b: f64) -> f64 {
+        a + (b - a) * 0.5
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -281,6 +396,33 @@ mod tests {
     }
 
     #[test]
+    fn tiered_tolerances_ordered() {
+        const { assert!(DETERMINISM.abs_tol <= MACHINE.abs_tol) };
+        const { assert!(MACHINE.abs_tol <= ACCUMULATION.abs_tol) };
+        const { assert!(ACCUMULATION.abs_tol <= TRANSCENDENTAL.abs_tol) };
+        const { assert!(TRANSCENDENTAL.abs_tol <= ITERATIVE.abs_tol) };
+        const { assert!(ITERATIVE.abs_tol <= STATISTICAL.abs_tol) };
+        const { assert!(STATISTICAL.abs_tol <= STOCHASTIC.abs_tol) };
+        const { assert!(STOCHASTIC.abs_tol <= EQUILIBRIUM.abs_tol) };
+    }
+
+    #[test]
+    fn eps_midpoint_safe() {
+        assert_eq!(eps::midpoint(0.0, 10.0), 5.0);
+        assert_eq!(eps::midpoint(-1.0, 1.0), 0.0);
+        let large = f64::MAX * 0.5;
+        let result = eps::midpoint(large, large);
+        assert!(result.is_finite());
+    }
+
+    #[test]
+    fn eps_guards_positive() {
+        const { assert!(eps::SAFE_DIV > 0.0) };
+        const { assert!(eps::LOG_FLOOR > 0.0) };
+        const { assert!(eps::PROB_FLOOR > 0.0) };
+    }
+
+    #[test]
     fn tolerances_have_finite_values() {
         let tols = [
             LINALG_MATMUL,
@@ -306,6 +448,14 @@ mod tests {
             BIO_DIVERSITY_SHANNON,
             BIO_DIVERSITY_SIMPSON,
             BIO_PHYLOGENETIC,
+            DETERMINISM,
+            MACHINE,
+            ACCUMULATION,
+            TRANSCENDENTAL,
+            ITERATIVE,
+            STATISTICAL,
+            STOCHASTIC,
+            EQUILIBRIUM,
         ];
         for t in &tols {
             assert!(t.abs_tol.is_finite(), "{} abs_tol must be finite", t.name);

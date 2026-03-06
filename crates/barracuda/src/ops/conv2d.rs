@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Conv2D operation - 2D convolution
+//! `Conv2D` operation - 2D convolution
 //! Pure WGSL implementation
 //! Shader: f64 canonical (downcast to f32 at compile)
 
@@ -25,6 +25,7 @@ pub struct Conv2D {
 
 impl Conv2D {
     /// Create a 2D convolution. Input [H,W], kernel [Kh,Kw].
+    #[must_use]
     pub fn new(input: Tensor, kernel: Tensor) -> Self {
         Self { input, kernel }
     }
@@ -37,6 +38,9 @@ impl Conv2D {
     }
 
     /// Execute 2D convolution on GPU.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 
@@ -190,6 +194,9 @@ impl Conv2D {
 
 impl Tensor {
     /// Apply 2D convolution with the given kernel.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn conv2d(self, kernel: &Self) -> Result<Self> {
         Conv2D::new(self, kernel.clone()).execute()
     }
@@ -287,7 +294,7 @@ mod tests {
         let result = input.conv2d(&kernel).unwrap();
         let output = result.to_vec().unwrap();
 
-        for val in output.iter() {
+        for val in &output {
             assert!(val.abs() < 1e-6);
         }
     }
@@ -391,8 +398,7 @@ mod tests {
 
         assert!(
             max_error < 1e-5,
-            "Max error: {} exceeds FP32 threshold",
-            max_error
+            "Max error: {max_error} exceeds FP32 threshold"
         );
     }
 }

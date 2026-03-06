@@ -7,11 +7,11 @@
 
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 
+use super::TensorSession;
 use super::types::{
     AttentionParams, HeadReshapeParams, LayerNormParams, MatMulParams, MatMulTier, ScaleParams,
     SessionOp,
 };
-use super::TensorSession;
 use bytemuck::bytes_of;
 
 impl TensorSession {

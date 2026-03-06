@@ -43,6 +43,7 @@ pub struct BootstrapCI {
 
 impl BootstrapCI {
     /// Get a human-readable summary.
+    #[must_use]
     pub fn summary(&self) -> String {
         let pct = (self.confidence * 100.0).round() as u32;
         format!(
@@ -93,6 +94,10 @@ impl SimpleRng {
 /// # Returns
 ///
 /// [`BootstrapCI`] with point estimate, confidence bounds, and standard error.
+///
+/// # Errors
+///
+/// Returns [`Err`] if `data` is empty, `n_bootstrap` is 0, or `confidence` is not in (0, 1).
 ///
 /// # Example
 ///
@@ -192,6 +197,10 @@ where
 ///
 /// Convenience function for the common case of bootstrapping the mean.
 ///
+/// # Errors
+///
+/// Returns [`Err`] if [`bootstrap_ci`] fails (empty data, `n_bootstrap`=0, or invalid `confidence`).
+///
 /// # Example
 ///
 /// ```
@@ -218,6 +227,10 @@ pub fn bootstrap_mean(
 
 /// Bootstrap CI for the median.
 ///
+/// # Errors
+///
+/// Returns [`Err`] if [`bootstrap_ci`] fails (empty data, `n_bootstrap`=0, or invalid `confidence`).
+///
 /// # Example
 ///
 /// ```
@@ -240,7 +253,7 @@ pub fn bootstrap_median(
             sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
             let n = sorted.len();
             if n % 2 == 0 {
-                (sorted[n / 2 - 1] + sorted[n / 2]) / 2.0
+                f64::midpoint(sorted[n / 2 - 1], sorted[n / 2])
             } else {
                 sorted[n / 2]
             }
@@ -262,6 +275,10 @@ pub fn bootstrap_median(
 /// # Provenance
 ///
 /// Absorbed from groundSpring `bootstrap.rs::rawr_mean()` (V7).
+///
+/// # Errors
+///
+/// Returns [`Err`] if `data` is empty, `n_replicates` is 0, or `confidence` is not in `(0, 1)`.
 pub fn rawr_mean(
     data: &[f64],
     n_replicates: usize,
@@ -294,7 +311,7 @@ pub fn rawr_mean(
 
     for _ in 0..n_replicates {
         let mut wsum = 0.0;
-        for w in weights.iter_mut() {
+        for w in &mut weights {
             let u = rng.next_f64();
             *w = if u > 0.0 { -u.ln() } else { EXP_CAP };
             wsum += *w;
@@ -334,6 +351,10 @@ pub fn rawr_mean(
 }
 
 /// Bootstrap CI for standard deviation.
+///
+/// # Errors
+///
+/// Returns [`Err`] if [`bootstrap_ci`] fails (empty data, `n_bootstrap`=0, or invalid `confidence`).
 ///
 /// # Example
 ///
@@ -385,11 +406,15 @@ pub struct BootstrapMeanGpu {
 #[cfg(feature = "gpu")]
 impl BootstrapMeanGpu {
     /// Create a GPU bootstrap mean executor for the given device.
+    /// # Errors
+    /// Currently always succeeds; reserved for future device validation.
     pub fn new(device: std::sync::Arc<crate::device::WgpuDevice>) -> crate::error::Result<Self> {
         Ok(Self { device })
     }
 
     /// Dispatch GPU-parallel bootstrap mean estimation.
+    /// # Errors
+    /// Returns [`Err`] if `data` is empty, `n_bootstrap` is 0, or if buffer creation/readback fails.
     pub fn dispatch(
         &self,
         data: &[f64],
@@ -431,7 +456,7 @@ impl BootstrapMeanGpu {
             .storage_rw(1, &out_buf)
             .uniform(2, &params_buf)
             .dispatch(wg_count, 1, 1)
-            .submit();
+            .submit()?;
 
         self.device.read_f64_buffer(&out_buf, n_bootstrap as usize)
     }
@@ -510,7 +535,7 @@ mod tests {
         // Bootstrap for max
         let ci = bootstrap_ci(
             &data,
-            |sample| sample.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
+            |sample| sample.iter().copied().fold(f64::NEG_INFINITY, f64::max),
             1000,
             0.95,
             42,

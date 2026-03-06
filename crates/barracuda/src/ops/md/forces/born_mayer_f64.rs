@@ -6,14 +6,14 @@
 //! - Zero hardcoding: Hardware-agnostic implementation
 //!
 //! Applications:
-//! - Ionic crystals (NaCl, MgO)
+//! - Ionic crystals (`NaCl`, `MgO`)
 //! - Hard-core repulsion in MD
 //! - Steric effects modeling
 
+use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
 
@@ -34,6 +34,8 @@ pub struct BornMayerForceF64 {
 
 impl BornMayerForceF64 {
     /// Create Born-Mayer force calculator.
+    /// # Errors
+    /// Returns [`Err`] if device initialization or shader compilation fails.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -59,6 +61,8 @@ impl BornMayerForceF64 {
     }
 
     /// Compute Born-Mayer forces (always GPU dispatch).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn compute_forces(
         &self,
         positions: &[f64],
@@ -71,7 +75,8 @@ impl BornMayerForceF64 {
     }
 
     /// Compute forces (GPU) and total potential energy.
-    ///
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     /// Forces come from GPU dispatch; energy is accumulated on the host from
     /// the same Born-Mayer potential U(r) = A·exp(−r/ρ) using geometric
     /// mixing rules: A = √(Aᵢ·Aⱼ), ρ = (ρᵢ+ρⱼ)/2.
@@ -171,7 +176,7 @@ impl BornMayerForceF64 {
             .storage_rw(3, &forces_buf)
             .uniform(4, &params_buf)
             .dispatch(wg, 1, 1)
-            .submit();
+            .submit()?;
 
         dev.read_f64_buffer(&forces_buf, n * 3)
     }

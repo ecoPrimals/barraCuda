@@ -59,6 +59,8 @@ pub struct DiceLoss {
 
 impl DiceLoss {
     /// Create new Dice loss operation
+    /// # Errors
+    /// Returns [`Err`] if predictions and targets shapes differ.
     pub fn new(predictions: Tensor, targets: Tensor, smoothing: f32) -> Result<Self> {
         // Validate shapes match
         if predictions.shape() != targets.shape() {
@@ -86,17 +88,18 @@ impl DiceLoss {
     }
 
     /// Execute Dice loss (GPU reduction)
-    ///
     /// **Deep Debt**: Efficient workgroup reduction for large segmentations
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
 
         // Determine batch and elements
         let total_size = self.predictions.len();
-        let batch_size = if !self.predictions.shape().is_empty() {
-            self.predictions.shape()[0]
-        } else {
+        let batch_size = if self.predictions.shape().is_empty() {
             1
+        } else {
+            self.predictions.shape()[0]
         };
         let elements_per_sample = total_size / batch_size;
 
@@ -120,7 +123,7 @@ impl DiceLoss {
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)
             .dispatch_1d(batch_size as u32)
-            .submit();
+            .submit()?;
 
         // Return output tensor [batch_size]
         Ok(Tensor::from_buffer(
@@ -137,22 +140,20 @@ impl DiceLoss {
 
 impl Tensor {
     /// Dice loss for segmentation
-    ///
     /// **Deep Debt**: Essential for medical imaging, handles class imbalance
-    ///
     /// # Arguments
     /// - `targets`: Ground truth [same shape as predictions]
     /// - `smoothing`: Smoothing factor (typically 1.0)
-    ///
     /// # Returns
-    /// - Loss tensor [batch_size] (one value per batch)
-    ///
+    /// - Loss tensor [`batch_size`] (one value per batch)
     /// # Example
     /// ```rust,ignore
     /// let preds = Tensor::randn(vec![4, 256, 256]).await?;
     /// let targets = Tensor::randn(vec![4, 256, 256]).await?;
     /// let loss = preds.dice_loss(&targets, 1.0)?;  // U-Net segmentation
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if shapes differ, buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn dice_loss(self, targets: &Self, smoothing: f32) -> Result<Self> {
         DiceLoss::new(self, targets.clone(), smoothing)?.execute()
     }
@@ -241,8 +242,9 @@ mod tests {
 
         assert_eq!(loss.shape(), &[batch]);
         let data = loss.to_vec().unwrap();
-        assert!(data
-            .iter()
-            .all(|&x| x.is_finite() && (0.0..=1.0).contains(&x)));
+        assert!(
+            data.iter()
+                .all(|&x| x.is_finite() && (0.0..=1.0).contains(&x))
+        );
     }
 }

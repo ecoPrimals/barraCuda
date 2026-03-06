@@ -2,13 +2,13 @@
 //! Fused Pearson correlation (f64) — 5-accumulator single-pass, GPU-resident
 //!
 //! Evolved from multi-dispatch mean→deviation→covariance to a single fused
-//! kernel with 5 accumulators (sum_x, sum_y, sum_xx, sum_yy, sum_xy).
-//! Absorbed from Kokkos parallel_reduce with JoinOp patterns.
+//! kernel with 5 accumulators (`sum_x`, `sum_y`, `sum_xx`, `sum_yy`, `sum_xy`).
+//! Absorbed from Kokkos `parallel_reduce` with `JoinOp` patterns.
 
+use crate::device::WgpuDevice;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -58,6 +58,29 @@ pub struct CorrelationResult {
     pub pearson_r: f64,
 }
 
+impl CorrelationResult {
+    /// Population covariance derived from the fused accumulators.
+    ///
+    /// `cov(x,y) = r * sqrt(var_x) * sqrt(var_y)`
+    #[must_use]
+    pub fn covariance(&self) -> f64 {
+        self.pearson_r * self.var_x.sqrt() * self.var_y.sqrt()
+    }
+
+    /// R-squared (coefficient of determination) between observed (x) and
+    /// simulated (y).
+    ///
+    /// Equivalent to `1 - SS_res / SS_tot` when x is observed and y is
+    /// simulated, but computed from the fused accumulators without a
+    /// second pass.
+    ///
+    /// For the common case where R² = r², this returns `pearson_r.powi(2)`.
+    #[must_use]
+    pub fn r_squared(&self) -> f64 {
+        self.pearson_r * self.pearson_r
+    }
+}
+
 /// f64 Pearson correlation evaluator — fused single-pass.
 pub struct CorrelationF64 {
     device: Arc<WgpuDevice>,
@@ -65,22 +88,46 @@ pub struct CorrelationF64 {
 
 impl CorrelationF64 {
     /// Create new Correlation f64 operation.
+    /// # Errors
+    /// Returns [`Err`] if device initialization fails.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Compute Pearson correlation coefficient between two vectors.
-    ///
     /// r = cov(x,y) / (std(x) * std(y))
-    ///
     /// Single GPU dispatch — no intermediate readbacks.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, the device is lost, or buffer
+    /// readback fails.
     pub fn correlation(&self, x: &[f64], y: &[f64]) -> Result<f64> {
         Ok(self.correlation_full(x, y)?.pearson_r)
     }
 
-    /// Compute full correlation statistics in a single fused dispatch.
+    /// Coefficient of determination (R²) between observed and simulated.
     ///
+    /// Single GPU dispatch, zero CPU round-trips. Returns `pearson_r²` which
+    /// equals the true R² for simple linear models.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, the device is lost, or buffer
+    /// readback fails.
+    pub fn r_squared(&self, observed: &[f64], simulated: &[f64]) -> Result<f64> {
+        Ok(self.correlation_full(observed, simulated)?.r_squared())
+    }
+
+    /// Population covariance between two vectors. Single GPU dispatch.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, the device is lost, or buffer
+    /// readback fails.
+    pub fn covariance(&self, x: &[f64], y: &[f64]) -> Result<f64> {
+        Ok(self.correlation_full(x, y)?.covariance())
+    }
+
+    /// Compute full correlation statistics in a single fused dispatch.
     /// Returns means, variances, and Pearson r — all from one kernel launch.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, the device is lost, or buffer
+    /// readback fails.
     pub fn correlation_full(&self, x: &[f64], y: &[f64]) -> Result<CorrelationResult> {
         if x.len() != y.len() || x.is_empty() {
             return Ok(CorrelationResult {
@@ -169,6 +216,101 @@ impl CorrelationF64 {
         })
     }
 
+    /// Compute full correlation from GPU-resident buffers — zero host transfer.
+    /// Both buffers must contain at least `n` f64 values.
+    /// This is the persistent-buffer path that eliminates the Kokkos dispatch gap.
+    /// # Errors
+    /// Returns [`Err`] if device context recording fails, the device is lost, or
+    /// buffer readback fails.
+    pub fn correlation_full_buffer(
+        &self,
+        x_buffer: &wgpu::Buffer,
+        y_buffer: &wgpu::Buffer,
+        n: usize,
+    ) -> Result<CorrelationResult> {
+        if n == 0 {
+            return Ok(CorrelationResult {
+                mean_x: 0.0,
+                mean_y: 0.0,
+                var_x: 0.0,
+                var_y: 0.0,
+                pearson_r: 0.0,
+            });
+        }
+
+        let ctx = get_device_context(&self.device);
+        let adapter_info = self.device.adapter_info();
+
+        let output_buf = ctx.acquire_pooled_output_f64(5);
+
+        let params = Params {
+            n: n as u32,
+            _pad0: 0,
+            _pad1: 0,
+            _pad2: 0,
+        };
+        let params_buf = self
+            .device
+            .create_uniform_buffer("CorrFused:Buf Params", &params);
+
+        let layout_sig = BindGroupLayoutSignature {
+            read_only_buffers: 2,
+            read_write_buffers: 1,
+            uniform_buffers: 1,
+        };
+
+        let bind_group = ctx.get_or_create_bind_group(
+            layout_sig,
+            &[x_buffer, y_buffer, &output_buf, &params_buf],
+            Some("CorrFused:Buf BG"),
+        );
+
+        let shader_src = fused_shader_for_device(&self.device);
+        let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
+            self.device.device(),
+            adapter_info,
+            shader_src,
+            layout_sig,
+            "main",
+            Some("CorrFused:Buf Pipeline"),
+        );
+
+        ctx.record_operation(move |encoder| {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("CorrFused:Buf Pass"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&pipeline);
+            pass.set_bind_group(0, Some(&*bind_group), &[]);
+            pass.dispatch_workgroups(1, 1, 1);
+        })?;
+
+        let result = self.device.read_buffer_f64(&output_buf, 5)?;
+
+        Ok(CorrelationResult {
+            mean_x: result[0],
+            mean_y: result[1],
+            var_x: result[2],
+            var_y: result[3],
+            pearson_r: result[4],
+        })
+    }
+
+    /// Compute Pearson r from GPU-resident buffers — zero host transfer.
+    /// # Errors
+    /// Returns [`Err`] if device context recording fails, the device is lost, or
+    /// buffer readback fails.
+    pub fn correlation_buffer(
+        &self,
+        x_buffer: &wgpu::Buffer,
+        y_buffer: &wgpu::Buffer,
+        n: usize,
+    ) -> Result<f64> {
+        Ok(self
+            .correlation_full_buffer(x_buffer, y_buffer, n)?
+            .pearson_r)
+    }
+
     #[cfg(test)]
     #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn correlation_cpu(x: &[f64], y: &[f64]) -> f64 {
@@ -214,8 +356,7 @@ mod tests {
 
         assert!(
             (result - 1.0).abs() < 1e-10,
-            "Correlation should be 1.0, got {}",
-            result
+            "Correlation should be 1.0, got {result}"
         );
     }
 
@@ -232,8 +373,7 @@ mod tests {
 
         assert!(
             (result + 1.0).abs() < 1e-10,
-            "Correlation should be -1.0, got {}",
-            result
+            "Correlation should be -1.0, got {result}"
         );
     }
 
@@ -249,8 +389,7 @@ mod tests {
 
         assert!(
             (result - 1.0).abs() < 1e-10,
-            "Self-correlation should be 1.0, got {}",
-            result
+            "Self-correlation should be 1.0, got {result}"
         );
     }
 
@@ -267,8 +406,7 @@ mod tests {
 
         assert!(
             result.abs() < 1e-10,
-            "Orthogonal vectors should have correlation ~0, got {}",
-            result
+            "Orthogonal vectors should have correlation ~0, got {result}"
         );
     }
 
@@ -285,8 +423,7 @@ mod tests {
 
         assert!(
             (-1.0..=1.0).contains(&result),
-            "Correlation must be in [-1, 1], got {}",
-            result
+            "Correlation must be in [-1, 1], got {result}"
         );
     }
 

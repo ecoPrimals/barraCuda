@@ -88,8 +88,7 @@ fn test_coulomb_f64_distance_scaling() {
     let ratio = forces1[0].abs() / forces2[0].abs();
     assert!(
         (ratio - 4.0).abs() < 0.01,
-        "Force should scale as 1/r^2, ratio = {}",
-        ratio
+        "Force should scale as 1/r^2, ratio = {ratio}"
     );
 }
 
@@ -134,8 +133,6 @@ fn test_coulomb_f64_with_energy_gpu() {
     // Interior forces should be smaller than boundary forces
     assert!(
         fx_mid < fx_first,
-        "Interior force {} should be less than boundary force {}",
-        fx_mid,
-        fx_first
+        "Interior force {fx_mid} should be less than boundary force {fx_first}"
     );
 }

@@ -158,6 +158,7 @@ pub mod bessel_k0_f64_wgsl; // f64 Modified Bessel K0 (Yukawa potential)
 pub mod spherical_harmonics_f64_wgsl;
 
 // Statistical functions (f64) - statistics, ML
+pub mod autocorrelation_f64_wgsl; // f64 general autocorrelation (time series, spectral)
 pub mod beta_f64_wgsl; // f64 Beta function (Bayesian statistics)
 pub mod correlation_f64_wgsl; // f64 Pearson correlation (portfolio analysis)
 pub mod covariance_f64_wgsl; // f64 Covariance (PCA, Kalman)
@@ -253,9 +254,9 @@ pub mod rk_stage; // RkIntegrator    — single-trajectory CPU-orchestrated RK4/
 pub use batch_pair_reduce_f64::{BatchPairReduceF64, PairReduceOp};
 pub use batch_tolerance_search_f64::BatchToleranceSearchF64;
 pub use hill_f64::HillFunctionF64;
-pub use kmd_grouping_f64::{repeat_units, KmdGroupingF64, KmdResult};
+pub use kmd_grouping_f64::{KmdGroupingF64, KmdResult, repeat_units};
 pub use rk_stage::{
-    wgsl_rk4_parallel, BatchedOdeRK4F64, BatchedRk4Config, OdeFunction, RkIntegrator,
+    BatchedOdeRK4F64, BatchedRk4Config, OdeFunction, RkIntegrator, wgsl_rk4_parallel,
 };
 
 // DF64 universal math shaders (compile via compile_shader_df64)
@@ -263,7 +264,7 @@ pub use df64_shaders::{
     WGSL_ELEMENTWISE_ADD_DF64, WGSL_ELEMENTWISE_FMA_DF64, WGSL_ELEMENTWISE_MUL_DF64,
     WGSL_ELEMENTWISE_SUB_DF64, WGSL_MEAN_REDUCE_DF64, WGSL_SUM_REDUCE_DF64,
 };
-pub use folding_df64::{compile_folding_shader, FoldingOp};
+pub use folding_df64::{FoldingOp, compile_folding_shader};
 
 // Cosine similarity (f64)
 pub mod cosine_similarity_f64; // Spectral matching, small-batch queries

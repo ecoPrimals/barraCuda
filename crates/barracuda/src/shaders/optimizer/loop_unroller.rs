@@ -28,6 +28,8 @@
 //!
 //! Loops without `// @unroll_hint` are passed through unchanged.
 
+use std::fmt::Write;
+
 /// Maximum trip count accepted for unrolling. Larger loops are passed through.
 const MAX_UNROLL_TRIP_COUNT: u32 = 32;
 
@@ -139,10 +141,7 @@ fn parse_for_header(line: &str) -> Option<(String, ForBound)> {
     let after_lt = &after_for[lt_pos + lt_pat.len()..];
 
     // Try numeric literal first (e.g. `8u` or `8`)
-    let num_str: String = after_lt
-        .chars()
-        .take_while(|c| c.is_ascii_digit())
-        .collect();
+    let num_str: String = after_lt.chars().take_while(char::is_ascii_digit).collect();
     if !num_str.is_empty() {
         let bound: u32 = num_str.parse().ok()?;
         if bound == 0 || bound > MAX_UNROLL_TRIP_COUNT {
@@ -286,17 +285,17 @@ fn emit_unrolled_block(
     body_lines: &[String],
     guard: Option<&str>,
 ) {
-    out.push_str(&format!("{indent}{{\n"));
+    let _ = writeln!(out, "{indent}{{");
     // Bind the loop variable to its literal value so the body can reference it.
-    out.push_str(&format!("{indent}    let {var_name} = {iter}u;\n"));
+    let _ = writeln!(out, "{indent}    let {var_name} = {iter}u;");
 
     if let Some(cond) = guard {
-        out.push_str(&format!("{indent}    {cond} {{\n"));
+        let _ = writeln!(out, "{indent}    {cond} {{");
         for body_line in body_lines {
             let subst = substitute_loop_var(body_line, var_name, iter);
-            out.push_str(&format!("    {subst}\n"));
+            let _ = writeln!(out, "    {subst}");
         }
-        out.push_str(&format!("{indent}    }}\n"));
+        let _ = writeln!(out, "{indent}    }}");
     } else {
         for body_line in body_lines {
             let subst = substitute_loop_var(body_line, var_name, iter);
@@ -305,7 +304,7 @@ fn emit_unrolled_block(
         }
     }
 
-    out.push_str(&format!("{indent}}}\n"));
+    let _ = writeln!(out, "{indent}}}");
 }
 
 /// Replace whole-word occurrences of `var_name` in `line` with the literal `iter`.
@@ -433,12 +432,12 @@ mod tests {
 
     #[test]
     fn test_simple_loop_unrolled() {
-        let shader = r#"
+        let shader = r"
     // @unroll_hint 3
     for (var k = 0u; k < 3u; k = k + 1u) {
         let v = k + 1u;
     }
-"#;
+";
         let result = WgslLoopUnroller::unroll(shader);
         // Should contain 3 unrolled blocks
         assert_eq!(result.matches("let k = 0u;").count(), 1);

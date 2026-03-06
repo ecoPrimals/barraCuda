@@ -15,26 +15,27 @@ pub struct TriangularSolve {
 
 impl TriangularSolve {
     /// Create new triangular solve operation
-    ///
     /// # Arguments
     /// * `matrix` - Triangular matrix [N, N]
     /// * `rhs` - Right-hand side vector [N]
     /// * `lower` - true for lower triangular (forward substitution)
-    ///
     /// # Deep Debt Compliance
     /// - No hardcoded sizes (runtime N)
     /// - No unsafe blocks
     /// - Agnostic design (works with any triangular system)
+    #[must_use]
     pub fn new(matrix: Tensor, rhs: Tensor, lower: bool) -> Self {
         Self { matrix, rhs, lower }
     }
 
     /// Create forward substitution: L·x = b
+    #[must_use]
     pub fn forward(matrix: Tensor, rhs: Tensor) -> Self {
         Self::new(matrix, rhs, true)
     }
 
     /// Create backward substitution: Uᵀ·x = b
+    #[must_use]
     pub fn backward(matrix: Tensor, rhs: Tensor) -> Self {
         Self::new(matrix, rhs, false)
     }
@@ -49,15 +50,11 @@ impl TriangularSolve {
     }
 
     /// Execute triangular solve on GPU
-    ///
     /// # Returns
     /// Solution vector x
-    ///
     /// # Errors
-    /// - Returns error if matrix is not square
-    /// - Returns error if rhs size doesn't match matrix
-    /// - Returns zero vector if matrix is singular
-    ///
+    /// Returns [`Err`] if matrix is not square, rhs size does not match matrix dimension,
+    /// buffer allocation fails, GPU dispatch fails, or buffer readback fails (e.g. device lost).
     /// # Deep Debt Compliance
     /// - Pure WGSL execution (no CPU fallback)
     /// - Capability-based workgroup dispatch
@@ -89,7 +86,7 @@ impl TriangularSolve {
         let solution_buffer = device.create_buffer_f32(n)?;
 
         // Create params buffer with matrix size and substitution type
-        let is_lower = if self.lower { 1u32 } else { 0u32 };
+        let is_lower = u32::from(self.lower);
         let params_buffer =
             device.create_uniform_buffer("TriangularSolve Params", &[n as u32, is_lower]);
 
@@ -225,38 +222,41 @@ impl TriangularSolve {
 /// Tensor extension for triangular solve
 impl Tensor {
     /// Solve L·x = b (forward substitution)
-    ///
     /// # Arguments
     /// * `rhs` - Right-hand side vector b
-    ///
     /// # Returns
     /// Solution vector x
-    ///
     /// # Example
     /// ```ignore
     /// let l = tensor.cholesky()?;  // Get lower triangular L
     /// let x = l.solve_triangular_forward(&b)?;
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if matrix is not square, rhs size does not match, buffer allocation fails,
+    /// GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn solve_triangular_forward(&self, rhs: &Tensor) -> Result<Tensor> {
         TriangularSolve::forward(self.clone(), rhs.clone()).execute()
     }
 
     /// Solve Uᵀ·x = b (backward substitution)
-    ///
     /// # Arguments
     /// * `rhs` - Right-hand side vector b
-    ///
     /// # Returns
     /// Solution vector x
+    /// # Errors
+    /// Returns [`Err`] if matrix is not square, rhs size does not match, buffer allocation fails,
+    /// GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn solve_triangular_backward(&self, rhs: &Tensor) -> Result<Tensor> {
         TriangularSolve::backward(self.clone(), rhs.clone()).execute()
     }
 
     /// Solve triangular system L·x = b or Uᵀ·x = b
-    ///
     /// # Arguments
     /// * `rhs` - Right-hand side vector b
     /// * `lower` - true for lower triangular, false for upper
+    /// # Errors
+    /// Returns [`Err`] if matrix is not square, rhs size does not match, buffer allocation fails,
+    /// GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn solve_triangular(&self, rhs: &Tensor, lower: bool) -> Result<Tensor> {
         TriangularSolve::new(self.clone(), rhs.clone(), lower).execute()
     }

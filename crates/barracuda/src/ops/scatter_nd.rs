@@ -21,6 +21,8 @@ pub struct ScatterNd {
 
 impl ScatterNd {
     /// Create a new scatter ND operation
+    /// # Errors
+    /// Returns [`Err`] if indices have fewer than 2 dimensions, index rank exceeds input rank, or values shape does not match expected shape.
     pub fn new(input: Tensor, indices: Tensor, values: Tensor) -> Result<Self> {
         let input_shape = input.shape();
         let indices_shape = indices.shape();
@@ -95,6 +97,8 @@ impl ScatterNd {
     }
 
     /// Execute the scatter ND operation (modifies input in-place)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -360,11 +364,11 @@ impl ScatterNd {
 
 impl Tensor {
     /// Scatter values using N-dimensional indices (modifies input in-place)
-    ///
     /// # Arguments
-    ///
     /// * `indices` - N-dimensional indices tensor
     /// * `values` - Values to scatter
+    /// # Errors
+    /// Returns [`Err`] if validation fails or buffer allocation/GPU dispatch/readback fails (e.g. device lost).
     pub fn scatter_nd(self, indices: Tensor, values: Tensor) -> Result<Self> {
         ScatterNd::new(self, indices, values)?.execute()
     }

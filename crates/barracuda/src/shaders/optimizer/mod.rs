@@ -65,7 +65,7 @@ pub mod dependency_graph;
 pub mod ilp_reorderer;
 pub mod loop_unroller;
 
-use crate::device::latency::{model_for_arch, ConservativeModel, LatencyModel};
+use crate::device::latency::{ConservativeModel, LatencyModel, model_for_arch};
 use dependency_graph::WgslDependencyGraph;
 use ilp_reorderer::IlpReorderer;
 pub use loop_unroller::WgslLoopUnroller;
@@ -129,10 +129,7 @@ impl WgslOptimizer {
 
                     // Include the marker line itself.
                     let after_begin = &rest[begin_pos..];
-                    let marker_end = after_begin
-                        .find('\n')
-                        .map(|p| p + 1)
-                        .unwrap_or(after_begin.len());
+                    let marker_end = after_begin.find('\n').map_or(after_begin.len(), |p| p + 1);
                     output.push_str(&after_begin[..marker_end]);
 
                     // Find the end marker.
@@ -153,10 +150,8 @@ impl WgslOptimizer {
                             output.push_str(&scheduled);
 
                             // Emit the end marker.
-                            let end_marker_end = after_end
-                                .find('\n')
-                                .map(|p| p + 1)
-                                .unwrap_or(after_end.len());
+                            let end_marker_end =
+                                after_end.find('\n').map_or(after_end.len(), |p| p + 1);
                             output.push_str(&after_end[..end_marker_end]);
 
                             // Advance past the end marker.

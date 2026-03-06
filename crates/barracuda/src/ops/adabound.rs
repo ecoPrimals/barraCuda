@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! AdaBound Optimizer - GPU-accelerated Adaptive Gradient Methods with Dynamic Bound
+//! `AdaBound` Optimizer - GPU-accelerated Adaptive Gradient Methods with Dynamic Bound
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation
@@ -31,7 +31,7 @@ struct AdaBoundParams {
     step: u32,
 }
 
-/// AdaBound optimizer — adaptive gradients with dynamic learning rate bounds.
+/// `AdaBound` optimizer — adaptive gradients with dynamic learning rate bounds.
 pub struct AdaBound {
     gradients: Tensor,
     params: Tensor,
@@ -46,7 +46,10 @@ pub struct AdaBound {
 }
 
 impl AdaBound {
-    /// Create AdaBound optimizer. Smoothly transitions from Adam to SGD.
+    /// Create `AdaBound` optimizer. Smoothly transitions from Adam to SGD.
+    /// # Errors
+    /// Returns [`Err`] if params and gradients shapes differ, `learning_rate` is not positive,
+    /// beta1 or beta2 are not in [0.0, 1.0), step is 0, or m/v (if provided) shapes differ from params.
     pub fn new(
         params: Tensor,
         gradients: Tensor,
@@ -142,7 +145,9 @@ impl AdaBound {
         }
     }
 
-    /// Execute AdaBound step. Returns (updated_params, m, v).
+    /// Execute `AdaBound` step. Returns (`updated_params`, m, v).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<(Tensor, Tensor, Tensor)> {
         let device = self.params.device();
         let size = self.params.shape().iter().product::<usize>();
@@ -340,8 +345,7 @@ impl AdaBound {
 }
 
 impl Tensor {
-    /// AdaBound optimizer step
-    ///
+    /// `AdaBound` optimizer step
     /// # Arguments
     /// - `gradients`: Gradient tensor [same shape as params]
     /// - `learning_rate`: Initial learning rate
@@ -352,9 +356,12 @@ impl Tensor {
     /// - `step`: Current iteration (starts at 1, not 0)
     /// - `m`: First moment estimate (None for first step)
     /// - `v`: Second moment estimate (None for first step)
-    ///
     /// # Returns
-    /// - Tuple: (updated_params, updated_m, updated_v)
+    /// - Tuple: (`updated_params`, `updated_m`, `updated_v`)
+    /// # Errors
+    /// Returns [`Err`] if params and gradients shapes differ, `learning_rate` is not positive,
+    /// beta1 or beta2 are not in [0.0, 1.0), step is 0, m/v shapes differ, buffer allocation fails,
+    /// GPU dispatch fails, or the device is lost.
     pub fn adabound_step(
         self,
         gradients: &Self,

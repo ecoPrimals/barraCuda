@@ -27,6 +27,11 @@ pub struct OuterProduct {
 
 impl OuterProduct {
     /// Creates a new outer product. Both inputs must be 1D vectors.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(vec_a: Tensor, vec_b: Tensor) -> Result<Self> {
         if vec_a.shape().len() != 1 {
             return Err(BarracudaError::invalid_op(
@@ -57,6 +62,11 @@ impl OuterProduct {
     }
 
     /// Executes the outer product and returns the result matrix.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.vec_a.device();
         let size_a = self.vec_a.len();

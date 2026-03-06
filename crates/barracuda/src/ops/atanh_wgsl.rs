@@ -22,6 +22,7 @@ pub struct Atanh {
 
 impl Atanh {
     /// Create an atanh operation.
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -31,6 +32,11 @@ impl Atanh {
     }
 
     /// Execute atanh on GPU.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.len();
@@ -79,6 +85,11 @@ impl Atanh {
 
 impl Tensor {
     /// Compute element-wise atanh(x).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn atanh(self) -> Result<Self> {
         Atanh::new(self).execute()
     }

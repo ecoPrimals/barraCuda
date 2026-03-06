@@ -31,6 +31,11 @@ pub struct MFCC {
 
 impl MFCC {
     /// Create a new MFCC operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         mel_spectrogram: Tensor,
         n_frames: usize,
@@ -68,6 +73,11 @@ impl MFCC {
     }
 
     /// Execute the MFCC operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.mel_spectrogram.device();
         let output_size = self.n_frames * self.n_mfcc;

@@ -11,7 +11,7 @@
 //!    that process **all** pencils simultaneously via strided addressing
 //! 3. Reads back the result **once**
 //!
-//! For an 8×8×8 mesh this is **~12 dispatches** (via ComputeDispatch)
+//! For an 8×8×8 mesh this is **~12 dispatches** (via `ComputeDispatch`)
 //! with buffer copies between passes for ping-pong.
 
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
@@ -44,7 +44,7 @@ struct AxisConfig {
 
 /// 3D Complex FFT operation (f64 precision) — batched GPU dispatch
 ///
-/// Shader compilation happens per-dispatch via ComputeDispatch.
+/// Shader compilation happens per-dispatch via `ComputeDispatch`.
 /// Each `forward`/`inverse` call runs compute passes and buffer copies
 /// for each axis, with one GPU readback at the end.
 pub struct Fft3DF64 {
@@ -58,8 +58,9 @@ pub struct Fft3DF64 {
 
 impl Fft3DF64 {
     /// Create a new 3D FFT operation.
-    ///
     /// Precomputes twiddle factor GPU buffers for each unique axis length.
+    /// # Errors
+    /// Returns [`Err`] if any of `nx`, `ny`, or `nz` are not powers of 2.
     pub fn new(
         device: Arc<crate::device::WgpuDevice>,
         nx: usize,
@@ -115,11 +116,17 @@ impl Fft3DF64 {
     }
 
     /// Compute forward 3D FFT (time → frequency domain).
+    /// # Errors
+    /// Returns [`Err`] if `data.len()` does not match `nx*ny*nz*2`, buffer allocation fails,
+    /// GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub async fn forward(&self, data: &[f64]) -> Result<Vec<f64>> {
         self.execute_internal(data, false).await
     }
 
     /// Compute inverse 3D FFT (frequency → time domain).
+    /// # Errors
+    /// Returns [`Err`] if `data.len()` does not match `nx*ny*nz*2`, buffer allocation fails,
+    /// GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub async fn inverse(&self, data: &[f64]) -> Result<Vec<f64>> {
         self.execute_internal(data, true).await
     }
@@ -191,7 +198,7 @@ impl Fft3DF64 {
         ];
 
         for axis in &axes {
-            self.encode_axis(&buf_a, &buf_b, buffer_bytes, axis, inverse);
+            self.encode_axis(&buf_a, &buf_b, buffer_bytes, axis, inverse)?;
         }
 
         dev.read_f64_buffer(&buf_a, expected_len)
@@ -204,7 +211,7 @@ impl Fft3DF64 {
         buffer_bytes: u64,
         axis: &AxisConfig,
         inverse: bool,
-    ) {
+    ) -> crate::error::Result<()> {
         let dev = &self.device;
         let n = axis.degree as u32;
         let log_n = (n as f32).log2() as u32;
@@ -238,7 +245,7 @@ impl Fft3DF64 {
             .storage_read(3, tw_im)
             .uniform(4, &br_params_buf)
             .dispatch(workgroups, 1, 1)
-            .submit();
+            .submit()?;
 
         // Copy buf_b → buf_a (bit-reversed data into working buffer)
         {
@@ -275,7 +282,7 @@ impl Fft3DF64 {
                 .storage_read(3, tw_im)
                 .uniform(4, &s_params_buf)
                 .dispatch(workgroups, 1, 1)
-                .submit();
+                .submit()?;
 
             // Ping-pong: copy output to working for next stage
             if stage < log_n - 1 {
@@ -295,9 +302,11 @@ impl Fft3DF64 {
             encoder.copy_buffer_to_buffer(buf_b, 0, buf_a, 0, buffer_bytes);
             dev.submit_and_poll(std::iter::once(encoder.finish()));
         }
+        Ok(())
     }
 
     /// Return (nx, ny, nz) dimensions.
+    #[must_use]
     pub fn dims(&self) -> (usize, usize, usize) {
         (self.nx, self.ny, self.nz)
     }
@@ -331,8 +340,7 @@ mod tests {
             let mag = (re * re + im * im).sqrt();
             assert!(
                 (mag - 1.0).abs() < 1e-10,
-                "Expected magnitude 1.0, got {}",
-                mag
+                "Expected magnitude 1.0, got {mag}"
             );
         }
 
@@ -387,8 +395,7 @@ mod tests {
             );
             assert!(
                 im.abs() < 1e-8,
-                "Voxel {} imag: expected ~0, got {im:.15e}",
-                i
+                "Voxel {i} imag: expected ~0, got {im:.15e}"
             );
         }
     }

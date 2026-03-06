@@ -5,7 +5,7 @@ use super::kernels::RBFKernel;
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use crate::linalg::solve_f64;
-use crate::ops::cdist_wgsl::{compute_distances_f64_gpu, DistanceMetric};
+use crate::ops::cdist_wgsl::{DistanceMetric, compute_distances_f64_gpu};
 use std::sync::Arc;
 
 /// RBF surrogate model with polynomial augmentation
@@ -14,9 +14,9 @@ use std::sync::Arc;
 /// s(x) = Σᵢ wᵢ φ(‖x - xᵢ‖) + p(x)
 ///
 /// where:
-/// - φ is the RBF kernel
-/// - wᵢ are weights (learned from data)
-/// - p(x) is a polynomial tail (linear: 1, x₁, ..., xₙ)
+///   - φ is the RBF kernel
+///   - wᵢ are weights (learned from data)
+///   - p(x) is a polynomial tail (linear: 1, x₁, ..., xₙ)
 ///
 /// All math (cdist, solve) dispatches to GPU shaders.
 ///
@@ -34,13 +34,13 @@ use std::sync::Arc;
 pub struct RBFSurrogate {
     /// GPU device for cdist and solve
     device: Arc<WgpuDevice>,
-    /// Training points (flattened: [n_train × n_dim])
+    /// Training points (flattened: [`n_train` × `n_dim`])
     train_x: Vec<f64>,
     /// Training targets
     train_y: Vec<f64>,
-    /// RBF weights (length n_train)
+    /// RBF weights (length `n_train`)
     weights: Vec<f64>,
-    /// Polynomial coefficients (length n_dim + 1)
+    /// Polynomial coefficients (length `n_dim` + 1)
     poly_coeffs: Vec<f64>,
     /// Number of training points
     n_train: usize,
@@ -83,38 +83,28 @@ impl RBFSurrogate {
     }
 
     /// Train RBF surrogate on data
-    ///
     /// # Arguments
-    ///
     /// * `x_data` - Training points [[x₁₁, x₁₂, ...], [x₂₁, x₂₂, ...], ...]
     /// * `y_data` - Training values [y₁, y₂, ...]
     /// * `kernel` - RBF kernel type
     /// * `smoothing` - Regularization parameter (1e-12 for exact interpolation)
-    ///
     /// # Returns
-    ///
     /// Trained surrogate model
-    ///
     /// # Algorithm
-    ///
     /// 1. Compute pairwise distances: D[i,j] = ‖xᵢ - xⱼ‖
     /// 2. Assemble kernel matrix: K[i,j] = φ(D[i,j]) + δᵢⱼ·smoothing
     /// 3. Augment with polynomial: [K P; Pᵀ 0] [w; c] = [y; 0]
     /// 4. Solve for weights w and polynomial coefficients c
-    ///
     /// # Examples
-    ///
     /// ```no_run
     /// use barracuda::surrogate::{RBFSurrogate, RBFKernel};
     /// use barracuda::prelude::WgpuDevice;
     /// use std::sync::Arc;
-    ///
     /// # async fn example() -> barracuda::error::Result<()> {
     /// let device = Arc::new(WgpuDevice::new().await?);
     /// // Training data: y = x²
     /// let x_train = vec![vec![0.0], vec![1.0], vec![2.0], vec![3.0]];
     /// let y_train = vec![0.0, 1.0, 4.0, 9.0];
-    ///
     /// let surrogate = RBFSurrogate::train(
     ///     device,
     ///     &x_train,
@@ -122,12 +112,14 @@ impl RBFSurrogate {
     ///     RBFKernel::ThinPlateSpline,
     ///     1e-12,
     /// )?;
-    ///
     /// // Predict at new points
     /// let y_pred = surrogate.predict(&[vec![1.5], vec![2.5]])?;
     /// # Ok(())
     /// # }
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if training data is empty, `x_data` and `y_data` lengths mismatch,
+    /// GPU distance computation fails, or the linear solve fails (e.g., singular matrix).
     pub fn train(
         device: Arc<WgpuDevice>,
         x_data: &[Vec<f64>],
@@ -225,14 +217,13 @@ impl RBFSurrogate {
     }
 
     /// Predict at new points
-    ///
     /// # Arguments
-    ///
     /// * `x_eval` - Evaluation points [[x₁₁, x₁₂, ...], ...]
-    ///
     /// # Returns
-    ///
     /// Predicted values [ŷ₁, ŷ₂, ...]
+    /// # Errors
+    /// Returns [`Err`] if evaluation point dimension does not match training dimension,
+    /// or if GPU distance computation fails.
     pub fn predict(&self, x_eval: &[Vec<f64>]) -> Result<Vec<f64>> {
         let n_eval = x_eval.len();
 
@@ -291,32 +282,25 @@ impl RBFSurrogate {
     // === Leave-One-Out Cross-Validation ===
 
     /// Compute leave-one-out cross-validation RMSE.
-    ///
     /// LOO-CV provides an unbiased estimate of prediction error without
     /// requiring a separate validation set. For RBF interpolation with
     /// smoothing λ > 0, the LOO residual is:
-    ///
-    /// LOO_i = (y_i - ŷ_i) / (1 - H_ii)
-    ///
+    /// `LOO_i` = (`y_i` - `ŷ_i`) / (1 - `H_ii`)
     /// where H is the hat matrix H = K(K + λI)⁻¹.
-    ///
     /// # Returns
-    ///
     /// Root mean square of LOO residuals
-    ///
     /// # Example
-    ///
     /// ```ignore
     /// let surrogate = RBFSurrogate::train(&x_data, &y_data, kernel, 1e-6)?;
     /// let rmse = surrogate.loo_cv_rmse()?;
     /// println!("LOO-CV RMSE: {:.6}", rmse);
     /// ```
-    ///
     /// # Notes
-    ///
-    /// - For exact interpolation (smoothing ≈ 0), H_ii ≈ 1 and LOO residuals
+    /// - For exact interpolation (smoothing ≈ 0), `H_ii` ≈ 1 and LOO residuals
     ///   are undefined. Use smoothing > 1e-10 for meaningful LOO-CV.
     /// - This is O(n³) due to hat matrix computation.
+    /// # Errors
+    /// Returns [`Err`] if [`loo_cv_errors`](RBFSurrogate::loo_cv_errors) fails.
     pub fn loo_cv_rmse(&self) -> Result<f64> {
         let loo_residuals = self.loo_cv_errors()?;
         let mse = loo_residuals.iter().map(|r| r * r).sum::<f64>() / self.n_train as f64;
@@ -324,13 +308,12 @@ impl RBFSurrogate {
     }
 
     /// Compute per-point LOO-CV errors.
-    ///
-    /// Returns LOO_i = (y_i - ŷ_i) / (1 - H_ii) for each training point.
+    /// Returns `LOO_i` = (`y_i` - `ŷ_i`) / (1 - `H_ii`) for each training point.
     /// Useful for identifying outliers or poorly-fit regions.
-    ///
     /// # Returns
-    ///
-    /// Vector of LOO residuals (length n_train)
+    /// Vector of LOO residuals (length `n_train`)
+    /// # Errors
+    /// Returns [`Err`] if [`predict`](RBFSurrogate::predict) or hat diagonal computation fails.
     pub fn loo_cv_errors(&self) -> Result<Vec<f64>> {
         if self.n_train == 0 {
             return Ok(Vec::new());
@@ -366,25 +349,19 @@ impl RBFSurrogate {
         Ok(loo_residuals)
     }
 
-    /// Compute diagonal of the hat matrix H = K_raw · (K_smooth)⁻¹.
-    ///
+    /// Compute diagonal of the hat matrix H = `K_raw` · (`K_smooth)⁻¹`.
     /// For RBF interpolation with regularization, the hat matrix is:
-    /// H = K_raw · (K_raw + λI)⁻¹
-    ///
-    /// where K_raw is the kernel matrix WITHOUT regularization and
-    /// K_smooth = K_raw + λI is the regularized matrix.
-    ///
-    /// H_ii measures how much influence point i has on its own prediction.
-    /// For exact interpolation (λ → 0), H_ii → 1.
-    /// For smoothed interpolation, H_ii < 1.
-    ///
+    /// H = `K_raw` · (`K_raw` + λI)⁻¹
+    /// where `K_raw` is the kernel matrix WITHOUT regularization and
+    /// `K_smooth` = `K_raw` + λI is the regularized matrix.
+    /// `H_ii` measures how much influence point i has on its own prediction.
+    /// For exact interpolation (λ → 0), `H_ii` → 1.
+    /// For smoothed interpolation, `H_ii` < 1.
     /// # Algorithm (hotSpring validated)
-    ///
     /// For each point i:
-    /// 1. Solve K_smooth · w = e_i (standard basis vector)
-    /// 2. H_ii = K_raw[i,:] · w = dot product of row i with solution
-    ///
-    /// This correctly gives H_ii < 1 when smoothing > 0.
+    /// 1. Solve `K_smooth` · w = `e_i` (standard basis vector)
+    /// 2. `H_ii` = `K_raw`[i,:] · w = dot product of row i with solution
+    ///    This correctly gives `H_ii` < 1 when smoothing > 0.
     fn compute_hat_diagonal(&self) -> Result<Vec<f64>> {
         let n = self.n_train;
 
@@ -438,11 +415,13 @@ impl RBFSurrogate {
     }
 
     /// Get the number of training points.
+    #[must_use]
     pub fn n_train(&self) -> usize {
         self.n_train
     }
 
     /// Get the input dimension.
+    #[must_use]
     pub fn n_dim(&self) -> usize {
         self.n_dim
     }
@@ -472,7 +451,7 @@ pub struct LooSmoothing {
 ///
 /// # Returns
 ///
-/// [`LooSmoothing`] with optimal_smoothing, optimal_rmse, and all grid results.
+/// [`LooSmoothing`] with `optimal_smoothing`, `optimal_rmse`, and all grid results.
 ///
 /// # Example
 ///
@@ -488,6 +467,11 @@ pub struct LooSmoothing {
 /// # Reference
 ///
 /// hotSpring validation: `surrogate.rs::loo_cv_optimal_smoothing()`
+///
+/// # Errors
+///
+/// Returns [`Err`] if `smoothing_grid` is empty, or if no valid smoothing values are found
+/// during grid search (all surrogates failed to train or produced non-finite LOO-CV RMSE).
 pub fn loo_cv_optimal_smoothing(
     device: Arc<WgpuDevice>,
     x_data: &[Vec<f64>],

@@ -16,13 +16,13 @@
 //! ```
 //!
 //! Where:
-//! - `x_t`: Input at time t [batch, input_size]
-//! - `h_{t-1}`: Previous hidden state [batch, hidden_size]
-//! - `W_ih`: Input-to-hidden weights [hidden_size, input_size]
-//! - `W_hh`: Hidden-to-hidden weights [hidden_size, hidden_size]
-//! - `b_ih`: Input-to-hidden bias [hidden_size]
-//! - `b_hh`: Hidden-to-hidden bias [hidden_size]
-//! - `h_t`: New hidden state [batch, hidden_size]
+//! - `x_t`: Input at time t [batch, `input_size`]
+//! - `h_{t-1}`: Previous hidden state [batch, `hidden_size`]
+//! - `W_ih`: Input-to-hidden weights [`hidden_size`, `input_size`]
+//! - `W_hh`: Hidden-to-hidden weights [`hidden_size`, `hidden_size`]
+//! - `b_ih`: Input-to-hidden bias [`hidden_size`]
+//! - `b_hh`: Hidden-to-hidden bias [`hidden_size`]
+//! - `h_t`: New hidden state [batch, `hidden_size`]
 
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
@@ -43,6 +43,9 @@ pub struct RNNCell {
 
 impl RNNCell {
     /// Create a new RNN cell operation
+    /// # Errors
+    /// Returns [`Err`] if weight or bias tensor shapes are invalid, or if
+    /// `h_prev` shape does not match batch and hidden size.
     pub fn new(
         input: Tensor,
         weight_ih: Tensor,
@@ -119,6 +122,9 @@ impl RNNCell {
     }
 
     /// Execute the RNN cell operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 

@@ -63,21 +63,17 @@ pub struct CrankNicolsonConfig {
 
 impl CrankNicolsonConfig {
     /// Create a new configuration.
-    ///
     /// # Arguments
-    ///
     /// * `alpha` - Thermal diffusivity
     /// * `dx` - Spatial step
     /// * `dt` - Time step
     /// * `nx` - Number of grid points
-    ///
     /// # Example
-    ///
     /// ```
     /// use barracuda::pde::CrankNicolsonConfig;
-    ///
     /// let config = CrankNicolsonConfig::new(1.0, 0.01, 0.001, 101);
     /// ```
+    #[must_use]
     pub fn new(alpha: f64, dx: f64, dt: f64, nx: usize) -> Self {
         Self {
             alpha,
@@ -90,6 +86,7 @@ impl CrankNicolsonConfig {
     }
 
     /// Set boundary conditions.
+    #[must_use]
     pub fn with_boundary_conditions(mut self, left: f64, right: f64) -> Self {
         self.left_bc = left;
         self.right_bc = right;
@@ -97,14 +94,16 @@ impl CrankNicolsonConfig {
     }
 
     /// Compute the Courant number r = α·Δt/Δx².
-    ///
     /// The Crank-Nicolson scheme is unconditionally stable for all r,
     /// but r ~ 0.5 gives best accuracy.
+    #[must_use]
     pub fn courant_number(&self) -> f64 {
         self.alpha * self.dt / (self.dx * self.dx)
     }
 
     /// Validate the configuration.
+    /// # Errors
+    /// Returns [`Err`] if `alpha` ≤ 0, `dx` ≤ 0, `dt` ≤ 0, or `nx` < 3.
     pub fn validate(&self) -> Result<()> {
         if self.alpha <= 0.0 {
             return Err(BarracudaError::InvalidInput {
@@ -147,27 +146,23 @@ pub struct HeatEquation1D {
 
 impl HeatEquation1D {
     /// Create a new solver with initial condition.
-    ///
     /// # Arguments
-    ///
     /// * `config` - Solver configuration
     /// * `initial` - Initial temperature profile (length nx)
-    ///
     /// # Example
-    ///
     /// ```
     /// use barracuda::pde::{CrankNicolsonConfig, HeatEquation1D};
-    ///
     /// let config = CrankNicolsonConfig::new(1.0, 0.1, 0.01, 11)
     ///     .with_boundary_conditions(0.0, 0.0);
-    ///
     /// // Initial condition: u(x,0) = sin(πx)
     /// let initial: Vec<f64> = (0..11)
     ///     .map(|i| (std::f64::consts::PI * i as f64 / 10.0).sin())
     ///     .collect();
-    ///
     /// let solver = HeatEquation1D::new(config, &initial).unwrap();
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if the configuration is invalid (see [`validate`](CrankNicolsonConfig::validate))
+    /// or if `initial.len() != config.nx`.
     pub fn new(config: CrankNicolsonConfig, initial: &[f64]) -> Result<Self> {
         config.validate()?;
 
@@ -204,10 +199,10 @@ impl HeatEquation1D {
     }
 
     /// Advance the solution by one time step.
-    ///
     /// # Returns
-    ///
     /// The new solution including boundary points.
+    /// # Errors
+    /// Returns [`Err`] if the tridiagonal solve fails (e.g., singular system or invalid dimensions).
     pub fn step(&mut self) -> Result<Vec<f64>> {
         let n = self.u.len();
 
@@ -242,14 +237,12 @@ impl HeatEquation1D {
     }
 
     /// Advance the solution by multiple time steps.
-    ///
     /// # Arguments
-    ///
     /// * `n_steps` - Number of time steps
-    ///
     /// # Returns
-    ///
     /// The final solution including boundary points.
+    /// # Errors
+    /// Returns [`Err`] if any time step fails (see [`step`](Self::step)).
     pub fn advance(&mut self, n_steps: usize) -> Result<Vec<f64>> {
         for _ in 0..n_steps {
             self.step()?;
@@ -258,6 +251,7 @@ impl HeatEquation1D {
     }
 
     /// Get the current solution including boundary points.
+    #[must_use]
     pub fn solution(&self) -> Vec<f64> {
         let mut full = Vec::with_capacity(self.config.nx);
         full.push(self.config.left_bc);
@@ -267,6 +261,7 @@ impl HeatEquation1D {
     }
 
     /// Get the spatial grid points.
+    #[must_use]
     pub fn grid(&self) -> Vec<f64> {
         (0..self.config.nx)
             .map(|i| i as f64 * self.config.dx)
@@ -274,6 +269,7 @@ impl HeatEquation1D {
     }
 
     /// Get the current time.
+    #[must_use]
     pub fn config(&self) -> &CrankNicolsonConfig {
         &self.config
     }
@@ -289,16 +285,19 @@ pub struct CrankNicolson1D {
 
 impl CrankNicolson1D {
     /// Create a new solver.
+    /// # Errors
+    /// Returns [`Err`] if the configuration is invalid or `initial.len() != config.nx`.
     pub fn new(config: CrankNicolsonConfig, initial: &[f64]) -> Result<Self> {
         let heat = HeatEquation1D::new(config, initial)?;
         Ok(Self { heat, time: 0.0 })
     }
 
     /// Advance with optional source term.
-    ///
     /// # Arguments
-    ///
     /// * `source` - Source term f(x) at current time (interior points only)
+    /// # Errors
+    /// Returns [`Err`] if the tridiagonal solve fails (see
+    /// [`HeatEquation1D::step`](HeatEquation1D::step)).
     pub fn step_with_source(&mut self, source: Option<&[f64]>) -> Result<Vec<f64>> {
         // For now, just do a regular step
         // Source term integration can be added via operator splitting
@@ -318,11 +317,13 @@ impl CrankNicolson1D {
     }
 
     /// Get current time.
+    #[must_use]
     pub fn time(&self) -> f64 {
         self.time
     }
 
     /// Get current solution.
+    #[must_use]
     pub fn solution(&self) -> Vec<f64> {
         self.heat.solution()
     }
@@ -342,6 +343,10 @@ impl CrankNicolson1D {
 /// # Returns
 ///
 /// New solution at interior points.
+///
+/// # Errors
+///
+/// Returns [`Err`] if `u` is empty or the tridiagonal solve fails.
 pub fn crank_nicolson_step(
     u: &[f64],
     alpha: f64,
@@ -420,14 +425,11 @@ mod tests {
         let grid = solver.grid();
         for (i, (x, u)) in grid.iter().zip(sol.iter()).enumerate() {
             let expected = x / 1.0; // Linear from 0 to 1
-                                    // Allow some error from finite time
+            // Allow some error from finite time
             if i > 0 && i < 10 {
                 assert!(
                     (u - expected).abs() < 0.1,
-                    "At x={}: u={}, expected={}",
-                    x,
-                    u,
-                    expected
+                    "At x={x}: u={u}, expected={expected}"
                 );
             }
         }

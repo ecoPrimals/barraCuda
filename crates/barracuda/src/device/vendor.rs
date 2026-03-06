@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Canonical GPU vendor ID constants.
 //!
-//! Every place in BarraCuda that branches on `caps.vendor` or
+//! Every place in `BarraCuda` that branches on `caps.vendor` or
 //! `adapter_info.vendor` should import from here instead of
 //! repeating raw hex literals.  This is the single source of truth.
 
@@ -23,13 +23,14 @@ pub const VENDOR_ARM: u32 = 0x13B5;
 /// Qualcomm Adreno GPU
 pub const VENDOR_QUALCOMM: u32 = 0x5143;
 
-/// ImgTec PowerVR GPU
+/// `ImgTec` `PowerVR` GPU
 pub const VENDOR_IMAGINATION: u32 = 0x1010;
 
-/// Software / CPU rasterizer (llvmpipe, SwiftShader, warp)
+/// Software / CPU rasterizer (llvmpipe, `SwiftShader`, warp)
 pub const VENDOR_SOFTWARE: u32 = 0x0000;
 
 /// Return a human-readable vendor name for debug output.
+#[must_use]
 pub fn vendor_name(id: u32) -> &'static str {
     match id {
         VENDOR_NVIDIA => "NVIDIA",

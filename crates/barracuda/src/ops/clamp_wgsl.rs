@@ -36,6 +36,7 @@ pub struct Clamp {
 
 impl Clamp {
     /// Create a new clamp operation
+    #[must_use]
     pub fn new(input: Tensor, min_val: f32, max_val: f32) -> Self {
         Self {
             input,
@@ -50,6 +51,11 @@ impl Clamp {
     }
 
     /// Execute the clamp operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -205,6 +211,11 @@ impl Tensor {
     ///
     /// * `min_val` - Minimum value
     /// * `max_val` - Maximum value
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn clamp_wgsl(self, min_val: f32, max_val: f32) -> Result<Self> {
         Clamp::new(self, min_val, max_val).execute()
     }

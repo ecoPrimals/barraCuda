@@ -47,13 +47,17 @@ pub struct FheFastPolyMul {
 
 impl FheFastPolyMul {
     /// Create a new fast polynomial multiplication operation
-    ///
     /// # Arguments
     /// * `input_a` - First polynomial (N coefficients)
     /// * `input_b` - Second polynomial (N coefficients)
     /// * `degree` - Polynomial degree (N), must be power of 2
     /// * `modulus` - FHE modulus q (64-bit prime)
     /// * `root_of_unity` - N-th primitive root of unity modulo q
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         input_a: Tensor,
         input_b: Tensor,
@@ -104,9 +108,7 @@ impl FheFastPolyMul {
     }
 
     /// Execute fast polynomial multiplication on GPU
-    ///
     /// Returns: c = a * b (polynomial product)
-    ///
     /// # Performance
     /// - N=4096: ~300μs total
     ///   - NTT(a): 98μs
@@ -114,6 +116,9 @@ impl FheFastPolyMul {
     ///   - Pointwise: 3μs
     ///   - INTT: 98μs
     /// - **56x faster** than naive O(N²) multiply
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(&self) -> Result<Tensor> {
         // Step 1: A = NTT(a)
         let ntt_a = FheNtt::new(
@@ -149,9 +154,9 @@ impl FheFastPolyMul {
     }
 
     /// Get expected speedup vs naive multiplication
-    ///
     /// Theoretical: N² / (N log N) = N / log N
     /// Practical: ~16% of theoretical (first iteration)
+    #[must_use]
     pub fn expected_speedup(&self) -> f64 {
         let n = self.degree as f64;
         let log_n = n.log2();

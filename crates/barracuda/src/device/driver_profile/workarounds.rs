@@ -22,10 +22,10 @@ pub enum Workaround {
     /// wetSpring on RTX 4070 (Feb 2026). Workaround: inject polyfill functions.
     NvvmAdaF64Transcendentals,
     /// NVK (nouveau) PTE fault on large combined allocations (>~1.4 GB).
-    /// Conservative limit of 1.2 GB total. File upstream bug in drm_gpuvm.
+    /// Conservative limit of 1.2 GB total. File upstream bug in `drm_gpuvm`.
     NvkLargeBufferLimit,
     /// NVK has broken or imprecise sin/cos/tan for f64. Use Taylor series
-    /// approximations (sin_f64_safe, cos_f64_safe) instead of native or polyfill.
+    /// approximations (`sin_f64_safe`, `cos_f64_safe`) instead of native or polyfill.
     NvkSinCosF64Imprecise,
 }
 

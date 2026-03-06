@@ -34,7 +34,11 @@ pub struct RandomCrop {
 }
 
 impl RandomCrop {
-    /// Create RandomCrop operation
+    /// Create `RandomCrop` operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if `crop_positions` is not 2D [`batch_size`, 2].
     pub fn new(
         input: Tensor,
         crop_positions: Tensor,
@@ -63,7 +67,12 @@ impl RandomCrop {
         &SHADER_F32
     }
 
-    /// Execute RandomCrop on tensor
+    /// Execute `RandomCrop` on tensor
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -128,7 +137,7 @@ impl RandomCrop {
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)
             .dispatch(workgroups_x, workgroups_y, workgroups_z)
-            .submit();
+            .submit()?;
 
         // Create output tensor
         Ok(Tensor::from_buffer(

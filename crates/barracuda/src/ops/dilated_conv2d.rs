@@ -36,6 +36,11 @@ pub struct DilatedConv2D {
 
 impl DilatedConv2D {
     /// Creates a new dilated conv2d. Input must be 4D [B, C, H, W].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         input: Tensor,
         weight: Tensor,
@@ -87,6 +92,9 @@ impl DilatedConv2D {
     }
 
     /// Executes dilated conv2d and returns the output tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let in_shape = self.input.shape();

@@ -10,7 +10,10 @@ use crate::unified_math::{MathOp, TensorDescriptor};
 use std::sync::Arc;
 
 use super::traits::{ComputeExecutor, TensorStorage};
-use super::types::*;
+use super::types::{
+    HardwareCapabilities, HardwareType, MemoryCapabilities, OperationCapabilities,
+    ParallelismCapabilities, PerformanceCapabilities, PrecisionCapabilities,
+};
 
 pub(crate) struct CpuExecutor {
     capabilities: HardwareCapabilities,
@@ -19,7 +22,7 @@ pub(crate) struct CpuExecutor {
 impl CpuExecutor {
     pub(crate) fn new() -> Self {
         let cpu_cores = std::thread::available_parallelism()
-            .map(|n| n.get())
+            .map(std::num::NonZero::get)
             .unwrap_or(4);
 
         #[cfg(target_arch = "x86_64")]

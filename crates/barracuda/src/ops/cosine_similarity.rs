@@ -24,7 +24,9 @@ pub struct CosineSimilarity {
 }
 
 impl CosineSimilarity {
-    /// Create CosineSimilarity operation
+    /// Create `CosineSimilarity` operation
+    /// # Errors
+    /// This function does not return errors; the [`Result`] type is for API consistency.
     pub fn new(vectors_a: Tensor, vectors_b: Tensor) -> Result<Self> {
         Ok(Self {
             vectors_a,
@@ -37,7 +39,10 @@ impl CosineSimilarity {
         include_str!("../shaders/math/cosine_similarity.wgsl")
     }
 
-    /// Execute CosineSimilarity on tensor
+    /// Execute `CosineSimilarity` on tensor
+    /// # Errors
+    /// Returns [`Err`] if vectors are not 2D, vector dimensions do not match,
+    /// or buffer allocation/GPU dispatch fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.vectors_a.device();
         let a_shape = self.vectors_a.shape();
@@ -89,7 +94,7 @@ impl CosineSimilarity {
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)
             .dispatch(workgroups_x, workgroups_y, 1)
-            .submit();
+            .submit()?;
 
         // Create output tensor
         Ok(Tensor::from_buffer(

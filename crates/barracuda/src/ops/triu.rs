@@ -34,6 +34,9 @@ pub struct Triu {
 
 impl Triu {
     /// Creates a new triu operation. `diagonal` selects which diagonal to include (0 = main).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor, diagonal: i32) -> Result<Self> {
         let shape = input.shape();
         if shape.len() < 2 {
@@ -51,6 +54,9 @@ impl Triu {
     }
 
     /// Executes the triu operation and returns the upper triangular result.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();

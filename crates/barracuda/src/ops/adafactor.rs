@@ -49,6 +49,9 @@ pub struct Adafactor {
 
 impl Adafactor {
     /// Create Adafactor optimizer with factorized second moment.
+    /// # Errors
+    /// Returns [`Err`] if params and gradients shapes differ, `learning_rate` is not positive,
+    /// beta1 or beta2 are not in [0.0, 1.0), step is 0, or m/v (if provided) shapes differ from params.
     pub fn new(
         params: Tensor,
         gradients: Tensor,
@@ -148,7 +151,9 @@ impl Adafactor {
         }
     }
 
-    /// Execute Adafactor step. Returns (updated_params, m, v).
+    /// Execute Adafactor step. Returns (`updated_params`, m, v).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<(Tensor, Tensor, Tensor)> {
         let device = self.params.device();
         let size = self.params.shape().iter().product::<usize>();
@@ -347,7 +352,6 @@ impl Adafactor {
 
 impl Tensor {
     /// Adafactor optimizer step
-    ///
     /// # Arguments
     /// - `gradients`: Gradient tensor [same shape as params]
     /// - `learning_rate`: Learning rate
@@ -360,9 +364,12 @@ impl Tensor {
     /// - `step`: Current iteration (starts at 1, not 0)
     /// - `m`: First moment estimate (None for first step or if beta1=0)
     /// - `v`: Second moment estimate (None for first step)
-    ///
     /// # Returns
-    /// - Tuple: (updated_params, updated_m, updated_v)
+    /// - Tuple: (`updated_params`, `updated_m`, `updated_v`)
+    /// # Errors
+    /// Returns [`Err`] if params and gradients shapes differ, `learning_rate` is not positive,
+    /// beta1 or beta2 are not in [0.0, 1.0), step is 0, m/v shapes differ, buffer allocation fails,
+    /// GPU dispatch fails, or the device is lost.
     pub fn adafactor_step(
         self,
         gradients: &Self,

@@ -3,9 +3,9 @@
 //!
 //! Deep Debt Principles:
 //! - Zero hardcoding: Capability-based workgroup dispatch
-//! - Batchable: routes through TensorContext::record_operation()
+//! - Batchable: routes through `TensorContext::record_operation()`
 //! - Zero-copy output: buffer pool, no GPU→CPU→GPU round-trip
-//! - Pipeline cached: GLOBAL_CACHE eliminates recompilation overhead
+//! - Pipeline cached: `GLOBAL_CACHE` eliminates recompilation overhead
 
 /// f64 is the canonical source — math is universal, precision is silicon.
 const SHADER_F64: &str = include_str!("../shaders/activation/tanhshrink_f64.wgsl");
@@ -33,6 +33,7 @@ pub struct Tanhshrink {
 
 impl Tanhshrink {
     /// Creates a Tanhshrink operation for the given input tensor.
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -42,10 +43,12 @@ impl Tanhshrink {
     }
 
     /// Execute Tanhshrink.
-    ///
     /// - Output stays GPU-resident (no readback).
     /// - Pipeline compiled once, cached globally.
     /// - Dispatch batched when inside `TensorSession`.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -124,6 +127,9 @@ impl Tanhshrink {
 
 impl Tensor {
     /// Compute Tanhshrink element-wise (GPU-resident, pipeline-cached, batchable).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn tanhshrink_wgsl(self) -> Result<Self> {
         Tanhshrink::new(self).execute()
     }

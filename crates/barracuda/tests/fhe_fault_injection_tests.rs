@@ -52,13 +52,9 @@ async fn fault_ntt_non_power_of_two_degree() {
             let result = FheNtt::new(input_tensor, degree, modulus, root);
 
             // Verify error (not panic)
-            assert!(
-                result.is_err(),
-                "NTT should reject invalid degree {}",
-                degree
-            );
+            assert!(result.is_err(), "NTT should reject invalid degree {degree}");
 
-            println!("✅ Rejected invalid degree: {}", degree);
+            println!("✅ Rejected invalid degree: {degree}");
         }
     }) {
         return;
@@ -83,15 +79,10 @@ async fn fault_ntt_mismatched_input_length() {
             let result = FheNtt::new(input_tensor, degree, modulus, root);
             assert!(
                 result.is_err(),
-                "NTT should reject mismatched length {} (expected {})",
-                length,
-                degree
+                "NTT should reject mismatched length {length} (expected {degree})"
             );
 
-            println!(
-                "✅ Rejected mismatched length: {} (expected {})",
-                length, degree
-            );
+            println!("✅ Rejected mismatched length: {length} (expected {degree})");
         }
     }) {
         return;
@@ -123,7 +114,7 @@ async fn fault_ntt_coefficient_exceeds_modulus() {
                 let result_tensor = ntt.execute().unwrap();
                 let result_data = result_tensor.to_vec_u32().unwrap();
                 for chunk in result_data.chunks(2) {
-                    let val = chunk[0] as u64 | ((chunk[1] as u64) << 32);
+                    let val = u64::from(chunk[0]) | (u64::from(chunk[1]) << 32);
                     assert!(val < modulus || val % modulus < modulus);
                 }
             }
@@ -170,8 +161,7 @@ async fn fault_gpu_unavailable() {
         let err_msg = format!("{:?}", result.err().unwrap());
         assert!(
             err_msg.contains("adapter") || err_msg.contains("No "),
-            "Error should mention adapter/unavailability: {}",
-            err_msg
+            "Error should mention adapter/unavailability: {err_msg}"
         );
 
         println!("✅ GPU unavailable returns clear error (no panic)");
@@ -193,7 +183,7 @@ async fn fault_out_of_gpu_memory() {
             match Tensor::from_data_pod(&data, vec![size], device.clone()) {
                 Ok(t) => tensors.push(t),
                 Err(_e) => {
-                    println!("  OOM at iteration {} (expected)", i);
+                    println!("  OOM at iteration {i} (expected)");
                     break;
                 }
             }
@@ -216,7 +206,7 @@ async fn fault_out_of_gpu_memory() {
 
 // Modular multiplication using u128 to avoid overflow (reference impl)
 fn mod_mul(a: u64, b: u64, modulus: u64) -> u64 {
-    ((a as u128 * b as u128) % modulus as u128) as u64
+    ((u128::from(a) * u128::from(b)) % u128::from(modulus)) as u64
 }
 
 #[tokio::test]
@@ -264,14 +254,14 @@ async fn fault_twiddle_factor_precision() {
     let mut power = 1u64;
     for _ in 0..degree {
         twiddles.push(power);
-        power = ((power as u128 * root as u128) % modulus as u128) as u64;
+        power = ((u128::from(power) * u128::from(root)) % u128::from(modulus)) as u64;
     }
 
     assert_eq!(twiddles.len(), degree as usize);
     assert_eq!(twiddles[0], 1, "First twiddle must be 1");
 
     // Verify ω^N ≡ 1 (mod q) — root of unity condition
-    let root_pow_n = mod_pow(root, degree as u64, modulus);
+    let root_pow_n = mod_pow(root, u64::from(degree), modulus);
     assert_eq!(root_pow_n, 1, "root^degree must equal 1 (mod modulus)");
 
     // Spot-check: twiddles[i] = root^i mod q
@@ -363,7 +353,7 @@ async fn fault_multiple_failures_in_sequence() {
             let result = FheNtt::new(empty_tensor, 0, 0, root);
             assert!(result.is_err(), "Should error on invalid input");
 
-            println!("  Failure {} handled", i);
+            println!("  Failure {i} handled");
         }
 
         let degree = 16u32;

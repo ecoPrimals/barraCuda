@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-//! SpectralNautilusBridge — maps spectral analysis features to NautilusBrain observations.
+//! `SpectralNautilusBridge` — maps spectral analysis features to `NautilusBrain` observations.
 //!
 //! Bridges `barracuda::spectral` eigenvalue statistics to `NautilusBrain`'s
 //! `BetaObservation` input format, enabling spectral-driven evolutionary
@@ -83,16 +83,17 @@ impl SpectralFeatures {
         }
     }
 
-    /// Convert spectral features to a `BetaObservation` for NautilusBrain.
+    /// Convert spectral features to a `BetaObservation` for `NautilusBrain`.
     ///
     /// Maps spectral quantities to physics-analogous fields:
-    /// - `beta` ← level_spacing_ratio (control parameter analog)
+    /// - `beta` ← `level_spacing_ratio` (control parameter analog)
     /// - `plaquette` ← bandwidth (order parameter analog)
-    /// - `cg_iters` ← condition_number (computational cost proxy)
+    /// - `cg_iters` ← `condition_number` (computational cost proxy)
     /// - `acceptance` ← 1.0 (always valid)
     /// - `delta_h_abs` ← 0.0 (no energy change for spectral obs)
-    /// - `anderson_r` ← level_spacing_ratio (direct)
-    /// - `anderson_lambda_min` ← lambda_min
+    /// - `anderson_r` ← `level_spacing_ratio` (direct)
+    /// - `anderson_lambda_min` ← `lambda_min`
+    #[must_use]
     pub fn to_observation(&self) -> BetaObservation {
         BetaObservation {
             beta: self.level_spacing_ratio,
@@ -124,11 +125,7 @@ fn level_spacing_ratio_from_sorted(eigs: &[f64]) -> f64 {
             count += 1;
         }
     }
-    if count > 0 {
-        sum / count as f64
-    } else {
-        0.0
-    }
+    if count > 0 { sum / count as f64 } else { 0.0 }
 }
 
 #[cfg(test)]

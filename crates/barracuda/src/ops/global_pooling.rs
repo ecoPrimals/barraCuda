@@ -35,6 +35,11 @@ pub struct GlobalPooling {
 
 impl GlobalPooling {
     /// Create global pooling with the given aggregation type.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(node_features: Tensor, aggregation_type: AggregationType) -> Result<Self> {
         let node_shape = node_features.shape();
         if node_shape.len() != 2 {
@@ -67,6 +72,11 @@ impl GlobalPooling {
     }
 
     /// Execute global pooling and return the output tensor.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.node_features.device();
         // Create output buffer

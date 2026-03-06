@@ -2,12 +2,12 @@
 //! Device Registry — Physical device tracking with backend preference
 //!
 //! This module provides deduplication of physical devices that may appear
-//! multiple times through different backends (Vulkan, OpenCL, Metal, DX12).
+//! multiple times through different backends (Vulkan, `OpenCL`, Metal, DX12).
 //!
 //! **Problem**: wgpu with `Backends::all()` returns the same physical GPU
-//! as multiple adapters (e.g., RTX 3090 via Vulkan AND OpenCL).
+//! as multiple adapters (e.g., RTX 3090 via Vulkan AND `OpenCL`).
 //!
-//! **Solution**: Track physical devices by (vendor, device_id) and aggregate
+//! **Solution**: Track physical devices by (vendor, `device_id`) and aggregate
 //! their backend capabilities. Prefer Vulkan for ecoPrimals workloads.
 //!
 //! # Example
@@ -30,6 +30,7 @@
 //! ```
 
 use std::collections::HashMap;
+use std::fmt::Write;
 use std::sync::OnceLock;
 
 /// Global device registry (lazily initialized on first access).
@@ -49,10 +50,10 @@ const BACKEND_PREFERENCE: &[wgpu::Backend] = &[
 ///
 /// This represents one physical piece of hardware, regardless of how many
 /// backends can access it. For example, an RTX 3090 accessible via both
-/// Vulkan and OpenGL is ONE PhysicalDevice with two backends.
+/// Vulkan and OpenGL is ONE `PhysicalDevice` with two backends.
 #[derive(Debug, Clone)]
 pub struct PhysicalDevice {
-    /// Unique identifier: (vendor_id, device_id)
+    /// Unique identifier: (`vendor_id`, `device_id`)
     pub id: PhysicalDeviceId,
 
     /// Human-readable device name
@@ -78,12 +79,13 @@ pub struct PhysicalDeviceId {
     pub vendor_id: u32,
     /// PCI device ID
     pub device_id: u32,
-    /// Normalized device name hash (for deduplication when device_id is 0)
+    /// Normalized device name hash (for deduplication when `device_id` is 0)
     pub name_hash: u64,
 }
 
 impl PhysicalDeviceId {
     /// Build ID from wgpu adapter info.
+    #[must_use]
     pub fn from_adapter_info(info: &wgpu::AdapterInfo) -> Self {
         // OpenGL backends sometimes report device_id=0
         // In that case, use the device name for deduplication
@@ -131,6 +133,7 @@ impl PhysicalDeviceId {
     }
 
     /// Check if two IDs likely refer to the same physical device
+    #[must_use]
     pub fn likely_same_device(&self, other: &Self) -> bool {
         // Same vendor is required
         if self.vendor_id != other.vendor_id {
@@ -215,6 +218,7 @@ pub enum DeviceVendor {
 
 impl DeviceVendor {
     /// Map PCI vendor ID to vendor enum.
+    #[must_use]
     pub fn from_vendor_id(id: u32) -> Self {
         match id {
             0x10DE => Self::Nvidia,
@@ -229,6 +233,7 @@ impl DeviceVendor {
     }
 
     /// Human-readable vendor name.
+    #[must_use]
     pub fn name(&self) -> &'static str {
         match self {
             Self::Nvidia => "NVIDIA",
@@ -273,7 +278,8 @@ impl DeviceRegistry {
         });
 
         let adapters = instance.enumerate_adapters(wgpu::Backends::all()).await;
-        let adapter_infos: Vec<wgpu::AdapterInfo> = adapters.iter().map(|a| a.get_info()).collect();
+        let adapter_infos: Vec<wgpu::AdapterInfo> =
+            adapters.iter().map(wgpu::Adapter::get_info).collect();
         Self::build_from_adapters(adapter_infos)
     }
 
@@ -281,6 +287,7 @@ impl DeviceRegistry {
     ///
     /// Uses `pollster::block_on` — avoid calling from within an async runtime.
     /// Prefer [`discover_async`] in async contexts.
+    #[must_use]
     pub fn discover() -> Self {
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
@@ -289,7 +296,8 @@ impl DeviceRegistry {
 
         let adapters: Vec<wgpu::Adapter> =
             pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all()));
-        let adapter_infos: Vec<wgpu::AdapterInfo> = adapters.iter().map(|a| a.get_info()).collect();
+        let adapter_infos: Vec<wgpu::AdapterInfo> =
+            adapters.iter().map(wgpu::Adapter::get_info).collect();
         Self::build_from_adapters(adapter_infos)
     }
 
@@ -347,12 +355,9 @@ impl DeviceRegistry {
 
         // Sort devices: discrete GPUs first, then by vendor preference
         device_order.sort_by(|a, b| {
-            let da = devices
-                .get(a)
-                .expect("device_order entries are keys of devices");
-            let db = devices
-                .get(b)
-                .expect("device_order entries are keys of devices");
+            let (Some(da), Some(db)) = (devices.get(a), devices.get(b)) else {
+                return std::cmp::Ordering::Equal;
+            };
 
             // Discrete GPUs first
             let type_ord_a = Self::device_type_order(da.device_type);
@@ -376,7 +381,7 @@ impl DeviceRegistry {
     ///
     /// This handles deduplication when:
     /// 1. Same vendor+device ID (straightforward match)
-    /// 2. Same vendor, one has device_id=0 (OpenGL quirk), names match
+    /// 2. Same vendor, one has `device_id=0` (OpenGL quirk), names match
     fn find_matching_device(
         devices: &HashMap<PhysicalDeviceId, PhysicalDevice>,
         new_id: &PhysicalDeviceId,
@@ -500,16 +505,19 @@ impl DeviceRegistry {
     }
 
     /// Get number of unique physical devices
+    #[must_use]
     pub fn device_count(&self) -> usize {
         self.devices.len()
     }
 
     /// Get physical device by index (in discovery order)
+    #[must_use]
     pub fn get_device(&self, index: usize) -> Option<&PhysicalDevice> {
         self.device_order.get(index).map(|id| &self.devices[id])
     }
 
     /// Get physical device by ID
+    #[must_use]
     pub fn get_device_by_id(&self, id: PhysicalDeviceId) -> Option<&PhysicalDevice> {
         self.devices.get(&id)
     }
@@ -517,6 +525,7 @@ impl DeviceRegistry {
     /// Get the preferred adapter index for a physical device
     ///
     /// Returns the adapter index for the best backend (Vulkan preferred)
+    #[must_use]
     pub fn get_preferred_adapter_index(&self, device_index: usize) -> Option<usize> {
         self.get_device(device_index)
             .and_then(|d| d.backends.first())
@@ -524,6 +533,7 @@ impl DeviceRegistry {
     }
 
     /// Get adapter index for a specific backend on a device
+    #[must_use]
     pub fn get_adapter_for_backend(
         &self,
         device_index: usize,
@@ -560,57 +570,62 @@ impl DeviceRegistry {
     }
 
     /// Get raw adapter info by index (for wgpu device creation)
+    #[must_use]
     pub fn get_adapter_info(&self, index: usize) -> Option<&wgpu::AdapterInfo> {
         self.adapter_infos.get(index)
     }
 
     /// Get all raw adapter infos
+    #[must_use]
     pub fn all_adapter_infos(&self) -> &[wgpu::AdapterInfo] {
         &self.adapter_infos
     }
 
     /// Generate a hardware report
+    #[must_use]
     pub fn report(&self) -> String {
         let mut report = String::new();
         report.push_str("=== Device Registry Report ===\n\n");
 
-        report.push_str(&format!(
+        let _ = write!(
+            report,
             "Physical devices: {} (from {} adapters)\n\n",
             self.device_count(),
             self.adapter_infos.len()
-        ));
+        );
 
         for (idx, device) in self.physical_devices().enumerate() {
-            report.push_str(&format!(
-                "Device {}: {} ({})\n",
+            let _ = writeln!(
+                report,
+                "Device {}: {} ({})",
                 idx,
                 device.name,
                 device.vendor.name()
-            ));
-            report.push_str(&format!("  Type: {:?}\n", device.device_type));
-            report.push_str(&format!(
-                "  ID: vendor=0x{:04X}, device=0x{:04X}\n",
+            );
+            let _ = writeln!(report, "  Type: {:?}", device.device_type);
+            let _ = writeln!(
+                report,
+                "  ID: vendor=0x{:04X}, device=0x{:04X}",
                 device.id.vendor_id, device.id.device_id
-            ));
-            report.push_str(&format!(
-                "  f64 support: {}\n",
-                device.capabilities.f64_shaders
-            ));
+            );
+            let _ = writeln!(report, "  f64 support: {}", device.capabilities.f64_shaders);
 
             if device.capabilities.compute_capability > 0.0 {
-                report.push_str(&format!(
-                    "  Compute capability: {:.1}\n",
+                let _ = writeln!(
+                    report,
+                    "  Compute capability: {:.1}",
                     device.capabilities.compute_capability
-                ));
+                );
             }
 
             report.push_str("  Backends:\n");
             for (bidx, backend) in device.backends.iter().enumerate() {
                 let preferred = if bidx == 0 { " (preferred)" } else { "" };
-                report.push_str(&format!(
-                    "    - {:?}{}: adapter[{}]\n",
+                let _ = writeln!(
+                    report,
+                    "    - {:?}{}: adapter[{}]",
                     backend.backend, preferred, backend.adapter_index
-                ));
+                );
             }
             report.push('\n');
         }

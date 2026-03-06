@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! TensorContext - Zero-overhead Tensor operations via internal pooling
+//! `TensorContext` - Zero-overhead Tensor operations via internal pooling
 //!
 //! # Batched dispatch (neuralSpring handoff #4 / #10)
 //!
@@ -26,7 +26,7 @@ mod context;
 mod limits;
 mod pool;
 
-pub use context::{clear_global_contexts, get_device_context, TensorContext, TensorContextStats};
+pub use context::{TensorContext, TensorContextStats, clear_global_contexts, get_device_context};
 pub use limits::{high_capacity_limits, science_limits};
 pub use pool::{BufferDescriptor, BufferPool, PooledBuffer, SolverBufferSet};
 
@@ -53,6 +53,7 @@ pub struct TensorSession {
 
 impl TensorSession {
     /// Begin a batch session on `device`.
+    #[must_use]
     pub fn new(device: &Arc<WgpuDevice>) -> Self {
         let ctx = get_device_context(device);
         ctx.begin_batch();
@@ -60,6 +61,8 @@ impl TensorSession {
     }
 
     /// Submit all queued ops in a single `queue.submit()` and end the session.
+    /// # Errors
+    /// Returns [`Err`] if the GPU device is lost or command submission fails.
     pub fn flush(self) -> Result<()> {
         self.ctx.end_batch()
     }
@@ -205,13 +208,15 @@ mod tests {
         let pool = BufferPool::new_standalone(device);
         pool.pin_solver_buffers("solver_a", &[("buf", BufferDescriptor::new(256))])
             .expect("first pin");
-        assert!(pool
-            .pin_solver_buffers("solver_a", &[("buf2", BufferDescriptor::new(256))])
-            .is_err());
-        pool.release_solver_buffers("solver_a");
-        assert!(pool
-            .pin_solver_buffers("solver_a", &[("buf2", BufferDescriptor::new(256))])
-            .is_ok());
+        assert!(
+            pool.pin_solver_buffers("solver_a", &[("buf2", BufferDescriptor::new(256))])
+                .is_err()
+        );
+        let _ = pool.release_solver_buffers("solver_a");
+        assert!(
+            pool.pin_solver_buffers("solver_a", &[("buf2", BufferDescriptor::new(256))])
+                .is_ok()
+        );
     }
 
     #[tokio::test]

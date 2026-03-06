@@ -13,7 +13,7 @@
 //! CrossAttention(Q_decoder, K_encoder, V_encoder) = softmax(QK^T / sqrt(d_k)) * V
 //! ```
 //!
-//! **Key Difference**: Q from decoder (seq_len_q), K/V from encoder (seq_len_kv)
+//! **Key Difference**: Q from decoder (`seq_len_q`), K/V from encoder (`seq_len_kv`)
 //!
 //! **Deep Debt Win**: Our attention already supports this! This is just a convenience API.
 //!
@@ -74,7 +74,7 @@ pub(crate) struct CrossAttentionParams {
 
 /// Cross Attention operation (encoder-decoder)
 ///
-/// **Deep Debt**: Custom WGSL for asymmetric seq_lens (decoder != encoder)
+/// **Deep Debt**: Custom WGSL for asymmetric `seq_lens` (decoder != encoder)
 pub struct CrossAttention {
     query: Tensor, // From decoder
     key: Tensor,   // From encoder
@@ -83,11 +83,13 @@ pub struct CrossAttention {
 
 impl CrossAttention {
     /// Create new cross attention operation
-    ///
     /// **Shapes**:
-    /// - query (decoder): [batch, heads, decoder_seq, dim]
-    /// - key (encoder): [batch, heads, encoder_seq, dim]
-    /// - value (encoder): [batch, heads, encoder_seq, dim]
+    /// - query (decoder): [batch, heads, `decoder_seq`, dim]
+    /// - key (encoder): [batch, heads, `encoder_seq`, dim]
+    /// - value (encoder): [batch, heads, `encoder_seq`, dim]
+    /// # Errors
+    /// Returns [`Err`] if tensors are not 4D, batch/heads/dim mismatch, or
+    /// key and value have different sequence lengths.
     pub fn new(query: Tensor, key: Tensor, value: Tensor) -> Result<Self> {
         // Validate shapes: all must be 4D [batch, heads, seq, dim]
         if query.shape().len() != 4 || key.shape().len() != 4 || value.shape().len() != 4 {
@@ -166,28 +168,25 @@ impl CrossAttention {
 
 impl Tensor {
     /// Cross Attention (encoder-decoder attention)
-    ///
-    /// **Deep Debt**: Convenience wrapper for attention with asymmetric seq_lens
-    ///
+    /// **Deep Debt**: Convenience wrapper for attention with asymmetric `seq_lens`
     /// # Arguments
-    /// - `key`: Encoder keys [batch, heads, encoder_seq, dim]
-    /// - `value`: Encoder values [batch, heads, encoder_seq, dim]
-    ///
+    /// - `key`: Encoder keys [batch, heads, `encoder_seq`, dim]
+    /// - `value`: Encoder values [batch, heads, `encoder_seq`, dim]
     /// # Returns
-    /// - Output: [batch, heads, decoder_seq, dim]
-    ///
+    /// - Output: [batch, heads, `decoder_seq`, dim]
     /// # Example
     /// ```rust,ignore
     /// // Decoder query
     /// let q = Tensor::randn(vec![2, 8, 32, 64]).await?;
-    ///
     /// // Encoder keys/values
     /// let k = Tensor::randn(vec![2, 8, 128, 64]).await?;
     /// let v = Tensor::randn(vec![2, 8, 128, 64]).await?;
-    ///
     /// // Cross attention (decoder attends to encoder)
     /// let output = q.cross_attention(&k, &v)?;  // T5/BART style
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if shape validation fails, or buffer allocation/GPU
+    /// dispatch fails (e.g. device lost or out of memory).
     pub fn cross_attention(self, key: &Self, value: &Self) -> Result<Self> {
         CrossAttention::new(self, key.clone(), value.clone())?.execute()
     }

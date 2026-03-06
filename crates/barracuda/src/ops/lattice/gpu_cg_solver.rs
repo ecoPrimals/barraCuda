@@ -2,7 +2,7 @@
 //! GPU Conjugate Gradient solver for D†D on staggered fermion fields.
 //!
 //! Orchestrates the existing [`StaggeredDirac`] and CG vector kernels
-//! (complex_dot_re, axpy, xpay) with [`ReduceScalarPipeline`] reductions
+//! (`complex_dot_re`, axpy, xpay) with [`ReduceScalarPipeline`] reductions
 //! in a host-side loop. All math runs on GPU — no CPU fallback.
 //!
 //! # Algorithm
@@ -13,15 +13,15 @@
 //! 2. p = r
 //! 3. Loop:
 //!    a. Ap = D†D·p  (two Dirac dispatches: D·p → tmp, D†·tmp → Ap)
-//!    b. rr = Re<r|r>  (complex_dot_re + reduce)
-//!    c. pAp = Re<p|Ap>  (complex_dot_re + reduce)
+//!    b. rr = Re<r|r>  (`complex_dot_re` + reduce)
+//!    c. pAp = Re<p|Ap>  (`complex_dot_re` + reduce)
 //!    d. α = rr / pAp
 //!    e. x += α·p  (axpy)
 //!    f. r -= α·Ap  (axpy with -α)
-//!    g. new_rr = Re<r|r>
-//!    h. β = new_rr / rr
+//!    g. `new_rr` = Re<r|r>
+//!    h. β = `new_rr` / rr
 //!    i. p = r + β·p  (xpay)
-//!    j. Check convergence: new_rr < tol² × b_norm²
+//!    j. Check convergence: `new_rr` < tol² × `b_norm²`
 
 use crate::device::WgpuDevice;
 use crate::error::Result;
@@ -86,6 +86,7 @@ pub struct GpuCgBuffers {
 
 impl GpuCgBuffers {
     /// Create GPU buffers for the given lattice volume.
+    #[must_use]
     pub fn new(device: &WgpuDevice, volume: usize) -> Self {
         let field_bytes = (volume * 6 * std::mem::size_of::<f64>()) as u64;
         let dot_bytes = (volume * 3 * std::mem::size_of::<f64>()) as u64;
@@ -135,6 +136,9 @@ pub struct GpuCgSolver {
 
 impl GpuCgSolver {
     /// Create a GPU CG solver for the given lattice volume.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>, volume: u32) -> Result<Self> {
         let dirac = StaggeredDirac::new(device.clone(), volume)?;
         let n_f64 = volume * 6; // 3 color × 2 (re/im)
@@ -214,9 +218,11 @@ impl GpuCgSolver {
     }
 
     /// Solve (D†D)x = b on GPU.
-    ///
     /// All buffers must be GPU-resident. `x` is zeroed at start.
     /// `links_buf`, `nbr_buf`, `phases_buf` come from `DiracGpuLayout`.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     #[expect(clippy::too_many_arguments, reason = "API")]
     pub fn solve(
         &self,
@@ -494,6 +500,7 @@ impl GpuCgSolver {
     }
 
     /// Lattice volume (number of sites).
+    #[must_use]
     pub fn volume(&self) -> u32 {
         self.volume
     }

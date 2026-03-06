@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Board structure and response for BingoCube reservoir computing.
+//! Board structure and response for `BingoCube` reservoir computing.
 
+use rand::SeedableRng;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
-use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
 
-/// Configuration for a BingoCube board.
+/// Configuration for a `BingoCube` board.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BoardConfig {
     /// Grid size (L×L).
@@ -43,7 +43,7 @@ pub struct ResponseVector {
     pub activations: Vec<f64>,
 }
 
-/// BingoCube board: L×L grid with column-range constraints.
+/// `BingoCube` board: L×L grid with column-range constraints.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Board {
     /// Cell values [row][col]; each column has unique values in its range.
@@ -54,6 +54,7 @@ pub struct Board {
 
 impl Board {
     /// Create a deterministic board from seed.
+    #[must_use]
     pub fn from_seed(config: BoardConfig, seed: u64) -> Self {
         let mut rng = StdRng::seed_from_u64(seed);
         let l = config.grid_size;
@@ -81,6 +82,7 @@ impl Board {
     }
 
     /// Compute response to reservoir input.
+    #[must_use]
     pub fn respond(&self, input: &ReservoirInput) -> ResponseVector {
         let l = self.config.grid_size;
         let mut activations = vec![0.0; l * l];

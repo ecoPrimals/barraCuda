@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Focal Loss v2 - Enhanced focal loss with alpha balancing
 //!
-//! **Canonical BarraCuda Pattern**: Struct with new/execute
+//! **Canonical `BarraCuda` Pattern**: Struct with new/execute
 //!
 //! Improved version with class balancing parameter.
 
@@ -19,6 +19,10 @@ pub struct FocalLossV2 {
 
 impl FocalLossV2 {
     /// Create a new focal loss v2 operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shapes mismatch or parameters are invalid (alpha not in [0, 1], gamma < 0).
     pub fn new(predictions: Tensor, targets: Tensor, alpha: f32, gamma: f32) -> Result<Self> {
         // Validate shapes match
         if predictions.shape() != targets.shape() {
@@ -62,6 +66,11 @@ impl FocalLossV2 {
     }
 
     /// Execute the focal loss v2 operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size = self.predictions.len();

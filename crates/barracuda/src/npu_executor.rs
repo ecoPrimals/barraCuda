@@ -3,7 +3,7 @@
 //!
 //! **Philosophy**: Bridge Akida neuromorphic operations to unified architecture
 //!
-//! This module wraps the existing AkidaExecutor to implement the ComputeExecutor trait,
+//! This module wraps the existing `AkidaExecutor` to implement the `ComputeExecutor` trait,
 //! allowing the scheduler to use Akida NPUs for neuromorphic workloads.
 //!
 //! **Deep Debt Principles**:
@@ -31,7 +31,7 @@ mod npu_efficiency {
     pub(super) const NPU_EQUIVALENT_TFLOPS: f64 = 0.001;
     /// MatMul/BatchMatMul efficiency on NPU (sparse matrix ops). Reserved for per-op scoring.
     pub(super) const _MATMUL_EFFICIENCY: f64 = 0.85;
-    /// Conv2D efficiency on NPU (neuromorphic convolutions). Reserved for per-op scoring.
+    /// `Conv2D` efficiency on NPU (neuromorphic convolutions). Reserved for per-op scoring.
     pub(super) const _CONV2D_EFFICIENCY: f64 = 0.90;
     /// Sigmoid/Tanh efficiency (spike coding). Reserved for per-op scoring.
     pub(super) const _ACTIVATION_EFFICIENCY: f64 = 0.70;
@@ -48,7 +48,7 @@ use crate::unified_hardware::{
 use crate::unified_math::{MathOp, TensorDescriptor};
 use std::sync::Arc;
 
-/// NPU executor wrapping AkidaExecutor
+/// NPU executor wrapping `AkidaExecutor`
 pub struct NpuExecutor {
     executor: Arc<AkidaExecutor>,
     capabilities: HardwareCapabilities,
@@ -56,6 +56,8 @@ pub struct NpuExecutor {
 
 impl NpuExecutor {
     /// Create new NPU executor
+    /// # Errors
+    /// Returns [`Err`] if no Akida boards are detected or board initialization fails.
     pub fn new() -> Result<Self> {
         let akida = AkidaExecutor::new()?;
         let capabilities = Self::detect_capabilities(&akida);
@@ -66,7 +68,8 @@ impl NpuExecutor {
         })
     }
 
-    /// Create from existing AkidaExecutor
+    /// Create from existing `AkidaExecutor`
+    #[must_use]
     pub fn from_executor(executor: AkidaExecutor) -> Self {
         let capabilities = Self::detect_capabilities(&executor);
         Self {
@@ -81,8 +84,8 @@ impl NpuExecutor {
         let board_count = executor.board_count();
 
         // Akida-specific capabilities
-        // Each NPU has 1.2M neurons, ultra-low power
-        let _total_neurons = npu_count * 1_200_000; // Reserved for future neuron-based scheduling
+        // Each NPU has 1.2M neurons, ultra-low power (reserved for future neuron-based scheduling)
+        let _ = npu_count * 1_200_000;
 
         HardwareCapabilities {
             hardware_type: HardwareType::NPU,
@@ -134,12 +137,14 @@ impl NpuExecutor {
         }
     }
 
-    /// Get underlying AkidaExecutor
+    /// Get underlying `AkidaExecutor`
+    #[must_use]
     pub fn akida(&self) -> &AkidaExecutor {
         &self.executor
     }
 
     /// Get total NPU count
+    #[must_use]
     pub fn npu_count(&self) -> usize {
         self.executor.npu_count()
     }
@@ -191,7 +196,10 @@ impl ComputeExecutor for NpuExecutor {
     }
 
     fn score_operation(&self, op: &MathOp, inputs: &[TensorDescriptor]) -> f64 {
-        use MathOp::*;
+        use MathOp::{
+            BatchMatMul, Conv2D, Div, GELU, MatMul, Pow, ReLU, ReduceMax, ReduceMin, ReduceSum,
+            Sigmoid, Softmax, Tanh,
+        };
 
         let total_elements: usize = inputs.iter().map(|t| t.numel).sum();
 
@@ -286,8 +294,8 @@ impl ComputeExecutor for NpuExecutor {
 
 /// NPU tensor storage for the scheduler path
 ///
-/// The primary NPU execution path uses AkidaExecutor directly.
-/// This storage type is for the ComputeExecutor scheduler interface.
+/// The primary NPU execution path uses `AkidaExecutor` directly.
+/// This storage type is for the `ComputeExecutor` scheduler interface.
 struct NpuTensorStorage {
     descriptor: TensorDescriptor,
     data: Vec<u8>,

@@ -21,6 +21,7 @@ pub struct Pad {
 
 impl Pad {
     /// Create a new pad operation
+    #[must_use]
     pub fn new(input: Tensor, padding: (usize, usize, usize, usize), value: f32) -> Self {
         Self {
             input,
@@ -42,6 +43,11 @@ impl Pad {
     }
 
     /// Execute the pad operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -231,6 +237,11 @@ impl Tensor {
     ///
     /// * `padding` - (left, right, top, bottom) padding amounts
     /// * `value` - Value to use for padding
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn pad_wgsl(self, padding: (usize, usize, usize, usize), value: f32) -> Result<Self> {
         Pad::new(self, padding, value).execute()
     }

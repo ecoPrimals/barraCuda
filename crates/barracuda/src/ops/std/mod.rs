@@ -17,6 +17,7 @@ use crate::error::Result;
 use crate::tensor::Tensor;
 
 /// Simple std reduction variant (scalar path).
+#[must_use]
 pub fn wgsl_std_simple() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
@@ -42,6 +43,7 @@ pub struct Std {
 
 impl Std {
     /// Create a new std operation
+    #[must_use]
     pub fn new(input: Tensor, dim: Option<usize>, keepdim: bool) -> Self {
         Self {
             input,
@@ -61,6 +63,8 @@ impl Std {
     }
 
     /// Execute the std operation
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range (for dimension-wise std), or if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         compute::execute(self)
     }
@@ -68,16 +72,18 @@ impl Std {
 
 impl Tensor {
     /// Compute standard deviation (global reduction)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn std(&self) -> Result<Self> {
         Std::new(self.clone(), None, false).execute()
     }
 
     /// Compute standard deviation along a dimension
-    ///
     /// # Arguments
-    ///
     /// * `dim` - Dimension to compute std along
     /// * `keepdim` - Whether to keep the reduced dimension with size 1
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range, or buffer allocation/GPU dispatch/buffer readback fails (e.g. device lost).
     pub fn std_dim(&self, dim: usize, keepdim: bool) -> Result<Self> {
         Std::new(self.clone(), Some(dim), keepdim).execute()
     }

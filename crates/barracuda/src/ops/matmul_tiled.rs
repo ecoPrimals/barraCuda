@@ -12,7 +12,7 @@
 //!
 //! ## Evolution History
 //!
-//! **Before** (Phase 3): `MatmulTiledExt` trait extension  
+//! **Before** (Phase 3): `MatmulTiledExt` trait extension\
 //! **After** (Phase 6): Direct `impl Tensor` method
 //!
 //! ## Usage
@@ -58,6 +58,11 @@ impl MatmulTiled {
     }
 
     /// Execute tiled matrix multiplication and return the result tensor.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.a.device();
         let a_shape = self.a.shape();
@@ -111,7 +116,7 @@ impl MatmulTiled {
                 (m as u32).div_ceil(TILE_SIZE),
                 1,
             )
-            .submit();
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,
@@ -156,6 +161,11 @@ impl Tensor {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn matmul_tiled(self, b: &Self) -> Result<Self> {
         let op = MatmulTiled {
             a: self,

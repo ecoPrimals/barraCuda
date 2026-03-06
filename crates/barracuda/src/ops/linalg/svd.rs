@@ -43,8 +43,8 @@ pub struct SvdDecomposition {
 
 impl SvdDecomposition {
     /// Compute the pseudoinverse (Moore-Penrose inverse) A⁺.
-    ///
     /// A⁺ = V Σ⁺ U^T where Σ⁺ has 1/σᵢ for σᵢ > tol, else 0.
+    #[must_use]
     pub fn pseudoinverse(&self, tol: f64) -> Vec<f64> {
         let k = self.s.len();
 
@@ -74,6 +74,8 @@ impl SvdDecomposition {
     }
 
     /// Solve the least squares problem min‖Ax - b‖₂ using pseudoinverse.
+    /// # Errors
+    /// Returns [`Err`] if `b.len() != self.m` (right-hand side length must match matrix row count).
     pub fn solve(&self, b: &[f64], tol: f64) -> Result<Vec<f64>> {
         if b.len() != self.m {
             return Err(BarracudaError::InvalidInput {
@@ -95,17 +97,23 @@ impl SvdDecomposition {
     }
 
     /// Compute the numerical rank (number of singular values > tol).
+    #[must_use]
     pub fn rank(&self, tol: f64) -> usize {
         self.s.iter().filter(|&&s| s > tol).count()
     }
 
-    /// Compute the condition number σ_max / σ_min.
+    /// Compute the condition number `σ_max` / `σ_min`.
+    /// # Panics
+    /// Panics if `s` is empty (should not occur after empty check).
+    #[must_use]
     pub fn condition_number(&self) -> f64 {
         if self.s.is_empty() {
             return f64::INFINITY;
         }
         let s_max = self.s[0];
-        let s_min = *self.s.last().expect("s is non-empty after empty check");
+        let Some(&s_min) = self.s.last() else {
+            return f64::INFINITY;
+        };
         if s_min < 1e-14 {
             f64::INFINITY
         } else {
@@ -114,8 +122,8 @@ impl SvdDecomposition {
     }
 
     /// Low-rank approximation: keep only the k largest singular values.
-    ///
     /// Returns the approximated matrix as m×n row-major.
+    #[must_use]
     pub fn low_rank_approx(&self, k: usize) -> Vec<f64> {
         let k = k.min(self.s.len());
         let mut approx = vec![0.0; self.m * self.n];
@@ -158,6 +166,11 @@ impl SvdDecomposition {
 /// let svd = svd_decompose(&a, 3, 2).unwrap();
 /// println!("Singular values: {:?}", svd.s);
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn svd_decompose(a: &[f64], m: usize, n: usize) -> Result<SvdDecomposition> {
     if a.len() != m * n {
         return Err(BarracudaError::InvalidInput {
@@ -353,12 +366,20 @@ fn jacobi_eigen(a: &[f64], n: usize, max_iter: usize) -> Result<(Vec<f64>, Vec<f
 }
 
 /// Convenience function: compute singular values only.
+///
+/// # Errors
+///
+/// Returns [`Err`] if [`svd_decompose`] fails (invalid dimensions or element count).
 pub fn svd_values(a: &[f64], m: usize, n: usize) -> Result<Vec<f64>> {
     let svd = svd_decompose(a, m, n)?;
     Ok(svd.s)
 }
 
 /// Convenience function: compute pseudoinverse.
+///
+/// # Errors
+///
+/// Returns [`Err`] if [`svd_decompose`] fails (invalid dimensions or element count).
 pub fn svd_pinv(a: &[f64], m: usize, n: usize, tol: f64) -> Result<Vec<f64>> {
     let svd = svd_decompose(a, m, n)?;
     Ok(svd.pseudoinverse(tol))

@@ -28,8 +28,8 @@
 //! let h_so = so.compute_with_density(&wf_squared, &density, &r_grid, &ls_factors, dr, w0)?;
 //! ```
 
-use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -72,6 +72,7 @@ pub struct SpinOrbitGpu {
 
 impl SpinOrbitGpu {
     /// Create a new spin-orbit GPU operator
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self { device }
     }
@@ -83,15 +84,20 @@ impl SpinOrbitGpu {
     /// Compute spin-orbit diagonal corrections with pre-computed gradient
     ///
     /// # Arguments
-    /// * `wf_squared` - Squared wavefunctions [batch × n_states × n_grid]
-    /// * `drho_dr` - Density gradient [batch × n_grid]
-    /// * `r_grid` - Radial grid points [n_grid]
-    /// * `ls_factors` - Spin-orbit factors ls_i [batch × n_states]
+    /// * `wf_squared` - Squared wavefunctions [batch × `n_states` × `n_grid`]
+    /// * `drho_dr` - Density gradient [batch × `n_grid`]
+    /// * `r_grid` - Radial grid points [`n_grid`]
+    /// * `ls_factors` - Spin-orbit factors `ls_i` [batch × `n_states`]
     /// * `dr` - Grid spacing
     /// * `w0` - Spin-orbit coupling strength (MeV·fm⁵)
     ///
     /// # Returns
-    /// Diagonal corrections h_so[i,i] for each (batch, state) pair [batch × n_states]
+    /// Diagonal corrections `h_so`[i,i] for each (batch, state) pair [batch × `n_states`]
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn compute(
         &self,
         wf_squared: &[f64],
@@ -154,6 +160,11 @@ impl SpinOrbitGpu {
     ///
     /// This version takes density and computes the gradient internally,
     /// which is more efficient when density is already on GPU.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn compute_with_density(
         &self,
         wf_squared: &[f64],
@@ -359,8 +370,7 @@ impl SpinOrbitGpu {
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
-        // drho_dr or dummy buffer
-        let drho_buffer = if let Some(drho) = drho_dr {
+        let drho_owned = drho_dr.map(|drho| {
             self.device
                 .device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -368,15 +378,10 @@ impl SpinOrbitGpu {
                     contents: bytemuck::cast_slice(drho),
                     usage: wgpu::BufferUsages::STORAGE,
                 })
-        } else {
-            // Dummy buffer for unused binding
-            self.device.device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("SpinOrbit drho_dr (dummy)"),
-                size: 8,
-                usage: wgpu::BufferUsages::STORAGE,
-                mapped_at_creation: false,
-            })
-        };
+        });
+        let drho_buffer = drho_owned
+            .as_ref()
+            .unwrap_or(self.device.placeholder_buffer());
 
         let r_buffer = self
             .device
@@ -485,9 +490,9 @@ impl SpinOrbitGpu {
     }
 }
 
-/// Compute ls_i factor for a state with quantum numbers (l, j)
+/// Compute `ls_i` factor for a state with quantum numbers (l, j)
 ///
-/// Formula: ls_i = (j(j+1) - l(l+1) - 3/4) / 2
+/// Formula: `ls_i` = (j(j+1) - l(l+1) - 3/4) / 2
 ///
 /// # Arguments
 /// * `l` - Orbital angular momentum quantum number
@@ -498,6 +503,7 @@ impl SpinOrbitGpu {
 /// let ls = compute_ls_factor(1, 1.5);  // p3/2 state
 /// let ls = compute_ls_factor(1, 0.5);  // p1/2 state
 /// ```
+#[must_use]
 pub fn compute_ls_factor(l: u32, j: f64) -> f64 {
     let l_f = l as f64;
     (j * (j + 1.0) - l_f * (l_f + 1.0) - 0.75) / 2.0

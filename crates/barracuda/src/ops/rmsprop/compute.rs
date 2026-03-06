@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! GPU compute operations for RMSprop Optimizer
+//! GPU compute operations for `RMSprop` Optimizer
 //!
-//! This module contains the GPU execution for RMSprop optimizer
+//! This module contains the GPU execution for `RMSprop` optimizer
 //! with adaptive learning rate per parameter.
 
 use super::{RMSprop, RMSpropParams};
@@ -10,11 +10,12 @@ use crate::error::Result;
 use crate::tensor::Tensor;
 
 impl RMSprop {
-    /// Execute RMSprop optimizer step (GPU single-pass)
-    ///
+    /// Execute `RMSprop` optimizer step (GPU single-pass)
     /// **Deep Debt**: Efficient single-pass update with adaptive learning rate
-    ///
-    /// Returns: (updated_weights, updated_sq_avg)
+    /// Returns: (`updated_weights`, `updated_sq_avg`)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<(Tensor, Tensor)> {
         let device = self.weights().device();
         let size = self.weights().shape().iter().product::<usize>();

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! AdaGrad Optimizer - GPU-accelerated Adaptive Gradient Algorithm
+//! `AdaGrad` Optimizer - GPU-accelerated Adaptive Gradient Algorithm
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation (existing shader evolved)
@@ -28,7 +28,7 @@
 //!
 //! **Used By**: Sparse gradient problems, NLP tasks
 //!
-//! **Note**: RMSprop and Adam address AdaGrad's monotonic decrease issue
+//! **Note**: `RMSprop` and Adam address `AdaGrad`'s monotonic decrease issue
 //!
 //! ## Usage
 //!
@@ -58,7 +58,7 @@ struct AdaGradParams {
     _padding: u32,
 }
 
-/// AdaGrad optimizer — per-parameter adaptive learning rates.
+/// `AdaGrad` optimizer — per-parameter adaptive learning rates.
 pub struct AdaGrad {
     weights: Tensor,
     gradients: Tensor,
@@ -67,7 +67,10 @@ pub struct AdaGrad {
 }
 
 impl AdaGrad {
-    /// Create AdaGrad optimizer. Good for sparse gradients.
+    /// Create `AdaGrad` optimizer. Good for sparse gradients.
+    /// # Errors
+    /// Returns [`Err`] if weights and gradients shapes differ, `learning_rate` is not positive,
+    /// or accumulated (if provided) shape differs from weights.
     pub fn new(
         weights: Tensor,
         gradients: Tensor,
@@ -117,7 +120,9 @@ impl AdaGrad {
         std::sync::LazyLock::force(&SHADER).as_str()
     }
 
-    /// Execute AdaGrad step. Returns (updated_weights, accumulated).
+    /// Execute `AdaGrad` step. Returns (`updated_weights`, accumulated).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<(Tensor, Tensor)> {
         let device = self.weights.device();
         let size = self.weights.shape().iter().product::<usize>();
@@ -334,32 +339,29 @@ impl AdaGrad {
 // ═══════════════════════════════════════════════════════════════
 
 impl Tensor {
-    /// AdaGrad optimizer step - adaptive learning rate for sparse gradients
-    ///
+    /// `AdaGrad` optimizer step - adaptive learning rate for sparse gradients
     /// **Deep Debt**: Historical optimizer, foundation for Adam/RMSprop
-    ///
     /// # Arguments
     /// - `gradients`: Gradient tensor [same shape as weights]
     /// - `learning_rate`: Initial step size, typically 0.01
     /// - `accumulated`: Accumulated squared gradients (None for first step)
-    ///
     /// # Returns
-    /// - Tuple: (updated_weights, updated_accumulated)
-    ///
+    /// - Tuple: (`updated_weights`, `updated_accumulated`)
     /// # Example
     /// ```rust,ignore
     /// // First step
     /// let (w1, acc1) = weights.adagrad_step(&grads, 0.01, None)?;
-    ///
     /// // Subsequent steps
     /// let (w2, acc2) = w1.adagrad_step(&grads, 0.01, Some(&acc1))?;
     /// ```
-    ///
     /// # Note
     /// - Good for sparse gradients
     /// - Learning rate monotonically decreases
-    /// - RMSprop and Adam address this limitation
-    /// - learning_rate must be positive
+    /// - `RMSprop` and Adam address this limitation
+    /// - `learning_rate` must be positive
+    /// # Errors
+    /// Returns [`Err`] if weights and gradients shapes differ, `learning_rate` is not positive,
+    /// accumulated shape differs, buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn adagrad_step(
         self,
         gradients: &Self,
@@ -445,16 +447,20 @@ mod tests {
             .unwrap();
 
         // Shape mismatch
-        assert!(weights
-            .clone()
-            .adagrad_step(&gradients, 0.01, None)
-            .is_err());
+        assert!(
+            weights
+                .clone()
+                .adagrad_step(&gradients, 0.01, None)
+                .is_err()
+        );
 
         // Invalid learning rate
-        assert!(weights
-            .clone()
-            .adagrad_step(&grads_correct, -0.01, None)
-            .is_err());
+        assert!(
+            weights
+                .clone()
+                .adagrad_step(&grads_correct, -0.01, None)
+                .is_err()
+        );
         assert!(weights.adagrad_step(&grads_correct, 0.0, None).is_err());
     }
 

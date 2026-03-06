@@ -35,6 +35,7 @@ pub struct L1Loss {
 
 impl L1Loss {
     /// Create an L1 loss operation between predictions and targets.
+    #[must_use]
     pub fn new(predictions: Tensor, targets: Tensor) -> Self {
         Self {
             predictions,
@@ -47,6 +48,11 @@ impl L1Loss {
     }
 
     /// Execute L1 loss computation on GPU.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size = self.predictions.len();
@@ -192,6 +198,11 @@ impl L1Loss {
 
 impl Tensor {
     /// Compute element-wise L1 loss (absolute error) against targets.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn l1_loss_wgsl(self, targets: Tensor) -> Result<Self> {
         L1Loss::new(self, targets).execute()
     }

@@ -4,9 +4,9 @@
 //! Per-site action contribution dispatched on GPU; host-side reduction
 //! via `ReduceScalarPipeline` yields the total Wilson action.
 
+use crate::device::WgpuDevice;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
 
@@ -39,9 +39,11 @@ pub struct GpuWilsonAction {
 
 impl GpuWilsonAction {
     /// Compile the Wilson action pipeline.
-    ///
     /// Automatically selects DF64 (f32-pair) shaders on consumer GPUs,
     /// routing plaquette products through FP32 cores for ~10x throughput.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>, nt: u32, nx: u32, ny: u32, nz: u32) -> Result<Self> {
         let volume = nt * nx * ny * nz;
 
@@ -88,11 +90,13 @@ impl GpuWilsonAction {
     }
 
     /// Compute per-site Wilson action contributions.
-    ///
-    /// * `links_buf`  — `[V × 4 × 18]` f64 (gauge config)
-    /// * `action_buf` — `[V]` f64 (per-site output)
+    ///   * `links_buf`  — `[V × 4 × 18]` f64 (gauge config)
+    ///   * `action_buf` — `[V]` f64 (per-site output)
     ///
     /// Multiply total sum by β for the full Wilson action.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn compute(&self, links_buf: &wgpu::Buffer, action_buf: &wgpu::Buffer) -> Result<()> {
         ComputeDispatch::new(self.device.as_ref(), "GpuWilsonAction")
             .shader(&self.shader_src, "wilson_action_kernel")
@@ -101,11 +105,12 @@ impl GpuWilsonAction {
             .storage_read(1, links_buf)
             .storage_rw(2, action_buf)
             .dispatch(self.volume.div_ceil(WG), 1, 1)
-            .submit();
+            .submit()?;
         Ok(())
     }
 
     /// Lattice volume.
+    #[must_use]
     pub fn volume(&self) -> u32 {
         self.volume
     }

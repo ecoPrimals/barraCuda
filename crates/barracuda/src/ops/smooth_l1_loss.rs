@@ -71,6 +71,8 @@ pub struct SmoothL1Loss {
 
 impl SmoothL1Loss {
     /// Creates a new smooth L1 loss. `beta` is the threshold between quadratic and linear regions.
+    /// # Errors
+    /// Returns [`Err`] if prediction and target shapes do not match, or beta is not positive.
     pub fn new(predictions: Tensor, targets: Tensor, beta: f32) -> Result<Self> {
         // Validate shapes match
         if predictions.shape() != targets.shape() {
@@ -100,6 +102,8 @@ impl SmoothL1Loss {
     }
 
     /// Executes the smooth L1 loss computation and returns the loss tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or device submission fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size = self.predictions.shape().iter().product::<usize>();
@@ -259,28 +263,25 @@ impl SmoothL1Loss {
 
 impl Tensor {
     /// Smooth L1 Loss - robust regression loss for object detection
-    ///
     /// **Deep Debt**: Essential for Faster R-CNN and robust regression
-    ///
     /// # Arguments
     /// - `targets`: Target tensor [same shape as predictions]
     /// - `beta`: Threshold between quadratic/linear regions, typically 1.0
-    ///
     /// # Returns
     /// - Loss tensor [same shape as input]
-    ///
     /// # Example
     /// ```rust,ignore
     /// // Object detection bounding box regression
     /// let loss = bbox_pred.smooth_l1_loss(&bbox_target, 1.0)?;
     /// ```
-    ///
     /// # Note
     /// - Combines L1 and L2 benefits
     /// - Quadratic below beta (smooth)
     /// - Linear above beta (robust to outliers)
     /// - beta must be positive
     /// - Similar to Huber Loss (different parameterization)
+    /// # Errors
+    /// Returns [`Err`] if shapes do not match, beta is not positive, or buffer allocation/GPU dispatch fails (e.g. device lost).
     pub fn smooth_l1_loss(self, targets: &Self, beta: f32) -> Result<Self> {
         SmoothL1Loss::new(self, targets.clone(), beta)?.execute()
     }
@@ -387,10 +388,12 @@ mod tests {
             .await
             .unwrap();
 
-        assert!(predictions
-            .clone()
-            .smooth_l1_loss(&targets_correct, -1.0)
-            .is_err());
+        assert!(
+            predictions
+                .clone()
+                .smooth_l1_loss(&targets_correct, -1.0)
+                .is_err()
+        );
         assert!(predictions.smooth_l1_loss(&targets_correct, 0.0).is_err());
     }
 

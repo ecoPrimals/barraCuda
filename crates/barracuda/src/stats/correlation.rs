@@ -27,6 +27,10 @@ use crate::error::{BarracudaError, Result};
 ///
 /// Correlation coefficient in [-1, 1], or NaN if either variance is zero.
 ///
+/// # Errors
+///
+/// Returns [`Err`] if `x` and `y` have different lengths, or if there are fewer than 2 data points.
+///
 /// # Examples
 ///
 /// ```
@@ -87,6 +91,10 @@ pub fn pearson_correlation(x: &[f64], y: &[f64]) -> Result<f64> {
 /// * `x` - First variable
 /// * `y` - Second variable (must have same length as x)
 ///
+/// # Errors
+///
+/// Returns [`Err`] if `x` and `y` have different lengths, or if there are fewer than 2 data points.
+///
 /// # Examples
 ///
 /// ```
@@ -128,6 +136,10 @@ pub fn covariance(x: &[f64], y: &[f64]) -> Result<f64> {
 /// Compute sample variance of a vector.
 ///
 /// Var(X) = Σ(xᵢ - x̄)² / (n-1)
+///
+/// # Errors
+///
+/// Returns [`Err`] if there are fewer than 2 data points.
 pub fn variance(x: &[f64]) -> Result<f64> {
     if x.len() < 2 {
         return Err(BarracudaError::InvalidInput {
@@ -144,6 +156,10 @@ pub fn variance(x: &[f64]) -> Result<f64> {
 }
 
 /// Compute standard deviation of a vector.
+///
+/// # Errors
+///
+/// Returns [`Err`] if [`variance`] fails (fewer than 2 data points).
 pub fn std_dev(x: &[f64]) -> Result<f64> {
     Ok(variance(x)?.sqrt())
 }
@@ -161,6 +177,11 @@ pub fn std_dev(x: &[f64]) -> Result<f64> {
 /// # Returns
 ///
 /// p×p correlation matrix (flattened row-major)
+///
+/// # Errors
+///
+/// Returns [`Err`] if the data matrix is empty, has fewer than 2 observations, has no variables,
+/// rows have inconsistent lengths, or [`pearson_correlation`] fails for any pair.
 ///
 /// # Examples
 ///
@@ -242,6 +263,11 @@ pub fn correlation_matrix(data: &[Vec<f64>]) -> Result<Vec<f64>> {
 /// # Returns
 ///
 /// p×p covariance matrix (flattened row-major)
+///
+/// # Errors
+///
+/// Returns [`Err`] if the data matrix is empty, has fewer than 2 observations, has no variables,
+/// rows have inconsistent lengths, or [`covariance`] fails for any pair.
 pub fn covariance_matrix(data: &[Vec<f64>]) -> Result<Vec<f64>> {
     if data.is_empty() {
         return Err(BarracudaError::InvalidInput {
@@ -293,6 +319,11 @@ pub fn covariance_matrix(data: &[Vec<f64>]) -> Result<Vec<f64>> {
 /// Compute Spearman rank correlation coefficient.
 ///
 /// Measures monotonic relationship (not just linear).
+///
+/// # Errors
+///
+/// Returns [`Err`] if `x` and `y` have different lengths, have fewer than 2 data points,
+/// or if [`pearson_correlation`] fails on the ranks.
 pub fn spearman_correlation(x: &[f64], y: &[f64]) -> Result<f64> {
     if x.len() != y.len() {
         return Err(BarracudaError::InvalidInput {

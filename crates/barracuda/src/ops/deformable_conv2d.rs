@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! DeformableConv2D - Deformable Convolution 2D
+//! `DeformableConv2D` - Deformable Convolution 2D
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation
@@ -49,6 +49,8 @@ pub struct DeformableConv2D {
 
 impl DeformableConv2D {
     /// Creates a new deformable conv2d. Input must be 4D [B, C, H, W].
+    /// # Errors
+    /// Returns [`Err`] if input is not 4D [B, C, H, W] or `kernel_size`, stride, or dilation is zero.
     pub fn new(
         input: Tensor,
         offset: Tensor,
@@ -101,6 +103,8 @@ impl DeformableConv2D {
     }
 
     /// Executes deformable conv2d and returns the output tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -300,16 +304,18 @@ impl DeformableConv2D {
 
 impl Tensor {
     /// Apply deformable convolution 2D
-    ///
     /// # Arguments
-    /// - `offset`: Learned offset tensor [B, 2*K*K, H_out, W_out]
-    /// - `weight`: Weight tensor [C_out, C_in, K, K]
-    /// - `bias`: Bias tensor [C_out]
+    /// - `offset`: Learned offset tensor [B, 2*K*K, `H_out`, `W_out`]
+    /// - `weight`: Weight tensor [`C_out`, `C_in`, K, K]
+    /// - `bias`: Bias tensor [`C_out`]
     /// - `kernel_size`: Kernel size
     /// - `stride`: Stride
     /// - `padding`: Padding
     /// - `dilation`: Dilation
     /// - `deform_groups`: Number of deformable groups
+    /// # Errors
+    /// Returns [`Err`] if input is not 4D, `kernel_size/stride/dilation` is zero, buffer allocation fails,
+    /// GPU dispatch fails, or the device is lost.
     pub fn deformable_conv2d(
         self,
         offset: Tensor,

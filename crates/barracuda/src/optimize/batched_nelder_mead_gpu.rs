@@ -4,9 +4,9 @@
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use crate::optimize::batched_nelder_mead_pipeline::{
-    apply_nm_step, create_centroid_bgl, create_contract_bgl, create_f64_buffer, create_shrink_bgl,
-    create_storage_buffer, run_centroid_reflect, run_contract, run_shrink, BatchedContractParams,
-    BatchedShrinkParams, BatchedSimplexParams,
+    BatchedContractParams, BatchedShrinkParams, BatchedSimplexParams, apply_nm_step,
+    create_centroid_bgl, create_contract_bgl, create_f64_buffer, create_shrink_bgl,
+    create_storage_buffer, run_centroid_reflect, run_contract, run_shrink,
 };
 
 /// Configuration for a single Nelder-Mead problem in the batch.
@@ -58,6 +58,11 @@ pub struct NelderMeadResult {
 const WGSL_SIMPLEX: &str = include_str!("../shaders/optimizer/simplex_ops_f64.wgsl");
 
 /// Run N independent Nelder-Mead optimizations in parallel on the GPU.
+///
+/// # Errors
+///
+/// Returns [`Err`] if `initial_simplices` length is invalid, or if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 ///
 /// # Arguments
 /// * `device` - WGPU device for GPU dispatch

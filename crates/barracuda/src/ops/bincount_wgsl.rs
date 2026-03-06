@@ -27,7 +27,8 @@ pub struct Bincount {
 }
 
 impl Bincount {
-    /// Create a bincount operation. num_bins defaults to 256 if None.
+    /// Create a bincount operation. `num_bins` defaults to 256 if None.
+    #[must_use]
     pub fn new(input: Tensor, num_bins: Option<usize>) -> Self {
         Self { input, num_bins }
     }
@@ -42,6 +43,11 @@ impl Bincount {
     }
 
     /// Execute bincount on GPU. Returns counts as f32.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_size = self.input.len();
@@ -170,6 +176,11 @@ impl Bincount {
 
 impl Tensor {
     /// Count value occurrences into bins. Input values as f32 (cast from u32).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn bincount_wgsl(self, num_bins: Option<usize>) -> Result<Self> {
         Bincount::new(self, num_bins).execute()
     }

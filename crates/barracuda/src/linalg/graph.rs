@@ -24,7 +24,7 @@ pub fn graph_laplacian(adjacency: &[f64], n: usize) -> Vec<f64> {
 
 /// Chain belief propagation: forward pass through a sequence of transition matrices.
 ///
-/// Computes P(layer_k) = normalize(transition_k * P(layer_{k-1})) for each layer.
+/// Computes `P(layer_k)` = `normalize(transition_k` * P(layer_{k-1})) for each layer.
 /// Returns distributions at each layer (including input).
 ///
 /// This is equivalent to the HMM forward algorithm for a chain PGM.
@@ -84,7 +84,7 @@ pub fn disordered_laplacian(
 
 /// Effective rank via Shannon entropy of normalized eigenvalue spectrum.
 ///
-/// rank_eff = exp(H) where H = -sum(p_i * log(p_i)).
+/// `rank_eff` = exp(H) where H = -`sum(p_i` * `log(p_i)`).
 #[must_use]
 pub fn effective_rank(eigenvalues: &[f64]) -> f64 {
     let abs_vals: Vec<f64> = eigenvalues.iter().map(|&ev| ev.abs()).collect();
@@ -113,12 +113,7 @@ mod tests {
         let l = graph_laplacian(&adj, 3);
         for i in 0..3 {
             let row_sum: f64 = (0..3).map(|j| l[i * 3 + j]).sum();
-            assert!(
-                row_sum.abs() < 1e-14,
-                "row {} sum = {}, expected 0",
-                i,
-                row_sum
-            );
+            assert!(row_sum.abs() < 1e-14, "row {i} sum = {row_sum}, expected 0");
         }
     }
 
@@ -147,7 +142,7 @@ mod tests {
         // Equal eigenvalues -> full rank (entropy max, rank_eff = n)
         let ev = vec![1.0, 1.0, 1.0, 1.0];
         let r = effective_rank(&ev);
-        assert!((r - 4.0).abs() < 1e-10, "expected 4, got {}", r);
+        assert!((r - 4.0).abs() < 1e-10, "expected 4, got {r}");
     }
 
     #[test]
@@ -155,7 +150,7 @@ mod tests {
         // One nonzero -> rank 1
         let ev = vec![1.0, 0.0, 0.0];
         let r = effective_rank(&ev);
-        assert!((r - 1.0).abs() < 1e-10, "expected 1, got {}", r);
+        assert!((r - 1.0).abs() < 1e-10, "expected 1, got {r}");
     }
 
     #[test]
@@ -163,7 +158,7 @@ mod tests {
         // All zeros -> 0
         let ev = vec![0.0, 0.0, 0.0];
         let r = effective_rank(&ev);
-        assert!((r - 0.0).abs() < 1e-14, "expected 0, got {}", r);
+        assert!((r - 0.0).abs() < 1e-14, "expected 0, got {r}");
     }
 
     #[test]
@@ -199,9 +194,7 @@ mod tests {
             let sum: f64 = d.iter().sum();
             assert!(
                 (sum - 1.0).abs() < 1e-14,
-                "distribution should sum to 1: {:?} sum={}",
-                d,
-                sum
+                "distribution should sum to 1: {d:?} sum={sum}"
             );
         }
     }
@@ -218,9 +211,7 @@ mod tests {
             let sum: f64 = d.iter().sum();
             assert!(
                 (sum - 1.0).abs() < 1e-14,
-                "distribution should sum to 1: {:?} sum={}",
-                d,
-                sum
+                "distribution should sum to 1: {d:?} sum={sum}"
             );
         }
     }
@@ -260,8 +251,7 @@ mod tests {
         let sum_adds: f64 = diag_adds.iter().sum();
         assert!(
             sum_adds.abs() < 1e-14,
-            "centered disorder: diagonal additions should sum to 0, got {}",
-            sum_adds
+            "centered disorder: diagonal additions should sum to 0, got {sum_adds}"
         );
     }
 }

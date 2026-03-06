@@ -7,7 +7,7 @@
 //!
 //! Output: new state (5th order) and per-variable absolute error.
 //! Host uses error to adapt step size:
-//!   h_new = h × min(5, max(0.2, 0.9 × (tol/err)^0.2))
+//!   `h_new` = h × min(5, max(0.2, 0.9 × (tol/err)^0.2))
 //!
 //! **Provenance**: neuralSpring metalForge → toadStool absorption (Feb 2026)
 //! **Papers**: 020 (regulatory network), 021 (signal integration)
@@ -16,8 +16,8 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
-use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 
 /// WGSL source for adaptive RK45 (f32).
 pub const WGSL_RK45_ADAPTIVE: &str = include_str!("../shaders/numerical/rk45_adaptive.wgsl");
@@ -46,6 +46,7 @@ pub struct Rk45AdaptiveGpu {
 
 impl Rk45AdaptiveGpu {
     /// Create an adaptive RK45 GPU kernel for regulatory network ODEs.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 

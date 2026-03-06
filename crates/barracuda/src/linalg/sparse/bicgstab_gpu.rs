@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! GPU-accelerated BiCGSTAB Solver (f64)
+//! GPU-accelerated `BiCGSTAB` Solver (f64)
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation (GPU-optimized)
@@ -9,7 +9,7 @@
 //!
 //! ## Algorithm
 //!
-//! BiCGSTAB (Biconjugate Gradient Stabilized) for non-symmetric systems:
+//! `BiCGSTAB` (Biconjugate Gradient Stabilized) for non-symmetric systems:
 //! ```text
 //! x₀ = 0, r₀ = b, r̂ = r₀
 //! ρ₀ = α = ω₀ = 1, v₀ = p₀ = 0
@@ -39,12 +39,12 @@
 //! - Saad, Y. (2003). Iterative Methods for Sparse Linear Systems
 
 use super::csr::CsrMatrix;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
 
-/// GPU BiCGSTAB solver result
+/// GPU `BiCGSTAB` solver result
 #[derive(Debug, Clone)]
 pub struct BiCgStabGpuResult {
     /// Solution vector
@@ -59,12 +59,13 @@ pub struct BiCgStabGpuResult {
 
 impl BiCgStabGpuResult {
     /// Returns true if the solver converged.
+    #[must_use]
     pub fn is_ok(&self) -> bool {
         self.converged
     }
 }
 
-/// GPU-accelerated BiCGSTAB solver
+/// GPU-accelerated `BiCGSTAB` solver
 pub struct BiCgStabGpu;
 
 impl BiCgStabGpu {
@@ -77,19 +78,20 @@ impl BiCgStabGpu {
         include_str!("../../shaders/sparse/dot_reduce_f64.wgsl")
     }
 
-    /// Solve Ax = b using GPU-accelerated BiCGSTAB
-    ///
+    /// Solve Ax = b using GPU-accelerated `BiCGSTAB`
     /// Works for general non-symmetric matrices (unlike CG which requires SPD).
-    ///
     /// # Arguments
-    /// * `device` - WgpuDevice to execute on
+    /// * `device` - `WgpuDevice` to execute on
     /// * `a` - Square CSR matrix (f64)
     /// * `b` - Right-hand side vector (f64)
     /// * `tol` - Convergence tolerance
     /// * `max_iter` - Maximum iterations
-    ///
     /// # Returns
-    /// BiCgStabGpuResult with solution, iteration count, and convergence info
+    /// `BiCgStabGpuResult` with solution, iteration count, and convergence info
+    /// # Errors
+    /// Returns [`Err`] if the matrix is not square, if `b.len() != n`, if
+    /// `BiCGSTAB` breaks down (rho = 0, `r_hat·v` = 0, or omega = 0), or if buffer
+    /// allocation, GPU dispatch, or readback fails (e.g. device lost or out of memory).
     pub fn solve(
         device: Arc<WgpuDevice>,
         a: &CsrMatrix,

@@ -17,7 +17,7 @@
 //! | File | Entry Point | Purpose |
 //! |------|-------------|---------|
 //! | `vacf_batch_f64.wgsl` | `main` | Batched C(lag) across all origins |
-//! | `stress_virial_f64.wgsl` | `main` | Per-particle σ_xy for Green-Kubo viscosity |
+//! | `stress_virial_f64.wgsl` | `main` | Per-particle `σ_xy` for Green-Kubo viscosity |
 //!
 //! ## Deep Debt Compliance
 //!
@@ -59,6 +59,7 @@ pub struct VacfBatchGpu {
 
 impl VacfBatchGpu {
     /// Create a batched VACF GPU pipeline.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let module = device.compile_shader_f64(VACF_BATCH_SHADER, Some("vacf_batch_f64"));
 
@@ -167,9 +168,9 @@ impl VacfBatchGpu {
 
 // ─── Stress virial ───────────────────────────────────────────────────────────
 
-/// GPU stress tensor σ_xy operator for Green-Kubo viscosity.
+/// GPU stress tensor `σ_xy` operator for Green-Kubo viscosity.
 ///
-/// Per-particle σ_xy = m·vx·vy + Σ_{j≠i} (F_ij_x · r_ij_y)/(2r)
+/// Per-particle `σ_xy` = m·vx·vy + Σ_{j≠i} (`F_ij_x` · `r_ij_y)/(2r`)
 /// Output is `[N]` f64 values, reduced via `ReduceScalarPipeline`.
 pub struct StressVirialGpu {
     device: Arc<WgpuDevice>,
@@ -179,6 +180,7 @@ pub struct StressVirialGpu {
 
 impl StressVirialGpu {
     /// Create a stress-virial GPU pipeline.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let module = device.compile_shader_f64(STRESS_VIRIAL_SHADER, Some("stress_virial_f64"));
 
@@ -224,7 +226,7 @@ impl StressVirialGpu {
     ///
     /// `pos_buf`:  `[N×3]` f64 — particle positions
     /// `vel_buf`:  `[N×3]` f64 — particle velocities
-    /// `out_buf`:  `[N]`   f64 — per-particle σ_xy contribution
+    /// `out_buf`:  `[N]`   f64 — per-particle `σ_xy` contribution
     /// `params`:   simulation parameters packed as `[8]` f64
     pub fn dispatch(
         &self,
@@ -292,16 +294,17 @@ pub struct GpuVelocityRing {
     pub n_slots: usize,
     /// Current write index (ring position)
     pub write_idx: usize,
-    /// Total snapshots stored (capped at n_slots)
+    /// Total snapshots stored (capped at `n_slots`)
     pub total_stored: usize,
     /// Number of particles per snapshot
     pub n_particles: usize,
-    /// Stride per snapshot (n_particles * 3)
+    /// Stride per snapshot (`n_particles` * 3)
     pub stride: usize,
 }
 
 impl GpuVelocityRing {
     /// Create a velocity ring buffer for the given particle count and slot count.
+    #[must_use]
     pub fn new(device: &WgpuDevice, n_particles: usize, n_slots: usize) -> Self {
         let stride = n_particles * 3;
         let total_f64 = n_slots * stride;
@@ -340,6 +343,7 @@ impl GpuVelocityRing {
     }
 
     /// Number of snapshots currently stored.
+    #[must_use]
     pub fn stored(&self) -> usize {
         self.total_stored
     }

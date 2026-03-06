@@ -36,6 +36,7 @@ pub struct Min {
 
 impl Min {
     /// Create a new min operation
+    #[must_use]
     pub fn new(input: Tensor, dim: Option<usize>, keepdim: bool) -> Self {
         Self {
             input,
@@ -65,6 +66,10 @@ impl Min {
     }
 
     /// Execute the min operation
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range for the tensor shape, buffer
+    /// allocation fails, shader compilation fails, GPU dispatch fails, or buffer
+    /// readback fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -391,21 +396,30 @@ impl Min {
 
 impl Tensor {
     /// Find minimum value (global reduction)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, shader compilation fails, GPU
+    /// dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn min(&self) -> Result<Self> {
         Min::new(self.clone(), None, false).execute()
     }
 
     /// Find minimum value along a dimension
-    ///
     /// # Arguments
-    ///
     /// * `dim` - Dimension to find min along
     /// * `keepdim` - Whether to keep the reduced dimension with size 1
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range for the tensor shape, buffer
+    /// allocation fails, shader compilation fails, GPU dispatch fails, or buffer
+    /// readback fails (e.g. device lost).
     pub fn min_dim(&self, dim: usize, keepdim: bool) -> Result<Self> {
         Min::new(self.clone(), Some(dim), keepdim).execute()
     }
 
     /// Find minimum value (legacy method for backward compatibility)
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range for the tensor shape, buffer
+    /// allocation fails, shader compilation fails, GPU dispatch fails, or buffer
+    /// readback fails (e.g. device lost).
     pub fn min_wgsl(self, dim: Option<usize>) -> Result<Self> {
         match dim {
             None => Min::new(self, None, false).execute(),

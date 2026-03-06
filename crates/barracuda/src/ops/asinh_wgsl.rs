@@ -20,6 +20,7 @@ pub struct Asinh {
 
 impl Asinh {
     /// Create an asinh operation.
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -34,6 +35,11 @@ impl Asinh {
     }
 
     /// Execute asinh on GPU.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -166,6 +172,11 @@ impl Asinh {
 
 impl Tensor {
     /// Compute element-wise asinh(x).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn asinh(self) -> Result<Self> {
         Asinh::new(self).execute()
     }

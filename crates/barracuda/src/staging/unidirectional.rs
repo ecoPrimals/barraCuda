@@ -28,8 +28,8 @@ use super::{GpuRingBuffer, RingBufferConfig, WriteHandle};
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use std::collections::VecDeque;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
 /// Configuration for the unidirectional pipeline
@@ -82,6 +82,7 @@ impl Default for UnidirectionalConfig {
 
 impl UnidirectionalConfig {
     /// Create config with custom buffer sizes
+    #[must_use]
     pub fn with_sizes(input_mb: usize, output_mb: usize) -> Self {
         Self {
             input_buffer_size: input_mb * BYTES_PER_MB,
@@ -91,6 +92,7 @@ impl UnidirectionalConfig {
     }
 
     /// Set bandwidth throttling for simulation
+    #[must_use]
     pub fn with_throttling(mut self, input_bps: u64, output_bps: u64) -> Self {
         self.target_input_bandwidth = Some(input_bps);
         self.target_output_bandwidth = Some(output_bps);
@@ -98,6 +100,7 @@ impl UnidirectionalConfig {
     }
 
     /// Enable strict unidirectional enforcement
+    #[must_use]
     pub fn strict(mut self) -> Self {
         self.strict_mode = true;
         self
@@ -231,7 +234,7 @@ pub struct UnidirectionalPipeline {
     stats: PipelineStats,
     /// Input throttler (for simulation)
     input_throttler: Option<BandwidthThrottler>,
-    /// Output throttler for bandwidth simulation (Phase 5+ parity with input_throttler).
+    /// Output throttler for bandwidth simulation (Phase 5+ parity with `input_throttler`).
     #[expect(
         dead_code,
         reason = "phase 5+: parity with input_throttler for bandwidth simulation"
@@ -243,6 +246,11 @@ pub struct UnidirectionalPipeline {
 
 impl UnidirectionalPipeline {
     /// Create a new unidirectional pipeline
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation or pipeline build fails (e.g. device
+    /// lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>, config: UnidirectionalConfig) -> Result<Self> {
         let input_config = RingBufferConfig::new(config.input_buffer_size)
             .for_input()
@@ -282,6 +290,11 @@ impl UnidirectionalPipeline {
     /// Submit work to the pipeline (fire-and-forget)
     ///
     /// Returns immediately. Use `poll_results` to collect completed work.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation or GPU dispatch fails (e.g. device
+    /// lost or out of memory).
     pub fn submit(&mut self, data: &[u8]) -> Result<WorkHandle> {
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
         let now = Instant::now();

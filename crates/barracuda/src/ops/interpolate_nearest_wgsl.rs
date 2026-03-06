@@ -31,6 +31,7 @@ pub struct InterpolateNearest {
 
 impl InterpolateNearest {
     /// Create interpolator with target (height, width).
+    #[must_use]
     pub fn new(input: Tensor, output_size: (usize, usize)) -> Self {
         Self { input, output_size }
     }
@@ -45,6 +46,11 @@ impl InterpolateNearest {
     }
 
     /// Execute nearest-neighbor interpolation on GPU.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -189,6 +195,11 @@ impl InterpolateNearest {
 
 impl Tensor {
     /// Resize image using nearest-neighbor sampling. Expects [B, C, H, W].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn interpolate_nearest_wgsl(self, output_size: (usize, usize)) -> Result<Self> {
         InterpolateNearest::new(self, output_size).execute()
     }

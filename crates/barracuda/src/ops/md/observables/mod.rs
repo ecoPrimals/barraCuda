@@ -89,6 +89,7 @@ pub struct EnergyValidation {
 /// * `n` - Number of particles
 /// * `box_side` - Box side length in reduced units
 /// * `n_bins` - Number of histogram bins
+#[must_use]
 pub fn compute_rdf(snapshots: &[Vec<f64>], n: usize, box_side: f64, n_bins: usize) -> Rdf {
     let r_max = box_side / 2.0;
     let dr = r_max / n_bins as f64;
@@ -147,6 +148,7 @@ pub fn compute_rdf(snapshots: &[Vec<f64>], n: usize, box_side: f64, n_bins: usiz
 /// * `n` - Number of particles
 /// * `dt_dump` - Time between snapshots (reduced units)
 /// * `max_lag` - Maximum lag in snapshots
+#[must_use]
 pub fn compute_vacf(vel_snapshots: &[Vec<f64>], n: usize, dt_dump: f64, max_lag: usize) -> Vacf {
     let n_frames = vel_snapshots.len();
     let n_lag = max_lag.min(n_frames);
@@ -207,6 +209,7 @@ pub fn compute_vacf(vel_snapshots: &[Vec<f64>], n: usize, dt_dump: f64, max_lag:
 /// * `n` - Number of particles
 /// * `box_side` - Box side length in reduced units
 /// * `max_k_harmonics` - Number of k-vectors along each axis
+#[must_use]
 pub fn compute_ssf(
     snapshots: &[Vec<f64>],
     n: usize,
@@ -268,6 +271,7 @@ pub struct Msd {
 /// * `box_side` - Box side length (for PBC unwrapping)
 /// * `dt` - Time between snapshots
 /// * `max_lag` - Maximum lag (number of snapshot intervals)
+#[must_use]
 pub fn compute_msd(
     snapshots: &[Vec<f64>],
     n: usize,
@@ -392,6 +396,7 @@ fn linear_fit_slope(x: &[f64], y: &[f64]) -> f64 {
 /// # Arguments
 /// * `energies` - Vector of (step, KE, PE, total) tuples
 /// * `skip_fraction` - Fraction of initial data to skip (e.g., 0.1)
+#[must_use]
 pub fn validate_energy(
     energies: &[(usize, f64, f64, f64)],
     skip_fraction: f64,
@@ -487,7 +492,7 @@ mod tests {
         let msd_late = msd.msd_values[9]; // lag=10
         let ratio = msd_late / msd_early;
         // Should be close to (10/5)² = 4
-        assert!((ratio - 4.0).abs() < 0.1, "Ballistic MSD ratio: {}", ratio);
+        assert!((ratio - 4.0).abs() < 0.1, "Ballistic MSD ratio: {ratio}");
     }
 
     #[test]

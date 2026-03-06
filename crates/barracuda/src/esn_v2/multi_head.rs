@@ -5,14 +5,14 @@
 //! - Pre-defined kinds for known physics/bio/steering domains
 //! - `Custom(String)` for spring-specific or experimental heads
 //!
-//! Provenance: hotSpring V0615 (physics), wetSpring V86 (BioHeadKind) → generalized
+//! Provenance: hotSpring V0615 (physics), wetSpring V86 (`BioHeadKind`) → generalized
 
 use crate::error::{BarracudaError, Result as BarracudaResult};
 use crate::linalg::solve_f64_cpu;
 use crate::tensor::Tensor;
 
-use super::config::{validate_config, ESNConfig};
-use super::model::{ExportedWeights, ESN};
+use super::config::{ESNConfig, validate_config};
+use super::model::{ESN, ExportedWeights};
 
 /// Domain-agnostic head classification for multi-head ESN.
 ///
@@ -23,7 +23,7 @@ use super::model::{ExportedWeights, ESN};
 /// S79 had 6 fixed physics groups. S83 generalizes to support:
 /// - hotSpring physics (Anderson, Qcd, Potts)
 /// - wetSpring biology (Diversity, Taxonomy, Amr, Bloom)
-/// - airSpring hydrology (Et0, SoilMoisture, Irrigation)
+/// - airSpring hydrology (Et0, `SoilMoisture`, Irrigation)
 /// - Any custom domain via `Custom(String)`
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum HeadKind {
@@ -76,6 +76,9 @@ pub struct MultiHeadEsn {
 
 impl MultiHeadEsn {
     /// Create a shared reservoir with per-head readout slots (no readout weights yet).
+    /// # Errors
+    /// Returns [`Err`] if config validation fails, if heads is empty, if any head
+    /// has zero `output_size`, or if ESN creation fails (device, buffer allocation).
     pub async fn new(base_config: ESNConfig, heads: Vec<HeadConfig>) -> BarracudaResult<Self> {
         validate_config(&base_config)?;
         if heads.is_empty() {
@@ -113,12 +116,14 @@ impl MultiHeadEsn {
     }
 
     /// Reconstruct a multi-head ESN from previously exported weights.
-    ///
     /// This enables CPU-to-GPU migration and cross-device deployment:
     /// train on one device, serialize via `export_weights()`, then
     /// reconstruct on another device via this constructor.
-    ///
     /// Provenance: hotSpring V0617 absorption request.
+    /// # Errors
+    /// Returns [`Err`] if heads is empty, if exported weights have zero `reservoir_size`
+    /// or `input_size`, if ESN creation or import fails, or if tensor creation from
+    /// weight chunks fails.
     pub async fn from_exported_weights(
         weights: &ExportedWeights,
         heads: Vec<HeadConfig>,
@@ -193,11 +198,21 @@ impl MultiHeadEsn {
     }
 
     /// Forward through shared reservoir; returns new state.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub async fn update(&mut self, input: &Tensor) -> BarracudaResult<Tensor> {
         self.reservoir.update(input).await
     }
 
     /// Train a single head's readout via ridge regression.
+    /// # Errors
+    /// Returns [`Err`] if head index is out of range, states are empty, states
+    /// length is not divisible by `reservoir_size`, targets length does not match
+    /// `output_size * n_samples`, lambda is not positive, the CPU matrix solve
+    /// fails, or tensor creation fails.
     pub fn train_head(
         &mut self,
         head_idx: usize,
@@ -207,7 +222,7 @@ impl MultiHeadEsn {
     ) -> BarracudaResult<()> {
         let Some(cfg) = self.head_configs.get(head_idx) else {
             return Err(BarracudaError::InvalidInput {
-                message: format!("Head index {} out of range", head_idx),
+                message: format!("Head index {head_idx} out of range"),
             });
         };
         let n = self.reservoir.config().reservoir_size;
@@ -290,24 +305,30 @@ impl MultiHeadEsn {
     }
 
     /// Predict from a single head given reservoir state.
+    /// # Errors
+    /// Returns [`Err`] if head index is out of range, if the head is not trained,
+    /// or if transpose/matmul operations fail (e.g. shape mismatch).
     pub fn predict_head(&self, head_idx: usize, state: &Tensor) -> BarracudaResult<Tensor> {
         let head = self
             .heads
             .get(head_idx)
             .ok_or_else(|| BarracudaError::InvalidInput {
-                message: format!("Head index {} out of range", head_idx),
+                message: format!("Head index {head_idx} out of range"),
             })?;
         let w_out = head
             .w_out
             .as_ref()
             .ok_or_else(|| BarracudaError::InvalidOperation {
                 op: "MultiHeadEsn::predict_head".to_string(),
-                reason: format!("Head {} not trained", head_idx),
+                reason: format!("Head {head_idx} not trained"),
             })?;
         w_out.transpose()?.matmul(state)
     }
 
     /// Predict from all trained heads.
+    /// # Errors
+    /// Returns [`Err`] if any trained head's `predict_head` fails (shape mismatch,
+    /// device error).
     pub fn predict_all(&self, state: &Tensor) -> BarracudaResult<Vec<Tensor>> {
         let mut out = Vec::with_capacity(self.heads.len());
         for i in 0..self.heads.len() {
@@ -319,6 +340,8 @@ impl MultiHeadEsn {
     }
 
     /// Mean pairwise L2 distance between head predictions (uncertainty signal).
+    /// # Errors
+    /// Returns [`Err`] if any trained head's `predict_head` or `to_vec` fails.
     pub fn head_disagreement(&self, state: &Tensor) -> BarracudaResult<f64> {
         let preds: Vec<Vec<f32>> = (0..self.heads.len())
             .filter(|&i| self.heads[i].trained)
@@ -349,7 +372,10 @@ impl MultiHeadEsn {
         Ok(if count > 0 { total / count as f64 } else { 0.0 })
     }
 
-    /// Export weights with head_labels populated.
+    /// Export weights with `head_labels` populated.
+    /// # Errors
+    /// Returns [`Err`] if reservoir export fails, or if reading any head's
+    /// readout weights to host fails.
     pub fn export_weights(&self) -> BarracudaResult<ExportedWeights> {
         let mut base = self.reservoir.export_weights()?;
 

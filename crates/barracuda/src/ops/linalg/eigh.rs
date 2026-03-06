@@ -56,14 +56,13 @@ pub struct Eigh {
 
 impl Eigh {
     /// Create new eigenvalue decomposition operation
-    ///
     /// # Arguments
     /// * `input` - Symmetric matrix [N, N]
-    ///
     /// # Deep Debt Compliance
     /// - No hardcoded sizes (runtime N)
     /// - No unsafe blocks
     /// - Agnostic design (works with any symmetric matrix)
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -73,19 +72,19 @@ impl Eigh {
     }
 
     /// Execute eigenvalue decomposition on GPU
-    ///
     /// # Returns
     /// Tuple (eigenvalues, eigenvectors) where A = V·D·Vᵀ
     /// - eigenvalues: vector [N]
     /// - eigenvectors: matrix [N, N] with columns as eigenvectors
-    ///
     /// # Errors
     /// - Returns error if input is not square
-    ///
     /// # Deep Debt Compliance
     /// - Pure WGSL execution (no CPU fallback)
     /// - Capability-based workgroup dispatch
     /// - Safe buffer management
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<(Tensor, Tensor)> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -122,7 +121,7 @@ impl Eigh {
             .storage_rw(3, &eigenvectors_buffer)
             .uniform(4, &params_buffer)
             .dispatch(1, 1, 1)
-            .submit();
+            .submit()?;
 
         Ok((
             Tensor::from_buffer(eigenvalues_buffer, vec![n], device.clone()),
@@ -134,15 +133,16 @@ impl Eigh {
 /// Tensor extension for eigenvalue decomposition
 impl Tensor {
     /// Compute eigenvalue decomposition of symmetric matrix: A = V·D·Vᵀ
-    ///
     /// # Returns
     /// Tuple (eigenvalues, eigenvectors)
-    ///
     /// # Example
     /// ```ignore
     /// let a = Tensor::from_vec(vec![4.0, 2.0, 2.0, 3.0], vec![2, 2], device)?;
     /// let (vals, vecs) = a.eigh()?;
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn eigh(self) -> Result<(Self, Self)> {
         Eigh::new(self).execute()
     }
@@ -188,12 +188,8 @@ mod tests {
         // Eigenvalues should sum to trace (4+3=7) and product to det (12-4=8)
         let trace = vals[0] + vals[1];
         let det = vals[0] * vals[1];
-        assert!(
-            (trace - 7.0).abs() < 1e-4,
-            "Trace should be 7, got {}",
-            trace
-        );
-        assert!((det - 8.0).abs() < 1e-3, "Det should be 8, got {}", det);
+        assert!((trace - 7.0).abs() < 1e-4, "Trace should be 7, got {trace}");
+        assert!((det - 8.0).abs() < 1e-3, "Det should be 8, got {det}");
 
         // Check reconstruction A ≈ V·D·Vᵀ
         let d_diag =
@@ -208,10 +204,7 @@ mod tests {
         for (i, (&o, &r)) in input_data.iter().zip(recon.iter()).enumerate() {
             assert!(
                 (o - r).abs() < 1e-3,
-                "Reconstruction error at {}: expected {}, got {}",
-                i,
-                o,
-                r
+                "Reconstruction error at {i}: expected {o}, got {r}"
             );
         }
     }
@@ -277,10 +270,7 @@ mod tests {
         for (i, (&o, &r)) in input_data.iter().zip(recon.iter()).enumerate() {
             assert!(
                 (o - r).abs() < 1e-2,
-                "Reconstruction error at {}: expected {}, got {}",
-                i,
-                o,
-                r
+                "Reconstruction error at {i}: expected {o}, got {r}"
             );
         }
     }

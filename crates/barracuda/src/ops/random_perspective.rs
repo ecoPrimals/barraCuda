@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! RandomPerspective - Random perspective transformation
+//! `RandomPerspective` - Random perspective transformation
 //!
 //! Applies random perspective distortion.
 //! Simulates different camera viewpoints.
@@ -15,12 +15,12 @@
 
 const SHADER_F64: &str = include_str!("../shaders/augmentation/random_perspective_f64.wgsl");
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::DeviceCapabilities;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// RandomPerspective operation
+/// `RandomPerspective` operation
 pub struct RandomPerspective {
     input: Tensor,
     distortion_scale: f32,
@@ -29,6 +29,8 @@ pub struct RandomPerspective {
 
 impl RandomPerspective {
     /// Create a new random perspective operation
+    /// # Errors
+    /// Returns [`Err`] if input is not 3D (C, H, W).
     pub fn new(input: Tensor, distortion_scale: f32, seed: u64) -> Result<Self> {
         let shape = input.shape();
         if shape.len() != 3 {
@@ -54,6 +56,8 @@ impl RandomPerspective {
     }
 
     /// Execute the random perspective operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -151,7 +155,7 @@ impl RandomPerspective {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch(workgroups_x, workgroups_y, 1)
-            .submit();
+            .submit()?;
 
         // Read back results
         let output_data = crate::utils::read_buffer(device, &output_buffer, output_size)?;
@@ -166,11 +170,11 @@ impl RandomPerspective {
 
 impl Tensor {
     /// Apply random perspective transformation
-    ///
     /// # Arguments
-    ///
     /// * `distortion_scale` - Scale of perspective distortion
     /// * `seed` - Random seed for deterministic transformation
+    /// # Errors
+    /// Returns [`Err`] if input is not 3D, or buffer allocation/GPU dispatch/readback fails (e.g. device lost).
     pub fn random_perspective(self, distortion_scale: f32, seed: u64) -> Result<Self> {
         RandomPerspective::new(self, distortion_scale, seed)?.execute()
     }

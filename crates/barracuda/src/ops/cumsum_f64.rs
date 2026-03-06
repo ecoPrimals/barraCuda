@@ -23,9 +23,9 @@
 //! let result = CumsumF64::new(tensor, 0).execute().await?;
 //! ```
 
+use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 use bytemuck::{Pod, Zeroable};
@@ -33,7 +33,7 @@ use std::sync::Arc;
 
 use wgpu;
 
-/// Parameters passed to the cumsum_f64 shader
+/// Parameters passed to the `cumsum_f64` shader
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 struct CumsumF64Params {
@@ -51,6 +51,7 @@ pub struct CumsumF64 {
 
 impl CumsumF64 {
     /// Create a new cumsum operation along the specified dimension
+    #[must_use]
     pub fn new(input: Tensor, dim: usize) -> Self {
         Self { input, dim }
     }
@@ -61,6 +62,9 @@ impl CumsumF64 {
     }
 
     /// Execute the cumsum operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let _device = self.input.device();
         let shape = self.input.shape().to_vec();
@@ -129,7 +133,7 @@ impl CumsumF64 {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch(workgroups, 1, 1)
-            .submit();
+            .submit()?;
 
         // Create output tensor
         Ok(Tensor::from_buffer(
@@ -140,6 +144,11 @@ impl CumsumF64 {
     }
 
     /// Execute 1D cumsum directly on a slice (convenience method)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub async fn execute_1d(device: &Arc<WgpuDevice>, data: &[f64]) -> Result<Vec<f64>> {
         let n = data.len();
         if n == 0 {
@@ -173,10 +182,7 @@ mod tests {
         for (i, (&got, &exp)) in result.iter().zip(expected.iter()).enumerate() {
             assert!(
                 (got - exp).abs() < 1e-10,
-                "Mismatch at {}: got {}, expected {}",
-                i,
-                got,
-                exp
+                "Mismatch at {i}: got {got}, expected {exp}"
             );
         }
     }
@@ -222,9 +228,7 @@ mod tests {
         let error = (result[n - 1] - expected_final).abs() / expected_final;
         assert!(
             error < 1e-10,
-            "Precision error too large: {} (expected {})",
-            error,
-            expected_final
+            "Precision error too large: {error} (expected {expected_final})"
         );
     }
 }

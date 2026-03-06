@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! BatchedOdeRK4F64 — full-GPU parameter sweep for structured ODE systems.
+//! `BatchedOdeRK4F64` — full-GPU parameter sweep for structured ODE systems.
 //!
 //! Extracted from `rk_stage.rs` (was D-S15-001 debt item): the single-trajectory
 //! CPU-orchestrated `RkIntegrator` and the batched-GPU QS/c-di-GMP integrator
@@ -13,14 +13,14 @@
 //! either a shader-per-ODE or a DSL approach.  See debt item D-S15-001.
 //!
 //! ## State variables (5)
-//! `[N, A, H, C, B]` = cell density, autoinducer, HapR, c-di-GMP, biofilm.
+//! `[N, A, H, C, B]` = cell density, autoinducer, `HapR`, c-di-GMP, biofilm.
 //!
 //! ## Parameters per batch (17)
 //! `[μ, K_cap, d_n, k_ai, d_ai, k_h, K_h, n_h, d_h, k_dgc, k_rep, k_pde, k_act,
 //!   k_bio, K_bio, n_bio, d_bio]`
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -96,6 +96,7 @@ impl BatchedOdeRK4F64 {
     }
 
     /// Create a new batched integrator.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>, config: BatchedRk4Config) -> Self {
         Self { device, config }
     }
@@ -108,6 +109,11 @@ impl BatchedOdeRK4F64 {
     ///
     /// # Returns
     /// Flat `[B × 5]` f64 `Vec` with the final state for each batch.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn integrate(&self, initial_states: &[f64], batch_params: &[f64]) -> Result<Vec<f64>> {
         let b = self.config.n_batches as usize;
 

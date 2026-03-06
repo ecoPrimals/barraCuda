@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Matrix Inverse - Compute inverse of square matrix
 //!
-//! **Canonical BarraCuda Pattern**: Struct with new/execute
+//! **Canonical `BarraCuda` Pattern**: Struct with new/execute
 //!
 //! Uses Gauss-Jordan elimination.
-//! Note: This is a wrapper around the canonical inverse_wgsl operation.
+//! Note: This is a wrapper around the canonical `inverse_wgsl` operation.
 
 use crate::error::Result;
 use crate::tensor::Tensor;
@@ -16,6 +16,11 @@ pub struct MatrixInverse {
 
 impl MatrixInverse {
     /// Create a new matrix inverse operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor) -> Result<Self> {
         // Validate that input is a square matrix
         let shape = input.shape();
@@ -30,7 +35,12 @@ impl MatrixInverse {
     }
 
     /// Execute the matrix inverse operation
-    /// Delegates to the canonical inverse_wgsl implementation
+    /// Delegates to the canonical `inverse_wgsl` implementation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         // Use the canonical inverse_wgsl implementation
         use crate::ops::inverse_wgsl::Inverse;

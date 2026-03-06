@@ -194,7 +194,7 @@ pub fn turc_et0(t_mean: f64, rs_mj: f64, rh_mean: f64) -> Option<f64> {
 ///
 /// `ET₀ = 0.55 · D² · e_s(t) / 100`
 ///
-/// where D = possible daylight hours / 12, e_s = saturated vapor pressure (mbar).
+/// where D = possible daylight hours / 12, `e_s` = saturated vapor pressure (mbar).
 ///
 /// Returns `None` if `daylight_hours < 0`.
 ///

@@ -28,6 +28,11 @@ pub struct ClipGradNorm {
 
 impl ClipGradNorm {
     /// Create a new clip gradient by norm operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(gradients: Tensor, max_norm: f32) -> Result<Self> {
         if max_norm < 0.0 {
             return Err(crate::error::BarracudaError::InvalidInput {
@@ -49,6 +54,11 @@ impl ClipGradNorm {
     }
 
     /// Execute the clip gradient by norm operation (2-pass)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.gradients.device();
         let size: usize = self.gradients.shape().iter().product();

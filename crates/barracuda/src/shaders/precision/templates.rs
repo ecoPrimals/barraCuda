@@ -2,7 +2,7 @@
 //! WGSL shader template constants for precision-generic code generation
 
 /// Element-wise addition: C = A + B
-pub const TEMPLATE_ELEMENTWISE_ADD: &str = r#"// Element-wise Addition: C = A + B
+pub const TEMPLATE_ELEMENTWISE_ADD: &str = r"// Element-wise Addition: C = A + B
 // Generated for precision: {{SCALAR}}
 
 @group(0) @binding(0) var<storage, read> a: array<{{SCALAR}}>;
@@ -33,10 +33,10 @@ fn main_vec4(@builtin(global_invocation_id) global_id: vec3<u32>) {
     if (idx < params.size / 4u) { out_vec[idx] = a_vec[idx] + b_vec[idx]; }
 }
 {{/if}}
-"#;
+";
 
 /// Element-wise multiplication: C = A * B
-pub const TEMPLATE_ELEMENTWISE_MUL: &str = r#"// Element-wise Multiplication: C = A * B
+pub const TEMPLATE_ELEMENTWISE_MUL: &str = r"// Element-wise Multiplication: C = A * B
 // Generated for precision: {{SCALAR}}
 
 @group(0) @binding(0) var<storage, read> a: array<{{SCALAR}}>;
@@ -66,10 +66,10 @@ fn main_vec4(@builtin(global_invocation_id) global_id: vec3<u32>) {
     if (idx < params.size / 4u) { out_vec[idx] = a_vec[idx] * b_vec[idx]; }
 }
 {{/if}}
-"#;
+";
 
 /// Fused Multiply-Add: D = A * B + C
-pub const TEMPLATE_ELEMENTWISE_FMA: &str = r#"// Fused Multiply-Add: D = A * B + C
+pub const TEMPLATE_ELEMENTWISE_FMA: &str = r"// Fused Multiply-Add: D = A * B + C
 // Generated for precision: {{SCALAR}}
 
 @group(0) @binding(0) var<storage, read> a: array<{{SCALAR}}>;
@@ -85,10 +85,10 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     // FMA - single rounding, better precision than separate mul+add
     output[idx] = fma(a[idx], b[idx], c[idx]);
 }
-"#;
+";
 
 /// Dot product: sum(A * B)
-pub const TEMPLATE_DOT_PRODUCT: &str = r#"// Dot Product: sum(A * B)
+pub const TEMPLATE_DOT_PRODUCT: &str = r"// Dot Product: sum(A * B)
 // Generated for precision: {{SCALAR}}
 // Uses workgroup reduction for parallel summation
 
@@ -129,10 +129,10 @@ fn main(
         output[workgroup_id.x] = shared[0];
     }
 }
-"#;
+";
 
 /// Reduction sum: sum(A)
-pub const TEMPLATE_REDUCE_SUM: &str = r#"// Reduction Sum: sum(A)
+pub const TEMPLATE_REDUCE_SUM: &str = r"// Reduction Sum: sum(A)
 // Generated for precision: {{SCALAR}}
 
 var<workgroup> shared: array<{{SCALAR}}, 256>;
@@ -164,10 +164,10 @@ fn main(
         output[workgroup_id.x] = shared[0];
     }
 }
-"#;
+";
 
 /// Element-wise subtraction: C = A - B
-pub const TEMPLATE_ELEMENTWISE_SUB: &str = r#"// Element-wise Subtraction: C = A - B
+pub const TEMPLATE_ELEMENTWISE_SUB: &str = r"// Element-wise Subtraction: C = A - B
 // Generated for precision: {{SCALAR}}
 
 @group(0) @binding(0) var<storage, read> a: array<{{SCALAR}}>;
@@ -180,10 +180,10 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     if (idx >= arrayLength(&output)) { return; }
     output[idx] = a[idx] - b[idx];
 }
-"#;
+";
 
 /// Element-wise absolute value: B = |A|
-pub const TEMPLATE_ELEMENTWISE_ABS: &str = r#"// Element-wise Absolute Value: B = |A|
+pub const TEMPLATE_ELEMENTWISE_ABS: &str = r"// Element-wise Absolute Value: B = |A|
 // Generated for precision: {{SCALAR}}
 
 @group(0) @binding(0) var<storage, read> input: array<{{SCALAR}}>;
@@ -195,10 +195,10 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     if (idx >= arrayLength(&output)) { return; }
     output[idx] = abs(input[idx]);
 }
-"#;
+";
 
 /// Element-wise negation: B = -A
-pub const TEMPLATE_ELEMENTWISE_NEG: &str = r#"// Element-wise Negation: B = -A
+pub const TEMPLATE_ELEMENTWISE_NEG: &str = r"// Element-wise Negation: B = -A
 // Generated for precision: {{SCALAR}}
 
 @group(0) @binding(0) var<storage, read> input: array<{{SCALAR}}>;
@@ -210,10 +210,10 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     if (idx >= arrayLength(&output)) { return; }
     output[idx] = -input[idx];
 }
-"#;
+";
 
 /// Element-wise clamp: B = clamp(A, lo, hi)
-pub const TEMPLATE_ELEMENTWISE_CLAMP: &str = r#"// Element-wise Clamp: B = clamp(A, lo, hi)
+pub const TEMPLATE_ELEMENTWISE_CLAMP: &str = r"// Element-wise Clamp: B = clamp(A, lo, hi)
 // Generated for precision: {{SCALAR}}
 
 struct ClampParams { lo: {{SCALAR}}, hi: {{SCALAR}}, }
@@ -228,10 +228,10 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     if (idx >= arrayLength(&output)) { return; }
     output[idx] = clamp(input[idx], params.lo, params.hi);
 }
-"#;
+";
 
 /// Mean reduction: mean(A)
-pub const TEMPLATE_REDUCE_MEAN: &str = r#"// Reduction Mean: mean(A)
+pub const TEMPLATE_REDUCE_MEAN: &str = r"// Reduction Mean: mean(A)
 // Generated for precision: {{SCALAR}}
 // Two-pass: first pass produces partial sums + counts, second pass divides
 
@@ -271,10 +271,10 @@ fn main(
         output[workgroup_id.x] = shared[0] / {{SCALAR}}(params.size);
     }
 }
-"#;
+";
 
 /// MSE loss: mean((pred - target)^2)
-pub const TEMPLATE_MSE_LOSS: &str = r#"// Mean Squared Error Loss
+pub const TEMPLATE_MSE_LOSS: &str = r"// Mean Squared Error Loss
 // Generated for precision: {{SCALAR}}
 
 var<workgroup> shared: array<{{SCALAR}}, 256>;
@@ -319,10 +319,10 @@ fn main(
         output[workgroup_id.x] = shared[0];
     }
 }
-"#;
+";
 
 /// MAE loss: mean(|pred - target|)
-pub const TEMPLATE_MAE_LOSS: &str = r#"// Mean Absolute Error Loss
+pub const TEMPLATE_MAE_LOSS: &str = r"// Mean Absolute Error Loss
 // Generated for precision: {{SCALAR}}
 
 var<workgroup> shared: array<{{SCALAR}}, 256>;
@@ -366,10 +366,10 @@ fn main(
         output[workgroup_id.x] = shared[0];
     }
 }
-"#;
+";
 
 /// Scaled addition (SAXPY): C = alpha * A + B
-pub const TEMPLATE_SAXPY: &str = r#"// Scaled Addition: C = alpha * A + B
+pub const TEMPLATE_SAXPY: &str = r"// Scaled Addition: C = alpha * A + B
 // Generated for precision: {{SCALAR}}
 
 struct SaxpyParams { alpha: {{SCALAR}}, }
@@ -385,7 +385,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     if (idx >= arrayLength(&output)) { return; }
     output[idx] = params.alpha * a[idx] + b[idx];
 }
-"#;
+";
 
 /// Remove a conditional block from the template
 pub fn remove_conditional_block(source: &str, start_marker: &str, end_marker: &str) -> String {

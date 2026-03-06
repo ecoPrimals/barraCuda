@@ -7,8 +7,8 @@
 //!
 //!   det(D†D) = ∫ Dφ†Dφ exp(−φ†(D†D)⁻¹φ)
 //!
-//! The pseudofermion action is S_F = φ†X where (D†D)X = φ, solved by CG.
-//! The pseudofermion force (derivative of S_F with respect to gauge links)
+//! The pseudofermion action is `S_F` = φ†X where (D†D)X = φ, solved by CG.
+//! The pseudofermion force (derivative of `S_F` with respect to gauge links)
 //! drives the molecular dynamics evolution alongside the gauge force.
 //!
 //! Absorbed from hotSpring v0.64 `lattice/pseudofermion.rs` (Feb 2026).
@@ -20,7 +20,7 @@
 //! - Clark & Kennedy, NPB Proc. Suppl. 129, 850 (2004) — RHMC
 
 use super::cpu_complex::Complex64;
-use super::cpu_dirac::{apply_dirac, apply_dirac_adjoint, cg_solve, CgResult, FermionField};
+use super::cpu_dirac::{CgResult, FermionField, apply_dirac, apply_dirac_adjoint, cg_solve};
 use super::cpu_su3::Su3Matrix;
 use super::wilson::Lattice;
 
@@ -59,7 +59,8 @@ pub fn pseudofermion_heatbath(lattice: &Lattice, mass: f64, seed: &mut u64) -> F
     apply_dirac_adjoint(lattice, &eta, mass)
 }
 
-/// Compute pseudofermion action: S_F = φ†X where (D†D)X = φ.
+/// Compute pseudofermion action: `S_F` = φ†X where (D†D)X = φ.
+#[must_use]
 pub fn pseudofermion_action(
     lattice: &Lattice,
     phi: &FermionField,
@@ -79,7 +80,8 @@ pub fn pseudofermion_action(
     (action, cg_result, x)
 }
 
-/// Compute the pseudofermion force: dS_F/dU_μ(x) for all links.
+/// Compute the pseudofermion force: `dS_F/dU_μ(x)` for all links.
+#[must_use]
 pub fn pseudofermion_force(lattice: &Lattice, x_field: &FermionField, mass: f64) -> Vec<Su3Matrix> {
     let vol = lattice.volume();
     let y_field = apply_dirac(lattice, x_field, mass);
@@ -122,11 +124,7 @@ pub fn pseudofermion_force(lattice: &Lattice, x_field: &FermionField, mass: f64)
 
 fn staggered_phase_local(x: [usize; 4], mu: usize) -> f64 {
     let sum: usize = x.iter().take(mu).sum();
-    if sum.is_multiple_of(2) {
-        1.0
-    } else {
-        -1.0
-    }
+    if sum.is_multiple_of(2) { 1.0 } else { -1.0 }
 }
 
 /// Dynamical fermion HMC configuration.
@@ -142,7 +140,7 @@ pub struct DynamicalHmcConfig {
     pub fermion: PseudofermionConfig,
     /// Gauge coupling β = 6/g²
     pub beta: f64,
-    /// Number of flavor quarters (n_flavors/4)
+    /// Number of flavor quarters (`n_flavors/4`)
     pub n_flavors_over_4: usize,
 }
 
@@ -164,7 +162,7 @@ impl Default for DynamicalHmcConfig {
 pub struct DynamicalHmcResult {
     /// Whether the trajectory was accepted
     pub accepted: bool,
-    /// ΔH = H_new - H_old
+    /// ΔH = `H_new` - `H_old`
     pub delta_h: f64,
     /// Average plaquette after trajectory
     pub plaquette: f64,

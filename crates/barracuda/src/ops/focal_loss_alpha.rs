@@ -26,7 +26,12 @@ pub struct FocalLossAlpha {
 }
 
 impl FocalLossAlpha {
-    /// Create FocalLossAlpha operation
+    /// Create `FocalLossAlpha` operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(predictions: Tensor, targets: Tensor, alpha: Tensor, gamma: f32) -> Result<Self> {
         if gamma < 0.0 {
             return Err(BarracudaError::invalid_op(
@@ -53,7 +58,12 @@ impl FocalLossAlpha {
         &SHADER
     }
 
-    /// Execute FocalLossAlpha on tensor
+    /// Execute `FocalLossAlpha` on tensor
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let pred_shape = self.predictions.shape();
@@ -116,7 +126,7 @@ impl FocalLossAlpha {
             .storage_rw(3, &output_buffer)
             .uniform(4, &params_buffer)
             .dispatch_1d(batch_size as u32)
-            .submit();
+            .submit()?;
 
         // Create output tensor
         Ok(Tensor::from_buffer(

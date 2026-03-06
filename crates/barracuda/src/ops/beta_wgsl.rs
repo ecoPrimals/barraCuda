@@ -20,6 +20,7 @@ pub struct Beta {
 impl Beta {
     /// Create new Beta function operation
     /// Input tensor must have even length: [a₀, b₀, a₁, b₁, ...]
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -29,6 +30,11 @@ impl Beta {
     }
 
     /// Execute Beta function B(a,b) = Γ(a)Γ(b)/Γ(a+b) on input pairs.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_size: usize = self.input.shape().iter().product();
@@ -164,6 +170,11 @@ impl Tensor {
     /// Compute Beta function B(a,b) for interleaved pairs
     /// Input: [a₀, b₀, a₁, b₁, ...]
     /// Output: [B(a₀,b₀), B(a₁,b₁), ...]
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn beta(self) -> Result<Self> {
         Beta::new(self).execute()
     }

@@ -23,6 +23,7 @@ pub struct SobolGpu {
 
 impl SobolGpu {
     /// Create new Sobol sequence generator
+    #[must_use]
     pub fn new(device: Arc<crate::device::WgpuDevice>, n_samples: u32, n_dims: u32) -> Self {
         Self {
             device,
@@ -33,6 +34,7 @@ impl SobolGpu {
     }
 
     /// Skip the first `n` points (useful for continuing a sequence)
+    #[must_use]
     pub fn with_skip(mut self, skip: u32) -> Self {
         self.skip = skip;
         self
@@ -48,6 +50,8 @@ impl SobolGpu {
     }
 
     /// Generate the Sobol sequence
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or device submission fails (e.g. device lost).
     pub fn generate(self) -> Result<Tensor> {
         let device = &self.device;
         let output_size = (self.n_samples * self.n_dims) as usize;
@@ -171,6 +175,10 @@ impl SobolGpu {
 }
 
 /// Generate Sobol sequence on GPU
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or device submission fails (e.g. device lost).
 pub fn sobol_gpu(
     device: Arc<crate::device::WgpuDevice>,
     n_samples: u32,
@@ -180,6 +188,10 @@ pub fn sobol_gpu(
 }
 
 /// Generate Sobol sequence with skip on GPU
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or device submission fails (e.g. device lost).
 pub fn sobol_gpu_skip(
     device: Arc<crate::device::WgpuDevice>,
     n_samples: u32,

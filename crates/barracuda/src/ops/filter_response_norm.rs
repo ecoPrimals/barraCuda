@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Filter Response Normalization (FRN) - Normalization without batch dependency
 //!
-//! **Canonical BarraCuda Pattern**: Struct with new/execute
+//! **Canonical `BarraCuda` Pattern**: Struct with new/execute
 //!
 //! Normalizes activations per filter, not per batch.
 //! Enables single-sample inference.
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::DeviceCapabilities;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
@@ -31,6 +31,9 @@ pub struct FilterResponseNorm {
 
 impl FilterResponseNorm {
     /// Create a new filter response normalization operation
+    /// # Errors
+    /// Returns [`Err`] if input size does not match batch×channels×height×width,
+    /// or gamma/beta shapes are not [channels].
     pub fn new(
         input: Tensor,
         gamma: Tensor,
@@ -84,6 +87,9 @@ impl FilterResponseNorm {
     }
 
     /// Execute the filter response normalization operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let spatial_size = self.height * self.width;
@@ -132,7 +138,7 @@ impl FilterResponseNorm {
             .storage_rw(4, &output_buffer)
             .uniform(5, &params_buffer)
             .dispatch(pass1_workgroups as u32, 1, 1)
-            .submit();
+            .submit()?;
 
         ComputeDispatch::new(device, "frn_normalize")
             .shader(Self::wgsl_shader(), "normalize_and_scale")
@@ -143,7 +149,7 @@ impl FilterResponseNorm {
             .storage_rw(4, &output_buffer)
             .uniform(5, &params_buffer)
             .dispatch(workgroups_pass2, 1, 1)
-            .submit();
+            .submit()?;
 
         let output_shape = self.input.shape().to_vec();
         let output_data = crate::utils::read_buffer(device, &output_buffer, total_elements)?;

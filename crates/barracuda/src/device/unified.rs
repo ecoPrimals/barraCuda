@@ -45,10 +45,10 @@
 //! println!("CPU supports: {:?}", info.capabilities);
 //! ```
 
+use crate::device::WgpuDevice;
 use crate::device::akida::AkidaBoard;
 use crate::device::capabilities::build_device_info;
 use crate::device::routing::{select_for_workload, select_with_preference};
-use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result as BarracudaResult};
 
 // Re-export for backward compatibility (mod.rs and prelude use these)
@@ -58,7 +58,6 @@ pub use crate::device::routing::WorkloadHint;
 
 impl Device {
     /// Get device information and capabilities
-    ///
     /// **Runtime discovery** — No hardcoding!
     #[must_use]
     pub fn info(&self) -> DeviceInfo {
@@ -72,7 +71,6 @@ impl Device {
     }
 
     /// List all available devices
-    ///
     /// **Runtime discovery** — No assumptions!
     #[must_use]
     pub fn available_devices() -> Vec<Device> {
@@ -84,17 +82,15 @@ impl Device {
             Device::Auto,
         ]
         .into_iter()
-        .filter(|d| d.is_available())
+        .filter(super::device_types::Device::is_available)
         .collect()
     }
 
     /// Select best device for given workload characteristics (auto-routing).
-    ///
     /// Routes workloads to the appropriate hardware based on the nature
     /// of the computation. GPUs run arbitrary WGSL shaders, NPUs run
     /// pre-compiled neural network models, CPUs handle everything else.
-    ///
-    /// This is BarraCuda's recommendation. To override, use
+    /// This is `BarraCuda`'s recommendation. To override, use
     /// [`Device::select_with_preference`] or construct a [`DeviceContext`] directly.
     #[must_use]
     pub fn select_for_workload(workload: &WorkloadHint) -> Device {
@@ -102,10 +98,8 @@ impl Device {
     }
 
     /// Select device with an explicit user preference.
-    ///
     /// If the user requests a specific device and it is available, honour
     /// that choice regardless of what the auto-router would recommend.
-    ///
     /// Fallback chain when the preferred device is unavailable:
     /// `preferred → auto-route recommendation → GPU → CPU`
     #[must_use]
@@ -133,8 +127,10 @@ pub enum DeviceContext {
 
 impl DeviceContext {
     /// Create context for device
-    ///
     /// **Lazy initialization** — Only when needed!
+    /// # Errors
+    /// Returns [`Err`] if device creation fails (e.g. no WGPU adapter, no Akida
+    /// boards for NPU, or driver initialization errors).
     pub async fn for_device(device: Device) -> BarracudaResult<Self> {
         match device {
             Device::CPU => Ok(DeviceContext::CPU),
@@ -259,9 +255,7 @@ mod tests {
             let dev = Device::select_for_workload(hint);
             assert!(
                 dev == Device::GPU || dev == Device::CPU,
-                "{:?} should route to GPU or CPU, got {:?}",
-                hint,
-                dev
+                "{hint:?} should route to GPU or CPU, got {dev:?}"
             );
         }
     }
@@ -309,7 +303,7 @@ mod tests {
         for hint in &hints {
             let auto = Device::select_for_workload(hint);
             let forced_cpu = Device::select_with_preference(Some(Device::CPU), hint);
-            println!("  {:?}: auto={:?}, forced_cpu={:?}", hint, auto, forced_cpu);
+            println!("  {hint:?}: auto={auto:?}, forced_cpu={forced_cpu:?}");
         }
 
         assert!(available.contains(&Device::CPU));

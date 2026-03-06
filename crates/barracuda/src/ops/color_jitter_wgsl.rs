@@ -38,6 +38,7 @@ pub struct ColorJitter {
 
 impl ColorJitter {
     /// Create a color jitter operation. Expects [B, C, H, W] input.
+    #[must_use]
     pub fn new(input: Tensor, brightness: f32, contrast: f32, saturation: f32, hue: f32) -> Self {
         Self {
             input,
@@ -53,6 +54,11 @@ impl ColorJitter {
     }
 
     /// Execute color jitter on GPU.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -210,6 +216,11 @@ impl ColorJitter {
 
 impl Tensor {
     /// Apply color jitter augmentation. Expects [B, C, H, W].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn color_jitter_wgsl(
         self,
         brightness: f32,

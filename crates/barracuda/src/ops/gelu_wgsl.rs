@@ -6,9 +6,9 @@
 //! - Zero hardcoding: Capability-based workgroup dispatch
 //! - Modern idiomatic Rust: Safe, zero unsafe code
 //! - Complete implementation: No mocks or stubs
-//! - Batchable: routes through TensorContext::record_operation()
+//! - Batchable: routes through `TensorContext::record_operation()`
 //! - Zero-copy output: buffer pool, no GPU→CPU→GPU round-trip
-//! - Pipeline cached: GLOBAL_CACHE eliminates recompilation overhead
+//! - Pipeline cached: `GLOBAL_CACHE` eliminates recompilation overhead
 
 /// f64 is the canonical source — math is universal, precision is silicon.
 const SHADER_F64: &str = include_str!("../shaders/activation/gelu_f64.wgsl");
@@ -36,6 +36,7 @@ pub struct GELU {
 
 impl GELU {
     /// Creates a GELU operation for the given input tensor.
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -49,6 +50,11 @@ impl GELU {
     /// - Output stays GPU-resident (no readback).
     /// - Pipeline compiled once, cached globally.
     /// - Dispatch batched when inside `TensorSession`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -131,6 +137,11 @@ impl GELU {
 
 impl Tensor {
     /// Compute GELU element-wise (GPU-resident, pipeline-cached, batchable).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn gelu_wgsl(self) -> Result<Self> {
         GELU::new(self).execute()
     }

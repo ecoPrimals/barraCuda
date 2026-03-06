@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Cross-device transfer cost modelling — PCIe, NVLink, shared memory.
+//! Cross-device transfer cost modelling — `PCIe`, `NVLink`, shared memory.
 
 use super::types::HardwareType;
 
@@ -39,10 +39,10 @@ impl TransferCost {
     }
 }
 
-/// PCIe 4.0 x16 bandwidth in GB/s.
+/// `PCIe` 4.0 x16 bandwidth in GB/s.
 pub const PCIE4_X16_BANDWIDTH_GBPS: f64 = 31.5;
 
-/// Estimated latency for PCIe DMA transfer in microseconds.
+/// Estimated latency for `PCIe` DMA transfer in microseconds.
 pub const PCIE_DMA_LATENCY_US: f64 = 5.0;
 
 /// Empirical GPU dispatch overhead in microseconds (queue submit + readback).
@@ -55,17 +55,17 @@ pub const GPU_DISPATCH_OVERHEAD_US: f64 = 1500.0;
 /// into the CPU/GPU dispatch decision.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BandwidthTier {
-    /// PCIe 3.0 x16 — ~15.75 GB/s (Titan V, RTX 2000 series)
+    /// `PCIe` 3.0 x16 — ~15.75 GB/s (Titan V, RTX 2000 series)
     PciE3x16,
-    /// PCIe 4.0 x16 — ~31.5 GB/s (RTX 3000/4000, RX 6000/7000)
+    /// `PCIe` 4.0 x16 — ~31.5 GB/s (RTX 3000/4000, RX 6000/7000)
     PciE4x16,
-    /// PCIe 5.0 x16 — ~63 GB/s (next-gen data center)
+    /// `PCIe` 5.0 x16 — ~63 GB/s (next-gen data center)
     PciE5x16,
-    /// NVLink — ~300 GB/s (A100, H100 multi-GPU)
+    /// `NVLink` — ~300 GB/s (A100, H100 multi-GPU)
     NvLink,
     /// Shared/unified memory — effectively infinite (Apple M-series, integrated)
     SharedMemory,
-    /// Unknown — conservative fallback (PCIe 3.0 assumptions)
+    /// Unknown — conservative fallback (`PCIe` 3.0 assumptions)
     Unknown,
 }
 
@@ -139,7 +139,7 @@ impl BandwidthTier {
     }
 }
 
-/// Select optimal mixed substrate for a workload (default PCIe 4.0).
+/// Select optimal mixed substrate for a workload (default `PCIe` 4.0).
 #[must_use]
 pub fn mixed_substrate(
     compute_us: f64,
@@ -199,7 +199,7 @@ pub fn mixed_substrate_with_tier(
     }
 }
 
-/// PCIe bridge for GPU↔NPU transfer cost estimation.
+/// `PCIe` bridge for GPU↔NPU transfer cost estimation.
 pub struct PcieBridge {
     /// Whether peer-to-peer DMA is available
     pub p2p_available: bool,
@@ -210,13 +210,18 @@ pub struct PcieBridge {
 }
 
 impl PcieBridge {
-    /// Detect P2P availability between GPU and NPU (placeholder).
+    /// Detect P2P availability between GPU and NPU.
+    ///
+    /// Currently returns `p2p_available: false` because wgpu does not
+    /// expose peer-to-peer DMA queries. When wgpu gains `device.peer_access()`
+    /// or a platform-specific extension, this will probe the real topology.
+    /// The API is stable so callers won't need changes.
     #[must_use]
     pub fn detect_p2p() -> Self {
         Self {
             p2p_available: false,
-            source_label: "unknown".to_string(),
-            target_label: "unknown".to_string(),
+            source_label: "gpu".to_string(),
+            target_label: "npu".to_string(),
         }
     }
 

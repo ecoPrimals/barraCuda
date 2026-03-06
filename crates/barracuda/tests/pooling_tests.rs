@@ -11,7 +11,7 @@
 //! references to their layouts/pipelines.
 
 #![expect(clippy::unwrap_used, reason = "tests")]
-use barracuda::device::{get_device_context, WgpuDevice};
+use barracuda::device::{WgpuDevice, get_device_context};
 use barracuda::prelude::*;
 use std::sync::Arc;
 use tokio::sync::OnceCell;
@@ -136,8 +136,7 @@ async fn e2e_multiple_operations_steady_state() {
     let new_reuses = stats_after.buffer_reuses - stats_before.buffer_reuses;
     assert!(
         new_reuses > 0,
-        "Expected buffer reuses in steady state, got {}",
-        new_reuses
+        "Expected buffer reuses in steady state, got {new_reuses}"
     );
 }
 
@@ -192,8 +191,7 @@ async fn chaos_rapid_acquire_release() {
         let reuses = stats_after.buffer_reuses - stats_before.buffer_reuses;
         assert!(
             reuses >= 90,
-            "Expected high reuse rate, got {} reuses",
-            reuses
+            "Expected high reuse rate, got {reuses} reuses"
         );
     }
 }
@@ -339,16 +337,14 @@ async fn correctness_pooled_results_accurate() {
         let result = c.to_vec().unwrap();
 
         // Verify sample elements
-        assert_eq!(result[0], 0.0, "Iteration {}: element 0 wrong", iteration);
+        assert_eq!(result[0], 0.0, "Iteration {iteration}: element 0 wrong");
         assert_eq!(
             result[500], 1500.0,
-            "Iteration {}: element 500 wrong",
-            iteration
+            "Iteration {iteration}: element 500 wrong"
         ); // 500 + 1000
         assert_eq!(
             result[999], 2997.0,
-            "Iteration {}: element 999 wrong",
-            iteration
+            "Iteration {iteration}: element 999 wrong"
         ); // 999 + 1998
 
         drop(c); // Return buffer to pool

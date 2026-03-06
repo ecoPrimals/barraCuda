@@ -19,7 +19,7 @@
 //!
 //! The same shader runs on any hardware: NVIDIA, AMD, Intel via WebGPU/Vulkan.
 //! - CUDA handicaps: vendor lock-in, artificial fp64 throttling
-//! - OpenCL fragmentation: driver quality varies wildly
+//! - `OpenCL` fragmentation: driver quality varies wildly
 //! - WGSL advantage: write once, run anywhere with native fp64 builtins
 //!
 //! ## Operations
@@ -85,18 +85,18 @@ pub mod tridiagonal;
 pub use batched_eigh_gpu::BatchedEighGpu;
 pub use cholesky::Cholesky;
 pub use eigh::Eigh;
-pub use eigh_f64::{eigh_householder_qr, EighDecompositionF64};
+pub use eigh_f64::{EighDecompositionF64, eigh_householder_qr};
 pub use gemm_f64::{GemmCachedF64, GemmF64};
 pub use gen_eigh_gpu::{GenEighDecompositionGpu, GenEighGpu};
 pub use grid_quadrature_gemm_f64::GridQuadratureGemm;
 pub use inverse_f64::InverseF64;
 pub use linsolve::LinSolve;
 pub use linsolve_f64::LinSolveF64;
-pub use lu::{lu_decompose, lu_det, lu_inverse, lu_solve, LuDecomposition};
+pub use lu::{LuDecomposition, lu_decompose, lu_det, lu_inverse, lu_solve};
 pub use lu_gpu::LuGpu;
-pub use qr::{qr_decompose, qr_least_squares, QrDecomposition};
+pub use qr::{QrDecomposition, qr_decompose, qr_least_squares};
 pub use qr_gpu::QrGpu;
-pub use svd::{svd_decompose, svd_pinv, svd_values, SvdDecomposition};
+pub use svd::{SvdDecomposition, svd_decompose, svd_pinv, svd_values};
 pub use svd_gpu::SvdGpu;
 pub use triangular_solve::{TriangularSolve, TriangularSolveF64};
 pub use tridiagonal::{tridiagonal_solve, tridiagonal_solve_batch, tridiagonal_solve_f32};
@@ -116,11 +116,13 @@ static WGSL_LAPLACIAN: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(WGSL_LAPLACIAN_F64));
 
 /// WGSL kernel: symmetrize a square matrix (out[i,j] = (A[i,j] + A[j,i]) / 2).
+#[must_use]
 pub fn wgsl_symmetrize() -> &'static str {
     &WGSL_SYMMETRIZE
 }
 
 /// WGSL kernel: graph Laplacian (L = D - A).
+#[must_use]
 pub fn wgsl_laplacian() -> &'static str {
     &WGSL_LAPLACIAN
 }
@@ -134,11 +136,15 @@ pub struct SymmetrizeGpu {
 
 impl SymmetrizeGpu {
     /// Create a GPU symmetrize executor for the given device.
+    /// # Errors
+    /// Returns [`Err`] if device initialization fails (currently always succeeds).
     pub fn new(device: std::sync::Arc<crate::device::WgpuDevice>) -> crate::error::Result<Self> {
         Ok(Self { device })
     }
 
     /// Symmetrize an `n x n` matrix. Returns the upper-triangle-averaged result.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, buffer readback/mapping fails, or the device is lost.
     pub fn execute(&self, matrix: &[f64], n: usize) -> crate::error::Result<Vec<f64>> {
         use crate::device::compute_pipeline::ComputeDispatch;
 
@@ -155,7 +161,7 @@ impl SymmetrizeGpu {
             .storage_rw(1, &output_buf)
             .uniform(2, &params_buf)
             .dispatch(wg, wg, 1)
-            .submit();
+            .submit()?;
 
         self.device.read_f64_buffer(&output_buf, n * n)
     }
@@ -170,11 +176,15 @@ pub struct LaplacianGpu {
 
 impl LaplacianGpu {
     /// Create a GPU graph Laplacian executor for the given device.
+    /// # Errors
+    /// Returns [`Err`] if device initialization fails (currently always succeeds).
     pub fn new(device: std::sync::Arc<crate::device::WgpuDevice>) -> crate::error::Result<Self> {
         Ok(Self { device })
     }
 
     /// Compute the graph Laplacian of an `n x n` adjacency matrix.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, buffer readback/mapping fails, or the device is lost.
     pub fn execute(&self, adjacency: &[f64], n: usize) -> crate::error::Result<Vec<f64>> {
         use crate::device::compute_pipeline::ComputeDispatch;
 
@@ -193,7 +203,7 @@ impl LaplacianGpu {
             .storage_rw(1, &output_buf)
             .uniform(2, &params_buf)
             .dispatch(wg, wg, 1)
-            .submit();
+            .submit()?;
 
         self.device.read_f64_buffer(&output_buf, n * n)
     }

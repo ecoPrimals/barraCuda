@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-//! UniFrac Tree Propagation — GPU kernel (f64).
+//! `UniFrac` Tree Propagation — GPU kernel (f64).
 //!
 //! Bottom-up propagation of sample abundances through a CSR phylogenetic
 //! tree. Two entry points:
 //!   - `unifrac_leaf_init`: copy sample matrix into leaf node slots
 //!   - `unifrac_propagate_level`: sum child contributions × branch length
 //!
-//! Multi-pass dispatch: leaf_init once, then propagate_level per tree level.
+//! Multi-pass dispatch: `leaf_init` once, then `propagate_level` per tree level.
 //!
 //! Provenance: wetSpring metagenomics → toadStool absorption
 
@@ -15,13 +15,13 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
-use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 
-/// WGSL source for UniFrac tree propagation (leaf init + propagate_level).
+/// WGSL source for `UniFrac` tree propagation (leaf init + `propagate_level`).
 pub const WGSL_UNIFRAC_PROPAGATE: &str = include_str!("../../shaders/bio/unifrac_propagate.wgsl");
 
-/// Configuration for UniFrac tree propagation.
+/// Configuration for `UniFrac` tree propagation.
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct UniFracConfig {
@@ -35,7 +35,7 @@ pub struct UniFracConfig {
     pub _pad: u32,
 }
 
-/// GPU pipeline for UniFrac tree propagation (leaf init + level-wise propagate).
+/// GPU pipeline for `UniFrac` tree propagation (leaf init + level-wise propagate).
 pub struct UniFracPropagateGpu {
     leaf_init_pipeline: wgpu::ComputePipeline,
     propagate_pipeline: wgpu::ComputePipeline,
@@ -44,7 +44,8 @@ pub struct UniFracPropagateGpu {
 }
 
 impl UniFracPropagateGpu {
-    /// Create the UniFrac propagation pipeline for the given device.
+    /// Create the `UniFrac` propagation pipeline for the given device.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 

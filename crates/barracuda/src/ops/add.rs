@@ -57,6 +57,8 @@ pub struct Add {
 
 impl Add {
     /// Create Add operation
+    /// # Errors
+    /// Returns [`Err`] if lhs and rhs shapes differ.
     pub fn new(lhs: Tensor, rhs: Tensor) -> Result<Self> {
         // Verify shapes match
         if lhs.shape() != rhs.shape() {
@@ -69,15 +71,12 @@ impl Add {
     }
 
     /// Select vendor-optimized shader based on GPU capabilities and tensor size
-    ///
     /// **Deep Debt Evolution**: Uses vendor ID (not string matching) for reliable detection
-    ///
     /// Benchmarks show:
     /// - NVIDIA: WG=64 is 3x faster than WG=256
     /// - AMD: WG=128 is 2x faster than WG=64
-    ///
-    /// Note: wgpu limits dispatch to 65535 workgroups per dimension,
-    /// so for very large tensors we use larger workgroup sizes.
+    ///   Note: wgpu limits dispatch to 65535 workgroups per dimension,
+    ///   so for very large tensors we use larger workgroup sizes.
     fn wgsl_shader(caps: &DeviceCapabilities, size: usize) -> (&'static str, u32) {
         // Calculate workgroup size based on tensor size to stay within dispatch limits
         let max_dispatch = 65535u32;
@@ -112,10 +111,11 @@ impl Add {
     }
 
     /// Execute addition on tensors
-    ///
     /// Uses cached shader and pipeline for fast repeated calls.
     /// First call compiles/caches, subsequent calls reuse.
     /// Output buffer is acquired from pool for zero-allocation steady-state.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.lhs.device();
         let size = self.lhs.len();
@@ -181,6 +181,8 @@ impl Add {
 // Convenience methods on Tensor
 impl Tensor {
     /// Element-wise addition
+    /// # Errors
+    /// Returns [`Err`] if shapes differ, buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn add(&self, other: &Tensor) -> Result<Self> {
         Add::new(self.clone(), other.clone())?.execute()
     }
@@ -208,7 +210,7 @@ mod tests {
 
         let expected = [11.0, 22.0, 33.0, 44.0, 55.0];
         for (i, (&r, &e)) in result.iter().zip(expected.iter()).enumerate() {
-            assert!((r - e).abs() < 1e-6, "Mismatch at {}: {} vs {}", i, r, e);
+            assert!((r - e).abs() < 1e-6, "Mismatch at {i}: {r} vs {e}");
         }
     }
 
@@ -284,12 +286,7 @@ mod tests {
 
         // All should equal size
         for (i, &val) in result.iter().enumerate() {
-            assert!(
-                (val - size as f32).abs() < 1e-4,
-                "Mismatch at {}: {}",
-                i,
-                val
-            );
+            assert!((val - size as f32).abs() < 1e-4, "Mismatch at {i}: {val}");
         }
     }
 
@@ -322,10 +319,7 @@ mod tests {
         for (i, (&gpu, &cpu)) in gpu_result.iter().zip(cpu_result.iter()).enumerate() {
             assert!(
                 (gpu - cpu).abs() < 1e-6,
-                "Error at {}: GPU={}, CPU={}",
-                i,
-                gpu,
-                cpu
+                "Error at {i}: GPU={gpu}, CPU={cpu}"
             );
         }
     }

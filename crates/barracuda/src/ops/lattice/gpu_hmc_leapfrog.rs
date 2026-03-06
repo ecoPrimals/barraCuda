@@ -33,6 +33,8 @@ pub struct GpuHmcLeapfrog {
 
 impl GpuHmcLeapfrog {
     /// Create HMC leapfrog integrator for given lattice volume.
+    /// # Errors
+    /// Returns [`Err`] if shader compilation fails, pipeline creation fails, or the device is lost.
     pub fn new(device: Arc<WgpuDevice>, volume: u32) -> Result<Self> {
         let n_links = volume * 4;
         let src = format!("{}{}", su3_extended_preamble(), SHADER_BODY);
@@ -87,6 +89,8 @@ impl GpuHmcLeapfrog {
     }
 
     /// π ← π + dt × force
+    /// # Errors
+    /// Returns [`Err`] if buffer sizes are invalid for the volume, command submission fails, or the device is lost.
     pub fn momentum_kick(
         &self,
         links_buf: &wgpu::Buffer,
@@ -109,6 +113,8 @@ impl GpuHmcLeapfrog {
     }
 
     /// U ← exp(dt × π) × U  then reunitarize
+    /// # Errors
+    /// Returns [`Err`] if buffer sizes are invalid for the volume, command submission fails, or the device is lost.
     pub fn link_update(
         &self,
         links_buf: &wgpu::Buffer,
@@ -131,6 +137,8 @@ impl GpuHmcLeapfrog {
     }
 
     /// Generate random su(3) algebra momenta.
+    /// # Errors
+    /// Returns [`Err`] if buffer sizes are invalid for the volume, command submission fails, or the device is lost.
     pub fn generate_momenta(
         &self,
         links_buf: &wgpu::Buffer,
@@ -230,6 +238,7 @@ impl GpuHmcLeapfrog {
     }
 
     /// Number of gauge links (volume × 4).
+    #[must_use]
     pub fn n_links(&self) -> u32 {
         self.n_links
     }

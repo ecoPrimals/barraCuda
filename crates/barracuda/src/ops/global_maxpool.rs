@@ -12,7 +12,7 @@
 //!
 //! ## Evolution History
 //!
-//! **Before** (Phase 3): `GlobalMaxPoolExt` trait extension  
+//! **Before** (Phase 3): `GlobalMaxPoolExt` trait extension\
 //! **After** (Phase 6): Direct `impl Tensor` method
 //!
 //! ## Usage
@@ -62,13 +62,21 @@ impl GlobalMaxPool {
     }
 
     /// Execute global max pooling over spatial dimensions.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
 
         if shape.len() != 4 {
-            return Err(crate::error::BarracudaError::invalid_op("Shape Error", 
-                format!("GlobalMaxPool expects 4D input [batch, channels, height, width], got shape {shape:?}")
+            return Err(crate::error::BarracudaError::invalid_op(
+                "Shape Error",
+                format!(
+                    "GlobalMaxPool expects 4D input [batch, channels, height, width], got shape {shape:?}"
+                ),
             ));
         }
 
@@ -113,7 +121,7 @@ impl GlobalMaxPool {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch(workgroups, 1, 1)
-            .submit();
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,
@@ -155,6 +163,11 @@ impl Tensor {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn global_maxpool(self) -> Result<Self> {
         let op = GlobalMaxPool { input: self };
         op.execute()

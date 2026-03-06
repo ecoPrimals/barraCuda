@@ -21,6 +21,11 @@ pub struct Pdist {
 
 impl Pdist {
     /// Create a new pdist operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor, p: Option<f32>, epsilon: Option<f32>) -> Result<Self> {
         let input_shape = input.shape();
         if input_shape.len() < 2 {
@@ -50,6 +55,11 @@ impl Pdist {
     }
 
     /// Execute the pdist operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 

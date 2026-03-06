@@ -74,14 +74,14 @@ fn correlated_3d_small_xi_matches_uncorrelated() {
         let diag_c = mat.values[mat.row_ptr[i]..mat.row_ptr[i + 1]]
             .iter()
             .zip(&mat.col_idx[mat.row_ptr[i]..mat.row_ptr[i + 1]])
-            .find(|(_, &c)| c == i)
-            .map(|(&v, _)| v)
+            .find(|&(_, c)| *c == i)
+            .map(|(v, _)| *v)
             .unwrap();
         let diag_u = mat_u.values[mat_u.row_ptr[i]..mat_u.row_ptr[i + 1]]
             .iter()
             .zip(&mat_u.col_idx[mat_u.row_ptr[i]..mat_u.row_ptr[i + 1]])
-            .find(|(_, &c)| c == i)
-            .map(|(&v, _)| v)
+            .find(|&(_, c)| *c == i)
+            .map(|(v, _)| *v)
             .unwrap();
         assert!(
             (diag_c - diag_u).abs() < 1e-10,
@@ -103,18 +103,16 @@ fn correlated_3d_smooths_potential() {
             let diag = mat.values[mat.row_ptr[i]..mat.row_ptr[i + 1]]
                 .iter()
                 .zip(&mat.col_idx[mat.row_ptr[i]..mat.row_ptr[i + 1]])
-                .find(|(_, &c)| c == i)
-                .map(|(&v, _)| v)
-                .unwrap_or(0.0);
+                .find(|&(_, c)| *c == i)
+                .map_or(0.0, |(v, _)| *v);
             for idx in mat.row_ptr[i]..mat.row_ptr[i + 1] {
                 let j = mat.col_idx[idx];
                 if j != i {
                     let diag_j = mat.values[mat.row_ptr[j]..mat.row_ptr[j + 1]]
                         .iter()
                         .zip(&mat.col_idx[mat.row_ptr[j]..mat.row_ptr[j + 1]])
-                        .find(|(_, &c)| c == j)
-                        .map(|(&v, _)| v)
-                        .unwrap_or(0.0);
+                        .find(|&(_, c)| *c == j)
+                        .map_or(0.0, |(v, _)| *v);
                     diffs.push((diag - diag_j).powi(2));
                 }
             }

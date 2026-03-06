@@ -2,7 +2,7 @@
 //! Per-Particle Kinetic Energy Computation
 //!
 //! **Physics**: KE = 0.5 * m * v² per particle
-//! **Use Case**: Temperature calculation: T = 2*KE_total / (3*N*k_B)
+//! **Use Case**: Temperature calculation: T = 2*`KE_total` / (3*N*`k_B`)
 //!
 //! **Deep Debt Compliance**:
 //! - ✅ Pure WGSL shader
@@ -15,7 +15,7 @@ use crate::tensor::Tensor;
 
 /// Per-particle kinetic energy computation
 ///
-/// Computes KE_i = 0.5 * mass * (vx² + vy² + vz²) for each particle.
+/// Computes `KE_i` = 0.5 * mass * (vx² + vy² + vz²) for each particle.
 /// Sum the output to get total kinetic energy.
 pub struct KineticEnergy {
     velocities: Tensor,
@@ -24,11 +24,9 @@ pub struct KineticEnergy {
 
 impl KineticEnergy {
     /// Create a kinetic energy computation
-    ///
     /// # Arguments
     /// * `velocities` - Velocity tensor [N, 3] (f64)
     /// * `mass` - Particle mass (reduced units)
-    ///
     /// # Errors
     /// Returns error if velocities tensor has wrong shape.
     pub fn new(velocities: Tensor, mass: f64) -> Result<Self> {
@@ -44,9 +42,13 @@ impl KineticEnergy {
     }
 
     /// Execute the kinetic energy computation
-    ///
     /// # Returns
     /// A tensor [N] with per-particle kinetic energy
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.velocities.device();
         let n_particles = self.velocities.shape()[0];
@@ -183,8 +185,8 @@ impl KineticEnergy {
     }
 
     /// Compute temperature from total kinetic energy
-    ///
-    /// T* = 2 * KE_total / (3 * N) in reduced units (k_B = 1)
+    /// T* = 2 * `KE_total` / (3 * N) in reduced units (`k_B` = 1)
+    #[must_use]
     pub fn temperature_from_ke(ke_total: f64, n_particles: usize) -> f64 {
         2.0 * ke_total / (3.0 * n_particles as f64)
     }

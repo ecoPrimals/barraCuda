@@ -16,7 +16,7 @@ pub fn random_polynomial(degree: usize, modulus: u64) -> Vec<u64> {
 }
 
 /// Known primitive roots for testing
-/// Format: (degree, modulus, root_of_unity)
+/// Format: (degree, modulus, `root_of_unity`)
 /// All satisfy: modulus ≡ 1 (mod 2*degree) and root^degree ≡ 1
 pub const KNOWN_ROOTS: &[(u32, u64, u64)] = &[
     (4, 17, 4),       // 4^4 ≡ 1 mod 17, 17 ≡ 1 mod 8
@@ -31,7 +31,7 @@ pub const KNOWN_ROOTS: &[(u32, u64, u64)] = &[
 #[expect(dead_code, reason = "test utility for FHE INTT validation")]
 pub fn mod_inverse(a: u64, m: u64) -> u64 {
     // Extended Euclidean algorithm
-    let (mut old_r, mut r) = (a as i128, m as i128);
+    let (mut old_r, mut r) = (i128::from(a), i128::from(m));
     let (mut old_s, mut s) = (1i128, 0i128);
 
     while r != 0 {
@@ -41,7 +41,7 @@ pub fn mod_inverse(a: u64, m: u64) -> u64 {
     }
 
     if old_s < 0 {
-        (old_s + m as i128) as u64
+        (old_s + i128::from(m)) as u64
     } else {
         old_s as u64
     }
@@ -49,7 +49,7 @@ pub fn mod_inverse(a: u64, m: u64) -> u64 {
 
 /// Find a primitive N-th root of unity for given degree and modulus.
 /// NTT requires: modulus ≡ 1 (mod 2*degree).
-/// Uses barracuda's compute_primitive_root when the modulus satisfies this constraint.
+/// Uses barracuda's `compute_primitive_root` when the modulus satisfies this constraint.
 pub fn find_root_of_unity(degree: u32, modulus: u64) -> Option<u64> {
     // Check known roots first
     for &(d, m, root) in KNOWN_ROOTS {
@@ -59,13 +59,13 @@ pub fn find_root_of_unity(degree: u32, modulus: u64) -> Option<u64> {
     }
 
     // NTT requires q ≡ 1 (mod 2*degree). If satisfied, use compute_primitive_root.
-    let two_n = 2u64 * degree as u64;
+    let two_n = 2u64 * u64::from(degree);
     if (modulus - 1).is_multiple_of(two_n) {
         let root = compute_primitive_root(degree, modulus);
         // Verify it's a valid primitive N-th root (omega^N = 1, omega^(N/2) != 1)
         let mut power = 1u64;
         for _ in 0..degree {
-            power = (power as u128 * root as u128 % modulus as u128) as u64;
+            power = (u128::from(power) * u128::from(root) % u128::from(modulus)) as u64;
         }
         if power == 1 && root != 1 {
             return Some(root);
@@ -76,14 +76,14 @@ pub fn find_root_of_unity(degree: u32, modulus: u64) -> Option<u64> {
     for candidate in 2..modulus.min(100) {
         let mut power = 1u64;
         for _ in 0..degree {
-            power = (power as u128 * candidate as u128 % modulus as u128) as u64;
+            power = (u128::from(power) * u128::from(candidate) % u128::from(modulus)) as u64;
         }
         if power == 1 {
             let mut is_primitive = true;
             for k in 1..degree {
                 let mut p = 1u64;
                 for _ in 0..k {
-                    p = (p as u128 * candidate as u128 % modulus as u128) as u64;
+                    p = (u128::from(p) * u128::from(candidate) % u128::from(modulus)) as u64;
                 }
                 if p == 1 {
                     is_primitive = false;
@@ -102,7 +102,7 @@ pub fn find_root_of_unity(degree: u32, modulus: u64) -> Option<u64> {
 /// Modulus/degree pairs that satisfy NTT constraint q ≡ 1 (mod 2*degree).
 /// Use these for tests to avoid invalid combinations.
 pub fn modulus_supports_degree(modulus: u64, degree: u32) -> bool {
-    let two_n = 2u64 * degree as u64;
+    let two_n = 2u64 * u64::from(degree);
     (modulus - 1).is_multiple_of(two_n)
 }
 
@@ -119,8 +119,8 @@ pub fn u32_pairs_to_poly(pairs: &[u32]) -> Vec<u64> {
     pairs
         .chunks(2)
         .map(|chunk| {
-            let low = chunk[0] as u64;
-            let high = chunk[1] as u64;
+            let low = u64::from(chunk[0]);
+            let high = u64::from(chunk[1]);
             low | (high << 32)
         })
         .collect()

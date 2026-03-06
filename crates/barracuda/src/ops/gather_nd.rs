@@ -20,6 +20,8 @@ pub struct GatherNd {
 
 impl GatherNd {
     /// Create a new gather ND operation
+    /// # Errors
+    /// Returns [`Err`] if indices have fewer than 2 dimensions, or if index rank exceeds input rank.
     pub fn new(input: Tensor, indices: Tensor) -> Result<Self> {
         let input_shape = input.shape();
         let indices_shape = indices.shape();
@@ -64,6 +66,9 @@ impl GatherNd {
     }
 
     /// Execute the gather ND operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, buffer readback fails
+    /// (e.g. device lost), or indices reference out-of-bounds elements.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -340,10 +345,11 @@ impl GatherNd {
 
 impl Tensor {
     /// Gather elements using N-dimensional indices
-    ///
     /// # Arguments
-    ///
     /// * `indices` - N-dimensional indices tensor
+    /// # Errors
+    /// Returns [`Err`] if indices have fewer than 2 dimensions, index rank exceeds input rank,
+    /// buffer allocation fails, GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn gather_nd(self, indices: Tensor) -> Result<Self> {
         GatherNd::new(self, indices)?.execute()
     }

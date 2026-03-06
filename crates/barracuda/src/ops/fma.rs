@@ -48,6 +48,8 @@ pub struct Fma {
 
 impl Fma {
     /// Create FMA operation
+    /// # Errors
+    /// Returns [`Err`] if tensor shapes do not match.
     pub fn new(a: Tensor, b: Tensor, c: Tensor) -> Result<Self> {
         // Verify shapes match
         if a.shape() != b.shape() {
@@ -96,8 +98,10 @@ impl Fma {
     }
 
     /// Execute FMA on tensors
-    ///
     /// Uses cached shader, pipeline, and bind group for fast repeated calls.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the
+    /// device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.a.device();
         let size = self.a.len();
@@ -170,16 +174,20 @@ impl Fma {
 // Convenience methods on Tensor
 impl Tensor {
     /// Fused Multiply-Add: self * other + addend
-    ///
     /// This is equivalent to `self.mul(other).add(addend)` but faster
     /// because it uses a single GPU dispatch instead of two.
+    /// # Errors
+    /// Returns [`Err`] if tensor shapes do not match, buffer allocation fails,
+    /// GPU dispatch fails, or the device is lost.
     pub fn fma(&self, other: &Tensor, addend: &Tensor) -> Result<Self> {
         Fma::new(self.clone(), other.clone(), addend.clone())?.execute()
     }
 
     /// Multiply-accumulate: self * other + self
-    ///
     /// Common pattern for residual connections.
+    /// # Errors
+    /// Returns [`Err`] if tensor shapes do not match, buffer allocation fails,
+    /// GPU dispatch fails, or the device is lost.
     pub fn mul_add(&self, multiplier: &Tensor, addend: &Tensor) -> Result<Self> {
         self.fma(multiplier, addend)
     }
@@ -211,7 +219,7 @@ mod tests {
         // d = a * b + c
         let expected = [12.0, 24.0, 36.0, 48.0, 60.0];
         for (i, (&r, &e)) in result.iter().zip(expected.iter()).enumerate() {
-            assert!((r - e).abs() < 1e-6, "Mismatch at {}: {} vs {}", i, r, e);
+            assert!((r - e).abs() < 1e-6, "Mismatch at {i}: {r} vs {e}");
         }
     }
 
@@ -241,10 +249,7 @@ mod tests {
         for (i, (&fma, &sep)) in fma_result.iter().zip(add_result.iter()).enumerate() {
             assert!(
                 (fma - sep).abs() < 1e-5,
-                "Mismatch at {}: FMA={}, separate={}",
-                i,
-                fma,
-                sep
+                "Mismatch at {i}: FMA={fma}, separate={sep}"
             );
         }
     }
@@ -320,11 +325,7 @@ mod tests {
             let error = (gpu - cpu).abs();
             assert!(
                 error < 1e-4 || error / cpu.abs().max(1e-10) < 1e-4,
-                "Error at {}: GPU={}, CPU={}, error={}",
-                i,
-                gpu,
-                cpu,
-                error
+                "Error at {i}: GPU={gpu}, CPU={cpu}, error={error}"
             );
         }
     }

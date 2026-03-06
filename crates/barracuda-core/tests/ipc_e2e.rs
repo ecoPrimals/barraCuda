@@ -8,7 +8,7 @@
 
 #![expect(clippy::unwrap_used, reason = "E2E tests use unwrap for clarity")]
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;

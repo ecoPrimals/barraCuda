@@ -2,8 +2,8 @@
 
 //! Outer product mean, pair transition, template embedding, recycling update, ensemble average.
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -67,6 +67,11 @@ struct EnsembleAverageParams {
 ///
 /// Computes `out[i,j,c] = mean_s(a[s,i,c] * b[s,j,c])` — the projected
 /// outer product averaged over MSA sequences.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, the device is lost, or buffer
+/// readback fails.
 pub fn outer_product_mean(
     device: &Arc<WgpuDevice>,
     a: &[f64],
@@ -90,7 +95,7 @@ pub fn outer_product_mean(
         .storage_rw(2, &out_buf)
         .uniform(3, &params_buf)
         .dispatch(out_len.div_ceil(WG_64 as usize) as u32, 1, 1)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, out_len)
 }
@@ -98,6 +103,11 @@ pub fn outer_product_mean(
 /// Pair representation transition: 2-layer MLP on pair features.
 ///
 /// `out[i,j,c] = ReLU(pair[i,j,:] * W1 + b1) * W2 + b2`
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, the device is lost, or buffer
+/// readback fails.
 pub fn pair_transition(
     device: &Arc<WgpuDevice>,
     pair: &[f64],
@@ -136,12 +146,17 @@ pub fn pair_transition(
         .storage_rw(5, &out_buf)
         .uniform(6, &params_buf)
         .dispatch(out_len.div_ceil(WG_64 as usize) as u32, 1, 1)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, out_len)
 }
 
 /// Template stack averaging: `out[i,j,c] = (1/T) * Σ_t template[t,i,j,c]`.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, the device is lost, or buffer
+/// readback fails.
 pub fn template_embedding(
     device: &Arc<WgpuDevice>,
     templates: &[f64],
@@ -162,12 +177,17 @@ pub fn template_embedding(
         .storage_rw(1, &out_buf)
         .uniform(2, &params_buf)
         .dispatch(out_len.div_ceil(WG_64 as usize) as u32, 1, 1)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, out_len)
 }
 
 /// Recycling iteration update: `out = prev + layer_norm(current - prev)`.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, the device is lost, or buffer
+/// readback fails.
 pub fn recycling_update(
     device: &Arc<WgpuDevice>,
     prev: &[f64],
@@ -196,12 +216,17 @@ pub fn recycling_update(
         .storage_rw(2, &out_buf)
         .uniform(3, &params_buf)
         .dispatch(out_len.div_ceil(WG_64 as usize) as u32, 1, 1)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, out_len)
 }
 
 /// Ensemble averaging: `out[i,d] = (1/M) * Σ_m positions[m,i,d]`.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, the device is lost, or buffer
+/// readback fails.
 pub fn ensemble_average(
     device: &Arc<WgpuDevice>,
     positions: &[f64],
@@ -227,7 +252,7 @@ pub fn ensemble_average(
         .storage_rw(1, &out_buf)
         .uniform(2, &params_buf)
         .dispatch(out_len.div_ceil(WG_64 as usize) as u32, 1, 1)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, out_len)
 }

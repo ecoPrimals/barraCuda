@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! CPU implementations of Conv2D, MaxPool2D, and AvgPool2D.
+//! CPU implementations of `Conv2D`, `MaxPool2D`, and `AvgPool2D`.
 //!
 //! Extracted from `cpu_executor.rs` for file-size compliance and logical separation.
 //! These are pure-Rust, im2col-free implementations suitable for CPU fallback.
@@ -8,6 +8,10 @@ use crate::error::Result;
 
 /// 2D convolution (im2col-free direct convolution).
 /// Input `[N, C_in, H, W]`, kernel `[C_out, C_in, kH, kW]`.
+///
+/// # Errors
+///
+/// Returns [`Err`] if the operation fails (e.g., dimension overflow or invalid output size).
 #[expect(clippy::too_many_arguments, reason = "API")]
 pub fn conv2d(
     input: &[f32],
@@ -72,6 +76,10 @@ pub fn conv2d(
 }
 
 /// 2D max pooling. Input `[N, C, H, W]`.
+///
+/// # Errors
+///
+/// Returns [`Err`] if the operation fails (e.g., dimension overflow or invalid output size).
 #[expect(clippy::too_many_arguments, reason = "API")]
 pub fn max_pool2d(
     input: &[f32],
@@ -124,6 +132,10 @@ pub fn max_pool2d(
 }
 
 /// 2D average pooling. Input `[N, C, H, W]`.
+///
+/// # Errors
+///
+/// Returns [`Err`] if the operation fails (e.g., dimension overflow or invalid output size).
 #[expect(clippy::too_many_arguments, reason = "API")]
 pub fn avg_pool2d(
     input: &[f32],

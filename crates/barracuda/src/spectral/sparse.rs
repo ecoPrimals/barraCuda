@@ -26,7 +26,7 @@ impl SpectralCsrMatrix {
     /// Sparse matrix-vector product: y = A * x.
     ///
     /// This is the P1 primitive for GPU promotion — the inner loop of Lanczos.
-    /// CPU version; GPU SpMV available via `WGSL_SPMV_CSR_F64` shader.
+    /// CPU version; GPU `SpMV` available via `WGSL_SPMV_CSR_F64` shader.
     pub fn spmv(&self, x: &[f64], y: &mut [f64]) {
         for (i, yi) in y.iter_mut().enumerate().take(self.n) {
             let mut sum = 0.0;
@@ -38,6 +38,7 @@ impl SpectralCsrMatrix {
     }
 
     /// Number of non-zero entries.
+    #[must_use]
     pub fn nnz(&self) -> usize {
         self.values.len()
     }
@@ -57,7 +58,7 @@ impl SpectralCsrMatrix {
 /// | 2 | storage, read | `col_idx: array<u32>` (nnz entries) |
 /// | 3 | storage, read | `values: array<f64>` (nnz entries) |
 /// | 4 | storage, read | `x: array<f64>` (n entries, input) |
-/// | 5 | storage, read_write | `y: array<f64>` (n entries, output) |
+/// | 5 | storage, `read_write` | `y: array<f64>` (n entries, output) |
 ///
 /// ## Dispatch
 ///
@@ -65,7 +66,7 @@ impl SpectralCsrMatrix {
 ///
 /// ## Provenance
 ///
-/// GPU promotion of CPU SpMV for Kachkovskiy spectral theory GPU Lanczos
+/// GPU promotion of CPU `SpMV` for Kachkovskiy spectral theory GPU Lanczos
 /// and lattice QCD GPU Dirac. Absorbed from hotSpring v0.6.0.
 pub const WGSL_SPMV_CSR_F64: &str = r"
 struct Params {

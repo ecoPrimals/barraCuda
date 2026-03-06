@@ -10,7 +10,7 @@
 //! in the latency window — a technique called **instruction-level parallelism**
 //! (ILP).
 //!
-//! BarraCuda expresses ILP at the WGSL source level (via `@ilp_region`
+//! `BarraCuda` expresses ILP at the WGSL source level (via `@ilp_region`
 //! annotations and the Phase 3 `WgslDependencyGraph` reorderer). This module
 //! provides the **latency numbers** that guide that reordering.
 //!
@@ -264,7 +264,7 @@ impl LatencyModel for MeasuredModel {
 /// executed as software multi-instruction sequences. The effective latency for
 /// an f64 FMA is empirically ~16 cycles (4× the f32 FFMA pipeline).
 ///
-/// Source: Apple GPU ISA (internal; approximated from bench_f64_builtins patterns).
+/// Source: Apple GPU ISA (internal; approximated from `bench_f64_builtins` patterns).
 /// Status: to be calibrated with `bench_f64_builtins` on macOS / Metal.
 pub struct AppleMLatencyModel;
 

@@ -16,14 +16,14 @@
 //! - `Op::Fao56Et0` (0): FAO-56 Penman-Monteith reference ET₀
 //! - `Op::WaterBalance` (1): Daily water balance update
 //! - `Op::Custom` (2): User-defined operations (passthrough)
-//! - `Op::SensorCalibration` (5): SoilWatch 10 VWC — Dong et al. (2024)
+//! - `Op::SensorCalibration` (5): `SoilWatch` 10 VWC — Dong et al. (2024)
 //! - `Op::HargreavesEt0` (6): Hargreaves-Samani (1985) ET₀
 //! - `Op::KcClimateAdjust` (7): FAO-56 Eq. 62 Kc climate adjustment
 //! - `Op::DualKcKe` (8): FAO-56 Eq. 71/74 dual Kc soil evaporation
 //! - `Op::VanGenuchtenTheta` (9): Van Genuchten θ(h) soil water content
 //! - `Op::VanGenuchtenK` (10): Van Genuchten K(h) hydraulic conductivity
 //! - `Op::ThornthwaiteEt0` (11): Thornthwaite monthly ET₀
-//! - `Op::Gdd` (12): Growing Degree Days (use aux_param for T_base)
+//! - `Op::Gdd` (12): Growing Degree Days (use `aux_param` for `T_base`)
 //! - `Op::PedotransferPolynomial` (13): Polynomial evaluation (Horner, degree ≤5)
 //! - `Op::MakkinkEt0` (14): Makkink (1957) ET₀ — radiation-based
 //! - `Op::TurcEt0` (15): Turc (1961) ET₀ — radiation + temperature
@@ -76,8 +76,7 @@ mod tests {
         // Expected: ~3.88 mm/day (FAO-56 Example 18)
         assert!(
             (et0 - 3.88).abs() < 0.1,
-            "FAO-56 Example 18: got {} mm/day, expected ~3.88 mm/day",
-            et0
+            "FAO-56 Example 18: got {et0} mm/day, expected ~3.88 mm/day"
         );
     }
 
@@ -187,6 +186,43 @@ mod tests {
         assert_eq!(Op::MakkinkEt0.stride(), 3);
         assert_eq!(Op::TurcEt0.stride(), 3);
         assert_eq!(Op::HamonEt0.stride(), 2);
+        assert_eq!(Op::ScsCnRunoff.stride(), 3);
+        assert_eq!(Op::StewartYieldWater.stride(), 2);
+        assert_eq!(Op::BlaneyCriddleEt0.stride(), 2);
+    }
+
+    #[test]
+    fn test_scs_cn_runoff_cpu() {
+        let q = cpu_ref::scs_cn_runoff_cpu(80.0, 75.0, 0.2);
+        // CN=75 → S = 25400/75−254 = 84.67, Ia = 0.2*84.67 = 16.93
+        // Pe = 80−16.93 = 63.07, Q = 63.07² / (63.07 + 84.67) = 26.93
+        assert!((q - 26.93).abs() < 0.5, "SCS-CN Q={q} mm, expected ~26.93");
+        assert_eq!(cpu_ref::scs_cn_runoff_cpu(0.0, 75.0, 0.2), 0.0);
+        assert_eq!(cpu_ref::scs_cn_runoff_cpu(5.0, 75.0, 0.2), 0.0);
+    }
+
+    #[test]
+    fn test_stewart_yield_water_cpu() {
+        let ya_ym = cpu_ref::stewart_yield_water_cpu(1.0, 0.8);
+        // Ya/Ym = 1 − 1.0*(1−0.8) = 0.8
+        assert!(
+            (ya_ym - 0.8).abs() < 1e-10,
+            "Stewart Ya/Ym={ya_ym}, expected 0.8"
+        );
+        let ya_ym_full = cpu_ref::stewart_yield_water_cpu(1.0, 1.0);
+        assert!((ya_ym_full - 1.0).abs() < 1e-10, "full ET → full yield");
+    }
+
+    #[test]
+    fn test_blaney_criddle_et0_cpu() {
+        let et0 = cpu_ref::blaney_criddle_et0_cpu(20.0, 12.0);
+        // p = 12/43.8 = 0.274, ET₀ = 0.274*(0.46*20+8.13) = 0.274*17.33 = 4.75
+        assert!(
+            (et0 - 4.75).abs() < 0.3,
+            "Blaney-Criddle ET₀={et0}, expected ~4.75"
+        );
+        let et0_cold = cpu_ref::blaney_criddle_et0_cpu(-5.0, 12.0);
+        assert!(et0_cold >= 0.0, "cold temp should clamp to 0");
     }
 
     #[test]

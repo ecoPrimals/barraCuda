@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! GPU compute operations for NAdam Optimizer
+//! GPU compute operations for `NAdam` Optimizer
 //!
-//! This module contains the single-pass GPU execution for NAdam optimizer
+//! This module contains the single-pass GPU execution for `NAdam` optimizer
 //! with Nesterov momentum.
 
 use super::{Nadam, NadamParams};
@@ -10,11 +10,16 @@ use crate::error::Result;
 use crate::tensor::Tensor;
 
 impl Nadam {
-    /// Execute NAdam optimizer step (GPU single-pass)
+    /// Execute `NAdam` optimizer step (GPU single-pass)
     ///
     /// **Deep Debt**: Efficient single-pass update with Nesterov momentum
     ///
-    /// Returns: (new_weights, new_m, new_v)
+    /// Returns: (`new_weights`, `new_m`, `new_v`)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<(Tensor, Tensor, Tensor)> {
         let device = self.weights().device();
         let size = self.weights().len();

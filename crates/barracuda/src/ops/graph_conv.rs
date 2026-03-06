@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! GraphConv - Pure WGSL
+//! `GraphConv` - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -25,6 +25,11 @@ pub struct GraphConv {
 
 impl GraphConv {
     /// Create a new graph convolution operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         node_features: Tensor,
         adj_matrix: Tensor,
@@ -88,6 +93,11 @@ impl GraphConv {
     }
 
     /// Execute the graph convolution operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.node_features.device();
 

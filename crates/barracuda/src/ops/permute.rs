@@ -20,6 +20,11 @@ pub struct Permute {
 
 impl Permute {
     /// Create a new permute operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor, permutation: Vec<usize>) -> Result<Self> {
         let num_dims = input.shape().len();
         if permutation.len() != num_dims {
@@ -62,6 +67,11 @@ impl Permute {
     }
 
     /// Execute the permute operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -131,7 +141,7 @@ impl Permute {
             .storage_read(5, &input_strides_buffer)
             .storage_rw(6, &output_buffer)
             .dispatch_1d(total_size as u32)
-            .submit();
+            .submit()?;
 
         // Return tensor without reading back (zero-copy)
         Ok(Tensor::from_buffer(

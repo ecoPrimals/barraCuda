@@ -20,7 +20,7 @@ use crate::error::{BarracudaError, Result};
 ///
 /// # Returns
 ///
-/// Tuple of (x_best, f_best, n_evaluations)
+/// Tuple of (`x_best`, `f_best`, `n_evaluations`)
 ///
 /// # Algorithm
 ///
@@ -65,6 +65,10 @@ use crate::error::{BarracudaError, Result};
 /// - Nelder, J. A.; Mead, R. (1965). "A simplex method for function minimization"
 /// - Numerical Recipes, 3rd Edition, Section 10.5
 /// - scipy.optimize.fmin
+///
+/// # Errors
+///
+/// Returns [`Err`] if bounds length does not match x0 length.
 pub fn nelder_mead<F>(
     f: F,
     x0: &[f64],
@@ -214,8 +218,7 @@ where
         .iter()
         .enumerate()
         .min_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-        .map(|(idx, _)| idx)
-        .unwrap_or(0);
+        .map_or(0, |(idx, _)| idx);
 
     Ok((simplex[best_idx].clone(), f_vals[best_idx], n_evals))
 }
@@ -271,10 +274,7 @@ mod tests {
 
         let (x_best, f_best, n_evals) = nelder_mead(f, &x0, &bounds, 2000, 1e-6).unwrap();
 
-        println!(
-            "Rosenbrock: x_best = {:?}, f_best = {}, evals = {}",
-            x_best, f_best, n_evals
-        );
+        println!("Rosenbrock: x_best = {x_best:?}, f_best = {f_best}, evals = {n_evals}");
 
         assert!((x_best[0] - 1.0).abs() < 1e-2);
         assert!((x_best[1] - 1.0).abs() < 1e-2);

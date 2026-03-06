@@ -76,6 +76,7 @@ impl Default for AdaptiveConfig {
 
 impl AdaptiveConfig {
     /// Create config that always uses f64 (for validation).
+    #[must_use]
     pub fn exact() -> Self {
         Self {
             force_f64: true,
@@ -94,6 +95,7 @@ impl AdaptiveConfig {
     }
 
     /// Create config that forces CPU path (no GPU).
+    #[must_use]
     pub fn cpu_only() -> Self {
         Self {
             prefer_gpu: false,
@@ -136,6 +138,11 @@ pub struct TrainingDiagnostics {
 /// # Returns
 ///
 /// Tuple of `(RBFSurrogate, TrainingDiagnostics)`
+///
+/// # Errors
+///
+/// Returns [`Err`] if training data is empty, `x_data` and `y_data` lengths
+/// differ, or the linear solve fails (e.g., singular matrix, GPU buffer error).
 ///
 /// # Examples
 ///
@@ -258,6 +265,11 @@ pub fn train_adaptive(
 /// # Ok(())
 /// # }
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if training data is empty, `x_data` and `y_data` lengths
+/// differ, GPU distance computation fails, or the linear solve fails.
 pub async fn train_adaptive_gpu(
     x_data: &[Vec<f64>],
     y_data: &[f64],
@@ -350,6 +362,11 @@ async fn compute_distances_gpu(
 /// Train with validation: compute both f32 and f64 distances and report error.
 ///
 /// Useful for verifying that the f32 path doesn't introduce significant error.
+///
+/// # Errors
+///
+/// Returns [`Err`] if training data is empty, `x_data` and `y_data` lengths
+/// differ, or the linear solve fails.
 pub fn train_with_validation(
     device: Arc<WgpuDevice>,
     x_data: &[Vec<f64>],

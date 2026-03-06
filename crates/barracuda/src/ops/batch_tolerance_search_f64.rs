@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! BatchToleranceSearchF64 — GPU PFAS ion batch tolerance search
+//! `BatchToleranceSearchF64` — GPU PFAS ion batch tolerance search
 //!
 //! Matches S environmental sample ion masses against R PFAS library reference
 //! ions in a single GPU dispatch.  Each output score is in [0, 1]: 1.0 = exact
 //! match, 0.0 = outside tolerance, linearly interpolated between.
 //!
-//! WetSpring Exp018 use case: 10,000 environmental samples × 259 Jones Lab
+//! `WetSpring` Exp018 use case: 10,000 environmental samples × 259 Jones Lab
 //! reference ions = 2.59 M comparisons per batch.
 
 use crate::device::WgpuDevice;
@@ -47,6 +47,7 @@ impl BatchToleranceSearchF64 {
     }
 
     /// Create a new tolerance searcher.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>, ppm_tol: f64, da_tol: f64) -> Self {
         Self {
             device,
@@ -58,6 +59,11 @@ impl BatchToleranceSearchF64 {
     /// Search `sample_masses` against `ref_masses`.
     ///
     /// Returns flat `[S × R]` f32 Vec (row-major, sample outer index).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn search(&self, sample_masses: &[f64], ref_masses: &[f64]) -> Result<Vec<f32>> {
         let s = sample_masses.len() as u32;
         let r = ref_masses.len() as u32;

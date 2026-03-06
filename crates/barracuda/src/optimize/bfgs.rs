@@ -82,6 +82,7 @@ impl Default for BfgsConfig {
 
 impl BfgsConfig {
     /// Create a new configuration with specified tolerances.
+    #[must_use]
     pub fn new(gtol: f64, max_iter: usize) -> Self {
         Self {
             max_iter,
@@ -140,6 +141,11 @@ pub struct BfgsResult {
 /// assert!(result.x[0].abs() < 1e-5);
 /// assert!(result.x[1].abs() < 1e-5);
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn bfgs<F, G>(f: &F, grad_f: &G, x0: &[f64], config: &BfgsConfig) -> Result<BfgsResult>
 where
     F: Fn(&[f64]) -> f64,
@@ -381,6 +387,11 @@ where
 /// BFGS with numerical gradient (convenience wrapper).
 ///
 /// Uses central difference approximation for gradients.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn bfgs_numerical<F>(f: &F, x0: &[f64], config: &BfgsConfig) -> Result<BfgsResult>
 where
     F: Fn(&[f64]) -> f64,
@@ -485,7 +496,7 @@ mod tests {
 
         assert!(result.converged);
         for (i, xi) in result.x.iter().enumerate() {
-            assert!(xi.abs() < 1e-5, "x[{}] = {}, expected ~0", i, xi);
+            assert!(xi.abs() < 1e-5, "x[{i}] = {xi}, expected ~0");
         }
     }
 

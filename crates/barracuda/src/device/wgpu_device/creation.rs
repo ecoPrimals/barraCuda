@@ -2,8 +2,8 @@
 //! Device creation and adapter selection
 //!
 //! **Why this file is large (~640 lines)**: Single concern—"how do I obtain a
-//! WgpuDevice?" Many entry points (new, new_gpu, new_cpu, from_env,
-//! discover_best_adapter, from_physical_device, etc.) reflect different selection
+//! `WgpuDevice`?" Many entry points (new, `new_gpu`, `new_cpu`, `from_env`,
+//! `discover_best_adapter`, `from_physical_device`, etc.) reflect different selection
 //! strategies, not mixed concerns. All logic serves device creation.
 
 use super::WgpuDevice;
@@ -30,7 +30,7 @@ fn desired_features() -> Vec<wgpu::Features> {
     ]
 }
 
-/// Extended feature set that also includes TIMESTAMP_QUERY (for benchmarks).
+/// Extended feature set that also includes `TIMESTAMP_QUERY` (for benchmarks).
 fn desired_features_extended() -> Vec<wgpu::Features> {
     vec![
         wgpu::Features::SHADER_F64,
@@ -73,7 +73,7 @@ impl WgpuDevice {
     ) {
         let flag = Arc::clone(lost_flag);
         device.on_uncaptured_error(Arc::new(move |error: wgpu::Error| {
-            let msg = format!("{error}");
+            let msg = error.to_string();
             if msg.contains("lost") || msg.contains("Lost") || msg.contains("Parent device") {
                 flag.store(true, std::sync::atomic::Ordering::Release);
                 tracing::warn!("GPU device lost (flagged for pool recovery): {msg}");
@@ -127,9 +127,11 @@ impl WgpuDevice {
     }
 
     /// Create new WebGPU device with auto-discovery.
-    ///
     /// Prefers discrete GPU via `HighPerformance` power preference.
     /// Falls back to integrated GPU, then software rasterizer.
+    /// # Errors
+    /// Returns [`Err`] if no WGPU adapter is found, or if device creation fails
+    /// (e.g., driver initialization, required features/limits not supported).
     pub async fn new() -> Result<Self> {
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
@@ -147,6 +149,9 @@ impl WgpuDevice {
     }
 
     /// Create device explicitly targeting GPU hardware
+    /// # Errors
+    /// Returns [`Err`] if no GPU adapter is found (only CPU software rasterizer
+    /// available), or if device creation fails.
     pub async fn new_gpu() -> Result<Self> {
         Self::new_with_filter(wgpu::Backends::all(), |info| {
             matches!(
@@ -159,6 +164,9 @@ impl WgpuDevice {
     }
 
     /// Create device explicitly targeting CPU software rasterizer
+    /// # Errors
+    /// Returns [`Err`] if no CPU software rasterizer adapter is available, or
+    /// if device creation fails.
     pub async fn new_cpu() -> Result<Self> {
         Self::new_with_filter(wgpu::Backends::all(), |info| {
             info.device_type == wgpu::DeviceType::Cpu
@@ -168,13 +176,14 @@ impl WgpuDevice {
     }
 
     /// Create a CPU software-rasterizer device using the adapter's own supported limits.
-    ///
     /// `new_cpu()` requests `science_limits()` (512 MB storage buffer binding), which
     /// llvmpipe and other software rasterizers cannot satisfy (capped at 128 MB), causing
     /// device creation to fail.  `new_cpu_relaxed()` instead asks for only
     /// `wgpu::Limits::downlevel_defaults()`, which every compliant adapter supports.
-    ///
     /// Use this constructor in tests and any pipeline that runs on CPU/llvmpipe.
+    /// # Errors
+    /// Returns [`Err`] if no CPU software rasterizer adapter is available, or
+    /// if device creation fails (e.g., required features not supported).
     pub async fn new_cpu_relaxed() -> Result<Self> {
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
@@ -194,7 +203,7 @@ impl WgpuDevice {
         );
 
         let required_features = negotiate_features(&adapter, &desired_features());
-        let _creation_guard = DEVICE_CREATION_LOCK.lock().await;
+        let creation_guard = DEVICE_CREATION_LOCK.lock().await;
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
                 label: Some("barraCuda cpu-relaxed"),
@@ -206,17 +215,23 @@ impl WgpuDevice {
             })
             .await
             .map_err(|e| BarracudaError::device(format!("Failed to create CPU device: {e}")))?;
-        drop(_creation_guard);
+        drop(creation_guard);
 
         Ok(Self::assemble(device, queue, adapter_info))
     }
 
     /// Create device with high-capacity limits (1GB+ buffers)
+    /// # Errors
+    /// Returns [`Err`] if no adapter is found or if device creation fails with
+    /// the requested limits (e.g., adapter cannot satisfy high-capacity limits).
     pub async fn new_high_capacity() -> Result<Self> {
         Self::new_with_limits(super::super::tensor_context::high_capacity_limits()).await
     }
 
     /// Create device with custom limits
+    /// # Errors
+    /// Returns [`Err`] if no WGPU adapter is found, or if device creation fails
+    /// because the adapter cannot satisfy the requested limits.
     pub async fn new_with_limits(limits: wgpu::Limits) -> Result<Self> {
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
@@ -239,7 +254,7 @@ impl WgpuDevice {
         );
 
         let required_features = negotiate_features(&adapter, &desired_features_extended());
-        let _creation_guard = DEVICE_CREATION_LOCK.lock().await;
+        let creation_guard = DEVICE_CREATION_LOCK.lock().await;
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
                 label: Some("BarraCuda custom-limits device"),
@@ -251,7 +266,7 @@ impl WgpuDevice {
             })
             .await
             .map_err(|e| BarracudaError::device(format!("Failed to create device: {e}")))?;
-        drop(_creation_guard);
+        drop(creation_guard);
 
         let actual_limits = device.limits();
         tracing::info!(
@@ -264,10 +279,12 @@ impl WgpuDevice {
     }
 
     /// Capability-scored adapter discovery.
-    ///
     /// Scores all available adapters by hardware capabilities (discrete > integrated,
     /// f64 support, memory limits) and returns the best one. Respects the
     /// `BARRACUDA_GPU_ADAPTER` env var override when set.
+    /// # Errors
+    /// Returns [`Err`] if adapter selection fails (env override invalid, physical
+    /// device index out of bounds), or if device creation fails.
     pub async fn discover_best_adapter() -> Result<Self> {
         if let Ok(selector) = std::env::var(ADAPTER_ENV_VAR) {
             if !selector.is_empty() && selector.to_lowercase() != "auto" {
@@ -292,10 +309,12 @@ impl WgpuDevice {
     }
 
     /// Discover primary and optional secondary adapters for multi-GPU workloads.
-    ///
     /// Returns `(primary, Option<secondary>)`. The primary is always the
     /// highest-scoring adapter; the secondary is the next best *different*
     /// physical device (if one exists).
+    /// # Errors
+    /// Returns [`Err`] if primary device creation fails (no adapters, physical
+    /// device index out of bounds, or device creation error).
     pub async fn discover_primary_and_secondary_adapters() -> Result<(Self, Option<Self>)> {
         let registry = super::super::registry::DeviceRegistry::global();
         let mut scored: Vec<(usize, u32)> = registry
@@ -305,8 +324,8 @@ impl WgpuDevice {
             .collect();
         scored.sort_by(|a, b| b.1.cmp(&a.1));
 
-        let primary = if let Some(&(idx, _)) = scored.first() {
-            Self::from_physical_device(idx).await?
+        let primary = if let Some((idx, _)) = scored.first() {
+            Self::from_physical_device(*idx).await?
         } else {
             Self::new().await?
         };
@@ -336,11 +355,12 @@ impl WgpuDevice {
             .enumerate_adapters(wgpu::Backends::all())
             .await
             .iter()
-            .map(|a| a.get_info())
+            .map(wgpu::Adapter::get_info)
             .collect()
     }
 
     /// List unique physical devices (deduplicated by hardware)
+    #[must_use]
     pub fn enumerate_physical_devices() -> Vec<super::super::registry::PhysicalDevice> {
         super::super::registry::DeviceRegistry::global()
             .physical_devices()
@@ -349,11 +369,15 @@ impl WgpuDevice {
     }
 
     /// Get the global device registry
+    #[must_use]
     pub fn registry() -> &'static super::super::registry::DeviceRegistry {
         super::super::registry::DeviceRegistry::global()
     }
 
     /// Create device from a physical device index (using preferred backend)
+    /// # Errors
+    /// Returns [`Err`] if the physical device index is out of bounds, or if
+    /// device creation fails.
     pub async fn from_physical_device(index: usize) -> Result<Self> {
         let registry = super::super::registry::DeviceRegistry::global();
         let adapter_index = registry.get_preferred_adapter_index(index).ok_or_else(|| {
@@ -367,6 +391,9 @@ impl WgpuDevice {
     }
 
     /// Create device from a physical device with explicit backend
+    /// # Errors
+    /// Returns [`Err`] if the requested backend is not available for the given
+    /// device index, or if device creation fails.
     pub async fn from_physical_device_with_backend(
         device_index: usize,
         backend: wgpu::Backend,
@@ -392,6 +419,9 @@ impl WgpuDevice {
     }
 
     /// Create device for the first f64-capable GPU (using preferred backend)
+    /// # Errors
+    /// Returns [`Err`] if no f64-capable GPU is found (NVIDIA Pascal+, AMD GCN+,
+    /// or Intel required), or if device creation fails for the selected adapter.
     pub async fn new_f64_capable() -> Result<Self> {
         let registry = super::super::registry::DeviceRegistry::global();
         for (idx, device) in registry.physical_devices().enumerate() {
@@ -410,12 +440,18 @@ impl WgpuDevice {
     }
 
     /// Create device using `BARRACUDA_GPU_ADAPTER` environment variable
+    /// # Errors
+    /// Returns [`Err`] if adapter selection fails (no adapters, selector does not
+    /// match any adapter), or if device creation fails.
     pub async fn from_env() -> Result<Self> {
         let selector = std::env::var(ADAPTER_ENV_VAR).unwrap_or_else(|_| "auto".to_string());
         Self::with_adapter_selector(&selector).await
     }
 
     /// Create device with explicit adapter selector
+    /// # Errors
+    /// Returns [`Err`] if no adapters are available, the selector (index or name
+    /// substring) does not match any adapter, or if device creation fails.
     pub async fn with_adapter_selector(selector: &str) -> Result<Self> {
         let selector = selector.trim().to_lowercase();
 
@@ -464,8 +500,10 @@ impl WgpuDevice {
     }
 
     /// Create with specific backend (for testing/multi-GPU)
-    ///
     /// Prefers `HighPerformance` adapter within the specified backends.
+    /// # Errors
+    /// Returns [`Err`] if no WGPU adapter is found for the requested backend(s),
+    /// or if device creation fails.
     pub async fn new_with_backend(backends: wgpu::Backends) -> Result<Self> {
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends,
@@ -487,6 +525,9 @@ impl WgpuDevice {
     }
 
     /// Create device from a specific adapter index
+    /// # Errors
+    /// Returns [`Err`] if the adapter index is out of bounds, or if device
+    /// creation fails (e.g., required features/limits not supported).
     pub async fn from_adapter_index(index: usize) -> Result<Self> {
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
@@ -509,7 +550,7 @@ impl WgpuDevice {
         );
 
         let required_features = negotiate_features(adapter, &desired_features_extended());
-        let _creation_guard = DEVICE_CREATION_LOCK.lock().await;
+        let creation_guard = DEVICE_CREATION_LOCK.lock().await;
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
                 label: Some("BarraCuda device"),
@@ -521,12 +562,15 @@ impl WgpuDevice {
             })
             .await
             .map_err(|e| BarracudaError::device(format!("Failed to create device: {e}")))?;
-        drop(_creation_guard);
+        drop(creation_guard);
 
         Ok(Self::assemble(device, queue, info))
     }
 
     /// Create with custom filter (for specific GPU selection)
+    /// # Errors
+    /// Returns [`Err`] if no WGPU adapters are found for the given backends, no
+    /// adapter matches the filter, or if device creation fails.
     pub async fn new_with_filter<F>(backends: wgpu::Backends, filter: F) -> Result<Self>
     where
         F: Fn(&wgpu::AdapterInfo) -> bool,
@@ -565,7 +609,7 @@ impl WgpuDevice {
             tracing::info!("  SHADER_F64: enabled");
         }
 
-        let _creation_guard = DEVICE_CREATION_LOCK.lock().await;
+        let creation_guard = DEVICE_CREATION_LOCK.lock().await;
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
                 label: Some("barraCuda Device"),
@@ -577,7 +621,7 @@ impl WgpuDevice {
             })
             .await
             .map_err(|e| BarracudaError::device(format!("Failed to create device: {e}")))?;
-        drop(_creation_guard);
+        drop(creation_guard);
 
         let wgpu_device = Self::assemble(device, queue, adapter_info);
 
@@ -587,22 +631,22 @@ impl WgpuDevice {
             .contains(wgpu::Features::SHADER_F64)
         {
             let caps = probe::probe_f64_builtins(&wgpu_device).await;
-            if !caps.can_compile_f64() {
+            if caps.can_compile_f64() {
+                tracing::info!("f64 probe: {}/{} builtins native", caps.native_count(), 9);
+            } else {
                 tracing::warn!(
                     "SHADER_F64 advertised but basic f64 probe FAILED — all f64 shaders will use DF64 fallback"
                 );
-            } else {
-                tracing::info!("f64 probe: {}/{} builtins native", caps.native_count(), 9);
             }
         }
 
         Ok(wgpu_device)
     }
 
-    /// Create WgpuDevice from existing wgpu device and queue.
-    ///
+    /// Create `WgpuDevice` from existing wgpu device and queue.
     /// In wgpu 28 `Device` and `Queue` are Clone (internally Arc'd),
     /// so no outer Arc is needed.
+    #[must_use]
     pub fn from_existing(
         device: wgpu::Device,
         queue: wgpu::Queue,
@@ -626,32 +670,5 @@ impl WgpuDevice {
         };
         probe::seed_cache_from_heuristics(&wgpu_device);
         wgpu_device
-    }
-
-    /// Create WgpuDevice from existing wgpu Device and Queue (deprecated).
-    ///
-    /// Uses synthetic AdapterInfo; prefer `from_existing()` with real adapter info.
-    #[deprecated(
-        since = "0.3.0",
-        note = "Use from_existing() with real AdapterInfo; synthetic info breaks driver detection"
-    )]
-    pub fn from_existing_simple(device: wgpu::Device, queue: wgpu::Queue) -> Self {
-        Self::from_existing(
-            device,
-            queue,
-            wgpu::AdapterInfo {
-                name: "External Device".to_string(),
-                vendor: 0,
-                device: 0,
-                device_type: wgpu::DeviceType::Other,
-                driver: "external".to_string(),
-                driver_info: "wrapped from existing wgpu resources".to_string(),
-                backend: wgpu::Backend::Vulkan,
-                device_pci_bus_id: String::new(),
-                subgroup_min_size: 1,
-                subgroup_max_size: 128,
-                transient_saves_memory: false,
-            },
-        )
     }
 }

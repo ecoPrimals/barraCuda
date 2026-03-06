@@ -4,7 +4,7 @@
 #![expect(clippy::unwrap_used, reason = "tests")]
 use super::helpers::*;
 use barracuda::device::WgpuDevice;
-use barracuda::ops::fhe_intt::{compute_inverse_root, FheIntt};
+use barracuda::ops::fhe_intt::{FheIntt, compute_inverse_root};
 use barracuda::ops::fhe_ntt::FheNtt;
 use barracuda::ops::fhe_poly_add::create_fhe_poly_tensor;
 use std::sync::Arc;
@@ -86,7 +86,7 @@ async fn test_ntt_all_power_of_two_degrees() {
                 "All coefficients should be < modulus"
             );
 
-            println!("✅ NTT works for N={}", degree);
+            println!("✅ NTT works for N={degree}");
         }
     }) {
         return;
@@ -127,12 +127,11 @@ async fn test_ntt_round_trip_identity() {
             for (i, (&orig, &recovered)) in input.iter().zip(intt_result.iter()).enumerate() {
                 assert_eq!(
                     orig, recovered,
-                    "Round-trip should preserve coefficient {} (degree={})",
-                    i, degree
+                    "Round-trip should preserve coefficient {i} (degree={degree})"
                 );
             }
 
-            println!("✅ NTT → INTT = identity for N={}", degree);
+            println!("✅ NTT → INTT = identity for N={degree}");
         }
     }) {
         return;
@@ -168,7 +167,7 @@ async fn test_ntt_different_moduli() {
                 assert!(result.iter().all(|&x| x < modulus));
             }
 
-            println!("✅ NTT works with modulus={}", modulus);
+            println!("✅ NTT works with modulus={modulus}");
         }
     }) {
         return;

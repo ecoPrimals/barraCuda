@@ -43,6 +43,8 @@ pub struct Mul {
 
 impl Mul {
     /// Create Mul operation
+    /// # Errors
+    /// Returns [`Err`] if lhs and rhs shapes do not match.
     pub fn new(lhs: Tensor, rhs: Tensor) -> Result<Self> {
         if lhs.shape() != rhs.shape() {
             return Err(BarracudaError::shape_mismatch(
@@ -54,7 +56,6 @@ impl Mul {
     }
 
     /// Select vendor-optimized shader based on GPU capabilities and tensor size
-    ///
     /// **Deep Debt Evolution**: Uses vendor ID (not string matching) for reliable detection
     fn wgsl_shader(caps: &DeviceCapabilities, size: usize) -> (&'static str, u32) {
         let max_dispatch = 65535u32;
@@ -89,6 +90,11 @@ impl Mul {
     ///
     /// Uses cached shader and pipeline for fast repeated calls.
     /// Output buffer is acquired from pool for zero-allocation steady-state.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.lhs.device();
         let size = self.lhs.len();
@@ -158,6 +164,11 @@ impl Mul {
 
 impl Tensor {
     /// Element-wise multiplication
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn mul(&self, other: &Tensor) -> Result<Self> {
         Mul::new(self.clone(), other.clone())?.execute()
     }
@@ -287,10 +298,7 @@ mod tests {
         for (i, (&gpu, &cpu)) in gpu_result.iter().zip(cpu_result.iter()).enumerate() {
             assert!(
                 (gpu - cpu).abs() < 1e-6,
-                "Error at {}: GPU={}, CPU={}",
-                i,
-                gpu,
-                cpu
+                "Error at {i}: GPU={gpu}, CPU={cpu}"
             );
         }
     }

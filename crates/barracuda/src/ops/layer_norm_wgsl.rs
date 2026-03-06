@@ -3,9 +3,9 @@
 //!
 //! Deep Debt Principles:
 //! - Zero hardcoding: Capability-based workgroup dispatch
-//! - Batchable: routes through TensorContext::record_operation()
+//! - Batchable: routes through `TensorContext::record_operation()`
 //! - Zero-copy output: buffer pool, no GPU→CPU→GPU round-trip
-//! - Pipeline cached: GLOBAL_CACHE eliminates recompilation overhead
+//! - Pipeline cached: `GLOBAL_CACHE` eliminates recompilation overhead
 
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
@@ -15,6 +15,7 @@ use crate::tensor::Tensor;
 use bytemuck::{Pod, Zeroable};
 
 /// GPU shader for fused layer normalization (single-pass mean+var, normalize+affine).
+#[must_use]
 pub fn wgsl_layernorm_fused() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
@@ -25,6 +26,7 @@ pub fn wgsl_layernorm_fused() -> &'static str {
 }
 
 /// GPU shader for fused layer normalization v2 (improved numerical stability).
+#[must_use]
 pub fn wgsl_layernorm_fused_v2() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
@@ -41,12 +43,13 @@ pub const WGSL_LAYERNORM_OPTIMIZED: &str = include_str!("../shaders/norm/layerno
 const WGSL_LAYERNORM_MEANVAR_F64: &str = include_str!("../shaders/norm/layernorm_meanvar_f64.wgsl");
 const WGSL_LAYERNORM_STATS_F64: &str = include_str!("../shaders/norm/layernorm_stats_f64.wgsl");
 
-/// LayerNorm mean/variance pass.
+/// `LayerNorm` mean/variance pass.
 pub static WGSL_LAYERNORM_MEANVAR: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     crate::shaders::precision::downcast_f64_to_f32(WGSL_LAYERNORM_MEANVAR_F64)
 });
 
-/// LayerNorm normalize pass.
+/// `LayerNorm` normalize pass.
+#[must_use]
 pub fn wgsl_layernorm_normalize() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
@@ -56,12 +59,13 @@ pub fn wgsl_layernorm_normalize() -> &'static str {
     std::sync::LazyLock::force(&SHADER).as_str()
 }
 
-/// LayerNorm stats pass.
+/// `LayerNorm` stats pass.
 pub static WGSL_LAYERNORM_STATS: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     crate::shaders::precision::downcast_f64_to_f32(WGSL_LAYERNORM_STATS_F64)
 });
 
-/// LayerNorm optimized variant.
+/// `LayerNorm` optimized variant.
+#[must_use]
 pub fn wgsl_layernorm_opt() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
@@ -72,6 +76,7 @@ pub fn wgsl_layernorm_opt() -> &'static str {
 }
 
 /// Base layer norm shader.
+#[must_use]
 pub fn wgsl_layernorm_base() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
@@ -98,6 +103,7 @@ pub struct LayerNorm {
 
 impl LayerNorm {
     /// Create layer norm with given epsilon for numerical stability.
+    #[must_use]
     pub fn new(input: Tensor, epsilon: f32) -> Self {
         Self { input, epsilon }
     }
@@ -112,9 +118,11 @@ impl LayerNorm {
     }
 
     /// Execute layer normalization.
-    ///
     /// Dispatch: one workgroup per batch row (shape[:-1]) so each workgroup
     /// normalizes one full feature vector.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -201,6 +209,9 @@ impl LayerNorm {
 
 impl Tensor {
     /// Apply layer normalization (normalize along last dimension).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn layer_norm_wgsl(self, epsilon: f32) -> Result<Self> {
         LayerNorm::new(self, epsilon).execute()
     }

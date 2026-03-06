@@ -9,7 +9,7 @@
 //! (D-S12-001). Updated to current barracuda API (Feb 19, 2026).
 
 use barracuda::device::test_pool;
-use barracuda::ops::fhe_ntt::{compute_primitive_root, FheNtt};
+use barracuda::ops::fhe_ntt::{FheNtt, compute_primitive_root};
 use barracuda::ops::fhe_poly_add::create_fhe_poly_tensor;
 
 // ── Invalid degree ────────────────────────────────────────────────────────────

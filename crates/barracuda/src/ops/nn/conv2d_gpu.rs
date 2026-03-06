@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-//! Full NCHW Conv2D GPU orchestrator.
+//! Full NCHW `Conv2D` GPU orchestrator.
 //!
 //! Wraps `ops/nn/conv2d.wgsl` to support stride, padding, dilation, groups, and
 //! bias on the GPU via a single flat dispatch.
 
 use std::sync::Arc;
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
@@ -33,13 +33,13 @@ struct Conv2dGpuParams {
     groups: u32,
 }
 
-/// Full NCHW Conv2D on GPU with stride, padding, dilation, groups.
+/// Full NCHW `Conv2D` on GPU with stride, padding, dilation, groups.
 pub struct Conv2dGpu {
-    /// Input tensor [N, C_in, H, W].
+    /// Input tensor [N, `C_in`, H, W].
     pub input: Tensor,
-    /// Kernel [C_out, C_in/groups, K_h, K_w].
+    /// Kernel [`C_out`, `C_in/groups`, `K_h`, `K_w`].
     pub kernel: Tensor,
-    /// Optional bias [C_out].
+    /// Optional bias [`C_out`].
     pub bias: Option<Tensor>,
     /// Stride (vertical, horizontal).
     pub stride: (usize, usize),
@@ -47,12 +47,20 @@ pub struct Conv2dGpu {
     pub padding: (usize, usize),
     /// Dilation (vertical, horizontal).
     pub dilation: (usize, usize),
-    /// Number of groups (depthwise when groups == C_in).
+    /// Number of groups (depthwise when groups == `C_in`).
     pub groups: usize,
 }
 
 impl Conv2dGpu {
-    /// Execute Conv2D on GPU; returns output tensor [N, C_out, H_out, W_out].
+    /// Execute `Conv2D` on GPU; returns output tensor [N, `C_out`, `H_out`, `W_out`].
+    ///
+    /// # Panics
+    /// Panics if input shape is not 4D `[N, C, H, W]`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let in_shape = self.input.shape();

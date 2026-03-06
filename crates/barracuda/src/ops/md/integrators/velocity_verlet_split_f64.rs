@@ -2,7 +2,7 @@
 //! Split Velocity-Verlet Integrator (f64)
 //!
 //! **Algorithm**: Kick-drift-kick pattern for flexible thermostating
-//! **Precision**: Full f64 via math_f64.wgsl preamble
+//! **Precision**: Full f64 via `math_f64.wgsl` preamble
 //! **Reference**: Standard in LAMMPS, GROMACS
 //!
 //! **Advantages over monolithic VV**:
@@ -11,7 +11,7 @@
 //! - Explicit PBC wrapping during drift
 //!
 //! **Deep Debt Compliance**:
-//! - ✅ Pure WGSL shader (velocity_verlet_split.wgsl, vv_half_kick_f64.wgsl)
+//! - ✅ Pure WGSL shader (`velocity_verlet_split.wgsl`, `vv_half_kick_f64.wgsl`)
 //! - ✅ Zero unsafe code
 //! - ✅ f64 precision
 
@@ -35,7 +35,6 @@ pub struct VelocityVerletKickDrift {
 
 impl VelocityVerletKickDrift {
     /// Create a new kick-drift operation
-    ///
     /// # Arguments
     /// * `positions` - Position tensor [N, 3] (f64)
     /// * `velocities` - Velocity tensor [N, 3] (f64)
@@ -43,7 +42,6 @@ impl VelocityVerletKickDrift {
     /// * `dt` - Timestep (reduced units)
     /// * `mass` - Particle mass (3.0 in OCP reduced units)
     /// * `box_size` - Simulation box dimensions [Lx, Ly, Lz]
-    ///
     /// # Errors
     /// Returns error if tensor shapes don't match.
     pub fn new(
@@ -90,9 +88,13 @@ impl VelocityVerletKickDrift {
     }
 
     /// Execute the kick-drift step (in-place update)
-    ///
     /// # Returns
     /// (positions, velocities) after half-kick and drift
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<(Tensor, Tensor)> {
         let device = self.positions.device();
 
@@ -251,13 +253,11 @@ pub struct VelocityVerletHalfKick {
 
 impl VelocityVerletHalfKick {
     /// Create a new half-kick operation
-    ///
     /// # Arguments
     /// * `velocities` - Velocity tensor [N, 3] (f64) — after kick-drift
     /// * `forces_new` - Force tensor [N, 3] (f64) — recomputed after drift
     /// * `dt` - Timestep (reduced units)
     /// * `mass` - Particle mass (3.0 in OCP reduced units)
-    ///
     /// # Errors
     /// Returns error if tensor shapes don't match.
     pub fn new(velocities: Tensor, forces_new: Tensor, dt: f64, mass: f64) -> Result<Self> {
@@ -288,9 +288,13 @@ impl VelocityVerletHalfKick {
     }
 
     /// Execute the second half-kick (in-place update)
-    ///
     /// # Returns
     /// Velocities after full VV step
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.velocities.device();
 

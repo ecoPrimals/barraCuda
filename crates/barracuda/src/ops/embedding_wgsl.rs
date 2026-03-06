@@ -20,6 +20,7 @@ pub struct Embedding {
 
 impl Embedding {
     /// Create a new embedding operation
+    #[must_use]
     pub fn new(weight: Tensor, indices: Vec<usize>) -> Self {
         Self { weight, indices }
     }
@@ -35,11 +36,14 @@ impl Embedding {
     }
 
     /// Execute the embedding operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.weight.device();
         let weight_shape = self.weight.shape();
 
-        let _num_embeddings = weight_shape[0]; // Reserved for validation
+        let _ = weight_shape[0]; // Reserved for validation
         let embedding_dim = weight_shape[1];
         let num_indices = self.indices.len();
 
@@ -96,7 +100,7 @@ impl Embedding {
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)
             .dispatch(workgroups, 1, 1)
-            .submit();
+            .submit()?;
 
         // Read back results
         let output_data = crate::utils::read_buffer(device, &output_buffer, output_size)?;
@@ -111,10 +115,11 @@ impl Embedding {
 
 impl Tensor {
     /// Lookup embeddings from weight matrix
-    ///
     /// # Arguments
-    ///
     /// * `indices` - Indices to lookup
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn embedding_wgsl(self, indices: Vec<usize>) -> Result<Self> {
         Embedding::new(self, indices).execute()
     }

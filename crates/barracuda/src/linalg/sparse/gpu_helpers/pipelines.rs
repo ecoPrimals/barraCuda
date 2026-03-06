@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Pipeline creation and dispatch helpers for sparse GPU solvers.
 //!
-//! Single responsibility: compute pipeline construction for SpMV, dot, reduce,
-//! and CG update steps. Shared by CG and BiCGSTAB solvers.
+//! Single responsibility: compute pipeline construction for `SpMV`, dot, reduce,
+//! and CG update steps. Shared by CG and `BiCGSTAB` solvers.
 
 use crate::device::WgpuDevice;
 use std::sync::Arc;
 
-/// CG-specific pipelines (SpMV, dot, reduce, update_xr, update_p, alpha, beta).
+/// CG-specific pipelines (`SpMV`, dot, reduce, `update_xr`, `update_p`, alpha, beta).
 pub struct CgPipelineSet {
     /// Sparse matrix-vector product pipeline
     pub spmv: wgpu::ComputePipeline,
@@ -26,7 +26,8 @@ pub struct CgPipelineSet {
 }
 
 impl CgPipelineSet {
-    /// Create all CG pipelines from spmv/dot shader and cg_kernels shader
+    /// Create all CG pipelines from spmv/dot shader and `cg_kernels` shader
+    #[must_use]
     pub fn new(
         device: &Arc<WgpuDevice>,
         spmv_shader: &wgpu::ShaderModule,
@@ -193,6 +194,7 @@ pub struct SparsePipelines {
 
 impl SparsePipelines {
     /// Create common sparse pipelines from shader module.
+    #[must_use]
     pub fn new(
         device: &Arc<WgpuDevice>,
         shader: &wgpu::ShaderModule,

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! MelScale - Mel filterbank for audio feature extraction
+//! `MelScale` - Mel filterbank for audio feature extraction
 //!
 //! Converts linear frequency scale to mel scale.
 //! Used in speech recognition (MFCC, mel spectrograms).
@@ -27,7 +27,7 @@ fn mel_to_hz(mel: f32) -> f32 {
     700.0 * (10.0_f32.powf(mel / 2595.0) - 1.0)
 }
 
-/// MelScale operation
+/// `MelScale` operation
 pub struct MelScale {
     spectrogram: Tensor,
     n_frames: usize,
@@ -40,6 +40,10 @@ pub struct MelScale {
 
 impl MelScale {
     /// Create a new mel scale operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if spectrogram size does not equal `n_frames` * `n_freqs`.
     pub fn new(
         spectrogram: Tensor,
         n_frames: usize,
@@ -106,6 +110,11 @@ impl MelScale {
     }
 
     /// Execute the mel scale operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.spectrogram.device();
 
@@ -166,7 +175,7 @@ impl MelScale {
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)
             .dispatch_1d(size as u32)
-            .submit();
+            .submit()?;
 
         // Output shape: [n_frames, n_mels]
         let output_shape = vec![self.n_frames, self.n_mels];

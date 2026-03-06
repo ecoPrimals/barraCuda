@@ -29,17 +29,21 @@ pub const WGSL_DF64_TRANSCENDENTALS: &str =
 /// Depends on `df64_core.wgsl` — always use `su3_df64_preamble()`.
 pub const WGSL_SU3_DF64: &str = include_str!("../../shaders/math/su3_df64.wgsl");
 
-/// Build a complete shader preamble: complex_f64 + su3.
+/// Build a complete shader preamble: `complex_f64` + su3.
 ///
 /// Call once per shader; append the domain shader source after this string.
+#[must_use]
 pub fn su3_preamble() -> String {
     format!("{WGSL_COMPLEX64}\n{WGSL_SU3}\n")
 }
 
-/// Build a hybrid DF64 shader preamble: complex_f64 + su3 + df64_core + su3_df64.
+/// Build a hybrid DF64 shader preamble: `complex_f64` + su3 + `df64_core` + `su3_df64`.
 ///
 /// Includes both native f64 SU(3) ops (for algebra projection) and DF64 SU(3)
 /// ops (for bulk matmuls on FP32 cores). Use for hybrid precision shaders.
+#[must_use]
 pub fn su3_df64_preamble() -> String {
-    format!("{WGSL_COMPLEX64}\n{WGSL_SU3}\n{WGSL_DF64_CORE}\n{WGSL_DF64_TRANSCENDENTALS}\n{WGSL_SU3_DF64}\n")
+    format!(
+        "{WGSL_COMPLEX64}\n{WGSL_SU3}\n{WGSL_DF64_CORE}\n{WGSL_DF64_TRANSCENDENTALS}\n{WGSL_SU3_DF64}\n"
+    )
 }

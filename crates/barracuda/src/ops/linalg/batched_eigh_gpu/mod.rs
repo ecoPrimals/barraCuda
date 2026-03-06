@@ -23,15 +23,15 @@ mod single_dispatch;
 mod standard;
 mod sweep;
 
-use crate::device::capabilities::{CompilerKind, GpuDriverProfile};
 use crate::device::WgpuDevice;
+use crate::device::capabilities::{CompilerKind, GpuDriverProfile};
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
 
 /// GPU-accelerated batched eigenvalue decomposition
 ///
 /// Computes eigenvalue decomposition for multiple symmetric matrices simultaneously:
-/// A_i = V_i · D_i · V_i^T for all i in batch
+/// `A_i` = `V_i` · `D_i` · `V_i^T` for all i in batch
 pub struct BatchedEighGpu;
 
 impl BatchedEighGpu {
@@ -58,6 +58,8 @@ impl BatchedEighGpu {
     }
 
     /// Convenience method for processing a batch of matrices
+    /// # Errors
+    /// Returns [`Err`] if any matrix has length different from `n * n`, or if [`execute_f64`](Self::execute_f64) fails (buffer allocation, pipeline execution, or device loss).
     pub fn execute_batch(
         device: Arc<WgpuDevice>,
         matrices: &[Vec<f64>],
@@ -102,6 +104,8 @@ impl BatchedEighGpu {
     }
 
     /// Create GPU buffers for GPU-resident eigenvalue decomposition
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails or the device is lost.
     pub fn create_buffers(
         device: &Arc<WgpuDevice>,
         n: usize,
@@ -141,6 +145,11 @@ impl BatchedEighGpu {
     }
 
     /// Read eigenvalues from a GPU buffer to CPU (for convergence checks)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn read_eigenvalues(
         device: &Arc<WgpuDevice>,
         eigenvalues_buffer: &wgpu::Buffer,
@@ -151,6 +160,8 @@ impl BatchedEighGpu {
     }
 
     /// Read eigenvectors from a GPU buffer to CPU (optional, only when needed)
+    /// # Errors
+    /// Returns [`Err`] if buffer mapping/readback fails or the device is lost.
     pub fn read_eigenvectors(
         device: &Arc<WgpuDevice>,
         eigenvectors_buffer: &wgpu::Buffer,
@@ -202,14 +213,12 @@ mod tests {
         let trace = eigenvalues[0] + eigenvalues[1];
         assert!(
             approx_eq_f64(trace, 7.0, 1e-6),
-            "Trace should be 7, got {}",
-            trace
+            "Trace should be 7, got {trace}"
         );
         let det = eigenvalues[0] * eigenvalues[1];
         assert!(
             approx_eq_f64(det, 8.0, 1e-4),
-            "Determinant should be 8, got {}",
-            det
+            "Determinant should be 8, got {det}"
         );
     }
 
@@ -229,9 +238,7 @@ mod tests {
         for (i, &val) in eigenvalues.iter().enumerate() {
             assert!(
                 approx_eq_f64(val, 1.0, 1e-6),
-                "Eigenvalue {} should be 1, got {}",
-                i,
-                val
+                "Eigenvalue {i} should be 1, got {val}"
             );
         }
     }

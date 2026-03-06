@@ -17,7 +17,7 @@
 //! ## Mathematical Background
 //!
 //! The Number Theoretic Transform (NTT) is the discrete Fourier transform over
-//! a finite field Z_q, where q is a prime modulus.
+//! a finite field `Z_q`, where q is a prime modulus.
 //!
 //! For polynomial multiplication:
 //! ```text
@@ -82,20 +82,19 @@ pub struct FheNtt {
 
 impl FheNtt {
     /// Create a new NTT operation
-    ///
     /// ## Parameters
-    ///
     /// - `input`: Polynomial tensor (u32 pairs representing u64 coefficients)
     /// - `degree`: Polynomial degree N (must be power of 2)
     /// - `modulus`: Prime modulus q (must satisfy q ≡ 1 mod 2N)
-    /// - `root_of_unity`: Primitive N-th root of unity ω (in Z_q)
-    ///
+    /// - `root_of_unity`: Primitive N-th root of unity ω (in `Z_q`)
     /// ## Constraints
-    ///
     /// - N must be a power of 2 (for Cooley-Tukey FFT)
     /// - q must be prime
     /// - q ≡ 1 (mod 2N) ensures N-th roots exist
     /// - ω^N ≡ 1 (mod q) and ω^k ≢ 1 for 0 < k < N
+    /// # Errors
+    /// Returns [`Err`] if degree is not a power of 2, input size mismatch, or
+    /// modulus/root validation fails.
     pub fn new(input: Tensor, degree: u32, modulus: u64, root_of_unity: u64) -> Result<Self> {
         // Validate inputs
         let expected_size = (degree as usize) * 2; // u32 pairs for u64
@@ -305,10 +304,10 @@ pub(crate) fn compute_twiddle_factors(degree: u32, modulus: u64, root: u64) -> V
     factors
 }
 
-/// Compute primitive N-th root of unity in Z_q
+/// Compute primitive N-th root of unity in `Z_q`
 ///
 /// For q ≡ 1 (mod 2N), we can find ω such that ω^N ≡ 1 (mod q).
-/// Algorithm: find generator g of Z_q*, then ω = g^((q-1)/N) mod q.
+/// Algorithm: find generator g of `Z_q`*, then ω = g^((q-1)/N) mod q.
 fn mod_pow(mut base: u64, mut exp: u64, modulus: u64) -> u64 {
     if modulus == 1 {
         return 0;
@@ -325,7 +324,7 @@ fn mod_pow(mut base: u64, mut exp: u64, modulus: u64) -> u64 {
     result
 }
 
-/// Compute a primitive N-th root of unity in Z_modulus.
+/// Compute a primitive N-th root of unity in `Z_modulus`.
 ///
 /// Requires modulus ≡ 1 (mod degree). Returns a fallback value if not satisfied.
 #[must_use]

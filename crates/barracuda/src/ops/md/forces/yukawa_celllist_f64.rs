@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Yukawa Cell-List Force (f64) with PBC
 //!
-//! **Physics**: Same as yukawa_f64 but O(N) via cell-list algorithm
+//! **Physics**: Same as `yukawa_f64` but O(N) via cell-list algorithm
 //! **Use Case**: N > 5000 particles where all-pairs becomes slow
 //!
 //! **Algorithm**: 27-neighbor cell iteration instead of all-pairs
-//! **Requires**: Particles sorted by cell index, cell_start/cell_count pre-computed
+//! **Requires**: Particles sorted by cell index, `cell_start/cell_count` pre-computed
 //!
 //! **Deep Debt Compliance**:
 //! - ✅ Pure WGSL shader (f64)
@@ -13,12 +13,12 @@
 //! - ✅ Capability-based dispatch
 //! - ✅ O(N) scaling via cell decomposition
 
-use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::error::Result;
 use std::sync::Arc;
 
-/// Result of particle sorting by cell: (sorted_positions, particle_indices, cell_start, cell_count)
+/// Result of particle sorting by cell: (`sorted_positions`, `particle_indices`, `cell_start`, `cell_count`)
 pub type CellSortResult = (Vec<f64>, Vec<usize>, Vec<u32>, Vec<u32>);
 
 /// f64 Yukawa force with cell-list O(N) scaling
@@ -50,6 +50,8 @@ pub struct CellListParams {
 
 impl YukawaCellListF64 {
     /// Create new Yukawa cell-list force calculation
+    /// # Errors
+    /// Returns [`Err`] if shader compilation or pipeline creation fails.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         let shader_source = include_str!("yukawa_celllist_f64.wgsl");
         let shader_module =
@@ -70,8 +72,9 @@ impl YukawaCellListF64 {
     }
 
     /// Compute Yukawa forces using cell-list algorithm
-    ///
     /// Always dispatches the GPU shader with sorted particles.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn compute_forces(
         &self,
         positions: &[f64],
@@ -269,7 +272,11 @@ impl YukawaCellListF64 {
 
     /// Sort particles by cell index for optimal GPU performance
     ///
-    /// Returns (sorted_positions, particle_indices, cell_start, cell_count)
+    /// Returns (`sorted_positions`, `particle_indices`, `cell_start`, `cell_count`)
+    ///
+    /// # Errors
+    ///
+    /// This function does not return errors; the [`Result`] type is for API consistency.
     pub fn sort_particles_by_cell(
         &self,
         positions: &[f64],

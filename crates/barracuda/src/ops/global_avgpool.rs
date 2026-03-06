@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! GlobalAvgPool - Global Average Pooling
+//! `GlobalAvgPool` - Global Average Pooling
 //! Pure WGSL implementation
 //!
 //! Reduces spatial dimensions (H × W) to 1×1 by averaging
 //! Formula: output[b, c] = mean(input[b, c, :, :])
 //!
-//! Used in: Modern CNNs (ResNet, EfficientNet) as replacement for FC layers
+//! Used in: Modern CNNs (`ResNet`, `EfficientNet`) as replacement for FC layers
 //! Benefits: Reduces parameters dramatically, increases spatial invariance
 
 use crate::device::compute_pipeline::ComputeDispatch;
@@ -28,6 +28,7 @@ pub struct GlobalAvgPool {
 
 impl GlobalAvgPool {
     /// Creates a new global average pool. Input must be 4D [B, C, H, W].
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -44,6 +45,11 @@ impl GlobalAvgPool {
     }
 
     /// Executes global average pooling and returns [B, C, 1, 1].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -74,7 +80,7 @@ impl GlobalAvgPool {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d(output_size as u32)
-            .submit();
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,
@@ -89,6 +95,11 @@ impl Tensor {
     /// Used in modern CNN architectures as replacement for fully connected layers
     /// # Returns
     /// Tensor with shape [batch, channels, 1, 1]
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn global_avgpool(self) -> Result<Self> {
         GlobalAvgPool::new(self).execute()
     }

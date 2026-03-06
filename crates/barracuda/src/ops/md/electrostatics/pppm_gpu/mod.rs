@@ -16,8 +16,8 @@ mod shaders;
 
 use std::sync::Arc;
 
-use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::error::{BarracudaError, Result};
 use crate::linalg::sparse::SparseBuffers;
 use crate::shaders::precision::ShaderTemplate;
@@ -38,7 +38,9 @@ pub struct PppmGpu {
 }
 
 impl PppmGpu {
-    /// Create from a WgpuDevice (preferred - driver-aware f64 compilation).
+    /// Create from a `WgpuDevice` (preferred - driver-aware f64 compilation).
+    /// # Errors
+    /// Returns [`Err`] if shader compilation fails or the device is lost.
     pub async fn from_device(wgpu_device: &Arc<WgpuDevice>, params: PppmParams) -> Result<Self> {
         let greens = GreensFunction::new(&params);
         let bspline_module = wgpu_device.compile_shader_f64(shaders::BSPLINE, Some("pppm_bspline"));
@@ -67,6 +69,10 @@ impl PppmGpu {
     }
 
     /// Create from raw wgpu device/queue (legacy API).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shader compilation fails or the device is lost.
     #[deprecated(
         since = "0.3.0",
         note = "Use from_device() for proper adapter detection"
@@ -80,6 +86,8 @@ impl PppmGpu {
     }
 
     /// Create with explicit driver awareness.
+    /// # Errors
+    /// Returns [`Err`] if shader compilation fails or the device is lost.
     #[deprecated(
         since = "0.3.0",
         note = "Use from_device() for proper adapter detection"
@@ -184,11 +192,13 @@ impl PppmGpu {
     }
 
     /// Get PPPM parameters.
+    #[must_use]
     pub fn params(&self) -> &PppmParams {
         &self.params
     }
 
     /// Get the Greens function for PPPM.
+    #[must_use]
     pub fn greens(&self) -> &GreensFunction {
         &self.greens
     }
@@ -214,6 +224,11 @@ impl PppmGpu {
     }
 
     /// Compute forces and total energy (short-range erfc only, no k-space).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub async fn compute(&self, positions: &[f64], charges: &[f64]) -> Result<(Vec<f64>, f64)> {
         let n = charges.len();
         if positions.len() != n * 3 {
@@ -399,12 +414,16 @@ impl PppmGpu {
     }
 
     /// Compute electrostatic forces only (short-range).
+    /// # Errors
+    /// Returns [`Err`] if [`compute`](PppmGpu::compute) fails.
     pub async fn compute_forces(&self, positions: &[f64], charges: &[f64]) -> Result<Vec<f64>> {
         let (forces, _) = self.compute(positions, charges).await?;
         Ok(forces)
     }
 
     /// Compute forces and energy with k-space (full PPPM).
+    /// # Errors
+    /// Returns [`Err`] if `positions.len() != charges.len() * 3`, or if GPU buffer readback fails.
     pub async fn compute_with_kspace(
         &self,
         positions: &[f64],
@@ -414,6 +433,9 @@ impl PppmGpu {
     }
 
     /// Compute forces and energy with GPU-accelerated k-space.
+    /// # Errors
+    /// Returns [`Err`] if `positions.len() != charges.len() * 3`, mesh dimensions are not
+    /// power-of-two, or if GPU buffer readback or FFT fails.
     pub async fn compute_with_kspace_gpu(
         &self,
         positions: &[f64],
@@ -452,8 +474,7 @@ mod tests {
             .unwrap();
         assert!(
             energy < 0.0,
-            "Opposite charges should have negative energy, got {}",
-            energy
+            "Opposite charges should have negative energy, got {energy}"
         );
     }
 
@@ -484,8 +505,7 @@ mod tests {
         };
         assert!(
             relative_error < 1e-3,
-            "Newton's 3rd law violation: |F1+F2|/|F1| = {}",
-            relative_error
+            "Newton's 3rd law violation: |F1+F2|/|F1| = {relative_error}"
         );
     }
 
@@ -615,24 +635,16 @@ mod tests {
                 let gpu_c = gpu_coeffs[d * order + k];
                 assert!(
                     (cpu_c - gpu_c).abs() < 1e-10,
-                    "coeff0 d{} k{}: CPU {} GPU {}",
-                    d,
-                    k,
-                    cpu_c,
-                    gpu_c
+                    "coeff0 d{d} k{k}: CPU {cpu_c} GPU {gpu_c}"
                 );
                 let cpu_d = cpu_coeffs0.derivs[d][k];
                 let gpu_d = gpu_derivs[d * order + k];
                 assert!(
                     (cpu_d - gpu_d).abs() < 1e-10,
-                    "deriv0 d{} k{}: CPU {} GPU {}",
-                    d,
-                    k,
-                    cpu_d,
-                    gpu_d
+                    "deriv0 d{d} k{k}: CPU {cpu_d} GPU {gpu_d}"
                 );
             }
-            assert_eq!(cpu_coeffs0.base_idx[d], gpu_base[d], "base0 d{}", d);
+            assert_eq!(cpu_coeffs0.base_idx[d], gpu_base[d], "base0 d{d}");
         }
         for d in 0..3 {
             for k in 0..order {
@@ -640,11 +652,7 @@ mod tests {
                 let gpu_c = gpu_coeffs[3 * order + d * order + k];
                 assert!(
                     (cpu_c - gpu_c).abs() < 1e-10,
-                    "coeff1 d{} k{}: CPU {} GPU {}",
-                    d,
-                    k,
-                    cpu_c,
-                    gpu_c
+                    "coeff1 d{d} k{k}: CPU {cpu_c} GPU {gpu_c}"
                 );
             }
         }
@@ -725,9 +733,7 @@ mod tests {
         let energy_rel_error = ((gpu_energy - cpu_energy) / energy_denom).abs();
         assert!(
             energy_rel_error < 0.1,
-            "GPU energy {} vs CPU energy {}",
-            gpu_energy,
-            cpu_energy
+            "GPU energy {gpu_energy} vs CPU energy {cpu_energy}"
         );
 
         // Force directions must match (sign check)
@@ -735,9 +741,7 @@ mod tests {
         let gpu_fx0 = gpu_forces[0];
         assert!(
             cpu_fx0 * gpu_fx0 > 0.0,
-            "Force direction mismatch: CPU {} GPU {}",
-            cpu_fx0,
-            gpu_fx0
+            "Force direction mismatch: CPU {cpu_fx0} GPU {gpu_fx0}"
         );
     }
 }

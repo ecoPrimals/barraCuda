@@ -4,10 +4,10 @@
 //! ψ(x) = Γ'(x)/Γ(x), the logarithmic derivative of the Gamma function.
 //! Applications: Fisher information, Bayesian statistics, neural network regularization
 
+use crate::device::WgpuDevice;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
 
@@ -40,17 +40,23 @@ pub struct DigammaF64 {
 
 impl DigammaF64 {
     /// Create new Digamma f64 operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Compute ψ(x) for each element
-    ///
     /// # Arguments
     /// * `x` - Input values
-    ///
     /// # Returns
     /// Vector of ψ(x) values with f64 precision
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn digamma(&self, x: &[f64]) -> Result<Vec<f64>> {
         if x.is_empty() {
             return Ok(vec![]);

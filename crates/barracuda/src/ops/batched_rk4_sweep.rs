@@ -51,6 +51,7 @@ impl TrajectoryResult {
     }
 
     /// Final time reached.
+    #[must_use]
     pub fn final_time(&self) -> f64 {
         self.times.last().copied().unwrap_or(0.0)
     }
@@ -90,6 +91,7 @@ pub struct BatchedRK4F64 {
 
 impl BatchedRK4F64 {
     /// Create a new batcher bound to `device`.
+    #[must_use]
     pub fn new(device: &WgpuDevice) -> Self {
         Self {
             device: Arc::new(device.clone()),
@@ -109,6 +111,14 @@ impl BatchedRK4F64 {
     ///
     /// # Returns
     /// `Vec<TrajectoryResult>` in the same order as `odes`.
+    ///
+    /// # Panics
+    /// Panics if a spawned thread panics during integration.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if batch validation fails, device creation fails, or any
+    /// trajectory integration fails (e.g. device lost, numerical error).
     pub fn integrate_fixed(
         &self,
         odes: &[OdeFn],
@@ -123,10 +133,8 @@ impl BatchedRK4F64 {
         }
 
         let device = &self.device;
-        let mut results: Vec<Option<Result<TrajectoryResult>>> =
-            (0..odes.len()).map(|_| None).collect();
 
-        std::thread::scope(|scope| {
+        let results: Vec<Result<TrajectoryResult>> = std::thread::scope(|scope| {
             let handles: Vec<_> = odes
                 .iter()
                 .zip(y0_batch.iter())
@@ -135,7 +143,6 @@ impl BatchedRK4F64 {
                     let dev = device.clone();
                     scope.spawn(move || -> Result<TrajectoryResult> {
                         let integrator = RkIntegrator::new(dev)?;
-                        // `f: &Box<dyn Fn...>` = `&OdeFunction`; pass directly.
                         let (times, states) = integrator.integrate_fixed(f, t0, y0, t_end, h)?;
                         Ok(TrajectoryResult {
                             times,
@@ -146,19 +153,20 @@ impl BatchedRK4F64 {
                 })
                 .collect();
 
-            for (i, handle) in handles.into_iter().enumerate() {
-                results[i] = Some(handle.join().unwrap_or_else(|_| {
-                    Err(BarracudaError::Internal(format!(
-                        "BatchedRK4F64::integrate_fixed: thread panic for instance {i}"
-                    )))
-                }));
-            }
+            handles
+                .into_iter()
+                .enumerate()
+                .map(|(i, h)| {
+                    h.join().unwrap_or_else(|_| {
+                        Err(BarracudaError::Internal(format!(
+                            "BatchedRK4F64::integrate_fixed: thread panic for instance {i}"
+                        )))
+                    })
+                })
+                .collect()
         });
 
-        results
-            .into_iter()
-            .map(|r| r.expect("join filled every slot"))
-            .collect()
+        results.into_iter().collect()
     }
 
     // ─── Adaptive RK45 ───────────────────────────────────────────────────────
@@ -172,6 +180,14 @@ impl BatchedRK4F64 {
     /// - `t_end`    : end time
     /// - `h_init`   : initial step size
     /// - `tol`      : local error tolerance for adaptive stepping
+    ///
+    /// # Panics
+    /// Panics if a spawned thread panics during integration.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if batch validation fails, device creation fails, or any
+    /// trajectory integration fails (e.g. device lost, numerical error).
     pub fn integrate_adaptive(
         &self,
         odes: &[OdeFn],
@@ -187,10 +203,8 @@ impl BatchedRK4F64 {
         }
 
         let device = &self.device;
-        let mut results: Vec<Option<Result<TrajectoryResult>>> =
-            (0..odes.len()).map(|_| None).collect();
 
-        std::thread::scope(|scope| {
+        let results: Vec<Result<TrajectoryResult>> = std::thread::scope(|scope| {
             let handles: Vec<_> = odes
                 .iter()
                 .zip(y0_batch.iter())
@@ -210,19 +224,20 @@ impl BatchedRK4F64 {
                 })
                 .collect();
 
-            for (i, handle) in handles.into_iter().enumerate() {
-                results[i] = Some(handle.join().unwrap_or_else(|_| {
-                    Err(BarracudaError::Internal(format!(
-                        "BatchedRK4F64::integrate_adaptive: thread panic for instance {i}"
-                    )))
-                }));
-            }
+            handles
+                .into_iter()
+                .enumerate()
+                .map(|(i, h)| {
+                    h.join().unwrap_or_else(|_| {
+                        Err(BarracudaError::Internal(format!(
+                            "BatchedRK4F64::integrate_adaptive: thread panic for instance {i}"
+                        )))
+                    })
+                })
+                .collect()
         });
 
-        results
-            .into_iter()
-            .map(|r| r.expect("join filled every slot"))
-            .collect()
+        results.into_iter().collect()
     }
 
     // ─── Private helpers ─────────────────────────────────────────────────────
@@ -336,8 +351,10 @@ mod tests {
         let odes: Vec<_> = vec![decay_ode(1.0), decay_ode(2.0)];
         // y0_batch has wrong inner dimension for instance 1
         let y0_batch = vec![vec![1.0_f64], vec![1.0_f64, 0.0_f64]];
-        assert!(batcher
-            .integrate_fixed(&odes, 0.0, &y0_batch, 1.0, 0.01)
-            .is_err());
+        assert!(
+            batcher
+                .integrate_fixed(&odes, 0.0, &y0_batch, 1.0, 0.01)
+                .is_err()
+        );
     }
 }

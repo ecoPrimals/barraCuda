@@ -355,9 +355,7 @@ async fn test_esn_train_ridge_regression_regularization() {
 
     assert!(
         norm_large < norm_small,
-        "Larger lambda should produce smaller weights: {} < {}",
-        norm_large,
-        norm_small
+        "Larger lambda should produce smaller weights: {norm_large} < {norm_small}"
     );
 }
 

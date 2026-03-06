@@ -39,6 +39,7 @@ pub struct LuDecomposition {
 
 impl LuDecomposition {
     /// Extract the L matrix (lower triangular with 1s on diagonal).
+    #[must_use]
     pub fn l(&self) -> Vec<f64> {
         let mut l = vec![0.0; self.n * self.n];
         for i in 0..self.n {
@@ -51,6 +52,7 @@ impl LuDecomposition {
     }
 
     /// Extract the U matrix (upper triangular).
+    #[must_use]
     pub fn u(&self) -> Vec<f64> {
         let mut u = vec![0.0; self.n * self.n];
         for i in 0..self.n {
@@ -62,6 +64,7 @@ impl LuDecomposition {
     }
 
     /// Get the permutation matrix P as a dense matrix.
+    #[must_use]
     pub fn p(&self) -> Vec<f64> {
         let mut p = vec![0.0; self.n * self.n];
         for i in 0..self.n {
@@ -71,12 +74,12 @@ impl LuDecomposition {
     }
 
     /// Compute the determinant of the original matrix.
-    ///
     /// det(A) = (-1)^swaps × ∏ U[i,i]
     #[expect(
         clippy::manual_is_multiple_of,
         reason = "is_multiple_of is nightly-only"
     )]
+    #[must_use]
     pub fn det(&self) -> f64 {
         let mut det = if self.num_swaps % 2 == 0 { 1.0 } else { -1.0 };
         for i in 0..self.n {
@@ -86,8 +89,10 @@ impl LuDecomposition {
     }
 
     /// Solve the linear system Ax = b.
-    ///
     /// First solves Ly = Pb (forward substitution), then Ux = y (back substitution).
+    /// # Errors
+    /// Returns [`Err`] if `b.len() != self.n` (invalid input dimensions), or if the
+    /// matrix is singular (zero pivot encountered during back substitution).
     pub fn solve(&self, b: &[f64]) -> Result<Vec<f64>> {
         if b.len() != self.n {
             return Err(BarracudaError::InvalidInput {
@@ -126,6 +131,8 @@ impl LuDecomposition {
     }
 
     /// Compute the inverse of the original matrix.
+    /// # Errors
+    /// Returns [`Err`] if [`solve`](Self::solve) fails (singular matrix or invalid dimensions).
     pub fn inverse(&self) -> Result<Vec<f64>> {
         let mut inv = vec![0.0; self.n * self.n];
 
@@ -170,6 +177,10 @@ impl LuDecomposition {
 /// let b = vec![10.0, 12.0];
 /// let x = lu.solve(&b).unwrap();
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if `a.len() != n * n` (invalid matrix size), or if `n == 0`.
 pub fn lu_decompose(a: &[f64], n: usize) -> Result<LuDecomposition> {
     if a.len() != n * n {
         return Err(BarracudaError::InvalidInput {
@@ -242,18 +253,31 @@ pub fn lu_decompose(a: &[f64], n: usize) -> Result<LuDecomposition> {
 }
 
 /// Convenience function to solve Ax = b using LU decomposition.
+///
+/// # Errors
+///
+/// Returns [`Err`] if [`lu_decompose`] fails (invalid dimensions), or if [`LuDecomposition::solve`]
+/// fails (singular matrix or RHS length mismatch).
 pub fn lu_solve(a: &[f64], n: usize, b: &[f64]) -> Result<Vec<f64>> {
     let lu = lu_decompose(a, n)?;
     lu.solve(b)
 }
 
 /// Compute the determinant of a square matrix using LU decomposition.
+///
+/// # Errors
+///
+/// Returns [`Err`] if [`lu_decompose`] fails (invalid matrix dimensions).
 pub fn lu_det(a: &[f64], n: usize) -> Result<f64> {
     let lu = lu_decompose(a, n)?;
     Ok(lu.det())
 }
 
 /// Compute the inverse of a square matrix using LU decomposition.
+///
+/// # Errors
+///
+/// Returns [`Err`] if [`lu_decompose`] fails (invalid dimensions), or if the matrix is singular.
 pub fn lu_inverse(a: &[f64], n: usize) -> Result<Vec<f64>> {
     let lu = lu_decompose(a, n)?;
     lu.inverse()

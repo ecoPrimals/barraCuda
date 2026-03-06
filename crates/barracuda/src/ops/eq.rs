@@ -6,7 +6,7 @@ use crate::device::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// f64 is the canonical source — f32 derived via downcast_f64_to_f32 when needed.
+/// f64 is the canonical source — f32 derived via `downcast_f64_to_f32` when needed.
 const SHADER_F64: &str = include_str!("../shaders/misc/eq_f64.wgsl");
 
 static SHADER_F32: std::sync::LazyLock<String> =
@@ -20,6 +20,7 @@ pub struct Eq {
 
 impl Eq {
     /// Create an element-wise equality operation.
+    #[must_use]
     pub fn new(lhs: Tensor, rhs: Tensor) -> Self {
         Self { lhs, rhs }
     }
@@ -29,6 +30,9 @@ impl Eq {
     }
 
     /// Execute element-wise equality and return the output tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.lhs.device();
         let size = self.lhs.len();
@@ -40,7 +44,7 @@ impl Eq {
             .storage_read(1, self.rhs.buffer())
             .storage_rw(2, &output_buffer)
             .dispatch_1d(size as u32)
-            .submit();
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,
@@ -52,6 +56,9 @@ impl Eq {
 
 impl Tensor {
     /// Element-wise equality (1.0 where equal, 0.0 where not).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn eq(self, other: &Self) -> Result<Self> {
         Eq::new(self, other.clone()).execute()
     }

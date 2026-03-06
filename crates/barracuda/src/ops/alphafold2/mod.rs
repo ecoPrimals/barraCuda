@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-//! AlphaFold2 Evoformer GPU primitives (f64).
+//! `AlphaFold2` Evoformer GPU primitives (f64).
 //!
 //! Provenance: neuralSpring S69 → toadStool absorption.
 //!

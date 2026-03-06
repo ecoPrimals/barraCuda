@@ -26,6 +26,7 @@ pub struct Round {
 
 impl Round {
     /// Create a new round operation
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -36,6 +37,9 @@ impl Round {
     }
 
     /// Execute the round operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -180,6 +184,9 @@ impl Round {
 
 impl Tensor {
     /// Compute round element-wise
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn round_wgsl(self) -> Result<Self> {
         Round::new(self).execute()
     }

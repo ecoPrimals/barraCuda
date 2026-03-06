@@ -3,7 +3,7 @@
 //!
 //! **Operation**: exp(a + bi) = exp(a)[cos(b) + i·sin(b)] (Euler's formula)
 //! **Complexity**: O(1) - 1 exp + 2 trig functions
-//! **CRITICAL**: This is THE operation for FFT twiddle factors W_N^k = exp(-2πik/N)
+//! **CRITICAL**: This is THE operation for FFT twiddle factors `W_N^k` = exp(-2πik/N)
 
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
@@ -18,6 +18,11 @@ pub struct ComplexExp {
 
 impl ComplexExp {
     /// Create complex exp operation. Input must have last dim = 2 (re, im).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor) -> Result<Self> {
         let shape = input.shape();
         if shape.last() != Some(&2) {
@@ -101,6 +106,11 @@ impl ComplexExp {
     }
 
     /// Execute complex exponential on GPU.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let num_elements = self.input.len();

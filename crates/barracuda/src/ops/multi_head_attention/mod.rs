@@ -45,7 +45,7 @@ pub struct MHAProjectionParams {
     pub d_model: u32,
     /// Number of attention heads
     pub num_heads: u32,
-    /// Dimension per head (d_model / num_heads)
+    /// Dimension per head (`d_model` / `num_heads`)
     pub head_dim: u32,
 }
 
@@ -69,17 +69,22 @@ impl MultiHeadAttention {
     /// Create a new multi-head attention operation
     ///
     /// # Arguments
-    /// - `query`: Query tensor [batch, seq_len, d_model]
-    /// - `key`: Key tensor [batch, seq_len, d_model]
-    /// - `value`: Value tensor [batch, seq_len, d_model]
-    /// - `w_q`: Query projection weights [d_model, d_model]
-    /// - `w_k`: Key projection weights [d_model, d_model]
-    /// - `w_v`: Value projection weights [d_model, d_model]
-    /// - `w_o`: Output projection weights [d_model, d_model]
+    /// - `query`: Query tensor [batch, `seq_len`, `d_model`]
+    /// - `key`: Key tensor [batch, `seq_len`, `d_model`]
+    /// - `value`: Value tensor [batch, `seq_len`, `d_model`]
+    /// - `w_q`: Query projection weights [`d_model`, `d_model`]
+    /// - `w_k`: Key projection weights [`d_model`, `d_model`]
+    /// - `w_v`: Value projection weights [`d_model`, `d_model`]
+    /// - `w_o`: Output projection weights [`d_model`, `d_model`]
     /// - `num_heads`: Number of attention heads
     ///
     /// # Returns
     /// Result containing the operation struct, or error if shapes are invalid
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         query: Tensor,
         key: Tensor,
@@ -109,10 +114,10 @@ impl MultiHeadAttention {
         if k_shape != q_shape || v_shape != q_shape {
             return Err(crate::error::BarracudaError::shape_mismatch(
                 q_shape.to_vec(),
-                if k_shape != q_shape {
-                    k_shape.to_vec()
-                } else {
+                if k_shape == q_shape {
                     v_shape.to_vec()
+                } else {
+                    k_shape.to_vec()
                 },
             ));
         }
@@ -177,6 +182,11 @@ impl MultiHeadAttention {
     }
 
     /// Execute the multi-head attention operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.query.device();
 
@@ -256,7 +266,7 @@ impl MultiHeadAttention {
         self.seq_len
     }
 
-    /// Get d_model
+    /// Get `d_model`
     pub(super) fn d_model(&self) -> usize {
         self.d_model
     }

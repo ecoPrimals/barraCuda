@@ -22,6 +22,9 @@ pub struct IndexAdd {
 
 impl IndexAdd {
     /// Create a new index add operation
+    /// # Errors
+    /// Returns [`Err`] if dimension is out of bounds, values size does not match expected shape,
+    /// or any index is out of bounds for the dimension.
     pub fn new(input: Tensor, dim: usize, indices: Vec<u32>, values: Tensor) -> Result<Self> {
         let input_shape = input.shape();
 
@@ -82,6 +85,8 @@ impl IndexAdd {
     }
 
     /// Execute the index add operation (modifies input in-place)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -129,7 +134,7 @@ impl IndexAdd {
             .storage_read(2, &indices_buffer)
             .storage_rw(3, input_buffer)
             .dispatch_1d(values_size as u32)
-            .submit();
+            .submit()?;
 
         // Return the input tensor (modified in-place)
         Ok(self.input)
@@ -138,12 +143,13 @@ impl IndexAdd {
 
 impl Tensor {
     /// Add values at specific indices along a dimension (scatter-add)
-    ///
     /// # Arguments
-    ///
     /// * `dim` - Dimension to add along
     /// * `indices` - Indices to add at
     /// * `values` - Values to add
+    /// # Errors
+    /// Returns [`Err`] if dimension is out of bounds, values shape does not match, indices are
+    /// out of bounds, buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn index_add(self, dim: usize, indices: Vec<u32>, values: Tensor) -> Result<Self> {
         IndexAdd::new(self, dim, indices, values)?.execute()
     }

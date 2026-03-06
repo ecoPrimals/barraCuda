@@ -90,10 +90,11 @@ async fn test_mha_shape_validation() {
     let w_o = w_q.clone();
 
     // Valid: d_model divisible by num_heads
-    assert!(q
-        .clone()
-        .multi_head_attention(&k, &v, &w_q, &w_k, &w_v, &w_o, num_heads)
-        .is_ok());
+    assert!(
+        q.clone()
+            .multi_head_attention(&k, &v, &w_q, &w_k, &w_v, &w_o, num_heads)
+            .is_ok()
+    );
 
     // Invalid: d_model not divisible by num_heads
     let result = q.multi_head_attention(&k, &v, &w_q, &w_k, &w_v, &w_o, 7);

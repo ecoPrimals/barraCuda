@@ -6,12 +6,12 @@
 //! for one sample. Results stored in `[n_samples × n_trees]`, then reduced on
 //! CPU for majority vote or averaging.
 //!
-//! SoA layout avoids bitcast — thresholds stored as native f64.
+//! `SoA` layout avoids bitcast — thresholds stored as native f64.
 //!
-//! Provenance: wetSpring handoff v5 → ToadStool absorption.
+//! Provenance: wetSpring handoff v5 → `ToadStool` absorption.
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
@@ -38,6 +38,7 @@ pub struct RfBatchInferenceGpu {
 
 impl RfBatchInferenceGpu {
     /// Creates a new batch Random Forest inference GPU kernel for the given device.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let shader = device.compile_shader(SHADER, Some("RfBatchInference"));
 

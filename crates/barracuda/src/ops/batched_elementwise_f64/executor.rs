@@ -4,9 +4,9 @@
 #[cfg(test)]
 use super::cpu_ref;
 use super::op::{Op, StationDayInput, WaterBalanceInput};
+use crate::device::WgpuDevice;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -16,7 +16,7 @@ const SHADER_BATCHED_ELEMENTWISE_F64: &str =
 
 /// Try to build a DF64-rewritten variant of the batched elementwise shader.
 ///
-/// Pre-injects math_f64 polyfills so naga can validate, then rewrites
+/// Pre-injects `math_f64` polyfills so naga can validate, then rewrites
 /// f64 infix ops to DF64 bridge calls. Returns `None` if the naga
 /// rewriter can't handle this shader's complexity.
 fn df64_shader_source() -> Option<&'static str> {
@@ -49,33 +49,41 @@ pub struct BatchedElementwiseF64 {
 
 impl BatchedElementwiseF64 {
     /// Create a new batched elementwise executor
+    /// # Errors
+    /// Returns [`Err`] if device initialization fails.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Execute batched computation
-    ///
     /// # Arguments
-    /// * `data` - Flattened input array [batch_size * stride]
+    /// * `data` - Flattened input array [`batch_size` * stride]
     /// * `batch_size` - Number of batch elements
     /// * `op` - Operation to perform
-    ///
     /// # Returns
-    /// Output array [batch_size]
+    /// Output array [`batch_size`]
+    /// # Errors
+    /// Returns [`Err`] if input data length is too short for the given batch size
+    /// and stride, buffer allocation fails, the device is lost, or buffer readback
+    /// fails.
     pub fn execute(&self, data: &[f64], batch_size: usize, op: Op) -> Result<Vec<f64>> {
         self.execute_with_aux(data, batch_size, op, 0.0)
     }
 
     /// Execute batched computation with auxiliary parameter
-    ///
+    /// # Panics
+    /// Panics if DF64 shader source is unavailable when hybrid FP64 strategy is selected (internal consistency).
     /// # Arguments
-    /// * `data` - Flattened input array [batch_size * stride]
+    /// * `data` - Flattened input array [`batch_size` * stride]
     /// * `batch_size` - Number of batch elements
     /// * `op` - Operation to perform
     /// * `aux_param` - Auxiliary parameter (e.g., total for normalization)
-    ///
     /// # Returns
-    /// Output array [batch_size]
+    /// Output array [`batch_size`]
+    /// # Errors
+    /// Returns [`Err`] if input data length is too short for the given batch size
+    /// and stride, buffer allocation fails, the device is lost, or buffer readback
+    /// fails.
     pub fn execute_with_aux(
         &self,
         data: &[f64],
@@ -142,7 +150,11 @@ impl BatchedElementwiseF64 {
             && df64_shader_source().is_some();
 
         if use_df64 {
-            let src = df64_shader_source().expect("checked above");
+            let Some(src) = df64_shader_source() else {
+                return Err(crate::error::BarracudaError::Internal(
+                    "DF64 shader source unavailable despite Hybrid strategy".into(),
+                ));
+            };
             ComputeDispatch::new(&self.device, "batched_elementwise_df64")
                 .shader(src, "batched_compute")
                 .df64()
@@ -150,7 +162,7 @@ impl BatchedElementwiseF64 {
                 .storage_rw(1, &output_buffer)
                 .uniform(2, &params_buffer)
                 .dispatch(batch_size as u32, 1, 1)
-                .submit();
+                .submit()?;
         } else {
             ComputeDispatch::new(&self.device, "batched_elementwise_f64")
                 .shader(SHADER_BATCHED_ELEMENTWISE_F64, "batched_compute")
@@ -159,7 +171,7 @@ impl BatchedElementwiseF64 {
                 .storage_rw(1, &output_buffer)
                 .uniform(2, &params_buffer)
                 .dispatch(batch_size as u32, 1, 1)
-                .submit();
+                .submit()?;
         }
 
         // Read results
@@ -294,6 +306,13 @@ impl BatchedElementwiseF64 {
                 }
                 Op::TurcEt0 => cpu_ref::turc_et0_cpu(data[base], data[base + 1], data[base + 2]),
                 Op::HamonEt0 => cpu_ref::hamon_et0_cpu(data[base], data[base + 1]),
+                Op::ScsCnRunoff => {
+                    cpu_ref::scs_cn_runoff_cpu(data[base], data[base + 1], data[base + 2])
+                }
+                Op::StewartYieldWater => {
+                    cpu_ref::stewart_yield_water_cpu(data[base], data[base + 1])
+                }
+                Op::BlaneyCriddleEt0 => cpu_ref::blaney_criddle_et0_cpu(data[base], data[base + 1]),
             };
             results.push(result);
         }
@@ -302,12 +321,13 @@ impl BatchedElementwiseF64 {
     }
 
     /// Compute FAO-56 ET₀ for multiple station-days
-    ///
     /// # Arguments
     /// * `station_days` - Slice of `StationDayInput` tuples
-    ///
     /// # Returns
     /// ET₀ values in mm/day for each station-day
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, the device is lost, or buffer
+    /// readback fails.
     pub fn fao56_et0_batch(&self, station_days: &[StationDayInput]) -> Result<Vec<f64>> {
         let batch_size = station_days.len();
         let mut data = Vec::with_capacity(batch_size * 9);
@@ -328,12 +348,13 @@ impl BatchedElementwiseF64 {
     }
 
     /// Compute water balance update for multiple fields
-    ///
     /// # Arguments
     /// * `fields` - Slice of `WaterBalanceInput` tuples
-    ///
     /// # Returns
     /// New depletion values for each field
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, the device is lost, or buffer
+    /// readback fails.
     pub fn water_balance_batch(&self, fields: &[WaterBalanceInput]) -> Result<Vec<f64>> {
         let batch_size = fields.len();
         let mut data = Vec::with_capacity(batch_size * 7);

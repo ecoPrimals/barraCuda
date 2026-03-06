@@ -20,6 +20,9 @@ pub struct Take {
 
 impl Take {
     /// Create a new take operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor, indices: Vec<u32>) -> Result<Self> {
         let input_size = input.shape().iter().product::<usize>();
         if indices.iter().any(|&idx| idx as usize >= input_size) {
@@ -43,6 +46,9 @@ impl Take {
     }
 
     /// Execute the take operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let output_size = self.indices.len();

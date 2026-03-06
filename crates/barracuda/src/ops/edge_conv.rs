@@ -22,9 +22,9 @@ struct EdgeConvParams {
 /// Edge convolution for graph neural networks (Dynamic Graph CNN).
 pub struct EdgeConv {
     node_features: Tensor,
-    /// CSR row offsets: [num_nodes + 1] entries
+    /// CSR row offsets: [`num_nodes` + 1] entries
     edge_offsets: Tensor,
-    /// CSR column indices: [num_edges] neighbor node indices
+    /// CSR column indices: [`num_edges`] neighbor node indices
     edge_targets: Tensor,
     mlp_weight: Tensor,
     mlp_bias: Tensor,
@@ -32,14 +32,18 @@ pub struct EdgeConv {
 }
 
 impl EdgeConv {
-    /// Create EdgeConv operation with CSR-format edge storage
-    ///
+    /// Create `EdgeConv` operation with CSR-format edge storage
     /// # Arguments
-    /// * `node_features` - Node features [num_nodes, feature_dim]
-    /// * `edge_offsets` - CSR row offsets [num_nodes + 1] (stored as f32, cast to u32 in shader)
-    /// * `edge_targets` - CSR column indices [num_edges] (stored as f32, cast to u32 in shader)
-    /// * `mlp_weight` - MLP weight matrix [output_dim, 2 * feature_dim]
-    /// * `mlp_bias` - MLP bias vector [output_dim]
+    /// * `node_features` - Node features [`num_nodes`, `feature_dim`]
+    /// * `edge_offsets` - CSR row offsets [`num_nodes` + 1] (stored as f32, cast to u32 in shader)
+    /// * `edge_targets` - CSR column indices [`num_edges`] (stored as f32, cast to u32 in shader)
+    /// * `mlp_weight` - MLP weight matrix [`output_dim`, 2 * `feature_dim`]
+    /// * `mlp_bias` - MLP bias vector [`output_dim`]
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         node_features: Tensor,
         edge_offsets: Tensor,
@@ -71,7 +75,10 @@ impl EdgeConv {
         }
     }
 
-    /// Execute EdgeConv on tensor
+    /// Execute `EdgeConv` on tensor
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.node_features.device();
         let node_shape = self.node_features.shape();

@@ -11,7 +11,7 @@
 //! Kriging provides the Best Linear Unbiased Predictor (BLUP) for spatial data:
 //! 1. Build covariance matrix K from variogram model
 //! 2. Solve kriging system Kw = k for weights
-//! 3. Interpolate: z* = Σ w_i * z_i with variance estimate
+//! 3. Interpolate: z* = Σ `w_i` * `z_i` with variance estimate
 //!
 //! # Variogram Models
 //!
@@ -97,7 +97,8 @@ pub enum VariogramModel {
 }
 
 impl VariogramModel {
-    /// Get variogram parameters (nugget, sill, range, model_id).
+    /// Get variogram parameters (nugget, sill, range, `model_id`).
+    #[must_use]
     pub fn params(&self) -> (f64, f64, f64, u32) {
         match self {
             VariogramModel::Spherical {
@@ -124,6 +125,7 @@ impl VariogramModel {
     }
 
     /// Compute variogram value γ(h) for distance h.
+    #[must_use]
     pub fn gamma(&self, h: f64) -> f64 {
         if h <= 0.0 {
             return 0.0;
@@ -164,6 +166,7 @@ impl VariogramModel {
     }
 
     /// Compute covariance C(h) = sill - γ(h).
+    #[must_use]
     pub fn covariance(&self, h: f64) -> f64 {
         let (_, sill, _, _) = self.params();
         sill - self.gamma(h)
@@ -177,7 +180,7 @@ pub struct KrigingResult {
     pub values: Vec<f64>,
     /// Kriging variance (uncertainty) at each target point
     pub variances: Vec<f64>,
-    /// Kriging weights used (n_known per target)
+    /// Kriging weights used (`n_known` per target)
     pub weights: Vec<Vec<f64>>,
 }
 
@@ -188,24 +191,28 @@ pub struct KrigingF64 {
 
 impl KrigingF64 {
     /// Create a new kriging interpolator
+    /// # Errors
+    /// Returns [`Err`] if the device is invalid or unavailable.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// GPU device handle (for future GPU-accelerated kriging).
+    #[must_use]
     pub fn device(&self) -> &Arc<WgpuDevice> {
         &self.device
     }
 
     /// Perform ordinary kriging interpolation
-    ///
     /// # Arguments
     /// * `known_points` - Known data points as (x, y, z) tuples
     /// * `target_points` - Target points as (x, y) tuples
     /// * `variogram` - Variogram model with parameters
-    ///
     /// # Returns
-    /// KrigingResult with interpolated values, variances, and weights
+    /// `KrigingResult` with interpolated values, variances, and weights
+    /// # Errors
+    /// Returns [`Err`] if the covariance matrix is singular or ill-conditioned
+    /// (LU solve fails).
     pub fn interpolate(
         &self,
         known_points: &[(f64, f64, f64)],
@@ -289,6 +296,11 @@ impl KrigingF64 {
     }
 
     /// Simple kriging (known mean)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn interpolate_simple(
         &self,
         known_points: &[(f64, f64, f64)],
@@ -436,6 +448,8 @@ impl KrigingF64 {
     }
 
     /// Estimate variogram parameters from data using method of moments
+    /// # Errors
+    /// Returns [`Err`] if allocation fails (unlikely for typical inputs).
     pub fn fit_variogram(
         known_points: &[(f64, f64, f64)],
         n_lags: usize,

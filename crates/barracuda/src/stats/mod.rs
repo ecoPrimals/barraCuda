@@ -6,9 +6,9 @@
 //!
 //! # Agreement Metrics (S64 absorption)
 //!
-//! - **RMSE, MAE, MBE, NSE, R², IA, hit_rate**: Model validation
+//! - **RMSE, MAE, MBE, NSE, R², IA, `hit_rate`**: Model validation
 //! - **mean, percentile**: Descriptive statistics
-//! - **dot, l2_norm**: CPU vector operations
+//! - **dot, `l2_norm`**: CPU vector operations
 //!
 //! # Ecological Diversity (S64 absorption)
 //!
@@ -26,8 +26,8 @@
 //!
 //! # Chi-Squared / Bootstrap
 //!
-//! - **chi2_decomposed**: Per-datum residuals, pulls, contributions
-//! - **bootstrap_ci**: Non-parametric confidence intervals
+//! - **`chi2_decomposed`**: Per-datum residuals, pulls, contributions
+//! - **`bootstrap_ci`**: Non-parametric confidence intervals
 //!
 //! # Regression (S66 absorption from airSpring)
 //!
@@ -93,16 +93,16 @@ pub mod spectral_density;
 #[cfg(feature = "gpu")]
 pub use bootstrap::BootstrapMeanGpu;
 pub use bootstrap::{
-    bootstrap_ci, bootstrap_mean, bootstrap_median, bootstrap_std, rawr_mean, BootstrapCI,
+    BootstrapCI, bootstrap_ci, bootstrap_mean, bootstrap_median, bootstrap_std, rawr_mean,
 };
-pub use chi2::{chi2_decomposed, chi2_decomposed_weighted, Chi2Decomposed};
+pub use chi2::{Chi2Decomposed, chi2_decomposed, chi2_decomposed_weighted};
 pub use correlation::{
     correlation_matrix, covariance, covariance_matrix, pearson_correlation, spearman_correlation,
 };
 pub use diversity::{
-    alpha_diversity, bray_curtis, bray_curtis_condensed, bray_curtis_matrix, chao1, chao1_classic,
-    condensed_index, observed_features, pielou_evenness, rarefaction_curve, shannon,
-    shannon_from_frequencies, simpson, AlphaDiversity,
+    AlphaDiversity, alpha_diversity, bray_curtis, bray_curtis_condensed, bray_curtis_matrix, chao1,
+    chao1_classic, condensed_index, observed_features, pielou_evenness, rarefaction_curve, shannon,
+    shannon_from_frequencies, simpson,
 };
 #[cfg(feature = "gpu")]
 pub use evolution::KimuraGpu;
@@ -111,25 +111,25 @@ pub use evolution::{detection_power, detection_threshold, error_threshold, kimur
 pub use histogram::HistogramGpu;
 #[cfg(feature = "gpu")]
 pub use hydrology::HargreavesBatchGpu;
-pub use hydrology::{
-    crop_coefficient, fao56_et0, hamon_et0, hargreaves_et0, hargreaves_et0_batch, makkink_et0,
-    soil_water_balance, thornthwaite_et0, thornthwaite_heat_index, turc_et0,
-};
 #[cfg(feature = "gpu")]
 pub use hydrology::{
     Fao56BaseInputs, Fao56Uncertainties, McEt0PropagateGpu, SeasonalGpuParams, SeasonalOutput,
     SeasonalPipelineF64,
 };
+pub use hydrology::{
+    crop_coefficient, fao56_et0, hamon_et0, hargreaves_et0, hargreaves_et0_batch, makkink_et0,
+    soil_water_balance, thornthwaite_et0, thornthwaite_heat_index, turc_et0,
+};
 #[cfg(feature = "gpu")]
 pub use jackknife::JackknifeMeanGpu;
-pub use jackknife::{jackknife, jackknife_mean_variance, JackknifeResult};
+pub use jackknife::{JackknifeResult, jackknife, jackknife_mean_variance};
 pub use metrics::{
     dot, hill, hit_rate, index_of_agreement, l2_norm, mae, mbe, mean, monod, nash_sutcliffe,
     percentile, r_squared, rmse,
 };
-pub use moving_window_f64::{moving_window_stats_f64, MovingWindowResultF64};
+pub use moving_window_f64::{MovingWindowResultF64, moving_window_stats_f64};
 pub use normal::{norm_cdf, norm_cdf_batch, norm_pdf, norm_pdf_batch, norm_ppf};
 pub use regression::{
-    fit_all, fit_exponential, fit_linear, fit_logarithmic, fit_quadratic, FitResult,
+    FitResult, fit_all, fit_exponential, fit_linear, fit_logarithmic, fit_quadratic,
 };
 pub use spectral_density::{empirical_spectral_density, marchenko_pastur_bounds};

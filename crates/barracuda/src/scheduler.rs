@@ -33,11 +33,19 @@ pub struct UnifiedScheduler {
 
 impl UnifiedScheduler {
     /// Create new scheduler with automatic hardware discovery
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if hardware discovery fails (e.g. GPU initialization fails).
     pub async fn new() -> Result<Self> {
         Self::discover().await
     }
 
     /// Discover all available hardware
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if hardware discovery fails (e.g. GPU initialization fails).
     pub async fn discover() -> Result<Self> {
         let mut executors: Vec<Arc<dyn ComputeExecutor>> = Vec::new();
 
@@ -87,6 +95,7 @@ impl UnifiedScheduler {
     }
 
     /// Select best executor for an operation
+    #[must_use]
     pub fn select_executor(
         &self,
         op: &MathOp,
@@ -115,21 +124,23 @@ impl UnifiedScheduler {
                     .partial_cmp(&score_b)
                     .unwrap_or(std::cmp::Ordering::Equal)
             })
-            .map(|best| (*best).clone())
-            .unwrap_or_else(|| self.default_executor.clone())
+            .map_or_else(|| self.default_executor.clone(), |best| (*best).clone())
     }
 
     /// Get all available executors
+    #[must_use]
     pub fn executors(&self) -> &[Arc<dyn ComputeExecutor>] {
         &self.executors
     }
 
     /// Get default executor (CPU fallback)
+    #[must_use]
     pub fn default_executor(&self) -> &Arc<dyn ComputeExecutor> {
         &self.default_executor
     }
 
     /// Get executor by hardware type
+    #[must_use]
     pub fn get_executor(&self, hardware_type: HardwareType) -> Option<Arc<dyn ComputeExecutor>> {
         self.executors
             .iter()

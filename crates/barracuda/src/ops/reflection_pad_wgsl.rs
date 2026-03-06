@@ -20,6 +20,7 @@ pub struct ReflectionPad {
 
 impl ReflectionPad {
     /// Create a new reflection pad operation
+    #[must_use]
     pub fn new(input: Tensor, padding: (usize, usize, usize, usize)) -> Self {
         Self { input, padding }
     }
@@ -35,6 +36,11 @@ impl ReflectionPad {
     }
 
     /// Execute the reflection pad operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -219,6 +225,11 @@ impl Tensor {
     /// # Arguments
     ///
     /// * `padding` - (left, right, top, bottom) padding amounts
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn reflection_pad_wgsl(self, padding: (usize, usize, usize, usize)) -> Result<Self> {
         ReflectionPad::new(self, padding).execute()
     }

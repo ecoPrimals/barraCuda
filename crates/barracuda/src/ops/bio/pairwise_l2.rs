@@ -12,9 +12,9 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
+use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::WgpuDevice;
 
 static WGSL_PAIRWISE_L2: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
@@ -36,6 +36,7 @@ pub struct PairwiseL2Gpu {
 
 impl PairwiseL2Gpu {
     /// Create pairwise L2 distance calculator.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self { device }
     }
@@ -44,7 +45,17 @@ impl PairwiseL2Gpu {
     ///
     /// `input_buf`: `[n × dim]` f32 (row-major feature vectors)
     /// `output_buf`: `[n*(n-1)/2]` f32 (L2 distances)
-    pub fn dispatch(&self, input_buf: &wgpu::Buffer, output_buf: &wgpu::Buffer, n: u32, dim: u32) {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shader compilation or GPU dispatch fails.
+    pub fn dispatch(
+        &self,
+        input_buf: &wgpu::Buffer,
+        output_buf: &wgpu::Buffer,
+        n: u32,
+        dim: u32,
+    ) -> crate::error::Result<()> {
         let d = self.device.device();
 
         let params = PairwiseL2Params { n, dim };
@@ -63,7 +74,8 @@ impl PairwiseL2Gpu {
             .storage_rw(1, output_buf)
             .uniform(2, &params_buf)
             .dispatch(wg_count, 1, 1)
-            .submit();
+            .submit()?;
+        Ok(())
     }
 }
 

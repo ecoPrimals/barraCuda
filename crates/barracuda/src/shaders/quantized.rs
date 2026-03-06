@@ -5,12 +5,12 @@
 //!
 //! ## Supported Quantization Types
 //!
-//! - **Q4_0**: 4-bit quantization (llama.cpp format)
+//! - **`Q4_0`**: 4-bit quantization (llama.cpp format)
 //!   - 32 elements per block
 //!   - 18 bytes per block (2 scale + 16 data)
 //!   - ~4.5x memory reduction vs f32
 //!
-//! - **Q8_0**: 8-bit quantization
+//! - **`Q8_0`**: 8-bit quantization
 //!   - 32 elements per block
 //!   - 34 bytes per block (2 scale + 32 data)
 //!   - ~4x memory reduction vs f32
@@ -26,7 +26,8 @@
 //! - Quantized weights = less data to read from VRAM
 //! - GPU compute can hide dequantization latency
 
-/// Q4_0 dequantization shader source (f64 canonical, downcast to f32)
+/// `Q4_0` dequantization shader source (f64 canonical, downcast to f32)
+#[must_use]
 pub fn dequant_q4_wgsl() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         crate::shaders::precision::downcast_f64_to_f32(include_str!(
@@ -36,7 +37,8 @@ pub fn dequant_q4_wgsl() -> &'static str {
     std::sync::LazyLock::force(&SHADER).as_str()
 }
 
-/// Q8_0 dequantization shader source (f64 canonical, downcast to f32)
+/// `Q8_0` dequantization shader source (f64 canonical, downcast to f32)
+#[must_use]
 pub fn dequant_q8_wgsl() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         crate::shaders::precision::downcast_f64_to_f32(include_str!(
@@ -46,7 +48,8 @@ pub fn dequant_q8_wgsl() -> &'static str {
     std::sync::LazyLock::force(&SHADER).as_str()
 }
 
-/// Q4_0 GEMV shader source (on-the-fly dequantization, f64 canonical)
+/// `Q4_0` GEMV shader source (on-the-fly dequantization, f64 canonical)
+#[must_use]
 pub fn gemv_q4_wgsl() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         crate::shaders::precision::downcast_f64_to_f32(include_str!("quantized/gemv_q4_f64.wgsl"))
@@ -54,7 +57,8 @@ pub fn gemv_q4_wgsl() -> &'static str {
     std::sync::LazyLock::force(&SHADER).as_str()
 }
 
-/// Q8_0 GEMV shader source (on-the-fly dequantization, f64 canonical)
+/// `Q8_0` GEMV shader source (on-the-fly dequantization, f64 canonical)
+#[must_use]
 pub fn gemv_q8_wgsl() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         crate::shaders::precision::downcast_f64_to_f32(include_str!("quantized/gemv_q8_f64.wgsl"))
@@ -62,31 +66,33 @@ pub fn gemv_q8_wgsl() -> &'static str {
     std::sync::LazyLock::force(&SHADER).as_str()
 }
 
-/// Block size for Q4_0 and Q8_0 quantization
+/// Block size for `Q4_0` and `Q8_0` quantization
 pub const QUANT_BLOCK_SIZE: usize = 32;
 
-/// Bytes per Q4_0 block
+/// Bytes per `Q4_0` block
 pub const Q4_BYTES_PER_BLOCK: usize = 18;
 
-/// Bytes per Q8_0 block
+/// Bytes per `Q8_0` block
 pub const Q8_BYTES_PER_BLOCK: usize = 34;
 
 /// Quantization type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QuantType {
-    /// 4-bit quantization (llama.cpp Q4_0)
+    /// 4-bit quantization (llama.cpp `Q4_0`)
     Q4_0,
-    /// 8-bit quantization (llama.cpp Q8_0)
+    /// 8-bit quantization (llama.cpp `Q8_0`)
     Q8_0,
 }
 
 impl QuantType {
     /// Get block size for this quantization type
+    #[must_use]
     pub const fn block_size(&self) -> usize {
         QUANT_BLOCK_SIZE
     }
 
     /// Get bytes per block for this quantization type
+    #[must_use]
     pub const fn bytes_per_block(&self) -> usize {
         match self {
             Self::Q4_0 => Q4_BYTES_PER_BLOCK,
@@ -95,12 +101,14 @@ impl QuantType {
     }
 
     /// Calculate total bytes needed for `numel` elements
+    #[must_use]
     pub fn required_bytes(&self, numel: usize) -> usize {
         let num_blocks = numel.div_ceil(self.block_size());
         num_blocks * self.bytes_per_block()
     }
 
     /// Memory reduction ratio compared to f32
+    #[must_use]
     pub fn compression_ratio(&self) -> f32 {
         let f32_bytes = QUANT_BLOCK_SIZE * 4;
         let quant_bytes = self.bytes_per_block();
@@ -108,6 +116,7 @@ impl QuantType {
     }
 
     /// Get dequantization shader source
+    #[must_use]
     pub fn dequant_shader(&self) -> &'static str {
         match self {
             Self::Q4_0 => dequant_q4_wgsl(),
@@ -116,6 +125,7 @@ impl QuantType {
     }
 
     /// Get GEMV shader source
+    #[must_use]
     pub fn gemv_shader(&self) -> &'static str {
         match self {
             Self::Q4_0 => gemv_q4_wgsl(),
@@ -124,7 +134,8 @@ impl QuantType {
     }
 }
 
-/// CPU reference implementation for Q4_0 dequantization
+/// CPU reference implementation for `Q4_0` dequantization
+#[must_use]
 pub fn dequant_q4_cpu(data: &[u8], numel: usize) -> Vec<f32> {
     let block_size = QUANT_BLOCK_SIZE;
     let n_blocks = numel.div_ceil(block_size);
@@ -160,7 +171,8 @@ pub fn dequant_q4_cpu(data: &[u8], numel: usize) -> Vec<f32> {
     output
 }
 
-/// CPU reference implementation for Q8_0 dequantization
+/// CPU reference implementation for `Q8_0` dequantization
+#[must_use]
 pub fn dequant_q8_cpu(data: &[u8], numel: usize) -> Vec<f32> {
     let block_size = QUANT_BLOCK_SIZE;
     let n_blocks = numel.div_ceil(block_size);
@@ -191,6 +203,7 @@ pub fn dequant_q8_cpu(data: &[u8], numel: usize) -> Vec<f32> {
 }
 
 /// CPU reference implementation for quantized GEMV
+#[must_use]
 pub fn gemv_quantized_cpu(
     a_quant: &[u8],
     x: &[f32],

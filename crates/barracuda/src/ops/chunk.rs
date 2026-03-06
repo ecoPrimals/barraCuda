@@ -33,6 +33,11 @@ pub struct Chunk {
 
 impl Chunk {
     /// Creates a new chunk operation. Splits into `chunks` chunks along `dim`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor, chunks: usize, dim: usize) -> Result<Self> {
         if chunks == 0 {
             return Err(BarracudaError::invalid_op(
@@ -67,6 +72,11 @@ impl Chunk {
     }
 
     /// Executes chunking and returns a vector of chunk tensors.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Vec<Tensor>> {
         let device = self.input.device();
         let shape = self.input.shape();

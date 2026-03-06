@@ -42,11 +42,13 @@ impl Stage {
     }
 
     /// Get the stage label.
+    #[must_use]
     pub fn label(&self) -> &str {
         &self.label
     }
 
     /// Get the workgroup dimensions.
+    #[must_use]
     pub fn workgroups(&self) -> (u32, u32, u32) {
         self.workgroups
     }
@@ -71,16 +73,19 @@ impl StageLink {
     }
 
     /// Get the underlying buffer.
+    #[must_use]
     pub fn buffer(&self) -> &wgpu::Buffer {
         &self.buffer
     }
 
     /// Get the buffer size in bytes.
+    #[must_use]
     pub fn size(&self) -> u64 {
         self.size
     }
 
     /// Get the link label.
+    #[must_use]
     pub fn label(&self) -> &str {
         &self.label
     }
@@ -104,14 +109,15 @@ impl PipelineBuilder {
     }
 
     /// Add a stage to the pipeline.
+    #[must_use]
     pub fn stage(mut self, stage: Stage) -> Self {
         self.stages.push(stage);
         self
     }
 
     /// Build the pipeline topology.
-    ///
-    /// Returns an error if no stages have been added.
+    /// # Errors
+    /// Returns [`Err`] if no stages have been added.
     pub fn build(self) -> Result<StreamingPipeline> {
         if self.stages.is_empty() {
             return Err(BarracudaError::InvalidInput {
@@ -137,6 +143,11 @@ pub struct StreamingPipeline {
 impl StreamingPipeline {
     /// Execute all stages as a single GPU submission.
     /// No CPU readback occurs between stages.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the GPU device is lost or if buffer allocation or
+    /// GPU dispatch fails.
     pub fn execute(&self) -> Result<()> {
         if self.device.is_lost() {
             return Err(BarracudaError::device(
@@ -171,6 +182,11 @@ impl StreamingPipeline {
     }
 
     /// Execute N iterations of the full pipeline chain.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the GPU device is lost or if buffer allocation or
+    /// GPU dispatch fails.
     pub fn execute_iterations(&self, n: usize) -> Result<()> {
         if n == 0 {
             return Ok(());
@@ -208,9 +224,11 @@ impl StreamingPipeline {
     }
 
     /// Execute and read back the final stage output.
-    ///
     /// Executes the pipeline once, then copies `output_buffer` to a staging
     /// buffer and maps it to read `count` elements of type `T`.
+    /// # Errors
+    /// Returns [`Err`] if pipeline execution fails (device lost) or buffer
+    /// readback fails (e.g., `map_async` error, device lost during poll).
     pub fn execute_and_read<T: bytemuck::Pod>(
         &self,
         output_buffer: &wgpu::Buffer,
@@ -221,11 +239,13 @@ impl StreamingPipeline {
     }
 
     /// Get the number of stages in the pipeline.
+    #[must_use]
     pub fn stage_count(&self) -> usize {
         self.stages.len()
     }
 
     /// Get the pipeline label.
+    #[must_use]
     pub fn label(&self) -> &str {
         &self.label
     }
@@ -236,7 +256,7 @@ mod tests {
     use super::*;
     use crate::device::test_pool;
 
-    const MINIMAL_PASSTHROUGH_WGSL: &str = r#"
+    const MINIMAL_PASSTHROUGH_WGSL: &str = r"
 @group(0) @binding(0) var<storage, read> input: array<f32>;
 @group(0) @binding(1) var<storage, read_write> output: array<f32>;
 
@@ -245,7 +265,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let i = gid.x;
     output[i] = input[i];
 }
-"#;
+";
 
     fn create_minimal_stage(device: &WgpuDevice) -> Option<Stage> {
         let shader = device.compile_shader(MINIMAL_PASSTHROUGH_WGSL, Some("test_passthrough"));

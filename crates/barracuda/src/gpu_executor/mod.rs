@@ -3,11 +3,11 @@
 //!
 //! **Philosophy**: Bridge existing GPU operations to unified architecture
 //!
-//! This module wraps the existing WgpuDevice to implement the ComputeExecutor trait,
-//! allowing the scheduler to use the 364 WGSL shaders we've already built.
+//! This module wraps the existing `WgpuDevice` to implement the `ComputeExecutor` trait,
+//! allowing the scheduler to use the 708 WGSL shaders we've already built.
 //!
 //! **Deep Debt Principles**:
-//! - ✅ Reuse existing 364 shaders
+//! - ✅ Reuse existing 708 shaders
 //! - ✅ Zero duplication
 //! - ✅ Runtime capability discovery
 //! - ✅ Hardware-agnostic (works on any GPU)
@@ -37,6 +37,9 @@ mod capability_defaults {
     pub const FALLBACK_MEMORY_GB: f64 = 1.0;
     pub const FALLBACK_PEAK_TFLOPS: f64 = 0.5;
     pub const GPU_MAX_PARALLEL_UNITS: usize = 2048;
+    /// Conservative SIMD width fallback — actual width is probed from
+    /// `AdapterInfo::subgroup_min_size` / `subgroup_max_size` at device
+    /// creation time. 32 is correct for NVIDIA; AMD GCN/RDNA uses 64.
     pub const GPU_SIMD_WIDTH: usize = 32;
     pub const MEMORY_AVAILABLE_FRACTION: f64 = 0.8;
     pub const TYPICAL_BANDWIDTH_GB_S: u64 = 500;
@@ -67,7 +70,7 @@ mod scoring {
     pub const SCORE_GPU_DEFAULT: f64 = 0.80;
 }
 
-/// GPU executor wrapping WgpuDevice
+/// GPU executor wrapping `WgpuDevice`
 pub struct GpuExecutor {
     device: Arc<WgpuDevice>,
     capabilities: HardwareCapabilities,
@@ -75,6 +78,8 @@ pub struct GpuExecutor {
 
 impl GpuExecutor {
     /// Create new GPU executor
+    /// # Errors
+    /// Returns [`Err`] if no WGPU adapter is found or device creation fails.
     pub async fn new() -> Result<Self> {
         let device = WgpuDevice::new().await?;
         let capabilities = Self::detect_capabilities(&device);
@@ -85,7 +90,8 @@ impl GpuExecutor {
         })
     }
 
-    /// Create from existing WgpuDevice
+    /// Create from existing `WgpuDevice`
+    #[must_use]
     pub fn from_device(device: WgpuDevice) -> Self {
         let capabilities = Self::detect_capabilities(&device);
         Self {
@@ -95,6 +101,7 @@ impl GpuExecutor {
     }
 
     /// Create from shared `Arc<WgpuDevice>` (for test pool usage)
+    #[must_use]
     pub fn from_device_arc(device: Arc<WgpuDevice>) -> Self {
         let capabilities = Self::detect_capabilities(&device);
         Self {
@@ -105,7 +112,11 @@ impl GpuExecutor {
 
     /// Detect GPU capabilities
     fn detect_capabilities(device: &WgpuDevice) -> HardwareCapabilities {
-        use capability_defaults::*;
+        use capability_defaults::{
+            BYTES_PER_GB, DISCRETE_MEMORY_GB, DISCRETE_PEAK_TFLOPS, FALLBACK_MEMORY_GB,
+            FALLBACK_PEAK_TFLOPS, GPU_MAX_PARALLEL_UNITS, GPU_SIMD_WIDTH, INTEGRATED_MEMORY_GB,
+            INTEGRATED_PEAK_TFLOPS, MEMORY_AVAILABLE_FRACTION, TYPICAL_BANDWIDTH_GB_S,
+        };
 
         let (memory_gb, peak_tflops) = match device.device_type() {
             wgpu::DeviceType::DiscreteGpu => (DISCRETE_MEMORY_GB, DISCRETE_PEAK_TFLOPS),
@@ -162,12 +173,13 @@ impl GpuExecutor {
         }
     }
 
-    /// Get underlying WgpuDevice
+    /// Get underlying `WgpuDevice`
+    #[must_use]
     pub fn device(&self) -> &WgpuDevice {
         &self.device
     }
 
-    /// Get Arc to WgpuDevice (for internal dispatch use)
+    /// Get Arc to `WgpuDevice` (for internal dispatch use)
     pub(crate) fn wgpu_device_arc(&self) -> &Arc<WgpuDevice> {
         &self.device
     }
@@ -210,13 +222,23 @@ impl ComputeExecutor for GpuExecutor {
             MathOp::Reshape { .. } | MathOp::Transpose { .. } => true,
             MathOp::Broadcast { .. } | MathOp::Concat { .. } => true,
 
-            _ => true, // Assume GPU can handle most ops (364 WGSL shaders!)
+            _ => true, // Assume GPU can handle most ops (708 WGSL shaders)
         }
     }
 
     fn score_operation(&self, op: &MathOp, inputs: &[TensorDescriptor]) -> f64 {
-        use scoring::*;
-        use MathOp::*;
+        use MathOp::{
+            Add, AvgPool2D, BatchMatMul, Broadcast, Conv2D, Div, GELU, MatMul, Max, MaxPool2D, Min,
+            Mul, Pow, ReLU, ReduceMax, ReduceMean, ReduceMin, ReduceProd, ReduceSum, Reshape,
+            Sigmoid, Softmax, Sub, Tanh, Transpose,
+        };
+        use scoring::{
+            LARGE_THRESHOLD, MEDIUM_THRESHOLD, SCORE_GPU_ACCEPTABLE, SCORE_GPU_ACTIVATION_LARGE,
+            SCORE_GPU_BINARY_LARGE, SCORE_GPU_CONV_LARGE, SCORE_GPU_CONV_SMALL, SCORE_GPU_DEFAULT,
+            SCORE_GPU_DOMINANT, SCORE_GPU_GOOD, SCORE_GPU_MARGINAL, SCORE_GPU_REDUCE_LARGE,
+            SCORE_GPU_REDUCE_SMALL, SCORE_GPU_SHAPE_LARGE, SCORE_GPU_SHAPE_SMALL, SCORE_SMALL,
+            SCORE_TINY, SMALL_THRESHOLD, TINY_THRESHOLD, VERY_LARGE_THRESHOLD,
+        };
 
         let total_elements: usize = inputs.iter().map(|t| t.numel).sum();
 

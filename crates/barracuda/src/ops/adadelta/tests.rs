@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Tests for AdaDelta Optimizer
+//! Tests for `AdaDelta` Optimizer
 
 use super::*;
 use crate::device::test_pool::get_test_device_if_gpu_available;
@@ -101,23 +101,29 @@ async fn test_adadelta_validation() {
         .unwrap();
 
     // Shape mismatch
-    assert!(weights
-        .clone()
-        .adadelta_step(&gradients, 0.95, None, None)
-        .is_err());
+    assert!(
+        weights
+            .clone()
+            .adadelta_step(&gradients, 0.95, None, None)
+            .is_err()
+    );
 
     // Invalid rho
     let gradients_correct = Tensor::from_vec_on(vec![0.1; 10], vec![10], device.clone())
         .await
         .unwrap();
-    assert!(weights
-        .clone()
-        .adadelta_step(&gradients_correct, -0.1, None, None)
-        .is_err());
-    assert!(weights
-        .clone()
-        .adadelta_step(&gradients_correct, 1.5, None, None)
-        .is_err());
+    assert!(
+        weights
+            .clone()
+            .adadelta_step(&gradients_correct, -0.1, None, None)
+            .is_err()
+    );
+    assert!(
+        weights
+            .clone()
+            .adadelta_step(&gradients_correct, 1.5, None, None)
+            .is_err()
+    );
 }
 
 #[tokio::test]

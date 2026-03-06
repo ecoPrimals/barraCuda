@@ -5,9 +5,9 @@
 //! The staggered (Kogut-Susskind) Dirac operator acts on a single-component
 //! complex color vector at each lattice site:
 //!
-//!   (D_st ψ)(x) = m ψ(x) + (1/2) Σ_μ η_μ(x) [U_μ(x) ψ(x+μ) - U_μ†(x-μ) ψ(x-μ)]
+//!   (`D_st` ψ)(x) = m ψ(x) + (1/2) `Σ_μ` `η_μ(x)` [`U_μ(x)` ψ(x+μ) - U_μ†(x-μ) ψ(x-μ)]
 //!
-//! where η_μ(x) = (-1)^{x_0 + ... + x_{μ-1}} are the staggered phases.
+//! where `η_μ(x)` = (-`1)^{x_0` + ... + x_{μ-1}} are the staggered phases.
 //!
 //! ## GPU Strategy
 //!
@@ -54,6 +54,11 @@ pub struct StaggeredDirac {
 
 impl StaggeredDirac {
     /// Compile the Dirac pipeline for the given lattice volume.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>, volume: u32) -> Result<Self> {
         let module = device.compile_shader_f64(DIRAC_SHADER, Some("dirac_staggered"));
 
@@ -98,7 +103,7 @@ impl StaggeredDirac {
         })
     }
 
-    /// Dispatch D_st on GPU-resident buffers.
+    /// Dispatch `D_st` on GPU-resident buffers.
     ///
     /// * `mass` — fermion mass parameter
     /// * `hop_sign` — `+1.0` for D, `-1.0` for D† (adjoint)
@@ -107,6 +112,11 @@ impl StaggeredDirac {
     /// * `psi_out` — `[V × 6]` f64 output (overwritten)
     /// * `nbr_buf` — `[V × 8]` u32 neighbor table
     /// * `phases_buf` — `[V × 4]` f64 staggered phases
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn dispatch(
         &self,
         mass: f64,
@@ -199,7 +209,7 @@ pub struct DiracGpuLayout {
     pub links_flat: Vec<f64>,
     /// `[V × 8]` u32 — neighbor indices (4 dirs × forward/backward)
     pub neighbors: Vec<u32>,
-    /// `[V × 4]` f64 — staggered phases η_μ(x) = ±1.0
+    /// `[V × 4]` f64 — staggered phases `η_μ(x)` = ±1.0
     pub phases: Vec<f64>,
 }
 
@@ -208,6 +218,7 @@ impl DiracGpuLayout {
     ///
     /// `dims` is `[nt, nx, ny, nz]`. `links` provides the gauge field:
     /// `links[(site * 4 + mu) * 18 + row * 6 + col * 2 + 0/1]` for re/im.
+    #[must_use]
     pub fn new(dims: [usize; 4], links_data: Vec<f64>) -> Self {
         let volume = dims.iter().product::<usize>();
         let mut neighbors = vec![0u32; volume * 8];
@@ -264,11 +275,7 @@ fn site_neighbor(coords: &[usize; 4], dims: &[usize; 4], mu: usize, forward: boo
 
 fn staggered_phase(coords: &[usize; 4], mu: usize) -> f64 {
     let sum: usize = coords.iter().take(mu).sum();
-    if sum.is_multiple_of(2) {
-        1.0
-    } else {
-        -1.0
-    }
+    if sum.is_multiple_of(2) { 1.0 } else { -1.0 }
 }
 
 // ─── BGL helpers ─────────────────────────────────────────────────────────────

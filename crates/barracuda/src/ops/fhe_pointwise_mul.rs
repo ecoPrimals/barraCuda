@@ -10,7 +10,7 @@ use bytemuck::{Pod, Zeroable};
 /// computes C = A ⊙ B (element-wise product).
 ///
 /// This is the core operation in fast polynomial multiplication:
-///   poly_mul(a, b) = INTT(pointwise_mul(NTT(a), NTT(b)))
+///   `poly_mul(a`, b) = `INTT(pointwise_mul(NTT(a)`, NTT(b)))
 ///
 /// Complexity: O(N) - much faster than O(N²) convolution!
 ///
@@ -53,12 +53,14 @@ struct PointwiseMulParams {
 
 impl FhePointwiseMul {
     /// Create a new point-wise multiplication operation
-    ///
     /// # Arguments
     /// * `input_a` - First polynomial in NTT domain (N × 2 u32 values)
     /// * `input_b` - Second polynomial in NTT domain (N × 2 u32 values)
     /// * `degree` - Polynomial degree (N), must be power of 2
     /// * `modulus` - FHE modulus q (64-bit prime)
+    /// # Errors
+    /// Returns [`Err`] if polynomial lengths do not match degree, tensors are on
+    /// different devices, or modulus is zero.
     pub fn new(input_a: Tensor, input_b: Tensor, degree: u32, modulus: u64) -> Result<Self> {
         // Validate inputs
         if !degree.is_power_of_two() {
@@ -110,8 +112,10 @@ impl FhePointwiseMul {
     }
 
     /// Execute point-wise multiplication on GPU
-    ///
     /// Returns: C = A ⊙ B (element-wise product in NTT domain)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(&self) -> Result<Tensor> {
         let device = self.input_a.device();
 
@@ -140,7 +144,7 @@ impl FhePointwiseMul {
             .storage_rw(2, &result_buffer)
             .uniform(3, &params_buffer)
             .dispatch_1d(self.degree)
-            .submit();
+            .submit()?;
 
         // Return tensor (data stays on GPU)
         Ok(Tensor::from_buffer(

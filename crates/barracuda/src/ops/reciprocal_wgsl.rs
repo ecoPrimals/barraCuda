@@ -26,6 +26,7 @@ pub struct Reciprocal {
 
 impl Reciprocal {
     /// Create a new reciprocal operation
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -36,6 +37,11 @@ impl Reciprocal {
     }
 
     /// Execute the reciprocal operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -180,6 +186,11 @@ impl Reciprocal {
 
 impl Tensor {
     /// Compute reciprocal element-wise
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn reciprocal_wgsl(self) -> Result<Self> {
         Reciprocal::new(self).execute()
     }

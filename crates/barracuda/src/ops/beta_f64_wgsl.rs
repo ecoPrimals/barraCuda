@@ -4,10 +4,10 @@
 //! B(a,b) = Γ(a)Γ(b)/Γ(a+b), computed via log-gamma for stability.
 //! Applications: Beta distributions, Bayesian statistics, binomial coefficients
 
+use crate::device::WgpuDevice;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -50,6 +50,11 @@ pub struct BetaF64 {
 
 impl BetaF64 {
     /// Create new Beta f64 operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -61,6 +66,11 @@ impl BetaF64 {
     ///
     /// # Returns
     /// Vector of B(aᵢ, bᵢ) values with f64 precision
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn beta(&self, pairs: &[f64]) -> Result<Vec<f64>> {
         if pairs.is_empty() || !pairs.len().is_multiple_of(2) {
             return Ok(vec![]);

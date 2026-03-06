@@ -46,8 +46,8 @@
 //! // ...
 //! ```
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -70,6 +70,11 @@ pub struct BrayCurtisF64 {
 
 impl BrayCurtisF64 {
     /// Create a new Bray-Curtis GPU operator
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         let shader_source = include_str!("../shaders/math/bray_curtis_f64.wgsl");
         let shader_module = device.compile_shader_f64(shader_source, Some("BrayCurtisF64 Shader"));
@@ -91,12 +96,17 @@ impl BrayCurtisF64 {
     /// Compute condensed Bray-Curtis distance matrix
     ///
     /// # Arguments
-    /// * `samples` - Flattened sample matrix [n_samples × n_features], row-major
+    /// * `samples` - Flattened sample matrix [`n_samples` × `n_features`], row-major
     /// * `n_samples` - Number of samples (N)
     /// * `n_features` - Number of features per sample (D)
     ///
     /// # Returns
     /// Condensed distance matrix [N*(N-1)/2]
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn condensed_distance_matrix(
         &self,
         samples: &[f64],
@@ -251,10 +261,11 @@ impl BrayCurtisF64 {
     /// Convert condensed matrix index to (i, j) pair
     ///
     /// Useful for interpreting results.
+    #[must_use]
     pub fn condensed_index_to_pair(idx: usize) -> (usize, usize) {
         // i = floor((1 + sqrt(1 + 8*idx)) / 2)
         let k = idx as f64;
-        let i = ((1.0 + (1.0 + 8.0 * k).sqrt()) / 2.0).floor() as usize;
+        let i = f64::midpoint(1.0, (1.0 + 8.0 * k).sqrt()).floor() as usize;
         let j = idx - i * (i - 1) / 2;
         (i, j)
     }
@@ -262,6 +273,7 @@ impl BrayCurtisF64 {
     /// Convert (i, j) pair to condensed matrix index
     ///
     /// Requires i > j.
+    #[must_use]
     pub fn pair_to_condensed_index(i: usize, j: usize) -> usize {
         debug_assert!(i > j, "Requires i > j for condensed indexing");
         i * (i - 1) / 2 + j
@@ -323,9 +335,7 @@ mod tests {
         let expected = 9.0 / 21.0;
         assert!(
             (bc - expected).abs() < 1e-10,
-            "Got {}, expected {}",
-            bc,
-            expected
+            "Got {bc}, expected {expected}"
         );
     }
 
@@ -336,7 +346,7 @@ mod tests {
             for j in 0..i {
                 let idx = BrayCurtisF64::pair_to_condensed_index(i, j);
                 let (i2, j2) = BrayCurtisF64::condensed_index_to_pair(idx);
-                assert_eq!((i, j), (i2, j2), "Failed for ({}, {})", i, j);
+                assert_eq!((i, j), (i2, j2), "Failed for ({i}, {j})");
             }
         }
     }

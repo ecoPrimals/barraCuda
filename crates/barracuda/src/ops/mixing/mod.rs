@@ -27,7 +27,7 @@
 //! ```text
 //! x_{n+1} = x_n + α·r_n - Σ_m γ_m·(Δx_m + α·Δr_m)
 //! ```
-//! Where r_n = F(x_n) - x_n is the residual.
+//! Where `r_n` = `F(x_n)` - `x_n` is the residual.
 //! Fast convergence (quadratic near solution) but requires history management.
 //!
 //! ## Usage
@@ -46,7 +46,7 @@
 //!
 //! ## Deep Debt Compliance
 //!
-//! - Pure WGSL (f64 via SHADER_F64)
+//! - Pure WGSL (f64 via `SHADER_F64`)
 //! - Physics-agnostic (no domain-specific parameters)
 //! - Validated by hotSpring nuclear EOS (169/169 acceptance checks)
 
@@ -59,6 +59,7 @@ pub mod presets {
     use super::MixingParams;
 
     /// Conservative linear mixing for initial iterations
+    #[must_use]
     pub fn warmup_linear() -> MixingParams {
         MixingParams {
             alpha: 0.3,
@@ -69,6 +70,7 @@ pub mod presets {
     }
 
     /// Standard Broyden for general SCF problems
+    #[must_use]
     pub fn standard_broyden() -> MixingParams {
         MixingParams {
             alpha: 0.4,
@@ -79,6 +81,7 @@ pub mod presets {
     }
 
     /// For density mixing (must be non-negative)
+    #[must_use]
     pub fn density_mixing() -> MixingParams {
         MixingParams {
             alpha: 0.5,
@@ -89,6 +92,7 @@ pub mod presets {
     }
 
     /// Aggressive mixing for well-conditioned problems
+    #[must_use]
     pub fn aggressive() -> MixingParams {
         MixingParams {
             alpha: 0.7,

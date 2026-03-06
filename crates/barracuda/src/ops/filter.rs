@@ -3,19 +3,19 @@
 //!
 //! ## Algorithm (single-level, n ≤ 65,536)
 //!
-//! 1. **evaluate_predicate**: `flags[i] = keep ? 1 : 0`
-//! 2. **local_scan**: intra-workgroup exclusive scan → `scan[i]` (local) + `wg_sums[wg]`
-//! 3. **add_wg_offsets**: single-workgroup scan of `wg_sums[]`, adds offsets to `scan[]`
+//! 1. **`evaluate_predicate`**: `flags[i] = keep ? 1 : 0`
+//! 2. **`local_scan`**: intra-workgroup exclusive scan → `scan[i]` (local) + `wg_sums[wg]`
+//! 3. **`add_wg_offsets`**: single-workgroup scan of `wg_sums[]`, adds offsets to `scan[]`
 //! 4. **scatter**: `output[scan[i]] = input[i]` if `flags[i] == 1`
 //!
 //! ## Algorithm (two-level, 65,536 < n ≤ 16,777,216)
 //!
 //! Adds two extra passes to handle arrays requiring >256 level-0 workgroups:
-//! 1. **evaluate_predicate** (unchanged)
-//! 2. **local_scan** on `flags` → `scan1`, `wg_sums1`
-//! 3. **local_scan** on `wg_sums1` → `wg_sums1_scan`, `wg_sums2`  (≤256 groups)
-//! 4. **add_wg_offsets** on `wg_sums2` (1 workgroup) → `wg_sums1_scan` globally correct
-//! 5. **apply_l1_offsets** (`n_groups1` workgroups) → adds `wg_sums1_scan[wg]` to `scan1`
+//! 1. **`evaluate_predicate`** (unchanged)
+//! 2. **`local_scan`** on `flags` → `scan1`, `wg_sums1`
+//! 3. **`local_scan`** on `wg_sums1` → `wg_sums1_scan`, `wg_sums2`  (≤256 groups)
+//! 4. **`add_wg_offsets`** on `wg_sums2` (1 workgroup) → `wg_sums1_scan` globally correct
+//! 5. **`apply_l1_offsets`** (`n_groups1` workgroups) → adds `wg_sums1_scan[wg]` to `scan1`
 //! 6. **scatter** (unchanged)
 //!
 //! Input size limit: 16,777,216 elements (WG³ = 256³).  Returns an error for
@@ -129,6 +129,7 @@ impl Filter {
     }
 
     /// Create a filter with the given input, operation, and threshold.
+    #[must_use]
     pub fn new(input: Tensor, operation: FilterOperation, threshold: f32) -> Self {
         Self {
             input,
@@ -139,6 +140,7 @@ impl Filter {
     }
 
     /// Set equality/inequality tolerance (default 1e-5).
+    #[must_use]
     pub fn with_epsilon(mut self, eps: f32) -> Self {
         self.epsilon = eps;
         self
@@ -146,10 +148,12 @@ impl Filter {
 
     /// Execute GPU stream compaction, automatically selecting single- or two-level
     /// prefix-sum based on input size.
-    ///
     /// - `n ≤ 65,536`  (WG²): single-level, 4 GPU passes
     /// - `n ≤ 16,777,216` (WG³): two-level, 6 GPU passes
     /// - `n > 16,777,216`: returns `BarracudaError::InvalidInput` (extend to three-level)
+    /// # Errors
+    /// Returns [`Err`] if input length exceeds 16,777,216 elements, buffer allocation
+    /// fails, GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn execute(self) -> Result<FilterResult> {
         let device = self.input.device();
         let n = self.input.len();
@@ -246,7 +250,7 @@ impl Filter {
             .storage_rw(4, &total_buf)
             .uniform(5, &filter_params_buf)
             .dispatch(n_groups, 1, 1)
-            .submit();
+            .submit()?;
 
         // Pass 2a: intra-workgroup scan
         ComputeDispatch::new(device, "scan_local")
@@ -256,7 +260,7 @@ impl Filter {
             .storage_rw(2, &scan_buf)
             .storage_rw(3, &wg_sums_buf)
             .dispatch(n_groups, 1, 1)
-            .submit();
+            .submit()?;
 
         if n_groups <= SCAN_WG {
             // ── Single-level path (n ≤ 65,536) ───────────────────────────────
@@ -269,7 +273,7 @@ impl Filter {
                 .storage_rw(2, &scan_buf)
                 .storage_rw(3, &wg_sums_buf)
                 .dispatch(1, 1, 1)
-                .submit();
+                .submit()?;
         } else {
             // ── Two-level path (65,536 < n ≤ 16,777,216) ─────────────────────
             let n_groups2 = n_groups.div_ceil(SCAN_WG);
@@ -305,7 +309,7 @@ impl Filter {
                 .storage_rw(2, &wg_sums1_scan_buf)
                 .storage_rw(3, &wg_sums2_buf)
                 .dispatch(n_groups2, 1, 1)
-                .submit();
+                .submit()?;
 
             // Pass 2c: single-workgroup scan of wg_sums2 → corrects wg_sums1_scan
             ComputeDispatch::new(device, "scan_offsets_l1")
@@ -315,7 +319,7 @@ impl Filter {
                 .storage_rw(2, &wg_sums1_scan_buf)
                 .storage_rw(3, &wg_sums2_buf)
                 .dispatch(1, 1, 1)
-                .submit();
+                .submit()?;
 
             // Pass 2d: apply L1 offsets (n_groups workgroups) → scan_buf globally correct
             ComputeDispatch::new(device, "apply_l1_offsets")
@@ -325,7 +329,7 @@ impl Filter {
                 .storage_rw(2, &scan_buf)
                 .storage_rw(3, &wg_sums_buf)
                 .dispatch(n_groups, 1, 1)
-                .submit();
+                .submit()?;
         }
 
         // Pass 3: scatter
@@ -338,7 +342,7 @@ impl Filter {
             .storage_rw(4, &total_buf)
             .uniform(5, &filter_params_buf)
             .dispatch(n_groups, 1, 1)
-            .submit();
+            .submit()?;
 
         // ── 6. Read back count and build result ───────────────────────────────
         let count_vec = crate::utils::read_buffer_u32(device, &total_buf, 1)?;
@@ -357,25 +361,32 @@ impl Filter {
 
 impl Tensor {
     /// Stream-compact this tensor, keeping elements satisfying `operation(x, threshold)`.
-    ///
     /// Returns a `FilterResult` with a compacted tensor and element count.
-    ///
     /// # Example
     /// ```ignore
     /// let result = tensor.filter(FilterOperation::GreaterThan, 4.0)?;
     /// let selected = result.selected.to_vec()?;  // only passing values
     /// let count = result.count;
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if input length exceeds 16,777,216 elements, buffer allocation fails,
+    /// GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn filter(self, operation: FilterOperation, threshold: f32) -> Result<FilterResult> {
         Filter::new(self, operation, threshold).execute()
     }
 
     /// Stream-compact keeping elements `> threshold`. Returns `(selected, count)`.
+    /// # Errors
+    /// Returns [`Err`] if input length exceeds 16,777,216 elements, buffer allocation fails,
+    /// GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn filter_gt(self, threshold: f32) -> Result<FilterResult> {
         self.filter(FilterOperation::GreaterThan, threshold)
     }
 
     /// Stream-compact keeping elements `< threshold`. Returns `(selected, count)`.
+    /// # Errors
+    /// Returns [`Err`] if input length exceeds 16,777,216 elements, buffer allocation fails,
+    /// GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn filter_lt(self, threshold: f32) -> Result<FilterResult> {
         self.filter(FilterOperation::LessThan, threshold)
     }

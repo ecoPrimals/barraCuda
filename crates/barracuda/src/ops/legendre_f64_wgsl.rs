@@ -14,8 +14,8 @@
 //! - Multipole expansion in electrostatics
 //! - Gravitational field modeling
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use std::sync::Arc;
 
@@ -29,6 +29,8 @@ pub struct LegendreF64 {
 
 impl LegendreF64 {
     /// Create new Legendre f64 polynomial operation
+    /// # Errors
+    /// Returns [`Err`] if device context cannot be obtained.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -38,13 +40,14 @@ impl LegendreF64 {
     }
 
     /// Compute Legendre polynomial Pₙ(x) for each element
-    ///
     /// # Arguments
     /// * `x` - Input values (should be in [-1, 1] for standard domain)
     /// * `n` - Polynomial degree (0, 1, 2, ...)
-    ///
     /// # Returns
     /// Vector of Pₙ(x) values with f64 precision
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or buffer readback fails
+    /// (e.g. device lost).
     pub fn legendre(&self, x: &[f64], n: u32) -> Result<Vec<f64>> {
         if x.is_empty() {
             return Ok(vec![]);
@@ -54,16 +57,16 @@ impl LegendreF64 {
     }
 
     /// Compute associated Legendre function Pₙᵐ(x) for each element
-    ///
     /// Uses Condon-Shortley phase convention.
-    ///
     /// # Arguments
     /// * `x` - Input values (should be in [-1, 1], typically cos(θ))
     /// * `n` - Degree (0, 1, 2, ...)
     /// * `m` - Order (0 ≤ m ≤ n)
-    ///
     /// # Returns
     /// Vector of Pₙᵐ(x) values with f64 precision
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or buffer readback fails
+    /// (e.g. device lost).
     pub fn assoc_legendre(&self, x: &[f64], n: u32, m: u32) -> Result<Vec<f64>> {
         if x.is_empty() {
             return Ok(vec![]);
@@ -203,7 +206,7 @@ impl LegendreF64 {
             size: size as u32,
             n,
             m,
-            is_assoc: if is_assoc { 1 } else { 0 },
+            is_assoc: u32::from(is_assoc),
         };
 
         let params_buf = self
@@ -222,7 +225,7 @@ impl LegendreF64 {
             .storage_rw(1, &output_buf)
             .uniform(2, &params_buf)
             .dispatch_1d(size as u32)
-            .submit();
+            .submit()?;
 
         let result: Vec<f64> = self.device.read_buffer_f64(&output_buf, size)?;
         Ok(result)
@@ -249,7 +252,7 @@ mod tests {
 
         // P₀(x) = 1 for all x
         for val in result {
-            assert!((val - 1.0).abs() < 1e-10, "P₀(x) should be 1, got {}", val);
+            assert!((val - 1.0).abs() < 1e-10, "P₀(x) should be 1, got {val}");
         }
         Ok(())
     }

@@ -16,14 +16,14 @@ pub enum Optimizer {
         /// Numerical stability epsilon.
         eps: f32,
     },
-    /// AdaGrad optimizer.
+    /// `AdaGrad` optimizer.
     AdaGrad {
         /// Learning rate.
         lr: f32,
         /// Numerical stability epsilon.
         eps: f32,
     },
-    /// AdaDelta optimizer.
+    /// `AdaDelta` optimizer.
     AdaDelta {
         /// Decay factor rho.
         rho: f32,

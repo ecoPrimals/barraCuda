@@ -356,7 +356,7 @@ impl BarraCudaService for BarraCudaServer {
             Ok(report) => HealthReport {
                 name: report.name.clone(),
                 version: report.version.clone(),
-                status: format!("{}", report.status),
+                status: report.status.to_string(),
             },
             Err(e) => HealthReport {
                 name: "barraCuda".to_string(),
@@ -587,7 +587,7 @@ impl BarraCudaService for BarraCudaServer {
                 return FheNttResult {
                     status: format!("error: {e}"),
                     result: vec![],
-                }
+                };
             }
         };
 
@@ -602,7 +602,7 @@ impl BarraCudaService for BarraCudaServer {
                 return FheNttResult {
                     status: format!("error: {e}"),
                     result: vec![],
-                }
+                };
             }
         };
 
@@ -639,7 +639,7 @@ impl BarraCudaService for BarraCudaServer {
                 return FhePointwiseMulResult {
                     status: format!("error: {e}"),
                     result: vec![],
-                }
+                };
             }
         };
         let tensor_b = match u64_to_tensor(&b, &dev) {
@@ -648,7 +648,7 @@ impl BarraCudaService for BarraCudaServer {
                 return FhePointwiseMulResult {
                     status: format!("error: {e}"),
                     result: vec![],
-                }
+                };
             }
         };
 
@@ -663,7 +663,7 @@ impl BarraCudaService for BarraCudaServer {
                 return FhePointwiseMulResult {
                     status: format!("error: {e}"),
                     result: vec![],
-                }
+                };
             }
         };
 

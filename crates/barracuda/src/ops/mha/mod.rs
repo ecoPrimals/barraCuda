@@ -15,11 +15,11 @@
 //! ```
 //!
 //! **Implementation**: 5-pass GPU execution
-//! 1. Pass 1: Project Q through W_q with head split: [B,S,D] → [B,H,S,D/H]
-//! 2. Pass 2: Project K through W_k with head split: [B,S,D] → [B,H,S,D/H]
-//! 3. Pass 3: Project V through W_v with head split: [B,S,D] → [B,H,S,D/H]
+//! 1. Pass 1: Project Q through `W_q` with head split: [B,S,D] → [B,H,S,D/H]
+//! 2. Pass 2: Project K through `W_k` with head split: [B,S,D] → [B,H,S,D/H]
+//! 3. Pass 3: Project V through `W_v` with head split: [B,S,D] → [B,H,S,D/H]
 //! 4. Pass 4: Apply validated attention: [B,H,S,D/H] → [B,H,S,D/H]
-//! 5. Pass 5: Concat heads + project through W_o: [B,H,S,D/H] → [B,S,D]
+//! 5. Pass 5: Concat heads + project through `W_o`: [B,H,S,D/H] → [B,S,D]
 //!
 //! **Deep Debt**: Custom WGSL for projections + reuse validated attention
 //!
@@ -78,10 +78,11 @@ pub struct MultiHeadAttention {
 
 impl MultiHeadAttention {
     /// Create new multi-head attention operation
-    ///
     /// **Shapes**:
-    /// - query, key, value: [batch, seq_len, d_model]
-    /// - w_q, w_k, w_v, w_o: [d_model, d_model]
+    /// - query, key, value: [batch, `seq_len`, `d_model`]
+    /// - `w_q`, `w_k`, `w_v`, `w_o`: [`d_model`, `d_model`]
+    /// # Errors
+    /// Returns [`Err`] if shapes are invalid (not 3D/2D), `batch/d_model` mismatch, K/V shapes differ, weight shapes differ from [`d_model`, `d_model`], or `d_model` is not divisible by `num_heads`.
     pub fn new(
         query: Tensor,
         key: Tensor,
@@ -168,6 +169,8 @@ impl MultiHeadAttention {
     }
 
     /// Execute multi-head attention on GPU
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or device submission fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let batch_size = self.query.shape()[0];
         let q_seq_len = self.query.shape()[1];
@@ -214,31 +217,27 @@ impl MultiHeadAttention {
 
 impl Tensor {
     /// Multi-head attention with learned projections
-    ///
     /// **Deep Debt**: Composes validated operations (proven to work!)
-    ///
     /// # Arguments
-    /// - `key`: Key tensor [batch, seq_len, d_model]
-    /// - `value`: Value tensor [batch, seq_len, d_model]
-    /// - `w_q`, `w_k`, `w_v`, `w_o`: Projection weights [d_model, d_model]
+    /// - `key`: Key tensor [batch, `seq_len`, `d_model`]
+    /// - `value`: Value tensor [batch, `seq_len`, `d_model`]
+    /// - `w_q`, `w_k`, `w_v`, `w_o`: Projection weights [`d_model`, `d_model`]
     /// - `num_heads`: Number of attention heads
-    ///
     /// # Returns
-    /// Output tensor [batch, seq_len, d_model]
-    ///
+    /// Output tensor [batch, `seq_len`, `d_model`]
     /// # Example
     /// ```rust,ignore
     /// let q = Tensor::randn(vec![2, 128, 512]).await?;
     /// let k = Tensor::randn(vec![2, 128, 512]).await?;
     /// let v = Tensor::randn(vec![2, 128, 512]).await?;
-    ///
     /// let w_q = Tensor::randn(vec![512, 512]).await?;
     /// let w_k = Tensor::randn(vec![512, 512]).await?;
     /// let w_v = Tensor::randn(vec![512, 512]).await?;
     /// let w_o = Tensor::randn(vec![512, 512]).await?;
-    ///
     /// let output = q.multi_head_attention(&k, &v, &w_q, &w_k, &w_v, &w_o, 8)?;
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if shapes are invalid, or buffer allocation/GPU dispatch fails (e.g. device lost).
     pub fn multi_head_attention(
         self,
         key: &Self,

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! WassersteinLoss - Pure WGSL
+//! `WassersteinLoss` - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -20,6 +20,9 @@ pub struct WassersteinLoss {
 
 impl WassersteinLoss {
     /// Create a new Wasserstein loss operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(pred: Tensor, target: Tensor) -> Result<Self> {
         if pred.shape() != target.shape() {
             return Err(BarracudaError::invalid_op(
@@ -42,6 +45,9 @@ impl WassersteinLoss {
     }
 
     /// Execute the Wasserstein loss operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.pred.device();
 

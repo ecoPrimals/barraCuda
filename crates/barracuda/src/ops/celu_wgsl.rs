@@ -26,6 +26,7 @@ pub struct CELU {
 
 impl CELU {
     /// Create a new celu operation
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -36,6 +37,11 @@ impl CELU {
     }
 
     /// Execute the celu operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -184,6 +190,11 @@ impl CELU {
 
 impl Tensor {
     /// Compute celu element-wise
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn celu_wgsl(self) -> Result<Self> {
         CELU::new(self).execute()
     }

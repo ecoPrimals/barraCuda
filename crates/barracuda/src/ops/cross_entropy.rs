@@ -20,6 +20,7 @@ pub struct CrossEntropy {
 
 impl CrossEntropy {
     /// Creates a new cross entropy loss. Shapes must match.
+    #[must_use]
     pub fn new(predictions: Tensor, targets: Tensor) -> Self {
         Self {
             predictions,
@@ -32,6 +33,9 @@ impl CrossEntropy {
     }
 
     /// Executes cross entropy loss and returns a scalar loss tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size: usize = self.predictions.shape().iter().product();
@@ -108,6 +112,9 @@ impl Tensor {
     /// Compute Cross Entropy loss
     /// # Arguments
     /// * `targets` - Target probabilities
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn cross_entropy(self, targets: Tensor) -> Result<Self> {
         CrossEntropy::new(self, targets).execute()
     }

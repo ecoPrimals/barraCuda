@@ -6,7 +6,7 @@
 //!
 //! The buffer is stored as `Arc<wgpu::Buffer>` so it can be shared with a
 //! `Tensor` via `Tensor::from_arc_buffer` — eliminating the GPU→CPU→GPU
-//! round-trip when wrapping an executed output back into TensorStorage.
+//! round-trip when wrapping an executed output back into `TensorStorage`.
 
 use crate::device::WgpuDevice;
 use crate::error::Result;
@@ -21,7 +21,7 @@ use std::sync::Arc;
 ///
 /// The buffer is stored as `Arc<wgpu::Buffer>` so it can be shared with a
 /// `Tensor` via `Tensor::from_arc_buffer` — eliminating the GPU→CPU→GPU
-/// round-trip when wrapping an executed output back into TensorStorage.
+/// round-trip when wrapping an executed output back into `TensorStorage`.
 pub(crate) struct GpuTensorStorage {
     pub(crate) descriptor: TensorDescriptor,
     pub(crate) device: Arc<WgpuDevice>,

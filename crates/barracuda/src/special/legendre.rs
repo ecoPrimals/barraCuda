@@ -54,6 +54,7 @@
 /// // Pₙ(1) = 1 for all n
 /// assert!((legendre(10, 1.0) - 1.0).abs() < 1e-14);
 /// ```
+#[must_use]
 pub fn legendre(n: usize, x: f64) -> f64 {
     if n == 0 {
         return 1.0;
@@ -100,6 +101,7 @@ pub fn legendre(n: usize, x: f64) -> f64 {
 /// assert!((p[1] - 0.5).abs() < 1e-14);     // P₁
 /// assert!((p[2] - (-0.125)).abs() < 1e-14); // P₂
 /// ```
+#[must_use]
 pub fn legendre_all(n: usize, x: f64) -> Vec<f64> {
     let mut result = Vec::with_capacity(n + 1);
 
@@ -153,6 +155,7 @@ pub fn legendre_all(n: usize, x: f64) -> Vec<f64> {
 /// assert!((assoc_legendre(2, 0, 0.5) - (-0.125)).abs() < 1e-14);
 /// ```
 #[expect(clippy::manual_is_multiple_of, reason = "suppressed")] // is_multiple_of is nightly-only
+#[must_use]
 pub fn assoc_legendre(n: usize, m: i32, x: f64) -> f64 {
     let m_abs = m.unsigned_abs() as usize;
 
@@ -229,11 +232,13 @@ fn factorial_ratio(n: usize, m: usize) -> f64 {
 }
 
 /// Compute Legendre polynomial for a batch of x values (CPU path).
+#[must_use]
 pub fn legendre_batch(n: usize, x: &[f64]) -> Vec<f64> {
     x.iter().map(|&xi| legendre(n, xi)).collect()
 }
 
 /// Compute associated Legendre function for a batch of x values.
+#[must_use]
 pub fn assoc_legendre_batch(n: usize, m: i32, x: &[f64]) -> Vec<f64> {
     x.iter().map(|&xi| assoc_legendre(n, m, xi)).collect()
 }

@@ -87,6 +87,7 @@ impl BenchmarkConfig {
     }
 
     /// Quick benchmark (fewer iterations)
+    #[must_use]
     pub fn quick() -> Self {
         Self {
             sizes: vec![32, 64, 128, 256, 512, 1024],
@@ -99,6 +100,7 @@ impl BenchmarkConfig {
     }
 
     /// Thorough benchmark (more sizes and iterations)
+    #[must_use]
     pub fn thorough() -> Self {
         Self {
             sizes: (3..=14).map(|i| 1 << i).collect(), // 8 to 16384
@@ -130,16 +132,19 @@ pub struct OperationBenchmark {
 
 impl OperationBenchmark {
     /// Find the crossover point where GPU becomes faster
+    #[must_use]
     pub fn crossover_index(&self, min_speedup: f64) -> Option<usize> {
         self.speedups.iter().position(|&s| s >= min_speedup)
     }
 
     /// Get the crossover size
+    #[must_use]
     pub fn crossover_size(&self, min_speedup: f64) -> Option<usize> {
         self.crossover_index(min_speedup).map(|i| self.sizes[i])
     }
 
     /// Compute optimal threshold with safety margin
+    #[must_use]
     pub fn optimal_threshold(&self, min_speedup: f64, safety_margin: f64) -> usize {
         match self.crossover_size(min_speedup) {
             Some(size) => ((size as f64) / safety_margin).max(1.0) as usize,
@@ -152,10 +157,11 @@ impl OperationBenchmark {
 
     /// Get maximum speedup observed
     pub fn max_speedup(&self) -> f64 {
-        self.speedups.iter().cloned().fold(0.0, f64::max)
+        self.speedups.iter().copied().fold(0.0, f64::max)
     }
 
     /// Summary string
+    #[must_use]
     pub fn summary(&self, min_speedup: f64, safety_margin: f64) -> String {
         let threshold = self.optimal_threshold(min_speedup, safety_margin);
         let crossover = self.crossover_size(min_speedup);
@@ -165,9 +171,7 @@ impl OperationBenchmark {
             "{:<15} threshold: {:>6}  crossover: {:>6}  max_speedup: {:.2}x  gpu: {}",
             self.operation,
             threshold,
-            crossover
-                .map(|s| s.to_string())
-                .unwrap_or_else(|| "N/A".to_string()),
+            crossover.map_or_else(|| "N/A".to_string(), |s| s.to_string()),
             max_speedup,
             if self.gpu_available { "yes" } else { "no" }
         )
@@ -204,6 +208,7 @@ pub struct BenchmarkResult {
 
 impl BenchmarkResult {
     /// Get optimal thresholds for all operations
+    #[must_use]
     pub fn optimal_thresholds(&self) -> HashMap<Arc<str>, usize> {
         let mut thresholds = HashMap::new();
 
@@ -217,6 +222,7 @@ impl BenchmarkResult {
     }
 
     /// Get threshold results with confidence
+    #[must_use]
     pub fn threshold_results(&self) -> Vec<ThresholdResult> {
         self.operations
             .iter()
@@ -251,6 +257,7 @@ impl BenchmarkResult {
     }
 
     /// Human-readable summary
+    #[must_use]
     pub fn summary(&self) -> String {
         let mut lines = Vec::new();
 
@@ -292,8 +299,7 @@ impl BenchmarkResult {
                 result.threshold,
                 result
                     .crossover_size
-                    .map(|s| s.to_string())
-                    .unwrap_or_else(|| "N/A".to_string()),
+                    .map_or_else(|| "N/A".to_string(), |s| s.to_string()),
                 result.max_speedup,
                 if result.confidence > 0.5 {
                     "high"
@@ -322,6 +328,7 @@ pub struct BenchmarkSuite {
 
 impl BenchmarkSuite {
     /// Create a new benchmark suite
+    #[must_use]
     pub fn new(config: BenchmarkConfig) -> Self {
         let (gpu_available, gpu_name, gpu_device) = check_gpu();
         Self {
@@ -333,11 +340,15 @@ impl BenchmarkSuite {
     }
 
     /// Check if GPU is available
+    #[must_use]
     pub fn has_gpu(&self) -> bool {
         self.gpu_available
     }
 
     /// Benchmark a specific operation
+    /// # Errors
+    /// Returns [`Err`] if CPU or GPU operation execution fails (e.g., unknown
+    /// operation, GPU not available when required, buffer allocation failure).
     pub fn benchmark_operation(&self, operation: &str) -> Result<OperationBenchmark> {
         let mut sizes = Vec::new();
         let mut cpu_times = Vec::new();
@@ -435,6 +446,9 @@ impl BenchmarkSuite {
     }
 
     /// Run benchmarks for common operations
+    /// # Errors
+    /// Returns [`Err`] if any operation benchmark fails (see
+    /// [`benchmark_operation`](Self::benchmark_operation)).
     pub fn run_common(&self) -> Result<BenchmarkResult> {
         let operations = vec!["matmul", "erf", "exp", "sum", "cdist"];
 
@@ -442,6 +456,9 @@ impl BenchmarkSuite {
     }
 
     /// Run benchmarks for specified operations
+    /// # Errors
+    /// Returns [`Err`] if any operation benchmark fails (errors are logged but
+    /// do not stop the run; this returns `Ok` with partial results).
     pub fn run_operations(&self, operations: &[&str]) -> Result<BenchmarkResult> {
         let start = Instant::now();
         let mut results = HashMap::new();
@@ -467,6 +484,9 @@ impl BenchmarkSuite {
     }
 
     /// Run all benchmarks
+    /// # Errors
+    /// Returns [`Err`] if any operation benchmark fails (see
+    /// [`run_operations`](Self::run_operations)).
     pub fn run_all(&self) -> Result<BenchmarkResult> {
         let operations = vec![
             // Special functions

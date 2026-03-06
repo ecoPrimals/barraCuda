@@ -4,11 +4,11 @@
 //! Provenance: groundSpring `drift.rs` / `quasispecies.rs` -> toadStool absorption (S70).
 
 #[cfg(feature = "gpu")]
+use crate::device::WgpuDevice;
+#[cfg(feature = "gpu")]
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 #[cfg(feature = "gpu")]
 use crate::device::compute_pipeline::ComputeDispatch;
-#[cfg(feature = "gpu")]
-use crate::device::WgpuDevice;
 #[cfg(feature = "gpu")]
 use crate::error::Result;
 #[cfg(feature = "gpu")]
@@ -36,11 +36,21 @@ pub struct KimuraGpu {
 #[cfg(feature = "gpu")]
 impl KimuraGpu {
     /// Creates a new GPU-accelerated Kimura fixation probability batch from a WGPU device.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
-    /// Dispatch batch Kimura fixation over (pop_size, selection, initial_freq) triplets.
+    /// Dispatch batch Kimura fixation over (`pop_size`, selection, `initial_freq`) triplets.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn dispatch(
         &self,
         pop_sizes: &[f64],
@@ -82,7 +92,7 @@ impl KimuraGpu {
             .storage_rw(3, &out_buf)
             .uniform(4, &params_buf)
             .dispatch(wg_count, 1, 1)
-            .submit();
+            .submit()?;
 
         self.device.read_f64_buffer(&out_buf, n)
     }

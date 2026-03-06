@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! AffineGrid - Affine Grid Generator
+//! `AffineGrid` - Affine Grid Generator
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation
@@ -35,6 +35,8 @@ pub struct AffineGrid {
 
 impl AffineGrid {
     /// Create affine grid. Theta must be [B, 2, 3] affine matrices.
+    /// # Errors
+    /// Returns [`Err`] if theta is not 3D [B, 2, 3] or height/width are zero.
     pub fn new(theta: Tensor, size: (usize, usize), align_corners: bool) -> Result<Self> {
         // Validate theta shape: must be [B, 2, 3] for affine matrices
         let shape = theta.shape();
@@ -45,7 +47,7 @@ impl AffineGrid {
             ));
         }
 
-        let _batch_size = shape[0];
+        let _ = shape[0];
         let height = size.0;
         let width = size.1;
 
@@ -73,6 +75,8 @@ impl AffineGrid {
     }
 
     /// Execute affine grid generation on GPU.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.theta.device();
         let shape = self.theta.shape();
@@ -88,7 +92,7 @@ impl AffineGrid {
             batch_size: batch_size as u32,
             height: height as u32,
             width: width as u32,
-            align_corners: if self.align_corners { 1 } else { 0 },
+            align_corners: u32::from(self.align_corners),
         };
 
         let params_buffer = device
@@ -212,10 +216,12 @@ impl AffineGrid {
 
 impl Tensor {
     /// Generate affine grid from transformation matrices
-    ///
     /// # Arguments
     /// - `size`: (height, width) output grid size
     /// - `align_corners`: Whether to align corners
+    /// # Errors
+    /// Returns [`Err`] if theta is not 3D [B, 2, 3], height/width are zero, buffer allocation fails,
+    /// GPU dispatch fails, or the device is lost.
     pub fn affine_grid(self, size: (usize, usize), align_corners: bool) -> Result<Self> {
         AffineGrid::new(self, size, align_corners)?.execute()
     }

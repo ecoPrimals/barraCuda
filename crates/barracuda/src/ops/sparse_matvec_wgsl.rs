@@ -14,7 +14,7 @@ use crate::tensor::Tensor;
 
 /// GPU shader for f64 sparse matrix-vector product (CSR format).
 ///
-/// Includes SpMV, axpy, dot product, scale, copy, diagonal preconditioner,
+/// Includes `SpMV`, axpy, dot product, scale, copy, diagonal preconditioner,
 /// linear combination, and full CG solver kernels — all in f64.
 ///
 /// Entry points: `spmv_f64`, `axpy_f64`, `dot_f64`, `scale_f64`, `copy_f64`,
@@ -31,7 +31,8 @@ pub struct SparseMatVec {
 }
 
 impl SparseMatVec {
-    /// Create sparse matvec from CSR format (values, col_indices, row_ptrs) and dense vector.
+    /// Create sparse matvec from CSR format (values, `col_indices`, `row_ptrs`) and dense vector.
+    #[must_use]
     pub fn new(values: Tensor, col_indices: Vec<u32>, row_ptrs: Vec<u32>, vector: Tensor) -> Self {
         Self {
             values,
@@ -46,6 +47,9 @@ impl SparseMatVec {
     }
 
     /// Execute sparse matrix-vector product.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.values.device();
         let num_rows = self.row_ptrs.len() - 1;

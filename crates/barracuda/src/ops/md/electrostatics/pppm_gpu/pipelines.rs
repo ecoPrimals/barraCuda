@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! PPPM bind group layouts and pipeline creation
 //!
-//! Extracted from pppm_layouts for pppm_gpu modularity.
+//! Extracted from `pppm_layouts` for `pppm_gpu` modularity.
 //! Contains all bind group layout definitions and compute pipeline creation.
 
 /// PPPM bind group layout helpers for creating individual bind group layouts.
@@ -35,6 +35,7 @@ impl PppmLayouts {
     }
 
     /// B-spline charge assignment bind group layout.
+    #[must_use]
     pub fn bspline(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("pppm_bspline_bgl"),
@@ -49,6 +50,7 @@ impl PppmLayouts {
     }
 
     /// Charge spreading to grid bind group layout.
+    #[must_use]
     pub fn charge_spread(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("pppm_charge_spread_bgl"),
@@ -63,6 +65,7 @@ impl PppmLayouts {
     }
 
     /// Greens function application bind group layout.
+    #[must_use]
     pub fn greens_apply(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("pppm_greens_apply_bgl"),
@@ -78,6 +81,7 @@ impl PppmLayouts {
     }
 
     /// Force interpolation from grid bind group layout.
+    #[must_use]
     pub fn force_interp(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("pppm_force_interp_bgl"),
@@ -94,6 +98,7 @@ impl PppmLayouts {
     }
 
     /// Real-space erfc forces bind group layout.
+    #[must_use]
     pub fn erfc_forces(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("pppm_erfc_forces_bgl"),
@@ -124,6 +129,7 @@ pub struct PppmBindGroupLayouts {
 
 impl PppmBindGroupLayouts {
     /// Create all PPPM bind group layouts for a device.
+    #[must_use]
     pub fn new(device: &wgpu::Device) -> Self {
         Self {
             bspline: PppmLayouts::bspline(device),
@@ -153,6 +159,7 @@ pub struct PppmPipelines {
 
 impl PppmPipelines {
     /// Create all PPPM compute pipelines from shader modules.
+    #[must_use]
     pub fn new(
         device: &wgpu::Device,
         layouts: &PppmBindGroupLayouts,

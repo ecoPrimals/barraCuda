@@ -14,6 +14,7 @@ pub struct MseLoss {
 
 impl MseLoss {
     /// Creates a new MSE loss. Shapes must match.
+    #[must_use]
     pub fn new(predictions: Tensor, targets: Tensor) -> Self {
         Self {
             predictions,
@@ -26,11 +27,17 @@ impl MseLoss {
     }
 
     /// f64 MSE loss (tree reduction for accumulation accuracy).
+    #[must_use]
     pub fn wgsl_shader_f64() -> &'static str {
         include_str!("../shaders/loss/mse_loss_f64.wgsl")
     }
 
     /// Executes MSE loss and returns a scalar loss tensor.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size: usize = self.predictions.shape().iter().product();
@@ -44,7 +51,7 @@ impl MseLoss {
             .storage_read(1, self.targets.buffer())
             .storage_rw(2, &output_buffer)
             .dispatch_1d(size.max(1) as u32)
-            .submit();
+            .submit()?;
 
         Ok(Tensor::from_buffer(output_buffer, vec![1], device.clone()))
     }
@@ -54,6 +61,11 @@ impl Tensor {
     /// Compute Mean Squared Error loss
     /// # Arguments
     /// * `targets` - Target values
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn mse_loss(self, targets: Tensor) -> Result<Self> {
         MseLoss::new(self, targets).execute()
     }

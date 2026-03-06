@@ -90,6 +90,11 @@ impl SGD {
     /// Create new SGD optimizer operation
     ///
     /// **Deep Debt**: Validates all inputs for shape compatibility
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         weights: Tensor,
         gradients: Tensor,
@@ -203,7 +208,7 @@ impl Tensor {
     /// - `velocity`: Momentum velocity (None for first step)
     ///
     /// # Returns
-    /// - Tuple: (updated_weights, updated_velocity)
+    /// - Tuple: (`updated_weights`, `updated_velocity`)
     ///
     /// # Example
     /// ```rust,ignore
@@ -217,9 +222,14 @@ impl Tensor {
     ///
     /// # Note
     /// - Foundation optimizer for deep learning
-    /// - learning_rate must be positive
+    /// - `learning_rate` must be positive
     /// - momentum must be in [0.0, 1.0]
-    /// - weight_decay must be non-negative
+    /// - `weight_decay` must be non-negative
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn sgd_step(
         self,
         gradients: &Self,

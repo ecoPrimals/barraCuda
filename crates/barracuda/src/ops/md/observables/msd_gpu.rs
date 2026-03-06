@@ -32,6 +32,11 @@ pub struct MsdGpu {
 
 impl MsdGpu {
     /// Creates a new GPU MSD calculator for the given WGPU device.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         let module = device.compile_shader_f64(SHADER, Some("msd_f64"));
 
@@ -73,6 +78,11 @@ impl MsdGpu {
     }
 
     /// Compute MSD for a range of lags.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     ///
     /// * `unwrapped_positions` — contiguous `[n_frames * n * 3]` f64 (PBC-unwrapped)
     /// * `n` — number of particles

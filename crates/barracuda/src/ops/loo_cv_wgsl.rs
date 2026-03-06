@@ -13,7 +13,7 @@ use crate::error::Result;
 use crate::tensor::Tensor;
 
 /// Leave-one-out cross-validation residuals for kernel methods.
-/// LOO_i = (y_i - pred_i) / (1 - H_ii)
+/// `LOO_i` = (`y_i` - `pred_i`) / (1 - `H_ii`)
 pub struct LooCv {
     hat_matrix: Tensor,
     y: Tensor,
@@ -22,6 +22,7 @@ pub struct LooCv {
 
 impl LooCv {
     /// Create LOO-CV residuals from hat matrix, targets, and predictions.
+    #[must_use]
     pub fn new(hat_matrix: Tensor, y: Tensor, predictions: Tensor) -> Self {
         Self {
             hat_matrix,
@@ -40,6 +41,9 @@ impl LooCv {
     }
 
     /// Compute leave-one-out cross-validation residuals.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.hat_matrix.device();
         let n: usize = self.y.shape().iter().product();
@@ -197,6 +201,9 @@ impl LooCv {
 
 impl Tensor {
     /// Compute LOO-CV residuals: (y - pred) / (1 - diag(H))
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn loo_cv(self, y: Tensor, predictions: Tensor) -> Result<Self> {
         LooCv::new(self, y, predictions).execute()
     }

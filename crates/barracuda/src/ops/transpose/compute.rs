@@ -68,7 +68,7 @@ fn execute_2d(
         .storage_rw(1, &output_buffer)
         .uniform(3, &params_buffer)
         .dispatch(workgroups_x, workgroups_y, 1)
-        .submit();
+        .submit()?;
 
     // Create output tensor with transposed shape
     let new_shape = vec![shape[1], shape[0]];
@@ -191,7 +191,7 @@ fn execute_nd(
         .storage_read(7, &input_strides_buffer)
         .storage_read(8, &output_strides_buffer)
         .dispatch(workgroups.max(1), 1, 1)
-        .submit();
+        .submit()?;
 
     // Create output tensor with transposed shape
     Ok(Tensor::from_buffer(

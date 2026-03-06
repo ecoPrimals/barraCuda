@@ -1,22 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Single-dispatch Jacobi eigensolver — one GPU submit for n≤32
 //!
-//! Eliminates poll bottleneck: instead of ~8000 queue.submit() calls per batch,
+//! Eliminates poll bottleneck: instead of ~8000 `queue.submit()` calls per batch,
 //! uses exactly ONE dispatch. Limited to n≤32 by workgroup shared memory.
 
-use super::params::SingleDispatchParams;
 use super::BatchedEighGpu;
-use crate::device::capabilities::{EigensolveStrategy, GpuDriverProfile};
+use super::params::SingleDispatchParams;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::{EigensolveStrategy, GpuDriverProfile};
 use crate::error::{BarracudaError, Result};
 use crate::shaders::precision::ShaderTemplate;
 use std::sync::Arc;
 
 impl BatchedEighGpu {
     /// **SINGLE-DISPATCH** batched eigenvalue decomposition — eliminates poll bottleneck
-    ///
     /// For n=12, batch=40: Previous 7,920 submits → This: 1 submit.
     /// Maximum n=32 (workgroup shared memory limit).
+    /// # Errors
+    /// Returns [`Err`] if `n > 32`, `data.len() != batch_size * n * n`, buffer allocation fails, pipeline execution fails, or the device is lost.
     pub fn execute_single_dispatch(
         device: Arc<WgpuDevice>,
         data: &[f64],
@@ -202,7 +203,10 @@ impl BatchedEighGpu {
         Ok((eigenvalues, eigenvectors))
     }
 
-    /// **SINGLE-DISPATCH** buffer-based eigensolve — no CPU readback
+    /// **SINGLE-DISPATCH** buffer-based eigensolve — no CPU readback.
+    /// Execute batched eigenvalue decomposition using pre-allocated buffers.
+    /// # Errors
+    /// Returns [`Err`] if `n > 32`, buffer sizes are invalid, shader compilation fails, pipeline execution fails, or the device is lost.
     pub fn execute_single_dispatch_buffers(
         device: &Arc<WgpuDevice>,
         matrices_buffer: &wgpu::Buffer,

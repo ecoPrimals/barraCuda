@@ -7,8 +7,6 @@
 
 use std::path::{Path, PathBuf};
 
-use etcetera::BaseStrategy;
-
 use crate::error::{BarracudaError, Result};
 
 /// Package name for cache directory (derived from Cargo metadata, not hardcoded).
@@ -25,16 +23,14 @@ pub struct NcbiCache {
 
 impl NcbiCache {
     /// Create a new cache. If `cache_dir` is `None`, uses XDG-compliant default.
-    ///
     /// Default: `$XDG_CACHE_HOME/<package>/ncbi/` or `~/.cache/<package>/ncbi/`.
+    /// # Errors
+    /// Returns [`Err`] if XDG base strategy cannot be determined (e.g., unsupported platform).
     pub fn new(cache_dir: Option<PathBuf>) -> Result<Self> {
-        let base = match cache_dir {
-            Some(p) => p,
-            None => {
-                let strategy = etcetera::choose_base_strategy()
-                    .map_err(|e| BarracudaError::Internal(format!("XDG cache dir: {e}")))?;
-                strategy.cache_dir()
-            }
+        let base = if let Some(p) = cache_dir {
+            p
+        } else {
+            xdg_cache_dir()?
         };
         Ok(Self {
             cache_dir: base.join(PRIMAL_NAME).join("ncbi"),
@@ -42,16 +38,20 @@ impl NcbiCache {
     }
 
     /// Returns the path where data for the given accession would be cached.
+    #[must_use]
     pub fn cache_path(&self, accession: &str) -> PathBuf {
         self.cache_dir.join(sanitize_filename(accession))
     }
 
     /// Check if the accession data exists in cache.
+    #[must_use]
     pub fn is_cached(&self, accession: &str) -> bool {
         validate_accession(accession).is_ok() && self.cache_path(accession).exists()
     }
 
     /// Write data to cache for the given accession.
+    /// # Errors
+    /// Returns [`Err`] if the accession is invalid (empty, path separators, traversal, etc.), directory creation fails, or file write fails.
     pub fn store(&self, accession: &str, data: &[u8]) -> Result<()> {
         validate_accession(accession)?;
         let path = self.cache_path(accession);
@@ -65,6 +65,8 @@ impl NcbiCache {
     }
 
     /// Read data from cache for the given accession.
+    /// # Errors
+    /// Returns [`Err`] if the accession is invalid or the cache file cannot be read.
     pub fn load(&self, accession: &str) -> Result<Vec<u8>> {
         validate_accession(accession)?;
         let path = self.cache_path(accession);
@@ -72,6 +74,8 @@ impl NcbiCache {
     }
 
     /// Remove all cached data.
+    /// # Errors
+    /// Returns [`Err`] if `remove_dir_all` fails (e.g., permission denied).
     pub fn clear(&self) -> Result<()> {
         if self.cache_dir.exists() {
             std::fs::remove_dir_all(&self.cache_dir)
@@ -79,6 +83,20 @@ impl NcbiCache {
         }
         Ok(())
     }
+}
+
+/// XDG-compliant cache directory resolution (pure stdlib, no external deps).
+///
+/// Returns `$XDG_CACHE_HOME` if set, otherwise `$HOME/.cache`.
+fn xdg_cache_dir() -> Result<PathBuf> {
+    if let Ok(xdg) = std::env::var("XDG_CACHE_HOME") {
+        if !xdg.is_empty() {
+            return Ok(PathBuf::from(xdg));
+        }
+    }
+    let home = std::env::var("HOME")
+        .map_err(|_| BarracudaError::Internal("HOME not set; cannot resolve cache dir".into()))?;
+    Ok(PathBuf::from(home).join(".cache"))
 }
 
 /// Reject paths that could escape the cache directory.
@@ -111,7 +129,7 @@ fn validate_accession(accession: &str) -> Result<()> {
     Ok(())
 }
 
-/// Sanitize accession for use as filename (safe after validate_accession).
+/// Sanitize accession for use as filename (safe after `validate_accession`).
 fn sanitize_filename(accession: &str) -> String {
     accession
         .chars()

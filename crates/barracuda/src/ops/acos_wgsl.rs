@@ -20,6 +20,7 @@ pub struct Acos {
 
 impl Acos {
     /// Create an acos operation.
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -34,6 +35,9 @@ impl Acos {
     }
 
     /// Execute acos on GPU.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -164,6 +168,11 @@ impl Acos {
 
 impl Tensor {
     /// Compute element-wise acos(x).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn acos(self) -> Result<Self> {
         Acos::new(self).execute()
     }

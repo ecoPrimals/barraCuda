@@ -19,6 +19,7 @@ pub struct Erf {
 
 impl Erf {
     /// Create an error function operation.
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -33,6 +34,9 @@ impl Erf {
     }
 
     /// Execute the error function and return the output tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -164,6 +168,9 @@ impl Erf {
 
 impl Tensor {
     /// Apply element-wise error function.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn erf(self) -> Result<Self> {
         Erf::new(self).execute()
     }

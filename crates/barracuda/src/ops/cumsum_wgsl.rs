@@ -20,6 +20,7 @@ pub struct Cumsum {
 
 impl Cumsum {
     /// Create a new cumsum operation
+    #[must_use]
     pub fn new(input: Tensor, dim: usize) -> Self {
         Self { input, dim }
     }
@@ -30,6 +31,9 @@ impl Cumsum {
     }
 
     /// Execute the cumsum operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -185,10 +189,11 @@ impl Cumsum {
 
 impl Tensor {
     /// Compute cumulative sum along a dimension
-    ///
     /// # Arguments
-    ///
     /// * `dim` - Dimension to accumulate along
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn cumsum_wgsl(self, dim: usize) -> Result<Self> {
         Cumsum::new(self, dim).execute()
     }

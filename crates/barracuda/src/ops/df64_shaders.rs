@@ -3,7 +3,7 @@
 //!
 //! These shaders use only f32 hardware but achieve ~48-bit mantissa (~14 decimal
 //! digits) at up to 9.9× throughput of native f64. Use [`crate::device::WgpuDevice::compile_shader_df64`]
-//! to compile (auto-injects df64_core.wgsl + df64_transcendentals.wgsl).
+//! to compile (auto-injects `df64_core.wgsl` + `df64_transcendentals.wgsl`).
 //!
 //! DF64 values are stored as `vec2<f32>` in GPU buffers (hi in .x, lo in .y).
 
@@ -23,7 +23,7 @@ pub const WGSL_ELEMENTWISE_SUB_DF64: &str =
 pub const WGSL_ELEMENTWISE_FMA_DF64: &str =
     include_str!("../shaders/math/elementwise_fma_df64.wgsl");
 
-/// Parallel sum reduction at DF64 precision (tree reduction, workgroup_size 256).
+/// Parallel sum reduction at DF64 precision (tree reduction, `workgroup_size` 256).
 pub const WGSL_SUM_REDUCE_DF64: &str = include_str!("../shaders/reduce/sum_reduce_df64.wgsl");
 
 /// Parallel mean reduction at DF64 precision (sum / n per workgroup).

@@ -14,7 +14,12 @@ impl Adam {
     ///
     /// **Deep Debt**: Efficient single-pass update with bias correction
     ///
-    /// Returns: (new_params, new_m, new_v)
+    /// Returns: (`new_params`, `new_m`, `new_v`)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<(Tensor, Tensor, Tensor)> {
         let device = self.params().device();
         let size = self.params().shape().iter().product::<usize>();

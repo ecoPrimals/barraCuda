@@ -102,7 +102,7 @@ pub(super) fn run_cpu_operation(
             let _: f64 = data.iter().sum();
         }
         "max" => {
-            let _ = data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+            let _ = data.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         }
         "matmul" => {
             let n = size;

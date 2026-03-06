@@ -31,6 +31,7 @@ use std::f64::consts::SQRT_2;
 /// assert!((norm_cdf(0.0) - 0.5).abs() < 1e-10);
 /// assert!((norm_cdf(1.96) - 0.975).abs() < 1e-3);  // 97.5 percentile
 /// ```
+#[must_use]
 pub fn norm_cdf(x: f64) -> f64 {
     0.5 * (1.0 + erf(x / SQRT_2))
 }
@@ -45,6 +46,7 @@ pub fn norm_cdf(x: f64) -> f64 {
 /// let peak = 1.0 / (2.0 * std::f64::consts::PI).sqrt();
 /// assert!((norm_pdf(0.0) - peak).abs() < 1e-10);
 /// ```
+#[must_use]
 pub fn norm_pdf(x: f64) -> f64 {
     const INV_SQRT_2PI: f64 = 0.3989422804014327; // 1/√(2π)
     INV_SQRT_2PI * (-0.5 * x * x).exp()
@@ -77,6 +79,7 @@ pub fn norm_pdf(x: f64) -> f64 {
     clippy::excessive_precision,
     reason = "Acklam algorithm coefficients; precision intentional"
 )]
+#[must_use]
 pub fn norm_ppf(p: f64) -> f64 {
     if p <= 0.0 {
         return f64::NEG_INFINITY;
@@ -149,12 +152,14 @@ pub fn norm_ppf(p: f64) -> f64 {
     x
 }
 
-/// Compute norm_cdf for a batch of values.
+/// Compute `norm_cdf` for a batch of values.
+#[must_use]
 pub fn norm_cdf_batch(x: &[f64]) -> Vec<f64> {
     x.iter().map(|&v| norm_cdf(v)).collect()
 }
 
-/// Compute norm_pdf for a batch of values.
+/// Compute `norm_pdf` for a batch of values.
+#[must_use]
 pub fn norm_pdf_batch(x: &[f64]) -> Vec<f64> {
     x.iter().map(|&v| norm_pdf(v)).collect()
 }
@@ -162,6 +167,7 @@ pub fn norm_pdf_batch(x: &[f64]) -> Vec<f64> {
 /// General normal CDF with mean μ and standard deviation σ.
 ///
 /// Φ((x - μ) / σ)
+#[must_use]
 pub fn norm_cdf_general(x: f64, mu: f64, sigma: f64) -> f64 {
     norm_cdf((x - mu) / sigma)
 }
@@ -169,6 +175,7 @@ pub fn norm_cdf_general(x: f64, mu: f64, sigma: f64) -> f64 {
 /// General normal PDF with mean μ and standard deviation σ.
 ///
 /// (1 / σ) φ((x - μ) / σ)
+#[must_use]
 pub fn norm_pdf_general(x: f64, mu: f64, sigma: f64) -> f64 {
     norm_pdf((x - mu) / sigma) / sigma
 }
@@ -176,6 +183,7 @@ pub fn norm_pdf_general(x: f64, mu: f64, sigma: f64) -> f64 {
 /// General inverse normal CDF (quantile) with mean μ and standard deviation σ.
 ///
 /// μ + σ Φ⁻¹(p)
+#[must_use]
 pub fn norm_ppf_general(p: f64, mu: f64, sigma: f64) -> f64 {
     mu + sigma * norm_ppf(p)
 }
@@ -276,12 +284,7 @@ mod tests {
         // different approximation, so round-trip error can accumulate.
         for x in [-1.0, 0.0, 1.0] {
             let roundtrip = norm_ppf(norm_cdf(x));
-            assert!(
-                (roundtrip - x).abs() < 0.1,
-                "ppf(cdf({})) = {}",
-                x,
-                roundtrip
-            );
+            assert!((roundtrip - x).abs() < 0.1, "ppf(cdf({x})) = {roundtrip}");
         }
     }
 

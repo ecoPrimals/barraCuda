@@ -20,6 +20,9 @@ pub struct Stack {
 
 impl Stack {
     /// Create a new stack operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(tensors: Vec<Tensor>, dim: usize) -> Result<Self> {
         if tensors.is_empty() {
             return Err(crate::error::BarracudaError::InvalidInput {
@@ -64,6 +67,9 @@ impl Stack {
     }
 
     /// Execute the stack operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.tensors[0].device();
         let num_tensors = self.tensors.len();

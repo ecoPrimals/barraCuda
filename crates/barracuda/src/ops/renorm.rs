@@ -23,6 +23,11 @@ pub struct Renorm {
 
 impl Renorm {
     /// Create a renormalization operation clamping L2 norm along the given dimension.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor, dim: usize, max_norm: f32) -> Result<Self> {
         let input_shape = input.shape();
         if dim >= input_shape.len() {
@@ -58,6 +63,11 @@ impl Renorm {
     }
 
     /// Execute renormalization and return the result tensor.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();

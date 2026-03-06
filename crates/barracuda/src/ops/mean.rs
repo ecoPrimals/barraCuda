@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Mean reduction — GPU-resident, pipeline-cached, buffer-pooled
 //!
-//! Evolved from per-call buffer allocation to pooled TensorContext path.
+//! Evolved from per-call buffer allocation to pooled `TensorContext` path.
 //! Dimension-wise results stay GPU-resident; global reductions do a single
 //! scalar readback.
 
@@ -33,6 +33,7 @@ pub struct Mean {
 
 impl Mean {
     /// Create a new mean operation.
+    #[must_use]
     pub fn new(input: Tensor, dim: Option<usize>, keepdim: bool) -> Self {
         Self {
             input,
@@ -50,6 +51,9 @@ impl Mean {
     }
 
     /// Execute the mean operation.
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range for the tensor shape, buffer
+    /// allocation fails, GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -178,16 +182,25 @@ impl Mean {
 
 impl Tensor {
     /// Compute mean (global reduction).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or buffer
+    /// readback fails (e.g. device lost).
     pub fn mean(&self) -> Result<Self> {
         Mean::new(self.clone(), None, false).execute()
     }
 
     /// Compute mean along a dimension.
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range for the tensor shape, buffer
+    /// allocation fails, GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn mean_dim(&self, dim: usize, keepdim: bool) -> Result<Self> {
         Mean::new(self.clone(), Some(dim), keepdim).execute()
     }
 
     /// Compute mean (legacy method for backward compatibility).
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range for the tensor shape, buffer
+    /// allocation fails, GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn mean_wgsl(self, dim: Option<usize>) -> Result<Self> {
         match dim {
             None => Mean::new(self, None, false).execute(),
@@ -296,7 +309,7 @@ mod tests {
         let cpu_result = mean_cpu(&input_data);
 
         let error = (gpu_result[0] - cpu_result).abs();
-        assert!(error < 1e-5, "Error {} exceeds threshold", error);
+        assert!(error < 1e-5, "Error {error} exceeds threshold");
     }
 
     #[tokio::test]

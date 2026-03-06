@@ -94,10 +94,10 @@ impl HardwareInventory {
         // Scan for NPUs
         let mut npus = Vec::new();
         for i in 0..16 {
-            let path = format!("/dev/akida{}", i);
+            let path = format!("/dev/akida{i}");
             if std::path::Path::new(&path).exists() {
                 npus.push(NpuInfo {
-                    name: format!("Akida NPU {}", i),
+                    name: format!("Akida NPU {i}"),
                     device_path: path,
                 });
             }
@@ -162,7 +162,7 @@ where
         Err(e) => {
             let msg = e
                 .downcast_ref::<String>()
-                .map(|s| s.as_str())
+                .map(std::string::String::as_str)
                 .or_else(|| e.downcast_ref::<&str>().copied())
                 .unwrap_or("unknown panic");
             let skip = msg.contains("does not exist")
@@ -181,8 +181,8 @@ where
     }
 }
 
-/// Try to create a WgpuDevice from adapter index. Returns None if the adapter
-/// doesn't support required features (e.g. BUFFER_STORAGE, COMPUTE_SHADER) or
+/// Try to create a `WgpuDevice` from adapter index. Returns None if the adapter
+/// doesn't support required features (e.g. `BUFFER_STORAGE`, `COMPUTE_SHADER`) or
 /// device creation otherwise fails. Catches panics from wgpu validation errors.
 async fn try_create_device(adapter_index: usize) -> Option<Arc<WgpuDevice>> {
     let result = tokio::task::spawn_blocking(move || {
@@ -200,17 +200,11 @@ async fn try_create_device(adapter_index: usize) -> Option<Arc<WgpuDevice>> {
     match result {
         Some(Ok(Ok(device))) => Some(Arc::new(device)),
         Some(Ok(Err(e))) => {
-            eprintln!(
-                "Adapter {}: skipped (unsupported features): {}",
-                adapter_index, e
-            );
+            eprintln!("Adapter {adapter_index}: skipped (unsupported features): {e}");
             None
         }
         Some(Err(_)) => {
-            eprintln!(
-                "Adapter {}: skipped (panic during device creation)",
-                adapter_index
-            );
+            eprintln!("Adapter {adapter_index}: skipped (panic during device creation)");
             None
         }
         None => None,
@@ -219,7 +213,7 @@ async fn try_create_device(adapter_index: usize) -> Option<Arc<WgpuDevice>> {
 
 /// Compare f32 slices with tolerance
 fn assert_close(label: &str, a: &[f32], b: &[f32], tol: f32) {
-    assert_eq!(a.len(), b.len(), "{}: length mismatch", label);
+    assert_eq!(a.len(), b.len(), "{label}: length mismatch");
     let mut max_diff = 0.0f32;
     let mut max_idx = 0;
     for (i, (va, vb)) in a.iter().zip(b.iter()).enumerate() {
@@ -231,11 +225,7 @@ fn assert_close(label: &str, a: &[f32], b: &[f32], tol: f32) {
     }
     assert!(
         max_diff < tol,
-        "{}: max diff {} at idx {} (tol {})",
-        label,
-        max_diff,
-        max_idx,
-        tol
+        "{label}: max diff {max_diff} at idx {max_idx} (tol {tol})"
     );
 }
 
@@ -285,7 +275,7 @@ async fn test_all_gpus_can_create_device() {
         );
 
         // At least one GPU should work
-        assert!(successful > 0, "No GPUs could create devices: {:?}", failed);
+        assert!(successful > 0, "No GPUs could create devices: {failed:?}");
     }) {
         return;
     }
@@ -355,13 +345,8 @@ async fn test_cross_vendor_matmul_parity() {
                 let result_a = &results[name_a];
                 let result_b = &results[name_b];
 
-                assert_close(
-                    &format!("{} vs {}", name_a, name_b),
-                    result_a,
-                    result_b,
-                    1e-3,
-                );
-                println!("  ✓ {} matches {}", name_a, name_b);
+                assert_close(&format!("{name_a} vs {name_b}"), result_a, result_b, 1e-3);
+                println!("  ✓ {name_a} matches {name_b}");
             }
         }
 
@@ -405,7 +390,7 @@ async fn test_cross_vendor_cholesky_parity() {
                 .unwrap();
 
             let result = a.cholesky().unwrap().to_vec().unwrap();
-            println!("  {} Cholesky L: {:?}", name, result);
+            println!("  {name} Cholesky L: {result:?}");
             results.insert(name.clone(), result);
         }
 
@@ -415,12 +400,12 @@ async fn test_cross_vendor_cholesky_parity() {
                 let name_a = &device_names[i];
                 let name_b = &device_names[j];
                 assert_close(
-                    &format!("{} vs {}", name_a, name_b),
+                    &format!("{name_a} vs {name_b}"),
                     &results[name_a],
                     &results[name_b],
                     1e-4,
                 );
-                println!("  ✓ {} matches {}", name_a, name_b);
+                println!("  ✓ {name_a} matches {name_b}");
             }
         }
 
@@ -464,12 +449,8 @@ async fn test_cross_vendor_softmax_parity() {
 
             let result = t.softmax().unwrap().to_vec().unwrap();
             let sum: f32 = result.iter().sum();
-            println!("  {} softmax sum: {:.6}", name, sum);
-            assert!(
-                (sum - 1.0).abs() < 1e-4,
-                "{} softmax should sum to 1.0",
-                name
-            );
+            println!("  {name} softmax sum: {sum:.6}");
+            assert!((sum - 1.0).abs() < 1e-4, "{name} softmax should sum to 1.0");
             results.insert(name.clone(), result);
         }
 
@@ -524,15 +505,11 @@ fn test_kernel_router_dense_workloads_to_wgsl() {
             KernelTarget::Wgsl { device, .. } => {
                 assert!(
                     device.supports_wgsl(),
-                    "Dense workload {:?} should route to WGSL-capable device",
-                    workload
+                    "Dense workload {workload:?} should route to WGSL-capable device"
                 );
             }
             other => {
-                panic!(
-                    "Dense workload {:?} should route to WGSL, got {:?}",
-                    workload, other
-                );
+                panic!("Dense workload {workload:?} should route to WGSL, got {other:?}");
             }
         }
     }
@@ -558,8 +535,7 @@ fn test_kernel_router_small_workloads_to_cpu() {
             assert_eq!(
                 device,
                 DeviceSelection::Cpu,
-                "Small workload {:?} should route to CPU",
-                workload
+                "Small workload {workload:?} should route to CPU"
             );
         }
     }
@@ -597,10 +573,7 @@ fn test_kernel_router_npu_fallback() {
                 // Also valid if NPU models are present
             }
             other => {
-                panic!(
-                    "NPU workload {:?} should route to Wgsl or Npu, got {:?}",
-                    workload, other
-                );
+                panic!("NPU workload {workload:?} should route to Wgsl or Npu, got {other:?}");
             }
         }
     }
@@ -635,7 +608,7 @@ async fn test_multi_gpu_performance_characterization() {
         let a_data: Vec<f32> = (0..size * size).map(|i| (i as f32) * 0.001).collect();
         let b_data: Vec<f32> = (0..size * size).map(|i| (i as f32) * 0.001 + 0.5).collect();
 
-        println!("Benchmark: {}x{} matmul x 20 iterations\n", size, size);
+        println!("Benchmark: {size}x{size} matmul x 20 iterations\n");
 
         for (name, device) in &devices {
             let _warmup = Tensor::from_vec_on(a_data.clone(), vec![size, size], device.clone())
@@ -657,14 +630,11 @@ async fn test_multi_gpu_performance_characterization() {
             let elapsed = start.elapsed();
 
             let total_ms = elapsed.as_secs_f64() * 1000.0;
-            let per_op_ms = total_ms / iterations as f64;
+            let per_op_ms = total_ms / f64::from(iterations);
             let gflops =
-                (2.0 * (size as f64).powi(3) * iterations as f64) / elapsed.as_secs_f64() / 1e9;
+                (2.0 * (size as f64).powi(3) * f64::from(iterations)) / elapsed.as_secs_f64() / 1e9;
 
-            println!(
-                "  {}: {:.2} ms total, {:.3} ms/op, {:.2} GFLOP/s",
-                name, total_ms, per_op_ms, gflops
-            );
+            println!("  {name}: {total_ms:.2} ms total, {per_op_ms:.3} ms/op, {gflops:.2} GFLOP/s");
         }
 
         println!("\n  Performance characterization complete.\n");
@@ -719,7 +689,6 @@ fn test_kernel_router_npu_capability_check() {
     // This will be false unless we register an NPU model
     let can_route = router.can_route_to_npu(&sparse);
     println!(
-        "Sparse inference can route to NPU: {} (expected: depends on model registration)",
-        can_route
+        "Sparse inference can route to NPU: {can_route} (expected: depends on model registration)"
     );
 }

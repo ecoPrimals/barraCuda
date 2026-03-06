@@ -13,7 +13,12 @@
 
 #![expect(clippy::needless_raw_string_hashes, reason = "WGSL readability")]
 
-use super::params::*;
+use super::params::{
+    BISTABLE_N_PARAMS, BISTABLE_N_VARS, BistableParams, CAPACITOR_N_PARAMS, CAPACITOR_N_VARS,
+    COOPERATION_N_PARAMS, COOPERATION_N_VARS, CapacitorParams, CooperationParams,
+    MULTI_SIGNAL_N_PARAMS, MULTI_SIGNAL_N_VARS, MultiSignalParams, PHAGE_DEFENSE_N_PARAMS,
+    PHAGE_DEFENSE_N_VARS, PhageDefenseParams,
+};
 use crate::numerical::ode_generic::OdeSystem;
 
 // ── Capacitor ODE ────────────────────────────────────────────────────────────

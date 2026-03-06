@@ -2,13 +2,13 @@
 //! Integration test for fast polynomial multiplication
 //!
 //! Tests the complete NTT-based fast polynomial multiplication pipeline
-//! using actual GPU-accelerated BarraCuda operations.
+//! using actual GPU-accelerated `BarraCuda` operations.
 //!
 //! This validates:
-//! 1. FheNtt (Number Theoretic Transform)
-//! 2. FhePointwiseMul (Element-wise multiplication in NTT domain)
-//! 3. FheIntt (Inverse NTT)
-//! 4. FheFastPolyMul (Complete pipeline wrapper)
+//! 1. `FheNtt` (Number Theoretic Transform)
+//! 2. `FhePointwiseMul` (Element-wise multiplication in NTT domain)
+//! 3. `FheIntt` (Inverse NTT)
+//! 4. `FheFastPolyMul` (Complete pipeline wrapper)
 
 use barracuda::tensor::Tensor;
 
@@ -181,7 +181,7 @@ fn test_benchmark_results_summary() {
     println!("│ Degree  │ Speedup      │ Efficiency│");
     println!("├─────────┼──────────────┼───────────┤");
     for (degree, speedup, efficiency) in results {
-        println!("│ {:7} │ {:12} │ {:9} │", degree, speedup, efficiency);
+        println!("│ {degree:7} │ {speedup:12} │ {efficiency:9} │");
     }
     println!("└─────────┴──────────────┴───────────┘\n");
 

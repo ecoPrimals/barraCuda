@@ -28,6 +28,10 @@ pub struct LennardJonesForce {
 
 impl LennardJonesForce {
     /// Create a Lennard-Jones force calculator with per-particle σ and ε parameters.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if positions shape is not [N, 3], or sigmas/epsilons shape does not match.
     pub fn new(
         positions: Tensor,
         sigmas: Tensor,
@@ -64,6 +68,11 @@ impl LennardJonesForce {
     }
 
     /// Compute Lennard-Jones forces for all particles and return the force tensor [N, 3].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.positions.device();
         let n_particles = self.positions.shape()[0];
@@ -109,7 +118,7 @@ impl LennardJonesForce {
             .storage_rw(3, &output_buffer)
             .uniform(4, &params_buffer)
             .dispatch(workgroups, 1, 1)
-            .submit();
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,

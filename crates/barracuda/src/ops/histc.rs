@@ -24,6 +24,11 @@ pub struct Histc {
 
 impl Histc {
     /// Create histogram with given bin count and value range.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor, num_bins: usize, min_val: f32, max_val: f32) -> Result<Self> {
         if num_bins == 0 {
             return Err(BarracudaError::invalid_op(
@@ -57,6 +62,11 @@ impl Histc {
     }
 
     /// Execute histogram computation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_size = self.input.shape().iter().product::<usize>();

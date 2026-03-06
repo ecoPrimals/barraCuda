@@ -5,9 +5,9 @@
 
 use std::sync::Arc;
 
+use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 
@@ -31,10 +31,15 @@ impl BoltzmannSamplingGpu {
     /// Uses Gumbel-max trick: sample = argmax(logits/temp + Gumbel).
     ///
     /// # Arguments
-    /// * `logits` - Flattened [batch_size, n_classes]
+    /// * `logits` - Flattened [`batch_size`, `n_classes`]
     /// * `batch_size` - Number of batch elements
     /// * `temperature` - Softmax temperature
     /// * `seed` - Random seed
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(
         device: Arc<WgpuDevice>,
         logits: &[f64],
@@ -57,8 +62,7 @@ impl BoltzmannSamplingGpu {
         if n_classes * batch_size != n {
             return Err(BarracudaError::InvalidInput {
                 message: format!(
-                    "logits.len() must be divisible by batch_size: {} / {}",
-                    n, batch_size
+                    "logits.len() must be divisible by batch_size: {n} / {batch_size}"
                 ),
             });
         }
@@ -114,7 +118,7 @@ impl BoltzmannSamplingGpu {
                 1,
                 1,
             )
-            .submit();
+            .submit()?;
 
         let indices = device.read_buffer_u32(&out_buf, batch_size)?;
         Ok(indices)

@@ -29,7 +29,8 @@ pub struct GridSample {
 }
 
 impl GridSample {
-    /// Create a grid sample operation. Input [B,C,H,W], grid [B,H_out,W_out,2].
+    /// Create a grid sample operation. Input [B,C,H,W], grid [`B,H_out,W_out,2`].
+    #[must_use]
     pub fn new(input: Tensor, grid: Tensor) -> Self {
         Self { input, grid }
     }
@@ -44,6 +45,11 @@ impl GridSample {
     }
 
     /// Execute grid sampling on GPU with bilinear interpolation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -219,6 +225,11 @@ impl GridSample {
 
 impl Tensor {
     /// Sample this tensor at grid coordinates. Uses bilinear interpolation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn grid_sample_wgsl(self, grid: Tensor) -> Result<Self> {
         GridSample::new(self, grid).execute()
     }

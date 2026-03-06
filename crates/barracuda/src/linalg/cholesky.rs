@@ -6,7 +6,7 @@
 //!
 //! # Algorithm
 //!
-//! GPU-accelerated via CholeskyF64 (WGSL). CPU fallback for tests only.
+//! GPU-accelerated via `CholeskyF64` (WGSL). CPU fallback for tests only.
 //!
 //! # Applications
 //!
@@ -33,8 +33,10 @@ pub struct CholeskyDecomposition {
 
 impl CholeskyDecomposition {
     /// Solve the linear system Ax = b.
-    ///
     /// Uses forward substitution (Ly = b) then backward substitution (Lᵀx = y).
+    /// # Errors
+    /// Returns [`Err`] if `b.len() != n`, or if the matrix is singular or not
+    /// positive definite (zero diagonal in L).
     pub fn solve(&self, b: &[f64]) -> Result<Vec<f64>> {
         if b.len() != self.n {
             return Err(BarracudaError::InvalidInput {
@@ -73,6 +75,7 @@ impl CholeskyDecomposition {
     }
 
     /// Compute the determinant: det(A) = det(L)² = (∏ L[i,i])²
+    #[must_use]
     pub fn det(&self) -> f64 {
         let mut det_l = 1.0;
         for i in 0..self.n {
@@ -82,8 +85,8 @@ impl CholeskyDecomposition {
     }
 
     /// Compute log determinant: log(det(A)) = 2·∑ log(L[i,i])
-    ///
     /// More numerically stable for large matrices.
+    #[must_use]
     pub fn log_det(&self) -> f64 {
         let mut log_det = 0.0;
         for i in 0..self.n {
@@ -93,6 +96,8 @@ impl CholeskyDecomposition {
     }
 
     /// Compute the inverse of A via L⁻¹.
+    /// # Errors
+    /// Returns [`Err`] if the matrix is singular or not positive definite.
     pub fn inverse(&self) -> Result<Vec<f64>> {
         let mut inv = vec![0.0; self.n * self.n];
 
@@ -187,8 +192,7 @@ pub fn cholesky_f64_cpu(a: &[f64], n: usize) -> Result<CholeskyDecomposition> {
                 if sum <= 0.0 {
                     return Err(BarracudaError::Numerical {
                         message: format!(
-                            "Matrix is not positive definite: L[{},{}]² = {} ≤ 0",
-                            i, i, sum
+                            "Matrix is not positive definite: L[{i},{i}]² = {sum} ≤ 0"
                         ),
                     });
                 }

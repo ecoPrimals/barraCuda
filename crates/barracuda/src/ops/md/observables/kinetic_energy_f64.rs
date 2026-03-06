@@ -4,12 +4,12 @@
 //! All math originates as `kinetic_energy_f64.wgsl`.
 //!
 //! Applications:
-//! - Temperature calculation: T = 2*KE_total / (3*N*k_B)
+//! - Temperature calculation: T = 2*`KE_total` / (3*N*`k_B`)
 //! - Energy monitoring in MD
 //! - Thermostat validation
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -33,11 +33,15 @@ pub struct KineticEnergyF64 {
 
 impl KineticEnergyF64 {
     /// Creates a new kinetic energy calculator for the given WGPU device.
+    /// # Errors
+    /// Returns [`Err`] if device initialization fails (currently always succeeds).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
-    /// Compute per-particle KE on GPU: KE_i = ½ m_i v_i²
+    /// Compute per-particle KE on GPU: `KE_i` = ½ `m_i` `v_i²`
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, staging buffer mapping fails, or the device is lost.
     pub fn per_particle(&self, velocities: &[f64], masses: &[f64]) -> Result<Vec<f64>> {
         let n = masses.len();
         let d = &self.device.device;
@@ -80,7 +84,7 @@ impl KineticEnergyF64 {
             .storage_rw(2, &ke_buf)
             .uniform(3, &params_buf)
             .dispatch(wg_count, 1, 1)
-            .submit();
+            .submit()?;
 
         let rb = d.create_buffer(&wgpu::BufferDescriptor {
             label: Some("KE:rb"),
@@ -96,12 +100,16 @@ impl KineticEnergyF64 {
     }
 
     /// Compute total kinetic energy (GPU per-particle, host reduce).
+    /// # Errors
+    /// Returns [`Err`] if [`per_particle`](Self::per_particle) fails.
     pub fn total(&self, velocities: &[f64], masses: &[f64]) -> Result<f64> {
         let per_particle = self.per_particle(velocities, masses)?;
         Ok(per_particle.iter().sum())
     }
 
-    /// Compute temperature: T = 2*KE_total / (3*N*k_B).
+    /// Compute temperature: T = 2*`KE_total` / (3*N*`k_B`).
+    /// # Errors
+    /// Returns [`Err`] if [`total`](Self::total) fails.
     pub fn temperature(&self, velocities: &[f64], masses: &[f64], k_b: f64) -> Result<f64> {
         let n = masses.len();
         if n == 0 {
@@ -210,9 +218,7 @@ mod tests {
         let rel_err = (temp - target_temp).abs() / target_temp;
         assert!(
             rel_err < 0.01,
-            "Temperature {} not close to {}",
-            temp,
-            target_temp
+            "Temperature {temp} not close to {target_temp}"
         );
 
         Ok(())

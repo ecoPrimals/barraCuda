@@ -2,7 +2,7 @@
 //! Complex Absolute Value (Magnitude) Operation
 //!
 //! **Operation**: |a + bi| = sqrt(a² + b²)
-//! **Complexity**: O(1) - native WGSL length() function
+//! **Complexity**: O(1) - native WGSL `length()` function
 //! **Use Case**: Power spectra, structure factors S(q)
 
 use crate::device::{DeviceCapabilities, WorkloadType};
@@ -18,6 +18,11 @@ pub struct ComplexAbs {
 
 impl ComplexAbs {
     /// Creates a new complex abs. Input last dimension must be 2 (real, imag).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor) -> Result<Self> {
         let shape = input.shape();
         if shape.last() != Some(&2) {
@@ -101,6 +106,11 @@ impl ComplexAbs {
     }
 
     /// Executes complex abs and returns real-valued magnitudes.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let num_elements = self.input.len();

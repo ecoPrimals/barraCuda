@@ -4,11 +4,11 @@
 //! Provenance: groundSpring `jackknife.rs` -> toadStool absorption (S70).
 
 #[cfg(feature = "gpu")]
+use crate::device::WgpuDevice;
+#[cfg(feature = "gpu")]
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 #[cfg(feature = "gpu")]
 use crate::device::compute_pipeline::ComputeDispatch;
-#[cfg(feature = "gpu")]
-use crate::device::WgpuDevice;
 #[cfg(feature = "gpu")]
 use crate::error::Result;
 #[cfg(feature = "gpu")]
@@ -36,11 +36,21 @@ pub struct JackknifeMeanGpu {
 #[cfg(feature = "gpu")]
 impl JackknifeMeanGpu {
     /// Creates a new GPU-accelerated jackknife mean estimator from a WGPU device.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Dispatch GPU to compute leave-out means, then compute variance on CPU.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn dispatch(&self, data: &[f64]) -> Result<JackknifeResult> {
         let n = data.len();
         if n < 2 {
@@ -77,7 +87,7 @@ impl JackknifeMeanGpu {
             .uniform(2, &params_buf)
             .storage_read(3, &full_sum_buf)
             .dispatch(wg_count, 1, 1)
-            .submit();
+            .submit()?;
 
         let leave_means = self.device.read_f64_buffer(&leave_means_buf, n)?;
 
@@ -266,8 +276,7 @@ mod tests {
         let small_result = jackknife_mean_variance(&data[..20]).unwrap();
         assert!(
             result.std_error < small_result.std_error,
-            "std_error should decrease with n (large n={} vs small n=20)",
-            n
+            "std_error should decrease with n (large n={n} vs small n=20)"
         );
     }
 

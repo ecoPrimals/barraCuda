@@ -27,6 +27,7 @@ pub struct Abs {
 
 impl Abs {
     /// Create a new abs operation
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -37,6 +38,9 @@ impl Abs {
     }
 
     /// Execute the abs operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -181,6 +185,11 @@ impl Abs {
 
 impl Tensor {
     /// Compute abs element-wise
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn abs_wgsl(self) -> Result<Self> {
         Abs::new(self).execute()
     }

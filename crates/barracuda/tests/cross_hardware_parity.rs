@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Cross-Hardware Parity Tests
 //!
-//! Proves BarraCuda produces IDENTICAL results across hardware:
+//! Proves `BarraCuda` produces IDENTICAL results across hardware:
 //! - Same WGSL shader
 //! - Same input data
 //! - GPU vs CPU → must match within f32 tolerance
@@ -78,8 +78,8 @@ async fn test_enumerate_all_adapters() {
     }
 
     println!("\n  Hardware summary:");
-    println!("    GPU available: {}", has_gpu);
-    println!("    CPU fallback:  {}", has_cpu);
+    println!("    GPU available: {has_gpu}");
+    println!("    CPU fallback:  {has_cpu}");
     println!("    Cross-hw test: {}", has_gpu && has_cpu);
 
     assert!(!adapters.is_empty(), "Should find at least one adapter");
@@ -138,8 +138,8 @@ async fn test_matmul_gpu_cpu_parity() {
     let b_cpu = Tensor::from_vec_on(b_data, vec![3, 2], cpu).await.unwrap();
     let cpu_data = a_cpu.matmul(&b_cpu).unwrap().to_vec().unwrap();
 
-    println!("  GPU result: {:?}", gpu_data);
-    println!("  CPU result: {:?}", cpu_data);
+    println!("  GPU result: {gpu_data:?}");
+    println!("  CPU result: {cpu_data:?}");
 
     assert_close("matmul", &gpu_data, &cpu_data, 1e-4);
     println!("  PASS: GPU and CPU produce identical matmul results");
@@ -219,8 +219,8 @@ async fn test_cholesky_gpu_cpu_parity() {
         .unwrap();
     let cpu_data = a_cpu.cholesky().unwrap().to_vec().unwrap();
 
-    println!("  GPU Cholesky: {:?}", gpu_data);
-    println!("  CPU Cholesky: {:?}", cpu_data);
+    println!("  GPU Cholesky: {gpu_data:?}");
+    println!("  CPU Cholesky: {cpu_data:?}");
 
     assert_close("cholesky", &gpu_data, &cpu_data, 1e-4);
     println!("  PASS: GPU and CPU produce identical Cholesky results");
@@ -257,8 +257,8 @@ async fn test_softmax_gpu_cpu_parity() {
         .unwrap();
     let cpu_data = t_cpu.softmax().unwrap().to_vec().unwrap();
 
-    println!("  GPU softmax: {:?}", gpu_data);
-    println!("  CPU softmax: {:?}", cpu_data);
+    println!("  GPU softmax: {gpu_data:?}");
+    println!("  CPU softmax: {cpu_data:?}");
 
     assert_close("softmax", &gpu_data, &cpu_data, 1e-4);
 
@@ -267,13 +267,11 @@ async fn test_softmax_gpu_cpu_parity() {
     let cpu_sum: f32 = cpu_data.iter().sum();
     assert!(
         (gpu_sum - 1.0).abs() < 1e-4,
-        "GPU softmax should sum to 1.0, got {}",
-        gpu_sum
+        "GPU softmax should sum to 1.0, got {gpu_sum}"
     );
     assert!(
         (cpu_sum - 1.0).abs() < 1e-4,
-        "CPU softmax should sum to 1.0, got {}",
-        cpu_sum
+        "CPU softmax should sum to 1.0, got {cpu_sum}"
     );
 
     println!("  PASS: GPU and CPU produce identical softmax results");
@@ -335,7 +333,7 @@ async fn test_performance_comparison() {
             size,
             iterations,
             elapsed.as_secs_f64() * 1000.0,
-            elapsed.as_secs_f64() * 1000.0 / iterations as f64,
+            elapsed.as_secs_f64() * 1000.0 / f64::from(iterations),
         );
     }
 

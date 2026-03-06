@@ -8,7 +8,7 @@
 ///
 /// Divides the simulation box into cubic cells. For short-range forces with
 /// cutoff rc, only particles in the same cell or 26 neighboring cells can
-/// interact. This reduces neighbor search from O(N²) to O(27·N_per_cell·N).
+/// interact. This reduces neighbor search from O(N²) to `O(27·N_per_cell·N)`.
 ///
 /// # Example
 ///
@@ -33,13 +33,13 @@ pub struct CellList {
     /// Total number of cells (nx * ny * nz)
     pub n_cells_total: usize,
 
-    /// First particle index for each cell (length = n_cells_total)
+    /// First particle index for each cell (length = `n_cells_total`)
     pub cell_start: Vec<u32>,
 
-    /// Number of particles in each cell (length = n_cells_total)
+    /// Number of particles in each cell (length = `n_cells_total`)
     pub cell_count: Vec<u32>,
 
-    /// Particle indices sorted by cell (length = n_particles)
+    /// Particle indices sorted by cell (length = `n_particles`)
     pub sorted_indices: Vec<usize>,
 
     /// Cutoff distance
@@ -55,6 +55,7 @@ impl CellList {
     /// # Arguments
     /// * `rc` - Cutoff distance (cell size will be at least this)
     /// * `box_side` - Box side length (assumes cubic box)
+    #[must_use]
     pub fn new(rc: f64, box_side: f64) -> Self {
         Self::new_with_dims(rc, [box_side; 3])
     }
@@ -64,6 +65,7 @@ impl CellList {
     /// # Arguments
     /// * `rc` - Cutoff distance (cell size will be at least this)
     /// * `box_dims` - Box dimensions [Lx, Ly, Lz]
+    #[must_use]
     pub fn new_with_dims(rc: f64, box_dims: [f64; 3]) -> Self {
         // Calculate number of cells per dimension
         // Each cell must be at least rc to ensure neighbors are within cutoff
@@ -99,7 +101,7 @@ impl CellList {
     /// Rebuild cell list from current positions
     ///
     /// This should be called:
-    /// - Every step for guaranteed correctness (rebuild_interval=1)
+    /// - Every step for guaranteed correctness (`rebuild_interval=1`)
     /// - Or with Verlet skin radius for better performance (advanced)
     ///
     /// # Arguments
@@ -153,6 +155,7 @@ impl CellList {
     /// # Arguments
     /// * `data` - Flat array of particle data
     /// * `stride` - Elements per particle (3 for positions/velocities/forces)
+    #[must_use]
     pub fn sort_array(&self, data: &[f64], stride: usize) -> Vec<f64> {
         let mut sorted = vec![0.0f64; data.len()];
 
@@ -172,6 +175,7 @@ impl CellList {
     /// # Arguments
     /// * `data` - Sorted data from GPU
     /// * `stride` - Elements per particle
+    #[must_use]
     pub fn unsort_array(&self, data: &[f64], stride: usize) -> Vec<f64> {
         let mut unsorted = vec![0.0f64; data.len()];
 
@@ -192,6 +196,7 @@ impl CellList {
     ///  cell_size_x, cell_size_y, cell_size_z,
     ///  n_cells_total, 0.0]
     /// ```
+    #[must_use]
     pub fn gpu_params(&self) -> Vec<f64> {
         vec![
             self.n_cells[0] as f64,
@@ -206,26 +211,31 @@ impl CellList {
     }
 
     /// Get cell start array for GPU upload
+    #[must_use]
     pub fn cell_start_u32(&self) -> &[u32] {
         &self.cell_start
     }
 
     /// Get cell count array for GPU upload
+    #[must_use]
     pub fn cell_count_u32(&self) -> &[u32] {
         &self.cell_count
     }
 
     /// Get the cutoff distance
+    #[must_use]
     pub fn cutoff(&self) -> f64 {
         self.rc
     }
 
     /// Get box dimensions
+    #[must_use]
     pub fn box_dims(&self) -> [f64; 3] {
         self.box_dims
     }
 
     /// Estimate memory usage in bytes
+    #[must_use]
     pub fn memory_usage(&self) -> usize {
         let n = self.sorted_indices.len();
         let cells = self.n_cells_total;
@@ -237,6 +247,7 @@ impl CellList {
     }
 
     /// Get statistics about cell occupancy
+    #[must_use]
     pub fn occupancy_stats(&self) -> CellStats {
         if self.n_cells_total == 0 || self.sorted_indices.is_empty() {
             return CellStats::default();
@@ -338,10 +349,7 @@ mod tests {
         for (i, (&orig, &recovered)) in positions.iter().zip(unsorted.iter()).enumerate() {
             assert!(
                 (orig - recovered).abs() < 1e-10,
-                "Mismatch at index {}: {} vs {}",
-                i,
-                orig,
-                recovered
+                "Mismatch at index {i}: {orig} vs {recovered}"
             );
         }
     }

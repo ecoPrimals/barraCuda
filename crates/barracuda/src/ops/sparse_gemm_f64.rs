@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-//! Sparse GEMM (SpMM) — CSR × Dense matrix multiplication on GPU.
+//! Sparse GEMM (`SpMM`) — CSR × Dense matrix multiplication on GPU.
 //!
 //! `C[M, N] = A_csr[M, K] × B_dense[K, N]`
 //!
@@ -9,8 +9,8 @@
 
 use std::sync::Arc;
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use crate::linalg::sparse::CsrMatrix;
 
@@ -38,6 +38,9 @@ pub struct SparseGemmF64<'a> {
 
 impl SparseGemmF64<'_> {
     /// Execute sparse-dense matrix multiplication on GPU.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(&self, device: &Arc<WgpuDevice>) -> Result<Vec<f64>> {
         let m = self.csr.n_rows;
         let k = self.csr.n_cols;

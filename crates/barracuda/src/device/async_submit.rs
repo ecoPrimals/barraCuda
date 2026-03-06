@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Async Submission System for BarraCuda
+//! Async Submission System for `BarraCuda`
 //!
 //! Provides non-blocking GPU submission with operation batching.
 //!
@@ -61,6 +61,7 @@ pub struct AsyncSubmitter {
 
 impl AsyncSubmitter {
     /// Create a new async submitter
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self {
             device,
@@ -71,16 +72,19 @@ impl AsyncSubmitter {
     }
 
     /// Queue a command buffer for deferred submission
-    ///
     /// The command buffer will be submitted when `submit_all()` is called.
     /// This allows batching multiple operations into a single driver call.
+    /// # Panics
+    /// Panics if the pending mutex is poisoned.
     pub fn queue(&self, command_buffer: wgpu::CommandBuffer) {
-        let mut pending = self.pending.lock().expect("pending mutex poisoned");
+        let mut pending = self
+            .pending
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         pending.push(command_buffer);
     }
 
     /// Queue an operation using a callback that receives an encoder
-    ///
     /// Convenience method that creates an encoder, runs the callback,
     /// and queues the finished command buffer.
     pub fn queue_operation<F>(&self, f: F)
@@ -98,11 +102,15 @@ impl AsyncSubmitter {
     }
 
     /// Submit all pending command buffers
-    ///
     /// Returns a submission index that can be used to track completion.
     /// Serialized via `gpu_lock` to prevent wgpu-core storage races.
+    /// # Panics
+    /// Panics if the pending mutex is poisoned.
     pub fn submit_all(&self) -> u64 {
-        let mut pending = self.pending.lock().expect("pending mutex poisoned");
+        let mut pending = self
+            .pending
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         if pending.is_empty() {
             return self.submission_index.load(Ordering::SeqCst);
         }
@@ -111,7 +119,9 @@ impl AsyncSubmitter {
 
         let buffers: Vec<_> = pending.drain(..).collect();
         let lock = self.device.gpu_lock_arc();
-        let _guard = lock.lock().unwrap_or_else(|e| e.into_inner());
+        let _guard = lock
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         self.device.brief_encoder_wait();
         self.device.queue().submit(buffers);
 
@@ -128,26 +138,25 @@ impl AsyncSubmitter {
     }
 
     /// Submit a single command buffer immediately
-    ///
     /// Serialized via `gpu_lock` to prevent wgpu-core storage races.
     pub fn submit_immediate(&self, command_buffer: wgpu::CommandBuffer) -> u64 {
         let index = self.submission_index.fetch_add(1, Ordering::SeqCst) + 1;
         let lock = self.device.gpu_lock_arc();
-        let _guard = lock.lock().unwrap_or_else(|e| e.into_inner());
+        let _guard = lock
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         self.device.brief_encoder_wait();
         self.device.queue().submit(Some(command_buffer));
         index
     }
 
     /// Get the current submission index
-    ///
     /// All work with index <= this value has been submitted to the GPU.
     pub fn current_index(&self) -> u64 {
         self.submission_index.load(Ordering::SeqCst)
     }
 
     /// Check if work at the given index is complete
-    ///
     /// Note: This is approximate. For precise synchronization, use `wait_for()`.
     pub fn is_complete(&self, index: u64) -> bool {
         self.device.poll_nonblocking();
@@ -155,7 +164,6 @@ impl AsyncSubmitter {
     }
 
     /// Wait for work at the given index to complete
-    ///
     /// Blocks until all GPU work up to and including the given index is done.
     /// Uses `poll_safe()` to respect the device lock.
     pub fn wait_for(&self, index: u64) {
@@ -172,15 +180,24 @@ impl AsyncSubmitter {
     }
 
     /// Get the number of pending command buffers
+    /// # Panics
+    /// Panics if the pending mutex is poisoned.
     pub fn pending_count(&self) -> usize {
-        self.pending.lock().expect("pending mutex poisoned").len()
+        self.pending
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .len()
     }
 
     /// Clear all pending command buffers without submitting
-    ///
     /// Use with caution - discards queued work.
+    /// # Panics
+    /// Panics if the pending mutex is poisoned.
     pub fn clear_pending(&self) {
-        self.pending.lock().expect("pending mutex poisoned").clear();
+        self.pending
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clear();
     }
 }
 
@@ -200,9 +217,9 @@ pub struct AsyncReadback {
 
 impl AsyncReadback {
     /// Create a new async readback operation
-    ///
     /// Copies from source buffer to staging and initiates async map.
     /// Thread-safe: wgpu's `Queue::submit` handles internal synchronization.
+    #[must_use]
     pub fn new(device: &WgpuDevice, source: &wgpu::Buffer, size_bytes: u64) -> Self {
         let device = Arc::new(device.clone());
 
@@ -229,7 +246,9 @@ impl AsyncReadback {
 
         {
             let lock = device.gpu_lock_arc();
-            let _guard = lock.lock().unwrap_or_else(|e| e.into_inner());
+            let _guard = lock
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             device.brief_encoder_wait();
             device.queue().submit(Some(commands));
         }
@@ -255,13 +274,13 @@ impl AsyncReadback {
     }
 
     /// Poll the device and check if data is ready (non-blocking).
+    #[must_use]
     pub fn poll(&self) -> bool {
         self.device.poll_nonblocking();
         self.receiver.try_recv().is_ok()
     }
 
     /// Poll the device until the buffer is ready (async-safe cooperative poll).
-    ///
     /// Yields to the Tokio executor between device polls to avoid starving
     /// other tasks. Poll is serialized via `poll_lock` to prevent wgpu-core
     /// cleanup races.
@@ -291,8 +310,10 @@ impl AsyncReadback {
     }
 
     /// Wait for data and read as f32 (async-safe)
-    ///
     /// Uses cooperative polling that yields to the async executor.
+    /// # Errors
+    /// Returns [`Err`] if the GPU device is lost during poll, buffer mapping fails,
+    /// or the readback is cancelled (sender dropped).
     pub async fn read_f32(mut self) -> Result<Vec<f32>, String> {
         self.poll_until_ready().await?;
 
@@ -308,6 +329,9 @@ impl AsyncReadback {
     }
 
     /// Wait for data and read as f64 (async-safe)
+    /// # Errors
+    /// Returns [`Err`] if the GPU device is lost during poll, buffer mapping fails,
+    /// or the readback is cancelled (sender dropped).
     pub async fn read_f64(mut self) -> Result<Vec<f64>, String> {
         self.poll_until_ready().await?;
 
@@ -322,6 +346,9 @@ impl AsyncReadback {
     }
 
     /// Wait for data and read as u32 (async-safe)
+    /// # Errors
+    /// Returns [`Err`] if the GPU device is lost during poll, buffer mapping fails,
+    /// or the readback is cancelled (sender dropped).
     pub async fn read_u32(mut self) -> Result<Vec<u32>, String> {
         self.poll_until_ready().await?;
 
@@ -336,6 +363,9 @@ impl AsyncReadback {
     }
 
     /// Wait for data and read as raw bytes (async-safe)
+    /// # Errors
+    /// Returns [`Err`] if the GPU device is lost during poll, buffer mapping fails,
+    /// or the readback is cancelled (sender dropped).
     pub async fn read_bytes(mut self) -> Result<Vec<u8>, String> {
         self.poll_until_ready().await?;
 
@@ -349,8 +379,10 @@ impl AsyncReadback {
     }
 
     /// Blocking read as f32 (for sync contexts).
-    ///
     /// Uses `poll_safe()` so the map callback fires before `recv()` — no async runtime needed.
+    /// # Errors
+    /// Returns [`Err`] if the GPU device is lost during poll, buffer mapping fails,
+    /// or the readback is cancelled (sender dropped).
     pub fn read_f32_blocking(self) -> Result<Vec<f32>, String> {
         self.device
             .poll_safe()
@@ -370,6 +402,9 @@ impl AsyncReadback {
     }
 
     /// Blocking read as f64 (for sync contexts).
+    /// # Errors
+    /// Returns [`Err`] if the GPU device is lost during poll, buffer mapping fails,
+    /// or the readback is cancelled (sender dropped).
     pub fn read_f64_blocking(self) -> Result<Vec<f64>, String> {
         self.device
             .poll_safe()
@@ -389,6 +424,7 @@ impl AsyncReadback {
     }
 
     /// Get the size in bytes
+    #[must_use]
     pub fn size_bytes(&self) -> u64 {
         self.size_bytes
     }

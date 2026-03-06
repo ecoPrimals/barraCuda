@@ -2,7 +2,7 @@
 //! NPU hardware constants validated by metalForge probing
 //!
 //! These values are derived from systematic hardware testing on a physical
-//! BrainChip AKD1000, overturning several SDK assumptions. See
+//! `BrainChip` AKD1000, overturning several SDK assumptions. See
 //! `ecoPrimals/hotSpring/metalForge/npu/akida/BEYOND_SDK.md` for methodology.
 //!
 //! All tolerances represent worst-case measurements from the hardware probe
@@ -10,24 +10,24 @@
 
 /// FC chain depth overhead: 7 extra FC layers vs 1 FC layer.
 /// Measured at 6.7% on AKD1000 — all FC layers merge into a single
-/// hardware sequence via intra-mesh SkipDMA.
+/// hardware sequence via intra-mesh `SkipDMA`.
 pub const FC_DEPTH_OVERHEAD_MAX: f64 = 0.30;
 
 /// Batch inference speedup floor: batch=8 vs batch=1.
 /// Measured at 2.35x on AKD1000 (427 us/sample at batch=8).
-/// PCIe round-trip amortization is the mechanism.
+/// `PCIe` round-trip amortization is the mechanism.
 pub const BATCH_SPEEDUP_MIN: f64 = 1.5;
 
 /// Multi-output overhead: 10 outputs vs 1 output.
 /// Measured at 4.5% on AKD1000.
 pub const MULTI_OUTPUT_OVERHEAD_MAX: f64 = 0.30;
 
-/// Weight mutation linearity tolerance: set_variable(weights * k)
+/// Weight mutation linearity tolerance: `set_variable(weights` * k)
 /// should produce output * k within this error bound.
 /// Measured at 0.0000 on AKD1000 (exact integer linearity).
 pub const WEIGHT_MUTATION_LINEARITY: f64 = 0.01;
 
-/// Optimal batch size for PCIe amortization.
+/// Optimal batch size for `PCIe` amortization.
 /// Beyond 16, SRAM contention degrades throughput on AKD1000.
 pub const OPTIMAL_BATCH_SIZE: u32 = 8;
 

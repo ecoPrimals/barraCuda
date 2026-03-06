@@ -4,10 +4,10 @@
 //! Bessel function of first kind, order 1.
 //! Applications: electromagnetic wave propagation, antenna patterns
 
+use crate::device::WgpuDevice;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
 
@@ -38,11 +38,21 @@ pub struct BesselJ1F64 {
 
 impl BesselJ1F64 {
     /// Creates a new J₁ Bessel function evaluator for the given WGPU device.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Compute J₁(x) for each element
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn j1(&self, x: &[f64]) -> Result<Vec<f64>> {
         if x.is_empty() {
             return Ok(vec![]);
@@ -144,11 +154,7 @@ impl BesselJ1F64 {
             let inv_sqrt_x = sqrt_2_over_pi / ax.sqrt();
             let xx = ax - three_pi_over_4;
             let r = inv_sqrt_x * (p1 * xx.cos() - q1 * xx.sin());
-            if x < 0.0 {
-                -r
-            } else {
-                r
-            }
+            if x < 0.0 { -r } else { r }
         } else {
             let z = x * x;
             let z2 = z * z;

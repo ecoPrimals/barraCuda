@@ -20,6 +20,7 @@ pub enum PppmAccuracy {
 
 impl PppmAccuracy {
     /// Get the target relative force error
+    #[must_use]
     pub fn target_error(&self) -> f64 {
         match self {
             PppmAccuracy::Low => 1e-3,
@@ -71,6 +72,7 @@ impl PppmParams {
     ///
     /// # Returns
     /// Optimized PPPM parameters
+    #[must_use]
     pub fn auto(n_particles: usize, box_side: f64, accuracy: PppmAccuracy) -> Self {
         Self::auto_with_dims(n_particles, [box_side; 3], accuracy)
     }
@@ -140,6 +142,7 @@ impl PppmParams {
     }
 
     /// Create custom PPPM parameters
+    #[must_use]
     pub fn custom(
         n_particles: usize,
         box_dims: [f64; 3],
@@ -161,12 +164,14 @@ impl PppmParams {
     }
 
     /// Set Coulomb constant (for unit system conversion)
+    #[must_use]
     pub fn with_coulomb_constant(mut self, k: f64) -> Self {
         self.coulomb_constant = k;
         self
     }
 
     /// Estimate memory usage in bytes
+    #[must_use]
     pub fn estimated_memory(&self) -> usize {
         let mesh_elements = self.mesh_dims[0] * self.mesh_dims[1] * self.mesh_dims[2];
 
@@ -183,6 +188,7 @@ impl PppmParams {
     }
 
     /// Estimate k-space cutoff (in units of 2π/L)
+    #[must_use]
     pub fn k_cutoff(&self) -> f64 {
         // k_max = π * mesh / L (Nyquist)
         let k_max_x = PI * self.mesh_dims[0] as f64 / self.box_dims[0];
@@ -195,6 +201,7 @@ impl PppmParams {
     /// Estimated real-space force error
     ///
     /// Based on erfc decay: error ∝ erfc(α*rc) / rc²
+    #[must_use]
     pub fn estimated_real_error(&self) -> f64 {
         let x = self.alpha * self.real_cutoff;
         // erfc(x) ≈ exp(-x²) / (x * √π) for large x
@@ -204,6 +211,7 @@ impl PppmParams {
     /// Estimated k-space force error
     ///
     /// Based on mesh aliasing and interpolation order
+    #[must_use]
     pub fn estimated_kspace_error(&self) -> f64 {
         let h = self.box_dims[0] / self.mesh_dims[0] as f64; // mesh spacing
         let order = self.interpolation_order as f64;

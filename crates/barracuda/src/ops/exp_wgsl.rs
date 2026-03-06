@@ -20,6 +20,7 @@ pub struct Exp {
 
 impl Exp {
     /// Create a new exp operation
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -35,6 +36,9 @@ impl Exp {
     }
 
     /// Execute the exp operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -180,6 +184,9 @@ impl Exp {
 
 impl Tensor {
     /// Compute exp element-wise
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn exp_wgsl(self) -> Result<Self> {
         Exp::new(self).execute()
     }

@@ -8,6 +8,7 @@ impl WgpuDevice {
     ///
     /// NVK is the open-source Vulkan driver for NVIDIA GPUs built on Mesa.
     /// Some f64 builtins (particularly `exp()`) crash the NAK compiler on NVK.
+    #[must_use]
     pub fn is_nvk(&self) -> bool {
         let driver = self.adapter_info.driver.to_lowercase();
         let driver_info = self.adapter_info.driver_info.to_lowercase();
@@ -21,6 +22,7 @@ impl WgpuDevice {
     /// Check if this device uses AMD's RADV Vulkan driver
     ///
     /// RADV is the open-source Vulkan driver for AMD GPUs built on Mesa.
+    #[must_use]
     pub fn is_radv(&self) -> bool {
         let driver = self.adapter_info.driver.to_lowercase();
         let driver_info = self.adapter_info.driver_info.to_lowercase();
@@ -37,7 +39,8 @@ impl WgpuDevice {
     ///   Ada Lovelace (SM89) and Ampere (SM86). NVVM's PTXAS does not
     ///   implement double-precision transcendentals — it relies on libdevice
     ///   which SPIR-V cannot link. The fix: use our Cody-Waite + minimax
-    ///   polynomial implementations from math_f64.wgsl.
+    ///   polynomial implementations from `math_f64.wgsl`.
+    #[must_use]
     pub fn needs_f64_exp_log_workaround(&self) -> bool {
         self.is_nvk() || self.is_radv() || self.is_nvidia_proprietary()
     }
@@ -45,6 +48,7 @@ impl WgpuDevice {
     /// Check if this device is NVIDIA Ada Lovelace (RTX 40xx) on the proprietary driver.
     ///
     /// This combination has broken f64 transcendentals in NVVM PTXAS.
+    #[must_use]
     pub fn is_nvidia_ada_lovelace(&self) -> bool {
         let name = self.adapter_info.name.to_lowercase();
         let is_ada = name.contains("rtx 40") || name.contains("rtx40") || name.contains("l40");
@@ -61,6 +65,7 @@ impl WgpuDevice {
     }
 
     /// Check if this device uses a proprietary NVIDIA driver
+    #[must_use]
     pub fn is_nvidia_proprietary(&self) -> bool {
         let name = self.adapter_info.name.to_lowercase();
         let driver = self.adapter_info.driver.to_lowercase();

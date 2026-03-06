@@ -23,9 +23,9 @@
 //! - Down-weights easy examples
 //! - Focuses training on hard negatives
 //! - Handles severe class imbalance
-//! - Standard in object detection (RetinaNet)
+//! - Standard in object detection (`RetinaNet`)
 //!
-//! **Used By**: RetinaNet, object detection, imbalanced classification
+//! **Used By**: `RetinaNet`, object detection, imbalanced classification
 //!
 //! ## Usage
 //!
@@ -76,6 +76,11 @@ impl FocalLoss {
     }
 
     /// Execute focal loss computation and return the result tensor.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size = self.predictions.shape().iter().product::<usize>();
@@ -109,7 +114,7 @@ impl FocalLoss {
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)
             .dispatch_1d(size as u32)
-            .submit();
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,
@@ -147,8 +152,13 @@ impl Tensor {
     ///
     /// # Note
     /// - `gamma=0`: Equivalent to binary cross-entropy
-    /// - `gamma=2`: Standard for object detection (RetinaNet)
+    /// - `gamma=2`: Standard for object detection (`RetinaNet`)
     /// - Higher `gamma`: More aggressive down-weighting of easy examples
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn focal_loss(self, targets: &Self, alpha: f32, gamma: f32) -> Result<Self> {
         // Validate shapes match
         if self.shape() != targets.shape() {

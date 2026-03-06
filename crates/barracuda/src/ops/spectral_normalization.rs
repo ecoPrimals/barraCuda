@@ -9,7 +9,7 @@
 //! - Hardware-agnostic: Pure WGSL for universal compute
 //!
 //! Stabilizes GAN training by constraining Lipschitz constant.
-//! Used in SNGAN, BigGAN.
+//! Used in SNGAN, `BigGAN`.
 //!
 //! Normalizes weights by their spectral norm (largest singular value).
 
@@ -27,12 +27,14 @@ pub struct SpectralNormalization {
 
 impl SpectralNormalization {
     /// Create a new spectral normalization operation
-    ///
     /// # Arguments
     /// * `weight` - Weight matrix [rows, cols]
     /// * `u` - Left singular vector [rows]
     /// * `v` - Right singular vector [cols]
     /// * `num_iterations` - Number of power iteration steps (typically 1)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(weight: Tensor, u: Tensor, v: Tensor, num_iterations: u32) -> Result<Self> {
         if num_iterations == 0 {
             return Err(BarracudaError::invalid_op(
@@ -89,6 +91,9 @@ impl SpectralNormalization {
     }
 
     /// Execute the spectral normalization operation (modifies weight in-place)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.weight.device();
         let weight_shape = self.weight.shape();

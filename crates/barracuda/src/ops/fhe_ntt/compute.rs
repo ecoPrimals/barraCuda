@@ -10,21 +10,19 @@ use crate::tensor::Tensor;
 
 impl FheNtt {
     /// Execute NTT transformation
-    ///
     /// Returns a new tensor containing the NTT-domain representation.
     /// The output can be used for fast polynomial multiplication.
-    ///
     /// ## Algorithm
-    ///
     /// 1. Bit-reversal permutation (preprocessing)
     /// 2. log₂(N) butterfly stages (Cooley-Tukey FFT)
     /// 3. Each stage processes N/2 butterflies in parallel
-    ///
     /// ## Complexity
-    ///
     /// - Time: O(N log N)
     /// - Space: O(N) temporary buffer
     /// - GPU parallelism: N/2 threads per stage
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input().device();
 

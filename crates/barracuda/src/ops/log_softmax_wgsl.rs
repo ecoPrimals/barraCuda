@@ -5,9 +5,9 @@
 //!
 //! Deep Debt Principles:
 //! - Zero hardcoding: Capability-based workgroup dispatch
-//! - Batchable: routes through TensorContext::record_operation()
+//! - Batchable: routes through `TensorContext::record_operation()`
 //! - Zero-copy output: buffer pool
-//! - Pipeline cached: GLOBAL_CACHE eliminates recompilation overhead
+//! - Pipeline cached: `GLOBAL_CACHE` eliminates recompilation overhead
 
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
@@ -36,6 +36,7 @@ pub struct LogSoftmax {
 
 impl LogSoftmax {
     /// Create a log-softmax operation along the last dimension.
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -45,6 +46,9 @@ impl LogSoftmax {
     }
 
     /// Execute log-softmax and return the result tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -130,6 +134,9 @@ impl LogSoftmax {
 
 impl Tensor {
     /// Apply log-softmax along last dimension (GPU-resident, batchable).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn log_softmax_wgsl(self) -> Result<Self> {
         LogSoftmax::new(self).execute()
     }

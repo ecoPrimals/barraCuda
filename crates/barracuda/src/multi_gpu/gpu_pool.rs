@@ -17,11 +17,16 @@ pub struct GpuPool {
 
 impl GpuPool {
     /// Create a pool with default workload config.
+    /// # Errors
+    /// Returns [`Err`] if no suitable GPU devices are found or device creation fails.
     pub async fn new() -> Result<Self> {
         Self::with_config(WorkloadConfig::default()).await
     }
 
     /// Create a pool with the given workload config.
+    /// # Errors
+    /// Returns [`Err`] if no suitable GPU devices are found (e.g. all adapters fail
+    /// creation, none meet `min_gflops`, or all are excluded as software).
     pub async fn with_config(config: WorkloadConfig) -> Result<Self> {
         let adapters = WgpuDevice::enumerate_adapters().await;
         let mut devices = Vec::new();
@@ -98,16 +103,19 @@ impl GpuPool {
     }
 
     /// Number of devices in the pool.
+    #[must_use]
     pub fn device_count(&self) -> usize {
         self.devices.len()
     }
 
     /// Device metadata for all devices in the pool.
+    #[must_use]
     pub fn devices(&self) -> &[GpuInfo] {
         &self.info
     }
 
     /// Get device by index.
+    #[must_use]
     pub fn device(&self, index: usize) -> Option<Arc<WgpuDevice>> {
         self.devices.get(index).cloned()
     }
@@ -148,6 +156,9 @@ impl GpuPool {
     }
 
     /// Acquire a device for the workload, holding a semaphore permit.
+    /// # Errors
+    /// Returns [`Err`] if semaphore acquisition fails or no GPU is available for
+    /// the workload type.
     pub async fn route_acquire(
         &self,
         workload: WorkloadType,
@@ -165,6 +176,9 @@ impl GpuPool {
     }
 
     /// Execute a function on the first available device.
+    /// # Errors
+    /// Returns [`Err`] if semaphore acquisition fails, no GPU is available, or the
+    /// spawned task panics or the closure returns an error.
     pub async fn execute<F, T>(&self, f: F) -> Result<T>
     where
         F: FnOnce(Arc<WgpuDevice>) -> Result<T> + Send + 'static,
@@ -188,6 +202,9 @@ impl GpuPool {
     }
 
     /// Map data across devices in parallel (round-robin).
+    /// # Errors
+    /// Returns [`Err`] if any element's closure returns an error, a spawned task
+    /// panics, or a task join fails.
     pub async fn parallel_map<T, R, F>(&self, data: Vec<T>, f: F) -> Result<Vec<R>>
     where
         T: Send + 'static,
@@ -227,6 +244,7 @@ impl GpuPool {
     }
 
     /// Human-readable pool summary.
+    #[must_use]
     pub fn summary(&self) -> String {
         let total_gflops: f64 = self.info.iter().map(|g| g.gflops).sum();
         let nvidia_count = self

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Product reduction — GPU-resident, pipeline-cached, buffer-pooled
 //!
-//! Evolved from per-call buffer allocation to pooled TensorContext path.
+//! Evolved from per-call buffer allocation to pooled `TensorContext` path.
 //! Dimension-wise results stay GPU-resident; global reductions do a single
 //! scalar readback.
 
@@ -28,6 +28,7 @@ pub struct Prod {
 
 impl Prod {
     /// Create a new product operation.
+    #[must_use]
     pub fn new(input: Tensor, dim: Option<usize>, keepdim: bool) -> Self {
         Self {
             input,
@@ -45,6 +46,8 @@ impl Prod {
     }
 
     /// Execute the product operation.
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range (for dimension-wise product), or if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -180,11 +183,15 @@ impl Prod {
 
 impl Tensor {
     /// Compute product (global reduction).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn prod(&self) -> Result<Self> {
         Prod::new(self.clone(), None, false).execute()
     }
 
     /// Compute product along a dimension.
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range, or buffer allocation/GPU dispatch/buffer readback fails (e.g. device lost).
     pub fn prod_dim(&self, dim: usize, keepdim: bool) -> Result<Self> {
         Prod::new(self.clone(), Some(dim), keepdim).execute()
     }
@@ -285,7 +292,7 @@ mod tests {
         let cpu_result = prod_cpu(&input_data);
 
         let error = (gpu_result[0] - cpu_result).abs();
-        assert!(error < 1e-3, "Error {} exceeds threshold", error);
+        assert!(error < 1e-3, "Error {error} exceeds threshold");
     }
 
     #[tokio::test]

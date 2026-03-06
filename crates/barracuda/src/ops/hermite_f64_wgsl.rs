@@ -5,10 +5,10 @@
 //! Applications: quantum harmonic oscillator wavefunctions, nuclear structure,
 //! Gaussian quadrature weights, Gaussian-Hermite basis functions
 
+use crate::device::WgpuDevice;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
 
@@ -42,18 +42,21 @@ pub struct HermiteF64 {
 
 impl HermiteF64 {
     /// Create new Hermite f64 polynomial operation
+    /// # Errors
+    /// Returns [`Err`] if device context cannot be obtained.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Compute Hermite polynomial Hₙ(x) for each element
-    ///
     /// # Arguments
     /// * `x` - Input values
     /// * `n` - Polynomial order (0, 1, 2, ...)
-    ///
     /// # Returns
     /// Vector of Hₙ(x) values with f64 precision
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or buffer readback fails
+    /// (e.g. device lost).
     pub fn hermite(&self, x: &[f64], n: u32) -> Result<Vec<f64>> {
         if x.is_empty() {
             return Ok(vec![]);
@@ -62,10 +65,11 @@ impl HermiteF64 {
     }
 
     /// Compute Hermite function ψₙ(x) (normalized wavefunction)
-    ///
     /// ψₙ(x) = (2ⁿ·n!·√π)^(-1/2) · Hₙ(x) · exp(-x²/2)
-    ///
     /// This is the quantum harmonic oscillator eigenfunction.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or buffer readback fails
+    /// (e.g. device lost).
     pub fn hermite_function(&self, x: &[f64], n: u32) -> Result<Vec<f64>> {
         if x.is_empty() {
             return Ok(vec![]);
@@ -201,7 +205,7 @@ mod tests {
         let result = op.hermite(&x, 0).unwrap();
 
         for &v in &result {
-            assert!((v - 1.0).abs() < 1e-10, "H₀ should be 1, got {}", v);
+            assert!((v - 1.0).abs() < 1e-10, "H₀ should be 1, got {v}");
         }
     }
 

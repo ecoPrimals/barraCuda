@@ -21,9 +21,9 @@
 //! wetSpring handoff §Shader Design 2 (Feb 2026) — validated on sklearn
 //! export: 65 nodes × 28 features, 744 samples, 100% prediction parity.
 
+use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -66,6 +66,7 @@ pub struct FlatForest {
 
 impl FlatForest {
     /// Wrap a single tree (root at node 0).
+    #[must_use]
     pub fn single_tree(
         feature_idx: Vec<u32>,
         thresholds: Vec<f64>,
@@ -84,10 +85,12 @@ impl FlatForest {
     }
 
     /// Number of trees in the forest.
+    #[must_use]
     pub fn n_trees(&self) -> usize {
         self.tree_offsets.len()
     }
     /// Total number of nodes across all trees.
+    #[must_use]
     pub fn n_nodes(&self) -> usize {
         self.left_child.len()
     }
@@ -125,6 +128,7 @@ pub struct TreeInferenceGpu {
 
 impl TreeInferenceGpu {
     /// Create tree inference operator for the given device.
+    #[must_use]
     pub fn new(device: &WgpuDevice) -> Self {
         Self {
             device: Arc::new(device.clone()),
@@ -134,6 +138,11 @@ impl TreeInferenceGpu {
     /// Run batch inference for `n_samples` through all trees in `forest`.
     ///
     /// Returns `output[sample_id * n_trees + tree_id]` = predicted class.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn predict(
         &self,
         forest: &FlatForest,
@@ -205,7 +214,7 @@ impl TreeInferenceGpu {
             .storage_read(7, &offsets_buf)
             .storage_rw(8, &output_buf)
             .dispatch(total_threads.div_ceil(WORKGROUP_SIZE_1D), 1, 1)
-            .submit();
+            .submit()?;
 
         dev.read_buffer_u32(&output_buf, n_samples * n_trees)
     }

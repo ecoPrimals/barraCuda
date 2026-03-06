@@ -97,6 +97,11 @@ impl NAdam {
     }
 
     /// Execute NAdam step (returns updated params, m, v)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<(Tensor, Tensor, Tensor)> {
         let device = self.params.device();
         let size = self.params.len();

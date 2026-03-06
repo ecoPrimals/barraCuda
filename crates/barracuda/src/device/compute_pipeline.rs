@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU compute pipeline builder — eliminates bind-group/pipeline boilerplate.
 //!
-//! The ~80 lines of create_bind_group_layout → create_bind_group →
-//! create_pipeline_layout → create_compute_pipeline → create_command_encoder →
-//! begin_compute_pass → set_pipeline → set_bind_group → dispatch pattern is
+//! The ~80 lines of `create_bind_group_layout` → `create_bind_group` →
+//! `create_pipeline_layout` → `create_compute_pipeline` → `create_command_encoder` →
+//! `begin_compute_pass` → `set_pipeline` → `set_bind_group` → dispatch pattern is
 //! repeated in 50+ ops. This module captures that pattern as a builder.
 //!
 //! # Example
@@ -17,11 +17,12 @@
 //!     .storage_rw(1, &output_buf)
 //!     .uniform(2, &params_buf)
 //!     .dispatch_1d(element_count)
-//!     .submit();
+//!     .submit()?;
 //! ```
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::error::{BarracudaError, Result};
 
 /// Buffer binding declaration for the pipeline builder.
 struct Binding<'a> {
@@ -48,6 +49,7 @@ pub struct ComputeDispatch<'a> {
 
 impl<'a> ComputeDispatch<'a> {
     /// Creates a new compute dispatch builder for the given device and label.
+    #[must_use]
     pub fn new(device: &'a WgpuDevice, label: &'a str) -> Self {
         Self {
             device,
@@ -62,6 +64,7 @@ impl<'a> ComputeDispatch<'a> {
     }
 
     /// Set the WGSL shader source and entry point.
+    #[must_use]
     pub fn shader(mut self, source: &'a str, entry_point: &'a str) -> Self {
         self.shader_source = Some(source);
         self.entry_point = entry_point;
@@ -69,6 +72,7 @@ impl<'a> ComputeDispatch<'a> {
     }
 
     /// Use f64 shader compilation path (with precision patching + ILP optimizer).
+    #[must_use]
     pub fn f64(mut self) -> Self {
         self.f64_shader = true;
         self
@@ -77,13 +81,15 @@ impl<'a> ComputeDispatch<'a> {
     /// Use DF64 shader compilation path (f32-pair arithmetic, ~48-bit mantissa).
     ///
     /// The source must already contain DF64 bridge functions (from naga rewrite).
-    /// This method prepends df64_core + df64_transcendentals and compiles.
+    /// This method prepends `df64_core` + `df64_transcendentals` and compiles.
+    #[must_use]
     pub fn df64(mut self) -> Self {
         self.df64_shader = true;
         self
     }
 
     /// Bind a read-only storage buffer at `index`.
+    #[must_use]
     pub fn storage_read(mut self, index: u32, buffer: &'a wgpu::Buffer) -> Self {
         self.bindings.push(Binding {
             index,
@@ -95,6 +101,7 @@ impl<'a> ComputeDispatch<'a> {
     }
 
     /// Bind a read-write storage buffer at `index`.
+    #[must_use]
     pub fn storage_rw(mut self, index: u32, buffer: &'a wgpu::Buffer) -> Self {
         self.bindings.push(Binding {
             index,
@@ -106,6 +113,7 @@ impl<'a> ComputeDispatch<'a> {
     }
 
     /// Bind a uniform buffer at `index`.
+    #[must_use]
     pub fn uniform(mut self, index: u32, buffer: &'a wgpu::Buffer) -> Self {
         self.bindings.push(Binding {
             index,
@@ -117,12 +125,14 @@ impl<'a> ComputeDispatch<'a> {
     }
 
     /// Set dispatch to `ceil(n / WORKGROUP_SIZE_1D)` workgroups in x.
+    #[must_use]
     pub fn dispatch_1d(mut self, element_count: u32) -> Self {
         self.workgroups = (element_count.div_ceil(WORKGROUP_SIZE_1D), 1, 1);
         self
     }
 
     /// Set explicit workgroup counts.
+    #[must_use]
     pub fn dispatch(mut self, x: u32, y: u32, z: u32) -> Self {
         self.workgroups = (x, y, z);
         self
@@ -134,12 +144,17 @@ impl<'a> ComputeDispatch<'a> {
     /// respecting the device's hardware-aware concurrency budget.
     /// All resource creation is covered by the encoder barrier to prevent
     /// wgpu-core races between poll cleanup and resource allocation.
-    pub fn submit(self) {
+    ///
+    /// # Errors
+    /// Returns [`Err`] if shader source was not set via [`shader`](Self::shader).
+    pub fn submit(self) -> Result<()> {
         let _permit = self.device.acquire_dispatch();
         self.device.encoding_guard();
         let source = self
             .shader_source
-            .expect("ComputeDispatch: shader source required");
+            .ok_or_else(|| BarracudaError::InvalidInput {
+                message: "ComputeDispatch: shader source required".into(),
+            })?;
 
         let bgl_entries: Vec<wgpu::BindGroupLayoutEntry> = self
             .bindings
@@ -241,6 +256,7 @@ impl<'a> ComputeDispatch<'a> {
         let commands = encoder.finish();
         self.device.encoding_complete();
         self.device.submit_and_poll_inner(Some(commands));
+        Ok(())
     }
 }
 
@@ -249,6 +265,7 @@ impl<'a> ComputeDispatch<'a> {
 /// Replaces the 7-line `BindGroupLayoutEntry` struct literal that appears
 /// in every GPU op. Use for ops that need the BGL separately (e.g.,
 /// cached pipelines that outlive a single dispatch).
+#[must_use]
 pub fn storage_bgl_entry(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
     wgpu::BindGroupLayoutEntry {
         binding,
@@ -263,6 +280,7 @@ pub fn storage_bgl_entry(binding: u32, read_only: bool) -> wgpu::BindGroupLayout
 }
 
 /// Helper to create a uniform bind-group-layout entry.
+#[must_use]
 pub fn uniform_bgl_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
     wgpu::BindGroupLayoutEntry {
         binding,

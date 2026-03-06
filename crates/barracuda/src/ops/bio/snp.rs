@@ -10,8 +10,8 @@
 //!
 //! wetSpring handoff v6, `snp_calling_f64.wgsl` — 5/5 GPU checks PASS.
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -36,6 +36,11 @@ pub struct SnpCallingF64 {
 
 impl SnpCallingF64 {
     /// Create SNP calling pipeline.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         let module = device.compile_shader_f64(SHADER, Some("snp_calling_f64"));
         let bgl = make_bgl(&device, &[true, false, false, false, false]);
@@ -49,6 +54,11 @@ impl SnpCallingF64 {
     }
 
     /// Dispatch SNP calling for alignment.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn dispatch(
         &self,
         alignment_length: u32,

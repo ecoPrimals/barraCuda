@@ -27,7 +27,7 @@ mod thresholds {
     pub const MINIMAL_SPARSITY: f32 = 0.10;
 }
 
-/// Canonical sparsity threshold for NPU routing (re-exported for npu_bridge, npu matmul).
+/// Canonical sparsity threshold for NPU routing (re-exported for `npu_bridge`, npu matmul).
 pub use thresholds::NPU_SPARSITY_THRESHOLD;
 
 /// Workload type classifier
@@ -39,7 +39,7 @@ pub enum WorkloadType {
     HE,
     /// Genomics (K-mer counting, sequence analysis)
     Genomics,
-    /// Cryptography (AES, ChaCha20)
+    /// Cryptography (AES, `ChaCha20`)
     Crypto,
     /// Dense arithmetic operations
     Dense,
@@ -117,6 +117,7 @@ impl SparsityAnalyzer {
     /// Analyze data for sparsity
     ///
     /// **Deep Debt**: Runtime analysis, no assumptions
+    #[must_use]
     pub fn analyze_data(data: &[f32]) -> SparsityProfile {
         let zeros = data.iter().filter(|&&x| x == 0.0).count();
         let near_zeros = data
@@ -155,6 +156,7 @@ impl SparsityAnalyzer {
     /// Analyze operation for sparsity potential
     ///
     /// **Deep Debt**: Pattern detection, no hardcoding
+    #[must_use]
     pub fn analyze_operation(op_name: &str) -> SparsityProfile {
         // Detect sparsity-producing operations
         let has_relu = op_name.contains("relu") || op_name.contains("ReLU");
@@ -191,6 +193,7 @@ impl WorkloadClassifier {
     /// Classify workload from operation name
     ///
     /// **Deep Debt**: Pattern matching, extensible
+    #[must_use]
     pub fn classify_op(op_name: &str) -> WorkloadType {
         let name_lower = op_name.to_lowercase();
 
@@ -266,6 +269,7 @@ impl DecisionMatrix {
     /// Build decision matrix from validation data
     ///
     /// **Deep Debt**: Data-driven, measured values only
+    #[must_use]
     pub fn from_validation_data() -> Self {
         let mut energy = HashMap::new();
         let mut throughput = HashMap::new();
@@ -296,7 +300,7 @@ impl DecisionMatrix {
         // Genomics (from K-mer CPU/GPU validation)
         throughput.insert((WorkloadType::Genomics, ComputeDevice::CPU), 5.21); // MB/s
         throughput.insert((WorkloadType::Genomics, ComputeDevice::GPU), 8_007.91); // MB/s 🏆
-                                                                                   // NPU genomics: awaiting K-mer NPU results
+        // NPU genomics: awaiting K-mer NPU results
 
         // Crypto (from AES CPU/GPU validation)
         throughput.insert((WorkloadType::Crypto, ComputeDevice::CPU), 132.0); // MB/s
@@ -314,16 +318,19 @@ impl DecisionMatrix {
     }
 
     /// Get energy efficiency for workload-device combination
+    #[must_use]
     pub fn get_energy(&self, workload: WorkloadType, device: ComputeDevice) -> Option<f32> {
         self.energy.get(&(workload, device)).copied()
     }
 
     /// Get throughput for workload-device combination
+    #[must_use]
     pub fn get_throughput(&self, workload: WorkloadType, device: ComputeDevice) -> Option<f64> {
         self.throughput.get(&(workload, device)).copied()
     }
 
     /// Get latency for workload-device combination
+    #[must_use]
     pub fn get_latency(&self, workload: WorkloadType, device: ComputeDevice) -> Option<f32> {
         self.latency.get(&(workload, device)).copied()
     }
@@ -340,6 +347,7 @@ impl DeviceSelector {
     /// Create selector with available devices
     ///
     /// **Deep Debt**: Runtime discovery, no assumptions
+    #[must_use]
     pub fn new(available_devices: Vec<ComputeDevice>) -> Self {
         Self {
             available_devices,
@@ -350,6 +358,7 @@ impl DeviceSelector {
     /// Select optimal device
     ///
     /// **Deep Debt**: Data-driven selection from 96+ tests
+    #[must_use]
     pub fn select(
         &self,
         workload: WorkloadType,

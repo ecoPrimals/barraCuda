@@ -22,6 +22,7 @@ pub struct Legendre {
 
 impl Legendre {
     /// Create new Legendre polynomial Pₙ(x)
+    #[must_use]
     pub fn new(input: Tensor, n: u32) -> Self {
         Self {
             input,
@@ -32,6 +33,7 @@ impl Legendre {
     }
 
     /// Create new associated Legendre function Pₙᵐ(x)
+    #[must_use]
     pub fn associated(input: Tensor, n: u32, m: u32) -> Self {
         Self {
             input,
@@ -46,6 +48,8 @@ impl Legendre {
     }
 
     /// Execute Legendre polynomial evaluation on the input tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -65,7 +69,7 @@ impl Legendre {
             size: size as u32,
             n: self.n,
             m: self.m,
-            is_assoc: if self.is_associated { 1 } else { 0 },
+            is_assoc: u32::from(self.is_associated),
         };
         let params_buffer = device
             .device
@@ -184,11 +188,15 @@ impl Legendre {
 
 impl Tensor {
     /// Compute Legendre polynomial Pₙ(x) for each element
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn legendre(self, n: u32) -> Result<Self> {
         Legendre::new(self, n).execute()
     }
 
     /// Compute associated Legendre function Pₙᵐ(x) for each element
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn assoc_legendre(self, n: u32, m: u32) -> Result<Self> {
         Legendre::associated(self, n, m).execute()
     }
@@ -213,7 +221,7 @@ mod tests {
         let result = output.to_vec().unwrap();
         // P₀(x) = 1 for all x
         for &v in &result {
-            assert!((v - 1.0).abs() < 1e-5, "P₀ should be 1, got {}", v);
+            assert!((v - 1.0).abs() < 1e-5, "P₀ should be 1, got {v}");
         }
     }
 
@@ -253,10 +261,7 @@ mod tests {
             let expected = (3.0 * x * x - 1.0) / 2.0;
             assert!(
                 (v - expected).abs() < 1e-4,
-                "P₂({}) = {}, expected {}",
-                x,
-                v,
-                expected
+                "P₂({x}) = {v}, expected {expected}"
             );
         }
     }
@@ -276,10 +281,7 @@ mod tests {
             let expected = -(1.0 - x * x).sqrt();
             assert!(
                 (v - expected).abs() < 1e-4,
-                "P₁¹({}) = {}, expected {}",
-                x,
-                v,
-                expected
+                "P₁¹({x}) = {v}, expected {expected}"
             );
         }
     }

@@ -31,6 +31,7 @@ pub struct Expand {
 
 impl Expand {
     /// Create a new expand operation
+    #[must_use]
     pub fn new(input: Tensor, target_shape: Vec<usize>) -> Self {
         Self {
             input,
@@ -39,6 +40,9 @@ impl Expand {
     }
 
     /// Execute the expand operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         compute::execute_expand(self.input, self.target_shape)
     }
@@ -46,6 +50,9 @@ impl Expand {
 
 impl Tensor {
     /// Expand/broadcast tensor to target shape
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn expand_wgsl(self, target_shape: Vec<usize>) -> Result<Self> {
         Expand::new(self, target_shape).execute()
     }

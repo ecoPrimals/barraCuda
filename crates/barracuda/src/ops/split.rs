@@ -3,16 +3,16 @@
 //! Pure WGSL implementation
 //!
 //! Splits a tensor into multiple parts along a dimension (inverse of Concat)
-//! Formula: [output1, output2] = split(input, split_point)
+//! Formula: [output1, output2] = split(input, `split_point`)
 //!
-//! Used in: Multi-branch networks, Inception modules, ResNeXt
+//! Used in: Multi-branch networks, Inception modules, `ResNeXt`
 //! Benefits: Enables parallel processing paths, modular architecture design
 
 use crate::device::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// f64 is the canonical source — f32 derived via downcast_f64_to_f32 when needed.
+/// f64 is the canonical source — f32 derived via `downcast_f64_to_f32` when needed.
 const SHADER_F64: &str = include_str!("../shaders/tensor/split_f64.wgsl");
 
 static SHADER_F32: std::sync::LazyLock<String> =
@@ -35,6 +35,7 @@ pub struct Split {
 
 impl Split {
     /// Creates a new split operation at the given point along the last dimension.
+    #[must_use]
     pub fn new(input: Tensor, split_point: usize) -> Self {
         Self { input, split_point }
     }
@@ -44,6 +45,9 @@ impl Split {
     }
 
     /// Executes the split and returns the two output tensors.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<(Tensor, Tensor)> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -73,7 +77,7 @@ impl Split {
             .storage_rw(2, &output2_buffer)
             .uniform(3, &params_buffer)
             .dispatch_1d(total_size as u32)
-            .submit();
+            .submit()?;
 
         // Determine output shapes (split along last dimension for simplicity)
         let mut shape1 = shape.to_vec();
@@ -96,12 +100,15 @@ impl Tensor {
     /// # Arguments
     /// * `split_point` - Position to split (along last dimension)
     /// # Returns
-    /// Tuple of two tensors (before split_point, after split_point)
+    /// Tuple of two tensors (before `split_point`, after `split_point`)
     /// # Example
     /// ```ignore
     /// // Split [batch, 512] into [batch, 256] and [batch, 256]
     /// let (left, right) = tensor.split(256)?;
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn split(self, split_point: usize) -> Result<(Self, Self)> {
         Split::new(self, split_point).execute()
     }

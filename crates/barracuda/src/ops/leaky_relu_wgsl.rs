@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! LeakyReLU — GPU-resident, pipeline-cached, batchable
+//! `LeakyReLU` — GPU-resident, pipeline-cached, batchable
 //!
-//! f64 canonical — f32 derived via downcast_f64_to_f32 when needed.
+//! f64 canonical — f32 derived via `downcast_f64_to_f32` when needed.
 //!
 //! Deep Debt Principles:
 //! - Zero hardcoding: Capability-based workgroup dispatch
-//! - Batchable: routes through TensorContext::record_operation()
+//! - Batchable: routes through `TensorContext::record_operation()`
 //! - Zero-copy output: buffer pool, no GPU→CPU→GPU round-trip
-//! - Pipeline cached: GLOBAL_CACHE eliminates recompilation overhead
+//! - Pipeline cached: `GLOBAL_CACHE` eliminates recompilation overhead
 //! - Params fixed (S14): Rust `Params` matches WGSL `{ size, negative_slope }`
 
 /// f64 is the canonical source.
@@ -27,12 +27,12 @@ use bytemuck::{Pod, Zeroable};
 const WGSL_LEAKY_RELU_SIMPLE_F64: &str =
     include_str!("../shaders/activation/leaky_relu_simple_f64.wgsl");
 
-/// Simple LeakyReLU variant (single-pass, no vectorization).
+/// Simple `LeakyReLU` variant (single-pass, no vectorization).
 pub static WGSL_LEAKY_RELU_SIMPLE: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     crate::shaders::precision::downcast_f64_to_f32(WGSL_LEAKY_RELU_SIMPLE_F64)
 });
 
-/// Default negative slope for LeakyReLU (matches common framework defaults).
+/// Default negative slope for `LeakyReLU` (matches common framework defaults).
 pub const LEAKY_RELU_DEFAULT_SLOPE: f32 = 0.01;
 
 #[repr(C)]
@@ -42,14 +42,15 @@ struct Params {
     negative_slope: f32,
 }
 
-/// LeakyReLU: `output = x if x ≥ 0 else α·x`
+/// `LeakyReLU`: `output = x if x ≥ 0 else α·x`
 pub struct LeakyRelu {
     input: Tensor,
     negative_slope: f32,
 }
 
 impl LeakyRelu {
-    /// Create LeakyReLU with default slope (0.01).
+    /// Create `LeakyReLU` with default slope (0.01).
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self {
             input,
@@ -57,7 +58,8 @@ impl LeakyRelu {
         }
     }
 
-    /// Create LeakyReLU with custom negative slope α.
+    /// Create `LeakyReLU` with custom negative slope α.
+    #[must_use]
     pub fn with_slope(input: Tensor, negative_slope: f32) -> Self {
         Self {
             input,
@@ -69,7 +71,9 @@ impl LeakyRelu {
         &SHADER_F32
     }
 
-    /// Execute LeakyReLU on GPU.
+    /// Execute `LeakyReLU` on GPU.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -150,12 +154,16 @@ impl LeakyRelu {
 }
 
 impl Tensor {
-    /// Compute LeakyReLU with default slope (0.01).
+    /// Compute `LeakyReLU` with default slope (0.01).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn leaky_relu_wgsl(self) -> Result<Self> {
         LeakyRelu::new(self).execute()
     }
 
-    /// Compute LeakyReLU with a custom negative slope α.
+    /// Compute `LeakyReLU` with a custom negative slope α.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn leaky_relu_wgsl_with_slope(self, negative_slope: f32) -> Result<Self> {
         LeakyRelu::with_slope(self, negative_slope).execute()
     }

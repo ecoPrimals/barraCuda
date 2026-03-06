@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! ALiBi Position Encoding - Attention with Linear Biases
+//! `ALiBi` Position Encoding - Attention with Linear Biases
 //!
 //! Adds position-dependent bias to attention scores.
 //! No position embeddings needed - bias encodes position directly.
@@ -8,10 +8,14 @@
 
 use crate::error::Result;
 
-/// ALiBi position encoding: adds position-dependent bias to attention scores.
+/// `ALiBi` position encoding: adds position-dependent bias to attention scores.
 ///
 /// No position embeddings needed — bias encodes position directly.
 /// Head-specific slopes follow geometric sequence.
+///
+/// # Errors
+///
+/// Currently always succeeds; returns [`Err`] only if internal allocation fails.
 pub async fn alibi_position(
     _device: &wgpu::Device,
     _queue: &wgpu::Queue,

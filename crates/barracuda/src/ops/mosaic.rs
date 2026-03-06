@@ -27,6 +27,11 @@ pub struct Mosaic {
 
 impl Mosaic {
     /// Create a new mosaic operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(images: [Tensor; 4], seed: u64) -> Result<Self> {
         // Validate all images have same shape
         let shape = images[0].shape();
@@ -55,6 +60,11 @@ impl Mosaic {
     }
 
     /// Execute the mosaic operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.images[0].device();
         let shape = self.images[0].shape();

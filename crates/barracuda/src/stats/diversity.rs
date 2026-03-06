@@ -96,7 +96,7 @@ pub fn simpson(counts: &[f64]) -> f64 {
 
 /// Chao1 richness estimator.
 ///
-/// Chao1 = S_obs + f1(f1−1) / (2(f2+1))
+/// Chao1 = `S_obs` + f1(f1−1) / (2(f2+1))
 /// where f1 = singletons, f2 = doubletons.
 ///
 /// Singleton/doubleton detection uses a half-width of 0.5 (integer counts).
@@ -205,11 +205,7 @@ pub fn bray_curtis(a: &[f64], b: &[f64]) -> f64 {
         num += (ai - bi).abs();
         den += ai + bi;
     }
-    if den == 0.0 {
-        0.0
-    } else {
-        num / den
-    }
+    if den == 0.0 { 0.0 } else { num / den }
 }
 
 /// Condensed Bray-Curtis distance matrix (lower triangle, row-major).
@@ -264,7 +260,7 @@ pub fn bray_curtis_matrix(samples: &[Vec<f64>]) -> Vec<f64> {
 /// Rarefaction curve: expected species at each subsampling depth.
 ///
 /// Uses the exact hypergeometric formula (no randomness):
-/// E[S_n] = S − Σ C(N−Nᵢ, n) / C(N, n)
+/// E[`S_n`] = S − Σ C(N−Nᵢ, n) / C(N, n)
 #[must_use]
 pub fn rarefaction_curve(counts: &[f64], depths: &[f64]) -> Vec<f64> {
     let total: f64 = counts.iter().sum();

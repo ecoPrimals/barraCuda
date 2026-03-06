@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! GridMask - Grid-based masking augmentation (Chen et al.)
+//! `GridMask` - Grid-based masking augmentation (Chen et al.)
 //!
 //! Masks structured grid regions in images.
 //! Prevents overfitting to spatial structures.
@@ -19,7 +19,7 @@ const SHADER_F64: &str = include_str!("../shaders/augmentation/grid_mask_f64.wgs
 static SHADER_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
 
-/// GridMask operation
+/// `GridMask` operation
 pub struct GridMask {
     input: Tensor,
     ratio: f32,
@@ -30,6 +30,8 @@ pub struct GridMask {
 
 impl GridMask {
     /// Create a new grid mask operation
+    /// # Errors
+    /// Returns [`Err`] if input is not 3D (C, H, W), or if ratio is not in [0, 1].
     pub fn new(
         input: Tensor,
         ratio: f32,
@@ -67,6 +69,9 @@ impl GridMask {
     }
 
     /// Execute the grid mask operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, buffer readback fails
+    /// (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -260,13 +265,14 @@ impl GridMask {
 
 impl Tensor {
     /// Apply grid mask augmentation
-    ///
     /// # Arguments
-    ///
     /// * `ratio` - Mask ratio (0.0 to 1.0)
     /// * `rotate` - Rotation angle in degrees
     /// * `grid_size` - Size of grid cells
     /// * `seed` - Random seed for deterministic masking
+    /// # Errors
+    /// Returns [`Err`] if input is not 3D, ratio is not in [0, 1], buffer allocation fails,
+    /// GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn grid_mask(self, ratio: f32, rotate: f32, grid_size: usize, seed: u64) -> Result<Self> {
         GridMask::new(self, ratio, rotate, grid_size, seed)?.execute()
     }

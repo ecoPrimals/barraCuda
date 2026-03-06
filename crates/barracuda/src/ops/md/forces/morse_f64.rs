@@ -11,10 +11,10 @@
 //! - ✅ Capability-based dispatch
 //! - ✅ Agnostic (no hardcoded constants)
 
+use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
 
@@ -200,13 +200,15 @@ fn reduce_bond_forces(
         .storage_read(2, pairs_buf)
         .storage_rw(3, &particle_forces_buf)
         .dispatch(wg, 1, 1)
-        .submit();
+        .submit()?;
 
     dev.read_f64_buffer(&particle_forces_buf, n_particles * 3)
 }
 
 impl MorseForceF64 {
     /// Create Morse potential force calculator.
+    /// # Errors
+    /// Returns [`Err`] if device initialization fails.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -228,6 +230,8 @@ impl MorseForceF64 {
     }
 
     /// Compute Morse forces for all bonds (always GPU dispatch).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn compute_forces(&self, positions: &[f64], bonds: &[MorseBond]) -> Result<Vec<f64>> {
         let n_particles = positions.len() / 3;
         if bonds.is_empty() {
@@ -237,6 +241,8 @@ impl MorseForceF64 {
     }
 
     /// Compute Morse forces and per-bond energies (GPU dispatch).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn compute_forces_and_energy(
         &self,
         positions: &[f64],
@@ -281,7 +287,7 @@ impl MorseForceF64 {
             .uniform(6, &buffers.params)
             .storage_rw(7, &bond_energy_buf)
             .dispatch(wg, 1, 1)
-            .submit();
+            .submit()?;
 
         let energies = dev.read_f64_buffer(&bond_energy_buf, n_bonds)?;
 
@@ -320,7 +326,7 @@ impl MorseForceF64 {
             .storage_rw(5, &buffers.bond_forces)
             .uniform(6, &buffers.params)
             .dispatch(wg, 1, 1)
-            .submit();
+            .submit()?;
 
         reduce_bond_forces(
             dev,

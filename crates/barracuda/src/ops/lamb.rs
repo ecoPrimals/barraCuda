@@ -29,6 +29,11 @@ pub struct Lamb {
 
 impl Lamb {
     /// Create a LAMB optimizer step with the given parameters and optional momentum/variance.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         parameters: Tensor,
         gradients: Tensor,
@@ -121,6 +126,11 @@ impl Lamb {
     }
 
     /// Execute LAMB optimizer step.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<(Tensor, Tensor, Tensor)> {
         let device = self.parameters.device();
         let size = self.parameters.shape().iter().product::<usize>();

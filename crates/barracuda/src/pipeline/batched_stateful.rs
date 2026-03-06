@@ -34,12 +34,14 @@ pub struct BatchedStatefulF64 {
 
 impl BatchedStatefulF64 {
     /// Create a new batched state buffer.
-    ///
     /// # Arguments
     /// * `device` - GPU device
     /// * `n_cells` - Number of spatial cells / batch elements
     /// * `n_state_per_cell` - Number of f64 state values per cell
-    /// * `initial_state` - Initial state values [n_cells * n_state_per_cell]
+    /// * `initial_state` - Initial state values [`n_cells` * `n_state_per_cell`]
+    /// # Errors
+    /// Returns [`Err`] if `initial_state.len()` does not equal
+    /// `n_cells * n_state_per_cell`.
     pub fn new(
         device: Arc<WgpuDevice>,
         n_cells: usize,
@@ -87,7 +89,8 @@ impl BatchedStatefulF64 {
         })
     }
 
-    /// The buffer to read current state FROM (bind as storage_read).
+    /// The buffer to read current state FROM (bind as `storage_read`).
+    #[must_use]
     pub fn state_in(&self) -> &wgpu::Buffer {
         if self.current_is_a {
             &self.state_a
@@ -96,7 +99,8 @@ impl BatchedStatefulF64 {
         }
     }
 
-    /// The buffer to write new state TO (bind as storage_rw).
+    /// The buffer to write new state TO (bind as `storage_rw`).
+    #[must_use]
     pub fn state_out(&self) -> &wgpu::Buffer {
         if self.current_is_a {
             &self.state_b
@@ -111,12 +115,16 @@ impl BatchedStatefulF64 {
     }
 
     /// Read the current state back to CPU.
+    /// # Errors
+    /// Returns [`Err`] if buffer readback fails (e.g., device lost, `map_async` error).
     pub fn read_state(&self) -> Result<Vec<f64>> {
         self.device
             .read_f64_buffer(self.state_in(), self.n_cells * self.n_state_per_cell)
     }
 
     /// Write new state from CPU (e.g., for re-initialization).
+    /// # Errors
+    /// Returns [`Err`] if `state.len()` does not equal the expected buffer size.
     pub fn write_state(&self, state: &[f64]) -> Result<()> {
         let expected = self.n_cells * self.n_state_per_cell;
         if state.len() != expected {
@@ -130,16 +138,19 @@ impl BatchedStatefulF64 {
     }
 
     /// Total number of f64 values in the state buffer.
+    #[must_use]
     pub fn state_len(&self) -> usize {
         self.n_cells * self.n_state_per_cell
     }
 
     /// Number of spatial cells.
+    #[must_use]
     pub fn n_cells(&self) -> usize {
         self.n_cells
     }
 
     /// Number of state values per cell.
+    #[must_use]
     pub fn n_state_per_cell(&self) -> usize {
         self.n_state_per_cell
     }

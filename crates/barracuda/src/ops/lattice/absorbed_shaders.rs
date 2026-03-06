@@ -19,7 +19,7 @@ pub use super::cg::{
 pub const WGSL_SU3_GAUGE_FORCE_F64: &str =
     include_str!("../../shaders/lattice/su3_gauge_force_f64.wgsl");
 
-/// Kinetic energy: T_link = -0.5 * Re Tr(P²) per link.
+/// Kinetic energy: `T_link` = -0.5 * Re Tr(P²) per link.
 pub const WGSL_SU3_KINETIC_ENERGY_F64: &str =
     include_str!("../../shaders/lattice/su3_kinetic_energy_f64.wgsl");
 
@@ -39,7 +39,7 @@ pub const WGSL_SU3_RANDOM_MOMENTA_F64: &str =
 pub const WGSL_GAUSSIAN_FERMION_F64: &str =
     include_str!("../../shaders/lattice/gaussian_fermion_f64.wgsl");
 
-/// Staggered fermion force: F_f = TA[ U·M ].
+/// Staggered fermion force: `F_f` = TA[ U·M ].
 pub const WGSL_STAGGERED_FERMION_FORCE_F64: &str =
     include_str!("../../shaders/lattice/staggered_fermion_force_f64.wgsl");
 
@@ -70,7 +70,7 @@ pub const WGSL_PRNG_PCG_F64: &str = include_str!("../../shaders/lattice/prng_pcg
 pub const WGSL_SU3_GAUGE_FORCE_DF64: &str =
     include_str!("../../shaders/lattice/su3_gauge_force_df64.wgsl");
 
-/// DF64 kinetic energy: T_link via f32-pair arithmetic.
+/// DF64 kinetic energy: `T_link` via f32-pair arithmetic.
 pub const WGSL_SU3_KINETIC_ENERGY_DF64: &str =
     include_str!("../../shaders/lattice/su3_kinetic_energy_df64.wgsl");
 

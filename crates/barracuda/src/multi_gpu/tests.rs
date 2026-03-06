@@ -5,8 +5,8 @@ use super::strategy::{GpuPool, MultiDevicePool};
 use super::topology::{GpuDriver, GpuVendor};
 use super::types::{DeviceInfo, DeviceRequirements};
 use crate::resource_quota::ResourceQuota;
-use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize};
 
 #[tokio::test]
 async fn test_gpu_pool_creation() {
@@ -39,11 +39,11 @@ async fn test_multi_device_pool_creation() {
         Ok(pool) => {
             println!("MultiDevicePool: {}", pool.summary());
             for status in pool.device_status() {
-                println!("  {}", status);
+                println!("  {status}");
             }
         }
         Err(e) => {
-            println!("No GPU available: {}", e);
+            println!("No GPU available: {e}");
         }
     }
 }

@@ -75,31 +75,41 @@ async fn test_adam_validation() {
         .unwrap();
 
     // Shape mismatch
-    assert!(params
-        .clone()
-        .adam_step(&gradients, 0.001, 0.9, 0.999, 1, None, None)
-        .is_err());
+    assert!(
+        params
+            .clone()
+            .adam_step(&gradients, 0.001, 0.9, 0.999, 1, None, None)
+            .is_err()
+    );
 
     // Invalid learning rate
-    assert!(params
-        .clone()
-        .adam_step(&grads_correct, -0.001, 0.9, 0.999, 1, None, None)
-        .is_err());
+    assert!(
+        params
+            .clone()
+            .adam_step(&grads_correct, -0.001, 0.9, 0.999, 1, None, None)
+            .is_err()
+    );
 
     // Invalid beta1
-    assert!(params
-        .clone()
-        .adam_step(&grads_correct, 0.001, -0.1, 0.999, 1, None, None)
-        .is_err());
-    assert!(params
-        .clone()
-        .adam_step(&grads_correct, 0.001, 1.0, 0.999, 1, None, None)
-        .is_err());
+    assert!(
+        params
+            .clone()
+            .adam_step(&grads_correct, 0.001, -0.1, 0.999, 1, None, None)
+            .is_err()
+    );
+    assert!(
+        params
+            .clone()
+            .adam_step(&grads_correct, 0.001, 1.0, 0.999, 1, None, None)
+            .is_err()
+    );
 
     // Invalid step
-    assert!(params
-        .adam_step(&grads_correct, 0.001, 0.9, 0.999, 0, None, None)
-        .is_err());
+    assert!(
+        params
+            .adam_step(&grads_correct, 0.001, 0.9, 0.999, 0, None, None)
+            .is_err()
+    );
 }
 
 #[tokio::test]

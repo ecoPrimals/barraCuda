@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! RandomAffine - Random affine transformations
+//! `RandomAffine` - Random affine transformations
 //!
 //! Applies random rotation, translation, scale, and shear.
 //! Comprehensive geometric augmentation.
@@ -20,7 +20,7 @@ const SHADER_F64: &str = include_str!("../shaders/augmentation/random_affine_f64
 static SHADER_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
 
-/// RandomAffine operation
+/// `RandomAffine` operation
 pub struct RandomAffine {
     input: Tensor,
     degrees: f32,
@@ -32,6 +32,8 @@ pub struct RandomAffine {
 
 impl RandomAffine {
     /// Create a new random affine operation
+    /// # Errors
+    /// Returns [`Err`] if input is not 3D (C, H, W).
     pub fn new(
         input: Tensor,
         degrees: f32,
@@ -64,6 +66,8 @@ impl RandomAffine {
     }
 
     /// Execute the random affine operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -164,7 +168,7 @@ impl RandomAffine {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch(workgroups_x, workgroups_y, 1)
-            .submit();
+            .submit()?;
 
         // Read back results
         let output_data = crate::utils::read_buffer(device, &output_buffer, output_size)?;
@@ -179,14 +183,14 @@ impl RandomAffine {
 
 impl Tensor {
     /// Apply random affine transformation
-    ///
     /// # Arguments
-    ///
     /// * `degrees` - Max rotation in degrees
     /// * `translate` - Max translation fraction (x, y)
     /// * `scale` - Scale range (min, max)
     /// * `shear` - Max shear in degrees
     /// * `seed` - Random seed for deterministic transformation
+    /// # Errors
+    /// Returns [`Err`] if input is not 3D, or buffer allocation/GPU dispatch/readback fails (e.g. device lost).
     pub fn random_affine(
         self,
         degrees: f32,

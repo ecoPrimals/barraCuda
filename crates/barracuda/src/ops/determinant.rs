@@ -4,14 +4,14 @@
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation (hardware-agnostic)
 //! - ✅ Safe Rust wrapper (no unsafe code)
-//! - ✅ Supports 2x2, 3x3, NxN matrices
+//! - ✅ Supports 2x2, 3x3, `NxN` matrices
 //! - ✅ Batch processing for multiple matrices
 //!
 //! ## Algorithm
 //!
 //! - 2x2: det(A) = a*d - b*c (exact)
 //! - 3x3: Sarrus rule (exact)
-//! - NxN: LU decomposition via Gaussian elimination
+//! - `NxN`: LU decomposition via Gaussian elimination
 //!   - For large matrices, uses iterative row reduction
 //!   - Determinant = product of diagonal elements after LU decomposition
 //!
@@ -34,13 +34,15 @@ struct DeterminantParams {
     _padding: [u32; 2],
 }
 
-/// Matrix determinant computation (2x2, 3x3, or NxN via LU).
+/// Matrix determinant computation (2x2, 3x3, or `NxN` via LU).
 pub struct Determinant {
     input: Tensor,
 }
 
 impl Determinant {
     /// Create a determinant operation for a square matrix (or batch of matrices).
+    /// # Errors
+    /// Returns [`Err`] if input is not at least 2D or is not a square matrix.
     pub fn new(input: Tensor) -> Result<Self> {
         // Verify square matrix
         let shape = input.shape();
@@ -75,6 +77,9 @@ impl Determinant {
     }
 
     /// Execute determinant calculation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -105,7 +110,7 @@ impl Determinant {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d(total_matrices as u32)
-            .submit();
+            .submit()?;
 
         // Return scalar or vector of determinants
         let output_shape = if total_matrices == 1 {

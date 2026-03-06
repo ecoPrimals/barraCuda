@@ -8,8 +8,8 @@
 //! All math runs on GPU. The host loop only reads scalar reduction results
 //! for convergence checks and the accept/reject decision.
 
-use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::error::Result;
 use crate::pipeline::ReduceScalarPipeline;
 use std::sync::Arc;
@@ -72,11 +72,11 @@ impl Default for GpuHmcConfig {
 pub struct GpuHmcResult {
     /// Whether the Metropolis step accepted the new configuration.
     pub accepted: bool,
-    /// Change in Hamiltonian H_new − H_old.
+    /// Change in Hamiltonian `H_new` − `H_old`.
     pub delta_h: f64,
-    /// Wilson gauge action S_G = β × (sum of plaquettes).
+    /// Wilson gauge action `S_G` = β × (sum of plaquettes).
     pub gauge_action: f64,
-    /// Fermion action S_F = Σ φ†(D†D)⁻¹φ.
+    /// Fermion action `S_F` = Σ φ†(D†D)⁻¹φ.
     pub fermion_action: f64,
     /// Kinetic energy of link momenta.
     pub kinetic_energy: f64,
@@ -122,6 +122,8 @@ pub struct GpuHmcBuffers {
 
 impl GpuHmcBuffers {
     /// Allocate all GPU buffers for the given HMC config.
+    /// # Errors
+    /// Returns [`Err`] if the estimated allocation exceeds driver limits, buffer allocation fails, or the device is lost.
     pub fn new(device: &WgpuDevice, config: &GpuHmcConfig) -> Result<Self> {
         use crate::device::driver_profile::GpuDriverProfile;
 
@@ -242,11 +244,15 @@ pub struct GpuHmcTrajectory {
 
 impl GpuHmcTrajectory {
     /// Create a new HMC trajectory engine with default RNG seed.
+    /// # Errors
+    /// Returns [`Err`] if any sub-component (leapfrog, gauge force, Wilson action, etc.) fails to initialize due to shader compilation, buffer allocation, or device loss.
     pub fn new(device: Arc<WgpuDevice>, config: GpuHmcConfig) -> Result<Self> {
         Self::with_seed(device, config, 42)
     }
 
     /// Create with an explicit host RNG seed for reproducible Metropolis.
+    /// # Errors
+    /// Returns [`Err`] if any sub-component (leapfrog, gauge force, Wilson action, etc.) fails to initialize due to shader compilation, buffer allocation, or device loss.
     pub fn with_seed(device: Arc<WgpuDevice>, config: GpuHmcConfig, seed: u64) -> Result<Self> {
         let volume = config.nt * config.nx * config.ny * config.nz;
         let n_links = volume * 4;
@@ -325,6 +331,8 @@ impl GpuHmcTrajectory {
     }
 
     /// Run one HMC trajectory. All computation on GPU.
+    /// # Errors
+    /// Returns [`Err`] if any GPU operation fails (heatbath, Dirac dispatch, CG solve, force computation, reduction, or buffer mapping) due to invalid buffer dimensions, command submission failure, or device loss.
     pub fn run(&self, bufs: &GpuHmcBuffers) -> Result<GpuHmcResult> {
         // Backup links for possible reject
         self.copy_buffer(&bufs.links, &bufs.links_backup);
@@ -453,7 +461,6 @@ impl GpuHmcTrajectory {
     }
 
     /// Omelyan 2MN integration with force recomputation between steps.
-    ///
     /// Uses π(λε) → U(ε/2) → π((1-2λ)ε) → U(ε/2) → π(λε) per step,
     /// achieving O(ε⁴) energy conservation vs O(ε²) for plain leapfrog.
     fn omelyan_integration(&self, bufs: &GpuHmcBuffers, total_cg_iters: &mut usize) -> Result<()> {
@@ -747,6 +754,7 @@ pub struct HostRng {
 
 impl HostRng {
     /// Create a new RNG with the given seed.
+    #[must_use]
     pub fn new(seed: u64) -> Self {
         Self { state: seed.max(1) }
     }

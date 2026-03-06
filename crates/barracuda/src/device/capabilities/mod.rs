@@ -23,15 +23,15 @@ pub use crate::device::driver_profile::{
     GpuDriverProfile, Workaround,
 };
 
+pub use device_info::{Capability, DeviceInfo};
 pub use device_info::{
     build_device_info, detect_system_memory_bytes, estimate_system_memory, is_gpu_available,
     is_npu_available,
 };
-pub use device_info::{Capability, DeviceInfo};
 pub use wgpu_caps::{
-    optimal_workgroup_size_arch, workgroup_size_2d_for_arch, workgroup_size_for_arch,
-    DeviceCapabilities, WorkloadType, FHE_MIN_BUFFER_SIZE, WORKGROUP_SIZE_1D, WORKGROUP_SIZE_2D,
-    WORKGROUP_SIZE_COMPACT,
+    DeviceCapabilities, FHE_MIN_BUFFER_SIZE, WORKGROUP_SIZE_1D, WORKGROUP_SIZE_2D,
+    WORKGROUP_SIZE_COMPACT, WorkloadType, optimal_workgroup_size_arch, workgroup_size_2d_for_arch,
+    workgroup_size_for_arch,
 };
 
 #[cfg(test)]

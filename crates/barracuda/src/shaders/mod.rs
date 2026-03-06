@@ -15,8 +15,8 @@
 //! # Quantized Inference
 //!
 //! For LLM inference with quantized weights (GGUF/llama.cpp):
-//! - `dequant_q4.wgsl`: Q4_0 dequantization (4-bit weights)
-//! - `dequant_q8.wgsl`: Q8_0 dequantization (8-bit weights)
+//! - `dequant_q4.wgsl`: `Q4_0` dequantization (4-bit weights)
+//! - `dequant_q8.wgsl`: `Q8_0` dequantization (8-bit weights)
 //! - `gemv_q4.wgsl`: On-the-fly Q4 matrix-vector multiply
 //! - `gemv_q8.wgsl`: On-the-fly Q8 matrix-vector multiply
 //!

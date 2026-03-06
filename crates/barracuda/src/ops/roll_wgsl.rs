@@ -21,6 +21,7 @@ pub struct Roll {
 
 impl Roll {
     /// Create a new roll operation
+    #[must_use]
     pub fn new(input: Tensor, shift: i32, dim: usize) -> Self {
         Self { input, shift, dim }
     }
@@ -38,6 +39,9 @@ impl Roll {
     }
 
     /// Execute the roll operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -195,11 +199,12 @@ impl Roll {
 
 impl Tensor {
     /// Roll elements along a dimension
-    ///
     /// # Arguments
-    ///
     /// * `shift` - Number of positions to shift (positive or negative)
     /// * `dim` - Dimension to roll along
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn roll_wgsl(self, shift: i32, dim: usize) -> Result<Self> {
         Roll::new(self, shift, dim).execute()
     }

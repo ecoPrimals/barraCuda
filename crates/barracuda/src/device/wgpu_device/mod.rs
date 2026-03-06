@@ -10,7 +10,7 @@
 //! Set `BARRACUDA_GPU_ADAPTER` environment variable:
 //! - `BARRACUDA_GPU_ADAPTER=0` — Select first adapter
 //! - `BARRACUDA_GPU_ADAPTER=titan` — Select adapter containing "titan"
-//! - `BARRACUDA_GPU_ADAPTER=auto` — Use wgpu HighPerformance (default)
+//! - `BARRACUDA_GPU_ADAPTER=auto` — Use wgpu `HighPerformance` (default)
 
 mod buffers;
 mod capabilities;
@@ -19,13 +19,13 @@ mod creation;
 mod dispatch;
 mod guard;
 
-pub(crate) use dispatch::{concurrency_budget, DispatchPermit, DispatchSemaphore};
+pub(crate) use dispatch::{DispatchPermit, DispatchSemaphore, concurrency_budget};
 pub use guard::{GuardedDeviceHandle, GuardedEncoder};
 
-use super::autotune::{GpuCalibration, GpuDeviceForCalibration, GLOBAL_TUNER};
+use super::autotune::{GLOBAL_TUNER, GpuCalibration, GpuDeviceForCalibration};
 use crate::error::Result;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// WebGPU device - executes WGSL on any hardware
 ///
@@ -50,7 +50,7 @@ pub struct WgpuDevice {
     pub(crate) lost: Arc<AtomicBool>,
     /// Serializes submit+poll to prevent wgpu-core storage races.
     gpu_lock: Arc<std::sync::Mutex<()>>,
-    /// Counts live GuardedEncoders — poll waits for this to reach zero.
+    /// Counts live `GuardedEncoders` — poll waits for this to reach zero.
     active_encoders: Arc<std::sync::atomic::AtomicU32>,
     /// Limits concurrent dispatches based on device capability.
     dispatch_semaphore: Arc<DispatchSemaphore>,
@@ -72,34 +72,37 @@ impl GpuDeviceForCalibration for WgpuDevice {
 
 impl WgpuDevice {
     /// Get device name
+    #[must_use]
     pub fn name(&self) -> &str {
         &self.adapter_info.name
     }
 
     /// Get device type
+    #[must_use]
     pub fn device_type(&self) -> wgpu::DeviceType {
         self.adapter_info.device_type
     }
 
     /// Check if running on CPU fallback
+    #[must_use]
     pub fn is_cpu(&self) -> bool {
         self.adapter_info.device_type == wgpu::DeviceType::Cpu
     }
 
     /// Check if the GPU driver has reported this device as lost.
+    #[must_use]
     pub fn is_lost(&self) -> bool {
         self.lost.load(Ordering::Acquire)
     }
 
     /// Check if f64 shaders are truly available on this device.
-    ///
     /// Returns `true` only when BOTH conditions hold:
     /// 1. `wgpu::Features::SHADER_F64` was granted at device creation.
     /// 2. The runtime probe (if completed) confirms basic f64 compilation works.
-    ///
-    /// groundSpring V37 discovered that NVK/NAK advertise `SHADER_F64` but fail
-    /// to compile even basic f64 WGSL. This method consults the probe cache to
-    /// avoid silent shader compilation failures.
+    ///    groundSpring V37 discovered that NVK/NAK advertise `SHADER_F64` but fail
+    ///    to compile even basic f64 WGSL. This method consults the probe cache to
+    ///    avoid silent shader compilation failures.
+    #[must_use]
     pub fn has_f64_shaders(&self) -> bool {
         if !self.device.features().contains(wgpu::Features::SHADER_F64) {
             return false;
@@ -111,20 +114,22 @@ impl WgpuDevice {
     }
 
     /// Check if the Sovereign Compiler's SPIR-V passthrough path is available.
-    ///
     /// In wgpu 28 SPIR-V passthrough is gated by the `spirv` cargo feature
     /// on the wgpu crate (always enabled in our workspace). The Vulkan
     /// backend is required at runtime for the driver to accept SPIR-V.
+    #[must_use]
     pub fn has_spirv_passthrough(&self) -> bool {
         self.adapter_info.backend == wgpu::Backend::Vulkan
     }
 
     /// Access underlying wgpu device
+    #[must_use]
     pub fn device(&self) -> &wgpu::Device {
         &self.device
     }
 
     /// Get a clone of the wgpu device (cheap — internally Arc-wrapped in wgpu 28).
+    #[must_use]
     pub fn device_clone(&self) -> wgpu::Device {
         (*self.device).clone()
     }
@@ -134,13 +139,12 @@ impl WgpuDevice {
         self.gpu_lock.clone()
     }
 
-    /// Get the active encoder counter (for BufferPool poll coordination).
+    /// Get the active encoder counter (for `BufferPool` poll coordination).
     pub(crate) fn active_encoders_arc(&self) -> Arc<std::sync::atomic::AtomicU32> {
         self.active_encoders.clone()
     }
 
     /// Increment active encoder count (encoding phase barrier).
-    ///
     /// While any encoder is active, `device.poll()` will spin-wait.
     /// This is lock-free and never blocks the caller.
     pub fn encoding_guard(&self) {
@@ -153,7 +157,6 @@ impl WgpuDevice {
     }
 
     /// Bounded wait for active encoders to finish.
-    ///
     /// Encoding is CPU work (recording commands into a buffer), so it
     /// completes in microseconds. A brief yield loop avoids the
     /// wgpu-core race where poll/cleanup overlaps with encoding, without
@@ -168,10 +171,10 @@ impl WgpuDevice {
     }
 
     /// Create a command encoder protected by the active-encoder barrier.
-    ///
     /// The returned `GuardedEncoder` increments the active encoder count,
     /// preventing `device.poll()` from running. Encoding is lock-free and
     /// never blocks other threads. Call `.finish()` to release.
+    #[must_use]
     pub fn create_encoder_guarded(
         &self,
         desc: &wgpu::CommandEncoderDescriptor<'_>,
@@ -182,50 +185,56 @@ impl WgpuDevice {
     }
 
     /// Get adapter info (for capability detection)
+    #[must_use]
     pub fn adapter_info(&self) -> &wgpu::AdapterInfo {
         &self.adapter_info
     }
 
     /// Get the device's pipeline cache for `create_compute_pipeline` calls.
-    ///
     /// Returns `None` only when the Vulkan driver does not support pipeline caching.
+    #[must_use]
     pub fn pipeline_cache(&self) -> Option<&wgpu::PipelineCache> {
         self.pipeline_cache.as_deref()
     }
 
     /// Access command queue
+    #[must_use]
     pub fn queue(&self) -> &wgpu::Queue {
         &self.queue
     }
 
     /// Get a clone of the command queue (cheap — internally Arc-wrapped in wgpu 28).
+    #[must_use]
     pub fn queue_clone(&self) -> wgpu::Queue {
         self.queue.clone()
     }
 
     /// Acquire a dispatch permit from the device's concurrency budget.
-    ///
     /// Hold this for the entire compile→bind→submit lifecycle of an
     /// operation. The device automatically sizes the budget to what the
     /// hardware can handle (2 for CPU/llvmpipe, 8 for discrete GPU, etc.).
+    #[must_use]
     pub fn acquire_dispatch(&self) -> DispatchPermit<'_> {
         self.dispatch_semaphore.acquire()
     }
 
     /// Poll the device for completed work, catching device-lost panics.
-    ///
     /// Every `device.poll(PollType::Wait)` call site in barracuda should
     /// go through this method (or its `_nonblocking` variant) so that a
     /// driver-level device loss is consistently caught, flagged, and
     /// converted to `Err` instead of panicking the caller's thread.
-    ///
     /// Serialized via `gpu_lock`: wgpu-core's internal resource tracking
     /// on software rasterizers can race under concurrent submit/poll.
+    /// # Errors
+    /// Returns [`Err`] if the device is lost or poll fails (e.g. driver crash).
     pub fn poll_safe(&self) -> Result<()> {
         if self.is_lost() {
             return Err(crate::error::BarracudaError::device_lost("device lost"));
         }
-        let _guard = self.gpu_lock.lock().unwrap_or_else(|e| e.into_inner());
+        let _guard = self
+            .gpu_lock
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         self.brief_encoder_wait();
         let device = self.device.clone();
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
@@ -252,7 +261,6 @@ impl WgpuDevice {
     }
 
     /// Submit command buffers without polling for completion.
-    ///
     /// Serialized via `gpu_lock` to prevent wgpu-core storage races on
     /// software rasterizers. Use when the caller will poll separately
     /// (e.g. via `poll_safe()` or `map_staging_buffer()`).
@@ -260,7 +268,10 @@ impl WgpuDevice {
         if self.is_lost() {
             return;
         }
-        let _guard = self.gpu_lock.lock().unwrap_or_else(|e| e.into_inner());
+        let _guard = self
+            .gpu_lock
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         self.brief_encoder_wait();
         let queue = self.queue.clone();
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
@@ -280,7 +291,6 @@ impl WgpuDevice {
     }
 
     /// Non-blocking poll variant for drain/housekeeping paths.
-    ///
     /// Serialized via `gpu_lock` to prevent wgpu-core cleanup races.
     pub fn poll_nonblocking(&self) {
         if self.is_lost() {
@@ -301,7 +311,7 @@ impl WgpuDevice {
     fn panic_message(payload: &Box<dyn std::any::Any + Send>) -> &str {
         payload
             .downcast_ref::<String>()
-            .map(|s| s.as_str())
+            .map(std::string::String::as_str)
             .or_else(|| payload.downcast_ref::<&str>().copied())
             .unwrap_or("unknown")
     }
@@ -312,18 +322,28 @@ impl WgpuDevice {
     }
 
     /// Submit commands and poll, respecting the device's concurrency budget.
-    ///
-    /// Acquires a dispatch permit (blocks if budget exhausted), then the
-    /// GPU lock. Together they prevent both driver overload (semaphore) and
-    /// state corruption (mutex).
+    /// First attempts a timed acquire (30 s) — if the semaphore is
+    /// saturated beyond that, falls back to the blocking path with a
+    /// warning.  This provides observability into dispatch stalls without
+    /// changing correctness: the operation always completes.
     pub fn submit_and_poll(&self, commands: impl IntoIterator<Item = wgpu::CommandBuffer>) {
-        let _permit = self.dispatch_semaphore.acquire();
+        let _permit = if let Some(p) = self
+            .dispatch_semaphore
+            .try_acquire_timeout(std::time::Duration::from_secs(30))
+        {
+            p
+        } else {
+            tracing::warn!(
+                "dispatch semaphore saturated for 30s ({} permits) — blocking until available",
+                self.dispatch_semaphore.max_permits(),
+            );
+            self.dispatch_semaphore.acquire()
+        };
         self.submit_and_poll_inner(commands);
     }
 
     /// Submit without acquiring a dispatch permit.
     /// Use when the caller already holds a `DispatchPermit`.
-    ///
     /// Submit and poll use SEPARATE write-lock acquisitions. This allows
     /// other threads to interleave their submits between our submit and poll,
     /// dramatically reducing lock-convoy stalls on software rasterizers.
@@ -336,7 +356,10 @@ impl WgpuDevice {
         if self.is_lost() {
             return;
         }
-        let _guard = self.gpu_lock.lock().unwrap_or_else(|e| e.into_inner());
+        let _guard = self
+            .gpu_lock
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         self.brief_encoder_wait();
         {
             let queue = self.queue.clone();
@@ -379,14 +402,17 @@ impl WgpuDevice {
     }
 
     /// The device's concurrency budget (max simultaneous dispatches).
+    #[must_use]
     pub fn max_concurrent_dispatches(&self) -> usize {
         self.dispatch_semaphore.max_permits()
     }
 
     /// Execute WGSL compute shader
-    ///
     /// Acquires a dispatch permit for the full compile→submit lifecycle.
     /// Holds encoding read-guard during compile/encode, releases before submit.
+    /// # Errors
+    /// Returns [`Err`] if shader compilation fails, pipeline creation fails,
+    /// or GPU dispatch fails (e.g., device lost).
     pub fn execute_compute(
         &self,
         shader_source: &str,
@@ -445,24 +471,29 @@ impl WgpuDevice {
     }
 
     /// Get optimal workgroup size for this device
+    #[must_use]
     pub fn optimal_workgroup_size(&self) -> u32 {
-        self.calibration
-            .as_ref()
-            .map(|c| c.optimal_workgroup_size)
-            .unwrap_or_else(|| GLOBAL_TUNER.get_or_calibrate(self).optimal_workgroup_size)
+        self.calibration.as_ref().map_or_else(
+            || GLOBAL_TUNER.get_or_calibrate(self).optimal_workgroup_size,
+            |c| c.optimal_workgroup_size,
+        )
     }
 
     /// Get measured peak bandwidth for this device (GB/s)
+    #[must_use]
     pub fn peak_bandwidth_gbps(&self) -> f64 {
         self.get_calibration().peak_bandwidth_gbps
     }
 
     /// Get measured dispatch overhead for this device (μs)
+    #[must_use]
     pub fn dispatch_overhead_us(&self) -> f64 {
         self.get_calibration().dispatch_overhead_us
     }
 
     /// Create calibrated device (runs calibration immediately)
+    /// # Errors
+    /// Returns [`Err`] if no WGPU adapter is found or device creation fails.
     pub async fn new_calibrated() -> Result<Self> {
         let mut device = Self::new().await?;
         let cal = device.get_calibration();
@@ -472,6 +503,7 @@ impl WgpuDevice {
 }
 
 #[cfg(test)]
+#[allow(unsafe_code)] // env::remove_var is unsafe in edition 2024; tests run serially
 mod tests {
     use super::*;
 
@@ -553,7 +585,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_from_env_default() {
-        std::env::remove_var(super::creation::ADAPTER_ENV_VAR);
+        // SAFETY: test runs serially, no concurrent env access
+        unsafe {
+            std::env::remove_var(super::creation::ADAPTER_ENV_VAR);
+        }
         let _ = WgpuDevice::from_env().await;
     }
 

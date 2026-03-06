@@ -5,10 +5,10 @@
 //! Applications: cylindrical wave propagation, Fourier-Bessel transforms,
 //! diffraction patterns, heat conduction in cylinders
 
+use crate::device::WgpuDevice;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
 
@@ -42,6 +42,11 @@ pub struct BesselJ0F64 {
 
 impl BesselJ0F64 {
     /// Create new Bessel J0 f64 operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -53,6 +58,11 @@ impl BesselJ0F64 {
     ///
     /// # Returns
     /// Vector of J₀(x) values with f64 precision
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn j0(&self, x: &[f64]) -> Result<Vec<f64>> {
         if x.is_empty() {
             return Ok(vec![]);

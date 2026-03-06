@@ -7,8 +7,8 @@
 //! These ops demonstrate the `ComputeDispatch` pattern: zero manual
 //! bind-group / pipeline boilerplate. New ops should follow this pattern.
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -29,6 +29,14 @@ struct GridFit2dParams {
 /// Fit a bilinear surface `z = a + bx + cy + dxy` to structured 2D grid data.
 ///
 /// Returns 4 coefficients `[a, b, c, d]`.
+///
+/// # Panics
+/// Panics if `data.len() != nx * ny`.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or buffer readback fails
+/// (e.g. device lost).
 pub fn grid_fit_2d(
     device: &Arc<WgpuDevice>,
     data: &[f64],
@@ -58,7 +66,7 @@ pub fn grid_fit_2d(
         .storage_rw(3, &out_buf)
         .uniform(4, &params_buf)
         .dispatch(1, 1, 1)
-        .submit();
+        .submit()?;
 
     let result = device.read_f64_buffer(&out_buf, 4)?;
     Ok([result[0], result[1], result[2], result[3]])
@@ -91,6 +99,14 @@ pub struct GridSearchResult {
 /// Find the global minimum in a pre-evaluated 3D grid of values.
 ///
 /// `values[ix * ny * nz + iy * nz + iz]` is the value at grid point (ix, iy, iz).
+///
+/// # Panics
+/// Panics if `values.len() != nx * ny * nz`.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or buffer readback fails
+/// (e.g. device lost).
 pub fn grid_search_3d(
     device: &Arc<WgpuDevice>,
     x_grid: &[f64],
@@ -129,7 +145,7 @@ pub fn grid_search_3d(
         .storage_rw(5, &out_idx_buf)
         .uniform(6, &params_buf)
         .dispatch(1, 1, 1)
-        .submit();
+        .submit()?;
 
     let min_val = device.read_f64_buffer(&out_min_buf, 1)?;
     let min_idx = device.read_buffer_u32(&out_idx_buf, 3)?;
@@ -155,6 +171,14 @@ struct BandEdgesParams {
 ///
 /// `eigenvalues[i * m .. (i+1) * m]` are sorted ascending for eigensystem `i`.
 /// Returns `(band_min[N], band_max[N])`.
+///
+/// # Panics
+/// Panics if `eigenvalues.len() != n * m`.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or buffer readback fails
+/// (e.g. device lost).
 pub fn band_edges_parallel(
     device: &Arc<WgpuDevice>,
     eigenvalues: &[f64],
@@ -180,7 +204,7 @@ pub fn band_edges_parallel(
         .storage_rw(2, &max_buf)
         .uniform(3, &params_buf)
         .dispatch_1d(n as u32)
-        .submit();
+        .submit()?;
 
     let band_min = device.read_f64_buffer(&min_buf, n)?;
     let band_max = device.read_f64_buffer(&max_buf, n)?;

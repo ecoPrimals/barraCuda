@@ -50,6 +50,10 @@ pub struct PbcDistance {
 impl PbcDistance {
     /// Create new PBC distance operation
     ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shapes are invalid, box dimensions mismatch, or box dimensions are non-positive.
+    ///
     /// # Arguments
     /// * `input_a` - Positions of first set of particles [M, D]
     /// * `input_b` - Positions of second set of particles [N, D]
@@ -112,6 +116,11 @@ impl PbcDistance {
     }
 
     /// Execute PBC distance calculation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input_a.device();
         let shape_a = self.input_a.shape();
@@ -356,8 +365,8 @@ mod tests {
         let pos_a = vec![0.1, 0.5, 0.5]; // Near left edge
         let pos_b = vec![0.9, 0.5, 0.5]; // Near right edge
 
-        println!("pos_a: {:?}", pos_a);
-        println!("pos_b: {:?}", pos_b);
+        println!("pos_a: {pos_a:?}");
+        println!("pos_b: {pos_b:?}");
         println!("Direct distance: {}", (0.9 - 0.1));
 
         let tensor_a = Tensor::from_data(&pos_a, vec![1, 3], device.clone()).unwrap();
@@ -368,7 +377,7 @@ mod tests {
         println!("tensor_b: {:?}", tensor_b.to_vec().unwrap());
 
         let box_dims = vec![1.0, 1.0, 1.0];
-        println!("box_dims: {:?}", box_dims);
+        println!("box_dims: {box_dims:?}");
 
         let pbc =
             PbcDistance::new(tensor_a, tensor_b, box_dims, DistanceMetric::Euclidean).unwrap();

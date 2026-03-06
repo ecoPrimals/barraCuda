@@ -295,7 +295,7 @@ mod tests {
 
     #[test]
     fn test_fma_fusion_on_add_pattern() {
-        let wgsl = r#"
+        let wgsl = r"
 @group(0) @binding(0) var<storage, read> a_buf: array<f32>;
 @group(0) @binding(1) var<storage, read> b_buf: array<f32>;
 @group(0) @binding(2) var<storage, read> c_buf: array<f32>;
@@ -311,7 +311,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let result = product + c;
     out[i] = result;
 }
-"#;
+";
         let mut module = naga::front::wgsl::parse_str(wgsl).expect("parse");
         let mut total_fusions = 0usize;
         for (_h, func) in module.functions.iter_mut() {
@@ -337,7 +337,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 
     #[test]
     fn test_no_fusion_when_mul_has_multiple_consumers() {
-        let wgsl = r#"
+        let wgsl = r"
 @group(0) @binding(0) var<storage, read> input: array<f32>;
 @group(0) @binding(1) var<storage, read_write> out: array<f32>;
 
@@ -352,7 +352,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let r2 = product + 1.0;
     out[i] = r1 + r2;
 }
-"#;
+";
         let mut module = naga::front::wgsl::parse_str(wgsl).expect("parse");
         let mut total_fusions = 0usize;
         for (_h, func) in module.functions.iter_mut() {

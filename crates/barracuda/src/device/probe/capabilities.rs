@@ -41,6 +41,7 @@ pub struct F64BuiltinCapabilities {
 
 impl F64BuiltinCapabilities {
     /// Conservative fallback: no native builtins — software lib for everything.
+    #[must_use]
     pub const fn none() -> Self {
         Self {
             basic_f64: false,
@@ -57,6 +58,7 @@ impl F64BuiltinCapabilities {
     }
 
     /// Full native support (known-good proprietary drivers on FP64 hardware).
+    #[must_use]
     pub const fn full() -> Self {
         Self {
             basic_f64: true,
@@ -74,26 +76,31 @@ impl F64BuiltinCapabilities {
 
     /// Whether the device can compile basic f64 WGSL at all.
     /// When false, all f64 shaders must use DF64 (f32-pair) instead.
+    #[must_use]
     pub fn can_compile_f64(&self) -> bool {
         self.basic_f64
     }
 
-    /// Whether exp/log workarounds are needed (drives ShaderTemplate patching).
+    /// Whether exp/log workarounds are needed (drives `ShaderTemplate` patching).
+    #[must_use]
     pub fn needs_exp_log_workaround(&self) -> bool {
         !self.basic_f64 || !self.exp || !self.log
     }
 
     /// Whether sin(f64) needs software substitution.
+    #[must_use]
     pub fn needs_sin_f64_workaround(&self) -> bool {
         !self.basic_f64 || !self.sin
     }
 
     /// Whether cos(f64) needs software substitution.
+    #[must_use]
     pub fn needs_cos_f64_workaround(&self) -> bool {
         !self.basic_f64 || !self.cos
     }
 
-    /// Total count of natively-supported functions (excluding basic_f64 gate).
+    /// Total count of natively-supported functions (excluding `basic_f64` gate).
+    #[must_use]
     pub fn native_count(&self) -> u8 {
         if !self.basic_f64 {
             return 0;

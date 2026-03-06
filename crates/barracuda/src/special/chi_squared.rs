@@ -27,8 +27,6 @@
 //! - Numerical Recipes, 3rd Edition, Chapter 6.2
 //! - NIST/SEMATECH e-Handbook of Statistical Methods
 
-#[cfg(feature = "gpu")]
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use crate::special::gamma::{ln_gamma, regularized_gamma_p, regularized_gamma_q};
 
@@ -46,6 +44,10 @@ pub const WGSL_CHI2_DECOMPOSED_F64: &str =
 ///
 /// * `x` - Value (x >= 0)
 /// * `k` - Degrees of freedom (k > 0, typically integer)
+///
+/// # Errors
+///
+/// Returns [`Err`] if `k <= 0`, `x < 0`, or if the underlying [`ln_gamma`] call fails.
 ///
 /// # Example
 ///
@@ -73,9 +75,8 @@ pub fn chi_squared_pdf(x: f64, k: f64) -> Result<f64> {
             return Ok(f64::INFINITY);
         } else if (k - 2.0).abs() < 1e-10 {
             return Ok(0.5);
-        } else {
-            return Ok(0.0);
         }
+        return Ok(0.0);
     }
 
     let half_k = k / 2.0;
@@ -96,6 +97,10 @@ pub fn chi_squared_pdf(x: f64, k: f64) -> Result<f64> {
 /// # Returns
 ///
 /// Probability that X ≤ x
+///
+/// # Errors
+///
+/// Returns [`Err`] if `k <= 0`, or if the underlying regularized gamma computation fails.
 ///
 /// # Example
 ///
@@ -133,6 +138,10 @@ pub fn chi_squared_cdf(x: f64, k: f64) -> Result<f64> {
 /// # Returns
 ///
 /// Probability that X > x (p-value for chi-squared test)
+///
+/// # Errors
+///
+/// Returns [`Err`] if `k <= 0`, or if the underlying regularized gamma computation fails.
 pub fn chi_squared_sf(x: f64, k: f64) -> Result<f64> {
     if k <= 0.0 {
         return Err(BarracudaError::InvalidInput {
@@ -160,6 +169,10 @@ pub fn chi_squared_sf(x: f64, k: f64) -> Result<f64> {
 /// # Returns
 ///
 /// The quantile (critical value)
+///
+/// # Errors
+///
+/// Returns [`Err`] if `k <= 0`, `p <= 0`, or `p >= 1`, or if the underlying CDF evaluation fails.
 ///
 /// # Example
 ///
@@ -221,16 +234,19 @@ pub fn chi_squared_quantile(p: f64, k: f64) -> Result<f64> {
 }
 
 /// Mean of chi-squared distribution
+#[must_use]
 pub fn chi_squared_mean(k: f64) -> f64 {
     k
 }
 
 /// Variance of chi-squared distribution
+#[must_use]
 pub fn chi_squared_variance(k: f64) -> f64 {
     2.0 * k
 }
 
 /// Mode of chi-squared distribution (for k >= 2)
+#[must_use]
 pub fn chi_squared_mode(k: f64) -> f64 {
     (k - 2.0).max(0.0)
 }
@@ -261,6 +277,10 @@ pub fn chi_squared_mode(k: f64) -> f64 {
 /// Chi-squared statistic (alias: absorption L-003).
 ///
 /// Same as `chi_squared_statistic`; provided for primal compatibility.
+///
+/// # Errors
+///
+/// Returns [`Err`] if [`chi_squared_statistic`] fails (length mismatch or non-positive expected).
 pub fn chi_squared_f64(observed: &[f64], expected: &[f64]) -> Result<f64> {
     chi_squared_statistic(observed, expected)
 }
@@ -273,6 +293,11 @@ pub fn chi_squared_f64(observed: &[f64], expected: &[f64]) -> Result<f64> {
 ///
 /// # Returns
 /// Chi-squared statistic value
+///
+/// # Errors
+///
+/// Returns [`Err`] if `observed` and `expected` have different lengths, or if any
+/// expected frequency is non-positive.
 pub fn chi_squared_statistic(observed: &[f64], expected: &[f64]) -> Result<f64> {
     if observed.len() != expected.len() {
         return Err(BarracudaError::InvalidInput {
@@ -306,7 +331,11 @@ pub fn chi_squared_statistic(observed: &[f64], expected: &[f64]) -> Result<f64> 
 ///
 /// # Returns
 ///
-/// (chi2_statistic, p_value, degrees_of_freedom)
+/// (`chi2_statistic`, `p_value`, `degrees_of_freedom`)
+///
+/// # Errors
+///
+/// Returns [`Err`] if [`chi_squared_statistic`] or [`chi_squared_sf`] fails.
 ///
 /// # Example
 ///
@@ -361,12 +390,17 @@ struct Chi2GpuParams {
 #[cfg(feature = "gpu")]
 impl ChiSquaredBatchGpu {
     /// Create a batched chi-squared GPU executor.
+    /// # Errors
+    /// Currently always succeeds; reserved for future device validation.
     pub fn new(device: std::sync::Arc<crate::device::WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Evaluate chi-squared PDF and CDF for `x_values` at `df` degrees of freedom.
+    /// # Errors
+    /// Returns [`Err`] if buffer creation or readback fails (e.g., device lost, out of memory).
     pub fn dispatch(&self, x_values: &[f64], df: u32) -> Result<ChiSquaredBatchResult> {
+        use crate::device::capabilities::WORKGROUP_SIZE_1D;
         use crate::device::compute_pipeline::ComputeDispatch;
 
         let n = x_values.len();
@@ -385,7 +419,7 @@ impl ChiSquaredBatchGpu {
             .uniform(2, &params_buf)
             .storage_rw(3, &cdf_buf)
             .dispatch(wg, 1, 1)
-            .submit();
+            .submit()?;
 
         let pdf = self.device.read_f64_buffer(&pdf_buf, n)?;
         let cdf = self.device.read_f64_buffer(&cdf_buf, n)?;
@@ -456,10 +490,7 @@ mod tests {
 
                 assert!(
                     (p - p_check).abs() < 1e-4,
-                    "Failed for k={}, p={}: got p_check={}",
-                    k,
-                    p,
-                    p_check
+                    "Failed for k={k}, p={p}: got p_check={p_check}"
                 );
             }
         }

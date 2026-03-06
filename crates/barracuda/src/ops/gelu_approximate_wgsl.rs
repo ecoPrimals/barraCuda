@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! GeluApproximate - Pure WGSL
+//! `GeluApproximate` - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -18,13 +18,14 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// GeluApproximate operation
+/// `GeluApproximate` operation
 pub struct GeluApproximate {
     input: Tensor,
 }
 
 impl GeluApproximate {
-    /// Create a new gelu_approximate operation
+    /// Create a new `gelu_approximate` operation
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -34,7 +35,12 @@ impl GeluApproximate {
         &SHADER_F32
     }
 
-    /// Execute the gelu_approximate operation
+    /// Execute the `gelu_approximate` operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -180,7 +186,12 @@ impl GeluApproximate {
 }
 
 impl Tensor {
-    /// Compute gelu_approximate element-wise
+    /// Compute `gelu_approximate` element-wise
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn gelu_approximate_wgsl(self) -> Result<Self> {
         GeluApproximate::new(self).execute()
     }

@@ -19,6 +19,7 @@ pub const HIGH_CAPACITY_MAX_BUFFER_SIZE: u64 = 1 << 31;
 
 /// Science-grade limits — 512 MiB binding, 1 GiB buffer, 12 storage buffers.
 /// Validated by hotSpring nuclear EOS study (169/169 acceptance checks).
+#[must_use]
 pub fn science_limits() -> wgpu::Limits {
     wgpu::Limits {
         max_storage_buffer_binding_size: SCIENCE_MAX_STORAGE_BUFFER_BINDING_SIZE,
@@ -29,6 +30,7 @@ pub fn science_limits() -> wgpu::Limits {
 }
 
 /// High-capacity limits — 1GB binding, 2GB buffer.
+#[must_use]
 pub fn high_capacity_limits() -> wgpu::Limits {
     wgpu::Limits {
         max_storage_buffer_binding_size: HIGH_CAPACITY_MAX_STORAGE_BUFFER_BINDING_SIZE,

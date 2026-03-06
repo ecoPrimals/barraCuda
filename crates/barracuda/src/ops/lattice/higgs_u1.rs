@@ -62,6 +62,9 @@ struct HiggsParams {
 
 impl HiggsU1HmcForce {
     /// Compile the HMC force pipeline for a `nt × ns` lattice.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         device: Arc<WgpuDevice>,
         nt: u32,
@@ -143,7 +146,6 @@ impl HiggsU1HmcForce {
     }
 
     /// Update the leapfrog step size in-place (no recompile needed).
-    ///
     /// `dt` is the full step size; the shader divides by 2 internally for the
     /// half-kick.
     pub fn set_dt(&self, dt: f64) {
@@ -155,12 +157,14 @@ impl HiggsU1HmcForce {
     }
 
     /// Execute one leapfrog half-kick: `π ← π − (dt/2) · ∂S/∂q`.
-    ///
     /// All four buffers must be GPU-resident STORAGE buffers:
-    /// - `link_angles` — `[V × 2]` f64, gauge link angles θ_mu(x)
+    /// - `link_angles` — `[V × 2]` f64, gauge link angles `θ_mu(x)`
     /// - `higgs`       — `[V × 2]` f64, complex Higgs field (re, im)
     /// - `pi_links`    — `[V × 2]` f64, gauge momenta (updated in-place)
     /// - `pi_higgs`    — `[V × 2]` f64, Higgs momenta (updated in-place)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn half_kick(
         &self,
         link_angles: &wgpu::Buffer,
@@ -217,6 +221,7 @@ impl HiggsU1HmcForce {
     }
 
     /// Number of lattice sites.
+    #[must_use]
     pub fn volume(&self) -> u32 {
         self.volume
     }
@@ -267,11 +272,9 @@ mod tests {
     }
 
     /// Zero fields (θ=0, φ=0) must produce zero force kick.
-    ///
     /// With all gauge link angles θ=0 and Higgs field φ=0+0i:
     ///   - Plaquette contribution: Im(e^{i·0}) = 0  →  gauge force = 0
     ///   - Hopping term: φ†(x)·e^{iθ}·φ(x+μ) = 0  →  Higgs force = 0
-    ///
     /// After one half-kick, all momenta must remain unchanged (zero).
     /// Tests the full WGSL path on a 2×4 (nt=2, ns=4) periodic lattice.
     #[test]

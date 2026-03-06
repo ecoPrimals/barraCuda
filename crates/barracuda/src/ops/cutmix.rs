@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! CutMix data augmentation operation
+//! `CutMix` data augmentation operation
 //!
-//! CutMix: Cuts and pastes patches between training images
+//! `CutMix`: Cuts and pastes patches between training images
 //! Improves model robustness and generalization
 
 use crate::error::{BarracudaError, Result};
@@ -34,7 +34,7 @@ struct CutMixParams {
     _pad7: u32,
 }
 
-/// CutMix data augmentation operation
+/// `CutMix` data augmentation operation
 pub struct CutMix {
     input: Tensor,
     cut_x: u32,
@@ -45,7 +45,12 @@ pub struct CutMix {
 }
 
 impl CutMix {
-    /// Create CutMix operation
+    /// Create `CutMix` operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         input: Tensor,
         cut_x: u32,
@@ -63,7 +68,7 @@ impl CutMix {
         }
 
         let batch_size = shape[0];
-        let _channels = shape[1];
+        let _ = shape[1];
         let height = shape[2];
         let width = shape[3];
 
@@ -98,7 +103,10 @@ impl CutMix {
         &SHADER_F32
     }
 
-    /// Execute CutMix on tensor
+    /// Execute `CutMix` on tensor
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();

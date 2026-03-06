@@ -2,34 +2,33 @@
 //! Standard Jacobi sweep — multi-dispatch variant (all matrix sizes)
 //!
 //! Iterates over (p,q) pairs, dispatching compute angles → rotate A → update blocks → rotate V
-//! for each pair. Used by execute_f64 and execute_f64_buffers.
+//! for each pair. Used by `execute_f64` and `execute_f64_buffers`.
 
+use super::BatchedEighGpu;
 use super::params::{BatchedEighParams, ParallelSweepParams};
 use super::pipelines::create_eigh_pipelines;
 use super::sweep::run_sweep_pass;
-use super::BatchedEighGpu;
-use crate::device::capabilities::{WORKGROUP_SIZE_1D, WORKGROUP_SIZE_COMPACT};
 use crate::device::WgpuDevice;
+use crate::device::capabilities::{WORKGROUP_SIZE_1D, WORKGROUP_SIZE_COMPACT};
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
 
 impl BatchedEighGpu {
     /// Execute batched eigenvalue decomposition on GPU with full f64 precision
-    ///
     /// This processes multiple symmetric matrices in parallel, ideal for HFB
     /// Hamiltonian diagonalization where 52 nuclei need simultaneous eigensolves.
-    ///
     /// # Arguments
-    /// * `device` - WgpuDevice to execute on
-    /// * `data` - Packed matrices [batch_size × n × n] in row-major order (f64)
+    /// * `device` - `WgpuDevice` to execute on
+    /// * `data` - Packed matrices [`batch_size` × n × n] in row-major order (f64)
     /// * `n` - Matrix dimension (same for all matrices)
     /// * `batch_size` - Number of matrices
     /// * `max_sweeps` - Maximum Jacobi sweeps (default: 30)
-    ///
     /// # Returns
     /// Tuple (eigenvalues, eigenvectors) where:
-    /// - eigenvalues: [batch_size × n] f64
-    /// - eigenvectors: [batch_size × n × n] f64
+    /// - eigenvalues: [`batch_size` × n] f64
+    /// - eigenvectors: [`batch_size` × n × n] f64
+    /// # Errors
+    /// Returns [`Err`] if `data.len() != batch_size * n * n`, buffer allocation fails, pipeline execution fails, or the device is lost.
     pub fn execute_f64(
         device: Arc<WgpuDevice>,
         data: &[f64],
@@ -233,9 +232,10 @@ impl BatchedEighGpu {
     }
 
     /// Execute batched eigenvalue decomposition on GPU **without CPU readback**
-    ///
     /// This is the GPU-resident variant for use in pipelines where data should
     /// stay on GPU between operations (e.g., SCF iteration loops).
+    /// # Errors
+    /// Returns [`Err`] if buffer sizes are invalid, shader compilation fails, pipeline execution fails, or the device is lost.
     pub fn execute_f64_buffers(
         device: &Arc<WgpuDevice>,
         matrices_buffer: &wgpu::Buffer,

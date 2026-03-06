@@ -20,6 +20,7 @@ pub struct Sinh {
 
 impl Sinh {
     /// Create a sinh operation.
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -34,6 +35,9 @@ impl Sinh {
     }
 
     /// Execute hyperbolic sine on GPU.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -166,6 +170,9 @@ impl Sinh {
 
 impl Tensor {
     /// Compute element-wise hyperbolic sine.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn sinh(self) -> Result<Self> {
         Sinh::new(self).execute()
     }

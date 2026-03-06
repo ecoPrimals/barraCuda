@@ -3,7 +3,7 @@
 //!
 //! **Philosophy**: Define WHAT to compute, not HOW
 //!
-//! This module provides the mathematical foundation for BarraCuda:
+//! This module provides the mathematical foundation for `BarraCuda`:
 //! - Pure mathematical definitions (no hardware assumptions)
 //! - Trait-based abstraction (works with any backend)
 //! - Composable primitives (build complex ops from simple ones)
@@ -192,7 +192,7 @@ pub enum MathOp {
     // ═══════════════════════════════════════════════════════════
     // ACTIVATION FUNCTIONS
     // ═══════════════════════════════════════════════════════════
-    /// ReLU: max(0, x)
+    /// `ReLU`: max(0, x)
     ReLU,
 
     /// Sigmoid: 1 / (1 + e⁻ˣ)
@@ -302,7 +302,7 @@ pub enum UnaryOp {
     Cos,
     /// Tangent: y = tan(x)
     Tan,
-    /// ReLU: max(0, x)
+    /// `ReLU`: max(0, x)
     ReLU,
     /// Sigmoid: 1 / (1 + e⁻ˣ)
     Sigmoid,
@@ -366,6 +366,7 @@ pub struct TensorDescriptor {
 
 impl TensorDescriptor {
     /// Create a new tensor descriptor from shape and data type.
+    #[must_use]
     pub fn new(shape: Vec<usize>, dtype: DType) -> Self {
         let numel = shape.iter().product();
         let strides = Self::compute_strides(&shape);
@@ -387,21 +388,25 @@ impl TensorDescriptor {
     }
 
     /// Returns the rank (number of dimensions).
+    #[must_use]
     pub fn rank(&self) -> usize {
         self.shape.len()
     }
 
     /// Returns `true` if the tensor is a scalar (single element).
+    #[must_use]
     pub fn is_scalar(&self) -> bool {
         self.numel == 1
     }
 
     /// Returns `true` if the tensor is a vector (rank 1).
+    #[must_use]
     pub fn is_vector(&self) -> bool {
         self.rank() == 1
     }
 
     /// Returns `true` if the tensor is a matrix (rank 2).
+    #[must_use]
     pub fn is_matrix(&self) -> bool {
         self.rank() == 2
     }
@@ -428,6 +433,7 @@ pub enum DType {
 
 impl DType {
     /// Returns the size in bytes of a single element of this type.
+    #[must_use]
     pub fn size_bytes(&self) -> usize {
         match self {
             DType::F32 | DType::I32 | DType::U32 => 4,
@@ -457,6 +463,7 @@ pub struct OpNode {
 
 impl OpNode {
     /// Create a new operation node.
+    #[must_use]
     pub fn new(op: MathOp, inputs: Vec<TensorDescriptor>, output: TensorDescriptor) -> Self {
         Self {
             op,
@@ -467,6 +474,7 @@ impl OpNode {
     }
 
     /// Set the operation name for debugging.
+    #[must_use]
     pub fn with_name(mut self, name: impl Into<String>) -> Self {
         self.name = Some(name.into());
         self

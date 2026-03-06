@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU-Accelerated Static Structure Factor (SSF) Computation
 //!
-//! **Physics**: S(k) = |Σ_j exp(ik·r_j)|² / N
+//! **Physics**: S(k) = |`Σ_j` `exp(ik·r_j)|²` / N
 //!
 //! Primary observable for paper parity validation.
 //! Computes S(k) for a set of k-vectors on GPU.
@@ -19,8 +19,8 @@
 //!
 //! This makes real-time SSF monitoring feasible during production runs.
 
-use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::f64::consts::PI;
@@ -38,7 +38,7 @@ struct SSFParams {
 
 /// GPU-accelerated Static Structure Factor computation
 ///
-/// Computes S(k) = |Σ_j exp(ik·r_j)|² / N for a set of k-vectors
+/// Computes S(k) = |`Σ_j` `exp(ik·r_j)|²` / N for a set of k-vectors
 pub struct SsfGpu;
 
 impl SsfGpu {
@@ -47,14 +47,14 @@ impl SsfGpu {
     }
 
     /// Compute S(k) for given k-vectors on GPU
-    ///
     /// # Arguments
-    /// * `device` - WgpuDevice
+    /// * `device` - `WgpuDevice`
     /// * `positions` - Particle positions [N × 3] flattened, f64
-    /// * `k_vectors` - k-vectors to compute S(k) for [n_k × 3] flattened, f64
-    ///
+    /// * `k_vectors` - k-vectors to compute S(k) for [`n_k` × 3] flattened, f64
     /// # Returns
     /// S(k) values for each k-vector, f64
+    /// # Errors
+    /// Returns [`Err`] if `positions` or `k_vectors` length is not divisible by 3, or if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn compute(
         device: Arc<WgpuDevice>,
         positions: &[f64],
@@ -239,17 +239,16 @@ impl SsfGpu {
     }
 
     /// Compute S(k) along radial shells (spherically averaged)
-    ///
     /// This is the typical DSF comparison format: S(|k|) vs |k|
-    ///
     /// # Arguments
-    /// * `device` - WgpuDevice
+    /// * `device` - `WgpuDevice`
     /// * `positions` - Particle positions [N × 3] flattened, f64
     /// * `box_side` - Simulation box side length
     /// * `max_k_harmonics` - Maximum k-vector harmonics along each axis
-    ///
     /// # Returns
     /// Vector of (|k|, S(k)) pairs, spherically averaged
+    /// # Errors
+    /// Returns [`Err`] if [`compute`](Self::compute) fails.
     pub fn compute_radial(
         device: Arc<WgpuDevice>,
         positions: &[f64],
@@ -325,15 +324,15 @@ impl SsfGpu {
     }
 
     /// Compute S(k) along principal axes only (faster, for quick checks)
-    ///
     /// # Arguments
-    /// * `device` - WgpuDevice
+    /// * `device` - `WgpuDevice`
     /// * `positions` - Particle positions [N × 3] flattened, f64
     /// * `box_side` - Simulation box side length
     /// * `max_k_harmonics` - Maximum k-vector harmonics
-    ///
     /// # Returns
     /// Vector of (|k|, S(k)) pairs along principal axes, averaged
+    /// # Errors
+    /// Returns [`Err`] if [`compute`](Self::compute) fails.
     pub fn compute_axes(
         device: Arc<WgpuDevice>,
         positions: &[f64],
@@ -406,7 +405,7 @@ mod tests {
         // For a perfect lattice, S(k) at reciprocal lattice vectors should be N
         // For this simple case, we just verify non-negative values
         for &s in &ssf {
-            assert!(s >= 0.0, "S(k) should be non-negative, got {}", s);
+            assert!(s >= 0.0, "S(k) should be non-negative, got {s}");
         }
     }
 
@@ -441,9 +440,7 @@ mod tests {
         for (i, &s) in ssf.iter().enumerate() {
             assert!(
                 (0.0..2.0).contains(&s),
-                "S(k)[{}] = {}, expected close to 1.0",
-                i,
-                s
+                "S(k)[{i}] = {s}, expected close to 1.0"
             );
         }
     }
@@ -481,7 +478,7 @@ mod tests {
 
         assert_eq!(ssf.len(), 3);
         for (i, &s) in ssf.iter().enumerate() {
-            assert!(s > 0.0, "S(k)[{}] should be > 0, got {}", i, s);
+            assert!(s > 0.0, "S(k)[{i}] should be > 0, got {s}");
         }
     }
 
@@ -517,10 +514,7 @@ mod tests {
         {
             assert!(
                 (k_gpu - k_cpu).abs() < 1e-10,
-                "k mismatch at {}: {} vs {}",
-                i,
-                k_gpu,
-                k_cpu
+                "k mismatch at {i}: {k_gpu} vs {k_cpu}"
             );
             // GPU uses Cody-Waite + fdlibm minimax sin/cos (~1 ULP accuracy).
             // Residual difference from FMA ordering and reduction rounding.
@@ -528,11 +522,7 @@ mod tests {
             let tol = rel_tol.max(1e-6);
             assert!(
                 (s_gpu - s_cpu).abs() < tol,
-                "S(k) mismatch at {}: {} vs {} (tol={:.6})",
-                i,
-                s_gpu,
-                s_cpu,
-                tol
+                "S(k) mismatch at {i}: {s_gpu} vs {s_cpu} (tol={tol:.6})"
             );
         }
     }

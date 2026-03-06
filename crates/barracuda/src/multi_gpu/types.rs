@@ -2,8 +2,8 @@
 //! Types and configuration for multi-GPU workload distribution.
 
 use super::topology::{GpuDriver, GpuVendor};
-use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 
 /// Workload distribution configuration.
 #[derive(Debug, Clone)]
@@ -46,6 +46,7 @@ pub struct DeviceRequirements {
 
 impl DeviceRequirements {
     /// Create requirements with software excluded by default.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             exclude_software: true,
@@ -137,7 +138,7 @@ pub struct DeviceInfo {
     /// Adapter index in enumeration.
     pub index: usize,
     pub(crate) pool_index: usize,
-    /// Device name (e.g. "NVIDIA GeForce RTX 4090").
+    /// Device name (e.g. "NVIDIA `GeForce` RTX 4090").
     pub name: String,
     /// GPU vendor.
     pub vendor: GpuVendor,
@@ -156,26 +157,31 @@ pub struct DeviceInfo {
 
 impl DeviceInfo {
     /// Returns true if device is currently in use.
+    #[must_use]
     pub fn is_busy(&self) -> bool {
         self.busy.load(Ordering::Relaxed)
     }
 
     /// Number of active buffer allocations.
+    #[must_use]
     pub fn allocation_count(&self) -> usize {
         self.allocations.load(Ordering::Relaxed)
     }
 
     /// Total allocated bytes on this device.
+    #[must_use]
     pub fn allocated_bytes(&self) -> u64 {
         self.allocated_bytes.load(Ordering::Relaxed)
     }
 
     /// Estimated available VRAM (total minus allocated).
+    #[must_use]
     pub fn available_vram_bytes(&self) -> u64 {
         self.vram_bytes.saturating_sub(self.allocated_bytes())
     }
 
     /// VRAM usage as percentage (0–100).
+    #[must_use]
     pub fn usage_percent(&self) -> f64 {
         if self.vram_bytes == 0 {
             return 0.0;
@@ -184,6 +190,7 @@ impl DeviceInfo {
     }
 
     /// Returns true if native f64 shader builtins are supported.
+    #[must_use]
     pub fn supports_f64_builtins(&self) -> bool {
         !matches!(self.driver, GpuDriver::Nvk | GpuDriver::Software)
     }

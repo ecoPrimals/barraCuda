@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! PixelShuffle - Pixel Shuffle (Depth to Space)
+//! `PixelShuffle` - Pixel Shuffle (Depth to Space)
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation
@@ -37,7 +37,9 @@ pub struct PixelShuffle {
 }
 
 impl PixelShuffle {
-    /// Creates a new pixel shuffle. Input channels must be divisible by upscale_factor².
+    /// Creates a new pixel shuffle. Input channels must be divisible by `upscale_factor²`.
+    /// # Errors
+    /// Returns [`Err`] if input is not 4D, `upscale_factor` is zero, or input channels are not divisible by `upscale_factor²`.
     pub fn new(input: Tensor, upscale_factor: usize) -> Result<Self> {
         // Validate input shape: must be 4D [B, C*r^2, H, W]
         let shape = input.shape();
@@ -81,6 +83,8 @@ impl PixelShuffle {
     }
 
     /// Executes pixel shuffle and returns the rearranged tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or device submission fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -228,9 +232,10 @@ impl PixelShuffle {
 
 impl Tensor {
     /// Apply pixel shuffle (depth to space)
-    ///
     /// # Arguments
     /// - `upscale_factor`: Upscaling factor r (output will be H*r x W*r)
+    /// # Errors
+    /// Returns [`Err`] if validation fails or buffer allocation/GPU dispatch fails (e.g. device lost).
     pub fn pixel_shuffle(self, upscale_factor: usize) -> Result<Self> {
         PixelShuffle::new(self, upscale_factor)?.execute()
     }

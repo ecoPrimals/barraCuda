@@ -28,6 +28,10 @@ pub struct MorseForce {
 
 impl MorseForce {
     /// Create a Morse force calculator for bonded interactions with per-bond parameters.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if positions shape is not [N, 3], `bond_pairs` is not [M, 2], or parameter shapes mismatch.
     pub fn new(
         positions: Tensor,
         bond_pairs: Tensor,
@@ -74,6 +78,11 @@ impl MorseForce {
     }
 
     /// Compute Morse forces for all particles and return the force tensor [N, 3].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.positions.device();
         let n_particles = self.positions.shape()[0];
@@ -332,6 +341,6 @@ mod tests {
 
         // At equilibrium, force should be very small
         let f0_mag = (force_data[0].powi(2) + force_data[1].powi(2) + force_data[2].powi(2)).sqrt();
-        println!("✅ Morse equilibrium force: |F| = {} (expect ≈0)", f0_mag);
+        println!("✅ Morse equilibrium force: |F| = {f0_mag} (expect ≈0)");
     }
 }

@@ -3,7 +3,7 @@
 //!
 //! **Physics**: Screened Coulomb with f64 precision, validated against Sarkas
 //! **Algorithm**: All-pairs O(N²) with PBC minimum-image convention
-//! **Precision**: Full f64 via math_f64.wgsl preamble
+//! **Precision**: Full f64 via `math_f64.wgsl` preamble
 //!
 //! **hotSpring Validation**: 9/9 Yukawa OCP cases pass (0.000% energy drift)
 //!
@@ -26,10 +26,10 @@ const YUKAWA_SHADER_DF64: &str = include_str!("yukawa_df64.wgsl");
 /// f64 Yukawa force with PBC minimum-image and potential energy accumulation
 ///
 /// **Key differences from f32 version**:
-/// - Full f64 precision via math_f64.wgsl preamble
+/// - Full f64 precision via `math_f64.wgsl` preamble
 /// - PBC minimum-image integrated into force loop
 /// - Accumulates per-particle potential energy alongside force
-/// - Force sign: repulsive (fx = fx - force_mag * dx * inv_r)
+/// - Force sign: repulsive (fx = fx - `force_mag` * dx * `inv_r`)
 pub struct YukawaForceF64 {
     positions: Tensor,
     n_particles: usize,
@@ -42,7 +42,6 @@ pub struct YukawaForceF64 {
 
 impl YukawaForceF64 {
     /// Create a new f64 Yukawa force computation
-    ///
     /// # Arguments
     /// * `positions` - Position tensor [N, 3] (f64)
     /// * `kappa` - Screening parameter (inverse Debye length)
@@ -50,7 +49,6 @@ impl YukawaForceF64 {
     /// * `cutoff` - Cutoff radius (reduced units)
     /// * `box_side` - Simulation box side length (reduced units)
     /// * `epsilon` - Softening parameter (typically 0 or 1e-30)
-    ///
     /// # Errors
     /// Returns error if positions tensor has wrong shape.
     pub fn new(
@@ -87,9 +85,13 @@ impl YukawaForceF64 {
     }
 
     /// Execute the force computation
-    ///
     /// # Returns
-    /// A tuple of (forces [N, 3], potential_energy [N]) tensors
+    /// A tuple of (forces [N, 3], `potential_energy` [N]) tensors
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<(Tensor, Tensor)> {
         let device = self.positions.device();
         let n = self.n_particles;
@@ -156,7 +158,7 @@ impl YukawaForceF64 {
             .storage_rw(2, &pe_buffer)
             .storage_read(3, &params_buffer)
             .dispatch(workgroups, 1, 1)
-            .submit();
+            .submit()?;
 
         let forces = Tensor::from_buffer(forces_buffer, vec![n, 3], device.clone());
         let pe = Tensor::from_buffer(pe_buffer, vec![n], device.clone());

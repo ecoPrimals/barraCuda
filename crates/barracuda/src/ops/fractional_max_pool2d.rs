@@ -29,6 +29,11 @@ pub struct FractionalMaxPool2d {
 
 impl FractionalMaxPool2d {
     /// Create fractional max pool 2D operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor, pool_seq_h: Tensor, pool_seq_w: Tensor) -> Result<Self> {
         let shape = input.shape();
         if shape.len() != 4 {
@@ -38,8 +43,7 @@ impl FractionalMaxPool2d {
             ));
         }
 
-        let _in_height = shape[2];
-        let _in_width = shape[3];
+        let _ = (shape[2], shape[3]);
 
         // pool_seq_h should have out_height + 1 elements
         // pool_seq_w should have out_width + 1 elements
@@ -60,8 +64,7 @@ impl FractionalMaxPool2d {
             ));
         }
 
-        let _out_height = pool_seq_h_shape[0] - 1;
-        let _out_width = pool_seq_w_shape[0] - 1;
+        let _ = (pool_seq_h_shape[0] - 1, pool_seq_w_shape[0] - 1);
 
         if pool_seq_h_shape[0] < 2 {
             return Err(BarracudaError::invalid_op(
@@ -103,6 +106,11 @@ impl FractionalMaxPool2d {
     }
 
     /// Execute fractional max pool 2D on tensor
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();

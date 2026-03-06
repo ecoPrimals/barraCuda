@@ -57,18 +57,18 @@
 //!
 //! | Parameter | Symbol | Typical Value | Notes |
 //! |-----------|--------|---------------|-------|
-//! | Splitting | α | box_side/6 | Balances PP/PM work |
+//! | Splitting | α | `box_side/6` | Balances PP/PM work |
 //! | Mesh size | Kx,Ky,Kz | 32-128 | Power of 2 for FFT |
 //! | Interpolation order | p | 4-7 | Higher = more accurate |
-//! | Real cutoff | rc | box_side/4 | Works with cell-list |
+//! | Real cutoff | rc | `box_side/4` | Works with cell-list |
 //! | Accuracy | δ | 1e-5 | Force relative error |
 //!
 //! # Implementation Status
 //!
 //! | Component | Status | Notes |
 //! |-----------|--------|-------|
-//! | Fft3D (f32) | ✅ Done | |
-//! | Fft1D (f64) | ✅ Done | For PPPM precision |
+//! | `Fft3D` (f32) | ✅ Done | |
+//! | `Fft1D` (f64) | ✅ Done | For PPPM precision |
 //! | B-spline functions | ✅ Done | Cardinal B-splines with derivatives |
 //! | Charge spreading | ✅ Done | CPU implementation |
 //! | Green's function | ✅ Done | Precomputed with influence correction |
@@ -104,10 +104,10 @@ mod pppm_params;
 mod short_range;
 
 // CPU reference implementation
-pub use bspline::{bspline, bspline_deriv, influence_function, BsplineCoeffs};
-pub use charge_spread::{spread_charges, spread_charges_with_coeffs, ChargeMesh};
+pub use bspline::{BsplineCoeffs, bspline, bspline_deriv, influence_function};
+pub use charge_spread::{ChargeMesh, spread_charges, spread_charges_with_coeffs};
 pub use force_interpolation::{
-    interpolate_forces, interpolate_forces_from_positions, PotentialMesh,
+    PotentialMesh, interpolate_forces, interpolate_forces_from_positions,
 };
 
 // WGSL shader sources (for custom GPU pipelines)

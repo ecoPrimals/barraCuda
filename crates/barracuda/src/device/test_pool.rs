@@ -22,6 +22,8 @@ use std::sync::{Arc, OnceLock, RwLock};
 /// - Current-thread runtime: spawns an OS thread with a dedicated runtime
 ///   (avoids both the `block_in_place` panic and nested `block_on` issues).
 /// - No runtime: uses a lazily-created static runtime directly.
+/// # Panics
+/// Panics if tokio runtime creation fails, or if a spawned thread panics.
 pub fn tokio_block_on<F>(f: F) -> F::Output
 where
     F: std::future::Future + Send,
@@ -121,21 +123,75 @@ fn resolve_gpu_adapter_selector() -> String {
 // Device creation
 // ============================================================================
 
+/// Maximum retries for device creation under driver oversubscription.
+///
+/// When many processes request devices simultaneously (e.g., nextest with
+/// high test-threads), the GPU driver may report "parent device is lost"
+/// for overflow requests.  This is transient — the adapter recovers once
+/// competing requests drain.  Exponential backoff with jitter mirrors the
+/// same strategy GPU memory allocators use when VRAM is temporarily
+/// exhausted.
+const DEVICE_CREATION_MAX_RETRIES: u32 = 5;
+const DEVICE_CREATION_BASE_DELAY_MS: u64 = 100;
+
 async fn create_gpu_device() -> Arc<WgpuDevice> {
     let selector = GPU_ADAPTER_SELECTOR.get_or_init(resolve_gpu_adapter_selector);
-    let device = tokio::time::timeout(
-        std::time::Duration::from_secs(30),
-        WgpuDevice::with_adapter_selector(selector),
-    )
-    .await
-    .expect("GPU device creation timed out after 30s -- check driver")
-    .expect("Failed to create GPU test device");
-    tracing::info!(
-        "test_pool[gpu]: '{}' ({:?})",
-        device.adapter_info().name,
-        device.adapter_info().device_type,
+
+    let mut last_err = String::new();
+    for attempt in 0..=DEVICE_CREATION_MAX_RETRIES {
+        match tokio::time::timeout(
+            std::time::Duration::from_secs(30),
+            WgpuDevice::with_adapter_selector(selector),
+        )
+        .await
+        {
+            Ok(Ok(device)) => {
+                if attempt > 0 {
+                    tracing::info!("test_pool[gpu]: device created after {} retries", attempt);
+                }
+                tracing::info!(
+                    "test_pool[gpu]: '{}' ({:?})",
+                    device.adapter_info().name,
+                    device.adapter_info().device_type,
+                );
+                return Arc::new(device);
+            }
+            Ok(Err(e)) => {
+                last_err = e.to_string();
+                let is_transient = last_err.contains("lost")
+                    || last_err.contains("overloaded")
+                    || last_err.contains("busy");
+                if !is_transient || attempt == DEVICE_CREATION_MAX_RETRIES {
+                    break;
+                }
+                let jitter = (attempt as u64).wrapping_mul(7) % 50;
+                let delay_ms = DEVICE_CREATION_BASE_DELAY_MS * 2u64.pow(attempt) + jitter;
+                tracing::warn!(
+                    "test_pool[gpu]: device creation failed (attempt {}/{}): {} — retrying in {}ms",
+                    attempt + 1,
+                    DEVICE_CREATION_MAX_RETRIES,
+                    last_err,
+                    delay_ms,
+                );
+                tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
+            }
+            Err(_timeout) => {
+                last_err = "timed out after 30s".to_string();
+                if attempt == DEVICE_CREATION_MAX_RETRIES {
+                    break;
+                }
+                tracing::warn!(
+                    "test_pool[gpu]: device creation timed out (attempt {}/{}) — retrying",
+                    attempt + 1,
+                    DEVICE_CREATION_MAX_RETRIES,
+                );
+            }
+        }
+    }
+    panic!(
+        "GPU device creation failed after {} attempts: {last_err}",
+        DEVICE_CREATION_MAX_RETRIES + 1
     );
-    Arc::new(device)
 }
 
 async fn create_cpu_device() -> Option<Arc<WgpuDevice>> {
@@ -161,7 +217,9 @@ fn is_device_healthy(device: &WgpuDevice) -> bool {
 
 /// Fast-path check: returns cached healthy device or None.
 fn try_get_cached(pool: &RwLock<Option<Arc<WgpuDevice>>>) -> Option<Arc<WgpuDevice>> {
-    let guard = pool.read().unwrap_or_else(|e| e.into_inner());
+    let guard = pool
+        .read()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     if let Some(ref dev) = *guard {
         if is_device_healthy(dev) {
             return Some(Arc::clone(dev));
@@ -175,7 +233,9 @@ fn insert_into_pool(
     pool: &RwLock<Option<Arc<WgpuDevice>>>,
     device: Arc<WgpuDevice>,
 ) -> Arc<WgpuDevice> {
-    let mut guard = pool.write().unwrap_or_else(|e| e.into_inner());
+    let mut guard = pool
+        .write()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     if let Some(ref dev) = *guard {
         if is_device_healthy(dev) {
             return Arc::clone(dev);
@@ -197,6 +257,9 @@ fn insert_into_pool(
 /// Returns CPU device for math validation (fast, parallel, no GPU contention).
 /// Set `BARRACUDA_TEST_BACKEND=gpu` to use GPU instead (workload testing).
 /// Falls back to GPU if CPU backend is unavailable.
+/// # Panics
+/// Panics if `BARRACUDA_TEST_BACKEND=gpu` is set but no GPU is available, or if
+/// neither CPU nor GPU backend is available.
 pub async fn get_test_device() -> Arc<WgpuDevice> {
     if prefer_gpu() {
         return get_test_gpu_device()
@@ -232,15 +295,12 @@ async fn get_test_cpu_device_async() -> Option<Arc<WgpuDevice>> {
     if let Some(dev) = try_get_cached(&CPU_POOL) {
         return Some(dev);
     }
-    match create_cpu_device().await {
-        Some(dev) => {
-            CPU_AVAILABLE.get_or_init(|| true);
-            Some(insert_into_pool(&CPU_POOL, dev))
-        }
-        None => {
-            CPU_AVAILABLE.get_or_init(|| false);
-            None
-        }
+    if let Some(dev) = create_cpu_device().await {
+        CPU_AVAILABLE.get_or_init(|| true);
+        Some(insert_into_pool(&CPU_POOL, dev))
+    } else {
+        CPU_AVAILABLE.get_or_init(|| false);
+        None
     }
 }
 
@@ -304,16 +364,19 @@ where
 }
 
 /// Sync wrapper for `get_test_device`.
+#[must_use]
 pub fn get_test_device_sync() -> Arc<WgpuDevice> {
     tokio_block_on(get_test_device())
 }
 
 /// Sync wrapper for `get_test_device_if_gpu_available`.
+#[must_use]
 pub fn get_test_device_if_gpu_available_sync() -> Option<Arc<WgpuDevice>> {
     tokio_block_on(get_test_device_if_gpu_available())
 }
 
 /// Sync wrapper for `get_test_device_if_f64_gpu_available`.
+#[must_use]
 pub fn get_test_device_if_f64_gpu_available_sync() -> Option<Arc<WgpuDevice>> {
     tokio_block_on(get_test_device_if_f64_gpu_available())
 }
@@ -339,7 +402,10 @@ pub fn get_test_device_if_f64_gpu_available_sync() -> Option<Arc<WgpuDevice>> {
 /// }
 /// ```
 pub mod test_prelude {
-    use super::*;
+    use super::{
+        Arc, WgpuDevice, get_test_device, get_test_device_if_f64_gpu_available,
+        get_test_device_if_gpu_available, get_test_device_sync, tokio_block_on,
+    };
     use crate::tensor::Tensor;
 
     /// Get shared test device (async). CPU by default, GPU with env var.
@@ -351,6 +417,7 @@ pub mod test_prelude {
     }
 
     /// Get shared test device (sync version)
+    #[must_use]
     pub fn test_device_blocking() -> Arc<WgpuDevice> {
         get_test_device_sync()
     }
@@ -367,6 +434,8 @@ pub mod test_prelude {
     }
 
     /// Create test tensor on shared device
+    /// # Panics
+    /// Panics if tensor creation fails (e.g. device lost, shape mismatch).
     pub async fn test_tensor(data: &[f32], shape: &[usize], device: &Arc<WgpuDevice>) -> Tensor {
         Tensor::from_vec_on(data.to_vec(), shape.to_vec(), Arc::clone(device))
             .await
@@ -374,11 +443,16 @@ pub mod test_prelude {
     }
 
     /// Create test tensor (sync version)
+    /// # Panics
+    /// Panics if tensor creation fails (e.g. device lost, shape mismatch).
+    #[must_use]
     pub fn test_tensor_blocking(data: &[f32], shape: &[usize], device: &Arc<WgpuDevice>) -> Tensor {
         tokio_block_on(test_tensor(data, shape, device))
     }
 
     /// Create zeros tensor on shared device
+    /// # Panics
+    /// Panics if tensor creation fails (e.g. device lost).
     pub async fn test_zeros(shape: &[usize], device: &Arc<WgpuDevice>) -> Tensor {
         Tensor::zeros_on(shape.to_vec(), Arc::clone(device))
             .await
@@ -386,6 +460,8 @@ pub mod test_prelude {
     }
 
     /// Create randn tensor on shared device (Box-Muller on CPU, then upload).
+    /// # Panics
+    /// Panics if tensor creation fails (e.g. device lost).
     pub async fn test_randn(shape: &[usize], device: &Arc<WgpuDevice>) -> Tensor {
         use rand::Rng;
         let size: usize = shape.iter().product();
@@ -413,6 +489,8 @@ pub mod test_prelude {
     }
 
     /// Create rand tensor on shared device (uniform [0, 1))
+    /// # Panics
+    /// Panics if tensor creation fails (e.g. device lost).
     pub async fn test_rand(shape: &[usize], device: &Arc<WgpuDevice>) -> Tensor {
         use rand::Rng;
         let size: usize = shape.iter().product();
@@ -433,6 +511,9 @@ pub mod test_prelude {
     /// - Device-lost errors → retry once with a fresh device
     /// - Other errors → propagated (test fails)
     /// - Second device-lost → propagated (avoids infinite loop)
+    ///
+    /// # Panics
+    /// Panics if GPU is unavailable on retry after device loss, or if the test fails on retry.
     ///
     /// # Example
     /// ```rust,ignore

@@ -21,6 +21,8 @@ pub struct RepeatInterleave {
 
 impl RepeatInterleave {
     /// Create a new repeat interleave operation
+    /// # Errors
+    /// Returns [`Err`] if `dim` exceeds the tensor rank or if `repeats` is zero.
     pub fn new(input: Tensor, repeats: usize, dim: usize) -> Result<Self> {
         let shape = input.shape();
         if dim >= shape.len() {
@@ -55,6 +57,9 @@ impl RepeatInterleave {
     }
 
     /// Execute the repeat interleave operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();

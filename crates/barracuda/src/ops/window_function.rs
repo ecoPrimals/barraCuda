@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! WindowFunction - Various windowing functions for signal processing
+//! `WindowFunction` - Various windowing functions for signal processing
 //!
 //! Implements Hann, Hamming, Blackman, Bartlett, and Rectangular windows.
 //! Reduces spectral leakage in FFT.
@@ -58,6 +58,9 @@ pub struct WindowFunction {
 
 impl WindowFunction {
     /// Create a new window function operation.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         length: usize,
         window_type: WindowType,
@@ -81,6 +84,9 @@ impl WindowFunction {
     }
 
     /// Execute the window function and return the output tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = &self.device;
 

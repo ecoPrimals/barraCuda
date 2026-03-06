@@ -102,7 +102,7 @@ async fn test_variance_precision() {
     let cpu_result = variance_cpu(&input_data);
 
     let error = (gpu_result[0] - cpu_result).abs();
-    assert!(error < 1e-3, "Error {} exceeds threshold", error);
+    assert!(error < 1e-3, "Error {error} exceeds threshold");
 }
 
 #[tokio::test]

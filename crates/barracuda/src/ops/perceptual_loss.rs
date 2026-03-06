@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! PerceptualLoss - Feature-based perceptual loss
+//! `PerceptualLoss` - Feature-based perceptual loss
 //!
-//! **Canonical BarraCuda Pattern**: Struct with new/execute
+//! **Canonical `BarraCuda` Pattern**: Struct with new/execute
 //!
 //! Compares high-level features instead of pixels.
 //! Used in style transfer and super-resolution.
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::DeviceCapabilities;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
@@ -20,6 +20,11 @@ pub struct PerceptualLoss {
 
 impl PerceptualLoss {
     /// Create a new perceptual loss operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(features1: Tensor, features2: Tensor, weights: Option<Tensor>) -> Result<Self> {
         // Validate feature dimensions match
         if features1.shape() != features2.shape() {
@@ -60,6 +65,11 @@ impl PerceptualLoss {
     }
 
     /// Execute the perceptual loss operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.features1.device();
         let size = self.features1.len();
@@ -76,8 +86,7 @@ impl PerceptualLoss {
         let num_weights = self
             .weights
             .as_ref()
-            .map(|w| w.shape().iter().product::<usize>())
-            .unwrap_or(0) as u32;
+            .map_or(0, |w| w.shape().iter().product::<usize>()) as u32;
 
         // Sentinel buffer when weights are None (keeps it alive for bind group creation)
         let sentinel_buf;
@@ -118,7 +127,7 @@ impl PerceptualLoss {
             .storage_rw(4, &output_buffer)
             .uniform(5, &params_buffer)
             .dispatch(workgroups, 1, 1)
-            .submit();
+            .submit()?;
 
         ComputeDispatch::new(device, "perceptual_loss_pass2")
             .shader(Self::wgsl_shader(), "compute_mean_loss")
@@ -129,7 +138,7 @@ impl PerceptualLoss {
             .storage_rw(4, &output_buffer)
             .uniform(5, &params_buffer)
             .dispatch(1, 1, 1)
-            .submit();
+            .submit()?;
 
         let output_data = crate::utils::read_buffer(device, &output_buffer, 1)?;
         Ok(Tensor::new(output_data, vec![1], device.clone()))

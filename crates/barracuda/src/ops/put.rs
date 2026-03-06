@@ -24,6 +24,10 @@ pub struct Put {
 
 impl Put {
     /// Create a new put operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if indices length does not match values size, or any index is out of bounds.
     pub fn new(
         output: Tensor,
         indices: Vec<u32>,
@@ -74,6 +78,11 @@ impl Put {
 
     /// Execute the put operation
     /// Note: This modifies the output tensor in-place
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.output.device();
         let output_size: usize = self.output.shape().iter().product();
@@ -120,7 +129,7 @@ impl Put {
         let params = Params {
             output_size: output_size as u32,
             num_values: num_values as u32,
-            accumulate: if self.accumulate { 1 } else { 0 },
+            accumulate: u32::from(self.accumulate),
             _pad1: 0,
         };
 

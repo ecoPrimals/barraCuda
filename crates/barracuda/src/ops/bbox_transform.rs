@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! BBox Transform - Transform bounding boxes
+//! `BBox` Transform - Transform bounding boxes
 //!
 //! Applies deltas to anchor boxes (object detection).
 //!
@@ -14,7 +14,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// BBoxTransform operation
+/// `BBoxTransform` operation
 pub struct BBoxTransform {
     anchors: Tensor,
     deltas: Tensor,
@@ -22,6 +22,8 @@ pub struct BBoxTransform {
 
 impl BBoxTransform {
     /// Create a new bbox transform operation
+    /// # Errors
+    /// Returns [`Err`] if anchors is not [N, 4] or deltas shape does not match anchors.
     pub fn new(anchors: Tensor, deltas: Tensor) -> Result<Self> {
         let anchor_shape = anchors.shape();
         let delta_shape = deltas.shape();
@@ -56,6 +58,11 @@ impl BBoxTransform {
     }
 
     /// Execute the bbox transform operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.anchors.device();
         let shape = self.anchors.shape();
@@ -225,8 +232,12 @@ impl Tensor {
     /// Transform bounding boxes with deltas
     ///
     /// # Arguments
-    ///
     /// * `deltas` - Deltas tensor [N, 4] (dx, dy, dw, dh)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn bbox_transform(self, deltas: Tensor) -> Result<Self> {
         BBoxTransform::new(self, deltas)?.execute()
     }

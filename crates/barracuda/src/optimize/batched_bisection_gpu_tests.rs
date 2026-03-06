@@ -144,11 +144,7 @@ async fn test_bcs_with_degeneracy() {
 
         assert!(
             (sum - target).abs() < 0.01,
-            "Problem {}: Σ deg_k v²_k should be {}, got {} (μ={})",
-            i,
-            target,
-            sum,
-            mu
+            "Problem {i}: Σ deg_k v²_k should be {target}, got {sum} (μ={mu})"
         );
     }
 }

@@ -68,6 +68,11 @@ pub struct BrentResult {
 /// assert!((result.root - std::f64::consts::SQRT_2).abs() < 1e-10);
 /// # Ok::<(), barracuda::error::BarracudaError>(())
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn brent<F>(f: F, mut a: f64, mut b: f64, tol: f64, max_iter: usize) -> Result<BrentResult>
 where
     F: Fn(f64) -> f64,
@@ -214,7 +219,7 @@ where
 ///
 /// # Returns
 ///
-/// (x_min, f_min, iterations)
+/// (`x_min`, `f_min`, iterations)
 ///
 /// # Example
 ///
@@ -229,6 +234,10 @@ where
 /// assert!(f_min < 1e-16);
 /// # Ok::<(), barracuda::error::BarracudaError>(())
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if the minimum cannot be bracketed or convergence fails.
 pub fn brent_minimize<F>(
     f: F,
     mut a: f64,

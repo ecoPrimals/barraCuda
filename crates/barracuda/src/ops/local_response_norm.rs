@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! LocalResponseNorm - Local Response Normalization (LRN)
+//! `LocalResponseNorm` - Local Response Normalization (LRN)
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation
@@ -9,9 +9,9 @@
 //! - ✅ Modern idiomatic Rust (no traits, direct impl)
 //!
 //! Normalizes activations within local neighborhoods
-//! Used in AlexNet and other early CNNs
+//! Used in `AlexNet` and other early CNNs
 //!
-//! Formula: y_i = x_i / (k + alpha * sum(x_j^2) / size)^beta
+//! Formula: `y_i` = `x_i` / (k + alpha * `sum(x_j^2)` / size)^beta
 
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
@@ -41,6 +41,8 @@ pub struct LocalResponseNorm {
 
 impl LocalResponseNorm {
     /// Creates a new LRN. Size is the normalization window; alpha, beta, k are formula parameters.
+    /// # Errors
+    /// Returns [`Err`] if input is not 4D [B, C, H, W], or if size is zero.
     pub fn new(input: Tensor, size: usize, alpha: f32, beta: f32, k: f32) -> Result<Self> {
         // Validate input shape: must be 4D [B, C, H, W]
         let shape = input.shape();
@@ -77,6 +79,8 @@ impl LocalResponseNorm {
     }
 
     /// Executes LRN and returns the normalized tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -220,12 +224,14 @@ impl LocalResponseNorm {
 
 impl Tensor {
     /// Apply local response normalization
-    ///
     /// # Arguments
     /// - `size`: Neighborhood size
     /// - `alpha`: Scaling parameter (typically 1e-4)
     /// - `beta`: Exponent (typically 0.75)
     /// - `k`: Bias (typically 1.0 or 2.0)
+    /// # Errors
+    /// Returns [`Err`] if input is not 4D, size is zero, buffer allocation fails, GPU dispatch
+    /// fails, or the device is lost.
     pub fn local_response_norm(self, size: usize, alpha: f32, beta: f32, k: f32) -> Result<Self> {
         LocalResponseNorm::new(self, size, alpha, beta, k)?.execute()
     }

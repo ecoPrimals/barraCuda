@@ -24,13 +24,13 @@
 //! }
 //! ```
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
-/// Parameters for max_abs_diff shader
+/// Parameters for `max_abs_diff` shader
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
 struct DiffParams {
@@ -52,15 +52,12 @@ impl MaxAbsDiffF64 {
     }
 
     /// Compute max|a[i] - b[i]| over all elements
-    ///
     /// # Arguments
-    /// * `device` - WgpuDevice
+    /// * `device` - `WgpuDevice`
     /// * `a` - First f64 slice
     /// * `b` - Second f64 slice (must have same length as `a`)
-    ///
     /// # Returns
     /// The maximum absolute difference as a single f64
-    ///
     /// # Errors
     /// Returns error if arrays have different lengths
     pub fn compute(device: Arc<WgpuDevice>, a: &[f64], b: &[f64]) -> Result<f64> {
@@ -129,7 +126,7 @@ impl MaxAbsDiffF64 {
             .storage_rw(2, &partial_buffer)
             .uniform(3, &params_buffer)
             .dispatch(n_workgroups as u32, 1, 1)
-            .submit();
+            .submit()?;
 
         // If single workgroup, result is ready
         if n_workgroups <= 1 {
@@ -152,28 +149,22 @@ impl MaxAbsDiffF64 {
         };
         let params2_buffer = device.create_uniform_buffer("MaxAbsDiff params 2", &params2);
 
-        // For pass 2, partial_buffer becomes input_a, we need a dummy input_b
-        let dummy_buffer = device.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("MaxAbsDiff dummy"),
-            size: (n_workgroups * 8) as u64,
-            usage: wgpu::BufferUsages::STORAGE,
-            mapped_at_creation: false,
-        });
+        let placeholder = device.placeholder_buffer();
 
         ComputeDispatch::new(&device, "max_abs_diff_pass2")
             .shader(Self::wgsl_shader(), "max_reduce_pass2")
             .f64()
             .storage_read(0, &partial_buffer)
-            .storage_read(1, &dummy_buffer)
+            .storage_read(1, placeholder)
             .storage_rw(2, &final_buffer)
             .uniform(3, &params2_buffer)
             .dispatch(n_workgroups2 as u32, 1, 1)
-            .submit();
+            .submit()?;
 
         // For very large inputs, may need CPU fallback
         if n_workgroups2 > 1 {
             let partials = device.read_f64_buffer(&final_buffer, n_workgroups2)?;
-            return Ok(partials.iter().cloned().fold(0.0_f64, f64::max));
+            return Ok(partials.iter().copied().fold(0.0_f64, f64::max));
         }
 
         Self::read_f64_scalar(&device, &final_buffer)
@@ -205,8 +196,7 @@ mod tests {
         let diff = MaxAbsDiffF64::compute(device, &a, &b).unwrap();
         assert!(
             (diff - 0.5).abs() < 1e-10,
-            "Max abs diff should be 0.5, got {}",
-            diff
+            "Max abs diff should be 0.5, got {diff}"
         );
     }
 
@@ -227,8 +217,7 @@ mod tests {
         let diff = MaxAbsDiffF64::compute(device, &a, &b).unwrap();
         assert!(
             (diff - 100.0).abs() < 1e-6,
-            "Max abs diff should be 100, got {}",
-            diff
+            "Max abs diff should be 100, got {diff}"
         );
     }
 
@@ -246,8 +235,7 @@ mod tests {
         let diff = MaxAbsDiffF64::compute(device, &a, &b).unwrap();
         assert!(
             diff < 1e-14,
-            "Max abs diff of identical arrays should be ~0, got {}",
-            diff
+            "Max abs diff of identical arrays should be ~0, got {diff}"
         );
     }
 
@@ -314,8 +302,7 @@ mod tests {
         let diff = MaxAbsDiffF64::compute(device, &a, &b).unwrap();
         assert!(
             (diff - 10.0).abs() < 1e-10,
-            "Max abs diff should be 10, got {}",
-            diff
+            "Max abs diff should be 10, got {diff}"
         );
     }
 }

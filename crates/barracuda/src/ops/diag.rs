@@ -55,6 +55,9 @@ pub enum DiagMode {
 
 impl Diag {
     /// Create a new diagonal operation.
+    /// # Errors
+    /// Returns [`Err`] if extract mode requires non-square matrix, or create
+    /// mode requires non-1D input.
     pub fn new(input: Tensor, mode: DiagMode) -> Result<Self> {
         let shape = input.shape();
 
@@ -95,6 +98,9 @@ impl Diag {
     }
 
     /// Execute the diagonal operation and return the output tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -135,7 +141,7 @@ impl Diag {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d(dispatch_size as u32)
-            .submit();
+            .submit()?;
 
         let output_data = crate::utils::read_buffer(device, &output_buffer, output_size)?;
         Ok(Tensor::new(output_data, output_shape, device.clone()))

@@ -32,19 +32,37 @@ impl PooledBuffer {
         }
     }
 
-    /// Get the underlying wgpu buffer
+    /// Get the underlying wgpu buffer.
+    ///
+    /// # Panics
+    /// Never panics: buffer is `None` only after [`into_buffer`](Self::into_buffer) (consumes self)
+    /// or during `Drop`; this method is not used in those states.
+    #[must_use]
     pub fn buffer(&self) -> &wgpu::Buffer {
-        self.buffer.as_ref().expect("Buffer already taken")
+        // Invariant: buffer is Some from construction until into_buffer/Drop.
+        self.buffer
+            .as_ref()
+            .expect("PooledBuffer::buffer after into_buffer (unreachable by ownership)")
     }
 
-    /// Get the buffer size in bytes
+    /// Get the buffer size in bytes.
+    #[must_use]
     pub fn size(&self) -> u64 {
         self.buffer().size()
     }
 
-    /// Convert to a regular wgpu::Buffer (removes from pool management)
+    /// Convert to a regular `wgpu::Buffer` (removes from pool management).
+    ///
+    /// # Panics
+    ///
+    /// Unreachable by construction: `into_buffer` consumes `self` so it
+    /// cannot be called twice.
+    #[must_use]
     pub fn into_buffer(mut self) -> wgpu::Buffer {
-        self.buffer.take().expect("Buffer already taken")
+        // Invariant: buffer is Some; into_buffer consumes self so only called once.
+        self.buffer
+            .take()
+            .expect("PooledBuffer::into_buffer called twice (unreachable by ownership)")
     }
 }
 
@@ -52,7 +70,9 @@ impl Deref for PooledBuffer {
     type Target = wgpu::Buffer;
 
     fn deref(&self) -> &Self::Target {
-        self.buffer()
+        self.buffer
+            .as_ref()
+            .expect("PooledBuffer::deref after into_buffer (unreachable by ownership)")
     }
 }
 
@@ -70,9 +90,9 @@ impl Drop for PooledBuffer {
 pub(crate) struct BufferPoolInner {
     pub pools: RwLock<HashMap<usize, Vec<wgpu::Buffer>>>,
     pub device: wgpu::Device,
-    /// Serializes poll against submit (shared with WgpuDevice::gpu_lock).
+    /// Serializes poll against submit (shared with `WgpuDevice::gpu_lock`).
     poll_lock: Arc<Mutex<()>>,
-    /// Counts live GuardedEncoders — poll skips when > 0.
+    /// Counts live `GuardedEncoders` — poll skips when > 0.
     active_encoders: Arc<AtomicU32>,
     pub allocations: AtomicUsize,
     pub reuses: AtomicUsize,
@@ -84,7 +104,7 @@ impl BufferPoolInner {
     fn return_buffer(&self, buffer: wgpu::Buffer, bucket: usize) {
         self.pools
             .write()
-            .expect("pools poisoned")
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .entry(bucket)
             .or_default()
             .push(buffer);
@@ -97,7 +117,7 @@ impl BufferPoolInner {
     fn defer_return(&self, buffer: wgpu::Buffer, bucket: usize) {
         self.pending
             .lock()
-            .expect("pending lock poisoned")
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .push((buffer, bucket));
     }
 }
@@ -115,6 +135,7 @@ pub struct BufferDescriptor {
 
 impl BufferDescriptor {
     /// Create a descriptor with default storage + copy usage.
+    #[must_use]
     pub fn new(size: u64) -> Self {
         Self {
             size,
@@ -126,22 +147,26 @@ impl BufferDescriptor {
     }
 
     /// Descriptor for an f64 array of given count.
+    #[must_use]
     pub fn f64_array(count: usize) -> Self {
         Self::new((count * std::mem::size_of::<f64>()) as u64)
     }
 
     /// Descriptor for an f32 array of given count.
+    #[must_use]
     pub fn f32_array(count: usize) -> Self {
         Self::new((count * std::mem::size_of::<f32>()) as u64)
     }
 
     /// Set the buffer label.
+    #[must_use]
     pub fn with_label(mut self, label: impl Into<String>) -> Self {
         self.label = Some(label.into());
         self
     }
 
     /// Set buffer usage flags.
+    #[must_use]
     pub fn with_usage(mut self, usage: wgpu::BufferUsages) -> Self {
         self.usage = usage;
         self
@@ -157,31 +182,36 @@ pub struct SolverBufferSet {
 
 impl SolverBufferSet {
     /// Get a buffer by name.
+    #[must_use]
     pub fn get(&self, name: &str) -> Option<&wgpu::Buffer> {
-        self.buffers.get(name).map(|b| b.as_ref())
+        self.buffers.get(name).map(std::convert::AsRef::as_ref)
     }
 
     /// Get a buffer as Arc by name.
+    #[must_use]
     pub fn get_arc(&self, name: &str) -> Option<Arc<wgpu::Buffer>> {
         self.buffers.get(name).cloned()
     }
 
     /// Solver identifier.
+    #[must_use]
     pub fn solver_id(&self) -> &str {
         &self.solver_id
     }
 
     /// Iterator over buffer names.
     pub fn buffer_names(&self) -> impl Iterator<Item = &str> {
-        self.buffers.keys().map(|s| s.as_str())
+        self.buffers.keys().map(std::string::String::as_str)
     }
 
     /// Number of buffers in the set.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.buffers.len()
     }
 
     /// Returns true if the set has no buffers.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.buffers.is_empty()
     }
@@ -214,6 +244,7 @@ impl BufferPool {
     }
 
     /// Create a pool with its own independent locks (for tests/standalone use).
+    #[must_use]
     pub fn new_standalone(device: wgpu::Device) -> Self {
         Self::new(
             device,
@@ -229,19 +260,19 @@ impl BufferPool {
     }
 
     /// Try to move pending buffers back into the available pool.
-    ///
-    /// Uses `try_write()` on the poll_lock so it **never blocks encoding**.
+    /// Uses `try_write()` on the `poll_lock` so it **never blocks encoding**.
     /// If encoding is in progress (read locks held), the drain is skipped
     /// entirely — buffers stay pending until the next drain attempt.
-    ///
     /// Uses `MaintainBase::Poll` (non-blocking) to check for GPU completion
     /// without stalling. Buffers whose GPU work hasn't finished remain pending.
+    /// # Panics
+    /// Panics if the pending lock is poisoned.
     pub fn drain_pending(&self) {
         let pending_count = self
             .inner
             .pending
             .lock()
-            .expect("pending lock poisoned")
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .len();
         if pending_count == 0 {
             return;
@@ -259,7 +290,11 @@ impl BufferPool {
         }));
 
         let drained: Vec<(wgpu::Buffer, usize)> = {
-            let mut pending = self.inner.pending.lock().expect("pending lock poisoned");
+            let mut pending = self
+                .inner
+                .pending
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             std::mem::take(&mut *pending)
         };
 
@@ -269,6 +304,9 @@ impl BufferPool {
     }
 
     /// Acquire a pooled buffer (returns to pool on drop).
+    /// # Panics
+    /// Panics if the pools lock is poisoned.
+    #[must_use]
     pub fn acquire_pooled(&self, size_bytes: usize) -> PooledBuffer {
         self.drain_pending();
 
@@ -277,14 +315,17 @@ impl BufferPool {
             .inner
             .pools
             .write()
-            .expect("pools poisoned")
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .get_mut(&bucket)
-            .and_then(|v| v.pop())
+            .and_then(std::vec::Vec::pop)
             .unwrap_or_else(|| self.allocate_new(bucket));
         PooledBuffer::new(buffer, Arc::downgrade(&self.inner), bucket)
     }
 
     /// Acquire a buffer (does not return to pool; call release explicitly).
+    /// # Panics
+    /// Panics if the pools lock is poisoned.
+    #[must_use]
     pub fn acquire(&self, size_bytes: usize) -> wgpu::Buffer {
         self.drain_pending();
 
@@ -293,9 +334,9 @@ impl BufferPool {
             .inner
             .pools
             .write()
-            .expect("pools poisoned")
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .get_mut(&bucket)
-            .and_then(|v| v.pop());
+            .and_then(std::vec::Vec::pop);
         if let Some(buf) = recycled {
             self.inner.reuses.fetch_add(1, Ordering::Relaxed);
             return buf;
@@ -319,18 +360,21 @@ impl BufferPool {
     }
 
     /// Return a buffer to the pool for reuse.
+    /// # Panics
+    /// Panics if the pools lock is poisoned.
     pub fn release(&self, buffer: wgpu::Buffer) {
         let bucket = Self::bucket_size(buffer.size() as usize);
         self.inner
             .pools
             .write()
-            .expect("pools poisoned")
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .entry(bucket)
             .or_default()
             .push(buffer);
     }
 
     /// Returns (allocations, reuses).
+    #[must_use]
     pub fn stats(&self) -> (usize, usize) {
         (
             self.inner.allocations.load(Ordering::Relaxed),
@@ -339,6 +383,11 @@ impl BufferPool {
     }
 
     /// Pin buffers for a solver; returns error if solver already has buffers.
+    /// # Panics
+    /// Panics if the `solver_buffers` lock is poisoned.
+    /// # Errors
+    /// Returns [`Err`] if the solver already has pinned buffers (call
+    /// `release_solver_buffers` first), or if buffer allocation fails.
     pub fn pin_solver_buffers(
         &self,
         solver_id: &str,
@@ -348,7 +397,7 @@ impl BufferPool {
             .inner
             .solver_buffers
             .write()
-            .expect("solver_buffers lock poisoned");
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
 
         if solver_buffers.contains_key(solver_id) {
             return Err(BarracudaError::InvalidInput {
@@ -387,22 +436,28 @@ impl BufferPool {
     }
 
     /// Release pinned buffers for a solver. Returns true if buffers were released.
+    /// # Panics
+    /// Panics if the `solver_buffers` lock is poisoned.
+    #[must_use]
     pub fn release_solver_buffers(&self, solver_id: &str) -> bool {
         let mut solver_buffers = self
             .inner
             .solver_buffers
             .write()
-            .expect("solver_buffers lock poisoned");
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         solver_buffers.remove(solver_id).is_some()
     }
 
     /// Get pinned buffers for a solver (cloned).
+    /// # Panics
+    /// Panics if the `solver_buffers` lock is poisoned.
+    #[must_use]
     pub fn get_solver_buffers(&self, solver_id: &str) -> Option<SolverBufferSet> {
         let solver_buffers = self
             .inner
             .solver_buffers
             .read()
-            .expect("solver_buffers lock poisoned");
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         solver_buffers.get(solver_id).map(|set| SolverBufferSet {
             solver_id: set.solver_id.clone(),
             buffers: set.buffers.clone(),
@@ -410,22 +465,28 @@ impl BufferPool {
     }
 
     /// Returns true if solver has pinned buffers.
+    /// # Panics
+    /// Panics if the `solver_buffers` lock is poisoned.
+    #[must_use]
     pub fn has_solver_buffers(&self, solver_id: &str) -> bool {
         let solver_buffers = self
             .inner
             .solver_buffers
             .read()
-            .expect("solver_buffers lock poisoned");
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         solver_buffers.contains_key(solver_id)
     }
 
     /// All solver IDs with pinned buffers.
+    /// # Panics
+    /// Panics if the `solver_buffers` lock is poisoned.
+    #[must_use]
     pub fn solver_ids(&self) -> Vec<String> {
         let solver_buffers = self
             .inner
             .solver_buffers
             .read()
-            .expect("solver_buffers lock poisoned");
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         solver_buffers.keys().cloned().collect()
     }
 }

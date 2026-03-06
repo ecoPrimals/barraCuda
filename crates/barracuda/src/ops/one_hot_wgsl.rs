@@ -20,6 +20,7 @@ pub struct OneHot {
 
 impl OneHot {
     /// Create a new one-hot operation
+    #[must_use]
     pub fn new(indices: Vec<usize>, num_classes: usize) -> Self {
         Self {
             indices,
@@ -40,6 +41,11 @@ impl OneHot {
     }
 
     /// Execute the one-hot operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self, device: &std::sync::Arc<crate::device::WgpuDevice>) -> Result<Tensor> {
         let num_indices = self.indices.len();
         let output_size = num_indices * self.num_classes;
@@ -204,6 +210,11 @@ impl Tensor {
     /// # Arguments
     ///
     /// * `num_classes` - Number of classes for one-hot encoding
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn one_hot_wgsl(self, num_classes: usize) -> Result<Self> {
         // Extract indices from tensor
         let data = self.to_vec()?;

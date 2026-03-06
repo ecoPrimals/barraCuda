@@ -24,7 +24,7 @@ use std::sync::Arc;
 
 use wgpu;
 
-/// Parameters passed to the cumprod_f64 shader
+/// Parameters passed to the `cumprod_f64` shader
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 struct CumprodF64Params {
@@ -55,6 +55,7 @@ pub struct CumprodF64 {
 
 impl CumprodF64 {
     /// Create a new inclusive cumprod operation along the specified dimension
+    #[must_use]
     pub fn new(input: Tensor, dim: usize) -> Self {
         Self {
             input,
@@ -64,6 +65,7 @@ impl CumprodF64 {
     }
 
     /// Create an exclusive cumprod (shifted, starts with 1)
+    #[must_use]
     pub fn exclusive(input: Tensor, dim: usize) -> Self {
         Self {
             input,
@@ -73,6 +75,7 @@ impl CumprodF64 {
     }
 
     /// Create a reverse cumprod (from end to start)
+    #[must_use]
     pub fn reverse(input: Tensor, dim: usize) -> Self {
         Self {
             input,
@@ -82,6 +85,7 @@ impl CumprodF64 {
     }
 
     /// Create a log-domain cumprod (numerically stable for long sequences)
+    #[must_use]
     pub fn log_domain(input: Tensor, dim: usize) -> Self {
         Self {
             input,
@@ -105,6 +109,9 @@ impl CumprodF64 {
     }
 
     /// Execute the cumprod operation
+    /// # Errors
+    /// Returns [`Err`] if dimension is out of range for the tensor rank, buffer allocation fails,
+    /// GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let _device = self.input.device();
         let shape = self.input.shape().to_vec();
@@ -278,6 +285,9 @@ impl CumprodF64 {
     }
 
     /// Execute 1D cumprod directly on a slice (convenience method)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, buffer readback fails,
+    /// or the device is lost.
     pub async fn execute_1d(device: &Arc<WgpuDevice>, data: &[f64]) -> Result<Vec<f64>> {
         let n = data.len();
         if n == 0 {
@@ -292,6 +302,9 @@ impl CumprodF64 {
     }
 
     /// Execute 1D exclusive cumprod directly on a slice
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, buffer readback fails,
+    /// or the device is lost.
     pub async fn execute_1d_exclusive(device: &Arc<WgpuDevice>, data: &[f64]) -> Result<Vec<f64>> {
         let n = data.len();
         if n == 0 {
@@ -325,10 +338,7 @@ mod tests {
         for (i, (&got, &exp)) in result.iter().zip(expected.iter()).enumerate() {
             assert!(
                 (got - exp).abs() < 1e-10,
-                "Mismatch at {}: got {}, expected {}",
-                i,
-                got,
-                exp
+                "Mismatch at {i}: got {got}, expected {exp}"
             );
         }
     }
@@ -349,10 +359,7 @@ mod tests {
         for (i, (&got, &exp)) in result.iter().zip(expected.iter()).enumerate() {
             assert!(
                 (got - exp).abs() < 1e-10,
-                "Mismatch at {}: got {}, expected {}",
-                i,
-                got,
-                exp
+                "Mismatch at {i}: got {got}, expected {exp}"
             );
         }
     }
@@ -370,9 +377,7 @@ mod tests {
         for (i, &val) in result.iter().enumerate() {
             assert!(
                 (val - 1.0).abs() < 1e-10,
-                "Mismatch at {}: got {}, expected 1.0",
-                i,
-                val
+                "Mismatch at {i}: got {val}, expected 1.0"
             );
         }
     }

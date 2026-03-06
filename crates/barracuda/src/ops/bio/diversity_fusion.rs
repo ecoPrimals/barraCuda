@@ -9,7 +9,7 @@
 //! Per sample (3 contiguous f64 values):
 //! - `[0]` Shannon entropy H' = −Σ pᵢ ln(pᵢ)
 //! - `[1]` Simpson index  D  = 1 − Σ pᵢ²
-//! - `[2]` Pielou evenness J' = H' / ln(S_obs)
+//! - `[2]` Pielou evenness J' = H' / `ln(S_obs)`
 //!
 //! Provenance: wetSpring Write phase → toadStool absorption
 
@@ -17,9 +17,9 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
+use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::WgpuDevice;
 use crate::error::Result;
 
 /// WGSL shader source for fused diversity computation (f64).
@@ -33,7 +33,7 @@ pub struct DiversityResult {
     pub shannon: f64,
     /// Simpson index D = 1 − Σ pᵢ².
     pub simpson: f64,
-    /// Pielou evenness J' = H' / ln(S_obs).
+    /// Pielou evenness J' = H' / `ln(S_obs)`.
     pub evenness: f64,
 }
 
@@ -51,6 +51,11 @@ pub struct DiversityFusionGpu {
 
 impl DiversityFusionGpu {
     /// Create a diversity fusion compute instance.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -58,6 +63,14 @@ impl DiversityFusionGpu {
     /// Compute fused diversity metrics for multiple samples.
     ///
     /// `abundances` is row-major `[n_samples × n_species]`.
+    ///
+    /// # Panics
+    /// Panics if `abundances.len() != n_samples * n_species`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn compute(
         &self,
         abundances: &[f64],
@@ -101,7 +114,7 @@ impl DiversityFusionGpu {
             .storage_read(1, &abundances_buf)
             .storage_rw(2, &results_buf)
             .dispatch(params.n_samples.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
-            .submit();
+            .submit()?;
 
         let raw = self.device.read_buffer_f64(&results_buf, n_samples * 3)?;
 

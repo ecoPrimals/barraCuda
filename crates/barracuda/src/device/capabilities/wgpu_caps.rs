@@ -4,9 +4,9 @@
 //! Answers "what can this wgpu device do?" by querying the adapter at
 //! construction time and providing typed, zero-hardcoded accessors.
 
+use crate::device::WgpuDevice;
 use crate::device::driver_profile::GpuArch;
 use crate::device::vendor::{VENDOR_AMD, VENDOR_INTEL, VENDOR_NVIDIA};
-use crate::device::WgpuDevice;
 use std::fmt;
 
 /// Minimum buffer size (bytes) for FHE workloads — 16K degree polynomial estimate.
@@ -99,7 +99,7 @@ pub struct DeviceCapabilities {
     /// Device name (e.g., "NVIDIA RTX 4090")
     pub device_name: String,
 
-    /// Device type (DiscreteGpu, IntegratedGpu, Cpu, etc.)
+    /// Device type (`DiscreteGpu`, `IntegratedGpu`, Cpu, etc.)
     pub device_type: wgpu::DeviceType,
 
     /// Maximum buffer size (bytes)
@@ -126,7 +126,7 @@ pub struct DeviceCapabilities {
     /// Backend (Vulkan, Metal, DX12, GL, etc.)
     pub backend: wgpu::Backend,
 
-    /// Vendor ID (e.g., NVIDIA=VENDOR_NVIDIA, AMD=VENDOR_AMD, Intel=VENDOR_INTEL)
+    /// Vendor ID (e.g., `NVIDIA=VENDOR_NVIDIA`, `AMD=VENDOR_AMD`, `Intel=VENDOR_INTEL`)
     pub vendor: u32,
 
     /// Override for `gpu_dispatch_threshold()`. `None` uses the default per
@@ -149,6 +149,7 @@ impl DeviceCapabilities {
     /// Detect capabilities from wgpu device
     ///
     /// **Deep Debt**: Runtime discovery, no assumptions
+    #[must_use]
     pub fn from_device(device: &WgpuDevice) -> Self {
         let limits = device.device().limits();
         let adapter_info = device.adapter_info();
@@ -181,6 +182,7 @@ impl DeviceCapabilities {
     }
 
     /// Get optimal workgroup size for a specific workload
+    #[must_use]
     pub fn optimal_workgroup_size(&self, workload: WorkloadType) -> u32 {
         match self.device_type {
             wgpu::DeviceType::DiscreteGpu => match self.vendor {
@@ -242,6 +244,7 @@ impl DeviceCapabilities {
     }
 
     /// Get optimal 2D workgroup size (for 2D operations like convolutions)
+    #[must_use]
     pub fn optimal_workgroup_size_2d(&self, workload: WorkloadType) -> (u32, u32) {
         let total = self.optimal_workgroup_size(workload);
         let side = (total as f32).sqrt() as u32;
@@ -251,6 +254,7 @@ impl DeviceCapabilities {
     }
 
     /// Get optimal 3D workgroup size (for 3D operations)
+    #[must_use]
     pub fn optimal_workgroup_size_3d(&self, workload: WorkloadType) -> (u32, u32, u32) {
         let total = self.optimal_workgroup_size(workload);
         let side = (total as f32).cbrt() as u32;
@@ -276,22 +280,26 @@ impl DeviceCapabilities {
     }
 
     /// Get maximum allocation size for this device
+    #[must_use]
     pub fn max_allocation_size(&self) -> u64 {
         (self.max_buffer_size as f64 * 0.75) as u64
     }
 
     /// Check if device supports FHE workloads (large U64 buffers)
+    #[must_use]
     pub fn supports_fhe(&self) -> bool {
         self.max_buffer_size >= FHE_MIN_BUFFER_SIZE
     }
 
     /// Check if device supports large matrix operations
+    #[must_use]
     pub fn supports_large_matmul(&self, m: usize, n: usize, k: usize) -> bool {
         let required_bytes = (m * k + k * n + m * n) * 4;
         required_bytes as u64 <= self.max_allocation_size()
     }
 
     /// Get optimal tile size for matrix multiplication
+    #[must_use]
     pub fn optimal_matmul_tile_size(&self) -> u32 {
         match self.device_type {
             wgpu::DeviceType::DiscreteGpu => match self.vendor {
@@ -307,6 +315,7 @@ impl DeviceCapabilities {
     }
 
     /// Minimum element count below which CPU is faster than a GPU dispatch.
+    #[must_use]
     pub fn gpu_dispatch_threshold(&self) -> usize {
         if let Some(t) = self.gpu_dispatch_threshold_override {
             return t;
@@ -320,12 +329,14 @@ impl DeviceCapabilities {
     }
 
     /// Return a copy with the GPU dispatch threshold set to `threshold`.
+    #[must_use]
     pub fn with_gpu_dispatch_threshold(mut self, threshold: usize) -> Self {
         self.gpu_dispatch_threshold_override = Some(threshold);
         self
     }
 
     /// Get vendor name (for logging/debugging)
+    #[must_use]
     pub fn vendor_name(&self) -> &'static str {
         match self.vendor {
             VENDOR_NVIDIA => "NVIDIA",
@@ -339,6 +350,7 @@ impl DeviceCapabilities {
     }
 
     /// Check if this is a high-performance GPU
+    #[must_use]
     pub fn is_high_performance(&self) -> bool {
         matches!(self.device_type, wgpu::DeviceType::DiscreteGpu)
             && self.max_compute_invocations_per_workgroup >= HIGH_PERFORMANCE_MIN_INVOCATIONS
@@ -349,6 +361,7 @@ impl DeviceCapabilities {
     /// True when `subgroup_min_size > 0`, indicating the driver exposes
     /// subgroup metadata. Note: WGSL subgroup intrinsics require a future
     /// wgpu feature flag (`SUBGROUP`) that is not yet stabilized.
+    #[must_use]
     pub fn has_subgroup_info(&self) -> bool {
         self.subgroup_min_size > 0
     }
@@ -357,6 +370,7 @@ impl DeviceCapabilities {
     ///
     /// Returns the max subgroup size (to maximise lane utilisation in
     /// tree reductions), or `None` when not reported.
+    #[must_use]
     pub fn preferred_subgroup_size(&self) -> Option<u32> {
         if self.subgroup_max_size > 0 {
             Some(self.subgroup_max_size)

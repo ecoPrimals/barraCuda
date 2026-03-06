@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! CPU path for SparsitySampler algorithm.
+//! CPU path for `SparsitySampler` algorithm.
 
 use crate::device::WgpuDevice;
 use crate::optimize::eval_record::EvaluationCache;
 use crate::optimize::multi_start::SolverResult;
 use crate::sample::latin_hypercube;
-use crate::surrogate::{loo_cv_optimal_smoothing, RBFSurrogate};
+use crate::surrogate::{RBFSurrogate, loo_cv_optimal_smoothing};
 use std::sync::Arc;
 
+use super::SparsitySamplerConfig;
 use super::filter::compute_surrogate_rmse;
 use super::filter::filter_training_data;
 use super::result::{IterationResult, SparsitySamplerResult};
-use super::SparsitySamplerConfig;
 use crate::error::{BarracudaError, Result};
 
 /// Run a batch of NM solvers on the true objective (fallback when surrogate fails).
@@ -58,7 +58,11 @@ where
     })
 }
 
-/// Run the SparsitySampler algorithm (CPU path).
+/// Run the `SparsitySampler` algorithm (CPU path).
+///
+/// # Errors
+///
+/// Returns [`Err`] if bounds is empty, `n_initial` < 2, or if LHS/surrogate/NM fails.
 pub fn sparsity_sampler<F>(
     device: Arc<WgpuDevice>,
     f: F,
@@ -137,26 +141,23 @@ where
             }
         }
 
-        let surrogate = match RBFSurrogate::train(
+        let Ok(surrogate) = RBFSurrogate::train(
             device.clone(),
             &x_data,
             &y_data,
             config.kernel,
             current_smoothing,
-        ) {
-            Ok(s) => s,
-            Err(_) => {
-                let nm_result = run_nm_batch(&f, bounds, config, iter, &mut cache)?;
-                iteration_results.push(IterationResult {
-                    iteration: iter,
-                    best_f: nm_result.f_best,
-                    n_new_evals: cache.len() - iter_start_evals,
-                    total_evals: cache.len(),
-                    surrogate_error: None,
-                    used_gpu: false,
-                });
-                continue;
-            }
+        ) else {
+            let nm_result = run_nm_batch(&f, bounds, config, iter, &mut cache)?;
+            iteration_results.push(IterationResult {
+                iteration: iter,
+                best_f: nm_result.f_best,
+                n_new_evals: cache.len() - iter_start_evals,
+                total_evals: cache.len(),
+                surrogate_error: None,
+                used_gpu: false,
+            });
+            continue;
         };
 
         let surrogate_error = surrogate
@@ -229,7 +230,7 @@ where
         None => {
             return Err(BarracudaError::Internal(
                 "No evaluations recorded".to_string(),
-            ))
+            ));
         }
     };
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! MatMul operation - Matrix multiplication
+//! `MatMul` operation - Matrix multiplication
 //! Pure WGSL implementation
 //!
 //! **3-tier kernel router** (S-14: Naive tier removed):
@@ -10,9 +10,9 @@
 //! | GPU, M < 256 or N < 256 (medium)  | `matmul_tiled.wgsl`      | 16   | High occupancy              |
 //! | GPU, M ≥ 256 and N ≥ 256 (large)  | `matmul_gpu_evolved.wgsl`| 32   | Double-buffered, 2×2 kernel |
 
+use crate::device::DeviceCapabilities;
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
-use crate::device::DeviceCapabilities;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
@@ -24,6 +24,7 @@ const GPU_EVOLVED_THRESHOLD: usize = 256;
 pub const WGSL_MATMUL_FP64: &str = include_str!("../shaders/math/matmul_fp64.wgsl");
 
 /// Linear layer shader (matmul + bias).
+#[must_use]
 pub fn wgsl_linear() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
@@ -60,12 +61,12 @@ pub struct MatMul<'a> {
 
 impl<'a> MatMul<'a> {
     /// Creates a new matmul for lhs × rhs.
+    #[must_use]
     pub fn new(lhs: &'a Tensor, rhs: &'a Tensor) -> Self {
         Self { lhs, rhs }
     }
 
     /// Select the appropriate matmul kernel tier based on device and matrix size.
-    ///
     /// S-14: Naive tier removed — Tiled16 is the minimum for all GPU sizes.
     /// The naive shader caused hangs on small square matrices. Tiled16 has
     /// proper bounds-checking and shared-memory prefetch even at small sizes.
@@ -110,6 +111,8 @@ impl<'a> MatMul<'a> {
     }
 
     /// Executes matrix multiplication and returns the result.
+    /// # Errors
+    /// Returns [`Err`] if tensors are not 2D+, inner dimensions do not match (k ≠ `k_rhs`), buffer allocation fails, or GPU dispatch fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.lhs.device();
 
@@ -240,28 +243,27 @@ impl<'a> MatMul<'a> {
 
 impl Tensor {
     /// Matrix multiplication
-    ///
     /// **Phase 3**: Now supports NPU routing!
-    ///
     /// Automatically routes to best device:
     /// - NPU if sparse data or energy priority
     /// - GPU/CPU via WGSL otherwise
-    ///
     /// # Example
-    ///
     /// ```ignore
     /// let a = Tensor::randn(vec![128, 64]).await?;
     /// let b = Tensor::randn(vec![64, 32]).await?;
     /// let c = a.matmul(&b)?;  // Routes to best device!
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if tensors are not 2D+, inner dimensions do not match, buffer allocation fails, or GPU dispatch fails (e.g. device lost).
     pub fn matmul(self, other: &Self) -> Result<Self> {
         self.matmul_ref(other)
     }
 
     /// Non-consuming matrix multiply: `C[m×n] = self[m×k] × other[k×n]`.
-    ///
     /// Unlike [`matmul`](Self::matmul), this borrows `self` so it can be
     /// reused in recurrent architectures (ESN, LSTM) without cloning.
+    /// # Errors
+    /// Returns [`Err`] if tensors are not 2D+, inner dimensions do not match, buffer allocation fails, or GPU dispatch fails (e.g. device lost).
     pub fn matmul_ref(&self, other: &Self) -> Result<Self> {
         tracing::debug!("Routing matmul_ref to WGSL (GPU/CPU)");
         MatMul::new(self, other).execute()
@@ -353,7 +355,7 @@ mod tests {
         let result = a.matmul(&b).unwrap();
         let output = result.to_vec().unwrap();
 
-        for val in output.iter() {
+        for val in &output {
             assert!(val.abs() < 1e-6);
         }
     }
@@ -460,8 +462,7 @@ mod tests {
 
         assert!(
             max_error < 1e-5,
-            "Max error: {} exceeds FP32 threshold",
-            max_error
+            "Max error: {max_error} exceeds FP32 threshold"
         );
     }
 }

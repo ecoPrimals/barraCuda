@@ -6,10 +6,10 @@
 //!
 //! # Features
 //!
-//! - **GpuPool**: Basic round-robin load balancing
-//! - **MultiDevicePool**: Advanced device selection with quotas and requirements
-//! - **DeviceRequirements**: Specify minimum VRAM, preferred vendor, etc.
-//! - **ResourceQuota integration**: Per-task VRAM budget enforcement
+//! - **`GpuPool`**: Basic round-robin load balancing
+//! - **`MultiDevicePool`**: Advanced device selection with quotas and requirements
+//! - **`DeviceRequirements`**: Specify minimum VRAM, preferred vendor, etc.
+//! - **`ResourceQuota` integration**: Per-task VRAM budget enforcement
 //!
 //! # Example
 //!

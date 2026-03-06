@@ -9,15 +9,15 @@
 //! Uses xoshiro128** PRNG matching `barracuda::ops::prng_xoshiro_wgsl`.
 //!
 //! Provenance: groundSpring metalForge → toadStool absorption
-//! Signature alignment: groundSpring V37 (cumulative_probs + seed)
+//! Signature alignment: groundSpring V37 (`cumulative_probs` + seed)
 
 use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
+use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 
 /// WGSL shader source for batched multinomial sampling (f64 probabilities).
@@ -55,6 +55,11 @@ pub struct BatchedMultinomialGpu {
 
 impl BatchedMultinomialGpu {
     /// Create a batched multinomial sampler.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -67,6 +72,11 @@ impl BatchedMultinomialGpu {
     /// Required when `config.seed` is `None`; ignored when `config.seed` is `Some`.
     ///
     /// Returns `counts[n_reps][n_taxa]` flattened row-major.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn sample(
         &self,
         probs: &[f64],
@@ -94,36 +104,34 @@ impl BatchedMultinomialGpu {
             cumul
         };
 
-        let seeds_data: Vec<u32> = match config.seed {
-            Some(seed) => (0..n_reps as usize * 4)
+        let seeds_data: Vec<u32> = if let Some(seed) = config.seed {
+            (0..n_reps as usize * 4)
                 .map(|i| {
                     let s = seed.wrapping_add(i as u64);
                     (s ^ (s >> 32)) as u32
                 })
-                .collect(),
-            None => {
-                let s = seeds.ok_or_else(|| BarracudaError::InvalidInput {
-                    message: "seeds required when config.seed is None".to_string(),
-                })?;
-                if s.len() != n_reps as usize * 4 {
-                    return Err(BarracudaError::InvalidInput {
-                        message: format!(
-                            "seeds length {} must equal n_reps * 4 = {}",
-                            s.len(),
-                            n_reps as usize * 4
-                        ),
-                    });
-                }
-                s.clone()
+                .collect()
+        } else {
+            let s = seeds.ok_or_else(|| BarracudaError::InvalidInput {
+                message: "seeds required when config.seed is None".to_string(),
+            })?;
+            if s.len() != n_reps as usize * 4 {
+                return Err(BarracudaError::InvalidInput {
+                    message: format!(
+                        "seeds length {} must equal n_reps * 4 = {}",
+                        s.len(),
+                        n_reps as usize * 4
+                    ),
+                });
             }
+            s.clone()
         };
 
         let d = self.device.device();
 
         let (seed_lo, seed_hi) = config
             .seed
-            .map(|s| ((s & 0xFFFF_FFFF) as u32, (s >> 32) as u32))
-            .unwrap_or((0, 0));
+            .map_or((0, 0), |s| ((s & 0xFFFF_FFFF) as u32, (s >> 32) as u32));
 
         let params = GpuParams {
             n_taxa: n_taxa as u32,
@@ -165,7 +173,7 @@ impl BatchedMultinomialGpu {
             .storage_rw(2, &seeds_buf)
             .storage_rw(3, &counts_buf)
             .dispatch(n_reps.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
-            .submit();
+            .submit()?;
 
         let counts = self
             .device

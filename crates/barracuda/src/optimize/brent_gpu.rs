@@ -13,8 +13,8 @@
 //!
 //! Provenance: airSpring V035/V045 handoff → toadStool absorption
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -23,10 +23,10 @@ use std::sync::Arc;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BrentFunction {
     /// Van Genuchten inverse: θ(h) - target = 0.
-    /// Aux params: (θ_r, θ_s, α, n).
+    /// Aux params: (`θ_r`, `θ_s`, α, n).
     VanGenuchtenInverse,
     /// Green-Ampt ponding time: F(t) - target = 0.
-    /// Aux params: (K_s, ψ_f·Δθ, _, _).
+    /// Aux params: (`K_s`, `ψ_f·Δθ`, _, _).
     GreenAmpt,
     /// Polynomial: x² - target = 0 (validation).
     Polynomial,
@@ -68,19 +68,20 @@ pub struct BrentGpu {
 
 /// Result of batched Brent root-finding.
 pub struct BrentGpuResult {
-    /// Found roots [batch_size]
+    /// Found roots [`batch_size`]
     pub roots: Vec<f64>,
-    /// Iterations used per problem [batch_size]
+    /// Iterations used per problem [`batch_size`]
     pub iterations: Vec<u32>,
 }
 
 impl BrentGpu {
     /// Create a new batched Brent solver.
-    ///
     /// # Arguments
     /// * `device` - GPU device
     /// * `max_iterations` - Maximum iterations per problem (typically 50-100)
     /// * `tolerance` - Convergence tolerance (typically 1e-10 to 1e-14)
+    /// # Errors
+    /// Returns [`Err`] if `tolerance` ≤ 0.
     pub fn new(device: Arc<WgpuDevice>, max_iterations: u32, tolerance: f64) -> Result<Self> {
         if tolerance <= 0.0 {
             return Err(BarracudaError::InvalidInput {
@@ -99,6 +100,9 @@ impl BrentGpu {
     }
 
     /// Solve polynomial roots: x² = target for each problem.
+    /// # Errors
+    /// Returns [`Err`] if `lower`, `upper`, and `targets` lengths do not match, or if GPU
+    /// execution or buffer readback fails (e.g., device lost).
     pub fn solve_polynomial(
         &self,
         lower: &[f64],
@@ -118,6 +122,8 @@ impl BrentGpu {
     }
 
     /// Solve van Genuchten inverse: find h where θ(h) = target.
+    /// # Errors
+    /// Returns [`Err`] if array lengths do not match, or if GPU execution or buffer readback fails.
     pub fn solve_vg_inverse(
         &self,
         lower: &[f64],
@@ -141,6 +147,8 @@ impl BrentGpu {
     }
 
     /// Solve Green-Ampt: find F where cumulative infiltration equation holds.
+    /// # Errors
+    /// Returns [`Err`] if array lengths do not match, or if GPU execution or buffer readback fails.
     pub fn solve_green_ampt(
         &self,
         lower: &[f64],
@@ -257,7 +265,7 @@ impl BrentGpu {
             .storage_rw(4, &iterations_buffer)
             .uniform(5, &params_buffer)
             .dispatch(batch_size as u32, 1, 1)
-            .submit();
+            .submit()?;
 
         let roots = self.device.read_f64_buffer(&roots_buffer, batch_size)?;
         let iterations = self.read_u32_buffer(&iterations_buffer, batch_size)?;

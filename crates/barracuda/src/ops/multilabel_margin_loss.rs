@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! MultiLabelMarginLoss - Pure WGSL
+//! `MultiLabelMarginLoss` - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -21,6 +21,11 @@ pub struct MultiLabelMarginLoss {
 
 impl MultiLabelMarginLoss {
     /// Create a new multi-label margin loss operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor, target: Tensor) -> Result<Self> {
         let input_shape = input.shape();
         let batch_size = input_shape[0];
@@ -54,6 +59,11 @@ impl MultiLabelMarginLoss {
     }
 
     /// Execute the multi-label margin loss operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 

@@ -23,21 +23,21 @@ pub struct QsBiofilmParams {
     pub k_ai_prod: f64,
     /// Autoinducer degradation rate (h⁻¹).
     pub d_ai: f64,
-    /// Maximum HapR transcription rate.
+    /// Maximum `HapR` transcription rate.
     pub k_hapr_max: f64,
-    /// Half-saturation for AI activation of HapR.
+    /// Half-saturation for AI activation of `HapR`.
     pub k_hapr_ai: f64,
-    /// Hill coefficient for HapR induction by AI.
+    /// Hill coefficient for `HapR` induction by AI.
     pub n_hapr: f64,
-    /// HapR degradation rate (h⁻¹).
+    /// `HapR` degradation rate (h⁻¹).
     pub d_hapr: f64,
     /// Basal diguanylate cyclase (DGC) activity.
     pub k_dgc_basal: f64,
-    /// HapR repression strength on DGC.
+    /// `HapR` repression strength on DGC.
     pub k_dgc_rep: f64,
     /// Basal phosphodiesterase (PDE) activity.
     pub k_pde_basal: f64,
-    /// HapR activation strength on PDE.
+    /// `HapR` activation strength on PDE.
     pub k_pde_act: f64,
     /// c-di-GMP degradation rate (h⁻¹).
     pub d_cdg: f64,
@@ -154,13 +154,13 @@ pub struct CapacitorParams {
     pub k_cdg_prod: f64,
     /// c-di-GMP degradation rate (h⁻¹).
     pub d_cdg: f64,
-    /// VpsR charge rate (c-di-GMP uptake into capacitor).
+    /// `VpsR` charge rate (c-di-GMP uptake into capacitor).
     pub k_vpsr_charge: f64,
-    /// VpsR discharge rate (release from capacitor).
+    /// `VpsR` discharge rate (release from capacitor).
     pub k_vpsr_discharge: f64,
-    /// Hill coefficient for VpsR response.
+    /// Hill coefficient for `VpsR` response.
     pub n_vpsr: f64,
-    /// Half-saturation for c-di-GMP activation of VpsR.
+    /// Half-saturation for c-di-GMP activation of `VpsR`.
     pub k_vpsr_cdg: f64,
     /// Weight of biofilm channel in phenotypic distribution.
     pub w_biofilm: f64,
@@ -383,33 +383,33 @@ pub struct MultiSignalParams {
     pub k_cai1_prod: f64,
     /// CAI-1 degradation rate (h⁻¹).
     pub d_cai1: f64,
-    /// CqsS receptor sensitivity (CAI-1 sensing).
+    /// `CqsS` receptor sensitivity (CAI-1 sensing).
     pub k_cqs: f64,
     /// AI-2 autoinducer production rate.
     pub k_ai2_prod: f64,
     /// AI-2 degradation rate (h⁻¹).
     pub d_ai2: f64,
-    /// LuxPQ receptor sensitivity (AI-2 sensing).
+    /// `LuxPQ` receptor sensitivity (AI-2 sensing).
     pub k_luxpq: f64,
-    /// LuxO phosphorylation rate.
+    /// `LuxO` phosphorylation rate.
     pub k_luxo_phos: f64,
-    /// Phosphorylated LuxO degradation rate (h⁻¹).
+    /// Phosphorylated `LuxO` degradation rate (h⁻¹).
     pub d_luxo_p: f64,
-    /// Maximum HapR transcription rate.
+    /// Maximum `HapR` transcription rate.
     pub k_hapr_max: f64,
-    /// Hill coefficient for HapR repression.
+    /// Hill coefficient for `HapR` repression.
     pub n_repress: f64,
-    /// Half-saturation for LuxO-P repression of HapR.
+    /// Half-saturation for LuxO-P repression of `HapR`.
     pub k_repress: f64,
-    /// HapR degradation rate (h⁻¹).
+    /// `HapR` degradation rate (h⁻¹).
     pub d_hapr: f64,
     /// Basal diguanylate cyclase (DGC) activity.
     pub k_dgc_basal: f64,
-    /// HapR repression strength on DGC.
+    /// `HapR` repression strength on DGC.
     pub k_dgc_rep: f64,
     /// Basal phosphodiesterase (PDE) activity.
     pub k_pde_basal: f64,
-    /// HapR activation strength on PDE.
+    /// `HapR` activation strength on PDE.
     pub k_pde_act: f64,
     /// c-di-GMP degradation rate (h⁻¹).
     pub d_cdg: f64,

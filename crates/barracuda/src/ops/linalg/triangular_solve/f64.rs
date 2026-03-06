@@ -15,7 +15,6 @@ pub struct TriangularSolveF64;
 
 impl TriangularSolveF64 {
     /// Solve triangular system L·x = b or U·x = b with f64 precision
-    ///
     /// # Arguments
     /// * `device` - GPU device (Arc-wrapped)
     /// * `matrix` - Triangular matrix (row-major f64)
@@ -23,9 +22,11 @@ impl TriangularSolveF64 {
     /// * `n` - Matrix/vector dimension
     /// * `lower` - true for lower triangular (forward), false for upper (backward)
     /// * `unit_diagonal` - true if diagonal is implicitly 1.0
-    ///
     /// # Returns
     /// Solution vector x
+    /// # Errors
+    /// Returns [`Err`] if `matrix.len() != n * n` or `rhs.len() != n` (invalid dimensions),
+    /// if buffer allocation fails, or if GPU dispatch/readback fails (e.g., device lost).
     pub fn execute(
         device: std::sync::Arc<crate::device::WgpuDevice>,
         matrix: &[f64],
@@ -61,8 +62,8 @@ impl TriangularSolveF64 {
         let solution_buffer = device.create_buffer_f64(n)?;
 
         // Params: n, is_lower, is_unit, _pad
-        let is_lower = if lower { 1u32 } else { 0u32 };
-        let is_unit = if unit_diagonal { 1u32 } else { 0u32 };
+        let is_lower = u32::from(lower);
+        let is_unit = u32::from(unit_diagonal);
         let params_buffer = device.create_uniform_buffer(
             "TriangularSolve F64 Params",
             &[n as u32, is_lower, is_unit, 0u32],
@@ -187,6 +188,11 @@ impl TriangularSolveF64 {
     }
 
     /// Solve L·x = b (forward substitution) with f64
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn forward(
         device: std::sync::Arc<crate::device::WgpuDevice>,
         matrix: &[f64],
@@ -197,6 +203,9 @@ impl TriangularSolveF64 {
     }
 
     /// Solve U·x = b (backward substitution) with f64
+    /// # Errors
+    /// Returns [`Err`] if [`execute`](Self::execute) fails (invalid dimensions, buffer allocation,
+    /// or GPU dispatch/readback failure).
     pub fn backward(
         device: std::sync::Arc<crate::device::WgpuDevice>,
         matrix: &[f64],
@@ -206,13 +215,14 @@ impl TriangularSolveF64 {
         Self::execute(device, matrix, rhs, n, false, false)
     }
 
-    /// Solve Lᵀ·x = b using stored L (transpose solve)
-    ///
+    /// Solve Lᵀ·x = b using stored L (transpose solve).
     /// This is the second step of Cholesky solve:
     /// 1. L·z = b (forward)
     /// 2. Lᵀ·x = z (this method)
-    ///
-    /// The matrix is accessed as transpose internally.
+    ///    The matrix is accessed as transpose internally.
+    /// # Errors
+    /// Returns [`Err`] if `matrix.len() != n * n` or `rhs.len() != n` (invalid dimensions),
+    /// if buffer allocation fails, or if GPU dispatch/readback fails (e.g., device lost).
     pub fn solve_transpose(
         device: std::sync::Arc<crate::device::WgpuDevice>,
         matrix: &[f64],
@@ -370,19 +380,21 @@ impl TriangularSolveF64 {
     }
 
     /// Complete Cholesky solve: Given L from Cholesky(A), solve A·x = b
-    ///
     /// Performs:
     /// 1. L·z = b (forward substitution)
     /// 2. Lᵀ·x = z (backward with transpose)
-    ///
     /// # Arguments
     /// * `device` - GPU device (Arc-wrapped)
     /// * `l_matrix` - Lower triangular Cholesky factor L
     /// * `b` - Right-hand side vector
     /// * `n` - System dimension
-    ///
     /// # Returns
     /// Solution vector x where A·x = b
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn cholesky_solve(
         device: std::sync::Arc<crate::device::WgpuDevice>,
         l_matrix: &[f64],

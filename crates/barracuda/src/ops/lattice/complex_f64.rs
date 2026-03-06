@@ -18,6 +18,7 @@ pub const WGSL_COMPLEX64: &str = include_str!("../../shaders/math/complex_f64.wg
 /// let full_src = prepend_complex("// my shader\nfn foo() {}");
 /// assert!(full_src.starts_with("// complex_f64"));
 /// ```
+#[must_use]
 pub fn prepend_complex(shader: &str) -> String {
     format!("{WGSL_COMPLEX64}\n{shader}")
 }

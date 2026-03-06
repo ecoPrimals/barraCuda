@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! KLDivLoss - Pure WGSL
+//! `KLDivLoss` - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -22,6 +22,11 @@ pub struct KLDivLoss {
 
 impl KLDivLoss {
     /// Create a new KL divergence loss operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         input: Tensor,
         target: Tensor,
@@ -54,6 +59,11 @@ impl KLDivLoss {
     }
 
     /// Execute the KL divergence loss operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 
@@ -79,7 +89,7 @@ impl KLDivLoss {
 
         let params = Params {
             size: size as u32,
-            log_target: if self.log_target { 1 } else { 0 },
+            log_target: u32::from(self.log_target),
             reduction: self.reduction,
             _padding: 0,
         };

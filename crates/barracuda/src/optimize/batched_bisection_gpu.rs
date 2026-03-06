@@ -5,7 +5,7 @@
 //! Each problem runs bisection concurrently with full f64 precision.
 //!
 //! **Use cases**:
-//! - BCS pairing: Find μ where Σ v²_k(μ) = N for each nucleus
+//! - BCS pairing: Find μ where Σ `v²_k(μ)` = N for each nucleus
 //! - Multi-system parameter fitting
 //! - Batch chemical equilibrium calculations
 //!
@@ -29,9 +29,9 @@
 //! // roots ≈ [1.414, 1.732, 2.236]
 //! ```
 
+use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -61,7 +61,7 @@ impl BisectionParams {
             batch_size,
             max_iterations,
             n_levels,
-            use_degeneracy: if use_degeneracy { 1 } else { 0 },
+            use_degeneracy: u32::from(use_degeneracy),
             tolerance_lo: tol_bits as u32,
             tolerance_hi: (tol_bits >> 32) as u32,
         }
@@ -79,19 +79,20 @@ pub struct BatchedBisectionGpu {
 
 /// Result of batched bisection
 pub struct BisectionResult {
-    /// Found roots [batch_size]
+    /// Found roots [`batch_size`]
     pub roots: Vec<f64>,
-    /// Number of iterations used per problem [batch_size]
+    /// Number of iterations used per problem [`batch_size`]
     pub iterations: Vec<u32>,
 }
 
 impl BatchedBisectionGpu {
     /// Create a new batched bisection solver
-    ///
     /// # Arguments
-    /// * `device` - WgpuDevice
+    /// * `device` - `WgpuDevice`
     /// * `max_iterations` - Maximum bisection iterations per problem (typically 50-100)
     /// * `tolerance` - Convergence tolerance (typically 1e-10 to 1e-14)
+    /// # Errors
+    /// Returns [`Err`] if `tolerance` ≤ 0.
     pub fn new(device: Arc<WgpuDevice>, max_iterations: u32, tolerance: f64) -> Result<Self> {
         if tolerance <= 0.0 {
             return Err(BarracudaError::InvalidInput {
@@ -110,14 +111,15 @@ impl BatchedBisectionGpu {
     }
 
     /// Solve batched polynomial root-finding: x² = target
-    ///
     /// Finds √target for each problem in parallel.
     /// This is a validation/test function.
-    ///
     /// # Arguments
-    /// * `lower` - Lower bounds [batch_size]
-    /// * `upper` - Upper bounds [batch_size]
-    /// * `targets` - Target values (find x where x² = target) [batch_size]
+    /// * `lower` - Lower bounds [`batch_size`]
+    /// * `upper` - Upper bounds [`batch_size`]
+    /// * `targets` - Target values (find x where x² = target) [`batch_size`]
+    /// # Errors
+    /// Returns [`Err`] if `lower`, `upper`, and `targets` lengths do not match, or if GPU
+    /// execution or buffer readback fails.
     pub fn solve_polynomial(
         &self,
         lower: &[f64],
@@ -138,17 +140,18 @@ impl BatchedBisectionGpu {
         self.solve_internal(lower, upper, targets, 1, false, "batched_bisection_poly")
     }
 
-    /// Solve BCS particle number equation: Σ v²_k(μ) = N
-    ///
+    /// Solve BCS particle number equation: Σ `v²_k(μ)` = N
     /// Finds chemical potential μ for each nucleus such that the
     /// BCS occupation numbers sum to the target particle number.
-    ///
     /// # Arguments
-    /// * `lower` - Lower bounds for μ [batch_size]
-    /// * `upper` - Upper bounds for μ [batch_size]
-    /// * `eigenvalues` - Single-particle energies [batch_size, n_levels]
-    /// * `delta` - Pairing gap for each problem [batch_size]
-    /// * `target_n` - Target particle number for each problem [batch_size]
+    /// * `lower` - Lower bounds for μ [`batch_size`]
+    /// * `upper` - Upper bounds for μ [`batch_size`]
+    /// * `eigenvalues` - Single-particle energies [`batch_size`, `n_levels`]
+    /// * `delta` - Pairing gap for each problem [`batch_size`]
+    /// * `target_n` - Target particle number for each problem [`batch_size`]
+    /// # Errors
+    /// Returns [`Err`] if array lengths do not match or `eigenvalues.len()` is not divisible by
+    /// `batch_size`, or if GPU execution or buffer readback fails.
     pub fn solve_bcs(
         &self,
         lower: &[f64],
@@ -199,22 +202,22 @@ impl BatchedBisectionGpu {
         )
     }
 
-    /// Solve BCS pairing equations with level degeneracy (deg_k)
-    ///
-    /// For nuclear HFB: deg_k = 2j+1 (spin degeneracy of each level)
-    ///
-    /// **Formula**: Find μ such that Σ_k deg_k · v²_k(μ) = N
-    ///
+    /// Solve BCS pairing equations with level degeneracy (`deg_k`)
+    /// For nuclear HFB: `deg_k` = 2j+1 (spin degeneracy of each level)
+    /// **Formula**: Find μ such that `Σ_k` `deg_k` · `v²_k(μ)` = N
     /// # Arguments
-    /// * `lower` - Lower bounds for μ [batch_size]
-    /// * `upper` - Upper bounds for μ [batch_size]
-    /// * `eigenvalues` - Packed energy levels [batch_size × n_levels]
-    /// * `degeneracies` - Degeneracy of each level [batch_size × n_levels]
-    /// * `delta` - BCS pairing gap per problem [batch_size]
-    /// * `target_n` - Target particle number per problem [batch_size]
-    ///
+    /// * `lower` - Lower bounds for μ [`batch_size`]
+    /// * `upper` - Upper bounds for μ [`batch_size`]
+    /// * `eigenvalues` - Packed energy levels [`batch_size` × `n_levels`]
+    /// * `degeneracies` - Degeneracy of each level [`batch_size` × `n_levels`]
+    /// * `delta` - BCS pairing gap per problem [`batch_size`]
+    /// * `target_n` - Target particle number per problem [`batch_size`]
     /// # Evolution
     /// Added Feb 16, 2026 per hotSpring handoff TIER 3.1
+    /// # Errors
+    /// Returns [`Err`] if array lengths do not match, `eigenvalues.len()` is not divisible by
+    /// `batch_size`, or `degeneracies.len() != eigenvalues.len()`, or if GPU execution or
+    /// buffer readback fails.
     pub fn solve_bcs_with_degeneracy(
         &self,
         lower: &[f64],
@@ -364,7 +367,7 @@ impl BatchedBisectionGpu {
             .storage_rw(4, &iterations_buffer)
             .uniform(5, &config_buffer)
             .dispatch(n_workgroups as u32, 1, 1)
-            .submit();
+            .submit()?;
 
         // Read back results
         let roots = self.device.read_f64_buffer(&roots_buffer, batch_size)?;

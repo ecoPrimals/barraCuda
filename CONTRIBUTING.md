@@ -35,7 +35,7 @@ cargo doc --workspace --no-deps
 |------|---------|
 | `crates/barracuda/` | Umbrella crate — all math, GPU ops, compute fabric |
 | `crates/barracuda-core/` | Primal lifecycle, IPC, tarpc, UniBin CLI |
-| `crates/barracuda/src/shaders/` | 692 WGSL shaders (see `shaders/README.md`) |
+| `crates/barracuda/src/shaders/` | 708 WGSL shaders (see `shaders/README.md`) |
 | `crates/barracuda/examples/` | Runnable examples |
 | `crates/barracuda/tests/` | 62 integration test suites |
 | `crates/barracuda/src/bin/` | Binaries (validate_gpu, bench_*) |
@@ -238,6 +238,7 @@ WGPU_BACKEND=vulkan WGPU_ADAPTER_NAME=llvmpipe cargo test -p barracuda
 ### Error handling
 
 - Return `Result<T, BarracudaError>` — never `unwrap()` or `expect()` in library code
+- Prefer `let-else` or `?` over `expect()`; for `RwLock`, use `unwrap_or_else(PoisonError::into_inner)` to recover
 - Use `BarracudaError::DeviceLost` for GPU device loss — enables retry logic
 - Check `error.is_retriable()` before retrying operations
 - In tests: use `with_device_retry` from `test_pool::test_prelude` for GPU resilience

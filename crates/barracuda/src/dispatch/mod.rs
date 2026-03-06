@@ -71,9 +71,9 @@ pub use benchmark::{
     BenchmarkConfig, BenchmarkResult, BenchmarkSuite, OperationBenchmark, ThresholdResult,
 };
 pub use config::{
-    batch_fitness_substrate, dispatch_for, dispatch_with_config, dispatch_with_transfer_cost,
-    global_config, hmm_substrate, ode_substrate, pairwise_substrate, spatial_substrate, Dispatch,
-    DispatchConfig, DispatchTarget, DEFAULT_THRESHOLD,
+    DEFAULT_THRESHOLD, Dispatch, DispatchConfig, DispatchTarget, batch_fitness_substrate,
+    dispatch_for, dispatch_with_config, dispatch_with_transfer_cost, global_config, hmm_substrate,
+    ode_substrate, pairwise_substrate, spatial_substrate,
 };
 pub use domain_ops::{
     frobenius_norm_dispatch, gelu_dispatch, hmm_forward_dispatch, l2_distance_dispatch,

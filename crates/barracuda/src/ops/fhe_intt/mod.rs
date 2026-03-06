@@ -71,19 +71,18 @@ pub struct FheIntt {
 
 impl FheIntt {
     /// Create a new INTT operation
-    ///
     /// ## Parameters
-    ///
     /// - `input`: NTT-domain polynomial tensor (u32 pairs representing u64)
     /// - `degree`: Polynomial degree N (must be power of 2)
     /// - `modulus`: Prime modulus q (must satisfy q ≡ 1 mod 2N)
-    /// - `inv_root_of_unity`: Inverse N-th root of unity ω^(-1) (in Z_q)
-    ///
+    /// - `inv_root_of_unity`: Inverse N-th root of unity ω^(-1) (in `Z_q`)
     /// ## Constraints
-    ///
     /// - N must be a power of 2
     /// - q must be prime
     /// - ω^(-1) * ω ≡ 1 (mod q)
+    /// # Errors
+    /// Returns [`Err`] if degree is not a power of 2, input size mismatch, or
+    /// modulus/root validation fails.
     pub fn new(input: Tensor, degree: u32, modulus: u64, inv_root_of_unity: u64) -> Result<Self> {
         // Validate inputs (same as NTT)
         let expected_size = (degree as usize) * 2;
@@ -336,6 +335,7 @@ pub(crate) fn compute_modular_inverse(a: u64, m: u64) -> u64 {
 }
 
 /// Compute inverse primitive root: ω^(-1) where ω is N-th root of unity
+#[must_use]
 pub fn compute_inverse_root(_degree: u32, modulus: u64, root: u64) -> u64 {
     compute_modular_inverse(root, modulus)
 }

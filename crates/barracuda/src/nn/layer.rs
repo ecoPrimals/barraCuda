@@ -45,7 +45,7 @@ pub enum Layer {
         /// Dropout probability (0.0–1.0)
         rate: f32,
     },
-    /// ReLU activation
+    /// `ReLU` activation
     ReLU,
     /// GELU activation
     GELU,

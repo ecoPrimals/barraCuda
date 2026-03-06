@@ -28,17 +28,16 @@ pub struct Fft1DF64 {
 
 impl Fft1DF64 {
     /// Create a new 1D FFT operation (f64)
-    ///
     /// ## Parameters
-    ///
     /// - `input`: Complex tensor (shape [..., N, 2] where last dim is (real, imag))
     /// - `degree`: FFT size N (must be power of 2)
-    ///
     /// ## Constraints
-    ///
     /// - N must be a power of 2 (for Cooley-Tukey radix-2 FFT)
     /// - Input must have last dimension = 2 (complex representation)
-    /// - Device must support f64 shaders (SHADER_F64 feature)
+    /// - Device must support f64 shaders (`SHADER_F64` feature)
+    /// # Errors
+    /// Returns [`Err`] if the input's last dimension is not 2 (complex representation), or if
+    /// `degree` is not a power of 2.
     pub fn new(input: Tensor, degree: u32) -> Result<Self> {
         // Validate input
         let shape = input.shape();
@@ -82,16 +81,18 @@ impl Fft1DF64 {
     }
 
     /// Execute the FFT (forward transform)
-    ///
     /// Returns the frequency-domain representation of the input signal.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub async fn execute(&self) -> Result<Tensor> {
         self.execute_internal(false).await
     }
 
     /// Execute the inverse FFT
-    ///
     /// Returns the time-domain signal from frequency representation.
     /// Note: Result must be scaled by 1/N for proper normalization.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub async fn execute_inverse(&self) -> Result<Tensor> {
         self.execute_internal(true).await
     }
@@ -157,7 +158,7 @@ impl Fft1DF64 {
         let params = Fft64Params {
             degree: n,
             stage: 0,
-            inverse: if inverse { 1 } else { 0 },
+            inverse: u32::from(inverse),
             _padding: 0,
         };
 
@@ -172,7 +173,7 @@ impl Fft1DF64 {
             .storage_read(3, &twiddle_im_buffer)
             .uniform(4, &params_buffer)
             .dispatch_1d(n)
-            .submit();
+            .submit()?;
 
         // Copy result back to working buffer
         {
@@ -188,7 +189,7 @@ impl Fft1DF64 {
             let stage_params = Fft64Params {
                 degree: n,
                 stage,
-                inverse: if inverse { 1 } else { 0 },
+                inverse: u32::from(inverse),
                 _padding: 0,
             };
 
@@ -204,7 +205,7 @@ impl Fft1DF64 {
                 .storage_read(3, &twiddle_im_buffer)
                 .uniform(4, &stage_params_buffer)
                 .dispatch_1d(n / 2)
-                .submit();
+                .submit()?;
 
             // Ping-pong: copy output to working for next stage
             if stage < log_n - 1 {
@@ -224,6 +225,7 @@ impl Fft1DF64 {
     }
 
     /// Get the FFT degree (size N)
+    #[must_use]
     pub fn degree(&self) -> u32 {
         self.degree
     }
@@ -305,7 +307,7 @@ mod tests {
 
     /// FFT of a unit impulse at t=0 must produce a flat-magnitude spectrum.
     /// Every bin X[k] = 1 (magnitude), with tolerance 1e-10.
-    /// Validates: forward butterfly correctness, twiddle precompute, SHADER_F64 path.
+    /// Validates: forward butterfly correctness, twiddle precompute, `SHADER_F64` path.
     #[tokio::test]
     async fn test_fft_1d_f64_impulse_spectrum_gpu() {
         let Some(device) = get_test_device_if_f64_gpu_available().await else {

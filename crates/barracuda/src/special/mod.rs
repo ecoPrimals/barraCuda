@@ -86,13 +86,13 @@ pub mod screened_coulomb;
 // Re-export CPU functions
 pub use anderson_transport::{anderson_conductance, localization_length};
 pub use bessel::{bessel_i0, bessel_j0, bessel_j1, bessel_k0};
+#[cfg(feature = "gpu")]
+pub use chi_squared::{ChiSquaredBatchGpu, ChiSquaredBatchResult};
 pub use chi_squared::{
     chi_squared_cdf, chi_squared_f64, chi_squared_mean, chi_squared_mode, chi_squared_pdf,
     chi_squared_quantile, chi_squared_sf, chi_squared_statistic, chi_squared_test,
     chi_squared_variance,
 };
-#[cfg(feature = "gpu")]
-pub use chi_squared::{ChiSquaredBatchGpu, ChiSquaredBatchResult};
 pub use erf::{erf, erfc};
 pub use factorial::factorial;
 pub use gamma::{

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-//! TransE knowledge graph triple scoring on GPU (f64).
+//! `TransE` knowledge graph triple scoring on GPU (f64).
 //!
 //! `score(h, r, t) = -‖entity[h] + relation[r] - entity[t]‖₂`
 //!
@@ -8,8 +8,8 @@
 
 use std::sync::Arc;
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 
 #[repr(C)]
@@ -21,14 +21,14 @@ struct TranseParams {
     _pad1: u32,
 }
 
-/// Batch TransE triple scoring on GPU.
+/// Batch `TransE` triple scoring on GPU.
 ///
 /// Entities and relations are flat `[count, dim]` row-major f64 embeddings.
 /// Triple indices are `(head, relation, tail)` tuples indexing into them.
 pub struct TranseScoreF64<'a> {
-    /// Flat entity embeddings [n_entities * dim].
+    /// Flat entity embeddings [`n_entities` * dim].
     pub entities: &'a [f64],
-    /// Flat relation embeddings [n_relations * dim].
+    /// Flat relation embeddings [`n_relations` * dim].
     pub relations: &'a [f64],
     /// Number of entities.
     pub n_entities: usize,
@@ -45,7 +45,10 @@ pub struct TranseScoreF64<'a> {
 }
 
 impl TranseScoreF64<'_> {
-    /// Run TransE scoring on GPU; returns one score per triple.
+    /// Run `TransE` scoring on GPU; returns one score per triple.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(&self, device: &Arc<WgpuDevice>) -> Result<Vec<f64>> {
         let n_triples = self.heads.len();
         if n_triples != self.rels.len() || n_triples != self.tails.len() {

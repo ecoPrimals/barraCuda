@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! MaxPool3D - 3D Max Pooling
+//! `MaxPool3D` - 3D Max Pooling
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation
@@ -47,7 +47,9 @@ pub struct MaxPool3D {
 }
 
 impl MaxPool3D {
-    /// Creates a new MaxPool3D. Input must be 5D [B, C, D, H, W].
+    /// Creates a new `MaxPool3D`. Input must be 5D [B, C, D, H, W].
+    /// # Errors
+    /// Returns [`Err`] if input is not 5D, kernel sizes are zero, or strides are zero.
     pub fn new(
         input: Tensor,
         kernel_size: (usize, usize, usize),
@@ -99,6 +101,8 @@ impl MaxPool3D {
     }
 
     /// Executes 3D max pooling and returns the output tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or device submission fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -259,11 +263,12 @@ impl MaxPool3D {
 
 impl Tensor {
     /// Apply 3D max pooling
-    ///
     /// # Arguments
     /// - `kernel_size`: (depth, height, width) kernel dimensions
     /// - `stride`: (depth, height, width) stride dimensions
     /// - `padding`: (depth, height, width) padding dimensions
+    /// # Errors
+    /// Returns [`Err`] if input is not 5D, kernel/stride are invalid, or buffer allocation/GPU dispatch fails (e.g. device lost).
     pub fn maxpool3d(
         self,
         kernel_size: (usize, usize, usize),

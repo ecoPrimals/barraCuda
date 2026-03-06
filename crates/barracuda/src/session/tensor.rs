@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! TensorSession — `SessionTensor` handle
+//! `TensorSession` — `SessionTensor` handle
 
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
@@ -22,22 +22,30 @@ pub struct SessionTensor {
 
 impl SessionTensor {
     /// Tensor shape.
+    #[must_use]
     pub fn shape(&self) -> &[usize] {
         &self.shape
     }
 
     /// Total number of elements.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.shape.iter().product()
     }
 
     /// True when the tensor has no elements.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
     /// Read data back to CPU (available immediately after buffer allocation;
     /// reflects computed values only after `session.run()`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the session has not been executed yet, or if buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn to_vec(&self) -> Result<Vec<f32>> {
         let buffer = self.buffer.as_ref().ok_or_else(|| {
             BarracudaError::execution_failed("Session not executed yet — call session.run() first")
@@ -48,6 +56,11 @@ impl SessionTensor {
     /// Convert to a standalone `Tensor` (GPU-resident copy).
     ///
     /// Performs a CPU round-trip; use `to_vec()` when only the data is needed.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if readback or buffer allocation fails (e.g. device lost
+    /// or out of memory).
     pub fn to_tensor(&self) -> Result<Tensor> {
         let data = self.to_vec()?;
         Tensor::from_data(&data, self.shape.clone(), self.device.clone())

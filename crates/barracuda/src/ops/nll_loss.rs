@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! NLLLoss - Pure WGSL
+//! `NLLLoss` - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -23,6 +23,11 @@ pub struct NLLLoss {
 
 impl NLLLoss {
     /// Create a new NLL loss operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         log_probs: Tensor,
         targets: Tensor,
@@ -71,6 +76,11 @@ impl NLLLoss {
     }
 
     /// Execute the NLL loss operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.log_probs.device();
 

@@ -53,6 +53,8 @@ pub struct MAELoss {
 
 impl MAELoss {
     /// Creates a new MAE loss. Shapes must match.
+    /// # Errors
+    /// Returns [`Err`] if prediction and target shapes do not match.
     pub fn new(predictions: Tensor, targets: Tensor) -> Result<Self> {
         // Validate shapes match
         if predictions.shape() != targets.shape() {
@@ -73,11 +75,14 @@ impl MAELoss {
     }
 
     /// f64 MAE loss (tree reduction for accumulation accuracy).
+    #[must_use]
     pub fn wgsl_shader_f64() -> &'static str {
         include_str!("../shaders/loss/mae_loss_f64.wgsl")
     }
 
     /// Executes MAE loss and returns a scalar loss tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or device submission fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size = self.predictions.shape().iter().product::<usize>();
@@ -237,25 +242,22 @@ impl MAELoss {
 
 impl Tensor {
     /// MAE Loss (Mean Absolute Error) - robust regression loss
-    ///
     /// **Deep Debt**: Essential for robust regression tasks
-    ///
     /// # Arguments
     /// - `targets`: Target tensor [same shape as predictions]
-    ///
     /// # Returns
     /// - Loss tensor [same shape as input]
-    ///
     /// # Example
     /// ```rust,ignore
     /// // Regression
     /// let loss = predictions.mae_loss(&targets)?;
     /// ```
-    ///
     /// # Note
     /// - Less sensitive to outliers than MSE
     /// - Linear penalty for errors
     /// - Used in robust regression
+    /// # Errors
+    /// Returns [`Err`] if shapes do not match, or if buffer allocation, GPU dispatch, or device submission fails (e.g. device lost).
     pub fn mae_loss(self, targets: &Self) -> Result<Self> {
         MAELoss::new(self, targets.clone())?.execute()
     }

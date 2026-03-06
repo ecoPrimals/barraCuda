@@ -21,6 +21,7 @@ pub struct GroupNorm {
 
 impl GroupNorm {
     /// Create a new group normalization operation
+    #[must_use]
     pub fn new(input: Tensor, num_groups: usize, epsilon: f32) -> Self {
         Self {
             input,
@@ -42,6 +43,11 @@ impl GroupNorm {
     }
 
     /// Execute the group normalization operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -209,6 +215,11 @@ impl Tensor {
     ///
     /// * `num_groups` - Number of groups to divide channels into
     /// * `epsilon` - Small constant for numerical stability (default: 1e-5)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn group_norm_wgsl(self, num_groups: usize, epsilon: f32) -> Result<Self> {
         GroupNorm::new(self, num_groups, epsilon).execute()
     }

@@ -4,10 +4,10 @@
 //! Modified Bessel function of third kind, order 0.
 //! Applications: Yukawa potential, screened Coulomb, Green's functions
 
+use crate::device::WgpuDevice;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
 
@@ -38,11 +38,21 @@ pub struct BesselK0F64 {
 
 impl BesselK0F64 {
     /// Creates a new K₀ Bessel function evaluator for the given WGPU device.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Compute K₀(x) for each element (x > 0)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn k0(&self, x: &[f64]) -> Result<Vec<f64>> {
         if x.is_empty() {
             return Ok(vec![]);

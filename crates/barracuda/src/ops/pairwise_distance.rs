@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! PairwiseDistance - Pure WGSL
+//! `PairwiseDistance` - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -22,6 +22,11 @@ pub struct PairwiseDistance {
 
 impl PairwiseDistance {
     /// Create a new pairwise distance operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         input1: Tensor,
         input2: Tensor,
@@ -67,6 +72,11 @@ impl PairwiseDistance {
     }
 
     /// Execute the pairwise distance operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input1.device();
 

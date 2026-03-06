@@ -40,7 +40,7 @@
 
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result as BarracudaResult};
-use crate::esn_v2::{ESNConfig, ESN};
+use crate::esn_v2::{ESN, ESNConfig};
 
 /// Time series model types (capability-based, runtime-configured).
 #[derive(Debug, Clone)]
@@ -167,6 +167,7 @@ pub struct TimeSeriesAnalyzer {
 
 impl TimeSeriesAnalyzer {
     /// Create a new time series analyzer.
+    #[must_use]
     pub fn new(device: &WgpuDevice) -> Self {
         Self {
             device: device.clone(),
@@ -177,17 +178,22 @@ impl TimeSeriesAnalyzer {
     }
 
     /// The underlying compute device for GPU-accelerated operations.
+    #[must_use]
     pub fn device(&self) -> &WgpuDevice {
         &self.device
     }
 
     /// Add a model to the analyzer.
+    #[must_use]
     pub fn add_model(mut self, model: TimeSeriesModel) -> Self {
         self.models.push(model);
         self
     }
 
     /// Build the analyzer (initializes models).
+    /// # Errors
+    /// Returns [`Err`] if ESN initialization fails (e.g., GPU device lost, buffer
+    /// allocation failure) when an ESN model is configured.
     pub async fn build(mut self) -> BarracudaResult<Self> {
         // Initialize ESN if requested
         for model in &self.models {
@@ -217,13 +223,14 @@ impl TimeSeriesAnalyzer {
     }
 
     /// Forecast future values
-    ///
     /// # Arguments
     /// * `history` - Historical time series data
     /// * `horizon` - Number of steps to forecast
-    ///
     /// # Returns
     /// Forecast with predicted values
+    /// # Errors
+    /// Returns [`Err`] if the analyzer was not built, `history` is empty, no models
+    /// were added, or the underlying model (e.g., ESN training/prediction) fails.
     pub async fn forecast(&mut self, history: &[f32], horizon: usize) -> BarracudaResult<Forecast> {
         if !self.built {
             return Err(BarracudaError::InvalidInput {
@@ -266,6 +273,10 @@ impl TimeSeriesAnalyzer {
     ///
     /// # Returns
     /// List of detected anomalies
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if series has fewer than 10 points.
     pub async fn detect_anomalies(
         &mut self,
         series: &[f32],
@@ -318,6 +329,10 @@ impl TimeSeriesAnalyzer {
     ///
     /// # Returns
     /// Decomposition with trend, seasonal, and residual components
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if series has fewer than 2×period points.
     pub async fn decompose(&self, series: &[f32], period: usize) -> BarracudaResult<Decomposition> {
         if series.len() < period * 2 {
             return Err(BarracudaError::InvalidInput {

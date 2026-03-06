@@ -60,9 +60,11 @@
 //! - Capability-based buffer management
 
 pub mod batched_stateful;
+pub mod gpu_view;
 pub mod reduce;
 pub mod stateful;
 
+pub use gpu_view::{GpuView, GpuViewElement, GpuViewF32, GpuViewF64, GpuViewU32};
 pub use reduce::ReduceScalarPipeline;
 pub use stateful::{PipelineStage, StatefulPipeline, WaterBalanceState};
 
@@ -84,6 +86,7 @@ pub struct BufferSpec {
 
 impl BufferSpec {
     /// Create a buffer spec for f64 array
+    #[must_use]
     pub fn f64(count: usize) -> Self {
         Self {
             size: (count * 8) as u64,
@@ -95,6 +98,7 @@ impl BufferSpec {
     }
 
     /// Create a buffer spec for f32 array
+    #[must_use]
     pub fn f32(count: usize) -> Self {
         Self {
             size: (count * 4) as u64,
@@ -106,6 +110,7 @@ impl BufferSpec {
     }
 
     /// Create a buffer spec for u32 array
+    #[must_use]
     pub fn u32(count: usize) -> Self {
         Self {
             size: (count * 4) as u64,
@@ -117,6 +122,7 @@ impl BufferSpec {
     }
 
     /// Create a buffer spec with explicit size
+    #[must_use]
     pub fn bytes(size: u64) -> Self {
         Self {
             size,
@@ -178,14 +184,20 @@ impl Stage {
     /// Add input buffer names
     #[must_use]
     pub fn with_inputs(mut self, inputs: &[&str]) -> Self {
-        self.inputs = inputs.iter().map(|s| s.to_string()).collect();
+        self.inputs = inputs
+            .iter()
+            .map(std::string::ToString::to_string)
+            .collect();
         self
     }
 
     /// Add output buffer names
     #[must_use]
     pub fn with_outputs(mut self, outputs: &[&str]) -> Self {
-        self.outputs = outputs.iter().map(|s| s.to_string()).collect();
+        self.outputs = outputs
+            .iter()
+            .map(std::string::ToString::to_string)
+            .collect();
         self
     }
 
@@ -214,6 +226,7 @@ pub struct PipelineBuilder {
 
 impl PipelineBuilder {
     /// Create a new pipeline builder
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self {
             device,
@@ -223,18 +236,23 @@ impl PipelineBuilder {
     }
 
     /// Create a named buffer for the pipeline
+    #[must_use]
     pub fn create_buffer(mut self, name: &str, spec: BufferSpec) -> Self {
         self.buffer_specs.insert(name.to_string(), spec);
         self
     }
 
     /// Add a compute stage to the pipeline
+    #[must_use]
     pub fn add_stage(mut self, stage: Stage) -> Self {
         self.stages.push(stage);
         self
     }
 
     /// Build the pipeline
+    /// # Errors
+    /// Returns [`Err`] if any stage references an unknown input or output buffer
+    /// name. Buffer allocation is infallible in wgpu (OOM surfaces as device lost).
     pub fn build(self) -> Result<ComputePipeline> {
         // Allocate all buffers
         let mut buffers = HashMap::new();
@@ -333,6 +351,8 @@ pub struct ComputePipeline {
 
 impl ComputePipeline {
     /// Write data to a pipeline buffer
+    /// # Errors
+    /// Returns [`Err`] if the buffer name is unknown.
     pub fn write_f64(&self, name: &str, data: &[f64]) -> Result<()> {
         let buffer = self
             .buffers
@@ -347,6 +367,8 @@ impl ComputePipeline {
     }
 
     /// Write f32 data to a pipeline buffer
+    /// # Errors
+    /// Returns [`Err`] if the buffer name is unknown.
     pub fn write_f32(&self, name: &str, data: &[f32]) -> Result<()> {
         let buffer = self
             .buffers
@@ -361,6 +383,8 @@ impl ComputePipeline {
     }
 
     /// Write raw bytes to a pipeline buffer
+    /// # Errors
+    /// Returns [`Err`] if the buffer name is unknown.
     pub fn write_bytes(&self, name: &str, data: &[u8]) -> Result<()> {
         let buffer = self
             .buffers
@@ -374,6 +398,9 @@ impl ComputePipeline {
     }
 
     /// Execute all pipeline stages with a single GPU submit
+    /// # Errors
+    /// Returns [`Err`] if command encoder creation fails, submit fails, or the
+    /// device is lost (e.g. during poll).
     pub fn execute(&self) -> Result<()> {
         let mut encoder = self
             .device
@@ -396,6 +423,12 @@ impl ComputePipeline {
     }
 
     /// Read f64 data from a pipeline buffer
+    /// # Errors
+    /// Returns [`Err`] if the buffer name is unknown, if buffer mapping fails
+    /// (e.g. device lost), or if the mapping channel is closed before completion.
+    /// # Panics
+    /// Panics if the buffer size is not a multiple of 8 bytes (internal invariant
+    /// violation; should not occur with correctly-sized f64 buffers).
     pub fn read_f64(&self, name: &str) -> Result<Vec<f64>> {
         let buffer = self
             .buffers
@@ -443,6 +476,12 @@ impl ComputePipeline {
     }
 
     /// Read f32 data from a pipeline buffer
+    /// # Errors
+    /// Returns [`Err`] if the buffer name is unknown, if buffer mapping fails
+    /// (e.g. device lost), or if the mapping channel is closed before completion.
+    /// # Panics
+    /// Panics if the buffer size is not a multiple of 4 bytes (internal invariant
+    /// violation; should not occur with correctly-sized f32 buffers).
     pub fn read_f32(&self, name: &str) -> Result<Vec<f32>> {
         let buffer = self
             .buffers
@@ -491,16 +530,19 @@ impl ComputePipeline {
     }
 
     /// Get a buffer reference (for use with external bind groups)
+    #[must_use]
     pub fn buffer(&self, name: &str) -> Option<&wgpu::Buffer> {
-        self.buffers.get(name).map(|b| b.as_ref())
+        self.buffers.get(name).map(std::convert::AsRef::as_ref)
     }
 
     /// Get stage count
+    #[must_use]
     pub fn stage_count(&self) -> usize {
         self.stages.len()
     }
 
     /// Get buffer count
+    #[must_use]
     pub fn buffer_count(&self) -> usize {
         self.buffers.len()
     }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Axis-aware tensor operations: argmax_dim, softmax_dim
+//! Axis-aware tensor operations: `argmax_dim`, `softmax_dim`
 //!
 //! CPU implementations for Viterbi decoding and similar workloads.
 //! No unsafe, no unwrap in non-test code.
@@ -9,10 +9,8 @@ use crate::tensor::Tensor;
 
 impl Tensor {
     /// Returns the index of the maximum value along the given axis.
-    ///
     /// Output shape is the input shape with the specified axis removed.
     /// Returns a tensor of u32 indices; use `to_vec_u32()` to read them.
-    ///
     /// # Errors
     /// Returns `Err` if axis is out of bounds or tensor is empty.
     pub fn argmax_dim(&self, axis: usize) -> Result<Self> {
@@ -62,10 +60,8 @@ impl Tensor {
     }
 
     /// Applies softmax along the specified axis.
-    ///
     /// Uses numerically stable formulation: subtract max along axis before exp.
     /// Output shape equals input shape. Row-wise when axis=1, column-wise when axis=0.
-    ///
     /// # Errors
     /// Returns `Err` if axis is out of bounds or tensor is empty.
     pub fn softmax_dim(&self, axis: usize) -> Result<Self> {
@@ -176,8 +172,8 @@ mod tests {
         assert_eq!(result.len(), 6);
         let row0_sum: f32 = result[0..3].iter().sum();
         let row1_sum: f32 = result[3..6].iter().sum();
-        assert!((row0_sum - 1.0).abs() < 1e-5, "row0 sum={}", row0_sum);
-        assert!((row1_sum - 1.0).abs() < 1e-5, "row1 sum={}", row1_sum);
+        assert!((row0_sum - 1.0).abs() < 1e-5, "row0 sum={row0_sum}");
+        assert!((row1_sum - 1.0).abs() < 1e-5, "row1 sum={row1_sum}");
     }
 
     #[tokio::test]
@@ -192,8 +188,8 @@ mod tests {
         let result = out.to_vec().unwrap();
         let col0_sum: f32 = result[0] + result[2] + result[4];
         let col1_sum: f32 = result[1] + result[3] + result[5];
-        assert!((col0_sum - 1.0).abs() < 1e-5, "col0 sum={}", col0_sum);
-        assert!((col1_sum - 1.0).abs() < 1e-5, "col1 sum={}", col1_sum);
+        assert!((col0_sum - 1.0).abs() < 1e-5, "col0 sum={col0_sum}");
+        assert!((col1_sum - 1.0).abs() < 1e-5, "col1 sum={col1_sum}");
     }
 
     #[tokio::test]

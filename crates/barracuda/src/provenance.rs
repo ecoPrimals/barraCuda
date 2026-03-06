@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Cross-Spring Provenance Tags (L-005)
 //!
-//! Metadata for absorbed code by capability domain (lattice_qcd, marine_bio,
-//! ml_inference, etc.). Enables traceability of feature origins across the
+//! Metadata for absorbed code by capability domain (`lattice_qcd`, `marine_bio`,
+//! `ml_inference`, etc.). Enables traceability of feature origins across the
 //! ecoPrimals ecosystem without hardcoding primal identities.
 
 /// Provenance metadata for absorbed items.
 ///
-/// Origin names are capability-based identifiers (e.g. "lattice_qcd",
-/// "marine_bio", "ml_inference") — not primal names. barraCuda describes
+/// Origin names are capability-based identifiers (e.g. "`lattice_qcd`",
+/// "`marine_bio`", "`ml_inference`") — not primal names. barraCuda describes
 /// capabilities and discovers peers at runtime via capability matching.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ProvenanceTag {
-    /// Capability domain (e.g. "lattice_qcd", "marine_bio", "ml_inference")
+    /// Capability domain (e.g. "`lattice_qcd`", "`marine_bio`", "`ml_inference`")
     pub origin: &'static str,
     /// Absorbed session or handoff identifier
     pub absorbed_session: &'static str,
@@ -25,6 +25,7 @@ impl ProvenanceTag {
     ///
     /// Checks non-empty strings and ASCII-safe origin names.
     /// Does NOT check against a hardcoded allowlist — any valid capability identifier is accepted.
+    #[must_use]
     pub fn is_valid(&self) -> bool {
         !self.origin.is_empty()
             && !self.absorbed_session.is_empty()

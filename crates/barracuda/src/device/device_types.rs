@@ -2,7 +2,7 @@
 //! Core device type — minimal enum for routing and capability modules.
 //!
 //! Extracted from unified.rs to avoid circular dependencies. The full `Device`
-//! API (info, select_for_workload, etc.) lives in `unified.rs`.
+//! API (info, `select_for_workload`, etc.) lives in `unified.rs`.
 
 use std::fmt;
 

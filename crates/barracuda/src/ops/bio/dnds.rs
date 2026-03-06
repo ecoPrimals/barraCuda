@@ -10,8 +10,8 @@
 //!
 //! wetSpring handoff v6, `dnds_batch_f64.wgsl` — 9/9 GPU checks PASS.
 
-use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -34,6 +34,11 @@ pub struct DnDsBatchF64 {
 
 impl DnDsBatchF64 {
     /// Create dN/dS batch calculator.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         let module = device.compile_shader_f64(SHADER, Some("dnds_batch_f64"));
         let bgl = super::snp::make_bgl(&device, &[true, true, true, false, false, false]);
@@ -47,6 +52,11 @@ impl DnDsBatchF64 {
     }
 
     /// Dispatch dN/dS computation for codon sequence pairs.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn dispatch(
         &self,
         n_pairs: u32,

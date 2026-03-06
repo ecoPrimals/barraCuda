@@ -36,6 +36,7 @@ pub const WGSL_FACTORIAL_F64: &str = include_str!("../shaders/special/factorial_
 ///
 /// - Exact for n ≤ 20
 /// - Stirling's approximation has <1% error for n > 20
+#[must_use]
 pub fn factorial(n: usize) -> f64 {
     // Lookup table for exact values (n ≤ 20)
     const FACTORIAL_TABLE: [f64; 21] = [

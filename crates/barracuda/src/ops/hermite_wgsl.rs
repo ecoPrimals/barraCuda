@@ -20,6 +20,7 @@ pub struct Hermite {
 
 impl Hermite {
     /// Create new Hermite polynomial operation for order n
+    #[must_use]
     pub fn new(input: Tensor, n: u32) -> Self {
         Self { input, n }
     }
@@ -29,6 +30,11 @@ impl Hermite {
     }
 
     /// Execute Hermite polynomial evaluation on the input tensor.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -163,6 +169,11 @@ impl Hermite {
 
 impl Tensor {
     /// Compute Hermite polynomial Hₙ(x) for each element
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn hermite(self, n: u32) -> Result<Self> {
         Hermite::new(self, n).execute()
     }
@@ -187,7 +198,7 @@ mod tests {
         let result = output.to_vec().unwrap();
         // H₀(x) = 1 for all x
         for &v in &result {
-            assert!((v - 1.0).abs() < 1e-5, "H₀ should be 1, got {}", v);
+            assert!((v - 1.0).abs() < 1e-5, "H₀ should be 1, got {v}");
         }
     }
 
@@ -228,10 +239,7 @@ mod tests {
             let expected = 4.0 * x * x - 2.0;
             assert!(
                 (v - expected).abs() < 1e-4,
-                "H₂({}) = {}, expected {}",
-                x,
-                v,
-                expected
+                "H₂({x}) = {v}, expected {expected}"
             );
         }
     }

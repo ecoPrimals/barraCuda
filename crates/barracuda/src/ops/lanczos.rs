@@ -8,11 +8,11 @@
 //!
 //! ## Algorithm (per iteration k)
 //!
-//! 1. w = A * v_k (matrix-vector product — caller provides)
-//! 2. α_k = v_k^T * w
-//! 3. w = w - α_k * v_k - β_{k-1} * v_{k-1}
-//! 4. β_k = ||w||
-//! 5. v_{k+1} = w / β_k
+//! 1. w = A * `v_k` (matrix-vector product — caller provides)
+//! 2. `α_k` = `v_k^T` * w
+//! 3. w = w - `α_k` * `v_k` - β_{k-1} * v_{k-1}
+//! 4. `β_k` = ||w||
+//! 5. v_{k+1} = w / `β_k`
 //!
 //! ## Usage
 //!
@@ -26,8 +26,8 @@
 //! let result = lanczos_eigensolver(device, n, k, &v0, |v| matrix_vector_product(a, v))?;
 //! ```
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -47,11 +47,11 @@ struct LanczosParams {
 /// Result of one Lanczos iteration.
 #[derive(Debug, Clone)]
 pub struct LanczosIterationResult {
-    /// Diagonal element α_k = v_k^T A v_k.
+    /// Diagonal element `α_k` = `v_k^T` A `v_k`.
     pub alpha: f64,
-    /// Off-diagonal norm β_k = ||w|| after orthogonalization.
+    /// Off-diagonal norm `β_k` = ||w|| after orthogonalization.
     pub beta: f64,
-    /// Next Lanczos vector v_{k+1} = w / β_k.
+    /// Next Lanczos vector v_{k+1} = w / `β_k`.
     pub v_next: Vec<f64>,
 }
 
@@ -61,20 +61,29 @@ pub struct LanczosIterationResult {
 /// T is symmetric tridiagonal with T[i,i] = alpha[i], T[i,i+1] = T[i+1,i] = beta[i].
 #[derive(Debug, Clone)]
 pub struct LanczosTridiagonal {
-    /// Diagonal elements α_0..α_{K-1}.
+    /// Diagonal elements `α_0..α`_{K-1}.
     pub alpha: Vec<f64>,
-    /// Off-diagonal elements β_0..β_{K-2}.
+    /// Off-diagonal elements `β_0..β`_{K-2}.
     pub beta: Vec<f64>,
 }
 
 /// One Lanczos iteration (steps 2–5).
 ///
-/// * `w` — A * v_k (matrix-vector product result; caller must compute)
+/// * `w` — A * `v_k` (matrix-vector product result; caller must compute)
 /// * `v_k` — current Lanczos vector
 /// * `v_prev` — previous Lanczos vector (use zeros for first iteration)
 /// * `beta_prev` — β_{k-1} (use 0.0 for first iteration)
 ///
 /// Returns `(alpha_k, beta_k, v_{k+1})`.
+///
+/// # Panics
+///
+/// Panics if `v_k` or `v_prev` length differs from `w`, or if `w` is empty.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn lanczos_iteration(
     device: &Arc<WgpuDevice>,
     w: &[f64],
@@ -109,7 +118,7 @@ pub fn lanczos_iteration(
         .storage_rw(4, &tridiag_buf)
         .uniform(5, &params_buf)
         .dispatch(1, 1, 1)
-        .submit();
+        .submit()?;
 
     let tridiag = device.read_f64_buffer(&tridiag_buf, 2)?;
     let v_next = device.read_f64_buffer(&v_next_buf, n)?;
@@ -127,6 +136,14 @@ pub fn lanczos_iteration(
 /// * `v0` — initial Lanczos vector (should be unit norm)
 ///
 /// Returns the tridiagonal matrix (alpha, beta) suitable for eigenvalue extraction.
+///
+/// # Panics
+/// Panics if `v0.len() != n` or `k == 0`.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn lanczos_eigensolver<F>(
     device: &Arc<WgpuDevice>,
     n: usize,

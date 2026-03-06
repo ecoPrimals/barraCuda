@@ -14,8 +14,10 @@ use crate::tensor::Tensor;
 
 impl LocalAttention {
     /// Execute local attention (3 GPU passes)
-    ///
     /// **Deep Debt**: Reuses 2/3 shaders from validated attention!
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.query().device();
 
@@ -71,7 +73,7 @@ impl LocalAttention {
             .storage_rw(2, &scores_buffer)
             .uniform(3, &params_buffer)
             .dispatch(matmul_workgroups.max(1), 1, 1)
-            .submit();
+            .submit()?;
 
         // ═══════════════════════════════════════════════════════════
         // PASS 2: Apply softmax with local window mask (NEW shader!)
@@ -85,7 +87,7 @@ impl LocalAttention {
             .storage_rw(1, &weights_buffer)
             .uniform(2, &params_buffer)
             .dispatch(softmax_workgroups.max(1), 1, 1)
-            .submit();
+            .submit()?;
 
         // ═══════════════════════════════════════════════════════════
         // PASS 3: Apply weights to values (REUSED from attention ✅)
@@ -100,7 +102,7 @@ impl LocalAttention {
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)
             .dispatch(apply_workgroups.max(1), 1, 1)
-            .submit();
+            .submit()?;
 
         // Return output tensor
         Ok(Tensor::from_buffer(

@@ -12,11 +12,11 @@
 
 #![expect(clippy::unwrap_used, reason = "tests")]
 use barracuda::device::test_pool;
-use barracuda::ops::fhe_intt::{compute_inverse_root, FheIntt};
+use barracuda::ops::fhe_intt::{FheIntt, compute_inverse_root};
 use barracuda::ops::fhe_key_switch::FheKeySwitch;
 use barracuda::ops::fhe_modulus_switch::FheModulusSwitch;
-use barracuda::ops::fhe_ntt::{compute_primitive_root, FheNtt};
-use barracuda::ops::fhe_poly_add::{create_fhe_poly_tensor, FhePolyAdd};
+use barracuda::ops::fhe_ntt::{FheNtt, compute_primitive_root};
+use barracuda::ops::fhe_poly_add::{FhePolyAdd, create_fhe_poly_tensor};
 use barracuda::ops::fhe_poly_sub::FhePolySub;
 use barracuda::ops::fhe_rotate::FheRotate;
 use barracuda::tensor::Tensor;
@@ -49,14 +49,14 @@ async fn get_fhe_device() -> Option<Arc<barracuda::device::WgpuDevice>> {
 fn tensor_to_u64(tensor: &Tensor) -> Vec<u64> {
     let raw = tensor.to_vec_u32().expect("tensor read-back failed");
     raw.chunks_exact(2)
-        .map(|pair| pair[0] as u64 | ((pair[1] as u64) << 32))
+        .map(|pair| u64::from(pair[0]) | (u64::from(pair[1]) << 32))
         .collect()
 }
 
 // ── Math helpers ─────────────────────────────────────────────────────────────
 
 fn mod_add(a: u64, b: u64, m: u64) -> u64 {
-    ((a as u128 + b as u128) % m as u128) as u64
+    ((u128::from(a) + u128::from(b)) % u128::from(m)) as u64
 }
 
 fn mod_sub(a: u64, b: u64, m: u64) -> u64 {

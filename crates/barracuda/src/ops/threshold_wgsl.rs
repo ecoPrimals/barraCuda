@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Threshold - Threshold activation function - Pure WGSL
 //!
-//! f64 canonical — f32 derived via downcast_f64_to_f32 when needed.
+//! f64 canonical — f32 derived via `downcast_f64_to_f32` when needed.
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its threshold and value
@@ -29,6 +29,7 @@ pub struct Threshold {
 
 impl Threshold {
     /// Create a new threshold operation
+    #[must_use]
     pub fn new(input: Tensor, threshold: f32, value: f32) -> Self {
         Self {
             input,
@@ -43,6 +44,9 @@ impl Threshold {
     }
 
     /// Execute the threshold operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -194,11 +198,12 @@ impl Threshold {
 
 impl Tensor {
     /// Apply threshold activation
-    ///
     /// # Arguments
-    ///
     /// * `threshold` - Threshold value
     /// * `value` - Replacement value for elements <= threshold
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn threshold_wgsl(self, threshold: f32, value: f32) -> Result<Self> {
         Threshold::new(self, threshold, value).execute()
     }

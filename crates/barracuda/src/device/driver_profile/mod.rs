@@ -37,6 +37,7 @@ pub use workarounds::Workaround;
 use std::fmt;
 
 use crate::device::WgpuDevice;
+use crate::device::probe::cache::adapter_key;
 use crate::error::{BarracudaError, Result};
 
 // ── Driver identity ───────────────────────────────────────────────────────────
@@ -160,16 +161,20 @@ pub struct GpuDriverProfile {
     pub fp64_rate: Fp64Rate,
     /// Active workarounds for this driver/arch
     pub workarounds: Vec<Workaround>,
+    /// Adapter cache key for probe result lookup
+    pub(crate) adapter_key: String,
 }
 
 impl GpuDriverProfile {
     /// Build a driver profile from a `WgpuDevice` using runtime detection.
+    #[must_use]
     pub fn from_device(device: &WgpuDevice) -> Self {
         let driver = Self::detect_driver(device);
         let compiler = Self::detect_compiler(driver);
         let arch = architectures::detect_arch(device);
-        let fp64_rate = Self::detect_fp64_rate(&arch, driver);
+        let fp64_rate = Self::detect_fp64_rate(arch, driver);
         let workarounds = workarounds::detect_workarounds(driver, arch);
+        let adapter_key = adapter_key(device);
 
         Self {
             driver,
@@ -177,22 +182,20 @@ impl GpuDriverProfile {
             arch,
             fp64_rate,
             workarounds,
+            adapter_key,
         }
     }
 
     /// Optimal eigensolve dispatch strategy for this driver/arch combination.
-    ///
     /// Physics domain measured 2.2× NVK speedup with warp-packing (Titan V, Feb 2026).
     /// Neutral on proprietary NVIDIA (scheduler already handles wg1 efficiently).
-    ///
     /// ### AMD RDNA2/RDNA3 (ACO compiler)
-    ///
     /// Empirically measured on RX 6950 XT (RDNA2/NAVI21, Feb 2026):
     /// - `wg_size=32`: 67.7 ms  ← optimal
     /// - `wg_size=64`: 117.1 ms ← 1.7× slower
-    ///
-    /// Root cause: ACO targets **wave32 mode** for compute shaders on RDNA2.
-    /// Use `WarpPacked { wg_size: 32 }` for all current ACO targets.
+    ///   Root cause: ACO targets **wave32 mode** for compute shaders on RDNA2.
+    ///   Use `WarpPacked { wg_size: 32 }` for all current ACO targets.
+    #[must_use]
     pub fn optimal_eigensolve_strategy(&self) -> EigensolveStrategy {
         match (self.compiler, self.arch) {
             (CompilerKind::Nak, _) => EigensolveStrategy::WarpPacked { wg_size: 32 },
@@ -206,6 +209,7 @@ impl GpuDriverProfile {
     }
 
     /// Whether `exp(f64)` needs software substitution on this driver.
+    #[must_use]
     pub fn needs_exp_f64_workaround(&self) -> bool {
         self.workarounds.contains(&Workaround::NvkExpF64Crash)
             || self
@@ -214,6 +218,7 @@ impl GpuDriverProfile {
     }
 
     /// Whether `log(f64)` needs software substitution on this driver.
+    #[must_use]
     pub fn needs_log_f64_workaround(&self) -> bool {
         self.workarounds.contains(&Workaround::NvkLogF64Crash)
             || self
@@ -222,48 +227,54 @@ impl GpuDriverProfile {
     }
 
     /// Whether `pow(f64, f64)` needs software substitution on this driver.
-    ///
     /// Ada Lovelace (SM89) with the proprietary NVIDIA driver cannot compile
     /// native f64 pow/exp/log. Discovered by marine biology domain on RTX 4070 (Feb 2026).
+    #[must_use]
     pub fn needs_pow_f64_workaround(&self) -> bool {
         self.workarounds
             .contains(&Workaround::NvvmAdaF64Transcendentals)
     }
 
     /// Whether `sin(f64)` needs Taylor-series workaround on this driver.
-    ///
     /// NVK (open-source NVIDIA Vulkan driver) has broken or imprecise native
     /// sin/cos implementations for f64. Returns true for NVK and any driver
     /// with the `NvkSinCosF64Imprecise` workaround.
+    #[must_use]
     pub fn needs_sin_f64_workaround(&self) -> bool {
         self.workarounds
             .contains(&Workaround::NvkSinCosF64Imprecise)
     }
 
     /// Whether `cos(f64)` needs Taylor-series workaround on this driver.
-    ///
     /// NVK has broken or imprecise native cos for f64. Returns true for NVK
     /// and any driver with the `NvkSinCosF64Imprecise` workaround.
+    #[must_use]
     pub fn needs_cos_f64_workaround(&self) -> bool {
         self.workarounds
             .contains(&Workaround::NvkSinCosF64Imprecise)
     }
 
     /// Whether this driver supports f64 builtins (exp, log, pow) natively.
-    ///
     /// Returns false for NVK, software renderers, and NVIDIA Ada Lovelace
     /// proprietary (NVVM PTXAS fails on f64 transcendentals for SM89).
+    #[must_use]
     pub fn supports_f64_builtins(&self) -> bool {
         self.workarounds.is_empty() && !matches!(self.driver, DriverKind::Software)
     }
 
     /// Choose the optimal FP64 execution strategy for this hardware.
     ///
-    /// Compute-class GPUs (1:2 FP64:FP32) should use native f64 everywhere.
-    /// Consumer GPUs (1:64) benefit from the hybrid core-streaming approach:
-    /// DF64 (f32-pair) on the FP32 core array for bulk math, native f64 only
-    /// for accumulations and convergence tests.
+    /// Probe-aware: if the runtime probe has determined that native f64
+    /// compilation fails (NAK, NVVM returning zeros), forces Hybrid even on
+    /// hardware with Full FP64 rate.  Falls back to the hardware-rate
+    /// heuristic when no probe result is cached yet.
+    #[must_use]
     pub fn fp64_strategy(&self) -> Fp64Strategy {
+        if let Some(false) =
+            crate::device::probe::cache::cached_basic_f64_for_key(&self.adapter_key)
+        {
+            return Fp64Strategy::Hybrid;
+        }
         match self.fp64_rate {
             Fp64Rate::Full => Fp64Strategy::Native,
             Fp64Rate::Throttled | Fp64Rate::Minimal | Fp64Rate::Software => Fp64Strategy::Hybrid,
@@ -272,9 +283,9 @@ impl GpuDriverProfile {
 
     /// Probe-informed FP64 strategy. Overrides heuristic when the runtime
     /// probe shows f64 compilation actually fails (NAK, NVVM).
-    ///
     /// Earth science domain V35/V37 discovery: NAK and NVVM advertise `SHADER_F64`
     /// but cannot compile f64 WGSL. The probe provides ground truth.
+    #[must_use]
     pub fn fp64_strategy_probed(
         &self,
         caps: &crate::device::probe::F64BuiltinCapabilities,
@@ -286,6 +297,7 @@ impl GpuDriverProfile {
     }
 
     /// Whether `sin(f64)` needs software substitution, considering probe results.
+    #[must_use]
     pub fn needs_sin_f64_workaround_probed(
         &self,
         caps: &crate::device::probe::F64BuiltinCapabilities,
@@ -294,6 +306,7 @@ impl GpuDriverProfile {
     }
 
     /// Whether `cos(f64)` needs software substitution, considering probe results.
+    #[must_use]
     pub fn needs_cos_f64_workaround_probed(
         &self,
         caps: &crate::device::probe::F64BuiltinCapabilities,
@@ -302,15 +315,14 @@ impl GpuDriverProfile {
     }
 
     /// Whether this is an open-source driver (NVK or RADV).
+    #[must_use]
     pub fn is_open_source(&self) -> bool {
         matches!(self.driver, DriverKind::Nvk | DriverKind::Radv)
     }
 
     /// Return the `LatencyModel` appropriate for this GPU architecture.
-    ///
     /// The model provides per-operation cycle counts used by the WGSL ILP
     /// scheduler (`@ilp_region` reorderer, Phase 3 `WgslDependencyGraph`).
-    ///
     /// - NVIDIA Volta/Turing/Ampere/Ada → `Sm70LatencyModel` (DFMA = 8 cy)
     /// - AMD RDNA2/RDNA3/CDNA2 → `Rdna2LatencyModel` (VFMA64 ≈ 4 cy)
     /// - Unknown/Intel/Software → `ConservativeModel` (safe overestimate)
@@ -322,7 +334,6 @@ impl GpuDriverProfile {
     // ── Allocation safety ─────────────────────────────────────────────────────
 
     /// Maximum safe combined allocation in bytes, or `None` if unlimited.
-    ///
     /// On NVK (nouveau), the kernel driver can PTE-fault when combined GPU
     /// allocations exceed ~1.4 GB (observed on GV100/Titan V). We use a
     /// conservative 1.2 GB limit to avoid silent device loss.
@@ -336,8 +347,11 @@ impl GpuDriverProfile {
     }
 
     /// Check whether a combined allocation of `total_bytes` is safe on this
-    /// driver. Returns `Ok(())` if safe, or `Err(DeviceLimitExceeded)` with a
-    /// diagnostic message suggesting Mesa git HEAD.
+    /// driver.
+    /// # Errors
+    /// Returns [`Err`] with [`DeviceLimitExceeded`] if the allocation exceeds
+    /// the driver's safe limit (e.g. NVK large-buffer limit); suggests Mesa
+    /// git HEAD in the diagnostic.
     pub fn check_allocation_safe(&self, total_bytes: u64) -> Result<()> {
         if let Some(limit) = self.max_safe_total_allocation() {
             if total_bytes > limit {
@@ -398,7 +412,7 @@ impl GpuDriverProfile {
         }
     }
 
-    fn detect_fp64_rate(arch: &GpuArch, driver: DriverKind) -> Fp64Rate {
+    fn detect_fp64_rate(arch: GpuArch, driver: DriverKind) -> Fp64Rate {
         match arch {
             GpuArch::Volta => Fp64Rate::Full,
             GpuArch::Ampere => Fp64Rate::Throttled,
@@ -420,7 +434,6 @@ impl GpuDriverProfile {
     }
 
     /// Preferred 1D workgroup size for the GPU architecture.
-    ///
     /// Volta/Turing (SM70/SM75): 64-wide warps → 64.
     /// Ampere/Ada (SM80+) and AMD RDNA: 256 occupancy sweet spot.
     /// Fallback: 128 (safe universal default).

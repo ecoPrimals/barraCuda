@@ -8,7 +8,7 @@
 //!
 //! # Key Insight
 //!
-//! The SparsitySampler algorithm from Diaw et al. (2024) trains surrogates
+//! The `SparsitySampler` algorithm from Diaw et al. (2024) trains surrogates
 //! on ALL evaluations, not just the best. This provides the surrogate with
 //! both exploitation data (near optima) and exploration data (away from
 //! optima), leading to dramatically better surrogate accuracy.
@@ -93,6 +93,7 @@ pub struct EvaluationCache {
 
 impl EvaluationCache {
     /// Create a new empty evaluation cache.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             records: Vec::new(),
@@ -101,6 +102,7 @@ impl EvaluationCache {
     }
 
     /// Create a cache with pre-allocated capacity.
+    #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             records: Vec::with_capacity(capacity),
@@ -125,31 +127,37 @@ impl EvaluationCache {
     }
 
     /// Number of recorded evaluations.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.records.len()
     }
 
     /// Whether the cache is empty.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.records.is_empty()
     }
 
     /// Best function value seen, if any.
+    #[must_use]
     pub fn best_f(&self) -> Option<f64> {
         self.best_idx.map(|idx| self.records[idx].f)
     }
 
     /// Best point found so far, if any.
+    #[must_use]
     pub fn best_x(&self) -> Option<&[f64]> {
         self.best_idx.map(|idx| self.records[idx].x.as_slice())
     }
 
     /// Best evaluation record, if any.
+    #[must_use]
     pub fn best(&self) -> Option<&EvaluationRecord> {
         self.best_idx.map(|idx| &self.records[idx])
     }
 
     /// Get all recorded evaluations as a slice.
+    #[must_use]
     pub fn records(&self) -> &[EvaluationRecord] {
         &self.records
     }
@@ -157,6 +165,7 @@ impl EvaluationCache {
     /// Extract training data: (X, y) where X is matrix of inputs, y is vector of outputs.
     ///
     /// Returns `(x_data, y_data)` suitable for feeding into `RBFSurrogate::train()`.
+    #[must_use]
     pub fn training_data(&self) -> (Vec<Vec<f64>>, Vec<f64>) {
         let x_data: Vec<Vec<f64>> = self.records.iter().map(|r| r.x.clone()).collect();
         let y_data: Vec<f64> = self.records.iter().map(|r| r.f).collect();
@@ -184,6 +193,11 @@ impl EvaluationCache {
     /// ```ignore
     /// cache.save("results/optimization_cache.json")?;
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let file = File::create(path.as_ref())
             .map_err(|e| BarracudaError::Internal(format!("Failed to create cache file: {e}")))?;
@@ -195,7 +209,7 @@ impl EvaluationCache {
 
     /// Load cache from a JSON file.
     ///
-    /// Recomputes the best_idx after loading (not serialized).
+    /// Recomputes the `best_idx` after loading (not serialized).
     ///
     /// # Example
     ///
@@ -203,6 +217,11 @@ impl EvaluationCache {
     /// let cache = EvaluationCache::load("results/optimization_cache.json")?;
     /// println!("Loaded {} evaluations, best: {:?}", cache.len(), cache.best_f());
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
         let file = File::open(path.as_ref())
             .map_err(|e| BarracudaError::Internal(format!("Failed to open cache file: {e}")))?;
@@ -250,6 +269,7 @@ impl EvaluationCache {
     /// let cache = EvaluationCache::from_training_data(x_data, y_data);
     /// assert_eq!(cache.len(), 2);
     /// ```
+    #[must_use]
     pub fn from_training_data(x_data: Vec<Vec<f64>>, y_data: Vec<f64>) -> Self {
         let mut cache = Self::with_capacity(x_data.len());
         for (x, f) in x_data.into_iter().zip(y_data) {
@@ -258,9 +278,9 @@ impl EvaluationCache {
         cache
     }
 
-    /// Recompute the best_idx from records.
+    /// Recompute the `best_idx` from records.
     ///
-    /// Called after deserialization (best_idx is not serialized).
+    /// Called after deserialization (`best_idx` is not serialized).
     fn recompute_best(&mut self) {
         self.best_idx = None;
         if self.records.is_empty() {

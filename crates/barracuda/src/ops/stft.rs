@@ -31,6 +31,9 @@ pub struct STFT {
 
 impl STFT {
     /// Create a new STFT operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(signal: Tensor, window: Tensor, n_fft: usize, hop_length: usize) -> Result<Self> {
         // Validate window length
         let window_size: usize = window.shape().iter().product();
@@ -69,6 +72,9 @@ impl STFT {
     }
 
     /// Execute the STFT operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.signal.device();
         let signal_length: usize = self.signal.shape().iter().product();

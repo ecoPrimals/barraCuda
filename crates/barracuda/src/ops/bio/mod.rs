@@ -68,17 +68,17 @@ pub mod wright_fisher;
 pub use ani::AniBatchF64;
 pub use batch_fitness::BatchFitnessGpu;
 pub use batched_multinomial::{
-    multinomial_sample_cpu, BatchedMultinomialConfig, BatchedMultinomialGpu,
+    BatchedMultinomialConfig, BatchedMultinomialGpu, multinomial_sample_cpu,
 };
 pub use dada2::Dada2EStepGpu;
-pub use diversity_fusion::{diversity_fusion_cpu, DiversityFusionGpu, DiversityResult};
+pub use diversity_fusion::{DiversityFusionGpu, DiversityResult, diversity_fusion_cpu};
 pub use dnds::DnDsBatchF64;
 pub use felsenstein::{FelsensteinGpu, FelsensteinResult, PhyloTree};
 pub use flat_tree::FlatTree;
-pub use fst_variance::{fst_variance_decomposition, FstResult};
+pub use fst_variance::{FstResult, fst_variance_decomposition};
 pub use gillespie::{GillespieConfig, GillespieGpu, GillespieResult};
 pub use hill_gate::{HillGateGpu, HillGateParams};
-pub use hmm::{hmm_backward, hmm_viterbi, HmmBatchForwardF64, ViterbiResult};
+pub use hmm::{HmmBatchForwardF64, ViterbiResult, hmm_backward, hmm_viterbi};
 pub use kmer_histogram::KmerHistogramGpu;
 pub use locus_variance::LocusVarianceGpu;
 pub use multi_obj_fitness::MultiObjFitnessGpu;

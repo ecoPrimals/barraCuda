@@ -24,6 +24,8 @@ pub struct PSNR {
 
 impl PSNR {
     /// Create a new PSNR operation
+    /// # Errors
+    /// Returns [`Err`] if tensor shapes do not match or tensors are empty.
     pub fn new(original: Tensor, reconstructed: Tensor, max_pixel_value: f32) -> Result<Self> {
         let shape1 = original.shape();
         let shape2 = reconstructed.shape();
@@ -62,6 +64,8 @@ impl PSNR {
     }
 
     /// Execute the PSNR operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn execute(self) -> Result<f32> {
         let device = self.original.device();
         let size = self.original.len();
@@ -89,7 +93,7 @@ impl PSNR {
             .storage_rw(2, &mse_buffer)
             .uniform(3, &params_buffer)
             .dispatch_1d(size as u32)
-            .submit();
+            .submit()?;
 
         // Read back results and compute MSE
         let mse_data = crate::utils::read_buffer(device, &mse_buffer, size)?;
@@ -108,11 +112,11 @@ impl PSNR {
 
 impl Tensor {
     /// Compute PSNR between two tensors
-    ///
     /// # Arguments
-    ///
     /// * `other` - Reconstructed tensor (must have same shape)
     /// * `max_pixel_value` - Maximum pixel value (typically 1.0 or 255.0)
+    /// # Errors
+    /// Returns [`Err`] if shapes do not match, tensors are empty, or buffer allocation/GPU dispatch/readback fails (e.g. device lost).
     pub fn psnr(self, other: Tensor, max_pixel_value: f32) -> Result<f32> {
         PSNR::new(self, other, max_pixel_value)?.execute()
     }

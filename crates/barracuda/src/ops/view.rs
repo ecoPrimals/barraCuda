@@ -63,11 +63,9 @@ pub struct View {
 
 impl View {
     /// Create View operation
-    ///
     /// # Arguments
     /// * `input` - Input tensor
     /// * `new_shape` - New shape (must have same total number of elements)
-    ///
     /// # Errors
     /// Returns error if the new shape has a different number of elements than the input.
     pub fn new(input: Tensor, new_shape: Vec<usize>) -> Result<Self> {
@@ -89,6 +87,11 @@ impl View {
     ///
     /// This is a metadata-only operation - it returns a new tensor with the
     /// same buffer but different shape metadata. No data is copied.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         // **Zero-Copy Implementation**: wgpu buffers are always contiguous,
         // so view is always safe and zero-copy - we just update metadata!
@@ -114,15 +117,18 @@ impl View {
 // Convenience method on Tensor
 impl Tensor {
     /// View tensor with new shape (zero-copy operation)
-    ///
     /// Changes the shape metadata without copying data. The new shape must
     /// have the same total number of elements as the original shape.
-    ///
     /// # Example
     /// ```rust,ignore
     /// let x = Tensor::zeros([2, 3, 4]).await?;  // [2, 3, 4]
     /// let y = x.view(&[6, 4])?;                 // [6, 4] - same buffer!
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn view(&self, shape: &[usize]) -> Result<Tensor> {
         View::new(self.clone(), shape.to_vec())?.execute()
     }

@@ -54,6 +54,7 @@
 /// // H₃(x) = 8x³ - 12x
 /// assert!((hermite(3, 2.0) - 40.0).abs() < 1e-14);
 /// ```
+#[must_use]
 pub fn hermite(n: usize, x: f64) -> f64 {
     if n == 0 {
         return 1.0;
@@ -101,6 +102,7 @@ pub fn hermite(n: usize, x: f64) -> f64 {
 /// assert!((h[2] - 2.0).abs() < 1e-14);  // H₂(1) = 4-2 = 2
 /// assert!((h[3] - (-4.0)).abs() < 1e-14);  // H₃(1) = 8-12 = -4
 /// ```
+#[must_use]
 pub fn hermite_all(n: usize, x: f64) -> Vec<f64> {
     let mut result = Vec::with_capacity(n + 1);
 
@@ -130,6 +132,7 @@ pub fn hermite_all(n: usize, x: f64) -> Vec<f64> {
 /// # Returns
 ///
 /// Vector of Hₙ(x) for each x in the input.
+#[must_use]
 pub fn hermite_batch(n: usize, x: &[f64]) -> Vec<f64> {
     x.iter().map(|&xi| hermite(n, xi)).collect()
 }
@@ -149,6 +152,7 @@ pub fn hermite_batch(n: usize, x: &[f64]) -> Vec<f64> {
 /// let psi0 = hermite_normalized(0, 0.0);
 /// assert!((psi0 - std::f64::consts::PI.powf(-0.25)).abs() < 1e-14);
 /// ```
+#[must_use]
 pub fn hermite_normalized(n: usize, x: f64) -> f64 {
     use crate::special::factorial::factorial;
     use std::f64::consts::PI;

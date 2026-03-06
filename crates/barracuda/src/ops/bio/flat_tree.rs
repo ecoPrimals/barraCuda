@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-//! Generic CSR FlatTree for phylogenetic and classification tree dispatch.
+//! Generic CSR `FlatTree` for phylogenetic and classification tree dispatch.
 //!
 //! A `FlatTree` stores tree topology in Compressed Sparse Row (CSR) format:
 //! parent indices, branch lengths, and per-node metadata. This is the common
-//! layout consumed by GPU shaders (Felsenstein pruning, UniFrac propagation,
+//! layout consumed by GPU shaders (Felsenstein pruning, `UniFrac` propagation,
 //! bootstrap resampling, NJ clustering, DTL reconciliation).
 //!
 //! Provenance: wetSpring metagenomics + neuralSpring metalForge → toadStool
@@ -26,14 +26,11 @@ pub struct FlatTree {
 }
 
 impl FlatTree {
-    /// Build a FlatTree from a Newick format string.
-    ///
+    /// Build a `FlatTree` from a Newick format string.
     /// Parses strings like `((A:0.1,B:0.2):0.3,C:0.4);` and constructs the tree
     /// with parent indices, branch lengths, and leaf ordering. Level ordering
     /// is computed automatically via [`bottom_up_levels`](Self::bottom_up_levels).
-    ///
     /// # Errors
-    ///
     /// Returns an error if the Newick string is malformed or invalid.
     pub fn from_newick(newick: &str) -> BarracudaResult<Self> {
         let newick = newick.trim();
@@ -59,12 +56,12 @@ impl FlatTree {
         build_flat_tree_from_parsed(nodes, root)
     }
 
-    /// Build a FlatTree from an edge list.
-    ///
+    /// Build a `FlatTree` from an edge list.
     /// Takes `(parent, child, branch_length)` tuples and constructs the tree.
-    /// Node indices are assigned automatically: leaves first (0..n_leaves),
+    /// Node indices are assigned automatically: leaves first (`0..n_leaves`),
     /// then internal nodes, with the root last. Level ordering is computed
     /// automatically via [`bottom_up_levels`](Self::bottom_up_levels).
+    #[must_use]
     pub fn from_edges(edges: &[(usize, usize, f64)]) -> Self {
         if edges.is_empty() {
             return FlatTree {
@@ -82,11 +79,17 @@ impl FlatTree {
     }
 
     /// Total number of nodes in the tree.
+    #[must_use]
     pub fn n_nodes(&self) -> usize {
         self.parent.len()
     }
 
     /// Validate structural invariants.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the tree structure violates invariants (branch
+    /// length mismatch, invalid root, out-of-bounds parent, etc.).
     pub fn validate(&self) -> Result<(), &'static str> {
         let n = self.n_nodes();
         if self.branch_length.len() != n {
@@ -110,15 +113,16 @@ impl FlatTree {
         Ok(())
     }
 
-    /// Convert to GPU-ready buffers (parent as `i32`, branch_length as `f64`).
+    /// Convert to GPU-ready buffers (parent as `i32`, `branch_length` as `f64`).
+    #[must_use]
     pub fn to_gpu_arrays(&self) -> (Vec<i32>, Vec<f64>) {
         (self.parent.clone(), self.branch_length.clone())
     }
 
     /// Build tree levels bottom-up for multi-pass GPU dispatch.
-    ///
     /// Returns a vector of levels, each containing node indices for that level.
     /// Level 0 = leaves, last level = root.
+    #[must_use]
     pub fn bottom_up_levels(&self) -> Vec<Vec<usize>> {
         let n = self.n_nodes();
         let mut depth = vec![0u32; n];
@@ -155,7 +159,7 @@ impl FlatTree {
     }
 }
 
-/// Parsed node: (name, parent_placeholder, branch_length, children_indices)
+/// Parsed node: (name, `parent_placeholder`, `branch_length`, `children_indices`)
 #[derive(Debug)]
 struct ParsedNode {
     name: Option<String>,
@@ -368,11 +372,8 @@ fn build_from_edges(edges: &[(usize, usize, f64)]) -> (Vec<i32>, Vec<f64>, usize
         .collect();
     leaves.sort_unstable();
     let root = all_nodes.iter().find(|n| !children.contains(n)).copied();
-    let root = match root {
-        Some(r) => r,
-        None => {
-            return (vec![-1], vec![0.0], 1);
-        }
+    let Some(root) = root else {
+        return (vec![-1], vec![0.0], 1);
     };
 
     let mut node_list: Vec<usize> = leaves.clone();

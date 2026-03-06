@@ -30,7 +30,7 @@ struct CyclicParams {
     _pad: u32,
 }
 
-/// Type alias for tridiagonal system: (sub_diag, main_diag, super_diag, rhs)
+/// Type alias for tridiagonal system: (`sub_diag`, `main_diag`, `super_diag`, rhs)
 pub type TridiagonalSystem = (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>);
 
 /// GPU-accelerated f64 tridiagonal solver via cyclic reduction
@@ -43,22 +43,21 @@ impl CyclicReductionF64 {
         include_str!("../../shaders/linalg/cyclic_reduction_f64.wgsl")
     }
 
-    /// Create a new CyclicReductionF64 orchestrator
+    /// Create a new `CyclicReductionF64` orchestrator
+    /// # Errors
+    /// Returns [`Err`] if device initialization fails.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Solve tridiagonal system Ax = d where A is tridiagonal
-    ///
     /// # Arguments
     /// * `a` - Sub-diagonal (length n, a[0] unused)
     /// * `b` - Main diagonal (length n)
     /// * `c` - Super-diagonal (length n, c[n-1] unused)
     /// * `d` - Right-hand side (length n)
-    ///
     /// # Returns
     /// Solution vector x of length n
-    ///
     /// # Example
     /// ```ignore
     /// // Solve: 4x₀ + x₁ = 5
@@ -71,6 +70,9 @@ impl CyclicReductionF64 {
     /// let x = solver.solve(&a, &b, &c, &d)?;
     /// // x ≈ [1.0, 1.0, 1.0]
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if a, c, or d length differs from b, n=1 with singular matrix (b[0]=0),
+    /// buffer allocation fails, GPU dispatch fails, buffer readback fails, or the device is lost.
     pub fn solve(&self, a: &[f64], b: &[f64], c: &[f64], d: &[f64]) -> Result<Vec<f64>> {
         let n = b.len();
 
@@ -108,12 +110,15 @@ impl CyclicReductionF64 {
     }
 
     /// Batched solve for multiple independent systems
-    ///
     /// # Arguments
     /// * `systems` - Vector of `TridiagonalSystem` (a, b, c, d) tuples
-    ///
     /// # Returns
     /// Vector of solution vectors
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn solve_batch(&self, systems: &[TridiagonalSystem]) -> Result<Vec<Vec<f64>>> {
         // For now, solve sequentially (batched GPU version coming)
         systems
@@ -329,7 +334,6 @@ impl CyclicReductionF64 {
     }
 
     /// GPU parallel cyclic reduction solver
-    ///
     /// O(log n) parallel — dispatched for n >= 2048 where parallelism amortizes
     /// the extra passes. For smaller systems, `solve_gpu_serial` is preferred.
     fn solve_gpu_parallel(&self, a: &[f64], b: &[f64], c: &[f64], d: &[f64]) -> Result<Vec<f64>> {

@@ -26,6 +26,7 @@ pub struct Ceil {
 
 impl Ceil {
     /// Create a new ceil operation
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -36,6 +37,11 @@ impl Ceil {
     }
 
     /// Execute the ceil operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -180,6 +186,11 @@ impl Ceil {
 
 impl Tensor {
     /// Compute ceil element-wise
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn ceil_wgsl(self) -> Result<Self> {
         Ceil::new(self).execute()
     }

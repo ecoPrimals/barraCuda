@@ -6,8 +6,8 @@
 
 use std::sync::Arc;
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use crate::special::chi_squared_sf;
 use bytemuck::{Pod, Zeroable};
@@ -44,6 +44,11 @@ impl FusedChiSquaredGpu {
     ///
     /// Computes χ² = Σ (observed - expected)² / expected and p-value via
     /// incomplete gamma (survival function).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(
         device: Arc<WgpuDevice>,
         observed: &[f64],
@@ -67,7 +72,7 @@ impl FusedChiSquaredGpu {
         for (i, &e) in expected.iter().enumerate() {
             if e <= 0.0 {
                 return Err(BarracudaError::InvalidInput {
-                    message: format!("expected[{}] must be positive, got {}", i, e),
+                    message: format!("expected[{i}] must be positive, got {e}"),
                 });
             }
         }
@@ -95,7 +100,7 @@ impl FusedChiSquaredGpu {
             .storage_rw(2, &partial_buf)
             .uniform(3, &params_buf)
             .dispatch(n_workgroups, 1, 1)
-            .submit();
+            .submit()?;
 
         let partials = device.read_f64_buffer(&partial_buf, n_workgroups as usize)?;
         let statistic = partials.iter().sum::<f64>();

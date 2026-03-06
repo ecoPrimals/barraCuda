@@ -28,6 +28,7 @@ impl<S: Default + Clone> Default for StatefulPipeline<S> {
 
 impl<S: Default + Clone> StatefulPipeline<S> {
     /// Create a new empty pipeline with default state.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -60,6 +61,7 @@ pub struct WaterBalanceState {
 
 impl WaterBalanceState {
     /// Create water balance state with given values.
+    #[must_use]
     pub fn new(soil_moisture: f64, snow_water_eq: f64, deep_percolation: f64) -> Self {
         Self {
             soil_moisture,

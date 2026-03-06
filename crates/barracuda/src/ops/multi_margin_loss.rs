@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! MultiMarginLoss - Pure WGSL
+//! `MultiMarginLoss` - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -24,6 +24,11 @@ pub struct MultiMarginLoss {
 
 impl MultiMarginLoss {
     /// Create a new multi-margin loss operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         input: Tensor,
         target: Tensor,
@@ -88,6 +93,11 @@ impl MultiMarginLoss {
     }
 
     /// Execute the multi-margin loss operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 

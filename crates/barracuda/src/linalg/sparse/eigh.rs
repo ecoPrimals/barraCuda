@@ -53,6 +53,10 @@ pub struct SparseEighResult {
 /// # Returns
 /// Eigenvalues in ascending order. The number of converged eigenvalues
 /// depends on `max_iter`: extremal eigenvalues converge first.
+///
+/// # Errors
+///
+/// Returns [`Err`] if the matrix is not square.
 pub fn sparse_eigh(matrix: &CsrMatrix, max_iter: usize, seed: u64) -> Result<SparseEighResult> {
     let spectral = to_spectral(matrix)?;
     let tridiag = lanczos(&spectral, max_iter, seed);
@@ -68,6 +72,10 @@ pub fn sparse_eigh(matrix: &CsrMatrix, max_iter: usize, seed: u64) -> Result<Spa
 ///
 /// Runs Lanczos with `3*k` iterations (heuristic for convergence of
 /// the k lowest Ritz values), then truncates.
+///
+/// # Errors
+///
+/// Returns [`Err`] if the matrix is not square.
 pub fn sparse_eigh_smallest(matrix: &CsrMatrix, k: usize, seed: u64) -> Result<SparseEighResult> {
     let max_iter = (3 * k).min(matrix.n_rows);
     let mut result = sparse_eigh(matrix, max_iter, seed)?;
@@ -78,6 +86,10 @@ pub fn sparse_eigh_smallest(matrix: &CsrMatrix, k: usize, seed: u64) -> Result<S
 /// Compute the k largest eigenvalues of a sparse symmetric matrix.
 ///
 /// Runs Lanczos with `3*k` iterations, then takes the last k values.
+///
+/// # Errors
+///
+/// Returns [`Err`] if the matrix is not square.
 pub fn sparse_eigh_largest(matrix: &CsrMatrix, k: usize, seed: u64) -> Result<SparseEighResult> {
     let max_iter = (3 * k).min(matrix.n_rows);
     let mut result = sparse_eigh(matrix, max_iter, seed)?;

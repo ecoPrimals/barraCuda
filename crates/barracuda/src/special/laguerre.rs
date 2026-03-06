@@ -5,7 +5,7 @@
 //! (`laguerre_f64.wgsl`, `laguerre_generalized_f64.wgsl`). GPU pipelines
 //! should use shader versions. These CPU functions are reference/validation.
 //!
-//! Computes L_n^(α)(x), the generalized (associated) Laguerre polynomials,
+//! Computes `L_n^(α)(x)`, the generalized (associated) Laguerre polynomials,
 //! using the three-term recurrence relation. These arise naturally in:
 //!
 //! - **Quantum mechanics**: Hydrogen atom wave functions (radial part)
@@ -30,13 +30,13 @@
 //!
 //! - Abramowitz & Stegun, Section 22.7
 //! - NIST DLMF, Chapter 18
-//! - scipy.special.eval_genlaguerre
+//! - `scipy.special.eval_genlaguerre`
 
 /// WGSL kernel for generalized Laguerre polynomial evaluation (f64).
 pub const WGSL_LAGUERRE_GENERALIZED_F64: &str =
     include_str!("../shaders/math/laguerre_generalized_f64.wgsl");
 
-/// Evaluate the generalized Laguerre polynomial L_n^(α)(x).
+/// Evaluate the generalized Laguerre polynomial `L_n^(α)(x)`.
 ///
 /// # Arguments
 ///
@@ -46,7 +46,7 @@ pub const WGSL_LAGUERRE_GENERALIZED_F64: &str =
 ///
 /// # Returns
 ///
-/// L_n^(α)(x)
+/// `L_n^(α)(x)`
 ///
 /// # Examples
 ///
@@ -64,6 +64,7 @@ pub const WGSL_LAGUERRE_GENERALIZED_F64: &str =
 /// let expected = (x * x - 4.0 * x + 2.0) / 2.0;
 /// assert!((laguerre(2, 0.0, x) - expected).abs() < 1e-12);
 /// ```
+#[must_use]
 pub fn laguerre(n: usize, alpha: f64, x: f64) -> f64 {
     match n {
         0 => 1.0,
@@ -86,7 +87,7 @@ pub fn laguerre(n: usize, alpha: f64, x: f64) -> f64 {
     }
 }
 
-/// Evaluate the (simple) Laguerre polynomial L_n(x) = L_n^(0)(x).
+/// Evaluate the (simple) Laguerre polynomial `L_n(x)` = `L_n^(0)(x)`.
 ///
 /// # Arguments
 ///
@@ -95,7 +96,7 @@ pub fn laguerre(n: usize, alpha: f64, x: f64) -> f64 {
 ///
 /// # Returns
 ///
-/// L_n(x)
+/// `L_n(x)`
 ///
 /// # Examples
 ///
@@ -106,11 +107,12 @@ pub fn laguerre(n: usize, alpha: f64, x: f64) -> f64 {
 /// assert!((laguerre_simple(1, 1.0) - 0.0).abs() < 1e-14);
 /// assert!((laguerre_simple(2, 1.0) - (-0.5)).abs() < 1e-14);
 /// ```
+#[must_use]
 pub fn laguerre_simple(n: usize, x: f64) -> f64 {
     laguerre(n, 0.0, x)
 }
 
-/// Evaluate all Laguerre polynomials L_0(x), L_1(x), ..., L_n(x) at once.
+/// Evaluate all Laguerre polynomials `L_0(x)`, `L_1(x)`, ..., `L_n(x)` at once.
 ///
 /// More efficient than calling `laguerre` repeatedly when all degrees are needed.
 ///
@@ -122,7 +124,7 @@ pub fn laguerre_simple(n: usize, x: f64) -> f64 {
 ///
 /// # Returns
 ///
-/// Vec of length `n_max + 1` containing [L_0^(α)(x), L_1^(α)(x), ..., L_n^(α)(x)]
+/// Vec of length `n_max + 1` containing [`L_0^(α)(x)`, `L_1^(α)(x)`, ..., `L_n^(α)(x)`]
 ///
 /// # Examples
 ///
@@ -134,6 +136,7 @@ pub fn laguerre_simple(n: usize, x: f64) -> f64 {
 /// assert!((values[0] - 1.0).abs() < 1e-14);  // L_0 = 1
 /// assert!((values[1] - 0.0).abs() < 1e-14);  // L_1(1) = 0
 /// ```
+#[must_use]
 pub fn laguerre_all(n_max: usize, alpha: f64, x: f64) -> Vec<f64> {
     let mut result = Vec::with_capacity(n_max + 1);
 
@@ -181,7 +184,7 @@ mod tests {
     fn test_laguerre_degree_2() {
         // L_2^(0)(x) = (x² - 4x + 2) / 2
         for x in [0.0, 0.5, 1.0, 2.0, 5.0] {
-            let expected = (x * x - 4.0 * x + 2.0) / 2.0;
+            let expected = f64::midpoint(x * x - 4.0 * x, 2.0);
             assert!(
                 (laguerre(2, 0.0, x) - expected).abs() < 1e-12,
                 "L_2(0, {}) = {} expected {}",
@@ -215,7 +218,7 @@ mod tests {
 
         // L_2^(1)(x) = (x² - 6x + 6) / 2
         for x in [0.0, 1.0, 3.0] {
-            let expected = (x * x - 6.0 * x + 6.0) / 2.0;
+            let expected = f64::midpoint(x * x - 6.0 * x, 6.0);
             assert!(
                 (laguerre(2, 1.0, x) - expected).abs() < 1e-12,
                 "L_2(1, {}) = {} expected {}",
@@ -270,10 +273,7 @@ mod tests {
             let individual = laguerre(n, alpha, x);
             assert!(
                 (val - individual).abs() < 1e-10,
-                "Mismatch at n={}: all={}, individual={}",
-                n,
-                val,
-                individual
+                "Mismatch at n={n}: all={val}, individual={individual}"
             );
         }
     }
@@ -297,9 +297,7 @@ mod tests {
         let expected = 34.0 / 6.0;
         assert!(
             (val - expected).abs() < 1e-11,
-            "L_3(0, -1) = {} expected {}",
-            val,
-            expected
+            "L_3(0, -1) = {val} expected {expected}"
         );
     }
 }

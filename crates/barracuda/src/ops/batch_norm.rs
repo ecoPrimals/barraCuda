@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! BatchNorm operation - Batch normalization
+//! `BatchNorm` operation - Batch normalization
 //! Pure WGSL implementation
 //!
 //! Deep Debt Principles:
@@ -28,6 +28,7 @@ static SHADER_BATCH_NORM_F32: std::sync::LazyLock<String> = std::sync::LazyLock:
 });
 
 /// GPU shader for group normalization (groups within channels).
+#[must_use]
 pub fn wgsl_groupnorm() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
@@ -38,6 +39,7 @@ pub fn wgsl_groupnorm() -> &'static str {
 }
 
 /// GPU shader for instance normalization (per-instance per-channel).
+#[must_use]
 pub fn wgsl_instancenorm() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
@@ -62,6 +64,7 @@ pub struct BatchNorm {
 
 impl BatchNorm {
     /// Create batch norm with given epsilon for numerical stability.
+    #[must_use]
     pub fn new(input: Tensor, epsilon: f32) -> Self {
         Self { input, epsilon }
     }
@@ -71,6 +74,11 @@ impl BatchNorm {
     }
 
     /// Execute batch normalization and return the output tensor.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.len();
@@ -201,6 +209,11 @@ impl BatchNorm {
 
 impl Tensor {
     /// Apply per-tensor batch normalization.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn batch_norm(self, epsilon: f32) -> Result<Self> {
         BatchNorm::new(self, epsilon).execute()
     }
@@ -252,7 +265,7 @@ mod tests {
         let result = input.batch_norm(1e-5).unwrap();
         let data = result.to_vec().unwrap();
         // Should be all zeros (normalized to mean)
-        for val in data.iter() {
+        for val in &data {
             assert!(val.abs() < 1e-3);
         }
 
@@ -340,8 +353,7 @@ mod tests {
 
         assert!(
             max_error < 1e-4,
-            "Max error: {} exceeds FP32 threshold",
-            max_error
+            "Max error: {max_error} exceeds FP32 threshold"
         );
     }
 }

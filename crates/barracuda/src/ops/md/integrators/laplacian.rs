@@ -23,6 +23,10 @@ pub struct Laplacian {
 
 impl Laplacian {
     /// Creates a Laplacian stencil for a 3D field with given grid spacing.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if field is not 3D or `grid_spacing` is not positive.
     pub fn new(field: Tensor, grid_spacing: f32) -> Result<Self> {
         let shape = field.shape();
         if shape.len() != 3 {
@@ -48,6 +52,11 @@ impl Laplacian {
     ///
     /// # Returns
     /// Laplacian field [nx, ny, nz]
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.field.device();
         let shape = self.field.shape();
@@ -230,8 +239,7 @@ mod tests {
         for (i, &val) in field_check.iter().enumerate() {
             assert_eq!(
                 val, 1.0,
-                "Input corrupted at index {}: expected 1.0, got {}",
-                i, val
+                "Input corrupted at index {i}: expected 1.0, got {val}"
             );
         }
 
@@ -245,9 +253,7 @@ mod tests {
         for (i, &val) in lap_data.iter().enumerate() {
             assert!(
                 val.abs() < 1e-5,
-                "Index {} Laplacian should be ~0, got {}",
-                i,
-                val
+                "Index {i} Laplacian should be ~0, got {val}"
             );
         }
 

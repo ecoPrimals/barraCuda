@@ -88,7 +88,7 @@ async fn e2e_signal_processing_pipeline() {
             }
         }
 
-        println!("   ✅ Recovery error: {:.6}", max_error);
+        println!("   ✅ Recovery error: {max_error:.6}");
         assert!(max_error < 1e-3, "Signal recovered with low error");
         println!("\n🎯 E2E Signal Processing: PASS\n");
     }) {
@@ -175,7 +175,7 @@ async fn e2e_fft_1d_2d_workflow() {
         let spectrum_2d = fft_2d.execute().unwrap();
         let elapsed_2d = start.elapsed();
 
-        println!("   ✅ 2D FFT ({}x{}): {:?}", rows, cols, elapsed_2d);
+        println!("   ✅ 2D FFT ({rows}x{cols}): {elapsed_2d:?}");
 
         // Verify output shape
         let output_data = spectrum_2d.to_vec().unwrap();
@@ -228,7 +228,7 @@ async fn e2e_fft_3d_workflow() {
         let reciprocal = fft_3d.execute().unwrap();
         let elapsed_3d = start.elapsed();
 
-        println!("   ✅ 3D FFT ({}³): {:?}", nx, elapsed_3d);
+        println!("   ✅ 3D FFT ({nx}³): {elapsed_3d:?}");
 
         // Verify output
         let output_data = reciprocal.to_vec().unwrap();
@@ -288,7 +288,7 @@ async fn e2e_complex_exp_to_fft() {
         let spectrum_data = spectrum.to_vec().unwrap();
         let total_energy: f32 = spectrum_data.iter().step_by(2).map(|&x| x * x).sum();
 
-        println!("   ✅ Total spectral energy: {:.2}", total_energy);
+        println!("   ✅ Total spectral energy: {total_energy:.2}");
         assert!(total_energy > 1.0, "Spectrum has energy");
 
         println!("\n🎯 E2E Complex Exp → FFT: PASS\n");

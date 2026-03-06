@@ -25,7 +25,7 @@ mod fault {
                 BarracudaError::InvalidInput { message } => {
                     assert!(message.contains("mismatch") || message.contains("dimension"));
                 }
-                other => panic!("Expected InvalidInput error, got {:?}", other),
+                other => panic!("Expected InvalidInput error, got {other:?}"),
             }
         }) {
             return;
@@ -59,7 +59,7 @@ mod fault {
                 BarracudaError::InvalidInput { message } => {
                     assert!(message.contains("mismatch") || message.contains("size"));
                 }
-                other => panic!("Expected InvalidInput error, got {:?}", other),
+                other => panic!("Expected InvalidInput error, got {other:?}"),
             }
         }) {
             return;
@@ -171,7 +171,7 @@ mod fault {
         if !super::common::run_gpu_resilient_async(|| async {
             let device = barracuda::device::test_pool::get_test_device().await;
             let grad = Gradient1D::new(device, 20, 0.1).unwrap();
-            let mut input: Vec<f64> = (0..20).map(|i| i as f64).collect();
+            let mut input: Vec<f64> = (0..20).map(|i| f64::from(i)).collect();
             input[10] = f64::NAN;
             let result = grad.compute(&input).await.unwrap();
             assert!(result[9].is_nan() || result[10].is_nan() || result[11].is_nan());
@@ -192,7 +192,7 @@ mod special_functions {
         let mut h_prev = 1.0;
         let mut h_curr = 2.0 * x;
         for k in 1..n {
-            let h_next = 2.0 * x * h_curr - 2.0 * k as f64 * h_prev;
+            let h_next = 2.0 * x * h_curr - 2.0 * f64::from(k) * h_prev;
             h_prev = h_curr;
             h_curr = h_next;
         }
@@ -209,7 +209,7 @@ mod special_functions {
         let mut l_prev = 1.0;
         let mut l_curr = 1.0 + alpha - x;
         for k in 1..n {
-            let kf = k as f64;
+            let kf = f64::from(k);
             let l_next =
                 ((2.0 * kf + 1.0 + alpha - x) * l_curr - (kf + alpha) * l_prev) / (kf + 1.0);
             l_prev = l_curr;
@@ -294,7 +294,7 @@ mod special_functions {
     #[test]
     fn test_laguerre_n2() {
         for x in [0.0_f64, 0.5, 1.0, 2.0, 5.0] {
-            let expected = (x * x - 4.0 * x + 2.0) / 2.0;
+            let expected = f64::midpoint(x * x - 4.0 * x, 2.0);
             assert!(
                 (laguerre_cpu(2, 0.0, x) - expected).abs() < 1e-13,
                 "L_2({}) = {} vs expected {}",

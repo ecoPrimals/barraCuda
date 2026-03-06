@@ -25,7 +25,12 @@ pub struct CenterLoss {
 }
 
 impl CenterLoss {
-    /// Create CenterLoss operation
+    /// Create `CenterLoss` operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(features: Tensor, centers: Tensor, labels: Tensor) -> Result<Self> {
         // Validate shapes
         if features.shape().len() != 2 {
@@ -72,7 +77,12 @@ impl CenterLoss {
         &SHADER
     }
 
-    /// Execute CenterLoss on tensor
+    /// Execute `CenterLoss` on tensor
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.features.device();
         let features_shape = self.features.shape();

@@ -3,9 +3,9 @@
 //!
 //! Computes the short-range part of the Ewald-split Coulomb interaction:
 //!
-//! U_short = Σ_{i<j} q_i q_j erfc(α r_ij) / r_ij
+//! `U_short` = Σ_{i<j} `q_i` `q_j` erfc(α `r_ij`) / `r_ij`
 //!
-//! F_short = Σ_j q_i q_j [erfc(αr)/r² + 2α/√π exp(-α²r²)/r] r̂
+//! `F_short` = `Σ_j` `q_i` `q_j` [erfc(αr)/r² + 2α/√π exp(-α²r²)/r] r̂
 //!
 //! The erfc damping makes the interaction short-ranged, allowing a
 //! cutoff rc without significant truncation error.
@@ -19,6 +19,7 @@ use super::PppmParams;
 /// erfc(x) = 1 - erf(x) = (2/√π) ∫_x^∞ exp(-t²) dt
 ///
 /// Uses rational approximation for numerical stability.
+#[must_use]
 pub fn erfc(x: f64) -> f64 {
     // For negative x: erfc(-x) = 2 - erfc(x)
     if x < 0.0 {
@@ -40,6 +41,7 @@ pub fn erfc(x: f64) -> f64 {
 ///
 /// Used in force calculations requiring analytical derivatives of the
 /// complementary error function (e.g., Ewald splitting gradient terms).
+#[must_use]
 pub fn erfc_deriv(x: f64) -> f64 {
     -2.0 / PI.sqrt() * (-x * x).exp()
 }
@@ -49,10 +51,13 @@ pub fn erfc_deriv(x: f64) -> f64 {
 /// # Arguments
 /// * `positions` - Particle positions [x, y, z]
 /// * `charges` - Particle charges
-/// * `params` - PPPM parameters (provides α, rc, box_dims)
+/// * `params` - PPPM parameters (provides α, rc, `box_dims`)
 ///
 /// # Returns
 /// (forces, energy) where forces[i] = [fx, fy, fz]
+/// # Panics
+/// Panics if `charges.len() != positions.len()`.
+#[must_use]
 pub fn compute_short_range(
     positions: &[[f64; 3]],
     charges: &[f64],
@@ -126,6 +131,9 @@ pub fn compute_short_range(
 /// Compute short-range forces only (no energy)
 ///
 /// Slightly faster than `compute_short_range` if energy not needed.
+/// # Panics
+/// Panics if `charges.len() != positions.len()`.
+#[must_use]
 pub fn compute_short_range_forces(
     positions: &[[f64; 3]],
     charges: &[f64],
@@ -187,7 +195,8 @@ pub fn compute_short_range_forces(
 /// Self-energy correction for PPPM
 ///
 /// The k-space sum includes a spurious self-interaction that must be subtracted:
-/// E_self = -α/√π × Σ_i q_i²
+/// `E_self` = -α/√π × `Σ_i` `q_i²`
+#[must_use]
 pub fn self_energy_correction(charges: &[f64], alpha: f64, coulomb_constant: f64) -> f64 {
     let q_sq_sum: f64 = charges.iter().map(|q| q * q).sum();
     -alpha / PI.sqrt() * coulomb_constant * q_sq_sum
@@ -196,7 +205,8 @@ pub fn self_energy_correction(charges: &[f64], alpha: f64, coulomb_constant: f64
 /// Dipole correction for non-neutral systems (Ewald surface term)
 ///
 /// For systems with net dipole moment, there's a surface-dependent contribution.
-/// This assumes "tin foil" boundary conditions (ε_s = ∞).
+/// This assumes "tin foil" boundary conditions (`ε_s` = ∞).
+#[must_use]
 pub fn dipole_correction(
     positions: &[[f64; 3]],
     charges: &[f64],

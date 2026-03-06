@@ -11,7 +11,7 @@
 //! | `complex_f64` | Complex f64 arithmetic (`c64_*` functions) |
 //! | `su3` | SU(3) 3×3 matrix algebra |
 //! | `lcg` | LCG PRNG for GPU lattice kernels |
-//! | `su3_extended` | Reunitarize, exp_cayley, random SU(3) generation |
+//! | `su3_extended` | Reunitarize, `exp_cayley`, random SU(3) generation |
 //!
 //! # GPU Operators
 //!
@@ -108,9 +108,10 @@ pub enum NeighborMode {
 /// For SU(3) in 4 dimensions there are 6 plaquette orientations per site.
 /// The per-site Wilson action density (without β factor) is:
 ///   `a_d = 6 × (1 − ⟨P⟩)`
-/// where ⟨P⟩ = (1/3) Re Tr U_p averaged over all orientations and sites.
-/// A cold (identity) configuration gives ⟨P⟩ = 1 → a_d = 0.
+/// where ⟨P⟩ = (1/3) Re Tr `U_p` averaged over all orientations and sites.
+/// A cold (identity) configuration gives ⟨P⟩ = 1 → `a_d` = 0.
 #[inline]
+#[must_use]
 pub fn action_density(avg_plaquette: f64) -> f64 {
     6.0 * (1.0 - avg_plaquette)
 }
@@ -120,6 +121,7 @@ impl NeighborMode {
     ///
     /// 4 neighbors per site: +x, -x, +y, -y (up, down, left, right).
     /// Row-major indexing: `idx = y * L + x`.
+    #[must_use]
     pub fn precompute_periodic_2d(l: usize) -> Self {
         let n_sites = l * l;
         let mut table = Vec::with_capacity(n_sites * 4);
@@ -145,6 +147,7 @@ impl NeighborMode {
     ///
     /// 6 neighbors per site: +x, -x, +y, -y, +z, -z.
     /// Indexing: `idx = z * L² + y * L + x`.
+    #[must_use]
     pub fn precompute_periodic_3d(l: usize) -> Self {
         let n_sites = l * l * l;
         let mut table = Vec::with_capacity(n_sites * 6);
@@ -193,6 +196,7 @@ impl NeighborMode {
     ///
     /// 8 neighbors per site in this order: +x, -x, +y, -y, +z, -z, +t, -t.
     /// `table[site * 8 + dir]` gives the neighbor index for direction `dir`.
+    #[must_use]
     pub fn precompute_periodic_4d(dims: [u32; 4]) -> Self {
         let [nx, ny, nz, nt] = dims;
         let n_sites = (nx * ny * nz * nt) as usize;
@@ -223,6 +227,7 @@ impl NeighborMode {
 
     /// Create a GPU buffer from the precomputed table (for `PrecomputedBuffer` variant).
     /// Returns `None` for `OnTheFly`.
+    #[must_use]
     pub fn create_gpu_buffer(
         &self,
         device: &crate::device::WgpuDevice,

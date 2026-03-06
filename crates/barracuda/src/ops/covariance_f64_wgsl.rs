@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Covariance (f64) — GPU-resident, pipeline-cached, buffer-pooled
 //!
-//! Evolved from per-call buffer allocation to pooled TensorContext path
+//! Evolved from per-call buffer allocation to pooled `TensorContext` path
 //! with cached pipelines and bind groups.
 //!
 //! Applications: portfolio theory, PCA, Kalman filters
 
+use crate::device::WgpuDevice;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -50,21 +50,32 @@ pub struct CovarianceF64 {
 
 impl CovarianceF64 {
     /// Create new Covariance f64 operation
+    /// # Errors
+    /// Returns [`Err`] if the device is invalid or unavailable.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Compute covariance between two vectors (population covariance, ddof=0)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or buffer
+    /// readback fails (e.g. device lost).
     pub fn covariance(&self, x: &[f64], y: &[f64]) -> Result<f64> {
         self.covariance_ddof(x, y, 0)
     }
 
     /// Compute sample covariance (ddof=1)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or buffer
+    /// readback fails (e.g. device lost).
     pub fn sample_covariance(&self, x: &[f64], y: &[f64]) -> Result<f64> {
         self.covariance_ddof(x, y, 1)
     }
 
     /// Compute covariance with specified degrees of freedom adjustment
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or buffer
+    /// readback fails (e.g. device lost).
     pub fn covariance_ddof(&self, x: &[f64], y: &[f64], ddof: usize) -> Result<f64> {
         if x.len() != y.len() || x.is_empty() || x.len() <= ddof {
             return Ok(0.0);
@@ -172,11 +183,7 @@ mod tests {
         let y = vec![2.0, 4.0, 6.0, 8.0, 10.0];
         let result = cov.covariance(&x, &y).unwrap();
 
-        assert!(
-            result > 0.0,
-            "Covariance should be positive, got {}",
-            result
-        );
+        assert!(result > 0.0, "Covariance should be positive, got {result}");
     }
 
     #[tokio::test]
@@ -191,11 +198,7 @@ mod tests {
         let y = vec![10.0, 8.0, 6.0, 4.0, 2.0];
         let result = cov.covariance(&x, &y).unwrap();
 
-        assert!(
-            result < 0.0,
-            "Covariance should be negative, got {}",
-            result
-        );
+        assert!(result < 0.0, "Covariance should be negative, got {result}");
     }
 
     #[tokio::test]
@@ -212,8 +215,7 @@ mod tests {
 
         assert!(
             result.abs() < 1e-10,
-            "Covariance with constant should be 0, got {}",
-            result
+            "Covariance with constant should be 0, got {result}"
         );
     }
 
@@ -230,8 +232,7 @@ mod tests {
 
         assert!(
             (cov_xx - 2.0).abs() < 1e-10,
-            "Cov(X,X) = {}, expected variance = 2.0",
-            cov_xx
+            "Cov(X,X) = {cov_xx}, expected variance = 2.0"
         );
     }
 
@@ -250,8 +251,7 @@ mod tests {
 
         assert!(
             (result - 2.5).abs() < 1e-10,
-            "Sample Cov(X,X) = {}, expected 2.5",
-            result
+            "Sample Cov(X,X) = {result}, expected 2.5"
         );
     }
 }

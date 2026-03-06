@@ -4,9 +4,9 @@
 //!
 //! Provenance: neuralSpring S69 → toadStool absorption.
 
+use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -28,6 +28,11 @@ struct CorrParams {
 /// Compute the Pearson correlation matrix for an n×p data matrix.
 ///
 /// `data` is row-major `[n, p]`. Returns the `p×p` correlation matrix.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn matrix_correlation(
     device: &Arc<WgpuDevice>,
     data: &[f64],
@@ -47,7 +52,7 @@ pub fn matrix_correlation(
         .storage_rw(1, &out_buf)
         .uniform(2, &params_buf)
         .dispatch(out_len.div_ceil(WG_64 as usize) as u32, 1, 1)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, out_len)
 }
@@ -69,6 +74,11 @@ struct OlsParams {
 /// * `y` — row-major `[b, n]` response vectors.
 ///
 /// Returns `[b, k]` coefficient vectors `β` (via normal equations).
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn linear_regression(
     device: &Arc<WgpuDevice>,
     x: &[f64],
@@ -92,7 +102,7 @@ pub fn linear_regression(
         .storage_rw(2, &out_buf)
         .uniform(3, &params_buf)
         .dispatch(b.div_ceil(WORKGROUP_SIZE_1D), 1, 1)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, out_len)
 }

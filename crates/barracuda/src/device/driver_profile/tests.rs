@@ -9,6 +9,7 @@ fn make_profile(rate: Fp64Rate, arch: GpuArch) -> GpuDriverProfile {
         arch,
         fp64_rate: rate,
         workarounds: vec![],
+        adapter_key: String::new(),
     }
 }
 
@@ -44,6 +45,7 @@ fn nvk_allocation_guard_rejects_large() {
         arch: GpuArch::Volta,
         fp64_rate: Fp64Rate::Full,
         workarounds: vec![Workaround::NvkLargeBufferLimit],
+        adapter_key: String::new(),
     };
     assert!(p.max_safe_total_allocation().is_some());
     assert!(p.check_allocation_safe(500_000_000).is_ok());
@@ -158,6 +160,7 @@ fn needs_sin_f64_workaround_true_for_nvk() {
         arch: GpuArch::Volta,
         fp64_rate: Fp64Rate::Full,
         workarounds: vec![Workaround::NvkSinCosF64Imprecise],
+        adapter_key: String::new(),
     };
     assert!(p.needs_sin_f64_workaround());
 }
@@ -170,6 +173,7 @@ fn needs_cos_f64_workaround_true_for_nvk() {
         arch: GpuArch::Volta,
         fp64_rate: Fp64Rate::Full,
         workarounds: vec![Workaround::NvkSinCosF64Imprecise],
+        adapter_key: String::new(),
     };
     assert!(p.needs_cos_f64_workaround());
 }

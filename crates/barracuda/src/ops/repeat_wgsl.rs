@@ -20,6 +20,7 @@ pub struct Repeat {
 
 impl Repeat {
     /// Create a new repeat operation
+    #[must_use]
     pub fn new(input: Tensor, repeats: Vec<usize>) -> Self {
         Self { input, repeats }
     }
@@ -37,6 +38,9 @@ impl Repeat {
     }
 
     /// Execute the repeat operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -214,10 +218,11 @@ impl Repeat {
 
 impl Tensor {
     /// Repeat tensor along dimensions
-    ///
     /// # Arguments
-    ///
     /// * `repeats` - Number of times to repeat each dimension
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn repeat_wgsl(self, repeats: Vec<usize>) -> Result<Self> {
         Repeat::new(self, repeats).execute()
     }

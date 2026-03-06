@@ -11,8 +11,10 @@ use crate::tensor::Tensor;
 
 impl TripletLoss {
     /// Execute Triplet loss (GPU distance computation)
-    ///
     /// **Deep Debt**: Efficient single-pass distance computation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.anchors().device();
 

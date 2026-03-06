@@ -12,8 +12,8 @@
 
 #![expect(clippy::unwrap_used, reason = "tests")]
 use barracuda::device::tensor_context::{BufferDescriptor, TensorContext};
-use barracuda::ops::linalg::GridQuadratureGemm;
 use barracuda::ops::MaxAbsDiffF64;
+use barracuda::ops::linalg::GridQuadratureGemm;
 use barracuda::optimize::BatchedBisectionGpu;
 
 // ============================================================================
@@ -41,8 +41,7 @@ async fn test_max_abs_diff_convergence_simulation() {
     // Max diff should be ~0.1
     assert!(
         (diff - 0.1).abs() < 1e-10,
-        "Max energy diff should be ~0.1, got {}",
-        diff
+        "Max energy diff should be ~0.1, got {diff}"
     );
 }
 
@@ -54,15 +53,14 @@ async fn test_max_abs_diff_converged_system() {
     };
 
     // Two arrays that are identical within tolerance
-    let a: Vec<f64> = (0..1000).map(|i| (i as f64 * 0.001).sin()).collect();
+    let a: Vec<f64> = (0..1000).map(|i| (f64::from(i) * 0.001).sin()).collect();
     let b = a.clone();
 
     let diff = MaxAbsDiffF64::compute(device, &a, &b).unwrap();
 
     assert!(
         diff < 1e-14,
-        "Identical arrays should have ~0 diff, got {}",
-        diff
+        "Identical arrays should have ~0 diff, got {diff}"
     );
 }
 
@@ -75,7 +73,7 @@ async fn test_max_abs_diff_stress_large() {
 
     // Large arrays (100K elements, multiple workgroups)
     let n = 100_000;
-    let a: Vec<f64> = (0..n).map(|i| i as f64).collect();
+    let a: Vec<f64> = (0..n).map(|i| f64::from(i)).collect();
     let mut b = a.clone();
 
     // Insert a known max difference at a specific location
@@ -85,8 +83,7 @@ async fn test_max_abs_diff_stress_large() {
 
     assert!(
         (diff - 999.0).abs() < 1e-6,
-        "Max diff should be 999, got {}",
-        diff
+        "Max diff should be 999, got {diff}"
     );
 }
 
@@ -225,7 +222,7 @@ async fn test_batched_bisection_iteration_counts() {
 
     let lower = vec![0.0; 10];
     let upper = vec![10.0; 10];
-    let targets: Vec<f64> = (1..=10).map(|i| i as f64).collect();
+    let targets: Vec<f64> = (1..=10).map(|i| f64::from(i)).collect();
 
     let result = bisect.solve_polynomial(&lower, &upper, &targets).unwrap();
 
@@ -233,9 +230,7 @@ async fn test_batched_bisection_iteration_counts() {
     for (i, &iters) in result.iterations.iter().enumerate() {
         assert!(
             iters < 50,
-            "Problem {} took {} iterations, expected < 50",
-            i,
-            iters
+            "Problem {i} took {iters} iterations, expected < 50"
         );
     }
 }
@@ -303,13 +298,7 @@ async fn test_grid_quadrature_gemm_overlap_integral() {
             let s_ji = result[j * n + i];
             assert!(
                 (s_ij - s_ji).abs() < 1e-10,
-                "S[{},{}] = {} != S[{},{}] = {}",
-                i,
-                j,
-                s_ij,
-                j,
-                i,
-                s_ji
+                "S[{i},{j}] = {s_ij} != S[{j},{i}] = {s_ji}"
             );
         }
     }
@@ -349,14 +338,7 @@ async fn test_grid_quadrature_gemm_batched() {
                 let h_ji = result[b * n * n + j * n + i];
                 assert!(
                     (h_ij - h_ji).abs() < 1e-9,
-                    "Batch {}: H[{},{}] = {}, H[{},{}] = {}",
-                    b,
-                    i,
-                    j,
-                    h_ij,
-                    j,
-                    i,
-                    h_ji
+                    "Batch {b}: H[{i},{j}] = {h_ij}, H[{j},{i}] = {h_ji}"
                 );
             }
         }
@@ -390,13 +372,7 @@ async fn test_grid_quadrature_gemm_large_grid() {
     for b in 0..batch {
         for i in 0..n {
             let h_ii = result[b * n * n + i * n + i];
-            assert!(
-                h_ii >= 0.0,
-                "Diagonal H[{},{}] = {} should be >= 0",
-                i,
-                i,
-                h_ii
-            );
+            assert!(h_ii >= 0.0, "Diagonal H[{i},{i}] = {h_ii} should be >= 0");
         }
     }
 }
@@ -417,7 +393,7 @@ async fn test_scf_convergence_loop_simulation() {
     let max_iter = 50;
 
     // Initial "energies"
-    let mut e_old: Vec<f64> = (0..10).map(|i| -100.0 + i as f64 * 0.1).collect();
+    let mut e_old: Vec<f64> = (0..10).map(|i| -100.0 + f64::from(i) * 0.1).collect();
 
     // Simulate convergence by reducing differences each iteration
     for iter in 0..max_iter {
@@ -438,7 +414,7 @@ async fn test_scf_convergence_loop_simulation() {
         e_old = e_new;
     }
 
-    panic!("Failed to converge in {} iterations", max_iter);
+    panic!("Failed to converge in {max_iter} iterations");
 }
 
 #[tokio::test]
@@ -460,8 +436,7 @@ async fn test_hotspring_nucleus_count() {
 
     assert!(
         (diff - 0.1).abs() < 1e-10,
-        "Max diff for 169 nuclei should be 0.1, got {}",
-        diff
+        "Max diff for 169 nuclei should be 0.1, got {diff}"
     );
 
     // Also test bisection for 169 problems
@@ -544,10 +519,10 @@ async fn test_e2e_gpu_resident_scf_iteration() {
     let gemm = GridQuadratureGemm::new(device.clone(), batch, n, grid).unwrap();
 
     println!("Starting SCF iteration loop...\n");
-    println!("  Batch size: {} nuclei", batch);
-    println!("  Basis size: {}", n);
-    println!("  Grid points: {}", grid);
-    println!("  Tolerance: {:.2e}\n", tolerance);
+    println!("  Batch size: {batch} nuclei");
+    println!("  Basis size: {n}");
+    println!("  Grid points: {grid}");
+    println!("  Tolerance: {tolerance:.2e}\n");
 
     let mut w_current = w_old.clone();
     let mut h_old: Vec<f64> = vec![0.0; batch * n * n];
@@ -563,7 +538,7 @@ async fn test_e2e_gpu_resident_scf_iteration() {
 
         if diff < tolerance {
             println!("\n✓ Converged in {} iterations!", iter + 1);
-            println!("  Final max|ΔH| = {:.2e}", diff);
+            println!("  Final max|ΔH| = {diff:.2e}");
 
             // Verify Hamiltonians are symmetric
             let mut max_asym = 0.0_f64;
@@ -576,7 +551,7 @@ async fn test_e2e_gpu_resident_scf_iteration() {
                     }
                 }
             }
-            println!("  Max asymmetry: {:.2e}", max_asym);
+            println!("  Max asymmetry: {max_asym:.2e}");
 
             return; // Test passed
         }
@@ -591,7 +566,7 @@ async fn test_e2e_gpu_resident_scf_iteration() {
     }
 
     // Should converge within max_iter
-    panic!("SCF did not converge in {} iterations", max_iter);
+    panic!("SCF did not converge in {max_iter} iterations");
 }
 
 /// E2E test with persistent buffer management
@@ -681,9 +656,9 @@ async fn test_e2e_batched_vs_sequential_performance() {
     }
 
     println!("\n=== Batched vs Sequential Performance ===");
-    println!("  Problems: {}", n_problems);
-    println!("  GPU batched time: {:?}", gpu_time);
-    println!("  Max error: {:.2e}", max_error);
+    println!("  Problems: {n_problems}");
+    println!("  GPU batched time: {gpu_time:?}");
+    println!("  Max error: {max_error:.2e}");
     println!("  All roots verified: {}", max_error < 1e-8);
 
     assert!(max_error < 1e-8, "GPU results should be accurate");

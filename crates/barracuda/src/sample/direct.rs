@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Direct round-based optimization sampler
 //!
-//! Unlike surrogate-guided optimization (SparsitySampler), this module runs
+//! Unlike surrogate-guided optimization (`SparsitySampler`), this module runs
 //! multi-start Nelder-Mead directly on the true objective function. The surrogate
 //! is trained for monitoring/quality assessment only, not for guiding optimization.
 //!
@@ -32,7 +32,7 @@ use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use crate::optimize::eval_record::EvaluationCache;
 use crate::sample::latin_hypercube;
-use crate::surrogate::{loo_cv_optimal_smoothing, RBFKernel, RBFSurrogate};
+use crate::surrogate::{RBFKernel, RBFSurrogate, loo_cv_optimal_smoothing};
 use std::sync::Arc;
 
 /// Configuration for direct round-based optimization.
@@ -54,7 +54,7 @@ pub struct DirectSamplerConfig {
     pub seed: u64,
     /// Warm-start seeds (optional)
     pub warm_start_seeds: Vec<Vec<f64>>,
-    /// RBF kernel for surrogate monitoring (default: ThinPlateSpline)
+    /// RBF kernel for surrogate monitoring (default: `ThinPlateSpline`)
     pub kernel: RBFKernel,
     /// Enable auto-smoothing for surrogate (default: true)
     pub auto_smoothing: bool,
@@ -62,6 +62,7 @@ pub struct DirectSamplerConfig {
 
 impl DirectSamplerConfig {
     /// Create a default configuration.
+    #[must_use]
     pub fn new(seed: u64) -> Self {
         Self {
             n_rounds: 5,
@@ -120,6 +121,7 @@ impl DirectSamplerConfig {
     }
 
     /// Total evaluation budget (approximate).
+    #[must_use]
     pub fn total_budget(&self) -> usize {
         self.n_rounds * self.n_solvers * self.max_eval_per_solver
     }
@@ -162,6 +164,7 @@ impl DirectSamplerResult {
     ///
     /// Returns the k points with lowest function values, suitable for seeding
     /// another optimization round.
+    #[must_use]
     pub fn top_k_seeds(&self, k: usize) -> Vec<Vec<f64>> {
         let mut records: Vec<_> = self.cache.records().to_vec();
         records.sort_by(|a, b| a.f.partial_cmp(&b.f).unwrap_or(std::cmp::Ordering::Equal));
@@ -169,6 +172,7 @@ impl DirectSamplerResult {
     }
 
     /// Get total number of true objective evaluations.
+    #[must_use]
     pub fn total_evals(&self) -> usize {
         self.cache.len()
     }
@@ -207,6 +211,10 @@ impl DirectSamplerResult {
 ///
 /// println!("Best: {:?} = {}", result.x_best, result.f_best);
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if bounds is empty, or if multi-start NM or surrogate training fails.
 pub fn direct_sampler<F>(
     device: Arc<WgpuDevice>,
     f: F,
@@ -318,7 +326,7 @@ where
         None => {
             return Err(BarracudaError::Internal(
                 "No evaluations recorded".to_string(),
-            ))
+            ));
         }
     };
 

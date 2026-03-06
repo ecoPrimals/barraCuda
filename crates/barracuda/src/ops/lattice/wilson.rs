@@ -5,11 +5,11 @@
 //! The fundamental building block is the plaquette — the smallest closed loop
 //! of link variables on the lattice:
 //!
-//!   P_μν(x) = U_μ(x) U_ν(x+μ) U_μ†(x+ν) U_ν†(x)
+//!   `P_μν(x)` = `U_μ(x)` `U_ν(x+μ)` `U_μ†(x+ν)` `U_ν†(x)`
 //!
 //! The Wilson action is:
 //!
-//!   S = β × Σ_{x,μ<ν} (1 - Re Tr P_μν(x) / 3)
+//!   S = β × Σ_{x,μ<ν} (1 - Re Tr `P_μν(x)` / 3)
 //!
 //! where β = 6/g² is the inverse bare coupling.
 //!
@@ -107,7 +107,7 @@ impl Lattice {
         Self { dims, links, beta }
     }
 
-    /// Plaquette P_μν(x) = U_μ(x) U_ν(x+μ) U_μ†(x+ν) U_ν†(x).
+    /// Plaquette `P_μν(x)` = `U_μ(x)` `U_ν(x+μ)` `U_μ†(x+ν)` `U_ν†(x)`.
     pub fn plaquette(&self, x: [usize; 4], mu: usize, nu: usize) -> Su3Matrix {
         let x_mu = self.neighbor(x, mu, true);
         let x_nu = self.neighbor(x, nu, true);
@@ -175,7 +175,7 @@ impl Lattice {
         self.beta * sum
     }
 
-    /// Gauge force dS/dU_μ(x) (traceless antihermitian).
+    /// Gauge force `dS/dU_μ(x)` (traceless antihermitian).
     pub fn gauge_force(&self, x: [usize; 4], mu: usize) -> Su3Matrix {
         let u = self.link(x, mu);
         let v = self.staple(x, mu);

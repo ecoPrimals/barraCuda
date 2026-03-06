@@ -94,35 +94,47 @@ async fn test_sgd_validation() {
         .unwrap();
 
     // Shape mismatch
-    assert!(weights
-        .clone()
-        .sgd_step(&gradients, 0.01, 0.0, 0.0, None)
-        .is_err());
+    assert!(
+        weights
+            .clone()
+            .sgd_step(&gradients, 0.01, 0.0, 0.0, None)
+            .is_err()
+    );
 
     // Invalid learning rate
-    assert!(weights
-        .clone()
-        .sgd_step(&grads_correct, -0.01, 0.0, 0.0, None)
-        .is_err());
-    assert!(weights
-        .clone()
-        .sgd_step(&grads_correct, 0.0, 0.0, 0.0, None)
-        .is_err());
+    assert!(
+        weights
+            .clone()
+            .sgd_step(&grads_correct, -0.01, 0.0, 0.0, None)
+            .is_err()
+    );
+    assert!(
+        weights
+            .clone()
+            .sgd_step(&grads_correct, 0.0, 0.0, 0.0, None)
+            .is_err()
+    );
 
     // Invalid momentum
-    assert!(weights
-        .clone()
-        .sgd_step(&grads_correct, 0.01, -0.1, 0.0, None)
-        .is_err());
-    assert!(weights
-        .clone()
-        .sgd_step(&grads_correct, 0.01, 1.5, 0.0, None)
-        .is_err());
+    assert!(
+        weights
+            .clone()
+            .sgd_step(&grads_correct, 0.01, -0.1, 0.0, None)
+            .is_err()
+    );
+    assert!(
+        weights
+            .clone()
+            .sgd_step(&grads_correct, 0.01, 1.5, 0.0, None)
+            .is_err()
+    );
 
     // Invalid weight decay
-    assert!(weights
-        .sgd_step(&grads_correct, 0.01, 0.0, -0.001, None)
-        .is_err());
+    assert!(
+        weights
+            .sgd_step(&grads_correct, 0.01, 0.0, -0.001, None)
+            .is_err()
+    );
 }
 
 #[tokio::test]

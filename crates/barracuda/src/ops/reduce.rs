@@ -12,7 +12,7 @@
 //!
 //! ## Evolution History
 //!
-//! **Before** (Phase 3): `ReduceExt` trait extension  
+//! **Before** (Phase 3): `ReduceExt` trait extension\
 //! **After** (Phase 6): Direct `impl Tensor` method
 //!
 //! ## Usage
@@ -85,6 +85,11 @@ impl Reduce {
     }
 
     /// Execute reduction on GPU; returns partial results (one per workgroup).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.shape().iter().product::<usize>();
@@ -126,7 +131,7 @@ impl Reduce {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch(num_workgroups, 1, 1)
-            .submit();
+            .submit()?;
 
         // Read back partial results (like scatter_wgsl - ensures GPU writes visible)
         let partial_data =
@@ -173,6 +178,11 @@ impl Tensor {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn reduce(self, operation: ReduceOperation) -> Result<Self> {
         let op = Reduce {
             input: self,
@@ -201,7 +211,7 @@ mod tests {
 
         // Sum all partial results
         let total: f32 = partial_sums.iter().sum();
-        println!("Partial sums: {:?}, Total: {}", partial_sums, total);
+        println!("Partial sums: {partial_sums:?}, Total: {total}");
         assert!((total - 10.0).abs() < 1e-5);
     }
 

@@ -39,12 +39,13 @@ pub struct Quantize {
 
 impl Quantize {
     /// Create quantize operation
-    ///
     /// # Arguments
     /// * `input` - Input tensor (FP32)
     /// * `scale` - Quantization scale (inverse of quantization scale)
     /// * `zero_point` - Quantization zero point
     /// * `num_bits` - Number of bits (4 for INT4, 8 for INT8)
+    /// # Errors
+    /// Returns [`Err`] if scale <= 0 or `num_bits` is not 4 or 8.
     pub fn new(input: Tensor, scale: f32, zero_point: f32, num_bits: u32) -> Result<Self> {
         if scale <= 0.0 {
             return Err(BarracudaError::invalid_op(
@@ -81,6 +82,8 @@ impl Quantize {
 
     /// Execute quantize on tensor
     /// Returns a tensor with i32 values (quantized integers)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.len();
@@ -113,7 +116,7 @@ impl Quantize {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d(size as u32)
-            .submit();
+            .submit()?;
 
         // Create staging buffer for reading i32 data
         let staging_buffer = device.device.create_buffer(&wgpu::BufferDescriptor {
@@ -148,6 +151,7 @@ impl Quantize {
 ///
 /// Returns `(scale, zero_point)` for symmetric quantization around zero,
 /// mapping `[-abs_max, abs_max]` to `[-127, 127]`.
+#[must_use]
 pub fn compute_affine_i8_params(data: &[f32]) -> (f32, f32) {
     let abs_max = data
         .iter()
@@ -160,7 +164,11 @@ pub fn compute_affine_i8_params(data: &[f32]) -> (f32, f32) {
 /// Quantize a tensor to affine int8 in one call.
 ///
 /// Computes scale from the tensor's range and applies symmetric quantization.
-/// For asymmetric quantization or custom scale/zero_point, use `Quantize::new`.
+/// For asymmetric quantization or custom `scale/zero_point`, use `Quantize::new`.
+///
+/// # Errors
+///
+/// Returns [`Err`] if tensor readback fails for scale computation, or if [`Quantize::new`] or [`Quantize::execute`] fails.
 pub fn quantize_affine_i8(input: Tensor) -> Result<(Tensor, f32, f32)> {
     let data = input.to_vec().map_err(|e| BarracudaError::InvalidInput {
         message: format!("failed to read tensor for scale computation: {e}"),

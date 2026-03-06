@@ -20,6 +20,7 @@ pub struct BinaryCrossEntropy {
 
 impl BinaryCrossEntropy {
     /// Create binary cross-entropy loss.
+    #[must_use]
     pub fn new(predictions: Tensor, targets: Tensor) -> Self {
         Self {
             predictions,
@@ -32,6 +33,11 @@ impl BinaryCrossEntropy {
     }
 
     /// Execute binary cross-entropy on GPU. Returns scalar loss.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
 
@@ -108,6 +114,11 @@ impl Tensor {
     /// Compute Binary Cross Entropy loss
     /// # Arguments
     /// * `targets` - Target binary labels (0 or 1)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn binary_cross_entropy(self, targets: Tensor) -> Result<Self> {
         BinaryCrossEntropy::new(self, targets).execute()
     }

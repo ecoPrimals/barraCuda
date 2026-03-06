@@ -38,11 +38,13 @@ pub struct DeformedHfbPipeline {
 
 impl DeformedHfbPipeline {
     /// Create a deformed HFB pipeline for the given device.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self { device }
     }
 
     /// Reference to the underlying wgpu device.
+    #[must_use]
     pub fn device(&self) -> &Arc<WgpuDevice> {
         &self.device
     }

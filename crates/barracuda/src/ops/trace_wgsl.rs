@@ -33,6 +33,7 @@ pub struct Trace {
 
 impl Trace {
     /// Create a trace operation for the given square matrix.
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -42,6 +43,9 @@ impl Trace {
     }
 
     /// Execute trace (sum of diagonal elements) on a square matrix.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -316,6 +320,9 @@ impl Trace {
 
 impl Tensor {
     /// Compute the trace (sum of diagonal elements) of this square matrix.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn trace_wgsl(self) -> Result<Self> {
         Trace::new(self).execute()
     }

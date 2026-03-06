@@ -4,7 +4,7 @@ Quick reference for finding shaders by name or purpose.
 
 ---
 
-## Activations (37)
+## Activations (40)
 
 | Shader | Description | Use Case |
 |--------|-------------|----------|
@@ -21,7 +21,7 @@ Quick reference for finding shaders by name or purpose.
 
 ---
 
-## Attention (8)
+## Attention (19)
 
 | Shader | Description | Use Case |
 |--------|-------------|----------|
@@ -36,7 +36,7 @@ Quick reference for finding shaders by name or purpose.
 
 ---
 
-## Linear Algebra (11)
+## Linear Algebra (32)
 
 | Shader | Description | Use Case |
 |--------|-------------|----------|
@@ -53,7 +53,7 @@ Quick reference for finding shaders by name or purpose.
 
 ---
 
-## Loss Functions (31)
+## Loss Functions (34)
 
 | Shader | Description | Use Case |
 |--------|-------------|----------|
@@ -277,7 +277,7 @@ Quick reference for finding shaders by name or purpose.
 
 ---
 
-**Total: 414 shaders across 21 categories**
+**Total: 708 shaders across 33 categories**
 
 **Navigation**: 
 - By function → Find category above

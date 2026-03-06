@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! NAdam Optimizer - GPU-accelerated Nesterov-accelerated Adam
+//! `NAdam` Optimizer - GPU-accelerated Nesterov-accelerated Adam
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation (uses existing shader!)
@@ -59,7 +59,7 @@ mod tests;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
-/// NAdam optimizer parameters for WGSL shader
+/// `NAdam` optimizer parameters for WGSL shader
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub(crate) struct NadamParams {
@@ -72,7 +72,7 @@ pub(crate) struct NadamParams {
     pub _padding: [u32; 2], // Explicit padding for 16-byte alignment
 }
 
-/// NAdam Optimizer operation
+/// `NAdam` Optimizer operation
 ///
 /// **Deep Debt**: Uses existing WGSL shader with Nesterov momentum
 pub struct Nadam {
@@ -89,9 +89,14 @@ pub struct Nadam {
 }
 
 impl Nadam {
-    /// Create new NAdam optimizer operation
+    /// Create new `NAdam` optimizer operation
     ///
     /// **Deep Debt**: Validates all inputs for shape compatibility
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     #[expect(clippy::too_many_arguments, reason = "API")]
     pub fn new(
         weights: Tensor,
@@ -233,7 +238,7 @@ impl Nadam {
 // ═══════════════════════════════════════════════════════════════
 
 impl Tensor {
-    /// NAdam optimizer step (Nesterov-accelerated Adam)
+    /// `NAdam` optimizer step (Nesterov-accelerated Adam)
     ///
     /// **Deep Debt**: Production-ready optimizer with Nesterov momentum
     ///
@@ -255,6 +260,11 @@ impl Tensor {
     /// ```rust,ignore
     /// let (w, m, v) = weights.nadam(&grad, &m, &v, 0.001, 0.9, 0.999, 1e-8, 0.0, 1)?;
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     #[expect(clippy::too_many_arguments, reason = "API")]
     pub fn nadam(
         self,

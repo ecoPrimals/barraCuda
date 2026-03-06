@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-//! PCIe interconnect topology for cross-substrate transfer routing.
+//! `PCIe` interconnect topology for cross-substrate transfer routing.
 //!
 //! Models the physical interconnect between substrates so pipeline stages
 //! can route data through the lowest-latency path. The key optimization
-//! is NPU→GPU transfers via PCIe peer-to-peer (P2P), bypassing CPU host
+//! is NPU→GPU transfers via `PCIe` peer-to-peer (P2P), bypassing CPU host
 //! memory bounce.
 //!
 //! # Bandwidth tiers
@@ -12,10 +12,10 @@
 //! | Tier | Bandwidth | Latency | Example |
 //! |------|-----------|---------|---------|
 //! | Local | ∞ | 0 | Same device |
-//! | NvLink | 300 GB/s | ~1µs | Multi-GPU NvLink bridge |
-//! | PciePeer | 15.8 GB/s | ~5µs | PCIe 4.0 x16 P2P |
-//! | PcieHost | 15.8 GB/s | ~50µs | PCIe 4.0 via CPU bounce |
-//! | PcieLow | 0.5 GB/s | ~100µs | PCIe 2.0 x1 (AKD1000) |
+//! | `NvLink` | 300 GB/s | ~1µs | Multi-GPU `NvLink` bridge |
+//! | `PciePeer` | 15.8 GB/s | ~5µs | `PCIe` 4.0 x16 P2P |
+//! | `PcieHost` | 15.8 GB/s | ~50µs | `PCIe` 4.0 via CPU bounce |
+//! | `PcieLow` | 0.5 GB/s | ~100µs | `PCIe` 2.0 x1 (AKD1000) |
 //! | Network | varies | ~1ms | LAN via NUCLEUS |
 //!
 //! Absorbed from groundSpring V61 `metalForge/forge/src/topology.rs`.
@@ -29,11 +29,11 @@ pub enum BandwidthTier {
     Local,
     /// NvLink/NvSwitch — GPU-to-GPU high bandwidth.
     NvLink,
-    /// PCIe peer-to-peer — direct DMA between devices (bypasses CPU).
+    /// `PCIe` peer-to-peer — direct DMA between devices (bypasses CPU).
     PciePeer,
-    /// PCIe via host — data bounces through CPU main memory.
+    /// `PCIe` via host — data bounces through CPU main memory.
     PcieHost,
-    /// Low-bandwidth PCIe (e.g. AKD1000 at PCIe 2.0 x1).
+    /// Low-bandwidth `PCIe` (e.g. AKD1000 at `PCIe` 2.0 x1).
     PcieLow,
     /// Network transfer via NUCLEUS LAN.
     Network,

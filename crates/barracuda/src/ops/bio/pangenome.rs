@@ -9,8 +9,8 @@
 //!
 //! wetSpring handoff v6, `pangenome_classify.wgsl` — 6/6 GPU checks PASS.
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -33,6 +33,11 @@ pub struct PangenomeClassifyGpu {
 
 impl PangenomeClassifyGpu {
     /// Create pangenome classifier.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         let module = device.compile_shader_f64(SHADER, Some("pangenome_classify"));
         let bgl = super::snp::make_bgl(&device, &[true, false, false]);
@@ -47,6 +52,11 @@ impl PangenomeClassifyGpu {
     }
 
     /// Dispatch pangenome classification.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn dispatch(
         &self,
         n_genes: u32,

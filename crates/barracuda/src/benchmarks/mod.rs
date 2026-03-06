@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! BarraCuda vs CUDA Benchmarking Framework
+//! `BarraCuda` vs CUDA Benchmarking Framework
 //!
-//! **Purpose**: Compare BarraCuda performance against CUDA across hardware
+//! **Purpose**: Compare `BarraCuda` performance against CUDA across hardware
 //!
 //! This module provides comprehensive benchmarking tools to:
-//! - Compare BarraCuda (WGSL/WebGPU) vs CUDA performance
+//! - Compare `BarraCuda` (WGSL/WebGPU) vs CUDA performance
 //! - Test across different hardware (NVIDIA, AMD, Intel, Apple)
 //! - Measure operation throughput, latency, and efficiency
 //! - Generate performance reports and visualizations
@@ -79,7 +79,7 @@ pub struct BenchmarkResult {
     /// Hardware name (e.g., "NVIDIA RTX 4090", "AMD RX 7900 XTX")
     pub hardware: String,
 
-    /// Framework (BarraCuda or CUDA)
+    /// Framework (`BarraCuda` or CUDA)
     pub framework: Framework,
 
     /// Median execution time
@@ -110,11 +110,11 @@ pub struct BenchmarkResult {
 /// Framework identifier for benchmark comparison.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Framework {
-    /// BarraCuda (WGSL/WebGPU)
+    /// `BarraCuda` (WGSL/WebGPU)
     BarraCuda,
     /// Native CUDA
     CUDA,
-    /// PyTorch with CUDA backend
+    /// `PyTorch` with CUDA backend
     PyTorchCUDA,
     /// TensorFlow with CUDA backend
     TensorFlowCUDA,
@@ -140,23 +140,24 @@ pub struct ComparisonResult {
     /// Hardware name
     pub hardware: String,
 
-    /// BarraCuda result
+    /// `BarraCuda` result
     pub barracuda: BenchmarkResult,
 
     /// CUDA result
     pub cuda: Option<BenchmarkResult>,
 
-    /// Speedup (positive = BarraCuda faster, negative = CUDA faster)
-    /// 2.0 = BarraCuda is 2x faster
+    /// Speedup (positive = `BarraCuda` faster, negative = CUDA faster)
+    /// 2.0 = `BarraCuda` is 2x faster
     /// -2.0 = CUDA is 2x faster
     pub speedup: f64,
 
-    /// Parity percentage (100% = same speed, >100% = BarraCuda faster)
+    /// Parity percentage (100% = same speed, >100% = `BarraCuda` faster)
     pub parity_percent: f64,
 }
 
 impl ComparisonResult {
-    /// Create comparison from BarraCuda and optional CUDA results.
+    /// Create comparison from `BarraCuda` and optional CUDA results.
+    #[must_use]
     pub fn new(barracuda: BenchmarkResult, cuda: Option<BenchmarkResult>) -> Self {
         let operation = barracuda.operation.clone();
         let hardware = barracuda.hardware.clone();
@@ -183,13 +184,14 @@ impl ComparisonResult {
         }
     }
 
-    /// Check if BarraCuda achieves target parity (e.g., 90%)
+    /// Check if `BarraCuda` achieves target parity (e.g., 90%)
+    #[must_use]
     pub fn achieves_parity(&self, target_percent: f64) -> bool {
         self.parity_percent >= target_percent
     }
 }
 
-/// Benchmark suite for all operations (BarraCuda vs CUDA).
+/// Benchmark suite for all operations (`BarraCuda` vs CUDA).
 pub struct BenchmarkSuite {
     config: BenchmarkConfig,
     results: Vec<ComparisonResult>,
@@ -197,6 +199,7 @@ pub struct BenchmarkSuite {
 
 impl BenchmarkSuite {
     /// Create new benchmark suite
+    #[must_use]
     pub fn new(config: BenchmarkConfig) -> Self {
         Self {
             config,
@@ -205,6 +208,9 @@ impl BenchmarkSuite {
     }
 
     /// Run all benchmarks
+    /// # Errors
+    /// Returns [`Err`] if hardware discovery fails, or if any benchmark
+    /// operation fails (e.g. device creation, GPU dispatch).
     pub async fn run_all(&mut self) -> Result<()> {
         tracing::info!("Starting BarraCuda vs CUDA Benchmark Suite");
 
@@ -230,14 +236,11 @@ impl BenchmarkSuite {
         let mut hardware = vec!["CPU".to_string()];
 
         // Try to discover GPU via wgpu
-        match WgpuDevice::new().await {
-            Ok(device) => {
-                let info = device.adapter_info();
-                hardware.push(format!("{} ({:?})", info.name, info.device_type));
-            }
-            Err(_) => {
-                // No GPU available, CPU-only mode
-            }
+        if let Ok(device) = WgpuDevice::new().await {
+            let info = device.adapter_info();
+            hardware.push(format!("{} ({:?})", info.name, info.device_type));
+        } else {
+            // No GPU available, CPU-only mode
         }
 
         Ok(hardware)
@@ -410,11 +413,13 @@ impl BenchmarkSuite {
     }
 
     /// Get all results
+    #[must_use]
     pub fn results(&self) -> &[ComparisonResult] {
         &self.results
     }
 
     /// Generate summary report
+    #[must_use]
     pub fn summary(&self) -> BenchmarkSummary {
         let total_ops = self.results.len();
         let ops_with_parity_90 = self

@@ -69,6 +69,11 @@ impl HuberLoss {
     }
 
     /// Execute Huber loss computation and return the result tensor.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size = self.predictions.shape().iter().product::<usize>();
@@ -96,7 +101,7 @@ impl HuberLoss {
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)
             .dispatch_1d(size as u32)
-            .submit();
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,
@@ -136,6 +141,11 @@ impl Tensor {
     /// - Small delta: More robust (less outlier influence)
     /// - Large delta: Closer to MSE behavior
     /// - Combines MSE (small errors) + MAE (large errors)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn huber_loss(self, targets: &Self, delta: f32) -> Result<Self> {
         // Validate shapes match
         if self.shape() != targets.shape() {
@@ -188,7 +198,7 @@ mod tests {
         // All errors = 0.1, which is < delta=1.0
         // Loss should be 0.5 * 0.1^2 = 0.005
         for &l in &loss {
-            assert!((l - 0.005).abs() < 1e-5, "Expected 0.005, got {}", l);
+            assert!((l - 0.005).abs() < 1e-5, "Expected 0.005, got {l}");
         }
     }
 

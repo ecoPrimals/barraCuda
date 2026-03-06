@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Rotary Position Embedding (RoPE) - GPU-accelerated
+//! Rotary Position Embedding (`RoPE`) - GPU-accelerated
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation (single-pass GPU)
@@ -24,9 +24,9 @@
 //! - Rotation preserves magnitude
 //! - Works for any sequence length
 //!
-//! **Used By**: Llama, GPT-NeoX, PaLM, Falcon
+//! **Used By**: Llama, GPT-NeoX, `PaLM`, Falcon
 //!
-//! **Reference**: RoFormer (Su et al., 2021)
+//! **Reference**: `RoFormer` (Su et al., 2021)
 //!
 //! ## Usage
 //!
@@ -47,7 +47,7 @@ static SHADER_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(SHADER_F64)
 });
 
-/// RoPE parameters for WGSL shader
+/// `RoPE` parameters for WGSL shader
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct RopeParams {
@@ -67,9 +67,10 @@ pub struct RotaryEmbedding {
 }
 
 impl RotaryEmbedding {
-    /// Create new RoPE operation
-    ///
-    /// **Shape**: [batch, seq_len, num_heads, head_dim]
+    /// Create new `RoPE` operation
+    /// **Shape**: [batch, `seq_len`, `num_heads`, `head_dim`]
+    /// # Errors
+    /// Returns [`Err`] if input is not 4D or `head_dim` is not even.
     pub fn new(input: Tensor) -> Result<Self> {
         // Validate shape: must be 4D
         if input.shape().len() != 4 {
@@ -96,9 +97,10 @@ impl RotaryEmbedding {
         &SHADER_F32
     }
 
-    /// Execute RoPE (single GPU pass)
-    ///
+    /// Execute `RoPE` (single GPU pass)
     /// **Deep Debt**: Efficient single-pass implementation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or device submission fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 
@@ -258,21 +260,19 @@ impl RotaryEmbedding {
 // ═══════════════════════════════════════════════════════════════
 
 impl Tensor {
-    /// Apply Rotary Position Embedding (RoPE)
-    ///
-    /// **Deep Debt**: Essential for Llama, GPT-NeoX, PaLM
-    ///
+    /// Apply Rotary Position Embedding (`RoPE`)
+    /// **Deep Debt**: Essential for Llama, GPT-NeoX, `PaLM`
     /// # Arguments
-    /// - Input: [batch, seq_len, num_heads, head_dim]
-    ///
+    /// - Input: [batch, `seq_len`, `num_heads`, `head_dim`]
     /// # Returns
-    /// - Output: [batch, seq_len, num_heads, head_dim] (rotated)
-    ///
+    /// - Output: [batch, `seq_len`, `num_heads`, `head_dim`] (rotated)
     /// # Example
     /// ```rust,ignore
     /// let q = Tensor::randn(vec![2, 128, 8, 64]).await?;
     /// let q_rope = q.rotary_embedding()?;  // Apply RoPE for Llama
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if input is not 4D, `head_dim` is not even, or buffer allocation/GPU dispatch fails (e.g. device lost).
     pub fn rotary_embedding(self) -> Result<Self> {
         RotaryEmbedding::new(self)?.execute()
     }

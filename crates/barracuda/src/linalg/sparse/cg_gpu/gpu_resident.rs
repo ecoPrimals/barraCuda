@@ -5,33 +5,34 @@
 
 use super::CgGpu;
 use super::CgGpuResult;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use crate::linalg::sparse::csr::CsrMatrix;
 use crate::linalg::sparse::gpu_helpers::{
-    cg_dispatch_pass, CgPipelineSet, SparseBindGroupLayouts, SparseBuffers,
+    CgPipelineSet, SparseBindGroupLayouts, SparseBuffers, cg_dispatch_pass,
 };
 use std::sync::Arc;
 
 impl CgGpu {
     /// Solve Ax = b using GPU-resident Conjugate Gradient (reduced CPU sync)
-    ///
     /// This is the **recommended method** for large systems.
     /// Scalar values (α, β, ρ) remain on GPU; residual is only read every `check_interval` iterations.
-    ///
     /// # Arguments
-    /// * `device` - WgpuDevice to execute on
+    /// * `device` - `WgpuDevice` to execute on
     /// * `a` - Symmetric positive definite CSR matrix (f64)
     /// * `b` - Right-hand side vector (f64)
     /// * `tol` - Convergence tolerance
     /// * `max_iter` - Maximum iterations
     /// * `check_interval` - How often to read residual from GPU (default: 10)
-    ///
     /// # Performance
     /// For a 1000×1000 matrix:
     /// - Original: ~100 GPU↔CPU syncs for 100 iterations
-    /// - GPU-resident (check_interval=10): ~10 GPU↔CPU syncs
+    /// - GPU-resident (`check_interval=10)`: ~10 GPU↔CPU syncs
+    /// # Errors
+    /// Returns [`Err`] if the matrix is not square, if `b.len() != n`, or if
+    /// buffer allocation, GPU dispatch, or readback fails (e.g. device lost or
+    /// out of memory).
     pub fn solve_gpu_resident(
         device: Arc<WgpuDevice>,
         a: &CsrMatrix,

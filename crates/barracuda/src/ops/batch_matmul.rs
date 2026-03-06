@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! BatchMatMul - Batched Matrix Multiplication
+//! `BatchMatMul` - Batched Matrix Multiplication
 //! Pure WGSL implementation
 //!
 //! Critical operation for transformer attention mechanisms
 //! Performs multiple matrix multiplications in parallel across batches
 //!
 //! Used in: Transformers, multi-head attention, batched inference
-//! Benefits: More efficient than looping MatMul, GPU-optimized parallelism
+//! Benefits: More efficient than looping `MatMul`, GPU-optimized parallelism
 
 use crate::error::Result;
 use crate::tensor::Tensor;
@@ -28,6 +28,7 @@ pub struct BatchMatMul {
 
 impl BatchMatMul {
     /// Create batched matmul. A: [batch,m,k], B: [batch,k,n].
+    #[must_use]
     pub fn new(a: Tensor, b: Tensor) -> Self {
         Self { a, b }
     }
@@ -42,6 +43,11 @@ impl BatchMatMul {
     }
 
     /// Execute batched matrix multiplication on GPU.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.a.device();
         let a_shape = self.a.shape();
@@ -157,6 +163,11 @@ impl Tensor {
     /// // Transformer attention: Q @ K^T
     /// let attention_scores = q.batch_matmul(&k_transposed)?;
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn batch_matmul(self, other: &Tensor) -> Result<Self> {
         BatchMatMul::new(self, other.clone()).execute()
     }

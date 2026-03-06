@@ -3,15 +3,15 @@
 //!
 //! CSR is the standard format for sparse matrix operations:
 //! - Efficient row access O(1)
-//! - Efficient SpMV O(nnz)
-//! - Memory: O(nnz + n_rows)
+//! - Efficient `SpMV` O(nnz)
+//! - Memory: O(nnz + `n_rows`)
 //!
 //! # Format
 //!
 //! A CSR matrix stores:
 //! - `values`: Non-zero values (length = nnz)
 //! - `col_indices`: Column index for each value (length = nnz)
-//! - `row_ptr`: Start of each row in values/col_indices (length = n_rows + 1)
+//! - `row_ptr`: Start of each row in `values/col_indices` (length = `n_rows` + 1)
 //!
 //! # Example
 //!
@@ -41,6 +41,7 @@ pub struct CooMatrix {
 
 impl CooMatrix {
     /// Create a new empty COO matrix
+    #[must_use]
     pub fn new(n_rows: usize, n_cols: usize) -> Self {
         Self {
             n_rows,
@@ -52,6 +53,7 @@ impl CooMatrix {
     }
 
     /// Create from triplets (row, col, value)
+    #[must_use]
     pub fn from_triplets(n_rows: usize, n_cols: usize, triplets: &[(usize, usize, f64)]) -> Self {
         let mut mat = Self::new(n_rows, n_cols);
         for &(row, col, val) in triplets {
@@ -68,11 +70,13 @@ impl CooMatrix {
     }
 
     /// Number of non-zeros
+    #[must_use]
     pub fn nnz(&self) -> usize {
         self.values.len()
     }
 
     /// Convert to CSR format
+    #[must_use]
     pub fn to_csr(&self) -> CsrMatrix {
         CsrMatrix::from_coo(self)
     }
@@ -89,12 +93,13 @@ pub struct CsrMatrix {
     pub values: Vec<f64>,
     /// Column indices (length = nnz)
     pub col_indices: Vec<usize>,
-    /// Row pointers (length = n_rows + 1)
+    /// Row pointers (length = `n_rows` + 1)
     pub row_ptr: Vec<usize>,
 }
 
 impl CsrMatrix {
     /// Create an empty CSR matrix
+    #[must_use]
     pub fn new(n_rows: usize, n_cols: usize) -> Self {
         Self {
             n_rows,
@@ -106,12 +111,14 @@ impl CsrMatrix {
     }
 
     /// Create from triplets (row, col, value)
+    #[must_use]
     pub fn from_triplets(n_rows: usize, n_cols: usize, triplets: &[(usize, usize, f64)]) -> Self {
         let coo = CooMatrix::from_triplets(n_rows, n_cols, triplets);
         Self::from_coo(&coo)
     }
 
     /// Create from COO format
+    #[must_use]
     pub fn from_coo(coo: &CooMatrix) -> Self {
         let n_rows = coo.n_rows;
         let n_cols = coo.n_cols;
@@ -160,12 +167,14 @@ impl CsrMatrix {
     }
 
     /// Create identity matrix
+    #[must_use]
     pub fn identity(n: usize) -> Self {
         let triplets: Vec<_> = (0..n).map(|i| (i, i, 1.0)).collect();
         Self::from_triplets(n, n, &triplets)
     }
 
     /// Create diagonal matrix from values
+    #[must_use]
     pub fn from_diagonal(diag: &[f64]) -> Self {
         let n = diag.len();
         let triplets: Vec<_> = diag.iter().enumerate().map(|(i, &v)| (i, i, v)).collect();
@@ -173,6 +182,8 @@ impl CsrMatrix {
     }
 
     /// Create tridiagonal matrix
+    /// # Errors
+    /// Returns [`Err`] if lower or upper diagonal length does not equal `main.len() - 1`.
     pub fn tridiagonal(lower: &[f64], main: &[f64], upper: &[f64]) -> Result<Self> {
         let n = main.len();
         if lower.len() != n - 1 || upper.len() != n - 1 {
@@ -202,11 +213,13 @@ impl CsrMatrix {
     }
 
     /// Number of non-zeros
+    #[must_use]
     pub fn nnz(&self) -> usize {
         self.values.len()
     }
 
     /// Sparsity (fraction of zeros)
+    #[must_use]
     pub fn sparsity(&self) -> f64 {
         let total = self.n_rows * self.n_cols;
         if total == 0 {
@@ -216,7 +229,8 @@ impl CsrMatrix {
         }
     }
 
-    /// Get value at (row, col) - O(nnz_row) lookup
+    /// Get value at (row, col) - `O(nnz_row)` lookup
+    #[must_use]
     pub fn get(&self, row: usize, col: usize) -> f64 {
         if row >= self.n_rows || col >= self.n_cols {
             return 0.0;
@@ -235,6 +249,7 @@ impl CsrMatrix {
     }
 
     /// Get diagonal elements
+    #[must_use]
     pub fn diagonal(&self) -> Vec<f64> {
         let n = self.n_rows.min(self.n_cols);
         let mut diag = vec![0.0; n];
@@ -247,6 +262,8 @@ impl CsrMatrix {
     }
 
     /// Matrix-vector multiplication: y = A * x
+    /// # Errors
+    /// Returns [`Err`] if vector length does not match matrix column count.
     pub fn matvec(&self, x: &[f64]) -> Result<Vec<f64>> {
         if x.len() != self.n_cols {
             return Err(BarracudaError::InvalidInput {
@@ -273,6 +290,8 @@ impl CsrMatrix {
     }
 
     /// Transpose matrix-vector: y = Aᵀ * x
+    /// # Errors
+    /// Returns [`Err`] if vector length does not match matrix row count.
     pub fn matvec_transpose(&self, x: &[f64]) -> Result<Vec<f64>> {
         if x.len() != self.n_rows {
             return Err(BarracudaError::InvalidInput {
@@ -306,6 +325,7 @@ impl CsrMatrix {
     }
 
     /// Convert to dense matrix (column-major)
+    #[must_use]
     pub fn to_dense(&self) -> Vec<f64> {
         let mut dense = vec![0.0; self.n_rows * self.n_cols];
 
@@ -323,6 +343,7 @@ impl CsrMatrix {
     }
 
     /// Check if matrix is symmetric
+    #[must_use]
     pub fn is_symmetric(&self, tol: f64) -> bool {
         if self.n_rows != self.n_cols {
             return false;

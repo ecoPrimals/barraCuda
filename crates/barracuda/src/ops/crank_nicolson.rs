@@ -17,7 +17,7 @@
 //!
 //! **Deep Debt Principles**:
 //! - Pure WGSL implementation (hardware-agnostic)
-//! - Chains with cyclic_reduction for the tridiagonal solve
+//! - Chains with `cyclic_reduction` for the tridiagonal solve
 //! - Safe Rust wrapper (no unsafe code)
 
 use crate::device::WgpuDevice;
@@ -55,12 +55,13 @@ impl CrankNicolson {
     }
 
     /// Create a new Crank-Nicolson solver
+    /// # Errors
+    /// This function does not return errors; the [`Result`] type is for API consistency.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Solve the 1D diffusion equation
-    ///
     /// # Arguments
     /// * `u0` - Initial condition (interior points only)
     /// * `alpha` - Diffusion coefficient
@@ -69,9 +70,11 @@ impl CrankNicolson {
     /// * `n_steps` - Number of time steps
     /// * `left_bc` - Left boundary condition
     /// * `right_bc` - Right boundary condition
-    ///
     /// # Returns
     /// Solution at final time (interior points only)
+    /// # Errors
+    /// Returns [`Err`] if initial condition is empty, or if buffer allocation,
+    /// GPU dispatch, or buffer readback fails (e.g. device lost or out of memory).
     pub fn solve(
         &self,
         u0: &[f32],
@@ -519,10 +522,7 @@ mod tests {
             let expected = (i + 1) as f32 / (n + 1) as f32;
             assert!(
                 (ui - expected).abs() < 0.05,
-                "u[{}] = {}, expected {}",
-                i,
-                ui,
-                expected
+                "u[{i}] = {ui}, expected {expected}"
             );
         }
     }
@@ -557,14 +557,11 @@ mod tests {
         // Heat should be dissipating to boundaries
         assert!(
             final_sum < initial_sum,
-            "Heat should decrease: initial={}, final={}",
-            initial_sum,
-            final_sum
+            "Heat should decrease: initial={initial_sum}, final={final_sum}"
         );
         assert!(
             final_sum > 0.0,
-            "Heat should remain positive: final={}",
-            final_sum
+            "Heat should remain positive: final={final_sum}"
         );
     }
 
@@ -597,9 +594,7 @@ mod tests {
         // Mass must be conserved with zero-flux Neumann
         assert!(
             (final_sum - initial_sum).abs() < 0.01,
-            "Mass should be conserved: initial={}, final={}",
-            initial_sum,
-            final_sum
+            "Mass should be conserved: initial={initial_sum}, final={final_sum}"
         );
     }
 }

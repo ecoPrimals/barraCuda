@@ -18,7 +18,7 @@ pub(crate) struct EighPipelines {
     pub rotate_v_pipeline: wgpu::ComputePipeline,
 }
 
-/// Create EighPipelines from device and shader module
+/// Create `EighPipelines` from device and shader module
 pub(crate) fn create_eigh_pipelines(
     device: &Arc<WgpuDevice>,
     shader: &wgpu::ShaderModule,

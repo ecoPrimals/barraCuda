@@ -14,11 +14,13 @@ pub struct ComputeScheduler {
 
 impl ComputeScheduler {
     /// Creates a new scheduler with the given executors.
+    #[must_use]
     pub fn new(executors: Vec<Arc<dyn ComputeExecutor>>) -> Self {
         Self { executors }
     }
 
     /// Selects the best executor for the given operation and inputs based on scoring.
+    #[must_use]
     pub fn select_executor(
         &self,
         op: &MathOp,
@@ -38,6 +40,10 @@ impl ComputeScheduler {
     }
 
     /// Executes the operation using the best available executor.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if no executor can handle the operation, or if execution fails.
     pub async fn execute(
         &self,
         op: &MathOp,

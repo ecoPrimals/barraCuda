@@ -29,6 +29,9 @@ pub struct Spectrogram {
 
 impl Spectrogram {
     /// Create a new spectrogram operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(stft_data: Tensor, power: f32) -> Result<Self> {
         let size = stft_data.shape().iter().product::<usize>();
         if size % 2 != 0 {
@@ -46,6 +49,9 @@ impl Spectrogram {
     }
 
     /// Execute the spectrogram operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.stft_data.device();
         let size: usize = self.stft_data.shape().iter().product();

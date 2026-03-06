@@ -20,6 +20,8 @@ pub struct Fft3D {
 
 impl Fft3D {
     /// Create 3D FFT for [nx, ny, nz, 2] complex input (powers of 2).
+    /// # Errors
+    /// Returns [`Err`] if input is not 4D [nx, ny, nz, 2], or dimensions are not powers of 2.
     pub fn new(input: Tensor, nx: u32, ny: u32, nz: u32) -> Result<Self> {
         let shape = input.shape();
 
@@ -49,6 +51,9 @@ impl Fft3D {
     }
 
     /// Execute 3D FFT (X, Y, Z passes).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 

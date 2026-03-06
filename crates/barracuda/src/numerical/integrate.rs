@@ -100,6 +100,10 @@ pub fn trapz(y: &[f64], x: &[f64]) -> Result<f64> {
 ///
 /// Approximate integral value
 ///
+/// # Errors
+///
+/// Returns [`Err`] if array lengths differ or if x is not non-decreasing.
+///
 /// # Examples
 ///
 /// ```

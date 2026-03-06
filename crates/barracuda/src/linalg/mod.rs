@@ -10,9 +10,9 @@
 //!
 //! - [`lu_decompose`] - LU decomposition with partial pivoting (PA = LU)
 //! - [`qr_decompose`] - QR decomposition via Householder reflections
-//! - [`svd_decompose`] - Singular value decomposition (A = UΣVᵀ)
-//! - [`cholesky_f64`] - Cholesky decomposition for SPD matrices (A = LLᵀ)
-//! - [`eigh_f64`] - Eigendecomposition for symmetric matrices (A = VDVᵀ)
+//! - [`svd_decompose`] - Singular value decomposition (A = `UΣVᵀ`)
+//! - [`cholesky_f64`] - Cholesky decomposition for SPD matrices (A = `LLᵀ`)
+//! - [`eigh_f64`] - Eigendecomposition for symmetric matrices (A = `VDVᵀ`)
 //! - [`gen_eigh_f64`] - Generalized eigenvalue problem Ax = λBx
 //!
 //! ## Dense Solvers
@@ -30,7 +30,7 @@
 //! - [`sparse::CsrMatrix`] - Compressed sparse row format
 //! - [`sparse::CooMatrix`] - Coordinate format (for construction)
 //! - [`sparse::cg_solve`] - Conjugate gradient (SPD matrices)
-//! - [`sparse::bicgstab_solve`] - BiCGSTAB (general matrices)
+//! - [`sparse::bicgstab_solve`] - `BiCGSTAB` (general matrices)
 //! - [`sparse::jacobi_solve`] - Jacobi iteration
 //!
 //! ## Utilities
@@ -66,9 +66,9 @@
 pub mod nmf;
 pub mod ridge;
 
-pub use nmf::{cosine_similarity, nmf, relative_reconstruction_error, top_k_predictions};
 pub use nmf::{NmfConfig, NmfObjective, NmfResult};
-pub use ridge::{ridge_regression, RidgeResult};
+pub use nmf::{cosine_similarity, nmf, relative_reconstruction_error, top_k_predictions};
+pub use ridge::{RidgeResult, ridge_regression};
 
 // GPU-dependent linear algebra (requires "gpu" feature)
 #[cfg(feature = "gpu")]
@@ -88,17 +88,17 @@ pub use crate::ops::linalg::tridiagonal_solve;
 #[cfg(feature = "gpu")]
 pub use crate::ops::linalg::tridiagonal_solve as tridiagonal_solve_f64;
 #[cfg(feature = "gpu")]
-pub use crate::ops::linalg::{lu_decompose, lu_det, lu_inverse, lu_solve, LuDecomposition};
+pub use crate::ops::linalg::{LuDecomposition, lu_decompose, lu_det, lu_inverse, lu_solve};
 #[cfg(feature = "gpu")]
-pub use crate::ops::linalg::{qr_decompose, qr_least_squares, QrDecomposition};
+pub use crate::ops::linalg::{QrDecomposition, qr_decompose, qr_least_squares};
 #[cfg(feature = "gpu")]
-pub use crate::ops::linalg::{svd_decompose, svd_pinv, svd_values, SvdDecomposition};
+pub use crate::ops::linalg::{SvdDecomposition, svd_decompose, svd_pinv, svd_values};
 #[cfg(feature = "gpu")]
 pub use cholesky::cholesky_f64;
 #[cfg(feature = "gpu")]
 pub use eigh::eigh_f64;
 #[cfg(feature = "gpu")]
-pub use gen_eigh::{gen_eigh_f64, gen_eigh_identity_b, GenEighDecomposition};
+pub use gen_eigh::{GenEighDecomposition, gen_eigh_f64, gen_eigh_identity_b};
 pub use graph::{belief_propagation_chain, disordered_laplacian, effective_rank, graph_laplacian};
 #[cfg(feature = "gpu")]
 pub use solve::{solve_f64, solve_f64_cpu};

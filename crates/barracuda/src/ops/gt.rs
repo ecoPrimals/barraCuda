@@ -6,7 +6,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// f64 is the canonical source — f32 derived via downcast_f64_to_f32 when needed.
+/// f64 is the canonical source — f32 derived via `downcast_f64_to_f32` when needed.
 const SHADER_F64: &str = include_str!("../shaders/misc/gt_f64.wgsl");
 
 static SHADER_F32: std::sync::LazyLock<String> =
@@ -20,6 +20,7 @@ pub struct Gt {
 
 impl Gt {
     /// Create a greater-than comparison operation.
+    #[must_use]
     pub fn new(lhs: Tensor, rhs: Tensor) -> Self {
         Self { lhs, rhs }
     }
@@ -28,6 +29,11 @@ impl Gt {
     }
 
     /// Execute greater-than comparison on GPU.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.lhs.device();
         let size = self.lhs.len();
@@ -140,6 +146,11 @@ impl Gt {
 
 impl Tensor {
     /// Element-wise greater-than comparison. Returns 1.0 where true, 0.0 where false.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn gt(self, other: &Self) -> Result<Self> {
         Gt::new(self, other.clone()).execute()
     }

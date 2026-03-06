@@ -1,6 +1,6 @@
 # BarraCuda WGSL Shader Library
 
-**694 Production WGSL Shaders** | Universal Precision (f16/f32/f64/DF64) | Cross-Vendor Compatible
+**708 Production WGSL Shaders** | Universal Precision (f16/f32/f64/DF64) | Cross-Vendor Compatible
 
 ---
 
@@ -269,14 +269,14 @@ All shaders follow these conventions:
 
 ## Shader Categories Explained
 
-### activation/ (37 shaders)
+### activation/ (40 shaders)
 Non-linear activation functions. All are element-wise operations.
 
 **Common**: ReLU, GELU, Swish, Sigmoid, Tanh  
 **Advanced**: Mish, CELU, Hardswish, PReLU, RReLU  
 **Pattern**: `f(x) → y` where `x` and `y` are same shape
 
-### attention/ (8 shaders)
+### attention/ (19 shaders)
 Attention mechanism components for transformers.
 
 **Core**: Attention matmul, softmax, apply  
@@ -284,7 +284,7 @@ Attention mechanism components for transformers.
 **Advanced**: Flash attention, GQA (grouped query attention)  
 **Pattern**: Q, K, V → Attention(Q,K,V)
 
-### linalg/ (11 shaders)
+### linalg/ (32 shaders)
 Linear algebra operations for scientific computing.
 
 **Decompositions**: Cholesky, Eigh (eigenvalue), QR, LU, SVD  
@@ -292,7 +292,7 @@ Linear algebra operations for scientific computing.
 **Operations**: Inverse, determinant, trace  
 **Pattern**: Dense matrices → decomposition or solution
 
-### loss/ (31 shaders)
+### loss/ (34 shaders)
 Training objectives and distance metrics.
 
 **Classification**: Cross-entropy, focal loss, NLL  
@@ -301,7 +301,7 @@ Training objectives and distance metrics.
 **Regression**: MSE, MAE, Huber, smooth L1  
 **Pattern**: (predictions, targets) → scalar loss
 
-### tensor/ (41 shaders)
+### tensor/ (43 shaders)
 Shape manipulation and indexing operations.
 
 **Combine**: Concat, stack, tile, repeat  
@@ -351,6 +351,6 @@ cargo test -p barracuda --lib --release
 ---
 
 **Last Updated**: March 2, 2026 — Session 86  
-**Shader Count**: 767 — organized by domain, all f64 canonical. DF64 emulated double-precision on hardware without native f64.  
+**Shader Count**: 708 — organized by domain, all f64 canonical. DF64 emulated double-precision on hardware without native f64.  
 **Categories**: 41 directories  
 **Status**: Production — dual-layer universal precision operational, 15-function DF64 transcendental suite complete

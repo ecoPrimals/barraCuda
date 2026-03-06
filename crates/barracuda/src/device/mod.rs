@@ -25,6 +25,7 @@ pub mod batched_encoder;
 pub mod cache_hierarchy;
 pub mod capabilities;
 pub mod compute_pipeline;
+pub mod coral_compiler;
 mod device_types;
 pub mod driver_profile; // GPU driver/compiler identity + shader strategies (D-S17-002 refactor)
 pub mod kernel_router; // Unified Math → Hardware routing (Feb 15, 2026)
@@ -42,11 +43,11 @@ pub mod warmup;
 pub mod wgpu_device;
 
 // Re-export auto-tuning types
-pub use autotune::{AutoTuner, GpuCalibration, GLOBAL_TUNER};
+pub use autotune::{AutoTuner, GLOBAL_TUNER, GpuCalibration};
 
 // Re-export warmup (mise en place)
 pub use warmup::{
-    warmup_device, warmup_pool, WarmupConfig, WarmupOp, WarmupResult, WarmupWorkloadHint,
+    WarmupConfig, WarmupOp, WarmupResult, WarmupWorkloadHint, warmup_device, warmup_pool,
 };
 
 // Re-export pipeline cache (for testing cache clearing)
@@ -54,11 +55,11 @@ pub use pipeline_cache::clear_global_cache;
 
 // Re-export tensor context (zero-overhead Tensor operations)
 pub use tensor_context::{
-    clear_global_contexts, get_device_context, high_capacity_limits, science_limits, BufferPool,
-    PooledBuffer, TensorContext, TensorContextStats, TensorSession,
+    BufferPool, PooledBuffer, TensorContext, TensorContextStats, TensorSession,
+    clear_global_contexts, get_device_context, high_capacity_limits, science_limits,
 };
 
-pub use akida::{detect_akida_boards, AkidaBoard, AkidaCapabilities, BoardHealth};
+pub use akida::{AkidaBoard, AkidaCapabilities, BoardHealth, detect_akida_boards};
 pub use akida_executor::{AkidaExecutor, NeuromorphicComparison};
 pub use async_submit::{AsyncReadback, AsyncSubmitter};
 pub use batched_encoder::BatchedEncoder;
@@ -66,11 +67,11 @@ pub use cache_hierarchy::{
     CacheAwareTiler, CacheLevel, CacheResidency, MainMemory, SubstrateMemoryHierarchy, TileConfig,
 };
 pub use capabilities::{
-    optimal_workgroup_size_arch, workgroup_size_2d_for_arch, workgroup_size_for_arch, CompilerKind,
-    DeviceCapabilities, DriverKind, EigensolveStrategy, Fp64Rate, Fp64Strategy, GpuArch,
-    GpuDriverProfile, Workaround, WorkloadType,
+    CompilerKind, DeviceCapabilities, DriverKind, EigensolveStrategy, Fp64Rate, Fp64Strategy,
+    GpuArch, GpuDriverProfile, Workaround, WorkloadType, optimal_workgroup_size_arch,
+    workgroup_size_2d_for_arch, workgroup_size_for_arch,
 };
-pub use compute_pipeline::{storage_bgl_entry, uniform_bgl_entry, ComputeDispatch};
+pub use compute_pipeline::{ComputeDispatch, storage_bgl_entry, uniform_bgl_entry};
 pub use kernel_router::{ComputeWorkload, KernelRouter, KernelTarget, NpuModelInfo};
 pub use registry::{
     BackendInfo, DeviceCapabilities as PhysicalDeviceCapabilities, DeviceRegistry, DeviceVendor,
@@ -97,11 +98,13 @@ pub enum DeviceSelection {
 
 impl DeviceSelection {
     /// Can this device run arbitrary WGSL compute shaders?
+    #[must_use]
     pub fn supports_wgsl(self) -> bool {
         matches!(self, Self::Gpu | Self::Cpu)
     }
 
     /// Is this device best for sparse/event-driven workloads?
+    #[must_use]
     pub fn is_event_driven(self) -> bool {
         matches!(self, Self::Npu)
     }
@@ -141,20 +144,21 @@ pub struct Auto;
 
 impl Auto {
     /// Discover best available device (wgpu handles selection)
-    ///
     /// Returns shared `WgpuDevice` from the global pool for thread-safe concurrent access.
     /// This enables parallel tests and concurrent GPU workloads without resource exhaustion.
-    ///
     /// **Architecture**: Uses LazyLock-based pool (Rust 1.80+) for idiomatic lazy initialization.
+    /// # Errors
+    /// Returns [`Err`] if no WGPU adapter is found or device creation fails.
     #[expect(clippy::new_ret_no_self, reason = "suppressed")]
     pub async fn new() -> Result<Arc<WgpuDevice>> {
         Ok(test_pool::get_test_device().await)
     }
 
     /// Create a fresh device (not from pool)
-    ///
     /// Use sparingly - creates a new device each call, which can exhaust GPU resources.
     /// Prefer `Auto::new()` for most cases.
+    /// # Errors
+    /// Returns [`Err`] if no WGPU adapter is found or device creation fails.
     pub async fn new_fresh() -> Result<WgpuDevice> {
         WgpuDevice::new().await
     }

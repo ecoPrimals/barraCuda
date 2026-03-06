@@ -13,6 +13,7 @@ pub struct Squeeze {
 
 impl Squeeze {
     /// Create a squeeze operation.
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -29,6 +30,9 @@ impl Squeeze {
     }
 
     /// Execute the squeeze operation, removing dimensions of size 1.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.len();
@@ -144,6 +148,9 @@ impl Squeeze {
 
 impl Tensor {
     /// Remove dimensions of size 1 from this tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn squeeze(self) -> Result<Self> {
         Squeeze::new(self).execute()
     }

@@ -31,11 +31,38 @@ pub mod spv_emit;
 
 use crate::device::driver_profile::GpuDriverProfile;
 
+/// SPIR-V binary that has been validated by naga's `Validator`.
+///
+/// Encodes the safety contract in the type system: only code paths that
+/// produce naga-validated SPIR-V can construct this type, so consumers
+/// can pass it to `wgpu::create_shader_module_passthrough` knowing the
+/// binary came from a trusted pipeline.
+#[derive(Debug, Clone)]
+pub struct ValidatedSpirv {
+    words: Vec<u32>,
+}
+
+impl ValidatedSpirv {
+    /// Construct from naga-validated SPIR-V output.
+    ///
+    /// Only callable within the sovereign compiler pipeline (after
+    /// `naga::valid::Validator::validate` + `naga::back::spv::Writer`).
+    pub(crate) fn from_validated(words: Vec<u32>) -> Self {
+        Self { words }
+    }
+
+    /// The raw SPIR-V words.
+    #[must_use]
+    pub fn words(&self) -> &[u32] {
+        &self.words
+    }
+}
+
 /// Output of the sovereign compiler pipeline.
 #[derive(Debug)]
 pub enum SovereignOutput {
-    /// Optimized SPIR-V binary (words), ready for `SPIRV_SHADER_PASSTHROUGH`.
-    Spirv(Vec<u32>),
+    /// Optimized SPIR-V binary, produced from naga-validated IR.
+    Spirv(ValidatedSpirv),
 }
 
 /// Sovereign compiler statistics, reported after each compilation.
@@ -67,12 +94,17 @@ impl SovereignCompiler {
     /// Returns `Err` if the WGSL fails to parse or the optimized module
     /// fails validation — in which case the caller should fall back to
     /// the plain WGSL text path.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn compile(&self, wgsl: &str) -> Result<(SovereignOutput, CompileStats), SovereignError> {
         let mut stats = CompileStats::default();
 
         // Step 1: Parse WGSL → naga::Module.
-        let mut module = naga::front::wgsl::parse_str(wgsl)
-            .map_err(|e| SovereignError::Parse(format!("{e}")))?;
+        let mut module =
+            naga::front::wgsl::parse_str(wgsl).map_err(|e| SovereignError::Parse(e.to_string()))?;
 
         // Step 2: FMA fusion — Mul(a,b) + Add/Sub(_, c) → Fma(a, b, c).
         for (_handle, func) in module.functions.iter_mut() {
@@ -103,13 +135,13 @@ impl SovereignCompiler {
             );
             validator
                 .validate(&module)
-                .map_err(|e| SovereignError::Validation(format!("{e}")))?
+                .map_err(|e| SovereignError::Validation(e.to_string()))?
         };
 
-        // Step 5: Emit SPIR-V.
-        let spirv = spv_emit::emit_spirv(&module, &info)?;
+        // Step 5: Emit SPIR-V (returns ValidatedSpirv — safety encoded in the type).
+        let validated = spv_emit::emit_spirv(&module, &info)?;
 
-        Ok((SovereignOutput::Spirv(spirv), stats))
+        Ok((SovereignOutput::Spirv(validated), stats))
     }
 }
 
@@ -141,12 +173,13 @@ mod tests {
             arch: GpuArch::Unknown,
             fp64_rate: Fp64Rate::Throttled,
             workarounds: vec![],
+            adapter_key: String::new(),
         }
     }
 
     #[test]
     fn test_sovereign_compiles_trivial_shader() {
-        let wgsl = r#"
+        let wgsl = r"
 @group(0) @binding(0) var<storage, read> input: array<f32>;
 @group(0) @binding(1) var<storage, read_write> output: array<f32>;
 
@@ -155,13 +188,13 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let idx = gid.x;
     output[idx] = input[idx] * 2.0;
 }
-"#;
+";
         let compiler = SovereignCompiler::new(test_profile());
         let (output, stats) = compiler.compile(wgsl).expect("should compile");
         match output {
-            SovereignOutput::Spirv(words) => {
-                assert!(!words.is_empty(), "SPIR-V should not be empty");
-                assert_eq!(words[0], 0x07230203, "SPIR-V magic number");
+            SovereignOutput::Spirv(validated) => {
+                assert!(!validated.words().is_empty(), "SPIR-V should not be empty");
+                assert_eq!(validated.words()[0], 0x07230203, "SPIR-V magic number");
             }
         }
         // Trivial shader has no FMA opportunities
@@ -177,7 +210,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 
     #[test]
     fn test_sovereign_fma_fusion_roundtrip() {
-        let wgsl = r#"
+        let wgsl = r"
 @group(0) @binding(0) var<storage, read> a_buf: array<f32>;
 @group(0) @binding(1) var<storage, read> b_buf: array<f32>;
 @group(0) @binding(2) var<storage, read> c_buf: array<f32>;
@@ -193,7 +226,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let result = product + c;
     out[i] = result;
 }
-"#;
+";
         let compiler = SovereignCompiler::new(test_profile());
         let (output, stats) = compiler.compile(wgsl).expect("should compile with FMA");
         assert!(
@@ -202,16 +235,16 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
             stats.fma_fusions
         );
         match output {
-            SovereignOutput::Spirv(words) => {
-                assert!(!words.is_empty());
-                assert_eq!(words[0], 0x07230203);
+            SovereignOutput::Spirv(validated) => {
+                assert!(!validated.words().is_empty());
+                assert_eq!(validated.words()[0], 0x07230203);
             }
         }
     }
 
     #[test]
     fn test_sovereign_complex_shader_roundtrip() {
-        let wgsl = r#"
+        let wgsl = r"
 struct Params {
     n: u32,
     scale: f32,
@@ -233,22 +266,25 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let clamped = max(shifted, 0.0);
     output[idx] = clamped;
 }
-"#;
+";
         let compiler = SovereignCompiler::new(test_profile());
         let (output, _stats) = compiler
             .compile(wgsl)
             .expect("complex shader should compile");
         match output {
-            SovereignOutput::Spirv(words) => {
-                assert!(words.len() > 10, "SPIR-V should have substantial content");
-                assert_eq!(words[0], 0x07230203);
+            SovereignOutput::Spirv(validated) => {
+                assert!(
+                    validated.words().len() > 10,
+                    "SPIR-V should have substantial content"
+                );
+                assert_eq!(validated.words()[0], 0x07230203);
             }
         }
     }
 
     #[test]
     fn test_sovereign_preserves_correctness_after_fusion() {
-        let wgsl = r#"
+        let wgsl = r"
 @group(0) @binding(0) var<storage, read> data: array<f32>;
 @group(0) @binding(1) var<storage, read_write> out: array<f32>;
 
@@ -268,14 +304,14 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 
     out[i] = r1 + r2;
 }
-"#;
+";
         let compiler = SovereignCompiler::new(test_profile());
         let (output, stats) = compiler.compile(wgsl).expect("should compile");
         // At least some fusions should fire
         assert!(stats.fma_fusions >= 1, "expected FMA fusions");
         match output {
-            SovereignOutput::Spirv(words) => {
-                assert_eq!(words[0], 0x07230203);
+            SovereignOutput::Spirv(validated) => {
+                assert_eq!(validated.words()[0], 0x07230203);
             }
         }
     }

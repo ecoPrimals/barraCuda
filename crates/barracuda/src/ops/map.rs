@@ -12,7 +12,7 @@
 //!
 //! ## Evolution History
 //!
-//! **Before** (Phase 3): `MapExt` trait extension  
+//! **Before** (Phase 3): `MapExt` trait extension\
 //! **After** (Phase 6): Direct `impl Tensor` method
 //!
 //! ## Usage
@@ -84,6 +84,11 @@ impl Map {
     }
 
     /// Execute the map operation on GPU.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.shape().iter().product::<usize>();
@@ -103,7 +108,7 @@ impl Map {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d(size as u32)
-            .submit();
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,
@@ -143,6 +148,11 @@ impl Tensor {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn map(self, operation: MapOperation) -> Result<Self> {
         let op = Map {
             input: self,

@@ -20,8 +20,8 @@
 //! **Performance Impact**: Batching 100 operations reduces overhead from
 //! ~10ms (100 × 100μs) to ~200μs (1 × 100μs + 100 × 1μs kernel dispatch).
 
-use crate::device::compute_pipeline::{storage_bgl_entry, uniform_bgl_entry};
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::{storage_bgl_entry, uniform_bgl_entry};
 use crate::error::Result;
 use std::sync::Arc;
 
@@ -100,6 +100,7 @@ pub struct ComputeGraph {
 
 impl ComputeGraph {
     /// Create a new compute graph for a device
+    #[must_use]
     pub fn new(wgpu_device: &WgpuDevice) -> Self {
         let optimal_wg = wgpu_device.optimal_workgroup_size();
         Self {
@@ -113,6 +114,7 @@ impl ComputeGraph {
     }
 
     /// Device name (for debug logging and diagnostics).
+    #[must_use]
     pub fn device_name(&self) -> &str {
         &self.device_name
     }
@@ -168,11 +170,13 @@ impl ComputeGraph {
     }
 
     /// Number of recorded operations
+    #[must_use]
     pub fn len(&self) -> usize {
         self.ops.len()
     }
 
     /// Check if graph is empty
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.ops.is_empty()
     }
@@ -183,9 +187,11 @@ impl ComputeGraph {
     }
 
     /// Execute all recorded operations in a single batch
-    ///
     /// This is where the performance magic happens - all operations
     /// are encoded into a single command buffer and submitted together.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or device
+    /// submission fails (e.g. device lost or out of memory).
     pub fn execute(&mut self) -> Result<()> {
         if self.ops.is_empty() {
             return Ok(());
@@ -201,7 +207,7 @@ impl ComputeGraph {
         let mul_shader = self.compile_elementwise("output[idx] = a[idx] * b[idx];", "Mul");
         let fma_shader = self.compile_shader(
             &format!(
-                r#"
+                r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read> b: array<f32>;
 @group(0) @binding(2) var<storage, read> c: array<f32>;
@@ -212,14 +218,14 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
     let idx = global_id.x;
     if (idx >= arrayLength(&output)) {{ return; }}
     output[idx] = fma(a[idx], b[idx], c[idx]);
-}}"#,
+}}",
                 wg = self.optimal_workgroup_size
             ),
             "FMA",
         );
         let scale_shader = self.compile_shader(
             &format!(
-                r#"
+                r"
 @group(0) @binding(0) var<storage, read> input: array<f32>;
 @group(0) @binding(1) var<uniform> scalar: f32;
 @group(0) @binding(2) var<storage, read_write> output: array<f32>;
@@ -229,7 +235,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     let idx = gid.x;
     if (idx >= arrayLength(&output)) {{ return; }}
     output[idx] = input[idx] * scalar;
-}}"#,
+}}",
                 wg = self.optimal_workgroup_size
             ),
             "Scale",
@@ -354,7 +360,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     fn compile_elementwise(&self, body: &str, label: &str) -> wgpu::ShaderModule {
         self.compile_shader(
             &format!(
-                r#"
+                r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read> b: array<f32>;
 @group(0) @binding(2) var<storage, read_write> output: array<f32>;
@@ -364,7 +370,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
     let idx = global_id.x;
     if (idx >= arrayLength(&output)) {{ return; }}
     {body}
-}}"#,
+}}",
                 wg = self.optimal_workgroup_size
             ),
             label,

@@ -15,16 +15,27 @@ use std::sync::Arc;
 ///
 /// Always returns `false` — barraCuda is a math library and does not manage
 /// NPU hardware. Orchestration primals provide NPU routing when present.
+#[must_use]
 pub fn is_npu_available() -> bool {
     false
 }
 
 /// Extract dense f32 data from a tensor for external consumption.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn tensor_to_npu_data(tensor: &Tensor) -> BarracudaResult<Vec<f32>> {
     tensor.to_vec()
 }
 
 /// Create a tensor from dense f32 data (e.g. NPU output).
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub async fn npu_data_to_tensor(
     data: Vec<f32>,
     shape: Vec<usize>,
@@ -37,6 +48,7 @@ pub async fn npu_data_to_tensor(
 ///
 /// Always returns `false` for GPU-resident tensors since readback would be
 /// required for sparsity analysis, defeating the purpose.
+#[must_use]
 pub fn should_route_to_npu(_tensor: &Tensor, _priority: Option<crate::workload::Priority>) -> bool {
     false
 }
@@ -45,6 +57,7 @@ pub fn should_route_to_npu(_tensor: &Tensor, _priority: Option<crate::workload::
 ///
 /// Returns `true` only if an NPU is available AND the workload characteristics
 /// favor event-driven execution (high sparsity, energy priority, small batch).
+#[must_use]
 pub fn should_use_npu(data: &[f32], priority: crate::workload::Priority) -> bool {
     use crate::npu::EventCodec;
     use crate::workload::Priority;

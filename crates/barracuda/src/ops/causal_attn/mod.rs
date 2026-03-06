@@ -16,9 +16,9 @@
 //! ```
 //!
 //! **Implementation**: 3-pass GPU execution (reuses 2 attention shaders!)
-//! 1. Pass 1: Compute QK^T scores (reuse attention_matmul.wgsl ✅)
-//! 2. Pass 2: Apply softmax with causal mask (NEW: causal_attention_softmax.wgsl)
-//! 3. Pass 3: Apply weights to values (reuse attention_apply.wgsl ✅)
+//! 1. Pass 1: Compute QK^T scores (reuse `attention_matmul.wgsl` ✅)
+//! 2. Pass 2: Apply softmax with causal mask (NEW: `causal_attention_softmax.wgsl`)
+//! 3. Pass 3: Apply weights to values (reuse `attention_apply.wgsl` ✅)
 //!
 //! **Deep Debt**: Maximum code reuse - only 1 new shader for masking!
 //!
@@ -71,6 +71,11 @@ pub struct CausalAttention {
 
 impl CausalAttention {
     /// Create new causal attention operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(query: Tensor, key: Tensor, value: Tensor) -> Result<Self> {
         // Validate shapes: all must be [batch, heads, seq_len, head_dim]
         if query.shape().len() != 4 || key.shape().len() != 4 || value.shape().len() != 4 {
@@ -131,11 +136,11 @@ impl Tensor {
     /// **Deep Debt**: Reuses 2/3 attention shaders + causal mask shader
     ///
     /// # Arguments
-    /// - `key`: Key tensor [batch, heads, seq_len, head_dim]
-    /// - `value`: Value tensor [batch, heads, seq_len, head_dim]
+    /// - `key`: Key tensor [batch, heads, `seq_len`, `head_dim`]
+    /// - `value`: Value tensor [batch, heads, `seq_len`, `head_dim`]
     ///
     /// # Returns
-    /// Output tensor [batch, heads, seq_len, head_dim]
+    /// Output tensor [batch, heads, `seq_len`, `head_dim`]
     ///
     /// # Example
     /// ```rust,ignore
@@ -145,6 +150,11 @@ impl Tensor {
     ///
     /// let output = q.causal_attention(&k, &v)?;  // GPT-style
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn causal_attention(self, key: &Self, value: &Self) -> Result<Self> {
         CausalAttention::new(self, key.clone(), value.clone())?.execute()
     }

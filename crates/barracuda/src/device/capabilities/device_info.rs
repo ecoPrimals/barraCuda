@@ -2,7 +2,7 @@
 //! Unified Device Info — high-level capability querying for Device enum.
 //!
 //! Answers "what can this Device do?" for routing and selection.
-//! Contrast with DeviceCapabilities (wgpu limits).
+//! Contrast with `DeviceCapabilities` (wgpu limits).
 
 use crate::device::device_types::Device;
 
@@ -69,7 +69,7 @@ pub enum Capability {
 /// Check if GPU is available.
 ///
 /// Optimistic — assume GPU might be available. Full runtime check happens at
-/// DeviceContext creation.
+/// `DeviceContext` creation.
 #[must_use]
 pub fn is_gpu_available() -> bool {
     true
@@ -169,7 +169,7 @@ fn detect_memory_macos() -> Option<u64> {
     s.trim().parse::<u64>().ok()
 }
 
-/// Build DeviceInfo for a given Device.
+/// Build `DeviceInfo` for a given Device.
 ///
 /// **Runtime discovery** — No hardcoding!
 #[must_use]
@@ -182,7 +182,7 @@ pub fn build_device_info(device: Device) -> DeviceInfo {
             capabilities: vec![Capability::Compute, Capability::Memory],
             memory_gb: estimate_system_memory(),
             compute_units: std::thread::available_parallelism()
-                .map(|n| n.get())
+                .map(std::num::NonZero::get)
                 .unwrap_or(4),
         },
 

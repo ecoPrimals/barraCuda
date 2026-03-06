@@ -64,44 +64,40 @@ pub struct RbfInterpolator {
 
 impl RbfInterpolator {
     /// Train RBF surrogate on GPU
-    ///
     /// # Arguments
     /// * `x` - Training points [N, d]
     /// * `y` - Training values [N]
-    /// * `kernel` - RBF kernel type (default: ThinPlateSpline)
+    /// * `kernel` - RBF kernel type (default: `ThinPlateSpline`)
     /// * `epsilon` - Shape parameter (default: 1.0)
-    ///
     /// # Returns
     /// Trained RBF interpolator
-    ///
     /// # Algorithm
     /// 1. Build kernel matrix K = φ(‖xᵢ - xⱼ‖)
     /// 2. Cholesky: K = L·Lᵀ
     /// 3. Solve K·w = y via forward/backward substitution
-    ///
     /// # Deep Debt Compliance
     /// - Pure composition (uses existing ops)
     /// - No new shaders needed
     /// - Safe Rust (no unsafe blocks)
     /// - GPU-accelerated throughout
-    ///
     /// # Example
     /// ```ignore
     /// // Train on sin(x)
     /// let x_train = Tensor::linspace(0.0, 10.0, 20, device)?;  // [20, 1]
     /// let y_train = x_train.sin()?;  // [20]
-    ///
     /// let rbf = RbfInterpolator::fit(
     ///     &x_train,
     ///     &y_train,
     ///     RbfKernelType::ThinPlateSpline,
     ///     1.0
     /// )?;
-    ///
     /// // Predict at new points
     /// let x_new = Tensor::linspace(0.0, 10.0, 100, device)?;  // [100, 1]
     /// let y_pred = rbf.predict(&x_new)?;  // [100]
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if x is not 2D, y is not 1D, y length does not match x rows, or if any
+    /// composed operation (`rbf_kernel`, Cholesky, `TriangularSolve`) fails.
     pub fn fit(x: &Tensor, y: &Tensor, kernel: RbfKernelType, epsilon: f32) -> Result<Self> {
         let x_shape = x.shape();
         let y_shape = y.shape();
@@ -151,26 +147,24 @@ impl RbfInterpolator {
     }
 
     /// Predict at new evaluation points
-    ///
     /// # Arguments
     /// * `x_new` - Evaluation points [M, d]
-    ///
     /// # Returns
     /// Predictions [M]
-    ///
     /// # Algorithm
-    /// 1. Build kernel matrix K = rbf_kernel(X_new, X_train)  [M×N]
-    /// 2. Compute y_pred = K·w  [M]
-    ///
+    /// 1. Build kernel matrix K = `rbf_kernel(X_new`, `X_train`)  [M×N]
+    /// 2. Compute `y_pred` = K·w  [M]
     /// # Deep Debt Compliance
-    /// - Pure composition (rbf_kernel + matmul)
+    /// - Pure composition (`rbf_kernel` + matmul)
     /// - GPU-accelerated
     /// - Safe Rust
-    ///
     /// # Example
     /// ```ignore
     /// let y_pred = rbf.predict(&x_new)?;
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if `x_new` dimensions do not match training points, or if any composed
+    /// operation (`rbf_kernel`, matmul) fails.
     pub fn predict(&self, x_new: &Tensor) -> Result<Tensor> {
         let x_new_shape = x_new.shape();
         let x_train_shape = self.training_points.shape();
@@ -196,31 +190,37 @@ impl RbfInterpolator {
     }
 
     /// Get training points
+    #[must_use]
     pub fn training_points(&self) -> &Tensor {
         &self.training_points
     }
 
     /// Get learned weights
+    #[must_use]
     pub fn weights(&self) -> &Tensor {
         &self.weights
     }
 
     /// Get kernel type
+    #[must_use]
     pub fn kernel(&self) -> RbfKernelType {
         self.kernel
     }
 
     /// Get epsilon parameter
+    #[must_use]
     pub fn epsilon(&self) -> f32 {
         self.epsilon
     }
 
     /// Number of training points
+    #[must_use]
     pub fn n_training_points(&self) -> usize {
         self.training_points.shape()[0]
     }
 
     /// Dimension of input space
+    #[must_use]
     pub fn input_dimension(&self) -> usize {
         self.training_points.shape()[1]
     }
@@ -229,20 +229,20 @@ impl RbfInterpolator {
 /// Tensor extension for RBF interpolation
 impl Tensor {
     /// Fit RBF interpolator and predict in one step
-    ///
     /// # Arguments
     /// * `y` - Training values [N]
     /// * `x_new` - Evaluation points [M, d]
     /// * `kernel` - RBF kernel type
     /// * `epsilon` - Shape parameter
-    ///
     /// # Returns
-    /// Predictions at x_new [M]
-    ///
+    /// Predictions at `x_new` [M]
     /// # Example
     /// ```ignore
     /// let y_pred = x_train.rbf_interpolate(&y_train, &x_new, ThinPlateSpline, 1.0)?;
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if x/y shapes are invalid, `x_new` dimensions do not match, or if fit or
+    /// predict fails.
     pub fn rbf_interpolate(
         &self,
         y: &Tensor,
@@ -286,10 +286,7 @@ mod tests {
         for (i, (&pred, &expected)) in predictions.iter().zip(y_expected.iter()).enumerate() {
             assert!(
                 (pred - expected).abs() < 0.5,
-                "Prediction {} mismatch: expected {}, got {}",
-                i,
-                expected,
-                pred
+                "Prediction {i} mismatch: expected {expected}, got {pred}"
             );
         }
     }

@@ -3,7 +3,7 @@
 //!
 //! Used for nuclear physics (deformed nuclei), fluid dynamics, etc.
 
-use super::super::fd_common::{FdPipelineBuilder, FD_WORKGROUP_SIZE};
+use super::super::fd_common::{FD_WORKGROUP_SIZE, FdPipelineBuilder};
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
@@ -23,6 +23,9 @@ pub struct CylindricalGradient {
 
 impl CylindricalGradient {
     /// Create a new cylindrical gradient operator
+    /// # Errors
+    /// Returns [`Err`] if pipeline creation fails (shader compilation, bind group
+    /// layout, or pipeline build).
     pub fn new(
         device: Arc<WgpuDevice>,
         n_rho: usize,
@@ -51,11 +54,16 @@ impl CylindricalGradient {
     }
 
     /// Grid dimensions
+    #[must_use]
     pub fn shape(&self) -> (usize, usize) {
         (self.n_rho, self.n_z)
     }
 
     /// Compute cylindrical gradient (∂f/∂ρ, ∂f/∂z)
+    /// # Errors
+    /// Returns [`Err`] if input length does not match `n_rho * n_z`, buffer
+    /// allocation fails, GPU dispatch fails, or buffer mapping/readback fails
+    /// (e.g. device lost).
     pub async fn compute(&self, input: &[f64]) -> Result<(Vec<f64>, Vec<f64>)> {
         let total = self.n_rho * self.n_z;
         if input.len() != total {
@@ -203,6 +211,9 @@ pub struct CylindricalLaplacian {
 
 impl CylindricalLaplacian {
     /// Create a new cylindrical Laplacian operator
+    /// # Errors
+    /// Returns [`Err`] if pipeline creation fails (shader compilation, bind group
+    /// layout, or pipeline build).
     pub fn new(
         device: Arc<WgpuDevice>,
         n_rho: usize,
@@ -232,11 +243,16 @@ impl CylindricalLaplacian {
     }
 
     /// Grid dimensions
+    #[must_use]
     pub fn shape(&self) -> (usize, usize) {
         (self.n_rho, self.n_z)
     }
 
     /// Compute cylindrical Laplacian: ∇²f = ∂²f/∂ρ² + (1/ρ)∂f/∂ρ + ∂²f/∂z²
+    /// # Errors
+    /// Returns [`Err`] if input length does not match `n_rho * n_z`, buffer
+    /// allocation fails, GPU dispatch fails, or buffer mapping/readback fails
+    /// (e.g. device lost).
     pub async fn compute(&self, input: &[f64]) -> Result<Vec<f64>> {
         let total = self.n_rho * self.n_z;
         if input.len() != total {
@@ -293,12 +309,7 @@ impl CylindricalLaplacian {
 
         let buffer_size = (total * std::mem::size_of::<f64>()) as u64;
 
-        let dummy_buffer = self.device.device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some("cyl_lap_dummy"),
-            size: 8,
-            usage: wgpu::BufferUsages::STORAGE,
-            mapped_at_creation: false,
-        });
+        let placeholder = self.device.placeholder_buffer();
 
         let laplacian_buffer = self.device.device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("cyl_lap_output"),
@@ -324,11 +335,11 @@ impl CylindricalLaplacian {
                     },
                     wgpu::BindGroupEntry {
                         binding: 2,
-                        resource: dummy_buffer.as_entire_binding(),
+                        resource: placeholder.as_entire_binding(),
                     },
                     wgpu::BindGroupEntry {
                         binding: 3,
-                        resource: dummy_buffer.as_entire_binding(),
+                        resource: placeholder.as_entire_binding(),
                     },
                     wgpu::BindGroupEntry {
                         binding: 4,

@@ -39,7 +39,7 @@ async fn test_ntt_performance_n4096() {
 
         // Should be fast (target: <200μs, but allow more for first run)
         // Note: First run may be slower due to shader compilation
-        println!("✅ NTT(N=4096) performance: {:?}", elapsed);
+        println!("✅ NTT(N=4096) performance: {elapsed:?}");
 
         // Just verify it completes without panicking
         assert!(
@@ -80,7 +80,7 @@ async fn test_fast_poly_mul_performance_n4096() {
         let elapsed = start.elapsed();
 
         // Should be fast (target: <500μs for full pipeline, but allow more for first run)
-        println!("✅ Fast multiply(N=4096) performance: {:?}", elapsed);
+        println!("✅ Fast multiply(N=4096) performance: {elapsed:?}");
 
         // Just verify it completes without panicking
         assert!(

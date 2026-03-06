@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! MaxPool2D operation - Max pooling for 2D tensors
+//! `MaxPool2D` operation - Max pooling for 2D tensors
 //! Pure WGSL implementation
 
 use crate::error::Result;
@@ -27,6 +27,7 @@ pub struct MaxPool2D {
 
 impl MaxPool2D {
     /// Create max pooling without padding.
+    #[must_use]
     pub fn new(input: Tensor, pool_size: usize, stride: usize) -> Self {
         Self {
             input,
@@ -38,6 +39,7 @@ impl MaxPool2D {
     }
 
     /// Create max pooling with explicit padding.
+    #[must_use]
     pub fn with_padding(
         input: Tensor,
         pool_size: usize,
@@ -66,6 +68,8 @@ impl MaxPool2D {
     }
 
     /// Execute max pooling and return the output tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or device submission fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 
@@ -203,11 +207,15 @@ impl MaxPool2D {
 
 impl Tensor {
     /// Apply 2D max pooling.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or device submission fails (e.g. device lost).
     pub fn maxpool2d(self, pool_size: usize, stride: usize) -> Result<Self> {
         MaxPool2D::new(self, pool_size, stride).execute()
     }
 
     /// Apply 2D max pooling with explicit padding.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or device submission fails (e.g. device lost).
     pub fn maxpool2d_padded(
         self,
         pool_size: usize,
@@ -308,7 +316,7 @@ mod tests {
         let result = input.maxpool2d(2, 2).unwrap();
         let output = result.to_vec().unwrap();
 
-        for val in output.iter() {
+        for val in &output {
             assert!((val - 5.0).abs() < 1e-5);
         }
 
@@ -409,8 +417,7 @@ mod tests {
 
         assert!(
             max_error < 1e-5,
-            "Max error: {} exceeds FP32 threshold",
-            max_error
+            "Max error: {max_error} exceeds FP32 threshold"
         );
     }
 

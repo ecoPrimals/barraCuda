@@ -12,7 +12,7 @@
 //!
 //! ## Evolution History
 //!
-//! **Before** (Phase 3): `AdaptiveMaxPool2DExt` trait extension  
+//! **Before** (Phase 3): `AdaptiveMaxPool2DExt` trait extension\
 //! **After** (Phase 6): Direct `impl Tensor` method
 //!
 //! ## Usage
@@ -64,13 +64,21 @@ impl AdaptiveMaxPool2D {
     }
 
     /// Execute adaptive max pooling and return the result tensor.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
 
         if shape.len() != 4 {
-            return Err(crate::error::BarracudaError::invalid_op("Shape Error", 
-                format!("AdaptiveMaxPool2D expects 4D input [batch, channels, height, width], got shape {shape:?}")
+            return Err(crate::error::BarracudaError::invalid_op(
+                "Shape Error",
+                format!(
+                    "AdaptiveMaxPool2D expects 4D input [batch, channels, height, width], got shape {shape:?}"
+                ),
             ));
         }
 
@@ -117,7 +125,7 @@ impl AdaptiveMaxPool2D {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch(workgroups_x, workgroups_y, workgroups_z)
-            .submit();
+            .submit()?;
 
         let output_elem_count = output_shape.iter().product::<usize>();
         let output_data = crate::utils::read_buffer(device, &output_buffer, output_elem_count)?;
@@ -162,6 +170,11 @@ impl Tensor {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn adaptive_maxpool2d(self, output_size: (usize, usize)) -> Result<Self> {
         let op = AdaptiveMaxPool2D {
             input: self,

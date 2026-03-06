@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Softplus - Smooth approximation of ReLU - Pure WGSL
+//! Softplus - Smooth approximation of `ReLU` - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its beta parameter
@@ -19,7 +19,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// Softplus operation - Smooth approximation of ReLU
+/// Softplus operation - Smooth approximation of `ReLU`
 ///
 /// Applies Softplus(x) = (1/beta) * log(1 + exp(beta * x))
 pub struct Softplus {
@@ -29,6 +29,7 @@ pub struct Softplus {
 
 impl Softplus {
     /// Create a new Softplus operation
+    #[must_use]
     pub fn new(input: Tensor, beta: f32) -> Self {
         Self { input, beta }
     }
@@ -39,6 +40,9 @@ impl Softplus {
     }
 
     /// Execute the softplus operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -185,10 +189,11 @@ impl Softplus {
 
 impl Tensor {
     /// Apply Softplus activation
-    ///
     /// # Arguments
-    ///
     /// * `beta` - Smoothness parameter (typically 1.0)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn softplus_wgsl(self, beta: f32) -> Result<Self> {
         Softplus::new(self, beta).execute()
     }

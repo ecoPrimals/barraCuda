@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! NonZero - GPU prefix sum implementation
+//! `NonZero` - GPU prefix sum implementation
 //!
 //! **Deep Debt Principles**:
-//! - Complete GPU implementation: Uses prefix_sum.wgsl for GPU parallel scan
+//! - Complete GPU implementation: Uses `prefix_sum.wgsl` for GPU parallel scan
 //! - No CPU fallbacks: All computation on GPU
 //! - Self-knowledge: Validates inputs
-//! - Modern idiomatic Rust: Result<T, E>, no unwrap()
+//! - Modern idiomatic Rust: Result<T, E>, no `unwrap()`
 //!
 //! ## Algorithm
 //!
@@ -28,7 +28,7 @@ mod tests;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
-/// NonZero operation parameters for WGSL shader
+/// `NonZero` operation parameters for WGSL shader
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub(crate) struct NonZeroParams {
@@ -36,7 +36,7 @@ pub(crate) struct NonZeroParams {
     pub _padding: [u32; 3],
 }
 
-/// NonZero operation - finds indices of non-zero elements
+/// `NonZero` operation - finds indices of non-zero elements
 ///
 /// **Deep Debt**: Utility operation for sparse tensor operations
 pub struct NonZero {
@@ -44,9 +44,13 @@ pub struct NonZero {
 }
 
 impl NonZero {
-    /// Create new NonZero operation
+    /// Create new `NonZero` operation
     ///
     /// **Deep Debt**: Validates input is not empty
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if input is empty.
     pub fn new(input: Tensor) -> Result<Self> {
         if input.is_empty() {
             return Err(BarracudaError::invalid_op(

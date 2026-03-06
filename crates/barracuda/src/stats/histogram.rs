@@ -2,11 +2,11 @@
 //! GPU-accelerated histogram via atomic binning.
 
 #[cfg(feature = "gpu")]
+use crate::device::WgpuDevice;
+#[cfg(feature = "gpu")]
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 #[cfg(feature = "gpu")]
 use crate::device::compute_pipeline::ComputeDispatch;
-#[cfg(feature = "gpu")]
-use crate::device::WgpuDevice;
 #[cfg(feature = "gpu")]
 use crate::error::{BarracudaError, Result};
 #[cfg(feature = "gpu")]
@@ -43,11 +43,21 @@ pub struct HistogramGpu {
 #[cfg(feature = "gpu")]
 impl HistogramGpu {
     /// Creates a new GPU-accelerated histogram from a WGPU device.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Dispatch GPU histogram: bin `values` into `n_bins` bins over [min, max].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn dispatch(&self, values: &[f64], n_bins: u32) -> Result<Vec<u32>> {
         let n_values = values.len();
         if n_values == 0 {
@@ -116,7 +126,7 @@ impl HistogramGpu {
             .storage_rw(1, bins_buf)
             .uniform(2, &params_buf)
             .dispatch(wg_count, 1, 1)
-            .submit();
+            .submit()?;
 
         self.device.read_buffer_u32(bins_buf, n_bins as usize)
     }
@@ -154,7 +164,7 @@ impl HistogramGpu {
             .storage_rw(1, bins_buf)
             .uniform(2, &params_buf)
             .dispatch(wg_count, 1, 1)
-            .submit();
+            .submit()?;
 
         self.device.read_buffer_u32(bins_buf, n_bins as usize)
     }

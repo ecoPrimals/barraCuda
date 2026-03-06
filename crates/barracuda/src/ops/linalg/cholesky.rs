@@ -51,14 +51,13 @@ pub struct Cholesky {
 
 impl Cholesky {
     /// Create new Cholesky decomposition operation
-    ///
     /// # Arguments
     /// * `input` - Symmetric positive-definite matrix [N, N]
-    ///
     /// # Deep Debt Compliance
     /// - No hardcoded sizes (runtime N)
     /// - No unsafe blocks
     /// - Agnostic design (works with any SPD matrix)
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -72,14 +71,12 @@ impl Cholesky {
     }
 
     /// Execute Cholesky decomposition on GPU
-    ///
     /// # Returns
     /// Lower triangular matrix L where A = L·Lᵀ
-    ///
     /// # Errors
-    /// - Returns error if input is not square
-    /// - Returns zero matrix if input is not positive definite
-    ///
+    /// Returns [`Err`] if input is not square (shape not 2D or rows ≠ cols), or if buffer
+    /// allocation fails (e.g., device lost, out of memory). Note: returns zero matrix if input
+    /// is not positive definite (handled by shader, not an error).
     /// # Deep Debt Compliance
     /// - Pure WGSL execution (no CPU fallback)
     /// - Capability-based workgroup dispatch
@@ -111,7 +108,7 @@ impl Cholesky {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch(1, 1, 1)
-            .submit();
+            .submit()?;
 
         // Return lower triangular matrix L
         Ok(Tensor::from_buffer(
@@ -122,9 +119,11 @@ impl Cholesky {
     }
 
     /// Execute and also return Lᵀ (useful for solving systems)
-    ///
     /// # Returns
     /// Tuple (L, Lᵀ) where A = L·Lᵀ
+    /// # Errors
+    /// Returns [`Err`] if [`execute`](Self::execute) or [`transpose`](crate::tensor::Tensor::transpose)
+    /// fails (invalid shape, buffer allocation, or GPU dispatch failure).
     pub fn execute_with_transpose(self) -> Result<(Tensor, Tensor)> {
         let l = self.execute()?;
         let l_t = l.transpose()?;
@@ -142,19 +141,19 @@ pub struct CholeskyF64;
 
 impl CholeskyF64 {
     /// Execute Cholesky decomposition on GPU with f64 precision
-    ///
     /// # Arguments
     /// * `device` - GPU device (Arc-wrapped)
     /// * `data` - Input SPD matrix data (row-major f64)
     /// * `n` - Matrix dimension (n×n)
-    ///
     /// # Returns
     /// Lower triangular matrix L where A = L·Lᵀ
-    ///
     /// # Deep Debt Compliance
     /// - Pure WGSL f64 execution
     /// - Native sqrt(f64) on Vulkan
     /// - Hardware-agnostic (NVIDIA/AMD/Intel)
+    /// # Errors
+    /// Returns [`Err`] if `data.len() != n * n` (invalid dimensions), if buffer allocation fails,
+    /// or if GPU dispatch/readback fails (e.g., device lost).
     pub fn execute(
         device: std::sync::Arc<crate::device::WgpuDevice>,
         data: &[f64],
@@ -186,22 +185,23 @@ impl CholeskyF64 {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch(1, 1, 1)
-            .submit();
+            .submit()?;
 
         // Read back f64 results
         crate::utils::read_buffer_f64(&device, &output_buffer, n * n)
     }
 
     /// Execute batched Cholesky decomposition
-    ///
     /// # Arguments
     /// * `device` - GPU device (Arc-wrapped)
-    /// * `data` - Batch of SPD matrices (flattened: batch_size × n × n)
+    /// * `data` - Batch of SPD matrices (flattened: `batch_size` × n × n)
     /// * `n` - Matrix dimension per batch element
     /// * `batch_size` - Number of matrices
-    ///
     /// # Returns
     /// Batch of lower triangular matrices L
+    /// # Errors
+    /// Returns [`Err`] if `data.len() != batch_size * n * n` (invalid dimensions), if buffer
+    /// allocation fails, or if GPU dispatch/readback fails (e.g., device lost).
     pub fn execute_batch(
         device: std::sync::Arc<crate::device::WgpuDevice>,
         data: &[f64],
@@ -233,7 +233,7 @@ impl CholeskyF64 {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch(batch_size as u32, 1, 1)
-            .submit();
+            .submit()?;
 
         crate::utils::read_buffer_f64(&device, &output_buffer, batch_size * mat_size)
     }
@@ -242,10 +242,11 @@ impl CholeskyF64 {
 /// Tensor extension for Cholesky decomposition
 impl Tensor {
     /// Compute Cholesky decomposition: A = L·Lᵀ
-    ///
     /// # Returns
     /// Lower triangular matrix L
-    ///
+    /// # Errors
+    /// Returns [`Err`] if [`Cholesky::execute`] fails (non-square input, buffer allocation,
+    /// or GPU dispatch failure).
     /// # Example
     /// ```ignore
     /// let a = Tensor::from_vec(vec![4.0, 2.0, 2.0, 3.0], vec![2, 2], device)?;
@@ -257,9 +258,11 @@ impl Tensor {
     }
 
     /// Compute Cholesky decomposition with transpose
-    ///
     /// # Returns
     /// Tuple (L, Lᵀ)
+    /// # Errors
+    /// Returns [`Err`] if [`Cholesky::execute_with_transpose`] fails (non-square input, buffer
+    /// allocation, or GPU dispatch failure).
     pub fn cholesky_with_transpose(self) -> Result<(Self, Self)> {
         Cholesky::new(self).execute_with_transpose()
     }

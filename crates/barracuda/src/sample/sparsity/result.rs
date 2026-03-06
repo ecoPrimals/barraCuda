@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! SparsitySampler result types.
+//! `SparsitySampler` result types.
 
 use crate::optimize::eval_record::EvaluationCache;
 use crate::surrogate::RBFSurrogate;
 
-/// Diagnostics for a single SparsitySampler iteration.
+/// Diagnostics for a single `SparsitySampler` iteration.
 #[derive(Debug, Clone)]
 pub struct IterationResult {
     /// Iteration number (0-indexed)
@@ -21,7 +21,7 @@ pub struct IterationResult {
     pub used_gpu: bool,
 }
 
-/// Result of SparsitySampler optimization.
+/// Result of `SparsitySampler` optimization.
 #[derive(Debug)]
 pub struct SparsitySamplerResult {
     /// Best point found
@@ -37,7 +37,8 @@ pub struct SparsitySamplerResult {
 }
 
 impl SparsitySamplerResult {
-    /// Extract top-k points as warm-start seeds for DirectSampler or subsequent optimization.
+    /// Extract top-k points as warm-start seeds for `DirectSampler` or subsequent optimization.
+    #[must_use]
     pub fn top_k_seeds(&self, k: usize) -> Vec<Vec<f64>> {
         let mut records: Vec<_> = self.cache.records().to_vec();
         records.sort_by(|a, b| a.f.partial_cmp(&b.f).unwrap_or(std::cmp::Ordering::Equal));
@@ -45,11 +46,13 @@ impl SparsitySamplerResult {
     }
 
     /// Get total number of true objective evaluations.
+    #[must_use]
     pub fn total_evals(&self) -> usize {
         self.cache.len()
     }
 
     /// Get evaluations per iteration.
+    #[must_use]
     pub fn evals_per_iteration(&self) -> Vec<usize> {
         self.iteration_results
             .iter()

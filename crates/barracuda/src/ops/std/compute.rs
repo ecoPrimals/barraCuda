@@ -48,7 +48,7 @@ pub(super) fn execute(op: Std) -> Result<Tensor> {
                 .storage_rw(1, &mean_output_buffer)
                 .uniform(2, &params_buffer)
                 .dispatch(num_workgroups, 1, 1)
-                .submit();
+                .submit()?;
 
             // Read back partial sums and compute mean
             let partial_sums =
@@ -94,7 +94,7 @@ pub(super) fn execute(op: Std) -> Result<Tensor> {
                 .storage_rw(1, &variance_output_buffer)
                 .uniform(2, &params_buffer)
                 .dispatch(num_workgroups, 1, 1)
-                .submit();
+                .submit()?;
 
             // Read back partial variance results
             let partial_variances =
@@ -154,7 +154,7 @@ pub(super) fn execute(op: Std) -> Result<Tensor> {
                 .storage_rw(1, &output_buffer)
                 .uniform(2, &params_buffer)
                 .dispatch(workgroups.max(1), 1, 1)
-                .submit();
+                .submit()?;
 
             // Read back results
             let output_data = device.read_buffer_f32(&output_buffer, output_size)?;

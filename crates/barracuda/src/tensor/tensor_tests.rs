@@ -79,7 +79,7 @@ async fn test_randn_shape() {
     let mean: f32 = data.iter().sum::<f32>() / data.len() as f32;
     let variance: f32 = data.iter().map(|&x| (x - mean).powi(2)).sum::<f32>() / data.len() as f32;
 
-    assert!(mean.abs() < 0.3, "Mean {} too far from 0", mean);
+    assert!(mean.abs() < 0.3, "Mean {mean} too far from 0");
     assert!(
         (variance.sqrt() - 1.0).abs() < 0.3,
         "Std {} too far from 1",
@@ -95,7 +95,7 @@ async fn test_rand_shape() {
 
     let data = tensor.to_vec().unwrap();
     for &val in &data {
-        assert!((0.0..1.0).contains(&val), "Value {} out of range", val);
+        assert!((0.0..1.0).contains(&val), "Value {val} out of range");
     }
 }
 
@@ -105,11 +105,11 @@ async fn test_rand_range() {
     let data = tensor.to_vec().unwrap();
 
     for &val in &data {
-        assert!((-5.0..5.0).contains(&val), "Value {} out of range", val);
+        assert!((-5.0..5.0).contains(&val), "Value {val} out of range");
     }
 
     let mean: f32 = data.iter().sum::<f32>() / data.len() as f32;
-    assert!(mean.abs() < 1.0, "Mean {} too far from 0", mean);
+    assert!(mean.abs() < 1.0, "Mean {mean} too far from 0");
 }
 
 #[tokio::test]
@@ -260,7 +260,7 @@ async fn test_tensor_display() {
 #[tokio::test]
 async fn test_tensor_debug() {
     let tensor = Tensor::zeros(vec![2]).await.unwrap();
-    let s = format!("{:?}", tensor);
+    let s = format!("{tensor:?}");
     assert!(s.contains("shape"));
     assert!(s.contains("len"));
 }

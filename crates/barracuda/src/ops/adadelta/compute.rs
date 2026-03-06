@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! GPU compute operations for AdaDelta Optimizer
+//! GPU compute operations for `AdaDelta` Optimizer
 //!
-//! This module contains the GPU execution for AdaDelta optimizer
+//! This module contains the GPU execution for `AdaDelta` optimizer
 //! with adaptive learning rate.
 
 use super::{AdaDelta, AdaDeltaParams};
@@ -10,11 +10,12 @@ use crate::error::Result;
 use crate::tensor::Tensor;
 
 impl AdaDelta {
-    /// Execute AdaDelta optimizer step (GPU single-pass)
-    ///
+    /// Execute `AdaDelta` optimizer step (GPU single-pass)
     /// **Deep Debt**: Efficient single-pass update with adaptive learning rate
-    ///
-    /// Returns: (updated_weights, updated_acc_grad, updated_acc_delta)
+    /// Returns: (`updated_weights`, `updated_acc_grad`, `updated_acc_delta`)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<(Tensor, Tensor, Tensor)> {
         let device = self.weights().device();
         let size = self.weights().shape().iter().product::<usize>();

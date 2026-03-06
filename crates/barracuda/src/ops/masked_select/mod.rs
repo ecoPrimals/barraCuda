@@ -28,6 +28,11 @@ pub struct MaskedSelect {
 
 impl MaskedSelect {
     /// Create a new masked select operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor, mask: Tensor) -> Result<Self> {
         if input.shape() != mask.shape() {
             return Err(crate::error::BarracudaError::ShapeMismatch {
@@ -75,6 +80,11 @@ impl MaskedSelect {
     }
 
     /// Execute the masked select operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         compute::execute_masked_select(self)
     }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! TensorSession — Automatic Operation Batching
+//! `TensorSession` — Automatic Operation Batching
 //!
 //! **Problem**: Individual tensor operations have ~250 μs overhead each.
 //! A chain of 100 operations = 25 ms of pure overhead.
@@ -47,8 +47,8 @@ mod types;
 pub use gpu_session::{GpuSession, GpuSessionBuilder};
 pub use tensor::SessionTensor;
 
-use crate::device::capabilities::DeviceCapabilities;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::DeviceCapabilities;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 use pipelines::SessionPipelines;
@@ -78,6 +78,7 @@ pub struct TensorSession {
 
 impl TensorSession {
     /// Create a new session — compiles all pipelines once.
+    #[must_use]
     pub fn new(device: &WgpuDevice) -> Self {
         let wg = device.optimal_workgroup_size();
         Self {
@@ -92,6 +93,7 @@ impl TensorSession {
     }
 
     /// Create a session with an explicit device `Arc`.
+    #[must_use]
     pub fn with_device(device: Arc<WgpuDevice>) -> Self {
         let wg = device.optimal_workgroup_size();
         let pls = SessionPipelines::build(&device.device, wg);
@@ -113,6 +115,7 @@ impl TensorSession {
     }
 
     /// Number of recorded operations.
+    #[must_use]
     pub fn num_ops(&self) -> usize {
         self.ops.len()
     }
@@ -120,11 +123,17 @@ impl TensorSession {
     // ── Input ingestion ───────────────────────────────────────────────────────
 
     /// Upload a flat slice to a 1-D session tensor.
+    /// # Errors
+    /// Returns [`Err`] if `data.len()` does not equal the product of the implied
+    /// shape dimensions (i.e. `[data.len()]`).
     pub fn tensor(&mut self, data: &[f32]) -> Result<SessionTensor> {
         self.tensor_with_shape(data, &[data.len()])
     }
 
     /// Upload data with an explicit shape (accepts slice to avoid cloning).
+    /// # Errors
+    /// Returns [`Err`] if `data.len()` does not equal the product of `shape`
+    /// dimensions.
     pub fn tensor_with_shape(&mut self, data: &[f32], shape: &[usize]) -> Result<SessionTensor> {
         let expected: usize = shape.iter().product();
         if data.len() != expected {
@@ -146,6 +155,9 @@ impl TensorSession {
     }
 
     /// Import an existing `Tensor` (reads to CPU, re-uploads — preserves interface).
+    /// # Errors
+    /// Returns [`Err`] if reading the tensor to CPU fails (e.g. device lost during
+    /// buffer readback), or if the tensor's data length does not match its shape.
     pub fn import(&mut self, tensor: &Tensor) -> Result<SessionTensor> {
         let data = tensor.to_vec()?;
         self.tensor_with_shape(&data, tensor.shape())
@@ -154,6 +166,8 @@ impl TensorSession {
     // ── Elementwise ops ───────────────────────────────────────────────────────
 
     /// `output = a + b`
+    /// # Errors
+    /// Returns [`Err`] if `a` and `b` have different shapes.
     pub fn add(&mut self, a: &SessionTensor, b: &SessionTensor) -> Result<SessionTensor> {
         self.check_same_shape(a, b)?;
         let out = self.alloc_output(&a.shape);
@@ -166,6 +180,8 @@ impl TensorSession {
     }
 
     /// `output = a * b`
+    /// # Errors
+    /// Returns [`Err`] if `a` and `b` have different shapes.
     pub fn mul(&mut self, a: &SessionTensor, b: &SessionTensor) -> Result<SessionTensor> {
         self.check_same_shape(a, b)?;
         let out = self.alloc_output(&a.shape);
@@ -178,6 +194,8 @@ impl TensorSession {
     }
 
     /// `output = a * b + c`
+    /// # Errors
+    /// Returns [`Err`] if `a`, `b`, and `c` do not all have the same shape.
     pub fn fma(
         &mut self,
         a: &SessionTensor,
@@ -197,6 +215,8 @@ impl TensorSession {
     }
 
     /// `output = a * scalar`
+    /// # Errors
+    /// Does not return [`Err`] in the current implementation.
     pub fn scale(&mut self, a: &SessionTensor, scalar: f32) -> Result<SessionTensor> {
         let out = self.alloc_output(&a.shape);
         self.ops.push(SessionOp::Scale {
@@ -210,6 +230,9 @@ impl TensorSession {
     // ── Linear algebra ────────────────────────────────────────────────────────
 
     /// `output[m×n] = a[m×k] × b[k×n]` — 4-tier device-aware matmul.
+    /// # Errors
+    /// Returns [`Err`] if `a` or `b` is not 2-D, or if `a`'s inner dimension
+    /// `k` does not match `b`'s first dimension.
     pub fn matmul(&mut self, a: &SessionTensor, b: &SessionTensor) -> Result<SessionTensor> {
         if a.shape.len() != 2 || b.shape.len() != 2 {
             return Err(BarracudaError::invalid_shape(
@@ -241,6 +264,8 @@ impl TensorSession {
     // ── Activations ───────────────────────────────────────────────────────────
 
     /// `output = max(0, input)`
+    /// # Errors
+    /// Does not return [`Err`] in the current implementation.
     pub fn relu(&mut self, a: &SessionTensor) -> Result<SessionTensor> {
         let out = self.alloc_output(&a.shape);
         self.ops.push(SessionOp::ReLU {
@@ -251,6 +276,8 @@ impl TensorSession {
     }
 
     /// `output = x × Φ(x)` (tanh-approximation GELU)
+    /// # Errors
+    /// Does not return [`Err`] in the current implementation.
     pub fn gelu(&mut self, a: &SessionTensor) -> Result<SessionTensor> {
         let out = self.alloc_output(&a.shape);
         self.ops.push(SessionOp::Gelu {
@@ -261,6 +288,8 @@ impl TensorSession {
     }
 
     /// Row-wise softmax: `output = exp(x) / Σexp(x)`
+    /// # Errors
+    /// Does not return [`Err`] in the current implementation.
     pub fn softmax(&mut self, a: &SessionTensor) -> Result<SessionTensor> {
         let out = self.alloc_output(&a.shape);
         self.ops.push(SessionOp::Softmax {
@@ -273,6 +302,9 @@ impl TensorSession {
     // ── Normalisation ─────────────────────────────────────────────────────────
 
     /// Layer normalisation over the last `feature_size` elements per row.
+    /// # Errors
+    /// Returns [`Err`] if the total number of elements in `a` is not divisible
+    /// by `feature_size`.
     pub fn layer_norm(&mut self, a: &SessionTensor, feature_size: usize) -> Result<SessionTensor> {
         let total: usize = a.shape.iter().product();
         if !total.is_multiple_of(feature_size) {
@@ -294,6 +326,9 @@ impl TensorSession {
     // ── Shape ops ─────────────────────────────────────────────────────────────
 
     /// Reshape — metadata-only, no GPU work.
+    /// # Errors
+    /// Returns [`Err`] if the product of `new_shape` dimensions does not equal
+    /// the product of `a`'s shape dimensions.
     pub fn reshape(&mut self, a: &SessionTensor, new_shape: Vec<usize>) -> Result<SessionTensor> {
         let old_len: usize = a.shape.iter().product();
         let new_len: usize = new_shape.iter().product();
@@ -311,6 +346,8 @@ impl TensorSession {
     // ── Attention ops ──────────────────────────────────────────────────────────
 
     /// Reshape `[B, S, H*D]` → `[B, H, S, D]` for multi-head attention.
+    /// # Errors
+    /// Returns [`Err`] if `a.len()` does not equal `batch_size × seq_len × n_heads × head_dim`.
     pub fn head_split(
         &mut self,
         a: &SessionTensor,
@@ -339,6 +376,8 @@ impl TensorSession {
     }
 
     /// Reshape `[B, H, S, D]` → `[B, S, H*D]` after multi-head attention.
+    /// # Errors
+    /// Returns [`Err`] if `a.len()` does not equal `batch_size × n_heads × seq_len × head_dim`.
     pub fn head_concat(
         &mut self,
         a: &SessionTensor,
@@ -367,9 +406,11 @@ impl TensorSession {
     }
 
     /// Scaled dot-product attention: `output = softmax(QK^T / √d) · V`
-    ///
     /// Q/K/V must be `[B, H, S, D]` (use `head_split` after projection).
     /// Encoded as 3 passes in a single encoder batch.
+    /// # Errors
+    /// Returns [`Err`] if any of `q`, `k`, or `v` has length not equal to
+    /// `batch_size × n_heads × seq_len × head_dim`.
     pub fn attention(
         &mut self,
         q: &SessionTensor,
@@ -406,9 +447,11 @@ impl TensorSession {
     // ── Execution ─────────────────────────────────────────────────────────────
 
     /// Execute all recorded operations in a single GPU command submission.
-    ///
     /// Pipelines are pre-compiled at construction — this call pays only
     /// bind-group creation and dispatch encoding (no SPIR-V translation).
+    /// # Errors
+    /// Returns [`Err`] if the GPU device is lost during command submission or
+    /// while polling for completion.
     pub fn run(&mut self) -> Result<()> {
         if self.ops.is_empty() {
             return Ok(());
@@ -460,13 +503,13 @@ impl TensorSession {
     }
 
     fn check_same_shape(&self, a: &SessionTensor, b: &SessionTensor) -> Result<()> {
-        if a.shape() != b.shape() {
+        if a.shape() == b.shape() {
+            Ok(())
+        } else {
             Err(BarracudaError::shape_mismatch(
                 a.shape().to_vec(),
                 b.shape().to_vec(),
             ))
-        } else {
-            Ok(())
         }
     }
 }

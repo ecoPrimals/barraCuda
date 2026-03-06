@@ -3,9 +3,9 @@
 //!
 //! Deep Debt Principles:
 //! - Zero hardcoding: Capability-based workgroup dispatch
-//! - Batchable: routes through TensorContext::record_operation()
+//! - Batchable: routes through `TensorContext::record_operation()`
 //! - Zero-copy output: buffer pool, no GPU→CPU→GPU round-trip
-//! - Pipeline cached: GLOBAL_CACHE eliminates recompilation overhead
+//! - Pipeline cached: `GLOBAL_CACHE` eliminates recompilation overhead
 //! - Params fixed (S14): Rust `Params` matches WGSL `{ size, alpha }`
 
 /// f64 is the canonical source — math is universal, precision is silicon.
@@ -27,6 +27,7 @@ use crate::tensor::Tensor;
 use bytemuck::{Pod, Zeroable};
 
 /// Returns the simple ELU WGSL shader (single-pass, no vectorization).
+#[must_use]
 pub fn wgsl_elu_simple() -> &'static str {
     &SHADER_ELU_SIMPLE_F32
 }
@@ -49,6 +50,7 @@ pub struct ELU {
 
 impl ELU {
     /// Creates ELU with default alpha (1.0).
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self {
             input,
@@ -57,6 +59,7 @@ impl ELU {
     }
 
     /// Creates ELU with custom alpha.
+    #[must_use]
     pub fn with_alpha(input: Tensor, alpha: f32) -> Self {
         Self { input, alpha }
     }
@@ -66,6 +69,8 @@ impl ELU {
     }
 
     /// Executes ELU activation and returns the output tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -147,11 +152,15 @@ impl ELU {
 
 impl Tensor {
     /// Compute ELU with default alpha (1.0).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn elu_wgsl(self) -> Result<Self> {
         ELU::new(self).execute()
     }
 
     /// Compute ELU with a custom alpha.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn elu_wgsl_with_alpha(self, alpha: f32) -> Result<Self> {
         ELU::with_alpha(self, alpha).execute()
     }

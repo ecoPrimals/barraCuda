@@ -6,14 +6,24 @@
 //!
 //! Configured for Vulkan 1.1 compute shaders with `Float64` capability.
 
-use super::SovereignError;
+use super::{SovereignError, ValidatedSpirv};
 use naga::back::spv;
 use naga::valid::ModuleInfo;
 
 /// Emit SPIR-V words from a validated naga module.
 ///
-/// The output is a `Vec<u32>` suitable for `wgpu::ShaderSource::SpirV`.
-pub fn emit_spirv(module: &naga::Module, info: &ModuleInfo) -> Result<Vec<u32>, SovereignError> {
+/// Returns [`ValidatedSpirv`] — a typed wrapper that encodes the safety
+/// contract (this SPIR-V came from naga-validated IR and is safe to pass
+/// to `create_shader_module_passthrough`).
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
+pub fn emit_spirv(
+    module: &naga::Module,
+    info: &ModuleInfo,
+) -> Result<ValidatedSpirv, SovereignError> {
     let options = spv::Options {
         lang_version: (1, 3),
         flags: spv::WriterFlags::ADJUST_COORDINATE_SPACE,
@@ -33,7 +43,7 @@ pub fn emit_spirv(module: &naga::Module, info: &ModuleInfo) -> Result<Vec<u32>, 
         .write(module, info, None, &None, &mut words)
         .map_err(|e| SovereignError::SpirvEmit(format!("SPIR-V write failed: {e}")))?;
 
-    Ok(words)
+    Ok(ValidatedSpirv::from_validated(words))
 }
 
 #[cfg(test)]
@@ -42,7 +52,7 @@ mod tests {
 
     #[test]
     fn test_emit_spirv_trivial() {
-        let wgsl = r#"
+        let wgsl = r"
 @group(0) @binding(0) var<storage, read> input: array<f32>;
 @group(0) @binding(1) var<storage, read_write> output: array<f32>;
 
@@ -51,21 +61,21 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let idx = gid.x;
     output[idx] = input[idx] * 2.0;
 }
-"#;
+";
         let module = naga::front::wgsl::parse_str(wgsl).expect("parse");
         let mut validator = naga::valid::Validator::new(
             naga::valid::ValidationFlags::all(),
             naga::valid::Capabilities::all(),
         );
         let info = validator.validate(&module).expect("validate");
-        let words = emit_spirv(&module, &info).expect("emit");
-        assert!(!words.is_empty());
-        assert_eq!(words[0], 0x07230203, "SPIR-V magic number");
+        let validated = emit_spirv(&module, &info).expect("emit");
+        assert!(!validated.words().is_empty());
+        assert_eq!(validated.words()[0], 0x07230203, "SPIR-V magic number");
     }
 
     #[test]
     fn test_emit_spirv_f64() {
-        let wgsl = r#"
+        let wgsl = r"
 enable f16;
 
 @group(0) @binding(0) var<storage, read> input: array<f64>;
@@ -78,7 +88,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let b = input[idx + 1u];
     output[idx] = a * b + a;
 }
-"#;
+";
         // f64 requires Float64 capability — our writer should handle it
         let module = naga::front::wgsl::parse_str(wgsl);
         if module.is_err() {
@@ -91,8 +101,8 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
             naga::valid::Capabilities::all(),
         );
         if let Ok(info) = validator.validate(&module) {
-            let words = emit_spirv(&module, &info).expect("emit f64 spirv");
-            assert_eq!(words[0], 0x07230203);
+            let validated = emit_spirv(&module, &info).expect("emit f64 spirv");
+            assert_eq!(validated.words()[0], 0x07230203);
         }
     }
 }

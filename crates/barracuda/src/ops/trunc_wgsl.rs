@@ -12,7 +12,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// f64 is the canonical source — f32 derived via downcast_f64_to_f32 when needed.
+/// f64 is the canonical source — f32 derived via `downcast_f64_to_f32` when needed.
 const SHADER_F64: &str = include_str!("../shaders/math/trunc_f64.wgsl");
 
 static SHADER_F32: std::sync::LazyLock<String> =
@@ -25,6 +25,7 @@ pub struct Trunc {
 
 impl Trunc {
     /// Create a new trunc operation
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -35,6 +36,9 @@ impl Trunc {
     }
 
     /// Execute the trunc operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -179,6 +183,9 @@ impl Trunc {
 
 impl Tensor {
     /// Compute trunc element-wise
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn trunc_wgsl(self) -> Result<Self> {
         Trunc::new(self).execute()
     }

@@ -4,7 +4,7 @@
 //! Provides benchmarking implementations for different operation categories.
 //!
 //! **Deep Debt Evolution (Feb 2026)**: Replaced mock `tokio::sleep` benchmarks
-//! with real BarraCuda CPU tensor operations for accurate measurement.
+//! with real `BarraCuda` CPU tensor operations for accurate measurement.
 
 use super::{BenchmarkConfig, BenchmarkResult, Framework};
 use crate::error::Result;
@@ -27,6 +27,11 @@ pub const MATMUL_SIZES: &[(usize, usize, usize)] = &[
 ];
 
 /// Benchmark matrix multiplication
+///
+/// # Errors
+///
+/// Returns [`Err`] if the `BarraCuda` or CUDA benchmark run fails (e.g. device
+/// creation, buffer allocation, or compute errors).
 pub async fn benchmark_matmul(
     config: &BenchmarkConfig,
     m: usize,
@@ -64,7 +69,7 @@ pub async fn benchmark_matmul(
     Ok((barracuda_result, cuda_result))
 }
 
-/// Real BarraCuda matmul benchmark using CPU tensor operations
+/// Real `BarraCuda` matmul benchmark using CPU tensor operations
 async fn benchmark_barracuda_matmul(
     config: &BenchmarkConfig,
     m: usize,
@@ -190,6 +195,10 @@ fn compute_benchmark_result(
 }
 
 /// Activation function benchmark
+///
+/// # Errors
+///
+/// Returns [`Err`] if the benchmark run fails (e.g. compute or allocation errors).
 pub async fn benchmark_activation(
     config: &BenchmarkConfig,
     operation: &str,

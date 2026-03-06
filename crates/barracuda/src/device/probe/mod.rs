@@ -26,7 +26,7 @@
 //! // caps.exp  == false → use software exp_f64() from math_f64.wgsl
 //! ```
 
-mod cache;
+pub(crate) mod cache;
 mod capabilities;
 mod probes;
 mod runner;
@@ -34,7 +34,9 @@ mod runner;
 use crate::device::WgpuDevice;
 
 pub(crate) use cache::{adapter_key, lock_cache};
-pub use cache::{cached_f64_builtins, cached_probe_result, seed_cache_from_heuristics};
+pub use cache::{
+    cached_basic_f64_for_key, cached_f64_builtins, cached_probe_result, seed_cache_from_heuristics,
+};
 pub use capabilities::F64BuiltinCapabilities;
 
 use cache::{get_cached_exp, get_cached_full, insert_exp_only, insert_full_caps};

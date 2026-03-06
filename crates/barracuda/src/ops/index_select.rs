@@ -20,6 +20,8 @@ pub struct IndexSelect {
 
 impl IndexSelect {
     /// Create a new index select operation
+    /// # Errors
+    /// Returns [`Err`] if any index is out of bounds for the input size.
     pub fn new(input: Tensor, indices: Vec<u32>) -> Result<Self> {
         let input_size = input.shape().iter().product::<usize>();
 
@@ -49,6 +51,9 @@ impl IndexSelect {
     }
 
     /// Execute the index select operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, buffer readback fails
+    /// (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -56,10 +61,10 @@ impl IndexSelect {
 
         // Output shape: replace first dimension with number of indices
         let mut output_shape = input_shape.to_vec();
-        if !output_shape.is_empty() {
-            output_shape[0] = num_indices;
-        } else {
+        if output_shape.is_empty() {
             output_shape.push(num_indices);
+        } else {
+            output_shape[0] = num_indices;
         }
 
         let output_size = output_shape.iter().product::<usize>();
@@ -247,10 +252,11 @@ impl IndexSelect {
 
 impl Tensor {
     /// Select elements by indices
-    ///
     /// # Arguments
-    ///
     /// * `indices` - Indices to select
+    /// # Errors
+    /// Returns [`Err`] if any index is out of bounds, buffer allocation fails, GPU dispatch fails,
+    /// or buffer readback fails (e.g. device lost).
     pub fn index_select(self, indices: Vec<u32>) -> Result<Self> {
         IndexSelect::new(self, indices)?.execute()
     }

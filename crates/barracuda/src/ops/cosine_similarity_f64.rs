@@ -12,10 +12,10 @@
 //! This dedicated shader is optimal for single-pair or small-batch queries
 //! where GEMM overhead dominates.
 
+use crate::device::WgpuDevice;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
-use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -56,19 +56,22 @@ pub struct CosineSimilarityF64 {
 }
 
 impl CosineSimilarityF64 {
-    /// Create a new CosineSimilarityF64 orchestrator
+    /// Create a new `CosineSimilarityF64` orchestrator
+    /// # Errors
+    /// Returns [`Err`] if device initialization fails.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Compute cosine similarity between two single vectors
-    ///
     /// # Arguments
     /// * `a` - First vector (f64)
     /// * `b` - Second vector (f64)
-    ///
     /// # Returns
     /// Cosine similarity in [-1, 1]
+    /// # Errors
+    /// Returns [`Err`] if vector dimensions differ, vectors are empty, buffer allocation fails,
+    /// GPU dispatch fails, buffer readback fails, or the device is lost.
     pub fn similarity(&self, a: &[f64], b: &[f64]) -> Result<f64> {
         if a.len() != b.len() {
             return Err(BarracudaError::InvalidInput {
@@ -88,15 +91,16 @@ impl CosineSimilarityF64 {
     }
 
     /// Compute all-pairs cosine similarity matrix
-    ///
     /// # Arguments
     /// * `vectors_a` - First set of vectors (each of dimension `dim`)
     /// * `vectors_b` - Second set of vectors (each of dimension `dim`)
     /// * `dim` - Vector dimension
-    ///
     /// # Returns
-    /// Similarity matrix of shape [len(vectors_a), len(vectors_b)]
-    /// Row-major: result[i * len(vectors_b) + j] = sim(vectors_a[i], vectors_b[j])
+    /// Similarity matrix of shape [`len(vectors_a)`, `len(vectors_b)`]
+    /// Row-major: result[i * `len(vectors_b)` + j] = `sim(vectors_a`[i], `vectors_b`[j])
+    /// # Errors
+    /// Returns [`Err`] if any vector has wrong dimension, buffer allocation fails, GPU dispatch fails,
+    /// buffer readback fails, or the device is lost.
     pub fn all_pairs(
         &self,
         vectors_a: &[Vec<f64>],
@@ -169,8 +173,8 @@ impl CosineSimilarityF64 {
         let ctx = get_device_context(&self.device);
         let adapter_info = self.device.adapter_info();
 
-        let a_flat: Vec<f64> = vectors_a.iter().flat_map(|v| v.iter().cloned()).collect();
-        let b_flat: Vec<f64> = vectors_b.iter().flat_map(|v| v.iter().cloned()).collect();
+        let a_flat: Vec<f64> = vectors_a.iter().flat_map(|v| v.iter().copied()).collect();
+        let b_flat: Vec<f64> = vectors_b.iter().flat_map(|v| v.iter().copied()).collect();
 
         let a_buf = self
             .device
@@ -254,8 +258,7 @@ mod tests {
 
         assert!(
             (sim - 1.0).abs() < 1e-9,
-            "Expected 1.0 for identical vectors, got {}",
-            sim
+            "Expected 1.0 for identical vectors, got {sim}"
         );
     }
 
@@ -272,8 +275,7 @@ mod tests {
         let sim = op.similarity(&a, &b).unwrap();
         assert!(
             sim.abs() < 1e-10,
-            "Expected 0 for orthogonal vectors, got {}",
-            sim
+            "Expected 0 for orthogonal vectors, got {sim}"
         );
     }
 
@@ -290,8 +292,7 @@ mod tests {
         let sim = op.similarity(&a, &b).unwrap();
         assert!(
             (sim + 1.0).abs() < 1e-10,
-            "Expected -1.0 for opposite vectors, got {}",
-            sim
+            "Expected -1.0 for opposite vectors, got {sim}"
         );
     }
 
@@ -333,11 +334,7 @@ mod tests {
         let tol = rel_tol * cpu_sim.abs().max(1.0) + abs_tol;
         assert!(
             diff < tol,
-            "GPU: {}, CPU: {}, diff: {}, tol: {}",
-            gpu_sim,
-            cpu_sim,
-            diff,
-            tol
+            "GPU: {gpu_sim}, CPU: {cpu_sim}, diff: {diff}, tol: {tol}"
         );
     }
 }

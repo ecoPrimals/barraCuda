@@ -19,6 +19,7 @@ pub struct LogsumexpWgsl {
 
 impl LogsumexpWgsl {
     /// Create a logsumexp operation.
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -28,6 +29,9 @@ impl LogsumexpWgsl {
     }
 
     /// Execute log-sum-exp on GPU. Returns a scalar tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -157,6 +161,9 @@ impl LogsumexpWgsl {
 
 impl Tensor {
     /// Compute log(sum(exp(x))) numerically stably.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn logsumexp_wgsl(self) -> Result<Self> {
         LogsumexpWgsl::new(self).execute()
     }

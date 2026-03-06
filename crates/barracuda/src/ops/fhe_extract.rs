@@ -72,18 +72,18 @@ pub struct FheExtract {
 
 impl FheExtract {
     /// Create a new coefficient extraction operation
-    ///
-    /// **Parameters**:
+    ///   **Parameters**:
     /// - `input`: Ciphertext polynomial (2*degree u32 values, u64 emulated)
     /// - `degree`: Polynomial degree (power of 2)
     /// - `index`: Coefficient index to extract (0 <= index < degree)
-    ///
-    /// **Returns**: FheExtract operation ready to execute
-    ///
-    /// **Errors**:
+    ///   **Returns**: `FheExtract` operation ready to execute
+    ///   **Errors**:
     /// - Invalid degree (not power of 2)
     /// - Index out of bounds (>= degree)
     /// - Input tensor size mismatch
+    /// # Errors
+    /// Returns [`Err`] if degree is not a power of 2, index >= degree, or input
+    /// size does not match degree.
     pub fn new(input: Tensor, degree: u32, index: u32) -> Result<Self> {
         // ✅ VALIDATION: Degree must be power of 2
         if !degree.is_power_of_two() || degree < 4 {
@@ -197,10 +197,11 @@ impl FheExtract {
     }
 
     /// Execute coefficient extraction on GPU
-    ///
     /// **Returns**: Tensor with all coefficients zero except at target index
-    ///
     /// **Performance**: O(n) GPU parallel execution
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 

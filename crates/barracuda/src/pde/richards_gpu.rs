@@ -8,15 +8,15 @@
 //! 3. `thomas_solve` — Thomas algorithm for tridiagonal solve (sequential)
 //!
 //! Convergence is checked on CPU after each Picard iteration by reading
-//! back h_new and comparing to h. When converged, h ← h_new and the
+//! back `h_new` and comparing to h. When converged, h ← `h_new` and the
 //! next time step begins.
 //!
 //! Provenance: airSpring V045 → toadStool absorption
 
 use super::richards::{RichardsBc, RichardsConfig, RichardsResult};
+use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -71,6 +71,7 @@ pub struct RichardsGpu {
 
 impl RichardsGpu {
     /// Create a GPU-accelerated Richards PDE solver.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self { device }
     }
@@ -78,6 +79,11 @@ impl RichardsGpu {
     /// Solve the Richards equation for the given configuration and initial conditions.
     ///
     /// Returns the final pressure head `h`, volumetric water content `theta`, and iteration counts.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if config validation fails, h0 length mismatch, or if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn solve(
         &self,
         config: &RichardsConfig,
@@ -200,7 +206,7 @@ impl RichardsGpu {
                     .storage_rw(10, &d_buf)
                     .storage_rw(11, &h_new_buf)
                     .dispatch(wg, 1, 1)
-                    .submit();
+                    .submit()?;
 
                 ComputeDispatch::new(self.device.as_ref(), "richards_tridiag")
                     .shader(SHADER, "assemble_tridiag")
@@ -218,7 +224,7 @@ impl RichardsGpu {
                     .storage_rw(10, &d_buf)
                     .storage_rw(11, &h_new_buf)
                     .dispatch(wg, 1, 1)
-                    .submit();
+                    .submit()?;
 
                 ComputeDispatch::new(self.device.as_ref(), "richards_thomas")
                     .shader(SHADER, "thomas_solve")
@@ -236,7 +242,7 @@ impl RichardsGpu {
                     .storage_rw(10, &d_buf)
                     .storage_rw(11, &h_new_buf)
                     .dispatch(1, 1, 1)
-                    .submit();
+                    .submit()?;
 
                 let h_current = self.device.read_f64_buffer(&h_buf, n)?;
                 let h_updated = self.device.read_f64_buffer(&h_new_buf, n)?;

@@ -25,6 +25,9 @@ pub struct RoiPool {
 
 impl RoiPool {
     /// Create an ROI pool operation with the given features, ROIs, and output dimensions.
+    /// # Errors
+    /// Returns [`Err`] if features is not 4D, rois is not [N, 4], or
+    /// `spatial_scale` is non-positive.
     pub fn new(
         features: Tensor,
         rois: Tensor,
@@ -76,6 +79,9 @@ impl RoiPool {
     }
 
     /// Execute ROI pooling and return the pooled feature maps.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.features.device();
         let features_shape = self.features.shape();

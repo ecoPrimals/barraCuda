@@ -30,6 +30,9 @@ pub struct FhePolyMul {
 
 impl FhePolyMul {
     /// Create a new FHE polynomial multiplication operation
+    /// # Errors
+    /// Returns [`Err`] if polynomial lengths do not match `degree*2`, tensors are on different
+    /// devices, or modulus is zero.
     pub fn new(poly_a: Tensor, poly_b: Tensor, degree: u32, modulus: u64) -> Result<Self> {
         let expected_size = (degree as usize) * 2;
         if poly_a.len() != expected_size {
@@ -152,6 +155,11 @@ impl FhePolyMul {
     }
 
     /// Execute polynomial multiplication on GPU
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.poly_a.device();
 
@@ -242,6 +250,10 @@ impl FhePolyMul {
 }
 
 /// Helper: Create FHE polynomial tensor from u64 coefficients
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation or data upload fails (e.g. device lost).
 pub async fn create_fhe_poly_tensor(
     poly: &[u64],
     device: Arc<crate::device::WgpuDevice>,

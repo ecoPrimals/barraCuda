@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! PitchShift - Pitch shifting without tempo change
+//! `PitchShift` - Pitch shifting without tempo change
 //!
 //! Changes pitch by resampling in frequency domain.
 //! Combines time stretching with resampling.
@@ -19,7 +19,7 @@ const SHADER_F64: &str = include_str!("../shaders/audio/pitch_shift_f64.wgsl");
 static SHADER_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
 
-/// PitchShift operation
+/// `PitchShift` operation
 pub struct PitchShift {
     signal: Tensor,
     n_steps: f32, // Semitones to shift (positive = up, negative = down)
@@ -28,6 +28,11 @@ pub struct PitchShift {
 
 impl PitchShift {
     /// Create a new pitch shift operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(signal: Tensor, n_steps: f32, bins_per_octave: f32) -> Result<Self> {
         if bins_per_octave <= 0.0 {
             return Err(BarracudaError::InvalidInput {
@@ -48,6 +53,11 @@ impl PitchShift {
     }
 
     /// Execute the pitch shift operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.signal.device();
         let input_length: usize = self.signal.shape().iter().product();
@@ -91,7 +101,7 @@ impl PitchShift {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d(output_length as u32)
-            .submit();
+            .submit()?;
 
         // Output shape: [output_length]
         let output_shape = vec![output_length];

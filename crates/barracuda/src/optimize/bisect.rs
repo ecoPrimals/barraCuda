@@ -38,6 +38,11 @@ use crate::error::{BarracudaError, Result};
 ///
 /// - Numerical Recipes, 3rd Edition, Section 9.1
 /// - scipy.optimize.bisect
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn bisect<F>(f: F, mut a: f64, mut b: f64, tol: f64, max_iter: usize) -> Result<f64>
 where
     F: Fn(f64) -> f64,
@@ -55,7 +60,7 @@ where
     }
 
     for iter in 0..max_iter {
-        let c = (a + b) / 2.0;
+        let c = f64::midpoint(a, b);
         let fc = f(c);
 
         // Check convergence
@@ -84,7 +89,7 @@ where
         }
     }
 
-    Ok((a + b) / 2.0)
+    Ok(f64::midpoint(a, b))
 }
 
 #[cfg(test)]

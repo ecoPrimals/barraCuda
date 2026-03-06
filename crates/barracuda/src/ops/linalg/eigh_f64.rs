@@ -181,6 +181,7 @@ fn eigh_2x2(a: &[f64]) -> EighDecompositionF64 {
 ///
 /// Returns (diagonal, off-diagonal, Q) where T has `diag[i]` on diagonal
 /// and `off_diag[i]` on the super/sub-diagonal (length n-1).
+#[must_use]
 pub fn householder_tridiag(a: &[f64], n: usize) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
     let mut work = a.to_vec();
 

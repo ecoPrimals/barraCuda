@@ -11,7 +11,7 @@
 
 use barracuda::device::WgpuDevice;
 use barracuda::error::BarracudaError;
-use barracuda::ops::fhe_intt::{compute_inverse_root, FheIntt};
+use barracuda::ops::fhe_intt::{FheIntt, compute_inverse_root};
 use barracuda::ops::fhe_ntt::FheNtt;
 use barracuda::tensor::Tensor;
 use std::sync::Arc;

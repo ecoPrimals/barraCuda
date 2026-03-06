@@ -25,8 +25,8 @@
 //! └─────────────────────────────────────────────────────────────────┘
 //! ```
 
-use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::WgpuDevice;
+use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::error::Result;
 use std::sync::Arc;
 use std::time::Instant;
@@ -48,12 +48,18 @@ pub enum WarmupOp {
     Reduce,
     /// Softmax
     Softmax,
-    /// ReLU activation
+    /// `ReLU` activation
     ReLU,
     /// Generic binary op
     BinaryOp,
     /// Generic unary op
     UnaryOp,
+    /// Fused mean+variance (Welford, f64)
+    MeanVarianceF64,
+    /// Fused Pearson correlation (5-accumulator, f64)
+    CorrelationF64,
+    /// Sum reduction (f64)
+    SumReduceF64,
 }
 
 impl WarmupOp {
@@ -61,7 +67,7 @@ impl WarmupOp {
     fn shader_source(&self, workgroup_size: u32) -> String {
         match self {
             WarmupOp::Add => format!(
-                r#"
+                r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read> b: array<f32>;
 @group(0) @binding(2) var<storage, read_write> out: array<f32>;
@@ -72,11 +78,11 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     if (idx >= arrayLength(&out)) {{ return; }}
     out[idx] = a[idx] + b[idx];
 }}
-"#
+"
             ),
 
             WarmupOp::Mul => format!(
-                r#"
+                r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read> b: array<f32>;
 @group(0) @binding(2) var<storage, read_write> out: array<f32>;
@@ -87,11 +93,11 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     if (idx >= arrayLength(&out)) {{ return; }}
     out[idx] = a[idx] * b[idx];
 }}
-"#
+"
             ),
 
             WarmupOp::Fma => format!(
-                r#"
+                r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read> b: array<f32>;
 @group(0) @binding(2) var<storage, read> c: array<f32>;
@@ -103,11 +109,11 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     if (idx >= arrayLength(&out)) {{ return; }}
     out[idx] = fma(a[idx], b[idx], c[idx]);
 }}
-"#
+"
             ),
 
             WarmupOp::Scale => format!(
-                r#"
+                r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read_write> out: array<f32>;
 @group(0) @binding(2) var<uniform> scale: f32;
@@ -118,11 +124,11 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     if (idx >= arrayLength(&out)) {{ return; }}
     out[idx] = a[idx] * scale;
 }}
-"#
+"
             ),
 
             WarmupOp::ReLU => format!(
-                r#"
+                r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read_write> out: array<f32>;
 
@@ -132,12 +138,12 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     if (idx >= arrayLength(&out)) {{ return; }}
     out[idx] = max(a[idx], 0.0);
 }}
-"#
+"
             ),
 
             // For complex ops, use placeholder shaders that exercise the pipeline
             WarmupOp::Matmul | WarmupOp::Reduce | WarmupOp::Softmax => format!(
-                r#"
+                r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read> b: array<f32>;
 @group(0) @binding(2) var<storage, read_write> out: array<f32>;
@@ -149,11 +155,11 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     if (idx >= arrayLength(&out)) {{ return; }}
     out[idx] = a[idx] + b[idx];
 }}
-"#
+"
             ),
 
             WarmupOp::BinaryOp => format!(
-                r#"
+                r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read> b: array<f32>;
 @group(0) @binding(2) var<storage, read_write> out: array<f32>;
@@ -164,11 +170,11 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     if (idx >= arrayLength(&out)) {{ return; }}
     out[idx] = a[idx] + b[idx];
 }}
-"#
+"
             ),
 
             WarmupOp::UnaryOp => format!(
-                r#"
+                r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read_write> out: array<f32>;
 
@@ -178,8 +184,20 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     if (idx >= arrayLength(&out)) {{ return; }}
     out[idx] = a[idx];
 }}
-"#
+"
             ),
+
+            WarmupOp::MeanVarianceF64 => {
+                include_str!("../shaders/reduce/mean_variance_f64.wgsl").to_string()
+            }
+
+            WarmupOp::CorrelationF64 => {
+                include_str!("../shaders/stats/correlation_full_f64.wgsl").to_string()
+            }
+
+            WarmupOp::SumReduceF64 => {
+                include_str!("../shaders/reduce/sum_reduce_f64.wgsl").to_string()
+            }
         }
     }
 
@@ -203,10 +221,19 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
             WarmupOp::Matmul | WarmupOp::Reduce | WarmupOp::Softmax => {
                 BindGroupLayoutSignature::matmul()
             }
+            WarmupOp::MeanVarianceF64 | WarmupOp::SumReduceF64 => {
+                BindGroupLayoutSignature::reduction()
+            }
+            WarmupOp::CorrelationF64 => BindGroupLayoutSignature {
+                read_only_buffers: 2,
+                read_write_buffers: 1,
+                uniform_buffers: 1,
+            },
         }
     }
 
     /// All standard operations for full warmup
+    #[must_use]
     pub fn all() -> &'static [WarmupOp] {
         &[
             WarmupOp::Add,
@@ -220,6 +247,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     }
 
     /// ML inference operations
+    #[must_use]
     pub fn ml_inference() -> &'static [WarmupOp] {
         &[
             WarmupOp::Add,
@@ -230,7 +258,8 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
         ]
     }
 
-    /// Scientific computing operations
+    /// Scientific computing operations (includes f64 fused reductions)
+    #[must_use]
     pub fn scientific() -> &'static [WarmupOp] {
         &[
             WarmupOp::Add,
@@ -238,6 +267,9 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
             WarmupOp::Fma,
             WarmupOp::Scale,
             WarmupOp::Reduce,
+            WarmupOp::MeanVarianceF64,
+            WarmupOp::CorrelationF64,
+            WarmupOp::SumReduceF64,
         ]
     }
 }
@@ -265,6 +297,7 @@ impl Default for WarmupConfig {
 
 impl WarmupConfig {
     /// Minimal warmup (just add/mul with default workgroup)
+    #[must_use]
     pub fn minimal() -> Self {
         Self {
             ops: vec![WarmupOp::Add, WarmupOp::Mul],
@@ -274,6 +307,7 @@ impl WarmupConfig {
     }
 
     /// Full warmup (all ops, all workgroup sizes)
+    #[must_use]
     pub fn full() -> Self {
         Self {
             ops: WarmupOp::all().to_vec(),
@@ -283,6 +317,7 @@ impl WarmupConfig {
     }
 
     /// ML inference workload
+    #[must_use]
     pub fn ml() -> Self {
         Self {
             ops: WarmupOp::ml_inference().to_vec(),
@@ -292,6 +327,7 @@ impl WarmupConfig {
     }
 
     /// Scientific computing workload
+    #[must_use]
     pub fn scientific() -> Self {
         Self {
             ops: WarmupOp::scientific().to_vec(),
@@ -318,6 +354,11 @@ pub struct WarmupResult {
 ///
 /// Call this before starting a compute-intensive workload.
 /// Compiles all specified shaders so they're ready when needed.
+///
+/// # Errors
+///
+/// Returns [`Err`] if shader compilation or pipeline creation fails (e.g.
+/// device lost, invalid WGSL, or out of memory).
 pub fn warmup_device(device: &WgpuDevice, config: &WarmupConfig) -> Result<WarmupResult> {
     let start = Instant::now();
     let adapter_info = device.adapter_info();
@@ -373,6 +414,11 @@ pub fn warmup_device(device: &WgpuDevice, config: &WarmupConfig) -> Result<Warmu
 /// Warm up all devices in a pool
 ///
 /// Call this at application startup or before a batch job.
+///
+/// # Errors
+///
+/// Returns [`Err`] if shader compilation or pipeline creation fails for any
+/// device (e.g. device lost, invalid WGSL, or out of memory).
 pub fn warmup_pool(
     devices: &[Arc<WgpuDevice>],
     config: &WarmupConfig,
@@ -436,6 +482,7 @@ pub enum WarmupWorkloadHint {
 
 impl WarmupWorkloadHint {
     /// Convert to warmup config
+    #[must_use]
     pub fn to_config(&self) -> WarmupConfig {
         match self {
             WarmupWorkloadHint::General => WarmupConfig::default(),

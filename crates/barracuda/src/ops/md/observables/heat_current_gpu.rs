@@ -2,9 +2,9 @@
 
 //! GPU heat current for Green-Kubo thermal conductivity (f64).
 //!
-//! Computes the microscopic heat current J_q per particle from positions,
+//! Computes the microscopic heat current `J_q` per particle from positions,
 //! velocities, and Yukawa interaction parameters. Output is per-particle
-//! [J_x, J_y, J_z] f64 vectors; host sums to get total J_q(t).
+//! [`J_x`, `J_y`, `J_z`] f64 vectors; host sums to get total `J_q(t)`.
 //!
 //! Absorbed from hotSpring CPU `compute_heat_current()` → GPU shader.
 
@@ -35,6 +35,11 @@ pub struct HeatCurrentGpu {
 
 impl HeatCurrentGpu {
     /// Creates a new heat current GPU kernel for the given WGPU device.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         let module = device.compile_shader_f64(SHADER, Some("heat_current_f64"));
 
@@ -78,9 +83,13 @@ impl HeatCurrentGpu {
 
     /// Dispatch heat current computation.
     ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation or GPU dispatch fails (e.g. device lost).
+    ///
     /// * `pos_buf` — `[N × 3]` f64 positions
     /// * `vel_buf` — `[N × 3]` f64 velocities
-    /// * `jq_buf`  — `[N × 3]` f64 output (per-particle J_q)
+    /// * `jq_buf`  — `[N × 3]` f64 output (per-particle `J_q`)
     pub fn dispatch(
         &self,
         pos_buf: &wgpu::Buffer,

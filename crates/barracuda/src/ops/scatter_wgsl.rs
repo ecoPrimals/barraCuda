@@ -8,8 +8,8 @@
 //! - Complete implementation: Production-ready, no mocks
 //! - Hardware-agnostic: Pure WGSL for universal compute
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::DeviceCapabilities;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
@@ -23,6 +23,7 @@ pub struct Scatter {
 
 impl Scatter {
     /// Create a new scatter operation
+    #[must_use]
     pub fn new(input: Tensor, dim: usize, indices: Vec<u32>, values: Tensor) -> Self {
         Self {
             input,
@@ -45,6 +46,9 @@ impl Scatter {
     }
 
     /// Execute the scatter operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -108,7 +112,7 @@ impl Scatter {
             .storage_rw(3, &output_buffer)
             .uniform(4, &params_buffer)
             .dispatch(workgroups_copy.max(1), 1, 1)
-            .submit();
+            .submit()?;
 
         // Second pass: scatter values
         ComputeDispatch::new(device, "scatter")
@@ -119,7 +123,7 @@ impl Scatter {
             .storage_rw(3, &output_buffer)
             .uniform(4, &params_buffer)
             .dispatch(workgroups_scatter.max(1), 1, 1)
-            .submit();
+            .submit()?;
 
         // Read back results
         let output_data = crate::utils::read_buffer(device, &output_buffer, size)?;
@@ -130,12 +134,13 @@ impl Scatter {
 
 impl Tensor {
     /// Scatter values to specific indices along a dimension
-    ///
     /// # Arguments
-    ///
     /// * `dim` - Dimension to scatter to
     /// * `indices` - Indices to scatter to
     /// * `values` - Values to scatter
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn scatter_wgsl(self, dim: usize, indices: Vec<u32>, values: Tensor) -> Result<Self> {
         Scatter::new(self, dim, indices, values).execute()
     }

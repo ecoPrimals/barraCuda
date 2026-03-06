@@ -3,7 +3,7 @@
 //! Wright-Fisher drift + selection — one generation step on GPU.
 //!
 //! Each thread handles one locus across all populations:
-//!   1. **Selection**: p' = p × w_A / (p × w_A + (1−p))
+//!   1. **Selection**: p' = p × `w_A` / (p × `w_A` + (1−p))
 //!   2. **Drift**: Binomial(2N, p') via PRNG
 //!
 //! Uses inline xoshiro128** PRNG seeded per-thread from a persistent
@@ -17,10 +17,10 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 
-/// f64 canonical — f32 derived via downcast_f64_to_f32 when needed.
+/// f64 canonical — f32 derived via `downcast_f64_to_f32` when needed.
 pub const WGSL_WRIGHT_FISHER_F64: &str =
     include_str!("../../shaders/bio/wright_fisher_step_f64.wgsl");
 
@@ -42,6 +42,7 @@ pub struct WrightFisherGpu {
 
 impl WrightFisherGpu {
     /// Creates a new Wright-Fisher drift+selection GPU kernel for the given device.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 

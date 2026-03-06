@@ -154,8 +154,8 @@ pub fn fit_exponential(x: &[f64], y: &[f64]) -> Option<FitResult> {
     let valid: Vec<(f64, f64)> = x
         .iter()
         .zip(y)
-        .filter(|(_, &yi)| yi > 0.0)
-        .map(|(&xi, &yi)| (xi, yi))
+        .filter(|&(_, yi)| *yi > 0.0)
+        .map(|(xi, yi)| (*xi, *yi))
         .collect();
     if valid.len() < 2 {
         return None;
@@ -190,8 +190,8 @@ pub fn fit_logarithmic(x: &[f64], y: &[f64]) -> Option<FitResult> {
     let valid: Vec<(f64, f64)> = x
         .iter()
         .zip(y)
-        .filter(|(&xi, _)| xi > 0.001)
-        .map(|(&xi, &yi)| (xi, yi))
+        .filter(|&(xi, _)| *xi > 0.001)
+        .map(|(xi, yi)| (*xi, *yi))
         .collect();
     if valid.len() < 2 {
         return None;

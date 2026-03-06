@@ -22,7 +22,7 @@
 //!
 //! # References
 //!
-//! - McKay, M.D., Beckman, R.J., Conover, W.J. (1979). "A comparison of three
+//! - `McKay`, M.D., Beckman, R.J., Conover, W.J. (1979). "A comparison of three
 //!   methods for selecting values of input variables in the analysis of output
 //!   from a computer code." Technometrics, 21(2), 239-245.
 //! - hotSpring: `control/surrogate/scripts/run_benchmark_functions.py:108-120`
@@ -115,6 +115,10 @@ impl Xoshiro256 {
 /// }
 /// # Ok::<(), barracuda::error::BarracudaError>(())
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if `n_samples` is 0, bounds is empty, or any bound has lower >= upper.
 pub fn latin_hypercube(
     n_samples: usize,
     bounds: &[(f64, f64)],
@@ -188,6 +192,7 @@ pub fn latin_hypercube(
 /// # Returns
 ///
 /// `Vec<Vec<f64>>` of shape `[n_samples][n_dims]`
+#[must_use]
 pub fn random_uniform(n_samples: usize, bounds: &[(f64, f64)], seed: u64) -> Vec<Vec<f64>> {
     let n_dims = bounds.len();
     let mut rng = Xoshiro256::new(seed);
@@ -209,6 +214,7 @@ pub fn random_uniform(n_samples: usize, bounds: &[(f64, f64)], seed: u64) -> Vec
 /// Higher values indicate better space-filling properties.
 /// LHS should consistently produce higher maximin distances than random sampling
 /// for the same number of points.
+#[must_use]
 pub fn maximin_distance(points: &[Vec<f64>]) -> f64 {
     let n = points.len();
     if n < 2 {
@@ -263,8 +269,7 @@ mod tests {
             let interval = (point[0] as usize).min(9);
             assert!(
                 !intervals_used[interval],
-                "Interval {} used more than once",
-                interval
+                "Interval {interval} used more than once"
             );
             intervals_used[interval] = true;
         }
@@ -293,11 +298,7 @@ mod tests {
                 let (lo, hi) = bounds[d];
                 assert!(
                     val >= lo && val <= hi,
-                    "Dim {} value {} outside [{}, {}]",
-                    d,
-                    val,
-                    lo,
-                    hi
+                    "Dim {d} value {val} outside [{lo}, {hi}]"
                 );
             }
         }
@@ -359,9 +360,7 @@ mod tests {
         // (Not guaranteed per-trial, but statistically very likely over 10 trials)
         assert!(
             lhs_avg > rng_avg * 0.9, // Allow some slack but LHS should be at least competitive
-            "LHS avg maximin ({:.4}) should be >= random avg maximin ({:.4})",
-            lhs_avg,
-            rng_avg
+            "LHS avg maximin ({lhs_avg:.4}) should be >= random avg maximin ({rng_avg:.4})"
         );
     }
 
@@ -440,7 +439,7 @@ mod tests {
         for point in &samples {
             for (d, &val) in point.iter().enumerate() {
                 let (lo, hi) = bounds[d];
-                assert!(val >= lo && val <= hi, "Dim {} out of bounds", d);
+                assert!(val >= lo && val <= hi, "Dim {d} out of bounds");
             }
         }
     }

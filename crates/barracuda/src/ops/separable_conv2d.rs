@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! SeparableConv2D - Depthwise Separable Convolution 2D
+//! `SeparableConv2D` - Depthwise Separable Convolution 2D
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation
@@ -9,9 +9,9 @@
 //! - ✅ Modern idiomatic Rust (no traits, direct impl)
 //!
 //! Efficient convolution: depthwise followed by pointwise (1x1)
-//! Used in MobileNet, Xception, EfficientNet
+//! Used in `MobileNet`, Xception, `EfficientNet`
 //!
-//! Reduces parameters from C_in*C_out*K*K to C_in*K*K + C_in*C_out
+//! Reduces parameters from `C_in`*`C_out`*K*K to `C_in`*K*K + `C_in`*`C_out`
 
 use crate::device::DeviceCapabilities;
 use crate::error::{BarracudaError, Result};
@@ -55,6 +55,8 @@ pub enum SeparableConvMode {
 
 impl SeparableConv2D {
     /// Create a new separable convolution operation.
+    /// # Errors
+    /// Returns [`Err`] if input is not 4D, or `kernel_size` or stride is zero.
     pub fn new(
         input: Tensor,
         weight: Tensor,
@@ -103,6 +105,8 @@ impl SeparableConv2D {
     }
 
     /// Execute the separable convolution and return the output tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -293,7 +297,6 @@ impl SeparableConv2D {
 
 impl Tensor {
     /// Apply separable convolution 2D
-    ///
     /// # Arguments
     /// - `weight`: Weight tensor
     /// - `bias`: Bias tensor
@@ -301,6 +304,8 @@ impl Tensor {
     /// - `stride`: Stride
     /// - `padding`: Padding
     /// - `mode`: Depthwise or Pointwise
+    /// # Errors
+    /// Returns [`Err`] if validation fails or buffer allocation/GPU dispatch/readback fails (e.g. device lost).
     pub fn separable_conv2d(
         self,
         weight: Tensor,

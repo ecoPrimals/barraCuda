@@ -66,19 +66,19 @@
 //! - Better codegen (GPU compilers optimize vec2 paths)
 //! - Precedent: GLSL/HLSL use vec2 for complex
 //!
-//! ### Future: ComplexF64
+//! ### Future: `ComplexF64`
 //! - For high-precision physics (energy conservation)
-//! - Use u64_emu pattern (`vec4<u32>`)
+//! - Use `u64_emu` pattern (`vec4<u32>`)
 //! - Follows existing FHE precision model
 //!
 //! ## Mathematical Background
 //!
 //! Complex numbers: z = a + bi where i² = -1
 //!
-//! **Euler's Formula**: exp(iθ) = cos(θ) + i·sin(θ)  
-//! **De Moivre's Theorem**: (cos(θ) + i·sin(θ))^n = cos(nθ) + i·sin(nθ)  
-//! **Conjugate**: conj(z) = a - bi  
-//! **Magnitude**: |z| = sqrt(a² + b²)  
+//! **Euler's Formula**: exp(iθ) = cos(θ) + i·sin(θ)\
+//! **De Moivre's Theorem**: (cos(θ) + i·sin(θ))^n = cos(nθ) + i·sin(nθ)\
+//! **Conjugate**: conj(z) = a - bi\
+//! **Magnitude**: |z| = sqrt(a² + b²)\
 //! **Polar Form**: z = r·exp(iθ) where r = |z|, θ = arg(z)
 
 pub mod abs;

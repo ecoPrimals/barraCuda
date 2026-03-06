@@ -2,8 +2,8 @@
 
 //! Backbone update, torsion angles, FAPE loss, structure violation, pLDDT, confidence.
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -69,6 +69,11 @@ struct ConfidenceParams {
 /// SE(3) backbone frame update: compose delta rotations/translations onto current frames.
 ///
 /// Quaternion-based rigid-body update for structure module iteration.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, the device is lost, or buffer
+/// readback fails.
 pub fn backbone_update(
     device: &Arc<WgpuDevice>,
     quaternions: &[f64],
@@ -100,7 +105,7 @@ pub fn backbone_update(
         .storage_rw(5, &ot_buf)
         .uniform(6, &params_buf)
         .dispatch((n as usize).div_ceil(WG_64 as usize) as u32, 1, 1)
-        .submit();
+        .submit()?;
 
     let out_q = device.read_f64_buffer(&oq_buf, quat_len)?;
     let out_t = device.read_f64_buffer(&ot_buf, trans_len)?;
@@ -111,6 +116,11 @@ pub fn backbone_update(
 ///
 /// For each group of 4 consecutive atoms, computes the dihedral angle using
 /// the atan2 formula on cross-product vectors.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, the device is lost, or buffer
+/// readback fails.
 pub fn torsion_angles(
     device: &Arc<WgpuDevice>,
     positions: &[f64],
@@ -130,7 +140,7 @@ pub fn torsion_angles(
         .storage_rw(1, &out_buf)
         .uniform(2, &params_buf)
         .dispatch(out_len.div_ceil(WG_64 as usize) as u32, 1, 1)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, out_len)
 }
@@ -138,6 +148,11 @@ pub fn torsion_angles(
 /// Frame Aligned Point Error loss: per-residue FAPE.
 ///
 /// Compares predicted vs true atom positions in local frames.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, the device is lost, or buffer
+/// readback fails.
 pub fn fape_loss(
     device: &Arc<WgpuDevice>,
     pred_pos: &[f64],
@@ -172,12 +187,17 @@ pub fn fape_loss(
         .storage_rw(4, &out_buf)
         .uniform(5, &params_buf)
         .dispatch(out_len.div_ceil(WG_64 as usize) as u32, 1, 1)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, out_len)
 }
 
 /// Predicted LDDT confidence score per residue.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, the device is lost, or buffer
+/// readback fails.
 pub fn plddt(
     device: &Arc<WgpuDevice>,
     pred_pos: &[f64],
@@ -204,14 +224,19 @@ pub fn plddt(
         .storage_rw(2, &out_buf)
         .uniform(3, &params_buf)
         .dispatch(out_len.div_ceil(WG_64 as usize) as u32, 1, 1)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, out_len)
 }
 
 /// Steric clash + bond geometry violations.
 ///
-/// Returns (out_clash, out_bond).
+/// Returns (`out_clash`, `out_bond`).
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, the device is lost, or buffer
+/// readback fails.
 pub fn structure_violation(
     device: &Arc<WgpuDevice>,
     positions: &[f64],
@@ -245,7 +270,7 @@ pub fn structure_violation(
         .storage_rw(3, &bond_out_buf)
         .uniform(4, &params_buf)
         .dispatch(total_threads.div_ceil(WG_64 as usize) as u32, 1, 1)
-        .submit();
+        .submit()?;
 
     let out_clash = device.read_f64_buffer(&clash_buf, clash_len)?;
     let out_bond = device.read_f64_buffer(&bond_out_buf, bond_len)?;
@@ -253,6 +278,11 @@ pub fn structure_violation(
 }
 
 /// Per-residue confidence from logits: `conf[i] = sum(softmax(logits[i,:]) * bin_centers)`.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, the device is lost, or buffer
+/// readback fails.
 pub fn confidence(
     device: &Arc<WgpuDevice>,
     logits: &[f64],
@@ -279,7 +309,7 @@ pub fn confidence(
         .storage_rw(2, &out_buf)
         .uniform(3, &params_buf)
         .dispatch(out_len.div_ceil(WG_64 as usize) as u32, 1, 1)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, out_len)
 }

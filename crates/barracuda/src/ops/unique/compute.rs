@@ -8,8 +8,8 @@
 //! 4. Pass 4: Compact unique values (parallel)
 
 use super::Unique;
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::DeviceCapabilities;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
 use bytemuck::{Pod, Zeroable};
@@ -27,8 +27,8 @@ struct ScanConfig {
 }
 
 /// Compute GPU prefix sum for boolean mask.
-/// Returns (prefix_sum_buffer, total_count).
-/// Uses exclusive scan: total = scan_out[N-1] + flags_in[N-1].
+/// Returns (`prefix_sum_buffer`, `total_count`).
+/// Uses exclusive scan: total = `scan_out`[N-1] + `flags_in`[N-1].
 fn compute_prefix_sum_gpu(
     device: &Arc<crate::device::WgpuDevice>,
     mask_buffer: &wgpu::Buffer,
@@ -59,7 +59,7 @@ fn compute_prefix_sum_gpu(
         .storage_rw(2, &prefix_sum_buffer)
         .storage_rw(3, &scratch_buffer)
         .dispatch(n_groups.max(1), 1, 1)
-        .submit();
+        .submit()?;
 
     // Pass 2: add workgroup offsets (only when n_groups > 1)
     if n_groups > 1 {
@@ -70,7 +70,7 @@ fn compute_prefix_sum_gpu(
             .storage_rw(2, &prefix_sum_buffer)
             .storage_rw(3, &scratch_buffer)
             .dispatch(1, 1, 1)
-            .submit();
+            .submit()?;
     }
 
     // Total = scan_out[N-1] + flags_in[N-1] (exclusive scan + last flag)
@@ -159,7 +159,7 @@ pub(super) fn execute(unique: Unique) -> Result<Tensor> {
         .storage_rw(2, &hash_table_buffer)
         .storage_rw(3, &unique_flags_buffer)
         .dispatch(workgroups, 1, 1)
-        .submit();
+        .submit()?;
 
     // Step 2: Compute prefix sum of unique flags to determine output positions
     let (prefix_sum_buffer, unique_count) =
@@ -184,7 +184,7 @@ pub(super) fn execute(unique: Unique) -> Result<Tensor> {
         .storage_read(4, &prefix_sum_buffer)
         .storage_rw(5, &output_buffer)
         .dispatch(workgroups, 1, 1)
-        .submit();
+        .submit()?;
 
     let output_data = crate::utils::read_buffer(device, &output_buffer, unique_count)?;
     Ok(Tensor::new(output_data, vec![unique_count], device.clone()))

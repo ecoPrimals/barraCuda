@@ -114,7 +114,7 @@ jobs:
       - name: Generate coverage
         run: cargo llvm-cov --workspace --lcov --output-path lcov.info
       - name: Coverage summary
-        run: cargo llvm-cov report --workspace --summary-only --fail-under-lines 80
+        run: cargo llvm-cov report --workspace --summary-only --fail-under-lines 90
       - name: Upload lcov artifact
         uses: actions/upload-artifact@v4
         with:

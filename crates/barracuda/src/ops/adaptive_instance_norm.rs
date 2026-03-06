@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Adaptive Instance Normalization (AdaIN) - Style transfer
+//! Adaptive Instance Normalization (`AdaIN`) - Style transfer
 //!
 //! Transfers style from one image to another.
 //! Used in neural style transfer, GANs.
@@ -20,7 +20,7 @@ static SHADER_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(SHADER_F64)
 });
 
-/// AdaptiveInstanceNorm operation
+/// `AdaptiveInstanceNorm` operation
 pub struct AdaptiveInstanceNorm {
     content: Tensor,
     style_mean: Tensor,
@@ -29,6 +29,9 @@ pub struct AdaptiveInstanceNorm {
 
 impl AdaptiveInstanceNorm {
     /// Create a new adaptive instance norm operation
+    /// # Errors
+    /// Returns [`Err`] if content is not 4D (NCHW), style mean/std are not 1D, or style statistics
+    /// do not match the number of channels.
     pub fn new(content: Tensor, style_mean: Tensor, style_std: Tensor) -> Result<Self> {
         let content_shape = content.shape();
         let style_mean_shape = style_mean.shape();
@@ -68,6 +71,9 @@ impl AdaptiveInstanceNorm {
     }
 
     /// Execute the adaptive instance norm operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, buffer readback fails,
+    /// or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.content.device();
         let shape = self.content.shape();
@@ -266,12 +272,13 @@ impl AdaptiveInstanceNorm {
 }
 
 impl Tensor {
-    /// Apply adaptive instance normalization (AdaIN) for style transfer
-    ///
+    /// Apply adaptive instance normalization (`AdaIN`) for style transfer
     /// # Arguments
-    ///
     /// * `style_mean` - Style mean tensor [C]
     /// * `style_std` - Style std tensor [C]
+    /// # Errors
+    /// Returns [`Err`] if content is not 4D, style mean/std shapes are invalid, channel count
+    /// mismatches, buffer allocation fails, GPU dispatch fails, buffer readback fails, or the device is lost.
     pub fn adaptive_instance_norm(self, style_mean: Tensor, style_std: Tensor) -> Result<Self> {
         AdaptiveInstanceNorm::new(self, style_mean, style_std)?.execute()
     }

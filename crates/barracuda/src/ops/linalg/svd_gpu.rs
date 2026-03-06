@@ -10,7 +10,7 @@
 //!
 //! ## Algorithm
 //!
-//! One-sided Jacobi SVD via eigendecomposition of AᵀA:
+//! One-sided Jacobi SVD via eigendecomposition of `AᵀA`:
 //! ```text
 //! 1. compute_AtA:  B = AᵀA (parallel matmul)
 //! 2. init_V:       V = I
@@ -29,8 +29,8 @@
 //! - Demmel & Veselic (1992), "Jacobi's Method is More Accurate than QR"
 //! - Golub & Van Loan, "Matrix Computations", Algorithm 8.6.1
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 use std::sync::Arc;
@@ -45,9 +45,9 @@ pub struct SvdGpu {
 
 impl SvdGpu {
     /// Create new GPU SVD operation
-    ///
     /// # Arguments
     /// * `input` - Matrix [M, N] in row-major order
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self {
             input,
@@ -56,6 +56,7 @@ impl SvdGpu {
     }
 
     /// Set maximum Jacobi sweeps for convergence
+    #[must_use]
     pub fn with_max_sweeps(mut self, sweeps: u32) -> Self {
         self.max_sweeps = sweeps;
         self
@@ -162,6 +163,9 @@ impl SvdGpu {
     }
 
     /// Execute SVD decomposition (f32 via Tensor API)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<(Vec<f32>, Tensor)> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -239,6 +243,11 @@ impl SvdGpu {
     }
 
     /// Execute SVD with full f64 precision. Preferred method — native WGSL f64 via SPIR-V/Vulkan.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute_f64(
         device: Arc<WgpuDevice>,
         data: &[f64],
@@ -404,8 +413,7 @@ mod tests {
         for s in &sigma {
             assert!(
                 (*s - 1.0).abs() < 0.1,
-                "Expected singular value ~1.0, got {}",
-                s
+                "Expected singular value ~1.0, got {s}"
             );
         }
 
@@ -433,8 +441,7 @@ mod tests {
         let sum: f32 = sigma.iter().map(|x| x * x).sum();
         assert!(
             (sum - 25.0).abs() < 1.0,
-            "Expected sum of squares ~25, got {}",
-            sum
+            "Expected sum of squares ~25, got {sum}"
         );
     }
 }

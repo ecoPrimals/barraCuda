@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! GPU compute operations for NonZero
+//! GPU compute operations for `NonZero`
 //!
 //! This module contains the GPU execution logic for finding non-zero elements,
 //! including mask conversion, prefix sum computation, and index compaction.
 
 use super::{NonZero, NonZeroParams};
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::DeviceCapabilities;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
 use bytemuck::{Pod, Zeroable};
@@ -25,8 +25,8 @@ struct ScanConfig {
 
 impl NonZero {
     /// Compute GPU prefix sum for boolean mask.
-    /// Returns (prefix_sum_buffer, total_count).
-    /// Uses exclusive scan: total = scan_out[N-1] + flags_in[N-1].
+    /// Returns (`prefix_sum_buffer`, `total_count`).
+    /// Uses exclusive scan: total = `scan_out`[N-1] + `flags_in`[N-1].
     pub(super) fn compute_prefix_sum_gpu(
         device: &Arc<crate::device::WgpuDevice>,
         mask_buffer: &wgpu::Buffer,
@@ -57,7 +57,7 @@ impl NonZero {
             .storage_rw(2, &prefix_sum_buffer)
             .storage_rw(3, &scratch_buffer)
             .dispatch(n_groups.max(1), 1, 1)
-            .submit();
+            .submit()?;
 
         // Pass 2: add workgroup offsets (only when n_groups > 1)
         if n_groups > 1 {
@@ -68,7 +68,7 @@ impl NonZero {
                 .storage_rw(2, &prefix_sum_buffer)
                 .storage_rw(3, &scratch_buffer)
                 .dispatch(1, 1, 1)
-                .submit();
+                .submit()?;
         }
 
         // Total = scan_out[N-1] + flags_in[N-1] (exclusive scan + last flag)
@@ -112,7 +112,7 @@ impl NonZero {
             .storage_read(1, input_buffer)
             .storage_rw(2, mask_buffer)
             .dispatch(workgroups, 1, 1)
-            .submit();
+            .submit()?;
 
         Ok(())
     }
@@ -150,7 +150,7 @@ impl NonZero {
             .storage_read(1, u32_buffer)
             .storage_rw(2, f32_buffer)
             .dispatch(workgroups, 1, 1)
-            .submit();
+            .submit()?;
 
         Ok(())
     }
@@ -188,11 +188,16 @@ impl NonZero {
         Ok(result_data[0])
     }
 
-    /// Execute NonZero operation (GPU-accelerated)
+    /// Execute `NonZero` operation (GPU-accelerated)
     ///
     /// **Deep Debt**: Efficient GPU implementation using prefix sum for compaction
     ///
     /// Returns: Tensor containing flat indices of non-zero elements
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input().device();
         let input_size: usize = self.input().len();
@@ -234,7 +239,7 @@ impl NonZero {
             .storage_read(2, &prefix_sum_buffer)
             .storage_rw(3, &output_buffer)
             .dispatch(workgroups, 1, 1)
-            .submit();
+            .submit()?;
 
         // Step 5: Convert u32 indices to f32 on GPU (for Tensor compatibility)
         let indices_f32_buffer = device.create_buffer_f32(output_size)?;

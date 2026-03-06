@@ -30,8 +30,8 @@
 //!
 //! - Golub & Van Loan, "Matrix Computations", Algorithm 3.4.1
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 use std::sync::Arc;
@@ -45,9 +45,9 @@ pub struct LuGpu {
 
 impl LuGpu {
     /// Create new GPU LU decomposition operation
-    ///
     /// # Arguments
     /// * `input` - Square matrix [N, N] in row-major order
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -144,6 +144,9 @@ impl LuGpu {
     }
 
     /// Execute LU decomposition (f32 via Tensor API)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<(Tensor, Vec<u32>)> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -259,6 +262,11 @@ impl LuGpu {
 
     /// Execute LU decomposition with full f64 precision.
     /// Preferred method — native WGSL f64 via SPIR-V/Vulkan (1:2-3 FP64 ratio).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute_f64(
         device: Arc<WgpuDevice>,
         data: &[f64],

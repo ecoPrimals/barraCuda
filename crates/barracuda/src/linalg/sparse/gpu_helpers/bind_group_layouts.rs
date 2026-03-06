@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Bind group layout builders for sparse GPU operations.
 //!
-//! Single responsibility: BGL creation for SpMV, dot, reduce, CG update steps,
-//! and preconditioner. Shared by CG and BiCGSTAB solvers.
+//! Single responsibility: BGL creation for `SpMV`, dot, reduce, CG update steps,
+//! and preconditioner. Shared by CG and `BiCGSTAB` solvers.
 
 use crate::device::WgpuDevice;
 use std::sync::Arc;
@@ -53,7 +53,8 @@ impl SparseBindGroupLayouts {
         }
     }
 
-    /// SpMV: values, col_idx, row_ptr, x, y, params
+    /// `SpMV`: values, `col_idx`, `row_ptr`, x, y, params
+    #[must_use]
     pub fn spmv(device: &Arc<WgpuDevice>) -> wgpu::BindGroupLayout {
         device
             .device
@@ -70,7 +71,8 @@ impl SparseBindGroupLayouts {
             })
     }
 
-    /// Dot product: a, b, partial_sums, params
+    /// Dot product: a, b, `partial_sums`, params
+    #[must_use]
     pub fn dot(device: &Arc<WgpuDevice>) -> wgpu::BindGroupLayout {
         device
             .device
@@ -85,7 +87,8 @@ impl SparseBindGroupLayouts {
             })
     }
 
-    /// Final reduction: partial_sums, result, params
+    /// Final reduction: `partial_sums`, result, params
+    #[must_use]
     pub fn reduce(device: &Arc<WgpuDevice>) -> wgpu::BindGroupLayout {
         device
             .device
@@ -100,6 +103,7 @@ impl SparseBindGroupLayouts {
     }
 
     /// AXPY: x, y, params (alpha is in params struct)
+    #[must_use]
     pub fn axpy(device: &Arc<WgpuDevice>) -> wgpu::BindGroupLayout {
         device
             .device
@@ -113,7 +117,8 @@ impl SparseBindGroupLayouts {
             })
     }
 
-    /// CG update xr: x, r, p, Ap, alpha, params (all read_write for consistency)
+    /// CG update xr: x, r, p, Ap, alpha, params (all `read_write` for consistency)
+    #[must_use]
     pub fn cg_update_xr(device: &Arc<WgpuDevice>) -> wgpu::BindGroupLayout {
         device
             .device
@@ -130,7 +135,8 @@ impl SparseBindGroupLayouts {
             })
     }
 
-    /// CG update p: r, p, beta, params (all read_write for consistency)
+    /// CG update p: r, p, beta, params (all `read_write` for consistency)
+    #[must_use]
     pub fn cg_update_p(device: &Arc<WgpuDevice>) -> wgpu::BindGroupLayout {
         device
             .device
@@ -145,7 +151,8 @@ impl SparseBindGroupLayouts {
             })
     }
 
-    /// Compute alpha: rz, pAp, alpha (all read_write for consistency)
+    /// Compute alpha: rz, pAp, alpha (all `read_write` for consistency)
+    #[must_use]
     pub fn compute_alpha(device: &Arc<WgpuDevice>) -> wgpu::BindGroupLayout {
         device
             .device
@@ -159,7 +166,8 @@ impl SparseBindGroupLayouts {
             })
     }
 
-    /// Compute beta: rz_new, rz, beta (all read_write for consistency)
+    /// Compute beta: `rz_new`, rz, beta (all `read_write` for consistency)
+    #[must_use]
     pub fn compute_beta(device: &Arc<WgpuDevice>) -> wgpu::BindGroupLayout {
         device
             .device
@@ -174,6 +182,7 @@ impl SparseBindGroupLayouts {
     }
 
     /// Preconditioner: r, diag, z, params
+    #[must_use]
     pub fn precond(device: &Arc<WgpuDevice>) -> wgpu::BindGroupLayout {
         device
             .device

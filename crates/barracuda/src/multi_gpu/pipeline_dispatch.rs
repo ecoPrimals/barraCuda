@@ -5,7 +5,7 @@
 //! A pipeline is an ordered sequence of stages, each requiring specific
 //! capabilities. Data flows between stages via typed intermediate buffers.
 //! The planner uses [`InterconnectTopology`] to minimize transfer overhead,
-//! preferring PCIe P2P over CPU bounce when possible.
+//! preferring `PCIe` P2P over CPU bounce when possible.
 //!
 //! # Example: NPU classification → GPU refinement → CPU provenance
 //!
@@ -23,7 +23,7 @@ use crate::device::substrate::{Substrate, SubstrateCapability, SubstrateType};
 /// Transfer strategy between pipeline stages.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransferStrategy {
-    /// Direct peer-to-peer DMA (NPU↔GPU via PCIe, GPU↔GPU via NvLink).
+    /// Direct peer-to-peer DMA (NPU↔GPU via `PCIe`, GPU↔GPU via `NvLink`).
     PeerToPeer,
     /// Bounce through CPU host memory.
     HostBounce,

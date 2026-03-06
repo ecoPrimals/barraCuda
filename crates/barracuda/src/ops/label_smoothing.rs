@@ -26,7 +26,12 @@ pub struct LabelSmoothing {
 }
 
 impl LabelSmoothing {
-    /// Create LabelSmoothing operation
+    /// Create `LabelSmoothing` operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(labels: Tensor, num_classes: u32, smoothing: f32) -> Result<Self> {
         if !(0.0..=1.0).contains(&smoothing) {
             return Err(BarracudaError::invalid_op(
@@ -52,7 +57,12 @@ impl LabelSmoothing {
         &SHADER
     }
 
-    /// Execute LabelSmoothing on tensor
+    /// Execute `LabelSmoothing` on tensor
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.labels.device();
         let labels_shape = self.labels.shape();
@@ -95,7 +105,7 @@ impl LabelSmoothing {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch(workgroups, 1, 1)
-            .submit();
+            .submit()?;
 
         // Create output tensor
         Ok(Tensor::from_buffer(

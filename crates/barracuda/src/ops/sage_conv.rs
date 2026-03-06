@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! SAGEConv - GraphSAGE (Pure WGSL)
+//! `SAGEConv` - `GraphSAGE` (Pure WGSL)
 //!
-//! Scalable sampling and aggregation: h_i' = W * [h_i || aggr_i]
+//! Scalable sampling and aggregation: `h_i`' = W * [`h_i` || `aggr_i`]
 //!
 //! **Deep Debt Principles**:
 //! - Pure WGSL implementation (no CPU code)
@@ -13,7 +13,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
-/// GraphSAGE Convolution
+/// `GraphSAGE` Convolution
 pub struct SageConv {
     node_features: Tensor,
     edge_index: Vec<(usize, usize)>,
@@ -27,7 +27,11 @@ pub struct SageConv {
 }
 
 impl SageConv {
-    /// Create a GraphSAGE convolution with node features, edge index, weights, and degrees.
+    /// Create a `GraphSAGE` convolution with node features, edge index, weights, and degrees.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if `node_features` is not 2D, degrees length mismatch, weights shape invalid, or `edge_index` is empty.
     pub fn new(
         node_features: Tensor,
         edge_index: Vec<(usize, usize)>,
@@ -95,7 +99,10 @@ impl SageConv {
         }
     }
 
-    /// Execute the GraphSAGE convolution and return the output node features.
+    /// Execute the `GraphSAGE` convolution and return the output node features.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.node_features.device();
         // Convert edge_index to u32 pairs
@@ -150,7 +157,7 @@ impl SageConv {
             num_edges: self.num_edges as u32,
             in_features: self.in_features as u32,
             out_features: self.out_features as u32,
-            normalize: if self.normalize { 1 } else { 0 },
+            normalize: u32::from(self.normalize),
             _pad1: 0,
             _pad2: 0,
             _pad3: 0,

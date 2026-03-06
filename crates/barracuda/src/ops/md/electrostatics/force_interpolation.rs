@@ -6,20 +6,20 @@
 //!
 //! # Algorithm
 //!
-//! For each particle i at position r_i:
-//! F_i = -q_i × ∇φ(r_i)
+//! For each particle i at position `r_i`:
+//! `F_i` = -`q_i` × ∇`φ(r_i)`
 //!
 //! where ∇φ is computed from the mesh potential using B-spline derivatives:
-//! ∇φ(r_i) = Σ_k φ(r_k) × ∇M(r_i - r_k)
+//! ∇`φ(r_i)` = `Σ_k` `φ(r_k)` × ∇`M(r_i` - `r_k`)
 //!
 //! The gradient of the B-spline is:
-//! ∂M(r)/∂x = M'(u_x) × M(u_y) × M(u_z) × (K_x / L_x)
+//! ∂M(r)/∂x = M'(`u_x`) × `M(u_y)` × `M(u_z)` × (`K_x` / `L_x`)
 
 /// WGSL kernel for mesh-to-particle force interpolation (f64).
 pub const WGSL_FORCE_INTERPOLATION_F64: &str = include_str!("force_interpolation_f64.wgsl");
 
-use super::bspline::BsplineCoeffs;
 use super::PppmParams;
+use super::bspline::BsplineCoeffs;
 
 /// Mesh potential for force interpolation
 #[derive(Clone, Debug)]
@@ -36,6 +36,9 @@ pub struct PotentialMesh {
 
 impl PotentialMesh {
     /// Create from raw values
+    /// # Panics
+    /// Panics if `values.len() != dims[0] * dims[1] * dims[2]`.
+    #[must_use]
     pub fn from_values(dims: [usize; 3], values: Vec<f64>, box_dims: [f64; 3]) -> Self {
         assert_eq!(values.len(), dims[0] * dims[1] * dims[2]);
         Self {
@@ -47,12 +50,14 @@ impl PotentialMesh {
 
     /// Get potential at mesh point
     #[inline]
+    #[must_use]
     pub fn get(&self, ix: usize, iy: usize, iz: usize) -> f64 {
         let idx = iz + self.dims[2] * (iy + self.dims[1] * ix);
         self.values[idx]
     }
 
     /// Get mesh spacing
+    #[must_use]
     pub fn spacing(&self) -> [f64; 3] {
         [
             self.box_dims[0] / self.dims[0] as f64,
@@ -72,6 +77,9 @@ impl PotentialMesh {
 ///
 /// # Returns
 /// Forces [fx, fy, fz] for each particle
+/// # Panics
+/// Panics if `charges.len() != coeffs.len()`.
+#[must_use]
 pub fn interpolate_forces(
     potential: &PotentialMesh,
     charges: &[f64],
@@ -130,6 +138,9 @@ pub fn interpolate_forces(
 ///
 /// # Returns
 /// Forces [fx, fy, fz] for each particle
+/// # Panics
+/// Panics if `positions.len() != charges.len()`.
+#[must_use]
 pub fn interpolate_forces_from_positions(
     potential: &PotentialMesh,
     positions: &[[f64; 3]],

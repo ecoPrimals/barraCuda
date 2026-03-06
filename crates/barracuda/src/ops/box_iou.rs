@@ -2,7 +2,7 @@
 //! Intersection over Union for bounding boxes
 //!
 //! **Pure WGSL**: Single implementation via WebGPU shader
-//! Computes IoU between pairs of bounding boxes
+//! Computes `IoU` between pairs of bounding boxes
 
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
@@ -25,7 +25,12 @@ pub struct BoxIoU {
 }
 
 impl BoxIoU {
-    /// Create BoxIoU operation
+    /// Create `BoxIoU` operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(boxes_a: Tensor, boxes_b: Tensor, box_format: u32) -> Result<Self> {
         if box_format > 2 {
             return Err(BarracudaError::invalid_op(
@@ -53,7 +58,12 @@ impl BoxIoU {
         }
     }
 
-    /// Execute BoxIoU on tensor
+    /// Execute `BoxIoU` on tensor
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.boxes_a.device();
         let a_shape = self.boxes_a.shape();
@@ -102,7 +112,7 @@ impl BoxIoU {
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)
             .dispatch(workgroups_x, workgroups_y, 1)
-            .submit();
+            .submit()?;
 
         // Create output tensor
         Ok(Tensor::from_buffer(

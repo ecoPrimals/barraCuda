@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! TensorSession — `SessionPipelines` cache
+//! `TensorSession` — `SessionPipelines` cache
 //!
 //! All compute pipelines compiled **once** at session construction.
 //! Subsequent `run()` calls pay only bind-group creation and dispatch encoding,

@@ -4,7 +4,7 @@
 #![expect(clippy::unwrap_used, reason = "tests")]
 use super::helpers::*;
 use barracuda::device::WgpuDevice;
-use barracuda::ops::fhe_intt::{compute_inverse_root, FheIntt};
+use barracuda::ops::fhe_intt::{FheIntt, compute_inverse_root};
 use barracuda::ops::fhe_ntt::FheNtt;
 use barracuda::ops::fhe_poly_add::create_fhe_poly_tensor;
 use std::sync::Arc;
@@ -43,8 +43,7 @@ async fn test_intt_basic() {
         for (i, (&orig, &recovered)) in input.iter().zip(intt_result.iter()).enumerate() {
             assert_eq!(
                 orig, recovered,
-                "INTT should recover original coefficient {}",
-                i
+                "INTT should recover original coefficient {i}"
             );
         }
 

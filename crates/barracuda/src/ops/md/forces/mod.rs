@@ -13,7 +13,7 @@
 //! All force kernels are pure WGSL → WebGPU → Vulkan:
 //! - Same code runs on NVIDIA, AMD, Intel
 //! - Native f64 builtins (sqrt, exp) at full hardware speed
-//! - No CUDA lock-in, no OpenCL fragmentation
+//! - No CUDA lock-in, no `OpenCL` fragmentation
 //!
 //! ## f64 Evolution
 //!

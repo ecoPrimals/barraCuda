@@ -5,14 +5,14 @@
 //! Deep debt compliant - zero unsafe, production-ready.
 
 #![expect(clippy::unwrap_used, reason = "tests")]
-use barracuda::esn_v2::{ESNConfig, ESN};
+use barracuda::esn_v2::{ESN, ESNConfig};
 use barracuda::genomics::{SequenceAnalyzer, SequenceConfig};
 use barracuda::snn::{SNNLayer, SpikingNetwork};
 use barracuda::timeseries::{TimeSeriesAnalyzer, TimeSeriesModel};
 use barracuda::vision::{ImageBatch, Transform, VisionPipeline};
 
-/// Test 1: ESN → TimeSeries Integration
-/// Verify TimeSeries API can leverage ESN for temporal learning
+/// Test 1: ESN → `TimeSeries` Integration
+/// Verify `TimeSeries` API can leverage ESN for temporal learning
 #[tokio::test]
 async fn test_esn_timeseries_integration() {
     let Some(device) = barracuda::device::test_pool::get_test_device_if_gpu_available().await
@@ -51,7 +51,7 @@ async fn test_esn_timeseries_integration() {
 
 /// Test 2: NN Training → Vision Integration  
 /// Train a network on preprocessed images
-/// NOTE: NeuralNetwork API was removed - test disabled until API is re-implemented
+/// NOTE: `NeuralNetwork` API was removed - test disabled until API is re-implemented
 #[tokio::test]
 #[ignore = "NeuralNetwork API was removed - test disabled until API is re-implemented"]
 async fn test_nn_vision_integration() {
@@ -116,7 +116,7 @@ async fn test_snn_neuromorphic() {
 
     // Verify sparse output (neuromorphic characteristic)
     let active = output.iter().filter(|&&v| v > 0.1).count();
-    println!("✅ SNN neuromorphic: {} active neurons (sparse)", active);
+    println!("✅ SNN neuromorphic: {active} active neurons (sparse)");
 }
 
 /// Test 4: Genomics Workflow
@@ -154,7 +154,7 @@ async fn test_genomics_workflow() {
     );
 }
 
-/// Test 5: Multi-API Workflow (Vision + TimeSeries)
+/// Test 5: Multi-API Workflow (Vision + `TimeSeries`)
 /// Complex integration across multiple APIs
 #[tokio::test]
 async fn test_multi_api_workflow() {

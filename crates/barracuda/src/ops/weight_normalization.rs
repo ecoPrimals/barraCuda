@@ -27,11 +27,13 @@ pub struct WeightNormalization {
 
 impl WeightNormalization {
     /// Create a new weight normalization operation
-    ///
     /// # Arguments
     /// * `v` - Direction vectors (weights to normalize)
     /// * `g` - Magnitude scalars
     /// * `dim` - Dimension to normalize over (0 = all)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(v: Tensor, g: Tensor, dim: u32) -> Result<Self> {
         let v_shape = v.shape();
 
@@ -58,6 +60,9 @@ impl WeightNormalization {
     }
 
     /// Execute the weight normalization operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.v.device();
         let v_shape = self.v.shape();

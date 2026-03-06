@@ -21,6 +21,7 @@ pub struct Interpolate {
 
 impl Interpolate {
     /// Create a new interpolate operation
+    #[must_use]
     pub fn new(input: Tensor, out_height: usize, out_width: usize) -> Self {
         Self {
             input,
@@ -40,6 +41,11 @@ impl Interpolate {
     }
 
     /// Execute the interpolate operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -217,6 +223,11 @@ impl Tensor {
     ///
     /// * `out_height` - Target height
     /// * `out_width` - Target width
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn interpolate_wgsl(self, out_height: usize, out_width: usize) -> Result<Self> {
         Interpolate::new(self, out_height, out_width).execute()
     }

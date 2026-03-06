@@ -5,7 +5,7 @@
 //! - ✅ Pure WGSL implementation (new shader!)
 //! - ✅ Safe Rust wrapper (no unsafe code)
 //! - ✅ Hardware-agnostic via WebGPU
-//! - ✅ Complete implementation (production-ready for SimCLR, MoCo)
+//! - ✅ Complete implementation (production-ready for `SimCLR`, `MoCo`)
 //!
 //! ## Algorithm
 //!
@@ -25,9 +25,9 @@
 //! - Pulls positive pairs together
 //! - Pushes negative pairs apart
 //! - Self-supervised (no labels needed)
-//! - Standard in SimCLR, MoCo
+//! - Standard in `SimCLR`, `MoCo`
 //!
-//! **Used By**: SimCLR, MoCo, CLIP, self-supervised learning
+//! **Used By**: `SimCLR`, `MoCo`, CLIP, self-supervised learning
 //!
 //! ## Usage
 //!
@@ -53,14 +53,17 @@ struct ContrastiveLossParams {
     _padding: u32,
 }
 
-/// NT-Xent contrastive loss for self-supervised learning (SimCLR, MoCo).
+/// NT-Xent contrastive loss for self-supervised learning (`SimCLR`, `MoCo`).
 pub struct ContrastiveLoss {
     embeddings: Tensor,
     temperature: f32,
 }
 
 impl ContrastiveLoss {
-    /// Creates a new contrastive loss. Embeddings shape: [batch*2, embed_dim]; temperature typically 0.1–0.5.
+    /// Creates a new contrastive loss. Embeddings shape: [batch*2, `embed_dim`]; temperature typically 0.1–0.5.
+    /// # Errors
+    /// Returns [`Err`] if embeddings is not 2D, first dimension is not even (batch*2),
+    /// or temperature is not positive.
     pub fn new(embeddings: Tensor, temperature: f32) -> Result<Self> {
         // Validate 2D input
         if embeddings.shape().len() != 2 {
@@ -105,6 +108,8 @@ impl ContrastiveLoss {
     }
 
     /// Executes contrastive loss and returns per-sample loss tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.embeddings.device();
         let batch_total = self.embeddings.shape()[0];
@@ -133,7 +138,7 @@ impl ContrastiveLoss {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d(batch_size as u32)
-            .submit();
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,
@@ -149,33 +154,29 @@ impl ContrastiveLoss {
 
 impl Tensor {
     /// Contrastive loss (NT-Xent) for self-supervised learning
-    ///
-    /// **Deep Debt**: Essential for SimCLR, MoCo, CLIP-style training
-    ///
+    /// **Deep Debt**: Essential for `SimCLR`, `MoCo`, CLIP-style training
     /// # Arguments
-    /// - `self`: Embeddings [batch*2, embed_dim] - positive pairs concatenated
+    /// - `self`: Embeddings [batch*2, `embed_dim`] - positive pairs concatenated
     /// - `temperature`: Controls distribution sharpness (typically 0.1-0.5)
-    ///
     /// # Returns
-    /// - Loss tensor [batch_size] - per-sample losses
-    ///
+    /// - Loss tensor [`batch_size`] - per-sample losses
     /// # Example
     /// ```rust,ignore
     /// // 8 positive pairs, 128-dimensional embeddings
     /// let embeddings = Tensor::randn(vec![16, 128]).await?;
-    ///
     /// // SimCLR-style: temperature=0.5
     /// let loss = embeddings.contrastive_loss(0.5)?;
-    ///
     /// // MoCo-style: temperature=0.07
     /// let loss = embeddings.contrastive_loss(0.07)?;
     /// ```
-    ///
     /// # Note
     /// - Input format: First `batch_size` samples paired with second `batch_size` samples
     /// - Lower temperature: Sharper distribution (more aggressive)
     /// - Higher temperature: Smoother distribution (more permissive)
     /// - Standard values: SimCLR=0.5, MoCo=0.07
+    /// # Errors
+    /// Returns [`Err`] if embeddings is not 2D, first dimension is not even, temperature is not positive,
+    /// buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn contrastive_loss(self, temperature: f32) -> Result<Self> {
         ContrastiveLoss::new(self, temperature)?.execute()
     }

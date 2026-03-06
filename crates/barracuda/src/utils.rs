@@ -7,6 +7,10 @@ use std::sync::Arc;
 
 /// Read f32 buffer data from GPU back to CPU.
 /// Delegates to `WgpuDevice::read_buffer` which holds the submit guard.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer readback fails (e.g., device lost, `map_async` error).
 pub fn read_buffer(
     device: &Arc<WgpuDevice>,
     buffer: &wgpu::Buffer,
@@ -17,6 +21,10 @@ pub fn read_buffer(
 
 /// Read u32 buffer data from GPU back to CPU.
 /// Delegates to `WgpuDevice::read_buffer` which holds the submit guard.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer readback fails (e.g., device lost, `map_async` error).
 pub fn read_buffer_u32(
     device: &Arc<WgpuDevice>,
     buffer: &wgpu::Buffer,
@@ -27,6 +35,10 @@ pub fn read_buffer_u32(
 
 /// Read f64 buffer data from GPU back to CPU.
 /// Delegates to `WgpuDevice::read_buffer` which holds the submit guard.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer readback fails (e.g., device lost, `map_async` error).
 pub fn read_buffer_f64(
     device: &Arc<WgpuDevice>,
     buffer: &wgpu::Buffer,

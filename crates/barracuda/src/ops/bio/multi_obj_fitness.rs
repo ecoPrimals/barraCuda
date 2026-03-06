@@ -3,7 +3,7 @@
 //! Multi-objective Fitness — GPU kernel.
 //!
 //! Evaluates per-individual multi-objective fitness from genotypes.
-//! Reads genotypes [pop × genome_len] f64, writes fitness [pop × n_obj] f64.
+//! Reads genotypes [pop × `genome_len`] f64, writes fitness [pop × `n_obj`] f64.
 //!
 //! Provenance: neuralSpring metalForge → toadStool absorption
 
@@ -11,8 +11,8 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 
 /// WGSL source for multi-objective fitness (f32).
 pub const WGSL_MULTI_OBJ_FITNESS: &str = include_str!("../../shaders/bio/multi_obj_fitness.wgsl");
@@ -39,6 +39,7 @@ pub struct MultiObjFitnessGpu {
 
 impl MultiObjFitnessGpu {
     /// Create multi-objective fitness GPU kernel.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 

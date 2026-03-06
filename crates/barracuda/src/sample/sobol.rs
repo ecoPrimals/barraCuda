@@ -180,19 +180,16 @@ pub struct SobolGenerator {
 
 impl SobolGenerator {
     /// Create a new Sobol generator for the given dimension.
-    ///
     /// # Arguments
-    ///
     /// * `dim` - Number of dimensions (1 to 40)
-    ///
     /// # Example
-    ///
     /// ```
     /// use barracuda::sample::sobol::SobolGenerator;
-    ///
     /// let mut gen = SobolGenerator::new(5).unwrap();
     /// let point = gen.next_point();  // 5-dimensional point
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if `dim` is 0 or greater than [`MAX_SOBOL_DIM`].
     pub fn new(dim: usize) -> Result<Self> {
         if dim == 0 || dim > MAX_SOBOL_DIM {
             return Err(BarracudaError::InvalidInput {
@@ -243,15 +240,11 @@ impl SobolGenerator {
     }
 
     /// Skip to a specific index in the sequence.
-    ///
     /// Useful for parallel generation where different workers start
     /// at different offsets.
-    ///
     /// After calling `skip_to(n)`, the next `next_point()` call will return
     /// the point at index n.
-    ///
     /// # Implementation Note
-    ///
     /// For correctness, this uses sequential generation internally.
     /// For very large n (> 1M), consider using parallel Sobol generation
     /// with different scrambling seeds instead.
@@ -268,7 +261,6 @@ impl SobolGenerator {
     }
 
     /// Generate the next point in the sequence.
-    ///
     /// Returns a point in [0, 1)^dim.
     pub fn next_point(&mut self) -> Vec<f64> {
         if self.index == 0 {
@@ -308,11 +300,13 @@ impl SobolGenerator {
     }
 
     /// Get current index.
+    #[must_use]
     pub fn index(&self) -> u64 {
         self.index
     }
 
     /// Get dimension.
+    #[must_use]
     pub fn dim(&self) -> usize {
         self.dim
     }
@@ -338,9 +332,13 @@ impl SobolGenerator {
 /// assert_eq!(points.len(), 100);
 /// assert_eq!(points[0].len(), 3);
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if `dim` is invalid (see [`SobolGenerator::new`]).
 pub fn sobol_sequence(n: usize, dim: usize) -> Result<Vec<Vec<f64>>> {
-    let mut gen = SobolGenerator::new(dim)?;
-    Ok(gen.generate(n))
+    let mut sampler = SobolGenerator::new(dim)?;
+    Ok(sampler.generate(n))
 }
 
 /// Generate Sobol points scaled to given bounds.
@@ -364,6 +362,10 @@ pub fn sobol_sequence(n: usize, dim: usize) -> Result<Vec<Vec<f64>>> {
 ///     assert!(p[1] >= -5.0 && p[1] <= 5.0);
 /// }
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if [`sobol_sequence`] fails (invalid dimension from `bounds.len()`).
 pub fn sobol_scaled(n: usize, bounds: &[(f64, f64)]) -> Result<Vec<Vec<f64>>> {
     let dim = bounds.len();
     let points = sobol_sequence(n, dim)?;
@@ -386,10 +388,14 @@ pub fn sobol_scaled(n: usize, bounds: &[(f64, f64)]) -> Result<Vec<Vec<f64>>> {
 /// * `n` - Number of points
 /// * `dim` - Dimension
 /// * `start_index` - Index to start from
+///
+/// # Errors
+///
+/// Returns [`Err`] if `dim` is invalid (see [`SobolGenerator::new`]).
 pub fn sobol_sequence_from(n: usize, dim: usize, start_index: u64) -> Result<Vec<Vec<f64>>> {
-    let mut gen = SobolGenerator::new(dim)?;
-    gen.skip_to(start_index);
-    Ok(gen.generate(n))
+    let mut sampler = SobolGenerator::new(dim)?;
+    sampler.skip_to(start_index);
+    Ok(sampler.generate(n))
 }
 
 #[cfg(test)]
@@ -436,7 +442,7 @@ mod tests {
         // Count points in each quadrant
         let mut quadrants = [0; 4];
         for p in &points {
-            let q = (if p[0] >= 0.5 { 1 } else { 0 }) + (if p[1] >= 0.5 { 2 } else { 0 });
+            let q = usize::from(p[0] >= 0.5) + (if p[1] >= 0.5 { 2 } else { 0 });
             quadrants[q] += 1;
         }
 
@@ -465,35 +471,35 @@ mod tests {
 
     #[test]
     fn test_sobol_skip_to() {
-        let mut gen1 = SobolGenerator::new(3).unwrap();
-        let mut gen2 = SobolGenerator::new(3).unwrap();
+        let mut sampler1 = SobolGenerator::new(3).unwrap();
+        let mut sampler2 = SobolGenerator::new(3).unwrap();
 
         // Generate 100 points normally
         for _ in 0..100 {
-            gen1.next_point();
+            sampler1.next_point();
         }
 
         // Skip to 100
-        gen2.skip_to(100);
+        sampler2.skip_to(100);
 
         // Next points should match
-        let p1 = gen1.next_point();
-        let p2 = gen2.next_point();
+        let p1 = sampler1.next_point();
+        let p2 = sampler2.next_point();
 
         for (a, b) in p1.iter().zip(p2.iter()) {
-            assert!((a - b).abs() < 1e-10, "Mismatch after skip: {} vs {}", a, b);
+            assert!((a - b).abs() < 1e-10, "Mismatch after skip: {a} vs {b}");
         }
     }
 
     #[test]
     fn test_sobol_reset() {
-        let mut gen = SobolGenerator::new(2).unwrap();
+        let mut sampler = SobolGenerator::new(2).unwrap();
 
-        let first_points: Vec<_> = (0..5).map(|_| gen.next_point()).collect();
+        let first_points: Vec<_> = (0..5).map(|_| sampler.next_point()).collect();
 
-        gen.reset();
+        sampler.reset();
 
-        let second_points: Vec<_> = (0..5).map(|_| gen.next_point()).collect();
+        let second_points: Vec<_> = (0..5).map(|_| sampler.next_point()).collect();
 
         for (p1, p2) in first_points.iter().zip(second_points.iter()) {
             for (a, b) in p1.iter().zip(p2.iter()) {
@@ -525,14 +531,14 @@ mod tests {
 
     #[test]
     fn test_sobol_generator_index() {
-        let mut gen = SobolGenerator::new(2).unwrap();
-        assert_eq!(gen.index(), 0);
+        let mut sampler = SobolGenerator::new(2).unwrap();
+        assert_eq!(sampler.index(), 0);
 
-        gen.next_point();
-        assert_eq!(gen.index(), 1);
+        sampler.next_point();
+        assert_eq!(sampler.index(), 1);
 
-        gen.next_point();
-        assert_eq!(gen.index(), 2);
+        sampler.next_point();
+        assert_eq!(sampler.index(), 2);
     }
 
     #[test]
@@ -553,10 +559,10 @@ mod tests {
         assert_eq!(points.len(), 10);
 
         // Verify against skip_to
-        let mut gen = SobolGenerator::new(2).unwrap();
-        gen.skip_to(50);
+        let mut sampler = SobolGenerator::new(2).unwrap();
+        sampler.skip_to(50);
         for p in &points {
-            let expected = gen.next_point();
+            let expected = sampler.next_point();
             for (a, b) in p.iter().zip(expected.iter()) {
                 assert!((a - b).abs() < 1e-14);
             }

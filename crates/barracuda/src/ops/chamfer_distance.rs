@@ -25,7 +25,12 @@ pub struct ChamferDistance {
 }
 
 impl ChamferDistance {
-    /// Create ChamferDistance operation
+    /// Create `ChamferDistance` operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(points_x: Tensor, points_y: Tensor, direction: u32) -> Result<Self> {
         if direction > 2 {
             return Err(BarracudaError::invalid_op(
@@ -53,7 +58,12 @@ impl ChamferDistance {
         &SHADER
     }
 
-    /// Execute ChamferDistance on tensor
+    /// Execute `ChamferDistance` on tensor
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.points_x.device();
         let x_shape = self.points_x.shape();
@@ -108,7 +118,7 @@ impl ChamferDistance {
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)
             .dispatch_1d(max_points as u32)
-            .submit();
+            .submit()?;
 
         let output_shape = match self.direction {
             0 => vec![num_points_x],

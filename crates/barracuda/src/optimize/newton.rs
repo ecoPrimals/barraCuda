@@ -6,7 +6,7 @@
 //!
 //! # Algorithm
 //!
-//! x_{n+1} = x_n - f(x_n) / f'(x_n)
+//! x_{n+1} = `x_n` - `f(x_n)` / f'(`x_n`)
 //!
 //! # Applications
 //!
@@ -47,6 +47,11 @@ pub struct NewtonResult {
 /// # Returns
 ///
 /// `NewtonResult` containing the root and convergence info
+///
+/// # Errors
+///
+/// Returns [`Err`] if the derivative is near zero at some iterate, or if the
+/// iteration diverges (x becomes non-finite).
 ///
 /// # Example
 ///
@@ -128,6 +133,11 @@ where
 /// * `max_iter` - Maximum number of iterations
 /// * `h` - Step size for numerical derivative (default: 1e-8)
 ///
+/// # Errors
+///
+/// Returns [`Err`] if the numerical derivative is near zero at some iterate,
+/// or if the iteration diverges (x becomes non-finite).
+///
 /// # Example
 ///
 /// ```
@@ -198,7 +208,7 @@ where
 /// Secant method - Newton-like without requiring derivatives.
 ///
 /// Uses two points to approximate the derivative:
-/// f'(x) ≈ (f(x_n) - f(x_{n-1})) / (x_n - x_{n-1})
+/// f'(x) ≈ (`f(x_n)` - f(x_{n-1})) / (`x_n` - x_{n-1})
 ///
 /// Convergence is superlinear (order ≈ 1.618) but more robust than Newton.
 ///
@@ -209,6 +219,11 @@ where
 /// * `x1` - Second initial guess (x0 ≠ x1)
 /// * `tol` - Tolerance for convergence
 /// * `max_iter` - Maximum iterations
+///
+/// # Errors
+///
+/// Returns [`Err`] if f(x0) ≈ f(x1) (cannot compute secant approximation),
+/// or if the iteration diverges (x or f(x) becomes non-finite).
 ///
 /// # Example
 ///

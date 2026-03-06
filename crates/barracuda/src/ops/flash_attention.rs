@@ -14,7 +14,7 @@
 //! 2. Fusing operations to minimize memory access
 //! 3. Using numerically stable softmax
 //!
-//! Reference: "FlashAttention: Fast and Memory-Efficient Exact Attention"
+//! Reference: "`FlashAttention`: Fast and Memory-Efficient Exact Attention"
 //! by Dao et al. (2022) - 2-4x faster than standard attention!
 //!
 //! ## Usage
@@ -58,6 +58,8 @@ pub struct FlashAttention {
 
 impl FlashAttention {
     /// Create Flash Attention operation
+    /// # Errors
+    /// Returns [`Err`] if shape validation fails (e.g. head dimension mismatch).
     pub fn new(query: Tensor, key: Tensor, value: Tensor, num_heads: u32) -> Result<Self> {
         // Verify shapes match
         if query.shape() != key.shape() || query.shape() != value.shape() {
@@ -97,6 +99,11 @@ impl FlashAttention {
     }
 
     /// Execute flash attention
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.query.device();
         let shape = self.query.shape();
@@ -319,7 +326,7 @@ mod tests {
 
         // Output should be weighted sum of values (all should be close to 2.0)
         for &val in &result {
-            assert!((val - 2.0).abs() < 1.0, "Expected ~2.0, got {}", val);
+            assert!((val - 2.0).abs() < 1.0, "Expected ~2.0, got {val}");
         }
     }
 

@@ -16,8 +16,8 @@
 //! - Full f64 precision via SPIR-V/Vulkan
 //! - Safe Rust wrapper (no unsafe code)
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -43,11 +43,16 @@ impl ProdReduceF64 {
     /// Compute the product of all elements in a f64 buffer on GPU
     ///
     /// # Arguments
-    /// * `device` - WgpuDevice
+    /// * `device` - `WgpuDevice`
     /// * `data` - Input f64 slice
     ///
     /// # Returns
     /// The product as a single f64
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn prod(device: Arc<WgpuDevice>, data: &[f64]) -> Result<f64> {
         Self::reduce_op(device, data, "prod_reduce_f64")
     }
@@ -59,6 +64,11 @@ impl ProdReduceF64 {
     ///
     /// # Note
     /// Only works for positive values. Returns NaN for negative or zero inputs.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn log_prod(device: Arc<WgpuDevice>, data: &[f64]) -> Result<f64> {
         let log_sum = Self::reduce_op(device, data, "log_prod_reduce_f64")?;
         Ok(log_sum.exp())
@@ -110,7 +120,7 @@ impl ProdReduceF64 {
             .storage_rw(1, &partial_buffer)
             .uniform(2, &params_buffer)
             .dispatch(n_workgroups as u32, 1, 1)
-            .submit();
+            .submit()?;
 
         if n_workgroups <= 1 {
             return Self::read_f64_scalar(&device, &partial_buffer);
@@ -140,7 +150,7 @@ impl ProdReduceF64 {
             .storage_rw(1, &final_buffer)
             .uniform(2, &params2_buffer)
             .dispatch(n_workgroups2 as u32, 1, 1)
-            .submit();
+            .submit()?;
 
         if n_workgroups2 > 1 {
             // Third pass (extremely rare): read back partials and multiply on CPU
@@ -172,8 +182,7 @@ mod tests {
         let prod = ProdReduceF64::prod(device, &data).unwrap();
         assert!(
             (prod - 120.0).abs() < 1e-6,
-            "Product of 1..5 should be 120, got {}",
-            prod
+            "Product of 1..5 should be 120, got {prod}"
         );
     }
 
@@ -188,8 +197,7 @@ mod tests {
         let prod = ProdReduceF64::prod(device, &[]).unwrap();
         assert!(
             (prod - 1.0).abs() < 1e-10,
-            "Empty product should be 1, got {}",
-            prod
+            "Empty product should be 1, got {prod}"
         );
     }
 
@@ -204,8 +212,7 @@ mod tests {
         let prod = ProdReduceF64::prod(device, &data).unwrap();
         assert!(
             prod.abs() < 1e-10,
-            "Product with zero should be 0, got {}",
-            prod
+            "Product with zero should be 0, got {prod}"
         );
     }
 
@@ -223,10 +230,7 @@ mod tests {
         let rel_error = (prod - expected).abs() / expected;
         assert!(
             rel_error < 1e-6,
-            "Large product error too high: {} (expected {}, got {})",
-            rel_error,
-            expected,
-            prod
+            "Large product error too high: {rel_error} (expected {expected}, got {prod})"
         );
     }
 }

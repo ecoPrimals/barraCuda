@@ -44,6 +44,7 @@ pub struct Cast {
 
 impl Cast {
     /// Creates a cast with identity mode (no-op).
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self {
             input,
@@ -85,6 +86,9 @@ impl Cast {
     }
 
     /// Executes the cast and returns the converted tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, shader compilation fails, GPU
+    /// dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.len();
@@ -214,16 +218,25 @@ impl Cast {
 
 impl Tensor {
     /// Cast tensor (identity mode for f32→f32 compatibility)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, shader compilation fails, GPU
+    /// dispatch fails, or the device is lost.
     pub fn cast(self) -> Result<Self> {
         Cast::new(self).execute()
     }
 
     /// Cast tensor with a specific mode
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, shader compilation fails, GPU
+    /// dispatch fails, or the device is lost.
     pub fn cast_mode(self, mode: CastMode) -> Result<Self> {
         Cast::with_mode(self, mode).execute()
     }
 
     /// Clamp tensor values to [min, max]
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, shader compilation fails, GPU
+    /// dispatch fails, or the device is lost.
     pub fn cast_clamp(self, min_val: f32, max_val: f32) -> Result<Self> {
         Cast::with_clamp(self, min_val, max_val).execute()
     }
@@ -370,10 +383,6 @@ mod tests {
             .map(|(r, e)| (r - e).abs())
             .fold(0.0f32, f32::max);
 
-        assert!(
-            max_error < 1e-6,
-            "Max error: {} exceeds threshold",
-            max_error
-        );
+        assert!(max_error < 1e-6, "Max error: {max_error} exceeds threshold");
     }
 }

@@ -19,6 +19,7 @@ impl EventCodec {
     /// Create new codec with threshold
     ///
     /// **Deep Debt**: Configurable threshold, no hardcoding
+    #[must_use]
     pub fn new(threshold: f32) -> Self {
         Self { threshold }
     }
@@ -35,16 +36,16 @@ impl EventCodec {
     ///
     /// # Returns
     /// Sparse event stream (u8 encoded)
+    #[must_use]
     pub fn encode(&self, input: &[f32]) -> Vec<u8> {
         input
             .iter()
             .enumerate()
-            .filter(|(_, &val)| val > self.threshold)
-            .flat_map(|(idx, &val)| {
-                // Encode as: index (u32 LE) + value (u8)
+            .filter(|&(_, val)| *val > self.threshold)
+            .flat_map(|(idx, val)| {
                 let mut bytes = Vec::with_capacity(5);
                 bytes.extend_from_slice(&(idx as u32).to_le_bytes());
-                bytes.push((val * 255.0).clamp(0.0, 255.0) as u8);
+                bytes.push((*val * 255.0).clamp(0.0, 255.0) as u8);
                 bytes
             })
             .collect()
@@ -55,6 +56,7 @@ impl EventCodec {
     /// For small inputs (like MNIST 784 dims), use simpler encoding
     ///
     /// **Deep Debt**: No unsafe, runtime size adaptation
+    #[must_use]
     pub fn encode_simple(&self, input: &[f32]) -> Vec<u8> {
         input
             .iter()
@@ -73,6 +75,7 @@ impl EventCodec {
     ///
     /// # Returns
     /// Dense tensor reconstruction
+    #[must_use]
     pub fn decode(&self, events: &[u8], size: usize) -> Vec<f32> {
         let mut dense = vec![0.0f32; size];
 
@@ -96,6 +99,7 @@ impl EventCodec {
     /// Decode simple event encoding
     ///
     /// For simple encoding (values only, sequential indices)
+    #[must_use]
     pub fn decode_simple(&self, events: &[u8], size: usize) -> Vec<f32> {
         let mut dense = vec![0.0f32; size];
 
@@ -111,6 +115,7 @@ impl EventCodec {
     /// Calculate sparsity of encoded events
     ///
     /// **Deep Debt**: Runtime metric, no assumptions
+    #[must_use]
     pub fn measure_sparsity(&self, input: &[f32]) -> f32 {
         if input.is_empty() {
             return 0.0;

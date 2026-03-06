@@ -44,6 +44,11 @@ pub enum CyclicalLrMode {
 
 impl CyclicalLr {
     /// Create cyclical learning rate operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         current_iter: u32,
         step_size: u32,
@@ -103,6 +108,9 @@ impl CyclicalLr {
     }
 
     /// Execute cyclical learning rate computation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self, device: &crate::device::WgpuDevice) -> Result<Tensor> {
         // Create output buffer (scalar LR value)
         let output_buffer = device.create_buffer_f32(1)?;

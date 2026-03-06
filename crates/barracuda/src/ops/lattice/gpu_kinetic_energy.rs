@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU per-link kinetic energy from HMC momenta.
 
+use crate::device::WgpuDevice;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
 
@@ -32,6 +32,9 @@ pub struct GpuKineticEnergy {
 
 impl GpuKineticEnergy {
     /// Create kinetic energy calculator for given lattice volume.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>, volume: u32) -> Result<Self> {
         let n_links = volume * 4;
 
@@ -74,9 +77,11 @@ impl GpuKineticEnergy {
     }
 
     /// Compute per-link kinetic energy.
-    ///
     /// * `momenta_buf` — `[V × 4 × 18]` f64 (conjugate momenta)
     /// * `energy_buf`  — `[V × 4]` f64 (per-link kinetic energy)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn compute(&self, momenta_buf: &wgpu::Buffer, energy_buf: &wgpu::Buffer) -> Result<()> {
         ComputeDispatch::new(self.device.as_ref(), "GpuKineticEnergy")
             .shader(&self.shader_src, "kinetic_energy_kernel")
@@ -85,11 +90,12 @@ impl GpuKineticEnergy {
             .storage_read(1, momenta_buf)
             .storage_rw(2, energy_buf)
             .dispatch(self.n_links.div_ceil(WG), 1, 1)
-            .submit();
+            .submit()?;
         Ok(())
     }
 
     /// Number of gauge links (volume × 4).
+    #[must_use]
     pub fn n_links(&self) -> u32 {
         self.n_links
     }

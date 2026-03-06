@@ -6,6 +6,9 @@
 //! GPUs get 8, integrated GPUs get 4. This prevents driver overload
 //! without requiring callers to manage thread counts.
 
+/// Environment variable to override the concurrency budget for all device types.
+const CONCURRENCY_BUDGET_ENV: &str = "BARRACUDA_CONCURRENCY_BUDGET";
+
 const CONCURRENCY_BUDGET_CPU: usize = 2;
 const CONCURRENCY_BUDGET_IGPU: usize = 4;
 const CONCURRENCY_BUDGET_DGPU: usize = 8;
@@ -28,16 +31,50 @@ impl DispatchSemaphore {
         }
     }
 
+    /// Acquire a dispatch permit, blocking until one is available.
     pub(crate) fn acquire(&self) -> DispatchPermit<'_> {
-        let mut count = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        let mut count = self
+            .state
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         while *count == 0 {
             count = self
                 .available
                 .wait(count)
-                .unwrap_or_else(|e| e.into_inner());
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
         }
         *count -= 1;
         DispatchPermit(self)
+    }
+
+    /// Acquire with a timeout — returns `None` if the deadline expires
+    /// before a permit is available.  Prevents infinite stalls when the
+    /// device is oversubscribed (same philosophy as GPU fence timeouts).
+    pub(crate) fn try_acquire_timeout(
+        &self,
+        timeout: std::time::Duration,
+    ) -> Option<DispatchPermit<'_>> {
+        let deadline = std::time::Instant::now() + timeout;
+        let mut count = self
+            .state
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        while *count == 0 {
+            let remaining = deadline.saturating_duration_since(std::time::Instant::now());
+            if remaining.is_zero() {
+                return None;
+            }
+            let (guard, wait_result) = self
+                .available
+                .wait_timeout(count, remaining)
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            count = guard;
+            if wait_result.timed_out() && *count == 0 {
+                return None;
+            }
+        }
+        *count -= 1;
+        Some(DispatchPermit(self))
     }
 
     pub(crate) fn max_permits(&self) -> usize {
@@ -56,14 +93,29 @@ pub struct DispatchPermit<'a>(&'a DispatchSemaphore);
 
 impl Drop for DispatchPermit<'_> {
     fn drop(&mut self) {
-        let mut count = self.0.state.lock().unwrap_or_else(|e| e.into_inner());
+        let mut count = self
+            .0
+            .state
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         *count += 1;
         self.0.available.notify_one();
     }
 }
 
 /// Determine concurrency budget from adapter type.
+///
+/// Respects `BARRACUDA_CONCURRENCY_BUDGET` env override for tuning on
+/// exotic hardware without a code change.
 pub(crate) fn concurrency_budget(device_type: wgpu::DeviceType) -> usize {
+    if let Ok(val) = std::env::var(CONCURRENCY_BUDGET_ENV) {
+        if let Ok(n) = val.parse::<usize>() {
+            if n > 0 {
+                return n;
+            }
+        }
+    }
+
     match device_type {
         wgpu::DeviceType::Cpu => CONCURRENCY_BUDGET_CPU,
         wgpu::DeviceType::IntegratedGpu => CONCURRENCY_BUDGET_IGPU,

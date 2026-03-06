@@ -2,7 +2,7 @@
 //! F64 Built-in Capability Survey
 //!
 //! Probes every f64 WGSL built-in on the selected GPU and reports which are
-//! natively supported vs need the math_f64.wgsl software fallback.
+//! natively supported vs need the `math_f64.wgsl` software fallback.
 //!
 //! # Background
 //!
@@ -13,19 +13,19 @@
 //! may be broken on specific open-source driver stacks (NVK/NAK as of Mesa ≤25.2).
 //!
 //! By probing each function in isolation (so one crash does not hide others) we
-//! build the exact capability matrix for each device. ShaderTemplate uses this
-//! to emit native calls where safe, and the math_f64.wgsl library otherwise.
+//! build the exact capability matrix for each device. `ShaderTemplate` uses this
+//! to emit native calls where safe, and the `math_f64.wgsl` library otherwise.
 //!
 //! # Usage
 //!
-//!   cargo run --release --bin bench_f64_builtins
-//!   BARRACUDA_GPU_ADAPTER=amd  cargo run --release --bin bench_f64_builtins
-//!   BARRACUDA_GPU_ADAPTER=0    cargo run --release --bin bench_f64_builtins
-//!   BARRACUDA_GPU_ADAPTER=1    cargo run --release --bin bench_f64_builtins
+//!   cargo run --release --bin `bench_f64_builtins`
+//!   `BARRACUDA_GPU_ADAPTER=amd`  cargo run --release --bin `bench_f64_builtins`
+//!   `BARRACUDA_GPU_ADAPTER=0`    cargo run --release --bin `bench_f64_builtins`
+//!   `BARRACUDA_GPU_ADAPTER=1`    cargo run --release --bin `bench_f64_builtins`
 
+use barracuda::device::WgpuDevice;
 use barracuda::device::capabilities::GpuDriverProfile;
 use barracuda::device::probe::probe_f64_builtins;
-use barracuda::device::WgpuDevice;
 use std::sync::Arc;
 
 #[tokio::main]

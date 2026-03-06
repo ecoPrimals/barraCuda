@@ -5,11 +5,11 @@
 //! domain workloads. Any consumer can run this to confirm their
 //! hardware is trustworthy for scientific compute.
 //!
-//! Usage: cargo run --bin validate_gpu --features gpu
+//! Usage: cargo run --bin `validate_gpu` --features gpu
 
 use barracuda::device::WgpuDevice;
 use barracuda::error::BarracudaError;
-use barracuda::ops::fhe_intt::{compute_inverse_root, FheIntt};
+use barracuda::ops::fhe_intt::{FheIntt, compute_inverse_root};
 use barracuda::ops::fhe_ntt::FheNtt;
 use barracuda::ops::fhe_pointwise_mul::FhePointwiseMul;
 use barracuda::tensor::Tensor;
@@ -35,7 +35,7 @@ fn tensor_to_u64(tensor: &Tensor) -> Result<Vec<u64>, BarracudaError> {
     let u32_data = tensor.to_vec_u32()?;
     Ok(u32_data
         .chunks(2)
-        .map(|c| (c[0] as u64) | ((c[1] as u64) << 32))
+        .map(|c| u64::from(c[0]) | (u64::from(c[1]) << 32))
         .collect())
 }
 
@@ -49,7 +49,7 @@ async fn validate_fhe_ntt_roundtrip(
     let name = format!("FHE NTT round-trip (mod {modulus}, N={degree})");
     let start = Instant::now();
 
-    let poly: Vec<u64> = (1..=degree as u64).collect();
+    let poly: Vec<u64> = (1..=u64::from(degree)).collect();
     let inv_root = compute_inverse_root(degree, modulus, root);
 
     let result = (|| -> Result<bool, BarracudaError> {

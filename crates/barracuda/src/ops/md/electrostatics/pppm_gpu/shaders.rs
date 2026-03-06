@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! PPPM WGSL shader source strings
 //!
-//! Extracted from pppm_gpu for modularity. All shader sources use include_str!
+//! Extracted from `pppm_gpu` for modularity. All shader sources use `include_str`!
 //! for compile-time embedding. Paths are relative to electrostatics directory.
 
 /// B-spline coefficient computation

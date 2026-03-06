@@ -6,8 +6,8 @@
 
 /// Int8-quantized readout weights for NPU deployment.
 ///
-/// The readout layer computes `output = W_out @ state` where W_out has shape
-/// `[output_dim, input_dim]` (output_dim × reservoir_size). Quantized for
+/// The readout layer computes `output = W_out @ state` where `W_out` has shape
+/// `[output_dim, input_dim]` (`output_dim` × `reservoir_size`). Quantized for
 /// efficient int8 matrix-vector multiply on NPU.
 #[derive(Debug, Clone)]
 pub struct NpuReadoutWeights {
@@ -51,8 +51,8 @@ pub fn quantize_affine_i8_f64(values: &[f64]) -> (Vec<i8>, f64, i64) {
         return (Vec::new(), 1.0, 0);
     }
 
-    let min_val = values.iter().cloned().fold(f64::INFINITY, f64::min);
-    let max_val = values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+    let min_val = values.iter().copied().fold(f64::INFINITY, f64::min);
+    let max_val = values.iter().copied().fold(f64::NEG_INFINITY, f64::max);
 
     let range = max_val - min_val;
     let scale = if range > 0.0 { range / 254.0 } else { 1.0 };
@@ -100,7 +100,7 @@ mod tests {
 
         let range = values
             .iter()
-            .cloned()
+            .copied()
             .fold((f64::INFINITY, f64::NEG_INFINITY), |(a, b), x| {
                 (a.min(x), b.max(x))
             });
@@ -127,7 +127,7 @@ mod tests {
 
         for (orig, deq) in values.iter().zip(dequantized.iter()) {
             let err = (orig - deq).abs();
-            assert!(err < 0.1, "orig {} deq {} err {}", orig, deq, err);
+            assert!(err < 0.1, "orig {orig} deq {deq} err {err}");
         }
     }
 
@@ -152,9 +152,7 @@ mod tests {
         for (orig, deq) in values.iter().zip(dequantized.iter()) {
             assert!(
                 (orig - deq).abs() < 1.0,
-                "single-value quantize: orig {} deq {}",
-                orig,
-                deq
+                "single-value quantize: orig {orig} deq {deq}"
             );
         }
     }

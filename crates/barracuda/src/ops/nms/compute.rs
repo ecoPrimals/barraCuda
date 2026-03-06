@@ -2,21 +2,26 @@
 //! GPU compute operations for NMS
 //!
 //! This module contains the 4-pass GPU execution:
-//! 1. Pass 1: Compute IoU Matrix on GPU (parallel)
+//! 1. Pass 1: Compute `IoU` Matrix on GPU (parallel)
 //! 2. Pass 2: Sort indices by score (CPU - acceptable for small sets)
 //! 3. Pass 3: Mark suppressed boxes on GPU (parallel)
 //! 4. Pass 4: Compact results on GPU (parallel with atomics)
 
 use super::NMS;
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::DeviceCapabilities;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
 use std::sync::Arc;
 
 impl NMS {
     /// Execute NMS on a given GPU device.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute_on(self, device: Arc<WgpuDevice>) -> Result<Vec<usize>> {
         if self.boxes().is_empty() {
             return Ok(Vec::new());
@@ -32,6 +37,11 @@ impl NMS {
     }
 
     /// Execute NMS with automatic device discovery.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Vec<usize>> {
         if self.boxes().is_empty() {
             return Ok(Vec::new());
@@ -88,7 +98,7 @@ impl NMS {
             .storage_rw(1, &iou_matrix_buffer)
             .uniform(2, &iou_params_buffer)
             .dispatch(workgroups_x.max(1), workgroups_y.max(1), 1)
-            .submit();
+            .submit()?;
 
         // ====================================================================
         // Pass 2: Sort indices by score (CPU - acceptable for small sets)
@@ -141,7 +151,7 @@ impl NMS {
             .storage_rw(2, &suppressed_buffer)
             .uniform(3, &suppress_params_buffer)
             .dispatch(workgroups_suppress, 1, 1)
-            .submit();
+            .submit()?;
 
         // ====================================================================
         // Pass 4: Compact Results on GPU
@@ -182,7 +192,7 @@ impl NMS {
             .storage_rw(3, &keep_count_buffer)
             .uniform(4, &compact_params_buffer)
             .dispatch(workgroups_compact, 1, 1)
-            .submit();
+            .submit()?;
 
         // ====================================================================
         // Read Results (read_buffer_u32 will handle GPU synchronization)

@@ -26,6 +26,8 @@ pub struct SSIM {
 
 impl SSIM {
     /// Create a new SSIM operation
+    /// # Errors
+    /// Returns [`Err`] if image shapes differ, images are not 2D, or `window_size` is invalid.
     pub fn new(
         image1: Tensor,
         image2: Tensor,
@@ -79,6 +81,8 @@ impl SSIM {
     }
 
     /// Execute the SSIM operation
+    /// # Errors
+    /// Returns [`Err`] if window size is too large for image, or buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn execute(self) -> Result<f32> {
         let device = self.image1.device();
         let shape = self.image1.shape();
@@ -140,7 +144,7 @@ impl SSIM {
             .storage_rw(2, &window_ssim_buffer)
             .uniform(3, &params_buffer)
             .dispatch(workgroups_x, workgroups_y, 1)
-            .submit();
+            .submit()?;
 
         // Read back results and compute mean SSIM
         let window_ssim_data = crate::utils::read_buffer(device, &window_ssim_buffer, num_windows)?;
@@ -151,13 +155,13 @@ impl SSIM {
 
 impl Tensor {
     /// Compute SSIM between two images
-    ///
     /// # Arguments
-    ///
     /// * `other` - Second image tensor (must have same shape)
     /// * `window_size` - Size of sliding window (typically 11)
     /// * `c1` - Stability constant for luminance (typically 0.01^2)
     /// * `c2` - Stability constant for contrast (typically 0.03^2)
+    /// # Errors
+    /// Returns [`Err`] if validation fails or buffer allocation/GPU dispatch/readback fails (e.g. device lost).
     pub fn ssim(self, other: Tensor, window_size: usize, c1: f32, c2: f32) -> Result<f32> {
         SSIM::new(self, other, window_size, c1, c2)?.execute()
     }

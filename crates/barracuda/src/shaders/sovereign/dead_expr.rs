@@ -76,7 +76,7 @@ pub fn eliminate(expressions: &mut Arena<Expression>, body: &naga::Block) -> usi
 
 /// Recursively mark expression handles referenced by statements as live.
 fn mark_roots_from_block(block: &naga::Block, live: &mut [bool]) {
-    for stmt in block.iter() {
+    for stmt in block {
         mark_roots_from_statement(stmt, live);
     }
 }
@@ -237,7 +237,7 @@ mod tests {
 
     #[test]
     fn test_dead_expr_elimination_preserves_valid_module() {
-        let wgsl = r#"
+        let wgsl = r"
 @group(0) @binding(0) var<storage, read> input: array<f32>;
 @group(0) @binding(1) var<storage, read_write> output: array<f32>;
 
@@ -248,7 +248,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let b = a * 2.0;
     output[idx] = b;
 }
-"#;
+";
         let mut module = naga::front::wgsl::parse_str(wgsl).expect("parse");
         for ep in &mut module.entry_points {
             let _ = eliminate(&mut ep.function.expressions, &ep.function.body);

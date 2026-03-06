@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! NORM_PPF - Inverse Normal CDF (Probit) - Pure WGSL
+//! `NORM_PPF` - Inverse Normal CDF (Probit) - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -21,6 +21,7 @@ pub struct NormPpf {
 
 impl NormPpf {
     /// Create standard normal inverse CDF (μ=0, σ=1)
+    #[must_use]
     pub fn standard(input: Tensor) -> Self {
         Self {
             input,
@@ -30,6 +31,7 @@ impl NormPpf {
     }
 
     /// Create general normal inverse CDF with custom μ, σ
+    #[must_use]
     pub fn general(input: Tensor, mu: f32, sigma: f32) -> Self {
         Self { input, mu, sigma }
     }
@@ -44,6 +46,8 @@ impl NormPpf {
     }
 
     /// Execute inverse normal CDF (probit) on the input tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or device submission fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -180,11 +184,15 @@ impl NormPpf {
 
 impl Tensor {
     /// Compute standard normal inverse CDF Φ⁻¹(p) for each element
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or device submission fails (e.g. device lost).
     pub fn norm_ppf(self) -> Result<Self> {
         NormPpf::standard(self).execute()
     }
 
     /// Compute general normal inverse CDF with custom μ, σ
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or device submission fails (e.g. device lost).
     pub fn norm_ppf_params(self, mu: f32, sigma: f32) -> Result<Self> {
         NormPpf::general(self, mu, sigma).execute()
     }

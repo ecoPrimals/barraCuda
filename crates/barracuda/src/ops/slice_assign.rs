@@ -8,12 +8,12 @@
 //! - Complete implementation: Production-ready, no mocks
 //! - Hardware-agnostic: Pure WGSL for universal compute
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::DeviceCapabilities;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
-/// f64 is the canonical source — f32 derived via downcast_f64_to_f32 when needed.
+/// f64 is the canonical source — f32 derived via `downcast_f64_to_f32` when needed.
 const SHADER_F64: &str = include_str!("../shaders/math/slice_assign_f64.wgsl");
 
 static SHADER_F32: std::sync::LazyLock<String> =
@@ -39,6 +39,8 @@ pub struct SliceAssign {
 
 impl SliceAssign {
     /// Create a new slice assign operation
+    /// # Errors
+    /// Returns [`Err`] if start >= end, end exceeds input size, stride is zero, or values size does not match slice size.
     pub fn new(input: Tensor, slice_range: SliceRange, values: Tensor) -> Result<Self> {
         let input_shape = input.shape();
         let input_size = input_shape.iter().product::<usize>();
@@ -91,6 +93,8 @@ impl SliceAssign {
     }
 
     /// Execute the slice assign operation (modifies input in-place)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_size: usize = self.input.shape().iter().product();
@@ -136,7 +140,7 @@ impl SliceAssign {
             .storage_read(1, values_buffer)
             .storage_rw(2, input_buffer)
             .dispatch(workgroups, 1, 1)
-            .submit();
+            .submit()?;
 
         let output_data = crate::utils::read_buffer(device, input_buffer, input_size)?;
         Ok(Tensor::new(
@@ -149,11 +153,11 @@ impl SliceAssign {
 
 impl Tensor {
     /// Assign values to a slice of the tensor (in-place)
-    ///
     /// # Arguments
-    ///
     /// * `slice_range` - Slice range (start, end, stride)
     /// * `values` - Values to assign
+    /// # Errors
+    /// Returns [`Err`] if validation fails or buffer allocation/GPU dispatch/readback fails (e.g. device lost).
     pub fn slice_assign(self, slice_range: SliceRange, values: Tensor) -> Result<Self> {
         SliceAssign::new(self, slice_range, values)?.execute()
     }

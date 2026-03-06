@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Softsign - Pure WGSL
 //!
-//! f64 canonical — f32 derived via downcast_f64_to_f32 when needed.
+//! f64 canonical — f32 derived via `downcast_f64_to_f32` when needed.
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -28,6 +28,7 @@ pub struct Softsign {
 
 impl Softsign {
     /// Create a new softsign operation
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -38,6 +39,9 @@ impl Softsign {
     }
 
     /// Execute the softsign operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -182,6 +186,9 @@ impl Softsign {
 
 impl Tensor {
     /// Compute softsign element-wise
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn softsign_wgsl(self) -> Result<Self> {
         Softsign::new(self).execute()
     }

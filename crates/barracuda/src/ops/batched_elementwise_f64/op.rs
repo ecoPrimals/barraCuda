@@ -16,7 +16,7 @@ pub enum Op {
     /// Custom operation (passthrough first element)
     Custom = 2,
 
-    /// SoilWatch 10 sensor calibration — Dong et al. (2024)
+    /// `SoilWatch` 10 sensor calibration — Dong et al. (2024)
     /// Input per batch: `[raw_count]`
     /// Output: VWC (cm³/cm³)
     SensorCalibration = 5,
@@ -51,9 +51,9 @@ pub enum Op {
     /// Output: ET₀ (mm/month)
     ThornthwaiteEt0 = 11,
 
-    /// Growing Degree Days: max(0, T_mean - T_base)
-    /// Input per batch: `[T_mean]` (user precomputes (T_max+T_min)/2)
-    /// aux_param: T_base (base temperature)
+    /// Growing Degree Days: max(0, `T_mean` - `T_base`)
+    /// Input per batch: `[T_mean]` (user precomputes (`T_max+T_min)/2`)
+    /// `aux_param`: `T_base` (base temperature)
     /// Output: GDD
     Gdd = 12,
 
@@ -76,6 +76,22 @@ pub enum Op {
     /// Input per batch: `[T_mean, daylight_hours]`
     /// Output: ET₀ (mm/day)
     HamonEt0 = 16,
+
+    /// SCS-CN (USDA TR-55) runoff estimation
+    /// Input per batch: `[P, CN, Ia_ratio]`
+    /// Output: Q (mm) runoff depth
+    ScsCnRunoff = 17,
+
+    /// Stewart (1977) yield-water function (Doorenbos & Kassam 1979)
+    /// `Ya/Ym` = 1 - Ky × (1 - `ETa/ETc`)
+    /// Input per batch: `[Ky, ETa_ETc_ratio]`
+    /// Output: relative yield (`Ya/Ym`)
+    StewartYieldWater = 18,
+
+    /// Blaney-Criddle (1950) ET₀ — temperature + daylight percentage
+    /// Input per batch: `[T_mean, p_daylight]`
+    /// Output: ET₀ (mm/month)
+    BlaneyCriddleEt0 = 19,
 }
 
 impl Op {
@@ -98,12 +114,15 @@ impl Op {
             Op::MakkinkEt0 => 3,
             Op::TurcEt0 => 3,
             Op::HamonEt0 => 2,
+            Op::ScsCnRunoff => 3,
+            Op::StewartYieldWater => 2,
+            Op::BlaneyCriddleEt0 => 2,
         }
     }
 }
 
-/// FAO-56 station-day input: (tmax, tmin, rh_max, rh_min, wind_2m, rs, elevation, latitude, day_of_year)
+/// FAO-56 station-day input: (tmax, tmin, `rh_max`, `rh_min`, `wind_2m`, rs, elevation, latitude, `day_of_year`)
 pub type StationDayInput = (f64, f64, f64, f64, f64, f64, f64, f64, u32);
 
-/// Water balance field input: (dr_prev, precipitation, irrigation, etc, taw, raw, p_fraction)
+/// Water balance field input: (`dr_prev`, precipitation, irrigation, etc, taw, raw, `p_fraction`)
 pub type WaterBalanceInput = (f64, f64, f64, f64, f64, f64, f64);

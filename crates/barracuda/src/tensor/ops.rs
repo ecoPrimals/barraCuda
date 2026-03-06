@@ -10,33 +10,39 @@ impl Tensor {
     // ── Scalar arithmetic ────────────────────────────────────────────────────
 
     /// `C = A * scalar` — broadcast scalar multiplication.
-    ///
     /// ```rust,ignore
     /// let x = Tensor::from_vec(vec![1.0, 2.0, 3.0], vec![3]).await?;
     /// let y = x.mul_scalar(2.0)?;  // [2.0, 4.0, 6.0]
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, buffer write fails, or the
+    /// element-wise multiply operation fails (e.g., device lost, out of memory).
     pub fn mul_scalar(&self, scalar: f32) -> Result<Tensor> {
         let scalar_tensor = self.broadcast_scalar(scalar)?;
         self.mul(&scalar_tensor)
     }
 
     /// `C = A + scalar` — broadcast scalar addition.
-    ///
     /// ```rust,ignore
     /// let x = Tensor::from_vec(vec![1.0, 2.0, 3.0], vec![3]).await?;
     /// let y = x.add_scalar(10.0)?;  // [11.0, 12.0, 13.0]
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, buffer write fails, or the
+    /// element-wise add operation fails (e.g., device lost, out of memory).
     pub fn add_scalar(&self, scalar: f32) -> Result<Tensor> {
         let scalar_tensor = self.broadcast_scalar(scalar)?;
         self.add(&scalar_tensor)
     }
 
     /// `C = A / scalar` — implemented as `A * (1/scalar)`.
-    ///
     /// ```rust,ignore
     /// let x = Tensor::from_vec(vec![10.0, 20.0, 30.0], vec![3]).await?;
     /// let y = x.div_scalar(2.0)?;  // [5.0, 10.0, 15.0]
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if `mul_scalar(1.0 / scalar)` fails (buffer allocation,
+    /// buffer write, or multiply operation failure).
     pub fn div_scalar(&self, scalar: f32) -> Result<Tensor> {
         self.mul_scalar(1.0 / scalar)
     }
@@ -49,10 +55,12 @@ impl Tensor {
     // ── Random generation ────────────────────────────────────────────────────
 
     /// Random tensor sampled from N(0, 1) via Box-Muller transform.
-    ///
     /// ```rust,ignore
     /// let x = Tensor::randn(vec![100, 100]).await?;
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if device discovery fails, buffer allocation fails, or
+    /// buffer write fails.
     pub async fn randn(shape: Vec<usize>) -> Result<Self> {
         use rand::SeedableRng;
         let mut rng = rand::rngs::StdRng::from_os_rng();
@@ -60,12 +68,14 @@ impl Tensor {
     }
 
     /// Random normal tensor with a caller-supplied RNG (reproducible).
-    ///
     /// ```rust,ignore
     /// use rand::SeedableRng;
     /// let mut rng = rand::rngs::StdRng::seed_from_u64(42);
     /// let x = Tensor::randn_with_rng(vec![10, 10], &mut rng).await?;
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if device discovery fails, buffer allocation fails, or
+    /// buffer write fails.
     pub async fn randn_with_rng<R: rand::Rng>(shape: Vec<usize>, rng: &mut R) -> Result<Self> {
         let size: usize = shape.iter().product();
 
@@ -92,10 +102,12 @@ impl Tensor {
     }
 
     /// Random tensor sampled from U(0, 1).
-    ///
     /// ```rust,ignore
     /// let x = Tensor::rand(vec![100, 100]).await?;
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if device discovery fails, buffer allocation fails, or
+    /// buffer write fails.
     pub async fn rand(shape: Vec<usize>) -> Result<Self> {
         use rand::SeedableRng;
         let mut rng = rand::rngs::StdRng::from_os_rng();
@@ -103,6 +115,9 @@ impl Tensor {
     }
 
     /// Random uniform tensor with a caller-supplied RNG.
+    /// # Errors
+    /// Returns [`Err`] if device discovery fails, buffer allocation fails, or
+    /// buffer write fails.
     pub async fn rand_with_rng<R: rand::Rng>(shape: Vec<usize>, rng: &mut R) -> Result<Self> {
         let size: usize = shape.iter().product();
         let data: Vec<f32> = (0..size).map(|_| rng.random()).collect();
@@ -110,10 +125,12 @@ impl Tensor {
     }
 
     /// Random tensor sampled from U(min, max).
-    ///
     /// ```rust,ignore
     /// let x = Tensor::rand_range(vec![100], -1.0, 1.0).await?;
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if `rand`, `mul_scalar`, or `add_scalar` fails (device
+    /// discovery, buffer allocation, buffer write, or element-wise ops).
     pub async fn rand_range(shape: Vec<usize>, min: f32, max: f32) -> Result<Self> {
         let uniform = Self::rand(shape).await?;
         let range = max - min;

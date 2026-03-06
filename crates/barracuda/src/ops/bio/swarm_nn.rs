@@ -3,9 +3,9 @@
 //! Swarm NN Forward — GPU kernel.
 //!
 //! Forward pass for a population of neural network controllers.
-//! Reads weights [n_controllers × weights_per_ctrl] f64 and inputs
-//! [n_controllers × n_evals × input_dim] f64, writes actions
-//! [n_controllers × n_evals] u32.
+//! Reads weights [`n_controllers` × `weights_per_ctrl`] f64 and inputs
+//! [`n_controllers` × `n_evals` × `input_dim`] f64, writes actions
+//! [`n_controllers` × `n_evals`] u32.
 //!
 //! Provenance: neuralSpring metalForge → toadStool absorption
 
@@ -13,8 +13,8 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 
 /// WGSL source for swarm NN forward pass (f32).
 pub const WGSL_SWARM_NN_FORWARD: &str = include_str!("../../shaders/bio/swarm_nn_forward.wgsl");
@@ -25,7 +25,7 @@ pub const WGSL_SWARM_NN_FORWARD_F64: &str =
 
 /// f64 is the canonical source — math is universal, precision is silicon.
 static WGSL_SWARM_NN_SCORES_F64: &str = include_str!("../../shaders/bio/swarm_nn_scores_f64.wgsl");
-/// Max activation output for mean_reduce chaining (Paper 015, L-009).
+/// Max activation output for `mean_reduce` chaining (Paper 015, L-009).
 /// Outputs f32 scores per (controller, eval) — different from forward which outputs u32 actions.
 pub static WGSL_SWARM_NN_SCORES: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(WGSL_SWARM_NN_SCORES_F64)
@@ -62,6 +62,7 @@ pub struct SwarmNnGpu {
 
 impl SwarmNnGpu {
     /// Create a new swarm NN GPU kernel.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 

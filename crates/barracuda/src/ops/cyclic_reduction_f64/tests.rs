@@ -25,7 +25,7 @@ fn test_simple_system() {
     let x = solver.solve(&a, &b, &c, &d).unwrap();
 
     for (i, xi) in x.iter().enumerate() {
-        assert!((*xi - 1.0).abs() < 1e-10, "x[{}] = {}, expected 1.0", i, xi);
+        assert!((*xi - 1.0).abs() < 1e-10, "x[{i}] = {xi}, expected 1.0");
     }
 }
 
@@ -69,11 +69,7 @@ fn test_heat_equation_stencil() {
         let error = (*xi - expected).abs();
         assert!(
             error < 0.01, // Allow for discretization error
-            "x[{}] = {}, expected {}, error {}",
-            i,
-            xi,
-            expected,
-            error
+            "x[{i}] = {xi}, expected {expected}, error {error}"
         );
     }
 }
@@ -106,9 +102,7 @@ fn test_large_system() {
         let residual = (ax_i - d[i]).abs();
         assert!(
             residual < 1e-8,
-            "Residual at i={} is {}, expected < 1e-8",
-            i,
-            residual
+            "Residual at i={i} is {residual}, expected < 1e-8"
         );
     }
 }

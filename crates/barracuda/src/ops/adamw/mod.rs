@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! AdamW Optimizer - GPU-accelerated Adam with Decoupled Weight Decay
+//! `AdamW` Optimizer - GPU-accelerated Adam with Decoupled Weight Decay
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation (new shader!)
@@ -61,7 +61,7 @@ mod tests;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
-/// AdamW optimizer parameters for WGSL shader
+/// `AdamW` optimizer parameters for WGSL shader
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub(crate) struct AdamWParams {
@@ -74,7 +74,7 @@ pub(crate) struct AdamWParams {
     pub step: u32,
 }
 
-/// AdamW Optimizer operation
+/// `AdamW` Optimizer operation
 ///
 /// **Deep Debt**: Uses new WGSL shader with decoupled weight decay
 pub struct AdamW {
@@ -91,9 +91,14 @@ pub struct AdamW {
 }
 
 impl AdamW {
-    /// Create new AdamW optimizer operation
+    /// Create new `AdamW` optimizer operation
     ///
     /// **Deep Debt**: Validates all inputs for shape compatibility
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shapes mismatch, betas out of [0, 1), epsilon ≤ 0,
+    /// or step is 0.
     #[expect(clippy::too_many_arguments, reason = "API")]
     pub fn new(
         params: Tensor,
@@ -235,7 +240,7 @@ impl AdamW {
 // ═══════════════════════════════════════════════════════════════
 
 impl Tensor {
-    /// AdamW optimizer step (Adam with Decoupled Weight Decay)
+    /// `AdamW` optimizer step (Adam with Decoupled Weight Decay)
     ///
     /// **Deep Debt**: Production-ready optimizer with decoupled weight decay
     ///
@@ -259,7 +264,12 @@ impl Tensor {
     /// ```
     ///
     /// # Note
-    /// AdamW is superior to Adam for large models due to decoupled weight decay!
+    /// `AdamW` is superior to Adam for large models due to decoupled weight decay!
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     #[expect(clippy::too_many_arguments, reason = "API")]
     pub fn adamw(
         self,

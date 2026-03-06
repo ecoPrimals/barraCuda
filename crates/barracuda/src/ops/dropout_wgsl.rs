@@ -12,7 +12,7 @@ use crate::device::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// f64 is the canonical source — f32 derived via downcast_f64_to_f32 when needed.
+/// f64 is the canonical source — f32 derived via `downcast_f64_to_f32` when needed.
 const SHADER_F64: &str = include_str!("../shaders/dropout/dropout_f64.wgsl");
 
 static SHADER_F32: std::sync::LazyLock<String> =
@@ -27,6 +27,7 @@ pub struct Dropout {
 
 impl Dropout {
     /// Create a new dropout operation
+    #[must_use]
     pub fn new(input: Tensor, probability: f32, seed: u32) -> Self {
         Self {
             input,
@@ -41,6 +42,9 @@ impl Dropout {
     }
 
     /// Execute the dropout operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -83,7 +87,7 @@ impl Dropout {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d(size as u32)
-            .submit();
+            .submit()?;
 
         // Read back results
         let output_data = crate::utils::read_buffer(device, &output_buffer, size)?;
@@ -98,11 +102,12 @@ impl Dropout {
 
 impl Tensor {
     /// Apply dropout with given probability
-    ///
     /// # Arguments
-    ///
     /// * `probability` - Probability of dropping each element (0.0 to 1.0)
     /// * `seed` - Random seed for reproducibility
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn dropout_wgsl(self, probability: f32, seed: u32) -> Result<Self> {
         Dropout::new(self, probability, seed).execute()
     }

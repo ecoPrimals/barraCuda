@@ -4,7 +4,7 @@
 //! **Purpose**: Reduce ciphertext noise by switching to a smaller modulus
 //!
 //! **Algorithm**: Scale-and-round modulus reduction
-//! - Noise reduction: ~log(q_old/q_new) bits
+//! - Noise reduction: ~`log(q_old/q_new)` bits
 //! - Preserves plaintext (decrypt correctness maintained)
 //! - Essential for leveled FHE schemes (BFV, BGV)
 //!
@@ -16,15 +16,15 @@
 //!
 //! ## Mathematical Background
 //!
-//! Modulus switching converts a ciphertext under modulus q_old to modulus q_new:
+//! Modulus switching converts a ciphertext under modulus `q_old` to modulus `q_new`:
 //! ```text
 //! ct_new = round((q_new / q_old) * ct_old) mod q_new
 //! ```
 //!
 //! **Key Properties**:
-//! 1. **Correctness**: Dec(ct_new, sk, q_new) = Dec(ct_old, sk, q_old)
-//! 2. **Noise Reduction**: noise_new ≈ noise_old * (q_new / q_old)
-//! 3. **Homomorphism**: Can continue operations under q_new
+//! 1. **Correctness**: `Dec(ct_new`, sk, `q_new`) = `Dec(ct_old`, sk, `q_old`)
+//! 2. **Noise Reduction**: `noise_new` ≈ `noise_old` * (`q_new` / `q_old`)
+//! 3. **Homomorphism**: Can continue operations under `q_new`
 //!
 //! **Use Cases**:
 //! - **Noise Management**: Reduce accumulated noise before overflow
@@ -69,19 +69,19 @@ pub struct FheModulusSwitch {
 
 impl FheModulusSwitch {
     /// Create a new modulus switching operation
-    ///
-    /// **Parameters**:
+    ///   **Parameters**:
     /// - `input`: Ciphertext polynomial (2*degree u32 values, u64 emulated)
     /// - `degree`: Polynomial degree (power of 2)
     /// - `modulus_old`: Current modulus
-    /// - `modulus_new`: Target modulus (must be < modulus_old)
-    ///
-    /// **Returns**: FheModulusSwitch operation ready to execute
-    ///
-    /// **Errors**:
+    /// - `modulus_new`: Target modulus (must be < `modulus_old`)
+    ///   **Returns**: `FheModulusSwitch` operation ready to execute
+    ///   **Errors**:
     /// - Invalid degree (not power of 2)
-    /// - modulus_new >= modulus_old
+    /// - `modulus_new` >= `modulus_old`
     /// - Input tensor size mismatch
+    /// # Errors
+    /// Returns [`Err`] if degree is not a power of 2, `modulus_new` < `modulus_old`,
+    /// or input size does not match degree.
     pub fn new(input: Tensor, degree: u32, modulus_old: u64, modulus_new: u64) -> Result<Self> {
         // ✅ VALIDATION: Degree must be power of 2
         if !degree.is_power_of_two() || degree < 4 {
@@ -121,10 +121,11 @@ impl FheModulusSwitch {
     }
 
     /// Execute modulus switching on GPU
-    ///
     /// **Returns**: Tensor with coefficients scaled to new modulus
-    ///
     /// **Performance**: O(n) GPU parallel execution
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 
@@ -162,7 +163,7 @@ impl FheModulusSwitch {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d(self.degree)
-            .submit();
+            .submit()?;
 
         // Return result tensor
         Ok(Tensor::from_buffer(

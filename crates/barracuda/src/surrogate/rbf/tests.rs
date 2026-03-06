@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 use super::*;
-use crate::device::test_pool::get_test_device_if_f64_gpu_available_sync;
 use crate::device::WgpuDevice;
+use crate::device::test_pool::get_test_device_if_f64_gpu_available_sync;
 use crate::surrogate::kernels::RBFKernel;
 use std::sync::Arc;
 
@@ -141,7 +141,7 @@ fn test_loo_cv_rmse() {
     assert!(loo_rmse >= 0.0);
 
     // Should be small since data is nearly linear
-    assert!(loo_rmse < 1.0, "LOO-CV RMSE too large: {}", loo_rmse);
+    assert!(loo_rmse < 1.0, "LOO-CV RMSE too large: {loo_rmse}");
 }
 
 #[test]
@@ -160,7 +160,7 @@ fn test_loo_cv_errors() {
 
     // Errors should be finite
     for e in &errors {
-        assert!(e.is_finite(), "Non-finite LOO error: {}", e);
+        assert!(e.is_finite(), "Non-finite LOO error: {e}");
     }
 }
 
@@ -242,16 +242,14 @@ fn test_loo_cv_hat_diagonal_correct() {
     // With high smoothing, the fit should be imperfect
     assert!(
         max_residual > 0.01,
-        "Expected imperfect fit with high smoothing. Max residual: {}",
-        max_residual
+        "Expected imperfect fit with high smoothing. Max residual: {max_residual}"
     );
 
     // LOO errors should be non-zero (the main test)
     let max_abs_error = errors.iter().map(|e| e.abs()).fold(0.0, f64::max);
     assert!(
         max_abs_error > 0.001,
-        "LOO errors should be non-zero with smoothing. Max error: {}",
-        max_abs_error
+        "LOO errors should be non-zero with smoothing. Max error: {max_abs_error}"
     );
 }
 
@@ -281,8 +279,6 @@ fn test_loo_cv_smoothing_effect() {
     // But this isn't strictly monotonic, so we just verify they're different
     assert!(
         (rmse_low - rmse_high).abs() > 1e-6,
-        "LOO-CV should be sensitive to smoothing. low={}, high={}",
-        rmse_low,
-        rmse_high
+        "LOO-CV should be sensitive to smoothing. low={rmse_low}, high={rmse_high}"
     );
 }

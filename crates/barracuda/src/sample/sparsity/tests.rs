@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! SparsitySampler tests.
+//! `SparsitySampler` tests.
 
 use super::filter::compute_surrogate_rmse;
 use super::sampler::sparsity_sampler;
@@ -198,7 +198,6 @@ fn test_surrogate_rmse() {
     let rmse = compute_surrogate_rmse(&surrogate, &x_train, &y_train);
     assert!(
         rmse < 1e-6,
-        "Surrogate should interpolate training data exactly, RMSE={}",
-        rmse
+        "Surrogate should interpolate training data exactly, RMSE={rmse}"
     );
 }

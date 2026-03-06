@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! SpatialDropout - Spatial Dropout (Channel-wise dropout)
+//! `SpatialDropout` - Spatial Dropout (Channel-wise dropout)
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation
@@ -17,7 +17,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
-/// f64 is the canonical source — f32 derived via downcast_f64_to_f32 when needed.
+/// f64 is the canonical source — f32 derived via `downcast_f64_to_f32` when needed.
 const SHADER_F64: &str = include_str!("../shaders/dropout/spatial_dropout_f64.wgsl");
 
 static SHADER_F32: std::sync::LazyLock<String> =
@@ -46,6 +46,8 @@ pub struct SpatialDropout {
 
 impl SpatialDropout {
     /// Creates a new spatial dropout operation. Mask shape must be [B, C].
+    /// # Errors
+    /// Returns [`Err`] if input is not 4D, mask shape does not match [B, C], or `drop_prob` is not in [0, 1).
     pub fn new(input: Tensor, mask: Tensor, drop_prob: f32, training: bool) -> Result<Self> {
         // Validate input shape: must be 4D [B, C, H, W]
         let input_shape = input.shape();
@@ -88,6 +90,8 @@ impl SpatialDropout {
     }
 
     /// Executes spatial dropout and returns the output tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or device submission fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -105,7 +109,7 @@ impl SpatialDropout {
             height: height as u32,
             width: width as u32,
             drop_prob: self.drop_prob,
-            training: if self.training { 1 } else { 0 },
+            training: u32::from(self.training),
             _padding: 0,
             _padding2: 0,
         };
@@ -245,11 +249,12 @@ impl SpatialDropout {
 
 impl Tensor {
     /// Apply spatial dropout (channel-wise dropout)
-    ///
     /// # Arguments
     /// - `mask`: Channel mask tensor [B, C] (random values on CPU, passed in)
     /// - `drop_prob`: Dropout probability
     /// - `training`: Whether in training mode
+    /// # Errors
+    /// Returns [`Err`] if validation fails or buffer allocation/GPU dispatch fails (e.g. device lost).
     pub fn spatial_dropout(self, mask: Tensor, drop_prob: f32, training: bool) -> Result<Self> {
         SpatialDropout::new(self, mask, drop_prob, training)?.execute()
     }

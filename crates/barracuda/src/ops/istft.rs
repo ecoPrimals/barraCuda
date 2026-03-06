@@ -32,6 +32,11 @@ pub struct ISTFT {
 
 impl ISTFT {
     /// Create a new ISTFT operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         stft_data: Tensor,
         window: Tensor,
@@ -81,6 +86,11 @@ impl ISTFT {
     }
 
     /// Execute the ISTFT operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.stft_data.device();
         let bins_per_frame = self.n_fft / 2 + 1;

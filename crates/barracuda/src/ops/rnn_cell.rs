@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! RNN Cell - Basic recurrent neural network cell
 //!
-//! **Canonical BarraCuda Pattern**: Struct with new/execute
+//! **Canonical `BarraCuda` Pattern**: Struct with new/execute
 //!
 //! ## Algorithm
 //!
@@ -16,17 +16,17 @@ use crate::tensor::Tensor;
 /// RNN cell weight matrices and biases.
 #[derive(Clone)]
 pub struct RNNWeights {
-    /// Input-to-hidden weights (hidden_size × input_size).
+    /// Input-to-hidden weights (`hidden_size` × `input_size`).
     pub w_ih: Vec<f32>,
-    /// Hidden-to-hidden weights (hidden_size × hidden_size).
+    /// Hidden-to-hidden weights (`hidden_size` × `hidden_size`).
     pub w_hh: Vec<f32>,
-    /// Input bias (hidden_size).
+    /// Input bias (`hidden_size`).
     pub b_ih: Vec<f32>,
-    /// Hidden bias (hidden_size).
+    /// Hidden bias (`hidden_size`).
     pub b_hh: Vec<f32>,
 }
 
-/// RNN cell operation (h_t = tanh(W_ih x + b_ih + W_hh h + b_hh)).
+/// RNN cell operation (`h_t` = `tanh(W_ih` x + `b_ih` + `W_hh` h + `b_hh`)).
 pub struct RNNCell {
     input: Tensor,
     prev_hidden: Tensor,
@@ -38,6 +38,9 @@ pub struct RNNCell {
 
 impl RNNCell {
     /// Create a new RNN cell operation.
+    /// # Errors
+    /// Returns [`Err`] if input or hidden shapes are invalid, or if weight/bias
+    /// dimensions do not match the expected sizes.
     pub fn new(
         input: Tensor,
         prev_hidden: Tensor,
@@ -132,6 +135,9 @@ impl RNNCell {
     }
 
     /// Execute the RNN cell and return the new hidden state.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let output_size = self.batch_size * self.hidden_size;

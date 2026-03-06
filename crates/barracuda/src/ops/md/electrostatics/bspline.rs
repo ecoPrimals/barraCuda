@@ -14,10 +14,10 @@
 //! ```
 //!
 //! Properties:
-//! - Non-negative: M_p(x) ≥ 0
-//! - Compact support: M_p(x) = 0 for x ≤ 0 or x ≥ p
+//! - Non-negative: `M_p(x)` ≥ 0
+//! - Compact support: `M_p(x)` = 0 for x ≤ 0 or x ≥ p
 //! - Partition of unity: Σ M_p(x-n) = 1 for all x
-//! - Smooth: M_p ∈ C^{p-2} (p-2 continuous derivatives)
+//! - Smooth: `M_p` ∈ C^{p-2} (p-2 continuous derivatives)
 //!
 //! # Usage in PPPM
 //!
@@ -35,14 +35,15 @@ use std::f64::consts::PI;
 /// Cardinal B-spline of order p evaluated at x
 ///
 /// Uses explicit formula for stability:
-/// M_p(x) = 1/(p-1)! × Σ_{k=0}^{p} (-1)^k × C(p,k) × max(x-k, 0)^{p-1}
+/// `M_p(x)` = 1/(p-1)! × Σ_{k=0}^{p} (-1)^k × C(p,k) × max(x-k, 0)^{p-1}
 ///
 /// # Arguments
 /// * `order` - B-spline order (typically 4-7 for PPPM)
 /// * `x` - Evaluation point (should be in [0, order] for non-zero result)
 ///
 /// # Returns
-/// B-spline value M_order(x)
+/// B-spline value `M_order(x)`
+#[must_use]
 pub fn bspline(order: usize, x: f64) -> f64 {
     if order == 0 {
         return 0.0;
@@ -97,14 +98,15 @@ fn binomial(n: usize, k: usize) -> usize {
 
 /// Derivative of cardinal B-spline
 ///
-/// dM_p(x)/dx = M_{p-1}(x) - M_{p-1}(x-1)
+/// `dM_p(x)/dx` = M_{p-1}(x) - M_{p-1}(x-1)
 ///
 /// # Arguments
 /// * `order` - B-spline order
 /// * `x` - Evaluation point
 ///
 /// # Returns
-/// Derivative dM_order(x)/dx
+/// Derivative `dM_order(x)/dx`
+#[must_use]
 pub fn bspline_deriv(order: usize, x: f64) -> f64 {
     if order <= 1 {
         return 0.0;
@@ -124,8 +126,8 @@ pub struct BsplineCoeffs {
     /// Grid index of leftmost node in stencil (for each dimension)
     pub base_idx: [i32; 3],
 
-    /// B-spline values W_k for k = 0..order
-    /// Stored as [x_coeffs, y_coeffs, z_coeffs]
+    /// B-spline values `W_k` for k = 0..order
+    /// Stored as [`x_coeffs`, `y_coeffs`, `z_coeffs`]
     pub coeffs: [Vec<f64>; 3],
 
     /// B-spline derivatives for force interpolation
@@ -139,15 +141,16 @@ impl BsplineCoeffs {
     /// continuous position u and order p:
     /// - Base index n0 = floor(u) - (p-2)/2  (for even p)
     ///   = floor(u) - (p-1)/2  (for odd p)
-    /// - Weight W_k = M_p(u - n0 - k) for k = 0, ..., p-1
+    /// - Weight `W_k` = `M_p(u` - n0 - k) for k = 0, ..., p-1
     ///
-    /// The weights satisfy: Σ_k W_k = 1 (partition of unity)
+    /// The weights satisfy: `Σ_k` `W_k` = 1 (partition of unity)
     ///
     /// # Arguments
     /// * `order` - B-spline order (typically 4-7)
     /// * `pos` - Particle position [x, y, z] in box coordinates
     /// * `mesh_dims` - Mesh dimensions [Kx, Ky, Kz]
     /// * `box_dims` - Box dimensions [Lx, Ly, Lz]
+    #[must_use]
     pub fn compute(order: usize, pos: [f64; 3], mesh_dims: [usize; 3], box_dims: [f64; 3]) -> Self {
         let mut coeffs = [
             Vec::with_capacity(order),
@@ -195,6 +198,7 @@ impl BsplineCoeffs {
     /// # Arguments
     /// * `ix, iy, iz` - Stencil indices (0 to order-1)
     /// * `mesh_dims` - Mesh dimensions for periodic wrapping
+    #[must_use]
     pub fn mesh_index(&self, ix: usize, iy: usize, iz: usize, mesh_dims: [usize; 3]) -> [usize; 3] {
         [
             ((self.base_idx[0] + ix as i32).rem_euclid(mesh_dims[0] as i32)) as usize,
@@ -205,7 +209,8 @@ impl BsplineCoeffs {
 
     /// Get the weight for stencil position (ix, iy, iz)
     ///
-    /// This is the product of 1D B-spline values: w = W_x × W_y × W_z
+    /// This is the product of 1D B-spline values: w = `W_x` × `W_y` × `W_z`
+    #[must_use]
     pub fn weight(&self, ix: usize, iy: usize, iz: usize) -> f64 {
         self.coeffs[0][ix] * self.coeffs[1][iy] * self.coeffs[2][iz]
     }
@@ -213,7 +218,8 @@ impl BsplineCoeffs {
     /// Get the gradient weights for stencil position (ix, iy, iz)
     ///
     /// Returns [dw/dx, dw/dy, dw/dz] for force interpolation.
-    /// The derivatives need to be scaled by mesh_dims/box_dims.
+    /// The derivatives need to be scaled by `mesh_dims/box_dims`.
+    #[must_use]
     pub fn gradient_weights(&self, ix: usize, iy: usize, iz: usize) -> [f64; 3] {
         [
             self.derivs[0][ix] * self.coeffs[1][iy] * self.coeffs[2][iz],
@@ -223,6 +229,7 @@ impl BsplineCoeffs {
     }
 
     /// Sum of all weights (should be 1.0 for correctly computed coefficients)
+    #[must_use]
     pub fn weight_sum(&self) -> f64 {
         let mut sum = 0.0;
         for ix in 0..self.order {
@@ -236,6 +243,7 @@ impl BsplineCoeffs {
     }
 
     /// Sum of 1D weights (should each be 1.0)
+    #[must_use]
     pub fn weight_sum_1d(&self) -> [f64; 3] {
         [
             self.coeffs[0].iter().sum(),
@@ -253,6 +261,7 @@ impl BsplineCoeffs {
 /// G(k) = 4π/k² × [reference charge / actual charge]²
 ///
 /// where the ratio accounts for B-spline aliasing.
+#[must_use]
 pub fn influence_function(
     kx: f64,
     ky: f64,
@@ -293,7 +302,7 @@ pub fn influence_function(
 
 /// B-spline Fourier transform magnitude squared
 ///
-/// |M̃_p(ξ)|² = (sin(πξ)/(πξ))^(2p) for ξ ≠ 0
+/// |`M̃_p(ξ)|²` = (sin(πξ)/(πξ))^(2p) for ξ ≠ 0
 ///           = 1 for ξ = 0
 fn bspline_ft_squared(xi: f64, order: usize) -> f64 {
     if xi.abs() < 1e-10 {
@@ -350,9 +359,7 @@ mod tests {
             }
             assert!(
                 (sum - 1.0).abs() < 1e-10,
-                "Partition of unity failed for order {}: sum = {}",
-                order,
-                sum
+                "Partition of unity failed for order {order}: sum = {sum}"
             );
         }
     }
@@ -376,11 +383,7 @@ mod tests {
                 for (d, s) in sums.iter().enumerate() {
                     assert!(
                         (s - 1.0).abs() < 1e-10,
-                        "Order {} dim {} at {:?}: 1D sum = {} (expected 1)",
-                        order,
-                        d,
-                        pos,
-                        s
+                        "Order {order} dim {d} at {pos:?}: 1D sum = {s} (expected 1)"
                     );
                 }
             }
@@ -399,9 +402,7 @@ mod tests {
 
             assert!(
                 (sum - 1.0).abs() < 1e-10,
-                "Order {}: 3D sum = {} (expected 1)",
-                order,
-                sum
+                "Order {order}: 3D sum = {sum} (expected 1)"
             );
         }
     }

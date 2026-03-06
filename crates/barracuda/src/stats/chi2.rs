@@ -23,26 +23,27 @@ use crate::special::chi_squared_sf;
 pub struct Chi2Decomposed {
     /// Total chi-squared statistic
     pub chi2_total: f64,
-    /// Chi-squared per datum (chi2_total / n)
+    /// Chi-squared per datum (`chi2_total` / n)
     pub chi2_per_datum: f64,
-    /// Chi-squared per degree of freedom (chi2_total / dof)
+    /// Chi-squared per degree of freedom (`chi2_total` / dof)
     pub chi2_per_dof: f64,
     /// Degrees of freedom
     pub dof: usize,
     /// Number of data points
     pub n_data: usize,
-    /// Per-datum contributions (chi2_i = (O_i - E_i)² / E_i)
+    /// Per-datum contributions (`chi2_i` = (`O_i` - `E_i)²` / `E_i`)
     pub contributions: Vec<f64>,
-    /// Residuals (O_i - E_i)
+    /// Residuals (`O_i` - `E_i`)
     pub residuals: Vec<f64>,
-    /// Pull values ((O_i - E_i) / σ_i where σ_i = √E_i)
+    /// Pull values ((`O_i` - `E_i`) / `σ_i` where `σ_i` = √`E_i`)
     pub pulls: Vec<f64>,
-    /// P-value (probability of observing chi2 >= chi2_total under null hypothesis)
+    /// P-value (probability of observing chi2 >= `chi2_total` under null hypothesis)
     pub p_value: f64,
 }
 
 impl Chi2Decomposed {
     /// Get indices of N worst-fitting points (highest contributions).
+    #[must_use]
     pub fn worst_n(&self, n: usize) -> Vec<usize> {
         let mut indexed: Vec<(usize, f64)> = self
             .contributions
@@ -114,6 +115,10 @@ impl Chi2Decomposed {
 /// println!("{}", result.summary());
 /// println!("Worst point: index {}", result.worst_n(1)[0]);
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if observed and expected lengths differ, either is empty, or dof <= 0.
 ///
 /// # Reference
 ///
@@ -191,8 +196,8 @@ pub fn chi2_decomposed(
 
 /// Compute chi-squared with uncertainties (weighted least squares).
 ///
-/// When uncertainties σ_i are known for each observation, use weighted chi-squared:
-/// χ²_i = (O_i - E_i)² / σ_i²
+/// When uncertainties `σ_i` are known for each observation, use weighted chi-squared:
+/// `χ²_i` = (`O_i` - `E_i)²` / `σ_i²`
 ///
 /// # Arguments
 ///
@@ -213,6 +218,10 @@ pub fn chi2_decomposed(
 /// let result = chi2_decomposed_weighted(&observed, &expected, &errors, 1).unwrap();
 /// println!("χ²/dof = {:.2}", result.chi2_per_dof);
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if observed, expected, and uncertainties lengths differ, any is empty, or dof <= 0.
 pub fn chi2_decomposed_weighted(
     observed: &[f64],
     expected: &[f64],

@@ -38,6 +38,11 @@ impl ComplexAdd {
     /// - Have same shape
     /// - Last dimension must be 2 (real, imag)
     /// - Be on the same device
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input_a: Tensor, input_b: Tensor) -> Result<Self> {
         // Validate tensors
         if input_a.shape() != input_b.shape() {
@@ -151,6 +156,11 @@ impl ComplexAdd {
     /// Execute complex addition on GPU
     ///
     /// Returns: New tensor with element-wise complex sum
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input_a.device();
         let num_elements = self.input_a.len();

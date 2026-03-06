@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! PoissonNLLLoss - Pure WGSL
+//! `PoissonNLLLoss` - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -23,6 +23,10 @@ pub struct PoissonNLLLoss {
 
 impl PoissonNLLLoss {
     /// Create a new Poisson NLL loss operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if input and target shapes do not match.
     pub fn new(
         input: Tensor,
         target: Tensor,
@@ -57,6 +61,11 @@ impl PoissonNLLLoss {
     }
 
     /// Execute the Poisson NLL loss operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 
@@ -75,8 +84,8 @@ impl PoissonNLLLoss {
 
         let params = Params {
             size: size as u32,
-            log_input: if self.log_input { 1 } else { 0 },
-            full: if self.full { 1 } else { 0 },
+            log_input: u32::from(self.log_input),
+            full: u32::from(self.full),
             epsilon: self.epsilon,
         };
 

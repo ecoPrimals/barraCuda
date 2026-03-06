@@ -28,6 +28,11 @@ pub struct LSTMCell {
 
 impl LSTMCell {
     /// Create a new LSTM cell operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         input: Tensor,
         weight_ih: Tensor,
@@ -103,6 +108,11 @@ impl LSTMCell {
     }
 
     /// Execute the LSTM cell operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<(Tensor, Tensor)> {
         let device = self.input.device();
 

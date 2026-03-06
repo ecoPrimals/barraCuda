@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! KmdGroupingF64 — Kendrick Mass Defect homologue grouping (f64)
+//! `KmdGroupingF64` — Kendrick Mass Defect homologue grouping (f64)
 //!
 //! Computes `[KM, NKM, KMD]` per ion.  Ions with matching NKM and KMD within
 //! a tolerance window belong to the same homologous series.
@@ -7,10 +7,10 @@
 //! Reference: Kendrick (1963), J. Am. Chem. Soc.
 //! PFAS-specific application: CF₂ repeat unit (49.9969 Da → nominal 50).
 //!
-//! WetSpring Exp018: 259 Jones Lab PFAS ions grouped by CH₂ / CF₂ homology.
+//! `WetSpring` Exp018: 259 Jones Lab PFAS ions grouped by CH₂ / CF₂ homology.
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -69,6 +69,7 @@ impl KmdGroupingF64 {
     /// Create a KMD calculator for the given repeat unit.
     ///
     /// Use `repeat_units::CF2` for PFAS, `repeat_units::CH2` for hydrocarbons.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>, exact_unit: f64, nominal_unit: f64) -> Self {
         Self {
             device,
@@ -80,6 +81,11 @@ impl KmdGroupingF64 {
     /// Compute `[KM, NKM, KMD]` for each ion mass.
     ///
     /// Returns one `KmdResult` per input mass.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn compute(&self, masses: &[f64]) -> Result<Vec<KmdResult>> {
         let n = masses.len();
         if n == 0 {
@@ -193,6 +199,11 @@ impl KmdGroupingF64 {
     ///
     /// Two ions belong to the same series if `|KMD_i − KMD_j| < kmd_tol`.
     /// Returns a `Vec<usize>` of group IDs (0-indexed, CPU post-pass).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn group(&self, masses: &[f64], kmd_tol: f64) -> Result<Vec<usize>> {
         let kmd_results = self.compute(masses)?;
         let n = kmd_results.len();

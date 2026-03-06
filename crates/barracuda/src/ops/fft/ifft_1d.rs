@@ -23,6 +23,8 @@ pub struct Ifft1D {
 
 impl Ifft1D {
     /// Create a new 1D IFFT operation
+    /// # Errors
+    /// Returns [`Err`] if input last dimension is not 2, or degree is not a power of 2.
     pub fn new(input: Tensor, degree: u32) -> Result<Self> {
         let shape = input.shape();
         if shape.last() != Some(&2) {
@@ -60,9 +62,11 @@ impl Ifft1D {
     }
 
     /// Execute IFFT transformation
-    ///
     /// Returns time/spatial domain representation.
     /// Output is normalized by 1/N.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let buffer_size = self.degree as u64 * 2 * std::mem::size_of::<f32>() as u64;
@@ -118,7 +122,7 @@ impl Ifft1D {
             .storage_read(2, &twiddle_buffer)
             .uniform(3, &params_buffer)
             .dispatch_1d(self.degree)
-            .submit();
+            .submit()?;
 
         // Pass 2-N: Butterfly stages
         let num_stages = (self.degree as f32).log2() as u32;
@@ -140,7 +144,7 @@ impl Ifft1D {
                 .storage_read(2, &twiddle_buffer)
                 .uniform(3, &stage_params_buffer)
                 .dispatch_1d(self.degree / 2)
-                .submit();
+                .submit()?;
 
             std::mem::swap(&mut current_input, &mut current_output);
         }
@@ -177,7 +181,7 @@ impl Ifft1D {
             .storage_rw(1, &final_buffer)
             .uniform(2, &normalize_params_buffer)
             .dispatch_1d(self.degree)
-            .submit();
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             final_buffer,

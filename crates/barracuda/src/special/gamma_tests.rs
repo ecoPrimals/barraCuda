@@ -122,9 +122,7 @@ fn test_digamma_half() {
     let psi_half = digamma(0.5).unwrap();
     assert!(
         (psi_half - expected).abs() < 1e-9,
-        "ψ(1/2) = {}, expected {}",
-        psi_half,
-        expected
+        "ψ(1/2) = {psi_half}, expected {expected}"
     );
 }
 
@@ -158,9 +156,7 @@ fn test_beta_half_half() {
     let b_half = beta(0.5, 0.5).unwrap();
     assert!(
         (b_half - PI).abs() < 1e-10,
-        "B(1/2, 1/2) = {}, expected π = {}",
-        b_half,
-        PI
+        "B(1/2, 1/2) = {b_half}, expected π = {PI}"
     );
 }
 

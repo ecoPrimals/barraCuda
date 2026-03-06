@@ -14,7 +14,7 @@
 //! but keys/values share heads across groups.
 //!
 //! Memory efficient: Reduces KV cache size for inference.
-//! Reference: LLaMA, LLaMA-2 (Meta AI)
+//! Reference: `LLaMA`, LLaMA-2 (Meta AI)
 //!
 //! ## Multi-Pass Execution
 //!
@@ -69,12 +69,17 @@ impl GroupedQueryAttention {
     /// Create a new grouped query attention operation
     ///
     /// # Arguments
-    /// - `query`: Query tensor [batch, num_q_heads, seq_len, head_dim]
-    /// - `key`: Key tensor [batch, num_kv_heads, seq_len, head_dim]
-    /// - `value`: Value tensor [batch, num_kv_heads, seq_len, head_dim]
+    /// - `query`: Query tensor [batch, `num_q_heads`, `seq_len`, `head_dim`]
+    /// - `key`: Key tensor [batch, `num_kv_heads`, `seq_len`, `head_dim`]
+    /// - `value`: Value tensor [batch, `num_kv_heads`, `seq_len`, `head_dim`]
     ///
     /// # Returns
     /// Result containing the operation struct, or error if shapes are invalid
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(query: Tensor, key: Tensor, value: Tensor) -> Result<Self> {
         // Validate shapes
         let q_shape = query.shape();
@@ -215,11 +220,16 @@ impl Tensor {
     /// Computes attention with grouped key/value heads (efficient for inference).
     ///
     /// # Arguments
-    /// - `key`: Key tensor [batch, num_kv_heads, seq_len, head_dim]
-    /// - `value`: Value tensor [batch, num_kv_heads, seq_len, head_dim]
+    /// - `key`: Key tensor [batch, `num_kv_heads`, `seq_len`, `head_dim`]
+    /// - `value`: Value tensor [batch, `num_kv_heads`, `seq_len`, `head_dim`]
     ///
     /// # Returns
-    /// Output tensor [batch, num_q_heads, seq_len, head_dim]
+    /// Output tensor [batch, `num_q_heads`, `seq_len`, `head_dim`]
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn grouped_query_attention(self, key: Tensor, value: Tensor) -> Result<Self> {
         GroupedQueryAttention::new(self, key, value)?.execute()
     }

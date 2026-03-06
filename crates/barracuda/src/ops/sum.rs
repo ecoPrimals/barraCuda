@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Sum reduction — GPU-resident, pipeline-cached, buffer-pooled
 //!
-//! Evolved from per-call buffer allocation to pooled TensorContext path.
+//! Evolved from per-call buffer allocation to pooled `TensorContext` path.
 //! Dimension-wise results stay GPU-resident; global reductions do a single
 //! scalar readback.
 
@@ -28,6 +28,7 @@ pub struct Sum {
 
 impl Sum {
     /// Create a new sum operation.
+    #[must_use]
     pub fn new(input: Tensor, dim: Option<usize>, keepdim: bool) -> Self {
         Self {
             input,
@@ -45,6 +46,9 @@ impl Sum {
     }
 
     /// Execute the sum operation.
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range for the tensor shape, buffer
+    /// allocation fails, GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -180,16 +184,25 @@ impl Sum {
 
 impl Tensor {
     /// Compute sum (global reduction).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or buffer
+    /// readback fails (e.g. device lost).
     pub fn sum(&self) -> Result<Self> {
         Sum::new(self.clone(), None, false).execute()
     }
 
     /// Compute sum along a dimension.
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range for the tensor shape, buffer
+    /// allocation fails, GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn sum_dim(&self, dim: usize, keepdim: bool) -> Result<Self> {
         Sum::new(self.clone(), Some(dim), keepdim).execute()
     }
 
     /// Compute sum (legacy method for backward compatibility).
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range for the tensor shape, buffer
+    /// allocation fails, GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn sum_wgsl(self, dim: Option<usize>) -> Result<Self> {
         match dim {
             None => Sum::new(self, None, false).execute(),
@@ -304,7 +317,7 @@ mod tests {
         let cpu_result = sum_cpu(&input_data);
 
         let error = (gpu_result[0] - cpu_result).abs();
-        assert!(error < 1e-4, "Error {} exceeds threshold", error);
+        assert!(error < 1e-4, "Error {error} exceeds threshold");
     }
 
     #[tokio::test]

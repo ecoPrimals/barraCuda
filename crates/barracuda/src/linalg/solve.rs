@@ -19,7 +19,12 @@ use std::sync::Arc;
 ///
 /// # Returns
 ///
-/// Solution vector x, or error if matrix is singular
+/// Solution vector x, or error if matrix is singular.
+///
+/// # Errors
+///
+/// Returns [`Err`] if matrix/vector dimensions are invalid, or if buffer
+/// allocation, GPU dispatch, or readback fails (e.g. device lost or out of memory).
 ///
 /// # Examples
 ///
@@ -78,6 +83,11 @@ pub fn solve_f64(device: Arc<WgpuDevice>, a: &[f64], b: &[f64], n: usize) -> Res
 /// # Returns
 ///
 /// Solution vector x, or error if matrix is singular or inputs are invalid.
+///
+/// # Errors
+///
+/// Returns [`Err`] if matrix/vector dimensions are invalid or the matrix is
+/// singular (pivot element zero during elimination).
 pub fn solve_f64_cpu(a: &[f64], b: &[f64], n: usize) -> Result<Vec<f64>> {
     if a.len() != n * n {
         return Err(BarracudaError::InvalidInput {

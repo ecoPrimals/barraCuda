@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! LogSumExp - Pure WGSL (f64)
+//! `LogSumExp` - Pure WGSL (f64)
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -10,13 +10,13 @@
 //!
 //! Computes log-sum-exp with numerical stability (f64 precision).
 //! Used in softmax, log-likelihood computations.
-//! Expects f64 input tensor (use Tensor::from_data_pod with &[f64]).
+//! Expects f64 input tensor (use `Tensor::from_data_pod` with &[f64]).
 
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// LogSumExp operation
+/// `LogSumExp` operation
 pub struct LogSumExp {
     input: Tensor,
 }
@@ -31,6 +31,7 @@ pub static WGSL_LOGSUMEXP_REDUCE: std::sync::LazyLock<String> = std::sync::LazyL
 
 impl LogSumExp {
     /// Create a new logsumexp operation
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -39,11 +40,15 @@ impl LogSumExp {
     pub const WGSL_LOGSUMEXP_F32: &str = include_str!("../shaders/math/logsumexp.wgsl");
 
     /// f64 version for universal math library portability.
+    #[must_use]
     pub fn wgsl_shader_f64() -> &'static str {
         include_str!("../shaders/math/logsumexp_f64.wgsl")
     }
 
     /// Execute the logsumexp operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -72,7 +77,7 @@ impl LogSumExp {
             .storage_rw(1, &output_buffer)
             .uniform(2, &metadata_buffer)
             .dispatch_1d(size as u32)
-            .submit();
+            .submit()?;
 
         // Return tensor without reading back (zero-copy)
         Ok(Tensor::from_buffer(output_buffer, vec![1], device.clone()))
@@ -81,6 +86,9 @@ impl LogSumExp {
 
 impl Tensor {
     /// Compute log-sum-exp (numerically stable)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn logsumexp(self) -> Result<Self> {
         LogSumExp::new(self).execute()
     }

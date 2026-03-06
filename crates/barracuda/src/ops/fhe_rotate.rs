@@ -73,23 +73,21 @@ pub struct FheRotate {
 
 impl FheRotate {
     /// Create a new rotation operation
-    ///
-    /// **Parameters**:
+    ///   **Parameters**:
     /// - `input`: Ciphertext polynomial (2*degree u32 values, u64 emulated)
     /// - `degree`: Polynomial degree (power of 2)
     /// - `rotation`: Number of slots to rotate (positive=left, negative=right)
     /// - `modulus`: Ciphertext modulus
-    ///
-    /// **Returns**: FheRotate operation ready to execute
-    ///
-    /// **Errors**:
+    ///   **Returns**: `FheRotate` operation ready to execute
+    ///   **Errors**:
     /// - Invalid degree (not power of 2)
     /// - Rotation out of valid range
     /// - Input tensor size mismatch
-    ///
-    /// **Note**: This is a simplified version. Full CKKS rotation requires
-    /// rotation keys (Galois keys) for key switching after automorphism.
-    /// This implementation applies the automorphism only.
+    ///   **Note**: This is a simplified version. Full CKKS rotation requires
+    ///   rotation keys (Galois keys) for key switching after automorphism.
+    ///   This implementation applies the automorphism only.
+    /// # Errors
+    /// Returns [`Err`] if degree is not a power of 2, or input size does not match degree.
     pub fn new(input: Tensor, degree: u32, rotation: i32, modulus: u64) -> Result<Self> {
         // ✅ VALIDATION: Degree must be power of 2
         if !degree.is_power_of_two() || degree < 4 {
@@ -130,13 +128,13 @@ impl FheRotate {
     }
 
     /// Execute rotation on GPU
-    ///
     /// **Returns**: Tensor with rotated coefficients (automorphism applied)
-    ///
     /// **Performance**: O(n) GPU parallel execution
-    ///
     /// **Note**: For complete CKKS rotation, apply key switching after this step
     /// using the rotation key corresponding to this rotation index.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 
@@ -177,7 +175,7 @@ impl FheRotate {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d(self.degree)
-            .submit();
+            .submit()?;
 
         // Return result tensor
         Ok(Tensor::from_buffer(

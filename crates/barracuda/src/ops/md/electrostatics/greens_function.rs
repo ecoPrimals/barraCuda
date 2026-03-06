@@ -5,14 +5,14 @@
 //! φ̃(k) = G(k) × ρ̃(k)
 //!
 //! For Coulomb interactions with Ewald splitting:
-//! G(k) = 4π/k² × exp(-k²/(4α²)) × influence_correction
+//! G(k) = 4π/k² × exp(-k²/(4α²)) × `influence_correction`
 //!
 //! The influence correction accounts for B-spline interpolation artifacts.
 
 use std::f64::consts::PI;
 
-use super::bspline::influence_function;
 use super::PppmParams;
+use super::bspline::influence_function;
 
 /// Precomputed Green's function table
 ///
@@ -39,6 +39,7 @@ impl GreensFunction {
     ///
     /// # Returns
     /// Green's function table
+    #[must_use]
     pub fn new(params: &PppmParams) -> Self {
         let dims = params.mesh_dims;
         let size = dims[0] * dims[1] * dims[2];
@@ -93,6 +94,7 @@ impl GreensFunction {
 
     /// Get Green's function value at mesh indices
     #[inline]
+    #[must_use]
     pub fn get(&self, ix: usize, iy: usize, iz: usize) -> f64 {
         let idx = iz + self.dims[2] * (iy + self.dims[1] * ix);
         self.values[idx]
@@ -107,6 +109,9 @@ impl GreensFunction {
     ///
     /// # Returns
     /// Potential in k-space (complex, interleaved re/im)
+    /// # Panics
+    /// Panics if `rho_k.len() != size * 2` (size = dims product).
+    #[must_use]
     pub fn apply(&self, rho_k: &[f64]) -> Vec<f64> {
         let size = self.dims[0] * self.dims[1] * self.dims[2];
         assert_eq!(rho_k.len(), size * 2); // Complex values
@@ -130,6 +135,8 @@ impl GreensFunction {
     ///
     /// # Arguments
     /// * `rho_k` - Charge density in k-space (modified in place to potential)
+    /// # Panics
+    /// Panics if `rho_k.len() != size * 2` (size = dims product).
     pub fn apply_inplace(&self, rho_k: &mut [f64]) {
         let size = self.dims[0] * self.dims[1] * self.dims[2];
         assert_eq!(rho_k.len(), size * 2);
@@ -146,13 +153,16 @@ impl GreensFunction {
 
     /// Compute k-space energy contribution
     ///
-    /// E_k = (1/2V) Σ_k |ρ̃(k)|² G(k)
+    /// `E_k` = (1/2V) `Σ_k` |ρ̃(k)|² G(k)
     ///
     /// # Arguments
     /// * `rho_k` - Charge density in k-space (complex, interleaved)
     ///
     /// # Returns
     /// k-space energy contribution
+    /// # Panics
+    /// Panics if `rho_k.len() != size * 2` (size = dims product).
+    #[must_use]
     pub fn kspace_energy(&self, rho_k: &[f64], volume: f64) -> f64 {
         let size = self.dims[0] * self.dims[1] * self.dims[2];
         assert_eq!(rho_k.len(), size * 2);
@@ -244,15 +254,7 @@ mod tests {
 
                     assert!(
                         (g1 - g2).abs() < 1e-10,
-                        "G({},{},{}) = {} != G({},{},{}) = {}",
-                        ix,
-                        iy,
-                        iz,
-                        g1,
-                        ix_neg,
-                        iy_neg,
-                        iz_neg,
-                        g2
+                        "G({ix},{iy},{iz}) = {g1} != G({ix_neg},{iy_neg},{iz_neg}) = {g2}"
                     );
                 }
             }

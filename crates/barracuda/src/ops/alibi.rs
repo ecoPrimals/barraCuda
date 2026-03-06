@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! ALiBi Position Encoding - GPU-accelerated
+//! `ALiBi` Position Encoding - GPU-accelerated
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation (single-pass GPU)
@@ -19,12 +19,12 @@
 //! ```
 //!
 //! **Key Properties**:
-//! - No learned parameters (like RoPE)
+//! - No learned parameters (like `RoPE`)
 //! - Linear bias based on distance
 //! - Head-specific slopes
 //! - Enables "train short, test long" (extrapolates to longer sequences)
 //!
-//! **Used By**: BLOOM, MPT, CodeGen
+//! **Used By**: BLOOM, MPT, `CodeGen`
 //!
 //! **Reference**: Press et al., 2021 - "Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation"
 //!
@@ -54,7 +54,7 @@ static SHADER_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(SHADER_F64)
 });
 
-/// ALiBi parameters for WGSL shader
+/// `ALiBi` parameters for WGSL shader
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct AlibiParams {
@@ -64,7 +64,7 @@ struct AlibiParams {
     _padding: u32,
 }
 
-/// ALiBi Position Encoding operation
+/// `ALiBi` Position Encoding operation
 ///
 /// **Deep Debt**: Single-pass GPU, no learned parameters
 pub struct AlibiPosition {
@@ -72,9 +72,10 @@ pub struct AlibiPosition {
 }
 
 impl AlibiPosition {
-    /// Create new ALiBi operation
-    ///
-    /// **Shape**: [batch, heads, seq_len, seq_len] (attention scores)
+    /// Create new `ALiBi` operation
+    /// **Shape**: [batch, heads, `seq_len`, `seq_len`] (attention scores)
+    /// # Errors
+    /// Returns [`Err`] if scores is not 4D or the attention matrix is not square.
     pub fn new(scores: Tensor) -> Result<Self> {
         // Validate shape: must be 4D square attention matrix
         if scores.shape().len() != 4 {
@@ -102,9 +103,10 @@ impl AlibiPosition {
         &SHADER_F32
     }
 
-    /// Execute ALiBi (single GPU pass)
-    ///
+    /// Execute `ALiBi` (single GPU pass)
     /// **Deep Debt**: Efficient single-pass, no intermediate buffers
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.scores.device();
 
@@ -135,7 +137,7 @@ impl AlibiPosition {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d(total)
-            .submit();
+            .submit()?;
 
         // Return output tensor (same shape as input)
         Ok(Tensor::from_buffer(
@@ -151,28 +153,25 @@ impl AlibiPosition {
 // ═══════════════════════════════════════════════════════════════
 
 impl Tensor {
-    /// Apply ALiBi position encoding to attention scores
-    ///
-    /// **Deep Debt**: Essential for BLOOM, MPT, CodeGen
-    ///
+    /// Apply `ALiBi` position encoding to attention scores
+    /// **Deep Debt**: Essential for BLOOM, MPT, `CodeGen`
     /// # Arguments
-    /// - Input: Attention scores [batch, heads, seq_len, seq_len]
-    ///
+    /// - Input: Attention scores [batch, heads, `seq_len`, `seq_len`]
     /// # Returns
-    /// - Biased scores [batch, heads, seq_len, seq_len]
-    ///
+    /// - Biased scores [batch, heads, `seq_len`, `seq_len`]
     /// # Example
     /// ```rust,ignore
     /// // Compute attention scores (before softmax)
     /// let scores = query.matmul(&key.transpose())?;
-    ///
     /// // Apply ALiBi bias
     /// let biased = scores.alibi_position()?;  // BLOOM-style
-    ///
     /// // Then softmax and apply to values
     /// let weights = biased.softmax()?;
     /// let output = weights.matmul(&value)?;
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if scores is not 4D, attention matrix is not square, buffer allocation fails,
+    /// GPU dispatch fails, or the device is lost.
     pub fn alibi_position(self) -> Result<Self> {
         AlibiPosition::new(self)?.execute()
     }

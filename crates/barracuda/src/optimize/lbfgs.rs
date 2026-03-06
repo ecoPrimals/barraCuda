@@ -14,9 +14,9 @@
 //! Uses the two-loop recursion (Nocedal 1980) to compute H⁻¹·g without
 //! forming the full Hessian approximation:
 //!
-//! 1. Backward loop: compute α_i = ρ_i · s_i^T · q for i = k-1, ..., k-m
+//! 1. Backward loop: compute `α_i` = `ρ_i` · `s_i^T` · q for i = k-1, ..., k-m
 //! 2. Scale by H₀ = (s^T·y)/(y^T·y) · I
-//! 3. Forward loop: compute β_i = ρ_i · y_i^T · r for i = k-m, ..., k-1
+//! 3. Forward loop: compute `β_i` = `ρ_i` · `y_i^T` · r for i = k-m, ..., k-1
 //!
 //! # References
 //! - Nocedal, J. (1980) "Updating quasi-Newton matrices with limited storage"
@@ -85,6 +85,11 @@ pub struct LbfgsResult {
 /// - The problem has thousands+ of parameters
 /// - Analytical or cheap numerical gradients are available
 /// - Memory is constrained (O(mn) vs O(n²) for full BFGS)
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn lbfgs<F, G>(f: F, grad: G, x0: &[f64], config: &LbfgsConfig) -> Result<LbfgsResult>
 where
     F: Fn(&[f64]) -> f64,
@@ -189,6 +194,11 @@ where
 }
 
 /// L-BFGS with numerical gradient (central differences).
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn lbfgs_numerical<F>(f: F, x0: &[f64], config: &LbfgsConfig) -> Result<LbfgsResult>
 where
     F: Fn(&[f64]) -> f64,

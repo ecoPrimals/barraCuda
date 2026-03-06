@@ -41,6 +41,8 @@ pub struct DiceLoss {
 
 impl DiceLoss {
     /// Creates a new Dice loss. Smooth prevents division by zero.
+    /// # Errors
+    /// Returns [`Err`] if predicted and target shapes do not match.
     pub fn new(predicted: Tensor, target: Tensor, smooth: f32) -> Result<Self> {
         if predicted.shape() != target.shape() {
             return Err(BarracudaError::shape_mismatch(
@@ -66,6 +68,9 @@ impl DiceLoss {
     }
 
     /// Executes Dice loss and returns a scalar loss tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predicted.device();
         let size = self.predicted.len();

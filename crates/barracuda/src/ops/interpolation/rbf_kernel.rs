@@ -33,8 +33,8 @@
 //! ## Use Case
 //!
 //! **RBF Surrogate Learning** (hotSpring physics integration):
-//! - Training: K = rbf_kernel(X_train, X_train) → Cholesky → solve for weights
-//! - Prediction: K = rbf_kernel(X_new, X_train) → matmul with weights
+//! - Training: K = `rbf_kernel(X_train`, `X_train`) → Cholesky → solve for weights
+//! - Prediction: K = `rbf_kernel(X_new`, `X_train`) → matmul with weights
 //!
 //! ## References
 //!
@@ -86,18 +86,17 @@ pub struct RbfKernel {
 
 impl RbfKernel {
     /// Create new RBF kernel operation
-    ///
     /// # Arguments
     /// * `x` - First point cloud [N, d]
     /// * `y` - Second point cloud [M, d]
     /// * `kernel_type` - Type of RBF kernel
     /// * `epsilon` - Shape parameter (default 1.0)
-    ///
     /// # Deep Debt Compliance
     /// - No hardcoded sizes (runtime N, M, d)
     /// - No unsafe blocks
     /// - Agnostic design (works with any point cloud)
     /// - Composable (fuses distance + kernel)
+    #[must_use]
     pub fn new(x: Tensor, y: Tensor, kernel_type: RbfKernelType, epsilon: f32) -> Self {
         Self {
             x,
@@ -112,14 +111,11 @@ impl RbfKernel {
     }
 
     /// Execute RBF kernel evaluation on GPU
-    ///
     /// # Returns
     /// Kernel matrix K [N, M] where K[i,j] = φ(‖xᵢ - yⱼ‖)
-    ///
     /// # Errors
     /// - Returns error if x and y have different dimensions
     /// - Returns error if x or y are not 2D
-    ///
     /// # Deep Debt Compliance
     /// - Pure WGSL execution (no CPU fallback)
     /// - Fused distance + kernel (single pass)
@@ -323,15 +319,12 @@ impl RbfKernel {
 /// Tensor extension for RBF kernel evaluation
 impl Tensor {
     /// Compute RBF kernel matrix between two point clouds
-    ///
     /// # Arguments
     /// * `other` - Second point cloud Y [M, d]
     /// * `kernel_type` - Type of RBF kernel
     /// * `epsilon` - Shape parameter (default 1.0)
-    ///
     /// # Returns
     /// Kernel matrix K [N, M] where K[i,j] = φ(‖xᵢ - yⱼ‖)
-    ///
     /// # Example
     /// ```ignore
     /// let x = Tensor::from_vec(vec![...], vec![10, 3], device)?;  // 10 points, 3D
@@ -339,6 +332,11 @@ impl Tensor {
     /// let k = x.rbf_kernel(&y, RbfKernelType::ThinPlateSpline, 1.0)?;
     /// // k is [10, 20] kernel matrix
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn rbf_kernel(
         &self,
         other: &Tensor,

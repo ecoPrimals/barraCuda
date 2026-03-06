@@ -34,6 +34,10 @@ pub struct SGDW {
 
 impl SGDW {
     /// Create SGD with decoupled weight decay.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shapes mismatch or `learning_rate` <= 0.
     pub fn new(
         parameters: Tensor,
         gradients: Tensor,
@@ -87,6 +91,9 @@ impl SGDW {
     }
 
     /// Execute SGDW optimizer step.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<(Tensor, Tensor)> {
         let device = self.parameters.device();
         let size = self.parameters.shape().iter().product::<usize>();
@@ -142,7 +149,7 @@ impl SGDW {
             momentum: self.momentum,
             weight_decay: self.weight_decay,
             dampening: self.dampening,
-            nesterov: if self.nesterov { 1 } else { 0 },
+            nesterov: u32::from(self.nesterov),
             _pad1: 0,
             _pad2: 0,
         };

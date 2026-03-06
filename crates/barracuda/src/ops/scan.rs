@@ -12,7 +12,7 @@
 //!
 //! ## Evolution History
 //!
-//! **Before** (Phase 3): `ScanExt` trait extension  
+//! **Before** (Phase 3): `ScanExt` trait extension\
 //! **After** (Phase 6): Direct `impl Tensor` method
 //!
 //! ## Usage
@@ -59,6 +59,9 @@ impl Scan {
     }
 
     /// Execute the prefix sum and return the result tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.shape().iter().product::<usize>();
@@ -66,7 +69,7 @@ impl Scan {
         let params = ScanParams {
             size: size as u32,
             operation: 0, // Sum
-            exclusive: if self.exclusive { 1 } else { 0 },
+            exclusive: u32::from(self.exclusive),
         };
 
         let output_buffer = device.device.create_buffer(&wgpu::BufferDescriptor {
@@ -94,7 +97,7 @@ impl Scan {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch(workgroups, 1, 1)
-            .submit();
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,
@@ -110,16 +113,11 @@ impl Scan {
 
 impl Tensor {
     /// Compute prefix sum (cumulative sum) of tensor elements
-    ///
     /// **Deep Debt**: Modern direct method, no trait extension needed
-    ///
     /// ## Arguments
-    ///
     /// * `exclusive` - If true, exclusive scan (shift right by 1, start with 0).
     ///   If false, inclusive scan (standard cumulative sum).
-    ///
     /// ## Example
-    ///
     /// ```ignore
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # use barracuda::tensor::Tensor;
@@ -128,12 +126,14 @@ impl Tensor {
     /// # let input = Tensor::from_data(&[1.0f32, 2.0, 3.0, 4.0], vec![4], device).unwrap();
     /// // Inclusive scan: [1, 2, 3, 4] → [1, 3, 6, 10]
     /// let cumsum = input.clone().scan(false)?;
-    ///
     /// // Exclusive scan: [1, 2, 3, 4] → [0, 1, 3, 6]
     /// let _exclusive = input.scan(true)?;
     /// # Ok(())
     /// # }
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn scan(self, exclusive: bool) -> Result<Self> {
         let op = Scan {
             input: self,

@@ -12,9 +12,9 @@
 //! neuralSpring S69, `hmm_backward_log_f64.wgsl` + `hmm_viterbi_f64.wgsl`.
 //! Polyfill required for Ada Lovelace (uses f64 exp/log in `log_sum_exp2`).
 
+use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -31,7 +31,7 @@ const SHADER_VITERBI: &str = include_str!("../../shaders/bio/hmm_viterbi_f64.wgs
 pub const WGSL_HMM_FORWARD_LOG_F32: &str = include_str!("../../shaders/ml/hmm_forward_log.wgsl");
 
 /// f64 version of the log-domain HMM forward pass for universal math library.
-/// Wired and ready; no separate log-domain pipeline in this module — HmmBatchForwardF64
+/// Wired and ready; no separate log-domain pipeline in this module — `HmmBatchForwardF64`
 /// uses the main `hmm_forward_f64.wgsl` shader via `compile_shader_f64`.
 pub const WGSL_HMM_FORWARD_LOG_F64: &str =
     include_str!("../../shaders/ml/hmm_forward_log_f64.wgsl");
@@ -52,11 +52,16 @@ pub struct HmmBatchForwardF64 {
 
 impl HmmBatchForwardF64 {
     /// Create batch HMM forward pipeline for the given device.
+    /// # Errors
+    /// Returns [`Err`] if device initialization or pipeline creation fails.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Dispatch the forward pass on GPU-resident buffers.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, the device is lost, or compute
+    /// submission fails.
     #[expect(clippy::too_many_arguments, reason = "API")]
     pub fn dispatch(
         &self,
@@ -93,7 +98,7 @@ impl HmmBatchForwardF64 {
             .storage_rw(5, log_alpha_out)
             .storage_rw(6, log_lik_out)
             .dispatch(wg_count, 1, 1)
-            .submit();
+            .submit()?;
         Ok(())
     }
 }
@@ -107,10 +112,15 @@ struct HmmBackwardParams {
     n_states: u32,
 }
 
-/// Batch HMM backward pass (β) on GPU via ComputeDispatch.
+/// Batch HMM backward pass (β) on GPU via `ComputeDispatch`.
 ///
 /// Computes log-domain backward variables for posterior decoding.
 /// Single workgroup — sequential over time, parallel across states.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, the device is lost, or buffer
+/// readback fails.
 pub fn hmm_backward(
     device: &Arc<WgpuDevice>,
     log_trans: &[f64],
@@ -133,7 +143,7 @@ pub fn hmm_backward(
         .storage_rw(2, &out_buf)
         .uniform(3, &params_buf)
         .dispatch(1, 1, 1)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, out_len)
 }
@@ -158,10 +168,15 @@ pub struct ViterbiResult {
     pub psi: Vec<u32>,
 }
 
-/// Batch HMM Viterbi decoding on GPU via ComputeDispatch.
+/// Batch HMM Viterbi decoding on GPU via `ComputeDispatch`.
 ///
 /// Finds the maximum-likelihood state sequence. Single workgroup dispatch
 /// (sequential over time steps).
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, the device is lost, or buffer
+/// readback fails.
 pub fn hmm_viterbi(
     device: &Arc<WgpuDevice>,
     log_trans: &[f64],
@@ -194,7 +209,7 @@ pub fn hmm_viterbi(
         .storage_rw(5, &psi_buf)
         .uniform(6, &params_buf)
         .dispatch(1, 1, 1)
-        .submit();
+        .submit()?;
 
     let path = device.read_buffer_u32(&path_buf, path_len)?;
     let delta = device.read_f64_buffer(&delta_buf, delta_len)?;
@@ -221,11 +236,15 @@ pub struct HmmForwardLogF32 {
 
 impl HmmForwardLogF32 {
     /// Create log-domain HMM forward (f32) pipeline.
+    /// # Errors
+    /// Returns [`Err`] if device initialization or pipeline creation fails.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
-    /// Dispatch one forward step: alpha_curr = fwd_step(alpha_prev, log_trans, log_emit).
+    /// Dispatch one forward step: `alpha_curr` = `fwd_step(alpha_prev`, `log_trans`, `log_emit`).
+    /// # Errors
+    /// Returns [`Err`] if the device is lost or compute submission fails.
     pub fn dispatch(
         &self,
         n_states: u32,
@@ -248,7 +267,7 @@ impl HmmForwardLogF32 {
             .storage_rw(3, alpha_curr)
             .uniform(4, &params_buf)
             .dispatch(wg_count, 1, 1)
-            .submit();
+            .submit()?;
         Ok(())
     }
 }
@@ -262,11 +281,15 @@ pub struct HmmForwardLogF64 {
 
 impl HmmForwardLogF64 {
     /// Create log-domain HMM forward (f64) pipeline.
+    /// # Errors
+    /// Returns [`Err`] if device initialization or pipeline creation fails.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
-    /// Dispatch one forward step: alpha_curr = fwd_step(alpha_prev, log_trans, log_emit).
+    /// Dispatch one forward step: `alpha_curr` = `fwd_step(alpha_prev`, `log_trans`, `log_emit`).
+    /// # Errors
+    /// Returns [`Err`] if the device is lost or compute submission fails.
     pub fn dispatch(
         &self,
         n_states: u32,
@@ -290,7 +313,7 @@ impl HmmForwardLogF64 {
             .storage_rw(3, alpha_curr)
             .uniform(4, &params_buf)
             .dispatch(wg_count, 1, 1)
-            .submit();
+            .submit()?;
         Ok(())
     }
 }

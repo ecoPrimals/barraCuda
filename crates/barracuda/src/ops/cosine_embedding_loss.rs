@@ -27,6 +27,8 @@ pub struct CosineEmbeddingLoss {
 
 impl CosineEmbeddingLoss {
     /// Create cosine embedding loss operation
+    /// # Errors
+    /// Returns [`Err`] if input1 and input2 shapes differ, or label is not scalar [1].
     pub fn new(input1: Tensor, input2: Tensor, label: Tensor, margin: f32) -> Result<Self> {
         if input1.shape() != input2.shape() {
             return Err(BarracudaError::invalid_op(
@@ -65,6 +67,9 @@ impl CosineEmbeddingLoss {
     }
 
     /// Execute cosine embedding loss on tensors
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input1.device();
         let size = self.input1.len();

@@ -9,7 +9,7 @@
 //! ## Algorithm
 //!
 //! Direct method (Gillespie 1977) with mass-action propensities:
-//!   `a_r = k_r × Π_s x_s! / (x_s - ν_r_s)!`  (ν_r_s = stoich_reactant[r,s])
+//!   `a_r = k_r × Π_s x_s! / (x_s - ν_r_s)!`  (`ν_r_s` = `stoich_reactant`[r,s])
 //!
 //! ## Limits
 //!
@@ -23,9 +23,9 @@
 //! Building blocks (`PrngXoshiro`, `SumReduceF64`) already present;
 //! this shader composes them into a complete single-kernel SSA.
 
+use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -110,6 +110,7 @@ pub struct GillespieGpu {
 
 impl GillespieGpu {
     /// Create Gillespie SSA simulator.
+    #[must_use]
     pub fn new(device: &WgpuDevice) -> Self {
         Self {
             device: Arc::new(device.clone()),
@@ -126,6 +127,14 @@ impl GillespieGpu {
     /// - `prng_seeds`    : xoshiro128** initial state [T × 4 u32]
     /// - `n_trajectories`: number of parallel trajectories T
     /// - `config`        : simulation parameters
+    ///
+    /// # Panics
+    /// Panics if `initial_states.len() != n_trajectories * n_species` or `prng_seeds.len() != n_trajectories * 4`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     #[expect(clippy::too_many_arguments, reason = "API")]
     pub fn simulate(
         &self,
@@ -236,7 +245,7 @@ impl GillespieGpu {
             .storage_rw(6, &times_buf)
             .storage_rw(7, &prop_buf)
             .dispatch(wg, 1, 1)
-            .submit();
+            .submit()?;
 
         // ── Read back results ─────────────────────────────────────────────────
         let states = dev.read_buffer_f64(&states_buf, n_t * n_s)?;

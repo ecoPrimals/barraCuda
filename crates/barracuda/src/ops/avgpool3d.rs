@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! AvgPool3D - 3D Average Pooling
+//! `AvgPool3D` - 3D Average Pooling
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation
@@ -48,6 +48,8 @@ pub struct AvgPool3D {
 
 impl AvgPool3D {
     /// Create 3D avg pool. Input must be 5D [B, C, D, H, W].
+    /// # Errors
+    /// Returns [`Err`] if input is not 5D [B, C, D, H, W], `kernel_size` is zero, or stride is zero.
     pub fn new(
         input: Tensor,
         kernel_size: (usize, usize, usize),
@@ -63,11 +65,7 @@ impl AvgPool3D {
             ));
         }
 
-        let _batch_size = shape[0];
-        let _channels = shape[1];
-        let _depth = shape[2];
-        let _height = shape[3];
-        let _width = shape[4];
+        let _ = (shape[0], shape[1], shape[2], shape[3], shape[4]);
 
         // Validate kernel sizes
         if kernel_size.0 == 0 || kernel_size.1 == 0 || kernel_size.2 == 0 {
@@ -105,6 +103,8 @@ impl AvgPool3D {
     }
 
     /// Execute 3D average pooling on GPU.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -265,11 +265,13 @@ impl AvgPool3D {
 
 impl Tensor {
     /// Apply 3D average pooling
-    ///
     /// # Arguments
     /// - `kernel_size`: (depth, height, width) kernel dimensions
     /// - `stride`: (depth, height, width) stride dimensions
     /// - `padding`: (depth, height, width) padding dimensions
+    /// # Errors
+    /// Returns [`Err`] if input is not 5D, `kernel_size` or stride is zero, buffer allocation fails,
+    /// GPU dispatch fails, or the device is lost.
     pub fn avgpool3d(
         self,
         kernel_size: (usize, usize, usize),

@@ -66,6 +66,10 @@ pub struct ReshapeParams {
 /// computation - it only changes how the tensor's shape is interpreted. The
 /// data buffer itself is never modified or copied. This is the correct
 /// implementation pattern for reshape operations.
+///
+/// # Errors
+///
+/// Returns [`Err`] if the new shape's element count does not match the input length.
 pub async fn reshape(
     _device: &wgpu::Device,
     _queue: &wgpu::Queue,
@@ -84,8 +88,8 @@ pub async fn reshape(
         });
     }
 
-    // Create params
-    let _params = ReshapeParams {
+    // Create params (metadata for shape interpretation)
+    let _ = ReshapeParams {
         num_elements: num_elements as u32,
         _padding: [0; 3],
     };

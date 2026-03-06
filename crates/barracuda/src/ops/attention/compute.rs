@@ -13,6 +13,11 @@ use crate::tensor::Tensor;
 
 impl Attention {
     /// Execute attention operation (3 GPU passes)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.query().device();
 

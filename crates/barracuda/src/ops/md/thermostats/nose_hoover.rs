@@ -17,12 +17,12 @@
 //! where Q is the thermostat mass (coupling strength).
 //!
 //! **Integration** (split for VV compatibility):
-//! 1. Half-step ξ: ξ += (dt/2) * (KE - KE_target) / Q
+//! 1. Half-step ξ: ξ += (dt/2) * (KE - `KE_target`) / Q
 //! 2. Half-step v: v' = (v + (dt/2)*a) / (1 + (dt/2)*ξ)  [GPU shader]
 //! 3. Full-step x: x += dt * v'                           [integrator]
 //! 4. Recompute forces                                    [force kernel]
 //! 5. Half-step v: v'' = (v' + (dt/2)*a') / (1 + (dt/2)*ξ) [GPU shader]
-//! 6. Half-step ξ: ξ += (dt/2) * (KE'' - KE_target) / Q
+//! 6. Half-step ξ: ξ += (dt/2) * (KE'' - `KE_target`) / Q
 //!
 //! **Deep Debt Compliance**:
 //! - ✅ Pure WGSL shader
@@ -53,16 +53,15 @@ pub struct NoseHooverChain {
 
 impl NoseHooverChain {
     /// Create a new Nosé-Hoover chain
-    ///
     /// # Arguments
     /// * `t_target` - Target temperature in reduced units (T* = 1/Γ for OCP)
     /// * `tau` - Characteristic time for temperature fluctuations
     /// * `n_particles` - Number of particles
     /// * `dt` - Integration timestep
-    ///
     /// # Notes
-    /// The thermostat mass Q is computed from tau: Q = 3*N*T_target*tau²
+    /// The thermostat mass Q is computed from tau: Q = 3*N*`T_target`*tau²
     /// Typical tau values: 10*dt to 100*dt
+    #[must_use]
     pub fn new(t_target: f64, tau: f64, n_particles: usize, dt: f64) -> Self {
         // Q = g * k_B * T * tau²  where g = 3N (degrees of freedom)
         // In reduced units k_B = 1
@@ -79,9 +78,7 @@ impl NoseHooverChain {
     }
 
     /// Half-step update of thermostat variable ξ
-    ///
     /// Call this BEFORE and AFTER the velocity half-step.
-    ///
     /// # Arguments
     /// * `ke_total` - Current total kinetic energy
     pub fn half_step_xi(&mut self, ke_total: f64) {
@@ -95,9 +92,9 @@ impl NoseHooverChain {
     }
 
     /// Get current thermostat temperature
-    ///
     /// Computes the instantaneous temperature that the thermostat
     /// is driving toward.
+    #[must_use]
     pub fn current_temperature(&self, ke_total: f64) -> f64 {
         // T = 2*KE / (3N) in reduced units
         2.0 * ke_total / (3.0 * self.n_particles as f64)
@@ -108,12 +105,12 @@ impl NoseHooverChain {
 ///
 /// Applies the thermostat friction to velocities.
 /// Use within the split VV integrator:
-/// 1. xi.half_step_xi(KE)
-/// 2. NoseHooverHalfKick::execute()  ← this
+/// 1. `xi.half_step_xi(KE)`
+/// 2. `NoseHooverHalfKick::execute()`  ← this
 /// 3. Drift positions
 /// 4. Recompute forces
-/// 5. NoseHooverHalfKick::execute()  ← this
-/// 6. xi.half_step_xi(KE)
+/// 5. `NoseHooverHalfKick::execute()`  ← this
+/// 6. `xi.half_step_xi(KE)`
 pub struct NoseHooverHalfKick {
     velocities: Tensor,
     forces: Tensor,
@@ -125,14 +122,12 @@ pub struct NoseHooverHalfKick {
 
 impl NoseHooverHalfKick {
     /// Create a new Nosé-Hoover half-kick operation
-    ///
     /// # Arguments
     /// * `velocities` - Velocity tensor [N, 3] (f64)
     /// * `forces` - Force tensor [N, 3] (f64)
     /// * `dt` - Timestep
     /// * `mass` - Particle mass (3.0 in OCP reduced units)
     /// * `xi` - Current thermostat friction coefficient
-    ///
     /// # Errors
     /// Returns error if tensor shapes don't match.
     pub fn new(velocities: Tensor, forces: Tensor, dt: f64, mass: f64, xi: f64) -> Result<Self> {
@@ -164,9 +159,13 @@ impl NoseHooverHalfKick {
     }
 
     /// Execute the half-kick with friction (in-place update)
-    ///
     /// # Returns
     /// Updated velocities tensor
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.velocities.device();
 

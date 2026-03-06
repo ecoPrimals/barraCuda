@@ -91,15 +91,11 @@ fn test_clamped_spline_derivatives() {
 
     assert!(
         (dy0 - dy_left).abs() < 1e-6,
-        "Left derivative should match: {} vs {}",
-        dy0,
-        dy_left
+        "Left derivative should match: {dy0} vs {dy_left}"
     );
     assert!(
         (dy_n - dy_right).abs() < 1e-6,
-        "Right derivative should match: {} vs {}",
-        dy_n,
-        dy_right
+        "Right derivative should match: {dy_n} vs {dy_right}"
     );
 }
 
@@ -120,10 +116,7 @@ fn test_sine_interpolation() {
 
         assert!(
             (y_spline - y_exact).abs() < 0.01,
-            "Spline should approximate sin(x) well: {} vs {} at x={}",
-            y_spline,
-            y_exact,
-            xi
+            "Spline should approximate sin(x) well: {y_spline} vs {y_exact} at x={xi}"
         );
     }
 }
@@ -141,8 +134,7 @@ fn test_integration() {
 
     assert!(
         (integral - expected).abs() < 1e-10,
-        "Integral should be 2: got {}",
-        integral
+        "Integral should be 2: got {integral}"
     );
 }
 

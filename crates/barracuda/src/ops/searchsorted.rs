@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! SearchSorted - GPU parallel binary search
+//! `SearchSorted` - GPU parallel binary search
 //!
 //! **Deep Debt Principles**:
 //! - Complete GPU implementation: Parallel binary search for each value
@@ -29,6 +29,8 @@ pub struct SearchSorted {
 
 impl SearchSorted {
     /// Creates a new searchsorted operation. `side_right` selects left (false) or right (true) insertion.
+    /// # Errors
+    /// Returns [`Err`] if sorted or values are empty, or if either is not 1D.
     pub fn new(sorted: Tensor, values: Tensor, side_right: bool) -> Result<Self> {
         if sorted.is_empty() {
             return Err(BarracudaError::invalid_op(
@@ -87,6 +89,9 @@ impl SearchSorted {
     }
 
     /// Executes the binary search and returns insertion indices as f32 tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.sorted.device();
         let sorted_size = self.sorted.len();
@@ -97,7 +102,7 @@ impl SearchSorted {
         let params = SearchSortedParams {
             sorted_size: sorted_size as u32,
             values_size: values_size as u32,
-            side_right: if self.side_right { 1 } else { 0 },
+            side_right: u32::from(self.side_right),
             _pad1: 0,
         };
 

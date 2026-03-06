@@ -29,6 +29,7 @@ pub struct Inverse {
 
 impl Inverse {
     /// Create an inverse operation for a square matrix.
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -38,6 +39,11 @@ impl Inverse {
     }
 
     /// Execute matrix inversion on GPU.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -185,6 +191,11 @@ impl Inverse {
 
 impl Tensor {
     /// Compute the matrix inverse. Input must be square.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn inverse_wgsl(self) -> Result<Self> {
         Inverse::new(self).execute()
     }

@@ -2,7 +2,7 @@
 //! Coulomb Force Calculation (f64)
 //!
 //! **Physics**: Electrostatic interactions between charged particles
-//! **Formula**: F = k * q_i * q_j / r² * r̂
+//! **Formula**: F = k * `q_i` * `q_j` / r² * r̂
 //! **Use Case**: Ions, proteins, charged molecules, nuclei
 //!
 //! **Deep Debt Compliance**:
@@ -16,8 +16,8 @@
 //! - Nuclear physics (fine structure constant precision)
 //! - Long timescale simulations
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
 
@@ -132,6 +132,8 @@ pub struct CoulombForceF64 {
 
 impl CoulombForceF64 {
     /// Create new Coulomb f64 force calculation
+    /// # Errors
+    /// Returns [`Err`] if device initialization fails.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -141,16 +143,16 @@ impl CoulombForceF64 {
     }
 
     /// Execute Coulomb force calculation
-    ///
     /// # Arguments
     /// * `positions` - Particle positions [N*3] (x,y,z interleaved)
     /// * `charges` - Particle charges [N]
     /// * `coulomb_constant` - Coulomb constant k (default: 1.0)
     /// * `cutoff_radius` - Cutoff distance (default: infinity)
     /// * `softening` - Softening parameter (default: 1e-10)
-    ///
     /// # Returns
     /// Force vectors [N*3] containing force for each particle
+    /// # Errors
+    /// Returns [`Err`] if `positions.len() != 3 * charges.len()`, or if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn compute_forces(
         &self,
         positions: &[f64],
@@ -181,6 +183,8 @@ impl CoulombForceF64 {
     }
 
     /// Compute forces with potential energy output
+    /// # Errors
+    /// Returns [`Err`] if `positions.len() != 3 * charges.len()`, or if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn compute_forces_and_energy(
         &self,
         positions: &[f64],

@@ -23,11 +23,13 @@ pub struct PrngXoshiro {
 
 impl PrngXoshiro {
     /// Creates a new PRNG with the given seeds tensor (u32) and offset.
+    #[must_use]
     pub fn new(seeds: Tensor, offset: u32) -> Self {
         Self { seeds, offset }
     }
 
-    /// Xoshiro128** stateful PRNG (neuralSpring): per-thread state, n_samples per thread.
+    /// Xoshiro128** stateful PRNG (neuralSpring): per-thread state, `n_samples` per thread.
+    #[must_use]
     pub fn wgsl_xoshiro128ss() -> &'static str {
         static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
             crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
@@ -41,11 +43,17 @@ impl PrngXoshiro {
     pub const WGSL_PRNG_XOSHIRO_F32: &str = include_str!("../shaders/misc/prng_xoshiro.wgsl");
 
     /// f64 version for universal math library portability.
+    #[must_use]
     pub fn wgsl_shader_f64() -> &'static str {
         include_str!("../shaders/misc/prng_xoshiro_f64.wgsl")
     }
 
     /// Executes the PRNG and returns random values in [0, 1).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.seeds.device();
         let seed_count: usize = self.seeds.shape().iter().product();
@@ -196,7 +204,12 @@ impl PrngXoshiro {
 
 impl Tensor {
     /// Generate random f64 values in [0, 1) using xoshiro128** PRNG.
-    /// Seeds tensor must contain u32 data (use Tensor::from_data_pod with u32).
+    /// Seeds tensor must contain u32 data (use `Tensor::from_data_pod` with u32).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn prng_xoshiro(self, offset: u32) -> Result<Self> {
         PrngXoshiro::new(self, offset).execute()
     }
@@ -222,8 +235,10 @@ mod tests {
         let output = seeds_tensor.prng_xoshiro(0).unwrap();
         let result = output.to_f64_vec().unwrap();
         assert_eq!(result.len(), 8);
-        assert!(result
-            .iter()
-            .all(|&x| (0.0..1.0).contains(&x) && x.is_finite()));
+        assert!(
+            result
+                .iter()
+                .all(|&x| (0.0..1.0).contains(&x) && x.is_finite())
+        );
     }
 }

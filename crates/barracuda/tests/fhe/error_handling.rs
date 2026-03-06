@@ -30,13 +30,9 @@ async fn test_ntt_invalid_degree_error() {
 
             // Should return Err, not panic
             let result = FheNtt::new(input_tensor, degree, modulus, root);
-            assert!(
-                result.is_err(),
-                "NTT should reject invalid degree {}",
-                degree
-            );
+            assert!(result.is_err(), "NTT should reject invalid degree {degree}");
 
-            println!("✅ NTT rejects invalid degree: {}", degree);
+            println!("✅ NTT rejects invalid degree: {degree}");
         }
     }) {
         return;

@@ -58,6 +58,11 @@ use crate::error::{BarracudaError, Result};
 /// let x = tridiagonal_solve(&a, &b, &c, &d).unwrap();
 /// // Verify: A·x ≈ d
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if system size is zero, diagonal lengths are mismatched (a and c must have
+/// length n-1, d must have length n), or if the matrix is singular (division by zero).
 pub fn tridiagonal_solve(a: &[f64], b: &[f64], c: &[f64], d: &[f64]) -> Result<Vec<f64>> {
     let n = b.len();
 
@@ -130,6 +135,11 @@ pub fn tridiagonal_solve(a: &[f64], b: &[f64], c: &[f64], d: &[f64]) -> Result<V
 /// Solve a tridiagonal system with f32 precision.
 ///
 /// Same as [`tridiagonal_solve`] but uses f32 for GPU compatibility.
+///
+/// # Errors
+///
+/// Returns [`Err`] if system size is zero, diagonal lengths are mismatched, or if the matrix
+/// is singular (division by zero).
 pub fn tridiagonal_solve_f32(a: &[f32], b: &[f32], c: &[f32], d: &[f32]) -> Result<Vec<f32>> {
     let n = b.len();
 
@@ -206,6 +216,10 @@ pub fn tridiagonal_solve_f32(a: &[f32], b: &[f32], c: &[f32], d: &[f32]) -> Resu
 /// # Returns
 ///
 /// Vector of solution vectors.
+///
+/// # Errors
+///
+/// Returns [`Err`] if any RHS in the batch fails [`tridiagonal_solve`].
 pub fn tridiagonal_solve_batch(
     a: &[f64],
     b: &[f64],

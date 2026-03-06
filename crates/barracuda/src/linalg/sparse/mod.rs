@@ -17,24 +17,24 @@
 //! # Storage Formats
 //!
 //! - **COO** (Coordinate): Easy construction, inefficient operations
-//! - **CSR** (Compressed Sparse Row): Efficient row access, SpMV
+//! - **CSR** (Compressed Sparse Row): Efficient row access, `SpMV`
 //! - **CSC** (Compressed Sparse Column): Efficient column access
 //!
 //! # Solvers
 //!
 //! ## CPU Solvers
 //! - **CG** (`cg_solve`): Conjugate Gradient for SPD matrices
-//! - **BiCGSTAB** (`bicgstab_solve`): For general non-symmetric matrices
+//! - **`BiCGSTAB`** (`bicgstab_solve`): For general non-symmetric matrices
 //! - **Jacobi** (`jacobi_solve`): Simple iterative method
 //!
 //! ## GPU Solvers (f64)
-//! - **CgGpu** (`CgGpu::solve`): GPU-accelerated Conjugate Gradient (SPD)
-//! - **BiCgStabGpu** (`BiCgStabGpu::solve`): GPU-accelerated BiCGSTAB (non-symmetric)
+//! - **`CgGpu`** (`CgGpu::solve`): GPU-accelerated Conjugate Gradient (SPD)
+//! - **`BiCgStabGpu`** (`BiCgStabGpu::solve`): GPU-accelerated `BiCGSTAB` (non-symmetric)
 //!
 //! ## Eigensolvers
-//! - **sparse_eigh**: Lanczos-based eigenvalues for sparse symmetric matrices
-//! - **sparse_eigh_smallest**: k smallest eigenvalues (extremal convergence)
-//! - **sparse_eigh_largest**: k largest eigenvalues
+//! - **`sparse_eigh`**: Lanczos-based eigenvalues for sparse symmetric matrices
+//! - **`sparse_eigh_smallest`**: k smallest eigenvalues (extremal convergence)
+//! - **`sparse_eigh_largest`**: k largest eigenvalues
 //!
 //! # Example
 //!
@@ -68,8 +68,8 @@ pub mod solvers;
 pub use bicgstab_gpu::{BiCgStabGpu, BiCgStabGpuResult};
 pub use cg_gpu::{CgGpu, CgGpuResult};
 pub use csr::{CooMatrix, CsrMatrix};
-pub use eigh::{sparse_eigh, sparse_eigh_largest, sparse_eigh_smallest, SparseEighResult};
+pub use eigh::{SparseEighResult, sparse_eigh, sparse_eigh_largest, sparse_eigh_smallest};
 pub use gpu_helpers::{
-    cg_dispatch_pass, CgPipelineSet, SparseBindGroupLayouts, SparseBuffers, SparsePipelines,
+    CgPipelineSet, SparseBindGroupLayouts, SparseBuffers, SparsePipelines, cg_dispatch_pass,
 };
-pub use solvers::{bicgstab_solve, cg_solve, jacobi_solve, SolverConfig, SolverResult};
+pub use solvers::{SolverConfig, SolverResult, bicgstab_solve, cg_solve, jacobi_solve};

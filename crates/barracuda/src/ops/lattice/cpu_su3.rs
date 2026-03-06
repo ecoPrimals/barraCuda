@@ -93,6 +93,7 @@ impl Su3Matrix {
     }
 
     /// Real part of trace.
+    #[must_use]
     pub fn re_trace(self) -> f64 {
         self.m[0][0].re + self.m[1][1].re + self.m[2][2].re
     }
@@ -120,6 +121,7 @@ impl Su3Matrix {
     }
 
     /// Frobenius norm squared.
+    #[must_use]
     pub fn norm_sq(self) -> f64 {
         let mut s = 0.0;
         for i in 0..3 {

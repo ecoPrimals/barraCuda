@@ -12,8 +12,8 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 
 static WGSL_PAIRWISE_HAMMING: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
@@ -37,6 +37,7 @@ pub struct PairwiseHammingGpu {
 
 impl PairwiseHammingGpu {
     /// Create pairwise Hamming distance calculator.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 

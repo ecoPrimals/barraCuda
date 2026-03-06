@@ -33,6 +33,7 @@ impl Default for DispatchConfig {
 
 impl DispatchConfig {
     /// Create a new dispatch config with default thresholds
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -47,6 +48,7 @@ impl DispatchConfig {
     }
 
     /// Force all operations to CPU
+    #[must_use]
     pub fn force_cpu(mut self) -> Self {
         self.force_cpu = true;
         self.force_gpu = false;
@@ -54,6 +56,7 @@ impl DispatchConfig {
     }
 
     /// Force all operations to GPU (if available)
+    #[must_use]
     pub fn force_gpu(mut self) -> Self {
         self.force_gpu = true;
         self.force_cpu = false;
@@ -66,6 +69,7 @@ impl DispatchConfig {
     }
 
     /// Get threshold for an operation (returns default if not set)
+    #[must_use]
     pub fn threshold(&self, operation: &str) -> usize {
         self.thresholds
             .get(operation)
@@ -83,6 +87,7 @@ impl DispatchConfig {
     /// # Returns
     ///
     /// `true` if GPU should be used, `false` for CPU
+    #[must_use]
     pub fn should_use_gpu(&self, input_size: usize, operation: &str) -> bool {
         // Force flags take precedence
         if self.force_cpu {
@@ -103,6 +108,7 @@ impl DispatchConfig {
     }
 
     /// Check if GPU is available
+    #[must_use]
     pub fn has_gpu(&self) -> bool {
         self.gpu_available
     }
@@ -217,17 +223,20 @@ pub enum DispatchTarget {
 
 impl DispatchTarget {
     /// Check if this is CPU target
+    #[must_use]
     pub fn is_cpu(self) -> bool {
         matches!(self, DispatchTarget::Cpu)
     }
 
     /// Check if this is GPU target
+    #[must_use]
     pub fn is_gpu(self) -> bool {
         matches!(self, DispatchTarget::Gpu)
     }
 }
 
 /// Decide dispatch target for given operation and size
+#[must_use]
 pub fn dispatch_for(operation: &str, input_size: usize) -> DispatchTarget {
     if global_config().should_use_gpu(input_size, operation) {
         DispatchTarget::Gpu
@@ -296,6 +305,7 @@ pub const fn spatial_substrate(grid_cells: usize) -> DispatchTarget {
 }
 
 /// Decide dispatch target using custom config
+#[must_use]
 pub fn dispatch_with_config(
     config: &DispatchConfig,
     operation: &str,
@@ -311,12 +321,13 @@ pub fn dispatch_with_config(
 /// Dispatch with transfer cost awareness.
 ///
 /// Like [`dispatch_for`] but additionally penalizes GPU dispatch when the
-/// PCIe data transfer would dominate the compute savings. Uses the
+/// `PCIe` data transfer would dominate the compute savings. Uses the
 /// [`BandwidthTier`] to estimate transfer overhead and compares against
 /// a heuristic GPU compute advantage.
 ///
-/// For shared-memory or NVLink tiers the transfer cost is negligible, so
+/// For shared-memory or `NVLink` tiers the transfer cost is negligible, so
 /// this falls through to the basic threshold check.
+#[must_use]
 pub fn dispatch_with_transfer_cost(
     operation: &str,
     input_size: usize,

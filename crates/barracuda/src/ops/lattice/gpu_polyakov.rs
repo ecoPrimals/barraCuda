@@ -34,6 +34,9 @@ pub struct GpuPolyakovLoop {
 
 impl GpuPolyakovLoop {
     /// Create Polyakov loop calculator for given lattice dimensions.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>, nt: u32, nx: u32, ny: u32, nz: u32) -> Result<Self> {
         let volume = nt * nx * ny * nz;
         let spatial_vol = nx * ny * nz;
@@ -100,9 +103,11 @@ impl GpuPolyakovLoop {
     }
 
     /// Compute Polyakov loop for all spatial sites.
-    ///
     /// * `links_buf` — `[V × 4 × 18]` f64
     /// * `poly_buf`  — `[spatial_vol × 2]` f64 (Re, Im per spatial site)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn compute(&self, links_buf: &wgpu::Buffer, poly_buf: &wgpu::Buffer) -> Result<()> {
         let bg = self
             .device
@@ -145,6 +150,7 @@ impl GpuPolyakovLoop {
     }
 
     /// Spatial volume (nx × ny × nz).
+    #[must_use]
     pub fn spatial_vol(&self) -> u32 {
         self.spatial_vol
     }

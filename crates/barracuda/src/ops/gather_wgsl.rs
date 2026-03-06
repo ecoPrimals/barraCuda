@@ -21,6 +21,7 @@ pub struct Gather {
 
 impl Gather {
     /// Create a new gather operation
+    #[must_use]
     pub fn new(input: Tensor, dim: usize, indices: Vec<u32>) -> Self {
         Self {
             input,
@@ -42,6 +43,11 @@ impl Gather {
     }
 
     /// Execute the gather operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -237,6 +243,11 @@ impl Tensor {
     ///
     /// * `dim` - Dimension to gather from
     /// * `indices` - Indices to gather
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn gather_wgsl(self, dim: usize, indices: Vec<u32>) -> Result<Self> {
         Gather::new(self, dim, indices).execute()
     }

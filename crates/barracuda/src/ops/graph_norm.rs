@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! GraphNorm - Pure WGSL
+//! `GraphNorm` - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -24,6 +24,11 @@ pub struct GraphNorm {
 
 impl GraphNorm {
     /// Create a new graph normalization operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor, gamma: Tensor, beta: Tensor, epsilon: Option<f32>) -> Result<Self> {
         let input_shape = input.shape();
         let num_nodes = input_shape[0];
@@ -68,6 +73,11 @@ impl GraphNorm {
     }
 
     /// Execute the graph normalization operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 

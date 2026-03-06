@@ -12,7 +12,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// Generalized Laguerre polynomial evaluator L_n^(α)(x)
+/// Generalized Laguerre polynomial evaluator `L_n^(α)(x)`
 pub struct Laguerre {
     input: Tensor,
     n: u32,
@@ -21,11 +21,13 @@ pub struct Laguerre {
 
 impl Laguerre {
     /// Create new Laguerre polynomial operation for degree n and parameter α
+    #[must_use]
     pub fn new(input: Tensor, n: u32, alpha: f32) -> Self {
         Self { input, n, alpha }
     }
 
-    /// Create simple Laguerre polynomial L_n(x) = L_n^(0)(x)
+    /// Create simple Laguerre polynomial `L_n(x)` = `L_n^(0)(x)`
+    #[must_use]
     pub fn simple(input: Tensor, n: u32) -> Self {
         Self::new(input, n, 0.0)
     }
@@ -35,6 +37,8 @@ impl Laguerre {
     }
 
     /// Execute Laguerre polynomial evaluation on the input tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -170,12 +174,16 @@ impl Laguerre {
 }
 
 impl Tensor {
-    /// Compute generalized Laguerre polynomial L_n^(α)(x) for each element
+    /// Compute generalized Laguerre polynomial `L_n^(α)(x)` for each element
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn laguerre(self, n: u32, alpha: f32) -> Result<Self> {
         Laguerre::new(self, n, alpha).execute()
     }
 
-    /// Compute simple Laguerre polynomial L_n(x) = L_n^(0)(x) for each element
+    /// Compute simple Laguerre polynomial `L_n(x)` = `L_n^(0)(x)` for each element
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn laguerre_simple(self, n: u32) -> Result<Self> {
         Laguerre::simple(self, n).execute()
     }
@@ -200,7 +208,7 @@ mod tests {
         let result = output.to_vec().unwrap();
         // L_0(x) = 1 for all x
         for &v in &result {
-            assert!((v - 1.0).abs() < 1e-5, "L_0 should be 1, got {}", v);
+            assert!((v - 1.0).abs() < 1e-5, "L_0 should be 1, got {v}");
         }
     }
 
@@ -238,13 +246,10 @@ mod tests {
         // L_2(x) = (x² - 4x + 2) / 2
         for (i, &v) in result.iter().enumerate() {
             let x = data[i];
-            let expected = (x * x - 4.0 * x + 2.0) / 2.0;
+            let expected = f32::midpoint(x * x - 4.0 * x, 2.0);
             assert!(
                 (v - expected).abs() < 1e-4,
-                "L_2({}) = {}, expected {}",
-                x,
-                v,
-                expected
+                "L_2({x}) = {v}, expected {expected}"
             );
         }
     }

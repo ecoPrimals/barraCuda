@@ -3,7 +3,7 @@
 //! Fermi imitation dynamics on 2D grid — stencil cooperation update.
 //!
 //! Each cell compares its fitness with a neighbor's via the Fermi function:
-//!   P(adopt) = 1 / (1 + exp((f_self - f_neighbor) / κ))
+//!   P(adopt) = 1 / (1 + `exp((f_self` - `f_neighbor`) / κ))
 //!
 //! This is the standard imitation dynamics update rule for spatial
 //! evolutionary game theory (Paper 019).
@@ -16,8 +16,8 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 
 /// WGSL source for stencil cooperation (f32).
 pub const WGSL_STENCIL_COOPERATION: &str =
@@ -47,6 +47,7 @@ pub struct StencilCooperationGpu {
 
 impl StencilCooperationGpu {
     /// Create stencil cooperation kernel.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Generalized IoU Loss for object detection
+//! Generalized `IoU` Loss for object detection
 //!
 //! **Pure WGSL**: Single implementation via WebGPU shader
-//! Improves upon IoU by considering the smallest enclosing box
+//! Improves upon `IoU` by considering the smallest enclosing box
 
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
@@ -16,7 +16,7 @@ struct GIoULossParams {
     _padding: [u32; 2],
 }
 
-/// Generalized IoU loss for object detection (considers smallest enclosing box).
+/// Generalized `IoU` loss for object detection (considers smallest enclosing box).
 pub struct GIoULoss {
     pred_boxes: Tensor,
     target_boxes: Tensor,
@@ -24,7 +24,11 @@ pub struct GIoULoss {
 }
 
 impl GIoULoss {
-    /// Create GIoULoss operation
+    /// Create `GIoULoss` operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if `pred_boxes` and `target_boxes` shapes do not match.
     pub fn new(pred_boxes: Tensor, target_boxes: Tensor, box_format: u32) -> Result<Self> {
         if box_format > 2 {
             return Err(BarracudaError::invalid_op(
@@ -50,7 +54,12 @@ impl GIoULoss {
         &SHADER
     }
 
-    /// Execute GIoULoss on tensor
+    /// Execute `GIoULoss` on tensor
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.pred_boxes.device();
         let pred_shape = self.pred_boxes.shape();
@@ -104,7 +113,7 @@ impl GIoULoss {
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)
             .dispatch_1d(num_boxes as u32)
-            .submit();
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,

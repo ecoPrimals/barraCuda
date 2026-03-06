@@ -11,8 +11,8 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 
 /// WGSL shader for k-mer histogram computation (atomic increments).
 pub const WGSL_KMER_HISTOGRAM: &str = include_str!("../../shaders/bio/kmer_histogram.wgsl");
@@ -35,6 +35,7 @@ pub struct KmerHistogramGpu {
 
 impl KmerHistogramGpu {
     /// Create a k-mer histogram GPU kernel.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 

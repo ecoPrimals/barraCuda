@@ -8,8 +8,9 @@
 //! ## Transport
 //!
 //! Primary: Unix domain socket at `$XDG_RUNTIME_DIR/barracuda/barracuda.sock`
-//! Fallback: TCP, resolved via `BARRACUDA_IPC_BIND` or
-//! `BARRACUDA_IPC_HOST`:`BARRACUDA_IPC_PORT`, default `127.0.0.1:0` (ephemeral)
+//! Fallback: TCP, resolved via [`transport::resolve_bind_address`] —
+//! `BARRACUDA_IPC_BIND` or `BARRACUDA_IPC_HOST`:`BARRACUDA_IPC_PORT`,
+//! default `localhost:0` (ephemeral)
 //!
 //! ## Endpoints
 //!

@@ -2,7 +2,7 @@
 //! LSTM reservoir for recurrent computation.
 //!
 //! CPU reference implementation with JSON weight serialization.
-//! GPU dispatch can come later via ComputeDispatch.
+//! GPU dispatch can come later via `ComputeDispatch`.
 //!
 //! Provenance: neuralSpring V24 handoff → barracuda nn module.
 
@@ -57,11 +57,11 @@ impl LstmState {
 /// Per-layer LSTM weights (input gate, forget gate, output gate, cell candidate).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LstmLayerWeights {
-    /// W_ii, W_if, W_ig, W_io: input projections (4 * hidden_size × input_size)
+    /// `W_ii`, `W_if`, `W_ig`, `W_io`: input projections (4 * `hidden_size` × `input_size`)
     pub w_ih: Vec<Vec<f64>>,
-    /// W_hi, W_hf, W_hg, W_ho: recurrent projections (4 * hidden_size × hidden_size)
+    /// `W_hi`, `W_hf`, `W_hg`, `W_ho`: recurrent projections (4 * `hidden_size` × `hidden_size`)
     pub w_hh: Vec<Vec<f64>>,
-    /// b_i, b_f, b_g, b_o: biases (4 * hidden_size)
+    /// `b_i`, `b_f`, `b_g`, `b_o`: biases (4 * `hidden_size`)
     pub bias: Vec<f64>,
 }
 
@@ -119,18 +119,23 @@ impl LstmReservoir {
     }
 
     /// Construct from JSON string.
+    /// # Errors
+    /// Returns [`Err`] if JSON parsing fails.
     pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(json)
     }
 
     /// Serialize to JSON string.
+    /// # Errors
+    /// Returns [`Err`] if JSON serialization fails.
     pub fn to_json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string_pretty(self)
     }
 
     /// Single step forward.
-    ///
     /// Returns output hidden state for the last layer.
+    /// # Panics
+    /// Panics if `state.len() != self.config.num_layers` or `input.len() != self.config.input_size`.
     #[must_use]
     pub fn forward(&self, input: &[f64], state: &mut [LstmState]) -> Vec<f64> {
         assert_eq!(state.len(), self.config.num_layers);
@@ -167,7 +172,6 @@ impl LstmReservoir {
     }
 
     /// Full sequence forward.
-    ///
     /// Returns (outputs per timestep, final state).
     #[must_use]
     pub fn forward_sequence(

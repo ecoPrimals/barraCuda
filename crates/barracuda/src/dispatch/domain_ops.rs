@@ -12,7 +12,7 @@
 )]
 
 use crate::device::WgpuDevice;
-use crate::dispatch::config::{global_config, DispatchConfig};
+use crate::dispatch::config::{DispatchConfig, global_config};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 use std::sync::Arc;
@@ -380,6 +380,11 @@ fn gpu_if_eligible_cfg<'a>(
 // -----------------------------------------------------------------------------
 
 /// Matrix multiply dispatch: C = A[m*k] * B[k*n].
+///
+/// # Errors
+///
+/// Returns [`Err`] if the GPU path is used and buffer upload, matmul compute,
+/// or readback fails (e.g. device lost, out of memory).
 pub fn matmul_dispatch(
     a: &[f64],
     b: &[f64],
@@ -395,6 +400,11 @@ pub fn matmul_dispatch(
 }
 
 /// Frobenius norm dispatch: sqrt(sum of squares).
+///
+/// # Errors
+///
+/// Returns [`Err`] if the GPU path is used and buffer upload, norm compute,
+/// or readback fails (e.g. device lost, out of memory).
 pub fn frobenius_norm_dispatch(a: &[f64], device: Option<&Arc<WgpuDevice>>) -> Result<f64> {
     if let Some(dev) = gpu_if_eligible(device, a.len(), "frobenius_norm") {
         return frobenius_norm_gpu(a, dev);
@@ -403,6 +413,11 @@ pub fn frobenius_norm_dispatch(a: &[f64], device: Option<&Arc<WgpuDevice>>) -> R
 }
 
 /// Transpose dispatch: [rows*cols] -> [cols*rows].
+///
+/// # Errors
+///
+/// Returns [`Err`] if the GPU path is used and buffer upload, transpose compute,
+/// or readback fails (e.g. device lost, out of memory).
 pub fn transpose_dispatch(
     a: &[f64],
     rows: usize,
@@ -416,6 +431,11 @@ pub fn transpose_dispatch(
 }
 
 /// Softmax dispatch: exp(x) / sum(exp(x)).
+///
+/// # Errors
+///
+/// Returns [`Err`] if the GPU path is used and buffer upload, softmax compute,
+/// or readback fails (e.g. device lost, out of memory).
 pub fn softmax_dispatch(x: &[f64], device: Option<&Arc<WgpuDevice>>) -> Result<Vec<f64>> {
     if let Some(dev) = gpu_if_eligible(device, x.len(), "softmax") {
         return softmax_gpu(x, dev);
@@ -424,6 +444,11 @@ pub fn softmax_dispatch(x: &[f64], device: Option<&Arc<WgpuDevice>>) -> Result<V
 }
 
 /// GELU activation dispatch.
+///
+/// # Errors
+///
+/// Returns [`Err`] if the GPU path is used and buffer upload, GELU compute,
+/// or readback fails (e.g. device lost, out of memory).
 pub fn gelu_dispatch(x: &[f64], device: Option<&Arc<WgpuDevice>>) -> Result<Vec<f64>> {
     if let Some(dev) = gpu_if_eligible(device, x.len(), "gelu") {
         return gelu_gpu(x, dev);
@@ -432,6 +457,11 @@ pub fn gelu_dispatch(x: &[f64], device: Option<&Arc<WgpuDevice>>) -> Result<Vec<
 }
 
 /// L2 (Euclidean) distance dispatch between two vectors.
+///
+/// # Errors
+///
+/// Returns [`Err`] if the GPU path is used and buffer upload, subtract/norm compute,
+/// or readback fails (e.g. device lost, out of memory).
 pub fn l2_distance_dispatch(a: &[f64], b: &[f64], device: Option<&Arc<WgpuDevice>>) -> Result<f64> {
     if let Some(dev) = gpu_if_eligible(device, a.len().min(b.len()), "l2_distance") {
         return l2_distance_gpu(a, b, dev);
@@ -440,6 +470,11 @@ pub fn l2_distance_dispatch(a: &[f64], b: &[f64], device: Option<&Arc<WgpuDevice
 }
 
 /// Mean reduction dispatch.
+///
+/// # Errors
+///
+/// Returns [`Err`] if the GPU path is used and buffer upload, mean compute,
+/// or readback fails (e.g. device lost, out of memory).
 pub fn mean_dispatch(data: &[f64], device: Option<&Arc<WgpuDevice>>) -> Result<f64> {
     if let Some(dev) = gpu_if_eligible(device, data.len(), "mean") {
         return mean_gpu(data, dev);
@@ -448,6 +483,11 @@ pub fn mean_dispatch(data: &[f64], device: Option<&Arc<WgpuDevice>>) -> Result<f
 }
 
 /// Variance (population) dispatch.
+///
+/// # Errors
+///
+/// Returns [`Err`] if the GPU path is used and buffer upload, variance compute,
+/// or readback fails (e.g. device lost, out of memory).
 pub fn variance_dispatch(data: &[f64], device: Option<&Arc<WgpuDevice>>) -> Result<f64> {
     if let Some(dev) = gpu_if_eligible(device, data.len(), "variance") {
         return variance_gpu(data, dev);
@@ -457,7 +497,12 @@ pub fn variance_dispatch(data: &[f64], device: Option<&Arc<WgpuDevice>>) -> Resu
 
 /// HMM forward step dispatch: alpha[t] = normalize(emit * (trans^T @ alpha[t-1])).
 ///
-/// Returns (alpha_new, scale).
+/// Returns (`alpha_new`, scale).
+///
+/// # Errors
+///
+/// Returns [`Err`] if the GPU path is used and buffer upload, matmul/mul/sum compute,
+/// or readback fails (e.g. device lost, out of memory).
 pub fn hmm_forward_dispatch(
     alpha_prev: &[f64],
     transition: &[f64],
@@ -481,6 +526,11 @@ pub fn hmm_forward_dispatch(
 // -----------------------------------------------------------------------------
 
 /// Matmul dispatch using custom config.
+///
+/// # Errors
+///
+/// Returns [`Err`] if the GPU path is used and buffer upload, matmul compute,
+/// or readback fails (e.g. device lost, out of memory).
 pub fn matmul_dispatch_with_config(
     a: &[f64],
     b: &[f64],

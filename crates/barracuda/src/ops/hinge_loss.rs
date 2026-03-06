@@ -64,6 +64,8 @@ pub struct HingeLoss {
 
 impl HingeLoss {
     /// Creates a new hinge loss. Margin is typically 1.0 for standard SVM.
+    /// # Errors
+    /// Returns [`Err`] if prediction and target shapes do not match, or if margin is not positive.
     pub fn new(predictions: Tensor, targets: Tensor, margin: f32) -> Result<Self> {
         // Validate shapes match
         if predictions.shape() != targets.shape() {
@@ -93,6 +95,8 @@ impl HingeLoss {
     }
 
     /// Executes hinge loss and returns the loss tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size = self.predictions.shape().iter().product::<usize>();
@@ -119,7 +123,7 @@ impl HingeLoss {
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)
             .dispatch_1d(size as u32)
-            .submit();
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,
@@ -135,30 +139,27 @@ impl HingeLoss {
 
 impl Tensor {
     /// Hinge loss for SVM-style max-margin classification
-    ///
     /// **Deep Debt**: Essential for support vector machines
-    ///
     /// # Arguments
     /// - `targets`: Ground truth labels [same shape, values in {-1, +1}]
     /// - `margin`: Margin threshold (typically 1.0)
-    ///
     /// # Returns
     /// - Loss tensor [same shape as input]
-    ///
     /// # Example
     /// ```rust,ignore
     /// // Standard SVM hinge loss
     /// let loss = predictions.hinge_loss(&targets, 1.0)?;
-    ///
     /// // Multi-class SVM (one-vs-all)
     /// let loss = scores.hinge_loss(&labels, 1.0)?;
     /// ```
-    ///
     /// # Note
     /// - Targets should be {-1, +1} (not {0, 1})
     /// - Predictions are raw scores (not probabilities)
     /// - Loss = 0 when y*pred > margin (correct and confident)
     /// - Standard margin = 1.0 for SVMs
+    /// # Errors
+    /// Returns [`Err`] if shapes do not match, margin is not positive, buffer allocation fails,
+    /// GPU dispatch fails, or the device is lost.
     pub fn hinge_loss(self, targets: &Self, margin: f32) -> Result<Self> {
         HingeLoss::new(self, targets.clone(), margin)?.execute()
     }

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Nautilus shell with layered evolutionary history.
 
-use rand::rngs::StdRng;
 use rand::SeedableRng;
+use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 
 use super::board::{BoardConfig, ReservoirInput};
-use super::evolution::{evolve, EvolutionConfig};
+use super::evolution::{EvolutionConfig, evolve};
 use super::population::Population;
 use super::readout::LinearReadout;
 
@@ -74,6 +74,7 @@ pub struct NautilusShell {
 
 impl NautilusShell {
     /// Create from seed with random population.
+    #[must_use]
     pub fn from_seed(config: ShellConfig, origin: InstanceId, seed: u64) -> Self {
         let pop = Population::new(&config.board_config, config.pop_size, seed);
         let l2 = config.board_config.grid_size * config.board_config.grid_size;
@@ -90,6 +91,8 @@ impl NautilusShell {
     }
 
     /// Evolve one generation: train readout, evaluate fitness, breed. Returns MSE.
+    /// # Errors
+    /// Returns [`Err`] if readout training fails or fitness evaluation fails.
     pub fn evolve_generation(
         &mut self,
         inputs: &[ReservoirInput],
@@ -114,7 +117,7 @@ impl NautilusShell {
             .map(|f| f.pearson_r)
             .collect();
         let mean_fitness = fitness.iter().sum::<f64>() / fitness.len() as f64;
-        let best_fitness = fitness.iter().copied().fold(0.0f64, |a, b| a.max(b));
+        let best_fitness = fitness.iter().copied().fold(0.0f64, f64::max);
 
         let mut rng =
             StdRng::seed_from_u64(self.population.generation as u64 ^ 0x9e37_79b9_7f4a_7c15);
@@ -141,12 +144,14 @@ impl NautilusShell {
     }
 
     /// Predict through population then readout.
+    #[must_use]
     pub fn predict(&self, input: &ReservoirInput) -> Option<Vec<f64>> {
         let response = self.population.respond_all(input);
         self.readout.predict(&response)
     }
 
     /// Continue from another shell, inheriting and adding to lineage.
+    #[must_use]
     pub fn continue_from(shell: Self, new_origin: InstanceId) -> Self {
         let mut lineage = shell.lineage.clone();
         lineage.push(new_origin.clone());

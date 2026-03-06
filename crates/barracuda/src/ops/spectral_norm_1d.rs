@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! SpectralNorm1D - Spectral normalization for 1D convolutions
+//! `SpectralNorm1D` - Spectral normalization for 1D convolutions
 //!
 //! Normalizes weight matrix by its largest singular value.
 //! Used for stabilizing GAN training in audio generation.
@@ -15,7 +15,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
-/// SpectralNorm1D operation
+/// `SpectralNorm1D` operation
 pub struct SpectralNorm1D {
     weights: Tensor,
     out_channels: usize,
@@ -26,6 +26,9 @@ pub struct SpectralNorm1D {
 
 impl SpectralNorm1D {
     /// Create a new spectral norm 1D operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         weights: Tensor,
         out_channels: usize,
@@ -67,6 +70,9 @@ impl SpectralNorm1D {
     /// Execute the spectral norm 1D operation
     /// Note: Full implementation would require iterative power method passes
     /// This is a simplified version that demonstrates the structure.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.weights.device();
         let rows = self.out_channels;

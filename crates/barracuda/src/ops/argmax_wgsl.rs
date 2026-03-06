@@ -14,6 +14,7 @@ use crate::error::Result;
 use crate::tensor::Tensor;
 
 /// Generic sort shader.
+#[must_use]
 pub fn wgsl_sort() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
@@ -32,6 +33,7 @@ pub struct Argmax {
 
 impl Argmax {
     /// Create a new argmax operation
+    #[must_use]
     pub fn new(input: Tensor, dim: Option<usize>, keepdim: bool) -> Self {
         Self {
             input,
@@ -61,6 +63,9 @@ impl Argmax {
     }
 
     /// Execute the argmax operation
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range for the tensor shape, buffer
+    /// allocation fails, GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -99,7 +104,7 @@ impl Argmax {
                     .storage_rw(1, &output_buffer)
                     .uniform(2, &params_buffer)
                     .dispatch(num_workgroups, 1, 1)
-                    .submit();
+                    .submit()?;
 
                 // Read back partial results and find the global argmax on CPU
                 // We need to compare values at the partial indices to find the true global argmax
@@ -175,7 +180,7 @@ impl Argmax {
                     .storage_rw(1, &output_buffer)
                     .uniform(2, &params_buffer)
                     .dispatch(workgroups, 1, 1)
-                    .submit();
+                    .submit()?;
 
                 // Read back results
                 let output_data =
@@ -200,21 +205,28 @@ impl Argmax {
 
 impl Tensor {
     /// Find index of maximum value (global reduction)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or buffer
+    /// readback fails (e.g. device lost).
     pub fn argmax(&self) -> Result<Self> {
         Argmax::new(self.clone(), None, false).execute()
     }
 
     /// Find indices of maximum values along a dimension (GPU/WGSL).
-    ///
     /// # Arguments
-    ///
     /// * `dim` - Dimension to find max along
     /// * `keepdim` - Whether to keep the reduced dimension with size 1
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range for the tensor shape, buffer
+    /// allocation fails, GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn argmax_dim_keepdim(&self, dim: usize, keepdim: bool) -> Result<Self> {
         Argmax::new(self.clone(), Some(dim), keepdim).execute()
     }
 
     /// Find indices of maximum values along a dimension (legacy method for backward compatibility)
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range for the tensor shape, buffer
+    /// allocation fails, GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn argmax_wgsl(self, dim: usize) -> Result<Self> {
         Argmax::new(self, Some(dim), false).execute()
     }

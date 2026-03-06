@@ -7,16 +7,16 @@
 //!
 //! **Algorithm** (BAOAB splitting):
 //! The Langevin equation: m*dv/dt = F - γ*v + σ*ξ(t)
-//! where γ is friction, σ = sqrt(2*γ*k_B*T/m), and ξ is white noise.
+//! where γ is friction, σ = sqrt(2*γ*`k_B`*T/m), and ξ is white noise.
 //!
 //! BAOAB integration (best for configurational sampling):
 //! 1. B: v += (dt/2) * a         (half-kick from forces)
 //! 2. A: x += (dt/2) * v         (half-drift)
-//! 3. O: v = c*v + σ_eff*R       (friction + noise)
+//! 3. O: v = c*v + `σ_eff`*R       (friction + noise)
 //! 4. A: x += (dt/2) * v         (half-drift)
 //! 5. B: v += (dt/2) * a         (half-kick with new forces)
 //!
-//! where c = exp(-γ*dt) and σ_eff = sqrt(k_B*T/m * (1 - c²))
+//! where c = exp(-γ*dt) and `σ_eff` = `sqrt(k_B`*T/m * (1 - c²))
 //!
 //! **Deep Debt Compliance**:
 //! - ✅ Pure WGSL shader
@@ -42,23 +42,22 @@ pub struct LangevinParams {
     pub dt: f64,
     /// Pre-computed: exp(-γ*dt)
     exp_factor: f64,
-    /// Pre-computed: sqrt(k_B*T/m * (1 - exp(-2*γ*dt)))
+    /// Pre-computed: `sqrt(k_B`*T/m * (1 - exp(-2*γ*dt)))
     noise_factor: f64,
 }
 
 impl LangevinParams {
     /// Create Langevin thermostat parameters
-    ///
     /// # Arguments
     /// * `gamma` - Friction coefficient (typical: 1/τ where τ is relaxation time)
     /// * `t_target` - Target temperature (reduced units)
     /// * `mass` - Particle mass (3.0 in OCP reduced units)
     /// * `dt` - Integration timestep
-    ///
     /// # Notes
     /// - Higher γ → faster equilibration but slower dynamics
     /// - Lower γ → more Hamiltonian-like behavior
     /// - Typical γ: 0.1/dt to 10/dt
+    #[must_use]
     pub fn new(gamma: f64, t_target: f64, mass: f64, dt: f64) -> Self {
         let exp_factor = (-gamma * dt).exp();
         // σ = sqrt(k_B * T / m) in reduced units (k_B = 1)
@@ -77,11 +76,13 @@ impl LangevinParams {
     }
 
     /// Get the friction decay factor exp(-γ*dt)
+    #[must_use]
     pub fn exp_factor(&self) -> f64 {
         self.exp_factor
     }
 
     /// Get the noise amplitude factor
+    #[must_use]
     pub fn noise_factor(&self) -> f64 {
         self.noise_factor
     }
@@ -89,8 +90,8 @@ impl LangevinParams {
 
 /// Langevin friction + noise step
 ///
-/// Applies the "O" step of BAOAB: v_new = c*v + σ_eff*R
-/// where c = exp(-γ*dt), σ_eff = sqrt(k_B*T/m * (1 - c²)), and R is Gaussian noise.
+/// Applies the "O" step of BAOAB: `v_new` = c*v + `σ_eff`*R
+/// where c = exp(-γ*dt), `σ_eff` = `sqrt(k_B`*T/m * (1 - c²)), and R is Gaussian noise.
 pub struct LangevinStep {
     velocities: Tensor,
     noise: Tensor,
@@ -100,12 +101,10 @@ pub struct LangevinStep {
 
 impl LangevinStep {
     /// Create a new Langevin step
-    ///
     /// # Arguments
     /// * `velocities` - Velocity tensor [N, 3] (f64)
     /// * `noise` - Gaussian noise tensor [N, 3] (f64), mean=0, std=1
     /// * `params` - Pre-computed Langevin parameters
-    ///
     /// # Errors
     /// Returns error if tensor shapes don't match.
     pub fn new(velocities: Tensor, noise: Tensor, params: LangevinParams) -> Result<Self> {
@@ -135,14 +134,17 @@ impl LangevinStep {
     }
 
     /// Generate Gaussian noise tensor for Langevin dynamics
-    ///
     /// # Arguments
     /// * `n_particles` - Number of particles
     /// * `device` - GPU device
     /// * `rng` - Random number generator
-    ///
     /// # Returns
     /// Tensor [N, 3] of Gaussian random numbers (mean=0, std=1)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn generate_noise<R: Rng>(
         n_particles: usize,
         device: &std::sync::Arc<crate::device::WgpuDevice>,
@@ -177,9 +179,13 @@ impl LangevinStep {
     }
 
     /// Execute the friction + noise step (in-place update)
-    ///
     /// # Returns
     /// Updated velocities tensor
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.velocities.device();
 

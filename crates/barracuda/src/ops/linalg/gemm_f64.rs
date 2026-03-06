@@ -16,8 +16,8 @@
 //! - Safe Rust wrapper (no unsafe code)
 //! - Runtime-configured dimensions and batch size
 
-use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::WgpuDevice;
+use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -61,7 +61,6 @@ pub struct GemmF64;
 
 impl GemmF64 {
     /// The raw WGSL source for the GEMM f64 shader.
-    ///
     /// Exposed so downstream crates can include this source in their own fused pipelines
     /// without fragile cross-crate `include_str!` paths.
     pub const WGSL: &'static str = include_str!("../../shaders/linalg/gemm_f64.wgsl");
@@ -81,18 +80,19 @@ impl GemmF64 {
     }
 
     /// Execute batched matrix multiply: C = A * B
-    ///
     /// # Arguments
-    /// * `device` - WgpuDevice
-    /// * `a` - Packed A matrices [batch_size × M × K] row-major f64
-    /// * `b` - Packed B matrices [batch_size × K × N] row-major f64
+    /// * `device` - `WgpuDevice`
+    /// * `a` - Packed A matrices [`batch_size` × M × K] row-major f64
+    /// * `b` - Packed B matrices [`batch_size` × K × N] row-major f64
     /// * `m` - Rows of A / C
     /// * `k` - Cols of A / Rows of B
     /// * `n` - Cols of B / C
     /// * `batch_size` - Number of independent multiplications
-    ///
     /// # Returns
-    /// C matrices [batch_size × M × N] row-major f64
+    /// C matrices [`batch_size` × M × N] row-major f64
+    /// # Errors
+    /// Returns [`Err`] if [`execute_gemm`](Self::execute_gemm) fails (invalid dimensions or
+    /// buffer readback failure).
     pub fn execute(
         device: Arc<WgpuDevice>,
         a: &[f64],
@@ -106,6 +106,9 @@ impl GemmF64 {
     }
 
     /// Execute batched GEMM with alpha/beta: C = alpha * A * B + beta * C
+    /// # Errors
+    /// Returns [`Err`] if `a.len() != batch_size * m * k` or `b.len() != batch_size * k * n`
+    /// (invalid dimensions), or if buffer allocation or readback fails (e.g., device lost).
     pub fn execute_gemm(
         device: Arc<WgpuDevice>,
         a: &[f64],
@@ -177,7 +180,7 @@ impl GemmF64 {
             .storage_read(2, &b_buffer)
             .storage_rw(3, &c_buffer)
             .dispatch(wg_x, wg_y, wg_z)
-            .submit();
+            .submit()?;
 
         device.read_f64_buffer(&c_buffer, c_size)
     }
@@ -219,13 +222,15 @@ pub struct GemmCachedF64 {
 
 impl GemmCachedF64 {
     /// Pre-compile the GEMM pipeline and upload weight matrix B to GPU.
-    ///
     /// # Arguments
     /// * `device`     — GPU device
     /// * `b`          — Weight matrix `[batch × K × N]` row-major f64
     /// * `k`          — Inner dimension
     /// * `n`          — Output columns
     /// * `batch_size` — Number of independent GEMM operations
+    /// # Errors
+    /// Returns [`Err`] if `b.len() != batch_size * k * n` (invalid dimensions), or if buffer
+    /// allocation or pipeline compilation fails (e.g., device lost, out of memory).
     pub fn new(
         device: Arc<WgpuDevice>,
         b: &[f64],
@@ -302,13 +307,14 @@ impl GemmCachedF64 {
     }
 
     /// Multiply input matrix A by the pre-loaded weight matrix B.
-    ///
     /// # Arguments
     /// * `a` — `[batch × M × K]` row-major f64 input
     /// * `m` — Rows of A (varies per call; K must match the B dimensions)
-    ///
     /// # Returns
     /// `[batch × M × N]` row-major f64 output (read back to CPU).
+    /// # Errors
+    /// Returns [`Err`] if [`execute_to_buffer`](Self::execute_to_buffer) fails (invalid dimensions),
+    /// or if buffer readback fails (e.g., device lost).
     pub fn multiply(&self, a: &[f64], m: usize) -> Result<Vec<f64>> {
         let c_buf = self.execute_to_buffer(a, m)?;
         let c_size = self.batch_size * m * self.n;
@@ -316,12 +322,13 @@ impl GemmCachedF64 {
     }
 
     /// GPU-resident GEMM — returns `wgpu::Buffer` without CPU readback.
-    ///
     /// Use this in streaming pipelines where the output feeds directly
     /// into another GPU dispatch (e.g., HFB self-consistency, density mixing).
-    ///
     /// # Returns
     /// GPU buffer containing `[batch × M × N]` row-major f64 output.
+    /// # Errors
+    /// Returns [`Err`] if `a.len() != batch_size * m * k` (invalid dimensions), or if buffer
+    /// allocation or GPU dispatch fails (e.g., device lost, out of memory).
     pub fn execute_to_buffer(&self, a: &[f64], m: usize) -> Result<wgpu::Buffer> {
         let k = self.k;
         let n = self.n;

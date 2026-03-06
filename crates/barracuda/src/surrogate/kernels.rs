@@ -47,6 +47,7 @@ pub enum RBFKernel {
 
 impl RBFKernel {
     /// Evaluate kernel at distance r
+    #[must_use]
     pub fn eval(&self, r: f64) -> f64 {
         match self {
             RBFKernel::ThinPlateSpline => {
@@ -75,6 +76,7 @@ impl RBFKernel {
     }
 
     /// Name of the kernel
+    #[must_use]
     pub fn name(&self) -> &str {
         match self {
             RBFKernel::ThinPlateSpline => "ThinPlateSpline",

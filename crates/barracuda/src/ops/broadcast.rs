@@ -6,7 +6,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// f64 is the canonical source — f32 derived via downcast_f64_to_f32 when needed.
+/// f64 is the canonical source — f32 derived via `downcast_f64_to_f32` when needed.
 const SHADER_F64: &str = include_str!("../shaders/tensor/broadcast_f64.wgsl");
 
 static SHADER_F32: std::sync::LazyLock<String> =
@@ -27,7 +27,8 @@ pub struct Broadcast {
 }
 
 impl Broadcast {
-    /// Creates a new broadcast. Expands input to match target_shape.
+    /// Creates a new broadcast. Expands input to match `target_shape`.
+    #[must_use]
     pub fn new(input: Tensor, target_shape: Vec<usize>) -> Self {
         Self {
             input,
@@ -69,6 +70,11 @@ impl Broadcast {
     }
 
     /// Executes the broadcast and returns the expanded tensor.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let output_size: usize = self.target_shape.iter().product();
@@ -194,8 +200,14 @@ impl Broadcast {
 impl Tensor {
     /// Broadcast tensor to target shape using NumPy-style broadcasting rules.
     /// Dimensions of size 1 in the input are broadcast to match the target.
+    ///
     /// # Arguments
     /// * `target_shape` - Target shape to broadcast to
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn broadcast(self, target_shape: Vec<usize>) -> Result<Self> {
         Broadcast::new(self, target_shape).execute()
     }
@@ -249,7 +261,7 @@ mod tests {
 
         // All should be 5.0
         assert_eq!(output.len(), 10);
-        for val in output.iter() {
+        for val in &output {
             assert_eq!(*val, 5.0);
         }
     }

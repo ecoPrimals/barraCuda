@@ -29,7 +29,12 @@ pub struct BiLSTM {
 }
 
 impl BiLSTM {
-    /// Create BiLSTM operation
+    /// Create `BiLSTM` operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         input: Tensor,
         weight_ih: Tensor,
@@ -68,7 +73,12 @@ impl BiLSTM {
         }
     }
 
-    /// Execute BiLSTM on tensor
+    /// Execute `BiLSTM` on tensor
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();

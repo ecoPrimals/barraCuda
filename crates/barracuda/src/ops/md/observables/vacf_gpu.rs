@@ -17,14 +17,14 @@
 //! - GPU: dispatches 500K threads, each ~1000 MADs — ~1-10 ms (100-1000× faster)
 //!
 //! **Deep Debt Compliance**:
-//! - ✅ Pure WGSL shader (vacf_f64.wgsl)
+//! - ✅ Pure WGSL shader (`vacf_f64.wgsl`)
 //! - ✅ Full f64 precision throughout
 //! - ✅ Zero unsafe code
 //! - ✅ Capability-based: skips to CPU fallback when no GPU available
 
 use crate::device::WgpuDevice;
 use crate::error::Result;
-use crate::ops::md::observables::{compute_vacf, Vacf};
+use crate::ops::md::observables::{Vacf, compute_vacf};
 use std::sync::Arc;
 
 const VACF_SHADER: &str = include_str!("vacf_f64.wgsl");
@@ -39,6 +39,7 @@ pub struct VacfGpu {
 
 impl VacfGpu {
     /// Create a new `VacfGpu` for the given device.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self { device }
     }
@@ -55,6 +56,11 @@ impl VacfGpu {
     /// A `Vacf` struct with normalised C(τ) values and the diffusion coefficient.
     /// Falls back to the CPU implementation when `max_lag == 0` or there is only
     /// one snapshot.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn compute(
         &self,
         vel_snapshots: &[Vec<f64>],

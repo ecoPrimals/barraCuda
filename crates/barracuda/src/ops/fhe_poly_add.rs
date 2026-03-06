@@ -21,7 +21,7 @@ use std::sync::Arc;
 ///
 /// ## Mathematical Operation
 ///
-/// Given polynomials a(X) and b(X) over Z_q[X]/(X^N + 1):
+/// Given polynomials a(X) and b(X) over `Z_q`[X]/(X^N + 1):
 /// ```text
 /// result(X) = a(X) + b(X) mod q
 /// ```
@@ -56,17 +56,16 @@ pub struct FhePolyAdd {
 
 impl FhePolyAdd {
     /// Create a new FHE polynomial addition operation
-    ///
     /// ## Parameters
-    ///
     /// - `poly_a`: First polynomial tensor (u32 pairs representing u64 coefficients)
     /// - `poly_b`: Second polynomial tensor (u32 pairs representing u64 coefficients)
     /// - `degree`: Polynomial degree (N), typically 2048, 4096, or 8192
     /// - `modulus`: Modulus q (large prime, e.g., 2^60)
-    ///
     /// ## Barrett Constant
-    ///
     /// Precomputes μ = ⌊2^128 / q⌋ for efficient modular reduction
+    /// # Errors
+    /// Returns [`Err`] if polynomial lengths do not match `degree*2`, tensors are on different
+    /// devices, or modulus is zero.
     pub fn new(poly_a: Tensor, poly_b: Tensor, degree: u32, modulus: u64) -> Result<Self> {
         // Validate inputs
         let expected_size = (degree as usize) * 2; // u32 pairs for u64
@@ -202,18 +201,16 @@ impl FhePolyAdd {
     }
 
     /// Execute polynomial addition on GPU
-    ///
     /// ## Returns
-    ///
-    /// Result tensor: (poly_a + poly_b) mod q
+    /// Result tensor: (`poly_a` + `poly_b`) mod q
     /// Data stays on GPU (no CPU readback)
-    ///
     /// ## Deep Debt
-    ///
     /// - ✅ Validates inputs (length, alignment)
     /// - ✅ GPU execution (parallel)
     /// - ✅ Numerically precise (Barrett reduction)
     /// - ✅ Pure GPU execution (no CPU fallback)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.poly_a.device();
 
@@ -312,6 +309,10 @@ impl FhePolyAdd {
 /// Helper: Create FHE polynomial tensor from u64 coefficients
 ///
 /// Converts u64 polynomial coefficients to u32 pairs for GPU storage
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation or data upload fails (e.g. device lost).
 pub async fn create_fhe_poly_tensor(
     poly: &[u64],
     device: Arc<crate::device::WgpuDevice>,

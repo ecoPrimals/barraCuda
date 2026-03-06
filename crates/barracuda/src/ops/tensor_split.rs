@@ -21,6 +21,9 @@ pub struct TensorSplit {
 
 impl TensorSplit {
     /// Create a new tensor split operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor, split_indices: Vec<usize>, dim: usize) -> Result<Self> {
         let shape = input.shape();
         if dim >= shape.len() {
@@ -59,6 +62,9 @@ impl TensorSplit {
 
     /// Execute the tensor split operation
     /// Returns a vector of tensors (one per split)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Vec<Tensor>> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -127,7 +133,7 @@ impl TensorSplit {
                 .storage_read(1, input_buffer)
                 .storage_rw(2, &output_buffer)
                 .dispatch_1d(output_size as u32)
-                .submit();
+                .submit()?;
 
             output_tensors.push(Tensor::from_buffer(
                 output_buffer,

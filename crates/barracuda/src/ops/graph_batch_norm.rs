@@ -26,6 +26,11 @@ pub struct GraphBatchNorm {
 
 impl GraphBatchNorm {
     /// Create graph batch normalization.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor, gamma: Tensor, beta: Tensor, epsilon: f32) -> Result<Self> {
         let input_shape = input.shape();
         if input_shape.len() != 2 {
@@ -85,6 +90,11 @@ impl GraphBatchNorm {
     }
 
     /// Execute graph batch normalization.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         // Create intermediate buffers for mean and variance

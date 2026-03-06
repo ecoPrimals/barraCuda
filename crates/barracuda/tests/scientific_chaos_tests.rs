@@ -46,7 +46,7 @@ async fn chaos_complex_large_scale() {
         let result = mul_op.execute().unwrap();
         let elapsed = start.elapsed();
 
-        println!("✅ ComplexMul 1M elements: {:?}", elapsed);
+        println!("✅ ComplexMul 1M elements: {elapsed:?}");
         assert!(result.len() == size * 2, "Result size matches");
         assert!(elapsed.as_secs() < 10, "Completed in reasonable time");
     }) {
@@ -171,7 +171,7 @@ async fn chaos_concurrent_complex_ops() {
     }
     let elapsed = start.elapsed();
 
-    println!("✅ {} concurrent ComplexMul: {:?}", num_ops, elapsed);
+    println!("✅ {num_ops} concurrent ComplexMul: {elapsed:?}");
     assert!(elapsed.as_secs() < 30, "Concurrent ops completed");
 }
 
@@ -204,10 +204,7 @@ async fn chaos_concurrent_fft_ops() {
     }
     let elapsed = start.elapsed();
 
-    println!(
-        "✅ {} concurrent FFT (256 pts each): {:?}",
-        num_ops, elapsed
-    );
+    println!("✅ {num_ops} concurrent FFT (256 pts each): {elapsed:?}");
     assert!(elapsed.as_secs() < 60, "Concurrent FFTs completed");
 }
 
@@ -232,7 +229,7 @@ async fn chaos_repeated_operations() {
     }
     let elapsed = start.elapsed();
 
-    println!("✅ {} iterations of ComplexMul: {:?}", iterations, elapsed);
+    println!("✅ {iterations} iterations of ComplexMul: {elapsed:?}");
     println!("   Average per op: {:?}", elapsed / iterations);
     assert!(
         elapsed.as_secs() < 30,
@@ -282,7 +279,7 @@ async fn chaos_mixed_workload() {
     handle2.await.unwrap();
 
     let elapsed = start.elapsed();
-    println!("✅ Mixed workload (100 ComplexMul + 10 FFT): {:?}", elapsed);
+    println!("✅ Mixed workload (100 ComplexMul + 10 FFT): {elapsed:?}");
 }
 
 // ═══════════════════════════════════════════════════════════════

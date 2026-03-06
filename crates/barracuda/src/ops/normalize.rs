@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Normalize - L2 normalization along dimension (Pure WGSL)
 //!
-//! Normalizes vectors to unit length: x_normalized = x / ||x||_2
+//! Normalizes vectors to unit length: `x_normalized` = x / ||x||_2
 //!
 //! **Deep Debt Principles**:
 //! - Pure WGSL implementation (no CPU code)
@@ -22,6 +22,10 @@ pub struct Normalize {
 
 impl Normalize {
     /// Create an L2 normalization operation along the given dimension.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if dim is out of bounds.
     pub fn new(input: Tensor, dim: usize, epsilon: f32) -> Result<Self> {
         let input_shape = input.shape();
         if dim >= input_shape.len() {
@@ -57,6 +61,11 @@ impl Normalize {
     }
 
     /// Execute L2 normalization and return the result tensor.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();

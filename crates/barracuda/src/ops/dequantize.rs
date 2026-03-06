@@ -27,9 +27,10 @@ pub struct Dequantize {
 
 impl Dequantize {
     /// Create dequantize operation
-    ///
     /// Note: input tensor should contain i32 values (quantized integers)
     /// This will be converted to f32 output
+    /// # Errors
+    /// Returns [`Err`] if scale is not positive.
     pub fn new(input: Tensor, scale: f32, zero_point: f32) -> Result<Self> {
         if scale <= 0.0 {
             return Err(BarracudaError::invalid_op(
@@ -56,6 +57,9 @@ impl Dequantize {
     }
 
     /// Execute dequantize on tensor
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.len();
@@ -83,7 +87,7 @@ impl Dequantize {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d(size as u32)
-            .submit();
+            .submit()?;
 
         // Create output tensor
         Ok(Tensor::from_buffer(

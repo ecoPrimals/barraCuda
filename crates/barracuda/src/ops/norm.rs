@@ -14,6 +14,7 @@ use crate::error::Result;
 use crate::tensor::Tensor;
 
 /// Simple norm reduction variant (scalar path).
+#[must_use]
 pub fn wgsl_norm_simple() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
@@ -33,6 +34,7 @@ pub struct Norm {
 
 impl Norm {
     /// Create a new norm operation
+    #[must_use]
     pub fn new(input: Tensor, p: f32, dim: Option<usize>, keepdim: bool) -> Self {
         Self {
             input,
@@ -60,6 +62,8 @@ impl Norm {
     }
 
     /// Execute the norm operation
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range (for dimension-wise norm), or if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -103,7 +107,7 @@ impl Norm {
                     .storage_rw(1, &output_buffer)
                     .uniform(2, &params_buffer)
                     .dispatch(num_workgroups, 1, 1)
-                    .submit();
+                    .submit()?;
 
                 // Read back partial results and reduce them on CPU
                 let partial_results =
@@ -164,7 +168,7 @@ impl Norm {
                     .storage_rw(1, &output_buffer)
                     .uniform(2, &params_buffer)
                     .dispatch(workgroups, 1, 1)
-                    .submit();
+                    .submit()?;
 
                 // Read back results
                 let output_data = device.read_buffer_f32(&output_buffer, output_size)?;
@@ -185,17 +189,19 @@ impl Norm {
 
 impl Tensor {
     /// Compute norm (global reduction, default L2 norm with p=2.0)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn norm(&self) -> Result<Self> {
         Norm::new(self.clone(), 2.0, None, false).execute()
     }
 
     /// Compute p-norm along a dimension
-    ///
     /// # Arguments
-    ///
     /// * `p` - p-norm parameter (e.g., 2.0 for L2 norm, 1.0 for L1 norm)
     /// * `dim` - Dimension to compute norm along
     /// * `keepdim` - Whether to keep the reduced dimension with size 1
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range, or buffer allocation/GPU dispatch/buffer readback fails (e.g. device lost).
     pub fn norm_dim(&self, p: f32, dim: usize, keepdim: bool) -> Result<Self> {
         Norm::new(self.clone(), p, Some(dim), keepdim).execute()
     }
@@ -306,7 +312,7 @@ mod tests {
         let cpu_result = norm_cpu(&input_data, 2.0);
 
         let error = (gpu_result[0] - cpu_result).abs();
-        assert!(error < 1e-4, "Error {} exceeds threshold", error);
+        assert!(error < 1e-4, "Error {error} exceeds threshold");
     }
 
     #[tokio::test]

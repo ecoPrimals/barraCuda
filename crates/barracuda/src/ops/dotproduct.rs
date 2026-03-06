@@ -12,7 +12,7 @@
 //!
 //! ## Evolution History
 //!
-//! **Before** (Phase 3): `DotProductExt` trait extension  
+//! **Before** (Phase 3): `DotProductExt` trait extension\
 //! **After** (Phase 6): Direct `impl Tensor` method
 //!
 //! ## Usage
@@ -29,8 +29,8 @@
 //! # }
 //! ```
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::ComputeDispatch;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
@@ -57,6 +57,9 @@ impl DotProduct {
     }
 
     /// Execute dot product and return partial sums (or final scalar if single workgroup).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.a.device();
         let size = self.a.shape().iter().product::<usize>();
@@ -77,7 +80,7 @@ impl DotProduct {
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)
             .dispatch(num_workgroups, 1, 1)
-            .submit();
+            .submit()?;
 
         // Return partial sums (caller can sum them for final result)
         Ok(Tensor::from_buffer(
@@ -94,17 +97,11 @@ impl DotProduct {
 
 impl Tensor {
     /// Compute dot product (inner product) with another tensor
-    ///
     /// Returns partial sums (caller can sum to get final result)
-    ///
     /// **Deep Debt**: Modern direct method, no trait extension needed
-    ///
     /// ## Arguments
-    ///
     /// * `b` - Second tensor (must have same shape as self)
-    ///
     /// ## Example
-    ///
     /// ```ignore
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # use barracuda::tensor::Tensor;
@@ -118,6 +115,9 @@ impl Tensor {
     /// # Ok(())
     /// # }
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn dotproduct(self, b: &Self) -> Result<Self> {
         let op = DotProduct {
             a: self,
@@ -154,8 +154,7 @@ mod tests {
         // Verify result is reasonable (within range of expected)
         assert!(
             total > 0.0 && total < 20.0,
-            "Dot product result out of reasonable range: {}",
-            total
+            "Dot product result out of reasonable range: {total}"
         );
     }
 
@@ -229,8 +228,7 @@ mod tests {
         // Verify result is in reasonable range (not checking exact value due to GPU implementation)
         assert!(
             total > 1000.0 && total < 10000.0,
-            "Result {} out of range",
-            total
+            "Result {total} out of range"
         );
     }
 

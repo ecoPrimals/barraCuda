@@ -20,21 +20,14 @@ async fn test_shannon_entropy_cpu() -> Result<()> {
         .iter()
         .map(|&c| {
             let p = c / total;
-            if p > 0.0 {
-                -p * p.ln()
-            } else {
-                0.0
-            }
+            if p > 0.0 { -p * p.ln() } else { 0.0 }
         })
         .sum();
 
     let error = (shannon - expected).abs();
     assert!(
         error < 1e-10,
-        "Shannon error {} exceeds tolerance (got {}, expected {})",
-        error,
-        shannon,
-        expected
+        "Shannon error {error} exceeds tolerance (got {shannon}, expected {expected})"
     );
 
     Ok(())
@@ -58,10 +51,7 @@ async fn test_simpson_index_cpu() -> Result<()> {
     let error = (simpson - expected).abs();
     assert!(
         error < 1e-12,
-        "Simpson error {} exceeds tolerance (got {}, expected {})",
-        error,
-        simpson,
-        expected
+        "Simpson error {error} exceeds tolerance (got {simpson}, expected {expected})"
     );
 
     Ok(())
@@ -85,8 +75,7 @@ async fn test_large_array_sum_gpu() -> Result<()> {
 
     assert!(
         error < 1e-10,
-        "Sum relative error {} exceeds tolerance",
-        error
+        "Sum relative error {error} exceeds tolerance"
     );
 
     Ok(())

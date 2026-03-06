@@ -21,7 +21,7 @@
 //! ```
 //!
 //! **Key Properties**:
-//! - Convex surrogate for IoU loss
+//! - Convex surrogate for `IoU` loss
 //! - Directly optimizes Intersection over Union
 //! - Better than cross-entropy for segmentation
 //! - Especially effective for imbalanced classes
@@ -61,6 +61,8 @@ pub struct LovaszLoss {
 
 impl LovaszLoss {
     /// Creates a new Lovász loss. Shapes must match.
+    /// # Errors
+    /// Returns [`Err`] if prediction and target shapes do not match.
     pub fn new(predictions: Tensor, targets: Tensor) -> Result<Self> {
         // Validate shapes match
         if predictions.shape() != targets.shape() {
@@ -86,6 +88,9 @@ impl LovaszLoss {
     }
 
     /// Executes Lovász loss and returns the loss tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size = self.predictions.shape().iter().product::<usize>();
@@ -245,29 +250,26 @@ impl LovaszLoss {
 
 impl Tensor {
     /// Lovasz Loss for IoU-optimized semantic segmentation
-    ///
     /// **Deep Debt**: Essential for semantic segmentation tasks
-    ///
     /// # Arguments
     /// - `targets`: Ground truth tensor [same shape as predictions]
-    ///
     /// # Returns
     /// - Loss tensor [same shape as input]
-    ///
     /// # Example
     /// ```rust,ignore
     /// // Semantic segmentation
     /// let loss = predictions.lovasz_loss(&targets)?;
-    ///
     /// // Medical imaging
     /// let seg_loss = model_output.lovasz_loss(&ground_truth)?;
     /// ```
-    ///
     /// # Note
-    /// - Directly optimizes IoU metric
+    /// - Directly optimizes `IoU` metric
     /// - Better than cross-entropy for segmentation
     /// - Especially effective for imbalanced classes
     /// - Predictions and targets should be in [0, 1]
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn lovasz_loss(self, targets: &Self) -> Result<Self> {
         LovaszLoss::new(self, targets.clone())?.execute()
     }
@@ -317,8 +319,7 @@ mod tests {
 
         assert!(
             mean < 0.1,
-            "Expected low loss for perfect prediction, got {}",
-            mean
+            "Expected low loss for perfect prediction, got {mean}"
         );
     }
 

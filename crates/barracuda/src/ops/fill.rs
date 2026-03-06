@@ -15,6 +15,7 @@ static SHADER_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
 
 /// Returns the WGSL meshgrid shader (expand coords to grid).
+#[must_use]
 pub fn wgsl_meshgrid() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
@@ -40,6 +41,7 @@ pub struct Fill {
 
 impl Fill {
     /// Creates a new fill operation with the given shape and value.
+    #[must_use]
     pub fn new(shape: Vec<usize>, value: f32, device: Arc<WgpuDevice>) -> Self {
         Self {
             shape,
@@ -53,6 +55,8 @@ impl Fill {
     }
 
     /// Executes the fill and returns a tensor of the given shape filled with the value.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let size: usize = self.shape.iter().product();
 
@@ -150,11 +154,15 @@ impl Tensor {
     /// * `shape` - Shape of the tensor
     /// * `value` - Value to fill with
     /// * `device` - Device to create tensor on
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn fill(shape: Vec<usize>, value: f32, device: Arc<WgpuDevice>) -> Result<Self> {
         Fill::new(shape, value, device).execute()
     }
 
     /// Fill this tensor with a constant value (in-place operation concept)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn fill_with(self, value: f32) -> Result<Self> {
         Fill::new(self.shape().to_vec(), value, self.device().clone()).execute()
     }
@@ -179,7 +187,7 @@ mod tests {
 
         // All 12 elements should be 7.5
         assert_eq!(output.len(), 12);
-        for val in output.iter() {
+        for val in &output {
             assert_eq!(*val, 7.5);
         }
     }
@@ -254,7 +262,7 @@ mod tests {
         // Value requiring precision
         let result = Tensor::fill(vec![5], 1.234567, device).unwrap();
         let output = result.to_vec().unwrap();
-        for val in output.iter() {
+        for val in &output {
             assert!((val - 1.234567).abs() < 1e-6);
         }
     }

@@ -19,9 +19,9 @@
 //! CPU reference in hotSpring `lattice/wilson.rs`.  Expected average plaquette
 //! for a thermalized SU(3) config at β=6: ≈ 0.5937 (Wilson action).
 
+use crate::device::WgpuDevice;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
 
@@ -54,9 +54,11 @@ struct PlaqParams {
 
 impl WilsonPlaquette {
     /// Compile the plaquette pipeline for a lattice of dimensions `nt×nx×ny×nz`.
-    ///
     /// Automatically selects DF64 (f32-pair) shaders on consumer GPUs,
     /// routing plaquette SU(3) products through FP32 cores for ~10x throughput.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>, nt: u32, nx: u32, ny: u32, nz: u32) -> Result<Self> {
         let volume = nt * nx * ny * nz;
 
@@ -103,9 +105,11 @@ impl WilsonPlaquette {
     }
 
     /// Compute `Re Tr(U_p) / 3` for all plaquettes.
-    ///
     /// * `links_buf` — `[V × 4 × 18]` f64 storage buffer (GPU-resident)
     /// * `plaq_buf`  — `[V × 6]` f64 storage buffer (output, GPU-resident)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn compute(&self, links_buf: &wgpu::Buffer, plaq_buf: &wgpu::Buffer) -> Result<()> {
         ComputeDispatch::new(self.device.as_ref(), "WilsonPlaquette")
             .shader(&self.shader_src, "plaquette")
@@ -114,16 +118,18 @@ impl WilsonPlaquette {
             .storage_read(1, links_buf)
             .storage_rw(2, plaq_buf)
             .dispatch(self.volume.div_ceil(PLAQ_WG), 1, 1)
-            .submit();
+            .submit()?;
         Ok(())
     }
 
     /// Number of lattice sites.
+    #[must_use]
     pub fn volume(&self) -> u32 {
         self.volume
     }
 
     /// Total number of plaquette values in the output buffer (`volume × 6`).
+    #[must_use]
     pub fn n_plaquettes(&self) -> u32 {
         self.volume * 6
     }
@@ -150,10 +156,9 @@ mod tests {
 
     /// All-identity link configuration must produce plaquette = 1.0 for every
     /// plane at every site.  This validates the full WGSL path:
-    ///   su3_load → su3_plaquette → su3_re_trace / 3 → write.
-    ///
+    ///   `su3_load` → `su3_plaquette` → `su3_re_trace` / 3 → write.
     /// On a 2×2×2×2 lattice (16 sites):
-    ///   U_p = I · I · I† · I† = I  →  Re Tr(I)/3 = 3/3 = 1.0
+    ///   `U_p` = I · I · I† · I† = I  →  Re Tr(I)/3 = 3/3 = 1.0
     #[test]
     fn test_plaquette_identity_links_gpu() {
         let Some(device) = crate::device::test_pool::get_test_device_if_f64_gpu_available_sync()

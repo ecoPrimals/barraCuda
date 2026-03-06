@@ -68,6 +68,7 @@ impl Default for Rk45Config {
 
 impl Rk45Config {
     /// Create a new configuration with specified tolerances.
+    #[must_use]
     pub fn new(rtol: f64, atol: f64) -> Self {
         Self {
             rtol,
@@ -127,7 +128,7 @@ pub struct Rk45Result {
 
 /// Adaptive RK45 ODE solver.
 ///
-/// Solves the system dy/dt = f(t, y) from t_start to t_end.
+/// Solves the system dy/dt = f(t, y) from `t_start` to `t_end`.
 ///
 /// # Arguments
 ///
@@ -140,6 +141,11 @@ pub struct Rk45Result {
 /// # Returns
 ///
 /// [`Rk45Result`] containing the solution and diagnostics.
+///
+/// # Errors
+///
+/// Returns [`Err`] if `t_end <= t_start`, `y0` is empty, step size falls below
+/// minimum, or max steps exceeded.
 ///
 /// # Example
 ///
@@ -334,6 +340,10 @@ where
 }
 
 /// Solve to a specific time, returning only the final value.
+///
+/// # Errors
+///
+/// Returns [`Err`] if [`rk45_solve`] fails (see [`rk45_solve`] for conditions).
 pub fn rk45_at<F>(
     f: &F,
     t_start: f64,

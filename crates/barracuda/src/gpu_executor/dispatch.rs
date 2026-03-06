@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! MathOp dispatch logic for GPU execution.
+//! `MathOp` dispatch logic for GPU execution.
 //!
-//! Contains the actual operation dispatch (match on MathOp) and the
+//! Contains the actual operation dispatch (match on `MathOp`) and the
 //! `build_tensor` helper for zero-copy / fallback tensor construction.
 
-use super::storage::GpuTensorStorage;
 use super::GpuExecutor;
+use super::storage::GpuTensorStorage;
 use crate::cpu_executor::CpuExecutor;
 use crate::device::WgpuDevice;
 use crate::error::Result;
@@ -83,7 +83,7 @@ pub async fn build_tensor(
     crate::tensor::Tensor::from_data(&floats, desc.shape.clone(), device.clone())
 }
 
-/// Execute the given MathOp on the GPU, returning the result as TensorStorage.
+/// Execute the given `MathOp` on the GPU, returning the result as `TensorStorage`.
 pub(super) async fn execute_dispatch(
     op: &MathOp,
     inputs: Vec<Arc<dyn TensorStorage>>,

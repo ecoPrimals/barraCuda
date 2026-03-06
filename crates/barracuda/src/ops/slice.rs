@@ -5,7 +5,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// f64 is the canonical source — f32 derived via downcast_f64_to_f32 when needed.
+/// f64 is the canonical source — f32 derived via `downcast_f64_to_f32` when needed.
 const SHADER_F64: &str = include_str!("../shaders/tensor/slice_f64.wgsl");
 
 static SHADER_F32: std::sync::LazyLock<String> =
@@ -28,11 +28,11 @@ pub struct Slice {
 
 impl Slice {
     /// Create a slice operation.
-    ///
     /// # Arguments
     /// * `input` - Input tensor (1D)
     /// * `start` - Start index (inclusive)
     /// * `length` - Number of elements to extract
+    #[must_use]
     pub fn new(input: Tensor, start: usize, length: usize) -> Self {
         Self {
             input,
@@ -46,6 +46,9 @@ impl Slice {
     }
 
     /// Execute slice operation (extract contiguous region from input).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let output_buffer = device.create_buffer_f32(self.length)?;
@@ -176,6 +179,9 @@ impl Slice {
 
 impl Tensor {
     /// Extract a contiguous subregion [start..start+length] from this 1D tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn slice(self, start: usize, length: usize) -> Result<Self> {
         Slice::new(self, start, length).execute()
     }

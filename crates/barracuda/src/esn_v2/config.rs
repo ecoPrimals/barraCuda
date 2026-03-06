@@ -47,9 +47,9 @@ pub struct ESNConfig {
 
 impl ESNConfig {
     /// Create a multi-head ESN config (hotSpring 11-head standard).
-    ///
     /// Produces an ESN with 11 output heads, a larger reservoir, and
     /// sparser connectivity tuned for multi-target prediction.
+    #[must_use]
     pub fn multi_head(input_size: usize) -> Self {
         Self {
             input_size,
@@ -80,6 +80,11 @@ impl Default for ESNConfig {
 }
 
 /// Validate ESN configuration parameters
+///
+/// # Errors
+///
+/// Returns [`Err`] if any parameter is invalid (e.g. sizes ≤ 0, spectral radius
+/// out of range, connectivity or `leak_rate` out of [0, 1], regularization ≤ 0).
 pub fn validate_config(config: &ESNConfig) -> BarracudaResult<()> {
     let check = |cond: bool, msg: &str| -> BarracudaResult<()> {
         if cond {
@@ -114,6 +119,10 @@ pub fn validate_config(config: &ESNConfig) -> BarracudaResult<()> {
 }
 
 /// Check that a dimension matches expected size
+///
+/// # Errors
+///
+/// Returns [`Err`] if `actual` does not equal `expected`.
 pub fn expect_size(label: &str, expected: usize, actual: usize) -> BarracudaResult<()> {
     if actual == expected {
         return Ok(());

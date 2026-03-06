@@ -29,6 +29,10 @@ pub struct YukawaForce {
 
 impl YukawaForce {
     /// Create a Yukawa force calculator with positions, charges, and screening parameters.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if positions shape is not [N, 3], charges shape does not match, or κ < 0.
     pub fn new(
         positions: Tensor,
         charges: Tensor,
@@ -71,6 +75,11 @@ impl YukawaForce {
     }
 
     /// Execute Yukawa force computation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.positions.device();
         let n_particles = self.positions.shape()[0];
@@ -299,6 +308,6 @@ mod tests {
 
         // Force should be heavily screened (small magnitude)
         let f0_mag = (force_data[0].powi(2) + force_data[1].powi(2) + force_data[2].powi(2)).sqrt();
-        println!("✅ Yukawa screening validated: |F| = {}", f0_mag);
+        println!("✅ Yukawa screening validated: |F| = {f0_mag}");
     }
 }

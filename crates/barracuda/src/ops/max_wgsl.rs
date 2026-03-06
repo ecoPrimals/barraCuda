@@ -37,6 +37,7 @@ pub struct Max {
 
 impl Max {
     /// Create a new max operation
+    #[must_use]
     pub fn new(input: Tensor, dim: Option<usize>, keepdim: bool) -> Self {
         Self {
             input,
@@ -66,6 +67,9 @@ impl Max {
     }
 
     /// Execute the max operation
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range for the tensor shape, buffer
+    /// allocation fails, GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -104,7 +108,7 @@ impl Max {
                     .storage_rw(1, &output_buffer)
                     .uniform(2, &params_buffer)
                     .dispatch(num_workgroups, 1, 1)
-                    .submit();
+                    .submit()?;
 
                 // Read back partial results and reduce them on CPU
                 // For now, we'll do a simple CPU reduction of partial results
@@ -165,7 +169,7 @@ impl Max {
                     .storage_rw(1, &output_buffer)
                     .uniform(2, &params_buffer)
                     .dispatch(workgroups, 1, 1)
-                    .submit();
+                    .submit()?;
 
                 // Read back results
                 let output_data = device.read_buffer_f32(&output_buffer, output_size)?;
@@ -186,21 +190,28 @@ impl Max {
 
 impl Tensor {
     /// Find maximum value (global reduction)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or buffer
+    /// readback fails (e.g. device lost).
     pub fn max(&self) -> Result<Self> {
         Max::new(self.clone(), None, false).execute()
     }
 
     /// Find maximum value along a dimension
-    ///
     /// # Arguments
-    ///
     /// * `dim` - Dimension to find max along
     /// * `keepdim` - Whether to keep the reduced dimension with size 1
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range for the tensor shape, buffer
+    /// allocation fails, GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn max_dim(&self, dim: usize, keepdim: bool) -> Result<Self> {
         Max::new(self.clone(), Some(dim), keepdim).execute()
     }
 
     /// Find maximum value (legacy method for backward compatibility)
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range for the tensor shape, buffer
+    /// allocation fails, GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub fn max_wgsl(self, dim: Option<usize>) -> Result<Self> {
         match dim {
             None => Max::new(self, None, false).execute(),

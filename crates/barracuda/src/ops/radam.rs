@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! RAdam - Rectified Adam Optimizer (Pure WGSL)
+//! `RAdam` - Rectified Adam Optimizer (Pure WGSL)
 //!
 //! Addresses variance warmup issue in Adam
 //! Automatically adjusts learning rate based on variance tractability
@@ -27,7 +27,11 @@ pub struct RAdam {
 }
 
 impl RAdam {
-    /// Create an RAdam optimizer step with the given parameters and optional momentum/variance.
+    /// Create an `RAdam` optimizer step with the given parameters and optional momentum/variance.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shapes mismatch, `learning_rate` <= 0, betas not in [0, 1), or step == 0.
     pub fn new(
         parameters: Tensor,
         gradients: Tensor,
@@ -119,7 +123,12 @@ impl RAdam {
         }
     }
 
-    /// Execute one RAdam optimization step. Returns (updated_params, updated_momentum, updated_variance).
+    /// Execute one `RAdam` optimization step. Returns (`updated_params`, `updated_momentum`, `updated_variance`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<(Tensor, Tensor, Tensor)> {
         let device = self.parameters.device();
         let size = self.parameters.shape().iter().product::<usize>();

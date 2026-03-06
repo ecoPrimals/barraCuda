@@ -3,8 +3,8 @@
 
 use barracuda::device::WgpuDevice;
 use barracuda::ops::md::electrostatics::{
-    compute_short_range, dipole_correction, self_energy_correction, spread_charges_with_coeffs,
-    GreensFunction, Pppm, PppmCpuFft, PppmParams,
+    GreensFunction, Pppm, PppmCpuFft, PppmParams, compute_short_range, dipole_correction,
+    self_energy_correction, spread_charges_with_coeffs,
 };
 use std::sync::Arc;
 

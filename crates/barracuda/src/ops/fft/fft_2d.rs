@@ -17,6 +17,8 @@ pub struct Fft2D {
 
 impl Fft2D {
     /// Create 2D FFT for [rows, cols, 2] complex input (powers of 2).
+    /// # Errors
+    /// Returns [`Err`] if input is not 3D [rows, cols, 2], or dimensions are not powers of 2.
     pub fn new(input: Tensor, rows: u32, cols: u32) -> Result<Self> {
         let shape = input.shape();
 
@@ -42,6 +44,9 @@ impl Fft2D {
     }
 
     /// Execute 2D FFT (row-wise then column-wise).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 

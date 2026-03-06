@@ -4,6 +4,8 @@
 use num_traits::Float;
 
 /// Element-wise addition: C = A + B
+/// # Panics
+/// Panics if `a.len() != b.len()` or `a.len() != output.len()`.
 #[inline]
 pub fn elementwise_add<T: Float>(a: &[T], b: &[T], output: &mut [T]) {
     assert_eq!(a.len(), b.len());
@@ -14,6 +16,8 @@ pub fn elementwise_add<T: Float>(a: &[T], b: &[T], output: &mut [T]) {
 }
 
 /// Element-wise multiplication: C = A * B
+/// # Panics
+/// Panics if `a.len() != b.len()` or `a.len() != output.len()`.
 #[inline]
 pub fn elementwise_mul<T: Float>(a: &[T], b: &[T], output: &mut [T]) {
     assert_eq!(a.len(), b.len());
@@ -24,6 +28,8 @@ pub fn elementwise_mul<T: Float>(a: &[T], b: &[T], output: &mut [T]) {
 }
 
 /// Fused multiply-add: D = A * B + C
+/// # Panics
+/// Panics if `a.len() != b.len()`, `a.len() != c.len()`, or `a.len() != output.len()`.
 #[inline]
 pub fn elementwise_fma<T: Float>(a: &[T], b: &[T], c: &[T], output: &mut [T]) {
     assert_eq!(a.len(), b.len());
@@ -35,6 +41,8 @@ pub fn elementwise_fma<T: Float>(a: &[T], b: &[T], c: &[T], output: &mut [T]) {
 }
 
 /// Dot product: sum(A * B)
+/// # Panics
+/// Panics if `a.len() != b.len()`.
 #[inline]
 pub fn dot_product<T: Float>(a: &[T], b: &[T]) -> T {
     assert_eq!(a.len(), b.len());

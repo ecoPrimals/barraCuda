@@ -4,6 +4,7 @@
 //! Used for tests and validation against GPU results.
 
 /// Hargreaves-Samani ET₀ (CPU reference) — FAO-56 Eq. 52
+#[must_use]
 pub fn hargreaves_et0_cpu(tmax: f64, tmin: f64, lat_rad: f64, doy: f64) -> f64 {
     use std::f64::consts::PI;
     let two_pi = 2.0 * PI;
@@ -20,13 +21,15 @@ pub fn hargreaves_et0_cpu(tmax: f64, tmin: f64, lat_rad: f64, doy: f64) -> f64 {
 }
 
 /// FAO-56 Eq. 62 Kc climate adjustment (CPU reference)
+#[must_use]
 pub fn kc_climate_adjust_cpu(kc_table: f64, u2: f64, rh_min: f64, crop_height_m: f64) -> f64 {
     let adj = (0.04 * (u2 - 2.0) - 0.004 * (rh_min - 45.0)) * (crop_height_m / 3.0_f64).powf(0.3);
     (kc_table + adj).max(0.0)
 }
 
 /// Van Genuchten θ(h) — soil water content from matric head (CPU reference)
-/// θ(h) = θ_r + (θ_s - θ_r) / [1 + (α|h|)^n]^m where m = 1 - 1/n
+/// θ(h) = `θ_r` + (`θ_s` - `θ_r`) / [1 + (α|h|)^n]^m where m = 1 - 1/n
+#[must_use]
 pub fn van_genuchten_theta_cpu(theta_r: f64, theta_s: f64, alpha: f64, n: f64, h: f64) -> f64 {
     if h >= 0.0 {
         return theta_s;
@@ -38,7 +41,8 @@ pub fn van_genuchten_theta_cpu(theta_r: f64, theta_s: f64, alpha: f64, n: f64, h
 }
 
 /// Van Genuchten K(h) — hydraulic conductivity (CPU reference)
-/// K(h) = K_s * S_e^l * [1 - (1 - S_e^(1/m))^m]^2
+/// K(h) = `K_s` * `S_e^l` * [1 - (1 - `S_e^(1/m))^m`]^2
+#[must_use]
 pub fn van_genuchten_k_cpu(
     k_s: f64,
     _theta_r: f64,
@@ -60,7 +64,8 @@ pub fn van_genuchten_k_cpu(
 }
 
 /// Thornthwaite monthly ET₀ (CPU reference)
-/// ET₀ = 16 * (10*T_mean/I)^a * (N/12) * (d/30)
+/// ET₀ = 16 * (10*`T_mean/I)^a` * (N/12) * (d/30)
+#[must_use]
 pub fn thornthwaite_et0_cpu(
     heat_index_i: f64,
     exponent_a: f64,
@@ -78,6 +83,7 @@ pub fn thornthwaite_et0_cpu(
 
 /// Makkink (1957) ET₀ — radiation-based, Netherlands standard (CPU reference)
 /// ET₀ = 0.61 * (Δ/(Δ+γ)) * Rs/λ − 0.12
+#[must_use]
 pub fn makkink_et0_cpu(rs_mj: f64, t_mean: f64, elevation: f64) -> f64 {
     let p = 101.3 * ((293.0 - 0.0065 * elevation) / 293.0).powf(5.26);
     let gamma = 0.000665 * p;
@@ -88,7 +94,8 @@ pub fn makkink_et0_cpu(rs_mj: f64, t_mean: f64, elevation: f64) -> f64 {
 }
 
 /// Turc (1961) ET₀ — radiation + temperature, humid climates (CPU reference)
-/// ET₀ = 0.013 * (T/(T+15)) * (Rs_cal + 50) * C_rh
+/// ET₀ = 0.013 * (T/(T+15)) * (`Rs_cal` + 50) * `C_rh`
+#[must_use]
 pub fn turc_et0_cpu(rs_mj: f64, t_mean: f64, rh_mean: f64) -> f64 {
     let rs_cal = rs_mj * 23.8846;
     let c_rh = if rh_mean < 50.0 {
@@ -102,19 +109,55 @@ pub fn turc_et0_cpu(rs_mj: f64, t_mean: f64, rh_mean: f64) -> f64 {
 /// Hamon (1963) ET₀ — temperature + daylength only (CPU reference).
 ///
 /// PET (mm/day) = 13.97 × D² × Pt
-/// where D = daylight_hours / 12, Pt = 4.95 × exp(0.062 × T) / 100
+/// where D = `daylight_hours` / 12, Pt = 4.95 × exp(0.062 × T) / 100
 /// (Pt approximates saturated vapor density in g/cm³; 13.97 = 0.55 × 25.4
 /// converts the original inches/day to mm/day.)
 ///
 /// Reference: Hamon (1963), "Estimating potential evapotranspiration", ASCE.
+#[must_use]
 pub fn hamon_et0_cpu(t_mean: f64, daylight_hours: f64) -> f64 {
     let d_ratio = daylight_hours / 12.0;
     let pt = 4.95 * (0.062 * t_mean).exp() / 100.0;
     (13.97 * d_ratio * d_ratio * pt).max(0.0)
 }
 
+/// SCS-CN Runoff (USDA TR-55) (CPU reference)
+/// Q = (P − Ia)² / (P − Ia + S), S = 25400/CN − 254, Ia = `Ia_ratio` × S
+#[cfg(test)]
+#[must_use]
+pub(crate) fn scs_cn_runoff_cpu(p: f64, cn: f64, ia_ratio: f64) -> f64 {
+    if p <= 0.0 || cn <= 0.0 {
+        return 0.0;
+    }
+    let s = 25400.0 / cn - 254.0;
+    let ia = ia_ratio * s;
+    if p <= ia {
+        return 0.0;
+    }
+    let pe = p - ia;
+    pe * pe / (pe + s)
+}
+
+/// Stewart (1977) yield-water function (CPU reference)
+/// `Ya/Ym` = 1 − Ky × (1 − `ETa/ETc`)
+#[cfg(test)]
+#[must_use]
+pub(crate) fn stewart_yield_water_cpu(ky: f64, eta_etc_ratio: f64) -> f64 {
+    1.0 - ky * (1.0 - eta_etc_ratio)
+}
+
+/// Blaney-Criddle (1950) ET₀ (CPU reference)
+/// ET₀ = p × (0.46 × T + 8.13) where p = `daylight_hours` / 43.80
+#[cfg(test)]
+#[must_use]
+pub(crate) fn blaney_criddle_et0_cpu(t_mean: f64, daylight_hours: f64) -> f64 {
+    let p = daylight_hours / 43.80;
+    (p * (0.46 * t_mean + 8.13)).max(0.0)
+}
+
 /// Pedotransfer polynomial — Horner form (CPU reference)
 /// y = a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*a5))))
+#[must_use]
 pub fn pedotransfer_polynomial_cpu(
     a0: f64,
     a1: f64,
@@ -142,7 +185,7 @@ pub(crate) fn fao56_et0_cpu(
 ) -> f64 {
     use std::f64::consts::PI;
 
-    let tmean = (tmax + tmin) / 2.0;
+    let tmean = f64::midpoint(tmax, tmin);
 
     // Atmospheric pressure (FAO-56 Eq. 7)
     let p = 101.3 * ((293.0 - 0.0065 * elevation) / 293.0).powf(5.26);
@@ -153,10 +196,10 @@ pub(crate) fn fao56_et0_cpu(
     // Saturation vapour pressure
     let e_tmax = 0.6108 * (17.27 * tmax / (tmax + 237.3)).exp();
     let e_tmin = 0.6108 * (17.27 * tmin / (tmin + 237.3)).exp();
-    let es = (e_tmax + e_tmin) / 2.0;
+    let es = f64::midpoint(e_tmax, e_tmin);
 
     // Actual vapour pressure
-    let ea = (e_tmin * rh_max / 100.0 + e_tmax * rh_min / 100.0) / 2.0;
+    let ea = f64::midpoint(e_tmin * rh_max / 100.0, e_tmax * rh_min / 100.0);
 
     // Slope of saturation vapour pressure curve
     let e_tmean = 0.6108 * (17.27 * tmean / (tmean + 237.3)).exp();

@@ -7,8 +7,8 @@
 //! Constructs the diagonal and off-diagonal elements of the Anderson
 //! tight-binding Hamiltonian from a random potential landscape.
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -44,6 +44,11 @@ pub struct AndersonResult {
 /// * `hopping_t` — nearest-neighbor hopping amplitude.
 ///
 /// Returns the diagonal (on-site energies) and off-diagonal (hopping) elements.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn anderson_coupling(
     device: &Arc<WgpuDevice>,
     potential: &[f64],
@@ -74,7 +79,7 @@ pub fn anderson_coupling(
         .storage_rw(2, &offdiag_buf)
         .uniform(3, &params_buf)
         .dispatch(n.div_ceil(WG_64 as usize) as u32, 1, 1)
-        .submit();
+        .submit()?;
 
     let diagonal = device.read_f64_buffer(&diag_buf, n)?;
     let off_diagonal = device.read_f64_buffer(&offdiag_buf, n_offdiag)?;

@@ -3,7 +3,7 @@
 //!
 //! Provides a stateful Nelder-Mead optimizer that can be paused mid-iteration
 //! and resumed later with the same simplex state. This is critical for the
-//! SparsitySampler workflow:
+//! `SparsitySampler` workflow:
 //!
 //! 1. Run NM for N evaluations → pause
 //! 2. Train surrogate on accumulated evaluations
@@ -102,6 +102,11 @@ impl ResumableNelderMead {
     /// Create a new resumable NM solver with initial point and bounds.
     ///
     /// The initial simplex is constructed by perturbing each dimension of `x0`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(x0: &[f64], bounds: &[(f64, f64)], tol: f64) -> Result<Self> {
         let n = x0.len();
         if bounds.len() != n {
@@ -253,6 +258,7 @@ impl ResumableNelderMead {
     }
 
     /// Get the best point and function value found so far.
+    #[must_use]
     pub fn best(&self) -> (Vec<f64>, f64) {
         if self.f_vals.is_empty() {
             return (vec![0.0; self.n_dims], f64::INFINITY);
@@ -269,16 +275,19 @@ impl ResumableNelderMead {
     }
 
     /// Get the current solver status.
+    #[must_use]
     pub fn status(&self) -> SolverStatus {
         self.status
     }
 
     /// Total number of function evaluations performed.
+    #[must_use]
     pub fn n_evals(&self) -> usize {
         self.n_evals
     }
 
     /// Access the evaluation cache.
+    #[must_use]
     pub fn cache(&self) -> &EvaluationCache {
         &self.cache
     }
@@ -289,11 +298,13 @@ impl ResumableNelderMead {
     }
 
     /// Whether the solver has converged.
+    #[must_use]
     pub fn is_converged(&self) -> bool {
         self.status == SolverStatus::Converged
     }
 
     /// Whether the solver can be resumed.
+    #[must_use]
     pub fn is_resumable(&self) -> bool {
         self.status == SolverStatus::Paused || self.status == SolverStatus::NotStarted
     }

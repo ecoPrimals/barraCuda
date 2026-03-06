@@ -46,8 +46,8 @@
 
 use crate::error::{BarracudaError, Result};
 use crate::multi_gpu::GpuVendor;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 // ============================================================================
 // ResourceQuota - Budget Definition
@@ -92,6 +92,7 @@ impl Default for ResourceQuota {
 
 impl ResourceQuota {
     /// Create a new quota with default (unlimited) settings
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -213,6 +214,7 @@ pub struct QuotaTracker {
 
 impl QuotaTracker {
     /// Create a new tracker for the given quota
+    #[must_use]
     pub fn new(quota: ResourceQuota) -> Self {
         Self {
             quota,
@@ -225,6 +227,7 @@ impl QuotaTracker {
     }
 
     /// Create a tracker wrapped in Arc for sharing
+    #[must_use]
     pub fn new_shared(quota: ResourceQuota) -> Arc<Self> {
         Arc::new(Self::new(quota))
     }
@@ -307,6 +310,11 @@ impl QuotaTracker {
     ///
     /// Returns Ok(()) if allocation is allowed, Err if it would exceed quota.
     /// On success, the allocation is tracked. Call `deallocate` when done.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn try_allocate(&self, bytes: u64) -> Result<()> {
         // Check single buffer limit
         if let Some(max_single) = self.quota.max_single_buffer_bytes {
@@ -463,11 +471,13 @@ pub struct DeviceQuota {
 
 impl DeviceQuota {
     /// Check if this device can accommodate an allocation
+    #[must_use]
     pub fn can_allocate(&self, bytes: u64) -> bool {
         self.available_vram_bytes >= bytes
     }
 
     /// Get usage percentage (0-100)
+    #[must_use]
     pub fn usage_percent(&self) -> f64 {
         if self.total_vram_bytes == 0 {
             return 0.0;
@@ -499,29 +509,34 @@ fn format_bytes(bytes: u64) -> String {
 
 /// Common quota presets
 pub mod presets {
-    use super::*;
+    use super::ResourceQuota;
 
     /// Small task: 512 MB VRAM
+    #[must_use]
     pub fn small() -> ResourceQuota {
         ResourceQuota::named("small").with_max_vram_mb(512)
     }
 
     /// Medium task: 2 GB VRAM
+    #[must_use]
     pub fn medium() -> ResourceQuota {
         ResourceQuota::named("medium").with_max_vram_gb(2)
     }
 
     /// Large task: 8 GB VRAM
+    #[must_use]
     pub fn large() -> ResourceQuota {
         ResourceQuota::named("large").with_max_vram_gb(8)
     }
 
     /// Unlimited (for testing or privileged tasks)
+    #[must_use]
     pub fn unlimited() -> ResourceQuota {
         ResourceQuota::named("unlimited")
     }
 
     /// Scientific computing: 4 GB VRAM, high buffer limits
+    #[must_use]
     pub fn scientific() -> ResourceQuota {
         ResourceQuota::named("scientific")
             .with_max_vram_gb(4)
@@ -529,6 +544,7 @@ pub mod presets {
     }
 
     /// ML inference: 2 GB VRAM per model
+    #[must_use]
     pub fn ml_inference() -> ResourceQuota {
         ResourceQuota::named("ml_inference")
             .with_max_vram_gb(2)
@@ -536,6 +552,7 @@ pub mod presets {
     }
 
     /// ML training: 8 GB VRAM, high buffer limits
+    #[must_use]
     pub fn ml_training() -> ResourceQuota {
         ResourceQuota::named("ml_training")
             .with_max_vram_gb(8)

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! GPU PeakDetectF64 — 1D peak detection with prominence and width.
+//! GPU `PeakDetectF64` — 1D peak detection with prominence and width.
 //!
 //! Parallel local-maxima detection via WGSL shader, with CPU-side filtering
 //! for height, prominence, distance, and width thresholds.
 
 use std::sync::Arc;
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::Result;
 
 /// A detected peak with its properties.
@@ -71,6 +71,11 @@ impl<'a> PeakDetectF64<'a> {
     }
 
     /// Run peak detection on the GPU.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(&self, device: &Arc<WgpuDevice>) -> Result<Vec<DetectedPeak>> {
         let n = self.signal.len();
         if n == 0 {
@@ -280,6 +285,7 @@ impl<'a> PeakDetectF64<'a> {
 }
 
 /// CPU reference implementation for testing.
+#[must_use]
 pub fn find_peaks_cpu(
     signal: &[f64],
     distance: usize,
@@ -504,8 +510,7 @@ mod tests {
         let indices: Vec<usize> = peaks.iter().map(|p| p.index).collect();
         assert!(
             !indices.contains(&2) && !indices.contains(&3),
-            "plateau values should not be detected as peaks: {:?}",
-            indices
+            "plateau values should not be detected as peaks: {indices:?}"
         );
     }
 }

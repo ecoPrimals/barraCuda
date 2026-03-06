@@ -8,7 +8,7 @@ fn test_sparsity_analysis() {
     let profile = SparsityAnalyzer::analyze_data(&sparse_data);
 
     assert!((profile.actual_sparsity - 0.75).abs() < 0.01); // 6/8 = 75% sparse
-                                                            // Note: potential_sparsity may differ from actual if near-zeros differ
+    // Note: potential_sparsity may differ from actual if near-zeros differ
 
     // Test dense data
     let dense_data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
@@ -327,15 +327,21 @@ fn test_device_selection_cpu_only() {
 fn test_decision_matrix_validation_data() {
     let matrix = DecisionMatrix::from_validation_data();
 
-    assert!(matrix
-        .get_energy(WorkloadType::ML, ComputeDevice::NPU)
-        .is_some());
-    assert!(matrix
-        .get_throughput(WorkloadType::ML, ComputeDevice::GPU)
-        .is_some());
-    assert!(matrix
-        .get_latency(WorkloadType::ML, ComputeDevice::CPU)
-        .is_some());
+    assert!(
+        matrix
+            .get_energy(WorkloadType::ML, ComputeDevice::NPU)
+            .is_some()
+    );
+    assert!(
+        matrix
+            .get_throughput(WorkloadType::ML, ComputeDevice::GPU)
+            .is_some()
+    );
+    assert!(
+        matrix
+            .get_latency(WorkloadType::ML, ComputeDevice::CPU)
+            .is_some()
+    );
 
     let ml_npu_energy = matrix
         .get_energy(WorkloadType::ML, ComputeDevice::NPU)
@@ -351,10 +357,14 @@ fn test_decision_matrix_validation_data() {
 #[test]
 fn test_decision_matrix_missing_entries() {
     let matrix = DecisionMatrix::from_validation_data();
-    assert!(matrix
-        .get_energy(WorkloadType::Unknown, ComputeDevice::CPU)
-        .is_none());
-    assert!(matrix
-        .get_throughput(WorkloadType::Sparse, ComputeDevice::NPU)
-        .is_none());
+    assert!(
+        matrix
+            .get_energy(WorkloadType::Unknown, ComputeDevice::CPU)
+            .is_none()
+    );
+    assert!(
+        matrix
+            .get_throughput(WorkloadType::Sparse, ComputeDevice::NPU)
+            .is_none()
+    );
 }

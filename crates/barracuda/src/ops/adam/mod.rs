@@ -21,7 +21,7 @@
 //!
 //! **Key Properties**:
 //! - Most widely used optimizer in deep learning
-//! - Combines momentum and RMSprop
+//! - Combines momentum and `RMSprop`
 //! - Bias correction for moving averages
 //! - Works well with sparse gradients
 //! - Computationally efficient
@@ -33,7 +33,7 @@
 //! - `epsilon` (ε): Numerical stability, typically 1e-8
 //! - `step`: Current iteration number (for bias correction)
 //!
-//! **Used By**: Almost all modern deep learning (GPT, BERT, ResNet, etc.)
+//! **Used By**: Almost all modern deep learning (GPT, BERT, `ResNet`, etc.)
 //!
 //! ## Usage
 //!
@@ -73,7 +73,7 @@ pub(crate) struct AdamParams {
 
 /// Adam Optimizer operation
 ///
-/// **Deep Debt**: Foundation for modern AI (GPT, BERT, ResNet, etc.)
+/// **Deep Debt**: Foundation for modern AI (GPT, BERT, `ResNet`, etc.)
 pub struct Adam {
     gradients: Tensor,
     params: Tensor,
@@ -89,6 +89,11 @@ impl Adam {
     /// Create new Adam optimizer operation
     ///
     /// **Deep Debt**: Validates all inputs for shape compatibility
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shapes mismatch, `learning_rate` ≤ 0, betas out of
+    /// [0, 1), step is 0, or m/v shapes mismatch.
     pub fn new(
         params: Tensor,
         gradients: Tensor,
@@ -229,7 +234,7 @@ impl Adam {
 impl Tensor {
     /// Adam optimizer step - most widely used optimizer in deep learning
     ///
-    /// **Deep Debt**: Foundation for modern AI (GPT, BERT, ResNet, etc.)
+    /// **Deep Debt**: Foundation for modern AI (GPT, BERT, `ResNet`, etc.)
     ///
     /// # Arguments
     /// - `gradients`: Gradient tensor [same shape as params]
@@ -241,7 +246,7 @@ impl Tensor {
     /// - `v`: Second moment estimate (None for first step)
     ///
     /// # Returns
-    /// - Tuple: (updated_params, updated_m, updated_v)
+    /// - Tuple: (`updated_params`, `updated_m`, `updated_v`)
     ///
     /// # Example
     /// ```rust,ignore
@@ -254,9 +259,14 @@ impl Tensor {
     ///
     /// # Note
     /// - Most widely used optimizer in deep learning
-    /// - learning_rate must be positive
+    /// - `learning_rate` must be positive
     /// - beta1, beta2 must be in [0.0, 1.0)
     /// - step must start at 1 (not 0)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn adam_step(
         self,
         gradients: &Self,

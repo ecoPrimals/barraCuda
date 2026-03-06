@@ -38,6 +38,9 @@ pub struct Unique {
 
 impl Unique {
     /// Create a new unique operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor) -> Result<Self> {
         if input.is_empty() {
             return Err(BarracudaError::invalid_op(
@@ -50,7 +53,6 @@ impl Unique {
     }
 
     /// WGSL shader source for unique marking and compaction.
-    ///
     /// Uses a dedicated f32 shader because the hash function is structurally
     /// different: f32 bitcasts to u32 (4 bytes), f64 bitcasts to `vec2<u32>`
     /// (8 bytes). Simple text downcast cannot bridge this.
@@ -69,6 +71,9 @@ impl Unique {
     }
 
     /// Execute the unique operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         compute::execute(self)
     }

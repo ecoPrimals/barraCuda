@@ -167,8 +167,8 @@ pub fn mutate(board: &mut Board, rate: f64, rng: &mut impl Rng) {
 
 #[cfg(test)]
 mod tests {
-    use rand::rngs::StdRng;
     use rand::SeedableRng;
+    use rand::rngs::StdRng;
 
     use super::*;
     use crate::nautilus::board::BoardConfig;

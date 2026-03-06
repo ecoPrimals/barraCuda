@@ -27,6 +27,8 @@ pub struct FakeQuantize {
 
 impl FakeQuantize {
     /// Create fake quantization operation
+    /// # Errors
+    /// Returns [`Err`] if `num_bits` is 0 or > 32, or scale is not positive.
     pub fn new(input: Tensor, num_bits: u32, scale: f32, zero_point: f32) -> Result<Self> {
         if num_bits == 0 || num_bits > 32 {
             return Err(BarracudaError::invalid_op(
@@ -59,6 +61,9 @@ impl FakeQuantize {
     }
 
     /// Execute fake quantization on tensor
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.len();

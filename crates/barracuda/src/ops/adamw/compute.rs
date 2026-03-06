@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! GPU compute operations for AdamW Optimizer
+//! GPU compute operations for `AdamW` Optimizer
 //!
-//! This module contains the single-pass GPU execution for AdamW optimizer
+//! This module contains the single-pass GPU execution for `AdamW` optimizer
 //! with decoupled weight decay.
 
 use super::{AdamW, AdamWParams};
@@ -10,11 +10,16 @@ use crate::error::Result;
 use crate::tensor::Tensor;
 
 impl AdamW {
-    /// Execute AdamW optimizer step (GPU single-pass with decoupled weight decay)
+    /// Execute `AdamW` optimizer step (GPU single-pass with decoupled weight decay)
     ///
     /// **Deep Debt**: Efficient single-pass update with decoupled weight decay
     ///
-    /// Returns: (new_params, new_m, new_v)
+    /// Returns: (`new_params`, `new_m`, `new_v`)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<(Tensor, Tensor, Tensor)> {
         let device = self.params().device();
         let size = self.params().len();

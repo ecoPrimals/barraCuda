@@ -13,7 +13,7 @@
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// AnchorGenerator operation
+/// `AnchorGenerator` operation
 pub struct AnchorGenerator {
     feature_h: usize,
     feature_w: usize,
@@ -25,6 +25,10 @@ pub struct AnchorGenerator {
 
 impl AnchorGenerator {
     /// Create a new anchor generator operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if `sizes` or `aspect_ratios` is empty.
     pub fn new(
         feature_h: usize,
         feature_w: usize,
@@ -63,6 +67,11 @@ impl AnchorGenerator {
     }
 
     /// Execute the anchor generator operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = &self.device;
         let num_anchors = self.sizes.len() * self.aspect_ratios.len();

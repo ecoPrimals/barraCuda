@@ -17,10 +17,10 @@ use super::capabilities::F64BuiltinCapabilities;
 /// (insertions are atomic) — a poisoned lock just means the inserting thread
 /// panicked after writing, which is safe to read.
 pub(crate) fn lock_cache<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
-    m.lock().unwrap_or_else(|e| e.into_inner())
+    m.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
-/// Global probe result cache keyed by adapter_name:backend:vendor
+/// Global probe result cache keyed by `adapter_name:backend:vendor`
 static F64_CAPS_CACHE: LazyLock<Mutex<HashMap<String, F64BuiltinCapabilities>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
@@ -35,6 +35,7 @@ pub(crate) fn adapter_key(device: &WgpuDevice) -> String {
 }
 
 /// Read cached full capability result, if available.
+#[must_use]
 pub fn cached_f64_builtins(device: &WgpuDevice) -> Option<F64BuiltinCapabilities> {
     lock_cache(&F64_CAPS_CACHE)
         .get(&adapter_key(device))
@@ -42,6 +43,7 @@ pub fn cached_f64_builtins(device: &WgpuDevice) -> Option<F64BuiltinCapabilities
 }
 
 /// Read the cached probe result for this device (legacy single-function API).
+#[must_use]
 pub fn cached_probe_result(device: &WgpuDevice) -> Option<bool> {
     let key = adapter_key(device);
     if let Some(caps) = lock_cache(&F64_CAPS_CACHE).get(&key).copied() {
@@ -79,9 +81,18 @@ pub fn seed_cache_from_heuristics(device: &WgpuDevice) {
         .or_insert(exp_capable);
 }
 
+/// Check if the cached probe result for this adapter key indicates basic f64 works.
+///
+/// Returns `Some(true)` if probed and working, `Some(false)` if probed and broken,
+/// `None` if not yet probed.
+#[must_use]
+pub fn cached_basic_f64_for_key(key: &str) -> Option<bool> {
+    lock_cache(&F64_CAPS_CACHE).get(key).map(|c| c.basic_f64)
+}
+
 pub(super) fn insert_full_caps(key: String, caps: F64BuiltinCapabilities) {
-    lock_cache(&F64_CAPS_CACHE).insert(key.clone(), caps);
-    lock_cache(&F64_EXP_PROBE_CACHE).insert(key, caps.exp);
+    lock_cache(&F64_EXP_PROBE_CACHE).insert(key.clone(), caps.exp);
+    lock_cache(&F64_CAPS_CACHE).insert(key, caps);
 }
 
 pub(super) fn get_cached_full(key: &str) -> Option<F64BuiltinCapabilities> {

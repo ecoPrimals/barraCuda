@@ -2,8 +2,8 @@
 
 //! MSA row/column attention, triangle attention, and IPA scores.
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -46,6 +46,10 @@ struct TriangleAttnParams {
 /// MSA row-wise attention: `out[s,i,j] = sum_d q[s,i,d] * k[s,j,d] / sqrt(d)`.
 ///
 /// Per-sequence attention over residue positions.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, buffer readback/mapping fails, or the device is lost.
 pub fn msa_row_attention(
     device: &Arc<WgpuDevice>,
     q: &[f64],
@@ -69,7 +73,7 @@ pub fn msa_row_attention(
         .storage_rw(2, &out_buf)
         .uniform(3, &params_buf)
         .dispatch(out_len.div_ceil(WG_64 as usize) as u32, 1, 1)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, out_len)
 }
@@ -77,6 +81,10 @@ pub fn msa_row_attention(
 /// MSA column-wise attention: `out[s1,s2,i] = sum_d q[s1,i,d] * k[s2,i,d] / sqrt(d)`.
 ///
 /// Cross-sequence attention at each residue position.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, buffer readback/mapping fails, or the device is lost.
 pub fn msa_col_attention(
     device: &Arc<WgpuDevice>,
     q: &[f64],
@@ -100,7 +108,7 @@ pub fn msa_col_attention(
         .storage_rw(2, &out_buf)
         .uniform(3, &params_buf)
         .dispatch(out_len.div_ceil(WG_64 as usize) as u32, 1, 1)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, out_len)
 }
@@ -109,6 +117,11 @@ pub fn msa_col_attention(
 ///
 /// Combines sequence-space attention with 3D point-cloud distance weighting
 /// to produce structure-aware attention scores.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn ipa_scores(
     device: &Arc<WgpuDevice>,
     q: &[f64],
@@ -145,7 +158,7 @@ pub fn ipa_scores(
         .storage_rw(4, &out_buf)
         .uniform(5, &params_buf)
         .dispatch(out_len.div_ceil(WG_64 as usize) as u32, 1, 1)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, out_len)
 }
@@ -153,6 +166,10 @@ pub fn ipa_scores(
 /// Triangle self-attention over pair representations.
 ///
 /// `out[i,j] = sum_k softmax(q·k/√d)[i,k] * v[k,j]`, biased by pair[i,k].
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, buffer readback/mapping fails, or the device is lost.
 pub fn triangle_attention(
     device: &Arc<WgpuDevice>,
     pair: &[f64],
@@ -181,7 +198,7 @@ pub fn triangle_attention(
         .storage_rw(4, &out_buf)
         .uniform(5, &params_buf)
         .dispatch(out_len.div_ceil(WG_64 as usize) as u32, 1, 1)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, out_len)
 }

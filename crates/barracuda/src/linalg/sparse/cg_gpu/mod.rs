@@ -55,6 +55,7 @@ pub struct CgGpuResult {
 
 impl CgGpuResult {
     /// Returns true if the solver converged.
+    #[must_use]
     pub fn is_ok(&self) -> bool {
         self.converged
     }
@@ -78,9 +79,12 @@ impl CgGpu {
     }
 
     /// Solve Ax = b using GPU-accelerated Conjugate Gradient
-    ///
     /// Delegates to `solve_gpu_resident` with convergence check every iteration.
     /// For fewer GPU↔CPU syncs on large systems, use `solve_gpu_resident` with larger `check_interval`.
+    /// # Errors
+    /// Returns [`Err`] if the matrix is not square, if `b.len() != n`, or if
+    /// buffer allocation, GPU dispatch, or readback fails (e.g. device lost or
+    /// out of memory).
     pub fn solve(
         device: Arc<WgpuDevice>,
         a: &CsrMatrix,
@@ -161,11 +165,7 @@ mod tests {
         for (i, (axi, bi)) in ax.iter().zip(b.iter()).enumerate() {
             assert!(
                 (axi - bi).abs() < 1e-6,
-                "Ax[{}] = {} should equal b[{}] = {}",
-                i,
-                axi,
-                i,
-                bi
+                "Ax[{i}] = {axi} should equal b[{i}] = {bi}"
             );
         }
     }
@@ -198,10 +198,7 @@ mod tests {
         {
             assert!(
                 (x_orig - x_res).abs() < 1e-8,
-                "Solution mismatch at {}: orig={}, resident={}",
-                i,
-                x_orig,
-                x_res
+                "Solution mismatch at {i}: orig={x_orig}, resident={x_res}"
             );
         }
     }
@@ -231,11 +228,7 @@ mod tests {
         for (i, (axi, bi)) in ax.iter().zip(b.iter()).enumerate() {
             assert!(
                 (axi - bi).abs() < 1e-6,
-                "Ax[{}] = {} should equal b[{}] = {}",
-                i,
-                axi,
-                i,
-                bi
+                "Ax[{i}] = {axi} should equal b[{i}] = {bi}"
             );
         }
     }
@@ -278,10 +271,7 @@ mod tests {
         {
             assert!(
                 (x_u - x_p).abs() < 1e-6,
-                "Solution mismatch at {}: unprecond={}, precond={}",
-                i,
-                x_u,
-                x_p
+                "Solution mismatch at {i}: unprecond={x_u}, precond={x_p}"
             );
         }
     }

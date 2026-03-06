@@ -196,6 +196,7 @@ impl SNNBuilder {
     }
 
     /// Add a layer to the network.
+    #[must_use]
     pub fn add_layer(mut self, layer: SNNLayer) -> Self {
         self.layers.push(layer);
         self
@@ -258,11 +259,13 @@ impl SNNBuilder {
 
 impl SpikingNetwork {
     /// Create a network builder.
+    #[must_use]
     pub fn builder() -> SNNBuilder {
         SNNBuilder::new(SNNConfig::default())
     }
 
     /// Create a network builder with config.
+    #[must_use]
     pub fn builder_with_config(config: SNNConfig) -> SNNBuilder {
         SNNBuilder::new(config)
     }
@@ -278,6 +281,10 @@ impl SpikingNetwork {
     /// # Returns
     ///
     /// Output spikes or decoded values
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if any layer processes input with mismatched dimensions.
     pub fn process_step(&mut self, input: &[f32]) -> BarracudaResult<Vec<f32>> {
         let mut current = input.to_vec();
 
@@ -297,6 +304,10 @@ impl SpikingNetwork {
     /// # Returns
     ///
     /// Sequence of outputs
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if any layer processes input with mismatched dimensions.
     pub fn process_sequence(&mut self, sequence: &[Vec<f32>]) -> BarracudaResult<Vec<Vec<f32>>> {
         sequence
             .iter()

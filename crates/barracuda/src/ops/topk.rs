@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! TopK - GPU-accelerated top-K largest values selection
+//! `TopK` - GPU-accelerated top-K largest values selection
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation (uses existing shader!)
@@ -36,7 +36,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
-/// TopK parameters for WGSL shader
+/// `TopK` parameters for WGSL shader
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct TopKParams {
@@ -46,7 +46,7 @@ struct TopKParams {
     _pad2: u32,
 }
 
-/// TopK operation
+/// `TopK` operation
 ///
 /// **Deep Debt**: Uses existing WGSL shader with selection algorithm
 pub struct TopK {
@@ -55,9 +55,10 @@ pub struct TopK {
 }
 
 impl TopK {
-    /// Create new TopK operation
-    ///
+    /// Create new `TopK` operation
     /// **Deep Debt**: Validates K against tensor size
+    /// # Errors
+    /// Returns [`Err`] if `k` is zero, `k` exceeds tensor size, or input is not 1D.
     pub fn new(input: Tensor, k: usize) -> Result<Self> {
         // Validate K
         let size = input.len();
@@ -94,11 +95,12 @@ impl TopK {
         }
     }
 
-    /// Execute TopK (GPU selection)
-    ///
+    /// Execute `TopK` (GPU selection)
     /// **Deep Debt**: Basic O(n*k) selection, sufficient for moderate K
-    ///
     /// Returns: Tensor of indices [k] as f32 (cast from u32)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails (e.g., device lost),
+    /// buffer readback fails, or output tensor creation fails.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 
@@ -276,23 +278,21 @@ impl TopK {
 
 impl Tensor {
     /// Top-K largest values (returns indices)
-    ///
     /// **Deep Debt**: Essential for beam search and retrieval
-    ///
     /// # Arguments
     /// - `k`: Number of top values to return
-    ///
     /// # Returns
     /// - Indices tensor [k] as f32 (cast from u32)
-    ///
     /// # Example
     /// ```rust,ignore
     /// let scores = Tensor::from_vec(vec![5.0, 1.0, 9.0, 3.0, 7.0], vec![5]).await?;
     /// let top3 = scores.topk(3)?;  // [2, 4, 0] (indices of 9.0, 7.0, 5.0)
     /// ```
-    ///
     /// # Note
     /// Currently only supports 1D tensors. Use `flatten()` for higher dimensions.
+    /// # Errors
+    /// Returns [`Err`] if validation fails (invalid `k` or shape), buffer allocation fails,
+    /// GPU dispatch fails (e.g., device lost), or buffer readback fails.
     pub fn topk(self, k: usize) -> Result<Self> {
         TopK::new(self, k)?.execute()
     }

@@ -20,7 +20,7 @@ async fn test_expand_basic() {
     // Should repeat pattern: [1,2,3,1,2,3,1,2,3]
     let expected = vec![1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0, 3.0];
     for (r, e) in result.iter().zip(expected.iter()) {
-        assert!((r - e).abs() < 1e-6, "Expected {}, got {}", e, r);
+        assert!((r - e).abs() < 1e-6, "Expected {e}, got {r}");
     }
 }
 
@@ -123,7 +123,7 @@ async fn test_expand_precision() {
     assert_eq!(output.len(), 100);
 
     // All values should match exactly
-    for val in output.iter() {
+    for val in &output {
         assert!((val - 1.23456).abs() < 1e-6);
     }
 }

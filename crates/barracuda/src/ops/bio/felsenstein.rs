@@ -34,9 +34,9 @@
 //! wetSpring handoff §Shader Design 3 (Feb 2026) — targets Exp019 PhyloNet-HMM
 //! and Liu 2014 maximum-likelihood phylogenetics.
 
+use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -68,6 +68,7 @@ pub struct PhyloTree {
 
 impl PhyloTree {
     /// Number of nodes in the tree.
+    #[must_use]
     pub fn n_nodes(&self) -> usize {
         self.left_child.len()
     }
@@ -116,7 +117,7 @@ pub struct FelsensteinGpu {
 
 /// Result of a Felsenstein pruning pass.
 pub struct FelsensteinResult {
-    /// Full likelihood array [n_nodes × n_sites × n_states].
+    /// Full likelihood array [`n_nodes` × `n_sites` × `n_states`].
     pub likelihoods: Vec<f64>,
     /// Total nodes in the tree.
     pub n_nodes: usize,
@@ -128,12 +129,14 @@ pub struct FelsensteinResult {
 
 impl FelsensteinResult {
     /// Slice the root likelihoods: `[n_sites × n_states]`.
+    #[must_use]
     pub fn root_likelihoods(&self, root_node: usize) -> &[f64] {
         let stride = self.n_sites * self.n_states;
         &self.likelihoods[root_node * stride..(root_node + 1) * stride]
     }
 
     /// Compute log-likelihood at the root given stationary distribution `pi`.
+    #[must_use]
     pub fn log_likelihood(&self, root_node: usize, pi: &[f64]) -> f64 {
         let root = self.root_likelihoods(root_node);
         let mut log_lik = 0.0_f64;
@@ -150,6 +153,7 @@ impl FelsensteinResult {
 
 impl FelsensteinGpu {
     /// Create Felsenstein pruner for given device.
+    #[must_use]
     pub fn new(device: &WgpuDevice) -> Self {
         Self {
             device: Arc::new(device.clone()),
@@ -166,6 +170,11 @@ impl FelsensteinGpu {
     ///   transition matrices (one per node, indexed by child)
     /// - `n_sites`          : number of alignment columns
     /// - `n_states`         : 4 for DNA, 20 for protein
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn prune(
         &self,
         tree: &PhyloTree,
@@ -256,7 +265,7 @@ impl FelsensteinGpu {
                 .storage_read(4, &tp_buf)
                 .storage_rw(5, &lik_buf)
                 .dispatch(total.div_ceil(WORKGROUP_SIZE_1D), 1, 1)
-                .submit();
+                .submit()?;
         }
 
         let likelihoods = dev.read_buffer_f64(&lik_buf, n_nodes * n_sites * n_states)?;
@@ -280,7 +289,7 @@ mod tests {
         let eye: [f64; 16] = [
             1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.,
         ];
-        eye.iter().cloned().cycle().take(n_nodes * 16).collect()
+        eye.iter().copied().cycle().take(n_nodes * 16).collect()
     }
 
     #[tokio::test]

@@ -8,12 +8,12 @@
 //! - Fossil function substitution: legacy `abs_f64(` → native `abs(`
 
 use super::math_f64::{
-    extract_wgsl_function, F64_FOSSIL_FUNCTIONS, F64_FUNCTION_DEPS, F64_FUNCTION_ORDER,
+    F64_FOSSIL_FUNCTIONS, F64_FUNCTION_DEPS, F64_FUNCTION_ORDER, extract_wgsl_function,
 };
 
 /// Taylor-series sin/cos for drivers with broken f64 implementations (NVK).
 /// 7-term Taylor for |x| ≤ π, with range reduction. cos derived from sin.
-pub(crate) const SIN_COS_F64_SAFE_PREAMBLE: &str = r#"
+pub(crate) const SIN_COS_F64_SAFE_PREAMBLE: &str = r"
 // sin_f64_safe: 7-term Taylor for |x| ≤ π, with range reduction (NVK workaround)
 fn sin_f64_safe(x: f64) -> f64 {
     let pi = 3.14159265358979323846;
@@ -31,9 +31,10 @@ fn sin_f64_safe(x: f64) -> f64 {
 fn cos_f64_safe(x: f64) -> f64 {
     return sin_f64_safe(x + 1.5707963267948966);
 }
-"#;
+";
 
-/// Full math_f64 library preamble (core + special).
+/// Full `math_f64` library preamble (core + special).
+#[must_use]
 pub fn math_f64_preamble() -> String {
     let core = include_str!("../math/math_f64.wgsl");
     let special = include_str!("../math/math_f64_special.wgsl");
@@ -48,6 +49,7 @@ pub fn math_f64_preamble() -> String {
 /// Rewrites `abs_f64(` → `abs(`, `sqrt_f64(` → `sqrt(` etc. in legacy shaders.
 /// New shaders must use native WGSL builtins directly — this method is the
 /// migration path for older code still using the `_f64` names.
+#[must_use]
 pub fn substitute_fossil_f64(shader_body: &str) -> String {
     let mut result = shader_body.to_string();
     for (fossil_name, native_name) in F64_FOSSIL_FUNCTIONS {
@@ -73,6 +75,7 @@ pub fn substitute_fossil_f64(shader_body: &str) -> String {
 /// - Lines with inline comments have only the code portion patched.
 /// - Block comments `/* … */` are not yet handled (rare in WGSL compute
 ///   shaders; revisit when encountered).
+#[must_use]
 pub fn apply_transcendental_workaround_with_sin_cos(
     shader: &str,
     needs_exp_log: bool,
@@ -100,6 +103,7 @@ pub fn apply_transcendental_workaround_with_sin_cos(
 }
 
 /// Legacy entry point: applies full transcendental workaround (exp, log, sin, cos, etc.).
+#[must_use]
 pub fn apply_transcendental_workaround(shader: &str) -> String {
     apply_transcendental_workaround_with_sin_cos(shader, true, false)
 }
@@ -117,6 +121,7 @@ pub fn apply_transcendental_workaround(shader: &str) -> String {
 /// `sin_f64_safe`/`cos_f64_safe` and protects `asin`/`acos` from being
 /// mangled (they become `asin_f64`/`acos_f64` from the polyfill).
 #[inline]
+#[must_use]
 pub fn patch_transcendentals_in_code(
     code: &str,
     needs_exp_log: bool,
@@ -179,7 +184,8 @@ pub fn patch_transcendentals_in_code(
 /// and hoists `enable` directives above injected code.
 ///
 /// When `extra_preamble` is `Some`, it is prepended to the injected preamble
-/// (e.g. sin_f64_safe/cos_f64_safe Taylor series for NVK).
+/// (e.g. `sin_f64_safe/cos_f64_safe` Taylor series for NVK).
+#[must_use]
 pub fn inject_f64_polyfills(shader_body: &str, extra_preamble: Option<&str>) -> String {
     let mut preamble = String::new();
     if let Some(extra) = extra_preamble {
@@ -232,6 +238,7 @@ pub fn inject_f64_polyfills(shader_body: &str, extra_preamble: Option<&str>) -> 
 
 /// Split `enable ...;` directives (must precede all declarations in WGSL)
 /// from the rest of the shader body so they can be hoisted above injected code.
+#[must_use]
 pub fn split_enable_directives(source: &str) -> (String, String) {
     let mut enables = String::new();
     let mut rest = String::new();
@@ -271,7 +278,8 @@ fn collect_deps<'a>(name: &'a str, needed: &mut std::collections::HashSet<&'a st
     }
 }
 
-/// Build a subset of math_f64 containing only the requested functions and deps.
+/// Build a subset of `math_f64` containing only the requested functions and deps.
+#[must_use]
 pub fn math_f64_subset(functions: &[&str]) -> String {
     use std::collections::HashSet;
     let deps = F64_FUNCTION_DEPS;
@@ -319,6 +327,7 @@ pub fn math_f64_subset(functions: &[&str]) -> String {
 }
 
 /// Check if the shader body defines a function with the given name.
+#[must_use]
 pub fn shader_defines_function(shader_body: &str, func_name: &str) -> bool {
     let pattern1 = format!("fn {func_name}(");
     let pattern2 = format!("fn {func_name} (");
@@ -326,6 +335,7 @@ pub fn shader_defines_function(shader_body: &str, func_name: &str) -> bool {
 }
 
 /// Check if the shader defines a module-level variable with the given name.
+#[must_use]
 pub fn shader_defines_module_var(shader_body: &str, var_name: &str) -> bool {
     for line in shader_body.lines() {
         let trimmed = line.trim();

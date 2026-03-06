@@ -19,7 +19,7 @@ pub struct AkidaBoard {
     /// Board index (0-based)
     pub index: usize,
 
-    /// PCIe address (e.g., "a1:00.0")
+    /// `PCIe` address (e.g., "a1:00.0")
     pub pcie_address: String,
 
     /// Device path (e.g., "/dev/akida0")
@@ -40,10 +40,10 @@ pub struct AkidaBoard {
     /// Current temperature (celsius)
     pub temperature_celsius: f64,
 
-    /// PCIe generation (1-4)
+    /// `PCIe` generation (1-4)
     pub pcie_generation: u8,
 
-    /// PCIe lane count
+    /// `PCIe` lane count
     pub pcie_lanes: u8,
 
     /// Health status
@@ -85,6 +85,11 @@ pub struct AkidaCapabilities {
 /// Detect available Akida boards
 ///
 /// **Deep Debt**: Runtime discovery, zero hardcoding
+///
+/// # Errors
+///
+/// Returns [`Err`] if `PCIe` scanning fails or board query fails (e.g. permission
+/// denied, driver unavailable).
 pub fn detect_akida_boards() -> Result<AkidaCapabilities> {
     tracing::info!("Detecting Akida NPU boards...");
 
@@ -140,7 +145,7 @@ pub fn detect_akida_boards() -> Result<AkidaCapabilities> {
     })
 }
 
-/// PCIe device info
+/// `PCIe` device info
 #[derive(Debug, Clone)]
 struct PcieDevice {
     address: String,
@@ -150,7 +155,7 @@ struct PcieDevice {
     device_id: u16,
 }
 
-/// Scan PCIe bus for BrainChip Akida devices
+/// Scan `PCIe` bus for `BrainChip` Akida devices
 fn scan_pcie_for_akida() -> Result<Vec<PcieDevice>> {
     let mut devices = Vec::new();
 
@@ -230,7 +235,7 @@ fn query_board_info(device: &PcieDevice, index: usize) -> Result<AkidaBoard> {
     Ok(board)
 }
 
-/// Query PCIe link status
+/// Query `PCIe` link status
 fn query_pcie_link_info(address: &str) -> Result<(u8, u8)> {
     use std::fs;
 
@@ -255,7 +260,7 @@ fn query_pcie_link_info(address: &str) -> Result<(u8, u8)> {
     Ok((generation, lanes))
 }
 
-/// Parse PCIe speed to generation
+/// Parse `PCIe` speed to generation
 fn parse_pcie_speed(speed: &str) -> u8 {
     if speed.contains("2.5") {
         1 // Gen1: 2.5 GT/s

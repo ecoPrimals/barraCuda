@@ -3,12 +3,12 @@
 //! Moving Window Statistics — GPU-accelerated sliding window mean/var/min/max
 //!
 //! Computes four summary statistics over a 1D sliding window in a single
-//! GPU dispatch, ideal for real-time IoT sensor streams.
+//! GPU dispatch, ideal for real-time `IoT` sensor streams.
 //!
 //! Provenance: airSpring precision agriculture / wetSpring monitoring
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -50,6 +50,7 @@ pub struct MovingWindowStats {
 
 impl MovingWindowStats {
     /// Create a moving window stats instance for the given device.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self { device }
     }
@@ -57,6 +58,11 @@ impl MovingWindowStats {
     /// Compute moving window statistics over `input` with given `window_size`.
     ///
     /// Returns vectors of length `input.len() - window_size + 1`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn compute(&self, input: &[f32], window_size: usize) -> Result<MovingWindowResult> {
         let n = input.len();
         if window_size == 0 || window_size > n {

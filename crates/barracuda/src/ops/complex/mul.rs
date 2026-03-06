@@ -29,6 +29,11 @@ pub struct ComplexMul {
 
 impl ComplexMul {
     /// Create a new complex multiplication operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input_a: Tensor, input_b: Tensor) -> Result<Self> {
         // Validate tensors
         if input_a.shape() != input_b.shape() {
@@ -137,6 +142,11 @@ impl ComplexMul {
     }
 
     /// Execute complex multiplication on GPU
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input_a.device();
         let num_elements = self.input_a.len();

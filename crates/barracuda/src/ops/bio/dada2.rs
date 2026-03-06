@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-//! DADA2 E-step (batch log_p_error) on GPU.
+//! DADA2 E-step (batch `log_p_error`) on GPU.
 //!
 //! One thread per (sequence, center) pair. Sums precomputed
 //! `log(err[from][to][qual])` over all alignment positions. No GPU
@@ -10,8 +10,8 @@
 //!
 //! wetSpring handoff v6, `dada2_e_step.wgsl` — 88 pipeline checks PASS.
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -36,6 +36,11 @@ pub struct Dada2EStepGpu {
 
 impl Dada2EStepGpu {
     /// Creates a new DADA2 E-step GPU kernel for the given device.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         let module = device.compile_shader_f64(SHADER, Some("dada2_e_step"));
         let bgl = super::snp::make_bgl(&device, &[true, true, true, true, true, false]);
@@ -56,6 +61,11 @@ impl Dada2EStepGpu {
     /// * `center_indices` — `[n_centers]` u32 center sequence indices
     /// * `log_err` — `[4 × 4 × 42 = 672]` f64 precomputed log error table
     /// * `scores` — `[n_seqs × n_centers]` f64 output
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     #[expect(clippy::too_many_arguments, reason = "API")]
     pub fn dispatch(
         &self,

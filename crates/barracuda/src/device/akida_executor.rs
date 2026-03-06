@@ -14,7 +14,7 @@
 //! - GPU: ~300W for RTX 3090
 //! - Akida: ~1W per board (2W total for 160 NPUs!)
 
-use super::akida::{detect_akida_boards, AkidaBoard};
+use super::akida::{AkidaBoard, detect_akida_boards};
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
 
@@ -33,6 +33,8 @@ pub struct AkidaExecutor {
 
 impl AkidaExecutor {
     /// Create new Akida executor by detecting available boards
+    /// # Errors
+    /// Returns [`Err`] if board detection fails or no Akida boards are available.
     pub fn new() -> Result<Self> {
         let caps = detect_akida_boards()?;
 
@@ -53,28 +55,29 @@ impl AkidaExecutor {
     }
 
     /// Get total NPU count across all boards
+    #[must_use]
     pub fn npu_count(&self) -> usize {
         self.total_npus
     }
 
     /// Get board count
+    #[must_use]
     pub fn board_count(&self) -> usize {
         self.boards.len()
     }
 
     /// Execute spike encoding on Akida NPU
-    ///
     /// **Architectural Difference**:
     /// - GPU: Processes entire input array in parallel, burns power on every element
     /// - Akida: Event-driven encoding, only processes when spike threshold crossed
-    ///
-    /// **Performance**:
+    ///   **Performance**:
     /// - GPU: Higher throughput (1000+ GFLOPS)
     /// - Akida: Ultra-low latency (<1ms), 100x lower power
-    ///
-    /// **Use Case**:
+    ///   **Use Case**:
     /// - GPU: Batch processing, training large networks
     /// - Akida: Real-time inference, edge deployment, battery-powered devices
+    /// # Errors
+    /// Returns [`Err`] if the underlying Akida implementation fails.
     pub async fn spike_encode_akida(&self, input: &[f32], time_steps: u32) -> Result<Vec<u32>> {
         let board = self.select_board();
 
@@ -109,15 +112,15 @@ impl AkidaExecutor {
     }
 
     /// Execute LIF neuron dynamics on Akida NPU
-    ///
     /// **Architectural Difference**:
     /// - GPU: Simulates LIF dynamics using floating-point math (continuous)
     /// - Akida: Hardware LIF neurons with real membrane dynamics (neuromorphic)
-    ///
-    /// **Key Insight**:
+    ///   **Key Insight**:
     /// - GPU: Calculates V(t+1) = V(t) + dV for every neuron every timestep
     /// - Akida: Neurons only activate when receiving spikes (sparse, event-driven)
     /// - Result: 1000x energy efficiency for sparse workloads
+    /// # Errors
+    /// Returns [`Err`] if `input_spikes.len() != weights.len()` (shape mismatch).
     pub async fn lif_neuron_akida(
         &self,
         input_spikes: &[u32],
@@ -160,14 +163,14 @@ impl AkidaExecutor {
     }
 
     /// Execute STDP (Spike-Timing-Dependent Plasticity) learning on Akida
-    ///
     /// **Architectural Difference**:
     /// - GPU: Simulates STDP with explicit timing calculations
     /// - Akida: Hardware STDP built into synapses (biological learning)
-    ///
-    /// **Result**:
+    ///   **Result**:
     /// - GPU: High accuracy, full control, high power
     /// - Akida: Approximate learning, ultra-efficient, online adaptation
+    /// # Errors
+    /// Returns [`Err`] if `pre_spikes.len() != post_spikes.len()` (shape mismatch).
     pub async fn stdp_learning_akida(
         &self,
         pre_spikes: &[u32],
@@ -206,18 +209,15 @@ impl AkidaExecutor {
     }
 
     /// Akida spike encoding implementation
-    ///
     /// **Implementation Strategy**:
     /// - Pure Rust fallback (no external SDK dependency)
     /// - Demonstrates event-driven encoding concept
     /// - Can be replaced with Akida SDK when available
     /// - Maintains deep debt principles (zero hardcoding, capability-based)
-    ///
-    /// **Integration Path**:
+    ///   **Integration Path**:
     /// ```rust,ignore
     /// // Future SDK integration:
     /// use akida_sdk::{AkidaDevice, Model};
-    ///
     /// let akida_device = AkidaDevice::open(&board.device_path)?;
     /// let model = Model::load_spike_encoder()?;
     /// akida_device.load_model(&model)?;
@@ -255,7 +255,6 @@ impl AkidaExecutor {
     }
 
     /// Akida LIF neuron implementation
-    ///
     /// **Implementation Strategy**:
     /// - Pure Rust event-driven LIF simulation
     /// - No external dependencies (maintains deep debt)
@@ -315,7 +314,6 @@ impl AkidaExecutor {
     }
 
     /// Akida STDP learning implementation
-    ///
     /// **Implementation Strategy**:
     /// - Pure Rust STDP algorithm
     /// - Biologically-inspired plasticity rule
@@ -396,6 +394,7 @@ pub struct NeuromorphicComparison {
 
 impl NeuromorphicComparison {
     /// Create comparison report
+    #[must_use]
     pub fn new(
         operation: String,
         gpu_time_ms: f64,
@@ -497,7 +496,7 @@ mod tests {
                 assert!(executor.npu_count() > 0);
             }
             Err(e) => {
-                println!("ℹ️  No Akida boards available: {}", e);
+                println!("ℹ️  No Akida boards available: {e}");
                 // Not a failure - just no hardware
             }
         }
@@ -546,7 +545,7 @@ mod tests {
             .await
             .unwrap();
 
-        println!("Akida LIF neuron output: {:?}", output);
+        println!("Akida LIF neuron output: {output:?}");
         assert_eq!(output.len(), 1);
     }
 }

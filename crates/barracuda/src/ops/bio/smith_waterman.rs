@@ -17,11 +17,11 @@
 //! ## Absorbed from
 //!
 //! wetSpring handoff §Shader Design 1 (Feb 2026) — used by `bio::sate_alignment`
-//! for phylogenetic multiple sequence alignment (Liu 2009 SATé).
+//! for phylogenetic multiple sequence alignment (Liu 2009 `SATé`).
 
+use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -106,6 +106,7 @@ pub struct SmithWatermanGpu {
 
 impl SmithWatermanGpu {
     /// Create Smith-Waterman aligner.
+    #[must_use]
     pub fn new(device: &WgpuDevice) -> Self {
         Self {
             device: Arc::new(device.clone()),
@@ -115,10 +116,15 @@ impl SmithWatermanGpu {
     /// Run banded Smith-Waterman alignment on the GPU.
     ///
     /// # Arguments
-    /// - `query`:  nucleotide (or amino-acid) indices 0..alphabet_size, length n
+    /// - `query`:  nucleotide (or amino-acid) indices `0..alphabet_size`, length n
     /// - `target`: nucleotide (or amino-acid) indices, length m
     /// - `subst`:  substitution score matrix, flat row-major [alphabet × alphabet]
     /// - `config`: gap penalties and band width
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn align(
         &self,
         query: &[u32],
@@ -217,7 +223,7 @@ impl SmithWatermanGpu {
                 .storage_rw(5, &e_buf)
                 .storage_rw(6, &f_buf)
                 .dispatch(wg, 1, 1)
-                .submit();
+                .submit()?;
         }
 
         // ── Read back H matrix and find best score on CPU ─────────────────────

@@ -36,8 +36,8 @@
 //! let simpson = fmr.execute(&counts, total, MapOp::Simpson, ReduceOp::Sum)?;
 //! ```
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -102,20 +102,23 @@ impl FusedMapReduceF64 {
     const SHADER: &'static str = include_str!("../shaders/reduce/fused_map_reduce_f64.wgsl");
 
     /// Create a new fused map-reduce executor
+    /// # Errors
+    /// Never returns an error; always returns `Ok`.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Execute fused map-reduce on input data
-    ///
     /// # Arguments
     /// * `data` - Input array
     /// * `total` - Normalization constant (used by Shannon, Simpson)
     /// * `map_op` - Element-wise transformation to apply
     /// * `reduce_op` - Reduction operation to combine results
-    ///
     /// # Returns
     /// The reduced scalar result
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer mapping fails
+    /// (e.g. device lost, out of memory, mapping channel closed).
     pub fn execute(
         &self,
         data: &[f64],
@@ -172,7 +175,7 @@ impl FusedMapReduceF64 {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch(n_workgroups as u32, 1, 1)
-            .submit();
+            .submit()?;
 
         if n_workgroups > 1 && n_workgroups <= FMR_MAX_SINGLE_PASS_WORKGROUPS {
             // TS-004: Use separate partials_buffer for pass 2 input to avoid buffer conflict.
@@ -225,7 +228,7 @@ impl FusedMapReduceF64 {
                 .storage_rw(1, &final_buffer)
                 .uniform(2, &pass2_params_buffer)
                 .dispatch(1, 1, 1)
-                .submit();
+                .submit()?;
 
             return self.read_result(&final_buffer);
         }
@@ -238,7 +241,7 @@ impl FusedMapReduceF64 {
         self.read_result(&output_buffer)
     }
 
-    /// Recursive reduction for very large inputs (>FMR_MAX_SINGLE_PASS_WORKGROUPS)
+    /// Recursive reduction for very large inputs (>`FMR_MAX_SINGLE_PASS_WORKGROUPS`)
     fn reduce_partials_recursive(
         &self,
         buffer: &wgpu::Buffer,
@@ -267,8 +270,8 @@ impl FusedMapReduceF64 {
         // Finish on CPU
         let result = match reduce_op {
             ReduceOp::Sum => partials.iter().sum(),
-            ReduceOp::Max => partials.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
-            ReduceOp::Min => partials.iter().cloned().fold(f64::INFINITY, f64::min),
+            ReduceOp::Max => partials.iter().copied().fold(f64::NEG_INFINITY, f64::max),
+            ReduceOp::Min => partials.iter().copied().fold(f64::INFINITY, f64::min),
             ReduceOp::Product => partials.iter().sum::<f64>(), // log-domain sum
         };
 
@@ -315,11 +318,7 @@ impl FusedMapReduceF64 {
                         0.0
                     } else {
                         let p = x / total;
-                        if p <= 1e-300 {
-                            0.0
-                        } else {
-                            -p * p.ln()
-                        }
+                        if p <= 1e-300 { 0.0 } else { -p * p.ln() }
                     }
                 }
                 MapOp::Simpson => {
@@ -335,8 +334,8 @@ impl FusedMapReduceF64 {
 
         let result = match reduce_op {
             ReduceOp::Sum => mapped.iter().sum(),
-            ReduceOp::Max => mapped.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
-            ReduceOp::Min => mapped.iter().cloned().fold(f64::INFINITY, f64::min),
+            ReduceOp::Max => mapped.iter().copied().fold(f64::NEG_INFINITY, f64::max),
+            ReduceOp::Min => mapped.iter().copied().fold(f64::INFINITY, f64::min),
             ReduceOp::Product => mapped.iter().map(|x| x.ln()).sum::<f64>().exp(),
         };
 
@@ -348,8 +347,10 @@ impl FusedMapReduceF64 {
     // ========================================================================
 
     /// Shannon entropy: H = -Σ p * log(p) where p = count / total
-    ///
     /// wetSpring primary use case for metagenomics diversity.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer mapping fails
+    /// (e.g. device lost, out of memory, mapping channel closed).
     pub fn shannon_entropy(&self, counts: &[f64]) -> Result<f64> {
         let total: f64 = counts.iter().sum();
         if total <= 0.0 {
@@ -359,8 +360,10 @@ impl FusedMapReduceF64 {
     }
 
     /// Simpson index: D = Σ p² where p = count / total
-    ///
     /// wetSpring use case for diversity measurement.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer mapping fails
+    /// (e.g. device lost, out of memory, mapping channel closed).
     pub fn simpson_index(&self, counts: &[f64]) -> Result<f64> {
         let total: f64 = counts.iter().sum();
         if total <= 0.0 {
@@ -370,36 +373,53 @@ impl FusedMapReduceF64 {
     }
 
     /// Sum of squares: Σ x²
-    ///
     /// Common for L2 norms, variance calculations.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer mapping fails
+    /// (e.g. device lost, out of memory, mapping channel closed).
     pub fn sum_of_squares(&self, data: &[f64]) -> Result<f64> {
         self.execute(data, 1.0, MapOp::Square, ReduceOp::Sum)
     }
 
     /// L1 norm: Σ |x|
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer mapping fails
+    /// (e.g. device lost, out of memory, mapping channel closed).
     pub fn l1_norm(&self, data: &[f64]) -> Result<f64> {
         self.execute(data, 1.0, MapOp::Abs, ReduceOp::Sum)
     }
 
     /// Maximum value
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer mapping fails
+    /// (e.g. device lost, out of memory, mapping channel closed).
     pub fn max(&self, data: &[f64]) -> Result<f64> {
         self.execute(data, 1.0, MapOp::Identity, ReduceOp::Max)
     }
 
     /// Minimum value
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer mapping fails
+    /// (e.g. device lost, out of memory, mapping channel closed).
     pub fn min(&self, data: &[f64]) -> Result<f64> {
         self.execute(data, 1.0, MapOp::Identity, ReduceOp::Min)
     }
 
     /// Sum
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer mapping fails
+    /// (e.g. device lost, out of memory, mapping channel closed).
     pub fn sum(&self, data: &[f64]) -> Result<f64> {
         self.execute(data, 1.0, MapOp::Identity, ReduceOp::Sum)
     }
 
     /// Convenience method for dot product of two vectors.
-    ///
     /// Computes Σ a[i] * b[i] using the sum-of-products pattern:
     /// element-wise products are formed on the host, then reduced on GPU.
+    /// # Errors
+    /// Returns [`Err`] if `a.len() != b.len()` (invalid input), or if buffer
+    /// allocation, GPU dispatch, or buffer mapping fails (e.g. device lost,
+    /// out of memory, mapping channel closed).
     pub fn dot(&self, a: &[f64], b: &[f64]) -> Result<f64> {
         if a.len() != b.len() {
             return Err(crate::error::BarracudaError::InvalidInput {

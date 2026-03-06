@@ -4,8 +4,8 @@
 //! Measures performance of the warp-packed Jacobi batched eigensolve.
 //! Key insight from hotSpring GPU sovereignty analysis (Feb 18, 2026):
 //!
-//! - wg1  — @workgroup_size(1,1,1): wastes 31/32 SIMD lanes on NVIDIA
-//! - wp32 — @workgroup_size(32,1,1): fills full warp with independent matrices
+//! - wg1  — @`workgroup_size(1,1,1)`: wastes 31/32 SIMD lanes on NVIDIA
+//! - wp32 — @`workgroup_size(32,1,1)`: fills full warp with independent matrices
 //!
 //! Measured impact:
 //!   NVK/NAK (Titan V):       152ms → 69ms  (2.2x speedup)
@@ -22,12 +22,12 @@
 //! NAK is written in Rust — see DEBT.md W-003 for the contribution roadmap.
 //!
 //! Usage:
-//!   cargo run --release --bin bench_wgsize_nvk
-//!   BARRACUDA_GPU_ADAPTER=titan cargo run --release --bin bench_wgsize_nvk
-//!   BARRACUDA_GPU_ADAPTER=0     cargo run --release --bin bench_wgsize_nvk
+//!   cargo run --release --bin `bench_wgsize_nvk`
+//!   `BARRACUDA_GPU_ADAPTER=titan` cargo run --release --bin `bench_wgsize_nvk`
+//!   `BARRACUDA_GPU_ADAPTER=0`     cargo run --release --bin `bench_wgsize_nvk`
 
-use barracuda::device::capabilities::{DriverKind, GpuDriverProfile};
 use barracuda::device::WgpuDevice;
+use barracuda::device::capabilities::{DriverKind, GpuDriverProfile};
 use barracuda::ops::linalg::BatchedEighGpu;
 use std::f64::consts::PI;
 use std::sync::Arc;

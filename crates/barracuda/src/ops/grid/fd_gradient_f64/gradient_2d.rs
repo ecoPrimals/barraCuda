@@ -20,6 +20,11 @@ pub struct Gradient2D {
 
 impl Gradient2D {
     /// Create a new 2D gradient operator
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>, nx: usize, ny: usize, dx: f64, dy: f64) -> Result<Self> {
         let (pipeline, bind_group_layout) = FdPipelineBuilder::new(device.device(), "gradient_2d")
             .with_uniform(0)
@@ -40,11 +45,17 @@ impl Gradient2D {
     }
 
     /// Grid dimensions
+    #[must_use]
     pub fn shape(&self) -> (usize, usize) {
         (self.nx, self.ny)
     }
 
     /// Compute 2D gradient (∂f/∂x, ∂f/∂y)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub async fn compute(&self, input: &[f64]) -> Result<(Vec<f64>, Vec<f64>)> {
         let total = self.nx * self.ny;
         if input.len() != total {

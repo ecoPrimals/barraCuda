@@ -5,8 +5,9 @@
 //! rasterizers (llvmpipe, lavapipe). The guard pattern uses an `AtomicU32`
 //! counter: encoding is lock-free, polling waits for the counter to reach 0.
 
-use std::sync::atomic::{AtomicU32, Ordering};
+use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, Ordering};
 use wgpu::util::DeviceExt;
 
 /// RAII command encoder that prevents `device.poll()` from running.
@@ -24,14 +25,21 @@ pub struct GuardedEncoder {
 
 impl std::ops::Deref for GuardedEncoder {
     type Target = wgpu::CommandEncoder;
+
     fn deref(&self) -> &Self::Target {
-        self.encoder.as_ref().expect("encoder already finished")
+        // Invariant: encoder is Some from construction until finish() consumes self.
+        // finish() takes self by value so Deref cannot be called post-finish.
+        self.encoder
+            .as_ref()
+            .expect("GuardedEncoder::deref after finish (unreachable by ownership)")
     }
 }
 
 impl std::ops::DerefMut for GuardedEncoder {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.encoder.as_mut().expect("encoder already finished")
+        self.encoder
+            .as_mut()
+            .expect("GuardedEncoder::deref_mut after finish (unreachable by ownership)")
     }
 }
 
@@ -43,15 +51,41 @@ impl GuardedEncoder {
         }
     }
 
+    /// Get immutable reference to the encoder.
+    ///
+    /// # Errors
+    /// Returns [`Err`] if the encoder was already finished.
+    pub fn encoder(&self) -> Result<&wgpu::CommandEncoder> {
+        self.encoder
+            .as_ref()
+            .ok_or_else(|| BarracudaError::Internal("encoder already finished".into()))
+    }
+
+    /// Get mutable reference to the encoder.
+    ///
+    /// # Errors
+    /// Returns [`Err`] if the encoder was already finished.
+    pub fn encoder_mut(&mut self) -> Result<&mut wgpu::CommandEncoder> {
+        self.encoder
+            .as_mut()
+            .ok_or_else(|| BarracudaError::Internal("encoder already finished".into()))
+    }
+
     /// Finish encoding and decrement the active encoder count.
+    ///
+    /// # Panics
+    ///
+    /// Unreachable by construction: `finish` consumes `self` so it cannot be
+    /// called twice.
+    #[must_use]
     pub fn finish(mut self) -> wgpu::CommandBuffer {
-        let cmd = self
+        // Invariant: encoder is Some until take(); finish consumes self so only called once.
+        let encoder = self
             .encoder
             .take()
-            .expect("encoder already finished")
-            .finish();
+            .expect("GuardedEncoder::finish called twice (unreachable by ownership)");
         self.active_encoders.fetch_sub(1, Ordering::Release);
-        cmd
+        encoder.finish()
     }
 }
 
@@ -108,6 +142,7 @@ impl GuardedDeviceHandle {
     }
 
     /// Create a buffer (guarded against poll races).
+    #[must_use]
     pub fn create_buffer(&self, desc: &wgpu::BufferDescriptor<'_>) -> wgpu::Buffer {
         self.guard();
         let r = self.inner.create_buffer(desc);
@@ -116,6 +151,7 @@ impl GuardedDeviceHandle {
     }
 
     /// Create and initialize a buffer (guarded).
+    #[must_use]
     pub fn create_buffer_init(&self, desc: &wgpu::util::BufferInitDescriptor<'_>) -> wgpu::Buffer {
         self.guard();
         let r = self.inner.create_buffer_init(desc);
@@ -124,6 +160,7 @@ impl GuardedDeviceHandle {
     }
 
     /// Create a bind group layout (guarded).
+    #[must_use]
     pub fn create_bind_group_layout(
         &self,
         desc: &wgpu::BindGroupLayoutDescriptor<'_>,
@@ -135,6 +172,7 @@ impl GuardedDeviceHandle {
     }
 
     /// Create a bind group (guarded).
+    #[must_use]
     pub fn create_bind_group(&self, desc: &wgpu::BindGroupDescriptor<'_>) -> wgpu::BindGroup {
         self.guard();
         let r = self.inner.create_bind_group(desc);
@@ -143,6 +181,7 @@ impl GuardedDeviceHandle {
     }
 
     /// Create a pipeline layout (guarded).
+    #[must_use]
     pub fn create_pipeline_layout(
         &self,
         desc: &wgpu::PipelineLayoutDescriptor<'_>,
@@ -154,6 +193,7 @@ impl GuardedDeviceHandle {
     }
 
     /// Create a compute pipeline (guarded).
+    #[must_use]
     pub fn create_compute_pipeline(
         &self,
         desc: &wgpu::ComputePipelineDescriptor<'_>,
@@ -165,6 +205,7 @@ impl GuardedDeviceHandle {
     }
 
     /// Create a shader module (guarded).
+    #[must_use]
     pub fn create_shader_module(
         &self,
         desc: wgpu::ShaderModuleDescriptor<'_>,
@@ -176,6 +217,7 @@ impl GuardedDeviceHandle {
     }
 
     /// Create a command encoder (guarded).
+    #[must_use]
     pub fn create_command_encoder(
         &self,
         desc: &wgpu::CommandEncoderDescriptor<'_>,

@@ -70,6 +70,7 @@ pub struct NelderMeadGpu {
 
 impl NelderMeadGpu {
     /// Create GPU-resident Nelder-Mead optimizer with default parameters
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self {
             device,
@@ -92,6 +93,11 @@ impl NelderMeadGpu {
 
     /// Optimize using a GPU-computable objective function
     ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if bounds length mismatch, or if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
+    ///
     /// The objective function takes GPU buffers and writes results to output buffer.
     /// This enables fully GPU-resident optimization without CPU roundtrips.
     ///
@@ -107,7 +113,7 @@ impl NelderMeadGpu {
     /// # Type Parameters
     ///
     /// * `F` - GPU evaluation function: `fn(&wgpu::Buffer, &wgpu::Buffer, usize) -> Result<()>`
-    ///   - Input: vertex buffer (n_vertices × dim f64), output buffer (n_vertices f64)
+    ///   - Input: vertex buffer (`n_vertices` × dim f64), output buffer (`n_vertices` f64)
     ///   - Evaluates all vertices and writes function values to output
     pub fn optimize<F>(
         &self,
@@ -266,8 +272,7 @@ impl NelderMeadGpu {
             .iter()
             .enumerate()
             .min_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-            .map(|(idx, _)| idx)
-            .unwrap_or(0);
+            .map_or(0, |(idx, _)| idx);
 
         Ok(NelderMeadGpuResult {
             x: simplex[best_idx].clone(),
@@ -332,7 +337,7 @@ impl NelderMeadGpu {
             .collect()
     }
 
-    /// Create GPU buffer for simplex (n_vertices × dim)
+    /// Create GPU buffer for simplex (`n_vertices` × dim)
     fn create_simplex_buffer(&self, simplex: &[Vec<f64>], dim: usize) -> wgpu::Buffer {
         let mut data = Vec::with_capacity(simplex.len() * dim);
         for vertex in simplex {

@@ -69,6 +69,6 @@ mod metrics;
 mod optimizer;
 
 pub use esn_classifier::{EsnClassifier, EsnConfig};
-pub use fused_mlp::{fused_mlp, Activation};
+pub use fused_mlp::{Activation, fused_mlp};
 pub use lstm_reservoir::{LstmReservoir, LstmReservoirConfig, LstmState};
 pub use simple_mlp::SimpleMlp;

@@ -51,7 +51,7 @@ pub fn empirical_spectral_density(eigenvalues: &[f64], n_bins: usize) -> (Vec<f6
 ///
 /// For a random matrix with aspect ratio γ = rows/cols, the eigenvalue
 /// distribution of M^T M / n converges to the Marchenko-Pastur law with
-/// support [λ_min, λ_max].
+/// support [`λ_min`, `λ_max`].
 ///
 /// Returns `(λ_min, λ_max)` where:
 /// - `λ_min = (1 - √γ)²`

@@ -44,6 +44,11 @@ use crate::error::{BarracudaError, Result};
 /// ).await.unwrap();
 /// # }
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub async fn causal_attention(
     _device: &wgpu::Device,
     _queue: &wgpu::Queue,
@@ -92,7 +97,7 @@ pub async fn causal_attention(
                 let max_score = scores
                     .iter()
                     .filter(|&&s| s.is_finite())
-                    .cloned()
+                    .copied()
                     .fold(f32::NEG_INFINITY, f32::max);
                 let mut sum = 0.0;
                 for s in &mut scores {

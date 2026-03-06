@@ -34,7 +34,7 @@ fn find_root_of_unity(degree: u32, modulus: u64) -> Option<u64> {
         let test_root = 11u64;
         let mut power = 1u64;
         for _ in 0..degree {
-            power = (power as u128 * test_root as u128 % modulus as u128) as u64;
+            power = (u128::from(power) * u128::from(test_root) % u128::from(modulus)) as u64;
         }
         if power == 1 {
             return Some(test_root);
@@ -45,7 +45,7 @@ fn find_root_of_unity(degree: u32, modulus: u64) -> Option<u64> {
     for candidate in 2..modulus.min(100) {
         let mut power = 1u64;
         for _ in 0..degree {
-            power = (power as u128 * candidate as u128 % modulus as u128) as u64;
+            power = (u128::from(power) * u128::from(candidate) % u128::from(modulus)) as u64;
         }
         if power == 1 {
             return Some(candidate);
@@ -90,12 +90,11 @@ async fn chaos_random_polynomials_1000_cases() {
 
             // Execute NTT (should never panic)
             let device = barracuda::device::test_pool::get_test_device().await;
-            let input_tensor = match create_fhe_poly_tensor(&input, device.clone()).await {
-                Ok(t) => t,
-                Err(_) => {
-                    failed += 1;
-                    continue;
-                }
+            let input_tensor = if let Ok(t) = create_fhe_poly_tensor(&input, device.clone()).await {
+                t
+            } else {
+                failed += 1;
+                continue;
             };
 
             // Find root for this degree/modulus
@@ -107,19 +106,19 @@ async fn chaos_random_polynomials_1000_cases() {
                         Ok(_) => passed += 1,
                         Err(e) => {
                             // Errors are OK if they're graceful
-                            println!("  Test {} failed gracefully: {}", test_id, e);
+                            println!("  Test {test_id} failed gracefully: {e}");
                             failed += 1;
                         }
                     }
                 }
                 Err(e) => {
-                    println!("  Test {} failed gracefully: {}", test_id, e);
+                    println!("  Test {test_id} failed gracefully: {e}");
                     failed += 1;
                 }
             }
         }
 
-        println!("✅ Chaos fuzzing: {} passed, {} failed", passed, failed);
+        println!("✅ Chaos fuzzing: {passed} passed, {failed} failed");
         assert!(passed > 990, "Should have >99% success rate");
     }) {
         return;
@@ -147,22 +146,19 @@ async fn chaos_random_coefficients_near_modulus() {
                 .unwrap();
 
             // Should handle near-boundary values correctly
-            match FheNtt::new(input_tensor, degree as u32, modulus, root) {
-                Ok(ntt) => {
-                    let result_tensor = ntt.execute().unwrap();
-                    let result_data = result_tensor.to_vec_u32().unwrap();
-                    // Verify all results are valid
-                    for chunk in result_data.chunks(2) {
-                        let val = chunk[0] as u64 | ((chunk[1] as u64) << 32);
-                        assert!(val < modulus || val % modulus < modulus);
-                    }
+            if let Ok(ntt) = FheNtt::new(input_tensor, degree as u32, modulus, root) {
+                let result_tensor = ntt.execute().unwrap();
+                let result_data = result_tensor.to_vec_u32().unwrap();
+                // Verify all results are valid
+                for chunk in result_data.chunks(2) {
+                    let val = u64::from(chunk[0]) | (u64::from(chunk[1]) << 32);
+                    assert!(val < modulus || val % modulus < modulus);
                 }
-                Err(_) => {
-                    // Some combinations may not be valid, that's OK
-                }
+            } else {
+                // Some combinations may not be valid, that's OK
             }
 
-            println!("✅ Handled coefficients near modulus (offset={})", offset);
+            println!("✅ Handled coefficients near modulus (offset={offset})");
         }
     }) {
         return;
@@ -199,20 +195,14 @@ async fn chaos_concurrent_ntt_operations() {
                 let root = find_root_of_unity(degree as u32, modulus).unwrap_or(11u64);
 
                 // Execute NTT
-                match create_fhe_poly_tensor(&input, device.clone()).await {
-                    Ok(input_tensor) => {
-                        match FheNtt::new(input_tensor, degree as u32, modulus, root) {
-                            Ok(ntt) => {
-                                let _result = ntt.execute();
-                            }
-                            Err(_) => {
-                                // Some combinations may fail, that's OK for chaos test
-                            }
-                        }
+                if let Ok(input_tensor) = create_fhe_poly_tensor(&input, device.clone()).await {
+                    if let Ok(ntt) = FheNtt::new(input_tensor, degree as u32, modulus, root) {
+                        let _result = ntt.execute();
+                    } else {
+                        // Some combinations may fail, that's OK for chaos test
                     }
-                    Err(_) => {
-                        // Allocation failure is OK for chaos test
-                    }
+                } else {
+                    // Allocation failure is OK for chaos test
                 }
 
                 Ok::<_, barracuda::error::BarracudaError>(i)
@@ -223,12 +213,12 @@ async fn chaos_concurrent_ntt_operations() {
         while let Some(result) = set.join_next().await {
             match result {
                 Ok(Ok(_task_id)) => succeeded += 1,
-                Ok(Err(e)) => println!("  Task failed: {}", e),
-                Err(e) => println!("  Task panicked: {}", e),
+                Ok(Err(e)) => println!("  Task failed: {e}"),
+                Err(e) => println!("  Task panicked: {e}"),
             }
         }
 
-        println!("✅ Concurrent execution: {}/100 succeeded", succeeded);
+        println!("✅ Concurrent execution: {succeeded}/100 succeeded");
         assert_eq!(succeeded, 100, "All concurrent operations should succeed");
     }) {
         return;
@@ -256,7 +246,7 @@ async fn chaos_rapid_alloc_dealloc() {
             drop(tensors);
 
             if iteration % 10 == 0 {
-                println!("  Iteration {}/100", iteration);
+                println!("  Iteration {iteration}/100");
             }
         }
 
@@ -335,16 +325,13 @@ async fn chaos_large_polynomial_degrees() {
         // Should handle gracefully (complete or error, not panic)
         let result = FheNtt::new(input_tensor, max_degree as u32, modulus, root);
         // Either works, just don't panic
-        match result {
-            Ok(ntt) => {
-                let _result_tensor = ntt.execute();
-            }
-            Err(_) => {
-                // Error is acceptable for very large degrees
-            }
+        if let Ok(ntt) = result {
+            let _result_tensor = ntt.execute();
+        } else {
+            // Error is acceptable for very large degrees
         }
 
-        println!("✅ Handles maximum degree ({})", max_degree);
+        println!("✅ Handles maximum degree ({max_degree})");
     }) {
         return;
     }
@@ -371,21 +358,18 @@ async fn chaos_memory_limit() {
                 }
                 Err(_e) => {
                     // Graceful failure expected
-                    println!("  Allocation failed at {}MB (expected)", total_mb);
+                    println!("  Allocation failed at {total_mb}MB (expected)");
                     break;
                 }
             }
 
             if i >= 999 {
-                println!("  Allocated {}MB without hitting limit", total_mb);
+                println!("  Allocated {total_mb}MB without hitting limit");
                 break;
             }
         }
 
-        println!(
-            "✅ Memory exhaustion handled gracefully ({}MB allocated)",
-            total_mb
-        );
+        println!("✅ Memory exhaustion handled gracefully ({total_mb}MB allocated)");
     }) {
         return;
     }
@@ -397,7 +381,7 @@ async fn chaos_memory_limit() {
 
 // Modular arithmetic helpers for property tests (pure CPU, no GPU)
 fn mod_mul(a: u64, b: u64, modulus: u64) -> u64 {
-    ((a as u128 * b as u128) % modulus as u128) as u64
+    ((u128::from(a) * u128::from(b)) % u128::from(modulus)) as u64
 }
 
 fn mod_pow(mut base: u64, mut exp: u64, modulus: u64) -> u64 {

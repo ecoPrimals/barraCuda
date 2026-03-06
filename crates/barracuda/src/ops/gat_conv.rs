@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! GATConv - Graph Attention Networks (Pure WGSL)
+//! `GATConv` - Graph Attention Networks (Pure WGSL)
 //!
 //! Attention-based graph convolution with learnable attention coefficients
 //!
@@ -28,6 +28,11 @@ pub struct GatConv {
 
 impl GatConv {
     /// Create GAT (Graph Attention) convolution.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         node_features: Tensor,
         edge_index: Vec<(usize, usize)>,
@@ -98,6 +103,11 @@ impl GatConv {
     }
 
     /// Execute GAT convolution.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.node_features.device();
         // Convert edge_index to u32 pairs

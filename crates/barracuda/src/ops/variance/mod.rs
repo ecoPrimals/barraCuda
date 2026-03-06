@@ -33,6 +33,7 @@ pub struct Variance {
 
 impl Variance {
     /// Create a new variance operation
+    #[must_use]
     pub fn new(input: Tensor, dim: Option<usize>, keepdim: bool) -> Self {
         Self {
             input,
@@ -69,21 +70,27 @@ impl Variance {
 
 impl Tensor {
     /// Compute variance (global reduction)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, dimension is out of range,
+    /// or buffer readback fails.
     pub fn variance(&self) -> Result<Self> {
         Variance::new(self.clone(), None, false).execute()
     }
 
     /// Compute variance along a dimension
-    ///
     /// # Arguments
-    ///
     /// * `dim` - Dimension to compute variance along
     /// * `keepdim` - Whether to keep the reduced dimension with size 1
+    /// # Errors
+    /// Returns [`Err`] if `dim` is out of range, buffer allocation fails,
+    /// or buffer readback fails.
     pub fn variance_dim(&self, dim: usize, keepdim: bool) -> Result<Self> {
         Variance::new(self.clone(), Some(dim), keepdim).execute()
     }
 
     /// Compute variance (legacy method for backward compatibility)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails or buffer readback fails.
     pub fn var(self) -> Result<Self> {
         Variance::new(self, None, false).execute()
     }

@@ -158,8 +158,7 @@ fn test_train_with_validation() {
     let max_err = diag.max_distance_error.unwrap();
     assert!(
         max_err < 1e-4,
-        "f32/f64 distance error too large: {}",
-        max_err
+        "f32/f64 distance error too large: {max_err}"
     );
 
     // Surrogate should work
@@ -199,13 +198,11 @@ fn test_f32_vs_f64_distances_accuracy() {
 
     assert!(
         max_abs_error < 1e-3,
-        "Max absolute distance error: {}",
-        max_abs_error
+        "Max absolute distance error: {max_abs_error}"
     );
     assert!(
         max_rel_error < 1e-5,
-        "Max relative distance error: {}",
-        max_rel_error
+        "Max relative distance error: {max_rel_error}"
     );
 }
 
@@ -250,24 +247,28 @@ fn test_adaptive_errors() {
         return;
     };
     let config = AdaptiveConfig::default();
-    assert!(train_adaptive(
-        device.clone(),
-        &[],
-        &[],
-        RBFKernel::ThinPlateSpline,
-        1e-12,
-        &config
-    )
-    .is_err());
-    assert!(train_adaptive(
-        device.clone(),
-        &[vec![0.0], vec![1.0]],
-        &[0.0],
-        RBFKernel::ThinPlateSpline,
-        1e-12,
-        &config
-    )
-    .is_err());
+    assert!(
+        train_adaptive(
+            device.clone(),
+            &[],
+            &[],
+            RBFKernel::ThinPlateSpline,
+            1e-12,
+            &config
+        )
+        .is_err()
+    );
+    assert!(
+        train_adaptive(
+            device.clone(),
+            &[vec![0.0], vec![1.0]],
+            &[0.0],
+            RBFKernel::ThinPlateSpline,
+            1e-12,
+            &config
+        )
+        .is_err()
+    );
     assert!(train_with_validation(device, &[], &[], RBFKernel::ThinPlateSpline, 1e-12).is_err());
 }
 
@@ -457,12 +458,7 @@ mod gpu_tests {
         let y_pred = surrogate.predict(&x_train[..5]).unwrap();
         assert_eq!(y_pred.len(), 5);
         for (i, &pred) in y_pred.iter().enumerate() {
-            assert!(
-                pred.is_finite(),
-                "GPU prediction {} is not finite: {}",
-                i,
-                pred
-            );
+            assert!(pred.is_finite(), "GPU prediction {i} is not finite: {pred}");
         }
     }
 

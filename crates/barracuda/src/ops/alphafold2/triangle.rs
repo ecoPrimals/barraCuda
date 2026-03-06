@@ -2,8 +2,8 @@
 
 //! Triangle multiplication (outgoing and incoming).
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -25,6 +25,11 @@ struct TriangleMulParams {
 /// Outgoing triangle multiplication: `out[i,j] = sum_k gate[i,k] * a[i,k] * b[j,k]`.
 ///
 /// Pair representation update from the Evoformer stack.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn triangle_mul_outgoing(
     device: &Arc<WgpuDevice>,
     a: &[f64],
@@ -49,12 +54,17 @@ pub fn triangle_mul_outgoing(
         .storage_rw(3, &out_buf)
         .uniform(4, &params_buf)
         .dispatch(total.div_ceil(WG_64 as usize) as u32, 1, 1)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, total)
 }
 
 /// Incoming triangle multiplication: `out[i,j] = sum_k gate[k,j] * a[k,i] * b[k,j]`.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn triangle_mul_incoming(
     device: &Arc<WgpuDevice>,
     a: &[f64],
@@ -79,7 +89,7 @@ pub fn triangle_mul_incoming(
         .storage_rw(3, &out_buf)
         .uniform(4, &params_buf)
         .dispatch(total.div_ceil(WG_64 as usize) as u32, 1, 1)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, total)
 }

@@ -40,7 +40,7 @@
 //! ## References
 //!
 //! - Golub & Van Loan, "Matrix Computations", Section 3.1
-//! - Used in scipy.linalg.solve_triangular
+//! - Used in `scipy.linalg.solve_triangular`
 //! - Completes the Cholesky solve pipeline
 
 mod f32;

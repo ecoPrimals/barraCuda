@@ -9,10 +9,10 @@
 //! - Observable correlation (hotSpring)
 //! - Portfolio analysis
 //!
-//! **Note**: f32 precision. For f64, use manual computation with weighted_dot_f64.
+//! **Note**: f32 precision. For f64, use manual computation with `weighted_dot_f64`.
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -38,18 +38,21 @@ impl Correlation {
     }
 
     /// Create a new Correlation orchestrator
+    /// # Errors
+    /// Returns [`Err`] if device initialization fails.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Compute Pearson correlation between two vectors
-    ///
     /// # Arguments
     /// * `x` - First vector (f32)
     /// * `y` - Second vector (f32)
-    ///
     /// # Returns
     /// Pearson correlation coefficient in [-1, 1]
+    /// # Errors
+    /// Returns [`Err`] if vector lengths differ, fewer than 2 elements, buffer allocation fails,
+    /// GPU dispatch fails, buffer readback fails, or the device is lost.
     pub fn correlate(&self, x: &[f32], y: &[f32]) -> Result<f32> {
         let n = x.len();
         if y.len() != n {
@@ -68,15 +71,16 @@ impl Correlation {
     }
 
     /// Compute correlation for multiple vector pairs (batched)
-    ///
     /// # Arguments
-    /// * `x_batch` - Concatenated x vectors (num_pairs * size elements)
-    /// * `y_batch` - Concatenated y vectors (num_pairs * size elements)
+    /// * `x_batch` - Concatenated x vectors (`num_pairs` * size elements)
+    /// * `y_batch` - Concatenated y vectors (`num_pairs` * size elements)
     /// * `size` - Length of each vector
     /// * `num_pairs` - Number of vector pairs
-    ///
     /// # Returns
     /// Vector of correlation coefficients (one per pair)
+    /// # Errors
+    /// Returns [`Err`] if batch size mismatch (`x_batch/y_batch` length != `num_pairs` * size),
+    /// buffer allocation fails, GPU dispatch fails, buffer readback fails, or the device is lost.
     pub fn correlate_batch(
         &self,
         x_batch: &[f32],
@@ -338,7 +342,7 @@ mod tests {
         let y: Vec<f32> = (0..100).map(|i| i as f32 * 2.0 + 1.0).collect();
 
         let r = op.correlate(&x, &y).unwrap();
-        assert!((r - 1.0).abs() < 0.001, "Expected r≈1.0, got {}", r);
+        assert!((r - 1.0).abs() < 0.001, "Expected r≈1.0, got {r}");
     }
 
     #[test]
@@ -350,7 +354,7 @@ mod tests {
         let y: Vec<f32> = (0..100).map(|i| -(i as f32)).collect();
 
         let r = op.correlate(&x, &y).unwrap();
-        assert!((r + 1.0).abs() < 0.001, "Expected r≈-1.0, got {}", r);
+        assert!((r + 1.0).abs() < 0.001, "Expected r≈-1.0, got {r}");
     }
 
     #[test]
@@ -364,6 +368,6 @@ mod tests {
         let y: Vec<f32> = (0..n).map(|i| (i as f32 * 0.01).cos()).collect();
 
         let r = op.correlate(&x, &y).unwrap();
-        assert!(r.abs() < 0.1, "Expected r≈0, got {}", r);
+        assert!(r.abs() < 0.1, "Expected r≈0, got {r}");
     }
 }

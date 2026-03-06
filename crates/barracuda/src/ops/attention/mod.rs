@@ -52,7 +52,7 @@ pub(crate) static SDPA_SCORES_F32: std::sync::LazyLock<String> = std::sync::Lazy
     crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(SDPA_SCORES_F64)
 });
 
-/// f64 canonical — f32 derived via downcast_f64_to_f32 when needed.
+/// f64 canonical — f32 derived via `downcast_f64_to_f32` when needed.
 pub(crate) const ATTENTION_APPLY_F64: &str =
     include_str!("../../shaders/attention/attention_apply_f64.wgsl");
 pub(crate) static ATTENTION_APPLY_F32: std::sync::LazyLock<String> =
@@ -73,8 +73,8 @@ mod tests;
 
 /// Attention parameters for WGSL shaders
 ///
-/// Supports both self-attention (q_seq_len == kv_seq_len) and cross-attention
-/// (q_seq_len != kv_seq_len). The score matrix is [B, H, q_seq_len, kv_seq_len].
+/// Supports both self-attention (`q_seq_len` == `kv_seq_len`) and cross-attention
+/// (`q_seq_len` != `kv_seq_len`). The score matrix is [B, H, `q_seq_len`, `kv_seq_len`].
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub(crate) struct AttentionParams {
@@ -100,6 +100,10 @@ pub struct Attention {
 
 impl Attention {
     /// Create new attention operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shapes are not 4D or `batch/heads/head_dim` mismatch.
     pub fn new(query: Tensor, key: Tensor, value: Tensor) -> Result<Self> {
         // Validate shapes: all must be [batch, heads, seq_len, head_dim]
         let q_ndim = query.shape().len();
@@ -190,18 +194,23 @@ impl Tensor {
     ///
     /// # Arguments
     ///
-    /// * `key` - Key tensor [batch, heads, seq_len, head_dim]
-    /// * `value` - Value tensor [batch, heads, seq_len, head_dim]
+    /// * `key` - Key tensor [batch, heads, `seq_len`, `head_dim`]
+    /// * `value` - Value tensor [batch, heads, `seq_len`, `head_dim`]
     ///
     /// # Returns
     ///
-    /// Output tensor [batch, heads, seq_len, head_dim]
+    /// Output tensor [batch, heads, `seq_len`, `head_dim`]
     ///
     /// # Example
     ///
     /// ```rust,ignore
     /// let output = query.attention(&key, &value)?;
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn attention(self, key: &Self, value: &Self) -> Result<Self> {
         Attention::new(self, key.clone(), value.clone())?.execute()
     }

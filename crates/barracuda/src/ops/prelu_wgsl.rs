@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! PReLU - Parametric Rectified Linear Unit - Pure WGSL
+//! `PReLU` - Parametric Rectified Linear Unit - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its alpha parameter
@@ -19,14 +19,15 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// PReLU operation - Parametric Rectified Linear Unit
+/// `PReLU` operation - Parametric Rectified Linear Unit
 pub struct PReLU {
     input: Tensor,
     alpha: f32,
 }
 
 impl PReLU {
-    /// Create a new PReLU operation
+    /// Create a new `PReLU` operation
+    #[must_use]
     pub fn new(input: Tensor, alpha: f32) -> Self {
         Self { input, alpha }
     }
@@ -36,7 +37,12 @@ impl PReLU {
         &SHADER_F32
     }
 
-    /// Execute the PReLU operation
+    /// Execute the `PReLU` operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -185,11 +191,16 @@ impl PReLU {
 }
 
 impl Tensor {
-    /// Apply Parametric ReLU activation
+    /// Apply Parametric `ReLU` activation
     ///
     /// # Arguments
     ///
     /// * `alpha` - Slope for negative values (typically 0.01 to 0.3)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn prelu_wgsl(self, alpha: f32) -> Result<Self> {
         PReLU::new(self, alpha).execute()
     }

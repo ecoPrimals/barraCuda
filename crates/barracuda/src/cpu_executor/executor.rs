@@ -37,9 +37,10 @@ pub struct CpuExecutor {
 
 impl CpuExecutor {
     /// Create new CPU executor
+    #[must_use]
     pub fn new() -> Self {
         let num_threads = std::thread::available_parallelism()
-            .map(|n| n.get())
+            .map(std::num::NonZero::get)
             .unwrap_or(4);
 
         Self {
@@ -116,13 +117,14 @@ impl CpuExecutor {
     }
 
     pub(crate) fn read_f32(storage: &dyn TensorStorage) -> Result<Vec<f32>> {
-        let rt = tokio::runtime::Handle::try_current()
-            .map(|h| tokio::task::block_in_place(|| h.block_on(storage.read_to_cpu())))
-            .unwrap_or_else(|_| {
+        let rt = tokio::runtime::Handle::try_current().map_or_else(
+            |_| {
                 tokio::runtime::Runtime::new()
                     .map_err(|e| crate::error::BarracudaError::device(e.to_string()))
                     .and_then(|rt: tokio::runtime::Runtime| rt.block_on(storage.read_to_cpu()))
-            })?;
+            },
+            |h| tokio::task::block_in_place(|| h.block_on(storage.read_to_cpu())),
+        )?;
         Ok(rt
             .chunks_exact(4)
             .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
@@ -137,7 +139,10 @@ impl CpuExecutor {
     }
 
     pub(crate) fn execute_unary_cpu(&self, op: &MathOp, input: &[f32]) -> Result<Vec<f32>> {
-        use MathOp::*;
+        use MathOp::{
+            Abs, Cos, Exp, GELU, Log, Negate, ReLU, Reciprocal, Sigmoid, Sin, Sqrt, Square, Tan,
+            Tanh,
+        };
         let output: Vec<f32> = input
             .par_iter()
             .map(|&x| match op {
@@ -165,7 +170,7 @@ impl CpuExecutor {
     }
 
     pub(crate) fn execute_binary_cpu(&self, op: &MathOp, a: &[f32], b: &[f32]) -> Result<Vec<f32>> {
-        use MathOp::*;
+        use MathOp::{Add, Div, Max, Min, Mul, Pow, Sub};
         let output: Vec<f32> = a
             .par_iter()
             .zip(b.par_iter())
@@ -184,7 +189,7 @@ impl CpuExecutor {
     }
 
     pub(crate) fn execute_reduce_cpu(&self, op: &MathOp, input: &[f32]) -> Result<f32> {
-        use MathOp::*;
+        use MathOp::{ReduceMax, ReduceMean, ReduceMin, ReduceProd, ReduceSum};
         let result = match op {
             ReduceSum { .. } => input.par_iter().sum(),
             ReduceMean { .. } => input.par_iter().sum::<f32>() / input.len() as f32,
@@ -250,8 +255,17 @@ impl ComputeExecutor for CpuExecutor {
     }
 
     fn score_operation(&self, op: &MathOp, inputs: &[TensorDescriptor]) -> f64 {
-        use defaults::*;
-        use MathOp::*;
+        use MathOp::{
+            Add, AvgPool2D, BatchMatMul, Conv2D, Div, GELU, MatMul, MaxPool2D, Mul, ReLU,
+            ReduceMax, ReduceMean, ReduceMin, ReduceSum, Sigmoid, Sub, Tanh,
+        };
+        use defaults::{
+            LARGE_TENSOR_THRESHOLD, MEDIUM_TENSOR_THRESHOLD, SCORE_CPU_CONV_LARGE,
+            SCORE_CPU_CONV_SMALL, SCORE_CPU_DEFAULT, SCORE_CPU_ELEMENTWISE_LARGE,
+            SCORE_CPU_ELEMENTWISE_MEDIUM, SCORE_CPU_ELEMENTWISE_SMALL, SCORE_CPU_MATMUL_LARGE,
+            SCORE_CPU_MATMUL_MEDIUM, SCORE_CPU_REDUCE, SCORE_CPU_SMALL_OPTIMAL,
+            SMALL_TENSOR_THRESHOLD,
+        };
         let total_elements: usize = inputs.iter().map(|t| t.numel).sum();
         match op {
             _ if total_elements < SMALL_TENSOR_THRESHOLD => SCORE_CPU_SMALL_OPTIMAL,

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Tests for RMSprop Optimizer
+//! Tests for `RMSprop` Optimizer
 
 use super::*;
 use crate::device::test_pool::get_test_device_if_gpu_available;
@@ -108,30 +108,40 @@ async fn test_rmsprop_validation() {
         .unwrap();
 
     // Shape mismatch
-    assert!(weights
-        .clone()
-        .rmsprop_step(&gradients, 0.001, 0.99, None)
-        .is_err());
+    assert!(
+        weights
+            .clone()
+            .rmsprop_step(&gradients, 0.001, 0.99, None)
+            .is_err()
+    );
 
     // Invalid learning rate
-    assert!(weights
-        .clone()
-        .rmsprop_step(&grads_correct, -0.001, 0.99, None)
-        .is_err());
-    assert!(weights
-        .clone()
-        .rmsprop_step(&grads_correct, 0.0, 0.99, None)
-        .is_err());
+    assert!(
+        weights
+            .clone()
+            .rmsprop_step(&grads_correct, -0.001, 0.99, None)
+            .is_err()
+    );
+    assert!(
+        weights
+            .clone()
+            .rmsprop_step(&grads_correct, 0.0, 0.99, None)
+            .is_err()
+    );
 
     // Invalid alpha
-    assert!(weights
-        .clone()
-        .rmsprop_step(&grads_correct, 0.001, -0.1, None)
-        .is_err());
-    assert!(weights
-        .clone()
-        .rmsprop_step(&grads_correct, 0.001, 1.5, None)
-        .is_err());
+    assert!(
+        weights
+            .clone()
+            .rmsprop_step(&grads_correct, 0.001, -0.1, None)
+            .is_err()
+    );
+    assert!(
+        weights
+            .clone()
+            .rmsprop_step(&grads_correct, 0.001, 1.5, None)
+            .is_err()
+    );
 }
 
 #[tokio::test]

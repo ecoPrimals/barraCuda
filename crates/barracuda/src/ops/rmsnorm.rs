@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! RMSNorm - Root Mean Square Normalization
+//! `RMSNorm` - Root Mean Square Normalization
 //! Pure WGSL implementation
 //!
-//! Simpler alternative to LayerNorm used in modern LLMs (LLaMA, GPT-NeoX, T5)
+//! Simpler alternative to `LayerNorm` used in modern LLMs (`LLaMA`, GPT-NeoX, T5)
 //! Formula: RMSNorm(x) = x / sqrt(mean(x²) + epsilon) * gamma
 //!
-//! Key difference from LayerNorm: No mean subtraction, only RMS scaling
+//! Key difference from `LayerNorm`: No mean subtraction, only RMS scaling
 //! Benefits: Faster computation, similar performance
 
 use crate::device::{DeviceCapabilities, WorkloadType};
@@ -21,7 +21,7 @@ struct RMSNormParams {
     _padding: u32,
 }
 
-/// Root Mean Square normalization (used in LLaMA, GPT-NeoX, T5).
+/// Root Mean Square normalization (used in `LLaMA`, GPT-NeoX, T5).
 pub struct RMSNorm {
     input: Tensor,
     gamma: Tensor, // Scale parameters
@@ -29,7 +29,8 @@ pub struct RMSNorm {
 }
 
 impl RMSNorm {
-    /// Creates a new RMSNorm operation. Gamma is the scale parameter.
+    /// Creates a new `RMSNorm` operation. Gamma is the scale parameter.
+    #[must_use]
     pub fn new(input: Tensor, gamma: Tensor, epsilon: f32) -> Self {
         Self {
             input,
@@ -50,6 +51,9 @@ impl RMSNorm {
     }
 
     /// Executes RMS normalization and returns the output tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -150,10 +154,13 @@ impl RMSNorm {
 }
 
 impl Tensor {
-    /// Apply RMS Normalization (used in LLaMA, GPT-NeoX, T5)
+    /// Apply RMS Normalization (used in `LLaMA`, GPT-NeoX, T5)
     /// # Arguments
-    /// * `gamma` - Scale parameters (shape: [feature_size])
+    /// * `gamma` - Scale parameters (shape: [`feature_size`])
     /// * `epsilon` - Small constant for numerical stability (default: 1e-6)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn rmsnorm(self, gamma: Tensor, epsilon: f32) -> Result<Self> {
         RMSNorm::new(self, gamma, epsilon).execute()
     }

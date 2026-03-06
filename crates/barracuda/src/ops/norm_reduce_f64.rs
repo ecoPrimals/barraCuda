@@ -5,7 +5,7 @@
 //! - L1 norm: sum(|x|)
 //! - L2 norm: sqrt(sum(x^2))
 //! - Linf norm: max(|x|)
-//! - Frobenius norm: sqrt(sum(|a_ij|^2)) for matrices
+//! - Frobenius norm: `sqrt(sum(|a_ij|^2))` for matrices
 //! - Generic p-norm: (sum(|x|^p))^(1/p)
 //!
 //! **Use cases**:
@@ -19,8 +19,8 @@
 //! - Full f64 precision via SPIR-V/Vulkan
 //! - Safe Rust wrapper (no unsafe code)
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -44,36 +44,47 @@ impl NormReduceF64 {
     }
 
     /// Compute L1 norm: sum(|x|)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or readback fails (e.g., device lost).
     pub fn l1(device: Arc<WgpuDevice>, data: &[f64]) -> Result<f64> {
         Self::reduce_op(device, data, "norm_l1_f64", None)
     }
 
     /// Compute L2 norm: sqrt(sum(x^2))
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or readback fails (e.g., device lost).
     pub fn l2(device: Arc<WgpuDevice>, data: &[f64]) -> Result<f64> {
         let sum_sq = Self::reduce_op(device, data, "norm_l2_f64", None)?;
         Ok(sum_sq.sqrt())
     }
 
     /// Compute L2 norm squared: sum(x^2) (without sqrt)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or readback fails (e.g., device lost).
     pub fn l2_squared(device: Arc<WgpuDevice>, data: &[f64]) -> Result<f64> {
         Self::reduce_op(device, data, "norm_l2_f64", None)
     }
 
     /// Compute Linf norm: max(|x|)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or readback fails (e.g., device lost).
     pub fn linf(device: Arc<WgpuDevice>, data: &[f64]) -> Result<f64> {
         Self::reduce_op(device, data, "norm_linf_f64", None)
     }
 
     /// Compute Frobenius norm (same as L2, but semantically for matrices)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or readback fails (e.g., device lost).
     pub fn frobenius(device: Arc<WgpuDevice>, data: &[f64]) -> Result<f64> {
         let sum_sq = Self::reduce_op(device, data, "norm_frobenius_f64", None)?;
         Ok(sum_sq.sqrt())
     }
 
     /// Compute generic p-norm: (sum(|x|^p))^(1/p)
-    ///
     /// Dispatches `norm_p_f64` WGSL shader. `compile_shader_f64()` auto-injects
     /// software `pow_f64` on drivers lacking native f64 pow (NVK, RADV, Ada).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or readback fails (e.g., device lost).
     pub fn p_norm(device: Arc<WgpuDevice>, data: &[f64], p: f64) -> Result<f64> {
         if data.is_empty() {
             return Ok(0.0);
@@ -144,7 +155,7 @@ impl NormReduceF64 {
             .storage_rw(1, &partial_buffer)
             .uniform(2, &params_buffer)
             .dispatch(n_workgroups as u32, 1, 1)
-            .submit();
+            .submit()?;
 
         if n_workgroups <= 1 {
             return Self::read_f64_scalar(&device, &partial_buffer);
@@ -180,15 +191,14 @@ impl NormReduceF64 {
             .storage_rw(1, &final_buffer)
             .uniform(2, &params2_buffer)
             .dispatch(n_workgroups2 as u32, 1, 1)
-            .submit();
+            .submit()?;
 
         if n_workgroups2 > 1 {
             let partials = device.read_f64_buffer(&final_buffer, n_workgroups2)?;
             if entry_point == "norm_linf_f64" {
                 return Ok(partials.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b)));
-            } else {
-                return Ok(partials.iter().sum());
             }
+            return Ok(partials.iter().sum());
         }
 
         Self::read_f64_scalar(&device, &final_buffer)
@@ -215,8 +225,7 @@ mod tests {
         let norm = NormReduceF64::l1(device, &data).unwrap();
         assert!(
             (norm - 15.0).abs() < 1e-6,
-            "L1 norm should be 15, got {}",
-            norm
+            "L1 norm should be 15, got {norm}"
         );
     }
 
@@ -231,8 +240,7 @@ mod tests {
         let norm = NormReduceF64::l2(device, &data).unwrap();
         assert!(
             (norm - 5.0).abs() < 1e-6,
-            "L2 norm of [3,4] should be 5, got {}",
-            norm
+            "L2 norm of [3,4] should be 5, got {norm}"
         );
     }
 
@@ -247,8 +255,7 @@ mod tests {
         let norm = NormReduceF64::linf(device, &data).unwrap();
         assert!(
             (norm - 7.0).abs() < 1e-6,
-            "Linf norm should be 7, got {}",
-            norm
+            "Linf norm should be 7, got {norm}"
         );
     }
 
@@ -265,8 +272,7 @@ mod tests {
         let expected = 2.0_f64.sqrt();
         assert!(
             (norm - expected).abs() < 1e-6,
-            "Frobenius norm should be sqrt(2), got {}",
-            norm
+            "Frobenius norm should be sqrt(2), got {norm}"
         );
     }
 
@@ -283,9 +289,7 @@ mod tests {
         let expected = 100.0_f64.powf(1.0 / 3.0);
         assert!(
             (norm - expected).abs() < 1e-4,
-            "p=3 norm should be {}, got {}",
-            expected,
-            norm
+            "p=3 norm should be {expected}, got {norm}"
         );
     }
 }

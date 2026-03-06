@@ -9,8 +9,8 @@
 //!
 //! wetSpring handoff v6, `ani_batch_f64.wgsl` — 7/7 GPU checks PASS.
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -33,6 +33,11 @@ pub struct AniBatchF64 {
 
 impl AniBatchF64 {
     /// Creates a new batch ANI GPU kernel for the given device.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         let module = device.compile_shader_f64(SHADER, Some("ani_batch_f64"));
         let bgl = device
@@ -73,6 +78,11 @@ impl AniBatchF64 {
     }
 
     /// Dispatch ANI computation on GPU-resident buffers.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn dispatch(
         &self,
         n_pairs: u32,

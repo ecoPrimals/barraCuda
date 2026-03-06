@@ -49,6 +49,7 @@ pub struct ConvergenceDiagnostics {
 
 impl ConvergenceDiagnostics {
     /// Get a human-readable summary.
+    #[must_use]
     pub fn summary(&self) -> String {
         let state_str = match self.state {
             ConvergenceState::Improving => "IMPROVING ↓",
@@ -99,6 +100,10 @@ impl ConvergenceDiagnostics {
 /// println!("{}", diag.summary());
 /// ```
 ///
+/// # Errors
+///
+/// Returns [`Err`] if history is empty.
+///
 /// # Reference
 ///
 /// hotSpring validation: `stats.rs::convergence_diagnostics()`
@@ -116,7 +121,7 @@ pub fn convergence_diagnostics(
     }
 
     // Find best value
-    let best_f = history.iter().cloned().fold(f64::INFINITY, f64::min);
+    let best_f = history.iter().copied().fold(f64::INFINITY, f64::min);
     let current_f = history[n - 1];
 
     // Relative gap from best
@@ -245,6 +250,7 @@ fn linear_slope(values: &[f64]) -> f64 {
 /// let improving = vec![100.0, 50.0, 25.0, 12.0];
 /// assert!(!should_stop_early(&improving, 0.1, 3));
 /// ```
+#[must_use]
 pub fn should_stop_early(history: &[f64], improvement_threshold: f64, patience: usize) -> bool {
     if history.len() < patience + 1 {
         return false;

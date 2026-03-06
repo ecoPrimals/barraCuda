@@ -50,7 +50,7 @@ async fn test_shape_mismatch_matmul() {
             }
             Err(e) => {
                 println!("  ✓ Shape mismatch correctly rejected");
-                println!("  Error: {}", e);
+                println!("  Error: {e}");
                 // Verify error contains useful info
                 let error_msg = e.to_string().to_lowercase();
                 assert!(
@@ -85,7 +85,7 @@ async fn test_data_shape_mismatch() {
             }
             Err(e) => {
                 println!("  ✓ Data/shape mismatch correctly rejected");
-                println!("  Error: {}", e);
+                println!("  Error: {e}");
             }
         }
 
@@ -177,7 +177,7 @@ async fn test_cholesky_non_positive_definite() {
             }
             Err(e) => {
                 println!("  ✓ Non-SPD matrix correctly rejected");
-                println!("  Error: {}", e);
+                println!("  Error: {e}");
             }
         }
 
@@ -207,7 +207,7 @@ async fn test_cholesky_non_square_matrix() {
             }
             Err(e) => {
                 println!("  ✓ Non-square matrix correctly rejected");
-                println!("  Error: {}", e);
+                println!("  Error: {e}");
             }
         }
 
@@ -249,7 +249,7 @@ fn test_kernel_router_invalid_model_fallback() {
             }
         }
         Err(e) => {
-            panic!("Routing should not fail (should fallback): {}", e);
+            panic!("Routing should not fail (should fallback): {e}");
         }
     }
 
@@ -294,9 +294,9 @@ async fn test_resource_cleanup_on_error() {
             }
         }
 
-        println!("  Iterations: {}", iterations);
+        println!("  Iterations: {iterations}");
         println!("  Expected errors: {}", iterations / 5);
-        println!("  Actual errors: {}", errors);
+        println!("  Actual errors: {errors}");
 
         // If we get here without panic or hang, cleanup worked
         println!("  ✓ No resource leaks detected (completed without hang)");
@@ -345,7 +345,7 @@ async fn test_operation_timeout_handling() {
                 println!("  Result size: {} elements", result.len());
             }
             Ok(Err(e)) => {
-                println!("  Operation failed (not timeout): {}", e);
+                println!("  Operation failed (not timeout): {e}");
             }
             Err(_) => {
                 println!("  ⚠ Operation timed out (may indicate performance issue)");
@@ -373,7 +373,7 @@ fn test_device_unavailability_handling() {
         let is_available = device.is_available();
         let info = device.info();
 
-        println!("  {} - available: {}", device, is_available);
+        println!("  {device} - available: {is_available}");
         println!("    capabilities: {:?}", info.capabilities);
 
         // CPU should always be available
@@ -388,7 +388,7 @@ fn test_device_unavailability_handling() {
         !available.is_empty(),
         "At least one device should be available"
     );
-    println!("\n  Available devices: {:?}", available);
+    println!("\n  Available devices: {available:?}");
 
     println!("\n  Device unavailability handling: PASS\n");
 }
@@ -413,11 +413,11 @@ async fn test_error_messages_are_informative() {
         for (name, data, shape) in test_cases {
             match Tensor::from_vec_on(data, shape, device.clone()).await {
                 Ok(_) => {
-                    println!("  {} - no error (implementation allows)", name);
+                    println!("  {name} - no error (implementation allows)");
                 }
                 Err(e) => {
                     let msg = e.to_string();
-                    println!("  {} - Error: {}", name, msg);
+                    println!("  {name} - Error: {msg}");
 
                     // Error messages should:
                     // 1. Not be empty
@@ -481,10 +481,10 @@ async fn test_concurrent_error_handling() {
             results.push(h.await.unwrap());
         }
 
-        let _expected_errors = num_tasks / 3 + if num_tasks % 3 > 0 { 1 } else { 0 };
+        let _expected_errors = num_tasks / 3 + i32::from(num_tasks % 3 > 0);
         let _actual_errors = results.iter().filter(|&&x| x).count();
 
-        println!("  Tasks: {}", num_tasks);
+        println!("  Tasks: {num_tasks}");
         println!("  All tasks completed without panic");
 
         println!("\n  Concurrent error handling: PASS\n");

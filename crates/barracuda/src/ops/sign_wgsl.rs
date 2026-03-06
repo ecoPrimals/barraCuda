@@ -26,6 +26,7 @@ pub struct Sign {
 
 impl Sign {
     /// Create a new sign operation
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -36,6 +37,9 @@ impl Sign {
     }
 
     /// Execute the sign operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -180,6 +184,9 @@ impl Sign {
 
 impl Tensor {
     /// Compute sign element-wise
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn sign_wgsl(self) -> Result<Self> {
         Sign::new(self).execute()
     }

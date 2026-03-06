@@ -20,6 +20,7 @@ pub struct ReplicationPad {
 
 impl ReplicationPad {
     /// Create a new replication pad operation
+    #[must_use]
     pub fn new(input: Tensor, padding: (usize, usize, usize, usize)) -> Self {
         Self { input, padding }
     }
@@ -37,6 +38,9 @@ impl ReplicationPad {
     }
 
     /// Execute the replication pad operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -217,10 +221,11 @@ impl ReplicationPad {
 
 impl Tensor {
     /// Apply replication padding (NCHW format)
-    ///
     /// # Arguments
-    ///
     /// * `padding` - (left, right, top, bottom) padding amounts
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn replication_pad_wgsl(self, padding: (usize, usize, usize, usize)) -> Result<Self> {
         ReplicationPad::new(self, padding).execute()
     }

@@ -26,6 +26,10 @@ pub struct Rk4 {
 
 impl Rk4 {
     /// Creates an RK4 integrator with positions, velocities, accelerations, and time step.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if tensor shapes mismatch, or dt <= 0.
     pub fn new(
         positions: Tensor,
         velocities: Tensor,
@@ -67,7 +71,12 @@ impl Rk4 {
     /// Execute RK4 integration
     ///
     /// # Returns
-    /// (positions_new, velocities_new) at time t+Δt
+    /// (`positions_new`, `velocities_new`) at time t+Δt
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<(Tensor, Tensor)> {
         let device = self.positions.device();
         let n_particles = self.positions.shape()[0];
@@ -301,8 +310,8 @@ mod tests {
         let pos_data = pos_new.to_vec().unwrap();
         let vel_data = vel_new.to_vec().unwrap();
 
-        println!("pos_data: {:?}", pos_data);
-        println!("vel_data: {:?}", vel_data);
+        println!("pos_data: {pos_data:?}");
+        println!("vel_data: {vel_data:?}");
 
         // For constant acceleration, RK4 should be exact
         // x = x0 + v0*dt + 0.5*a*dt^2

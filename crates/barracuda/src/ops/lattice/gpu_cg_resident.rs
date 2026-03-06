@@ -11,7 +11,7 @@ use std::sync::mpsc;
 //  Reduce chain (generic over bind group type)
 // ═══════════════════════════════════════════════════════════════════
 
-/// One step of a multi-pass reduction: (bind_group, num_workgroups).
+/// One step of a multi-pass reduction: (`bind_group`, `num_workgroups`).
 ///
 /// Generic over `B` to avoid direct wgpu dependency — use with barracuda's
 /// pipeline infrastructure (e.g. `wgpu::BindGroup` when instantiated).
@@ -23,7 +23,7 @@ pub struct ReducePass<B> {
     pub num_wg: u32,
 }
 
-/// Pre-built reduction chain: dot_buf → target scalar in 2–3 GPU dispatches.
+/// Pre-built reduction chain: `dot_buf` → target scalar in 2–3 GPU dispatches.
 #[derive(Debug, Clone)]
 pub struct ReduceChain<B> {
     /// Ordered reduction passes.
@@ -41,7 +41,7 @@ pub struct StreamObservables {
     pub plaquette: f64,
     /// Real part of Polyakov loop.
     pub polyakov_re: f64,
-    /// ΔH = H_new - H_old (Metropolis).
+    /// ΔH = `H_new` - `H_old` (Metropolis).
     pub delta_h: f64,
     /// CG iterations for this trajectory.
     pub cg_iterations: usize,
@@ -72,7 +72,6 @@ pub struct BidirectionalStream {
 
 impl BidirectionalStream {
     /// Create a new bidirectional stream.
-    ///
     /// Returns `(stream, control_tx)` — the caller holds `control_tx` to send
     /// control signals (e.g. `true`/`false` for screening decisions).
     #[must_use]
@@ -94,8 +93,9 @@ impl BidirectionalStream {
     }
 
     /// Record observables from one trajectory.
-    ///
     /// Updates internal statistics and optionally forwards to attached consumer.
+    /// # Errors
+    /// Returns [`Err`] if the observables channel is disconnected.
     pub fn send_observables(&self, obs: StreamObservables) -> Result<()> {
         if let Some(ref tx) = self.obs_tx {
             tx.send(obs).map_err(|_| BarracudaError::ExecutionError {
@@ -106,8 +106,9 @@ impl BidirectionalStream {
     }
 
     /// Record observables and update internal statistics.
-    ///
     /// Use this when the stream both accumulates and optionally forwards.
+    /// # Errors
+    /// Returns [`Err`] if the observables channel is disconnected.
     pub fn record_observables(&mut self, obs: StreamObservables) -> Result<()> {
         self.trajectories += 1;
         if obs.accepted {
@@ -117,7 +118,7 @@ impl BidirectionalStream {
         self.send_observables(obs)
     }
 
-    /// Return (trajectories, accepted, acceptance_rate).
+    /// Return (trajectories, accepted, `acceptance_rate`).
     #[must_use]
     pub fn statistics(&self) -> (usize, usize, f64) {
         let rate = if self.trajectories == 0 {
@@ -156,7 +157,7 @@ pub struct GpuResidentCgConfig {
     pub max_iterations: usize,
     /// Relative residual tolerance for convergence.
     pub tolerance: f64,
-    /// Vector length (e.g. n_flat = vol * 6 for staggered fermions).
+    /// Vector length (e.g. `n_flat` = vol * 6 for staggered fermions).
     pub vector_length: usize,
 }
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! OctaveConv2D - Octave Convolution 2D
+//! `OctaveConv2D` - Octave Convolution 2D
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation
@@ -66,6 +66,8 @@ pub enum OctaveConvPath {
 
 impl OctaveConv2D {
     /// Create octave conv2d with inputs, weights, and path.
+    /// # Errors
+    /// Returns [`Err`] if `kernel_size` or stride is zero, or if `input_high/input_low` is missing for the given path.
     pub fn new(
         input_high: Option<Tensor>,
         input_low: Option<Tensor>,
@@ -127,6 +129,8 @@ impl OctaveConv2D {
     }
 
     /// Run octave convolution on GPU.
+    /// # Errors
+    /// Returns [`Err`] if no input provided, buffer allocation fails, or buffer readback fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = match (&self.input_high, &self.input_low) {
             (Some(h), _) => h.device(),
@@ -135,7 +139,7 @@ impl OctaveConv2D {
                 return Err(BarracudaError::invalid_op(
                     "octave_conv2d",
                     "No input provided",
-                ))
+                ));
             }
         };
 
@@ -373,18 +377,15 @@ impl OctaveConv2D {
                 compilation_options: Default::default(),
             });
 
-        // Create bind group entries - use dummy buffers for None inputs
-        let dummy_buffer = device.create_buffer_f32(1)?;
+        let placeholder = device.placeholder_buffer();
         let input_high_buffer = self
             .input_high
             .as_ref()
-            .map(|t| t.buffer())
-            .unwrap_or(&dummy_buffer);
+            .map_or(placeholder, super::super::tensor::Tensor::buffer);
         let input_low_buffer = self
             .input_low
             .as_ref()
-            .map(|t| t.buffer())
-            .unwrap_or(&dummy_buffer);
+            .map_or(placeholder, super::super::tensor::Tensor::buffer);
 
         let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("octave_conv2d_bind_group"),
@@ -450,16 +451,17 @@ impl OctaveConv2D {
 
 impl Tensor {
     /// Apply octave convolution 2D
-    ///
     /// # Arguments
-    /// - `input_high`: High frequency input [B, C_H, H, W] (optional)
-    /// - `input_low`: Low frequency input [B, C_L, H/2, W/2] (optional)
+    /// - `input_high`: High frequency input [B, `C_H`, H, W] (optional)
+    /// - `input_low`: Low frequency input [B, `C_L`, H/2, W/2] (optional)
     /// - `weight`: Weight tensor
     /// - `bias`: Bias tensor
     /// - `kernel_size`: Kernel size
     /// - `stride`: Stride
     /// - `padding`: Padding
     /// - `path`: Convolution path (H→H, H→L, L→H, L→L)
+    /// # Errors
+    /// Returns [`Err`] if validation fails or buffer allocation/GPU dispatch/readback fails (e.g. device lost).
     pub fn octave_conv2d(
         self,
         input_high: Option<Tensor>,

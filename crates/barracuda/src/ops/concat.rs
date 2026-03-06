@@ -5,7 +5,7 @@ use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// f64 is the canonical source — f32 derived via downcast_f64_to_f32 when needed.
+/// f64 is the canonical source — f32 derived via `downcast_f64_to_f32` when needed.
 const SHADER_F64: &str = include_str!("../shaders/tensor/concat_f64.wgsl");
 
 static SHADER_F32: std::sync::LazyLock<String> =
@@ -19,6 +19,7 @@ pub struct Concat {
 
 impl Concat {
     /// Create a concat operation.
+    #[must_use]
     pub fn new(lhs: Tensor, rhs: Tensor) -> Self {
         Self { lhs, rhs }
     }
@@ -28,6 +29,9 @@ impl Concat {
     }
 
     /// Execute concatenation on GPU.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.lhs.device();
         let size1 = self.lhs.len();
@@ -42,7 +46,7 @@ impl Concat {
             .storage_read(1, self.rhs.buffer())
             .storage_rw(2, &output_buffer)
             .dispatch_1d(output_size as u32)
-            .submit();
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,
@@ -54,6 +58,9 @@ impl Concat {
 
 impl Tensor {
     /// Concatenate with another tensor along the last dimension.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn concat(self, other: &Self) -> Result<Self> {
         Concat::new(self, other.clone()).execute()
     }

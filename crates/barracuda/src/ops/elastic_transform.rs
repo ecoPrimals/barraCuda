@@ -36,6 +36,11 @@ pub struct ElasticTransform {
 
 impl ElasticTransform {
     /// Create elastic transform operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         input: Tensor,
         displacement_x: Tensor,
@@ -106,6 +111,9 @@ impl ElasticTransform {
     }
 
     /// Execute elastic transform on tensor
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -152,7 +160,7 @@ impl ElasticTransform {
             .storage_rw(3, &output_buffer)
             .uniform(4, &params_buffer)
             .dispatch(workgroups_x, workgroups_y, workgroups_z)
-            .submit();
+            .submit()?;
 
         // Create output tensor
         Ok(Tensor::from_buffer(
@@ -191,7 +199,7 @@ mod tests {
             .unwrap();
 
         let result = ElasticTransform::new(input, displacement_x, displacement_y, 1.0, 1.0)
-            .and_then(|t| t.execute())
+            .and_then(super::ElasticTransform::execute)
             .and_then(|t| t.to_vec());
         let Ok(result) = result else { return };
         assert_eq!(result.len(), 2 * 3 * 4 * 4);

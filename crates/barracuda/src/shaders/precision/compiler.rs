@@ -5,8 +5,8 @@
 //! expansion. The "math is universal, precision is silicon" philosophy: one
 //! f64-canonical shader produces variants for all precisions.
 
-use super::templates::remove_conditional_block;
 use super::Precision;
+use super::templates::remove_conditional_block;
 
 /// Downcast an f64 shader source to f32 via text substitution.
 ///
@@ -16,6 +16,7 @@ use super::Precision;
 /// shaders that use basic arithmetic (`+`, `-`, `*`, `/`, `fma`). Shaders
 /// with f64 polyfill calls (`exp_f64`, `sin_f64`, etc.) need
 /// `downcast_f64_to_f32_with_transcendentals` instead.
+#[must_use]
 pub fn downcast_f64_to_f32(f64_source: &str) -> String {
     let result = f64_source
         .replace("_f64(", "\x00_F64_CALL\x00")
@@ -36,6 +37,7 @@ pub fn downcast_f64_to_f32(f64_source: &str) -> String {
 /// as min/max initialization sentinels. These exceed f32 range (~3.4e38) and
 /// cause WGSL parse errors when downcasted. We replace them with the
 /// corresponding f32 extremes.
+#[must_use]
 pub fn clamp_f64_range_literals(source: &str) -> String {
     source
         .replace("-1.7976931348623157e+308", "-3.4028235e+38")
@@ -54,6 +56,7 @@ pub fn clamp_f64_range_literals(source: &str) -> String {
 ///
 /// Same sentinel protection and literal clamping as the f32 downcast.
 /// f16 range is ~65504 so f64-range sentinels need aggressive clamping.
+#[must_use]
 pub fn downcast_f64_to_f16(f64_source: &str) -> String {
     let result = f64_source
         .replace("_f64(", "\x00_F64_CALL\x00")
@@ -70,6 +73,7 @@ pub fn downcast_f64_to_f16(f64_source: &str) -> String {
 
 /// Replace f64-range sentinel literals with f16-safe equivalents.
 /// f16 max is ~65504.
+#[must_use]
 pub fn clamp_f64_range_literals_f16(source: &str) -> String {
     source
         .replace("-1.7976931348623157e+308", "-65504.0")
@@ -90,7 +94,8 @@ pub fn clamp_f64_range_literals_f16(source: &str) -> String {
 /// transcendental calls with native WGSL builtins.
 ///
 /// `exp_f64(x)` → `exp(x)`, `sin_f64(x)` → `sin(x)`, etc.
-/// Use for shaders that call math_f64 polyfill functions.
+/// Use for shaders that call `math_f64` polyfill functions.
+#[must_use]
 pub fn downcast_f64_to_f32_with_transcendentals(f64_source: &str) -> String {
     let base = downcast_f64_to_f32(f64_source);
     base.replace("exp_f64(", "exp(")
@@ -126,7 +131,8 @@ pub fn downcast_f64_to_f32_with_transcendentals(f64_source: &str) -> String {
 /// Shaders that only use `_f64()` function calls work fully with this transform.
 ///
 /// The caller must compile through `compile_shader_df64()` which prepends the
-/// DF64 core library (df64_core.wgsl + df64_transcendentals.wgsl).
+/// DF64 core library (`df64_core.wgsl` + `df64_transcendentals.wgsl`).
+#[must_use]
 pub fn downcast_f64_to_df64(f64_source: &str) -> String {
     let result = f64_source
         // Protect function-name _f64( from constructor replacement
@@ -163,6 +169,7 @@ pub fn downcast_f64_to_df64(f64_source: &str) -> String {
 /// Expand a `{{SCALAR}}`/`{{VEC2}}`/`{{VEC4}}` template for the given precision.
 ///
 /// Handles `{{#if HAS_VEC4}}` conditional blocks.
+#[must_use]
 pub fn expand_template(template: &str, precision: Precision) -> String {
     let mut result = template.to_string();
     result = result.replace("{{SCALAR}}", precision.scalar());

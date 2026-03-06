@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! MarginRankingLoss - Pure WGSL
+//! `MarginRankingLoss` - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -29,6 +29,11 @@ pub struct MarginRankingLoss {
 
 impl MarginRankingLoss {
     /// Create a new margin ranking loss operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input1: Tensor, input2: Tensor, target: Tensor, margin: f32) -> Result<Self> {
         if input1.shape() != input2.shape() {
             return Err(BarracudaError::invalid_op(
@@ -59,6 +64,11 @@ impl MarginRankingLoss {
     }
 
     /// Execute the margin ranking loss operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input1.device();
 

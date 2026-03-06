@@ -12,12 +12,62 @@ use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
 
-/// Maximum tarpc frame length. `usize::MAX` allows arbitrarily large
-/// payloads — tighten this if DoS protection is needed at the transport layer.
-const TARPC_MAX_FRAME_LENGTH: usize = usize::MAX;
+/// Maximum tarpc frame length.
+///
+/// Configurable via `BARRACUDA_IPC_MAX_FRAME_BYTES`.  Defaults to 256 MiB —
+/// large enough for any tensor payload, bounded enough for DoS protection.
+/// The previous default of `usize::MAX` offered no transport-layer protection.
+fn tarpc_max_frame_length() -> usize {
+    const DEFAULT: usize = 256 * 1024 * 1024; // 256 MiB
+    std::env::var("BARRACUDA_IPC_MAX_FRAME_BYTES")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(DEFAULT)
+}
 
-/// Maximum concurrent tarpc connections processed simultaneously.
-const TARPC_MAX_CONCURRENT_CONNECTIONS: usize = 10;
+/// Maximum concurrent tarpc connections.
+///
+/// Configurable via `BARRACUDA_IPC_MAX_CONNECTIONS`.  Defaults to 10.
+fn tarpc_max_concurrent_connections() -> usize {
+    const DEFAULT: usize = 10;
+    std::env::var("BARRACUDA_IPC_MAX_CONNECTIONS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(DEFAULT)
+}
+
+/// Default TCP bind host when no environment or CLI override is provided.
+///
+/// `127.0.0.1` = localhost-only. This is the secure default: the primal
+/// listens only on the loopback interface. External access requires explicit
+/// configuration via `BARRACUDA_IPC_HOST` or `--bind`.
+const DEFAULT_BIND_HOST: &str = "127.0.0.1";
+
+/// Resolve the TCP bind address from the primal's own configuration.
+///
+/// Resolution chain (first match wins):
+/// 1. `explicit` — CLI `--bind` argument
+/// 2. `BARRACUDA_IPC_BIND` — full `host:port` from environment
+/// 3. `BARRACUDA_IPC_HOST` + `BARRACUDA_IPC_PORT` — composed from environment
+/// 4. `{DEFAULT_BIND_HOST}:0` — localhost, ephemeral port
+///
+/// The primal only has self-knowledge. It does not embed assumptions about
+/// network topology or other primals — it simply resolves its own bind
+/// address from its own configuration sources.
+pub fn resolve_bind_address(explicit: Option<&str>) -> String {
+    if let Some(addr) = explicit {
+        return addr.to_string();
+    }
+    if let Ok(addr) = std::env::var("BARRACUDA_IPC_BIND") {
+        return addr;
+    }
+    let host =
+        std::env::var("BARRACUDA_IPC_HOST").unwrap_or_else(|_| DEFAULT_BIND_HOST.to_string());
+    match std::env::var("BARRACUDA_IPC_PORT") {
+        Ok(port) => format!("{host}:{port}"),
+        Err(_) => format!("{host}:0"),
+    }
+}
 
 /// IPC server for barraCuda primal.
 ///
@@ -55,7 +105,7 @@ impl IpcServer {
 
         listener
             .config_mut()
-            .max_frame_length(TARPC_MAX_FRAME_LENGTH);
+            .max_frame_length(tarpc_max_frame_length());
 
         let server = BarraCudaServer::new(Arc::clone(&self.primal));
 
@@ -69,7 +119,7 @@ impl IpcServer {
                     async {}
                 })
             })
-            .buffer_unordered(TARPC_MAX_CONCURRENT_CONNECTIONS)
+            .buffer_unordered(tarpc_max_concurrent_connections())
             .for_each(|()| async {})
             .await;
 
@@ -124,7 +174,9 @@ impl IpcServer {
                         let (reader, mut writer) = stream.into_split();
                         let mut lines = BufReader::new(reader).lines();
                         while let Ok(Some(line)) = lines.next_line().await {
-                            let response = handle_line(&primal, &line).await;
+                            let Some(response) = handle_line(&primal, &line).await else {
+                                continue;
+                            };
                             let mut json = serde_json::to_string(&response).unwrap_or_else(|_| {
                                 SERIALIZATION_ERROR.to_string()
                             });
@@ -169,7 +221,9 @@ async fn handle_stream(primal: Arc<BarraCudaPrimal>, stream: tokio::net::TcpStre
     let mut lines = BufReader::new(reader).lines();
 
     while let Ok(Some(line)) = lines.next_line().await {
-        let response = handle_line(&primal, &line).await;
+        let Some(response) = handle_line(&primal, &line).await else {
+            continue;
+        };
         let mut json =
             serde_json::to_string(&response).unwrap_or_else(|_| SERIALIZATION_ERROR.to_string());
         json.push('\n');
@@ -185,11 +239,17 @@ async fn shutdown_signal() {
 
     #[cfg(unix)]
     {
-        let mut sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
-            .expect("failed to register SIGTERM handler");
-        tokio::select! {
-            _ = ctrl_c => {}
-            _ = sigterm.recv() => {}
+        match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+            Ok(mut sigterm) => {
+                tokio::select! {
+                    _ = ctrl_c => {}
+                    _ = sigterm.recv() => {}
+                }
+            }
+            Err(e) => {
+                tracing::warn!("failed to register SIGTERM handler: {e}");
+                let _ = ctrl_c.await;
+            }
         }
     }
 
@@ -200,18 +260,24 @@ async fn shutdown_signal() {
 }
 
 /// Parse a single line of JSON-RPC and dispatch to the method handler.
-async fn handle_line(primal: &BarraCudaPrimal, line: &str) -> JsonRpcResponse {
+///
+/// Returns `None` for notifications (requests without `id`), per JSON-RPC 2.0
+/// spec: "The Server MUST NOT reply to a Notification".
+async fn handle_line(primal: &BarraCudaPrimal, line: &str) -> Option<JsonRpcResponse> {
     let request: JsonRpcRequest = match serde_json::from_str(line) {
         Ok(r) => r,
-        Err(_) => return JsonRpcResponse::parse_error(),
+        Err(_) => return Some(JsonRpcResponse::parse_error()),
     };
 
     if let Err(err_resp) = request.validate() {
-        return err_resp;
+        return Some(err_resp);
     }
 
-    let id = request.id.clone().unwrap_or(serde_json::Value::Null);
-    methods::dispatch(primal, &request.method, &request.params, id).await
+    let id = match request.id {
+        Some(ref v) if !v.is_null() => v.clone(),
+        _ => return None,
+    };
+    Some(methods::dispatch(primal, &request.method, &request.params, id).await)
 }
 
 #[cfg(test)]
@@ -223,7 +289,7 @@ mod tests {
     async fn test_handle_valid_request() {
         let primal = BarraCudaPrimal::new();
         let line = r#"{"jsonrpc":"2.0","method":"barracuda.device.list","params":{},"id":1}"#;
-        let resp = handle_line(&primal, line).await;
+        let resp = handle_line(&primal, line).await.expect("non-notification");
         assert!(resp.result.is_some());
         assert_eq!(resp.id, serde_json::json!(1));
     }
@@ -231,7 +297,9 @@ mod tests {
     #[tokio::test]
     async fn test_handle_parse_error() {
         let primal = BarraCudaPrimal::new();
-        let resp = handle_line(&primal, "not json").await;
+        let resp = handle_line(&primal, "not json")
+            .await
+            .expect("parse error returns response");
         assert!(resp.error.is_some());
         assert_eq!(resp.error.unwrap().code, super::super::jsonrpc::PARSE_ERROR);
     }
@@ -240,7 +308,27 @@ mod tests {
     async fn test_handle_unknown_method() {
         let primal = BarraCudaPrimal::new();
         let line = r#"{"jsonrpc":"2.0","method":"nonexistent","params":{},"id":2}"#;
-        let resp = handle_line(&primal, line).await;
+        let resp = handle_line(&primal, line).await.expect("non-notification");
         assert!(resp.error.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_notification_no_response() {
+        let primal = BarraCudaPrimal::new();
+        let line = r#"{"jsonrpc":"2.0","method":"barracuda.device.list","params":{}}"#;
+        assert!(
+            handle_line(&primal, line).await.is_none(),
+            "notification must not produce response"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_notification_null_id_no_response() {
+        let primal = BarraCudaPrimal::new();
+        let line = r#"{"jsonrpc":"2.0","method":"barracuda.device.list","params":{},"id":null}"#;
+        assert!(
+            handle_line(&primal, line).await.is_none(),
+            "null id is a notification"
+        );
     }
 }

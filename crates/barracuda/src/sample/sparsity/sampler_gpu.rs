@@ -1,18 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! GPU path for SparsitySampler algorithm.
+//! GPU path for `SparsitySampler` algorithm.
 
 use crate::optimize::eval_record::EvaluationCache;
 use crate::sample::latin_hypercube;
-use crate::surrogate::adaptive::train_adaptive_gpu;
 use crate::surrogate::RBFSurrogate;
+use crate::surrogate::adaptive::train_adaptive_gpu;
 
+use super::SparsitySamplerConfig;
 use super::filter::compute_surrogate_rmse;
 use super::result::{IterationResult, SparsitySamplerResult};
 use super::sampler::run_nm_batch;
-use super::SparsitySamplerConfig;
 use crate::error::{BarracudaError, Result};
 
-/// Run the SparsitySampler algorithm with GPU-accelerated surrogate training.
+/// Run the `SparsitySampler` algorithm with GPU-accelerated surrogate training.
+///
+/// # Errors
+///
+/// Returns [`Err`] if bounds is empty, `n_initial` < 2, `gpu_device` is missing when required, or if LHS/surrogate/NM fails.
 pub async fn sparsity_sampler_gpu<F>(
     f: F,
     bounds: &[(f64, f64)],
@@ -63,52 +67,23 @@ where
                         .to_string(),
                 })?
                 .clone();
-            match train_adaptive_gpu(&x_data, &y_data, config.kernel, config.smoothing, device)
-                .await
+            if let Ok((s, _diag)) =
+                train_adaptive_gpu(&x_data, &y_data, config.kernel, config.smoothing, device).await
             {
-                Ok((s, _diag)) => (s, true),
-                Err(_) => {
-                    let dev = config
-                        .gpu_device
-                        .as_ref()
-                        .ok_or_else(|| BarracudaError::InvalidInput {
-                            message: "gpu_device required for fallback".to_string(),
-                        })?
-                        .clone();
-                    match RBFSurrogate::train(
-                        dev,
-                        &x_data,
-                        &y_data,
-                        config.kernel,
-                        config.smoothing,
-                    ) {
-                        Ok(s) => (s, false),
-                        Err(_) => {
-                            let nm_result = run_nm_batch(&f, bounds, config, iter, &mut cache)?;
-                            iteration_results.push(IterationResult {
-                                iteration: iter,
-                                best_f: nm_result.f_best,
-                                n_new_evals: cache.len() - iter_start_evals,
-                                total_evals: cache.len(),
-                                surrogate_error: None,
-                                used_gpu: false,
-                            });
-                            continue;
-                        }
-                    }
-                }
-            }
-        } else {
-            let dev = config
-                .gpu_device
-                .as_ref()
-                .ok_or_else(|| BarracudaError::InvalidInput {
-                    message: "gpu_device must be set for sparsity_sampler_gpu".to_string(),
-                })?
-                .clone();
-            match RBFSurrogate::train(dev, &x_data, &y_data, config.kernel, config.smoothing) {
-                Ok(s) => (s, false),
-                Err(_) => {
+                (s, true)
+            } else {
+                let dev = config
+                    .gpu_device
+                    .as_ref()
+                    .ok_or_else(|| BarracudaError::InvalidInput {
+                        message: "gpu_device required for fallback".to_string(),
+                    })?
+                    .clone();
+                if let Ok(s) =
+                    RBFSurrogate::train(dev, &x_data, &y_data, config.kernel, config.smoothing)
+                {
+                    (s, false)
+                } else {
                     let nm_result = run_nm_batch(&f, bounds, config, iter, &mut cache)?;
                     iteration_results.push(IterationResult {
                         iteration: iter,
@@ -120,6 +95,30 @@ where
                     });
                     continue;
                 }
+            }
+        } else {
+            let dev = config
+                .gpu_device
+                .as_ref()
+                .ok_or_else(|| BarracudaError::InvalidInput {
+                    message: "gpu_device must be set for sparsity_sampler_gpu".to_string(),
+                })?
+                .clone();
+            if let Ok(s) =
+                RBFSurrogate::train(dev, &x_data, &y_data, config.kernel, config.smoothing)
+            {
+                (s, false)
+            } else {
+                let nm_result = run_nm_batch(&f, bounds, config, iter, &mut cache)?;
+                iteration_results.push(IterationResult {
+                    iteration: iter,
+                    best_f: nm_result.f_best,
+                    n_new_evals: cache.len() - iter_start_evals,
+                    total_evals: cache.len(),
+                    surrogate_error: None,
+                    used_gpu: false,
+                });
+                continue;
             }
         };
 
@@ -185,7 +184,7 @@ where
         None => {
             return Err(BarracudaError::Internal(
                 "No evaluations recorded".to_string(),
-            ))
+            ));
         }
     };
 

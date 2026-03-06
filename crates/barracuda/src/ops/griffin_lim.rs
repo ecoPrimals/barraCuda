@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! GriffinLim - Phase reconstruction from magnitude spectrogram
+//! `GriffinLim` - Phase reconstruction from magnitude spectrogram
 //!
 //! Iteratively estimates phase for ISTFT.
 //! Used in audio synthesis from spectrograms.
@@ -21,7 +21,7 @@ static SHADER_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(SHADER_F64)
 });
 
-/// GriffinLim operation
+/// `GriffinLim` operation
 pub struct GriffinLim {
     magnitude: Tensor,
     n_frames: usize,
@@ -33,6 +33,11 @@ pub struct GriffinLim {
 
 impl GriffinLim {
     /// Create a new Griffin-Lim operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         magnitude: Tensor,
         n_frames: usize,
@@ -91,6 +96,11 @@ impl GriffinLim {
     /// Execute the Griffin-Lim operation
     /// Note: This is a simplified version. Full implementation would require
     /// iterative STFT/ISTFT cycles which are complex to implement in GPU.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.magnitude.device();
 

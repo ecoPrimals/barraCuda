@@ -30,13 +30,7 @@ fn test_cg_small() {
     // Verify: Ax = b
     let ax = a.matvec(&result.x).unwrap();
     for (i, (&axi, &bi)) in ax.iter().zip(b.iter()).enumerate() {
-        assert!(
-            (axi - bi).abs() < 1e-8,
-            "Mismatch at {}: {} vs {}",
-            i,
-            axi,
-            bi
-        );
+        assert!((axi - bi).abs() < 1e-8, "Mismatch at {i}: {axi} vs {bi}");
     }
 }
 

@@ -5,25 +5,26 @@
 //! **Why this file is large (~700 lines)**: Single coherent domain—Anderson
 //! localization. Contains Hamiltonian construction (1D–4D, correlated disorder),
 //! Lyapunov exponent (transfer matrix), level-spacing statistics, Wegner block
-//! renormalization, and LcgRng. All algorithms serve the same physics; splitting
+//! renormalization, and `LcgRng`. All algorithms serve the same physics; splitting
 //! would fragment a well-defined algorithm family.
 //! with random potential, plus transfer-matrix Lyapunov exponent.
 //!
 //! 1D/2D: all states localized (Abrahams et al. 1979).
-//! 3D: genuine metal-insulator transition at W_c ≈ 16.5.
+//! 3D: genuine metal-insulator transition at `W_c` ≈ 16.5.
 //!
 //! Provenance: hotSpring v0.6.0 (Kachkovskiy spectral theory)
 
 use super::sparse::SpectralCsrMatrix;
 
 /// Construct the 1D Anderson Hamiltonian on N sites with periodic boundary
-/// conditions: H = -Δ + V, where V_i ~ Uniform[-W/2, W/2].
+/// conditions: H = -Δ + V, where `V_i` ~ Uniform[-W/2, W/2].
 ///
-/// Returns (diagonal, off_diagonal) for the tridiagonal representation.
+/// Returns (diagonal, `off_diagonal`) for the tridiagonal representation.
 /// The hopping is t = 1, so the clean bandwidth is [-2, 2].
 ///
 /// # Provenance
 /// Anderson (1958), Phys. Rev. 109, 1492
+#[must_use]
 pub fn anderson_hamiltonian(n: usize, disorder: f64, seed: u64) -> (Vec<f64>, Vec<f64>) {
     let mut rng = LcgRng::new(seed);
 
@@ -35,6 +36,7 @@ pub fn anderson_hamiltonian(n: usize, disorder: f64, seed: u64) -> (Vec<f64>, Ve
 
 /// Generate the random potential for the Anderson model (for use with
 /// transfer matrix methods that need the raw potential, not the tridiag form).
+#[must_use]
 pub fn anderson_potential(n: usize, disorder: f64, seed: u64) -> Vec<f64> {
     let mut rng = LcgRng::new(seed);
     (0..n).map(|_| disorder * (rng.uniform() - 0.5)).collect()
@@ -42,11 +44,11 @@ pub fn anderson_potential(n: usize, disorder: f64, seed: u64) -> Vec<f64> {
 
 /// Compute the Lyapunov exponent γ(E) via the transfer matrix method.
 ///
-/// For the 1D Schrödinger equation ψ_{n+1} + ψ_{n-1} + V_n ψ_n = E ψ_n,
+/// For the 1D Schrödinger equation ψ_{n+1} + ψ_{n-1} + `V_n` `ψ_n` = E `ψ_n`,
 /// the transfer matrix at site n is:
-///   T_n = [[E − V_n, −1], [1, 0]]
+///   `T_n` = [[E − `V_n`, −1], [1, 0]]
 ///
-/// The Lyapunov exponent γ = lim_{N→∞} (1/N) ln ‖T_N ⋯ T_1‖ measures
+/// The Lyapunov exponent γ = lim_{N→∞} (1/N) ln ‖`T_N` ⋯ `T_1`‖ measures
 /// the exponential growth rate. γ > 0 implies localization.
 ///
 /// Uses iterative renormalization to prevent overflow.
@@ -54,6 +56,7 @@ pub fn anderson_potential(n: usize, disorder: f64, seed: u64) -> Vec<f64> {
 /// # Known results
 /// - Anderson model, E=0, small W: γ(0) ≈ W²/96 (Kappus-Wegner 1981)
 /// - Almost-Mathieu, irrational α: γ(E) = max(0, ln|λ|) a.e. (Herman 1983, Avila 2015)
+#[must_use]
 pub fn lyapunov_exponent(potential: &[f64], energy: f64) -> f64 {
     let n = potential.len();
     if n == 0 {
@@ -81,6 +84,7 @@ pub fn lyapunov_exponent(potential: &[f64], energy: f64) -> f64 {
 }
 
 /// Compute Lyapunov exponent averaged over multiple disorder realizations.
+#[must_use]
 pub fn lyapunov_averaged(
     n_sites: usize,
     disorder: f64,
@@ -100,17 +104,18 @@ pub fn lyapunov_averaged(
 /// with open boundary conditions.
 ///
 /// H = -Δ₂D + V, where Δ₂D is the 2D discrete Laplacian (4 nearest
-/// neighbors) and V_i ~ Uniform[-W/2, W/2].
+/// neighbors) and `V_i` ~ Uniform[-W/2, W/2].
 ///
 /// The clean bandwidth is [-4, 4] (hopping t=1, coordination number z=4).
 /// With disorder W, spectrum lies in [-4-W/2, 4+W/2].
 ///
-/// Returns a SpectralCsrMatrix of dimension N = Lx × Ly.
+/// Returns a `SpectralCsrMatrix` of dimension N = Lx × Ly.
 ///
 /// # Provenance
 /// Abrahams, Anderson, Licciardello, Ramakrishnan (1979) "Scaling Theory
 /// of Localization in an Open and Topologically Disordered System"
 /// Phys. Rev. Lett. 42, 673
+#[must_use]
 pub fn anderson_2d(lx: usize, ly: usize, disorder: f64, seed: u64) -> SpectralCsrMatrix {
     let n = lx * ly;
     let mut rng = LcgRng::new(seed);
@@ -162,6 +167,7 @@ pub fn anderson_2d(lx: usize, ly: usize, disorder: f64, seed: u64) -> SpectralCs
 }
 
 /// Construct the clean 2D tight-binding Hamiltonian (no disorder).
+#[must_use]
 pub fn clean_2d_lattice(lx: usize, ly: usize) -> SpectralCsrMatrix {
     anderson_2d(lx, ly, 0.0, 0)
 }
@@ -170,26 +176,27 @@ pub fn clean_2d_lattice(lx: usize, ly: usize) -> SpectralCsrMatrix {
 /// with open boundary conditions.
 ///
 /// H = -Δ₃D + V, where Δ₃D is the 3D discrete Laplacian (6 nearest
-/// neighbors) and V_i ~ Uniform[-W/2, W/2].
+/// neighbors) and `V_i` ~ Uniform[-W/2, W/2].
 ///
 /// The clean bandwidth is [-6, 6] (hopping t=1, coordination number z=6).
 /// With disorder W, spectrum lies in [-6-W/2, 6+W/2].
 ///
 /// In 3D, a genuine **Anderson metal-insulator transition** exists at
-/// critical disorder W_c ≈ 16.5 (band center, orthogonal class):
-/// - W < W_c: extended states near band center, localized at band edges
+/// critical disorder `W_c` ≈ 16.5 (band center, orthogonal class):
+/// - W < `W_c`: extended states near band center, localized at band edges
 ///   → **mobility edge** separates extended from localized states
-/// - W > W_c: all states localized
+/// - W > `W_c`: all states localized
 ///
 /// This is qualitatively different from 1D/2D where all states are
 /// localized for any nonzero disorder.
 ///
-/// Returns a SpectralCsrMatrix of dimension N = Lx × Ly × Lz.
+/// Returns a `SpectralCsrMatrix` of dimension N = Lx × Ly × Lz.
 ///
 /// # Provenance
 /// Anderson (1958) Phys. Rev. 109, 1492
 /// Abrahams, Anderson, Licciardello, Ramakrishnan (1979) Phys. Rev. Lett. 42, 673
-/// Slevin & Ohtsuki (1999) Phys. Rev. Lett. 82, 382 [W_c ≈ 16.5]
+/// Slevin & Ohtsuki (1999) Phys. Rev. Lett. 82, 382 [`W_c` ≈ 16.5]
+#[must_use]
 pub fn anderson_3d(lx: usize, ly: usize, lz: usize, disorder: f64, seed: u64) -> SpectralCsrMatrix {
     let n = lx * ly * lz;
     let mut rng = LcgRng::new(seed);
@@ -248,6 +255,7 @@ pub fn anderson_3d(lx: usize, ly: usize, lz: usize, disorder: f64, seed: u64) ->
 }
 
 /// Construct the clean 3D tight-binding Hamiltonian (no disorder).
+#[must_use]
 pub fn clean_3d_lattice(l: usize) -> SpectralCsrMatrix {
     anderson_3d(l, l, l, 0.0, 0)
 }
@@ -264,6 +272,7 @@ pub fn clean_3d_lattice(l: usize) -> SpectralCsrMatrix {
 /// # Provenance
 /// Adapted from wetSpring `validate_correlated_disorder.rs` (Feb 2026).
 /// Motivated by Méndez-Bermúdez et al. (2014), J. Phys. A 47, 125101.
+#[must_use]
 pub fn anderson_3d_correlated(
     l: usize,
     disorder: f64,
@@ -399,6 +408,7 @@ pub struct AndersonSweepPoint {
 /// # Provenance
 /// Adapted from wetSpring `validate_finite_size_scaling_v2.rs` (Feb 2026).
 /// Oganesyan & Huse (2007), Phys. Rev. B 75, 155111.
+#[must_use]
 pub fn anderson_sweep_averaged(
     l: usize,
     w_min: f64,
@@ -447,12 +457,13 @@ pub fn anderson_sweep_averaged(
     results
 }
 
-/// Find the critical disorder W_c by linear interpolation of the ⟨r⟩(W)
+/// Find the critical disorder `W_c` by linear interpolation of the ⟨r⟩(W)
 /// sweep through the GOE–Poisson midpoint.
 ///
 /// Returns `None` if the midpoint is never crossed.
 ///
-/// The standard midpoint is (r_GOE + r_Poisson) / 2 ≈ (0.5307 + 0.3863) / 2 ≈ 0.4585.
+/// The standard midpoint is (`r_GOE` + `r_Poisson`) / 2 ≈ (0.5307 + 0.3863) / 2 ≈ 0.4585.
+#[must_use]
 pub fn find_w_c(sweep: &[AndersonSweepPoint], midpoint: f64) -> Option<f64> {
     let mut last = None;
     for i in 1..sweep.len() {
@@ -470,6 +481,7 @@ pub fn find_w_c(sweep: &[AndersonSweepPoint], midpoint: f64) -> Option<f64> {
 ///
 /// Combines `anderson_hamiltonian` + `find_all_eigenvalues` into a single call
 /// for the common case of studying spectral statistics.
+#[must_use]
 pub fn anderson_eigenvalues(n: usize, disorder: f64, seed: u64) -> Vec<f64> {
     let (diag, off) = anderson_hamiltonian(n, disorder, seed);
     super::tridiag::find_all_eigenvalues(&diag, &off)
@@ -479,21 +491,22 @@ pub fn anderson_eigenvalues(n: usize, disorder: f64, seed: u64) -> Vec<f64> {
 /// with open boundary conditions.
 ///
 /// H = -Δ₄D + V, where Δ₄D is the 4D discrete Laplacian (8 nearest
-/// neighbors) and V_i ~ Uniform[-W/2, W/2].
+/// neighbors) and `V_i` ~ Uniform[-W/2, W/2].
 ///
 /// The clean bandwidth is [-8, 8] (hopping t=1, coordination number z=8).
 /// With disorder W, spectrum lies in [-8-W/2, 8+W/2].
 ///
-/// In 4D the upper critical dimension d_c=4 coincides with the lattice
+/// In 4D the upper critical dimension `d_c=4` coincides with the lattice
 /// dimension, producing logarithmic corrections to the metal-insulator
 /// transition. Wegner's block renormalization group can be studied directly
 /// by coarse-graining blocks of 2⁴ = 16 sites.
 ///
-/// Returns a SpectralCsrMatrix of dimension N = L⁴.
+/// Returns a `SpectralCsrMatrix` of dimension N = L⁴.
 ///
 /// # Provenance
 /// hotSpring Exp 026 (4D Anderson + Wegner block proxy)
 /// Wegner (1976) Z. Phys. B 25, 327
+#[must_use]
 pub fn anderson_4d(l: usize, disorder: f64, seed: u64) -> SpectralCsrMatrix {
     let n = l * l * l * l;
     let mut rng = LcgRng::new(seed);
@@ -560,6 +573,7 @@ pub fn anderson_4d(l: usize, disorder: f64, seed: u64) -> SpectralCsrMatrix {
 }
 
 /// Construct the clean 4D tight-binding Hamiltonian (no disorder).
+#[must_use]
 pub fn clean_4d_lattice(l: usize) -> SpectralCsrMatrix {
     anderson_4d(l, 0.0, 0)
 }
@@ -573,10 +587,11 @@ pub fn clean_4d_lattice(l: usize) -> SpectralCsrMatrix {
 /// diagonal elements. The effective hopping between adjacent blocks is the
 /// mean of the 2⁴⁻¹ = 8 inter-block bonds per face.
 ///
-/// Returns a SpectralCsrMatrix of dimension (L/2)⁴.
+/// Returns a `SpectralCsrMatrix` of dimension (L/2)⁴.
 ///
 /// # Panics
 /// Panics if `l` is not even.
+#[must_use]
 pub fn wegner_block_4d(original: &SpectralCsrMatrix, l: usize) -> SpectralCsrMatrix {
     assert!(
         l >= 2 && l.is_multiple_of(2),

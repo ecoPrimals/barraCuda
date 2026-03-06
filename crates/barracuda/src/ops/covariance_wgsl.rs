@@ -8,10 +8,10 @@
 //! - PCA preprocessing (all springs)
 //! - Kalman filters (airSpring sensor fusion)
 //!
-//! **Note**: f32 precision. For f64, use manual computation with weighted_dot_f64.
+//! **Note**: f32 precision. For f64, use manual computation with `weighted_dot_f64`.
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -37,28 +37,40 @@ impl Covariance {
     }
 
     /// Create a new Covariance orchestrator
+    /// # Errors
+    /// Never returns an error; always returns `Ok`.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Compute sample covariance between two vectors (ddof=1)
-    ///
     /// # Arguments
     /// * `x` - First vector (f32)
     /// * `y` - Second vector (f32)
-    ///
     /// # Returns
     /// Sample covariance
+    /// # Errors
+    /// Returns [`Err`] if `x.len() != y.len()` (invalid input), if buffer
+    /// allocation fails, or if buffer mapping fails (e.g. device lost,
+    /// mapping channel closed).
     pub fn covariance(&self, x: &[f32], y: &[f32]) -> Result<f32> {
         self.covariance_with_ddof(x, y, 1)
     }
 
     /// Compute population covariance (ddof=0)
+    /// # Errors
+    /// Returns [`Err`] if `x.len() != y.len()` or `n <= ddof` (invalid input),
+    /// if buffer allocation fails, or if buffer mapping fails (e.g. device lost,
+    /// mapping channel closed).
     pub fn population_covariance(&self, x: &[f32], y: &[f32]) -> Result<f32> {
         self.covariance_with_ddof(x, y, 0)
     }
 
     /// Compute covariance with specified degrees of freedom
+    /// # Errors
+    /// Returns [`Err`] if `x.len() != y.len()` or `n <= ddof` (invalid input),
+    /// if buffer allocation fails, or if buffer mapping fails (e.g. device lost,
+    /// mapping channel closed).
     pub fn covariance_with_ddof(&self, x: &[f32], y: &[f32], ddof: u32) -> Result<f32> {
         let n = x.len();
         if y.len() != n {
@@ -77,16 +89,25 @@ impl Covariance {
     }
 
     /// Compute sample variance of a single vector (ddof=1)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails or if buffer mapping fails
+    /// (e.g. device lost, mapping channel closed).
     pub fn variance(&self, x: &[f32]) -> Result<f32> {
         self.covariance_with_ddof(x, x, 1)
     }
 
     /// Compute population variance (ddof=0)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails or if buffer mapping fails
+    /// (e.g. device lost, mapping channel closed).
     pub fn population_variance(&self, x: &[f32]) -> Result<f32> {
         self.covariance_with_ddof(x, x, 0)
     }
 
     /// Compute standard deviation (sqrt of variance)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails or if buffer mapping fails
+    /// (e.g. device lost, mapping channel closed).
     pub fn std(&self, x: &[f32]) -> Result<f32> {
         Ok(self.variance(x)?.sqrt())
     }
@@ -148,7 +169,7 @@ impl Covariance {
             .storage_rw(2, &output_buf)
             .uniform(3, &params_buf)
             .dispatch(1, 1, 1)
-            .submit();
+            .submit()?;
 
         let staging = self.device.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Covariance Staging"),
@@ -187,7 +208,7 @@ mod tests {
         // Mean = 5, Var = Σ(x-5)² / (n-1) = (9+1+1+1+0+0+4+16) / 7 = 32/7 ≈ 4.57
 
         let var = op.variance(&x).unwrap();
-        assert!((var - 4.571428).abs() < 0.01, "Expected ~4.57, got {}", var);
+        assert!((var - 4.571428).abs() < 0.01, "Expected ~4.57, got {var}");
     }
 
     #[test]
@@ -199,7 +220,7 @@ mod tests {
         let y: Vec<f32> = (0..100).map(|i| i as f32 * 2.0).collect();
 
         let cov = op.covariance(&x, &y).unwrap();
-        assert!(cov > 0.0, "Expected positive covariance, got {}", cov);
+        assert!(cov > 0.0, "Expected positive covariance, got {cov}");
     }
 
     #[test]
@@ -211,7 +232,7 @@ mod tests {
         let y: Vec<f32> = (0..100).map(|i| -(i as f32)).collect();
 
         let cov = op.covariance(&x, &y).unwrap();
-        assert!(cov < 0.0, "Expected negative covariance, got {}", cov);
+        assert!(cov < 0.0, "Expected negative covariance, got {cov}");
     }
 
     #[test]
@@ -227,9 +248,7 @@ mod tests {
         // Sample variance should be larger (n-1 denominator vs n)
         assert!(
             sample_var > pop_var,
-            "Sample var ({}) should be > pop var ({})",
-            sample_var,
-            pop_var
+            "Sample var ({sample_var}) should be > pop var ({pop_var})"
         );
     }
 }

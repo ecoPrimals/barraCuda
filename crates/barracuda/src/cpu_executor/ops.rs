@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! CPU op dispatch - MathOp execution logic
+//! CPU op dispatch - `MathOp` execution logic
 
 use super::executor::CpuExecutor;
 use crate::error::Result;
@@ -18,7 +18,12 @@ pub(super) fn dispatch(
         });
     }
 
-    use MathOp::*;
+    use MathOp::{
+        Abs, Add, AvgPool2D, BatchMatMul, Broadcast, Concat, Conv2D, Cos, Div, Exp, GELU, Log,
+        MatMul, Max, MaxPool2D, Min, Mul, Negate, Pow, ReLU, Reciprocal, ReduceMax, ReduceMean,
+        ReduceMin, ReduceProd, ReduceSum, Reshape, Sigmoid, Sin, Softmax, Split, Sqrt, Square,
+        Squeeze, Sub, Tan, Tanh, Transpose, Unsqueeze,
+    };
     match op {
         ReLU | Sigmoid | Tanh | GELU | Negate | Abs | Square | Sqrt | Reciprocal | Exp | Log
         | Sin | Cos | Tan => {
@@ -107,7 +112,7 @@ pub(super) fn dispatch(
         }
         Softmax { .. } => {
             let data = CpuExecutor::read_f32(inputs[0].as_ref())?;
-            let max_val = data.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+            let max_val = data.iter().copied().fold(f32::NEG_INFINITY, f32::max);
             let exp_vals: Vec<f32> = data.iter().map(|&x| (x - max_val).exp()).collect();
             let sum: f32 = exp_vals.iter().sum();
             let result: Vec<f32> = exp_vals.iter().map(|&x| x / sum).collect();

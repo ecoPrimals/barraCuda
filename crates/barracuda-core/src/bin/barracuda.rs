@@ -5,9 +5,9 @@
 //! - One binary named after the primal
 //! - Subcommands: `server`, `doctor`, `validate`, `version`
 
+use barracuda_core::BarraCudaPrimal;
 use barracuda_core::health::PrimalHealth;
 use barracuda_core::lifecycle::PrimalLifecycle;
-use barracuda_core::BarraCudaPrimal;
 use clap::{Parser, Subcommand};
 use std::sync::Arc;
 
@@ -107,17 +107,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 return Ok(());
             }
 
-            let bind_addr = bind.unwrap_or_else(|| {
-                if let Ok(addr) = std::env::var("BARRACUDA_IPC_BIND") {
-                    return addr;
-                }
-                let host =
-                    std::env::var("BARRACUDA_IPC_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-                std::env::var("BARRACUDA_IPC_PORT")
-                    .map(|port| format!("{host}:{port}"))
-                    .unwrap_or_else(|_| format!("{host}:0"))
-            });
+            let bind_addr = barracuda_core::ipc::transport::resolve_bind_address(bind.as_deref());
+
+            // File-based discovery: write transport info for peer primals.
+            write_discovery_file(&bind_addr, tarpc_bind.as_deref());
+
             server.serve_tcp(&bind_addr).await?;
+
+            remove_discovery_file();
         }
 
         Commands::Doctor => {
@@ -203,4 +200,51 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     }
 
     Ok(())
+}
+
+/// Write a discovery file so peer primals can find barraCuda.
+///
+/// File path: `$XDG_RUNTIME_DIR/ecoPrimals/barracuda-core.json`
+fn write_discovery_file(bind_addr: &str, tarpc_addr: Option<&str>) {
+    let Some(dir) = discovery_dir() else { return };
+    if std::fs::create_dir_all(&dir).is_err() {
+        return;
+    }
+    let path = dir.join("barracuda-core.json");
+
+    let discovery = serde_json::json!({
+        "primal": "barraCuda",
+        "pid": std::process::id(),
+        "transports": {
+            "jsonrpc": bind_addr,
+            "tarpc": tarpc_addr.unwrap_or(""),
+        },
+        "provides": ["gpu.compute", "tensor.ops", "gpu.dispatch"],
+        "requires": [{ "id": "shader.compile", "optional": true }],
+    });
+
+    match std::fs::write(
+        &path,
+        serde_json::to_string_pretty(&discovery).unwrap_or_default(),
+    ) {
+        Ok(()) => tracing::info!(path = %path.display(), "wrote discovery file"),
+        Err(e) => tracing::warn!(error = %e, "failed to write discovery file"),
+    }
+}
+
+/// Remove the discovery file on shutdown.
+fn remove_discovery_file() {
+    if let Some(dir) = discovery_dir() {
+        let path = dir.join("barracuda-core.json");
+        if path.exists() {
+            let _ = std::fs::remove_file(&path);
+        }
+    }
+}
+
+/// The shared discovery directory for all ecoPrimals.
+fn discovery_dir() -> Option<std::path::PathBuf> {
+    std::env::var("XDG_RUNTIME_DIR")
+        .ok()
+        .map(|d| std::path::PathBuf::from(d).join("ecoPrimals"))
 }

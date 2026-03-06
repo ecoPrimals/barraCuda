@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! High-level NautilusBrain API for physics observables.
+//! High-level `NautilusBrain` API for physics observables.
 
 use serde::{Deserialize, Serialize};
 
@@ -67,6 +67,7 @@ impl DriftMonitor {
             .push((pop_size as f64 * generation.best_fitness) / (1.0 + generation.best_fitness));
     }
     /// Returns true if recent generations show stagnation.
+    #[must_use]
     pub fn is_drifting(&self) -> bool {
         self.ne_s_history.len() >= self.window
             && self.ne_s_history[self.ne_s_history.len() - self.window..]
@@ -113,6 +114,7 @@ pub struct NautilusBrain {
 
 impl NautilusBrain {
     /// Create a new brain with the given config and instance name.
+    #[must_use]
     pub fn new(config: NautilusBrainConfig, instance_name: &str) -> Self {
         let shell = NautilusShell::from_seed(
             config.shell_config.clone(),
@@ -158,6 +160,7 @@ impl NautilusBrain {
     }
 
     /// Predict (CG iters, plaquette, acceptance) for a given β.
+    #[must_use]
     pub fn predict_dynamical(
         &self,
         beta: f64,
@@ -173,6 +176,7 @@ impl NautilusBrain {
         (pred.len() >= 3).then(|| (pred[0], pred[1], pred[2]))
     }
     /// Score candidate β values by predicted quality.
+    #[must_use]
     pub fn screen_candidates(&self, betas: &[f64]) -> Vec<(f64, f64)> {
         betas
             .iter()
@@ -180,8 +184,7 @@ impl NautilusBrain {
                 (
                     b,
                     self.predict_dynamical(b, None)
-                        .map(|(a, x, c)| (a * a + x * x + c * c) / 3.0)
-                        .unwrap_or(0.0),
+                        .map_or(0.0, |(a, x, c)| (a * a + x * x + c * c) / 3.0),
                 )
             })
             .collect()
@@ -219,14 +222,19 @@ impl NautilusBrain {
         edges
     }
     /// Returns true if the shell is drifting (stagnating).
+    #[must_use]
     pub fn is_drifting(&self) -> bool {
         self.drift.is_drifting()
     }
     /// Serialize brain to JSON.
+    /// # Errors
+    /// Returns [`Err`] if JSON serialization fails.
     pub fn to_json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string(self)
     }
     /// Deserialize brain from JSON.
+    /// # Errors
+    /// Returns [`Err`] if JSON parsing fails.
     pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(json)
     }

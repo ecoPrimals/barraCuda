@@ -432,6 +432,50 @@ fn batched_compute(
             if (et0 < zero) { et0 = zero; }
             output[batch_idx] = et0;
         }
+        case 17u: {
+            // SCS-CN Runoff (USDA TR-55): Q = (P - Ia)² / (P - Ia + S)
+            // input: [P(mm), CN, Ia_ratio]
+            // S = 25400/CN - 254, Ia = Ia_ratio × S
+            let p = input[base + 0u];
+            let cn = input[base + 1u];
+            let ia_ratio = input[base + 2u];
+            let zero = p - p;
+
+            if (p <= zero || cn <= zero) {
+                output[batch_idx] = zero;
+            } else {
+                let s = (zero + 25400.0) / cn - (zero + 254.0);
+                let ia = ia_ratio * s;
+                if (p <= ia) {
+                    output[batch_idx] = zero;
+                } else {
+                    let pe = p - ia;
+                    output[batch_idx] = pe * pe / (pe + s);
+                }
+            }
+        }
+        case 18u: {
+            // Stewart Yield-Water Function (Doorenbos & Kassam 1979)
+            // Ya/Ym = 1 - Ky × (1 - ETa/ETc)
+            // input: [Ky, ETa_ETc_ratio]
+            let ky = input[base + 0u];
+            let eta_etc = input[base + 1u];
+            let zero = ky - ky;
+            output[batch_idx] = (zero + 1.0) - ky * ((zero + 1.0) - eta_etc);
+        }
+        case 19u: {
+            // Blaney-Criddle ET₀ (Blaney & Criddle 1950)
+            // ET₀ = p × (0.46 × T + 8.13), p = daylight_hours / 43.80
+            // input: [T_mean(°C), daylight_hours]
+            let t_mean = input[base + 0u];
+            let daylight = input[base + 1u];
+            let zero = t_mean - t_mean;
+
+            let p = daylight / (zero + 43.80);
+            var et0 = p * ((zero + 0.46) * t_mean + (zero + 8.13));
+            if (et0 < zero) { et0 = zero; }
+            output[batch_idx] = et0;
+        }
         default: {
             // Identity / passthrough first element
             output[batch_idx] = input[base];

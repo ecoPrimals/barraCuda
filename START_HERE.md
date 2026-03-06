@@ -1,0 +1,100 @@
+# Start Here — barraCuda Developer Guide
+
+## What is this?
+
+barraCuda is the sovereign math engine for the ecoPrimals ecosystem. It provides
+GPU-accelerated scientific computing across any vendor's hardware using WGSL
+shaders compiled through wgpu. One source, any GPU, identical results.
+
+## Prerequisites
+
+- **Rust 1.87+** (check with `rustc --version`)
+- **GPU driver**: Vulkan-capable (NVIDIA, AMD, Intel) or software rasterizer (llvmpipe)
+- **OS**: Linux, macOS, or Windows
+
+## Quick Start
+
+```bash
+# Build everything
+cargo build --workspace --all-features
+
+# Run all tests
+cargo test --workspace --all-features
+
+# Run the doctor (device diagnostics)
+cargo run --bin barracuda -- doctor
+
+# Start the IPC server
+cargo run --bin barracuda -- server
+```
+
+## Repository Layout
+
+```
+crates/
+  barracuda/           Core compute library
+    src/
+      device/          GPU device management, driver profiles, pipeline cache
+      shaders/         708 WGSL shaders + sovereign compiler
+        math/          DF64 core, transcendentals
+        sovereign/     Naga-based compiler (FMA fusion, dead expr, SPIR-V emit)
+        precision/     F32/F64/DF64/F16 universal pipeline
+      tensor/          Tensor types, GpuView persistent buffers
+      ops/             Science operations (FHE, statistics, physics, bio)
+      pipeline/        GPU dispatch pipeline, workgroup sizing
+      error.rs         Error types
+
+  barracuda-core/      Primal lifecycle, IPC, CLI
+    src/
+      ipc/             JSON-RPC 2.0 + tarpc transport
+      rpc.rs           tarpc service definitions
+      bin/barracuda.rs UniBin entry point
+
+specs/                 Formal specifications
+```
+
+## Key Documents
+
+| Document | Purpose |
+|----------|---------|
+| `README.md` | Project overview, architecture, usage examples |
+| `CHANGELOG.md` | Detailed change history |
+| `STATUS.md` | Current grade and capability status |
+| `WHATS_NEXT.md` | Prioritized work items |
+| `specs/BARRACUDA_SPECIFICATION.md` | Formal primal specification |
+
+## Architecture
+
+The precision pipeline is the core abstraction:
+
+```
+f64 source (the "true math")
+  → compile_shader_universal(source, precision, label)
+    → F32:  downcast types → standard compilation
+    → F64:  driver patching → ILP optimization → sovereign compiler → SPIR-V
+    → Df64: naga-guided infix rewrite → DF64 library injection → compilation
+    → F16:  downcast types → standard compilation
+```
+
+The sovereign compiler pipeline:
+
+```
+WGSL → naga parse → FMA fusion → dead expr elimination → validate → SPIR-V emit
+                                                          ↓
+                                               ValidatedSpirv (type-safe)
+                                                          ↓
+                                          wgpu SPIRV_SHADER_PASSTHROUGH
+```
+
+## Running Specific Test Suites
+
+```bash
+# DF64 rewriter tests
+cargo test -p barracuda --lib -- df64_rewrite
+
+# Sovereign compiler tests
+cargo test -p barracuda --lib -- sovereign
+
+# IPC transport tests
+cargo test -p barracuda-core -- ipc
+```

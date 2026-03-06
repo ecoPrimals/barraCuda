@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! TimeStretch - Time-domain stretching without pitch change
+//! `TimeStretch` - Time-domain stretching without pitch change
 //!
 //! Phase vocoder-based time stretching.
 //! Speeds up or slows down audio while preserving pitch.
@@ -19,7 +19,7 @@ const SHADER_F64: &str = include_str!("../shaders/audio/time_stretch_f64.wgsl");
 static SHADER_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
 
-/// TimeStretch operation
+/// `TimeStretch` operation
 pub struct TimeStretch {
     signal: Tensor,
     rate: f32, // Stretch factor (>1.0 = slower, <1.0 = faster)
@@ -30,6 +30,9 @@ pub struct TimeStretch {
 
 impl TimeStretch {
     /// Create a new time stretch operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         signal: Tensor,
         rate: f32,
@@ -73,6 +76,9 @@ impl TimeStretch {
     }
 
     /// Execute the time stretch operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.signal.device();
         let signal_length: usize = self.signal.shape().iter().product();

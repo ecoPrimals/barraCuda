@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! AdaDelta Optimizer - GPU-accelerated adaptive learning rate optimizer
+//! `AdaDelta` Optimizer - GPU-accelerated adaptive learning rate optimizer
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation (existing shader evolved)
@@ -23,7 +23,7 @@
 //! **Key Properties**:
 //! - No learning rate hyperparameter needed!
 //! - Adapts learning rate per parameter
-//! - More stable than AdaGrad (doesn't monotonically decrease)
+//! - More stable than `AdaGrad` (doesn't monotonically decrease)
 //! - Uses moving average of gradients and updates
 //!
 //! **Parameters**:
@@ -62,7 +62,7 @@ mod tests;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
-/// AdaDelta optimizer parameters for WGSL shader
+/// `AdaDelta` optimizer parameters for WGSL shader
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub(crate) struct AdaDeltaParams {
@@ -72,7 +72,7 @@ pub(crate) struct AdaDeltaParams {
     pub _padding: u32,
 }
 
-/// AdaDelta Optimizer operation
+/// `AdaDelta` Optimizer operation
 ///
 /// **Deep Debt**: Uses WGSL shader with adaptive learning rate
 pub struct AdaDelta {
@@ -84,9 +84,14 @@ pub struct AdaDelta {
 }
 
 impl AdaDelta {
-    /// Create new AdaDelta optimizer operation
+    /// Create new `AdaDelta` optimizer operation
     ///
     /// **Deep Debt**: Validates all inputs for shape compatibility
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shapes mismatch, rho out of [0, 1], or accumulator
+    /// shapes mismatch.
     pub fn new(
         weights: Tensor,
         gradients: Tensor,
@@ -181,7 +186,7 @@ impl AdaDelta {
 // ═══════════════════════════════════════════════════════════════
 
 impl Tensor {
-    /// AdaDelta optimizer step - adaptive learning rate without lr hyperparameter
+    /// `AdaDelta` optimizer step - adaptive learning rate without lr hyperparameter
     ///
     /// **Deep Debt**: Essential for training without tuning learning rates
     ///
@@ -192,7 +197,7 @@ impl Tensor {
     /// - `acc_delta`: Accumulated squared deltas (None for first step)
     ///
     /// # Returns
-    /// - Tuple: (updated_weights, updated_acc_grad, updated_acc_delta)
+    /// - Tuple: (`updated_weights`, `updated_acc_grad`, `updated_acc_delta`)
     ///
     /// # Example
     /// ```rust,ignore
@@ -205,8 +210,13 @@ impl Tensor {
     ///
     /// # Note
     /// - No learning rate hyperparameter needed!
-    /// - More stable than AdaGrad
+    /// - More stable than `AdaGrad`
     /// - rho should be in [0.0, 1.0], typically 0.95
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn adadelta_step(
         self,
         gradients: &Self,

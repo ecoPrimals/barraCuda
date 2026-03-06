@@ -1,153 +1,137 @@
-// Chi-squared distribution: PDF and CDF
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Chi-squared with k degrees of freedom:
-//   PDF: f(x; k) = x^(k/2-1) * exp(-x/2) / (2^(k/2) * Γ(k/2))   for x > 0
-//   CDF: F(x; k) = P(k/2, x/2)   where P is the lower regularized gamma
+// chi_squared_f64.wgsl — Chi-squared CDF and quantile (f64)
 //
-// Uses lgamma_f64, gamma_series_f64, gamma_cf_f64 (same as regularized_gamma_f64).
+// Computes the chi-squared cumulative distribution function (CDF) and
+// its inverse (quantile / percent-point function) for statistical testing.
 //
-// Input: x values [x₀, x₁, ...] (as vec2<u32> for f64)
-// Output @binding(1): PDF values
-// Output @binding(3): CDF values
+// χ²-CDF(x, k) = P(k/2, x/2) where P is the regularized lower
+// incomplete gamma function.
 //
-// Params: size (number of elements), df (degrees of freedom k)
+// Uses the series expansion for the regularized gamma:
+//   P(a, x) = e^{-x} · x^a / Γ(a) · Σ_{n=0}^{∞} x^n / (a·(a+1)···(a+n))
 //
-// Applications: Pearson's chi-squared test, likelihood ratio tests, variance
-// estimation, goodness-of-fit, categorical data analysis.
-// Reference: Abramowitz & Stegun §26.4; Press et al. "Numerical Recipes"
+// Provenance: groundSpring V74 request for chi_squared_cdf / chi_squared_quantile.
 //
-// Note: Requires GPU f64 support including log/exp operations.
+// Operations (via params.op):
+//   0 = CDF:     input [x, k] → P(χ² ≤ x | k df)
+//   1 = Quantile: input [p, k] → x such that P(χ² ≤ x | k df) = p
+//
+// Dispatch: (ceil(N / 256), 1, 1) — one thread per element
 
-@group(0) @binding(0) var<storage, read> input: array<vec2<u32>>;
-@group(0) @binding(1) var<storage, read_write> output: array<vec2<u32>>;
-@group(0) @binding(2) var<uniform> params: Params;
-@group(0) @binding(3) var<storage, read_write> output_cdf: array<vec2<u32>>;
+enable f64;
 
 struct Params {
-    size: u32,
-    df: u32,
+    n: u32,
+    op: u32,
+    _pad0: u32,
+    _pad1: u32,
 }
 
-const MAX_ITER: u32 = 100u;
-const EPS: f64 = 1e-14;
-const FPMIN: f64 = 1e-30;
+@group(0) @binding(0) var<uniform> params: Params;
+@group(0) @binding(1) var<storage, read> input: array<f64>;
+@group(0) @binding(2) var<storage, read_write> output: array<f64>;
 
-const PI_F64: f64 = 3.14159265358979323846264338327950288;
-const SQRT_2PI_F64: f64 = 2.5066282746310005024157652848110452;
-
-fn lgamma_lanczos_f64(x: f64) -> f64 {
+fn lgamma_approx(x: f64) -> f64 {
+    // Stirling's approximation with Lanczos-like correction
+    // ln Γ(x) ≈ (x-0.5)·ln(x+4.5) - (x+4.5) + 0.5·ln(2π) + correction
+    let z = x - f64(1.0);
     let g = f64(7.0);
-    let x_shifted = x - f64(1.0);
-    var sum: f64 = f64(0.99999999999980993);
-    sum = sum + f64(676.5203681218851) / (x_shifted + f64(1.0));
-    sum = sum + f64(-1259.1392167224028) / (x_shifted + f64(2.0));
-    sum = sum + f64(771.32342877765313) / (x_shifted + f64(3.0));
-    sum = sum + f64(-176.61502916214059) / (x_shifted + f64(4.0));
-    sum = sum + f64(12.507343278686905) / (x_shifted + f64(5.0));
-    sum = sum + f64(-0.13857109526572012) / (x_shifted + f64(6.0));
-    sum = sum + f64(9.9843695780195716e-6) / (x_shifted + f64(7.0));
-    sum = sum + f64(1.5056327351493116e-7) / (x_shifted + f64(8.0));
-    let t = x_shifted + g + f64(0.5);
-    return log(SQRT_2PI_F64) + log(sum) + (x_shifted + f64(0.5)) * log(t) - t;
+    let c0 = f64(0.99999999999980993);
+    let c1 = f64(676.5203681218851);
+    let c2 = f64(-1259.1392167224028);
+    let c3 = f64(771.32342877765313);
+    let c4 = f64(-176.61502916214059);
+    let c5 = f64(12.507343278686905);
+    let c6 = f64(-0.13857109526572012);
+    let c7 = f64(9.9843695780195716e-6);
+    let c8 = f64(1.5056327351493116e-7);
+
+    var sum = c0;
+    sum += c1 / (z + f64(1.0));
+    sum += c2 / (z + f64(2.0));
+    sum += c3 / (z + f64(3.0));
+    sum += c4 / (z + f64(4.0));
+    sum += c5 / (z + f64(5.0));
+    sum += c6 / (z + f64(6.0));
+    sum += c7 / (z + f64(7.0));
+    sum += c8 / (z + f64(8.0));
+
+    let t = z + g + f64(0.5);
+    return f64(0.9189385332046727) + (z + f64(0.5)) * log(t) - t + log(sum);
 }
 
-fn lgamma_f64(x: f64) -> f64 {
-    if (x <= f64(0.0)) {
-        let z = x - x;
-        return z / z;
+fn gamma_inc_lower_series(a: f64, x: f64) -> f64 {
+    // Regularized lower incomplete gamma via series expansion
+    // P(a,x) = e^{-x} · x^a / Γ(a) · Σ x^n / Π(a+k)
+    if (x <= f64(0.0)) { return f64(0.0); }
+    if (x > f64(200.0) * a) { return f64(1.0); }
+
+    let ln_prefix = a * log(x) - x - lgamma_approx(a);
+    let prefix = exp(ln_prefix);
+
+    var sum = f64(1.0);
+    var term = f64(1.0);
+    for (var n = 1u; n < 200u; n++) {
+        term *= x / (a + f64(n));
+        sum += term;
+        if (abs(term) < f64(1e-15) * abs(sum)) { break; }
     }
-    if (x < f64(0.5)) {
-        return log(PI_F64 / sin(PI_F64 * x)) - lgamma_lanczos_f64(f64(1.0) - x);
-    }
-    return lgamma_lanczos_f64(x);
+
+    return clamp(prefix * sum / a, f64(0.0), f64(1.0));
 }
 
-fn gamma_series_f64(a: f64, x: f64, gln: f64) -> f64 {
-    var sum: f64 = f64(1.0) / a;
-    var term: f64 = sum;
-    for (var n: u32 = 1u; n < MAX_ITER; n = n + 1u) {
-        term = term * x / (a + f64(n));
-        sum = sum + term;
-        if (abs(term) < abs(sum) * EPS) {
-            break;
-        }
-    }
-    return sum * exp(-x + a * log(x) - gln);
+fn chi2_cdf(x: f64, k: f64) -> f64 {
+    if (x <= f64(0.0)) { return f64(0.0); }
+    return gamma_inc_lower_series(k / f64(2.0), x / f64(2.0));
 }
 
-fn gamma_cf_f64(a: f64, x: f64, gln: f64) -> f64 {
-    var b: f64 = x + f64(1.0) - a;
-    var c: f64 = f64(1.0) / FPMIN;
-    var d: f64 = f64(1.0) / b;
-    var h: f64 = d;
-    for (var n: u32 = 1u; n < MAX_ITER; n = n + 1u) {
-        let an = -f64(n) * (f64(n) - a);
-        b = b + f64(2.0);
-        d = an * d + b;
-        if (abs(d) < FPMIN) {
-            d = FPMIN;
-        }
-        c = b + an / c;
-        if (abs(c) < FPMIN) {
-            c = FPMIN;
-        }
-        d = f64(1.0) / d;
-        let delta = d * c;
-        h = h * delta;
-        if (abs(delta - f64(1.0)) < EPS) {
-            break;
-        }
-    }
-    return exp(-x + a * log(x) - gln) * h;
-}
+fn chi2_quantile(p: f64, k: f64) -> f64 {
+    // Newton-Raphson on CDF(x) = p
+    // Initial guess: Wilson-Hilferty approximation
+    if (p <= f64(0.0)) { return f64(0.0); }
+    if (p >= f64(1.0)) { return f64(1e10); }
 
-fn regularized_gamma_p_f64(a: f64, x: f64) -> f64 {
-    if (a <= f64(0.0) || x < f64(0.0)) {
-        let z = a - a;
-        return z / z;
-    }
-    if (x == f64(0.0)) {
-        return f64(0.0);
-    }
-    let gln = lgamma_f64(a);
-    if (x < a + f64(1.0)) {
-        return gamma_series_f64(a, x, gln);
-    }
-    return gamma_cf_f64(a, x, gln);
-}
+    // Wilson-Hilferty: x ≈ k·(1 - 2/(9k) + z·√(2/(9k)))³, z = Φ⁻¹(p)
+    // Simplified: use k as starting point, iterate
+    var x = max(k, f64(1.0));
 
-fn chi2_pdf_f64(x: f64, k: f64) -> f64 {
-    if (x <= f64(0.0)) {
-        return f64(0.0);
-    }
-    let half_k = k * f64(0.5);
-    let gln = lgamma_f64(half_k);
-    let log_pdf = (half_k - f64(1.0)) * log(x) - x * f64(0.5) - half_k * log(f64(2.0)) - gln;
-    return exp(log_pdf);
-}
+    for (var iter = 0u; iter < 50u; iter++) {
+        let cdf_val = chi2_cdf(x, k);
+        let diff = cdf_val - p;
+        if (abs(diff) < f64(1e-12)) { break; }
 
-fn chi2_cdf_f64(x: f64, k: f64) -> f64 {
-    if (x <= f64(0.0)) {
-        return f64(0.0);
+        // PDF of chi-squared for Newton step
+        let half_k = k / f64(2.0);
+        let ln_pdf = (half_k - f64(1.0)) * log(x) - x / f64(2.0)
+                   - half_k * log(f64(2.0)) - lgamma_approx(half_k);
+        let pdf = exp(ln_pdf);
+        if (pdf < f64(1e-300)) { break; }
+
+        x = max(x - diff / pdf, f64(1e-10));
     }
-    let a = k * f64(0.5);
-    let x_scaled = x * f64(0.5);
-    return regularized_gamma_p_f64(a, x_scaled);
+
+    return x;
 }
 
 @compute @workgroup_size(256)
-fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    let idx = global_id.x;
-    if (idx >= params.size) {
-        return;
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = gid.x;
+    if (idx >= params.n) { return; }
+
+    let base = idx * 2u;
+    let val = input[base + 0u];
+    let k = input[base + 1u];
+
+    switch (params.op) {
+        case 0u: {
+            output[idx] = chi2_cdf(val, k);
+        }
+        case 1u: {
+            output[idx] = chi2_quantile(val, k);
+        }
+        default: {
+            output[idx] = f64(0.0);
+        }
     }
-
-    let x = bitcast<f64>(input[idx]);
-    let k = f64(params.df);
-
-    let pdf = chi2_pdf_f64(x, k);
-    let cdf = chi2_cdf_f64(x, k);
-
-    output[idx] = bitcast<vec2<u32>>(pdf);
-    output_cdf[idx] = bitcast<vec2<u32>>(cdf);
 }

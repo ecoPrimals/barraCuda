@@ -61,12 +61,15 @@ pub struct GridQuadratureGemm {
 
 impl GridQuadratureGemm {
     /// Create a new grid quadrature GEMM operator
-    ///
     /// # Arguments
-    /// * `device` - WgpuDevice
+    /// * `device` - `WgpuDevice`
     /// * `batch_size` - Number of matrices to compute
     /// * `n` - Basis size (matrix dimension)
     /// * `grid_size` - Number of quadrature points
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
+    /// Also returns [`Err`] if `batch_size`, n, or `grid_size` is zero.
     pub fn new(
         device: Arc<WgpuDevice>,
         batch_size: usize,
@@ -88,8 +91,8 @@ impl GridQuadratureGemm {
     }
 
     /// Enable symmetric optimization (only compute upper triangle)
-    ///
     /// Use this when H is symmetric, cuts computation in half.
+    #[must_use]
     pub fn with_symmetric(mut self, symmetric: bool) -> Self {
         self.symmetric = symmetric;
         self
@@ -100,14 +103,16 @@ impl GridQuadratureGemm {
     }
 
     /// Execute grid quadrature GEMM
-    ///
     /// # Arguments
     /// * `phi` - Basis functions [batch, n, grid]
     /// * `w` - Weight function [batch, grid]
     /// * `quad_weights` - Quadrature weights [grid]
-    ///
     /// # Returns
     /// Hamiltonian matrices [batch, n, n]
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
+    /// Also returns [`Err`] if phi, w, or `quad_weights` lengths are invalid.
     pub fn execute(&self, phi: &[f64], w: &[f64], quad_weights: &[f64]) -> Result<Vec<f64>> {
         // Validate dimensions
         let expected_phi_len = self.batch_size * self.n * self.grid_size;
@@ -410,11 +415,7 @@ mod tests {
                 let actual = result[i * n + j];
                 assert!(
                     (actual - expected).abs() < 1e-10,
-                    "H[{},{}] = {}, expected {}",
-                    i,
-                    j,
-                    actual,
-                    expected
+                    "H[{i},{j}] = {actual}, expected {expected}"
                 );
             }
         }
@@ -505,14 +506,7 @@ mod tests {
                     let h_ji = result[b * n * n + j * n + i];
                     assert!(
                         (h_ij - h_ji).abs() < 1e-10,
-                        "Batch {}: H[{},{}] = {}, H[{},{}] = {}",
-                        b,
-                        i,
-                        j,
-                        h_ij,
-                        j,
-                        i,
-                        h_ji
+                        "Batch {b}: H[{i},{j}] = {h_ij}, H[{j},{i}] = {h_ji}"
                     );
                 }
             }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! MessagePassing - Pure WGSL
+//! `MessagePassing` - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -27,6 +27,10 @@ pub struct MessagePassing {
 
 impl MessagePassing {
     /// Create a new message passing operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if `edge_index` is not [`num_edges`, 2].
     pub fn new(
         node_features: Tensor,
         edge_index: Tensor,
@@ -76,6 +80,11 @@ impl MessagePassing {
     }
 
     /// Execute the message passing operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.node_features.device();
 
@@ -224,18 +233,15 @@ impl MessagePassing {
             });
         }
 
-        // Dummy buffers for message_mlp and update_mlp (simplified)
-        let dummy_size = self.node_feat_dim.max(1);
-        let dummy_buffer = device.create_buffer_f32(dummy_size)?;
-
+        let placeholder = device.placeholder_buffer();
         bind_entries.extend([
             wgpu::BindGroupEntry {
                 binding: 3,
-                resource: dummy_buffer.as_entire_binding(),
+                resource: placeholder.as_entire_binding(),
             },
             wgpu::BindGroupEntry {
                 binding: 4,
-                resource: dummy_buffer.as_entire_binding(),
+                resource: placeholder.as_entire_binding(),
             },
             wgpu::BindGroupEntry {
                 binding: 5,

@@ -13,7 +13,7 @@
 //! CrossAttention(Q_decoder, K_encoder, V_encoder) = softmax(QK^T / sqrt(d_k)) * V
 //! ```
 //!
-//! Key difference: Q has different seq_len than K/V
+//! Key difference: Q has different `seq_len` than K/V
 //! Use: T5, BART, encoder-decoder transformers
 
 use crate::error::{BarracudaError, Result};
@@ -46,6 +46,11 @@ use crate::error::{BarracudaError, Result};
 /// ).await.unwrap();
 /// # }
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if query, key, or value lengths do not match expected
+/// dimensions for the given batch, heads, and sequence lengths.
 pub async fn cross_attention(
     _device: &wgpu::Device,
     _queue: &wgpu::Queue,
@@ -93,7 +98,7 @@ pub async fn cross_attention(
                 }
 
                 // Softmax
-                let max_score = scores.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+                let max_score = scores.iter().copied().fold(f32::NEG_INFINITY, f32::max);
                 let mut sum = 0.0;
                 for s in &mut scores {
                     *s = (*s - max_score).exp();

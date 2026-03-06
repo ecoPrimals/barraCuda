@@ -20,6 +20,7 @@ pub struct Flip {
 
 impl Flip {
     /// Create a new flip operation
+    #[must_use]
     pub fn new(input: Tensor, dim: usize) -> Self {
         Self { input, dim }
     }
@@ -37,6 +38,11 @@ impl Flip {
     }
 
     /// Execute the flip operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -196,6 +202,11 @@ impl Tensor {
     /// # Arguments
     ///
     /// * `dim` - Dimension to flip
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn flip_wgsl(self, dim: usize) -> Result<Self> {
         Flip::new(self, dim).execute()
     }

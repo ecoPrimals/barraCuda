@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! OneCycle - 1cycle Learning Rate Policy (Smith)
+//! `OneCycle` - 1cycle Learning Rate Policy (Smith)
 //!
-//! Single cycle: warmup to max_lr, then anneal to min_lr.
+//! Single cycle: warmup to `max_lr`, then anneal to `min_lr`.
 //! Enables super-convergence with high learning rates.
 //!
 //! **Canonical Pattern**: Struct-based with Tensor support
@@ -9,9 +9,9 @@
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// OneCycle learning rate scheduler
+/// `OneCycle` learning rate scheduler
 ///
-/// Implements the 1cycle policy: warmup to max_lr, then anneal to min_lr.
+/// Implements the 1cycle policy: warmup to `max_lr`, then anneal to `min_lr`.
 pub struct OneCycle {
     max_lr: f32,
     total_steps: usize,
@@ -22,16 +22,16 @@ pub struct OneCycle {
 }
 
 impl OneCycle {
-    /// Create a new OneCycle learning rate scheduler
-    ///
+    /// Create a new `OneCycle` learning rate scheduler
     /// ## Parameters
-    ///
     /// - `max_lr`: Maximum learning rate (peak)
     /// - `total_steps`: Total number of training steps
     /// - `current_step`: Current step (0-indexed)
     /// - `pct_start`: Percentage of cycle spent warming up (default 0.3)
-    /// - `div_factor`: Initial lr = max_lr / div_factor (default 25.0)
-    /// - `final_div_factor`: Final lr = max_lr / final_div_factor (default 10000.0)
+    /// - `div_factor`: Initial lr = `max_lr` / `div_factor` (default 25.0)
+    /// - `final_div_factor`: Final lr = `max_lr` / `final_div_factor` (default 10000.0)
+    /// # Errors
+    /// Returns [`Err`] if `current_step` >= `total_steps`.
     pub fn new(
         max_lr: f32,
         total_steps: usize,
@@ -56,10 +56,11 @@ impl OneCycle {
         })
     }
 
-    /// Execute OneCycle learning rate calculation
-    ///
+    /// Execute `OneCycle` learning rate calculation
     /// Returns the learning rate for the current step.
     /// This is a CPU calculation (learning rate scheduling doesn't need GPU).
+    /// # Errors
+    /// This function does not return errors; the [`Result`] type is for API consistency.
     pub fn execute(self) -> Result<f32> {
         let step = self.current_step as f32;
         let total = self.total_steps as f32;
@@ -81,11 +82,11 @@ impl OneCycle {
     }
 
     /// Get learning rate as a scalar tensor
-    ///
     /// Creates a tensor with a single element containing the learning rate.
     /// Useful for operations that require tensor inputs.
-    ///
     /// Note: This requires async context. For synchronous use, use `execute()` and create tensor manually.
+    /// # Errors
+    /// Returns [`Err`] if `execute()` fails or device creation fails.
     pub async fn execute_as_tensor(self) -> Result<Tensor> {
         let lr = self.execute()?;
         let device = crate::device::Auto::new().await?;

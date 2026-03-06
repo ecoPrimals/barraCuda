@@ -34,6 +34,9 @@ pub struct TensorDot {
 
 impl TensorDot {
     /// Creates a new tensor dot operation. `axes_a` and `axes_b` specify contraction axes.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         tensor_a: Tensor,
         tensor_b: Tensor,
@@ -110,6 +113,9 @@ impl TensorDot {
     }
 
     /// Executes the tensor contraction and returns the result.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.tensor_a.device();
         let shape_a = self.tensor_a.shape();

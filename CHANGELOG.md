@@ -7,6 +7,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Deep Debt Resolution and Compliance (Mar 6 2026)
+
+- **Autocorrelation GPU op** (`ops/autocorrelation_f64_wgsl.rs`, `shaders/stats/autocorrelation_f64.wgsl`) —
+  general 1D autocorrelation C(lag) for lags `0..max_lag` in a single dispatch, with CPU reference tests
+- **R-squared and covariance API** — `CorrelationResult::r_squared()`, `CorrelationResult::covariance()`,
+  and convenience methods on `CorrelationF64` for direct GPU calculation
+- **CPU reference tests** for SCS-CN runoff, Stewart yield-water, and Blaney-Criddle ET₀ ops
+- **JSON-RPC notification tests** — `test_notification_no_response`, `test_notification_null_id_no_response`
+
+### Fixed — Deep Debt Resolution (Mar 6 2026)
+
+- **JSON-RPC 2.0 notification compliance** — `handle_line()` returns `None` for notifications
+  (absent or null `id`), per spec: "The Server MUST NOT reply to a Notification". Both TCP and
+  Unix socket handlers updated
+- **DF64 divisor bug** — `mean_variance_df64.wgsl` changed `if divisor.hi > 0.0` to
+  `if df64_to_f64(divisor) > 0.0`, correctly handling small positive DF64 values where `hi == 0.0`
+- **NVK f64 probe reliability** — `GpuDriverProfile::fp64_strategy()` now consults
+  `cached_basic_f64_for_key` before heuristic fallback, preventing incorrect native f64
+  dispatch on drivers that advertise but fail f64 compilation
+- **4 high-severity unwrap/expect eliminated** — `device/registry.rs` (let-else),
+  `batched_elementwise_f64/executor.rs` (Result propagation), `linalg/svd.rs` (let-else),
+  `batched_rk4_sweep.rs` (Vec<Option> pattern eliminated entirely in both integrate methods)
+- **RwLock poison recovery** — all 6 `expect("RwLock poisoned")` in `autotune.rs` replaced
+  with `unwrap_or_else(PoisonError::into_inner)`, recovering data instead of panicking
+- **6 unsafe unwrap_unchecked eliminated** — `GuardedEncoder` and `PooledBuffer` replaced
+  `unsafe { unwrap_unchecked() }` with safe `expect()` calls documented by ownership invariants
+- **ODE zero-copy optimization** — `ode_generic.rs` RK4 inner loop now uses pre-allocated
+  scratch buffers and direct slice borrows for params, eliminating `3 × batch_size × n_steps`
+  allocations per integration
+
+### Changed — Deep Debt Resolution (Mar 6 2026)
+
+- **Capability-based primal discovery** — `coral_compiler.rs` refactored to scan
+  `$XDG_RUNTIME_DIR/ecoPrimals/` for any JSON manifest advertising `"shader_compiler"`
+  capability, replacing hardcoded `coralreef-core.json` filename lookup
+- **`etcetera` crate eliminated** — XDG directory resolution in `ncbi_cache.rs` replaced
+  with pure `std::env::var` implementation; dependency removed from workspace and crate Cargo.toml
+- **Feature gating fixes** — `ode_generic.rs` GPU test and `chi_squared.rs` import properly
+  gated behind `#[cfg(feature = "gpu")]`
+- **Test environment safety** — `EnvGuard` RAII struct for `std::env::set_var`/`remove_var`
+  in tests, centralizing unsafe env access
+
+### Added — Spring Absorption and Architecture Evolution (Mar 4-5 2026)
+
+- **`GpuView<T>` persistent buffer API** (`pipeline/gpu_view.rs`) — typed handle to
+  GPU-resident data that eliminates per-call host↔device round-trips. Supports
+  `upload()`, `download()`, `upload_into()`, and `uninit()` with typed safety for
+  f64, f32, u32, i32. Targets 80×–600× improvement for statistical reductions
+  vs per-call pattern (Kokkos dispatch gap)
+- **Buffer-resident fused reduction methods** — `VarianceF64::mean_variance_buffer()`
+  and `CorrelationF64::correlation_full_buffer()` / `correlation_buffer()` accept
+  `&wgpu::Buffer` instead of `&[f64]`, enabling zero-copy chaining with `GpuView`
+- **Nuclear physics shaders** (absorbed from hotSpring): `deformed_gradient_f64.wgsl`,
+  `deformed_potentials_f64.wgsl`, `deformed_density_energy_f64.wgsl`,
+  `semf_pure_gpu_f64.wgsl`, `semf_batch_f64.wgsl`, `chi2_batch_f64.wgsl`,
+  `spin_orbit_pack_f64.wgsl` — full HFB/Skyrme + BCS + Broyden + observables chain
+- **VACF dot product shader** (absorbed from hotSpring): `vacf_dot_f64.wgsl` —
+  per-particle velocity autocorrelation for GPU-resident transport
+- **Anderson Lyapunov shaders** (absorbed from groundSpring): `anderson_lyapunov_f64.wgsl`
+  and `anderson_lyapunov_f32.wgsl` — transfer-matrix localization with xoshiro128** PRNG
+- **airSpring elementwise ops** — SCS-CN runoff (op 17), Stewart yield ratio (op 18),
+  Blaney-Criddle ET₀ (op 19) added to `batched_elementwise_f64.wgsl`
+- **HMM forward/backward shaders** (`bio/hmm_forward_f64.wgsl`, `bio/hmm_backward_f64.wgsl`)
+  — full-pass log-domain forward-backward algorithm replacing neuralSpring's per-step
+  Tensor loops. Single dispatch per timestep with logsumexp for numerical stability
+- **FFT radix-2 shader** (`spectral/fft_radix2_f64.wgsl`) — Cooley-Tukey butterfly stage
+  for real-valued FFT. Multi-pass dispatch orchestrated by Rust driver
+- **Chi-squared special functions** (`special/chi_squared_f64.wgsl`) — CDF via regularized
+  lower incomplete gamma (series expansion), quantile via Newton-Raphson with Lanczos
+  gamma. Both ops in a single shader selected by params.op
+- **13-tier tolerance architecture** (absorbed from groundSpring V74) — `DETERMINISM` through
+  `EQUILIBRIUM` with `eps::` guard constants (`SAFE_DIV`, `SSA_FLOOR`, `UNDERFLOW`,
+  `OVERFLOW`, `LOG_FLOOR`, `DENSITY_FLOOR`, `PROB_FLOOR`) and `eps::midpoint()` for
+  overflow-safe averaging
+- **F64 pipeline cache warming** — `WarmupOp::MeanVarianceF64`, `CorrelationF64`,
+  `SumReduceF64` added to scientific warmup preset, eliminating cold-start latency for
+  statistical workloads
+- **DF64 NVK validation tests** — CG solver kernel and Yukawa cell-list kernel patterns
+  added to `df64_rewrite.rs` tests, validating compound assignments, PBC wrapping, and
+  nested arithmetic through the full Naga→DF64→validate pipeline
+- **coralNAK scaffold plan** (`specs/coralnak/SCAFFOLD_PLAN.md`) — detailed analysis of
+  NAK's f64 transcendental gaps (from_nir.rs, builder.rs, ir.rs, legalize.rs, sm70_encode.rs),
+  repository structure, extraction steps, fix strategy, and public API design. Ready to
+  apply when org repo fork lands
+
 ### Added
 - **Fused mean+variance shader** (`shaders/reduce/mean_variance_f64.wgsl`) — single-pass
   Welford algorithm with grid-stride loop and workgroup tree reduction. Computes both

@@ -22,6 +22,7 @@ pub struct Narrow {
 
 impl Narrow {
     /// Create a new narrow operation
+    #[must_use]
     pub fn new(input: Tensor, dim: usize, start: usize, length: usize) -> Self {
         Self {
             input,
@@ -44,6 +45,11 @@ impl Narrow {
     }
 
     /// Execute the narrow operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -219,6 +225,11 @@ impl Tensor {
     /// * `dim` - Dimension to slice
     /// * `start` - Start index
     /// * `length` - Length of slice
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn narrow_wgsl(self, dim: usize, start: usize, length: usize) -> Result<Self> {
         Narrow::new(self, dim, start, length).execute()
     }

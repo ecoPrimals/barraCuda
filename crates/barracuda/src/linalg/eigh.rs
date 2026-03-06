@@ -38,6 +38,7 @@ pub struct EighDecomposition {
 
 impl EighDecomposition {
     /// Get eigenvector for eigenvalue at index i.
+    #[must_use]
     pub fn eigenvector(&self, i: usize) -> Option<Vec<f64>> {
         if i >= self.n {
             return None;
@@ -50,7 +51,6 @@ impl EighDecomposition {
     }
 
     /// Sort eigenvalues and eigenvectors in descending order.
-    ///
     /// Useful for PCA where largest eigenvalues matter most.
     pub fn sort_descending(&mut self) {
         let mut indexed: Vec<(usize, f64)> = self.eigenvalues.iter().copied().enumerate().collect();
@@ -68,8 +68,8 @@ impl EighDecomposition {
     }
 
     /// Reconstruct A = V·D·Vᵀ.
-    ///
     /// Useful for verification.
+    #[must_use]
     pub fn reconstruct(&self) -> Vec<f64> {
         let mut a = vec![0.0; self.n * self.n];
 
@@ -90,11 +90,13 @@ impl EighDecomposition {
     }
 
     /// Compute trace (sum of eigenvalues).
+    #[must_use]
     pub fn trace(&self) -> f64 {
         self.eigenvalues.iter().sum()
     }
 
     /// Compute determinant (product of eigenvalues).
+    #[must_use]
     pub fn det(&self) -> f64 {
         self.eigenvalues.iter().product()
     }

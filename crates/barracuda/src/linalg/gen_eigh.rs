@@ -8,7 +8,7 @@
 //!
 //! Uses Cholesky-based reduction to standard form:
 //!
-//! 1. Compute Cholesky decomposition: B = LLᵀ
+//! 1. Compute Cholesky decomposition: B = `LLᵀ`
 //! 2. Transform: C = L⁻¹ A (L⁻¹)ᵀ (symmetric)
 //! 3. Solve standard eigenproblem: Cy = λy
 //! 4. Back-transform eigenvectors: x = (L⁻¹)ᵀ y
@@ -27,7 +27,7 @@
 //! - LAPACK DSYGV/DSYGVX routines
 
 use crate::error::{BarracudaError, Result};
-use crate::linalg::cholesky::{cholesky_f64, CholeskyDecomposition};
+use crate::linalg::cholesky::{CholeskyDecomposition, cholesky_f64};
 use crate::linalg::eigh::eigh_f64;
 use std::sync::Arc;
 
@@ -47,9 +47,9 @@ pub struct GenEighDecomposition {
 
 impl GenEighDecomposition {
     /// Get the i-th eigenvector
-    ///
     /// Eigenvectors are stored as columns in row-major format:
     /// eigenvector j has component i at position [i * n + j]
+    #[must_use]
     pub fn eigenvector(&self, i: usize) -> Option<Vec<f64>> {
         if i >= self.n {
             return None;
@@ -84,8 +84,8 @@ impl GenEighDecomposition {
     }
 
     /// Verify that Ax = λBx for all eigenpairs
-    ///
     /// Returns the maximum residual ||Ax - λBx|| / ||x||
+    #[must_use]
     pub fn verify(&self, a: &[f64], b: &[f64]) -> f64 {
         let n = self.n;
         let mut max_residual: f64 = 0.0;
@@ -132,6 +132,7 @@ impl GenEighDecomposition {
 
     /// Compute the trace of the generalized eigenvalue problem
     /// (sum of eigenvalues)
+    #[must_use]
     pub fn trace(&self) -> f64 {
         self.eigenvalues.iter().sum()
     }
@@ -325,7 +326,7 @@ fn compute_symmetric_transform(
 
 /// Back-transform eigenvectors: x = L⁻ᵀ y (solve Lᵀ x = y)
 ///
-/// Note: eigenvectors from eigh_f64 are stored as columns in row-major format:
+/// Note: eigenvectors from `eigh_f64` are stored as columns in row-major format:
 /// eigenvector j has component i at position [i * n + j]
 fn back_transform_eigenvectors(
     chol: &CholeskyDecomposition,
@@ -367,6 +368,10 @@ fn back_transform_eigenvectors(
 /// Solve generalized eigenvalue problem with B = I (identity)
 ///
 /// This is a convenience function that reduces to standard eigenvalue problem.
+///
+/// # Errors
+///
+/// Returns [`Err`] if matrix dimensions are invalid or eigendecomposition fails.
 pub fn gen_eigh_identity_b(a: &[f64], n: usize) -> Result<GenEighDecomposition> {
     let eigh = eigh_f64(a, n)?;
 
@@ -397,7 +402,7 @@ mod tests {
         // Characteristic polynomial: (4-λ)(3-λ) - 1 = λ² - 7λ + 11
         // λ = (7 ± √5) / 2 ≈ 2.382, 4.618
         let expected_min = (7.0 - 5.0_f64.sqrt()) / 2.0;
-        let expected_max = (7.0 + 5.0_f64.sqrt()) / 2.0;
+        let expected_max = f64::midpoint(7.0, 5.0_f64.sqrt());
 
         assert!(
             (result.eigenvalues[0] - expected_min).abs() < 1e-10,
@@ -450,7 +455,7 @@ mod tests {
         let result = gen_eigh_f64(device, &a, &b, 2).unwrap();
 
         let residual = result.verify(&a, &b);
-        assert!(residual < 1e-10, "Residual too large: {}", residual);
+        assert!(residual < 1e-10, "Residual too large: {residual}");
     }
 
     #[test]
@@ -476,7 +481,7 @@ mod tests {
 
         // Verify all eigenpairs
         let residual = result.verify(&a, &b);
-        assert!(residual < 1e-9, "Residual too large: {}", residual);
+        assert!(residual < 1e-9, "Residual too large: {residual}");
     }
 
     #[test]
@@ -556,11 +561,7 @@ mod tests {
 
         // With B = I, trace of eigenvalues = trace of A = 6
         let trace = result.trace();
-        assert!(
-            (trace - 6.0).abs() < 1e-10,
-            "Expected trace 6, got {}",
-            trace
-        );
+        assert!((trace - 6.0).abs() < 1e-10, "Expected trace 6, got {trace}");
     }
 
     #[test]
@@ -580,6 +581,6 @@ mod tests {
         let result = gen_eigh_f64(device, &a, &b, n).unwrap();
 
         let residual = result.verify(&a, &b);
-        assert!(residual < 1e-8, "Residual too large for 5×5: {}", residual);
+        assert!(residual < 1e-8, "Residual too large for 5×5: {residual}");
     }
 }

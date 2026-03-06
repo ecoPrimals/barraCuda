@@ -27,6 +27,11 @@ pub struct GRUCell {
 
 impl GRUCell {
     /// Create a new GRU cell operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         input: Tensor,
         weight_ih: Tensor,
@@ -91,6 +96,11 @@ impl GRUCell {
     }
 
     /// Execute the GRU cell operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 

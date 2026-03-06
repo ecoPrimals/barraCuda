@@ -27,6 +27,11 @@ pub struct ClipGradValue {
 
 impl ClipGradValue {
     /// Create a new clip gradient by value operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(gradients: Tensor, clip_value: f32) -> Result<Self> {
         if clip_value < 0.0 {
             return Err(crate::error::BarracudaError::InvalidInput {
@@ -45,6 +50,11 @@ impl ClipGradValue {
     }
 
     /// Execute the clip gradient by value operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.gradients.device();
         let size: usize = self.gradients.shape().iter().product();

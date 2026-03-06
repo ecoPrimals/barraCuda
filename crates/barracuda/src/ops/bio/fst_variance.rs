@@ -19,7 +19,7 @@
 //! # References
 //!
 //! - Weir & Cockerham (1984) Evolution 38:1358-1370
-//! - scikit-allel weir_cockerham_fst
+//! - scikit-allel `weir_cockerham_fst`
 
 use crate::error::{BarracudaError, Result};
 

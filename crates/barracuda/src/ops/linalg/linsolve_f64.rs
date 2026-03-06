@@ -10,8 +10,8 @@
 //! Solves A·x = b using Gaussian elimination with partial pivoting.
 //! For systems where f32 precision is insufficient (condition number > 10⁶).
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -34,14 +34,17 @@ pub struct LinSolveF64 {
 
 impl LinSolveF64 {
     /// Creates a new f64 linear system solver for the given WGPU device.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self { device }
     }
 
     /// Solve A·x = b where A is n×n and b is length n.
-    ///
     /// Returns solution vector x (length n) as `Vec<f64>`.
     /// Returns zeros if the matrix is singular.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn solve(&self, matrix_data: &[f64], rhs_data: &[f64], n: usize) -> Result<Vec<f64>> {
         if matrix_data.len() != n * n {
             return Err(BarracudaError::InvalidShape {
@@ -98,7 +101,7 @@ impl LinSolveF64 {
             .storage_rw(2, &output_buf)
             .uniform(3, &params_buf)
             .dispatch(1, 1, 1)
-            .submit();
+            .submit()?;
 
         let full = self.device.read_buffer_f64(&output_buf, output_size)?;
         Ok(full[n * n..].to_vec())

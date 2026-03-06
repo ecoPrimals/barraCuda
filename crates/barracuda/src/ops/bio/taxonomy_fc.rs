@@ -4,7 +4,7 @@
 //!
 //! Computes log-posterior scores for metagenomic taxonomy classification.
 //! One thread per (query, taxon) pair. GEMM-like log-space accumulation:
-//!   score = log_prior[taxon] + Σ log_prob[taxon, feature] for present features.
+//!   score = `log_prior`[taxon] + Σ `log_prob`[taxon, feature] for present features.
 //!
 //! Provenance: wetSpring metagenomics → toadStool absorption
 
@@ -35,6 +35,7 @@ pub struct TaxonomyFcGpu {
 
 impl TaxonomyFcGpu {
     /// Create a taxonomy FC GPU kernel.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 

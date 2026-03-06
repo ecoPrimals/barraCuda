@@ -4,8 +4,8 @@
 //! GPU-accelerated vector mixing for SCF convergence.
 //! Uses WGSL shaders for f64 precision on all GPU hardware.
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
@@ -36,7 +36,7 @@ impl Default for MixingParams {
 
 /// Linear mixer for simple damped iteration
 ///
-/// x_new = (1-α)·x_old + α·x_computed
+/// `x_new` = (1-α)·x_old + `α·x_computed`
 pub struct LinearMixer {
     device: Arc<WgpuDevice>,
     pipeline: wgpu::ComputePipeline,
@@ -47,6 +47,9 @@ pub struct LinearMixer {
 
 impl LinearMixer {
     /// Create a new linear mixer
+    /// # Errors
+    /// Returns [`Err`] if `vec_dim` is zero, or if shader compilation or pipeline
+    /// creation fails.
     pub fn new(device: Arc<WgpuDevice>, vec_dim: usize, params: MixingParams) -> Result<Self> {
         if vec_dim == 0 {
             return Err(crate::error::BarracudaError::invalid_op(
@@ -139,7 +142,10 @@ impl LinearMixer {
         })
     }
 
-    /// Mix two vectors: x_new = (1-α)·x_old + α·x_computed
+    /// Mix two vectors: `x_new` = (1-α)·x_old + `α·x_computed`
+    /// # Errors
+    /// Returns [`Err`] if vector lengths do not match `vec_dim`, buffer allocation
+    /// fails, GPU dispatch fails, or buffer mapping/readback fails (e.g. device lost).
     pub async fn mix(&self, x_old: &[f64], x_computed: &[f64]) -> Result<Vec<f64>> {
         if x_old.len() != self.vec_dim || x_computed.len() != self.vec_dim {
             return Err(BarracudaError::InvalidInput {
@@ -277,7 +283,7 @@ impl LinearMixer {
 /// Broyden mixer with history for accelerated SCF convergence
 ///
 /// Modified Broyden II algorithm:
-/// x_{n+1} = x_n + α·r_n - Σ_m γ_m·(Δx_m + α·Δr_m)
+/// x_{n+1} = `x_n` + `α·r_n` - `Σ_m` `γ_m·(Δx_m` + `α·Δr_m`)
 pub struct BroydenMixer {
     device: Arc<WgpuDevice>,
     linear_mixer: LinearMixer,
@@ -292,12 +298,14 @@ pub struct BroydenMixer {
 
 impl BroydenMixer {
     /// Create a new Broyden mixer
-    ///
     /// # Arguments
     /// * `device` - GPU device
     /// * `vec_dim` - Dimension of vectors to mix
     /// * `max_history` - Maximum number of history vectors (typically 5-10)
     /// * `params` - Mixing parameters
+    /// # Errors
+    /// Returns [`Err`] if `vec_dim` is zero, or if the underlying linear mixer
+    /// creation fails (shader compilation, pipeline creation).
     pub fn new(
         device: Arc<WgpuDevice>,
         vec_dim: usize,
@@ -319,11 +327,13 @@ impl BroydenMixer {
     }
 
     /// GPU device handle (for future GPU-accelerated Broyden update).
+    #[must_use]
     pub fn device(&self) -> &Arc<WgpuDevice> {
         &self.device
     }
 
     /// Dimension of the vectors being mixed.
+    #[must_use]
     pub fn vec_dim(&self) -> usize {
         self.vec_dim
     }
@@ -336,16 +346,17 @@ impl BroydenMixer {
     }
 
     /// Perform one mixing step
-    ///
-    /// During warmup (first n_warmup iterations), uses linear mixing.
+    /// During warmup (first `n_warmup` iterations), uses linear mixing.
     /// After warmup, uses full Broyden with history.
-    ///
     /// # Arguments
     /// * `x_old` - Input from previous iteration
-    /// * `x_new` - Output from F(x_old)
-    ///
+    /// * `x_new` - Output from `F(x_old)`
     /// # Returns
     /// Mixed vector x_{n+1}
+    /// # Errors
+    /// Returns [`Err`] if vector lengths do not match, buffer allocation fails,
+    /// GPU dispatch fails, buffer readback fails, or the Broyden gamma computation
+    /// fails (e.g. device lost).
     pub async fn mix(&mut self, x_old: &[f64], x_new: &[f64]) -> Result<Vec<f64>> {
         self.iteration += 1;
 
@@ -379,9 +390,8 @@ impl BroydenMixer {
     }
 
     /// Compute Broyden γ coefficients via least-squares on CPU.
-    ///
-    /// Solves A·γ = β where A_ij = <ΔF_i|ΔF_j>, β_i = <ΔF_i|r>.
-    /// This is O(n_history²) work on a tiny matrix — CPU is appropriate.
+    /// Solves A·γ = β where `A_ij` = <`ΔF_i|ΔF_j`>, `β_i` = <`ΔF_i|r`>.
+    /// This is `O(n_history²)` work on a tiny matrix — CPU is appropriate.
     fn compute_broyden_gammas(&self, residual: &[f64]) -> Result<Vec<f64>> {
         let m = self.df_history.len();
         if m == 0 {
@@ -411,13 +421,11 @@ impl BroydenMixer {
     }
 
     /// Apply Broyden update on GPU.
-    ///
-    /// x_new = x + α·r - Σ_k γ_k · (Δx_k + α·ΔF_k)
-    ///
+    /// `x_new` = x + α·r - `Σ_k` `γ_k` · (`Δx_k` + `α·ΔF_k`)
     /// The linear-mixing part (x + α·r) goes through the GPU mixer.
-    /// The Broyden correction is accumulated on CPU (O(n_history × dim)) then
+    /// The Broyden correction is accumulated on CPU (`O(n_history` × dim)) then
     /// added to the GPU result. For large dim this could be a second GPU kernel,
-    /// but n_history is typically 5–10 so the CPU path is <1ms.
+    /// but `n_history` is typically 5–10 so the CPU path is <1ms.
     async fn broyden_update_gpu(
         &self,
         x: &[f64],
@@ -537,7 +545,7 @@ mod tests {
 
         // Expected: 0.5 * 1.0 + 0.5 * 2.0 = 1.5
         for val in &result {
-            assert!((val - 1.5).abs() < 1e-10, "Expected 1.5, got {}", val);
+            assert!((val - 1.5).abs() < 1e-10, "Expected 1.5, got {val}");
         }
     }
 

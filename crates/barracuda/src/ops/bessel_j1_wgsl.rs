@@ -15,6 +15,7 @@ pub struct BesselJ1 {
 
 impl BesselJ1 {
     /// Create a Bessel J1 operation.
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -24,6 +25,11 @@ impl BesselJ1 {
     }
 
     /// Execute Bessel J1 on GPU.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -153,6 +159,11 @@ impl BesselJ1 {
 
 impl Tensor {
     /// Compute element-wise J₁(x). J₁(0) = 0.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn bessel_j1(self) -> Result<Self> {
         BesselJ1::new(self).execute()
     }

@@ -120,7 +120,9 @@ pub enum BarracudaError {
     ResourceExhausted(String),
 
     /// Requested allocation exceeds device safe limit.
-    #[error("Device limit exceeded: {message} (requested {requested_bytes} bytes, safe limit {safe_limit_bytes} bytes)")]
+    #[error(
+        "Device limit exceeded: {message} (requested {requested_bytes} bytes, safe limit {safe_limit_bytes} bytes)"
+    )]
     DeviceLimitExceeded {
         /// Human-readable description of the limit exceeded.
         message: String,
@@ -176,6 +178,7 @@ impl BarracudaError {
     }
 
     /// Construct a shape mismatch error.
+    #[must_use]
     pub fn shape_mismatch(expected: Vec<usize>, actual: Vec<usize>) -> Self {
         Self::ShapeMismatch { expected, actual }
     }
@@ -212,6 +215,7 @@ impl BarracudaError {
     }
 
     /// Construct an invalid shape error.
+    #[must_use]
     pub fn invalid_shape(expected: Vec<usize>, actual: Vec<usize>) -> Self {
         Self::InvalidShape { expected, actual }
     }
@@ -247,6 +251,7 @@ impl BarracudaError {
     /// Device loss is a transient hardware failure — the operation can be
     /// retried on a fresh device. Callers (and the test infrastructure)
     /// use this to distinguish retriable failures from logic bugs.
+    #[must_use]
     pub fn is_device_lost(&self) -> bool {
         if matches!(self, Self::DeviceLost(_)) {
             return true;
@@ -256,6 +261,7 @@ impl BarracudaError {
     }
 
     /// Returns `true` when this error is retriable (device lost or transient GPU failure).
+    #[must_use]
     pub fn is_retriable(&self) -> bool {
         self.is_device_lost()
     }

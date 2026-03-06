@@ -57,6 +57,8 @@ pub struct KLDivergence {
 
 impl KLDivergence {
     /// Creates a new KL divergence. Shapes must match.
+    /// # Errors
+    /// Returns [`Err`] if predicted and target shapes do not match.
     pub fn new(predicted: Tensor, target: Tensor) -> Result<Self> {
         // Validate shapes match
         if predicted.shape() != target.shape() {
@@ -74,6 +76,8 @@ impl KLDivergence {
     }
 
     /// Executes KL divergence and returns a scalar loss tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predicted.device();
         let size = self.predicted.shape().iter().product::<usize>();
@@ -233,29 +237,26 @@ impl KLDivergence {
 
 impl Tensor {
     /// KL Divergence for measuring distribution differences
-    ///
     /// **Deep Debt**: Essential for VAEs and knowledge distillation
-    ///
     /// # Arguments
     /// - `target`: Target distribution Q [same shape as P]
-    ///
     /// # Returns
     /// - Divergence tensor [same shape as input]
-    ///
     /// # Example
     /// ```rust,ignore
     /// // VAE loss
     /// let kl_loss = latent_distribution.kl_divergence(&prior)?;
-    ///
     /// // Knowledge distillation
     /// let kl_loss = student_probs.kl_divergence(&teacher_probs)?;
     /// ```
-    ///
     /// # Note
     /// - Both inputs should be probability distributions (sum to 1)
     /// - KL(P||Q) ≠ KL(Q||P) (asymmetric!)
     /// - Always non-negative
     /// - Numerically stable with epsilon=1e-10
+    /// # Errors
+    /// Returns [`Err`] if shapes do not match, buffer allocation fails, GPU dispatch fails,
+    /// or the device is lost.
     pub fn kl_divergence(self, target: &Self) -> Result<Self> {
         KLDivergence::new(self, target.clone())?.execute()
     }
@@ -304,7 +305,7 @@ mod tests {
         let data = kl.to_vec().unwrap();
         let sum: f32 = data.iter().sum();
 
-        assert!(sum.abs() < 0.01, "Expected ~0, got {}", sum);
+        assert!(sum.abs() < 0.01, "Expected ~0, got {sum}");
     }
 
     #[tokio::test]
@@ -329,9 +330,7 @@ mod tests {
         // Both should be positive
         assert!(
             sum_pq > 0.0 && sum_qp > 0.0,
-            "KL should be positive: {} and {}",
-            sum_pq,
-            sum_qp
+            "KL should be positive: {sum_pq} and {sum_qp}"
         );
         // For very different distributions, both KL values should be similar (symmetric input)
         // This test validates that the operation completes correctly for asymmetric comparisons

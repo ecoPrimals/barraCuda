@@ -36,8 +36,10 @@ pub struct AutoContext {
 
 impl AutoContext {
     /// Create new auto-scheduling context
-    ///
     /// Discovers all available hardware and creates device pool
+    /// # Errors
+    /// Returns [`Err`] if scheduler initialization fails or no compute device
+    /// is available.
     pub async fn new() -> Result<Self> {
         tracing::info!("Initializing AutoContext...");
 
@@ -67,8 +69,10 @@ impl AutoContext {
     }
 
     /// Create random tensor (normal distribution)
-    ///
     /// Automatically selects device based on tensor size
+    /// # Errors
+    /// Returns [`Err`] if no device is available, or if buffer allocation or
+    /// tensor creation fails on the device.
     pub fn randn(&self, shape: Vec<usize>) -> Result<Tensor> {
         // For tensor creation, just use first available device
         // Scheduler will optimize operations, not creation
@@ -86,6 +90,9 @@ impl AutoContext {
     }
 
     /// Create zeros tensor
+    /// # Errors
+    /// Returns [`Err`] if no device is available, or if buffer allocation or
+    /// tensor creation fails on the device.
     pub fn zeros(&self, shape: Vec<usize>) -> Result<Tensor> {
         let device = self
             .devices
@@ -100,8 +107,11 @@ impl AutoContext {
     }
 
     /// Matrix multiplication with automatic device selection.
-    ///
     /// Scheduler picks CPU for small, GPU for large.
+    /// # Errors
+    /// Returns [`Err`] if no device is available, tensor transfer fails (buffer
+    /// map or allocation), or the operation fails (shape mismatch, execution
+    /// error, GPU device lost).
     pub fn matmul(&self, a: &Tensor, b: &Tensor) -> Result<Tensor> {
         let op = MathOp::MatMul {
             transpose_a: false,
@@ -110,12 +120,20 @@ impl AutoContext {
         self.dispatch_binary(op, a, b, |a, b| a.matmul(&b))
     }
 
-    /// Element-wise ReLU with automatic device selection.
+    /// Element-wise `ReLU` with automatic device selection.
+    /// # Errors
+    /// Returns [`Err`] if no device is available, tensor transfer fails (buffer
+    /// map or allocation), or the operation fails (execution error, GPU device
+    /// lost).
     pub fn relu(&self, input: &Tensor) -> Result<Tensor> {
-        self.dispatch_unary(MathOp::ReLU, input, |t| t.relu())
+        self.dispatch_unary(MathOp::ReLU, input, super::tensor::Tensor::relu)
     }
 
     /// 2D Convolution with automatic device selection.
+    /// # Errors
+    /// Returns [`Err`] if no device is available, tensor transfer fails (buffer
+    /// map or allocation), or the operation fails (shape mismatch, execution
+    /// error, GPU device lost).
     pub fn conv2d(&self, input: &Tensor, kernel: &Tensor) -> Result<Tensor> {
         let op = MathOp::Conv2D {
             stride: (1, 1),
@@ -127,33 +145,57 @@ impl AutoContext {
     }
 
     /// Element-wise addition with automatic device selection.
+    /// # Errors
+    /// Returns [`Err`] if no device is available, tensor transfer fails (buffer
+    /// map or allocation), or the operation fails (shape mismatch, execution
+    /// error, GPU device lost).
     pub fn add(&self, a: &Tensor, b: &Tensor) -> Result<Tensor> {
         self.dispatch_binary(MathOp::Add, a, b, |a, b| a.add(&b))
     }
 
     /// Element-wise subtraction with automatic device selection.
+    /// # Errors
+    /// Returns [`Err`] if no device is available, tensor transfer fails (buffer
+    /// map or allocation), or the operation fails (shape mismatch, execution
+    /// error, GPU device lost).
     pub fn sub(&self, a: &Tensor, b: &Tensor) -> Result<Tensor> {
         self.dispatch_binary(MathOp::Sub, a, b, |a, b| a.sub(&b))
     }
 
     /// Element-wise multiplication with automatic device selection.
+    /// # Errors
+    /// Returns [`Err`] if no device is available, tensor transfer fails (buffer
+    /// map or allocation), or the operation fails (shape mismatch, execution
+    /// error, GPU device lost).
     pub fn mul(&self, a: &Tensor, b: &Tensor) -> Result<Tensor> {
         self.dispatch_binary(MathOp::Mul, a, b, |a, b| a.mul(&b))
     }
 
     /// Element-wise division with automatic device selection.
+    /// # Errors
+    /// Returns [`Err`] if no device is available, tensor transfer fails (buffer
+    /// map or allocation), or the operation fails (shape mismatch, execution
+    /// error, GPU device lost).
     pub fn div(&self, a: &Tensor, b: &Tensor) -> Result<Tensor> {
         self.dispatch_binary(MathOp::Div, a, b, |a, b| a.div(&b))
     }
 
     /// Sigmoid activation with automatic device selection.
+    /// # Errors
+    /// Returns [`Err`] if no device is available, tensor transfer fails (buffer
+    /// map or allocation), or the operation fails (execution error, GPU device
+    /// lost).
     pub fn sigmoid(&self, input: &Tensor) -> Result<Tensor> {
-        self.dispatch_unary(MathOp::Sigmoid, input, |t| t.sigmoid())
+        self.dispatch_unary(MathOp::Sigmoid, input, super::tensor::Tensor::sigmoid)
     }
 
     /// Tanh activation with automatic device selection.
+    /// # Errors
+    /// Returns [`Err`] if no device is available, tensor transfer fails (buffer
+    /// map or allocation), or the operation fails (execution error, GPU device
+    /// lost).
     pub fn tanh(&self, input: &Tensor) -> Result<Tensor> {
-        self.dispatch_unary(MathOp::Tanh, input, |t| t.tanh())
+        self.dispatch_unary(MathOp::Tanh, input, super::tensor::Tensor::tanh)
     }
 
     /// Resolve the optimal device for a scheduled operation.
@@ -165,6 +207,10 @@ impl AutoContext {
     }
 
     /// Ensure a tensor lives on the target device, transferring if necessary.
+    /// # Errors
+    /// Returns [`Err`] if reading the tensor to host memory fails (buffer map,
+    /// GPU device lost) or creating the tensor on the target device fails
+    /// (buffer allocation).
     fn ensure_on_device(&self, tensor: &Tensor, target: &Arc<WgpuDevice>) -> Result<Tensor> {
         if Arc::ptr_eq(tensor.device(), target) {
             Ok(tensor.clone())
@@ -175,6 +221,10 @@ impl AutoContext {
     }
 
     /// Schedule and dispatch a binary (two-tensor) operation.
+    /// # Errors
+    /// Returns [`Err`] if no device is available, tensor transfer fails (buffer
+    /// map or allocation), or the operation `f` fails (shape mismatch,
+    /// execution error, GPU device lost).
     fn dispatch_binary(
         &self,
         op: MathOp,
@@ -194,6 +244,10 @@ impl AutoContext {
     }
 
     /// Schedule and dispatch a unary (single-tensor) operation.
+    /// # Errors
+    /// Returns [`Err`] if no device is available, tensor transfer fails (buffer
+    /// map or allocation), or the operation `f` fails (execution error, GPU
+    /// device lost).
     fn dispatch_unary(
         &self,
         op: MathOp,
@@ -208,11 +262,13 @@ impl AutoContext {
     }
 
     /// Get scheduler reference
+    #[must_use]
     pub fn scheduler(&self) -> &UnifiedScheduler {
         &self.scheduler
     }
 
     /// Get device from pool
+    #[must_use]
     pub fn get_device(&self, hw_type: HardwareType) -> Option<&Arc<WgpuDevice>> {
         self.devices.get(&hw_type)
     }

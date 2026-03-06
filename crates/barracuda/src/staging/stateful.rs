@@ -82,6 +82,7 @@ pub struct KernelDispatch {
 
 impl KernelDispatch {
     /// Create a new kernel dispatch unit.
+    #[must_use]
     pub fn new(
         pipeline: Arc<wgpu::ComputePipeline>,
         bind_group: Arc<wgpu::BindGroup>,
@@ -128,15 +129,16 @@ impl Default for StatefulConfig {
 pub struct StatefulPipeline {
     device: Arc<WgpuDevice>,
     config: StatefulConfig,
-    /// Persistent MAP_READ staging buffer for convergence scalar readback.
+    /// Persistent `MAP_READ` staging buffer for convergence scalar readback.
     convergence_staging: wgpu::Buffer,
 }
 
 impl StatefulPipeline {
     /// Create a new stateful pipeline.
     ///
-    /// Allocates a single persistent MAP_READ staging buffer sized for
+    /// Allocates a single persistent `MAP_READ` staging buffer sized for
     /// `config.convergence_scalars` × 8 bytes.  Everything else is zero-cost.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>, config: StatefulConfig) -> Self {
         let label = config.label.as_deref().unwrap_or("StatefulPipeline");
         let staging_size = (config.convergence_scalars * 8) as u64;
@@ -174,6 +176,11 @@ impl StatefulPipeline {
     ///
     /// `Vec<f64>` of length `convergence_scalars` read back after all
     /// iterations complete.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if chain is empty, or if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn run_iterations(
         &self,
         chain: &[KernelDispatch],
@@ -229,6 +236,11 @@ impl StatefulPipeline {
     /// # Returns
     ///
     /// `(iterations_run, final_convergence_values)`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if chain is empty, or if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn run_until_converged(
         &self,
         chain: &[KernelDispatch],
@@ -282,14 +294,14 @@ mod tests {
     use crate::device::test_pool;
     use std::sync::Arc;
 
-    const MINIMAL_WGSL: &str = r#"
+    const MINIMAL_WGSL: &str = r"
 @group(0) @binding(0) var<storage, read> input: array<f32>;
 @group(0) @binding(1) var<storage, read_write> output: array<f32>;
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     output[gid.x] = input[gid.x];
 }
-"#;
+";
 
     fn create_minimal_kernel_dispatch(workgroups: (u32, u32, u32)) -> KernelDispatch {
         let device = test_pool::get_test_device_sync();

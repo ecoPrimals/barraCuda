@@ -32,6 +32,10 @@ pub enum UpsampleMode {
 
 impl Upsample {
     /// Create a new upsample operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if input is not 4D [B, C, H, W], or neither size nor `scale_factor` is provided.
     pub fn new(
         input: Tensor,
         size: Option<(usize, usize)>,
@@ -74,6 +78,9 @@ impl Upsample {
     }
 
     /// Execute the upsample operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -129,7 +136,7 @@ impl Upsample {
                 UpsampleMode::Nearest => 0,
                 UpsampleMode::Bilinear => 1,
             },
-            align_corners: if self.align_corners { 1 } else { 0 },
+            align_corners: u32::from(self.align_corners),
         };
 
         let params_buffer = device

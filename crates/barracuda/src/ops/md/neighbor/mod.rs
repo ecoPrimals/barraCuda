@@ -32,7 +32,7 @@
 //!
 //! **hotSpring Integration** (Feb 2026):
 //! - CPU-managed cell list with GPU 27-neighbor force kernel
-//! - Rebuild every step (rebuild_interval=1) for guaranteed correctness
+//! - Rebuild every step (`rebuild_interval=1`) for guaranteed correctness
 //! - <5% CPU overhead at N=10k, GPU speedup dominates
 //!
 //! **Deep Debt Compliance**:

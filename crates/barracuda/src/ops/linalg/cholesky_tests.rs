@@ -137,10 +137,7 @@ async fn test_cholesky_reconstruction() {
     for (i, (&orig, &recon)) in input_data.iter().zip(recon_data.iter()).enumerate() {
         assert!(
             (orig - recon).abs() < 1e-4,
-            "Reconstruction error at index {}: expected {}, got {}",
-            i,
-            orig,
-            recon
+            "Reconstruction error at index {i}: expected {orig}, got {recon}"
         );
     }
 }
@@ -220,10 +217,7 @@ async fn test_cholesky_f64_reconstruction() {
     for (i, (&orig, &recon)) in a.iter().zip(reconstruction.iter()).enumerate() {
         assert!(
             (orig - recon).abs() < 1e-12,
-            "f64 reconstruction error at {}: expected {}, got {}",
-            i,
-            orig,
-            recon
+            "f64 reconstruction error at {i}: expected {orig}, got {recon}"
         );
     }
 }
@@ -264,10 +258,7 @@ async fn test_cholesky_f64_3x3() {
     for (i, (&orig, &r)) in a.iter().zip(recon.iter()).enumerate() {
         assert!(
             (orig - r).abs() < 1e-10,
-            "3x3 f64 reconstruction error at {}: expected {}, got {}",
-            i,
-            orig,
-            r
+            "3x3 f64 reconstruction error at {i}: expected {orig}, got {r}"
         );
     }
 }

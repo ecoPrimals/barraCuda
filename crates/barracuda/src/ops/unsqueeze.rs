@@ -14,6 +14,7 @@ pub struct Unsqueeze {
 
 impl Unsqueeze {
     /// Create an unsqueeze operation inserting a dimension at `axis`.
+    #[must_use]
     pub fn new(input: Tensor, axis: usize) -> Self {
         Self { input, axis }
     }
@@ -28,6 +29,9 @@ impl Unsqueeze {
     }
 
     /// Execute the unsqueeze operation on GPU.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.len();
@@ -132,6 +136,9 @@ impl Unsqueeze {
 
 impl Tensor {
     /// Add a dimension of size 1 at the given axis.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn unsqueeze(self, axis: usize) -> Result<Self> {
         Unsqueeze::new(self, axis).execute()
     }

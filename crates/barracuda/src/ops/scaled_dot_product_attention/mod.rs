@@ -21,10 +21,10 @@
 //! ```
 //!
 //! Where:
-//! - Q: Query matrix [batch, heads, seq_len, head_dim]
-//! - K: Key matrix [batch, heads, seq_len, head_dim]
-//! - V: Value matrix [batch, heads, seq_len, head_dim]
-//! - d_k: Dimension of keys (head_dim)
+//! - Q: Query matrix [batch, heads, `seq_len`, `head_dim`]
+//! - K: Key matrix [batch, heads, `seq_len`, `head_dim`]
+//! - V: Value matrix [batch, heads, `seq_len`, `head_dim`]
+//! - `d_k`: Dimension of keys (`head_dim`)
 //!
 //! ## Multi-Pass Execution
 //!
@@ -56,6 +56,7 @@ static WGSL_SDPA_SINGLE_KERNEL_F32: std::sync::LazyLock<String> = std::sync::Laz
 ///
 /// The production multi-pass implementation above is preferred; this constant
 /// exposes the simplified variant for experimentation and testing.
+#[must_use]
 pub fn wgsl_sdpa_single_kernel() -> &'static str {
     &WGSL_SDPA_SINGLE_KERNEL_F32
 }
@@ -91,14 +92,14 @@ pub struct ScaledDotProductAttention {
 
 impl ScaledDotProductAttention {
     /// Create a new scaled dot-product attention operation
-    ///
     /// # Arguments
-    /// - `query`: Query tensor [batch, heads, seq_len, head_dim]
-    /// - `key`: Key tensor [batch, heads, seq_len, head_dim]
-    /// - `value`: Value tensor [batch, heads, seq_len, head_dim]
-    ///
+    /// - `query`: Query tensor [batch, heads, `seq_len`, `head_dim`]
+    /// - `key`: Key tensor [batch, heads, `seq_len`, `head_dim`]
+    /// - `value`: Value tensor [batch, heads, `seq_len`, `head_dim`]
     /// # Returns
     /// Result containing the operation struct, or error if shapes are invalid
+    /// # Errors
+    /// Returns [`Err`] if inputs are not 4D, shapes do not match, or tensors are on different devices.
     pub fn new(query: Tensor, key: Tensor, value: Tensor) -> Result<Self> {
         // Validate shapes match
         let q_shape = query.shape();
@@ -121,10 +122,10 @@ impl ScaledDotProductAttention {
         if k_shape != q_shape || v_shape != q_shape {
             return Err(crate::error::BarracudaError::shape_mismatch(
                 q_shape.to_vec(),
-                if k_shape != q_shape {
-                    k_shape.to_vec()
-                } else {
+                if k_shape == q_shape {
                     v_shape.to_vec()
+                } else {
+                    k_shape.to_vec()
                 },
             ));
         }
@@ -201,11 +202,12 @@ impl ScaledDotProductAttention {
     }
 
     /// Execute the scaled dot-product attention operation
-    ///
     /// Performs multi-pass execution:
     /// 1. Compute Q @ K^T scores
     /// 2. Apply softmax to scores
     /// 3. Apply attention weights to values
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or device submission fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         compute::execute_scaled_dot_product_attention(self)
     }
@@ -213,15 +215,14 @@ impl ScaledDotProductAttention {
 
 impl Tensor {
     /// Scaled dot-product attention
-    ///
-    /// Computes: Attention(Q, K, V) = softmax(QK^T / sqrt(d_k)) * V
-    ///
+    /// Computes: Attention(Q, K, V) = softmax(QK^T / `sqrt(d_k)`) * V
     /// # Arguments
-    /// - `key`: Key tensor [batch, heads, seq_len, head_dim]
-    /// - `value`: Value tensor [batch, heads, seq_len, head_dim]
-    ///
+    /// - `key`: Key tensor [batch, heads, `seq_len`, `head_dim`]
+    /// - `value`: Value tensor [batch, heads, `seq_len`, `head_dim`]
     /// # Returns
-    /// Output tensor [batch, heads, seq_len, head_dim]
+    /// Output tensor [batch, heads, `seq_len`, `head_dim`]
+    /// # Errors
+    /// Returns [`Err`] if shape validation fails or buffer allocation/GPU dispatch fails (e.g. device lost).
     pub fn scaled_dot_product_attention(self, key: Tensor, value: Tensor) -> Result<Self> {
         ScaledDotProductAttention::new(self, key, value)?.execute()
     }

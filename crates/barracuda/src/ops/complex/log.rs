@@ -14,6 +14,11 @@ pub struct ComplexLog {
 
 impl ComplexLog {
     /// Create complex log operation. Input must have last dim = 2 (re, im).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor) -> Result<Self> {
         if input.shape().last() != Some(&2) {
             return Err(BarracudaError::Device(
@@ -91,6 +96,11 @@ impl ComplexLog {
     }
 
     /// Execute complex logarithm on GPU.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let n = self.input.len();

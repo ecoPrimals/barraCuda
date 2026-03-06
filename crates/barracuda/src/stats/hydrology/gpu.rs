@@ -17,7 +17,7 @@ const SHADER_HARGREAVES: &str = include_str!("../../shaders/science/hargreaves_b
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct HargreavesGpuParams {
-    /// Number of days (length of ra, t_max, t_min arrays).
+    /// Number of days (length of ra, `t_max`, `t_min` arrays).
     n_days: u32,
     _pad: [u32; 3],
 }
@@ -31,11 +31,18 @@ pub struct HargreavesBatchGpu {
 
 impl HargreavesBatchGpu {
     /// Create a new Hargreaves batch GPU executor.
+    /// # Errors
+    /// Never returns an error; always returns `Ok` when the device is valid.
     pub fn new(device: Arc<crate::device::WgpuDevice>) -> crate::error::Result<Self> {
         Ok(Self { device })
     }
 
     /// Dispatch Hargreaves ET₀ for all days. Returns ET₀ values (mm/day).
+    /// # Panics
+    /// Panics if `ra.len() != t_max.len()` or `ra.len() != t_min.len()`.
+    /// # Errors
+    /// Returns [`Err`] if buffer creation fails, buffer readback fails (e.g. device
+    /// lost, mapping timeout), or the GPU compute dispatch fails.
     pub fn dispatch(
         &self,
         ra: &[f64],
@@ -68,7 +75,7 @@ impl HargreavesBatchGpu {
             .storage_rw(3, &out_buf)
             .uniform(4, &params_buf)
             .dispatch(wg, 1, 1)
-            .submit();
+            .submit()?;
 
         self.device.read_f64_buffer(&out_buf, n)
     }
@@ -109,6 +116,7 @@ pub struct SeasonalGpuParams {
 impl SeasonalGpuParams {
     /// Construct with all physical parameters; padding is set automatically.
     #[expect(clippy::too_many_arguments, reason = "API")]
+    #[must_use]
     pub fn new(
         cell_count: u32,
         day_of_year: u32,
@@ -169,11 +177,18 @@ pub struct SeasonalPipelineF64 {
 
 impl SeasonalPipelineF64 {
     /// Create a new seasonal pipeline executor.
+    /// # Errors
+    /// Never returns an error; always returns `Ok` when the device is valid.
     pub fn new(device: Arc<crate::device::WgpuDevice>) -> crate::error::Result<Self> {
         Ok(Self { device })
     }
 
     /// Dispatch the fused seasonal pipeline for all cells.
+    /// # Panics
+    /// Panics if `cell_weather.len() != params.cell_count * 9`.
+    /// # Errors
+    /// Returns [`Err`] if buffer creation fails, buffer readback fails (e.g. device
+    /// lost, mapping timeout), or the GPU compute dispatch fails.
     pub fn dispatch(
         &self,
         cell_weather: &[f64],
@@ -199,7 +214,7 @@ impl SeasonalPipelineF64 {
             .storage_rw(1, &out_buf)
             .uniform(2, &params_buf)
             .dispatch(n as u32, 1, 1)
-            .submit();
+            .submit()?;
 
         let raw = self.device.read_f64_buffer(&out_buf, n * 5)?;
         Ok(raw
@@ -215,6 +230,7 @@ impl SeasonalPipelineF64 {
     }
 
     /// CPU reference implementation for validation.
+    #[must_use]
     pub fn execute_cpu(
         cell_weather: &[f64],
         kc_prev: f64,
@@ -332,13 +348,17 @@ pub struct McEt0PropagateGpu {
 
 impl McEt0PropagateGpu {
     /// Create a new Monte Carlo ET₀ propagation executor.
+    /// # Errors
+    /// Never returns an error; always returns `Ok` when the device is valid.
     pub fn new(device: Arc<crate::device::WgpuDevice>) -> crate::error::Result<Self> {
         Ok(Self { device })
     }
 
     /// Dispatch Monte Carlo ET₀ propagation.
-    ///
     /// Returns `n_samples` ET₀ values drawn from the uncertainty distribution.
+    /// # Errors
+    /// Returns [`Err`] if buffer creation fails, buffer readback fails (e.g. device
+    /// lost, mapping timeout), or the GPU compute dispatch fails.
     pub fn dispatch(
         &self,
         base: &Fao56BaseInputs,
@@ -396,7 +416,7 @@ impl McEt0PropagateGpu {
             .storage_rw(3, &seeds_buf)
             .storage_rw(4, &out_buf)
             .dispatch(wg, 1, 1)
-            .submit();
+            .submit()?;
 
         self.device.read_f64_buffer(&out_buf, n_samples as usize)
     }

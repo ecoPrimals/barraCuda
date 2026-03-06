@@ -39,6 +39,7 @@ pub const WGSL_ERFC_DERIV_F64: &str = include_str!("../shaders/special/erfc_deri
 /// assert!((erf(1.0) - 0.8427007929).abs() < 2e-7);
 /// assert!((erf(-1.0) + 0.8427007929).abs() < 2e-7);  // Odd function
 /// ```
+#[must_use]
 pub fn erf(x: f64) -> f64 {
     // Special cases
     if x == 0.0 {
@@ -92,6 +93,7 @@ pub fn erf(x: f64) -> f64 {
 /// assert!((erfc(0.0) - 1.0).abs() < 1e-14);
 /// assert!((erfc(3.0) - 2.209049699858544e-5).abs() < 1e-5);
 /// ```
+#[must_use]
 pub fn erfc(x: f64) -> f64 {
     // Special case
     if x == 0.0 {
@@ -122,11 +124,13 @@ pub fn erfc(x: f64) -> f64 {
 /// Compute erf for a batch of values (CPU path).
 ///
 /// For GPU batch processing, use `ErfGpu` from `barracuda::special`.
+#[must_use]
 pub fn erf_batch(x: &[f64]) -> Vec<f64> {
     x.iter().map(|&v| erf(v)).collect()
 }
 
 /// Compute erfc for a batch of values (CPU path).
+#[must_use]
 pub fn erfc_batch(x: &[f64]) -> Vec<f64> {
     x.iter().map(|&v| erfc(v)).collect()
 }
@@ -180,9 +184,7 @@ mod tests {
         let expected = 2.209049699858544e-5;
         assert!(
             (computed - expected).abs() / expected < 1e-3,
-            "erfc(3) = {}, expected ~{}",
-            computed,
-            expected
+            "erfc(3) = {computed}, expected ~{expected}"
         );
     }
 

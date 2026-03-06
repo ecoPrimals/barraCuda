@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Conv1D - 1D Convolution
+//! `Conv1D` - 1D Convolution
 //! Pure WGSL implementation
 //!
 //! Convolution operation for sequences (time-series, NLP, audio processing)
 //! Formula: output[b, oc, ol] = Σ(input[b, ic, il] * weight[oc, ic, k]) + bias[oc]
 //!
-//! Used in: WaveNet, temporal CNNs, sequence models, audio processing
+//! Used in: `WaveNet`, temporal CNNs, sequence models, audio processing
 //! Benefits: Captures temporal/sequential patterns efficiently
 //!
 //! Shader: f64 canonical (downcast to f32 at compile)
@@ -41,7 +41,8 @@ pub struct Conv1D {
 }
 
 impl Conv1D {
-    /// Creates a new Conv1D. Input shape: [B, C_in, L]; weight: [C_out, C_in, K].
+    /// Creates a new `Conv1D`. Input shape: [B, `C_in`, L]; weight: [`C_out`, `C_in`, K].
+    #[must_use]
     pub fn new(
         input: Tensor,
         weight: Tensor,
@@ -68,6 +69,9 @@ impl Conv1D {
     }
 
     /// Executes 1D convolution and returns the output tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -191,11 +195,14 @@ impl Conv1D {
 impl Tensor {
     /// Apply 1D convolution for sequence processing
     /// # Arguments
-    /// * `weight` - Convolution weights (shape: [out_channels, in_channels, kernel_size])
-    /// * `bias` - Bias terms (shape: [out_channels])
+    /// * `weight` - Convolution weights (shape: [`out_channels`, `in_channels`, `kernel_size`])
+    /// * `bias` - Bias terms (shape: [`out_channels`])
     /// * `stride` - Stride for convolution (default: 1)
     /// * `padding` - Padding to apply (default: 0)
     /// * `dilation` - Dilation factor (default: 1)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn conv1d(
         self,
         weight: Tensor,

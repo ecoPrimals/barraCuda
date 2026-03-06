@@ -116,6 +116,7 @@ impl SubstrateMemoryHierarchy {
     ///
     /// Uses device type to estimate cache hierarchy.
     /// This is fast but less accurate than probing.
+    #[must_use]
     pub fn estimate(device: &WgpuDevice) -> Self {
         let info = device.adapter_info();
 
@@ -268,7 +269,7 @@ impl SubstrateMemoryHierarchy {
         }
 
         // VRAM bandwidth from largest probe that succeeded
-        let main_bw = samples.last().map(|s| s.bandwidth_gbs).unwrap_or(100.0);
+        let main_bw = samples.last().map_or(100.0, |s| s.bandwidth_gbs);
         let main_memory = MainMemory {
             size_bytes: device.device().limits().max_buffer_size,
             bandwidth_gbs: main_bw,
@@ -277,8 +278,7 @@ impl SubstrateMemoryHierarchy {
         // Optimal tile targets ~70% of largest cache
         let optimal_tile = cache_levels
             .last()
-            .map(|c| (c.size_bytes as f64 * 0.7) as u64)
-            .unwrap_or(16 * 1024 * 1024);
+            .map_or(16 * 1024 * 1024, |c| (c.size_bytes as f64 * 0.7) as u64);
 
         Self {
             substrate_name: info.name.clone(),
@@ -299,7 +299,7 @@ impl SubstrateMemoryHierarchy {
             return None;
         }
 
-        let shader_src = r#"
+        let shader_src = r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read> b: array<f32>;
 @group(0) @binding(2) var<storage, read_write> output: array<f32>;
@@ -312,7 +312,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
     output[idx] = a[idx] + b[idx];
 }
-"#;
+";
 
         let wgpu_device = device.device();
 
@@ -433,6 +433,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     /// Discover cache hierarchy (alias for estimate)
+    #[must_use]
     pub fn discover(device: &WgpuDevice) -> Self {
         Self::estimate(device)
     }
@@ -473,8 +474,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
                         NAME_TABLE
                             .iter()
                             .find(|(patterns, _)| patterns.iter().any(|p| n.contains(p)))
-                            .map(|(_, st)| *st)
-                            .unwrap_or(SubstrateType::Other)
+                            .map_or(SubstrateType::Other, |(_, st)| *st)
                     }
                 }
             }
@@ -484,11 +484,13 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     /// Get the largest cache level
+    #[must_use]
     pub fn largest_cache(&self) -> Option<&CacheLevel> {
         self.cache_levels.iter().max_by_key(|c| c.size_bytes)
     }
 
     /// Total cache capacity
+    #[must_use]
     pub fn total_cache_bytes(&self) -> u64 {
         self.cache_levels.iter().map(|c| c.size_bytes).sum()
     }
@@ -533,6 +535,7 @@ pub struct CacheAwareTiler {
 
 impl CacheAwareTiler {
     /// Create a tiler for a substrate
+    #[must_use]
     pub fn new(hierarchy: SubstrateMemoryHierarchy) -> Self {
         Self { hierarchy }
     }
@@ -543,6 +546,7 @@ impl CacheAwareTiler {
     /// * `total_bytes` - Total data size
     /// * `element_size` - Bytes per element
     /// * `read_write_ratio` - Data reuse factor (e.g., 3.0 for A*B+C)
+    #[must_use]
     pub fn optimal_tile_size(
         &self,
         total_bytes: u64,
@@ -583,6 +587,7 @@ impl CacheAwareTiler {
     }
 
     /// Check if data fits in cache
+    #[must_use]
     pub fn is_cache_resident(&self, data_bytes: u64) -> CacheResidency {
         for cache in &self.hierarchy.cache_levels {
             if data_bytes <= cache.size_bytes {
@@ -597,8 +602,7 @@ impl CacheAwareTiler {
             .hierarchy
             .cache_levels
             .last()
-            .map(|c| c.size_bytes)
-            .unwrap_or(0);
+            .map_or(0, |c| c.size_bytes);
 
         CacheResidency::DramBound {
             overflow_bytes: data_bytes.saturating_sub(largest),
@@ -606,6 +610,7 @@ impl CacheAwareTiler {
     }
 
     /// Predict effective bandwidth
+    #[must_use]
     pub fn predict_bandwidth(&self, data_bytes: u64) -> f64 {
         match self.is_cache_resident(data_bytes) {
             CacheResidency::Resident { cache_level, .. } => self
@@ -613,8 +618,9 @@ impl CacheAwareTiler {
                 .cache_levels
                 .iter()
                 .find(|c| c.name == cache_level)
-                .map(|c| c.bandwidth_gbs)
-                .unwrap_or(self.hierarchy.main_memory.bandwidth_gbs),
+                .map_or(self.hierarchy.main_memory.bandwidth_gbs, |c| {
+                    c.bandwidth_gbs
+                }),
             CacheResidency::DramBound { .. } => {
                 // Expect ~80% of theoretical DRAM bandwidth
                 self.hierarchy.main_memory.bandwidth_gbs * 0.8

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU lattice initialization: cold start and hot start.
 //!
-//! Replaces CPU-only `wilson.rs` cold_start/hot_start with GPU shaders.
+//! Replaces CPU-only `wilson.rs` `cold_start/hot_start` with GPU shaders.
 
 use crate::device::WgpuDevice;
 use crate::error::Result;
@@ -34,6 +34,8 @@ pub struct GpuLatticeInit {
 
 impl GpuLatticeInit {
     /// Create lattice initializer for given volume.
+    /// # Errors
+    /// Returns [`Err`] if shader compilation or pipeline creation fails.
     pub fn new(device: Arc<WgpuDevice>, volume: u32) -> Result<Self> {
         let n_links = volume * 4;
         let src = format!("{}{}", su3_extended_preamble(), SHADER_BODY);
@@ -92,6 +94,8 @@ impl GpuLatticeInit {
     }
 
     /// Initialize all links to SU(3) identity.
+    /// # Errors
+    /// Returns [`Err`] if GPU dispatch fails or the device is lost.
     pub fn cold_start(
         &self,
         links_buf: &wgpu::Buffer,
@@ -109,6 +113,8 @@ impl GpuLatticeInit {
     }
 
     /// Initialize links with random SU(3) near identity.
+    /// # Errors
+    /// Returns [`Err`] if GPU dispatch fails or the device is lost.
     pub fn hot_start(
         &self,
         links_buf: &wgpu::Buffer,
@@ -194,6 +200,7 @@ impl GpuLatticeInit {
     }
 
     /// Number of gauge links (volume × 4).
+    #[must_use]
     pub fn n_links(&self) -> u32 {
         self.n_links
     }

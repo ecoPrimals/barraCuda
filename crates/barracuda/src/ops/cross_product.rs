@@ -2,7 +2,7 @@
 //! Cross product operation - Vector cross product
 //!
 //! Computes cross product of 3D vectors
-//! a × b = (a_y*b_z - a_z*b_y, a_z*b_x - a_x*b_z, a_x*b_y - a_y*b_x)
+//! a × b = (`a_y`*`b_z` - `a_z`*`b_y`, `a_z`*`b_x` - `a_x`*`b_z`, `a_x`*`b_y` - `a_y`*`b_x`)
 
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
@@ -30,6 +30,8 @@ pub struct CrossProduct {
 
 impl CrossProduct {
     /// Create cross product operation
+    /// # Errors
+    /// Returns [`Err`] if inputs are not [N, 3] or batch sizes differ.
     pub fn new(input_a: Tensor, input_b: Tensor) -> Result<Self> {
         let shape_a = input_a.shape();
         let shape_b = input_b.shape();
@@ -72,6 +74,9 @@ impl CrossProduct {
     }
 
     /// Execute cross product on tensors
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input_a.device();
         let shape_a = self.input_a.shape();
@@ -102,7 +107,7 @@ impl CrossProduct {
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)
             .dispatch_1d(num_vectors as u32)
-            .submit();
+            .submit()?;
 
         // Create output tensor
         Ok(Tensor::from_buffer(

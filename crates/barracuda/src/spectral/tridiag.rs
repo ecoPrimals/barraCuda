@@ -14,6 +14,7 @@
 ///
 /// - `diagonal`: main diagonal d[0..n]
 /// - `off_diag`: sub/super-diagonal e[0..n-1]
+#[must_use]
 pub fn sturm_count(diagonal: &[f64], off_diag: &[f64], lambda: f64) -> usize {
     let n = diagonal.len();
     if n == 0 {
@@ -28,11 +29,7 @@ pub fn sturm_count(diagonal: &[f64], off_diag: &[f64], lambda: f64) -> usize {
 
     for i in 1..n {
         let q_safe = if q.abs() < 1e-300 {
-            if q >= 0.0 {
-                1e-300
-            } else {
-                -1e-300
-            }
+            if q >= 0.0 { 1e-300 } else { -1e-300 }
         } else {
             q
         };
@@ -48,6 +45,7 @@ pub fn sturm_count(diagonal: &[f64], off_diag: &[f64], lambda: f64) -> usize {
 ///
 /// Returns eigenvalues sorted in ascending order. Complexity: O(N² log(1/ε)).
 /// Exact to machine precision for well-separated eigenvalues.
+#[must_use]
 pub fn find_all_eigenvalues(diagonal: &[f64], off_diag: &[f64]) -> Vec<f64> {
     let n = diagonal.len();
     if n == 0 {
@@ -99,6 +97,7 @@ pub fn find_all_eigenvalues(diagonal: &[f64], off_diag: &[f64]) -> Vec<f64> {
 /// Complexity: O(N² log(1/ε)) for eigenvalues + O(N²) per eigenvector.
 /// For degenerate eigenvalues, the vectors are orthogonalized via
 /// modified Gram-Schmidt.
+#[must_use]
 pub fn tridiag_eigenvectors(diagonal: &[f64], off_diag: &[f64]) -> (Vec<f64>, Vec<f64>) {
     let n = diagonal.len();
     if n == 0 {

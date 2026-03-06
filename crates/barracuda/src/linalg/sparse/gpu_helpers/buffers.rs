@@ -2,7 +2,7 @@
 //! Buffer creation and I/O for sparse GPU solvers.
 //!
 //! Single responsibility: buffer allocation, readback, and copy operations.
-//! Reused by CG, BiCGSTAB, and other sparse solvers.
+//! Reused by CG, `BiCGSTAB`, and other sparse solvers.
 
 use crate::device::WgpuDevice;
 use crate::error::Result;
@@ -14,16 +14,19 @@ pub struct SparseBuffers;
 
 impl SparseBuffers {
     /// Create an f64 storage buffer from data
+    #[must_use]
     pub fn f64_from_slice(device: &Arc<WgpuDevice>, label: &str, data: &[f64]) -> wgpu::Buffer {
         Self::f64_from_slice_raw(&device.device, label, data)
     }
 
     /// Create a zero-initialized f64 storage buffer
+    #[must_use]
     pub fn f64_zeros(device: &Arc<WgpuDevice>, label: &str, count: usize) -> wgpu::Buffer {
         Self::f64_zeros_raw(&device.device, label, count)
     }
 
     /// Create an f64 storage buffer from slice (raw device)
+    #[must_use]
     pub fn f64_from_slice_raw(device: &wgpu::Device, label: &str, data: &[f64]) -> wgpu::Buffer {
         let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
         device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -36,6 +39,7 @@ impl SparseBuffers {
     }
 
     /// Create a zero-initialized f64 storage buffer (raw device)
+    #[must_use]
     pub fn f64_zeros_raw(device: &wgpu::Device, label: &str, count: usize) -> wgpu::Buffer {
         let zeros = vec![0u8; count * 8];
         device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -48,6 +52,7 @@ impl SparseBuffers {
     }
 
     /// Create a zero-initialized i32 storage buffer (raw device)
+    #[must_use]
     pub fn i32_zeros_raw(device: &wgpu::Device, label: &str, count: usize) -> wgpu::Buffer {
         device.create_buffer(&wgpu::BufferDescriptor {
             label: Some(label),
@@ -59,7 +64,9 @@ impl SparseBuffers {
         })
     }
 
-    /// Read f64 data from GPU buffer (synchronized via WgpuDevice)
+    /// Read f64 data from GPU buffer (synchronized via `WgpuDevice`)
+    /// # Errors
+    /// Returns [`Err`] if buffer readback fails (e.g., device lost, mapping timeout).
     pub fn read_f64_raw(
         device: &WgpuDevice,
         buffer: &wgpu::Buffer,
@@ -68,7 +75,9 @@ impl SparseBuffers {
         device.read_buffer::<f64>(buffer, count)
     }
 
-    /// Read i32 data from GPU buffer (synchronized via WgpuDevice)
+    /// Read i32 data from GPU buffer (synchronized via `WgpuDevice`)
+    /// # Errors
+    /// Returns [`Err`] if buffer readback fails (e.g., device lost, mapping timeout).
     pub fn read_i32_raw(
         device: &WgpuDevice,
         buffer: &wgpu::Buffer,
@@ -78,6 +87,7 @@ impl SparseBuffers {
     }
 
     /// Create a u32 storage buffer from usize data (for CSR indices)
+    #[must_use]
     pub fn u32_from_usize(device: &Arc<WgpuDevice>, label: &str, data: &[usize]) -> wgpu::Buffer {
         let u32_data: Vec<u32> = data.iter().map(|&x| x as u32).collect();
         device
@@ -90,6 +100,7 @@ impl SparseBuffers {
     }
 
     /// Create a uniform buffer from u32 params
+    #[must_use]
     pub fn uniform_u32(device: &Arc<WgpuDevice>, label: &str, params: &[u32]) -> wgpu::Buffer {
         device
             .device
@@ -101,6 +112,8 @@ impl SparseBuffers {
     }
 
     /// Read f64 data from GPU buffer
+    /// # Errors
+    /// Returns [`Err`] if buffer readback fails (e.g., device lost, mapping timeout).
     pub fn read_f64(
         device: &Arc<WgpuDevice>,
         buffer: &wgpu::Buffer,

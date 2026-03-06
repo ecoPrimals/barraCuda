@@ -35,15 +35,15 @@ use crate::error::{BarracudaError, Result as BarracudaResult};
 /// Image transform types (runtime-configured)
 #[derive(Debug, Clone)]
 pub enum Transform {
-    /// Normalize with mean and std (per-channel) - Future: use ops::normalize
+    /// Normalize with mean and std (per-channel) - Future: use `ops::normalize`
     Normalize {
-        /// Per-channel mean (e.g. [0.485, 0.456, 0.406] for ImageNet)
+        /// Per-channel mean (e.g. [0.485, 0.456, 0.406] for `ImageNet`)
         mean: [f32; 3],
         /// Per-channel standard deviation
         std: [f32; 3],
     },
 
-    /// Resize to target dimensions - Future: use ops::interpolate
+    /// Resize to target dimensions - Future: use `ops::interpolate`
     Resize {
         /// Target width in pixels
         width: usize,
@@ -60,19 +60,19 @@ pub enum Transform {
     /// Random horizontal flip
     RandomFlip,
 
-    /// Cutmix augmentation (training only) - See ops::cutmix
+    /// Cutmix augmentation (training only) - See `ops::cutmix`
     Cutmix {
         /// Beta distribution parameter for mix ratio
         alpha: f32,
     },
 
-    /// Mixup augmentation (training only) - See ops::mixup
+    /// Mixup augmentation (training only) - See `ops::mixup`
     Mixup {
         /// Beta distribution parameter for mix ratio
         alpha: f32,
     },
 
-    /// Padding (reflect, replicate, constant) - Future: use ops::pad
+    /// Padding (reflect, replicate, constant) - Future: use `ops::pad`
     Pad {
         /// Padding amounts [top, bottom, left, right]
         padding: [usize; 4],
@@ -103,7 +103,7 @@ pub enum PadMode {
 /// # Status
 /// - Core infrastructure: Complete
 /// - Basic transforms: Implemented
-/// - Advanced transforms: Future (will use ops:: modules)
+/// - Advanced transforms: Future (will use `ops::` modules)
 pub struct VisionPipeline {
     device: WgpuDevice,
     transforms: Vec<Transform>,
@@ -112,6 +112,7 @@ pub struct VisionPipeline {
 
 impl VisionPipeline {
     /// Create new vision pipeline
+    #[must_use]
     pub fn new(device: &WgpuDevice) -> Self {
         Self {
             device: device.clone(),
@@ -121,11 +122,13 @@ impl VisionPipeline {
     }
 
     /// The underlying compute device for GPU-accelerated transforms.
+    #[must_use]
     pub fn device(&self) -> &WgpuDevice {
         &self.device
     }
 
     /// Add transform to pipeline
+    #[must_use]
     pub fn add_transform(mut self, transform: Transform) -> Self {
         self.transforms.push(transform);
         self
@@ -139,19 +142,19 @@ impl VisionPipeline {
     }
 
     /// Process single image through pipeline
-    ///
     /// # Arguments
     /// * `image` - Flattened image data (H×W×C)
     /// * `height` - Image height
     /// * `width` - Image width
     /// * `channels` - Number of channels (typically 3 for RGB)
-    ///
     /// # Returns
     /// Processed image data
-    ///
     /// # Status
     /// Basic transforms implemented. Advanced transforms (normalize, resize, pad)
-    /// will be integrated with ops:: modules in next iteration.
+    /// will be integrated with `ops::` modules in next iteration.
+    /// # Errors
+    /// Returns [`Err`] if the pipeline was not built, image dimensions do not
+    /// match `height * width * channels`, or crop size exceeds image dimensions.
     pub async fn process_image(
         &self,
         image: &[f32],
@@ -239,6 +242,9 @@ impl VisionPipeline {
     }
 
     /// Process batch of images
+    /// # Errors
+    /// Returns [`Err`] if any image fails to process (see
+    /// [`process_image`](Self::process_image)).
     pub async fn process_batch(
         &self,
         images: &[Vec<f32>],
@@ -277,6 +283,9 @@ pub struct ImageBatch {
 
 impl ImageBatch {
     /// Create new batch
+    /// # Errors
+    /// Returns [`Err`] if the number of images and labels differ, or if any
+    /// image has fewer elements than `height * width * channels`.
     pub fn new(
         images: Vec<Vec<f32>>,
         labels: Vec<f32>,
@@ -318,6 +327,7 @@ impl ImageBatch {
     }
 
     /// Batch size
+    #[must_use]
     pub fn size(&self) -> usize {
         self.images.len()
     }

@@ -14,6 +14,8 @@ pub struct ComplexSqrt {
 
 impl ComplexSqrt {
     /// Create complex square root operation. Input must have last dim = 2 (re, im).
+    /// # Errors
+    /// Returns [`Err`] if input last dimension is not 2.
     pub fn new(input: Tensor) -> Result<Self> {
         if input.shape().last() != Some(&2) {
             return Err(BarracudaError::Device(
@@ -91,6 +93,9 @@ impl ComplexSqrt {
     }
 
     /// Execute complex square root on GPU.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let num_elements = self.input.len();

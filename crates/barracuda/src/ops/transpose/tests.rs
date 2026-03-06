@@ -18,13 +18,7 @@ async fn test_transpose_basic() {
     let expected = [1.0, 4.0, 2.0, 5.0, 3.0, 6.0];
     assert_eq!(output.shape(), &[3, 2]);
     for (i, (&r, &e)) in result.iter().zip(expected.iter()).enumerate() {
-        assert!(
-            (r - e).abs() < 1e-5,
-            "Mismatch at index {}: {} vs {}",
-            i,
-            r,
-            e
-        );
+        assert!((r - e).abs() < 1e-5, "Mismatch at index {i}: {r} vs {e}");
     }
 }
 

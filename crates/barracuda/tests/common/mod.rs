@@ -4,7 +4,7 @@
 //! Provides `run_gpu_resilient_async` to wrap GPU test bodies and gracefully
 //! skip when NVK/Nouveau driver invalidates resources under concurrent load.
 
-use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 
 const NVK_SKIP_PATTERNS: &[&str] = &["does not exist", "device lost", "Parent device"];
 
@@ -39,7 +39,7 @@ where
         Err(e) => {
             let msg = e
                 .downcast_ref::<String>()
-                .map(|s| s.as_str())
+                .map(std::string::String::as_str)
                 .or_else(|| e.downcast_ref::<&str>().copied())
                 .unwrap_or("unknown panic");
 

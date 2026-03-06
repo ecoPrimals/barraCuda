@@ -18,7 +18,7 @@
 //! | Pass | Shader | Description |
 //! |------|--------|-------------|
 //! | 1 | `atomic_cell_bin.wgsl` | One thread/particle → atomicAdd cell count |
-//! | 2 | `prefix_sum.wgsl` | Parallel exclusive scan → cell_start offsets |
+//! | 2 | `prefix_sum.wgsl` | Parallel exclusive scan → `cell_start` offsets |
 //! | 3 | `cell_list_scatter.wgsl` | Each particle scatters its index |
 //!
 //! All three passes fit in one `queue.submit()`.  The resulting buffers
@@ -110,6 +110,11 @@ impl CellListGpu {
     /// * `n` — number of particles (fixed for lifetime of this builder)
     /// * `box_l` — simulation box side length `[Lx, Ly, Lz]` in Å
     /// * `cutoff` — force cutoff radius; cell side = cutoff
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>, n: usize, box_l: [f64; 3], cutoff: f64) -> Result<Self> {
         let n_u32 = n as u32;
         let mx = ((box_l[0] / cutoff).floor() as u32).max(1);
@@ -262,6 +267,11 @@ impl CellListGpu {
     ///
     /// After this returns, [`sorted_indices`] and [`cell_start`] are ready
     /// for the force kernel's bind group.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn build(&self, positions_buf: &wgpu::Buffer) -> Result<()> {
         let dev = &self.device.device;
 
@@ -432,22 +442,27 @@ impl CellListGpu {
     }
 
     /// GPU buffer: `[N] u32` particle indices sorted by cell.
+    #[must_use]
     pub fn sorted_indices(&self) -> &wgpu::Buffer {
         &self.bufs.sorted_indices
     }
     /// GPU buffer: `[Nc] u32` exclusive prefix sum (cell start offsets).
+    #[must_use]
     pub fn cell_start(&self) -> &wgpu::Buffer {
         &self.bufs.cell_start
     }
     /// GPU buffer: `[Nc] u32` particle count per cell.
+    #[must_use]
     pub fn cell_count(&self) -> &wgpu::Buffer {
         &self.bufs.cell_counts
     }
     /// Total number of cells.
+    #[must_use]
     pub fn n_cells(&self) -> u32 {
         self.nc
     }
     /// Cell grid dimensions.
+    #[must_use]
     pub fn grid(&self) -> (u32, u32, u32) {
         (self.mx, self.my, self.mz)
     }

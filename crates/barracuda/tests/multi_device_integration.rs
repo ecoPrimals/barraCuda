@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Multi-Device Pool Integration Tests
 //!
-//! Tests for ResourceQuota and MultiDevicePool with real GPU hardware.
+//! Tests for `ResourceQuota` and `MultiDevicePool` with real GPU hardware.
 //! Designed for heterogeneous GPU configurations (e.g., NVIDIA + AMD).
 //!
 //! # Test Environment
@@ -20,7 +20,7 @@
 #![expect(clippy::unwrap_used, reason = "tests")]
 use barracuda::device::WgpuDevice;
 use barracuda::multi_gpu::{DeviceRequirements, GpuVendor, MultiDevicePool, WorkloadConfig};
-use barracuda::resource_quota::{presets, ResourceQuota};
+use barracuda::resource_quota::{ResourceQuota, presets};
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
@@ -88,7 +88,7 @@ async fn test_device_creation_for_all_adapters() {
                 }
             }
             Err(e) => {
-                println!("  ✗ Failed: {}", e);
+                println!("  ✗ Failed: {e}");
             }
         }
     }
@@ -99,7 +99,7 @@ async fn test_device_creation_for_all_adapters() {
         successful_discrete_gpus.len()
     );
     for name in &successful_discrete_gpus {
-        println!("  - {}", name);
+        println!("  - {name}");
     }
 
     // We expect at least one discrete GPU to work
@@ -138,18 +138,18 @@ async fn test_multi_device_pool_discovers_both_gpus() {
             println!("{}", pool.summary());
 
             for status in pool.device_status() {
-                println!("  {}", status);
+                println!("  {status}");
             }
 
             // Check for multiple GPUs
             let device_count = pool.device_count();
-            println!("\nTotal devices: {}", device_count);
+            println!("\nTotal devices: {device_count}");
 
             // Check for vendor diversity
             let has_nvidia = pool.devices().iter().any(|d| d.vendor == GpuVendor::Nvidia);
             let has_amd = pool.devices().iter().any(|d| d.vendor == GpuVendor::Amd);
 
-            println!("Vendor coverage: NVIDIA={}, AMD={}", has_nvidia, has_amd);
+            println!("Vendor coverage: NVIDIA={has_nvidia}, AMD={has_amd}");
 
             if device_count >= 2 {
                 println!("✓ Multi-GPU configuration detected");
@@ -158,7 +158,7 @@ async fn test_multi_device_pool_discovers_both_gpus() {
             }
         }
         Err(e) => {
-            panic!("Failed to create MultiDevicePool: {}", e);
+            panic!("Failed to create MultiDevicePool: {e}");
         }
     }
 }
@@ -171,7 +171,7 @@ async fn test_multi_device_pool_discovers_both_gpus() {
 async fn test_acquire_device_with_nvidia_preference() {
     let pool = MultiDevicePool::new().await;
     if let Err(e) = &pool {
-        println!("Skipping test - no GPU available: {}", e);
+        println!("Skipping test - no GPU available: {e}");
         return;
     }
     let pool = pool.unwrap();
@@ -193,7 +193,7 @@ async fn test_acquire_device_with_nvidia_preference() {
             }
         }
         Err(e) => {
-            println!("Could not acquire device: {}", e);
+            println!("Could not acquire device: {e}");
         }
     }
 }
@@ -202,7 +202,7 @@ async fn test_acquire_device_with_nvidia_preference() {
 async fn test_acquire_device_with_amd_preference() {
     let pool = MultiDevicePool::new().await;
     if let Err(e) = &pool {
-        println!("Skipping test - no GPU available: {}", e);
+        println!("Skipping test - no GPU available: {e}");
         return;
     }
     let pool = pool.unwrap();
@@ -224,7 +224,7 @@ async fn test_acquire_device_with_amd_preference() {
             }
         }
         Err(e) => {
-            println!("Could not acquire device: {}", e);
+            println!("Could not acquire device: {e}");
         }
     }
 }
@@ -233,7 +233,7 @@ async fn test_acquire_device_with_amd_preference() {
 async fn test_acquire_multiple_devices_sequentially() {
     let pool = MultiDevicePool::new().await;
     if let Err(e) = &pool {
-        println!("Skipping test - no GPU available: {}", e);
+        println!("Skipping test - no GPU available: {e}");
         return;
     }
     let pool = pool.unwrap();
@@ -277,7 +277,7 @@ async fn test_acquire_multiple_devices_sequentially() {
 async fn test_quota_enforcement_on_device_lease() {
     let pool = MultiDevicePool::new().await;
     if let Err(e) = &pool {
-        println!("Skipping test - no GPU available: {}", e);
+        println!("Skipping test - no GPU available: {e}");
         return;
     }
     let pool = pool.unwrap();
@@ -391,13 +391,13 @@ async fn test_concurrent_device_acquisition() {
             match pool_clone.acquire(&reqs).await {
                 Ok(lease) => {
                     let name = lease.info().name.clone();
-                    println!("Task {} acquired: {}", i, name);
+                    println!("Task {i} acquired: {name}");
                     // Drop the lease — release is atomic, no hold time needed.
                     drop(lease);
                     Ok(name)
                 }
                 Err(e) => {
-                    println!("Task {} failed: {}", i, e);
+                    println!("Task {i} failed: {e}");
                     Err(e.to_string())
                 }
             }
@@ -431,7 +431,7 @@ async fn test_concurrent_device_acquisition() {
 async fn test_device_vram_requirements() {
     let pool = MultiDevicePool::new().await;
     if let Err(e) = &pool {
-        println!("Skipping test - no GPU available: {}", e);
+        println!("Skipping test - no GPU available: {e}");
         return;
     }
     let pool = pool.unwrap();
@@ -476,7 +476,7 @@ async fn test_pool_status_reporting() {
 
     println!("\nPer-device status:");
     for status in pool.device_status() {
-        println!("  {}", status);
+        println!("  {status}");
     }
 
     println!("\nDetailed device info:");
@@ -503,7 +503,7 @@ async fn test_pool_status_reporting() {
 async fn test_real_workload_on_acquired_device() {
     let pool = MultiDevicePool::new().await;
     if let Err(e) = &pool {
-        println!("Skipping test - no GPU available: {}", e);
+        println!("Skipping test - no GPU available: {e}");
         return;
     }
     let pool = pool.unwrap();
@@ -575,12 +575,12 @@ async fn test_rapid_acquire_release_cycles() {
         drop(lease);
     }
 
-    println!("Completed {} cycles", cycles);
+    println!("Completed {cycles} cycles");
     println!("Final: {}", pool.summary());
 
     // All devices should be available again
     for status in pool.device_status() {
-        println!("  {}", status);
+        println!("  {status}");
         assert!(
             status.contains("available"),
             "All devices should be available after leases dropped"

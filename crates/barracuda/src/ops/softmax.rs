@@ -41,6 +41,8 @@ pub struct Softmax {
 
 impl Softmax {
     /// Create Softmax operation
+    /// # Errors
+    /// Returns [`Err`] if input tensor is empty.
     pub fn new(input: Tensor) -> Result<Self> {
         // Softmax expects 1D or last dimension for now
         if input.shape().is_empty() {
@@ -58,6 +60,8 @@ impl Softmax {
     }
 
     /// Execute Softmax — GPU-resident, pipeline-cached, batchable.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or device submission fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.len();
@@ -139,6 +143,8 @@ impl Softmax {
 // Convenience method on Tensor
 impl Tensor {
     /// Apply Softmax activation.
+    /// # Errors
+    /// Returns [`Err`] if tensor is empty or buffer allocation/GPU dispatch fails (e.g. device lost).
     pub fn softmax(self) -> Result<Self> {
         tracing::debug!("Routing softmax to WGSL");
         Softmax::new(self)?.execute()
@@ -239,10 +245,7 @@ mod tests {
         for (i, (&gpu, &cpu)) in gpu_result.iter().zip(cpu_result.iter()).enumerate() {
             assert!(
                 (gpu - cpu).abs() < 1e-5,
-                "Error at {}: GPU={}, CPU={}",
-                i,
-                gpu,
-                cpu
+                "Error at {i}: GPU={gpu}, CPU={cpu}"
             );
         }
     }

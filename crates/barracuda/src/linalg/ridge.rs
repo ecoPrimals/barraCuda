@@ -18,7 +18,7 @@ use crate::error::{BarracudaError, Result};
 /// Result of ridge regression fitting.
 #[derive(Debug, Clone)]
 pub struct RidgeResult {
-    /// Weight matrix (n_outputs × n_features, row-major).
+    /// Weight matrix (`n_outputs` × `n_features`, row-major).
     pub weights: Vec<f64>,
     /// Number of features (columns of X).
     pub n_features: usize,
@@ -28,9 +28,10 @@ pub struct RidgeResult {
 
 impl RidgeResult {
     /// Predict outputs for new data points.
-    ///
     /// `x` is `n_samples × n_features` (row-major).
     /// Returns `n_samples × n_outputs` (row-major).
+    /// # Errors
+    /// Returns [`Err`] if `x.len() != n_samples * n_features` (shape mismatch).
     pub fn predict(&self, x: &[f64], n_samples: usize) -> Result<Vec<f64>> {
         if x.len() != n_samples * self.n_features {
             return Err(BarracudaError::InvalidInput {
@@ -62,6 +63,11 @@ impl RidgeResult {
 /// - `regularization`: Tikhonov parameter λ ≥ 0
 ///
 /// Returns a [`RidgeResult`] containing the fitted weight matrix.
+///
+/// # Errors
+///
+/// Returns [`Err`] if dimensions are inconsistent, regularization < 0, or the
+/// Gram matrix is not positive definite (degenerate data).
 pub fn ridge_regression(
     x: &[f64],
     y: &[f64],
@@ -172,7 +178,7 @@ pub fn ridge_regression(
     })
 }
 
-/// In-place Cholesky factorization. Returns lower triangular L where A = LLᵀ,
+/// In-place Cholesky factorization. Returns lower triangular L where A = `LLᵀ`,
 /// or `None` if a leading minor is non-positive.
 fn cholesky_factor(a: &[f64], n: usize) -> Option<Vec<f64>> {
     let mut l = vec![0.0; n * n];

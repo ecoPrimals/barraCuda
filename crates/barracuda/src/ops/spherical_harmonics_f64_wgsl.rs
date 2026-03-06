@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! SPHERICAL HARMONICS F64 - Real spherical harmonics Y_l^m - f64 precision WGSL
+//! SPHERICAL HARMONICS F64 - Real spherical harmonics `Y_l^m` - f64 precision WGSL
 //!
 //! Deep Debt Principles apply.
 //!
@@ -9,18 +9,21 @@
 //! - Molecular orbital visualization
 //! - Gravitational field modeling
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use std::sync::Arc;
 
-/// f64 Real spherical harmonics evaluator Y_l^m(θ, φ)
+/// f64 Real spherical harmonics evaluator `Y_l^m(θ`, φ)
 pub struct SphericalHarmonicsF64 {
     device: Arc<WgpuDevice>,
 }
 
 impl SphericalHarmonicsF64 {
     /// Creates a new f64 spherical harmonics evaluator for the given WGPU device.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -29,21 +32,23 @@ impl SphericalHarmonicsF64 {
         include_str!("../shaders/special/spherical_harmonics_f64.wgsl")
     }
 
-    /// Compute real spherical harmonic Y_l^m(θ, φ) for each (θ, φ) pair
-    ///
+    /// Compute real spherical harmonic `Y_l^m(θ`, φ) for each (θ, φ) pair
     /// # Arguments
     /// * `theta_phi` - Interleaved [θ₀, φ₀, θ₁, φ₁, ...] angles in radians
     /// * `l` - Degree (0, 1, 2, ...)
     /// * `m` - Order (-l ≤ m ≤ l)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn ylm(&self, theta_phi: &[f64], l: u32, m: i32) -> Result<Vec<f64>> {
         if theta_phi.is_empty() || !theta_phi.len().is_multiple_of(2) {
             return Ok(vec![]);
         }
 
         let size = theta_phi.len() / 2;
-        let _abs_m = m.unsigned_abs();
+        let abs_m = m.unsigned_abs();
 
-        if _abs_m > l {
+        if abs_m > l {
             return Ok(vec![0.0; size]);
         }
 
@@ -54,7 +59,7 @@ impl SphericalHarmonicsF64 {
     #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn ylm_cpu(&self, theta_phi: &[f64], l: u32, m: i32) -> Vec<f64> {
         let size = theta_phi.len() / 2;
-        let _abs_m = m.unsigned_abs(); // Used in GPU path
+        let _ = m.unsigned_abs(); // Reserved for GPU path validation
         let mut result = Vec::with_capacity(size);
 
         for i in 0..size {
@@ -97,9 +102,8 @@ impl SphericalHarmonicsF64 {
                 } else {
                     -1.0
                 };
-            } else {
-                return 0.0;
             }
+            return 0.0;
         }
 
         let mut pm = Self::double_factorial(m) * t.sqrt().powf(m as f64);
@@ -158,7 +162,7 @@ impl SphericalHarmonicsF64 {
     fn ylm_gpu(&self, theta_phi: &[f64], l: u32, m: i32) -> Result<Vec<f64>> {
         let size = theta_phi.len() / 2;
         let abs_m = m.unsigned_abs();
-        let m_is_positive = if m >= 0 { 1u32 } else { 0u32 };
+        let m_is_positive = u32::from(m >= 0);
 
         let input_buf = self
             .device
@@ -207,7 +211,7 @@ impl SphericalHarmonicsF64 {
             .storage_rw(1, &output_buf)
             .uniform(2, &params_buf)
             .dispatch_1d(size as u32)
-            .submit();
+            .submit()?;
 
         let result: Vec<f64> = self.device.read_buffer_f64(&output_buf, size)?;
         Ok(result)
@@ -236,9 +240,7 @@ mod tests {
         for val in result {
             assert!(
                 (val - expected).abs() < 1e-10,
-                "Y₀⁰ = {}, expected {}",
-                val,
-                expected
+                "Y₀⁰ = {val}, expected {expected}"
             );
         }
         Ok(())

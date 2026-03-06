@@ -3,7 +3,7 @@
 //!
 //! **Physics**: Hard-core repulsion (ionic crystals, close approach)
 //! **Formula**: F = A/(ρ)·exp(-r/ρ)·r̂
-//! **Use Case**: Ionic solids (NaCl), core-shell models, collisions
+//! **Use Case**: Ionic solids (`NaCl`), core-shell models, collisions
 //!
 //! **Deep Debt Compliance**:
 //! - ✅ Pure WGSL shader
@@ -27,6 +27,10 @@ pub struct BornMayerForce {
 
 impl BornMayerForce {
     /// Create a Born-Mayer force calculator with per-particle amplitude and range parameters.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if positions shape is not [N, 3], or amplitudes/ranges shape does not match.
     pub fn new(
         positions: Tensor,
         amplitudes: Tensor,
@@ -63,6 +67,11 @@ impl BornMayerForce {
     }
 
     /// Compute Born-Mayer repulsive forces for all particles and return the force tensor [N, 3].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.positions.device();
         let n_particles = self.positions.shape()[0];

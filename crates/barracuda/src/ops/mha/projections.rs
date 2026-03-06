@@ -2,7 +2,7 @@
 //! Decomposed projection operations for Multi-Head Attention.
 //!
 //! Instead of fusing matmul + head reshape into a single kernel (which causes
-//! GPU watchdog timeouts at production sizes due to O(d_model) per-thread loops),
+//! GPU watchdog timeouts at production sizes due to `O(d_model)` per-thread loops),
 //! we compose two validated primitives:
 //!
 //! 1. `Tensor::matmul` — tiled, shared-memory GPU matmul (validated across codebase)
@@ -13,8 +13,8 @@
 use std::sync::Arc;
 
 use super::{MhaParams, MultiHeadAttention};
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
@@ -32,8 +32,8 @@ impl MultiHeadAttention {
     ///
     /// `[B, S, D] × [D, D] → [B, S, D] → head_split → [B, H, S, D/H]`
     ///
-    /// Derives seq_len from the input tensor (supports cross-attention where
-    /// K/V have different seq_len from Q).
+    /// Derives `seq_len` from the input tensor (supports cross-attention where
+    /// K/V have different `seq_len` from Q).
     pub(super) fn project_with_head_split(
         &self,
         input: &Tensor,

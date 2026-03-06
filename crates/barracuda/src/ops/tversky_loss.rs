@@ -74,8 +74,10 @@ pub struct TverskyLoss {
 
 impl TverskyLoss {
     /// Create new Tversky loss operation
-    ///
     /// **Deep Debt**: Validates inputs and hyperparameters
+    /// # Errors
+    /// Returns [`Err`] if prediction and target shapes do not match, alpha or beta are not in [0, 1],
+    /// or smoothing is negative.
     pub fn new(
         predictions: Tensor,
         targets: Tensor,
@@ -133,15 +135,20 @@ impl TverskyLoss {
     /// Execute Tversky loss (GPU reduction)
     ///
     /// **Deep Debt**: Efficient workgroup reduction for large segmentations
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
 
         // Determine batch and elements
         let total_size = self.predictions.len();
-        let batch_size = if !self.predictions.shape().is_empty() {
-            self.predictions.shape()[0]
-        } else {
+        let batch_size = if self.predictions.shape().is_empty() {
             1
+        } else {
+            self.predictions.shape()[0]
         };
         let elements_per_sample = total_size / batch_size;
 
@@ -164,7 +171,7 @@ impl TverskyLoss {
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)
             .dispatch_1d(batch_size as u32)
-            .submit();
+            .submit()?;
 
         let output_data = crate::utils::read_buffer(device, &output_buffer, batch_size)?;
         Ok(Tensor::new(output_data, vec![batch_size], device.clone()))
@@ -177,31 +184,30 @@ impl TverskyLoss {
 
 impl Tensor {
     /// Tversky loss for segmentation (generalized Dice)
-    ///
     /// **Deep Debt**: Essential for imbalanced segmentation, control FP/FN trade-off
-    ///
     /// # Arguments
     /// - `targets`: Ground truth [same shape as predictions]
     /// - `alpha`: Weight for false positives (0.0-1.0, typically 0.3-0.7)
     /// - `beta`: Weight for false negatives (0.0-1.0, typically 0.3-0.7)
     /// - `smoothing`: Smoothing factor (typically 1.0)
-    ///
     /// # Returns
-    /// - Loss tensor [batch_size] (one value per batch)
-    ///
+    /// - Loss tensor [`batch_size`] (one value per batch)
     /// # Example
     /// ```rust,ignore
     /// // Penalize false negatives more (medical imaging)
     /// let loss = preds.tversky_loss(&targets, 0.3, 0.7, 1.0)?;
-    ///
     /// // Equivalent to Dice Loss
     /// let loss = preds.tversky_loss(&targets, 0.5, 0.5, 1.0)?;
     /// ```
-    ///
     /// # Note
     /// - `alpha < beta`: Recall-focused (minimize false negatives)
     /// - `alpha > beta`: Precision-focused (minimize false positives)
     /// - `alpha = beta = 0.5`: Equivalent to Dice Loss
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn tversky_loss(
         self,
         targets: &Self,
@@ -276,8 +282,7 @@ mod tests {
         let diff = (tversky_data[0] - dice_data[0]).abs();
         assert!(
             diff < 0.01,
-            "Tversky (alpha=beta=0.5) should be close to Dice, got diff={}",
-            diff
+            "Tversky (alpha=beta=0.5) should be close to Dice, got diff={diff}"
         );
     }
 
@@ -358,9 +363,10 @@ mod tests {
 
         assert_eq!(loss.shape(), &[batch]);
         let data = loss.to_vec().unwrap();
-        assert!(data
-            .iter()
-            .all(|&x| x.is_finite() && (0.0..=1.0).contains(&x)));
+        assert!(
+            data.iter()
+                .all(|&x| x.is_finite() && (0.0..=1.0).contains(&x))
+        );
     }
 
     #[tokio::test]
@@ -380,10 +386,12 @@ mod tests {
         assert!(preds.clone().tversky_loss(&targets, 1.5, 0.5, 1.0).is_err());
 
         // Invalid beta (< 0.0) should error
-        assert!(preds
-            .clone()
-            .tversky_loss(&targets, 0.5, -0.1, 1.0)
-            .is_err());
+        assert!(
+            preds
+                .clone()
+                .tversky_loss(&targets, 0.5, -0.1, 1.0)
+                .is_err()
+        );
 
         // Invalid smoothing (< 0.0) should error
         assert!(preds.tversky_loss(&targets, 0.5, 0.5, -1.0).is_err());

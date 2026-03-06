@@ -113,7 +113,8 @@ impl SoilParams {
         1.0 - 1.0 / self.n
     }
 
-    /// Effective saturation S_e(h) via van Genuchten.
+    /// Effective saturation `S_e(h)` via van Genuchten.
+    #[must_use]
     pub fn effective_saturation(&self, h: f64) -> f64 {
         if h >= 0.0 {
             return 1.0;
@@ -123,11 +124,13 @@ impl SoilParams {
     }
 
     /// Water content θ(h) via van Genuchten.
+    #[must_use]
     pub fn theta(&self, h: f64) -> f64 {
         self.theta_r + (self.theta_s - self.theta_r) * self.effective_saturation(h)
     }
 
     /// Specific moisture capacity C(h) = dθ/dh via van Genuchten.
+    #[must_use]
     pub fn capacity(&self, h: f64) -> f64 {
         if h >= 0.0 {
             return 0.0;
@@ -142,6 +145,7 @@ impl SoilParams {
     }
 
     /// Hydraulic conductivity K(h) via van Genuchten-Mualem model.
+    #[must_use]
     pub fn conductivity(&self, h: f64) -> f64 {
         let se = self.effective_saturation(h);
         let m = self.m();
@@ -177,6 +181,11 @@ pub struct RichardsConfig {
 
 impl RichardsConfig {
     /// Validates configuration parameters (nodes, spacing, time step, soil params).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn validate(&self) -> Result<()> {
         if self.n_nodes < 3 {
             return Err(BarracudaError::InvalidInput {
@@ -216,6 +225,10 @@ pub struct RichardsResult {
 /// - Evaluates K and C at the current iterate
 /// - Assembles and solves the tridiagonal system
 /// - Iterates until convergence or max iterations
+///
+/// # Errors
+///
+/// Returns [`Err`] if config validation fails, h0 length mismatch, or tridiagonal solve fails.
 pub fn solve_richards(
     config: &RichardsConfig,
     h0: &[f64],

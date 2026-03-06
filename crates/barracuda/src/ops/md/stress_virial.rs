@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-//! Stress virial GPU op — instantaneous stress tensor via ComputeDispatch.
+//! Stress virial GPU op — instantaneous stress tensor via `ComputeDispatch`.
 //!
-//! Computes the 6 independent components [σ_xx, σ_yy, σ_zz, σ_xy, σ_xz, σ_yz]
+//! Computes the 6 independent components [`σ_xx`, `σ_yy`, `σ_zz`, `σ_xy`, `σ_xz`, `σ_yz`]
 //! from positions, velocities, forces, and masses using the virial theorem.
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -25,12 +25,19 @@ struct StressVirialParams {
 ///
 /// Returns `[σ_xx, σ_yy, σ_zz, σ_xy, σ_xz, σ_yz]`.
 ///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
+///
 /// # Arguments
 /// * `positions` — `[N×3]` f64 particle positions
 /// * `velocities` — `[N×3]` f64 particle velocities
 /// * `forces` — `[N×3]` f64 total forces on each particle
 /// * `masses` — `[N]` f64 particle masses
 /// * `volume` — simulation box volume
+/// # Panics
+/// Panics if `positions.len()`, `velocities.len()`, or `forces.len()` != `n_atoms * 3`.
 pub fn compute_stress_virial(
     device: &Arc<WgpuDevice>,
     positions: &[f64],
@@ -67,7 +74,7 @@ pub fn compute_stress_virial(
         .storage_rw(4, &out_buf)
         .uniform(5, &params_buf)
         .dispatch(1, 1, 1)
-        .submit();
+        .submit()?;
 
     let result = device.read_f64_buffer(&out_buf, 6)?;
     Ok([

@@ -64,10 +64,76 @@
 //! - Zero duplication: One implementation per op
 
 #![deny(unsafe_code)]
+#![warn(clippy::pedantic)]
+// ── Domain-specific allows ──────────────────────────────────────────────────
+// GPU APIs require u32 for dimensions/indices; scientific computing uses
+// f64/f32 for counts/sizes.  These casts are intentional and pervasive.
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_precision_loss,
+    clippy::cast_lossless,
+    clippy::cast_possible_wrap
+)]
+// Scientific/physics code uses single-char variables (x, y, z, r, θ),
+// similar binding names (pos_x vs pos_y), and long numeric literals
+// (physical constants).
+#![allow(
+    clippy::similar_names,
+    clippy::many_single_char_names,
+    clippy::unreadable_literal
+)]
+// Items-after-statements is common Rust style in compute kernels where
+// buffers are declared close to their use.  Float equality is intentional
+// in exact comparisons (0.0, NaN checks, sentinel values).
+#![allow(clippy::items_after_statements, clippy::float_cmp)]
+// Module-name repetitions are intentional for clarity in a large API
+// (e.g., tensor::TensorError, device::DeviceSelection).
+#![allow(clippy::module_name_repetitions)]
+// wgpu's Default::default() pattern is idiomatic when the type is
+// inferred from context (e.g., ComputePassDescriptor, CommandEncoderDescriptor).
+#![allow(clippy::default_trait_access)]
+// GPU ops legitimately return Result even when the current implementation
+// is infallible — the contract allows future error paths (device lost,
+// validation failure) without breaking callers.
+#![allow(clippy::unnecessary_wraps)]
+// GPU dispatch code often handles multiple match variants identically
+// (e.g., different precisions routed to the same kernel).
+#![allow(clippy::match_same_arms)]
+// Async signatures on trait methods / framework callbacks are required by
+// the trait even when the implementation is synchronous.
+#![allow(clippy::unused_async)]
+// GPU pipeline functions legitimately exceed 100 lines — they set up
+// multiple bind groups, encoders, and staging buffers.
+#![allow(clippy::too_many_lines)]
+// Trait implementations require `&self` even when unused.
+#![allow(clippy::unused_self)]
+// Struct field name patterns are intentional for domain clarity.
+#![allow(clippy::struct_field_names)]
+// GPU ops take tensors/configs by value for ownership transfer; many public
+// functions intentionally consume their arguments.
+#![allow(clippy::needless_pass_by_value)]
+// Booleans in config structs are intentional (e.g., enable_bias, use_cache).
+#![allow(clippy::struct_excessive_bools)]
+// Public fields prefixed with _ are used in tests or reserved for future use.
+#![allow(clippy::used_underscore_items)]
+// Passing single bytes by reference is acceptable for trait consistency.
+#![allow(clippy::trivially_copy_pass_by_ref)]
+// Debug impls intentionally omit large buffer fields.
+#![allow(clippy::missing_fields_in_debug)]
+// Wildcard matching against single-variant enums is intentional for forward
+// compatibility — new variants will be caught at compile time.
+#![allow(clippy::match_wildcard_for_single_variants)]
+// inline(always) is used for hot GPU dispatch paths where the cost model
+// is known.
+#![allow(clippy::inline_always)]
+// GPU uniform structs use `pub _padding` fields for repr(C) alignment;
+// these are intentionally unused but must be pub for bytemuck::Pod derive.
+#![allow(clippy::pub_underscore_fields)]
 #![cfg_attr(
     test,
     expect(clippy::unwrap_used, reason = "test code uses unwrap for brevity"),
-    allow(clippy::large_stack_arrays)
+    allow(clippy::large_stack_arrays, clippy::needless_pass_by_value)
 )]
 #![expect(
     rustdoc::broken_intra_doc_links,
@@ -197,15 +263,16 @@ pub mod prelude {
     #[cfg(feature = "gpu")]
     pub use crate::device::{
         Auto, AutoTuner, Capability, Device, DeviceCapabilities, DeviceContext, DeviceInfo,
-        GpuCalibration, WgpuDevice, WorkloadHint, GLOBAL_TUNER,
+        GLOBAL_TUNER, GpuCalibration, WgpuDevice, WorkloadHint,
     };
     #[cfg(feature = "gpu")]
     pub use crate::dispatch::{
-        batch_fitness_substrate, dispatch_for, dispatch_with_transfer_cost, hmm_substrate,
-        ode_substrate, pairwise_substrate, spatial_substrate, DispatchConfig, DispatchTarget,
+        DispatchConfig, DispatchTarget, batch_fitness_substrate, dispatch_for,
+        dispatch_with_transfer_cost, hmm_substrate, ode_substrate, pairwise_substrate,
+        spatial_substrate,
     };
     #[cfg(all(feature = "gpu", feature = "domain-esn"))]
-    pub use crate::esn_v2::{ESNConfig, ESN};
+    pub use crate::esn_v2::{ESN, ESNConfig};
     #[cfg(all(feature = "gpu", feature = "domain-genomics"))]
     pub use crate::genomics::{
         CompositionReport, MotifMatch, QualityReport, SequenceAnalyzer, SequenceConfig,
@@ -221,7 +288,7 @@ pub mod prelude {
     #[cfg(feature = "gpu")]
     pub use crate::npu::EventCodec;
     #[cfg(feature = "gpu")]
-    pub use crate::resource_quota::{presets as quota_presets, QuotaTracker, ResourceQuota};
+    pub use crate::resource_quota::{QuotaTracker, ResourceQuota, presets as quota_presets};
     #[cfg(feature = "gpu")]
     pub use crate::session::{SessionTensor, TensorSession};
     #[cfg(all(feature = "gpu", feature = "domain-snn"))]

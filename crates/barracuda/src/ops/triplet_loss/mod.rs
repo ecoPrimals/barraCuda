@@ -82,8 +82,10 @@ pub struct TripletLoss {
 
 impl TripletLoss {
     /// Create new Triplet loss operation
-    ///
     /// **Deep Debt**: Validates all inputs for shape compatibility
+    /// # Errors
+    /// Returns [`Err`] if anchor, positive, and negative shapes do not match, tensors are not 2D,
+    /// or margin is negative.
     pub fn new(
         anchors: Tensor,
         positives: Tensor,
@@ -175,30 +177,27 @@ impl TripletLoss {
 
 impl Tensor {
     /// Triplet loss for metric learning
-    ///
     /// **Deep Debt**: Essential for similarity learning and face recognition
-    ///
     /// # Arguments
     /// - `positives`: Similar embeddings [same shape as anchors]
     /// - `negatives`: Dissimilar embeddings [same shape as anchors]
     /// - `margin`: Minimum separation between positive and negative (typically 0.2-1.0)
-    ///
     /// # Returns
-    /// - Loss tensor [batch_size] (one value per triplet)
-    ///
+    /// - Loss tensor [`batch_size`] (one value per triplet)
     /// # Example
     /// ```rust,ignore
     /// // L2 distance (default)
     /// let loss = anchors.triplet_loss(&positives, &negatives, 0.2)?;
-    ///
     /// // Cosine distance
     /// let loss = anchors.triplet_loss_cosine(&positives, &negatives, 0.1)?;
     /// ```
-    ///
     /// # Note
-    /// - Embeddings should be [batch, embedding_dim]
+    /// - Embeddings should be [batch, `embedding_dim`]
     /// - Margin controls how far negatives should be from positives
     /// - Larger margin = stricter separation requirement
+    /// # Errors
+    /// Returns [`Err`] if validation fails (shape mismatch, invalid margin), buffer allocation fails,
+    /// or GPU dispatch fails (e.g., device lost).
     pub fn triplet_loss(self, positives: &Self, negatives: &Self, margin: f32) -> Result<Self> {
         TripletLoss::new(
             self,
@@ -211,8 +210,12 @@ impl Tensor {
     }
 
     /// Triplet loss with cosine distance metric
-    ///
     /// **Deep Debt**: Useful when embeddings are normalized
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn triplet_loss_cosine(
         self,
         positives: &Self,

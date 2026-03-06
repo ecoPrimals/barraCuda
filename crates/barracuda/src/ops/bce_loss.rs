@@ -60,6 +60,8 @@ pub struct BCELoss {
 
 impl BCELoss {
     /// Create BCE loss. Predictions and targets must have matching shapes.
+    /// # Errors
+    /// Returns [`Err`] if predictions and targets shapes differ.
     pub fn new(predictions: Tensor, targets: Tensor) -> Result<Self> {
         // Validate shapes match
         if predictions.shape() != targets.shape() {
@@ -80,6 +82,8 @@ impl BCELoss {
     }
 
     /// Execute BCE loss computation on GPU.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.predictions.device();
         let size = self.predictions.shape().iter().product::<usize>();
@@ -107,7 +111,7 @@ impl BCELoss {
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)
             .dispatch_1d(size as u32)
-            .submit();
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,
@@ -123,30 +127,26 @@ impl BCELoss {
 
 impl Tensor {
     /// Binary Cross Entropy loss for binary classification
-    ///
     /// **Deep Debt**: Foundation for binary classification and GANs
-    ///
     /// # Arguments
     /// - `targets`: Ground truth binary labels [same shape, values in {0, 1}]
-    ///
     /// # Returns
     /// - Loss tensor [same shape as input]
-    ///
     /// # Example
     /// ```rust,ignore
     /// // Standard binary classification
     /// let loss = predictions.bce_loss(&targets)?;
-    ///
     /// // With sigmoid activation
     /// let probs = logits.sigmoid()?;
     /// let loss = probs.bce_loss(&targets)?;
     /// ```
-    ///
     /// # Note
     /// - Predictions should be probabilities in [0, 1] (use sigmoid first!)
     /// - Targets should be binary {0, 1}
     /// - Numerically stable with epsilon=1e-7
     /// - Standard for logistic regression and binary GANs
+    /// # Errors
+    /// Returns [`Err`] if shapes differ, buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn bce_loss(self, targets: &Self) -> Result<Self> {
         BCELoss::new(self, targets.clone())?.execute()
     }

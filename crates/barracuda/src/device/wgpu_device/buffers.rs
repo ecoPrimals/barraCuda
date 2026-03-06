@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Buffer allocation and data transfer — generic read_buffer<T: Pod> + typed helpers
+//! Buffer allocation and data transfer — generic `read_buffer`<T: Pod> + typed helpers
 
 use super::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 
 impl WgpuDevice {
     /// Read typed values from a GPU buffer.
-    ///
     /// Creates a staging buffer, copies data, maps it, and extracts via bytemuck.
     /// All typed read variants delegate here.
+    /// # Errors
+    /// Returns [`Err`] if the device is lost before or during the readback copy,
+    /// if [`poll_safe`] fails (e.g. device lost during poll), or if
+    /// [`map_staging_buffer`] fails (device lost, buffer mapping channel closed,
+    /// or wgpu `map_async` reports an error).
     pub(crate) fn read_buffer<T: bytemuck::Pod>(
         &self,
         buffer: &wgpu::Buffer,
@@ -49,11 +53,14 @@ impl WgpuDevice {
     }
 
     /// Map a staging buffer and extract typed data.
-    ///
     /// Use after you've already submitted a copy to the staging buffer
     /// and polled (e.g., via `submit_and_poll`). This handles the
     /// `map_async` → `poll` → `get_mapped_range` → `unmap` dance that
     /// was previously duplicated across ~40 ops.
+    /// # Errors
+    /// Returns [`Err`] if the device is lost, if [`poll_safe`] fails (device lost
+    /// during poll), if the GPU buffer mapping channel is closed before the
+    /// callback runs, or if wgpu `map_async` reports an error.
     pub fn map_staging_buffer<T: bytemuck::Pod>(
         &self,
         staging: &wgpu::Buffer,
@@ -93,18 +100,23 @@ impl WgpuDevice {
     }
 
     /// Read f64 values from a GPU buffer.
-    ///
     /// This is the canonical readback path — all GPU ops should use this.
+    /// # Errors
+    /// Returns [`Err`] with the same conditions as [`read_buffer`].
     pub fn read_f64_buffer(&self, buffer: &wgpu::Buffer, count: usize) -> Result<Vec<f64>> {
         self.read_buffer::<f64>(buffer, count)
     }
 
     /// Read buffer to host memory (f32)
+    /// # Errors
+    /// Returns [`Err`] with the same conditions as [`read_buffer`].
     pub fn read_buffer_f32(&self, buffer: &wgpu::Buffer, size: usize) -> Result<Vec<f32>> {
         self.read_buffer::<f32>(buffer, size)
     }
 
     /// Write data to buffer (f32)
+    /// # Errors
+    /// Never returns an error; always returns `Ok(())`.
     pub fn write_buffer_f32(&self, buffer: &wgpu::Buffer, data: &[f32]) -> Result<()> {
         self.encoding_guard();
         self.queue
@@ -114,16 +126,21 @@ impl WgpuDevice {
     }
 
     /// Read f64 buffer to host memory
+    /// # Errors
+    /// Returns [`Err`] with the same conditions as [`read_buffer`].
     pub fn read_buffer_f64(&self, buffer: &wgpu::Buffer, size: usize) -> Result<Vec<f64>> {
         self.read_buffer::<f64>(buffer, size)
     }
 
     /// Read u32 buffer to host memory
+    /// # Errors
+    /// Returns [`Err`] with the same conditions as [`read_buffer`].
     pub fn read_buffer_u32(&self, buffer: &wgpu::Buffer, size: usize) -> Result<Vec<u32>> {
         self.read_buffer::<u32>(buffer, size)
     }
 
     /// Create storage buffer (convenience helper)
+    #[must_use]
     pub fn create_storage_buffer(&self, label: &str, data: &[u8]) -> wgpu::Buffer {
         self.encoding_guard();
         let buf = self
@@ -154,6 +171,8 @@ impl WgpuDevice {
     }
 
     /// Allocate buffer for f32 data
+    /// # Errors
+    /// Never returns an error; always returns `Ok` when the buffer is created.
     pub fn create_buffer_f32(&self, size: usize) -> Result<wgpu::Buffer> {
         self.encoding_guard();
         let buf = self.device.create_buffer(&wgpu::BufferDescriptor {
@@ -169,6 +188,7 @@ impl WgpuDevice {
     }
 
     /// Create storage buffer initialized with u32 data.
+    #[must_use]
     pub fn create_buffer_u32_init(&self, label: &str, data: &[u32]) -> wgpu::Buffer {
         self.encoding_guard();
         let buf = self
@@ -185,6 +205,8 @@ impl WgpuDevice {
     }
 
     /// Allocate buffer for u32 data
+    /// # Errors
+    /// Never returns an error; always returns `Ok` when the buffer is created.
     pub fn create_buffer_u32(&self, size: usize) -> Result<wgpu::Buffer> {
         self.encoding_guard();
         let buf = self.device.create_buffer(&wgpu::BufferDescriptor {
@@ -200,6 +222,8 @@ impl WgpuDevice {
     }
 
     /// Allocate zero-initialized buffer for u32 data
+    /// # Errors
+    /// Never returns an error; always returns `Ok` when the buffer is created.
     pub fn create_buffer_u32_zeros(&self, size: usize) -> Result<wgpu::Buffer> {
         self.encoding_guard();
         let zeros = vec![0u32; size];
@@ -217,6 +241,7 @@ impl WgpuDevice {
     }
 
     /// Create storage buffer initialized with f32 data.
+    #[must_use]
     pub fn create_buffer_f32_init(&self, label: &str, data: &[f32]) -> wgpu::Buffer {
         self.encoding_guard();
         let buf = self
@@ -233,6 +258,8 @@ impl WgpuDevice {
     }
 
     /// Write data to buffer (f64)
+    /// # Errors
+    /// Never returns an error; always returns `Ok(())`.
     pub fn write_buffer_f64(&self, buffer: &wgpu::Buffer, data: &[f64]) -> Result<()> {
         self.encoding_guard();
         self.queue
@@ -242,6 +269,7 @@ impl WgpuDevice {
     }
 
     /// Create storage buffer initialized with f64 data.
+    #[must_use]
     pub fn create_buffer_f64_init(&self, label: &str, data: &[f64]) -> wgpu::Buffer {
         self.encoding_guard();
         let buf = self
@@ -258,6 +286,8 @@ impl WgpuDevice {
     }
 
     /// Allocate buffer for f64 data
+    /// # Errors
+    /// Never returns an error; always returns `Ok` when the buffer is created.
     pub fn create_buffer_f64(&self, size: usize) -> Result<wgpu::Buffer> {
         self.encoding_guard();
         let buf = self.device.create_buffer(&wgpu::BufferDescriptor {
@@ -275,9 +305,10 @@ impl WgpuDevice {
     // ── f32 buffer ergonomic helpers (hotSpring ESN GPU dispatch absorption) ───
 
     /// Create an f32 read-write storage buffer (GPU shader ↔ CPU).
-    ///
     /// Equivalent to `create_buffer_f32` with a descriptive label.
     /// For ESN and other f32 GPU pipelines.
+    /// # Errors
+    /// Never returns an error; always returns `Ok` when the buffer is created.
     pub fn create_f32_rw_buffer(&self, label: &str, count: usize) -> Result<wgpu::Buffer> {
         self.encoding_guard();
         let buf = self.device.create_buffer(&wgpu::BufferDescriptor {
@@ -293,26 +324,62 @@ impl WgpuDevice {
     }
 
     /// Create an f32 output buffer (GPU write → CPU read).
-    ///
     /// Like `create_f32_rw_buffer` but labelled for clarity in GPU dispatch
     /// pipelines where the buffer is only written by the shader and read back
     /// to the host.
+    /// # Errors
+    /// Returns [`Err`] with the same conditions as [`create_f32_rw_buffer`].
     pub fn create_f32_output_buffer(&self, label: &str, count: usize) -> Result<wgpu::Buffer> {
         self.create_f32_rw_buffer(label, count)
     }
 
     /// Upload f32 data to a new GPU buffer in one call.
-    ///
     /// Creates and initializes a labeled storage buffer. For ESN weight
     /// uploads and similar patterns.
+    #[must_use]
     pub fn upload_f32(&self, label: &str, data: &[f32]) -> wgpu::Buffer {
         self.create_buffer_f32_init(label, data)
     }
 
     /// Read back f32 data from a GPU buffer (GPU → CPU).
-    ///
     /// Ergonomic alias for `read_buffer_f32`.
+    /// # Errors
+    /// Returns [`Err`] with the same conditions as [`read_buffer`].
     pub fn read_back_f32(&self, buffer: &wgpu::Buffer, count: usize) -> Result<Vec<f32>> {
         self.read_buffer_f32(buffer, count)
+    }
+
+    /// Minimal 8-byte storage buffer for unused **read-only** bind-group slots.
+    /// wgpu requires every slot in a bind-group layout to be populated.
+    /// When a shader entry point doesn't use all slots (e.g., a velocity
+    /// half-step that ignores position output), callers previously
+    /// allocated ad-hoc "dummy" buffers at every call site.
+    /// WebGPU forbids aliasing the same buffer across `storage_read` and
+    /// `storage_rw` bindings, so we provide separate placeholders for each.
+    pub fn placeholder_buffer(&self) -> &wgpu::Buffer {
+        static PLACEHOLDER_RO: std::sync::OnceLock<wgpu::Buffer> = std::sync::OnceLock::new();
+        PLACEHOLDER_RO.get_or_init(|| {
+            self.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("placeholder:unused_read_slot"),
+                size: 8,
+                usage: wgpu::BufferUsages::STORAGE,
+                mapped_at_creation: false,
+            })
+        })
+    }
+
+    /// Minimal 8-byte storage buffer for unused **read-write** bind-group slots.
+    /// Separate from [`placeholder_buffer`] to avoid WebGPU aliasing violations
+    /// when both read and read-write slots are unused in the same dispatch.
+    pub fn placeholder_buffer_rw(&self) -> &wgpu::Buffer {
+        static PLACEHOLDER_RW: std::sync::OnceLock<wgpu::Buffer> = std::sync::OnceLock::new();
+        PLACEHOLDER_RW.get_or_init(|| {
+            self.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("placeholder:unused_rw_slot"),
+                size: 8,
+                usage: wgpu::BufferUsages::STORAGE,
+                mapped_at_creation: false,
+            })
+        })
     }
 }

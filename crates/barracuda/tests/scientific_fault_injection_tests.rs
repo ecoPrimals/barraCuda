@@ -49,8 +49,8 @@ async fn fault_complex_wrong_dimension() {
 
             // Should fail gracefully
             let result = ComplexAdd::new(tensor.clone(), tensor.clone());
-            assert!(result.is_err(), "Should reject shape {:?}", shape);
-            println!("✅ Rejected invalid shape: {:?}", shape);
+            assert!(result.is_err(), "Should reject shape {shape:?}");
+            println!("✅ Rejected invalid shape: {shape:?}");
         }
     }) {
         return;
@@ -154,8 +154,8 @@ async fn fault_fft_non_power_of_two_degree() {
 
             // Should reject non-power-of-2
             let result = Fft1D::new(tensor, degree as u32);
-            assert!(result.is_err(), "Should reject degree {}", degree);
-            println!("✅ Rejected invalid FFT degree: {}", degree);
+            assert!(result.is_err(), "Should reject degree {degree}");
+            println!("✅ Rejected invalid FFT degree: {degree}");
         }
     }) {
         return;
@@ -211,7 +211,7 @@ async fn fault_fft_excessive_degree() {
         let result = Fft1D::new(tensor, degree);
         // Should either reject upfront or fail gracefully during execution
         assert!(result.is_err(), "Should reject excessive degree");
-        println!("✅ Rejected excessive FFT degree: {}", degree);
+        println!("✅ Rejected excessive FFT degree: {degree}");
     }) {
         return;
     }

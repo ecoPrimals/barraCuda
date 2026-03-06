@@ -103,11 +103,7 @@ async fn test_pointwise_mul_identity() {
 
         // Results should match (pointwise multiply by 1 in NTT domain = identity)
         for (i, (&a, &b)) in result.iter().zip(input_ntt_result.iter()).enumerate() {
-            assert_eq!(
-                a, b,
-                "Multiplying by 1 should preserve value at index {}",
-                i
-            );
+            assert_eq!(a, b, "Multiplying by 1 should preserve value at index {i}");
         }
 
         println!("✅ Point-wise multiply identity test passed");

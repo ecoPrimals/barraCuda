@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! DepthwiseConv2D - Depthwise 2D Convolution
+//! `DepthwiseConv2D` - Depthwise 2D Convolution
 //! Pure WGSL implementation
 //!
 //! Efficient convolution that applies a separate filter to each input channel
 //! Formula: output[b, c, h, w] = Σ(input[b, c, ...] * weight[c, 1, ...]) + bias[c]
 //!
-//! Used in: MobileNet, EfficientNet, lightweight CNNs
-//! Benefits: Dramatically reduces parameters and computation vs standard Conv2D
+//! Used in: `MobileNet`, `EfficientNet`, lightweight CNNs
+//! Benefits: Dramatically reduces parameters and computation vs standard `Conv2D`
 
 use crate::error::Result;
 use crate::tensor::Tensor;
@@ -39,6 +39,7 @@ pub struct DepthwiseConv2D {
 
 impl DepthwiseConv2D {
     /// Creates a new depthwise conv2d. Weight shape: [channels, 1, kh, kw].
+    #[must_use]
     pub fn new(
         input: Tensor,
         weight: Tensor,
@@ -67,6 +68,9 @@ impl DepthwiseConv2D {
     }
 
     /// Executes depthwise conv2d and returns the output tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -193,10 +197,15 @@ impl DepthwiseConv2D {
 impl Tensor {
     /// Apply depthwise 2D convolution (efficient for mobile networks)
     /// # Arguments
-    /// * `weight` - Depthwise weights (shape: [channels, 1, kernel_h, kernel_w])
+    /// * `weight` - Depthwise weights (shape: [channels, 1, `kernel_h`, `kernel_w`])
     /// * `bias` - Bias terms (shape: [channels])
-    /// * `stride` - (height_stride, width_stride)
-    /// * `padding` - (height_padding, width_padding)
+    /// * `stride` - (`height_stride`, `width_stride`)
+    /// * `padding` - (`height_padding`, `width_padding`)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn depthwise_conv2d(
         self,
         weight: Tensor,
@@ -373,7 +382,7 @@ mod tests {
         assert_eq!(output.len(), 4);
 
         // All outputs should be positive and finite (kernel sums positive inputs)
-        for val in output.iter() {
+        for val in &output {
             assert!(val.is_finite());
             assert!(*val > 0.0);
         }

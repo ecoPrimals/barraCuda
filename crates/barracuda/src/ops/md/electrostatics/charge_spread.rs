@@ -6,10 +6,10 @@
 //!
 //! # Algorithm
 //!
-//! For each particle i with charge q_i at position r_i:
+//! For each particle i with charge `q_i` at position `r_i`:
 //! 1. Compute B-spline coefficients for the stencil
 //! 2. For each mesh node in the p×p×p stencil:
-//!    ρ(mesh) += q_i × M(u_x) × M(u_y) × M(u_z)
+//!    ρ(mesh) += `q_i` × `M(u_x)` × `M(u_y)` × `M(u_z)`
 //!
 //! where M is the cardinal B-spline and u is the fractional mesh coordinate.
 //!
@@ -21,12 +21,12 @@
 /// WGSL kernel for charge-to-mesh spreading (f64).
 pub const WGSL_CHARGE_SPREAD_F64: &str = include_str!("charge_spread_f64.wgsl");
 
-use super::bspline::BsplineCoeffs;
 use super::PppmParams;
+use super::bspline::BsplineCoeffs;
 
 /// Charge mesh for PPPM
 ///
-/// Stores the mesh charge density ρ(k) = Σ_i q_i M(r_i - r_k)
+/// Stores the mesh charge density ρ(k) = `Σ_i` `q_i` `M(r_i` - `r_k`)
 #[derive(Clone, Debug)]
 pub struct ChargeMesh {
     /// Mesh dimensions [Kx, Ky, Kz]
@@ -41,6 +41,7 @@ pub struct ChargeMesh {
 
 impl ChargeMesh {
     /// Create empty charge mesh
+    #[must_use]
     pub fn new(dims: [usize; 3], box_dims: [f64; 3]) -> Self {
         let size = dims[0] * dims[1] * dims[2];
         Self {
@@ -57,12 +58,14 @@ impl ChargeMesh {
 
     /// Get linear index from 3D indices
     #[inline]
+    #[must_use]
     pub fn index(&self, ix: usize, iy: usize, iz: usize) -> usize {
         iz + self.dims[2] * (iy + self.dims[1] * ix)
     }
 
     /// Get value at mesh point
     #[inline]
+    #[must_use]
     pub fn get(&self, ix: usize, iy: usize, iz: usize) -> f64 {
         self.values[self.index(ix, iy, iz)]
     }
@@ -75,6 +78,7 @@ impl ChargeMesh {
     }
 
     /// Get mesh spacing
+    #[must_use]
     pub fn spacing(&self) -> [f64; 3] {
         [
             self.box_dims[0] / self.dims[0] as f64,
@@ -84,11 +88,13 @@ impl ChargeMesh {
     }
 
     /// Total mesh elements
+    #[must_use]
     pub fn len(&self) -> usize {
         self.values.len()
     }
 
     /// Check if mesh is empty
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.values.is_empty()
     }
@@ -103,6 +109,9 @@ impl ChargeMesh {
 ///
 /// # Returns
 /// Charge mesh with spread charges
+/// # Panics
+/// Panics if `positions.len() != charges.len()`.
+#[must_use]
 pub fn spread_charges(positions: &[[f64; 3]], charges: &[f64], params: &PppmParams) -> ChargeMesh {
     assert_eq!(positions.len(), charges.len());
 
@@ -144,6 +153,9 @@ pub fn spread_charges(positions: &[[f64; 3]], charges: &[f64], params: &PppmPara
 ///
 /// # Returns
 /// (mesh, coefficients) where coefficients[i] is for particle i
+/// # Panics
+/// Panics if `positions.len() != charges.len()`.
+#[must_use]
 pub fn spread_charges_with_coeffs(
     positions: &[[f64; 3]],
     charges: &[f64],

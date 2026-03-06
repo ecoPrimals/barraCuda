@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Tests for NAdam Optimizer
+//! Tests for `NAdam` Optimizer
 
 use super::*;
 use crate::device::test_pool::get_test_device_if_gpu_available;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Pipeline Cache for BarraCuda
+//! Pipeline Cache for `BarraCuda`
 //!
 //! Caches shader modules, bind group layouts, and compute pipelines
 //! to eliminate redundant GPU object creation.
@@ -15,23 +15,25 @@ use std::hash::{Hash, Hasher};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use wgpu::{BindGroupLayout, ComputePipeline, Device, ShaderModule};
 
-/// Recover from RwLock poison on read. Safe for caches: worst case is a
+/// Recover from `RwLock` poison on read. Safe for caches: worst case is a
 /// stale entry or cache miss, never data corruption.
 fn read_or_recover<T>(lock: &RwLock<T>) -> RwLockReadGuard<'_, T> {
-    lock.read().unwrap_or_else(|e| e.into_inner())
+    lock.read()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
-/// Recover from RwLock poison on write. Safe for caches: a previously
+/// Recover from `RwLock` poison on write. Safe for caches: a previously
 /// panicked thread may have left partial state, but inserting over it
 /// is correct behavior for a cache.
 fn write_or_recover<T>(lock: &RwLock<T>) -> RwLockWriteGuard<'_, T> {
-    lock.write().unwrap_or_else(|e| e.into_inner())
+    lock.write()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 /// Unique device identifier that works across wgpu instances
 ///
 /// wgpu's `global_id()` is only unique within a single Instance.
-/// Since GpuPool creates devices from different instances, we use
+/// Since `GpuPool` creates devices from different instances, we use
 /// a hash of the device's physical characteristics instead.
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub struct DeviceFingerprint {
@@ -43,6 +45,7 @@ pub struct DeviceFingerprint {
 
 impl DeviceFingerprint {
     /// Create fingerprint from adapter info
+    #[must_use]
     pub fn from_device_info(device: &Device, adapter_info: &wgpu::AdapterInfo) -> Self {
         use std::hash::Hasher;
 
@@ -65,6 +68,7 @@ impl DeviceFingerprint {
     }
 
     /// Create from just adapter info (for quick lookups)
+    #[must_use]
     pub fn from_adapter_info(adapter_info: &wgpu::AdapterInfo) -> Self {
         use std::hash::Hasher;
 
@@ -95,6 +99,7 @@ pub struct ShaderKey {
 
 impl ShaderKey {
     /// Create a shader cache key from source and device fingerprint.
+    #[must_use]
     pub fn new(source: &str, device_fingerprint: DeviceFingerprint) -> Self {
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         source.hash(&mut hasher);
@@ -118,6 +123,7 @@ pub struct BindGroupLayoutSignature {
 
 impl BindGroupLayoutSignature {
     /// Standard elementwise binary op (2 read, 1 write)
+    #[must_use]
     pub fn elementwise_binary() -> Self {
         Self {
             read_only_buffers: 2,
@@ -127,6 +133,7 @@ impl BindGroupLayoutSignature {
     }
 
     /// Standard unary op (1 read, 1 write)
+    #[must_use]
     pub fn elementwise_unary() -> Self {
         Self {
             read_only_buffers: 1,
@@ -136,6 +143,7 @@ impl BindGroupLayoutSignature {
     }
 
     /// Reduction op (1 read, 1 write, 1 uniform for params)
+    #[must_use]
     pub fn reduction() -> Self {
         Self {
             read_only_buffers: 1,
@@ -145,6 +153,7 @@ impl BindGroupLayoutSignature {
     }
 
     /// Matmul (2 read, 1 write, 1 uniform for dimensions)
+    #[must_use]
     pub fn matmul() -> Self {
         Self {
             read_only_buffers: 2,
@@ -154,6 +163,7 @@ impl BindGroupLayoutSignature {
     }
 
     /// Ternary op like FMA: d = a * b + c (3 read, 1 write)
+    #[must_use]
     pub fn elementwise_ternary() -> Self {
         Self {
             read_only_buffers: 3,
@@ -164,6 +174,7 @@ impl BindGroupLayoutSignature {
 
     /// Two-input reduction with params: covariance, correlation, cosine similarity
     /// (2 read, 1 rw, 1 uniform). Equivalent to `matmul()` layout.
+    #[must_use]
     pub fn two_input_reduction() -> Self {
         Self {
             read_only_buffers: 2,
@@ -174,6 +185,7 @@ impl BindGroupLayoutSignature {
 
     /// Three-input reduction with params: weighted dot product
     /// (3 read, 1 rw, 1 uniform).
+    #[must_use]
     pub fn three_input_reduction() -> Self {
         Self {
             read_only_buffers: 3,
@@ -192,6 +204,7 @@ pub struct BindGroupLayoutKey {
 
 impl BindGroupLayoutKey {
     /// Create a bind group layout cache key.
+    #[must_use]
     pub fn new(signature: BindGroupLayoutSignature, device_fingerprint: DeviceFingerprint) -> Self {
         Self {
             signature,
@@ -211,6 +224,7 @@ pub struct PipelineKey {
 
 impl PipelineKey {
     /// Create a pipeline cache key from shader source, layout, entry point, and device.
+    #[must_use]
     pub fn new(
         shader_source: &str,
         layout_signature: BindGroupLayoutSignature,
@@ -228,10 +242,10 @@ impl PipelineKey {
     }
 }
 
-/// Thread-safe pipeline cache — evolved from DashMap to stdlib `RwLock<HashMap>`.
+/// Thread-safe pipeline cache — evolved from `DashMap` to stdlib `RwLock<HashMap>`.
 ///
 /// Access pattern: very frequent reads (cache hits), rare writes (first-use only).
-/// RwLock's read-write semantics are ideal: unlimited concurrent readers, exclusive writer.
+/// `RwLock`'s read-write semantics are ideal: unlimited concurrent readers, exclusive writer.
 ///
 /// Note: Keys include device fingerprint to ensure GPU objects are only used
 /// with the device that created them.
@@ -248,6 +262,7 @@ pub struct PipelineCache {
 
 impl PipelineCache {
     /// Create an empty pipeline cache.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             shaders: RwLock::new(HashMap::new()),
@@ -258,8 +273,8 @@ impl PipelineCache {
 
     /// Get or compile a shader module
     ///
-    /// Uses device + adapter_info to create a fingerprint unique per device instance.
-    /// This ensures layouts/pipelines from different wgpu::Device instances don't collide.
+    /// Uses device + `adapter_info` to create a fingerprint unique per device instance.
+    /// This ensures layouts/pipelines from different `wgpu::Device` instances don't collide.
     pub fn get_or_compile_shader(
         &self,
         device: &Device,
@@ -287,7 +302,7 @@ impl PipelineCache {
 
     /// Get or create a bind group layout
     ///
-    /// Uses device + adapter_info to create a fingerprint unique per device instance.
+    /// Uses device + `adapter_info` to create a fingerprint unique per device instance.
     pub fn get_or_create_layout(
         &self,
         device: &Device,
@@ -366,7 +381,7 @@ impl PipelineCache {
 
     /// Get or create a compute pipeline
     ///
-    /// Uses adapter_info to create a device fingerprint that's unique per physical GPU.
+    /// Uses `adapter_info` to create a device fingerprint that's unique per physical GPU.
     pub fn get_or_create_pipeline(
         &self,
         device: &Device,
@@ -441,9 +456,9 @@ pub struct CacheStats {
     pub pipelines: usize,
 }
 
-/// Global pipeline cache (singleton pattern via std::sync::LazyLock).
+/// Global pipeline cache (singleton pattern via `std::sync::LazyLock`).
 ///
-/// Evolved from lazy_static to pure std (Rust 1.80+).
+/// Evolved from `lazy_static` to pure std (Rust 1.80+).
 pub static GLOBAL_CACHE: std::sync::LazyLock<PipelineCache> =
     std::sync::LazyLock::new(PipelineCache::new);
 

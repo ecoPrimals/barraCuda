@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-//! VACF batch GPU op — Velocity Autocorrelation Function via ComputeDispatch.
+//! VACF batch GPU op — Velocity Autocorrelation Function via `ComputeDispatch`.
 //!
-//! Computes C(τ) = (1/n_origins) Σₜ v(t)·v(t+τ) for each lag τ.
+//! Computes C(τ) = (`1/n_origins`) Σₜ v(t)·v(t+τ) for each lag τ.
 //! Each thread handles one lag value.
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -26,11 +26,18 @@ struct VacfBatchParams {
 ///
 /// Returns `C(τ)` for τ = 0..n_lags-1.
 ///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
+///
 /// # Arguments
 /// * `velocities` — `[n_frames × N × 3]` f64, flattened (frame-major)
 /// * `n_atoms` — number of particles
 /// * `n_frames` — number of velocity snapshots
 /// * `n_lags` — number of lag values to compute
+/// # Panics
+/// Panics if `velocities.len() != n_frames * n_atoms * 3` or `n_lags > n_frames`.
 pub fn compute_vacf_batch(
     device: &Arc<WgpuDevice>,
     velocities: &[f64],
@@ -64,7 +71,7 @@ pub fn compute_vacf_batch(
         .storage_rw(1, &out_buf)
         .uniform(2, &params_buf)
         .dispatch_1d(n_lags as u32)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, n_lags)
 }

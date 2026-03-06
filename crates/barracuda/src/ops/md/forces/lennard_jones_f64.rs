@@ -11,10 +11,10 @@
 //! **Potential**: U(r) = 4ε[(σ/r)^12 - (σ/r)^6]
 //! **Force**: F = 24ε/r * [2(σ/r)^12 - (σ/r)^6] * r̂
 
+use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
-use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
 
@@ -60,6 +60,11 @@ impl LennardJonesF64 {
     ///
     /// # Returns
     /// Forces [N*3] (fx,fy,fz interleaved)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn compute(
         device: Arc<WgpuDevice>,
         positions: &[f64],
@@ -134,12 +139,17 @@ impl LennardJonesF64 {
             .storage_rw(3, &forces_buffer)
             .uniform(4, &params_buffer)
             .dispatch((n as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1)
-            .submit();
+            .submit()?;
 
         crate::utils::read_buffer_f64(&device, &forces_buffer, n * 3)
     }
 
     /// Compute LJ forces with uniform parameters (all particles same σ, ε)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn compute_uniform(
         device: Arc<WgpuDevice>,
         positions: &[f64],

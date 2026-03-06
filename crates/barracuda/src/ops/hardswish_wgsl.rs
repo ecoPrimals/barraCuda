@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Hardswish - Pure WGSL
 //!
-//! f64 canonical — f32 derived via downcast_f64_to_f32 when needed.
+//! f64 canonical — f32 derived via `downcast_f64_to_f32` when needed.
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -28,6 +28,7 @@ pub struct Hardswish {
 
 impl Hardswish {
     /// Create a new hardswish operation
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -38,6 +39,11 @@ impl Hardswish {
     }
 
     /// Execute the hardswish operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -183,6 +189,11 @@ impl Hardswish {
 
 impl Tensor {
     /// Compute hardswish element-wise
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn hardswish_wgsl(self) -> Result<Self> {
         Hardswish::new(self).execute()
     }

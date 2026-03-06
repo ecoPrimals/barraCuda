@@ -19,6 +19,9 @@ pub struct ComplexSub {
 
 impl ComplexSub {
     /// Creates a new complex sub. Both inputs must have last dim = 2 and same shape.
+    /// # Errors
+    /// Returns [`Err`] if shapes differ, last dimension is not 2, or tensors
+    /// are on different devices.
     pub fn new(input_a: Tensor, input_b: Tensor) -> Result<Self> {
         if input_a.shape() != input_b.shape() {
             return Err(BarracudaError::Device(
@@ -125,6 +128,9 @@ impl ComplexSub {
     }
 
     /// Executes complex subtraction and returns the result.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input_a.device();
         let num_elements = self.input_a.len();

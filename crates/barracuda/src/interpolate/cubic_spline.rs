@@ -5,17 +5,17 @@
 //!
 //! # Algorithm
 //!
-//! Given n data points (x_i, y_i), construct n-1 cubic polynomials S_i(x) such that:
-//! 1. S_i(x_i) = y_i (passes through data points)
-//! 2. S_i(x_{i+1}) = y_{i+1} (continuous)
+//! Given n data points (`x_i`, `y_i`), construct n-1 cubic polynomials `S_i(x)` such that:
+//! 1. `S_i(x_i)` = `y_i` (passes through data points)
+//! 2. `S_i(x`_{i+1}) = y_{i+1} (continuous)
 //! 3. S'_i(x_{i+1}) = S'_{i+1}(x_{i+1}) (C¹ continuous)
 //! 4. S''_i(x_{i+1}) = S''_{i+1}(x_{i+1}) (C² continuous)
 //!
 //! # Boundary Conditions
 //!
-//! - **Natural**: S''(x_0) = S''(x_n) = 0
-//! - **Clamped**: S'(x_0) = f'_0, S'(x_n) = f'_n (specified derivatives)
-//! - **Not-a-knot**: Third derivative continuous at x_1 and x_{n-1}
+//! - **Natural**: S''(`x_0`) = S''(`x_n`) = 0
+//! - **Clamped**: S'(`x_0`) = f'_0, S'(`x_n`) = f'_n (specified derivatives)
+//! - **Not-a-knot**: Third derivative continuous at `x_1` and x_{n-1}
 //!
 //! # Applications
 //!
@@ -65,20 +65,16 @@ pub enum SplineBoundary {
 
 impl CubicSpline {
     /// Create a natural cubic spline (S'' = 0 at endpoints)
-    ///
     /// # Arguments
-    ///
     /// * `x` - x coordinates (must be strictly increasing)
     /// * `y` - y coordinates
-    ///
+    /// # Errors
+    /// Returns [`Err`] if [`new`](Self::new) fails (see [`new`](Self::new) for conditions).
     /// # Example
-    ///
     /// ```
     /// use barracuda::interpolate::CubicSpline;
-    ///
     /// let x = vec![0.0, 1.0, 2.0, 3.0];
     /// let y = vec![0.0, 1.0, 0.0, 1.0];
-    ///
     /// let spline = CubicSpline::natural(&x, &y)?;
     /// let y_mid = spline.eval(1.5)?;
     /// # Ok::<(), barracuda::error::BarracudaError>(())
@@ -88,13 +84,13 @@ impl CubicSpline {
     }
 
     /// Create a clamped cubic spline (specified first derivatives at endpoints)
-    ///
     /// # Arguments
-    ///
     /// * `x` - x coordinates (must be strictly increasing)
     /// * `y` - y coordinates
     /// * `dy_left` - First derivative at left endpoint
     /// * `dy_right` - First derivative at right endpoint
+    /// # Errors
+    /// Returns [`Err`] if [`new`](Self::new) fails (see [`new`](Self::new) for conditions).
     pub fn clamped(x: &[f64], y: &[f64], dy_left: f64, dy_right: f64) -> Result<Self> {
         Self::new(
             x,
@@ -107,12 +103,13 @@ impl CubicSpline {
     }
 
     /// Create a cubic spline with specified boundary conditions
-    ///
     /// # Arguments
-    ///
     /// * `x` - x coordinates (must be strictly increasing)
     /// * `y` - y coordinates
     /// * `boundary` - Boundary condition type
+    /// # Errors
+    /// Returns [`Err`] if there are fewer than 2 data points, `x` and `y` have different
+    /// lengths, `x` is not strictly increasing, or the tridiagonal system is singular.
     pub fn new(x: &[f64], y: &[f64], boundary: SplineBoundary) -> Result<Self> {
         let n = x.len();
 
@@ -153,14 +150,12 @@ impl CubicSpline {
     }
 
     /// Evaluate the spline at a single point
-    ///
     /// # Arguments
-    ///
     /// * `x_eval` - Point at which to evaluate
-    ///
     /// # Returns
-    ///
     /// Interpolated value
+    /// # Errors
+    /// Currently always succeeds; [`find_interval`](Self::find_interval) does not fail.
     pub fn eval(&self, x_eval: f64) -> Result<f64> {
         // Find the interval containing x_eval
         let i = self.find_interval(x_eval)?;
@@ -178,14 +173,17 @@ impl CubicSpline {
     }
 
     /// Evaluate the spline at multiple points (CPU path).
+    /// # Errors
+    /// Returns [`Err`] if [`eval`](Self::eval) fails for any query point.
     pub fn eval_many(&self, x_eval: &[f64]) -> Result<Vec<f64>> {
         x_eval.iter().map(|&x| self.eval(x)).collect()
     }
 
     /// Evaluate the spline at multiple points on GPU.
-    ///
     /// Converts `(y, y2)` representation to `[a, b, c, d]` monomial coefficients
     /// per segment, then dispatches `cubic_spline_eval_f64.wgsl`.
+    /// # Errors
+    /// Returns [`Err`] if device poll, buffer map, or readback fails (e.g., device lost).
     pub fn eval_many_gpu(
         &self,
         x_eval: &[f64],
@@ -258,7 +256,7 @@ impl CubicSpline {
             .storage_rw(3, &result_buf)
             .uniform(4, &params_buf)
             .dispatch((n_query as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1)
-            .submit();
+            .submit()?;
 
         let mut enc = device.create_encoder_guarded(&Default::default());
         let rb = d.create_buffer(&wgpu::BufferDescriptor {
@@ -290,6 +288,8 @@ impl CubicSpline {
     }
 
     /// Evaluate the first derivative at a point
+    /// # Errors
+    /// Currently always succeeds; [`find_interval`](Self::find_interval) does not fail.
     pub fn derivative(&self, x_eval: f64) -> Result<f64> {
         let i = self.find_interval(x_eval)?;
 
@@ -304,6 +304,8 @@ impl CubicSpline {
     }
 
     /// Evaluate the second derivative at a point
+    /// # Errors
+    /// Currently always succeeds; [`find_interval`](Self::find_interval) does not fail.
     pub fn second_derivative(&self, x_eval: f64) -> Result<f64> {
         let i = self.find_interval(x_eval)?;
 
@@ -317,6 +319,8 @@ impl CubicSpline {
     }
 
     /// Compute the definite integral of the spline from a to b
+    /// # Errors
+    /// Currently always succeeds; [`find_interval`](Self::find_interval) does not fail.
     pub fn integrate(&self, a: f64, b: f64) -> Result<f64> {
         if a > b {
             return Ok(-self.integrate(b, a)?);
@@ -338,22 +342,32 @@ impl CubicSpline {
     }
 
     /// Get the x coordinates of the data points
+    #[must_use]
     pub fn x_data(&self) -> &[f64] {
         &self.x
     }
 
     /// Get the y coordinates of the data points
+    #[must_use]
     pub fn y_data(&self) -> &[f64] {
         &self.y
     }
 
     /// Get the second derivatives at the data points
+    #[must_use]
     pub fn second_derivatives(&self) -> &[f64] {
         &self.y2
     }
 
-    /// Find the interval [x[i], x[i+1]] containing x_eval
-    fn find_interval(&self, x_eval: f64) -> Result<usize> {
+    /// Find the interval \[x\[i\], x\[i+1\]\] containing `x_eval`.
+    ///
+    /// Uses binary search. Clamps to the first or last interval for
+    /// extrapolation outside the data range.
+    ///
+    /// # Errors
+    ///
+    /// Currently infallible; returns `Ok` for all valid splines.
+    pub fn find_interval(&self, x_eval: f64) -> Result<usize> {
         let n = self.x.len();
 
         // Handle boundary cases with extrapolation
@@ -369,7 +383,7 @@ impl CubicSpline {
         let mut hi = n - 1;
 
         while hi - lo > 1 {
-            let mid = (lo + hi) / 2;
+            let mid = usize::midpoint(lo, hi);
             if self.x[mid] > x_eval {
                 hi = mid;
             } else {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Auto-Tuning Runtime for BarraCuda
+//! Auto-Tuning Runtime for `BarraCuda`
 //!
 //! Discovers optimal GPU parameters at runtime through calibration.
 //!
@@ -17,7 +17,7 @@ use std::time::Instant;
 use wgpu::util::DeviceExt;
 
 /// Trait for GPU devices that support calibration (submit+poll under lock).
-/// Implemented by WgpuDevice to avoid circular dependency.
+/// Implemented by `WgpuDevice` to avoid circular dependency.
 pub(crate) trait GpuDeviceForCalibration {
     fn device(&self) -> &wgpu::Device;
     fn name(&self) -> &str;
@@ -29,7 +29,7 @@ pub(crate) trait GpuDeviceForCalibration {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GpuCalibration {
-    /// Unique device identifier (from wgpu global_id)
+    /// Unique device identifier (from wgpu `global_id`)
     pub device_id: String,
     /// Device name (adapter name)
     pub device_name: String,
@@ -66,6 +66,7 @@ pub struct AutoTuner {
 
 impl AutoTuner {
     /// Create a new auto-tuner
+    #[must_use]
     pub fn new() -> Self {
         Self {
             calibrations: RwLock::new(HashMap::new()),
@@ -86,7 +87,7 @@ impl AutoTuner {
                 let mut map = tuner
                     .calibrations
                     .write()
-                    .expect("calibrations RwLock poisoned");
+                    .unwrap_or_else(std::sync::PoisonError::into_inner);
                 for cal in cals {
                     map.insert(cal.device_name.clone(), cal);
                 }
@@ -110,7 +111,7 @@ impl AutoTuner {
             let cals = self
                 .calibrations
                 .read()
-                .expect("calibrations RwLock poisoned");
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             if let Some(cal) = cals.get(device_name) {
                 return cal.clone();
             }
@@ -124,7 +125,7 @@ impl AutoTuner {
             let mut cals = self
                 .calibrations
                 .write()
-                .expect("calibrations RwLock poisoned");
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             cals.insert(device_name.to_string(), cal.clone());
         }
 
@@ -181,7 +182,7 @@ impl AutoTuner {
     ) -> Option<f64> {
         let device = wgpu_device.device();
         let shader_src = format!(
-            r#"
+            r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read> b: array<f32>;
 @group(0) @binding(2) var<storage, read_write> output: array<f32>;
@@ -194,7 +195,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
     }}
     output[idx] = a[idx] + b[idx];
 }}
-"#
+"
         );
 
         let data: Vec<f32> = (0..size).map(|i| i as f32 * 0.001).collect();
@@ -345,7 +346,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
         let size = 1024usize;
 
         let shader_src = format!(
-            r#"
+            r"
 @group(0) @binding(0) var<storage, read_write> data: array<f32>;
 
 @compute @workgroup_size({workgroup_size})
@@ -355,7 +356,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
         data[idx] = data[idx] + 1.0;
     }}
 }}
-"#
+"
         );
 
         let data: Vec<f32> = vec![0.0; size];
@@ -451,7 +452,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
             let cals = self
                 .calibrations
                 .read()
-                .expect("calibrations RwLock poisoned");
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             let cal_vec: Vec<&GpuCalibration> = cals.values().collect();
             if let Ok(json) = serde_json::to_string_pretty(&cal_vec) {
                 let _ = std::fs::write(path, json);
@@ -472,7 +473,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
             let mut cals = self
                 .calibrations
                 .write()
-                .expect("calibrations RwLock poisoned");
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             cals.insert(wgpu_device.name().to_string(), cal.clone());
         }
 
@@ -492,13 +493,15 @@ impl Default for AutoTuner {
 /// Global auto-tuner instance for runtime GPU parameter calibration.
 pub static GLOBAL_TUNER: std::sync::LazyLock<AutoTuner> = std::sync::LazyLock::new(|| {
     // Try to use a standard cache location
-    let cache_dir = std::env::var("XDG_CACHE_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            std::env::var("HOME")
-                .map(|h| PathBuf::from(h).join(".cache"))
-                .unwrap_or_else(|_| std::env::temp_dir())
-        });
+    let cache_dir = std::env::var("XDG_CACHE_HOME").map_or_else(
+        |_| {
+            std::env::var("HOME").map_or_else(
+                |_| std::env::temp_dir(),
+                |h| PathBuf::from(h).join(".cache"),
+            )
+        },
+        PathBuf::from,
+    );
 
     let cache_path = cache_dir
         .join(env!("CARGO_PKG_NAME"))
@@ -525,10 +528,12 @@ mod tests {
     #[test]
     fn test_tuner_creation() {
         let tuner = AutoTuner::new();
-        assert!(tuner
-            .calibrations
-            .read()
-            .expect("calibrations RwLock poisoned")
-            .is_empty());
+        assert!(
+            tuner
+                .calibrations
+                .read()
+                .unwrap_or_else(|e| e.into_inner())
+                .is_empty()
+        );
     }
 }

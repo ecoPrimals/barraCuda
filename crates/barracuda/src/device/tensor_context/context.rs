@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! TensorContext - accelerated tensor operations via internal pooling
+//! `TensorContext` - accelerated tensor operations via internal pooling
 
 use super::pool::{BufferDescriptor, BufferPool, SolverBufferSet};
-use crate::device::pipeline_cache::{BindGroupLayoutSignature, DeviceFingerprint, GLOBAL_CACHE};
 use crate::device::WgpuDevice;
+use crate::device::pipeline_cache::{BindGroupLayoutSignature, DeviceFingerprint, GLOBAL_CACHE};
 use crate::error::Result;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -34,7 +34,7 @@ fn buffer_identity(buf: &wgpu::Buffer) -> u64 {
     h.finish()
 }
 
-/// TensorContext - accelerated tensor operations via internal pooling
+/// `TensorContext` - accelerated tensor operations via internal pooling
 pub struct TensorContext {
     device: Arc<WgpuDevice>,
     buffer_pool: BufferPool,
@@ -49,6 +49,7 @@ pub struct TensorContext {
 
 impl TensorContext {
     /// Create a new tensor context for the device.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self {
             buffer_pool: BufferPool::new(
@@ -67,12 +68,14 @@ impl TensorContext {
         }
     }
 
-    /// Start batching operations (defer submit until end_batch).
+    /// Start batching operations (defer submit until `end_batch`).
     pub fn begin_batch(&self) {
         self.batching.store(true, Ordering::SeqCst);
     }
 
     /// End batching and submit all pending operations.
+    /// # Errors
+    /// Returns [`Err`] if the GPU device is lost or command submission fails.
     pub fn end_batch(&self) -> Result<()> {
         self.batching.store(false, Ordering::SeqCst);
         self.sync()
@@ -107,6 +110,11 @@ impl TensorContext {
     }
 
     /// Record an operation (immediate or batched).
+    /// # Errors
+    /// Returns [`Err`] if command encoder creation or submission fails (e.g.,
+    /// device lost).
+    /// # Panics
+    /// Panics if the `pending_ops` mutex is poisoned.
     pub fn record_operation<F>(&self, op: F) -> Result<()>
     where
         F: FnOnce(&mut wgpu::CommandEncoder) + Send + 'static,
@@ -114,7 +122,7 @@ impl TensorContext {
         if self.is_batching() {
             self.pending_ops
                 .lock()
-                .expect("pending_ops poisoned")
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
                 .push(Box::new(op));
             self.ops_batched.fetch_add(1, Ordering::Relaxed);
             Ok(())
@@ -139,6 +147,8 @@ impl TensorContext {
     }
 
     /// Get or create a bind group from layout signature and buffers.
+    /// # Panics
+    /// Panics if the `bind_group_cache` lock is poisoned.
     pub fn get_or_create_bind_group(
         &self,
         layout_sig: BindGroupLayoutSignature,
@@ -155,7 +165,7 @@ impl TensorContext {
         if let Some(bg) = self
             .bind_group_cache
             .read()
-            .expect("bind_group_cache poisoned")
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .get(&key)
         {
             self.cache_hits.fetch_add(1, Ordering::Relaxed);
@@ -190,7 +200,7 @@ impl TensorContext {
         // Use `entry().or_insert()` so a concurrent insert wins gracefully.
         self.bind_group_cache
             .write()
-            .expect("bind_group_cache poisoned")
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .entry(key)
             .or_insert(bind_group)
             .clone()
@@ -208,8 +218,15 @@ impl TensorContext {
     }
 
     /// Submit all pending batched operations.
+    /// # Errors
+    /// Returns [`Err`] if the GPU device is lost or command submission fails.
+    /// # Panics
+    /// Panics if the `pending_ops` mutex is poisoned.
     pub fn sync(&self) -> Result<()> {
-        let mut pending = self.pending_ops.lock().expect("pending_ops poisoned");
+        let mut pending = self
+            .pending_ops
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         if pending.is_empty() {
             return Ok(());
         }
@@ -243,7 +260,12 @@ impl TensorContext {
         &self.buffer_pool
     }
 
-    /// Pin buffers for a solver (held until release_solver_buffers).
+    /// Pin buffers for a solver (held until `release_solver_buffers`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn pin_solver_buffers(
         &self,
         solver_id: &str,
@@ -276,7 +298,7 @@ impl TensorContext {
     }
 }
 
-/// TensorContext statistics.
+/// `TensorContext` statistics.
 #[derive(Debug, Clone)]
 pub struct TensorContextStats {
     /// Number of new buffer allocations.
@@ -325,17 +347,19 @@ impl std::fmt::Display for TensorContextStats {
     }
 }
 
-/// Get or create the global TensorContext for a device.
+/// Get or create the global `TensorContext` for a device.
 ///
 /// Uses double-checked locking: fast read path for the common case,
 /// write path only when a new device is first seen.
+/// # Panics
+/// Panics if the `GLOBAL_CONTEXTS` lock is poisoned.
 pub fn get_device_context(device: &Arc<WgpuDevice>) -> Arc<TensorContext> {
     let fingerprint = DeviceFingerprint::from_adapter_info(device.adapter_info());
 
     // Fast path.
     if let Some(ctx) = GLOBAL_CONTEXTS
         .read()
-        .expect("GLOBAL_CONTEXTS poisoned")
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
         .get(&fingerprint)
     {
         return ctx.clone();
@@ -344,16 +368,18 @@ pub fn get_device_context(device: &Arc<WgpuDevice>) -> Arc<TensorContext> {
     // Slow path — first time this device is seen.
     GLOBAL_CONTEXTS
         .write()
-        .expect("GLOBAL_CONTEXTS poisoned")
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
         .entry(fingerprint)
         .or_insert_with(|| Arc::new(TensorContext::new(device.clone())))
         .clone()
 }
 
 /// Clear all global contexts (for testing/benchmarking).
+/// # Panics
+/// Panics if the `GLOBAL_CONTEXTS` lock is poisoned.
 pub fn clear_global_contexts() {
     GLOBAL_CONTEXTS
         .write()
-        .expect("GLOBAL_CONTEXTS poisoned")
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
         .clear();
 }

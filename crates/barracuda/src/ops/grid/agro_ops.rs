@@ -3,12 +3,12 @@
 //! Agricultural/environmental computing primitives (airSpring absorption).
 //!
 //! - **Hargreaves ET₀**: FAO reference evapotranspiration
-//! - **Dual Kc**: FAO dual crop coefficient ETc
+//! - **Dual Kc**: FAO dual crop coefficient `ETc`
 //! - **Van Genuchten**: Soil moisture retention θ(h) and K(θ)
 //! - **Batched crop pipeline**: Water balance over time steps
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -30,7 +30,14 @@ struct HargreavesParams {
     _pad2: u32,
 }
 
-/// FAO Hargreaves reference evapotranspiration: ET₀ = 0.0023 * Ra * (T_mean + 17.8) * (T_max - T_min)^0.5
+/// FAO Hargreaves reference evapotranspiration: ET₀ = 0.0023 * Ra * (`T_mean` + 17.8) * (`T_max` - `T_min)^0.5`
+///
+/// # Panics
+/// Panics if `t_min.len() != t_max.len()` or `ra.len() != t_max.len()`.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, buffer readback/mapping fails, or the device is lost.
 pub fn hargreaves_et0(
     device: &Arc<WgpuDevice>,
     t_max: &[f64],
@@ -62,7 +69,7 @@ pub fn hargreaves_et0(
         .storage_rw(3, &out_buf)
         .uniform(4, &params_buf)
         .dispatch_1d(n as u32)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, n)
 }
@@ -78,7 +85,14 @@ struct DualKcParams {
     _pad2: u32,
 }
 
-/// FAO dual crop coefficient: ETc = (Kcb * Ks + Ke) * ET₀
+/// FAO dual crop coefficient: `ETc` = (Kcb * Ks + Ke) * ET₀
+///
+/// # Panics
+/// Panics if `ks.len()`, `ke.len()`, or `et0.len()` != `kcb.len()`.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, buffer readback/mapping fails, or the device is lost.
 pub fn dual_kc(
     device: &Arc<WgpuDevice>,
     kcb: &[f64],
@@ -114,7 +128,7 @@ pub fn dual_kc(
         .storage_rw(4, &out_buf)
         .uniform(5, &params_buf)
         .dispatch_1d(n as u32)
-        .submit();
+        .submit()?;
 
     device.read_f64_buffer(&out_buf, n)
 }
@@ -137,6 +151,11 @@ struct VanGenuchtenParams {
 /// Van Genuchten soil moisture retention θ(h) and hydraulic conductivity K(θ).
 ///
 /// Returns `(theta, k)` where theta is volumetric water content and k is conductivity.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn van_genuchten(
     device: &Arc<WgpuDevice>,
     h: &[f64],
@@ -172,7 +191,7 @@ pub fn van_genuchten(
         .storage_rw(2, &out_k_buf)
         .uniform(3, &params_buf)
         .dispatch_1d(n as u32)
-        .submit();
+        .submit()?;
 
     let theta = device.read_f64_buffer(&out_theta_buf, n)?;
     let k = device.read_f64_buffer(&out_k_buf, n)?;
@@ -192,13 +211,20 @@ struct BatchedCropParams {
 
 /// Combined crop water balance over time steps.
 ///
-/// For each cell: soil_water[t+1] = soil_water[t] + precip[t] - ETc[t] - drainage[t]
-/// with drainage = max(0, soil_water - field_capacity).
+/// For each cell: `soil_water`[t+1] = `soil_water`[t] + precip[t] - `ETc`[t] - drainage[t]
+/// with drainage = max(0, `soil_water` - `field_capacity`).
 ///
-/// - `precip`, `etc_vals`: [n_cells * n_steps], index = cell * n_steps + step
-/// - `field_capacity`: [n_cells]
-/// - `soil_water`: [n_cells] initial values (overwritten with final values)
-/// - Returns `(soil_water, drainage)` where drainage is [n_cells * n_steps]
+/// - `precip`, `etc_vals`: [`n_cells` * `n_steps`], index = cell * `n_steps` + step
+/// - `field_capacity`: [`n_cells`]
+/// - `soil_water`: [`n_cells`] initial values (overwritten with final values)
+/// - Returns `(soil_water, drainage)` where drainage is [`n_cells` * `n_steps`]
+///
+/// # Panics
+/// Panics if `precip.len()`, `etc_vals.len()`, or `field_capacity.len()` do not match expected dimensions.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, buffer readback/mapping fails, or the device is lost.
 pub fn batched_crop_pipeline(
     device: &Arc<WgpuDevice>,
     precip: &[f64],
@@ -240,7 +266,7 @@ pub fn batched_crop_pipeline(
         .storage_rw(4, &drain_buf)
         .uniform(5, &params_buf)
         .dispatch_1d(n_cells as u32)
-        .submit();
+        .submit()?;
 
     let soil_water_out = device.read_f64_buffer(&sw_buf, n_cells)?;
     let drainage = device.read_f64_buffer(&drain_buf, total)?;

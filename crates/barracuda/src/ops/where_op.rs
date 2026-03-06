@@ -22,6 +22,7 @@ pub struct Where {
 
 impl Where {
     /// Create a where/select operation with condition, true-branch, and false-branch tensors.
+    #[must_use]
     pub fn new(condition: Tensor, x: Tensor, y: Tensor) -> Self {
         Self { condition, x, y }
     }
@@ -38,6 +39,9 @@ impl Where {
     }
 
     /// Execute the conditional selection on GPU.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.condition.device();
         let size = self.condition.len();
@@ -166,6 +170,9 @@ impl Where {
 
 impl Tensor {
     /// Select elements from `x` or `y` based on condition (1.0 = x, 0.0 = y).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn where_select(condition: Self, x: Self, y: Self) -> Result<Self> {
         Where::new(condition, x, y).execute()
     }

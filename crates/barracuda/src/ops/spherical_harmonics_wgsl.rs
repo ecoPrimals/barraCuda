@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Real spherical harmonics Y_l^m(theta, phi) for multipole expansion - Pure WGSL
+//! Real spherical harmonics `Y_l^m(theta`, phi) for multipole expansion - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -12,8 +12,8 @@ use crate::device::DeviceCapabilities;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// Real spherical harmonics Y_l^m(theta, phi).
-/// theta_phi: interleaved [theta0, phi0, theta1, phi1, ...]
+/// Real spherical harmonics `Y_l^m(theta`, phi).
+/// `theta_phi`: interleaved [theta0, phi0, theta1, phi1, ...]
 /// l: degree (0..6), m: order (can be negative)
 pub struct SphericalHarmonics {
     theta_phi: Tensor,
@@ -22,7 +22,8 @@ pub struct SphericalHarmonics {
 }
 
 impl SphericalHarmonics {
-    /// Create spherical harmonics Y_l^m evaluation for (θ, φ) angle pairs.
+    /// Create spherical harmonics `Y_l^m` evaluation for (θ, φ) angle pairs.
+    #[must_use]
     pub fn new(theta_phi: Tensor, l: u32, m: i32) -> Self {
         Self { theta_phi, l, m }
     }
@@ -31,7 +32,12 @@ impl SphericalHarmonics {
         include_str!("../shaders/special/spherical_harmonics.wgsl")
     }
 
-    /// Evaluate Y_l^m(θ, φ) for all (θ, φ) pairs in the input.
+    /// Evaluate `Y_l^m(θ`, φ) for all (θ, φ) pairs in the input.
+    /// # Panics
+    /// Panics if `theta_phi` has odd length (must be even for theta/phi pairs).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.theta_phi.device();
         let total_elements: usize = self.theta_phi.shape().iter().product();
@@ -48,7 +54,7 @@ impl SphericalHarmonics {
         let output_buffer = device.create_buffer_f32(size)?;
 
         let abs_m = self.m.unsigned_abs();
-        let m_is_positive = if self.m > 0 { 1u32 } else { 0u32 };
+        let m_is_positive = u32::from(self.m > 0);
 
         #[repr(C)]
         #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -180,8 +186,11 @@ impl SphericalHarmonics {
 }
 
 impl Tensor {
-    /// Compute real spherical harmonic Y_l^m at (theta, phi) points.
-    /// theta_phi: interleaved [theta0, phi0, theta1, phi1, ...]
+    /// Compute real spherical harmonic `Y_l^m` at (theta, phi) points.
+    /// `theta_phi`: interleaved [theta0, phi0, theta1, phi1, ...]
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn spherical_harmonics(self, l: u32, m: i32) -> Result<Self> {
         SphericalHarmonics::new(self, l, m).execute()
     }

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! LayerScale - Per-layer learnable scaling
+//! `LayerScale` - Per-layer learnable scaling
 //!
-//! **Canonical BarraCuda Pattern**: Struct with new/execute
+//! **Canonical `BarraCuda` Pattern**: Struct with new/execute
 //!
-//! Used in vision transformers (CaiT, LeViT) to stabilize training.
+//! Used in vision transformers (`CaiT`, `LeViT`) to stabilize training.
 //!
 //! ## Algorithm
 //!
@@ -17,7 +17,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
-/// LayerScale operation
+/// `LayerScale` operation
 pub struct LayerScale {
     input: Tensor,
     gamma: Tensor,
@@ -25,6 +25,8 @@ pub struct LayerScale {
 
 impl LayerScale {
     /// Create a new layer scale operation
+    /// # Errors
+    /// Returns [`Err`] if input and gamma shapes do not match.
     pub fn new(input: Tensor, gamma: Tensor) -> Result<Self> {
         // Validate shapes match
         if input.shape() != gamma.shape() {
@@ -48,6 +50,9 @@ impl LayerScale {
     }
 
     /// Execute the layer scale operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.len();

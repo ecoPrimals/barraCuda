@@ -90,6 +90,7 @@ pub enum FoldingOp {
 
 impl FoldingOp {
     /// WGSL source for this operation.
+    #[must_use]
     pub fn source(&self) -> &'static str {
         match self {
             FoldingOp::TorsionAngles => WGSL_TORSION_ANGLES_DF64,
@@ -111,6 +112,7 @@ impl FoldingOp {
     }
 
     /// Shader label for debugging.
+    #[must_use]
     pub fn label(&self) -> &'static str {
         match self {
             FoldingOp::TorsionAngles => "torsion_angles_df64",
@@ -133,6 +135,11 @@ impl FoldingOp {
 }
 
 /// Compile a folding DF64 shader for the given device and operation.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn compile_folding_shader(device: &WgpuDevice, op: FoldingOp) -> Result<wgpu::ShaderModule> {
     let source = op.source();
     let label = op.label();

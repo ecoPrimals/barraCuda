@@ -60,6 +60,7 @@ pub fn storage_readwrite_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
 }
 
 /// Create an f64 GPU buffer from a slice
+#[must_use]
 pub fn create_f64_buffer(
     device: &wgpu::Device,
     data: &[f64],
@@ -76,6 +77,7 @@ pub fn create_f64_buffer(
 }
 
 /// Create an empty f64 GPU buffer
+#[must_use]
 pub fn create_empty_f64_buffer(
     device: &wgpu::Device,
     count: usize,
@@ -91,6 +93,7 @@ pub fn create_empty_f64_buffer(
 }
 
 /// Create a staging buffer for readback
+#[must_use]
 pub fn create_staging_buffer(device: &wgpu::Device, size_bytes: u64, label: &str) -> wgpu::Buffer {
     device.create_buffer(&wgpu::BufferDescriptor {
         label: Some(label),
@@ -112,6 +115,7 @@ pub struct FdPipelineBuilder<'a> {
 
 impl<'a> FdPipelineBuilder<'a> {
     /// Create a new pipeline builder
+    #[must_use]
     pub fn new(device: &'a wgpu::Device, label_prefix: &'a str) -> Self {
         Self {
             device,
@@ -143,6 +147,8 @@ impl<'a> FdPipelineBuilder<'a> {
     }
 
     /// Build the pipeline with the specified entry point
+    /// # Errors
+    /// Returns [`Err`] if shader compilation or pipeline creation fails.
     pub fn build(
         self,
         entry_point: &str,
@@ -197,6 +203,7 @@ pub struct FdComputeRunner<'a> {
 
 impl<'a> FdComputeRunner<'a> {
     /// Create a new compute runner
+    #[must_use]
     pub fn new(
         device: &'a Arc<WgpuDevice>,
         pipeline: &'a wgpu::ComputePipeline,
@@ -214,6 +221,8 @@ impl<'a> FdComputeRunner<'a> {
     }
 
     /// Execute the compute pass and read back a single output buffer
+    /// # Errors
+    /// Returns [`Err`] if GPU dispatch fails or buffer readback fails (e.g. device lost).
     pub fn execute_single(
         self,
         output_buffer: &wgpu::Buffer,
@@ -244,6 +253,8 @@ impl<'a> FdComputeRunner<'a> {
     }
 
     /// Execute the compute pass and read back two output buffers
+    /// # Errors
+    /// Returns [`Err`] if GPU dispatch fails or buffer readback fails (e.g. device lost).
     pub fn execute_dual(
         self,
         output_buffer_a: &wgpu::Buffer,

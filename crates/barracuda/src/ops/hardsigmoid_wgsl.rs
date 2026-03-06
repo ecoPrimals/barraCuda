@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Hardsigmoid — GPU-resident, pipeline-cached, batchable
 //!
-//! f64 canonical — f32 derived via downcast_f64_to_f32 when needed.
+//! f64 canonical — f32 derived via `downcast_f64_to_f32` when needed.
 //!
 //! Deep Debt Principles:
 //! - Zero hardcoding: Capability-based workgroup dispatch
-//! - Batchable: routes through TensorContext::record_operation()
+//! - Batchable: routes through `TensorContext::record_operation()`
 //! - Zero-copy output: buffer pool, no GPU→CPU→GPU round-trip
-//! - Pipeline cached: GLOBAL_CACHE eliminates recompilation overhead
+//! - Pipeline cached: `GLOBAL_CACHE` eliminates recompilation overhead
 
 /// f64 is the canonical source.
 const SHADER_F64: &str = include_str!("../shaders/activation/hardsigmoid_f64.wgsl");
@@ -35,6 +35,7 @@ pub struct Hardsigmoid {
 
 impl Hardsigmoid {
     /// Creates a Hardsigmoid operation for the given input tensor.
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -48,6 +49,11 @@ impl Hardsigmoid {
     /// - Output stays GPU-resident (no readback).
     /// - Pipeline compiled once, cached globally.
     /// - Dispatch batched when inside `TensorSession`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -126,6 +132,11 @@ impl Hardsigmoid {
 
 impl Tensor {
     /// Compute Hardsigmoid element-wise (GPU-resident, pipeline-cached, batchable).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn hardsigmoid_wgsl(self) -> Result<Self> {
         Hardsigmoid::new(self).execute()
     }

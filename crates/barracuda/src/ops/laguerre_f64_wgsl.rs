@@ -14,12 +14,12 @@
 //! - 2D/3D harmonic oscillator basis
 //! - Molecular dynamics radial basis
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use std::sync::Arc;
 
-/// f64 Generalized Laguerre polynomial evaluator L_n^(α)(x)
+/// f64 Generalized Laguerre polynomial evaluator `L_n^(α)(x)`
 ///
 /// Computes generalized Laguerre polynomials with full f64 precision
 /// using three-term recurrence relation.
@@ -29,6 +29,8 @@ pub struct LaguerreF64 {
 
 impl LaguerreF64 {
     /// Create new Laguerre f64 polynomial operation
+    /// # Errors
+    /// Returns [`Err`] if device context cannot be obtained.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -37,15 +39,16 @@ impl LaguerreF64 {
         include_str!("../shaders/special/laguerre_f64.wgsl")
     }
 
-    /// Compute generalized Laguerre polynomial L_n^(α)(x) for each element
-    ///
+    /// Compute generalized Laguerre polynomial `L_n^(α)(x)` for each element
     /// # Arguments
     /// * `x` - Input values
     /// * `n` - Polynomial degree (0, 1, 2, ...)
     /// * `alpha` - Generalization parameter (0.0 for simple Laguerre)
-    ///
     /// # Returns
-    /// Vector of L_n^(α)(x) values with f64 precision
+    /// Vector of `L_n^(α)(x)` values with f64 precision
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or buffer readback fails
+    /// (e.g. device lost).
     pub fn laguerre(&self, x: &[f64], n: u32, alpha: f64) -> Result<Vec<f64>> {
         if x.is_empty() {
             return Ok(vec![]);
@@ -55,6 +58,9 @@ impl LaguerreF64 {
     }
 
     /// Compute simple Laguerre polynomial Lₙ(x) (α = 0)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or buffer readback fails
+    /// (e.g. device lost).
     pub fn laguerre_simple(&self, x: &[f64], n: u32) -> Result<Vec<f64>> {
         self.laguerre(x, n, 0.0)
     }
@@ -145,7 +151,7 @@ impl LaguerreF64 {
             .storage_rw(1, &output_buf)
             .uniform(2, &params_buf)
             .dispatch_1d(size as u32)
-            .submit();
+            .submit()?;
 
         let result: Vec<f64> = self.device.read_buffer_f64(&output_buf, size)?;
         Ok(result)
@@ -172,7 +178,7 @@ mod tests {
 
         // L₀(x) = 1 for all x
         for &v in &result {
-            assert!((v - 1.0).abs() < 1e-10, "L₀ should be 1, got {}", v);
+            assert!((v - 1.0).abs() < 1e-10, "L₀ should be 1, got {v}");
         }
     }
 
@@ -215,10 +221,7 @@ mod tests {
             let expected = 0.5 * xi * xi - 2.0 * xi + 1.0;
             assert!(
                 (v - expected).abs() < 1e-10,
-                "L₂({}) = {}, expected {}",
-                xi,
-                v,
-                expected
+                "L₂({xi}) = {v}, expected {expected}"
             );
         }
     }

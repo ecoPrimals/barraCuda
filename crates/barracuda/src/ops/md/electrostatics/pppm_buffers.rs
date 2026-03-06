@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! PPPM GPU buffer helpers
 //!
-//! Extracted from pppm_gpu.rs for modularity (Feb 14, 2026).
+//! Extracted from `pppm_gpu.rs` for modularity (Feb 14, 2026).
 //! Delegates to `crate::linalg::sparse::SparseBuffers` for shared implementation (Feb 15, 2026).
 
 use crate::device::WgpuDevice;
@@ -12,26 +12,30 @@ use wgpu::util::DeviceExt;
 /// PPPM buffer utilities for GPU memory management
 ///
 /// Thin wrapper over `SparseBuffers` for electrostatics code paths that use raw
-/// `wgpu::Device` and `wgpu::Queue` (e.g. PppmGpu).
+/// `wgpu::Device` and `wgpu::Queue` (e.g. `PppmGpu`).
 pub struct PppmBuffers;
 
 impl PppmBuffers {
     /// Create f64 buffer initialized with data
+    #[must_use]
     pub fn f64_from_slice(device: &wgpu::Device, label: &str, data: &[f64]) -> wgpu::Buffer {
         SparseBuffers::f64_from_slice_raw(device, label, data)
     }
 
     /// Create zero-initialized f64 buffer
+    #[must_use]
     pub fn f64_zeros(device: &wgpu::Device, label: &str, count: usize) -> wgpu::Buffer {
         SparseBuffers::f64_zeros_raw(device, label, count)
     }
 
     /// Create zero-initialized i32 buffer
+    #[must_use]
     pub fn i32_zeros(device: &wgpu::Device, label: &str, count: usize) -> wgpu::Buffer {
         SparseBuffers::i32_zeros_raw(device, label, count)
     }
 
     /// Create i32 buffer from slice
+    #[must_use]
     pub fn i32_from_slice(device: &wgpu::Device, label: &str, data: &[i32]) -> wgpu::Buffer {
         let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
         device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -42,6 +46,11 @@ impl PppmBuffers {
     }
 
     /// Read f64 buffer back to CPU (sync; async wrapper for API compatibility)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub async fn read_f64(
         device: &WgpuDevice,
         buffer: &wgpu::Buffer,
@@ -51,6 +60,11 @@ impl PppmBuffers {
     }
 
     /// Read i32 buffer back to CPU (sync; async wrapper for API compatibility)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub async fn read_i32(
         device: &WgpuDevice,
         buffer: &wgpu::Buffer,
@@ -65,6 +79,7 @@ pub struct PppmCpuFft;
 
 impl PppmCpuFft {
     /// Forward 3D FFT (real input → complex output)
+    #[must_use]
     pub fn forward_3d(mesh: &[f64], kx: usize, ky: usize, kz: usize) -> Vec<f64> {
         let size = kx * ky * kz;
 
@@ -81,6 +96,7 @@ impl PppmCpuFft {
     }
 
     /// Inverse 3D FFT (complex input → real output, normalized)
+    #[must_use]
     pub fn inverse_3d(phi_k: &[f64], kx: usize, ky: usize, kz: usize) -> Vec<f64> {
         let size = kx * ky * kz;
 
@@ -93,7 +109,7 @@ impl PppmCpuFft {
 
     /// 3D FFT via 1D transforms along each axis
     ///
-    /// Matches CPU Pppm's fft_3d_cpu exactly so GPU path produces same e_kspace/forces.
+    /// Matches CPU Pppm's `fft_3d_cpu` exactly so GPU path produces same `e_kspace/forces`.
     fn fft_3d(data: &mut [f64], nx: usize, ny: usize, nz: usize, inverse: bool) {
         // FFT along Z (innermost)
         for ix in 0..nx {
@@ -164,7 +180,7 @@ impl PppmCpuFft {
         }
     }
 
-    /// CPU 1D FFT (Cooley-Tukey radix-2) - matches Pppm::fft_1d_cpu exactly
+    /// CPU 1D FFT (Cooley-Tukey radix-2) - matches `Pppm::fft_1d_cpu` exactly
     fn fft_1d(data: &mut [f64], n: usize, inverse: bool) {
         use std::f64::consts::PI;
 

@@ -47,15 +47,14 @@ pub struct LinSolve {
 
 impl LinSolve {
     /// Create new linear solve operation
-    ///
     /// # Arguments
     /// * `matrix` - Square matrix A [N, N]
     /// * `rhs` - Right-hand side vector b [N]
-    ///
     /// # Deep Debt Compliance
     /// - No hardcoded sizes (runtime N)
     /// - No unsafe blocks
     /// - Agnostic design (works with any square system)
+    #[must_use]
     pub fn new(matrix: Tensor, rhs: Tensor) -> Self {
         Self { matrix, rhs }
     }
@@ -65,19 +64,19 @@ impl LinSolve {
     }
 
     /// Execute linear solve on GPU
-    ///
     /// # Returns
     /// Solution vector x where A·x = b
-    ///
     /// # Errors
     /// - Returns error if matrix is not square
     /// - Returns error if rhs length doesn't match matrix dimension
     /// - Returns zero vector if matrix is singular
-    ///
     /// # Deep Debt Compliance
     /// - Pure WGSL execution (no CPU fallback)
     /// - Capability-based workgroup dispatch
     /// - Safe buffer management
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.matrix.device();
         let matrix_shape = self.matrix.shape();
@@ -115,7 +114,7 @@ impl LinSolve {
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)
             .dispatch(1, 1, 1)
-            .submit();
+            .submit()?;
 
         // Read solution from output buffer (last n elements)
         let full_data = utils::read_buffer(device, &output_buffer, output_size)?;
@@ -128,19 +127,19 @@ impl LinSolve {
 /// Tensor extension for linear solve
 impl Tensor {
     /// Solve linear system A·x = b
-    ///
     /// # Arguments
     /// * `rhs` - Right-hand side vector b
-    ///
     /// # Returns
     /// Solution vector x
-    ///
     /// # Example
     /// ```ignore
     /// let a = Tensor::from_vec(vec![2.0, 1.0, 1.0, 2.0], vec![2, 2], device)?;
     /// let b = Tensor::from_vec(vec![5.0, 4.0], vec![2], device)?;
     /// let x = a.linsolve(&b)?;
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn linsolve(&self, rhs: &Tensor) -> Result<Tensor> {
         LinSolve::new(self.clone(), rhs.clone()).execute()
     }
@@ -223,10 +222,7 @@ mod tests {
         for (i, (&exp, &act)) in b_data.iter().zip(ax_data.iter()).enumerate() {
             assert!(
                 (exp - act).abs() < 1e-4,
-                "A·x[{}] should be {}, got {}",
-                i,
-                exp,
-                act
+                "A·x[{i}] should be {exp}, got {act}"
             );
         }
     }

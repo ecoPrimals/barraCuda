@@ -26,6 +26,7 @@ use crate::error::{BarracudaError, Result};
 /// # Returns
 ///
 /// Localization length in units of lattice spacing.
+#[must_use]
 pub fn localization_length(disorder_strength: f64, energy: f64) -> f64 {
     let w_sq = disorder_strength * disorder_strength + 0.01;
     let band_factor = (4.0 - energy * energy).max(0.01);
@@ -48,6 +49,10 @@ pub fn localization_length(disorder_strength: f64, energy: f64) -> f64 {
 /// # Returns
 ///
 /// Normalized conductance in [0, 1]. Ballistic (W=0) → ~1.0; localized → 0.
+///
+/// # Errors
+///
+/// Returns [`Err`] if `disorder_strength` is negative.
 pub fn anderson_conductance(
     disorder_strength: f64,
     system_size: usize,
@@ -79,8 +84,7 @@ mod tests {
         let g = anderson_conductance(0.0, 100, 0.0).unwrap();
         assert!(
             g > 0.99,
-            "Zero disorder should give ballistic conductance ~1.0, got {}",
-            g
+            "Zero disorder should give ballistic conductance ~1.0, got {g}"
         );
     }
 
@@ -89,8 +93,7 @@ mod tests {
         let g = anderson_conductance(20.0, 1000, 0.0).unwrap();
         assert!(
             g < 0.01,
-            "Strong disorder should give conductance → 0, got {}",
-            g
+            "Strong disorder should give conductance → 0, got {g}"
         );
     }
 
@@ -100,9 +103,7 @@ mod tests {
         let xi_large = localization_length(10.0, 0.0);
         assert!(
             xi_large < xi_small,
-            "Localization length should decrease with disorder: ξ(W=10)={} < ξ(W=1)={}",
-            xi_large,
-            xi_small
+            "Localization length should decrease with disorder: ξ(W=10)={xi_large} < ξ(W=1)={xi_small}"
         );
     }
 

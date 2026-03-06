@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! GpuSession Builder API — Pre-warmed GPU sessions (L-004)
+//! `GpuSession` Builder API — Pre-warmed GPU sessions (L-004)
 //!
 //! Builds GPU sessions with optional pipeline pre-warming to eliminate
 //! cold-start latency from the critical path.
 
 use std::sync::Arc;
 
-use crate::device::warmup::{warmup_device, WarmupConfig, WarmupOp};
 use crate::device::WgpuDevice;
+use crate::device::warmup::{WarmupConfig, WarmupOp, warmup_device};
 use crate::error::{BarracudaError, Result};
 
 /// Builder for pre-warmed GPU sessions.
@@ -34,6 +34,7 @@ pub struct GpuSessionBuilder {
 
 impl GpuSessionBuilder {
     /// Create a new builder with default settings.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             device: None,
@@ -67,6 +68,11 @@ impl GpuSessionBuilder {
     ///
     /// If no device was set, creates a new device via `WgpuDevice::new()`.
     /// Pre-warms the requested pipelines on the device.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if device creation fails, or if buffer allocation or
+    /// GPU dispatch fails during warmup (e.g. device lost or out of memory).
     pub async fn build(self) -> Result<GpuSession> {
         let device = match self.device {
             Some(d) => d,
@@ -128,11 +134,13 @@ pub struct GpuSession {
 
 impl GpuSession {
     /// Get the underlying device.
+    #[must_use]
     pub fn device(&self) -> &Arc<WgpuDevice> {
         &self.device
     }
 
     /// Maximum concurrent dispatch limit (for future scheduling).
+    #[must_use]
     pub fn max_concurrent_dispatches(&self) -> usize {
         self.max_concurrent_dispatches
     }

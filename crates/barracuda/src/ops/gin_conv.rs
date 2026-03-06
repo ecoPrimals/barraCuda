@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! GINConv - Graph Isomorphism Network (Pure WGSL)
+//! `GINConv` - Graph Isomorphism Network (Pure WGSL)
 //!
-//! Expressive GNN with MLP: h_i' = MLP((1 + ε) * h_i + Σ_j h_j)
+//! Expressive GNN with MLP: `h_i`' = MLP((1 + ε) * `h_i` + `Σ_j` `h_j`)
 //!
 //! **Deep Debt Principles**:
 //! - Pure WGSL implementation (no CPU code)
@@ -28,6 +28,11 @@ pub struct GinConv {
 
 impl GinConv {
     /// Create GIN (Graph Isomorphism Network) convolution.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         node_features: Tensor,
         edge_index: Vec<(usize, usize)>,
@@ -98,6 +103,11 @@ impl GinConv {
     }
 
     /// Execute GIN convolution.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.node_features.device();
         // Convert edge_index to u32 pairs

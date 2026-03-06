@@ -90,21 +90,21 @@ pub mod solver_state;
 
 pub use batched_bisection_gpu::{BatchedBisectionGpu, BisectionResult};
 pub use batched_nelder_mead_gpu::{
-    batched_nelder_mead_gpu, BatchNelderMeadConfig, NelderMeadResult,
+    BatchNelderMeadConfig, NelderMeadResult, batched_nelder_mead_gpu,
 };
-pub use bfgs::{bfgs, bfgs_numerical, numerical_gradient, BfgsConfig, BfgsResult};
+pub use bfgs::{BfgsConfig, BfgsResult, bfgs, bfgs_numerical, numerical_gradient};
 pub use bisect::bisect;
-pub use brent::{brent, brent_minimize, BrentResult};
+pub use brent::{BrentResult, brent, brent_minimize};
 pub use brent_gpu::{BrentFunction, BrentGpu, BrentGpuResult};
 pub use diagnostics::{
-    convergence_diagnostics, should_stop_early, ConvergenceDiagnostics, ConvergenceState,
+    ConvergenceDiagnostics, ConvergenceState, convergence_diagnostics, should_stop_early,
 };
 pub use eval_record::{EvaluationCache, EvaluationRecord};
-pub use lbfgs::{lbfgs, lbfgs_numerical, LbfgsConfig, LbfgsResult};
+pub use lbfgs::{LbfgsConfig, LbfgsResult, lbfgs, lbfgs_numerical};
 pub use lbfgs_gpu::{LbfgsGpu, LbfgsGpuConfig, LbfgsGpuResult};
-pub use multi_start::{multi_start_nelder_mead, SolverResult};
+pub use multi_start::{SolverResult, multi_start_nelder_mead};
 pub use nelder_mead::nelder_mead;
 pub use nelder_mead_gpu::{NelderMeadGpu, NelderMeadGpuResult}; // GPU-resident optimizer
-pub use newton::{newton, newton_numerical, secant, NewtonResult};
-pub use penalty::{adaptive_penalty, adaptive_penalty_mad, AdaptivePenalty, PenaltyConfig};
+pub use newton::{NewtonResult, newton, newton_numerical, secant};
+pub use penalty::{AdaptivePenalty, PenaltyConfig, adaptive_penalty, adaptive_penalty_mad};
 pub use solver_state::{ResumableNelderMead, SolverStatus};

@@ -127,7 +127,7 @@ pub fn nash_sutcliffe(observed: &[f64], simulated: &[f64]) -> f64 {
 
 /// Coefficient of determination (R²) via sum-of-squares method.
 ///
-/// R² = 1 − SS_res / SS_tot
+/// R² = 1 − `SS_res` / `SS_tot`
 ///
 /// Can be negative for poor models. Equivalent to [`nash_sutcliffe`].
 ///
@@ -195,7 +195,7 @@ pub fn hit_rate(observed: &[f64], simulated: &[f64], threshold: f64) -> f64 {
     let agree = observed
         .iter()
         .zip(simulated)
-        .filter(|(&o, &s)| (o > threshold) == (s > threshold))
+        .filter(|&(o, s)| (*o > threshold) == (*s > threshold))
         .count();
     agree as f64 / n as f64
 }

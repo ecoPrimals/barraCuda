@@ -12,7 +12,7 @@
 //! Used in YOLO, Faster R-CNN, etc.
 //!
 //! Algorithm (Pure GPU):
-//! 1. Compute IoU matrix on GPU (parallel)
+//! 1. Compute `IoU` matrix on GPU (parallel)
 //! 2. Sort indices by score (CPU - acceptable for small sets)
 //! 3. Mark suppressed boxes on GPU (parallel)
 //! 4. Compact results on GPU (parallel with atomics)
@@ -49,7 +49,12 @@ pub struct NMS {
 }
 
 impl NMS {
-    /// Create an NMS operation with the given boxes and IoU threshold.
+    /// Create an NMS operation with the given boxes and `IoU` threshold.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(boxes: Vec<BoundingBox>, iou_threshold: f32) -> Result<Self> {
         if !(0.0..=1.0).contains(&iou_threshold) {
             return Err(BarracudaError::invalid_op(
@@ -69,7 +74,7 @@ impl NMS {
         &self.boxes
     }
 
-    /// Get IoU threshold
+    /// Get `IoU` threshold
     pub(super) fn iou_threshold(&self) -> f32 {
         self.iou_threshold
     }
@@ -85,7 +90,8 @@ impl NMS {
     }
 }
 
-/// Compute IoU between two boxes (public for use by soft_nms)
+/// Compute `IoU` between two boxes (public for use by `soft_nms`)
+#[must_use]
 pub fn compute_iou(box1: &BoundingBox, box2: &BoundingBox) -> f32 {
     let x1 = box1.x1.max(box2.x1);
     let y1 = box1.y1.max(box2.y1);
@@ -106,6 +112,11 @@ pub fn compute_iou(box1: &BoundingBox, box2: &BoundingBox) -> f32 {
 }
 
 /// Convenience function for NMS
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn nms(boxes: Vec<BoundingBox>, iou_threshold: f32) -> Result<Vec<usize>> {
     NMS::new(boxes, iou_threshold)?.execute()
 }

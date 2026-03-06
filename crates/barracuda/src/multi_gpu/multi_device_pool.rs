@@ -6,8 +6,8 @@ use super::types::{DeviceInfo, DeviceRequirements, WorkloadConfig};
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use crate::resource_quota::{QuotaTracker, ResourceQuota};
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 use tokio::sync::{Mutex, Semaphore};
 
 struct MultiDevicePoolInner {
@@ -37,21 +37,26 @@ pub struct DeviceLease {
 
 impl DeviceLease {
     /// The leased device.
+    #[must_use]
     pub fn device(&self) -> &Arc<WgpuDevice> {
         &self.device
     }
 
     /// Device metadata.
+    #[must_use]
     pub fn info(&self) -> &DeviceInfo {
         &self.info
     }
 
     /// Optional quota tracker for allocation limits.
+    #[must_use]
     pub fn quota_tracker(&self) -> Option<&Arc<QuotaTracker>> {
         self.quota_tracker.as_ref()
     }
 
     /// Track an allocation against quota and device stats.
+    /// # Errors
+    /// Returns [`Err`] if the allocation would exceed the configured resource quota.
     pub fn track_allocation(&self, bytes: u64) -> Result<()> {
         if let Some(tracker) = &self.quota_tracker {
             tracker.try_allocate(bytes)?;
@@ -95,11 +100,16 @@ pub struct MultiDevicePool {
 
 impl MultiDevicePool {
     /// Create a pool with default config.
+    /// # Errors
+    /// Returns [`Err`] if no suitable GPU devices are found or device creation fails.
     pub async fn new() -> Result<Self> {
         Self::with_config(WorkloadConfig::default()).await
     }
 
     /// Create a pool with the given workload config.
+    /// # Errors
+    /// Returns [`Err`] if no suitable GPU devices are found (e.g. all adapters fail
+    /// creation, none meet `min_gflops`, or all are excluded as software).
     pub async fn with_config(config: WorkloadConfig) -> Result<Self> {
         let adapters = WgpuDevice::enumerate_adapters().await;
         let mut devices = Vec::new();
@@ -243,21 +253,29 @@ impl MultiDevicePool {
     }
 
     /// Number of devices in the pool.
+    #[must_use]
     pub fn device_count(&self) -> usize {
         self.inner.devices.len()
     }
 
     /// Device metadata for all devices.
+    #[must_use]
     pub fn devices(&self) -> &[DeviceInfo] {
         &self.inner.info
     }
 
     /// Acquire a device matching the requirements.
+    /// # Errors
+    /// Returns [`Err`] if the semaphore acquisition fails (e.g. pool closed) or no
+    /// device matches the requirements.
     pub async fn acquire(&self, requirements: &DeviceRequirements) -> Result<DeviceLease> {
         self.acquire_with_quota(requirements, None).await
     }
 
     /// Acquire with an optional resource quota.
+    /// # Errors
+    /// Returns [`Err`] if the semaphore acquisition fails (e.g. pool closed) or no
+    /// device matches the requirements.
     pub async fn acquire_with_quota(
         &self,
         requirements: &DeviceRequirements,
@@ -305,16 +323,22 @@ impl MultiDevicePool {
     }
 
     /// Acquire any available device.
+    /// # Errors
+    /// Returns [`Err`] if the semaphore acquisition fails or no device is available.
     pub async fn acquire_any(&self) -> Result<DeviceLease> {
         self.acquire(&DeviceRequirements::new()).await
     }
 
     /// Get device by index.
+    #[must_use]
     pub fn device(&self, index: usize) -> Option<Arc<WgpuDevice>> {
         self.inner.devices.get(index).cloned()
     }
 
     /// Execute a function on a device matching requirements.
+    /// # Errors
+    /// Returns [`Err`] if device acquisition fails (semaphore or no match), or if the
+    /// spawned task panics or the closure returns an error.
     pub async fn execute<F, T>(&self, requirements: &DeviceRequirements, f: F) -> Result<T>
     where
         F: FnOnce(Arc<WgpuDevice>) -> Result<T> + Send + 'static,
@@ -329,9 +353,15 @@ impl MultiDevicePool {
     }
 
     /// Human-readable pool summary.
+    #[must_use]
     pub fn summary(&self) -> String {
         let total_vram: u64 = self.inner.info.iter().map(|d| d.vram_bytes).sum();
-        let allocated_vram: u64 = self.inner.info.iter().map(|d| d.allocated_bytes()).sum();
+        let allocated_vram: u64 = self
+            .inner
+            .info
+            .iter()
+            .map(super::types::DeviceInfo::allocated_bytes)
+            .sum();
         let total_gflops: f64 = self.inner.info.iter().map(|d| d.estimated_gflops).sum();
 
         let nvidia_count = self
@@ -366,6 +396,7 @@ impl MultiDevicePool {
     }
 
     /// Per-device status strings for diagnostics.
+    #[must_use]
     pub fn device_status(&self) -> Vec<String> {
         self.inner
             .info

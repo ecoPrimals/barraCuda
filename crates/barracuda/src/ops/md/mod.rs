@@ -41,8 +41,8 @@ pub use forces::*;
 pub use integrators::*;
 pub use neighbor::{CellList, CellListGpu};
 pub use observables::{
-    compute_msd, compute_rdf, compute_ssf, compute_vacf, KineticEnergy, KineticEnergyF64, Msd, Rdf,
-    RdfHistogramF64, SsfGpu, Vacf, VacfGpu,
+    KineticEnergy, KineticEnergyF64, Msd, Rdf, RdfHistogramF64, SsfGpu, Vacf, VacfGpu, compute_msd,
+    compute_rdf, compute_ssf, compute_vacf,
 };
 pub use pbc::{DistanceMetric, PbcDistance};
 pub use stress_virial::compute_stress_virial;

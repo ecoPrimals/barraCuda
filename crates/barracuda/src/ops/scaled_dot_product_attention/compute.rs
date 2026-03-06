@@ -66,7 +66,7 @@ pub(super) fn execute_scaled_dot_product_attention(
         .storage_rw(2, &scores_buffer)
         .uniform(3, &params_buffer)
         .dispatch(workgroups_x, workgroups_y, workgroups_z)
-        .submit();
+        .submit()?;
 
     // ═══════════════════════════════════════════════════════════════
     // PASS 2: Apply softmax to scores
@@ -81,7 +81,7 @@ pub(super) fn execute_scaled_dot_product_attention(
         .storage_rw(1, &weights_buffer)
         .uniform(2, &params_buffer)
         .dispatch(softmax_workgroups, 1, 1)
-        .submit();
+        .submit()?;
 
     // ═══════════════════════════════════════════════════════════════
     // PASS 3: Apply attention weights to values
@@ -97,7 +97,7 @@ pub(super) fn execute_scaled_dot_product_attention(
         .storage_rw(2, &output_buffer)
         .uniform(3, &params_buffer)
         .dispatch(apply_wg_x, apply_wg_y, apply_wg_z)
-        .submit();
+        .submit()?;
 
     // Return output tensor
     Ok(Tensor::from_buffer(

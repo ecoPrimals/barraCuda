@@ -21,6 +21,10 @@ pub struct Flatten {
 
 impl Flatten {
     /// Create a new flatten operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if `start_dim` >= `end_dim`, or dimensions are out of range.
     pub fn new(input: Tensor, start_dim: usize, end_dim: usize) -> Result<Self> {
         let shape = input.shape();
         if start_dim >= shape.len() || end_dim >= shape.len() || start_dim > end_dim {
@@ -50,6 +54,11 @@ impl Flatten {
     }
 
     /// Execute the flatten operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -94,7 +103,7 @@ impl Flatten {
             .storage_read(1, input_buffer)
             .storage_rw(2, &output_buffer)
             .dispatch_1d(size as u32)
-            .submit();
+            .submit()?;
 
         // Return tensor without reading back (zero-copy)
         Ok(Tensor::from_buffer(

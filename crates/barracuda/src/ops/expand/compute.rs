@@ -7,14 +7,14 @@
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 
-/// f64 is the canonical source — f32 derived via downcast_f64_to_f32 when needed.
+/// f64 is the canonical source — f32 derived via `downcast_f64_to_f32` when needed.
 const SHADER_F64: &str = include_str!("../../shaders/math/expand_f64.wgsl");
 
 static SHADER_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
 use crate::tensor::Tensor;
 
-/// Compute broadcasted input shape following NumPy broadcasting rules
+/// Compute broadcasted input shape following `NumPy` broadcasting rules
 ///
 /// Broadcasting rules:
 /// - Dimensions are compared right-to-left
@@ -23,8 +23,8 @@ use crate::tensor::Tensor;
 ///   - One of them is 1
 ///   - One of them doesn't exist (implicitly 1)
 /// - For expand operation:
-///   - If target_rank > input_rank: pad dimensions at the back (right) with 1s
-///   - If target_rank == input_rank: try padding at front first, then validate
+///   - If `target_rank` > `input_rank`: pad dimensions at the back (right) with 1s
+///   - If `target_rank` == `input_rank`: try padding at front first, then validate
 pub fn compute_broadcast_shape(
     input_shape: &[usize],
     target_shape: &[usize],
@@ -58,10 +58,9 @@ pub fn compute_broadcast_shape(
                         // Allow it - will be handled in execute_expand
                         compatible = true;
                         break;
-                    } else {
-                        compatible = false;
-                        break;
                     }
+                    compatible = false;
+                    break;
                 }
             }
 

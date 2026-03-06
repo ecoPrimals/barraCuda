@@ -104,7 +104,7 @@ pub enum ComputeWorkload {
     PhysicsForce {
         /// Number of particles
         particle_count: usize,
-        /// Force kernel name (e.g. "lennard_jones")
+        /// Force kernel name (e.g. "`lennard_jones`")
         force_type: String,
     },
 
@@ -175,7 +175,7 @@ pub enum KernelTarget {
 /// each device can accelerate. It returns the best target for a given
 /// computation.
 pub struct KernelRouter {
-    /// Available NPU models (model_name → model_path)
+    /// Available NPU models (`model_name` → `model_path`)
     npu_models: HashMap<String, NpuModelInfo>,
     /// GPU available
     has_gpu: bool,
@@ -199,6 +199,9 @@ pub struct NpuModelInfo {
 
 impl KernelRouter {
     /// Create new kernel router with runtime hardware discovery
+    /// # Errors
+    /// Returns [`Err`] if NPU model discovery fails (e.g. filesystem or
+    /// permission errors).
     pub fn new() -> Result<Self> {
         let has_gpu = Device::GPU.is_available();
         let has_npu = Device::NPU.is_available();
@@ -216,11 +219,15 @@ impl KernelRouter {
     }
 
     /// Whether a TPU is available for routing.
+    #[must_use]
     pub fn has_tpu(&self) -> bool {
         self.has_tpu
     }
 
     /// Route workload to best hardware target
+    /// # Errors
+    /// Returns [`Err`] if workload routing fails (e.g. device unavailable or
+    /// capability check fails).
     pub fn route(&self, workload: &ComputeWorkload) -> Result<KernelTarget> {
         match workload {
             // === Dense compute → Always GPU/CPU (WGSL) ===
@@ -365,6 +372,7 @@ impl KernelRouter {
     }
 
     /// Check if a workload CAN be accelerated by NPU
+    #[must_use]
     pub fn can_route_to_npu(&self, workload: &ComputeWorkload) -> bool {
         if !self.has_npu {
             return false;
@@ -458,7 +466,10 @@ impl KernelRouter {
     /// Get list of available NPU model names.
     #[must_use]
     pub fn available_npu_models(&self) -> Vec<&str> {
-        self.npu_models.keys().map(|s| s.as_str()).collect()
+        self.npu_models
+            .keys()
+            .map(std::string::String::as_str)
+            .collect()
     }
 }
 

@@ -43,7 +43,7 @@ pub enum SubstrateType {
 /// describes what the substrate can *do* at a higher abstraction level.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SubstrateCapability {
-    /// IEEE 754 f64 compute (GPU SHADER_F64 or CPU native)
+    /// IEEE 754 f64 compute (GPU `SHADER_F64` or CPU native)
     F64Compute,
     /// f32 compute
     F32Compute,
@@ -77,6 +77,7 @@ pub enum SubstrateCapability {
 
 impl SubstrateCapability {
     /// Human-readable label for display.
+    #[must_use]
     pub const fn label(&self) -> &'static str {
         match self {
             Self::F64Compute => "f64",
@@ -102,7 +103,7 @@ impl SubstrateCapability {
 pub struct Substrate {
     /// Substrate type
     pub substrate_type: SubstrateType,
-    /// Human-readable name (e.g., "NVIDIA GeForce RTX 3090")
+    /// Human-readable name (e.g., "NVIDIA `GeForce` RTX 3090")
     pub name: String,
     /// Backend (Vulkan, DX12, Metal, OpenGL)
     pub backend: String,
@@ -130,6 +131,7 @@ impl Substrate {
     }
 
     /// Check if this substrate has a specific capability.
+    #[must_use]
     pub fn has(&self, cap: &SubstrateCapability) -> bool {
         self.capabilities.contains(cap)
     }
@@ -144,9 +146,10 @@ impl Substrate {
     }
 
     /// Discover all available substrates (async).
-    ///
     /// Prefer this over [`discover_all_sync`] when running inside a tokio context
     /// to avoid blocking the executor thread.
+    /// # Errors
+    /// Returns [`Err`] if wgpu adapter enumeration fails.
     pub async fn discover_all_async() -> Result<Vec<Self>> {
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
@@ -158,9 +161,10 @@ impl Substrate {
     }
 
     /// Discover all available substrates (sync convenience wrapper).
-    ///
     /// Uses `pollster::block_on` — avoid calling from within an async runtime.
     /// Prefer [`discover_all_async`] in async contexts.
+    /// # Errors
+    /// Returns [`Err`] if wgpu adapter enumeration fails.
     pub fn discover_all() -> Result<Vec<Self>> {
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
@@ -241,7 +245,6 @@ impl Substrate {
     }
 
     /// Classify substrate type from adapter info using PCI vendor IDs.
-    ///
     /// Primary detection uses standard PCI vendor IDs (reliable across drivers).
     /// Falls back to name-based detection for non-PCI devices (Apple, NPU).
     fn classify_substrate(info: &wgpu::AdapterInfo) -> SubstrateType {
@@ -269,12 +272,13 @@ impl Substrate {
         }
     }
 
-    /// Create WgpuDevice on this specific substrate
-    ///
+    /// Create `WgpuDevice` on this specific substrate
     /// **Deep Debt**: Explicit selection, no implicit behavior
-    ///
     /// Multi-device support: When multiple devices of the same type exist,
     /// selects the device at the specified index within that type.
+    /// # Errors
+    /// Returns [`Err`] if no adapter matches the substrate type/index, or if
+    /// device creation fails (e.g., driver initialization, required features not supported).
     pub async fn create_device(&self) -> Result<WgpuDevice> {
         let substrate_type = self.substrate_type;
         let target_index = self.index;
@@ -329,7 +333,7 @@ mod tests {
         let substrates = Substrate::discover_all().unwrap();
         println!("Discovered {} substrates:", substrates.len());
         for substrate in &substrates {
-            println!("  - {}", substrate);
+            println!("  - {substrate}");
         }
         assert!(
             !substrates.is_empty(),
@@ -341,7 +345,7 @@ mod tests {
     async fn test_substrate_device_creation() {
         let substrates = Substrate::discover_all().unwrap();
         if let Some(substrate) = substrates.first() {
-            println!("Testing device creation on: {}", substrate);
+            println!("Testing device creation on: {substrate}");
             let device = substrate.create_device().await.unwrap();
             println!("✓ Created device: {}", device.name());
         }

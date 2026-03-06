@@ -67,6 +67,11 @@ use crate::error::{BarracudaError, Result as BarracudaResult};
 /// # Returns
 ///
 /// Dense output vector (fp32, dequantized)
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn sparse_matmul_quantized(
     device: &WgpuDevice,
     sparse_values: &[i8],

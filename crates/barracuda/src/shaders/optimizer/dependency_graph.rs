@@ -121,6 +121,7 @@ pub enum Node {
 
 impl Node {
     /// Return the raw source line for this node.
+    #[must_use]
     pub fn source_line(&self) -> &str {
         match self {
             Node::Binding(b) => &b.source_line,
@@ -320,11 +321,7 @@ mod tests {
         // Find binding 'b'
         let b = graph.nodes.iter().find_map(|n| {
             if let Node::Binding(b) = n {
-                if b.name == "b" {
-                    Some(b)
-                } else {
-                    None
-                }
+                if b.name == "b" { Some(b) } else { None }
             } else {
                 None
             }

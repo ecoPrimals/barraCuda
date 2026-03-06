@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! TransposedConv2D - Transposed 2D Convolution (Deconvolution)
+//! `TransposedConv2D` - Transposed 2D Convolution (Deconvolution)
 //! Pure WGSL implementation
 //!
 //! Upsampling operation also known as fractionally-strided convolution
@@ -44,6 +44,7 @@ pub struct TransposedConv2D {
 
 impl TransposedConv2D {
     /// Creates a new transposed conv2d operation.
+    #[must_use]
     pub fn new(
         input: Tensor,
         weight: Tensor,
@@ -74,6 +75,9 @@ impl TransposedConv2D {
     }
 
     /// Executes the transposed convolution and returns the upsampled output.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -207,11 +211,16 @@ impl TransposedConv2D {
 impl Tensor {
     /// Apply transposed 2D convolution (learnable upsampling)
     /// # Arguments
-    /// * `weight` - Transposed conv weights (shape: [in_channels, out_channels, kernel_h, kernel_w])
-    /// * `bias` - Bias terms (shape: [out_channels])
-    /// * `stride` - (height_stride, width_stride)
-    /// * `padding` - (height_padding, width_padding)
-    /// * `output_padding` - (height_out_pad, width_out_pad)
+    /// * `weight` - Transposed conv weights (shape: [`in_channels`, `out_channels`, `kernel_h`, `kernel_w`])
+    /// * `bias` - Bias terms (shape: [`out_channels`])
+    /// * `stride` - (`height_stride`, `width_stride`)
+    /// * `padding` - (`height_padding`, `width_padding`)
+    /// * `output_padding` - (`height_out_pad`, `width_out_pad`)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn transposed_conv2d(
         self,
         weight: Tensor,

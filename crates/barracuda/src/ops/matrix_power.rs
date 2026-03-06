@@ -20,6 +20,11 @@ pub struct MatrixPower {
 
 impl MatrixPower {
     /// Creates a new matrix power operation. Matrix must be square; power must be non-negative.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor, power: i32) -> Result<Self> {
         let shape = input.shape();
         if shape.len() < 2 {
@@ -59,6 +64,11 @@ impl MatrixPower {
     }
 
     /// Executes matrix exponentiation and returns A^power.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();

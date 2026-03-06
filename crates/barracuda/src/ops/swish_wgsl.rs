@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Swish (SiLU) - Self-gated activation function - Pure WGSL
+//! Swish (`SiLU`) - Self-gated activation function - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -19,13 +19,14 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// Swish (SiLU) operation - Self-gated activation function
+/// Swish (`SiLU`) operation - Self-gated activation function
 pub struct Swish {
     input: Tensor,
 }
 
 impl Swish {
     /// Create a new Swish operation
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -36,6 +37,9 @@ impl Swish {
     }
 
     /// Execute the Swish operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -180,7 +184,10 @@ impl Swish {
 }
 
 impl Tensor {
-    /// Apply Swish (SiLU) activation: f(x) = x * sigmoid(x)
+    /// Apply Swish (`SiLU`) activation: f(x) = x * sigmoid(x)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn swish_wgsl(self) -> Result<Self> {
         Swish::new(self).execute()
     }

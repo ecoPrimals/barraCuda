@@ -36,9 +36,10 @@ pub struct QrDecomposition {
 
 impl QrDecomposition {
     /// Solve the least squares problem min‖Ax - b‖₂.
-    ///
     /// For overdetermined systems (m > n), finds the least squares solution.
     /// For square systems, equivalent to direct solve.
+    /// # Errors
+    /// Returns [`Err`] if b length does not match m, or if the matrix is rank deficient.
     pub fn solve_least_squares(&self, b: &[f64]) -> Result<Vec<f64>> {
         if b.len() != self.m {
             return Err(BarracudaError::InvalidInput {
@@ -102,6 +103,10 @@ impl QrDecomposition {
 /// let b = vec![1.0, 2.0, 2.0];
 /// let x = qr.solve_least_squares(&b).unwrap();
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if matrix length does not match m×n, dimensions are zero, or m < n.
 pub fn qr_decompose(a: &[f64], m: usize, n: usize) -> Result<QrDecomposition> {
     if a.len() != m * n {
         return Err(BarracudaError::InvalidInput {
@@ -211,6 +216,10 @@ pub fn qr_decompose(a: &[f64], m: usize, n: usize) -> Result<QrDecomposition> {
 }
 
 /// Convenience function: solve least squares min‖Ax - b‖₂.
+///
+/// # Errors
+///
+/// Returns [`Err`] if `qr_decompose` fails, b length does not match m, or matrix is rank deficient.
 pub fn qr_least_squares(a: &[f64], m: usize, n: usize, b: &[f64]) -> Result<Vec<f64>> {
     let qr = qr_decompose(a, m, n)?;
     qr.solve_least_squares(b)
@@ -237,13 +246,7 @@ mod tests {
                     dot += qr.q[k * 2 + i] * qr.q[k * 2 + j];
                 }
                 let expected = if i == j { 1.0 } else { 0.0 };
-                assert!(
-                    approx_eq(dot, expected, 1e-10),
-                    "Q^TQ[{},{}] = {}",
-                    i,
-                    j,
-                    dot
-                );
+                assert!(approx_eq(dot, expected, 1e-10), "Q^TQ[{i},{j}] = {dot}");
             }
         }
 

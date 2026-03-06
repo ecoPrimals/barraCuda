@@ -2,7 +2,7 @@
 //! Coulomb Force Calculation
 //!
 //! **Physics**: Electrostatic interactions between charged particles
-//! **Formula**: F = k * q_i * q_j / r² * r̂
+//! **Formula**: F = k * `q_i` * `q_j` / r² * r̂
 //! **Use Case**: Ions, proteins, charged molecules
 //!
 //! **Deep Debt Compliance**:
@@ -29,6 +29,10 @@ pub struct CoulombForce {
 
 impl CoulombForce {
     /// Create new Coulomb force calculation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if positions shape is not [N, 3], or charges shape does not match.
     ///
     /// # Arguments
     /// * `positions` - Particle positions [N, 3]
@@ -76,6 +80,11 @@ impl CoulombForce {
     ///
     /// # Returns
     /// Force tensor [N, 3] containing force vectors for each particle
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.positions.device();
         let n_particles = self.positions.shape()[0];
@@ -266,8 +275,8 @@ mod tests {
         // First verify input tensors are correct
         let pos_check = pos_tensor.to_vec().unwrap();
         let charge_check = charge_tensor.to_vec().unwrap();
-        println!("Input positions: {:?}", pos_check);
-        println!("Input charges: {:?}", charge_check);
+        println!("Input positions: {pos_check:?}");
+        println!("Input charges: {charge_check:?}");
         assert_eq!(pos_check, positions);
         assert_eq!(charge_check, charges);
 
@@ -275,7 +284,7 @@ mod tests {
         let forces = coulomb.execute().unwrap();
 
         let force_data = forces.to_vec().unwrap();
-        println!("Output forces: {:?}", force_data);
+        println!("Output forces: {force_data:?}");
 
         // Force on particle 0 should be negative x (repulsion away from particle 1)
         // With physics direction fixed, force should point in -x
@@ -317,8 +326,8 @@ mod tests {
         // Verify inputs
         let pos_check = pos_tensor.to_vec().unwrap();
         let charge_check = charge_tensor.to_vec().unwrap();
-        println!("Input positions: {:?}", pos_check);
-        println!("Input charges: {:?}", charge_check);
+        println!("Input positions: {pos_check:?}");
+        println!("Input charges: {charge_check:?}");
         assert_eq!(pos_check, positions);
         assert_eq!(charge_check, charges);
 
@@ -334,7 +343,7 @@ mod tests {
         let forces = coulomb.execute().unwrap();
 
         let force_data = forces.to_vec().unwrap();
-        println!("Output forces: {:?}", force_data);
+        println!("Output forces: {force_data:?}");
 
         // Force on particle 0 should be positive x (attracted toward particle 1)
         println!("Expected: force[0] > 0 (attraction in +x)");

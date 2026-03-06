@@ -104,7 +104,9 @@ fn main(
             let m2 = Df64(s_m2_hi[0], s_m2_lo[0]);
             let divisor = df64_sub(count, df64_from_f32(f32(params.ddof)));
             var variance = df64_zero();
-            if divisor.hi > 0.0 {
+            // Compare via f64 round-trip: DF64 values can have hi==0 with
+            // nonzero lo, so checking only hi misses valid positive divisors.
+            if df64_to_f64(divisor) > 0.0 {
                 variance = df64_div(m2, divisor);
             }
             output[0] = df64_to_f64(mean);

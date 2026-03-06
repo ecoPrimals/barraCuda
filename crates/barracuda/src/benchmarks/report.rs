@@ -19,13 +19,14 @@ pub struct ReportGenerator {
 
 impl ReportGenerator {
     /// Create new report generator
+    #[must_use]
     pub fn new(results: Vec<ComparisonResult>) -> Self {
         Self { results }
     }
 
     /// Generate markdown report
-    ///
     /// Uses `write!` macro for cleaner string formatting (idiomatic Rust).
+    #[must_use]
     pub fn generate_markdown(&self) -> String {
         let mut report = String::new();
 
@@ -36,8 +37,10 @@ impl ReportGenerator {
             use std::time::SystemTime;
             let timestamp = SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
-                .map(|d| format!("{}s since epoch", d.as_secs()))
-                .unwrap_or_else(|_| "[unknown]".to_string());
+                .map_or_else(
+                    |_| "[unknown]".to_string(),
+                    |d| format!("{}s since epoch", d.as_secs()),
+                );
             writeln!(report, "**Generated:** {timestamp}\n").unwrap_or_default();
         }
 
@@ -140,6 +143,9 @@ impl ReportGenerator {
     }
 
     /// Save report to file
+    /// # Errors
+    /// Returns [`Err`] if file creation or writing fails (e.g. permission denied,
+    /// disk full, path invalid).
     pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> std::io::Result<()> {
         let report = self.generate_markdown();
         let mut file = File::create(path)?;
@@ -173,8 +179,8 @@ mod tests {
 
     #[test]
     fn test_empty_report() {
-        let gen = ReportGenerator::new(vec![]);
-        let md = gen.generate_markdown();
+        let report = ReportGenerator::new(vec![]);
+        let md = report.generate_markdown();
         assert!(md.contains("No benchmark results"));
     }
 
@@ -182,8 +188,8 @@ mod tests {
     fn test_report_with_results() {
         let barracuda = make_result("MatMul", "CPU", Framework::BarraCuda, 10.0);
         let results = vec![ComparisonResult::new(barracuda, None)];
-        let gen = ReportGenerator::new(results);
-        let md = gen.generate_markdown();
+        let report = ReportGenerator::new(results);
+        let md = report.generate_markdown();
         assert!(md.contains("MatMul"));
     }
 
@@ -192,8 +198,8 @@ mod tests {
         let barracuda = make_result("MatMul", "CPU", Framework::BarraCuda, 10.0);
         let cuda = make_result("MatMul", "CPU", Framework::CUDA, 8.0);
         let results = vec![ComparisonResult::new(barracuda, Some(cuda))];
-        let gen = ReportGenerator::new(results);
-        let md = gen.generate_markdown();
+        let report = ReportGenerator::new(results);
+        let md = report.generate_markdown();
         assert!(md.contains("MatMul"));
         assert!(md.contains("parity") || md.contains("Parity"));
         assert!(md.contains("≥90%") || md.contains("90%"));
@@ -203,10 +209,10 @@ mod tests {
     fn test_save_to_file() {
         let barracuda = make_result("MatMul", "CPU", Framework::BarraCuda, 10.0);
         let results = vec![ComparisonResult::new(barracuda, None)];
-        let gen = ReportGenerator::new(results);
+        let report = ReportGenerator::new(results);
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("report.md");
-        gen.save_to_file(&path).unwrap();
+        report.save_to_file(&path).unwrap();
         assert!(path.exists());
         let content = std::fs::read_to_string(&path).unwrap();
         assert!(content.contains("MatMul"));

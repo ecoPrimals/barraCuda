@@ -21,7 +21,7 @@
 //! ct = (c₀, c₁) where c₀ + c₁·sk₁ = m + e (mod q)
 //! ```
 //!
-//! Using switching key swk = (swk₀, swk₁, ..., swk_L):
+//! Using switching key swk = (swk₀, swk₁, ..., `swk_L)`:
 //! ```text
 //! 1. Decompose c₁ = Σᵢ dᵢ·Bⁱ (base-B representation)
 //! 2. ct' = (c₀, 0) + Σᵢ dᵢ·swk[i]
@@ -82,23 +82,24 @@ pub struct FheKeySwitch {
 
 impl FheKeySwitch {
     /// Create a new key switching operation
-    ///
-    /// **Parameters**:
+    ///   **Parameters**:
     /// - `input`: Ciphertext to switch (2*degree u32 values, u64 emulated)
     /// - `degree`: Polynomial degree (power of 2)
     /// - `modulus`: Ciphertext modulus
     /// - `decomp_base`: Decomposition base (typically 2^16 or 2^20)
-    /// - `decomp_levels`: Number of base-B digits (log_B(q))
-    ///
-    /// **Returns**: FheKeySwitch operation ready to execute
-    ///
-    /// **Errors**:
+    /// - `decomp_levels`: Number of base-B digits (`log_B(q)`)
+    ///   **Returns**: `FheKeySwitch` operation ready to execute
+    ///   **Errors**:
     /// - Invalid degree (not power of 2)
     /// - Invalid decomposition parameters
     /// - Input tensor size mismatch
+    ///   **Note**: Switching keys must be provided separately during `execute()`.
+    ///   This constructor sets up the decomposition pipeline.
     ///
-    /// **Note**: Switching keys must be provided separately during execute().
-    /// This constructor sets up the decomposition pipeline.
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         input: Tensor,
         degree: u32,
@@ -240,14 +241,14 @@ impl FheKeySwitch {
     }
 
     /// Execute key switching on GPU
-    ///
     /// **Returns**: Tensor with ciphertext under new key
-    ///
     /// **Performance**: O(L·n log n) where L is decomposition levels
-    ///
     /// **Note**: This is a simplified implementation that demonstrates the
     /// decomposition step. Full key switching requires switching keys and
     /// NTT-based polynomial multiplication for each level.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 

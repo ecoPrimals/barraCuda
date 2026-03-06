@@ -35,11 +35,13 @@ pub struct HfbPipeline {
 
 impl HfbPipeline {
     /// Create an HFB pipeline for the given device.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         Self { device }
     }
 
     /// Reference to the underlying wgpu device.
+    #[must_use]
     pub fn device(&self) -> &Arc<WgpuDevice> {
         &self.device
     }

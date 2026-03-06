@@ -22,7 +22,8 @@ pub struct MaxPool1D {
 }
 
 impl MaxPool1D {
-    /// Create a new MaxPool1D operation
+    /// Create a new `MaxPool1D` operation
+    #[must_use]
     pub fn new(input: Tensor, kernel_size: usize, stride: usize) -> Self {
         Self {
             input,
@@ -44,6 +45,11 @@ impl MaxPool1D {
     }
 
     /// Execute the max pool 1D operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -230,7 +236,12 @@ impl Tensor {
     ///
     /// # Returns
     ///
-    /// Pooled tensor with shape (batch, channels, output_length)
+    /// Pooled tensor with shape (batch, channels, `output_length`)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn max_pool1d_wgsl(self, kernel_size: usize, stride: usize) -> Result<Self> {
         MaxPool1D::new(self, kernel_size, stride).execute()
     }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! GCNConv - Graph Convolutional Network (Pure WGSL)
+//! `GCNConv` - Graph Convolutional Network (Pure WGSL)
 //!
 //! Standard GCN layer: H' = σ(D^{-1/2} A D^{-1/2} H W)
 //!
@@ -29,6 +29,11 @@ pub struct GcnConv {
 
 impl GcnConv {
     /// Create GCN (Graph Convolutional Network) layer.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         node_features: Tensor,
         edge_index: Vec<(usize, usize)>,
@@ -101,6 +106,11 @@ impl GcnConv {
     }
 
     /// Execute GCN convolution.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.node_features.device();
         // Convert edge_index to u32 pairs
@@ -145,8 +155,8 @@ impl GcnConv {
             num_edges: self.num_edges as u32,
             in_features: self.in_features as u32,
             out_features: self.out_features as u32,
-            add_self_loops: if self.add_self_loops { 1 } else { 0 },
-            normalize: if self.normalize { 1 } else { 0 },
+            add_self_loops: u32::from(self.add_self_loops),
+            normalize: u32::from(self.normalize),
             _pad1: 0,
             _pad2: 0,
         };

@@ -6,7 +6,7 @@
 //! - Trait-based execution (CPU, GPU, TPU, NPU implement same traits)
 //! - Runtime capability discovery (query what hardware can do)
 //! - Smart scheduling (match operations to best hardware)
-//! - Cross-device transfer cost modelling (PCIe, NVLink, shared memory)
+//! - Cross-device transfer cost modelling (`PCIe`, `NVLink`, shared memory)
 
 pub(crate) mod cpu_executor;
 mod discovery;
@@ -22,8 +22,8 @@ pub use discovery::HardwareDiscovery;
 pub use scheduler::ComputeScheduler;
 pub use traits::{ComputeExecutor, TensorStorage};
 pub use transfer::{
-    mixed_substrate, mixed_substrate_with_tier, BandwidthTier, MixedSubstrate, PcieBridge,
-    TransferCost, GPU_DISPATCH_OVERHEAD_US, PCIE4_X16_BANDWIDTH_GBPS, PCIE_DMA_LATENCY_US,
+    BandwidthTier, GPU_DISPATCH_OVERHEAD_US, MixedSubstrate, PCIE_DMA_LATENCY_US,
+    PCIE4_X16_BANDWIDTH_GBPS, PcieBridge, TransferCost, mixed_substrate, mixed_substrate_with_tier,
 };
 pub use types::{
     HardwareCapabilities, HardwareType, MemoryCapabilities, OperationCapabilities,
@@ -128,9 +128,11 @@ mod tests {
     async fn test_hardware_discovery() {
         let executors = HardwareDiscovery::discover_all().await.unwrap();
         assert!(!executors.is_empty());
-        assert!(executors
-            .iter()
-            .any(|e| e.hardware_type() == HardwareType::CPU));
+        assert!(
+            executors
+                .iter()
+                .any(|e| e.hardware_type() == HardwareType::CPU)
+        );
     }
 
     #[test]

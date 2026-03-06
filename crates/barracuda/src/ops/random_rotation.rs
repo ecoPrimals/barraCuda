@@ -35,7 +35,12 @@ pub struct RandomRotation {
 }
 
 impl RandomRotation {
-    /// Create RandomRotation operation
+    /// Create `RandomRotation` operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor, rotation_matrices: Tensor, fill_value: f32) -> Result<Self> {
         // Validate rotation_matrices shape: [batch_size, 4] (cos, -sin, sin, cos)
         let rot_shape = rotation_matrices.shape();
@@ -61,7 +66,12 @@ impl RandomRotation {
         SHADER.as_str()
     }
 
-    /// Execute RandomRotation on tensor
+    /// Execute `RandomRotation` on tensor
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();

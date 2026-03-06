@@ -22,7 +22,8 @@ pub struct MaskedFill {
 }
 
 impl MaskedFill {
-    /// Create a new MaskedFill operation
+    /// Create a new `MaskedFill` operation
+    #[must_use]
     pub fn new(input: Tensor, mask: Tensor, value: f32) -> Self {
         Self { input, mask, value }
     }
@@ -40,6 +41,11 @@ impl MaskedFill {
     }
 
     /// Execute the masked fill operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -56,10 +62,7 @@ impl MaskedFill {
 
         // Convert mask to u32 (0 = false, 1 = true)
         let mask_data = self.mask.to_vec()?;
-        let mask_u32: Vec<u32> = mask_data
-            .iter()
-            .map(|&v| if v != 0.0 { 1u32 } else { 0u32 })
-            .collect();
+        let mask_u32: Vec<u32> = mask_data.iter().map(|&v| u32::from(v != 0.0)).collect();
 
         // Create buffers
         // Access input buffer directly (zero-copy)
@@ -233,6 +236,11 @@ impl Tensor {
     /// # Returns
     ///
     /// Tensor with masked values filled
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn masked_fill_wgsl(self, mask: Tensor, value: f32) -> Result<Self> {
         MaskedFill::new(self, mask, value).execute()
     }

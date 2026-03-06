@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! RANDOM_UNIFORM - Uniform random sampling - Pure WGSL
+//! `RANDOM_UNIFORM` - Uniform random sampling - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -23,6 +23,7 @@ pub struct RandomUniformGpu {
 
 impl RandomUniformGpu {
     /// Create new uniform random sampler
+    #[must_use]
     pub fn new(
         device: Arc<crate::device::WgpuDevice>,
         n_samples: u32,
@@ -48,6 +49,11 @@ impl RandomUniformGpu {
     }
 
     /// Generate uniform random samples
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn generate(self) -> Result<Tensor> {
         let device = &self.device;
         let n_dims = self.bounds.len() / 2;
@@ -195,6 +201,11 @@ impl RandomUniformGpu {
 }
 
 /// Generate uniform random samples on GPU
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn random_uniform_gpu(
     device: Arc<crate::device::WgpuDevice>,
     n_samples: u32,
@@ -228,8 +239,8 @@ mod tests {
         for i in 0..100 {
             let x = data[i * 2];
             let y = data[i * 2 + 1];
-            assert!((0.0..=1.0).contains(&x), "x={} out of [0,1]", x);
-            assert!((-1.0..=1.0).contains(&y), "y={} out of [-1,1]", y);
+            assert!((0.0..=1.0).contains(&x), "x={x} out of [0,1]");
+            assert!((-1.0..=1.0).contains(&y), "y={y} out of [-1,1]");
         }
     }
 

@@ -5,8 +5,8 @@
 //! **W** (m x k) and **H** (k x n) such that V ≈ WH.
 //!
 //! Two objective functions are supported:
-//! - **Euclidean** (Frobenius): minimise ‖V − WH‖²_F
-//! - **KL divergence**: minimise D_KL(V ‖ WH)
+//! - **Euclidean** (Frobenius): minimise ‖V − `WH‖²_F`
+//! - **KL divergence**: minimise `D_KL(V` ‖ WH)
 //!
 //! Absorbed from wetSpring bio module (Feb 2026). CPU-only implementation;
 //! GPU WGSL generation is future work (OdeSystem-style trait pattern).
@@ -17,7 +17,7 @@
 //! non-negative matrix factorization. *Nature*, 401, 788–791.
 //!
 //! Lee, D.D. & Seung, H.S. (2000). Algorithms for Non-negative Matrix
-//! Factorization. *NeurIPS 2000*.
+//! Factorization. *`NeurIPS` 2000*.
 
 use crate::error::BarracudaError;
 
@@ -41,9 +41,9 @@ pub struct NmfResult {
 /// Objective function for NMF.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NmfObjective {
-    /// Minimise ‖V − WH‖²_F (Frobenius norm).
+    /// Minimise ‖V − `WH‖²_F` (Frobenius norm).
     Euclidean,
-    /// Minimise D_KL(V ‖ WH) (generalised Kullback-Leibler divergence).
+    /// Minimise `D_KL(V` ‖ WH) (generalised Kullback-Leibler divergence).
     KlDivergence,
 }
 
@@ -325,6 +325,8 @@ fn row_sums(a: &[f64], k: usize, n: usize) -> Vec<f64> {
 // ── Scoring helpers ──────────────────────────────────────────────
 
 /// Cosine similarity between two vectors.
+/// # Panics
+/// Panics if `a.len() != b.len()`.
 #[must_use]
 pub fn cosine_similarity(a: &[f64], b: &[f64]) -> f64 {
     assert_eq!(a.len(), b.len());
@@ -341,6 +343,8 @@ pub fn cosine_similarity(a: &[f64], b: &[f64]) -> f64 {
 /// the top-K pairs sorted by descending score.
 ///
 /// Returns `Vec<(row_idx, col_idx, score)>`.
+/// # Panics
+/// Panics if `partial_cmp` returns `None` during sort (e.g. NaN values).
 #[must_use]
 pub fn top_k_predictions(result: &NmfResult, top_k: usize) -> Vec<(usize, usize, f64)> {
     let m = result.m;

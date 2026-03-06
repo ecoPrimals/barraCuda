@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! NORM_CDF - Normal distribution CDF and PDF - Pure WGSL
+//! `NORM_CDF` - Normal distribution CDF and PDF - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -22,6 +22,7 @@ pub struct NormCdf {
 
 impl NormCdf {
     /// Create standard normal CDF operation (μ=0, σ=1)
+    #[must_use]
     pub fn standard_cdf(input: Tensor) -> Self {
         Self {
             input,
@@ -32,6 +33,7 @@ impl NormCdf {
     }
 
     /// Create standard normal PDF operation (μ=0, σ=1)
+    #[must_use]
     pub fn standard_pdf(input: Tensor) -> Self {
         Self {
             input,
@@ -42,6 +44,7 @@ impl NormCdf {
     }
 
     /// Create general normal CDF operation with custom μ, σ
+    #[must_use]
     pub fn cdf(input: Tensor, mu: f32, sigma: f32) -> Self {
         Self {
             input,
@@ -52,6 +55,7 @@ impl NormCdf {
     }
 
     /// Create general normal PDF operation with custom μ, σ
+    #[must_use]
     pub fn pdf(input: Tensor, mu: f32, sigma: f32) -> Self {
         Self {
             input,
@@ -71,6 +75,9 @@ impl NormCdf {
     }
 
     /// Execute normal CDF or PDF on the input tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, shader compilation fails, the
+    /// device is lost, or compute submission fails.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -90,7 +97,7 @@ impl NormCdf {
             size: size as u32,
             mu: self.mu,
             sigma: self.sigma,
-            mode: if self.compute_pdf { 1 } else { 0 },
+            mode: u32::from(self.compute_pdf),
         };
         let params_buffer = device
             .device
@@ -209,21 +216,33 @@ impl NormCdf {
 
 impl Tensor {
     /// Compute standard normal CDF Φ(x) for each element
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, shader compilation fails, the
+    /// device is lost, or compute submission fails.
     pub fn norm_cdf(self) -> Result<Self> {
         NormCdf::standard_cdf(self).execute()
     }
 
     /// Compute standard normal PDF φ(x) for each element
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, shader compilation fails, the
+    /// device is lost, or compute submission fails.
     pub fn norm_pdf(self) -> Result<Self> {
         NormCdf::standard_pdf(self).execute()
     }
 
     /// Compute general normal CDF Φ(x; μ, σ) for each element
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, shader compilation fails, the
+    /// device is lost, or compute submission fails.
     pub fn norm_cdf_params(self, mu: f32, sigma: f32) -> Result<Self> {
         NormCdf::cdf(self, mu, sigma).execute()
     }
 
     /// Compute general normal PDF φ(x; μ, σ) for each element
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, shader compilation fails, the
+    /// device is lost, or compute submission fails.
     pub fn norm_pdf_params(self, mu: f32, sigma: f32) -> Result<Self> {
         NormCdf::pdf(self, mu, sigma).execute()
     }

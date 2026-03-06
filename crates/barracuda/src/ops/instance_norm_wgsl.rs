@@ -20,6 +20,7 @@ pub struct InstanceNorm {
 
 impl InstanceNorm {
     /// Create a new instance normalization operation
+    #[must_use]
     pub fn new(input: Tensor, epsilon: f32) -> Self {
         Self { input, epsilon }
     }
@@ -37,6 +38,11 @@ impl InstanceNorm {
     }
 
     /// Execute the instance normalization operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -198,6 +204,11 @@ impl Tensor {
     /// # Arguments
     ///
     /// * `epsilon` - Small constant for numerical stability (default: 1e-5)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn instance_norm_wgsl(self, epsilon: f32) -> Result<Self> {
         InstanceNorm::new(self, epsilon).execute()
     }
@@ -250,11 +261,11 @@ mod tests {
         let result = output.to_vec().unwrap();
 
         // First instance mean should be ~0
-        let mean1 = (result[0] + result[1]) / 2.0;
+        let mean1 = f32::midpoint(result[0], result[1]);
         assert!((mean1).abs() < 1e-5);
 
         // Second instance mean should be ~0
-        let mean2 = (result[2] + result[3]) / 2.0;
+        let mean2 = f32::midpoint(result[2], result[3]);
         assert!((mean2).abs() < 1e-5);
     }
 }

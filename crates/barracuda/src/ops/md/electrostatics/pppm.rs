@@ -35,8 +35,8 @@ use crate::device::WgpuDevice;
 use crate::ops::fft::Fft3DF64;
 
 use super::{
-    compute_short_range, dipole_correction, interpolate_forces, self_energy_correction,
-    spread_charges_with_coeffs, ChargeMesh, GreensFunction, PotentialMesh, PppmParams,
+    ChargeMesh, GreensFunction, PotentialMesh, PppmParams, compute_short_range, dipole_correction,
+    interpolate_forces, self_energy_correction, spread_charges_with_coeffs,
 };
 
 /// PPPM Electrostatics Solver
@@ -57,6 +57,7 @@ pub struct Pppm {
 
 impl Pppm {
     /// Create a new PPPM solver with given parameters and GPU device
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>, params: PppmParams) -> Self {
         let greens = GreensFunction::new(&params);
         Self {
@@ -73,7 +74,12 @@ impl Pppm {
     /// * `charges` - Particle charges
     ///
     /// # Returns
-    /// (forces, total_energy) where forces[i] = [fx, fy, fz]
+    /// (forces, `total_energy`) where forces[i] = [fx, fy, fz]
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn compute(
         &self,
         positions: &[[f64; 3]],
@@ -138,6 +144,11 @@ impl Pppm {
     }
 
     /// Compute forces only (slightly faster if energy not needed)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn compute_forces(
         &self,
         positions: &[[f64; 3]],
@@ -148,6 +159,7 @@ impl Pppm {
     }
 
     /// Get the PPPM parameters
+    #[must_use]
     pub fn params(&self) -> &PppmParams {
         &self.params
     }
@@ -202,7 +214,7 @@ impl Pppm {
 
         // Normalize for inverse FFT (Fft3DF64 doesn't normalize)
         let scale = 1.0 / (kx * ky * kz) as f64;
-        for v in complex.iter_mut() {
+        for v in &mut complex {
             *v *= scale;
         }
 
@@ -416,7 +428,7 @@ mod tests {
         let (forces, energy) = pppm.compute(&positions, &charges).unwrap();
 
         // Energy should be negative (attractive)
-        assert!(energy < 0.0, "Energy should be negative: {}", energy);
+        assert!(energy < 0.0, "Energy should be negative: {energy}");
 
         // Forces should attract charges together
         // Positive charge at x=4 should be pulled toward x=6 (positive force)
@@ -436,8 +448,7 @@ mod tests {
         let force_sum = forces[0][0] + forces[1][0];
         assert!(
             force_sum.abs() < 0.1,
-            "Forces should sum to ~0: {}",
-            force_sum
+            "Forces should sum to ~0: {force_sum}"
         );
     }
 
@@ -476,8 +487,7 @@ mod tests {
         let force_sum = forces[0][0] + forces[1][0];
         assert!(
             force_sum.abs() < 0.1,
-            "Forces should sum to ~0: {}",
-            force_sum
+            "Forces should sum to ~0: {force_sum}"
         );
     }
 
@@ -505,9 +515,9 @@ mod tests {
         let total_fy: f64 = forces.iter().map(|f| f[1]).sum();
         let total_fz: f64 = forces.iter().map(|f| f[2]).sum();
 
-        assert!(total_fx.abs() < 0.1, "Total Fx should be ~0: {}", total_fx);
-        assert!(total_fy.abs() < 0.1, "Total Fy should be ~0: {}", total_fy);
-        assert!(total_fz.abs() < 0.1, "Total Fz should be ~0: {}", total_fz);
+        assert!(total_fx.abs() < 0.1, "Total Fx should be ~0: {total_fx}");
+        assert!(total_fy.abs() < 0.1, "Total Fy should be ~0: {total_fy}");
+        assert!(total_fz.abs() < 0.1, "Total Fz should be ~0: {total_fz}");
     }
 
     #[test]
@@ -567,12 +577,7 @@ mod tests {
 
         // Should match original
         for (a, b) in original.iter().zip(data.iter()) {
-            assert!(
-                (a - b).abs() < 1e-10,
-                "FFT roundtrip failed: {} != {}",
-                a,
-                b
-            );
+            assert!((a - b).abs() < 1e-10, "FFT roundtrip failed: {a} != {b}");
         }
     }
 }

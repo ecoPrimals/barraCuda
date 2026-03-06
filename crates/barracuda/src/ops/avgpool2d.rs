@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! AvgPool2D operation - Average pooling for 2D tensors
+//! `AvgPool2D` operation - Average pooling for 2D tensors
 //! Pure WGSL implementation
 
 use crate::error::Result;
@@ -27,6 +27,7 @@ pub struct AvgPool2D {
 
 impl AvgPool2D {
     /// Create average pooling without padding.
+    #[must_use]
     pub fn new(input: Tensor, pool_size: usize, stride: usize) -> Self {
         Self {
             input,
@@ -38,6 +39,7 @@ impl AvgPool2D {
     }
 
     /// Create average pooling with explicit padding.
+    #[must_use]
     pub fn with_padding(
         input: Tensor,
         pool_size: usize,
@@ -66,6 +68,8 @@ impl AvgPool2D {
     }
 
     /// Execute average pooling and return the output tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
 
@@ -203,11 +207,15 @@ impl AvgPool2D {
 
 impl Tensor {
     /// Apply 2D average pooling.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn avgpool2d(self, pool_size: usize, stride: usize) -> Result<Self> {
         AvgPool2D::new(self, pool_size, stride).execute()
     }
 
     /// Apply 2D average pooling with explicit padding.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn avgpool2d_padded(
         self,
         pool_size: usize,
@@ -309,7 +317,7 @@ mod tests {
         let result = input.avgpool2d(2, 2).unwrap();
         let output = result.to_vec().unwrap();
 
-        for val in output.iter() {
+        for val in &output {
             assert!((val - 7.0).abs() < 1e-5);
         }
 
@@ -411,8 +419,7 @@ mod tests {
 
         assert!(
             max_error < 1e-5,
-            "Max error: {} exceeds FP32 threshold",
-            max_error
+            "Max error: {max_error} exceeds FP32 threshold"
         );
     }
 

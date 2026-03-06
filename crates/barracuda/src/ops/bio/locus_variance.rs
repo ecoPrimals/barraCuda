@@ -15,10 +15,10 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 
-/// f64 canonical — f32 derived via downcast_f64_to_f32 when needed.
+/// f64 canonical — f32 derived via `downcast_f64_to_f32` when needed.
 pub const WGSL_LOCUS_VARIANCE_F64: &str = include_str!("../../shaders/bio/locus_variance_f64.wgsl");
 
 #[repr(C)]
@@ -37,6 +37,7 @@ pub struct LocusVarianceGpu {
 
 impl LocusVarianceGpu {
     /// Creates a new per-locus allele frequency variance GPU kernel for the given device.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 

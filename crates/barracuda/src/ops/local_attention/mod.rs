@@ -16,9 +16,9 @@
 //! ```
 //!
 //! **Implementation**: 3-pass GPU execution (reuses 2 attention shaders!)
-//! 1. Pass 1: Compute QK^T scores (reuse attention_matmul.wgsl ✅)
-//! 2. Pass 2: Apply softmax with local window mask (NEW: local_attention_softmax.wgsl)
-//! 3. Pass 3: Apply weights to values (reuse attention_apply.wgsl ✅)
+//! 1. Pass 1: Compute QK^T scores (reuse `attention_matmul.wgsl` ✅)
+//! 2. Pass 2: Apply softmax with local window mask (NEW: `local_attention_softmax.wgsl`)
+//! 3. Pass 3: Apply weights to values (reuse `attention_apply.wgsl` ✅)
 //!
 //! **Deep Debt**: Maximum code reuse - only 1 new shader for window masking!
 //!
@@ -72,9 +72,12 @@ pub struct LocalAttention {
 
 impl LocalAttention {
     /// Create new local attention operation
-    ///
     /// # Arguments
     /// - `window_size`: Size of attention window (must be > 0)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
+    /// Also returns [`Err`] if shape validation fails.
     pub fn new(query: Tensor, key: Tensor, value: Tensor, window_size: usize) -> Result<Self> {
         // Validate shapes: all must be [batch, heads, seq_len, head_dim]
         if query.shape().len() != 4 || key.shape().len() != 4 || value.shape().len() != 4 {
@@ -148,25 +151,23 @@ impl LocalAttention {
 
 impl Tensor {
     /// Local attention (windowed attention for long sequences)
-    ///
     /// **Deep Debt**: Reuses 2/3 attention shaders + local window mask shader
-    ///
     /// # Arguments
-    /// - `key`: Key tensor [batch, heads, seq_len, head_dim]
-    /// - `value`: Value tensor [batch, heads, seq_len, head_dim]
+    /// - `key`: Key tensor [batch, heads, `seq_len`, `head_dim`]
+    /// - `value`: Value tensor [batch, heads, `seq_len`, `head_dim`]
     /// - `window_size`: Size of attention window (must be > 0)
-    ///
     /// # Returns
-    /// Output tensor [batch, heads, seq_len, head_dim]
-    ///
+    /// Output tensor [batch, heads, `seq_len`, `head_dim`]
     /// # Example
     /// ```rust,ignore
     /// let q = Tensor::randn(vec![2, 8, 1024, 64]).await?;  // Long sequence
     /// let k = Tensor::randn(vec![2, 8, 1024, 64]).await?;
     /// let v = Tensor::randn(vec![2, 8, 1024, 64]).await?;
-    ///
     /// let output = q.local_attention(&k, &v, 4)?;  // window_size=4
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn local_attention(self, key: &Self, value: &Self, window_size: usize) -> Result<Self> {
         LocalAttention::new(self, key.clone(), value.clone(), window_size)?.execute()
     }

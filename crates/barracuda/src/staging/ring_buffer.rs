@@ -13,8 +13,8 @@
 
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Direction of data flow for the ring buffer
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -50,6 +50,7 @@ impl Default for RingBufferConfig {
 
 impl RingBufferConfig {
     /// Create a new config with specified capacity
+    #[must_use]
     pub fn new(capacity: usize) -> Self {
         // Round up to power of 2 for efficient modulo
         let capacity = capacity.next_power_of_two();
@@ -60,24 +61,28 @@ impl RingBufferConfig {
     }
 
     /// Set the buffer direction
+    #[must_use]
     pub fn with_direction(mut self, direction: BufferDirection) -> Self {
         self.direction = direction;
         self
     }
 
     /// Configure for input (Host → Device)
+    #[must_use]
     pub fn for_input(mut self) -> Self {
         self.direction = BufferDirection::HostToDevice;
         self
     }
 
     /// Configure for output (Device → Host)
+    #[must_use]
     pub fn for_output(mut self) -> Self {
         self.direction = BufferDirection::DeviceToHost;
         self
     }
 
     /// Set label for debugging
+    #[must_use]
     pub fn with_label(mut self, label: impl Into<String>) -> Self {
         self.label = Some(label.into());
         self
@@ -118,7 +123,7 @@ pub struct WriteHandle {
 pub struct GpuRingBuffer {
     /// The underlying GPU buffer
     buffer: wgpu::Buffer,
-    /// Staging buffer for CPU access (only for DeviceToHost)
+    /// Staging buffer for CPU access (only for `DeviceToHost`)
     staging_buffer: Option<wgpu::Buffer>,
     /// Buffer capacity (power of 2)
     capacity: usize,
@@ -142,6 +147,10 @@ pub struct GpuRingBuffer {
 
 impl GpuRingBuffer {
     /// Create a new ring buffer
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>, config: RingBufferConfig) -> Result<Self> {
         let capacity = config.capacity;
         let mask = capacity - 1;
@@ -247,7 +256,7 @@ impl GpuRingBuffer {
         self.available_write() == 0
     }
 
-    /// Write data to the ring buffer (for HostToDevice)
+    /// Write data to the ring buffer (for `HostToDevice`)
     ///
     /// Returns a handle for tracking, or None if not enough space.
     /// This is non-blocking - returns immediately if buffer is full.
@@ -300,6 +309,10 @@ impl GpuRingBuffer {
     /// Write data, blocking until space is available
     ///
     /// For async contexts, prefer `try_write` with polling.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the buffer remains full after max attempts.
     pub fn write(&mut self, data: &[u8]) -> Result<WriteHandle> {
         // In strict unidirectional mode, we shouldn't block
         // This is a simple spin-wait for now; could be evolved to async
@@ -351,7 +364,7 @@ impl GpuRingBuffer {
         &self.buffer
     }
 
-    /// Get the staging buffer for async CPU readback (DeviceToHost only).
+    /// Get the staging buffer for async CPU readback (`DeviceToHost` only).
     pub fn staging_buffer(&self) -> Option<&wgpu::Buffer> {
         self.staging_buffer.as_ref()
     }

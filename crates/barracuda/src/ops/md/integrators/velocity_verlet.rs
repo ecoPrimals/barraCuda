@@ -29,6 +29,10 @@ pub struct VelocityVerlet {
 
 impl VelocityVerlet {
     /// Create Velocity-Verlet integrator with given state tensors.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if tensor shapes mismatch, or dt <= 0.
     pub fn new(
         positions: Tensor,
         velocities: Tensor,
@@ -84,7 +88,12 @@ impl VelocityVerlet {
     /// Execute Velocity-Verlet integration
     ///
     /// # Returns
-    /// (positions_new, velocities_new) at time t+Δt
+    /// (`positions_new`, `velocities_new`) at time t+Δt
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<(Tensor, Tensor)> {
         let device = self.positions.device();
         let n_particles = self.positions.shape()[0];
@@ -346,11 +355,11 @@ mod tests {
         let f_new_check = f_new_tensor.to_vec().unwrap();
         let mass_check = mass_tensor.to_vec().unwrap();
 
-        println!("Input positions: {:?}", pos_check);
-        println!("Input velocities: {:?}", vel_check);
-        println!("Input forces_old: {:?}", f_old_check);
-        println!("Input forces_new: {:?}", f_new_check);
-        println!("Input masses: {:?}", mass_check);
+        println!("Input positions: {pos_check:?}");
+        println!("Input velocities: {vel_check:?}");
+        println!("Input forces_old: {f_old_check:?}");
+        println!("Input forces_new: {f_new_check:?}");
+        println!("Input masses: {mass_check:?}");
 
         assert_eq!(pos_check, positions);
         assert_eq!(vel_check, velocities);
@@ -373,8 +382,8 @@ mod tests {
         let pos_data = pos_new.to_vec().unwrap();
         let vel_data = vel_new.to_vec().unwrap();
 
-        println!("pos_data: {:?}", pos_data);
-        println!("vel_data: {:?}", vel_data);
+        println!("pos_data: {pos_data:?}");
+        println!("vel_data: {vel_data:?}");
 
         // Check physics: x = x0 + v*t + 0.5*a*t^2
         // x = 0 + 1*0.1 + 0.5*2*0.01 = 0.11

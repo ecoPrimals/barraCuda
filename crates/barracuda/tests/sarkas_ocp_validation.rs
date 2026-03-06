@@ -7,19 +7,19 @@
 //!
 //! | Case | Γ    | κ   | Regime          | LAMMPS equiv         |
 //! |------|------|-----|-----------------|----------------------|
-//! | 1    | 10   | 2.0 | Weak coupling   | pair_style yukawa    |
-//! | 2    | 50   | 2.0 | Moderate        | pair_style yukawa    |
-//! | 3    | 150  | 2.0 | Near-crystalline| pair_style yukawa    |
+//! | 1    | 10   | 2.0 | Weak coupling   | `pair_style` yukawa    |
+//! | 2    | 50   | 2.0 | Moderate        | `pair_style` yukawa    |
+//! | 3    | 150  | 2.0 | Near-crystalline| `pair_style` yukawa    |
 //!
 //! Physics: One-Component Plasma in reduced units.
-//! - ε = k_B T / Γ, σ = a_ws (Wigner-Seitz radius)
+//! - ε = `k_B` T / Γ, σ = `a_ws` (Wigner-Seitz radius)
 //! - Yukawa: V(r) = (Γ/r) exp(-κ r)
-//! - Density: ρ = 3/(4π), so a_ws = 1.0
+//! - Density: ρ = 3/(4π), so `a_ws` = 1.0
 //! - Box side: L = (N / ρ)^{1/3}
 //!
 //! Validation criteria:
 //! - Energy conservation: |ΔE/E₀| < 1e-4 over 200 NVE steps
-//! - Force symmetry: |F_i + F_j| / |F_i| < 1e-12 for nearest pair
+//! - Force symmetry: |`F_i` + `F_j`| / |`F_i`| < 1e-12 for nearest pair
 //! - Newton's third law per pair
 //!
 //! Run: `cargo test --test sarkas_ocp_validation -- --nocapture`
@@ -40,10 +40,10 @@ struct OcpCase {
 }
 
 impl OcpCase {
-    /// Wigner-Seitz radius for OCP: a_ws = (3/(4πρ))^{1/3} = 1.0 in reduced units.
+    /// Wigner-Seitz radius for OCP: `a_ws` = (3/(4πρ))^{1/3} = 1.0 in reduced units.
     const A_WS: f64 = 1.0;
 
-    /// OCP number density: ρ = 3/(4π a_ws³).
+    /// OCP number density: ρ = 3/(4π `a_ws³`).
     fn density(&self) -> f64 {
         3.0 / (4.0 * PI * Self::A_WS.powi(3))
     }
@@ -52,7 +52,7 @@ impl OcpCase {
         (self.n_particles as f64 / self.density()).cbrt()
     }
 
-    /// Cutoff in units of a_ws — typically L/2 for PBC.
+    /// Cutoff in units of `a_ws` — typically L/2 for PBC.
     fn cutoff(&self) -> f64 {
         self.box_side() / 2.0
     }

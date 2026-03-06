@@ -5,7 +5,7 @@ the sourDough scaffold. barraCuda owns its own standards.
 
 ## Quick Reference
 
-- **Edition**: 2021
+- **Edition**: 2024
 - **MSRV**: 1.87
 - **GPU stack**: wgpu 28, naga 28 — `Device` and `Queue` are `Clone` (no `Arc` wrappers)
 - **Linting**: `warn(clippy::all, clippy::pedantic)` — configured in `Cargo.toml` `[lints]`

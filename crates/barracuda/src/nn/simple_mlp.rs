@@ -4,7 +4,7 @@
 //! Designed to replace ~400 LOC of hand-rolled MLP inference across
 //! 3 WDM surrogates (ESN readout, SQW regressor, transport model).
 //!
-//! Provenance: neuralSpring TOADSTOOL_HANDOFF → toadStool absorption (S70).
+//! Provenance: neuralSpring `TOADSTOOL_HANDOFF` → toadStool absorption (S70).
 //!
 //! # Example
 //!
@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Activation {
-    /// ReLU: max(0, x).
+    /// `ReLU`: max(0, x).
     Relu,
     /// Hyperbolic tangent.
     Tanh,
@@ -36,9 +36,9 @@ pub enum Activation {
 /// A single dense layer: y = W·x + b
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DenseLayer {
-    /// Weight matrix (row-major: out_size × in_size).
+    /// Weight matrix (row-major: `out_size` × `in_size`).
     pub weight: Vec<Vec<f64>>,
-    /// Bias vector (length out_size).
+    /// Bias vector (length `out_size`).
     pub bias: Vec<f64>,
     /// Activation applied after affine transform.
     pub activation: Activation,
@@ -56,7 +56,6 @@ pub struct SimpleMlp {
 
 impl SimpleMlp {
     /// Construct from a JSON string containing serialized weights.
-    ///
     /// # Errors
     /// Returns an error if JSON is malformed or shapes are inconsistent.
     pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
@@ -64,7 +63,6 @@ impl SimpleMlp {
     }
 
     /// Serialize to JSON string.
-    ///
     /// # Errors
     /// Returns an error if serialization fails.
     pub fn to_json(&self) -> Result<String, serde_json::Error> {
@@ -78,7 +76,6 @@ impl SimpleMlp {
     }
 
     /// Forward pass (CPU inference).
-    ///
     /// Applies each layer in sequence: affine transform + activation.
     #[must_use]
     pub fn forward(&self, input: &[f64]) -> Vec<f64> {

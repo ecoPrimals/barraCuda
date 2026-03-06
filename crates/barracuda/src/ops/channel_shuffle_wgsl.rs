@@ -22,7 +22,7 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// Shuffle channels for group convolutions (ShuffleNet).
+/// Shuffle channels for group convolutions (`ShuffleNet`).
 pub struct ChannelShuffle {
     input: Tensor,
     groups: usize,
@@ -30,6 +30,7 @@ pub struct ChannelShuffle {
 
 impl ChannelShuffle {
     /// Create a channel shuffle. Channels must be divisible by groups.
+    #[must_use]
     pub fn new(input: Tensor, groups: usize) -> Self {
         Self { input, groups }
     }
@@ -44,6 +45,11 @@ impl ChannelShuffle {
     }
 
     /// Execute channel shuffle on GPU.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -198,6 +204,11 @@ impl ChannelShuffle {
 
 impl Tensor {
     /// Shuffle channels into groups. Expects [B, C, H, W], C divisible by groups.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn channel_shuffle_wgsl(self, groups: usize) -> Result<Self> {
         ChannelShuffle::new(self, groups).execute()
     }

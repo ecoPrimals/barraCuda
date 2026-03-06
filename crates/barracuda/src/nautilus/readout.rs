@@ -22,6 +22,7 @@ pub struct LinearReadout {
 
 impl LinearReadout {
     /// Create a new readout. Lambda defaults to 1e-3.
+    #[must_use]
     pub fn new(input_dim: usize, output_dim: usize, lambda: f64) -> Self {
         Self {
             weights: None,
@@ -32,6 +33,8 @@ impl LinearReadout {
     }
 
     /// Train via ridge regression: (X^T X + λI)^-1 X^T y. Returns MSE.
+    /// # Errors
+    /// Returns [`Err`] if the linear solve fails (e.g. singular matrix).
     #[cfg(feature = "gpu")]
     pub fn train(&mut self, responses: &[Vec<f64>], targets: &[Vec<f64>]) -> Result<f64> {
         let n = responses.len();
@@ -93,6 +96,8 @@ impl LinearReadout {
     }
 
     /// Train (no-op when gpu feature disabled; use ridge_regression fallback).
+    /// # Errors
+    /// Returns [`Err`] if ridge regression fails (e.g. degenerate data).
     #[cfg(not(feature = "gpu"))]
     pub fn train(&mut self, responses: &[Vec<f64>], targets: &[Vec<f64>]) -> Result<f64> {
         use crate::linalg::ridge_regression;
@@ -133,6 +138,7 @@ impl LinearReadout {
     }
 
     /// Predict: W·x.
+    #[must_use]
     pub fn predict(&self, response: &[f64]) -> Option<Vec<f64>> {
         let w = self.weights.as_ref()?;
         let nf = self.input_dim;

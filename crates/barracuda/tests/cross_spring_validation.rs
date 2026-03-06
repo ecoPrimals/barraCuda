@@ -12,7 +12,7 @@
 //!
 //! Run: `cargo test --test cross_spring_validation`
 
-use barracuda::optimize::{brent, lbfgs_numerical, LbfgsConfig};
+use barracuda::optimize::{LbfgsConfig, brent, lbfgs_numerical};
 use barracuda::spectral::anderson::{
     anderson_3d, anderson_4d, anderson_eigenvalues, anderson_potential, lyapunov_exponent,
 };
@@ -145,7 +145,7 @@ fn check_lbfgs_quadratic() -> CheckResult {
 
 fn check_spectral_features() -> CheckResult {
     use barracuda::nautilus::SpectralFeatures;
-    let eigs: Vec<f64> = (0..50).map(|i| i as f64 * 0.1).collect();
+    let eigs: Vec<f64> = (0..50).map(|i| f64::from(i) * 0.1).collect();
     let feat = SpectralFeatures::from_eigenvalues(&eigs);
     let passed = feat.bandwidth > 0.0 && feat.level_spacing_ratio > 0.0;
     CheckResult {

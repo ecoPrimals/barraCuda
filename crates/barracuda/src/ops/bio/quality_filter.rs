@@ -10,8 +10,8 @@
 //!
 //! wetSpring handoff v6, `quality_filter.wgsl` — 88 pipeline checks PASS.
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -70,6 +70,11 @@ impl Default for QualityConfig {
 
 impl QualityFilterGpu {
     /// Create quality filter pipeline for the given device.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         let module = device.compile_shader_f64(SHADER, Some("quality_filter"));
         let bgl = super::snp::make_bgl(&device, &[true, true, true, false]);
@@ -84,6 +89,11 @@ impl QualityFilterGpu {
     }
 
     /// Dispatch quality filter kernel with given config and buffers.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn dispatch(
         &self,
         n_reads: u32,

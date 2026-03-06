@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! GatedConv2D - Gated Convolution 2D
+//! `GatedConv2D` - Gated Convolution 2D
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation
@@ -9,9 +9,9 @@
 //! - ✅ Modern idiomatic Rust (no traits, direct impl)
 //!
 //! Convolution with multiplicative gating mechanism
-//! Used in PixelCNN, WaveNet, and generative models
+//! Used in `PixelCNN`, `WaveNet`, and generative models
 //!
-//! Output = tanh(W_f * x) ⊙ sigmoid(W_g * x)
+//! Output = `tanh(W_f` * x) ⊙ `sigmoid(W_g` * x)
 
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
@@ -34,7 +34,7 @@ struct GatedConv2DParams {
     _padding2: u32,
 }
 
-/// Gated 2D convolution (PixelCNN/WaveNet style: tanh(W_f*x) ⊙ sigmoid(W_g*x)).
+/// Gated 2D convolution (PixelCNN/WaveNet style: `tanh(W_f`*x) ⊙ `sigmoid(W_g`*x)).
 pub struct GatedConv2D {
     input: Tensor,
     weight_feature: Tensor,
@@ -48,6 +48,8 @@ pub struct GatedConv2D {
 
 impl GatedConv2D {
     /// Creates a new gated conv2d. Input must be 4D [B, C, H, W].
+    /// # Errors
+    /// Returns [`Err`] if input is not 4D [B, C, H, W], or if `kernel_size` or stride is zero.
     pub fn new(
         input: Tensor,
         weight_feature: Tensor,
@@ -98,6 +100,8 @@ impl GatedConv2D {
     }
 
     /// Executes gated conv2d and returns the output tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -305,15 +309,17 @@ impl GatedConv2D {
 
 impl Tensor {
     /// Apply gated convolution 2D
-    ///
     /// # Arguments
-    /// - `weight_feature`: Feature weight tensor [C_out, C_in, K, K]
-    /// - `weight_gate`: Gate weight tensor [C_out, C_in, K, K]
-    /// - `bias_feature`: Feature bias tensor [C_out]
-    /// - `bias_gate`: Gate bias tensor [C_out]
+    /// - `weight_feature`: Feature weight tensor [`C_out`, `C_in`, K, K]
+    /// - `weight_gate`: Gate weight tensor [`C_out`, `C_in`, K, K]
+    /// - `bias_feature`: Feature bias tensor [`C_out`]
+    /// - `bias_gate`: Gate bias tensor [`C_out`]
     /// - `kernel_size`: Kernel size
     /// - `stride`: Stride
     /// - `padding`: Padding
+    /// # Errors
+    /// Returns [`Err`] if input is not 4D, `kernel_size/stride` is zero, buffer allocation fails,
+    /// GPU dispatch fails, or the device is lost.
     pub fn gated_conv2d(
         self,
         weight_feature: Tensor,

@@ -20,8 +20,9 @@ fn naive_poly_multiply(a: &[u64], b: &[u64], degree: usize, modulus: u64) -> Vec
     for i in 0..degree {
         for j in 0..degree {
             let k = (i + j) % degree;
-            result[k] = ((result[k] as u128 + (a[i] as u128 * b[j] as u128 % modulus as u128))
-                % modulus as u128) as u64;
+            result[k] = ((u128::from(result[k])
+                + (u128::from(a[i]) * u128::from(b[j]) % u128::from(modulus)))
+                % u128::from(modulus)) as u64;
         }
     }
 
@@ -67,13 +68,11 @@ async fn test_fast_poly_mul_vs_naive() {
                 assert_eq!(
                     fast % modulus,
                     naive % modulus,
-                    "Fast and naive multiply should match at index {} (degree={})",
-                    i,
-                    degree
+                    "Fast and naive multiply should match at index {i} (degree={degree})"
                 );
             }
 
-            println!("✅ Fast multiply matches naive for N={}", degree);
+            println!("✅ Fast multiply matches naive for N={degree}");
         }
     }) {
         return;
@@ -114,7 +113,7 @@ async fn test_fast_poly_mul_commutativity() {
         // Results should be equal (commutativity)
         assert_eq!(ab_result.len(), ba_result.len());
         for (i, (&ab, &ba)) in ab_result.iter().zip(ba_result.iter()).enumerate() {
-            assert_eq!(ab, ba, "Commutativity should hold at index {}", i);
+            assert_eq!(ab, ba, "Commutativity should hold at index {i}");
         }
 
         println!("✅ Fast multiply is commutative");
@@ -146,7 +145,7 @@ async fn test_fast_poly_mul_distributivity() {
         let b_plus_c: Vec<u64> = b
             .iter()
             .zip(c.iter())
-            .map(|(&bi, &ci)| ((bi as u128 + ci as u128) % modulus as u128) as u64)
+            .map(|(&bi, &ci)| ((u128::from(bi) + u128::from(ci)) % u128::from(modulus)) as u64)
             .collect();
 
         let a_tensor = create_fhe_poly_tensor(&a, device.clone()).await.unwrap();
@@ -174,13 +173,13 @@ async fn test_fast_poly_mul_distributivity() {
         let ab_plus_ac: Vec<u64> = ab_result
             .iter()
             .zip(ac_result.iter())
-            .map(|(&abi, &aci)| ((abi as u128 + aci as u128) % modulus as u128) as u64)
+            .map(|(&abi, &aci)| ((u128::from(abi) + u128::from(aci)) % u128::from(modulus)) as u64)
             .collect();
 
         // Compare a*(b+c) with a*b + a*c
         assert_eq!(a_bc_result.len(), ab_plus_ac.len());
         for (i, (&left, &right)) in a_bc_result.iter().zip(ab_plus_ac.iter()).enumerate() {
-            assert_eq!(left, right, "Distributivity should hold at index {}", i);
+            assert_eq!(left, right, "Distributivity should hold at index {i}");
         }
 
         println!("✅ Fast multiply is distributive");

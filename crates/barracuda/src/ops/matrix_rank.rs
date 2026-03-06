@@ -35,6 +35,11 @@ pub struct MatrixRank {
 
 impl MatrixRank {
     /// Creates a new matrix rank operation. Tolerance controls numerical rank threshold.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor, tolerance: f32) -> Result<Self> {
         let shape = input.shape();
         if shape.len() < 2 {
@@ -52,6 +57,11 @@ impl MatrixRank {
     }
 
     /// Executes rank computation and returns the matrix rank.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<usize> {
         let device = self.input.device();
         let shape = self.input.shape();

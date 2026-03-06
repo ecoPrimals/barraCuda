@@ -58,11 +58,11 @@ impl Default for EsnConfig {
 pub struct EsnWeights {
     /// ESN configuration.
     pub config: EsnConfig,
-    /// Input-to-reservoir weights (reservoir_size × input_size, row-major)
+    /// Input-to-reservoir weights (`reservoir_size` × `input_size`, row-major)
     pub w_in: Vec<f64>,
-    /// Reservoir recurrent weights (reservoir_size × reservoir_size, row-major)
+    /// Reservoir recurrent weights (`reservoir_size` × `reservoir_size`, row-major)
     pub w_res: Vec<f64>,
-    /// Readout weights (output_size × reservoir_size, row-major)
+    /// Readout weights (`output_size` × `reservoir_size`, row-major)
     pub w_out: Option<Vec<f64>>,
 }
 
@@ -83,6 +83,9 @@ pub struct EsnClassifier {
 
 impl EsnClassifier {
     /// Create new ESN with random reservoir (fixed), untrained readout.
+    /// # Errors
+    /// Returns [`Err`] if the configuration is invalid (sizes zero, spectral radius
+    /// outside (0, 2], sparsity or leak rate outside (0, 1], or non-positive regularization).
     pub fn new(config: EsnConfig) -> Result<Self> {
         validate_esn_config(&config)?;
 
@@ -129,6 +132,8 @@ impl EsnClassifier {
     }
 
     /// Construct from JSON string.
+    /// # Errors
+    /// Returns [`Err`] if the JSON fails to parse or the parsed configuration is invalid.
     pub fn from_json(json: &str) -> Result<Self> {
         let weights: EsnWeights =
             serde_json::from_str(json).map_err(|e| BarracudaError::InvalidInput {
@@ -147,6 +152,8 @@ impl EsnClassifier {
     }
 
     /// Serialize to JSON string.
+    /// # Errors
+    /// Returns [`Err`] if JSON serialization fails.
     pub fn to_json(&self) -> Result<String> {
         let weights = EsnWeights {
             config: self.config.clone(),
@@ -203,6 +210,9 @@ impl EsnClassifier {
     }
 
     /// Train the readout layer via ridge regression.
+    /// # Errors
+    /// Returns [`Err`] if inputs or targets are empty, lengths differ, any input
+    /// has wrong size, any target has wrong size, or ridge regression fails.
     pub fn train(&mut self, inputs: &[Vec<f64>], targets: &[Vec<f64>]) -> Result<()> {
         if inputs.is_empty() || targets.is_empty() {
             return Err(BarracudaError::InvalidInput {
@@ -268,6 +278,9 @@ impl EsnClassifier {
     }
 
     /// Predict output for a single input.
+    /// # Errors
+    /// Returns [`Err`] if the ESN is untrained or the input length does not match
+    /// the configured input size.
     pub fn predict(&mut self, input: &[f64]) -> Result<Vec<f64>> {
         if self.w_out.is_none() {
             return Err(BarracudaError::InvalidInput {
@@ -301,6 +314,8 @@ impl EsnClassifier {
     }
 
     /// Predict without updating state (uses current state for readout).
+    /// # Errors
+    /// Returns [`Err`] if the ESN is untrained.
     pub fn predict_from_state(&self) -> Result<Vec<f64>> {
         let w_out = self
             .w_out
@@ -413,15 +428,15 @@ mod tests {
         esn.reset_state();
         let p11 = esn.predict(&[1.0, 1.0]).unwrap()[0];
 
-        let zeros = (p00 + p11) / 2.0;
-        let ones = (p01 + p10) / 2.0;
+        let zeros = f64::midpoint(p00, p11);
+        let ones = f64::midpoint(p01, p10);
         assert!(
             ones > zeros,
             "XOR: (0,1) and (1,0) should output higher than (0,0) and (1,1); \
              got p00={p00:.3} p01={p01:.3} p10={p10:.3} p11={p11:.3}"
         );
-        assert!(p00 < 0.5, "XOR(0,0) should be ~0, got {}", p00);
-        assert!(p11 < 0.5, "XOR(1,1) should be ~0, got {}", p11);
+        assert!(p00 < 0.5, "XOR(0,0) should be ~0, got {p00}");
+        assert!(p11 < 0.5, "XOR(1,1) should be ~0, got {p11}");
     }
 
     #[test]

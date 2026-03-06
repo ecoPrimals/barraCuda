@@ -43,12 +43,14 @@ impl Default for PenaltyConfig {
 
 impl PenaltyConfig {
     /// Set custom minimum penalty value.
+    #[must_use]
     pub fn with_min(mut self, min: f64) -> Self {
         self.min_penalty = min;
         self
     }
 
     /// Set custom safety margin multiplier.
+    #[must_use]
     pub fn with_margin(mut self, margin: f64) -> Self {
         self.safety_margin = margin;
         self
@@ -60,7 +62,7 @@ impl PenaltyConfig {
 pub struct AdaptivePenalty {
     /// Computed raw penalty value
     pub raw_penalty: f64,
-    /// Transformed penalty (log if use_log)
+    /// Transformed penalty (log if `use_log`)
     pub penalty: f64,
     /// Maximum objective value among feasible points
     pub feasible_max: f64,
@@ -76,6 +78,7 @@ impl AdaptivePenalty {
     /// Apply penalty to an infeasible point.
     ///
     /// Returns a value guaranteed to be worse than any feasible point.
+    #[must_use]
     pub fn apply(&self, constraint_violation: f64) -> f64 {
         self.penalty * (1.0 + constraint_violation.abs())
     }
@@ -117,6 +120,11 @@ impl AdaptivePenalty {
 /// # Reference
 ///
 /// hotSpring validation: `surrogate.rs::adaptive_penalty()`
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+/// readback fails (e.g. device lost or out of memory).
 pub fn adaptive_penalty(feasible_values: &[f64], config: PenaltyConfig) -> Result<AdaptivePenalty> {
     if feasible_values.is_empty() {
         // No feasible points - use minimum penalty
@@ -141,7 +149,7 @@ pub fn adaptive_penalty(feasible_values: &[f64], config: PenaltyConfig) -> Resul
     let valid: Vec<f64> = feasible_values
         .iter()
         .filter(|v| v.is_finite())
-        .cloned()
+        .copied()
         .collect();
 
     if valid.is_empty() {
@@ -152,8 +160,8 @@ pub fn adaptive_penalty(feasible_values: &[f64], config: PenaltyConfig) -> Resul
 
     // Compute statistics
     let n = valid.len();
-    let feasible_max = valid.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-    let feasible_min = valid.iter().cloned().fold(f64::INFINITY, f64::min);
+    let feasible_max = valid.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let feasible_min = valid.iter().copied().fold(f64::INFINITY, f64::min);
     let feasible_mean = valid.iter().sum::<f64>() / n as f64;
 
     // Compute raw penalty: safety_margin × max feasible (or min_penalty if max is small)
@@ -200,6 +208,10 @@ pub fn adaptive_penalty(feasible_values: &[f64], config: PenaltyConfig) -> Resul
 ///
 /// let penalty = adaptive_penalty_mad(&values, PenaltyConfig::default(), 5.0).unwrap();
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if values is empty or contains no finite values.
 pub fn adaptive_penalty_mad(
     values: &[f64],
     config: PenaltyConfig,
@@ -212,7 +224,7 @@ pub fn adaptive_penalty_mad(
     }
 
     // Filter finite values
-    let mut valid: Vec<f64> = values.iter().filter(|v| v.is_finite()).cloned().collect();
+    let mut valid: Vec<f64> = values.iter().filter(|v| v.is_finite()).copied().collect();
 
     if valid.is_empty() {
         return Err(BarracudaError::InvalidInput {
@@ -224,7 +236,7 @@ pub fn adaptive_penalty_mad(
     valid.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     let n = valid.len();
     let median = if n.is_multiple_of(2) {
-        (valid[n / 2 - 1] + valid[n / 2]) / 2.0
+        f64::midpoint(valid[n / 2 - 1], valid[n / 2])
     } else {
         valid[n / 2]
     };
@@ -233,7 +245,7 @@ pub fn adaptive_penalty_mad(
     let mut deviations: Vec<f64> = valid.iter().map(|v| (v - median).abs()).collect();
     deviations.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     let mad = if n.is_multiple_of(2) {
-        (deviations[n / 2 - 1] + deviations[n / 2]) / 2.0
+        f64::midpoint(deviations[n / 2 - 1], deviations[n / 2])
     } else {
         deviations[n / 2]
     };
@@ -242,7 +254,7 @@ pub fn adaptive_penalty_mad(
     let threshold = median + mad_multiplier * mad;
 
     // Filter feasible values (below threshold)
-    let feasible: Vec<f64> = valid.iter().filter(|&&v| v <= threshold).cloned().collect();
+    let feasible: Vec<f64> = valid.iter().filter(|&&v| v <= threshold).copied().collect();
 
     adaptive_penalty(&feasible, config)
 }

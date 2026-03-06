@@ -2,7 +2,7 @@
 
 //! Omelyan 2MN (second-order minimum-norm) integrator for HMC.
 //!
-//! Composes the existing `GpuHmcLeapfrog` momentum_kick and link_update
+//! Composes the existing `GpuHmcLeapfrog` `momentum_kick` and `link_update`
 //! kernels into the Omelyan stepping pattern:
 //!
 //!   π(λε) → U(ε/2) → π((1-2λ)ε) → U(ε/2) → π(λε)
@@ -35,6 +35,7 @@ pub struct OmelyanIntegrator {
 
 impl OmelyanIntegrator {
     /// Create with the standard optimal λ.
+    #[must_use]
     pub fn new(leapfrog: GpuHmcLeapfrog) -> Self {
         Self {
             leapfrog,
@@ -43,17 +44,15 @@ impl OmelyanIntegrator {
     }
 
     /// Create with a custom λ (for studies of integrator tuning).
+    #[must_use]
     pub fn with_lambda(leapfrog: GpuHmcLeapfrog, lambda: f64) -> Self {
         Self { leapfrog, lambda }
     }
 
     /// Execute one full Omelyan 2MN step of size `dt`.
-    ///
     /// Sequence: π(λ·dt) → U(dt/2) → π((1-2λ)·dt) → U(dt/2) → π(λ·dt)
-    ///
     /// The force buffer must contain the current gauge force (computed
     /// externally between steps via `GpuHmcForceSu3` or equivalent).
-    ///
     /// For a complete HMC trajectory, the caller should:
     /// 1. Compute force
     /// 2. Call `step()`  
@@ -62,6 +61,9 @@ impl OmelyanIntegrator {
     ///
     /// With force reuse at boundaries, the effective cost per step is
     /// 1 force computation + 5 kernel dispatches.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn step(
         &self,
         links_buf: &wgpu::Buffer,
@@ -114,13 +116,16 @@ impl OmelyanIntegrator {
         Ok(())
     }
 
-    /// Execute a multi-step trajectory (N steps of size dt = trajectory_length / n_steps).
-    ///
+    /// Execute a multi-step trajectory (N steps of size dt = `trajectory_length` / `n_steps`).
     /// This assumes the force is constant across all steps (quenched approximation
     /// or external force recomputation via callback).
-    ///
     /// For dynamical fermion HMC where force must be recomputed each step,
     /// use `step()` directly in a loop with force recomputation between steps.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn trajectory_quenched(
         &self,
         links_buf: &wgpu::Buffer,
@@ -139,11 +144,13 @@ impl OmelyanIntegrator {
     }
 
     /// Access the underlying leapfrog for momentum generation.
+    #[must_use]
     pub fn leapfrog(&self) -> &GpuHmcLeapfrog {
         &self.leapfrog
     }
 
     /// Current λ parameter.
+    #[must_use]
     pub fn lambda(&self) -> f64 {
         self.lambda
     }

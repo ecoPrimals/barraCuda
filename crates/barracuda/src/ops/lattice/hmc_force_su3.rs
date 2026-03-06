@@ -31,9 +31,9 @@
 //! Algorithm: hotSpring `lattice/hmc.rs` (v0.5.16, Feb 2026).
 //! GPU promotion: Feb 2026.  CPU reference unchanged in hotSpring.
 
+use crate::device::WgpuDevice;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use std::sync::Arc;
 
@@ -70,11 +70,13 @@ struct ForceParams {
 
 impl Su3HmcForce {
     /// Compile the HMC force pipeline for a `nt×nx×ny×nz` 4D lattice.
-    ///
     /// Automatically selects DF64 (f32-pair) shaders on consumer GPUs where
     /// FP64:FP32 ≤ 1:64, routing staple multiplications through the FP32 core
     /// array for ~10x throughput. On compute-class GPUs (Titan V, A100, MI250)
     /// with 1:2 hardware, native f64 is used directly.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(
         device: Arc<WgpuDevice>,
         nt: u32,
@@ -132,12 +134,14 @@ impl Su3HmcForce {
     }
 
     /// Compute su(3)-algebra force matrices for all links.
-    ///
     /// * `links_buf` — `[V × 4 × 18]` f64 (GPU-resident gauge configuration)
     /// * `force_buf` — `[V × 4 × 18]` f64 (output: algebra-valued force, zero-init)
     ///
     /// The output must be zeroed before calling (e.g. via `queue.write_buffer`
     /// or a separate clear kernel).
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn compute(&self, links_buf: &wgpu::Buffer, force_buf: &wgpu::Buffer) -> Result<()> {
         ComputeDispatch::new(self.device.as_ref(), "Su3HmcForce")
             .shader(&self.shader_src, "hmc_force")
@@ -146,16 +150,18 @@ impl Su3HmcForce {
             .storage_read(1, links_buf)
             .storage_rw(2, force_buf)
             .dispatch(self.volume.div_ceil(FORCE_WG), 1, 1)
-            .submit();
+            .submit()?;
         Ok(())
     }
 
     /// Number of lattice sites.
+    #[must_use]
     pub fn volume(&self) -> u32 {
         self.volume
     }
 
     /// Total link buffer size in f64 elements (`volume × 4 × 18`).
+    #[must_use]
     pub fn link_buffer_len(&self) -> u64 {
         self.volume as u64 * 4 * 18
     }
@@ -191,16 +197,12 @@ mod tests {
     }
 
     /// All-identity link configuration must produce zero force on every link.
-    ///
-    /// With U_mu(x) = I everywhere, every plaquette staple is also the identity.
+    /// With `U_mu(x)` = I everywhere, every plaquette staple is also the identity.
     /// The staple sum is 6I per link (6 planes contribute identically).
-    ///
-    /// Force = -β/3 · Im Tr(staple_sum · U_mu†) projected onto su(3) algebra.
-    ///
+    /// Force = -β/3 · Im `Tr(staple_sum` · `U_mu`†) projected onto su(3) algebra.
     /// Im Tr(6I · I†) = Im Tr(6I) = Im(6 · 3) = 0  →  force = 0 for every link.
-    ///
-    /// This validates the full shader path: staple loop, su3_adjoint,
-    /// su3_project_algebra, and the β/3 prefactor.
+    /// This validates the full shader path: staple loop, `su3_adjoint`,
+    /// `su3_project_algebra`, and the β/3 prefactor.
     #[test]
     fn test_su3_hmc_force_identity_links_gpu() {
         let Some(device) = crate::device::test_pool::get_test_device_if_f64_gpu_available_sync()

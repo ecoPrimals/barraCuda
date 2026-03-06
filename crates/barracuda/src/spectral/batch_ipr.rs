@@ -3,7 +3,7 @@
 //! Batch Inverse Participation Ratio (IPR) — GPU kernel.
 //!
 //! IPR measures eigenvector localization:
-//!   IPR = Σ |ψ_i|⁴
+//!   IPR = Σ |`ψ_i|⁴`
 //!
 //! - Extended states: IPR ~ 1/dim
 //! - Localized states: IPR >> 1/dim
@@ -14,8 +14,8 @@
 
 use std::sync::Arc;
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 
 /// WGSL shader source for batch Inverse Participation Ratio (f64 downcast to f32 when needed).
 pub static WGSL_BATCH_IPR: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
@@ -40,6 +40,7 @@ pub struct BatchIprGpu {
 
 impl BatchIprGpu {
     /// Creates a new batch IPR pipeline for the given device.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
         let d = device.device();
 

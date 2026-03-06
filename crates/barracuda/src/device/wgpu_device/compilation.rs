@@ -5,6 +5,7 @@ use super::WgpuDevice;
 
 impl WgpuDevice {
     /// Compile WGSL shader
+    #[must_use]
     pub fn compile_shader(&self, source: &str, label: Option<&str>) -> wgpu::ShaderModule {
         self.encoding_guard();
         let module = self
@@ -17,33 +18,35 @@ impl WgpuDevice {
         module
     }
 
-    /// Compile a pre-built SPIR-V binary into a shader module.
+    /// Compile a [`ValidatedSpirv`] binary into a shader module.
     ///
     /// Requires `SPIRV_SHADER_PASSTHROUGH` — check with `has_spirv_passthrough()`.
     ///
-    /// # Safety
+    /// Safety is encoded in the type system: [`ValidatedSpirv`] can only be
+    /// constructed from naga-validated IR via [`SovereignCompiler`], so the
+    /// `unsafe` wgpu API call is backed by a compile-time trust boundary.
     ///
-    /// The SPIR-V binary is passed to the driver as-is. The caller must
-    /// ensure the binary was produced by a trusted source (our own naga
-    /// backend) and has been validated by `naga::valid::Validator`.
+    /// [`ValidatedSpirv`]: crate::shaders::sovereign::ValidatedSpirv
+    /// [`SovereignCompiler`]: crate::shaders::sovereign::SovereignCompiler
+    #[must_use]
     pub fn compile_shader_spirv(
         &self,
-        spirv_words: &[u32],
+        validated: &crate::shaders::sovereign::ValidatedSpirv,
         label: Option<&str>,
     ) -> wgpu::ShaderModule {
-        // SAFETY: create_shader_module_passthrough passes binary directly to the driver.
-        // Invariants: SPIR-V is produced by SovereignCompiler (naga IR → spv::Writer)
-        // from Validator-approved modules. No external or untrusted input.
+        // SAFETY: SPIR-V was produced by SovereignCompiler (naga IR → spv::Writer)
+        // from Validator-approved modules. The ValidatedSpirv type guarantees no
+        // external or untrusted binary can reach this call site.
         self.encoding_guard();
         #[expect(
             unsafe_code,
-            reason = "SPIR-V passthrough bypasses wgpu shader validation"
+            reason = "wgpu API requires unsafe for SPIR-V passthrough; safety enforced by ValidatedSpirv type boundary"
         )]
         let module = unsafe {
             self.device
                 .create_shader_module_passthrough(wgpu::ShaderModuleDescriptorPassthrough {
                     label,
-                    spirv: Some(std::borrow::Cow::Borrowed(spirv_words)),
+                    spirv: Some(std::borrow::Cow::Borrowed(validated.words())),
                     ..Default::default()
                 })
         };
@@ -56,7 +59,7 @@ impl WgpuDevice {
     /// Pipeline:
     /// 1. `ShaderTemplate::for_driver_auto` — patches exp/log for drivers that lack native f64
     /// 2. `WgslOptimizer::optimize` — reorders `@ilp_region` blocks + unrolls `@unroll_hint` loops
-    ///    (Phase 3 SOVEREIGN_COMPUTE_EVOLUTION; only active when annotations are present)
+    ///    (Phase 3 `SOVEREIGN_COMPUTE_EVOLUTION`; only active when annotations are present)
     /// 3. `SovereignCompiler::compile` — Phase 4: naga IR optimization (FMA fusion, dead expr
     ///    elimination) + SPIR-V emission via `SPIRV_SHADER_PASSTHROUGH` (when available).
     ///
@@ -76,13 +79,20 @@ impl WgpuDevice {
             &profile,
         );
 
+        // coralReef: async native binary compilation for NVIDIA GPUs.
+        // Fires in the background — the cached binary will be available for
+        // future coralDriver dispatch. Current path continues via wgpu.
+        if let Some(coral_arch) = crate::device::coral_compiler::arch_to_coral(&profile.arch) {
+            crate::device::coral_compiler::spawn_coral_compile(&optimized, coral_arch, true);
+        }
+
         // Sovereign compiler — naga IR → FMA fusion → SPIR-V.
         // Bypasses NAK entirely when SPIRV_SHADER_PASSTHROUGH is available (NVK/Vulkan).
         if self.has_spirv_passthrough() {
             use crate::shaders::sovereign::{SovereignCompiler, SovereignOutput};
             let sovereign = SovereignCompiler::new(profile);
             match sovereign.compile(&optimized) {
-                Ok((SovereignOutput::Spirv(words), stats)) => {
+                Ok((SovereignOutput::Spirv(validated), stats)) => {
                     if stats.fma_fusions > 0 || stats.dead_exprs_eliminated > 0 {
                         tracing::debug!(
                             "sovereign: {} FMA fusions, {} dead exprs eliminated",
@@ -90,7 +100,7 @@ impl WgpuDevice {
                             stats.dead_exprs_eliminated,
                         );
                     }
-                    return self.compile_shader_spirv(&words, label);
+                    return self.compile_shader_spirv(&validated, label);
                 }
                 Err(e) => {
                     tracing::debug!("sovereign compiler fallback to WGSL: {e}");
@@ -139,11 +149,16 @@ impl WgpuDevice {
             combined
         };
 
+        // coralReef: async native binary compilation for NVIDIA GPUs.
+        if let Some(coral_arch) = crate::device::coral_compiler::arch_to_coral(&profile.arch) {
+            crate::device::coral_compiler::spawn_coral_compile(&optimized, coral_arch, false);
+        }
+
         if self.has_spirv_passthrough() {
             use crate::shaders::sovereign::{SovereignCompiler, SovereignOutput};
             let sovereign = SovereignCompiler::new(profile);
             match sovereign.compile(&optimized) {
-                Ok((SovereignOutput::Spirv(words), stats)) => {
+                Ok((SovereignOutput::Spirv(validated), stats)) => {
                     if stats.fma_fusions > 0 || stats.dead_exprs_eliminated > 0 {
                         tracing::debug!(
                             "sovereign df64: {} FMA fusions, {} dead exprs eliminated",
@@ -151,7 +166,7 @@ impl WgpuDevice {
                             stats.dead_exprs_eliminated,
                         );
                     }
-                    return self.compile_shader_spirv(&words, label);
+                    return self.compile_shader_spirv(&validated, label);
                 }
                 Err(e) => {
                     tracing::debug!("sovereign df64 fallback: {e}");
@@ -186,13 +201,14 @@ impl WgpuDevice {
     ///
     /// Shaders using `op_add`/`op_mul`/etc. work at all precisions without
     /// either layer — the operation preamble provides implementations directly.
+    #[must_use]
     pub fn compile_shader_universal(
         &self,
         source: &str,
         precision: crate::shaders::precision::Precision,
         label: Option<&str>,
     ) -> wgpu::ShaderModule {
-        use crate::shaders::precision::{downcast_f64_to_df64, downcast_f64_to_f32, Precision};
+        use crate::shaders::precision::{Precision, downcast_f64_to_df64, downcast_f64_to_f32};
         match precision {
             Precision::F32 => {
                 let f32_source = downcast_f64_to_f32(source);
@@ -234,6 +250,7 @@ impl WgpuDevice {
     /// 2. Routes through the appropriate compilation pipeline
     ///
     /// Shaders written this way work at ALL precisions without naga IR rewriting.
+    #[must_use]
     pub fn compile_op_shader(
         &self,
         source: &str,
@@ -254,6 +271,7 @@ impl WgpuDevice {
     ///
     /// Renders the template via [`ShaderTemplate::render`], then routes through
     /// the appropriate compilation pipeline for the target precision.
+    #[must_use]
     pub fn compile_template(
         &self,
         template: &crate::shaders::precision::ShaderTemplate,

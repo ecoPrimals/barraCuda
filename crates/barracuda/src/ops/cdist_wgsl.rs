@@ -43,6 +43,7 @@ pub struct Cdist {
 
 impl Cdist {
     /// Create a cdist op with two input tensors and distance metric.
+    #[must_use]
     pub fn new(input_a: Tensor, input_b: Tensor, metric: DistanceMetric) -> Self {
         Self {
             input_a,
@@ -55,11 +56,15 @@ impl Cdist {
     pub const WGSL_CDIST_F32: &str = include_str!("../shaders/misc/cdist.wgsl");
 
     /// f64 version for universal math library portability.
+    #[must_use]
     pub fn wgsl_shader_f64() -> &'static str {
         include_str!("../shaders/misc/cdist_f64.wgsl")
     }
 
     /// Execute pairwise distance computation on GPU.
+    /// # Errors
+    /// Returns [`Err`] if inputs are not 2D [M, D] and [N, D], dimension D differs between inputs,
+    /// buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input_a.device();
         let shape_a = self.input_a.shape();
@@ -104,7 +109,7 @@ impl Cdist {
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)
             .dispatch(workgroups_x.max(1), workgroups_y.max(1), 1)
-            .submit();
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,
@@ -116,6 +121,11 @@ impl Cdist {
 
 impl Tensor {
     /// Compute pairwise distances to another tensor; returns [M, N] distance matrix.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn cdist_wgsl(self, other: Tensor, metric: DistanceMetric) -> Result<Self> {
         Cdist::new(self, other, metric).execute()
     }
@@ -127,6 +137,11 @@ impl Tensor {
 /// * `x2` — `[n2 * d]` f64 flattened row-major
 ///
 /// Returns `[n1 * n2]` f64 distance matrix.
+///
+/// # Errors
+///
+/// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, buffer readback fails,
+/// or the device is lost.
 pub fn compute_distances_f64_gpu(
     device: &crate::device::WgpuDevice,
     x1: &[f64],
@@ -182,7 +197,7 @@ pub fn compute_distances_f64_gpu(
         .storage_rw(2, &out_buf)
         .uniform(3, &params_buf)
         .dispatch((n1 as u32).div_ceil(16), (n2 as u32).div_ceil(16), 1)
-        .submit();
+        .submit()?;
 
     let readback = d.create_buffer(&wgpu::BufferDescriptor {
         label: Some("cdist_f64:rb"),

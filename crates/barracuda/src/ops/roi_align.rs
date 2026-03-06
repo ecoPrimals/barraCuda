@@ -26,6 +26,9 @@ pub struct RoiAlign {
 
 impl RoiAlign {
     /// Create ROI align with pooled size and spatial scale.
+    /// # Errors
+    /// Returns [`Err`] if features is not 4D, rois is not [N, 4], or
+    /// `spatial_scale` is non-positive.
     pub fn new(
         features: Tensor,
         rois: Tensor,
@@ -79,6 +82,9 @@ impl RoiAlign {
     }
 
     /// Execute ROI align pooling.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.features.device();
         let features_shape = self.features.shape();

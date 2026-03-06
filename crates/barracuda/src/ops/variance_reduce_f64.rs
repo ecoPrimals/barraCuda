@@ -16,8 +16,8 @@
 //! - Numerically stable (Welford's algorithm)
 //! - Safe Rust wrapper (no unsafe code)
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -66,8 +66,10 @@ impl VarianceReduceF64 {
     }
 
     /// Compute sample variance: Var(X) = sum((x - mean)^2) / (n - 1)
-    ///
     /// Uses Bessel's correction (n-1 denominator) for unbiased estimation.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or readback fails
+    /// (e.g. device lost, out of memory, buffer mapping channel closed).
     pub fn variance(device: Arc<WgpuDevice>, data: &[f64]) -> Result<f64> {
         let state = Self::compute_welford_state(device, data)?;
         if state.count < 2.0 {
@@ -77,6 +79,9 @@ impl VarianceReduceF64 {
     }
 
     /// Compute population variance: Var(X) = sum((x - mean)^2) / n
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or readback fails
+    /// (e.g. device lost, out of memory, buffer mapping channel closed).
     pub fn population_variance(device: Arc<WgpuDevice>, data: &[f64]) -> Result<f64> {
         let state = Self::compute_welford_state(device, data)?;
         if state.count < 1.0 {
@@ -86,24 +91,36 @@ impl VarianceReduceF64 {
     }
 
     /// Compute sample standard deviation: sqrt(variance)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or readback fails
+    /// (e.g. device lost, out of memory, buffer mapping channel closed).
     pub fn std(device: Arc<WgpuDevice>, data: &[f64]) -> Result<f64> {
         let var = Self::variance(device, data)?;
         Ok(var.sqrt())
     }
 
     /// Compute population standard deviation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or readback fails
+    /// (e.g. device lost, out of memory, buffer mapping channel closed).
     pub fn population_std(device: Arc<WgpuDevice>, data: &[f64]) -> Result<f64> {
         let var = Self::population_variance(device, data)?;
         Ok(var.sqrt())
     }
 
     /// Compute mean using Welford state (bonus: numerically stable)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or readback fails
+    /// (e.g. device lost, out of memory, buffer mapping channel closed).
     pub fn mean(device: Arc<WgpuDevice>, data: &[f64]) -> Result<f64> {
         let state = Self::compute_welford_state(device, data)?;
         Ok(state.mean)
     }
 
     /// Compute both mean and variance in one pass
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or readback fails
+    /// (e.g. device lost, out of memory, buffer mapping channel closed).
     pub fn mean_and_variance(device: Arc<WgpuDevice>, data: &[f64]) -> Result<(f64, f64)> {
         let state = Self::compute_welford_state(device, data)?;
         let var = if state.count < 2.0 {
@@ -115,6 +132,9 @@ impl VarianceReduceF64 {
     }
 
     /// Compute all statistics: (count, mean, variance, std)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or readback fails
+    /// (e.g. device lost, out of memory, buffer mapping channel closed).
     pub fn statistics(device: Arc<WgpuDevice>, data: &[f64]) -> Result<(usize, f64, f64, f64)> {
         let state = Self::compute_welford_state(device, data)?;
         let var = if state.count < 2.0 {
@@ -178,7 +198,7 @@ impl VarianceReduceF64 {
             .storage_rw(1, &partial_buffer)
             .uniform(2, &params_buffer)
             .dispatch(n_workgroups as u32, 1, 1)
-            .submit();
+            .submit()?;
 
         // Read back partial states and merge on CPU
         let partials = device.read_f64_buffer(&partial_buffer, n_workgroups * 3)?;
@@ -219,9 +239,7 @@ mod tests {
         let expected = 4.571428571428571;
         assert!(
             (var - expected).abs() < 1e-6,
-            "Variance should be ~{}, got {}",
-            expected,
-            var
+            "Variance should be ~{expected}, got {var}"
         );
     }
 
@@ -237,9 +255,7 @@ mod tests {
         let expected = 4.571428571428571_f64.sqrt();
         assert!(
             (std - expected).abs() < 1e-6,
-            "Std should be ~{}, got {}",
-            expected,
-            std
+            "Std should be ~{expected}, got {std}"
         );
     }
 
@@ -252,7 +268,7 @@ mod tests {
 
         let data: Vec<f64> = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let mean = VarianceReduceF64::mean(device, &data).unwrap();
-        assert!((mean - 3.0).abs() < 1e-6, "Mean should be 3, got {}", mean);
+        assert!((mean - 3.0).abs() < 1e-6, "Mean should be 3, got {mean}");
     }
 
     #[tokio::test]
@@ -273,8 +289,7 @@ mod tests {
         let actual_ratio = pop_var / sample_var;
         assert!(
             (actual_ratio - expected_ratio).abs() < 1e-6,
-            "Variance ratio should be (n-1)/n, got {}",
-            actual_ratio
+            "Variance ratio should be (n-1)/n, got {actual_ratio}"
         );
     }
 

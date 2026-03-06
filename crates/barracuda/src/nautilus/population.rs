@@ -27,6 +27,7 @@ pub struct Population {
 
 impl Population {
     /// Create a new random population.
+    #[must_use]
     pub fn new(config: &BoardConfig, size: usize, seed: u64) -> Self {
         let boards: Vec<Board> = (0..size)
             .map(|i| Board::from_seed(config.clone(), seed.wrapping_add(i as u64)))
@@ -38,7 +39,8 @@ impl Population {
         }
     }
 
-    /// Concatenated responses from all boards (pop_size × L²).
+    /// Concatenated responses from all boards (`pop_size` × L²).
+    #[must_use]
     pub fn respond_all(&self, input: &ReservoirInput) -> Vec<f64> {
         let mut out = Vec::new();
         for board in &self.boards {
@@ -51,7 +53,7 @@ impl Population {
     /// Evaluate fitness: Pearson correlation between each board's response pattern and targets.
     pub fn evaluate_fitness(&mut self, inputs: &[ReservoirInput], targets: &[Vec<f64>]) {
         let l2 = self.boards[0].config.grid_size * self.boards[0].config.grid_size;
-        let n_out = targets.first().map(|t| t.len()).unwrap_or(0);
+        let n_out = targets.first().map_or(0, std::vec::Vec::len);
         self.fitness.clear();
 
         for (idx, board) in self.boards.iter().enumerate() {

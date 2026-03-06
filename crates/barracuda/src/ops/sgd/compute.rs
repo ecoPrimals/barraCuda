@@ -4,17 +4,18 @@
 //! This module contains the GPU execution for SGD optimizer
 //! with optional momentum and weight decay.
 
-use super::{SGDParams, SGD};
+use super::{SGD, SGDParams};
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
 impl SGD {
     /// Execute SGD optimizer step (GPU execution)
-    ///
     /// **Deep Debt**: Efficient GPU update with optional momentum and weight decay
-    ///
-    /// Returns: (updated_weights, updated_velocity)
+    /// Returns: (`updated_weights`, `updated_velocity`)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<(Tensor, Option<Tensor>)> {
         let device = self.weights().device();
         let size = self.weights().shape().iter().product::<usize>();
@@ -216,14 +217,14 @@ impl SGD {
             device.clone(),
         );
 
-        let updated_velocity = if self.momentum() != 0.0 {
+        let updated_velocity = if self.momentum() == 0.0 {
+            None
+        } else {
             Some(Tensor::from_buffer(
                 velocity_out_buffer,
                 self.weights().shape().to_vec(),
                 device.clone(),
             ))
-        } else {
-            None
         };
 
         Ok((updated_weights, updated_velocity))

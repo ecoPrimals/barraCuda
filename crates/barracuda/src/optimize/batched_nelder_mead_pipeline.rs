@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Pipeline and BGL helpers for batched Nelder-Mead GPU.
 
+use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::uniform_bgl_entry;
-use crate::device::WgpuDevice;
 use bytemuck::{Pod, Zeroable};
 
 #[repr(C)]
@@ -350,7 +350,7 @@ pub fn apply_nm_step(
             f_vals[base + worst_idx_p] = f_r;
         } else {
             need_contract[p] = true;
-            inside_contract[p] = if f_r < f_worst { 0 } else { 1 };
+            inside_contract[p] = u32::from(f_r >= f_worst);
         }
     }
 }

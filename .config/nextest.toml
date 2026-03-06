@@ -1,0 +1,75 @@
+# barraCuda nextest configuration
+#
+# GPU optimization strategies applied to test dispatch:
+#
+# Under nextest, each test runs in its own process.  Each process creates
+# its own WgpuDevice — the in-process test_pool cache is per-process.
+# On a 128-core machine this means up to 128 simultaneous device creation
+# requests, which oversubscribes the GPU driver ("parent device is lost").
+#
+# The same principle as GPU workgroup sizing applies: match dispatch
+# volume to hardware capacity.  A single GPU can sustain ~16 concurrent
+# device handles before drivers degrade.  test_pool now retries with
+# exponential backoff on transient driver errors, but we also size the
+# thread count to avoid the storm in the first place.
+#
+# CONCURRENCY TIERS (mirrors dispatch semaphore budgets):
+#   default  = 16  — sustainable for any single-GPU system
+#   ci       = 16  — same, deterministic across CI runners
+#   gpu      = 8   — matches DGPU concurrency budget exactly
+#   quick    = 32  — math-only tests can go wider (CPU-validated)
+#   stress   = 128 — intentional oversubscription test (validates backoff)
+
+[store]
+dir = "target/nextest"
+
+# ─── Default profile ───────────────────────────────────────────────
+# Balanced: enough parallelism to be fast, bounded to prevent driver
+# oversubscription.  16 matches the sweet spot where device creation
+# retries rarely trigger.
+[profile.default]
+test-threads = 16
+fail-fast = true
+slow-timeout = { period = "60s", terminate-after = 3 }
+status-level = "fail"
+final-status-level = "flaky"
+
+# ─── CI profile: deterministic, verbose ────────────────────────────
+[profile.ci]
+test-threads = 16
+fail-fast = false
+slow-timeout = { period = "120s", terminate-after = 2 }
+status-level = "all"
+final-status-level = "all"
+
+# ─── GPU profile: matches discrete GPU concurrency budget ──────────
+# 8 permits = the dispatch semaphore budget for discrete GPUs.
+# Each process gets its own device, so 8 simultaneous devices is the
+# hardware-matched limit.
+[profile.gpu]
+test-threads = 8
+fail-fast = true
+slow-timeout = { period = "120s", terminate-after = 2 }
+status-level = "fail"
+final-status-level = "all"
+
+# ─── Quick profile: wide parallelism for CPU-validated math tests ──
+# These tests use llvmpipe (software renderer), which doesn't have the
+# driver oversubscription problem.  Go wide.
+[profile.quick]
+test-threads = 32
+fail-fast = true
+slow-timeout = { period = "30s", terminate-after = 2 }
+status-level = "fail"
+final-status-level = "fail"
+
+# ─── Stress profile: intentional oversubscription ──────────────────
+# Tests the device creation backoff/retry under driver saturation.
+# Failures here validate that the retry strategy needs tuning, not
+# that the code is broken.
+[profile.stress]
+test-threads = 128
+fail-fast = false
+slow-timeout = { period = "180s", terminate-after = 2 }
+status-level = "all"
+final-status-level = "all"

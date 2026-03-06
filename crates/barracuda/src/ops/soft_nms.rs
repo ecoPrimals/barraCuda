@@ -5,7 +5,7 @@
 //! Better performance than hard NMS.
 //!
 //! Deep Debt Principles:
-//! - Hybrid GPU/CPU execution (IoU on GPU, sorting/iteration on CPU)
+//! - Hybrid GPU/CPU execution (`IoU` on GPU, sorting/iteration on CPU)
 //! - Safe Rust wrappers
 //! - Hardware-agnostic via WebGPU
 //! - Runtime device discovery
@@ -21,7 +21,7 @@ pub static WGSL_SOFT_NMS: std::sync::LazyLock<String> = std::sync::LazyLock::new
     ))
 });
 
-/// SoftNMS operation
+/// `SoftNMS` operation
 pub struct SoftNMS {
     boxes: Tensor,  // [N, 4] (x1, y1, x2, y2)
     scores: Tensor, // [N]
@@ -31,6 +31,8 @@ pub struct SoftNMS {
 
 impl SoftNMS {
     /// Create a new soft NMS operation
+    /// # Errors
+    /// Returns [`Err`] if boxes are not [N, 4], scores length does not match boxes, or `IoU` threshold is not in [0, 1].
     pub fn new(boxes: Tensor, scores: Tensor, iou_threshold: f32, sigma: f32) -> Result<Self> {
         let boxes_shape = boxes.shape();
         let scores_shape = scores.shape();
@@ -65,10 +67,11 @@ impl SoftNMS {
     }
 
     /// Execute the soft NMS operation
-    ///
-    /// Note: This uses a hybrid approach - IoU computation could be done on GPU,
+    /// Note: This uses a hybrid approach - `IoU` computation could be done on GPU,
     /// but sorting and iterative score decay are done on CPU for simplicity.
     /// The operation returns indices of kept boxes.
+    /// # Errors
+    /// Returns [`Err`] if tensor readback fails (e.g. device lost).
     pub fn execute(self) -> Result<Vec<usize>> {
         // Read boxes and scores from GPU
         let boxes_data = self.boxes.to_vec()?;
@@ -138,15 +141,15 @@ impl SoftNMS {
 }
 
 impl Tensor {
-    /// Apply soft non-maximum suppression
-    ///
+    /// Apply soft non-maximum suppression.
     /// # Arguments
-    ///
     /// * `scores` - Score tensor [N]
-    /// * `iou_threshold` - IoU threshold for suppression
+    /// * `iou_threshold` - `IoU` threshold for suppression
     /// * `sigma` - Gaussian decay parameter
     ///
-    /// Returns indices of kept boxes
+    /// Returns indices of kept boxes.
+    /// # Errors
+    /// Returns [`Err`] if validation fails or tensor readback fails (e.g. device lost).
     pub fn soft_nms(self, scores: Tensor, iou_threshold: f32, sigma: f32) -> Result<Vec<usize>> {
         SoftNMS::new(self, scores, iou_threshold, sigma)?.execute()
     }

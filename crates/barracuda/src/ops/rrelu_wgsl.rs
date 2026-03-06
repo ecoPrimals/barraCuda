@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! RReLU — Randomized Leaky ReLU, GPU-resident, pipeline-cached, batchable
+//! `RReLU` — Randomized Leaky `ReLU`, GPU-resident, pipeline-cached, batchable
 //!
-//! f64 canonical — f32 derived via downcast_f64_to_f32 when needed.
+//! f64 canonical — f32 derived via `downcast_f64_to_f32` when needed.
 //!
 //! `rrelu(x) = x if x ≥ 0 else a·x` where `a ~ Uniform(lower, upper)` (per-element, seeded)
 //!
 //! Deep Debt Principles:
 //! - Eliminated CPU readback — output stays GPU-resident via buffer pool
-//! - Pipeline cached: GLOBAL_CACHE eliminates recompilation overhead
-//! - Batchable: routes through TensorContext::record_operation()
+//! - Pipeline cached: `GLOBAL_CACHE` eliminates recompilation overhead
+//! - Batchable: routes through `TensorContext::record_operation()`
 
 /// f64 is the canonical source.
 const SHADER_F64: &str = include_str!("../shaders/activation/rrelu_f64.wgsl");
@@ -32,7 +32,7 @@ struct Params {
     seed: u32,
 }
 
-/// Randomized Leaky ReLU.
+/// Randomized Leaky `ReLU`.
 pub struct RReLU {
     input: Tensor,
     lower: f32,
@@ -41,7 +41,8 @@ pub struct RReLU {
 }
 
 impl RReLU {
-    /// Create a Randomized Leaky ReLU operation with the given slope bounds and seed.
+    /// Create a Randomized Leaky `ReLU` operation with the given slope bounds and seed.
+    #[must_use]
     pub fn new(input: Tensor, lower: f32, upper: f32, seed: u32) -> Self {
         Self {
             input,
@@ -55,7 +56,10 @@ impl RReLU {
         &SHADER_F32
     }
 
-    /// Execute the RReLU activation and return the result tensor.
+    /// Execute the `RReLU` activation and return the result tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -137,10 +141,12 @@ impl RReLU {
 }
 
 impl Tensor {
-    /// Apply Randomized Leaky ReLU (GPU-resident, pipeline-cached, batchable).
-    ///
+    /// Apply Randomized Leaky `ReLU` (GPU-resident, pipeline-cached, batchable).
     /// `lower`/`upper` bound the uniform slope for negative values.
     /// Same `seed` always produces the same result — useful for evaluation mode.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn rrelu_wgsl(self, lower: f32, upper: f32, seed: u32) -> Result<Self> {
         RReLU::new(self, lower, upper, seed).execute()
     }

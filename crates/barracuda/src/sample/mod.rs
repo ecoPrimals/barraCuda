@@ -71,9 +71,9 @@ pub static WGSL_METROPOLIS: std::sync::LazyLock<String> = std::sync::LazyLock::n
 });
 
 #[cfg(feature = "gpu")]
-pub use direct::{direct_sampler, DirectSamplerConfig, DirectSamplerResult};
+pub use direct::{DirectSamplerConfig, DirectSamplerResult, direct_sampler};
 pub use lhs::{latin_hypercube, random_uniform};
-pub use metropolis::{boltzmann_sampling, BoltzmannResult};
-pub use sobol::{sobol_scaled, sobol_sequence, SobolGenerator};
+pub use metropolis::{BoltzmannResult, boltzmann_sampling};
+pub use sobol::{SobolGenerator, sobol_scaled, sobol_sequence};
 #[cfg(feature = "gpu")]
 pub use sparsity::{PenaltyFilter, SparsitySamplerConfig};

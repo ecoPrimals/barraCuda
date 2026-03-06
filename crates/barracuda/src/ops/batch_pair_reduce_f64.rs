@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! BatchPairReduceF64 — O(N²) pairwise batch reduction (f64)
+//! `BatchPairReduceF64` — O(N²) pairwise batch reduction (f64)
 //!
 //! Supported operations:
 //! - `DotProduct`    — Σ A[i,d]·B[j,d]
@@ -7,7 +7,7 @@
 //! - `L1Distance`    — Σ |A[i,d]-B[j,d]|
 //! - `LogSumExpDiff` — Σ log(A[i,d]/B[j,d])  (DADA2 E-step)
 //!
-//! WetSpring use cases: DADA2 error model, BrayCurtis distance matrices,
+//! `WetSpring` use cases: DADA2 error model, `BrayCurtis` distance matrices,
 //! spectral pairwise matching.
 
 use crate::device::WgpuDevice;
@@ -62,6 +62,7 @@ impl BatchPairReduceF64 {
     }
 
     /// Create a new pairwise reducer with the specified operation.
+    #[must_use]
     pub fn new(device: Arc<WgpuDevice>, op: PairReduceOp) -> Self {
         Self { device, op }
     }
@@ -78,6 +79,11 @@ impl BatchPairReduceF64 {
     ///
     /// # Returns
     /// Flat `[B × N × M]` f64 Vec.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn compute(
         &self,
         n_batches: u32,

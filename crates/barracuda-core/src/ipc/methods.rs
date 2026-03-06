@@ -4,7 +4,7 @@
 //! Each handler follows the semantic naming standard from wateringHole:
 //! `barracuda.{domain}.{operation}`.
 
-use super::jsonrpc::{JsonRpcResponse, INTERNAL_ERROR, INVALID_PARAMS, METHOD_NOT_FOUND};
+use super::jsonrpc::{INTERNAL_ERROR, INVALID_PARAMS, JsonRpcResponse, METHOD_NOT_FOUND};
 use crate::BarraCudaPrimal;
 use serde_json::Value;
 
@@ -61,6 +61,14 @@ fn primal_capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
     JsonRpcResponse::success(
         id,
         serde_json::json!({
+            "provides": [
+                { "id": "gpu.compute", "version": "0.3.0" },
+                { "id": "tensor.ops", "version": "0.3.0" },
+                { "id": "gpu.dispatch", "version": "0.3.0" },
+            ],
+            "requires": [
+                { "id": "shader.compile", "version": ">=0.1.0", "optional": true },
+            ],
             "domains": [
                 "gpu_compute",
                 "tensor_ops",
@@ -145,7 +153,7 @@ async fn health_check(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
             serde_json::json!({
                 "name": report.name,
                 "version": report.version,
-                "status": format!("{}", report.status),
+                "status": report.status.to_string(),
             }),
         ),
         Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, e.to_string()),
@@ -467,7 +475,7 @@ async fn fhe_ntt(primal: &BarraCudaPrimal, params: &Value, id: Value) -> JsonRpc
                 id,
                 INTERNAL_ERROR,
                 format!("Tensor creation failed: {e}"),
-            )
+            );
         }
     };
 
@@ -479,7 +487,7 @@ async fn fhe_ntt(primal: &BarraCudaPrimal, params: &Value, id: Value) -> JsonRpc
     ) {
         Ok(n) => n,
         Err(e) => {
-            return JsonRpcResponse::error(id, INTERNAL_ERROR, format!("NTT setup failed: {e}"))
+            return JsonRpcResponse::error(id, INTERNAL_ERROR, format!("NTT setup failed: {e}"));
         }
     };
 
@@ -562,7 +570,7 @@ async fn fhe_pointwise_mul(primal: &BarraCudaPrimal, params: &Value, id: Value) 
                 id,
                 INTERNAL_ERROR,
                 format!("Tensor creation failed: {e}"),
-            )
+            );
         }
     };
 
@@ -578,7 +586,7 @@ async fn fhe_pointwise_mul(primal: &BarraCudaPrimal, params: &Value, id: Value) 
                 id,
                 INTERNAL_ERROR,
                 format!("Pointwise mul setup failed: {e}"),
-            )
+            );
         }
     };
 

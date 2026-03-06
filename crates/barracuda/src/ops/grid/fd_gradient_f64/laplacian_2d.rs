@@ -20,6 +20,11 @@ pub struct Laplacian2D {
 
 impl Laplacian2D {
     /// Create a new 2D Laplacian operator
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>, nx: usize, ny: usize, dx: f64, dy: f64) -> Result<Self> {
         let (pipeline, bind_group_layout) = FdPipelineBuilder::new(device.device(), "laplacian_2d")
             .with_uniform(0)
@@ -42,11 +47,17 @@ impl Laplacian2D {
     }
 
     /// Grid dimensions
+    #[must_use]
     pub fn shape(&self) -> (usize, usize) {
         (self.nx, self.ny)
     }
 
     /// Compute 2D Laplacian: ∇²f = ∂²f/∂x² + ∂²f/∂y²
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub async fn compute(&self, input: &[f64]) -> Result<Vec<f64>> {
         let total = self.nx * self.ny;
         if input.len() != total {
@@ -101,12 +112,7 @@ impl Laplacian2D {
 
         let buffer_size = (total * std::mem::size_of::<f64>()) as u64;
 
-        let dummy_buffer = self.device.device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some("lap2d_dummy"),
-            size: 8,
-            usage: wgpu::BufferUsages::STORAGE,
-            mapped_at_creation: false,
-        });
+        let placeholder = self.device.placeholder_buffer();
 
         let laplacian_buffer = self.device.device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("lap2d_output"),
@@ -132,15 +138,15 @@ impl Laplacian2D {
                     },
                     wgpu::BindGroupEntry {
                         binding: 2,
-                        resource: dummy_buffer.as_entire_binding(),
+                        resource: placeholder.as_entire_binding(),
                     },
                     wgpu::BindGroupEntry {
                         binding: 3,
-                        resource: dummy_buffer.as_entire_binding(),
+                        resource: placeholder.as_entire_binding(),
                     },
                     wgpu::BindGroupEntry {
                         binding: 4,
-                        resource: dummy_buffer.as_entire_binding(),
+                        resource: placeholder.as_entire_binding(),
                     },
                     wgpu::BindGroupEntry {
                         binding: 5,

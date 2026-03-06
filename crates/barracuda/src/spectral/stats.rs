@@ -35,7 +35,7 @@ pub fn spectral_bandwidth(eigenvalues: &[f64]) -> f64 {
     max - min
 }
 
-/// Condition number = max(|eigenvalues|) / min(|eigenvalues|). Returns f64::INFINITY if min is zero.
+/// Condition number = max(|eigenvalues|) / min(|eigenvalues|). Returns `f64::INFINITY` if min is zero.
 #[must_use]
 pub fn spectral_condition_number(eigenvalues: &[f64]) -> f64 {
     if eigenvalues.is_empty() {
@@ -106,8 +106,8 @@ impl SpectralAnalysis {
 
 /// Compute the mean level spacing ratio ⟨r⟩ from sorted eigenvalues.
 ///
-/// r_i = min(s_i, s_{i+1}) / max(s_i, s_{i+1})
-/// where s_i = λ_{i+1} − λ_i.
+/// `r_i` = `min(s_i`, s_{i+1}) / `max(s_i`, s_{i+1})
+/// where `s_i` = λ_{i+1} − `λ_i`.
 ///
 /// Known values:
 /// - Poisson (localized): ⟨r⟩ = 2 ln 2 − 1 ≈ 0.3863
@@ -116,6 +116,7 @@ impl SpectralAnalysis {
 /// # Provenance
 /// Oganesyan & Huse (2007), Phys. Rev. B 75, 155111
 /// Atas et al. (2013), Phys. Rev. Lett. 110, 084101
+#[must_use]
 pub fn level_spacing_ratio(eigenvalues: &[f64]) -> f64 {
     let n = eigenvalues.len();
     if n < 3 {
@@ -135,11 +136,7 @@ pub fn level_spacing_ratio(eigenvalues: &[f64]) -> f64 {
         }
     }
 
-    if count > 0 {
-        sum / count as f64
-    } else {
-        0.0
-    }
+    if count > 0 { sum / count as f64 } else { 0.0 }
 }
 
 /// Poisson level spacing ratio (localized states).
@@ -152,7 +149,7 @@ pub const GOE_R: f64 = 0.5307;
 ///
 /// Groups eigenvalues into bands separated by gaps. A "gap" is defined as a
 /// spacing exceeding `gap_factor` times the median spacing. Returns a vector
-/// of (band_min, band_max) pairs.
+/// of (`band_min`, `band_max`) pairs.
 pub fn detect_bands(eigenvalues: &[f64], gap_factor: f64) -> Vec<(f64, f64)> {
     if eigenvalues.len() < 2 {
         if eigenvalues.len() == 1 {

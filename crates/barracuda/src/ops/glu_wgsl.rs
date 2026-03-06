@@ -35,6 +35,7 @@ pub struct GLU {
 
 impl GLU {
     /// Create a GLU operation. Input size must be even.
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -44,6 +45,11 @@ impl GLU {
     }
 
     /// Execute GLU on GPU. Output is half the input size.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size = self.input.len();
@@ -181,7 +187,12 @@ impl GLU {
 }
 
 impl Tensor {
-    /// Apply Gated Linear Unit. Splits input in half; output = first_half ⊙ sigmoid(second_half).
+    /// Apply Gated Linear Unit. Splits input in half; output = `first_half` ⊙ `sigmoid(second_half)`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn glu_wgsl(self) -> Result<Self> {
         GLU::new(self).execute()
     }

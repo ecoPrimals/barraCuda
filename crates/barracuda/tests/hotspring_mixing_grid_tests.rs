@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! hotSpring Evolution: Mixing and Grid unit tests.
 //!
-//! LinearMixer, BroydenMixer, Gradient1D, Gradient2D, Laplacian2D, Cylindrical.
+//! `LinearMixer`, `BroydenMixer`, `Gradient1D`, `Gradient2D`, `Laplacian2D`, Cylindrical.
 
 #![expect(clippy::unwrap_used, reason = "tests")]
 mod common;
@@ -29,9 +29,7 @@ mod mixing_unit {
             for (i, val) in result.iter().enumerate() {
                 assert!(
                     (val - 1.0).abs() < 1e-10,
-                    "At index {}: expected 1.0, got {}",
-                    i,
-                    val
+                    "At index {i}: expected 1.0, got {val}"
                 );
             }
         }) {
@@ -54,9 +52,7 @@ mod mixing_unit {
             for (i, val) in result.iter().enumerate() {
                 assert!(
                     (val - 13.0).abs() < 1e-10,
-                    "At index {}: expected 13.0, got {}",
-                    i,
-                    val
+                    "At index {i}: expected 13.0, got {val}"
                 );
             }
         }) {
@@ -79,9 +75,7 @@ mod mixing_unit {
             for (i, val) in result.iter().enumerate() {
                 assert!(
                     (val - 5.0).abs() < 1e-10,
-                    "At index {}: expected 5.0, got {}",
-                    i,
-                    val
+                    "At index {i}: expected 5.0, got {val}"
                 );
             }
         }) {
@@ -104,9 +98,7 @@ mod mixing_unit {
             for (i, val) in result.iter().enumerate() {
                 assert!(
                     (val - std::f64::consts::PI).abs() < 1e-10,
-                    "At index {}: expected PI, got {}",
-                    i,
-                    val
+                    "At index {i}: expected PI, got {val}"
                 );
             }
         }) {
@@ -131,10 +123,7 @@ mod mixing_unit {
                 let expected = 1.4 * i as f64;
                 assert!(
                     (val - expected).abs() < 1e-9,
-                    "At index {}: expected {}, got {}",
-                    i,
-                    expected,
-                    val
+                    "At index {i}: expected {expected}, got {val}"
                 );
             }
         }) {

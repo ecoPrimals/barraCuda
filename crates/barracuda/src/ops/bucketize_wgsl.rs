@@ -28,6 +28,7 @@ pub struct Bucketize {
 
 impl Bucketize {
     /// Create a bucketize operation. Boundaries must be sorted.
+    #[must_use]
     pub fn new(input: Tensor, boundaries: Vec<f32>) -> Self {
         Self { input, boundaries }
     }
@@ -42,6 +43,11 @@ impl Bucketize {
     }
 
     /// Execute bucketize on GPU. Returns bucket indices as f32.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_size = self.input.len();
@@ -187,6 +193,11 @@ impl Bucketize {
 
 impl Tensor {
     /// Map values to bucket indices based on boundaries.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn bucketize_wgsl(self, boundaries: Vec<f32>) -> Result<Self> {
         Bucketize::new(self, boundaries).execute()
     }

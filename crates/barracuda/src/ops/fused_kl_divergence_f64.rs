@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Fused KL Divergence (f64) — neuralSpring V24
 //!
-//! D_KL(P||Q) = Σ p_i * log(p_i / q_i) computed entirely on GPU.
+//! `D_KL(P||Q)` = Σ `p_i` * `log(p_i` / `q_i`) computed entirely on GPU.
 
 use std::sync::Arc;
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 
@@ -27,9 +27,14 @@ struct GpuParams {
 pub struct FusedKlDivergenceGpu;
 
 impl FusedKlDivergenceGpu {
-    /// Execute KL divergence D_KL(P||Q) on GPU.
+    /// Execute KL divergence `D_KL(P||Q)` on GPU.
     ///
     /// Handles numerical stability: clamps to epsilon to avoid log(0).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(device: Arc<WgpuDevice>, p: &[f64], q: &[f64]) -> Result<f64> {
         if p.len() != q.len() {
             return Err(BarracudaError::InvalidInput {
@@ -66,7 +71,7 @@ impl FusedKlDivergenceGpu {
             .storage_rw(2, &partial_buf)
             .uniform(3, &params_buf)
             .dispatch(n_workgroups, 1, 1)
-            .submit();
+            .submit()?;
 
         let partials = device.read_f64_buffer(&partial_buf, n_workgroups as usize)?;
         Ok(partials.iter().sum::<f64>())
@@ -88,7 +93,7 @@ mod tests {
         let q = vec![0.25, 0.25, 0.25, 0.25];
 
         let kl = FusedKlDivergenceGpu::execute(device, &p, &q).unwrap();
-        assert!((kl - 0.0).abs() < 1e-10, "KL(P||P) should be 0, got {}", kl);
+        assert!((kl - 0.0).abs() < 1e-10, "KL(P||P) should be 0, got {kl}");
     }
 
     #[tokio::test]

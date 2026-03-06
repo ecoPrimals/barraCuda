@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Lt operation - Less than comparison  
+//! Lt operation - Less than comparison\
 //! Pure WGSL implementation
 
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-/// f64 is the canonical source — f32 derived via downcast_f64_to_f32 when needed.
+/// f64 is the canonical source — f32 derived via `downcast_f64_to_f32` when needed.
 const SHADER_F64: &str = include_str!("../shaders/misc/lt_f64.wgsl");
 
 static SHADER_F32: std::sync::LazyLock<String> =
@@ -20,6 +20,7 @@ pub struct Lt {
 
 impl Lt {
     /// Create a less-than comparison operation.
+    #[must_use]
     pub fn new(lhs: Tensor, rhs: Tensor) -> Self {
         Self { lhs, rhs }
     }
@@ -28,6 +29,11 @@ impl Lt {
     }
 
     /// Execute element-wise less-than comparison.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.lhs.device();
         let size = self.lhs.len();
@@ -140,6 +146,11 @@ impl Lt {
 
 impl Tensor {
     /// Element-wise less-than comparison. Returns 1.0 where true, 0.0 where false.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn lt(self, other: &Self) -> Result<Self> {
         Lt::new(self, other.clone()).execute()
     }

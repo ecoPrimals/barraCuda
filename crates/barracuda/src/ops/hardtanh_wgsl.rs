@@ -3,9 +3,9 @@
 //!
 //! Deep Debt Principles:
 //! - Zero hardcoding: Capability-based workgroup dispatch
-//! - Batchable: routes through TensorContext::record_operation()
+//! - Batchable: routes through `TensorContext::record_operation()`
 //! - Zero-copy output: buffer pool, no GPU→CPU→GPU round-trip
-//! - Pipeline cached: GLOBAL_CACHE eliminates recompilation overhead
+//! - Pipeline cached: `GLOBAL_CACHE` eliminates recompilation overhead
 
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
@@ -35,6 +35,7 @@ pub struct Hardtanh {
 
 impl Hardtanh {
     /// Creates a Hardtanh operation for the given input tensor.
+    #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
     }
@@ -48,6 +49,11 @@ impl Hardtanh {
     /// - Output stays GPU-resident (no readback).
     /// - Pipeline compiled once, cached globally.
     /// - Dispatch batched when inside `TensorSession`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let size: usize = self.input.shape().iter().product();
@@ -130,6 +136,11 @@ impl Hardtanh {
 
 impl Tensor {
     /// Compute Hardtanh element-wise (GPU-resident, pipeline-cached, batchable).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn hardtanh_wgsl(self) -> Result<Self> {
         Hardtanh::new(self).execute()
     }

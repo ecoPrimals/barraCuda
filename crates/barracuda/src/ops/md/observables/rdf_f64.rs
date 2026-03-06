@@ -9,8 +9,8 @@
 //! - Phase identification (solid/liquid/gas)
 //! - Validation against experiment/theory
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -36,6 +36,8 @@ pub struct RdfHistogramF64 {
 
 impl RdfHistogramF64 {
     /// Creates a new RDF histogram calculator for the given WGPU device.
+    /// # Errors
+    /// Returns [`Err`] if device initialization fails.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
@@ -44,11 +46,12 @@ impl RdfHistogramF64 {
     pub const WGSL_RDF_HISTOGRAM_F32: &str = include_str!("rdf_histogram.wgsl");
 
     /// Compute RDF histogram on GPU.
-    ///
     /// * `positions` — `[N*3]` f64 particle positions
     /// * `n_bins`    — number of histogram bins
     /// * `r_max`     — maximum radius
     /// * `box_size`  — `[Lx, Ly, Lz]` (PBC)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer readback fails (e.g. device lost).
     pub fn histogram(
         &self,
         positions: &[f64],
@@ -96,7 +99,7 @@ impl RdfHistogramF64 {
             .storage_rw(1, &hist_buf)
             .uniform(2, &params_buf)
             .dispatch(wg_count, 1, 1)
-            .submit();
+            .submit()?;
 
         let readback = d.create_buffer(&wgpu::BufferDescriptor {
             label: Some("RDF:readback"),
@@ -116,9 +119,10 @@ impl RdfHistogramF64 {
     }
 
     /// Compute normalized g(r) on GPU.
-    ///
-    /// g(r) = histogram / (N * ρ * V_shell)
-    /// where V_shell = 4π/3 * ((r+dr)³ - r³)
+    /// g(r) = histogram / (N * ρ * `V_shell`)
+    /// where `V_shell` = 4π/3 * ((r+dr)³ - r³)
+    /// # Errors
+    /// Returns [`Err`] if [`histogram`](Self::histogram) fails.
     pub fn compute_gr(
         &self,
         positions: &[f64],
@@ -138,7 +142,7 @@ impl RdfHistogramF64 {
         for i in 0..n_bins {
             let r_lo = i as f64 * dr;
             let r_hi = (i + 1) as f64 * dr;
-            let r_mid = (r_lo + r_hi) / 2.0;
+            let r_mid = f64::midpoint(r_lo, r_hi);
             let v_shell = 4.0 / 3.0 * std::f64::consts::PI * (r_hi.powi(3) - r_lo.powi(3));
             let expected = density * v_shell * (n - 1) as f64 / 2.0;
 
@@ -236,8 +240,7 @@ mod tests {
         let avg_gr: f64 = gr[10..].iter().sum::<f64>() / 10.0;
         assert!(
             avg_gr > 0.5 && avg_gr < 2.0,
-            "g(r) ~ 1 expected for random distribution, got {}",
-            avg_gr
+            "g(r) ~ 1 expected for random distribution, got {avg_gr}"
         );
 
         Ok(())

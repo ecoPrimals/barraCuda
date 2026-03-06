@@ -33,7 +33,12 @@ pub struct RandomErasing {
 }
 
 impl RandomErasing {
-    /// Create RandomErasing operation
+    /// Create `RandomErasing` operation
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(input: Tensor, erase_boxes: Tensor, erase_value: f32) -> Result<Self> {
         // Validate erase_boxes shape: [batch_size, 4] (top, left, height, width)
         let erase_shape = erase_boxes.shape();
@@ -61,7 +66,12 @@ impl RandomErasing {
         &SHADER
     }
 
-    /// Execute RandomErasing on tensor
+    /// Execute `RandomErasing` on tensor
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();

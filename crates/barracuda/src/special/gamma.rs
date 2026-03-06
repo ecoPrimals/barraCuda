@@ -59,6 +59,11 @@ const LANCZOS_COEFFS: [f64; 9] = [
 ///
 /// ln(Γ(x))
 ///
+/// # Errors
+///
+/// Returns [`Err`] if `x <= 0` (invalid domain for ln(Γ)), or if the internal
+/// series/continued-fraction convergence fails when using the reflection formula.
+///
 /// # Example
 ///
 /// ```
@@ -99,6 +104,11 @@ pub fn ln_gamma(x: f64) -> Result<f64> {
 ///
 /// * `x` - Input value (x > 0 or negative non-integer)
 ///
+/// # Errors
+///
+/// Returns [`Err`] if `x` is a non-positive integer (gamma is undefined), or if
+/// the underlying [`ln_gamma`] call fails.
+///
 /// # Example
 ///
 /// ```
@@ -132,6 +142,11 @@ pub const WGSL_INCOMPLETE_GAMMA_F64: &str =
 ///
 /// * `a` - Shape parameter (a > 0)
 /// * `x` - Upper limit of integration (x >= 0)
+///
+/// # Errors
+///
+/// Returns [`Err`] if `a <= 0`, `x < 0`, or if the internal series/continued-fraction
+/// convergence fails.
 ///
 /// # Example
 ///
@@ -181,6 +196,10 @@ pub fn lower_incomplete_gamma(a: f64, x: f64) -> Result<(f64, f64)> {
 ///
 /// * `a` - Shape parameter (a > 0)
 /// * `x` - Lower limit of integration (x >= 0)
+///
+/// # Errors
+///
+/// Returns [`Err`] if [`lower_incomplete_gamma`] fails (invalid `a`/`x` or convergence failure).
 pub fn upper_incomplete_gamma(a: f64, x: f64) -> Result<f64> {
     let (lower, complete) = lower_incomplete_gamma(a, x)?;
     Ok(complete - lower)
@@ -202,6 +221,11 @@ pub const WGSL_REGULARIZED_GAMMA_F64: &str =
 /// # Returns
 ///
 /// P(a, x) in [0, 1]
+///
+/// # Errors
+///
+/// Returns [`Err`] if `a <= 0`, `x < 0`, or if the internal series/continued-fraction
+/// convergence fails.
 ///
 /// # Example
 ///
@@ -246,6 +270,10 @@ pub fn regularized_gamma_p(a: f64, x: f64) -> Result<f64> {
 ///
 /// * `a` - Shape parameter (a > 0)
 /// * `x` - Lower limit of integration (x >= 0)
+///
+/// # Errors
+///
+/// Returns [`Err`] if [`regularized_gamma_p`] fails (invalid `a`/`x` or convergence failure).
 pub fn regularized_gamma_q(a: f64, x: f64) -> Result<f64> {
     Ok(1.0 - regularized_gamma_p(a, x)?)
 }
@@ -322,6 +350,10 @@ fn gamma_cf(a: f64, x: f64, gln: f64) -> Result<f64> {
 ///
 /// ψ(x)
 ///
+/// # Errors
+///
+/// Returns [`Err`] if `x <= 0` (invalid domain for digamma).
+///
 /// # Algorithm
 ///
 /// Uses recurrence relation ψ(x+1) = ψ(x) + 1/x to reduce to x ≥ 7,
@@ -393,6 +425,10 @@ pub fn digamma(x: f64) -> Result<f64> {
 /// - B(a, 1) = 1/a
 /// - B(1/2, 1/2) = π
 ///
+/// # Errors
+///
+/// Returns [`Err`] if `a <= 0` or `b <= 0`, or if the underlying [`ln_gamma`] call fails.
+///
 /// # Example
 ///
 /// ```
@@ -434,6 +470,10 @@ pub const WGSL_LN_BETA_F64: &str = include_str!("../shaders/special/ln_beta_f64.
 /// Natural logarithm of the beta function: ln(B(a, b))
 ///
 /// Useful for avoiding overflow when a, b are large.
+///
+/// # Errors
+///
+/// Returns [`Err`] if `a <= 0` or `b <= 0`, or if the underlying [`ln_gamma`] call fails.
 ///
 /// # Example
 ///

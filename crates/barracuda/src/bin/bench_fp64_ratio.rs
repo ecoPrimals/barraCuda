@@ -9,7 +9,7 @@
 //! for ~14-digit-precision f64-equivalent work instead of the dedicated FP64 units.
 //!
 //! # Usage
-//!   cargo run --release -p barracuda --bin bench_fp64_ratio
+//!   cargo run --release -p barracuda --bin `bench_fp64_ratio`
 //!
 //! # Provenance
 //! Absorbed from hotSpring `bench_fp64_ratio.rs` (Feb 2026).
@@ -26,7 +26,7 @@ const MEASURE: usize = 10;
 
 fn fma_shader_f32() -> String {
     format!(
-        r#"
+        r"
 @group(0) @binding(0) var<storage, read_write> output: array<f32>;
 
 @compute @workgroup_size({WG_SIZE})
@@ -44,13 +44,13 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
 
     output[i] = acc;
 }}
-"#
+"
     )
 }
 
 fn fma_shader_f64() -> String {
     format!(
-        r#"
+        r"
 @group(0) @binding(0) var<storage, read_write> output: array<f64>;
 
 @compute @workgroup_size({WG_SIZE})
@@ -68,13 +68,13 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
 
     output[i] = acc;
 }}
-"#
+"
     )
 }
 
 fn fma_shader_df64() -> String {
     format!(
-        r#"
+        r"
 struct Df64 {{
     hi: f32,
     lo: f32,
@@ -133,7 +133,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     output[i * 2u] = acc.hi;
     output[i * 2u + 1u] = acc.lo;
 }}
-"#
+"
     )
 }
 

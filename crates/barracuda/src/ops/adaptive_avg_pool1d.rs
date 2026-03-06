@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! AdaptiveAvgPool1D - 1D Adaptive Average Pooling
+//! `AdaptiveAvgPool1D` - 1D Adaptive Average Pooling
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation
@@ -9,7 +9,7 @@
 //! - ✅ Modern idiomatic Rust (no traits, direct impl)
 //!
 //! Applies average pooling with adaptive kernel size to produce fixed output size
-//! Used in models like ResNet, VGG for variable input sizes
+//! Used in models like `ResNet`, VGG for variable input sizes
 
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
@@ -32,6 +32,8 @@ pub struct AdaptiveAvgPool1D {
 
 impl AdaptiveAvgPool1D {
     /// Create adaptive avg pool. Input must be 3D [B, C, L].
+    /// # Errors
+    /// Returns [`Err`] if input is not 3D [B, C, L] or `output_length` is zero.
     pub fn new(input: Tensor, output_length: usize) -> Result<Self> {
         // Validate input shape: must be 3D [B, C, L]
         let shape = input.shape();
@@ -67,6 +69,8 @@ impl AdaptiveAvgPool1D {
     }
 
     /// Execute adaptive average pooling on GPU.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -203,6 +207,9 @@ impl AdaptiveAvgPool1D {
 
 impl Tensor {
     /// Apply 1D adaptive average pooling to fixed output length
+    /// # Errors
+    /// Returns [`Err`] if input is not 3D [B, C, L], `output_length` is zero, buffer allocation fails,
+    /// GPU dispatch fails, or the device is lost.
     pub fn adaptive_avg_pool1d(self, output_length: usize) -> Result<Self> {
         AdaptiveAvgPool1D::new(self, output_length)?.execute()
     }

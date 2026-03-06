@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! RMSprop Optimizer - GPU-accelerated Root Mean Square Propagation
+//! `RMSprop` Optimizer - GPU-accelerated Root Mean Square Propagation
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation (existing shader evolved)
@@ -19,7 +19,7 @@
 //! **Key Properties**:
 //! - Adaptive learning rate per parameter
 //! - Uses moving average of squared gradients
-//! - More stable than AdaGrad (doesn't monotonically decrease)
+//! - More stable than `AdaGrad` (doesn't monotonically decrease)
 //! - Popular for RNNs and non-stationary problems
 //!
 //! **Parameters**:
@@ -52,7 +52,7 @@ mod tests;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
-/// RMSprop optimizer parameters for WGSL shader
+/// `RMSprop` optimizer parameters for WGSL shader
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub(crate) struct RMSpropParams {
@@ -62,7 +62,7 @@ pub(crate) struct RMSpropParams {
     pub weight_decay: f32,
 }
 
-/// RMSprop Optimizer operation
+/// `RMSprop` Optimizer operation
 ///
 /// **Deep Debt**: Uses existing WGSL shader for adaptive learning rate optimization
 pub struct RMSprop {
@@ -74,9 +74,11 @@ pub struct RMSprop {
 }
 
 impl RMSprop {
-    /// Create new RMSprop optimizer operation
-    ///
+    /// Create new `RMSprop` optimizer operation
     /// **Deep Debt**: Validates all inputs for shape compatibility
+    /// # Errors
+    /// Returns [`Err`] if weights and gradients shapes differ, `learning_rate` is
+    /// non-positive, `alpha` is outside [0.0, 1.0], or `sq_avg` shape mismatches weights.
     pub fn new(
         weights: Tensor,
         gradients: Tensor,
@@ -149,7 +151,7 @@ impl RMSprop {
         &self.gradients
     }
 
-    /// Get sq_avg tensor
+    /// Get `sq_avg` tensor
     pub(super) fn sq_avg(&self) -> Option<&Tensor> {
         self.sq_avg.as_ref()
     }
@@ -170,33 +172,30 @@ impl RMSprop {
 // ═══════════════════════════════════════════════════════════════
 
 impl Tensor {
-    /// RMSprop optimizer step - adaptive learning rate optimizer
-    ///
+    /// `RMSprop` optimizer step - adaptive learning rate optimizer
     /// **Deep Debt**: Essential for RNNs and non-stationary problems
-    ///
     /// # Arguments
     /// - `gradients`: Gradient tensor [same shape as weights]
     /// - `learning_rate`: Step size, typically 0.001-0.01
     /// - `alpha`: Decay rate for moving average, typically 0.99
     /// - `sq_avg`: Accumulated squared gradients (None for first step)
-    ///
     /// # Returns
-    /// - Tuple: (updated_weights, updated_sq_avg)
-    ///
+    /// - Tuple: (`updated_weights`, `updated_sq_avg`)
     /// # Example
     /// ```rust,ignore
     /// // First step
     /// let (w1, sq1) = weights.rmsprop_step(&grads, 0.001, 0.99, None)?;
-    ///
     /// // Subsequent steps
     /// let (w2, sq2) = w1.rmsprop_step(&grads, 0.001, 0.99, Some(&sq1))?;
     /// ```
-    ///
     /// # Note
     /// - Adaptive learning rate per parameter
     /// - Popular for RNNs
-    /// - learning_rate must be positive
+    /// - `learning_rate` must be positive
     /// - alpha must be in [0.0, 1.0]
+    /// # Errors
+    /// Returns [`Err`] if shape validation fails or if buffer allocation, GPU
+    /// dispatch, or buffer readback fails (e.g. device lost or out of memory).
     pub fn rmsprop_step(
         self,
         gradients: &Self,

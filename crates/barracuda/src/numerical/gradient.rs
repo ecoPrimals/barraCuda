@@ -3,7 +3,7 @@
 
 /// Compute numerical gradient using finite difference stencils
 ///
-/// **Matches numpy.gradient() behavior exactly** for 1D arrays with uniform spacing.
+/// **Matches `numpy.gradient()` behavior exactly** for 1D arrays with uniform spacing.
 ///
 /// # Arguments
 ///
@@ -44,6 +44,7 @@
 /// # References
 ///
 /// - numpy.gradient: <https://numpy.org/doc/stable/reference/generated/numpy.gradient.html>
+#[must_use]
 pub fn gradient_1d(f: &[f64], dx: f64) -> Vec<f64> {
     let n = f.len();
 

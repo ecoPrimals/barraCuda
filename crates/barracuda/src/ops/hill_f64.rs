@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! HillFunctionF64 — element-wise Hill kinetic activation (f64 precision)
+//! `HillFunctionF64` — element-wise Hill kinetic activation (f64 precision)
 //!
 //! `Hill(x, K, n) = xⁿ / (Kⁿ + xⁿ)`
 //!
@@ -9,8 +9,8 @@
 //! - Cooperativity models (ligand binding with n>1)
 //! - PFAS degradation rate models
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -48,6 +48,11 @@ impl HillFunctionF64 {
     }
 
     /// Create a Hill activation with the given K (EC₅₀) and cooperativity n.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>, k: f64, n: f64) -> Result<Self> {
         if k <= 0.0 {
             return Err(BarracudaError::InvalidInput {
@@ -65,6 +70,11 @@ impl HillFunctionF64 {
     /// Apply Hill activation element-wise.
     ///
     /// `input` is a flat f64 slice. Returns a flat f64 Vec of the same length.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn apply(&self, input: &[f64]) -> Result<Vec<f64>> {
         let n_elements = input.len();
         if n_elements == 0 {

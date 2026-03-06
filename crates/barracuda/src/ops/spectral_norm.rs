@@ -25,7 +25,10 @@ pub struct SpectralNorm {
 }
 
 impl SpectralNorm {
-    /// Create SpectralNorm operation
+    /// Create `SpectralNorm` operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn new(weight: Tensor, u: Tensor, v: Tensor, num_iterations: u32) -> Result<Self> {
         if num_iterations == 0 {
             return Err(BarracudaError::invalid_op(
@@ -54,7 +57,10 @@ impl SpectralNorm {
         }
     }
 
-    /// Execute SpectralNorm on tensor (modifies weight in-place)
+    /// Execute `SpectralNorm` on tensor (modifies weight in-place)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.weight.device();
         let weight_shape = self.weight.shape();

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Conv3D - 3D Convolution
+//! `Conv3D` - 3D Convolution
 //! Pure WGSL implementation
 //!
 //! Convolv operation for volumetric/spatiotemporal data
@@ -49,7 +49,8 @@ pub struct Conv3D {
 }
 
 impl Conv3D {
-    /// Creates a new Conv3D. Input shape: [B, C_in, D, H, W]; weight: [C_out, C_in, kD, kH, kW].
+    /// Creates a new `Conv3D`. Input shape: [B, `C_in`, D, H, W]; weight: [`C_out`, `C_in`, kD, kH, kW].
+    #[must_use]
     pub fn new(
         input: Tensor,
         weight: Tensor,
@@ -80,6 +81,9 @@ impl Conv3D {
     }
 
     /// Executes 3D convolution and returns the output tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let input_shape = self.input.shape();
@@ -226,11 +230,14 @@ impl Conv3D {
 impl Tensor {
     /// Apply 3D convolution for volumetric/video data
     /// # Arguments
-    /// * `weight` - 3D conv weights (shape: [out_channels, in_channels, kernel_d, kernel_h, kernel_w])
-    /// * `bias` - Bias terms (shape: [out_channels])
-    /// * `stride` - (depth_stride, height_stride, width_stride)
-    /// * `padding` - (depth_padding, height_padding, width_padding)
-    /// * `dilation` - (depth_dilation, height_dilation, width_dilation)
+    /// * `weight` - 3D conv weights (shape: [`out_channels`, `in_channels`, `kernel_d`, `kernel_h`, `kernel_w`])
+    /// * `bias` - Bias terms (shape: [`out_channels`])
+    /// * `stride` - (`depth_stride`, `height_stride`, `width_stride`)
+    /// * `padding` - (`depth_padding`, `height_padding`, `width_padding`)
+    /// * `dilation` - (`depth_dilation`, `height_dilation`, `width_dilation`)
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn conv3d(
         self,
         weight: Tensor,

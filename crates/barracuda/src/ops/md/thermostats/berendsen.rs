@@ -2,7 +2,7 @@
 //! Berendsen Thermostat
 //!
 //! **Physics**: Weak coupling to heat bath via velocity rescaling
-//! **Formula**: v *= sqrt(1 + (dt/τ) * (T_target/T_current - 1))
+//! **Formula**: v *= sqrt(1 + (dt/τ) * (`T_target/T_current` - 1))
 //! **Use Case**: Equilibration phase only — does NOT sample canonical ensemble
 //!
 //! **Deep Debt Compliance**:
@@ -28,11 +28,9 @@ pub struct BerendsenThermostat {
 
 impl BerendsenThermostat {
     /// Create a new Berendsen thermostat operation
-    ///
     /// # Arguments
     /// * `velocities` - Velocity tensor [N, 3] (f64)
     /// * `scale_factor` - Pre-computed scale factor from temperature ratio
-    ///
     /// # Errors
     /// Returns error if velocities tensor has wrong shape.
     pub fn new(velocities: Tensor, scale_factor: f64) -> Result<Self> {
@@ -51,12 +49,12 @@ impl BerendsenThermostat {
     }
 
     /// Compute the Berendsen scale factor
-    ///
     /// # Arguments
     /// * `t_current` - Current temperature (reduced units)
     /// * `t_target` - Target temperature (reduced units)
     /// * `dt` - Timestep (reduced units)
     /// * `tau` - Coupling time constant (reduced units)
+    #[must_use]
     pub fn compute_scale(t_current: f64, t_target: f64, dt: f64, tau: f64) -> f64 {
         if t_current < 1e-30 {
             return 1.0; // avoid division by zero
@@ -66,9 +64,13 @@ impl BerendsenThermostat {
     }
 
     /// Execute the thermostat (in-place velocity scaling)
-    ///
     /// # Returns
     /// The same velocities tensor with scaled values
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.velocities.device();
         let n_particles = self.velocities.shape()[0];

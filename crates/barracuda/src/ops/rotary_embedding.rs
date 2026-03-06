@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Rotary Position Embedding (RoPE) - Pure WGSL
+//! Rotary Position Embedding (`RoPE`) - Pure WGSL
 //!
 //! Deep Debt Principles:
 //! - Self-knowledge: Operation knows its computation
@@ -11,7 +11,7 @@
 //! Applies rotation to query/key pairs based on position.
 //! Encodes relative position information without absolute position embeddings.
 //!
-//! Reference: RoFormer (Su et al., 2021), used in GPT-Neo, LLaMA, PaLM
+//! Reference: `RoFormer` (Su et al., 2021), used in GPT-Neo, `LLaMA`, `PaLM`
 
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
@@ -30,9 +30,10 @@ pub struct RotaryEmbedding {
 
 impl RotaryEmbedding {
     /// Create a new rotary embedding operation
-    ///
-    /// **Shape**: [batch, seq_len, num_heads, head_dim]
-    /// **Requirement**: head_dim must be even
+    /// **Shape**: [batch, `seq_len`, `num_heads`, `head_dim`]
+    /// **Requirement**: `head_dim` must be even
+    /// # Errors
+    /// Returns [`Err`] if input is not 4D or if `head_dim` is not even.
     pub fn new(input: Tensor) -> Result<Self> {
         // Validate shape: must be 4D
         if input.shape().len() != 4 {
@@ -60,6 +61,9 @@ impl RotaryEmbedding {
     }
 
     /// Execute the rotary embedding operation
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let shape = self.input.shape();
@@ -107,7 +111,7 @@ impl RotaryEmbedding {
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d(total as u32)
-            .submit();
+            .submit()?;
 
         // Return tensor without reading back (zero-copy)
         Ok(Tensor::from_buffer(

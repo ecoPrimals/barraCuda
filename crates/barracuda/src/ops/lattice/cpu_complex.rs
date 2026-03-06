@@ -44,12 +44,14 @@ impl Complex64 {
 
     /// Squared magnitude: |z|².
     #[inline]
+    #[must_use]
     pub fn abs_sq(self) -> f64 {
         self.re.mul_add(self.re, self.im * self.im)
     }
 
     /// Magnitude: |z|.
     #[inline]
+    #[must_use]
     pub fn abs(self) -> f64 {
         self.abs_sq().sqrt()
     }

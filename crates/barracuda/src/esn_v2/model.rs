@@ -8,17 +8,17 @@ use crate::tensor::Tensor;
 use rand::{Rng, SeedableRng};
 use std::sync::Arc;
 
-use super::config::{expect_size, validate_config, ESNConfig};
-use super::npu::{quantize_affine_i8_f64, NpuReadoutWeights};
+use super::config::{ESNConfig, expect_size, validate_config};
+use super::npu::{NpuReadoutWeights, quantize_affine_i8_f64};
 
 /// Serializable ESN weight snapshot for cross-run / cross-device deployment.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ExportedWeights {
-    /// Input-to-reservoir weights (reservoir_size × input_size).
+    /// Input-to-reservoir weights (`reservoir_size` × `input_size`).
     pub w_in: Vec<f32>,
-    /// Reservoir recurrent weights (reservoir_size × reservoir_size).
+    /// Reservoir recurrent weights (`reservoir_size` × `reservoir_size`).
     pub w_res: Vec<f32>,
-    /// Readout weights (reservoir_size × output_size), None if untrained.
+    /// Readout weights (`reservoir_size` × `output_size`), None if untrained.
     pub w_out: Option<Vec<f32>>,
     /// Input dimension for cross-device reconstruction.
     #[serde(default)]
@@ -39,12 +39,13 @@ pub struct ExportedWeights {
 
 impl ExportedWeights {
     /// Migrate a single-head weight snapshot to a multi-head ESN.
-    ///
     /// The reservoir weights (`w_in`, `w_res`) are preserved unchanged.
     /// If `w_out` was trained for 1 head, it is replicated across all
     /// `new_output_size` heads. If `w_out` is `None`, it remains `None`.
-    ///
     /// hotSpring v0.6.15 absorption: enables 1-head → 11-head migration.
+    /// # Errors
+    /// Returns [`Err`] if `w_out` length is not divisible by `reservoir_size`, or
+    /// if `w_out` length divided by `reservoir_size` is zero.
     pub fn migrate_to_multi_head(
         &self,
         reservoir_size: usize,
@@ -80,7 +81,7 @@ impl ExportedWeights {
 
 /// Hardware-Agnostic Echo State Network
 ///
-/// **Uses BarraCuda Tensors** - Works on CPU, GPU, NPU!
+/// **Uses `BarraCuda` Tensors** - Works on CPU, GPU, NPU!
 pub struct ESN {
     pub(super) config: ESNConfig,
 
@@ -94,8 +95,11 @@ pub struct ESN {
 
 impl ESN {
     /// Create a new Echo State Network
-    ///
     /// **Hardware-agnostic** - Auto-detects best device!
+    /// # Errors
+    /// Returns [`Err`] if config validation fails (invalid sizes, spectral radius,
+    /// connectivity, leak rate, or regularization), if device creation fails, if
+    /// reservoir or input weight initialization fails, or if buffer allocation fails.
     pub async fn new(config: ESNConfig) -> BarracudaResult<Self> {
         validate_config(&config)?;
 
@@ -163,6 +167,7 @@ impl ESN {
     }
 
     /// Set device preference
+    #[must_use]
     pub fn prefer_device(self, _device: Device) -> Self {
         tracing::debug!("Device preference set; migration not yet implemented");
         self
@@ -177,6 +182,8 @@ impl ESN {
     }
 
     /// Reset reservoir state to zero
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation fails or the device is lost.
     pub async fn reset_state(&mut self) -> BarracudaResult<()> {
         self.state =
             Tensor::zeros_on(vec![self.config.reservoir_size, 1], self.device.clone()).await?;
@@ -184,10 +191,13 @@ impl ESN {
     }
 
     /// Update reservoir state with a single input.
-    ///
     /// Accepts column vectors of shape `[input_size, 1]`. Row vectors
     /// `[1, input_size]` and flat vectors `[input_size]` are automatically
     /// reshaped to column form for convenience.
+    /// # Errors
+    /// Returns [`Err`] if input shape does not match `[input_size, 1]`, `[1, input_size]`,
+    /// or `[input_size]`, or if any tensor operation (reshape, matmul, add, tanh, etc.)
+    /// fails due to shape mismatch or device error.
     pub async fn update(&mut self, input: &Tensor) -> BarracudaResult<Tensor> {
         let input = match input.shape() {
             [n, 1] if *n == self.config.input_size => input.clone(),
@@ -201,9 +211,7 @@ impl ESN {
                 return Err(BarracudaError::InvalidInput {
                     message: format!(
                         "Input tensor shape mismatch: expected [{}, 1] (or [1, {}] or [{}]), got {other:?}",
-                        self.config.input_size,
-                        self.config.input_size,
-                        self.config.input_size,
+                        self.config.input_size, self.config.input_size, self.config.input_size,
                     ),
                 });
             }
@@ -226,6 +234,10 @@ impl ESN {
     }
 
     /// Train the ESN readout layer
+    /// # Errors
+    /// Returns [`Err`] if inputs or targets are empty, if inputs and targets have
+    /// different lengths, if any input or target has wrong size (via `expect_size`),
+    /// if buffer allocation or tensor operations fail, or if ridge regression solve fails.
     pub async fn train(
         &mut self,
         inputs: &[Vec<f32>],
@@ -291,15 +303,16 @@ impl ESN {
     }
 
     /// Train the readout layer using matrix ridge regression (closed-form).
-    ///
-    /// Implements W_out = Y * X^T * (X * X^T + lambda * I)^{-1} using CPU solve.
+    /// Implements `W_out` = Y * X^T * (X * X^T + lambda * I)^{-1} using CPU solve.
     /// Uses `solve_f64_cpu` from linalg for the matrix solve (ESN matrices are small).
-    ///
     /// # Arguments
-    ///
-    /// * `states` - State matrix (reservoir_size × n_samples), row-major
-    /// * `targets` - Target matrix (output_size × n_samples), row-major
+    /// * `states` - State matrix (`reservoir_size` × `n_samples`), row-major
+    /// * `targets` - Target matrix (`output_size` × `n_samples`), row-major
     /// * `lambda` - Ridge regularization parameter (> 0)
+    /// # Errors
+    /// Returns [`Err`] if states are empty, states length is not divisible by
+    /// `reservoir_size`, targets length does not match `output_size * n_samples`,
+    /// lambda is not positive, the CPU matrix solve fails, or tensor creation fails.
     pub fn train_ridge_regression(
         &mut self,
         states: &[f64],
@@ -410,12 +423,18 @@ impl ESN {
     }
 
     /// Predict on new input sequence
+    /// # Errors
+    /// Returns [`Err`] with the same conditions as [`predict_return_state`](Self::predict_return_state).
     pub async fn predict(&mut self, input: &[f32]) -> BarracudaResult<Vec<f32>> {
         let (output, _state) = self.predict_return_state(input).await?;
         Ok(output)
     }
 
     /// Predict and return both output AND raw reservoir state.
+    /// # Errors
+    /// Returns [`Err`] if the ESN is not trained, if input length does not match
+    /// `input_size`, if buffer allocation or tensor operations fail during update,
+    /// or if readout weights are missing (untrained ESN).
     pub async fn predict_return_state(
         &mut self,
         input: &[f32],
@@ -451,10 +470,11 @@ impl ESN {
     }
 
     /// Replace the readout weights without retraining the reservoir.
-    ///
     /// Weights must have shape `[reservoir_size, output_size]` — the same
     /// layout produced by `train()` and `train_ridge_regression()`.
     /// Predict transposes internally: `output = W_out^T @ state`.
+    /// # Errors
+    /// Returns [`Err`] if weight tensor shape is not `[reservoir_size, output_size]`.
     pub fn set_readout_weights(&mut self, weights: Tensor) -> BarracudaResult<()> {
         let expected = [self.config.reservoir_size, self.config.output_size];
         if weights.shape() != expected {
@@ -472,25 +492,30 @@ impl ESN {
     }
 
     /// Get current configuration
+    #[must_use]
     pub fn config(&self) -> &ESNConfig {
         &self.config
     }
 
     /// Check if ESN is trained
+    #[must_use]
     pub fn is_trained(&self) -> bool {
         self.trained
     }
 
     /// Get current reservoir state
+    #[must_use]
     pub fn state(&self) -> &Tensor {
         &self.state
     }
 
     /// Export readout weights as int8-quantized NPU format.
-    ///
     /// Requires the ESN to be trained. Converts f32 readout weights to f64,
     /// applies affine quantization, and returns `NpuReadoutWeights` suitable
     /// for NPU deployment (e.g. Akida AKD1000 FC layer).
+    /// # Errors
+    /// Returns [`Err`] if the ESN has not been trained yet, or if reading
+    /// readout weights to host fails.
     pub fn to_npu_weights(&self) -> BarracudaResult<NpuReadoutWeights> {
         let w_out =
             self.w_out
@@ -515,6 +540,9 @@ impl ESN {
     }
 
     /// Export all ESN weights as flat f32 vectors for cross-device deployment.
+    /// # Errors
+    /// Returns [`Err`] if reading any weight tensor to host fails (e.g. device lost,
+    /// buffer mapping failure).
     pub fn export_weights(&self) -> BarracudaResult<ExportedWeights> {
         let w_in_data = self.w_in.to_vec()?;
         let w_res_data = self.w_res.to_vec()?;
@@ -535,6 +563,9 @@ impl ESN {
     }
 
     /// Import pre-trained weights
+    /// # Errors
+    /// Returns [`Err`] if `w_in`, `w_res`, or `w_out` (when provided) have wrong
+    /// lengths for the expected shapes, or if tensor creation from data fails.
     pub fn import_weights(
         &mut self,
         w_in: &[f32],
@@ -560,6 +591,7 @@ impl ESN {
     }
 
     /// Get device query
+    #[must_use]
     pub fn query_device(&self) -> Device {
         match self.device.device_type() {
             wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::IntegratedGpu => Device::GPU,

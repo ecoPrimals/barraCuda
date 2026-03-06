@@ -5,9 +5,9 @@
 
 use std::sync::Arc;
 
+use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 
@@ -61,6 +61,11 @@ impl RawrWeightedMeanGpu {
     ///
     /// Generates bootstrap resamples, computes weighted mean per resample on GPU,
     /// then computes confidence intervals from sorted bootstrap means on CPU.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(
         device: Arc<WgpuDevice>,
         data: &[f64],
@@ -91,7 +96,7 @@ impl RawrWeightedMeanGpu {
         }
         if !(0.0..1.0).contains(&confidence) {
             return Err(BarracudaError::InvalidInput {
-                message: format!("confidence must be in (0, 1), got {}", confidence),
+                message: format!("confidence must be in (0, 1), got {confidence}"),
             });
         }
 
@@ -131,7 +136,7 @@ impl RawrWeightedMeanGpu {
             .storage_rw(3, &out_buf)
             .uniform(4, &params_buf)
             .dispatch(wg_count, 1, 1)
-            .submit();
+            .submit()?;
 
         let mut bootstrap_means = device.read_f64_buffer(&out_buf, n_resamples)?;
 

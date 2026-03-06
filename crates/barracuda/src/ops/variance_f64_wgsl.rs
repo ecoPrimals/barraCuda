@@ -2,13 +2,13 @@
 //! Fused mean+variance (f64) — single-pass Welford, GPU-resident, pipeline-cached
 //!
 //! Evolved from separate mean+deviation passes to a single fused dispatch.
-//! Absorbed from Kokkos parallel_reduce patterns: one kernel, zero intermediate
+//! Absorbed from Kokkos `parallel_reduce` patterns: one kernel, zero intermediate
 //! CPU round-trips for chained statistics.
 
+use crate::device::WgpuDevice;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
-use crate::device::WgpuDevice;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -38,6 +38,7 @@ fn fused_shader_for_device(device: &WgpuDevice) -> &'static str {
 }
 
 /// Simple variance reduction variant (scalar path).
+#[must_use]
 pub fn wgsl_variance_simple() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
@@ -66,24 +67,34 @@ pub struct VarianceF64 {
 
 impl VarianceF64 {
     /// Create new Variance f64 operation.
+    /// # Errors
+    /// Never returns an error; always returns `Ok`.
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         Ok(Self { device })
     }
 
     /// Compute variance of a vector (population variance, ddof=0).
+    /// # Errors
+    /// Returns [`Err`] if the device is lost, if buffer recording fails, or if
+    /// readback fails (e.g. buffer mapping channel closed).
     pub fn variance(&self, data: &[f64]) -> Result<f64> {
         self.variance_ddof(data, 0)
     }
 
     /// Compute sample variance (ddof=1).
+    /// # Errors
+    /// Returns [`Err`] if the device is lost, if buffer recording fails, or if
+    /// readback fails (e.g. buffer mapping channel closed).
     pub fn sample_variance(&self, data: &[f64]) -> Result<f64> {
         self.variance_ddof(data, 1)
     }
 
     /// Compute variance with specified degrees of freedom adjustment.
-    ///
     /// Uses a fused mean+variance Welford shader — single GPU dispatch,
     /// no intermediate readback between mean and deviation passes.
+    /// # Errors
+    /// Returns [`Err`] if the device is lost, if buffer recording fails, or if
+    /// readback fails (e.g. buffer mapping channel closed).
     pub fn variance_ddof(&self, data: &[f64], ddof: usize) -> Result<f64> {
         if data.is_empty() || data.len() <= ddof {
             return Ok(0.0);
@@ -94,8 +105,10 @@ impl VarianceF64 {
     }
 
     /// Compute mean and variance together in a single GPU pass.
-    ///
     /// Returns `[mean, variance]`.
+    /// # Errors
+    /// Returns [`Err`] if the device is lost, if buffer recording fails, or if
+    /// readback fails (e.g. buffer mapping channel closed).
     pub fn mean_variance(&self, data: &[f64], ddof: usize) -> Result<[f64; 2]> {
         if data.is_empty() || data.len() <= ddof {
             return Ok([0.0, 0.0]);
@@ -162,12 +175,80 @@ impl VarianceF64 {
         self.device.read_buffer_f64(&output_buf, 2)
     }
 
+    /// Compute mean and variance from a GPU-resident buffer — zero host transfer.
+    /// The buffer must contain at least `n` f64 values.  Returns `[mean, variance]`.
+    /// This is the persistent-buffer path that eliminates the Kokkos dispatch gap.
+    /// # Errors
+    /// Returns [`Err`] if the device is lost, if buffer recording fails, or if
+    /// readback fails (e.g. buffer mapping channel closed).
+    pub fn mean_variance_buffer(
+        &self,
+        buffer: &wgpu::Buffer,
+        n: usize,
+        ddof: usize,
+    ) -> Result<[f64; 2]> {
+        if n == 0 || n <= ddof {
+            return Ok([0.0, 0.0]);
+        }
+
+        let ctx = get_device_context(&self.device);
+        let adapter_info = self.device.adapter_info();
+
+        let output_buf = ctx.acquire_pooled_output_f64(2);
+
+        let params = FusedParams {
+            n: n as u32,
+            ddof: ddof as u32,
+            _pad0: 0,
+            _pad1: 0,
+        };
+        let params_buf = self
+            .device
+            .create_uniform_buffer("FusedMeanVar:Buf Params", &params);
+
+        let layout_sig = BindGroupLayoutSignature::reduction();
+        let bind_group = ctx.get_or_create_bind_group(
+            layout_sig,
+            &[buffer, &output_buf, &params_buf],
+            Some("FusedMeanVar:Buf BG"),
+        );
+
+        let shader_src = fused_shader_for_device(&self.device);
+        let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
+            self.device.device(),
+            adapter_info,
+            shader_src,
+            layout_sig,
+            "main",
+            Some("FusedMeanVar:Buf Pipeline"),
+        );
+
+        ctx.record_operation(move |encoder| {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("FusedMeanVar:Buf Pass"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&pipeline);
+            pass.set_bind_group(0, Some(&*bind_group), &[]);
+            pass.dispatch_workgroups(1, 1, 1);
+        })?;
+
+        let result = self.device.read_buffer_f64(&output_buf, 2)?;
+        Ok([result[0], result[1]])
+    }
+
     /// Compute standard deviation (population, ddof=0).
+    /// # Errors
+    /// Returns [`Err`] if the device is lost, if buffer recording fails, or if
+    /// readback fails (e.g. buffer mapping channel closed).
     pub fn std_dev(&self, data: &[f64]) -> Result<f64> {
         Ok(self.variance(data)?.sqrt())
     }
 
     /// Compute sample standard deviation (ddof=1).
+    /// # Errors
+    /// Returns [`Err`] if the device is lost, if buffer recording fails, or if
+    /// readback fails (e.g. buffer mapping channel closed).
     pub fn sample_std_dev(&self, data: &[f64]) -> Result<f64> {
         Ok(self.sample_variance(data)?.sqrt())
     }
@@ -202,8 +283,7 @@ mod tests {
 
         assert!(
             (result - 2.0).abs() < 1e-10,
-            "Variance = {}, expected 2.0",
-            result
+            "Variance = {result}, expected 2.0"
         );
     }
 
@@ -219,8 +299,7 @@ mod tests {
 
         assert!(
             (result - 2.5).abs() < 1e-10,
-            "Sample variance = {}, expected 2.5",
-            result
+            "Sample variance = {result}, expected 2.5"
         );
     }
 
@@ -237,9 +316,7 @@ mod tests {
 
         assert!(
             (result - expected).abs() < 1e-10,
-            "Std dev = {}, expected {}",
-            result,
-            expected
+            "Std dev = {result}, expected {expected}"
         );
     }
 
@@ -255,8 +332,7 @@ mod tests {
 
         assert!(
             result.abs() < 1e-10,
-            "Variance of constant = {}, expected 0.0",
-            result
+            "Variance of constant = {result}, expected 0.0"
         );
     }
 
@@ -270,11 +346,10 @@ mod tests {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let [mean, variance] = var.mean_variance(&data, 0).unwrap();
 
-        assert!((mean - 3.0).abs() < 1e-10, "Mean = {}, expected 3.0", mean);
+        assert!((mean - 3.0).abs() < 1e-10, "Mean = {mean}, expected 3.0");
         assert!(
             (variance - 2.0).abs() < 1e-10,
-            "Variance = {}, expected 2.0",
-            variance
+            "Variance = {variance}, expected 2.0"
         );
     }
 
@@ -294,15 +369,11 @@ mod tests {
 
         assert!(
             (mean - expected_mean).abs() / expected_mean < 1e-10,
-            "Mean = {}, expected {}",
-            mean,
-            expected_mean
+            "Mean = {mean}, expected {expected_mean}"
         );
         assert!(
             (variance - expected_var).abs() / expected_var < 1e-6,
-            "Variance = {}, expected {}",
-            variance,
-            expected_var
+            "Variance = {variance}, expected {expected_var}"
         );
     }
 }

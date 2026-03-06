@@ -104,7 +104,7 @@ pub(super) async fn run_single_probe(wgpu_device: &WgpuDevice, probe: &ProbeShad
     });
     let poll_ok = wgpu_device.poll_safe().is_ok();
 
-    if !poll_ok || rx.recv().ok().and_then(|r| r.ok()).is_none() {
+    if !poll_ok || rx.recv().ok().and_then(std::result::Result::ok).is_none() {
         return false;
     }
 

@@ -12,11 +12,15 @@ pub struct Harness {
 
 impl Harness {
     /// Create new harness
+    #[must_use]
     pub fn new(config: BenchmarkConfig) -> Self {
         Self { config }
     }
 
     /// Run a benchmark function multiple times and collect statistics
+    /// # Errors
+    /// Returns [`Err`] if any warmup or measurement iteration fails (e.g. from
+    /// the benchmark function's GPU dispatch or device errors).
     pub async fn run<F, Fut>(&self, name: &str, mut benchmark_fn: F) -> Result<BenchmarkResult>
     where
         F: FnMut() -> Fut,

@@ -12,7 +12,7 @@
 //! 3. Record every function evaluation (not just best results)
 //! 4. Return the globally best solution plus the full evaluation cache
 //!
-//! This is the core of the SparsitySampler approach from Diaw et al. (2024):
+//! This is the core of the `SparsitySampler` approach from Diaw et al. (2024):
 //! multiple parallel solvers exploring different regions produce space-filling
 //! evaluations that are both exploitative (near optima) and exploratory (initial
 //! phases), making them ideal training data for RBF surrogates.
@@ -49,7 +49,7 @@ pub struct SolverResult {
 
 /// Run Nelder-Mead from multiple starting points with full evaluation recording.
 ///
-/// This is the pure Rust equivalent of mystic's SparsitySampler strategy:
+/// This is the pure Rust equivalent of mystic's `SparsitySampler` strategy:
 /// multiple parallel simplex solvers exploring different parameter space regions,
 /// with ALL evaluations captured for surrogate model training.
 ///
@@ -102,6 +102,10 @@ pub struct SolverResult {
 /// assert_eq!(all_results.len(), 16);
 /// # Ok::<(), barracuda::error::BarracudaError>(())
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if `n_starts` is 0, or if LHS or Nelder-Mead fails.
 pub fn multi_start_nelder_mead<F>(
     f: F,
     bounds: &[(f64, f64)],
@@ -157,8 +161,7 @@ where
                 .partial_cmp(&b.f_best)
                 .unwrap_or(std::cmp::Ordering::Equal)
         })
-        .map(|(idx, _)| idx)
-        .unwrap_or(0);
+        .map_or(0, |(idx, _)| idx);
 
     let best = all_results[best_idx].clone();
 
@@ -313,8 +316,7 @@ where
         .iter()
         .enumerate()
         .min_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-        .map(|(idx, _)| idx)
-        .unwrap_or(0);
+        .map_or(0, |(idx, _)| idx);
 
     SolverResult {
         x_best: simplex[best_idx].clone(),
@@ -427,10 +429,7 @@ mod tests {
             let expected = xi[0].powi(2) + xi[1].powi(2);
             assert!(
                 (expected - yi).abs() < 1e-10,
-                "Inconsistent: f({:?}) = {} != {}",
-                xi,
-                expected,
-                yi
+                "Inconsistent: f({xi:?}) = {expected} != {yi}"
             );
         }
     }

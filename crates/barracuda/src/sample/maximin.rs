@@ -30,12 +30,12 @@
 //! - hotSpring: Space-filling designs for nuclear EOS parameter fitting
 
 use crate::error::{BarracudaError, Result};
-use crate::sample::lhs::{latin_hypercube, maximin_distance, Xoshiro256};
+use crate::sample::lhs::{Xoshiro256, latin_hypercube, maximin_distance};
 
 /// Configuration for maximin LHS optimization.
 #[derive(Debug, Clone)]
 pub struct MaximinConfig {
-    /// Number of swap attempts per iteration (default: 100 × n_dims)
+    /// Number of swap attempts per iteration (default: 100 × `n_dims`)
     pub max_iter: usize,
     /// Number of candidate designs to generate and pick the best (default: 5)
     pub n_candidates: usize,
@@ -45,6 +45,7 @@ pub struct MaximinConfig {
 
 impl MaximinConfig {
     /// Create a new configuration with defaults scaled to dimension count.
+    #[must_use]
     pub fn new(n_dims: usize, seed: u64) -> Self {
         Self {
             max_iter: 100 * n_dims,
@@ -71,7 +72,7 @@ impl MaximinConfig {
 /// Result of maximin optimization.
 #[derive(Debug, Clone)]
 pub struct MaximinResult {
-    /// Optimized sample points [n_samples][n_dims]
+    /// Optimized sample points [`n_samples`][n_dims]
     pub samples: Vec<Vec<f64>>,
     /// Maximin distance of the optimized design
     pub maximin_dist: f64,
@@ -109,6 +110,10 @@ pub struct MaximinResult {
 /// assert!(result.maximin_dist >= result.initial_maximin_dist * 0.99);
 /// # Ok::<(), barracuda::error::BarracudaError>(())
 /// ```
+///
+/// # Errors
+///
+/// Returns [`Err`] if `n_samples` < 2, bounds is empty, or `latin_hypercube` fails.
 pub fn maximin_lhs(
     n_samples: usize,
     bounds: &[(f64, f64)],

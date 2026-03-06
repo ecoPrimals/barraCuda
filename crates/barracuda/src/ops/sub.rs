@@ -26,6 +26,8 @@ pub struct Sub {
 
 impl Sub {
     /// Create a subtraction operation. Shapes must match.
+    /// # Errors
+    /// Returns [`Err`] if lhs and rhs shapes do not match.
     pub fn new(lhs: Tensor, rhs: Tensor) -> Result<Self> {
         if lhs.shape() != rhs.shape() {
             return Err(BarracudaError::shape_mismatch(
@@ -41,6 +43,8 @@ impl Sub {
     }
 
     /// Execute element-wise subtraction and return the result tensor.
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or device submission fails (e.g. device lost).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.lhs.device();
         let size = self.lhs.len();
@@ -155,6 +159,8 @@ impl Sub {
 
 impl Tensor {
     /// Subtract another tensor element-wise. Shapes must match.
+    /// # Errors
+    /// Returns [`Err`] if shapes do not match, or buffer allocation/GPU dispatch fails (e.g. device lost).
     pub fn sub(&self, other: &Tensor) -> Result<Self> {
         Sub::new(self.clone(), other.clone())?.execute()
     }
@@ -265,10 +271,7 @@ mod tests {
         for (i, (&gpu, &cpu)) in gpu_result.iter().zip(cpu_result.iter()).enumerate() {
             assert!(
                 (gpu - cpu).abs() < 1e-6,
-                "Error at {}: GPU={}, CPU={}",
-                i,
-                gpu,
-                cpu
+                "Error at {i}: GPU={gpu}, CPU={cpu}"
             );
         }
     }

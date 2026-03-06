@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Generalized Eigenvalue Decomposition (gen_eigh) - GPU-Accelerated Implementation (f64)
+//! Generalized Eigenvalue Decomposition (`gen_eigh`) - GPU-Accelerated Implementation (f64)
 //!
 //! Solves the generalized eigenvalue problem: Ax = λBx
 //! where A is symmetric and B is symmetric positive definite.
@@ -64,6 +64,7 @@ pub struct GenEighDecompositionGpu {
 
 impl GenEighDecompositionGpu {
     /// Get the i-th eigenvector
+    #[must_use]
     pub fn eigenvector(&self, i: usize) -> Option<Vec<f64>> {
         if i >= self.n {
             return None;
@@ -97,6 +98,7 @@ impl GenEighDecompositionGpu {
     }
 
     /// Verify that Ax = λBx for all eigenpairs
+    #[must_use]
     pub fn verify(&self, a: &[f64], b: &[f64]) -> f64 {
         let n = self.n;
         let mut max_residual: f64 = 0.0;
@@ -144,32 +146,30 @@ pub struct GenEighGpu;
 
 impl GenEighGpu {
     /// Execute generalized eigenvalue decomposition with GPU-accelerated eigensolve
-    ///
     /// # Arguments
-    /// * `device` - WgpuDevice to execute on
+    /// * `device` - `WgpuDevice` to execute on
     /// * `a` - Symmetric matrix A (row-major, n×n) as f64
     /// * `b` - Symmetric positive definite matrix B (row-major, n×n) as f64
     /// * `n` - Matrix dimension
     /// * `max_sweeps` - Maximum Jacobi sweeps for eigensolve (default: 30)
-    ///
     /// # Returns
     /// `GenEighDecompositionGpu` with eigenvalues and eigenvectors
-    ///
     /// # Errors
     /// - If B is not positive definite (Cholesky fails)
     /// - If matrix dimensions are invalid
     /// - If GPU execution fails
-    ///
     /// # Example
     /// ```ignore
     /// use barracuda::ops::linalg::GenEighGpu;
-    ///
     /// // Generalized eigenvalue problem: Ax = λBx
     /// let a = vec![4.0, 2.0, 2.0, 3.0]; // [[4, 2], [2, 3]]
     /// let b = vec![2.0, 1.0, 1.0, 2.0]; // [[2, 1], [1, 2]]
-    ///
     /// let result = GenEighGpu::execute_f64(device, &a, &b, 2, 30)?;
     /// ```
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
+    /// Also returns [`Err`] if matrix A or B has invalid size.
     pub fn execute_f64(
         device: Arc<WgpuDevice>,
         a: &[f64],
@@ -227,17 +227,20 @@ impl GenEighGpu {
     }
 
     /// Execute for a batch of generalized eigenvalue problems
-    ///
     /// # Arguments
-    /// * `device` - WgpuDevice to execute on
-    /// * `a_batch` - Packed A matrices [batch_size × n × n]
-    /// * `b_batch` - Packed B matrices [batch_size × n × n]
+    /// * `device` - `WgpuDevice` to execute on
+    /// * `a_batch` - Packed A matrices [`batch_size` × n × n]
+    /// * `b_batch` - Packed B matrices [`batch_size` × n × n]
     /// * `n` - Matrix dimension (same for all)
     /// * `batch_size` - Number of matrix pairs
     /// * `max_sweeps` - Maximum Jacobi sweeps
-    ///
     /// # Returns
     /// Vector of `GenEighDecompositionGpu`, one per matrix pair
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn execute_batch_f64(
         device: Arc<WgpuDevice>,
         a_batch: &[f64],

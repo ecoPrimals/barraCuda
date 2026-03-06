@@ -228,6 +228,10 @@ pub fn spawn_coral_compile(optimized_wgsl: &str, arch: &str, fp64_software: bool
         return;
     }
 
+    let Ok(_handle) = tokio::runtime::Handle::try_current() else {
+        return;
+    };
+
     tokio::spawn(async move {
         if let Some(binary) = GLOBAL_CORAL
             .compile_wgsl(&source, &arch_owned, fp64_software)

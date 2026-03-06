@@ -504,9 +504,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_spike_encode_akida() {
-        let executor = match AkidaExecutor::new() {
-            Ok(e) => e,
-            Err(_) => return, // Skip if no hardware
+        let Ok(executor) = AkidaExecutor::new() else {
+            return; // Skip if no hardware
         };
 
         let input = vec![0.0, 0.25, 0.5, 0.75, 1.0];
@@ -529,9 +528,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_lif_neuron_akida() {
-        let executor = match AkidaExecutor::new() {
-            Ok(e) => e,
-            Err(_) => return,
+        let Ok(executor) = AkidaExecutor::new() else {
+            return;
         };
 
         let input_spikes = vec![10, 20, 30, 15];

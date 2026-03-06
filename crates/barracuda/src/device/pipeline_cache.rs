@@ -249,6 +249,7 @@ impl PipelineKey {
 ///
 /// Note: Keys include device fingerprint to ensure GPU objects are only used
 /// with the device that created them.
+#[derive(Default)]
 pub struct PipelineCache {
     /// Cached shader modules (keyed by source hash + device)
     shaders: RwLock<HashMap<ShaderKey, Arc<ShaderModule>>>,
@@ -436,12 +437,6 @@ impl PipelineCache {
         write_or_recover(&self.shaders).clear();
         write_or_recover(&self.layouts).clear();
         write_or_recover(&self.pipelines).clear();
-    }
-}
-
-impl Default for PipelineCache {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

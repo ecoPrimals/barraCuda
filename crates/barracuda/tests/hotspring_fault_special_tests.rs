@@ -171,7 +171,7 @@ mod fault {
         if !super::common::run_gpu_resilient_async(|| async {
             let device = barracuda::device::test_pool::get_test_device().await;
             let grad = Gradient1D::new(device, 20, 0.1).unwrap();
-            let mut input: Vec<f64> = (0..20).map(|i| f64::from(i)).collect();
+            let mut input: Vec<f64> = (0..20).map(f64::from).collect();
             input[10] = f64::NAN;
             let result = grad.compute(&input).await.unwrap();
             assert!(result[9].is_nan() || result[10].is_nan() || result[11].is_nan());

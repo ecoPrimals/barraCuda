@@ -200,6 +200,6 @@ mod tests {
         else {
             return;
         };
-        device.compile_shader_f64(WGSL_WRIGHT_FISHER_F64, Some("wright_fisher_f64"));
+        let _ = device.compile_shader_f64(WGSL_WRIGHT_FISHER_F64, Some("wright_fisher_f64"));
     }
 }

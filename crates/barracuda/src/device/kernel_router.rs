@@ -412,20 +412,32 @@ impl KernelRouter {
         }
     }
 
-    /// Discover available NPU models from filesystem
+    /// Discover available NPU models via capability-based filesystem search.
+    ///
+    /// Resolution chain (first match wins):
+    /// 1. `AKIDA_MODELS_DIR` environment variable
+    /// 2. XDG data dirs → `$XDG_DATA_HOME/akida/models`
+    /// 3. `$HOME/.local/share/akida/models`
+    /// 4. System paths → `/usr/share/akida/models`, `/opt/akida/models`
     fn discover_npu_models() -> Result<HashMap<String, NpuModelInfo>> {
         let mut models = HashMap::new();
 
-        // Check standard model locations (absolute paths only)
-        let mut model_dirs = vec![
-            "/usr/share/akida/models".to_string(),
-            "/opt/akida/models".to_string(),
-        ];
+        let mut model_dirs = Vec::new();
 
-        // Add home directory path if available
-        if let Ok(home) = std::env::var("HOME") {
+        if let Ok(dir) = std::env::var("AKIDA_MODELS_DIR") {
+            model_dirs.push(dir);
+        }
+
+        if let Ok(data_home) = std::env::var("XDG_DATA_HOME") {
+            model_dirs.push(format!("{data_home}/akida/models"));
+        } else if let Ok(home) = std::env::var("HOME") {
             model_dirs.push(format!("{home}/.local/share/akida/models"));
         }
+
+        model_dirs.extend([
+            "/usr/share/akida/models".to_string(),
+            "/opt/akida/models".to_string(),
+        ]);
 
         for dir in model_dirs {
             let path = std::path::Path::new(&dir);

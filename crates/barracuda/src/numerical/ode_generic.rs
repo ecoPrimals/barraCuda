@@ -607,7 +607,7 @@ fn deriv(state: array<Scalar, 1>, params: array<Scalar, 1>, t: Scalar) -> array<
             return;
         };
         let shader = BatchedOdeRK4::<ExponentialDecay>::generate_shader();
-        device.compile_shader_f64(&shader, Some("ode_generic_exponential_decay"));
+        let _ = device.compile_shader_f64(&shader, Some("ode_generic_exponential_decay"));
     }
 
     #[test]

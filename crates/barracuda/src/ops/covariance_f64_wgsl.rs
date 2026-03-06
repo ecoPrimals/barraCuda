@@ -18,18 +18,24 @@ const SHADER: &str = include_str!("../shaders/special/covariance_f64.wgsl");
 const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
 
 /// Select shader based on FP64 strategy: native f64 or DF64 auto-rewrite.
-fn shader_for_device(device: &WgpuDevice) -> &'static str {
+///
+/// On Hybrid devices the native f64 shader may silently produce zeros,
+/// so we require the DF64 rewrite to succeed rather than falling back.
+fn shader_for_device(device: &WgpuDevice) -> Result<&'static str> {
     let profile = GpuDriverProfile::from_device(device);
     match profile.fp64_strategy() {
-        Fp64Strategy::Native | Fp64Strategy::Concurrent => SHADER,
+        Fp64Strategy::Native | Fp64Strategy::Concurrent => Ok(SHADER),
         Fp64Strategy::Hybrid => {
-            static DF64_SOURCE: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-                match crate::shaders::sovereign::df64_rewrite::rewrite_f64_infix_full(SHADER) {
-                    Ok(src) => format!("enable f64;\n{DF64_CORE}\n{src}"),
-                    Err(_) => SHADER.to_string(),
-                }
-            });
-            &DF64_SOURCE
+            static DF64_RESULT: std::sync::LazyLock<std::result::Result<String, String>> =
+                std::sync::LazyLock::new(|| {
+                    crate::shaders::sovereign::df64_rewrite::rewrite_f64_infix_full(SHADER)
+                        .map(|src| format!("enable f64;\n{DF64_CORE}\n{src}"))
+                        .map_err(|e| format!("covariance DF64 rewrite failed: {e}"))
+                });
+            match DF64_RESULT.as_ref() {
+                Ok(src) => Ok(src.as_str()),
+                Err(msg) => Err(crate::error::BarracudaError::ShaderCompilation(msg.clone())),
+            }
         }
     }
 }
@@ -121,7 +127,7 @@ impl CovarianceF64 {
             Some("CovF64 BG"),
         );
 
-        let shader_src = shader_for_device(&self.device);
+        let shader_src = shader_for_device(&self.device)?;
         let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
             self.device.device(),
             adapter_info,

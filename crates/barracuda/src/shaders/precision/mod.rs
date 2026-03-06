@@ -453,14 +453,15 @@ impl ShaderTemplate {
     #[must_use]
     pub fn with_math_f64_auto(shader_body: &str) -> String {
         use math_f64::F64_FUNCTION_ORDER;
-        let mut used_functions = Vec::new();
-        for func_name in F64_FUNCTION_ORDER {
-            let call_pattern = format!("{func_name}(");
-            let call_pattern_space = format!("{func_name} (");
-            if shader_body.contains(&call_pattern) || shader_body.contains(&call_pattern_space) {
-                used_functions.push(*func_name);
-            }
-        }
+        let mut used_functions: Vec<&str> = F64_FUNCTION_ORDER
+            .iter()
+            .filter(|func_name| {
+                let call_pattern = format!("{func_name}(");
+                let call_pattern_space = format!("{func_name} (");
+                shader_body.contains(&call_pattern) || shader_body.contains(&call_pattern_space)
+            })
+            .copied()
+            .collect();
         if shader_body.contains("round_f64") && !used_functions.contains(&"round_f64") {
             used_functions.push("round_f64");
         }

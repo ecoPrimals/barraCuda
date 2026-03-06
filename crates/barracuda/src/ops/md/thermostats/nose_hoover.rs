@@ -325,8 +325,7 @@ mod tests {
     fn test_nose_hoover_xi_dynamics() {
         let mut chain = NoseHooverChain::new(0.1, 0.5, 100, 0.01);
 
-        // If KE > KE_target, ξ should increase (add friction to cool down)
-        let _ke_target = 1.5 * 100.0 * 0.1; // 15.0 (used for documentation)
+        // If KE > KE_target (= 1.5 × 100 × 0.1 = 15.0), ξ should increase
         let ke_hot = 20.0; // Too hot
 
         chain.half_step_xi(ke_hot);

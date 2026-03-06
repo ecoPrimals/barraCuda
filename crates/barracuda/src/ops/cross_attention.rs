@@ -279,7 +279,6 @@ mod tests {
         let dim = 2;
 
         let q_size = batch * heads * dec_len * dim;
-        let _kv_size = batch * heads * enc_len * dim;
 
         let query = vec![1.0, 0.0, 0.0, 1.0]; // 2 decoder tokens
         let key = vec![1.0, 0.0, 0.0, 1.0, 0.5, 0.5]; // 3 encoder tokens

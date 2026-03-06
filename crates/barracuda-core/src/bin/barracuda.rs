@@ -26,10 +26,15 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Start the barraCuda IPC server.
+    ///
+    /// Per ecoBin standard, Unix domain sockets are the primary transport
+    /// on Unix platforms. TCP is used as fallback or when `--bind` is
+    /// explicitly provided. Use `--no-unix` to force TCP-only mode.
     Server {
         /// TCP bind address for JSON-RPC.
         /// Resolved in order: `--bind`, `BARRACUDA_IPC_BIND`,
         /// `BARRACUDA_IPC_HOST`:`BARRACUDA_IPC_PORT`, or `127.0.0.1:0` (ephemeral).
+        /// When `--bind` is provided, TCP becomes the primary transport.
         #[arg(long)]
         bind: Option<String>,
 
@@ -37,12 +42,16 @@ enum Commands {
         #[arg(long)]
         tarpc_bind: Option<String>,
 
-        /// Use Unix socket instead of TCP for JSON-RPC.
-        /// Defaults to `$XDG_RUNTIME_DIR/barracuda/barracuda.sock` if
-        /// flag is present without a value.
+        /// Unix socket path override. Defaults to
+        /// `$XDG_RUNTIME_DIR/barracuda/barracuda.sock`.
         #[cfg(unix)]
         #[arg(long, num_args = 0..=1, default_missing_value = "__default__")]
         unix: Option<String>,
+
+        /// Disable Unix socket transport (force TCP-only).
+        #[cfg(unix)]
+        #[arg(long)]
+        no_unix: bool,
     },
 
     /// Health check and diagnostics.
@@ -76,6 +85,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             tarpc_bind,
             #[cfg(unix)]
             unix,
+            #[cfg(unix)]
+            no_unix,
         } => {
             let mut primal = BarraCudaPrimal::new();
             primal
@@ -96,20 +107,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 });
             }
 
+            // ecoBin transport priority: Unix socket → TCP fallback.
+            // When --bind is explicitly provided, TCP is primary.
+            // Otherwise, Unix socket is the default on Unix platforms.
             #[cfg(unix)]
-            if let Some(path) = unix {
-                let sock_path = if path == "__default__" {
-                    barracuda_core::ipc::IpcServer::default_socket_path()
-                } else {
-                    std::path::PathBuf::from(&path)
-                };
-                server.serve_unix(&sock_path).await?;
-                return Ok(());
+            {
+                let use_unix = !no_unix && bind.is_none();
+                let explicit_unix = unix.is_some();
+
+                if use_unix || explicit_unix {
+                    let sock_path = match &unix {
+                        Some(p) if p != "__default__" => std::path::PathBuf::from(p),
+                        _ => barracuda_core::ipc::IpcServer::default_socket_path(),
+                    };
+                    server.serve_unix(&sock_path).await?;
+                    return Ok(());
+                }
             }
 
             let bind_addr = barracuda_core::ipc::transport::resolve_bind_address(bind.as_deref());
 
-            // File-based discovery: write transport info for peer primals.
             write_discovery_file(&bind_addr, tarpc_bind.as_deref());
 
             server.serve_tcp(&bind_addr).await?;

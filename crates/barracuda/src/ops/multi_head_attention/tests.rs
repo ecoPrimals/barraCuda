@@ -36,7 +36,6 @@ async fn test_multi_head_attention_basic() {
         .await
         .unwrap();
 
-    let _weight_size = d_model * d_model;
     let w_q = create_test_tensor(dev.clone(), vec![d_model, d_model], 0.01)
         .await
         .unwrap();

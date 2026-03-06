@@ -133,7 +133,7 @@
 #![cfg_attr(
     test,
     expect(clippy::unwrap_used, reason = "test code uses unwrap for brevity"),
-    allow(clippy::large_stack_arrays, clippy::needless_pass_by_value)
+    allow(clippy::large_stack_arrays)
 )]
 #![expect(
     rustdoc::broken_intra_doc_links,

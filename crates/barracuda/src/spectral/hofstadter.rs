@@ -61,21 +61,19 @@ pub const GOLDEN_RATIO: f64 = 0.618_033_988_749_894_9;
 /// Avila & Jitomirskaya (2009) Ann. Math. 170, 303
 #[must_use]
 pub fn hofstadter_butterfly(q_max: usize, lambda: f64, n_sites: usize) -> Vec<(f64, Vec<f64>)> {
-    let mut results = Vec::new();
-
-    for q in 1..=q_max {
-        for p in 1..q {
-            if gcd(p, q) != 1 {
-                continue;
-            }
-            let alpha = p as f64 / q as f64;
-            let (d, e) = almost_mathieu_hamiltonian(n_sites, lambda, alpha, 0.0);
-            let evals = find_all_eigenvalues(&d, &e);
-            results.push((alpha, evals));
-        }
-    }
-
-    results
+    (1..=q_max)
+        .flat_map(|q| {
+            (1..q).filter_map(move |p| {
+                if gcd(p, q) != 1 {
+                    return None;
+                }
+                let alpha = p as f64 / q as f64;
+                let (d, e) = almost_mathieu_hamiltonian(n_sites, lambda, alpha, 0.0);
+                let evals = find_all_eigenvalues(&d, &e);
+                Some((alpha, evals))
+            })
+        })
+        .collect()
 }
 
 /// Greatest common divisor (Euclid's algorithm).

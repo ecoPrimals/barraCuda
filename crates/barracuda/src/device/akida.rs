@@ -109,9 +109,10 @@ pub fn detect_akida_boards() -> Result<AkidaCapabilities> {
     tracing::info!("Found {} Akida board(s)", pcie_devices.len());
 
     // Query each board
-    let mut boards = Vec::new();
-    for (index, device) in pcie_devices.iter().enumerate() {
-        match query_board_info(device, index) {
+    let boards: Vec<_> = pcie_devices
+        .iter()
+        .enumerate()
+        .filter_map(|(index, device)| match query_board_info(device, index) {
             Ok(board) => {
                 tracing::info!(
                     "  Board {}: {} at {} ({} NPUs, {:.1}W, {:.1}°C)",
@@ -122,13 +123,14 @@ pub fn detect_akida_boards() -> Result<AkidaCapabilities> {
                     board.power_watts,
                     board.temperature_celsius
                 );
-                boards.push(board);
+                Some(board)
             }
             Err(e) => {
                 tracing::warn!("Failed to query board {}: {}", index, e);
+                None
             }
-        }
-    }
+        })
+        .collect();
 
     // Calculate totals
     let total_npus = boards.iter().map(|b| b.npu_count).sum();
@@ -157,24 +159,29 @@ struct PcieDevice {
 
 /// Scan `PCIe` bus for `BrainChip` Akida devices
 fn scan_pcie_for_akida() -> Result<Vec<PcieDevice>> {
-    let mut devices = Vec::new();
-
     // Scan /sys/bus/pci/devices for BrainChip vendor ID (0x1e7c)
     let pci_dir = "/sys/bus/pci/devices";
 
-    if let Ok(entries) = std::fs::read_dir(pci_dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            let address = entry.file_name().to_string_lossy().to_string();
+    let devices = if let Ok(entries) = std::fs::read_dir(pci_dir) {
+        entries
+            .flatten()
+            .filter_map(|entry| {
+                let path = entry.path();
+                let address = entry.file_name().to_string_lossy().to_string();
 
-            // Read vendor and device IDs
-            let vendor_path = path.join("vendor");
-            let device_path = path.join("device");
+                // Read vendor and device IDs
+                let vendor_path = path.join("vendor");
+                let device_path = path.join("device");
 
-            if let (Ok(vendor_str), Ok(device_str)) = (
-                std::fs::read_to_string(&vendor_path),
-                std::fs::read_to_string(&device_path),
-            ) {
+                let (vendor_str, device_str) = (
+                    std::fs::read_to_string(&vendor_path),
+                    std::fs::read_to_string(&device_path),
+                );
+
+                let (Ok(vendor_str), Ok(device_str)) = (vendor_str, device_str) else {
+                    return None;
+                };
+
                 // Parse hex values
                 let vendor_id = u16::from_str_radix(vendor_str.trim().trim_start_matches("0x"), 16)
                     .unwrap_or(0);
@@ -191,15 +198,19 @@ fn scan_pcie_for_akida() -> Result<Vec<PcieDevice>> {
                         device_id
                     );
 
-                    devices.push(PcieDevice {
+                    Some(PcieDevice {
                         address,
                         vendor_id,
                         device_id,
-                    });
+                    })
+                } else {
+                    None
                 }
-            }
-        }
-    }
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
 
     Ok(devices)
 }
@@ -362,19 +373,33 @@ fn check_board_health(address: &str) -> Result<BoardHealth> {
     }
 }
 
-/// Detect Akida SDK version
+/// Detect Akida SDK version via capability-based discovery.
+///
+/// Resolution chain (first match wins):
+/// 1. `AKIDA_SDK_DIR` environment variable → `$AKIDA_SDK_DIR/version`
+/// 2. XDG data dirs → `$XDG_DATA_HOME/akida/version`
+/// 3. System paths → `/opt/akida/version`, `/usr/local/akida/version`,
+///    `/usr/share/akida/version`
 fn detect_akida_sdk_version() -> Option<String> {
-    // Try to find Akida SDK installation
-    // In production, this would check for SDK libraries
+    let mut search_paths = Vec::new();
 
-    // Check common locations
-    let sdk_paths = [
-        "/opt/akida/version",
-        "/usr/local/akida/version",
-        "/usr/share/akida/version",
-    ];
+    if let Ok(sdk_dir) = std::env::var("AKIDA_SDK_DIR") {
+        search_paths.push(format!("{sdk_dir}/version"));
+    }
 
-    for path in &sdk_paths {
+    if let Ok(data_home) = std::env::var("XDG_DATA_HOME") {
+        search_paths.push(format!("{data_home}/akida/version"));
+    } else if let Ok(home) = std::env::var("HOME") {
+        search_paths.push(format!("{home}/.local/share/akida/version"));
+    }
+
+    search_paths.extend([
+        "/opt/akida/version".to_string(),
+        "/usr/local/akida/version".to_string(),
+        "/usr/share/akida/version".to_string(),
+    ]);
+
+    for path in &search_paths {
         if let Ok(version) = std::fs::read_to_string(path) {
             return Some(version.trim().to_string());
         }

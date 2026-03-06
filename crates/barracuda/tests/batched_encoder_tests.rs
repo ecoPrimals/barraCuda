@@ -36,11 +36,11 @@ async fn batched_encoder_two_passes_execute() {
     let buf_b = device.create_buffer_f32(n).unwrap();
 
     let mut batch = BatchedEncoder::new(&device);
-    batch
+    let _ = batch
         .dispatch("fill", SHADER_FILL, "main")
         .storage_rw(0, &buf_a)
         .workgroups(1, 1, 1);
-    batch
+    let _ = batch
         .dispatch("double", SHADER_DOUBLE, "main")
         .storage_read(0, &buf_a)
         .storage_rw(1, &buf_b)

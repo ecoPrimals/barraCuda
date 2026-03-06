@@ -186,6 +186,7 @@ mod tests {
         else {
             return;
         };
-        device.compile_shader_f64(WGSL_MULTI_OBJ_FITNESS_F64, Some("multi_obj_fitness_f64"));
+        let _ =
+            device.compile_shader_f64(WGSL_MULTI_OBJ_FITNESS_F64, Some("multi_obj_fitness_f64"));
     }
 }

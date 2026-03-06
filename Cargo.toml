@@ -41,7 +41,7 @@ wgpu = { version = "28", default-features = false, features = [
     "spirv",
 ] }
 bytemuck = { version = "1.25", features = ["derive"] }
-naga = { version = "28", features = ["wgsl-in", "spv-out"] }
+naga = { version = "28", features = ["wgsl-in", "wgsl-out", "spv-out"] }
 
 # Numerics
 num-traits = "0.2"

@@ -272,9 +272,11 @@ mod tests {
     }
 
     /// Zero fields (θ=0, φ=0) must produce zero force kick.
+    ///
     /// With all gauge link angles θ=0 and Higgs field φ=0+0i:
-    ///   - Plaquette contribution: Im(e^{i·0}) = 0  →  gauge force = 0
-    ///   - Hopping term: φ†(x)·e^{iθ}·φ(x+μ) = 0  →  Higgs force = 0
+    ///   - Plaquette contribution: Im(e^{i·0}) = 0 → gauge force = 0
+    ///   - Hopping term: φ†(x)·e^{iθ}·φ(x+μ) = 0 → Higgs force = 0
+    ///
     /// After one half-kick, all momenta must remain unchanged (zero).
     /// Tests the full WGSL path on a 2×4 (nt=2, ns=4) periodic lattice.
     #[test]

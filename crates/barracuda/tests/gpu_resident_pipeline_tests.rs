@@ -73,7 +73,7 @@ async fn test_max_abs_diff_stress_large() {
 
     // Large arrays (100K elements, multiple workgroups)
     let n = 100_000;
-    let a: Vec<f64> = (0..n).map(|i| f64::from(i)).collect();
+    let a: Vec<f64> = (0..n).map(f64::from).collect();
     let mut b = a.clone();
 
     // Insert a known max difference at a specific location
@@ -166,12 +166,12 @@ async fn test_solver_buffers_multiple_solvers() {
     assert!(ids.contains(&"md".to_string()));
 
     // Release one
-    pool.release_solver_buffers("hfb");
+    let _ = pool.release_solver_buffers("hfb");
     assert!(!pool.has_solver_buffers("hfb"));
     assert!(pool.has_solver_buffers("md"));
 
     // Release the other
-    pool.release_solver_buffers("md");
+    let _ = pool.release_solver_buffers("md");
     assert!(pool.solver_ids().is_empty());
 }
 
@@ -222,7 +222,7 @@ async fn test_batched_bisection_iteration_counts() {
 
     let lower = vec![0.0; 10];
     let upper = vec![10.0; 10];
-    let targets: Vec<f64> = (1..=10).map(|i| f64::from(i)).collect();
+    let targets: Vec<f64> = (1..=10).map(f64::from).collect();
 
     let result = bisect.solve_polynomial(&lower, &upper, &targets).unwrap();
 

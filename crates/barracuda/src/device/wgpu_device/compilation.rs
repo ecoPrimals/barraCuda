@@ -18,40 +18,36 @@ impl WgpuDevice {
         module
     }
 
-    /// Compile a [`ValidatedSpirv`] binary into a shader module.
+    /// Run the sovereign compiler's naga-level optimisations on WGSL and
+    /// compile the result through the safe `create_shader_module` path.
     ///
-    /// Requires `SPIRV_SHADER_PASSTHROUGH` — check with `has_spirv_passthrough()`.
-    ///
-    /// Safety is encoded in the type system: [`ValidatedSpirv`] can only be
-    /// constructed from naga-validated IR via [`SovereignCompiler`], so the
-    /// `unsafe` wgpu API call is backed by a compile-time trust boundary.
-    ///
-    /// [`ValidatedSpirv`]: crate::shaders::sovereign::ValidatedSpirv
-    /// [`SovereignCompiler`]: crate::shaders::sovereign::SovereignCompiler
-    #[must_use]
-    pub fn compile_shader_spirv(
+    /// Returns `None` if the sovereign pipeline fails (caller should fall
+    /// back to the un-optimised WGSL).
+    fn try_sovereign_compile(
         &self,
-        validated: &crate::shaders::sovereign::ValidatedSpirv,
+        source: &str,
         label: Option<&str>,
-    ) -> wgpu::ShaderModule {
-        // SAFETY: SPIR-V was produced by SovereignCompiler (naga IR → spv::Writer)
-        // from Validator-approved modules. The ValidatedSpirv type guarantees no
-        // external or untrusted binary can reach this call site.
-        self.encoding_guard();
-        #[expect(
-            unsafe_code,
-            reason = "wgpu API requires unsafe for SPIR-V passthrough; safety enforced by ValidatedSpirv type boundary"
-        )]
-        let module = unsafe {
-            self.device
-                .create_shader_module_passthrough(wgpu::ShaderModuleDescriptorPassthrough {
-                    label,
-                    spirv: Some(std::borrow::Cow::Borrowed(validated.words())),
-                    ..Default::default()
-                })
-        };
-        self.encoding_complete();
-        module
+        tag: &str,
+    ) -> Option<wgpu::ShaderModule> {
+        use crate::shaders::sovereign::SovereignCompiler;
+        let profile = crate::device::driver_profile::GpuDriverProfile::from_device(self);
+        let sovereign = SovereignCompiler::new(profile);
+        match sovereign.compile_to_wgsl(source) {
+            Ok((optimized_wgsl, stats)) => {
+                if stats.fma_fusions > 0 || stats.dead_exprs_eliminated > 0 {
+                    tracing::debug!(
+                        "sovereign {tag}: {} FMA fusions, {} dead exprs eliminated",
+                        stats.fma_fusions,
+                        stats.dead_exprs_eliminated,
+                    );
+                }
+                Some(self.compile_shader(&optimized_wgsl, label))
+            }
+            Err(e) => {
+                tracing::debug!("sovereign {tag} fallback to raw WGSL: {e}");
+                None
+            }
+        }
     }
 
     /// Compile an f64 WGSL shader with automatic driver-aware patching and ILP optimization.
@@ -60,19 +56,17 @@ impl WgpuDevice {
     /// 1. `ShaderTemplate::for_driver_auto` — patches exp/log for drivers that lack native f64
     /// 2. `WgslOptimizer::optimize` — reorders `@ilp_region` blocks + unrolls `@unroll_hint` loops
     ///    (Phase 3 `SOVEREIGN_COMPUTE_EVOLUTION`; only active when annotations are present)
-    /// 3. `SovereignCompiler::compile` — Phase 4: naga IR optimization (FMA fusion, dead expr
-    ///    elimination) + SPIR-V emission via `SPIRV_SHADER_PASSTHROUGH` (when available).
+    /// 3. `SovereignCompiler::compile_to_wgsl` — Phase 4: naga IR optimisation (FMA fusion,
+    ///    dead expr elimination) → re-emit optimised WGSL (safe, no SPIR-V passthrough).
     ///
     /// The optimizer is keyed to the actual GPU arch detected at device-creation time,
     /// so the ILP fill width matches the hardware (8 cy on SM70, 4 cy on RDNA2, etc.).
+    #[must_use]
     pub fn compile_shader_f64(&self, source: &str, label: Option<&str>) -> wgpu::ShaderModule {
         let source = &source.replace("enable f64;", "");
 
         let profile = crate::device::driver_profile::GpuDriverProfile::from_device(self);
 
-        // Single-pass: driver patching + ILP optimization with the real latency model.
-        // `for_driver_profile` replaces the previous `for_driver_auto` + second optimizer
-        // pass that was double-optimizing with mismatched latency models.
         let optimized = crate::shaders::precision::ShaderTemplate::for_driver_profile(
             source,
             self.needs_f64_exp_log_workaround(),
@@ -80,32 +74,14 @@ impl WgpuDevice {
         );
 
         // coralReef: async native binary compilation for NVIDIA GPUs.
-        // Fires in the background — the cached binary will be available for
-        // future coralDriver dispatch. Current path continues via wgpu.
         if let Some(coral_arch) = crate::device::coral_compiler::arch_to_coral(&profile.arch) {
             crate::device::coral_compiler::spawn_coral_compile(&optimized, coral_arch, true);
         }
 
-        // Sovereign compiler — naga IR → FMA fusion → SPIR-V.
-        // Bypasses NAK entirely when SPIRV_SHADER_PASSTHROUGH is available (NVK/Vulkan).
-        if self.has_spirv_passthrough() {
-            use crate::shaders::sovereign::{SovereignCompiler, SovereignOutput};
-            let sovereign = SovereignCompiler::new(profile);
-            match sovereign.compile(&optimized) {
-                Ok((SovereignOutput::Spirv(validated), stats)) => {
-                    if stats.fma_fusions > 0 || stats.dead_exprs_eliminated > 0 {
-                        tracing::debug!(
-                            "sovereign: {} FMA fusions, {} dead exprs eliminated",
-                            stats.fma_fusions,
-                            stats.dead_exprs_eliminated,
-                        );
-                    }
-                    return self.compile_shader_spirv(&validated, label);
-                }
-                Err(e) => {
-                    tracing::debug!("sovereign compiler fallback to WGSL: {e}");
-                }
-            }
+        // Sovereign compiler — naga IR → FMA fusion → optimised WGSL (safe path).
+        // Runs on all backends (Vulkan, Metal, DX12, WebGPU).
+        if let Some(module) = self.try_sovereign_compile(&optimized, label, "f64") {
+            return module;
         }
 
         self.compile_shader(&optimized, label)
@@ -125,7 +101,8 @@ impl WgpuDevice {
     /// Pipeline mirrors [`compile_shader_f64`] minus the f64 driver patching:
     /// 1. Prepend DF64 preamble (core + transcendentals)
     /// 2. ILP optimizer (when `@ilp_region`/`@unroll_hint` annotations present)
-    /// 3. Sovereign compiler SPIR-V path (when available)
+    /// 3. Sovereign compiler optimised WGSL path (safe, all backends)
+    #[must_use]
     pub fn compile_shader_df64(&self, source: &str, label: Option<&str>) -> wgpu::ShaderModule {
         const DF64_CORE: &str = include_str!("../../shaders/math/df64_core.wgsl");
         const DF64_TRANSCENDENTALS: &str =
@@ -133,7 +110,6 @@ impl WgpuDevice {
 
         let combined = format!("{DF64_CORE}\n{DF64_TRANSCENDENTALS}\n{source}");
 
-        // Strip `enable f64;` — naga handles f64 via capability flags, not directives.
         let combined = combined
             .lines()
             .filter(|l| l.trim() != "enable f64;")
@@ -154,24 +130,9 @@ impl WgpuDevice {
             crate::device::coral_compiler::spawn_coral_compile(&optimized, coral_arch, false);
         }
 
-        if self.has_spirv_passthrough() {
-            use crate::shaders::sovereign::{SovereignCompiler, SovereignOutput};
-            let sovereign = SovereignCompiler::new(profile);
-            match sovereign.compile(&optimized) {
-                Ok((SovereignOutput::Spirv(validated), stats)) => {
-                    if stats.fma_fusions > 0 || stats.dead_exprs_eliminated > 0 {
-                        tracing::debug!(
-                            "sovereign df64: {} FMA fusions, {} dead exprs eliminated",
-                            stats.fma_fusions,
-                            stats.dead_exprs_eliminated,
-                        );
-                    }
-                    return self.compile_shader_spirv(&validated, label);
-                }
-                Err(e) => {
-                    tracing::debug!("sovereign df64 fallback: {e}");
-                }
-            }
+        // Sovereign compiler — naga IR → FMA fusion → optimised WGSL (safe path).
+        if let Some(module) = self.try_sovereign_compile(&optimized, label, "df64") {
+            return module;
         }
 
         self.compile_shader(&optimized, label)

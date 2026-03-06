@@ -86,8 +86,6 @@ async fn test_spin_orbit_with_density() {
 
     // Test the version that computes gradient internally
     let n_grid = 10;
-    let _n_states = 1;
-    let _batch_size = 1;
     let dr = 0.5;
     let w0 = 120.0;
 

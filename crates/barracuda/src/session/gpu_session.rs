@@ -74,17 +74,16 @@ impl GpuSessionBuilder {
     /// Returns [`Err`] if device creation fails, or if buffer allocation or
     /// GPU dispatch fails during warmup (e.g. device lost or out of memory).
     pub async fn build(self) -> Result<GpuSession> {
-        let device = match self.device {
-            Some(d) => d,
-            None => {
-                Arc::new(
-                    WgpuDevice::new()
-                        .await
-                        .map_err(|e| BarracudaError::InvalidInput {
-                            message: format!("Failed to create WgpuDevice: {e}"),
-                        })?,
-                )
-            }
+        let device = if let Some(d) = self.device {
+            d
+        } else {
+            Arc::new(
+                WgpuDevice::new()
+                    .await
+                    .map_err(|e| BarracudaError::InvalidInput {
+                        message: format!("Failed to create WgpuDevice: {e}"),
+                    })?,
+            )
         };
 
         let warmup_ops: Vec<WarmupOp> = self

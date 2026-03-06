@@ -245,9 +245,8 @@ mod tests {
             return;
         };
 
-        let gpu = match BatchedMultinomialGpu::new(device) {
-            Ok(g) => g,
-            Err(_) => return,
+        let Ok(gpu) = BatchedMultinomialGpu::new(device) else {
+            return;
         };
 
         let cumul = vec![0.25, 0.50, 0.75, 1.0];
@@ -280,9 +279,8 @@ mod tests {
             return;
         };
 
-        let gpu = match BatchedMultinomialGpu::new(device) {
-            Ok(g) => g,
-            Err(_) => return,
+        let Ok(gpu) = BatchedMultinomialGpu::new(device) else {
+            return;
         };
 
         let cumul = vec![0.25, 0.50, 0.75, 1.0];
@@ -309,9 +307,8 @@ mod tests {
             return;
         };
 
-        let gpu = match BatchedMultinomialGpu::new(device) {
-            Ok(g) => g,
-            Err(_) => return,
+        let Ok(gpu) = BatchedMultinomialGpu::new(device) else {
+            return;
         };
 
         let raw_probs = vec![0.25, 0.25, 0.25, 0.25];

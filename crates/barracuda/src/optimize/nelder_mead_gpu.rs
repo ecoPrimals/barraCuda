@@ -409,21 +409,10 @@ impl NelderMeadGpu {
 
 #[cfg(test)]
 mod tests {
-    // Note: Full GPU tests require a device. These are compilation/API tests.
+    use super::NelderMeadGpuResult;
 
     #[test]
     fn test_nelder_mead_gpu_creation() {
-        // Verify the struct and methods compile correctly
-        // Actual GPU tests would require async runtime and device
-    }
-
-    #[test]
-    fn test_simplex_init() {
-        // Test initialization logic (doesn't need GPU)
-        let _x0 = [1.0, 2.0];
-        let _bounds = [(0.0, 10.0), (0.0, 10.0)];
-
-        // Would need device for full test
-        // This verifies the algorithm compiles
+        assert!(std::mem::size_of::<NelderMeadGpuResult>() > 0);
     }
 }

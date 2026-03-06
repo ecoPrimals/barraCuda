@@ -201,6 +201,6 @@ mod tests {
         else {
             return;
         };
-        device.compile_shader_f64(WGSL_STENCIL_COOPERATION_F64, Some("stencil_coop_f64"));
+        let _ = device.compile_shader_f64(WGSL_STENCIL_COOPERATION_F64, Some("stencil_coop_f64"));
     }
 }

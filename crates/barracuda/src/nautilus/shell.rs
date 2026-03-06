@@ -106,7 +106,8 @@ impl NautilusShell {
             .map(|inp| self.population.respond_all(inp))
             .collect();
 
-        self.readout = LinearReadout::new(input_dim, 3, self.config.lambda);
+        let n_out = targets.first().map_or(3, std::vec::Vec::len);
+        self.readout = LinearReadout::new(input_dim, n_out, self.config.lambda);
         let mse = self.readout.train(&responses, targets)?;
 
         self.population.evaluate_fitness(inputs, targets);

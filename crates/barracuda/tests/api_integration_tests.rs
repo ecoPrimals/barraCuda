@@ -110,7 +110,7 @@ async fn test_snn_neuromorphic() {
         })
         .collect();
 
-    let output = network.process_step(&input_spikes).unwrap();
+    let output = network.process_step(input_spikes.as_slice()).unwrap();
 
     assert_eq!(output.len(), 100);
 

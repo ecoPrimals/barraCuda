@@ -3,8 +3,12 @@
 //!
 //! Provides `run_gpu_resilient_async` to wrap GPU test bodies and gracefully
 //! skip when NVK/Nouveau driver invalidates resources under concurrent load.
+//! Wraps the entire async body in `tokio::time::timeout` to prevent indefinite
+//! hangs when the GPU stalls (driver lockup, compute shader deadlock).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
+
+use barracuda::device::test_pool::GPU_TEST_TIMEOUT;
 
 const NVK_SKIP_PATTERNS: &[&str] = &["does not exist", "device lost", "Parent device"];
 
@@ -15,8 +19,12 @@ fn is_nvk_driver_error(msg: &str) -> bool {
 /// Runs a GPU test body, gracefully skipping if the GPU device panics
 /// due to NVK driver resource invalidation under concurrent load.
 ///
+/// Wraps the async body in `tokio::time::timeout` (see `GPU_TEST_TIMEOUT`)
+/// to prevent indefinite hangs when the GPU stalls.
+///
 /// Returns `true` if the test completed successfully, `false` if it should
-/// be skipped (NVK driver limitation). Re-panics on other panics.
+/// be skipped (NVK driver limitation). Re-panics on other panics (including
+/// timeout).
 ///
 /// Spawns a dedicated thread with its own tokio runtime to avoid nesting
 /// runtimes when called from `#[tokio::test]`.
@@ -31,7 +39,15 @@ where
             .build()
             .expect("failed to build test runtime");
 
-        catch_unwind(AssertUnwindSafe(|| rt.block_on(f())))
+        let fut = f();
+        let wrapped = async {
+            assert!(
+                tokio::time::timeout(GPU_TEST_TIMEOUT, fut).await.is_ok(),
+                "GPU test timed out after {GPU_TEST_TIMEOUT:?} \
+                 (possible driver stall or shader deadlock)",
+            );
+        };
+        catch_unwind(AssertUnwindSafe(|| rt.block_on(wrapped)))
     });
 
     match handle.join().expect("test thread panicked") {

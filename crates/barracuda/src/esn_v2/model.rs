@@ -546,10 +546,7 @@ impl ESN {
     pub fn export_weights(&self) -> BarracudaResult<ExportedWeights> {
         let w_in_data = self.w_in.to_vec()?;
         let w_res_data = self.w_res.to_vec()?;
-        let w_out_data = match &self.w_out {
-            Some(w) => Some(w.to_vec()?),
-            None => None,
-        };
+        let w_out_data = self.w_out.as_ref().map(Tensor::to_vec).transpose()?;
         Ok(ExportedWeights {
             w_in: w_in_data,
             w_res: w_res_data,

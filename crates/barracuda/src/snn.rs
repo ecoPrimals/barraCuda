@@ -285,8 +285,8 @@ impl SpikingNetwork {
     /// # Errors
     ///
     /// Returns [`Err`] if any layer processes input with mismatched dimensions.
-    pub fn process_step(&mut self, input: &[f32]) -> BarracudaResult<Vec<f32>> {
-        let mut current = input.to_vec();
+    pub fn process_step(&mut self, input: impl Into<Vec<f32>>) -> BarracudaResult<Vec<f32>> {
+        let mut current = input.into();
 
         for i in 0..self.layers.len() {
             current = self.process_layer(i, &current)?;
@@ -311,7 +311,7 @@ impl SpikingNetwork {
     pub fn process_sequence(&mut self, sequence: &[Vec<f32>]) -> BarracudaResult<Vec<Vec<f32>>> {
         sequence
             .iter()
-            .map(|input| self.process_step(input))
+            .map(|input| self.process_step(input.as_slice()))
             .collect()
     }
 
@@ -362,6 +362,7 @@ impl SpikingNetwork {
 
             SNNLayer::TemporalPool { window_size } => {
                 // Temporal pooling: sum spikes over time window
+                // Copy necessary: we must store the frame for later aggregation; buffer owns the data.
                 state.temporal_buffer.push(input.to_vec());
 
                 if state.temporal_buffer.len() > *window_size {
@@ -437,6 +438,7 @@ impl SpikingNetwork {
             SNNLayer::RateDecoder => {
                 // Rate decoding: spikes → continuous
                 // Just pass through (decoding happens via temporal pooling)
+                // Copy necessary: we must return owned Vec; input is borrowed.
                 Ok(input.to_vec())
             }
         }
@@ -483,7 +485,7 @@ mod tests {
 
         // Strong input should cause spikes
         let input = vec![2.0, 2.0, 2.0, 2.0, 2.0];
-        let output = network.process_step(&input).unwrap();
+        let output = network.process_step(input.as_slice()).unwrap();
 
         // Should have spikes (1.0) since input > threshold
         assert!(output.contains(&1.0));
@@ -502,7 +504,7 @@ mod tests {
 
         // Weak input should not cause spikes
         let input = vec![0.1, 0.1, 0.1, 0.1, 0.1];
-        let output = network.process_step(&input).unwrap();
+        let output = network.process_step(input.as_slice()).unwrap();
 
         // Should have no spikes
         assert!(output.iter().all(|&x| x == 0.0));
@@ -515,9 +517,9 @@ mod tests {
             .build();
 
         // Process sequence
-        network.process_step(&[1.0, 0.0]).unwrap();
-        network.process_step(&[0.0, 1.0]).unwrap();
-        let output = network.process_step(&[1.0, 0.0]).unwrap();
+        network.process_step([1.0, 0.0]).unwrap();
+        network.process_step([0.0, 1.0]).unwrap();
+        let output = network.process_step([1.0, 0.0]).unwrap();
 
         // Should sum over last 3 frames
         assert_eq!(output[0], 2.0); // Two 1.0s in first channel
@@ -541,7 +543,7 @@ mod tests {
             .build();
 
         let input = vec![1.0, 2.0, 3.0, 4.0];
-        let output = network.process_step(&input).unwrap();
+        let output = network.process_step(input.as_slice()).unwrap();
 
         // output[0] = 0.5*1.0 + 0.5*4.0 = 2.5
         // output[1] = 0.5*2.0 + 0.5*3.0 = 2.5
@@ -564,8 +566,8 @@ mod tests {
 
         // Run multiple trials
         for _ in 0..1000 {
-            let high_out = network.process_step(&high_input).unwrap();
-            let low_out = network.process_step(&low_input).unwrap();
+            let high_out = network.process_step(high_input.as_slice()).unwrap();
+            let low_out = network.process_step(low_input.as_slice()).unwrap();
 
             high_spike_count += high_out.iter().filter(|&&x| x == 1.0).count();
             low_spike_count += low_out.iter().filter(|&&x| x == 1.0).count();
@@ -587,7 +589,7 @@ mod tests {
             .build();
 
         // Process some input
-        network.process_step(&[0.5; 5]).unwrap();
+        network.process_step([0.5; 5]).unwrap();
 
         // Reset
         network.reset();

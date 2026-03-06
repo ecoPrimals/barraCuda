@@ -198,6 +198,6 @@ mod tests {
         else {
             return;
         };
-        device.compile_shader_f64(WGSL_BATCH_FITNESS_EVAL_F64, Some("batch_fitness_f64"));
+        let _ = device.compile_shader_f64(WGSL_BATCH_FITNESS_EVAL_F64, Some("batch_fitness_f64"));
     }
 }

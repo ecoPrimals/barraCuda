@@ -255,7 +255,6 @@ mod tests {
 
     #[test]
     fn test_trapz_product_weights() {
-        let _n = 3;
         let x = vec![0.0, 1.0, 2.0];
         let f = vec![1.0, 2.0, 3.0];
         let g1 = vec![1.0, 1.0, 1.0];

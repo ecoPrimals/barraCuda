@@ -57,6 +57,7 @@ impl Default for GpuCalibration {
 }
 
 /// Auto-tuner for discovering optimal GPU parameters
+#[derive(Default)]
 pub struct AutoTuner {
     /// Cached calibrations by device name
     calibrations: RwLock<HashMap<String, GpuCalibration>>,
@@ -482,12 +483,6 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
     }
 }
 
-impl Default for AutoTuner {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 // Global auto-tuner instance (singleton pattern via std::sync::LazyLock)
 // Evolved from lazy_static to pure std (Rust 1.80+)
 /// Global auto-tuner instance for runtime GPU parameter calibration.
@@ -532,7 +527,7 @@ mod tests {
             tuner
                 .calibrations
                 .read()
-                .unwrap_or_else(|e| e.into_inner())
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
                 .is_empty()
         );
     }

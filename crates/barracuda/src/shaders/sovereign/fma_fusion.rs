@@ -43,52 +43,44 @@ pub fn fuse_multiply_add(expressions: &mut Arena<Expression>) -> usize {
 
     // Phase 2: Scan for Add/Sub whose left or right operand is a Mul
     // with ref_count == 1. Collect replacements.
-    let mut replacements: Vec<(Handle<Expression>, Expression)> = Vec::new();
+    let replacements: Vec<(Handle<Expression>, Expression)> = expressions
+        .iter()
+        .filter_map(|(handle, expr)| {
+            match *expr {
+                // Pattern: Mul(a,b) + c  or  c + Mul(a,b)
+                Expression::Binary {
+                    op: BinaryOperator::Add,
+                    left,
+                    right,
+                } => try_fuse_add(expressions, left, right, &ref_counts)
+                    .or_else(|| try_fuse_add(expressions, right, left, &ref_counts))
+                    .map(|fma| (handle, fma)),
 
-    for (handle, expr) in expressions.iter() {
-        match *expr {
-            // Pattern: Mul(a,b) + c  or  c + Mul(a,b)
-            Expression::Binary {
-                op: BinaryOperator::Add,
-                left,
-                right,
-            } => {
-                if let Some(fma) = try_fuse_add(expressions, left, right, &ref_counts) {
-                    replacements.push((handle, fma));
-                } else if let Some(fma) = try_fuse_add(expressions, right, left, &ref_counts) {
-                    replacements.push((handle, fma));
-                }
+                // Pattern: Mul(a,b) - c  →  fma(a, b, -c)
+                // We express this as fma(a, b, c) and negate c via Unary(Negate).
+                // However, introducing a new expression into the arena at the
+                // wrong position would violate naga's ordering invariant.
+                // Instead, we only handle the case where the subtracted side
+                // is the Mul: c - Mul(a,b) → fma(-a, b, c) which requires
+                // a negate node too. For now, we handle only:
+                //   Mul(a,b) - c  where we rewrite to fma(a, b, -c)
+                //   but only if -c already exists as a Unary(Negate, c).
+                //
+                // For the common Jacobi pattern `c * akp - s * akq`:
+                //   Binary(Sub, Binary(Mul, c, akp), Binary(Mul, s, akq))
+                // Neither side's Mul has ref_count 1 if both are used elsewhere,
+                // so this correctly skips non-fusible patterns.
+                Expression::Binary {
+                    op: BinaryOperator::Subtract,
+                    left: mul_candidate,
+                    right: addend,
+                } => try_fuse_sub_left(expressions, mul_candidate, addend, &ref_counts)
+                    .map(|fma| (handle, fma)),
+
+                _ => None,
             }
-
-            // Pattern: Mul(a,b) - c  →  fma(a, b, -c)
-            // We express this as fma(a, b, c) and negate c via Unary(Negate).
-            // However, introducing a new expression into the arena at the
-            // wrong position would violate naga's ordering invariant.
-            // Instead, we only handle the case where the subtracted side
-            // is the Mul: c - Mul(a,b) → fma(-a, b, c) which requires
-            // a negate node too. For now, we handle only:
-            //   Mul(a,b) - c  where we rewrite to fma(a, b, -c)
-            //   but only if -c already exists as a Unary(Negate, c).
-            //
-            // For the common Jacobi pattern `c * akp - s * akq`:
-            //   Binary(Sub, Binary(Mul, c, akp), Binary(Mul, s, akq))
-            // Neither side's Mul has ref_count 1 if both are used elsewhere,
-            // so this correctly skips non-fusible patterns.
-            Expression::Binary {
-                op: BinaryOperator::Subtract,
-                left: mul_candidate,
-                right: addend,
-            } => {
-                if let Some(fma) =
-                    try_fuse_sub_left(expressions, mul_candidate, addend, &ref_counts)
-                {
-                    replacements.push((handle, fma));
-                }
-            }
-
-            _ => {}
-        }
-    }
+        })
+        .collect();
 
     let count = replacements.len();
     for (handle, replacement) in replacements {

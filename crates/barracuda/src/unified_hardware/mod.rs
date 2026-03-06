@@ -329,8 +329,8 @@ mod tests {
     fn test_pcie_bridge_detect_p2p_returns_false() {
         let bridge = PcieBridge::detect_p2p();
         assert!(!bridge.p2p_available);
-        assert_eq!(bridge.source_label, "unknown");
-        assert_eq!(bridge.target_label, "unknown");
+        assert_eq!(bridge.source_label, "gpu");
+        assert_eq!(bridge.target_label, "npu");
     }
 
     #[test]

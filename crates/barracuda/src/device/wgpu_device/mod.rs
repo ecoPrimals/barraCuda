@@ -26,6 +26,29 @@ use super::autotune::{GLOBAL_TUNER, GpuCalibration, GpuDeviceForCalibration};
 use crate::error::Result;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
+
+/// Maximum time to wait for a single GPU poll to complete.
+///
+/// Configurable via `BARRACUDA_POLL_TIMEOUT_SECS`. Defaults to 120 seconds,
+/// which is generous for any real GPU operation. This prevents indefinite
+/// hangs under instrumentation (llvm-cov) or when a software rasterizer
+/// stalls. The CPU sends work to the GPU and expects results within this
+/// window; exceeding it signals a driver-level stall, not a compute issue.
+fn poll_timeout() -> Option<Duration> {
+    static TIMEOUT: std::sync::LazyLock<Option<Duration>> = std::sync::LazyLock::new(|| {
+        let secs: u64 = std::env::var("BARRACUDA_POLL_TIMEOUT_SECS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(120);
+        if secs == 0 {
+            None
+        } else {
+            Some(Duration::from_secs(secs))
+        }
+    });
+    *TIMEOUT
+}
 
 /// WebGPU device - executes WGSL on any hardware
 ///
@@ -107,10 +130,7 @@ impl WgpuDevice {
         if !self.device.features().contains(wgpu::Features::SHADER_F64) {
             return false;
         }
-        match super::probe::cached_f64_builtins(self) {
-            Some(caps) => caps.can_compile_f64(),
-            None => true,
-        }
+        super::probe::cached_f64_builtins(self).is_none_or(|caps| caps.can_compile_f64())
     }
 
     /// Check if the Sovereign Compiler's SPIR-V passthrough path is available.
@@ -237,14 +257,27 @@ impl WgpuDevice {
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         self.brief_encoder_wait();
         let device = self.device.clone();
+        let timeout = poll_timeout();
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
-            let _ = device.poll(wgpu::PollType::Wait {
+            match device.poll(wgpu::PollType::Wait {
                 submission_index: None,
-                timeout: None,
-            });
+                timeout,
+            }) {
+                Ok(status) => status.is_queue_empty(),
+                Err(_) => false,
+            }
         }));
         match result {
-            Ok(()) => Ok(()),
+            Ok(true) => Ok(()),
+            Ok(false) => {
+                tracing::warn!(
+                    "poll_safe: GPU poll timed out after {}s — treating as stall",
+                    timeout.map_or(0, |d| d.as_secs())
+                );
+                Err(crate::error::BarracudaError::execution_failed(
+                    "GPU poll timed out — driver stall or instrumentation overhead",
+                ))
+            }
             Err(payload) => {
                 if Self::is_device_lost_panic(&payload) {
                     self.lost.store(true, Ordering::Release);
@@ -381,11 +414,21 @@ impl WgpuDevice {
         self.brief_encoder_wait();
         {
             let device = self.device.clone();
+            let timeout = poll_timeout();
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
-                let _ = device.poll(wgpu::PollType::Wait {
+                let queue_empty = match device.poll(wgpu::PollType::Wait {
                     submission_index: None,
-                    timeout: None,
-                });
+                    timeout,
+                }) {
+                    Ok(status) => status.is_queue_empty(),
+                    Err(_) => false,
+                };
+                if !queue_empty {
+                    tracing::warn!(
+                        "submit_and_poll: GPU poll timed out after {}s",
+                        timeout.map_or(0, |d| d.as_secs())
+                    );
+                }
             }));
             if let Err(payload) = result {
                 if Self::is_device_lost_panic(&payload) {
@@ -503,7 +546,6 @@ impl WgpuDevice {
 }
 
 #[cfg(test)]
-#[allow(unsafe_code)] // env::remove_var is unsafe in edition 2024; tests run serially
 mod tests {
     use super::*;
 
@@ -585,11 +627,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_from_env_default() {
-        // SAFETY: test runs serially, no concurrent env access
-        unsafe {
-            std::env::remove_var(super::creation::ADAPTER_ENV_VAR);
-        }
-        let _ = WgpuDevice::from_env().await;
+        // Tests the "auto" selection path — same code as from_env() when
+        // BARRACUDA_GPU_ADAPTER is unset (the typical case).
+        let _ = WgpuDevice::with_adapter_selector("auto").await;
     }
 
     #[tokio::test]

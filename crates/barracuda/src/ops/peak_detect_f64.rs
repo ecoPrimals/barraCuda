@@ -84,41 +84,29 @@ impl<'a> PeakDetectF64<'a> {
 
         let (is_peak_data, prominence_data) = self.dispatch_gpu(device, n)?;
 
-        let mut peaks = Vec::new();
-        for i in 0..n {
-            if is_peak_data[i] == 0 {
-                continue;
-            }
-
-            let h = self.signal[i];
-            let p = prominence_data[i];
-
-            if let Some(min_h) = self.height {
-                if h < min_h {
-                    continue;
+        let peaks: Vec<_> = (0..n)
+            .filter(|&i| is_peak_data[i] == 1)
+            .filter_map(|i| {
+                let h = self.signal[i];
+                let p = prominence_data[i];
+                if !self.height.is_none_or(|min_h| h >= min_h) {
+                    return None;
                 }
-            }
-            if let Some(min_p) = self.prominence {
-                if p < min_p {
-                    continue;
+                if !self.prominence.is_none_or(|min_p| p >= min_p) {
+                    return None;
                 }
-            }
-
-            let w = Self::compute_width(self.signal, i, p);
-
-            if let Some(min_w) = self.width {
-                if w < min_w {
-                    continue;
+                let w = Self::compute_width(self.signal, i, p);
+                if !self.width.is_none_or(|min_w| w >= min_w) {
+                    return None;
                 }
-            }
-
-            peaks.push(DetectedPeak {
-                index: i,
-                height: h,
-                prominence: p,
-                width: w,
-            });
-        }
+                Some(DetectedPeak {
+                    index: i,
+                    height: h,
+                    prominence: p,
+                    width: w,
+                })
+            })
+            .collect();
 
         Ok(peaks)
     }

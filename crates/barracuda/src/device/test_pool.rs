@@ -75,6 +75,7 @@ static GPU_CREATE_GUARD: std::sync::LazyLock<tokio::sync::Mutex<()>> =
 /// Cached adapter capabilities (survive device recreation).
 static GPU_IS_REAL: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 static GPU_HAS_F64: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+static GPU_F64_COMPUTES: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 static CPU_AVAILABLE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 
 /// Whether tests default to GPU backend.
@@ -134,13 +135,26 @@ fn resolve_gpu_adapter_selector() -> String {
 const DEVICE_CREATION_MAX_RETRIES: u32 = 5;
 const DEVICE_CREATION_BASE_DELAY_MS: u64 = 100;
 
+/// Timeout for GPU device creation (per attempt).
+///
+/// Prevents indefinite hangs when the driver stalls during adapter/device
+/// initialization. Used in `create_gpu_device()`.
+const DEVICE_CREATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
+
+/// Timeout for GPU test execution.
+///
+/// Wraps the entire async test body in `run_gpu_resilient_async` to prevent
+/// indefinite hangs when GPU stalls (e.g., driver lockup, compute shader
+/// deadlock). Exported for use by the test helper infrastructure.
+pub const GPU_TEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
+
 async fn create_gpu_device() -> Arc<WgpuDevice> {
     let selector = GPU_ADAPTER_SELECTOR.get_or_init(resolve_gpu_adapter_selector);
 
     let mut last_err = String::new();
     for attempt in 0..=DEVICE_CREATION_MAX_RETRIES {
         match tokio::time::timeout(
-            std::time::Duration::from_secs(30),
+            DEVICE_CREATION_TIMEOUT,
             WgpuDevice::with_adapter_selector(selector),
         )
         .await
@@ -176,7 +190,7 @@ async fn create_gpu_device() -> Arc<WgpuDevice> {
                 tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
             }
             Err(_timeout) => {
-                last_err = "timed out after 30s".to_string();
+                last_err = format!("timed out after {DEVICE_CREATION_TIMEOUT:?}");
                 if attempt == DEVICE_CREATION_MAX_RETRIES {
                     break;
                 }
@@ -341,13 +355,68 @@ pub async fn get_test_device_if_gpu_available() -> Option<Arc<WgpuDevice>> {
     }
 }
 
-/// Get a device only if it supports f64 shader operations.
+/// Get a device only if it supports f64 shader operations with verified accuracy.
+///
+/// Three-gate check:
+/// 1. Real hardware (not CPU software rasterizer)
+/// 2. `SHADER_F64` feature + compilation probe pass
+/// 3. Computational accuracy probe — runs a small f64 reduction and verifies
+///    the result. Catches drivers (e.g. NVK/NAK, some RADV) that advertise
+///    f64 support and pass compilation probes but produce incorrect results.
 pub async fn get_test_device_if_f64_gpu_available() -> Option<Arc<WgpuDevice>> {
     let device = get_test_gpu_device().await?;
-    if *GPU_HAS_F64.get_or_init(|| device.has_f64_shaders()) {
-        Some(device)
-    } else {
-        None
+    let is_real =
+        *GPU_IS_REAL.get_or_init(|| device.adapter_info().device_type != wgpu::DeviceType::Cpu);
+    let has_f64 = *GPU_HAS_F64.get_or_init(|| device.has_f64_shaders());
+    if !is_real || !has_f64 {
+        return None;
+    }
+    let computes = *GPU_F64_COMPUTES.get_or_init(|| f64_computation_probe(&device));
+    if computes { Some(device) } else { None }
+}
+
+/// Run a small f64 shader that writes 3.0 * 2.0 + 1.0 to a storage buffer
+/// and read back the result. Returns true only if the readback value matches.
+fn f64_computation_probe(device: &WgpuDevice) -> bool {
+    use crate::device::compute_pipeline::ComputeDispatch;
+
+    let output_buffer = device.device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("f64 compute probe"),
+        size: 8,
+        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+        mapped_at_creation: false,
+    });
+
+    let shader_src = "\
+        enable f64;\n\
+        @group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
+        @compute @workgroup_size(1)\n\
+        fn main() { out[0] = f64(3.0) * f64(2.0) + f64(1.0); }\n";
+
+    let result = ComputeDispatch::new(device, "f64_compute_probe")
+        .shader(shader_src, "main")
+        .f64()
+        .storage_rw(0, &output_buffer)
+        .dispatch(1, 1, 1)
+        .submit();
+
+    if result.is_err() {
+        return false;
+    }
+
+    match device.read_f64_buffer(&output_buffer, 1) {
+        Ok(values) if !values.is_empty() => {
+            let ok = (values[0] - 7.0).abs() < 1e-10;
+            if !ok {
+                tracing::warn!(
+                    "f64 computation probe FAILED: expected 7.0, got {} — \
+                     f64 GPU tests will be skipped",
+                    values[0]
+                );
+            }
+            ok
+        }
+        _ => false,
     }
 }
 

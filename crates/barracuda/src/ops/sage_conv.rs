@@ -488,10 +488,8 @@ mod tests {
         .await
         .unwrap();
 
-        let mut edge_index = Vec::new();
-        for i in 0..num_nodes {
-            edge_index.push((i, (i + 1) % num_nodes));
-        }
+        let edge_index: Vec<(usize, usize)> =
+            (0..num_nodes).map(|i| (i, (i + 1) % num_nodes)).collect();
         let degrees = vec![1u32; num_nodes];
 
         let weights = Tensor::from_vec_on(

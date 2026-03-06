@@ -216,6 +216,6 @@ mod tests {
         else {
             return;
         };
-        device.compile_shader_f64(WGSL_SWARM_NN_FORWARD_F64, Some("swarm_nn_forward_f64"));
+        let _ = device.compile_shader_f64(WGSL_SWARM_NN_FORWARD_F64, Some("swarm_nn_forward_f64"));
     }
 }

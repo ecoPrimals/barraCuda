@@ -16,6 +16,7 @@
 use crate::device::WgpuDevice;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
+use crate::utils::chunk_to_array;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
@@ -303,8 +304,8 @@ impl BrentGpu {
         let data = slice.get_mapped_range();
         let result: Vec<u32> = data
             .chunks_exact(4)
-            .map(|chunk| u32::from_le_bytes(chunk.try_into().expect("chunks_exact(4) invariant")))
-            .collect();
+            .map(|chunk| chunk_to_array::<4>(chunk).map(u32::from_le_bytes))
+            .collect::<Result<Vec<_>>>()?;
         drop(data);
         staging.unmap();
 

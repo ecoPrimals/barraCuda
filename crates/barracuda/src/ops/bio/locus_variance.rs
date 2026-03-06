@@ -175,6 +175,6 @@ mod tests {
         else {
             return;
         };
-        device.compile_shader_f64(WGSL_LOCUS_VARIANCE_F64, Some("locus_variance_f64"));
+        let _ = device.compile_shader_f64(WGSL_LOCUS_VARIANCE_F64, Some("locus_variance_f64"));
     }
 }

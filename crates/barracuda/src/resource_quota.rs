@@ -406,8 +406,15 @@ impl QuotaTracker {
         let buffers = self.current_buffers();
         let failures = self.quota_failures();
 
-        match self.quota.max_vram_bytes {
-            Some(max) => {
+        self.quota.max_vram_bytes.map_or(
+            format!(
+                "Quota '{}': {} bytes used (unlimited), {} buffers, peak {} bytes",
+                self.quota.name,
+                format_bytes(current),
+                buffers,
+                format_bytes(peak)
+            ),
+            |max| {
                 let percent = (current as f64 / max as f64) * 100.0;
                 format!(
                     "Quota '{}': {:.1}% used ({} / {} bytes), {} buffers, peak {} bytes, {} failures",
@@ -419,15 +426,8 @@ impl QuotaTracker {
                     format_bytes(peak),
                     failures
                 )
-            }
-            None => format!(
-                "Quota '{}': {} bytes used (unlimited), {} buffers, peak {} bytes",
-                self.quota.name,
-                format_bytes(current),
-                buffers,
-                format_bytes(peak)
-            ),
-        }
+            },
+        )
     }
 
     /// Reset usage tracking (does not affect quota limits)

@@ -162,6 +162,11 @@ pub fn cholesky_f64(device: Arc<WgpuDevice>, a: &[f64], n: usize) -> Result<Chol
 }
 
 /// Compute Cholesky decomposition on CPU (test/benchmark only).
+///
+/// # Errors
+///
+/// Returns `BarracudaError::InvalidInput` if the matrix dimensions are
+/// inconsistent or the matrix is not positive-definite.
 #[cfg(any(test, feature = "benchmarks"))]
 pub fn cholesky_f64_cpu(a: &[f64], n: usize) -> Result<CholeskyDecomposition> {
     if a.len() != n * n {

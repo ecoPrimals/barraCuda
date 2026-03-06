@@ -1,7 +1,7 @@
 # barraCuda Specification
 
 **Version**: 0.3.3
-**Date**: March 4, 2026
+**Date**: March 6, 2026
 **Status**: Active — standalone primal, fully untangled from toadStool (S89)
 **Origin**: toadStool S88 budding proposal
 
@@ -120,12 +120,14 @@ WGSL source
   → op_preamble (abstract ops for F16/F32/F64/DF64)
   → naga parse → naga IR
   → df64_rewrite (infix → bridge functions, when DF64)
-  → naga optimize (FMA fusion, DCE)
-  → SPIR-V / Metal / DXIL / WGSL (per backend)
-  → GPU driver compile
+  → sovereign compiler: FMA fusion, dead expression elimination
+  → naga wgsl-out → optimised WGSL
+  → wgpu create_shader_module (safe) → driver compile
 ```
 
-Sovereign compiler path. No external SDK needed for correctness.
+Zero `unsafe` in the entire pipeline. The sovereign compiler runs on all
+backends (Vulkan, Metal, DX12, WebGPU). No SPIR-V passthrough needed.
+No external SDK needed for correctness.
 
 ---
 

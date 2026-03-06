@@ -3,10 +3,9 @@
 //!
 //! Drives naga as a library to parse WGSL into a typed IR (`naga::Module`),
 //! apply optimization passes (FMA fusion, dead expression elimination),
-//! and emit SPIR-V bytes that bypass naga's internal WGSL re-parse on
-//! the wgpu side via `SPIRV_SHADER_PASSTHROUGH`.
+//! and re-emit optimised WGSL for safe compilation via `create_shader_module`.
 //!
-//! ## Pipeline
+//! ## Pipeline (safe WGSL path — default)
 //!
 //! ```text
 //! WGSL text (after ShaderTemplate + WgslOptimizer)
@@ -14,20 +13,27 @@
 //!     → fma_fusion::fuse_multiply_add()   → mutated Module (Mul+Add → Fma)
 //!     → dead_expr::eliminate()            → mutated Module (unused exprs removed)
 //!     → naga::valid::Validator::validate() → ModuleInfo
-//!     → spv_emit::emit_spirv()            → Vec<u32> (SPIR-V words)
-//!     → wgpu (SPIRV_SHADER_PASSTHROUGH)   → driver → GPU
+//!     → wgsl_emit::emit_wgsl()           → optimised WGSL text
+//!     → wgpu::create_shader_module()     → driver → GPU
 //! ```
+//!
+//! ## SPIR-V path (retained for benchmarking)
+//!
+//! The `compile()` method still emits SPIR-V via `spv_emit`, but
+//! production compilation uses `compile_to_wgsl()` exclusively to
+//! maintain zero `unsafe` in the shader pipeline.
 //!
 //! ## Fallback
 //!
-//! If SPIR-V passthrough is unavailable (WebGPU, some mobile drivers),
-//! the caller falls back to the existing WGSL text path. Phase 4 is
-//! additive — it never replaces the text path.
+//! If the sovereign compiler fails (e.g. naga rejects the optimised
+//! module), the caller falls back to the un-optimised WGSL text path.
 
 pub mod dead_expr;
 pub mod df64_rewrite;
 pub mod fma_fusion;
 pub mod spv_emit;
+mod validation_harness;
+pub mod wgsl_emit;
 
 use crate::device::driver_profile::GpuDriverProfile;
 
@@ -89,6 +95,22 @@ impl SovereignCompiler {
         Self { _profile: profile }
     }
 
+    /// Compile WGSL source to optimised WGSL via naga IR (safe path).
+    ///
+    /// Parses → optimises (FMA fusion, dead expression elimination) →
+    /// validates → re-emits WGSL. The output can be fed to the safe
+    /// `wgpu::Device::create_shader_module` API without any `unsafe`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the WGSL fails to parse, the optimised module
+    /// fails validation, or WGSL re-emission fails.
+    pub fn compile_to_wgsl(&self, wgsl: &str) -> Result<(String, CompileStats), SovereignError> {
+        let (module, info, stats) = self.parse_optimize_validate(wgsl)?;
+        let optimized_wgsl = wgsl_emit::emit_wgsl(&module, &info)?;
+        Ok((optimized_wgsl, stats))
+    }
+
     /// Compile WGSL source to optimized SPIR-V.
     ///
     /// Returns `Err` if the WGSL fails to parse or the optimized module
@@ -100,13 +122,21 @@ impl SovereignCompiler {
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
     pub fn compile(&self, wgsl: &str) -> Result<(SovereignOutput, CompileStats), SovereignError> {
+        let (module, info, stats) = self.parse_optimize_validate(wgsl)?;
+        let validated = spv_emit::emit_spirv(&module, &info)?;
+        Ok((SovereignOutput::Spirv(validated), stats))
+    }
+
+    /// Shared pipeline: parse → optimise → validate.
+    fn parse_optimize_validate(
+        &self,
+        wgsl: &str,
+    ) -> Result<(naga::Module, naga::valid::ModuleInfo, CompileStats), SovereignError> {
         let mut stats = CompileStats::default();
 
-        // Step 1: Parse WGSL → naga::Module.
         let mut module =
             naga::front::wgsl::parse_str(wgsl).map_err(|e| SovereignError::Parse(e.to_string()))?;
 
-        // Step 2: FMA fusion — Mul(a,b) + Add/Sub(_, c) → Fma(a, b, c).
         for (_handle, func) in module.functions.iter_mut() {
             stats.fma_fusions += fma_fusion::fuse_multiply_add(&mut func.expressions);
         }
@@ -114,11 +144,6 @@ impl SovereignCompiler {
             stats.fma_fusions += fma_fusion::fuse_multiply_add(&mut ep.function.expressions);
         }
 
-        // Step 3: Dead expression elimination.
-        // Skipped for now — naga's validator rejects modules with unused
-        // expressions only in specific cases, and the SPIR-V backend
-        // naturally skips un-emitted expressions. We track the stat for
-        // future use.
         for (_handle, func) in module.functions.iter_mut() {
             stats.dead_exprs_eliminated += dead_expr::eliminate(&mut func.expressions, &func.body);
         }
@@ -127,7 +152,6 @@ impl SovereignCompiler {
                 dead_expr::eliminate(&mut ep.function.expressions, &ep.function.body);
         }
 
-        // Step 4: Validate the optimized module.
         let info = {
             let mut validator = naga::valid::Validator::new(
                 naga::valid::ValidationFlags::all(),
@@ -138,10 +162,7 @@ impl SovereignCompiler {
                 .map_err(|e| SovereignError::Validation(e.to_string()))?
         };
 
-        // Step 5: Emit SPIR-V (returns ValidatedSpirv — safety encoded in the type).
-        let validated = spv_emit::emit_spirv(&module, &info)?;
-
-        Ok((SovereignOutput::Spirv(validated), stats))
+        Ok((module, info, stats))
     }
 }
 
@@ -159,6 +180,10 @@ pub enum SovereignError {
     /// SPIR-V emission from validated module failed.
     #[error("SPIR-V emission failed: {0}")]
     SpirvEmit(String),
+
+    /// WGSL re-emission from validated module failed.
+    #[error("WGSL emission failed: {0}")]
+    WgslEmit(String),
 }
 
 #[cfg(test)]

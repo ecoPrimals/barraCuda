@@ -277,9 +277,8 @@ mod neighbor_tests {
     fn precompute_2d_table_size() {
         // L×L lattice: N sites × 4 neighbors
         let mode = NeighborMode::precompute_periodic_2d(8);
-        let table = match &mode {
-            NeighborMode::PrecomputedBuffer(t) => t,
-            _ => panic!("expected PrecomputedBuffer"),
+        let NeighborMode::PrecomputedBuffer(table) = &mode else {
+            panic!("expected PrecomputedBuffer");
         };
         assert_eq!(table.len(), 8 * 8 * 4, "8×8 lattice × 4 neighbors = 256");
     }
@@ -288,9 +287,8 @@ mod neighbor_tests {
     fn precompute_2d_periodic_boundary() {
         // Site (0,0): -x wraps to (L-1,0), -y wraps to (0,L-1)
         let mode = NeighborMode::precompute_periodic_2d(4);
-        let table = match &mode {
-            NeighborMode::PrecomputedBuffer(t) => t,
-            _ => panic!("expected PrecomputedBuffer"),
+        let NeighborMode::PrecomputedBuffer(table) = &mode else {
+            panic!("expected PrecomputedBuffer");
         };
         // Site 0 = (0,0): dirs [+x, -x, +y, -y]
         // +x -> (1,0) = 1, -x -> (3,0) = 3, +y -> (0,1) = 4, -y -> (0,3) = 12
@@ -310,9 +308,8 @@ mod neighbor_tests {
     fn precompute_3d_table_size() {
         // L×L×L lattice: N sites × 6 neighbors
         let mode = NeighborMode::precompute_periodic_3d(4);
-        let table = match &mode {
-            NeighborMode::PrecomputedBuffer(t) => t,
-            _ => panic!("expected PrecomputedBuffer"),
+        let NeighborMode::PrecomputedBuffer(table) = &mode else {
+            panic!("expected PrecomputedBuffer");
         };
         assert_eq!(table.len(), 4 * 4 * 4 * 6, "4³ lattice × 6 neighbors = 384");
     }
@@ -321,9 +318,8 @@ mod neighbor_tests {
     fn precompute_3d_periodic_wrap() {
         // Site (0,0,0): -x -> (L-1,0,0), -y -> (0,L-1,0), -z -> (0,0,L-1)
         let mode = NeighborMode::precompute_periodic_3d(3);
-        let table = match &mode {
-            NeighborMode::PrecomputedBuffer(t) => t,
-            _ => panic!("expected PrecomputedBuffer"),
+        let NeighborMode::PrecomputedBuffer(table) = &mode else {
+            panic!("expected PrecomputedBuffer");
         };
         // idx = z*9 + y*3 + x; site (0,0,0) = 0
         // -x -> (2,0,0) = 2, -y -> (0,2,0) = 6, -z -> (0,0,2) = 18
@@ -341,9 +337,8 @@ mod neighbor_tests {
     fn precompute_4d_table_size() {
         // 4^4 lattice: 256 sites * 8 neighbors = 2048 entries
         let mode = NeighborMode::precompute_periodic_4d([4, 4, 4, 4]);
-        let table = match &mode {
-            NeighborMode::PrecomputedBuffer(t) => t,
-            _ => panic!("expected PrecomputedBuffer"),
+        let NeighborMode::PrecomputedBuffer(table) = &mode else {
+            panic!("expected PrecomputedBuffer");
         };
         assert_eq!(table.len(), 2048);
     }
@@ -351,9 +346,8 @@ mod neighbor_tests {
     #[test]
     fn precompute_4d_periodic_boundary() {
         let mode = NeighborMode::precompute_periodic_4d([4, 4, 4, 4]);
-        let table = match &mode {
-            NeighborMode::PrecomputedBuffer(t) => t,
-            _ => panic!("expected PrecomputedBuffer"),
+        let NeighborMode::PrecomputedBuffer(table) = &mode else {
+            panic!("expected PrecomputedBuffer");
         };
         // Site (0,0,0,0): +x -> (1,0,0,0), -x wraps to (3,0,0,0)
         let idx = |x: u32, y: u32, z: u32, t: u32| -> u32 { t * 4 * 4 * 4 + z * 4 * 4 + y * 4 + x };

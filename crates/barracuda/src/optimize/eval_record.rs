@@ -82,7 +82,7 @@ pub struct EvaluationRecord {
 /// // Or load with fallback to empty cache
 /// let cache = EvaluationCache::load_or_new("results/cache.json");
 /// ```
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct EvaluationCache {
     /// All recorded evaluations in chronological order
     records: Vec<EvaluationRecord>,
@@ -294,12 +294,6 @@ impl EvaluationCache {
             }
         }
         self.best_idx = Some(best);
-    }
-}
-
-impl Default for EvaluationCache {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

@@ -228,11 +228,11 @@ pub fn spawn_coral_compile(optimized_wgsl: &str, arch: &str, fp64_software: bool
         return;
     }
 
-    let Ok(_handle) = tokio::runtime::Handle::try_current() else {
+    let Ok(handle) = tokio::runtime::Handle::try_current() else {
         return;
     };
 
-    tokio::spawn(async move {
+    handle.spawn(async move {
         if let Some(binary) = GLOBAL_CORAL
             .compile_wgsl(&source, &arch_owned, fp64_software)
             .await
@@ -248,26 +248,35 @@ pub fn spawn_coral_compile(optimized_wgsl: &str, arch: &str, fp64_software: bool
     });
 }
 
-/// Environment variable for overriding the coralReef endpoint address.
+/// Environment variable for overriding the shader-compiler endpoint address.
 ///
-/// When set, skips file-based and default-port discovery entirely.
-const CORALREEF_ADDR_ENV: &str = "BARRACUDA_CORALREEF_ADDR";
+/// When set, skips capability-based and port-based discovery entirely.
+const CORALREEF_ADDR_ENV: &str = "BARRACUDA_SHADER_COMPILER_ADDR";
 
-/// Default TCP port for coralReef JSON-RPC (used as last-resort probe).
+/// Environment variable for the shader-compiler well-known port.
+///
+/// Overrides the default last-resort probe port. Consumed only if
+/// env and capability-based discovery both fail.
+const CORALREEF_PORT_ENV: &str = "BARRACUDA_SHADER_COMPILER_PORT";
+
+/// Default TCP port for shader-compiler JSON-RPC (last-resort probe).
+/// Overridable via `BARRACUDA_SHADER_COMPILER_PORT`.
 const CORALREEF_DEFAULT_PORT: u16 = 9741;
 
-/// Discover coralReef's JSON-RPC endpoint via capability-based runtime
-/// discovery (no hardcoded primal names in production routing).
+/// Discover a shader-compiler primal's JSON-RPC endpoint via capability-based
+/// runtime discovery. No hardcoded primal names — any primal advertising the
+/// `shader_compiler` capability is accepted.
 ///
-/// Checks (in order):
-/// 1. `BARRACUDA_CORALREEF_ADDR` environment variable (explicit override)
-/// 2. File-based discovery: `$XDG_RUNTIME_DIR/ecoPrimals/coralreef-core.json`
-/// 3. Localhost probe on the well-known port (last resort)
+/// Discovery order:
+/// 1. `BARRACUDA_SHADER_COMPILER_ADDR` — explicit override (operator-set)
+/// 2. Capability scan of `$XDG_RUNTIME_DIR/ecoPrimals/*.json` for
+///    `"shader_compiler"` in the `capabilities` array
+/// 3. Localhost probe on `BARRACUDA_SHADER_COMPILER_PORT` (default 9741)
 async fn discover_coralreef() -> Option<String> {
     if let Ok(addr) = std::env::var(CORALREEF_ADDR_ENV) {
         let addr = addr.trim().to_owned();
         if !addr.is_empty() && probe_jsonrpc(&addr).await {
-            tracing::debug!(addr = %addr, "coralReef discovered via {CORALREEF_ADDR_ENV}");
+            tracing::debug!(addr = %addr, "shader compiler discovered via {CORALREEF_ADDR_ENV}");
             return Some(addr);
         }
     }
@@ -278,7 +287,11 @@ async fn discover_coralreef() -> Option<String> {
         }
     }
 
-    let default_addr = format!("127.0.0.1:{CORALREEF_DEFAULT_PORT}");
+    let port = std::env::var(CORALREEF_PORT_ENV)
+        .ok()
+        .and_then(|s| s.trim().parse::<u16>().ok())
+        .unwrap_or(CORALREEF_DEFAULT_PORT);
+    let default_addr = format!("127.0.0.1:{port}");
     if probe_jsonrpc(&default_addr).await {
         return Some(default_addr);
     }

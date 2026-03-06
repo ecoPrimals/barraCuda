@@ -220,6 +220,6 @@ mod tests {
         else {
             return;
         };
-        device.compile_shader_f64(WGSL_HILL_GATE_F64, Some("hill_gate_f64"));
+        let _ = device.compile_shader_f64(WGSL_HILL_GATE_F64, Some("hill_gate_f64"));
     }
 }

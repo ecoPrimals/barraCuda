@@ -29,7 +29,7 @@ fn test_cpu_executor_creation() {
     let cpu = CpuExecutor::new();
     assert_eq!(cpu.name(), "CPU (Native Rust + SIMD)");
     assert_eq!(cpu.hardware_type(), HardwareType::CPU);
-    assert!(cpu._num_threads > 0);
+    assert!(cpu.num_threads > 0);
 }
 
 #[test]

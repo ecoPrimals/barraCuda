@@ -70,7 +70,7 @@ mod tests {
         else {
             return;
         };
-        device.compile_shader_f64(
+        let _ = device.compile_shader_f64(
             WGSL_ESN_RESERVOIR_UPDATE_F64,
             Some("esn_reservoir_update_f64"),
         );

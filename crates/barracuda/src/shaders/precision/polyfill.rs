@@ -193,18 +193,19 @@ pub fn inject_f64_polyfills(shader_body: &str, extra_preamble: Option<&str>) -> 
         preamble.push('\n');
     }
 
-    let mut missing_functions: Vec<&str> = Vec::new();
-    for func_name in F64_FUNCTION_ORDER {
-        // Fossil functions are universally-native WGSL builtins on all
-        // SHADER_F64 hardware — never inject them; use native calls directly.
-        if F64_FOSSIL_FUNCTIONS.iter().any(|(f, _)| f == func_name) {
-            continue;
-        }
-        let call_pattern = format!("{func_name}(");
-        if shader_body.contains(&call_pattern) && !shader_defines_function(shader_body, func_name) {
-            missing_functions.push(func_name);
-        }
-    }
+    let missing_functions: Vec<&str> = F64_FUNCTION_ORDER
+        .iter()
+        .filter(|func_name| {
+            // Fossil functions are universally-native WGSL builtins on all
+            // SHADER_F64 hardware — never inject them; use native calls directly.
+            !F64_FOSSIL_FUNCTIONS.iter().any(|(f, _)| *f == **func_name)
+        })
+        .filter(|func_name| {
+            let call_pattern = format!("{func_name}(");
+            shader_body.contains(&call_pattern) && !shader_defines_function(shader_body, func_name)
+        })
+        .copied()
+        .collect();
     if missing_functions.is_empty() && extra_preamble.is_none() {
         return shader_body.to_string();
     }

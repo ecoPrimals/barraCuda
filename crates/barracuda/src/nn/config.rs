@@ -5,7 +5,7 @@
 //! Deep Debt compliant: No hardcoded values, all runtime configurable.
 
 /// Network configuration (runtime, no hardcoding)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct NetworkConfig {
     /// Hardware preference (discovered at runtime)
     pub hardware_preference: HardwarePreference,
@@ -20,21 +20,11 @@ pub struct NetworkConfig {
     pub enable_checkpointing: bool,
 }
 
-impl Default for NetworkConfig {
-    fn default() -> Self {
-        Self {
-            hardware_preference: HardwarePreference::Auto,
-            auto_mixed_precision: false,
-            grad_clip: None,
-            enable_checkpointing: false,
-        }
-    }
-}
-
 /// Hardware preference (runtime discovery)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum HardwarePreference {
     /// Automatic selection (recommended)
+    #[default]
     Auto,
     /// Prefer GPU if available
     PreferGPU,

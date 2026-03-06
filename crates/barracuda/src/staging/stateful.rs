@@ -64,6 +64,7 @@
 
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
+use crate::utils::chunk_to_array;
 use std::sync::Arc;
 
 /// A single GPU kernel dispatch unit: pipeline + bind group + workgroup size.
@@ -277,11 +278,10 @@ impl StatefulPipeline {
             .map_err(|e| BarracudaError::execution_failed(e.to_string()))?;
 
         let data = slice.get_mapped_range();
-        // infallible: chunks_exact(8) guarantees exactly 8-byte chunks, so try_into never fails
         let result: Vec<f64> = data
             .chunks_exact(8)
-            .map(|b| f64::from_le_bytes(b.try_into().expect("chunks_exact(8) invariant")))
-            .collect();
+            .map(|b| chunk_to_array::<8>(b).map(f64::from_le_bytes))
+            .collect::<Result<Vec<_>>>()?;
         drop(data);
         self.convergence_staging.unmap();
         Ok(result)

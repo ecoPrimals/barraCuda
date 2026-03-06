@@ -214,13 +214,21 @@ impl ValidationHarness {
     }
 }
 
+/// Parse a `BARRACUDA_REQUIRE_GPU` value into a boolean.
+///
+/// Accepts `"1"` or `"true"` (case-insensitive) as truthy.
+#[must_use]
+fn parse_gpu_required(val: Option<&str>) -> bool {
+    val.is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+}
+
 /// Whether `BARRACUDA_REQUIRE_GPU=1` is set.
 ///
 /// When `true`, validation binaries that cannot obtain a GPU adapter must exit 1
 /// instead of silently skipping. For CI pipelines with a known-good GPU.
 #[must_use]
 pub fn gpu_required() -> bool {
-    std::env::var("BARRACUDA_REQUIRE_GPU").is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+    parse_gpu_required(std::env::var("BARRACUDA_REQUIRE_GPU").ok().as_deref())
 }
 
 /// Handle the absence of a GPU adapter in a validation binary.
@@ -251,44 +259,8 @@ macro_rules! require {
 }
 
 #[cfg(test)]
-#[allow(unsafe_code)]
 mod tests {
     use super::*;
-
-    /// RAII guard that sets an environment variable and restores it on drop.
-    ///
-    /// Edition 2024 made `set_var`/`remove_var` unsafe. In the single-threaded
-    /// default test runner these are sound; the guard ensures cleanup even on
-    /// panic without requiring `unsafe` at call sites.
-    struct EnvGuard {
-        key: &'static str,
-        prev: Option<String>,
-    }
-
-    impl EnvGuard {
-        fn set(key: &'static str, val: &str) -> Self {
-            let prev = std::env::var(key).ok();
-            // SAFETY: test binary is single-threaded by default
-            unsafe { std::env::set_var(key, val) };
-            Self { key, prev }
-        }
-
-        fn remove(key: &'static str) -> Self {
-            let prev = std::env::var(key).ok();
-            // SAFETY: test binary is single-threaded by default
-            unsafe { std::env::remove_var(key) };
-            Self { key, prev }
-        }
-    }
-
-    impl Drop for EnvGuard {
-        fn drop(&mut self) {
-            match &self.prev {
-                Some(v) => unsafe { std::env::set_var(self.key, v) },
-                None => unsafe { std::env::remove_var(self.key) },
-            }
-        }
-    }
 
     #[test]
     fn harness_tracks_pass_fail() {
@@ -339,8 +311,7 @@ mod tests {
 
     #[test]
     fn gpu_required_default_false() {
-        let _guard = EnvGuard::remove("BARRACUDA_REQUIRE_GPU");
-        assert!(!gpu_required());
+        assert!(!parse_gpu_required(None));
     }
 
     #[test]
@@ -379,25 +350,21 @@ mod tests {
 
     #[test]
     fn test_gpu_required_when_set_to_1() {
-        let _guard = EnvGuard::set("BARRACUDA_REQUIRE_GPU", "1");
-        assert!(gpu_required());
+        assert!(parse_gpu_required(Some("1")));
     }
 
     #[test]
     fn test_gpu_required_when_set_to_true() {
-        let _guard = EnvGuard::set("BARRACUDA_REQUIRE_GPU", "true");
-        assert!(gpu_required());
+        assert!(parse_gpu_required(Some("true")));
     }
 
     #[test]
     fn test_gpu_required_case_insensitive() {
-        let _guard = EnvGuard::set("BARRACUDA_REQUIRE_GPU", "TRUE");
-        assert!(gpu_required());
+        assert!(parse_gpu_required(Some("TRUE")));
     }
 
     #[test]
     fn test_gpu_required_false_when_other_value() {
-        let _guard = EnvGuard::set("BARRACUDA_REQUIRE_GPU", "0");
-        assert!(!gpu_required());
+        assert!(!parse_gpu_required(Some("0")));
     }
 }

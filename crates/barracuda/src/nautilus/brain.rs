@@ -6,6 +6,29 @@ use serde::{Deserialize, Serialize};
 use super::board::ReservoirInput;
 use super::shell::{GenerationRecord, InstanceId, NautilusShell, ShellConfig};
 
+const ANOMALY_WINDOW: usize = 10;
+
+/// Detect energy anomalies from sudden jumps vs running statistics.
+///
+/// Absorbed from hotSpring MdBrain. Domain-agnostic: works with any
+/// scalar energy proxy (delta_h, total_energy/N, etc.).
+/// Returns 1.0 if current value deviates by more than 10σ from the
+/// recent window, 0.0 otherwise.
+#[must_use]
+pub fn force_anomaly(current: f64, recent_window: &[f64]) -> f64 {
+    let take = recent_window.len().min(ANOMALY_WINDOW);
+    if take < 3 {
+        return 0.0;
+    }
+    let start = recent_window.len().saturating_sub(take);
+    let slice = &recent_window[start..];
+    let mean: f64 = slice.iter().sum::<f64>() / slice.len() as f64;
+    let variance: f64 = slice.iter().map(|e| (e - mean).powi(2)).sum::<f64>() / slice.len() as f64;
+    let std = (variance + 1e-20).sqrt();
+    let deviation = (current - mean).abs();
+    if deviation > 10.0 * std { 1.0 } else { 0.0 }
+}
+
 fn obs_to_input(o: &BetaObservation) -> ReservoirInput {
     ReservoirInput::Continuous(vec![
         o.beta,
@@ -106,6 +129,9 @@ pub struct NautilusBrain {
     pub shell: NautilusShell,
     /// Observed (β, plaquette, CG iters, acceptance) from HMC runs.
     pub observations: Vec<BetaObservation>,
+    /// Recent delta-H values for anomaly detection.
+    #[serde(default)]
+    pub recent_delta_h: Vec<f64>,
     /// Whether training has been performed.
     pub trained: bool,
     /// Drift monitor for evolutionary stagnation.
@@ -125,6 +151,7 @@ impl NautilusBrain {
             config: config.clone(),
             shell,
             observations: Vec::new(),
+            recent_delta_h: Vec::new(),
             trained: false,
             drift: DriftMonitor::default(),
         }
@@ -132,7 +159,19 @@ impl NautilusBrain {
 
     /// Record an HMC observation for training.
     pub fn observe(&mut self, obs: BetaObservation) {
+        self.recent_delta_h.push(obs.delta_h_abs);
         self.observations.push(obs);
+    }
+
+    /// Check if the most recent observation shows an energy anomaly.
+    #[must_use]
+    pub fn has_force_anomaly(&self) -> bool {
+        self.observations.last().map_or(false, |obs| {
+            force_anomaly(
+                obs.delta_h_abs,
+                &self.recent_delta_h[..self.recent_delta_h.len().saturating_sub(1)],
+            ) > 0.5
+        })
     }
 
     /// Evolve the shell and train on observations. Returns MSE if trained.
@@ -144,7 +183,15 @@ impl NautilusBrain {
         let targets: Vec<Vec<f64>> = self
             .observations
             .iter()
-            .map(|o| vec![o.cg_iters, o.plaquette, o.acceptance])
+            .enumerate()
+            .map(|(i, o)| {
+                let anomaly = if i > 0 {
+                    force_anomaly(o.delta_h_abs, &self.recent_delta_h[..i])
+                } else {
+                    0.0
+                };
+                vec![o.cg_iters, o.plaquette, o.acceptance, anomaly]
+            })
             .collect();
         let mut mse = 0.0;
         for _ in 0..self.config.generations_per_train {
@@ -327,6 +374,43 @@ mod tests {
             restored.shell.population.boards.len(),
             brain.shell.population.boards.len()
         );
+    }
+
+    #[test]
+    fn test_force_anomaly_no_history() {
+        assert!((force_anomaly(1.0, &[]) - 0.0).abs() < f64::EPSILON);
+        assert!((force_anomaly(1.0, &[1.0, 2.0]) - 0.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_force_anomaly_normal() {
+        let window = vec![1.0, 1.1, 0.9, 1.05, 0.95];
+        assert!((force_anomaly(1.0, &window) - 0.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_force_anomaly_spike() {
+        let window = vec![1.0, 1.01, 0.99, 1.005, 0.995];
+        assert!((force_anomaly(100.0, &window) - 1.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_brain_anomaly_tracking() {
+        let config = NautilusBrainConfig {
+            shell_config: ShellConfig::default(),
+            generations_per_train: 2,
+            min_observations: 5,
+        };
+        let mut brain = NautilusBrain::new(config, "anomaly-test");
+        for i in 0..6 {
+            brain.observe(make_obs(
+                (i as f64) * 0.1,
+                0.5 + (i as f64) * 0.01,
+                (i as f64) * 10.0,
+                0.8,
+            ));
+        }
+        assert_eq!(brain.recent_delta_h.len(), 6);
     }
 
     #[test]

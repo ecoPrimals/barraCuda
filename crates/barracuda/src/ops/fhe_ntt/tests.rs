@@ -26,8 +26,8 @@ fn test_degree_validation() {
 
 #[test]
 fn test_modulus_constraint() {
-    // Test modulus constraint: q ≡ 1 (mod 2N)
-    let _degree = 4u32;
-    let _modulus = 17u64; // 17 ≡ 1 (mod 8), so valid for N=4
-    assert!((_modulus - 1).is_multiple_of(2 * _degree as u64));
+    // Modulus constraint: q ≡ 1 (mod 2N). For N=4, q=17: 17 ≡ 1 (mod 8).
+    let degree = 4u32;
+    let modulus = 17u64;
+    assert!((modulus - 1).is_multiple_of(2 * u64::from(degree)));
 }

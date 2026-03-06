@@ -70,6 +70,7 @@ pub use stateful::{PipelineStage, StatefulPipeline, WaterBalanceState};
 
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
+use crate::utils::chunk_to_array;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -467,8 +468,8 @@ impl ComputePipeline {
         let data = slice.get_mapped_range();
         let result: Vec<f64> = data
             .chunks_exact(8)
-            .map(|chunk| f64::from_le_bytes(chunk.try_into().expect("chunks_exact(8) invariant")))
-            .collect();
+            .map(|chunk| chunk_to_array::<8>(chunk).map(f64::from_le_bytes))
+            .collect::<Result<Vec<_>>>()?;
         drop(data);
         staging.unmap();
 
@@ -518,11 +519,10 @@ impl ComputePipeline {
             .map_err(|e| BarracudaError::execution_failed(e.to_string()))?;
 
         let data = slice.get_mapped_range();
-        // SAFETY: chunks_exact(4) guarantees exactly 4-byte chunks
         let result: Vec<f32> = data
             .chunks_exact(4)
-            .map(|chunk| f32::from_le_bytes(chunk.try_into().expect("chunks_exact(4) invariant")))
-            .collect();
+            .map(|chunk| chunk_to_array::<4>(chunk).map(f32::from_le_bytes))
+            .collect::<Result<Vec<_>>>()?;
         drop(data);
         staging.unmap();
 

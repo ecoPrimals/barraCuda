@@ -257,9 +257,8 @@ mod tests {
             return;
         };
 
-        let gpu = match DiversityFusionGpu::new(device) {
-            Ok(g) => g,
-            Err(_) => return,
+        let Ok(gpu) = DiversityFusionGpu::new(device) else {
+            return;
         };
 
         let abundances = vec![

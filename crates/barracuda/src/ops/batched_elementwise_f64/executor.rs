@@ -191,7 +191,7 @@ impl BatchedElementwiseF64 {
         data: &[f64],
         batch_size: usize,
         op: Op,
-        _aux_param: f64,
+        aux_param: f64,
     ) -> Result<Vec<f64>> {
         let stride = op.stride();
         let mut results = Vec::with_capacity(batch_size);
@@ -290,7 +290,7 @@ impl BatchedElementwiseF64 {
                 ),
                 Op::Gdd => {
                     let t_mean = data[base];
-                    (t_mean - _aux_param).max(0.0)
+                    (t_mean - aux_param).max(0.0)
                 }
                 Op::PedotransferPolynomial => cpu_ref::pedotransfer_polynomial_cpu(
                     data[base],

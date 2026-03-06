@@ -36,6 +36,7 @@
 
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
+use crate::utils::chunk_to_array;
 use std::sync::Arc;
 
 const WORKGROUP_SIZE: u32 = 256;
@@ -255,6 +256,98 @@ impl ReduceScalarPipeline {
         &self.scalar_output
     }
 
+    /// Encode a sum reduction into an existing command encoder WITHOUT
+    /// submitting or reading back. The result stays GPU-resident in
+    /// [`scalar_buffer()`].
+    ///
+    /// Use this for GPU-resident CG solvers and multi-kernel pipelines
+    /// where CPU round-trips between reductions are unacceptable.
+    ///
+    /// After encoding, the caller submits the encoder and either:
+    /// - Chains the scalar buffer into a subsequent GPU kernel, or
+    /// - Calls [`readback_scalar`] to copy and map the result.
+    pub fn encode_reduce_to_buffer(
+        &self,
+        encoder: &mut wgpu::CommandEncoder,
+        input: &wgpu::Buffer,
+    ) {
+        let bgl = self.sum_pipeline.get_bind_group_layout(0);
+        let bg_pass1 = self
+            .device
+            .device
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("ReduceScalar:BG:pass1:encode"),
+                layout: &bgl,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: input.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: self.partial_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: self.params_buf.as_entire_binding(),
+                    },
+                ],
+            });
+
+        let n_partial = self.n.div_ceil(WORKGROUP_SIZE);
+
+        {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("reduce:encode:pass1"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&self.sum_pipeline);
+            pass.set_bind_group(0, Some(&bg_pass1), &[]);
+            pass.dispatch_workgroups(n_partial, 1, 1);
+        }
+        {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("reduce:encode:pass2"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&self.sum_pipeline);
+            pass.set_bind_group(0, Some(&self.sum_bg_pass2), &[]);
+            pass.dispatch_workgroups(1, 1, 1);
+        }
+    }
+
+    /// Read back the scalar result after a previous [`encode_reduce_to_buffer`]
+    /// + submit cycle. Copies `scalar_output` → staging → CPU.
+    /// # Errors
+    /// Returns [`Err`] if GPU buffer mapping or readback fails (e.g., device lost).
+    pub fn readback_scalar(&self) -> Result<f64> {
+        let mut enc = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("ReduceScalar:readback"),
+            });
+        enc.copy_buffer_to_buffer(&self.scalar_output, 0, &self.scalar_staging, 0, 8);
+        self.device.submit_and_poll(Some(enc.finish()));
+
+        let slice = self.scalar_staging.slice(..);
+        let (tx, rx) = std::sync::mpsc::channel();
+        slice.map_async(wgpu::MapMode::Read, move |r| {
+            let _ = tx.send(r);
+        });
+        self.device.poll_safe()?;
+        rx.recv()
+            .map_err(|_| {
+                BarracudaError::execution_failed("ReduceScalarPipeline: readback channel closed")
+            })?
+            .map_err(|e| BarracudaError::execution_failed(e.to_string()))?;
+
+        let data = slice.get_mapped_range();
+        let v = f64::from_le_bytes(chunk_to_array::<8>(&data[..8])?);
+        drop(data);
+        self.scalar_staging.unmap();
+        Ok(v)
+    }
+
     // ── Private ──────────────────────────────────────────────────────────────
 
     fn reduce(&self, input: &wgpu::Buffer, entry: &str) -> Result<f64> {
@@ -361,12 +454,7 @@ impl ReduceScalarPipeline {
             .map_err(|e| BarracudaError::execution_failed(e.to_string()))?;
 
         let data = slice.get_mapped_range();
-        // SAFETY: chunks_exact(8) guarantees 8-byte chunk
-        let v = f64::from_le_bytes(
-            data[..8]
-                .try_into()
-                .expect("scalar buffer is exactly 8 bytes"),
-        );
+        let v = f64::from_le_bytes(chunk_to_array::<8>(&data[..8])?);
         drop(data);
         self.scalar_staging.unmap();
         Ok(v)

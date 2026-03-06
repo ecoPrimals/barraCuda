@@ -321,14 +321,10 @@ where
     }
 
     // Extract best overall result
-    let (x_best, f_best) = match cache.best() {
-        Some(record) => (record.x.clone(), record.f),
-        None => {
-            return Err(BarracudaError::Internal(
-                "No evaluations recorded".to_string(),
-            ));
-        }
-    };
+    let record = cache
+        .best()
+        .ok_or_else(|| BarracudaError::Internal("No evaluations recorded".to_string()))?;
+    let (x_best, f_best) = (record.x.clone(), record.f);
 
     Ok(DirectSamplerResult {
         x_best,

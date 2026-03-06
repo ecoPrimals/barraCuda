@@ -123,8 +123,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_autocorrelation_constant_signal() {
-        use crate::device::test_pool::get_test_device;
-        let dev = get_test_device().await;
+        let Some(dev) = crate::device::test_pool::get_test_device_if_f64_gpu_available().await
+        else {
+            return;
+        };
         let op = AutocorrelationF64::new(dev).unwrap();
         let data = vec![1.0_f64; 256];
         let result = op.autocorrelation(&data, 10).unwrap();
@@ -138,8 +140,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_autocorrelation_vs_cpu() {
-        use crate::device::test_pool::get_test_device;
-        let dev = get_test_device().await;
+        let Some(dev) = crate::device::test_pool::get_test_device_if_f64_gpu_available().await
+        else {
+            return;
+        };
         let op = AutocorrelationF64::new(dev).unwrap();
         let data: Vec<f64> = (0..512).map(|i| (i as f64 * 0.1).sin()).collect();
         let max_lag = 32;

@@ -23,11 +23,7 @@ pub const ADAPTER_ENV_VAR: &str = "BARRACUDA_GPU_ADAPTER";
 
 /// Desired features to negotiate with any adapter.
 fn desired_features() -> Vec<wgpu::Features> {
-    vec![
-        wgpu::Features::SHADER_F64,
-        wgpu::Features::SHADER_F16,
-        wgpu::Features::PIPELINE_CACHE,
-    ]
+    vec![wgpu::Features::SHADER_F64, wgpu::Features::SHADER_F16]
 }
 
 /// Extended feature set that also includes `TIMESTAMP_QUERY` (for benchmarks).
@@ -36,7 +32,6 @@ fn desired_features_extended() -> Vec<wgpu::Features> {
         wgpu::Features::SHADER_F64,
         wgpu::Features::SHADER_F16,
         wgpu::Features::TIMESTAMP_QUERY,
-        wgpu::Features::PIPELINE_CACHE,
     ]
 }
 
@@ -83,25 +78,16 @@ impl WgpuDevice {
         }));
     }
 
-    fn make_pipeline_cache(device: &wgpu::Device) -> Option<Arc<wgpu::PipelineCache>> {
-        if !device.features().contains(wgpu::Features::PIPELINE_CACHE) {
-            return None;
-        }
-        // SAFETY: `create_pipeline_cache` is still unsafe in wgpu 28 because
-        // loading blob data from disk can cause UB if the data is corrupt.
-        // We pass `data: None` (fresh cache only) so no untrusted blob
-        // can reach the driver.
-        #[expect(
-            unsafe_code,
-            reason = "wgpu 28 pipeline cache init requires unsafe even with data: None"
-        )]
-        Some(Arc::new(unsafe {
-            device.create_pipeline_cache(&wgpu::PipelineCacheDescriptor {
-                label: Some("barraCuda pipeline cache"),
-                data: None,
-                fallback: true,
-            })
-        }))
+    /// Pipeline caching is deferred until wgpu provides a safe creation API.
+    ///
+    /// `create_pipeline_cache` is `unsafe` in wgpu 28 even with `data: None`
+    /// because the API cannot distinguish fresh-cache from corrupt-blob at the
+    /// type level. Rather than carry an `unsafe` block for a performance-only
+    /// optimisation, we return `None` and let wgpu compile pipelines without
+    /// caching. The field + accessor remain so caching can be re-enabled
+    /// when wgpu evolves the API to be safe.
+    fn make_pipeline_cache(_device: &wgpu::Device) -> Option<Arc<wgpu::PipelineCache>> {
+        None
     }
 
     /// Assemble a `WgpuDevice` from already-created wgpu primitives.

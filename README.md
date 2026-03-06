@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **708 WGSL shaders** spanning scientific compute domains
-- **1,026 Rust source files**, 62 integration test suites, 3,471 test functions
+- **1,026 Rust source files**, 63 integration test suites, 3,014+ library tests passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -48,7 +48,7 @@ results.
 1. **Math is universal, precision is silicon** — one WGSL source, any precision
 2. **Vendor-agnostic** — same binary, identical results on any GPU
 3. **Sovereign** — zero external SDK dependency for correctness or performance
-4. **Pure Rust** — `#![deny(unsafe_code)]` in barracuda-core, exactly 2 wgpu FFI calls (pipeline cache + SPIR-V passthrough), zero external C dependencies, zero dependencies on any other primal (lifecycle and health traits internalized from sourDough scaffold)
+4. **Pure Rust** — `#![deny(unsafe_code)]` in barracuda-core, zero `unsafe` blocks, zero external C dependencies, zero dependencies on any other primal (lifecycle and health traits internalized from sourDough scaffold)
 5. **Fully concurrent** — `GuardedDeviceHandle` + atomic encoder barrier prevents wgpu-core races without lock contention; wgpu 28 `Device`/`Queue` are `Clone` — zero `Arc` overhead for handle sharing; all tests pass at 16 threads on llvmpipe
 6. **AGPL-3.0** — free as in freedom
 

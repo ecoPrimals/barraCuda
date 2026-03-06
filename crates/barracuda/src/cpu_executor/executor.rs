@@ -28,11 +28,12 @@ use crate::unified_math::{MathOp, TensorDescriptor};
 use rayon::prelude::*;
 use std::sync::Arc;
 
-/// CPU executor implementation
+/// CPU executor implementation.
 pub struct CpuExecutor {
     capabilities: HardwareCapabilities,
-    /// Thread count (stored for future parallel execution tuning)
-    pub(crate) _num_threads: usize,
+    /// Thread count available for parallel execution.
+    #[cfg(test)]
+    pub(crate) num_threads: usize,
 }
 
 impl CpuExecutor {
@@ -45,7 +46,8 @@ impl CpuExecutor {
 
         Self {
             capabilities: Self::detect_capabilities(num_threads),
-            _num_threads: num_threads,
+            #[cfg(test)]
+            num_threads,
         }
     }
 

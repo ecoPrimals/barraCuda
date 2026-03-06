@@ -44,6 +44,7 @@
 pub mod gradient;
 pub mod hessian;
 pub mod integrate;
+pub mod lscfrk;
 pub mod ode_bio;
 pub mod ode_generic;
 pub mod rk45;
@@ -51,6 +52,10 @@ pub mod rk45;
 pub use gradient::gradient_1d;
 pub use hessian::numerical_hessian;
 pub use integrate::{trapz, trapz_product};
+pub use lscfrk::{
+    FlowMeasurement, LSCFRK3_W6, LSCFRK3_W7, LSCFRK4_CK, LscfrkCoefficients, compute_w_function,
+    derive_lscfrk3, find_t0, find_w0,
+};
 pub use ode_bio::{
     BistableOde, BistableParams, CapacitorOde, CapacitorParams, CooperationOde, CooperationParams,
     MultiSignalOde, MultiSignalParams, PhageDefenseOde, PhageDefenseParams, QsBiofilmParams,

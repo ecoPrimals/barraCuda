@@ -14,8 +14,6 @@ fn test_modular_inverse() {
 
 #[test]
 fn test_inverse_root() {
-    // For N=4, q=17, ω=4
-    // ω^(-1) = 4^(-1) mod 17 = 13
-    let _degree = 4u32; // Documented for clarity
+    // For N=4, q=17, ω=4: ω^(-1) = 4^(-1) mod 17 = 13
     assert_eq!(compute_inverse_root(4, 17, 4), 13);
 }

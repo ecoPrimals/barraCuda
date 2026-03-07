@@ -194,6 +194,163 @@ impl Rk45AdaptiveGpu {
     }
 }
 
+// ── Batched ODE RK45 integrator (wetSpring V95) ─────────────────────────────
+
+/// Configuration for batched adaptive RK45 integration.
+pub struct BatchedRk45Config {
+    /// Number of independent ODE systems to integrate.
+    pub n_systems: u32,
+    /// State dimension per system.
+    pub dim: u32,
+    /// Coefficient count per system.
+    pub n_coeffs: u32,
+    /// Initial time step.
+    pub dt_init: f64,
+    /// Absolute tolerance for step-size control.
+    pub atol: f64,
+    /// Relative tolerance for step-size control.
+    pub rtol: f64,
+    /// Maximum number of adaptive steps before returning.
+    pub max_steps: u32,
+    /// Integration endpoint (`t_final`).
+    pub t_final: f64,
+}
+
+/// Result of a batched RK45 integration.
+pub struct BatchedRk45Result {
+    /// Final state `[n_systems × dim]`.
+    pub states: Vec<f64>,
+    /// Total steps taken per system.
+    pub steps_taken: u32,
+    /// Whether integration reached `t_final` within `max_steps`.
+    pub converged: bool,
+}
+
+/// Batched adaptive ODE integrator: multiple full trajectories on GPU.
+///
+/// Wraps [`Rk45AdaptiveGpu`] with host-side adaptive step-size control
+/// (Dormand-Prince 5(4) error estimate). Each call to [`integrate`]
+/// advances all systems from `t=0` to `t_final` using adaptive dt.
+///
+/// **Provenance**: wetSpring V95 requested this for batched bio ODE systems
+/// where RK45 vs RK4 achieves 18.5× fewer steps for stiff regulatory networks.
+pub struct BatchedOdeRK45F64 {
+    kernel: Rk45AdaptiveGpu,
+    device: Arc<WgpuDevice>,
+}
+
+impl BatchedOdeRK45F64 {
+    /// Create a batched RK45 integrator.
+    #[must_use]
+    pub fn new(device: Arc<WgpuDevice>) -> Self {
+        let kernel = Rk45AdaptiveGpu::new(Arc::clone(&device));
+        Self { kernel, device }
+    }
+
+    /// Integrate all systems from `t=0` to `config.t_final` using adaptive stepping.
+    ///
+    /// The step-size controller uses the standard embedded-pair formula:
+    /// `dt_new = dt * min(5, max(0.2, 0.9 * (tol/err)^0.2))`
+    ///
+    /// Returns the final states and integration metadata.
+    ///
+    /// # Errors
+    /// Returns [`Err`] if GPU buffer creation or readback fails.
+    pub fn integrate(
+        &self,
+        initial_states: &[f64],
+        coefficients: &[f64],
+        config: &BatchedRk45Config,
+    ) -> crate::error::Result<BatchedRk45Result> {
+        let sys_dim = (config.n_systems * config.dim) as usize;
+        let scratch_size = (config.n_systems * config.dim * 8) as usize;
+        let d = self.device.device();
+
+        let state_buf = d.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("RK45Batch state"),
+            contents: bytemuck::cast_slice(initial_states),
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+        });
+        let coeffs_buf = d.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("RK45Batch coeffs"),
+            contents: bytemuck::cast_slice(coefficients),
+            usage: wgpu::BufferUsages::STORAGE,
+        });
+        let new_state_buf = self.device.create_buffer_f64(sys_dim)?;
+        let error_buf = self.device.create_buffer_f64(sys_dim)?;
+        let scratch_buf = self.device.create_buffer_f64(scratch_size)?;
+
+        let mut dt = config.dt_init;
+        let mut t = 0.0_f64;
+        let mut steps: u32 = 0;
+        let safety = 0.9_f64;
+        let dt_min_factor = 0.2_f64;
+        let dt_max_factor = 5.0_f64;
+
+        while t < config.t_final && steps < config.max_steps {
+            let dt_step = dt.min(config.t_final - t);
+
+            let args = Rk45DispatchArgs {
+                buffers: Rk45Buffers {
+                    state_buf: &state_buf,
+                    coeffs_buf: &coeffs_buf,
+                    new_state_buf: &new_state_buf,
+                    error_buf: &error_buf,
+                    scratch_buf: &scratch_buf,
+                },
+                params: Rk45DispatchParams {
+                    n_systems: config.n_systems,
+                    dim: config.dim,
+                    n_coeffs: config.n_coeffs,
+                    dt: dt_step,
+                },
+            };
+
+            self.kernel.dispatch(&args);
+
+            let errors = self.device.read_buffer_f64(&error_buf, sys_dim)?;
+            let max_err = errors.iter().copied().fold(0.0_f64, f64::max).max(1e-15);
+
+            let tol = config.atol + config.rtol * max_err;
+            let err_ratio = tol / max_err;
+
+            if err_ratio >= 1.0 {
+                // Accept step: copy new_state → state
+                let mut encoder =
+                    self.device
+                        .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                            label: Some("RK45Batch copy"),
+                        });
+                encoder.copy_buffer_to_buffer(
+                    &new_state_buf,
+                    0,
+                    &state_buf,
+                    0,
+                    (sys_dim * 8) as u64,
+                );
+                self.device
+                    .queue()
+                    .submit(std::iter::once(encoder.finish()));
+
+                t += dt_step;
+                steps += 1;
+            }
+
+            // Adapt step size
+            let factor = safety * err_ratio.powf(0.2);
+            dt *= factor.clamp(dt_min_factor, dt_max_factor);
+        }
+
+        let final_states = self.device.read_buffer_f64(&state_buf, sys_dim)?;
+
+        Ok(BatchedRk45Result {
+            states: final_states,
+            steps_taken: steps,
+            converged: t >= config.t_final,
+        })
+    }
+}
+
 fn storage_entry(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
     wgpu::BindGroupLayoutEntry {
         binding,

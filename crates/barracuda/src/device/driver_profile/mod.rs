@@ -135,6 +135,29 @@ pub enum Fp64Strategy {
     Concurrent,
 }
 
+// ── Precision routing (toadStool S128 integration) ──────────────────────────
+
+/// Precision routing advice from toadStool S128.
+///
+/// Captures the three-axis reality of GPU f64: some hardware has native f64
+/// everywhere, some has native f64 but broken shared-memory f64 reductions
+/// (naga/SPIR-V emit zeros), some can only do DF64, and some are f32-only.
+///
+/// Use this to route workloads to the correct precision path at dispatch time,
+/// especially for reductions that rely on `var<workgroup>` f64 accumulators.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PrecisionRoutingAdvice {
+    /// Native f64 everywhere — compute and shared-memory reductions.
+    F64Native,
+    /// Native f64 compute works, but shared-memory f64 reductions return zeros.
+    /// Route reductions through DF64 or scalar f64 (no workgroup accumulator).
+    F64NativeNoSharedMem,
+    /// No reliable native f64; use DF64 (f32-pair) for all f64-class work.
+    Df64Only,
+    /// No f64 support at all; fall back to f32.
+    F32Only,
+}
+
 // ── GpuDriverProfile ──────────────────────────────────────────────────────────
 
 /// Unified GPU driver profile for data-driven shader specialisation.
@@ -283,6 +306,46 @@ impl GpuDriverProfile {
         match crate::device::probe::cache::cached_basic_f64_for_key(&self.adapter_key) {
             Some(probed) => probed,
             None => self.workarounds.is_empty() && !matches!(self.driver, DriverKind::Software),
+        }
+    }
+
+    /// Precision routing advice integrating toadStool S128 f64 shared-memory discovery.
+    ///
+    /// This is higher-level than `fp64_strategy()`: it additionally captures
+    /// the shared-memory reliability axis. Use this to decide whether a
+    /// workgroup-based f64 reduction can use `var<workgroup>` accumulators
+    /// or must fall back to scalar/DF64 paths.
+    ///
+    /// The hierarchy:
+    /// - `F64Native` — full native f64 everywhere (Titan V with working driver)
+    /// - `F64NativeNoSharedMem` — native f64 compute works, but shared-memory
+    ///   reductions return zeros (common on NVK/NAK today)
+    /// - `Df64Only` — use DF64 for all f64-class work
+    /// - `F32Only` — no f64 support at all
+    #[must_use]
+    pub fn precision_routing(&self) -> PrecisionRoutingAdvice {
+        let native_fails = matches!(
+            crate::device::probe::cache::cached_basic_f64_for_key(&self.adapter_key),
+            Some(false)
+        );
+
+        if native_fails {
+            if matches!(self.fp64_rate, Fp64Rate::Software) {
+                return PrecisionRoutingAdvice::F32Only;
+            }
+            return PrecisionRoutingAdvice::Df64Only;
+        }
+
+        match self.fp64_rate {
+            Fp64Rate::Full => {
+                if self.driver == DriverKind::Nvk {
+                    PrecisionRoutingAdvice::F64NativeNoSharedMem
+                } else {
+                    PrecisionRoutingAdvice::F64Native
+                }
+            }
+            Fp64Rate::Throttled | Fp64Rate::Minimal => PrecisionRoutingAdvice::Df64Only,
+            Fp64Rate::Software => PrecisionRoutingAdvice::F32Only,
         }
     }
 
@@ -514,6 +577,7 @@ impl fmt::Display for GpuDriverProfile {
         }
         writeln!(f, "  Eigensolve: {:?}", self.optimal_eigensolve_strategy())?;
         writeln!(f, "  FP64 Strategy: {:?}", self.fp64_strategy())?;
+        writeln!(f, "  Precision Routing: {:?}", self.precision_routing())?;
         Ok(())
     }
 }

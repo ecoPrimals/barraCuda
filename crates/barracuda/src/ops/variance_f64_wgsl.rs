@@ -237,6 +237,68 @@ impl VarianceF64 {
         Ok([result[0], result[1]])
     }
 
+    /// Fused mean+variance to a GPU-resident output buffer — zero CPU readback.
+    ///
+    /// The output buffer will contain `[mean, variance]` as 2×f64. Use this
+    /// in chained GPU pipelines (e.g. normalize → reduce → next kernel)
+    /// where reading back to CPU between dispatches is the bottleneck.
+    ///
+    /// Returns the output buffer handle. Chain with `encode_reduce_to_buffer`
+    /// or bind directly to the next kernel's uniform/storage slot.
+    ///
+    /// # Errors
+    /// Returns [`Err`] if the device is lost or buffer recording fails.
+    pub fn mean_variance_to_buffer(
+        &self,
+        buffer: &wgpu::Buffer,
+        n: usize,
+        ddof: usize,
+    ) -> Result<wgpu::Buffer> {
+        let ctx = get_device_context(&self.device);
+        let adapter_info = self.device.adapter_info();
+
+        let output_buf = ctx.acquire_pooled_output_f64(2);
+
+        let params = FusedParams {
+            n: n as u32,
+            ddof: ddof as u32,
+            _pad0: 0,
+            _pad1: 0,
+        };
+        let params_buf = self
+            .device
+            .create_uniform_buffer("FusedMeanVar:GPU Params", &params);
+
+        let layout_sig = BindGroupLayoutSignature::reduction();
+        let bind_group = ctx.get_or_create_bind_group(
+            layout_sig,
+            &[buffer, &output_buf, &params_buf],
+            Some("FusedMeanVar:GPU BG"),
+        );
+
+        let shader_src = fused_shader_for_device(&self.device);
+        let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
+            self.device.device(),
+            adapter_info,
+            shader_src,
+            layout_sig,
+            "main",
+            Some("FusedMeanVar:GPU Pipeline"),
+        );
+
+        ctx.record_operation(move |encoder| {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("FusedMeanVar:GPU Pass"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&pipeline);
+            pass.set_bind_group(0, Some(&*bind_group), &[]);
+            pass.dispatch_workgroups(1, 1, 1);
+        })?;
+
+        Ok(output_buf.into_buffer())
+    }
+
     /// Compute standard deviation (population, ddof=0).
     /// # Errors
     /// Returns [`Err`] if the device is lost, if buffer recording fails, or if

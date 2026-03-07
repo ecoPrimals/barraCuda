@@ -18,6 +18,7 @@ struct BenchResult {
     name: &'static str,
     origin: &'static str,
     consumers: &'static str,
+    #[expect(dead_code, reason = "used by Debug derive in --nocapture output")]
     n: usize,
     wall_us: f64,
     throughput: String,

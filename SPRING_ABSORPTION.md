@@ -25,13 +25,16 @@ with zero local WGSL (except airSpring, 3 remaining).
 ### Cross-Spring Shader Flow (from provenance registry)
 
 ```text
-hotSpring → groundSpring: 3 shared shaders (df64, complex, CG solver)
-hotSpring → neuralSpring: 3 shared shaders (df64, lattice CG → attention)
-hotSpring → wetSpring:    3 shared shaders (df64, ESN, fused_map_reduce)
-airSpring → wetSpring:    3 shared shaders (ET₀, seasonal, moving_window)
-neuralSpring → hotSpring: 2 shared shaders (chi-squared, matrix_correlation)
-neuralSpring → wetSpring: 2 shared shaders (KL divergence, chi-squared)
-groundSpring → hotSpring: 2 shared shaders (Anderson Lyapunov, chi-squared)
+hotSpring → groundSpring: 3 shaders (df64, complex, CG solver)
+hotSpring → neuralSpring: 4 shaders (df64, df64_transcendentals, lattice CG, ESN)
+hotSpring → wetSpring:    6 shaders (df64, df64_transcendentals, stress_virial, verlet, ESN, fused_map_reduce)
+airSpring → wetSpring:    4 shaders (ET₀, seasonal, moving_window, fused_map_reduce)
+airSpring → neuralSpring: 1 shader  (moving_window → streaming inference)
+neuralSpring → hotSpring:  3 shaders (chi-squared, matrix_correlation, batch_ipr)
+neuralSpring → wetSpring:  2 shaders (KL divergence, chi-squared)
+neuralSpring → groundSpring: 2 shaders (KL divergence, matrix_correlation)
+groundSpring → hotSpring:  2 shaders (Anderson Lyapunov, chi-squared)
+groundSpring → ALL:        2 shaders (chi_squared universal, Welford mean+variance)
 ```
 
 ### Benchmark Summary (CPU, 100K points)
@@ -62,6 +65,17 @@ groundSpring → hotSpring: 2 shared shaders (Anderson Lyapunov, chi-squared)
 | S | `RBFSurrogate::from_parts` → `RbfTrainingData` + `RbfTrainedModel` | 9-arg → 3-arg; 1 caller in `adaptive/mod.rs` updated | ✅ Done |
 | T | Zero `#[expect(clippy::too_many_arguments)]` remaining | All 9 instances evolved to parameter structs/builders | ✅ Done |
 
+### Cross-Spring Rewiring (Mar 7 2026)
+
+| # | Item | Change | Status |
+|---|------|--------|--------|
+| U | Provenance evolution dates + bidirectional flows | 27 shaders with `created`/`absorbed` dates, 10 timeline events, `evolution_report()` | ✅ Done |
+| V | `PrecisionRoutingAdvice` from toadStool S128 | `F64Native`/`F64NativeNoSharedMem`/`Df64Only`/`F32Only` in `GpuDriverProfile` | ✅ Done |
+| W | `mean_variance_to_buffer()` GPU-resident stats | Zero-readback fused Welford — output stays as GPU buffer for chained pipelines | ✅ Done |
+| X | `BatchedOdeRK45F64` integrator | Full-trajectory adaptive RK45 on GPU with step-size control (wetSpring V95) | ✅ Done |
+| Y | MD + ML provenance expansion | `stress_virial`, `verlet_neighbor`, `batch_ipr`, `hmm_forward`, `hfb_gradient`, `welford` | ✅ Done |
+| Z | Cross-spring evolution report generator | Dependency matrix + timeline + category report (programmatic) | ✅ Done |
+
 ## P1 — High Priority
 
 | # | Item | Source | Module | Status |
@@ -73,14 +87,14 @@ groundSpring → hotSpring: 2 shared shaders (Anderson Lyapunov, chi-squared)
 | 5 | Dedicated DF64 shaders (covariance, weighted_dot) | hotSpring, internal | `shaders/`, ops | 🔶 Deferred (auto-rewrite works) |
 | 6 | Subgroup-aware workgroup sizing | toadStool S97 | `device::driver_profile` | ✅ Done |
 | 7 | Welford co-moment + covariance_gpu formalization | groundSpring V80 | `stats::welford` | ✅ Done |
-| 8 | `BatchedOdeRK45F64` GPU variant | wetSpring V95 | `ops::rk45_adaptive` | 🔲 Pending |
+| 8 | `BatchedOdeRK45F64` GPU variant | wetSpring V95 | `ops::rk45_adaptive` | ✅ Done |
 
 ## P2 — Medium Priority
 
 | # | Item | Source | Module | Status |
 |---|------|--------|--------|--------|
 | 9 | `GpuView<T>` zero-copy expansion | hotSpring | `pipeline::gpu_view` | 🔲 Pending |
-| 10 | `mean_variance_buffer()` fused GPU stats | hotSpring | `ops::stats_f64` | 🔲 Pending |
+| 10 | `mean_variance_to_buffer()` fused GPU stats | hotSpring | `ops::variance_f64_wgsl` | ✅ Done |
 | 11 | RHMC multi-shift CG solver | hotSpring ladder L4 | `ops::lattice` | 🔲 Pending |
 | 12 | Adaptive HMC dt from acceptance rate | hotSpring | `ops::lattice` | 🔲 Pending |
 | 13 | Anderson Lyapunov shaders | groundSpring | `ops` | 🔲 Pending |

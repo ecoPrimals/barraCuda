@@ -2,7 +2,7 @@
 
 **Version**: 0.3.3
 **Date**: 2026-03-07
-**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,099 tests passing)
+**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,105 tests passing)
 
 ---
 
@@ -15,7 +15,7 @@
 | **Sovereign compiler** | A | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all shaders |
 | **IPC / primal protocol** | A | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery |
 | **Device management** | A | Multi-GPU, capability-scored discovery, probe-aware f64 strategy, f64 computational accuracy probe, bounded poll timeout, poison-recovering autotune |
-| **Test coverage** | A | 3,083 lib tests + 15 integration + 1 core = 3,099 total; proptest; chaos/fault test tiers; bounded GPU poll timeout prevents hangs |
+| **Test coverage** | A | 3,089 lib tests + 15 integration + 1 core = 3,105 total; proptest; chaos/fault test tiers; bounded GPU poll timeout prevents hangs |
 | **Dependencies** | A- | Pure Rust chain (blake3 pure); zero non-GPU external C deps; wgpu/naga 28 for GPU |
 | **Documentation** | A | Comprehensive CHANGELOG, specs, README, CONTRIBUTING, CONVENTIONS, BREAKING_CHANGES; all rustdoc warnings resolved |
 | **Unsafe code** | A+ | Zero `unsafe` blocks in entire codebase |

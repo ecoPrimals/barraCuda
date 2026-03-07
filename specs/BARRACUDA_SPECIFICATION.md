@@ -46,13 +46,13 @@ barraCuda/
 │   │   │   ├── sample/       # LHS, Sobol, Metropolis, sparsity
 │   │   │   ├── ops/          # GPU ops (matmul, softmax, FHE NTT, bio, MD)
 │   │   │   ├── tensor/       # GPU tensor type, buffer management
-│   │   │   ├── shaders/      # 708 WGSL shaders
+│   │   │   ├── shaders/      # 784 WGSL shaders
 │   │   │   ├── device/       # WgpuDevice, capabilities, test pool
 │   │   │   ├── staging/      # Ring buffers, unidirectional pipelines
 │   │   │   ├── pipeline/     # ComputeDispatch, batched pipelines
 │   │   │   ├── multi_gpu/    # GpuPool, MultiDevicePool, load balancing
 │   │   │   └── ...           # + nn, snn, esn, pde, genomics, vision (feature-gated)
-│   │   ├── tests/            # 22 integration test suites
+│   │   ├── tests/            # 31 integration test suites
 │   │   └── examples/         # 4 runnable examples
 │   └── barracuda-core/       # Primal lifecycle wrapper
 │       ├── src/

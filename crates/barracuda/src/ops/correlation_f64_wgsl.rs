@@ -311,7 +311,7 @@ impl CorrelationF64 {
             .pearson_r)
     }
 
-    #[allow(
+    #[expect(
         dead_code,
         reason = "CPU reference implementation for GPU parity validation"
     )]

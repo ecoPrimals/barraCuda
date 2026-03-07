@@ -4,6 +4,9 @@
 //! Used by both the tarpc service and JSON-RPC method handlers. Kept in a
 //! separate module so consumers can import types without pulling in the
 //! full tarpc dependency.
+//!
+//! String fields use `String` (not `&str`) because these types cross RPC
+//! boundaries via serde — owned strings are required for deserialization.
 
 use serde::{Deserialize, Serialize};
 

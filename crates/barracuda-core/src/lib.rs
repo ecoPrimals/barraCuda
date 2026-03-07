@@ -53,6 +53,7 @@
     reason = "tensor dimensions validated upstream"
 )]
 
+pub mod discovery;
 pub mod error;
 pub mod health;
 pub mod ipc;

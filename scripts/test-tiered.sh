@@ -89,7 +89,7 @@ ok "Targeted tier complete ($(elapsed $T))"
 }
 
 # ─── Tier 4: Full unit tests (nextest, bounded parallelism) ───────
-tier 4 "Full unit tests (2998+ via nextest, 16 threads)"
+tier 4 "Full unit tests (3095+ via nextest, 16 threads)"
 T=$(date +%s%3N)
 
 $NEXTEST -p barracuda --lib --profile default

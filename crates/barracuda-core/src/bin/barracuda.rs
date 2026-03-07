@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! barraCuda UniBin — single binary, multiple modes.
 //!
-//! Per wateringHole `UNIBIN_ARCHITECTURE_STANDARD.md`:
+//! Per wateringHole `UNIBIN_ARCHITECTURE_STANDARD.md` and
+//! `GENOMEBIN_ARCHITECTURE_STANDARD.md`:
 //! - One binary named after the primal
-//! - Subcommands: `server`, `doctor`, `validate`, `version`
+//! - Subcommands: `server`, `service`, `doctor`, `validate`, `version`
 
 use barracuda_core::BarraCudaPrimal;
 use barracuda_core::health::PrimalHealth;
@@ -53,6 +54,13 @@ enum Commands {
         #[arg(long)]
         no_unix: bool,
     },
+
+    /// Start the barraCuda IPC server in service mode (systemd/init).
+    ///
+    /// Per genomeBin standard: Unix socket by default (Unix), no interactive
+    /// output, graceful shutdown on SIGTERM/SIGINT, optional PID file,
+    /// systemd Type=notify support via NOTIFY_SOCKET.
+    Service,
 
     /// Health check and diagnostics.
     Doctor,
@@ -137,7 +145,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                         Some(p) if p != "__default__" => std::path::PathBuf::from(p),
                         _ => barracuda_core::ipc::IpcServer::default_socket_path(),
                     };
-                    server.serve_unix(&sock_path).await?;
+                    server.serve_unix(&sock_path, None::<fn()>).await?;
                     return Ok(());
                 }
             }
@@ -150,6 +158,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
             remove_discovery_file();
         }
+
+        Commands::Service => run_service_mode().await?,
 
         Commands::Doctor => {
             let mut primal = BarraCudaPrimal::new();
@@ -281,6 +291,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
 /// Write a discovery file so peer primals can find barraCuda.
 ///
+/// Capabilities, provides, and methods are derived from the actual registered
+/// IPC methods — no hardcoded values. Per wateringHole capability-based discovery.
+///
 /// File path: `$XDG_RUNTIME_DIR/ecoPrimals/barracuda-core.json`
 fn write_discovery_file(bind_addr: &str, tarpc_addr: Option<&str>) {
     let Some(dir) = discovery_dir() else { return };
@@ -296,21 +309,26 @@ fn write_discovery_file(bind_addr: &str, tarpc_addr: Option<&str>) {
         transports["tarpc"] = serde_json::Value::String(tarpc.to_string());
     }
 
+    let capabilities: Vec<serde_json::Value> = barracuda_core::discovery::capabilities()
+        .into_iter()
+        .map(serde_json::Value::String)
+        .collect();
+    let provides: Vec<serde_json::Value> = barracuda_core::discovery::provides()
+        .into_iter()
+        .map(serde_json::Value::String)
+        .collect();
+    let methods: Vec<serde_json::Value> = barracuda_core::discovery::registered_methods()
+        .iter()
+        .map(|m| serde_json::Value::String((*m).to_string()))
+        .collect();
+
     let discovery = serde_json::json!({
         "primal": "barraCuda",
         "pid": std::process::id(),
         "transports": transports,
-        "capabilities": [
-            "gpu_compute",
-            "tensor_ops",
-            "fhe",
-            "molecular_dynamics",
-            "lattice_qcd",
-            "statistics",
-            "hydrology",
-            "bio"
-        ],
-        "provides": ["gpu.compute", "tensor.ops", "gpu.dispatch"],
+        "capabilities": capabilities,
+        "provides": provides,
+        "methods": methods,
         "requires": [{ "id": "shader.compile", "optional": true }],
     });
 
@@ -330,6 +348,96 @@ fn remove_discovery_file() {
         if path.exists() {
             let _ = std::fs::remove_file(&path);
         }
+    }
+}
+
+/// Run the server in service mode (systemd/init).
+///
+/// Per genomeBin: Unix socket default, PID file, NOTIFY_SOCKET, no banner.
+async fn run_service_mode() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let _pid_guard = write_pid_file();
+
+    let mut primal = BarraCudaPrimal::new();
+    primal
+        .start()
+        .await
+        .map_err(|e| format!("Failed to start: {e}"))?;
+    let primal = Arc::new(primal);
+
+    let server = barracuda_core::ipc::IpcServer::new(Arc::clone(&primal));
+
+    #[cfg(unix)]
+    {
+        let sock_path = barracuda_core::ipc::IpcServer::default_socket_path();
+        let on_ready = || notify_systemd_ready();
+        server.serve_unix(&sock_path, Some(on_ready)).await?;
+    }
+
+    #[cfg(not(unix))]
+    {
+        let bind_addr = barracuda_core::ipc::transport::resolve_bind_address(None);
+        write_discovery_file(&bind_addr, None);
+        server.serve_tcp(&bind_addr).await?;
+        remove_discovery_file();
+    }
+
+    Ok(())
+}
+
+/// Write PID file at `$XDG_RUNTIME_DIR/barracuda/barracuda.pid` (best-effort).
+/// Returns a guard that removes the file on drop.
+fn write_pid_file() -> Option<PidFileGuard> {
+    let dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
+    let dir = std::path::PathBuf::from(dir).join("barracuda");
+    std::fs::create_dir_all(&dir).ok()?;
+    let path = dir.join("barracuda.pid");
+    std::fs::write(&path, std::process::id().to_string()).ok()?;
+    tracing::debug!(path = %path.display(), "wrote PID file");
+    Some(PidFileGuard { path })
+}
+
+struct PidFileGuard {
+    path: std::path::PathBuf,
+}
+
+impl Drop for PidFileGuard {
+    fn drop(&mut self) {
+        if self.path.exists() {
+            let _ = std::fs::remove_file(&self.path);
+        }
+    }
+}
+
+/// Send READY=1 to NOTIFY_SOCKET for systemd Type=notify (best-effort).
+#[cfg(unix)]
+fn notify_systemd_ready() {
+    let Ok(socket_path) = std::env::var("NOTIFY_SOCKET") else {
+        return;
+    };
+    let sock = match std::os::unix::net::UnixDatagram::unbound() {
+        Ok(s) => s,
+        Err(e) => {
+            tracing::warn!(error = %e, "failed to create notify socket");
+            return;
+        }
+    };
+    let msg = b"READY=1\n";
+    // Abstract sockets (Linux): @name → \0name
+    let addr: std::path::PathBuf = if socket_path.starts_with('@') {
+        use std::ffi::OsStr;
+        use std::os::unix::ffi::OsStrExt;
+        let bytes: Vec<u8> = [0]
+            .into_iter()
+            .chain(socket_path.trim_start_matches('@').bytes())
+            .collect();
+        std::path::PathBuf::from(OsStr::from_bytes(&bytes))
+    } else {
+        std::path::PathBuf::from(&socket_path)
+    };
+    if let Err(e) = sock.send_to(msg, &addr) {
+        tracing::warn!(error = %e, "failed to send sd_notify READY");
+    } else {
+        tracing::debug!("sent sd_notify READY");
     }
 }
 

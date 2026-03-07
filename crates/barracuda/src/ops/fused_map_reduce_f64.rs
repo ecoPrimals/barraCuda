@@ -300,7 +300,7 @@ impl FusedMapReduceF64 {
     }
 
     /// CPU fallback for small arrays (faster due to no dispatch overhead)
-    #[allow(
+    #[expect(
         dead_code,
         reason = "CPU reference implementation for GPU parity validation"
     )]

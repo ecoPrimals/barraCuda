@@ -12,6 +12,7 @@ use crate::device::WgpuDevice;
 use crate::error::Result;
 use crate::unified_hardware::{HardwareType, TensorStorage};
 use crate::unified_math::{DType, TensorDescriptor};
+use bytes::Bytes;
 use std::sync::Arc;
 
 /// GPU tensor storage for the `ComputeExecutor` scheduler interface.
@@ -100,7 +101,7 @@ impl TensorStorage for GpuTensorStorage {
 
     fn read_to_cpu(
         &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<u8>>> + Send + '_>> {
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Bytes>> + Send + '_>> {
         let device = self.device.clone();
         let buffer = self.buffer.clone();
         let numel = self.descriptor.numel;
@@ -131,9 +132,10 @@ impl TensorStorage for GpuTensorStorage {
                 .map_err(|e| {
                     crate::error::BarracudaError::Gpu(format!("Buffer map failed: {e:?}"))
                 })?;
-            let data = slice.get_mapped_range().to_vec();
+            let data = slice.get_mapped_range();
+            let bytes = Bytes::copy_from_slice(&data);
             staging.unmap();
-            Ok(data)
+            Ok(bytes)
         })
     }
 

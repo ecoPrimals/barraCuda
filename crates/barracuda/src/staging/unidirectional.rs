@@ -27,6 +27,7 @@
 use super::{GpuRingBuffer, RingBufferConfig, WriteHandle};
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
+use bytes::Bytes;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -113,7 +114,7 @@ pub struct WorkUnit {
     /// Unique identifier for tracking
     pub id: u64,
     /// Serialized input data
-    pub data: Vec<u8>,
+    pub data: Bytes,
     /// Timestamp when submitted
     pub submitted_at: Instant,
 }
@@ -135,7 +136,7 @@ pub struct CompletedWork {
     /// Work unit ID (matches submitted ID)
     pub id: u64,
     /// Result data
-    pub data: Vec<u8>,
+    pub data: Bytes,
     /// Time from submission to completion
     pub latency: std::time::Duration,
 }

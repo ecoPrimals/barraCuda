@@ -46,6 +46,7 @@ use crate::unified_hardware::{
     ParallelismCapabilities, PerformanceCapabilities, PrecisionCapabilities, TensorStorage,
 };
 use crate::unified_math::{MathOp, TensorDescriptor};
+use bytes::Bytes;
 use std::sync::Arc;
 
 /// NPU executor wrapping `AkidaExecutor`
@@ -322,8 +323,8 @@ impl TensorStorage for NpuTensorStorage {
 
     fn read_to_cpu(
         &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<u8>>> + Send + '_>> {
-        let data = self.data.clone();
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Bytes>> + Send + '_>> {
+        let data = Bytes::from(self.data.clone());
         Box::pin(async move { Ok(data) })
     }
 

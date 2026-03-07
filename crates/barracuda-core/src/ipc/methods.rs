@@ -8,6 +8,26 @@ use super::jsonrpc::{INTERNAL_ERROR, INVALID_PARAMS, JsonRpcResponse, METHOD_NOT
 use crate::BarraCudaPrimal;
 use serde_json::Value;
 
+/// All JSON-RPC methods this primal supports.
+///
+/// Single source of truth for capability discovery. Derived from the
+/// `dispatch()` match arms — discovery files and `primal.capabilities`
+/// use this to self-describe what the primal actually supports.
+pub const REGISTERED_METHODS: &[&str] = &[
+    "barracuda.primal.info",
+    "barracuda.primal.capabilities",
+    "barracuda.device.list",
+    "barracuda.device.probe",
+    "barracuda.health.check",
+    "barracuda.tolerances.get",
+    "barracuda.validate.gpu_stack",
+    "barracuda.compute.dispatch",
+    "barracuda.tensor.create",
+    "barracuda.tensor.matmul",
+    "barracuda.fhe.ntt",
+    "barracuda.fhe.pointwise_mul",
+];
+
 /// Route a JSON-RPC method call to the appropriate handler.
 pub async fn dispatch(
     primal: &BarraCudaPrimal,

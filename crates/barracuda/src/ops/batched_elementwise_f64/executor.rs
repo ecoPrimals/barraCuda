@@ -183,7 +183,7 @@ impl BatchedElementwiseF64 {
     }
 
     /// CPU fallback for small batches
-    #[allow(
+    #[expect(
         dead_code,
         reason = "CPU reference implementation for GPU parity validation"
     )]

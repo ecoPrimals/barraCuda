@@ -315,7 +315,7 @@ impl VarianceF64 {
         Ok(self.sample_variance(data)?.sqrt())
     }
 
-    #[allow(
+    #[expect(
         dead_code,
         reason = "CPU reference implementation for GPU parity validation"
     )]

@@ -222,20 +222,20 @@ mod tests {
             }
         }
 
-        eprintln!("Sovereign shader validation harness:");
-        eprintln!("  Total files:       {}", all_files.len());
-        eprintln!("  Sovereign pass:    {sovereign_count}");
-        eprintln!("  Parse-only (fallback): {parse_only_count}");
-        eprintln!("  Fragments (lib):   {fragment_count}");
-        eprintln!("  Needs preprocess:  {preprocess_count}");
-        eprintln!("  Parse failures:    {}", failures.len());
-        eprintln!("  FMA fusions:       {total_fma}");
-        eprintln!("  Dead exprs elim:   {total_dead}");
+        tracing::warn!("Sovereign shader validation harness:");
+        tracing::warn!("  Total files:       {}", all_files.len());
+        tracing::warn!("  Sovereign pass:    {sovereign_count}");
+        tracing::warn!("  Parse-only (fallback): {parse_only_count}");
+        tracing::warn!("  Fragments (lib):   {fragment_count}");
+        tracing::warn!("  Needs preprocess:  {preprocess_count}");
+        tracing::warn!("  Parse failures:    {}", failures.len());
+        tracing::warn!("  FMA fusions:       {total_fma}");
+        tracing::warn!("  Dead exprs elim:   {total_dead}");
 
         if !failures.is_empty() {
-            eprintln!("\nParse failures:");
+            tracing::warn!("\nParse failures:");
             for msg in &failures {
-                eprintln!("  {msg}");
+                tracing::warn!("  {msg}");
             }
         }
 

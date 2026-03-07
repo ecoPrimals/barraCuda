@@ -184,7 +184,7 @@ impl BornMayerForceF64 {
     }
 
     /// CPU reference (test/validation only).
-    #[allow(
+    #[expect(
         dead_code,
         reason = "CPU reference implementation for GPU parity validation"
     )]
@@ -240,7 +240,7 @@ impl BornMayerForceF64 {
         forces
     }
 
-    #[allow(
+    #[expect(
         dead_code,
         reason = "CPU reference implementation for GPU parity validation"
     )]

@@ -16,7 +16,7 @@
 //! Budget is derived from device type (matching dispatch semaphore tiers)
 //! or the `BARRACUDA_TEST_GPU_BUDGET` environment variable.
 
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 
 const GPU_TEST_BUDGET_CPU: u32 = 2;
 const GPU_TEST_BUDGET_IGPU: u32 = 4;
@@ -28,17 +28,18 @@ static CORAL_AVAILABLE: OnceLock<bool> = OnceLock::new();
 
 /// Process-wide admission gate for GPU test execution.
 ///
-/// Wraps a [`tokio::sync::Semaphore`] with a budget derived from device type.
-/// Acquire a permit via [`gpu_section`] before executing GPU work in tests.
+/// Wraps an [`Arc<tokio::sync::Semaphore>`] with a budget derived from device type.
+/// Acquire a permit via [`gpu_section`] or [`acquire_owned`] before executing
+/// GPU work in tests.
 pub struct GpuTestGate {
-    semaphore: tokio::sync::Semaphore,
+    semaphore: Arc<tokio::sync::Semaphore>,
     budget: u32,
 }
 
 impl GpuTestGate {
     fn new(budget: u32) -> Self {
         Self {
-            semaphore: tokio::sync::Semaphore::new(budget as usize),
+            semaphore: Arc::new(tokio::sync::Semaphore::new(budget as usize)),
             budget,
         }
     }
@@ -53,6 +54,27 @@ impl GpuTestGate {
             .acquire()
             .await
             .expect("GPU test gate semaphore closed unexpectedly")
+    }
+
+    /// Acquire an owned permit for thread-local storage in the test pool.
+    ///
+    /// # Panics
+    /// Panics if the semaphore has been closed.
+    pub async fn acquire_owned(&self) -> tokio::sync::OwnedSemaphorePermit {
+        Arc::clone(&self.semaphore)
+            .acquire_owned()
+            .await
+            .expect("GPU test gate semaphore closed unexpectedly")
+    }
+
+    /// Blocking acquire of an owned permit (for sync test helpers).
+    ///
+    /// # Panics
+    /// Panics if the semaphore has been closed or the runtime cannot block.
+    pub fn acquire_owned_blocking(&self) -> tokio::sync::OwnedSemaphorePermit {
+        Arc::clone(&self.semaphore)
+            .try_acquire_owned()
+            .unwrap_or_else(|_| super::test_pool::tokio_block_on(self.acquire_owned()))
     }
 
     /// The configured budget for this gate.

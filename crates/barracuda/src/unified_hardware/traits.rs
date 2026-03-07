@@ -6,6 +6,7 @@
 
 use crate::error::Result;
 use crate::unified_math::{MathOp, TensorDescriptor};
+use bytes::Bytes;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -55,7 +56,7 @@ pub trait TensorStorage: Send + Sync {
     /// Hardware where the tensor resides.
     fn hardware_type(&self) -> HardwareType;
     /// Read tensor data to CPU memory.
-    fn read_to_cpu(&self) -> BoxFuture<'_, Result<Vec<u8>>>;
+    fn read_to_cpu(&self) -> BoxFuture<'_, Result<Bytes>>;
     /// Write tensor data from CPU memory.
     fn write_from_cpu(&mut self, data: &[u8]) -> BoxFuture<'_, Result<()>>;
 

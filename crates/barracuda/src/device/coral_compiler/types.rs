@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Wire types for the coralReef IPC protocol.
 
+use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 
 /// Cached native binary produced by coralReef.
 #[derive(Debug, Clone)]
 pub struct CoralBinary {
     /// Raw GPU binary (SM70+ native code).
-    pub binary: Vec<u8>,
+    pub binary: Bytes,
     /// Target architecture (e.g. `sm_70`).
     pub arch: String,
 }

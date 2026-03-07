@@ -54,6 +54,7 @@ blake3 = { version = "1.8", features = ["pure"] }
 
 # Utilities
 half = "2.4"
+bytes = "1.9"
 
 # CLI
 clap = { version = "4", features = ["derive"] }

@@ -3,7 +3,7 @@ use super::*;
 
 #[cfg(test)]
 impl MorseForceF64 {
-    #[allow(
+    #[expect(
         dead_code,
         reason = "CPU reference implementation for GPU parity validation"
     )]
@@ -24,7 +24,7 @@ impl MorseForceF64 {
         forces
     }
 
-    #[allow(
+    #[expect(
         dead_code,
         reason = "CPU reference implementation for GPU parity validation"
     )]

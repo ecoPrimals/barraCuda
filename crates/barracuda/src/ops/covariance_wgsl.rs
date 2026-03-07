@@ -113,7 +113,7 @@ impl Covariance {
     }
 
     /// CPU reference implementation
-    #[allow(
+    #[expect(
         dead_code,
         reason = "CPU reference implementation for GPU parity validation"
     )]

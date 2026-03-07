@@ -54,7 +54,7 @@ groundSpring → ALL:        2 shaders (chi_squared universal, Welford mean+vari
 | H | Deprecated PPPM constructors removed | `new()` / `new_with_driver()` removed — zero callers, `from_device()` is the API | ✅ Done |
 | I | `SeasonalGpuParams` → builder pattern | 9-arg constructor replaced with `.builder().stage().crop_coefficients().soil().build()` | ✅ Done |
 | J | `HmmBatchForwardF64::dispatch` → `HmmForwardArgs` struct | 11-arg dispatch replaced with grouped buffer struct | ✅ Done |
-| K | CPU reference functions: `dead_code` → `#[expect]` audit | 19 files verified — all CPU refs correctly gated with `#[expect(dead_code)]` | ✅ Done |
+| K | CPU reference functions: `dead_code` lint audit | All CPU refs carry `#[allow(dead_code, reason = "...")]` where test-used, `#[expect(dead_code)]` where truly dead | ✅ Done |
 | L | Unused `ShaderTemplate` import cleaned | Removed from `pppm_gpu/mod.rs` after deprecated constructor removal | ✅ Done |
 | M | `GpuCgSolver::solve` → `CgLatticeBuffers` + `CgSolverConfig` | 9-arg → 4-arg; 3 callers in `gpu_hmc_trajectory.rs` updated | ✅ Done |
 | N | `GillespieGpu::simulate` → `GillespieModel` struct | 8-arg → 5-arg; 2 test callers updated | ✅ Done |

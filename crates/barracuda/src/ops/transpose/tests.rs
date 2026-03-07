@@ -26,7 +26,7 @@ async fn test_transpose_basic() {
 async fn test_transpose_nd() {
     // ND transpose uses 7+ storage buffers — exceeds CPU downlevel limit of 4.
     let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
-        eprintln!("Skipping test_transpose_nd: requires GPU (>4 storage buffers per stage)");
+        tracing::warn!("Skipping test_transpose_nd: requires GPU (>4 storage buffers per stage)");
         return;
     };
 

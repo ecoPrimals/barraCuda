@@ -42,6 +42,16 @@ Prioritized work items, ordered by impact. Updated 2026-03-07.
   chained multi-kernel pipelines (zero CPU readback).
 - **Evolution timeline**: 10 chronological events + dependency matrix in provenance registry,
   27 shaders with created/absorbed dates.
+- **`service` subcommand**: genomeBin compliance — systemd/init integration with PID file,
+  READY=1 notification, Unix socket transport, graceful shutdown.
+- **Dynamic discovery**: capabilities, provides, and methods arrays derived from
+  `REGISTERED_METHODS` source of truth instead of hardcoded values.
+- **Thread-local GPU throttling**: `OwnedSemaphorePermit` in test pool transparently limits
+  concurrent GPU access during `cargo test` — reduced intermittent failures from ~103 to 2.
+- **`bytes::Bytes` zero-copy**: `TensorStorage::read_to_cpu()`, `WorkUnit.data`,
+  `CompletedWork.data` now return `Bytes` instead of `Vec<u8>`.
+- **Deep audit**: lint migration (#[allow] → #[expect] where valid), eprintln → tracing,
+  RPC String parameter documentation, CI coverage with --ignore-run-fail.
 
 ---
 
@@ -78,8 +88,9 @@ Prioritized work items, ordered by impact. Updated 2026-03-07.
   accessor are preserved, `make_pipeline_cache` returns `None` until then.
 - **Shader hot-reload**: File watcher for `.wgsl` files during development, automatic
   recompilation through sovereign pipeline.
-- **Zero-copy evolution**: Pre-allocated buffers for `domain_ops.rs` CPU fallback clones,
-  LSTM hidden state clones, RBF assembly allocations (see zero-copy audit).
+- **Zero-copy evolution**: `bytes::Bytes` on I/O boundaries done; remaining: pre-allocated
+  buffers for `domain_ops.rs` CPU fallback clones, LSTM hidden state clones, RBF assembly
+  allocations (see zero-copy audit).
 
 ## Long-term (P4)
 

@@ -125,6 +125,7 @@ dependencies = [
  "approx",
  "blake3",
  "bytemuck",
+ "bytes",
  "half",
  "naga",
  "num-traits",

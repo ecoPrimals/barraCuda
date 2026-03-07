@@ -136,10 +136,7 @@ impl CosineSimilarityF64 {
     }
 
     /// CPU reference implementation (single pair)
-    #[allow(
-        dead_code,
-        reason = "CPU reference implementation for GPU parity validation"
-    )]
+    #[allow(dead_code)]
     fn similarity_cpu(&self, a: &[f64], b: &[f64]) -> f64 {
         let mut dot = 0.0f64;
         let mut norm_a = 0.0f64;
@@ -159,10 +156,7 @@ impl CosineSimilarityF64 {
     }
 
     /// CPU reference implementation (all pairs)
-    #[allow(
-        dead_code,
-        reason = "CPU reference implementation for GPU parity validation"
-    )]
+    #[allow(dead_code)]
     fn all_pairs_cpu(&self, vectors_a: &[Vec<f64>], vectors_b: &[Vec<f64>]) -> Vec<f64> {
         let mut result = Vec::with_capacity(vectors_a.len() * vectors_b.len());
         for va in vectors_a {

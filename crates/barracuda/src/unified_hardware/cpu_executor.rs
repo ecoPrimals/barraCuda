@@ -14,6 +14,7 @@ use super::types::{
     HardwareCapabilities, HardwareType, MemoryCapabilities, OperationCapabilities,
     ParallelismCapabilities, PerformanceCapabilities, PrecisionCapabilities,
 };
+use bytes::Bytes;
 
 pub(crate) struct CpuExecutor {
     capabilities: HardwareCapabilities,
@@ -166,7 +167,10 @@ impl ComputeExecutor for CpuExecutor {
             } else {
                 let data = tensor.read_to_cpu().await?;
                 let descriptor = tensor.descriptor().clone();
-                Ok(Arc::new(CpuTensorStorageSimple { descriptor, data }) as Arc<dyn TensorStorage>)
+                Ok(Arc::new(CpuTensorStorageSimple {
+                    descriptor,
+                    data: data.to_vec(),
+                }) as Arc<dyn TensorStorage>)
             }
         })
     }
@@ -189,8 +193,8 @@ impl TensorStorage for CpuTensorStorageSimple {
 
     fn read_to_cpu(
         &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<u8>>> + Send + '_>> {
-        let data = self.data.clone();
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Bytes>> + Send + '_>> {
+        let data = Bytes::from(self.data.clone());
         Box::pin(async move { Ok(data) })
     }
 

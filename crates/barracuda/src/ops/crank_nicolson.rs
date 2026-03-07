@@ -213,7 +213,7 @@ impl CrankNicolson {
     }
 
     /// CPU reference implementation (Thomas algorithm)
-    #[allow(
+    #[expect(
         dead_code,
         reason = "CPU reference implementation for GPU parity validation"
     )]

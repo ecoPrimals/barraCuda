@@ -5,7 +5,7 @@
 //! are used for unit test validation against the GPU output.
 
 /// CPU reference for Coulomb forces (test/validation only).
-#[allow(
+#[expect(
     dead_code,
     reason = "CPU reference implementation for GPU parity validation"
 )]
@@ -54,7 +54,7 @@ pub fn compute_cpu(positions: &[f64], charges: &[f64], k: f64, cutoff: f64, eps:
 }
 
 /// CPU reference for Coulomb forces with potential energy (test/validation only).
-#[allow(
+#[expect(
     dead_code,
     reason = "CPU reference implementation for GPU parity validation"
 )]

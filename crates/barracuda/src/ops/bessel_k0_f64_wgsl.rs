@@ -132,15 +132,12 @@ impl BesselK0F64 {
         self.device.read_buffer_f64(&output_buf, size)
     }
 
-    #[allow(
-        dead_code,
-        reason = "CPU reference implementation for GPU parity validation"
-    )]
+    #[allow(dead_code)]
     fn k0_cpu(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| Self::k0_scalar(xi)).collect()
     }
 
-    #[allow(dead_code, reason = "CPU scalar helper for GPU parity validation")]
+    #[allow(dead_code)]
     fn i0_small(x: f64) -> f64 {
         let y = x / 3.75;
         let t = y * y;
@@ -150,7 +147,7 @@ impl BesselK0F64 {
                     + t * (1.2067492 + t * (0.2659732 + t * (0.0360768 + t * 0.0045813)))))
     }
 
-    #[allow(dead_code, reason = "CPU scalar helper for GPU parity validation")]
+    #[allow(dead_code)]
     fn k0_scalar(x: f64) -> f64 {
         if x <= 0.0 {
             return f64::INFINITY;

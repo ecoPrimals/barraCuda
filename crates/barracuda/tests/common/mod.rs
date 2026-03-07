@@ -65,7 +65,7 @@ where
                 .unwrap_or("unknown panic");
 
             if is_nvk_driver_error(msg) {
-                eprintln!("GPU test skipped: {msg} (NVK driver limitation)");
+                tracing::warn!("GPU test skipped: {msg} (NVK driver limitation)");
                 false
             } else {
                 std::panic::resume_unwind(e);

@@ -106,7 +106,7 @@ impl CoralCompiler {
         .await
         {
             Ok(resp) => Some(CoralBinary {
-                binary: resp.binary,
+                binary: bytes::Bytes::from(resp.binary),
                 arch: arch.to_owned(),
             }),
             Err(e) => {
@@ -147,7 +147,7 @@ impl CoralCompiler {
         .await
         {
             Ok(resp) => Some(CoralBinary {
-                binary: resp.binary,
+                binary: bytes::Bytes::from(resp.binary),
                 arch: arch.to_owned(),
             }),
             Err(e) => {
@@ -288,7 +288,7 @@ mod tests {
     #[test]
     fn test_coral_binary_debug() {
         let binary = CoralBinary {
-            binary: vec![0xDE, 0xAD],
+            binary: bytes::Bytes::from_static(&[0xDE, 0xAD]),
             arch: "sm_70".to_owned(),
         };
         assert!(format!("{binary:?}").contains("sm_70"));

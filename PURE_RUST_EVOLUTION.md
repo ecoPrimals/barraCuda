@@ -38,7 +38,7 @@ Layer 4  toadStool    █░░░░░░░░░  Planned    Sovereign GPU d
 
 | Milestone | Status | Date |
 |-----------|--------|------|
-| 708 WGSL shaders, F32/F64/DF64/F16 | Done | Mar 4, 2026 |
+| 784 WGSL shaders, F32/F64/DF64/F16 | Done | Mar 7, 2026 |
 | Sovereign compiler (FMA fusion, dead expr) | Done | Mar 5, 2026 |
 | SPIR-V passthrough → safe WGSL roundtrip | Done | Mar 6, 2026 |
 | Pipeline cache unsafe → deferred | Done | Mar 6, 2026 |

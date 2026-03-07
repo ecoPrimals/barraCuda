@@ -78,6 +78,38 @@ static GPU_HAS_F64: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 static GPU_F64_COMPUTES: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 static CPU_AVAILABLE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 
+// ============================================================================
+// Thread-local GPU test gate permits
+// ============================================================================
+//
+// Under `cargo test`, all tests share one process and tokio runtime.  GPU
+// tests that use `get_test_device_if_gpu_available()` need to be throttled
+// to prevent driver oversubscription ("parent device is lost").
+//
+// Each thread stores ONE owned permit from the `GpuTestGate` semaphore.
+// - When a GPU test starts, it acquires a permit and stores it here.
+// - When the thread picks up the NEXT test (GPU or CPU), the old permit
+//   is released (via `release_held_permit()`).
+// - `#[tokio::test]` (default `current_thread`) keeps the task on one
+//   thread, so the permit lives for the test's duration.
+
+thread_local! {
+    static GPU_HELD_PERMIT: std::cell::RefCell<Option<tokio::sync::OwnedSemaphorePermit>>
+        = const { std::cell::RefCell::new(None) };
+}
+
+fn hold_gpu_permit(permit: tokio::sync::OwnedSemaphorePermit) {
+    GPU_HELD_PERMIT.with(|p| {
+        *p.borrow_mut() = Some(permit);
+    });
+}
+
+fn release_held_permit() {
+    GPU_HELD_PERMIT.with(|p| {
+        *p.borrow_mut() = None;
+    });
+}
+
 /// Whether tests default to GPU backend.
 fn prefer_gpu() -> bool {
     static CACHED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
@@ -275,6 +307,7 @@ fn insert_into_pool(
 /// Panics if `BARRACUDA_TEST_BACKEND=gpu` is set but no GPU is available, or if
 /// neither CPU nor GPU backend is available.
 pub async fn get_test_device() -> Arc<WgpuDevice> {
+    release_held_permit();
     if prefer_gpu() {
         return get_test_gpu_device()
             .await
@@ -346,9 +379,17 @@ pub async fn get_test_gpu_device() -> Option<Arc<WgpuDevice>> {
 }
 
 /// Get a GPU device only if it's real hardware (not software fallback).
+///
+/// Acquires a [`GpuTestGate`](super::test_harness::GpuTestGate) permit that
+/// is held in thread-local storage for the duration of the test. This limits
+/// concurrent GPU tests under `cargo test` parallelism, preventing driver
+/// oversubscription ("parent device is lost" errors).
 pub async fn get_test_device_if_gpu_available() -> Option<Arc<WgpuDevice>> {
+    release_held_permit();
+    let permit = super::test_harness::global_gate().acquire_owned().await;
     let device = get_test_gpu_device().await?;
     if *GPU_IS_REAL.get_or_init(|| device.adapter_info().device_type != wgpu::DeviceType::Cpu) {
+        hold_gpu_permit(permit);
         Some(device)
     } else {
         None
@@ -357,13 +398,17 @@ pub async fn get_test_device_if_gpu_available() -> Option<Arc<WgpuDevice>> {
 
 /// Get a device only if it supports f64 shader operations with verified accuracy.
 ///
-/// Three-gate check:
+/// Three-gate check plus test-level throttling (see
+/// [`get_test_device_if_gpu_available`] for details):
+///
 /// 1. Real hardware (not CPU software rasterizer)
 /// 2. `SHADER_F64` feature + compilation probe pass
 /// 3. Computational accuracy probe — runs a small f64 reduction and verifies
 ///    the result. Catches drivers (e.g. NVK/NAK, some RADV) that advertise
 ///    f64 support and pass compilation probes but produce incorrect results.
 pub async fn get_test_device_if_f64_gpu_available() -> Option<Arc<WgpuDevice>> {
+    release_held_permit();
+    let permit = super::test_harness::global_gate().acquire_owned().await;
     let device = get_test_gpu_device().await?;
     let is_real =
         *GPU_IS_REAL.get_or_init(|| device.adapter_info().device_type != wgpu::DeviceType::Cpu);
@@ -372,7 +417,12 @@ pub async fn get_test_device_if_f64_gpu_available() -> Option<Arc<WgpuDevice>> {
         return None;
     }
     let computes = *GPU_F64_COMPUTES.get_or_init(|| f64_computation_probe(&device));
-    if computes { Some(device) } else { None }
+    if computes {
+        hold_gpu_permit(permit);
+        Some(device)
+    } else {
+        None
+    }
 }
 
 /// Run a small f64 shader that writes 3.0 * 2.0 + 1.0 to a storage buffer
@@ -435,19 +485,49 @@ where
 /// Sync wrapper for `get_test_device`.
 #[must_use]
 pub fn get_test_device_sync() -> Arc<WgpuDevice> {
+    release_held_permit();
     tokio_block_on(get_test_device())
 }
 
 /// Sync wrapper for `get_test_device_if_gpu_available`.
 #[must_use]
 pub fn get_test_device_if_gpu_available_sync() -> Option<Arc<WgpuDevice>> {
-    tokio_block_on(get_test_device_if_gpu_available())
+    release_held_permit();
+    let permit = super::test_harness::global_gate().acquire_owned_blocking();
+    let device = tokio_block_on(async {
+        let device = get_test_gpu_device().await?;
+        if *GPU_IS_REAL.get_or_init(|| device.adapter_info().device_type != wgpu::DeviceType::Cpu) {
+            Some(device)
+        } else {
+            None
+        }
+    });
+    if device.is_some() {
+        hold_gpu_permit(permit);
+    }
+    device
 }
 
 /// Sync wrapper for `get_test_device_if_f64_gpu_available`.
 #[must_use]
 pub fn get_test_device_if_f64_gpu_available_sync() -> Option<Arc<WgpuDevice>> {
-    tokio_block_on(get_test_device_if_f64_gpu_available())
+    release_held_permit();
+    let permit = super::test_harness::global_gate().acquire_owned_blocking();
+    let device = tokio_block_on(async {
+        let device = get_test_gpu_device().await?;
+        let is_real =
+            *GPU_IS_REAL.get_or_init(|| device.adapter_info().device_type != wgpu::DeviceType::Cpu);
+        let has_f64 = *GPU_HAS_F64.get_or_init(|| device.has_f64_shaders());
+        if !is_real || !has_f64 {
+            return None;
+        }
+        let computes = *GPU_F64_COMPUTES.get_or_init(|| f64_computation_probe(&device));
+        if computes { Some(device) } else { None }
+    });
+    if device.is_some() {
+        hold_gpu_permit(permit);
+    }
+    device
 }
 
 // ============================================================================

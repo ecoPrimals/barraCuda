@@ -26,8 +26,8 @@ results.
 
 ### Key capabilities
 
-- **708 WGSL shaders** spanning scientific compute domains
-- **1,026 Rust source files**, 23 integration test suites, 3,089 library tests passing
+- **784 WGSL shaders** spanning scientific compute domains
+- **1,055 Rust source files**, 31 integration test suites, 3,095 library tests passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -41,7 +41,7 @@ results.
 - **ML ops** — matmul, softmax, attention, ESN reservoir computing
 - **Sovereign shader compilation** — naga 28 IR optimizer, SPIR-V passthrough
 - **JSON-RPC 2.0 + tarpc** — dual-protocol IPC for primal-to-primal and external consumers
-- **UniBin CLI** — single `barracuda` binary with `server`, `doctor`, `validate`, `version`
+- **UniBin CLI** — single `barracuda` binary with `server`, `service`, `doctor`, `validate`, `version`
 
 ### Design principles
 
@@ -123,7 +123,7 @@ barraCuda/
 │       │   ├── sample/              # LHS, Sobol, Metropolis, sparsity
 │       │   ├── ops/                 # GPU ops (matmul, softmax, FHE, bio)
 │       │   ├── tensor/              # GPU tensor type
-│       │   ├── shaders/             # 708 WGSL shaders (see shaders/README.md)
+│       │   ├── shaders/             # 784 WGSL shaders (see shaders/README.md)
 │       │   ├── device/              # WgpuDevice, concurrency, test pool
 │       │   ├── staging/             # Ring buffers, unidirectional pipelines
 │       │   ├── pipeline/            # ComputeDispatch, batched pipelines
@@ -132,7 +132,7 @@ barraCuda/
 │       │   ├── unified_hardware/    # Unified CPU/GPU/NPU abstraction
 │       │   └── ...                  # + nn, snn, esn, pde, genomics, vision
 │       ├── examples/                # Runnable examples
-│       ├── tests/                   # 62 integration test suites
+│       ├── tests/                   # 31 integration test suites
 │       └── src/bin/                 # validate_gpu, bench_*
 └── specs/
     ├── BARRACUDA_SPECIFICATION.md   # Crate architecture + IPC contract
@@ -168,8 +168,8 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo test --workspace --lib            # 3,089 test functions
-cargo llvm-cov --workspace --lib        # 90%+ line coverage target (CI enforced --fail-under 80, evolving to 90)
+cargo test --workspace --lib            # 3,095 test functions
+cargo llvm-cov --workspace --lib        # 90%+ line coverage target (70% on llvmpipe; GPU hardware needed for 90%)
 ```
 
 All gates are enforced in `.github/workflows/ci.yml`.
@@ -214,6 +214,9 @@ barracuda server --bind 127.0.0.1:9000 --tarpc-bind 127.0.0.1:9001
 
 # Start with Unix socket
 barracuda server --unix /tmp/barracuda.sock
+
+# Start as systemd/init service (genomeBin mode)
+barracuda service
 
 # Health check and device diagnostics
 barracuda doctor

@@ -151,7 +151,7 @@ impl CovarianceF64 {
         Ok(result[0])
     }
 
-    #[allow(
+    #[expect(
         dead_code,
         reason = "CPU reference implementation for GPU parity validation"
     )]

@@ -2,7 +2,7 @@
 
 **Version**: 0.3.3
 **Date**: 2026-03-07
-**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,678 tests passing)
+**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,687 tests passing)
 
 ---
 
@@ -10,16 +10,16 @@
 
 | Category | Grade | Notes |
 |----------|-------|-------|
-| **Core compute** | A | 708 WGSL shaders, 13-tier tolerance architecture, GpuView persistent buffers |
+| **Core compute** | A | 784 WGSL shaders, 13-tier tolerance architecture, GpuView persistent buffers |
 | **Precision tiers** | A | F32/F64/DF64/F16 universal pipeline; DF64 naga-guided rewrite validated; probe-aware Fp64Strategy; DF64 Hybrid fallback bug fixed (10 ops) |
 | **Sovereign compiler** | A | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all shaders |
 | **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery; coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support |
 | **Device management** | A | Multi-GPU, capability-scored discovery, probe-aware f64 strategy, f64 computational accuracy probe, bounded poll timeout, poison-recovering autotune |
-| **Test coverage** | A | 3,678 total tests; proptest; chaos/fault test tiers; bounded GPU poll timeout prevents hangs |
+| **Test coverage** | A | 3,687 total tests; proptest; chaos/fault test tiers; bounded GPU poll timeout prevents hangs; thread-local GPU throttling for `cargo test` stability |
 | **Dependencies** | A- | Pure Rust chain (blake3 pure); zero non-GPU external C deps; wgpu/naga 28 for GPU |
 | **Documentation** | A | Comprehensive CHANGELOG, specs, README, CONTRIBUTING, CONVENTIONS, BREAKING_CHANGES; all rustdoc warnings resolved |
 | **Unsafe code** | A+ | Zero `unsafe` blocks in entire codebase |
-| **Clippy / lint** | A+ | Zero warnings with pedantic + unwrap_used; `#[expect(reason)]` for clippy suppressions; `#[allow(dead_code, reason)]` for CPU reference implementations; zero undocumented suppressions |
+| **Clippy / lint** | A+ | Zero warnings with pedantic + unwrap_used; `#[expect(reason)]` for clippy suppressions; `#[allow(dead_code, reason)]` for CPU reference implementations; `bytes::Bytes` zero-copy on I/O boundaries; zero undocumented suppressions |
 | **Error handling** | A | 6 `.expect()` on ownership invariants in RAII guards; all other production code uses `Result` propagation; `let-else` throughout; poison recovery |
 | **Idiomatic Rust** | A+ | Edition 2024; zero `too_many_arguments` (all 9 → builder/struct); documented `#[allow]`/`#[expect]` with reason; `#[derive(Default)]`; zero unsafe; `ChamferDirection` enum; smart module decomposition (provenance, coral_compiler) |
 | **Spring absorption** | A | LSCFRK integrators, force_anomaly brain, GPU-resident reduction, airSpring ops all absorbed; cross-spring provenance registry |
@@ -66,6 +66,12 @@
 - All `#[allow(dead_code)]` on CPU reference implementations documented with `reason` parameter
 - Magic numbers evolved to named constants (workload thresholds, discovery filenames)
 - Zero `unreachable!()` without descriptive messages
+- `service` subcommand for genomeBin compliance (systemd integration, PID file, READY=1)
+- Dynamic capability derivation from `REGISTERED_METHODS` source of truth in discovery files
+- Thread-local GPU test throttling via `OwnedSemaphorePermit` — stable `cargo test` at any parallelism
+- `bytes::Bytes` zero-copy for `TensorStorage::read_to_cpu()`, staging `WorkUnit`/`CompletedWork`
+- RPC `String` parameter documentation for serde boundary correctness
+- `eprintln!` → `tracing::warn!` in sovereign validation harness (library code)
 
 ## What's Not Working Yet
 

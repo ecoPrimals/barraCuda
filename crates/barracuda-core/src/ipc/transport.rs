@@ -153,8 +153,14 @@ impl IpcServer {
     }
 
     /// Start listening on a Unix domain socket with graceful shutdown.
+    ///
+    /// If `on_ready` is provided, it is invoked after the listener is bound
+    /// (e.g. for systemd Type=notify via `sd_notify`).
     #[cfg(unix)]
-    pub async fn serve_unix(&self, path: &std::path::Path) -> Result<()> {
+    pub async fn serve_unix<F>(&self, path: &std::path::Path, on_ready: Option<F>) -> Result<()>
+    where
+        F: FnOnce() + Send,
+    {
         if path.exists() {
             std::fs::remove_file(path)?;
         }
@@ -164,6 +170,10 @@ impl IpcServer {
 
         let listener = tokio::net::UnixListener::bind(path)?;
         tracing::info!("barraCuda IPC listening on unix://{}", path.display());
+
+        if let Some(f) = on_ready {
+            f();
+        }
 
         loop {
             tokio::select! {

@@ -5,7 +5,7 @@
 //! can be used for unit test validation.
 
 /// Thomas algorithm for tridiagonal systems (O(n) sequential).
-#[allow(
+#[expect(
     dead_code,
     reason = "CPU reference implementation for GPU parity validation"
 )]

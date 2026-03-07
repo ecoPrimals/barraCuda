@@ -350,7 +350,7 @@ impl ComputeExecutor for GpuExecutor {
                 let data = tensor.read_to_cpu().await?;
                 let descriptor = tensor.descriptor().clone();
                 let mut gpu_tensor = GpuTensorStorage::new(descriptor, device);
-                gpu_tensor.write_from_cpu(&data).await?;
+                gpu_tensor.write_from_cpu(data.as_ref()).await?;
                 Ok(Arc::new(gpu_tensor) as Arc<dyn TensorStorage>)
             }
         })

@@ -4,6 +4,7 @@
 use crate::error::Result;
 use crate::unified_hardware::{HardwareType, TensorStorage};
 use crate::unified_math::TensorDescriptor;
+use bytes::Bytes;
 
 /// CPU tensor storage implementation
 pub(super) struct CpuTensorStorage {
@@ -32,8 +33,8 @@ impl TensorStorage for CpuTensorStorage {
 
     fn read_to_cpu(
         &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<u8>>> + Send + '_>> {
-        let data = self.data.clone();
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Bytes>> + Send + '_>> {
+        let data = Bytes::from(self.data.clone());
         Box::pin(async move { Ok(data) })
     }
 

@@ -6,6 +6,15 @@
 //! high-throughput protocol for primal-to-primal calls. JSON-RPC 2.0 remains
 //! the primary protocol for external/cross-language consumers.
 //!
+//! ## String parameters
+//!
+//! Service methods use `String` (not `&str`) for string parameters because
+//! tarpc uses serde for serialization across process/network boundaries.
+//! `&str` cannot be deserialized into (it doesn't own data); `impl Into<String>`
+//! is not `Serialize`; `Cow<'static, str>` adds complexity without benefit
+//! over the wire. For RPC boundaries, `String` is the idiomatic type — `&str`
+//! and `Cow` are for in-process APIs.
+//!
 //! ## Usage
 //!
 //! ```rust,ignore

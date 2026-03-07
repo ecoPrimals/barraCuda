@@ -588,3 +588,5 @@ pub fn rewrite_f64_infix_full(f64_source: &str) -> Result<String, String> {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_nak;

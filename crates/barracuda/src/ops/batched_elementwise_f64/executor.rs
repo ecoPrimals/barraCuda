@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Batched element-wise GPU executor for f64 operations.
 
-#[cfg(test)]
 use super::cpu_ref;
 use super::op::{Op, StationDayInput, WaterBalanceInput};
 use crate::device::WgpuDevice;
@@ -184,8 +183,10 @@ impl BatchedElementwiseF64 {
     }
 
     /// CPU fallback for small batches
-    #[cfg(test)]
-    #[expect(dead_code, reason = "CPU reference for GPU validation")]
+    #[allow(
+        dead_code,
+        reason = "CPU reference implementation for GPU parity validation"
+    )]
     fn execute_cpu(
         &self,
         data: &[f64],

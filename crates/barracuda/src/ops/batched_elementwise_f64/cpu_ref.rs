@@ -123,7 +123,10 @@ pub fn hamon_et0_cpu(t_mean: f64, daylight_hours: f64) -> f64 {
 
 /// SCS-CN Runoff (USDA TR-55) (CPU reference)
 /// Q = (P − Ia)² / (P − Ia + S), S = 25400/CN − 254, Ia = `Ia_ratio` × S
-#[cfg(test)]
+#[allow(
+    dead_code,
+    reason = "CPU reference implementation for GPU parity validation"
+)]
 #[must_use]
 pub(crate) fn scs_cn_runoff_cpu(p: f64, cn: f64, ia_ratio: f64) -> f64 {
     if p <= 0.0 || cn <= 0.0 {
@@ -140,7 +143,10 @@ pub(crate) fn scs_cn_runoff_cpu(p: f64, cn: f64, ia_ratio: f64) -> f64 {
 
 /// Stewart (1977) yield-water function (CPU reference)
 /// `Ya/Ym` = 1 − Ky × (1 − `ETa/ETc`)
-#[cfg(test)]
+#[allow(
+    dead_code,
+    reason = "CPU reference implementation for GPU parity validation"
+)]
 #[must_use]
 pub(crate) fn stewart_yield_water_cpu(ky: f64, eta_etc_ratio: f64) -> f64 {
     1.0 - ky * (1.0 - eta_etc_ratio)
@@ -148,7 +154,10 @@ pub(crate) fn stewart_yield_water_cpu(ky: f64, eta_etc_ratio: f64) -> f64 {
 
 /// Blaney-Criddle (1950) ET₀ (CPU reference)
 /// ET₀ = p × (0.46 × T + 8.13) where p = `daylight_hours` / 43.80
-#[cfg(test)]
+#[allow(
+    dead_code,
+    reason = "CPU reference implementation for GPU parity validation"
+)]
 #[must_use]
 pub(crate) fn blaney_criddle_et0_cpu(t_mean: f64, daylight_hours: f64) -> f64 {
     let p = daylight_hours / 43.80;
@@ -170,7 +179,10 @@ pub fn pedotransfer_polynomial_cpu(
     ((((a5 * x + a4) * x + a3) * x + a2) * x + a1) * x + a0
 }
 
-#[cfg(test)]
+#[allow(
+    dead_code,
+    reason = "CPU reference implementation for GPU parity validation"
+)]
 /// FAO-56 Penman-Monteith ET₀ (CPU reference)
 pub(crate) fn fao56_et0_cpu(
     tmax: f64,
@@ -249,7 +261,10 @@ pub(crate) fn fao56_et0_cpu(
     numerator / denominator
 }
 
-#[cfg(test)]
+#[allow(
+    dead_code,
+    reason = "CPU reference implementation for GPU parity validation"
+)]
 /// Water balance daily update (CPU reference)
 pub(crate) fn water_balance_cpu(
     dr_prev: f64,

@@ -19,9 +19,9 @@
 | **Dependencies** | A- | Pure Rust chain (blake3 pure); zero non-GPU external C deps; wgpu/naga 28 for GPU |
 | **Documentation** | A | Comprehensive CHANGELOG, specs, README, CONTRIBUTING, CONVENTIONS, BREAKING_CHANGES; all rustdoc warnings resolved |
 | **Unsafe code** | A+ | Zero `unsafe` blocks in entire codebase |
-| **Clippy / lint** | A+ | Zero warnings with pedantic + unwrap_used; `#[expect(reason)]` compile-time verified suppressions; zero `#[allow]` in production |
+| **Clippy / lint** | A+ | Zero warnings with pedantic + unwrap_used; `#[expect(reason)]` for clippy suppressions; `#[allow(dead_code, reason)]` for CPU reference implementations; zero undocumented suppressions |
 | **Error handling** | A | 6 `.expect()` on ownership invariants in RAII guards; all other production code uses `Result` propagation; `let-else` throughout; poison recovery |
-| **Idiomatic Rust** | A+ | Edition 2024; zero `too_many_arguments` (all 9 → builder/struct); `#[expect]` over `#[allow]`; `#[derive(Default)]`; zero unsafe; `ChamferDirection` enum replaces raw u32 |
+| **Idiomatic Rust** | A+ | Edition 2024; zero `too_many_arguments` (all 9 → builder/struct); documented `#[allow]`/`#[expect]` with reason; `#[derive(Default)]`; zero unsafe; `ChamferDirection` enum; smart module decomposition (provenance, coral_compiler) |
 | **Spring absorption** | A | LSCFRK integrators, force_anomaly brain, GPU-resident reduction, airSpring ops all absorbed; cross-spring provenance registry |
 
 ---
@@ -62,6 +62,10 @@
 - `mean_variance_to_buffer()` GPU-resident fused Welford (zero CPU readback for chained pipelines)
 - Cross-spring evolution timeline with 10 events + dependency matrix + 27 dated shader records
 - `ChamferDirection` enum — evolved from raw u32 to exhaustive-match type-safe direction
+- Smart module decomposition: `provenance/` (types/registry/report); `coral_compiler/` (types/discovery/cache/jsonrpc/client)
+- All `#[allow(dead_code)]` on CPU reference implementations documented with `reason` parameter
+- Magic numbers evolved to named constants (workload thresholds, discovery filenames)
+- Zero `unreachable!()` without descriptive messages
 
 ## What's Not Working Yet
 

@@ -146,7 +146,7 @@ mod tests {
 
     #[test]
     fn health_report_builder() {
-        let report = HealthReport::new("barraCuda", "0.3.2")
+        let report = HealthReport::new("barraCuda", "0.3.3")
             .with_status(HealthStatus::Healthy)
             .with_detail("adapter", "llvmpipe");
 

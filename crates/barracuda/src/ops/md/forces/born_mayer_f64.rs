@@ -184,8 +184,10 @@ impl BornMayerForceF64 {
     }
 
     /// CPU reference (test/validation only).
-    #[cfg(test)]
-    #[expect(dead_code, reason = "CPU reference for GPU validation")]
+    #[allow(
+        dead_code,
+        reason = "CPU reference implementation for GPU parity validation"
+    )]
     fn compute_cpu(
         &self,
         positions: &[f64],
@@ -238,8 +240,10 @@ impl BornMayerForceF64 {
         forces
     }
 
-    #[cfg(test)]
-    #[expect(dead_code, reason = "CPU reference for GPU validation")]
+    #[allow(
+        dead_code,
+        reason = "CPU reference implementation for GPU parity validation"
+    )]
     fn compute_cpu_with_energy(
         &self,
         positions: &[f64],

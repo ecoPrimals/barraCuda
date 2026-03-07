@@ -274,7 +274,9 @@ barracuda = { path = "../barraCuda/crates/barracuda", default-features = false }
 ```
 ecoPrimals/
 ├── barraCuda/          # This repo
+├── coralReef/          # Shader compiler (WGSL/SPIR-V → native GPU binary)
 ├── sourDough/          # Scaffold reference (no runtime dependency)
+├── toadStool/          # Orchestration / hardware discovery
 ├── wateringHole/       # Ecosystem standards and genomeBin manifest
 └── ...Springs          # Consumers
 ```

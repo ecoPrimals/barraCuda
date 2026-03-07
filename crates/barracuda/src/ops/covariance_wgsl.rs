@@ -113,7 +113,10 @@ impl Covariance {
     }
 
     /// CPU reference implementation
-    #[expect(dead_code, reason = "CPU reference for GPU validation")]
+    #[allow(
+        dead_code,
+        reason = "CPU reference implementation for GPU parity validation"
+    )]
     fn covariance_cpu(&self, x: &[f32], y: &[f32], ddof: u32) -> f32 {
         let n = x.len() as f32;
         let mean_x: f32 = x.iter().sum::<f32>() / n;

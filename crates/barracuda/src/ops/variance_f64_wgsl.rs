@@ -315,7 +315,10 @@ impl VarianceF64 {
         Ok(self.sample_variance(data)?.sqrt())
     }
 
-    #[expect(dead_code, reason = "CPU reference for GPU validation")]
+    #[allow(
+        dead_code,
+        reason = "CPU reference implementation for GPU parity validation"
+    )]
     fn variance_cpu(data: &[f64], ddof: usize) -> f64 {
         let n = data.len();
         if n <= ddof {

@@ -5,8 +5,10 @@
 //! can be used for unit test validation.
 
 /// Thomas algorithm for tridiagonal systems (O(n) sequential).
-#[cfg(test)]
-#[expect(dead_code, reason = "CPU reference for GPU validation")]
+#[allow(
+    dead_code,
+    reason = "CPU reference implementation for GPU parity validation"
+)]
 pub fn solve_cpu_thomas(a: &[f64], b: &[f64], c: &[f64], d: &[f64]) -> Vec<f64> {
     let n = b.len();
     let mut c_prime = vec![0.0f64; n];

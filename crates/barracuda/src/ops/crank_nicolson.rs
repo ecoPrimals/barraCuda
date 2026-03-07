@@ -213,7 +213,10 @@ impl CrankNicolson {
     }
 
     /// CPU reference implementation (Thomas algorithm)
-    #[expect(dead_code, reason = "CPU reference for GPU validation")]
+    #[allow(
+        dead_code,
+        reason = "CPU reference implementation for GPU parity validation"
+    )]
     fn solve_cpu(
         &self,
         u0: &[f32],

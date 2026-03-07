@@ -27,7 +27,6 @@
 //! let (forces, energy) = pppm.compute(&positions, &charges)?;
 //! ```
 
-#[cfg(test)]
 use std::f64::consts::PI;
 use std::sync::Arc;
 
@@ -236,8 +235,10 @@ impl Pppm {
     }
 
     /// CPU 3D FFT using dimension-wise 1D FFTs (test only)
-    #[cfg(test)]
-    #[expect(dead_code, reason = "CPU reference for GPU validation")]
+    #[allow(
+        dead_code,
+        reason = "CPU reference implementation for GPU parity validation"
+    )]
     fn fft_3d_cpu(
         &self,
         data: &mut [f64],
@@ -318,7 +319,7 @@ impl Pppm {
     }
 
     /// CPU 1D FFT (Cooley-Tukey radix-2)
-    #[cfg(test)]
+    #[allow(dead_code, reason = "CPU scalar helper for GPU parity validation")]
     fn fft_1d_cpu(&self, data: &mut [f64], n: usize, inverse: bool) {
         // Bit-reversal permutation
         let mut j = 0;

@@ -237,7 +237,10 @@ impl BrayCurtisF64 {
     }
 
     /// CPU fallback for small inputs
-    #[expect(dead_code, reason = "CPU reference for GPU validation")]
+    #[allow(
+        dead_code,
+        reason = "CPU reference implementation for GPU parity validation"
+    )]
     fn condensed_distance_matrix_cpu(
         &self,
         samples: &[f64],
@@ -280,7 +283,10 @@ impl BrayCurtisF64 {
 }
 
 /// CPU reference: Bray-Curtis distance between samples i and j
-#[allow(dead_code)] // used by condensed_distance_matrix_cpu and tests
+#[allow(
+    dead_code,
+    reason = "CPU reference implementation for GPU parity validation"
+)]
 fn bray_curtis_cpu(samples: &[f64], i: usize, j: usize, n_features: usize) -> f64 {
     let base_i = i * n_features;
     let base_j = j * n_features;

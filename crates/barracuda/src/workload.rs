@@ -25,10 +25,12 @@ mod thresholds {
     pub const THRESHOLD_ONLY_SPARSITY: f32 = 0.40;
     pub const MASK_ONLY_SPARSITY: f32 = 0.30;
     pub const MINIMAL_SPARSITY: f32 = 0.10;
+    /// Below this element count, CPU dispatch overhead beats GPU for dense ops.
+    pub const DENSE_CPU_THRESHOLD: usize = 1024;
 }
 
 /// Canonical sparsity threshold for NPU routing (re-exported for `npu_bridge`, npu matmul).
-pub use thresholds::NPU_SPARSITY_THRESHOLD;
+pub use thresholds::{DENSE_CPU_THRESHOLD, NPU_SPARSITY_THRESHOLD};
 
 /// Workload type classifier
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -449,7 +451,7 @@ impl DeviceSelector {
             }
 
             // Dense operations (from characterization)
-            (WorkloadType::Dense, _) if data_size < 1024 => {
+            (WorkloadType::Dense, _) if data_size < thresholds::DENSE_CPU_THRESHOLD => {
                 // CPU dominates small dense (2,857× better!)
                 ComputeDevice::CPU
             }

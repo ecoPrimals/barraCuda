@@ -49,7 +49,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Akida SDK paths** — hardcoded system paths extracted to `AKIDA_SDK_SYSTEM_DIRS` constant
   shared between `akida.rs` and `kernel_router.rs`
-- **19 CPU reference functions audited** — all correctly gated with `#[expect(dead_code)]`
+
+### Changed — coralReef Phase 10 IPC Alignment and Deep Debt (Mar 7 2026)
+
+- **IPC method names** — `compiler.compile` → `shader.compile.spirv`, `compiler.compile_wgsl`
+  → `shader.compile.wgsl`, `compiler.health` → `shader.compile.status` per wateringHole semantic
+  naming standard; backward-compat fallback for pre-Phase 10 coralReef
+- **`capabilities()` method** — new `shader.compile.capabilities` endpoint preferred over
+  health-response embedded arch list for architecture enumeration
+- **AMD GPU support** — `arch_to_coral()` now maps RDNA2 (`gfx1030`), RDNA3 (`gfx1100`),
+  CDNA2 (`gfx90a`) per coralReef Phase 10 multi-vendor evolution
+- **Discovery evolution** — file-based capability scan checks `shader.compile` (Phase 10)
+  before `shader_compiler` (legacy), then well-known filename fallback
+- **Smart module decomposition** — `provenance.rs` (767 lines) → `provenance/` module
+  (types/registry/report); `coral_compiler.rs` (735 lines) → `coral_compiler/` module
+  (types/discovery/cache/jsonrpc/client)
+- **40+ `#[allow(dead_code)]` documented** — all CPU reference implementations now carry
+  `reason = "CPU reference implementation for GPU parity validation"` parameter
+- **`#[expect(clippy::suspicious_arithmetic_impl)]`** → `#[allow]` with documented reason
+  for complex division (lint no longer fires in current clippy)
+- **Magic numbers** — workload threshold `1024` → `DENSE_CPU_THRESHOLD` named constant;
+  discovery filename `coralreef-core.json` → `LEGACY_DISCOVERY_FILENAME` const
+- **Test strengthening** — 5 coral_compiler `let _ = result` tests replaced with conditional
+  assertions; new `test_connection_state_transitions` test
+- **Capability version bump** — IPC `provides` versions updated to `0.3.3`
 
 ### Added — Deep Debt Resolution and Compliance (Mar 6 2026)
 

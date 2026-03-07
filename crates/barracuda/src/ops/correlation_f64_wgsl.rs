@@ -311,7 +311,10 @@ impl CorrelationF64 {
             .pearson_r)
     }
 
-    #[expect(dead_code, reason = "CPU reference for GPU validation")]
+    #[allow(
+        dead_code,
+        reason = "CPU reference implementation for GPU parity validation"
+    )]
     fn correlation_cpu(x: &[f64], y: &[f64]) -> f64 {
         let n = x.len();
         if n == 0 {

@@ -62,9 +62,9 @@ fn primal_capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
         id,
         serde_json::json!({
             "provides": [
-                { "id": "gpu.compute", "version": "0.3.0" },
-                { "id": "tensor.ops", "version": "0.3.0" },
-                { "id": "gpu.dispatch", "version": "0.3.0" },
+                { "id": "gpu.compute", "version": "0.3.3" },
+                { "id": "tensor.ops", "version": "0.3.3" },
+                { "id": "gpu.dispatch", "version": "0.3.3" },
             ],
             "requires": [
                 { "id": "shader.compile", "version": ">=0.1.0", "optional": true },

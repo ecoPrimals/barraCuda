@@ -300,7 +300,10 @@ impl FusedMapReduceF64 {
     }
 
     /// CPU fallback for small arrays (faster due to no dispatch overhead)
-    #[expect(dead_code, reason = "CPU reference for GPU validation")]
+    #[allow(
+        dead_code,
+        reason = "CPU reference implementation for GPU parity validation"
+    )]
     fn execute_cpu(
         &self,
         data: &[f64],

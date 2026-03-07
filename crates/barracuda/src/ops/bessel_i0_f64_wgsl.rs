@@ -133,12 +133,15 @@ impl BesselI0F64 {
         self.device.read_buffer_f64(&output_buf, size)
     }
 
-    #[expect(dead_code, reason = "CPU reference for GPU validation")]
+    #[allow(
+        dead_code,
+        reason = "CPU reference implementation for GPU parity validation"
+    )]
     fn i0_cpu(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| Self::i0_scalar(xi)).collect()
     }
 
-    #[allow(dead_code)] // used by i0_cpu
+    #[allow(dead_code, reason = "CPU scalar helper for GPU parity validation")]
     fn i0_scalar(x: f64) -> f64 {
         let ax = x.abs();
         if ax < 3.75 {

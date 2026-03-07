@@ -1,135 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Shader provenance tracking — cross-spring evolution registry.
-//!
-//! Tracks which spring domain each WGSL shader originated from, which
-//! springs currently consume it, and how patterns flow across domains.
-//! This is the programmatic equivalent of the provenance comments in shader
-//! headers, enabling runtime introspection and evolution auditing.
-//!
-//! # Cross-Spring Evolution (Write → Absorb → Lean)
-//!
-//! Shaders flow between springs following the ecosystem pattern:
-//! - **Write**: a spring creates a domain-specific shader
-//! - **Absorb**: barraCuda generalises it as a reusable primitive
-//! - **Lean**: other springs consume the upstream version
-//!
-//! ## Evolution examples
-//!
-//! - **hotSpring precision → all springs**: `df64_core.wgsl` from nuclear
-//!   physics became the universal FP32-pair arithmetic library
-//! - **neuralSpring stats → wetSpring + groundSpring**: `kl_divergence_f64`
-//!   for ML validation absorbed by bio-informatics and condensed matter
-//! - **hotSpring MD → wetSpring**: `stress_virial_f64` used for mechanical
-//!   property validation in bio-material pipelines
+//! Shader provenance registry and cross-spring dependency queries.
 
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
-/// Which spring domain originated or primarily uses a shader.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum SpringDomain {
-    /// Nuclear physics, lattice QCD, molecular dynamics
-    HotSpring,
-    /// Metagenomics, bioinformatics, phylogenetics
-    WetSpring,
-    /// Machine learning, attention, neuroevolution
-    NeuralSpring,
-    /// Agriculture, hydrology, evapotranspiration
-    AirSpring,
-    /// Condensed matter, Anderson localization, noise validation
-    GroundSpring,
-    /// Internal barraCuda primitive (no spring origin)
-    BarraCuda,
-}
-
-impl std::fmt::Display for SpringDomain {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::HotSpring => write!(f, "hotSpring"),
-            Self::WetSpring => write!(f, "wetSpring"),
-            Self::NeuralSpring => write!(f, "neuralSpring"),
-            Self::AirSpring => write!(f, "airSpring"),
-            Self::GroundSpring => write!(f, "groundSpring"),
-            Self::BarraCuda => write!(f, "barraCuda"),
-        }
-    }
-}
-
-/// Provenance record for a single shader.
-#[derive(Debug, Clone)]
-pub struct ShaderRecord {
-    /// Shader path relative to `shaders/` (e.g. `"math/df64_core.wgsl"`)
-    pub path: &'static str,
-    /// Spring that originally created this shader
-    pub origin: SpringDomain,
-    /// Springs that currently consume or reference this shader
-    pub consumers: &'static [SpringDomain],
-    /// Broad category for grouping
-    pub category: ShaderCategory,
-    /// Brief description of cross-spring evolution
-    pub evolution_note: &'static str,
-    /// When this shader was first created (e.g. "Feb 2026 S58")
-    pub created: &'static str,
-    /// When barraCuda absorbed this shader (e.g. "Mar 2026 v0.3.3")
-    pub absorbed: &'static str,
-}
-
-/// Key moment in the cross-spring evolution timeline.
-#[derive(Debug, Clone)]
-pub struct EvolutionEvent {
-    /// Date or sprint reference (e.g. "Mar 5, 2026")
-    pub date: &'static str,
-    /// Which spring initiated this evolution
-    pub from: SpringDomain,
-    /// Which springs benefited
-    pub beneficiaries: &'static [SpringDomain],
-    /// What evolved and why it mattered
-    pub description: &'static str,
-}
-
-/// Shader category for grouping.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ShaderCategory {
-    /// Foundational math libraries (df64, su3, complex)
-    MathLibrary,
-    /// Lattice QCD and gauge theory
-    LatticeQcd,
-    /// Molecular dynamics forces, integrators, observables
-    MolecularDynamics,
-    /// Nuclear physics (HFB, SEMF, deformed)
-    NuclearPhysics,
-    /// Statistics and correlation
-    Statistics,
-    /// Machine learning and neural networks
-    MachineLearning,
-    /// Bioinformatics and genomics
-    Bioinformatics,
-    /// Hydrology and earth science
-    Hydrology,
-    /// Condensed matter physics
-    CondensedMatter,
-    /// General compute primitives
-    Primitives,
-}
-
-impl std::fmt::Display for ShaderCategory {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::MathLibrary => write!(f, "Math Library"),
-            Self::LatticeQcd => write!(f, "Lattice QCD"),
-            Self::MolecularDynamics => write!(f, "Molecular Dynamics"),
-            Self::NuclearPhysics => write!(f, "Nuclear Physics"),
-            Self::Statistics => write!(f, "Statistics"),
-            Self::MachineLearning => write!(f, "Machine Learning"),
-            Self::Bioinformatics => write!(f, "Bioinformatics"),
-            Self::Hydrology => write!(f, "Hydrology"),
-            Self::CondensedMatter => write!(f, "Condensed Matter"),
-            Self::Primitives => write!(f, "Primitives"),
-        }
-    }
-}
-
-use ShaderCategory as C;
+use super::types::{EvolutionEvent, ShaderCategory as C, ShaderRecord, SpringDomain};
 use SpringDomain::{AirSpring, GroundSpring, HotSpring, NeuralSpring, WetSpring};
 
 /// The canonical cross-spring shader provenance registry.
@@ -414,44 +289,6 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
     ]
 });
 
-/// Query all shaders from a specific spring domain.
-#[must_use]
-pub fn shaders_from(origin: SpringDomain) -> Vec<&'static ShaderRecord> {
-    REGISTRY.iter().filter(|r| r.origin == origin).collect()
-}
-
-/// Query all shaders consumed by a specific spring domain.
-#[must_use]
-pub fn shaders_consumed_by(consumer: SpringDomain) -> Vec<&'static ShaderRecord> {
-    REGISTRY
-        .iter()
-        .filter(|r| r.consumers.contains(&consumer))
-        .collect()
-}
-
-/// Query cross-spring shaders — those consumed by a spring other than the origin.
-#[must_use]
-pub fn cross_spring_shaders() -> Vec<&'static ShaderRecord> {
-    REGISTRY
-        .iter()
-        .filter(|r| r.consumers.iter().any(|c| *c != r.origin))
-        .collect()
-}
-
-/// Build a spring-to-spring dependency map: `(from, to)` → count of shared shaders.
-#[must_use]
-pub fn cross_spring_matrix() -> HashMap<(SpringDomain, SpringDomain), usize> {
-    let mut matrix = HashMap::new();
-    for record in REGISTRY.iter() {
-        for consumer in record.consumers {
-            if *consumer != record.origin {
-                *matrix.entry((record.origin, *consumer)).or_insert(0) += 1;
-            }
-        }
-    }
-    matrix
-}
-
 /// The canonical cross-spring evolution timeline.
 ///
 /// Key moments when a spring's work evolved to benefit other springs,
@@ -540,70 +377,42 @@ pub static EVOLUTION_TIMELINE: LazyLock<Vec<EvolutionEvent>> = LazyLock::new(|| 
     ]
 });
 
-/// Generate a human-readable cross-spring evolution report.
+/// Query all shaders from a specific spring domain.
 #[must_use]
-pub fn evolution_report() -> String {
-    use std::fmt::Write;
-    let mut report = String::from("# Cross-Spring Shader Evolution Report\n\n");
+pub fn shaders_from(origin: SpringDomain) -> Vec<&'static ShaderRecord> {
+    REGISTRY.iter().filter(|r| r.origin == origin).collect()
+}
 
-    report.push_str("## Timeline\n\n");
-    for event in EVOLUTION_TIMELINE.iter() {
-        let _ = write!(
-            report,
-            "**{}** — {} →\n  {}\n\n",
-            event.date, event.from, event.description
-        );
-    }
+/// Query all shaders consumed by a specific spring domain.
+#[must_use]
+pub fn shaders_consumed_by(consumer: SpringDomain) -> Vec<&'static ShaderRecord> {
+    REGISTRY
+        .iter()
+        .filter(|r| r.consumers.contains(&consumer))
+        .collect()
+}
 
-    report.push_str("## Dependency Matrix (shader count)\n\n");
-    report.push_str(
-        "| From \\ To | hotSpring | wetSpring | neuralSpring | airSpring | groundSpring |\n",
-    );
-    report.push_str(
-        "|-----------|-----------|-----------|--------------|-----------|---------------|\n",
-    );
+/// Query cross-spring shaders — those consumed by a spring other than the origin.
+#[must_use]
+pub fn cross_spring_shaders() -> Vec<&'static ShaderRecord> {
+    REGISTRY
+        .iter()
+        .filter(|r| r.consumers.iter().any(|c| *c != r.origin))
+        .collect()
+}
 
-    let matrix = cross_spring_matrix();
-    let domains = [HotSpring, WetSpring, NeuralSpring, AirSpring, GroundSpring];
-    for from in &domains {
-        let _ = write!(report, "| **{from}** ");
-        for to in &domains {
-            let count = matrix.get(&(*from, *to)).copied().unwrap_or(0);
-            if from == to {
-                report.push_str("| — ");
-            } else if count > 0 {
-                let _ = write!(report, "| {count} ");
-            } else {
-                report.push_str("| · ");
+/// Build a spring-to-spring dependency map: `(from, to)` → count of shared shaders.
+#[must_use]
+pub fn cross_spring_matrix() -> HashMap<(SpringDomain, SpringDomain), usize> {
+    let mut matrix = HashMap::new();
+    for record in REGISTRY.iter() {
+        for consumer in record.consumers {
+            if *consumer != record.origin {
+                *matrix.entry((record.origin, *consumer)).or_insert(0) += 1;
             }
         }
-        report.push_str("|\n");
     }
-
-    report.push_str("\n## Shader Categories by Origin\n\n");
-    for domain in &domains {
-        let shaders = shaders_from(*domain);
-        if shaders.is_empty() {
-            continue;
-        }
-        let _ = write!(report, "### {} ({} shaders)\n\n", domain, shaders.len());
-        for s in &shaders {
-            let cross = s.consumers.iter().filter(|c| **c != s.origin).count();
-            let _ = write!(
-                report,
-                "- `{}` [{}] — {} cross-spring consumer{}\n  Created: {} | Absorbed: {}\n",
-                s.path,
-                s.category,
-                cross,
-                if cross == 1 { "" } else { "s" },
-                s.created,
-                s.absorbed,
-            );
-        }
-        report.push('\n');
-    }
-
-    report
+    matrix
 }
 
 #[cfg(test)]
@@ -729,16 +538,6 @@ mod tests {
     }
 
     #[test]
-    fn evolution_report_contains_key_sections() {
-        let report = evolution_report();
-        assert!(report.contains("Timeline"));
-        assert!(report.contains("Dependency Matrix"));
-        assert!(report.contains("hotSpring"));
-        assert!(report.contains("neuralSpring"));
-        assert!(report.contains("wetSpring"));
-    }
-
-    #[test]
     fn welford_consumed_by_all_springs() {
         let welford = REGISTRY
             .iter()
@@ -750,18 +549,5 @@ mod tests {
             5,
             "Welford should be consumed by all 5 springs"
         );
-    }
-
-    #[test]
-    fn display_spring_domains() {
-        assert_eq!(format!("{HotSpring}"), "hotSpring");
-        assert_eq!(format!("{WetSpring}"), "wetSpring");
-        assert_eq!(format!("{NeuralSpring}"), "neuralSpring");
-    }
-
-    #[test]
-    fn display_shader_categories() {
-        assert_eq!(format!("{}", C::LatticeQcd), "Lattice QCD");
-        assert_eq!(format!("{}", C::MathLibrary), "Math Library");
     }
 }

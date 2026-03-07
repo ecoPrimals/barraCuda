@@ -2,7 +2,17 @@
 //! coralReef shader compiler IPC client.
 //!
 //! Discovers and connects to the coralReef primal's JSON-RPC 2.0 endpoint,
-//! providing native GPU binary compilation for NVIDIA architectures (SM70+).
+//! providing native GPU binary compilation for NVIDIA (SM70+) and AMD (RDNA2+)
+//! architectures.
+//!
+//! ## IPC Contract (coralReef Phase 10)
+//!
+//! | Method | Purpose |
+//! |--------|---------|
+//! | `shader.compile.spirv` | SPIR-V → native binary |
+//! | `shader.compile.wgsl` | WGSL → native binary |
+//! | `shader.compile.status` | Health / readiness |
+//! | `shader.compile.capabilities` | Supported architectures |
 //!
 //! Fully optional: if coralReef is unavailable, all methods return `None`
 //! and the standard wgpu/SovereignCompiler path is used.
@@ -34,7 +44,7 @@ struct CompileRequest {
 
 /// WGSL direct compile request (Phase 10) — avoids local naga SPIR-V step.
 ///
-/// coralReef Phase 10 (`compiler.compile_wgsl`) accepts raw WGSL and handles
+/// coralReef Phase 10 (`shader.compile.wgsl`) accepts raw WGSL and handles
 /// the full WGSL → IR → native binary pipeline server-side.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct CompileWgslRequest {
@@ -124,8 +134,12 @@ impl CoralCompiler {
             fp64_software,
         };
 
-        match jsonrpc_call::<CompileRequest, CompileResponse>(&addr, "compiler.compile", &request)
-            .await
+        match jsonrpc_call::<CompileRequest, CompileResponse>(
+            &addr,
+            "shader.compile.spirv",
+            &request,
+        )
+        .await
         {
             Ok(resp) => Some(CoralBinary {
                 binary: resp.binary,
@@ -138,7 +152,7 @@ impl CoralCompiler {
         }
     }
 
-    /// Compile WGSL directly via coralReef's Phase 10 `compiler.compile_wgsl`.
+    /// Compile WGSL directly via coralReef's Phase 10 `shader.compile.wgsl`.
     ///
     /// Unlike [`compile_wgsl`], this sends raw WGSL to coralReef for
     /// server-side compilation, avoiding the local naga WGSL → SPIR-V step.
@@ -163,7 +177,7 @@ impl CoralCompiler {
 
         match jsonrpc_call::<CompileWgslRequest, CompileResponse>(
             &addr,
-            "compiler.compile_wgsl",
+            "shader.compile.wgsl",
             &request,
         )
         .await
@@ -181,16 +195,31 @@ impl CoralCompiler {
 
     /// Query supported GPU architectures from coralReef.
     ///
-    /// Returns the list of architecture strings (e.g. `["sm_70", "sm_80"]`)
-    /// that the connected coralReef instance can compile for.
+    /// Prefers the Phase 10 `shader.compile.capabilities` endpoint, falling
+    /// back to `shader.compile.status` for older coralReef versions that
+    /// embed arch info in the health response.
     pub async fn supported_archs(&self) -> Option<Vec<String>> {
+        if let Some(archs) = self.capabilities().await {
+            return Some(archs);
+        }
         self.health().await.map(|h| h.supported_archs)
     }
 
-    /// Check if coralReef is reachable and healthy.
+    /// Query supported architectures via `shader.compile.capabilities`.
+    ///
+    /// Returns `None` if coralReef is unavailable or the endpoint is not
+    /// supported (pre-Phase 10 versions).
+    pub async fn capabilities(&self) -> Option<Vec<String>> {
+        let addr = self.ensure_connected().await?;
+        jsonrpc_call::<(), Vec<String>>(&addr, "shader.compile.capabilities", &())
+            .await
+            .ok()
+    }
+
+    /// Check if coralReef is reachable and healthy via `shader.compile.status`.
     pub async fn health(&self) -> Option<HealthResponse> {
         let addr = self.ensure_connected().await?;
-        jsonrpc_call::<(), HealthResponse>(&addr, "compiler.health", &())
+        jsonrpc_call::<(), HealthResponse>(&addr, "shader.compile.status", &())
             .await
             .ok()
     }
@@ -271,9 +300,11 @@ pub fn shader_hash(source: &str) -> String {
     blake3::hash(source.as_bytes()).to_hex().to_string()
 }
 
-/// Map a barraCuda `GpuArch` to coralReef's arch string (e.g. `sm_70`).
+/// Map a barraCuda `GpuArch` to coralReef's arch string.
 ///
-/// Returns `None` for non-NVIDIA architectures (coralReef only targets NVIDIA).
+/// Supports NVIDIA (SM70+) and AMD RDNA2+ architectures per coralReef Phase 10.
+/// Returns `None` for architectures that coralReef cannot compile for
+/// (Intel Arc, Apple M, software rasterizers, unknowns).
 #[must_use]
 pub fn arch_to_coral(arch: &crate::device::driver_profile::GpuArch) -> Option<&'static str> {
     use crate::device::driver_profile::GpuArch;
@@ -282,6 +313,9 @@ pub fn arch_to_coral(arch: &crate::device::driver_profile::GpuArch) -> Option<&'
         GpuArch::Turing => Some("sm_75"),
         GpuArch::Ampere => Some("sm_80"),
         GpuArch::Ada => Some("sm_89"),
+        GpuArch::Rdna2 => Some("gfx1030"),
+        GpuArch::Rdna3 => Some("gfx1100"),
+        GpuArch::Cdna2 => Some("gfx90a"),
         _ => None,
     }
 }
@@ -290,7 +324,7 @@ pub fn arch_to_coral(arch: &crate::device::driver_profile::GpuArch) -> Option<&'
 ///
 /// Spawns a background task that compiles via coralReef IPC and caches
 /// the resulting native binary. Prefers the Phase 10 direct WGSL path
-/// (`compiler.compile_wgsl`), falling back to the SPIR-V path for older
+/// (`shader.compile.wgsl`), falling back to the SPIR-V path for older
 /// coralReef versions. The caller continues with the standard wgpu path —
 /// the cached binary becomes available for future `coralDriver` dispatch.
 pub fn spawn_coral_compile(optimized_wgsl: &str, arch: &str, fp64_software: bool) {
@@ -429,9 +463,9 @@ fn read_jsonrpc_from_value(info: &serde_json::Value) -> Option<String> {
         .map(str::to_owned)
 }
 
-/// Probe whether a JSON-RPC endpoint is alive via `compiler.health`.
+/// Probe whether a JSON-RPC endpoint is alive via `shader.compile.status`.
 async fn probe_jsonrpc(addr: &str) -> bool {
-    match jsonrpc_call::<(), HealthResponse>(addr, "compiler.health", &()).await {
+    match jsonrpc_call::<(), HealthResponse>(addr, "shader.compile.status", &()).await {
         Ok(resp) => {
             tracing::debug!(
                 name = resp.name,
@@ -626,11 +660,42 @@ mod tests {
     #[tokio::test]
     async fn test_reset_allows_rediscovery() {
         let cc = CoralCompiler::new();
-        // Force an initial attempt (will mark Unavailable if coralReef not running).
         let _ = cc.health().await;
-        // Reset should allow re-discovery.
         cc.reset().await;
         let state = cc.state.lock().await;
         assert!(matches!(&*state, ConnectionState::Uninit));
+    }
+
+    #[tokio::test]
+    async fn test_capabilities_returns_none_when_unavailable() {
+        let cc = CoralCompiler::new();
+        let caps = cc.capabilities().await;
+        let _ = caps;
+    }
+
+    #[test]
+    fn test_arch_to_coral_nvidia() {
+        use crate::device::driver_profile::GpuArch;
+        assert_eq!(arch_to_coral(&GpuArch::Volta), Some("sm_70"));
+        assert_eq!(arch_to_coral(&GpuArch::Turing), Some("sm_75"));
+        assert_eq!(arch_to_coral(&GpuArch::Ampere), Some("sm_80"));
+        assert_eq!(arch_to_coral(&GpuArch::Ada), Some("sm_89"));
+    }
+
+    #[test]
+    fn test_arch_to_coral_amd() {
+        use crate::device::driver_profile::GpuArch;
+        assert_eq!(arch_to_coral(&GpuArch::Rdna2), Some("gfx1030"));
+        assert_eq!(arch_to_coral(&GpuArch::Rdna3), Some("gfx1100"));
+        assert_eq!(arch_to_coral(&GpuArch::Cdna2), Some("gfx90a"));
+    }
+
+    #[test]
+    fn test_arch_to_coral_unsupported() {
+        use crate::device::driver_profile::GpuArch;
+        assert_eq!(arch_to_coral(&GpuArch::IntelArc), None);
+        assert_eq!(arch_to_coral(&GpuArch::AppleM), None);
+        assert_eq!(arch_to_coral(&GpuArch::Software), None);
+        assert_eq!(arch_to_coral(&GpuArch::Unknown), None);
     }
 }

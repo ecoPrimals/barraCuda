@@ -754,9 +754,9 @@ mod tests {
 
     #[test]
     fn display_spring_domains() {
-        assert_eq!(format!("{}", HotSpring), "hotSpring");
-        assert_eq!(format!("{}", WetSpring), "wetSpring");
-        assert_eq!(format!("{}", NeuralSpring), "neuralSpring");
+        assert_eq!(format!("{HotSpring}"), "hotSpring");
+        assert_eq!(format!("{WetSpring}"), "wetSpring");
+        assert_eq!(format!("{NeuralSpring}"), "neuralSpring");
     }
 
     #[test]

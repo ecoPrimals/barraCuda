@@ -195,6 +195,10 @@ mod tests {
     #[test]
     fn gpu_f64_tier() {
         let cpu = std::f64::consts::PI;
+        #[expect(
+            clippy::approx_constant,
+            reason = "intentionally truncated pi to simulate GPU f64 precision loss"
+        )]
         let gpu = 3.141_592_653_590_f64;
         assert!(Tolerance::GPU_F64.approx_eq(cpu, gpu));
     }

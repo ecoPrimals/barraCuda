@@ -14,33 +14,63 @@ struct ChamferDistanceParams {
     num_points_x: u32,
     num_points_y: u32,
     point_dim: u32,
-    direction: u32, // 0 = X→Y, 1 = Y→X, 2 = bidirectional
+    direction: u32,
+}
+
+/// Direction of Chamfer distance computation.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum ChamferDirection {
+    /// X→Y: nearest-neighbor distance from each point in X to Y.
+    Forward,
+    /// Y→X: nearest-neighbor distance from each point in Y to X.
+    Reverse,
+    /// Bidirectional: both X→Y and Y→X distances concatenated.
+    Bidirectional,
+}
+
+impl ChamferDirection {
+    /// Convert from raw `u32` for backward compatibility.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the value is not 0, 1, or 2.
+    pub fn from_u32(value: u32) -> Result<Self> {
+        match value {
+            0 => Ok(Self::Forward),
+            1 => Ok(Self::Reverse),
+            2 => Ok(Self::Bidirectional),
+            _ => Err(BarracudaError::invalid_op(
+                "ChamferDistance",
+                format!("direction must be 0 (X→Y), 1 (Y→X), or 2 (bidirectional), got {value}"),
+            )),
+        }
+    }
+
+    const fn as_u32(self) -> u32 {
+        match self {
+            Self::Forward => 0,
+            Self::Reverse => 1,
+            Self::Bidirectional => 2,
+        }
+    }
 }
 
 /// Chamfer distance between point clouds (X→Y, Y→X, or bidirectional).
 pub struct ChamferDistance {
     points_x: Tensor,
     points_y: Tensor,
-    direction: u32,
+    direction: ChamferDirection,
 }
 
 impl ChamferDistance {
-    /// Create `ChamferDistance` operation
+    /// Create `ChamferDistance` operation with a typed direction.
     ///
     /// # Errors
     ///
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
     pub fn new(points_x: Tensor, points_y: Tensor, direction: u32) -> Result<Self> {
-        if direction > 2 {
-            return Err(BarracudaError::invalid_op(
-                "ChamferDistance",
-                format!(
-                    "direction must be 0 (X→Y), 1 (Y→X), or 2 (bidirectional), got {direction}"
-                ),
-            ));
-        }
-
+        let direction = ChamferDirection::from_u32(direction)?;
         Ok(Self {
             points_x,
             points_y,
@@ -92,12 +122,10 @@ impl ChamferDistance {
             ));
         }
 
-        // Create output buffer based on direction
         let output_size = match self.direction {
-            0 => num_points_x,                // X→Y: one distance per point in X
-            1 => num_points_y,                // Y→X: one distance per point in Y
-            2 => num_points_x + num_points_y, // Bidirectional: both
-            _ => unreachable!(),
+            ChamferDirection::Forward => num_points_x,
+            ChamferDirection::Reverse => num_points_y,
+            ChamferDirection::Bidirectional => num_points_x + num_points_y,
         };
         let output_buffer = device.create_buffer_f32(output_size)?;
 
@@ -105,7 +133,7 @@ impl ChamferDistance {
             num_points_x: num_points_x as u32,
             num_points_y: num_points_y as u32,
             point_dim: point_dim as u32,
-            direction: self.direction,
+            direction: self.direction.as_u32(),
         };
 
         let params_buffer = device.create_uniform_buffer("chamfer_distance_params", &params);
@@ -121,10 +149,9 @@ impl ChamferDistance {
             .submit()?;
 
         let output_shape = match self.direction {
-            0 => vec![num_points_x],
-            1 => vec![num_points_y],
-            2 => vec![num_points_x + num_points_y],
-            _ => unreachable!(),
+            ChamferDirection::Forward => vec![num_points_x],
+            ChamferDirection::Reverse => vec![num_points_y],
+            ChamferDirection::Bidirectional => vec![num_points_x + num_points_y],
         };
 
         Ok(Tensor::from_buffer(

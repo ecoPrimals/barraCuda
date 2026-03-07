@@ -58,6 +58,7 @@ pub mod health;
 pub mod ipc;
 pub mod lifecycle;
 pub mod rpc;
+pub mod rpc_types;
 
 pub use barracuda;
 

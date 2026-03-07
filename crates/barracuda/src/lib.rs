@@ -65,71 +65,87 @@
 
 #![deny(unsafe_code)]
 #![warn(clippy::pedantic)]
-// ── Domain-specific allows ──────────────────────────────────────────────────
-// GPU APIs require u32 for dimensions/indices; scientific computing uses
-// f64/f32 for counts/sizes.  These casts are intentional and pervasive.
-#![allow(
+// ── Domain-specific expectations ────────────────────────────────────────────
+// Compile-time verified: #[expect] warns if the suppression becomes unnecessary.
+#![expect(
     clippy::cast_possible_truncation,
     clippy::cast_sign_loss,
     clippy::cast_precision_loss,
     clippy::cast_lossless,
-    clippy::cast_possible_wrap
+    clippy::cast_possible_wrap,
+    reason = "GPU APIs require u32 for dimensions/indices; scientific computing uses f64/f32 for counts/sizes"
 )]
-// Scientific/physics code uses single-char variables (x, y, z, r, θ),
-// similar binding names (pos_x vs pos_y), and long numeric literals
-// (physical constants).
-#![allow(
+#![expect(
     clippy::similar_names,
     clippy::many_single_char_names,
-    clippy::unreadable_literal
+    clippy::unreadable_literal,
+    reason = "scientific/physics code uses single-char variables (x, y, z, r, θ), similar bindings (pos_x vs pos_y), and physical constants"
 )]
-// Items-after-statements is common Rust style in compute kernels where
-// buffers are declared close to their use.  Float equality is intentional
-// in exact comparisons (0.0, NaN checks, sentinel values).
-#![allow(clippy::items_after_statements, clippy::float_cmp)]
-// Module-name repetitions are intentional for clarity in a large API
-// (e.g., tensor::TensorError, device::DeviceSelection).
-#![allow(clippy::module_name_repetitions)]
-// wgpu's Default::default() pattern is idiomatic when the type is
-// inferred from context (e.g., ComputePassDescriptor, CommandEncoderDescriptor).
-#![allow(clippy::default_trait_access)]
-// GPU ops legitimately return Result even when the current implementation
-// is infallible — the contract allows future error paths (device lost,
-// validation failure) without breaking callers.
-#![allow(clippy::unnecessary_wraps)]
-// GPU dispatch code often handles multiple match variants identically
-// (e.g., different precisions routed to the same kernel).
-#![allow(clippy::match_same_arms)]
-// Async signatures on trait methods / framework callbacks are required by
-// the trait even when the implementation is synchronous.
-#![allow(clippy::unused_async)]
-// GPU pipeline functions legitimately exceed 100 lines — they set up
-// multiple bind groups, encoders, and staging buffers.
-#![allow(clippy::too_many_lines)]
-// Trait implementations require `&self` even when unused.
-#![allow(clippy::unused_self)]
-// Struct field name patterns are intentional for domain clarity.
-#![allow(clippy::struct_field_names)]
-// GPU ops take tensors/configs by value for ownership transfer; many public
-// functions intentionally consume their arguments.
-#![allow(clippy::needless_pass_by_value)]
-// Booleans in config structs are intentional (e.g., enable_bias, use_cache).
-#![allow(clippy::struct_excessive_bools)]
-// Public fields prefixed with _ are used in tests or reserved for future use.
-#![allow(clippy::used_underscore_items)]
-// Passing single bytes by reference is acceptable for trait consistency.
-#![allow(clippy::trivially_copy_pass_by_ref)]
-// Debug impls intentionally omit large buffer fields.
-#![allow(clippy::missing_fields_in_debug)]
-// Wildcard matching against single-variant enums is intentional for forward
-// compatibility — new variants will be caught at compile time.
-#![allow(clippy::match_wildcard_for_single_variants)]
-// inline(always) is used for hot GPU dispatch paths where the cost model
-// is known.
-#![allow(clippy::inline_always)]
-// GPU uniform structs use `pub _padding` fields for repr(C) alignment;
-// these are intentionally unused but must be pub for bytemuck::Pod derive.
-#![allow(clippy::pub_underscore_fields)]
+#![expect(
+    clippy::items_after_statements,
+    clippy::float_cmp,
+    reason = "compute kernels declare buffers close to use; float equality is intentional for exact comparisons (0.0, NaN, sentinels)"
+)]
+#![expect(
+    clippy::module_name_repetitions,
+    reason = "intentional for clarity in a large API (e.g. tensor::TensorError, device::DeviceSelection)"
+)]
+#![expect(
+    clippy::default_trait_access,
+    reason = "wgpu's Default::default() pattern is idiomatic when type is inferred (ComputePassDescriptor, CommandEncoderDescriptor)"
+)]
+#![expect(
+    clippy::unnecessary_wraps,
+    reason = "GPU ops return Result for future error paths (device lost, validation) without breaking callers"
+)]
+#![expect(
+    clippy::match_same_arms,
+    reason = "GPU dispatch routes multiple precision variants to the same kernel"
+)]
+#![expect(
+    clippy::unused_async,
+    reason = "async signatures required by trait even when implementation is synchronous"
+)]
+#![expect(
+    clippy::too_many_lines,
+    reason = "GPU pipeline functions set up multiple bind groups, encoders, and staging buffers"
+)]
+#![expect(
+    clippy::unused_self,
+    reason = "trait implementations require &self even when unused"
+)]
+#![expect(
+    clippy::struct_field_names,
+    reason = "struct field name patterns are intentional for domain clarity"
+)]
+#![expect(
+    clippy::needless_pass_by_value,
+    reason = "GPU ops take tensors/configs by value for ownership transfer"
+)]
+#![expect(
+    clippy::struct_excessive_bools,
+    reason = "booleans in config structs are intentional (enable_bias, use_cache)"
+)]
+#![expect(
+    clippy::trivially_copy_pass_by_ref,
+    reason = "passing single bytes by reference is acceptable for trait consistency"
+)]
+#![expect(
+    clippy::missing_fields_in_debug,
+    reason = "Debug impls intentionally omit large buffer fields"
+)]
+#![expect(
+    clippy::match_wildcard_for_single_variants,
+    reason = "wildcard matching is intentional for forward compatibility — new variants caught at compile time"
+)]
+#![expect(
+    clippy::inline_always,
+    reason = "hot GPU dispatch paths where the cost model is known"
+)]
+#![expect(
+    clippy::pub_underscore_fields,
+    reason = "GPU uniform structs use pub _padding fields for repr(C) alignment with bytemuck::Pod"
+)]
 #![cfg_attr(
     test,
     expect(clippy::unwrap_used, reason = "test code uses unwrap for brevity"),

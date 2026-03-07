@@ -44,10 +44,17 @@ Previously limited to Vulkan with SPIR-V passthrough.
 - When org repo fork lands, create the sovereign NVIDIA shader compiler primal
 - See `ecoPrimals/wateringHole/SOVEREIGN_COMPUTE_EVOLUTION.md` Level 2-3
 
+#### coralReef Phase 10 — Verified
+- IPC method names evolved to semantic naming (`shader.compile.*`) per wateringHole standard
+- `shader.compile.capabilities` endpoint added (preferred over health-embedded arch list)
+- AMD RDNA2/RDNA3/CDNA2 architecture mappings added (`gfx1030`, `gfx1100`, `gfx90a`)
+- Backward-compat fallback retained for pre-Phase 10 coralReef instances
+- Discovery scans for `shader.compile` capability (Phase 10) with `shader_compiler` fallback
+
 ### P2 — Near-term
 
 #### Test Coverage to 90%
-- Current: 3,105 tests (3,089 lib + 15 integration + 1 core), 23 integration suites
+- Current: 3,678 tests, 23 integration suites
 - Evolve CI `--fail-under` from 80 to 90
 - Add GPU-conditional tests for new ops
 - GPU_TEST_TIMEOUT (60s) prevents hangs; coordination harness with
@@ -107,9 +114,9 @@ barraCuda (Layer 1 — WHAT to compute)
     WGSL shaders → naga IR → optimise → WGSL
     Zero unsafe, zero C deps, all backends
     ↓
-coralReef (Layer 2-3 — HOW to compile)
-    SPIR-V/WGSL → native GPU binary (SASS, RDNA)
-    2 unsafe blocks remaining (nak-ir-proc)
+coralReef (Layer 2-3 — HOW to compile) — Phase 10
+    SPIR-V/WGSL → native GPU binary (SASS, RDNA2+)
+    shader.compile.* semantic IPC, 856 tests
     ↓
 toadStool (Layer 3-4 — WHERE to run)
     Hardware discovery, GPU driver, DMA, dispatch
@@ -159,3 +166,9 @@ Transitive C boundaries (all via wgpu/tokio, not barraCuda code):
 - `specs/ARCHITECTURE_DEMARCATION.md` — primal ownership boundaries
 - `ecoPrimals/wateringHole/SOVEREIGN_COMPUTE_EVOLUTION.md` — full stack evolution plan
 - `ecoPrimals/wateringHole/PURE_RUST_SOVEREIGN_STACK_GUIDANCE.md` — coralReef Layer 2-4 guidance
+
+### Cross-Primal Handoffs Absorbed (Mar 5-7, 2026)
+
+- **coralReef Phase 10 Iter 6** (Mar 7): semantic `shader.compile.*` IPC, AMD RDNA2+, 856 tests
+- **toadStool S128-S130** (Mar 6-7): PrecisionRoutingAdvice, coralReef proxy, cross-spring provenance, C dep removal
+- **wateringHole groundSpring** (Mar 5-7): rewiring guidance, precision evolution, coralReef integration contracts

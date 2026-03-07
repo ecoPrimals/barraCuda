@@ -110,16 +110,25 @@ pub(super) async fn execute_dispatch(
         }
 
         // ── Binary ops ──────────────────────────────────────────────────
-        MathOp::Add | MathOp::Sub | MathOp::Mul | MathOp::Div => {
+        MathOp::Add => {
             let a = build_tensor(&inputs[0], device).await?;
             let b = build_tensor(&inputs[1], device).await?;
-            match op {
-                MathOp::Add => a.add(&b)?,
-                MathOp::Sub => a.sub(&b)?,
-                MathOp::Mul => a.mul(&b)?,
-                MathOp::Div => a.div(&b)?,
-                _ => unreachable!(),
-            }
+            a.add(&b)?
+        }
+        MathOp::Sub => {
+            let a = build_tensor(&inputs[0], device).await?;
+            let b = build_tensor(&inputs[1], device).await?;
+            a.sub(&b)?
+        }
+        MathOp::Mul => {
+            let a = build_tensor(&inputs[0], device).await?;
+            let b = build_tensor(&inputs[1], device).await?;
+            a.mul(&b)?
+        }
+        MathOp::Div => {
+            let a = build_tensor(&inputs[0], device).await?;
+            let b = build_tensor(&inputs[1], device).await?;
+            a.div(&b)?
         }
 
         // ── Matrix multiply ─────────────────────────────────────────────

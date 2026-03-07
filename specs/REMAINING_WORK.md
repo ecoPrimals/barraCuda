@@ -1,12 +1,12 @@
 # barraCuda — Remaining Work
 
 **Version**: 0.3.3+
-**Date**: March 6, 2026
+**Date**: March 7, 2026
 **Status**: Active — tracks all open work items for barraCuda evolution
 
 ---
 
-## Achieved (March 6, 2026)
+## Achieved (March 7, 2026)
 
 ### Zero Unsafe
 barraCuda has **zero `unsafe` blocks** in its entire codebase. Every prior
@@ -47,7 +47,7 @@ Previously limited to Vulkan with SPIR-V passthrough.
 ### P2 — Near-term
 
 #### Test Coverage to 90%
-- Current: 3,099 tests (3,083 lib + 15 integration + 1 core), 23 integration suites
+- Current: 3,105 tests (3,089 lib + 15 integration + 1 core), 23 integration suites
 - Evolve CI `--fail-under` from 80 to 90
 - Add GPU-conditional tests for new ops
 - GPU_TEST_TIMEOUT (60s) prevents hangs; coordination harness with

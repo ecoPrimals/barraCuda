@@ -7,11 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Cross-Spring Rewiring and Modern Systems (Mar 7 2026)
+
+- **Cross-spring evolution timeline** (`shaders::provenance`) — 10 chronological events tracking
+  when hotSpring precision shaders (DF64 S58), wetSpring bio shaders (HMM V90), neuralSpring
+  stats (S69/S100) evolved to benefit other springs; `evolution_report()` generator
+- **Provenance dates** — all 27 shader records now carry `created` and `absorbed` dates
+- **6 new provenance records** — `stress_virial`, `verlet_neighbor`, `batch_ipr`, `hmm_forward`,
+  `hfb_gradient`, `welford_mean_variance` with full cross-spring consumer tracking
+- **`PrecisionRoutingAdvice`** (`device::driver_profile`) — `F64Native`, `F64NativeNoSharedMem`,
+  `Df64Only`, `F32Only` from toadStool S128 f64 shared-memory discovery
+- **`mean_variance_to_buffer()`** (`ops::variance_f64_wgsl`) — GPU-resident fused Welford output
+  stays as `wgpu::Buffer` for zero-readback chained pipelines
+- **`BatchedOdeRK45F64`** (`ops::rk45_adaptive`) — full-trajectory adaptive Dormand-Prince integrator
+  on GPU with host-side step-size control (atol/rtol/max_steps), from wetSpring V95
+
 ### Added — Cross-Spring Integration and API Evolution (Mar 7 2026)
 
 - **Cross-spring shader provenance registry** (`shaders::provenance`) — programmatic tracking
   of Write → Absorb → Lean shader evolution across `HotSpring`, `WetSpring`, `NeuralSpring`,
-  `AirSpring`, `GroundSpring` domains; 24+ shader records, cross-spring matrix query
+  `AirSpring`, `GroundSpring` domains; 27 shader records with evolution dates, cross-spring matrix query, evolution timeline
 - **coralReef Phase 10 rewire** — `compile_wgsl_direct()` for direct WGSL→native compilation,
   `supported_archs()` query, fallback to SPIR-V path
 - **Cross-spring validation suite** (`tests/cross_spring_validation.rs`) — provenance, tolerance,
@@ -237,7 +252,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `cargo clippy --workspace --all-targets --all-features -- -D warnings` — zero warnings
 - `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` — clean
 - `cargo deny check` — advisories/bans/licenses/sources OK
-- 3,471 test functions across 62 integration test suites
+- 3,105 tests across 23 integration test suites
 - 80%+ line coverage enforced in CI
 
 ## [0.3.3] - March 4, 2026

@@ -54,6 +54,10 @@
 - Cross-spring shader provenance registry with Write → Absorb → Lean tracking
 - Deprecated PPPM constructors removed (zero callers)
 - Akida SDK paths extracted to shared capability constant
+- `PrecisionRoutingAdvice` from toadStool S128 (`F64Native`, `F64NativeNoSharedMem`, `Df64Only`, `F32Only`)
+- `BatchedOdeRK45F64` adaptive Dormand-Prince integrator on GPU (wetSpring V95)
+- `mean_variance_to_buffer()` GPU-resident fused Welford (zero CPU readback for chained pipelines)
+- Cross-spring evolution timeline with 10 events + dependency matrix + 27 dated shader records
 
 ## What's Not Working Yet
 

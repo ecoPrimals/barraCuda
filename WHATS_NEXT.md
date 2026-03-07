@@ -33,6 +33,14 @@ Prioritized work items, ordered by impact. Updated 2026-03-07.
 - **Cross-spring provenance registry**: `shaders::provenance` tracks Write → Absorb → Lean
   evolution with `ShaderRecord` and `SpringDomain` taxonomy.
 - **coralReef Phase 10 rewire**: `compile_wgsl_direct`, `supported_archs()`, fallback to SPIR-V path.
+- **`PrecisionRoutingAdvice`** from toadStool S128: `F64Native`, `F64NativeNoSharedMem`, `Df64Only`,
+  `F32Only` routing in `GpuDriverProfile::precision_routing()`.
+- **`BatchedOdeRK45F64`**: Full-trajectory adaptive Dormand-Prince integrator on GPU with
+  host-side step-size control (wetSpring V95, 18.5× fewer steps than RK4).
+- **`mean_variance_to_buffer()`**: GPU-resident fused Welford — output stays as buffer for
+  chained multi-kernel pipelines (zero CPU readback).
+- **Evolution timeline**: 10 chronological events + dependency matrix in provenance registry,
+  27 shaders with created/absorbed dates.
 
 ---
 

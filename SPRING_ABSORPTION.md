@@ -98,7 +98,7 @@ groundSpring → ALL:        2 shaders (chi_squared universal, Welford mean+vari
 | 11 | RHMC multi-shift CG solver | hotSpring ladder L4 | `ops::lattice` | 🔲 Pending |
 | 12 | Adaptive HMC dt from acceptance rate | hotSpring | `ops::lattice` | 🔲 Pending |
 | 13 | Anderson Lyapunov shaders | groundSpring | `ops` | 🔲 Pending |
-| 14 | airSpring local ops (Makkink, Turc, Hamon) | airSpring | `stats::hydrology` | 🔲 Pending |
+| 14 | airSpring local ops (Makkink, Turc, Hamon) | airSpring | `stats::hydrology` | ✅ Done (already absorbed) |
 | 15 | Covariance from `correlation_full` shader | groundSpring V80 | `ops` | 🔲 Pending |
 
 ## P3 — Infrastructure

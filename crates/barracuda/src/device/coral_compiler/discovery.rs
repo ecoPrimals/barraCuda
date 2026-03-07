@@ -18,6 +18,9 @@ const CORALREEF_ADDR_ENV: &str = "BARRACUDA_SHADER_COMPILER_ADDR";
 /// no hardcoded port is ever probed.
 const CORALREEF_PORT_ENV: &str = "BARRACUDA_SHADER_COMPILER_PORT";
 
+/// Loopback address for localhost-only discovery probes.
+const LOCALHOST: &str = "127.0.0.1";
+
 /// Well-known discovery filename for pre-Phase 10 backward compatibility.
 const LEGACY_DISCOVERY_FILENAME: &str = "coralreef-core.json";
 
@@ -50,7 +53,7 @@ pub async fn discover_coralreef() -> Option<String> {
         .ok()
         .and_then(|s| s.trim().parse::<u16>().ok())
     {
-        let explicit_addr = format!("127.0.0.1:{port}");
+        let explicit_addr = format!("{LOCALHOST}:{port}");
         if probe_jsonrpc(&explicit_addr).await {
             return Some(explicit_addr);
         }

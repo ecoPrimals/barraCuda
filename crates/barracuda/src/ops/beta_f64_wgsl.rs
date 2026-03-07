@@ -138,7 +138,7 @@ impl BetaF64 {
         self.device.read_buffer_f64(&output_buf, num_pairs)
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
     fn beta_cpu(&self, pairs: &[f64]) -> Vec<f64> {
         pairs
             .chunks(2)
@@ -146,7 +146,7 @@ impl BetaF64 {
             .collect()
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
     fn beta_scalar(a: f64, b: f64) -> f64 {
         if a <= 0.0 || b <= 0.0 {
             return f64::NAN;

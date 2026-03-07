@@ -148,19 +148,19 @@ impl HermiteF64 {
         self.device.read_buffer_f64(&output_buf, size)
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
     fn hermite_cpu(&self, x: &[f64], n: u32) -> Vec<f64> {
         x.iter().map(|&xi| Self::hermite_scalar(n, xi)).collect()
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
     fn hermite_function_cpu(&self, x: &[f64], n: u32) -> Vec<f64> {
         x.iter()
             .map(|&xi| Self::hermite_function_scalar(n, xi))
             .collect()
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
     fn hermite_scalar(n: u32, x: f64) -> f64 {
         if n == 0 {
             return 1.0;
@@ -181,7 +181,7 @@ impl HermiteF64 {
         h_curr
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
     fn hermite_function_scalar(n: u32, x: f64) -> f64 {
         let h_n = Self::hermite_scalar(n, x);
         let two_n = 1u64 << n.min(62);

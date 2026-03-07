@@ -97,9 +97,9 @@ groundSpring → ALL:        2 shaders (chi_squared universal, Welford mean+vari
 | 10 | `mean_variance_to_buffer()` fused GPU stats | hotSpring | `ops::variance_f64_wgsl` | ✅ Done |
 | 11 | RHMC multi-shift CG solver | hotSpring ladder L4 | `ops::lattice` | 🔲 Pending |
 | 12 | Adaptive HMC dt from acceptance rate | hotSpring | `ops::lattice` | 🔲 Pending |
-| 13 | Anderson Lyapunov shaders | groundSpring | `ops` | 🔲 Pending |
+| 13 | Anderson Lyapunov shaders | groundSpring | `ops` | ✅ Done (shaders absorbed: `anderson_lyapunov_f64.wgsl`, `anderson_lyapunov_f32.wgsl`) |
 | 14 | airSpring local ops (Makkink, Turc, Hamon) | airSpring | `stats::hydrology` | ✅ Done (already absorbed) |
-| 15 | Covariance from `correlation_full` shader | groundSpring V80 | `ops` | 🔲 Pending |
+| 15 | Covariance from `correlation_full` shader | groundSpring V80 | `ops` | ✅ Done (`CorrelationResult::covariance()` uses `correlation_full`) |
 
 ## P3 — Infrastructure
 

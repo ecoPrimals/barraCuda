@@ -1,7 +1,7 @@
 # Architecture Demarcation: barraCuda / toadStool / songBird
 
-**Version**: 1.0.0
-**Date**: March 2, 2026
+**Version**: 1.0.1
+**Date**: March 7, 2026
 **Status**: Active — defines ownership boundaries for Phase 1 primals
 **Origin**: toadStool S89, post-barraCuda extraction
 
@@ -50,7 +50,7 @@ barraCuda is a Rust library (`cargo add barracuda`). It owns:
 ### GPU Math (WGSL shaders, wgpu execution)
 - `ops` — matmul, softmax, element-wise, reductions, FHE (NTT/INTT/pointwise)
 - `tensor` — GPU tensor type, buffer management, memory layout
-- `shaders` — 708 WGSL shaders (f32, f64, DF64), sovereign compiler pipeline
+- `shaders` — 784 WGSL shaders (f32, f64, DF64), sovereign compiler pipeline
 - `interpolate` — cubic spline, kriging
 - `optimize` — L-BFGS, Brent, Nelder-Mead (GPU variants)
 - `unified_math` — unified math routing across precision levels

@@ -133,12 +133,12 @@ impl BesselJ1F64 {
         self.device.read_buffer_f64(&output_buf, size)
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
     fn j1_cpu(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| Self::j1_scalar(xi)).collect()
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
     fn j1_scalar(x: f64) -> f64 {
         let ax = x.abs();
         if ax >= 8.0 {

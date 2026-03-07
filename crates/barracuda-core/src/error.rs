@@ -34,6 +34,14 @@ pub enum BarracudaCoreError {
     /// Serialization error.
     #[error("serialization error: {0}")]
     Serialization(String),
+
+    /// JSON parsing/serialization error.
+    #[error(transparent)]
+    Json(#[from] serde_json::Error),
+
+    /// Compute library error (delegated from barracuda crate).
+    #[error(transparent)]
+    Compute(#[from] barracuda::error::BarracudaError),
 }
 
 impl BarracudaCoreError {

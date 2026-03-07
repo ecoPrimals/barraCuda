@@ -277,11 +277,11 @@ Quick reference for finding shaders by name or purpose.
 
 ---
 
-**Total: 708 shaders across 33 categories**
+**Total: 784 shaders across 33 categories**
 
 **Navigation**: 
 - By function → Find category above
 - By name → Use Ctrl+F / Cmd+F
 - By use case → Check "Use Case" column
 
-**Last Updated**: February 11, 2026
+**Last Updated**: March 7, 2026

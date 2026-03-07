@@ -58,11 +58,14 @@ pub const INVALID_PARAMS: i32 = -32602;
 /// JSON-RPC 2.0 error code: internal error.
 pub const INTERNAL_ERROR: i32 = -32603;
 
+/// JSON-RPC 2.0 protocol version string.
+const JSONRPC_VERSION: &str = "2.0";
+
 impl JsonRpcResponse {
     /// Create a success response.
     pub fn success(id: serde_json::Value, result: serde_json::Value) -> Self {
         Self {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JSONRPC_VERSION.to_owned(),
             result: Some(result),
             error: None,
             id,
@@ -72,7 +75,7 @@ impl JsonRpcResponse {
     /// Create an error response.
     pub fn error(id: serde_json::Value, code: i32, message: impl Into<String>) -> Self {
         Self {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JSONRPC_VERSION.to_owned(),
             result: None,
             error: Some(JsonRpcError {
                 code,

@@ -327,7 +327,7 @@ impl YukawaCellListF64 {
         Ok((sorted_positions, particle_indices, cell_start, cell_count))
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
     fn build_cell_list(
         &self,
         positions: &[f64],
@@ -366,7 +366,7 @@ impl YukawaCellListF64 {
     }
 
     /// CPU reference (test/validation only — production always dispatches shader).
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
     fn compute_cpu(
         &self,
         positions: &[f64],
@@ -442,12 +442,12 @@ impl YukawaCellListF64 {
         (forces, energies)
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
     fn pbc_delta(&self, delta: f64, box_size: f64) -> f64 {
         delta - box_size * (delta / box_size).round()
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
     fn get_neighbor_cells(&self, cell_idx: usize, params: &CellListParams) -> Vec<usize> {
         let nx = params.n_cells[0];
         let ny = params.n_cells[1];

@@ -134,12 +134,12 @@ impl DigammaF64 {
         self.device.read_buffer_f64(&output_buf, n)
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
     fn digamma_cpu(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| Self::digamma_scalar(xi)).collect()
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
     fn digamma_scalar(x: f64) -> f64 {
         use std::f64::consts::PI;
 
@@ -164,7 +164,7 @@ impl DigammaF64 {
         result + Self::digamma_asymptotic(y)
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
     fn digamma_asymptotic(x: f64) -> f64 {
         let inv_x = 1.0 / x;
         let inv_x2 = inv_x * inv_x;

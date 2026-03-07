@@ -65,14 +65,14 @@ impl LaguerreF64 {
         self.laguerre(x, n, 0.0)
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
     fn laguerre_cpu(&self, x: &[f64], n: u32, alpha: f64) -> Vec<f64> {
         x.iter()
             .map(|&xi| Self::laguerre_scalar(n, alpha, xi))
             .collect()
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
     fn laguerre_scalar(n: u32, alpha: f64, x: f64) -> f64 {
         if n == 0 {
             return 1.0;

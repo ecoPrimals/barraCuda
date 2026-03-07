@@ -235,7 +235,7 @@ impl Pppm {
     }
 
     /// CPU 3D FFT using dimension-wise 1D FFTs (test only)
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
     fn fft_3d_cpu(
         &self,
         data: &mut [f64],
@@ -316,7 +316,7 @@ impl Pppm {
     }
 
     /// CPU 1D FFT (Cooley-Tukey radix-2)
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
     fn fft_1d_cpu(&self, data: &mut [f64], n: usize, inverse: bool) {
         // Bit-reversal permutation
         let mut j = 0;

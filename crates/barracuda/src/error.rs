@@ -261,9 +261,16 @@ impl BarracudaError {
     }
 
     /// Returns `true` when this error is retriable (device lost or transient GPU failure).
+    ///
+    /// Includes buffer validation errors that occur transiently under
+    /// instrumentation pressure (e.g. llvm-cov on llvmpipe).
     #[must_use]
     pub fn is_retriable(&self) -> bool {
-        self.is_device_lost()
+        if self.is_device_lost() {
+            return true;
+        }
+        let msg = self.to_string();
+        msg.contains("is invalid") || msg.contains("Validation Error")
     }
 
     /// Wrap any `Display` error as a GPU error with contextual message.

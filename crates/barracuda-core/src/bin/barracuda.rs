@@ -94,7 +94,7 @@ enum Commands {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -114,10 +114,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             no_unix,
         } => {
             let mut primal = BarraCudaPrimal::new();
-            primal
-                .start()
-                .await
-                .map_err(|e| format!("Failed to start: {e}"))?;
+            primal.start().await.map_err(|e| {
+                barracuda_core::error::BarracudaCoreError::lifecycle(format!(
+                    "Failed to start: {e}"
+                ))
+            })?;
             let primal = Arc::new(primal);
 
             let server = barracuda_core::ipc::IpcServer::new(Arc::clone(&primal));
@@ -163,15 +164,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
         Commands::Doctor => {
             let mut primal = BarraCudaPrimal::new();
-            primal
-                .start()
-                .await
-                .map_err(|e| format!("Failed to start: {e}"))?;
+            primal.start().await.map_err(|e| {
+                barracuda_core::error::BarracudaCoreError::lifecycle(format!(
+                    "Failed to start: {e}"
+                ))
+            })?;
 
-            let report = primal
-                .health_check()
-                .await
-                .map_err(|e| format!("Health check failed: {e}"))?;
+            let report = primal.health_check().await.map_err(|e| {
+                barracuda_core::error::BarracudaCoreError::health(format!(
+                    "Health check failed: {e}"
+                ))
+            })?;
 
             println!("barraCuda Doctor");
             println!("================");
@@ -208,10 +211,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
         Commands::Validate { extended } => {
             let mut primal = BarraCudaPrimal::new();
-            primal
-                .start()
-                .await
-                .map_err(|e| format!("Failed to start: {e}"))?;
+            primal.start().await.map_err(|e| {
+                barracuda_core::error::BarracudaCoreError::lifecycle(format!(
+                    "Failed to start: {e}"
+                ))
+            })?;
 
             if primal.device().is_none() {
                 println!("No GPU device available. Cannot run validation.");
@@ -241,8 +245,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         } => {
             let server_addr = resolve_client_addr(addr.as_deref())?;
 
-            let params: serde_json::Value =
-                serde_json::from_str(&params).map_err(|e| format!("invalid JSON params: {e}"))?;
+            let params: serde_json::Value = serde_json::from_str(&params)?;
 
             let request = serde_json::json!({
                 "jsonrpc": "2.0",
@@ -256,7 +259,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
             let stream = tokio::net::TcpStream::connect(&server_addr)
                 .await
-                .map_err(|e| format!("connect to {server_addr}: {e}"))?;
+                .map_err(|e| {
+                    barracuda_core::error::BarracudaCoreError::ipc(format!(
+                        "connect to {server_addr}: {e}"
+                    ))
+                })?;
 
             let (reader, mut writer) = stream.into_split();
             use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
@@ -354,14 +361,13 @@ fn remove_discovery_file() {
 /// Run the server in service mode (systemd/init).
 ///
 /// Per genomeBin: Unix socket default, PID file, NOTIFY_SOCKET, no banner.
-async fn run_service_mode() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn run_service_mode() -> Result<(), barracuda_core::error::BarracudaCoreError> {
     let _pid_guard = write_pid_file();
 
     let mut primal = BarraCudaPrimal::new();
-    primal
-        .start()
-        .await
-        .map_err(|e| format!("Failed to start: {e}"))?;
+    primal.start().await.map_err(|e| {
+        barracuda_core::error::BarracudaCoreError::lifecycle(format!("Failed to start: {e}"))
+    })?;
     let primal = Arc::new(primal);
 
     let server = barracuda_core::ipc::IpcServer::new(Arc::clone(&primal));
@@ -456,7 +462,7 @@ fn discovery_dir() -> Option<std::path::PathBuf> {
 /// 3. Discovery file at `$XDG_RUNTIME_DIR/ecoPrimals/barracuda-core.json`
 fn resolve_client_addr(
     explicit: Option<&str>,
-) -> std::result::Result<String, Box<dyn std::error::Error + Send + Sync>> {
+) -> std::result::Result<String, barracuda_core::error::BarracudaCoreError> {
     if let Some(addr) = explicit {
         return Ok(addr.to_string());
     }
@@ -480,5 +486,7 @@ fn resolve_client_addr(
         }
     }
 
-    Err("cannot discover barraCuda server; use --addr or start `barracuda server`".into())
+    Err(barracuda_core::error::BarracudaCoreError::ipc(
+        "cannot discover barraCuda server; use --addr or start `barracuda server`",
+    ))
 }

@@ -27,6 +27,40 @@ struct Dada2Params {
     _pad: u32,
 }
 
+/// Problem dimensions for a DADA2 E-step dispatch.
+pub struct Dada2Dimensions {
+    /// Number of input sequences.
+    pub n_seqs: u32,
+    /// Number of cluster centers.
+    pub n_centers: u32,
+    /// Maximum sequence length (for buffer sizing).
+    pub max_len: u32,
+}
+
+/// GPU-resident buffers for a DADA2 E-step dispatch.
+pub struct Dada2Buffers<'a> {
+    /// Base calls `[n_seqs × max_len]`.
+    pub bases: &'a wgpu::Buffer,
+    /// Quality scores `[n_seqs × max_len]`.
+    pub quals: &'a wgpu::Buffer,
+    /// Per-sequence lengths `[n_seqs]`.
+    pub lengths: &'a wgpu::Buffer,
+    /// Center assignment indices `[n_seqs]`.
+    pub center_indices: &'a wgpu::Buffer,
+    /// Log-error model `[n_centers × max_len]`.
+    pub log_err: &'a wgpu::Buffer,
+    /// Output: log-probability scores `[n_seqs × n_centers]`.
+    pub scores: &'a wgpu::Buffer,
+}
+
+/// Grouped arguments for [`Dada2EStepGpu::dispatch`].
+pub struct Dada2DispatchArgs<'a> {
+    /// Problem dimensions.
+    pub dimensions: Dada2Dimensions,
+    /// GPU buffers.
+    pub buffers: Dada2Buffers<'a>,
+}
+
 /// DADA2 E-step: batch log-probability matrix on GPU.
 pub struct Dada2EStepGpu {
     device: Arc<WgpuDevice>,
@@ -55,34 +89,22 @@ impl Dada2EStepGpu {
 
     /// Dispatch E-step computation.
     ///
-    /// * `bases` — `[n_seqs × max_len]` u32 encoded bases
-    /// * `quals` — `[n_seqs × max_len]` u32 phred scores
-    /// * `lengths` — `[n_seqs]` u32 actual lengths
-    /// * `center_indices` — `[n_centers]` u32 center sequence indices
-    /// * `log_err` — `[4 × 4 × 42 = 672]` f64 precomputed log error table
-    /// * `scores` — `[n_seqs × n_centers]` f64 output
+    /// * `args.buffers.bases` — `[n_seqs × max_len]` u32 encoded bases
+    /// * `args.buffers.quals` — `[n_seqs × max_len]` u32 phred scores
+    /// * `args.buffers.lengths` — `[n_seqs]` u32 actual lengths
+    /// * `args.buffers.center_indices` — `[n_centers]` u32 center sequence indices
+    /// * `args.buffers.log_err` — `[4 × 4 × 42 = 672]` f64 precomputed log error table
+    /// * `args.buffers.scores` — `[n_seqs × n_centers]` f64 output
     ///
     /// # Errors
     ///
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
-    #[expect(clippy::too_many_arguments, reason = "API")]
-    pub fn dispatch(
-        &self,
-        n_seqs: u32,
-        n_centers: u32,
-        max_len: u32,
-        bases: &wgpu::Buffer,
-        quals: &wgpu::Buffer,
-        lengths: &wgpu::Buffer,
-        center_indices: &wgpu::Buffer,
-        log_err: &wgpu::Buffer,
-        scores: &wgpu::Buffer,
-    ) -> Result<()> {
+    pub fn dispatch(&self, args: &Dada2DispatchArgs<'_>) -> Result<()> {
         let params = Dada2Params {
-            n_seqs,
-            n_centers,
-            max_len,
+            n_seqs: args.dimensions.n_seqs,
+            n_centers: args.dimensions.n_centers,
+            max_len: args.dimensions.max_len,
             _pad: 0,
         };
         let pbuf = super::snp::upload_uniform(&self.device, &params);
@@ -94,15 +116,15 @@ impl Dada2EStepGpu {
                 layout: &self.bgl,
                 entries: &[
                     super::snp::bg_entry(0, &pbuf),
-                    super::snp::bg_entry(1, bases),
-                    super::snp::bg_entry(2, quals),
-                    super::snp::bg_entry(3, lengths),
-                    super::snp::bg_entry(4, center_indices),
-                    super::snp::bg_entry(5, log_err),
-                    super::snp::bg_entry(6, scores),
+                    super::snp::bg_entry(1, args.buffers.bases),
+                    super::snp::bg_entry(2, args.buffers.quals),
+                    super::snp::bg_entry(3, args.buffers.lengths),
+                    super::snp::bg_entry(4, args.buffers.center_indices),
+                    super::snp::bg_entry(5, args.buffers.log_err),
+                    super::snp::bg_entry(6, args.buffers.scores),
                 ],
             });
-        let total_pairs = n_seqs * n_centers;
+        let total_pairs = args.dimensions.n_seqs * args.dimensions.n_centers;
         super::snp::submit(
             &self.device,
             &self.pipeline,

@@ -25,12 +25,11 @@
 //! lattice with β=2, κ=0.5, λ=1, μ²=0 (confirmed via 10k HMC trajectories).
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::error::Result;
 use std::sync::Arc;
 
 use super::complex_f64::WGSL_COMPLEX64;
-
-const HIGGS_WG: u32 = 64;
 const HIGGS_SHADER_BODY: &str = include_str!("../../shaders/lattice/higgs_u1_hmc_f64.wgsl");
 
 /// U(1) Abelian Higgs HMC force operator (2D periodic lattice).
@@ -214,7 +213,7 @@ impl HiggsU1HmcForce {
             });
             pass.set_pipeline(&self.pipeline);
             pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(self.volume.div_ceil(HIGGS_WG), 1, 1);
+            pass.dispatch_workgroups(self.volume.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
         }
         self.device.submit_and_poll(Some(enc.finish()));
         Ok(())

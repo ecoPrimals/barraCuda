@@ -131,7 +131,7 @@ pub static LSCFRK3_W6: LscfrkCoefficients = LscfrkCoefficients {
 
 /// LSCFRK3W7: Bazavov & Chuna recommended. c₂ = 1/3, c₃ = 3/4.
 ///
-/// Leading-order error coefficient for action observables (D³_C) is near
+/// Leading-order error coefficient for action observables (`D³_C`) is near
 /// zero, making it ~2× more efficient than W6 for w₀ scale setting.
 /// See Fig. 5 of arXiv:2101.05320.
 const LSCFRK3W7_DERIVED: ([f64; 3], [f64; 3]) = derive_lscfrk3(1.0 / 3.0, 3.0 / 4.0);
@@ -209,8 +209,8 @@ pub fn find_t0(measurements: &[FlowMeasurement]) -> Option<f64> {
 /// Find w₀ such that W(t) = t d/dt[t²E(t)] = 0.3 by linear interpolation.
 ///
 /// The w₀ scale (BMW, arXiv:1203.4469) is less sensitive to short-distance
-/// lattice artifacts than t₀. Returns √t_cross where t_cross satisfies
-/// W(t_cross) = 0.3.
+/// lattice artifacts than t₀. Returns √`t_cross` where `t_cross` satisfies
+/// `W(t_cross)` = 0.3.
 #[must_use]
 pub fn find_w0(measurements: &[FlowMeasurement]) -> Option<f64> {
     const TARGET: f64 = 0.3;

@@ -22,7 +22,7 @@ const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
 fn shader_for_device(device: &WgpuDevice) -> Result<&'static str> {
     let profile = GpuDriverProfile::from_device(device);
     match profile.fp64_strategy() {
-        Fp64Strategy::Native | Fp64Strategy::Concurrent => Ok(SHADER),
+        Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => Ok(SHADER),
         Fp64Strategy::Hybrid => {
             static DF64_RESULT: std::sync::LazyLock<std::result::Result<String, String>> =
                 std::sync::LazyLock::new(|| {
@@ -142,13 +142,12 @@ impl BesselJ0F64 {
         self.device.read_buffer_f64(&output_buf, size)
     }
 
-    #[cfg(test)]
     #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn j0_cpu(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| Self::j0_scalar(xi)).collect()
     }
 
-    #[cfg(test)]
+    #[allow(dead_code)] // used by j0_cpu
     fn j0_scalar(x: f64) -> f64 {
         let ax = x.abs();
         if ax >= 8.0 {

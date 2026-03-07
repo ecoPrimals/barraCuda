@@ -44,6 +44,7 @@
 //! ```
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::{WORKGROUP_SIZE_1D, WORKGROUP_SIZE_COMPACT};
 use crate::error::Result;
 use std::sync::Arc;
 
@@ -53,9 +54,6 @@ pub const WGSL_ATOMIC_CELL_BIN: &str = include_str!("../../../shaders/misc/atomi
 /// Cell list scatter pass (pass 3).
 pub const WGSL_CELL_LIST_SCATTER: &str =
     include_str!("../../../shaders/misc/cell_list_scatter.wgsl");
-
-const BIN_WG: u32 = 64;
-const SCAN_WG: u32 = 256; // must match prefix_sum.wgsl workgroup size
 
 struct GpuBuffers {
     // Input (caller-owned; we borrow them via bind groups)
@@ -202,7 +200,7 @@ impl CellListGpu {
         let sorted_indices = buf(&device, n_u32 as u64 * 4, "sorted_indices", false);
         let scan_partial = buf(
             &device,
-            (nc.div_ceil(SCAN_WG)) as u64 * 4,
+            (nc.div_ceil(WORKGROUP_SIZE_1D)) as u64 * 4,
             "scan_partial",
             false,
         );
@@ -220,8 +218,8 @@ impl CellListGpu {
         ];
         let bin_params = uniform_buf(&device, &u32_bytes(&bin_params_data), "bin_params");
 
-        // Pass 2 params: n = nc, n_groups = ceil(nc / SCAN_WG) (matches ScanConfig in WGSL)
-        let n_groups = nc.div_ceil(SCAN_WG);
+        // Pass 2 params: n = nc, n_groups = ceil(nc / WORKGROUP_SIZE_1D) (matches ScanConfig in WGSL)
+        let n_groups = nc.div_ceil(WORKGROUP_SIZE_1D);
         let scan_params_data = [nc, n_groups, 0u32, 0u32];
         let scan_params = uniform_buf(&device, &u32_bytes(&scan_params_data), "scan_params");
 
@@ -405,7 +403,7 @@ impl CellListGpu {
             &self.bin_pl,
             &bg_bin,
             "cell_bin",
-            self.n.div_ceil(BIN_WG),
+            self.n.div_ceil(WORKGROUP_SIZE_COMPACT),
             1,
             1,
         );
@@ -414,7 +412,7 @@ impl CellListGpu {
             &self.scan_pass_a_pl,
             &bg_scan1,
             "scan_local",
-            self.nc.div_ceil(SCAN_WG),
+            self.nc.div_ceil(WORKGROUP_SIZE_1D),
             1,
             1,
         );
@@ -432,7 +430,7 @@ impl CellListGpu {
             &self.scatter_pl,
             &bg_scatter,
             "scatter",
-            self.n.div_ceil(BIN_WG),
+            self.n.div_ceil(WORKGROUP_SIZE_COMPACT),
             1,
             1,
         );
@@ -604,10 +602,9 @@ mod tests {
 
     #[test]
     fn test_workgroup_sizes() {
-        // dispatch math: ceil(N / 64)
-        assert_eq!(64u32.div_ceil(BIN_WG), 1);
-        assert_eq!(65u32.div_ceil(BIN_WG), 2);
-        assert_eq!(10_000u32.div_ceil(BIN_WG), 157);
+        assert_eq!(64u32.div_ceil(WORKGROUP_SIZE_COMPACT), 1);
+        assert_eq!(65u32.div_ceil(WORKGROUP_SIZE_COMPACT), 2);
+        assert_eq!(10_000u32.div_ceil(WORKGROUP_SIZE_COMPACT), 157);
     }
 
     #[test]

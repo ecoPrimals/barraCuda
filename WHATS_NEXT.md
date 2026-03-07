@@ -1,6 +1,6 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-03-06.
+Prioritized work items, ordered by impact. Updated 2026-03-07.
 
 ---
 
@@ -26,6 +26,13 @@ Prioritized work items, ordered by impact. Updated 2026-03-06.
   StewartYieldWater, BlaneyCriddleEt0) already absorbed.
 - **Sovereign validation harness**: Pure-Rust shader pipeline coverage without GPU.
 - **Tokio runtime graceful detection**: `coral_compiler.rs` no longer panics without runtime.
+- **Zero `too_many_arguments`**: All 9 instances evolved to builder/struct patterns (CG solver,
+  Gillespie, seasonal params, HMM, RK45, DADA2, spin-orbit, leapfrog, RBF).
+- **Deprecated PPPM constructors removed**: `new()` / `new_with_driver()` had zero callers.
+- **Akida SDK paths → capability constant**: `AKIDA_SDK_SYSTEM_DIRS` shared between device modules.
+- **Cross-spring provenance registry**: `shaders::provenance` tracks Write → Absorb → Lean
+  evolution with `ShaderRecord` and `SpringDomain` taxonomy.
+- **coralReef Phase 10 rewire**: `compile_wgsl_direct`, `supported_archs()`, fallback to SPIR-V path.
 
 ---
 

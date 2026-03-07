@@ -2,12 +2,11 @@
 //! GPU Polyakov loop (temporal Wilson line) computation.
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::error::Result;
 use std::sync::Arc;
 
 use super::su3::su3_preamble;
-
-const WG: u32 = 64;
 const SHADER_BODY: &str = include_str!("../../shaders/lattice/polyakov_loop_f64.wgsl");
 
 #[repr(C)]
@@ -143,7 +142,7 @@ impl GpuPolyakovLoop {
             });
             pass.set_pipeline(&self.pipeline);
             pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(self.spatial_vol.div_ceil(WG), 1, 1);
+            pass.dispatch_workgroups(self.spatial_vol.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
         }
         self.device.submit_and_poll(Some(enc.finish()));
         Ok(())

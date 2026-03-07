@@ -110,8 +110,18 @@ fn test_conv2d_simple() {
     let input: Vec<f32> = (1..=16).map(|x| x as f32).collect();
     let kernel = vec![1.0, 0.0, 0.0, 1.0];
 
-    let out = crate::cpu_conv_pool::conv2d(&input, &kernel, 1, 1, 4, 4, 1, 2, 2, 1, 1, 0, 0, 1, 1)
-        .unwrap();
+    let out = crate::cpu_conv_pool::conv2d(
+        &input,
+        &kernel,
+        crate::cpu_conv_pool::TensorShape {
+            n: 1,
+            c: 1,
+            h: 4,
+            w: 4,
+        },
+        crate::cpu_conv_pool::Conv2dConfig::new(1, 2, 2),
+    )
+    .unwrap();
 
     assert_eq!(out.len(), 9);
     assert!((out[0] - 7.0).abs() < 1e-5);
@@ -120,7 +130,17 @@ fn test_conv2d_simple() {
 #[test]
 fn test_maxpool2d_simple() {
     let input: Vec<f32> = (1..=16).map(|x| x as f32).collect();
-    let out = crate::cpu_conv_pool::max_pool2d(&input, 1, 1, 4, 4, 2, 2, 2, 2, 0, 0).unwrap();
+    let out = crate::cpu_conv_pool::max_pool2d(
+        &input,
+        crate::cpu_conv_pool::TensorShape {
+            n: 1,
+            c: 1,
+            h: 4,
+            w: 4,
+        },
+        crate::cpu_conv_pool::Pool2dConfig::new(2, 2),
+    )
+    .unwrap();
     assert_eq!(out.len(), 4);
     assert!((out[0] - 6.0).abs() < 1e-5);
     assert!((out[1] - 8.0).abs() < 1e-5);
@@ -131,7 +151,17 @@ fn test_maxpool2d_simple() {
 #[test]
 fn test_avgpool2d_simple() {
     let input: Vec<f32> = (1..=16).map(|x| x as f32).collect();
-    let out = crate::cpu_conv_pool::avg_pool2d(&input, 1, 1, 4, 4, 2, 2, 2, 2, 0, 0).unwrap();
+    let out = crate::cpu_conv_pool::avg_pool2d(
+        &input,
+        crate::cpu_conv_pool::TensorShape {
+            n: 1,
+            c: 1,
+            h: 4,
+            w: 4,
+        },
+        crate::cpu_conv_pool::Pool2dConfig::new(2, 2),
+    )
+    .unwrap();
     assert_eq!(out.len(), 4);
     assert!((out[0] - 3.5).abs() < 1e-5);
     assert!((out[1] - 5.5).abs() < 1e-5);

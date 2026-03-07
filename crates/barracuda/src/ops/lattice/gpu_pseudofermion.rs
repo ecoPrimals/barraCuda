@@ -7,14 +7,13 @@
 //! The fermion force computes `dS_F/dU` from CG solution fields.
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::error::Result;
 use std::sync::Arc;
 
 use super::complex_f64::WGSL_COMPLEX64;
 use super::lcg::WGSL_LCG_F64;
 use super::su3::su3_preamble;
-
-const WG: u32 = 64;
 const HEATBATH_SHADER: &str = include_str!("../../shaders/lattice/pseudofermion_heatbath_f64.wgsl");
 const FORCE_SHADER: &str = include_str!("../../shaders/lattice/pseudofermion_force_f64.wgsl");
 
@@ -141,7 +140,7 @@ impl GpuPseudofermionHeatbath {
             });
             pass.set_pipeline(&self.pipeline);
             pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(self.volume.div_ceil(WG), 1, 1);
+            pass.dispatch_workgroups(self.volume.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
         }
         self.device.submit_and_poll(Some(enc.finish()));
         Ok(())
@@ -304,7 +303,7 @@ impl GpuPseudofermionForce {
             });
             pass.set_pipeline(&self.pipeline);
             pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(self.volume.div_ceil(WG), 1, 1);
+            pass.dispatch_workgroups(self.volume.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
         }
         self.device.submit_and_poll(Some(enc.finish()));
         Ok(())

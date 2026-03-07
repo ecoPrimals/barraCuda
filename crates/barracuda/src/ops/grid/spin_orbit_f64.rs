@@ -65,6 +65,32 @@ impl SpinOrbitParams {
     }
 }
 
+/// Input arrays and physics parameters for a spin-orbit computation.
+pub struct SpinOrbitInputs<'a> {
+    /// Squared wave-function amplitudes `[batch_size × n_states × n_grid]`.
+    pub wf_squared: &'a [f64],
+    /// Radial density gradient (for diagonal mode).
+    pub drho_dr: Option<&'a [f64]>,
+    /// Electron density (for gradient mode — gradient computed internally).
+    pub density: Option<&'a [f64]>,
+    /// Radial grid points `[n_grid]`.
+    pub r_grid: &'a [f64],
+    /// Angular momentum (l·s) factors per state `[n_states]`.
+    pub ls_factors: &'a [f64],
+    /// Number of independent systems in the batch.
+    pub batch_size: usize,
+    /// Number of orbital states.
+    pub n_states: usize,
+    /// Number of radial grid points.
+    pub n_grid: usize,
+    /// Radial grid spacing.
+    pub dr: f64,
+    /// Spin-orbit coupling strength W₀.
+    pub w0: f64,
+    /// Shader entry point (`"spin_orbit_diagonal"` or `"spin_orbit_with_gradient"`).
+    pub entry_point: &'a str,
+}
+
 /// GPU-accelerated spin-orbit coupling computation
 pub struct SpinOrbitGpu {
     device: Arc<WgpuDevice>,
@@ -141,10 +167,10 @@ impl SpinOrbitGpu {
             });
         }
 
-        self.compute_internal(
+        self.compute_internal(&SpinOrbitInputs {
             wf_squared,
-            Some(drho_dr),
-            None,
+            drho_dr: Some(drho_dr),
+            density: None,
             r_grid,
             ls_factors,
             batch_size,
@@ -152,8 +178,8 @@ impl SpinOrbitGpu {
             n_grid,
             dr,
             w0,
-            "spin_orbit_diagonal",
-        )
+            entry_point: "spin_orbit_diagonal",
+        })
     }
 
     /// Compute spin-orbit corrections with internal gradient computation
@@ -207,10 +233,10 @@ impl SpinOrbitGpu {
             });
         }
 
-        self.compute_internal(
+        self.compute_internal(&SpinOrbitInputs {
             wf_squared,
-            None,
-            Some(density),
+            drho_dr: None,
+            density: Some(density),
             r_grid,
             ls_factors,
             batch_size,
@@ -218,25 +244,24 @@ impl SpinOrbitGpu {
             n_grid,
             dr,
             w0,
-            "spin_orbit_with_gradient",
-        )
+            entry_point: "spin_orbit_with_gradient",
+        })
     }
 
-    #[expect(clippy::too_many_arguments, reason = "API")]
-    fn compute_internal(
-        &self,
-        wf_squared: &[f64],
-        drho_dr: Option<&[f64]>,
-        density: Option<&[f64]>,
-        r_grid: &[f64],
-        ls_factors: &[f64],
-        batch_size: usize,
-        n_states: usize,
-        n_grid: usize,
-        dr: f64,
-        w0: f64,
-        entry_point: &str,
-    ) -> Result<Vec<f64>> {
+    fn compute_internal(&self, inputs: &SpinOrbitInputs<'_>) -> Result<Vec<f64>> {
+        let SpinOrbitInputs {
+            wf_squared,
+            drho_dr,
+            density,
+            r_grid,
+            ls_factors,
+            batch_size,
+            n_states,
+            n_grid,
+            dr,
+            w0,
+            entry_point,
+        } = inputs;
         let shader = self
             .device
             .compile_shader_f64(Self::wgsl_shader(), Some("SpinOrbit f64"));
@@ -355,8 +380,13 @@ impl SpinOrbitGpu {
                 });
 
         // Create buffers
-        let params =
-            SpinOrbitParams::new(batch_size as u32, n_states as u32, n_grid as u32, dr, w0);
+        let params = SpinOrbitParams::new(
+            *batch_size as u32,
+            *n_states as u32,
+            *n_grid as u32,
+            *dr,
+            *w0,
+        );
         let params_buffer = self
             .device
             .create_uniform_buffer("SpinOrbit Params", &params);

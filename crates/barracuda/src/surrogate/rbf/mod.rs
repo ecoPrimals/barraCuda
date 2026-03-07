@@ -52,33 +52,50 @@ pub struct RBFSurrogate {
     smoothing: f64,
 }
 
+/// Training data for an RBF surrogate (points and targets).
+pub struct RbfTrainingData {
+    /// Flattened training inputs `[n_train × n_dim]`.
+    pub train_x: Vec<f64>,
+    /// Training targets `[n_train]`.
+    pub train_y: Vec<f64>,
+    /// Number of training points.
+    pub n_train: usize,
+    /// Input dimensionality.
+    pub n_dim: usize,
+}
+
+/// Trained RBF model parameters (from the solve step).
+pub struct RbfTrainedModel {
+    /// RBF interpolation weights `[n_train]`.
+    pub weights: Vec<f64>,
+    /// Polynomial tail coefficients `[n_dim + 1]`.
+    pub poly_coeffs: Vec<f64>,
+    /// Radial basis kernel function.
+    pub kernel: RBFKernel,
+    /// Smoothing (regularization) parameter.
+    pub smoothing: f64,
+}
+
 #[cfg(test)]
 mod tests;
 
 impl RBFSurrogate {
     /// Construct from pre-computed parts (used by adaptive dispatch).
-    #[expect(clippy::too_many_arguments, reason = "API")]
     pub(crate) fn from_parts(
         device: Arc<WgpuDevice>,
-        train_x: Vec<f64>,
-        train_y: Vec<f64>,
-        weights: Vec<f64>,
-        poly_coeffs: Vec<f64>,
-        n_train: usize,
-        n_dim: usize,
-        kernel: RBFKernel,
-        smoothing: f64,
+        training_data: RbfTrainingData,
+        trained_model: RbfTrainedModel,
     ) -> Self {
         Self {
             device,
-            train_x,
-            train_y,
-            weights,
-            poly_coeffs,
-            n_train,
-            n_dim,
-            kernel,
-            smoothing,
+            train_x: training_data.train_x,
+            train_y: training_data.train_y,
+            n_train: training_data.n_train,
+            n_dim: training_data.n_dim,
+            weights: trained_model.weights,
+            poly_coeffs: trained_model.poly_coeffs,
+            kernel: trained_model.kernel,
+            smoothing: trained_model.smoothing,
         }
     }
 

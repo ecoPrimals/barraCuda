@@ -89,6 +89,7 @@ pub mod moving_window_f64;
 pub mod normal;
 pub mod regression;
 pub mod spectral_density;
+pub mod welford;
 
 #[cfg(feature = "gpu")]
 pub use bootstrap::BootstrapMeanGpu;
@@ -133,3 +134,4 @@ pub use regression::{
     FitResult, fit_all, fit_exponential, fit_linear, fit_logarithmic, fit_quadratic,
 };
 pub use spectral_density::{empirical_spectral_density, marchenko_pastur_bounds};
+pub use welford::{WelfordCovState, WelfordState};

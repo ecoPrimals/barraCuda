@@ -42,6 +42,12 @@ pub struct ShellConfig {
     pub evolution: EvolutionConfig,
     /// Ridge regression regularization
     pub lambda: f64,
+    /// Output dimension override. When `Some(n)`, the readout layer is
+    /// constructed with `n` outputs instead of the default 3. Springs with
+    /// extended target vectors (e.g. 4-head anomaly signal) set this to
+    /// match their target dimensionality.
+    #[serde(default)]
+    pub output_dim: Option<usize>,
 }
 
 impl Default for ShellConfig {
@@ -51,7 +57,21 @@ impl Default for ShellConfig {
             pop_size: 16,
             evolution: EvolutionConfig::default(),
             lambda: 1e-3,
+            output_dim: None,
         }
+    }
+}
+
+impl ShellConfig {
+    /// Set the output dimension for the readout layer.
+    ///
+    /// By default the readout has 3 outputs (CG iters, plaquette, acceptance).
+    /// Use this when training targets have a different width (e.g. 4 outputs
+    /// when including the anomaly signal).
+    #[must_use]
+    pub fn with_output_dim(mut self, n: usize) -> Self {
+        self.output_dim = Some(n);
+        self
     }
 }
 
@@ -79,7 +99,8 @@ impl NautilusShell {
         let pop = Population::new(&config.board_config, config.pop_size, seed);
         let l2 = config.board_config.grid_size * config.board_config.grid_size;
         let input_dim = config.pop_size * l2;
-        let readout = LinearReadout::new(input_dim, 3, config.lambda);
+        let n_out = config.output_dim.unwrap_or(3);
+        let readout = LinearReadout::new(input_dim, n_out, config.lambda);
         Self {
             config: config.clone(),
             population: pop,

@@ -103,7 +103,6 @@ impl Correlation {
     }
 
     /// CPU reference implementation
-    #[cfg(test)]
     #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn correlate_cpu(&self, x: &[f32], y: &[f32]) -> f32 {
         let n = x.len() as f32;

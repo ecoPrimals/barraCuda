@@ -55,7 +55,6 @@ impl SphericalHarmonicsF64 {
         self.ylm_gpu(theta_phi, l, m)
     }
 
-    #[cfg(test)]
     #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn ylm_cpu(&self, theta_phi: &[f64], l: u32, m: i32) -> Vec<f64> {
         let size = theta_phi.len() / 2;
@@ -70,7 +69,7 @@ impl SphericalHarmonicsF64 {
         result
     }
 
-    #[cfg(test)]
+    #[allow(dead_code)] // used by ylm_scalar
     fn factorial(n: u32) -> f64 {
         match n {
             0 | 1 => 1.0,
@@ -78,7 +77,7 @@ impl SphericalHarmonicsF64 {
         }
     }
 
-    #[cfg(test)]
+    #[allow(dead_code)] // used by assoc_legendre
     fn double_factorial(m: u32) -> f64 {
         if m == 0 {
             return 1.0;
@@ -86,7 +85,7 @@ impl SphericalHarmonicsF64 {
         (1..=m).map(|k| (2 * k - 1) as f64).product()
     }
 
-    #[cfg(test)]
+    #[allow(dead_code)] // used by ylm_scalar
     fn assoc_legendre(l: u32, m: u32, x: f64) -> f64 {
         if m > l {
             return 0.0;
@@ -129,7 +128,7 @@ impl SphericalHarmonicsF64 {
         pl_m1
     }
 
-    #[cfg(test)]
+    #[allow(dead_code)] // used by ylm_cpu
     fn ylm_scalar(l: u32, m: i32, theta: f64, phi: f64) -> f64 {
         let abs_m = m.unsigned_abs();
         if abs_m > l {

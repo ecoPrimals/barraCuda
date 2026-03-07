@@ -45,6 +45,32 @@ struct HmmParams {
     n_seqs: u32,
 }
 
+/// GPU-resident buffers for an HMM forward pass dispatch.
+///
+/// Groups dimensions and buffer references to avoid 11-argument function calls.
+pub struct HmmForwardArgs<'a> {
+    /// Number of hidden states.
+    pub n_states: u32,
+    /// Number of emission symbols.
+    pub n_symbols: u32,
+    /// Number of time steps per sequence.
+    pub n_steps: u32,
+    /// Number of sequences in the batch.
+    pub n_seqs: u32,
+    /// Log transition matrix (N×N).
+    pub log_trans: &'a wgpu::Buffer,
+    /// Log emission matrix (N×M).
+    pub log_emit: &'a wgpu::Buffer,
+    /// Log initial state probabilities (N).
+    pub log_pi: &'a wgpu::Buffer,
+    /// Observation sequences (B×T).
+    pub observations: &'a wgpu::Buffer,
+    /// Output: log forward variables (B×T×N).
+    pub log_alpha_out: &'a wgpu::Buffer,
+    /// Output: log likelihood per sequence (B).
+    pub log_lik_out: &'a wgpu::Buffer,
+}
+
 /// Batch HMM forward pass on GPU (log-domain, f64).
 pub struct HmmBatchForwardF64 {
     device: Arc<WgpuDevice>,
@@ -62,41 +88,28 @@ impl HmmBatchForwardF64 {
     /// # Errors
     /// Returns [`Err`] if buffer allocation fails, the device is lost, or compute
     /// submission fails.
-    #[expect(clippy::too_many_arguments, reason = "API")]
-    pub fn dispatch(
-        &self,
-        n_states: u32,
-        n_symbols: u32,
-        n_steps: u32,
-        n_seqs: u32,
-        log_trans: &wgpu::Buffer,
-        log_emit: &wgpu::Buffer,
-        log_pi: &wgpu::Buffer,
-        observations: &wgpu::Buffer,
-        log_alpha_out: &wgpu::Buffer,
-        log_lik_out: &wgpu::Buffer,
-    ) -> Result<()> {
+    pub fn dispatch(&self, args: &HmmForwardArgs<'_>) -> Result<()> {
         let params = HmmParams {
-            n_states,
-            n_symbols,
-            n_steps,
-            n_seqs,
+            n_states: args.n_states,
+            n_symbols: args.n_symbols,
+            n_steps: args.n_steps,
+            n_seqs: args.n_seqs,
         };
         let params_buf = self
             .device
             .create_uniform_buffer("HmmForward:params", &params);
 
-        let wg_count = n_seqs.div_ceil(WORKGROUP_SIZE_1D);
+        let wg_count = args.n_seqs.div_ceil(WORKGROUP_SIZE_1D);
         ComputeDispatch::new(&self.device, "hmm_forward")
             .shader(SHADER, "main")
             .f64()
             .uniform(0, &params_buf)
-            .storage_read(1, log_trans)
-            .storage_read(2, log_emit)
-            .storage_read(3, log_pi)
-            .storage_read(4, observations)
-            .storage_rw(5, log_alpha_out)
-            .storage_rw(6, log_lik_out)
+            .storage_read(1, args.log_trans)
+            .storage_read(2, args.log_emit)
+            .storage_read(3, args.log_pi)
+            .storage_read(4, args.observations)
+            .storage_rw(5, args.log_alpha_out)
+            .storage_rw(6, args.log_lik_out)
             .dispatch(wg_count, 1, 1)
             .submit()?;
         Ok(())

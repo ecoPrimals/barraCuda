@@ -6,6 +6,7 @@
 
 pub mod compiler;
 pub mod cpu;
+pub mod eps;
 mod math_f64;
 pub mod polyfill;
 mod templates;

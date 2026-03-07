@@ -2,14 +2,13 @@
 //! GPU per-link kinetic energy from HMC momenta.
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::error::Result;
 use std::sync::Arc;
 
 use super::su3::{su3_df64_preamble, su3_preamble};
-
-const WG: u32 = 64;
 const SHADER_BODY: &str = include_str!("../../shaders/lattice/kinetic_energy_f64.wgsl");
 const SHADER_DF64: &str = include_str!("../../shaders/lattice/kinetic_energy_df64.wgsl");
 
@@ -41,7 +40,7 @@ impl GpuKineticEnergy {
         let profile = GpuDriverProfile::from_device(&device);
         let strategy = profile.fp64_strategy();
         let shader_src = match strategy {
-            Fp64Strategy::Native | Fp64Strategy::Concurrent => {
+            Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => {
                 format!("{}{}", su3_preamble(), SHADER_BODY)
             }
             Fp64Strategy::Hybrid => format!("{}{}", su3_df64_preamble(), SHADER_DF64),
@@ -89,7 +88,7 @@ impl GpuKineticEnergy {
             .uniform(0, &self.params)
             .storage_read(1, momenta_buf)
             .storage_rw(2, energy_buf)
-            .dispatch(self.n_links.div_ceil(WG), 1, 1)
+            .dispatch(self.n_links.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
             .submit()?;
         Ok(())
     }

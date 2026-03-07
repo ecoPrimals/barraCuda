@@ -143,6 +143,16 @@ pub struct DeviceCapabilities {
 
     /// Whether the device supports native f64 shader operations.
     pub f64_shaders: bool,
+
+    /// Whether f64 workgroup shared memory (`var<workgroup> x: array<f64, N>`)
+    /// produces correct results on this GPU+driver combination.
+    ///
+    /// groundSpring V84-V85 discovered that f64 shared-memory reductions
+    /// return zeros on all current naga/SPIR-V paths (NVIDIA proprietary
+    /// and NVK). DF64 shared memory works correctly. This flag gates
+    /// whether f64 shared-memory shaders should be attempted or diverted
+    /// to DF64.
+    pub f64_shared_memory: bool,
 }
 
 impl DeviceCapabilities {
@@ -178,6 +188,7 @@ impl DeviceCapabilities {
             subgroup_min_size: adapter_info.subgroup_min_size,
             subgroup_max_size: adapter_info.subgroup_max_size,
             f64_shaders: device.has_f64_shaders(),
+            f64_shared_memory: false,
         }
     }
 
@@ -378,6 +389,17 @@ impl DeviceCapabilities {
             None
         }
     }
+
+    /// Whether f64 workgroup shared memory produces correct results.
+    ///
+    /// Currently `false` for all naga/SPIR-V paths due to a systemic bug
+    /// in naga's SPIR-V emission for f64 workgroup shared memory. Shaders
+    /// using `var<workgroup> x: array<f64, N>` should divert to DF64 when
+    /// this returns `false`.
+    #[must_use]
+    pub fn has_f64_shared_memory(&self) -> bool {
+        self.f64_shared_memory
+    }
 }
 
 /// Workload types for optimal configuration
@@ -476,6 +498,15 @@ impl fmt::Display for DeviceCapabilities {
             f,
             "  f64 shaders: {}",
             if self.f64_shaders { "Yes" } else { "No" }
+        )?;
+        writeln!(
+            f,
+            "  f64 shared memory: {}",
+            if self.f64_shared_memory {
+                "Yes"
+            } else {
+                "No (naga/SPIR-V bug — use DF64)"
+            }
         )?;
         writeln!(
             f,

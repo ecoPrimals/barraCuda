@@ -30,6 +30,7 @@
 //! - Future fp64 GPUs (seamless transition via wgpu backend selection)
 //! - Quantum sequential compute (same algorithm, different substrate)
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::wgpu_device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
@@ -214,8 +215,8 @@ fn tridiagonal_solve_gpu_large(
         );
         
         let stride = 1 << (step + 1);
-        let workgroups = ((n_padded / stride) + 255) / 256;
-        device.dispatch(&reduction_pipeline, &bind_group, (workgroups.max(1), 1, 1))?;
+        let workgroups = (n_padded / stride).div_ceil(WORKGROUP_SIZE_1D as usize).max(1) as u32;
+        device.dispatch(&reduction_pipeline, &bind_group, (workgroups, 1, 1))?;
     }
     
     // Solve center element (trivial - just d[n/2] / b[n/2])
@@ -237,8 +238,8 @@ fn tridiagonal_solve_gpu_large(
         );
         
         let stride = 1 << (step + 1);
-        let workgroups = ((n_padded / stride) + 255) / 256;
-        device.dispatch(&substitution_pipeline, &bind_group, (workgroups.max(1), 1, 1))?;
+        let workgroups = (n_padded / stride).div_ceil(WORKGROUP_SIZE_1D as usize).max(1) as u32;
+        device.dispatch(&substitution_pipeline, &bind_group, (workgroups, 1, 1))?;
     }
     
     // Read back result
@@ -524,12 +525,12 @@ fn tridiagonal_solve_batch_gpu_large(
         });
         
         let stride = 1 << (step + 1);
-        let workgroups_x = ((n_padded / stride) + 255) / 256;
+        let workgroups_x = (n_padded / stride).div_ceil(WORKGROUP_SIZE_1D as usize).max(1) as u32;
         
         device.dispatch_with_bind_groups(
             &reduction_pipeline,
             &[&bind_group_0, &bind_group_1],
-            (workgroups_x.max(1) as u32, batch_size as u32, 1),
+            (workgroups_x, batch_size as u32, 1),
         )?;
     }
     
@@ -572,12 +573,12 @@ fn tridiagonal_solve_batch_gpu_large(
         });
         
         let stride = 1 << (step + 1);
-        let workgroups_x = ((n_padded / stride) + 255) / 256;
+        let workgroups_x = (n_padded / stride).div_ceil(WORKGROUP_SIZE_1D as usize).max(1) as u32;
         
         device.dispatch_with_bind_groups(
             &substitution_pipeline,
             &[&bind_group_0, &bind_group_1],
-            (workgroups_x.max(1) as u32, batch_size as u32, 1),
+            (workgroups_x, batch_size as u32, 1),
         )?;
     }
     

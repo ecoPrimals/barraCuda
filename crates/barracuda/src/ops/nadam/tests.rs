@@ -3,6 +3,11 @@
 
 use super::*;
 use crate::device::test_pool::get_test_device_if_gpu_available;
+use crate::ops::adamw::AdamConfig;
+
+fn default_config() -> AdamConfig {
+    AdamConfig::new(0.001)
+}
 
 #[tokio::test]
 async fn test_nadam_gpu_basic() {
@@ -27,7 +32,7 @@ async fn test_nadam_gpu_basic() {
         .unwrap();
 
     let (new_weights, new_m, new_v) = weights
-        .nadam(&gradients, &m, &v, 0.001, 0.9, 0.999, 1e-8, 0.0, 1)
+        .nadam(&gradients, &m, &v, &default_config(), 1)
         .unwrap();
 
     assert_eq!(new_weights.shape(), &[size]);
@@ -38,11 +43,8 @@ async fn test_nadam_gpu_basic() {
     let m_data = new_m.to_vec().unwrap();
     let v_data = new_v.to_vec().unwrap();
 
-    // Weights should decrease (gradient descent)
     assert!(w_data.iter().all(|&x| x < 1.0));
-    // m should be non-zero (momentum accumulated)
     assert!(m_data.iter().any(|&x| x.abs() > 1e-6));
-    // v should be non-zero (variance accumulated)
     assert!(v_data.iter().all(|&x| x > 0.0));
 }
 
@@ -64,23 +66,19 @@ async fn test_nadam_gpu_convergence() {
         .await
         .unwrap();
 
-    // Constant gradient pointing toward zero
     let gradients = Tensor::from_vec_on(vec![1.0; size], vec![size], device)
         .await
         .unwrap();
 
-    // Run 10 steps
+    let config = AdamConfig::new(0.1);
     for step in 1..=10 {
-        let (w, m_new, v_new) = weights
-            .nadam(&gradients, &m, &v, 0.1, 0.9, 0.999, 1e-8, 0.0, step)
-            .unwrap();
+        let (w, m_new, v_new) = weights.nadam(&gradients, &m, &v, &config, step).unwrap();
         weights = w;
         m = m_new;
         v = v_new;
     }
 
     let final_weights = weights.to_vec().unwrap();
-    // Should converge toward lower values
     assert!(final_weights.iter().all(|&x| x < 4.0));
 }
 
@@ -106,13 +104,17 @@ async fn test_nadam_gpu_weight_decay() {
         .await
         .unwrap();
 
-    // With weight decay, weights should shrink even with zero gradient
     let (new_weights, _, _) = weights
-        .nadam(&gradients, &m, &v, 0.1, 0.9, 0.999, 1e-8, 0.01, 1)
+        .nadam(
+            &gradients,
+            &m,
+            &v,
+            &AdamConfig::new(0.1).weight_decay(0.01),
+            1,
+        )
         .unwrap();
 
     let w_data = new_weights.to_vec().unwrap();
-    // Weight decay should reduce weights
     assert!(w_data.iter().all(|&x| x < 10.0));
 }
 
@@ -137,8 +139,7 @@ async fn test_nadam_gpu_shape_validation() {
         .await
         .unwrap();
 
-    // Shape mismatch should error
-    let result = weights.nadam(&gradients, &m, &v, 0.001, 0.9, 0.999, 1e-8, 0.0, 1);
+    let result = weights.nadam(&gradients, &m, &v, &default_config(), 1);
     assert!(result.is_err());
 }
 
@@ -147,7 +148,6 @@ async fn test_nadam_gpu_multidimensional() {
     let Some(device) = get_test_device_if_gpu_available().await else {
         return;
     };
-    // 2D weights (matrix)
     let weights = Tensor::from_vec_on(vec![1.0; 100], vec![10, 10], device.clone())
         .await
         .unwrap();
@@ -165,7 +165,7 @@ async fn test_nadam_gpu_multidimensional() {
         .unwrap();
 
     let (new_weights, new_m, new_v) = weights
-        .nadam(&gradients, &m, &v, 0.001, 0.9, 0.999, 1e-8, 0.0, 1)
+        .nadam(&gradients, &m, &v, &default_config(), 1)
         .unwrap();
 
     assert_eq!(new_weights.shape(), &[10, 10]);

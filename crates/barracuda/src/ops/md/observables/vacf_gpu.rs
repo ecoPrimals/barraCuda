@@ -23,12 +23,12 @@
 //! - ✅ Capability-based: skips to CPU fallback when no GPU available
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_2D;
 use crate::error::Result;
 use crate::ops::md::observables::{Vacf, compute_vacf};
 use std::sync::Arc;
 
 const VACF_SHADER: &str = include_str!("vacf_f64.wgsl");
-const WG: u32 = 16;
 
 /// GPU-accelerated VACF computation.
 ///
@@ -163,8 +163,8 @@ impl VacfGpu {
         });
 
         // ── Dispatch: ceil(L/16) × ceil(T/16) workgroups ─────────────────────
-        let wg_x = (actual_lag as u32).div_ceil(WG);
-        let wg_y = (n_frames as u32).div_ceil(WG);
+        let wg_x = (actual_lag as u32).div_ceil(WORKGROUP_SIZE_2D);
+        let wg_y = (n_frames as u32).div_ceil(WORKGROUP_SIZE_2D);
 
         let mut encoder = gpu_d.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
             label: Some("VACF"),

@@ -1,8 +1,8 @@
 # barraCuda Status
 
 **Version**: 0.3.3
-**Date**: 2026-03-06
-**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3014 tests passing)
+**Date**: 2026-03-07
+**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,099 tests passing)
 
 ---
 
@@ -15,14 +15,14 @@
 | **Sovereign compiler** | A | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all shaders |
 | **IPC / primal protocol** | A | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery |
 | **Device management** | A | Multi-GPU, capability-scored discovery, probe-aware f64 strategy, f64 computational accuracy probe, bounded poll timeout, poison-recovering autotune |
-| **Test coverage** | A | 3,014 lib tests passing, 0 failures; 63 integration suites; proptest; chaos/fault test tiers; bounded GPU poll timeout prevents hangs |
+| **Test coverage** | A | 3,083 lib tests + 15 integration + 1 core = 3,099 total; proptest; chaos/fault test tiers; bounded GPU poll timeout prevents hangs |
 | **Dependencies** | A- | Pure Rust chain (blake3 pure); zero non-GPU external C deps; wgpu/naga 28 for GPU |
 | **Documentation** | A | Comprehensive CHANGELOG, specs, README, CONTRIBUTING, CONVENTIONS, BREAKING_CHANGES; all rustdoc warnings resolved |
 | **Unsafe code** | A+ | Zero `unsafe` blocks in entire codebase |
 | **Clippy / lint** | A | Zero warnings with pedantic + unwrap_used; all `manual_let_else` converted |
 | **Error handling** | A | All production `expect`/`unwrap` evolved to `Result`; `let-else` throughout; poison recovery; DF64 rewrite failures surface as errors not silent zeros |
-| **Idiomatic Rust** | A | Edition 2024; `#[expect]` over `#[allow]`; `#[derive(Default)]`; `is_none_or`; iterator `collect()`; Option combinators; zero unsafe |
-| **Spring absorption** | A | LSCFRK integrators, force_anomaly brain, GPU-resident reduction, airSpring ops 14-19 all absorbed |
+| **Idiomatic Rust** | A+ | Edition 2024; zero `too_many_arguments` (all 9 → builder/struct); `#[expect]` over `#[allow]`; `#[derive(Default)]`; zero unsafe |
+| **Spring absorption** | A | LSCFRK integrators, force_anomaly brain, GPU-resident reduction, airSpring ops all absorbed; cross-spring provenance registry |
 
 ---
 
@@ -47,9 +47,13 @@
 - LSCFRK gradient flow integrators (W6, W7, CK45) with algebraic coefficient derivation
 - NautilusBrain force anomaly detection (10σ energy deviation, rolling window)
 - Zero TODOs/FIXMEs/HACKs in codebase
+- Zero `#[expect(clippy::too_many_arguments)]` — all 9 evolved to builder/struct patterns
 - All quality gates green (fmt, clippy -D warnings, rustdoc -D warnings, deny)
 - Zero production `expect()`/`unwrap()` — all evolved to `Result` propagation
 - coralReef IPC client uses capability-based discovery (no hardcoded primal names or ports)
+- Cross-spring shader provenance registry with Write → Absorb → Lean tracking
+- Deprecated PPPM constructors removed (zero callers)
+- Akida SDK paths extracted to shared capability constant
 
 ## What's Not Working Yet
 

@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use super::dirac::DiracGpuLayout;
 use super::gpu_cg_solver::{GpuCgBuffers, GpuCgSolver};
-use super::gpu_hmc_leapfrog::GpuHmcLeapfrog;
+use super::gpu_hmc_leapfrog::{GpuHmcLeapfrog, LeapfrogBuffers};
 use super::gpu_kinetic_energy::GpuKineticEnergy;
 use super::gpu_pseudofermion::{GpuPseudofermionForce, GpuPseudofermionHeatbath};
 use super::gpu_wilson_action::GpuWilsonAction;
@@ -362,30 +362,32 @@ impl GpuHmcTrajectory {
 
         // Compute initial fermion action S_F = Σ φ†(D†D)⁻¹φ
         let mut fermion_action_before = 0.0;
+        let lattice = super::gpu_cg_solver::CgLatticeBuffers {
+            links: &bufs.links,
+            nbr: &bufs.nbr,
+            phases: &bufs.phases,
+        };
+        let cg_config = super::gpu_cg_solver::CgSolverConfig {
+            mass: self.config.mass,
+            tol: self.config.cg_tol,
+            max_iter: self.config.cg_max_iter,
+        };
         for phi_buf in &bufs.phi_fields {
-            let cg_result = self.cg_solver.solve(
-                phi_buf,
-                &bufs.cg,
-                &bufs.links,
-                &bufs.nbr,
-                &bufs.phases,
-                self.config.mass,
-                self.config.cg_tol,
-                self.config.cg_max_iter,
-            )?;
+            let cg_result = self
+                .cg_solver
+                .solve(phi_buf, &bufs.cg, &lattice, &cg_config)?;
             total_cg_iters += cg_result.iterations;
-            // S_F = Re<φ|x> where x = (D†D)⁻¹φ
-            // We need a dot product dispatch — reuse the CG solver's infrastructure
-            // For now, read back the x buffer and compute φ†x via the dot kernel
             fermion_action_before += self.fermion_action_from_cg(phi_buf, &bufs.cg)?;
         }
 
         // Generate random momenta
         self.leapfrog.generate_momenta(
-            &bufs.links,
-            &bufs.momenta,
-            &bufs.gauge_force,
-            &bufs.rng_links,
+            &LeapfrogBuffers {
+                links_buf: &bufs.links,
+                momenta_buf: &bufs.momenta,
+                force_buf: &bufs.gauge_force,
+                rng_buf: &bufs.rng_links,
+            },
             self.volume,
         )?;
 
@@ -406,16 +408,9 @@ impl GpuHmcTrajectory {
 
         let mut fermion_action_after = 0.0;
         for phi_buf in &bufs.phi_fields {
-            let cg_result = self.cg_solver.solve(
-                phi_buf,
-                &bufs.cg,
-                &bufs.links,
-                &bufs.nbr,
-                &bufs.phases,
-                self.config.mass,
-                self.config.cg_tol,
-                self.config.cg_max_iter,
-            )?;
+            let cg_result = self
+                .cg_solver
+                .solve(phi_buf, &bufs.cg, &lattice, &cg_config)?;
             total_cg_iters += cg_result.iterations;
             fermion_action_after += self.fermion_action_from_cg(phi_buf, &bufs.cg)?;
         }
@@ -495,17 +490,20 @@ impl GpuHmcTrajectory {
         self.copy_buffer_sized(&bufs.gauge_force, &bufs.total_force, force_bytes);
 
         // Fermion force from each pseudofermion field
+        let lattice = super::gpu_cg_solver::CgLatticeBuffers {
+            links: &bufs.links,
+            nbr: &bufs.nbr,
+            phases: &bufs.phases,
+        };
+        let cg_config = super::gpu_cg_solver::CgSolverConfig {
+            mass: self.config.mass,
+            tol: self.config.cg_tol,
+            max_iter: self.config.cg_max_iter,
+        };
         for phi_buf in &bufs.phi_fields {
-            let cg_result = self.cg_solver.solve(
-                phi_buf,
-                &bufs.cg,
-                &bufs.links,
-                &bufs.nbr,
-                &bufs.phases,
-                self.config.mass,
-                self.config.cg_tol,
-                self.config.cg_max_iter,
-            )?;
+            let cg_result = self
+                .cg_solver
+                .solve(phi_buf, &bufs.cg, &lattice, &cg_config)?;
             *total_cg_iters += cg_result.iterations;
 
             // y = D·x (apply Dirac to CG solution)

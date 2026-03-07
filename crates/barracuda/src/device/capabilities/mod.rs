@@ -60,6 +60,7 @@ mod tests {
             subgroup_min_size: 32,
             subgroup_max_size: 32,
             f64_shaders: true,
+            f64_shared_memory: false,
         };
 
         let workloads = vec![
@@ -111,6 +112,7 @@ mod tests {
             subgroup_min_size: 32,
             subgroup_max_size: 32,
             f64_shaders: true,
+            f64_shared_memory: false,
         };
 
         assert!(caps_supported.supports_fhe());
@@ -131,6 +133,7 @@ mod tests {
             subgroup_min_size: 8,
             subgroup_max_size: 32,
             f64_shaders: true,
+            f64_shared_memory: false,
         };
 
         assert!(!caps_limited.supports_fhe());

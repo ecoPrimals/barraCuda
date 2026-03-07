@@ -1,12 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! `NAdam` Optimizer - GPU-accelerated Nesterov-accelerated Adam
 //!
-//! **Deep Debt Principles**:
-//! - ✅ Pure WGSL implementation (uses existing shader!)
-//! - ✅ Safe Rust wrapper (no unsafe code)
-//! - ✅ Hardware-agnostic via WebGPU
-//! - ✅ Complete implementation (production-ready optimizer)
-//!
 //! ## Algorithm
 //!
 //! ```text
@@ -18,37 +12,14 @@
 //! weight = weight - learning_rate * gradient_nesterov / (sqrt(v_hat) + epsilon)
 //! ```
 //!
-//! **Implementation**: Single-pass GPU optimizer with Nesterov momentum
-//!
-//! **Key Properties**:
-//! - Combines Adam with Nesterov momentum
-//! - Faster convergence than standard Adam
-//! - Automatic bias correction
-//! - Optional weight decay (L2 regularization)
-//!
-//! **Used By**: Modern deep learning training, faster than Adam
-//!
 //! ## Usage
 //!
 //! ```rust,ignore
 //! use barracuda::tensor::Tensor;
+//! use barracuda::ops::adamw::AdamConfig;
 //!
-//! let weights = Tensor::randn(vec![1000, 512]).await?;
-//! let gradients = Tensor::randn(vec![1000, 512]).await?;
-//! let m = Tensor::zeros(vec![1000, 512]).await?;
-//! let v = Tensor::zeros(vec![1000, 512]).await?;
-//!
-//! let (new_weights, new_m, new_v) = weights.nadam(
-//!     &gradients,
-//!     &m,
-//!     &v,
-//!     0.001,  // learning_rate
-//!     0.9,    // beta1
-//!     0.999,  // beta2
-//!     1e-8,   // epsilon
-//!     0.0,    // weight_decay
-//!     1,      // step
-//! )?;
+//! let config = AdamConfig::new(0.001);
+//! let (new_weights, new_m, new_v) = weights.nadam(&gradients, &m, &v, &config, 1)?;
 //! ```
 
 mod compute;
@@ -57,6 +28,7 @@ mod compute;
 mod tests;
 
 use crate::error::{BarracudaError, Result};
+use crate::ops::adamw::AdamConfig;
 use crate::tensor::Tensor;
 
 /// `NAdam` optimizer parameters for WGSL shader
@@ -69,48 +41,34 @@ pub(crate) struct NadamParams {
     pub epsilon: f32,
     pub weight_decay: f32,
     pub step: u32,
-    pub _padding: [u32; 2], // Explicit padding for 16-byte alignment
+    pub _padding: [u32; 2],
 }
 
 /// `NAdam` Optimizer operation
-///
-/// **Deep Debt**: Uses existing WGSL shader with Nesterov momentum
 pub struct Nadam {
     weights: Tensor,
     gradients: Tensor,
     m: Tensor,
     v: Tensor,
-    learning_rate: f32,
-    beta1: f32,
-    beta2: f32,
-    epsilon: f32,
-    weight_decay: f32,
+    config: AdamConfig,
     step: u32,
 }
 
 impl Nadam {
-    /// Create new `NAdam` optimizer operation
-    ///
-    /// **Deep Debt**: Validates all inputs for shape compatibility
+    /// Create new `NAdam` optimizer operation.
     ///
     /// # Errors
     ///
-    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
-    /// readback fails (e.g. device lost or out of memory).
-    #[expect(clippy::too_many_arguments, reason = "API")]
+    /// Returns [`Err`] if shapes mismatch, hyperparameters are invalid,
+    /// or step is 0.
     pub fn new(
         weights: Tensor,
         gradients: Tensor,
         m: Tensor,
         v: Tensor,
-        learning_rate: f32,
-        beta1: f32,
-        beta2: f32,
-        epsilon: f32,
-        weight_decay: f32,
+        config: &AdamConfig,
         step: u32,
     ) -> Result<Self> {
-        // Validate shapes match
         if weights.shape() != gradients.shape() {
             return Err(BarracudaError::shape_mismatch(
                 weights.shape().to_vec(),
@@ -129,26 +87,7 @@ impl Nadam {
                 v.shape().to_vec(),
             ));
         }
-
-        // Validate hyperparameters
-        if !(0.0..1.0).contains(&beta1) {
-            return Err(BarracudaError::invalid_op(
-                "NAdam",
-                format!("beta1 must be in [0, 1), got {beta1}"),
-            ));
-        }
-        if !(0.0..1.0).contains(&beta2) {
-            return Err(BarracudaError::invalid_op(
-                "NAdam",
-                format!("beta2 must be in [0, 1), got {beta2}"),
-            ));
-        }
-        if epsilon <= 0.0 {
-            return Err(BarracudaError::invalid_op(
-                "NAdam",
-                format!("epsilon must be positive, got {epsilon}"),
-            ));
-        }
+        config.validate("NAdam")?;
         if step == 0 {
             return Err(BarracudaError::invalid_op(
                 "NAdam",
@@ -161,11 +100,7 @@ impl Nadam {
             gradients,
             m,
             v,
-            learning_rate,
-            beta1,
-            beta2,
-            epsilon,
-            weight_decay,
+            config: *config,
             step,
         })
     }
@@ -182,52 +117,33 @@ impl Nadam {
         }
     }
 
-    /// Get weights tensor
     pub(super) fn weights(&self) -> &Tensor {
         &self.weights
     }
-
-    /// Get gradients tensor
     pub(super) fn gradients(&self) -> &Tensor {
         &self.gradients
     }
-
-    /// Get m tensor
     pub(super) fn m(&self) -> &Tensor {
         &self.m
     }
-
-    /// Get v tensor
     pub(super) fn v(&self) -> &Tensor {
         &self.v
     }
-
-    /// Get learning rate
     pub(super) fn learning_rate(&self) -> f32 {
-        self.learning_rate
+        self.config.learning_rate
     }
-
-    /// Get beta1
     pub(super) fn beta1(&self) -> f32 {
-        self.beta1
+        self.config.beta1
     }
-
-    /// Get beta2
     pub(super) fn beta2(&self) -> f32 {
-        self.beta2
+        self.config.beta2
     }
-
-    /// Get epsilon
     pub(super) fn epsilon(&self) -> f32 {
-        self.epsilon
+        self.config.epsilon
     }
-
-    /// Get weight decay
     pub(super) fn weight_decay(&self) -> f32 {
-        self.weight_decay
+        self.config.weight_decay
     }
-
-    /// Get step
     pub(super) fn step(&self) -> u32 {
         self.step
     }
@@ -238,58 +154,20 @@ impl Nadam {
 // ═══════════════════════════════════════════════════════════════
 
 impl Tensor {
-    /// `NAdam` optimizer step (Nesterov-accelerated Adam)
-    ///
-    /// **Deep Debt**: Production-ready optimizer with Nesterov momentum
-    ///
-    /// # Arguments
-    /// - `gradients`: Gradient tensor [same shape as weights]
-    /// - `m`: First moment estimate [same shape as weights]
-    /// - `v`: Second moment estimate [same shape as weights]
-    /// - `learning_rate`: Learning rate (e.g., 0.001)
-    /// - `beta1`: First moment decay (typically 0.9)
-    /// - `beta2`: Second moment decay (typically 0.999)
-    /// - `epsilon`: Numerical stability (typically 1e-8)
-    /// - `weight_decay`: L2 regularization (0.0 = none)
-    /// - `step`: Current step number (for bias correction, must be >= 1)
-    ///
-    /// # Returns
-    /// - `(new_weights, new_m, new_v)`: Updated parameters and moments
-    ///
-    /// # Example
-    /// ```rust,ignore
-    /// let (w, m, v) = weights.nadam(&grad, &m, &v, 0.001, 0.9, 0.999, 1e-8, 0.0, 1)?;
-    /// ```
+    /// `NAdam` optimizer step (Nesterov-accelerated Adam).
     ///
     /// # Errors
     ///
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
-    #[expect(clippy::too_many_arguments, reason = "API")]
     pub fn nadam(
         self,
         gradients: &Self,
         m: &Self,
         v: &Self,
-        learning_rate: f32,
-        beta1: f32,
-        beta2: f32,
-        epsilon: f32,
-        weight_decay: f32,
+        config: &AdamConfig,
         step: u32,
     ) -> Result<(Self, Self, Self)> {
-        Nadam::new(
-            self,
-            gradients.clone(),
-            m.clone(),
-            v.clone(),
-            learning_rate,
-            beta1,
-            beta2,
-            epsilon,
-            weight_decay,
-            step,
-        )?
-        .execute()
+        Nadam::new(self, gradients.clone(), m.clone(), v.clone(), config, step)?.execute()
     }
 }

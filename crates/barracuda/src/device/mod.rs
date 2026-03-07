@@ -85,6 +85,10 @@ pub use wgpu_device::WgpuDevice;
 /// Always compiled so NMS can acquire a GPU device at runtime.
 pub mod test_pool;
 
+/// GPU test coordination harness — admission gate for concurrent test execution.
+/// Always compiled so integration tests can use `gpu_section` and `with_coral`.
+pub mod test_harness;
+
 /// Which hardware to target and how
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DeviceSelection {

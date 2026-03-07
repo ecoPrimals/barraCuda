@@ -135,10 +135,7 @@ impl MulAssign for Complex64 {
 impl Div for Complex64 {
     type Output = Self;
     #[inline]
-    #[expect(
-        clippy::suspicious_arithmetic_impl,
-        reason = "complex division uses multiplication internally"
-    )]
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn div(self, rhs: Self) -> Self {
         let d = rhs.abs_sq();
         Self {

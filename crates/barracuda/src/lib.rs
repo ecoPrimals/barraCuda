@@ -11,7 +11,7 @@
 //! - ✅ **Zero Duplication**: Single WGSL implementation per operation
 //! - ✅ **Runtime Discovery**: wgpu selects best available backend
 //! - ✅ **Simple**: No separate CPU code, no trait abstractions
-//! - ✅ **Minimal unsafe**: Exactly 2 wgpu FFI calls (pipeline cache, SPIR-V passthrough); no C FFI
+//! - ✅ **Zero unsafe**: `#![deny(unsafe_code)]` — all former FFI evolved to safe Rust
 //!
 //! ## Architecture
 //!

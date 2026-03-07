@@ -48,6 +48,7 @@ pub mod lscfrk;
 pub mod ode_bio;
 pub mod ode_generic;
 pub mod rk45;
+pub mod tolerance;
 
 pub use gradient::gradient_1d;
 pub use hessian::numerical_hessian;
@@ -62,6 +63,7 @@ pub use ode_bio::{
 };
 pub use ode_generic::{BatchedOdeRK4, OdeSystem};
 pub use rk45::{Rk45Config, Rk45Result, rk45_at, rk45_solve};
+pub use tolerance::Tolerance;
 
 /// WGSL shader: parallel central-difference Hessian column computation
 /// WGSL kernel for Hessian column extraction via finite differences.

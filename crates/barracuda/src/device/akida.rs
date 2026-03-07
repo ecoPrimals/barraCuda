@@ -147,13 +147,47 @@ pub fn detect_akida_boards() -> Result<AkidaCapabilities> {
     })
 }
 
+/// Chip-specific specs resolved from `PCIe` device ID at runtime.
+struct AkidaChipSpecs {
+    name: &'static str,
+    npu_count: usize,
+    memory_bytes: usize,
+}
+
+impl AkidaChipSpecs {
+    fn from_device_id(device_id: u16) -> Self {
+        match device_id {
+            0x1000 => Self {
+                name: "Akida AKD1000",
+                npu_count: 80,
+                memory_bytes: 10 * 1024 * 1024,
+            },
+            0x1500 => Self {
+                name: "Akida AKD1500",
+                npu_count: 128,
+                memory_bytes: 32 * 1024 * 1024,
+            },
+            _ => {
+                tracing::warn!(
+                    device_id,
+                    "Unknown Akida device ID, using conservative defaults"
+                );
+                Self {
+                    name: "Akida (unknown)",
+                    npu_count: 1,
+                    memory_bytes: 1024 * 1024,
+                }
+            }
+        }
+    }
+}
+
 /// `PCIe` device info
 #[derive(Debug, Clone)]
 struct PcieDevice {
     address: String,
     #[expect(dead_code, reason = "populated during PCIe scan, used for diagnostics")]
     vendor_id: u16,
-    #[expect(dead_code, reason = "populated during PCIe scan, used for diagnostics")]
     device_id: u16,
 }
 
@@ -182,11 +216,16 @@ fn scan_pcie_for_akida() -> Result<Vec<PcieDevice>> {
                     return None;
                 };
 
-                // Parse hex values
-                let vendor_id = u16::from_str_radix(vendor_str.trim().trim_start_matches("0x"), 16)
-                    .unwrap_or(0);
-                let device_id = u16::from_str_radix(device_str.trim().trim_start_matches("0x"), 16)
-                    .unwrap_or(0);
+                let Ok(vendor_id) =
+                    u16::from_str_radix(vendor_str.trim().trim_start_matches("0x"), 16)
+                else {
+                    return None;
+                };
+                let Ok(device_id) =
+                    u16::from_str_radix(device_str.trim().trim_start_matches("0x"), 16)
+                else {
+                    return None;
+                };
 
                 // BrainChip vendor ID is 0x1e7c
                 // Akida AKD1000 device ID is 0x1000
@@ -219,8 +258,7 @@ fn scan_pcie_for_akida() -> Result<Vec<PcieDevice>> {
 fn query_board_info(device: &PcieDevice, index: usize) -> Result<AkidaBoard> {
     let device_path = PathBuf::from(format!("/dev/akida{index}"));
 
-    // Query PCIe link info
-    let (pcie_gen, pcie_lanes) = query_pcie_link_info(&device.address).unwrap_or((2, 4)); // Default: PCIe Gen2 x4
+    let (pcie_gen, pcie_lanes) = query_pcie_link_info(&device.address)?;
 
     // Query real power consumption from hwmon
     let power_watts = query_power_consumption(&device.address);
@@ -228,14 +266,15 @@ fn query_board_info(device: &PcieDevice, index: usize) -> Result<AkidaBoard> {
     // Query real temperature from hwmon
     let temperature_celsius = query_temperature(&device.address);
 
-    // Akida AKD1000 specifications
+    let specs = AkidaChipSpecs::from_device_id(device.device_id);
+
     let board = AkidaBoard {
         index,
         pcie_address: device.address.clone(),
         device_path,
-        chip_name: "Akida AKD1000".to_string(),
-        npu_count: 80,                  // AKD1000 has 80 NPUs
-        memory_bytes: 10 * 1024 * 1024, // 10MB on-chip SRAM
+        chip_name: specs.name.to_string(),
+        npu_count: specs.npu_count,
+        memory_bytes: specs.memory_bytes,
         power_watts,
         temperature_celsius,
         pcie_generation: pcie_gen,
@@ -263,9 +302,12 @@ fn query_pcie_link_info(address: &str) -> Result<(u8, u8)> {
     };
 
     let lanes = if let Ok(width) = fs::read_to_string(&width_path) {
-        width.trim().parse().unwrap_or(4)
+        width.trim().parse().unwrap_or_else(|_| {
+            tracing::debug!(address, "unparseable PCIe width, defaulting to x4");
+            4
+        })
     } else {
-        4 // Default x4
+        4
     };
 
     Ok((generation, lanes))
@@ -373,13 +415,17 @@ fn check_board_health(address: &str) -> Result<BoardHealth> {
     }
 }
 
+/// Well-known system locations for the Akida SDK — tried only after
+/// environment variables (`AKIDA_SDK_DIR`, `XDG_DATA_HOME`) are exhausted.
+pub(crate) const AKIDA_SDK_SYSTEM_DIRS: &[&str] =
+    &["/opt/akida", "/usr/local/akida", "/usr/share/akida"];
+
 /// Detect Akida SDK version via capability-based discovery.
 ///
 /// Resolution chain (first match wins):
 /// 1. `AKIDA_SDK_DIR` environment variable → `$AKIDA_SDK_DIR/version`
 /// 2. XDG data dirs → `$XDG_DATA_HOME/akida/version`
-/// 3. System paths → `/opt/akida/version`, `/usr/local/akida/version`,
-///    `/usr/share/akida/version`
+/// 3. System paths from [`AKIDA_SDK_SYSTEM_DIRS`]
 fn detect_akida_sdk_version() -> Option<String> {
     let mut search_paths = Vec::new();
 
@@ -393,11 +439,9 @@ fn detect_akida_sdk_version() -> Option<String> {
         search_paths.push(format!("{home}/.local/share/akida/version"));
     }
 
-    search_paths.extend([
-        "/opt/akida/version".to_string(),
-        "/usr/local/akida/version".to_string(),
-        "/usr/share/akida/version".to_string(),
-    ]);
+    for dir in AKIDA_SDK_SYSTEM_DIRS {
+        search_paths.push(format!("{dir}/version"));
+    }
 
     for path in &search_paths {
         if let Ok(version) = std::fs::read_to_string(path) {
@@ -414,11 +458,7 @@ mod tests {
 
     #[test]
     fn test_akida_detection() {
-        // This should work on any system (returns empty if no boards)
-        let result = detect_akida_boards();
-        assert!(result.is_ok());
-
-        let caps = result.unwrap();
+        let caps = detect_akida_boards().expect("detect_akida_boards should succeed on any system");
         println!("Detected {} Akida boards", caps.boards.len());
 
         for board in &caps.boards {

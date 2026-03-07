@@ -30,7 +30,7 @@ const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
 fn shader_for_device(device: &WgpuDevice) -> Result<&'static str> {
     let profile = GpuDriverProfile::from_device(device);
     match profile.fp64_strategy() {
-        Fp64Strategy::Native | Fp64Strategy::Concurrent => Ok(SHADER),
+        Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => Ok(SHADER),
         Fp64Strategy::Hybrid => {
             static DF64_RESULT: std::sync::LazyLock<std::result::Result<String, String>> =
                 std::sync::LazyLock::new(|| {
@@ -136,7 +136,7 @@ impl CosineSimilarityF64 {
     }
 
     /// CPU reference implementation (single pair)
-    #[cfg(test)]
+    #[allow(dead_code)] // used by all_pairs_cpu and test_large_vectors
     fn similarity_cpu(&self, a: &[f64], b: &[f64]) -> f64 {
         let mut dot = 0.0f64;
         let mut norm_a = 0.0f64;
@@ -156,7 +156,6 @@ impl CosineSimilarityF64 {
     }
 
     /// CPU reference implementation (all pairs)
-    #[cfg(test)]
     #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn all_pairs_cpu(&self, vectors_a: &[Vec<f64>], vectors_b: &[Vec<f64>]) -> Vec<f64> {
         let mut result = Vec::with_capacity(vectors_a.len() * vectors_b.len());

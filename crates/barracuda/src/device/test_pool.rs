@@ -477,6 +477,8 @@ pub mod test_prelude {
     };
     use crate::tensor::Tensor;
 
+    pub use crate::device::test_harness::{coral_available, gpu_section, with_coral};
+
     /// Get shared test device (async). CPU by default, GPU with env var.
     ///
     /// The device self-throttles via its internal dispatch semaphore —
@@ -601,11 +603,14 @@ pub mod test_prelude {
         F: Fn(Arc<WgpuDevice>) -> Fut,
         Fut: std::future::Future<Output = crate::error::Result<()>>,
     {
+        use crate::device::test_harness::gpu_section;
+
         let device = super::get_test_device_if_gpu_available().await;
         let Some(device) = device else {
             return;
         };
-        match f(Arc::clone(&device)).await {
+        let result = gpu_section(|| f(Arc::clone(&device))).await;
+        match result {
             Ok(()) => {}
             Err(e) if e.is_device_lost() => {
                 tracing::warn!("test: device lost during execution, retrying with fresh device");
@@ -613,7 +618,7 @@ pub mod test_prelude {
                 let fresh = super::get_test_device_if_gpu_available()
                     .await
                     .expect("GPU unavailable on retry after device loss");
-                f(fresh)
+                gpu_section(|| f(fresh))
                     .await
                     .expect("test failed on retry after device recovery");
             }

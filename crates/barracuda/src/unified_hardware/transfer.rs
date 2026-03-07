@@ -207,6 +207,8 @@ pub struct PcieBridge {
     pub source_label: String,
     /// Target device label for diagnostics
     pub target_label: String,
+    /// Detected bandwidth tier for this bridge
+    pub tier: BandwidthTier,
 }
 
 impl PcieBridge {
@@ -222,16 +224,25 @@ impl PcieBridge {
             p2p_available: false,
             source_label: "gpu".to_string(),
             target_label: "npu".to_string(),
+            tier: BandwidthTier::Unknown,
         }
     }
 
-    /// Return transfer cost for the given byte count.
+    /// Detect P2P with adapter-aware bandwidth tier.
     #[must_use]
-    pub fn transfer_cost(&self, _bytes: usize) -> TransferCost {
-        TransferCost {
-            latency_us: PCIE_DMA_LATENCY_US,
-            bandwidth_gbps: PCIE4_X16_BANDWIDTH_GBPS,
+    pub fn detect_with_adapter(adapter_name: &str) -> Self {
+        Self {
+            p2p_available: false,
+            source_label: "gpu".to_string(),
+            target_label: "npu".to_string(),
+            tier: BandwidthTier::detect_from_adapter_name(adapter_name),
         }
+    }
+
+    /// Return transfer cost using the detected bandwidth tier.
+    #[must_use]
+    pub fn transfer_cost(&self) -> TransferCost {
+        self.tier.transfer_cost()
     }
 }
 

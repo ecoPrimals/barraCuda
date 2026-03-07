@@ -24,7 +24,7 @@ const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
 fn fused_shader_for_device(device: &WgpuDevice) -> &'static str {
     let profile = GpuDriverProfile::from_device(device);
     match profile.fp64_strategy() {
-        Fp64Strategy::Native | Fp64Strategy::Concurrent => SHADER_FUSED,
+        Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => SHADER_FUSED,
         Fp64Strategy::Hybrid => {
             static DF64_COMBINED: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
                 format!("enable f64;\n{DF64_CORE}\n{SHADER_FUSED_DF64}")
@@ -311,7 +311,6 @@ impl CorrelationF64 {
             .pearson_r)
     }
 
-    #[cfg(test)]
     #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn correlation_cpu(x: &[f64], y: &[f64]) -> f64 {
         let n = x.len();

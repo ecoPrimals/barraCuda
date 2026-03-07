@@ -11,6 +11,7 @@
 //! **Architecture**:
 //! - CPU builds cell list ([`CellList`]): assigns particles → sorts → computes offsets
 //! - GPU-resident cell list ([`CellListGpu`]): 3-pass atomic pipeline, no CPU round-trip
+//! - Verlet neighbor list ([`VerletList`]): explicit per-particle lists with skin radius
 //! - Force kernel uses cell metadata: iterates only over 27 neighbors per particle
 //!
 //! **Usage Pattern**:
@@ -42,6 +43,8 @@
 
 mod cell_list;
 mod cell_list_gpu;
+mod verlet_list;
 
 pub use cell_list::CellList;
 pub use cell_list_gpu::CellListGpu;
+pub use verlet_list::VerletList;

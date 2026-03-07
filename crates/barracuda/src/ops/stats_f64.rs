@@ -5,7 +5,7 @@
 //! Provenance: neuralSpring S69 → toadStool absorption.
 
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::capabilities::{WORKGROUP_SIZE_1D, WORKGROUP_SIZE_COMPACT};
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
@@ -13,8 +13,6 @@ use std::sync::Arc;
 
 const SHADER_MATRIX_CORR: &str = include_str!("../shaders/stats/matrix_correlation_f64.wgsl");
 const SHADER_OLS: &str = include_str!("../shaders/stats/linear_regression_f64.wgsl");
-
-const WG_64: u32 = 64;
 
 // ── Matrix Correlation ──────────────────────────────────────────────────────
 
@@ -51,7 +49,11 @@ pub fn matrix_correlation(
         .storage_read(0, &data_buf)
         .storage_rw(1, &out_buf)
         .uniform(2, &params_buf)
-        .dispatch(out_len.div_ceil(WG_64 as usize) as u32, 1, 1)
+        .dispatch(
+            out_len.div_ceil(WORKGROUP_SIZE_COMPACT as usize) as u32,
+            1,
+            1,
+        )
         .submit()?;
 
     device.read_f64_buffer(&out_buf, out_len)

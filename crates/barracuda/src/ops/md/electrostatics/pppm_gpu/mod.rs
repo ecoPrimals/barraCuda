@@ -20,7 +20,6 @@ use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::error::{BarracudaError, Result};
 use crate::linalg::sparse::SparseBuffers;
-use crate::shaders::precision::ShaderTemplate;
 
 use super::{GreensFunction, PppmParams};
 
@@ -57,96 +56,6 @@ impl PppmGpu {
             wgpu_device.device_clone(),
             wgpu_device.queue_clone(),
             Arc::clone(wgpu_device),
-            params,
-            greens,
-            bspline_module,
-            charge_spread_module,
-            greens_apply_module,
-            force_interp_module,
-            erfc_forces_module,
-        )
-        .await
-    }
-
-    /// Create from raw wgpu device/queue (legacy API).
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Err`] if shader compilation fails or the device is lost.
-    #[deprecated(
-        since = "0.3.0",
-        note = "Use from_device() for proper adapter detection"
-    )]
-    pub async fn new(device: wgpu::Device, queue: wgpu::Queue, params: PppmParams) -> Result<Self> {
-        #[expect(
-            deprecated,
-            reason = "forwarding to deprecated constructor during migration"
-        )]
-        Self::new_with_driver(device, queue, params, false).await
-    }
-
-    /// Create with explicit driver awareness.
-    /// # Errors
-    /// Returns [`Err`] if shader compilation fails or the device is lost.
-    #[deprecated(
-        since = "0.3.0",
-        note = "Use from_device() for proper adapter detection"
-    )]
-    pub async fn new_with_driver(
-        device: wgpu::Device,
-        queue: wgpu::Queue,
-        params: PppmParams,
-        is_nvk: bool,
-    ) -> Result<Self> {
-        let greens = GreensFunction::new(&params);
-        let bspline_shader = ShaderTemplate::for_driver_auto(shaders::BSPLINE, is_nvk);
-        let charge_spread_shader = ShaderTemplate::for_driver_auto(shaders::CHARGE_SPREAD, is_nvk);
-        let greens_apply_shader = ShaderTemplate::for_driver_auto(shaders::GREENS_APPLY, is_nvk);
-        let force_interp_shader = ShaderTemplate::for_driver_auto(shaders::FORCE_INTERP, is_nvk);
-        let erfc_forces_shader = ShaderTemplate::for_driver_auto(shaders::ERFC_FORCES, is_nvk);
-
-        let bspline_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("pppm_bspline"),
-            source: wgpu::ShaderSource::Wgsl(bspline_shader.into()),
-        });
-        let charge_spread_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("pppm_charge_spread"),
-            source: wgpu::ShaderSource::Wgsl(charge_spread_shader.into()),
-        });
-        let greens_apply_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("pppm_greens_apply"),
-            source: wgpu::ShaderSource::Wgsl(greens_apply_shader.into()),
-        });
-        let force_interp_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("pppm_force_interp"),
-            source: wgpu::ShaderSource::Wgsl(force_interp_shader.into()),
-        });
-        let erfc_forces_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("pppm_erfc_forces"),
-            source: wgpu::ShaderSource::Wgsl(erfc_forces_shader.into()),
-        });
-
-        let wgpu_device = Arc::new(WgpuDevice::from_existing(
-            device.clone(),
-            queue.clone(),
-            wgpu::AdapterInfo {
-                name: "Legacy PPPM Device".to_string(),
-                vendor: 0,
-                device: 0,
-                device_type: wgpu::DeviceType::Other,
-                driver: if is_nvk { "nvk" } else { "unknown" }.to_string(),
-                driver_info: "created via deprecated new_with_driver()".to_string(),
-                backend: wgpu::Backend::Vulkan,
-                device_pci_bus_id: String::new(),
-                subgroup_min_size: 1,
-                subgroup_max_size: 128,
-                transient_saves_memory: false,
-            },
-        ));
-        Self::build_from_modules(
-            device,
-            queue,
-            wgpu_device,
             params,
             greens,
             bspline_module,

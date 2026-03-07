@@ -23,10 +23,22 @@ pub struct CoralBinary {
     pub arch: String,
 }
 
-/// Compile request — mirrors `coralreef-core::service::CompileRequest`.
+/// SPIR-V compile request — mirrors `coralreef-core::service::CompileRequest`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct CompileRequest {
     spirv_words: Vec<u32>,
+    arch: String,
+    opt_level: u32,
+    fp64_software: bool,
+}
+
+/// WGSL direct compile request (Phase 10) — avoids local naga SPIR-V step.
+///
+/// coralReef Phase 10 (`compiler.compile_wgsl`) accepts raw WGSL and handles
+/// the full WGSL → IR → native binary pipeline server-side.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct CompileWgslRequest {
+    wgsl_source: String,
     arch: String,
     opt_level: u32,
     fp64_software: bool,
@@ -42,10 +54,14 @@ struct CompileResponse {
 /// Health response from coralReef.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthResponse {
-    name: String,
-    version: String,
-    status: String,
-    supported_archs: Vec<String>,
+    /// Primal name (e.g. `"coralReef"`)
+    pub name: String,
+    /// Version string
+    pub version: String,
+    /// Health status
+    pub status: String,
+    /// Supported GPU architectures (e.g. `["sm_70", "sm_75", "sm_80", "sm_89"]`)
+    pub supported_archs: Vec<String>,
 }
 
 /// Connection state for the coralReef IPC client.
@@ -122,6 +138,55 @@ impl CoralCompiler {
         }
     }
 
+    /// Compile WGSL directly via coralReef's Phase 10 `compiler.compile_wgsl`.
+    ///
+    /// Unlike [`compile_wgsl`], this sends raw WGSL to coralReef for
+    /// server-side compilation, avoiding the local naga WGSL → SPIR-V step.
+    /// coralReef handles the full pipeline: WGSL → IR → native binary.
+    ///
+    /// Falls back to the SPIR-V path if the direct endpoint is unavailable
+    /// (older coralReef versions).
+    pub async fn compile_wgsl_direct(
+        &self,
+        wgsl: &str,
+        arch: &str,
+        fp64_software: bool,
+    ) -> Option<CoralBinary> {
+        let addr = self.ensure_connected().await?;
+
+        let request = CompileWgslRequest {
+            wgsl_source: wgsl.to_owned(),
+            arch: arch.to_owned(),
+            opt_level: 2,
+            fp64_software,
+        };
+
+        match jsonrpc_call::<CompileWgslRequest, CompileResponse>(
+            &addr,
+            "compiler.compile_wgsl",
+            &request,
+        )
+        .await
+        {
+            Ok(resp) => Some(CoralBinary {
+                binary: resp.binary,
+                arch: arch.to_owned(),
+            }),
+            Err(e) => {
+                tracing::debug!("coralReef compile_wgsl direct failed: {e}, trying SPIR-V path");
+                self.compile_wgsl(wgsl, arch, fp64_software).await
+            }
+        }
+    }
+
+    /// Query supported GPU architectures from coralReef.
+    ///
+    /// Returns the list of architecture strings (e.g. `["sm_70", "sm_80"]`)
+    /// that the connected coralReef instance can compile for.
+    pub async fn supported_archs(&self) -> Option<Vec<String>> {
+        self.health().await.map(|h| h.supported_archs)
+    }
+
     /// Check if coralReef is reachable and healthy.
     pub async fn health(&self) -> Option<HealthResponse> {
         let addr = self.ensure_connected().await?;
@@ -166,6 +231,14 @@ impl Default for CoralCompiler {
 /// Global coralReef compiler client (lazy singleton like `GLOBAL_CACHE`).
 pub static GLOBAL_CORAL: std::sync::LazyLock<CoralCompiler> =
     std::sync::LazyLock::new(CoralCompiler::new);
+
+/// Lightweight health probe for coralReef availability.
+///
+/// Uses the global singleton — does not create a new `CoralCompiler` instance.
+/// Returns `true` if coralReef is reachable and reports healthy status.
+pub async fn probe_health() -> bool {
+    GLOBAL_CORAL.health().await.is_some()
+}
 
 /// Cache of native GPU binaries produced by coralReef, keyed by
 /// (blake3 hash of shader source, target arch).
@@ -216,9 +289,10 @@ pub fn arch_to_coral(arch: &crate::device::driver_profile::GpuArch) -> Option<&'
 /// Fire-and-forget coralReef compilation for the given WGSL source.
 ///
 /// Spawns a background task that compiles via coralReef IPC and caches
-/// the resulting native binary. The caller continues with the standard
-/// wgpu path — the cached binary becomes available for future `coralDriver`
-/// dispatch once that subsystem exists.
+/// the resulting native binary. Prefers the Phase 10 direct WGSL path
+/// (`compiler.compile_wgsl`), falling back to the SPIR-V path for older
+/// coralReef versions. The caller continues with the standard wgpu path —
+/// the cached binary becomes available for future `coralDriver` dispatch.
 pub fn spawn_coral_compile(optimized_wgsl: &str, arch: &str, fp64_software: bool) {
     let source = optimized_wgsl.to_owned();
     let arch_owned = arch.to_owned();
@@ -234,7 +308,7 @@ pub fn spawn_coral_compile(optimized_wgsl: &str, arch: &str, fp64_software: bool
 
     handle.spawn(async move {
         if let Some(binary) = GLOBAL_CORAL
-            .compile_wgsl(&source, &arch_owned, fp64_software)
+            .compile_wgsl_direct(&source, &arch_owned, fp64_software)
             .await
         {
             tracing::debug!(
@@ -253,25 +327,22 @@ pub fn spawn_coral_compile(optimized_wgsl: &str, arch: &str, fp64_software: bool
 /// When set, skips capability-based and port-based discovery entirely.
 const CORALREEF_ADDR_ENV: &str = "BARRACUDA_SHADER_COMPILER_ADDR";
 
-/// Environment variable for the shader-compiler well-known port.
+/// Environment variable for an explicit shader-compiler port.
 ///
-/// Overrides the default last-resort probe port. Consumed only if
-/// env and capability-based discovery both fail.
+/// When set, enables a localhost probe as the final discovery fallback.
+/// Without this, only env-address and capability-file discovery are tried —
+/// no hardcoded port is ever probed.
 const CORALREEF_PORT_ENV: &str = "BARRACUDA_SHADER_COMPILER_PORT";
 
-/// Default TCP port for shader-compiler JSON-RPC (last-resort probe).
-/// Overridable via `BARRACUDA_SHADER_COMPILER_PORT`.
-const CORALREEF_DEFAULT_PORT: u16 = 9741;
-
 /// Discover a shader-compiler primal's JSON-RPC endpoint via capability-based
-/// runtime discovery. No hardcoded primal names — any primal advertising the
-/// `shader_compiler` capability is accepted.
+/// runtime discovery. No hardcoded primal names or ports — any primal
+/// advertising the `shader_compiler` capability is accepted.
 ///
 /// Discovery order:
 /// 1. `BARRACUDA_SHADER_COMPILER_ADDR` — explicit override (operator-set)
 /// 2. Capability scan of `$XDG_RUNTIME_DIR/ecoPrimals/*.json` for
 ///    `"shader_compiler"` in the `capabilities` array
-/// 3. Localhost probe on `BARRACUDA_SHADER_COMPILER_PORT` (default 9741)
+/// 3. Localhost probe on `BARRACUDA_SHADER_COMPILER_PORT` (only if set)
 async fn discover_coralreef() -> Option<String> {
     if let Ok(addr) = std::env::var(CORALREEF_ADDR_ENV) {
         let addr = addr.trim().to_owned();
@@ -287,13 +358,14 @@ async fn discover_coralreef() -> Option<String> {
         }
     }
 
-    let port = std::env::var(CORALREEF_PORT_ENV)
+    if let Some(port) = std::env::var(CORALREEF_PORT_ENV)
         .ok()
         .and_then(|s| s.trim().parse::<u16>().ok())
-        .unwrap_or(CORALREEF_DEFAULT_PORT);
-    let default_addr = format!("127.0.0.1:{port}");
-    if probe_jsonrpc(&default_addr).await {
-        return Some(default_addr);
+    {
+        let explicit_addr = format!("127.0.0.1:{port}");
+        if probe_jsonrpc(&explicit_addr).await {
+            return Some(explicit_addr);
+        }
     }
 
     None
@@ -532,8 +604,23 @@ mod tests {
         let result = cc
             .compile_wgsl("@compute @workgroup_size(64) fn main() {}", "sm_70", true)
             .await;
-        // Should gracefully return None (no coralReef running).
         let _ = result;
+    }
+
+    #[tokio::test]
+    async fn test_compile_wgsl_direct_returns_none_when_unavailable() {
+        let cc = CoralCompiler::new();
+        let result = cc
+            .compile_wgsl_direct("@compute @workgroup_size(64) fn main() {}", "sm_70", false)
+            .await;
+        let _ = result;
+    }
+
+    #[tokio::test]
+    async fn test_supported_archs_returns_none_when_unavailable() {
+        let cc = CoralCompiler::new();
+        let archs = cc.supported_archs().await;
+        let _ = archs;
     }
 
     #[tokio::test]

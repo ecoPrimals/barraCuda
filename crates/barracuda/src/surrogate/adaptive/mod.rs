@@ -33,7 +33,7 @@
 //! - Diaw et al. (2024): Dual-precision surrogate training architecture
 
 use super::kernels::RBFKernel;
-use super::rbf::RBFSurrogate;
+use super::rbf::{RBFSurrogate, RbfTrainedModel, RbfTrainingData};
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use crate::linalg::solve_f64;
@@ -475,14 +475,18 @@ fn assemble_and_solve(
 
     Ok(RBFSurrogate::from_parts(
         device,
-        train_x.to_vec(),
-        y_data.to_vec(),
-        weights,
-        poly_coeffs,
-        n_train,
-        n_dim,
-        kernel,
-        smoothing,
+        RbfTrainingData {
+            train_x: train_x.to_vec(),
+            train_y: y_data.to_vec(),
+            n_train,
+            n_dim,
+        },
+        RbfTrainedModel {
+            weights,
+            poly_coeffs,
+            kernel,
+            smoothing,
+        },
     ))
 }
 

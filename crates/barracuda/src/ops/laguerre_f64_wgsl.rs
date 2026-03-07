@@ -65,7 +65,6 @@ impl LaguerreF64 {
         self.laguerre(x, n, 0.0)
     }
 
-    #[cfg(test)]
     #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn laguerre_cpu(&self, x: &[f64], n: u32, alpha: f64) -> Vec<f64> {
         x.iter()
@@ -73,7 +72,7 @@ impl LaguerreF64 {
             .collect()
     }
 
-    #[cfg(test)]
+    #[allow(dead_code)] // used by laguerre_cpu
     fn laguerre_scalar(n: u32, alpha: f64, x: f64) -> f64 {
         if n == 0 {
             return 1.0;

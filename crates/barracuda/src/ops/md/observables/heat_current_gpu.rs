@@ -9,12 +9,12 @@
 //! Absorbed from hotSpring CPU `compute_heat_current()` → GPU shader.
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
 const SHADER: &str = include_str!("../../../shaders/md/observables/heat_current_f64.wgsl");
-const WG: u32 = 64;
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -155,7 +155,7 @@ impl HeatCurrentGpu {
             });
             pass.set_pipeline(&self.pipeline);
             pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(n.div_ceil(WG), 1, 1);
+            pass.dispatch_workgroups(n.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
         }
         self.device.submit_and_poll(Some(enc.finish()));
         Ok(())

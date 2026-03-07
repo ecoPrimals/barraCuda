@@ -64,6 +64,19 @@ impl Default for GillespieConfig {
     }
 }
 
+/// Reaction network definition for the Gillespie SSA.
+///
+/// Groups the three stoichiometry arrays that together define the system's
+/// chemistry, avoiding 8-argument function signatures.
+pub struct GillespieModel<'a> {
+    /// Rate constants [R] (one per reaction).
+    pub rate_k: &'a [f64],
+    /// Reactant stoichiometry [R × S] (species consumed per reaction).
+    pub stoich_react: &'a [u32],
+    /// Net stoichiometry [R × S] (species change per reaction firing).
+    pub stoich_net: &'a [i32],
+}
+
 /// Gillespie SSA result for all trajectories.
 pub struct GillespieResult {
     /// Final species counts [T × S] (T trajectories, S species).
@@ -99,7 +112,8 @@ pub struct GillespieResult {
 ///                  99u32, 0, 1, 0];  // trajectory 1 PRNG seed
 ///
 /// let result = ssa.simulate(
-///     &rate_k, &stoich_react, &stoich_net, &initial_state, &seeds, 2,
+///     &GillespieModel { rate_k: &rate_k, stoich_react: &stoich_react, stoich_net: &stoich_net },
+///     &initial_state, &seeds, 2,
 ///     &GillespieConfig::default(),
 /// ).unwrap();
 /// # });
@@ -120,13 +134,11 @@ impl GillespieGpu {
     /// Run `n_trajectories` independent SSA trajectories in parallel.
     ///
     /// # Arguments
-    /// - `rate_k`        : rate constants [R]
-    /// - `stoich_react`  : reactant stoichiometry [R × S] (counts consumed)
-    /// - `stoich_net`    : net stoichiometry [R × S] (change per firing)
-    /// - `initial_states`: starting species counts [T × S]
-    /// - `prng_seeds`    : xoshiro128** initial state [T × 4 u32]
-    /// - `n_trajectories`: number of parallel trajectories T
-    /// - `config`        : simulation parameters
+    /// - `model`          : reaction network (rate constants, stoichiometry)
+    /// - `initial_states` : starting species counts [T × S]
+    /// - `prng_seeds`     : xoshiro128** initial state [T × 4 u32]
+    /// - `n_trajectories` : number of parallel trajectories T
+    /// - `config`         : simulation parameters
     ///
     /// # Panics
     /// Panics if `initial_states.len() != n_trajectories * n_species` or `prng_seeds.len() != n_trajectories * 4`.
@@ -135,20 +147,25 @@ impl GillespieGpu {
     ///
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
-    #[expect(clippy::too_many_arguments, reason = "API")]
+    /// Run `n_trajectories` parallel Gillespie SSA trajectories on GPU.
+    ///
+    /// # Panics
+    /// Panics if `initial_states.len() != n_trajectories * n_species` or `prng_seeds.len() != n_trajectories * 4`.
+    ///
+    /// # Errors
+    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
+    /// readback fails (e.g. device lost or out of memory).
     pub fn simulate(
         &self,
-        rate_k: &[f64],
-        stoich_react: &[u32],
-        stoich_net: &[i32],
+        model: &GillespieModel<'_>,
         initial_states: &[f64],
         prng_seeds: &[u32],
         n_trajectories: usize,
         config: &GillespieConfig,
     ) -> Result<GillespieResult> {
         let dev = &self.device;
-        let n_r = rate_k.len();
-        let n_s = stoich_net.len() / n_r;
+        let n_r = model.rate_k.len();
+        let n_s = model.stoich_net.len() / n_r;
         let n_t = n_trajectories;
 
         assert_eq!(
@@ -163,21 +180,21 @@ impl GillespieGpu {
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Gillespie rates"),
-                contents: bytemuck::cast_slice(rate_k),
+                contents: bytemuck::cast_slice(model.rate_k),
                 usage: wgpu::BufferUsages::STORAGE,
             });
         let sreact_buf = dev
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Gillespie stoich_react"),
-                contents: bytemuck::cast_slice(stoich_react),
+                contents: bytemuck::cast_slice(model.stoich_react),
                 usage: wgpu::BufferUsages::STORAGE,
             });
         let snet_buf = dev
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Gillespie stoich_net"),
-                contents: bytemuck::cast_slice(stoich_net),
+                contents: bytemuck::cast_slice(model.stoich_net),
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
@@ -291,11 +308,14 @@ mod tests {
             seeds.push(0x85ebca77u32);
         }
 
+        let model = GillespieModel {
+            rate_k: &rate_k,
+            stoich_react: &stoich_react,
+            stoich_net: &stoich_net,
+        };
         let result = ssa
             .simulate(
-                &rate_k,
-                &stoich_react,
-                &stoich_net,
+                &model,
                 &initial,
                 &seeds,
                 n_traj,
@@ -329,16 +349,13 @@ mod tests {
         let initial = vec![50.0_f64, 50.0];
         let seeds = vec![1u32, 2, 3, 4, 5, 6, 7, 8];
 
+        let model = GillespieModel {
+            rate_k: &rate_k,
+            stoich_react: &stoich_react,
+            stoich_net: &stoich_net,
+        };
         let result = ssa
-            .simulate(
-                &rate_k,
-                &stoich_react,
-                &stoich_net,
-                &initial,
-                &seeds,
-                2,
-                &GillespieConfig::default(),
-            )
+            .simulate(&model, &initial, &seeds, 2, &GillespieConfig::default())
             .unwrap();
 
         assert_eq!(result.states[0], 50.0);

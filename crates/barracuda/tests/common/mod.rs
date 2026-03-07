@@ -20,7 +20,9 @@ fn is_nvk_driver_error(msg: &str) -> bool {
 /// due to NVK driver resource invalidation under concurrent load.
 ///
 /// Wraps the async body in `tokio::time::timeout` (see `GPU_TEST_TIMEOUT`)
-/// to prevent indefinite hangs when the GPU stalls.
+/// to prevent indefinite hangs when the GPU stalls. Also acquires a
+/// [`GpuTestGate`](barracuda::device::test_harness::GpuTestGate) permit
+/// to coordinate concurrent GPU test execution.
 ///
 /// Returns `true` if the test completed successfully, `false` if it should
 /// be skipped (NVK driver limitation). Re-panics on other panics (including
@@ -39,13 +41,16 @@ where
             .build()
             .expect("failed to build test runtime");
 
-        let fut = f();
         let wrapped = async {
-            assert!(
-                tokio::time::timeout(GPU_TEST_TIMEOUT, fut).await.is_ok(),
-                "GPU test timed out after {GPU_TEST_TIMEOUT:?} \
-                 (possible driver stall or shader deadlock)",
-            );
+            barracuda::device::test_harness::gpu_section(|| async {
+                let fut = f();
+                assert!(
+                    tokio::time::timeout(GPU_TEST_TIMEOUT, fut).await.is_ok(),
+                    "GPU test timed out after {GPU_TEST_TIMEOUT:?} \
+                     (possible driver stall or shader deadlock)",
+                );
+            })
+            .await;
         };
         catch_unwind(AssertUnwindSafe(|| rt.block_on(wrapped)))
     });

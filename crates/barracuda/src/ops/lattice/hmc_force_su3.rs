@@ -90,7 +90,7 @@ impl Su3HmcForce {
         let profile = GpuDriverProfile::from_device(&device);
         let strategy = profile.fp64_strategy();
         let shader_src = match strategy {
-            Fp64Strategy::Native | Fp64Strategy::Concurrent => {
+            Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => {
                 format!("{}{}", su3_preamble(), FORCE_SHADER_BODY)
             }
             Fp64Strategy::Hybrid => format!("{}{}", su3_df64_preamble(), FORCE_SHADER_DF64),

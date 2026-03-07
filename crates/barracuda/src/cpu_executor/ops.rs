@@ -312,19 +312,11 @@ pub(super) fn dispatch(
             let result = crate::cpu_conv_pool::conv2d(
                 &input_data,
                 &kernel_data,
-                n,
-                c_in,
-                h,
-                w,
-                c_out,
-                k_h,
-                k_w,
-                *stride_h,
-                *stride_w,
-                *pad_h,
-                *pad_w,
-                *dil_h,
-                *dil_w,
+                crate::cpu_conv_pool::TensorShape { n, c: c_in, h, w },
+                crate::cpu_conv_pool::Conv2dConfig::new(c_out, k_h, k_w)
+                    .stride(*stride_h, *stride_w)
+                    .padding(*pad_h, *pad_w)
+                    .dilation(*dil_h, *dil_w),
             )?;
 
             let eff_k_h = (k_h - 1) * *dil_h + 1;
@@ -358,16 +350,10 @@ pub(super) fn dispatch(
             let input_data = CpuExecutor::read_f32(inputs[0].as_ref())?;
             let result = crate::cpu_conv_pool::max_pool2d(
                 &input_data,
-                n,
-                c,
-                h,
-                w,
-                *k_h,
-                *k_w,
-                *stride_h,
-                *stride_w,
-                *pad_h,
-                *pad_w,
+                crate::cpu_conv_pool::TensorShape { n, c, h, w },
+                crate::cpu_conv_pool::Pool2dConfig::new(*k_h, *k_w)
+                    .stride(*stride_h, *stride_w)
+                    .padding(*pad_h, *pad_w),
             )?;
 
             let h_out = (h + 2 * *pad_h - *k_h) / *stride_h + 1;
@@ -399,16 +385,10 @@ pub(super) fn dispatch(
             let input_data = CpuExecutor::read_f32(inputs[0].as_ref())?;
             let result = crate::cpu_conv_pool::avg_pool2d(
                 &input_data,
-                n,
-                c,
-                h,
-                w,
-                *k_h,
-                *k_w,
-                *stride_h,
-                *stride_w,
-                *pad_h,
-                *pad_w,
+                crate::cpu_conv_pool::TensorShape { n, c, h, w },
+                crate::cpu_conv_pool::Pool2dConfig::new(*k_h, *k_w)
+                    .stride(*stride_h, *stride_w)
+                    .padding(*pad_h, *pad_w),
             )?;
 
             let h_out = (h + 2 * *pad_h - *k_h) / *stride_h + 1;

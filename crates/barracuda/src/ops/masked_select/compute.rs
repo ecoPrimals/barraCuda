@@ -6,13 +6,12 @@
 
 use super::MaskedSelect;
 use crate::device::DeviceCapabilities;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-
-const WG: u32 = 256;
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -37,7 +36,7 @@ pub(super) fn compute_prefix_sum_gpu(
     }
 
     let prefix_sum_buffer = device.create_buffer_u32(size)?;
-    let n_groups = (size as u32).div_ceil(WG);
+    let n_groups = (size as u32).div_ceil(WORKGROUP_SIZE_1D);
     let scratch_buffer = device.create_buffer_u32(n_groups as usize)?;
 
     let params = ScanConfig {

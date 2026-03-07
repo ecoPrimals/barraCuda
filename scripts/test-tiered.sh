@@ -12,13 +12,15 @@
 #   1. STATIC — clippy + compile (catches 80% of issues in seconds)
 #   2. CORE  — barracuda-core lib tests (IPC, lifecycle, RPC)
 #   3. TARGETED — changed-module tests only (sovereign, tolerances, etc.)
-#   4. FULL  — all 2998+ unit tests via nextest (bounded parallelism)
-#   5. GPU   — hardware workload tests (BARRACUDA_TEST_BACKEND=gpu)
+#   4. FULL  — all 3083+ unit tests via nextest (bounded parallelism)
+#   5. CORAL — coralReef cross-primal validation (shader compilation probes)
+#   6. GPU   — hardware workload tests (BARRACUDA_TEST_BACKEND=gpu)
 #
 # Usage:
 #   ./scripts/test-tiered.sh           # Tiers 1-3 (fast iteration)
 #   ./scripts/test-tiered.sh full      # Tiers 1-4
-#   ./scripts/test-tiered.sh gpu       # Tiers 1-5
+#   ./scripts/test-tiered.sh coralreef # Tiers 1-5 (with coralReef probe)
+#   ./scripts/test-tiered.sh gpu       # Tiers 1-6
 #   ./scripts/test-tiered.sh quick     # Tier 1 only
 #   ./scripts/test-tiered.sh stress    # All tiers + oversubscription stress test
 #   ./scripts/test-tiered.sh <filter>  # Targeted: test names matching <filter>
@@ -42,7 +44,7 @@ NEXTEST="cargo nextest run"
 
 # Handle direct filter mode (e.g., ./test-tiered.sh sovereign)
 case "$MODE" in
-    default|full|gpu|quick|stress) ;;
+    default|full|coralreef|gpu|quick|stress) ;;
     *)
         tier 0 "Targeted: $MODE"
         T=$(date +%s%3N)
@@ -99,9 +101,32 @@ ok "barracuda integration: all tests ($(elapsed $T2))"
 
 [ "$MODE" = "full" ] && { echo -e "\n${GREEN}Full suite complete.${NC}"; exit 0; }
 
-# ─── Tier 5: GPU workload tests ───────────────────────────────────
+# ─── Tier 5: coralReef cross-primal validation ────────────────────
+if [ "$MODE" = "coralreef" ] || [ "$MODE" = "gpu" ] || [ "$MODE" = "stress" ]; then
+    tier 5 "coralReef cross-primal validation"
+    T=$(date +%s%3N)
+
+    # Probe coralReef availability via its XDG runtime manifest
+    CORAL_MANIFEST=$(find "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ecoPrimals" -name 'coralReef*.json' 2>/dev/null | head -1)
+    if [ -n "$CORAL_MANIFEST" ]; then
+        ok "coralReef discovered at $CORAL_MANIFEST"
+
+        # Run sovereign compiler tests that exercise the coralReef IPC path
+        $NEXTEST -p barracuda --lib -E 'test(coral)' --profile default 2>&1 | tail -1
+        ok "coralReef shader compilation tests ($(elapsed $T))"
+
+        $NEXTEST -p barracuda --lib -E 'test(sovereign)' --profile default 2>&1 | tail -1
+        ok "Sovereign compiler + coralReef validation ($(elapsed $T))"
+    else
+        skip "coralReef not running — cross-primal tests skipped ($(elapsed $T))"
+    fi
+
+    [ "$MODE" = "coralreef" ] && { echo -e "\n${GREEN}Tiers 1-5 (coralReef) complete.${NC}"; exit 0; }
+fi
+
+# ─── Tier 6: GPU workload tests ───────────────────────────────────
 if [ "$MODE" = "gpu" ] || [ "$MODE" = "stress" ]; then
-    tier 5 "GPU workload (BARRACUDA_TEST_BACKEND=gpu)"
+    tier 6 "GPU workload (BARRACUDA_TEST_BACKEND=gpu)"
     T=$(date +%s%3N)
     BARRACUDA_TEST_BACKEND=gpu $NEXTEST --workspace --profile gpu
     ok "GPU workload ($(elapsed $T))"
@@ -109,7 +134,7 @@ fi
 
 # ─── Stress tier: intentional oversubscription ─────────────────────
 if [ "$MODE" = "stress" ]; then
-    tier 6 "Stress (128 threads — tests device creation backoff)"
+    tier 7 "Stress (128 threads — tests device creation backoff)"
     T=$(date +%s%3N)
     $NEXTEST -p barracuda --lib --profile stress --no-fail-fast 2>&1 | tail -3
     ok "Stress test ($(elapsed $T))"

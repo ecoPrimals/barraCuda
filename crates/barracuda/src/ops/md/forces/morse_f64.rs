@@ -222,7 +222,9 @@ impl MorseForceF64 {
         let strategy = profile.fp64_strategy();
         tracing::info!(?strategy, "Morse F64: using {:?} FP64 strategy", strategy);
         match strategy {
-            Fp64Strategy::Native | Fp64Strategy::Concurrent => Self::wgsl_shader().to_string(),
+            Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => {
+                Self::wgsl_shader().to_string()
+            }
             Fp64Strategy::Hybrid => {
                 format!("{WGSL_DF64_CORE}\n{WGSL_DF64_TRANSCENDENTALS}\n{MORSE_SHADER_DF64}")
             }

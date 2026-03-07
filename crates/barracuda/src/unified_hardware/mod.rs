@@ -336,7 +336,7 @@ mod tests {
     #[test]
     fn test_pcie_bridge_transfer_cost() {
         let bridge = PcieBridge::detect_p2p();
-        let cost = bridge.transfer_cost(1_048_576);
+        let cost = bridge.transfer_cost();
         assert!(cost.latency_us > 0.0);
         assert!(cost.bandwidth_gbps > 0.0);
         assert!(cost.estimated_us(1_048_576) > cost.latency_us);

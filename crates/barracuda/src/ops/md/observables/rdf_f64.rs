@@ -10,13 +10,13 @@
 //! - Validation against experiment/theory
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
 const SHADER: &str = include_str!("rdf_histogram_f64.wgsl");
-const WG: u32 = 64;
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -91,7 +91,7 @@ impl RdfHistogramF64 {
             usage: wgpu::BufferUsages::UNIFORM,
         });
 
-        let wg_count = (n as u32).div_ceil(WG);
+        let wg_count = (n as u32).div_ceil(WORKGROUP_SIZE_COMPACT);
         ComputeDispatch::new(&self.device, "rdf_histogram_f64")
             .shader(SHADER, "main")
             .f64()

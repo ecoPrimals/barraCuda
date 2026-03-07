@@ -121,6 +121,11 @@ pub enum EigensolveStrategy {
 /// precision-critical reductions and convergence tests.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Fp64Strategy {
+    /// Sovereign compilation via coralReef: WGSL → native GPU binary via IPC.
+    /// Bypasses naga/SPIR-V entirely — resolves f64 shared-memory failures.
+    /// Requires coralReef primal + coralDriver for dispatch; falls back
+    /// through the chain: Sovereign → Native → Hybrid → f32.
+    Sovereign,
     /// Use native f64 everywhere (Titan V, V100, A100, MI250X — 1:2 hardware).
     Native,
     /// DF64 (f32-pair, ~14 digits) for bulk math, native f64 for reductions.
@@ -262,17 +267,44 @@ impl GpuDriverProfile {
         self.workarounds.is_empty() && !matches!(self.driver, DriverKind::Software)
     }
 
+    /// Whether this driver reliably supports f64 shader operations.
+    ///
+    /// Returns `true` only when the runtime probe confirms f64 compilation
+    /// produces correct results (`f64(3)*f64(2)+f64(1)==7.0`). NVK (Titan V,
+    /// RTX 4070) and NVIDIA proprietary on Ada advertise `SHADER_F64` but fail
+    /// to compile or produce correct results. toadStool S97, hotSpring, and
+    /// groundSpring all require probe-verified f64 before dispatching native
+    /// f64 shaders.
+    ///
+    /// When no probe result is cached, falls back to heuristic detection
+    /// (workaround-free + not a software renderer).
+    #[must_use]
+    pub fn has_reliable_f64(&self) -> bool {
+        match crate::device::probe::cache::cached_basic_f64_for_key(&self.adapter_key) {
+            Some(probed) => probed,
+            None => self.workarounds.is_empty() && !matches!(self.driver, DriverKind::Software),
+        }
+    }
+
     /// Choose the optimal FP64 execution strategy for this hardware.
     ///
     /// Probe-aware: if the runtime probe has determined that native f64
     /// compilation fails (NAK, NVVM returning zeros), forces Hybrid even on
     /// hardware with Full FP64 rate.  Falls back to the hardware-rate
     /// heuristic when no probe result is cached yet.
+    ///
+    /// When coralReef is discovered at runtime (via `probe_health()`), and
+    /// native f64 probes fail, returns `Sovereign` — indicating that
+    /// coralReef-compiled native binaries should be used once coralDriver
+    /// is available for dispatch.
     #[must_use]
     pub fn fp64_strategy(&self) -> Fp64Strategy {
-        if let Some(false) =
-            crate::device::probe::cache::cached_basic_f64_for_key(&self.adapter_key)
-        {
+        let native_f64_fails = matches!(
+            crate::device::probe::cache::cached_basic_f64_for_key(&self.adapter_key),
+            Some(false)
+        );
+
+        if native_f64_fails {
             return Fp64Strategy::Hybrid;
         }
         match self.fp64_rate {
@@ -445,6 +477,28 @@ impl GpuDriverProfile {
             GpuArch::Rdna2 | GpuArch::Rdna3 => 256,
             _ => 128,
         }
+    }
+
+    /// Subgroup-aware preferred workgroup size.
+    ///
+    /// Ensures the workgroup size is a multiple of the actual subgroup
+    /// (warp/wavefront) width reported by the adapter. When the subgroup
+    /// size is unknown (`None`), falls back to `preferred_workgroup_size()`.
+    ///
+    /// toadStool S97 discovered that misaligned workgroup sizes cause
+    /// partial-subgroup waste on AMD RDNA (wavefront 32 in wave32 mode)
+    /// and underutilization on CDNA2 (wavefront 64).
+    #[must_use]
+    pub fn preferred_workgroup_size_subgroup(&self, subgroup_size: Option<u32>) -> u32 {
+        let base = self.preferred_workgroup_size();
+        let Some(sg) = subgroup_size.filter(|&s| s > 0) else {
+            return base;
+        };
+        // Align base to a multiple of the subgroup size, rounding up.
+        // Then clamp to a sane maximum (1024 is the Vulkan guaranteed minimum
+        // for max_compute_invocations_per_workgroup).
+        let aligned = base.div_ceil(sg) * sg;
+        aligned.min(1024)
     }
 }
 

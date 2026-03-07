@@ -53,7 +53,9 @@ impl BornMayerForceF64 {
             strategy
         );
         match strategy {
-            Fp64Strategy::Native | Fp64Strategy::Concurrent => Self::wgsl_shader().to_string(),
+            Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => {
+                Self::wgsl_shader().to_string()
+            }
             Fp64Strategy::Hybrid => {
                 format!("{WGSL_DF64_CORE}\n{WGSL_DF64_TRANSCENDENTALS}\n{BM_SHADER_DF64}")
             }

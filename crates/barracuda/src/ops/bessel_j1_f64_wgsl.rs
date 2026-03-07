@@ -5,6 +5,7 @@
 //! Applications: electromagnetic wave propagation, antenna patterns
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
@@ -21,7 +22,7 @@ const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
 fn shader_for_device(device: &WgpuDevice) -> Result<&'static str> {
     let profile = GpuDriverProfile::from_device(device);
     match profile.fp64_strategy() {
-        Fp64Strategy::Native | Fp64Strategy::Concurrent => Ok(SHADER),
+        Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => Ok(SHADER),
         Fp64Strategy::Hybrid => {
             static DF64_RESULT: std::sync::LazyLock<std::result::Result<String, String>> =
                 std::sync::LazyLock::new(|| {
@@ -118,7 +119,7 @@ impl BesselJ1F64 {
             Some("BesselJ1 Pipeline"),
         );
 
-        let workgroups = size.div_ceil(256) as u32;
+        let workgroups = size.div_ceil(WORKGROUP_SIZE_1D as usize) as u32;
         ctx.record_operation(move |encoder| {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("BesselJ1 Pass"),
@@ -132,13 +133,12 @@ impl BesselJ1F64 {
         self.device.read_buffer_f64(&output_buf, size)
     }
 
-    #[cfg(test)]
     #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn j1_cpu(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| Self::j1_scalar(xi)).collect()
     }
 
-    #[cfg(test)]
+    #[allow(dead_code)] // used by j1_cpu
     fn j1_scalar(x: f64) -> f64 {
         let ax = x.abs();
         if ax >= 8.0 {

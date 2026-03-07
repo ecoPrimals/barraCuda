@@ -64,6 +64,23 @@ enum Commands {
         extended: bool,
     },
 
+    /// Invoke a JSON-RPC method against a running barraCuda server.
+    ///
+    /// Discovers the server via `$XDG_RUNTIME_DIR/ecoPrimals/barracuda-core.json`,
+    /// `BARRACUDA_IPC_BIND`, or falls back to `--addr`.
+    Client {
+        /// JSON-RPC method name (e.g. `barracuda.device.list`).
+        method: String,
+
+        /// JSON params (as a JSON string). Defaults to `{}`.
+        #[arg(long, default_value = "{}")]
+        params: String,
+
+        /// Explicit server address (`host:port`). Overrides discovery.
+        #[arg(long)]
+        addr: Option<String>,
+    },
+
     /// Print version and build info.
     Version,
 }
@@ -207,6 +224,49 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             );
         }
 
+        Commands::Client {
+            method,
+            params,
+            addr,
+        } => {
+            let server_addr = resolve_client_addr(addr.as_deref())?;
+
+            let params: serde_json::Value =
+                serde_json::from_str(&params).map_err(|e| format!("invalid JSON params: {e}"))?;
+
+            let request = serde_json::json!({
+                "jsonrpc": "2.0",
+                "method": method,
+                "params": params,
+                "id": 1,
+            });
+
+            let mut line = serde_json::to_string(&request)?;
+            line.push('\n');
+
+            let stream = tokio::net::TcpStream::connect(&server_addr)
+                .await
+                .map_err(|e| format!("connect to {server_addr}: {e}"))?;
+
+            let (reader, mut writer) = stream.into_split();
+            use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
+            writer.write_all(line.as_bytes()).await?;
+            writer.shutdown().await?;
+
+            let mut lines = tokio::io::BufReader::new(reader).lines();
+            if let Ok(Some(response_line)) = lines.next_line().await {
+                let response: serde_json::Value = serde_json::from_str(&response_line)
+                    .unwrap_or_else(|_| serde_json::json!({"raw": response_line}));
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&response).unwrap_or(response_line)
+                );
+            } else {
+                eprintln!("No response from server");
+                std::process::exit(1);
+            }
+        }
+
         Commands::Version => {
             println!("barraCuda {}", env!("CARGO_PKG_VERSION"));
             println!("License: AGPL-3.0-or-later");
@@ -229,13 +289,27 @@ fn write_discovery_file(bind_addr: &str, tarpc_addr: Option<&str>) {
     }
     let path = dir.join("barracuda-core.json");
 
+    let mut transports = serde_json::json!({
+        "jsonrpc": bind_addr,
+    });
+    if let Some(tarpc) = tarpc_addr {
+        transports["tarpc"] = serde_json::Value::String(tarpc.to_string());
+    }
+
     let discovery = serde_json::json!({
         "primal": "barraCuda",
         "pid": std::process::id(),
-        "transports": {
-            "jsonrpc": bind_addr,
-            "tarpc": tarpc_addr.unwrap_or(""),
-        },
+        "transports": transports,
+        "capabilities": [
+            "gpu_compute",
+            "tensor_ops",
+            "fhe",
+            "molecular_dynamics",
+            "lattice_qcd",
+            "statistics",
+            "hydrology",
+            "bio"
+        ],
         "provides": ["gpu.compute", "tensor.ops", "gpu.dispatch"],
         "requires": [{ "id": "shader.compile", "optional": true }],
     });
@@ -264,4 +338,39 @@ fn discovery_dir() -> Option<std::path::PathBuf> {
     std::env::var("XDG_RUNTIME_DIR")
         .ok()
         .map(|d| std::path::PathBuf::from(d).join("ecoPrimals"))
+}
+
+/// Resolve the server address for the `client` subcommand.
+///
+/// Resolution chain (first match wins):
+/// 1. Explicit `--addr` CLI argument
+/// 2. `BARRACUDA_IPC_BIND` environment variable
+/// 3. Discovery file at `$XDG_RUNTIME_DIR/ecoPrimals/barracuda-core.json`
+fn resolve_client_addr(
+    explicit: Option<&str>,
+) -> std::result::Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    if let Some(addr) = explicit {
+        return Ok(addr.to_string());
+    }
+
+    if let Ok(addr) = std::env::var("BARRACUDA_IPC_BIND") {
+        return Ok(addr);
+    }
+
+    if let Some(dir) = discovery_dir() {
+        let path = dir.join("barracuda-core.json");
+        if let Ok(content) = std::fs::read_to_string(&path) {
+            if let Ok(info) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Some(addr) = info
+                    .get("transports")
+                    .and_then(|t| t.get("jsonrpc"))
+                    .and_then(|v| v.as_str())
+                {
+                    return Ok(addr.to_string());
+                }
+            }
+        }
+    }
+
+    Err("cannot discover barraCuda server; use --addr or start `barracuda server`".into())
 }

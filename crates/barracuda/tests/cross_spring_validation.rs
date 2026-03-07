@@ -189,3 +189,126 @@ fn cross_spring_validation_harness() {
         assert!(c.passed, "FAILED: {} — {}", c.name, c.detail);
     }
 }
+
+// ── Modern Absorption Validation (Spring Absorption Mar 2026) ───────
+
+#[test]
+fn provenance_registry_tracks_cross_spring_evolution() {
+    use barracuda::shaders::provenance::{self, SpringDomain};
+
+    let cross = provenance::cross_spring_shaders();
+    assert!(
+        cross.len() >= 10,
+        "expected 10+ cross-spring shaders, got {}",
+        cross.len()
+    );
+
+    let matrix = provenance::cross_spring_matrix();
+    let hot_to_all: usize = matrix
+        .iter()
+        .filter(|((from, _), _)| *from == SpringDomain::HotSpring)
+        .map(|(_, count)| count)
+        .sum();
+    assert!(
+        hot_to_all >= 3,
+        "hotSpring should share 3+ shader patterns with other springs"
+    );
+
+    let neural_consumed = provenance::shaders_consumed_by(SpringDomain::NeuralSpring);
+    let has_external_origin = neural_consumed
+        .iter()
+        .any(|r| r.origin != SpringDomain::NeuralSpring);
+    assert!(
+        has_external_origin,
+        "neuralSpring should consume shaders from other springs"
+    );
+}
+
+#[test]
+fn tolerance_system_validates_gpu_precision_tiers() {
+    use barracuda::numerical::tolerance::Tolerance;
+
+    let cpu_pi = std::f64::consts::PI;
+    let gpu_pi = 3.141_592_653_590_f64;
+    let df64_pi = 3.141_592_653_6_f64;
+    let f32_pi = 3.141_593_f64;
+
+    assert!(Tolerance::CPU_F64.approx_eq(cpu_pi, cpu_pi));
+    assert!(Tolerance::GPU_F64.approx_eq(cpu_pi, gpu_pi));
+    assert!(Tolerance::DF64.approx_eq(cpu_pi, df64_pi));
+    assert!(Tolerance::F32.approx_eq(cpu_pi, f32_pi));
+
+    // Loosening chain: GPU f64 with transcendentals is one tier
+    // looser than plain GPU f64
+    assert!(Tolerance::GPU_F64 < Tolerance::GPU_TRANSCENDENTAL);
+    assert!(Tolerance::GPU_TRANSCENDENTAL < Tolerance::F32);
+}
+
+#[test]
+fn welford_matches_two_pass_covariance() {
+    use barracuda::stats::correlation::covariance;
+    use barracuda::stats::welford::WelfordCovState;
+
+    let xs: Vec<f64> = (0..100).map(|i| (i as f64) * 0.1).collect();
+    let ys: Vec<f64> = xs.iter().map(|x| 2.0 * x + 1.0 + x.sin() * 0.01).collect();
+
+    let two_pass = covariance(&xs, &ys).unwrap();
+    let welford = WelfordCovState::from_slices(&xs, &ys);
+
+    let diff = (two_pass - welford.sample_covariance()).abs();
+    assert!(
+        diff < 1e-10,
+        "Welford vs two-pass covariance mismatch: {diff}"
+    );
+}
+
+#[test]
+fn eps_guards_prevent_gpu_nan_sources() {
+    use barracuda::shaders::precision::eps;
+
+    let denominator = 0.0_f64;
+    let safe_result = 1.0 / denominator.max(eps::SAFE_DIV);
+    assert!(safe_result.is_finite(), "eps::SAFE_DIV should prevent NaN");
+
+    let log_arg = 0.0_f64;
+    let safe_log = log_arg.max(eps::SAFE_LOG).ln();
+    assert!(safe_log.is_finite(), "eps::SAFE_LOG should prevent -Inf");
+
+    assert!(
+        eps::WGSL_PREAMBLE.contains("EPS_SAFE_DIV"),
+        "WGSL preamble should be injectable"
+    );
+}
+
+#[test]
+fn verlet_list_complements_cell_list() {
+    use barracuda::ops::md::neighbor::{CellList, VerletList};
+
+    let n = 50;
+    let box_side = 10.0;
+    let rc = 2.5;
+    let r_skin = 0.3;
+
+    let mut rng = 42u64;
+    let positions: Vec<f64> = (0..n * 3)
+        .map(|_| {
+            rng = rng.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1);
+            (rng as f64 / u64::MAX as f64) * box_side
+        })
+        .collect();
+
+    // Cell list: rebuild every step
+    let mut cl = CellList::new(rc, box_side);
+    cl.rebuild(&positions, n);
+
+    // Verlet list: rebuild only when displaced
+    let mut vl = VerletList::new(rc, r_skin, box_side);
+    vl.build(&positions, n);
+
+    assert_eq!(cl.sorted_indices.len(), n);
+    assert!(
+        vl.total_pairs() > 0,
+        "Verlet list should have neighbor pairs"
+    );
+    assert!(!vl.needs_rebuild(&positions), "no displacement yet");
+}

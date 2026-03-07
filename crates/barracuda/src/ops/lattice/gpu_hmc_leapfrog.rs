@@ -2,12 +2,11 @@
 //! GPU HMC leapfrog integration: momentum kick, link update, momentum generation.
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::error::Result;
 use std::sync::Arc;
 
 use super::su3_extended::su3_extended_preamble;
-
-const WG: u32 = 64;
 const SHADER_BODY: &str = include_str!("../../shaders/lattice/hmc_leapfrog_f64.wgsl");
 
 #[repr(C)]
@@ -19,6 +18,18 @@ struct LeapfrogParams {
     _pad1: u32,
     dt: f64,
     _padf: f64,
+}
+
+/// GPU-resident buffers for HMC leapfrog integration steps.
+pub struct LeapfrogBuffers<'a> {
+    /// Gauge link field.
+    pub links_buf: &'a wgpu::Buffer,
+    /// Conjugate momenta field.
+    pub momenta_buf: &'a wgpu::Buffer,
+    /// Force (∂S/∂U) field.
+    pub force_buf: &'a wgpu::Buffer,
+    /// PRNG state for momentum generation.
+    pub rng_buf: &'a wgpu::Buffer,
 }
 
 /// GPU HMC leapfrog integrator with three dispatch modes.
@@ -91,82 +102,28 @@ impl GpuHmcLeapfrog {
     /// π ← π + dt × force
     /// # Errors
     /// Returns [`Err`] if buffer sizes are invalid for the volume, command submission fails, or the device is lost.
-    pub fn momentum_kick(
-        &self,
-        links_buf: &wgpu::Buffer,
-        momenta_buf: &wgpu::Buffer,
-        force_buf: &wgpu::Buffer,
-        rng_buf: &wgpu::Buffer,
-        volume: u32,
-        dt: f64,
-    ) -> Result<()> {
-        self.dispatch(
-            &self.kick_pipeline,
-            links_buf,
-            momenta_buf,
-            force_buf,
-            rng_buf,
-            volume,
-            dt,
-            "kick",
-        )
+    pub fn momentum_kick(&self, buffers: &LeapfrogBuffers<'_>, volume: u32, dt: f64) -> Result<()> {
+        self.dispatch(&self.kick_pipeline, buffers, volume, dt, "kick")
     }
 
     /// U ← exp(dt × π) × U  then reunitarize
     /// # Errors
     /// Returns [`Err`] if buffer sizes are invalid for the volume, command submission fails, or the device is lost.
-    pub fn link_update(
-        &self,
-        links_buf: &wgpu::Buffer,
-        momenta_buf: &wgpu::Buffer,
-        force_buf: &wgpu::Buffer,
-        rng_buf: &wgpu::Buffer,
-        volume: u32,
-        dt: f64,
-    ) -> Result<()> {
-        self.dispatch(
-            &self.update_pipeline,
-            links_buf,
-            momenta_buf,
-            force_buf,
-            rng_buf,
-            volume,
-            dt,
-            "update",
-        )
+    pub fn link_update(&self, buffers: &LeapfrogBuffers<'_>, volume: u32, dt: f64) -> Result<()> {
+        self.dispatch(&self.update_pipeline, buffers, volume, dt, "update")
     }
 
     /// Generate random su(3) algebra momenta.
     /// # Errors
     /// Returns [`Err`] if buffer sizes are invalid for the volume, command submission fails, or the device is lost.
-    pub fn generate_momenta(
-        &self,
-        links_buf: &wgpu::Buffer,
-        momenta_buf: &wgpu::Buffer,
-        force_buf: &wgpu::Buffer,
-        rng_buf: &wgpu::Buffer,
-        volume: u32,
-    ) -> Result<()> {
-        self.dispatch(
-            &self.gen_pipeline,
-            links_buf,
-            momenta_buf,
-            force_buf,
-            rng_buf,
-            volume,
-            0.0,
-            "gen",
-        )
+    pub fn generate_momenta(&self, buffers: &LeapfrogBuffers<'_>, volume: u32) -> Result<()> {
+        self.dispatch(&self.gen_pipeline, buffers, volume, 0.0, "gen")
     }
 
-    #[expect(clippy::too_many_arguments, reason = "API")]
     fn dispatch(
         &self,
         pipeline: &wgpu::ComputePipeline,
-        links_buf: &wgpu::Buffer,
-        momenta_buf: &wgpu::Buffer,
-        force_buf: &wgpu::Buffer,
-        rng_buf: &wgpu::Buffer,
+        buffers: &LeapfrogBuffers<'_>,
         volume: u32,
         dt: f64,
         label: &str,
@@ -202,19 +159,19 @@ impl GpuHmcLeapfrog {
                     },
                     wgpu::BindGroupEntry {
                         binding: 1,
-                        resource: links_buf.as_entire_binding(),
+                        resource: buffers.links_buf.as_entire_binding(),
                     },
                     wgpu::BindGroupEntry {
                         binding: 2,
-                        resource: momenta_buf.as_entire_binding(),
+                        resource: buffers.momenta_buf.as_entire_binding(),
                     },
                     wgpu::BindGroupEntry {
                         binding: 3,
-                        resource: force_buf.as_entire_binding(),
+                        resource: buffers.force_buf.as_entire_binding(),
                     },
                     wgpu::BindGroupEntry {
                         binding: 4,
-                        resource: rng_buf.as_entire_binding(),
+                        resource: buffers.rng_buf.as_entire_binding(),
                     },
                 ],
             });
@@ -231,7 +188,7 @@ impl GpuHmcLeapfrog {
             });
             pass.set_pipeline(pipeline);
             pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(self.n_links.div_ceil(WG), 1, 1);
+            pass.dispatch_workgroups(self.n_links.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
         }
         self.device.submit_and_poll(Some(enc.finish()));
         Ok(())

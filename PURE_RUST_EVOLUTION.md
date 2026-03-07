@@ -24,7 +24,7 @@ Together they produce a stable, sovereign, pure Rust compute stack.
 
 ```
 Layer 1  barraCuda    ██████████  COMPLETE   Zero unsafe, zero C deps
-Layer 2  coralReef    █████░░░░░  Phase 9    2 unsafe (nak-ir-proc), pure Rust chain
+Layer 2  coralReef    ██████░░░░  Phase 10   2 unsafe (nak-ir-proc), pure Rust chain
 Layer 3  coralReef    ██░░░░░░░░  Planned    Standalone coral-reef crate, multi-arch ISA
 Layer 4  toadStool    █░░░░░░░░░  Planned    Sovereign GPU driver, DMA, command submit
 ```
@@ -66,7 +66,7 @@ Layer 4  toadStool    █░░░░░░░░░  Planned    Sovereign GPU d
 ## Layer 2 — coralReef: The Compiler (IN PROGRESS)
 
 **Owner**: coralReef
-**Status**: Phase 5 complete. 2 `unsafe` blocks remain in `nak-ir-proc`.
+**Status**: Phase 10 complete. 2 `unsafe` blocks remain in `nak-ir-proc`.
 
 coralReef is a sovereign Rust NVIDIA shader compiler. It takes SPIR-V or WGSL
 and produces native GPU binaries (SASS) for SM20–SM120.

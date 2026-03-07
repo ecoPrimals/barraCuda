@@ -21,7 +21,7 @@ const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
 fn shader_for_device(device: &WgpuDevice) -> Result<&'static str> {
     let profile = GpuDriverProfile::from_device(device);
     match profile.fp64_strategy() {
-        Fp64Strategy::Native | Fp64Strategy::Concurrent => Ok(SHADER),
+        Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => Ok(SHADER),
         Fp64Strategy::Hybrid => {
             static DF64_RESULT: std::sync::LazyLock<std::result::Result<String, String>> =
                 std::sync::LazyLock::new(|| {
@@ -132,13 +132,12 @@ impl BesselK0F64 {
         self.device.read_buffer_f64(&output_buf, size)
     }
 
-    #[cfg(test)]
     #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn k0_cpu(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| Self::k0_scalar(xi)).collect()
     }
 
-    #[cfg(test)]
+    #[allow(dead_code)] // used by k0_scalar
     fn i0_small(x: f64) -> f64 {
         let y = x / 3.75;
         let t = y * y;
@@ -148,7 +147,7 @@ impl BesselK0F64 {
                     + t * (1.2067492 + t * (0.2659732 + t * (0.0360768 + t * 0.0045813)))))
     }
 
-    #[cfg(test)]
+    #[allow(dead_code)] // used by k0_cpu
     fn k0_scalar(x: f64) -> f64 {
         if x <= 0.0 {
             return f64::INFINITY;

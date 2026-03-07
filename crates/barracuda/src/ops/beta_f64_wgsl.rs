@@ -5,6 +5,7 @@
 //! Applications: Beta distributions, Bayesian statistics, binomial coefficients
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
@@ -22,7 +23,7 @@ const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
 fn shader_for_device(device: &WgpuDevice) -> Result<&'static str> {
     let profile = GpuDriverProfile::from_device(device);
     match profile.fp64_strategy() {
-        Fp64Strategy::Native | Fp64Strategy::Concurrent => Ok(SHADER),
+        Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => Ok(SHADER),
         Fp64Strategy::Hybrid => {
             static DF64_RESULT: std::sync::LazyLock<std::result::Result<String, String>> =
                 std::sync::LazyLock::new(|| {
@@ -123,7 +124,7 @@ impl BetaF64 {
             Some("Beta Pipeline"),
         );
 
-        let workgroups = num_pairs.div_ceil(256) as u32;
+        let workgroups = num_pairs.div_ceil(WORKGROUP_SIZE_1D as usize) as u32;
         ctx.record_operation(move |encoder| {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("Beta Pass"),
@@ -137,7 +138,6 @@ impl BetaF64 {
         self.device.read_buffer_f64(&output_buf, num_pairs)
     }
 
-    #[cfg(test)]
     #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn beta_cpu(&self, pairs: &[f64]) -> Vec<f64> {
         pairs
@@ -146,7 +146,7 @@ impl BetaF64 {
             .collect()
     }
 
-    #[cfg(test)]
+    #[allow(dead_code)] // used by beta_cpu
     fn beta_scalar(a: f64, b: f64) -> f64 {
         if a <= 0.0 || b <= 0.0 {
             return f64::NAN;

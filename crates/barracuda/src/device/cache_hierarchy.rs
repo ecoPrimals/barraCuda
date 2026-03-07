@@ -34,6 +34,7 @@
 //! # }
 //! ```
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::{SubstrateType, WgpuDevice};
 use std::time::Instant;
 use wgpu::util::DeviceExt;
@@ -386,7 +387,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
             compilation_options: Default::default(),
         });
 
-        let workgroups = (elements as u32).div_ceil(256).min(65_535);
+        let workgroups = (elements as u32).div_ceil(WORKGROUP_SIZE_1D).min(65_535);
 
         // Hold WgpuDevice::lock() for all submit/poll via submit_and_poll_inner
         let run_pass = || {

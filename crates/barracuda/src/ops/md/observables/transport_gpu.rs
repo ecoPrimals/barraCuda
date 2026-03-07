@@ -27,6 +27,7 @@
 //! - Capability-based: CPU fallback when no GPU available
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
@@ -34,7 +35,6 @@ const VACF_BATCH_SHADER: &str =
     include_str!("../../../shaders/md/vacf_batch_per_particle_f64.wgsl");
 const STRESS_VIRIAL_SHADER: &str =
     include_str!("../../../shaders/md/stress_virial_per_particle_f64.wgsl");
-const WG: u32 = 64;
 
 // ─── Batched VACF ────────────────────────────────────────────────────────────
 
@@ -160,7 +160,7 @@ impl VacfBatchGpu {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
             pass.set_pipeline(&self.pipeline);
             pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(n_particles.div_ceil(WG), 1, 1);
+            pass.dispatch_workgroups(n_particles.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
         }
         self.device.submit_and_poll(Some(encoder.finish()));
     }
@@ -271,7 +271,7 @@ impl StressVirialGpu {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
             pass.set_pipeline(&self.pipeline);
             pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(n_particles.div_ceil(WG), 1, 1);
+            pass.dispatch_workgroups(n_particles.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
         }
         self.device.submit_and_poll(Some(encoder.finish()));
     }

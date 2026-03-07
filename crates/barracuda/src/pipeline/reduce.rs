@@ -35,11 +35,10 @@
 //! | Equil thermo   | 80 000 bytes | 8 B    | 10 000×   |
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use crate::utils::chunk_to_array;
 use std::sync::Arc;
-
-const WORKGROUP_SIZE: u32 = 256;
 
 /// Two-pass f64 reduction pipeline returning a single scalar.
 ///
@@ -72,7 +71,7 @@ impl ReduceScalarPipeline {
     /// Returns [`Err`] if shader compilation fails or the device is lost.
     pub fn new(device: Arc<WgpuDevice>, n: usize) -> Result<Self> {
         let n_u32 = n as u32;
-        let n_partial = n_u32.div_ceil(WORKGROUP_SIZE) as usize;
+        let n_partial = n_u32.div_ceil(WORKGROUP_SIZE_1D) as usize;
 
         // Compile shader
         let module = device
@@ -294,7 +293,7 @@ impl ReduceScalarPipeline {
                 ],
             });
 
-        let n_partial = self.n.div_ceil(WORKGROUP_SIZE);
+        let n_partial = self.n.div_ceil(WORKGROUP_SIZE_1D);
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -411,7 +410,7 @@ impl ReduceScalarPipeline {
             )
         };
 
-        let n_partial = self.n.div_ceil(WORKGROUP_SIZE);
+        let n_partial = self.n.div_ceil(WORKGROUP_SIZE_1D);
 
         let mut enc = self
             .device
@@ -495,7 +494,7 @@ mod tests {
     fn test_workgroup_size_constant() {
         // 256 threads × 8 bytes each = 2 KiB shared memory per workgroup.
         // Within the 32 KiB SM70 / 64 KiB RDNA2 limit.
-        assert_eq!(WORKGROUP_SIZE, 256);
+        assert_eq!(WORKGROUP_SIZE_1D, 256);
     }
 
     #[test]

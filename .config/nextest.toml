@@ -73,3 +73,23 @@ fail-fast = false
 slow-timeout = { period = "180s", terminate-after = 2 }
 status-level = "all"
 final-status-level = "all"
+
+# ─── GPU-heavy test groups ────────────────────────────────────────
+# Coarse-grained nextest-level coordination on top of the in-process
+# GpuTestGate semaphore.  These tests allocate large GPU buffers or
+# run compute-intensive shaders that saturate VRAM/driver queues.
+# Limiting their concurrency prevents cascading device-lost errors.
+[test-groups.gpu-heavy]
+max-threads = 4
+
+[[profile.default.overrides]]
+filter = "test(/fft|conv2d|conv3d|flash_attention|deformable|fhe_polynomial/)"
+test-group = "gpu-heavy"
+
+[[profile.ci.overrides]]
+filter = "test(/fft|conv2d|conv3d|flash_attention|deformable|fhe_polynomial/)"
+test-group = "gpu-heavy"
+
+[[profile.gpu.overrides]]
+filter = "test(/fft|conv2d|conv3d|flash_attention|deformable|fhe_polynomial/)"
+test-group = "gpu-heavy"

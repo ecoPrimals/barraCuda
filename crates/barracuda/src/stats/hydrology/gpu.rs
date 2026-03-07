@@ -114,30 +114,76 @@ pub struct SeasonalGpuParams {
 }
 
 impl SeasonalGpuParams {
-    /// Construct with all physical parameters; padding is set automatically.
-    #[expect(clippy::too_many_arguments, reason = "API")]
+    /// Start building seasonal parameters with required grid + time info.
     #[must_use]
-    pub fn new(
-        cell_count: u32,
-        day_of_year: u32,
-        stage_length: u32,
-        day_in_stage: u32,
-        kc_prev: f64,
-        kc_next: f64,
-        taw_default: f64,
-        raw_fraction: f64,
-        field_capacity: f64,
-    ) -> Self {
-        Self {
+    pub fn builder(cell_count: u32, day_of_year: u32) -> SeasonalGpuParamsBuilder {
+        SeasonalGpuParamsBuilder {
             cell_count,
             day_of_year,
-            stage_length,
-            day_in_stage,
-            kc_prev,
-            kc_next,
-            taw_default,
-            raw_fraction,
-            field_capacity,
+            stage_length: 1,
+            day_in_stage: 0,
+            kc_prev: 0.3,
+            kc_next: 0.3,
+            taw_default: 100.0,
+            raw_fraction: 0.5,
+            field_capacity: 0.3,
+        }
+    }
+}
+
+/// Builder for [`SeasonalGpuParams`] — avoids 9-argument constructor.
+#[derive(Debug, Clone)]
+pub struct SeasonalGpuParamsBuilder {
+    cell_count: u32,
+    day_of_year: u32,
+    stage_length: u32,
+    day_in_stage: u32,
+    kc_prev: f64,
+    kc_next: f64,
+    taw_default: f64,
+    raw_fraction: f64,
+    field_capacity: f64,
+}
+
+impl SeasonalGpuParamsBuilder {
+    /// Growth stage timing.
+    #[must_use]
+    pub const fn stage(mut self, length: u32, day_in_stage: u32) -> Self {
+        self.stage_length = length;
+        self.day_in_stage = day_in_stage;
+        self
+    }
+
+    /// Crop coefficients at start and end of the current growth stage.
+    #[must_use]
+    pub const fn crop_coefficients(mut self, kc_prev: f64, kc_next: f64) -> Self {
+        self.kc_prev = kc_prev;
+        self.kc_next = kc_next;
+        self
+    }
+
+    /// Soil water parameters.
+    #[must_use]
+    pub const fn soil(mut self, taw: f64, raw_fraction: f64, field_capacity: f64) -> Self {
+        self.taw_default = taw;
+        self.raw_fraction = raw_fraction;
+        self.field_capacity = field_capacity;
+        self
+    }
+
+    /// Build the GPU-compatible parameter struct.
+    #[must_use]
+    pub const fn build(self) -> SeasonalGpuParams {
+        SeasonalGpuParams {
+            cell_count: self.cell_count,
+            day_of_year: self.day_of_year,
+            stage_length: self.stage_length,
+            day_in_stage: self.day_in_stage,
+            kc_prev: self.kc_prev,
+            kc_next: self.kc_next,
+            taw_default: self.taw_default,
+            raw_fraction: self.raw_fraction,
+            field_capacity: self.field_capacity,
             _pad0: 0,
             _pad1: 0,
         }
@@ -429,17 +475,11 @@ mod tests {
 
     #[test]
     fn test_seasonal_gpu_params_new() {
-        let p = SeasonalGpuParams::new(
-            10,    // cell_count
-            187,   // day_of_year
-            30,    // stage_length
-            15,    // day_in_stage
-            0.3,   // kc_prev
-            1.2,   // kc_next
-            100.0, // taw_default
-            0.5,   // raw_fraction
-            0.4,   // field_capacity
-        );
+        let p = SeasonalGpuParams::builder(10, 187)
+            .stage(30, 15)
+            .crop_coefficients(0.3, 1.2)
+            .soil(100.0, 0.5, 0.4)
+            .build();
         assert_eq!(p.cell_count, 10);
         assert_eq!(p.day_of_year, 187);
         assert_eq!(p.stage_length, 30);
@@ -554,7 +594,11 @@ mod tests {
             21.5, 12.3, 84.0, 63.0, 2.78, 22.07, 100.0, 50.8, 30.0, 25.0, 15.0, 75.0, 55.0, 3.0,
             24.0, 150.0, 45.0, 80.0,
         ];
-        let params = SeasonalGpuParams::new(2, 187, 30, 15, 0.3, 1.2, 100.0, 0.5, 150.0);
+        let params = SeasonalGpuParams::builder(2, 187)
+            .stage(30, 15)
+            .crop_coefficients(0.3, 1.2)
+            .soil(100.0, 0.5, 150.0)
+            .build();
         let Ok(out) = gpu.dispatch(&cell_weather, &params) else {
             return;
         };

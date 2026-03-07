@@ -9,13 +9,13 @@
 //! - Thermostat validation
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
 const SHADER: &str = include_str!("kinetic_energy_f64.wgsl");
-const WG: u32 = 256;
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -75,7 +75,7 @@ impl KineticEnergyF64 {
             usage: wgpu::BufferUsages::UNIFORM,
         });
 
-        let wg_count = (n as u32).div_ceil(WG);
+        let wg_count = (n as u32).div_ceil(WORKGROUP_SIZE_1D);
         ComputeDispatch::new(&self.device, "kinetic_energy_f64")
             .shader(SHADER, "main")
             .f64()

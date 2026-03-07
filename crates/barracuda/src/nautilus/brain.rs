@@ -8,10 +8,64 @@ use super::shell::{GenerationRecord, InstanceId, NautilusShell, ShellConfig};
 
 const ANOMALY_WINDOW: usize = 10;
 
+/// GPU memory pressure estimate (bytes) for common algorithms.
+///
+/// Absorbed from hotSpring `MdBrain`. Helps the brain predict whether a
+/// workload will fit in GPU VRAM and whether to recommend smaller batch
+/// sizes, cell-list fallback, or CPU offload.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AlgorithmClass {
+    /// O(N²) all-pairs: 2 position arrays + force array.
+    AllPairs,
+    /// Cell-list: positions + cell indices + cell list + forces.
+    CellList,
+    /// Verlet neighbour list: positions + neighbour list + forces.
+    VerletList,
+    /// Lattice field (SU(3)/gauge): 4 link arrays + staple + force.
+    LatticeGauge,
+    /// Generic: caller provides estimate directly.
+    Custom,
+}
+
+/// Estimate GPU memory usage in bytes for a workload.
+///
+/// Returns a conservative estimate of the minimum GPU allocation
+/// required for `n` particles/sites using the given algorithm class.
+/// Uses f64 (8 bytes) per component, 3D positions.
+#[must_use]
+pub fn memory_pressure(algo: AlgorithmClass, n: usize) -> u64 {
+    let n = n as u64;
+    let f64_bytes: u64 = 8;
+    let dims: u64 = 3;
+    match algo {
+        AlgorithmClass::AllPairs => {
+            // 2 × position (N×3×f64) + force (N×3×f64) + params
+            3 * n * dims * f64_bytes + 1024
+        }
+        AlgorithmClass::CellList => {
+            // positions + cell indices + cell head + forces + params
+            // cell count ≈ N for uniform distribution
+            n * dims * f64_bytes + n * 4 + n * 4 + n * dims * f64_bytes + 4096
+        }
+        AlgorithmClass::VerletList => {
+            // positions + neighbour list (≈100 neighbours/particle) + forces
+            let max_neighbours: u64 = 100;
+            n * dims * f64_bytes + n * max_neighbours * 4 + n * dims * f64_bytes + 4096
+        }
+        AlgorithmClass::LatticeGauge => {
+            // 4 link directions × N sites × 18 f64 (SU(3) 3×3 complex)
+            // + staple + force buffers
+            let su3_size = 18 * f64_bytes;
+            4 * n * su3_size + 2 * n * su3_size + 4096
+        }
+        AlgorithmClass::Custom => 0,
+    }
+}
+
 /// Detect energy anomalies from sudden jumps vs running statistics.
 ///
-/// Absorbed from hotSpring MdBrain. Domain-agnostic: works with any
-/// scalar energy proxy (delta_h, total_energy/N, etc.).
+/// Absorbed from hotSpring `MdBrain`. Domain-agnostic: works with any
+/// scalar energy proxy (`delta_h`, `total_energy`/N, etc.).
 /// Returns 1.0 if current value deviates by more than 10σ from the
 /// recent window, 0.0 otherwise.
 #[must_use]
@@ -166,7 +220,7 @@ impl NautilusBrain {
     /// Check if the most recent observation shows an energy anomaly.
     #[must_use]
     pub fn has_force_anomaly(&self) -> bool {
-        self.observations.last().map_or(false, |obs| {
+        self.observations.last().is_some_and(|obs| {
             force_anomaly(
                 obs.delta_h_abs,
                 &self.recent_delta_h[..self.recent_delta_h.len().saturating_sub(1)],
@@ -268,6 +322,16 @@ impl NautilusBrain {
         }
         edges
     }
+    /// Estimate GPU memory pressure for a workload.
+    ///
+    /// Returns `true` if the estimated allocation exceeds the device's
+    /// safe limit. Use this before dispatching to decide between GPU and
+    /// CPU paths, or to recommend smaller batch sizes.
+    #[must_use]
+    pub fn would_exceed_memory(algo: AlgorithmClass, n: usize, max_safe_bytes: u64) -> bool {
+        memory_pressure(algo, n) > max_safe_bytes
+    }
+
     /// Returns true if the shell is drifting (stagnating).
     #[must_use]
     pub fn is_drifting(&self) -> bool {
@@ -411,6 +475,41 @@ mod tests {
             ));
         }
         assert_eq!(brain.recent_delta_h.len(), 6);
+    }
+
+    #[test]
+    fn test_memory_pressure_all_pairs() {
+        let bytes = memory_pressure(AlgorithmClass::AllPairs, 10_000);
+        assert!(bytes > 0);
+        assert!(bytes < 10 * 1024 * 1024, "10K particles should be < 10 MB");
+    }
+
+    #[test]
+    fn test_memory_pressure_scaling() {
+        let small = memory_pressure(AlgorithmClass::AllPairs, 1_000);
+        let large = memory_pressure(AlgorithmClass::AllPairs, 100_000);
+        assert!(large > small * 50, "memory should scale roughly linearly");
+    }
+
+    #[test]
+    fn test_memory_pressure_lattice_gauge() {
+        let bytes = memory_pressure(AlgorithmClass::LatticeGauge, 32 * 32 * 32 * 8);
+        assert!(bytes > 100 * 1024 * 1024, "32³×8 lattice needs > 100 MB");
+    }
+
+    #[test]
+    fn test_would_exceed_memory() {
+        let limit = 1024 * 1024 * 1024; // 1 GB
+        assert!(!NautilusBrain::would_exceed_memory(
+            AlgorithmClass::AllPairs,
+            10_000,
+            limit
+        ));
+        assert!(NautilusBrain::would_exceed_memory(
+            AlgorithmClass::LatticeGauge,
+            64 * 64 * 64 * 16,
+            limit
+        ));
     }
 
     #[test]

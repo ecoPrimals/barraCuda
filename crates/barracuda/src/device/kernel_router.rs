@@ -434,10 +434,9 @@ impl KernelRouter {
             model_dirs.push(format!("{home}/.local/share/akida/models"));
         }
 
-        model_dirs.extend([
-            "/usr/share/akida/models".to_string(),
-            "/opt/akida/models".to_string(),
-        ]);
+        for dir in super::akida::AKIDA_SDK_SYSTEM_DIRS {
+            model_dirs.push(format!("{dir}/models"));
+        }
 
         for dir in model_dirs {
             let path = std::path::Path::new(&dir);

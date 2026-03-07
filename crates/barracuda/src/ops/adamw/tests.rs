@@ -4,6 +4,10 @@
 use super::*;
 use crate::device::test_pool::get_test_device_if_gpu_available;
 
+fn default_config() -> AdamConfig {
+    AdamConfig::new(0.001).weight_decay(0.01)
+}
+
 #[tokio::test]
 async fn test_adamw_gpu_basic() {
     let Some(device) = get_test_device_if_gpu_available().await else {
@@ -27,7 +31,7 @@ async fn test_adamw_gpu_basic() {
         .unwrap();
 
     let (new_params, new_m, new_v) = params
-        .adamw(&gradients, &m, &v, 0.001, 0.9, 0.999, 1e-8, 0.01, 1)
+        .adamw(&gradients, &m, &v, &default_config(), 1)
         .unwrap();
 
     assert_eq!(new_params.shape(), &[size]);
@@ -38,11 +42,8 @@ async fn test_adamw_gpu_basic() {
     let m_data = new_m.to_vec().unwrap();
     let v_data = new_v.to_vec().unwrap();
 
-    // Params should decrease (gradient descent + weight decay)
     assert!(p_data.iter().all(|&x| x < 1.0));
-    // m should be non-zero (momentum accumulated)
     assert!(m_data.iter().any(|&x| x.abs() > 1e-6));
-    // v should be non-zero (variance accumulated)
     assert!(v_data.iter().all(|&x| x > 0.0));
 }
 
@@ -64,23 +65,19 @@ async fn test_adamw_gpu_convergence() {
         .await
         .unwrap();
 
-    // Constant gradient pointing toward zero
     let gradients = Tensor::from_vec_on(vec![1.0; size], vec![size], device)
         .await
         .unwrap();
 
-    // Run 10 steps
+    let config = AdamConfig::new(0.1).weight_decay(0.01);
     for step in 1..=10 {
-        let (p, m_new, v_new) = params
-            .adamw(&gradients, &m, &v, 0.1, 0.9, 0.999, 1e-8, 0.01, step)
-            .unwrap();
+        let (p, m_new, v_new) = params.adamw(&gradients, &m, &v, &config, step).unwrap();
         params = p;
         m = m_new;
         v = v_new;
     }
 
     let final_params = params.to_vec().unwrap();
-    // Should converge toward lower values
     assert!(final_params.iter().all(|&x| x < 4.0));
 }
 
@@ -106,20 +103,24 @@ async fn test_adamw_gpu_weight_decay_stronger() {
         .await
         .unwrap();
 
-    // With weight decay, params should shrink even with zero gradient
     let (new_params_wd, _, _) = params
         .clone()
-        .adamw(&gradients, &m, &v, 0.1, 0.9, 0.999, 1e-8, 0.1, 1)
+        .adamw(
+            &gradients,
+            &m,
+            &v,
+            &AdamConfig::new(0.1).weight_decay(0.1),
+            1,
+        )
         .unwrap();
 
     let (new_params_no_wd, _, _) = params
-        .adamw(&gradients, &m, &v, 0.1, 0.9, 0.999, 1e-8, 0.0, 1)
+        .adamw(&gradients, &m, &v, &AdamConfig::new(0.1), 1)
         .unwrap();
 
     let wd_data = new_params_wd.to_vec().unwrap();
     let no_wd_data = new_params_no_wd.to_vec().unwrap();
 
-    // Weight decay should reduce params more than no weight decay
     assert!(wd_data[0] < no_wd_data[0]);
     assert!(wd_data[0] < 10.0);
 }
@@ -145,8 +146,7 @@ async fn test_adamw_gpu_shape_validation() {
         .await
         .unwrap();
 
-    // Shape mismatch should error
-    let result = params.adamw(&gradients, &m, &v, 0.001, 0.9, 0.999, 1e-8, 0.01, 1);
+    let result = params.adamw(&gradients, &m, &v, &default_config(), 1);
     assert!(result.is_err());
 }
 
@@ -155,7 +155,6 @@ async fn test_adamw_gpu_multidimensional() {
     let Some(device) = get_test_device_if_gpu_available().await else {
         return;
     };
-    // 2D params (matrix)
     let params = Tensor::from_vec_on(vec![1.0; 100], vec![10, 10], device.clone())
         .await
         .unwrap();
@@ -173,7 +172,7 @@ async fn test_adamw_gpu_multidimensional() {
         .unwrap();
 
     let (new_params, new_m, new_v) = params
-        .adamw(&gradients, &m, &v, 0.001, 0.9, 0.999, 1e-8, 0.01, 1)
+        .adamw(&gradients, &m, &v, &default_config(), 1)
         .unwrap();
 
     assert_eq!(new_params.shape(), &[10, 10]);
@@ -186,7 +185,6 @@ async fn test_adamw_vs_adam_difference() {
     let Some(device) = get_test_device_if_gpu_available().await else {
         return;
     };
-    // Compare AdamW vs Adam behavior with same hyperparameters
     let size = 100;
     let params = Tensor::from_vec_on(vec![10.0; size], vec![size], device.clone())
         .await
@@ -204,18 +202,18 @@ async fn test_adamw_vs_adam_difference() {
         .await
         .unwrap();
 
-    // AdamW with weight decay
     let (adamw_params, _, _) = params
         .clone()
-        .adamw(&gradients, &m, &v, 0.01, 0.9, 0.999, 1e-8, 0.1, 1)
+        .adamw(
+            &gradients,
+            &m,
+            &v,
+            &AdamConfig::new(0.01).weight_decay(0.1),
+            1,
+        )
         .unwrap();
 
     let adamw_data = adamw_params.to_vec().unwrap();
-
-    // AdamW should apply decoupled weight decay
-    // Result should be different from params without update
     assert!(adamw_data.iter().all(|&x| x < 10.0));
-
-    // Verify all values are finite
     assert!(adamw_data.iter().all(|&x| x.is_finite()));
 }

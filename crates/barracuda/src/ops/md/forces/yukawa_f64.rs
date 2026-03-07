@@ -141,7 +141,7 @@ impl YukawaForceF64 {
             strategy
         );
         let shader_src = match strategy {
-            Fp64Strategy::Native | Fp64Strategy::Concurrent => {
+            Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => {
                 include_str!("yukawa_f64.wgsl").to_string()
             }
             Fp64Strategy::Hybrid => {

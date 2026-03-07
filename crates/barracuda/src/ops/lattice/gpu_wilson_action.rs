@@ -5,14 +5,13 @@
 //! via `ReduceScalarPipeline` yields the total Wilson action.
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::error::Result;
 use std::sync::Arc;
 
 use super::su3::{su3_df64_preamble, su3_preamble};
-
-const WG: u32 = 64;
 const SHADER_BODY: &str = include_str!("../../shaders/lattice/wilson_action_f64.wgsl");
 const SHADER_DF64: &str = include_str!("../../shaders/lattice/wilson_action_df64.wgsl");
 
@@ -50,7 +49,7 @@ impl GpuWilsonAction {
         let profile = GpuDriverProfile::from_device(&device);
         let strategy = profile.fp64_strategy();
         let shader_src = match strategy {
-            Fp64Strategy::Native | Fp64Strategy::Concurrent => {
+            Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => {
                 format!("{}{}", su3_preamble(), SHADER_BODY)
             }
             Fp64Strategy::Hybrid => format!("{}{}", su3_df64_preamble(), SHADER_DF64),
@@ -104,7 +103,7 @@ impl GpuWilsonAction {
             .uniform(0, &self.params)
             .storage_read(1, links_buf)
             .storage_rw(2, action_buf)
-            .dispatch(self.volume.div_ceil(WG), 1, 1)
+            .dispatch(self.volume.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
             .submit()?;
         Ok(())
     }

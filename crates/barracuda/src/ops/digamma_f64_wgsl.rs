@@ -21,7 +21,7 @@ const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
 fn shader_for_device(device: &WgpuDevice) -> Result<&'static str> {
     let profile = GpuDriverProfile::from_device(device);
     match profile.fp64_strategy() {
-        Fp64Strategy::Native | Fp64Strategy::Concurrent => Ok(SHADER),
+        Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => Ok(SHADER),
         Fp64Strategy::Hybrid => {
             static DF64_RESULT: std::sync::LazyLock<std::result::Result<String, String>> =
                 std::sync::LazyLock::new(|| {
@@ -134,13 +134,12 @@ impl DigammaF64 {
         self.device.read_buffer_f64(&output_buf, n)
     }
 
-    #[cfg(test)]
     #[expect(dead_code, reason = "CPU reference for GPU validation")]
     fn digamma_cpu(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| Self::digamma_scalar(xi)).collect()
     }
 
-    #[cfg(test)]
+    #[allow(dead_code)] // used by digamma_cpu
     fn digamma_scalar(x: f64) -> f64 {
         use std::f64::consts::PI;
 
@@ -165,7 +164,7 @@ impl DigammaF64 {
         result + Self::digamma_asymptotic(y)
     }
 
-    #[cfg(test)]
+    #[allow(dead_code)] // used by digamma_scalar
     fn digamma_asymptotic(x: f64) -> f64 {
         let inv_x = 1.0 / x;
         let inv_x2 = inv_x * inv_x;

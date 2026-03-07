@@ -7,12 +7,12 @@
 //! Positions must be PBC-unwrapped before calling.
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
 const SHADER: &str = include_str!("msd_f64.wgsl");
-const WG: u32 = 256;
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -167,7 +167,7 @@ impl MsdGpu {
                 let mut pass = enc.begin_compute_pass(&Default::default());
                 pass.set_pipeline(&self.pipeline);
                 pass.set_bind_group(0, Some(&bg), &[]);
-                pass.dispatch_workgroups((total as u32).div_ceil(WG), 1, 1);
+                pass.dispatch_workgroups((total as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1);
             }
             enc.copy_buffer_to_buffer(&out_buf, 0, &rb, 0, out_size.max(8));
             q.submit(Some(enc.finish()));

@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Cross-Spring Integration and API Evolution (Mar 7 2026)
+
+- **Cross-spring shader provenance registry** (`shaders::provenance`) — programmatic tracking
+  of Write → Absorb → Lean shader evolution across `HotSpring`, `WetSpring`, `NeuralSpring`,
+  `AirSpring`, `GroundSpring` domains; 24+ shader records, cross-spring matrix query
+- **coralReef Phase 10 rewire** — `compile_wgsl_direct()` for direct WGSL→native compilation,
+  `supported_archs()` query, fallback to SPIR-V path
+- **Cross-spring validation suite** (`tests/cross_spring_validation.rs`) — provenance, tolerance,
+  Welford, eps guards, Verlet list validation
+- **Cross-spring benchmark suite** (`tests/cross_spring_benchmark.rs`) — throughput measurement
+  for Welford, tolerance, Verlet, eps guards, provenance queries
+- **Shader validation harness** (`device::test_harness`) — `validate_wgsl_shader`,
+  `validate_df64_shader`, `validate_shader_batch` via naga (no GPU required)
+- **Builder patterns** — `SeasonalGpuParams::builder()`, `HmmForwardArgs`, `CgLatticeBuffers` +
+  `CgSolverConfig`, `GillespieModel`, `Rk45DispatchArgs`, `Dada2DispatchArgs`,
+  `SpinOrbitInputs`, `LeapfrogBuffers`, `RbfTrainingData` + `RbfTrainedModel`
+
+### Removed — API Cleanup (Mar 7 2026)
+
+- **Deprecated PPPM constructors** — `PppmGpu::new()` and `PppmGpu::new_with_driver()` removed
+  (deprecated since v0.3.0, zero callers; use `from_device()`)
+- **All 9 `#[expect(clippy::too_many_arguments)]`** — eliminated via parameter structs/builders
+
+### Changed — Capability Evolution (Mar 7 2026)
+
+- **Akida SDK paths** — hardcoded system paths extracted to `AKIDA_SDK_SYSTEM_DIRS` constant
+  shared between `akida.rs` and `kernel_router.rs`
+- **19 CPU reference functions audited** — all correctly gated with `#[expect(dead_code)]`
+
 ### Added — Deep Debt Resolution and Compliance (Mar 6 2026)
 
 - **Autocorrelation GPU op** (`ops/autocorrelation_f64_wgsl.rs`, `shaders/stats/autocorrelation_f64.wgsl`) —

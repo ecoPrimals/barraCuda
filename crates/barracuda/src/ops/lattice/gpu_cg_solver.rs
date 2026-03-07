@@ -57,6 +57,27 @@ struct XpayParams {
     beta: f64,
 }
 
+/// Lattice geometry buffers for the Dirac operator (links, neighbors, phases).
+pub struct CgLatticeBuffers<'a> {
+    /// Gauge link buffer.
+    pub links: &'a wgpu::Buffer,
+    /// Neighbor index buffer.
+    pub nbr: &'a wgpu::Buffer,
+    /// Staggered phase buffer.
+    pub phases: &'a wgpu::Buffer,
+}
+
+/// Solver convergence parameters.
+#[derive(Clone, Debug)]
+pub struct CgSolverConfig {
+    /// Fermion mass.
+    pub mass: f64,
+    /// Relative residual tolerance.
+    pub tol: f64,
+    /// Maximum CG iterations.
+    pub max_iter: usize,
+}
+
 /// Result of a GPU CG solve.
 #[derive(Clone, Debug)]
 pub struct GpuCgResult {
@@ -219,21 +240,15 @@ impl GpuCgSolver {
 
     /// Solve (D†D)x = b on GPU.
     /// All buffers must be GPU-resident. `x` is zeroed at start.
-    /// `links_buf`, `nbr_buf`, `phases_buf` come from `DiracGpuLayout`.
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
-    #[expect(clippy::too_many_arguments, reason = "API")]
     pub fn solve(
         &self,
         b_buf: &wgpu::Buffer,
         bufs: &GpuCgBuffers,
-        links_buf: &wgpu::Buffer,
-        nbr_buf: &wgpu::Buffer,
-        phases_buf: &wgpu::Buffer,
-        mass: f64,
-        tol: f64,
-        max_iter: usize,
+        lattice: &CgLatticeBuffers<'_>,
+        config: &CgSolverConfig,
     ) -> Result<GpuCgResult> {
         let n = self.n_f64 as usize;
         let n_bytes = (n * std::mem::size_of::<f64>()) as u64;
@@ -258,17 +273,29 @@ impl GpuCgSolver {
                 residual_sq: 0.0,
             });
         }
-        let tol_sq = tol * tol * b_norm_sq;
+        let tol_sq = config.tol * config.tol * b_norm_sq;
 
         let mut rr = b_norm_sq;
 
-        for iter in 0..max_iter {
+        for iter in 0..config.max_iter {
             // Ap = D†D·p: first D·p → tmp, then D†·tmp → ap
             self.dirac.dispatch(
-                mass, 1.0, links_buf, &bufs.p, &bufs.tmp, nbr_buf, phases_buf,
+                config.mass,
+                1.0,
+                lattice.links,
+                &bufs.p,
+                &bufs.tmp,
+                lattice.nbr,
+                lattice.phases,
             )?;
             self.dirac.dispatch(
-                mass, -1.0, links_buf, &bufs.tmp, &bufs.ap, nbr_buf, phases_buf,
+                config.mass,
+                -1.0,
+                lattice.links,
+                &bufs.tmp,
+                &bufs.ap,
+                lattice.nbr,
+                lattice.phases,
             )?;
 
             // pAp = Re<p|Ap>
@@ -309,7 +336,7 @@ impl GpuCgSolver {
 
         Ok(GpuCgResult {
             converged: false,
-            iterations: max_iter,
+            iterations: config.max_iter,
             residual_sq: rr,
         })
     }

@@ -6,30 +6,134 @@
 
 use crate::error::Result;
 
+/// Input tensor shape `[N, C, H, W]`.
+#[derive(Debug, Clone, Copy)]
+pub struct TensorShape {
+    /// Batch size.
+    pub n: usize,
+    /// Channel count.
+    pub c: usize,
+    /// Height.
+    pub h: usize,
+    /// Width.
+    pub w: usize,
+}
+
+/// Convolution kernel and stride/padding/dilation parameters.
+#[derive(Debug, Clone, Copy)]
+pub struct Conv2dConfig {
+    /// Output channel count.
+    pub c_out: usize,
+    /// Kernel height.
+    pub k_h: usize,
+    /// Kernel width.
+    pub k_w: usize,
+    /// Stride `[h, w]` (default `[1, 1]`).
+    pub stride: [usize; 2],
+    /// Padding `[h, w]` (default `[0, 0]`).
+    pub padding: [usize; 2],
+    /// Dilation `[h, w]` (default `[1, 1]`).
+    pub dilation: [usize; 2],
+}
+
+impl Conv2dConfig {
+    /// Create with output channels and kernel size; stride=1, padding=0, dilation=1.
+    #[must_use]
+    pub fn new(c_out: usize, k_h: usize, k_w: usize) -> Self {
+        Self {
+            c_out,
+            k_h,
+            k_w,
+            stride: [1, 1],
+            padding: [0, 0],
+            dilation: [1, 1],
+        }
+    }
+
+    /// Set stride `[h, w]`.
+    #[must_use]
+    pub fn stride(mut self, h: usize, w: usize) -> Self {
+        self.stride = [h, w];
+        self
+    }
+
+    /// Set padding `[h, w]`.
+    #[must_use]
+    pub fn padding(mut self, h: usize, w: usize) -> Self {
+        self.padding = [h, w];
+        self
+    }
+
+    /// Set dilation `[h, w]`.
+    #[must_use]
+    pub fn dilation(mut self, h: usize, w: usize) -> Self {
+        self.dilation = [h, w];
+        self
+    }
+}
+
+/// Pooling kernel and stride/padding parameters.
+#[derive(Debug, Clone, Copy)]
+pub struct Pool2dConfig {
+    /// Kernel height.
+    pub k_h: usize,
+    /// Kernel width.
+    pub k_w: usize,
+    /// Stride `[h, w]` (defaults to kernel size).
+    pub stride: [usize; 2],
+    /// Padding `[h, w]` (default `[0, 0]`).
+    pub padding: [usize; 2],
+}
+
+impl Pool2dConfig {
+    /// Create with kernel size; stride defaults to kernel size, padding to zero.
+    #[must_use]
+    pub fn new(k_h: usize, k_w: usize) -> Self {
+        Self {
+            k_h,
+            k_w,
+            stride: [k_h, k_w],
+            padding: [0, 0],
+        }
+    }
+
+    /// Set stride `[h, w]`.
+    #[must_use]
+    pub fn stride(mut self, h: usize, w: usize) -> Self {
+        self.stride = [h, w];
+        self
+    }
+
+    /// Set padding `[h, w]`.
+    #[must_use]
+    pub fn padding(mut self, h: usize, w: usize) -> Self {
+        self.padding = [h, w];
+        self
+    }
+}
+
 /// 2D convolution (im2col-free direct convolution).
 /// Input `[N, C_in, H, W]`, kernel `[C_out, C_in, kH, kW]`.
 ///
 /// # Errors
 ///
 /// Returns [`Err`] if the operation fails (e.g., dimension overflow or invalid output size).
-#[expect(clippy::too_many_arguments, reason = "API")]
 pub fn conv2d(
     input: &[f32],
     kernel: &[f32],
-    n: usize,
-    c_in: usize,
-    h: usize,
-    w: usize,
-    c_out: usize,
-    k_h: usize,
-    k_w: usize,
-    stride_h: usize,
-    stride_w: usize,
-    pad_h: usize,
-    pad_w: usize,
-    dil_h: usize,
-    dil_w: usize,
+    shape: TensorShape,
+    cfg: Conv2dConfig,
 ) -> Result<Vec<f32>> {
+    let TensorShape { n, c: c_in, h, w } = shape;
+    let Conv2dConfig {
+        c_out,
+        k_h,
+        k_w,
+        stride: [stride_h, stride_w],
+        padding: [pad_h, pad_w],
+        dilation: [dil_h, dil_w],
+    } = cfg;
+
     let eff_k_h = (k_h - 1) * dil_h + 1;
     let eff_k_w = (k_w - 1) * dil_w + 1;
     let h_out = (h + 2 * pad_h - eff_k_h) / stride_h + 1;
@@ -80,20 +184,15 @@ pub fn conv2d(
 /// # Errors
 ///
 /// Returns [`Err`] if the operation fails (e.g., dimension overflow or invalid output size).
-#[expect(clippy::too_many_arguments, reason = "API")]
-pub fn max_pool2d(
-    input: &[f32],
-    n: usize,
-    c: usize,
-    h: usize,
-    w: usize,
-    k_h: usize,
-    k_w: usize,
-    stride_h: usize,
-    stride_w: usize,
-    pad_h: usize,
-    pad_w: usize,
-) -> Result<Vec<f32>> {
+pub fn max_pool2d(input: &[f32], shape: TensorShape, cfg: Pool2dConfig) -> Result<Vec<f32>> {
+    let TensorShape { n, c, h, w } = shape;
+    let Pool2dConfig {
+        k_h,
+        k_w,
+        stride: [stride_h, stride_w],
+        padding: [pad_h, pad_w],
+    } = cfg;
+
     let h_out = (h + 2 * pad_h - k_h) / stride_h + 1;
     let w_out = (w + 2 * pad_w - k_w) / stride_w + 1;
 
@@ -136,20 +235,15 @@ pub fn max_pool2d(
 /// # Errors
 ///
 /// Returns [`Err`] if the operation fails (e.g., dimension overflow or invalid output size).
-#[expect(clippy::too_many_arguments, reason = "API")]
-pub fn avg_pool2d(
-    input: &[f32],
-    n: usize,
-    c: usize,
-    h: usize,
-    w: usize,
-    k_h: usize,
-    k_w: usize,
-    stride_h: usize,
-    stride_w: usize,
-    pad_h: usize,
-    pad_w: usize,
-) -> Result<Vec<f32>> {
+pub fn avg_pool2d(input: &[f32], shape: TensorShape, cfg: Pool2dConfig) -> Result<Vec<f32>> {
+    let TensorShape { n, c, h, w } = shape;
+    let Pool2dConfig {
+        k_h,
+        k_w,
+        stride: [stride_h, stride_w],
+        padding: [pad_h, pad_w],
+    } = cfg;
+
     let h_out = (h + 2 * pad_h - k_h) / stride_h + 1;
     let w_out = (w + 2 * pad_w - k_w) / stride_w + 1;
 

@@ -15,7 +15,10 @@ pub mod shell;
 pub mod spectral_bridge;
 
 pub use board::{Board, BoardConfig, ReservoirInput, ResponseVector};
-pub use brain::{BetaObservation, DriftMonitor, NautilusBrain, NautilusBrainConfig};
+pub use brain::{
+    AlgorithmClass, BetaObservation, DriftMonitor, NautilusBrain, NautilusBrainConfig,
+    force_anomaly, memory_pressure,
+};
 pub use evolution::{EvolutionConfig, SelectionMethod};
 pub use population::{FitnessRecord, Population};
 pub use readout::LinearReadout;

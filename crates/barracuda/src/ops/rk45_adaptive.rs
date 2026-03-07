@@ -37,6 +37,40 @@ struct Rk45Params {
     _pad2: f64,
 }
 
+/// GPU-resident buffers for an RK45 adaptive step.
+pub struct Rk45Buffers<'a> {
+    /// Current ODE state `[n_systems × dim]`.
+    pub state_buf: &'a wgpu::Buffer,
+    /// Per-system coefficients `[n_systems × n_coeffs]`.
+    pub coeffs_buf: &'a wgpu::Buffer,
+    /// Output: 5th-order solution `[n_systems × dim]`.
+    pub new_state_buf: &'a wgpu::Buffer,
+    /// Output: per-variable absolute error `[n_systems × dim]`.
+    pub error_buf: &'a wgpu::Buffer,
+    /// Workspace for k-stages `[n_systems × dim × 8]`.
+    pub scratch_buf: &'a wgpu::Buffer,
+}
+
+/// Scalar parameters for an RK45 adaptive step.
+pub struct Rk45DispatchParams {
+    /// Number of independent ODE systems.
+    pub n_systems: u32,
+    /// State dimension per system.
+    pub dim: u32,
+    /// Coefficient count per system.
+    pub n_coeffs: u32,
+    /// Time step.
+    pub dt: f64,
+}
+
+/// Grouped arguments for [`Rk45AdaptiveGpu::dispatch`].
+pub struct Rk45DispatchArgs<'a> {
+    /// GPU buffers.
+    pub buffers: Rk45Buffers<'a>,
+    /// Scalar parameters.
+    pub params: Rk45DispatchParams,
+}
+
 /// Adaptive Dormand-Prince RK45 GPU kernel for regulatory network ODEs.
 pub struct Rk45AdaptiveGpu {
     pipeline: wgpu::ComputePipeline,
@@ -88,33 +122,21 @@ impl Rk45AdaptiveGpu {
 
     /// Dispatch one adaptive RK45 step (f64 pipeline).
     ///
-    /// `state_buf`:     `[n_systems × dim]` f64 — current ODE state
-    /// `coeffs_buf`:    `[n_systems × n_coeffs]` f64 — per-system coefficients
-    /// `new_state_buf`: `[n_systems × dim]` f64 — output state (5th order)
-    /// `error_buf`:     `[n_systems × dim]` f64 — per-variable absolute error
-    /// `scratch_buf`:   `[n_systems × dim × 8]` f64 — k-stage + tmp workspace
-    #[expect(clippy::too_many_arguments, reason = "API")]
-    pub fn dispatch(
-        &self,
-        state_buf: &wgpu::Buffer,
-        coeffs_buf: &wgpu::Buffer,
-        new_state_buf: &wgpu::Buffer,
-        error_buf: &wgpu::Buffer,
-        scratch_buf: &wgpu::Buffer,
-        n_systems: u32,
-        dim: u32,
-        n_coeffs: u32,
-        dt: f64,
-    ) {
+    /// `buffers.state_buf`:     `[n_systems × dim]` f64 — current ODE state
+    /// `buffers.coeffs_buf`:    `[n_systems × n_coeffs]` f64 — per-system coefficients
+    /// `buffers.new_state_buf`: `[n_systems × dim]` f64 — output state (5th order)
+    /// `buffers.error_buf`:     `[n_systems × dim]` f64 — per-variable absolute error
+    /// `buffers.scratch_buf`:   `[n_systems × dim × 8]` f64 — k-stage + tmp workspace
+    pub fn dispatch(&self, args: &Rk45DispatchArgs<'_>) {
         let d = self.device.device();
         let q = self.device.queue();
 
         let params = Rk45Params {
-            n_systems,
-            dim,
-            n_coeffs,
+            n_systems: args.params.n_systems,
+            dim: args.params.dim,
+            n_coeffs: args.params.n_coeffs,
             _pad: 0,
-            dt,
+            dt: args.params.dt,
             _pad2: 0.0,
         };
         let params_buf = d.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -129,19 +151,19 @@ impl Rk45AdaptiveGpu {
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: state_buf.as_entire_binding(),
+                    resource: args.buffers.state_buf.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: coeffs_buf.as_entire_binding(),
+                    resource: args.buffers.coeffs_buf.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,
-                    resource: new_state_buf.as_entire_binding(),
+                    resource: args.buffers.new_state_buf.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 3,
-                    resource: error_buf.as_entire_binding(),
+                    resource: args.buffers.error_buf.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 4,
@@ -149,7 +171,7 @@ impl Rk45AdaptiveGpu {
                 },
                 wgpu::BindGroupEntry {
                     binding: 5,
-                    resource: scratch_buf.as_entire_binding(),
+                    resource: args.buffers.scratch_buf.as_entire_binding(),
                 },
             ],
         });
@@ -166,7 +188,7 @@ impl Rk45AdaptiveGpu {
             });
             pass.set_pipeline(&self.pipeline);
             pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(n_systems.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
+            pass.dispatch_workgroups(args.params.n_systems.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
         }
         q.submit(std::iter::once(encoder.finish()));
     }

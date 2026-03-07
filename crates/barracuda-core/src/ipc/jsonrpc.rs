@@ -90,18 +90,23 @@ impl JsonRpcResponse {
 }
 
 impl JsonRpcRequest {
+    /// Extract the request ID, defaulting to `null` for notifications.
+    fn id_or_null(&self) -> serde_json::Value {
+        self.id.clone().unwrap_or(serde_json::Value::Null)
+    }
+
     /// Validate this is a proper JSON-RPC 2.0 request.
     pub fn validate(&self) -> Result<(), JsonRpcResponse> {
         if self.jsonrpc != "2.0" {
             return Err(JsonRpcResponse::error(
-                self.id.clone().unwrap_or(serde_json::Value::Null),
+                self.id_or_null(),
                 INVALID_REQUEST,
                 "jsonrpc field must be \"2.0\"",
             ));
         }
         if self.method.is_empty() {
             return Err(JsonRpcResponse::error(
-                self.id.clone().unwrap_or(serde_json::Value::Null),
+                self.id_or_null(),
                 INVALID_REQUEST,
                 "method must not be empty",
             ));

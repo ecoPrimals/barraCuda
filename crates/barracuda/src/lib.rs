@@ -239,6 +239,7 @@ pub mod math {
         beta, digamma, erf, erfc, gamma, ln_beta, ln_gamma, lower_incomplete_gamma,
         regularized_gamma_p, regularized_gamma_q,
     };
+    pub use crate::stats::metrics::{dot, l2_norm};
     pub use crate::stats::normal::norm_cdf;
 }
 pub mod stats;
@@ -257,14 +258,20 @@ pub use ops::sparse_matmul_quantized::sparse_matmul_quantized;
 
 #[cfg(feature = "gpu")]
 pub use ops::bio::{
-    AniBatchF64, BatchFitnessGpu, Dada2EStepGpu, DnDsBatchF64, FelsensteinGpu, FelsensteinResult,
-    FlatForest, FlatTree, GillespieConfig, GillespieGpu, GillespieResult, HillGateGpu,
-    HmmBatchForwardF64, KmerHistogramGpu, LocusVarianceGpu, MultiObjFitnessGpu, PairwiseHammingGpu,
-    PairwiseJaccardGpu, PairwiseL2Gpu, PangenomeClassifyGpu, PhyloTree, QualityConfig,
-    QualityFilterGpu, RfBatchInferenceGpu, SmithWatermanGpu, SnpCallingF64, SpatialPayoffGpu,
-    SwConfig, SwResult, SwarmNnGpu, TaxonomyFcGpu, TreeInferenceGpu, UniFracConfig,
-    UniFracPropagateGpu,
+    AniBatchF64, BatchFitnessGpu, Dada2Buffers, Dada2Dimensions, Dada2DispatchArgs, Dada2EStepGpu,
+    DnDsBatchF64, FelsensteinGpu, FelsensteinResult, FlatForest, FlatTree, GillespieConfig,
+    GillespieGpu, GillespieModel, GillespieResult, HillGateGpu, HmmBatchForwardF64, HmmForwardArgs,
+    KmerHistogramGpu, LocusVarianceGpu, MultiObjFitnessGpu, PairwiseHammingGpu, PairwiseJaccardGpu,
+    PairwiseL2Gpu, PangenomeClassifyGpu, PhyloTree, QualityConfig, QualityFilterGpu,
+    RfBatchInferenceGpu, SmithWatermanGpu, SnpCallingF64, SpatialPayoffGpu, SwConfig, SwResult,
+    SwarmNnGpu, TaxonomyFcGpu, TreeInferenceGpu, UniFracConfig, UniFracPropagateGpu,
 };
+
+#[cfg(feature = "gpu")]
+pub use device::driver_profile::PrecisionRoutingAdvice;
+
+#[cfg(feature = "gpu")]
+pub use ops::rk45_adaptive::Rk45DispatchArgs;
 
 /// Prelude: Common imports for using barracuda.
 ///

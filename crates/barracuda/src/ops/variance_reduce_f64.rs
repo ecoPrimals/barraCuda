@@ -18,6 +18,7 @@
 
 use crate::device::WgpuDevice;
 use crate::device::compute_pipeline::ComputeDispatch;
+use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -57,14 +58,33 @@ impl WelfordState {
     }
 }
 
+/// Native f64 variance-reduce shader (workgroup shared memory uses f64).
+const SHADER_NATIVE: &str = include_str!("../shaders/reduce/variance_reduce_f64.wgsl");
+/// DF64 variance-reduce shader (workgroup shared memory uses f32 pairs).
+const SHADER_DF64: &str = include_str!("../shaders/reduce/variance_reduce_df64.wgsl");
+/// DF64 core arithmetic library.
+const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
+
+/// Select the variance-reduce shader based on the device's FP64 strategy.
+///
+/// Native/Concurrent/Sovereign: native f64 workgroup memory is reliable.
+/// Hybrid: f64 shared memory returns zeros on some devices; use DF64.
+fn shader_for_device(device: &WgpuDevice) -> &'static str {
+    let profile = GpuDriverProfile::from_device(device);
+    match profile.fp64_strategy() {
+        Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => SHADER_NATIVE,
+        Fp64Strategy::Hybrid => {
+            static DF64_COMBINED: std::sync::LazyLock<String> =
+                std::sync::LazyLock::new(|| format!("enable f64;\n{DF64_CORE}\n{SHADER_DF64}"));
+            &DF64_COMBINED
+        }
+    }
+}
+
 /// GPU-accelerated f64 variance/std operations
 pub struct VarianceReduceF64;
 
 impl VarianceReduceF64 {
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/reduce/variance_reduce_f64.wgsl")
-    }
-
     /// Compute sample variance: Var(X) = sum((x - mean)^2) / (n - 1)
     /// Uses Bessel's correction (n-1 denominator) for unbiased estimation.
     /// # Errors
@@ -161,11 +181,12 @@ impl VarianceReduceF64 {
             });
         }
 
+        let shader_src = shader_for_device(&device);
+
         let n = data.len();
         let wg_size = 256;
         let n_workgroups = n.div_ceil(wg_size);
 
-        // Create input buffer
         let input_bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
         let input_buffer = device
             .device
@@ -175,7 +196,6 @@ impl VarianceReduceF64 {
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
-        // Output: 3 f64s per workgroup (count, mean, M2)
         let partial_buffer = device.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("VarianceReduce partials"),
             size: (n_workgroups * 3 * 8) as u64,
@@ -192,7 +212,7 @@ impl VarianceReduceF64 {
         let params_buffer = device.create_uniform_buffer("VarianceReduce params", &params);
 
         ComputeDispatch::new(&device, "variance_reduce_f64")
-            .shader(Self::wgsl_shader(), "variance_reduce_f64")
+            .shader(shader_src, "variance_reduce_f64")
             .f64()
             .storage_read(0, &input_buffer)
             .storage_rw(1, &partial_buffer)
@@ -200,10 +220,8 @@ impl VarianceReduceF64 {
             .dispatch(n_workgroups as u32, 1, 1)
             .submit()?;
 
-        // Read back partial states and merge on CPU
         let partials = device.read_f64_buffer(&partial_buffer, n_workgroups * 3)?;
 
-        // Merge all partial Welford states
         let mut final_state = WelfordState {
             count: 0.0,
             mean: 0.0,

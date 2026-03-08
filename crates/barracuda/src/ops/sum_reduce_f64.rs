@@ -18,6 +18,7 @@
 
 use crate::device::WgpuDevice;
 use crate::device::compute_pipeline::ComputeDispatch;
+use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -32,14 +33,33 @@ struct ReduceParams {
     _pad3: u32,
 }
 
+/// Native f64 sum-reduce shader (workgroup shared memory uses f64).
+const SHADER_NATIVE: &str = include_str!("../shaders/reduce/sum_reduce_f64.wgsl");
+/// DF64 sum-reduce shader (workgroup shared memory uses f32 pairs).
+const SHADER_DF64: &str = include_str!("../shaders/reduce/sum_reduce_df64.wgsl");
+/// DF64 core arithmetic library.
+const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
+
+/// Select the reduce shader based on the device's FP64 strategy.
+///
+/// Native/Concurrent/Sovereign: native f64 workgroup memory is reliable.
+/// Hybrid: f64 shared memory returns zeros on some devices; use DF64.
+fn shader_for_device(device: &WgpuDevice) -> &'static str {
+    let profile = GpuDriverProfile::from_device(device);
+    match profile.fp64_strategy() {
+        Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => SHADER_NATIVE,
+        Fp64Strategy::Hybrid => {
+            static DF64_COMBINED: std::sync::LazyLock<String> =
+                std::sync::LazyLock::new(|| format!("enable f64;\n{DF64_CORE}\n{SHADER_DF64}"));
+            &DF64_COMBINED
+        }
+    }
+}
+
 /// GPU-accelerated f64 reduction operations
 pub struct SumReduceF64;
 
 impl SumReduceF64 {
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/reduce/sum_reduce_f64.wgsl")
-    }
-
     /// Compute the sum of all elements in a f64 buffer on GPU
     /// # Arguments
     /// * `device` - `WgpuDevice`
@@ -86,12 +106,12 @@ impl SumReduceF64 {
             return Ok(data[0]);
         }
 
-        // Two-pass reduction
+        let shader_src = shader_for_device(&device);
+
         let n = data.len();
         let wg_size = 256;
         let n_workgroups = n.div_ceil(wg_size);
 
-        // Pass 1: data -> partial sums
         let input_bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
         let input_buffer = device
             .device
@@ -117,7 +137,7 @@ impl SumReduceF64 {
         let params_buffer = device.create_uniform_buffer("Reduce params", &params);
 
         ComputeDispatch::new(&device, "sum_reduce_pass1")
-            .shader(Self::wgsl_shader(), entry_point)
+            .shader(shader_src, entry_point)
             .f64()
             .storage_read(0, &input_buffer)
             .storage_rw(1, &partial_buffer)
@@ -126,11 +146,9 @@ impl SumReduceF64 {
             .submit()?;
 
         if n_workgroups <= 1 {
-            // Single workgroup — result is ready
             return Self::read_f64_scalar(&device, &partial_buffer);
         }
 
-        // Pass 2: partial sums -> final result
         let final_buffer = device.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Reduce final"),
             size: 8 * n_workgroups.div_ceil(wg_size) as u64,
@@ -148,7 +166,7 @@ impl SumReduceF64 {
 
         let n_workgroups2 = n_workgroups.div_ceil(wg_size);
         ComputeDispatch::new(&device, "sum_reduce_pass2")
-            .shader(Self::wgsl_shader(), entry_point)
+            .shader(shader_src, entry_point)
             .f64()
             .storage_read(0, &partial_buffer)
             .storage_rw(1, &final_buffer)
@@ -156,10 +174,7 @@ impl SumReduceF64 {
             .dispatch(n_workgroups2 as u32, 1, 1)
             .submit()?;
 
-        // For very large inputs, may need a third pass — but for nuclear EOS
-        // (max ~2042 elements), two passes always suffice (ceil(2042/256) = 8 < 256)
         if n_workgroups2 > 1 {
-            // Third pass (extremely rare): read back partials and sum on CPU
             let partials = device.read_f64_buffer(&final_buffer, n_workgroups2)?;
             return Ok(partials.iter().sum());
         }

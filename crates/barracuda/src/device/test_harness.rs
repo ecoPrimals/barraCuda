@@ -238,6 +238,53 @@ pub fn validate_shader_batch<'a>(
         .collect()
 }
 
+/// Check whether the device's fused f64 reduction ops produce valid results.
+///
+/// Runs a minimal variance computation (`[1.0, 2.0, 3.0, 4.0, 5.0]`) and
+/// verifies the result is finite and positive. Returns `false` on Hybrid
+/// devices where shared-memory f64 accumulators return zeros, or when the
+/// GPU is otherwise unable to produce correct fused-reduction results.
+///
+/// Springs use this as a canary to gate test suites that depend on fused
+/// reductions (`VarianceF64`, `CorrelationF64`, `HmmBatchForwardF64`).
+#[cfg(feature = "gpu")]
+#[must_use]
+pub fn fused_ops_healthy(device: &std::sync::Arc<super::WgpuDevice>) -> bool {
+    let data = [1.0_f64, 2.0, 3.0, 4.0, 5.0];
+    match crate::ops::variance_f64_wgsl::VarianceF64::new(std::sync::Arc::clone(device)) {
+        Ok(var_op) => match var_op.variance(&data) {
+            Ok(v) => v.is_finite() && v > 0.1,
+            Err(_) => false,
+        },
+        Err(_) => false,
+    }
+}
+
+/// Check whether the adapter is a software rasterizer (llvmpipe, lavapipe, swiftshader).
+///
+/// Springs use this to skip hardware-specific tests or relax tolerances.
+#[cfg(feature = "gpu")]
+#[must_use]
+pub fn is_software_adapter(device: &super::WgpuDevice) -> bool {
+    let info = device.adapter_info();
+    info.device_type == wgpu::DeviceType::Cpu
+        || info.driver.to_lowercase().contains("llvmpipe")
+        || info.driver.to_lowercase().contains("lavapipe")
+        || info.name.to_lowercase().contains("swiftshader")
+}
+
+/// Resolve a path relative to the calling crate's manifest directory.
+///
+/// Wraps the common `CARGO_MANIFEST_DIR` pattern so springs don't have to
+/// replicate it. Returns `None` if the env var is missing (e.g. running
+/// outside `cargo test`).
+#[must_use]
+pub fn baseline_path(relative: &str) -> Option<std::path::PathBuf> {
+    std::env::var("CARGO_MANIFEST_DIR")
+        .ok()
+        .map(|dir| std::path::PathBuf::from(dir).join(relative))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

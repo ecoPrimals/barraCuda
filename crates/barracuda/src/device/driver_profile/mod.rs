@@ -415,6 +415,18 @@ impl GpuDriverProfile {
         matches!(self.driver, DriverKind::Nvk | DriverKind::Radv)
     }
 
+    /// Whether this device may advertise f64 support but produce zero outputs.
+    ///
+    /// NVK on Titan V and some consumer NVIDIA GPUs advertise `Float64` in
+    /// wgpu features, but shared-memory f64 accumulators return zeros for
+    /// reduction operations. This flag allows springs to skip or guard f64
+    /// reduction tests on affected hardware.
+    #[must_use]
+    pub fn f64_zeros_risk(&self) -> bool {
+        self.driver == DriverKind::Nvk
+            && matches!(self.fp64_rate, Fp64Rate::Full | Fp64Rate::Throttled)
+    }
+
     /// Return the `LatencyModel` appropriate for this GPU architecture.
     /// The model provides per-operation cycle counts used by the WGSL ILP
     /// scheduler (`@ilp_region` reorderer, Phase 3 `WgslDependencyGraph`).

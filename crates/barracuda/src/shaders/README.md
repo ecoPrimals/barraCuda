@@ -1,6 +1,6 @@
 # BarraCuda WGSL Shader Library
 
-**784 Production WGSL Shaders** | Universal Precision (f16/f32/f64/DF64) | Cross-Vendor Compatible
+**786 Production WGSL Shaders** | Universal Precision (f16/f32/f64/DF64) | Cross-Vendor Compatible
 
 ---
 
@@ -351,6 +351,6 @@ cargo test -p barracuda --lib --release
 ---
 
 **Last Updated**: March 7, 2026  
-**Shader Count**: 784 — organized by domain, all f64 canonical. DF64 emulated double-precision on hardware without native f64.  
+**Shader Count**: 786 — organized by domain, all f64 canonical. DF64 emulated double-precision on hardware without native f64.  
 **Categories**: 41 directories  
 **Status**: Production — dual-layer universal precision operational, 15-function DF64 transcendental suite complete

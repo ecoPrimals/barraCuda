@@ -1,11 +1,30 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-03-07.
+Prioritized work items, ordered by impact. Updated 2026-03-08.
 
 ---
 
 ## Recently Completed
 
+- **P0: `SumReduceF64`/`VarianceReduceF64` `Fp64Strategy` fix**: Created DF64 shader
+  variants (`sum_reduce_df64.wgsl`, `variance_reduce_df64.wgsl`) that use `vec2<f32>`
+  workgroup memory instead of native f64. Added `Fp64Strategy` routing so Hybrid
+  devices auto-select the DF64 path. Fixes zeros-from-reductions bug reported by
+  groundSpring V96 and neuralSpring S131.
+- **Re-export builder types**: `HmmForwardArgs`, `Dada2DispatchArgs`, `Dada2Buffers`,
+  `Dada2Dimensions`, `GillespieModel`, `PrecisionRoutingAdvice`, `Rk45DispatchArgs`
+  now accessible at `barracuda::` level (wetSpring P1 request).
+- **`barracuda::math::{dot, l2_norm}`**: Re-exported from `stats::metrics` —
+  15+ wetSpring binaries can drop local 5-line implementations.
+- **`fused_ops_healthy()` canary**: `device::test_harness::fused_ops_healthy(&device)`
+  runs minimal variance probe, returns `false` if shared-memory reductions fail.
+  neuralSpring canary pattern absorbed.
+- **NVK zero-output detection**: `GpuDriverProfile::f64_zeros_risk()` flags
+  NVK + Full/Throttled FP64 as shared-memory-unreliable (airSpring V071 request).
+- **`GpuViewF64` ops**: `mean_variance(ddof)`, `sum()`, `correlation(a, b)` —
+  stepping-stone API for zero-readback chains (groundSpring P2 request).
+- **Test utilities absorbed**: `is_software_adapter(&device)`, `baseline_path(relative)`
+  in `test_harness`, re-exported in `test_prelude`.
 - **DF64 Hybrid fallback bug**: 10 ops (covariance, weighted_dot, hermite, digamma,
   cosine_similarity, beta, bessel_i0/j0/j1/k0) now return `ShaderCompilation` error
   instead of silently producing zeros on Hybrid devices.

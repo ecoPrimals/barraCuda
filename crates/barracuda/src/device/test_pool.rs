@@ -557,7 +557,10 @@ pub mod test_prelude {
     };
     use crate::tensor::Tensor;
 
-    pub use crate::device::test_harness::{coral_available, gpu_section, with_coral};
+    pub use crate::device::test_harness::{
+        baseline_path, coral_available, fused_ops_healthy, gpu_section, is_software_adapter,
+        with_coral,
+    };
 
     /// Get shared test device (async). CPU by default, GPU with env var.
     ///

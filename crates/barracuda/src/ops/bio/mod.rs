@@ -70,15 +70,15 @@ pub use batch_fitness::BatchFitnessGpu;
 pub use batched_multinomial::{
     BatchedMultinomialConfig, BatchedMultinomialGpu, multinomial_sample_cpu,
 };
-pub use dada2::Dada2EStepGpu;
+pub use dada2::{Dada2Buffers, Dada2Dimensions, Dada2DispatchArgs, Dada2EStepGpu};
 pub use diversity_fusion::{DiversityFusionGpu, DiversityResult, diversity_fusion_cpu};
 pub use dnds::DnDsBatchF64;
 pub use felsenstein::{FelsensteinGpu, FelsensteinResult, PhyloTree};
 pub use flat_tree::FlatTree;
 pub use fst_variance::{FstResult, fst_variance_decomposition};
-pub use gillespie::{GillespieConfig, GillespieGpu, GillespieResult};
+pub use gillespie::{GillespieConfig, GillespieGpu, GillespieModel, GillespieResult};
 pub use hill_gate::{HillGateGpu, HillGateParams};
-pub use hmm::{HmmBatchForwardF64, ViterbiResult, hmm_backward, hmm_viterbi};
+pub use hmm::{HmmBatchForwardF64, HmmForwardArgs, ViterbiResult, hmm_backward, hmm_viterbi};
 pub use kmer_histogram::KmerHistogramGpu;
 pub use locus_variance::LocusVarianceGpu;
 pub use multi_obj_fitness::MultiObjFitnessGpu;

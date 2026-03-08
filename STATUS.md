@@ -1,7 +1,7 @@
 # barraCuda Status
 
 **Version**: 0.3.3
-**Date**: 2026-03-07
+**Date**: 2026-03-08
 **Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,100+ tests passing)
 
 ---
@@ -10,8 +10,8 @@
 
 | Category | Grade | Notes |
 |----------|-------|-------|
-| **Core compute** | A | 784 WGSL shaders, 13-tier tolerance architecture, GpuView persistent buffers |
-| **Precision tiers** | A | F32/F64/DF64/F16 universal pipeline; DF64 naga-guided rewrite validated; probe-aware Fp64Strategy; DF64 Hybrid fallback bug fixed (10 ops) |
+| **Core compute** | A | 786 WGSL shaders, 13-tier tolerance architecture, GpuView persistent buffers with ops |
+| **Precision tiers** | A+ | F32/F64/DF64/F16 universal pipeline; DF64 naga-guided rewrite validated; probe-aware Fp64Strategy; DF64 reduce shaders for Hybrid devices; P0 `SumReduceF64`/`VarianceReduceF64` fix |
 | **Sovereign compiler** | A | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all shaders |
 | **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery; coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support |
 | **Device management** | A | Multi-GPU, capability-scored discovery, probe-aware f64 strategy, f64 computational accuracy probe, bounded poll timeout, poison-recovering autotune |
@@ -22,7 +22,7 @@
 | **Clippy / lint** | A+ | Zero warnings with pedantic + unwrap_used; `#[expect(reason)]` for clippy suppressions; `#[allow(dead_code, reason)]` for CPU reference implementations; `bytes::Bytes` zero-copy on I/O boundaries; zero undocumented suppressions |
 | **Error handling** | A+ | Binary `main()` uses typed `BarracudaCoreError` (not `Box<dyn Error>`); `From` impls for `serde_json::Error`, `BarracudaError`, `io::Error`; `Result` propagation throughout; `let-else` throughout; poison recovery |
 | **Idiomatic Rust** | A+ | Edition 2024; zero `too_many_arguments` (all 9 → builder/struct); documented `#[allow]`/`#[expect]` with reason; `#[derive(Default)]`; zero unsafe; `ChamferDirection` enum; smart module decomposition (provenance, coral_compiler) |
-| **Spring absorption** | A | LSCFRK integrators, force_anomaly brain, GPU-resident reduction, airSpring ops all absorbed; cross-spring provenance registry |
+| **Spring absorption** | A+ | Cross-spring P0/P1/P2 items resolved (Mar 8); DF64 reduce fix for groundSpring/neuralSpring; builder re-exports for wetSpring; `dot`/`l2_norm` for springs; canary/test utils; NVK guard; GpuView ops; all shader targets verified absorbed |
 
 ---
 
@@ -31,6 +31,12 @@
 - Full F32/F64/DF64/F16 precision pipeline with universal shader compilation
 - Naga-guided DF64 infix rewrite (compound assignments, comparisons, nested ops)
 - DF64 Hybrid path: 10 ops now fail loudly on rewrite failure instead of silently producing zeros
+- **P0 fix**: `SumReduceF64`/`VarianceReduceF64` now route through DF64 shaders on Hybrid devices (was returning zeros)
+- Builder type re-exports at `barracuda::{HmmForwardArgs, Dada2DispatchArgs, GillespieModel, PrecisionRoutingAdvice, Rk45DispatchArgs}`
+- `barracuda::math::{dot, l2_norm}` for springs to drop local implementations
+- `fused_ops_healthy()` canary, `is_software_adapter()`, `baseline_path()` in test harness
+- `GpuDriverProfile::f64_zeros_risk()` for NVK shared-memory f64 detection
+- `GpuViewF64::{mean_variance, sum, correlation}` ops for zero-readback chains
 - Sovereign compiler: WGSL → naga IR → FMA fusion → dead expr elimination → optimised WGSL (safe, all backends)
 - Sovereign validation harness: pure-Rust traversal + parse + optimize + validate of all WGSL shaders
 - GpuView persistent buffer API for zero-copy GPU-resident computation

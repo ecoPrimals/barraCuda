@@ -215,6 +215,47 @@ pub type GpuViewF32 = GpuView<f32>;
 /// Convenience alias for u32 GPU views.
 pub type GpuViewU32 = GpuView<u32>;
 
+impl GpuViewF64 {
+    /// Compute mean and variance of the view's data.
+    ///
+    /// Downloads data once, then dispatches to the fused Welford op.
+    /// Returns `[mean, variance]`.
+    /// # Errors
+    /// Returns [`Err`] if download or variance computation fails.
+    pub fn mean_variance(&self, ddof: usize) -> Result<[f64; 2]> {
+        let var_op = crate::ops::variance_f64_wgsl::VarianceF64::new(Arc::clone(&self.device))?;
+        let data = self.download()?;
+        var_op.mean_variance(&data, ddof)
+    }
+
+    /// Compute sum of all elements.
+    /// # Errors
+    /// Returns [`Err`] if download or sum computation fails.
+    pub fn sum(&self) -> Result<f64> {
+        let data = self.download()?;
+        crate::ops::sum_reduce_f64::SumReduceF64::sum(Arc::clone(&self.device), &data)
+    }
+
+    /// Compute Pearson correlation between two views.
+    /// # Errors
+    /// Returns [`Err`] if views have different lengths or GPU dispatch fails.
+    pub fn correlation(a: &GpuViewF64, b: &GpuViewF64) -> Result<f64> {
+        if a.len() != b.len() {
+            return Err(BarracudaError::InvalidInput {
+                message: format!(
+                    "GpuView::correlation: length mismatch ({} vs {})",
+                    a.len(),
+                    b.len()
+                ),
+            });
+        }
+        let data_a = a.download()?;
+        let data_b = b.download()?;
+        let corr = crate::ops::correlation_f64_wgsl::CorrelationF64::new(Arc::clone(&a.device))?;
+        corr.correlation(&data_a, &data_b)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,13 +1,13 @@
 # Spring Absorption Tracker
 
 **Version**: 0.3.3 → 0.3.4
-**Date**: March 7, 2026
-**Source**: hotSpring v0.6.19, groundSpring V88, neuralSpring V128, wetSpring V97d, airSpring v0.7.0
+**Date**: March 8, 2026
+**Source**: hotSpring v0.6.19, groundSpring V96, neuralSpring V89/S131, wetSpring V97e, airSpring v0.7.3
 
 Cross-spring evolution follows **Write → Absorb → Lean**: springs implement
 domain-specific primitives, barraCuda absorbs and generalises, springs consume
 the upstream version. All springs are synced to barraCuda v0.3.3 / wgpu 28
-with zero local WGSL (except airSpring, 3 remaining).
+with zero local WGSL (airSpring and wetSpring fully lean).
 
 ---
 
@@ -93,7 +93,7 @@ groundSpring → ALL:        2 shaders (chi_squared universal, Welford mean+vari
 
 | # | Item | Source | Module | Status |
 |---|------|--------|--------|--------|
-| 9 | `GpuView<T>` zero-copy expansion | hotSpring | `pipeline::gpu_view` | 🔲 Pending |
+| 9 | `GpuView<T>` ops: `mean_variance`, `sum`, `correlation` | groundSpring, hotSpring | `pipeline::gpu_view` | ✅ Done |
 | 10 | `mean_variance_to_buffer()` fused GPU stats | hotSpring | `ops::variance_f64_wgsl` | ✅ Done |
 | 11 | RHMC multi-shift CG solver | hotSpring ladder L4 | `ops::lattice` | 🔲 Pending |
 | 12 | Adaptive HMC dt from acceptance rate | hotSpring | `ops::lattice` | 🔲 Pending |
@@ -112,6 +112,20 @@ groundSpring → ALL:        2 shaders (chi_squared universal, Welford mean+vari
 
 ---
 
+### Cross-Spring Absorption (Mar 8 2026)
+
+| # | Item | Change | Status |
+|---|------|--------|--------|
+| AA | **P0: Fp64Strategy in `SumReduceF64`/`VarianceReduceF64`** | DF64 shader variants (`sum_reduce_df64.wgsl`, `variance_reduce_df64.wgsl`) + `Fp64Strategy` routing — Hybrid devices now use DF64 workgroup memory instead of unreliable f64 shared memory | ✅ Done |
+| AB | **P1: Re-export builder types** | `HmmForwardArgs`, `Dada2DispatchArgs`, `Dada2Buffers`, `Dada2Dimensions`, `GillespieModel`, `PrecisionRoutingAdvice`, `Rk45DispatchArgs` at `barracuda::` level | ✅ Done |
+| AC | **P1: `barracuda::math::{dot, l2_norm}`** | Re-exported from `stats::metrics` — 15+ wetSpring binaries can drop local implementations | ✅ Done |
+| AD | **P1: `fused_ops_healthy()` canary** | `device::test_harness::fused_ops_healthy(&device)` — gates fused-reduction test suites on Hybrid devices | ✅ Done |
+| AE | **P2: NVK zero-output detection** | `GpuDriverProfile::f64_zeros_risk()` — flags NVK + Full/Throttled FP64 as shared-memory-unreliable | ✅ Done |
+| AF | **P2: `GpuViewF64` ops** | `mean_variance(ddof)`, `sum()`, `GpuViewF64::correlation(a, b)` — stepping-stone API for zero-readback chains | ✅ Done |
+| AG | **P2: Test utilities** | `is_software_adapter(&device)`, `baseline_path(relative)` in `test_harness` + re-exported in `test_prelude` | ✅ Done |
+
+---
+
 ## Numerical Stability Notes (from springs)
 
 - **f32 accumulation bias**: Green-Kubo gives ~28% bias — use f64/DF64 for reductions
@@ -119,9 +133,11 @@ groundSpring → ALL:        2 shaders (chi_squared universal, Welford mean+vari
 - **GPU NaN source**: division-by-zero — mitigated by `eps::SAFE_DIV` (item 2)
 - **NVK/NAK f64**: unreliable on Titan V, RTX 4070 — mitigated by `has_reliable_f64()` (item 1)
 - **DF64 Yukawa on NVK**: 300–900 steps/s vs 29 native — requires `compile_shader_universal(Df64)`
+- **NVK shared-memory f64**: returns zeros for `var<workgroup>` f64 accumulators — mitigated by DF64 reduce shaders (item AA)
 
 ## References
 
+- `wateringHole/handoffs/BARRACUDA_V033_CROSS_SPRING_ABSORPTION_HANDOFF_MAR08_2026.md`
 - `wateringHole/handoffs/CORALREEF_PHASE10_CROSS_SPRING_REWIRE_HANDOFF_MAR07_2026.md`
 - `wateringHole/handoffs/BARRACUDA_V033_SPRING_ABSORPTION_DEEP_DEBT_HANDOFF_MAR06_2026.md`
 - `wateringHole/handoffs/HOTSPRING_SCIENCE_LADDER_BARRACUDA_ABSORPTION_MAR06_2026.md`

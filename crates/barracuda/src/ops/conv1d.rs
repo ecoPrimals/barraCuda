@@ -62,9 +62,8 @@ impl Conv1D {
     }
 
     fn wgsl_shader() -> &'static str {
-        static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-            SHADER_F64.to_string()
-        });
+        static SHADER: std::sync::LazyLock<String> =
+            std::sync::LazyLock::new(|| SHADER_F64.to_string());
         std::sync::LazyLock::force(&SHADER).as_str()
     }
 

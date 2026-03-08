@@ -66,7 +66,7 @@ ok "Clippy clean ($(elapsed $T))"
 tier 2 "Core library (barracuda-core: IPC, lifecycle, RPC)"
 T=$(date +%s%3N)
 $NEXTEST -p barracuda-core --lib --profile default
-ok "barracuda-core: 45 tests ($(elapsed $T))"
+ok "barracuda-core: 50 tests ($(elapsed $T))"
 
 # ─── Tier 3: Targeted module tests ────────────────────────────────
 tier 3 "Targeted modules (changed-code validation)"

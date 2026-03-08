@@ -4,10 +4,10 @@
 //! **Purpose**: Complex FFT for wave physics and frequency analysis
 //!
 //! **Architecture**: GPU-resident f64-canonical
-//! - All FFT shaders written in f64 (fft_3d_batched_f64.wgsl)
+//! - All FFT shaders written in f64 (`fft_3d_batched_f64.wgsl`)
 //! - f32 path: downcast via `downcast_f64_to_f32` for broad compatibility
 //! - f64 path: native when device has `SHADER_F64`, else DF64 fallback
-//! - Zero CPU readbacks for f32 pipeline (Fft1D, Fft2D, Fft3D, Rfft)
+//! - Zero CPU readbacks for f32 pipeline (`Fft1D`, `Fft2D`, `Fft3D`, `Rfft`)
 //!
 //! **Evolution**: Adapted from FHE NTT (80% structure reuse!)
 //! - NTT: Butterfly in integer modular domain
@@ -16,12 +16,12 @@
 //!
 //! ## Operations
 //!
-//! - `fft_1d` - 1D Complex FFT (Cooley-Tukey radix-2, f32) ⚠️ **CRITICAL FOR PPPM**
-//! - `fft_1d_f64` - 1D Complex FFT (f64) for high-precision MD simulations
-//! - `ifft_1d` - 1D Inverse FFT (conjugate + normalize)
-//! - `fft_2d` - 2D FFT via row-column decomposition
-//! - `fft_3d` - 3D FFT for PPPM long-range forces
-//! - `rfft` - Real-to-complex FFT (optimized)
+//! - [`fft_1d`] - 1D Complex FFT (Cooley-Tukey radix-2, f32) — **CRITICAL FOR PPPM**
+//! - [`fft_1d_f64`] - 1D Complex FFT (f64) for high-precision MD simulations
+//! - [`ifft_1d`] - 1D Inverse FFT (conjugate + normalize)
+//! - [`fft_2d`] - 2D FFT via row-column decomposition
+//! - [`fft_3d`] - 3D FFT for PPPM long-range forces
+//! - [`rfft`] - Real-to-complex FFT (optimized)
 //!
 //! ## Mathematical Background
 //!

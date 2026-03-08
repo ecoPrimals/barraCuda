@@ -17,8 +17,11 @@ use super::types::{
 use bytes::Bytes;
 
 mod defaults {
+    /// Conservative fallback total system memory (16 GiB) when sysinfo unavailable.
     pub const FALLBACK_TOTAL_MEMORY_BYTES: u64 = 16 * 1024 * 1024 * 1024;
+    /// Conservative fallback available memory (8 GiB) when sysinfo unavailable.
     pub const FALLBACK_AVAILABLE_MEMORY_BYTES: u64 = 8 * 1024 * 1024 * 1024;
+    /// Conservative fallback memory bandwidth (50 GiB/s) when sysinfo unavailable.
     pub const FALLBACK_BANDWIDTH_BYTES_SEC: u64 = 50 * 1024 * 1024 * 1024;
     #[cfg(not(target_arch = "x86_64"))]
     pub const FALLBACK_SIMD_WIDTH: usize = 4;
@@ -158,7 +161,7 @@ impl ComputeExecutor for CpuExecutor {
         Box::pin(async move {
             Ok(Arc::new(CpuTensorStorageSimple {
                 descriptor,
-                data: vec![0u8; byte_size],
+                data: Bytes::from(vec![0u8; byte_size]),
             }) as Arc<dyn TensorStorage>)
         })
     }
@@ -175,19 +178,19 @@ impl ComputeExecutor for CpuExecutor {
             } else {
                 let data = tensor.read_to_cpu().await?;
                 let descriptor = tensor.descriptor().clone();
-                Ok(Arc::new(CpuTensorStorageSimple {
-                    descriptor,
-                    data: data.to_vec(),
-                }) as Arc<dyn TensorStorage>)
+                Ok(Arc::new(CpuTensorStorageSimple { descriptor, data }) as Arc<dyn TensorStorage>)
             }
         })
     }
 }
 
 /// Simple CPU tensor storage for the scheduler path.
+///
+/// Uses `Bytes` for zero-copy readback — `read_to_cpu()` is a cheap
+/// ref-count bump instead of cloning the entire buffer.
 pub(crate) struct CpuTensorStorageSimple {
     pub(crate) descriptor: TensorDescriptor,
-    pub(crate) data: Vec<u8>,
+    pub(crate) data: Bytes,
 }
 
 impl TensorStorage for CpuTensorStorageSimple {
@@ -202,7 +205,7 @@ impl TensorStorage for CpuTensorStorageSimple {
     fn read_to_cpu(
         &self,
     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Bytes>> + Send + '_>> {
-        let data = Bytes::from(self.data.clone());
+        let data = self.data.clone();
         Box::pin(async move { Ok(data) })
     }
 
@@ -210,18 +213,18 @@ impl TensorStorage for CpuTensorStorageSimple {
         &mut self,
         data: &[u8],
     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
-        let data = data.to_vec();
+        let new_data = Bytes::copy_from_slice(data);
         Box::pin(async move {
-            if data.len() != self.data.len() {
+            if new_data.len() != self.data.len() {
                 return Err(crate::error::BarracudaError::InvalidInput {
                     message: format!(
                         "Data size mismatch: expected {}, got {}",
                         self.data.len(),
-                        data.len()
+                        new_data.len()
                     ),
                 });
             }
-            self.data.copy_from_slice(&data);
+            self.data = new_data;
             Ok(())
         })
     }
@@ -262,7 +265,7 @@ mod tests {
         let desc = TensorDescriptor::new(vec![4], DType::F32);
         let mut storage = CpuTensorStorageSimple {
             descriptor: desc,
-            data: vec![0u8; 16],
+            data: Bytes::from(vec![0u8; 16]),
         };
         let input = [1.0f32, 2.0, 3.0, 4.0];
         let bytes: Vec<u8> = input.iter().flat_map(|v| v.to_le_bytes()).collect();
@@ -276,7 +279,7 @@ mod tests {
         let desc = TensorDescriptor::new(vec![4], DType::F32);
         let mut storage = CpuTensorStorageSimple {
             descriptor: desc,
-            data: vec![0u8; 16],
+            data: Bytes::from(vec![0u8; 16]),
         };
         let result = storage.write_from_cpu(&[1, 2, 3]).await;
         assert!(result.is_err());

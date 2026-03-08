@@ -6,10 +6,10 @@
 //! **Output**: Complex spectrum (N/2+1 unique points)
 //! **Mathematical Property**: X[k] = conj(X[N-k]) for real inputs
 //!
-//! GPU-resident: uses real_to_complex_f64.wgsl (downcast), batched FFT,
-//! rfft_extract_f64.wgsl (downcast). Zero CPU readbacks.
+//! GPU-resident: uses `real_to_complex_f64.wgsl` (downcast), batched FFT,
+//! `rfft_extract_f64.wgsl` (downcast). Zero CPU readbacks.
 
-use super::fft_1d::{batched_shader_f32, dispatch_axis_inner, upload_twiddles_f32, AxisConfig};
+use super::fft_1d::{AxisConfig, batched_shader_f32, dispatch_axis_inner, upload_twiddles_f32};
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
@@ -17,17 +17,15 @@ use crate::tensor::Tensor;
 use std::mem::size_of;
 
 fn rtc_shader_f32() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        include_str!("real_to_complex_f64.wgsl").to_string()
-    });
-    &*SHADER
+    static SHADER: std::sync::LazyLock<String> =
+        std::sync::LazyLock::new(|| include_str!("real_to_complex_f64.wgsl").to_string());
+    &SHADER
 }
 
 fn extract_shader_f32() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        include_str!("rfft_extract_f64.wgsl").to_string()
-    });
-    &*SHADER
+    static SHADER: std::sync::LazyLock<String> =
+        std::sync::LazyLock::new(|| include_str!("rfft_extract_f64.wgsl").to_string());
+    &SHADER
 }
 
 #[repr(C)]
@@ -86,7 +84,9 @@ impl Rfft {
 
     /// Execute RFFT operation. 3 GPU passes: real→complex, FFT, extract. Zero CPU readbacks.
     /// # Returns
-    /// Complex spectrum tensor (shape: [N/2+1, 2])
+    /// Complex spectrum tensor (shape: \[N/2+1, 2\])
+    /// # Errors
+    /// Returns [`Err`] if GPU dispatch, buffer creation, or readback fails.
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let n = self.degree as usize;
@@ -163,18 +163,15 @@ impl Rfft {
             unique_points: unique_points as u32,
             padding: [0; 3],
         };
-        let extract_params_buf = device.create_uniform_buffer("RFFT ExtractParams", &extract_params);
+        let extract_params_buf =
+            device.create_uniform_buffer("RFFT ExtractParams", &extract_params);
 
         ComputeDispatch::new(device, "RFFT Extract")
             .shader(extract_shader_f32(), "main")
             .storage_read(0, &complex_buf)
             .storage_rw(1, &output_buf)
             .uniform(2, &extract_params_buf)
-            .dispatch(
-                (unique_points as u32).div_ceil(WORKGROUP_SIZE_1D),
-                1,
-                1,
-            )
+            .dispatch((unique_points as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1)
             .submit()?;
 
         Ok(Tensor::from_buffer(

@@ -29,7 +29,13 @@ pub fn evolution_report() -> String {
     );
 
     let matrix = cross_spring_matrix();
-    let domains = [SD::HOT_SPRING, SD::WET_SPRING, SD::NEURAL_SPRING, SD::AIR_SPRING, SD::GROUND_SPRING];
+    let domains = [
+        SD::HOT_SPRING,
+        SD::WET_SPRING,
+        SD::NEURAL_SPRING,
+        SD::AIR_SPRING,
+        SD::GROUND_SPRING,
+    ];
     for from in &domains {
         let _ = write!(report, "| **{from}** ");
         for to in &domains {

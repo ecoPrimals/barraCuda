@@ -5,7 +5,7 @@
 //! **Performance**: ~10x faster than NTT (native float vs U64 emulation)
 //! **CRITICAL**: Unblocks PPPM, structure factors, all wave physics
 //!
-//! Uses the batched FFT engine (fft_3d_batched_f64.wgsl) for both f32 and f64.
+//! Uses the batched FFT engine (`fft_3d_batched_f64.wgsl`) for both f32 and f64.
 //! f32 path: downcast shader via `downcast_f64_to_f32`.
 
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
@@ -62,10 +62,11 @@ pub const BATCHED_SHADER_F64: &str = include_str!("fft_3d_batched_f64.wgsl");
 pub fn batched_shader_f32() -> &'static str {
     static SHADER: std::sync::LazyLock<String> =
         std::sync::LazyLock::new(|| BATCHED_SHADER_F64.to_string());
-    &*SHADER
+    &SHADER
 }
 
 /// Upload twiddle factors for f32 (re/im interleaved as f32 pairs).
+#[must_use]
 pub fn upload_twiddles_f32(
     device: &crate::device::WgpuDevice,
     degree: u32,
@@ -78,20 +79,25 @@ pub fn upload_twiddles_f32(
         re.push(angle.cos());
         im.push(angle.sin());
     }
-    let re_buf = device.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("FFT Twiddle Re f32"),
-        contents: bytemuck::cast_slice(&re),
-        usage: wgpu::BufferUsages::STORAGE,
-    });
-    let im_buf = device.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("FFT Twiddle Im f32"),
-        contents: bytemuck::cast_slice(&im),
-        usage: wgpu::BufferUsages::STORAGE,
-    });
+    let re_buf = device
+        .device
+        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("FFT Twiddle Re f32"),
+            contents: bytemuck::cast_slice(&re),
+            usage: wgpu::BufferUsages::STORAGE,
+        });
+    let im_buf = device
+        .device
+        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("FFT Twiddle Im f32"),
+            contents: bytemuck::cast_slice(&im),
+            usage: wgpu::BufferUsages::STORAGE,
+        });
     (re_buf, im_buf)
 }
 
 /// Upload twiddle factors for f64 (separate re/im arrays).
+#[must_use]
 pub fn upload_twiddles_f64(
     device: &crate::device::WgpuDevice,
     degree: u32,
@@ -104,16 +110,20 @@ pub fn upload_twiddles_f64(
         re.push(angle.cos());
         im.push(angle.sin());
     }
-    let re_buf = device.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("FFT Twiddle Re f64"),
-        contents: bytemuck::cast_slice(&re),
-        usage: wgpu::BufferUsages::STORAGE,
-    });
-    let im_buf = device.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("FFT Twiddle Im f64"),
-        contents: bytemuck::cast_slice(&im),
-        usage: wgpu::BufferUsages::STORAGE,
-    });
+    let re_buf = device
+        .device
+        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("FFT Twiddle Re f64"),
+            contents: bytemuck::cast_slice(&re),
+            usage: wgpu::BufferUsages::STORAGE,
+        });
+    let im_buf = device
+        .device
+        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("FFT Twiddle Im f64"),
+            contents: bytemuck::cast_slice(&im),
+            usage: wgpu::BufferUsages::STORAGE,
+        });
     (re_buf, im_buf)
 }
 
@@ -226,6 +236,8 @@ pub(crate) fn dispatch_axis_inner(
 }
 
 /// Dispatch batched FFT along one axis (f32).
+/// # Errors
+/// Returns [`Err`] if GPU dispatch or buffer copy fails.
 pub fn dispatch_axis(
     device: &crate::device::WgpuDevice,
     buf_a: &wgpu::Buffer,
@@ -251,6 +263,8 @@ pub fn dispatch_axis(
 }
 
 /// Dispatch batched FFT along one axis (f64).
+/// # Errors
+/// Returns [`Err`] if GPU dispatch or buffer copy fails.
 pub fn dispatch_axis_f64(
     device: &crate::device::WgpuDevice,
     buf_a: &wgpu::Buffer,
@@ -290,11 +304,11 @@ impl Fft1D {
     /// - `degree`: FFT size N (must be power of 2)
     /// ## Constraints
     /// - N must be a power of 2 (for Cooley-Tukey radix-2 FFT)
-    /// - N must be <= MAX_FFT_DEGREE (1<<24)
+    /// - N must be <= `MAX_FFT_DEGREE` (1<<24)
     /// - Input size must match degree * 2 (complex elements)
     /// # Errors
     /// Returns [`Err`] if input last dimension is not 2, degree is not a power of 2,
-    /// degree is 0, degree exceeds MAX_FFT_DEGREE, or input size doesn't match.
+    /// degree is 0, degree exceeds `MAX_FFT_DEGREE`, or input size doesn't match.
     pub fn new(input: Tensor, degree: u32) -> Result<Self> {
         if degree == 0 {
             return Err(BarracudaError::Device(
@@ -323,21 +337,22 @@ impl Fft1D {
         let actual_size: usize = shape.iter().product();
         if actual_size != expected_size {
             return Err(BarracudaError::Device(format!(
-                "FFT input size {} doesn't match degree {} (expected {} elements)",
-                actual_size, degree, expected_size
+                "FFT input size {actual_size} doesn't match degree {degree} (expected {expected_size} elements)"
             )));
         }
 
         Ok(Self { input, degree })
     }
 
-    /// Execute FFT transformation
+    /// Execute FFT transformation.
     /// Returns a new tensor containing the frequency-domain representation.
+    /// # Errors
+    /// Returns [`Err`] if GPU dispatch, buffer creation, or readback fails.
     pub fn execute(self) -> Result<Tensor> {
         self.execute_internal(false)
     }
 
-    /// Execute FFT with inverse flag (used by Ifft1D).
+    /// Execute FFT with inverse flag (used by `Ifft1D`).
     pub(crate) fn execute_internal(self, inverse: bool) -> Result<Tensor> {
         let device = self.input.device();
         let n = self.degree;
@@ -357,13 +372,7 @@ impl Fft1D {
             let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
                 label: Some("FFT Copy Input"),
             });
-            encoder.copy_buffer_to_buffer(
-                self.input.buffer(),
-                0,
-                &buf_a,
-                0,
-                buffer_bytes,
-            );
+            encoder.copy_buffer_to_buffer(self.input.buffer(), 0, &buf_a, 0, buffer_bytes);
             device.submit_and_poll(std::iter::once(encoder.finish()));
         }
 
@@ -387,7 +396,16 @@ impl Fft1D {
             dim2_count: 1,
         };
 
-        dispatch_axis(device, &buf_a, &buf_b, buffer_bytes, &tw_re, &tw_im, &axis, inverse)?;
+        dispatch_axis(
+            device,
+            &buf_a,
+            &buf_b,
+            buffer_bytes,
+            &tw_re,
+            &tw_im,
+            &axis,
+            inverse,
+        )?;
 
         Ok(Tensor::from_buffer(
             buf_a,
@@ -408,9 +426,7 @@ mod tests {
             return;
         };
 
-        let data = vec![
-            1.0f32, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-        ];
+        let data = vec![1.0f32, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
 
         let tensor = Tensor::from_data(&data, vec![4, 2], device.clone()).unwrap();
         let fft = Fft1D::new(tensor, 4).unwrap();

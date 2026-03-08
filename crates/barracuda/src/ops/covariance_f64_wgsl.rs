@@ -8,7 +8,7 @@
 
 use crate::device::WgpuDevice;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
-use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
+use crate::device::pipeline_cache::{BindGroupLayoutSignature, create_f64_data_pipeline};
 use crate::device::tensor_context::get_device_context;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
@@ -89,7 +89,6 @@ impl CovarianceF64 {
 
         let n = x.len();
         let ctx = get_device_context(&self.device);
-        let adapter_info = self.device.adapter_info();
 
         let params = Params {
             size: n as u32,
@@ -128,9 +127,8 @@ impl CovarianceF64 {
         );
 
         let shader_src = shader_for_device(&self.device)?;
-        let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
-            self.device.device(),
-            adapter_info,
+        let pipeline = create_f64_data_pipeline(
+            &self.device,
             shader_src,
             layout_sig,
             "main",

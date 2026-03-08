@@ -1,6 +1,33 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Advanced multi-device pool with requirements-based selection and resource quotas.
 
+/// Bytes per gibibyte for VRAM estimates.
+const BYTES_PER_GIB: u64 = 1024 * 1024 * 1024;
+/// Estimated GFLOPS for software renderer (e.g. llvmpipe).
+const ESTIMATED_SOFTWARE_GFLOPS: f64 = 10.0;
+/// Estimated GFLOPS for discrete NVIDIA GPUs (fallback when unknown).
+const ESTIMATED_NVIDIA_DISCRETE_GFLOPS: f64 = 5000.0;
+/// Estimated GFLOPS for discrete AMD GPUs (fallback when unknown).
+const ESTIMATED_AMD_DISCRETE_GFLOPS: f64 = 4000.0;
+/// Estimated GFLOPS for other discrete GPUs (fallback when unknown).
+const ESTIMATED_OTHER_DISCRETE_GFLOPS: f64 = 1000.0;
+/// Estimated VRAM for discrete NVIDIA GPUs (12 GiB, fallback when unknown).
+const ESTIMATED_NVIDIA_DISCRETE_VRAM_BYTES: u64 = 12 * BYTES_PER_GIB;
+/// Estimated VRAM for discrete AMD GPUs (16 GiB, fallback when unknown).
+const ESTIMATED_AMD_DISCRETE_VRAM_BYTES: u64 = 16 * BYTES_PER_GIB;
+/// Estimated VRAM for other discrete GPUs (8 GiB, fallback when unknown).
+const ESTIMATED_OTHER_DISCRETE_VRAM_BYTES: u64 = 8 * BYTES_PER_GIB;
+/// Estimated GFLOPS for integrated GPUs (fallback when unknown).
+const ESTIMATED_INTEGRATED_GFLOPS: f64 = 200.0;
+/// Estimated VRAM for integrated GPUs (2 GiB, fallback when unknown).
+const ESTIMATED_INTEGRATED_VRAM_BYTES: u64 = 2 * BYTES_PER_GIB;
+/// Estimated GFLOPS for CPU device type (fallback when unknown).
+const ESTIMATED_CPU_GFLOPS: f64 = 50.0;
+/// Estimated GFLOPS for other device types (fallback when unknown).
+const ESTIMATED_OTHER_GFLOPS: f64 = 100.0;
+/// Estimated VRAM for other device types (4 GiB, fallback when unknown).
+const ESTIMATED_OTHER_VRAM_BYTES: u64 = 4 * BYTES_PER_GIB;
+
 use super::topology::{GpuDriver, GpuVendor};
 use super::types::{DeviceInfo, DeviceRequirements, WorkloadConfig};
 use crate::device::WgpuDevice;
@@ -127,24 +154,26 @@ impl MultiDevicePool {
                     && (vendor == GpuVendor::Nvidia || vendor == GpuVendor::Amd));
 
             let (estimated_gflops, estimated_vram) = if vendor == GpuVendor::Software {
-                (10.0, 0u64)
+                (ESTIMATED_SOFTWARE_GFLOPS, 0u64)
             } else if is_likely_discrete {
                 let gflops = match vendor {
-                    GpuVendor::Nvidia => 5000.0,
-                    GpuVendor::Amd => 4000.0,
-                    _ => 1000.0,
+                    GpuVendor::Nvidia => ESTIMATED_NVIDIA_DISCRETE_GFLOPS,
+                    GpuVendor::Amd => ESTIMATED_AMD_DISCRETE_GFLOPS,
+                    _ => ESTIMATED_OTHER_DISCRETE_GFLOPS,
                 };
                 let vram = match vendor {
-                    GpuVendor::Nvidia => 12 * 1024 * 1024 * 1024,
-                    GpuVendor::Amd => 16 * 1024 * 1024 * 1024,
-                    _ => 8 * 1024 * 1024 * 1024,
+                    GpuVendor::Nvidia => ESTIMATED_NVIDIA_DISCRETE_VRAM_BYTES,
+                    GpuVendor::Amd => ESTIMATED_AMD_DISCRETE_VRAM_BYTES,
+                    _ => ESTIMATED_OTHER_DISCRETE_VRAM_BYTES,
                 };
                 (gflops, vram)
             } else {
                 match adapter.device_type {
-                    wgpu::DeviceType::IntegratedGpu => (200.0, 2 * 1024 * 1024 * 1024),
-                    wgpu::DeviceType::Cpu => (50.0, 0),
-                    _ => (100.0, 4 * 1024 * 1024 * 1024),
+                    wgpu::DeviceType::IntegratedGpu => {
+                        (ESTIMATED_INTEGRATED_GFLOPS, ESTIMATED_INTEGRATED_VRAM_BYTES)
+                    }
+                    wgpu::DeviceType::Cpu => (ESTIMATED_CPU_GFLOPS, 0),
+                    _ => (ESTIMATED_OTHER_GFLOPS, ESTIMATED_OTHER_VRAM_BYTES),
                 }
             };
 
@@ -235,7 +264,7 @@ impl MultiDevicePool {
                 di.name,
                 di.vendor,
                 di.estimated_gflops,
-                di.vram_bytes / (1024 * 1024 * 1024)
+                di.vram_bytes / BYTES_PER_GIB
             );
         }
 
@@ -389,8 +418,8 @@ impl MultiDevicePool {
             nvidia_count,
             amd_count,
             total_gflops,
-            total_vram / (1024 * 1024 * 1024),
-            allocated_vram / (1024 * 1024 * 1024),
+            total_vram / BYTES_PER_GIB,
+            allocated_vram / BYTES_PER_GIB,
             busy_count
         )
     }

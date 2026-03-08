@@ -35,9 +35,8 @@ use crate::tensor::Tensor;
 
 /// f64 is the canonical source — math is universal, precision is silicon.
 static SHADER_F64: &str = include_str!("../shaders/attention/flash_attention_f64.wgsl");
-static SHADER_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    SHADER_F64.to_string()
-});
+static SHADER_F32: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| SHADER_F64.to_string());
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -228,7 +227,8 @@ impl FlashAttention {
         });
 
         // Compile shader
-        let shader_module = device.compile_shader(Self::wgsl_shader(), Some("Flash Attention Shader"));
+        let shader_module =
+            device.compile_shader(Self::wgsl_shader(), Some("Flash Attention Shader"));
 
         // Create pipeline
         let pipeline_layout =

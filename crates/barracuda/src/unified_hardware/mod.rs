@@ -237,7 +237,7 @@ mod tests {
         let desc = TensorDescriptor::new(vec![4], DType::F32);
         let storage = cpu_executor::CpuTensorStorageSimple {
             descriptor: desc,
-            data: vec![0u8; 16],
+            data: bytes::Bytes::from(vec![0u8; 16]),
         };
         assert!(storage.is_cpu());
         assert!(!storage.is_gpu());

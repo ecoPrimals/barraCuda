@@ -28,6 +28,16 @@ Prioritized work items, ordered by impact. Updated 2026-03-08.
 - **DF64 Hybrid fallback bug**: 10 ops (covariance, weighted_dot, hermite, digamma,
   cosine_similarity, beta, bessel_i0/j0/j1/k0) now return `ShaderCompilation` error
   instead of silently producing zeros on Hybrid devices.
+- **Systematic f64 pipeline fix**: 14 ops evolved from `compile_shader()`/`GLOBAL_CACHE`
+  (which silently downcast f64→f32) to f64-native compilation paths —
+  `compile_shader_f64()` for direct callers, `create_f64_data_pipeline()` for
+  GLOBAL_CACHE users. Pipeline cache evolved with f64-native path (`shaders_f64`,
+  `pipelines_f64` maps).
+- **Zero-copy `CpuTensorStorageSimple`**: `Vec<u8>` → `Bytes` — `read_to_cpu()` is
+  now a cheap ref-count bump.
+- **Pipeline cache hot-path**: `DeviceFingerprint` discriminant hashing (no `format!`),
+  `PipelineKey` hash (no `String`).
+- **Legacy discovery filename**: `coralreef-core.json` → `shader-compiler.json`.
 - **GPU f64 computational accuracy probe**: `get_test_device_if_f64_gpu_available()`
   now runs a runtime probe (`3*2+1=7`) to verify real f64 execution, gating 58 tests
   that were failing on software rasterizers.
@@ -82,8 +92,9 @@ Prioritized work items, ordered by impact. Updated 2026-03-08.
   is now in place to auto-fallback if native f64 fails.
 - **coralNAK extraction**: When org repo fork lands, create the sovereign NVIDIA shader
   compiler primal.
-- **Dedicated DF64 shaders for covariance + weighted_dot**: The auto-rewrite works but
-  hand-written DF64 shaders (like variance/correlation already have) would be more robust.
+- **Dedicated DF64 shaders for covariance + weighted_dot**: The auto-rewrite works and
+  the native f64 path is now fixed via `create_f64_data_pipeline()`. Hand-written DF64
+  shaders (like variance/correlation already have) would be more robust on Hybrid devices.
 
 ## Near-term (P2)
 
@@ -107,9 +118,9 @@ Prioritized work items, ordered by impact. Updated 2026-03-08.
   accessor are preserved, `make_pipeline_cache` returns `None` until then.
 - **Shader hot-reload**: File watcher for `.wgsl` files during development, automatic
   recompilation through sovereign pipeline.
-- **Zero-copy evolution**: `bytes::Bytes` on I/O boundaries done; remaining: pre-allocated
-  buffers for `domain_ops.rs` CPU fallback clones, LSTM hidden state clones, RBF assembly
-  allocations (see zero-copy audit).
+- **Zero-copy evolution**: `bytes::Bytes` on I/O boundaries + `CpuTensorStorageSimple` +
+  `CosineSimilarityF64` done; remaining: pre-allocated buffers for `domain_ops.rs` CPU
+  fallback clones, LSTM hidden state clones, RBF assembly allocations.
 
 ## Long-term (P4)
 

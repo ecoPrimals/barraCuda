@@ -25,11 +25,8 @@ use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
 /// WGSL shader source (f64 canonical, downcast to f32 at runtime)
-pub static WGSL_VIEW: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    include_str!(
-        "../shaders/tensor/view_f64.wgsl"
-    ).to_string()
-});
+pub static WGSL_VIEW: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| include_str!("../shaders/tensor/view_f64.wgsl").to_string());
 
 /// View operation parameters
 #[repr(C)]

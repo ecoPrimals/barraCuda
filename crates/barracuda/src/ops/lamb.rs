@@ -118,9 +118,7 @@ impl Lamb {
 
     fn wgsl_shader() -> &'static str {
         static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-            include_str!(
-                "../shaders/optimizer/lamb_f64.wgsl"
-            ).to_string()
+            include_str!("../shaders/optimizer/lamb_f64.wgsl").to_string()
         });
         std::sync::LazyLock::force(&SHADER).as_str()
     }

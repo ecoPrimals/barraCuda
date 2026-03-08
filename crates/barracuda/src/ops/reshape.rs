@@ -24,11 +24,8 @@
 use crate::error::{BarracudaError, Result};
 
 /// Reshape identity shader (metadata-only, copy-through).
-pub static WGSL_RESHAPE: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    include_str!(
-        "../shaders/tensor/reshape_f64.wgsl"
-    ).to_string()
-});
+pub static WGSL_RESHAPE: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| include_str!("../shaders/tensor/reshape_f64.wgsl").to_string());
 
 /// Reshape parameters
 #[repr(C)]

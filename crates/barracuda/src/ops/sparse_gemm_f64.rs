@@ -89,7 +89,7 @@ impl SparseGemmF64<'_> {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let shader = device.compile_shader(
+        let shader = device.compile_shader_f64(
             include_str!("../shaders/sparse/spmm_f64.wgsl"),
             Some("spmm_f64"),
         );
@@ -243,7 +243,7 @@ fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
+    use crate::device::test_pool::get_test_device_if_f64_gpu_available;
     use crate::linalg::sparse::CsrMatrix;
 
     fn spmm_cpu(csr: &CsrMatrix, b: &[f64], n: usize) -> Vec<f64> {
@@ -263,7 +263,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_spmm_small() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         // 3×4 CSR × 4×2 dense
@@ -297,7 +297,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_spmm_identity() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         // 4×4 identity × 4×3 dense = dense

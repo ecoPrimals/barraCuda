@@ -189,7 +189,10 @@ impl NoseHooverHalfKick {
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
-        let shader = device.compile_shader(include_str!("nose_hoover.wgsl"), Some("Nosé-Hoover HalfKick Shader"));
+        let shader = device.compile_shader(
+            include_str!("nose_hoover.wgsl"),
+            Some("Nosé-Hoover HalfKick Shader"),
+        );
 
         let bind_group_layout =
             device

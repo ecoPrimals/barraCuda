@@ -14,7 +14,7 @@
 
 use crate::device::WgpuDevice;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
-use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
+use crate::device::pipeline_cache::{BindGroupLayoutSignature, create_f64_data_pipeline};
 use crate::device::tensor_context::get_device_context;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
@@ -92,7 +92,7 @@ impl CosineSimilarityF64 {
             });
         }
 
-        let matrix = self.all_pairs_gpu(&[a.to_vec()], &[b.to_vec()], n)?;
+        let matrix = self.dispatch_flat(a, b, 1, 1, n)?;
         Ok(matrix[0])
     }
 
@@ -132,7 +132,9 @@ impl CosineSimilarityF64 {
             }
         }
 
-        self.all_pairs_gpu(vectors_a, vectors_b, dim)
+        let a_flat: Vec<f64> = vectors_a.iter().flat_map(|v| v.iter().copied()).collect();
+        let b_flat: Vec<f64> = vectors_b.iter().flat_map(|v| v.iter().copied()).collect();
+        self.dispatch_flat(&a_flat, &b_flat, vectors_a.len(), vectors_b.len(), dim)
     }
 
     /// CPU reference implementation (single pair)
@@ -167,26 +169,22 @@ impl CosineSimilarityF64 {
         result
     }
 
-    fn all_pairs_gpu(
+    fn dispatch_flat(
         &self,
-        vectors_a: &[Vec<f64>],
-        vectors_b: &[Vec<f64>],
+        a_flat: &[f64],
+        b_flat: &[f64],
+        num_a: usize,
+        num_b: usize,
         dim: usize,
     ) -> Result<Vec<f64>> {
-        let num_a = vectors_a.len();
-        let num_b = vectors_b.len();
         let ctx = get_device_context(&self.device);
-        let adapter_info = self.device.adapter_info();
-
-        let a_flat: Vec<f64> = vectors_a.iter().flat_map(|v| v.iter().copied()).collect();
-        let b_flat: Vec<f64> = vectors_b.iter().flat_map(|v| v.iter().copied()).collect();
 
         let a_buf = self
             .device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("CosSim A"),
-                contents: bytemuck::cast_slice(&a_flat),
+                contents: bytemuck::cast_slice(a_flat),
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
@@ -195,7 +193,7 @@ impl CosineSimilarityF64 {
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("CosSim B"),
-                contents: bytemuck::cast_slice(&b_flat),
+                contents: bytemuck::cast_slice(b_flat),
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
@@ -218,9 +216,8 @@ impl CosineSimilarityF64 {
         );
 
         let shader_src = shader_for_device(&self.device)?;
-        let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
-            self.device.device(),
-            adapter_info,
+        let pipeline = create_f64_data_pipeline(
+            &self.device,
             shader_src,
             layout_sig,
             "main",

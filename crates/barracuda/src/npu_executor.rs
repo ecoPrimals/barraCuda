@@ -16,6 +16,9 @@
 //! - GPU: Continuous compute, high power, general purpose
 //! - NPU: Event-driven, ultra-low power, neuromorphic-specialized
 
+/// SIMD width for neuromorphic cores (parallel processing lanes).
+const NPU_SIMD_WIDTH: usize = 256;
+
 pub(crate) mod npu_defaults {
     pub const SRAM_PER_BOARD_BYTES: u64 = 4 * 1024 * 1024;
     pub const AVAILABLE_PER_BOARD_BYTES: u64 = 3 * 1024 * 1024;
@@ -93,7 +96,7 @@ impl NpuExecutor {
 
             parallelism: ParallelismCapabilities {
                 max_parallel_units: npu_count, // Each NPU is a parallel unit
-                simd_width: 256,               // Neuromorphic cores process in parallel
+                simd_width: NPU_SIMD_WIDTH,
                 task_parallel: true,
                 data_parallel: true,
                 pipeline_parallel: true,

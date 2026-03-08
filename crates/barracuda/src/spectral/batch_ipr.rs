@@ -18,11 +18,8 @@ use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 
 /// WGSL shader source for batch Inverse Participation Ratio (f64 downcast to f32 when needed).
-pub static WGSL_BATCH_IPR: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    include_str!(
-        "../shaders/spectral/batch_ipr_f64.wgsl"
-    ).to_string()
-});
+pub static WGSL_BATCH_IPR: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| include_str!("../shaders/spectral/batch_ipr_f64.wgsl").to_string());
 
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]

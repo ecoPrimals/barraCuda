@@ -22,9 +22,7 @@ use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 
 static WGSL_SPATIAL_PAYOFF: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    include_str!(
-        "../../shaders/math/spatial_payoff_f64.wgsl"
-    ).to_string()
+    include_str!("../../shaders/math/spatial_payoff_f64.wgsl").to_string()
 });
 
 #[repr(C)]

@@ -4,7 +4,7 @@
 //! **Purpose**: 2D frequency analysis for images and 2D signals
 //! **Algorithm**: Row-column decomposition using batched 1D FFT (GPU-resident, zero CPU readbacks)
 
-use super::fft_1d::{batched_shader_f32, upload_twiddles_f32, AxisConfig};
+use super::fft_1d::{AxisConfig, batched_shader_f32, upload_twiddles_f32};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 use std::mem::size_of;
@@ -72,13 +72,7 @@ impl Fft2D {
             let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
                 label: Some("FFT2D Copy Input"),
             });
-            encoder.copy_buffer_to_buffer(
-                self.input.buffer(),
-                0,
-                &buf_a,
-                0,
-                buffer_bytes,
-            );
+            encoder.copy_buffer_to_buffer(self.input.buffer(), 0, &buf_a, 0, buffer_bytes);
             device.submit_and_poll(std::iter::once(encoder.finish()));
         }
 

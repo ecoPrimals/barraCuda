@@ -34,9 +34,7 @@ pub use npu::{NpuReadoutWeights, dequantize_affine_i8_f64, quantize_affine_i8_f6
 #[must_use]
 pub fn wgsl_reservoir_update() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        include_str!(
-            "../shaders/ml/esn_reservoir_update_f64.wgsl"
-        ).to_string()
+        include_str!("../shaders/ml/esn_reservoir_update_f64.wgsl").to_string()
     });
     std::sync::LazyLock::force(&SHADER).as_str()
 }

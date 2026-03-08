@@ -44,9 +44,8 @@ mod tests;
 
 const SHADER_CAUSAL_SOFTMAX_F64: &str =
     include_str!("../../shaders/activation/causal_attention_softmax_f64.wgsl");
-static SHADER_CAUSAL_SOFTMAX_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    SHADER_CAUSAL_SOFTMAX_F64.to_string()
-});
+static SHADER_CAUSAL_SOFTMAX_F32: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| SHADER_CAUSAL_SOFTMAX_F64.to_string());
 
 /// Attention parameters for WGSL shaders (same as regular attention)
 #[repr(C)]

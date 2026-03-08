@@ -124,7 +124,8 @@ impl CoulombForce {
             });
 
         // Load shader
-        let shader = device.compile_shader(include_str!("coulomb.wgsl"), Some("Coulomb Force Shader"));
+        let shader =
+            device.compile_shader(include_str!("coulomb.wgsl"), Some("Coulomb Force Shader"));
 
         // Create bind group layout
         let bind_group_layout =

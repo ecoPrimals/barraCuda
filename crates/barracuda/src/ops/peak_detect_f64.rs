@@ -203,7 +203,7 @@ impl<'a> PeakDetectF64<'a> {
             ],
         });
 
-        let shader = device.compile_shader(shader_src, Some("PeakDetect"));
+        let shader = device.compile_shader_f64(shader_src, Some("PeakDetect"));
         let pl = device
             .device
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -366,11 +366,11 @@ fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
+    use crate::device::test_pool::get_test_device_if_f64_gpu_available;
 
     #[tokio::test]
     async fn test_peak_detect_known_signal() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
 
@@ -388,7 +388,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_peak_detect_with_height_filter() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
 
@@ -405,7 +405,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_peak_detect_prominence() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
 
@@ -426,7 +426,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_peak_detect_matches_cpu() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
 
@@ -460,7 +460,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_peak_detect_edge_endpoints() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
 
@@ -484,7 +484,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_peak_detect_plateau_rejected() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
 

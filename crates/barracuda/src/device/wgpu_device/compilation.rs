@@ -20,11 +20,15 @@ impl WgpuDevice {
         module
     }
 
-    /// Compile WGSL shader.
-    /// If source contains f64 types:
-    /// - Device has SHADER_F64: route to [`compile_shader_f64`](Self::compile_shader_f64)
-    /// - No SHADER_F64: downcast with `downcast_f64_to_f32_with_transcendentals` then compile_raw
-    /// Otherwise: compile_raw.
+    /// Compile WGSL shader with automatic f64→f32 downcast for broad compatibility.
+    ///
+    /// f64-canonical architecture: shaders are authored in f64 as the source of
+    /// truth. This method always downcasts f64 types to f32 via
+    /// `downcast_f64_to_f32_with_transcendentals`, ensuring the shader runs on
+    /// any GPU regardless of f64 support.
+    ///
+    /// For native f64 execution (when the Rust side uploads f64 data), use
+    /// [`compile_shader_f64`](Self::compile_shader_f64) instead.
     #[must_use]
     pub fn compile_shader(&self, source: &str, label: Option<&str>) -> wgpu::ShaderModule {
         if source_is_f64(source) {

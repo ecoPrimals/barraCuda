@@ -48,9 +48,7 @@ impl MaskedSelect {
     pub(super) fn wgsl_shader() -> &'static str {
         {
             static S: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-                include_str!(
-                    "../../shaders/tensor/masked_select_f64.wgsl"
-                ).to_string()
+                include_str!("../../shaders/tensor/masked_select_f64.wgsl").to_string()
             });
             &S
         }
@@ -62,9 +60,7 @@ impl MaskedSelect {
 
     pub(super) fn mask_convert_shader() -> &'static str {
         static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-            include_str!(
-                "../../shaders/misc/mask_convert_f64.wgsl"
-            ).to_string()
+            include_str!("../../shaders/misc/mask_convert_f64.wgsl").to_string()
         });
         std::sync::LazyLock::force(&SHADER).as_str()
     }

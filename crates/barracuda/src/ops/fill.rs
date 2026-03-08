@@ -17,11 +17,8 @@ static SHADER_F32: std::sync::LazyLock<String> =
 /// Returns the WGSL meshgrid shader (expand coords to grid).
 #[must_use]
 pub fn wgsl_meshgrid() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        include_str!(
-            "../shaders/misc/meshgrid_f64.wgsl"
-        ).to_string()
-    });
+    static SHADER: std::sync::LazyLock<String> =
+        std::sync::LazyLock::new(|| include_str!("../shaders/misc/meshgrid_f64.wgsl").to_string());
     std::sync::LazyLock::force(&SHADER).as_str()
 }
 
@@ -79,7 +76,8 @@ impl Fill {
 
         // Create shader module
         let shader = self
-            .device.compile_shader(Self::wgsl_shader(), Some("Fill Shader"));
+            .device
+            .compile_shader(Self::wgsl_shader(), Some("Fill Shader"));
 
         // Create compute pipeline
         let pipeline =

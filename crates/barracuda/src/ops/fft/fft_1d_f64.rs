@@ -4,9 +4,9 @@
 //! **Evolution**: f64 version for PPPM/Ewald long-range electrostatics
 //! **Critical**: Unblocks full plasma simulation (Coulomb κ=0 cases)
 //!
-//! Uses the shared batched engine from fft_1d with f64 buffers.
+//! Uses the shared batched engine from `fft_1d` with f64 buffers.
 
-use super::fft_1d::{dispatch_axis_f64, upload_twiddles_f64, AxisConfig};
+use super::fft_1d::{AxisConfig, dispatch_axis_f64, upload_twiddles_f64};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 use std::mem::size_of;
@@ -45,13 +45,17 @@ impl Fft1DF64 {
         Ok(Self { input, degree })
     }
 
-    /// Execute the FFT (forward transform)
+    /// Execute the FFT (forward transform).
+    /// # Errors
+    /// Returns [`Err`] if GPU dispatch, buffer creation, or readback fails.
     pub async fn execute(&self) -> Result<Tensor> {
         self.execute_internal(false).await
     }
 
-    /// Execute the inverse FFT
-    /// Note: Result must be scaled by 1/N for proper normalization.
+    /// Execute the inverse FFT.
+    /// Note: Result must be scaled by `1/N` for proper normalization.
+    /// # Errors
+    /// Returns [`Err`] if GPU dispatch, buffer creation, or readback fails.
     pub async fn execute_inverse(&self) -> Result<Tensor> {
         self.execute_internal(true).await
     }
@@ -223,7 +227,10 @@ mod tests {
                 "Sample {i} real: expected {:.15e}, got {re:.15e}",
                 original[i * 2]
             );
-            assert!(im.abs() < 1e-10, "Sample {i} imag: expected ~0, got {im:.15e}");
+            assert!(
+                im.abs() < 1e-10,
+                "Sample {i} imag: expected ~0, got {im:.15e}"
+            );
         }
     }
 

@@ -8,9 +8,8 @@ use crate::tensor::Tensor;
 
 /// f64 is the canonical source — math is universal, precision is silicon.
 static SHADER_F64: &str = include_str!("../shaders/loss/binary_cross_entropy_f64.wgsl");
-static SHADER_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    SHADER_F64.to_string()
-});
+static SHADER_F32: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| SHADER_F64.to_string());
 
 /// Binary cross-entropy loss (scalar reduction).
 pub struct BinaryCrossEntropy {
@@ -45,7 +44,8 @@ impl BinaryCrossEntropy {
         let output_buffer = device.create_buffer_f32(1)?;
 
         // Create shader module
-        let shader = device.compile_shader(Self::wgsl_shader(), Some("Binary Cross Entropy Shader"));
+        let shader =
+            device.compile_shader(Self::wgsl_shader(), Some("Binary Cross Entropy Shader"));
 
         // Create compute pipeline
         let pipeline = device

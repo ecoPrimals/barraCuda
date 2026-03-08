@@ -7,7 +7,7 @@
 
 use crate::device::WgpuDevice;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
-use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
+use crate::device::pipeline_cache::{BindGroupLayoutSignature, create_f64_data_pipeline};
 use crate::device::tensor_context::get_device_context;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
@@ -141,7 +141,6 @@ impl CorrelationF64 {
 
         let n = x.len();
         let ctx = get_device_context(&self.device);
-        let adapter_info = self.device.adapter_info();
 
         let x_buf = self
             .device
@@ -186,9 +185,8 @@ impl CorrelationF64 {
         );
 
         let shader_src = fused_shader_for_device(&self.device);
-        let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
-            self.device.device(),
-            adapter_info,
+        let pipeline = create_f64_data_pipeline(
+            &self.device,
             shader_src,
             layout_sig,
             "main",
@@ -239,7 +237,6 @@ impl CorrelationF64 {
         }
 
         let ctx = get_device_context(&self.device);
-        let adapter_info = self.device.adapter_info();
 
         let output_buf = ctx.acquire_pooled_output_f64(5);
 
@@ -266,9 +263,8 @@ impl CorrelationF64 {
         );
 
         let shader_src = fused_shader_for_device(&self.device);
-        let pipeline = GLOBAL_CACHE.get_or_create_pipeline(
-            self.device.device(),
-            adapter_info,
+        let pipeline = create_f64_data_pipeline(
+            &self.device,
             shader_src,
             layout_sig,
             "main",

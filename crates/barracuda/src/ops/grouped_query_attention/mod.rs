@@ -33,9 +33,8 @@ static SHADER_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| SHADER_F64.to_string());
 
 const SHADER_SOFTMAX_F64: &str = include_str!("../../shaders/activation/gqa_softmax_f64.wgsl");
-static SHADER_SOFTMAX_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    SHADER_SOFTMAX_F64.to_string()
-});
+static SHADER_SOFTMAX_F32: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| SHADER_SOFTMAX_F64.to_string());
 
 #[cfg(test)]
 mod tests;
@@ -151,9 +150,7 @@ impl GroupedQueryAttention {
     /// Get WGSL shader for GQA attention matrix multiplication (Pass 1)
     pub(super) fn wgsl_shader_matmul() -> &'static str {
         static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-            include_str!(
-                "../../shaders/math/gqa_matmul_f64.wgsl"
-            ).to_string()
+            include_str!("../../shaders/math/gqa_matmul_f64.wgsl").to_string()
         });
         &SHADER
     }

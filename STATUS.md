@@ -2,7 +2,7 @@
 
 **Version**: 0.3.3
 **Date**: 2026-03-08
-**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,100+ tests passing)
+**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,700+ tests, 3,105 pass on llvmpipe, systematic f64 pipeline fix)
 
 ---
 
@@ -10,12 +10,12 @@
 
 | Category | Grade | Notes |
 |----------|-------|-------|
-| **Core compute** | A | 786 WGSL shaders, 13-tier tolerance architecture, GpuView persistent buffers with ops |
+| **Core compute** | A | 712 WGSL shaders, 13-tier tolerance architecture, GpuView persistent buffers with ops |
 | **Precision tiers** | A+ | F32/F64/DF64/F16 universal pipeline; DF64 naga-guided rewrite validated; probe-aware Fp64Strategy; DF64 reduce shaders for Hybrid devices; P0 `SumReduceF64`/`VarianceReduceF64` fix |
 | **Sovereign compiler** | A | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all shaders |
 | **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery; coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support |
 | **Device management** | A | Multi-GPU, capability-scored discovery, probe-aware f64 strategy, f64 computational accuracy probe, bounded poll timeout, poison-recovering autotune |
-| **Test coverage** | A | 3,100+ total tests; proptest; chaos/fault test tiers; nextest CI/stress profiles; bounded GPU poll timeout prevents hangs; thread-local GPU throttling for `cargo test` stability |
+| **Test coverage** | A | 3,700+ total tests (3,105 in lib suite); proptest; chaos/fault test tiers; nextest CI/stress profiles; bounded GPU poll timeout prevents hangs; thread-local GPU throttling for `cargo test` stability; f64 ops gated on `get_test_device_if_f64_gpu_available` |
 | **Dependencies** | A- | Pure Rust chain (blake3 pure); zero non-GPU external C deps; wgpu/naga 28 for GPU |
 | **Documentation** | A | Comprehensive CHANGELOG, specs, README, CONTRIBUTING, CONVENTIONS, BREAKING_CHANGES; all rustdoc warnings resolved |
 | **Unsafe code** | A+ | Zero `unsafe` blocks in entire codebase |
@@ -88,10 +88,25 @@
 - Flaky GPU tests (erf, erfc, expand, determinant) guarded with `catch_unwind` for wgpu panics
 - CI evolved to nextest with `ci`/`stress` profiles; chaos/fault/property test tier added
 - Coverage job uses `BARRACUDA_POLL_TIMEOUT_SECS` and soft-gates at 80% (90% requires real GPU)
+- `SparseGemmF64` and `PeakDetectF64` now compile via `compile_shader_f64()` (was incorrectly using `compile_shader()` which downcasts f64→f32, causing data corruption on non-f64 GPUs)
+- f64 GPU ops gated on `get_test_device_if_f64_gpu_available()` — no more false failures on llvmpipe
+- GPU performance estimation constants extracted to named `estimates::` module in `multi_device_pool`
+- NPU SIMD width extracted to `NPU_SIMD_WIDTH` constant
+- Zero `panic!()` in production library code (all panics restricted to `#[cfg(test)]` modules)
+- **Systematic f64 pipeline fix**: 14 ops (transe_score, triangular_solve, variance, correlation, covariance, hermite, bessel_i0/j0/j1/k0, beta, digamma, cosine_similarity, weighted_dot) evolved from `compile_shader()`/`GLOBAL_CACHE` to f64-native compilation paths — eliminates silent data corruption on f64-capable GPUs
+- Pipeline cache evolved with f64-native compilation path (`get_or_create_pipeline_f64_native`) — separate cache maps prevent f64/f32 key collisions
+- `create_f64_data_pipeline()` helper auto-selects native or downcast path based on device `SHADER_F64` capability
+- `compile_shader()` doc evolved to accurately describe f64-canonical always-downcast behavior
+- `CpuTensorStorageSimple` evolved from `Vec<u8>` to `Bytes` — `read_to_cpu()` is now zero-copy (ref-count bump instead of full buffer clone)
+- `CosineSimilarityF64::similarity()` zero-copy: eliminated unnecessary `to_vec()` pair via flat-dispatch refactor
+- Pipeline cache `DeviceFingerprint` evolved from `format!("{:?}:")` string allocation to `std::mem::discriminant` hashing — zero allocation on cache lookup
+- Pipeline cache `PipelineKey` evolved from `String` entry point to `u64` hash — eliminates per-lookup allocation
+- Legacy discovery filename evolved from hardcoded `coralreef-core.json` to agnostic `shader-compiler.json`
 
 ## What's Not Working Yet
 
 - P1: DF64 end-to-end NVK hardware verification (Yukawa shaders)
 - P2: llvm-cov coverage measurement hangs mitigated by bounded timeout but full coordination harness with coralReef/toadStool still needed
+- P2: Test coverage ~70-80% on llvmpipe (target: 90%, requires real GPU hardware)
 - Kokkos validation baseline documentation
 - Kokkos GPU parity benchmarks

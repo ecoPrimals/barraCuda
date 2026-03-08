@@ -73,7 +73,10 @@ impl KineticEnergy {
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
-        let shader = device.compile_shader(include_str!("kinetic_energy.wgsl"), Some("Kinetic Energy Shader"));
+        let shader = device.compile_shader(
+            include_str!("kinetic_energy.wgsl"),
+            Some("Kinetic Energy Shader"),
+        );
 
         let bind_group_layout =
             device

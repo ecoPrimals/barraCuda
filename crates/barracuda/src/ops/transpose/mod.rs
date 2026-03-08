@@ -95,9 +95,7 @@ impl Transpose {
     pub(super) fn wgsl_shader() -> &'static str {
         {
             static S: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-                include_str!(
-                    "../../shaders/tensor/transpose_f64.wgsl"
-                ).to_string()
+                include_str!("../../shaders/tensor/transpose_f64.wgsl").to_string()
             });
             &S
         }

@@ -348,7 +348,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `WgpuDevice`, `BufferPool`, `PppmGpu`, `ComputeGraph`, and `PppmPipelines`.
   `device_arc()` → `device_clone()`, `queue_arc()` → `queue_clone()`,
   `inner_arc()` removed, `from_existing()` takes plain types
-- **tokio 1.40 → 1.49** — workspace dependency bumped to current stable
+- **tokio 1.40 → 1.50** — workspace dependency bumped to current stable
 - **Dependency alignment** — `serde_json` now uses `workspace = true` in barracuda
   crate; tokio dev-dependency aligned with workspace (was pinned to 1.35)
 - **Workgroup size constants** — introduced `WORKGROUP_SIZE_COMPACT = 64` alongside

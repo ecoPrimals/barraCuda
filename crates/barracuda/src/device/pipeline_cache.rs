@@ -49,15 +49,13 @@ impl DeviceFingerprint {
     pub fn from_device_info(device: &Device, adapter_info: &wgpu::AdapterInfo) -> Self {
         use std::hash::Hasher;
 
-        // Hash the adapter name
         let mut name_hasher = std::collections::hash_map::DefaultHasher::new();
         adapter_info.name.hash(&mut name_hasher);
         let name_hash = name_hasher.finish();
 
-        // Hash backend + device type for additional uniqueness
         let mut backend_hasher = std::collections::hash_map::DefaultHasher::new();
-        format!("{:?}:{:?}", adapter_info.backend, adapter_info.device_type)
-            .hash(&mut backend_hasher);
+        std::mem::discriminant(&adapter_info.backend).hash(&mut backend_hasher);
+        std::mem::discriminant(&adapter_info.device_type).hash(&mut backend_hasher);
         device.hash(&mut backend_hasher);
         let backend_hash = backend_hasher.finish();
 
@@ -77,8 +75,8 @@ impl DeviceFingerprint {
         let name_hash = name_hasher.finish();
 
         let mut backend_hasher = std::collections::hash_map::DefaultHasher::new();
-        format!("{:?}:{:?}", adapter_info.backend, adapter_info.device_type)
-            .hash(&mut backend_hasher);
+        std::mem::discriminant(&adapter_info.backend).hash(&mut backend_hasher);
+        std::mem::discriminant(&adapter_info.device_type).hash(&mut backend_hasher);
         let backend_hash = backend_hasher.finish();
 
         Self {
@@ -218,7 +216,7 @@ impl BindGroupLayoutKey {
 pub struct PipelineKey {
     source_hash: u64,
     layout_signature: BindGroupLayoutSignature,
-    entry_point: String,
+    entry_point_hash: u64,
     device_fingerprint: DeviceFingerprint,
 }
 
@@ -231,12 +229,14 @@ impl PipelineKey {
         entry_point: &str,
         device_fingerprint: DeviceFingerprint,
     ) -> Self {
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        shader_source.hash(&mut hasher);
+        let mut src_hasher = std::collections::hash_map::DefaultHasher::new();
+        shader_source.hash(&mut src_hasher);
+        let mut ep_hasher = std::collections::hash_map::DefaultHasher::new();
+        entry_point.hash(&mut ep_hasher);
         Self {
-            source_hash: hasher.finish(),
+            source_hash: src_hasher.finish(),
             layout_signature,
-            entry_point: entry_point.to_string(),
+            entry_point_hash: ep_hasher.finish(),
             device_fingerprint,
         }
     }
@@ -251,14 +251,20 @@ impl PipelineKey {
 /// with the device that created them.
 #[derive(Default)]
 pub struct PipelineCache {
-    /// Cached shader modules (keyed by source hash + device)
+    /// Cached shader modules — f64-canonical, auto-downcast to f32 (keyed by source hash + device)
     shaders: RwLock<HashMap<ShaderKey, Arc<ShaderModule>>>,
+
+    /// Cached shader modules — f64-native, no downcast (keyed by source hash + device)
+    shaders_f64: RwLock<HashMap<ShaderKey, Arc<ShaderModule>>>,
 
     /// Cached bind group layouts (keyed by signature + device)
     layouts: RwLock<HashMap<BindGroupLayoutKey, Arc<BindGroupLayout>>>,
 
-    /// Cached compute pipelines (keyed by shader + layout + entry + device)
+    /// Cached compute pipelines — f64-canonical, auto-downcast (keyed by shader + layout + entry + device)
     pipelines: RwLock<HashMap<PipelineKey, Arc<ComputePipeline>>>,
+
+    /// Cached compute pipelines — f64-native (keyed by shader + layout + entry + device)
+    pipelines_f64: RwLock<HashMap<PipelineKey, Arc<ComputePipeline>>>,
 }
 
 impl PipelineCache {
@@ -267,8 +273,10 @@ impl PipelineCache {
     pub fn new() -> Self {
         Self {
             shaders: RwLock::new(HashMap::new()),
+            shaders_f64: RwLock::new(HashMap::new()),
             layouts: RwLock::new(HashMap::new()),
             pipelines: RwLock::new(HashMap::new()),
+            pipelines_f64: RwLock::new(HashMap::new()),
         }
     }
 
@@ -290,7 +298,10 @@ impl PipelineCache {
         if let Some(m) = read_or_recover(&self.shaders).get(&key) {
             return m.clone();
         }
-        // Slow path: auto-downcast f64-canonical source then compile and cache.
+        // Slow path: auto-downcast f64-canonical source to f32 then compile and cache.
+        // f64-canonical architecture: shaders are authored in f64 as the source of
+        // truth. The cache always downcasts for broad f32 compatibility.
+        // Ops that need native f64 must compile via WgpuDevice::compile_shader_f64().
         let resolved: std::borrow::Cow<'_, str> =
             if crate::shaders::precision::compiler::source_is_f64(source) {
                 std::borrow::Cow::Owned(
@@ -431,20 +442,95 @@ impl PipelineCache {
             .clone()
     }
 
+    /// Get or compile a shader module preserving f64 types (no downcast).
+    ///
+    /// For ops that upload real f64 data and need the shader to read it natively.
+    /// Cached separately from the f32-downcast path to avoid key collisions.
+    pub fn get_or_compile_shader_f64_native(
+        &self,
+        device: &Device,
+        adapter_info: &wgpu::AdapterInfo,
+        source: &str,
+        label: Option<&str>,
+    ) -> Arc<ShaderModule> {
+        let fingerprint = DeviceFingerprint::from_device_info(device, adapter_info);
+        let key = ShaderKey::new(source, fingerprint);
+
+        if let Some(m) = read_or_recover(&self.shaders_f64).get(&key) {
+            return m.clone();
+        }
+        let module = Arc::new(device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label,
+            source: wgpu::ShaderSource::Wgsl(source.into()),
+        }));
+        write_or_recover(&self.shaders_f64)
+            .entry(key)
+            .or_insert(module)
+            .clone()
+    }
+
+    /// Get or create a compute pipeline preserving f64 types (no downcast).
+    ///
+    /// For ops that upload real f64 data to GPU buffers. The shader is compiled
+    /// as-is, so it must match the buffer data layout. Cached separately from
+    /// the f32-downcast path.
+    pub fn get_or_create_pipeline_f64_native(
+        &self,
+        device: &Device,
+        adapter_info: &wgpu::AdapterInfo,
+        shader_source: &str,
+        layout_signature: BindGroupLayoutSignature,
+        entry_point: &str,
+        label: Option<&str>,
+    ) -> Arc<ComputePipeline> {
+        let fingerprint = DeviceFingerprint::from_device_info(device, adapter_info);
+        let key = PipelineKey::new(shader_source, layout_signature, entry_point, fingerprint);
+
+        if let Some(p) = read_or_recover(&self.pipelines_f64).get(&key) {
+            return p.clone();
+        }
+        let shader =
+            self.get_or_compile_shader_f64_native(device, adapter_info, shader_source, label);
+        let layout = self.get_or_create_layout(device, adapter_info, layout_signature, label);
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label,
+            bind_group_layouts: &[&layout],
+            immediate_size: 0,
+        });
+        let pipeline = Arc::new(
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label,
+                layout: Some(&pipeline_layout),
+                module: &shader,
+                entry_point: Some(entry_point),
+                cache: None,
+                compilation_options: Default::default(),
+            }),
+        );
+        write_or_recover(&self.pipelines_f64)
+            .entry(key)
+            .or_insert(pipeline)
+            .clone()
+    }
+
     /// Get cache statistics
     pub fn stats(&self) -> CacheStats {
         CacheStats {
-            shaders: read_or_recover(&self.shaders).len(),
+            shaders: read_or_recover(&self.shaders).len()
+                + read_or_recover(&self.shaders_f64).len(),
             layouts: read_or_recover(&self.layouts).len(),
-            pipelines: read_or_recover(&self.pipelines).len(),
+            pipelines: read_or_recover(&self.pipelines).len()
+                + read_or_recover(&self.pipelines_f64).len(),
         }
     }
 
     /// Clear all cached objects
     pub fn clear(&self) {
         write_or_recover(&self.shaders).clear();
+        write_or_recover(&self.shaders_f64).clear();
         write_or_recover(&self.layouts).clear();
         write_or_recover(&self.pipelines).clear();
+        write_or_recover(&self.pipelines_f64).clear();
     }
 }
 
@@ -464,6 +550,47 @@ pub struct CacheStats {
 /// Evolved from `lazy_static` to pure std (Rust 1.80+).
 pub static GLOBAL_CACHE: std::sync::LazyLock<PipelineCache> =
     std::sync::LazyLock::new(PipelineCache::new);
+
+/// Create a pipeline for an op that uploads real f64 data to GPU buffers.
+///
+/// Auto-selects compilation path based on device capabilities:
+/// - Device has `SHADER_F64`: compile shader as-is (f64-native cache)
+/// - No `SHADER_F64`: use the f32-downcast cache (caller's `Fp64Strategy`
+///   should have already selected a DF64 shader variant)
+pub fn create_f64_data_pipeline(
+    device: &crate::device::WgpuDevice,
+    shader_src: &str,
+    layout_sig: BindGroupLayoutSignature,
+    entry: &str,
+    label: Option<&str>,
+) -> std::sync::Arc<wgpu::ComputePipeline> {
+    let adapter_info = device.adapter_info();
+    let needs_native = device
+        .device()
+        .features()
+        .contains(wgpu::Features::SHADER_F64)
+        && crate::shaders::precision::compiler::source_is_f64(shader_src);
+
+    if needs_native {
+        GLOBAL_CACHE.get_or_create_pipeline_f64_native(
+            device.device(),
+            adapter_info,
+            shader_src,
+            layout_sig,
+            entry,
+            label,
+        )
+    } else {
+        GLOBAL_CACHE.get_or_create_pipeline(
+            device.device(),
+            adapter_info,
+            shader_src,
+            layout_sig,
+            entry,
+            label,
+        )
+    }
+}
 
 /// Clear the global pipeline cache (for testing only)
 ///

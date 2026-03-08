@@ -43,9 +43,8 @@ use crate::tensor::Tensor;
 
 /// f64 is the canonical source — math is universal, precision is silicon.
 static SHADER_F64: &str = include_str!("../shaders/attention/rotary_embedding_f64.wgsl");
-static SHADER_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    SHADER_F64.to_string()
-});
+static SHADER_F32: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| SHADER_F64.to_string());
 
 /// `RoPE` parameters for WGSL shader
 #[repr(C)]

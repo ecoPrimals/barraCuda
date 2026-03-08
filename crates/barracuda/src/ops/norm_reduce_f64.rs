@@ -63,7 +63,6 @@ fn shader_for_device(device: &WgpuDevice) -> &'static str {
 pub struct NormReduceF64;
 
 impl NormReduceF64 {
-
     /// Compute L1 norm: sum(|x|)
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or readback fails (e.g., device lost).

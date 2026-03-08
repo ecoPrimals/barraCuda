@@ -176,7 +176,8 @@ impl Trace {
         let final_buffer = if workgroups > 1 {
             // Second pass: reduce partial results using reduce shader
             let reduce_shader_source = crate::ops::reduce::Reduce::wgsl_shader();
-            let reduce_shader = device.compile_shader(reduce_shader_source, Some("Trace Reduce Shader"));
+            let reduce_shader =
+                device.compile_shader(reduce_shader_source, Some("Trace Reduce Shader"));
 
             #[repr(C)]
             #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]

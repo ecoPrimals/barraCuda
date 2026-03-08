@@ -9,9 +9,8 @@
 
 /// f64 is the canonical source — math is universal, precision is silicon.
 const SHADER_F64: &str = include_str!("../shaders/activation/tanhshrink_f64.wgsl");
-pub(crate) static SHADER_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    SHADER_F64.to_string()
-});
+pub(crate) static SHADER_F32: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| SHADER_F64.to_string());
 
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;

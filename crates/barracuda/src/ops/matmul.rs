@@ -26,11 +26,8 @@ pub const WGSL_MATMUL_FP64: &str = include_str!("../shaders/math/matmul_fp64.wgs
 /// Linear layer shader (matmul + bias).
 #[must_use]
 pub fn wgsl_linear() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        include_str!(
-            "../shaders/misc/linear_f64.wgsl"
-        ).to_string()
-    });
+    static SHADER: std::sync::LazyLock<String> =
+        std::sync::LazyLock::new(|| include_str!("../shaders/misc/linear_f64.wgsl").to_string());
     std::sync::LazyLock::force(&SHADER).as_str()
 }
 

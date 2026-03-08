@@ -39,9 +39,8 @@ use crate::tensor::Tensor;
 
 /// f64 is the canonical source — math is universal, precision is silicon.
 static SHADER_F64: &str = include_str!("../shaders/loss/bce_loss_f64.wgsl");
-static SHADER_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    SHADER_F64.to_string()
-});
+static SHADER_F32: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| SHADER_F64.to_string());
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]

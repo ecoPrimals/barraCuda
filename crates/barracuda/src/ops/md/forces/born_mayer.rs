@@ -108,7 +108,10 @@ impl BornMayerForce {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let shader = device.compile_shader(include_str!("born_mayer.wgsl"), Some("Born-Mayer Force Shader"));
+        let shader = device.compile_shader(
+            include_str!("born_mayer.wgsl"),
+            Some("Born-Mayer Force Shader"),
+        );
 
         let bind_group_layout =
             device

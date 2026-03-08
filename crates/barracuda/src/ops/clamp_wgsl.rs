@@ -16,9 +16,8 @@ use crate::tensor::Tensor;
 const WGSL_CLAMP_SIMPLE_F64: &str = include_str!("../shaders/math/clamp_simple_f64.wgsl");
 
 /// Simple clamp variant (f32 derived from f64).
-pub static WGSL_CLAMP_SIMPLE: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    WGSL_CLAMP_SIMPLE_F64.to_string()
-});
+pub static WGSL_CLAMP_SIMPLE: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| WGSL_CLAMP_SIMPLE_F64.to_string());
 
 /// f64 is the canonical source — math is universal, precision is silicon.
 const SHADER_F64: &str = include_str!("../shaders/math/clamp_f64.wgsl");

@@ -5,9 +5,9 @@
 //! **Algorithm**: Dimension-wise decomposition using batched 1D FFT (Z, Y, X)
 //! **CRITICAL FOR PPPM**: This operation unblocks molecular dynamics!
 //!
-//! GPU-resident: zero CPU readbacks. Uses HashMap for twiddle caching by degree.
+//! GPU-resident: zero CPU readbacks. Uses `HashMap` for twiddle caching by degree.
 
-use super::fft_1d::{batched_shader_f32, dispatch_axis_inner, upload_twiddles_f32, AxisConfig};
+use super::fft_1d::{AxisConfig, batched_shader_f32, dispatch_axis_inner, upload_twiddles_f32};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 use std::collections::HashMap;
@@ -74,11 +74,8 @@ impl Fft3D {
     /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
-        let buffer_bytes = (self.nx as u64)
-            * (self.ny as u64)
-            * (self.nz as u64)
-            * 2
-            * size_of::<f32>() as u64;
+        let buffer_bytes =
+            (self.nx as u64) * (self.ny as u64) * (self.nz as u64) * 2 * size_of::<f32>() as u64;
 
         let buf_a = device.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("FFT3D buf_a"),
@@ -93,13 +90,7 @@ impl Fft3D {
             let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
                 label: Some("FFT3D Copy Input"),
             });
-            encoder.copy_buffer_to_buffer(
-                self.input.buffer(),
-                0,
-                &buf_a,
-                0,
-                buffer_bytes,
-            );
+            encoder.copy_buffer_to_buffer(self.input.buffer(), 0, &buf_a, 0, buffer_bytes);
             device.submit_and_poll(std::iter::once(encoder.finish()));
         }
 
@@ -160,12 +151,7 @@ impl Fft3D {
 
         Ok(Tensor::from_buffer(
             buf_a,
-            vec![
-                self.nx as usize,
-                self.ny as usize,
-                self.nz as usize,
-                2,
-            ],
+            vec![self.nx as usize, self.ny as usize, self.nz as usize, 2],
             device.clone(),
         ))
     }

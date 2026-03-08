@@ -19,7 +19,13 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         ShaderRecord {
             path: "math/df64_core.wgsl",
             origin: SD::HOT_SPRING,
-            consumers: &[SD::HOT_SPRING, SD::WET_SPRING, SD::NEURAL_SPRING, SD::AIR_SPRING, SD::GROUND_SPRING],
+            consumers: &[
+                SD::HOT_SPRING,
+                SD::WET_SPRING,
+                SD::NEURAL_SPRING,
+                SD::AIR_SPRING,
+                SD::GROUND_SPRING,
+            ],
             category: C::MathLibrary,
             evolution_note: "FP32-pair arithmetic from nuclear physics core-streaming (S58). \
                             Unleashes FP32 cores for f64-class work on consumer GPUs.",
@@ -29,7 +35,12 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         ShaderRecord {
             path: "math/df64_transcendentals.wgsl",
             origin: SD::HOT_SPRING,
-            consumers: &[SD::HOT_SPRING, SD::WET_SPRING, SD::NEURAL_SPRING, SD::GROUND_SPRING],
+            consumers: &[
+                SD::HOT_SPRING,
+                SD::WET_SPRING,
+                SD::NEURAL_SPRING,
+                SD::GROUND_SPRING,
+            ],
             category: C::MathLibrary,
             evolution_note: "DF64 exp/log/sin/cos for consumer GPUs where native f64 transcendentals fail.",
             created: "Feb 2026 hotSpring S60",
@@ -241,7 +252,13 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         ShaderRecord {
             path: "special/chi_squared_f64.wgsl",
             origin: SD::GROUND_SPRING,
-            consumers: &[SD::GROUND_SPRING, SD::HOT_SPRING, SD::WET_SPRING, SD::NEURAL_SPRING, SD::AIR_SPRING],
+            consumers: &[
+                SD::GROUND_SPRING,
+                SD::HOT_SPRING,
+                SD::WET_SPRING,
+                SD::NEURAL_SPRING,
+                SD::AIR_SPRING,
+            ],
             category: C::Statistics,
             evolution_note: "Chi-squared CDF+quantile from V74. Universal statistical test for all springs.",
             created: "Mar 2026 groundSpring V74",
@@ -280,7 +297,13 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         ShaderRecord {
             path: "reduce/welford_mean_variance_f64.wgsl",
             origin: SD::GROUND_SPRING,
-            consumers: &[SD::GROUND_SPRING, SD::HOT_SPRING, SD::WET_SPRING, SD::NEURAL_SPRING, SD::AIR_SPRING],
+            consumers: &[
+                SD::GROUND_SPRING,
+                SD::HOT_SPRING,
+                SD::WET_SPRING,
+                SD::NEURAL_SPRING,
+                SD::AIR_SPRING,
+            ],
             category: C::Primitives,
             evolution_note: "Welford single-pass fused mean+variance. Universal reduction primitive \
                             for all springs' GPU statistics.",
@@ -301,14 +324,24 @@ pub static EVOLUTION_TIMELINE: LazyLock<Vec<EvolutionEvent>> = LazyLock::new(|| 
         EvolutionEvent {
             date: "Feb 2026 (S46-S48)",
             from: SD::HOT_SPRING,
-            beneficiaries: &[SD::WET_SPRING, SD::NEURAL_SPRING, SD::GROUND_SPRING, SD::AIR_SPRING],
+            beneficiaries: &[
+                SD::WET_SPRING,
+                SD::NEURAL_SPRING,
+                SD::GROUND_SPRING,
+                SD::AIR_SPRING,
+            ],
             description: "First f64 WGSL shaders: SU(3), CG solver, sum_reduce. \
                          Established the shader-first f64 pattern all springs now follow.",
         },
         EvolutionEvent {
             date: "Feb 2026 (S58)",
             from: SD::HOT_SPRING,
-            beneficiaries: &[SD::WET_SPRING, SD::NEURAL_SPRING, SD::GROUND_SPRING, SD::AIR_SPRING],
+            beneficiaries: &[
+                SD::WET_SPRING,
+                SD::NEURAL_SPRING,
+                SD::GROUND_SPRING,
+                SD::AIR_SPRING,
+            ],
             description: "DF64 core-streaming: FP32-pair arithmetic unleashed consumer \
                          GPUs for f64-class work. The single most impactful cross-spring \
                          contribution — every spring's GPU stats now run on any hardware.",
@@ -348,7 +381,12 @@ pub static EVOLUTION_TIMELINE: LazyLock<Vec<EvolutionEvent>> = LazyLock::new(|| 
         EvolutionEvent {
             date: "Mar 2026 (V74-V80)",
             from: SD::GROUND_SPRING,
-            beneficiaries: &[SD::HOT_SPRING, SD::WET_SPRING, SD::NEURAL_SPRING, SD::AIR_SPRING],
+            beneficiaries: &[
+                SD::HOT_SPRING,
+                SD::WET_SPRING,
+                SD::NEURAL_SPRING,
+                SD::AIR_SPRING,
+            ],
             description: "Universal primitives: chi-squared CDF+quantile, Anderson \
                          Lyapunov, 13-tier tolerance, Welford fused mean+variance. \
                          The tolerance framework became the validation backbone for all springs.",
@@ -370,7 +408,13 @@ pub static EVOLUTION_TIMELINE: LazyLock<Vec<EvolutionEvent>> = LazyLock::new(|| 
         EvolutionEvent {
             date: "Mar 7, 2026",
             from: SpringDomain::BARRACUDA,
-            beneficiaries: &[SD::HOT_SPRING, SD::WET_SPRING, SD::NEURAL_SPRING, SD::AIR_SPRING, SD::GROUND_SPRING],
+            beneficiaries: &[
+                SD::HOT_SPRING,
+                SD::WET_SPRING,
+                SD::NEURAL_SPRING,
+                SD::AIR_SPRING,
+                SD::GROUND_SPRING,
+            ],
             description: "Provenance registry formalized: all cross-spring flows now \
                          tracked programmatically with Write → Absorb → Lean lifecycle, \
                          evolution dates, and bidirectional dependency matrix.",
@@ -492,19 +536,28 @@ mod tests {
         let matrix = cross_spring_matrix();
         assert!(!matrix.is_empty());
 
-        let hot_to_neural = matrix.get(&(SD::HOT_SPRING, SD::NEURAL_SPRING)).copied().unwrap_or(0);
+        let hot_to_neural = matrix
+            .get(&(SD::HOT_SPRING, SD::NEURAL_SPRING))
+            .copied()
+            .unwrap_or(0);
         assert!(
             hot_to_neural >= 2,
             "hotSpring→neuralSpring should share 2+ shaders"
         );
 
-        let hot_to_wet = matrix.get(&(SD::HOT_SPRING, SD::WET_SPRING)).copied().unwrap_or(0);
+        let hot_to_wet = matrix
+            .get(&(SD::HOT_SPRING, SD::WET_SPRING))
+            .copied()
+            .unwrap_or(0);
         assert!(
             hot_to_wet >= 3,
             "hotSpring→wetSpring should share 3+ shaders"
         );
 
-        let wet_to_neural = matrix.get(&(SD::WET_SPRING, SD::NEURAL_SPRING)).copied().unwrap_or(0);
+        let wet_to_neural = matrix
+            .get(&(SD::WET_SPRING, SD::NEURAL_SPRING))
+            .copied()
+            .unwrap_or(0);
         assert!(
             wet_to_neural >= 3,
             "wetSpring→neuralSpring should share 3+ shaders"

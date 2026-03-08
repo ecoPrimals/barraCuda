@@ -21,8 +21,11 @@ const CORALREEF_PORT_ENV: &str = "BARRACUDA_SHADER_COMPILER_PORT";
 /// Loopback address for localhost-only discovery probes.
 const LOCALHOST: &str = "127.0.0.1";
 
-/// Well-known discovery filename for pre-Phase 10 backward compatibility.
-const LEGACY_DISCOVERY_FILENAME: &str = "coralreef-core.json";
+/// Legacy discovery filename for pre-Phase 10 backward compatibility.
+///
+/// Deprecated: prefer capability-based discovery (`shader.compile` or `shader_compiler`).
+/// This fallback reads transport info from any remaining pre-capability manifest.
+const LEGACY_DISCOVERY_FILENAME: &str = "shader-compiler.json";
 
 /// Discover a shader-compiler primal's JSON-RPC endpoint via capability-based
 /// runtime discovery. No hardcoded primal names or ports — any primal

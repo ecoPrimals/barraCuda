@@ -60,9 +60,8 @@ impl RandomRotation {
 
     /// WGSL shader source (f64 canonical, downcast to f32 at compile)
     fn wgsl_shader() -> &'static str {
-        static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-            SHADER_F64.to_string()
-        });
+        static SHADER: std::sync::LazyLock<String> =
+            std::sync::LazyLock::new(|| SHADER_F64.to_string());
         SHADER.as_str()
     }
 

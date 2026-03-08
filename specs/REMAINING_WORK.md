@@ -20,7 +20,24 @@ barraCuda has **zero `unsafe` blocks** in its entire codebase. Every prior
 | `env::remove_var` (device test) | Direct path testing | `with_adapter_selector("auto")` |
 
 ### Zero Clippy Warnings
-Pedantic + `unwrap_used` — zero warnings across all targets.
+Pedantic + `unwrap_used` — zero warnings across all targets (re-verified Mar 8).
+
+### Deep Debt Audit (March 8, 2026)
+- **352 formatting violations** fixed (`cargo fmt`)
+- **36 clippy warnings** resolved (missing doc backticks, `# Errors`, auto-deref, `#[must_use]`, inline format vars)
+- **f64 shader compilation bug** fixed: `SparseGemmF64` and `PeakDetectF64` were using `compile_shader()` (downcasts f64→f32) instead of `compile_shader_f64()`, causing data corruption on non-f64 GPUs. Tests now gated on `get_test_device_if_f64_gpu_available()`.
+- **Magic numbers** extracted to named constants: 16 constants across `npu_executor`, `multi_device_pool`, `cpu_executor`, `bfgs`
+- **Zero production `panic!()`**: all `panic!()` calls confirmed restricted to `#[cfg(test)]` modules
+
+### Systematic f64 Pipeline Evolution (March 8, 2026)
+- **14 additional f64 ops** fixed: `transe_score_f64`, `triangular_solve/f64`, `variance_f64`, `correlation_f64`, `covariance_f64`, `hermite_f64`, `bessel_i0/j0/j1/k0`, `beta_f64`, `digamma_f64`, `cosine_similarity_f64`, `weighted_dot_f64` — all were silently producing corrupted data on f64-capable GPUs
+- **Pipeline cache f64-native path**: `get_or_create_pipeline_f64_native()` preserves f64 types with separate cache maps; `create_f64_data_pipeline()` auto-selects native vs downcast based on `SHADER_F64` capability
+- **`compile_shader()` doc corrected**: now accurately describes f64-canonical always-downcast behavior
+- **Zero-copy `CpuTensorStorageSimple`**: evolved from `Vec<u8>` to `Bytes` — `read_to_cpu()` is ref-count bump, not full clone
+- **Zero-copy `CosineSimilarityF64::similarity()`**: eliminated `to_vec()` pair via flat-dispatch refactor
+- **Pipeline cache hot-path allocations eliminated**: `DeviceFingerprint` uses `std::mem::discriminant` instead of `format!`; `PipelineKey` uses hash instead of `String` for entry point
+- **Legacy discovery filename** evolved from hardcoded `coralreef-core.json` to agnostic `shader-compiler.json`
+- **Hardcoding audit**: zero hardcoded primal names in production code, zero hardcoded ports, zero hardcoded URLs — all env-var or capability-based
 
 ### Sovereign Compiler — All Backends
 The sovereign compiler (FMA fusion, dead expression elimination) now runs on
@@ -54,7 +71,7 @@ Previously limited to Vulkan with SPIR-V passthrough.
 ### P2 — Near-term
 
 #### Test Coverage to 90%
-- Current: 3,100+ lib tests, 31 integration suites
+- Current: 3,700+ total tests (3,105 in lib suite), 31 integration suites
 - Evolve CI `--fail-under` from 80 to 90
 - Add GPU-conditional tests for new ops
 - GPU_TEST_TIMEOUT (60s) prevents hangs; coordination harness with

@@ -12,13 +12,10 @@
 /// f64 is the canonical source — math is universal, precision is silicon.
 const SHADER_F64: &str = include_str!("../shaders/activation/selu_f64.wgsl");
 const SHADER_SELU_SIMPLE_F64: &str = include_str!("../shaders/activation/selu_simple_f64.wgsl");
-pub(crate) static SHADER_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    SHADER_F64.to_string()
-});
+pub(crate) static SHADER_F32: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| SHADER_F64.to_string());
 pub(crate) static SHADER_SELU_SIMPLE_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| {
-        SHADER_SELU_SIMPLE_F64.to_string()
-    });
+    std::sync::LazyLock::new(|| SHADER_SELU_SIMPLE_F64.to_string());
 
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;

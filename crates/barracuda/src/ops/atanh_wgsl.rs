@@ -11,9 +11,8 @@ use crate::tensor::Tensor;
 
 /// f64 is the canonical source — math is universal, precision is silicon.
 const SHADER_F64: &str = include_str!("../shaders/activation/atanh_f64.wgsl");
-static SHADER_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    SHADER_F64.to_string()
-});
+static SHADER_F32: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| SHADER_F64.to_string());
 
 /// Element-wise inverse hyperbolic tangent: atanh(x), valid for x ∈ (-1, 1).
 pub struct Atanh {

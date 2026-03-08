@@ -19,9 +19,7 @@ use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 
 static WGSL_PAIRWISE_JACCARD: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    include_str!(
-        "../../shaders/math/pairwise_jaccard_f64.wgsl"
-    ).to_string()
+    include_str!("../../shaders/math/pairwise_jaccard_f64.wgsl").to_string()
 });
 
 #[repr(C)]

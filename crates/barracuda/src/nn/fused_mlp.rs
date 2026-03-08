@@ -13,8 +13,7 @@ const RELU_F64: &str = include_str!("../shaders/activation/relu_f64.wgsl");
 
 static LINEAR_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| LINEAR_F64.to_string());
-static RELU_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| RELU_F64.to_string());
+static RELU_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| RELU_F64.to_string());
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]

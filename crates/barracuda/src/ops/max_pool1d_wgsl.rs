@@ -36,9 +36,7 @@ impl MaxPool1D {
     fn wgsl_shader() -> &'static str {
         {
             static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-                include_str!(
-                    "../shaders/pooling/max_pool1d_f64.wgsl"
-                ).to_string()
+                include_str!("../shaders/pooling/max_pool1d_f64.wgsl").to_string()
             });
             std::sync::LazyLock::force(&SHADER).as_str()
         }

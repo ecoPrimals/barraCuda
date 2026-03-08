@@ -32,9 +32,7 @@ impl PrngXoshiro {
     #[must_use]
     pub fn wgsl_xoshiro128ss() -> &'static str {
         static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-            include_str!(
-                "../shaders/misc/xoshiro128ss_f64.wgsl"
-            ).to_string()
+            include_str!("../shaders/misc/xoshiro128ss_f64.wgsl").to_string()
         });
         std::sync::LazyLock::force(&SHADER).as_str()
     }

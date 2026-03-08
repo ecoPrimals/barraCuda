@@ -142,7 +142,7 @@ impl TriangularSolveF64 {
             ],
         });
 
-        let shader = device.compile_shader(
+        let shader = device.compile_shader_f64(
             TriangularSolve::wgsl_shader_f64(),
             Some("TriangularSolve F64"),
         );
@@ -334,7 +334,7 @@ impl TriangularSolveF64 {
             ],
         });
 
-        let shader = device.compile_shader(
+        let shader = device.compile_shader_f64(
             TriangularSolve::wgsl_shader_f64(),
             Some("TriangularSolve Transpose F64"),
         );

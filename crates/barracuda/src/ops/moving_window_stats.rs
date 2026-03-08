@@ -16,9 +16,7 @@ use wgpu::util::DeviceExt;
 
 /// WGSL shader for moving window mean/variance/min/max (f32, downcast from f64).
 pub static WGSL_MOVING_WINDOW_STATS: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    include_str!(
-        "../shaders/stats/moving_window_f64.wgsl"
-    ).to_string()
+    include_str!("../shaders/stats/moving_window_f64.wgsl").to_string()
 });
 
 #[repr(C)]

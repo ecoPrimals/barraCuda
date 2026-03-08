@@ -27,15 +27,18 @@
 
 use crate::error::{BarracudaError, Result};
 
+/// Maximum iterations for difficult optimization problems (e.g. Rosenbrock).
+#[allow(dead_code)] // Used in test_bfgs_rosenbrock
+const BFGS_MAX_ITER_EXTENDED: usize = 5000;
+
 /// GPU shader for BFGS inverse Hessian update (O(n²) parallel).
 ///
 /// f64 canonical — f32 derived via downcast when needed.
 const WGSL_BFGS_UPDATE_F64: &str = include_str!("../shaders/optimizer/bfgs_update_f64.wgsl");
 
 /// Entry points: `bfgs_update`, `dot_product`, `mat_vec_mul`, `compute_Hy_and_yHy`.
-pub static WGSL_BFGS_UPDATE: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    WGSL_BFGS_UPDATE_F64.to_string()
-});
+pub static WGSL_BFGS_UPDATE: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| WGSL_BFGS_UPDATE_F64.to_string());
 
 /// GPU shader for batch numerical gradient via central/forward differences.
 ///
@@ -43,9 +46,8 @@ pub static WGSL_BFGS_UPDATE: std::sync::LazyLock<String> = std::sync::LazyLock::
 const WGSL_BATCH_GRADIENT_F64: &str = include_str!("../shaders/optimizer/batch_gradient_f64.wgsl");
 
 /// WGSL batch gradient shader (f32, downcast from f64).
-pub static WGSL_BATCH_GRADIENT: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    WGSL_BATCH_GRADIENT_F64.to_string()
-});
+pub static WGSL_BATCH_GRADIENT: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| WGSL_BATCH_GRADIENT_F64.to_string());
 
 /// Configuration for the BFGS optimizer.
 #[derive(Debug, Clone)]
@@ -432,7 +434,7 @@ mod tests {
         };
 
         let config = BfgsConfig {
-            max_iter: 5000,
+            max_iter: BFGS_MAX_ITER_EXTENDED,
             gtol: 1e-6,
             ..Default::default()
         };

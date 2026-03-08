@@ -2,12 +2,12 @@
 //! 3D Fast Fourier Transform — Batched GPU Dispatch (f64 Precision)
 //!
 //! Performs 3D FFT via dimension-wise decomposition with a single batched
-//! shader per axis. Uses the shared engine from fft_1d (dispatch_axis_f64,
-//! upload_twiddles_f64, AxisConfig, BATCHED_SHADER_F64).
+//! shader per axis. Uses the shared engine from `fft_1d` (`dispatch_axis_f64`,
+//! `upload_twiddles_f64`, `AxisConfig`, `BATCHED_SHADER_F64`).
 //!
 //! Reads back via `dev.read_f64_buffer(&buf_a, expected_len)`.
 
-use super::fft_1d::{dispatch_axis_f64, upload_twiddles_f64, AxisConfig};
+use super::fft_1d::{AxisConfig, dispatch_axis_f64, upload_twiddles_f64};
 use crate::error::{BarracudaError, Result};
 use std::collections::HashMap;
 use std::mem::size_of;
@@ -56,11 +56,15 @@ impl Fft3DF64 {
     }
 
     /// Compute forward 3D FFT (time → frequency domain).
+    /// # Errors
+    /// Returns [`Err`] if data length mismatches or GPU dispatch fails.
     pub async fn forward(&self, data: &[f64]) -> Result<Vec<f64>> {
         self.execute_internal(data, false).await
     }
 
     /// Compute inverse 3D FFT (frequency → time domain).
+    /// # Errors
+    /// Returns [`Err`] if data length mismatches or GPU dispatch fails.
     pub async fn inverse(&self, data: &[f64]) -> Result<Vec<f64>> {
         self.execute_internal(data, true).await
     }
@@ -85,13 +89,15 @@ impl Fft3DF64 {
         let buffer_bytes = (expected_len * size_of::<f64>()) as u64;
         let dev = &self.device;
 
-        let buf_a = dev.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("FFT3D buf_a"),
-            contents: bytemuck::cast_slice(data),
-            usage: wgpu::BufferUsages::STORAGE
-                | wgpu::BufferUsages::COPY_SRC
-                | wgpu::BufferUsages::COPY_DST,
-        });
+        let buf_a = dev
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("FFT3D buf_a"),
+                contents: bytemuck::cast_slice(data),
+                usage: wgpu::BufferUsages::STORAGE
+                    | wgpu::BufferUsages::COPY_SRC
+                    | wgpu::BufferUsages::COPY_DST,
+            });
 
         let buf_b = dev.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("FFT3D buf_b"),

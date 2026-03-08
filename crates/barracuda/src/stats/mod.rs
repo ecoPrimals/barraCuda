@@ -70,11 +70,8 @@ pub const WGSL_HISTOGRAM_F64: &str = include_str!("../shaders/stats/histogram_f6
 
 /// WGSL kernel for parallel histogram (f32 downcast for devices without f64).
 #[cfg(feature = "gpu")]
-pub static WGSL_HISTOGRAM_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    include_str!(
-        "../shaders/stats/histogram_f64.wgsl"
-    ).to_string()
-});
+pub static WGSL_HISTOGRAM_F32: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| include_str!("../shaders/stats/histogram_f64.wgsl").to_string());
 
 pub mod bootstrap;
 pub mod chi2;

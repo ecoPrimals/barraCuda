@@ -209,7 +209,10 @@ impl LangevinStep {
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
-        let shader = device.compile_shader(include_str!("langevin.wgsl"), Some("Langevin Thermostat Shader"));
+        let shader = device.compile_shader(
+            include_str!("langevin.wgsl"),
+            Some("Langevin Thermostat Shader"),
+        );
 
         let bind_group_layout =
             device

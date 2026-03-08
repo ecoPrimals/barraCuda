@@ -95,7 +95,8 @@ impl Laplacian {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let shader = device.compile_shader(include_str!("laplacian.wgsl"), Some("Laplacian Shader"));
+        let shader =
+            device.compile_shader(include_str!("laplacian.wgsl"), Some("Laplacian Shader"));
 
         let bind_group_layout =
             device

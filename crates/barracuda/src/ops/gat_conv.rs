@@ -94,9 +94,7 @@ impl GatConv {
     fn wgsl_shader() -> &'static str {
         {
             static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-                include_str!(
-                    "../shaders/gnn/gat_conv_f64.wgsl"
-                ).to_string()
+                include_str!("../shaders/gnn/gat_conv_f64.wgsl").to_string()
             });
             SHADER.as_str()
         }

@@ -120,7 +120,8 @@ impl YukawaForce {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let shader = device.compile_shader(include_str!("yukawa.wgsl"), Some("Yukawa Force Shader"));
+        let shader =
+            device.compile_shader(include_str!("yukawa.wgsl"), Some("Yukawa Force Shader"));
 
         let bind_group_layout =
             device

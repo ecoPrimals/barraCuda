@@ -119,7 +119,8 @@ impl FheIntt {
         let device = input.device();
 
         // Load shaders
-        let shader = device.compile_shader(include_str!("../fhe_intt.wgsl"), Some("FHE INTT Shader"));
+        let shader =
+            device.compile_shader(include_str!("../fhe_intt.wgsl"), Some("FHE INTT Shader"));
 
         // Bind group layout (same structure as NTT)
         let bind_group_layout =

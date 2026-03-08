@@ -82,7 +82,10 @@ impl FhePolySub {
         let device = poly_a.device();
 
         // Load WGSL shader
-        let shader = device.compile_shader(include_str!("fhe_poly_sub.wgsl"), Some("FHE Polynomial Subtraction Shader"));
+        let shader = device.compile_shader(
+            include_str!("fhe_poly_sub.wgsl"),
+            Some("FHE Polynomial Subtraction Shader"),
+        );
 
         // Create bind group layout
         let bind_group_layout =

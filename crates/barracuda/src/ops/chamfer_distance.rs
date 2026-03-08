@@ -81,9 +81,7 @@ impl ChamferDistance {
     /// WGSL shader source (embedded at compile time)
     fn wgsl_shader() -> &'static str {
         static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-            include_str!(
-                "../shaders/loss/chamfer_distance_f64.wgsl"
-            ).to_string()
+            include_str!("../shaders/loss/chamfer_distance_f64.wgsl").to_string()
         });
         &SHADER
     }

@@ -101,7 +101,7 @@ impl TranseScoreF64<'_> {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let shader = device.compile_shader(
+        let shader = device.compile_shader_f64(
             include_str!("../shaders/bio/transe_score_f64.wgsl"),
             Some("transe_score_f64"),
         );
@@ -254,7 +254,7 @@ fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
+    use crate::device::test_pool::get_test_device_if_f64_gpu_available;
 
     fn transe_cpu(
         entities: &[f64],
@@ -281,7 +281,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_transe_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         let dim = 4;
@@ -321,7 +321,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_transe_zero_distance() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         let dim = 3;

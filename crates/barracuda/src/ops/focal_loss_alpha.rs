@@ -51,9 +51,7 @@ impl FocalLossAlpha {
     /// WGSL shader source (embedded at compile time)
     fn wgsl_shader() -> &'static str {
         static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-            include_str!(
-                "../shaders/loss/focal_loss_alpha_f64.wgsl"
-            ).to_string()
+            include_str!("../shaders/loss/focal_loss_alpha_f64.wgsl").to_string()
         });
         &SHADER
     }

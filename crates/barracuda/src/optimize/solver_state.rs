@@ -245,7 +245,8 @@ impl ResumableNelderMead {
                                     + SIGMA * (self.simplex[i][j] - self.simplex[best_idx][j]);
                             }
                             self.simplex[i] = project_bounds(&self.simplex[i], &self.bounds);
-                            let fi = self.eval(f, &self.simplex[i].clone());
+                            let point = self.simplex[i].clone();
+                            let fi = self.eval(f, &point);
                             self.f_vals[i] = fi;
                         }
                     }

@@ -2,7 +2,7 @@
 
 **Version**: 0.3.3
 **Date**: 2026-03-08
-**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,700+ tests, 3,118 pass on llvmpipe, systematic f64 pipeline fix, cross-spring absorptions)
+**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,700+ tests, 3,097 pass on llvmpipe, systematic f64 pipeline fix, cross-spring absorptions, plasma physics absorption)
 
 ---
 
@@ -10,7 +10,7 @@
 
 | Category | Grade | Notes |
 |----------|-------|-------|
-| **Core compute** | A | 712 WGSL shaders, 13-tier tolerance architecture, GpuView persistent buffers with ops |
+| **Core compute** | A | 716 WGSL shaders, 13-tier tolerance architecture, GpuView persistent buffers with ops |
 | **Precision tiers** | A+ | 3-tier model (F32/F64/Df64) aligned with coralReef `Fp64Strategy`; DF64 naga-guided rewrite validated; probe-aware Fp64Strategy; DF64 reduce shaders for Hybrid devices |
 | **Sovereign compiler** | A | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all shaders |
 | **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery; coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support |

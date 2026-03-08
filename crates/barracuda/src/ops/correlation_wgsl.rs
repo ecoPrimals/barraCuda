@@ -125,7 +125,7 @@ impl Correlation {
         }
 
         let denom = (var_x * var_y).sqrt();
-        if denom < 1e-10 {
+        if denom < 1e-10_f32 {
             return 0.0;
         }
         cov / denom

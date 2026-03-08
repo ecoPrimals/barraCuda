@@ -329,7 +329,7 @@ impl CorrelationF64 {
             var_y += dy * dy;
         }
         let denom = (var_x * var_y).sqrt();
-        if denom < 1e-15 {
+        if denom < crate::tolerances::eps::SAFE_DIV {
             return 0.0;
         }
         cov / denom

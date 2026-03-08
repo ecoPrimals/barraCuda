@@ -310,6 +310,51 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
             created: "Mar 2026 groundSpring V80",
             absorbed: "Mar 2026 barraCuda v0.3.3",
         },
+        // ── Plasma Physics (hotSpring Chuna Papers 43-45) ───────────
+        ShaderRecord {
+            path: "science/plasma/dielectric_mermin_f64.wgsl",
+            origin: SD::HOT_SPRING,
+            consumers: &[SD::HOT_SPRING],
+            category: C::PlasmaPhysics,
+            evolution_note: "Mermin dielectric ε(k,ω) with plasma dispersion function. \
+                            Completed Mermin (momentum-conserving) variant from Chuna & Murillo (2024). \
+                            Depends on complex_f64.wgsl.",
+            created: "Mar 2026 hotSpring v0.6.23 (Chuna P44)",
+            absorbed: "Mar 2026 barraCuda v0.3.3",
+        },
+        ShaderRecord {
+            path: "science/plasma/dielectric_multicomponent_f64.wgsl",
+            origin: SD::HOT_SPRING,
+            consumers: &[SD::HOT_SPRING],
+            category: C::PlasmaPhysics,
+            evolution_note: "Multi-species Mermin dielectric with per-species susceptibility. \
+                            Species layout: [mass, charge, density, temp, nu, v_th, k_debye] × N. \
+                            Uses cscale() for correct complex scalar multiplication.",
+            created: "Mar 2026 hotSpring v0.6.23 (Chuna P44)",
+            absorbed: "Mar 2026 barraCuda v0.3.3",
+        },
+        ShaderRecord {
+            path: "science/plasma/bgk_relaxation_f64.wgsl",
+            origin: SD::HOT_SPRING,
+            consumers: &[SD::HOT_SPRING],
+            category: C::PlasmaPhysics,
+            evolution_note: "Two-pass BGK relaxation for multi-species kinetic plasma. \
+                            Pass 1: velocity-space moments. Pass 2: relax f toward Maxwellian. \
+                            CPU reduces moments between passes (WGSL lacks f64 atomics).",
+            created: "Mar 2026 hotSpring v0.6.23 (Chuna P45)",
+            absorbed: "Mar 2026 barraCuda v0.3.3",
+        },
+        ShaderRecord {
+            path: "science/plasma/euler_hll_f64.wgsl",
+            origin: SD::HOT_SPRING,
+            consumers: &[SD::HOT_SPRING],
+            category: C::PlasmaPhysics,
+            evolution_note: "1D Euler fluid with HLL approximate Riemann solver. \
+                            Two-pass: compute HLL flux at interfaces, then conservative update. \
+                            For kinetic-fluid coupling pipeline (Chuna P45).",
+            created: "Mar 2026 hotSpring v0.6.23 (Chuna P45)",
+            absorbed: "Mar 2026 barraCuda v0.3.3",
+        },
     ]
 });
 

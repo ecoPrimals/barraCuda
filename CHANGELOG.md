@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Plasma Physics Absorption and Deep Debt (Mar 8 2026)
+
+- **4 plasma physics shaders absorbed from hotSpring** (Chuna Papers 43-45):
+  `dielectric_mermin_f64.wgsl` (Mermin dielectric ε(k,ω) with plasma dispersion function),
+  `dielectric_multicomponent_f64.wgsl` (multi-species Mermin with per-species susceptibility),
+  `bgk_relaxation_f64.wgsl` (two-pass BGK relaxation for kinetic plasma),
+  `euler_hll_f64.wgsl` (1D Euler fluid with HLL approximate Riemann solver).
+  Total WGSL shaders: 712 → 716.
+- **`PlasmaPhysics` shader category** in provenance registry for dielectric, kinetic, and
+  fluid plasma shaders. 4 provenance records with full evolution notes.
+- **Magic number evolution**: cosine similarity and correlation CPU references now use
+  `eps::SAFE_DIV` instead of ad-hoc `1e-14`/`1e-15` literals.
+- **Stale template debris removed**: `shaders/templates/elementwise_add.wgsl.template`
+  (leftover from the `{{SCALAR}}` system deleted in the precision lean-out).
+- **Clone optimization**: `solver_state.rs` Nelder-Mead shrinkage avoids temporary
+  reference to clone.
+
 ### Changed — Precision Model Lean-Out (Mar 8 2026)
 
 - **3-tier precision model**: Removed `Precision::F16` (aspirational, zero production callers),

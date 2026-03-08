@@ -151,7 +151,7 @@ impl CosineSimilarityF64 {
         }
 
         let denom = (norm_a * norm_b).sqrt();
-        if denom < 1e-14 {
+        if denom < crate::tolerances::eps::SAFE_DIV {
             return 0.0;
         }
         dot / denom

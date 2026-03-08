@@ -84,6 +84,8 @@ pub enum ShaderCategory {
     Hydrology,
     /// Condensed matter physics
     CondensedMatter,
+    /// Plasma physics (dielectric, kinetic, fluid)
+    PlasmaPhysics,
     /// General compute primitives
     Primitives,
 }
@@ -100,6 +102,7 @@ impl std::fmt::Display for ShaderCategory {
             Self::Bioinformatics => write!(f, "Bioinformatics"),
             Self::Hydrology => write!(f, "Hydrology"),
             Self::CondensedMatter => write!(f, "Condensed Matter"),
+            Self::PlasmaPhysics => write!(f, "Plasma Physics"),
             Self::Primitives => write!(f, "Primitives"),
         }
     }

@@ -28,7 +28,7 @@
 use crate::error::{BarracudaError, Result};
 
 /// Maximum iterations for difficult optimization problems (e.g. Rosenbrock).
-#[allow(dead_code)] // Used in test_bfgs_rosenbrock
+#[allow(dead_code, reason = "used in test_bfgs_rosenbrock")]
 const BFGS_MAX_ITER_EXTENDED: usize = 5000;
 
 /// GPU shader for BFGS inverse Hessian update (O(n²) parallel).

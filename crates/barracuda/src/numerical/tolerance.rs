@@ -231,7 +231,8 @@ mod tests {
 
     #[test]
     fn display_exact() {
-        assert_eq!(format!("{}", Tolerance::Exact), "exact (0 ULP)");
+        let exact = Tolerance::Exact;
+        assert_eq!(format!("{exact}"), "exact (0 ULP)");
     }
 
     #[test]

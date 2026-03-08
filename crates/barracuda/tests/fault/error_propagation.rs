@@ -35,7 +35,7 @@ async fn test_error_contains_context() {
     let result = matmul(&dev.device, &dev.queue, &a, &b, 10, 10, 20).await;
 
     if let Err(e) = result {
-        let error_msg = format!("{}", e);
+        let error_msg = format!("{e}");
         // Error should mention "dimension" or "shape" or "size"
         assert!(
             error_msg.to_lowercase().contains("dimension")

@@ -478,13 +478,14 @@ mod tests {
 
     #[test]
     fn test_solver_status_display() {
-        assert_eq!(format!("{}", SolverStatus::NotStarted), "NotStarted");
-        assert_eq!(format!("{}", SolverStatus::Paused), "Paused");
-        assert_eq!(format!("{}", SolverStatus::Converged), "Converged");
-        assert_eq!(
-            format!("{}", SolverStatus::BudgetExhausted),
-            "BudgetExhausted"
-        );
+        let not_started = SolverStatus::NotStarted;
+        let paused = SolverStatus::Paused;
+        let converged = SolverStatus::Converged;
+        let budget_exhausted = SolverStatus::BudgetExhausted;
+        assert_eq!(format!("{not_started}"), "NotStarted");
+        assert_eq!(format!("{paused}"), "Paused");
+        assert_eq!(format!("{converged}"), "Converged");
+        assert_eq!(format!("{budget_exhausted}"), "BudgetExhausted");
     }
 
     #[test]

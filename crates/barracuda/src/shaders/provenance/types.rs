@@ -111,9 +111,12 @@ mod tests {
 
     #[test]
     fn display_spring_domains() {
-        assert_eq!(format!("{}", SpringDomain::HOT_SPRING), "hotSpring");
-        assert_eq!(format!("{}", SpringDomain::WET_SPRING), "wetSpring");
-        assert_eq!(format!("{}", SpringDomain::NEURAL_SPRING), "neuralSpring");
+        let hot = SpringDomain::HOT_SPRING;
+        let wet = SpringDomain::WET_SPRING;
+        let neural = SpringDomain::NEURAL_SPRING;
+        assert_eq!(format!("{hot}"), "hotSpring");
+        assert_eq!(format!("{wet}"), "wetSpring");
+        assert_eq!(format!("{neural}"), "neuralSpring");
     }
 
     #[test]
@@ -125,7 +128,9 @@ mod tests {
 
     #[test]
     fn display_shader_categories() {
-        assert_eq!(format!("{}", ShaderCategory::LatticeQcd), "Lattice QCD");
-        assert_eq!(format!("{}", ShaderCategory::MathLibrary), "Math Library");
+        let lattice = ShaderCategory::LatticeQcd;
+        let math = ShaderCategory::MathLibrary;
+        assert_eq!(format!("{lattice}"), "Lattice QCD");
+        assert_eq!(format!("{math}"), "Math Library");
     }
 }

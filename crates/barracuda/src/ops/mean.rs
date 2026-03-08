@@ -19,7 +19,7 @@ pub const WGSL_MEAN_DIM_F64: &str = include_str!("../shaders/reduce/mean_dim_f64
 
 /// f32 derived from f64 canonical source.
 static WGSL_MEAN_DIM_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(WGSL_MEAN_DIM_F64));
+    std::sync::LazyLock::new(|| WGSL_MEAN_DIM_F64.to_string());
 
 /// f64 mean reduction (tree reduction, partial sums).
 pub const WGSL_MEAN_REDUCE_F64: &str = include_str!("../shaders/reduce/mean_reduce_f64.wgsl");

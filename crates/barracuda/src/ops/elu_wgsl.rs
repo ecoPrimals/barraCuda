@@ -12,11 +12,11 @@
 const SHADER_ELU_F64: &str = include_str!("../shaders/activation/elu_f64.wgsl");
 const SHADER_ELU_SIMPLE_F64: &str = include_str!("../shaders/activation/elu_simple_f64.wgsl");
 pub(crate) static SHADER_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(SHADER_ELU_F64)
+    SHADER_ELU_F64.to_string()
 });
 pub(crate) static SHADER_ELU_SIMPLE_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| {
-        crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(SHADER_ELU_SIMPLE_F64)
+        SHADER_ELU_SIMPLE_F64.to_string()
     });
 
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};

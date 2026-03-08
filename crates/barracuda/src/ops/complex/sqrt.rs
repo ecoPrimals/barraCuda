@@ -23,12 +23,7 @@ impl ComplexSqrt {
             ));
         }
         let device = input.device();
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Complex Sqrt Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("sqrt.wgsl").into()),
-            });
+        let shader = device.compile_shader(include_str!("sqrt.wgsl"), Some("Complex Sqrt Shader"));
         let bind_group_layout =
             device
                 .device

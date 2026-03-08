@@ -28,7 +28,7 @@ static WGSL_SWARM_NN_SCORES_F64: &str = include_str!("../../shaders/bio/swarm_nn
 /// Max activation output for `mean_reduce` chaining (Paper 015, L-009).
 /// Outputs f32 scores per (controller, eval) — different from forward which outputs u32 actions.
 pub static WGSL_SWARM_NN_SCORES: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(WGSL_SWARM_NN_SCORES_F64)
+    WGSL_SWARM_NN_SCORES_F64.to_string()
 });
 
 /// Parameters for swarm NN forward pass.

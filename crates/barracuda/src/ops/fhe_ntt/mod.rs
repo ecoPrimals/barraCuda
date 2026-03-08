@@ -135,12 +135,7 @@ impl FheNtt {
         let device = input.device();
 
         // Load shaders
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("FHE NTT Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("../fhe_ntt.wgsl").into()),
-            });
+        let shader = device.compile_shader(include_str!("../fhe_ntt.wgsl"), Some("FHE NTT Shader"));
 
         // Bind group layout (will be used for both pipelines)
         let bind_group_layout =

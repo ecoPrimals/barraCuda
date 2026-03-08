@@ -23,7 +23,7 @@ and the migration path.
 | `create_shader_module_spirv()` → `create_shader_module_passthrough()` | Rename call sites. Function semantics are identical. |
 | `on_uncaptured_error` handler is `Arc<dyn UncapturedErrorHandler>` (was `Box<dyn Fn(...)>`) | Implement `UncapturedErrorHandler` trait on your error handler struct and wrap in `Arc`. |
 | Workgroup dispatch uses named constants | If you used `div_ceil(64)` or `div_ceil(256)` directly, import `WORKGROUP_SIZE_COMPACT` (64) or `WORKGROUP_SIZE_1D` (256) from `device::capabilities`. |
-| tokio workspace version → 1.49 | If your crate uses `tokio = { workspace = true }`, you get 1.49 automatically. |
+| tokio workspace version → 1.50 | If your crate uses `tokio = { workspace = true }`, you get 1.50 automatically. |
 
 ### 0.3.2
 

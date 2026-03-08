@@ -106,12 +106,7 @@ impl FhePolyAdd {
         let device = poly_a.device();
 
         // Load WGSL shader
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("FHE Polynomial Addition Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("fhe_poly_add.wgsl").into()),
-            });
+        let shader = device.compile_shader(include_str!("fhe_poly_add.wgsl"), Some("FHE Polynomial Addition Shader"));
 
         // Create bind group layout
         let bind_group_layout =

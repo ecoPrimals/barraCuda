@@ -145,8 +145,8 @@ async fn fault_fft_non_power_of_two_degree() {
     if !common::run_gpu_resilient_async(|| async {
         let device = barracuda::device::test_pool::get_test_device().await;
 
-        // Inject fault: Invalid FFT degree (not power of 2)
-        let invalid_degrees = vec![0, 1, 3, 5, 6, 7, 9, 10, 15, 17, 100, 1000];
+        // Inject fault: Invalid FFT degree (not power of 2; note: 1 = 2^0 is valid)
+        let invalid_degrees = vec![0, 3, 5, 6, 7, 9, 10, 15, 17, 100, 1000];
 
         for degree in invalid_degrees {
             let data = vec![1.0f32; degree * 2];

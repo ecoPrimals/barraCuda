@@ -8,6 +8,19 @@
 use super::Precision;
 use super::templates::remove_conditional_block;
 
+/// Detect whether WGSL source is f64-canonical (contains f64 type declarations).
+///
+/// Checks for `array<f64>`, struct field / param types (`: f64,`, `: f64;`,
+/// `: f64\n`), and return types (`-> f64`).
+#[must_use]
+pub fn source_is_f64(source: &str) -> bool {
+    source.contains("array<f64>")
+        || source.contains(": f64,")
+        || source.contains(": f64;")
+        || source.contains(": f64\n")
+        || source.contains("-> f64")
+}
+
 /// Downcast an f64 shader source to f32 via text substitution.
 ///
 /// This is the core of "math is universal, precision is silicon": the shader

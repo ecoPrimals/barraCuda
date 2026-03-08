@@ -67,12 +67,7 @@ impl FhePolyMul {
         let barrett_mu = u64::MAX / modulus;
         let device = poly_a.device();
 
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("FHE Polynomial Multiplication Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("fhe_poly_mul.wgsl").into()),
-            });
+        let shader = device.compile_shader(include_str!("fhe_poly_mul.wgsl"), Some("FHE Polynomial Multiplication Shader"));
 
         let bind_group_layout =
             device

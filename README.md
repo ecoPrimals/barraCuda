@@ -103,6 +103,11 @@ barraCuda/
 ├── CONVENTIONS.md                   # Coding standards
 ├── CHANGELOG.md                     # SemVer changelog
 ├── BREAKING_CHANGES.md              # Migration notes
+├── STATUS.md                        # Quality scorecard (A+ grade)
+├── WHATS_NEXT.md                    # P1–P4 roadmap
+├── START_HERE.md                    # Developer quick start
+├── PURE_RUST_EVOLUTION.md           # Sovereign compute evolution log
+├── SPRING_ABSORPTION.md             # Cross-spring absorption tracker
 ├── LICENSE                          # AGPL-3.0-or-later
 ├── .github/workflows/ci.yml        # CI: fmt, clippy, deny, doc, test, coverage
 ├── crates/
@@ -326,6 +331,7 @@ Lifecycle and health traits are modeled on the ecoPrimals pattern but fully owne
 |----------|---------|
 | `specs/BARRACUDA_SPECIFICATION.md` | Crate architecture, IPC contract, shader pipeline |
 | `specs/ARCHITECTURE_DEMARCATION.md` | barraCuda vs toadStool boundary definition |
+| `specs/REMAINING_WORK.md` | P1-P4 open work items |
 | `crates/barracuda/src/shaders/README.md` | Shader organization |
 
 ---

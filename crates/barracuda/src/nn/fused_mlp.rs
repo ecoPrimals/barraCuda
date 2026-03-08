@@ -4,7 +4,6 @@
 use crate::device::BatchedEncoder;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
-use crate::shaders::precision::downcast_f64_to_f32;
 use crate::tensor::Tensor;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -13,9 +12,9 @@ const LINEAR_F64: &str = include_str!("../shaders/misc/linear_f64.wgsl");
 const RELU_F64: &str = include_str!("../shaders/activation/relu_f64.wgsl");
 
 static LINEAR_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| downcast_f64_to_f32(LINEAR_F64));
+    std::sync::LazyLock::new(|| LINEAR_F64.to_string());
 static RELU_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| downcast_f64_to_f32(RELU_F64));
+    std::sync::LazyLock::new(|| RELU_F64.to_string());
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]

@@ -54,9 +54,9 @@ impl Renorm {
     fn wgsl_shader() -> &'static str {
         {
             static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-                crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
+                include_str!(
                     "../shaders/norm/renorm_f64.wgsl"
-                ))
+                ).to_string()
             });
             std::sync::LazyLock::force(&SHADER).as_str()
         }

@@ -41,9 +41,9 @@ fn fused_shader_for_device(device: &WgpuDevice) -> &'static str {
 #[must_use]
 pub fn wgsl_variance_simple() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
+        include_str!(
             "../shaders/misc/variance_simple_f64.wgsl"
-        ))
+        ).to_string()
     });
     std::sync::LazyLock::force(&SHADER).as_str()
 }

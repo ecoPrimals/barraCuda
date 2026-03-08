@@ -2,11 +2,12 @@
 //! 2D Fast Fourier Transform Operation
 //!
 //! **Purpose**: 2D frequency analysis for images and 2D signals
-//! **Algorithm**: Row-column decomposition using 1D FFT
+//! **Algorithm**: Row-column decomposition using batched 1D FFT (GPU-resident, zero CPU readbacks)
 
-use super::Fft1D;
+use super::fft_1d::{batched_shader_f32, upload_twiddles_f32, AxisConfig};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
+use std::mem::size_of;
 
 /// 2D Complex FFT operation
 pub struct Fft2D {
@@ -34,6 +35,12 @@ impl Fft2D {
             )));
         }
 
+        if rows == 0 || cols == 0 {
+            return Err(BarracudaError::Device(
+                "FFT 2D dimensions must be non-zero".to_string(),
+            ));
+        }
+
         if rows & (rows - 1) != 0 || cols & (cols - 1) != 0 {
             return Err(BarracudaError::Device(
                 "FFT 2D dimensions must be powers of 2".to_string(),
@@ -43,101 +50,112 @@ impl Fft2D {
         Ok(Self { input, rows, cols })
     }
 
-    /// Execute 2D FFT (row-wise then column-wise).
+    /// Execute 2D FFT (row-wise then column-wise). Zero CPU readbacks.
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
+        let buffer_bytes = (self.rows as u64) * (self.cols as u64) * 2 * size_of::<f32>() as u64;
 
-        // Step 1: FFT each row
-        let mut row_results = Vec::new();
+        // buf_a holds data, buf_b is ping-pong
+        let buf_a = device.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("FFT2D buf_a"),
+            size: buffer_bytes,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_SRC
+                | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
 
-        for row_idx in 0..self.rows {
-            let row_data = self.extract_row(row_idx)?;
-            let row_tensor =
-                Tensor::from_data(&row_data, vec![self.cols as usize, 2], device.clone())?;
-            let fft = Fft1D::new(row_tensor, self.cols)?;
-            let row_fft = fft.execute()?;
-            row_results.extend(row_fft.to_vec()?);
+        {
+            let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("FFT2D Copy Input"),
+            });
+            encoder.copy_buffer_to_buffer(
+                self.input.buffer(),
+                0,
+                &buf_a,
+                0,
+                buffer_bytes,
+            );
+            device.submit_and_poll(std::iter::once(encoder.finish()));
         }
 
-        let rows_transformed = Tensor::from_data(
-            &row_results,
-            vec![self.rows as usize, self.cols as usize, 2],
-            device.clone(),
+        let buf_b = device.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("FFT2D buf_b"),
+            size: buffer_bytes,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_SRC
+                | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let shader = batched_shader_f32();
+
+        // Row pass: degree=cols, element_stride=1, dim1_stride=cols, dim1_count=rows, dim2_count=1
+        let tw_row_re;
+        let tw_row_im;
+        {
+            let (re, im) = upload_twiddles_f32(device, self.cols);
+            tw_row_re = re;
+            tw_row_im = im;
+        }
+        let row_axis = AxisConfig {
+            degree: self.cols,
+            element_stride: 1,
+            dim1_stride: self.cols,
+            dim2_stride: 1,
+            dim1_count: self.rows,
+            dim2_count: 1,
+        };
+        super::fft_1d::dispatch_axis_inner(
+            device,
+            shader,
+            &buf_a,
+            &buf_b,
+            buffer_bytes,
+            &tw_row_re,
+            &tw_row_im,
+            &row_axis,
+            false,
+            false,
         )?;
 
-        // Step 2: FFT each column (via transpose)
-        let transposed_data = self.transpose_2d_complex(&rows_transformed)?;
-        let mut col_results = Vec::new();
-
-        for col_idx in 0..self.cols {
-            let col_data = self.extract_from_transposed(&transposed_data, col_idx)?;
-            let col_tensor =
-                Tensor::from_data(&col_data, vec![self.rows as usize, 2], device.clone())?;
-            let fft = Fft1D::new(col_tensor, self.rows)?;
-            col_results.extend(fft.execute()?.to_vec()?);
+        // Col pass: degree=rows, element_stride=cols, dim1_stride=1, dim1_count=cols, dim2_count=1
+        let tw_col_re;
+        let tw_col_im;
+        {
+            let (re, im) = upload_twiddles_f32(device, self.rows);
+            tw_col_re = re;
+            tw_col_im = im;
         }
+        let col_axis = AxisConfig {
+            degree: self.rows,
+            element_stride: self.cols,
+            dim1_stride: 1,
+            dim2_stride: 1,
+            dim1_count: self.cols,
+            dim2_count: 1,
+        };
+        super::fft_1d::dispatch_axis_inner(
+            device,
+            shader,
+            &buf_a,
+            &buf_b,
+            buffer_bytes,
+            &tw_col_re,
+            &tw_col_im,
+            &col_axis,
+            false,
+            false,
+        )?;
 
-        let cols_transformed_flat: Vec<f32> = col_results;
-        let final_data = self.transpose_flat_2d_complex(&cols_transformed_flat)?;
-
-        Tensor::from_data(
-            &final_data,
+        Ok(Tensor::from_buffer(
+            buf_a,
             vec![self.rows as usize, self.cols as usize, 2],
             device.clone(),
-        )
-    }
-
-    fn extract_row(&self, row_idx: u32) -> Result<Vec<f32>> {
-        let data = self.input.to_vec()?;
-        let cols = self.cols as usize;
-        let start = (row_idx as usize) * cols * 2;
-        let end = start + cols * 2;
-        Ok(data[start..end].to_vec())
-    }
-
-    fn extract_from_transposed(&self, transposed: &[f32], row_idx: u32) -> Result<Vec<f32>> {
-        let rows = self.rows as usize;
-        let start = (row_idx as usize) * rows * 2;
-        let end = start + rows * 2;
-        Ok(transposed[start..end].to_vec())
-    }
-
-    fn transpose_2d_complex(&self, tensor: &Tensor) -> Result<Vec<f32>> {
-        let data = tensor.to_vec()?;
-        let m = self.rows as usize;
-        let n = self.cols as usize;
-        let mut transposed = vec![0.0f32; m * n * 2];
-
-        for i in 0..m {
-            for j in 0..n {
-                let src_base = (i * n + j) * 2;
-                let dst_base = (j * m + i) * 2;
-                transposed[dst_base] = data[src_base];
-                transposed[dst_base + 1] = data[src_base + 1];
-            }
-        }
-
-        Ok(transposed)
-    }
-
-    fn transpose_flat_2d_complex(&self, data: &[f32]) -> Result<Vec<f32>> {
-        let m = self.cols as usize; // After first transpose: cols×rows
-        let n = self.rows as usize;
-        let mut transposed = vec![0.0f32; m * n * 2];
-
-        for i in 0..m {
-            for j in 0..n {
-                let src_base = (i * n + j) * 2;
-                let dst_base = (j * m + i) * 2;
-                transposed[dst_base] = data[src_base];
-                transposed[dst_base + 1] = data[src_base + 1];
-            }
-        }
-
-        Ok(transposed)
+        ))
     }
 }
 

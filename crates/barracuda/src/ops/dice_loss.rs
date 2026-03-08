@@ -60,9 +60,9 @@ impl DiceLoss {
 
     fn wgsl_shader() -> &'static str {
         static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-            crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
+            include_str!(
                 "../shaders/loss/dice_loss_f64.wgsl"
-            ))
+            ).to_string()
         });
         std::sync::LazyLock::force(&SHADER).as_str()
     }
@@ -164,12 +164,7 @@ impl DiceLoss {
             ],
         });
 
-        let shader_module = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Dice Loss Shader"),
-                source: wgpu::ShaderSource::Wgsl(Self::wgsl_shader().into()),
-            });
+        let shader_module = device.compile_shader(Self::wgsl_shader(), Some("Dice Loss Shader"));
 
         let pipeline_layout =
             device

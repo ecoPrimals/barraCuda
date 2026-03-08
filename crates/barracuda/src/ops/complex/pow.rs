@@ -27,12 +27,7 @@ impl ComplexPow {
             ));
         }
         let device = input.device();
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Complex Pow Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("pow.wgsl").into()),
-            });
+        let shader = device.compile_shader(include_str!("pow.wgsl"), Some("Complex Pow Shader"));
         let bind_group_layout =
             device
                 .device

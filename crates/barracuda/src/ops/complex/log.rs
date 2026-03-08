@@ -26,12 +26,7 @@ impl ComplexLog {
             ));
         }
         let device = input.device();
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Complex Log Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("log.wgsl").into()),
-            });
+        let shader = device.compile_shader(include_str!("log.wgsl"), Some("Complex Log Shader"));
         let bind_group_layout =
             device
                 .device

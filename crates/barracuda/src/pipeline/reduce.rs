@@ -36,9 +36,33 @@
 
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::error::{BarracudaError, Result};
 use crate::utils::chunk_to_array;
 use std::sync::Arc;
+
+/// Native f64 sum-reduce shader (workgroup shared memory uses f64).
+const SHADER_NATIVE: &str = include_str!("../shaders/reduce/sum_reduce_f64.wgsl");
+/// DF64 sum-reduce shader (workgroup shared memory uses f32 pairs).
+const SHADER_DF64: &str = include_str!("../shaders/reduce/sum_reduce_df64.wgsl");
+/// DF64 core arithmetic library.
+const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
+
+/// Select the reduce shader based on the device's FP64 strategy.
+///
+/// Native/Concurrent/Sovereign: native f64 workgroup memory is reliable.
+/// Hybrid: f64 shared memory returns zeros on some devices; use DF64.
+fn shader_for_device(device: &WgpuDevice) -> &'static str {
+    let profile = GpuDriverProfile::from_device(device);
+    match profile.fp64_strategy() {
+        Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => SHADER_NATIVE,
+        Fp64Strategy::Hybrid => {
+            static DF64_COMBINED: std::sync::LazyLock<String> =
+                std::sync::LazyLock::new(|| format!("enable f64;\n{DF64_CORE}\n{SHADER_DF64}"));
+            &DF64_COMBINED
+        }
+    }
+}
 
 /// Two-pass f64 reduction pipeline returning a single scalar.
 ///
@@ -64,8 +88,6 @@ pub struct ReduceScalarPipeline {
 }
 
 impl ReduceScalarPipeline {
-    const SHADER: &'static str = include_str!("../shaders/reduce/sum_reduce_f64.wgsl");
-
     /// Build a reduction pipeline for arrays of up to `n` f64 elements.
     /// # Errors
     /// Returns [`Err`] if shader compilation fails or the device is lost.
@@ -73,13 +95,7 @@ impl ReduceScalarPipeline {
         let n_u32 = n as u32;
         let n_partial = n_u32.div_ceil(WORKGROUP_SIZE_1D) as usize;
 
-        // Compile shader
-        let module = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("sum_reduce_f64"),
-                source: wgpu::ShaderSource::Wgsl(Self::SHADER.into()),
-            });
+        let module = device.compile_shader_f64(shader_for_device(&device), Some("sum_reduce_f64"));
 
         // Bind group layout (matches sum_reduce_f64.wgsl group 0):
         //   binding 0: input (storage read)
@@ -383,11 +399,7 @@ impl ReduceScalarPipeline {
         } else {
             let module = self
                 .device
-                .device
-                .create_shader_module(wgpu::ShaderModuleDescriptor {
-                    label: Some(entry),
-                    source: wgpu::ShaderSource::Wgsl(Self::SHADER.into()),
-                });
+                .compile_shader_f64(shader_for_device(&self.device), Some(entry));
             let layout =
                 self.device
                     .device

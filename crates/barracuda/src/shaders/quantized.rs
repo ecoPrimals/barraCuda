@@ -30,9 +30,9 @@
 #[must_use]
 pub fn dequant_q4_wgsl() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        crate::shaders::precision::downcast_f64_to_f32(include_str!(
+        include_str!(
             "quantized/dequant_q4_f64.wgsl"
-        ))
+        ).to_string()
     });
     std::sync::LazyLock::force(&SHADER).as_str()
 }
@@ -41,9 +41,9 @@ pub fn dequant_q4_wgsl() -> &'static str {
 #[must_use]
 pub fn dequant_q8_wgsl() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        crate::shaders::precision::downcast_f64_to_f32(include_str!(
+        include_str!(
             "quantized/dequant_q8_f64.wgsl"
-        ))
+        ).to_string()
     });
     std::sync::LazyLock::force(&SHADER).as_str()
 }
@@ -52,7 +52,7 @@ pub fn dequant_q8_wgsl() -> &'static str {
 #[must_use]
 pub fn gemv_q4_wgsl() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        crate::shaders::precision::downcast_f64_to_f32(include_str!("quantized/gemv_q4_f64.wgsl"))
+        include_str!("quantized/gemv_q4_f64.wgsl").to_string()
     });
     std::sync::LazyLock::force(&SHADER).as_str()
 }
@@ -61,7 +61,7 @@ pub fn gemv_q4_wgsl() -> &'static str {
 #[must_use]
 pub fn gemv_q8_wgsl() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        crate::shaders::precision::downcast_f64_to_f32(include_str!("quantized/gemv_q8_f64.wgsl"))
+        include_str!("quantized/gemv_q8_f64.wgsl").to_string()
     });
     std::sync::LazyLock::force(&SHADER).as_str()
 }

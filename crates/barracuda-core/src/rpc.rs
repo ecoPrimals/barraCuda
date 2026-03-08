@@ -126,7 +126,7 @@ fn u32_pairs_to_u64(data: &[u32]) -> Vec<u64> {
 impl BarraCudaService for BarraCudaServer {
     async fn primal_info(self, _: tarpc::context::Context) -> PrimalInfo {
         PrimalInfo {
-            primal: "barraCuda".into(),
+            primal: crate::PRIMAL_NAME.into(),
             version: env!("CARGO_PKG_VERSION").into(),
             protocol: "json-rpc-2.0".into(),
             namespace: "barracuda".into(),
@@ -218,7 +218,7 @@ impl BarraCudaService for BarraCudaServer {
                 status: report.status.to_string(),
             },
             Err(e) => HealthReport {
-                name: "barraCuda".to_string(),
+                name: crate::PRIMAL_NAME.to_string(),
                 version: env!("CARGO_PKG_VERSION").to_string(),
                 status: format!("Error: {e}"),
             },

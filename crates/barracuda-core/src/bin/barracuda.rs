@@ -146,14 +146,16 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
                         Some(p) if p != "__default__" => std::path::PathBuf::from(p),
                         _ => barracuda_core::ipc::IpcServer::default_socket_path(),
                     };
+                    write_discovery_file(None, tarpc_bind.as_deref(), Some(&sock_path));
                     server.serve_unix(&sock_path, None::<fn()>).await?;
+                    remove_discovery_file();
                     return Ok(());
                 }
             }
 
             let bind_addr = barracuda_core::ipc::transport::resolve_bind_address(bind.as_deref());
 
-            write_discovery_file(&bind_addr, tarpc_bind.as_deref());
+            write_discovery_file(Some(&bind_addr), tarpc_bind.as_deref(), None);
 
             server.serve_tcp(&bind_addr).await?;
 
@@ -257,26 +259,51 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
             let mut line = serde_json::to_string(&request)?;
             line.push('\n');
 
-            let stream = tokio::net::TcpStream::connect(&server_addr)
-                .await
-                .map_err(|e| {
-                    barracuda_core::error::BarracudaCoreError::ipc(format!(
-                        "connect to {server_addr}: {e}"
-                    ))
-                })?;
-
-            let (reader, mut writer) = stream.into_split();
             use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
-            writer.write_all(line.as_bytes()).await?;
-            writer.shutdown().await?;
 
-            let mut lines = tokio::io::BufReader::new(reader).lines();
-            if let Ok(Some(response_line)) = lines.next_line().await {
-                let response: serde_json::Value = serde_json::from_str(&response_line)
-                    .unwrap_or_else(|_| serde_json::json!({"raw": response_line}));
+            let response_line = if let Some(sock_path) = server_addr.strip_prefix("unix://") {
+                #[cfg(unix)]
+                {
+                    let stream = tokio::net::UnixStream::connect(sock_path)
+                        .await
+                        .map_err(|e| {
+                            barracuda_core::error::BarracudaCoreError::ipc(format!(
+                                "connect to unix://{sock_path}: {e}"
+                            ))
+                        })?;
+                    let (reader, mut writer) = stream.into_split();
+                    writer.write_all(line.as_bytes()).await?;
+                    writer.shutdown().await?;
+                    tokio::io::BufReader::new(reader).lines().next_line().await
+                }
+
+                #[cfg(not(unix))]
+                {
+                    let _ = sock_path;
+                    return Err(barracuda_core::error::BarracudaCoreError::ipc(
+                        "Unix sockets not supported on this platform",
+                    ));
+                }
+            } else {
+                let stream = tokio::net::TcpStream::connect(&server_addr)
+                    .await
+                    .map_err(|e| {
+                        barracuda_core::error::BarracudaCoreError::ipc(format!(
+                            "connect to {server_addr}: {e}"
+                        ))
+                    })?;
+                let (reader, mut writer) = stream.into_split();
+                writer.write_all(line.as_bytes()).await?;
+                writer.shutdown().await?;
+                tokio::io::BufReader::new(reader).lines().next_line().await
+            };
+
+            if let Ok(Some(resp)) = response_line {
+                let response: serde_json::Value = serde_json::from_str(&resp)
+                    .unwrap_or_else(|_| serde_json::json!({"raw": resp}));
                 println!(
                     "{}",
-                    serde_json::to_string_pretty(&response).unwrap_or(response_line)
+                    serde_json::to_string_pretty(&response).unwrap_or(resp)
                 );
             } else {
                 eprintln!("No response from server");
@@ -301,19 +328,40 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
 /// Capabilities, provides, and methods are derived from the actual registered
 /// IPC methods — no hardcoded values. Per wateringHole capability-based discovery.
 ///
+/// Supports both TCP (`host:port`) and Unix socket (`unix:///path`) transports.
 /// File path: `$XDG_RUNTIME_DIR/ecoPrimals/barracuda-core.json`
-fn write_discovery_file(bind_addr: &str, tarpc_addr: Option<&str>) {
+fn write_discovery_file(
+    tcp_addr: Option<&str>,
+    tarpc_addr: Option<&str>,
+    unix_path: Option<&std::path::Path>,
+) {
     let Some(dir) = discovery_dir() else { return };
     if std::fs::create_dir_all(&dir).is_err() {
         return;
     }
     let path = dir.join("barracuda-core.json");
 
-    let mut transports = serde_json::json!({
-        "jsonrpc": bind_addr,
-    });
+    let mut transports = serde_json::Map::new();
+    if let Some(addr) = tcp_addr {
+        transports.insert(
+            "jsonrpc".into(),
+            serde_json::Value::String(addr.to_string()),
+        );
+    }
     if let Some(tarpc) = tarpc_addr {
-        transports["tarpc"] = serde_json::Value::String(tarpc.to_string());
+        transports.insert("tarpc".into(), serde_json::Value::String(tarpc.to_string()));
+    }
+    if let Some(sock) = unix_path {
+        transports.insert(
+            "unix".into(),
+            serde_json::Value::String(format!("unix://{}", sock.display())),
+        );
+        if !transports.contains_key("jsonrpc") {
+            transports.insert(
+                "jsonrpc".into(),
+                serde_json::Value::String(format!("unix://{}", sock.display())),
+            );
+        }
     }
 
     let capabilities: Vec<serde_json::Value> = barracuda_core::discovery::capabilities()
@@ -330,7 +378,7 @@ fn write_discovery_file(bind_addr: &str, tarpc_addr: Option<&str>) {
         .collect();
 
     let discovery = serde_json::json!({
-        "primal": "barraCuda",
+        "primal": barracuda_core::PRIMAL_NAME,
         "pid": std::process::id(),
         "transports": transports,
         "capabilities": capabilities,
@@ -339,12 +387,12 @@ fn write_discovery_file(bind_addr: &str, tarpc_addr: Option<&str>) {
         "requires": [{ "id": "shader.compile", "optional": true }],
     });
 
-    match std::fs::write(
-        &path,
-        serde_json::to_string_pretty(&discovery).unwrap_or_default(),
-    ) {
-        Ok(()) => tracing::info!(path = %path.display(), "wrote discovery file"),
-        Err(e) => tracing::warn!(error = %e, "failed to write discovery file"),
+    match serde_json::to_string_pretty(&discovery) {
+        Ok(json) => match std::fs::write(&path, json) {
+            Ok(()) => tracing::info!(path = %path.display(), "wrote discovery file"),
+            Err(e) => tracing::warn!(error = %e, "failed to write discovery file"),
+        },
+        Err(e) => tracing::warn!(error = %e, "failed to serialize discovery file"),
     }
 }
 
@@ -375,14 +423,16 @@ async fn run_service_mode() -> Result<(), barracuda_core::error::BarracudaCoreEr
     #[cfg(unix)]
     {
         let sock_path = barracuda_core::ipc::IpcServer::default_socket_path();
+        write_discovery_file(None, None, Some(&sock_path));
         let on_ready = || notify_systemd_ready();
         server.serve_unix(&sock_path, Some(on_ready)).await?;
+        remove_discovery_file();
     }
 
     #[cfg(not(unix))]
     {
         let bind_addr = barracuda_core::ipc::transport::resolve_bind_address(None);
-        write_discovery_file(&bind_addr, None);
+        write_discovery_file(Some(&bind_addr), None, None);
         server.serve_tcp(&bind_addr).await?;
         remove_discovery_file();
     }
@@ -475,8 +525,28 @@ fn resolve_client_addr(
         let path = dir.join("barracuda-core.json");
         if let Ok(content) = std::fs::read_to_string(&path) {
             if let Ok(info) = serde_json::from_str::<serde_json::Value>(&content) {
-                if let Some(addr) = info
-                    .get("transports")
+                let transports = info.get("transports");
+
+                // Prefer TCP for the client subcommand (TCP is simpler for CLI)
+                if let Some(addr) = transports
+                    .and_then(|t| t.get("jsonrpc"))
+                    .and_then(|v| v.as_str())
+                {
+                    if !addr.starts_with("unix://") {
+                        return Ok(addr.to_string());
+                    }
+                }
+
+                // Fall back to Unix socket if available (strip unix:// prefix)
+                if let Some(unix_addr) = transports
+                    .and_then(|t| t.get("unix"))
+                    .and_then(|v| v.as_str())
+                {
+                    return Ok(unix_addr.to_string());
+                }
+
+                // Accept unix:// in jsonrpc transport too
+                if let Some(addr) = transports
                     .and_then(|t| t.get("jsonrpc"))
                     .and_then(|v| v.as_str())
                 {

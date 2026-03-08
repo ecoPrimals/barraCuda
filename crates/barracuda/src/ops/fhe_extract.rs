@@ -116,12 +116,7 @@ impl FheExtract {
 
         // Load WGSL shader
         let shader_source = include_str!("fhe_extract.wgsl");
-        let shader_module = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("FHE Extract Shader"),
-                source: wgpu::ShaderSource::Wgsl(shader_source.into()),
-            });
+        let shader_module = device.compile_shader(shader_source, Some("FHE Extract Shader"));
 
         // Create bind group layout
         let bind_group_layout =

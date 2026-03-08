@@ -52,7 +52,7 @@ const SHADER_F64: &str = include_str!("../shaders/loss/smooth_l1_loss_f64.wgsl")
 
 /// f32 variant derived from f64 via precision downcast.
 static SHADER_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
+    std::sync::LazyLock::new(|| SHADER_F64.to_string());
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -129,12 +129,7 @@ impl SmoothL1Loss {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("smooth_l1_loss_shader"),
-                source: wgpu::ShaderSource::Wgsl(Self::wgsl_shader().into()),
-            });
+        let shader = device.compile_shader(Self::wgsl_shader(), Some("smooth_l1_loss_shader"));
 
         let bind_group_layout =
             device

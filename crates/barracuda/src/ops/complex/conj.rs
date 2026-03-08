@@ -32,12 +32,7 @@ impl ComplexConj {
         }
 
         let device = input.device();
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Complex Conj Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("conj.wgsl").into()),
-            });
+        let shader = device.compile_shader(include_str!("conj.wgsl"), Some("Complex Conj Shader"));
 
         let bind_group_layout =
             device

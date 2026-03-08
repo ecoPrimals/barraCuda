@@ -19,9 +19,9 @@ use crate::device::capabilities::WORKGROUP_SIZE_1D;
 
 /// WGSL shader source for batch Inverse Participation Ratio (f64 downcast to f32 when needed).
 pub static WGSL_BATCH_IPR: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
+    include_str!(
         "../shaders/spectral/batch_ipr_f64.wgsl"
-    ))
+    ).to_string()
 });
 
 #[repr(C)]
@@ -86,10 +86,7 @@ impl BatchIprGpu {
             immediate_size: 0,
         });
 
-        let module = d.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("BatchIpr Shader"),
-            source: wgpu::ShaderSource::Wgsl((&**WGSL_BATCH_IPR).into()),
-        });
+        let module = device.compile_shader(&WGSL_BATCH_IPR, Some("BatchIpr Shader"));
 
         let pipeline = d.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("BatchIpr Pipeline"),

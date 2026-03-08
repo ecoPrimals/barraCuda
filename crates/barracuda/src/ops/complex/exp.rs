@@ -32,12 +32,7 @@ impl ComplexExp {
         }
 
         let device = input.device();
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Complex Exp Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("exp.wgsl").into()),
-            });
+        let shader = device.compile_shader(include_str!("exp.wgsl"), Some("Complex Exp Shader"));
 
         let bind_group_layout =
             device

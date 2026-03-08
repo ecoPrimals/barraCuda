@@ -2,13 +2,16 @@
 //! 3D Fast Fourier Transform Operation
 //!
 //! **Purpose**: 3D frequency analysis for PPPM molecular dynamics
-//! **Algorithm**: Dimension-wise decomposition using 1D FFT
-//!
+//! **Algorithm**: Dimension-wise decomposition using batched 1D FFT (Z, Y, X)
 //! **CRITICAL FOR PPPM**: This operation unblocks molecular dynamics!
+//!
+//! GPU-resident: zero CPU readbacks. Uses HashMap for twiddle caching by degree.
 
-use super::Fft1D;
+use super::fft_1d::{batched_shader_f32, dispatch_axis_inner, upload_twiddles_f32, AxisConfig};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
+use std::collections::HashMap;
+use std::mem::size_of;
 
 /// 3D Complex FFT operation
 pub struct Fft3D {
@@ -16,6 +19,7 @@ pub struct Fft3D {
     nx: u32,
     ny: u32,
     nz: u32,
+    twiddles: HashMap<u32, (wgpu::Buffer, wgpu::Buffer)>,
 }
 
 impl Fft3D {
@@ -47,99 +51,123 @@ impl Fft3D {
             ));
         }
 
-        Ok(Self { input, nx, ny, nz })
+        let device = input.device();
+        let mut twiddles = HashMap::new();
+        for &n in &[nx, ny, nz] {
+            twiddles
+                .entry(n)
+                .or_insert_with(|| upload_twiddles_f32(device, n));
+        }
+
+        Ok(Self {
+            input,
+            nx,
+            ny,
+            nz,
+            twiddles,
+        })
     }
 
-    /// Execute 3D FFT (X, Y, Z passes).
+    /// Execute 3D FFT (Z, Y, X passes). Zero CPU readbacks.
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
+        let buffer_bytes = (self.nx as u64)
+            * (self.ny as u64)
+            * (self.nz as u64)
+            * 2
+            * size_of::<f32>() as u64;
 
-        // FFT along X
-        let mut x_results = Vec::new();
-        for y in 0..self.ny {
-            for z in 0..self.nz {
-                let pencil = self.extract_x_pencil(y, z)?;
-                let tensor = Tensor::from_data(&pencil, vec![self.nx as usize, 2], device.clone())?;
-                let fft = Fft1D::new(tensor, self.nx)?;
-                x_results.extend(fft.execute()?.to_vec()?);
-            }
+        let buf_a = device.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("FFT3D buf_a"),
+            size: buffer_bytes,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_SRC
+                | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        {
+            let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("FFT3D Copy Input"),
+            });
+            encoder.copy_buffer_to_buffer(
+                self.input.buffer(),
+                0,
+                &buf_a,
+                0,
+                buffer_bytes,
+            );
+            device.submit_and_poll(std::iter::once(encoder.finish()));
         }
 
-        let x_transformed = Tensor::from_data(
-            &x_results,
-            vec![self.nx as usize, self.ny as usize, self.nz as usize, 2],
+        let buf_b = device.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("FFT3D buf_b"),
+            size: buffer_bytes,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_SRC
+                | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let shader = batched_shader_f32();
+
+        // Axis configs matching Fft3DF64 pattern (Z, Y, X)
+        let axes = [
+            AxisConfig {
+                degree: self.nz,
+                element_stride: 1,
+                dim1_stride: self.ny * self.nz,
+                dim2_stride: self.nz,
+                dim1_count: self.nx,
+                dim2_count: self.ny,
+            },
+            AxisConfig {
+                degree: self.ny,
+                element_stride: self.nz,
+                dim1_stride: self.ny * self.nz,
+                dim2_stride: 1,
+                dim1_count: self.nx,
+                dim2_count: self.nz,
+            },
+            AxisConfig {
+                degree: self.nx,
+                element_stride: self.ny * self.nz,
+                dim1_stride: self.nz,
+                dim2_stride: 1,
+                dim1_count: self.ny,
+                dim2_count: self.nz,
+            },
+        ];
+
+        for axis in &axes {
+            let (tw_re, tw_im) = &self.twiddles[&axis.degree];
+            dispatch_axis_inner(
+                device,
+                shader,
+                &buf_a,
+                &buf_b,
+                buffer_bytes,
+                tw_re,
+                tw_im,
+                axis,
+                false,
+                false,
+            )?;
+        }
+
+        Ok(Tensor::from_buffer(
+            buf_a,
+            vec![
+                self.nx as usize,
+                self.ny as usize,
+                self.nz as usize,
+                2,
+            ],
             device.clone(),
-        )?;
-
-        // FFT along Y
-        let mut y_results = Vec::new();
-        for x in 0..self.nx {
-            for z in 0..self.nz {
-                let pencil = self.extract_y_pencil(&x_transformed, x, z)?;
-                let tensor = Tensor::from_data(&pencil, vec![self.ny as usize, 2], device.clone())?;
-                let fft = Fft1D::new(tensor, self.ny)?;
-                y_results.extend(fft.execute()?.to_vec()?);
-            }
-        }
-
-        let y_transformed = Tensor::from_data(
-            &y_results,
-            vec![self.nx as usize, self.ny as usize, self.nz as usize, 2],
-            device.clone(),
-        )?;
-
-        // FFT along Z
-        let mut z_results = Vec::new();
-        for x in 0..self.nx {
-            for y in 0..self.ny {
-                let pencil = self.extract_z_pencil(&y_transformed, x, y)?;
-                let tensor = Tensor::from_data(&pencil, vec![self.nz as usize, 2], device.clone())?;
-                let fft = Fft1D::new(tensor, self.nz)?;
-                z_results.extend(fft.execute()?.to_vec()?);
-            }
-        }
-
-        Tensor::from_data(
-            &z_results,
-            vec![self.nx as usize, self.ny as usize, self.nz as usize, 2],
-            device.clone(),
-        )
-    }
-
-    fn extract_x_pencil(&self, y: u32, z: u32) -> Result<Vec<f32>> {
-        let data = self.input.to_vec()?;
-        let mut pencil = Vec::with_capacity((self.nx * 2) as usize);
-        for x in 0..self.nx {
-            let idx = ((x * self.ny * self.nz + y * self.nz + z) * 2) as usize;
-            pencil.push(data[idx]);
-            pencil.push(data[idx + 1]);
-        }
-        Ok(pencil)
-    }
-
-    fn extract_y_pencil(&self, tensor: &Tensor, x: u32, z: u32) -> Result<Vec<f32>> {
-        let data = tensor.to_vec()?;
-        let mut pencil = Vec::with_capacity((self.ny * 2) as usize);
-        for y in 0..self.ny {
-            let idx = ((x * self.ny * self.nz + y * self.nz + z) * 2) as usize;
-            pencil.push(data[idx]);
-            pencil.push(data[idx + 1]);
-        }
-        Ok(pencil)
-    }
-
-    fn extract_z_pencil(&self, tensor: &Tensor, x: u32, y: u32) -> Result<Vec<f32>> {
-        let data = tensor.to_vec()?;
-        let mut pencil = Vec::with_capacity((self.nz * 2) as usize);
-        for z in 0..self.nz {
-            let idx = ((x * self.ny * self.nz + y * self.nz + z) * 2) as usize;
-            pencil.push(data[idx]);
-            pencil.push(data[idx + 1]);
-        }
-        Ok(pencil)
+        ))
     }
 }
 
@@ -154,18 +182,14 @@ mod tests {
             return;
         };
 
-        // 2×2×2 FFT test
         let data = vec![
-            1.0f32, 0.0, 2.0, 0.0, // (0,0,:)
-            3.0, 0.0, 4.0, 0.0, // (0,1,:)
-            5.0, 0.0, 6.0, 0.0, // (1,0,:)
-            7.0, 0.0, 8.0, 0.0, // (1,1,:)
+            1.0f32, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0, 5.0, 0.0, 6.0, 0.0, 7.0, 0.0, 8.0, 0.0,
         ];
 
         let tensor = Tensor::from_data(&data, vec![2, 2, 2, 2], device.clone()).unwrap();
         let fft = Fft3D::new(tensor, 2, 2, 2).unwrap();
         let result = fft.execute().unwrap();
         let result_data = result.to_vec().unwrap();
-        assert_eq!(result_data.len(), 16); // 2×2×2×2 = 16 floats
+        assert_eq!(result_data.len(), 16);
     }
 }

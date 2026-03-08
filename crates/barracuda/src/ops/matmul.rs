@@ -27,9 +27,9 @@ pub const WGSL_MATMUL_FP64: &str = include_str!("../shaders/math/matmul_fp64.wgs
 #[must_use]
 pub fn wgsl_linear() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
+        include_str!(
             "../shaders/misc/linear_f64.wgsl"
-        ))
+        ).to_string()
     });
     std::sync::LazyLock::force(&SHADER).as_str()
 }
@@ -85,25 +85,19 @@ impl<'a> MatMul<'a> {
         match tier {
             MatMulTier::Tiled16 => {
                 static S_TILED: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-                    crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(
-                        include_str!("../shaders/math/matmul_tiled_f64.wgsl"),
-                    )
+                    include_str!("../shaders/math/matmul_tiled_f64.wgsl").to_string()
                 });
                 &S_TILED
             }
             MatMulTier::CpuTiled32 => {
                 static S_CPU: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-                    crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(
-                        include_str!("../shaders/math/matmul_cpu_tiled_f64.wgsl"),
-                    )
+                    include_str!("../shaders/math/matmul_cpu_tiled_f64.wgsl").to_string()
                 });
                 &S_CPU
             }
             MatMulTier::GpuEvolved32 => {
                 static S_GPU: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-                    crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(
-                        include_str!("../shaders/math/matmul_gpu_evolved_f64.wgsl"),
-                    )
+                    include_str!("../shaders/math/matmul_gpu_evolved_f64.wgsl").to_string()
                 });
                 &S_GPU
             }

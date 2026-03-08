@@ -57,12 +57,7 @@ impl ComplexMul {
 
         let device = input_a.device();
 
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Complex Mul Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("mul.wgsl").into()),
-            });
+        let shader = device.compile_shader(include_str!("mul.wgsl"), Some("Complex Mul Shader"));
 
         let bind_group_layout =
             device

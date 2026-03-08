@@ -17,7 +17,7 @@ const SHADER_F64: &str = include_str!("../shaders/linalg/clip_grad_value_f64.wgs
 
 /// f32 variant derived from f64 via precision downcast.
 static SHADER_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
+    std::sync::LazyLock::new(|| SHADER_F64.to_string());
 
 /// Clip gradient by value operation
 pub struct ClipGradValue {

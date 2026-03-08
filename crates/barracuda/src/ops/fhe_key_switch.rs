@@ -144,12 +144,7 @@ impl FheKeySwitch {
         let device = input.device();
 
         let shader_source = include_str!("fhe_key_switch.wgsl");
-        let shader_module = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("FHE Key Switch Shader"),
-                source: wgpu::ShaderSource::Wgsl(shader_source.into()),
-            });
+        let shader_module = device.compile_shader(shader_source, Some("FHE Key Switch Shader"));
 
         // Create bind group layout
         let bind_group_layout =

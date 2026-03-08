@@ -63,6 +63,9 @@ pub mod rpc_types;
 
 pub use barracuda;
 
+/// Canonical primal identity — single source of truth for self-knowledge.
+pub const PRIMAL_NAME: &str = "barraCuda";
+
 use error::BarracudaCoreError;
 use health::{HealthReport, HealthStatus, PrimalHealth};
 use lifecycle::{PrimalLifecycle, PrimalState};
@@ -186,7 +189,7 @@ impl PrimalHealth for BarraCudaPrimal {
     }
 
     async fn health_check(&self) -> Result<HealthReport, BarracudaCoreError> {
-        let mut report = HealthReport::new("barraCuda", env!("CARGO_PKG_VERSION"))
+        let mut report = HealthReport::new(PRIMAL_NAME, env!("CARGO_PKG_VERSION"))
             .with_status(self.health_status());
 
         if let Some(dev) = &self.device {

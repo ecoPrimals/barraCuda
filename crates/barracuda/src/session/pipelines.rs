@@ -8,35 +8,35 @@
 //! both `BindGroupLayout` and `ComputePipeline` on every `run()` invocation.
 
 pub(super) static MATMUL_NAIVE_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
+    include_str!(
         "../shaders/math/matmul_f64.wgsl"
-    ))
+    ).to_string()
 });
 pub(super) static MATMUL_TILED_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
+    include_str!(
         "../shaders/math/matmul_tiled_f64.wgsl"
-    ))
+    ).to_string()
 });
 pub(super) static MATMUL_CPU_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
+    include_str!(
         "../shaders/math/matmul_cpu_tiled_f64.wgsl"
-    ))
+    ).to_string()
 });
 pub(super) static MATMUL_GPU_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
+    include_str!(
         "../shaders/math/matmul_gpu_evolved_f64.wgsl"
-    ))
+    ).to_string()
 });
 
 pub(crate) static HEAD_SPLIT_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
+    include_str!(
         "../shaders/tensor/head_split_f64.wgsl"
-    ))
+    ).to_string()
 });
 pub(crate) static HEAD_CONCAT_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
+    include_str!(
         "../shaders/tensor/head_concat_f64.wgsl"
-    ))
+    ).to_string()
 });
 
 /// All compute pipelines for a `TensorSession`.
@@ -74,9 +74,17 @@ impl SessionPipelines {
         // `auto_pipeline` uses `layout: None` — wgpu reflects the BGL from
         // the shader, eliminating all manual `BindGroupLayoutDescriptor` boilerplate.
         let auto_pipeline = |src: &str, label: &str| -> wgpu::ComputePipeline {
+            let resolved: std::borrow::Cow<'_, str> =
+                if crate::shaders::precision::compiler::source_is_f64(src) {
+                    std::borrow::Cow::Owned(
+                        crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(src),
+                    )
+                } else {
+                    std::borrow::Cow::Borrowed(src)
+                };
             let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some(label),
-                source: wgpu::ShaderSource::Wgsl(src.into()),
+                source: wgpu::ShaderSource::Wgsl((&*resolved).into()),
             });
             device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
                 label: Some(label),

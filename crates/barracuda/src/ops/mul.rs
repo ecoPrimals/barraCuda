@@ -27,7 +27,7 @@ pub const WGSL_MUL_F64: &str = include_str!("../shaders/math/elementwise_mul_f64
 
 /// f32 variant derived from f64 via precision downcast.
 static SHADER_DEFAULT: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(WGSL_MUL_F64));
+    std::sync::LazyLock::new(|| WGSL_MUL_F64.to_string());
 
 /// Optimized element-wise mul variant.
 pub const WGSL_MUL_OPTIMIZED: &str = include_str!("../shaders/math/elementwise_mul_optimized.wgsl");

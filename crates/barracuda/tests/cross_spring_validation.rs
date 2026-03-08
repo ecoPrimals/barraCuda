@@ -214,7 +214,7 @@ fn provenance_registry_tracks_cross_spring_evolution() {
     let matrix = provenance::cross_spring_matrix();
     let hot_to_all: usize = matrix
         .iter()
-        .filter(|((from, _), _)| *from == SpringDomain::HotSpring)
+        .filter(|((from, _), _)| *from == SpringDomain::HOT_SPRING)
         .map(|(_, count)| count)
         .sum();
     assert!(
@@ -222,10 +222,10 @@ fn provenance_registry_tracks_cross_spring_evolution() {
         "hotSpring should share 3+ shader patterns with other springs"
     );
 
-    let neural_consumed = provenance::shaders_consumed_by(SpringDomain::NeuralSpring);
+    let neural_consumed = provenance::shaders_consumed_by(SpringDomain::NEURAL_SPRING);
     let has_external_origin = neural_consumed
         .iter()
-        .any(|r| r.origin != SpringDomain::NeuralSpring);
+        .any(|r| r.origin != SpringDomain::NEURAL_SPRING);
     assert!(
         has_external_origin,
         "neuralSpring should consume shaders from other springs"

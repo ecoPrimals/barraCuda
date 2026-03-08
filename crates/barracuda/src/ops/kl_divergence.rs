@@ -103,12 +103,7 @@ impl KLDivergence {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("kl_divergence_shader"),
-                source: wgpu::ShaderSource::Wgsl(Self::wgsl_shader().into()),
-            });
+        let shader = device.compile_shader(Self::wgsl_shader(), Some("kl_divergence_shader"));
 
         let bind_group_layout =
             device

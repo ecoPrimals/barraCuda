@@ -469,12 +469,7 @@ impl CellListGpu {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 fn compile(device: &WgpuDevice, src: &str, label: &str) -> wgpu::ShaderModule {
-    device
-        .device
-        .create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some(label),
-            source: wgpu::ShaderSource::Wgsl(src.into()),
-        })
+    device.compile_shader(src, Some(label))
 }
 
 fn make_pipeline(

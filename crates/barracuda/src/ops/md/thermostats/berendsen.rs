@@ -86,12 +86,7 @@ impl BerendsenThermostat {
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Berendsen Thermostat Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("berendsen.wgsl").into()),
-            });
+        let shader = device.compile_shader(include_str!("berendsen.wgsl"), Some("Berendsen Thermostat Shader"));
 
         let bind_group_layout =
             device

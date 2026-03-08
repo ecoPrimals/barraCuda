@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Deep Debt Evolution Sprint (Mar 8 2026)
+
+- **Fp64Strategy routing for all f64 reduce ops** — `ProdReduceF64`, `NormReduceF64`,
+  `FusedMapReduceF64`, and `ReduceScalarPipeline` now route through `GpuDriverProfile::fp64_strategy()`.
+  On Hybrid devices (Ada Lovelace RTX 4070, NVK), workgroup shared memory uses DF64 (f32-pair)
+  accumulators instead of native f64, preventing zero-output from unreliable f64 shared memory.
+- **3 new DF64 reduce shaders** — `prod_reduce_df64.wgsl`, `norm_reduce_df64.wgsl`,
+  `fused_map_reduce_df64.wgsl` mirror their native f64 counterparts using `shared_hi`/`shared_lo`
+  f32-pair workgroup memory with `df64_add`, `df64_mul` reduction.
+- **`ReduceScalarPipeline` compile_shader_f64 routing** — replaced direct
+  `device.device.create_shader_module()` calls with `device.compile_shader_f64()`, routing through
+  the full compilation chain (driver patching, sovereign compiler, coralReef IPC).
+- **`PRIMAL_NAME` constant** (`barracuda-core`) — canonical `const PRIMAL_NAME: &str = "barraCuda"`
+  replaces 5 scattered string literals. Self-knowledge in one definition.
+- **`SpringDomain` capability-based evolution** — replaced hardcoded 6-variant enum with
+  `struct SpringDomain(pub &'static str)` newtype. barraCuda no longer embeds compile-time
+  knowledge of other primals in its type system. New domains are runtime-extensible via
+  `SpringDomain("anyName")`. Associated constants (`HOT_SPRING`, `WET_SPRING`, etc.) preserve
+  ergonomics and backward compatibility.
+
 ### Added — Deep Audit and Quality Evolution (Mar 7 2026)
 
 - **`service` subcommand** — genomeBin compliance for systemd/init systems: Unix socket transport,

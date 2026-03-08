@@ -59,9 +59,9 @@ impl RandomErasing {
     /// WGSL shader source (embedded at compile time)
     fn wgsl_shader() -> &'static str {
         static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-            crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
+            include_str!(
                 "../shaders/math/random_erasing_f64.wgsl"
-            ))
+            ).to_string()
         });
         &SHADER
     }

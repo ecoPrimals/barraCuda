@@ -17,9 +17,9 @@ use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 
 static WGSL_PAIRWISE_L2: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
+    include_str!(
         "../../shaders/math/pairwise_l2_f64.wgsl"
-    ))
+    ).to_string()
 });
 
 #[repr(C)]

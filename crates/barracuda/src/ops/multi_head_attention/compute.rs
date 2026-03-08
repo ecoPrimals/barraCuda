@@ -11,7 +11,7 @@ use crate::error::Result;
 
 const SHADER_F64: &str = include_str!("../../shaders/attention/mha_projection_f64.wgsl");
 static SHADER_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
+    std::sync::LazyLock::new(|| SHADER_F64.to_string());
 
 impl MultiHeadAttention {
     /// Get WGSL shader for MHA projection
@@ -23,9 +23,9 @@ impl MultiHeadAttention {
     pub(super) fn wgsl_shader_output() -> &'static str {
         {
             static S: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-                crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
+                include_str!(
                     "../../shaders/tensor/mha_output_f64.wgsl"
-                ))
+                ).to_string()
             });
             &S
         }

@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Transport layer for barraCuda IPC.
 //!
+//! Transport-agnostic JSON-RPC 2.0 handler over any `AsyncRead + AsyncWrite`.
 //! Supports Unix domain sockets (primary) and TCP (fallback), per
-//! wateringHole `UNIVERSAL_IPC_STANDARD_V3.md`.
+//! wateringHole `UNIVERSAL_IPC_STANDARD_V3.md` and `ECOBIN_ARCHITECTURE_STANDARD.md`.
 
 use super::jsonrpc::{JsonRpcRequest, JsonRpcResponse};
 use super::methods;
 use crate::BarraCudaPrimal;
 use barracuda::error::Result;
 use std::sync::Arc;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
 
 /// Maximum tarpc frame length.
@@ -181,20 +182,8 @@ impl IpcServer {
                     let (stream, _) = result?;
                     let primal = Arc::clone(&self.primal);
                     tokio::spawn(async move {
-                        let (reader, mut writer) = stream.into_split();
-                        let mut lines = BufReader::new(reader).lines();
-                        while let Ok(Some(line)) = lines.next_line().await {
-                            let Some(response) = handle_line(&primal, &line).await else {
-                                continue;
-                            };
-                            let mut json = serde_json::to_string(&response).unwrap_or_else(|_| {
-                                SERIALIZATION_ERROR.to_string()
-                            });
-                            json.push('\n');
-                            if writer.write_all(json.as_bytes()).await.is_err() {
-                                break;
-                            }
-                        }
+                        let (reader, writer) = stream.into_split();
+                        handle_connection(primal, reader, writer).await;
                     });
                 }
                 () = shutdown_signal() => {
@@ -225,11 +214,18 @@ impl IpcServer {
 const SERIALIZATION_ERROR: &str =
     r#"{"jsonrpc":"2.0","error":{"code":-32603,"message":"Serialization error"},"id":null}"#;
 
-/// Handle a single TCP connection (newline-delimited JSON-RPC).
-async fn handle_stream(primal: Arc<BarraCudaPrimal>, stream: tokio::net::TcpStream) {
-    let (reader, mut writer) = stream.into_split();
+/// Transport-agnostic JSON-RPC 2.0 connection handler.
+///
+/// Works over any `AsyncRead + AsyncWrite` stream — TCP, Unix socket,
+/// or future transports (named pipes, abstract sockets). This is the
+/// ecoBin v2.0 transport-agnostic protocol handler: add a new transport
+/// by binding a listener and passing accepted connections here.
+async fn handle_connection<R, W>(primal: Arc<BarraCudaPrimal>, reader: R, mut writer: W)
+where
+    R: AsyncRead + Unpin + Send,
+    W: AsyncWrite + Unpin + Send,
+{
     let mut lines = BufReader::new(reader).lines();
-
     while let Ok(Some(line)) = lines.next_line().await {
         let Some(response) = handle_line(&primal, &line).await else {
             continue;
@@ -241,6 +237,12 @@ async fn handle_stream(primal: Arc<BarraCudaPrimal>, stream: tokio::net::TcpStre
             break;
         }
     }
+}
+
+/// Handle a single TCP connection (newline-delimited JSON-RPC).
+async fn handle_stream(primal: Arc<BarraCudaPrimal>, stream: tokio::net::TcpStream) {
+    let (reader, writer) = stream.into_split();
+    handle_connection(primal, reader, writer).await;
 }
 
 /// Wait for SIGINT (Ctrl-C) or SIGTERM for graceful shutdown.
@@ -340,5 +342,92 @@ mod tests {
             handle_line(&primal, line).await.is_none(),
             "null id is a notification"
         );
+    }
+
+    // ─── resolve_bind_address tests ───
+
+    #[test]
+    fn resolve_explicit_addr() {
+        assert_eq!(resolve_bind_address(Some("0.0.0.0:8080")), "0.0.0.0:8080");
+    }
+
+    #[test]
+    fn resolve_explicit_always_wins() {
+        // Explicit always takes priority regardless of env state
+        let addr = resolve_bind_address(Some("10.0.0.1:9000"));
+        assert_eq!(addr, "10.0.0.1:9000");
+    }
+
+    // ─── handle_connection integration tests ───
+
+    #[tokio::test]
+    async fn handle_connection_valid_request() {
+        let primal = Arc::new(BarraCudaPrimal::new());
+        let request = r#"{"jsonrpc":"2.0","method":"barracuda.health.check","params":{},"id":1}"#;
+        let input = format!("{request}\n");
+
+        let (reader, _) = tokio::io::duplex(4096);
+        let (_, writer) = tokio::io::duplex(4096);
+
+        // Use a proper in-memory stream pair
+        let (client_reader, mut server_writer) = tokio::io::duplex(4096);
+        let (mut server_reader_buf, client_writer) = tokio::io::duplex(4096);
+
+        server_writer.write_all(input.as_bytes()).await.unwrap();
+        server_writer.shutdown().await.unwrap();
+        drop(reader);
+        drop(writer);
+
+        handle_connection(primal, client_reader, client_writer).await;
+
+        let mut response = String::new();
+        tokio::io::AsyncReadExt::read_to_string(&mut server_reader_buf, &mut response)
+            .await
+            .unwrap();
+        assert!(response.contains("\"jsonrpc\":\"2.0\""));
+        assert!(response.contains("\"result\""));
+    }
+
+    #[tokio::test]
+    async fn handle_connection_parse_error() {
+        let primal = Arc::new(BarraCudaPrimal::new());
+        let input = "not valid json\n";
+
+        let (client_reader, mut server_writer) = tokio::io::duplex(4096);
+        let (mut server_reader_buf, client_writer) = tokio::io::duplex(4096);
+
+        server_writer.write_all(input.as_bytes()).await.unwrap();
+        server_writer.shutdown().await.unwrap();
+
+        handle_connection(primal, client_reader, client_writer).await;
+
+        let mut response = String::new();
+        tokio::io::AsyncReadExt::read_to_string(&mut server_reader_buf, &mut response)
+            .await
+            .unwrap();
+        assert!(
+            response.contains("-32700"),
+            "should contain parse error code"
+        );
+    }
+
+    #[tokio::test]
+    async fn handle_connection_notification_no_reply() {
+        let primal = Arc::new(BarraCudaPrimal::new());
+        let input = "{\"jsonrpc\":\"2.0\",\"method\":\"barracuda.device.list\",\"params\":{}}\n";
+
+        let (client_reader, mut server_writer) = tokio::io::duplex(4096);
+        let (mut server_reader_buf, client_writer) = tokio::io::duplex(4096);
+
+        server_writer.write_all(input.as_bytes()).await.unwrap();
+        server_writer.shutdown().await.unwrap();
+
+        handle_connection(primal, client_reader, client_writer).await;
+
+        let mut response = String::new();
+        tokio::io::AsyncReadExt::read_to_string(&mut server_reader_buf, &mut response)
+            .await
+            .unwrap();
+        assert!(response.is_empty(), "notification must produce no response");
     }
 }

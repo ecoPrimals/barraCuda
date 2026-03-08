@@ -21,7 +21,7 @@ use crate::tensor::Tensor;
 const SHADER_F64: &str = include_str!("../shaders/dropout/spatial_dropout_f64.wgsl");
 
 static SHADER_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
+    std::sync::LazyLock::new(|| SHADER_F64.to_string());
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]

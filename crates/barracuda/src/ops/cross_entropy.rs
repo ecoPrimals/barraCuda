@@ -9,7 +9,7 @@ use crate::tensor::Tensor;
 /// f64 is the canonical source — math is universal, precision is silicon.
 static SHADER_F64: &str = include_str!("../shaders/loss/cross_entropy_f64.wgsl");
 static SHADER_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(SHADER_F64)
+    SHADER_F64.to_string()
 });
 
 /// Cross entropy loss for classification.
@@ -44,12 +44,7 @@ impl CrossEntropy {
         let output_buffer = device.create_buffer_f32(1)?;
 
         // Create shader module
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Cross Entropy Shader"),
-                source: wgpu::ShaderSource::Wgsl(Self::wgsl_shader().into()),
-            });
+        let shader = device.compile_shader(Self::wgsl_shader(), Some("Cross Entropy Shader"));
 
         // Create compute pipeline
         let pipeline = device

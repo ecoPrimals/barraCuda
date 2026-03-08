@@ -174,12 +174,7 @@ impl PbcDistance {
             });
 
         // Load shader
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("PBC Distance Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("pbc.wgsl").into()),
-            });
+        let shader = device.compile_shader(include_str!("pbc.wgsl"), Some("PBC Distance Shader"));
 
         // Create bind group layout
         let bind_group_layout =

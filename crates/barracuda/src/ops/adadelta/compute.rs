@@ -82,12 +82,7 @@ impl AdaDelta {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("adadelta_shader"),
-                source: wgpu::ShaderSource::Wgsl(Self::shader().into()),
-            });
+        let shader = device.compile_shader(Self::shader(), Some("adadelta_shader"));
 
         let bind_group_layout =
             device

@@ -71,9 +71,9 @@ pub use tolerance::Tolerance;
 #[must_use]
 pub fn wgsl_hessian_column() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        crate::shaders::precision::downcast_f64_to_f32(include_str!(
+        include_str!(
             "../shaders/numerical/hessian_column_f64.wgsl"
-        ))
+        ).to_string()
     });
     std::sync::LazyLock::force(&SHADER).as_str()
 }

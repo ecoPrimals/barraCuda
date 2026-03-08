@@ -38,12 +38,7 @@ impl ComplexDiv {
         }
 
         let device = input_a.device();
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Complex Div Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("div.wgsl").into()),
-            });
+        let shader = device.compile_shader(include_str!("div.wgsl"), Some("Complex Div Shader"));
 
         let bind_group_layout =
             device

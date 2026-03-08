@@ -22,9 +22,9 @@ use barracuda::optimize::BatchedBisectionGpu;
 
 #[tokio::test]
 async fn test_max_abs_diff_convergence_simulation() {
-    let Some(device) = barracuda::device::test_pool::get_test_device_if_gpu_available().await
+    let Some(device) = barracuda::device::test_pool::get_test_device_if_f64_gpu_available().await
     else {
-        eprintln!("No GPU available, skipping test");
+        eprintln!("No f64-capable GPU available, skipping test");
         return;
     };
 
@@ -66,7 +66,7 @@ async fn test_max_abs_diff_converged_system() {
 
 #[tokio::test]
 async fn test_max_abs_diff_stress_large() {
-    let Some(device) = barracuda::device::test_pool::get_test_device_if_gpu_available().await
+    let Some(device) = barracuda::device::test_pool::get_test_device_if_f64_gpu_available().await
     else {
         return;
     };
@@ -420,7 +420,7 @@ async fn test_scf_convergence_loop_simulation() {
 #[tokio::test]
 async fn test_hotspring_nucleus_count() {
     // Verify we can handle hotSpring's 169 nuclei in parallel
-    let Some(device) = barracuda::device::test_pool::get_test_device_if_gpu_available().await
+    let Some(device) = barracuda::device::test_pool::get_test_device_if_f64_gpu_available().await
     else {
         return;
     };

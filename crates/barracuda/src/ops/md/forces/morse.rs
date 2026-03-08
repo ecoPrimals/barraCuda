@@ -130,12 +130,7 @@ impl MorseForce {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Morse Force Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("morse.wgsl").into()),
-            });
+        let shader = device.compile_shader(include_str!("morse.wgsl"), Some("Morse Force Shader"));
 
         let bind_group_layout =
             device

@@ -4,7 +4,7 @@
 use std::fmt::Write;
 
 use super::registry::{EVOLUTION_TIMELINE, REGISTRY, cross_spring_matrix, shaders_from};
-use super::types::SpringDomain::{AirSpring, GroundSpring, HotSpring, NeuralSpring, WetSpring};
+use super::types::SpringDomain as SD;
 
 /// Generate a human-readable cross-spring evolution report.
 #[must_use]
@@ -29,7 +29,7 @@ pub fn evolution_report() -> String {
     );
 
     let matrix = cross_spring_matrix();
-    let domains = [HotSpring, WetSpring, NeuralSpring, AirSpring, GroundSpring];
+    let domains = [SD::HOT_SPRING, SD::WET_SPRING, SD::NEURAL_SPRING, SD::AIR_SPRING, SD::GROUND_SPRING];
     for from in &domains {
         let _ = write!(report, "| **{from}** ");
         for to in &domains {

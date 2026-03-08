@@ -63,12 +63,7 @@ impl SGD {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("sgd_shader"),
-                source: wgpu::ShaderSource::Wgsl(Self::shader().into()),
-            });
+        let shader = device.compile_shader(Self::shader(), Some("sgd_shader"));
 
         let bind_group_layout =
             device

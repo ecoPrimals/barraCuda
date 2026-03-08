@@ -139,12 +139,7 @@ impl VelocityVerlet {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Velocity-Verlet Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("velocity_verlet.wgsl").into()),
-            });
+        let shader = device.compile_shader(include_str!("velocity_verlet.wgsl"), Some("Velocity-Verlet Shader"));
 
         let bind_group_layout =
             device

@@ -124,12 +124,7 @@ impl CoulombForce {
             });
 
         // Load shader
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Coulomb Force Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("coulomb.wgsl").into()),
-            });
+        let shader = device.compile_shader(include_str!("coulomb.wgsl"), Some("Coulomb Force Shader"));
 
         // Create bind group layout
         let bind_group_layout =

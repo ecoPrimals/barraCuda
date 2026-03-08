@@ -290,10 +290,18 @@ impl PipelineCache {
         if let Some(m) = read_or_recover(&self.shaders).get(&key) {
             return m.clone();
         }
-        // Slow path: compile and cache.
+        // Slow path: auto-downcast f64-canonical source then compile and cache.
+        let resolved: std::borrow::Cow<'_, str> =
+            if crate::shaders::precision::compiler::source_is_f64(source) {
+                std::borrow::Cow::Owned(
+                    crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(source),
+                )
+            } else {
+                std::borrow::Cow::Borrowed(source)
+            };
         let module = Arc::new(device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label,
-            source: wgpu::ShaderSource::Wgsl(source.into()),
+            source: wgpu::ShaderSource::Wgsl((&*resolved).into()),
         }));
         write_or_recover(&self.shaders)
             .entry(key)

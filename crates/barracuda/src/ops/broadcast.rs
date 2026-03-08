@@ -10,7 +10,7 @@ use crate::tensor::Tensor;
 const SHADER_F64: &str = include_str!("../shaders/tensor/broadcast_f64.wgsl");
 
 static SHADER_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
+    std::sync::LazyLock::new(|| SHADER_F64.to_string());
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -122,12 +122,7 @@ impl Broadcast {
             });
 
         // Create shader module
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Broadcast Shader"),
-                source: wgpu::ShaderSource::Wgsl(Self::wgsl_shader().into()),
-            });
+        let shader = device.compile_shader(Self::wgsl_shader(), Some("Broadcast Shader"));
 
         // Create compute pipeline
         let pipeline = device

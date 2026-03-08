@@ -2,63 +2,28 @@
 //! 3D Fast Fourier Transform — Batched GPU Dispatch (f64 Precision)
 //!
 //! Performs 3D FFT via dimension-wise decomposition with a single batched
-//! shader per axis. Instead of dispatching N² individual 1D FFTs per axis
-//! (each with its own pipeline creation, buffer upload, and synchronous
-//! readback), this implementation:
+//! shader per axis. Uses the shared engine from fft_1d (dispatch_axis_f64,
+//! upload_twiddles_f64, AxisConfig, BATCHED_SHADER_F64).
 //!
-//! 1. Uploads the full 3D complex array to the GPU **once**
-//! 2. For each axis (Z → Y → X): dispatches `1 + log₂(N)` compute passes
-//!    that process **all** pencils simultaneously via strided addressing
-//! 3. Reads back the result **once**
-//!
-//! For an 8×8×8 mesh this is **~12 dispatches** (via `ComputeDispatch`)
-//! with buffer copies between passes for ping-pong.
+//! Reads back via `dev.read_f64_buffer(&buf_a, expected_len)`.
 
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
-use crate::device::compute_pipeline::ComputeDispatch;
+use super::fft_1d::{dispatch_axis_f64, upload_twiddles_f64, AxisConfig};
 use crate::error::{BarracudaError, Result};
 use std::collections::HashMap;
+use std::mem::size_of;
 use std::sync::Arc;
 
-#[repr(C)]
-#[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct BatchedFftParams {
-    degree: u32,
-    stage: u32,
-    inverse: u32,
-    element_stride: u32,
-    dim1_stride: u32,
-    dim2_stride: u32,
-    dim1_count: u32,
-    dim2_count: u32,
-}
-
-struct AxisConfig {
-    degree: usize,
-    element_stride: usize,
-    dim1_stride: usize,
-    dim2_stride: usize,
-    dim1_count: usize,
-    dim2_count: usize,
-}
-
 /// 3D Complex FFT operation (f64 precision) — batched GPU dispatch
-///
-/// Shader compilation happens per-dispatch via `ComputeDispatch`.
-/// Each `forward`/`inverse` call runs compute passes and buffer copies
-/// for each axis, with one GPU readback at the end.
 pub struct Fft3DF64 {
     device: Arc<crate::device::WgpuDevice>,
     nx: usize,
     ny: usize,
     nz: usize,
-    shader_source: &'static str,
     twiddles: HashMap<u32, (wgpu::Buffer, wgpu::Buffer)>,
 }
 
 impl Fft3DF64 {
     /// Create a new 3D FFT operation.
-    /// Precomputes twiddle factor GPU buffers for each unique axis length.
     /// # Errors
     /// Returns [`Err`] if any of `nx`, `ny`, or `nz` are not powers of 2.
     pub fn new(
@@ -73,36 +38,12 @@ impl Fft3DF64 {
             });
         }
 
-        let shader_source = include_str!("fft_3d_batched_f64.wgsl");
-
         let mut twiddles = HashMap::new();
         for &n in &[nx, ny, nz] {
             let n32 = n as u32;
-            twiddles.entry(n32).or_insert_with(|| {
-                let pi = std::f64::consts::PI;
-                let mut re = Vec::with_capacity(n);
-                let mut im = Vec::with_capacity(n);
-                for k in 0..n {
-                    let angle = -2.0 * pi * (k as f64) / (n as f64);
-                    re.push(angle.cos());
-                    im.push(angle.sin());
-                }
-                let re_buf = device
-                    .device
-                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("FFT3D Twiddle Re"),
-                        contents: bytemuck::cast_slice(&re),
-                        usage: wgpu::BufferUsages::STORAGE,
-                    });
-                let im_buf = device
-                    .device
-                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("FFT3D Twiddle Im"),
-                        contents: bytemuck::cast_slice(&im),
-                        usage: wgpu::BufferUsages::STORAGE,
-                    });
-                (re_buf, im_buf)
-            });
+            twiddles
+                .entry(n32)
+                .or_insert_with(|| upload_twiddles_f64(device.as_ref(), n32));
         }
 
         Ok(Self {
@@ -110,23 +51,16 @@ impl Fft3DF64 {
             nx,
             ny,
             nz,
-            shader_source,
             twiddles,
         })
     }
 
     /// Compute forward 3D FFT (time → frequency domain).
-    /// # Errors
-    /// Returns [`Err`] if `data.len()` does not match `nx*ny*nz*2`, buffer allocation fails,
-    /// GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub async fn forward(&self, data: &[f64]) -> Result<Vec<f64>> {
         self.execute_internal(data, false).await
     }
 
     /// Compute inverse 3D FFT (frequency → time domain).
-    /// # Errors
-    /// Returns [`Err`] if `data.len()` does not match `nx*ny*nz*2`, buffer allocation fails,
-    /// GPU dispatch fails, or buffer readback fails (e.g. device lost).
     pub async fn inverse(&self, data: &[f64]) -> Result<Vec<f64>> {
         self.execute_internal(data, true).await
     }
@@ -148,18 +82,16 @@ impl Fft3DF64 {
             });
         }
 
-        let buffer_bytes = (expected_len * std::mem::size_of::<f64>()) as u64;
+        let buffer_bytes = (expected_len * size_of::<f64>()) as u64;
         let dev = &self.device;
 
-        let buf_a = dev
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("FFT3D buf_a"),
-                contents: bytemuck::cast_slice(data),
-                usage: wgpu::BufferUsages::STORAGE
-                    | wgpu::BufferUsages::COPY_SRC
-                    | wgpu::BufferUsages::COPY_DST,
-            });
+        let buf_a = dev.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("FFT3D buf_a"),
+            contents: bytemuck::cast_slice(data),
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_SRC
+                | wgpu::BufferUsages::COPY_DST,
+        });
 
         let buf_b = dev.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("FFT3D buf_b"),
@@ -172,137 +104,46 @@ impl Fft3DF64 {
 
         let axes = [
             AxisConfig {
-                degree: self.nz,
+                degree: self.nz as u32,
                 element_stride: 1,
-                dim1_stride: self.ny * self.nz,
-                dim2_stride: self.nz,
-                dim1_count: self.nx,
-                dim2_count: self.ny,
+                dim1_stride: (self.ny * self.nz) as u32,
+                dim2_stride: self.nz as u32,
+                dim1_count: self.nx as u32,
+                dim2_count: self.ny as u32,
             },
             AxisConfig {
-                degree: self.ny,
-                element_stride: self.nz,
-                dim1_stride: self.ny * self.nz,
+                degree: self.ny as u32,
+                element_stride: self.nz as u32,
+                dim1_stride: (self.ny * self.nz) as u32,
                 dim2_stride: 1,
-                dim1_count: self.nx,
-                dim2_count: self.nz,
+                dim1_count: self.nx as u32,
+                dim2_count: self.nz as u32,
             },
             AxisConfig {
-                degree: self.nx,
-                element_stride: self.ny * self.nz,
-                dim1_stride: self.nz,
+                degree: self.nx as u32,
+                element_stride: (self.ny * self.nz) as u32,
+                dim1_stride: self.nz as u32,
                 dim2_stride: 1,
-                dim1_count: self.ny,
-                dim2_count: self.nz,
+                dim1_count: self.ny as u32,
+                dim2_count: self.nz as u32,
             },
         ];
 
         for axis in &axes {
-            self.encode_axis(&buf_a, &buf_b, buffer_bytes, axis, inverse)?;
+            let (tw_re, tw_im) = &self.twiddles[&axis.degree];
+            dispatch_axis_f64(
+                dev,
+                &buf_a,
+                &buf_b,
+                buffer_bytes,
+                tw_re,
+                tw_im,
+                axis,
+                inverse,
+            )?;
         }
 
         dev.read_f64_buffer(&buf_a, expected_len)
-    }
-
-    fn encode_axis(
-        &self,
-        buf_a: &wgpu::Buffer,
-        buf_b: &wgpu::Buffer,
-        buffer_bytes: u64,
-        axis: &AxisConfig,
-        inverse: bool,
-    ) -> crate::error::Result<()> {
-        let dev = &self.device;
-        let n = axis.degree as u32;
-        let log_n = (n as f32).log2() as u32;
-        let num_pencils = (axis.dim1_count * axis.dim2_count) as u32;
-        let inv_flag = u32::from(inverse);
-
-        let (tw_re, tw_im) = &self.twiddles[&n];
-
-        // Bit-reverse pass: buf_a → buf_b
-        let br_params = BatchedFftParams {
-            degree: n,
-            stage: 0,
-            inverse: inv_flag,
-            element_stride: axis.element_stride as u32,
-            dim1_stride: axis.dim1_stride as u32,
-            dim2_stride: axis.dim2_stride as u32,
-            dim1_count: axis.dim1_count as u32,
-            dim2_count: axis.dim2_count as u32,
-        };
-        let br_params_buf = dev.create_uniform_buffer("FFT3D BR Params", &br_params);
-
-        let total_invocations = num_pencils * n;
-        let workgroups = total_invocations.div_ceil(WORKGROUP_SIZE_1D);
-
-        ComputeDispatch::new(dev, "FFT3D Bit Reverse")
-            .shader(self.shader_source, "bit_reverse")
-            .f64()
-            .storage_read(0, buf_a)
-            .storage_rw(1, buf_b)
-            .storage_read(2, tw_re)
-            .storage_read(3, tw_im)
-            .uniform(4, &br_params_buf)
-            .dispatch(workgroups, 1, 1)
-            .submit()?;
-
-        // Copy buf_b → buf_a (bit-reversed data into working buffer)
-        {
-            let mut encoder = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("FFT3D Copy BR"),
-            });
-            encoder.copy_buffer_to_buffer(buf_b, 0, buf_a, 0, buffer_bytes);
-            dev.submit_and_poll(std::iter::once(encoder.finish()));
-        }
-
-        // Butterfly stages
-        for stage in 0..log_n {
-            let s_params = BatchedFftParams {
-                degree: n,
-                stage,
-                inverse: inv_flag,
-                element_stride: axis.element_stride as u32,
-                dim1_stride: axis.dim1_stride as u32,
-                dim2_stride: axis.dim2_stride as u32,
-                dim1_count: axis.dim1_count as u32,
-                dim2_count: axis.dim2_count as u32,
-            };
-            let s_params_buf = dev.create_uniform_buffer("FFT3D Stage Params", &s_params);
-
-            let total = num_pencils * (n / 2);
-            let workgroups = total.div_ceil(WORKGROUP_SIZE_1D);
-
-            ComputeDispatch::new(dev, "FFT3D Butterfly")
-                .shader(self.shader_source, "main")
-                .f64()
-                .storage_read(0, buf_a)
-                .storage_rw(1, buf_b)
-                .storage_read(2, tw_re)
-                .storage_read(3, tw_im)
-                .uniform(4, &s_params_buf)
-                .dispatch(workgroups, 1, 1)
-                .submit()?;
-
-            // Ping-pong: copy output to working for next stage
-            if stage < log_n - 1 {
-                let mut encoder = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                    label: Some("FFT3D Copy Stage"),
-                });
-                encoder.copy_buffer_to_buffer(buf_b, 0, buf_a, 0, buffer_bytes);
-                dev.submit_and_poll(std::iter::once(encoder.finish()));
-            }
-        }
-
-        // After last butterfly, result is in buf_b. Copy back to buf_a for next axis.
-        {
-            let mut encoder = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("FFT3D Copy Final"),
-            });
-            encoder.copy_buffer_to_buffer(buf_b, 0, buf_a, 0, buffer_bytes);
-            dev.submit_and_poll(std::iter::once(encoder.finish()));
-        }
-        Ok(())
     }
 
     /// Return (nx, ny, nz) dimensions.

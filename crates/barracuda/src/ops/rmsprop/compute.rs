@@ -63,12 +63,7 @@ impl RMSprop {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("rmsprop_shader"),
-                source: wgpu::ShaderSource::Wgsl(Self::shader().into()),
-            });
+        let shader = device.compile_shader(Self::shader(), Some("rmsprop_shader"));
 
         let bind_group_layout =
             device

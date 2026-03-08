@@ -6,22 +6,48 @@
 //! **Output**: Complex spectrum (N/2+1 unique points)
 //! **Mathematical Property**: X[k] = conj(X[N-k]) for real inputs
 //!
-//! **Deep Debt Compliance**:
-//! - ✅ Pure WGSL (no unsafe)
-//! - ✅ Smart optimization (conjugate symmetry)
-//! - ✅ Composes existing FFT 1D
-//! - ✅ Capability-based dispatch
+//! GPU-resident: uses real_to_complex_f64.wgsl (downcast), batched FFT,
+//! rfft_extract_f64.wgsl (downcast). Zero CPU readbacks.
 
+use super::fft_1d::{batched_shader_f32, dispatch_axis_inner, upload_twiddles_f32, AxisConfig};
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
-use crate::ops::fft::Fft1D;
 use crate::tensor::Tensor;
+use std::mem::size_of;
+
+fn rtc_shader_f32() -> &'static str {
+    static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+        include_str!("real_to_complex_f64.wgsl").to_string()
+    });
+    &*SHADER
+}
+
+fn extract_shader_f32() -> &'static str {
+    static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+        include_str!("rfft_extract_f64.wgsl").to_string()
+    });
+    &*SHADER
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+struct RtcParams {
+    n: u32,
+    padding: [u32; 3],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+struct ExtractParams {
+    unique_points: u32,
+    padding: [u32; 3],
+}
 
 /// Real-to-Complex FFT Operation
 ///
 /// For real-valued inputs, FFT has conjugate symmetry: X[k] = conj(X[N-k])
 /// This means we only need to compute N/2+1 unique frequency components.
-///
-/// **Performance**: ~2x faster than full complex FFT for real signals
 pub struct Rfft {
     input: Tensor,
     degree: u32,
@@ -32,19 +58,15 @@ impl Rfft {
     /// # Arguments
     /// * `input` - Real-valued signal tensor (shape: [N])
     /// * `degree` - FFT degree (must be power of 2)
-    /// # Returns
-    /// Complex spectrum with N/2+1 points (exploiting conjugate symmetry)
     /// # Errors
     /// Returns [`Err`] if degree is not a power of 2, input is not 1D, or input size ≠ degree.
     pub fn new(input: Tensor, degree: u32) -> Result<Self> {
-        // Validate degree is power of 2
         if degree == 0 || (degree & (degree - 1)) != 0 {
             return Err(BarracudaError::Device(format!(
                 "FFT degree must be power of 2, got {degree}"
             )));
         }
 
-        // Validate input is real (1D, not complex)
         let shape = input.shape();
         if shape.len() != 1 {
             return Err(BarracudaError::Device(
@@ -62,46 +84,104 @@ impl Rfft {
         Ok(Self { input, degree })
     }
 
-    /// Execute RFFT operation
-    /// # Strategy
-    /// 1. Convert real signal to complex (real + 0i)
-    /// 2. Compute full complex FFT
-    /// 3. Extract N/2+1 unique points (exploit symmetry)
+    /// Execute RFFT operation. 3 GPU passes: real→complex, FFT, extract. Zero CPU readbacks.
     /// # Returns
     /// Complex spectrum tensor (shape: [N/2+1, 2])
-    /// # Errors
-    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
-    /// readback fails (e.g. device lost or out of memory).
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let n = self.degree as usize;
-
-        // Step 1: Convert real to complex (interleave with zeros)
-        let real_data = self.input.to_vec()?;
-        let mut complex_data = Vec::with_capacity(n * 2);
-        for &val in &real_data {
-            complex_data.push(val); // Real part
-            complex_data.push(0.0); // Imaginary part (zero)
-        }
-
-        let complex_input = Tensor::from_data(&complex_data, vec![n, 2], device.clone())?;
-
-        // Step 2: Compute full complex FFT
-        let fft = Fft1D::new(complex_input, self.degree)?;
-        let full_spectrum = fft.execute()?;
-
-        // Step 3: Extract unique N/2+1 points (conjugate symmetry)
-        // For real input: X[k] = conj(X[N-k]), so we only keep k=0..N/2
         let unique_points = (n / 2) + 1;
-        let spectrum_data = full_spectrum.to_vec()?;
 
-        let mut rfft_spectrum = Vec::with_capacity(unique_points * 2);
-        for i in 0..unique_points {
-            rfft_spectrum.push(spectrum_data[i * 2]); // Real part
-            rfft_spectrum.push(spectrum_data[i * 2 + 1]); // Imaginary part
-        }
+        let complex_bytes = (n * 2) * size_of::<f32>();
+        let output_bytes = unique_points * 2 * size_of::<f32>();
 
-        Tensor::from_data(&rfft_spectrum, vec![unique_points, 2], device.clone())
+        // Pass 1: Real → complex (zero-interleave)
+        let complex_buf = device.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("RFFT complex"),
+            size: complex_bytes as u64,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_SRC
+                | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let rtc_params = RtcParams {
+            n: n as u32,
+            padding: [0; 3],
+        };
+        let rtc_params_buf = device.create_uniform_buffer("RFFT RtcParams", &rtc_params);
+
+        ComputeDispatch::new(device, "RFFT Real-to-Complex")
+            .shader(rtc_shader_f32(), "main")
+            .storage_read(0, self.input.buffer())
+            .storage_rw(1, &complex_buf)
+            .uniform(2, &rtc_params_buf)
+            .dispatch((n as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1)
+            .submit()?;
+
+        // Pass 2: Batched FFT
+        let buf_b = device.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("RFFT buf_b"),
+            size: complex_bytes as u64,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_SRC
+                | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let (tw_re, tw_im) = upload_twiddles_f32(device, n as u32);
+        let axis = AxisConfig {
+            degree: n as u32,
+            element_stride: 1,
+            dim1_stride: n as u32,
+            dim2_stride: 1,
+            dim1_count: 1,
+            dim2_count: 1,
+        };
+        dispatch_axis_inner(
+            device,
+            batched_shader_f32(),
+            &complex_buf,
+            &buf_b,
+            complex_bytes as u64,
+            &tw_re,
+            &tw_im,
+            &axis,
+            false,
+            false,
+        )?;
+
+        // Pass 3: Extract N/2+1 unique points
+        let output_buf = device.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("RFFT output"),
+            size: output_bytes as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+
+        let extract_params = ExtractParams {
+            unique_points: unique_points as u32,
+            padding: [0; 3],
+        };
+        let extract_params_buf = device.create_uniform_buffer("RFFT ExtractParams", &extract_params);
+
+        ComputeDispatch::new(device, "RFFT Extract")
+            .shader(extract_shader_f32(), "main")
+            .storage_read(0, &complex_buf)
+            .storage_rw(1, &output_buf)
+            .uniform(2, &extract_params_buf)
+            .dispatch(
+                (unique_points as u32).div_ceil(WORKGROUP_SIZE_1D),
+                1,
+                1,
+            )
+            .submit()?;
+
+        Ok(Tensor::from_buffer(
+            output_buf,
+            vec![unique_points, 2],
+            device.clone(),
+        ))
     }
 }
 
@@ -116,7 +196,6 @@ mod tests {
             return;
         };
 
-        // Real sine wave: sin(2πk/N) for k=0..7
         let n = 8;
         let data: Vec<f32> = (0..n)
             .map(|k| (2.0 * std::f32::consts::PI * (k as f32) / (n as f32)).sin())
@@ -127,9 +206,7 @@ mod tests {
         let rfft = Rfft::new(tensor, n as u32).unwrap();
         let spectrum = rfft.execute().unwrap();
 
-        // Output should have N/2+1 = 5 points
         assert_eq!(spectrum.shape(), &[5, 2]);
-        println!("✅ RFFT output shape correct: [5, 2]");
     }
 
     #[tokio::test]
@@ -139,7 +216,6 @@ mod tests {
             return;
         };
 
-        // Constant signal (DC component only)
         let n = 16;
         let data = vec![1.0f32; n];
 
@@ -149,17 +225,13 @@ mod tests {
         let spectrum = rfft.execute().unwrap();
         let spectrum_data = spectrum.to_vec().unwrap();
 
-        // DC component (k=0) should be N
         let dc_real = spectrum_data[0];
         assert!((dc_real - (n as f32)).abs() < 1e-4, "DC component = N");
 
-        // All other components should be ~0
         for i in 1..=(n / 2) {
             let mag = (spectrum_data[i * 2].powi(2) + spectrum_data[i * 2 + 1].powi(2)).sqrt();
             assert!(mag < 1e-3, "Non-DC components near zero");
         }
-
-        println!("✅ RFFT DC component verified");
     }
 
     #[tokio::test]
@@ -169,7 +241,6 @@ mod tests {
             return;
         };
 
-        // Mixed frequency signal
         let n = 32;
         let data: Vec<f32> = (0..n)
             .map(|k| {
@@ -184,17 +255,14 @@ mod tests {
         let rfft = Rfft::new(tensor, n as u32).unwrap();
         let spectrum = rfft.execute().unwrap();
 
-        // Should have N/2+1 = 17 unique points
         assert_eq!(spectrum.shape(), &[17, 2]);
 
-        // Verify spectrum has energy (not all zeros)
         let spectrum_data = spectrum.to_vec().unwrap();
         let total_energy: f32 = (0..17)
             .map(|i| spectrum_data[i * 2].powi(2) + spectrum_data[i * 2 + 1].powi(2))
             .sum();
 
         assert!(total_energy > 1.0, "Spectrum has energy");
-        println!("✅ RFFT conjugate symmetry validated (17 unique points)");
     }
 
     #[tokio::test]
@@ -204,7 +272,6 @@ mod tests {
             return;
         };
 
-        // Large real signal
         let n = 4096;
         let data: Vec<f32> = (0..n).map(|k| (k as f32).sin() / 100.0).collect();
 
@@ -215,10 +282,6 @@ mod tests {
         let _spectrum = rfft.execute().unwrap();
         let elapsed = start.elapsed();
 
-        println!("✅ RFFT {n} points: {elapsed:?}");
-
-        // Should complete in reasonable time (benefit from symmetry exploitation)
-        // Software rasterizer (llvmpipe) is much slower than real GPU; allow generous timeout
         assert!(elapsed.as_secs() < 30, "RFFT completes efficiently");
     }
 }

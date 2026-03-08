@@ -20,9 +20,9 @@ use crate::tensor::Tensor;
 #[must_use]
 pub fn wgsl_std_simple() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
+        include_str!(
             "../../shaders/misc/std_simple_f64.wgsl"
-        ))
+        ).to_string()
     });
     std::sync::LazyLock::force(&SHADER).as_str()
 }
@@ -32,7 +32,7 @@ pub(crate) const WGSL_STD_DIM_F64: &str = include_str!("../../shaders/reduce/std
 
 /// f32 derived from f64 canonical source.
 static WGSL_STD_DIM_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(WGSL_STD_DIM_F64));
+    std::sync::LazyLock::new(|| WGSL_STD_DIM_F64.to_string());
 
 /// Standard deviation reduction operation
 pub struct Std {

@@ -1,33 +1,33 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Domain types for cross-spring shader provenance tracking.
 
-/// Which spring domain originated or primarily uses a shader.
+/// Capability-based domain identifier for shader provenance.
+///
+/// String-based rather than enum-based so barraCuda holds no compile-time
+/// knowledge of other primals. New domains are runtime-extensible — just
+/// construct `SpringDomain("myNewDomain")`. The known constants below are
+/// provided for ergonomics and backward compatibility.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum SpringDomain {
+pub struct SpringDomain(pub &'static str);
+
+impl SpringDomain {
     /// Nuclear physics, lattice QCD, molecular dynamics
-    HotSpring,
+    pub const HOT_SPRING: Self = Self("hotSpring");
     /// Metagenomics, bioinformatics, phylogenetics
-    WetSpring,
+    pub const WET_SPRING: Self = Self("wetSpring");
     /// Machine learning, attention, neuroevolution
-    NeuralSpring,
+    pub const NEURAL_SPRING: Self = Self("neuralSpring");
     /// Agriculture, hydrology, evapotranspiration
-    AirSpring,
+    pub const AIR_SPRING: Self = Self("airSpring");
     /// Condensed matter, Anderson localization, noise validation
-    GroundSpring,
+    pub const GROUND_SPRING: Self = Self("groundSpring");
     /// Internal barraCuda primitive (no spring origin)
-    BarraCuda,
+    pub const BARRACUDA: Self = Self("barraCuda");
 }
 
 impl std::fmt::Display for SpringDomain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::HotSpring => write!(f, "hotSpring"),
-            Self::WetSpring => write!(f, "wetSpring"),
-            Self::NeuralSpring => write!(f, "neuralSpring"),
-            Self::AirSpring => write!(f, "airSpring"),
-            Self::GroundSpring => write!(f, "groundSpring"),
-            Self::BarraCuda => write!(f, "barraCuda"),
-        }
+        f.write_str(self.0)
     }
 }
 
@@ -111,10 +111,16 @@ mod tests {
 
     #[test]
     fn display_spring_domains() {
-        use SpringDomain::{HotSpring, NeuralSpring, WetSpring};
-        assert_eq!(format!("{HotSpring}"), "hotSpring");
-        assert_eq!(format!("{WetSpring}"), "wetSpring");
-        assert_eq!(format!("{NeuralSpring}"), "neuralSpring");
+        assert_eq!(format!("{}", SpringDomain::HOT_SPRING), "hotSpring");
+        assert_eq!(format!("{}", SpringDomain::WET_SPRING), "wetSpring");
+        assert_eq!(format!("{}", SpringDomain::NEURAL_SPRING), "neuralSpring");
+    }
+
+    #[test]
+    fn runtime_extensible_domain() {
+        let custom = SpringDomain("myCustomDomain");
+        assert_eq!(format!("{custom}"), "myCustomDomain");
+        assert_ne!(custom, SpringDomain::HOT_SPRING);
     }
 
     #[test]

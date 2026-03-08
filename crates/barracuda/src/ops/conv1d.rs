@@ -63,7 +63,7 @@ impl Conv1D {
 
     fn wgsl_shader() -> &'static str {
         static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-            crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(SHADER_F64)
+            SHADER_F64.to_string()
         });
         std::sync::LazyLock::force(&SHADER).as_str()
     }
@@ -117,12 +117,7 @@ impl Conv1D {
             });
 
         // Create shader module
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Conv1D Shader"),
-                source: wgpu::ShaderSource::Wgsl(Self::wgsl_shader().into()),
-            });
+        let shader = device.compile_shader(Self::wgsl_shader(), Some("Conv1D Shader"));
 
         // Create compute pipeline
         let pipeline = device

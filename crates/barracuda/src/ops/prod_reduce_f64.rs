@@ -18,6 +18,7 @@
 
 use crate::device::WgpuDevice;
 use crate::device::compute_pipeline::ComputeDispatch;
+use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -32,14 +33,33 @@ struct ReduceParams {
     _pad3: u32,
 }
 
+/// Native f64 product-reduce shader (workgroup shared memory uses f64).
+const SHADER_NATIVE: &str = include_str!("../shaders/reduce/prod_reduce_f64.wgsl");
+/// DF64 product-reduce shader (workgroup shared memory uses f32 pairs).
+const SHADER_DF64: &str = include_str!("../shaders/reduce/prod_reduce_df64.wgsl");
+/// DF64 core arithmetic library.
+const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
+
+/// Select the reduce shader based on the device's FP64 strategy.
+///
+/// Native/Concurrent/Sovereign: native f64 workgroup memory is reliable.
+/// Hybrid: f64 shared memory returns zeros on some devices; use DF64.
+fn shader_for_device(device: &WgpuDevice) -> &'static str {
+    let profile = GpuDriverProfile::from_device(device);
+    match profile.fp64_strategy() {
+        Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => SHADER_NATIVE,
+        Fp64Strategy::Hybrid => {
+            static DF64_COMBINED: std::sync::LazyLock<String> =
+                std::sync::LazyLock::new(|| format!("enable f64;\n{DF64_CORE}\n{SHADER_DF64}"));
+            &DF64_COMBINED
+        }
+    }
+}
+
 /// GPU-accelerated f64 product reduction operations
 pub struct ProdReduceF64;
 
 impl ProdReduceF64 {
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/reduce/prod_reduce_f64.wgsl")
-    }
-
     /// Compute the product of all elements in a f64 buffer on GPU
     ///
     /// # Arguments
@@ -114,7 +134,7 @@ impl ProdReduceF64 {
         let params_buffer = device.create_uniform_buffer("ProdReduce params", &params);
 
         ComputeDispatch::new(&device, "prod_reduce_pass1")
-            .shader(Self::wgsl_shader(), entry_point)
+            .shader(shader_for_device(&device), entry_point)
             .f64()
             .storage_read(0, &input_buffer)
             .storage_rw(1, &partial_buffer)
@@ -144,7 +164,7 @@ impl ProdReduceF64 {
 
         let n_workgroups2 = n_workgroups.div_ceil(wg_size);
         ComputeDispatch::new(&device, "prod_reduce_pass2")
-            .shader(Self::wgsl_shader(), entry_point)
+            .shader(shader_for_device(&device), entry_point)
             .f64()
             .storage_read(0, &partial_buffer)
             .storage_rw(1, &final_buffer)

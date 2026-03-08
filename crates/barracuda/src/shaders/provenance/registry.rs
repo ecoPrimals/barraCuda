@@ -5,7 +5,8 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use super::types::{EvolutionEvent, ShaderCategory as C, ShaderRecord, SpringDomain};
-use SpringDomain::{AirSpring, GroundSpring, HotSpring, NeuralSpring, WetSpring};
+
+use SpringDomain as SD;
 
 /// The canonical cross-spring shader provenance registry.
 ///
@@ -17,8 +18,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         // ── Math Libraries (hotSpring → all) ────────────────────────
         ShaderRecord {
             path: "math/df64_core.wgsl",
-            origin: HotSpring,
-            consumers: &[HotSpring, WetSpring, NeuralSpring, AirSpring, GroundSpring],
+            origin: SD::HOT_SPRING,
+            consumers: &[SD::HOT_SPRING, SD::WET_SPRING, SD::NEURAL_SPRING, SD::AIR_SPRING, SD::GROUND_SPRING],
             category: C::MathLibrary,
             evolution_note: "FP32-pair arithmetic from nuclear physics core-streaming (S58). \
                             Unleashes FP32 cores for f64-class work on consumer GPUs.",
@@ -27,8 +28,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         },
         ShaderRecord {
             path: "math/df64_transcendentals.wgsl",
-            origin: HotSpring,
-            consumers: &[HotSpring, WetSpring, NeuralSpring, GroundSpring],
+            origin: SD::HOT_SPRING,
+            consumers: &[SD::HOT_SPRING, SD::WET_SPRING, SD::NEURAL_SPRING, SD::GROUND_SPRING],
             category: C::MathLibrary,
             evolution_note: "DF64 exp/log/sin/cos for consumer GPUs where native f64 transcendentals fail.",
             created: "Feb 2026 hotSpring S60",
@@ -36,8 +37,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         },
         ShaderRecord {
             path: "math/su3.wgsl",
-            origin: HotSpring,
-            consumers: &[HotSpring],
+            origin: SD::HOT_SPRING,
+            consumers: &[SD::HOT_SPRING],
             category: C::MathLibrary,
             evolution_note: "SU(3) matrix algebra for lattice QCD.",
             created: "Feb 2026 hotSpring S46",
@@ -45,8 +46,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         },
         ShaderRecord {
             path: "math/su3_df64.wgsl",
-            origin: HotSpring,
-            consumers: &[HotSpring],
+            origin: SD::HOT_SPRING,
+            consumers: &[SD::HOT_SPRING],
             category: C::MathLibrary,
             evolution_note: "DF64 SU(3) for consumer GPU lattice QCD.",
             created: "Feb 2026 hotSpring S62",
@@ -54,8 +55,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         },
         ShaderRecord {
             path: "math/complex_f64.wgsl",
-            origin: HotSpring,
-            consumers: &[HotSpring, GroundSpring],
+            origin: SD::HOT_SPRING,
+            consumers: &[SD::HOT_SPRING, SD::GROUND_SPRING],
             category: C::MathLibrary,
             evolution_note: "f64 complex arithmetic; shared by lattice QCD and condensed matter.",
             created: "Feb 2026 hotSpring S46",
@@ -64,8 +65,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         // ── Lattice QCD (hotSpring) ─────────────────────────────────
         ShaderRecord {
             path: "lattice/wilson_plaquette_df64.wgsl",
-            origin: HotSpring,
-            consumers: &[HotSpring],
+            origin: SD::HOT_SPRING,
+            consumers: &[SD::HOT_SPRING],
             category: C::LatticeQcd,
             evolution_note: "DF64 Wilson plaquette from core-streaming discovery. Production wiring via toadStool.",
             created: "Feb 2026 hotSpring S58",
@@ -73,8 +74,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         },
         ShaderRecord {
             path: "lattice/su3_gauge_force_df64.wgsl",
-            origin: HotSpring,
-            consumers: &[HotSpring],
+            origin: SD::HOT_SPRING,
+            consumers: &[SD::HOT_SPRING],
             category: C::LatticeQcd,
             evolution_note: "DF64 gauge force with neighbor-buffer indexing.",
             created: "Feb 2026 hotSpring S58",
@@ -82,8 +83,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         },
         ShaderRecord {
             path: "lattice/cg_kernels_f64.wgsl",
-            origin: HotSpring,
-            consumers: &[HotSpring, NeuralSpring],
+            origin: SD::HOT_SPRING,
+            consumers: &[SD::HOT_SPRING, SD::NEURAL_SPRING],
             category: C::LatticeQcd,
             evolution_note: "CG solver with shared memory barriers. Iterative pattern adopted by \
                             neuralSpring for attention convergence loops.",
@@ -93,8 +94,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         // ── Molecular Dynamics (hotSpring → wetSpring) ──────────────
         ShaderRecord {
             path: "md/stress_virial_f64.wgsl",
-            origin: HotSpring,
-            consumers: &[HotSpring, WetSpring],
+            origin: SD::HOT_SPRING,
+            consumers: &[SD::HOT_SPRING, SD::WET_SPRING],
             category: C::MolecularDynamics,
             evolution_note: "Stress tensor via virial theorem. wetSpring uses it for \
                             bio-material mechanical property validation.",
@@ -103,8 +104,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         },
         ShaderRecord {
             path: "md/verlet_neighbor_f64.wgsl",
-            origin: HotSpring,
-            consumers: &[HotSpring, WetSpring],
+            origin: SD::HOT_SPRING,
+            consumers: &[SD::HOT_SPRING, SD::WET_SPRING],
             category: C::MolecularDynamics,
             evolution_note: "Verlet neighbor list for MD force calculations. Shared between \
                             hotSpring nuclear MD and wetSpring bio-molecular pipelines.",
@@ -114,8 +115,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         // ── Statistics (neuralSpring → multiple) ────────────────────
         ShaderRecord {
             path: "stats/matrix_correlation_f64.wgsl",
-            origin: NeuralSpring,
-            consumers: &[NeuralSpring, GroundSpring, HotSpring],
+            origin: SD::NEURAL_SPRING,
+            consumers: &[SD::NEURAL_SPRING, SD::GROUND_SPRING, SD::HOT_SPRING],
             category: C::Statistics,
             evolution_note: "Pearson correlation matrix for multi-variate validation. \
                             hotSpring nuclear fits, groundSpring noise validation.",
@@ -124,8 +125,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         },
         ShaderRecord {
             path: "stats/linear_regression_f64.wgsl",
-            origin: NeuralSpring,
-            consumers: &[NeuralSpring, AirSpring],
+            origin: SD::NEURAL_SPRING,
+            consumers: &[SD::NEURAL_SPRING, SD::AIR_SPRING],
             category: C::Statistics,
             evolution_note: "Batched OLS from ML; adopted by airSpring for trend analysis.",
             created: "Feb 2026 neuralSpring S69",
@@ -133,8 +134,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         },
         ShaderRecord {
             path: "special/fused_kl_divergence_f64.wgsl",
-            origin: NeuralSpring,
-            consumers: &[NeuralSpring, WetSpring, GroundSpring],
+            origin: SD::NEURAL_SPRING,
+            consumers: &[SD::NEURAL_SPRING, SD::WET_SPRING, SD::GROUND_SPRING],
             category: C::Statistics,
             evolution_note: "KL divergence for ML validation → wetSpring cross-entropy → \
                             groundSpring fitness scoring.",
@@ -143,8 +144,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         },
         ShaderRecord {
             path: "special/fused_chi_squared_f64.wgsl",
-            origin: NeuralSpring,
-            consumers: &[NeuralSpring, HotSpring, WetSpring],
+            origin: SD::NEURAL_SPRING,
+            consumers: &[SD::NEURAL_SPRING, SD::HOT_SPRING, SD::WET_SPRING],
             category: C::Statistics,
             evolution_note: "Chi-squared for ML validation → hotSpring nuclear χ² fits → \
                             wetSpring enrichment testing.",
@@ -153,8 +154,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         },
         ShaderRecord {
             path: "special/batch_ipr_f64.wgsl",
-            origin: NeuralSpring,
-            consumers: &[NeuralSpring, HotSpring],
+            origin: SD::NEURAL_SPRING,
+            consumers: &[SD::NEURAL_SPRING, SD::HOT_SPRING],
             category: C::Statistics,
             evolution_note: "Inverse participation ratio for eigenstate localization. \
                             hotSpring spectral diagnostics.",
@@ -164,8 +165,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         // ── Bioinformatics (wetSpring) ──────────────────────────────
         ShaderRecord {
             path: "bio/smith_waterman_banded_f64.wgsl",
-            origin: WetSpring,
-            consumers: &[WetSpring, NeuralSpring],
+            origin: SD::WET_SPRING,
+            consumers: &[SD::WET_SPRING, SD::NEURAL_SPRING],
             category: C::Bioinformatics,
             evolution_note: "Banded Smith-Waterman for metagenomics; neuralSpring protein folding.",
             created: "Feb 2026 wetSpring V87",
@@ -173,8 +174,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         },
         ShaderRecord {
             path: "bio/felsenstein_f64.wgsl",
-            origin: WetSpring,
-            consumers: &[WetSpring],
+            origin: SD::WET_SPRING,
+            consumers: &[SD::WET_SPRING],
             category: C::Bioinformatics,
             evolution_note: "Phylogenetic likelihood from metagenomics pipeline.",
             created: "Feb 2026 wetSpring V87",
@@ -182,8 +183,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         },
         ShaderRecord {
             path: "bio/gillespie_ssa_f64.wgsl",
-            origin: WetSpring,
-            consumers: &[WetSpring, NeuralSpring],
+            origin: SD::WET_SPRING,
+            consumers: &[SD::WET_SPRING, SD::NEURAL_SPRING],
             category: C::Bioinformatics,
             evolution_note: "Stochastic simulation algorithm; neuralSpring evolutionary dynamics.",
             created: "Feb 2026 wetSpring V90",
@@ -191,8 +192,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         },
         ShaderRecord {
             path: "bio/hmm_forward_f64.wgsl",
-            origin: WetSpring,
-            consumers: &[WetSpring, NeuralSpring],
+            origin: SD::WET_SPRING,
+            consumers: &[SD::WET_SPRING, SD::NEURAL_SPRING],
             category: C::Bioinformatics,
             evolution_note: "HMM forward/backward in log-domain. neuralSpring batched inference.",
             created: "Feb 2026 wetSpring V90",
@@ -200,8 +201,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         },
         ShaderRecord {
             path: "reduce/fused_map_reduce_f64.wgsl",
-            origin: WetSpring,
-            consumers: &[WetSpring, AirSpring, HotSpring],
+            origin: SD::WET_SPRING,
+            consumers: &[SD::WET_SPRING, SD::AIR_SPRING, SD::HOT_SPRING],
             category: C::Primitives,
             evolution_note: "Shannon/Simpson map-reduce → airSpring batch sums → hotSpring observable stats.",
             created: "Feb 2026 wetSpring V87",
@@ -210,8 +211,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         // ── Hydrology (airSpring) ───────────────────────────────────
         ShaderRecord {
             path: "grid/hargreaves_et0_f64.wgsl",
-            origin: AirSpring,
-            consumers: &[AirSpring, WetSpring],
+            origin: SD::AIR_SPRING,
+            consumers: &[SD::AIR_SPRING, SD::WET_SPRING],
             category: C::Hydrology,
             evolution_note: "Hargreaves ET₀ reference evapotranspiration for agriculture.",
             created: "Feb 2026 airSpring V043",
@@ -219,8 +220,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         },
         ShaderRecord {
             path: "science/seasonal_pipeline.wgsl",
-            origin: AirSpring,
-            consumers: &[AirSpring, WetSpring],
+            origin: SD::AIR_SPRING,
+            consumers: &[SD::AIR_SPRING, SD::WET_SPRING],
             category: C::Hydrology,
             evolution_note: "Seasonal FAO-56 pipeline → wetSpring environmental monitoring.",
             created: "Feb 2026 airSpring V043",
@@ -229,8 +230,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         // ── Condensed Matter (groundSpring) ─────────────────────────
         ShaderRecord {
             path: "spectral/anderson_lyapunov_f64.wgsl",
-            origin: GroundSpring,
-            consumers: &[GroundSpring, HotSpring, NeuralSpring],
+            origin: SD::GROUND_SPRING,
+            consumers: &[SD::GROUND_SPRING, SD::HOT_SPRING, SD::NEURAL_SPRING],
             category: C::CondensedMatter,
             evolution_note: "Anderson localization via transfer-matrix Lyapunov exponent. \
                             hotSpring spectral diagnostics, neuralSpring disorder sweeps.",
@@ -239,8 +240,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         },
         ShaderRecord {
             path: "special/chi_squared_f64.wgsl",
-            origin: GroundSpring,
-            consumers: &[GroundSpring, HotSpring, WetSpring, NeuralSpring, AirSpring],
+            origin: SD::GROUND_SPRING,
+            consumers: &[SD::GROUND_SPRING, SD::HOT_SPRING, SD::WET_SPRING, SD::NEURAL_SPRING, SD::AIR_SPRING],
             category: C::Statistics,
             evolution_note: "Chi-squared CDF+quantile from V74. Universal statistical test for all springs.",
             created: "Mar 2026 groundSpring V74",
@@ -249,8 +250,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         // ── ML / ESN (hotSpring → wetSpring) ────────────────────────
         ShaderRecord {
             path: "ml/esn_readout_f64.wgsl",
-            origin: HotSpring,
-            consumers: &[HotSpring, WetSpring],
+            origin: SD::HOT_SPRING,
+            consumers: &[SD::HOT_SPRING, SD::WET_SPRING],
             category: C::MachineLearning,
             evolution_note: "ESN readout from Stanton-Murillo transport predictions. \
                             wetSpring environmental time-series.",
@@ -259,8 +260,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         },
         ShaderRecord {
             path: "stats/moving_window_f64.wgsl",
-            origin: AirSpring,
-            consumers: &[AirSpring, WetSpring, NeuralSpring],
+            origin: SD::AIR_SPRING,
+            consumers: &[SD::AIR_SPRING, SD::WET_SPRING, SD::NEURAL_SPRING],
             category: C::Statistics,
             evolution_note: "Sliding window stats for IoT sensor streams. neuralSpring streaming inference.",
             created: "Mar 2026 airSpring V068",
@@ -269,8 +270,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         // ── Nuclear Physics (hotSpring) ─────────────────────────────
         ShaderRecord {
             path: "nuclear/hfb_gradient_f64.wgsl",
-            origin: HotSpring,
-            consumers: &[HotSpring],
+            origin: SD::HOT_SPRING,
+            consumers: &[SD::HOT_SPRING],
             category: C::NuclearPhysics,
             evolution_note: "Hartree-Fock-Bogoliubov gradient kernel from nuclear structure ladder.",
             created: "Feb 2026 hotSpring S52",
@@ -278,8 +279,8 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
         },
         ShaderRecord {
             path: "reduce/welford_mean_variance_f64.wgsl",
-            origin: GroundSpring,
-            consumers: &[GroundSpring, HotSpring, WetSpring, NeuralSpring, AirSpring],
+            origin: SD::GROUND_SPRING,
+            consumers: &[SD::GROUND_SPRING, SD::HOT_SPRING, SD::WET_SPRING, SD::NEURAL_SPRING, SD::AIR_SPRING],
             category: C::Primitives,
             evolution_note: "Welford single-pass fused mean+variance. Universal reduction primitive \
                             for all springs' GPU statistics.",
@@ -299,77 +300,77 @@ pub static EVOLUTION_TIMELINE: LazyLock<Vec<EvolutionEvent>> = LazyLock::new(|| 
     vec![
         EvolutionEvent {
             date: "Feb 2026 (S46-S48)",
-            from: HotSpring,
-            beneficiaries: &[WetSpring, NeuralSpring, GroundSpring, AirSpring],
+            from: SD::HOT_SPRING,
+            beneficiaries: &[SD::WET_SPRING, SD::NEURAL_SPRING, SD::GROUND_SPRING, SD::AIR_SPRING],
             description: "First f64 WGSL shaders: SU(3), CG solver, sum_reduce. \
                          Established the shader-first f64 pattern all springs now follow.",
         },
         EvolutionEvent {
             date: "Feb 2026 (S58)",
-            from: HotSpring,
-            beneficiaries: &[WetSpring, NeuralSpring, GroundSpring, AirSpring],
+            from: SD::HOT_SPRING,
+            beneficiaries: &[SD::WET_SPRING, SD::NEURAL_SPRING, SD::GROUND_SPRING, SD::AIR_SPRING],
             description: "DF64 core-streaming: FP32-pair arithmetic unleashed consumer \
                          GPUs for f64-class work. The single most impactful cross-spring \
                          contribution — every spring's GPU stats now run on any hardware.",
         },
         EvolutionEvent {
             date: "Feb 2026 (S69)",
-            from: NeuralSpring,
-            beneficiaries: &[HotSpring, GroundSpring, AirSpring],
+            from: SD::NEURAL_SPRING,
+            beneficiaries: &[SD::HOT_SPRING, SD::GROUND_SPRING, SD::AIR_SPRING],
             description: "matrix_correlation + linear_regression f64 shaders from ML \
                          validation: hotSpring nuclear fits, groundSpring noise validation, \
                          airSpring trend analysis.",
         },
         EvolutionEvent {
             date: "Feb 2026 (V87-V90)",
-            from: WetSpring,
-            beneficiaries: &[NeuralSpring, HotSpring, AirSpring],
+            from: SD::WET_SPRING,
+            beneficiaries: &[SD::NEURAL_SPRING, SD::HOT_SPRING, SD::AIR_SPRING],
             description: "Bio shaders: Smith-Waterman, Felsenstein, Gillespie SSA, HMM, \
                          fused_map_reduce. neuralSpring adopted HMM for batched inference \
                          and Gillespie for evolutionary dynamics.",
         },
         EvolutionEvent {
             date: "Feb 2026 (S100)",
-            from: NeuralSpring,
-            beneficiaries: &[HotSpring, WetSpring, GroundSpring],
+            from: SD::NEURAL_SPRING,
+            beneficiaries: &[SD::HOT_SPRING, SD::WET_SPRING, SD::GROUND_SPRING],
             description: "KL divergence + chi-squared fused shaders from ML: \
                          hotSpring nuclear chi-squared fits, wetSpring enrichment testing, \
                          groundSpring fitness scoring.",
         },
         EvolutionEvent {
             date: "Mar 2026 (V043-V068)",
-            from: AirSpring,
-            beneficiaries: &[WetSpring, NeuralSpring],
+            from: SD::AIR_SPRING,
+            beneficiaries: &[SD::WET_SPRING, SD::NEURAL_SPRING],
             description: "Hydrology shaders: Hargreaves ET₀, seasonal pipeline, \
                          moving_window_f64. wetSpring environmental monitoring, \
                          neuralSpring streaming inference windows.",
         },
         EvolutionEvent {
             date: "Mar 2026 (V74-V80)",
-            from: GroundSpring,
-            beneficiaries: &[HotSpring, WetSpring, NeuralSpring, AirSpring],
+            from: SD::GROUND_SPRING,
+            beneficiaries: &[SD::HOT_SPRING, SD::WET_SPRING, SD::NEURAL_SPRING, SD::AIR_SPRING],
             description: "Universal primitives: chi-squared CDF+quantile, Anderson \
                          Lyapunov, 13-tier tolerance, Welford fused mean+variance. \
                          The tolerance framework became the validation backbone for all springs.",
         },
         EvolutionEvent {
             date: "Mar 2026 (V128)",
-            from: NeuralSpring,
-            beneficiaries: &[HotSpring],
+            from: SD::NEURAL_SPRING,
+            beneficiaries: &[SD::HOT_SPRING],
             description: "batch_ipr_f64: inverse participation ratio for eigenstate \
                          localization. hotSpring spectral diagnostics for Anderson model.",
         },
         EvolutionEvent {
             date: "Mar 2026 (V0619)",
-            from: HotSpring,
-            beneficiaries: &[WetSpring],
+            from: SD::HOT_SPRING,
+            beneficiaries: &[SD::WET_SPRING],
             description: "Verlet neighbor list and stress virial shaders: wetSpring \
                          bio-material mechanical property validation using MD patterns.",
         },
         EvolutionEvent {
             date: "Mar 7, 2026",
-            from: SpringDomain::BarraCuda,
-            beneficiaries: &[HotSpring, WetSpring, NeuralSpring, AirSpring, GroundSpring],
+            from: SpringDomain::BARRACUDA,
+            beneficiaries: &[SD::HOT_SPRING, SD::WET_SPRING, SD::NEURAL_SPRING, SD::AIR_SPRING, SD::GROUND_SPRING],
             description: "Provenance registry formalized: all cross-spring flows now \
                          tracked programmatically with Write → Absorb → Lean lifecycle, \
                          evolution dates, and bidirectional dependency matrix.",
@@ -434,16 +435,16 @@ mod tests {
 
     #[test]
     fn hotspring_has_most_contributions() {
-        let hot = shaders_from(HotSpring);
+        let hot = shaders_from(SD::HOT_SPRING);
         assert!(hot.len() >= 8, "hotSpring should have 8+ origin shaders");
     }
 
     #[test]
     fn wetspring_bio_shaders_consumed_by_neuralspring() {
-        let wet = shaders_from(WetSpring);
+        let wet = shaders_from(SD::WET_SPRING);
         let consumed_by_neural: Vec<_> = wet
             .iter()
-            .filter(|r| r.consumers.contains(&NeuralSpring))
+            .filter(|r| r.consumers.contains(&SD::NEURAL_SPRING))
             .collect();
         assert!(
             consumed_by_neural.len() >= 3,
@@ -454,8 +455,8 @@ mod tests {
 
     #[test]
     fn neuralspring_bidirectional_flow() {
-        let from_neural = shaders_from(NeuralSpring);
-        let consumed_by_neural = shaders_consumed_by(NeuralSpring);
+        let from_neural = shaders_from(SD::NEURAL_SPRING);
+        let consumed_by_neural = shaders_consumed_by(SD::NEURAL_SPRING);
 
         assert!(from_neural.len() >= 4, "neuralSpring writes 4+ shaders");
         assert!(
@@ -465,11 +466,11 @@ mod tests {
 
         let external_origins: Vec<_> = consumed_by_neural
             .iter()
-            .filter(|r| r.origin != NeuralSpring)
+            .filter(|r| r.origin != SD::NEURAL_SPRING)
             .map(|r| r.origin)
             .collect();
-        assert!(external_origins.contains(&HotSpring));
-        assert!(external_origins.contains(&WetSpring));
+        assert!(external_origins.contains(&SD::HOT_SPRING));
+        assert!(external_origins.contains(&SD::WET_SPRING));
     }
 
     #[test]
@@ -491,19 +492,19 @@ mod tests {
         let matrix = cross_spring_matrix();
         assert!(!matrix.is_empty());
 
-        let hot_to_neural = matrix.get(&(HotSpring, NeuralSpring)).copied().unwrap_or(0);
+        let hot_to_neural = matrix.get(&(SD::HOT_SPRING, SD::NEURAL_SPRING)).copied().unwrap_or(0);
         assert!(
             hot_to_neural >= 2,
             "hotSpring→neuralSpring should share 2+ shaders"
         );
 
-        let hot_to_wet = matrix.get(&(HotSpring, WetSpring)).copied().unwrap_or(0);
+        let hot_to_wet = matrix.get(&(SD::HOT_SPRING, SD::WET_SPRING)).copied().unwrap_or(0);
         assert!(
             hot_to_wet >= 3,
             "hotSpring→wetSpring should share 3+ shaders"
         );
 
-        let wet_to_neural = matrix.get(&(WetSpring, NeuralSpring)).copied().unwrap_or(0);
+        let wet_to_neural = matrix.get(&(SD::WET_SPRING, SD::NEURAL_SPRING)).copied().unwrap_or(0);
         assert!(
             wet_to_neural >= 3,
             "wetSpring→neuralSpring should share 3+ shaders"
@@ -515,18 +516,18 @@ mod tests {
         let kl = REGISTRY.iter().find(|r| r.path.contains("kl_divergence"));
         assert!(kl.is_some());
         let kl = kl.unwrap();
-        assert_eq!(kl.origin, NeuralSpring);
-        assert!(kl.consumers.contains(&WetSpring));
-        assert!(kl.consumers.contains(&GroundSpring));
+        assert_eq!(kl.origin, SD::NEURAL_SPRING);
+        assert!(kl.consumers.contains(&SD::WET_SPRING));
+        assert!(kl.consumers.contains(&SD::GROUND_SPRING));
     }
 
     #[test]
     fn consumed_by_query_works() {
-        let wet_shaders = shaders_consumed_by(WetSpring);
+        let wet_shaders = shaders_consumed_by(SD::WET_SPRING);
         assert!(wet_shaders.len() >= 8, "wetSpring consumes 8+ shaders");
         let origins: Vec<_> = wet_shaders.iter().map(|r| r.origin).collect();
-        assert!(origins.contains(&HotSpring));
-        assert!(origins.contains(&AirSpring));
+        assert!(origins.contains(&SD::HOT_SPRING));
+        assert!(origins.contains(&SD::AIR_SPRING));
     }
 
     #[test]

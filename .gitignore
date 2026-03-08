@@ -2,5 +2,12 @@
 **/*.rs.bk
 *.swp
 *.swo
+*.tmp
+*.temp
+*.log
 .DS_Store
+.env
+.env.local
+.idea/
+*.iml
 lcov.info

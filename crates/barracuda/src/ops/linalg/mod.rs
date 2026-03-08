@@ -110,10 +110,10 @@ const WGSL_LAPLACIAN_F64: &str = include_str!("../../shaders/linalg/laplacian_f6
 
 /// f32 variants derived from f64 via precision downcast.
 static WGSL_SYMMETRIZE: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    crate::shaders::precision::downcast_f64_to_f32(WGSL_SYMMETRIZE_F64)
+    WGSL_SYMMETRIZE_F64.to_string()
 });
 static WGSL_LAPLACIAN: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(WGSL_LAPLACIAN_F64));
+    std::sync::LazyLock::new(|| WGSL_LAPLACIAN_F64.to_string());
 
 /// WGSL kernel: symmetrize a square matrix (out[i,j] = (A[i,j] + A[j,i]) / 2).
 #[must_use]

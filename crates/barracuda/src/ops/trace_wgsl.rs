@@ -24,7 +24,7 @@ const SHADER_F64: &str = include_str!("../shaders/linalg/trace_f64.wgsl");
 
 /// f32 variant derived from f64 via precision downcast.
 static SHADER_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
+    std::sync::LazyLock::new(|| SHADER_F64.to_string());
 
 /// Sum of diagonal elements of a square matrix.
 pub struct Trace {
@@ -176,12 +176,7 @@ impl Trace {
         let final_buffer = if workgroups > 1 {
             // Second pass: reduce partial results using reduce shader
             let reduce_shader_source = crate::ops::reduce::Reduce::wgsl_shader();
-            let reduce_shader = device
-                .device
-                .create_shader_module(wgpu::ShaderModuleDescriptor {
-                    label: Some("Trace Reduce Shader"),
-                    source: wgpu::ShaderSource::Wgsl(reduce_shader_source.into()),
-                });
+            let reduce_shader = device.compile_shader(reduce_shader_source, Some("Trace Reduce Shader"));
 
             #[repr(C)]
             #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]

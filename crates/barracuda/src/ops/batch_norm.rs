@@ -12,28 +12,28 @@ use crate::tensor::Tensor;
 const WGSL_BATCHNORM_TRAINING_F64: &str = include_str!("../shaders/norm/batchnorm_f64.wgsl");
 /// f32 batch norm shader (training mode, running mean/var).
 pub static WGSL_BATCHNORM_TRAINING: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(WGSL_BATCHNORM_TRAINING_F64)
+    WGSL_BATCHNORM_TRAINING_F64.to_string()
 });
 
 const WGSL_BATCH_NORM_2D_F64: &str = include_str!("../shaders/norm/batch_norm2d_f64.wgsl");
 /// f32 2D batch norm shader (NCHW format, per-channel stats).
 pub static WGSL_BATCH_NORM_2D: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(WGSL_BATCH_NORM_2D_F64)
+    WGSL_BATCH_NORM_2D_F64.to_string()
 });
 
 /// f64 canonical — per-tensor batch norm (simplified).
 const SHADER_BATCH_NORM_F64: &str = include_str!("../shaders/norm/batch_norm_f64.wgsl");
 static SHADER_BATCH_NORM_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(SHADER_BATCH_NORM_F64)
+    SHADER_BATCH_NORM_F64.to_string()
 });
 
 /// GPU shader for group normalization (groups within channels).
 #[must_use]
 pub fn wgsl_groupnorm() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
+        include_str!(
             "../shaders/norm/groupnorm_f64.wgsl"
-        ))
+        ).to_string()
     });
     std::sync::LazyLock::force(&SHADER).as_str()
 }
@@ -42,9 +42,9 @@ pub fn wgsl_groupnorm() -> &'static str {
 #[must_use]
 pub fn wgsl_instancenorm() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
+        include_str!(
             "../shaders/norm/instancenorm_f64.wgsl"
-        ))
+        ).to_string()
     });
     std::sync::LazyLock::force(&SHADER).as_str()
 }

@@ -42,14 +42,14 @@ pub(crate) static ATTENTION_MATMUL_F64: &str =
     include_str!("../../shaders/math/attention_matmul_f64.wgsl");
 pub(crate) static ATTENTION_MATMUL_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| {
-        crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(ATTENTION_MATMUL_F64)
+        ATTENTION_MATMUL_F64.to_string()
     });
 
 /// f64 canonical — SDPA scores (sqrt).
 pub(crate) const SDPA_SCORES_F64: &str =
     include_str!("../../shaders/attention/sdpa_scores_f64.wgsl");
 pub(crate) static SDPA_SCORES_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(SDPA_SCORES_F64)
+    SDPA_SCORES_F64.to_string()
 });
 
 /// f64 canonical — f32 derived via `downcast_f64_to_f32` when needed.
@@ -57,7 +57,7 @@ pub(crate) const ATTENTION_APPLY_F64: &str =
     include_str!("../../shaders/attention/attention_apply_f64.wgsl");
 pub(crate) static ATTENTION_APPLY_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| {
-        crate::shaders::precision::downcast_f64_to_f32(ATTENTION_APPLY_F64)
+        ATTENTION_APPLY_F64.to_string()
     });
 
 /// f64 canonical — attention softmax (exp).
@@ -65,7 +65,7 @@ pub(crate) const ATTENTION_SOFTMAX_F64: &str =
     include_str!("../../shaders/activation/attention_softmax_f64.wgsl");
 pub(crate) static ATTENTION_SOFTMAX_F32: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| {
-        crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(ATTENTION_SOFTMAX_F64)
+        ATTENTION_SOFTMAX_F64.to_string()
     });
 
 #[cfg(test)]

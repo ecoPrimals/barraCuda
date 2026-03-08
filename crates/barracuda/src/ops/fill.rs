@@ -12,15 +12,15 @@ const SHADER_F64: &str = include_str!("../shaders/misc/fill_f64.wgsl");
 
 /// f32 variant derived from f64 via precision downcast.
 static SHADER_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| crate::shaders::precision::downcast_f64_to_f32(SHADER_F64));
+    std::sync::LazyLock::new(|| SHADER_F64.to_string());
 
 /// Returns the WGSL meshgrid shader (expand coords to grid).
 #[must_use]
 pub fn wgsl_meshgrid() -> &'static str {
     static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(include_str!(
+        include_str!(
             "../shaders/misc/meshgrid_f64.wgsl"
-        ))
+        ).to_string()
     });
     std::sync::LazyLock::force(&SHADER).as_str()
 }
@@ -79,12 +79,7 @@ impl Fill {
 
         // Create shader module
         let shader = self
-            .device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Fill Shader"),
-                source: wgpu::ShaderSource::Wgsl(Self::wgsl_shader().into()),
-            });
+            .device.compile_shader(Self::wgsl_shader(), Some("Fill Shader"));
 
         // Create compute pipeline
         let pipeline =

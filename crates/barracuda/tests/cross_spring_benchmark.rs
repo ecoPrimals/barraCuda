@@ -274,8 +274,8 @@ fn bench_provenance_registry_queries() -> BenchResult {
     let mut total = 0usize;
     for _ in 0..iters {
         total += provenance::cross_spring_shaders().len();
-        total += provenance::shaders_from(SpringDomain::HotSpring).len();
-        total += provenance::shaders_consumed_by(SpringDomain::WetSpring).len();
+        total += provenance::shaders_from(SpringDomain::HOT_SPRING).len();
+        total += provenance::shaders_consumed_by(SpringDomain::WET_SPRING).len();
         let _ = provenance::cross_spring_matrix();
     }
     let elapsed = start.elapsed();

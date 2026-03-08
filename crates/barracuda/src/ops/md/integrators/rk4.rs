@@ -122,12 +122,7 @@ impl Rk4 {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let shader = device
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("RK4 Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("rk4.wgsl").into()),
-            });
+        let shader = device.compile_shader(include_str!("rk4.wgsl"), Some("RK4 Shader"));
 
         let bind_group_layout =
             device

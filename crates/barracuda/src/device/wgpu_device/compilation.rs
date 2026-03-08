@@ -2,11 +2,13 @@
 //! Shader compilation — WGSL, SPIR-V, f64, DF64, universal precision pipelines
 
 use super::WgpuDevice;
+use crate::shaders::precision::compiler::source_is_f64;
 
 impl WgpuDevice {
-    /// Compile WGSL shader
+    /// Compile WGSL shader (raw path — no f64 detection or routing).
+    /// Use [`compile_shader`](Self::compile_shader) for the public API that handles f64.
     #[must_use]
-    pub fn compile_shader(&self, source: &str, label: Option<&str>) -> wgpu::ShaderModule {
+    pub fn compile_shader_raw(&self, source: &str, label: Option<&str>) -> wgpu::ShaderModule {
         self.encoding_guard();
         let module = self
             .device
@@ -16,6 +18,21 @@ impl WgpuDevice {
             });
         self.encoding_complete();
         module
+    }
+
+    /// Compile WGSL shader.
+    /// If source contains f64 types:
+    /// - Device has SHADER_F64: route to [`compile_shader_f64`](Self::compile_shader_f64)
+    /// - No SHADER_F64: downcast with `downcast_f64_to_f32_with_transcendentals` then compile_raw
+    /// Otherwise: compile_raw.
+    #[must_use]
+    pub fn compile_shader(&self, source: &str, label: Option<&str>) -> wgpu::ShaderModule {
+        if source_is_f64(source) {
+            let downcast =
+                crate::shaders::precision::downcast_f64_to_f32_with_transcendentals(source);
+            return self.compile_shader_raw(&downcast, label);
+        }
+        self.compile_shader_raw(source, label)
     }
 
     /// Run the sovereign compiler's naga-level optimisations on WGSL and
@@ -41,7 +58,7 @@ impl WgpuDevice {
                         stats.dead_exprs_eliminated,
                     );
                 }
-                Some(self.compile_shader(&optimized_wgsl, label))
+                Some(self.compile_shader_raw(&optimized_wgsl, label))
             }
             Err(e) => {
                 tracing::debug!("sovereign {tag} fallback to raw WGSL: {e}");
@@ -84,7 +101,7 @@ impl WgpuDevice {
             return module;
         }
 
-        self.compile_shader(&optimized, label)
+        self.compile_shader_raw(&optimized, label)
     }
 
     /// Compile a DF64 (double-float, f32-pair) WGSL shader.
@@ -135,7 +152,7 @@ impl WgpuDevice {
             return module;
         }
 
-        self.compile_shader(&optimized, label)
+        self.compile_shader_raw(&optimized, label)
     }
 
     /// Compile a shader written as universal math, specialized to the requested precision.
@@ -173,7 +190,7 @@ impl WgpuDevice {
         match precision {
             Precision::F32 => {
                 let f32_source = downcast_f64_to_f32(source);
-                self.compile_shader(&f32_source, label)
+                self.compile_shader_raw(&f32_source, label)
             }
             Precision::F64 => self.compile_shader_f64(source, label),
             Precision::Df64 => {
@@ -195,7 +212,7 @@ impl WgpuDevice {
             }
             Precision::F16 => {
                 let f16_source = crate::shaders::precision::downcast_f64_to_f16(source);
-                self.compile_shader(&f16_source, label)
+                self.compile_shader_raw(&f16_source, label)
             }
         }
     }
@@ -224,7 +241,7 @@ impl WgpuDevice {
         match precision {
             Precision::F64 => self.compile_shader_f64(&combined, label),
             Precision::Df64 => self.compile_shader_df64(&combined, label),
-            _ => self.compile_shader(&combined, label),
+            _ => self.compile_shader_raw(&combined, label),
         }
     }
 
@@ -244,7 +261,7 @@ impl WgpuDevice {
         match precision {
             Precision::F64 => self.compile_shader_f64(&rendered, label),
             Precision::Df64 => self.compile_shader_df64(&rendered, label),
-            _ => self.compile_shader(&rendered, label),
+            _ => self.compile_shader_raw(&rendered, label),
         }
     }
 }

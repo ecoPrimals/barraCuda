@@ -34,7 +34,7 @@ const WGSL_BFGS_UPDATE_F64: &str = include_str!("../shaders/optimizer/bfgs_updat
 
 /// Entry points: `bfgs_update`, `dot_product`, `mat_vec_mul`, `compute_Hy_and_yHy`.
 pub static WGSL_BFGS_UPDATE: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    crate::shaders::precision::downcast_f64_to_f32(WGSL_BFGS_UPDATE_F64)
+    WGSL_BFGS_UPDATE_F64.to_string()
 });
 
 /// GPU shader for batch numerical gradient via central/forward differences.
@@ -44,7 +44,7 @@ const WGSL_BATCH_GRADIENT_F64: &str = include_str!("../shaders/optimizer/batch_g
 
 /// WGSL batch gradient shader (f32, downcast from f64).
 pub static WGSL_BATCH_GRADIENT: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    crate::shaders::precision::downcast_f64_to_f32(WGSL_BATCH_GRADIENT_F64)
+    WGSL_BATCH_GRADIENT_F64.to_string()
 });
 
 /// Configuration for the BFGS optimizer.

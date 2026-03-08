@@ -145,7 +145,7 @@ struct CoulombParams {
 
 // NOTE: The Coulomb potential uses a multi-pass approach:
 // Pass 1 (bin_charges): bin ρ_p·dV into radial shells (atomic-free, use workgroup reduce)
-// Pass 2 (prefix_sum): use CumsumF64 toadstool op on charge_bins
+// Pass 2 (prefix_sum): use CumsumF64 op on charge_bins
 // Pass 3 (compute_coulomb): use prefix sums to compute V_C per grid point
 
 // We define the final per-grid-point Coulomb evaluation kernel here.

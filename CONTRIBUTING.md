@@ -35,7 +35,7 @@ cargo doc --workspace --no-deps
 |------|---------|
 | `crates/barracuda/` | Umbrella crate — all math, GPU ops, compute fabric |
 | `crates/barracuda-core/` | Primal lifecycle, IPC, tarpc, UniBin CLI |
-| `crates/barracuda/src/shaders/` | 784 WGSL shaders (see `shaders/README.md`) |
+| `crates/barracuda/src/shaders/` | 786 WGSL shaders (see `shaders/README.md`) |
 | `crates/barracuda/examples/` | Runnable examples |
 | `crates/barracuda/tests/` | 31 integration test suites |
 | `crates/barracuda/src/bin/` | Binaries (validate_gpu, bench_*) |

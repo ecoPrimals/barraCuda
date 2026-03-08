@@ -305,7 +305,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `cargo clippy --workspace --all-targets --all-features -- -D warnings` — zero warnings
 - `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` — clean
 - `cargo deny check` — advisories/bans/licenses/sources OK
-- 3,687 tests across 31 integration test suites
+- 3,100+ tests across 31 integration test suites
 - 70% line coverage on llvmpipe; 90% target requires GPU hardware CI runner
 
 ## [0.3.3] - March 4, 2026

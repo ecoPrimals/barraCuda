@@ -54,7 +54,7 @@ Previously limited to Vulkan with SPIR-V passthrough.
 ### P2 — Near-term
 
 #### Test Coverage to 90%
-- Current: 3,687 tests, 31 integration suites
+- Current: 3,100+ lib tests, 31 integration suites
 - Evolve CI `--fail-under` from 80 to 90
 - Add GPU-conditional tests for new ops
 - GPU_TEST_TIMEOUT (60s) prevents hangs; coordination harness with

@@ -35,7 +35,7 @@ crates/
   barracuda/           Core compute library
     src/
       device/          GPU device management, driver profiles, pipeline cache
-      shaders/         784 WGSL shaders + sovereign compiler
+      shaders/         786 WGSL shaders + sovereign compiler
         math/          DF64 core, transcendentals
         sovereign/     Naga-based compiler (FMA fusion, dead expr, SPIR-V emit)
         precision/     F32/F64/DF64/F16 universal pipeline

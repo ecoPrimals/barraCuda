@@ -6,8 +6,8 @@
 // NVVM consumer limitation). Uses the same algorithm as the f64 version
 // but with reduced precision (~7 significant digits vs ~15).
 //
-// For production precision on f32-only hardware, use ToadStool's DF64
-// (double-float) emulation: pairs of f32 values giving ~50 bits of
+// For production precision on f32-only hardware, use the DF64
+// (double-float) emulation path: pairs of f32 values giving ~50 bits of
 // significand (vs f64's 52 bits).
 //
 // Binding layout:

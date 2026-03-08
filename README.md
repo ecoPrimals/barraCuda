@@ -168,7 +168,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo test --workspace --lib            # 3,095 test functions
+cargo test --workspace --lib            # 3,100+ test functions
 cargo llvm-cov --workspace --lib        # 90%+ line coverage target (70% on llvmpipe; GPU hardware needed for 90%)
 ```
 

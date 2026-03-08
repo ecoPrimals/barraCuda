@@ -132,7 +132,7 @@ groundSpring → ALL:        2 shaders (chi_squared universal, Welford mean+vari
 - **GPU transcendental precision**: one tier looser than CPU per transcendental call
 - **GPU NaN source**: division-by-zero — mitigated by `eps::SAFE_DIV` (item 2)
 - **NVK/NAK f64**: unreliable on Titan V, RTX 4070 — mitigated by `has_reliable_f64()` (item 1)
-- **DF64 Yukawa on NVK**: 300–900 steps/s vs 29 native — requires `compile_shader_universal(Df64)`
+- **DF64 Yukawa on NVK**: 300–900 steps/s vs 29 native — requires DF64 compilation path
 - **NVK shared-memory f64**: returns zeros for `var<workgroup>` f64 accumulators — mitigated by DF64 reduce shaders (item AA)
 
 ## References

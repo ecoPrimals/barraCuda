@@ -1,63 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Precision validation tests — edge cases, E2E, and fault recovery.
-//! Extracted from `precision_tests.rs` for maintainability (wateringHole 1000-line convention).
 
 use super::*;
-
-// ══════════════════════════════════════════════════════════════════════
-// Unit Tests — edge cases and uncovered paths
-// ══════════════════════════════════════════════════════════════════════
-
-#[test]
-fn test_downcast_f64_to_f16_sentinel_protection() {
-    let source = "let x = exp_f64(input[i]);\nlet y: f64 = f64(1.0);";
-    let result = downcast_f64_to_f16(source);
-    assert!(
-        result.contains("exp_f64("),
-        "polyfill name must survive sentinel"
-    );
-    assert!(result.contains(": f16"), "type should downcast to f16");
-    assert!(result.contains("f16(1.0)"), "constructor should downcast");
-    assert!(
-        !result.contains("exp_f16("),
-        "exp_f64 must NOT become exp_f16"
-    );
-}
-
-#[test]
-fn test_downcast_f64_to_f16_clamps_f64_range_literals() {
-    let source = "let x: f64 = f64(-1e308);";
-    let result = downcast_f64_to_f16(source);
-    assert!(
-        result.contains("-65504.0"),
-        "f64 sentinel should clamp to f16 max"
-    );
-    assert!(!result.contains("1e308"), "f64-range literal must be gone");
-}
-
-#[test]
-fn test_downcast_f64_to_f16_clamps_f32_range_to_f16() {
-    let source = "let x = 3.4028235e+38;";
-    let result = downcast_f64_to_f16(source);
-    assert!(
-        result.contains("65504.0"),
-        "f32-range literal should clamp to f16"
-    );
-}
-
-#[test]
-fn test_op_preamble_pack_unpack_all_precisions() {
-    for prec in [
-        Precision::F16,
-        Precision::F32,
-        Precision::F64,
-        Precision::Df64,
-    ] {
-        let p = prec.op_preamble();
-        assert!(p.contains("fn op_pack("), "{prec:?} missing op_pack");
-        assert!(p.contains("fn op_unpack("), "{prec:?} missing op_unpack");
-    }
-}
 
 #[test]
 fn test_downcast_df64_only_maps_existing_transcendentals() {
@@ -65,7 +9,6 @@ fn test_downcast_df64_only_maps_existing_transcendentals() {
     let result = downcast_f64_to_df64(source);
     assert!(result.contains("exp_df64("), "exp should map");
     assert!(result.contains("sqrt_df64("), "sqrt should map");
-    // tan_f64 should NOT be mapped since tan_df64 doesn't exist
     assert!(
         result.contains("tan_f64("),
         "tan_f64 should stay unmapped (no df64 impl)"
@@ -100,11 +43,7 @@ fn test_clamp_f64_range_handles_all_patterns() {
     }
 }
 
-// ══════════════════════════════════════════════════════════════════════
-// End-to-End Tests — real shader patterns through full pipeline
-// ══════════════════════════════════════════════════════════════════════
-
-/// Universal shader with comparison ops validates at all precisions.
+/// Universal shader with comparison ops validates at all 3 tiers.
 const UNIVERSAL_COMPARISON: &str = r"
 @group(0) @binding(0) var<storage, read> a: array<Scalar>;
 @group(0) @binding(1) var<storage, read> b: array<Scalar>;
@@ -137,7 +76,6 @@ fn test_e2e_comparison_shader_all_precisions() {
         v.validate(&module)
             .unwrap_or_else(|e| panic!("{prec:?} comparison validate: {e}"));
     }
-    // DF64
     const DF64_CORE: &str = include_str!("../../shaders/math/df64_core.wgsl");
     const DF64_TRANS: &str = include_str!("../../shaders/math/df64_transcendentals.wgsl");
     let preamble = Precision::Df64.op_preamble();
@@ -206,7 +144,6 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     assert!(f32_source.contains("array<f32>"), "storage downcast");
     assert!(f32_source.contains("tanh("), "tanh_f64 → tanh");
     assert!(!f32_source.contains("f64"), "no f64 should remain");
-    // Parse with naga
     let module = naga::front::wgsl::parse_str(&f32_source)
         .unwrap_or_else(|e| panic!("f32 downcast parse: {e}\n{f32_source}"));
     let mut v = naga::valid::Validator::new(
@@ -217,20 +154,10 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         .unwrap_or_else(|e| panic!("f32 downcast validate: {e}"));
 }
 
-// ══════════════════════════════════════════════════════════════════════
-// Fault Tests — graceful degradation, fallback paths, error recovery
-// ══════════════════════════════════════════════════════════════════════
-
 #[test]
 fn test_fault_preamble_consistency_under_concatenation() {
-    for prec in [
-        Precision::F16,
-        Precision::F32,
-        Precision::F64,
-        Precision::Df64,
-    ] {
+    for prec in [Precision::F32, Precision::F64, Precision::Df64] {
         let p = prec.op_preamble();
-        // Every preamble must have matching open/close braces
         let opens = p.matches('{').count();
         let closes = p.matches('}').count();
         assert_eq!(opens, closes, "{prec:?} preamble has unbalanced braces");
@@ -246,16 +173,7 @@ fn test_fault_downcast_idempotent_f32() {
 }
 
 #[test]
-fn test_fault_downcast_idempotent_f16() {
-    let source = "let x: f64 = f64(1.0);";
-    let once = downcast_f64_to_f16(source);
-    let twice = downcast_f64_to_f16(&once);
-    assert_eq!(once, twice, "double f16 downcast should be idempotent");
-}
-
-#[test]
 fn test_fault_precision_bytes_consistent() {
-    assert_eq!(Precision::F16.bytes_per_element(), 2);
     assert_eq!(Precision::F32.bytes_per_element(), 4);
     assert_eq!(Precision::F64.bytes_per_element(), 8);
     assert_eq!(Precision::Df64.bytes_per_element(), 8);
@@ -263,7 +181,6 @@ fn test_fault_precision_bytes_consistent() {
 
 #[test]
 fn test_fault_precision_is_f64_class() {
-    assert!(!Precision::F16.is_f64_class());
     assert!(!Precision::F32.is_f64_class());
     assert!(Precision::F64.is_f64_class());
     assert!(Precision::Df64.is_f64_class());

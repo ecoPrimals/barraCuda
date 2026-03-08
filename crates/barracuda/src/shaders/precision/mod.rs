@@ -9,37 +9,35 @@ pub mod cpu;
 pub mod eps;
 mod math_f64;
 pub mod polyfill;
-mod templates;
 
 // Re-export public downcast/compiler API for external callers
 pub use compiler::{
-    downcast_f64_to_df64, downcast_f64_to_f16, downcast_f64_to_f32,
-    downcast_f64_to_f32_with_transcendentals,
+    downcast_f64_to_df64, downcast_f64_to_f32, downcast_f64_to_f32_with_transcendentals,
 };
 
-use templates::{
-    TEMPLATE_DOT_PRODUCT, TEMPLATE_ELEMENTWISE_ABS, TEMPLATE_ELEMENTWISE_ADD,
-    TEMPLATE_ELEMENTWISE_CLAMP, TEMPLATE_ELEMENTWISE_FMA, TEMPLATE_ELEMENTWISE_MUL,
-    TEMPLATE_ELEMENTWISE_NEG, TEMPLATE_ELEMENTWISE_SUB, TEMPLATE_MAE_LOSS, TEMPLATE_MSE_LOSS,
-    TEMPLATE_REDUCE_MEAN, TEMPLATE_REDUCE_SUM, TEMPLATE_SAXPY,
-};
-
-/// Supported precision types.
+/// Hardware precision tiers.
 ///
-/// Math is universal — precision is a silicon detail. The same algorithm runs
-/// at every precision; the compilation pipeline (`compile_shader_universal`)
-/// handles type specialization, polyfill injection, and driver patching.
+/// Math is written in f64-canonical WGSL — pure math, conceptually infinite
+/// precision. The compilation pipeline then targets one of three hardware
+/// tiers. This maps directly to coralReef's `Fp64Strategy`:
+///
+/// | Tier | coralReef strategy | Mantissa | Throughput (RTX 3090) |
+/// |------|-------------------|----------|----------------------|
+/// | F32  | `F32Only`         | 24 bits  | ~29,770 GFLOPS       |
+/// | Df64 | `DoubleFloat`     | ~48 bits | ~7,000–10,000 GFLOPS |
+/// | F64  | `Native`          | 52 bits  | ~556 GFLOPS          |
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Precision {
-    /// 16-bit float (half precision) — inference, 2× memory bandwidth
-    F16,
-    /// 32-bit float (single precision) — default, widely supported
+    /// 32-bit float (single precision) — default, broadly supported.
+    /// coralReef: `Fp64Strategy::F32Only`.
     F32,
-    /// 64-bit float (double precision) — scientific computing
+    /// 64-bit float (double precision) — scientific computing, gold standard.
+    /// coralReef: `Fp64Strategy::Native`.
     F64,
     /// Double-float f32-pair (~48-bit mantissa, ~14 decimal digits) —
-    /// unleashes FP32 cores for f64-class work. 9.9× throughput vs native
-    /// f64 on consumer GPUs.
+    /// unleashes FP32 cores for f64-class work. 12–18× throughput vs native
+    /// f64 on consumer GPUs. The "fp48" sweet spot.
+    /// coralReef: `Fp64Strategy::DoubleFloat`.
     Df64,
 }
 
@@ -48,7 +46,6 @@ impl Precision {
     #[must_use]
     pub fn scalar(&self) -> &'static str {
         match self {
-            Precision::F16 => "f16",
             Precision::F32 => "f32",
             Precision::F64 => "f64",
             Precision::Df64 => "vec2<f32>",
@@ -59,7 +56,6 @@ impl Precision {
     #[must_use]
     pub fn vec2(&self) -> &'static str {
         match self {
-            Precision::F16 => "vec2<f16>",
             Precision::F32 => "vec2<f32>",
             Precision::F64 => "f64",
             Precision::Df64 => "vec2<f32>",
@@ -70,7 +66,6 @@ impl Precision {
     #[must_use]
     pub fn vec4(&self) -> &'static str {
         match self {
-            Precision::F16 => "vec4<f16>",
             Precision::F32 => "vec4<f32>",
             Precision::F64 => "f64",
             Precision::Df64 => "vec2<f32>",
@@ -80,14 +75,13 @@ impl Precision {
     /// Whether this precision supports vectorized operations (vec4).
     #[must_use]
     pub fn has_vec4(&self) -> bool {
-        matches!(self, Precision::F16 | Precision::F32)
+        matches!(self, Precision::F32)
     }
 
     /// Bytes per element.
     #[must_use]
     pub fn bytes_per_element(&self) -> usize {
         match self {
-            Precision::F16 => 2,
             Precision::F32 => 4,
             Precision::F64 => 8,
             Precision::Df64 => 8,
@@ -98,7 +92,6 @@ impl Precision {
     #[must_use]
     pub fn required_feature(&self) -> Option<wgpu::Features> {
         match self {
-            Precision::F16 => Some(wgpu::Features::SHADER_F16),
             Precision::F32 => None,
             Precision::F64 => Some(wgpu::Features::SHADER_F64),
             Precision::Df64 => None,
@@ -129,7 +122,6 @@ impl Precision {
             Precision::F32 => OP_PREAMBLE_F32,
             Precision::F64 => OP_PREAMBLE_F64,
             Precision::Df64 => OP_PREAMBLE_DF64,
-            Precision::F16 => OP_PREAMBLE_F16,
         }
     }
 }
@@ -205,29 +197,6 @@ fn op_pack(v: Df64) -> vec2<f32> { return vec2<f32>(v.hi, v.lo); }
 fn op_unpack(v: vec2<f32>) -> Df64 { return Df64(v.x, v.y); }
 ";
 
-/// f16 operation preamble — trivial wrappers.
-const OP_PREAMBLE_F16: &str = r"
-// Universal operation preamble — f16 precision
-alias Scalar = f16;
-fn op_add(a: f16, b: f16) -> f16 { return a + b; }
-fn op_sub(a: f16, b: f16) -> f16 { return a - b; }
-fn op_mul(a: f16, b: f16) -> f16 { return a * b; }
-fn op_div(a: f16, b: f16) -> f16 { return a / b; }
-fn op_neg(a: f16) -> f16 { return -a; }
-fn op_abs(a: f16) -> f16 { return abs(a); }
-fn op_max(a: f16, b: f16) -> f16 { return max(a, b); }
-fn op_min(a: f16, b: f16) -> f16 { return min(a, b); }
-fn op_gt(a: f16, b: f16) -> bool { return a > b; }
-fn op_lt(a: f16, b: f16) -> bool { return a < b; }
-fn op_ge(a: f16, b: f16) -> bool { return a >= b; }
-fn op_le(a: f16, b: f16) -> bool { return a <= b; }
-fn op_from_f32(v: f32) -> f16 { return f16(v); }
-fn op_zero() -> f16 { return f16(0.0); }
-fn op_one() -> f16 { return f16(1.0); }
-fn op_pack(v: f16) -> f16 { return v; }
-fn op_unpack(v: f16) -> f16 { return v; }
-";
-
 /// Inject DF64 pack/unpack helpers for array load/store patterns.
 ///
 /// Converts:
@@ -240,102 +209,17 @@ fn df64_pack(v: Df64) -> vec2<f32> { return vec2<f32>(v.hi, v.lo); }
 fn df64_unpack(v: vec2<f32>) -> Df64 { return Df64(v.x, v.y); }
 ";
 
-/// Shader template with precision placeholders.
-pub struct ShaderTemplate {
-    template: &'static str,
-}
+/// Shader preparation utilities for f64-canonical WGSL.
+///
+/// Provides driver-aware patching, polyfill injection, and ILP optimization.
+/// Math is written once in f64; these utilities prepare it for hardware dispatch.
+///
+/// Transitional: driver patching and polyfill injection exist because the
+/// sovereign dispatch path (coralReef → coralDriver) is not yet integrated.
+/// When coralReef handles compilation end-to-end, these reduce to thin IPC calls.
+pub struct ShaderTemplate;
 
 impl ShaderTemplate {
-    /// Create a new shader template.
-    #[must_use]
-    pub const fn new(template: &'static str) -> Self {
-        Self { template }
-    }
-
-    /// Render the template for the given precision.
-    #[must_use]
-    pub fn render(&self, precision: Precision) -> String {
-        compiler::expand_template(self.template, precision)
-    }
-
-    /// Generate elementwise-add shader for the given precision.
-    #[must_use]
-    pub fn elementwise_add(precision: Precision) -> String {
-        Self::new(TEMPLATE_ELEMENTWISE_ADD).render(precision)
-    }
-
-    /// Generate elementwise-mul shader for the given precision.
-    #[must_use]
-    pub fn elementwise_mul(precision: Precision) -> String {
-        Self::new(TEMPLATE_ELEMENTWISE_MUL).render(precision)
-    }
-
-    /// Generate FMA (fused multiply-add) shader for the given precision.
-    #[must_use]
-    pub fn elementwise_fma(precision: Precision) -> String {
-        Self::new(TEMPLATE_ELEMENTWISE_FMA).render(precision)
-    }
-
-    /// Generate dot-product shader for the given precision.
-    #[must_use]
-    pub fn dot_product(precision: Precision) -> String {
-        Self::new(TEMPLATE_DOT_PRODUCT).render(precision)
-    }
-
-    /// Generate elementwise-sub shader for the given precision.
-    #[must_use]
-    pub fn elementwise_sub(precision: Precision) -> String {
-        Self::new(TEMPLATE_ELEMENTWISE_SUB).render(precision)
-    }
-
-    /// Generate elementwise-abs shader for the given precision.
-    #[must_use]
-    pub fn elementwise_abs(precision: Precision) -> String {
-        Self::new(TEMPLATE_ELEMENTWISE_ABS).render(precision)
-    }
-
-    /// Generate elementwise-neg shader for the given precision.
-    #[must_use]
-    pub fn elementwise_neg(precision: Precision) -> String {
-        Self::new(TEMPLATE_ELEMENTWISE_NEG).render(precision)
-    }
-
-    /// Generate elementwise-clamp shader for the given precision.
-    #[must_use]
-    pub fn elementwise_clamp(precision: Precision) -> String {
-        Self::new(TEMPLATE_ELEMENTWISE_CLAMP).render(precision)
-    }
-
-    /// Generate reduce-sum shader for the given precision.
-    #[must_use]
-    pub fn reduce_sum(precision: Precision) -> String {
-        Self::new(TEMPLATE_REDUCE_SUM).render(precision)
-    }
-
-    /// Generate reduce-mean shader for the given precision.
-    #[must_use]
-    pub fn reduce_mean(precision: Precision) -> String {
-        Self::new(TEMPLATE_REDUCE_MEAN).render(precision)
-    }
-
-    /// Generate MSE loss shader for the given precision.
-    #[must_use]
-    pub fn mse_loss(precision: Precision) -> String {
-        Self::new(TEMPLATE_MSE_LOSS).render(precision)
-    }
-
-    /// Generate MAE loss shader for the given precision.
-    #[must_use]
-    pub fn mae_loss(precision: Precision) -> String {
-        Self::new(TEMPLATE_MAE_LOSS).render(precision)
-    }
-
-    /// Generate SAXPY (y = αx + y) shader for the given precision.
-    #[must_use]
-    pub fn saxpy(precision: Precision) -> String {
-        Self::new(TEMPLATE_SAXPY).render(precision)
-    }
-
     /// Full `math_f64` polyfill preamble for shaders.
     #[must_use]
     pub fn math_f64_preamble() -> String {

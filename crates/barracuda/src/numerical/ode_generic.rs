@@ -192,8 +192,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
 ///
 /// Generates WGSL that works with any precision preamble (f32, f64, df64, f16).
 /// The derivative function must use `Scalar` instead of `f64`.
-/// The appropriate precision preamble is prepended by the device's
-/// `compile_op_shader()` method.
+/// The appropriate precision preamble is prepended at compilation time.
 fn wgsl_rk4_template_universal(n_vars: usize, n_params: usize, derivative_fn: &str) -> String {
     let unroll_state2_from = |k: &str, coeff: &str| {
         (0..n_vars)
@@ -240,7 +239,7 @@ fn wgsl_rk4_template_universal(n_vars: usize, n_params: usize, derivative_fn: &s
 
     format!(
         r"// Generic batched ODE RK4 — universal precision (Scalar/op_*)
-// Precision preamble injected by compile_op_shader()
+// Precision preamble injected at compile time
 
 const N_VARS:   u32 = {n_vars}u;
 const N_PARAMS: u32 = {n_params}u;
@@ -377,8 +376,9 @@ impl<S: OdeSystem> BatchedOdeRK4<S> {
     /// Generate universal-precision WGSL shader using `Scalar`/`op_*`.
     ///
     /// Returns `Some(shader)` if the system provides a universal derivative,
-    /// `None` otherwise. Compile with `compile_op_shader()` and a
-    /// [`Precision`](crate::shaders::precision::Precision) to select precision.
+    /// `None` otherwise. Prepend a precision-specific `op_preamble()` and compile
+    /// via the appropriate pipeline for the target
+    /// [`Precision`](crate::shaders::precision::Precision).
     #[must_use]
     pub fn generate_shader_universal() -> Option<String> {
         S::wgsl_derivative_universal()

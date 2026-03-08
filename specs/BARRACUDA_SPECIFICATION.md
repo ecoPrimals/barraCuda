@@ -117,7 +117,7 @@ Error codes follow JSON-RPC 2.0: -32700 (parse), -32600 (invalid request),
 
 ```
 WGSL source
-  → op_preamble (abstract ops for F16/F32/F64/DF64)
+  → op_preamble (abstract ops for F32/F64/Df64)
   → naga parse → naga IR
   → df64_rewrite (infix → bridge functions, when DF64)
   → sovereign compiler: FMA fusion, dead expression elimination

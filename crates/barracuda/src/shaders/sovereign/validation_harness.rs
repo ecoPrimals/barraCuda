@@ -57,9 +57,6 @@ mod tests {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() {
-                if path.ends_with("templates") {
-                    continue;
-                }
                 collect_wgsl_recursive(&path, out);
             } else if path.extension().is_some_and(|e| e == "wgsl") {
                 out.push(path);

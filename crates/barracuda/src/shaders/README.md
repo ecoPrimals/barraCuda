@@ -1,6 +1,6 @@
 # BarraCuda WGSL Shader Library
 
-**786 Production WGSL Shaders** | Universal Precision (f16/f32/f64/DF64) | Cross-Vendor Compatible
+**786 Production WGSL Shaders** | 3-Tier Precision (f32/f64/df64) | Cross-Vendor Compatible
 
 ---
 
@@ -45,8 +45,8 @@ src/shaders/
 └── tensor/           43  Shape manipulation (Concat, Slice, Reshape, Transpose, etc.)
 ```
 
-**3 additional template/tooling directories** (`precision/`, `sovereign/`, `templates/`)
-contain shader templates and DF64 rewrite infrastructure rather than standalone shaders.
+**2 additional tooling directories** (`precision/`, `sovereign/`)
+contain precision infrastructure and DF64 rewrite tooling rather than standalone shaders.
 
 ---
 
@@ -232,10 +232,10 @@ All shaders follow these conventions:
 - **2D ops**: `@workgroup_size(16, 16)` typically
 - **3D ops**: `@workgroup_size(8, 8, 8)` typically
 
-### Precision (Universal — Math Is Universal, Precision Is Silicon)
-- **Canonical**: All shaders are f64 canonical. f32 generated at runtime via `LazyLock<String>` + `downcast_f64_to_f32()`.
-- **Pipeline**: `compile_shader_universal(source, precision)` routes to f16/f32/f64/DF64.
-- **Abstract ops**: New shaders can use `op_add`/`op_mul` via `compile_op_shader()` for precision-agnostic code.
+### Precision (3-Tier — Aligned with coralReef `Fp64Strategy`)
+- **Canonical**: All shaders are f64-canonical WGSL — pure math, conceptually infinite precision.
+- **3 tiers**: `compile_shader()` (f32), `compile_shader_f64()` (f64), `compile_shader_df64()` (df64/fp48).
+- **Routing**: `fp64_strategy()` selects f64-native vs df64 based on hardware capabilities.
 - **DF64**: `compile_shader_df64()` auto-injects `df64_core.wgsl` + `df64_transcendentals.wgsl`.
 - **FHE**: `u32` for modular arithmetic
 - **Quantization**: `u8`, `i8`, `i4` via bit packing

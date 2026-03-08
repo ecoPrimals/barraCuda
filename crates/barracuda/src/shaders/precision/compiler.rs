@@ -5,9 +5,6 @@
 //! expansion. The "math is universal, precision is silicon" philosophy: one
 //! f64-canonical shader produces variants for all precisions.
 
-use super::Precision;
-use super::templates::remove_conditional_block;
-
 /// Detect whether WGSL source is f64-canonical (contains f64 type declarations).
 ///
 /// Checks for `array<f64>`, struct field / param types (`: f64,`, `: f64;`,
@@ -63,44 +60,6 @@ pub fn clamp_f64_range_literals(source: &str) -> String {
         .replace("1.0e300", "3.4028235e+38")
         .replace("-1e300", "-3.4028235e+38")
         .replace("1e300", "3.4028235e+38")
-}
-
-/// Downcast an f64 shader source to f16 via text substitution.
-///
-/// Same sentinel protection and literal clamping as the f32 downcast.
-/// f16 range is ~65504 so f64-range sentinels need aggressive clamping.
-#[must_use]
-pub fn downcast_f64_to_f16(f64_source: &str) -> String {
-    let result = f64_source
-        .replace("_f64(", "\x00_F64_CALL\x00")
-        .replace("array<f64>", "array<f16>")
-        .replace("array<f64,", "array<f16,")
-        .replace(": f64", ": f16")
-        .replace("-> f64", "-> f16")
-        .replace("f64(", "f16(")
-        .replace("<f64>", "<f16>")
-        .replace("\x00_F64_CALL\x00", "_f64(");
-
-    clamp_f64_range_literals_f16(&result)
-}
-
-/// Replace f64-range sentinel literals with f16-safe equivalents.
-/// f16 max is ~65504.
-#[must_use]
-pub fn clamp_f64_range_literals_f16(source: &str) -> String {
-    source
-        .replace("-1.7976931348623157e+308", "-65504.0")
-        .replace("1.7976931348623157e+308", "65504.0")
-        .replace("-1.0e308", "-65504.0")
-        .replace("1.0e308", "65504.0")
-        .replace("-1e308", "-65504.0")
-        .replace("1e308", "65504.0")
-        .replace("-1.0e300", "-65504.0")
-        .replace("1.0e300", "65504.0")
-        .replace("-1e300", "-65504.0")
-        .replace("1e300", "65504.0")
-        .replace("-3.4028235e+38", "-65504.0")
-        .replace("3.4028235e+38", "65504.0")
 }
 
 /// Downcast an f64 shader source to f32, also replacing polyfill
@@ -177,22 +136,4 @@ pub fn downcast_f64_to_df64(f64_source: &str) -> String {
 
     // Clamp f64-range sentinels to f32-range (DF64 uses f32 components)
     clamp_f64_range_literals(&with_transcendentals)
-}
-
-/// Expand a `{{SCALAR}}`/`{{VEC2}}`/`{{VEC4}}` template for the given precision.
-///
-/// Handles `{{#if HAS_VEC4}}` conditional blocks.
-#[must_use]
-pub fn expand_template(template: &str, precision: Precision) -> String {
-    let mut result = template.to_string();
-    result = result.replace("{{SCALAR}}", precision.scalar());
-    result = result.replace("{{VEC2}}", precision.vec2());
-    result = result.replace("{{VEC4}}", precision.vec4());
-    if precision.has_vec4() {
-        result = result.replace("{{#if HAS_VEC4}}", "");
-        result = result.replace("{{/if}}", "");
-    } else {
-        result = remove_conditional_block(&result, "{{#if HAS_VEC4}}", "{{/if}}");
-    }
-    result
 }

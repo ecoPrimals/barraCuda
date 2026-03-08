@@ -2,31 +2,26 @@
 //! WGSL Shader Infrastructure
 //!
 //! This module provides:
-//! - **Precision-generic shader templates**: ONE source generates f16/f32/f64 shaders
+//! - **3-tier precision model**: f32 / f64 / df64 (fp48) — aligned with coralReef's `Fp64Strategy`
+//! - **Driver-aware shader preparation**: polyfill injection, ILP optimization
 //! - **CPU implementations**: Same algorithms via `num-traits` for CPU fallback
 //! - **Quantized inference shaders**: INT4/INT8 dequantization and GEMV
 //!
 //! # Design Philosophy
 //!
-//! Same math runs on CPU and GPU:
-//! - GPU: WGSL shaders (generated from templates)
-//! - CPU: Rust implementations (via num-traits)
-//!
-//! # Quantized Inference
-//!
-//! For LLM inference with quantized weights (GGUF/llama.cpp):
-//! - `dequant_q4.wgsl`: `Q4_0` dequantization (4-bit weights)
-//! - `dequant_q8.wgsl`: `Q8_0` dequantization (8-bit weights)
-//! - `gemv_q4.wgsl`: On-the-fly Q4 matrix-vector multiply
-//! - `gemv_q8.wgsl`: On-the-fly Q8 matrix-vector multiply
+//! Math is written in f64-canonical WGSL — pure math, conceptually infinite
+//! precision. The compilation pipeline targets one of three hardware tiers:
+//! - **f32** — consumer default, lossy downcast (coralReef: `Fp64Strategy::F32Only`)
+//! - **f64** — scientific computing, native hardware (coralReef: `Fp64Strategy::Native`)
+//! - **df64** — fp48 sweet spot, f32-pair emulation (coralReef: `Fp64Strategy::DoubleFloat`)
 //!
 //! # Usage
 //!
 //! ```rust,ignore
-//! use barracuda::shaders::precision::{Precision, ShaderTemplate};
+//! use barracuda::shaders::precision::ShaderTemplate;
 //!
-//! // Generate f64 shader at runtime
-//! let f64_add = ShaderTemplate::elementwise_add(Precision::F64);
+//! // Prepare f64-canonical shader for driver-aware dispatch
+//! let prepared = ShaderTemplate::for_driver_auto(shader_source, needs_workaround);
 //!
 //! // CPU equivalent (same algorithm)
 //! use barracuda::shaders::precision::cpu;

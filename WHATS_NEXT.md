@@ -65,6 +65,12 @@ Prioritized work items, ordered by impact. Updated 2026-03-08.
   backward-compat fallback; `coral_compiler` decomposed into types/discovery/cache/jsonrpc/client.
 - **`PrecisionRoutingAdvice`** from toadStool S128: `F64Native`, `F64NativeNoSharedMem`, `Df64Only`,
   `F32Only` routing in `GpuDriverProfile::precision_routing()`.
+- **3-tier precision lean-out**: Removed `Precision::F16` (aspirational, zero production callers),
+  `templates.rs` (411-line `{{SCALAR}}` system, zero production callers), `compile_shader_universal`,
+  `compile_op_shader`, `compile_template` (all zero callers). Net -798 lines. Precision model now
+  explicitly 3-tier (F32/F64/Df64), directly aligned with coralReef's `Fp64Strategy`. IPC
+  `CompileWgslRequest` now sends `fp64_strategy` hint alongside legacy `fp64_software` flag.
+  `precision_to_coral_strategy()` maps barraCuda's `Precision` → coralReef's strategy string.
 - **`hill_activation` / `hill_repression`**: Absorbed from neuralSpring `primitives.rs`.
   Amplitude-scaled Hill functions for gene regulatory networks. 9 unit tests.
   `barracuda::stats::{hill_activation, hill_repression}`.
@@ -96,10 +102,10 @@ Prioritized work items, ordered by impact. Updated 2026-03-08.
 
 ## Immediate (P1)
 
-- **DF64 NVK end-to-end verification**: Run `compile_shader_universal(Precision::Df64)` on
-  Yukawa force kernels through NVK/NAK on hardware. Validate sovereign compiler's safe WGSL
-  roundtrip produces correct numerical results across all backends. Probe-aware `fp64_strategy()`
-  is now in place to auto-fallback if native f64 fails.
+- **DF64 NVK end-to-end verification**: Run df64 compilation on Yukawa force kernels through
+  NVK/NAK on hardware. Validate sovereign compiler's safe WGSL roundtrip produces correct
+  numerical results across all backends. Probe-aware `fp64_strategy()` is now in place to
+  auto-fallback if native f64 fails.
 - **coralNAK extraction**: When org repo fork lands, create the sovereign NVIDIA shader
   compiler primal.
 - **Dedicated DF64 shaders for covariance + weighted_dot**: The auto-rewrite works and

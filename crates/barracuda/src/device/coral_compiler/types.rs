@@ -26,12 +26,37 @@ pub(super) struct CompileRequest {
 ///
 /// coralReef Phase 10 (`shader.compile.wgsl`) accepts raw WGSL and handles
 /// the full WGSL → IR → native binary pipeline server-side.
+///
+/// `fp64_strategy` is the Phase 2 field aligned with coralReef's `Fp64Strategy`
+/// enum. `fp64_software` is kept for backward compatibility with Phase 1 servers.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(super) struct CompileWgslRequest {
     pub wgsl_source: String,
     pub arch: String,
     pub opt_level: u32,
     pub fp64_software: bool,
+    /// Precision strategy hint for coralReef (Phase 2).
+    /// Maps to coralReef's `Fp64Strategy`: `"native"`, `"double_float"`, `"f32_only"`.
+    /// Ignored by Phase 1 servers that only read `fp64_software`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fp64_strategy: Option<String>,
+}
+
+/// Map a barraCuda `Precision` tier to coralReef's `Fp64Strategy` string.
+///
+/// This is the interface between barraCuda's precision model and coralReef's
+/// compilation pipeline. barraCuda decides WHICH precision; coralReef decides
+/// HOW to compile it to hardware.
+#[must_use]
+pub fn precision_to_coral_strategy(
+    precision: &crate::shaders::precision::Precision,
+) -> &'static str {
+    use crate::shaders::precision::Precision;
+    match precision {
+        Precision::F32 => "f32_only",
+        Precision::F64 => "native",
+        Precision::Df64 => "double_float",
+    }
 }
 
 /// Compile response — mirrors `coralreef-core::service::CompileResponse`.

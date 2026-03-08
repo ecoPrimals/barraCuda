@@ -132,11 +132,17 @@ impl CoralCompiler {
     ) -> Option<CoralBinary> {
         let addr = self.ensure_connected().await?;
 
+        let fp64_strategy = if fp64_software {
+            Some("native".to_owned())
+        } else {
+            Some("f32_only".to_owned())
+        };
         let request = CompileWgslRequest {
             wgsl_source: wgsl.to_owned(),
             arch: arch.to_owned(),
             opt_level: 2,
             fp64_software,
+            fp64_strategy,
         };
 
         match jsonrpc_call::<CompileWgslRequest, CompileResponse>(

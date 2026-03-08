@@ -11,7 +11,7 @@
 | Category | Grade | Notes |
 |----------|-------|-------|
 | **Core compute** | A | 712 WGSL shaders, 13-tier tolerance architecture, GpuView persistent buffers with ops |
-| **Precision tiers** | A+ | F32/F64/DF64/F16 universal pipeline; DF64 naga-guided rewrite validated; probe-aware Fp64Strategy; DF64 reduce shaders for Hybrid devices; P0 `SumReduceF64`/`VarianceReduceF64` fix |
+| **Precision tiers** | A+ | 3-tier model (F32/F64/Df64) aligned with coralReef `Fp64Strategy`; DF64 naga-guided rewrite validated; probe-aware Fp64Strategy; DF64 reduce shaders for Hybrid devices |
 | **Sovereign compiler** | A | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all shaders |
 | **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery; coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support |
 | **Device management** | A | Multi-GPU, capability-scored discovery, probe-aware f64 strategy, f64 computational accuracy probe, bounded poll timeout, poison-recovering autotune |
@@ -28,7 +28,7 @@
 
 ## What's Working
 
-- Full F32/F64/DF64/F16 precision pipeline with universal shader compilation
+- 3-tier precision model (F32/F64/Df64) aligned with coralReef's `Fp64Strategy`
 - Naga-guided DF64 infix rewrite (compound assignments, comparisons, nested ops)
 - DF64 Hybrid path: 10 ops now fail loudly on rewrite failure instead of silently producing zeros
 - **P0 fix**: `SumReduceF64`/`VarianceReduceF64` now route through DF64 shaders on Hybrid devices (was returning zeros)

@@ -7,19 +7,10 @@ mod precision_chaos_tests;
 fn test_precision_types() {
     assert_eq!(Precision::F32.scalar(), "f32");
     assert_eq!(Precision::F64.scalar(), "f64");
-    assert_eq!(Precision::F16.scalar(), "f16");
+    assert_eq!(Precision::Df64.scalar(), "vec2<f32>");
     assert!(Precision::F32.has_vec4());
     assert!(!Precision::F64.has_vec4());
-}
-
-#[test]
-fn test_shader_generation() {
-    let f32_shader = ShaderTemplate::elementwise_add(Precision::F32);
-    assert!(f32_shader.contains("array<f32>"));
-    assert!(f32_shader.contains("vec4<f32>"));
-    let f64_shader = ShaderTemplate::elementwise_add(Precision::F64);
-    assert!(f64_shader.contains("array<f64>"));
-    assert!(!f64_shader.contains("vec4"));
+    assert!(!Precision::Df64.has_vec4());
 }
 
 #[test]
@@ -127,8 +118,6 @@ const EPSILON: f64 = 1e-15;
 
 #[test]
 fn test_safe_injects_only_called_functions() {
-    // Fossil functions (sqrt_f64) are NOT injected — native sqrt() handles them.
-    // Active fallbacks (cbrt_f64) ARE injected when called.
     let fossil_shader = r"
             @compute @workgroup_size(256)
             fn main(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -195,7 +184,6 @@ fn test_sin_cos_taylor_workaround_asin_acos_protected() {
         CompilerKind, DriverKind, Fp64Rate, GpuArch, GpuDriverProfile, Workaround,
     };
 
-    // NVK profile with sin/cos workaround
     let nvk_profile = GpuDriverProfile {
         driver: DriverKind::Nvk,
         compiler: CompilerKind::Nak,
@@ -234,7 +222,6 @@ fn test_sin_cos_taylor_workaround_asin_acos_protected() {
 
 #[test]
 fn test_for_driver_auto_applies_fossil_substitution() {
-    // for_driver_auto should substitute fossils AND apply exp/log workaround
     let legacy_shader = r"
             @compute @workgroup_size(256)
             fn main(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -244,13 +231,11 @@ fn test_for_driver_auto_applies_fossil_substitution() {
             }
         ";
     let result = ShaderTemplate::for_driver_auto(legacy_shader, true);
-    // sqrt_f64 → sqrt (fossil substitution)
     assert!(
         result.contains("sqrt("),
         "fossil sqrt_f64 must become native sqrt"
     );
     assert!(!result.contains("sqrt_f64("), "fossil name must be gone");
-    // exp → exp_f64 (workaround)
     assert!(result.contains("exp_f64("));
     assert!(
         result.contains("fn exp_f64"),
@@ -398,13 +383,6 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 }
 
 #[test]
-fn test_template_renders_df64() {
-    let shader = ShaderTemplate::elementwise_add(Precision::Df64);
-    assert!(shader.contains("array<vec2<f32>>"));
-    assert!(!shader.contains("vec4"));
-}
-
-#[test]
 fn test_downcast_clamps_f64_range_sentinels() {
     let f64_source = r"
 var max_val: f64 = -1e308;
@@ -534,12 +512,7 @@ fn test_op_preamble_df64_routes_to_library() {
 
 #[test]
 fn test_op_preamble_all_precisions_consistent() {
-    for prec in [
-        Precision::F16,
-        Precision::F32,
-        Precision::F64,
-        Precision::Df64,
-    ] {
+    for prec in [Precision::F32, Precision::F64, Precision::Df64] {
         let p = prec.op_preamble();
         assert!(p.contains("fn op_add("), "{prec:?} missing op_add");
         assert!(p.contains("fn op_mul("), "{prec:?} missing op_mul");
@@ -565,7 +538,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     assert!(df64.contains("array<vec2<f32>>"), "f64 storage → vec2<f32>");
 }
 
-/// A universal shader written with op_* functions — works at ALL precisions.
+/// A universal shader written with op_* functions — works at all 3 precision tiers.
 const UNIVERSAL_ELEMENTWISE_ADD: &str = r"
 @group(0) @binding(0) var<storage, read> a: array<Scalar>;
 @group(0) @binding(1) var<storage, read> b: array<Scalar>;
@@ -612,7 +585,6 @@ fn test_universal_shader_validates_f64() {
 }
 
 /// Prove the universal shader is valid WGSL at DF64 precision via naga parse.
-/// The DF64 path: `df64_core` + `df64_transcendentals` + `op_preamble` + shader.
 #[cfg(feature = "gpu")]
 #[test]
 fn test_universal_shader_validates_df64() {
@@ -665,7 +637,7 @@ fn main(
 }
 ";
 
-/// Prove the universal reduce shader validates at all 3 main precisions.
+/// Prove the universal reduce shader validates at all 3 precision tiers.
 #[cfg(feature = "gpu")]
 #[test]
 fn test_universal_reduce_validates_all_precisions() {
@@ -682,7 +654,6 @@ fn test_universal_reduce_validates_all_precisions() {
             .unwrap_or_else(|e| panic!("{prec:?} reduce validation failed: {e}"));
     }
 
-    // DF64 needs the core library prepended
     const DF64_CORE: &str = include_str!("../../shaders/math/df64_core.wgsl");
     const DF64_TRANSCENDENTALS: &str = include_str!("../../shaders/math/df64_transcendentals.wgsl");
     let preamble = Precision::Df64.op_preamble();

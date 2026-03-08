@@ -51,8 +51,7 @@ Previously limited to Vulkan with SPIR-V passthrough.
 ### P1 — Immediate
 
 #### DF64 NVK End-to-End Verification
-- Run `compile_shader_universal(Precision::Df64)` on Yukawa force kernels
-  through NVK/NAK on hardware
+- Run DF64 compilation on Yukawa force kernels through NVK/NAK on hardware
 - Validate the sovereign compiler's safe WGSL roundtrip produces correct
   numerical results across all backends
 - Probe-aware `fp64_strategy()` is in place for auto-fallback

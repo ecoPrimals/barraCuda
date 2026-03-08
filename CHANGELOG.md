@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — Precision Model Lean-Out (Mar 8 2026)
+
+- **3-tier precision model**: Removed `Precision::F16` (aspirational, zero production callers),
+  `templates.rs` (411-line `{{SCALAR}}` template system, zero production callers),
+  `compile_shader_universal`, `compile_op_shader`, `compile_template` (all zero production callers).
+  Net -798 lines of dead code. `Precision` enum now has exactly 3 variants: `F32`, `F64`, `Df64` —
+  directly aligned with coralReef's `Fp64Strategy::F32Only` / `Native` / `DoubleFloat`.
+- **coralReef IPC precision hint**: `CompileWgslRequest` now includes `fp64_strategy` field
+  (`"native"`, `"double_float"`, `"f32_only"`) alongside the legacy `fp64_software` boolean.
+  `precision_to_coral_strategy()` maps barraCuda's `Precision` to coralReef's strategy string.
+  Phase 1 servers ignore the new field via `serde(skip_serializing_if)`.
+
 ### Added — Deep Debt Evolution Sprint (Mar 8 2026)
 
 - **Fp64Strategy routing for all f64 reduce ops** — `ProdReduceF64`, `NormReduceF64`,

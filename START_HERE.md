@@ -38,7 +38,7 @@ crates/
       shaders/         786 WGSL shaders + sovereign compiler
         math/          DF64 core, transcendentals
         sovereign/     Naga-based compiler (FMA fusion, dead expr, SPIR-V emit)
-        precision/     F32/F64/DF64/F16 universal pipeline
+        precision/     3-tier model: F32/F64/Df64 (aligned with coralReef Fp64Strategy)
       tensor/          Tensor types, GpuView persistent buffers
       ops/             Science operations (FHE, statistics, physics, bio)
       pipeline/        GPU dispatch pipeline, workgroup sizing
@@ -65,15 +65,15 @@ specs/                 Formal specifications
 
 ## Architecture
 
-The precision pipeline is the core abstraction:
+The precision pipeline is the core abstraction. Math is authored in f64 (the
+canonical precision), and barraCuda handles the 3-tier hardware mapping:
 
 ```
 f64 source (the "true math")
-  → compile_shader_universal(source, precision, label)
+  → Precision selected by Fp64Strategy (aligned with coralReef)
     → F32:  downcast types → standard compilation
     → F64:  driver patching → ILP optimization → sovereign compiler → SPIR-V
     → Df64: naga-guided infix rewrite → DF64 library injection → compilation
-    → F16:  downcast types → standard compilation
 ```
 
 The sovereign compiler pipeline:

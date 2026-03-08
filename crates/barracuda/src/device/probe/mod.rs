@@ -35,7 +35,8 @@ use crate::device::WgpuDevice;
 
 pub(crate) use cache::{adapter_key, lock_cache};
 pub use cache::{
-    cached_basic_f64_for_key, cached_f64_builtins, cached_probe_result, seed_cache_from_heuristics,
+    cached_basic_f64_for_key, cached_f64_builtins, cached_probe_result,
+    cached_shared_mem_f64_for_key, seed_cache_from_heuristics,
 };
 pub use capabilities::F64BuiltinCapabilities;
 
@@ -68,6 +69,7 @@ pub async fn probe_f64_builtins(device: &WgpuDevice) -> F64BuiltinCapabilities {
             "sqrt" => caps.sqrt = ok,
             "fma" => caps.fma = ok,
             "abs_min_max" => caps.abs_min_max = ok,
+            "shared_mem_f64" => caps.shared_mem_f64 = ok,
             _ => {}
         }
         if probe.name == "basic_f64" && !ok {
@@ -155,16 +157,18 @@ mod tests {
         assert!(c.needs_exp_log_workaround());
         assert!(c.needs_sin_f64_workaround());
         assert!(c.needs_cos_f64_workaround());
+        assert!(c.needs_shared_mem_f64_workaround());
     }
 
     #[test]
     fn test_f64_caps_full() {
         let c = F64BuiltinCapabilities::full();
-        assert_eq!(c.native_count(), 9);
+        assert_eq!(c.native_count(), 10);
         assert!(c.can_compile_f64());
         assert!(!c.needs_exp_log_workaround());
         assert!(!c.needs_sin_f64_workaround());
         assert!(!c.needs_cos_f64_workaround());
+        assert!(!c.needs_shared_mem_f64_workaround());
     }
 
     #[test]
@@ -180,6 +184,7 @@ mod tests {
             sqrt: true,
             fma: true,
             abs_min_max: true,
+            shared_mem_f64: true,
         };
         assert_eq!(
             c.native_count(),
@@ -189,5 +194,6 @@ mod tests {
         assert!(c.needs_exp_log_workaround());
         assert!(c.needs_sin_f64_workaround());
         assert!(c.needs_cos_f64_workaround());
+        assert!(c.needs_shared_mem_f64_workaround());
     }
 }

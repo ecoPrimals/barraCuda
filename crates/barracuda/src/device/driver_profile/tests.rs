@@ -13,6 +13,17 @@ fn make_profile(rate: Fp64Rate, arch: GpuArch) -> GpuDriverProfile {
     }
 }
 
+fn make_profile_with_driver(rate: Fp64Rate, arch: GpuArch, driver: DriverKind) -> GpuDriverProfile {
+    GpuDriverProfile {
+        driver,
+        compiler: CompilerKind::NvidiaPtxas,
+        arch,
+        fp64_rate: rate,
+        workarounds: vec![],
+        adapter_key: String::new(),
+    }
+}
+
 #[test]
 fn fp64_strategy_native_for_full_rate() {
     let p = make_profile(Fp64Rate::Full, GpuArch::Volta);
@@ -196,5 +207,39 @@ fn fp64_strategy_probed_hybrid_when_probe_fails_on_full_rate() {
         p.fp64_strategy_probed(&caps_fail),
         Fp64Strategy::Hybrid,
         "Probe failure must override Full rate to Hybrid"
+    );
+}
+
+#[test]
+fn ada_proprietary_f64_zeros_risk() {
+    let p = make_profile(Fp64Rate::Throttled, GpuArch::Ada);
+    assert!(
+        p.f64_zeros_risk(),
+        "Ada + proprietary should report f64 zeros risk"
+    );
+}
+
+#[test]
+fn nvk_f64_zeros_risk() {
+    let p = make_profile_with_driver(Fp64Rate::Full, GpuArch::Volta, DriverKind::Nvk);
+    assert!(p.f64_zeros_risk(), "NVK should report f64 zeros risk");
+}
+
+#[test]
+fn ampere_proprietary_no_f64_zeros_risk() {
+    let p = make_profile(Fp64Rate::Throttled, GpuArch::Ampere);
+    assert!(
+        !p.f64_zeros_risk(),
+        "Ampere + proprietary should NOT report f64 zeros risk"
+    );
+}
+
+#[test]
+fn ada_proprietary_precision_routing_no_shared_mem() {
+    let p = make_profile(Fp64Rate::Throttled, GpuArch::Ada);
+    assert_eq!(
+        p.precision_routing(),
+        PrecisionRoutingAdvice::F64NativeNoSharedMem,
+        "Ada + proprietary should route to F64NativeNoSharedMem"
     );
 }

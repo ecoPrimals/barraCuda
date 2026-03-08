@@ -65,6 +65,16 @@ Prioritized work items, ordered by impact. Updated 2026-03-08.
   backward-compat fallback; `coral_compiler` decomposed into types/discovery/cache/jsonrpc/client.
 - **`PrecisionRoutingAdvice`** from toadStool S128: `F64Native`, `F64NativeNoSharedMem`, `Df64Only`,
   `F32Only` routing in `GpuDriverProfile::precision_routing()`.
+- **`hill_activation` / `hill_repression`**: Absorbed from neuralSpring `primitives.rs`.
+  Amplitude-scaled Hill functions for gene regulatory networks. 9 unit tests.
+  `barracuda::stats::{hill_activation, hill_repression}`.
+- **Ada Lovelace `F64NativeNoSharedMem` reclassification**: RTX 4000-series + proprietary
+  driver now routes to `F64NativeNoSharedMem` instead of `Df64Only`. `f64_zeros_risk()` extended
+  to cover Ada + proprietary. groundSpring P0 request resolved.
+- **`shared_mem_f64` runtime probe**: New empirical probe in `device::probe` verifies
+  `var<workgroup> array<f64, 4>` reductions produce correct results. `precision_routing()`
+  and heuristic seed now use probe result. `needs_shared_mem_f64_workaround()` added to
+  `F64BuiltinCapabilities`. Native count: 9 → 10. groundSpring P1 request resolved.
 - **`BatchedOdeRK45F64`**: Full-trajectory adaptive Dormand-Prince integrator on GPU with
   host-side step-size control (wetSpring V95, 18.5× fewer steps than RK4).
 - **`mean_variance_to_buffer()`**: GPU-resident fused Welford — output stays as buffer for
@@ -95,6 +105,8 @@ Prioritized work items, ordered by impact. Updated 2026-03-08.
 - **Dedicated DF64 shaders for covariance + weighted_dot**: The auto-rewrite works and
   the native f64 path is now fixed via `create_f64_data_pipeline()`. Hand-written DF64
   shaders (like variance/correlation already have) would be more robust on Hybrid devices.
+- **`BatchedTridiagEigh` GPU op**: groundSpring local QL implicit eigensolver is a candidate
+  for absorption as a batched GPU tridiagonal eigenvector solver.
 
 ## Near-term (P2)
 

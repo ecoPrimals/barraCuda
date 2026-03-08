@@ -37,6 +37,10 @@ pub struct F64BuiltinCapabilities {
     pub fma: bool,
     /// `abs(f64)`, `min(f64, f64)`, `max(f64, f64)` — bit-level ops, always work
     pub abs_min_max: bool,
+    /// `var<workgroup>` f64 reduction — writes f64 to shared memory, barriers,
+    /// reads back. Fails on NVK/NAK and Ada Lovelace proprietary where
+    /// shared-memory f64 accumulators return zeros.
+    pub shared_mem_f64: bool,
 }
 
 impl F64BuiltinCapabilities {
@@ -54,6 +58,7 @@ impl F64BuiltinCapabilities {
             sqrt: false,
             fma: false,
             abs_min_max: false,
+            shared_mem_f64: false,
         }
     }
 
@@ -71,6 +76,7 @@ impl F64BuiltinCapabilities {
             sqrt: true,
             fma: true,
             abs_min_max: true,
+            shared_mem_f64: true,
         }
     }
 
@@ -99,6 +105,15 @@ impl F64BuiltinCapabilities {
         !self.basic_f64 || !self.cos
     }
 
+    /// Whether `var<workgroup>` f64 shared-memory reductions need a workaround.
+    ///
+    /// When `true`, reduction shaders must use scalar f64 accumulation or
+    /// DF64 workgroup accumulators instead of native `var<workgroup> array<f64>`.
+    #[must_use]
+    pub fn needs_shared_mem_f64_workaround(&self) -> bool {
+        !self.basic_f64 || !self.shared_mem_f64
+    }
+
     /// Total count of natively-supported functions (excluding `basic_f64` gate).
     #[must_use]
     pub fn native_count(&self) -> u8 {
@@ -115,6 +130,7 @@ impl F64BuiltinCapabilities {
             self.sqrt,
             self.fma,
             self.abs_min_max,
+            self.shared_mem_f64,
         ]
         .iter()
         .filter(|&&b| b)
@@ -143,6 +159,7 @@ impl std::fmt::Display for F64BuiltinCapabilities {
             sym(self.sqrt),
             sym(self.fma)
         )?;
-        write!(f, "    abs/min/max={}", sym(self.abs_min_max))
+        writeln!(f, "    abs/min/max={}", sym(self.abs_min_max))?;
+        write!(f, "    shared_mem_f64={}", sym(self.shared_mem_f64))
     }
 }

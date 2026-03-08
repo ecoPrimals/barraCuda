@@ -136,4 +136,20 @@ pub(super) const PROBES: &[ProbeShader] = &[
         expected: 3.5,
         tolerance: PROBE_F64_TOLERANCE_TIGHT,
     },
+    ProbeShader {
+        name: "shared_mem_f64",
+        wgsl: "enable f64;\n\
+               @group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
+               var<workgroup> shared: array<f64, 4>;\n\
+               @compute @workgroup_size(4)\n\
+               fn probe(@builtin(local_invocation_id) lid: vec3<u32>) {\n\
+                   shared[lid.x] = f64(lid.x + 1u);\n\
+                   workgroupBarrier();\n\
+                   if lid.x == 0u {\n\
+                       out[0] = shared[0] + shared[1] + shared[2] + shared[3];\n\
+                   }\n\
+               }",
+        expected: 10.0,
+        tolerance: PROBE_F64_TOLERANCE_TIGHT,
+    },
 ];

@@ -276,6 +276,40 @@ pub fn hill(x: f64, k: f64, n: f64) -> f64 {
     xn / (k.powf(n) + xn)
 }
 
+/// Hill activation: amplitude-scaled sigmoidal increase.
+///
+/// f(x) = amplitude * x^n / (k^n + x^n)
+///
+/// Returns 0 when x ≤ 0, approaches `amplitude` as x → ∞.
+/// Used in gene regulatory networks (biofilm production, virulence expression).
+///
+/// Cross-spring absorption from neuralSpring `primitives::hill_activation`.
+#[inline]
+#[must_use]
+pub fn hill_activation(x: f64, amplitude: f64, k: f64, n: f64) -> f64 {
+    if x <= 0.0 {
+        return 0.0;
+    }
+    amplitude * hill(x, k, n)
+}
+
+/// Hill repression: amplitude-scaled sigmoidal decrease.
+///
+/// f(x) = amplitude * k^n / (k^n + x^n)
+///
+/// Returns `amplitude` when x ≤ 0, approaches 0 as x → ∞.
+/// Used in gene regulatory networks (motility suppression by quorum sensing).
+///
+/// Cross-spring absorption from neuralSpring `primitives::hill_repression`.
+#[inline]
+#[must_use]
+pub fn hill_repression(x: f64, amplitude: f64, k: f64, n: f64) -> f64 {
+    if x <= 0.0 {
+        return amplitude;
+    }
+    amplitude * (1.0 - hill(x, k, n))
+}
+
 /// Monod kinetics: saturation growth rate.
 ///
 /// f(x) = r * x / (k + x)
@@ -441,6 +475,55 @@ mod tests {
     #[test]
     fn hill_zero_input() {
         assert!(hill(0.0, 5.0, 2.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn hill_activation_zero_input() {
+        assert!(hill_activation(0.0, 10.0, 5.0, 2.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn hill_activation_midpoint() {
+        assert!((hill_activation(5.0, 10.0, 5.0, 1.0) - 5.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn hill_activation_large_x() {
+        assert!((hill_activation(1000.0, 1.0, 5.0, 2.0) - 1.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn hill_activation_negative_input() {
+        assert!(hill_activation(-1.0, 10.0, 5.0, 2.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn hill_repression_zero_input() {
+        assert!((hill_repression(0.0, 10.0, 5.0, 2.0) - 10.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn hill_repression_midpoint() {
+        assert!((hill_repression(5.0, 10.0, 5.0, 1.0) - 5.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn hill_repression_large_x() {
+        assert!(hill_repression(1000.0, 1.0, 5.0, 2.0) < 0.001);
+    }
+
+    #[test]
+    fn hill_repression_negative_input() {
+        assert!((hill_repression(-1.0, 10.0, 5.0, 2.0) - 10.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn hill_activation_repression_complement() {
+        let x = 3.0;
+        let a = 7.0;
+        let k = 4.0;
+        let n = 2.5;
+        assert!((hill_activation(x, a, k, n) + hill_repression(x, a, k, n) - a).abs() < 1e-12);
     }
 
     #[test]

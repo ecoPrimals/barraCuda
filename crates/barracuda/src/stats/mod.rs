@@ -122,8 +122,8 @@ pub use hydrology::{
 pub use jackknife::JackknifeMeanGpu;
 pub use jackknife::{JackknifeResult, jackknife, jackknife_mean_variance};
 pub use metrics::{
-    dot, hill, hit_rate, index_of_agreement, l2_norm, mae, mbe, mean, monod, nash_sutcliffe,
-    percentile, r_squared, rmse,
+    dot, hill, hill_activation, hill_repression, hit_rate, index_of_agreement, l2_norm, mae, mbe,
+    mean, monod, nash_sutcliffe, percentile, r_squared, rmse,
 };
 pub use moving_window_f64::{MovingWindowResultF64, moving_window_stats_f64};
 pub use normal::{norm_cdf, norm_cdf_batch, norm_pdf, norm_pdf_batch, norm_ppf};

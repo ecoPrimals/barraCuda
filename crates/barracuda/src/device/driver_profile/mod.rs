@@ -336,15 +336,29 @@ impl GpuDriverProfile {
             return PrecisionRoutingAdvice::Df64Only;
         }
 
+        let shared_mem_fails = matches!(
+            crate::device::probe::cache::cached_shared_mem_f64_for_key(&self.adapter_key),
+            Some(false)
+        );
+
         match self.fp64_rate {
             Fp64Rate::Full => {
-                if self.driver == DriverKind::Nvk {
+                if shared_mem_fails || self.driver == DriverKind::Nvk {
                     PrecisionRoutingAdvice::F64NativeNoSharedMem
                 } else {
                     PrecisionRoutingAdvice::F64Native
                 }
             }
-            Fp64Rate::Throttled | Fp64Rate::Minimal => PrecisionRoutingAdvice::Df64Only,
+            Fp64Rate::Throttled | Fp64Rate::Minimal => {
+                if shared_mem_fails
+                    || (self.driver == DriverKind::NvidiaProprietary
+                        && self.arch == architectures::GpuArch::Ada)
+                {
+                    PrecisionRoutingAdvice::F64NativeNoSharedMem
+                } else {
+                    PrecisionRoutingAdvice::Df64Only
+                }
+            }
             Fp64Rate::Software => PrecisionRoutingAdvice::F32Only,
         }
     }
@@ -419,12 +433,17 @@ impl GpuDriverProfile {
     ///
     /// NVK on Titan V and some consumer NVIDIA GPUs advertise `Float64` in
     /// wgpu features, but shared-memory f64 accumulators return zeros for
-    /// reduction operations. This flag allows springs to skip or guard f64
+    /// reduction operations. Ada Lovelace on proprietary drivers exhibits
+    /// the same shared-memory f64 reduction failures despite basic f64 compute
+    /// working correctly. This flag allows springs to skip or guard f64
     /// reduction tests on affected hardware.
     #[must_use]
     pub fn f64_zeros_risk(&self) -> bool {
-        self.driver == DriverKind::Nvk
-            && matches!(self.fp64_rate, Fp64Rate::Full | Fp64Rate::Throttled)
+        let nvk_risk = self.driver == DriverKind::Nvk
+            && matches!(self.fp64_rate, Fp64Rate::Full | Fp64Rate::Throttled);
+        let ada_proprietary_risk = self.driver == DriverKind::NvidiaProprietary
+            && self.arch == architectures::GpuArch::Ada;
+        nvk_risk || ada_proprietary_risk
     }
 
     /// Return the `LatencyModel` appropriate for this GPU architecture.

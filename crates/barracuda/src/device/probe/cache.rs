@@ -61,6 +61,7 @@ pub fn seed_cache_from_heuristics(device: &WgpuDevice) {
     let mut cache = lock_cache(&F64_CAPS_CACHE);
     cache.entry(key.clone()).or_insert_with(|| {
         let exp_log_works = !device.needs_f64_exp_log_workaround();
+        let shared_mem_works = !device.is_nvk();
         F64BuiltinCapabilities {
             basic_f64: true,
             exp: exp_log_works,
@@ -72,6 +73,7 @@ pub fn seed_cache_from_heuristics(device: &WgpuDevice) {
             sqrt: true,
             fma: true,
             abs_min_max: true,
+            shared_mem_f64: shared_mem_works,
         }
     });
     let exp_capable = cache.get(&key).is_some_and(|c| c.exp);
@@ -88,6 +90,17 @@ pub fn seed_cache_from_heuristics(device: &WgpuDevice) {
 #[must_use]
 pub fn cached_basic_f64_for_key(key: &str) -> Option<bool> {
     lock_cache(&F64_CAPS_CACHE).get(key).map(|c| c.basic_f64)
+}
+
+/// Check if the cached probe indicates `var<workgroup>` f64 reductions work.
+///
+/// Returns `Some(true)` if shared-memory f64 reductions pass the probe,
+/// `Some(false)` if they produce zeros, `None` if not yet probed.
+#[must_use]
+pub fn cached_shared_mem_f64_for_key(key: &str) -> Option<bool> {
+    lock_cache(&F64_CAPS_CACHE)
+        .get(key)
+        .map(|c| c.shared_mem_f64)
 }
 
 pub(super) fn insert_full_caps(key: String, caps: F64BuiltinCapabilities) {

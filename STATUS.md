@@ -2,7 +2,7 @@
 
 **Version**: 0.3.3
 **Date**: 2026-03-08
-**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,700+ tests, 3,105 pass on llvmpipe, systematic f64 pipeline fix)
+**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,700+ tests, 3,118 pass on llvmpipe, systematic f64 pipeline fix, cross-spring absorptions)
 
 ---
 
@@ -15,14 +15,14 @@
 | **Sovereign compiler** | A | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all shaders |
 | **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery; coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support |
 | **Device management** | A | Multi-GPU, capability-scored discovery, probe-aware f64 strategy, f64 computational accuracy probe, bounded poll timeout, poison-recovering autotune |
-| **Test coverage** | A | 3,700+ total tests (3,105 in lib suite); proptest; chaos/fault test tiers; nextest CI/stress profiles; bounded GPU poll timeout prevents hangs; thread-local GPU throttling for `cargo test` stability; f64 ops gated on `get_test_device_if_f64_gpu_available` |
+| **Test coverage** | A | 3,700+ total tests (3,118 in lib suite); proptest; chaos/fault test tiers; nextest CI/stress profiles; bounded GPU poll timeout prevents hangs; thread-local GPU throttling for `cargo test` stability; f64 ops gated on `get_test_device_if_f64_gpu_available` |
 | **Dependencies** | A- | Pure Rust chain (blake3 pure); zero non-GPU external C deps; wgpu/naga 28 for GPU |
 | **Documentation** | A | Comprehensive CHANGELOG, specs, README, CONTRIBUTING, CONVENTIONS, BREAKING_CHANGES; all rustdoc warnings resolved |
 | **Unsafe code** | A+ | Zero `unsafe` blocks in entire codebase |
 | **Clippy / lint** | A+ | Zero warnings with pedantic + unwrap_used; `#[expect(reason)]` for clippy suppressions; `#[allow(dead_code, reason)]` for CPU reference implementations; `bytes::Bytes` zero-copy on I/O boundaries; zero undocumented suppressions |
 | **Error handling** | A+ | Binary `main()` uses typed `BarracudaCoreError` (not `Box<dyn Error>`); `From` impls for `serde_json::Error`, `BarracudaError`, `io::Error`; `Result` propagation throughout; `let-else` throughout; poison recovery |
 | **Idiomatic Rust** | A+ | Edition 2024; zero `too_many_arguments` (all 9 → builder/struct); documented `#[allow]`/`#[expect]` with reason; `#[derive(Default)]`; zero unsafe; `ChamferDirection` enum; smart module decomposition (provenance, coral_compiler) |
-| **Spring absorption** | A+ | Cross-spring P0/P1/P2 items resolved (Mar 8); DF64 reduce fix for groundSpring/neuralSpring; builder re-exports for wetSpring; `dot`/`l2_norm` for springs; canary/test utils; NVK guard; GpuView ops; all shader targets verified absorbed |
+| **Spring absorption** | A+ | Cross-spring P0/P1/P2 items resolved (Mar 8); `hill_activation`/`hill_repression` from neuralSpring; Ada Lovelace `F64NativeNoSharedMem` (groundSpring P0); `shared_mem_f64` runtime probe (groundSpring P1); DF64 reduce fix; builder re-exports for wetSpring; `dot`/`l2_norm` for springs; canary/test utils; NVK guard; GpuView ops; all shader targets verified absorbed |
 
 ---
 
@@ -35,7 +35,10 @@
 - Builder type re-exports at `barracuda::{HmmForwardArgs, Dada2DispatchArgs, GillespieModel, PrecisionRoutingAdvice, Rk45DispatchArgs}`
 - `barracuda::math::{dot, l2_norm}` for springs to drop local implementations
 - `fused_ops_healthy()` canary, `is_software_adapter()`, `baseline_path()` in test harness
-- `GpuDriverProfile::f64_zeros_risk()` for NVK shared-memory f64 detection
+- `GpuDriverProfile::f64_zeros_risk()` for NVK + Ada Lovelace proprietary shared-memory f64 detection
+- `barracuda::stats::{hill_activation, hill_repression}` — Hill kinetics for regulatory networks
+- Ada Lovelace + proprietary → `F64NativeNoSharedMem` precision routing (probe-aware)
+- `shared_mem_f64` runtime probe — empirically verifies `var<workgroup>` f64 reductions on hardware
 - `GpuViewF64::{mean_variance, sum, correlation}` ops for zero-readback chains
 - Sovereign compiler: WGSL → naga IR → FMA fusion → dead expr elimination → optimised WGSL (safe, all backends)
 - Sovereign validation harness: pure-Rust traversal + parse + optimize + validate of all WGSL shaders

@@ -36,7 +36,7 @@
 //! | Module | Content |
 //! |--------|---------|
 //! | `constants` | LCG constants and CPU PRNG (test reference) |
-//! | `cpu_complex` | Complex64 CPU arithmetic (test reference) |
+//! | `cpu_complex` | Complex64 CPU arithmetic (runtime — used by `special::plasma_dispersion`) |
 //! | `cpu_su3` | SU(3) CPU matrix ops (test reference) |
 //! | `wilson` | Wilson lattice CPU (test reference) |
 //! | `cpu_dirac` | Dirac/CG CPU solver (test reference) |
@@ -75,8 +75,7 @@ pub mod plaquette;
 /// LCG PRNG and lattice constants (used at runtime by `HostRng`).
 pub mod constants;
 
-// CPU reference implementations — test-only
-#[cfg(test)]
+// Complex64 is used at runtime by special::plasma_dispersion (ISSUE-006 absorption).
 pub mod cpu_complex;
 #[cfg(test)]
 pub mod cpu_dirac;

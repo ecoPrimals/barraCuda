@@ -74,6 +74,16 @@ impl Complex64 {
             im: self.im * s,
         }
     }
+
+    /// Multiplicative inverse: 1/z.
+    #[inline]
+    pub fn inv(self) -> Self {
+        let d = self.abs_sq();
+        Self {
+            re: self.re / d,
+            im: -self.im / d,
+        }
+    }
 }
 
 impl Add for Complex64 {
@@ -129,6 +139,28 @@ impl MulAssign for Complex64 {
     #[inline]
     fn mul_assign(&mut self, rhs: Self) {
         *self = *self * rhs;
+    }
+}
+
+impl Mul<f64> for Complex64 {
+    type Output = Self;
+    #[inline]
+    fn mul(self, rhs: f64) -> Self {
+        Self {
+            re: self.re * rhs,
+            im: self.im * rhs,
+        }
+    }
+}
+
+impl Mul<Complex64> for f64 {
+    type Output = Complex64;
+    #[inline]
+    fn mul(self, rhs: Complex64) -> Complex64 {
+        Complex64 {
+            re: self * rhs.re,
+            im: self * rhs.im,
+        }
     }
 }
 
@@ -191,5 +223,25 @@ mod tests {
         assert!((a.abs() - 5.0).abs() < 1e-15);
         let c = a.conj();
         assert!((c.im - (-4.0)).abs() < 1e-15);
+    }
+
+    #[test]
+    fn complex_inv() {
+        let a = Complex64::new(1.0, 1.0);
+        let inv = a.inv();
+        let product = a * inv;
+        assert!((product.re - 1.0).abs() < 1e-14);
+        assert!(product.im.abs() < 1e-14);
+    }
+
+    #[test]
+    fn complex_scalar_mul() {
+        let a = Complex64::new(2.0, 3.0);
+        let r = a * 4.0;
+        assert!((r.re - 8.0).abs() < 1e-15);
+        assert!((r.im - 12.0).abs() < 1e-15);
+        let r2 = 4.0 * a;
+        assert!((r2.re - 8.0).abs() < 1e-15);
+        assert!((r2.im - 12.0).abs() < 1e-15);
     }
 }

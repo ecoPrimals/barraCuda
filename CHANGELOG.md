@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — healthSpring / hotSpring Absorption Sprint (Mar 9 2026)
+
+- **Hill dose-response (Emax)**: `HillFunctionF64` evolved from normalized `[0,1]` Hill to
+  full dose-response `E(x) = Emax × xⁿ / (Kⁿ + xⁿ)` with `dose_response()` constructor
+  and `emax` field. Backward compatible — `new()` defaults to `emax = 1.0`.
+  Absorbed from healthSpring `hill_dose_response_f64.wgsl`.
+- **Population PK Monte Carlo** (`PopulationPkF64`): GPU-vectorized Monte Carlo
+  simulation of inter-individual clearance variability. Wang hash + xorshift32 PRNG,
+  configurable dose/bioavailability/clearance parameters. Evolved from healthSpring
+  hardcoded values to fully parameterized. New shader `population_pk_f64.wgsl`.
+- **Plasma dispersion W(z) and Z(z)** (`special::plasma_dispersion`): CPU-side
+  numerically stable implementations absorbed from hotSpring `dielectric.rs`. Addresses
+  ISSUE-006 (GPU f64 catastrophic cancellation) with stable branch for |z| ≥ 4.
+- **Complex64 evolution**: `inv()` and `Mul<f64>` added to lattice `Complex64` type,
+  promoted from test-only to runtime (needed by `plasma_dispersion`).
+
 ### Changed — Deep Debt Evolution Sprint (Mar 9 2026)
 
 - **Hot-path clone elimination**: `DeviceInfo::name` (`String` → `Arc<str>`),

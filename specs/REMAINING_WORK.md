@@ -6,6 +6,20 @@
 
 ---
 
+## Achieved (March 9, 2026 — healthSpring / hotSpring Absorption)
+
+### healthSpring Absorptions
+- **Hill dose-response (Emax)**: `HillFunctionF64` evolved to full `E(x) = Emax × xⁿ / (Kⁿ + xⁿ)` — `dose_response()` constructor, `emax` field, 3 new GPU tests
+- **Population PK Monte Carlo**: `PopulationPkF64` op — GPU-vectorized virtual patient simulation with Wang hash + xorshift32 PRNG, fully parameterized (dose, bioavailability, clearance range), 6 GPU tests
+- **New WGSL shader**: `shaders/science/population_pk_f64.wgsl`
+
+### hotSpring Absorptions
+- **Plasma dispersion W(z) and Z(z)**: `special::plasma_dispersion` module — CPU-side numerically stable implementations for Vlasov susceptibility. Addresses ISSUE-006 catastrophic cancellation with direct asymptotic expansion for |z| ≥ 4. 8 unit tests.
+- **Complex64 evolution**: `inv()` and `Mul<f64>` added; `cpu_complex` promoted from `#[cfg(test)]` to runtime module
+
+### neuralSpring Alignment
+- **head_split / head_concat WGSL**: Confirmed equivalent index math between barraCuda (f64, entry `main`) and neuralSpring (f32, named entries). No changes needed — already absorbed.
+
 ## Achieved (March 9, 2026 — Deep Debt Sprint)
 
 ### Concurrency and Hot-Path Evolution

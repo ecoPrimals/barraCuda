@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! `HillFunctionF64` — element-wise Hill kinetic activation (f64 precision)
+//! `HillFunctionF64` — element-wise Hill dose-response activation (f64 precision)
 //!
-//! `Hill(x, K, n) = xⁿ / (Kⁿ + xⁿ)`
+//! `E(x) = Emax × xⁿ / (Kⁿ + xⁿ)`
 //!
 //! Used in:
 //! - Quorum-sensing / c-di-GMP regulatory cascades (wetSpring)
 //! - Michaelis-Menten kinetics (Hill with n=1)
 //! - Cooperativity models (ligand binding with n>1)
+//! - Drug dose-response curves (healthSpring absorption)
 //! - PFAS degradation rate models
+//!
+//! Set `emax = 1.0` for the normalized Hill activation in \[0, 1\].
 
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
@@ -22,17 +25,23 @@ struct HillParamsGpu {
     _pad: u32,
     k: f64,
     n: f64,
+    emax: f64,
 }
 
-/// Element-wise Hill activation: `Hill(x_i, K, n) = x_iⁿ / (Kⁿ + x_iⁿ)`
+/// Element-wise Hill dose-response: `E(x_i) = Emax × x_iⁿ / (Kⁿ + x_iⁿ)`
 ///
-/// Output is in [0, 1]; inputs are clamped to ≥ 0 before evaluation.
+/// Output is in \[0, Emax\]; inputs are clamped to ≥ 0 before evaluation.
+/// With `emax = 1.0` this is the classic normalized Hill activation.
 ///
 /// # Example
 /// ```ignore
 /// // Autoinducer concentrations → HapR activation probabilities
-/// let activations = HillFunctionF64::new(device, K_h, n_h)
+/// let activations = HillFunctionF64::new(device, K_h, n_h)?
 ///     .apply(&autoinducer_concs)?;
+///
+/// // Drug dose-response with 95% max efficacy
+/// let responses = HillFunctionF64::dose_response(device, ec50, hill_n, 0.95)?
+///     .apply(&drug_concentrations)?;
 /// ```
 pub struct HillFunctionF64 {
     device: Arc<WgpuDevice>,
@@ -40,6 +49,8 @@ pub struct HillFunctionF64 {
     pub k: f64,
     /// Hill coefficient n (cooperativity exponent; 1 = Michaelis-Menten).
     pub n: f64,
+    /// Maximum effect (Emax). Default 1.0 for normalized output.
+    pub emax: f64,
 }
 
 impl HillFunctionF64 {
@@ -49,11 +60,23 @@ impl HillFunctionF64 {
 
     /// Create a Hill activation with the given K (EC₅₀) and cooperativity n.
     ///
+    /// Emax defaults to 1.0 (normalized Hill in \[0, 1\]).
+    ///
     /// # Errors
     ///
-    /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
-    /// readback fails (e.g. device lost or out of memory).
+    /// Returns [`Err`] if K or n are not positive.
     pub fn new(device: Arc<WgpuDevice>, k: f64, n: f64) -> Result<Self> {
+        Self::dose_response(device, k, n, 1.0)
+    }
+
+    /// Create a Hill dose-response with explicit Emax.
+    ///
+    /// `E(x) = emax × xⁿ / (Kⁿ + xⁿ)`
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if K, n, or emax are not positive.
+    pub fn dose_response(device: Arc<WgpuDevice>, k: f64, n: f64, emax: f64) -> Result<Self> {
         if k <= 0.0 {
             return Err(BarracudaError::InvalidInput {
                 message: format!("HillFunctionF64: K must be > 0, got {k}"),
@@ -64,10 +87,15 @@ impl HillFunctionF64 {
                 message: format!("HillFunctionF64: n must be > 0, got {n}"),
             });
         }
-        Ok(Self { device, k, n })
+        if emax <= 0.0 {
+            return Err(BarracudaError::InvalidInput {
+                message: format!("HillFunctionF64: emax must be > 0, got {emax}"),
+            });
+        }
+        Ok(Self { device, k, n, emax })
     }
 
-    /// Apply Hill activation element-wise.
+    /// Apply Hill dose-response element-wise.
     ///
     /// `input` is a flat f64 slice. Returns a flat f64 Vec of the same length.
     ///
@@ -87,6 +115,7 @@ impl HillFunctionF64 {
             _pad: 0,
             k: self.k,
             n: self.n,
+            emax: self.emax,
         };
 
         let params_buf = dev
@@ -225,8 +254,6 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        // With n=1, Hill reduces to Michaelis-Menten: x/(K+x)
-        // At x=K the activation should be 0.5
         let k = 10.0_f64;
         let hill = HillFunctionF64::new(device, k, 1.0).unwrap();
         let result = hill.apply(&[0.0, k, 2.0 * k, 100.0 * k]).unwrap();
@@ -245,7 +272,6 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        // With n=2 (cooperative), Hill(K,K,2) = K²/(K²+K²) = 0.5 still
         let k = 5.0_f64;
         let hill = HillFunctionF64::new(device, k, 2.0).unwrap();
         let result = hill.apply(&[k]).unwrap();
@@ -267,5 +293,64 @@ mod tests {
         for &v in &result {
             assert!((0.0..=1.0).contains(&v), "Hill output out of [0,1]: {v}");
         }
+    }
+
+    #[tokio::test]
+    async fn test_dose_response_emax() {
+        let Some(device) = get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let ec50 = 10.0_f64;
+        let emax = 0.95;
+        let hill = HillFunctionF64::dose_response(device, ec50, 2.0, emax).unwrap();
+        let result = hill.apply(&[0.0, ec50, 100.0 * ec50]).unwrap();
+
+        assert!(result[0].abs() < 1e-10, "E(0)=0");
+        assert!(
+            (result[1] - emax * 0.5).abs() < 1e-9,
+            "E(EC50)=Emax/2, got {}",
+            result[1]
+        );
+        assert!(
+            (result[2] - emax).abs() < 0.01,
+            "E(100×EC50)≈Emax, got {}",
+            result[2]
+        );
+    }
+
+    #[tokio::test]
+    async fn test_dose_response_output_bounded_by_emax() {
+        let Some(device) = get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let emax = 42.0;
+        let vals: Vec<f64> = (0..=200).map(|i| i as f64).collect();
+        let hill = HillFunctionF64::dose_response(device, 50.0, 1.0, emax).unwrap();
+        let result = hill.apply(&vals).unwrap();
+        for &v in &result {
+            assert!(
+                (0.0..=emax).contains(&v),
+                "dose-response output {v} exceeds Emax {emax}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_dose_response_validation() {
+        let Some(device) = get_test_device_if_gpu_available().await else {
+            return;
+        };
+        assert!(
+            HillFunctionF64::dose_response(device.clone(), 10.0, 1.0, -1.0).is_err(),
+            "negative emax should fail"
+        );
+        assert!(
+            HillFunctionF64::dose_response(device.clone(), 10.0, 1.0, 0.0).is_err(),
+            "zero emax should fail"
+        );
+        assert!(
+            HillFunctionF64::dose_response(device, 10.0, 1.0, 0.5).is_ok(),
+            "positive emax should succeed"
+        );
     }
 }

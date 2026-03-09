@@ -6,6 +6,17 @@ Prioritized work items, ordered by impact. Updated 2026-03-09.
 
 ## Recently Completed
 
+- **healthSpring Hill dose-response absorption**: `HillFunctionF64` evolved to support
+  Emax parameter (`dose_response()` constructor). Output now `[0, Emax]` instead of
+  fixed `[0, 1]`. Backward compatible — `new()` defaults to `emax = 1.0`. 3 new tests.
+- **healthSpring Population PK Monte Carlo**: New `PopulationPkF64` op with
+  `population_pk_f64.wgsl` shader. GPU-vectorized virtual patient simulation with
+  Wang hash + xorshift32 PRNG. Fully parameterized (no hardcoded CL ranges). 6 tests.
+- **hotSpring plasma dispersion W(z)/Z(z)**: `special::plasma_dispersion` module with
+  CPU-side numerically stable implementations. Direct asymptotic expansion for |z| ≥ 4
+  avoids catastrophic cancellation (ISSUE-006). 8 tests. `Complex64` promoted to runtime.
+- **neuralSpring head_split/head_concat alignment**: Confirmed equivalent index math —
+  both compute `[B,S,D] ↔ [B,H,S,D/H]` with identical memory layout. No changes needed.
 - **P0: `SumReduceF64`/`VarianceReduceF64` `Fp64Strategy` fix**: Created DF64 shader
   variants (`sum_reduce_df64.wgsl`, `variance_reduce_df64.wgsl`) that use `vec2<f32>`
   workgroup memory instead of native f64. Added `Fp64Strategy` routing so Hybrid

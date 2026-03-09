@@ -36,6 +36,8 @@
 //! | `hermite(n, x)` | ✅ | ✅ | Physicist's Hermite Hₙ(x) |
 //! | `legendre(n, x)` | ✅ | ✅ | Legendre Pₙ(x) |
 //! | `assoc_legendre(n, m, x)` | ✅ | — | Associated Pₙᵐ(x) |
+//! | `plasma_dispersion_z(z)` | ✅ | ✅ | Z(z) power series / asymptotic |
+//! | `plasma_dispersion_w(z)` | ✅ | ✅ | W(z) = 1+z·Z(z), stable branch |
 //!
 //! # Precision
 //!
@@ -80,6 +82,7 @@ pub mod gamma;
 pub mod hermite;
 pub mod laguerre;
 pub mod legendre;
+pub mod plasma_dispersion;
 #[cfg(feature = "gpu")]
 pub mod screened_coulomb;
 
@@ -102,6 +105,7 @@ pub use gamma::{
 pub use hermite::hermite;
 pub use laguerre::{laguerre, laguerre_all, laguerre_simple};
 pub use legendre::{assoc_legendre, legendre};
+pub use plasma_dispersion::{plasma_dispersion_w, plasma_dispersion_w_stable, plasma_dispersion_z};
 #[cfg(feature = "gpu")]
 pub use screened_coulomb::screened_coulomb_eigenvalues;
 

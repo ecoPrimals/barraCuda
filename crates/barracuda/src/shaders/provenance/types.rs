@@ -21,6 +21,8 @@ impl SpringDomain {
     pub const AIR_SPRING: Self = Self("airSpring");
     /// Condensed matter, Anderson localization, noise validation
     pub const GROUND_SPRING: Self = Self("groundSpring");
+    /// Human health, PK/PD, biosignals, microbiome
+    pub const HEALTH_SPRING: Self = Self("healthSpring");
     /// Internal barraCuda primitive (no spring origin)
     pub const BARRACUDA: Self = Self("barraCuda");
 }

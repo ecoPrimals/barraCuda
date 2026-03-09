@@ -3,6 +3,7 @@
 
 use super::*;
 use crate::device::test_pool::get_test_device_if_gpu_available;
+use crate::device::test_pool::test_prelude::with_device_retry;
 
 #[tokio::test]
 async fn test_expand_basic() {
@@ -161,53 +162,30 @@ async fn test_expand_2d_broadcast_second_dim() {
 
 #[tokio::test]
 async fn test_expand_2d_broadcast_first_dim() {
-    let Some(dev) = get_test_device_if_gpu_available().await else {
-        return;
-    };
-    // (1, 5) → (4, 5): broadcast first dim
     let input_data: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-    let input = Tensor::from_vec_on(input_data.clone(), vec![1, 5], dev.clone())
-        .await
-        .unwrap();
-    let expand_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        input.expand_wgsl(vec![4, 5])
-    }));
-    let result = match expand_result {
-        Ok(Ok(r)) => r,
-        Ok(Err(e)) if e.is_retriable() => {
-            tracing::warn!("expand failed (retriable): {e}");
-            return;
-        }
-        Ok(Err(e)) => panic!("expand failed: {e}"),
-        Err(_) => {
-            tracing::warn!("expand caught wgpu panic (buffer invalid on llvmpipe) — skipping");
-            return;
-        }
-    };
-    let output = match result.to_vec() {
-        Ok(v) => v,
-        Err(e) if e.is_retriable() => {
-            tracing::warn!("expand readback failed (retriable): {e}");
-            return;
-        }
-        Err(e) => panic!("expand readback failed: {e}"),
-    };
+    with_device_retry(|device| {
+        let input_data = input_data.clone();
+        async move {
+            let input = Tensor::from_vec_on(input_data.clone(), vec![1, 5], device).await?;
+            let result = input.expand_wgsl(vec![4, 5])?;
+            let output = result.to_vec()?;
 
-    assert_eq!(result.shape(), &vec![4, 5]);
-    // All rows should be the same: [1,2,3,4,5]
-    for i in 0..4 {
-        for j in 0..5 {
-            let idx = i * 5 + j;
-            assert!(
-                (output[idx] - input_data[j]).abs() < 1e-6,
-                "Expected {} at [{}, {}], got {}",
-                input_data[j],
-                i,
-                j,
-                output[idx]
-            );
+            assert_eq!(result.shape(), &vec![4, 5]);
+            for i in 0..4 {
+                for j in 0..5 {
+                    let idx = i * 5 + j;
+                    assert!(
+                        (output[idx] - input_data[j]).abs() < 1e-6,
+                        "Expected {} at [{i}, {j}], got {}",
+                        input_data[j],
+                        output[idx]
+                    );
+                }
+            }
+            Ok(())
         }
-    }
+    })
+    .await;
 }
 
 #[tokio::test]

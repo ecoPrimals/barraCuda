@@ -176,33 +176,18 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::device::test_pool::test_prelude::with_device_retry;
 
     #[tokio::test]
     async fn test_erf() {
-        let device = crate::device::test_pool::get_test_device_if_gpu_available().await;
-        let Some(device) = device else {
-            return;
-        };
-        let data = vec![0.0, 1.0, 2.0, 3.0, 4.0];
-        let input = Tensor::new(data, vec![5], device.clone());
-        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| input.erf()));
-        match result {
-            Ok(Ok(output)) => match output.to_vec() {
-                Ok(values) => assert!(values.iter().all(|&x| x.is_finite())),
-                Err(e) if e.is_retriable() => {
-                    tracing::warn!("erf readback failed (retriable): {e}");
-                }
-                Err(e) => panic!("erf readback failed: {e}"),
-            },
-            Ok(Err(e)) if e.is_retriable() => {
-                tracing::warn!("erf execution failed (retriable): {e}");
-            }
-            Ok(Err(e)) => panic!("erf execution failed: {e}"),
-            Err(_) => {
-                tracing::warn!(
-                    "erf test caught wgpu panic (buffer invalid on llvmpipe) — skipping"
-                );
-            }
-        }
+        with_device_retry(|dev| async move {
+            let data = vec![0.0, 1.0, 2.0, 3.0, 4.0];
+            let input = Tensor::new(data, vec![5], dev);
+            let output = input.erf()?;
+            let values = output.to_vec()?;
+            assert!(values.iter().all(|&x| x.is_finite()));
+            Ok(())
+        })
+        .await;
     }
 }

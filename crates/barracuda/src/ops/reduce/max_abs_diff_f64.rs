@@ -25,6 +25,7 @@
 //! ```
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -155,7 +156,7 @@ impl MaxAbsDiffF64 {
 
         // Two-pass reduction
         let n = a.len();
-        let wg_size = 256;
+        let wg_size = WORKGROUP_SIZE_1D as usize;
         let n_workgroups = n.div_ceil(wg_size);
 
         // Create input buffers

@@ -432,6 +432,75 @@ impl UnidirectionalPipeline {
         self.output_buffer.available_read()
     }
 
+    /// Notify the pipeline that the GPU has written `bytes` into the output ring.
+    ///
+    /// Call this after a compute dispatch writes results to `output_gpu_buffer()`.
+    pub fn advance_output(&mut self, bytes: usize) {
+        self.output_buffer.advance_write(bytes);
+    }
+
+    /// Poll for completed results, reading output data from the GPU.
+    ///
+    /// Drains in-flight work that has corresponding output data available and
+    /// returns them as `CompletedWork` items. Up to `max` items are returned
+    /// per call; pass `None` for unbounded drain.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the GPU readback fails (e.g. device lost).
+    pub async fn poll_results(&mut self, max: Option<usize>) -> Result<Vec<CompletedWork>> {
+        let available = self.output_buffer.available_read();
+        if available == 0 || self.in_flight.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let data = self.output_buffer.read(Some(available)).await?;
+        if data.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let limit = max
+            .unwrap_or(self.in_flight.len())
+            .min(self.in_flight.len());
+        let mut results = Vec::with_capacity(limit);
+
+        let chunk_size = if limit > 0 { data.len() / limit } else { 0 };
+
+        for i in 0..limit {
+            if let Some((id, submitted_at)) = self.in_flight.pop_front() {
+                let start = i * chunk_size;
+                let end = if i + 1 == limit {
+                    data.len()
+                } else {
+                    (i + 1) * chunk_size
+                };
+                let chunk = data.slice(start..end);
+                let latency = submitted_at.elapsed();
+
+                let latency_ns = latency.as_nanos() as u64;
+                self.stats.completed += 1;
+                self.stats.output_bytes += chunk.len() as u64;
+                if self.stats.completed == 1 {
+                    self.stats.avg_latency_ns = latency_ns;
+                } else {
+                    let n = self.stats.completed;
+                    self.stats.avg_latency_ns =
+                        (self.stats.avg_latency_ns * (n - 1) + latency_ns) / n;
+                }
+                self.stats.max_latency_ns = self.stats.max_latency_ns.max(latency_ns);
+
+                results.push(CompletedWork {
+                    id,
+                    data: chunk,
+                    latency,
+                });
+            }
+        }
+
+        self.update_throughput();
+        Ok(results)
+    }
+
     /// Get count of in-flight work units
     pub fn in_flight_count(&self) -> usize {
         self.in_flight.len()

@@ -10,6 +10,7 @@
 //! - Energy integrals: ∫ρ(r)V(r)dr via quadrature
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, create_f64_data_pipeline};
 use crate::device::tensor_context::get_device_context;
@@ -139,7 +140,7 @@ impl WeightedDotF64 {
 
     fn weighted_dot_gpu(&self, weights: &[f64], a: &[f64], b: &[f64]) -> Result<f64> {
         let n = weights.len();
-        let workgroup_size = 256;
+        let workgroup_size = WORKGROUP_SIZE_1D as usize;
         let n_workgroups = n.div_ceil(workgroup_size);
         let ctx = get_device_context(&self.device);
 

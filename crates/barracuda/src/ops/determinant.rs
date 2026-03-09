@@ -129,6 +129,7 @@ impl Determinant {
 mod tests {
     use super::*;
     use crate::device::test_pool::get_test_device_if_gpu_available;
+    use crate::device::test_pool::test_prelude::with_device_retry;
 
     #[tokio::test]
     async fn test_determinant_basic() {
@@ -154,55 +155,26 @@ mod tests {
 
     #[tokio::test]
     async fn test_determinant_edge_cases() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
-
-        let run = |dev: std::sync::Arc<crate::device::WgpuDevice>| -> crate::error::Result<()> {
-            let rt = tokio::runtime::Handle::current();
-            let matrix = rt.block_on(Tensor::from_vec_on(vec![5.0], vec![1, 1], dev.clone()))?;
+        with_device_retry(|dev| async move {
+            let matrix = Tensor::from_vec_on(vec![5.0], vec![1, 1], dev.clone()).await?;
             let det = Determinant::new(matrix)?.execute()?;
             let result = det.to_vec()?;
             assert!((result[0] - 5.0).abs() < 1e-5);
 
-            let matrix = rt.block_on(Tensor::from_vec_on(
-                vec![1.0, 2.0, 2.0, 4.0],
-                vec![2, 2],
-                dev.clone(),
-            ))?;
+            let matrix =
+                Tensor::from_vec_on(vec![1.0, 2.0, 2.0, 4.0], vec![2, 2], dev.clone()).await?;
             let det = Determinant::new(matrix)?.execute()?;
             let result = det.to_vec()?;
             assert!(result[0].abs() < 1e-5, "Singular matrix should have det=0");
 
-            let matrix = rt.block_on(Tensor::from_vec_on(
-                vec![1.0, 0.0, 0.0, 1.0],
-                vec![2, 2],
-                dev,
-            ))?;
+            let matrix = Tensor::from_vec_on(vec![1.0, 0.0, 0.0, 1.0], vec![2, 2], dev).await?;
             let det = Determinant::new(matrix)?.execute()?;
             let result = det.to_vec()?;
             assert!((result[0] - 1.0).abs() < 1e-5);
 
             Ok(())
-        };
-
-        let dev = device.clone();
-        let outcome = tokio::task::spawn_blocking(move || {
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run(dev)))
         })
         .await;
-
-        match outcome {
-            Ok(Ok(Ok(()))) => {}
-            Ok(Ok(Err(e))) if e.is_retriable() => {
-                tracing::warn!("determinant edge cases: retriable ({e}) — skipping");
-            }
-            Ok(Ok(Err(e))) => panic!("determinant edge cases failed: {e}"),
-            Ok(Err(_)) => {
-                tracing::warn!("determinant caught wgpu panic (llvmpipe) — skipping");
-            }
-            Err(e) => panic!("task join failed: {e}"),
-        }
     }
 
     #[tokio::test]

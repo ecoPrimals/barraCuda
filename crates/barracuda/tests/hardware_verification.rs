@@ -144,6 +144,7 @@ impl HardwareInventory {
 
 /// Runs a cross-vendor GPU test, skipping when adapters lack required features
 /// (Validation Error, doesn't support) in addition to NVK driver issues.
+/// Bounded by `GPU_TEST_TIMEOUT` to prevent indefinite hangs.
 fn run_cross_vendor_resilient_async<F, Fut>(f: F) -> bool
 where
     F: FnOnce() -> Fut + Send + std::panic::UnwindSafe + 'static,
@@ -154,7 +155,17 @@ where
             .enable_all()
             .build()
             .expect("failed to build test runtime");
-        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| rt.block_on(f())))
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            rt.block_on(async {
+                assert!(
+                    tokio::time::timeout(barracuda::device::test_pool::GPU_TEST_TIMEOUT, f())
+                        .await
+                        .is_ok(),
+                    "Cross-vendor GPU test timed out after {:?}",
+                    barracuda::device::test_pool::GPU_TEST_TIMEOUT,
+                );
+            });
+        }))
     });
 
     match handle.join().expect("test thread panicked") {
@@ -172,7 +183,7 @@ where
                 || msg.contains("doesn't support")
                 || msg.contains("is no longer alive");
             if skip {
-                eprintln!("Cross-vendor test skipped: {msg}");
+                tracing::warn!("Cross-vendor test skipped: {msg}");
                 false
             } else {
                 std::panic::resume_unwind(e);

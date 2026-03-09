@@ -35,7 +35,7 @@ pub use types::{CoralBinary, HealthResponse, arch_to_coral};
 
 use jsonrpc::{jsonrpc_call, wgsl_to_spirv};
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 use types::{CompileRequest, CompileResponse, CompileWgslRequest};
 
 /// Connection state for the coralReef IPC client.
@@ -44,17 +44,19 @@ enum ConnectionState {
     /// Haven't tried connecting yet.
     Uninit,
     /// Connected to a JSON-RPC endpoint.
-    Connected { addr: String },
+    Connected { addr: Arc<str> },
     /// Discovery failed or connection refused — don't retry until reset.
     Unavailable,
 }
 
 /// IPC client for the coralReef shader compiler primal.
 ///
-/// Lazily discovers coralReef on first use. Thread-safe via interior mutex.
+/// Lazily discovers coralReef on first use. Thread-safe via interior `RwLock`
+/// — concurrent compile requests share the read lock while discovery and
+/// reset take the write lock.
 #[derive(Debug)]
 pub struct CoralCompiler {
-    state: Arc<Mutex<ConnectionState>>,
+    state: Arc<RwLock<ConnectionState>>,
 }
 
 impl CoralCompiler {
@@ -62,7 +64,7 @@ impl CoralCompiler {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            state: Arc::new(Mutex::new(ConnectionState::Uninit)),
+            state: Arc::new(RwLock::new(ConnectionState::Uninit)),
         }
     }
 
@@ -195,28 +197,44 @@ impl CoralCompiler {
     }
 
     /// Ensure we have a connection, discovering coralReef if needed.
-    async fn ensure_connected(&self) -> Option<String> {
-        let mut state = self.state.lock().await;
-        match &*state {
-            ConnectionState::Connected { addr } => Some(addr.clone()),
-            ConnectionState::Unavailable => None,
-            ConnectionState::Uninit => {
-                if let Some(addr) = discover_coralreef().await {
-                    tracing::info!(addr = %addr, "discovered coralReef compiler service");
-                    *state = ConnectionState::Connected { addr: addr.clone() };
-                    Some(addr)
-                } else {
-                    tracing::debug!("coralReef not available — using standard compilation path");
-                    *state = ConnectionState::Unavailable;
-                    None
-                }
+    ///
+    /// Fast path (read lock): returns the cached address if already connected.
+    /// Slow path (write lock): performs discovery on first use.
+    async fn ensure_connected(&self) -> Option<Arc<str>> {
+        {
+            let state = self.state.read().await;
+            match &*state {
+                ConnectionState::Connected { addr } => return Some(Arc::clone(addr)),
+                ConnectionState::Unavailable => return None,
+                ConnectionState::Uninit => {}
             }
+        }
+
+        let mut state = self.state.write().await;
+        // Re-check after acquiring write lock (another task may have connected).
+        match &*state {
+            ConnectionState::Connected { addr } => return Some(Arc::clone(addr)),
+            ConnectionState::Unavailable => return None,
+            ConnectionState::Uninit => {}
+        }
+
+        if let Some(addr) = discover_coralreef().await {
+            tracing::info!(addr = %addr, "discovered coralReef compiler service");
+            let addr: Arc<str> = Arc::from(addr);
+            *state = ConnectionState::Connected {
+                addr: Arc::clone(&addr),
+            };
+            Some(addr)
+        } else {
+            tracing::debug!("coralReef not available — using standard compilation path");
+            *state = ConnectionState::Unavailable;
+            None
         }
     }
 
     /// Reset connection state, forcing re-discovery on next use.
     pub async fn reset(&self) {
-        let mut state = self.state.lock().await;
+        let mut state = self.state.write().await;
         *state = ConnectionState::Uninit;
     }
 }
@@ -375,7 +393,7 @@ mod tests {
             assert!(!h.version.is_empty());
         }
         cc.reset().await;
-        let state = cc.state.lock().await;
+        let state = cc.state.read().await;
         assert!(matches!(&*state, ConnectionState::Uninit));
     }
 
@@ -392,12 +410,12 @@ mod tests {
     async fn test_connection_state_transitions() {
         let cc = CoralCompiler::new();
         {
-            let state = cc.state.lock().await;
+            let state = cc.state.read().await;
             assert!(matches!(&*state, ConnectionState::Uninit));
         }
         let _ = cc.health().await;
         {
-            let state = cc.state.lock().await;
+            let state = cc.state.read().await;
             assert!(
                 matches!(&*state, ConnectionState::Connected { .. })
                     || matches!(&*state, ConnectionState::Unavailable)

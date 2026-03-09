@@ -6,6 +6,7 @@
 //! diffraction patterns, heat conduction in cylinders
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, create_f64_data_pipeline};
 use crate::device::tensor_context::get_device_context;
@@ -130,7 +131,7 @@ impl BesselJ0F64 {
             Some("BesselJ0 Pipeline"),
         );
 
-        let workgroups = size.div_ceil(256) as u32;
+        let workgroups = size.div_ceil(WORKGROUP_SIZE_1D as usize) as u32;
         ctx.record_operation(move |encoder| {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("BesselJ0 Pass"),

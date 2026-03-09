@@ -56,7 +56,7 @@ mod tests {
             .for_input();
 
         assert_eq!(config.capacity, 1024 * 1024);
-        assert_eq!(config.label, Some("test_buffer".to_string()));
+        assert_eq!(config.label.as_deref(), Some("test_buffer"));
         assert_eq!(config.direction, BufferDirection::HostToDevice);
     }
 }

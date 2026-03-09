@@ -55,6 +55,32 @@ use pipelines::SessionPipelines;
 use std::sync::Arc;
 use types::{MatMulTier, SessionOp};
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+/// Dimensions for multi-head attention operations.
+///
+/// Consolidates the 4 dimension parameters shared by `attention`,
+/// `head_split`, and `head_concat` into a single config struct.
+#[derive(Debug, Clone, Copy)]
+pub struct AttentionDims {
+    /// Batch size (B)
+    pub batch_size: usize,
+    /// Number of attention heads (H)
+    pub n_heads: usize,
+    /// Sequence length (S)
+    pub seq_len: usize,
+    /// Head dimension (D)
+    pub head_dim: usize,
+}
+
+impl AttentionDims {
+    /// Total elements: B × H × S × D
+    #[must_use]
+    pub const fn total_elements(&self) -> usize {
+        self.batch_size * self.n_heads * self.seq_len * self.head_dim
+    }
+}
+
 // ─── TensorSession ─────────────────────────────────────────────────────────────
 
 /// Session for batching tensor operations.
@@ -347,60 +373,52 @@ impl TensorSession {
 
     /// Reshape `[B, S, H*D]` → `[B, H, S, D]` for multi-head attention.
     /// # Errors
-    /// Returns [`Err`] if `a.len()` does not equal `batch_size × seq_len × n_heads × head_dim`.
-    pub fn head_split(
-        &mut self,
-        a: &SessionTensor,
-        batch_size: usize,
-        seq_len: usize,
-        n_heads: usize,
-        head_dim: usize,
-    ) -> Result<SessionTensor> {
-        let expected = batch_size * seq_len * n_heads * head_dim;
+    /// Returns [`Err`] if `a.len()` does not equal the product of all
+    /// `dims` fields.
+    pub fn head_split(&mut self, a: &SessionTensor, dims: &AttentionDims) -> Result<SessionTensor> {
+        let expected = dims.total_elements();
         if a.len() != expected {
             return Err(BarracudaError::InvalidInput {
                 message: format!("head_split: input len {} ≠ B×S×H×D={expected}", a.len()),
             });
         }
-        let out_shape = [batch_size, n_heads, seq_len, head_dim];
+        let out_shape = [dims.batch_size, dims.n_heads, dims.seq_len, dims.head_dim];
         let out = self.alloc_output(&out_shape);
         self.ops.push(SessionOp::HeadSplit {
             input: a.buffer_id,
             output: out,
-            batch_size: batch_size as u32,
-            seq_len: seq_len as u32,
-            num_heads: n_heads as u32,
-            head_dim: head_dim as u32,
+            batch_size: dims.batch_size as u32,
+            seq_len: dims.seq_len as u32,
+            num_heads: dims.n_heads as u32,
+            head_dim: dims.head_dim as u32,
         });
         Ok(self.make_tensor(out, &out_shape))
     }
 
     /// Reshape `[B, H, S, D]` → `[B, S, H*D]` after multi-head attention.
     /// # Errors
-    /// Returns [`Err`] if `a.len()` does not equal `batch_size × n_heads × seq_len × head_dim`.
+    /// Returns [`Err`] if `a.len()` does not equal the product of all
+    /// `dims` fields.
     pub fn head_concat(
         &mut self,
         a: &SessionTensor,
-        batch_size: usize,
-        seq_len: usize,
-        n_heads: usize,
-        head_dim: usize,
+        dims: &AttentionDims,
     ) -> Result<SessionTensor> {
-        let expected = batch_size * n_heads * seq_len * head_dim;
+        let expected = dims.total_elements();
         if a.len() != expected {
             return Err(BarracudaError::InvalidInput {
                 message: format!("head_concat: input len {} ≠ B×H×S×D={expected}", a.len()),
             });
         }
-        let out_shape = [batch_size, seq_len, n_heads * head_dim];
+        let out_shape = [dims.batch_size, dims.seq_len, dims.n_heads * dims.head_dim];
         let out = self.alloc_output(&out_shape);
         self.ops.push(SessionOp::HeadConcat {
             input: a.buffer_id,
             output: out,
-            batch_size: batch_size as u32,
-            seq_len: seq_len as u32,
-            num_heads: n_heads as u32,
-            head_dim: head_dim as u32,
+            batch_size: dims.batch_size as u32,
+            seq_len: dims.seq_len as u32,
+            num_heads: dims.n_heads as u32,
+            head_dim: dims.head_dim as u32,
         });
         Ok(self.make_tensor(out, &out_shape))
     }
@@ -410,18 +428,15 @@ impl TensorSession {
     /// Encoded as 3 passes in a single encoder batch.
     /// # Errors
     /// Returns [`Err`] if any of `q`, `k`, or `v` has length not equal to
-    /// `batch_size × n_heads × seq_len × head_dim`.
+    /// the product of all `dims` fields.
     pub fn attention(
         &mut self,
         q: &SessionTensor,
         k: &SessionTensor,
         v: &SessionTensor,
-        batch_size: usize,
-        n_heads: usize,
-        seq_len: usize,
-        head_dim: usize,
+        dims: &AttentionDims,
     ) -> Result<SessionTensor> {
-        let expected = batch_size * n_heads * seq_len * head_dim;
+        let expected = dims.total_elements();
         for (name, t) in [("q", q), ("k", k), ("v", v)] {
             if t.len() != expected {
                 return Err(BarracudaError::InvalidInput {
@@ -429,17 +444,17 @@ impl TensorSession {
                 });
             }
         }
-        let out_shape = [batch_size, n_heads, seq_len, head_dim];
+        let out_shape = [dims.batch_size, dims.n_heads, dims.seq_len, dims.head_dim];
         let out = self.alloc_output(&out_shape);
         self.ops.push(SessionOp::Attention {
             q: q.buffer_id,
             k: k.buffer_id,
             v: v.buffer_id,
             output: out,
-            batch_size: batch_size as u32,
-            num_heads: n_heads as u32,
-            seq_len: seq_len as u32,
-            head_dim: head_dim as u32,
+            batch_size: dims.batch_size as u32,
+            num_heads: dims.n_heads as u32,
+            seq_len: dims.seq_len as u32,
+            head_dim: dims.head_dim as u32,
         });
         Ok(self.make_tensor(out, &out_shape))
     }

@@ -313,7 +313,7 @@ pub mod prelude {
     #[cfg(feature = "gpu")]
     pub use crate::resource_quota::{QuotaTracker, ResourceQuota, presets as quota_presets};
     #[cfg(feature = "gpu")]
-    pub use crate::session::{SessionTensor, TensorSession};
+    pub use crate::session::{AttentionDims, SessionTensor, TensorSession};
     #[cfg(all(feature = "gpu", feature = "domain-snn"))]
     pub use crate::snn::{SNNConfig, SNNLayer, SpikingNetwork};
     #[cfg(feature = "gpu")]

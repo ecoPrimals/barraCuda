@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — Deep Debt Evolution Sprint (Mar 9 2026)
+
+- **Hot-path clone elimination**: `DeviceInfo::name` (`String` → `Arc<str>`),
+  `RingBufferConfig::label` (`String` → `Option<Arc<str>>`), `CoralCompiler::state`
+  (`Mutex` → `RwLock` with `Arc<str>`)
+- **Ring buffer back-off**: `write()` evolved from million-iteration `spin_loop()` to
+  staged back-off (256 spins → 4096 `yield_now()` calls, ~100ms wall-clock budget)
+- **Workgroup size consolidation**: 10 f64 ops evolved from hardcoded `256` to
+  `WORKGROUP_SIZE_1D` constant (weighted_dot, digamma, bessel_k0/j0, prod_reduce,
+  norm_reduce, variance_reduce, sum_reduce, max_abs_diff ×2)
+- **Magic number extraction**: VRAM caps (`VRAM_CAP_PROFESSIONAL`, `_CONSUMER_HIGH`,
+  `_CONSERVATIVE`), dispatch thresholds (`DISCRETE_`, `INTEGRATED_`, `OTHER_THRESHOLD`),
+  scoring weights (`PREFERRED_VENDOR_BONUS`, `DISCRETE_BONUS`, `IDLE_BONUS`)
+- **`max_allocation_size()`**: Float round-trip → integer arithmetic (`/ 4 * 3`)
+- **Test evolution**: `catch_unwind` → `with_device_retry` for GPU tests (erf, erfc,
+  expand, determinant); `eprintln!` → `tracing::warn!` in hardware verification
+- **IPC safe casts**: `parse_shape()` helper with `usize::try_from` instead of `as usize`
+- **Streaming pipeline**: `GpuRingBuffer::read()`, `advance_write()`,
+  `UnidirectionalPipeline::poll_results()` for GPU→CPU data flow
+- **`AttentionDims` config struct**: Replaces 4-argument attention functions
+
 ### Added — Showcase Collection (Mar 9 2026)
 
 - **`showcase/` directory**: 10 progressive demos across 3 tiers, following

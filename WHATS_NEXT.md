@@ -114,6 +114,25 @@ Prioritized work items, ordered by impact. Updated 2026-03-09.
   `CompletedWork.data` now return `Bytes` instead of `Vec<u8>`.
 - **Deep audit**: lint migration (#[allow] → #[expect] where valid), eprintln → tracing,
   RPC String parameter documentation, CI coverage with --ignore-run-fail.
+- **Hot-path clone elimination**: `DeviceInfo::name` (`String` → `Arc<str>`),
+  `RingBufferConfig::label` (`String` → `Option<Arc<str>>`), `CoralCompiler::state`
+  (`Mutex` → `RwLock` with `Arc<str>` addresses).
+- **Ring buffer back-off**: `write()` spin-wait evolved from million-iteration `spin_loop()`
+  to staged back-off (256 spins → 4096 `yield_now()` calls, ~100ms budget).
+- **Workgroup size consolidation**: 10 f64 ops (`weighted_dot`, `digamma`, `bessel_k0`,
+  `bessel_j0`, `prod_reduce`, `norm_reduce`, `variance_reduce`, `sum_reduce`,
+  `max_abs_diff` ×2) evolved from hardcoded `256` to `WORKGROUP_SIZE_1D` constant.
+- **Magic number extraction**: `max_allocation_size()` float round-trip → integer arithmetic;
+  `sanitize_max_buffer_size` VRAM caps, `gpu_dispatch_threshold` levels, and
+  `DeviceRequirements::score()` weights all extracted to named constants.
+- **Test fragility resolved**: GPU tests (erf, erfc, expand, determinant) evolved from
+  `catch_unwind` to `with_device_retry` — production recovery pattern.
+- **Streaming pipeline completion**: `GpuRingBuffer::read()`, `advance_write()`, and
+  `UnidirectionalPipeline::poll_results()` implemented for GPU→CPU data flow.
+- **`AttentionDims` config struct**: Replaces 4-argument attention/head_split/head_concat
+  with typed struct (builder pattern).
+- **IPC `as` casts → `try_from`**: `parse_shape()` helper with safe `usize::try_from`.
+- **External dependency audit**: All deps confirmed pure Rust — fully ecoBin compliant.
 
 ---
 

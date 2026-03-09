@@ -11,6 +11,8 @@
 //! - Power-of-two capacity for efficient modulo via bitmask
 //! - Zero unsafe code
 
+use bytes::Bytes;
+
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
@@ -32,8 +34,8 @@ pub struct RingBufferConfig {
     pub capacity: usize,
     /// Data flow direction
     pub direction: BufferDirection,
-    /// Optional label for debugging
-    pub label: Option<String>,
+    /// Optional label for debugging (`Arc<str>` for zero-alloc clone)
+    pub label: Option<Arc<str>>,
 }
 
 const DEFAULT_RING_BUFFER_BYTES: usize = 64 * 1024 * 1024;
@@ -83,7 +85,7 @@ impl RingBufferConfig {
 
     /// Set label for debugging
     #[must_use]
-    pub fn with_label(mut self, label: impl Into<String>) -> Self {
+    pub fn with_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.label = Some(label.into());
         self
     }
@@ -142,7 +144,7 @@ pub struct GpuRingBuffer {
     /// Device reference for queue operations
     device: Arc<WgpuDevice>,
     /// Label for debugging
-    label: String,
+    label: Arc<str>,
 }
 
 impl GpuRingBuffer {
@@ -154,9 +156,9 @@ impl GpuRingBuffer {
     pub fn new(device: Arc<WgpuDevice>, config: RingBufferConfig) -> Result<Self> {
         let capacity = config.capacity;
         let mask = capacity - 1;
-        let label = config
+        let label: Arc<str> = config
             .label
-            .unwrap_or_else(|| format!("RingBuffer:{:?}", config.direction));
+            .unwrap_or_else(|| Arc::from(format!("RingBuffer:{:?}", config.direction)));
 
         // Determine buffer usage based on direction
         let usage = match config.direction {
@@ -306,31 +308,39 @@ impl GpuRingBuffer {
         })
     }
 
-    /// Write data, blocking until space is available
+    /// Write data, yielding until space is available.
     ///
+    /// Uses exponential back-off (`spin_loop` → `yield_now`) to avoid
+    /// burning CPU while waiting for the consumer to drain.
     /// For async contexts, prefer `try_write` with polling.
     ///
     /// # Errors
     ///
-    /// Returns [`Err`] if the buffer remains full after max attempts.
+    /// Returns [`Err`] if the buffer remains full after the back-off budget
+    /// is exhausted (~100 ms wall-clock time).
     pub fn write(&mut self, data: &[u8]) -> Result<WriteHandle> {
-        // In strict unidirectional mode, we shouldn't block
-        // This is a simple spin-wait for now; could be evolved to async
-        let mut attempts = 0;
-        const MAX_ATTEMPTS: u32 = 1_000_000;
+        const SPIN_ITERS: u32 = 256;
+        const YIELD_ITERS: u32 = 4096;
+
+        let mut spins: u32 = 0;
+        let mut yields: u32 = 0;
 
         while self.available_write() < data.len() {
-            attempts += 1;
-            if attempts > MAX_ATTEMPTS {
+            if spins < SPIN_ITERS {
+                std::hint::spin_loop();
+                spins += 1;
+            } else if yields < YIELD_ITERS {
+                std::thread::yield_now();
+                yields += 1;
+            } else {
                 return Err(BarracudaError::execution_failed(format!(
-                    "Ring buffer '{}' full after {} attempts ({} bytes needed, {} available)",
+                    "Ring buffer '{}' full after {spins} spins + {yields} yields \
+                     ({} bytes needed, {} available)",
                     self.label,
-                    attempts,
                     data.len(),
                     self.available_write()
                 )));
             }
-            std::hint::spin_loop();
         }
 
         self.try_write(data)
@@ -357,6 +367,94 @@ impl GpuRingBuffer {
     /// Reset statistics
     pub fn reset_stats(&mut self) {
         self.stats = RingBufferStats::default();
+    }
+
+    /// Advance the write head (call after GPU has produced data into the output buffer).
+    pub fn advance_write(&mut self, bytes: usize) {
+        let current = self.write_head.load(Ordering::Acquire);
+        let new_pos = current.wrapping_add(bytes as u64);
+        self.write_head.store(new_pos, Ordering::Release);
+
+        self.stats.bytes_written += bytes as u64;
+        self.stats.write_count += 1;
+    }
+
+    /// Read available data from a `DeviceToHost` ring buffer via the staging buffer.
+    ///
+    /// Copies GPU → staging → CPU. Advances the read head by the amount read.
+    /// Returns up to `max_bytes` of available data, or all available data if
+    /// `max_bytes` is `None`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if this is not a `DeviceToHost` buffer, or if the GPU
+    /// copy or map operation fails.
+    pub async fn read(&mut self, max_bytes: Option<usize>) -> Result<Bytes> {
+        if self.direction != BufferDirection::DeviceToHost {
+            return Err(BarracudaError::execution_failed(
+                "Cannot read from a HostToDevice ring buffer",
+            ));
+        }
+
+        let available = self.available_read();
+        if available == 0 {
+            return Ok(Bytes::new());
+        }
+
+        let to_read = max_bytes.map_or(available, |max| max.min(available));
+        let read_pos = self.read_head.load(Ordering::Acquire);
+        let offset = (read_pos as usize) & self.mask;
+
+        let staging = self
+            .staging_buffer
+            .as_ref()
+            .ok_or_else(|| BarracudaError::execution_failed("No staging buffer for readback"))?;
+
+        // Copy GPU → staging via command encoder
+        let mut encoder =
+            self.device
+                .device
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("RingBuffer readback"),
+                });
+
+        let first_part = (self.capacity - offset).min(to_read);
+        encoder.copy_buffer_to_buffer(&self.buffer, offset as u64, staging, 0, first_part as u64);
+
+        let second_part = to_read - first_part;
+        if second_part > 0 {
+            encoder.copy_buffer_to_buffer(
+                &self.buffer,
+                0,
+                staging,
+                first_part as u64,
+                second_part as u64,
+            );
+        }
+
+        self.device.queue.submit(std::iter::once(encoder.finish()));
+
+        // Map staging buffer for CPU read
+        let slice = staging.slice(..to_read as u64);
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        slice.map_async(wgpu::MapMode::Read, move |result| {
+            let _ = tx.send(result);
+        });
+        let _ = self.device.device.poll(wgpu::PollType::Wait {
+            submission_index: None,
+            timeout: Some(std::time::Duration::from_secs(30)),
+        });
+
+        rx.await
+            .map_err(|_| BarracudaError::execution_failed("Map channel dropped"))?
+            .map_err(|e| BarracudaError::execution_failed(format!("Buffer map failed: {e}")))?;
+
+        let data = Bytes::copy_from_slice(&slice.get_mapped_range()[..to_read]);
+        staging.unmap();
+
+        self.advance_read(to_read);
+
+        Ok(data)
     }
 
     /// Get the underlying GPU buffer (for use in compute shaders)

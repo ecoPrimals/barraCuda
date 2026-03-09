@@ -17,6 +17,7 @@
 //! - Safe Rust wrapper (no unsafe code)
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::error::Result;
@@ -184,7 +185,7 @@ impl VarianceReduceF64 {
         let shader_src = shader_for_device(&device);
 
         let n = data.len();
-        let wg_size = 256;
+        let wg_size = WORKGROUP_SIZE_1D as usize;
         let n_workgroups = n.div_ceil(wg_size);
 
         let input_bytes: &[u8] = bytemuck::cast_slice(data);

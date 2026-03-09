@@ -93,7 +93,7 @@ fn test_device_requirements_scoring() {
     let nvidia_info = DeviceInfo {
         index: 0,
         pool_index: 0,
-        name: "RTX 4070".to_string(),
+        name: Arc::from("RTX 4070"),
         vendor: GpuVendor::Nvidia,
         driver: GpuDriver::NvidiaProprietary,
         vram_bytes: 12 * 1024 * 1024 * 1024,
@@ -107,7 +107,7 @@ fn test_device_requirements_scoring() {
     let amd_info = DeviceInfo {
         index: 1,
         pool_index: 1,
-        name: "RX 6800".to_string(),
+        name: Arc::from("RX 6800"),
         vendor: GpuVendor::Amd,
         driver: GpuDriver::Radv,
         vram_bytes: 16 * 1024 * 1024 * 1024,

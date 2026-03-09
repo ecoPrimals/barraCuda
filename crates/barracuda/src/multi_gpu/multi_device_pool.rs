@@ -203,7 +203,7 @@ impl MultiDevicePool {
                     info.push(DeviceInfo {
                         index: idx,
                         pool_index: 0,
-                        name: adapter.name.clone(),
+                        name: Arc::from(adapter.name.as_str()),
                         vendor,
                         driver,
                         vram_bytes: estimated_vram,

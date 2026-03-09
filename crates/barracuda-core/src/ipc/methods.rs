@@ -257,6 +257,16 @@ async fn validate_gpu_stack(primal: &BarraCudaPrimal, id: Value) -> JsonRpcRespo
 
 /// `barracuda.compute.dispatch` — Dispatch a named compute operation.
 ///
+/// Parse a JSON array of u64 values into a `Vec<usize>`, returning `None` if
+/// any dimension overflows the platform `usize`.
+fn parse_shape(arr: &[Value]) -> Option<Vec<usize>> {
+    arr.iter()
+        .filter_map(|v| v.as_u64())
+        .map(usize::try_from)
+        .collect::<std::result::Result<Vec<_>, _>>()
+        .ok()
+}
+
 /// Rather than accepting raw WGSL (which would require shader security auditing),
 /// this dispatches named operations from barraCuda's shader library. Pass input
 /// data and the operation produces output stored in the tensor store.
@@ -278,10 +288,13 @@ async fn compute_dispatch(primal: &BarraCudaPrimal, params: &Value, id: Value) -
             let Some(shape) = params.get("shape").and_then(|v| v.as_array()) else {
                 return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: shape");
             };
-            let shape_vec: Vec<usize> = shape
-                .iter()
-                .filter_map(|v| v.as_u64().map(|n| n as usize))
-                .collect();
+            let Some(shape_vec) = parse_shape(shape) else {
+                return JsonRpcResponse::error(
+                    id,
+                    INVALID_PARAMS,
+                    "Shape dimension exceeds platform usize",
+                );
+            };
             let dev_arc = std::sync::Arc::new(dev);
             match barracuda::tensor::Tensor::zeros_on(shape_vec.clone(), dev_arc).await {
                 Ok(t) => {
@@ -300,10 +313,13 @@ async fn compute_dispatch(primal: &BarraCudaPrimal, params: &Value, id: Value) -
             let Some(shape) = params.get("shape").and_then(|v| v.as_array()) else {
                 return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: shape");
             };
-            let shape_vec: Vec<usize> = shape
-                .iter()
-                .filter_map(|v| v.as_u64().map(|n| n as usize))
-                .collect();
+            let Some(shape_vec) = parse_shape(shape) else {
+                return JsonRpcResponse::error(
+                    id,
+                    INVALID_PARAMS,
+                    "Shape dimension exceeds platform usize",
+                );
+            };
             let dev_arc = std::sync::Arc::new(dev);
             match barracuda::tensor::Tensor::ones_on(shape_vec.clone(), dev_arc).await {
                 Ok(t) => {
@@ -364,15 +380,21 @@ async fn tensor_create(primal: &BarraCudaPrimal, params: &Value, id: Value) -> J
         return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: shape");
     };
 
-    let shape_vec: Vec<usize> = shape
-        .iter()
-        .filter_map(|v| v.as_u64().map(|n| n as usize))
-        .collect();
+    let Some(shape_vec) = parse_shape(shape) else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Shape dimension exceeds platform usize",
+        );
+    };
 
     let elements: usize = shape_vec.iter().product();
 
-    // If data provided, use it; otherwise create zeros
     let data: Vec<f32> = if let Some(arr) = params.get("data").and_then(|v| v.as_array()) {
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "f64→f32 narrowing is intentional for JSON numeric inputs"
+        )]
         arr.iter()
             .filter_map(|v| v.as_f64().map(|n| n as f32))
             .collect()

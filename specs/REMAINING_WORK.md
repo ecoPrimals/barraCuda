@@ -6,7 +6,28 @@
 
 ---
 
-## Achieved (March 9, 2026)
+## Achieved (March 9, 2026 — Deep Debt Sprint)
+
+### Concurrency and Hot-Path Evolution
+- **`DeviceInfo::name`**: `String` → `Arc<str>` — zero-alloc clone on every device lease
+- **`RingBufferConfig::label`**: `String` → `Option<Arc<str>>` — zero-alloc clone on buffer creation
+- **`CoralCompiler::state`**: `Mutex` → `RwLock` with `Arc<str>` addresses — concurrent shader compiler reads
+- **Ring buffer back-off**: `write()` evolved from million-iteration `spin_loop()` to staged back-off (256 spins → 4096 `yield_now()`, bounded ~100ms)
+- **Streaming pipeline**: `GpuRingBuffer::read()`, `advance_write()`, `UnidirectionalPipeline::poll_results()` — GPU→CPU data flow complete
+- **`AttentionDims` config struct**: Replaces 4-argument attention/head_split/head_concat
+
+### Hardcoding Elimination
+- **10 f64 ops**: Hardcoded `256` → `WORKGROUP_SIZE_1D` constant (weighted_dot, digamma, bessel_k0, bessel_j0, prod_reduce, norm_reduce, variance_reduce, sum_reduce, max_abs_diff ×2)
+- **VRAM caps**: `sanitize_max_buffer_size` extracted to `VRAM_CAP_PROFESSIONAL`, `VRAM_CAP_CONSUMER_HIGH`, `VRAM_CAP_CONSERVATIVE`
+- **Dispatch thresholds**: `gpu_dispatch_threshold` → `DISCRETE_THRESHOLD`, `INTEGRATED_THRESHOLD`, `OTHER_THRESHOLD`
+- **Scoring weights**: `DeviceRequirements::score()` → `PREFERRED_VENDOR_BONUS`, `DISCRETE_BONUS`, `IDLE_BONUS`
+- **`max_allocation_size()`**: Float round-trip eliminated — pure integer `max_buffer_size / 4 * 3`
+
+### Test Evolution
+- **`catch_unwind` → `with_device_retry`**: GPU tests (erf, erfc, expand, determinant) now use production recovery pattern
+- **IPC `as` casts → `try_from`**: `parse_shape()` helper with safe `usize::try_from`
+- **Hardware verification**: `eprintln!` → `tracing::warn!`; `tokio::time::timeout` added for cross-vendor tests
+- **External dependency audit**: All deps confirmed pure Rust — fully ecoBin compliant
 
 ### GpuBackend Trait + Sovereign Dispatch Scaffold
 - **`GpuBackend` trait** (`device::backend`): Backend-agnostic GPU compute interface —

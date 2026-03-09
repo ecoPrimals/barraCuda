@@ -70,17 +70,30 @@ pub fn optimal_workgroup_size_arch(
 }
 
 /// NVK (and some other drivers) may report absurd `max_buffer_size` values
-/// (e.g. 2^57). Cap to architecture-appropriate defaults when the reported
-/// value exceeds 64 GB.
+/// (e.g. 2^57). Cap to a conservative default when the reported value
+/// exceeds a sane maximum.
+///
+/// # Why name-based heuristics
+///
+/// wgpu (WebGPU) does **not** expose physical VRAM capacity as a device
+/// limit. When the driver reports a bogus value, the only information
+/// available at runtime is the adapter name. These heuristics are
+/// conservative lower bounds used *only* when the driver is demonstrably
+/// broken (>64 GB reported for consumer hardware). When wgpu gains a
+/// VRAM capacity limit, this function should switch to it.
 fn sanitize_max_buffer_size(reported: u64, device_name: &str) -> u64 {
-    const MAX_SANE_BUFFER: u64 = 64 * 1024 * 1024 * 1024; // 64 GB
+    const MAX_SANE_BUFFER: u64 = 64 * 1024 * 1024 * 1024;
+    const VRAM_CAP_PROFESSIONAL: u64 = 12 * 1024 * 1024 * 1024;
+    const VRAM_CAP_CONSUMER_HIGH: u64 = 24 * 1024 * 1024 * 1024;
+    const VRAM_CAP_CONSERVATIVE: u64 = 8 * 1024 * 1024 * 1024;
+
     if reported > MAX_SANE_BUFFER {
         let capped = if device_name.contains("Titan V") || device_name.contains("V100") {
-            12 * 1024 * 1024 * 1024 // 12 GB VRAM
+            VRAM_CAP_PROFESSIONAL
         } else if device_name.contains("RTX 30") || device_name.contains("RTX 40") {
-            24 * 1024 * 1024 * 1024 // 24 GB max consumer
+            VRAM_CAP_CONSUMER_HIGH
         } else {
-            8 * 1024 * 1024 * 1024 // 8 GB conservative default
+            VRAM_CAP_CONSERVATIVE
         };
         tracing::warn!(
             "Driver reported max_buffer_size={reported} (>64GB), capping to {capped} for {device_name}"
@@ -290,10 +303,13 @@ impl DeviceCapabilities {
         )
     }
 
-    /// Get maximum allocation size for this device
+    /// Maximum single allocation size (75% of `max_buffer_size`).
+    ///
+    /// Reserves headroom for driver metadata, command buffers, and
+    /// other internal allocations that share the same address space.
     #[must_use]
     pub fn max_allocation_size(&self) -> u64 {
-        (self.max_buffer_size as f64 * 0.75) as u64
+        self.max_buffer_size / 4 * 3
     }
 
     /// Check if device supports FHE workloads (large U64 buffers)
@@ -326,16 +342,23 @@ impl DeviceCapabilities {
     }
 
     /// Minimum element count below which CPU is faster than a GPU dispatch.
+    ///
+    /// Conservative defaults by device class — override with
+    /// [`Self::with_gpu_dispatch_threshold`] for workload-specific tuning.
     #[must_use]
     pub fn gpu_dispatch_threshold(&self) -> usize {
+        const DISCRETE_THRESHOLD: usize = 4_096;
+        const INTEGRATED_THRESHOLD: usize = 16_384;
+        const OTHER_THRESHOLD: usize = 8_192;
+
         if let Some(t) = self.gpu_dispatch_threshold_override {
             return t;
         }
         match self.device_type {
-            wgpu::DeviceType::DiscreteGpu => 4_096,
-            wgpu::DeviceType::IntegratedGpu => 16_384,
+            wgpu::DeviceType::DiscreteGpu => DISCRETE_THRESHOLD,
+            wgpu::DeviceType::IntegratedGpu => INTEGRATED_THRESHOLD,
             wgpu::DeviceType::Cpu => usize::MAX,
-            _ => 8_192,
+            _ => OTHER_THRESHOLD,
         }
     }
 

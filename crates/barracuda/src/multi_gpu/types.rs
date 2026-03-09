@@ -114,19 +114,36 @@ impl DeviceRequirements {
             }
         }
 
+        const PREFERRED_VENDOR_BONUS: i64 = 1000;
+        const DISCRETE_BONUS: i64 = 100;
+        const IDLE_BONUS: i64 = 50;
+        const GFLOPS_DIVISOR: f64 = 100.0;
+
         let mut score: i64 = 0;
         if let Some(pref) = self.preferred_vendor {
             if info.vendor == pref {
-                score += 1000;
+                score += PREFERRED_VENDOR_BONUS;
             }
         }
-        score += (info.vram_bytes / (1024 * 1024 * 1024)) as i64;
-        score += (info.estimated_gflops / 100.0) as i64;
+        #[expect(
+            clippy::cast_possible_wrap,
+            reason = "VRAM in GiB always fits in i64 (max ~16 EiB)"
+        )]
+        {
+            score += (info.vram_bytes / (1024 * 1024 * 1024)) as i64;
+        }
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "GFLOPS/100 always fits in i64 range"
+        )]
+        {
+            score += (info.estimated_gflops / GFLOPS_DIVISOR) as i64;
+        }
         if info.is_discrete {
-            score += 100;
+            score += DISCRETE_BONUS;
         }
         if !info.is_busy() {
-            score += 50;
+            score += IDLE_BONUS;
         }
         Some(score)
     }
@@ -139,7 +156,10 @@ pub struct DeviceInfo {
     pub index: usize,
     pub(crate) pool_index: usize,
     /// Device name (e.g. "NVIDIA `GeForce` RTX 4090").
-    pub name: String,
+    ///
+    /// `Arc<str>` instead of `String` so that cloning `DeviceInfo` (which
+    /// happens on every device lease) is a ref-count bump, not a heap alloc.
+    pub name: Arc<str>,
     /// GPU vendor.
     pub vendor: GpuVendor,
     /// Driver type (e.g. Nvk, Cuda).
@@ -182,6 +202,10 @@ impl DeviceInfo {
 
     /// VRAM usage as percentage (0–100).
     #[must_use]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "u64→f64 for ratio; sub-ULP precision is irrelevant for a percentage"
+    )]
     pub fn usage_percent(&self) -> f64 {
         if self.vram_bytes == 0 {
             return 0.0;

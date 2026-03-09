@@ -2,7 +2,7 @@
 
 **Version**: 0.3.3
 **Date**: 2026-03-09
-**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,450+ tests, GpuBackend trait abstraction, sovereign dispatch scaffold, zero-copy bytemuck/Bytes, showcase collection with 10 progressive demos)
+**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,450+ tests, GpuBackend trait abstraction, sovereign dispatch scaffold, zero-copy bytemuck/Bytes, showcase collection with 10 progressive demos, all deps pure Rust, zero hardcoded workgroup sizes)
 
 ---
 
@@ -16,7 +16,7 @@
 | **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery; coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support |
 | **Device management** | A+ | `GpuBackend` trait abstraction, `CoralReefDevice` scaffold behind `sovereign-dispatch` feature, multi-GPU, capability-scored discovery, probe-aware f64 strategy, bounded poll timeout |
 | **Test coverage** | A | 3,450+ tests (all pass on llvmpipe); proptest; chaos/fault test tiers; nextest CI/stress profiles; bounded GPU poll timeout; GPU-heavy test group with extended timeouts; coverage tests for batch_ipr, histogram, staging, precision/cpu, surrogate/adaptive |
-| **Dependencies** | A- | Pure Rust chain (blake3 pure); zero non-GPU external C deps; wgpu/naga 28 for GPU |
+| **Dependencies** | A+ | All deps pure Rust (blake3 `pure`, wgpu/naga 28); zero application C deps; ecoBin compliant |
 | **Documentation** | A+ | Comprehensive CHANGELOG, specs, README, CONTRIBUTING, CONVENTIONS, BREAKING_CHANGES; all rustdoc warnings resolved; showcase/ with 10 progressive demos (local, IPC, cross-primal) |
 | **Unsafe code** | A+ | Zero `unsafe` blocks in entire codebase |
 | **Clippy / lint** | A+ | Zero warnings with pedantic + unwrap_used; `#[expect(reason)]` for clippy suppressions; `#[allow(dead_code, reason)]` for CPU reference implementations; `bytes::Bytes` zero-copy on I/O boundaries; zero undocumented suppressions |
@@ -91,7 +91,7 @@
 - CPU executor magic numbers evolved to `defaults::` named constants
 - `is_retriable()` covers buffer validation errors (not just device-lost)
 - `with_device_retry` gracefully skips on persistent llvmpipe instability
-- Flaky GPU tests (erf, erfc, expand, determinant) guarded with `catch_unwind` for wgpu panics
+- Flaky GPU tests (erf, erfc, expand, determinant) evolved from `catch_unwind` to `with_device_retry` — production recovery pattern
 - CI evolved to nextest with `ci`/`stress` profiles; chaos/fault/property test tier added
 - Coverage job uses `BARRACUDA_POLL_TIMEOUT_SECS` and soft-gates at 80% (90% requires real GPU)
 - `SparseGemmF64` and `PeakDetectF64` now compile via `compile_shader_f64()` (was incorrectly using `compile_shader()` which downcasts f64→f32, causing data corruption on non-f64 GPUs)
@@ -117,6 +117,18 @@
 - Pipeline cache `DeviceFingerprint` evolved from `format!("{:?}:")` string allocation to `std::mem::discriminant` hashing — zero allocation on cache lookup
 - Pipeline cache `PipelineKey` evolved from `String` entry point to `u64` hash — eliminates per-lookup allocation
 - Legacy discovery filename evolved from hardcoded `coralreef-core.json` to agnostic `shader-compiler.json`
+- `DeviceInfo::name` evolved from `String` to `Arc<str>` — zero-alloc clone on every device lease
+- `RingBufferConfig::label` evolved from `String` to `Option<Arc<str>>` — zero-alloc clone on buffer creation
+- `CoralCompiler::state` evolved from `Mutex` to `RwLock` with `Arc<str>` addresses — concurrent reads
+- Ring buffer `write()` evolved from million-iteration `spin_loop()` to staged back-off (256 spins → 4096 yields)
+- 10 f64 ops (`weighted_dot`, `digamma`, `bessel_k0`, `bessel_j0`, `prod_reduce`, `norm_reduce`, `variance_reduce`, `sum_reduce`, `max_abs_diff` ×2) evolved from hardcoded `256` to `WORKGROUP_SIZE_1D` constant
+- `max_allocation_size()` evolved from float round-trip to integer arithmetic (`max_buffer_size / 4 * 3`)
+- `sanitize_max_buffer_size` VRAM caps extracted to named constants (`VRAM_CAP_PROFESSIONAL`, `VRAM_CAP_CONSUMER_HIGH`, `VRAM_CAP_CONSERVATIVE`)
+- `gpu_dispatch_threshold` magic numbers extracted to named constants (`DISCRETE_THRESHOLD`, `INTEGRATED_THRESHOLD`, `OTHER_THRESHOLD`)
+- `DeviceRequirements::score()` magic numbers extracted to named constants (`PREFERRED_VENDOR_BONUS`, `DISCRETE_BONUS`, `IDLE_BONUS`)
+- `AttentionDims` config struct — replaces 4-arg attention/head_split/head_concat with typed struct
+- `parse_shape()` helper in IPC methods — `usize::try_from` instead of `as usize` casts
+- `eprintln!` → `tracing::warn!` in hardware verification tests
 
 ## What's Not Working Yet
 

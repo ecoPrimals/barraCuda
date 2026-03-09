@@ -6,6 +6,10 @@
 //! `begin_compute_pass` → `set_pipeline` → `set_bind_group` → dispatch pattern is
 //! repeated in 50+ ops. This module captures that pattern as a builder.
 //!
+//! `ComputeDispatch` is generic over `GpuBackend`, defaulting to `WgpuDevice`.
+//! Existing callers need no changes — the type parameter is inferred. Future
+//! backends (e.g. `CoralReefDevice`) work through the same builder.
+//!
 //! # Example
 //!
 //! ```ignore
@@ -21,13 +25,14 @@
 //! ```
 
 use crate::device::WgpuDevice;
+use crate::device::backend::{BufferBinding, DispatchDescriptor, GpuBackend};
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 
 /// Buffer binding declaration for the pipeline builder.
-struct Binding<'a> {
+struct Binding<'a, B: GpuBackend> {
     index: u32,
-    buffer: &'a wgpu::Buffer,
+    buffer: &'a B::Buffer,
     read_only: bool,
     is_uniform: bool,
 }
@@ -36,10 +41,13 @@ struct Binding<'a> {
 ///
 /// Builds the bind-group layout, bind group, pipeline layout, pipeline,
 /// command encoder, and compute pass from a fluent API, then submits.
-pub struct ComputeDispatch<'a> {
-    device: &'a WgpuDevice,
+///
+/// Generic over `GpuBackend`, defaulting to `WgpuDevice`. The type parameter
+/// is inferred from the `device` argument — existing callers compile unchanged.
+pub struct ComputeDispatch<'a, B: GpuBackend = WgpuDevice> {
+    device: &'a B,
     label: &'a str,
-    bindings: Vec<Binding<'a>>,
+    bindings: Vec<Binding<'a, B>>,
     shader_source: Option<&'a str>,
     entry_point: &'a str,
     workgroups: (u32, u32, u32),
@@ -47,10 +55,10 @@ pub struct ComputeDispatch<'a> {
     df64_shader: bool,
 }
 
-impl<'a> ComputeDispatch<'a> {
+impl<'a, B: GpuBackend> ComputeDispatch<'a, B> {
     /// Creates a new compute dispatch builder for the given device and label.
     #[must_use]
-    pub fn new(device: &'a WgpuDevice, label: &'a str) -> Self {
+    pub fn new(device: &'a B, label: &'a str) -> Self {
         Self {
             device,
             label,
@@ -90,7 +98,7 @@ impl<'a> ComputeDispatch<'a> {
 
     /// Bind a read-only storage buffer at `index`.
     #[must_use]
-    pub fn storage_read(mut self, index: u32, buffer: &'a wgpu::Buffer) -> Self {
+    pub fn storage_read(mut self, index: u32, buffer: &'a B::Buffer) -> Self {
         self.bindings.push(Binding {
             index,
             buffer,
@@ -102,7 +110,7 @@ impl<'a> ComputeDispatch<'a> {
 
     /// Bind a read-write storage buffer at `index`.
     #[must_use]
-    pub fn storage_rw(mut self, index: u32, buffer: &'a wgpu::Buffer) -> Self {
+    pub fn storage_rw(mut self, index: u32, buffer: &'a B::Buffer) -> Self {
         self.bindings.push(Binding {
             index,
             buffer,
@@ -114,7 +122,7 @@ impl<'a> ComputeDispatch<'a> {
 
     /// Bind a uniform buffer at `index`.
     #[must_use]
-    pub fn uniform(mut self, index: u32, buffer: &'a wgpu::Buffer) -> Self {
+    pub fn uniform(mut self, index: u32, buffer: &'a B::Buffer) -> Self {
         self.bindings.push(Binding {
             index,
             buffer,
@@ -140,123 +148,39 @@ impl<'a> ComputeDispatch<'a> {
 
     /// Build everything and submit the compute pass to the device queue.
     ///
-    /// Holds a dispatch permit for the full compile→bind→submit lifecycle,
-    /// respecting the device's hardware-aware concurrency budget.
-    /// All resource creation is covered by the encoder barrier to prevent
-    /// wgpu-core races between poll cleanup and resource allocation.
+    /// Delegates to [`GpuBackend::dispatch_compute`], which handles the full
+    /// compile → bind → submit lifecycle using the backend's native API.
     ///
     /// # Errors
-    /// Returns [`Err`] if shader source was not set via [`shader`](Self::shader).
+    /// Returns [`Err`] if shader source was not set via [`shader`](Self::shader),
+    /// or if the backend's dispatch fails.
     pub fn submit(self) -> Result<()> {
-        let _permit = self.device.acquire_dispatch();
-        self.device.encoding_guard();
         let source = self
             .shader_source
             .ok_or_else(|| BarracudaError::InvalidInput {
                 message: "ComputeDispatch: shader source required".into(),
             })?;
 
-        let bgl_entries: Vec<wgpu::BindGroupLayoutEntry> = self
+        let bindings: Vec<BufferBinding<'_, B>> = self
             .bindings
             .iter()
-            .map(|b| wgpu::BindGroupLayoutEntry {
-                binding: b.index,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: if b.is_uniform {
-                    wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    }
-                } else {
-                    wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage {
-                            read_only: b.read_only,
-                        },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    }
-                },
-                count: None,
+            .map(|b| BufferBinding {
+                index: b.index,
+                buffer: b.buffer,
+                read_only: b.read_only,
+                is_uniform: b.is_uniform,
             })
             .collect();
 
-        let bgl = self
-            .device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some(self.label),
-                entries: &bgl_entries,
-            });
-
-        let bg_entries: Vec<wgpu::BindGroupEntry<'_>> = self
-            .bindings
-            .iter()
-            .map(|b| wgpu::BindGroupEntry {
-                binding: b.index,
-                resource: b.buffer.as_entire_binding(),
-            })
-            .collect();
-
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some(self.label),
-                layout: &bgl,
-                entries: &bg_entries,
-            });
-
-        let module = if self.df64_shader {
-            self.device.compile_shader_df64(source, Some(self.label))
-        } else if self.f64_shader {
-            self.device.compile_shader_f64(source, Some(self.label))
-        } else {
-            self.device.compile_shader(source, Some(self.label))
-        };
-
-        let pl = self
-            .device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some(self.label),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-
-        let pipeline =
-            self.device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some(self.label),
-                    layout: Some(&pl),
-                    module: &module,
-                    entry_point: Some(self.entry_point),
-                    cache: self.device.pipeline_cache(),
-                    compilation_options: Default::default(),
-                });
-
-        let mut encoder =
-            self.device
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some(self.label),
-                });
-
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some(self.label),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(self.workgroups.0, self.workgroups.1, self.workgroups.2);
-        }
-
-        let commands = encoder.finish();
-        self.device.encoding_complete();
-        self.device.submit_and_poll_inner(Some(commands));
-        Ok(())
+        self.device.dispatch_compute(DispatchDescriptor {
+            label: self.label,
+            shader_source: source,
+            entry_point: self.entry_point,
+            bindings,
+            workgroups: self.workgroups,
+            f64_shader: self.f64_shader,
+            df64_shader: self.df64_shader,
+        })
     }
 }
 

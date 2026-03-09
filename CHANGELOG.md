@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — GpuBackend Trait and Sovereign Dispatch Scaffold (Mar 9 2026)
+
+- **`GpuBackend` trait** (`device::backend`): Backend-agnostic GPU compute interface with 9
+  required methods (identity, buffer lifecycle, compute dispatch) and 12 default typed
+  convenience methods via bytemuck. Blanket impl for `Arc<B>` enables zero-change usage
+  from ops holding `Arc<WgpuDevice>`.
+- **`WgpuDevice` implements `GpuBackend`**: `dispatch_compute()` encapsulates the full
+  wgpu boilerplate (bind group layout → bind group → pipeline → encoder → compute pass →
+  submit → poll). Buffer lifecycle methods delegate to existing WgpuDevice methods.
+- **`ComputeDispatch<'a, B: GpuBackend>`**: Now generic over backend, defaulting to
+  `WgpuDevice`. All existing callers compile unchanged — type parameter is inferred.
+  `submit()` delegates to `GpuBackend::dispatch_compute()`.
+- **`CoralReefDevice` scaffold** (`device::coral_reef_device`): Behind `sovereign-dispatch`
+  feature flag. Implements `GpuBackend` with stub methods that return clear error messages
+  pointing to `SOVEREIGN_PIPELINE_TRACKER.md`. Zero unsafe. Will wrap `coral-gpu::GpuContext`
+  when the crate is available.
+- **`sovereign-dispatch` feature flag**: Added to `Cargo.toml`. Enables `CoralReefDevice`
+  module and re-export. Requires `gpu` feature during transition period.
+- **`SOVEREIGN_PIPELINE_TRACKER.md`**: New root tracking doc for the sovereign pipeline —
+  P0 blocker (CoralReefDevice), libc/musl → rustix evolution (toadStool-led), cross-primal
+  dependency matrix, prioritized remaining work, cross-compilation target matrix.
+
 ### Added — Plasma Physics Absorption and Deep Debt (Mar 8 2026)
 
 - **4 plasma physics shaders absorbed from hotSpring** (Chuna Papers 43-45):

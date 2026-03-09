@@ -142,6 +142,10 @@ Prioritized work items, ordered by impact. Updated 2026-03-08.
 
 ## Long-term (P4)
 
+See `SOVEREIGN_PIPELINE_TRACKER.md` for the full sovereign pipeline tracker
+including cross-primal dependencies, libc/musl → rustix evolution, and
+cross-compilation target matrix.
+
 - **Sovereign Compute Evolution**: Replace entire non-Rust GPU stack with coral-prefixed
   pure Rust components (coralNak, coralDriver, coralMem, coralQueue, coralGpu).
 - **WebGPU browser target**: Compile barraCuda shaders for browser execution via wasm-pack
@@ -197,6 +201,6 @@ last C dependency: coralReef's pure-Rust NVIDIA codegen (coralNak) replaces NAK,
 coralDriver replaces the Vulkan loader. The math never changes — only the substrate.
 
 **Layer 4 — Kernel ABI (`libc`)**: Every Rust program on Linux calls the kernel through
-`libc` (syscalls for memory, I/O, signals). This is the OS boundary, not a C dependency.
-Rust's `std` uses it internally. It's unavoidable and irrelevant to sovereignty — the
-kernel is a platform, not a dependency.
+`libc` (syscalls for memory, I/O, signals). This evolves via `rustix` (pure Rust syscalls
+using `linux-raw-sys`) — see `SOVEREIGN_PIPELINE_TRACKER.md` for the phased evolution
+from libc/musl to zero-package cross-compilation.

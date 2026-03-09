@@ -129,7 +129,7 @@ barraCuda/
 │       │   ├── ops/                 # GPU ops (matmul, softmax, FHE, bio)
 │       │   ├── tensor/              # GPU tensor type
 │       │   ├── shaders/             # 712 WGSL shaders (see shaders/README.md)
-│       │   ├── device/              # WgpuDevice, concurrency, test pool
+│       │   ├── device/              # GpuBackend trait, WgpuDevice, CoralReefDevice, concurrency
 │       │   ├── staging/             # Ring buffers, unidirectional pipelines
 │       │   ├── pipeline/            # ComputeDispatch, batched pipelines
 │       │   ├── dispatch/            # Size-based CPU/GPU routing
@@ -249,6 +249,7 @@ barracuda version
 | `domain-genomics` | via umbrella | Bioinformatics and genomics API. |
 | `domain-vision` | via umbrella | Computer vision pipelines. |
 | `domain-timeseries` | via umbrella | Time series analysis (implies `domain-esn`). |
+| `sovereign-dispatch` | No | Sovereign GPU dispatch via coralReef `coral-gpu` (bypasses wgpu/Vulkan). |
 | `serde` | No | Serde derive support. |
 | `parallel` | No | Rayon parallelism hints. |
 
@@ -332,6 +333,7 @@ Lifecycle and health traits are modeled on the ecoPrimals pattern but fully owne
 | `specs/BARRACUDA_SPECIFICATION.md` | Crate architecture, IPC contract, shader pipeline |
 | `specs/ARCHITECTURE_DEMARCATION.md` | barraCuda vs toadStool boundary definition |
 | `specs/REMAINING_WORK.md` | P1-P4 open work items |
+| `SOVEREIGN_PIPELINE_TRACKER.md` | Sovereign pipeline tracker (P0 blocker, libc evolution, cross-compilation) |
 | `crates/barracuda/src/shaders/README.md` | Shader organization |
 
 ---

@@ -21,11 +21,14 @@ pub mod akida;
 pub mod akida_executor;
 pub mod async_submit;
 pub mod autotune;
+pub mod backend;
 pub mod batched_encoder;
 pub mod cache_hierarchy;
 pub mod capabilities;
 pub mod compute_pipeline;
 pub mod coral_compiler;
+#[cfg(feature = "sovereign-dispatch")]
+pub mod coral_reef_device;
 mod device_types;
 pub mod driver_profile; // GPU driver/compiler identity + shader strategies (D-S17-002 refactor)
 pub mod kernel_router; // Unified Math → Hardware routing (Feb 15, 2026)
@@ -40,6 +43,7 @@ pub mod tensor_context;
 pub mod unified;
 pub mod vendor; // Canonical GPU vendor ID constants (single source of truth)
 pub mod warmup;
+mod wgpu_backend;
 pub mod wgpu_device;
 
 // Re-export auto-tuning types
@@ -62,6 +66,7 @@ pub use tensor_context::{
 pub use akida::{AkidaBoard, AkidaCapabilities, BoardHealth, detect_akida_boards};
 pub use akida_executor::{AkidaExecutor, NeuromorphicComparison};
 pub use async_submit::{AsyncReadback, AsyncSubmitter};
+pub use backend::{BufferBinding, DispatchDescriptor, GpuBackend};
 pub use batched_encoder::BatchedEncoder;
 pub use cache_hierarchy::{
     CacheAwareTiler, CacheLevel, CacheResidency, MainMemory, SubstrateMemoryHierarchy, TileConfig,
@@ -72,6 +77,8 @@ pub use capabilities::{
     workgroup_size_2d_for_arch, workgroup_size_for_arch,
 };
 pub use compute_pipeline::{ComputeDispatch, storage_bgl_entry, uniform_bgl_entry};
+#[cfg(feature = "sovereign-dispatch")]
+pub use coral_reef_device::CoralReefDevice;
 pub use kernel_router::{ComputeWorkload, KernelRouter, KernelTarget, NpuModelInfo};
 pub use registry::{
     BackendInfo, DeviceCapabilities as PhysicalDeviceCapabilities, DeviceRegistry, DeviceVendor,

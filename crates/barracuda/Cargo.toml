@@ -123,6 +123,11 @@ default = ["gpu", "domain-models"]
 
 gpu = ["dep:wgpu", "dep:bytemuck", "dep:naga"]
 
+# Sovereign dispatch via coralReef's coral-gpu crate (bypasses wgpu/Vulkan stack).
+# Enable when coral-gpu is available as a cargo dependency.
+# Requires: gpu (for shared buffer types during transition)
+sovereign-dispatch = ["gpu"]
+
 # Domain model umbrella — enables all domain-specific modules.
 # Disable with default-features = false to get pure math + GPU compute only.
 # Individual domain features allow selective compilation for consumers

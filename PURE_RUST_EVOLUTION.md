@@ -1,7 +1,7 @@
 # Pure Rust Evolution — barraCuda
 
-**Date**: March 7, 2026
-**Status**: Layer 1 complete — zero unsafe, zero application C deps
+**Date**: March 9, 2026
+**Status**: Layer 1 complete — zero unsafe, zero application C deps, GpuBackend trait abstraction
 
 ---
 
@@ -46,6 +46,8 @@ Layer 4  toadStool    █░░░░░░░░░  Planned    Sovereign GPU d
 | All clippy pedantic warnings resolved | Done | Mar 6, 2026 |
 | All production expect/unwrap → Result | Done | Mar 6, 2026 |
 | Capability-based discovery (no hardcoding) | Done | Mar 6, 2026 |
+| `GpuBackend` trait + `ComputeDispatch<B>` generic | Done | Mar 9, 2026 |
+| `CoralReefDevice` scaffold (sovereign-dispatch feature) | Done | Mar 9, 2026 |
 
 ### Remaining Layer 1 Work
 - DF64 NVK end-to-end verification on hardware
@@ -59,7 +61,7 @@ Layer 4  toadStool    █░░░░░░░░░  Planned    Sovereign GPU d
 |-------|-----|------------|
 | `ash` (Vulkan FFI) | wgpu talks to GPU drivers | coralReef sovereign driver |
 | `renderdoc-sys` | Debug capture in wgpu-hal | Feature-gate out |
-| `libc` | Kernel syscalls (tokio, mio) | Rust std (irreducible OS boundary) |
+| `libc` | Kernel syscalls (tokio, mio) | toadStool leads rustix evolution (see `SOVEREIGN_PIPELINE_TRACKER.md`) |
 
 ---
 

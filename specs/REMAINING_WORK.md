@@ -1,10 +1,22 @@
 # barraCuda — Remaining Work
 
 **Version**: 0.3.3+
-**Date**: March 7, 2026
+**Date**: March 9, 2026
 **Status**: Active — tracks all open work items for barraCuda evolution
 
 ---
+
+## Achieved (March 9, 2026)
+
+### GpuBackend Trait + Sovereign Dispatch Scaffold
+- **`GpuBackend` trait** (`device::backend`): Backend-agnostic GPU compute interface —
+  9 required methods, 12 default typed convenience methods, blanket `Arc<B>` impl.
+- **`WgpuDevice` implements `GpuBackend`**: `dispatch_compute()` encapsulates the full
+  wgpu bind→pipeline→dispatch→submit cycle.
+- **`ComputeDispatch<'a, B: GpuBackend>`**: Generic over backend, defaults to `WgpuDevice`.
+  Zero changes to existing callers.
+- **`CoralReefDevice`** scaffold behind `sovereign-dispatch` feature flag.
+- **3097 tests pass**, zero clippy warnings, both default and sovereign-dispatch features.
 
 ## Achieved (March 7, 2026)
 
@@ -109,6 +121,10 @@ Previously limited to Vulkan with SPIR-V passthrough.
 
 ### P4 — Long-term (Sovereign Compute)
 
+See `SOVEREIGN_PIPELINE_TRACKER.md` for the full sovereign pipeline tracker
+including cross-primal dependencies, libc/musl → rustix evolution, and
+cross-compilation target matrix.
+
 #### barraCuda's Layer 1 Contribution
 barraCuda owns the math. Its remaining long-term contributions to the
 sovereign compute stack:
@@ -153,9 +169,12 @@ Transitive C boundaries (all via wgpu/tokio, not barraCuda code):
 |----------|------|------------|
 | `ash` → `libvulkan.so` | GPU driver FFI | coralReef/toadStool sovereign driver |
 | `renderdoc-sys` | Debug capture | Feature-gate out of wgpu |
-| `libc` (mio, signal, getrandom) | Kernel ABI (syscalls) | Irreducible OS boundary |
+| `libc` (mio, signal, getrandom) | Kernel ABI (syscalls) | rustix Phase 1-2, then Rust std Phase 3 |
 
 **blake3**: Already pure Rust (`pure` feature flag).
+
+See `SOVEREIGN_PIPELINE_TRACKER.md` for the full libc → rustix evolution
+path and cross-compilation target matrix.
 
 ---
 
@@ -175,6 +194,7 @@ Transitive C boundaries (all via wgpu/tokio, not barraCuda code):
 
 ## References
 
+- `SOVEREIGN_PIPELINE_TRACKER.md` — sovereign pipeline tracker (P0 blocker, libc evolution, cross-primal deps)
 - `STATUS.md` — current grade (A+)
 - `WHATS_NEXT.md` — prioritised work items + C dependency evolution map
 - `CONVENTIONS.md` — coding standards

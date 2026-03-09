@@ -1,8 +1,8 @@
 # barraCuda Status
 
 **Version**: 0.3.3
-**Date**: 2026-03-08
-**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,700+ tests, 3,097 pass on llvmpipe, systematic f64 pipeline fix, cross-spring absorptions, plasma physics absorption)
+**Date**: 2026-03-09
+**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,700+ tests, 3,097 pass on llvmpipe, GpuBackend trait abstraction, sovereign dispatch scaffold, cross-spring absorptions)
 
 ---
 
@@ -14,7 +14,7 @@
 | **Precision tiers** | A+ | 3-tier model (F32/F64/Df64) aligned with coralReef `Fp64Strategy`; DF64 naga-guided rewrite validated; probe-aware Fp64Strategy; DF64 reduce shaders for Hybrid devices |
 | **Sovereign compiler** | A | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all shaders |
 | **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery; coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support |
-| **Device management** | A | Multi-GPU, capability-scored discovery, probe-aware f64 strategy, f64 computational accuracy probe, bounded poll timeout, poison-recovering autotune |
+| **Device management** | A+ | `GpuBackend` trait abstraction, `CoralReefDevice` scaffold behind `sovereign-dispatch` feature, multi-GPU, capability-scored discovery, probe-aware f64 strategy, bounded poll timeout |
 | **Test coverage** | A | 3,700+ total tests (3,118 in lib suite); proptest; chaos/fault test tiers; nextest CI/stress profiles; bounded GPU poll timeout prevents hangs; thread-local GPU throttling for `cargo test` stability; f64 ops gated on `get_test_device_if_f64_gpu_available` |
 | **Dependencies** | A- | Pure Rust chain (blake3 pure); zero non-GPU external C deps; wgpu/naga 28 for GPU |
 | **Documentation** | A | Comprehensive CHANGELOG, specs, README, CONTRIBUTING, CONVENTIONS, BREAKING_CHANGES; all rustdoc warnings resolved |
@@ -55,6 +55,9 @@
 - Graceful Tokio runtime detection in coral compiler spawn
 - LSCFRK gradient flow integrators (W6, W7, CK45) with algebraic coefficient derivation
 - NautilusBrain force anomaly detection (10σ energy deviation, rolling window)
+- `GpuBackend` trait (`device::backend`) — backend-agnostic compute interface; `WgpuDevice` + `Arc<WgpuDevice>` implement it; `ComputeDispatch<B: GpuBackend>` generic over backend
+- `CoralReefDevice` scaffold behind `sovereign-dispatch` feature flag — ready for `coral-gpu` crate
+- `SOVEREIGN_PIPELINE_TRACKER.md` — tracks P0 (CoralReefDevice), libc→rustix evolution, cross-primal deps
 - Zero TODOs/FIXMEs/HACKs/`unreachable!()` without messages in codebase
 - Zero `#[expect(clippy::too_many_arguments)]` — all 9 evolved to builder/struct patterns
 - All quality gates green (fmt, clippy -D warnings, rustdoc -D warnings, deny)

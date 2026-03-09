@@ -34,7 +34,7 @@ cargo run --bin barracuda -- server
 crates/
   barracuda/           Core compute library
     src/
-      device/          GPU device management, driver profiles, pipeline cache
+      device/          GpuBackend trait, WgpuDevice, CoralReefDevice scaffold, driver profiles
       shaders/         786 WGSL shaders + sovereign compiler
         math/          DF64 core, transcendentals
         sovereign/     Naga-based compiler (FMA fusion, dead expr, SPIR-V emit)
@@ -61,6 +61,7 @@ specs/                 Formal specifications
 | `CHANGELOG.md` | Detailed change history |
 | `STATUS.md` | Current grade and capability status |
 | `WHATS_NEXT.md` | Prioritized work items |
+| `SOVEREIGN_PIPELINE_TRACKER.md` | Sovereign pipeline P0 blocker, libc evolution, cross-primal deps |
 | `specs/BARRACUDA_SPECIFICATION.md` | Formal primal specification |
 
 ## Architecture

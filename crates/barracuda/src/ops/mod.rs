@@ -251,7 +251,8 @@ pub mod hill_f64; // Hill dose-response activation (wetSpring QS + healthSpring 
 pub mod kmd_grouping_f64;
 pub mod population_pk_f64; // Population PK Monte Carlo (healthSpring absorption)
 pub mod rk45_adaptive; // Adaptive Dormand-Prince RK45 for regulatory networks (neuralSpring)
-pub mod rk_stage; // RkIntegrator    — single-trajectory CPU-orchestrated RK4/RK45 // Kendrick Mass Defect homologue grouping
+pub mod rk_stage;
+pub mod wright_fisher_f32; // Wright-Fisher drift+selection (neuralSpring popgen absorption) // RkIntegrator    — single-trajectory CPU-orchestrated RK4/RK45 // Kendrick Mass Defect homologue grouping
 pub use batch_pair_reduce_f64::{BatchPairReduceF64, PairReduceOp};
 pub use batch_tolerance_search_f64::BatchToleranceSearchF64;
 pub use hill_f64::HillFunctionF64;
@@ -260,6 +261,7 @@ pub use population_pk_f64::{PopulationPkConfig, PopulationPkF64};
 pub use rk_stage::{
     BatchedOdeRK4F64, BatchedRk4Config, OdeFunction, RkIntegrator, wgsl_rk4_parallel,
 };
+pub use wright_fisher_f32::{WrightFisherConfig, WrightFisherF32, seed_xoshiro_state};
 
 // DF64 universal math shaders (compile via compile_shader_df64)
 pub use df64_shaders::{

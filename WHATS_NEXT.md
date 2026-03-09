@@ -6,6 +6,16 @@ Prioritized work items, ordered by impact. Updated 2026-03-09.
 
 ## Recently Completed
 
+- **Tridiagonal QL eigensolver**: `special::tridiagonal_ql` — symmetric tridiagonal
+  eigenvalue/eigenvector solver with `anderson_diagonalize()`. healthSpring absorption.
+  Fixed EISPACK sub-diagonal convention bug. 6 tests.
+- **LCG PRNG module**: `rng` — centralized Knuth LCG (`lcg_step`, `state_to_f64`,
+  `uniform_f64_sequence`). Replaces constant duplication across 4+ springs. 6 tests.
+- **Public activations API**: `activations` — canonical CPU f64 `sigmoid`, `relu`, `gelu`,
+  `swish`, `mish`, `softplus`, `leaky_relu` + batch variants. Consolidates 7 duplicates. 8 tests.
+- **Wright-Fisher population genetics**: `ops::wright_fisher_f32` — GPU-vectorized allele
+  frequency evolution with selection + drift + xoshiro128** PRNG. neuralSpring absorption.
+  3 GPU tests (neutral drift, strong selection, fixation). New WGSL shader.
 - **healthSpring Hill dose-response absorption**: `HillFunctionF64` evolved to support
   Emax parameter (`dose_response()` constructor). Output now `[0, Emax]` instead of
   fixed `[0, 1]`. Backward compatible — `new()` defaults to `emax = 1.0`. 3 new tests.

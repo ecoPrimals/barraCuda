@@ -6,6 +6,17 @@
 
 ---
 
+## Achieved (March 9, 2026 — Cross-Spring Absorption Sprint 2)
+
+### healthSpring Absorptions (Sprint 2)
+- **Tridiagonal QL eigensolver**: `special::tridiagonal_ql` — symmetric tridiagonal eigenvalue/eigenvector solver via QL with Wilkinson shifts. `anderson_diagonalize()` for Anderson tight-binding. Fixed EISPACK sub-diagonal convention bug from source. 6 tests.
+- **LCG PRNG module**: `rng` — centralized Knuth LCG with `lcg_step()`, `state_to_f64()`, `uniform_f64_sequence()`. Eliminates constant duplication across 4+ springs. 6 tests.
+
+### neuralSpring Absorptions (Sprint 2)
+- **Public activations API**: `activations` — canonical CPU f64 `sigmoid`, `relu`, `gelu`, `swish`, `mish`, `softplus`, `leaky_relu` + batch variants. Consolidates 7 duplicate implementations. 8 tests.
+- **Wright-Fisher population genetics**: `ops::wright_fisher_f32` — GPU-vectorized allele frequency evolution with selection + binomial drift + xoshiro128** PRNG. New WGSL shader `wright_fisher_step_f32.wgsl`. `seed_xoshiro_state()` utility. 6 tests (3 CPU seed, 3 GPU including neutral drift, strong selection, fixation).
+- **xoshiro128ss.wgsl**: Confirmed already covered by existing `prng_xoshiro_wgsl`. No duplicate absorption needed.
+
 ## Achieved (March 9, 2026 — healthSpring / hotSpring Absorption)
 
 ### healthSpring Absorptions

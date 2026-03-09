@@ -78,9 +78,9 @@ pub use capabilities::{
 };
 pub use compute_pipeline::{ComputeDispatch, storage_bgl_entry, uniform_bgl_entry};
 #[cfg(feature = "sovereign-dispatch")]
-pub use coral_reef_device::CoralReefDevice;
-#[cfg(feature = "sovereign-dispatch")]
 pub use coral_gpu;
+#[cfg(feature = "sovereign-dispatch")]
+pub use coral_reef_device::CoralReefDevice;
 pub use kernel_router::{ComputeWorkload, KernelRouter, KernelTarget, NpuModelInfo};
 pub use registry::{
     BackendInfo, DeviceCapabilities as PhysicalDeviceCapabilities, DeviceRegistry, DeviceVendor,

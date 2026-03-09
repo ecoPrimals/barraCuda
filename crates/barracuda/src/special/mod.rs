@@ -38,6 +38,8 @@
 //! | `assoc_legendre(n, m, x)` | ✅ | — | Associated Pₙᵐ(x) |
 //! | `plasma_dispersion_z(z)` | ✅ | ✅ | Z(z) power series / asymptotic |
 //! | `plasma_dispersion_w(z)` | ✅ | ✅ | W(z) = 1+z·Z(z), stable branch |
+//! | `tridiagonal_ql(d, e)` | ✅ | — | QL with Wilkinson shifts |
+//! | `anderson_diagonalize(w, t)` | ✅ | — | Anderson tight-binding eigensolver |
 //!
 //! # Precision
 //!
@@ -85,6 +87,7 @@ pub mod legendre;
 pub mod plasma_dispersion;
 #[cfg(feature = "gpu")]
 pub mod screened_coulomb;
+pub mod tridiagonal_ql;
 
 // Re-export CPU functions
 pub use anderson_transport::{anderson_conductance, localization_length};
@@ -108,6 +111,7 @@ pub use legendre::{assoc_legendre, legendre};
 pub use plasma_dispersion::{plasma_dispersion_w, plasma_dispersion_w_stable, plasma_dispersion_z};
 #[cfg(feature = "gpu")]
 pub use screened_coulomb::screened_coulomb_eigenvalues;
+pub use tridiagonal_ql::{anderson_diagonalize, tridiagonal_ql};
 
 // Re-export GPU ops for batch processing (requires GPU feature)
 #[cfg(feature = "gpu")]

@@ -118,11 +118,7 @@ impl CoralReefDevice {
     ///
     /// Returns [`Err`] if the descriptor is unsupported or device open fails.
     #[cfg(feature = "sovereign-dispatch")]
-    pub fn from_descriptor(
-        vendor: &str,
-        arch: Option<&str>,
-        driver: Option<&str>,
-    ) -> Result<Self> {
+    pub fn from_descriptor(vendor: &str, arch: Option<&str>, driver: Option<&str>) -> Result<Self> {
         let ctx = coral_gpu::GpuContext::from_descriptor(vendor, arch, driver).map_err(|e| {
             BarracudaError::Device(format!("CoralReefDevice: descriptor failed: {e}"))
         })?;
@@ -157,9 +153,9 @@ impl CoralReefDevice {
         let compile_ctx = coral_gpu::GpuContext::new(target).map_err(|e| {
             BarracudaError::Device(format!("CoralReefDevice: context init failed: {e}"))
         })?;
-        compile_ctx.compile_wgsl(wgsl).map_err(|e| {
-            BarracudaError::Device(format!("CoralReefDevice: compile failed: {e}"))
-        })
+        compile_ctx
+            .compile_wgsl(wgsl)
+            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: compile failed: {e}")))
     }
 
     /// Whether this device has a hardware backend attached for dispatch.
@@ -198,9 +194,10 @@ impl GpuBackend for CoralReefDevice {
         if !self.has_device {
             return self.require_device("alloc_buffer");
         }
-        let mut ctx = self.ctx.lock().map_err(|e| {
-            BarracudaError::Device(format!("CoralReefDevice: lock poisoned: {e}"))
-        })?;
+        let mut ctx = self
+            .ctx
+            .lock()
+            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: lock poisoned: {e}")))?;
         let handle = ctx.alloc(size).map_err(|e| {
             BarracudaError::Device(format!("CoralReefDevice: alloc({label}, {size}): {e}"))
         })?;
@@ -209,7 +206,9 @@ impl GpuBackend for CoralReefDevice {
 
     #[cfg(not(feature = "sovereign-dispatch"))]
     fn alloc_buffer(&self, _label: &str, _size: u64) -> Result<CoralBuffer> {
-        Err(BarracudaError::Device("sovereign-dispatch not enabled".into()))
+        Err(BarracudaError::Device(
+            "sovereign-dispatch not enabled".into(),
+        ))
     }
 
     #[cfg(feature = "sovereign-dispatch")]
@@ -221,7 +220,9 @@ impl GpuBackend for CoralReefDevice {
 
     #[cfg(not(feature = "sovereign-dispatch"))]
     fn alloc_buffer_init(&self, _label: &str, _contents: &[u8]) -> Result<CoralBuffer> {
-        Err(BarracudaError::Device("sovereign-dispatch not enabled".into()))
+        Err(BarracudaError::Device(
+            "sovereign-dispatch not enabled".into(),
+        ))
     }
 
     #[cfg(feature = "sovereign-dispatch")]
@@ -231,7 +232,9 @@ impl GpuBackend for CoralReefDevice {
 
     #[cfg(not(feature = "sovereign-dispatch"))]
     fn alloc_uniform(&self, _label: &str, _contents: &[u8]) -> Result<CoralBuffer> {
-        Err(BarracudaError::Device("sovereign-dispatch not enabled".into()))
+        Err(BarracudaError::Device(
+            "sovereign-dispatch not enabled".into(),
+        ))
     }
 
     #[cfg(feature = "sovereign-dispatch")]
@@ -249,18 +252,21 @@ impl GpuBackend for CoralReefDevice {
         if !self.has_device {
             return self.require_device("download");
         }
-        let ctx = self.ctx.lock().map_err(|e| {
-            BarracudaError::Device(format!("CoralReefDevice: lock poisoned: {e}"))
-        })?;
-        let data = ctx.readback(buffer.handle, size as usize).map_err(|e| {
-            BarracudaError::Device(format!("CoralReefDevice: readback: {e}"))
-        })?;
+        let ctx = self
+            .ctx
+            .lock()
+            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: lock poisoned: {e}")))?;
+        let data = ctx
+            .readback(buffer.handle, size as usize)
+            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: readback: {e}")))?;
         Ok(bytes::Bytes::from(data))
     }
 
     #[cfg(not(feature = "sovereign-dispatch"))]
     fn download(&self, _buffer: &CoralBuffer, _size: u64) -> Result<bytes::Bytes> {
-        Err(BarracudaError::Device("sovereign-dispatch not enabled".into()))
+        Err(BarracudaError::Device(
+            "sovereign-dispatch not enabled".into(),
+        ))
     }
 
     #[cfg(feature = "sovereign-dispatch")]
@@ -268,26 +274,27 @@ impl GpuBackend for CoralReefDevice {
         if !self.has_device {
             return self.require_device("dispatch_compute");
         }
-        let mut ctx = self.ctx.lock().map_err(|e| {
-            BarracudaError::Device(format!("CoralReefDevice: lock poisoned: {e}"))
-        })?;
-        let kernel = ctx.compile_wgsl(desc.shader_source).map_err(|e| {
-            BarracudaError::Device(format!("CoralReefDevice: compile: {e}"))
-        })?;
+        let mut ctx = self
+            .ctx
+            .lock()
+            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: lock poisoned: {e}")))?;
+        let kernel = ctx
+            .compile_wgsl(desc.shader_source)
+            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: compile: {e}")))?;
         let buffer_handles: Vec<coral_gpu::BufferHandle> =
             desc.bindings.iter().map(|b| b.buffer.handle).collect();
         let dims = [desc.workgroups.0, desc.workgroups.1, desc.workgroups.2];
-        ctx.dispatch(&kernel, &buffer_handles, dims).map_err(|e| {
-            BarracudaError::Device(format!("CoralReefDevice: dispatch: {e}"))
-        })?;
-        ctx.sync().map_err(|e| {
-            BarracudaError::Device(format!("CoralReefDevice: sync: {e}"))
-        })
+        ctx.dispatch(&kernel, &buffer_handles, dims)
+            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: dispatch: {e}")))?;
+        ctx.sync()
+            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: sync: {e}")))
     }
 
     #[cfg(not(feature = "sovereign-dispatch"))]
     fn dispatch_compute(&self, _desc: DispatchDescriptor<'_, Self>) -> Result<()> {
-        Err(BarracudaError::Device("sovereign-dispatch not enabled".into()))
+        Err(BarracudaError::Device(
+            "sovereign-dispatch not enabled".into(),
+        ))
     }
 }
 

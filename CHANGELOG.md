@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Cross-Spring Absorption Sprint 2 (Mar 9 2026)
+
+- **Tridiagonal QL eigensolver** (`special::tridiagonal_ql`): Symmetric tridiagonal
+  eigenvalue/eigenvector solver via QL algorithm with Wilkinson shifts. Includes
+  `anderson_diagonalize()` for Anderson tight-binding models. Absorbed from healthSpring
+  `microbiome.rs` (V13). Fixed off-by-one in EISPACK sub-diagonal convention. 6 tests.
+- **LCG PRNG module** (`rng`): Centralized Knuth LCG with `lcg_step()`,
+  `state_to_f64()`, `uniform_f64_sequence()`. Replaces duplicated constant across 4+
+  springs. CPU-only, complements GPU xoshiro128**. Absorbed from healthSpring `rng.rs`.
+  6 tests.
+- **Public activations API** (`activations`): `sigmoid`, `relu`, `gelu`, `swish`, `mish`,
+  `softplus`, `leaky_relu` as canonical CPU f64 functions + batch variants. Consolidates
+  7 duplicate implementations across springs. Numerically stable sigmoid for all inputs.
+  8 tests.
+- **Wright-Fisher population genetics** (`ops::wright_fisher_f32`): GPU-vectorized
+  allele frequency simulation with selection + drift. Xoshiro128** PRNG per thread,
+  binomial drift via sequential sampling. `seed_xoshiro_state()` utility. Absorbed from
+  neuralSpring `metalForge/shaders/wright_fisher_step.wgsl`. New WGSL shader. 6 tests
+  (3 CPU, 3 GPU including neutral drift, strong selection, fixation).
+
 ### Added — healthSpring / hotSpring Absorption Sprint (Mar 9 2026)
 
 - **Hill dose-response (Emax)**: `HillFunctionF64` evolved from normalized `[0,1]` Hill to

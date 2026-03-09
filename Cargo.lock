@@ -126,6 +126,7 @@ dependencies = [
  "blake3",
  "bytemuck",
  "bytes",
+ "coral-gpu",
  "half",
  "naga",
  "num-traits",
@@ -181,6 +182,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "843867be96c8daad0d758b57df9392b6d8d271134fce549de6ce169ff98a92af"
 
 [[package]]
+name = "bitview"
+version = "0.1.0"
+
+[[package]]
 name = "blake3"
 version = "1.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -231,6 +236,9 @@ name = "bytes"
 version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e748733b7cbc798e1434b6ac524f0c1ff2ab456fe201501e6497c8417a4fc33"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "cc"
@@ -316,6 +324,51 @@ name = "constant_time_eq"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
+
+[[package]]
+name = "coral-driver"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "rustix",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "coral-gpu"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "coral-driver",
+ "coral-reef",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "coral-reef"
+version = "0.1.0"
+dependencies = [
+ "bitview",
+ "coral-reef-isa",
+ "coral-reef-stubs",
+ "naga",
+ "nak_ir_proc",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "coral-reef-isa"
+version = "0.1.0"
+dependencies = [
+ "bitview",
+]
+
+[[package]]
+name = "coral-reef-stubs"
+version = "0.1.0"
 
 [[package]]
 name = "core-foundation"
@@ -890,10 +943,20 @@ dependencies = [
  "num-traits",
  "once_cell",
  "petgraph",
+ "pp-rs",
  "rustc-hash",
  "spirv",
  "thiserror",
  "unicode-ident",
+]
+
+[[package]]
+name = "nak_ir_proc"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1071,6 +1134,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a9db96d7fa8782dd8c15ce32ffe8680bbd1e978a43bf51a34d39483540495f5"
 dependencies = [
  "portable-atomic",
+]
+
+[[package]]
+name = "pp-rs"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bb458bb7f6e250e6eb79d5026badc10a3ebb8f9a15d1fff0f13d17c71f4d6dee"
+dependencies = [
+ "unicode-xid",
 ]
 
 [[package]]

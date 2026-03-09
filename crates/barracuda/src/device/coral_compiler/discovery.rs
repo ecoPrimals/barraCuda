@@ -105,11 +105,20 @@ fn scan_capability(dir: &std::path::Path, capability: &str) -> Option<String> {
 }
 
 /// Read a primal's transport manifest and check for a specific capability.
+///
+/// Supports both Phase 10 manifests (`"provides"` array) and earlier
+/// manifests (`"capabilities"` array) for backward compatibility.
 fn read_capability_transport(path: &std::path::Path, capability: &str) -> Option<String> {
     let content = std::fs::read_to_string(path).ok()?;
     let info: serde_json::Value = serde_json::from_str(&content).ok()?;
-    let caps = info.get("capabilities")?.as_array()?;
-    if !caps.iter().any(|c| c.as_str() == Some(capability)) {
+
+    let has_cap = info
+        .get("provides")
+        .or_else(|| info.get("capabilities"))
+        .and_then(|v| v.as_array())
+        .is_some_and(|caps| caps.iter().any(|c| c.as_str() == Some(capability)));
+
+    if !has_cap {
         return None;
     }
     read_jsonrpc_from_value(&info)
@@ -123,9 +132,17 @@ fn read_jsonrpc_transport(path: &std::path::Path) -> Option<String> {
 }
 
 /// Extract JSON-RPC address from a parsed transport manifest.
+///
+/// Handles both formats:
+/// - String: `"transports": { "jsonrpc": "127.0.0.1:5000" }`
+/// - Object (Phase 10): `"transports": { "jsonrpc": { "tcp": "127.0.0.1:5000", "path": "..." } }`
 fn read_jsonrpc_from_value(info: &serde_json::Value) -> Option<String> {
-    info.get("transports")
-        .and_then(|t| t.get("jsonrpc"))
+    let jsonrpc = info.get("transports")?.get("jsonrpc")?;
+    if let Some(s) = jsonrpc.as_str() {
+        return Some(s.to_owned());
+    }
+    jsonrpc
+        .get("tcp")
         .and_then(|v| v.as_str())
         .map(str::to_owned)
 }

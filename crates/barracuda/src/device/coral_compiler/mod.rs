@@ -389,7 +389,11 @@ mod tests {
         let cc = CoralCompiler::new();
         let health = cc.health().await;
         if let Some(ref h) = health {
-            assert_eq!(h.name, "coralReef");
+            assert!(
+                h.name == "coralReef" || h.name == "coralreef-core",
+                "unexpected primal name: {}",
+                h.name
+            );
             assert!(!h.version.is_empty());
         }
         cc.reset().await;

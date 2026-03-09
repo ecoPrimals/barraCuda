@@ -14,3 +14,9 @@ panic = "abort"
 [profile.release-fast]
 inherits = "release"
 opt-level = 3
+
+# Local coralReef checkout for sovereign-dispatch development
+[patch.crates-io]
+coral-gpu = { path = "../coralReef/crates/coral-gpu" }
+coral-reef = { path = "../coralReef/crates/coral-reef" }
+coral-driver = { path = "../coralReef/crates/coral-driver" }

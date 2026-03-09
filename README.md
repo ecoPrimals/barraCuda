@@ -26,8 +26,8 @@ results.
 
 ### Key capabilities
 
-- **716 WGSL shaders** spanning scientific compute domains
-- **1,057 Rust source files**, 31 integration test suites, 3,450+ library tests passing
+- **719 WGSL shaders** spanning scientific compute domains
+- **1,062 Rust source files**, 63 integration test suites, 3,450+ library tests passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -66,7 +66,7 @@ Your Code / Springs
     |
     v
 barracuda (umbrella crate)
-    |-- Pure Math: linalg, special, numerical, spectral, stats, sample
+    |-- Pure Math: linalg, special, numerical, spectral, stats, sample, activations, rng
     |-- GPU Math: ops, tensor, shaders, interpolate, optimize
     |-- Compute Fabric: device, staging, pipeline, dispatch, multi_gpu
     |-- Domain Models: nn, snn, esn, pde, genomics (feature-gated)
@@ -128,7 +128,7 @@ barraCuda/
 │       │   ├── sample/              # LHS, Sobol, Metropolis, sparsity
 │       │   ├── ops/                 # GPU ops (matmul, softmax, FHE, bio)
 │       │   ├── tensor/              # GPU tensor type
-│       │   ├── shaders/             # 791 WGSL shaders (see shaders/README.md)
+│       │   ├── shaders/             # 719 WGSL shaders (see shaders/README.md)
 │       │   ├── device/              # GpuBackend trait, WgpuDevice, CoralReefDevice, concurrency
 │       │   ├── staging/             # Ring buffers, unidirectional pipelines
 │       │   ├── pipeline/            # ComputeDispatch, batched pipelines

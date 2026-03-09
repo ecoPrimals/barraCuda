@@ -232,7 +232,7 @@ pub mod fused_map_reduce_f64; // Unified pattern: Shannon, Simpson, norms, etc.
 pub mod kriging_f64; // Spatial interpolation (airSpring, wetSpring)
 
 // Tridiagonal solvers - Critical for PDE/ODE (all springs)
-// Note: cyclic_reduction_wgsl.rs exists but has API drift; use cyclic_reduction_f64 instead
+// cyclic_reduction_wgsl.rs removed (API drift); use cyclic_reduction_f64 instead
 pub mod cyclic_reduction_f64; // f64 cyclic reduction for PDEs (Feb 17, 2026)
 pub mod weighted_dot_f64; // Weighted inner products (energy integrals, Galerkin)
 

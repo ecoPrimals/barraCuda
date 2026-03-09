@@ -1,8 +1,8 @@
 # Spring Absorption Tracker
 
 **Version**: 0.3.3 → 0.3.4
-**Date**: March 8, 2026
-**Source**: hotSpring v0.6.19, groundSpring V96, neuralSpring V89/S131, wetSpring V97e, airSpring v0.7.3
+**Date**: March 9, 2026
+**Source**: hotSpring v0.6.24, groundSpring V96, neuralSpring V92/S134, wetSpring V101, airSpring v0.7.3, healthSpring V13
 
 Cross-spring evolution follows **Write → Absorb → Lean**: springs implement
 domain-specific primitives, barraCuda absorbs and generalises, springs consume
@@ -126,6 +126,23 @@ groundSpring → ALL:        2 shaders (chi_squared universal, Welford mean+vari
 
 ---
 
+### Cross-Spring Absorption Sprint 2 (Mar 9 2026)
+
+| # | Item | Source | Module | Status |
+|---|------|--------|--------|--------|
+| AH | **P0: Tridiagonal QL eigensolver** | healthSpring `microbiome.rs` | `special::tridiagonal_ql` | ✅ Done |
+| AI | **P0: LCG PRNG centralization** | healthSpring `rng.rs` | `rng` | ✅ Done |
+| AJ | **P0: Public activations API** | neuralSpring S134 request | `activations` | ✅ Done |
+| AK | **P1: Wright-Fisher population genetics** | neuralSpring `metalForge` | `ops::wright_fisher_f32` | ✅ Done |
+| AL | **P1: Hill dose-response Emax** | healthSpring V13 | `ops::hill_f64` | ✅ Done |
+| AM | **P1: Population PK Monte Carlo** | healthSpring V13 | `ops::population_pk_f64` | ✅ Done |
+| AN | **P1: Plasma dispersion W(z)/Z(z)** | hotSpring `dielectric.rs` | `special::plasma_dispersion` | ✅ Done |
+| AO | **P1: Batched f32 logsumexp** | neuralSpring confirm | `shaders/reduce/logsumexp_reduce_f32.wgsl` | ✅ Done |
+| AP | **P2: healthSpring provenance domain** | healthSpring V13 | `shaders::provenance::types` | ✅ Done |
+| AQ | **Cleanup: orphaned code removal** | internal audit | `ops/cyclic_reduction_wgsl.rs`, `ops/reduce/` | ✅ Removed |
+
+---
+
 ## Numerical Stability Notes (from springs)
 
 - **f32 accumulation bias**: Green-Kubo gives ~28% bias — use f64/DF64 for reductions
@@ -137,6 +154,8 @@ groundSpring → ALL:        2 shaders (chi_squared universal, Welford mean+vari
 
 ## References
 
+- `wateringHole/handoffs/BARRACUDA_V033_CROSS_SPRING_ABSORPTION_SPRINT2_HANDOFF_MAR09_2026.md`
+- `wateringHole/handoffs/BARRACUDA_V033_HEALTHSPRING_HOTSPRING_ABSORPTION_HANDOFF_MAR09_2026.md`
 - `wateringHole/handoffs/BARRACUDA_V033_CROSS_SPRING_ABSORPTION_HANDOFF_MAR08_2026.md`
 - `wateringHole/handoffs/CORALREEF_PHASE10_CROSS_SPRING_REWIRE_HANDOFF_MAR07_2026.md`
 - `wateringHole/handoffs/BARRACUDA_V033_SPRING_ABSORPTION_DEEP_DEBT_HANDOFF_MAR06_2026.md`

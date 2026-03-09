@@ -56,7 +56,7 @@ the conventions in `src/shaders/README.md`:
 - Workgroup size: `@workgroup_size(256)` for general elementwise,
   `@workgroup_size(64)` for physics/lattice/memory-heavy (see `CONVENTIONS.md`)
 - Include `fn main(@builtin(global_invocation_id) gid: vec3<u32>)` entry point
-- Use `{{SCALAR}}` template for multi-precision support when applicable
+- Write shaders in f64-canonical form; the precision compiler handles F32/DF64 transforms
 
 ### 2. Register the shader
 

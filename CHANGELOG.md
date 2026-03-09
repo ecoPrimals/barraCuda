@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Showcase Collection (Mar 9 2026)
+
+- **`showcase/` directory**: 10 progressive demos across 3 tiers, following
+  ecosystem conventions (numbered subdirs, standalone Cargo crates, shell scripts)
+- **00-local-primal/01-device-discovery**: GPU detection, capability scoring,
+  precision routing advice (`Fp64Strategy`), vendor-specific workgroup sizing
+- **00-local-primal/02-precision-tiers**: F32 vs F64 vs DF64 comparison on
+  identical math, error analysis against CPU reference
+- **00-local-primal/03-fused-gpu-ops**: Fused Welford mean+variance, fused
+  5-accumulator correlation, GpuView zero-readback chains
+- **00-local-primal/04-science-shaders**: Hill kinetics, statistical metrics,
+  tolerance architecture, epsilon guards, shader inventory
+- **01-ipc-protocol/01-jsonrpc-server**: Start server, exercise 6 JSON-RPC 2.0
+  methods via `barracuda client`
+- **01-ipc-protocol/02-doctor-validate**: Health diagnostics, GPU validation canary
+- **02-cross-primal-compute/01-coralreef-shader-compile**: WGSL → coralReef
+  native binary with graceful degradation to wgpu path
+- **02-cross-primal-compute/02-toadstool-hw-discovery**: Hardware inventory
+  feeding GPU selection with toadStool fallback to local discovery
+- **02-cross-primal-compute/03-sovereign-pipeline**: Full pipeline capstone —
+  discover (toadStool) → route precision (barraCuda) → compile (coralReef) →
+  dispatch → validate, each layer degrading independently
+
 ### Added — Deep Audit and Zero-Copy Evolution (Mar 9 2026)
 
 - **Zero-copy upload evolution**: ~50 GPU dispatch paths evolved from

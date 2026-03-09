@@ -2,7 +2,7 @@
 
 **Version**: 0.3.3
 **Date**: 2026-03-09
-**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,450+ tests all pass on llvmpipe, GpuBackend trait abstraction, sovereign dispatch scaffold, zero-copy bytemuck/Bytes evolution, Arc<str> error paths, capability-based GPU estimates, comprehensive coverage tests)
+**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,450+ tests, GpuBackend trait abstraction, sovereign dispatch scaffold, zero-copy bytemuck/Bytes, showcase collection with 10 progressive demos)
 
 ---
 
@@ -10,14 +10,14 @@
 
 | Category | Grade | Notes |
 |----------|-------|-------|
-| **Core compute** | A | 716 WGSL shaders, 13-tier tolerance architecture, GpuView persistent buffers with ops |
+| **Core compute** | A | 791 WGSL shaders, 13-tier tolerance architecture, GpuView persistent buffers with ops |
 | **Precision tiers** | A+ | 3-tier model (F32/F64/Df64) aligned with coralReef `Fp64Strategy`; DF64 naga-guided rewrite validated; probe-aware Fp64Strategy; DF64 reduce shaders for Hybrid devices |
 | **Sovereign compiler** | A | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all shaders |
 | **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery; coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support |
 | **Device management** | A+ | `GpuBackend` trait abstraction, `CoralReefDevice` scaffold behind `sovereign-dispatch` feature, multi-GPU, capability-scored discovery, probe-aware f64 strategy, bounded poll timeout |
 | **Test coverage** | A | 3,450+ tests (all pass on llvmpipe); proptest; chaos/fault test tiers; nextest CI/stress profiles; bounded GPU poll timeout; GPU-heavy test group with extended timeouts; coverage tests for batch_ipr, histogram, staging, precision/cpu, surrogate/adaptive |
 | **Dependencies** | A- | Pure Rust chain (blake3 pure); zero non-GPU external C deps; wgpu/naga 28 for GPU |
-| **Documentation** | A | Comprehensive CHANGELOG, specs, README, CONTRIBUTING, CONVENTIONS, BREAKING_CHANGES; all rustdoc warnings resolved |
+| **Documentation** | A+ | Comprehensive CHANGELOG, specs, README, CONTRIBUTING, CONVENTIONS, BREAKING_CHANGES; all rustdoc warnings resolved; showcase/ with 10 progressive demos (local, IPC, cross-primal) |
 | **Unsafe code** | A+ | Zero `unsafe` blocks in entire codebase |
 | **Clippy / lint** | A+ | Zero warnings with pedantic + unwrap_used; `#[expect(reason)]` for clippy suppressions; `#[allow(dead_code, reason)]` for CPU reference implementations; `bytes::Bytes` zero-copy on I/O boundaries; zero undocumented suppressions |
 | **Error handling** | A+ | Binary `main()` uses typed `BarracudaCoreError` (not `Box<dyn Error>`); `From` impls for `serde_json::Error`, `BarracudaError`, `io::Error`; `Result` propagation throughout; `let-else` throughout; poison recovery |
@@ -105,6 +105,8 @@
 - GPU-heavy test group with extended timeouts for edge_conv, fft, conv2d, flash_attention
 - Coverage tests added for batch_ipr, histogram, staging/ring_buffer, staging/unidirectional, staging/stateful, precision/cpu, surrogate/adaptive
 - CI dual coverage targets: 80% baseline (llvmpipe) + 90% stretch (GPU hardware)
+- `showcase/` collection: 10 progressive demos across 3 tiers (local primal, IPC protocol, cross-primal compute)
+- Showcase demonstrates: device discovery, precision tiers, fused GPU ops, science shaders, JSON-RPC server, doctor/validate, coralReef compilation, toadStool discovery, sovereign pipeline
 - Zero `panic!()` in production library code (all panics restricted to `#[cfg(test)]` modules)
 - **Systematic f64 pipeline fix**: 14 ops (transe_score, triangular_solve, variance, correlation, covariance, hermite, bessel_i0/j0/j1/k0, beta, digamma, cosine_similarity, weighted_dot) evolved from `compile_shader()`/`GLOBAL_CACHE` to f64-native compilation paths — eliminates silent data corruption on f64-capable GPUs
 - Pipeline cache evolved with f64-native compilation path (`get_or_create_pipeline_f64_native`) — separate cache maps prevent f64/f32 key collisions

@@ -128,7 +128,7 @@ barraCuda/
 │       │   ├── sample/              # LHS, Sobol, Metropolis, sparsity
 │       │   ├── ops/                 # GPU ops (matmul, softmax, FHE, bio)
 │       │   ├── tensor/              # GPU tensor type
-│       │   ├── shaders/             # 712 WGSL shaders (see shaders/README.md)
+│       │   ├── shaders/             # 791 WGSL shaders (see shaders/README.md)
 │       │   ├── device/              # GpuBackend trait, WgpuDevice, CoralReefDevice, concurrency
 │       │   ├── staging/             # Ring buffers, unidirectional pipelines
 │       │   ├── pipeline/            # ComputeDispatch, batched pipelines

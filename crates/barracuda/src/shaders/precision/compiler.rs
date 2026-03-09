@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Shader compilation pipeline: type substitution, downcast, template expansion.
+//! Shader compilation pipeline: type substitution and downcast transforms.
 //!
-//! Handles f64 → f32/f16/df64 text-based transforms and `{{SCALAR}}` template
-//! expansion. The "math is universal, precision is silicon" philosophy: one
-//! f64-canonical shader produces variants for all precisions.
+//! Handles f64 → f32 and f64 → df64 text-based transforms. The "math is
+//! universal, precision is silicon" philosophy: one f64-canonical shader
+//! produces variants for all precisions.
 
 /// Detect whether WGSL source is f64-canonical (contains f64 type declarations).
 ///

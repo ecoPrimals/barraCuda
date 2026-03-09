@@ -51,6 +51,13 @@ Prioritized work items, ordered by impact. Updated 2026-03-09.
 - **Coverage expansion**: batch_ipr, histogram, staging (ring_buffer, unidirectional, stateful), precision/cpu, surrogate/adaptive — targeting 0% and <30% coverage modules.
 - **GPU-heavy test timeouts**: Extended slow-timeout overrides for edge_conv, fft, conv2d, flash_attention; fixed edge_conv 60s timeout failure.
 - **CI 90% coverage**: Dual target — 80% baseline (llvmpipe), 90% stretch (GPU hardware, continue-on-error).
+- **Showcase collection**: 10 progressive demos across 3 tiers (local primal, IPC
+  protocol, cross-primal compute). Demonstrates device discovery, precision tiers
+  (F32/F64/DF64), fused GPU ops (Welford, correlation, GpuView), science shaders
+  (Hill kinetics, tolerance architecture), JSON-RPC server, doctor/validate,
+  coralReef shader compilation, toadStool hardware discovery, sovereign pipeline
+  capstone. All Cargo crates compile zero warnings. Each cross-primal demo
+  degrades gracefully when toadStool/coralReef are absent.
 - **Bounded GPU poll timeout**: `BARRACUDA_POLL_TIMEOUT_SECS` (default 120s) prevents
   indefinite hangs under llvm-cov instrumentation.
 - **LSCFRK gradient flow integrators**: Absorbed from hotSpring — `derive_lscfrk3`

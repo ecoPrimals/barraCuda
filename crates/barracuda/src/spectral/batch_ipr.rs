@@ -160,3 +160,90 @@ impl BatchIprGpu {
 }
 
 use wgpu::util::DeviceExt;
+
+#[cfg(all(test, feature = "gpu"))]
+mod tests {
+    #![expect(clippy::unwrap_used, reason = "tests")]
+
+    use super::*;
+    use std::sync::Arc;
+
+    fn get_device() -> Option<Arc<WgpuDevice>> {
+        crate::device::test_pool::get_test_device_if_gpu_available_sync()
+    }
+
+    #[tokio::test]
+    async fn test_batch_ipr_creation() {
+        let Some(device) = get_device() else {
+            return;
+        };
+        let _batch_ipr = BatchIprGpu::new(device);
+    }
+
+    #[tokio::test]
+    async fn test_batch_ipr_uniform_vector() {
+        let Some(device) = get_device() else {
+            return;
+        };
+        let dim = 64u32;
+        let n_vectors = 4u32;
+        // Uniform normalized vector: each component = 1/sqrt(dim)
+        // IPR = Σ|ψ_i|⁴ = dim * (1/dim)² = 1/dim
+        let inv_sqrt_dim = 1.0 / (dim as f32).sqrt();
+        let mut eigenvectors = vec![0.0f32; (dim * n_vectors) as usize];
+        for v in eigenvectors.chunks_mut(dim as usize) {
+            v.fill(inv_sqrt_dim);
+        }
+
+        let batch_ipr = BatchIprGpu::new(device.clone());
+        let eig_buf = device.create_buffer_f32_init("batch_ipr:eig", &eigenvectors);
+        let ipr_out_buf = device
+            .create_f32_rw_buffer("batch_ipr:out", n_vectors as usize)
+            .unwrap();
+
+        batch_ipr.dispatch(&eig_buf, &ipr_out_buf, dim, n_vectors);
+
+        let ipr_values = device
+            .read_buffer_f32(&ipr_out_buf, n_vectors as usize)
+            .unwrap();
+        let expected_ipr = 1.0 / dim as f32;
+        for (i, &ipr) in ipr_values.iter().enumerate() {
+            assert!(
+                (ipr - expected_ipr).abs() < 1e-5,
+                "Vector {i}: IPR {ipr} should be ≈ {expected_ipr} (uniform)"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_batch_ipr_localized_vector() {
+        let Some(device) = get_device() else {
+            return;
+        };
+        let dim = 32u32;
+        let n_vectors = 4u32;
+        // One-hot vectors: IPR = 1.0 (fully localized)
+        let mut eigenvectors = vec![0.0f32; (dim * n_vectors) as usize];
+        for (vec_idx, v) in eigenvectors.chunks_mut(dim as usize).enumerate() {
+            v[vec_idx % dim as usize] = 1.0;
+        }
+
+        let batch_ipr = BatchIprGpu::new(device.clone());
+        let eig_buf = device.create_buffer_f32_init("batch_ipr:eig", &eigenvectors);
+        let ipr_out_buf = device
+            .create_f32_rw_buffer("batch_ipr:out", n_vectors as usize)
+            .unwrap();
+
+        batch_ipr.dispatch(&eig_buf, &ipr_out_buf, dim, n_vectors);
+
+        let ipr_values = device
+            .read_buffer_f32(&ipr_out_buf, n_vectors as usize)
+            .unwrap();
+        for (i, &ipr) in ipr_values.iter().enumerate() {
+            assert!(
+                (ipr - 1.0).abs() < 1e-5,
+                "Vector {i}: IPR {ipr} should be ≈ 1.0 (localized)"
+            );
+        }
+    }
+}

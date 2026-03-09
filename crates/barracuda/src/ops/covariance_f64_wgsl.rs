@@ -26,15 +26,19 @@ fn shader_for_device(device: &WgpuDevice) -> Result<&'static str> {
     match profile.fp64_strategy() {
         Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => Ok(SHADER),
         Fp64Strategy::Hybrid => {
-            static DF64_RESULT: std::sync::LazyLock<std::result::Result<String, String>> =
+            static DF64_RESULT: std::sync::LazyLock<std::result::Result<String, Arc<str>>> =
                 std::sync::LazyLock::new(|| {
                     crate::shaders::sovereign::df64_rewrite::rewrite_f64_infix_full(SHADER)
                         .map(|src| format!("enable f64;\n{DF64_CORE}\n{src}"))
-                        .map_err(|e| format!("covariance DF64 rewrite failed: {e}"))
+                        .map_err(|e| {
+                            Arc::from(format!("covariance DF64 rewrite failed: {e}").as_str())
+                        })
                 });
             match DF64_RESULT.as_ref() {
                 Ok(src) => Ok(src.as_str()),
-                Err(msg) => Err(crate::error::BarracudaError::ShaderCompilation(msg.clone())),
+                Err(msg) => Err(crate::error::BarracudaError::ShaderCompilation(Arc::clone(
+                    msg,
+                ))),
             }
         }
     }

@@ -124,17 +124,17 @@ impl YukawaCellListF64 {
             0.0, // padding to 16
         ];
 
-        let pos_bytes: Vec<u8> = sorted_pos.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let params_bytes: Vec<u8> = gpu_params.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let cs_bytes: Vec<u8> = cell_start.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let cc_bytes: Vec<u8> = cell_count.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let pos_bytes: &[u8] = bytemuck::cast_slice(&sorted_pos);
+        let params_bytes: &[u8] = bytemuck::cast_slice(&gpu_params);
+        let cs_bytes: &[u8] = bytemuck::cast_slice(&cell_start);
+        let cc_bytes: &[u8] = bytemuck::cast_slice(&cell_count);
 
         let pos_buffer = self
             .device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("YCL Positions"),
-                contents: &pos_bytes,
+                contents: pos_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
@@ -157,7 +157,7 @@ impl YukawaCellListF64 {
                 .device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("YCL Params"),
-                    contents: &params_bytes,
+                    contents: params_bytes,
                     usage: wgpu::BufferUsages::STORAGE,
                 });
 
@@ -166,7 +166,7 @@ impl YukawaCellListF64 {
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("YCL CellStart"),
-                contents: &cs_bytes,
+                contents: cs_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
@@ -175,7 +175,7 @@ impl YukawaCellListF64 {
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("YCL CellCount"),
-                contents: &cc_bytes,
+                contents: cc_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
 

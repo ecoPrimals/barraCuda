@@ -80,23 +80,23 @@ impl SsfGpu {
 
         // Create buffers
         let positions_buffer = {
-            let bytes: Vec<u8> = positions.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let bytes: &[u8] = bytemuck::cast_slice(positions);
             device
                 .device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("SSF positions"),
-                    contents: &bytes,
+                    contents: bytes,
                     usage: wgpu::BufferUsages::STORAGE,
                 })
         };
 
         let k_vectors_buffer = {
-            let bytes: Vec<u8> = k_vectors.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let bytes: &[u8] = bytemuck::cast_slice(k_vectors);
             device
                 .device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("SSF k_vectors"),
-                    contents: &bytes,
+                    contents: bytes,
                     usage: wgpu::BufferUsages::STORAGE,
                 })
         };

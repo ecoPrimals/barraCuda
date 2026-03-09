@@ -16,6 +16,7 @@
 
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
+use bytemuck;
 use std::sync::Arc;
 
 /// GPU-resident state buffer for sequential multi-step dispatches.
@@ -60,7 +61,7 @@ impl BatchedStatefulF64 {
             });
         }
 
-        let bytes: Vec<u8> = initial_state.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let bytes: &[u8] = bytemuck::cast_slice(initial_state);
         let buf_usage = wgpu::BufferUsages::STORAGE
             | wgpu::BufferUsages::COPY_SRC
             | wgpu::BufferUsages::COPY_DST;
@@ -69,7 +70,7 @@ impl BatchedStatefulF64 {
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("BatchedStateful:A"),
-                contents: &bytes,
+                contents: bytes,
                 usage: buf_usage,
             });
         let state_b = device.device.create_buffer(&wgpu::BufferDescriptor {
@@ -132,8 +133,8 @@ impl BatchedStatefulF64 {
                 message: format!("state length {} != expected {expected}", state.len()),
             });
         }
-        let bytes: Vec<u8> = state.iter().flat_map(|v| v.to_le_bytes()).collect();
-        self.device.queue.write_buffer(self.state_in(), 0, &bytes);
+        let bytes: &[u8] = bytemuck::cast_slice(state);
+        self.device.queue.write_buffer(self.state_in(), 0, bytes);
         Ok(())
     }
 

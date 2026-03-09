@@ -138,21 +138,21 @@ impl GemmF64 {
         let c_size = batch_size * m * n;
 
         // Create buffers
-        let a_bytes: Vec<u8> = a.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let a_bytes: &[u8] = bytemuck::cast_slice(a);
         let a_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("GEMM A f64"),
-                contents: &a_bytes,
+                contents: a_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
-        let b_bytes: Vec<u8> = b.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let b_bytes: &[u8] = bytemuck::cast_slice(b);
         let b_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("GEMM B f64"),
-                contents: &b_bytes,
+                contents: b_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
 

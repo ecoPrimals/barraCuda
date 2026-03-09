@@ -142,13 +142,13 @@ impl RichardsGpu {
             })
         };
 
-        let h_bytes: Vec<u8> = h0.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let h_bytes: &[u8] = bytemuck::cast_slice(h0);
         let h_buf = self
             .device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Richards h"),
-                contents: &h_bytes,
+                contents: h_bytes,
                 usage: wgpu::BufferUsages::STORAGE
                     | wgpu::BufferUsages::COPY_SRC
                     | wgpu::BufferUsages::COPY_DST,
@@ -158,7 +158,7 @@ impl RichardsGpu {
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Richards h_old"),
-                contents: &h_bytes,
+                contents: h_bytes,
                 usage: wgpu::BufferUsages::STORAGE
                     | wgpu::BufferUsages::COPY_SRC
                     | wgpu::BufferUsages::COPY_DST,
@@ -254,8 +254,8 @@ impl RichardsGpu {
                     .fold(0.0f64, f64::max);
 
                 // h ← h_new
-                let new_bytes: Vec<u8> = h_updated.iter().flat_map(|v| v.to_le_bytes()).collect();
-                self.device.queue.write_buffer(&h_buf, 0, &new_bytes);
+                let new_bytes: &[u8] = bytemuck::cast_slice(&h_updated);
+                self.device.queue.write_buffer(&h_buf, 0, new_bytes);
 
                 if max_diff < config.picard_tol {
                     break;

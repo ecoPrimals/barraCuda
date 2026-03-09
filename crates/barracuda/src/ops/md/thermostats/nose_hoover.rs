@@ -180,12 +180,12 @@ impl NoseHooverHalfKick {
             0.0,
             0.0,
         ];
-        let params_bytes: Vec<u8> = params.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let params_bytes: &[u8] = bytemuck::cast_slice(&params);
         let params_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("NH HalfKick Params"),
-                contents: &params_bytes,
+                contents: params_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
@@ -361,22 +361,22 @@ mod tests {
         let velocities: Vec<f64> = vec![1.0, 0.0, 0.0];
         let forces: Vec<f64> = vec![6.0, 0.0, 0.0]; // a = 6/3 = 2
 
-        let vel_bytes: Vec<u8> = velocities.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let vel_bytes: &[u8] = bytemuck::cast_slice(&velocities);
         let vel_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Test Velocities"),
-                contents: &vel_bytes,
+                contents: vel_bytes,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
             });
         let vel_tensor = Tensor::from_buffer(vel_buffer, vec![1, 3], device.clone());
 
-        let force_bytes: Vec<u8> = forces.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let force_bytes: &[u8] = bytemuck::cast_slice(&forces);
         let force_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Test Forces"),
-                contents: &force_bytes,
+                contents: force_bytes,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
             });
         let force_tensor = Tensor::from_buffer(force_buffer, vec![1, 3], device.clone());

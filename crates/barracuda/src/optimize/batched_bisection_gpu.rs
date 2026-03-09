@@ -301,33 +301,33 @@ impl BatchedBisectionGpu {
         }
 
         // Create buffers
-        let lower_bytes: Vec<u8> = lower.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let lower_bytes: &[u8] = bytemuck::cast_slice(lower);
         let lower_buffer =
             self.device
                 .device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("BatchedBisection lower"),
-                    contents: &lower_bytes,
+                    contents: lower_bytes,
                     usage: wgpu::BufferUsages::STORAGE,
                 });
 
-        let upper_bytes: Vec<u8> = upper.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let upper_bytes: &[u8] = bytemuck::cast_slice(upper);
         let upper_buffer =
             self.device
                 .device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("BatchedBisection upper"),
-                    contents: &upper_bytes,
+                    contents: upper_bytes,
                     usage: wgpu::BufferUsages::STORAGE,
                 });
 
-        let params_bytes: Vec<u8> = params.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let params_bytes: &[u8] = bytemuck::cast_slice(params);
         let params_buffer =
             self.device
                 .device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("BatchedBisection params"),
-                    contents: &params_bytes,
+                    contents: params_bytes,
                     usage: wgpu::BufferUsages::STORAGE,
                 });
 

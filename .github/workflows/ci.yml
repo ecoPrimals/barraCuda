@@ -140,8 +140,11 @@ jobs:
         run: cargo llvm-cov --workspace --ignore-run-fail --lcov --output-path lcov.info
         env:
           BARRACUDA_POLL_TIMEOUT_SECS: 120
-      - name: Coverage summary (90% target requires GPU hardware)
+      - name: Coverage gate (llvmpipe — 80% floor for CI software renderer)
         run: cargo llvm-cov report --workspace --summary-only --fail-under-lines 80
+        continue-on-error: true
+      - name: Coverage target (90% on real hardware)
+        run: cargo llvm-cov report --workspace --summary-only --fail-under-lines 90
         continue-on-error: true
       - name: Upload lcov artifact
         uses: actions/upload-artifact@v4

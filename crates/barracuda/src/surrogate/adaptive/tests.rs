@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Tests for adaptive RBF surrogate training
 
+#![expect(clippy::unwrap_used, reason = "tests")]
+
 use super::*;
 use crate::device::test_pool::get_test_device_if_f64_gpu_available_sync;
 
@@ -481,5 +483,137 @@ mod gpu_tests {
         )
         .await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_train_adaptive_gpu_multiquadric_kernel() {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
+            return;
+        };
+
+        let x_train = vec![
+            vec![0.0, 0.0],
+            vec![1.0, 0.0],
+            vec![0.0, 1.0],
+            vec![1.0, 1.0],
+            vec![0.5, 0.5],
+        ];
+        let y_train: Vec<f64> = x_train.iter().map(|x| x[0] + x[1]).collect();
+
+        let (surrogate, diag) = train_adaptive_gpu(
+            &x_train,
+            &y_train,
+            RBFKernel::Multiquadric { epsilon: 1.0 },
+            1e-8,
+            device,
+        )
+        .await
+        .unwrap();
+
+        assert!(diag.used_gpu);
+        assert_eq!(diag.n_train, 5);
+        assert_eq!(diag.n_dim, 2);
+
+        let y_pred = surrogate.predict(&[vec![0.5, 0.5]]).unwrap();
+        assert!(y_pred[0].is_finite());
+        assert!((y_pred[0] - 1.0).abs() < 0.5);
+    }
+
+    #[tokio::test]
+    async fn test_train_adaptive_gpu_cubic_kernel() {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
+            return;
+        };
+
+        let x_train: Vec<Vec<f64>> = (0..6).map(|i| vec![i as f64 * 0.2]).collect();
+        let y_train: Vec<f64> = x_train.iter().map(|x| x[0] * x[0] * x[0]).collect();
+
+        let (surrogate, diag) =
+            train_adaptive_gpu(&x_train, &y_train, RBFKernel::Cubic, 1e-10, device)
+                .await
+                .unwrap();
+
+        assert!(diag.used_gpu);
+        assert_eq!(diag.n_train, 6);
+
+        let y_pred = surrogate.predict(&x_train).unwrap();
+        for i in 0..6 {
+            assert!(
+                (y_pred[i] - y_train[i]).abs() < 0.1,
+                "Cubic interpolation at {}: {} vs {}",
+                i,
+                y_pred[i],
+                y_train[i]
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_train_adaptive_gpu_3d_data() {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
+            return;
+        };
+
+        let x_train = vec![
+            vec![0.0, 0.0, 0.0],
+            vec![1.0, 0.0, 0.0],
+            vec![0.0, 1.0, 0.0],
+            vec![0.0, 0.0, 1.0],
+            vec![1.0, 1.0, 1.0],
+            vec![0.5, 0.5, 0.5],
+        ];
+        let y_train: Vec<f64> = x_train
+            .iter()
+            .map(|x| x[0] * x[0] + x[1] * x[1] + x[2] * x[2])
+            .collect();
+
+        let (surrogate, diag) = train_adaptive_gpu(
+            &x_train,
+            &y_train,
+            RBFKernel::InverseMultiquadric { epsilon: 1.0 },
+            1e-8,
+            device,
+        )
+        .await
+        .unwrap();
+
+        assert!(diag.used_gpu);
+        assert_eq!(diag.n_train, 6);
+        assert_eq!(diag.n_dim, 3);
+        assert_eq!(diag.system_size, 10); // 6 + 3 + 1
+
+        let y_pred = surrogate.predict(&[vec![0.5, 0.5, 0.5]]).unwrap();
+        let expected = 0.75;
+        assert!(y_pred[0].is_finite());
+        assert!((y_pred[0] - expected).abs() < 0.5);
+    }
+
+    #[tokio::test]
+    async fn test_train_adaptive_gpu_quintic_kernel() {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
+            return;
+        };
+
+        let x_train = vec![vec![0.0], vec![0.5], vec![1.0]];
+        let y_train = vec![0.0, 0.125, 1.0]; // x^5 at 0, 0.5, 1
+
+        let (surrogate, diag) =
+            train_adaptive_gpu(&x_train, &y_train, RBFKernel::Quintic, 1e-12, device)
+                .await
+                .unwrap();
+
+        assert!(diag.used_gpu);
+        assert_eq!(diag.n_train, 3);
+
+        let y_pred = surrogate.predict(&x_train).unwrap();
+        for i in 0..3 {
+            assert!(
+                (y_pred[i] - y_train[i]).abs() < 0.1,
+                "Quintic at {}: {} vs {}",
+                i,
+                y_pred[i],
+                y_train[i]
+            );
+        }
     }
 }

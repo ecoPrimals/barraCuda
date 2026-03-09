@@ -134,7 +134,7 @@ impl CpuExecutor {
     }
 
     pub(crate) fn pack_f32(data: Vec<f32>, desc: TensorDescriptor) -> Arc<dyn TensorStorage> {
-        let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let bytes: Vec<u8> = bytemuck::cast_slice(&data).to_vec();
         let mut s = CpuTensorStorage::new(desc);
         s.data = bytes;
         Arc::new(s)

@@ -206,10 +206,10 @@ pub async fn compute_with_kspace(
         SparseBuffers::f64_from_slice_raw(device, "interp_params", &interp_params);
     let coeffs_buffer2 = SparseBuffers::f64_from_slice_raw(device, "coeffs2", &coeffs);
     let derivs_buffer2 = SparseBuffers::f64_from_slice_raw(device, "derivs2", &derivs);
-    let base_idx_bytes: Vec<u8> = base_idx.iter().flat_map(|v| v.to_le_bytes()).collect();
+    let base_idx_bytes: &[u8] = bytemuck::cast_slice(&base_idx);
     let base_idx_buffer2 = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("base_idx2"),
-        contents: &base_idx_bytes,
+        contents: base_idx_bytes,
         usage: wgpu::BufferUsages::STORAGE,
     });
 

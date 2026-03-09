@@ -109,12 +109,12 @@ impl VelocityVerletKickDrift {
             self.box_size[2],
             0.0,
         ];
-        let params_bytes: Vec<u8> = params.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let params_bytes: &[u8] = bytemuck::cast_slice(&params);
         let params_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("VV KickDrift Params"),
-                contents: &params_bytes,
+                contents: params_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
@@ -300,12 +300,12 @@ impl VelocityVerletHalfKick {
 
         // Params: [n, dt, mass, _]
         let params: Vec<f64> = vec![self.n_particles as f64, self.dt, self.mass, 0.0];
-        let params_bytes: Vec<u8> = params.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let params_bytes: &[u8] = bytemuck::cast_slice(&params);
         let params_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("VV HalfKick Params"),
-                contents: &params_bytes,
+                contents: params_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
@@ -450,32 +450,32 @@ mod tests {
         let box_size = [10.0, 10.0, 10.0];
 
         // Create tensors
-        let pos_bytes: Vec<u8> = positions.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let pos_bytes: &[u8] = bytemuck::cast_slice(&positions);
         let pos_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Test Positions"),
-                contents: &pos_bytes,
+                contents: pos_bytes,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
             });
         let pos_tensor = Tensor::from_buffer(pos_buffer, vec![1, 3], device.clone());
 
-        let vel_bytes: Vec<u8> = velocities.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let vel_bytes: &[u8] = bytemuck::cast_slice(&velocities);
         let vel_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Test Velocities"),
-                contents: &vel_bytes,
+                contents: vel_bytes,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
             });
         let vel_tensor = Tensor::from_buffer(vel_buffer, vec![1, 3], device.clone());
 
-        let force_bytes: Vec<u8> = forces.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let force_bytes: &[u8] = bytemuck::cast_slice(&forces);
         let force_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Test Forces"),
-                contents: &force_bytes,
+                contents: force_bytes,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
             });
         let force_tensor = Tensor::from_buffer(force_buffer, vec![1, 3], device.clone());
@@ -491,12 +491,12 @@ mod tests {
 
         // Step 2 would be force recomputation (skipped here)
         // Step 3: Second half-kick (using same forces as approximation)
-        let force_bytes2: Vec<u8> = forces.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let force_bytes2: &[u8] = bytemuck::cast_slice(&forces);
         let force_buffer2 = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Test Forces 2"),
-                contents: &force_bytes2,
+                contents: force_bytes2,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
             });
         let force_tensor2 = Tensor::from_buffer(force_buffer2, vec![1, 3], device.clone());

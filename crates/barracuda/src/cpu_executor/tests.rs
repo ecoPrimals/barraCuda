@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 fn make_storage(data: &[f32], shape: Vec<usize>) -> Arc<dyn TensorStorage> {
     let desc = TensorDescriptor::new(shape, DType::F32);
-    let bytes: Vec<u8> = data.iter().flat_map(|f| f.to_le_bytes()).collect();
+    let bytes: Vec<u8> = bytemuck::cast_slice(data).to_vec();
     Arc::new(CpuTensorStorage {
         descriptor: desc,
         data: bytes,

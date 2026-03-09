@@ -187,12 +187,12 @@ impl VarianceReduceF64 {
         let wg_size = 256;
         let n_workgroups = n.div_ceil(wg_size);
 
-        let input_bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let input_bytes: &[u8] = bytemuck::cast_slice(data);
         let input_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("VarianceReduce input"),
-                contents: &input_bytes,
+                contents: input_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
 

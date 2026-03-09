@@ -39,6 +39,7 @@ use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::error::{BarracudaError, Result};
 use crate::utils::chunk_to_array;
+use bytemuck;
 use std::sync::Arc;
 
 /// Native f64 sum-reduce shader (workgroup shared memory uses f64).
@@ -157,21 +158,18 @@ impl ReduceScalarPipeline {
 
         // Params buffers: [size, 0, 0, 0] as u32×4
         let params_data: [u32; 4] = [n_u32, 0, 0, 0];
-        let params_bytes: Vec<u8> = params_data.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let params_bytes: &[u8] = bytemuck::cast_slice(&params_data);
         let params_buf = device.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("ReduceScalar:params"),
             size: 16,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        device.queue.write_buffer(&params_buf, 0, &params_bytes);
+        device.queue.write_buffer(&params_buf, 0, params_bytes);
 
         let partial_size = n_partial as u32;
         let partial_params_data: [u32; 4] = [partial_size, 0, 0, 0];
-        let partial_params_bytes: Vec<u8> = partial_params_data
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
+        let partial_params_bytes: &[u8] = bytemuck::cast_slice(&partial_params_data);
         let partial_params = device.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("ReduceScalar:partial_params"),
             size: 16,
@@ -180,7 +178,7 @@ impl ReduceScalarPipeline {
         });
         device
             .queue
-            .write_buffer(&partial_params, 0, &partial_params_bytes);
+            .write_buffer(&partial_params, 0, partial_params_bytes);
 
         // Pass 2 bind group (partial → scalar_output)
         let sum_bg_pass2 = device.device.create_bind_group(&wgpu::BindGroupDescriptor {

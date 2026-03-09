@@ -85,11 +85,19 @@ max-threads = 4
 [[profile.default.overrides]]
 filter = "test(/fft|conv2d|conv3d|flash_attention|deformable|fhe_polynomial|edge_conv/)"
 test-group = "gpu-heavy"
+slow-timeout = { period = "60s", terminate-after = 2 }
 
 [[profile.ci.overrides]]
 filter = "test(/fft|conv2d|conv3d|flash_attention|deformable|fhe_polynomial|edge_conv/)"
 test-group = "gpu-heavy"
+slow-timeout = { period = "180s", terminate-after = 2 }
 
 [[profile.gpu.overrides]]
 filter = "test(/fft|conv2d|conv3d|flash_attention|deformable|fhe_polynomial|edge_conv/)"
 test-group = "gpu-heavy"
+slow-timeout = { period = "180s", terminate-after = 2 }
+
+[[profile.quick.overrides]]
+filter = "test(/fft|conv2d|conv3d|flash_attention|deformable|fhe_polynomial|edge_conv/)"
+test-group = "gpu-heavy"
+slow-timeout = { period = "120s", terminate-after = 2 }

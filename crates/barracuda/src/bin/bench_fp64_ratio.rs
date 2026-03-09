@@ -182,11 +182,11 @@ fn bench_shader_inner(
     let constants_buf;
     if needs_constants {
         let const_data: [f32; 4] = [1.000_000_1, 0.000_000_1, 0.000_000_1, 0.0];
-        let bytes: Vec<u8> = const_data.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let bytes: &[u8] = bytemuck::cast_slice(&const_data);
         constants_buf = Some(device.device().create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label: Some("constants"),
-                contents: &bytes,
+                contents: bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             },
         ));

@@ -447,12 +447,12 @@ impl BiCgStabGpu {
     }
 
     fn create_f64_buffer(device: &Arc<WgpuDevice>, label: &str, data: &[f64]) -> wgpu::Buffer {
-        let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let bytes: &[u8] = bytemuck::cast_slice(data);
         device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some(label),
-                contents: &bytes,
+                contents: bytes,
                 usage: wgpu::BufferUsages::STORAGE
                     | wgpu::BufferUsages::COPY_SRC
                     | wgpu::BufferUsages::COPY_DST,
@@ -484,8 +484,8 @@ impl BiCgStabGpu {
     }
 
     fn write_f64_buffer(device: &Arc<WgpuDevice>, buffer: &wgpu::Buffer, data: &[f64]) {
-        let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
-        device.queue.write_buffer(buffer, 0, &bytes);
+        let bytes: &[u8] = bytemuck::cast_slice(data);
+        device.queue.write_buffer(buffer, 0, bytes);
     }
 
     fn create_spmv_bgl(device: &Arc<WgpuDevice>) -> wgpu::BindGroupLayout {

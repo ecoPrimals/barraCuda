@@ -266,12 +266,12 @@ impl SvdGpu {
         }
         let (mu, nu) = (m as u32, n as u32);
 
-        let a_bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let a_bytes: &[u8] = bytemuck::cast_slice(data);
         let a_buf = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("SVD A f64"),
-                contents: &a_bytes,
+                contents: a_bytes,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
             });
         let b_buf = Self::create_zero_buffer(&device, n * n, 8);

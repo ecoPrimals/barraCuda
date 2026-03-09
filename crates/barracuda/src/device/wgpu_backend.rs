@@ -74,9 +74,9 @@ impl GpuBackend for WgpuDevice {
         self.encoding_complete();
     }
 
-    fn download(&self, buffer: &wgpu::Buffer, size: u64) -> Result<Vec<u8>> {
+    fn download(&self, buffer: &wgpu::Buffer, size: u64) -> Result<bytes::Bytes> {
         if size == 0 {
-            return Ok(Vec::new());
+            return Ok(bytes::Bytes::new());
         }
         if self.is_lost() {
             return Err(BarracudaError::device_lost(
@@ -105,7 +105,8 @@ impl GpuBackend for WgpuDevice {
             ));
         }
 
-        self.map_staging_buffer::<u8>(&staging, size as usize)
+        let vec_data = self.map_staging_buffer::<u8>(&staging, size as usize)?;
+        Ok(bytes::Bytes::from(vec_data))
     }
 
     fn dispatch_compute(&self, desc: DispatchDescriptor<'_, Self>) -> Result<()> {

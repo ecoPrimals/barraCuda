@@ -216,17 +216,17 @@ impl CellListGpu {
             (box_l[2] as f32).to_bits(),
             cell_size.to_bits(),
         ];
-        let bin_params = uniform_buf(&device, &u32_bytes(&bin_params_data), "bin_params");
+        let bin_params = uniform_buf(&device, u32_bytes(&bin_params_data), "bin_params");
 
         // Pass 2 params: n = nc, n_groups = ceil(nc / WORKGROUP_SIZE_1D) (matches ScanConfig in WGSL)
         let n_groups = nc.div_ceil(WORKGROUP_SIZE_1D);
         let scan_params_data = [nc, n_groups, 0u32, 0u32];
-        let scan_params = uniform_buf(&device, &u32_bytes(&scan_params_data), "scan_params");
+        let scan_params = uniform_buf(&device, u32_bytes(&scan_params_data), "scan_params");
 
         // Pass 3 params
         let scatter_params_data = [n_u32, nc, 0u32, 0u32];
         let scatter_params =
-            uniform_buf(&device, &u32_bytes(&scatter_params_data), "scatter_params");
+            uniform_buf(&device, u32_bytes(&scatter_params_data), "scatter_params");
 
         let bufs = GpuBuffers {
             cell_ids,
@@ -522,8 +522,8 @@ fn uniform_buf(device: &WgpuDevice, data: &[u8], label: &str) -> wgpu::Buffer {
     buf
 }
 
-fn u32_bytes(data: &[u32]) -> Vec<u8> {
-    data.iter().flat_map(|v| v.to_le_bytes()).collect()
+fn u32_bytes(data: &[u32]) -> &[u8] {
+    bytemuck::cast_slice(data)
 }
 
 fn storage_bgl(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {

@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Deep Audit and Zero-Copy Evolution (Mar 9 2026)
+
+- **Zero-copy upload evolution**: ~50 GPU dispatch paths evolved from
+  `data.iter().flat_map(|v| v.to_le_bytes()).collect::<Vec<u8>>()` to
+  `bytemuck::cast_slice(data)` — eliminates per-dispatch allocation across
+  pipeline, MD, linalg, optimize, PDE, grid, lattice, and reduction ops
+- **`GpuBackend::download()` → `Bytes`**: Trait return type evolved from
+  `Result<Vec<u8>>` to `Result<bytes::Bytes>` for zero-copy downstream
+- **`NpuTensorStorage` → `BytesMut`**: Storage evolved from `Vec<u8>` to
+  `bytes::BytesMut` with zero-copy `freeze()` on read
+- **`ShaderCompilation(Arc<str>)`**: Error variant evolved from `String` to
+  `Arc<str>` — eliminates clone allocation on 10 DF64 shader error paths
+- **GPU estimate functions**: 13 hardcoded `ESTIMATED_*` constants in
+  `multi_device_pool` refactored to `fallback_estimates::gflops()` /
+  `vram_bytes()` pattern-matched by vendor and device type
+- **Coverage tests**: batch_ipr (3), histogram (4), precision/cpu (22+),
+  staging/ring_buffer (8), staging/unidirectional (7), staging/stateful (3),
+  surrogate/adaptive (4) — targeting 0% and <30% coverage modules
+- **GPU-heavy nextest timeouts**: Extended timeouts for edge_conv, fft,
+  conv2d, flash_attention across all profiles; added quick profile override
+- **CI 90% coverage target**: Second coverage step with `--fail-under-lines 90`
+  (continue-on-error until GPU hardware CI runner)
+- **Doc collision fix**: Binary `barracuda` in `barracuda-core` set to
+  `doc = false`, resolving the Cargo #6313 filename collision warning
+
 ### Added — GpuBackend Trait and Sovereign Dispatch Scaffold (Mar 9 2026)
 
 - **`GpuBackend` trait** (`device::backend`): Backend-agnostic GPU compute interface with 9
@@ -376,8 +401,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `cargo clippy --workspace --all-targets --all-features -- -D warnings` — zero warnings
 - `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` — clean
 - `cargo deny check` — advisories/bans/licenses/sources OK
-- 3,100+ tests across 31 integration test suites
-- 70% line coverage on llvmpipe; 90% target requires GPU hardware CI runner
+- 3,450+ tests across 31 integration test suites
+- ~75% line coverage on llvmpipe; 90% target requires GPU hardware CI runner
 
 ## [0.3.3] - March 4, 2026
 

@@ -3,6 +3,7 @@
 //!
 //! **Deep Debt Excellence**: Rich error context, zero panic paths
 
+use std::sync::Arc;
 use thiserror::Error;
 
 /// Result type alias for barraCuda operations.
@@ -59,7 +60,7 @@ pub enum BarracudaError {
 
     /// WGSL shader failed to compile (syntax, validation).
     #[error("Shader compilation error: {0}")]
-    ShaderCompilation(String),
+    ShaderCompilation(Arc<str>),
 
     /// GPU or host memory allocation failed.
     #[error("Out of memory: {0}")]
@@ -197,7 +198,7 @@ impl BarracudaError {
     }
 
     /// Construct a shader compilation error.
-    pub fn shader_compilation(msg: impl Into<String>) -> Self {
+    pub fn shader_compilation(msg: impl Into<Arc<str>>) -> Self {
         Self::ShaderCompilation(msg.into())
     }
 
@@ -352,7 +353,7 @@ mod tests {
 
     #[test]
     fn shader_compilation_variant_constructs_and_displays() {
-        let e = BarracudaError::ShaderCompilation("syntax error".to_string());
+        let e = BarracudaError::ShaderCompilation(Arc::from("syntax error"));
         let s = e.to_string();
         assert!(s.contains("Shader compilation error"));
         assert!(s.contains("syntax error"));

@@ -162,12 +162,12 @@ impl LangevinStep {
         }
         noise_data.truncate(n_particles * 3);
 
-        let noise_bytes: Vec<u8> = noise_data.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let noise_bytes: &[u8] = bytemuck::cast_slice(&noise_data);
         let noise_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Langevin Noise"),
-                contents: &noise_bytes,
+                contents: noise_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
@@ -200,12 +200,12 @@ impl LangevinStep {
             0.0,
             0.0,
         ];
-        let params_bytes: Vec<u8> = params_data.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let params_bytes: &[u8] = bytemuck::cast_slice(&params_data);
         let params_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Langevin Params"),
-                contents: &params_bytes,
+                contents: params_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
@@ -380,22 +380,22 @@ mod tests {
         let velocities: Vec<f64> = vec![1.0, 0.0, 0.0];
         let noise_data: Vec<f64> = vec![0.5, 0.0, 0.0]; // Small positive noise
 
-        let vel_bytes: Vec<u8> = velocities.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let vel_bytes: &[u8] = bytemuck::cast_slice(&velocities);
         let vel_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Test Velocities"),
-                contents: &vel_bytes,
+                contents: vel_bytes,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
             });
         let vel_tensor = Tensor::from_buffer(vel_buffer, vec![1, 3], device.clone());
 
-        let noise_bytes: Vec<u8> = noise_data.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let noise_bytes: &[u8] = bytemuck::cast_slice(&noise_data);
         let noise_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Test Noise"),
-                contents: &noise_bytes,
+                contents: noise_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
         let noise_tensor = Tensor::from_buffer(noise_buffer, vec![1, 3], device.clone());

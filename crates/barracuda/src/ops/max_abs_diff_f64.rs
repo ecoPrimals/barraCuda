@@ -84,21 +84,21 @@ impl MaxAbsDiffF64 {
         let n_workgroups = n.div_ceil(wg_size);
 
         // Create input buffers
-        let a_bytes: Vec<u8> = a.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let a_bytes: &[u8] = bytemuck::cast_slice(a);
         let a_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("MaxAbsDiff input_a"),
-                contents: &a_bytes,
+                contents: a_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
-        let b_bytes: Vec<u8> = b.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let b_bytes: &[u8] = bytemuck::cast_slice(b);
         let b_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("MaxAbsDiff input_b"),
-                contents: &b_bytes,
+                contents: b_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
 

@@ -302,7 +302,7 @@ impl ComputeExecutor for NpuExecutor {
 /// This storage type is for the `ComputeExecutor` scheduler interface.
 struct NpuTensorStorage {
     descriptor: TensorDescriptor,
-    data: Vec<u8>,
+    data: bytes::BytesMut,
 }
 
 impl NpuTensorStorage {
@@ -310,7 +310,7 @@ impl NpuTensorStorage {
         let byte_size = descriptor.numel * descriptor.dtype.size_bytes();
         Self {
             descriptor,
-            data: vec![0u8; byte_size],
+            data: bytes::BytesMut::zeroed(byte_size),
         }
     }
 }
@@ -327,28 +327,25 @@ impl TensorStorage for NpuTensorStorage {
     fn read_to_cpu(
         &self,
     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Bytes>> + Send + '_>> {
-        let data = Bytes::from(self.data.clone());
-        Box::pin(async move { Ok(data) })
+        Box::pin(async move { Ok(self.data.clone().freeze()) })
     }
 
     fn write_from_cpu(
         &mut self,
         data: &[u8],
     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
-        let data = data.to_vec();
-        Box::pin(async move {
-            if data.len() != self.data.len() {
-                return Err(crate::error::BarracudaError::InvalidInput {
-                    message: format!(
-                        "Data size mismatch: expected {}, got {}",
-                        self.data.len(),
-                        data.len()
-                    ),
-                });
-            }
-            self.data.copy_from_slice(&data);
-            Ok(())
-        })
+        if data.len() != self.data.len() {
+            let msg = format!(
+                "Data size mismatch: expected {}, got {}",
+                self.data.len(),
+                data.len()
+            );
+            return Box::pin(async move {
+                Err(crate::error::BarracudaError::InvalidInput { message: msg })
+            });
+        }
+        self.data.copy_from_slice(data);
+        Box::pin(async move { Ok(()) })
     }
 }
 

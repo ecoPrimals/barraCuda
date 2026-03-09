@@ -34,12 +34,23 @@ barraCuda has **zero `unsafe` blocks** in its entire codebase. Every prior
 ### Zero Clippy Warnings
 Pedantic + `unwrap_used` — zero warnings across all targets (re-verified Mar 8).
 
-### Deep Debt Audit (March 8, 2026)
+### Deep Debt Audit (March 8-9, 2026)
 - **352 formatting violations** fixed (`cargo fmt`)
 - **36 clippy warnings** resolved (missing doc backticks, `# Errors`, auto-deref, `#[must_use]`, inline format vars)
 - **f64 shader compilation bug** fixed: `SparseGemmF64` and `PeakDetectF64` were using `compile_shader()` (downcasts f64→f32) instead of `compile_shader_f64()`, causing data corruption on non-f64 GPUs. Tests now gated on `get_test_device_if_f64_gpu_available()`.
 - **Magic numbers** extracted to named constants: 16 constants across `npu_executor`, `multi_device_pool`, `cpu_executor`, `bfgs`
 - **Zero production `panic!()`**: all `panic!()` calls confirmed restricted to `#[cfg(test)]` modules
+
+### Zero-Copy and Coverage Sprint (March 9, 2026)
+- **~50 GPU dispatch paths**: `to_le_bytes().collect::<Vec<u8>>()` → `bytemuck::cast_slice()` across pipeline, MD, linalg, reduce, optimize, PDE, grid, lattice ops
+- **`GpuBackend::download()`**: Return type `Vec<u8>` → `bytes::Bytes` for zero-copy readback
+- **`NpuTensorStorage`**: `Vec<u8>` → `bytes::BytesMut` with `freeze()` zero-copy read path
+- **`ShaderCompilation(Arc<str>)`**: Error variant `String` → `Arc<str>` — eliminates clone allocation on 10 DF64 shader error paths
+- **GPU fallback estimates**: 13 hardcoded constants → `fallback_estimates::{gflops, vram_bytes}` pattern-matched by vendor and device type
+- **Coverage tests**: batch_ipr (3), histogram (4), precision/cpu (22+), staging/ring_buffer (8), staging/unidirectional (7), staging/stateful (3), surrogate/adaptive (4 GPU tests)
+- **GPU-heavy test timeouts**: Extended slow-timeout overrides for edge_conv, fft, conv2d, flash_attention
+- **CI dual coverage**: 80% baseline + 90% stretch target (continue-on-error)
+- **Doc collision fix**: `barracuda-core` binary `doc = false` resolves Cargo #6313
 
 ### Systematic f64 Pipeline Evolution (March 8, 2026)
 - **14 additional f64 ops** fixed: `transe_score_f64`, `triangular_solve/f64`, `variance_f64`, `correlation_f64`, `covariance_f64`, `hermite_f64`, `bessel_i0/j0/j1/k0`, `beta_f64`, `digamma_f64`, `cosine_similarity_f64`, `weighted_dot_f64` — all were silently producing corrupted data on f64-capable GPUs
@@ -82,7 +93,7 @@ Previously limited to Vulkan with SPIR-V passthrough.
 ### P2 — Near-term
 
 #### Test Coverage to 90%
-- Current: 3,700+ total tests (3,105 in lib suite), 31 integration suites
+- Current: 3,450+ total tests, 31 integration suites
 - Evolve CI `--fail-under` from 80 to 90
 - Add GPU-conditional tests for new ops
 - GPU_TEST_TIMEOUT (60s) prevents hangs; coordination harness with

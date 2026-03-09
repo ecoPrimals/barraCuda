@@ -103,9 +103,11 @@ pub trait GpuBackend: Send + Sync {
 
     /// Read `size` bytes from a buffer back to host memory.
     ///
+    /// Returns [`bytes::Bytes`] for zero-copy downstream consumers.
+    ///
     /// # Errors
     /// Returns [`Err`] if readback fails (e.g. device lost, mapping error).
-    fn download(&self, buffer: &Self::Buffer, size: u64) -> Result<Vec<u8>>;
+    fn download(&self, buffer: &Self::Buffer, size: u64) -> Result<bytes::Bytes>;
 
     // ── Compute dispatch ──────────────────────────────────────────────
 
@@ -230,7 +232,7 @@ impl<B: GpuBackend> GpuBackend for Arc<B> {
     fn upload(&self, buffer: &Self::Buffer, offset: u64, data: &[u8]) {
         (**self).upload(buffer, offset, data);
     }
-    fn download(&self, buffer: &Self::Buffer, size: u64) -> Result<Vec<u8>> {
+    fn download(&self, buffer: &Self::Buffer, size: u64) -> Result<bytes::Bytes> {
         (**self).download(buffer, size)
     }
     fn dispatch_compute(&self, desc: DispatchDescriptor<'_, Self>) -> Result<()> {

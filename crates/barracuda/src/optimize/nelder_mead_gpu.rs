@@ -342,13 +342,13 @@ impl NelderMeadGpu {
         for vertex in simplex {
             data.extend_from_slice(vertex);
         }
-        let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let bytes: &[u8] = bytemuck::cast_slice(&data);
 
         self.device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("NM simplex"),
-                contents: &bytes,
+                contents: bytes,
                 usage: wgpu::BufferUsages::STORAGE
                     | wgpu::BufferUsages::COPY_SRC
                     | wgpu::BufferUsages::COPY_DST,
@@ -361,18 +361,18 @@ impl NelderMeadGpu {
         for vertex in simplex {
             data.extend_from_slice(vertex);
         }
-        let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
-        self.device.queue.write_buffer(buffer, 0, &bytes);
+        let bytes: &[u8] = bytemuck::cast_slice(&data);
+        self.device.queue.write_buffer(buffer, 0, bytes);
     }
 
     /// Create GPU buffer for single point
     fn create_point_buffer(&self, x: &[f64]) -> wgpu::Buffer {
-        let bytes: Vec<u8> = x.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let bytes: &[u8] = bytemuck::cast_slice(x);
         self.device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("NM point"),
-                contents: &bytes,
+                contents: bytes,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
             })
     }
@@ -380,13 +380,13 @@ impl NelderMeadGpu {
     /// Create GPU buffer for bounds
     fn create_bounds_buffer(&self, bounds: &[(f64, f64)]) -> wgpu::Buffer {
         let data: Vec<f64> = bounds.iter().flat_map(|&(lo, hi)| [lo, hi]).collect();
-        let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let bytes: &[u8] = bytemuck::cast_slice(&data);
 
         self.device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("NM bounds"),
-                contents: &bytes,
+                contents: bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             })
     }

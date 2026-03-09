@@ -37,10 +37,10 @@ impl PppmBuffers {
     /// Create i32 buffer from slice
     #[must_use]
     pub fn i32_from_slice(device: &wgpu::Device, label: &str, data: &[i32]) -> wgpu::Buffer {
-        let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let bytes: &[u8] = bytemuck::cast_slice(data);
         device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some(label),
-            contents: &bytes,
+            contents: bytes,
             usage: wgpu::BufferUsages::STORAGE,
         })
     }

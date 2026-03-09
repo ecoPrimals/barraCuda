@@ -1,6 +1,6 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-03-08.
+Prioritized work items, ordered by impact. Updated 2026-03-09.
 
 ---
 
@@ -41,6 +41,16 @@ Prioritized work items, ordered by impact. Updated 2026-03-08.
 - **GPU f64 computational accuracy probe**: `get_test_device_if_f64_gpu_available()`
   now runs a runtime probe (`3*2+1=7`) to verify real f64 execution, gating 58 tests
   that were failing on software rasterizers.
+- **Zero-copy upload evolution**: ~50 GPU dispatch paths evolved from
+  `to_le_bytes().collect::<Vec<u8>>()` to `bytemuck::cast_slice()` — eliminates
+  per-dispatch allocation across pipeline, MD, linalg, reduce, optimize, PDE, grid ops.
+- **`GpuBackend::download()` → `Bytes`**: Trait return type `Vec<u8>` → `bytes::Bytes`.
+- **`NpuTensorStorage` → `BytesMut`**: `Vec<u8>` → `bytes::BytesMut` with `freeze()`.
+- **`ShaderCompilation(Arc<str>)`**: Error variant `String` → `Arc<str>` across 10 ops.
+- **GPU fallback estimates**: 13 hardcoded constants refactored to `fallback_estimates::{gflops, vram_bytes}` pattern-matched by vendor/device-type.
+- **Coverage expansion**: batch_ipr, histogram, staging (ring_buffer, unidirectional, stateful), precision/cpu, surrogate/adaptive — targeting 0% and <30% coverage modules.
+- **GPU-heavy test timeouts**: Extended slow-timeout overrides for edge_conv, fft, conv2d, flash_attention; fixed edge_conv 60s timeout failure.
+- **CI 90% coverage**: Dual target — 80% baseline (llvmpipe), 90% stretch (GPU hardware, continue-on-error).
 - **Bounded GPU poll timeout**: `BARRACUDA_POLL_TIMEOUT_SECS` (default 120s) prevents
   indefinite hangs under llvm-cov instrumentation.
 - **LSCFRK gradient flow integrators**: Absorbed from hotSpring — `derive_lscfrk3`

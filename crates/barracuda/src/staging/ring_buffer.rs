@@ -404,7 +404,11 @@ impl std::fmt::Debug for GpuRingBuffer {
 
 #[cfg(test)]
 mod tests {
+    #![expect(clippy::unwrap_used, reason = "tests")]
+
     use super::*;
+    use crate::device::test_pool::get_test_device_if_gpu_available;
+    use std::sync::Arc;
 
     #[test]
     fn test_config_power_of_two() {
@@ -464,5 +468,114 @@ mod tests {
         assert_eq!(used, 100);
 
         let _ = mask; // Suppress unused warning
+    }
+
+    #[tokio::test]
+    async fn test_gpu_ring_buffer_new_requires_gpu() {
+        let Some(device) = get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let config = RingBufferConfig::new(4096).for_input();
+        let buf = GpuRingBuffer::new(Arc::clone(&device), config).unwrap();
+        assert_eq!(buf.capacity(), 4096);
+        assert!(buf.is_empty());
+        assert!(!buf.is_full());
+    }
+
+    #[tokio::test]
+    async fn test_gpu_ring_buffer_try_write_write_advance_read() {
+        let Some(device) = get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let config = RingBufferConfig::new(4096).for_input();
+        let mut buf = GpuRingBuffer::new(Arc::clone(&device), config).unwrap();
+        let data = b"hello";
+        let handle = buf.try_write(data).unwrap();
+        assert_eq!(handle.size, 5);
+        assert!(!buf.is_empty());
+        assert_eq!(buf.available_read(), 5);
+        buf.advance_read(5);
+        assert!(buf.is_empty());
+        assert_eq!(buf.available_read(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_gpu_ring_buffer_write_blocking() {
+        let Some(device) = get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let config = RingBufferConfig::new(4096).for_input();
+        let mut buf = GpuRingBuffer::new(Arc::clone(&device), config).unwrap();
+        let data = vec![0u8; 1024];
+        let handle = buf.write(&data).unwrap();
+        assert_eq!(handle.size, 1024);
+    }
+
+    #[tokio::test]
+    async fn test_gpu_ring_buffer_stats_reset() {
+        let Some(device) = get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let config = RingBufferConfig::new(4096).for_input();
+        let mut buf = GpuRingBuffer::new(Arc::clone(&device), config).unwrap();
+        buf.try_write(b"hello").unwrap();
+        let stats = buf.stats();
+        assert_eq!(stats.bytes_written, 5);
+        assert_eq!(stats.write_count, 1);
+        buf.reset_stats();
+        let stats = buf.stats();
+        assert_eq!(stats.bytes_written, 0);
+    }
+
+    #[tokio::test]
+    async fn test_gpu_ring_buffer_is_empty_full_capacity() {
+        let Some(device) = get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let config = RingBufferConfig::new(4096).for_input();
+        let mut buf = GpuRingBuffer::new(Arc::clone(&device), config).unwrap();
+        assert_eq!(buf.capacity(), 4096);
+        assert!(buf.is_empty());
+        assert!(!buf.is_full());
+        assert_eq!(buf.available_write(), 4095);
+        buf.try_write(&vec![0u8; 4095]).unwrap();
+        assert!(buf.is_full());
+        assert_eq!(buf.available_write(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_gpu_ring_buffer_debug() {
+        let Some(device) = get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let config = RingBufferConfig::new(4096).for_input();
+        let buf = GpuRingBuffer::new(Arc::clone(&device), config).unwrap();
+        let s = format!("{buf:?}");
+        assert!(s.contains("GpuRingBuffer"));
+        assert!(s.contains("capacity"));
+    }
+
+    #[tokio::test]
+    async fn test_gpu_ring_buffer_try_write_device_to_host_returns_none() {
+        let Some(device) = get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let config = RingBufferConfig::new(4096).for_output();
+        let mut buf = GpuRingBuffer::new(Arc::clone(&device), config).unwrap();
+        let result = buf.try_write(b"hello");
+        assert!(result.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_gpu_ring_buffer_reset() {
+        let Some(device) = get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let config = RingBufferConfig::new(4096).for_input();
+        let mut buf = GpuRingBuffer::new(Arc::clone(&device), config).unwrap();
+        buf.try_write(b"hello").unwrap();
+        buf.reset();
+        assert!(buf.is_empty());
+        assert_eq!(buf.available_read(), 0);
     }
 }

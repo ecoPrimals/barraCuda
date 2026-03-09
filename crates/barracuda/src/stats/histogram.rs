@@ -169,3 +169,79 @@ impl HistogramGpu {
         self.device.read_buffer_u32(bins_buf, n_bins as usize)
     }
 }
+
+#[cfg(all(test, feature = "gpu"))]
+mod tests {
+    #![expect(clippy::unwrap_used, reason = "tests")]
+
+    use super::*;
+    use crate::device::test_pool::get_test_device_if_gpu_available_sync;
+    use std::sync::Arc;
+
+    fn get_device() -> Option<Arc<WgpuDevice>> {
+        get_test_device_if_gpu_available_sync()
+    }
+
+    #[tokio::test]
+    async fn test_histogram_uniform() {
+        let Some(device) = get_device() else {
+            return;
+        };
+        let hist = HistogramGpu::new(device).unwrap();
+        let n_bins = 10u32;
+        // Uniform data in [0, 1) — each bin should get ~10% of values
+        let values: Vec<f64> = (0..1000).map(|i| i as f64 / 1000.0).collect();
+        let bins = hist.dispatch(&values, n_bins).unwrap();
+        assert_eq!(bins.len(), n_bins as usize);
+        let total: u32 = bins.iter().sum();
+        assert_eq!(total, 1000);
+        // Each bin should have roughly 100 (allow 50–150 for tolerance)
+        for (i, &count) in bins.iter().enumerate() {
+            assert!(
+                (50..=150).contains(&count),
+                "Bin {i}: count {count} should be roughly 100 for uniform data"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_histogram_single_bin() {
+        let Some(device) = get_device() else {
+            return;
+        };
+        let hist = HistogramGpu::new(device).unwrap();
+        let n_bins = 5u32;
+        // All same value — everything in one bin
+        let values = vec![std::f64::consts::PI; 100];
+        let bins = hist.dispatch(&values, n_bins).unwrap();
+        assert_eq!(bins.len(), n_bins as usize);
+        let total: u32 = bins.iter().sum();
+        assert_eq!(total, 100);
+        // Exactly one bin should have count 100
+        let non_zero: Vec<_> = bins.iter().enumerate().filter(|(_, c)| **c > 0).collect();
+        assert_eq!(non_zero.len(), 1);
+        assert_eq!(*non_zero[0].1, 100);
+    }
+
+    #[tokio::test]
+    async fn test_histogram_empty_error() {
+        let Some(device) = get_device() else {
+            return;
+        };
+        let hist = HistogramGpu::new(device).unwrap();
+        let values: Vec<f64> = vec![];
+        let result = hist.dispatch(&values, 10);
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_histogram_zero_bins_error() {
+        let Some(device) = get_device() else {
+            return;
+        };
+        let hist = HistogramGpu::new(device).unwrap();
+        let values = vec![1.0, 2.0, 3.0];
+        let result = hist.dispatch(&values, 0);
+        assert!(result.is_err());
+    }
+}

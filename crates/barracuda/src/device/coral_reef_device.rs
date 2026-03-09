@@ -114,7 +114,7 @@ impl GpuBackend for CoralReefDevice {
 
     fn upload(&self, _buffer: &CoralBuffer, _offset: u64, _data: &[u8]) {}
 
-    fn download(&self, _buffer: &CoralBuffer, _size: u64) -> Result<Vec<u8>> {
+    fn download(&self, _buffer: &CoralBuffer, _size: u64) -> Result<bytes::Bytes> {
         Self::scaffold_err("download")
     }
 

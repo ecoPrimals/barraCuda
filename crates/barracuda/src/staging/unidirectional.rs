@@ -479,7 +479,11 @@ impl std::fmt::Debug for UnidirectionalPipeline {
 
 #[cfg(test)]
 mod tests {
+    #![expect(clippy::unwrap_used, reason = "tests")]
+
     use super::*;
+    use crate::device::test_pool::get_test_device_if_gpu_available;
+    use std::sync::Arc;
 
     #[test]
     fn test_config_defaults() {
@@ -527,5 +531,92 @@ mod tests {
 
         // Next 200 bytes would exceed, should throttle
         assert!(throttler.check(200).is_some());
+    }
+
+    #[tokio::test]
+    async fn test_unidirectional_pipeline_new_requires_gpu() {
+        let Some(device) = get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let config = UnidirectionalConfig::with_sizes(4, 2);
+        let pipeline = UnidirectionalPipeline::new(Arc::clone(&device), config).unwrap();
+        assert_eq!(pipeline.in_flight_count(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_unidirectional_pipeline_submit_try_submit() {
+        let Some(device) = get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let config = UnidirectionalConfig::with_sizes(4, 2);
+        let mut pipeline = UnidirectionalPipeline::new(Arc::clone(&device), config).unwrap();
+        let handle = pipeline.submit(b"hello").unwrap();
+        assert_eq!(handle.id, 1);
+        assert_eq!(handle.write_handle.size, 5);
+        let handle2 = pipeline.try_submit(b"world").unwrap();
+        assert_eq!(handle2.id, 2);
+        assert_eq!(pipeline.in_flight_count(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_unidirectional_pipeline_mark_completed() {
+        let Some(device) = get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let config = UnidirectionalConfig::with_sizes(4, 2);
+        let mut pipeline = UnidirectionalPipeline::new(Arc::clone(&device), config).unwrap();
+        let handle = pipeline.submit(b"hello").unwrap();
+        let latency = pipeline.mark_completed(handle.id, 5);
+        assert!(latency.is_some());
+        assert_eq!(pipeline.in_flight_count(), 0);
+        assert_eq!(pipeline.stats().completed, 1);
+    }
+
+    #[tokio::test]
+    async fn test_unidirectional_pipeline_mark_completed_unknown_id_returns_none() {
+        let Some(device) = get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let config = UnidirectionalConfig::with_sizes(4, 2);
+        let mut pipeline = UnidirectionalPipeline::new(Arc::clone(&device), config).unwrap();
+        let result = pipeline.mark_completed(999, 0);
+        assert!(result.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_unidirectional_pipeline_mark_input_consumed_reset() {
+        let Some(device) = get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let config = UnidirectionalConfig::with_sizes(4, 2);
+        let mut pipeline = UnidirectionalPipeline::new(Arc::clone(&device), config).unwrap();
+        pipeline.submit(b"hello").unwrap();
+        pipeline.mark_input_consumed(5);
+        pipeline.reset();
+        assert_eq!(pipeline.in_flight_count(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_unidirectional_pipeline_stats() {
+        let Some(device) = get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let config = UnidirectionalConfig::with_sizes(4, 2);
+        let mut pipeline = UnidirectionalPipeline::new(Arc::clone(&device), config).unwrap();
+        pipeline.submit(b"hello").unwrap();
+        let stats = pipeline.stats();
+        assert_eq!(stats.submitted, 1);
+        assert_eq!(stats.input_bytes, 5);
+    }
+
+    #[tokio::test]
+    async fn test_unidirectional_pipeline_debug() {
+        let Some(device) = get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let config = UnidirectionalConfig::with_sizes(4, 2);
+        let pipeline = UnidirectionalPipeline::new(Arc::clone(&device), config).unwrap();
+        let s = format!("{pipeline:?}");
+        assert!(s.contains("UnidirectionalPipeline"));
     }
 }

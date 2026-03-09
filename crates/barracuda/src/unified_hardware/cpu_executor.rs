@@ -268,10 +268,10 @@ mod tests {
             data: Bytes::from(vec![0u8; 16]),
         };
         let input = [1.0f32, 2.0, 3.0, 4.0];
-        let bytes: Vec<u8> = input.iter().flat_map(|v| v.to_le_bytes()).collect();
-        storage.write_from_cpu(&bytes).await.unwrap();
+        let bytes: &[u8] = bytemuck::cast_slice(&input);
+        storage.write_from_cpu(bytes).await.unwrap();
         let readback = storage.read_to_cpu().await.unwrap();
-        assert_eq!(readback.as_ref(), bytes.as_slice());
+        assert_eq!(readback.as_ref(), bytes);
     }
 
     #[tokio::test]

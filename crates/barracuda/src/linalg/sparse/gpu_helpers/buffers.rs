@@ -28,10 +28,10 @@ impl SparseBuffers {
     /// Create an f64 storage buffer from slice (raw device)
     #[must_use]
     pub fn f64_from_slice_raw(device: &wgpu::Device, label: &str, data: &[f64]) -> wgpu::Buffer {
-        let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let bytes: &[u8] = bytemuck::cast_slice(data);
         device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some(label),
-            contents: &bytes,
+            contents: bytes,
             usage: wgpu::BufferUsages::STORAGE
                 | wgpu::BufferUsages::COPY_SRC
                 | wgpu::BufferUsages::COPY_DST,
@@ -124,8 +124,8 @@ impl SparseBuffers {
 
     /// Write f64 data to GPU buffer
     pub fn write_f64(device: &Arc<WgpuDevice>, buffer: &wgpu::Buffer, data: &[f64]) {
-        let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
-        device.queue.write_buffer(buffer, 0, &bytes);
+        let bytes: &[u8] = bytemuck::cast_slice(data);
+        device.queue.write_buffer(buffer, 0, bytes);
     }
 
     /// Copy buffer to buffer (f64)

@@ -124,11 +124,11 @@ impl BornMayerForceF64 {
         let dev = &self.device;
 
         let to_buf = |label: &str, data: &[f64], usage: wgpu::BufferUsages| -> wgpu::Buffer {
-            let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let bytes: &[u8] = bytemuck::cast_slice(data);
             dev.device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some(label),
-                    contents: &bytes,
+                    contents: bytes,
                     usage,
                 })
         };

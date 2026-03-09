@@ -77,12 +77,12 @@ impl BerendsenThermostat {
 
         // Create params buffer: [n, scale, _, _]
         let params: Vec<f64> = vec![n_particles as f64, self.scale_factor, 0.0, 0.0];
-        let params_bytes: Vec<u8> = params.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let params_bytes: &[u8] = bytemuck::cast_slice(&params);
         let params_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Berendsen Params"),
-                contents: &params_bytes,
+                contents: params_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
 

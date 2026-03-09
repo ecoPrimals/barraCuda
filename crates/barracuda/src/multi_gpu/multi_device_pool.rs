@@ -3,30 +3,46 @@
 
 /// Bytes per gibibyte for VRAM estimates.
 const BYTES_PER_GIB: u64 = 1024 * 1024 * 1024;
-/// Estimated GFLOPS for software renderer (e.g. llvmpipe).
-const ESTIMATED_SOFTWARE_GFLOPS: f64 = 10.0;
-/// Estimated GFLOPS for discrete NVIDIA GPUs (fallback when unknown).
-const ESTIMATED_NVIDIA_DISCRETE_GFLOPS: f64 = 5000.0;
-/// Estimated GFLOPS for discrete AMD GPUs (fallback when unknown).
-const ESTIMATED_AMD_DISCRETE_GFLOPS: f64 = 4000.0;
-/// Estimated GFLOPS for other discrete GPUs (fallback when unknown).
-const ESTIMATED_OTHER_DISCRETE_GFLOPS: f64 = 1000.0;
-/// Estimated VRAM for discrete NVIDIA GPUs (12 GiB, fallback when unknown).
-const ESTIMATED_NVIDIA_DISCRETE_VRAM_BYTES: u64 = 12 * BYTES_PER_GIB;
-/// Estimated VRAM for discrete AMD GPUs (16 GiB, fallback when unknown).
-const ESTIMATED_AMD_DISCRETE_VRAM_BYTES: u64 = 16 * BYTES_PER_GIB;
-/// Estimated VRAM for other discrete GPUs (8 GiB, fallback when unknown).
-const ESTIMATED_OTHER_DISCRETE_VRAM_BYTES: u64 = 8 * BYTES_PER_GIB;
-/// Estimated GFLOPS for integrated GPUs (fallback when unknown).
-const ESTIMATED_INTEGRATED_GFLOPS: f64 = 200.0;
-/// Estimated VRAM for integrated GPUs (2 GiB, fallback when unknown).
-const ESTIMATED_INTEGRATED_VRAM_BYTES: u64 = 2 * BYTES_PER_GIB;
-/// Estimated GFLOPS for CPU device type (fallback when unknown).
-const ESTIMATED_CPU_GFLOPS: f64 = 50.0;
-/// Estimated GFLOPS for other device types (fallback when unknown).
-const ESTIMATED_OTHER_GFLOPS: f64 = 100.0;
-/// Estimated VRAM for other device types (4 GiB, fallback when unknown).
-const ESTIMATED_OTHER_VRAM_BYTES: u64 = 4 * BYTES_PER_GIB;
+
+/// Fallback performance/memory estimates by device class.
+///
+/// Used ONLY when runtime capability discovery cannot determine actual values.
+/// These are conservative lower bounds — the scheduler always prefers
+/// runtime-discovered metrics from adapter properties when available.
+mod fallback_estimates {
+    use super::BYTES_PER_GIB;
+
+    pub(super) fn gflops(vendor: super::GpuVendor, device_type: wgpu::DeviceType) -> f64 {
+        match (vendor, device_type) {
+            (super::GpuVendor::Software, _) => 10.0,
+            (super::GpuVendor::Nvidia, wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::Other) => {
+                5_000.0
+            }
+            (super::GpuVendor::Amd, wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::Other) => {
+                4_000.0
+            }
+            (_, wgpu::DeviceType::DiscreteGpu) => 1_000.0,
+            (_, wgpu::DeviceType::IntegratedGpu) => 200.0,
+            (_, wgpu::DeviceType::Cpu) => 50.0,
+            _ => 100.0,
+        }
+    }
+
+    pub(super) fn vram_bytes(vendor: super::GpuVendor, device_type: wgpu::DeviceType) -> u64 {
+        match (vendor, device_type) {
+            (super::GpuVendor::Software, _) | (_, wgpu::DeviceType::Cpu) => 0,
+            (super::GpuVendor::Nvidia, wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::Other) => {
+                12 * BYTES_PER_GIB
+            }
+            (super::GpuVendor::Amd, wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::Other) => {
+                16 * BYTES_PER_GIB
+            }
+            (_, wgpu::DeviceType::DiscreteGpu) => 8 * BYTES_PER_GIB,
+            (_, wgpu::DeviceType::IntegratedGpu) => 2 * BYTES_PER_GIB,
+            _ => 4 * BYTES_PER_GIB,
+        }
+    }
+}
 
 use super::topology::{GpuDriver, GpuVendor};
 use super::types::{DeviceInfo, DeviceRequirements, WorkloadConfig};
@@ -153,29 +169,8 @@ impl MultiDevicePool {
                 || (adapter.device_type == wgpu::DeviceType::Other
                     && (vendor == GpuVendor::Nvidia || vendor == GpuVendor::Amd));
 
-            let (estimated_gflops, estimated_vram) = if vendor == GpuVendor::Software {
-                (ESTIMATED_SOFTWARE_GFLOPS, 0u64)
-            } else if is_likely_discrete {
-                let gflops = match vendor {
-                    GpuVendor::Nvidia => ESTIMATED_NVIDIA_DISCRETE_GFLOPS,
-                    GpuVendor::Amd => ESTIMATED_AMD_DISCRETE_GFLOPS,
-                    _ => ESTIMATED_OTHER_DISCRETE_GFLOPS,
-                };
-                let vram = match vendor {
-                    GpuVendor::Nvidia => ESTIMATED_NVIDIA_DISCRETE_VRAM_BYTES,
-                    GpuVendor::Amd => ESTIMATED_AMD_DISCRETE_VRAM_BYTES,
-                    _ => ESTIMATED_OTHER_DISCRETE_VRAM_BYTES,
-                };
-                (gflops, vram)
-            } else {
-                match adapter.device_type {
-                    wgpu::DeviceType::IntegratedGpu => {
-                        (ESTIMATED_INTEGRATED_GFLOPS, ESTIMATED_INTEGRATED_VRAM_BYTES)
-                    }
-                    wgpu::DeviceType::Cpu => (ESTIMATED_CPU_GFLOPS, 0),
-                    _ => (ESTIMATED_OTHER_GFLOPS, ESTIMATED_OTHER_VRAM_BYTES),
-                }
-            };
+            let estimated_gflops = fallback_estimates::gflops(vendor, adapter.device_type);
+            let estimated_vram = fallback_estimates::vram_bytes(vendor, adapter.device_type);
 
             if estimated_gflops < config.min_gflops {
                 continue;

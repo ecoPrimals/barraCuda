@@ -64,12 +64,12 @@ impl KineticEnergy {
 
         // Params buffer: [n, mass, _, _]
         let params: Vec<f64> = vec![n_particles as f64, self.mass, 0.0, 0.0];
-        let params_bytes: Vec<u8> = params.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let params_bytes: &[u8] = bytemuck::cast_slice(&params);
         let params_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("KE Params"),
-                contents: &params_bytes,
+                contents: params_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
 

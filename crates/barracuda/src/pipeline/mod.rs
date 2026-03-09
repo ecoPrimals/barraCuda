@@ -71,6 +71,7 @@ pub use stateful::{PipelineStage, StatefulPipeline, WaterBalanceState};
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use crate::utils::chunk_to_array;
+use bytemuck;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -362,8 +363,8 @@ impl ComputePipeline {
                 message: format!("Unknown buffer: {name}"),
             })?;
 
-        let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
-        self.device.queue.write_buffer(buffer, 0, &bytes);
+        let bytes: &[u8] = bytemuck::cast_slice(data);
+        self.device.queue.write_buffer(buffer, 0, bytes);
         Ok(())
     }
 
@@ -378,8 +379,8 @@ impl ComputePipeline {
                 message: format!("Unknown buffer: {name}"),
             })?;
 
-        let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
-        self.device.queue.write_buffer(buffer, 0, &bytes);
+        let bytes: &[u8] = bytemuck::cast_slice(data);
+        self.device.queue.write_buffer(buffer, 0, bytes);
         Ok(())
     }
 

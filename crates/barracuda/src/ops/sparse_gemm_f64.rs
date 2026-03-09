@@ -193,12 +193,12 @@ impl SparseGemmF64<'_> {
     }
 
     fn f64_buf(device: &Arc<WgpuDevice>, label: &str, data: &[f64]) -> wgpu::Buffer {
-        let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let bytes: &[u8] = bytemuck::cast_slice(data);
         device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some(label),
-                contents: &bytes,
+                contents: bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             })
     }

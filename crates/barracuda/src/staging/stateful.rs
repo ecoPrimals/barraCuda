@@ -290,6 +290,8 @@ impl StatefulPipeline {
 
 #[cfg(test)]
 mod tests {
+    #![expect(clippy::unwrap_used, reason = "tests")]
+
     use super::*;
     use crate::device::test_pool;
     use std::sync::Arc;
@@ -428,12 +430,130 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 
     #[test]
     fn test_run_iterations_empty_chain_returns_err() {
-        // We can't create a real WgpuDevice in a unit test, so this is a
-        // compile-time + API-shape check only.  The GPU integration path is
-        // covered by the barracuda multi-device integration tests.
-        let _ = StatefulConfig {
+        let device = test_pool::get_test_device_sync();
+        let config = StatefulConfig {
             convergence_scalars: 1,
             label: None,
         };
+        let pipeline = StatefulPipeline::new(Arc::clone(&device), config);
+        let conv_buf = device.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("conv_test"),
+            size: 8,
+            usage: wgpu::BufferUsages::COPY_SRC | wgpu::BufferUsages::STORAGE,
+            mapped_at_creation: false,
+        });
+        let result = pipeline.run_iterations(&[], &conv_buf, 1);
+        assert!(result.is_err());
+    }
+
+    const CONVERGENCE_WGSL: &str = r"
+@group(0) @binding(0) var<storage, read_write> output: array<f32>;
+@compute @workgroup_size(1)
+fn main() {
+    output[0] = 1.0;
+    output[1] = 0.0;
+}
+";
+
+    fn create_convergence_chain(
+        device: &crate::device::WgpuDevice,
+    ) -> (Vec<KernelDispatch>, wgpu::Buffer) {
+        let shader = device.compile_shader(CONVERGENCE_WGSL, Some("conv_kernel"));
+        let bgl = device
+            .device
+            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("conv_bgl"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: false },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            });
+        let layout = device
+            .device
+            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("conv_pl"),
+                bind_group_layouts: &[&bgl],
+                immediate_size: 0,
+            });
+        let pipeline = device
+            .device
+            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("conv_pipeline"),
+                layout: Some(&layout),
+                module: &shader,
+                entry_point: Some("main"),
+                cache: None,
+                compilation_options: Default::default(),
+            });
+        let conv_buf = device.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("conv_buf"),
+            size: 8,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("conv_bg"),
+            layout: &bgl,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: conv_buf.as_entire_binding(),
+            }],
+        });
+        let k = KernelDispatch::new(Arc::new(pipeline), Arc::new(bind_group), (1, 1, 1));
+        (vec![k], conv_buf)
+    }
+
+    #[tokio::test]
+    async fn test_stateful_pipeline_new_requires_gpu() {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
+            return;
+        };
+        let config = StatefulConfig {
+            convergence_scalars: 1,
+            label: Some("TestPipeline".into()),
+        };
+        let _pipeline = StatefulPipeline::new(Arc::clone(&device), config);
+    }
+
+    #[tokio::test]
+    async fn test_run_iterations_success() {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
+            return;
+        };
+        let config = StatefulConfig {
+            convergence_scalars: 1,
+            label: None,
+        };
+        let pipeline = StatefulPipeline::new(Arc::clone(&device), config);
+        let (chain, conv_buf) = create_convergence_chain(device.as_ref());
+        let result = pipeline.run_iterations(&chain, &conv_buf, 1).unwrap();
+        assert_eq!(result.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_run_until_converged() {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
+            return;
+        };
+        let config = StatefulConfig {
+            convergence_scalars: 1,
+            label: None,
+        };
+        let pipeline = StatefulPipeline::new(Arc::clone(&device), config);
+        let (chain, conv_buf) = create_convergence_chain(device.as_ref());
+        let (iters, scalars) = pipeline
+            .run_until_converged(&chain, &conv_buf, 10, 1, 0.5)
+            .unwrap();
+        assert!(iters >= 1);
+        assert_eq!(scalars.len(), 1);
     }
 }

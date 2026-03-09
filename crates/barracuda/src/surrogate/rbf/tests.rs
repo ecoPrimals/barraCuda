@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+#![expect(clippy::unwrap_used, reason = "tests")]
+
 use super::*;
 use crate::device::WgpuDevice;
 use crate::device::test_pool::get_test_device_if_f64_gpu_available_sync;

@@ -199,33 +199,33 @@ impl BrentGpu {
             });
         }
 
-        let lower_bytes: Vec<u8> = lower.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let lower_bytes: &[u8] = bytemuck::cast_slice(lower);
         let lower_buffer =
             self.device
                 .device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("Brent lower"),
-                    contents: &lower_bytes,
+                    contents: lower_bytes,
                     usage: wgpu::BufferUsages::STORAGE,
                 });
 
-        let upper_bytes: Vec<u8> = upper.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let upper_bytes: &[u8] = bytemuck::cast_slice(upper);
         let upper_buffer =
             self.device
                 .device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("Brent upper"),
-                    contents: &upper_bytes,
+                    contents: upper_bytes,
                     usage: wgpu::BufferUsages::STORAGE,
                 });
 
-        let target_bytes: Vec<u8> = targets.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let target_bytes: &[u8] = bytemuck::cast_slice(targets);
         let target_buffer =
             self.device
                 .device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("Brent target"),
-                    contents: &target_bytes,
+                    contents: target_bytes,
                     usage: wgpu::BufferUsages::STORAGE,
                 });
 

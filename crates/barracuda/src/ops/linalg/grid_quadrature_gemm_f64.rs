@@ -251,33 +251,33 @@ impl GridQuadratureGemm {
                 });
 
         // Create buffers
-        let phi_bytes: Vec<u8> = phi.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let phi_bytes: &[u8] = bytemuck::cast_slice(phi);
         let phi_buffer = self
             .device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("GridQuadGEMM phi"),
-                contents: &phi_bytes,
+                contents: phi_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
-        let w_bytes: Vec<u8> = w.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let w_bytes: &[u8] = bytemuck::cast_slice(w);
         let w_buffer = self
             .device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("GridQuadGEMM w"),
-                contents: &w_bytes,
+                contents: w_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
-        let qw_bytes: Vec<u8> = quad_weights.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let qw_bytes: &[u8] = bytemuck::cast_slice(quad_weights);
         let qw_buffer = self
             .device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("GridQuadGEMM quad_weights"),
-                contents: &qw_bytes,
+                contents: qw_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
 

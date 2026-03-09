@@ -2,7 +2,7 @@
 
 **Version**: 0.3.3
 **Date**: 2026-03-09
-**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,700+ tests, 3,097 pass on llvmpipe, GpuBackend trait abstraction, sovereign dispatch scaffold, cross-spring absorptions)
+**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,450+ tests all pass on llvmpipe, GpuBackend trait abstraction, sovereign dispatch scaffold, zero-copy bytemuck/Bytes evolution, Arc<str> error paths, capability-based GPU estimates, comprehensive coverage tests)
 
 ---
 
@@ -15,7 +15,7 @@
 | **Sovereign compiler** | A | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all shaders |
 | **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery; coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support |
 | **Device management** | A+ | `GpuBackend` trait abstraction, `CoralReefDevice` scaffold behind `sovereign-dispatch` feature, multi-GPU, capability-scored discovery, probe-aware f64 strategy, bounded poll timeout |
-| **Test coverage** | A | 3,700+ total tests (3,118 in lib suite); proptest; chaos/fault test tiers; nextest CI/stress profiles; bounded GPU poll timeout prevents hangs; thread-local GPU throttling for `cargo test` stability; f64 ops gated on `get_test_device_if_f64_gpu_available` |
+| **Test coverage** | A | 3,450+ tests (all pass on llvmpipe); proptest; chaos/fault test tiers; nextest CI/stress profiles; bounded GPU poll timeout; GPU-heavy test group with extended timeouts; coverage tests for batch_ipr, histogram, staging, precision/cpu, surrogate/adaptive |
 | **Dependencies** | A- | Pure Rust chain (blake3 pure); zero non-GPU external C deps; wgpu/naga 28 for GPU |
 | **Documentation** | A | Comprehensive CHANGELOG, specs, README, CONTRIBUTING, CONVENTIONS, BREAKING_CHANGES; all rustdoc warnings resolved |
 | **Unsafe code** | A+ | Zero `unsafe` blocks in entire codebase |
@@ -96,8 +96,15 @@
 - Coverage job uses `BARRACUDA_POLL_TIMEOUT_SECS` and soft-gates at 80% (90% requires real GPU)
 - `SparseGemmF64` and `PeakDetectF64` now compile via `compile_shader_f64()` (was incorrectly using `compile_shader()` which downcasts f64→f32, causing data corruption on non-f64 GPUs)
 - f64 GPU ops gated on `get_test_device_if_f64_gpu_available()` — no more false failures on llvmpipe
-- GPU performance estimation constants extracted to named `estimates::` module in `multi_device_pool`
+- GPU performance estimation refactored from 13 constants to `fallback_estimates::{gflops, vram_bytes}` pattern-matched functions
 - NPU SIMD width extracted to `NPU_SIMD_WIDTH` constant
+- `ShaderCompilation(Arc<str>)` — error type evolved from `String` to `Arc<str>` for zero-copy error propagation across 10 DF64 shader paths
+- ~50 GPU dispatch paths evolved from `to_le_bytes().collect::<Vec<u8>>()` to `bytemuck::cast_slice()` — zero-copy buffer uploads
+- `GpuBackend::download()` returns `bytes::Bytes` instead of `Vec<u8>` — zero-copy GPU readback
+- `NpuTensorStorage` evolved from `Vec<u8>` to `bytes::BytesMut` with `freeze()` zero-copy read
+- GPU-heavy test group with extended timeouts for edge_conv, fft, conv2d, flash_attention
+- Coverage tests added for batch_ipr, histogram, staging/ring_buffer, staging/unidirectional, staging/stateful, precision/cpu, surrogate/adaptive
+- CI dual coverage targets: 80% baseline (llvmpipe) + 90% stretch (GPU hardware)
 - Zero `panic!()` in production library code (all panics restricted to `#[cfg(test)]` modules)
 - **Systematic f64 pipeline fix**: 14 ops (transe_score, triangular_solve, variance, correlation, covariance, hermite, bessel_i0/j0/j1/k0, beta, digamma, cosine_similarity, weighted_dot) evolved from `compile_shader()`/`GLOBAL_CACHE` to f64-native compilation paths — eliminates silent data corruption on f64-capable GPUs
 - Pipeline cache evolved with f64-native compilation path (`get_or_create_pipeline_f64_native`) — separate cache maps prevent f64/f32 key collisions
@@ -112,7 +119,6 @@
 ## What's Not Working Yet
 
 - P1: DF64 end-to-end NVK hardware verification (Yukawa shaders)
-- P2: llvm-cov coverage measurement hangs mitigated by bounded timeout but full coordination harness with coralReef/toadStool still needed
-- P2: Test coverage ~70-80% on llvmpipe (target: 90%, requires real GPU hardware)
-- Kokkos validation baseline documentation
-- Kokkos GPU parity benchmarks
+- P2: Test coverage ~75% on llvmpipe (target: 90%, requires real GPU hardware for GPU-path coverage)
+- P2: Kokkos validation baseline documentation
+- P2: Kokkos GPU parity benchmarks

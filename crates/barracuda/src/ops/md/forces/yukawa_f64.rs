@@ -124,12 +124,12 @@ impl YukawaForceF64 {
             self.box_side,
             self.epsilon,
         ];
-        let params_bytes: Vec<u8> = params.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let params_bytes: &[u8] = bytemuck::cast_slice(&params);
         let params_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Yukawa F64 Params"),
-                contents: &params_bytes,
+                contents: params_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
@@ -194,12 +194,12 @@ mod tests {
         let n = 2;
 
         // Create position tensor (f64)
-        let pos_bytes: Vec<u8> = positions.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let pos_bytes: &[u8] = bytemuck::cast_slice(&positions);
         let pos_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Test Positions"),
-                contents: &pos_bytes,
+                contents: pos_bytes,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
             });
         let pos_tensor = Tensor::from_buffer(pos_buffer, vec![n, 3], device.clone());

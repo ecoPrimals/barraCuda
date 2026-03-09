@@ -55,12 +55,12 @@ impl BatchedEighGpu {
 
         // Create A buffer (input matrices, will be modified in-place)
         let a_buffer = {
-            let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let bytes: &[u8] = bytemuck::cast_slice(data);
             device
                 .device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("Batched A f64"),
-                    contents: &bytes,
+                    contents: bytes,
                     usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
                 })
         };

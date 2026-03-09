@@ -72,12 +72,12 @@ impl MorseBuffers {
     fn new(dev: &WgpuDevice, positions: &[f64], bonds: &[MorseBond]) -> Self {
         let n_bonds = bonds.len();
 
-        let pos_bytes: Vec<u8> = positions.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let pos_bytes: &[u8] = bytemuck::cast_slice(positions);
         let pos = dev
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("morse pos"),
-                contents: &pos_bytes,
+                contents: pos_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
@@ -102,11 +102,11 @@ impl MorseBuffers {
             });
 
         let to_f64_buf = |label: &str, data: &[f64]| -> wgpu::Buffer {
-            let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let bytes: &[u8] = bytemuck::cast_slice(data);
             dev.device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some(label),
-                    contents: &bytes,
+                    contents: bytes,
                     usage: wgpu::BufferUsages::STORAGE,
                 })
         };

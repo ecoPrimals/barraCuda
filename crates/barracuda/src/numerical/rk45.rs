@@ -126,6 +126,32 @@ pub struct Rk45Result {
     pub h_final: f64,
 }
 
+impl Rk45Result {
+    /// Number of variables in the ODE system.
+    ///
+    /// Derived from `y_final.len()`. Returns 0 if `y_final` is empty.
+    #[must_use]
+    pub fn n_vars(&self) -> usize {
+        self.y_final.len()
+    }
+
+    /// Extract the trajectory of a single variable across all time steps.
+    ///
+    /// For an ODE system with `n_vars` variables, this collects
+    /// `y_history[step][var_idx]` for every recorded step into a single
+    /// `Vec<f64>`, eliminating the manual flat-array indexing pattern
+    /// used by ODE scenario builders.
+    ///
+    /// Returns an empty `Vec` if `var_idx >= n_vars` or no history was recorded.
+    #[must_use]
+    pub fn variable_trajectory(&self, var_idx: usize) -> Vec<f64> {
+        self.y_history
+            .iter()
+            .filter_map(|step| step.get(var_idx).copied())
+            .collect()
+    }
+}
+
 /// Adaptive RK45 ODE solver.
 ///
 /// Solves the system dy/dt = f(t, y) from `t_start` to `t_end`.

@@ -207,3 +207,42 @@ fn test_backward_integration_error() {
     let result = rk45_solve(&f, 1.0, 0.0, &[(-1.0_f64).exp()], &config);
     assert!(result.is_err());
 }
+
+#[test]
+fn test_variable_trajectory_3d() {
+    let f = |_t: f64, y: &[f64]| vec![-y[0], -2.0 * y[1], -3.0 * y[2]];
+    let config = Rk45Config::new(1e-8, 1e-10);
+
+    let result = rk45_solve(&f, 0.0, 1.0, &[1.0, 1.0, 1.0], &config).unwrap();
+
+    assert_eq!(result.n_vars(), 3);
+
+    let traj_0 = result.variable_trajectory(0);
+    let traj_1 = result.variable_trajectory(1);
+    let traj_2 = result.variable_trajectory(2);
+
+    assert_eq!(traj_0.len(), result.y_history.len());
+    assert_eq!(traj_1.len(), result.y_history.len());
+    assert_eq!(traj_2.len(), result.y_history.len());
+
+    assert!((traj_0[0] - 1.0).abs() < 1e-10, "initial y0=1.0");
+
+    if let Some(&last) = traj_0.last() {
+        assert!((last - (-1.0_f64).exp()).abs() < 1e-6);
+    }
+    if let Some(&last) = traj_1.last() {
+        assert!((last - (-2.0_f64).exp()).abs() < 1e-6);
+    }
+}
+
+#[test]
+fn test_variable_trajectory_out_of_bounds() {
+    let f = |_t: f64, y: &[f64]| vec![-y[0]];
+    let config = Rk45Config::new(1e-8, 1e-10);
+
+    let result = rk45_solve(&f, 0.0, 1.0, &[1.0], &config).unwrap();
+
+    assert_eq!(result.n_vars(), 1);
+    assert!(!result.variable_trajectory(0).is_empty());
+    assert!(result.variable_trajectory(5).is_empty());
+}

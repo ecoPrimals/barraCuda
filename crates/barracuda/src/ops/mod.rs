@@ -423,8 +423,8 @@ pub mod index_select_wgsl;
 pub mod interpolate_nearest_wgsl;
 pub mod interpolate_wgsl;
 pub mod inverse_wgsl;
-pub mod logsumexp; // Need to check which one has WGSL
-pub mod logsumexp_wgsl; // Need to analyze before removing
+pub mod logsumexp;
+pub mod logsumexp_wgsl;
 pub mod masked_fill_wgsl;
 pub mod masked_select;
 pub mod nonzero;

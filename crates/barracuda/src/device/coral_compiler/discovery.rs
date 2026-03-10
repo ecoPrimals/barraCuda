@@ -67,26 +67,28 @@ pub async fn discover_coralreef() -> Option<String> {
 
 /// Read transport info from the file-based discovery directory.
 ///
-/// Scans `$XDG_RUNTIME_DIR/ecoPrimals/` for any primal advertising a
-/// `shader.compile` capability via its transport manifest. Falls back to
-/// the legacy `shader_compiler` capability name, then the well-known
-/// `coralreef-core.json` filename for backward compat.
+/// Scans both `$XDG_RUNTIME_DIR/ecoPrimals/` (toadStool S139 compat write)
+/// and `$XDG_RUNTIME_DIR/ecoPrimals/discovery/` (canonical path) for any
+/// primal advertising a `shader.compile` capability. Falls back to the
+/// legacy `shader_compiler` capability name, then the well-known filename.
 async fn discover_from_file() -> Option<String> {
     let runtime_dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
-    let discovery_dir = PathBuf::from(runtime_dir).join("ecoPrimals");
+    let base_dir = PathBuf::from(runtime_dir).join("ecoPrimals");
+    let canonical_dir = base_dir.join("discovery");
 
-    // Phase 10 semantic capability name
-    if let Some(addr) = scan_capability(&discovery_dir, "shader.compile") {
-        return Some(addr);
+    for dir in [&base_dir, &canonical_dir] {
+        if let Some(addr) = scan_capability(dir, "shader.compile") {
+            return Some(addr);
+        }
     }
 
-    // Pre-Phase 10 capability name
-    if let Some(addr) = scan_capability(&discovery_dir, "shader_compiler") {
-        return Some(addr);
+    for dir in [&base_dir, &canonical_dir] {
+        if let Some(addr) = scan_capability(dir, "shader_compiler") {
+            return Some(addr);
+        }
     }
 
-    // Fallback: well-known filename for backward compatibility
-    let legacy_path = discovery_dir.join(LEGACY_DISCOVERY_FILENAME);
+    let legacy_path = base_dir.join(LEGACY_DISCOVERY_FILENAME);
     read_jsonrpc_transport(&legacy_path)
 }
 

@@ -6,6 +6,23 @@ Prioritized work items, ordered by impact. Updated 2026-03-09.
 
 ## Recently Completed
 
+- **Deep cleanup sprint**: Removed 4 orphaned test directories (`tests/chaos/`, `tests/fault/`,
+  `tests/e2e/`, `tests/precision/`) — ~4,000 lines of dead code that drifted to 84-125 compilation
+  errors each. Wired in `three_springs/` (was compiling but never linked). Cleaned stale
+  informal TODO comments from `ops/mod.rs`. Corrected doc counts to match actual codebase
+  (3,262 lib tests, 28 integration suites, 1,044 .rs files, 9 showcase demos).
+- **`Rk45Result::variable_trajectory()`**: Convenience method extracting single-variable
+  trajectory across all ODE time steps. Eliminates `y_history[step][var_idx]` boilerplate
+  used by 5+ ODE scenario builders in wetSpring. Also added `n_vars()`. 2 tests.
+- **`spectral::analyze_weight_matrix()`**: Composite primitive combining `eigh_f64` eigensolve
+  with bandwidth, condition number, phase classification, mean IPR, level spacing ratio,
+  and spectral entropy — single call for neural network weight diagnostics. 4 tests.
+- **`histogram_u32_to_f64()`**: Conversion utility for GPU k-mer histogram readback.
+  Spectrum/visualization channels require `Vec<f64>`; GPU histograms produce `Vec<u32>`.
+  Eliminates repeated manual casting. 2 tests.
+- **toadStool S139 discovery alignment**: `discover_from_file()` now scans both
+  `$XDG_RUNTIME_DIR/ecoPrimals/` (flat) and `$XDG_RUNTIME_DIR/ecoPrimals/discovery/`
+  (canonical) for primal manifests. Aligns with toadStool S139 dual-write discovery.
 - **Tridiagonal QL eigensolver**: `special::tridiagonal_ql` — symmetric tridiagonal
   eigenvalue/eigenvector solver with `anderson_diagonalize()`. healthSpring absorption.
   Fixed EISPACK sub-diagonal convention bug. 6 tests.
@@ -72,7 +89,7 @@ Prioritized work items, ordered by impact. Updated 2026-03-09.
 - **Coverage expansion**: batch_ipr, histogram, staging (ring_buffer, unidirectional, stateful), precision/cpu, surrogate/adaptive — targeting 0% and <30% coverage modules.
 - **GPU-heavy test timeouts**: Extended slow-timeout overrides for edge_conv, fft, conv2d, flash_attention; fixed edge_conv 60s timeout failure.
 - **CI 90% coverage**: Dual target — 80% baseline (llvmpipe), 90% stretch (GPU hardware, continue-on-error).
-- **Showcase collection**: 10 progressive demos across 3 tiers (local primal, IPC
+- **Showcase collection**: 9 progressive demos across 3 tiers (local primal, IPC
   protocol, cross-primal compute). Demonstrates device discovery, precision tiers
   (F32/F64/DF64), fused GPU ops (Welford, correlation, GpuView), science shaders
   (Hill kinetics, tolerance architecture), JSON-RPC server, doctor/validate,

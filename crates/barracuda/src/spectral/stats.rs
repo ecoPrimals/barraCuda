@@ -104,6 +104,90 @@ impl SpectralAnalysis {
     }
 }
 
+/// Weight matrix spectral analysis — combines eigenvalue decomposition with
+/// all spectral diagnostics in a single call.
+///
+/// Intended for neural network weight matrices where the full spectral
+/// profile (bandwidth, condition number, phase, IPR, LSR) is needed.
+#[derive(Debug, Clone)]
+pub struct WeightMatrixAnalysis {
+    /// Core spectral analysis (eigenvalues, bandwidth, condition number, phase).
+    pub spectral: SpectralAnalysis,
+    /// Mean inverse participation ratio: `Σ|ψ_i|⁴` averaged over eigenvectors.
+    /// High IPR → localized; low IPR → extended.
+    pub mean_ipr: f64,
+    /// Mean level spacing ratio ⟨r⟩ (Poisson ≈ 0.386, GOE ≈ 0.531).
+    pub level_spacing_ratio: f64,
+    /// Spectral entropy: `−Σ p_i ln(p_i)` where `p_i = |λ_i| / Σ|λ_j|`.
+    pub spectral_entropy: f64,
+}
+
+/// Analyze a symmetric weight matrix in one call.
+///
+/// Computes eigenvalues via CPU Jacobi eigensolve, then derives bandwidth,
+/// condition number, phase classification, mean IPR, level spacing ratio,
+/// and spectral entropy.
+///
+/// `gamma` is the aspect ratio n/p for Marchenko-Pastur phase bounds
+/// (use 1.0 for square matrices).
+///
+/// # Errors
+///
+/// Returns [`Err`] if the eigenvalue decomposition fails.
+pub fn analyze_weight_matrix(
+    matrix: &[f64],
+    n: usize,
+    gamma: f64,
+) -> crate::error::Result<WeightMatrixAnalysis> {
+    let decomp = crate::linalg::eigh::eigh_f64(matrix, n)?;
+
+    let mut sorted_evals = decomp.eigenvalues.clone();
+    sorted_evals.sort_by(f64::total_cmp);
+
+    let spectral = SpectralAnalysis::from_eigenvalues(sorted_evals.clone(), gamma);
+    let lsr = level_spacing_ratio(&sorted_evals);
+    let mean_ipr = compute_mean_ipr(&decomp.eigenvectors, n);
+    let spectral_entropy = compute_spectral_entropy(&sorted_evals);
+
+    Ok(WeightMatrixAnalysis {
+        spectral,
+        mean_ipr,
+        level_spacing_ratio: lsr,
+        spectral_entropy,
+    })
+}
+
+fn compute_mean_ipr(eigenvectors: &[f64], n: usize) -> f64 {
+    if n == 0 {
+        return 0.0;
+    }
+    let mut total_ipr = 0.0;
+    for col in 0..n {
+        let mut ipr = 0.0;
+        for row in 0..n {
+            let v = eigenvectors[row * n + col];
+            ipr += v * v * v * v;
+        }
+        total_ipr += ipr;
+    }
+    total_ipr / n as f64
+}
+
+fn compute_spectral_entropy(eigenvalues: &[f64]) -> f64 {
+    let total: f64 = eigenvalues.iter().map(|x| x.abs()).sum();
+    if total < 1e-300 {
+        return 0.0;
+    }
+    let mut entropy = 0.0;
+    for &ev in eigenvalues {
+        let p = ev.abs() / total;
+        if p > 1e-300 {
+            entropy -= p * p.ln();
+        }
+    }
+    entropy
+}
+
 /// Compute the mean level spacing ratio ⟨r⟩ from sorted eigenvalues.
 ///
 /// `r_i` = `min(s_i`, s_{i+1}) / `max(s_i`, s_{i+1})
@@ -259,5 +343,51 @@ mod tests {
         assert_eq!(a.bandwidth, 4.0);
         assert!((a.condition_number - 5.0).abs() < 1e-10); // max=5, min=1
         assert_eq!(a.eigenvalues, evals);
+    }
+
+    #[test]
+    fn analyze_weight_matrix_identity() {
+        #[rustfmt::skip]
+        let mat = [
+            1.0, 0.0, 0.0,
+            0.0, 2.0, 0.0,
+            0.0, 0.0, 3.0,
+        ];
+        let analysis = analyze_weight_matrix(&mat, 3, 1.0).unwrap();
+        assert!((analysis.spectral.bandwidth - 2.0).abs() < 1e-6);
+        assert!((analysis.spectral.condition_number - 3.0).abs() < 1e-6);
+        assert!(analysis.mean_ipr > 0.0);
+        assert!(analysis.spectral_entropy > 0.0);
+        assert!(analysis.level_spacing_ratio >= 0.0);
+    }
+
+    #[test]
+    fn analyze_weight_matrix_2x2() {
+        #[rustfmt::skip]
+        let mat = [
+            2.0, 1.0,
+            1.0, 2.0,
+        ];
+        let analysis = analyze_weight_matrix(&mat, 2, 1.0).unwrap();
+        assert!((analysis.spectral.bandwidth - 2.0).abs() < 1e-6);
+        assert_eq!(analysis.spectral.eigenvalues.len(), 2);
+    }
+
+    #[test]
+    fn spectral_entropy_uniform() {
+        let evals = vec![1.0, 1.0, 1.0, 1.0];
+        let entropy = compute_spectral_entropy(&evals);
+        let expected = (4.0_f64).ln();
+        assert!(
+            (entropy - expected).abs() < 1e-10,
+            "uniform spectrum: entropy={entropy}, expected={expected}"
+        );
+    }
+
+    #[test]
+    fn spectral_entropy_single() {
+        let evals = vec![5.0];
+        let entropy = compute_spectral_entropy(&evals);
+        assert!(entropy.abs() < 1e-10, "single eigenvalue → zero entropy");
     }
 }

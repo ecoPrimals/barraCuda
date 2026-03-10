@@ -79,7 +79,7 @@ pub use fst_variance::{FstResult, fst_variance_decomposition};
 pub use gillespie::{GillespieConfig, GillespieGpu, GillespieModel, GillespieResult};
 pub use hill_gate::{HillGateGpu, HillGateParams};
 pub use hmm::{HmmBatchForwardF64, HmmForwardArgs, ViterbiResult, hmm_backward, hmm_viterbi};
-pub use kmer_histogram::KmerHistogramGpu;
+pub use kmer_histogram::{KmerHistogramGpu, histogram_u32_to_f64};
 pub use locus_variance::LocusVarianceGpu;
 pub use multi_obj_fitness::MultiObjFitnessGpu;
 pub use ncbi_cache::NcbiCache;

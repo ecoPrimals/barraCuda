@@ -2,6 +2,7 @@
 //! Precision tests: f64 accuracy vs CPU reference.
 
 #![expect(clippy::unwrap_used, reason = "tests")]
+#![allow(clippy::useless_vec, reason = "test cases with mixed-length inner vecs")]
 use super::*;
 use barracuda::ops::fused_map_reduce_f64::FusedMapReduceF64;
 

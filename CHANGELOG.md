@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed — Deep Cleanup Sprint 4 (Mar 9 2026)
+
+- **4 orphaned test directories**: `tests/chaos/`, `tests/fault/`, `tests/e2e/`,
+  `tests/precision/` — ~4,000 lines of dead test code that drifted to 84–125 compilation
+  errors each. Root-level test files (`scientific_chaos_tests.rs`,
+  `scientific_e2e_tests.rs`, `scientific_fault_injection_tests.rs`) supersede them.
+- **Stale informal TODO comments** in `ops/mod.rs` (logsumexp module declarations).
+
+### Fixed — Deep Cleanup Sprint 4 (Mar 9 2026)
+
+- **Orphaned `three_springs/` tests wired in**: Created `three_springs_tests.rs` root
+  harness. Module was compiling but never linked into test runner.
+- **Doc accuracy**: All counts verified against actual codebase — 3,262 lib tests,
+  28 integration suites, 1,044 .rs files, 9 showcase demos. Corrected inflated
+  counts in README, STATUS, REMAINING_WORK, WHATS_NEXT.
+
 ### Added — Cross-Spring Absorption Sprint 2 (Mar 9 2026)
 
 - **Tridiagonal QL eigensolver** (`special::tridiagonal_ql`): Symmetric tridiagonal
@@ -481,7 +497,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `cargo clippy --workspace --all-targets --all-features -- -D warnings` — zero warnings
 - `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` — clean
 - `cargo deny check` — advisories/bans/licenses/sources OK
-- 3,450+ tests across 31 integration test suites
+- 3,262 tests across 28 integration test suites (4 drifted orphaned dirs removed, three_springs wired in)
 - ~75% line coverage on llvmpipe; 90% target requires GPU hardware CI runner
 
 ## [0.3.3] - March 4, 2026

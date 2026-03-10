@@ -70,11 +70,7 @@ mod chaos {
             None => return,
         };
         let kriging = KrigingF64::new(device).unwrap();
-        let known = vec![
-            (0.0, 0.0, 1.0),
-            (0.001, 0.001, 1.1),
-            (10.0, 10.0, 2.0),
-        ];
+        let known = vec![(0.0, 0.0, 1.0), (0.001, 0.001, 1.1), (10.0, 10.0, 2.0)];
         let targets = vec![(5.0, 5.0)];
         let model = VariogramModel::Spherical {
             nugget: 0.01,
@@ -132,8 +128,15 @@ mod chaos {
         let sum = fmr.sum(&data).unwrap();
         let expected: f64 = data.iter().sum();
         let rel_error = (sum - expected).abs() / expected.abs();
-        assert!(rel_error < 1e-10, "Large array sum relative error: {}", rel_error);
-        println!("✓ Array ({} elements) sum: {} (rel error: {:.2e})", n, sum, rel_error);
+        assert!(
+            rel_error < 1e-10,
+            "Large array sum relative error: {}",
+            rel_error
+        );
+        println!(
+            "✓ Array ({} elements) sum: {} (rel error: {:.2e})",
+            n, sum, rel_error
+        );
     }
 
     #[test]
@@ -149,8 +152,15 @@ mod chaos {
         let sum = fmr.sum(&data).unwrap();
         let expected: f64 = data.iter().sum();
         let rel_error = (sum - expected).abs() / expected.abs();
-        assert!(rel_error < 1e-8, "Large array sum relative error: {}", rel_error);
-        println!("✓ Large array (1M elements) sum: {} (rel error: {:.2e})", sum, rel_error);
+        assert!(
+            rel_error < 1e-8,
+            "Large array sum relative error: {}",
+            rel_error
+        );
+        println!(
+            "✓ Large array (1M elements) sum: {} (rel error: {:.2e})",
+            sum, rel_error
+        );
     }
 
     #[test]

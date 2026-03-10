@@ -26,8 +26,10 @@ mod e2e {
         assert!(shannon > 0.0 && shannon < richness.ln() + 0.01);
         assert!(simpson > 0.0 && simpson < 1.0);
         assert!(evenness > 0.0 && evenness <= 1.0);
-        println!("✓ Biodiversity pipeline: Shannon H' = {:.4}, Simpson D = {:.4}, Evenness = {:.4}",
-            shannon, simpson, evenness);
+        println!(
+            "✓ Biodiversity pipeline: Shannon H' = {:.4}, Simpson D = {:.4}, Evenness = {:.4}",
+            shannon, simpson, evenness
+        );
     }
 
     #[test]
@@ -67,9 +69,16 @@ mod e2e {
             assert!(var >= 0.0, "Negative variance at point {}: {}", i, var);
         }
         let min_vwc = result.values.iter().cloned().fold(f64::INFINITY, f64::min);
-        let max_vwc = result.values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-        println!("✓ Soil moisture mapping: Grid 10x10, VWC {:.2}% - {:.2}%",
-            min_vwc * 100.0, max_vwc * 100.0);
+        let max_vwc = result
+            .values
+            .iter()
+            .cloned()
+            .fold(f64::NEG_INFINITY, f64::max);
+        println!(
+            "✓ Soil moisture mapping: Grid 10x10, VWC {:.2}% - {:.2}%",
+            min_vwc * 100.0,
+            max_vwc * 100.0
+        );
     }
 
     #[test]
@@ -84,7 +93,11 @@ mod e2e {
             (0.0, 0.0, fmr.shannon_entropy(&[50.0, 30.0, 20.0]).unwrap()),
             (10.0, 0.0, fmr.shannon_entropy(&[40.0, 40.0, 20.0]).unwrap()),
             (0.0, 10.0, fmr.shannon_entropy(&[60.0, 25.0, 15.0]).unwrap()),
-            (10.0, 10.0, fmr.shannon_entropy(&[35.0, 35.0, 30.0]).unwrap()),
+            (
+                10.0,
+                10.0,
+                fmr.shannon_entropy(&[35.0, 35.0, 30.0]).unwrap(),
+            ),
             (5.0, 5.0, fmr.shannon_entropy(&[45.0, 35.0, 20.0]).unwrap()),
         ];
         let new_sites = vec![(2.5, 2.5), (7.5, 2.5), (2.5, 7.5), (7.5, 7.5)];
@@ -102,7 +115,10 @@ mod e2e {
                 h
             );
         }
-        println!("✓ Combined diversity + spatial: {} known, {} interpolated",
-            sites.len(), new_sites.len());
+        println!(
+            "✓ Combined diversity + spatial: {} known, {} interpolated",
+            sites.len(),
+            new_sites.len()
+        );
     }
 }

@@ -31,7 +31,10 @@ mod fused_map_reduce_unit {
             result,
             expected
         );
-        println!("✓ Shannon wetSpring reference: {} (error: {:.2e})", result, error);
+        println!(
+            "✓ Shannon wetSpring reference: {} (error: {:.2e})",
+            result, error
+        );
     }
 
     #[test]
@@ -46,7 +49,10 @@ mod fused_map_reduce_unit {
         let expected = 4.0_f64.ln();
         let error = (result - expected).abs();
         assert!(error < 1e-10, "Uniform Shannon error: {}", error);
-        println!("✓ Shannon uniform: {} (expected ln(4) = {})", result, expected);
+        println!(
+            "✓ Shannon uniform: {} (expected ln(4) = {})",
+            result, expected
+        );
     }
 
     #[test]
@@ -199,7 +205,10 @@ mod kriging_unit {
             gamma_at_range,
             expected
         );
-        println!("✓ Exponential variogram: γ(0)=0, γ(10)≈{:.4}", gamma_at_range);
+        println!(
+            "✓ Exponential variogram: γ(0)=0, γ(10)≈{:.4}",
+            gamma_at_range
+        );
     }
 
     #[test]
@@ -355,7 +364,10 @@ mod kriging_unit {
         assert_eq!(lag_distances.len(), 10);
         assert_eq!(lag_semivariances.len(), 10);
         let non_empty_lags: Vec<_> = lag_semivariances.iter().filter(|&&v| v > 0.0).collect();
-        assert!(!non_empty_lags.is_empty(), "Should have computed some lag values");
+        assert!(
+            !non_empty_lags.is_empty(),
+            "Should have computed some lag values"
+        );
         println!(
             "✓ Variogram fitting: {} lags computed, {} non-empty",
             lag_distances.len(),

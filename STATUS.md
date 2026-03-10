@@ -2,7 +2,7 @@
 
 **Version**: 0.3.3
 **Date**: 2026-03-09
-**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,450+ tests, GpuBackend trait abstraction, sovereign dispatch scaffold, zero-copy bytemuck/Bytes, showcase collection with 10 progressive demos, all deps pure Rust, zero hardcoded workgroup sizes, zero orphaned code)
+**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,262 tests, GpuBackend trait abstraction, sovereign dispatch scaffold, zero-copy bytemuck/Bytes, showcase collection with 9 progressive demos, all deps pure Rust, zero hardcoded workgroup sizes, zero orphaned code, toadStool S139 discovery aligned)
 
 ---
 
@@ -15,14 +15,14 @@
 | **Sovereign compiler** | A | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all shaders |
 | **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery; coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support |
 | **Device management** | A+ | `GpuBackend` trait abstraction, `CoralReefDevice` scaffold behind `sovereign-dispatch` feature, multi-GPU, capability-scored discovery, probe-aware f64 strategy, bounded poll timeout |
-| **Test coverage** | A | 3,450+ tests (all pass on llvmpipe); proptest; chaos/fault test tiers; nextest CI/stress profiles; bounded GPU poll timeout; GPU-heavy test group with extended timeouts; coverage tests for batch_ipr, histogram, staging, precision/cpu, surrogate/adaptive |
+| **Test coverage** | A | 3,262 tests (all pass on llvmpipe); proptest; chaos/fault test tiers; nextest CI/stress profiles; bounded GPU poll timeout; GPU-heavy test group with extended timeouts; coverage tests for batch_ipr, histogram, staging, precision/cpu, surrogate/adaptive; 4 drifted orphaned test dirs removed |
 | **Dependencies** | A+ | All deps pure Rust (blake3 `pure`, wgpu/naga 28); zero application C deps; ecoBin compliant |
-| **Documentation** | A+ | Comprehensive CHANGELOG, specs, README, CONTRIBUTING, CONVENTIONS, BREAKING_CHANGES; all rustdoc warnings resolved; showcase/ with 10 progressive demos (local, IPC, cross-primal) |
+| **Documentation** | A+ | Comprehensive CHANGELOG, specs, README, CONTRIBUTING, CONVENTIONS, BREAKING_CHANGES; all rustdoc warnings resolved; showcase/ with 9 progressive demos (local, IPC, cross-primal) |
 | **Unsafe code** | A+ | Zero `unsafe` blocks in entire codebase |
 | **Clippy / lint** | A+ | Zero warnings with pedantic + unwrap_used; `#[expect(reason)]` for clippy suppressions; `#[allow(dead_code, reason)]` for CPU reference implementations; `bytes::Bytes` zero-copy on I/O boundaries; zero undocumented suppressions |
 | **Error handling** | A+ | Binary `main()` uses typed `BarracudaCoreError` (not `Box<dyn Error>`); `From` impls for `serde_json::Error`, `BarracudaError`, `io::Error`; `Result` propagation throughout; `let-else` throughout; poison recovery |
 | **Idiomatic Rust** | A+ | Edition 2024; zero `too_many_arguments` (all 9 → builder/struct); documented `#[allow]`/`#[expect]` with reason; `#[derive(Default)]`; zero unsafe; `ChamferDirection` enum; smart module decomposition (provenance, coral_compiler) |
-| **Spring absorption** | A+ | Cross-spring P0/P1/P2 items resolved; healthSpring: Hill Emax, Population PK, tridiagonal QL eigensolver, LCG PRNG centralization; hotSpring: plasma dispersion W(z)/Z(z); neuralSpring: public activations API (sigmoid/relu/gelu/swish/mish/softplus/leaky_relu), Wright-Fisher popgen GPU op, hill_activation/hill_repression, head_split/head_concat alignment, xoshiro PRNG confirmed covered; groundSpring: Ada Lovelace F64NativeNoSharedMem, shared_mem_f64 probe, DF64 reduce fix; wetSpring: builder re-exports, dot/l2_norm; ecosystem: canary/test utils, NVK guard, GpuView ops |
+| **Spring absorption** | A+ | Cross-spring P0/P1/P2 items resolved; healthSpring: Hill Emax, Population PK, tridiagonal QL, LCG PRNG; hotSpring: plasma dispersion; neuralSpring: activations, Wright-Fisher, head alignment; groundSpring: F64NativeNoSharedMem, DF64 reduce; wetSpring: builder re-exports, dot/l2_norm, `Rk45Result::variable_trajectory()`, `histogram_u32_to_f64()`; neuralSpring: `analyze_weight_matrix()` composite; toadStool S139: dual-scan discovery; confirmed: `regularized_gamma_q`, `r_squared()`, ET0 GPU all already present |
 
 ---
 
@@ -105,7 +105,7 @@
 - GPU-heavy test group with extended timeouts for edge_conv, fft, conv2d, flash_attention
 - Coverage tests added for batch_ipr, histogram, staging/ring_buffer, staging/unidirectional, staging/stateful, precision/cpu, surrogate/adaptive
 - CI dual coverage targets: 80% baseline (llvmpipe) + 90% stretch (GPU hardware)
-- `showcase/` collection: 10 progressive demos across 3 tiers (local primal, IPC protocol, cross-primal compute)
+- `showcase/` collection: 9 progressive demos across 3 tiers (local primal, IPC protocol, cross-primal compute)
 - Showcase demonstrates: device discovery, precision tiers, fused GPU ops, science shaders, JSON-RPC server, doctor/validate, coralReef compilation, toadStool discovery, sovereign pipeline
 - Zero `panic!()` in production library code (all panics restricted to `#[cfg(test)]` modules)
 - **Systematic f64 pipeline fix**: 14 ops (transe_score, triangular_solve, variance, correlation, covariance, hermite, bessel_i0/j0/j1/k0, beta, digamma, cosine_similarity, weighted_dot) evolved from `compile_shader()`/`GLOBAL_CACHE` to f64-native compilation paths — eliminates silent data corruption on f64-capable GPUs

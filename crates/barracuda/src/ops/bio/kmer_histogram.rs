@@ -165,6 +165,16 @@ impl KmerHistogramGpu {
     }
 }
 
+/// Convert a `u32` histogram (e.g. from GPU readback) to `f64`.
+///
+/// Spectrum and visualization channels require `Vec<f64>`; GPU k-mer
+/// histograms produce `Vec<u32>`. This avoids repeated manual casting
+/// in downstream consumers.
+#[must_use]
+pub fn histogram_u32_to_f64(counts: &[u32]) -> Vec<f64> {
+    counts.iter().map(|&c| f64::from(c)).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -172,5 +182,17 @@ mod tests {
     #[test]
     fn shader_contains_entry_point() {
         assert!(WGSL_KMER_HISTOGRAM.contains("fn kmer_histogram"));
+    }
+
+    #[test]
+    fn histogram_conversion_roundtrip() {
+        let counts: Vec<u32> = vec![0, 5, 12, 0, 3];
+        let f64s = histogram_u32_to_f64(&counts);
+        assert_eq!(f64s, vec![0.0, 5.0, 12.0, 0.0, 3.0]);
+    }
+
+    #[test]
+    fn histogram_conversion_empty() {
+        assert!(histogram_u32_to_f64(&[]).is_empty());
     }
 }

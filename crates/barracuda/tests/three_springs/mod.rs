@@ -25,11 +25,7 @@ pub fn cpu_shannon(counts: &[f64]) -> f64 {
         .iter()
         .map(|&c| {
             let p = c / total;
-            if p > 0.0 {
-                -p * p.ln()
-            } else {
-                0.0
-            }
+            if p > 0.0 { -p * p.ln() } else { 0.0 }
         })
         .sum()
 }

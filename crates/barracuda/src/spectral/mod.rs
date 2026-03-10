@@ -56,7 +56,8 @@ pub use hofstadter::{GOLDEN_RATIO, almost_mathieu_hamiltonian, gcd, hofstadter_b
 pub use lanczos::{LanczosTridiag, lanczos, lanczos_eigenvalues};
 pub use sparse::{SpectralCsrMatrix, WGSL_SPMV_CSR_F64};
 pub use stats::{
-    GOE_R, POISSON_R, SpectralAnalysis, SpectralPhase, classify_spectral_phase, detect_bands,
-    level_spacing_ratio, spectral_bandwidth, spectral_condition_number,
+    GOE_R, POISSON_R, SpectralAnalysis, SpectralPhase, WeightMatrixAnalysis, analyze_weight_matrix,
+    classify_spectral_phase, detect_bands, level_spacing_ratio, spectral_bandwidth,
+    spectral_condition_number,
 };
 pub use tridiag::{find_all_eigenvalues, sturm_count, tridiag_eigenvectors};

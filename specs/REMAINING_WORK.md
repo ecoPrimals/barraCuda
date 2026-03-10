@@ -6,6 +6,23 @@
 
 ---
 
+## Achieved (March 9, 2026 — Deep Cleanup Sprint 4)
+
+### Debris Removal & Accuracy
+- **4 orphaned test directories removed**: `tests/chaos/`, `tests/fault/`, `tests/e2e/`, `tests/precision/` — never compiled (no root test file importing them), drifted to 84-125 compilation errors each. Root-level test files (`scientific_chaos_tests.rs`, `scientific_e2e_tests.rs`, `scientific_fault_injection_tests.rs`) supersede them. ~4,000 lines of dead code removed.
+- **`three_springs/` wired in**: Was orphaned (compiles but never included). Created `three_springs_tests.rs` root harness. 28 integration test suites now all compiled and linked.
+- **Stale comments cleaned**: Removed informal TODO comments from `ops/mod.rs` (logsumexp/logsumexp_wgsl module declarations).
+- **Doc accuracy**: All test counts (3,262 lib tests, 28 integration suites), file counts (1,044 .rs files), and showcase count (9 demos) verified against actual codebase.
+
+## Achieved (March 9, 2026 — Cross-Spring Absorption Sprint 3)
+
+### API Convenience & Discovery (Sprint 3)
+- **`Rk45Result::variable_trajectory(var_idx)`**: Extracts single-variable trajectory across all ODE time steps. Replaces manual `y_history[step][var_idx]` indexing. Added `n_vars()`. 2 tests.
+- **`spectral::analyze_weight_matrix()`**: Composite primitive (`WeightMatrixAnalysis`) combining eigensolve + bandwidth + condition number + phase classification + mean IPR + level spacing ratio + spectral entropy. 4 tests.
+- **`histogram_u32_to_f64()`**: GPU k-mer histogram readback conversion. 2 tests.
+- **toadStool S139 discovery alignment**: `discover_from_file()` now dual-scans both `$XDG_RUNTIME_DIR/ecoPrimals/` and `ecoPrimals/discovery/` for primal manifests.
+- **Confirmed existing coverage**: `regularized_gamma_q()`, `CorrelationResult::r_squared()`, and ET0 GPU shaders (Thornthwaite/Makkink/Turc/Hamon) all already present — no absorption needed.
+
 ## Achieved (March 9, 2026 — Cross-Spring Absorption Sprint 2)
 
 ### healthSpring Absorptions (Sprint 2)
@@ -99,7 +116,7 @@ Pedantic + `unwrap_used` — zero warnings across all targets (re-verified Mar 8
 - **Doc collision fix**: `barracuda-core` binary `doc = false` resolves Cargo #6313
 
 ### Showcase Collection (March 9, 2026)
-- **10 progressive demos** across 3 tiers: local primal, IPC protocol, cross-primal compute
+- **9 progressive demos** across 3 tiers: local primal, IPC protocol, cross-primal compute
 - **00-local-primal**: device-discovery, precision-tiers, fused-gpu-ops, science-shaders (4 standalone Cargo crates)
 - **01-ipc-protocol**: jsonrpc-server, doctor-validate (2 shell script demos)
 - **02-cross-primal-compute**: coralreef-shader-compile, toadstool-hw-discovery, sovereign-pipeline (2 Cargo crates + 1 shell)
@@ -147,7 +164,7 @@ Previously limited to Vulkan with SPIR-V passthrough.
 ### P2 — Near-term
 
 #### Test Coverage to 90%
-- Current: 3,450+ total tests, 31 integration suites
+- Current: 3,262 total tests, 28 integration suites
 - Evolve CI `--fail-under` from 80 to 90
 - Add GPU-conditional tests for new ops
 - GPU_TEST_TIMEOUT (60s) prevents hangs; coordination harness with

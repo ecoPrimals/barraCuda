@@ -2,7 +2,7 @@
 
 **Version**: 0.3.3 → 0.3.4
 **Date**: March 9, 2026
-**Source**: hotSpring v0.6.24, groundSpring V96, neuralSpring V92/S134, wetSpring V101, airSpring v0.7.3, healthSpring V13
+**Source**: hotSpring v0.6.24, groundSpring V99, neuralSpring S135, wetSpring V102, airSpring v0.7.5, healthSpring V13, toadStool S139
 
 Cross-spring evolution follows **Write → Absorb → Lean**: springs implement
 domain-specific primitives, barraCuda absorbs and generalises, springs consume
@@ -143,6 +143,18 @@ groundSpring → ALL:        2 shaders (chi_squared universal, Welford mean+vari
 
 ---
 
+### Cross-Spring Absorption Sprint 3 (Mar 9 2026)
+
+| # | Item | Source | Module | Status |
+|---|------|--------|--------|--------|
+| AR | **P1: `Rk45Result::variable_trajectory()`** | wetSpring V102 | `numerical::rk45` | ✅ Done |
+| AS | **P1: `analyze_weight_matrix()` composite** | neuralSpring S135 | `spectral::stats` | ✅ Done |
+| AT | **P1: `histogram_u32_to_f64()` convenience** | wetSpring V102 | `ops::bio::kmer_histogram` | ✅ Done |
+| AU | **P0: toadStool S139 discovery alignment** | toadStool S139 | `device::coral_compiler::discovery` | ✅ Done |
+| AV | **Audit: confirmed existing coverage** | airSpring v0.7.5 | — | ✅ `regularized_gamma_q`, `CorrelationResult::r_squared()`, ET0 GPU shaders all already present |
+
+---
+
 ## Numerical Stability Notes (from springs)
 
 - **f32 accumulation bias**: Green-Kubo gives ~28% bias — use f64/DF64 for reductions
@@ -154,6 +166,8 @@ groundSpring → ALL:        2 shaders (chi_squared universal, Welford mean+vari
 
 ## References
 
+- `wateringHole/handoffs/BARRACUDA_V034_DEEP_CLEANUP_SPRINT4_HANDOFF_MAR09_2026.md`
+- `wateringHole/handoffs/BARRACUDA_V034_CROSS_SPRING_ABSORPTION_SPRINT3_HANDOFF_MAR09_2026.md`
 - `wateringHole/handoffs/BARRACUDA_V033_CROSS_SPRING_ABSORPTION_SPRINT2_HANDOFF_MAR09_2026.md`
 - `wateringHole/handoffs/BARRACUDA_V033_HEALTHSPRING_HOTSPRING_ABSORPTION_HANDOFF_MAR09_2026.md`
 - `wateringHole/handoffs/BARRACUDA_V033_CROSS_SPRING_ABSORPTION_HANDOFF_MAR08_2026.md`

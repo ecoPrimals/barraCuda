@@ -459,9 +459,24 @@ impl PipelineCache {
         if let Some(m) = read_or_recover(&self.shaders_f64).get(&key) {
             return m.clone();
         }
+        // Strip `enable f64;` — naga resolves f64 support from device capability
+        // flags, not WGSL directives.  Leaving the directive in causes NVIDIA
+        // PTXAS (Ada Lovelace / SM89) to silently produce broken shaders that
+        // return zeros for all outputs.  Discovered via neuralSpring diagnostic
+        // on RTX 4070 Vulkan (Mar 2026).
+        let stripped: std::borrow::Cow<'_, str> = if source.contains("enable f64;") {
+            source
+                .lines()
+                .filter(|l| l.trim() != "enable f64;")
+                .collect::<Vec<_>>()
+                .join("\n")
+                .into()
+        } else {
+            source.into()
+        };
         let module = Arc::new(device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label,
-            source: wgpu::ShaderSource::Wgsl(source.into()),
+            source: wgpu::ShaderSource::Wgsl((&*stripped).into()),
         }));
         write_or_recover(&self.shaders_f64)
             .entry(key)

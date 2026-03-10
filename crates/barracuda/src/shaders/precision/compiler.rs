@@ -29,6 +29,8 @@ pub fn source_is_f64(source: &str) -> bool {
 #[must_use]
 pub fn downcast_f64_to_f32(f64_source: &str) -> String {
     let result = f64_source
+        .replace("enable f64;\n", "")
+        .replace("enable f64;", "")
         .replace("_f64(", "\x00_F64_CALL\x00")
         .replace("array<f64>", "array<f32>")
         .replace("array<f64,", "array<f32,")

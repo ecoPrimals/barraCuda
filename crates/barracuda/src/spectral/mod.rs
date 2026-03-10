@@ -43,6 +43,8 @@ pub(crate) mod lanczos;
 pub(crate) mod sparse;
 mod stats;
 mod tridiag;
+#[cfg(feature = "gpu")]
+pub mod tridiag_eigh_gpu;
 
 pub use anderson::{
     AndersonSweepPoint, anderson_2d, anderson_3d, anderson_3d_correlated, anderson_4d,
@@ -61,3 +63,5 @@ pub use stats::{
     spectral_condition_number,
 };
 pub use tridiag::{find_all_eigenvalues, sturm_count, tridiag_eigenvectors};
+#[cfg(feature = "gpu")]
+pub use tridiag_eigh_gpu::BatchedTridiagEighGpu;

@@ -1,6 +1,6 @@
 # barraCuda
 
-**Version**: 0.3.4
+**Version**: 0.3.5
 **Status**: Standalone primal — zero cross-dependencies, fully concurrent, all quality gates passing
 **License**: AGPL-3.0-or-later
 **MSRV**: 1.87
@@ -26,8 +26,8 @@ results.
 
 ### Key capabilities
 
-- **797 WGSL shaders** spanning scientific compute domains
-- **1,050+ Rust source files**, 28 integration test suites, 3,280 library tests passing
+- **803 WGSL shaders** spanning scientific compute domains
+- **1,060+ Rust source files**, 28 integration test suites, 3,348 library tests passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -38,6 +38,7 @@ results.
 - **Linear algebra** — dense, sparse (CSR SpMV, CG, BiCGStab), eigensolvers, L-BFGS
 - **Statistics** — bootstrap, jackknife, diversity indices, hydrology
 - **Pharmacometrics** — FOCE gradients, VPC Monte Carlo, population PK, dose-response
+- **Health** — Michaelis-Menten PK (GPU batch), SCFA production, beat classification, EDA stress detection
 - **Bioinformatics** — Smith-Waterman, HMM, phylogenetics, bipartition encoding, genomic ops
 - **ML ops** — matmul, softmax, attention, ESN reservoir computing
 - **Sovereign shader compilation** — naga 28 IR optimizer, SPIR-V passthrough

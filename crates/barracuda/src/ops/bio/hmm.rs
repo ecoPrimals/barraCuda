@@ -19,7 +19,15 @@ use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
-const SHADER: &str = include_str!("../../shaders/bio/hmm_forward_f64.wgsl");
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "per-timestep shader kept for host-side multi-dispatch HMM loop"
+    )
+)]
+const SHADER_PER_STEP: &str = include_str!("../../shaders/bio/hmm_forward_f64.wgsl");
+const SHADER: &str = include_str!("../../shaders/bio/hmm_batch_forward_f64.wgsl");
 const SHADER_BACKWARD: &str = include_str!("../../shaders/bio/hmm_backward_log_f64.wgsl");
 const SHADER_VITERBI: &str = include_str!("../../shaders/bio/hmm_viterbi_f64.wgsl");
 
@@ -341,9 +349,17 @@ mod tests {
             SHADER.contains("logsumexp")
                 || SHADER.contains("log_sum_exp")
                 || SHADER.contains("sum_exp"),
-            "forward shader must implement logsumexp"
+            "batch forward shader must implement logsumexp"
         );
         assert!(SHADER.contains("Params"));
+        assert!(SHADER.contains("log_lik_out"));
+        assert!(SHADER.contains("log_pi"));
+    }
+
+    #[test]
+    fn per_step_shader_source_valid() {
+        assert!(SHADER_PER_STEP.contains("log_alpha_prev"));
+        assert!(SHADER_PER_STEP.contains("log_alpha_next"));
     }
 
     #[test]

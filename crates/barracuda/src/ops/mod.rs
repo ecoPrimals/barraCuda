@@ -502,6 +502,7 @@ pub mod stats_f64;
 // Life-science + analytical chemistry GPU primitives (wetSpring handoff v4, Feb 2026)
 // Smith-Waterman banded alignment, Gillespie SSA, decision-tree inference, Felsenstein pruning
 pub mod bio;
+pub mod health;
 pub mod pharma;
 
 // Quantization

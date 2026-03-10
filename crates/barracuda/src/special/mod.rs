@@ -87,6 +87,7 @@ pub mod legendre;
 pub mod plasma_dispersion;
 #[cfg(feature = "gpu")]
 pub mod screened_coulomb;
+pub mod stable_gpu;
 pub mod tridiagonal_ql;
 
 // Re-export CPU functions
@@ -111,6 +112,7 @@ pub use legendre::{assoc_legendre, legendre};
 pub use plasma_dispersion::{plasma_dispersion_w, plasma_dispersion_w_stable, plasma_dispersion_z};
 #[cfg(feature = "gpu")]
 pub use screened_coulomb::screened_coulomb_eigenvalues;
+pub use stable_gpu::{bessel_j0_minus1_f64, erfc_f64, expm1_f64, log1p_f64};
 pub use tridiagonal_ql::{anderson_diagonalize, tridiagonal_ql};
 
 // Re-export GPU ops for batch processing (requires GPU feature)

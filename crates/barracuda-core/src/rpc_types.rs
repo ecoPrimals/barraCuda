@@ -200,13 +200,13 @@ mod tests {
     fn health_report_roundtrip() {
         let report = HealthReport {
             name: "barraCuda".into(),
-            version: "0.3.4".into(),
+            version: "0.3.5".into(),
             status: "healthy".into(),
         };
         let json = serde_json::to_string(&report).unwrap();
         let parsed: HealthReport = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.name, "barraCuda");
-        assert_eq!(parsed.version, "0.3.4");
+        assert_eq!(parsed.version, "0.3.5");
     }
 
     #[test]
@@ -240,7 +240,7 @@ mod tests {
     fn primal_info_roundtrip() {
         let info = PrimalInfo {
             primal: "barraCuda".into(),
-            version: "0.3.4".into(),
+            version: "0.3.5".into(),
             protocol: "jsonrpc-2.0".into(),
             namespace: "barracuda".into(),
             license: "AGPL-3.0-only".into(),

@@ -5,6 +5,48 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.5] — 2026-03-10
+
+### Added — Cross-Spring Deep Absorption & Evolution Sprint 2 (Mar 10 2026)
+
+- **Health module** (`health::pkpd`, `health::microbiome`, `health::biosignal`): Full CPU
+  scientific computing suite absorbed from healthSpring V19. Michaelis-Menten PK simulation
+  with AUC, steady-state Css, apparent half-life. SCFA production (acetate, propionate,
+  butyrate) with healthy/dysbiotic parameter sets. Antibiotic perturbation model, gut-brain
+  serotonin axis. EDA tonic/phasic decomposition, SCR peak detection, stress assessment.
+  Beat template-matching classification (Normal/PVC/PAC) with normalized cross-correlation.
+- **3 GPU health shaders** (`shaders/health/`): `michaelis_menten_batch_f64.wgsl` (per-patient
+  Euler PK with PRNG Vmax variation), `scfa_batch_f64.wgsl` (element-wise Michaelis-Menten
+  for 3 metabolites), `beat_classify_batch_f64.wgsl` (normalized cross-correlation template
+  matching). Each with GPU dispatch wrapper in `ops::health`.
+- **GPU stable special functions** (`shaders/special/stable_f64.wgsl`): `log1p_f64` (Kahan
+  compensated), `expm1_f64` (Taylor + compensated), `erfc_f64` (A&S 7.1.26 rational),
+  `bessel_j0_minus1_f64` (power series). Cross-spring P1 for ISSUE-011 catastrophic
+  cancellation avoidance. CPU reference implementations in `special::stable_gpu`.
+- **GPU batched tridiagonal eigensolver** (`spectral::tridiag_eigh_gpu`): QL algorithm with
+  Wilkinson shifts, one GPU thread per independent tridiagonal system. Complements CPU
+  `tridiagonal_ql` for batch spectral problems. Shader: `tridiag_eigh_f64.wgsl`.
+- **FMA policy** (`device::fma_policy`): `FmaPolicy::Contract`/`Separate`/`Default` with
+  domain-aware routing (`domain_requires_separate_fma`). Lattice QCD, gradient flow, nuclear
+  EOS flagged for forced separate FMA to ensure bit-exact reproducibility.
+- **HMM batch forward shader** (`shaders/bio/hmm_batch_forward_f64.wgsl`): Full batch
+  dispatch (one thread per sequence, sequential over T steps) with correct 7-binding layout
+  matching `HmmBatchForwardF64::dispatch()`. Replaces mismatched per-timestep shader.
+- **FAO-56 extended** (`stats::hydrology::fao56_et0_with_ea`): Direct actual vapour pressure
+  input, closing the CPU-GPU gap when measured humidity is available (airSpring V075 request).
+- **Hamon-Brock ET₀** (`stats::hydrology::hamon_et0_brock`): Standardized Brock (1981)
+  daylight formula variant for airSpring consistency.
+- **Biosignal primitives** (`health::biosignal`): O(n) `rolling_average` (21x faster than
+  naive convolution for large windows), `convolve_1d` for valid 1D convolution.
+
+### Fixed
+
+- **P0: `enable f64;` Ada Lovelace PTXAS bug**: `downcast_f64_to_f32()` now strips the
+  `enable f64;` directive before compilation, preventing broken shader output on SM89 GPUs
+  where PTXAS silently produces zero-returning code.
+- **P0: HMM batch forward binding mismatch**: Shader declared 5 bindings (per-timestep layout)
+  but Rust dispatch provided 7 (batch layout). New dedicated batch shader with matching params.
+
 ## [0.3.4] — 2026-03-10
 
 ### Added — Cross-Spring Absorption & Deep Evolution Sprint (Mar 10 2026)

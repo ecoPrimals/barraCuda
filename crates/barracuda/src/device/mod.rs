@@ -31,9 +31,12 @@ pub mod coral_compiler;
 pub mod coral_reef_device;
 mod device_types;
 pub mod driver_profile; // GPU driver/compiler identity + shader strategies (D-S17-002 refactor)
+pub mod hardware_calibration; // Per-tier GPU compilation probing (hotSpring v0.6.25 absorption)
 pub mod kernel_router; // Unified Math → Hardware routing (Feb 15, 2026)
 pub mod latency; // LatencyModel trait + Sm70/Rdna2/AppleM/Conservative/Measured (SOVEREIGN Phase 2, Feb 2026)
 pub mod pipeline_cache;
+pub mod precision_brain; // Domain→tier self-routing brain (hotSpring v0.6.25 absorption)
+pub mod precision_tier; // PrecisionTier, PhysicsDomain enums (hotSpring v0.6.25 absorption)
 pub mod probe; // Runtime f64 exp/log capability probing (W-001 evolution)
 pub mod probe_throughput; // f64 throughput ratio probing (metalForge discovery)
 pub mod registry; // Physical device tracking with backend preference (Feb 16, 2026)
@@ -89,6 +92,10 @@ pub use registry::{
 pub use substrate::{Substrate, SubstrateCapability, SubstrateType};
 pub use unified::{Capability, Device, DeviceContext, DeviceInfo, WorkloadHint};
 pub use wgpu_device::WgpuDevice;
+
+pub use hardware_calibration::HardwareCalibration;
+pub use precision_brain::PrecisionBrain;
+pub use precision_tier::{PhysicsDomain, PrecisionBrainAdvice, PrecisionTier};
 
 /// Device pool for GPU operations (used by NMS and tests).
 /// Always compiled so NMS can acquire a GPU device at runtime.

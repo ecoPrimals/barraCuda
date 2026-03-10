@@ -153,18 +153,10 @@ impl BarraCudaService for BarraCudaServer {
                 "hydrology".into(),
                 "bio".into(),
             ],
-            methods: vec![
-                "barracuda.device.list".into(),
-                "barracuda.device.probe".into(),
-                "barracuda.health.check".into(),
-                "barracuda.tolerances.get".into(),
-                "barracuda.validate.gpu_stack".into(),
-                "barracuda.compute.dispatch".into(),
-                "barracuda.tensor.create".into(),
-                "barracuda.tensor.matmul".into(),
-                "barracuda.fhe.ntt".into(),
-                "barracuda.fhe.pointwise_mul".into(),
-            ],
+            methods: crate::ipc::methods::REGISTERED_METHODS
+                .iter()
+                .map(|&m| m.into())
+                .collect(),
             gpu_available: has_gpu,
             f64_shaders: has_f64,
             spirv_passthrough: has_spirv,

@@ -2,7 +2,7 @@
 
 **Version**: 0.3.4
 **Date**: 2026-03-10
-**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,249 tests, zero TODO/FIXME/unimplemented, NVVM poisoning guard, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust)
+**Overall Grade**: A+ (Zero unsafe, zero unwrap in production, pure safe Rust, all quality gates green, 3,249+ tests, zero TODO/FIXME/unimplemented, NVVM poisoning guard, PrecisionBrain self-routing, HardwareCalibration per-tier probing, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust, device-aware test tolerances, cross-spring pharma/bio absorption)
 
 ---
 
@@ -10,7 +10,7 @@
 
 | Category | Grade | Notes |
 |----------|-------|-------|
-| **Core compute** | A+ | 794 WGSL shaders, 13-tier tolerance architecture, GpuView persistent buffers with ops, BGL builder pattern |
+| **Core compute** | A+ | 797 WGSL shaders, 13-tier tolerance architecture, GpuView persistent buffers with ops, BGL builder pattern, PrecisionBrain domain→tier routing |
 | **Precision tiers** | A+ | 3-tier model (F32/F64/Df64) aligned with coralReef `Fp64Strategy`; DF64 naga-guided rewrite validated; probe-aware Fp64Strategy; DF64 reduce shaders correctly routed via `.df64()` on Hybrid devices; NVVM poisoning guard for proprietary NVIDIA DF64 transcendentals |
 | **Sovereign compiler** | A+ | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all 794 shaders via rayon parallel validation |
 | **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery; coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support |
@@ -19,10 +19,10 @@
 | **Dependencies** | A+ | All deps pure Rust (blake3 `pure`, wgpu/naga 28); zero application C deps; ecoBin compliant |
 | **Documentation** | A+ | Comprehensive CHANGELOG, specs, README, CONTRIBUTING, CONVENTIONS, BREAKING_CHANGES; all rustdoc warnings resolved; showcase/ with 9 progressive demos (local, IPC, cross-primal) |
 | **Unsafe code** | A+ | Zero `unsafe` blocks in entire codebase |
-| **Clippy / lint** | A+ | Zero warnings with pedantic + unwrap_used; `#[expect(reason)]` for clippy suppressions; `#[allow(dead_code, reason)]` for CPU reference implementations; `bytes::Bytes` zero-copy on I/O boundaries; zero undocumented suppressions; zero `#[allow(dead_code)]` without reason |
+| **Clippy / lint** | A+ | Zero warnings with pedantic + unwrap_used; zero production `unwrap()` calls; `#[expect(reason)]` for clippy suppressions; `#[allow(dead_code, reason)]` for CPU reference implementations; `bytes::Bytes` zero-copy on I/O boundaries; zero undocumented suppressions; zero `#[allow(dead_code)]` without reason |
 | **Error handling** | A+ | Binary `main()` uses typed `BarracudaCoreError` (not `Box<dyn Error>`); `From` impls for `serde_json::Error`, `BarracudaError`, `io::Error`; `Result` propagation throughout; `let-else` throughout; poison recovery |
-| **Idiomatic Rust** | A+ | Edition 2024; zero `too_many_arguments` (all 9 → builder/struct); documented `#[allow]`/`#[expect]` with reason; `#[derive(Default)]`; zero unsafe; `ChamferDirection` enum; smart module decomposition (provenance, coral_compiler) |
-| **Spring absorption** | A+ | All P0/P1/P2 items resolved; hotSpring: NVVM poisoning guard, plasma dispersion, LSCFRK; groundSpring: F64NativeNoSharedMem, DF64 reduce, shared `estimate_gflops`/`estimate_vram_bytes`; wetSpring: BGL builder, `ComputeDispatch` builder, `Rk45Result::variable_trajectory()`; neuralSpring: activations, Wright-Fisher, `analyze_weight_matrix()`; healthSpring: Hill Emax, Population PK, tridiagonal QL, LCG PRNG; toadStool S139: dual-scan discovery |
+| **Idiomatic Rust** | A+ | Edition 2024; zero `too_many_arguments` (all 9 → builder/struct); documented `#[allow]`/`#[expect]` with reason; `#[derive(Default)]`; zero unsafe; zero production unwrap; `ChamferDirection` enum; smart module decomposition (provenance, coral_compiler); capability version derived from `env!("CARGO_PKG_VERSION")`; method lists derived from `REGISTERED_METHODS` constant |
+| **Spring absorption** | A+ | All P0/P1/P2 items resolved; hotSpring: NVVM poisoning guard, plasma dispersion, LSCFRK, **PrecisionBrain + HardwareCalibration**; groundSpring: F64NativeNoSharedMem, DF64 reduce, shared `estimate_gflops`/`estimate_vram_bytes`; wetSpring: BGL builder, `ComputeDispatch` builder, `Rk45Result::variable_trajectory()`, **`CsrMatrix::from_triplets_summed()`**, **`BipartitionEncodeGpu`**; neuralSpring: activations, Wright-Fisher, `analyze_weight_matrix()`; healthSpring: Hill Emax, Population PK, tridiagonal QL, LCG PRNG, **FOCE/VPC GPU shaders**; toadStool S139: dual-scan discovery |
 
 ---
 
@@ -129,6 +129,30 @@
 - `AttentionDims` config struct — replaces 4-arg attention/head_split/head_concat with typed struct
 - `parse_shape()` helper in IPC methods — `usize::try_from` instead of `as usize` casts
 - `eprintln!` → `tracing::warn!` in hardware verification tests
+- `board.rs` hash unwrap evolved to zero-panic direct array indexing — `blake3::Hash::as_bytes()` returns `&[u8; 32]`, compile-time safe
+- tarpc `primal_capabilities` method list derived from `REGISTERED_METHODS` constant — single source of truth
+- JSON-RPC `primal.capabilities` version strings derived from `env!("CARGO_PKG_VERSION")` — no hardcoded version drift
+- JSON-RPC `primal.capabilities` methods array derived from `REGISTERED_METHODS` — eliminates method list duplication
+- HMM dispatch threshold extracted to `HMM_FORWARD_THRESHOLD` named constant
+- Three springs tests evolved with device-aware tolerance: `tol()` helper floors precision expectations at 1e-6 for hardware with imprecise f64 shaders
+- Kahan summation test detects f32-only GPU execution and skips gracefully rather than false-failing
+- `PrecisionTier` enum (F32/DF64/F64/F64Precise) + `PhysicsDomain` classification — absorbed from hotSpring v0.6.25 precision brain
+- `HardwareCalibration` per-tier GPU probing — safe tier detection with NVVM poisoning guard, builds on existing probe infrastructure
+- `PrecisionBrain` self-routing domain→tier routing table — O(1) lookup for all physics domains, probe-first, data-driven
+- `PhysicsDomain` extended with `PopulationPk`, `Bioinformatics`, `Hydrology`, `Statistics`, `General` for cross-spring coverage
+- `CsrMatrix::from_triplets_summed()` — duplicate (row, col) entries summed automatically (wetSpring V105 finite-element assembly pattern)
+- `OdeTrajectory` result struct with `.time_series(batch, var)` and `.state_at(batch, t)` interpolation helpers (wetSpring/airSpring request)
+- `integrate_cpu_trajectory()` on `BatchedOdeRK4<S>` — records full ODE trajectory at every time step
+- `lanczos_with_config()` — configurable convergence threshold + progress callback for long-running eigensolves (N > 1000)
+- `lanczos_extremal()` — efficient k-largest eigenvalue extraction via early-termination Lanczos
+- Two-pass Gram-Schmidt reorthogonalization in Lanczos for improved numerical stability on large matrices
+- Tolerance registry evolution: `all_tolerances()`, `by_name()`, `tier()` runtime introspection functions
+- Pharma tolerances: `PHARMA_FOCE`, `PHARMA_VPC`, `PHARMA_NCA` for population PK validation
+- Signal processing tolerances: `SIGNAL_FFT`, `SIGNAL_QRS` for biosignal analysis
+- `BipartitionEncodeGpu` — GPU kernel for Robinson-Foulds distance bit-vector encoding (wetSpring V105 absorption)
+- `FoceGradientGpu` — GPU-accelerated FOCE per-subject gradient computation for population PK (healthSpring V14 absorption)
+- `VpcSimulateGpu` — GPU Monte Carlo VPC simulation with RK4 PK integration (healthSpring V14 absorption)
+- `foce_gradient_f64.wgsl` + `vpc_simulate_f64.wgsl` + `bipartition_encode.wgsl` — 3 new production WGSL shaders
 
 ## What's Not Working Yet
 

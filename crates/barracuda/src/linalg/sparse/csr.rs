@@ -166,6 +166,74 @@ impl CsrMatrix {
         }
     }
 
+    /// Create from triplets, summing duplicate `(row, col)` entries.
+    ///
+    /// Scientific codes often accumulate element contributions where the same
+    /// `(i, j)` position receives multiple values that should be added. This
+    /// builder handles that automatically, unlike [`from_triplets`](Self::from_triplets)
+    /// which preserves duplicates as separate entries.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use barracuda::linalg::sparse::CsrMatrix;
+    /// let csr = CsrMatrix::from_triplets_summed(2, 2, &[
+    ///     (0, 0, 1.0),
+    ///     (0, 0, 2.0),  // duplicate — will be summed
+    ///     (1, 1, 3.0),
+    /// ]);
+    /// assert!((csr.get(0, 0) - 3.0).abs() < 1e-10);
+    /// ```
+    #[must_use]
+    pub fn from_triplets_summed(
+        n_rows: usize,
+        n_cols: usize,
+        triplets: &[(usize, usize, f64)],
+    ) -> Self {
+        if triplets.is_empty() {
+            return Self::new(n_rows, n_cols);
+        }
+
+        let mut sorted: Vec<(usize, usize, f64)> = triplets.to_vec();
+        sorted.sort_by_key(|&(r, c, _)| (r, c));
+
+        let mut values = Vec::with_capacity(triplets.len());
+        let mut col_indices = Vec::with_capacity(triplets.len());
+        let mut row_ptr = vec![0usize; n_rows + 1];
+
+        let mut prev_row = sorted[0].0;
+        let mut prev_col = sorted[0].1;
+        let mut acc = sorted[0].2;
+
+        for &(r, c, v) in &sorted[1..] {
+            if r == prev_row && c == prev_col {
+                acc += v;
+            } else {
+                for ptr in &mut row_ptr[prev_row + 1..] {
+                    *ptr = values.len() + 1;
+                }
+                values.push(acc);
+                col_indices.push(prev_col);
+                prev_row = r;
+                prev_col = c;
+                acc = v;
+            }
+        }
+        values.push(acc);
+        col_indices.push(prev_col);
+        for ptr in &mut row_ptr[prev_row + 1..] {
+            *ptr = values.len();
+        }
+
+        Self {
+            n_rows,
+            n_cols,
+            values,
+            col_indices,
+            row_ptr,
+        }
+    }
+
     /// Create identity matrix
     #[must_use]
     pub fn identity(n: usize) -> Self {
@@ -519,6 +587,33 @@ mod tests {
         // Non-symmetric matrix
         let nonsym = CsrMatrix::from_triplets(3, 3, &[(0, 0, 1.0), (0, 1, 2.0), (1, 0, 3.0)]);
         assert!(!nonsym.is_symmetric(1e-10));
+    }
+
+    #[test]
+    fn test_csr_from_triplets_summed() {
+        let csr = CsrMatrix::from_triplets_summed(
+            3,
+            3,
+            &[
+                (0, 0, 1.0),
+                (0, 0, 2.0),
+                (1, 1, 3.0),
+                (2, 0, 4.0),
+                (2, 0, 1.0),
+                (2, 2, 5.0),
+            ],
+        );
+        assert!((csr.get(0, 0) - 3.0).abs() < 1e-10);
+        assert!((csr.get(1, 1) - 3.0).abs() < 1e-10);
+        assert!((csr.get(2, 0) - 5.0).abs() < 1e-10);
+        assert!((csr.get(2, 2) - 5.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_csr_from_triplets_summed_empty() {
+        let csr = CsrMatrix::from_triplets_summed(3, 3, &[]);
+        assert_eq!(csr.nnz(), 0);
+        assert_eq!(csr.n_rows, 3);
     }
 
     #[test]

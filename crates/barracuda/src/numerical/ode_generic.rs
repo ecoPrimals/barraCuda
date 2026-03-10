@@ -357,6 +357,98 @@ pub trait OdeSystem {
     fn cpu_derivative(_t: f64, state: &[f64], params: &[f64]) -> Vec<f64>;
 }
 
+/// Result of an ODE integration that records the full trajectory.
+///
+/// Provides convenience methods for time-series extraction and
+/// state interpolation (wetSpring V105 / airSpring V075 request).
+#[derive(Debug, Clone)]
+pub struct OdeTrajectory {
+    /// Flattened state snapshots: `[step][batch][var]` stored as
+    /// `[n_steps+1][batch_size][n_vars]` in row-major order.
+    pub states: Vec<f64>,
+    /// Time at each snapshot.
+    pub times: Vec<f64>,
+    /// Number of state variables per system.
+    pub n_vars: usize,
+    /// Number of batched systems.
+    pub batch_size: usize,
+}
+
+impl OdeTrajectory {
+    /// Extract the full time series for a given batch index and variable index.
+    ///
+    /// Returns `(times, values)` where `times[i]` is the time and `values[i]`
+    /// is the state variable at that time.
+    #[must_use]
+    pub fn time_series(&self, batch: usize, var: usize) -> (Vec<f64>, Vec<f64>) {
+        let n_snapshots = self.times.len();
+        let stride = self.batch_size * self.n_vars;
+        let mut values = Vec::with_capacity(n_snapshots);
+        for step in 0..n_snapshots {
+            values.push(self.states[step * stride + batch * self.n_vars + var]);
+        }
+        (self.times.clone(), values)
+    }
+
+    /// Interpolate state at an arbitrary time for a given batch.
+    ///
+    /// Uses linear interpolation between the two nearest snapshots.
+    /// Returns `None` if `t` is outside the integration range.
+    #[must_use]
+    pub fn state_at(&self, batch: usize, t: f64) -> Option<Vec<f64>> {
+        if self.times.is_empty() {
+            return None;
+        }
+        let t_start = self.times[0];
+        let t_end = *self.times.last()?;
+        if t < t_start || t > t_end {
+            return None;
+        }
+
+        let idx = self
+            .times
+            .partition_point(|&ti| ti < t)
+            .min(self.times.len() - 1);
+
+        if idx == 0 || (self.times[idx] - t).abs() < f64::EPSILON {
+            let stride = self.batch_size * self.n_vars;
+            let off = idx * stride + batch * self.n_vars;
+            return Some(self.states[off..off + self.n_vars].to_vec());
+        }
+
+        let t0 = self.times[idx - 1];
+        let t1 = self.times[idx];
+        let frac = (t - t0) / (t1 - t0);
+
+        let stride = self.batch_size * self.n_vars;
+        let off0 = (idx - 1) * stride + batch * self.n_vars;
+        let off1 = idx * stride + batch * self.n_vars;
+
+        let mut state = vec![0.0; self.n_vars];
+        for i in 0..self.n_vars {
+            state[i] = self.states[off0 + i] * (1.0 - frac) + self.states[off1 + i] * frac;
+        }
+        Some(state)
+    }
+
+    /// Number of time snapshots (including the initial state).
+    #[must_use]
+    pub fn n_snapshots(&self) -> usize {
+        self.times.len()
+    }
+
+    /// Final state for a given batch.
+    #[must_use]
+    pub fn final_state(&self, batch: usize) -> Option<Vec<f64>> {
+        if self.times.is_empty() {
+            return None;
+        }
+        let stride = self.batch_size * self.n_vars;
+        let last = (self.times.len() - 1) * stride + batch * self.n_vars;
+        Some(self.states[last..last + self.n_vars].to_vec())
+    }
+}
+
 /// Batched 4th-order Runge-Kutta ODE integrator.
 ///
 /// Integrates multiple parameter sets in parallel. Each batch has its own
@@ -472,6 +564,95 @@ impl<S: OdeSystem> BatchedOdeRK4<S> {
         }
 
         Ok(state)
+    }
+
+    /// CPU integration that records the full trajectory at every step.
+    ///
+    /// Returns an [`OdeTrajectory`] with state snapshots at each time step,
+    /// enabling `.time_series(batch, var)` and `.state_at(batch, t)` queries.
+    ///
+    /// # Errors
+    /// Returns [`Err`] if input dimensions are inconsistent.
+    pub fn integrate_cpu_trajectory(
+        initial_states: &[f64],
+        params: &[f64],
+        dt: f64,
+        n_steps: usize,
+        batch_size: usize,
+    ) -> Result<OdeTrajectory> {
+        let n_vars = S::N_VARS;
+        let n_params = S::N_PARAMS;
+
+        if initial_states.len() != batch_size * n_vars {
+            return Err(BarracudaError::InvalidInput {
+                message: format!(
+                    "initial_states: expected {} ([batch_size×{n_vars}]), got {}",
+                    batch_size * n_vars,
+                    initial_states.len()
+                ),
+            });
+        }
+        if params.len() != batch_size * n_params {
+            return Err(BarracudaError::InvalidInput {
+                message: format!(
+                    "params: expected {} ([batch_size×{n_params}]), got {}",
+                    batch_size * n_params,
+                    params.len()
+                ),
+            });
+        }
+
+        let stride = batch_size * n_vars;
+        let n_snapshots = n_steps + 1;
+        let mut all_states = Vec::with_capacity(n_snapshots * stride);
+        let mut times = Vec::with_capacity(n_snapshots);
+
+        let mut state: Vec<f64> = initial_states.to_vec();
+        all_states.extend_from_slice(&state);
+        times.push(0.0);
+
+        let mut t = 0.0_f64;
+        let mut y_buf = vec![0.0_f64; n_vars];
+        let mut stage_buf = vec![0.0_f64; n_vars];
+
+        for _step in 0..n_steps {
+            for b in 0..batch_size {
+                let s_off = b * n_vars;
+                let p = &params[b * n_params..b * n_params + n_params];
+
+                y_buf.copy_from_slice(&state[s_off..s_off + n_vars]);
+
+                let k1 = S::cpu_derivative(t, &y_buf, p);
+                for i in 0..n_vars {
+                    stage_buf[i] = y_buf[i] + 0.5 * dt * k1[i];
+                }
+                let k2 = S::cpu_derivative(t + 0.5 * dt, &stage_buf, p);
+                for i in 0..n_vars {
+                    stage_buf[i] = y_buf[i] + 0.5 * dt * k2[i];
+                }
+                let k3 = S::cpu_derivative(t + 0.5 * dt, &stage_buf, p);
+                for i in 0..n_vars {
+                    stage_buf[i] = y_buf[i] + dt * k3[i];
+                }
+                let k4 = S::cpu_derivative(t + dt, &stage_buf, p);
+
+                let sixth = 1.0 / 6.0;
+                for i in 0..n_vars {
+                    state[s_off + i] =
+                        y_buf[i] + dt * sixth * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
+                }
+            }
+            t += dt;
+            all_states.extend_from_slice(&state);
+            times.push(t);
+        }
+
+        Ok(OdeTrajectory {
+            states: all_states,
+            times,
+            n_vars,
+            batch_size,
+        })
     }
 }
 
@@ -626,5 +807,84 @@ fn deriv(state: array<Scalar, 1>, params: array<Scalar, 1>, t: Scalar) -> array<
         let result =
             BatchedOdeRK4::<ExponentialDecay>::integrate_cpu(&initial, &params, 0.01, 10, 1);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_trajectory_time_series() {
+        let initial = vec![1.0];
+        let params = vec![1.0]; // k=1
+        let traj = BatchedOdeRK4::<ExponentialDecay>::integrate_cpu_trajectory(
+            &initial, &params, 0.01, 100, 1,
+        )
+        .unwrap();
+
+        assert_eq!(traj.n_snapshots(), 101);
+
+        let (times, values) = traj.time_series(0, 0);
+        assert_eq!(times.len(), 101);
+        assert!((times[0] - 0.0).abs() < 1e-14);
+        assert!((times[100] - 1.0).abs() < 1e-10);
+
+        // Exponential decay: y(1) = exp(-1) ≈ 0.3679
+        let expected = (-1.0_f64).exp();
+        assert!(
+            (values[100] - expected).abs() < 1e-6,
+            "y(1) = {}, expected {}",
+            values[100],
+            expected
+        );
+    }
+
+    #[test]
+    fn test_trajectory_state_at_interpolation() {
+        let initial = vec![1.0];
+        let params = vec![1.0];
+        let traj = BatchedOdeRK4::<ExponentialDecay>::integrate_cpu_trajectory(
+            &initial, &params, 0.1, 10, 1,
+        )
+        .unwrap();
+
+        // Interpolate at t=0.55 (between step 5 at t=0.5 and step 6 at t=0.6)
+        let state = traj.state_at(0, 0.55).unwrap();
+        let expected = (-0.55_f64).exp();
+        assert!(
+            (state[0] - expected).abs() < 1e-3,
+            "y(0.55) = {}, expected {}",
+            state[0],
+            expected
+        );
+
+        // Outside range returns None
+        assert!(traj.state_at(0, -0.1).is_none());
+        assert!(traj.state_at(0, 1.1).is_none());
+    }
+
+    #[test]
+    fn test_trajectory_final_state() {
+        let initial = vec![1.0, 2.0]; // 2 batches
+        let params = vec![1.0, 0.5]; // k=1 and k=0.5
+        let traj = BatchedOdeRK4::<ExponentialDecay>::integrate_cpu_trajectory(
+            &initial, &params, 0.01, 100, 2,
+        )
+        .unwrap();
+
+        let final_0 = traj.final_state(0).unwrap();
+        let final_1 = traj.final_state(1).unwrap();
+
+        let expected_0 = (-1.0_f64).exp();
+        let expected_1 = 2.0 * (-0.5_f64).exp();
+
+        assert!(
+            (final_0[0] - expected_0).abs() < 1e-6,
+            "batch 0: {} vs {}",
+            final_0[0],
+            expected_0
+        );
+        assert!(
+            (final_1[0] - expected_1).abs() < 1e-6,
+            "batch 1: {} vs {}",
+            final_1[0],
+            expected_1
+        );
     }
 }

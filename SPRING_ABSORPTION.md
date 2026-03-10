@@ -2,11 +2,11 @@
 
 **Version**: 0.3.4
 **Date**: March 10, 2026
-**Source**: hotSpring v0.6.24, groundSpring V99, neuralSpring S139, wetSpring V105, airSpring v0.7.5, healthSpring V13, toadStool S143
+**Source**: hotSpring v0.6.25, groundSpring V99, neuralSpring S139, wetSpring V105, airSpring v0.7.5, healthSpring V14, toadStool S143
 
 Cross-spring evolution follows **Write → Absorb → Lean**: springs implement
 domain-specific primitives, barraCuda absorbs and generalises, springs consume
-the upstream version. All springs are synced to barraCuda v0.3.3 / wgpu 28
+the upstream version. All springs are synced to barraCuda v0.3.4 / wgpu 28
 with zero local WGSL (airSpring and wetSpring fully lean).
 
 ---

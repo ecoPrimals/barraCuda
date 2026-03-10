@@ -117,7 +117,9 @@ impl Board {
                             hasher.update(&f.to_le_bytes());
                         }
                         let hash = hasher.finalize();
-                        let u = u64::from_le_bytes(hash.as_bytes()[..8].try_into().unwrap());
+                        let b = hash.as_bytes();
+                        let u =
+                            u64::from_le_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]]);
                         activations[i * l + j] = (u as f64) / (u64::MAX as f64);
                     }
                 }

@@ -363,6 +363,144 @@ pub mod eps {
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// pharmacology tolerances (healthSpring cross-spring)
+// ═══════════════════════════════════════════════════════════════════
+
+/// FOCE population PK objective function.
+pub const PHARMA_FOCE: Tolerance = Tolerance {
+    name: "pharma_foce",
+    abs_tol: 1e-6,
+    rel_tol: 1e-4,
+    justification: "FOCE likelihood: per-subject gradient accumulation; Newton step convergence",
+};
+
+/// VPC simulation envelope.
+pub const PHARMA_VPC: Tolerance = Tolerance {
+    name: "pharma_vpc",
+    abs_tol: 1e-4,
+    rel_tol: 1e-3,
+    justification: "VPC Monte Carlo: 1000+ sims; dominated by sampling variance",
+};
+
+/// NCA AUC trapezoidal integration.
+pub const PHARMA_NCA: Tolerance = Tolerance {
+    name: "pharma_nca",
+    abs_tol: 1e-8,
+    rel_tol: 1e-6,
+    justification: "trapezoidal AUC: exact for linear interpolation; f64 accumulation",
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// signal processing tolerances (healthSpring, neuralSpring)
+// ═══════════════════════════════════════════════════════════════════
+
+/// FFT spectral analysis.
+pub const SIGNAL_FFT: Tolerance = Tolerance {
+    name: "signal_fft",
+    abs_tol: 1e-10,
+    rel_tol: 1e-10,
+    justification: "radix-2 FFT: O(n log n) butterfly; twiddle factor precision",
+};
+
+/// QRS detection (Pan-Tompkins).
+pub const SIGNAL_QRS: Tolerance = Tolerance {
+    name: "signal_qrs",
+    abs_tol: 1e-3,
+    rel_tol: 1e-2,
+    justification: "streaming filter bank; adaptive threshold; dominated by signal noise",
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// Runtime tolerance registry (cross-spring introspection pattern)
+//
+// Springs can enumerate all known tolerances at runtime for validation
+// harnesses, documentation generation, and tolerance-tier auditing.
+// ═══════════════════════════════════════════════════════════════════
+
+/// All registered tolerances, accessible for runtime introspection.
+///
+/// Springs use this to validate that their domain tolerances are consistent
+/// with the tiered architecture (DETERMINISM ≤ MACHINE ≤ ... ≤ EQUILIBRIUM)
+/// and to generate tolerance documentation automatically.
+#[must_use]
+pub fn all_tolerances() -> &'static [Tolerance] {
+    &[
+        LINALG_MATMUL,
+        LINALG_TRANSPOSE,
+        LINALG_FROBENIUS,
+        REDUCTION_SUM,
+        REDUCTION_MEAN,
+        REDUCTION_VARIANCE,
+        REDUCTION_LOGSUMEXP,
+        BIO_HMM,
+        BIO_ALLELE_FREQ,
+        BIO_NUCLEOTIDE_DIVERSITY,
+        SPECIAL_ERF,
+        SPECIAL_GAMMA,
+        SPECIAL_BESSEL,
+        HYDRO_ET0,
+        HYDRO_SOIL_MOISTURE,
+        HYDRO_WATER_BALANCE,
+        HYDRO_CROP_COEFFICIENT,
+        PHYSICS_ANDERSON_EIGENVALUE,
+        PHYSICS_LATTICE_ACTION,
+        PHYSICS_LYAPUNOV,
+        BIO_DIVERSITY_SHANNON,
+        BIO_DIVERSITY_SIMPSON,
+        BIO_PHYLOGENETIC,
+        DETERMINISM,
+        MACHINE,
+        ACCUMULATION,
+        TRANSCENDENTAL,
+        ITERATIVE,
+        STATISTICAL,
+        STOCHASTIC,
+        EQUILIBRIUM,
+        PHARMA_FOCE,
+        PHARMA_VPC,
+        PHARMA_NCA,
+        SIGNAL_FFT,
+        SIGNAL_QRS,
+    ]
+}
+
+/// Look up a tolerance by name at runtime.
+///
+/// Springs can query `tolerances::by_name("pharma_foce")` to get the
+/// tolerance descriptor without importing the constant directly.
+#[must_use]
+pub fn by_name(name: &str) -> Option<&'static Tolerance> {
+    all_tolerances().iter().find(|t| t.name == name)
+}
+
+/// Return the appropriate tiered tolerance for a given category.
+///
+/// Maps semantic categories to the tiered architecture:
+/// - `"determinism"` → [`DETERMINISM`]
+/// - `"machine"` → [`MACHINE`]
+/// - `"accumulation"` → [`ACCUMULATION`]
+/// - `"transcendental"` → [`TRANSCENDENTAL`]
+/// - `"iterative"` → [`ITERATIVE`]
+/// - `"statistical"` → [`STATISTICAL`]
+/// - `"stochastic"` → [`STOCHASTIC`]
+/// - `"equilibrium"` → [`EQUILIBRIUM`]
+/// - anything else → `None`
+#[must_use]
+pub fn tier(category: &str) -> Option<&'static Tolerance> {
+    match category {
+        "determinism" => Some(&DETERMINISM),
+        "machine" => Some(&MACHINE),
+        "accumulation" => Some(&ACCUMULATION),
+        "transcendental" => Some(&TRANSCENDENTAL),
+        "iterative" => Some(&ITERATIVE),
+        "statistical" => Some(&STATISTICAL),
+        "stochastic" => Some(&STOCHASTIC),
+        "equilibrium" => Some(&EQUILIBRIUM),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -416,6 +554,32 @@ mod tests {
     }
 
     #[test]
+    fn all_tolerances_registry() {
+        let all = all_tolerances();
+        assert!(all.len() >= 30, "registry should have 30+ tolerances");
+        for t in all {
+            assert!(!t.name.is_empty());
+            assert!(!t.justification.is_empty());
+            assert!(t.abs_tol.is_finite());
+            assert!(t.rel_tol.is_finite());
+        }
+    }
+
+    #[test]
+    fn by_name_lookup() {
+        assert_eq!(by_name("pharma_foce").unwrap().name, "pharma_foce");
+        assert_eq!(by_name("signal_fft").unwrap().name, "signal_fft");
+        assert!(by_name("nonexistent").is_none());
+    }
+
+    #[test]
+    fn tier_lookup() {
+        assert_eq!(tier("determinism").unwrap().name, "tol::DETERMINISM");
+        assert_eq!(tier("equilibrium").unwrap().name, "tol::EQUILIBRIUM");
+        assert!(tier("nonexistent").is_none());
+    }
+
+    #[test]
     fn eps_guards_positive() {
         const { assert!(eps::SAFE_DIV > 0.0) };
         const { assert!(eps::LOG_FLOOR > 0.0) };
@@ -424,40 +588,7 @@ mod tests {
 
     #[test]
     fn tolerances_have_finite_values() {
-        let tols = [
-            LINALG_MATMUL,
-            LINALG_TRANSPOSE,
-            LINALG_FROBENIUS,
-            REDUCTION_SUM,
-            REDUCTION_MEAN,
-            REDUCTION_VARIANCE,
-            REDUCTION_LOGSUMEXP,
-            BIO_HMM,
-            BIO_ALLELE_FREQ,
-            BIO_NUCLEOTIDE_DIVERSITY,
-            SPECIAL_ERF,
-            SPECIAL_GAMMA,
-            SPECIAL_BESSEL,
-            HYDRO_ET0,
-            HYDRO_SOIL_MOISTURE,
-            HYDRO_WATER_BALANCE,
-            HYDRO_CROP_COEFFICIENT,
-            PHYSICS_ANDERSON_EIGENVALUE,
-            PHYSICS_LATTICE_ACTION,
-            PHYSICS_LYAPUNOV,
-            BIO_DIVERSITY_SHANNON,
-            BIO_DIVERSITY_SIMPSON,
-            BIO_PHYLOGENETIC,
-            DETERMINISM,
-            MACHINE,
-            ACCUMULATION,
-            TRANSCENDENTAL,
-            ITERATIVE,
-            STATISTICAL,
-            STOCHASTIC,
-            EQUILIBRIUM,
-        ];
-        for t in &tols {
+        for t in all_tolerances() {
             assert!(t.abs_tol.is_finite(), "{} abs_tol must be finite", t.name);
             assert!(t.rel_tol.is_finite(), "{} rel_tol must be finite", t.name);
             assert!(!t.name.is_empty(), "tolerance name must not be empty");

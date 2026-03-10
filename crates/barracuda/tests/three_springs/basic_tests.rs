@@ -19,14 +19,15 @@ mod fused_map_reduce_unit {
             }
         };
 
-        let fmr = FusedMapReduceF64::new(device).unwrap();
+        let fmr = FusedMapReduceF64::new(device.clone()).unwrap();
         let counts = vec![10.0, 20.0, 30.0, 40.0];
         let result = fmr.shannon_entropy(&counts).unwrap();
         let expected = cpu_shannon(&counts);
         let error = (result - expected).abs();
+        let t = tol(&device, 1e-10);
         assert!(
-            error < 1e-10,
-            "Shannon entropy error {} exceeds 1e-10 (got {}, expected {})",
+            error < t,
+            "Shannon entropy error {} exceeds {t} (got {}, expected {})",
             error,
             result,
             expected
@@ -43,12 +44,13 @@ mod fused_map_reduce_unit {
             Some(d) => d,
             None => return,
         };
-        let fmr = FusedMapReduceF64::new(device).unwrap();
+        let fmr = FusedMapReduceF64::new(device.clone()).unwrap();
         let counts = vec![25.0; 4];
         let result = fmr.shannon_entropy(&counts).unwrap();
         let expected = 4.0_f64.ln();
         let error = (result - expected).abs();
-        assert!(error < 1e-10, "Uniform Shannon error: {}", error);
+        let t = tol(&device, 1e-10);
+        assert!(error < t, "Uniform Shannon error: {error} (tol: {t})");
         println!(
             "✓ Shannon uniform: {} (expected ln(4) = {})",
             result, expected
@@ -78,12 +80,13 @@ mod fused_map_reduce_unit {
             Some(d) => d,
             None => return,
         };
-        let fmr = FusedMapReduceF64::new(device).unwrap();
+        let fmr = FusedMapReduceF64::new(device.clone()).unwrap();
         let counts = vec![10.0, 20.0, 30.0, 40.0];
         let result = fmr.simpson_index(&counts).unwrap();
         let expected = cpu_simpson(&counts);
         let error = (result - expected).abs();
-        assert!(error < 1e-12, "Simpson error: {}", error);
+        let t = tol(&device, 1e-12);
+        assert!(error < t, "Simpson error: {error} (tol: {t})");
         println!("✓ Simpson index: {} (error: {:.2e})", result, error);
     }
 

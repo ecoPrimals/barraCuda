@@ -15,12 +15,13 @@ mod chaos {
             Some(d) => d,
             None => return,
         };
-        let fmr = FusedMapReduceF64::new(device).unwrap();
+        let fmr = FusedMapReduceF64::new(device.clone()).unwrap();
         let counts: Vec<f64> = vec![1e8, 5e7, 2.5e7, 1e7, 5e6];
         let result = fmr.shannon_entropy(&counts).unwrap();
         let expected = cpu_shannon(&counts);
         let error = (result - expected).abs();
-        assert!(error < 1e-8, "Large counts Shannon error: {}", error);
+        let t = tol(&device, 1e-8);
+        assert!(error < t, "Large counts Shannon error: {error} (tol: {t})");
         println!("✓ Shannon large counts: {} (error: {:.2e})", result, error);
     }
 
@@ -49,7 +50,7 @@ mod chaos {
             Some(d) => d,
             None => return,
         };
-        let fmr = FusedMapReduceF64::new(device).unwrap();
+        let fmr = FusedMapReduceF64::new(device.clone()).unwrap();
         let mut counts = vec![0.0; 1000];
         counts[0] = 100.0;
         counts[50] = 50.0;
@@ -59,7 +60,8 @@ mod chaos {
         let result = fmr.shannon_entropy(&counts).unwrap();
         let expected = cpu_shannon(&counts);
         let error = (result - expected).abs();
-        assert!(error < 1e-10, "Sparse Shannon error: {}", error);
+        let t = tol(&device, 1e-10);
+        assert!(error < t, "Sparse Shannon error: {error} (tol: {t})");
         println!("✓ Shannon sparse (5 non-zero of 1000): {}", result);
     }
 

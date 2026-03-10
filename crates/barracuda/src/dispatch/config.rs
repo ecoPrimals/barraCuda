@@ -114,8 +114,11 @@ impl DispatchConfig {
     }
 }
 
-/// Default threshold when operation not specified
+/// Default threshold when operation not specified.
 pub const DEFAULT_THRESHOLD: usize = 1024;
+
+/// HMM forward-pass dispatch threshold (states × observations).
+const HMM_FORWARD_THRESHOLD: usize = 5000;
 
 /// Default per-operation thresholds (empirically determined)
 fn default_thresholds() -> HashMap<Arc<str>, usize> {
@@ -182,7 +185,7 @@ fn default_thresholds() -> HashMap<Arc<str>, usize> {
     m.insert(Arc::from("surrogate_train"), 200); // Training benefits from GPU
 
     // === Bio (HMM) ===
-    m.insert(Arc::from("hmm"), 5000); // HMM forward step
+    m.insert(Arc::from("hmm"), HMM_FORWARD_THRESHOLD);
 
     m
 }
@@ -287,7 +290,7 @@ pub const fn ode_substrate(n_systems: usize, n_steps: usize) -> DispatchTarget {
 #[must_use]
 pub const fn hmm_substrate(n_states: usize, n_observations: usize) -> DispatchTarget {
     let total_work = n_states * n_observations;
-    if total_work > 5_000 {
+    if total_work > HMM_FORWARD_THRESHOLD {
         DispatchTarget::Gpu
     } else {
         DispatchTarget::Cpu

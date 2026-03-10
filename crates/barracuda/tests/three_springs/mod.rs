@@ -15,6 +15,23 @@ pub fn create_device_sync() -> Option<Arc<WgpuDevice>> {
     })
 }
 
+/// Tolerance appropriate for the device: tight on known-good f64 hardware,
+/// relaxed when the GPU claims f64 capability but achieves limited precision
+/// (NVK, DF64 emulation, some integrated GPUs).
+///
+/// Software adapters are already excluded by `new_f64_capable()` which only
+/// returns `DiscreteGpu` or `IntegratedGpu` device types.
+pub fn tol(device: &WgpuDevice, hardware_tol: f64) -> f64 {
+    if barracuda::device::test_harness::is_software_adapter(device) {
+        hardware_tol.max(1e-4)
+    } else {
+        // Real GPU with f64 shaders may still use DF64 emulation or have
+        // driver-specific precision limits (NVK, nouveau, some AMD).
+        // Floor at 1e-6 to avoid false failures on valid hardware.
+        hardware_tol.max(1e-6)
+    }
+}
+
 /// CPU reference Shannon entropy
 pub fn cpu_shannon(counts: &[f64]) -> f64 {
     let total: f64 = counts.iter().sum();

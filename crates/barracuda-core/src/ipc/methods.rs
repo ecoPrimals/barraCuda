@@ -78,13 +78,14 @@ fn primal_capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
     let has_f64 = primal.device().is_some_and(|d| d.has_f64_shaders());
     let has_spirv = primal.device().is_some_and(|d| d.has_spirv_passthrough());
 
+    let version = env!("CARGO_PKG_VERSION");
     JsonRpcResponse::success(
         id,
         serde_json::json!({
             "provides": [
-                { "id": "gpu.compute", "version": "0.3.3" },
-                { "id": "tensor.ops", "version": "0.3.3" },
-                { "id": "gpu.dispatch", "version": "0.3.3" },
+                { "id": "gpu.compute", "version": version },
+                { "id": "tensor.ops", "version": version },
+                { "id": "gpu.dispatch", "version": version },
             ],
             "requires": [
                 { "id": "shader.compile", "version": ">=0.1.0", "optional": true },
@@ -99,18 +100,7 @@ fn primal_capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
                 "hydrology",
                 "bio",
             ],
-            "methods": [
-                "barracuda.device.list",
-                "barracuda.device.probe",
-                "barracuda.health.check",
-                "barracuda.tolerances.get",
-                "barracuda.validate.gpu_stack",
-                "barracuda.compute.dispatch",
-                "barracuda.tensor.create",
-                "barracuda.tensor.matmul",
-                "barracuda.fhe.ntt",
-                "barracuda.fhe.pointwise_mul",
-            ],
+            "methods": REGISTERED_METHODS,
             "hardware": {
                 "gpu_available": has_gpu,
                 "f64_shaders": has_f64,

@@ -6,6 +6,18 @@ Prioritized work items, ordered by impact. Updated 2026-03-10.
 
 ## Recently Completed
 
+- **Cross-spring absorption & deep evolution (Mar 10)**: PrecisionTier/PhysicsDomain
+  enums for domain-aware precision selection. HardwareCalibration safe per-tier GPU
+  probing with NVVM poisoning guard (synthesizes from cached driver profile — no device
+  poisoning risk). PrecisionBrain self-routing domain→tier O(1) table with `route()`,
+  `route_advice()`, `compile()`. Lanczos extended with `lanczos_with_config()`,
+  two-pass Gram-Schmidt reorth, `lanczos_extremal()`. CsrMatrix::from_triplets_summed
+  (wetSpring V105). OdeTrajectory with `time_series()`, `state_at()`, `final_state()`.
+  BipartitionEncodeGpu for Robinson-Foulds bit-vector encoding (wetSpring). FOCE
+  gradient GPU shader for population PK (healthSpring V14). VPC Monte Carlo GPU
+  simulation with RK4 + Box-Muller (healthSpring V14). Tolerance registry evolved
+  with `all_tolerances()`, `by_name()`, `tier()` runtime introspection — 36 registered
+  tolerances. All 6 springs absorbed. 3,280 tests pass, 0 fail, 13 ignored.
 - **Deep debt & test pipeline (Mar 10)**: Unified GFLOPS/VRAM estimation across
   GpuPool and MultiDevicePool. Fixed Fp64Strategy routing in 4 reduce ops (DF64
   shaders now correctly compiled via `.df64()` on Hybrid devices). PCIe topology

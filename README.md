@@ -1,6 +1,6 @@
 # barraCuda
 
-**Version**: 0.3.3
+**Version**: 0.3.4
 **Status**: Standalone primal — zero cross-dependencies, fully concurrent, all quality gates passing
 **License**: AGPL-3.0-or-later
 **MSRV**: 1.87
@@ -26,8 +26,8 @@ results.
 
 ### Key capabilities
 
-- **719 WGSL shaders** spanning scientific compute domains
-- **1,044 Rust source files**, 28 integration test suites, 3,262 library tests passing
+- **797 WGSL shaders** spanning scientific compute domains
+- **1,050+ Rust source files**, 28 integration test suites, 3,280 library tests passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -37,7 +37,8 @@ results.
 - **Molecular dynamics** — Yukawa, PPPM, VV integrator, cell-list neighbor search
 - **Linear algebra** — dense, sparse (CSR SpMV, CG, BiCGStab), eigensolvers, L-BFGS
 - **Statistics** — bootstrap, jackknife, diversity indices, hydrology
-- **Bioinformatics** — Smith-Waterman, HMM, phylogenetics, genomic ops
+- **Pharmacometrics** — FOCE gradients, VPC Monte Carlo, population PK, dose-response
+- **Bioinformatics** — Smith-Waterman, HMM, phylogenetics, bipartition encoding, genomic ops
 - **ML ops** — matmul, softmax, attention, ESN reservoir computing
 - **Sovereign shader compilation** — naga 28 IR optimizer, SPIR-V passthrough
 - **JSON-RPC 2.0 + tarpc** — dual-protocol IPC for primal-to-primal and external consumers
@@ -66,8 +67,8 @@ Your Code / Springs
     |
     v
 barracuda (umbrella crate)
-    |-- Pure Math: linalg, special, numerical, spectral, stats, sample, activations, rng
-    |-- GPU Math: ops, tensor, shaders, interpolate, optimize
+    |-- Pure Math: linalg, special, numerical, spectral, stats, sample, activations, rng, tolerances
+    |-- GPU Math: ops (bio, pharma, fhe, qcd, ...), tensor, shaders, interpolate, optimize
     |-- Compute Fabric: device, staging, pipeline, dispatch, multi_gpu
     |-- Domain Models: nn, snn, esn, pde, genomics (feature-gated)
     |
@@ -128,7 +129,7 @@ barraCuda/
 │       │   ├── sample/              # LHS, Sobol, Metropolis, sparsity
 │       │   ├── ops/                 # GPU ops (matmul, softmax, FHE, bio)
 │       │   ├── tensor/              # GPU tensor type
-│       │   ├── shaders/             # 719 WGSL shaders (see shaders/README.md)
+│       │   ├── shaders/             # 797 WGSL shaders (see shaders/README.md)
 │       │   ├── device/              # GpuBackend trait, WgpuDevice, CoralReefDevice, concurrency
 │       │   ├── staging/             # Ring buffers, unidirectional pipelines
 │       │   ├── pipeline/            # ComputeDispatch, batched pipelines
@@ -173,7 +174,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo test --workspace --lib            # 3,262 test functions
+cargo test --workspace --lib            # 3,280 test functions
 cargo llvm-cov --workspace --lib        # 90%+ line coverage target (70% on llvmpipe; GPU hardware needed for 90%)
 ```
 

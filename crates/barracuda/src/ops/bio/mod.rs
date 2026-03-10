@@ -36,6 +36,7 @@
 pub mod ani;
 pub mod batch_fitness;
 pub mod batched_multinomial;
+pub mod bipartition_encode;
 pub mod dada2;
 pub mod diversity_fusion;
 pub mod dnds;
@@ -70,6 +71,7 @@ pub use batch_fitness::BatchFitnessGpu;
 pub use batched_multinomial::{
     BatchedMultinomialConfig, BatchedMultinomialGpu, multinomial_sample_cpu,
 };
+pub use bipartition_encode::BipartitionEncodeGpu;
 pub use dada2::{Dada2Buffers, Dada2Dimensions, Dada2DispatchArgs, Dada2EStepGpu};
 pub use diversity_fusion::{DiversityFusionGpu, DiversityResult, diversity_fusion_cpu};
 pub use dnds::DnDsBatchF64;

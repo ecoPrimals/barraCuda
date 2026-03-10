@@ -5,7 +5,44 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.4] — 2026-03-10
+
+### Added — Cross-Spring Absorption & Deep Evolution Sprint (Mar 10 2026)
+
+- **PrecisionTier enum** (`device::precision_tier`): `F32`/`DF64`/`F64`/`F64Precise`
+  compilation-level precision selection with `mantissa_bits()` and `Display`. Absorbed
+  from hotSpring v0.6.25.
+- **PhysicsDomain classification**: 12 physics domains (`LatticeQcd`, `GradientFlow`,
+  `Dielectric`, `KineticFluid`, `Eigensolve`, `MolecularDynamics`, `NuclearEos`,
+  `PopulationPk`, `Bioinformatics`, `Hydrology`, `Statistics`, `General`) with
+  `fma_sensitive()`, `throughput_bound()`, `minimum_tier()` properties.
+- **HardwareCalibration** (`device::hardware_calibration`): Per-tier GPU compilation
+  probing with NVVM poisoning safety. Synthesizes tier capabilities from existing
+  driver profile and probe cache. `tier_safe()`, `tier_arith_only()`, `best_f64_tier()`,
+  `best_any_tier()` queries.
+- **PrecisionBrain** (`device::precision_brain`): Self-routing domain→tier O(1) routing
+  table. `route()`, `route_advice()`, `compile()` for automatic precision-optimal
+  shader compilation. Probe-first, data-driven, domain-aware.
+- **Lanczos extended**: `lanczos_with_config()` with configurable convergence threshold
+  and progress callback. Two-pass Gram-Schmidt reorthogonalization for N > 1,000.
+  `lanczos_extremal()` for efficient k-largest eigenvalue extraction.
+- **CsrMatrix::from_triplets_summed()**: Duplicate (row, col) entries automatically
+  summed. Critical for finite-element assembly patterns. Absorbed from wetSpring V105.
+- **OdeTrajectory**: Full trajectory recording with `.time_series(batch, var)`,
+  `.state_at(batch, t)` interpolation, `.final_state(batch)`. New
+  `integrate_cpu_trajectory()` on `BatchedOdeRK4<S>`.
+- **BipartitionEncodeGpu** (`ops::bio::bipartition_encode`): GPU kernel for
+  Robinson-Foulds distance bit-vector encoding. New `bipartition_encode.wgsl`.
+  Absorbed from wetSpring V105.
+- **FoceGradientGpu** (`ops::pharma::foce_gradient`): Per-subject FOCE gradient
+  computation for population PK. 7-binding BGL. New `foce_gradient_f64.wgsl`.
+  Absorbed from healthSpring V14.
+- **VpcSimulateGpu** (`ops::pharma::vpc_simulate`): Monte Carlo VPC simulation with
+  embedded RK4 one-compartment oral PK model, LCG PRNG, Box-Muller normal sampling.
+  New `vpc_simulate_f64.wgsl`. Absorbed from healthSpring V14.
+- **Tolerance registry evolution**: `all_tolerances()`, `by_name()`, `tier()` runtime
+  introspection. 6 new tolerances: `PHARMA_FOCE`, `PHARMA_VPC`, `PHARMA_NCA`,
+  `SIGNAL_FFT`, `SIGNAL_QRS`. 36 registered tolerances total.
 
 ### Changed — Deep Debt & Test Pipeline Evolution (Mar 10 2026)
 

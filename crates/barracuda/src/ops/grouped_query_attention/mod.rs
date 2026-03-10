@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Grouped Query Attention - LLaMA-style efficient attention
 //!
 //! ## Deep Debt Principles

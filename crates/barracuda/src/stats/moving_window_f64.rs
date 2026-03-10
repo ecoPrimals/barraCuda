@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! CPU f64 moving window statistics.
 //!
 //! Provides f64-precision sliding window computations (mean, variance, min, max).

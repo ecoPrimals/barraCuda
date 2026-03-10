@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Clip Gradient by Norm - Pure WGSL
 //!
 //! Deep Debt Principles:

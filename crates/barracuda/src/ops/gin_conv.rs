@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `GINConv` - Graph Isomorphism Network (Pure WGSL)
 //!
 //! Expressive GNN with MLP: `h_i`' = MLP((1 + ε) * `h_i` + `Σ_j` `h_j`)

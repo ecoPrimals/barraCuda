@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 
 //! Batch HMM algorithms (f64, GPU) — forward, backward, Viterbi.
 //!

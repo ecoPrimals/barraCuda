@@ -1,48 +1,7 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Advanced multi-device pool with requirements-based selection and resource quotas.
 
-/// Bytes per gibibyte for VRAM estimates.
-const BYTES_PER_GIB: u64 = 1024 * 1024 * 1024;
-
-/// Fallback performance/memory estimates by device class.
-///
-/// Used ONLY when runtime capability discovery cannot determine actual values.
-/// These are conservative lower bounds — the scheduler always prefers
-/// runtime-discovered metrics from adapter properties when available.
-mod fallback_estimates {
-    use super::BYTES_PER_GIB;
-
-    pub(super) fn gflops(vendor: super::GpuVendor, device_type: wgpu::DeviceType) -> f64 {
-        match (vendor, device_type) {
-            (super::GpuVendor::Software, _) => 10.0,
-            (super::GpuVendor::Nvidia, wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::Other) => {
-                5_000.0
-            }
-            (super::GpuVendor::Amd, wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::Other) => {
-                4_000.0
-            }
-            (_, wgpu::DeviceType::DiscreteGpu) => 1_000.0,
-            (_, wgpu::DeviceType::IntegratedGpu) => 200.0,
-            (_, wgpu::DeviceType::Cpu) => 50.0,
-            _ => 100.0,
-        }
-    }
-
-    pub(super) fn vram_bytes(vendor: super::GpuVendor, device_type: wgpu::DeviceType) -> u64 {
-        match (vendor, device_type) {
-            (super::GpuVendor::Software, _) | (_, wgpu::DeviceType::Cpu) => 0,
-            (super::GpuVendor::Nvidia, wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::Other) => {
-                12 * BYTES_PER_GIB
-            }
-            (super::GpuVendor::Amd, wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::Other) => {
-                16 * BYTES_PER_GIB
-            }
-            (_, wgpu::DeviceType::DiscreteGpu) => 8 * BYTES_PER_GIB,
-            (_, wgpu::DeviceType::IntegratedGpu) => 2 * BYTES_PER_GIB,
-            _ => 4 * BYTES_PER_GIB,
-        }
-    }
-}
+use super::{BYTES_PER_GIB, estimate_gflops, estimate_vram_bytes};
 
 use super::topology::{GpuDriver, GpuVendor};
 use super::types::{DeviceInfo, DeviceRequirements, WorkloadConfig};
@@ -169,8 +128,8 @@ impl MultiDevicePool {
                 || (adapter.device_type == wgpu::DeviceType::Other
                     && (vendor == GpuVendor::Nvidia || vendor == GpuVendor::Amd));
 
-            let estimated_gflops = fallback_estimates::gflops(vendor, adapter.device_type);
-            let estimated_vram = fallback_estimates::vram_bytes(vendor, adapter.device_type);
+            let estimated_gflops = estimate_gflops(vendor, adapter.device_type);
+            let estimated_vram = estimate_vram_bytes(vendor, adapter.device_type);
 
             if estimated_gflops < config.min_gflops {
                 continue;

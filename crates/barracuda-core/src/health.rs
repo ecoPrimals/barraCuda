@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Health check types and trait for observability.
 //!
 //! Modeled on the ecoPrimals pattern (sourDough scaffold), owned by barraCuda.

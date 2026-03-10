@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Types and configuration for multi-GPU workload distribution.
 
 use super::topology::{GpuDriver, GpuVendor};
@@ -217,5 +217,235 @@ impl DeviceInfo {
     #[must_use]
     pub fn supports_f64_builtins(&self) -> bool {
         !matches!(self.driver, GpuDriver::Nvk | GpuDriver::Software)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_device_info(
+        vendor: GpuVendor,
+        driver: GpuDriver,
+        vram_gb: u64,
+        gflops: f64,
+        discrete: bool,
+    ) -> DeviceInfo {
+        DeviceInfo {
+            index: 0,
+            pool_index: 0,
+            name: Arc::from("Test GPU"),
+            vendor,
+            driver,
+            vram_bytes: vram_gb * 1024 * 1024 * 1024,
+            estimated_gflops: gflops,
+            is_discrete: discrete,
+            allocations: Arc::new(AtomicUsize::new(0)),
+            allocated_bytes: Arc::new(AtomicU64::new(0)),
+            busy: Arc::new(AtomicBool::new(false)),
+        }
+    }
+
+    #[test]
+    fn workload_config_default() {
+        let cfg = WorkloadConfig::default();
+        assert_eq!(cfg.max_parallel, 4);
+        assert!(cfg.prefer_discrete);
+        assert!(cfg.exclude_software);
+        assert!((cfg.min_gflops - 100.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn device_requirements_builder() {
+        let req = DeviceRequirements::new()
+            .with_min_vram_gb(8)
+            .prefer_nvidia()
+            .require_discrete()
+            .with_min_gflops(500.0);
+        assert_eq!(req.min_vram_bytes, Some(8 * 1024 * 1024 * 1024));
+        assert_eq!(req.preferred_vendor, Some(GpuVendor::Nvidia));
+        assert!(req.require_discrete);
+        assert_eq!(req.min_gflops, Some(500.0));
+        assert!(req.exclude_software);
+    }
+
+    #[test]
+    fn score_excludes_software_when_required() {
+        let req = DeviceRequirements::new();
+        let info = make_device_info(GpuVendor::Software, GpuDriver::Software, 4, 50.0, false);
+        assert!(req.score(&info).is_none());
+    }
+
+    #[test]
+    fn score_excludes_integrated_when_discrete_required() {
+        let req = DeviceRequirements::new().require_discrete();
+        let info = make_device_info(
+            GpuVendor::Nvidia,
+            GpuDriver::NvidiaProprietary,
+            8,
+            1000.0,
+            false,
+        );
+        assert!(req.score(&info).is_none());
+    }
+
+    #[test]
+    fn score_excludes_below_min_vram() {
+        let req = DeviceRequirements::new().with_min_vram_gb(16);
+        let info = make_device_info(
+            GpuVendor::Nvidia,
+            GpuDriver::NvidiaProprietary,
+            8,
+            1000.0,
+            true,
+        );
+        assert!(req.score(&info).is_none());
+    }
+
+    #[test]
+    fn score_excludes_below_min_gflops() {
+        let req = DeviceRequirements::new().with_min_gflops(2000.0);
+        let info = make_device_info(
+            GpuVendor::Nvidia,
+            GpuDriver::NvidiaProprietary,
+            24,
+            1000.0,
+            true,
+        );
+        assert!(req.score(&info).is_none());
+    }
+
+    #[test]
+    fn score_prefers_vendor_bonus() {
+        let req = DeviceRequirements::new().prefer_nvidia();
+        let nvidia = make_device_info(
+            GpuVendor::Nvidia,
+            GpuDriver::NvidiaProprietary,
+            8,
+            1000.0,
+            true,
+        );
+        let amd = make_device_info(GpuVendor::Amd, GpuDriver::Radv, 8, 1000.0, true);
+        let s_nvidia = req.score(&nvidia).unwrap();
+        let s_amd = req.score(&amd).unwrap();
+        assert!(
+            s_nvidia > s_amd,
+            "NVIDIA ({s_nvidia}) should score higher than AMD ({s_amd})"
+        );
+    }
+
+    #[test]
+    fn score_prefers_more_vram() {
+        let req = DeviceRequirements {
+            exclude_software: false,
+            ..DeviceRequirements::default()
+        };
+        let big = make_device_info(
+            GpuVendor::Nvidia,
+            GpuDriver::NvidiaProprietary,
+            24,
+            1000.0,
+            true,
+        );
+        let small = make_device_info(
+            GpuVendor::Nvidia,
+            GpuDriver::NvidiaProprietary,
+            8,
+            1000.0,
+            true,
+        );
+        assert!(req.score(&big).unwrap() > req.score(&small).unwrap());
+    }
+
+    #[test]
+    fn score_discrete_bonus() {
+        let req = DeviceRequirements {
+            exclude_software: false,
+            ..DeviceRequirements::default()
+        };
+        let discrete = make_device_info(GpuVendor::Intel, GpuDriver::Intel, 8, 500.0, true);
+        let integrated = make_device_info(GpuVendor::Intel, GpuDriver::Intel, 8, 500.0, false);
+        assert!(req.score(&discrete).unwrap() > req.score(&integrated).unwrap());
+    }
+
+    #[test]
+    fn score_idle_bonus() {
+        let req = DeviceRequirements {
+            exclude_software: false,
+            ..DeviceRequirements::default()
+        };
+        let idle = make_device_info(
+            GpuVendor::Nvidia,
+            GpuDriver::NvidiaProprietary,
+            8,
+            1000.0,
+            true,
+        );
+        let busy = make_device_info(
+            GpuVendor::Nvidia,
+            GpuDriver::NvidiaProprietary,
+            8,
+            1000.0,
+            true,
+        );
+        busy.busy.store(true, Ordering::Relaxed);
+        assert!(req.score(&idle).unwrap() > req.score(&busy).unwrap());
+    }
+
+    #[test]
+    fn device_info_available_vram() {
+        let info = make_device_info(
+            GpuVendor::Nvidia,
+            GpuDriver::NvidiaProprietary,
+            8,
+            1000.0,
+            true,
+        );
+        let one_gb = 1024 * 1024 * 1024_u64;
+        info.allocated_bytes.store(one_gb, Ordering::Relaxed);
+        assert_eq!(info.available_vram_bytes(), 7 * one_gb);
+    }
+
+    #[test]
+    fn device_info_usage_percent() {
+        let info = make_device_info(
+            GpuVendor::Nvidia,
+            GpuDriver::NvidiaProprietary,
+            10,
+            1000.0,
+            true,
+        );
+        let half = 5 * 1024 * 1024 * 1024_u64;
+        info.allocated_bytes.store(half, Ordering::Relaxed);
+        assert!((info.usage_percent() - 50.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn device_info_zero_vram_usage() {
+        let mut info = make_device_info(
+            GpuVendor::Nvidia,
+            GpuDriver::NvidiaProprietary,
+            0,
+            0.0,
+            false,
+        );
+        info.vram_bytes = 0;
+        assert!((info.usage_percent()).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn f64_builtins_supported_by_proprietary_not_nvk() {
+        let prop = make_device_info(
+            GpuVendor::Nvidia,
+            GpuDriver::NvidiaProprietary,
+            8,
+            1000.0,
+            true,
+        );
+        let nvk = make_device_info(GpuVendor::Nvidia, GpuDriver::Nvk, 8, 1000.0, true);
+        let sw = make_device_info(GpuVendor::Software, GpuDriver::Software, 4, 50.0, false);
+        assert!(prop.supports_f64_builtins());
+        assert!(!nvk.supports_f64_builtins());
+        assert!(!sw.supports_f64_builtins());
     }
 }

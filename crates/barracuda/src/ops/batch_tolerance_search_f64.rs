@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `BatchToleranceSearchF64` — GPU PFAS ion batch tolerance search
 //!
 //! Matches S environmental sample ion masses against R PFAS library reference
@@ -196,11 +196,11 @@ fn bgl_entry(idx: u32, ty: wgpu::BufferBindingType) -> wgpu::BindGroupLayoutEntr
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
+    use crate::device::test_pool::get_test_device_if_f64_gpu_available;
 
     #[tokio::test]
     async fn test_exact_match_scores_one() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         let searcher = BatchToleranceSearchF64::new(device, 5.0, 0.002);
@@ -219,7 +219,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_within_ppm_tolerance() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         // 5 ppm at 200 Da = 1e-3 Da; shift by 0.5e-3 → score 0.5

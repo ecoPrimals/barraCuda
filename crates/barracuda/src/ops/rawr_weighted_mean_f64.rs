@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! RAWR Weighted Mean (f64) — groundSpring V10/V54
 //!
 //! Reliability-Averaged Weighted Resampling: weighted mean with bootstrap confidence intervals.

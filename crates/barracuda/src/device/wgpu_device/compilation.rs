@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Shader compilation — WGSL, SPIR-V, f64, DF64, universal precision pipelines
 
 use super::WgpuDevice;
@@ -129,7 +129,25 @@ impl WgpuDevice {
         const DF64_TRANSCENDENTALS: &str =
             include_str!("../../shaders/math/df64_transcendentals.wgsl");
 
-        let combined = format!("{DF64_CORE}\n{DF64_TRANSCENDENTALS}\n{source}");
+        let profile = crate::device::driver_profile::GpuDriverProfile::from_device(self);
+        let include_transcendentals = if profile.has_nvvm_df64_poisoning_risk() {
+            tracing::warn!(
+                driver = ?profile.driver,
+                arch = ?profile.arch,
+                "NVVM DF64 poisoning risk — omitting DF64 transcendentals (exp, log, pow) \
+                 to prevent unrecoverable device invalidation. \
+                 Arithmetic-only DF64 shaders remain safe."
+            );
+            false
+        } else {
+            true
+        };
+
+        let combined = if include_transcendentals {
+            format!("{DF64_CORE}\n{DF64_TRANSCENDENTALS}\n{source}")
+        } else {
+            format!("{DF64_CORE}\n{source}")
+        };
 
         let combined = combined
             .lines()
@@ -137,7 +155,6 @@ impl WgpuDevice {
             .collect::<Vec<_>>()
             .join("\n");
 
-        let profile = crate::device::driver_profile::GpuDriverProfile::from_device(self);
         let optimized = if combined.contains("@ilp_region") || combined.contains("@unroll_hint") {
             use crate::shaders::optimizer::WgslOptimizer;
             let optimizer = WgslOptimizer::new(profile.latency_model());

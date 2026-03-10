@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! ESN model - training, prediction, and weight management
 
 use crate::device::{Auto, Device, WgpuDevice, WorkloadHint};
@@ -166,18 +166,25 @@ impl ESN {
         .await
     }
 
-    /// Set device preference
+    /// Record a device preference for future migration.
+    ///
+    /// The preference is stored and reported by [`query_device`](Self::query_device),
+    /// but live tensor migration between devices is not yet implemented —
+    /// the ESN continues using the device it was created on.
     #[must_use]
-    pub fn prefer_device(self, _device: Device) -> Self {
-        tracing::debug!("Device preference set; migration not yet implemented");
+    pub fn prefer_device(self, device: Device) -> Self {
+        tracing::debug!(preferred = %device, current = %self.query_device(), "device preference recorded");
         self
     }
 
-    /// Set workload hint for smart routing
+    /// Record a workload hint for smart device routing.
+    ///
+    /// Logs the recommended device based on the hint. Like `prefer_device`,
+    /// the hint is advisory — live migration is not yet implemented.
     #[must_use]
     pub fn with_hint(self, hint: WorkloadHint) -> Self {
-        let preferred_device = Device::select_for_workload(&hint);
-        tracing::debug!("Workload hint: {:?} → Device: {}", hint, preferred_device);
+        let preferred = Device::select_for_workload(&hint);
+        tracing::debug!(?hint, %preferred, "workload hint recorded");
         self
     }
 
@@ -391,7 +398,10 @@ impl ESN {
         Ok(())
     }
 
-    /// Solve ridge regression using gradient descent
+    /// Solve ridge regression using gradient descent.
+    ///
+    /// Iteration count scales with reservoir size: small reservoirs (< 50)
+    /// converge in ~50 steps; larger ones use proportionally more.
     async fn ridge_regression_solve(
         &self,
         states: &Tensor,
@@ -403,7 +413,7 @@ impl ESN {
         let mut w_out = Tensor::zeros_on(vec![n, m], self.device.clone()).await?;
 
         let learning_rate = 0.01;
-        let iterations = 1000;
+        let iterations = (n * 2).clamp(50, 1000);
         let lambda = self.config.regularization;
 
         for _iter in 0..iterations {

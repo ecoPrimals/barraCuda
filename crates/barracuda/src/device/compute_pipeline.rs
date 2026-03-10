@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! GPU compute pipeline builder — eliminates bind-group/pipeline boilerplate.
 //!
 //! The ~80 lines of `create_bind_group_layout` → `create_bind_group` →
@@ -215,5 +215,87 @@ pub fn uniform_bgl_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
             min_binding_size: None,
         },
         count: None,
+    }
+}
+
+/// Declarative bind-group layout builder for reusable compute pipelines.
+///
+/// Many ops create identical bind-group layouts every dispatch. This builder
+/// lets callers declare the layout once and cache the resulting
+/// `wgpu::BindGroupLayout` for reuse across dispatches.
+///
+/// # Example
+///
+/// ```ignore
+/// use barracuda::device::compute_pipeline::BglBuilder;
+///
+/// let bgl = BglBuilder::new("my_op")
+///     .storage_read(0)
+///     .storage_rw(1)
+///     .uniform(2)
+///     .build(&device.device);
+/// ```
+pub struct BglBuilder {
+    label: &'static str,
+    entries: Vec<wgpu::BindGroupLayoutEntry>,
+}
+
+impl BglBuilder {
+    /// Create a new builder with the given label.
+    #[must_use]
+    pub fn new(label: &'static str) -> Self {
+        Self {
+            label,
+            entries: Vec::new(),
+        }
+    }
+
+    /// Add a read-only storage buffer binding at `index`.
+    #[must_use]
+    pub fn storage_read(mut self, index: u32) -> Self {
+        self.entries.push(storage_bgl_entry(index, true));
+        self
+    }
+
+    /// Add a read-write storage buffer binding at `index`.
+    #[must_use]
+    pub fn storage_rw(mut self, index: u32) -> Self {
+        self.entries.push(storage_bgl_entry(index, false));
+        self
+    }
+
+    /// Add a uniform buffer binding at `index`.
+    #[must_use]
+    pub fn uniform(mut self, index: u32) -> Self {
+        self.entries.push(uniform_bgl_entry(index));
+        self
+    }
+
+    /// Add an arbitrary `BindGroupLayoutEntry` for advanced use cases.
+    #[must_use]
+    pub fn entry(mut self, entry: wgpu::BindGroupLayoutEntry) -> Self {
+        self.entries.push(entry);
+        self
+    }
+
+    /// Number of entries declared so far.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    /// Whether no entries have been added.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    /// Build the `BindGroupLayout` on the given device.
+    #[must_use]
+    pub fn build(self, device: &wgpu::Device) -> wgpu::BindGroupLayout {
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some(self.label),
+            entries: &self.entries,
+        })
     }
 }

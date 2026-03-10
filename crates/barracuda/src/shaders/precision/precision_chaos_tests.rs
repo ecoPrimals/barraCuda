@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Chaos tests — malformed input, boundary values, adversarial patterns.
 
 use super::super::*;

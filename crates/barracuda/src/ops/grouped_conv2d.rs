@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Grouped `Conv2D` - Convolution with channel groups (Pure WGSL)
 //!
 //! Divides input/output channels into groups, reducing parameters

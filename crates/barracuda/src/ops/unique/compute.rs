@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! GPU compute operations for unique element detection
 //!
 //! This module contains the multi-pass GPU execution:

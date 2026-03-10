@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Maximin Latin Hypercube Sampling
 //!
 //! Generates space-filling sample designs by maximizing the minimum

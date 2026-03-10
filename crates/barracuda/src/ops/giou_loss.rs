@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Generalized `IoU` Loss for object detection
 //!
 //! **Pure WGSL**: Single implementation via WebGPU shader

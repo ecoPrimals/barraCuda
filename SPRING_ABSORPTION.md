@@ -1,8 +1,8 @@
 # Spring Absorption Tracker
 
-**Version**: 0.3.3 → 0.3.4
-**Date**: March 9, 2026
-**Source**: hotSpring v0.6.24, groundSpring V99, neuralSpring S135, wetSpring V102, airSpring v0.7.5, healthSpring V13, toadStool S139
+**Version**: 0.3.4
+**Date**: March 10, 2026
+**Source**: hotSpring v0.6.24, groundSpring V99, neuralSpring S139, wetSpring V105, airSpring v0.7.5, healthSpring V13, toadStool S143
 
 Cross-spring evolution follows **Write → Absorb → Lean**: springs implement
 domain-specific primitives, barraCuda absorbs and generalises, springs consume
@@ -101,13 +101,24 @@ groundSpring → ALL:        2 shaders (chi_squared universal, Welford mean+vari
 | 14 | airSpring local ops (Makkink, Turc, Hamon) | airSpring | `stats::hydrology` | ✅ Done (already absorbed) |
 | 15 | Covariance from `correlation_full` shader | groundSpring V80 | `ops` | ✅ Done (`CorrelationResult::covariance()` uses `correlation_full`) |
 
+### Deep Debt Sprint (Mar 10 2026)
+
+| # | Item | Source | Module | Status |
+|---|------|--------|--------|--------|
+| AW | **Unified GFLOPS/VRAM estimation** | groundSpring/internal | `multi_gpu::mod` | ✅ Done |
+| AX | **Fp64Strategy routing fix (4 reduce ops)** | hotSpring NVVM guidance | `ops::*_reduce_f64` | ✅ Done |
+| AY | **PCIe topology sysfs probing** | internal (multi-GPU evolution) | `unified_hardware::transfer` | ✅ Done |
+| AZ | **VRAM quota in buffer allocation** | internal (multi-GPU evolution) | `device::wgpu_device::buffers` | ✅ Done |
+| BA | **BGL builder** | wetSpring V105 | `device::compute_pipeline` | ✅ Done |
+| BB | **Test pipeline optimisation** | internal audit | `nautilus::shell`, `esn_v2`, `sovereign::validation_harness` | ✅ Done |
+
 ## P3 — Infrastructure
 
 | # | Item | Source | Module | Status |
 |---|------|--------|--------|--------|
-| 16 | `ComputeBackend` trait | hotSpring | `device` | 🔲 Pending |
+| 16 | `ComputeBackend` trait | hotSpring | `device` | ✅ Done (`GpuBackend`) |
 | 17 | `ComputeDispatch` tarpc for NUCLEUS | wetSpring | `barracuda-core` | 🔲 Pending |
-| 18 | `BandwidthTier` in device profile | wetSpring | `device::driver_profile` | 🔲 Pending |
+| 18 | `BandwidthTier` in device profile | wetSpring | `device::driver_profile` | ✅ Done (in `unified_hardware::transfer`) |
 | 19 | `domain-genomics` feature extraction | wetSpring | feature flags | 🔲 Pending |
 
 ---

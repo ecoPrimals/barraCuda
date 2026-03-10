@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Graph and spectral utilities for linear algebra
 //!
 //! - [`graph_laplacian`]: Compute graph Laplacian L = D - A from adjacency matrix

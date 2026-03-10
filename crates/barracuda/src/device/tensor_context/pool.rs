@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Buffer pool for zero-overhead tensor operations
 //!
 //! Buffers returned to the pool are held in a pending queue until a

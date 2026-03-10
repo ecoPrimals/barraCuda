@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! FHE Coefficient Extraction Operation
 //!
 //! **Purpose**: Extract specific polynomial coefficients from ciphertext

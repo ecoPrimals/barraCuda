@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 #![expect(
     clippy::unwrap_used,
     reason = "integration test — unwrap is idiomatic for test assertions"

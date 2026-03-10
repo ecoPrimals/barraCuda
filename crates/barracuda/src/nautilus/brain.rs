@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! High-level `NautilusBrain` API for physics observables.
 
 use serde::{Deserialize, Serialize};
@@ -372,8 +372,11 @@ mod tests {
     #[test]
     fn test_brain_observe_and_train() {
         let config = NautilusBrainConfig {
-            shell_config: ShellConfig::default(),
-            generations_per_train: 5,
+            shell_config: ShellConfig {
+                pop_size: 4,
+                ..ShellConfig::default()
+            },
+            generations_per_train: 2,
             min_observations: 5,
         };
         let mut brain = NautilusBrain::new(config, "observe-train-test");
@@ -397,8 +400,11 @@ mod tests {
     #[test]
     fn test_brain_predict_after_training() {
         let config = NautilusBrainConfig {
-            shell_config: ShellConfig::default(),
-            generations_per_train: 3,
+            shell_config: ShellConfig {
+                pop_size: 4,
+                ..ShellConfig::default()
+            },
+            generations_per_train: 2,
             min_observations: 5,
         };
         let mut brain = NautilusBrain::new(config, "predict-test");
@@ -418,7 +424,10 @@ mod tests {
     #[test]
     fn test_brain_serialization_roundtrip() {
         let config = NautilusBrainConfig {
-            shell_config: ShellConfig::default(),
+            shell_config: ShellConfig {
+                pop_size: 4,
+                ..ShellConfig::default()
+            },
             generations_per_train: 2,
             min_observations: 5,
         };

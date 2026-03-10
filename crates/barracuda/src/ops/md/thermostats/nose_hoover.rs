@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Nosé-Hoover Thermostat
 //!
 //! **Physics**: Extended Lagrangian for canonical (NVT) ensemble

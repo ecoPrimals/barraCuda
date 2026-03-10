@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! GPU-Accelerated Velocity Autocorrelation Function (VACF)
 //!
 //! **Physics**: C(τ) = <v(t) · v(t+τ)> / <v(0)·v(0)>

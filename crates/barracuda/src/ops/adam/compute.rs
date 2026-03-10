@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! GPU compute operations for Adam Optimizer
 //!
 //! This module contains the single-pass GPU execution for Adam optimizer

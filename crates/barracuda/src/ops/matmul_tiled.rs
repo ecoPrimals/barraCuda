@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Tiled Matrix Multiplication - High-performance matmul with shared memory
 //!
 //! **Deep Debt Evolution**: Modernized from trait-based to direct `impl Tensor`

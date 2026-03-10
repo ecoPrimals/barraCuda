@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! 2D Fast Fourier Transform Operation
 //!
 //! **Purpose**: 2D frequency analysis for images and 2D signals

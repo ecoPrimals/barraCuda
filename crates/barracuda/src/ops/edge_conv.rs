@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Edge Convolution for Graph Neural Networks
 //!
 //! **Pure WGSL**: Single implementation via WebGPU shader
@@ -295,11 +295,11 @@ impl EdgeConv {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
+    use crate::device::test_pool::get_test_device_if_f64_gpu_available;
 
     #[tokio::test]
     async fn test_edge_conv_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         let num_nodes = 5;

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `SpatialDropout` - Spatial Dropout (Channel-wise dropout)
 //!
 //! **Deep Debt Principles**:

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Operation types and input shapes for batched element-wise f64 compute.
 
 /// Operations for batched element-wise computation

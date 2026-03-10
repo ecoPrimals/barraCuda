@@ -8,8 +8,8 @@ struct Params {
 }
 
 @group(0) @binding(0) var<storage, read> node_features: array<f64>;
-@group(0) @binding(1) var<storage, read> edge_offsets: array<u32>;
-@group(0) @binding(2) var<storage, read> edge_targets: array<u32>;
+@group(0) @binding(1) var<storage, read> edge_offsets: array<f32>;
+@group(0) @binding(2) var<storage, read> edge_targets: array<f32>;
 @group(0) @binding(3) var<storage, read> mlp_weight: array<f64>;
 @group(0) @binding(4) var<storage, read> mlp_bias: array<f64>;
 @group(0) @binding(5) var<storage, read_write> output: array<f64>;
@@ -33,11 +33,11 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         max_features[o] = -1e10;
     }
 
-    let neighbor_start = edge_offsets[node_idx];
-    let neighbor_end = edge_offsets[node_idx + 1u];
+    let neighbor_start = u32(edge_offsets[node_idx]);
+    let neighbor_end = u32(edge_offsets[node_idx + 1u]);
 
     for (var k: u32 = neighbor_start; k < neighbor_end; k = k + 1u) {
-        let neighbor_idx = edge_targets[k];
+        let neighbor_idx = u32(edge_targets[k]);
 
         if (neighbor_idx >= params.num_nodes) {
             continue;

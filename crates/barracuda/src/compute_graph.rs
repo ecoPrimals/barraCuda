@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Compute Graph - Lazy Execution for Operation Batching
 //!
 //! **Problem**: wgpu has significant per-dispatch overhead (~50-100μs).

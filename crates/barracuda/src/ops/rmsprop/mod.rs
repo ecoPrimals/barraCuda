@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `RMSprop` Optimizer - GPU-accelerated Root Mean Square Propagation
 //!
 //! **Deep Debt Principles**:

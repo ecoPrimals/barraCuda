@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! SOBOL - Quasi-random Sobol sequences - Pure WGSL
 //!
 //! Deep Debt Principles:

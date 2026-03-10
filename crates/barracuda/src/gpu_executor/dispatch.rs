@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `MathOp` dispatch logic for GPU execution.
 //!
 //! Contains the actual operation dispatch (match on `MathOp`) and the

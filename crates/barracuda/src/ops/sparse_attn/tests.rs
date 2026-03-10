@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Tests for Sparse Attention
 //!
 //! Validates sparse attention with various stride values and sequence lengths.

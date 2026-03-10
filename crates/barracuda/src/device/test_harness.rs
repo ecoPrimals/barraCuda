@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! GPU test coordination harness — admission gate for concurrent test execution.
 //!
 //! Provides [`GpuTestGate`] to limit how many test threads execute GPU work

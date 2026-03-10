@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! GPU-Accelerated Static Structure Factor (SSF) Computation
 //!
 //! **Physics**: S(k) = |`Σ_j` `exp(ik·r_j)|²` / N

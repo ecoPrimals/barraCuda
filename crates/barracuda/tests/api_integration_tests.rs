@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Integration tests for all 6 high-level APIs
 //!
 //! Tests that validate APIs work together seamlessly.

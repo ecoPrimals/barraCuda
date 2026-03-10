@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Lookahead - Lookahead Optimizer (Zhang et al.)
 //!
 //! Maintains two sets of weights: fast and slow.

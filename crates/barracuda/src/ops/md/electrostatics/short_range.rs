@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Short-Range (Real-Space) Electrostatics for PPPM
 //!
 //! Computes the short-range part of the Ewald-split Coulomb interaction:

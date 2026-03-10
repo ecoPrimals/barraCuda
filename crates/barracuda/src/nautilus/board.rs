@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Board structure and response for `BingoCube` reservoir computing.
 
 use rand::SeedableRng;
@@ -108,14 +108,16 @@ impl Board {
                 for i in 0..l {
                     for j in 0..l {
                         let cell = self.cells[i][j];
-                        let hash_input = format!("NAUTILUS_PROJ|{i}|{j}|{cell}|{features:?}");
-                        let hash = blake3::hash(hash_input.as_bytes());
-                        let bytes = hash.as_bytes();
-                        let byte_arr: [u8; 8] = [
-                            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6],
-                            bytes[7],
-                        ];
-                        let u = u64::from_le_bytes(byte_arr);
+                        let mut hasher = blake3::Hasher::new();
+                        hasher.update(b"NAUTILUS_PROJ");
+                        hasher.update(&(i as u32).to_le_bytes());
+                        hasher.update(&(j as u32).to_le_bytes());
+                        hasher.update(&cell.to_le_bytes());
+                        for f in features {
+                            hasher.update(&f.to_le_bytes());
+                        }
+                        let hash = hasher.finalize();
+                        let u = u64::from_le_bytes(hash.as_bytes()[..8].try_into().unwrap());
                         activations[i * l + j] = (u as f64) / (u64::MAX as f64);
                     }
                 }

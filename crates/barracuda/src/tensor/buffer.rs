@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Internal buffer storage abstraction for `Tensor`.
 //!
 //! `TensorBuffer` encapsulates the two ownership modes a `Tensor`'s GPU

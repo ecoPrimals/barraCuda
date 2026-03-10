@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `BatchPairReduceF64` — O(N²) pairwise batch reduction (f64)
 //!
 //! Supported operations:

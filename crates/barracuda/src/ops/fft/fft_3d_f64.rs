@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! 3D Fast Fourier Transform — Batched GPU Dispatch (f64 Precision)
 //!
 //! Performs 3D FFT via dimension-wise decomposition with a single batched

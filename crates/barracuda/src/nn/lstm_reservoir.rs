@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! LSTM reservoir for recurrent computation.
 //!
 //! CPU reference implementation with JSON weight serialization.
@@ -144,20 +144,24 @@ impl LstmReservoir {
         let hidden_size = self.config.hidden_size;
 
         for (layer_idx, layer) in self.layers.iter().enumerate() {
-            let in_vec = if layer_idx == 0 {
-                input.to_vec()
+            // Borrow the previous layer's hidden state as a slice to avoid cloning.
+            // First layer uses the input directly; subsequent layers read from the
+            // already-updated hidden state of the previous layer.
+            let (i, f, g, o) = if layer_idx == 0 {
+                lstm_gates(layer, input, &state[layer_idx].hidden)
             } else {
-                state[layer_idx - 1].hidden.clone()
+                // SAFETY (borrow): We only read `state[layer_idx - 1].hidden` and
+                // mutate `state[layer_idx]` — disjoint indices, so we split the
+                // borrow via index.
+                let (prev, curr) = state.split_at_mut(layer_idx);
+                lstm_gates(layer, &prev[layer_idx - 1].hidden, &curr[0].hidden)
             };
-
-            let (i, f, g, o) = lstm_gates(layer, &in_vec, &state[layer_idx].hidden);
 
             for j in 0..hidden_size {
                 state[layer_idx].cell[j] = f[j] * state[layer_idx].cell[j] + i[j] * g[j];
                 state[layer_idx].hidden[j] = o[j] * state[layer_idx].cell[j].tanh();
             }
 
-            // Dropout between layers (training-time; inference we typically use 0)
             if layer_idx < self.config.num_layers - 1
                 && self.config.dropout > 0.0
                 && self.config.dropout < 1.0

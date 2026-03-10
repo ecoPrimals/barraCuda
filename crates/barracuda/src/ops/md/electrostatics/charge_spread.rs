@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Charge Spreading for PPPM
 //!
 //! Spreads point charges onto a regular mesh using B-spline interpolation.

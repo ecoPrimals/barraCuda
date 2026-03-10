@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 // ! Akida NPU Backend for barraCuda
 //!
 //! Provides Akida-specific acceleration for neuromorphic operations

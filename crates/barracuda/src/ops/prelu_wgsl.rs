@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `PReLU` - Parametric Rectified Linear Unit - Pure WGSL
 //!
 //! Deep Debt Principles:

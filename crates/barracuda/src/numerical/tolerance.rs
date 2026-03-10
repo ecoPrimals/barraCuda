@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Named tolerance tiers for precision guarantees.
 //!
 //! 13 tiers from exact to qualitative, codifying the precision hierarchy

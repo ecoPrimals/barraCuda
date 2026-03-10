@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! DF64 protein folding shaders for AlphaFold2-style structure prediction.
 //!
 //! These shaders use double-float (f32-pair) arithmetic for high precision on

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! # barraCuda: Hardware-Agnostic Tensor Compute
 //!
 //! **Deep Debt Excellence**: Zero duplication, pure capability-based compute

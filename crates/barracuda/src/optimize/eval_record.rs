@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Evaluation recording for optimization and surrogate training
 //!
 //! Captures every function evaluation during optimization, not just the best.

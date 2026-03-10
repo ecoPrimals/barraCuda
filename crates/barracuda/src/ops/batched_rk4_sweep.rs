@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 
 //! `BatchedRK4F64` — General-purpose N-trajectory RK4/RK45 orchestration.
 //!

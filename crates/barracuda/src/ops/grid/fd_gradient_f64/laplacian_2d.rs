@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! 2D Laplacian computation: ∇²f = ∂²f/∂x² + ∂²f/∂y²
 
 use super::super::fd_common::FdPipelineBuilder;

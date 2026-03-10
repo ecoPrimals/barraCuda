@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Quantized Inference Shaders
 //!
 //! WGSL shaders for efficient inference with quantized weights.

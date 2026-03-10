@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Device topology detection: vendor, driver, and capability classification.
 //!
 //! Extracted from `multi_gpu.rs` for separation of concerns.
@@ -165,5 +165,129 @@ impl GpuInfo {
             self.vendor,
             GpuVendor::Nvidia | GpuVendor::Amd | GpuVendor::Intel
         ) && self.gflops >= 500.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn vendor_from_pci_id() {
+        assert_eq!(GpuVendor::from_vendor_id(0x10DE), GpuVendor::Nvidia);
+        assert_eq!(GpuVendor::from_vendor_id(0x1002), GpuVendor::Amd);
+        assert_eq!(GpuVendor::from_vendor_id(0x8086), GpuVendor::Intel);
+        assert_eq!(GpuVendor::from_vendor_id(0), GpuVendor::Software);
+        assert_eq!(GpuVendor::from_vendor_id(0xFFFF), GpuVendor::Unknown);
+    }
+
+    #[test]
+    fn vendor_from_device_name() {
+        assert_eq!(
+            GpuVendor::from_name("NVIDIA GeForce RTX 4090"),
+            GpuVendor::Nvidia
+        );
+        assert_eq!(GpuVendor::from_name("RTX 3090"), GpuVendor::Nvidia);
+        assert_eq!(GpuVendor::from_name("AMD Radeon RX 7900"), GpuVendor::Amd);
+        assert_eq!(GpuVendor::from_name("RADV NAVI10"), GpuVendor::Amd);
+        assert_eq!(GpuVendor::from_name("Intel Iris Xe"), GpuVendor::Intel);
+        assert_eq!(
+            GpuVendor::from_name("llvmpipe (LLVM 17.0.6)"),
+            GpuVendor::Software
+        );
+        assert_eq!(GpuVendor::from_name("SwiftShader"), GpuVendor::Software);
+        assert_eq!(GpuVendor::from_name("unknown device"), GpuVendor::Unknown);
+    }
+
+    #[test]
+    fn driver_detection_nvk() {
+        assert_eq!(
+            GpuDriver::from_adapter_info("NVIDIA", "NVK", "Mesa 24.0"),
+            GpuDriver::Nvk
+        );
+        assert_eq!(
+            GpuDriver::from_adapter_info("NVIDIA", "mesa", "nouveau/nvk"),
+            GpuDriver::Nvk
+        );
+    }
+
+    #[test]
+    fn driver_detection_radv() {
+        assert_eq!(
+            GpuDriver::from_adapter_info("AMD RADV", "radv", "Mesa 24.0"),
+            GpuDriver::Radv
+        );
+    }
+
+    #[test]
+    fn driver_detection_nvidia_proprietary() {
+        assert_eq!(
+            GpuDriver::from_adapter_info("NVIDIA GeForce RTX 4090", "nvidia", "550.0"),
+            GpuDriver::NvidiaProprietary
+        );
+    }
+
+    #[test]
+    fn driver_detection_software() {
+        assert_eq!(
+            GpuDriver::from_adapter_info("llvmpipe", "", ""),
+            GpuDriver::Software
+        );
+    }
+
+    #[test]
+    fn gpu_info_f64_builtins() {
+        let nvidia_prop = GpuInfo {
+            index: 0,
+            name: "RTX 4090".into(),
+            vendor: GpuVendor::Nvidia,
+            driver: GpuDriver::NvidiaProprietary,
+            gflops: 10_000.0,
+            busy: false,
+        };
+        assert!(nvidia_prop.supports_f64_builtins());
+
+        let nvk = GpuInfo {
+            index: 0,
+            name: "RTX 4090 (NVK)".into(),
+            vendor: GpuVendor::Nvidia,
+            driver: GpuDriver::Nvk,
+            gflops: 10_000.0,
+            busy: false,
+        };
+        assert!(!nvk.supports_f64_builtins());
+    }
+
+    #[test]
+    fn gpu_info_compute_capable() {
+        let discrete = GpuInfo {
+            index: 0,
+            name: "RTX 4090".into(),
+            vendor: GpuVendor::Nvidia,
+            driver: GpuDriver::NvidiaProprietary,
+            gflops: 10_000.0,
+            busy: false,
+        };
+        assert!(discrete.is_compute_capable());
+
+        let software = GpuInfo {
+            index: 0,
+            name: "llvmpipe".into(),
+            vendor: GpuVendor::Software,
+            driver: GpuDriver::Software,
+            gflops: 50.0,
+            busy: false,
+        };
+        assert!(!software.is_compute_capable());
+
+        let weak_gpu = GpuInfo {
+            index: 0,
+            name: "Intel Iris".into(),
+            vendor: GpuVendor::Intel,
+            driver: GpuDriver::Intel,
+            gflops: 200.0,
+            busy: false,
+        };
+        assert!(!weak_gpu.is_compute_capable());
     }
 }

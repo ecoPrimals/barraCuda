@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `TensorContext` - Zero-overhead Tensor operations via internal pooling
 //!
 //! # Batched dispatch (neuralSpring handoff #4 / #10)

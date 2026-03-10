@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! FHE Property-Based GPU Integration Tests
 //!
 //! Validates fundamental cryptographic and mathematical properties on GPU:

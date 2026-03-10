@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Dead Expression Elimination — Sovereign Compiler Phase 4.
 //!
 //! After FMA fusion, some intermediate `Mul` expressions may become unused

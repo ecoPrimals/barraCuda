@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Board ensembles and fitness evaluation.
 
 use serde::{Deserialize, Serialize};

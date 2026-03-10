@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Buffer creation and I/O for sparse GPU solvers.
 //!
 //! Single responsibility: buffer allocation, readback, and copy operations.

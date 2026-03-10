@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `HillFunctionF64` — element-wise Hill dose-response activation (f64 precision)
 //!
 //! `E(x) = Emax × xⁿ / (Kⁿ + xⁿ)`
@@ -247,11 +247,11 @@ fn bgl_uniform(idx: u32) -> wgpu::BindGroupLayoutEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
+    use crate::device::test_pool::get_test_device_if_f64_gpu_available;
 
     #[tokio::test]
     async fn test_hill_michaelis_menten() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         let k = 10.0_f64;
@@ -269,7 +269,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_hill_cooperativity() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         let k = 5.0_f64;
@@ -284,7 +284,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_hill_output_range() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         let vals: Vec<f64> = (0..=100).map(|i| i as f64).collect();
@@ -297,7 +297,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dose_response_emax() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         let ec50 = 10.0_f64;
@@ -320,7 +320,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dose_response_output_bounded_by_emax() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         let emax = 42.0;
@@ -337,7 +337,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dose_response_validation() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         assert!(

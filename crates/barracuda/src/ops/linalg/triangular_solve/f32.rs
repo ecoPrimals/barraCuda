@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! f32 triangular solve (Tensor-based) and Tensor extension
 
 use crate::error::{BarracudaError, Result};

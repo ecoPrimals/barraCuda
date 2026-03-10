@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Soft NMS - Soft Non-Maximum Suppression
 //!
 //! Reduces scores of overlapping boxes instead of removing them.
@@ -86,9 +86,7 @@ impl SoftNMS {
 
         let mut keep = Vec::new();
 
-        for i in 0..indices.len() {
-            let idx = indices[i];
-
+        for (i, &idx) in indices.iter().enumerate() {
             if scores_data[idx] < 0.001 {
                 continue;
             }
@@ -96,9 +94,7 @@ impl SoftNMS {
             keep.push(idx);
 
             // Soft suppress overlapping boxes
-            for j in (i + 1)..indices.len() {
-                let other_idx = indices[j];
-
+            for &other_idx in &indices[(i + 1)..] {
                 // Compute IoU
                 let x1_1 = boxes_data[idx * 4];
                 let y1_1 = boxes_data[idx * 4 + 1];

@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — Deep Debt & Test Pipeline Evolution (Mar 10 2026)
+
+- **Unified GFLOPS/VRAM estimation**: `GpuPool` and `MultiDevicePool` now share
+  `estimate_gflops()` / `estimate_vram_bytes()` from `multi_gpu::mod`, replacing
+  divergent hardcoded estimates and duplicated `fallback_estimates` module
+- **Fp64Strategy routing fix in reduce ops**: `SumReduceF64`, `VarianceReduceF64`,
+  `NormReduceF64`, `ProdReduceF64` now correctly call `.df64()` on Hybrid devices
+  instead of `.f64()` — fixes DF64 shader compilation taking the wrong path
+- **PCIe topology via sysfs probing**: `PcieBridge` and new `PcieLinkInfo` probe
+  Linux sysfs (`/sys/bus/pci/devices`) for PCIe generation, lane width, NUMA node,
+  and vendor ID. `BandwidthTier` now calculates real bandwidth from probed data
+  instead of heuristics. P2P detection uses shared NUMA node inference
+- **VRAM quota enforcement**: `WgpuDevice` now accepts optional `QuotaTracker`.
+  All canonical buffer allocations (`create_buffer_f32/u32/f64`, `create_f32_rw_buffer`)
+  check quota before proceeding. Enables proactive OOM prevention for multi-GPU pools
+- **BGL builder**: `BglBuilder` for declarative `BindGroupLayout` construction —
+  `storage_read()`, `storage_rw()`, `uniform()` chainable methods (wetSpring V105)
+- **Deprecated `discover_coralreef` alias removed**: sole definition, zero callers
+- **Sovereign shader validation parallelised**: `sovereign_validates_all_wgsl_shaders`
+  test now uses `rayon::par_iter()` for 600+ shader files
+- **Nautilus test pipeline optimised**: Test config shrunk from `pop_size:16, grid:5×5`
+  (400-dim features, 400×400 Gram) to `pop_size:4, grid:2×2` (16-dim). Tests validate
+  mechanics (generation counter, MSE finiteness), not convergence — that's the springs'
+  job. Board hash evolved from `format!("{features:?}")` (catastrophic `Vec<f64>` Debug
+  formatting) to incremental `blake3::Hasher::update(f64::to_le_bytes())` — zero
+  allocations, same determinism
+- **ESN reservoir test shrunk**: `test_esn_large_reservoir` (200→16 reservoir) renamed
+  to `test_esn_reservoir_shape` — validates shape mechanics, not GPU memory
+
 ### Removed — Deep Cleanup Sprint 4 (Mar 9 2026)
 
 - **4 orphaned test directories**: `tests/chaos/`, `tests/fault/`, `tests/e2e/`,

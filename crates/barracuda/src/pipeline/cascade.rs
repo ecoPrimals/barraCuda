@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Cascade filtering pipeline
 //!
 //! A cascade is a series of increasingly expensive filters that progressively

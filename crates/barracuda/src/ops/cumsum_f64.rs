@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Cumsum F64 - Cumulative sum along a dimension (double precision)
 //!
 //! GPU-accelerated prefix sum / cumulative sum for f64 arrays.

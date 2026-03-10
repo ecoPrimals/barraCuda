@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! GPU Driver Profile — data-driven shader specialisation.
 //!
 //! This module answers the question **"who is driving the hardware?"** and
@@ -290,6 +290,24 @@ impl GpuDriverProfile {
         self.workarounds.is_empty() && !matches!(self.driver, DriverKind::Software)
     }
 
+    /// Whether DF64 shaders containing transcendentals (exp, log, pow) risk
+    /// permanently poisoning the wgpu device via an unrecoverable NVVM failure.
+    ///
+    /// On NVIDIA proprietary drivers, the NVVM compiler cannot handle f64
+    /// transcendentals in the DF64 (f32-pair) rewrite mode. A single failed
+    /// compilation invalidates the device — all subsequent operations panic.
+    /// NVK (Mesa) is unaffected.
+    ///
+    /// When `true`, callers must either strip transcendentals from the DF64
+    /// preamble or avoid DF64 compilation entirely.
+    ///
+    /// Discovered by hotSpring v0.6.25 (March 2026) on RTX 3090 (Ampere).
+    #[must_use]
+    pub fn has_nvvm_df64_poisoning_risk(&self) -> bool {
+        self.workarounds
+            .contains(&Workaround::NvvmDf64TranscendentalPoisoning)
+    }
+
     /// Whether this driver reliably supports f64 shader operations.
     ///
     /// Returns `true` only when the runtime probe confirms f64 compilation
@@ -403,6 +421,20 @@ impl GpuDriverProfile {
             return Fp64Strategy::Hybrid;
         }
         self.fp64_strategy()
+    }
+
+    /// Whether a shader containing f64 transcendentals can safely use the
+    /// Hybrid (DF64) strategy on this device.
+    ///
+    /// On NVIDIA proprietary, DF64 transcendentals cause unrecoverable NVVM
+    /// device poisoning. When `false`, callers must either use native F64
+    /// (if available) or fall back to F32 for shaders with transcendentals.
+    #[must_use]
+    pub fn df64_transcendentals_safe(
+        &self,
+        caps: &crate::device::probe::F64BuiltinCapabilities,
+    ) -> bool {
+        caps.df64_transcendentals_safe
     }
 
     /// Whether `sin(f64)` needs software substitution, considering probe results.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `GatedConv2D` - Gated Convolution 2D
 //!
 //! **Deep Debt Principles**:

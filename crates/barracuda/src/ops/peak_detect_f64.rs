@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! GPU `PeakDetectF64` — 1D peak detection with prominence and width.
 //!
 //! Parallel local-maxima detection via WGSL shader, with CPU-side filtering

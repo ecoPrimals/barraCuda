@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! ReflectionPad2D - Padding with reflection
 //!
 //! Pads image by reflecting pixels at borders.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Device creation and adapter selection
 //!
 //! **Why this file is large (~640 lines)**: Single concern—"how do I obtain a
@@ -107,6 +107,7 @@ impl WgpuDevice {
             gpu_lock: Arc::new(std::sync::Mutex::new(())),
             active_encoders,
             dispatch_semaphore: Arc::new(super::DispatchSemaphore::new(budget)),
+            quota_tracker: None,
         };
         probe::seed_cache_from_heuristics(&wgpu_device);
         wgpu_device
@@ -653,6 +654,7 @@ impl WgpuDevice {
             gpu_lock: Arc::new(std::sync::Mutex::new(())),
             active_encoders,
             dispatch_semaphore: Arc::new(super::DispatchSemaphore::new(budget)),
+            quota_tracker: None,
         };
         probe::seed_cache_from_heuristics(&wgpu_device);
         wgpu_device

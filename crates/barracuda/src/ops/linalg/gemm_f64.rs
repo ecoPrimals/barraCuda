@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Dense Matrix Multiply (f64) — GPU-Accelerated via WGSL
 //!
 //! Batched GEMM: C = alpha * A * B + beta * C

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! FHE NTT Validation - Real GPU Testing
 //!
 //! **Purpose**: Validate NTT operations on actual GPU hardware

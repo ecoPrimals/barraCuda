@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Digamma ψ(x) (f64) — GPU-resident, pipeline-cached, buffer-pooled
 //!
 //! ψ(x) = Γ'(x)/Γ(x), the logarithmic derivative of the Gamma function.

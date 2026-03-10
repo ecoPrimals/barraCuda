@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Leave-one-out jackknife estimator.
 //!
 //! Provenance: groundSpring `jackknife.rs` -> toadStool absorption (S70).

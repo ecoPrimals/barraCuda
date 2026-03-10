@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Probe shader definitions — one per f64 built-in function
 //!
 //! Each probe is compiled in an isolated shader so a crash in one does not

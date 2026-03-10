@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Generic batched ODE RK4 solver for barracuda.
 //!
 //! Replaces the 5 domain-specific ODE shaders from wetSpring (`phage_defense`,

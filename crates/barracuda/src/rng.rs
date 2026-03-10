@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Deterministic CPU PRNG for reproducible simulations.
 //!
 //! Provides a Knuth LCG (Linear Congruential Generator) with 64-bit state.

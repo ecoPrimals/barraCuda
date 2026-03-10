@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Complex Absolute Value (Magnitude) Operation
 //!
 //! **Operation**: |a + bi| = sqrt(a² + b²)

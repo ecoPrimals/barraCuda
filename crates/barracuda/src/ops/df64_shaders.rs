@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! DF64 (double-float, f32-pair) universal math shaders.
 //!
 //! These shaders use only f32 hardware but achieve ~48-bit mantissa (~14 decimal

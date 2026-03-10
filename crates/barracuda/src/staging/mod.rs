@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Staging Buffers for Unidirectional Compute Pipelines
 //!
 //! Provides ring buffer abstractions for streaming data to/from the GPU

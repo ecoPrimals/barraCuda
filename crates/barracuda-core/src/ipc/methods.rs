@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! JSON-RPC method handlers for barraCuda IPC endpoints.
 //!
 //! Each handler follows the semantic naming standard from wateringHole:
@@ -63,7 +63,7 @@ fn primal_info(_primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
             "version": env!("CARGO_PKG_VERSION"),
             "protocol": "json-rpc-2.0",
             "namespace": "barracuda",
-            "license": "AGPL-3.0-or-later",
+            "license": "AGPL-3.0-only",
         }),
     )
 }

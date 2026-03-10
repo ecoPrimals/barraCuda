@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Cross-device transfer cost modelling — `PCIe`, `NVLink`, shared memory.
 
 use super::types::HardwareType;
@@ -214,28 +214,48 @@ pub struct PcieBridge {
 impl PcieBridge {
     /// Detect P2P availability between GPU and NPU.
     ///
-    /// Currently returns `p2p_available: false` because wgpu does not
-    /// expose peer-to-peer DMA queries. When wgpu gains `device.peer_access()`
-    /// or a platform-specific extension, this will probe the real topology.
-    /// The API is stable so callers won't need changes.
+    /// On Linux, probes sysfs for GPU PCI devices and checks whether they
+    /// share a NUMA node (heuristic for P2P capability). Falls back to
+    /// `p2p_available: false` on non-Linux or when sysfs is unavailable.
     #[must_use]
     pub fn detect_p2p() -> Self {
+        let probed = PcieLinkInfo::probe_all_gpus();
+        let p2p_available = Self::any_shared_numa(&probed);
+        let tier = probed
+            .first()
+            .map_or(BandwidthTier::Unknown, PcieLinkInfo::bandwidth_tier);
         Self {
-            p2p_available: false,
-            source_label: "gpu".to_string(),
-            target_label: "npu".to_string(),
-            tier: BandwidthTier::Unknown,
+            p2p_available,
+            source_label: probed
+                .first()
+                .map_or_else(|| "gpu".to_string(), |i| i.bdf_address.clone()),
+            target_label: probed
+                .get(1)
+                .map_or_else(|| "npu".to_string(), |i| i.bdf_address.clone()),
+            tier,
         }
     }
 
     /// Detect P2P with adapter-aware bandwidth tier.
     #[must_use]
     pub fn detect_with_adapter(adapter_name: &str) -> Self {
+        let probed = PcieLinkInfo::probe_all_gpus();
+        let tier = probed
+            .iter()
+            .find(|p| {
+                adapter_name
+                    .to_lowercase()
+                    .contains(&p.bdf_address.to_lowercase())
+            })
+            .map_or_else(
+                || BandwidthTier::detect_from_adapter_name(adapter_name),
+                PcieLinkInfo::bandwidth_tier,
+            );
         Self {
-            p2p_available: false,
+            p2p_available: Self::any_shared_numa(&probed),
             source_label: "gpu".to_string(),
             target_label: "npu".to_string(),
-            tier: BandwidthTier::detect_from_adapter_name(adapter_name),
+            tier,
         }
     }
 
@@ -244,6 +264,170 @@ impl PcieBridge {
     pub fn transfer_cost(&self) -> TransferCost {
         self.tier.transfer_cost()
     }
+
+    /// All probed `PCIe` GPU links from sysfs (Linux only).
+    #[must_use]
+    pub fn probe_gpu_links() -> Vec<PcieLinkInfo> {
+        PcieLinkInfo::probe_all_gpus()
+    }
+
+    fn any_shared_numa(links: &[PcieLinkInfo]) -> bool {
+        if links.len() < 2 {
+            return false;
+        }
+        for (i, a) in links.iter().enumerate() {
+            for b in &links[i + 1..] {
+                if let (Some(na), Some(nb)) = (a.numa_node, b.numa_node) {
+                    if na == nb {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+}
+
+/// Runtime-probed `PCIe` link characteristics for a single device.
+#[derive(Debug, Clone)]
+pub struct PcieLinkInfo {
+    /// Bus:Device.Function address (e.g. "0000:01:00.0").
+    pub bdf_address: String,
+    /// `PCIe` generation (1..=6). 0 means unknown.
+    pub pcie_gen: u8,
+    /// Lane width (1, 2, 4, 8, 16). 0 means unknown.
+    pub lane_width: u8,
+    /// NUMA node affinity, if detectable.
+    pub numa_node: Option<u32>,
+    /// Vendor ID (e.g. 0x10de for NVIDIA, 0x1002 for AMD).
+    pub vendor_id: u32,
+}
+
+impl PcieLinkInfo {
+    /// Theoretical unidirectional bandwidth in GB/s for this link.
+    #[must_use]
+    pub fn bandwidth_gbps(&self) -> f64 {
+        let per_lane = match self.pcie_gen {
+            1 => 0.25,
+            2 => 0.5,
+            3 => 0.985,
+            4 => 1.969,
+            5 => 3.938,
+            6 => 7.563,
+            _ => 0.985,
+        };
+        per_lane * f64::from(self.lane_width)
+    }
+
+    /// Map to the closest `BandwidthTier`.
+    #[must_use]
+    pub fn bandwidth_tier(&self) -> BandwidthTier {
+        let bw = self.bandwidth_gbps();
+        if bw >= 50.0 {
+            BandwidthTier::PciE5x16
+        } else if bw >= 25.0 {
+            BandwidthTier::PciE4x16
+        } else if bw >= 10.0 {
+            BandwidthTier::PciE3x16
+        } else {
+            BandwidthTier::Unknown
+        }
+    }
+
+    /// Probe all GPU-class devices from sysfs (Linux).
+    ///
+    /// On non-Linux platforms, returns an empty vec.
+    #[must_use]
+    pub fn probe_all_gpus() -> Vec<Self> {
+        #[cfg(target_os = "linux")]
+        {
+            Self::probe_sysfs()
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            Vec::new()
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    fn probe_sysfs() -> Vec<Self> {
+        let pci_dir = std::path::Path::new("/sys/bus/pci/devices");
+        let Ok(entries) = std::fs::read_dir(pci_dir) else {
+            return Vec::new();
+        };
+
+        let mut results = Vec::new();
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let bdf = entry.file_name().to_string_lossy().to_string();
+
+            let Some(class) = read_sysfs_hex(&path.join("class")) else {
+                continue;
+            };
+            // PCI class 0x03xxxx = display controller (covers VGA + 3D)
+            if (class >> 16) != 0x03 {
+                continue;
+            }
+
+            let vendor_id = read_sysfs_hex(&path.join("vendor")).unwrap_or(0);
+            let pcie_gen = parse_pcie_gen(&path.join("current_link_speed"));
+            let lane_width = parse_lane_width(&path.join("current_link_width"));
+            let numa_node = read_sysfs_i32(&path.join("numa_node"))
+                .and_then(|n| if n >= 0 { Some(n as u32) } else { None });
+
+            results.push(Self {
+                bdf_address: bdf,
+                pcie_gen,
+                lane_width,
+                numa_node,
+                vendor_id,
+            });
+        }
+        results
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn read_sysfs_hex(path: &std::path::Path) -> Option<u32> {
+    let text = std::fs::read_to_string(path).ok()?;
+    let trimmed = text.trim().trim_start_matches("0x");
+    u32::from_str_radix(trimmed, 16).ok()
+}
+
+#[cfg(target_os = "linux")]
+fn read_sysfs_i32(path: &std::path::Path) -> Option<i32> {
+    let text = std::fs::read_to_string(path).ok()?;
+    text.trim().parse().ok()
+}
+
+#[cfg(target_os = "linux")]
+fn parse_pcie_gen(path: &std::path::Path) -> u8 {
+    let Ok(text) = std::fs::read_to_string(path) else {
+        return 0;
+    };
+    let lower = text.trim().to_lowercase();
+    const MARKERS: &[(&str, &str, u8)] = &[
+        ("64.0", "gen6", 6),
+        ("32.0", "gen5", 5),
+        ("16.0", "gen4", 4),
+        ("8.0", "gen3", 3),
+        ("5.0", "gen2", 2),
+        ("2.5", "gen1", 1),
+    ];
+    for &(speed, gen_label, version) in MARKERS {
+        if lower.contains(speed) || lower.contains(gen_label) {
+            return version;
+        }
+    }
+    0
+}
+
+#[cfg(target_os = "linux")]
+fn parse_lane_width(path: &std::path::Path) -> u8 {
+    let Ok(text) = std::fs::read_to_string(path) else {
+        return 0;
+    };
+    text.trim().parse().unwrap_or(0)
 }
 
 #[cfg(test)]

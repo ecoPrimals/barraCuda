@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 use super::*;
 use crate::device::{Device, WorkloadHint};
 
@@ -404,18 +404,18 @@ async fn test_esn_exported_weights_migrate_to_multi_head() {
 }
 
 #[tokio::test]
-async fn test_esn_large_reservoir() {
+async fn test_esn_reservoir_shape() {
     let config = ESNConfig {
-        input_size: 5,
-        reservoir_size: 200,
+        input_size: 3,
+        reservoir_size: 16,
         output_size: 2,
         spectral_radius: 0.95,
-        connectivity: 0.05,
+        connectivity: 0.1,
         leak_rate: 0.2,
         regularization: 1e-4,
         seed: 42,
     };
 
     let esn = ESN::new(config).await.unwrap();
-    assert_eq!(esn.state().shape(), &[200, 1]);
+    assert_eq!(esn.state().shape(), &[16, 1]);
 }

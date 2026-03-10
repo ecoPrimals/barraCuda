@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Color Jitter - Image data augmentation - Pure WGSL
 //!
 //! **Deep Debt Principles**:

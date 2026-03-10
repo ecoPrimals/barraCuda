@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! GPU HMC leapfrog integration: momentum kick, link update, momentum generation.
 
 use crate::device::WgpuDevice;

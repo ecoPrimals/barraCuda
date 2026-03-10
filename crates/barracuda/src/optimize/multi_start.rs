@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Multi-start Nelder-Mead optimization with evaluation recording
 //!
 //! Runs Nelder-Mead simplex from multiple initial guesses (generated via

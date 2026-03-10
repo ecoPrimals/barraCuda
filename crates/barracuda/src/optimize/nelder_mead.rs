@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Nelder-Mead simplex optimization algorithm
 
 use crate::error::{BarracudaError, Result};

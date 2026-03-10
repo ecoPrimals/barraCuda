@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Unified Tensor abstraction — hardware-agnostic tensor compute.
 //!
 //! - Single `Tensor` type works on any device

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Filter — full GPU stream compaction (predicate → prefix sum → scatter)
 //!
 //! ## Algorithm (single-level, n ≤ 65,536)

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! LAMB - Layer-wise Adaptive Moments optimizer for Batch training (Pure WGSL)
 //!
 //! Enables large batch training (e.g., BERT with 64K batch size)

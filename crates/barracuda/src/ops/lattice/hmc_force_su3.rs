@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! SU(3) HMC gauge force GPU operator (Wilson action, 4D lattice).
 //!
 //! Computes the force on every link `U_mu(x)` from the Wilson plaquette action:

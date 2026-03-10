@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Numerical gradient computation via finite differences
 
 /// Compute numerical gradient using finite difference stencils

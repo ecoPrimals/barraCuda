@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Born-Mayer Force Calculation
 //!
 //! **Physics**: Hard-core repulsion (ionic crystals, close approach)

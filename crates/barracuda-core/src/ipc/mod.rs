@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Inter-Primal Communication (IPC) for barraCuda.
 //!
 //! Implements JSON-RPC 2.0 per wateringHole `PRIMAL_IPC_PROTOCOL.md` and

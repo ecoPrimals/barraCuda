@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Runge-Kutta Stage Evaluation — CPU-Orchestrated RK4/RK45
 //!
 //! Single-trajectory ODE integration with Dormand-Prince adaptive stepping.

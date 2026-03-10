@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! FHE Polynomial Subtraction Operation
 //!
 //! **Purpose**: Subtract two FHE ciphertext polynomials on GPU

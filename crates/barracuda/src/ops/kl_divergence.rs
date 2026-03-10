@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! KL Divergence - GPU-accelerated Kullback-Leibler divergence
 //!
 //! **Deep Debt Principles**:

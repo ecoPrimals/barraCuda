@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Cell List for O(N) Neighbor Search
 //!
 //! Spatial hashing algorithm that reduces force computation from O(N²) to O(N)

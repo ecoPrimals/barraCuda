@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Sovereign compute backend via coralReef's `coral-gpu` crate.
 //!
 //! `CoralReefDevice` provides WGSL → native binary compilation and GPU
@@ -29,6 +29,7 @@
 
 use super::backend::{DispatchDescriptor, GpuBackend};
 use crate::error::{BarracudaError, Result};
+use std::sync::Arc;
 
 /// Buffer handle for the sovereign compute path.
 ///
@@ -52,7 +53,7 @@ pub struct CoralBuffer {
 /// standalone WGSL → native compilation. In dispatch mode (hardware
 /// attached), provides the full alloc/upload/dispatch/readback cycle.
 pub struct CoralReefDevice {
-    name: String,
+    name: Arc<str>,
     #[cfg(feature = "sovereign-dispatch")]
     ctx: std::sync::Mutex<coral_gpu::GpuContext>,
     #[cfg(feature = "sovereign-dispatch")]
@@ -83,7 +84,7 @@ impl CoralReefDevice {
             BarracudaError::Device(format!("CoralReefDevice: context init failed: {e}"))
         })?;
         Ok(Self {
-            name: format!("coralReef:sovereign:{target:?}"),
+            name: Arc::from(format!("sovereign:{target:?}").as_str()),
             ctx: std::sync::Mutex::new(ctx),
             has_device: false,
         })
@@ -103,7 +104,7 @@ impl CoralReefDevice {
             BarracudaError::Device(format!("CoralReefDevice: auto-detect failed: {e}"))
         })?;
         Ok(Self {
-            name: "coralReef:sovereign:auto".to_owned(),
+            name: Arc::from("sovereign:auto"),
             ctx: std::sync::Mutex::new(ctx),
             has_device: true,
         })
@@ -123,7 +124,7 @@ impl CoralReefDevice {
             BarracudaError::Device(format!("CoralReefDevice: descriptor failed: {e}"))
         })?;
         Ok(Self {
-            name: format!("coralReef:sovereign:{vendor}:{}", arch.unwrap_or("auto")),
+            name: Arc::from(format!("sovereign:{vendor}:{}", arch.unwrap_or("auto")).as_str()),
             ctx: std::sync::Mutex::new(ctx),
             has_device: true,
         })
@@ -307,7 +308,7 @@ mod tests {
     fn device_creation_compile_only() {
         let target = coral_gpu::GpuTarget::Nvidia(coral_gpu::NvArch::Sm70);
         let dev = CoralReefDevice::new(target).expect("device creation");
-        assert!(dev.name().contains("coralReef"));
+        assert!(dev.name().contains("sovereign"));
         assert!(dev.has_f64_shaders());
         assert!(!dev.is_lost());
         assert!(!dev.has_dispatch());

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Verlet Neighbor List for Molecular Dynamics
 //!
 //! Maintains an explicit per-particle neighbor list with a skin radius,

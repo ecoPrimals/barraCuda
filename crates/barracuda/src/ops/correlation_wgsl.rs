@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Pearson Correlation Coefficient — GPU-Accelerated via WGSL
 //!
 //! Computes Pearson correlation: r = Σ(x-μx)(y-μy) / (σx·σy·n)

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Basic GPU pool with round-robin workload routing and semaphore-based concurrency.
 
 use super::topology::{GpuDriver, GpuInfo, GpuVendor, WorkloadType};
@@ -38,16 +38,7 @@ impl GpuPool {
                 continue;
             }
 
-            let gflops = if vendor == GpuVendor::Software {
-                10.0
-            } else {
-                match adapter.device_type {
-                    wgpu::DeviceType::DiscreteGpu => 1000.0,
-                    wgpu::DeviceType::IntegratedGpu => 200.0,
-                    wgpu::DeviceType::Cpu => 50.0,
-                    _ => 100.0,
-                }
-            };
+            let gflops = super::estimate_gflops(vendor, adapter.device_type);
 
             if gflops < config.min_gflops {
                 continue;

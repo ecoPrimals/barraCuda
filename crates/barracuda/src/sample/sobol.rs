@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Sobol quasi-random sequences
 //!
 //! Sobol sequences are low-discrepancy sequences that provide more uniform

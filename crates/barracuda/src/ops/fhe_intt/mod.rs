@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! FHE Inverse Number Theoretic Transform (INTT) Operation
 //!
 //! **Purpose**: Convert NTT-domain polynomial back to coefficient domain

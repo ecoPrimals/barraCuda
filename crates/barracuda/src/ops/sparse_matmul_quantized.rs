@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Sparse matrix multiplication with quantization
 //!
 //! Performs matrix multiplication with sparse matrices and quantized values.

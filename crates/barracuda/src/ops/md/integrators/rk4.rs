@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Runge-Kutta 4th Order Time Integration
 //!
 //! **Physics**: 4th-order accurate general ODE solver

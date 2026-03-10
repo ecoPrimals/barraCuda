@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Fused Pearson correlation (f64) — 5-accumulator single-pass, GPU-resident
 //!
 //! Evolved from multi-dispatch mean→deviation→covariance to a single fused

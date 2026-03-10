@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Newton-Raphson root-finding algorithm
 //!
 //! Finds roots of f(x) = 0 using Newton's method with optional numerical

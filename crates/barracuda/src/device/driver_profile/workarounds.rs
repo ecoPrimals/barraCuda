@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Driver workarounds — known bugs and their mitigations.
 //!
 //! Consolidates workaround detection and allocation limits for drivers
@@ -27,6 +27,17 @@ pub enum Workaround {
     /// NVK has broken or imprecise sin/cos/tan for f64. Use Taylor series
     /// approximations (`sin_f64_safe`, `cos_f64_safe`) instead of native or polyfill.
     NvkSinCosF64Imprecise,
+    /// NVIDIA proprietary NVVM device poisoning: DF64 or `F64Precise` shaders
+    /// containing f64 transcendentals (exp, log, pow) cause an unrecoverable
+    /// NVVM compilation failure that permanently invalidates the wgpu device.
+    /// All subsequent buffer creation, dispatch, and readback panic with
+    /// "Buffer is invalid". Only recovery is process restart.
+    ///
+    /// Discovered by hotSpring v0.6.25 on RTX 3090 (Ampere, SM86). Affects
+    /// all NVIDIA proprietary driver architectures — the NVVM compiler cannot
+    /// handle f64 transcendentals in DF64 (f32-pair rewrite) or `F64Precise`
+    /// (no-FMA) compilation modes. NVK (Mesa) is unaffected.
+    NvvmDf64TranscendentalPoisoning,
 }
 
 /// Detect which workarounds apply for the given driver/arch combination.
@@ -38,8 +49,11 @@ pub(crate) fn detect_workarounds(driver: DriverKind, arch: GpuArch) -> Vec<Worka
         w.push(Workaround::NvkLargeBufferLimit);
         w.push(Workaround::NvkSinCosF64Imprecise);
     }
-    if driver == DriverKind::NvidiaProprietary && arch == GpuArch::Ada {
-        w.push(Workaround::NvvmAdaF64Transcendentals);
+    if driver == DriverKind::NvidiaProprietary {
+        if arch == GpuArch::Ada {
+            w.push(Workaround::NvvmAdaF64Transcendentals);
+        }
+        w.push(Workaround::NvvmDf64TranscendentalPoisoning);
     }
     w
 }

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Auto-Tuning Runtime for `BarraCuda`
 //!
 //! Discovers optimal GPU parameters at runtime through calibration.

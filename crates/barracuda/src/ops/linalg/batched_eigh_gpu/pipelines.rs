@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Pipelines and bind group layouts for Jacobi eigh (shared by slices and buffer APIs)
 
 use crate::device::WgpuDevice;

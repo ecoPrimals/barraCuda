@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Akida NPU Executor for Neuromorphic Operations
 //!
 //! Routes neuromorphic operations to Akida hardware for efficient execution.
@@ -336,26 +336,22 @@ impl AkidaExecutor {
         // Pure Rust STDP implementation
         // Key: Built-in learning rule, minimal computation
 
-        let mut weights = vec![1.0f32; pre_spikes.len()];
-
-        for i in 0..pre_spikes.len() {
-            // STDP rule: strengthen if pre→post, weaken if post→pre
-            let delta = if pre_spikes[i] > 0 && post_spikes[i] > 0 {
-                // Coincidence detection
-                learning_rate * 0.1
-            } else if pre_spikes[i] > post_spikes[i] {
-                // Pre before post → potentiate
-                learning_rate
-            } else if post_spikes[i] > pre_spikes[i] {
-                // Post before pre → depress
-                -learning_rate * 0.5
-            } else {
-                0.0
-            };
-
-            weights[i] += delta;
-            weights[i] = weights[i].clamp(0.0, 2.0); // Clamp to valid range
-        }
+        let weights: Vec<f32> = pre_spikes
+            .iter()
+            .zip(post_spikes)
+            .map(|(&pre, &post)| {
+                let delta = if pre > 0 && post > 0 {
+                    learning_rate * 0.1
+                } else if pre > post {
+                    learning_rate
+                } else if post > pre {
+                    -learning_rate * 0.5
+                } else {
+                    0.0
+                };
+                (1.0 + delta).clamp(0.0, 2.0)
+            })
+            .collect();
 
         tracing::trace!(
             "Akida STDP: {} weights updated (board {})",

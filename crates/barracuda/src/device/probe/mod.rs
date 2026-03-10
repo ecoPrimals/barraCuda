@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Runtime GPU capability probing for f64 built-in functions
 //!
 //! Dispatches tiny test shaders to empirically verify hardware capabilities
@@ -77,6 +77,10 @@ pub async fn probe_f64_builtins(device: &WgpuDevice) -> F64BuiltinCapabilities {
             break;
         }
     }
+
+    let profile = crate::device::driver_profile::GpuDriverProfile::from_device(device);
+    caps.df64_arith = true;
+    caps.df64_transcendentals_safe = !profile.has_nvvm_df64_poisoning_risk();
 
     insert_full_caps(key, caps);
     caps
@@ -163,12 +167,14 @@ mod tests {
     #[test]
     fn test_f64_caps_full() {
         let c = F64BuiltinCapabilities::full();
-        assert_eq!(c.native_count(), 10);
+        assert_eq!(c.native_count(), 12);
         assert!(c.can_compile_f64());
         assert!(!c.needs_exp_log_workaround());
         assert!(!c.needs_sin_f64_workaround());
         assert!(!c.needs_cos_f64_workaround());
         assert!(!c.needs_shared_mem_f64_workaround());
+        assert!(c.can_use_df64());
+        assert!(!c.needs_df64_transcendental_stripping());
     }
 
     #[test]
@@ -185,6 +191,8 @@ mod tests {
             fma: true,
             abs_min_max: true,
             shared_mem_f64: true,
+            df64_arith: true,
+            df64_transcendentals_safe: true,
         };
         assert_eq!(
             c.native_count(),
@@ -195,5 +203,21 @@ mod tests {
         assert!(c.needs_sin_f64_workaround());
         assert!(c.needs_cos_f64_workaround());
         assert!(c.needs_shared_mem_f64_workaround());
+    }
+
+    #[test]
+    fn test_df64_poisoning_risk() {
+        let mut c = F64BuiltinCapabilities::full();
+        c.df64_transcendentals_safe = false;
+        assert!(c.needs_df64_transcendental_stripping());
+        assert!(c.can_use_df64());
+    }
+
+    #[test]
+    fn test_no_df64_at_all() {
+        let mut c = F64BuiltinCapabilities::full();
+        c.df64_arith = false;
+        c.df64_transcendentals_safe = false;
+        assert!(!c.can_use_df64());
     }
 }

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! BESSEL K0 - Modified Bessel function of the third kind, order 0
 //!
 //! K₀(x) for cylindrical coordinate physics. Uses polynomial approximation

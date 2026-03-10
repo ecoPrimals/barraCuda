@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! barraCuda UniBin — single binary, multiple modes.
 //!
 //! Per wateringHole `UNIBIN_ARCHITECTURE_STANDARD.md` and
@@ -313,7 +313,7 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
 
         Commands::Version => {
             println!("barraCuda {}", env!("CARGO_PKG_VERSION"));
-            println!("License: AGPL-3.0-or-later");
+            println!("License: AGPL-3.0-only");
             println!("MSRV:    {}", env!("CARGO_PKG_RUST_VERSION"));
             println!("Arch:    {}", std::env::consts::ARCH);
             println!("OS:      {}", std::env::consts::OS);

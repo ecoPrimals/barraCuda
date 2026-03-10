@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `GCNConv` - Graph Convolutional Network (Pure WGSL)
 //!
 //! Standard GCN layer: H' = σ(D^{-1/2} A D^{-1/2} H W)

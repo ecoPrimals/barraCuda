@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Replication Pad - Pad by replicating edge values - Pure WGSL
 //!
 //! Deep Debt Principles:

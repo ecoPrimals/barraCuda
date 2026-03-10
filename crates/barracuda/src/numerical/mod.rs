@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Numerical methods for differentiation, integration, and ODEs
 //!
 //! This module provides standard numerical methods for computing

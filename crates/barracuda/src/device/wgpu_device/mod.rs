@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Pure WGSL device - hardware-agnostic compute via WebGPU
 //!
 //! **Pure WGSL Architecture**:
@@ -35,7 +35,7 @@ use std::time::Duration;
 /// hangs under instrumentation (llvm-cov) or when a software rasterizer
 /// stalls. The CPU sends work to the GPU and expects results within this
 /// window; exceeding it signals a driver-level stall, not a compute issue.
-fn poll_timeout() -> Option<Duration> {
+pub(crate) fn poll_timeout() -> Option<Duration> {
     static TIMEOUT: std::sync::LazyLock<Option<Duration>> = std::sync::LazyLock::new(|| {
         let secs: u64 = std::env::var("BARRACUDA_POLL_TIMEOUT_SECS")
             .ok()
@@ -46,6 +46,19 @@ fn poll_timeout() -> Option<Duration> {
         } else {
             Some(Duration::from_secs(secs))
         }
+    });
+    *TIMEOUT
+}
+
+/// Timeout for the dispatch semaphore before falling back to a blocking acquire.
+/// Override with `BARRACUDA_DISPATCH_TIMEOUT_SECS` (default: 30).
+fn dispatch_semaphore_timeout() -> Duration {
+    static TIMEOUT: std::sync::LazyLock<Duration> = std::sync::LazyLock::new(|| {
+        let secs: u64 = std::env::var("BARRACUDA_DISPATCH_TIMEOUT_SECS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(30);
+        Duration::from_secs(secs)
     });
     *TIMEOUT
 }
@@ -77,6 +90,9 @@ pub struct WgpuDevice {
     active_encoders: Arc<std::sync::atomic::AtomicU32>,
     /// Limits concurrent dispatches based on device capability.
     dispatch_semaphore: Arc<DispatchSemaphore>,
+    /// Optional VRAM quota tracker — when set, buffer allocations are checked
+    /// against the budget before proceeding. `None` means unlimited.
+    quota_tracker: Option<Arc<crate::resource_quota::QuotaTracker>>,
 }
 
 impl GpuDeviceForCalibration for WgpuDevice {
@@ -116,6 +132,40 @@ impl WgpuDevice {
     #[must_use]
     pub fn is_lost(&self) -> bool {
         self.lost.load(Ordering::Acquire)
+    }
+
+    /// Attach a VRAM quota tracker to this device.
+    ///
+    /// Once set, all buffer allocations through the canonical helpers
+    /// (`create_buffer_f32`, `create_buffer_f64`, etc.) will be checked
+    /// against the budget before proceeding.
+    pub fn set_quota_tracker(&mut self, tracker: Arc<crate::resource_quota::QuotaTracker>) {
+        self.quota_tracker = Some(tracker);
+    }
+
+    /// Current quota tracker, if any.
+    #[must_use]
+    pub fn quota_tracker(&self) -> Option<&Arc<crate::resource_quota::QuotaTracker>> {
+        self.quota_tracker.as_ref()
+    }
+
+    /// Check the VRAM quota and record the allocation. No-op if no tracker is set.
+    pub(crate) fn quota_try_allocate(&self, bytes: u64) -> Result<()> {
+        if let Some(tracker) = &self.quota_tracker {
+            tracker.try_allocate(bytes)?;
+        }
+        Ok(())
+    }
+
+    /// Record a buffer deallocation against the VRAM quota. No-op if no tracker is set.
+    ///
+    /// Callers should invoke this when a tracked buffer is dropped or returned
+    /// to a pool. Currently called by `DeviceLease` and by buffer-drop hooks
+    /// when a `QuotaTracker` is attached.
+    pub fn quota_deallocate(&self, bytes: u64) {
+        if let Some(tracker) = &self.quota_tracker {
+            tracker.deallocate(bytes);
+        }
     }
 
     /// Check if f64 shaders are truly available on this device.
@@ -360,14 +410,13 @@ impl WgpuDevice {
     /// warning.  This provides observability into dispatch stalls without
     /// changing correctness: the operation always completes.
     pub fn submit_and_poll(&self, commands: impl IntoIterator<Item = wgpu::CommandBuffer>) {
-        let _permit = if let Some(p) = self
-            .dispatch_semaphore
-            .try_acquire_timeout(std::time::Duration::from_secs(30))
-        {
+        let timeout = dispatch_semaphore_timeout();
+        let _permit = if let Some(p) = self.dispatch_semaphore.try_acquire_timeout(timeout) {
             p
         } else {
             tracing::warn!(
-                "dispatch semaphore saturated for 30s ({} permits) — blocking until available",
+                "dispatch semaphore saturated for {}s ({} permits) — blocking until available",
+                timeout.as_secs(),
                 self.dispatch_semaphore.max_permits(),
             );
             self.dispatch_semaphore.acquire()

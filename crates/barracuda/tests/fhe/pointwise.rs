@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Point-wise multiplication unit tests (NTT domain).
 
 #![expect(clippy::unwrap_used, reason = "tests")]

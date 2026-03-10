@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `AdaDelta` Optimizer - GPU-accelerated adaptive learning rate optimizer
 //!
 //! **Deep Debt Principles**:

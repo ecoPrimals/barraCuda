@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Renorm - Renormalize with max norm constraint (Pure WGSL)
 //!
 //! Clamps L2 norm of vectors to maximum value

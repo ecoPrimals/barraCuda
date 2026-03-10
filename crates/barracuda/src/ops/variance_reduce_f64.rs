@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Variance/Std Reduction (f64) — GPU-Accelerated via WGSL
 //!
 //! Computes variance and standard deviation of f64 arrays using
@@ -62,23 +62,20 @@ impl WelfordState {
 /// Native f64 variance-reduce shader (workgroup shared memory uses f64).
 const SHADER_NATIVE: &str = include_str!("../shaders/reduce/variance_reduce_f64.wgsl");
 /// DF64 variance-reduce shader (workgroup shared memory uses f32 pairs).
+/// Compiled via `compile_shader_df64` which prepends the DF64 core preamble.
 const SHADER_DF64: &str = include_str!("../shaders/reduce/variance_reduce_df64.wgsl");
-/// DF64 core arithmetic library.
-const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
 
-/// Select the variance-reduce shader based on the device's FP64 strategy.
+/// Select the variance-reduce shader and compilation mode based on the device's FP64 strategy.
 ///
-/// Native/Concurrent/Sovereign: native f64 workgroup memory is reliable.
-/// Hybrid: f64 shared memory returns zeros on some devices; use DF64.
-fn shader_for_device(device: &WgpuDevice) -> &'static str {
+/// Native/Concurrent/Sovereign: native f64 workgroup memory is reliable → `.f64()`.
+/// Hybrid: f64 shared memory returns zeros on some devices → DF64 source + `.df64()`.
+fn shader_config_for_device(device: &WgpuDevice) -> (&'static str, bool) {
     let profile = GpuDriverProfile::from_device(device);
     match profile.fp64_strategy() {
-        Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => SHADER_NATIVE,
-        Fp64Strategy::Hybrid => {
-            static DF64_COMBINED: std::sync::LazyLock<String> =
-                std::sync::LazyLock::new(|| format!("enable f64;\n{DF64_CORE}\n{SHADER_DF64}"));
-            &DF64_COMBINED
+        Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => {
+            (SHADER_NATIVE, false)
         }
+        Fp64Strategy::Hybrid => (SHADER_DF64, true),
     }
 }
 
@@ -182,7 +179,7 @@ impl VarianceReduceF64 {
             });
         }
 
-        let shader_src = shader_for_device(&device);
+        let (shader_src, use_df64) = shader_config_for_device(&device);
 
         let n = data.len();
         let wg_size = WORKGROUP_SIZE_1D as usize;
@@ -212,14 +209,18 @@ impl VarianceReduceF64 {
         };
         let params_buffer = device.create_uniform_buffer("VarianceReduce params", &params);
 
-        ComputeDispatch::new(&device, "variance_reduce_f64")
+        let mut dispatch = ComputeDispatch::new(&device, "variance_reduce_f64")
             .shader(shader_src, "variance_reduce_f64")
-            .f64()
             .storage_read(0, &input_buffer)
             .storage_rw(1, &partial_buffer)
             .uniform(2, &params_buffer)
-            .dispatch(n_workgroups as u32, 1, 1)
-            .submit()?;
+            .dispatch(n_workgroups as u32, 1, 1);
+        dispatch = if use_df64 {
+            dispatch.df64()
+        } else {
+            dispatch.f64()
+        };
+        dispatch.submit()?;
 
         let partials = device.read_f64_buffer(&partial_buffer, n_workgroups * 3)?;
 

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `BatchedOdeRK4F64` — full-GPU parameter sweep for structured ODE systems.
 //!
 //! Extracted from `rk_stage.rs` (was D-S15-001 debt item): the single-trajectory

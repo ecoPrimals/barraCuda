@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Fused Chi-Squared Test (f64) — neuralSpring V24
 //!
 //! Fused chi-squared test: computes observed vs expected, chi-squared statistic,

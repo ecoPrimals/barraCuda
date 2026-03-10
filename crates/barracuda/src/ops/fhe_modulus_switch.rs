@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! FHE Modulus Switching Operation
 //!
 //! **Purpose**: Reduce ciphertext noise by switching to a smaller modulus

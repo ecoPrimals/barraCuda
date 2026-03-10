@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! f64 triangular solve (science-grade precision)
 
 use super::f32::TriangularSolve;

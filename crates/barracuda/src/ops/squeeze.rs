@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Squeeze operation - Remove dimensions of size 1
 //! Pure WGSL implementation
 

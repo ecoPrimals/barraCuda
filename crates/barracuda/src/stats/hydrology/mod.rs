@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Hydrological primitives for environmental and agricultural computing.
 //!
 //! | Function | Reference | Use case |

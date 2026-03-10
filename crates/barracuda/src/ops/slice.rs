@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Slice operation - Pure WGSL
 
 use crate::device::{DeviceCapabilities, WorkloadType};

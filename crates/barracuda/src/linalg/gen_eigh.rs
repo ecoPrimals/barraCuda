@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Generalized Symmetric Eigenvalue Problem (f64 CPU)
 //!
 //! Solves the generalized eigenvalue problem: Ax = λBx

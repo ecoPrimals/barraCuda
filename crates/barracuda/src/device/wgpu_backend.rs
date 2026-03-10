@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `GpuBackend` implementation for `WgpuDevice`.
 //!
 //! Delegates to existing `WgpuDevice` methods. The dispatch path moves the

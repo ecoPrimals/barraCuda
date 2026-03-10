@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `PixelShuffle` - Pixel Shuffle (Depth to Space)
 //!
 //! **Deep Debt Principles**:

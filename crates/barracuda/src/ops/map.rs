@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Map Operation - Element-wise transformations
 //!
 //! **Deep Debt Evolution**: Modernized from trait-based to direct `impl Tensor`

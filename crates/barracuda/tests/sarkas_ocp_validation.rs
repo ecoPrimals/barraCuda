@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 
 //! Sarkas OCP Validation — 3 Representative PP Yukawa DSF Cases.
 //!

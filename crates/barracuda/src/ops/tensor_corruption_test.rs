@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Tensor 3D corruption investigation test
 //!
 //! Minimal reproduction for Tensor::from_data 3D array corruption bug

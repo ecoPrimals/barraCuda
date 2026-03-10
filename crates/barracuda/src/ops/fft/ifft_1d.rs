@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Inverse 1D Fast Fourier Transform Operation
 //!
 //! **Purpose**: Transform from frequency domain back to time/spatial domain

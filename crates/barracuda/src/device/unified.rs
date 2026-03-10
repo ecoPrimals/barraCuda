@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Unified Device Abstraction - Phase 2
 //!
 //! **EVOLVED**: Single Device enum for ALL hardware types!

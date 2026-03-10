@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Penalty filtering and surrogate quality utilities.
 
 use super::config::PenaltyFilter;

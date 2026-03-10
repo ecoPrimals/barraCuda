@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Precision guard constants for GPU numerical safety.
 //!
 //! GPU f64 division-by-zero is the primary NaN source across all spring

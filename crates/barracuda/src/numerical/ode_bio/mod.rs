@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Biological ODE system implementations for [`BatchedOdeRK4`].
 //!
 //! Absorbed from wetSpring's 5 quorum-sensing and microbial ecology models

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Tests for Multi-Head Attention
 //!
 //! Validates projection, attention, and cross-attention functionality.

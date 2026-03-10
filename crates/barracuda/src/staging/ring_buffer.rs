@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! GPU Ring Buffer for Streaming Data
 //!
 //! A lock-free ring buffer for staging data between CPU and GPU
@@ -442,7 +442,7 @@ impl GpuRingBuffer {
         });
         let _ = self.device.device.poll(wgpu::PollType::Wait {
             submission_index: None,
-            timeout: Some(std::time::Duration::from_secs(30)),
+            timeout: crate::device::wgpu_device::poll_timeout(),
         });
 
         rx.await

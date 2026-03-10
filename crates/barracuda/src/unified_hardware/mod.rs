@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Unified Hardware Base — Universal Compute Abstraction
 //!
 //! Hardware executes math, math doesn't know hardware.
@@ -23,7 +23,8 @@ pub use scheduler::ComputeScheduler;
 pub use traits::{ComputeExecutor, TensorStorage};
 pub use transfer::{
     BandwidthTier, GPU_DISPATCH_OVERHEAD_US, MixedSubstrate, PCIE_DMA_LATENCY_US,
-    PCIE4_X16_BANDWIDTH_GBPS, PcieBridge, TransferCost, mixed_substrate, mixed_substrate_with_tier,
+    PCIE4_X16_BANDWIDTH_GBPS, PcieBridge, PcieLinkInfo, TransferCost, mixed_substrate,
+    mixed_substrate_with_tier,
 };
 pub use types::{
     HardwareCapabilities, HardwareType, MemoryCapabilities, OperationCapabilities,
@@ -326,11 +327,43 @@ mod tests {
     }
 
     #[test]
-    fn test_pcie_bridge_detect_p2p_returns_false() {
+    fn test_pcie_bridge_detect_p2p_runs_without_panic() {
         let bridge = PcieBridge::detect_p2p();
-        assert!(!bridge.p2p_available);
-        assert_eq!(bridge.source_label, "gpu");
-        assert_eq!(bridge.target_label, "npu");
+        assert!(!bridge.source_label.is_empty());
+        assert!(!bridge.target_label.is_empty());
+    }
+
+    #[test]
+    fn test_pcie_link_info_bandwidth() {
+        let link = PcieLinkInfo {
+            bdf_address: "0000:01:00.0".to_string(),
+            pcie_gen: 4,
+            lane_width: 16,
+            numa_node: Some(0),
+            vendor_id: 0x10de,
+        };
+        let bw = link.bandwidth_gbps();
+        assert!((bw - 31.504).abs() < 1.0);
+        assert_eq!(link.bandwidth_tier(), BandwidthTier::PciE4x16);
+    }
+
+    #[test]
+    fn test_pcie_link_info_narrow_link() {
+        let link = PcieLinkInfo {
+            bdf_address: "0000:03:00.0".to_string(),
+            pcie_gen: 3,
+            lane_width: 4,
+            numa_node: None,
+            vendor_id: 0x10de,
+        };
+        let bw = link.bandwidth_gbps();
+        assert!(bw < 5.0);
+        assert_eq!(link.bandwidth_tier(), BandwidthTier::Unknown);
+    }
+
+    #[test]
+    fn test_pcie_probe_all_gpus_does_not_panic() {
+        let _links = PcieLinkInfo::probe_all_gpus();
     }
 
     #[test]

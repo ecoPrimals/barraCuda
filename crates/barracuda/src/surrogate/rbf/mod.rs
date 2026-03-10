@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Radial basis function surrogate for expensive function approximation
 
 use super::kernels::RBFKernel;
@@ -393,19 +393,17 @@ impl RBFSurrogate {
             DistanceMetric::Euclidean,
         )?;
 
-        // Build K_raw (kernel matrix WITHOUT smoothing)
-        let mut k_raw = vec![0.0; n * n];
+        // Build K_smooth = K(d) + λI in a single pass (avoids cloning the n×n matrix).
+        // K_raw[i,j] values are still accessible as k_smooth[i,j] - λ·δ_ij when needed.
+        let mut k_smooth = vec![0.0; n * n];
         for i in 0..n {
             for j in 0..n {
-                k_raw[i * n + j] = self.kernel.eval(distances[i * n + j]);
+                k_smooth[i * n + j] = self.kernel.eval(distances[i * n + j]);
             }
-        }
-
-        // Build K_smooth = K_raw + λI (kernel matrix WITH smoothing)
-        let mut k_smooth = k_raw.clone();
-        for i in 0..n {
             k_smooth[i * n + i] += self.smoothing;
         }
+
+        // Reconstruct K_raw[i,:] on-the-fly below instead of storing a separate copy.
 
         // Compute H_ii for each point
         // H = K_raw · (K_smooth)⁻¹
@@ -423,8 +421,17 @@ impl RBFSurrogate {
             // Solve K_smooth · w = e_i on GPU
             let w = solve_f64(self.device.clone(), &k_smooth, &e_i, n)?;
 
-            // H_ii = K_raw[i,:] · w (dot product)
-            let h_ii: f64 = (0..n).map(|j| k_raw[i * n + j] * w[j]).sum();
+            // H_ii = K_raw[i,:] · w — derive K_raw from K_smooth (K_raw = K_smooth - λI)
+            let h_ii: f64 = (0..n)
+                .map(|j| {
+                    let k_raw_ij = if i == j {
+                        k_smooth[i * n + j] - self.smoothing
+                    } else {
+                        k_smooth[i * n + j]
+                    };
+                    k_raw_ij * w[j]
+                })
+                .sum();
             h_diag.push(h_ii);
         }
 

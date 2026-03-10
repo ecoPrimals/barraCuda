@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Multi-Kernel Pipeline — GPU Operation Chaining Without CPU Round-Trips
 //!
 //! Enables chaining GPU operations where the output buffer of one operation

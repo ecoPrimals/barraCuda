@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Performance regression tests for FHE shaders.
 
 #![expect(clippy::unwrap_used, reason = "tests")]

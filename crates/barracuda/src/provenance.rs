@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Cross-Spring Provenance Tags (L-005)
 //!
 //! Metadata for absorbed code by capability domain (`lattice_qcd`, `marine_bio`,

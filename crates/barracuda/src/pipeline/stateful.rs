@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Stateful pipeline — day-over-day state tracking for water balance (airSpring V039).
 //!
 //! Soil moisture from day N becomes input for day N+1.

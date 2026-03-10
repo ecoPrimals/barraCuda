@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Green's Function for PPPM
 //!
 //! The Green's function G(k) transforms charge density in k-space to potential:

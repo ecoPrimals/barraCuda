@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Spatial Interpolation (Ordinary Kriging) at f64 precision
 //!
 //! UNIFIED PATTERN (Feb 16 2026) — Serves multiple springs:

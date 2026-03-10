@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Surrogate modeling for expensive function approximation
 //!
 //! This module provides radial basis function (RBF) surrogates for

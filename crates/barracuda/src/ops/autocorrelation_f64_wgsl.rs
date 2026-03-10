@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! General 1D autocorrelation (f64) — single GPU dispatch for all lags
 //!
 //! Computes C(lag) = (1/(N-lag)) × Σ x\[t\] × x\[t+lag\] for lags `0..max_lag`.

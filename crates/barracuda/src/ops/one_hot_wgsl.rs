@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! One-hot - Convert indices to one-hot vectors - Pure WGSL
 //!
 //! Deep Debt Principles:

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! CPU reference implementations for Coulomb force (test/validation only).
 //!
 //! Production always dispatches to GPU shaders. These implementations

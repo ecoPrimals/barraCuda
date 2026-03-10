@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `TensorSession` — `SessionPipelines` cache
 //!
 //! All compute pipelines compiled **once** at session construction.

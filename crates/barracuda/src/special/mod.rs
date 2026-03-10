@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Special mathematical functions
 //!
 //! This module provides special functions commonly needed in scientific

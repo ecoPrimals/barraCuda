@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Domain types for cross-spring shader provenance tracking.
 
 /// Capability-based domain identifier for shader provenance.

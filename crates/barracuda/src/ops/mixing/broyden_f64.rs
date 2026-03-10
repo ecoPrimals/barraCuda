@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Broyden Mixing GPU Implementation (f64)
 //!
 //! GPU-accelerated vector mixing for SCF convergence.
@@ -442,8 +442,8 @@ impl BroydenMixer {
             }
             let dx_k = &self.dx_history[k];
             let df_k = &self.df_history[k];
-            for i in 0..result.len() {
-                result[i] -= gamma_k * (dx_k[i] + alpha * df_k[i]);
+            for ((r, &dx), &df) in result.iter_mut().zip(dx_k.iter()).zip(df_k.iter()) {
+                *r -= gamma_k * (dx + alpha * df);
             }
         }
 

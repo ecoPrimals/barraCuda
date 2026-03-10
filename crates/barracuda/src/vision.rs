@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! High-level Computer Vision API
 //!
 //! Production-ready interface for image processing, preprocessing, and vision pipelines.

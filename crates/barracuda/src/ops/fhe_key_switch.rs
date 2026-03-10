@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! FHE Key Switching Operation
 //!
 //! **Purpose**: Re-encrypt ciphertext under a different secret key

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Extended SU(3) WGSL library: reunitarize, `exp_cayley`, random generation.
 //!
 //! Depends on `complex_f64` + su3 + `lcg_f64`.

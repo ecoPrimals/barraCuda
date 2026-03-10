@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Pad - Add padding to tensor - Pure WGSL
 //!
 //! Deep Debt Principles:

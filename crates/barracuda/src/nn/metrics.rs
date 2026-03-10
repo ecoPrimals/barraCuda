@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Training and Evaluation Metrics
 //!
 //! Runtime metrics collection for neural network training.

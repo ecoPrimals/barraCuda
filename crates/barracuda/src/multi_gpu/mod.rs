@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Multi-GPU Workload Distribution
 //!
 //! Provides load balancing and parallel execution across multiple GPUs.
@@ -66,3 +66,39 @@ pub use types::{DeviceInfo, DeviceRequirements, WorkloadConfig};
 
 // Pool implementations and leases
 pub use strategy::{DeviceLease, GpuPool, MultiDevicePool};
+
+/// Bytes per gibibyte for VRAM estimates.
+const BYTES_PER_GIB: u64 = 1024 * 1024 * 1024;
+
+/// Conservative GFLOPS estimate when runtime probing is unavailable.
+///
+/// Values are lower bounds by vendor and device class. The scheduler always
+/// prefers runtime-probed metrics when available; these exist only so device
+/// scoring never divides by zero.
+pub(crate) fn estimate_gflops(vendor: GpuVendor, device_type: wgpu::DeviceType) -> f64 {
+    match (vendor, device_type) {
+        (GpuVendor::Software, _) => 10.0,
+        (GpuVendor::Nvidia, wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::Other) => 5_000.0,
+        (GpuVendor::Amd, wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::Other) => 4_000.0,
+        (_, wgpu::DeviceType::DiscreteGpu) => 1_000.0,
+        (_, wgpu::DeviceType::IntegratedGpu) => 200.0,
+        (_, wgpu::DeviceType::Cpu) => 50.0,
+        _ => 100.0,
+    }
+}
+
+/// Conservative VRAM estimate when runtime probing is unavailable.
+pub(crate) fn estimate_vram_bytes(vendor: GpuVendor, device_type: wgpu::DeviceType) -> u64 {
+    match (vendor, device_type) {
+        (GpuVendor::Software, _) | (_, wgpu::DeviceType::Cpu) => 0,
+        (GpuVendor::Nvidia, wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::Other) => {
+            12 * BYTES_PER_GIB
+        }
+        (GpuVendor::Amd, wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::Other) => {
+            16 * BYTES_PER_GIB
+        }
+        (_, wgpu::DeviceType::DiscreteGpu) => 8 * BYTES_PER_GIB,
+        (_, wgpu::DeviceType::IntegratedGpu) => 2 * BYTES_PER_GIB,
+        _ => 4 * BYTES_PER_GIB,
+    }
+}

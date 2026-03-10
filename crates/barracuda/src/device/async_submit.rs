@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Async Submission System for `BarraCuda`
 //!
 //! Provides non-blocking GPU submission with operation batching.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Capability-based runtime discovery of shader-compiler primals.
 
 use std::path::PathBuf;
@@ -37,7 +37,7 @@ const LEGACY_DISCOVERY_FILENAME: &str = "shader-compiler.json";
 ///    `"shader.compile"` in the `capabilities` array (falls back to legacy
 ///    `"shader_compiler"` for pre-Phase 10 primals)
 /// 3. Localhost probe on `BARRACUDA_SHADER_COMPILER_PORT` (only if set)
-pub async fn discover_coralreef() -> Option<String> {
+pub async fn discover_shader_compiler() -> Option<String> {
     if let Ok(addr) = std::env::var(CORALREEF_ADDR_ENV) {
         let addr = addr.trim().to_owned();
         if !addr.is_empty() && probe_jsonrpc(&addr).await {
@@ -73,7 +73,9 @@ pub async fn discover_coralreef() -> Option<String> {
 /// legacy `shader_compiler` capability name, then the well-known filename.
 async fn discover_from_file() -> Option<String> {
     let runtime_dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
-    let base_dir = PathBuf::from(runtime_dir).join("ecoPrimals");
+    let eco_dir =
+        std::env::var("ECOPRIMALS_DISCOVERY_DIR").unwrap_or_else(|_| "ecoPrimals".to_owned());
+    let base_dir = PathBuf::from(runtime_dir).join(eco_dir);
     let canonical_dir = base_dir.join("discovery");
 
     for dir in [&base_dir, &canonical_dir] {
@@ -159,7 +161,7 @@ pub async fn probe_jsonrpc(addr: &str) -> bool {
             tracing::debug!(
                 name = resp.name,
                 version = resp.version,
-                "coralReef health OK"
+                "shader compiler health OK"
             );
             true
         }
@@ -168,6 +170,109 @@ pub async fn probe_jsonrpc(addr: &str) -> bool {
             jsonrpc_call::<(), HealthResponse>(addr, "compiler.health", &())
                 .await
                 .is_ok()
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn read_jsonrpc_from_value_string_format() {
+        let info: serde_json::Value = serde_json::json!({
+            "transports": {
+                "jsonrpc": "127.0.0.1:5000"
+            }
+        });
+        assert_eq!(
+            read_jsonrpc_from_value(&info),
+            Some("127.0.0.1:5000".to_owned())
+        );
+    }
+
+    #[test]
+    fn read_jsonrpc_from_value_phase10_object_format() {
+        let info: serde_json::Value = serde_json::json!({
+            "transports": {
+                "jsonrpc": {
+                    "tcp": "127.0.0.1:5000",
+                    "path": "/run/ecoPrimals/shader-compiler.sock"
+                }
+            }
+        });
+        assert_eq!(
+            read_jsonrpc_from_value(&info),
+            Some("127.0.0.1:5000".to_owned())
+        );
+    }
+
+    #[test]
+    fn read_jsonrpc_from_value_no_transport() {
+        let info: serde_json::Value = serde_json::json!({
+            "name": "some-primal"
+        });
+        assert_eq!(read_jsonrpc_from_value(&info), None);
+    }
+
+    #[test]
+    fn read_capability_transport_provides_array() {
+        let dir = std::env::temp_dir().join("barracuda_test_discovery");
+        let _ = std::fs::create_dir_all(&dir);
+        let manifest = dir.join("test-shader-compiler.json");
+        std::fs::write(
+            &manifest,
+            serde_json::json!({
+                "provides": ["shader.compile", "shader.compile.wgsl"],
+                "transports": {
+                    "jsonrpc": "127.0.0.1:7777"
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let result = read_capability_transport(&manifest, "shader.compile");
+        assert_eq!(result, Some("127.0.0.1:7777".to_owned()));
+
+        let result = read_capability_transport(&manifest, "nonexistent");
+        assert_eq!(result, None);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn read_capability_transport_legacy_capabilities_array() {
+        let dir = std::env::temp_dir().join("barracuda_test_discovery_legacy");
+        let _ = std::fs::create_dir_all(&dir);
+        let manifest = dir.join("legacy-compiler.json");
+        std::fs::write(
+            &manifest,
+            serde_json::json!({
+                "capabilities": ["shader_compiler"],
+                "transports": {
+                    "jsonrpc": "127.0.0.1:8888"
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let result = read_capability_transport(&manifest, "shader_compiler");
+        assert_eq!(result, Some("127.0.0.1:8888".to_owned()));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn discover_returns_none_without_env() {
+        // Without the env var set and no running primals, discovery should
+        // return None gracefully — no panics.
+        let result = discover_shader_compiler().await;
+        // Can't assert None because a real primal might be running;
+        // just verify it doesn't panic.
+        if let Some(ref addr) = result {
+            assert!(!addr.is_empty());
         }
     }
 }

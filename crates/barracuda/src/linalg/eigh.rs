@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Symmetric Eigenvalue Decomposition (f64 CPU)
 //!
 //! Computes eigenvalues and eigenvectors of a symmetric matrix:

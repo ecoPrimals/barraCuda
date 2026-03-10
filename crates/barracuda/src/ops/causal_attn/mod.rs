@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Causal Attention - GPU-accelerated with causal masking
 //!
 //! **Deep Debt Principles**:

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! FMA Fusion Pass — Sovereign Compiler Phase 4.
 //!
 //! Walks a `naga::Arena<Expression>` and detects `Mul(a,b)` whose result

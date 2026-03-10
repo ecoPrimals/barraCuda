@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Unit Tests for FHE WGSL Shaders
 //!
 //! Entry point for the FHE test suite. Tests are organized by domain

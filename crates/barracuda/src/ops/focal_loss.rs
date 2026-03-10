@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Focal Loss - GPU-accelerated loss for imbalanced classification
 //!
 //! **Deep Debt Principles**:

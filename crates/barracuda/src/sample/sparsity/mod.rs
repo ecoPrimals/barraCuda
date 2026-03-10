@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Sparsity-based iterative surrogate sampling
 //!
 //! Implements the `SparsitySampler` algorithm from Diaw et al. (2024):

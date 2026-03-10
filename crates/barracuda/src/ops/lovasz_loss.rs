@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Lovasz Loss - GPU-accelerated IoU-optimized loss for segmentation
 //!
 //! **Deep Debt Principles**:

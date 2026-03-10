@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Put - Pure WGSL
 //!
 //! Deep Debt Principles:
@@ -86,11 +86,9 @@ impl Put {
         let output_size: usize = self.output.shape().iter().product();
         let num_values = self.values.shape().iter().product::<usize>();
 
-        // Create work buffer with initial output data (copy ensures correct format for GPU write)
         // Ensure minimum 32 bytes for WebGPU storage buffer binding requirements
-        let output_data = self.output.to_vec()?;
         let byte_size = (output_size * std::mem::size_of::<f32>()).max(32);
-        let mut work_contents = output_data.clone();
+        let mut work_contents = self.output.to_vec()?;
         work_contents.resize(byte_size / std::mem::size_of::<f32>(), 0.0);
         let work_buffer = device
             .device

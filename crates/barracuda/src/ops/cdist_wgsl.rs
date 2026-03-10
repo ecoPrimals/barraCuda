@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Cdist - Pairwise distance computation - Pure WGSL
 //!
 //! **Deep Debt Principles**:

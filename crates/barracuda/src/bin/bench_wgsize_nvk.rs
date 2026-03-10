@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Workgroup-size diagnostic for batched eigensolve across GPU drivers
 //!
 //! Measures performance of the warp-packed Jacobi batched eigensolve.

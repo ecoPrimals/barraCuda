@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! GPU Scalar Reduction Pipeline
 //!
 //! Promotes `sum_reduce_f64.wgsl` to a first-class pipeline primitive that

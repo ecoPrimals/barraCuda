@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Softmax activation — GPU-resident, pipeline-cached, batchable
 //!
 //! Formula: `softmax(x_i) = exp(x_i) / Σ exp(x_j)`

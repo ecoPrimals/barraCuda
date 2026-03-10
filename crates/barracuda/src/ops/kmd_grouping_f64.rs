@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `KmdGroupingF64` — Kendrick Mass Defect homologue grouping (f64)
 //!
 //! Computes `[KM, NKM, KMD]` per ion.  Ions with matching NKM and KMD within
@@ -242,11 +242,11 @@ fn bgl_entry(idx: u32, ty: wgpu::BufferBindingType) -> wgpu::BindGroupLayoutEntr
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
+    use crate::device::test_pool::get_test_device_if_f64_gpu_available;
 
     #[tokio::test]
     async fn test_kmd_ch2_series() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         // Simple alkane homologues: CH4 (16.0313), C2H6 (30.0469), C3H8 (44.0626)
@@ -271,7 +271,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_kmd_nkm_is_round() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         let (exact, nominal) = repeat_units::CF2;

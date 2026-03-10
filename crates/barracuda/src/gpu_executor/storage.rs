@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! GPU tensor storage for the `ComputeExecutor` scheduler interface.
 //!
 //! Holds a real `wgpu::Buffer` so that `read_to_cpu` / `write_from_cpu`

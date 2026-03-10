@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Hardware-Agnostic Echo State Network (ESN) API
 //!
 //! **EVOLVED v2**: Uses `BarraCuda` Tensors - Works on ANY hardware!

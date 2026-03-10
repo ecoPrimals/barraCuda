@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Cylindrical (ρ, z) gradient and Laplacian for axially symmetric problems
 //!
 //! Used for nuclear physics (deformed nuclei), fluid dynamics, etc.

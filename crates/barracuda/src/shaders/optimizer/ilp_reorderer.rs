@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Instruction-level parallelism (ILP) reorderer for WGSL `@ilp_region` blocks.
 //!
 //! Takes a `WgslDependencyGraph` and a `LatencyModel` and re-emits the

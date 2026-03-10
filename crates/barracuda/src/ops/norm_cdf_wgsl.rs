@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `NORM_CDF` - Normal distribution CDF and PDF - Pure WGSL
 //!
 //! Deep Debt Principles:

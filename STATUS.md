@@ -1,8 +1,8 @@
 # barraCuda Status
 
-**Version**: 0.3.3
-**Date**: 2026-03-09
-**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,262 tests, GpuBackend trait abstraction, sovereign dispatch scaffold, zero-copy bytemuck/Bytes, showcase collection with 9 progressive demos, all deps pure Rust, zero hardcoded workgroup sizes, zero orphaned code, toadStool S139 discovery aligned)
+**Version**: 0.3.4
+**Date**: 2026-03-10
+**Overall Grade**: A+ (Zero unsafe, pure safe Rust, all quality gates green, 3,249 tests, zero TODO/FIXME/unimplemented, NVVM poisoning guard, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust)
 
 ---
 
@@ -10,19 +10,19 @@
 
 | Category | Grade | Notes |
 |----------|-------|-------|
-| **Core compute** | A | 719 WGSL shaders, 13-tier tolerance architecture, GpuView persistent buffers with ops |
-| **Precision tiers** | A+ | 3-tier model (F32/F64/Df64) aligned with coralReef `Fp64Strategy`; DF64 naga-guided rewrite validated; probe-aware Fp64Strategy; DF64 reduce shaders for Hybrid devices |
-| **Sovereign compiler** | A | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all shaders |
+| **Core compute** | A+ | 794 WGSL shaders, 13-tier tolerance architecture, GpuView persistent buffers with ops, BGL builder pattern |
+| **Precision tiers** | A+ | 3-tier model (F32/F64/Df64) aligned with coralReef `Fp64Strategy`; DF64 naga-guided rewrite validated; probe-aware Fp64Strategy; DF64 reduce shaders correctly routed via `.df64()` on Hybrid devices; NVVM poisoning guard for proprietary NVIDIA DF64 transcendentals |
+| **Sovereign compiler** | A+ | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all 794 shaders via rayon parallel validation |
 | **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery; coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support |
-| **Device management** | A+ | `GpuBackend` trait abstraction, `CoralReefDevice` scaffold behind `sovereign-dispatch` feature, multi-GPU, capability-scored discovery, probe-aware f64 strategy, bounded poll timeout |
-| **Test coverage** | A | 3,262 tests (all pass on llvmpipe); proptest; chaos/fault test tiers; nextest CI/stress profiles; bounded GPU poll timeout; GPU-heavy test group with extended timeouts; coverage tests for batch_ipr, histogram, staging, precision/cpu, surrogate/adaptive; 4 drifted orphaned test dirs removed |
+| **Device management** | A+ | `GpuBackend` trait abstraction, `CoralReefDevice` scaffold behind `sovereign-dispatch` feature, multi-GPU with PCIe topology sysfs probing (`PcieLinkInfo`), capability-scored discovery, probe-aware f64 strategy, VRAM quota enforcement via `ResourceQuota`/`QuotaTracker`, bounded poll timeout |
+| **Test coverage** | A+ | 3,249 tests (all pass on llvmpipe); proptest; chaos/fault test tiers; nextest CI/stress profiles; optimised test pipeline (nautilus 14.3s→0.01s, sovereign 600+ shaders parallelised via rayon, ESN reservoir shrunk); zero `todo!()`/`unimplemented!()` |
 | **Dependencies** | A+ | All deps pure Rust (blake3 `pure`, wgpu/naga 28); zero application C deps; ecoBin compliant |
 | **Documentation** | A+ | Comprehensive CHANGELOG, specs, README, CONTRIBUTING, CONVENTIONS, BREAKING_CHANGES; all rustdoc warnings resolved; showcase/ with 9 progressive demos (local, IPC, cross-primal) |
 | **Unsafe code** | A+ | Zero `unsafe` blocks in entire codebase |
-| **Clippy / lint** | A+ | Zero warnings with pedantic + unwrap_used; `#[expect(reason)]` for clippy suppressions; `#[allow(dead_code, reason)]` for CPU reference implementations; `bytes::Bytes` zero-copy on I/O boundaries; zero undocumented suppressions |
+| **Clippy / lint** | A+ | Zero warnings with pedantic + unwrap_used; `#[expect(reason)]` for clippy suppressions; `#[allow(dead_code, reason)]` for CPU reference implementations; `bytes::Bytes` zero-copy on I/O boundaries; zero undocumented suppressions; zero `#[allow(dead_code)]` without reason |
 | **Error handling** | A+ | Binary `main()` uses typed `BarracudaCoreError` (not `Box<dyn Error>`); `From` impls for `serde_json::Error`, `BarracudaError`, `io::Error`; `Result` propagation throughout; `let-else` throughout; poison recovery |
 | **Idiomatic Rust** | A+ | Edition 2024; zero `too_many_arguments` (all 9 → builder/struct); documented `#[allow]`/`#[expect]` with reason; `#[derive(Default)]`; zero unsafe; `ChamferDirection` enum; smart module decomposition (provenance, coral_compiler) |
-| **Spring absorption** | A+ | Cross-spring P0/P1/P2 items resolved; healthSpring: Hill Emax, Population PK, tridiagonal QL, LCG PRNG; hotSpring: plasma dispersion; neuralSpring: activations, Wright-Fisher, head alignment; groundSpring: F64NativeNoSharedMem, DF64 reduce; wetSpring: builder re-exports, dot/l2_norm, `Rk45Result::variable_trajectory()`, `histogram_u32_to_f64()`; neuralSpring: `analyze_weight_matrix()` composite; toadStool S139: dual-scan discovery; confirmed: `regularized_gamma_q`, `r_squared()`, ET0 GPU all already present |
+| **Spring absorption** | A+ | All P0/P1/P2 items resolved; hotSpring: NVVM poisoning guard, plasma dispersion, LSCFRK; groundSpring: F64NativeNoSharedMem, DF64 reduce, shared `estimate_gflops`/`estimate_vram_bytes`; wetSpring: BGL builder, `ComputeDispatch` builder, `Rk45Result::variable_trajectory()`; neuralSpring: activations, Wright-Fisher, `analyze_weight_matrix()`; healthSpring: Hill Emax, Population PK, tridiagonal QL, LCG PRNG; toadStool S139: dual-scan discovery |
 
 ---
 
@@ -133,6 +133,8 @@
 ## What's Not Working Yet
 
 - P1: DF64 end-to-end NVK hardware verification (Yukawa shaders)
+- P1: coralNAK extraction (pending org repo fork)
 - P2: Test coverage ~75% on llvmpipe (target: 90%, requires real GPU hardware for GPU-path coverage)
 - P2: Kokkos validation baseline documentation
 - P2: Kokkos GPU parity benchmarks
+- P2: RHMC multi-shift CG solver (hotSpring ladder L4)

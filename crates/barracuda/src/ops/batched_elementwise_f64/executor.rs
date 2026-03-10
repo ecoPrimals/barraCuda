@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Batched element-wise GPU executor for f64 operations.
 
 use super::cpu_ref;

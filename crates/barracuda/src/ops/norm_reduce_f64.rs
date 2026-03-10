@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Norm Reduction (f64) — GPU-Accelerated via WGSL
 //!
 //! Computes vector norms over f64 arrays:
@@ -40,23 +40,17 @@ struct NormParams {
 /// Native f64 norm-reduce shader (workgroup shared memory uses f64).
 const SHADER_NATIVE: &str = include_str!("../shaders/reduce/norm_reduce_f64.wgsl");
 /// DF64 norm-reduce shader (workgroup shared memory uses f32 pairs).
+/// Compiled via `compile_shader_df64` which prepends the DF64 core preamble.
 const SHADER_DF64: &str = include_str!("../shaders/reduce/norm_reduce_df64.wgsl");
-/// DF64 core arithmetic library.
-const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
 
-/// Select the reduce shader based on the device's FP64 strategy.
-///
-/// Native/Concurrent/Sovereign: native f64 workgroup memory is reliable.
-/// Hybrid: f64 shared memory returns zeros on some devices; use DF64.
-fn shader_for_device(device: &WgpuDevice) -> &'static str {
+/// Select the reduce shader and compilation mode based on the device's FP64 strategy.
+fn shader_config_for_device(device: &WgpuDevice) -> (&'static str, bool) {
     let profile = GpuDriverProfile::from_device(device);
     match profile.fp64_strategy() {
-        Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => SHADER_NATIVE,
-        Fp64Strategy::Hybrid => {
-            static DF64_COMBINED: std::sync::LazyLock<String> =
-                std::sync::LazyLock::new(|| format!("enable f64;\n{DF64_CORE}\n{SHADER_DF64}"));
-            &DF64_COMBINED
+        Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => {
+            (SHADER_NATIVE, false)
         }
+        Fp64Strategy::Hybrid => (SHADER_DF64, true),
     }
 }
 
@@ -169,14 +163,16 @@ impl NormReduceF64 {
         };
         let params_buffer = device.create_uniform_buffer("NormReduce params", &params);
 
-        ComputeDispatch::new(&device, "norm_reduce_pass1")
-            .shader(shader_for_device(&device), entry_point)
-            .f64()
+        let (shader_src, use_df64) = shader_config_for_device(&device);
+
+        let mut pass1 = ComputeDispatch::new(&device, "norm_reduce_pass1")
+            .shader(shader_src, entry_point)
             .storage_read(0, &input_buffer)
             .storage_rw(1, &partial_buffer)
             .uniform(2, &params_buffer)
-            .dispatch(n_workgroups as u32, 1, 1)
-            .submit()?;
+            .dispatch(n_workgroups as u32, 1, 1);
+        pass1 = if use_df64 { pass1.df64() } else { pass1.f64() };
+        pass1.submit()?;
 
         if n_workgroups <= 1 {
             return Self::read_f64_scalar(&device, &partial_buffer);
@@ -205,14 +201,14 @@ impl NormReduceF64 {
         let params2_buffer = device.create_uniform_buffer("NormReduce params 2", &params2);
 
         let n_workgroups2 = n_workgroups.div_ceil(wg_size);
-        ComputeDispatch::new(&device, "norm_reduce_pass2")
-            .shader(shader_for_device(&device), second_entry)
-            .f64()
+        let mut pass2 = ComputeDispatch::new(&device, "norm_reduce_pass2")
+            .shader(shader_src, second_entry)
             .storage_read(0, &partial_buffer)
             .storage_rw(1, &final_buffer)
             .uniform(2, &params2_buffer)
-            .dispatch(n_workgroups2 as u32, 1, 1)
-            .submit()?;
+            .dispatch(n_workgroups2 as u32, 1, 1);
+        pass2 = if use_df64 { pass2.df64() } else { pass2.f64() };
+        pass2.submit()?;
 
         if n_workgroups2 > 1 {
             let partials = device.read_f64_buffer(&final_buffer, n_workgroups2)?;

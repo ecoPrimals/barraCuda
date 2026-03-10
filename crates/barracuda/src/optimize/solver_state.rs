@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Pausable/resumable solver state management
 //!
 //! Provides a stateful Nelder-Mead optimizer that can be paused mid-iteration

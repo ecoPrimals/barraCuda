@@ -1,10 +1,27 @@
 # barraCuda — Remaining Work
 
-**Version**: 0.3.3+
-**Date**: March 9, 2026
+**Version**: 0.3.4
+**Date**: March 10, 2026
 **Status**: Active — tracks all open work items for barraCuda evolution
 
 ---
+
+## Achieved (March 10, 2026 — Deep Debt & Test Pipeline Evolution)
+
+### Multi-GPU & Precision Evolution
+- **Unified GFLOPS/VRAM estimation**: `GpuPool` and `MultiDevicePool` share `estimate_gflops()`/`estimate_vram_bytes()` from `multi_gpu::mod` — removed duplicated fallback logic
+- **Fp64Strategy routing fix**: 4 reduce ops (`SumReduceF64`, `VarianceReduceF64`, `NormReduceF64`, `ProdReduceF64`) now correctly call `.df64()` on Hybrid devices instead of `.f64()`
+- **PCIe topology sysfs probing**: `PcieBridge` + `PcieLinkInfo` probe `/sys/bus/pci/devices` for PCIe gen, lane width, NUMA node, vendor ID. Real bandwidth calculation replaces heuristics
+- **VRAM quota enforcement**: `QuotaTracker` wired into `WgpuDevice` buffer allocation — all `create_buffer_*` methods check quota before allocating
+- **BGL builder**: Declarative `BglBuilder` for `wgpu::BindGroupLayout` construction (wetSpring V105)
+- **Deprecated `discover_coralreef` alias removed**: zero callers
+
+### Test Pipeline Optimisation
+- **Nautilus tests 1430× faster**: `ShellConfig` shrunk from `pop_size:16, grid:5×5` (400-dim, 400×400 Gram matrix) to `pop_size:4, grid:2×2` (16-dim). Tests validate dispatch mechanics, not convergence
+- **Board hash zero-alloc**: `format!("{features:?}")` → incremental `blake3::Hasher::update(f64::to_le_bytes())`
+- **Sovereign validation parallelised**: 600+ shader files via `rayon::par_iter()`
+- **ESN test shrunk**: `test_esn_large_reservoir` (200→16 reservoir) → `test_esn_reservoir_shape`
+- **Full suite**: 3,249 pass, 0 fail, 13 ignored, 21.5s execution
 
 ## Achieved (March 9, 2026 — Deep Cleanup Sprint 4)
 
@@ -79,7 +96,7 @@
 - **`ComputeDispatch<'a, B: GpuBackend>`**: Generic over backend, defaults to `WgpuDevice`.
   Zero changes to existing callers.
 - **`CoralReefDevice`** scaffold behind `sovereign-dispatch` feature flag.
-- **3097 tests pass**, zero clippy warnings, both default and sovereign-dispatch features.
+- **3,249 tests pass**, zero clippy warnings, both default and sovereign-dispatch features.
 
 ## Achieved (March 7, 2026)
 
@@ -164,7 +181,7 @@ Previously limited to Vulkan with SPIR-V passthrough.
 ### P2 — Near-term
 
 #### Test Coverage to 90%
-- Current: 3,262 total tests, 28 integration suites
+- Current: 3,249 total tests (lib), 28 integration suites
 - Evolve CI `--fail-under` from 80 to 90
 - Add GPU-conditional tests for new ops
 - GPU_TEST_TIMEOUT (60s) prevents hangs; coordination harness with

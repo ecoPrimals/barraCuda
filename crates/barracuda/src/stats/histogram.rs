@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! GPU-accelerated histogram via atomic binning.
 
 #[cfg(feature = "gpu")]

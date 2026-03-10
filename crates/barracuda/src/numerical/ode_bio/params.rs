@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Parameter structs for the 5 biological ODE systems.
 //!
 //! Each struct carries the kinetic constants for one model and provides
@@ -696,5 +696,79 @@ impl PhageDefenseParams {
             resource_dilution: flat[9],
             death_rate: flat[10],
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn qs_biofilm_roundtrip() {
+        let params = QsBiofilmParams::default();
+        let flat = params.to_flat();
+        assert_eq!(flat.len(), QS_BIOFILM_N_PARAMS);
+        let restored = QsBiofilmParams::from_flat(&flat);
+        assert!((restored.mu_max - params.mu_max).abs() < f64::EPSILON);
+        assert!((restored.d_bio - params.d_bio).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn qs_biofilm_default_positive() {
+        let params = QsBiofilmParams::default();
+        let flat = params.to_flat();
+        for (i, &v) in flat.iter().enumerate() {
+            assert!(v > 0.0, "param[{i}] must be positive, got {v}");
+        }
+    }
+
+    #[test]
+    fn bistable_roundtrip() {
+        let params = BistableParams::default();
+        let flat = params.to_flat();
+        assert_eq!(flat.len(), BISTABLE_N_PARAMS);
+        let restored = BistableParams::from_flat(&flat);
+        assert!((restored.base.mu_max - params.base.mu_max).abs() < f64::EPSILON);
+        assert!((restored.alpha_fb - params.alpha_fb).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn capacitor_roundtrip() {
+        let params = CapacitorParams::default();
+        let flat = params.to_flat();
+        assert_eq!(flat.len(), CAPACITOR_N_PARAMS);
+        let restored = CapacitorParams::from_flat(&flat);
+        assert!((restored.mu_max - params.mu_max).abs() < f64::EPSILON);
+        assert!((restored.d_mot - params.d_mot).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn cooperation_roundtrip() {
+        let params = CooperationParams::default();
+        let flat = params.to_flat();
+        assert_eq!(flat.len(), COOPERATION_N_PARAMS);
+        let restored = CooperationParams::from_flat(&flat);
+        assert!((restored.mu_coop - params.mu_coop).abs() < f64::EPSILON);
+        assert!((restored.d_bio - params.d_bio).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn multi_signal_roundtrip() {
+        let params = MultiSignalParams::default();
+        let flat = params.to_flat();
+        assert_eq!(flat.len(), MULTI_SIGNAL_N_PARAMS);
+        let restored = MultiSignalParams::from_flat(&flat);
+        assert!((restored.mu_max - params.mu_max).abs() < f64::EPSILON);
+        assert!((restored.d_bio - params.d_bio).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn phage_defense_roundtrip() {
+        let params = PhageDefenseParams::default();
+        let flat = params.to_flat();
+        assert_eq!(flat.len(), PHAGE_DEFENSE_N_PARAMS);
+        let restored = PhageDefenseParams::from_flat(&flat);
+        assert!((restored.mu_max - params.mu_max).abs() < f64::EPSILON);
+        assert!((restored.burst_size - params.burst_size).abs() < f64::EPSILON);
     }
 }

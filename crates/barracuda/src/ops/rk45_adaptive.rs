@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 
 //! Adaptive Dormand-Prince RK45 for regulatory networks — GPU kernel (f64).
 //!

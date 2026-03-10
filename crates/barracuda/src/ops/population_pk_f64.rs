@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `PopulationPkF64` — GPU-vectorized population pharmacokinetics Monte Carlo
 //!
 //! Simulates N virtual patients with inter-individual clearance (CL) variability
@@ -225,7 +225,7 @@ fn bgl_uniform(idx: u32) -> wgpu::BindGroupLayoutEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
+    use crate::device::test_pool::get_test_device_if_f64_gpu_available;
 
     fn default_config() -> PopulationPkConfig {
         PopulationPkConfig {
@@ -239,7 +239,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_population_pk_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         let pk = PopulationPkF64::new(device, default_config()).unwrap();
@@ -254,7 +254,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_population_pk_auc_bounds() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         let cfg = default_config();
@@ -274,7 +274,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_population_pk_deterministic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         let pk = PopulationPkF64::new(device, default_config()).unwrap();
@@ -285,7 +285,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_population_pk_different_seeds() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         let pk = PopulationPkF64::new(device, default_config()).unwrap();
@@ -296,7 +296,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_population_pk_empty() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         let pk = PopulationPkF64::new(device, default_config()).unwrap();
@@ -306,7 +306,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_population_pk_validation() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;
         };
         assert!(

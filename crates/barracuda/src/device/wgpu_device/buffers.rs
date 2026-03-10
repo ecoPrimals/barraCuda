@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Buffer allocation and data transfer — generic `read_buffer`<T: Pod> + typed helpers
 
 use super::WgpuDevice;
@@ -170,14 +170,16 @@ impl WgpuDevice {
         buf
     }
 
-    /// Allocate buffer for f32 data
+    /// Allocate buffer for f32 data.
     /// # Errors
-    /// Never returns an error; always returns `Ok` when the buffer is created.
+    /// Returns [`Err`] if the allocation would exceed the VRAM quota.
     pub fn create_buffer_f32(&self, size: usize) -> Result<wgpu::Buffer> {
+        let byte_size = (size * std::mem::size_of::<f32>()) as u64;
+        self.quota_try_allocate(byte_size)?;
         self.encoding_guard();
         let buf = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("barraCuda Buffer"),
-            size: (size * std::mem::size_of::<f32>()) as u64,
+            size: byte_size,
             usage: wgpu::BufferUsages::STORAGE
                 | wgpu::BufferUsages::COPY_DST
                 | wgpu::BufferUsages::COPY_SRC,
@@ -204,14 +206,16 @@ impl WgpuDevice {
         buf
     }
 
-    /// Allocate buffer for u32 data
+    /// Allocate buffer for u32 data.
     /// # Errors
-    /// Never returns an error; always returns `Ok` when the buffer is created.
+    /// Returns [`Err`] if the allocation would exceed the VRAM quota.
     pub fn create_buffer_u32(&self, size: usize) -> Result<wgpu::Buffer> {
+        let byte_size = (size * std::mem::size_of::<u32>()) as u64;
+        self.quota_try_allocate(byte_size)?;
         self.encoding_guard();
         let buf = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("barraCuda U32 Buffer"),
-            size: (size * std::mem::size_of::<u32>()) as u64,
+            size: byte_size,
             usage: wgpu::BufferUsages::STORAGE
                 | wgpu::BufferUsages::COPY_DST
                 | wgpu::BufferUsages::COPY_SRC,
@@ -221,10 +225,12 @@ impl WgpuDevice {
         Ok(buf)
     }
 
-    /// Allocate zero-initialized buffer for u32 data
+    /// Allocate zero-initialized buffer for u32 data.
     /// # Errors
-    /// Never returns an error; always returns `Ok` when the buffer is created.
+    /// Returns [`Err`] if the allocation would exceed the VRAM quota.
     pub fn create_buffer_u32_zeros(&self, size: usize) -> Result<wgpu::Buffer> {
+        let byte_size = (size * std::mem::size_of::<u32>()) as u64;
+        self.quota_try_allocate(byte_size)?;
         self.encoding_guard();
         let zeros = vec![0u32; size];
         let buf = self
@@ -285,14 +291,16 @@ impl WgpuDevice {
         buf
     }
 
-    /// Allocate buffer for f64 data
+    /// Allocate buffer for f64 data.
     /// # Errors
-    /// Never returns an error; always returns `Ok` when the buffer is created.
+    /// Returns [`Err`] if the allocation would exceed the VRAM quota.
     pub fn create_buffer_f64(&self, size: usize) -> Result<wgpu::Buffer> {
+        let byte_size = (size * std::mem::size_of::<f64>()) as u64;
+        self.quota_try_allocate(byte_size)?;
         self.encoding_guard();
         let buf = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("barraCuda F64 Buffer"),
-            size: (size * std::mem::size_of::<f64>()) as u64,
+            size: byte_size,
             usage: wgpu::BufferUsages::STORAGE
                 | wgpu::BufferUsages::COPY_DST
                 | wgpu::BufferUsages::COPY_SRC,
@@ -308,12 +316,14 @@ impl WgpuDevice {
     /// Equivalent to `create_buffer_f32` with a descriptive label.
     /// For ESN and other f32 GPU pipelines.
     /// # Errors
-    /// Never returns an error; always returns `Ok` when the buffer is created.
+    /// Returns [`Err`] if the allocation would exceed the VRAM quota.
     pub fn create_f32_rw_buffer(&self, label: &str, count: usize) -> Result<wgpu::Buffer> {
+        let byte_size = (count * std::mem::size_of::<f32>()) as u64;
+        self.quota_try_allocate(byte_size)?;
         self.encoding_guard();
         let buf = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some(label),
-            size: (count * std::mem::size_of::<f32>()) as u64,
+            size: byte_size,
             usage: wgpu::BufferUsages::STORAGE
                 | wgpu::BufferUsages::COPY_DST
                 | wgpu::BufferUsages::COPY_SRC,

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! NPU Bridge — Tensor to dense f32 conversion utilities.
 //!
 //! Provides conversion between GPU-resident `Tensor` and dense `Vec<f32>` for

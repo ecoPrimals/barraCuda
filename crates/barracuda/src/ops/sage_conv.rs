@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `SAGEConv` - `GraphSAGE` (Pure WGSL)
 //!
 //! Scalable sampling and aggregation: `h_i`' = W * [`h_i` || `aggr_i`]

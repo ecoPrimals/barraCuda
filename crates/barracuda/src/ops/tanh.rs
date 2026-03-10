@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Tanh — GPU-resident, pipeline-cached, bind-group-cached, batchable
 //!
 //! Deep Debt Principles:

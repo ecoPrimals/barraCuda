@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! QR Decomposition - GPU-Accelerated Implementation (f64)
 //!
 //! **Deep Debt Principles**:

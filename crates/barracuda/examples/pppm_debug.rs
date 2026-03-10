@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Debug PPPM (GPU FFT) - run: cargo run -p barracuda --example pppm_debug
 
 use barracuda::device::WgpuDevice;

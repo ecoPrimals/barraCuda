@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! FHE XOR Gate Operation
 //!
 //! **Purpose**: Perform Boolean XOR on FHE-encrypted data using GPU

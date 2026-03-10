@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `SparsitySampler` result types.
 
 use crate::optimize::eval_record::EvaluationCache;

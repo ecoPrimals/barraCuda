@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Real-to-Complex Fast Fourier Transform (RFFT)
 //!
 //! **Optimization**: Exploits conjugate symmetry for 50% speedup on real signals

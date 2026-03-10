@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Device routing and selection logic.
 //!
 //! Routes workloads to the appropriate hardware based on the nature of the
@@ -135,5 +135,96 @@ fn device_is_available(device: Device) -> bool {
         Device::NPU => is_npu_available(),
         Device::TPU => false,
         Device::Auto => true,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cpu_only_workloads_always_route_to_cpu() {
+        assert_eq!(
+            select_for_workload(&WorkloadHint::SmallWorkload),
+            Device::CPU
+        );
+        assert_eq!(select_for_workload(&WorkloadHint::StringOps), Device::CPU);
+    }
+
+    #[test]
+    fn general_fallback_never_panics() {
+        let device = select_for_workload(&WorkloadHint::General);
+        assert!(device == Device::GPU || device == Device::CPU);
+    }
+
+    #[test]
+    fn preference_none_delegates_to_auto() {
+        let auto = select_for_workload(&WorkloadHint::General);
+        let pref = select_with_preference(None, &WorkloadHint::General);
+        assert_eq!(auto, pref);
+    }
+
+    #[test]
+    fn preference_auto_delegates_to_auto() {
+        let auto = select_for_workload(&WorkloadHint::General);
+        let pref = select_with_preference(Some(Device::Auto), &WorkloadHint::General);
+        assert_eq!(auto, pref);
+    }
+
+    #[test]
+    fn preference_cpu_always_honoured() {
+        let dev = select_with_preference(Some(Device::CPU), &WorkloadHint::LargeMatrices);
+        assert_eq!(dev, Device::CPU);
+    }
+
+    #[test]
+    fn tpu_unavailable_falls_back() {
+        let dev = select_with_preference(Some(Device::TPU), &WorkloadHint::General);
+        assert_ne!(dev, Device::TPU);
+    }
+
+    #[test]
+    fn device_is_available_cpu_always_true() {
+        assert!(device_is_available(Device::CPU));
+    }
+
+    #[test]
+    fn device_is_available_tpu_always_false() {
+        assert!(!device_is_available(Device::TPU));
+    }
+
+    #[test]
+    fn device_is_available_auto_always_true() {
+        assert!(device_is_available(Device::Auto));
+    }
+
+    #[test]
+    fn all_workload_hints_produce_valid_device() {
+        let hints = [
+            WorkloadHint::LargeMatrices,
+            WorkloadHint::SmallWorkload,
+            WorkloadHint::SparseEvents,
+            WorkloadHint::EventProcessing,
+            WorkloadHint::StringOps,
+            WorkloadHint::General,
+            WorkloadHint::PhysicsForce,
+            WorkloadHint::FFT,
+            WorkloadHint::EigenDecomp,
+            WorkloadHint::LinearSolve,
+            WorkloadHint::Training,
+            WorkloadHint::Inference,
+            WorkloadHint::PreScreen,
+            WorkloadHint::SurrogateEval,
+            WorkloadHint::MonteCarlo,
+            WorkloadHint::SparseMath,
+            WorkloadHint::Reservoir,
+        ];
+        for hint in &hints {
+            let dev = select_for_workload(hint);
+            assert!(
+                matches!(dev, Device::CPU | Device::GPU | Device::NPU),
+                "Hint {hint:?} produced unexpected device {dev:?}"
+            );
+        }
     }
 }

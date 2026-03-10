@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Analytical least-squares regression primitives.
 //!
 //! Pure-Rust closed-form regression models (no iterative optimization).

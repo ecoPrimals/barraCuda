@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Shared types for the barraCuda RPC interface.
 //!
 //! Used by both the tarpc service and JSON-RPC method handlers. Kept in a
@@ -120,7 +120,7 @@ pub struct FhePointwiseMulResult {
 }
 
 /// Matmul result.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MatmulResult {
     /// Status of the operation.
     pub status: String,
@@ -158,4 +158,148 @@ pub struct PrimalCapabilities {
     pub f64_shaders: bool,
     /// Whether SPIR-V passthrough is available.
     pub spirv_passthrough: bool,
+}
+
+#[cfg(test)]
+#[expect(clippy::unwrap_used, reason = "tests")]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn device_info_roundtrip() {
+        let info = DeviceInfo {
+            name: "Test GPU".into(),
+            vendor: 0x10DE,
+            device_type: "DiscreteGpu".into(),
+            backend: "Vulkan".into(),
+            driver: "nvidia".into(),
+            driver_info: "550.0".into(),
+        };
+        let json = serde_json::to_string(&info).unwrap();
+        let parsed: DeviceInfo = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.name, "Test GPU");
+        assert_eq!(parsed.vendor, 0x10DE);
+    }
+
+    #[test]
+    fn device_probe_roundtrip() {
+        let probe = DeviceProbe {
+            available: true,
+            max_buffer_size: 2_147_483_648,
+            max_storage_buffers: 8,
+            max_workgroup_size_x: 256,
+            max_workgroups_per_dimension: 65_535,
+        };
+        let json = serde_json::to_string(&probe).unwrap();
+        let parsed: DeviceProbe = serde_json::from_str(&json).unwrap();
+        assert!(parsed.available);
+        assert_eq!(parsed.max_buffer_size, 2_147_483_648);
+    }
+
+    #[test]
+    fn health_report_roundtrip() {
+        let report = HealthReport {
+            name: "barraCuda".into(),
+            version: "0.3.3".into(),
+            status: "healthy".into(),
+        };
+        let json = serde_json::to_string(&report).unwrap();
+        let parsed: HealthReport = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.name, "barraCuda");
+        assert_eq!(parsed.version, "0.3.3");
+    }
+
+    #[test]
+    fn tolerances_roundtrip() {
+        let tol = Tolerances {
+            name: "GPU_RELAXED".into(),
+            abs_tol: 1e-4,
+            rel_tol: 1e-3,
+        };
+        let json = serde_json::to_string(&tol).unwrap();
+        let parsed: Tolerances = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.name, "GPU_RELAXED");
+        assert!((parsed.abs_tol - 1e-4).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn tensor_handle_roundtrip() {
+        let handle = TensorHandle {
+            tensor_id: "t_001".into(),
+            shape: vec![2, 3, 4],
+            elements: 24,
+            dtype: "f32".into(),
+        };
+        let json = serde_json::to_string(&handle).unwrap();
+        let parsed: TensorHandle = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.shape, vec![2, 3, 4]);
+        assert_eq!(parsed.elements, 24);
+    }
+
+    #[test]
+    fn primal_info_roundtrip() {
+        let info = PrimalInfo {
+            primal: "barraCuda".into(),
+            version: "0.3.3".into(),
+            protocol: "jsonrpc-2.0".into(),
+            namespace: "barracuda".into(),
+            license: "AGPL-3.0-only".into(),
+        };
+        let json = serde_json::to_string(&info).unwrap();
+        let parsed: PrimalInfo = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.primal, "barraCuda");
+        assert_eq!(parsed.license, "AGPL-3.0-only");
+    }
+
+    #[test]
+    fn primal_capabilities_roundtrip() {
+        let caps = PrimalCapabilities {
+            domains: vec!["gpu_compute".into(), "tensor_ops".into()],
+            methods: vec!["barracuda.device.list".into()],
+            gpu_available: true,
+            f64_shaders: false,
+            spirv_passthrough: false,
+        };
+        let json = serde_json::to_string(&caps).unwrap();
+        let parsed: PrimalCapabilities = serde_json::from_str(&json).unwrap();
+        assert!(parsed.gpu_available);
+        assert_eq!(parsed.domains.len(), 2);
+    }
+
+    #[test]
+    fn dispatch_result_optional_fields() {
+        let result = DispatchResult {
+            status: "ok".into(),
+            tensor_id: None,
+            shape: None,
+            data: None,
+        };
+        let json = serde_json::to_string(&result).unwrap();
+        assert!(!json.contains("tensor_id") || json.contains("null"));
+        let parsed: DispatchResult = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.status, "ok");
+    }
+
+    #[test]
+    fn fhe_ntt_result_roundtrip() {
+        let result = FheNttResult {
+            status: "ok".into(),
+            result: vec![1, 2, 3, 4],
+        };
+        let json = serde_json::to_string(&result).unwrap();
+        let parsed: FheNttResult = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.result, vec![1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn matmul_result_roundtrip() {
+        let result = MatmulResult {
+            status: "ok".into(),
+            result_id: "matmul_001".into(),
+            shape: vec![4, 4],
+        };
+        let json = serde_json::to_string(&result).unwrap();
+        let parsed: MatmulResult = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed, result);
+    }
 }

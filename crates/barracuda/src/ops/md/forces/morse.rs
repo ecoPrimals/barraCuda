@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Morse Force Calculation
 //!
 //! **Physics**: Anharmonic bonded interactions (covalent bonds, diatomics)

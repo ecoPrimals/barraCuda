@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Max Pool 1D - Temporal max pooling - Pure WGSL
 //!
 //! Deep Debt Principles:

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Multi-Device Pool Integration Tests
 //!
 //! Tests for `ResourceQuota` and `MultiDevicePool` with real GPU hardware.

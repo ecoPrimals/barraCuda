@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Sovereign shader validation harness — pure Rust, no GPU required.
 //!
 //! Walks all WGSL shader files and validates each through the naga pipeline:
@@ -176,6 +176,9 @@ mod tests {
 
     #[test]
     fn sovereign_validates_all_wgsl_shaders() {
+        use rayon::prelude::*;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
         let compiler = test_compiler();
         let df64_pre = df64_preamble();
 
@@ -189,45 +192,60 @@ mod tests {
             all_files.len()
         );
 
-        let mut sovereign_count = 0usize;
-        let mut parse_only_count = 0usize;
-        let mut fragment_count = 0usize;
-        let mut preprocess_count = 0usize;
-        let mut total_fma = 0usize;
-        let mut total_dead = 0usize;
-        let mut failures: Vec<String> = Vec::new();
+        let sovereign_count = AtomicUsize::new(0);
+        let parse_only_count = AtomicUsize::new(0);
+        let fragment_count = AtomicUsize::new(0);
+        let preprocess_count = AtomicUsize::new(0);
+        let total_fma = AtomicUsize::new(0);
+        let total_dead = AtomicUsize::new(0);
+        let failures: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
 
-        for path in &all_files {
-            match validate_shader(&compiler, path, &df64_pre) {
+        all_files
+            .par_iter()
+            .for_each(|path| match validate_shader(&compiler, path, &df64_pre) {
                 Ok(ShaderResult::Sovereign { fma, dead }) => {
-                    sovereign_count += 1;
-                    total_fma += fma;
-                    total_dead += dead;
+                    sovereign_count.fetch_add(1, Ordering::Relaxed);
+                    total_fma.fetch_add(fma, Ordering::Relaxed);
+                    total_dead.fetch_add(dead, Ordering::Relaxed);
                 }
                 Ok(ShaderResult::ParseOnly) => {
-                    parse_only_count += 1;
+                    parse_only_count.fetch_add(1, Ordering::Relaxed);
                 }
                 Ok(ShaderResult::Fragment) => {
-                    fragment_count += 1;
+                    fragment_count.fetch_add(1, Ordering::Relaxed);
                 }
                 Ok(ShaderResult::NeedsPreprocessing) => {
-                    preprocess_count += 1;
+                    preprocess_count.fetch_add(1, Ordering::Relaxed);
                 }
                 Err(msg) => {
-                    failures.push(msg);
+                    failures.lock().unwrap().push(msg);
                 }
-            }
-        }
+            });
+
+        let sovereign_count = sovereign_count.load(Ordering::Relaxed);
+        let failures = failures.into_inner().unwrap();
 
         tracing::warn!("Sovereign shader validation harness:");
         tracing::warn!("  Total files:       {}", all_files.len());
         tracing::warn!("  Sovereign pass:    {sovereign_count}");
-        tracing::warn!("  Parse-only (fallback): {parse_only_count}");
-        tracing::warn!("  Fragments (lib):   {fragment_count}");
-        tracing::warn!("  Needs preprocess:  {preprocess_count}");
+        tracing::warn!(
+            "  Parse-only (fallback): {}",
+            parse_only_count.load(Ordering::Relaxed)
+        );
+        tracing::warn!(
+            "  Fragments (lib):   {}",
+            fragment_count.load(Ordering::Relaxed)
+        );
+        tracing::warn!(
+            "  Needs preprocess:  {}",
+            preprocess_count.load(Ordering::Relaxed)
+        );
         tracing::warn!("  Parse failures:    {}", failures.len());
-        tracing::warn!("  FMA fusions:       {total_fma}");
-        tracing::warn!("  Dead exprs elim:   {total_dead}");
+        tracing::warn!("  FMA fusions:       {}", total_fma.load(Ordering::Relaxed));
+        tracing::warn!(
+            "  Dead exprs elim:   {}",
+            total_dead.load(Ordering::Relaxed)
+        );
 
         if !failures.is_empty() {
             tracing::warn!("\nParse failures:");

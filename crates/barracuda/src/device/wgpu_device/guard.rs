@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Atomic encoder barrier and guarded device handle.
 //!
 //! Prevents `device.poll()` from racing with resource creation on software

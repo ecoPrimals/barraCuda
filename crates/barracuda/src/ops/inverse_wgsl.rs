@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Inverse - Matrix inversion - Pure WGSL
 //!
 //! **Deep Debt Principles**:

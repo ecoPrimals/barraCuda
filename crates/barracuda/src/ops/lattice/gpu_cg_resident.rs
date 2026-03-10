@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! GPU-resident CG infrastructure structs (absorbed from hotSpring).
 //!
 //! Type definitions for reduce chains, stream observables, and CG configuration.

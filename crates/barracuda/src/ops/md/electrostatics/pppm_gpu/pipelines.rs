@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! PPPM bind group layouts and pipeline creation
 //!
 //! Extracted from `pppm_layouts` for `pppm_gpu` modularity.

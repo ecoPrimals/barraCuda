@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! tarpc service definition for barraCuda.
 //!
 //! High-performance binary RPC alongside the JSON-RPC 2.0 text protocol.
@@ -130,7 +130,7 @@ impl BarraCudaService for BarraCudaServer {
             version: env!("CARGO_PKG_VERSION").into(),
             protocol: "json-rpc-2.0".into(),
             namespace: "barracuda".into(),
-            license: "AGPL-3.0-or-later".into(),
+            license: "AGPL-3.0-only".into(),
         }
     }
 
@@ -188,24 +188,22 @@ impl BarraCudaService for BarraCudaServer {
     }
 
     async fn device_probe(self, _: tarpc::context::Context) -> DeviceProbe {
-        match self.primal.device() {
-            Some(dev) => {
-                let limits = dev.device().limits();
-                DeviceProbe {
-                    available: true,
-                    max_buffer_size: limits.max_buffer_size,
-                    max_storage_buffers: limits.max_storage_buffers_per_shader_stage,
-                    max_workgroup_size_x: limits.max_compute_workgroup_size_x,
-                    max_workgroups_per_dimension: limits.max_compute_workgroups_per_dimension,
-                }
-            }
-            None => DeviceProbe {
+        let Some(dev) = self.primal.device() else {
+            return DeviceProbe {
                 available: false,
                 max_buffer_size: 0,
                 max_storage_buffers: 0,
                 max_workgroup_size_x: 0,
                 max_workgroups_per_dimension: 0,
-            },
+            };
+        };
+        let limits = dev.device().limits();
+        DeviceProbe {
+            available: true,
+            max_buffer_size: limits.max_buffer_size,
+            max_storage_buffers: limits.max_storage_buffers_per_shader_stage,
+            max_workgroup_size_x: limits.max_compute_workgroup_size_x,
+            max_workgroups_per_dimension: limits.max_compute_workgroups_per_dimension,
         }
     }
 

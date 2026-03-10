@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Nautilus shell with layered evolutionary history.
 
 use rand::SeedableRng;
@@ -226,9 +226,36 @@ impl NautilusShell {
 mod tests {
     use super::*;
 
+    /// Minimal config for fast unit tests.
+    /// Tests validate mechanics (generation counter, MSE finiteness, etc.),
+    /// not convergence — that's the springs' responsibility.
+    fn test_config() -> ShellConfig {
+        ShellConfig {
+            board_config: BoardConfig {
+                grid_size: 2,
+                range_per_column: 4,
+                seed: 0,
+            },
+            pop_size: 4,
+            evolution: EvolutionConfig::default(),
+            lambda: 1e-3,
+            output_dim: None,
+        }
+    }
+
+    fn test_inputs() -> Vec<ReservoirInput> {
+        (0..3)
+            .map(|i| ReservoirInput::Continuous(vec![(i as f64) * 0.2, 0.5]))
+            .collect()
+    }
+
+    fn test_targets() -> Vec<Vec<f64>> {
+        vec![vec![1.0, 0.5], vec![2.0, 0.6], vec![1.5, 0.55]]
+    }
+
     #[test]
     fn test_shell_creation() {
-        let config = ShellConfig::default();
+        let config = test_config();
         let shell =
             NautilusShell::from_seed(config.clone(), InstanceId("test-instance".to_string()), 42);
         assert_eq!(shell.population.boards.len(), config.pop_size);
@@ -240,19 +267,11 @@ mod tests {
 
     #[test]
     fn test_shell_evolve_generation() {
-        let config = ShellConfig::default();
+        let config = test_config();
         let mut shell =
-            NautilusShell::from_seed(config.clone(), InstanceId("evolve-test".to_string()), 123);
-        let inputs: Vec<ReservoirInput> = (0..5)
-            .map(|i| ReservoirInput::Continuous(vec![(i as f64) * 0.2, 0.5, 0.5, 0.0, 0.0]))
-            .collect();
-        let targets = vec![
-            vec![1.0, 0.5, 0.8],
-            vec![2.0, 0.6, 0.7],
-            vec![1.5, 0.55, 0.75],
-            vec![1.2, 0.52, 0.78],
-            vec![1.8, 0.58, 0.72],
-        ];
+            NautilusShell::from_seed(config, InstanceId("evolve-test".to_string()), 123);
+        let inputs = test_inputs();
+        let targets = test_targets();
 
         let mse1 = shell.evolve_generation(&inputs, &targets).unwrap();
         assert!(mse1.is_finite());
@@ -266,30 +285,21 @@ mod tests {
 
     #[test]
     fn test_shell_predict() {
-        let config = ShellConfig::default();
+        let config = test_config();
         let mut shell =
-            NautilusShell::from_seed(config.clone(), InstanceId("predict-test".to_string()), 456);
-        let inputs: Vec<ReservoirInput> = (0..6)
-            .map(|i| ReservoirInput::Continuous(vec![(i as f64) * 0.15, 0.5, 0.5, 0.0, 0.0]))
-            .collect();
-        let targets = vec![
-            vec![1.0, 0.5, 0.8],
-            vec![2.0, 0.6, 0.7],
-            vec![1.5, 0.55, 0.75],
-            vec![1.2, 0.52, 0.78],
-            vec![1.8, 0.58, 0.72],
-            vec![1.1, 0.51, 0.79],
-        ];
+            NautilusShell::from_seed(config, InstanceId("predict-test".to_string()), 456);
+        let inputs = test_inputs();
+        let targets = test_targets();
         let _ = shell.evolve_generation(&inputs, &targets).unwrap();
 
-        let pred = shell.predict(&ReservoirInput::Continuous(vec![0.5, 0.5, 0.5, 0.0, 0.0]));
+        let pred = shell.predict(&ReservoirInput::Continuous(vec![0.5, 0.5]));
         let pred = pred.expect("predict should return Some after training");
-        assert_eq!(pred.len(), 3);
+        assert_eq!(pred.len(), 2);
     }
 
     #[test]
     fn test_shell_continue_from() {
-        let config = ShellConfig::default();
+        let config = test_config();
         let shell = NautilusShell::from_seed(config, InstanceId("original".to_string()), 789);
         let continued = NautilusShell::continue_from(shell, InstanceId("continued".to_string()));
 
@@ -301,22 +311,13 @@ mod tests {
 
     #[test]
     fn test_shell_merge() {
-        let config = ShellConfig::default();
+        let config = test_config();
         let mut shell1 =
             NautilusShell::from_seed(config.clone(), InstanceId("shell1".to_string()), 111);
         let shell2 =
             NautilusShell::from_seed(config.clone(), InstanceId("shell2".to_string()), 222);
-
-        let inputs: Vec<ReservoirInput> = (0..5)
-            .map(|i| ReservoirInput::Continuous(vec![(i as f64) * 0.2, 0.5, 0.5, 0.0, 0.0]))
-            .collect();
-        let targets = vec![
-            vec![1.0, 0.5, 0.8],
-            vec![2.0, 0.6, 0.7],
-            vec![1.5, 0.55, 0.75],
-            vec![1.2, 0.52, 0.78],
-            vec![1.8, 0.58, 0.72],
-        ];
+        let inputs = test_inputs();
+        let targets = test_targets();
 
         let _ = shell1.evolve_generation(&inputs, &targets).unwrap();
         let mut shell2_mut = shell2.clone();

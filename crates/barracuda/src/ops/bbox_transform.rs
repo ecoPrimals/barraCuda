@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `BBox` Transform - Transform bounding boxes
 //!
 //! Applies deltas to anchor boxes (object detection).

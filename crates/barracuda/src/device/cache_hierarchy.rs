@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Universal Substrate Cache Hierarchy
 //!
 //! **RUNTIME DISCOVERY, NOT VENDOR HARDCODING**
@@ -218,36 +218,27 @@ impl SubstrateMemoryHierarchy {
 
         // Find inflection points where bandwidth drops significantly (>20%)
         let mut cache_levels = Vec::new();
-        let mut peak_bw = 0.0f64;
         let mut last_cache_bw = samples[0].bandwidth_gbs;
 
-        for i in 0..samples.len() {
-            let sample = &samples[i];
-            peak_bw = peak_bw.max(sample.bandwidth_gbs);
+        for pair in samples.windows(2) {
+            let (prev, cur) = (&pair[0], &pair[1]);
+            let drop_ratio = cur.bandwidth_gbs / last_cache_bw;
 
-            // Check for significant bandwidth drop from previous level
-            if i > 0 {
-                let prev = &samples[i - 1];
-                let drop_ratio = sample.bandwidth_gbs / last_cache_bw;
+            if drop_ratio < 0.8 {
+                let level_name = match cache_levels.len() {
+                    0 => "L2",
+                    1 => "L3",
+                    _ => "Cache",
+                };
 
-                // Bandwidth drop of >20% indicates cache boundary
-                if drop_ratio < 0.8 {
-                    // Previous sample was the cache boundary
-                    let level_name = match cache_levels.len() {
-                        0 => "L2",
-                        1 => "L3",
-                        _ => "Cache",
-                    };
+                cache_levels.push(CacheLevel {
+                    name: level_name,
+                    size_bytes: prev.size_bytes,
+                    bandwidth_gbs: last_cache_bw,
+                    shared: cache_levels.is_empty(),
+                });
 
-                    cache_levels.push(CacheLevel {
-                        name: level_name,
-                        size_bytes: prev.size_bytes,
-                        bandwidth_gbs: last_cache_bw,
-                        shared: cache_levels.is_empty(), // First level typically shared
-                    });
-
-                    last_cache_bw = sample.bandwidth_gbs;
-                }
+                last_cache_bw = cur.bandwidth_gbs;
             }
         }
 

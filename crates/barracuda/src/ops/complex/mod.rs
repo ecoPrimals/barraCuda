@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Complex Number Operations
 //!
 //! **Purpose**: Complex arithmetic for FFT and wave physics

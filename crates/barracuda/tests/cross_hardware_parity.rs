@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Cross-Hardware Parity Tests
 //!
 //! Proves `BarraCuda` produces IDENTICAL results across hardware:

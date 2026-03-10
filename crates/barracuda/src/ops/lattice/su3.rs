@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! WGSL SU(3) matrix algebra library.
 //!
 //! Provides `WGSL_SU3` and `su3_preamble()` for building shaders that require

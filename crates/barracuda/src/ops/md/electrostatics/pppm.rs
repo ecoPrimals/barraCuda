@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! PPPM Electrostatics Orchestration
 //!
 //! Combines all PPPM components into a complete long-range electrostatics solver.

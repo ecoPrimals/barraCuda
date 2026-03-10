@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! CPU implementations that match GPU algorithms exactly
 
 use num_traits::Float;
@@ -10,8 +10,8 @@ use num_traits::Float;
 pub fn elementwise_add<T: Float>(a: &[T], b: &[T], output: &mut [T]) {
     assert_eq!(a.len(), b.len());
     assert_eq!(a.len(), output.len());
-    for i in 0..output.len() {
-        output[i] = a[i] + b[i]; // Same as GPU
+    for ((o, &ai), &bi) in output.iter_mut().zip(a).zip(b) {
+        *o = ai + bi;
     }
 }
 
@@ -22,8 +22,8 @@ pub fn elementwise_add<T: Float>(a: &[T], b: &[T], output: &mut [T]) {
 pub fn elementwise_mul<T: Float>(a: &[T], b: &[T], output: &mut [T]) {
     assert_eq!(a.len(), b.len());
     assert_eq!(a.len(), output.len());
-    for i in 0..output.len() {
-        output[i] = a[i] * b[i]; // Same as GPU
+    for ((o, &ai), &bi) in output.iter_mut().zip(a).zip(b) {
+        *o = ai * bi;
     }
 }
 
@@ -35,8 +35,8 @@ pub fn elementwise_fma<T: Float>(a: &[T], b: &[T], c: &[T], output: &mut [T]) {
     assert_eq!(a.len(), b.len());
     assert_eq!(a.len(), c.len());
     assert_eq!(a.len(), output.len());
-    for i in 0..output.len() {
-        output[i] = a[i].mul_add(b[i], c[i]); // Same as GPU fma()
+    for (((o, &ai), &bi), &ci) in output.iter_mut().zip(a).zip(b).zip(c) {
+        *o = ai.mul_add(bi, ci);
     }
 }
 
@@ -46,11 +46,9 @@ pub fn elementwise_fma<T: Float>(a: &[T], b: &[T], c: &[T], output: &mut [T]) {
 #[inline]
 pub fn dot_product<T: Float>(a: &[T], b: &[T]) -> T {
     assert_eq!(a.len(), b.len());
-    let mut sum = T::zero();
-    for i in 0..a.len() {
-        sum = sum + a[i] * b[i]; // Same as GPU
-    }
-    sum
+    a.iter()
+        .zip(b)
+        .fold(T::zero(), |acc, (&ai, &bi)| acc + ai * bi)
 }
 
 /// Kahan summation for high-precision reduction

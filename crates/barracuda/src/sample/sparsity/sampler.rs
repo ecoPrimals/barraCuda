@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! CPU path for `SparsitySampler` algorithm.
 
 use crate::device::WgpuDevice;

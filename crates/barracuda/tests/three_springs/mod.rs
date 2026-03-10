@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Shared helpers for Three Springs Evolution tests.
 //!
 //! These primitives serve wetSpring, airSpring, and hotSpring validation.

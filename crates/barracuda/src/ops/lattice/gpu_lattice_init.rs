@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! GPU lattice initialization: cold start and hot start.
 //!
 //! Replaces CPU-only `wilson.rs` `cold_start/hot_start` with GPU shaders.

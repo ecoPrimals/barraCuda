@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Adaptive Runge-Kutta-Fehlberg (RK45) ODE Solver
 //!
 //! Implements the Dormand-Prince (DOPRI5) embedded method for solving

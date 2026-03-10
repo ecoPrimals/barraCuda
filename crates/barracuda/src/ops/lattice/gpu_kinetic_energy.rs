@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! GPU per-link kinetic energy from HMC momenta.
 
 use crate::device::WgpuDevice;

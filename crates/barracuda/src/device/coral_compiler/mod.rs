@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! coralReef shader compiler IPC client.
 //!
 //! Discovers and connects to the coralReef primal's JSON-RPC 2.0 endpoint,
@@ -30,7 +30,7 @@ mod jsonrpc;
 pub mod types;
 
 pub use cache::{cache_native_binary, cached_native_binary, shader_hash};
-pub use discovery::discover_coralreef;
+pub use discovery::discover_shader_compiler;
 pub use types::{CoralBinary, HealthResponse, arch_to_coral};
 
 use jsonrpc::{jsonrpc_call, wgsl_to_spirv};
@@ -112,7 +112,7 @@ impl CoralCompiler {
                 arch: arch.to_owned(),
             }),
             Err(e) => {
-                tracing::debug!("coralReef compile failed: {e}");
+                tracing::debug!("shader compile failed: {e}");
                 None
             }
         }
@@ -159,7 +159,7 @@ impl CoralCompiler {
                 arch: arch.to_owned(),
             }),
             Err(e) => {
-                tracing::debug!("coralReef compile_wgsl direct failed: {e}, trying SPIR-V path");
+                tracing::debug!("shader compile_wgsl direct failed: {e}, trying SPIR-V path");
                 self.compile_wgsl(wgsl, arch, fp64_software).await
             }
         }
@@ -218,15 +218,15 @@ impl CoralCompiler {
             ConnectionState::Uninit => {}
         }
 
-        if let Some(addr) = discover_coralreef().await {
-            tracing::info!(addr = %addr, "discovered coralReef compiler service");
+        if let Some(addr) = discover_shader_compiler().await {
+            tracing::info!(addr = %addr, "discovered shader compiler service");
             let addr: Arc<str> = Arc::from(addr);
             *state = ConnectionState::Connected {
                 addr: Arc::clone(&addr),
             };
             Some(addr)
         } else {
-            tracing::debug!("coralReef not available — using standard compilation path");
+            tracing::debug!("shader compiler not available — using standard compilation path");
             *state = ConnectionState::Unavailable;
             None
         }
@@ -285,7 +285,7 @@ pub fn spawn_coral_compile(optimized_wgsl: &str, arch: &str, fp64_software: bool
             tracing::debug!(
                 arch = %arch_owned,
                 size = binary.binary.len(),
-                "coralReef: cached native binary ({} bytes)",
+                "cached native binary ({} bytes)",
                 binary.binary.len(),
             );
             cache_native_binary(&hash, &arch_owned, binary);
@@ -338,8 +338,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_discovery_graceful_without_coralreef() {
-        let addr = discover_coralreef().await;
+    async fn test_discovery_graceful_without_shader_compiler() {
+        let addr = discover_shader_compiler().await;
         if let Some(ref a) = addr {
             assert!(!a.is_empty(), "discovered address must be non-empty");
         }

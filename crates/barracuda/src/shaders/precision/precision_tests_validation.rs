@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Precision validation tests — edge cases, E2E, and fault recovery.
 
 use super::*;

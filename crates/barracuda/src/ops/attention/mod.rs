@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Scaled Dot-Product Attention - GPU-accelerated implementation
 //!
 //! **Deep Debt Principles**:

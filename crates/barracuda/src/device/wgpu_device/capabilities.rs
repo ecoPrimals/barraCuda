@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Driver capability detection — f64 workarounds, NVK/RADV detection
 
 use super::WgpuDevice;

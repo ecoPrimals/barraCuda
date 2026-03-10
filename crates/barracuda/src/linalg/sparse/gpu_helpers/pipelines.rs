@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Pipeline creation and dispatch helpers for sparse GPU solvers.
 //!
 //! Single responsibility: compute pipeline construction for `SpMV`, dot, reduce,

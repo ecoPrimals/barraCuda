@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! `DepthwiseConv2D` - Depthwise 2D Convolution
 //! Pure WGSL implementation
 //!

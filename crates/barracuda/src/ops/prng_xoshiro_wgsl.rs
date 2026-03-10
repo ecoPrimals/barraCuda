@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! PRNG Xoshiro128** - High-quality pseudorandom f64 generator - Pure WGSL
 //!
 //! Deep Debt Principles:
@@ -219,7 +219,7 @@ mod tests {
     use std::sync::Arc;
 
     async fn get_test_device() -> Option<Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
+        crate::device::test_pool::get_test_device_if_f64_gpu_available().await
     }
 
     #[tokio::test]

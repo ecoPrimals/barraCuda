@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! f64 built-in capability result type
 //!
 //! Which f64 WGSL built-in functions are natively supported by a device.
@@ -41,6 +41,14 @@ pub struct F64BuiltinCapabilities {
     /// reads back. Fails on NVK/NAK and Ada Lovelace proprietary where
     /// shared-memory f64 accumulators return zeros.
     pub shared_mem_f64: bool,
+    /// DF64 (f32-pair) arithmetic compiles and dispatches correctly.
+    /// When `false`, DF64 shaders should not be used on this device.
+    pub df64_arith: bool,
+    /// DF64 transcendentals (`exp_df64`, `log_df64`, `pow_df64`) are safe.
+    /// When `false`, DF64 shaders must omit transcendental preamble.
+    /// On NVIDIA proprietary, NVVM cannot handle DF64 transcendentals
+    /// and a failed compilation permanently poisons the wgpu device.
+    pub df64_transcendentals_safe: bool,
 }
 
 impl F64BuiltinCapabilities {
@@ -59,6 +67,8 @@ impl F64BuiltinCapabilities {
             fma: false,
             abs_min_max: false,
             shared_mem_f64: false,
+            df64_arith: false,
+            df64_transcendentals_safe: false,
         }
     }
 
@@ -77,6 +87,8 @@ impl F64BuiltinCapabilities {
             fma: true,
             abs_min_max: true,
             shared_mem_f64: true,
+            df64_arith: true,
+            df64_transcendentals_safe: true,
         }
     }
 
@@ -114,6 +126,22 @@ impl F64BuiltinCapabilities {
         !self.basic_f64 || !self.shared_mem_f64
     }
 
+    /// Whether DF64 shaders need transcendental stripping on this device.
+    ///
+    /// On NVIDIA proprietary, NVVM permanently poisons the wgpu device
+    /// when a DF64 transcendental shader fails to compile. Callers must
+    /// omit `df64_transcendentals.wgsl` from the DF64 preamble.
+    #[must_use]
+    pub fn needs_df64_transcendental_stripping(&self) -> bool {
+        !self.df64_transcendentals_safe
+    }
+
+    /// Whether DF64 is available at all (arithmetic path).
+    #[must_use]
+    pub fn can_use_df64(&self) -> bool {
+        self.df64_arith
+    }
+
     /// Total count of natively-supported functions (excluding `basic_f64` gate).
     #[must_use]
     pub fn native_count(&self) -> u8 {
@@ -131,6 +159,8 @@ impl F64BuiltinCapabilities {
             self.fma,
             self.abs_min_max,
             self.shared_mem_f64,
+            self.df64_arith,
+            self.df64_transcendentals_safe,
         ]
         .iter()
         .filter(|&&b| b)
@@ -160,6 +190,12 @@ impl std::fmt::Display for F64BuiltinCapabilities {
             sym(self.fma)
         )?;
         writeln!(f, "    abs/min/max={}", sym(self.abs_min_max))?;
-        write!(f, "    shared_mem_f64={}", sym(self.shared_mem_f64))
+        writeln!(f, "    shared_mem_f64={}", sym(self.shared_mem_f64))?;
+        write!(
+            f,
+            "    df64_arith={} df64_transcendentals={}",
+            sym(self.df64_arith),
+            sym(self.df64_transcendentals_safe)
+        )
     }
 }

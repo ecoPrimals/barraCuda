@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Probe result cache and adapter keying
 //!
 //! Results are cached globally per adapter identity (name + backend + vendor)
@@ -62,6 +62,7 @@ pub fn seed_cache_from_heuristics(device: &WgpuDevice) {
     cache.entry(key.clone()).or_insert_with(|| {
         let exp_log_works = !device.needs_f64_exp_log_workaround();
         let shared_mem_works = !device.is_nvk();
+        let is_nvidia_proprietary = device.is_nvidia_proprietary();
         F64BuiltinCapabilities {
             basic_f64: true,
             exp: exp_log_works,
@@ -74,6 +75,8 @@ pub fn seed_cache_from_heuristics(device: &WgpuDevice) {
             fma: true,
             abs_min_max: true,
             shared_mem_f64: shared_mem_works,
+            df64_arith: true,
+            df64_transcendentals_safe: !is_nvidia_proprietary,
         }
     });
     let exp_capable = cache.get(&key).is_some_and(|c| c.exp);

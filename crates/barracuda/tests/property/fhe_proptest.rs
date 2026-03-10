@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Property-based tests for FHE/NTT mathematical invariants
 //!
 //! Uses `proptest` to verify that core NTT properties hold across a wide range

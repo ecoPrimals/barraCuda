@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Fused GPU Operations Showcase
 //!
 //! Demonstrates single-dispatch fused operations (Welford mean+variance,

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! High-level Time Series Analysis API
 //!
 //! Production-ready interface for time series forecasting, analysis, and anomaly detection.

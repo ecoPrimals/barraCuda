@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Correlation and covariance functions
 //!
 //! # Functions
@@ -65,9 +65,9 @@ pub fn pearson_correlation(x: &[f64], y: &[f64]) -> Result<f64> {
     let mut var_x = 0.0;
     let mut var_y = 0.0;
 
-    for i in 0..x.len() {
-        let dx = x[i] - mean_x;
-        let dy = y[i] - mean_y;
+    for (&xi, &yi) in x.iter().zip(y) {
+        let dx = xi - mean_x;
+        let dy = yi - mean_y;
         cov += dx * dy;
         var_x += dx * dx;
         var_y += dy * dy;

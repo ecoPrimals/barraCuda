@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # cargo-deny configuration for barraCuda
 # ecoBin compliance: pure Rust, no banned C wrappers
@@ -22,7 +22,7 @@ allow = [
     "ISC",
     "Zlib",
     "Unicode-3.0",
-    "AGPL-3.0-or-later",
+    "AGPL-3.0-only",
     "CC0-1.0",
 ]
 

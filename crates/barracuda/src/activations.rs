@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Canonical CPU activation functions for neural networks and signal processing.
 //!
 //! These are the single-source-of-truth scalar and batch implementations.

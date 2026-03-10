@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Single-dispatch Jacobi eigensolver — one GPU submit for n≤32
 //!
 //! Eliminates poll bottleneck: instead of ~8000 `queue.submit()` calls per batch,

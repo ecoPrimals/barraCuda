@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Compressed Sparse Row (CSR) matrix format
 //!
 //! CSR is the standard format for sparse matrix operations:

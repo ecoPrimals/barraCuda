@@ -1,11 +1,20 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-03-09.
+Prioritized work items, ordered by impact. Updated 2026-03-10.
 
 ---
 
 ## Recently Completed
 
+- **Deep debt & test pipeline (Mar 10)**: Unified GFLOPS/VRAM estimation across
+  GpuPool and MultiDevicePool. Fixed Fp64Strategy routing in 4 reduce ops (DF64
+  shaders now correctly compiled via `.df64()` on Hybrid devices). PCIe topology
+  via Linux sysfs probing (`PcieLinkInfo`). VRAM quota enforcement wired into all
+  buffer allocation paths. BGL builder for declarative bind-group layout. Sovereign
+  shader validation parallelised via rayon. Nautilus test pipeline 1430× faster
+  (14.3s→0.01s) — tests now validate dispatch mechanics, not full computation.
+  Board hash evolved from Debug formatting to zero-alloc blake3 incremental hashing.
+  ESN test shrunk from 200→16 reservoir. Full suite: 3,249 pass, 0 fail, 21.5s.
 - **Deep cleanup sprint**: Removed 4 orphaned test directories (`tests/chaos/`, `tests/fault/`,
   `tests/e2e/`, `tests/precision/`) — ~4,000 lines of dead code that drifted to 84-125 compilation
   errors each. Wired in `three_springs/` (was compiling but never linked). Cleaned stale
@@ -187,6 +196,8 @@ Prioritized work items, ordered by impact. Updated 2026-03-09.
   shaders (like variance/correlation already have) would be more robust on Hybrid devices.
 - **`BatchedTridiagEigh` GPU op**: groundSpring local QL implicit eigensolver is a candidate
   for absorption as a batched GPU tridiagonal eigenvector solver.
+- **Multi-GPU OOM recovery**: `QuotaTracker` is wired into buffer allocation; next step
+  is automatic workload migration when a device hits VRAM quota.
 
 ## Near-term (P2)
 

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! GPU-accelerated PPPM/Ewald electrostatics (universal via WGSL)
 //!
 //! This module provides hardware-agnostic PPPM using WGSL shaders that run

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! LAGUERRE F64 - Generalized Laguerre polynomials - f64 precision WGSL
 //!
 //! Deep Debt Principles:

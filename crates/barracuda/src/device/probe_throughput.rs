@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! f64 throughput ratio probing — metalForge discovery
 //!
 //! Runs FMA microbenchmarks in f32 and f64 to measure the actual throughput

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! coralReef Shader Compilation Showcase
 //!
 //! Demonstrates the barraCuda → coralReef shader compilation path.

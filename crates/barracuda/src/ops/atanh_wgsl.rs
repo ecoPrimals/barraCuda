@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Atanh — inverse hyperbolic tangent, GPU-resident, pipeline-cached, batchable
 //!
 //! `atanh(x) = 0.5 · ln((1+x)/(1−x))`, valid for x ∈ (−1, 1)

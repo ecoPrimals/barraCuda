@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Linear algebra operations for scientific computing
 //!
 //! This module provides f64 linear algebra operations dispatched to GPU

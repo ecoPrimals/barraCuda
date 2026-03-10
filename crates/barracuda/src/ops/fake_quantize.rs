@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Fake quantization operation - Simulate quantization for training
 //!
 //! Fake quantization simulates the effect of quantization during training

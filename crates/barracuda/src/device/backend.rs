@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Backend-agnostic GPU compute trait.
 //!
 //! `GpuBackend` defines the minimal surface a compute backend must implement:

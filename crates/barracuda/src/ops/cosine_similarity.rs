@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Cosine Similarity
 //!
 //! **Pure WGSL**: Single implementation via WebGPU shader

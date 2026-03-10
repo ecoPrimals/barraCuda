@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! NPU weight export for ESN readout layer.
 //!
 //! Provides affine int8 quantization for deploying ESN readout weights to

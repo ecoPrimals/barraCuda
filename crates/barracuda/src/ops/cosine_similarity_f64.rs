@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Cosine Similarity (f64) — GPU-resident, pipeline-cached, buffer-pooled
 //!
 //! Computes cosine similarity: sim(a,b) = (a·b) / (||a|| * ||b||)

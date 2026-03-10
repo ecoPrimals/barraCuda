@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Bessel I₀ (f64) — GPU-resident, pipeline-cached, buffer-pooled
 //!
 //! Modified Bessel function of first kind, order 0.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Broadcast operation - Expand tensor dimensions with full NumPy-style broadcasting
 //! Pure WGSL implementation
 

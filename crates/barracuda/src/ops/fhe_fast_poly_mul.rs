@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 use crate::error::{BarracudaError, Result};
 use crate::ops::fhe_intt::FheIntt;
 use crate::ops::fhe_ntt::FheNtt;

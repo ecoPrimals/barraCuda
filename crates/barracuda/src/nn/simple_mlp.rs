@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Simple multi-layer perceptron with JSON weight serialization.
 //!
 //! Designed to replace ~400 LOC of hand-rolled MLP inference across

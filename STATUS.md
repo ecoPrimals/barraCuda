@@ -1,8 +1,8 @@
 # barraCuda Status
 
-**Version**: 0.3.4
+**Version**: 0.3.5
 **Date**: 2026-03-10
-**Overall Grade**: A+ (Zero unsafe, zero unwrap in production, pure safe Rust, all quality gates green, 3,249+ tests, zero TODO/FIXME/unimplemented, NVVM poisoning guard, PrecisionBrain self-routing, HardwareCalibration per-tier probing, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust, device-aware test tolerances, cross-spring pharma/bio absorption)
+**Overall Grade**: A+ (Zero unsafe, zero unwrap in production, pure safe Rust, all quality gates green, 3,348+ tests, zero TODO/FIXME/unimplemented, NVVM poisoning guard, PrecisionBrain self-routing, HardwareCalibration per-tier probing, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust, device-aware test tolerances, cross-spring pharma/bio/health absorption, FMA policy, stable GPU special functions)
 
 ---
 
@@ -10,12 +10,12 @@
 
 | Category | Grade | Notes |
 |----------|-------|-------|
-| **Core compute** | A+ | 797 WGSL shaders, 13-tier tolerance architecture, GpuView persistent buffers with ops, BGL builder pattern, PrecisionBrain domain→tier routing |
+| **Core compute** | A+ | 803 WGSL shaders, 13-tier tolerance architecture, GpuView persistent buffers with ops, BGL builder pattern, PrecisionBrain domain→tier routing |
 | **Precision tiers** | A+ | 3-tier model (F32/F64/Df64) aligned with coralReef `Fp64Strategy`; DF64 naga-guided rewrite validated; probe-aware Fp64Strategy; DF64 reduce shaders correctly routed via `.df64()` on Hybrid devices; NVVM poisoning guard for proprietary NVIDIA DF64 transcendentals |
-| **Sovereign compiler** | A+ | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all 794 shaders via rayon parallel validation |
+| **Sovereign compiler** | A+ | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all 803 shaders via rayon parallel validation |
 | **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery; coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support |
 | **Device management** | A+ | `GpuBackend` trait abstraction, `CoralReefDevice` scaffold behind `sovereign-dispatch` feature, multi-GPU with PCIe topology sysfs probing (`PcieLinkInfo`), capability-scored discovery, probe-aware f64 strategy, VRAM quota enforcement via `ResourceQuota`/`QuotaTracker`, bounded poll timeout |
-| **Test coverage** | A+ | 3,249 tests (all pass on llvmpipe); proptest; chaos/fault test tiers; nextest CI/stress profiles; optimised test pipeline (nautilus 14.3s→0.01s, sovereign 600+ shaders parallelised via rayon, ESN reservoir shrunk); zero `todo!()`/`unimplemented!()` |
+| **Test coverage** | A+ | 3,348 tests (all pass on llvmpipe); proptest; chaos/fault test tiers; nextest CI/stress profiles; optimised test pipeline (nautilus 14.3s→0.01s, sovereign 800+ shaders parallelised via rayon, ESN reservoir shrunk); zero `todo!()`/`unimplemented!()` |
 | **Dependencies** | A+ | All deps pure Rust (blake3 `pure`, wgpu/naga 28); zero application C deps; ecoBin compliant |
 | **Documentation** | A+ | Comprehensive CHANGELOG, specs, README, CONTRIBUTING, CONVENTIONS, BREAKING_CHANGES; all rustdoc warnings resolved; showcase/ with 9 progressive demos (local, IPC, cross-primal) |
 | **Unsafe code** | A+ | Zero `unsafe` blocks in entire codebase |

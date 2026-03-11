@@ -130,7 +130,7 @@ barraCuda/
 │       │   ├── sample/              # LHS, Sobol, Metropolis, sparsity
 │       │   ├── ops/                 # GPU ops (matmul, softmax, FHE, bio)
 │       │   ├── tensor/              # GPU tensor type
-│       │   ├── shaders/             # 797 WGSL shaders (see shaders/README.md)
+│       │   ├── shaders/             # 803 WGSL shaders (see shaders/README.md)
 │       │   ├── device/              # GpuBackend trait, WgpuDevice, CoralReefDevice, concurrency
 │       │   ├── staging/             # Ring buffers, unidirectional pipelines
 │       │   ├── pipeline/            # ComputeDispatch, batched pipelines
@@ -175,7 +175,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo test --workspace --lib            # 3,280 test functions
+cargo test --workspace --lib            # 3,348 test functions
 cargo llvm-cov --workspace --lib        # 90%+ line coverage target (70% on llvmpipe; GPU hardware needed for 90%)
 ```
 

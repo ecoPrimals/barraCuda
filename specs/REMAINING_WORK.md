@@ -1,6 +1,6 @@
 # barraCuda — Remaining Work
 
-**Version**: 0.3.4
+**Version**: 0.3.5
 **Date**: March 10, 2026
 **Status**: Active — tracks all open work items for barraCuda evolution
 

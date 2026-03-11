@@ -17,7 +17,7 @@ Prioritized work items, ordered by impact. Updated 2026-03-10.
   gradient GPU shader for population PK (healthSpring V14). VPC Monte Carlo GPU
   simulation with RK4 + Box-Muller (healthSpring V14). Tolerance registry evolved
   with `all_tolerances()`, `by_name()`, `tier()` runtime introspection — 36 registered
-  tolerances. All 6 springs absorbed. 3,280 tests pass, 0 fail, 13 ignored.
+  tolerances. All 6 springs absorbed. 3,348 tests pass, 0 fail, 13 ignored.
 - **Deep debt & test pipeline (Mar 10)**: Unified GFLOPS/VRAM estimation across
   GpuPool and MultiDevicePool. Fixed Fp64Strategy routing in 4 reduce ops (DF64
   shaders now correctly compiled via `.df64()` on Hybrid devices). PCIe topology
@@ -26,12 +26,12 @@ Prioritized work items, ordered by impact. Updated 2026-03-10.
   shader validation parallelised via rayon. Nautilus test pipeline 1430× faster
   (14.3s→0.01s) — tests now validate dispatch mechanics, not full computation.
   Board hash evolved from Debug formatting to zero-alloc blake3 incremental hashing.
-  ESN test shrunk from 200→16 reservoir. Full suite: 3,249 pass, 0 fail, 21.5s.
+  ESN test shrunk from 200→16 reservoir. Full suite: 3,348 pass, 0 fail, 21.5s.
 - **Deep cleanup sprint**: Removed 4 orphaned test directories (`tests/chaos/`, `tests/fault/`,
   `tests/e2e/`, `tests/precision/`) — ~4,000 lines of dead code that drifted to 84-125 compilation
   errors each. Wired in `three_springs/` (was compiling but never linked). Cleaned stale
   informal TODO comments from `ops/mod.rs`. Corrected doc counts to match actual codebase
-  (3,262 lib tests, 28 integration suites, 1,044 .rs files, 9 showcase demos).
+  (3,348 lib tests, 28 integration suites, 1,060+ .rs files, 9 showcase demos).
 - **`Rk45Result::variable_trajectory()`**: Convenience method extracting single-variable
   trajectory across all ODE time steps. Eliminates `y_history[step][var_idx]` boilerplate
   used by 5+ ODE scenario builders in wetSpring. Also added `n_vars()`. 2 tests.

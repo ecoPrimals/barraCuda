@@ -208,4 +208,131 @@ impl GpuBackend for WgpuDevice {
         self.submit_and_poll_inner(Some(commands));
         Ok(())
     }
+
+    fn dispatch_compute_batch(&self, descs: Vec<DispatchDescriptor<'_, Self>>) -> Result<()> {
+        if descs.is_empty() {
+            return Ok(());
+        }
+        if descs.len() == 1 {
+            return self.dispatch_compute(
+                descs
+                    .into_iter()
+                    .next()
+                    .expect("len == 1 checked above"),
+            );
+        }
+
+        let _permit = self.acquire_dispatch();
+        self.encoding_guard();
+
+        struct Compiled {
+            pipeline: wgpu::ComputePipeline,
+            bg: wgpu::BindGroup,
+            workgroups: (u32, u32, u32),
+        }
+
+        let mut compiled = Vec::with_capacity(descs.len());
+        for desc in &descs {
+            let bgl_entries: Vec<wgpu::BindGroupLayoutEntry> = desc
+                .bindings
+                .iter()
+                .map(|b| wgpu::BindGroupLayoutEntry {
+                    binding: b.index,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: if b.is_uniform {
+                        wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        }
+                    } else {
+                        wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage {
+                                read_only: b.read_only,
+                            },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        }
+                    },
+                    count: None,
+                })
+                .collect();
+
+            let bgl = self
+                .device
+                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some(desc.label),
+                    entries: &bgl_entries,
+                });
+
+            let bg_entries: Vec<wgpu::BindGroupEntry<'_>> = desc
+                .bindings
+                .iter()
+                .map(|b| wgpu::BindGroupEntry {
+                    binding: b.index,
+                    resource: b.buffer.as_entire_binding(),
+                })
+                .collect();
+
+            let bg = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some(desc.label),
+                layout: &bgl,
+                entries: &bg_entries,
+            });
+
+            let module = if desc.df64_shader {
+                self.compile_shader_df64(desc.shader_source, Some(desc.label))
+            } else if desc.f64_shader {
+                self.compile_shader_f64(desc.shader_source, Some(desc.label))
+            } else {
+                self.compile_shader(desc.shader_source, Some(desc.label))
+            };
+
+            let pl = self
+                .device
+                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                    label: Some(desc.label),
+                    bind_group_layouts: &[&bgl],
+                    immediate_size: 0,
+                });
+
+            let pipeline = self
+                .device
+                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                    label: Some(desc.label),
+                    layout: Some(&pl),
+                    module: &module,
+                    entry_point: Some(desc.entry_point),
+                    cache: self.pipeline_cache(),
+                    compilation_options: Default::default(),
+                });
+
+            compiled.push(Compiled {
+                pipeline,
+                bg,
+                workgroups: desc.workgroups,
+            });
+        }
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("batched_dispatch"),
+            });
+
+        for c in &compiled {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: None,
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(&c.pipeline);
+            pass.set_bind_group(0, Some(&c.bg), &[]);
+            pass.dispatch_workgroups(c.workgroups.0, c.workgroups.1, c.workgroups.2);
+        }
+
+        let commands = encoder.finish();
+        self.encoding_complete();
+        self.submit_and_poll_inner(Some(commands));
+        Ok(())
+    }
 }

@@ -130,12 +130,12 @@ impl WgpuDevice {
             include_str!("../../shaders/math/df64_transcendentals.wgsl");
 
         let profile = crate::device::driver_profile::GpuDriverProfile::from_device(self);
-        let include_transcendentals = if profile.has_nvvm_df64_poisoning_risk() {
+        let include_transcendentals = if profile.has_df64_spir_v_poisoning() {
             tracing::warn!(
                 driver = ?profile.driver,
                 arch = ?profile.arch,
-                "NVVM DF64 poisoning risk — omitting DF64 transcendentals (exp, log, pow) \
-                 to prevent unrecoverable device invalidation. \
+                "DF64 SPIR-V poisoning (naga codegen) — omitting DF64 transcendentals \
+                 (exp, sqrt, log, pow) to prevent all-zero output. \
                  Arithmetic-only DF64 shaders remain safe."
             );
             false

@@ -80,7 +80,7 @@ pub async fn probe_f64_builtins(device: &WgpuDevice) -> F64BuiltinCapabilities {
 
     let profile = crate::device::driver_profile::GpuDriverProfile::from_device(device);
     caps.df64_arith = true;
-    caps.df64_transcendentals_safe = !profile.has_nvvm_df64_poisoning_risk();
+    caps.df64_transcendentals_safe = !profile.has_df64_spir_v_poisoning();
 
     insert_full_caps(key, caps);
     caps

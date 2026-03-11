@@ -27,17 +27,20 @@ pub enum Workaround {
     /// NVK has broken or imprecise sin/cos/tan for f64. Use Taylor series
     /// approximations (`sin_f64_safe`, `cos_f64_safe`) instead of native or polyfill.
     NvkSinCosF64Imprecise,
-    /// NVIDIA proprietary NVVM device poisoning: DF64 or `F64Precise` shaders
-    /// containing f64 transcendentals (exp, log, pow) cause an unrecoverable
-    /// NVVM compilation failure that permanently invalidates the wgpu device.
-    /// All subsequent buffer creation, dispatch, and readback panic with
-    /// "Buffer is invalid". Only recovery is process restart.
+    /// naga WGSL->SPIR-V codegen poisoning: DF64 shaders containing f64
+    /// transcendentals (exp, sqrt, log, pow) produce all-zero output when
+    /// compiled through naga's SPIR-V backend. Affects ALL Vulkan drivers
+    /// (NVIDIA proprietary, NVK/NAK, llvmpipe) because the root cause is
+    /// naga codegen, not the driver JIT.
     ///
-    /// Discovered by hotSpring v0.6.25 on RTX 3090 (Ampere, SM86). Affects
-    /// all NVIDIA proprietary driver architectures — the NVVM compiler cannot
-    /// handle f64 transcendentals in DF64 (f32-pair rewrite) or `F64Precise`
-    /// (no-FMA) compilation modes. NVK (Mesa) is unaffected.
-    NvvmDf64TranscendentalPoisoning,
+    /// On NVIDIA proprietary, the bad SPIR-V additionally causes unrecoverable
+    /// NVVM device invalidation ("Buffer is invalid" panic).
+    ///
+    /// Discovered by hotSpring v0.6.25 on RTX 3090 (Ampere). Confirmed on
+    /// Titan V (NVK) and llvmpipe by hotSpring Exp 055 (March 2026).
+    /// coralReef Iter 33 validated that sovereign compilation (bypassing naga
+    /// SPIR-V) produces correct results for the exact same shaders.
+    Df64SpirVPoisoning,
 }
 
 /// Detect which workarounds apply for the given driver/arch combination.
@@ -49,11 +52,11 @@ pub(crate) fn detect_workarounds(driver: DriverKind, arch: GpuArch) -> Vec<Worka
         w.push(Workaround::NvkLargeBufferLimit);
         w.push(Workaround::NvkSinCosF64Imprecise);
     }
-    if driver == DriverKind::NvidiaProprietary {
-        if arch == GpuArch::Ada {
-            w.push(Workaround::NvvmAdaF64Transcendentals);
-        }
-        w.push(Workaround::NvvmDf64TranscendentalPoisoning);
+    if driver == DriverKind::NvidiaProprietary && arch == GpuArch::Ada {
+        w.push(Workaround::NvvmAdaF64Transcendentals);
     }
+    // naga WGSL->SPIR-V codegen zeroes DF64 transcendentals on all Vulkan
+    // backends. Root cause is naga, not the driver JIT (hotSpring Exp 055).
+    w.push(Workaround::Df64SpirVPoisoning);
     w
 }

@@ -36,33 +36,33 @@
 
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
-use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::error::{BarracudaError, Result};
 use crate::utils::chunk_to_array;
 use bytemuck;
 use std::sync::Arc;
 
-/// Native f64 sum-reduce shader (workgroup shared memory uses f64).
-const SHADER_NATIVE: &str = include_str!("../shaders/reduce/sum_reduce_f64.wgsl");
 /// DF64 sum-reduce shader (workgroup shared memory uses f32 pairs).
 const SHADER_DF64: &str = include_str!("../shaders/reduce/sum_reduce_df64.wgsl");
-/// DF64 core arithmetic library.
+/// DF64 core arithmetic library (Dekker-pair: `df64_from_f64`, `df64_add`, etc.).
 const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
 
-/// Select the reduce shader based on the device's FP64 strategy.
+/// Select the reduce shader for this device.
 ///
-/// Native/Concurrent/Sovereign: native f64 workgroup memory is reliable.
-/// Hybrid: f64 shared memory returns zeros on some devices; use DF64.
-fn shader_for_device(device: &WgpuDevice) -> &'static str {
-    let profile = GpuDriverProfile::from_device(device);
-    match profile.fp64_strategy() {
-        Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => SHADER_NATIVE,
-        Fp64Strategy::Hybrid => {
-            static DF64_COMBINED: std::sync::LazyLock<String> =
-                std::sync::LazyLock::new(|| format!("enable f64;\n{DF64_CORE}\n{SHADER_DF64}"));
-            &DF64_COMBINED
-        }
-    }
+/// Always uses DF64 (f32-pair) accumulation in `var<workgroup>` memory.
+/// Native f64 in workgroup shared memory (`var<workgroup> array<f64, N>`)
+/// returns zeros on ALL tested naga -> SPIR-V backends: NVIDIA proprietary,
+/// NVK/NAK, and llvmpipe. Global-memory f64 (`var<storage>`) is unaffected.
+///
+/// The DF64 path uses `shared_hi/shared_lo: array<f32, 256>` for the tree
+/// reduction and converts at the storage boundary via `df64_from_f64` /
+/// `df64_to_f64`. Precision loss is ~4 mantissa bits (48 vs 52) which is
+/// acceptable for sum/max/min reductions.
+///
+/// Diagnostic: hotSpring Exp 055, `HOTSPRING_DF64_NAGA_POISONING_DIAGNOSTIC`
+fn shader_for_device(_device: &WgpuDevice) -> &'static str {
+    static DF64_COMBINED: std::sync::LazyLock<String> =
+        std::sync::LazyLock::new(|| format!("{DF64_CORE}\n{SHADER_DF64}"));
+    &DF64_COMBINED
 }
 
 /// Two-pass f64 reduction pipeline returning a single scalar.

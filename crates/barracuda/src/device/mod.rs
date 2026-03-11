@@ -108,7 +108,9 @@ pub use capabilities::{
     GpuArch, GpuDriverProfile, Workaround, WorkloadType, optimal_workgroup_size_arch,
     workgroup_size_2d_for_arch, workgroup_size_for_arch,
 };
-pub use compute_pipeline::{ComputeDispatch, storage_bgl_entry, uniform_bgl_entry};
+pub use compute_pipeline::{
+    BatchedComputeDispatch, ComputeDispatch, storage_bgl_entry, uniform_bgl_entry,
+};
 #[cfg(feature = "sovereign-dispatch")]
 pub use coral_gpu;
 #[cfg(feature = "sovereign-dispatch")]

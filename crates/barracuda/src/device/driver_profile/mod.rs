@@ -290,22 +290,23 @@ impl GpuDriverProfile {
         self.workarounds.is_empty() && !matches!(self.driver, DriverKind::Software)
     }
 
-    /// Whether DF64 shaders containing transcendentals (exp, log, pow) risk
-    /// permanently poisoning the wgpu device via an unrecoverable NVVM failure.
+    /// Whether DF64 shaders containing transcendentals (exp, sqrt, log, pow)
+    /// produce all-zero output due to naga WGSL->SPIR-V codegen bugs.
     ///
-    /// On NVIDIA proprietary drivers, the NVVM compiler cannot handle f64
-    /// transcendentals in the DF64 (f32-pair) rewrite mode. A single failed
-    /// compilation invalidates the device — all subsequent operations panic.
-    /// NVK (Mesa) is unaffected.
+    /// Affects ALL Vulkan backends (NVIDIA proprietary, NVK/NAK, llvmpipe).
+    /// Root cause is naga's SPIR-V generation for mixed f64/f32 shaders, not
+    /// the driver JIT. On NVIDIA proprietary, the bad SPIR-V additionally
+    /// causes unrecoverable device invalidation.
     ///
     /// When `true`, callers must either strip transcendentals from the DF64
-    /// preamble or avoid DF64 compilation entirely.
+    /// preamble, avoid DF64 compilation, or use sovereign dispatch (coralReef)
+    /// which bypasses naga SPIR-V entirely.
     ///
-    /// Discovered by hotSpring v0.6.25 (March 2026) on RTX 3090 (Ampere).
+    /// Discovered by hotSpring v0.6.25 (March 2026). Root-caused by hotSpring
+    /// Exp 055 (March 2026). Sovereign fix validated by coralReef Iter 33.
     #[must_use]
-    pub fn has_nvvm_df64_poisoning_risk(&self) -> bool {
-        self.workarounds
-            .contains(&Workaround::NvvmDf64TranscendentalPoisoning)
+    pub fn has_df64_spir_v_poisoning(&self) -> bool {
+        self.workarounds.contains(&Workaround::Df64SpirVPoisoning)
     }
 
     /// Whether this driver reliably supports f64 shader operations.

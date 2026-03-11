@@ -72,7 +72,7 @@ impl HardwareCalibration {
     pub fn from_profile(profile: &GpuDriverProfile, device: &WgpuDevice) -> Self {
         let adapter_name = device.name().to_string();
         let has_f64_shaders = device.has_f64_shaders();
-        let has_nvvm_risk = profile.has_nvvm_df64_poisoning_risk();
+        let has_nvvm_risk = profile.has_df64_spir_v_poisoning();
         let precision_routing = profile.precision_routing();
 
         use super::driver_profile::PrecisionRoutingAdvice as PRA;

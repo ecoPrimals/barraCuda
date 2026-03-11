@@ -121,6 +121,24 @@ pub trait GpuBackend: Send + Sync {
     /// Returns [`Err`] if compilation, dispatch, or synchronization fails.
     fn dispatch_compute(&self, desc: DispatchDescriptor<'_, Self>) -> Result<()>;
 
+    /// Execute multiple compute dispatches in a single GPU submission.
+    ///
+    /// On backends that support command batching (e.g. wgpu/Vulkan), all
+    /// dispatches are recorded into one command encoder, amortizing the
+    /// per-submission overhead (~1.6ms on Vulkan → ~0.1ms amortized).
+    ///
+    /// The default implementation calls [`dispatch_compute`] sequentially.
+    /// Backends that support batching should override this.
+    ///
+    /// # Errors
+    /// Returns [`Err`] if any dispatch fails.
+    fn dispatch_compute_batch(&self, descs: Vec<DispatchDescriptor<'_, Self>>) -> Result<()> {
+        for desc in descs {
+            self.dispatch_compute(desc)?;
+        }
+        Ok(())
+    }
+
     // ── Typed convenience methods (defaults via bytemuck) ─────────────
 
     /// Allocate a storage buffer for `n` f32 values.
@@ -236,24 +254,35 @@ impl<B: GpuBackend> GpuBackend for Arc<B> {
         (**self).download(buffer, size)
     }
     fn dispatch_compute(&self, desc: DispatchDescriptor<'_, Self>) -> Result<()> {
-        let reborrowed: Vec<BufferBinding<'_, B>> = desc
-            .bindings
-            .iter()
-            .map(|b| BufferBinding {
-                index: b.index,
-                buffer: b.buffer,
-                read_only: b.read_only,
-                is_uniform: b.is_uniform,
-            })
-            .collect();
-        (**self).dispatch_compute(DispatchDescriptor {
-            label: desc.label,
-            shader_source: desc.shader_source,
-            entry_point: desc.entry_point,
-            bindings: reborrowed,
-            workgroups: desc.workgroups,
-            f64_shader: desc.f64_shader,
-            df64_shader: desc.df64_shader,
+        (**self).dispatch_compute(reborrow_descriptor(desc))
+    }
+
+    fn dispatch_compute_batch(&self, descs: Vec<DispatchDescriptor<'_, Self>>) -> Result<()> {
+        let reborrowed = descs.into_iter().map(reborrow_descriptor).collect();
+        (**self).dispatch_compute_batch(reborrowed)
+    }
+}
+
+fn reborrow_descriptor<B: GpuBackend>(
+    desc: DispatchDescriptor<'_, Arc<B>>,
+) -> DispatchDescriptor<'_, B> {
+    let bindings = desc
+        .bindings
+        .iter()
+        .map(|b| BufferBinding {
+            index: b.index,
+            buffer: b.buffer,
+            read_only: b.read_only,
+            is_uniform: b.is_uniform,
         })
+        .collect();
+    DispatchDescriptor {
+        label: desc.label,
+        shader_source: desc.shader_source,
+        entry_point: desc.entry_point,
+        bindings,
+        workgroups: desc.workgroups,
+        f64_shader: desc.f64_shader,
+        df64_shader: desc.df64_shader,
     }
 }

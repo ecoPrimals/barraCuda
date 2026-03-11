@@ -146,15 +146,15 @@ impl<'a, B: GpuBackend> ComputeDispatch<'a, B> {
         self
     }
 
-    /// Build everything and submit the compute pass to the device queue.
+    /// Build the dispatch descriptor without submitting.
     ///
-    /// Delegates to [`GpuBackend::dispatch_compute`], which handles the full
-    /// compile → bind → submit lifecycle using the backend's native API.
+    /// Use this with [`BatchedComputeDispatch`] to record multiple dispatches
+    /// into a single GPU submission, reducing per-dispatch overhead (~1.8x on
+    /// Vulkan for multi-kernel pipelines like MD force+kick+drift).
     ///
     /// # Errors
-    /// Returns [`Err`] if shader source was not set via [`shader`](Self::shader),
-    /// or if the backend's dispatch fails.
-    pub fn submit(self) -> Result<()> {
+    /// Returns [`Err`] if shader source was not set via [`shader`](Self::shader).
+    pub fn build(self) -> Result<DispatchDescriptor<'a, B>> {
         let source = self
             .shader_source
             .ok_or_else(|| BarracudaError::InvalidInput {
@@ -172,7 +172,7 @@ impl<'a, B: GpuBackend> ComputeDispatch<'a, B> {
             })
             .collect();
 
-        self.device.dispatch_compute(DispatchDescriptor {
+        Ok(DispatchDescriptor {
             label: self.label,
             shader_source: source,
             entry_point: self.entry_point,
@@ -181,6 +181,99 @@ impl<'a, B: GpuBackend> ComputeDispatch<'a, B> {
             f64_shader: self.f64_shader,
             df64_shader: self.df64_shader,
         })
+    }
+
+    /// Build everything and submit the compute pass to the device queue.
+    ///
+    /// Delegates to [`GpuBackend::dispatch_compute`], which handles the full
+    /// compile → bind → submit lifecycle using the backend's native API.
+    ///
+    /// # Errors
+    /// Returns [`Err`] if shader source was not set via [`shader`](Self::shader),
+    /// or if the backend's dispatch fails.
+    pub fn submit(self) -> Result<()> {
+        let device = self.device;
+        let desc = self.build()?;
+        device.dispatch_compute(desc)
+    }
+}
+
+/// Batched compute dispatch — multiple kernels in a single GPU submission.
+///
+/// Reduces per-dispatch overhead by recording all compute passes into one
+/// command encoder before submitting. On Vulkan this avoids repeated
+/// queue submissions (~1.8x overhead measured by hotSpring on RTX 3090).
+///
+/// Backends that don't support batching (e.g. sovereign/DRM) fall back to
+/// sequential `dispatch_compute` calls via the default trait implementation.
+///
+/// # Example
+///
+/// ```ignore
+/// let mut batch = BatchedComputeDispatch::new(&device);
+/// batch.push(
+///     ComputeDispatch::new(&device, "force")
+///         .shader(FORCE_SHADER, "main").f64()
+///         .storage_read(0, &pos).storage_rw(1, &force)
+///         .dispatch_1d(n)
+/// )?;
+/// batch.push(
+///     ComputeDispatch::new(&device, "kick_drift")
+///         .shader(KD_SHADER, "main").f64()
+///         .storage_rw(0, &pos).storage_rw(1, &vel)
+///         .dispatch_1d(n)
+/// )?;
+/// batch.submit()?;
+/// ```
+pub struct BatchedComputeDispatch<'a, B: GpuBackend = WgpuDevice> {
+    device: &'a B,
+    descriptors: Vec<DispatchDescriptor<'a, B>>,
+}
+
+impl<'a, B: GpuBackend> BatchedComputeDispatch<'a, B> {
+    /// Create a new batched dispatch for the given device.
+    #[must_use]
+    pub fn new(device: &'a B) -> Self {
+        Self {
+            device,
+            descriptors: Vec::new(),
+        }
+    }
+
+    /// Add a dispatch to the batch.
+    ///
+    /// The dispatch is built (validated) immediately but not submitted until
+    /// [`submit`](Self::submit) is called.
+    ///
+    /// # Errors
+    /// Returns [`Err`] if the dispatch builder is missing a shader source.
+    pub fn push(&mut self, dispatch: ComputeDispatch<'a, B>) -> Result<()> {
+        self.descriptors.push(dispatch.build()?);
+        Ok(())
+    }
+
+    /// Number of dispatches queued so far.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.descriptors.len()
+    }
+
+    /// Whether the batch is empty.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.descriptors.is_empty()
+    }
+
+    /// Submit all queued dispatches in a single GPU submission.
+    ///
+    /// On backends that support batching (e.g. wgpu/Vulkan), all compute
+    /// passes are recorded into one command encoder. On backends without
+    /// batching support, dispatches are executed sequentially.
+    ///
+    /// # Errors
+    /// Returns [`Err`] if any dispatch fails (compilation, dispatch, or sync).
+    pub fn submit(self) -> Result<()> {
+        self.device.dispatch_compute_batch(self.descriptors)
     }
 }
 

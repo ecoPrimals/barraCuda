@@ -412,8 +412,11 @@ impl ESN {
 
         let mut w_out = Tensor::zeros_on(vec![n, m], self.device.clone()).await?;
 
-        let learning_rate = 0.01;
-        let iterations = (n * 2).clamp(50, 1000);
+        let learning_rate = self.config.sgd_learning_rate as f32;
+        let iterations = (n * 2).clamp(
+            self.config.sgd_min_iterations,
+            self.config.sgd_max_iterations,
+        );
         let lambda = self.config.regularization;
 
         for _iter in 0..iterations {

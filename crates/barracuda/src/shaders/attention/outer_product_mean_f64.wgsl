@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // outer_product_mean_f64.wgsl — AlphaFold2 Evoformer outer product mean
 //

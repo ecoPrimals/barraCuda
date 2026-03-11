@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // cubic_spline_eval_f64.wgsl — Evaluate cubic spline at query points (native f64)
 //

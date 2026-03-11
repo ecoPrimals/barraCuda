@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // symmetrize_f64.wgsl — Symmetrize a square matrix: out[i,j] = (A[i,j] + A[j,i]) / 2 (f64 canonical)
 //

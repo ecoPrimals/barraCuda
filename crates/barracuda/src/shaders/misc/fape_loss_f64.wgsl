@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // fape_loss_f64.wgsl — Frame Aligned Point Error loss (AlphaFold2)
 //

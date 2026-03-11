@@ -172,9 +172,12 @@ struct BandwidthThrottler {
     window_bytes: u64,
     /// Window start time
     window_start: Instant,
-    /// Window duration (1 second)
+    /// Window duration for bandwidth measurement.
     window_duration: std::time::Duration,
 }
+
+/// Default bandwidth measurement window (1 second).
+const DEFAULT_THROTTLE_WINDOW_SECS: u64 = 1;
 
 impl BandwidthThrottler {
     fn new(target_bps: u64) -> Self {
@@ -182,7 +185,7 @@ impl BandwidthThrottler {
             target_bps,
             window_bytes: 0,
             window_start: Instant::now(),
-            window_duration: std::time::Duration::from_secs(1),
+            window_duration: std::time::Duration::from_secs(DEFAULT_THROTTLE_WINDOW_SECS),
         }
     }
 

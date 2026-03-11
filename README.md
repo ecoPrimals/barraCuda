@@ -2,7 +2,7 @@
 
 **Version**: 0.3.5
 **Status**: Standalone primal — zero cross-dependencies, fully concurrent, all quality gates passing
-**License**: AGPL-3.0-or-later
+**License**: AGPL-3.0-only
 **MSRV**: 1.87
 
 ---
@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **803 WGSL shaders** spanning scientific compute domains
-- **1,060+ Rust source files**, 28 integration test suites, 3,348 library tests passing
+- **1,060+ Rust source files**, 42 integration test files, 3,900+ tests passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -110,7 +110,7 @@ barraCuda/
 ├── START_HERE.md                    # Developer quick start
 ├── PURE_RUST_EVOLUTION.md           # Sovereign compute evolution log
 ├── SPRING_ABSORPTION.md             # Cross-spring absorption tracker
-├── LICENSE                          # AGPL-3.0-or-later
+├── LICENSE                          # AGPL-3.0-only
 ├── .github/workflows/ci.yml        # CI: fmt, clippy, deny, doc, test, coverage
 ├── crates/
 │   ├── barracuda-core/              # Primal lifecycle wrapper
@@ -139,11 +139,13 @@ barraCuda/
 │       │   ├── unified_hardware/    # Unified CPU/GPU/NPU abstraction
 │       │   └── ...                  # + nn, snn, esn, pde, genomics, vision
 │       ├── examples/                # Runnable examples
-│       ├── tests/                   # 28 integration test suites
+│       ├── tests/                   # 42 integration test files
 │       └── src/bin/                 # validate_gpu, bench_*
 └── specs/
-    ├── BARRACUDA_SPECIFICATION.md   # Crate architecture + IPC contract
-    └── ARCHITECTURE_DEMARCATION.md  # barraCuda vs toadStool boundaries
+    ├── BARRACUDA_SPECIFICATION.md       # Crate architecture + IPC contract
+    ├── PRECISION_TIERS_SPECIFICATION.md # 15-tier precision ladder (Binary→DF128)
+    ├── REMAINING_WORK.md                # P1-P4 open work items
+    └── ARCHITECTURE_DEMARCATION.md      # barraCuda vs toadStool boundaries
 ```
 
 ---
@@ -175,7 +177,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo test --workspace --lib            # 3,348 test functions
+cargo test --workspace --lib            # 3,900+ test functions
 cargo llvm-cov --workspace --lib        # 90%+ line coverage target (70% on llvmpipe; GPU hardware needed for 90%)
 ```
 
@@ -333,6 +335,7 @@ Lifecycle and health traits are modeled on the ecoPrimals pattern but fully owne
 | Document | Purpose |
 |----------|---------|
 | `specs/BARRACUDA_SPECIFICATION.md` | Crate architecture, IPC contract, shader pipeline |
+| `specs/PRECISION_TIERS_SPECIFICATION.md` | Full 15-tier precision ladder (Binary to DF128) |
 | `specs/ARCHITECTURE_DEMARCATION.md` | barraCuda vs toadStool boundary definition |
 | `specs/REMAINING_WORK.md` | P1-P4 open work items |
 | `SOVEREIGN_PIPELINE_TRACKER.md` | Sovereign pipeline tracker (P0 blocker, libc evolution, cross-compilation) |

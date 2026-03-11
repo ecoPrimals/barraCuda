@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 // solvation_energy_df64.wgsl — Implicit solvation (GBSA-style, per-atom contribution)
 //
 // GBSA: DeltaG_solv = -0.5 * (1/eps_in - 1/eps_out) * sum_i q_i^2 / R_i

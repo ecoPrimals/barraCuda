@@ -149,6 +149,7 @@ impl MultiHeadEsn {
             connectivity: 0.1,
             regularization: 1e-6,
             seed: 0,
+            ..Default::default()
         };
         let mut reservoir = ESN::new(config).await?;
         reservoir.import_weights(&weights.w_in, &weights.w_res, None)?;

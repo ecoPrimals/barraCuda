@@ -30,7 +30,7 @@
 // Dispatch: (ceil(n_pairs / 256), 1, 1)
 //
 // Date: February 16, 2026 (absorbed from wetSpring)
-// License: AGPL-3.0-or-later
+// License: AGPL-3.0-only
 // ============================================================================
 
 struct BcParams {

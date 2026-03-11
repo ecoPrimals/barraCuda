@@ -440,9 +440,16 @@ impl BarraCudaService for BarraCudaServer {
             }
         };
 
+        let Ok(degree_u32) = u32::try_from(degree) else {
+            return FheNttResult {
+                status: format!("error: degree {degree} exceeds u32::MAX"),
+                result: vec![],
+            };
+        };
+
         let ntt = match barracuda::ops::fhe_ntt::FheNtt::new(
             tensor,
-            degree as u32,
+            degree_u32,
             modulus,
             root_of_unity,
         ) {
@@ -501,11 +508,15 @@ impl BarraCudaService for BarraCudaServer {
             }
         };
 
+        let Ok(degree_u32) = u32::try_from(degree) else {
+            return FhePointwiseMulResult {
+                status: format!("error: degree {degree} exceeds u32::MAX"),
+                result: vec![],
+            };
+        };
+
         let mul = match barracuda::ops::fhe_pointwise_mul::FhePointwiseMul::new(
-            tensor_a,
-            tensor_b,
-            degree as u32,
-            modulus,
+            tensor_a, tensor_b, degree_u32, modulus,
         ) {
             Ok(m) => m,
             Err(e) => {

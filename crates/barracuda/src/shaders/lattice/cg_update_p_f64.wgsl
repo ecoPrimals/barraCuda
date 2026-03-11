@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // CG vector update: p = r + beta * p.
 // Beta is read from a GPU buffer (no CPU upload needed).

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // backbone_update_f64.wgsl — Rigid body backbone frame update (AlphaFold2 structure module)
 //

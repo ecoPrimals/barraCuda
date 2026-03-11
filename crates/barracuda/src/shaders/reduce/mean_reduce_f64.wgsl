@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 // Mean Reduction (f64) - Parallel mean at double precision
 //
 // Computes sum of elements via tree reduction, then caller divides by n for mean.

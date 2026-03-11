@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // xoshiro128ss_f64.wgsl — GPU-parallel PRNG (Xoshiro128**) (f64 canonical)
 //

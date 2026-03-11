@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 // Sum Dim (f64) - Sum along a specific dimension at double precision
 //
 // Similar to PyTorch's torch.sum(dim=N)

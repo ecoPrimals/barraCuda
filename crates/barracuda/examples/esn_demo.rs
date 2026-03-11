@@ -28,6 +28,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         leak_rate: 0.3,
         regularization: 1e-6,
         seed: 42,
+        ..Default::default()
     };
 
     println!("   Reservoir: {} neurons", config.reservoir_size);

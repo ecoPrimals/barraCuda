@@ -222,6 +222,7 @@ async fn test_all_apis_hardware_agnostic() {
         leak_rate: 0.3,
         regularization: 1e-6,
         seed: 42,
+        ..Default::default()
     })
     .await;
     assert!(esn.is_ok(), "ESN failed");
@@ -313,6 +314,7 @@ async fn test_concurrent_apis() {
         leak_rate: 0.3,
         regularization: 1e-6,
         seed: 42,
+        ..Default::default()
     })
     .await
     .unwrap();

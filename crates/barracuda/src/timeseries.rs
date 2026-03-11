@@ -203,14 +203,15 @@ impl TimeSeriesAnalyzer {
             } = model
             {
                 let config = ESNConfig {
-                    input_size: 1, // Single value input
+                    input_size: 1,
                     reservoir_size: *reservoir_size,
-                    output_size: 1, // Single value output
+                    output_size: 1,
                     spectral_radius: *spectral_radius,
                     connectivity: esn_defaults::CONNECTIVITY,
                     leak_rate: esn_defaults::LEAK_RATE,
                     regularization: esn_defaults::REGULARIZATION,
                     seed: esn_defaults::SEED,
+                    ..Default::default()
                 };
 
                 self.esn_instance = Some(ESN::new(config).await?);

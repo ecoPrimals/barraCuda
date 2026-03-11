@@ -194,6 +194,18 @@ pub(super) fn run_cpu_operation(
     Ok(())
 }
 
+/// Simulated GPU dispatch overhead for benchmark estimation.
+const SIMULATED_DISPATCH_OVERHEAD_US: u64 = 100;
+/// Simulated per-element compute time for benchmark estimation.
+const SIMULATED_PER_ELEMENT_NS: u64 = 1;
+
+const SPEEDUP_MATMUL: f64 = 50.0;
+const SPEEDUP_TRANSCENDENTAL: f64 = 100.0;
+const SPEEDUP_REDUCTION: f64 = 20.0;
+const SPEEDUP_LINALG: f64 = 10.0;
+const SPEEDUP_PAIRWISE: f64 = 30.0;
+const SPEEDUP_DEFAULT: f64 = 20.0;
+
 /// Run GPU operation for benchmarking
 pub(super) fn run_gpu_operation(
     operation: &str,
@@ -202,8 +214,8 @@ pub(super) fn run_gpu_operation(
 ) -> Result<()> {
     let size = test_data.size;
 
-    let dispatch_overhead = std::time::Duration::from_micros(100);
-    let per_element_time = std::time::Duration::from_nanos(1);
+    let dispatch_overhead = std::time::Duration::from_micros(SIMULATED_DISPATCH_OVERHEAD_US);
+    let per_element_time = std::time::Duration::from_nanos(SIMULATED_PER_ELEMENT_NS);
 
     let elements = match operation {
         "matmul" | "cholesky" | "eigh" | "lu" | "qr" | "svd" | "solve" => size * size * size,
@@ -212,12 +224,12 @@ pub(super) fn run_gpu_operation(
     };
 
     let gpu_speedup = match operation {
-        "matmul" => 50.0,
-        "exp" | "log" | "sqrt" | "sin" | "cos" => 100.0,
-        "sum" | "max" => 20.0,
-        "cholesky" | "lu" | "qr" | "svd" | "eigh" | "solve" => 10.0,
-        "cdist" | "rbf_kernel" => 30.0,
-        _ => 20.0,
+        "matmul" => SPEEDUP_MATMUL,
+        "exp" | "log" | "sqrt" | "sin" | "cos" => SPEEDUP_TRANSCENDENTAL,
+        "sum" | "max" => SPEEDUP_REDUCTION,
+        "cholesky" | "lu" | "qr" | "svd" | "eigh" | "solve" => SPEEDUP_LINALG,
+        "cdist" | "rbf_kernel" => SPEEDUP_PAIRWISE,
+        _ => SPEEDUP_DEFAULT,
     };
 
     let _simulated_time =

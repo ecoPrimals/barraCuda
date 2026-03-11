@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // population_pk_f64.wgsl — Population PK Monte Carlo (f64, GPU-vectorized)
 //

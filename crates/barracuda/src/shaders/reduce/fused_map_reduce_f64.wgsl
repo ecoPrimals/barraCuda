@@ -17,7 +17,7 @@
 // PRECISION: Uses (zero + literal) pattern for full f64 constants
 //
 // Date: February 16, 2026
-// License: AGPL-3.0-or-later
+// License: AGPL-3.0-only
 // ============================================================================
 
 // ============================================================================

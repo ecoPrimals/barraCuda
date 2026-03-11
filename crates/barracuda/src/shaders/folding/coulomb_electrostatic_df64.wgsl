@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 // coulomb_electrostatic_df64.wgsl — Coulomb electrostatic energy with dielectric
 //
 // V(r) = k_e * q_i * q_j / (epsilon_r * r)

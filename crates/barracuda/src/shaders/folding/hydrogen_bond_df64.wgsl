@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 // hydrogen_bond_df64.wgsl — Hydrogen bond energy (donor-acceptor geometry)
 //
 // Simplified 12-10-6 potential: V = eps * (5*(sigma/r)^12 - 6*(sigma/r)^10)

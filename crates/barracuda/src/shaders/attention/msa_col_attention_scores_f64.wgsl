@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // msa_col_attention_scores_f64.wgsl — AlphaFold2 MSA column-wise attention scores
 //

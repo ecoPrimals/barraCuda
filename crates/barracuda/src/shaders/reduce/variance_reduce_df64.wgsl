@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // variance_reduce_df64.wgsl — Welford variance reduction using DF64 workgroup memory
 //

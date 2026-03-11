@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 // SU(3) WGSL library: 3x3 complex matrix operations for lattice QCD
 // Depends on complex_f64.wgsl (prepend before this file).
 

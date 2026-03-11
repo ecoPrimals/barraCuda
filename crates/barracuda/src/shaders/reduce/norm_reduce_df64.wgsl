@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // norm_reduce_df64.wgsl — Norm reduction using DF64 workgroup memory
 //

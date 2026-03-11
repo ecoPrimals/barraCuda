@@ -44,12 +44,15 @@ pub struct BenchmarkConfig {
     pub random_seed: u64,
 }
 
+/// Default minimum benchmark measurement duration (seconds).
+const DEFAULT_MIN_BENCH_DURATION_SECS: u64 = 5;
+
 impl Default for BenchmarkConfig {
     fn default() -> Self {
         Self {
             warmup_iterations: 10,
             measurement_iterations: 100,
-            min_duration: Duration::from_secs(5),
+            min_duration: Duration::from_secs(DEFAULT_MIN_BENCH_DURATION_SECS),
             compare_cuda: true,
             precision: Precision::FP32,
             random_seed: 42,

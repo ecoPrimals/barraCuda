@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // template_embedding_f64.wgsl — AlphaFold2 template stack averaging
 //

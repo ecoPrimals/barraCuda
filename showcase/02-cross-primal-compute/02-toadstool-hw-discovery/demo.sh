@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: AGPL-3.0-only
 # toadStool Hardware Discovery Showcase
 #
 # Demonstrates toadStool hardware inventory feeding barraCuda GPU selection.
@@ -83,7 +83,7 @@ echo "─── Summary ──────────────────�
 echo
 echo "  Compute triangle:"
 echo "    toadStool → hardware discovery + GPU management"
-echo "    barraCuda → math engine (716+ WGSL shaders)"
+echo "    barraCuda → math engine (803 WGSL shaders)"
 echo "    coralReef → sovereign shader compilation"
 echo
 echo "  When toadStool is available:"

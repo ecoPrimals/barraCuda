@@ -295,6 +295,35 @@ impl From<std::io::Error> for BarracudaError {
     }
 }
 
+// ── Safe narrowing cast helpers ─────────────────────────────────────────────
+
+/// Safe `u64` to `u32` conversion.
+///
+/// Use at RPC boundaries where external input (e.g. `degree: u64`) must be
+/// narrowed for GPU dispatch (`u32` shader uniforms).
+///
+/// # Errors
+///
+/// Returns [`BarracudaError::InvalidInput`] if `v > u32::MAX`.
+#[inline]
+pub fn u32_from_u64(v: u64) -> Result<u32> {
+    u32::try_from(v).map_err(|_| BarracudaError::InvalidInput {
+        message: format!("value {v} exceeds u32::MAX ({max})", max = u32::MAX),
+    })
+}
+
+/// Safe `usize` to `u32` conversion.
+///
+/// # Errors
+///
+/// Returns [`BarracudaError::InvalidInput`] if `v > u32::MAX`.
+#[inline]
+pub fn u32_from_usize(v: usize) -> Result<u32> {
+    u32::try_from(v).map_err(|_| BarracudaError::InvalidInput {
+        message: format!("value {v} exceeds u32::MAX ({max})", max = u32::MAX),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

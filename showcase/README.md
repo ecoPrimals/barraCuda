@@ -12,7 +12,7 @@ shaders dispatched through wgpu. Demos progress from local capabilities through
 IPC protocol to cross-primal compute orchestration with toadStool (hardware
 discovery) and coralReef (sovereign shader compilation).
 
-All demos are pure Rust, zero unsafe, AGPL-3.0-or-later.
+All demos are pure Rust, zero unsafe, AGPL-3.0-only.
 
 ---
 
@@ -67,4 +67,4 @@ cargo run --release
 
 ## License
 
-AGPL-3.0-or-later — same as all barraCuda code.
+AGPL-3.0-only — same as all barraCuda code.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: AGPL-3.0-only
 # barraCuda Doctor + Validate Showcase
 #
 # Demonstrates self-diagnostic commands for production health checking.

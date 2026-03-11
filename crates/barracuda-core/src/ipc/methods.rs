@@ -481,7 +481,17 @@ async fn fhe_ntt(primal: &BarraCudaPrimal, params: &Value, id: Value) -> JsonRpc
     };
 
     let poly: Vec<u64> = coefficients.iter().filter_map(|v| v.as_u64()).collect();
-    if poly.len() != degree as usize {
+    let Ok(degree_usize) = usize::try_from(degree) else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, format!("degree {degree} too large"));
+    };
+    let Ok(degree_u32) = u32::try_from(degree) else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            format!("degree {degree} exceeds u32::MAX"),
+        );
+    };
+    if poly.len() != degree_usize {
         return JsonRpcResponse::error(
             id,
             INVALID_PARAMS,
@@ -492,7 +502,7 @@ async fn fhe_ntt(primal: &BarraCudaPrimal, params: &Value, id: Value) -> JsonRpc
     // u64 → u32 pairs → f32 bit patterns → Tensor
     let u32_pairs: Vec<u32> = poly
         .iter()
-        .flat_map(|&x| [(x & 0xFFFF_FFFF) as u32, (x >> 32) as u32])
+        .flat_map(|&x| [x as u32, (x >> 32) as u32])
         .collect();
     let f32_bits: Vec<f32> = u32_pairs.iter().map(|&x| f32::from_bits(x)).collect();
 
@@ -513,7 +523,7 @@ async fn fhe_ntt(primal: &BarraCudaPrimal, params: &Value, id: Value) -> JsonRpc
 
     let ntt = match barracuda::ops::fhe_ntt::FheNtt::new(
         input_tensor,
-        degree as u32,
+        degree_u32,
         modulus,
         root_of_unity,
     ) {
@@ -573,7 +583,17 @@ async fn fhe_pointwise_mul(primal: &BarraCudaPrimal, params: &Value, id: Value) 
     let a: Vec<u64> = a_coeffs.iter().filter_map(|v| v.as_u64()).collect();
     let b: Vec<u64> = b_coeffs.iter().filter_map(|v| v.as_u64()).collect();
 
-    if a.len() != degree as usize || b.len() != degree as usize {
+    let Ok(degree_usize) = usize::try_from(degree) else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, format!("degree {degree} too large"));
+    };
+    let Ok(degree_u32) = u32::try_from(degree) else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            format!("degree {degree} exceeds u32::MAX"),
+        );
+    };
+    if a.len() != degree_usize || b.len() != degree_usize {
         return JsonRpcResponse::error(
             id,
             INVALID_PARAMS,
@@ -584,7 +604,7 @@ async fn fhe_pointwise_mul(primal: &BarraCudaPrimal, params: &Value, id: Value) 
     let to_tensor = |poly: &[u64]| -> Result<barracuda::tensor::Tensor, String> {
         let u32_pairs: Vec<u32> = poly
             .iter()
-            .flat_map(|&x| [(x & 0xFFFF_FFFF) as u32, (x >> 32) as u32])
+            .flat_map(|&x| [x as u32, (x >> 32) as u32])
             .collect();
         let f32_bits: Vec<f32> = u32_pairs.iter().map(|&x| f32::from_bits(x)).collect();
         barracuda::tensor::Tensor::from_data(
@@ -607,10 +627,7 @@ async fn fhe_pointwise_mul(primal: &BarraCudaPrimal, params: &Value, id: Value) 
     };
 
     let op = match barracuda::ops::fhe_pointwise_mul::FhePointwiseMul::new(
-        a_tensor,
-        b_tensor,
-        degree as u32,
-        modulus,
+        a_tensor, b_tensor, degree_u32, modulus,
     ) {
         Ok(op) => op,
         Err(e) => {

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 // Pure-GPU SEMF: all math done on GPU via math_f64 library
 // Input:  nuclei[3*i] = Z, nuclei[3*i+1] = N, nuclei[3*i+2] = A
 // Input:  nmp[0..3] = a_v, r0, a_a, e2

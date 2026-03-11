@@ -15,7 +15,7 @@ use barracuda::tolerances;
 async fn main() -> barracuda::error::Result<()> {
     println!("╔══════════════════════════════════════════════════════════════╗");
     println!("║  barraCuda — Science Shaders Showcase                       ║");
-    println!("║  716+ WGSL shaders for GPU-accelerated scientific computing ║");
+    println!("║  803 WGSL shaders for GPU-accelerated scientific computing  ║");
     println!("╚══════════════════════════════════════════════════════════════╝");
     println!();
 
@@ -130,7 +130,7 @@ async fn main() -> barracuda::error::Result<()> {
     // --- Shader Inventory ---
     println!("─── Shader Inventory ─────────────────────────────────────");
     println!();
-    println!("  barraCuda includes 716+ WGSL shaders across domains:");
+    println!("  barraCuda includes 803 WGSL shaders across domains:");
     println!();
     println!("  Domain               Shaders  Examples");
     println!("  ───────────────────  ───────  ───────────────────────────────");

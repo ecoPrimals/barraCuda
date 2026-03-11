@@ -52,6 +52,7 @@ async fn test_esn_train_simple() {
         leak_rate: 0.3,
         regularization: 1e-6,
         seed: 42,
+        ..Default::default()
     };
 
     let mut esn = ESN::new(config).await.unwrap();
@@ -76,6 +77,7 @@ async fn test_esn_predict_after_train() {
         leak_rate: 0.3,
         regularization: 1e-5,
         seed: 42,
+        ..Default::default()
     };
 
     let mut esn = ESN::new(config).await.unwrap();
@@ -155,6 +157,7 @@ async fn test_esn_multiple_outputs() {
         leak_rate: 0.3,
         regularization: 1e-5,
         seed: 42,
+        ..Default::default()
     };
 
     let mut esn = ESN::new(config).await.unwrap();
@@ -414,6 +417,7 @@ async fn test_esn_reservoir_shape() {
         leak_rate: 0.2,
         regularization: 1e-4,
         seed: 42,
+        ..Default::default()
     };
 
     let esn = ESN::new(config).await.unwrap();

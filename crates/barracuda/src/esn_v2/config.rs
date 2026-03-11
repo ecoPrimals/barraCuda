@@ -43,6 +43,15 @@ pub struct ESNConfig {
 
     /// Random seed for reproducibility
     pub seed: u64,
+
+    /// Learning rate for SGD ridge regression fallback (default: 0.01).
+    pub sgd_learning_rate: f64,
+
+    /// Minimum SGD iterations for ridge regression fallback (default: 50).
+    pub sgd_min_iterations: usize,
+
+    /// Maximum SGD iterations for ridge regression fallback (default: 1000).
+    pub sgd_max_iterations: usize,
 }
 
 impl ESNConfig {
@@ -60,9 +69,19 @@ impl ESNConfig {
             leak_rate: 0.3,
             regularization: 1e-6,
             seed: 42,
+            sgd_learning_rate: DEFAULT_SGD_LEARNING_RATE,
+            sgd_min_iterations: DEFAULT_SGD_MIN_ITERATIONS,
+            sgd_max_iterations: DEFAULT_SGD_MAX_ITERATIONS,
         }
     }
 }
+
+/// Default SGD learning rate for ridge regression fallback.
+pub const DEFAULT_SGD_LEARNING_RATE: f64 = 0.01;
+/// Default minimum SGD iterations.
+pub const DEFAULT_SGD_MIN_ITERATIONS: usize = 50;
+/// Default maximum SGD iterations.
+pub const DEFAULT_SGD_MAX_ITERATIONS: usize = 1000;
 
 impl Default for ESNConfig {
     fn default() -> Self {
@@ -75,6 +94,9 @@ impl Default for ESNConfig {
             leak_rate: 0.3,
             regularization: 1e-6,
             seed: 42,
+            sgd_learning_rate: DEFAULT_SGD_LEARNING_RATE,
+            sgd_min_iterations: DEFAULT_SGD_MIN_ITERATIONS,
+            sgd_max_iterations: DEFAULT_SGD_MAX_ITERATIONS,
         }
     }
 }

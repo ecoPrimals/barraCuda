@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // hessian_column.wgsl — Parallel central-difference Hessian column computation (f64 canonical)
 //

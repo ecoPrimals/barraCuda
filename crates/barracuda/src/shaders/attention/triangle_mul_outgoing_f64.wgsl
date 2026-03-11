@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // triangle_mul_outgoing_f64.wgsl — AlphaFold2 Evoformer triangle multiplicative update (outgoing edges)
 //

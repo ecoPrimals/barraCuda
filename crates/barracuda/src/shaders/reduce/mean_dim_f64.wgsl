@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 // Mean Dim (f64) - Mean along a specific dimension at double precision
 //
 // Similar to PyTorch's torch.mean(dim=N)

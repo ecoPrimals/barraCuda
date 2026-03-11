@@ -11,7 +11,7 @@
 // - Biological sequence comparison
 //
 // Date: February 16, 2026
-// License: AGPL-3.0-or-later
+// License: AGPL-3.0-only
 
 // Import sqrt_f64 from math_f64.wgsl (include via ShaderTemplate or inline)
 // For standalone use, inline the sqrt function:

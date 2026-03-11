@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: AGPL-3.0-only
 # barraCuda JSON-RPC Server Showcase
 #
 # Starts barraCuda as an IPC server, exercises JSON-RPC 2.0 methods,

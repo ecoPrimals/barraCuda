@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 // distance_matrix_df64.wgsl — pairwise Cα distance matrix
 //
 // Computes d[i,j] = ||pos[i] - pos[j]|| for all residue pairs.

@@ -231,8 +231,22 @@ Previously limited to Vulkan with SPIR-V passthrough.
 
 ### P2 — Near-term
 
+#### Precision Tiers Evolution (Full Ladder)
+- See `specs/PRECISION_TIERS_SPECIFICATION.md` for the complete 15-tier
+  precision architecture from Binary (1-bit) to DF128 (~104-bit mantissa)
+- **Phase 1 — FP16**: Enable `SHADER_F16` detection, native `f16` op_preamble,
+  emulated fallback via `pack2x16float`/`unpack2x16float`, tolerance tier
+- **Phase 2 — BF16**: u32 bit-manipulation pack/unpack, ML training support
+- **Phase 3 — DF128**: `df128_core.wgsl` (port of `df64_core.wgsl` to f64 base),
+  `df128_transcendentals.wgsl`, `df128_rewrite` pass, MPFR reference tables
+- **Phase 4 — QF128**: Bailey quad-double on f32 (universal, no f64 HW needed),
+  renormalization cascade, consumer GPU support
+- **Phase 5 — FP8**: E4M3/E5M2 pack/unpack, GEMV with on-the-fly dequantization
+- **Phase 6 — INT2/Binary**: Ternary networks, XNOR+popcount dot product
+- **Phase 7 — K-quant**: Q2_K through Q6_K super-block formats (GGML parity)
+
 #### Test Coverage to 90%
-- Current: 3,249 total tests (lib), 28 integration suites
+- Current: 3,900+ total tests (workspace), 42 integration test files
 - Evolve CI `--fail-under` from 80 to 90
 - Add GPU-conditional tests for new ops
 - GPU_TEST_TIMEOUT (60s) prevents hangs; coordination harness with
@@ -349,6 +363,7 @@ path and cross-compilation target matrix.
 - `WHATS_NEXT.md` — prioritised work items + C dependency evolution map
 - `CONVENTIONS.md` — coding standards
 - `specs/BARRACUDA_SPECIFICATION.md` — crate architecture
+- `specs/PRECISION_TIERS_SPECIFICATION.md` — full precision ladder (Binary to DF128)
 - `specs/ARCHITECTURE_DEMARCATION.md` — primal ownership boundaries
 - `ecoPrimals/wateringHole/SOVEREIGN_COMPUTE_EVOLUTION.md` — full stack evolution plan
 - `ecoPrimals/wateringHole/PURE_RUST_SOVEREIGN_STACK_GUIDANCE.md` — coralReef Layer 2-4 guidance

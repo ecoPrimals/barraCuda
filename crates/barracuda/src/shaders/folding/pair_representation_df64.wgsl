@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 // pair_representation_df64.wgsl — Pair features update (outer product mean)
 //
 // out[i,j,c] = (1/S) * sum_s a[s,i,c] * b[s,j,c]

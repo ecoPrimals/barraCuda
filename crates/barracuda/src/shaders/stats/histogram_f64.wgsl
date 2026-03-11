@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // histogram.wgsl — Parallel histogram via atomic binning (f64 canonical)
 //

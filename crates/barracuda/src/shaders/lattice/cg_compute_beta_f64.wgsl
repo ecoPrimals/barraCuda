@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // CG scalar: beta = rz_new / rz_old, then rz_old ← rz_new.
 // Single-thread GPU kernel — no readback for CG internals.

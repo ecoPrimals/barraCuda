@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 // contact_map_df64.wgsl — Binary contact map from distance matrix with threshold
 //
 // contact[i,j] = 1 if dist[i,j] <= threshold else 0

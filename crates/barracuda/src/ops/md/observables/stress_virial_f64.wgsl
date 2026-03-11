@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Off-diagonal stress tensor σ_xy (f64) — GPU virial computation
 //

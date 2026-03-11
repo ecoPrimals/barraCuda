@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 // Elementwise fused multiply-add at DF64 precision (f32-pair, ~48-bit mantissa).
 // result[i] = a[i] * b[i] + c[i]
 // Input/output as vec2<f32> where .x = hi, .y = lo.

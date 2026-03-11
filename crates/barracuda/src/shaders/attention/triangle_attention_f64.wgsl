@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // triangle_attention_f64.wgsl — AlphaFold2 Evoformer triangle self-attention (starting node)
 //

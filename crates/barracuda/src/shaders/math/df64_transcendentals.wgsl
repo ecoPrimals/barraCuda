@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 // DF64 transcendental functions — f64-precision math at FP32 core speed.
 //
 // These functions use Df64 (f32-pair) arithmetic for all intermediate

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 // structure_module_df64.wgsl — IPA (Invariant Point Attention) frame update
 //
 // IPA score: q*k^T/sqrt(d) + w_l * ||T_i(q_pts) - T_j(k_pts)||^2

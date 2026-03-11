@@ -135,12 +135,10 @@ impl BarraCudaService for BarraCudaServer {
     }
 
     async fn primal_capabilities(self, _: tarpc::context::Context) -> PrimalCapabilities {
-        let has_gpu = self.primal.device().is_some();
-        let has_f64 = self.primal.device().is_some_and(|d| d.has_f64_shaders());
-        let has_spirv = self
-            .primal
-            .device()
-            .is_some_and(|d| d.has_spirv_passthrough());
+        let dev = self.primal.device();
+        let has_gpu = dev.is_some();
+        let has_f64 = dev.as_ref().is_some_and(|d| d.has_f64_shaders());
+        let has_spirv = dev.as_ref().is_some_and(|d| d.has_spirv_passthrough());
 
         PrimalCapabilities {
             domains: vec![
@@ -203,8 +201,8 @@ impl BarraCudaService for BarraCudaServer {
         use crate::health::PrimalHealth;
         match self.primal.health_check().await {
             Ok(report) => HealthReport {
-                name: report.name.clone(),
-                version: report.version.clone(),
+                name: report.name,
+                version: report.version,
                 status: report.status.to_string(),
             },
             Err(e) => HealthReport {

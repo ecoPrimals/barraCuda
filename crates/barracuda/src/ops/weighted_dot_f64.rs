@@ -34,12 +34,10 @@ fn shader_for_device(device: &WgpuDevice) -> Result<&'static str> {
                 std::sync::LazyLock::new(|| {
                     crate::shaders::sovereign::df64_rewrite::rewrite_f64_infix_full(SHADER)
                         .map(|src| format!("enable f64;\n{DF64_CORE}\n{src}"))
-                        .map_err(|e| {
-                            Arc::from(format!("weighted_dot DF64 rewrite failed: {e}").as_str())
-                        })
+                        .map_err(|e| Arc::from(format!("weighted_dot DF64 rewrite failed: {e}")))
                 });
             match DF64_RESULT.as_ref() {
-                Ok(src) => Ok(src.as_str()),
+                Ok(src) => Ok(src),
                 Err(msg) => Err(BarracudaError::ShaderCompilation(Arc::clone(msg))),
             }
         }

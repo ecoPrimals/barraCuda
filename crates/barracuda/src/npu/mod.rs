@@ -7,5 +7,4 @@
 pub mod constants;
 pub mod event_codec;
 
-pub use constants as npu_constants;
 pub use event_codec::EventCodec;

@@ -214,12 +214,8 @@ impl GpuBackend for WgpuDevice {
             return Ok(());
         }
         if descs.len() == 1 {
-            return self.dispatch_compute(
-                descs
-                    .into_iter()
-                    .next()
-                    .expect("len == 1 checked above"),
-            );
+            return self
+                .dispatch_compute(descs.into_iter().next().expect("len == 1 checked above"));
         }
 
         let _permit = self.acquire_dispatch();

@@ -89,7 +89,7 @@ impl CoralReefDevice {
             BarracudaError::Device(format!("CoralReefDevice: context init failed: {e}"))
         })?;
         Ok(Self {
-            name: Arc::from(format!("sovereign:{target:?}").as_str()),
+            name: Arc::from(format!("sovereign:{target:?}")),
             ctx: std::sync::Mutex::new(ctx),
             has_device: false,
             kernel_cache: std::sync::Mutex::new(HashMap::new()),
@@ -131,7 +131,7 @@ impl CoralReefDevice {
             BarracudaError::Device(format!("CoralReefDevice: descriptor failed: {e}"))
         })?;
         Ok(Self {
-            name: Arc::from(format!("sovereign:{vendor}:{}", arch.unwrap_or("auto")).as_str()),
+            name: Arc::from(format!("sovereign:{vendor}:{}", arch.unwrap_or("auto"))),
             ctx: std::sync::Mutex::new(ctx),
             has_device: true,
             kernel_cache: std::sync::Mutex::new(HashMap::new()),

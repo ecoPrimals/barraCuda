@@ -53,12 +53,19 @@
     reason = "tensor dimensions validated upstream"
 )]
 
+/// Runtime discovery of peer primals via mDNS and fallback scanning.
 pub mod discovery;
+/// Primal-specific error types and conversions.
 pub mod error;
+/// Health-check subsystem — liveness, readiness, and device availability.
 pub mod health;
+/// JSON-RPC 2.0 IPC transport and method handlers.
 pub mod ipc;
+/// Primal lifecycle management — start, stop, health, and graceful shutdown.
 pub mod lifecycle;
+/// `tarpc` binary RPC service definition and handlers.
 pub mod rpc;
+/// Shared request/response types for the RPC layer.
 pub mod rpc_types;
 
 pub use barracuda;

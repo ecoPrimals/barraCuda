@@ -505,6 +505,9 @@ pub mod bio;
 pub mod health;
 pub mod pharma;
 
+// Procedural generation (ludoSpring V2 absorption — Perlin noise, fBm)
+pub mod procedural;
+
 // Quantization
 pub mod dequantize;
 pub mod fake_quantize;

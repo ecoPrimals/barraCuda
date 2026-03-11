@@ -18,8 +18,11 @@
 use crate::error::Result;
 use std::time::Duration;
 
+/// Benchmark harness — warm-up, measurement, and statistical aggregation.
 pub mod harness;
+/// GPU operation benchmarks for every supported compute primitive.
 pub mod operations;
+/// Benchmark report generation — CSV, JSON, and human-readable output.
 pub mod report;
 
 /// Benchmark configuration

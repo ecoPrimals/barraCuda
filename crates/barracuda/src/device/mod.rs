@@ -17,37 +17,65 @@
 use crate::error::Result;
 use std::sync::Arc;
 
+/// Akida neuromorphic hardware detection and board health.
 pub mod akida;
+/// Akida NPU execution backend for spiking-network inference.
 pub mod akida_executor;
+/// Async GPU submission queue for pipelined dispatch.
 pub mod async_submit;
+/// Auto-tuning framework for workgroup sizes and dispatch parameters.
 pub mod autotune;
+/// `GpuBackend` trait abstracting wgpu, coralReef, and CPU fallback.
 pub mod backend;
+/// Batched command encoder for fusing multiple dispatches.
 pub mod batched_encoder;
+/// Multi-level GPU cache hierarchy (L1 pipeline, L2 compute, L3 global).
 pub mod cache_hierarchy;
+/// Runtime capability queries (f64, subgroups, max buffer size, etc.).
 pub mod capabilities;
+/// `ComputeDispatch` builder — the canonical GPU dispatch primitive.
 pub mod compute_pipeline;
+/// coralReef sovereign compiler discovery and gRPC bridge.
 pub mod coral_compiler;
+/// coralReef device implementation (sovereign dispatch feature gate).
 #[cfg(feature = "sovereign-dispatch")]
 pub mod coral_reef_device;
 mod device_types;
-pub mod driver_profile; // GPU driver/compiler identity + shader strategies (D-S17-002 refactor)
-pub mod fma_policy; // FMA contraction policy for reproducibility (coralReef Iteration 30)
-pub mod hardware_calibration; // Per-tier GPU compilation probing (hotSpring v0.6.25 absorption)
-pub mod kernel_router; // Unified Math → Hardware routing (Feb 15, 2026)
-pub mod latency; // LatencyModel trait + Sm70/Rdna2/AppleM/Conservative/Measured (SOVEREIGN Phase 2, Feb 2026)
+/// GPU driver/compiler identity and shader strategy selection.
+pub mod driver_profile;
+/// FMA contraction policy for reproducible floating-point results.
+pub mod fma_policy;
+/// Per-tier GPU compilation probing (hotSpring v0.6.25 absorption).
+pub mod hardware_calibration;
+/// Unified Math-to-Hardware routing (operation → best device).
+pub mod kernel_router;
+/// Latency models for dispatch scheduling (Sm70, Rdna2, AppleM, Conservative).
+pub mod latency;
+/// Global GPU pipeline cache — deduplicates compiled shader modules.
 pub mod pipeline_cache;
-pub mod precision_brain; // Domain→tier self-routing brain (hotSpring v0.6.25 absorption)
-pub mod precision_tier; // PrecisionTier, PhysicsDomain enums (hotSpring v0.6.25 absorption)
-pub mod probe; // Runtime f64 exp/log capability probing (W-001 evolution)
-pub mod probe_throughput; // f64 throughput ratio probing (metalForge discovery)
-pub mod registry; // Physical device tracking with backend preference (Feb 16, 2026)
+/// Domain-aware precision self-routing brain.
+pub mod precision_brain;
+/// `PrecisionTier` and `PhysicsDomain` enums.
+pub mod precision_tier;
+/// Runtime f64 exp/log capability probing.
+pub mod probe;
+/// f64 throughput ratio probing (native vs emulated performance).
+pub mod probe_throughput;
+/// Physical device registry with backend preference ordering.
+pub mod registry;
 mod routing;
+/// GPU memory substrate — allocation, lifetime, and residency tracking.
 pub mod substrate;
+/// Zero-overhead tensor context with buffer pooling.
 pub mod tensor_context;
+/// Unified `Device` enum routing across CPU, GPU, NPU, and Auto.
 pub mod unified;
-pub mod vendor; // Canonical GPU vendor ID constants (single source of truth)
+/// Canonical GPU vendor ID constants (single source of truth).
+pub mod vendor;
+/// Device warm-up (mise en place) — pre-compile pipelines before first use.
 pub mod warmup;
 mod wgpu_backend;
+/// `WgpuDevice` — the primary GPU device implementation via wgpu/WebGPU.
 pub mod wgpu_device;
 
 // Re-export auto-tuning types

@@ -144,13 +144,15 @@ pub enum DeviceSelection {
     Cpu,
     /// NPU via Akida driver - runs pre-compiled SNN models only
     Npu,
+    /// Sovereign GPU via coralReef → DRM (no wgpu/Vulkan/Metal)
+    Sovereign,
 }
 
 impl DeviceSelection {
     /// Can this device run arbitrary WGSL compute shaders?
     #[must_use]
     pub fn supports_wgsl(self) -> bool {
-        matches!(self, Self::Gpu | Self::Cpu)
+        matches!(self, Self::Gpu | Self::Cpu | Self::Sovereign)
     }
 
     /// Is this device best for sparse/event-driven workloads?
@@ -158,6 +160,29 @@ impl DeviceSelection {
     pub fn is_event_driven(self) -> bool {
         matches!(self, Self::Npu)
     }
+
+    /// Is this a sovereign dispatch path (pure Rust, no Vulkan)?
+    #[must_use]
+    pub fn is_sovereign(self) -> bool {
+        matches!(self, Self::Sovereign)
+    }
+}
+
+/// Check whether sovereign dispatch (coralReef → DRM) is available.
+///
+/// Returns `true` when the `sovereign-dispatch` feature is enabled **and**
+/// `CoralReefDevice::with_auto_device()` finds a dispatchable GPU.
+/// This is a runtime probe — call once at startup, cache the result.
+#[must_use]
+pub fn sovereign_available() -> bool {
+    #[cfg(feature = "sovereign-dispatch")]
+    {
+        coral_reef_device::CoralReefDevice::with_auto_device()
+            .map(|d| d.has_dispatch())
+            .unwrap_or(false)
+    }
+    #[cfg(not(feature = "sovereign-dispatch"))]
+    false
 }
 
 /// What kind of work needs to be done (hardware routing level)

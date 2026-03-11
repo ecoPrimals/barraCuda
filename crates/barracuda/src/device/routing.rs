@@ -130,11 +130,11 @@ pub fn select_with_preference(preferred: Option<Device>, workload: &WorkloadHint
 /// Check if a device is available (used by `select_with_preference`).
 fn device_is_available(device: Device) -> bool {
     match device {
-        Device::CPU => true,
+        Device::CPU | Device::Auto => true,
         Device::GPU => is_gpu_available(),
         Device::NPU => is_npu_available(),
         Device::TPU => false,
-        Device::Auto => true,
+        Device::Sovereign => device.is_available(),
     }
 }
 

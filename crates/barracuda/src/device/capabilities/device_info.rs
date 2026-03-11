@@ -221,6 +221,19 @@ pub fn build_device_info(device: Device) -> DeviceInfo {
             compute_units: 0,
         },
 
+        Device::Sovereign => DeviceInfo {
+            device,
+            name: "Sovereign (coralReef → DRM)".to_string(),
+            available: is_sovereign_available(),
+            capabilities: vec![
+                Capability::Compute,
+                Capability::WGSL,
+                Capability::ParallelExecution,
+            ],
+            memory_gb: 0,
+            compute_units: 0,
+        },
+
         Device::Auto => DeviceInfo {
             device,
             name: "Auto (smart selection)".to_string(),
@@ -230,4 +243,16 @@ pub fn build_device_info(device: Device) -> DeviceInfo {
             compute_units: 0,
         },
     }
+}
+
+/// Check if sovereign dispatch is available (feature + hardware).
+fn is_sovereign_available() -> bool {
+    #[cfg(feature = "sovereign-dispatch")]
+    {
+        crate::device::coral_reef_device::CoralReefDevice::with_auto_device()
+            .map(|d| d.has_dispatch())
+            .unwrap_or(false)
+    }
+    #[cfg(not(feature = "sovereign-dispatch"))]
+    false
 }

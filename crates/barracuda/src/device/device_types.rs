@@ -23,6 +23,12 @@ pub enum Device {
     /// TPU execution (Tensor Processing Unit)
     TPU,
 
+    /// Sovereign GPU execution (WGSL → coralReef → native SASS/GFX → DRM).
+    ///
+    /// Bypasses wgpu/Vulkan/Metal entirely. Requires the `sovereign-dispatch`
+    /// feature and a coralReef-compatible GPU (NVIDIA SM70+, AMD RDNA2+).
+    Sovereign,
+
     /// Automatic selection based on workload
     Auto,
 }
@@ -34,6 +40,7 @@ impl fmt::Display for Device {
             Device::GPU => write!(f, "GPU"),
             Device::NPU => write!(f, "NPU"),
             Device::TPU => write!(f, "TPU"),
+            Device::Sovereign => write!(f, "Sovereign"),
             Device::Auto => write!(f, "Auto"),
         }
     }

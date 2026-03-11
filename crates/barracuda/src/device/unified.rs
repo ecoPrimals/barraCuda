@@ -79,6 +79,7 @@ impl Device {
             Device::GPU,
             Device::NPU,
             Device::TPU,
+            Device::Sovereign,
             Device::Auto,
         ]
         .into_iter()
@@ -121,6 +122,10 @@ pub enum DeviceContext {
     /// NPU context (Akida)
     NPU(AkidaBoard),
 
+    /// Sovereign GPU context (coralReef → DRM, no wgpu/Vulkan).
+    #[cfg(feature = "sovereign-dispatch")]
+    Sovereign(super::coral_reef_device::CoralReefDevice),
+
     /// Not yet initialized
     Uninitialized,
 }
@@ -156,7 +161,15 @@ impl DeviceContext {
                 reason: "TPU support not yet implemented".to_string(),
             }),
 
+            Device::Sovereign => Self::try_sovereign(),
+
             Device::Auto => {
+                // Prefer sovereign when available: pure Rust, no Vulkan/Metal.
+                #[cfg(feature = "sovereign-dispatch")]
+                if let Ok(ctx) = Self::try_sovereign() {
+                    return Ok(ctx);
+                }
+
                 if Device::GPU.is_available() {
                     match WgpuDevice::new().await {
                         Ok(wgpu_device) => Ok(DeviceContext::GPU(wgpu_device)),
@@ -167,6 +180,31 @@ impl DeviceContext {
                 }
             }
         }
+    }
+
+    /// Attempt sovereign device creation via coralReef.
+    ///
+    /// Returns `Sovereign(CoralReefDevice)` if `sovereign-dispatch` is
+    /// enabled and hardware auto-detection succeeds.
+    fn try_sovereign() -> BarracudaResult<Self> {
+        #[cfg(feature = "sovereign-dispatch")]
+        {
+            let dev = super::coral_reef_device::CoralReefDevice::with_auto_device()?;
+            if dev.has_dispatch() {
+                return Ok(DeviceContext::Sovereign(dev));
+            }
+            Err(BarracudaError::DeviceNotAvailable {
+                device: "Sovereign".into(),
+                reason: "coralReef auto-detect found no dispatchable GPU".into(),
+            })
+        }
+        #[cfg(not(feature = "sovereign-dispatch"))]
+        Err(BarracudaError::DeviceNotAvailable {
+            device: "Sovereign".into(),
+            reason: "enable sovereign-dispatch feature: \
+                     cargo build --features sovereign-dispatch"
+                .into(),
+        })
     }
 }
 

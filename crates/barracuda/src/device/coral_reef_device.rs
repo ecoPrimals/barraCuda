@@ -31,6 +31,9 @@ use super::backend::{DispatchDescriptor, GpuBackend};
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
 
+#[cfg(feature = "sovereign-dispatch")]
+use std::collections::HashMap;
+
 /// Buffer handle for the sovereign compute path.
 ///
 /// Wraps `coral_driver::BufferHandle` when the sovereign-dispatch feature is
@@ -58,6 +61,8 @@ pub struct CoralReefDevice {
     ctx: std::sync::Mutex<coral_gpu::GpuContext>,
     #[cfg(feature = "sovereign-dispatch")]
     has_device: bool,
+    #[cfg(feature = "sovereign-dispatch")]
+    kernel_cache: std::sync::Mutex<HashMap<u64, coral_gpu::CompiledKernel>>,
 }
 
 impl std::fmt::Debug for CoralReefDevice {
@@ -87,6 +92,7 @@ impl CoralReefDevice {
             name: Arc::from(format!("sovereign:{target:?}").as_str()),
             ctx: std::sync::Mutex::new(ctx),
             has_device: false,
+            kernel_cache: std::sync::Mutex::new(HashMap::new()),
         })
     }
 
@@ -107,6 +113,7 @@ impl CoralReefDevice {
             name: Arc::from("sovereign:auto"),
             ctx: std::sync::Mutex::new(ctx),
             has_device: true,
+            kernel_cache: std::sync::Mutex::new(HashMap::new()),
         })
     }
 
@@ -127,6 +134,7 @@ impl CoralReefDevice {
             name: Arc::from(format!("sovereign:{vendor}:{}", arch.unwrap_or("auto")).as_str()),
             ctx: std::sync::Mutex::new(ctx),
             has_device: true,
+            kernel_cache: std::sync::Mutex::new(HashMap::new()),
         })
     }
 
@@ -272,19 +280,41 @@ impl GpuBackend for CoralReefDevice {
 
     #[cfg(feature = "sovereign-dispatch")]
     fn dispatch_compute(&self, desc: DispatchDescriptor<'_, Self>) -> Result<()> {
+        use std::hash::{Hash, Hasher};
+
         if !self.has_device {
             return self.require_device("dispatch_compute");
         }
+
+        let mut hasher = std::hash::DefaultHasher::new();
+        desc.shader_source.hash(&mut hasher);
+        let key = hasher.finish();
+
         let mut ctx = self
             .ctx
             .lock()
             .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: lock poisoned: {e}")))?;
-        let kernel = ctx
-            .compile_wgsl(desc.shader_source)
-            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: compile: {e}")))?;
+
+        let mut cache = self.kernel_cache.lock().map_err(|e| {
+            BarracudaError::Device(format!("CoralReefDevice: cache lock poisoned: {e}"))
+        })?;
+
+        let kernel = if let Some(cached) = cache.get(&key) {
+            cached.clone()
+        } else {
+            let compiled = ctx
+                .compile_wgsl(desc.shader_source)
+                .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: compile: {e}")))?;
+            cache.insert(key, compiled.clone());
+            compiled
+        };
+
         let buffer_handles: Vec<coral_gpu::BufferHandle> =
             desc.bindings.iter().map(|b| b.buffer.handle).collect();
         let dims = [desc.workgroups.0, desc.workgroups.1, desc.workgroups.2];
+
+        drop(cache);
+
         ctx.dispatch(&kernel, &buffer_handles, dims)
             .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: dispatch: {e}")))?;
         ctx.sync()

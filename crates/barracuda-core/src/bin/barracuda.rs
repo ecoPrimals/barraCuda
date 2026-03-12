@@ -452,13 +452,14 @@ async fn run_service_mode() -> Result<(), barracuda_core::error::BarracudaCoreEr
     Ok(())
 }
 
-/// Write PID file at `$XDG_RUNTIME_DIR/barracuda/barracuda.pid` (best-effort).
+/// Write PID file at `$XDG_RUNTIME_DIR/{namespace}/{namespace}.pid` (best-effort).
 /// Returns a guard that removes the file on drop.
 fn write_pid_file() -> Option<PidFileGuard> {
+    let ns = barracuda_core::PRIMAL_NAMESPACE;
     let dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
-    let dir = std::path::PathBuf::from(dir).join("barracuda");
+    let dir = std::path::PathBuf::from(dir).join(ns);
     std::fs::create_dir_all(&dir).ok()?;
-    let path = dir.join("barracuda.pid");
+    let path = dir.join(format!("{ns}.pid"));
     std::fs::write(&path, std::process::id().to_string()).ok()?;
     tracing::debug!(path = %path.display(), "wrote PID file");
     Some(PidFileGuard { path })

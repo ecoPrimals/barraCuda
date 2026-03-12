@@ -182,6 +182,24 @@ impl CoralReefDevice {
         )))
     }
 
+    /// Check the coral compiler cache for a pre-compiled native binary.
+    ///
+    /// Returns `Some(binary)` if `spawn_coral_compile` has previously cached
+    /// a native GPU binary for this shader source. The lookup scans all
+    /// cached architectures, returning the first match.
+    fn try_coral_cache(shader_source: &str) -> Option<bytes::Bytes> {
+        use crate::device::coral_compiler::{cached_native_binary, shader_hash};
+        let hash = shader_hash(shader_source);
+        for arch in &[
+            "sm_70", "sm_75", "sm_80", "sm_86", "sm_89", "gfx1030", "gfx1100",
+        ] {
+            if let Some(binary) = cached_native_binary(&hash, arch) {
+                return Some(binary.binary);
+            }
+        }
+        None
+    }
+
     /// Dispatch a pre-compiled `CompiledKernel` with full metadata.
     ///
     /// Preferred over [`GpuBackend::dispatch_binary`] because the kernel
@@ -333,6 +351,20 @@ impl GpuBackend for CoralReefDevice {
 
         let kernel = if let Some(cached) = cache.get(&key) {
             cached.clone()
+        } else if let Some(cached_binary) = Self::try_coral_cache(desc.shader_source) {
+            let kernel = coral_gpu::CompiledKernel {
+                binary: cached_binary,
+                source_hash: key,
+                target: coral_gpu::GpuTarget::default(),
+                gpr_count: 128,
+                instr_count: 0,
+                shared_mem_bytes: 0,
+                barrier_count: 0,
+                workgroup: [64, 1, 1],
+            };
+            tracing::debug!("sovereign cache hit — using pre-compiled native binary");
+            cache.insert(key, kernel.clone());
+            kernel
         } else {
             let compiled = ctx
                 .compile_wgsl(desc.shader_source)

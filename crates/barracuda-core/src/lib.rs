@@ -73,6 +73,13 @@ pub use barracuda;
 /// Canonical primal identity — single source of truth for self-knowledge.
 pub const PRIMAL_NAME: &str = "barraCuda";
 
+/// Lowercase namespace used in IPC wire protocol, filesystem paths, and CLI.
+///
+/// Derived from [`PRIMAL_NAME`] convention: primals use lowercase for
+/// machine-facing identifiers (socket paths, JSON-RPC namespaces) and
+/// camelCase for human-facing display names.
+pub const PRIMAL_NAMESPACE: &str = "barracuda";
+
 use error::BarracudaCoreError;
 use health::{HealthReport, HealthStatus, PrimalHealth};
 use lifecycle::{PrimalLifecycle, PrimalState};

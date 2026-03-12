@@ -201,13 +201,14 @@ impl IpcServer {
 
     /// Resolve the default IPC socket path per wateringHole standards.
     ///
-    /// Prefers `$XDG_RUNTIME_DIR/barracuda/barracuda.sock`, falls back to
-    /// `$TMPDIR/barracuda/barracuda.sock` via `std::env::temp_dir()`.
+    /// Prefers `$XDG_RUNTIME_DIR/{namespace}/{namespace}.sock`, falls back to
+    /// `$TMPDIR/{namespace}/{namespace}.sock` via `std::env::temp_dir()`.
     #[cfg(unix)]
     pub fn default_socket_path() -> std::path::PathBuf {
+        let ns = crate::PRIMAL_NAMESPACE;
         let base = std::env::var("XDG_RUNTIME_DIR")
             .map_or_else(|_| std::env::temp_dir(), std::path::PathBuf::from);
-        base.join("barracuda").join("barracuda.sock")
+        base.join(ns).join(format!("{ns}.sock"))
     }
 }
 

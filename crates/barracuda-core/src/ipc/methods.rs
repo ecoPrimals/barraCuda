@@ -62,7 +62,7 @@ fn primal_info(_primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
             "primal": crate::PRIMAL_NAME,
             "version": env!("CARGO_PKG_VERSION"),
             "protocol": "json-rpc-2.0",
-            "namespace": "barracuda",
+            "namespace": crate::PRIMAL_NAMESPACE,
             "license": "AGPL-3.0-only",
         }),
     )

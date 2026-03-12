@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Upsample - Upsampling (nearest neighbor or bilinear) (f64 canonical)
 // Increases spatial resolution of input tensor
 //

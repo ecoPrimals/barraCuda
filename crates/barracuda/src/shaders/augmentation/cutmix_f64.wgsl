@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // cutmix.wgsl - CutMix data augmentation
 //
 // CutMix: Cuts and pastes patches between training images

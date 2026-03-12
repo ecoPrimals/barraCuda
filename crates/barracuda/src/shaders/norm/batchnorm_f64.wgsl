@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // BatchNorm: Batch normalization (f64 canonical)
 // CUDA equivalent: cudnn::BatchNormalization
 // Formula: output = (input - running_mean) / sqrt(running_var + epsilon) * gamma + beta

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // determinant_f64.wgsl - Matrix determinant calculation (f64 canonical)
 //
 // Computes the determinant of square matrices.

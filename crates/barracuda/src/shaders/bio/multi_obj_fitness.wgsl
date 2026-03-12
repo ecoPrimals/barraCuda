@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // multi_obj_fitness.wgsl — Multi-objective fitness evaluation (f32)
 //
 // neuralSpring absorption: evolutionary optimization with multiple objectives.

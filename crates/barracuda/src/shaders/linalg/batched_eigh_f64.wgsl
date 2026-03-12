@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Batched Symmetric Eigenvalue Decomposition (f64) - Shader-First Implementation
 //
 // Processes multiple symmetric matrices simultaneously.

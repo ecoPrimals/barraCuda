@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Complex Absolute Value (Magnitude) Shader
 // Operation: |a + bi| = sqrt(a² + b²)
 // Uses native WGSL length() function

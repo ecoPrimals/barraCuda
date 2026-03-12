@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // FHE Modulus Switching Shader
 //
 // **Purpose**: Scale ciphertext coefficients to smaller modulus

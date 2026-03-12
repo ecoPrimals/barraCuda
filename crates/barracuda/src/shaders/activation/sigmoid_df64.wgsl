@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Sigmoid activation in DF64 precision — numerically stable
 // sigmoid(x) = 1 / (1 + exp(-x))  for x >= 0
 //            = exp(x) / (1 + exp(x))  for x < 0

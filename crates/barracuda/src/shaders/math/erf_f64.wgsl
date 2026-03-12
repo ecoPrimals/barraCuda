@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Error function (erf) operation (f64 canonical)
 // erf(x) = (2/√π) ∫[0,x] e^(-t²) dt
 // Approximation using Abramowitz and Stegun formula

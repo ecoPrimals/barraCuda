@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // FHE Point-wise Multiplication (in NTT domain)
 //
 // Purpose: Multiply two polynomials element-wise in NTT domain

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // dada2_e_step.wgsl — Batch log_p_error for DADA2 E-step
 //
 // One GPU thread per (sequence, center) pair.

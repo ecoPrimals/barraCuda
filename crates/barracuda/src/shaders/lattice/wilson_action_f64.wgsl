@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // wilson_action_f64.wgsl — Per-site Wilson action contribution
 //
 // Prepend: complex_f64.wgsl + su3.wgsl

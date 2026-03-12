@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Morse Force Kernel (DF64) — Full FP32 Core Streaming
 //
 // Prepend: df64_core.wgsl, df64_transcendentals.wgsl

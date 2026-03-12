@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Velocity-Verlet Second Half-Kick (f64)
 //
 // **Purpose**: Complete the VV step after force recomputation

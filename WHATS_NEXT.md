@@ -6,6 +6,17 @@ Prioritized work items, ordered by impact. Updated 2026-03-12.
 
 ## Recently Completed
 
+- **Comprehensive audit & deep debt sprint (Mar 12)**: Full codebase audit against
+  wateringHole standards (uniBin, ecoBin, semantic naming, sovereignty, zero-copy,
+  license compliance, code quality). 12-item remediation: `#![forbid(unsafe_code)]`
+  in both crates; namespace-derived IPC method names via `PRIMAL_NAMESPACE` +
+  `METHOD_SUFFIXES` (LazyLock); 648 WGSL SPDX headers added (805/805 complete);
+  9 bulk-allowed pedantic lints promoted to warn (enforced); erfc_f64 recursion
+  fix in stable_f64.wgsl; magic numbers extracted (CONSERVATIVE_GPR_COUNT,
+  DEFAULT_WORKGROUP, CORAL_CACHE_ARCHITECTURES); zero-copy evolution
+  (async_submit::read_bytes, ncbi_cache::load -> bytes::Bytes); unreachable! ->
+  debug_assert! + graceful fallback; rustdoc zero warnings; BufferBinding import
+  for --all-features clippy. 3,688 tests pass, 0 fail, 15 skip.
 - **Sovereign dispatch wiring & deep debt evolution (Mar 11-12)**: Wired coral
   compiler cache → `CoralReefDevice::dispatch_compute` (sovereign cache hits
   skip recompilation). Implemented `dispatch_binary` and `dispatch_kernel` on

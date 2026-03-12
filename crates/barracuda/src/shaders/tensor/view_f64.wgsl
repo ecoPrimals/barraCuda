@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // View - Pure metadata operation (zero-copy) (f64 canonical)
 // Changes tensor shape without copying data
 //

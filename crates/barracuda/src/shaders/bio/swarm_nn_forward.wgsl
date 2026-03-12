@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // swarm_nn_forward.wgsl — Population-parallel MLP forward pass (f32)
 //
 // neuralSpring absorption: neuroevolution swarm controller inference.

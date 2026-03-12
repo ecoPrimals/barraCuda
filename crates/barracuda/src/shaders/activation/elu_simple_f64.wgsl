@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // ELU (Exponential Linear Unit) - Simple version with alpha=1.0 (f64 canonical)
 // Formula: ELU(x) = x if x > 0, else (exp(x) - 1)
 

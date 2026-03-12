@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Replication Pad - Pad tensor by replicating edge values (f64 canonical)
 //
 // Deep Debt Principles:

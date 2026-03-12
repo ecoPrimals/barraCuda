@@ -35,7 +35,7 @@ crates/
   barracuda/           Core compute library
     src/
       device/          GpuBackend trait, WgpuDevice, CoralReefDevice scaffold, driver profiles
-      shaders/         803 WGSL shaders + sovereign compiler
+      shaders/         805 WGSL shaders + sovereign compiler
         math/          DF64 core, transcendentals
         sovereign/     Naga-based compiler (FMA fusion, dead expr, SPIR-V emit)
         precision/     3-tier model: F32/F64/Df64 (aligned with coralReef Fp64Strategy)

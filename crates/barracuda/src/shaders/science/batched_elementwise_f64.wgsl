@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // ============================================================================
 // batched_elementwise_f64.wgsl — Unified batched element-wise computation
 // ============================================================================

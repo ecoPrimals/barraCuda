@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // cooperation_ode_rk4_f64.wgsl — Batched RK4 for cooperative QS game theory
 //
 // LOCAL EVOLUTION — to be absorbed by ToadStool as BatchedOdeRK4Generic<4, 13>.

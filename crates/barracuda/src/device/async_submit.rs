@@ -366,11 +366,11 @@ impl AsyncReadback {
     /// # Errors
     /// Returns [`Err`] if the GPU device is lost during poll, buffer mapping fails,
     /// or the readback is cancelled (sender dropped).
-    pub async fn read_bytes(mut self) -> Result<Vec<u8>, String> {
+    pub async fn read_bytes(mut self) -> Result<bytes::Bytes, String> {
         self.poll_until_ready().await?;
 
         let data = self.staging_buffer.slice(..).get_mapped_range();
-        let result = data.to_vec();
+        let result = bytes::Bytes::from(data.to_vec());
 
         drop(data);
         self.staging_buffer.unmap();

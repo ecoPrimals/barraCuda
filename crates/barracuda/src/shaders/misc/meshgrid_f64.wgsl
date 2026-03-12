@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Meshgrid - Create coordinate grids (complete implementation) (f64 canonical)
 // Generates coordinate matrices from coordinate vectors
 //

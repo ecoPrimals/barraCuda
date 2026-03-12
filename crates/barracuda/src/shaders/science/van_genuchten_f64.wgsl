@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // van_genuchten_f64.wgsl — Van Genuchten–Mualem soil hydraulic functions
 //
 // **Physics**: Soil water retention and hydraulic conductivity from pressure head h.

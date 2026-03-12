@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Yukawa All-Pairs Force (f64) with PBC + potential energy
 //
 // **Physics**: Screened Coulomb interactions with PBC minimum-image convention

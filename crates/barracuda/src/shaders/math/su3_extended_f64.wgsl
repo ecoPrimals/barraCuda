@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // su3_extended_f64.wgsl — Extended SU(3) operations for HMC / lattice init
 //
 // Prepend: complex_f64.wgsl + su3.wgsl + lcg_f64.wgsl

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // ROI Pool - Region of Interest Pooling (f64 canonical)
 // Extracts fixed-size feature maps from regions using max pooling
 // Simpler than ROI Align but has quantization artifacts

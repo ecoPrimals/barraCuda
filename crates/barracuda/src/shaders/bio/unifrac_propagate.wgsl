@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // unifrac_propagate.wgsl — GPU UniFrac tree propagation (f64)
 //
 // wetSpring absorption: phylogenetic distance computation.

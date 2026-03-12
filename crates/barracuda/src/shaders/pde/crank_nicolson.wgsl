@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Crank-Nicolson PDE Solver - Shader-First Implementation
 //
 // Parallel operations for the Crank-Nicolson scheme:

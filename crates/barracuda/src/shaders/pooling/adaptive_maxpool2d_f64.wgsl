@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Adaptive Max Pooling 2D
 // Pools input to a specific output size using maximum operation
 //

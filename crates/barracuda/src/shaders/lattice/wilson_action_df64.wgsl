@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // wilson_action_df64.wgsl — Hybrid per-site Wilson action (DF64 core streaming)
 //
 // Prepend: complex_f64.wgsl + su3.wgsl + df64_core.wgsl + su3_df64.wgsl

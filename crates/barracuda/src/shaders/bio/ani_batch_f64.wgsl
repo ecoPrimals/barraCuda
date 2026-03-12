@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // ani_batch_f64.wgsl — Batch Pairwise ANI (Average Nucleotide Identity)
 //
 // One thread per sequence pair. Each thread walks the alignment

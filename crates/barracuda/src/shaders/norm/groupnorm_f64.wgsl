@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // GroupNorm: Group normalization (modern alternative to BatchNorm) (f64 canonical)
 // CUDA equivalent: Custom kernels or PyTorch's GroupNorm
 // Formula: output = (input - group_mean) / sqrt(group_var + epsilon) * gamma + beta

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // RBF Kernel Evaluation - Fused pairwise distance + kernel function (f64 canonical)
 // Computes K[i,j] = φ(‖xᵢ - xⱼ‖) for various radial basis functions
 //

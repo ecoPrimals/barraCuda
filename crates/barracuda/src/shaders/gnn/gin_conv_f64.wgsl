@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // GINConv - Graph Isomorphism Network (f64 canonical)
 
 struct Params {

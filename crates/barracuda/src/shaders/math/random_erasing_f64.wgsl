@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // random_erasing_f64.wgsl - Random erasing data augmentation (f64 canonical)
 //
 // Randomly erases rectangular regions in images

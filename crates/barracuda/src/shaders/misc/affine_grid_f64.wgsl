@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // affine_grid_f64.wgsl - Affine Grid Generator (f64 canonical)
 //
 // Generates sampling grid for spatial transformer networks

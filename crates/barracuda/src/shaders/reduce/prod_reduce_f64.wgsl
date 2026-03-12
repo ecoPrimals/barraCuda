@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Product Reduction (f64) - Compute product over all elements in double precision
 //
 // CUDA equivalent: thrust::reduce with multiply operation (f64)

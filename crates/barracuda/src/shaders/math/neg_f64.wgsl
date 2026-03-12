@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Neg - Negation operation (multiply by -1)
 //
 // Deep Debt Principles:

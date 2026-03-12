@@ -105,18 +105,21 @@ wrong_self_convention = "allow"
 # Formatting — scientific code uses specific formats
 uninlined_format_args = "allow"
 doc_comment_double_space_linebreaks = "allow"
-# Bulk-allowed: promote to warn as debt is reduced
-needless_raw_string_hashes = "allow"
-redundant_closure_for_method_calls = "allow"
-bool_to_int_with_if = "allow"
-cloned_instead_of_copied = "allow"
-map_unwrap_or = "allow"
-no_effect_underscore_binding = "allow"
-format_push_string = "allow"
+# Promoted from bulk-allow — clean pass, now enforced.
+needless_raw_string_hashes = "warn"
+redundant_closure_for_method_calls = "warn"
+bool_to_int_with_if = "warn"
+cloned_instead_of_copied = "warn"
+map_unwrap_or = "warn"
+no_effect_underscore_binding = "warn"
+format_push_string = "warn"
+explicit_iter_loop = "warn"
+used_underscore_binding = "warn"
+# Remaining bulk-allow — needs manual refactoring in numerical code.
+# 56 needless_range_loop sites use multi-array indexed access patterns
+# that are clearer with explicit indexing in scientific compute contexts.
 if_same_then_else = "allow"
 needless_range_loop = "allow"
-explicit_iter_loop = "allow"
-used_underscore_binding = "allow"
 
 [lints.rust]
 missing_docs = "warn"

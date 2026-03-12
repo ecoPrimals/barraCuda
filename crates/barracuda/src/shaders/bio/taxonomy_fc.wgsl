@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // taxonomy_fc.wgsl — GPU taxonomy Naive Bayes scoring (f64)
 //
 // wetSpring absorption: metagenomic taxonomy classification.

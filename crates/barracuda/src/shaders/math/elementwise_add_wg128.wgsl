@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Optimized element-wise addition for AMD GPUs
 // Workgroup size 128 provides best performance on AMD RADV driver
 // (2 wavefronts of 64 threads each)

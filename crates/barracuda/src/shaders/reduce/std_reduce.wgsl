@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Standard Deviation Reduction: Compute std over all elements
 // Algorithm: Two-pass tree reduction (same as variance, then sqrt)
 // Pass 1: Compute mean using tree reduction

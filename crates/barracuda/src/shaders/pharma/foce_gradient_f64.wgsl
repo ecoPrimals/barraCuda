@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // FOCE (First-Order Conditional Estimation) per-subject gradient — GPU kernel.
 //
 // Each thread computes the gradient of the objective function for one subject

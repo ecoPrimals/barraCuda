@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // dnds_batch_f64.wgsl — Batch Pairwise dN/dS (Nei-Gojobori 1986)
 //
 // One thread per coding sequence pair. Each thread walks codons,

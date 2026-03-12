@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Bincount_f64.wgsl — Count occurrences of each value (f64 canonical)
 // Computes histogram of non-negative integer values
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // RReLU - Randomized Leaky ReLU (f64 canonical)
 // output = x if x > 0 else slope*x where slope ~ Uniform(lower, upper)
 

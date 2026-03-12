@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Generalized Laguerre polynomials L_n^(α)(x) — f64 precision
 // Uses three-term recurrence relation:
 //   L₀^(α)(x) = 1

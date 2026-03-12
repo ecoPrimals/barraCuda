@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // iou_f64.wgsl — Intersection over Union for bounding boxes (f64)
 //
 // **Math**: For axis-aligned boxes A and B:

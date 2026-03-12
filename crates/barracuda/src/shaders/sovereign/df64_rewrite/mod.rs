@@ -444,7 +444,10 @@ fn build_bridge_text(handle: Handle<Expression>, ctx: &RewriteCtx) -> String {
                 BinaryOperator::Less => "_df64_lt_f64",
                 BinaryOperator::GreaterEqual => "_df64_gte_f64",
                 BinaryOperator::LessEqual => "_df64_lte_f64",
-                _ => unreachable!("is_rewritable_op checked"),
+                _ => {
+                    debug_assert!(false, "is_rewritable_op should prevent reaching here");
+                    return format!("/* unhandled f64 op: {op:?} */");
+                }
             };
             let left_text = resolve_operand(left, ctx);
             let right_text = resolve_operand(right, ctx);

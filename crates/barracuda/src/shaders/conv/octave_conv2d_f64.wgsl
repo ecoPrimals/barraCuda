@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // octave_conv2d.wgsl - Octave Convolution 2D (f64 canonical)
 
 struct Params {

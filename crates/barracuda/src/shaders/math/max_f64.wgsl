@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Element-wise maximum between tensor and scalar
 // Universal compute via WGSL - works on any hardware
 

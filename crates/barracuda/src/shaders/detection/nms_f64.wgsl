@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // NMS - Non-Maximum Suppression (f64 canonical)
 // Pass 1: IoU Matrix Computation
 

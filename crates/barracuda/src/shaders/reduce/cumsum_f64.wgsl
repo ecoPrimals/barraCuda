@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Cumsum F64 - Cumulative sum along a dimension (double precision)
 //
 // Deep Debt Principles:

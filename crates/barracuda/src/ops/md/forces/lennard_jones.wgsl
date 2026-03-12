@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Lennard-Jones Force Kernel
 //
 // **Purpose**: Van der Waals interactions (noble gases, simple liquids)

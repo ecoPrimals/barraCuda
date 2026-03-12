@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // su3_hmc_force_f64.wgsl — SU(3) HMC gauge force (Wilson action)
 //
 // Prepend: complex_f64.wgsl + su3.wgsl

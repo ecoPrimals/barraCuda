@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Product Reduction: Compute product over all elements
 // CUDA equivalent: thrust::reduce with multiply operation
 // Algorithm: Tree reduction (work-efficient)

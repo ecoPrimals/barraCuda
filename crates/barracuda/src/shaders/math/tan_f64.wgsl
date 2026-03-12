@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // tan_f64.wgsl — Element-wise tangent operation (f64 canonical)
 // Universal compute via WGSL - works on any hardware
 

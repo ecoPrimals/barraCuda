@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // su3.wgsl — SU(3) 3×3 complex matrix algebra for lattice gauge fields
 //
 // Prepend complex_f64.wgsl before this file.

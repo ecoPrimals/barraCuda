@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Masked Select - Extract elements where mask is true (f64 canonical)
 // Selects elements from input where corresponding mask is non-zero
 //

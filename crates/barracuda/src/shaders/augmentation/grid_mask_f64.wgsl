@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // GridMask - Grid-based masking augmentation
 //
 // Masks structured grid regions in images with rotation support

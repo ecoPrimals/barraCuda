@@ -27,12 +27,30 @@
 //! sovereign-dispatch = ["gpu", "dep:coral-gpu"]
 //! ```
 
-use super::backend::{DispatchDescriptor, GpuBackend};
+use super::backend::{BufferBinding, DispatchDescriptor, GpuBackend};
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
 
 #[cfg(feature = "sovereign-dispatch")]
 use std::collections::HashMap;
+
+/// Conservative default GPR count for pre-compiled binary dispatch.
+///
+/// Used when the compiler cache returns a binary without metadata.
+/// 128 is safe for all current targets (SM70+, GFX1030+) — the driver
+/// may over-allocate registers but will not fail.
+#[cfg(feature = "sovereign-dispatch")]
+const CONSERVATIVE_GPR_COUNT: u32 = 128;
+
+/// Default workgroup size for pre-compiled binary dispatch.
+#[cfg(feature = "sovereign-dispatch")]
+const DEFAULT_WORKGROUP: [u32; 3] = [64, 1, 1];
+
+/// Architectures to scan when looking up pre-compiled native binaries
+/// from the coral compiler cache.
+const CORAL_CACHE_ARCHITECTURES: &[&str] = &[
+    "sm_70", "sm_75", "sm_80", "sm_86", "sm_89", "gfx1030", "gfx1100",
+];
 
 /// Buffer handle for the sovereign compute path.
 ///
@@ -190,9 +208,7 @@ impl CoralReefDevice {
     fn try_coral_cache(shader_source: &str) -> Option<bytes::Bytes> {
         use crate::device::coral_compiler::{cached_native_binary, shader_hash};
         let hash = shader_hash(shader_source);
-        for arch in &[
-            "sm_70", "sm_75", "sm_80", "sm_86", "sm_89", "gfx1030", "gfx1100",
-        ] {
+        for arch in CORAL_CACHE_ARCHITECTURES {
             if let Some(binary) = cached_native_binary(&hash, arch) {
                 return Some(binary.binary);
             }
@@ -356,11 +372,11 @@ impl GpuBackend for CoralReefDevice {
                 binary: cached_binary,
                 source_hash: key,
                 target: coral_gpu::GpuTarget::default(),
-                gpr_count: 128,
+                gpr_count: CONSERVATIVE_GPR_COUNT,
                 instr_count: 0,
                 shared_mem_bytes: 0,
                 barrier_count: 0,
-                workgroup: [64, 1, 1],
+                workgroup: DEFAULT_WORKGROUP,
             };
             tracing::debug!("sovereign cache hit — using pre-compiled native binary");
             cache.insert(key, kernel.clone());
@@ -410,11 +426,11 @@ impl GpuBackend for CoralReefDevice {
             binary: bytes::Bytes::copy_from_slice(binary),
             source_hash: 0,
             target: GpuTarget::default(),
-            gpr_count: 128,
+            gpr_count: CONSERVATIVE_GPR_COUNT,
             instr_count: 0,
             shared_mem_bytes: 0,
             barrier_count: 0,
-            workgroup: [64, 1, 1],
+            workgroup: DEFAULT_WORKGROUP,
         };
 
         let mut ctx = self

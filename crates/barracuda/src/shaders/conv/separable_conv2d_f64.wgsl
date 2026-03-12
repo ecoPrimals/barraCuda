@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // separable_conv2d.wgsl - Depthwise Separable Convolution 2D (f64 canonical)
 
 struct Params {

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // batched_hfb_energy_f64.wgsl — HFB total energy functional for spherical nuclei
 //
 // hotSpring absorption: nuclear physics GPU-resident SCF.

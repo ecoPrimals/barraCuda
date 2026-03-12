@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // snp_calling_f64.wgsl — Position-Parallel SNP Calling
 //
 // One thread per alignment position. Each thread counts allele

@@ -9,7 +9,7 @@
 //! ## Module structure
 //!
 //! - [`OdeSystem`] trait, [`BatchedOdeRK4`] solver, [`OdeTrajectory`] recording
-//! - [`wgsl_templates`] — WGSL RK4 kernel code generation (f64 + universal precision)
+//! - `wgsl_templates` — WGSL RK4 kernel code generation (f64 + universal precision)
 //!
 //! # Example
 //!

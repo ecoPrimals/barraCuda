@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Gather ND - N-dimensional gather operation with partial indexing (f64 canonical)
 //
 // Gathers elements or slices from input tensor using multi-dimensional indices.

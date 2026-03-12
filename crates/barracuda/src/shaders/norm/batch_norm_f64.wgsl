@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // BatchNorm - Batch normalization (f64 canonical)
 // output = (input - mean) / sqrt(variance + epsilon) * gamma + beta
 // Simplified version: per-tensor normalization with default gamma=1, beta=0

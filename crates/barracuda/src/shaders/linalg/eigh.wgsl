@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Eigenvalue Decomposition (eigh) - Jacobi algorithm for symmetric matrices
 // Computes eigenvalues and eigenvectors of A where A = V·D·Vᵀ
 //

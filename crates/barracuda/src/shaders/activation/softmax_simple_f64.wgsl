@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Simple Softmax for small tensors (single workgroup) (f64 canonical)
 // Formula: softmax(x_i) = exp(x_i - max(x)) / sum(exp(x_j - max(x)))
 //

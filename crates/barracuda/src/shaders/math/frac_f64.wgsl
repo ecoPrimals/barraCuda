@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Element-wise fractional part operation (x - floor(x))
 // Universal compute via WGSL - works on any hardware
 

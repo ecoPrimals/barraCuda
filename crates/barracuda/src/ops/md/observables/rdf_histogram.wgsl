@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // RDF Pair Distance Histogram (f64 positions, u32 bins)
 //
 // **Physics**: Radial distribution function g(r)

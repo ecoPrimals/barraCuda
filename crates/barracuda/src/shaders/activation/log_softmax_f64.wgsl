@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Log Softmax - Numerically stable log of softmax (f64 canonical)
 //
 // Deep Debt Principles:

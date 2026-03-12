@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // poisson_nll_loss_f64.wgsl - Poisson Negative Log Likelihood Loss (f64 canonical)
 //
 // Loss for Poisson distributed data (count data, rates)

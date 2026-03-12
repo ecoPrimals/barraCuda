@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // complex_f64.wgsl — f64 complex arithmetic library
 //
 // Prepend this to any WGSL shader that requires complex-number operations.

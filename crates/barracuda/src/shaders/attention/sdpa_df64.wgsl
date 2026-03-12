@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Scaled Dot-Product Attention in DF64 precision
 // attn(Q, K, V) = softmax(Q @ K^T / sqrt(d_k)) @ V
 //

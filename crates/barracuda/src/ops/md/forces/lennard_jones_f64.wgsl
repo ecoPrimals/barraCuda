@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Lennard-Jones Force Kernel (f64) — Science-Grade MD
 //
 // **Deep Debt Evolution (Feb 16, 2026)**:

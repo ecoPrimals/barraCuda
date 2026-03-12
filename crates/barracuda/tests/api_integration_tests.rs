@@ -76,8 +76,7 @@ async fn test_nn_vision_integration() {
     assert_eq!(processed.len(), 1);
 
     let flattened: Vec<f32> = processed[0].iter().take(784).copied().collect();
-    let _input = [flattened];
-    let _target = [vec![1.0; 10]];
+    assert_eq!(flattened.len(), 784);
 
     println!("✅ Vision pipeline: Image preprocessing verified");
 }

@@ -426,7 +426,6 @@ async fn test_hotspring_nucleus_count() {
     };
 
     let batch = 169; // hotSpring validation count
-    let _n = 12; // Typical basis size (for reference)
 
     // Create test data for 169 nuclei
     let a: Vec<f64> = (0..batch).map(|i| -100.0 - i as f64 * 0.5).collect();
@@ -487,7 +486,6 @@ async fn test_e2e_gpu_resident_scf_iteration() {
     // Initialize basis functions (mock harmonic oscillator basis)
     let phi: Vec<f64> = (0..batch * n * grid)
         .map(|idx| {
-            let _b = idx / (n * grid); // batch index (could vary potential by nucleus)
             let i = (idx % (n * grid)) / grid;
             let k = idx % grid;
             let r = k as f64 * 0.1; // Grid spacing

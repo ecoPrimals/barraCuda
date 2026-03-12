@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Chunk - Split tensor into N chunks along dimension (complete implementation) (f64 canonical)
 // Divides input tensor into chunks (supports unequal chunks like PyTorch)
 // When dimension size is not divisible by chunks:

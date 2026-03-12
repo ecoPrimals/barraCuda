@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Argmax Reduction - Find index of maximum value over all elements (f64 canonical)
 // CUDA equivalent: thrust::reduce with argmax operation
 // Algorithm: Tree reduction tracking both value and index

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Variance Dim (f64) - Variance along a specific dimension at double precision
 //
 // Similar to PyTorch's torch.var(dim=N)

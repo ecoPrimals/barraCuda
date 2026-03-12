@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Unfold - Extract sliding windows (im2col) (f64 canonical)
 // Extracts sliding local blocks from input tensor
 // Used for efficient convolution implementation

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Sparse Matrix-Vector Product (CSR format)
 // y = A * x where A is in Compressed Sparse Row format
 

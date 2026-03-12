@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Smooth L1 Loss (Huber Loss variant) - WGSL Shader
 //
 // Deep Debt: Universal compute for all chips!

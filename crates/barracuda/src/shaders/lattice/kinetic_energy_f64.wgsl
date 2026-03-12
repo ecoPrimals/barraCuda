@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // kinetic_energy_f64.wgsl — Per-link kinetic energy from HMC momenta
 //
 // Prepend: complex_f64.wgsl + su3.wgsl

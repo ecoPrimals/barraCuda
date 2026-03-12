@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Permute - Reorder tensor dimensions (f64 canonical)
 // Transposes tensor according to dimension permutation
 //

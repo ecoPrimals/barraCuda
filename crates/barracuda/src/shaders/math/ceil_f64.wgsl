@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Element-wise ceiling operation (round up to nearest integer)
 // Universal compute via WGSL - works on any hardware
 

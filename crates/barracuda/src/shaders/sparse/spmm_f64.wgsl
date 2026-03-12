@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Sparse Matrix-Matrix Product (CSR × Dense, f64)
 //
 // C[M, N] = A[M, K] × B[K, N]

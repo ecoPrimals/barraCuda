@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // cg_kernels_f64.wgsl — BLAS-like kernels for lattice CG solver
 //
 // Three kernels for the Conjugate Gradient algorithm on complex fermion fields:

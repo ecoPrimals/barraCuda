@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // dilated_conv2d.wgsl - Dilated (atrous) 2D convolution (f64 canonical)
 
 struct Params {

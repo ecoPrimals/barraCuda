@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Flatten - Flatten tensor to specified dimensions (f64 canonical)
 // Reshapes tensor by flattening specified range of dimensions
 //

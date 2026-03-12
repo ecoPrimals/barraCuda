@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Log gamma function (lgamma) operation (f64 canonical)
 // lgamma(x) = ln(Γ(x)) where Γ is the gamma function
 // Uses Lanczos approximation for positive x

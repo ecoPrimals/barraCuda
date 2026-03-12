@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // lcg_f64.wgsl — GPU PRNG for lattice kernels (xorshift32 + Box-Muller)
 //
 // Prepend: (standalone, no dependencies)

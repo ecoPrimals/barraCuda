@@ -11,7 +11,7 @@
 //! - ✅ **Zero Duplication**: Single WGSL implementation per operation
 //! - ✅ **Runtime Discovery**: wgpu selects best available backend
 //! - ✅ **Simple**: No separate CPU code, no trait abstractions
-//! - ✅ **Zero unsafe**: `#![deny(unsafe_code)]` — all former FFI evolved to safe Rust
+//! - **Zero unsafe**: `#![forbid(unsafe_code)]` — all former FFI evolved to safe Rust
 //!
 //! ## Architecture
 //!
@@ -63,7 +63,7 @@
 //! - All WGSL shaders properly utilized
 //! - Zero duplication: One implementation per op
 
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 #![warn(clippy::pedantic)]
 // ── Domain-specific expectations ────────────────────────────────────────────
 // Compile-time verified: #[expect] warns if the suppression becomes unnecessary.

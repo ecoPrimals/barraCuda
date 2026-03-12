@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Bipartition encoding: convert tree bipartition strings to u32 bit-vectors
 // for Robinson-Foulds distance computation.
 //

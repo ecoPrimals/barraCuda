@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Q8_0 GEMV (General Matrix-Vector Multiply) Shader (f64 canonical)
 //
 // Computes y = A @ x where A is Q8_0 quantized.

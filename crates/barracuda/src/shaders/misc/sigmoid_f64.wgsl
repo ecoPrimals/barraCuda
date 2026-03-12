@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Sigmoid: Sigmoid activation function (f64 canonical)
 // CUDA equivalent: cudnn::Activation(SIGMOID)
 // Formula: sigmoid(x) = 1 / (1 + exp(-x))

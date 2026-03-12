@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // KL Divergence (Kullback-Leibler Divergence)
 // Measures how one probability distribution differs from another
 //

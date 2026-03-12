@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // U64 Emulation Library for WGSL
 //
 // **Purpose**: Emulate 64-bit unsigned integer arithmetic using u32 pairs

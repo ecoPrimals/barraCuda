@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Covariance and variance computation
 // Cov(X,Y) = E[(X-μx)(Y-μy)] = E[XY] - E[X]E[Y]
 //

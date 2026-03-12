@@ -39,9 +39,10 @@ fn test_tolerances_fhe() {
 #[tokio::test]
 async fn test_dispatch_routing() {
     let primal = test_primal();
+    let method = format!("{}.device.list", crate::PRIMAL_NAMESPACE);
     let resp = dispatch(
         &primal,
-        "barracuda.device.list",
+        &method,
         &serde_json::json!({}),
         serde_json::json!(5),
     )
@@ -164,27 +165,28 @@ async fn test_fhe_pointwise_mul_missing_params() {
 #[tokio::test]
 async fn test_all_dispatch_routes_exist() {
     let primal = test_primal();
-    let methods = [
-        "barracuda.device.list",
-        "barracuda.device.probe",
-        "barracuda.health.check",
-        "barracuda.tolerances.get",
-        "barracuda.validate.gpu_stack",
-        "barracuda.compute.dispatch",
-        "barracuda.tensor.create",
-        "barracuda.tensor.matmul",
-        "barracuda.fhe.ntt",
-        "barracuda.fhe.pointwise_mul",
+    let ns = crate::PRIMAL_NAMESPACE;
+    let suffixes = [
+        "device.list",
+        "device.probe",
+        "health.check",
+        "tolerances.get",
+        "validate.gpu_stack",
+        "compute.dispatch",
+        "tensor.create",
+        "tensor.matmul",
+        "fhe.ntt",
+        "fhe.pointwise_mul",
     ];
-    for method in methods {
+    for suffix in suffixes {
+        let method = format!("{ns}.{suffix}");
         let resp = dispatch(
             &primal,
-            method,
+            &method,
             &serde_json::json!({}),
             serde_json::json!(99),
         )
         .await;
-        // All should NOT return METHOD_NOT_FOUND
         if let Some(err) = &resp.error {
             assert_ne!(err.code, METHOD_NOT_FOUND, "Method {method} not routed");
         }

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Scatter ND - N-dimensional scatter operation with multi-dim values (f64 canonical)
 //
 // Scatters values into an output tensor at positions specified by indices.

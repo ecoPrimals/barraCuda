@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Split operation - Split tensor along a dimension (inverse of Concat) (f64 canonical)
 // Copies portions of input to multiple outputs
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // GPU-Resident Conjugate Gradient kernels - f64 Precision
 // These kernels keep scalar values on GPU to eliminate per-iteration CPU sync.
 // All bindings use read_write for consistency within this module.

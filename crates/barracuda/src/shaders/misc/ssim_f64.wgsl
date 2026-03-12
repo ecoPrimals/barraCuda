@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // SSIM - Structural Similarity Index Measure (f64 canonical)
 //
 // Computes SSIM metric for image quality assessment

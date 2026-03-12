@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Grouped Query Attention Softmax: Apply softmax to attention scores (f64 canonical)
 // Pass 2 of GQA multi-pass attention implementation
 //

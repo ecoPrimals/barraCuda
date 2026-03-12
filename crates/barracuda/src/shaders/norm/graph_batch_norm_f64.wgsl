@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Graph Batch Normalization - Batch normalization adapted for graph data (f64 canonical)
 // Normalizes node features across the batch and feature dimensions
 // Similar to standard batch norm, but operates on graph nodes

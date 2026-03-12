@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // batch_tolerance_search_f64.wgsl — PFAS ion batch tolerance search
 //
 // **WetSpring handoff absorption** — Exp018 Jones Lab PFAS library screening.

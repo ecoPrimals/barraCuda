@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // MoveDim - Move dimension to new position (complete implementation) (f64 canonical)
 // Reorders tensor dimensions by moving a dimension from one position to another
 //

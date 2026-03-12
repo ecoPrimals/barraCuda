@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Single-Dispatch Batched Symmetric Eigenvalue Decomposition (f64)
 //
 // CRITICAL EVOLUTION: Eliminates the per-rotation queue.submit() bottleneck.

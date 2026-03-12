@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // FHE Key Switching Shader
 //
 // **Purpose**: Decompose ciphertext for key switching

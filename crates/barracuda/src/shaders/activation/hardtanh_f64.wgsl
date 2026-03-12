@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Hardtanh - Hard hyperbolic tangent (f64 canonical)
 // Hardtanh: clamp(x, min_val, max_val)
 

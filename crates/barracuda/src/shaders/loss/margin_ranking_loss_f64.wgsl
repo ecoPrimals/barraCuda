@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // margin_ranking_loss.wgsl - Margin Ranking Loss
 //
 // Measures ranking loss between pairs

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Depthwise Conv2D (f64 canonical)
 // Efficient convolution that applies a separate filter to each input channel
 

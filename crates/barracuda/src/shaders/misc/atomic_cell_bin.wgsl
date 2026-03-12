@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // GPU-Resident Cell-List: Atomic Particle Binning (Pass 1 of 3)
 //
 // Assigns each particle to its cell and atomically increments the cell count.

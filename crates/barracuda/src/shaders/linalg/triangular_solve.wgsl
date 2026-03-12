@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Triangular Solve - Forward and Backward Substitution
 // Solves L·x = b (forward) or Uᵀ·x = b (backward) for triangular matrices
 //

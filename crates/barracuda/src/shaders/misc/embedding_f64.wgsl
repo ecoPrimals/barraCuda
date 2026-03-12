@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Embedding_f64.wgsl — Lookup table operation (f64 canonical)
 //
 // Pure WGSL implementation (universal compute)

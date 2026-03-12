@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // AvgPool2D - Average pooling (2D) with padding support
 //
 // Supports configurable pool_size, stride, and padding (pad_h, pad_w).

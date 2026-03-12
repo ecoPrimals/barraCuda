@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Prod Dim (f64) - Product along a specific dimension at double precision
 //
 // Similar to PyTorch's torch.prod(dim=N)

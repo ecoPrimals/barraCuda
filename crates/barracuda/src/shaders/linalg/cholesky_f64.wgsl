@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Cholesky Decomposition (f64) — L·Lᵀ factorization for scientific computing
 //
 // Computes lower triangular matrix L such that A = L·Lᵀ

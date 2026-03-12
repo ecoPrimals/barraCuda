@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Attention Matrix Multiplication: Compute QK^T scores (f64 canonical)
 // Pass 1 of multi-pass attention implementation
 //

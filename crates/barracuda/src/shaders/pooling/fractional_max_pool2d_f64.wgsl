@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // fractional_max_pool2d.wgsl - Fractional max pooling
 //
 // Stochastic pooling with non-integer pooling ratios

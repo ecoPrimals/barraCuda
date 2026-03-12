@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Mean reduction - Simple single-workgroup version
 // Computes average of all elements
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Sobol quasi-random sequence generator - GPU accelerated (f64 canonical)
 // Generates low-discrepancy sequences using Gray code
 //

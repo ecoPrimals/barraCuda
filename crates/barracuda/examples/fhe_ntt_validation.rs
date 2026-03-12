@@ -62,7 +62,7 @@ async fn main() -> Result<(), BarracudaError> {
     println!("🔧 Step 1: Initialize GPU Device");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-    let _device = match WgpuDevice::new().await {
+    let device = match WgpuDevice::new().await {
         Ok(dev) => {
             println!("✅ GPU device created: {}", dev.name());
             Arc::new(dev)
@@ -101,7 +101,7 @@ async fn main() -> Result<(), BarracudaError> {
     // Create tensor -- reinterpret u32 as f32 for GPU transport (FHE convention)
     let poly_f32: Vec<f32> = poly_u32.iter().map(|&x| f32::from_bits(x)).collect();
     let poly_tensor =
-        Tensor::from_data(&poly_f32, vec![degree_small as usize * 2], _device.clone())?;
+        Tensor::from_data(&poly_f32, vec![degree_small as usize * 2], device.clone())?;
 
     // Forward NTT
     println!("\n⚡ Running NTT on GPU...");
@@ -199,7 +199,7 @@ async fn main() -> Result<(), BarracudaError> {
         .collect();
 
     let a_f32: Vec<f32> = a_u32.iter().map(|&x| f32::from_bits(x)).collect();
-    let tensor_a = Tensor::from_data(&a_f32, vec![degree_large * 2], _device.clone())?;
+    let tensor_a = Tensor::from_data(&a_f32, vec![degree_large * 2], device.clone())?;
 
     let start = Instant::now();
 

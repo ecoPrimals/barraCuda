@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // cosine_similarity_f64.wgsl - Cosine Similarity at f64 precision
 //
 // Computes cosine similarity between pairs of vectors using f64 arithmetic

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // AvgPool2D - Average pooling compute shader
 //
 // **Purpose**: Downsampling via local average

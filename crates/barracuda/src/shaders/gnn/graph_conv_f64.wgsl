@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // graph_conv.wgsl - Graph Convolution (f64 canonical)
 
 struct Params {

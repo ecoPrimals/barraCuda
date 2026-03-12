@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // BCE (Binary Cross Entropy) Loss (f64 canonical)
 // Binary classification loss function
 //

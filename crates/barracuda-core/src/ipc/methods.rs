@@ -2,31 +2,51 @@
 //! JSON-RPC method handlers for barraCuda IPC endpoints.
 //!
 //! Each handler follows the semantic naming standard from wateringHole:
-//! `barracuda.{domain}.{operation}`.
+//! `{namespace}.{domain}.{operation}`. Method names are derived from
+//! [`PRIMAL_NAMESPACE`](crate::PRIMAL_NAMESPACE) at startup — no
+//! hardcoded primal names on the wire.
 
 use super::jsonrpc::{INTERNAL_ERROR, INVALID_PARAMS, JsonRpcResponse, METHOD_NOT_FOUND};
 use crate::BarraCudaPrimal;
 use serde_json::Value;
+use std::sync::LazyLock;
 
-/// All JSON-RPC methods this primal supports.
+/// Domain-qualified method suffixes (namespace-agnostic).
 ///
-/// Single source of truth for capability discovery. Derived from the
-/// `dispatch()` match arms — discovery files and `primal.capabilities`
-/// use this to self-describe what the primal actually supports.
-pub const REGISTERED_METHODS: &[&str] = &[
-    "barracuda.primal.info",
-    "barracuda.primal.capabilities",
-    "barracuda.device.list",
-    "barracuda.device.probe",
-    "barracuda.health.check",
-    "barracuda.tolerances.get",
-    "barracuda.validate.gpu_stack",
-    "barracuda.compute.dispatch",
-    "barracuda.tensor.create",
-    "barracuda.tensor.matmul",
-    "barracuda.fhe.ntt",
-    "barracuda.fhe.pointwise_mul",
+/// Single source of truth for which operations this primal supports.
+/// Full wire names are built at startup by prepending [`PRIMAL_NAMESPACE`](crate::PRIMAL_NAMESPACE).
+const METHOD_SUFFIXES: &[&str] = &[
+    "primal.info",
+    "primal.capabilities",
+    "device.list",
+    "device.probe",
+    "health.check",
+    "tolerances.get",
+    "validate.gpu_stack",
+    "compute.dispatch",
+    "tensor.create",
+    "tensor.matmul",
+    "fhe.ntt",
+    "fhe.pointwise_mul",
 ];
+
+/// All JSON-RPC method names this primal supports, fully qualified.
+///
+/// Built from [`PRIMAL_NAMESPACE`](crate::PRIMAL_NAMESPACE) + `METHOD_SUFFIXES`
+/// so renaming the namespace automatically updates all wire names.
+pub static REGISTERED_METHODS: LazyLock<Vec<String>> = LazyLock::new(|| {
+    METHOD_SUFFIXES
+        .iter()
+        .map(|suffix| format!("{}.{suffix}", crate::PRIMAL_NAMESPACE))
+        .collect()
+});
+
+/// Strip the namespace prefix from a fully-qualified method name.
+pub fn method_suffix(method: &str) -> Option<&str> {
+    method
+        .strip_prefix(crate::PRIMAL_NAMESPACE)
+        .and_then(|s| s.strip_prefix('.'))
+}
 
 /// Route a JSON-RPC method call to the appropriate handler.
 pub async fn dispatch(
@@ -35,19 +55,19 @@ pub async fn dispatch(
     params: &Value,
     id: Value,
 ) -> JsonRpcResponse {
-    match method {
-        "barracuda.primal.info" => primal_info(primal, id),
-        "barracuda.primal.capabilities" => primal_capabilities(primal, id),
-        "barracuda.device.list" => device_list(primal, id).await,
-        "barracuda.device.probe" => device_probe(primal, id).await,
-        "barracuda.health.check" => health_check(primal, id).await,
-        "barracuda.tolerances.get" => tolerances_get(params, id),
-        "barracuda.validate.gpu_stack" => validate_gpu_stack(primal, id).await,
-        "barracuda.compute.dispatch" => compute_dispatch(primal, params, id).await,
-        "barracuda.tensor.create" => tensor_create(primal, params, id).await,
-        "barracuda.tensor.matmul" => tensor_matmul(primal, params, id).await,
-        "barracuda.fhe.ntt" => fhe_ntt(primal, params, id).await,
-        "barracuda.fhe.pointwise_mul" => fhe_pointwise_mul(primal, params, id).await,
+    match method_suffix(method) {
+        Some("primal.info") => primal_info(primal, id),
+        Some("primal.capabilities") => primal_capabilities(primal, id),
+        Some("device.list") => device_list(primal, id).await,
+        Some("device.probe") => device_probe(primal, id).await,
+        Some("health.check") => health_check(primal, id).await,
+        Some("tolerances.get") => tolerances_get(params, id),
+        Some("validate.gpu_stack") => validate_gpu_stack(primal, id).await,
+        Some("compute.dispatch") => compute_dispatch(primal, params, id).await,
+        Some("tensor.create") => tensor_create(primal, params, id).await,
+        Some("tensor.matmul") => tensor_matmul(primal, params, id).await,
+        Some("fhe.ntt") => fhe_ntt(primal, params, id).await,
+        Some("fhe.pointwise_mul") => fhe_pointwise_mul(primal, params, id).await,
         _ => JsonRpcResponse::error(id, METHOD_NOT_FOUND, format!("Unknown method: {method}")),
     }
 }
@@ -100,7 +120,7 @@ fn primal_capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
                 "hydrology",
                 "bio",
             ],
-            "methods": REGISTERED_METHODS,
+            "methods": &*REGISTERED_METHODS,
             "hardware": {
                 "gpu_available": has_gpu,
                 "f64_shaders": has_f64,

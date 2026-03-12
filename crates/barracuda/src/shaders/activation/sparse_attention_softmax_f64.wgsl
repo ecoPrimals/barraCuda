@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Sparse Attention Softmax: Apply softmax with strided sparse mask (f64 canonical)
 // Pass 2 of sparse attention (reuses attention matmul and apply passes)
 //

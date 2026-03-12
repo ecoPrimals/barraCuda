@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // deformed_wavefunction_f64.wgsl — Nilsson harmonic oscillator basis on (ρ,z) grid
 //
 // hotSpring absorption: axially-deformed nuclear HFB.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Sum Reduction (f64) - Compute sum over all elements in double precision
 //
 // CUDA equivalent: thrust::reduce with sum operation (f64)

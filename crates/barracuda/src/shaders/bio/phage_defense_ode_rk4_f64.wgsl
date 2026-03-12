@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // phage_defense_ode_rk4_f64.wgsl — Batched RK4 for phage-bacteria defense ODE
 //
 // LOCAL EVOLUTION — to be absorbed by ToadStool.

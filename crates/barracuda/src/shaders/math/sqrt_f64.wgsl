@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // sqrt_f64.wgsl — Square root operation (f64 canonical)
 //
 // Deep Debt Principles:

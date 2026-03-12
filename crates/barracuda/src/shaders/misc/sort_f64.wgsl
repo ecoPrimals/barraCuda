@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Sort - Parallel sorting (bitonic sort for GPU) (f64 canonical)
 // Sorts tensor elements in ascending or descending order
 //

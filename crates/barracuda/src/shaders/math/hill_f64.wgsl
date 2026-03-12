@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // hill_f64.wgsl — Element-wise Hill dose-response activation (f64 precision)
 //
 // E(x_i) = Emax * x_i^n / (K^n + x_i^n)

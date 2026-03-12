@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Min Reduction: Compute minimum over all elements (f64 canonical)
 // CUDA equivalent: thrust::reduce with min operation
 // Algorithm: Tree reduction (work-efficient)

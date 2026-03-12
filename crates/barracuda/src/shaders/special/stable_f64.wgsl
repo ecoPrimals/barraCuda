@@ -62,11 +62,9 @@ fn expm1_f64(x: f64) -> f64 {
 /// For x < 0: erfc(x) = 2 - erfc(-x).
 /// Avoids catastrophic cancellation that occurs when computing 1 - erf(x)
 /// for large x where erf(x) ≈ 1.
-fn erfc_f64(x: f64) -> f64 {
-    if x < 0.0 {
-        return 2.0 - erfc_f64(-x);
-    }
-
+///
+/// WGSL disallows recursion; the non-negative case is in a helper.
+fn erfc_x_nonneg_f64(x: f64) -> f64 {
     let t = 1.0 / (1.0 + 0.3275911 * x);
     let poly = t * (0.254829592
         + t * (-0.284496736
@@ -75,6 +73,13 @@ fn erfc_f64(x: f64) -> f64 {
         + t * 1.061405429))));
 
     return poly * exp(-x * x);
+}
+
+fn erfc_f64(x: f64) -> f64 {
+    if x < 0.0 {
+        return 2.0 - erfc_x_nonneg_f64(-x);
+    }
+    return erfc_x_nonneg_f64(x);
 }
 
 /// Stable Bessel J₀(x) - 1 for small x.

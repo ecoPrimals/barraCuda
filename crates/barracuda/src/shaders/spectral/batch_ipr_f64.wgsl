@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // batch_ipr.wgsl — Batch Inverse Participation Ratio (f64 canonical)
 //
 // Each thread computes IPR = sum(|psi_i|^4) for one eigenvector.

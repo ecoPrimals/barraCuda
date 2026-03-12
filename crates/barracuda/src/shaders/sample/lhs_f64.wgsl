@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Latin Hypercube Sampling (LHS) - GPU accelerated (f64 canonical)
 // Each thread generates one sample point, stratified across dimensions
 //

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Nelder-Mead Simplex Operations - f64 canonical
 //
 // Parallel primitives for the Nelder-Mead simplex algorithm:

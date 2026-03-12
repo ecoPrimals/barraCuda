@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // filter.wgsl — Stream compaction (predicate evaluation + scatter)
 //
 // Pass 1 — evaluate_predicate:

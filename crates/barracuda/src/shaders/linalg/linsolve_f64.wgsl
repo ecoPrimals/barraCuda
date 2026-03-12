@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Linear System Solve (f64) - Gaussian elimination with partial pivoting
 // Solves A·x = b for square matrix A and vector b
 //

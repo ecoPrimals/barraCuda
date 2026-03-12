@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Transpose: N-Dimensional transpose with arbitrary dimension permutations (f64 canonical)
 // Supports both 2D transpose (swap last two dims) and N-D with permutation
 //

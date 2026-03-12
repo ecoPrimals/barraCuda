@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // bistable_ode_rk4_f64.wgsl — Batched RK4 for bistable QS/biofilm ODE
 //
 // LOCAL EVOLUTION — to be absorbed by ToadStool.

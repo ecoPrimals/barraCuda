@@ -386,7 +386,7 @@ fn write_discovery_file(
         .collect();
     let methods: Vec<serde_json::Value> = barracuda_core::discovery::registered_methods()
         .iter()
-        .map(|m| serde_json::Value::String((*m).to_string()))
+        .map(|m| serde_json::Value::String(m.clone()))
         .collect();
 
     let discovery = serde_json::json!({

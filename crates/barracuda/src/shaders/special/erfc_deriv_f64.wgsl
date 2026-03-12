@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Derivative of the complementary error function: d/dx erfc(x) = -2/√π · exp(-x²)
 //
 // The complementary error function is erfc(x) = 1 - erf(x) = 2/√π ∫ₓ^∞ exp(-t²) dt.

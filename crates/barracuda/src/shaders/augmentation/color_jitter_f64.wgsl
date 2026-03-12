@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Color Jitter - Data augmentation for image color
 // Randomly adjusts brightness, contrast, saturation, hue
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // avgpool3d.wgsl - 3D Average Pooling
 //
 // Average pooling for 3D data (video, volumetric medical imaging)

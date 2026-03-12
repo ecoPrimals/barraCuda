@@ -6,6 +6,32 @@
 
 ---
 
+## Achieved (March 12, 2026 — Comprehensive Audit & Deep Debt)
+
+### wateringHole Standards Compliance
+- **`#![forbid(unsafe_code)]`**: Upgraded from `deny` (overridable) to `forbid` (irrevocable) in both `barracuda` and `barracuda-core` crate roots.
+- **Namespace-derived IPC method names**: All 12 hardcoded `"barracuda.method.name"` strings evolved to `LazyLock<Vec<String>>` built from `PRIMAL_NAMESPACE` + `METHOD_SUFFIXES`. Dispatch routing uses `method_suffix()`. Discovery, tarpc, CLI all consume derived names. Primal has self-knowledge only.
+- **SPDX license compliance**: 648 WGSL shaders were missing `// SPDX-License-Identifier: AGPL-3.0-only` — all 805 shaders now have headers. 1,062/1,062 Rust files confirmed.
+- **BufferBinding import**: Added missing import in `coral_reef_device.rs` — `--all-features` clippy now passes.
+
+### Code Quality Evolution
+- **9 pedantic lints promoted**: `needless_raw_string_hashes`, `redundant_closure_for_method_calls`, `bool_to_int_with_if`, `cloned_instead_of_copied`, `map_unwrap_or`, `no_effect_underscore_binding`, `format_push_string`, `explicit_iter_loop`, `used_underscore_binding` — all promoted from bulk-allow to warn, all violations fixed, enforced via `-D warnings`.
+- **erfc_f64 recursion fix**: `stable_f64.wgsl` had recursive `erfc_f64` (WGSL forbids recursion). Refactored to non-recursive `erfc_x_nonneg_f64` helper. Sovereign shader validation test now passes (was the only test failure).
+- **Magic numbers extracted**: `CONSERVATIVE_GPR_COUNT` (128), `DEFAULT_WORKGROUP` ([64,1,1]), `CORAL_CACHE_ARCHITECTURES` in `coral_reef_device.rs`.
+- **Zero-copy evolution**: `async_submit::read_bytes()` and `ncbi_cache::load()` evolved to return `bytes::Bytes`.
+- **`unreachable!` evolved**: Production `unreachable!()` in `df64_rewrite` evolved to `debug_assert!` + graceful comment fallback.
+- **Rustdoc zero warnings**: Fixed broken `transport::resolve_bind_address` link and private `wgsl_templates` link.
+- **`cargo clippy --fix`**: Auto-fixed applicable violations across workspace.
+
+### Quality Gate Results
+- **Format**: Pass
+- **Clippy** (`-D warnings`): Pass (all configs)
+- **Rustdoc**: Zero warnings
+- **cargo deny**: Pass (advisories ok, bans ok, licenses ok, sources ok)
+- **Tests**: 3,688 pass, 0 fail, 15 skip
+
+---
+
 ## Achieved (March 11-12, 2026 — Sovereign Wiring & Deep Debt)
 
 ### Sovereign Dispatch Wiring
@@ -265,7 +291,7 @@ Previously limited to Vulkan with SPIR-V passthrough.
 - **Phase 7 — K-quant**: Q2_K through Q6_K super-block formats (GGML parity)
 
 #### Test Coverage to 90%
-- Current: 3,900+ total tests (workspace), 42 integration test files
+- Current: 3,688 total tests (workspace), 43 integration test files
 - Evolve CI `--fail-under` from 80 to 90
 - Add GPU-conditional tests for new ops
 - GPU_TEST_TIMEOUT (60s) prevents hangs; coordination harness with
@@ -366,9 +392,10 @@ path and cross-compilation target matrix.
 | Gate | Status | Command |
 |------|--------|---------|
 | Format | Pass | `cargo fmt --check` |
-| Clippy | Pass (zero warnings) | `cargo clippy --all-targets` |
-| Rustdoc | Pass | `cargo doc --no-deps` |
-| Deny | Pass | `cargo deny check` |
+| Clippy | Pass (zero warnings, `-D warnings`) | `cargo clippy --workspace --all-targets -- -D warnings` |
+| Rustdoc | Pass (zero warnings) | `cargo doc --workspace --no-deps` |
+| Deny | Pass (advisories, bans, licenses, sources) | `cargo deny check` |
+| Tests | 3,688 pass / 0 fail / 15 skip | `cargo nextest run --workspace --no-fail-fast` |
 | Check (no GPU) | Pass | `cargo check --no-default-features` |
 | Check (GPU only) | Pass | `cargo check --no-default-features --features gpu` |
 | Check (all) | Pass | `cargo check` |

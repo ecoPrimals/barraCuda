@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // hmc_leapfrog_f64.wgsl — HMC leapfrog integration steps
 //
 // Prepend: complex_f64.wgsl + su3.wgsl + lcg_f64.wgsl + su3_extended_f64.wgsl

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // circular_pad2d.wgsl - Circular/wrap padding for 2D tensors (f64 canonical)
 //
 // Wraps edges around (toroidal topology)

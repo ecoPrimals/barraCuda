@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Clip Grad Value - Element-wise gradient clipping (f64 canonical)
 // Clamps each gradient element to [-clip_value, clip_value]
 //

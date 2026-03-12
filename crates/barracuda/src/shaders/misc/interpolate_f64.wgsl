@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Interpolate_f64.wgsl — Resize tensor using bilinear interpolation (f64 canonical)
 //
 // Pure WGSL implementation (universal compute)

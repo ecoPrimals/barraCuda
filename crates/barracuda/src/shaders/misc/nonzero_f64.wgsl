@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // NonZero - Find indices of non-zero elements (GPU parallel scan) (f64 canonical)
 // Returns indices where tensor values are non-zero
 //

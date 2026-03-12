@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // AdamW Optimizer: Adam with Decoupled Weight Decay (f64 canonical)
 // Key difference from Adam: Weight decay applied AFTER gradient update
 // This makes weight decay independent of gradient-based learning rate adaptation

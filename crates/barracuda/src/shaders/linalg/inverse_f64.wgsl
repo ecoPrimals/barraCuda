@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Matrix Inverse (f64) - Gauss-Jordan elimination with augmented matrix
 // Computes inverse of square matrices using [A | I] → [I | A^-1]
 //

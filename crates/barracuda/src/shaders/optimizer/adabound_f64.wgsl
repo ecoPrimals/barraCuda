@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // adabound.wgsl - AdaBound Optimizer (f64 canonical)
 //
 // Adaptive learning rate optimizer with dynamic bound on learning rates

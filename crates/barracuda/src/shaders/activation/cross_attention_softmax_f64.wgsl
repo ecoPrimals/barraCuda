@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Cross Attention Softmax: Apply softmax to cross-attention scores (f64 canonical)
 // Pass 2 of cross-attention
 //

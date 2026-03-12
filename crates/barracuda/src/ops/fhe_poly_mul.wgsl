@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 //! FHE Polynomial Multiplication Shader
 //!
 //! **Purpose**: Multiply two polynomials modulo q (FHE ciphertext operation)

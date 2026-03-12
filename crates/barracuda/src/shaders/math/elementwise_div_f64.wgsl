@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Element-wise division: C = A / B
 
 @group(0) @binding(0) var<storage, read> a: array<f64>;

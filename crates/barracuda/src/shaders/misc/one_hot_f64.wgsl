@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // One-hot - Convert indices to one-hot vectors (f64 canonical)
 //
 // Deep Debt Principles:

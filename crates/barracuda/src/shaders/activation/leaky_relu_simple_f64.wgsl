@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // LeakyReLU - Simple version with alpha=0.01 (f64 canonical)
 // Formula: LeakyReLU(x) = max(0.01x, x)
 

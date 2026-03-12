@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // NAK-Optimized Batched Symmetric Eigenvalue Decomposition (f64)
 //
 // Drop-in replacement for batched_eigh_single_dispatch_f64.wgsl.

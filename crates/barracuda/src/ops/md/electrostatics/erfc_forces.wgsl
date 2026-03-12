@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Short-range erfc-damped Coulomb forces for PPPM (f64)
 //
 // **Physics**: Real-space Ewald sum with erfc damping

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Yukawa Force Kernel
 //
 // **Purpose**: Screened Coulomb interactions (e.g., Debye screening in plasmas)

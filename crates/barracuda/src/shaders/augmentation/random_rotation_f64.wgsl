@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // random_rotation.wgsl - Random rotation augmentation (f64 canonical)
 //
 // Rotates images by random angles

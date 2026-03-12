@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // quantize_params_f64.wgsl — Affine quantization parameters via max-abs reduction (f64)
 //
 // **Math**: For symmetric affine quantization (scale, zero_point):

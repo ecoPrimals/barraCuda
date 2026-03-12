@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Grid Sample_f64.wgsl — Spatial transformer network sampling (f64 canonical)
 // Samples input at arbitrary grid positions using bilinear interpolation
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Circular Pad - Pad tensor with circular wrapping (f64 canonical)
 //
 // Deep Debt Principles:

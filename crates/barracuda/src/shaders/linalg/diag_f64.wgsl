@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // diag_f64.wgsl - Diagonal matrix operations (f64 canonical)
 //
 // Two modes:

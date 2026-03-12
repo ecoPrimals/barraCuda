@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Pure Rust WGSL shader for ReLU activation (f64 canonical)
 // ReLU: max(0, x)
 

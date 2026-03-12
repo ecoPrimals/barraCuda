@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // pairwise_jaccard_f64.wgsl — Pairwise Jaccard Distance (f64 canonical)
 //
 // Computes the upper-triangle Jaccard distance matrix for a pangenome

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // pangenome_classify.wgsl — Pangenome Gene Classification
 //
 // One thread per gene cluster. Each thread reads its presence row

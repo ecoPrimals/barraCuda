@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Regularized incomplete gamma function P(a,x) = γ(a,x)/Γ(a)
 //
 // Lower regularized gamma: P(a,x) = (1/Γ(a)) ∫₀ˣ t^(a-1) e^(-t) dt

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // maxpool3d.wgsl - 3D Max Pooling (f64 canonical)
 //
 // Max pooling for 3D data (video, volumetric medical imaging)

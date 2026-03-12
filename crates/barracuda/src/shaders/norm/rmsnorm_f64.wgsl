@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // RMS Normalization (Root Mean Square Normalization) (f64 canonical)
 // Simpler alternative to LayerNorm used in modern transformers
 //

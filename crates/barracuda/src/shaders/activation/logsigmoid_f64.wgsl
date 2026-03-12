@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // LogSigmoid - Logarithm of sigmoid (f64 canonical)
 //
 // Deep Debt Principles:

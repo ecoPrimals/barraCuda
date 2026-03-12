@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // deformable_conv2d.wgsl - Deformable Convolution 2D (f64 canonical)
 //
 // Convolution with learnable offsets for sampling positions

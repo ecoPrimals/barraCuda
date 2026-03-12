@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // GriffinLim - Phase reconstruction from magnitude spectrogram (f64 canonical)
 // Iteratively estimates phase for ISTFT
 // This is a simplified version - full implementation would require ISTFT/STFT cycles

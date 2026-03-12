@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // pdist.wgsl - Pairwise Distances (all pairs) (f64 canonical)
 //
 // Computes distances between all pairs of row vectors

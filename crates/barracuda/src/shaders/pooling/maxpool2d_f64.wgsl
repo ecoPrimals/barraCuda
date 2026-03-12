@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // MaxPool2D - Max pooling (2D) with padding support (f64 canonical)
 //
 // Supports configurable pool_size, stride, and padding (pad_h, pad_w).

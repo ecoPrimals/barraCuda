@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Batch Norm 2D - Batch normalization for CNNs (complete implementation) (f64 canonical)
 // Normalizes activations across batch dimension
 //

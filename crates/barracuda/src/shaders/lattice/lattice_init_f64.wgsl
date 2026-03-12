@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // lattice_init_f64.wgsl — Cold/hot start for SU(3) lattice gauge links
 //
 // Prepend: complex_f64.wgsl + su3.wgsl + lcg_f64.wgsl + su3_extended_f64.wgsl

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Batched 3D FFT — processes ALL pencils along one axis in a single dispatch.
 //
 // Instead of 192 individual 1D FFT dispatches for an 8×8×8 mesh,

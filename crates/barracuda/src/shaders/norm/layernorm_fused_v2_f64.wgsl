@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Fused LayerNorm V2: Single-launch, multi-phase layer normalization (f64 canonical)
 //
 // **CORRECTED**: Now properly computes GLOBAL statistics before normalization!

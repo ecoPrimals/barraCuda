@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Complex Multiplication Shader
 //
 // Operation: (a + bi)(c + di) = (ac - bd) + (ad + bc)i

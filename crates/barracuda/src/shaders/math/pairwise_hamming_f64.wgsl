@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // pairwise_hamming_f64.wgsl — Pairwise Hamming Distance (f64 canonical)
 //
 // Each thread computes the Hamming distance (proportion of differing

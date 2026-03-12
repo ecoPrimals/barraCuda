@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // adaptive_avg_pool1d.wgsl - Adaptive Average Pooling 1D
 //
 // Applies average pooling with adaptive kernel size to produce fixed output size

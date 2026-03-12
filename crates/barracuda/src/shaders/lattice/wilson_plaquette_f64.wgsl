@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // wilson_plaquette_f64.wgsl — SU(3) Wilson plaquette action on a 4D lattice
 //
 // Prepend: complex_f64.wgsl + su3.wgsl

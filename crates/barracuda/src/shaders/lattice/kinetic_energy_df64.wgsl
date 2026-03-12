@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // kinetic_energy_df64.wgsl — Hybrid per-link kinetic energy (DF64 core streaming)
 //
 // Prepend: complex_f64.wgsl + su3.wgsl + df64_core.wgsl + su3_df64.wgsl

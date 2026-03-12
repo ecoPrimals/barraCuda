@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Softplus - Smooth approximation of ReLU (f64 canonical)
 //
 // Deep Debt Principles:

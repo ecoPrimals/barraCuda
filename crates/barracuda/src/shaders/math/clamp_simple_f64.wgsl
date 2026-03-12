@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Clamp values to range [0, 6] (ReLU6-style for simplicity) (f64 canonical)
 // Can be extended with parameters for arbitrary ranges
 

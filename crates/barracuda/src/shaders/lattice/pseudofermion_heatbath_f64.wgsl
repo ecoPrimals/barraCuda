@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // pseudofermion_heatbath_f64.wgsl — Generate Gaussian noise for pseudofermion heatbath
 //
 // Prepend: complex_f64.wgsl + lcg_f64.wgsl

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Element-wise multiplication: C = A * B (f64 - double precision)
 //
 // **Purpose**: High-precision element-wise multiplication for scientific computing

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 //! FHE Polynomial Addition Shader
 //!
 //! **Purpose**: Add two polynomials modulo q (FHE ciphertext operation)

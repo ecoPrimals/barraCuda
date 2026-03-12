@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Sparse matrix multiply with quantized int8 values
 // Uses COO (coordinate) format for sparse matrix
 

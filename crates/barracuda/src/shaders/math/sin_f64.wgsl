@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // sin_f64.wgsl — Element-wise sine operation (f64 canonical)
 // Universal compute via WGSL - works on any hardware
 

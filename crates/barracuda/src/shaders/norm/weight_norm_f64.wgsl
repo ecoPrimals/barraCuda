@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // weight_norm.wgsl - Weight Normalization (f64 canonical)
 //
 // Reparameterizes weights as: w = g * (v / ||v||)

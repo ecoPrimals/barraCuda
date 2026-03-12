@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Attention Apply: Apply attention weights to values
 // Pass 3 of multi-pass attention implementation
 //

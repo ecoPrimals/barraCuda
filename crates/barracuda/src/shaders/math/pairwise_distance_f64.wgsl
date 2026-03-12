@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // pairwise_distance_f64.wgsl - Pairwise Distance (f64 canonical)
 //
 // Computes distance between pairs of vectors

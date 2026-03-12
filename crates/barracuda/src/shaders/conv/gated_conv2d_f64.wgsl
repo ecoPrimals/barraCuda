@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // gated_conv2d.wgsl - Gated Convolution 2D (f64 canonical)
 //
 // Output = tanh(W_f * x) ⊙ sigmoid(W_g * x)

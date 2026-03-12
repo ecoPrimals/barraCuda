@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Variance and standard deviation computation — f64 precision
 // Var(X) = E[(X-μ)²] = Σ(x-μ)² / (n - ddof)
 //

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Filter Response Normalization (FRN) - Normalization without batch dependency (f64 canonical)
 // Normalizes activations per filter, not per batch
 // Enables single-sample inference

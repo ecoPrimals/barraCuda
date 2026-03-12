@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Grid Quadrature GEMM (f64) — GPU Hamiltonian Construction
 //
 // Computes batched Hamiltonian matrices via numerical quadrature:

@@ -344,6 +344,7 @@ dependencies = [
  "bytes",
  "coral-driver",
  "coral-reef",
+ "serde",
  "thiserror",
  "tracing",
 ]

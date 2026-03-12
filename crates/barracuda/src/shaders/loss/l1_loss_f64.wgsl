@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // L1 Loss - Mean Absolute Error
 // loss = mean(|predictions - targets|)
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // loo_cv_f64.wgsl — Leave-One-Out Cross-Validation for kernel methods (f64 canonical)
 // LOO_i = (y_i - pred_i) / (1 - H_ii)
 // H: hat matrix [N, N], y: targets [N], pred: predictions [N]

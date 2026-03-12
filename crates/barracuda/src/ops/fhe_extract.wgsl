@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // FHE Coefficient Extraction Shader
 //
 // **Purpose**: Mask all coefficients except target index

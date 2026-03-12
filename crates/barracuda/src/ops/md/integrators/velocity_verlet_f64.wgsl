@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Velocity-Verlet Time Integration — f64 precision
 //!
 //! **Physics**: Symplectic integrator for classical mechanics (Hamilton's equations)

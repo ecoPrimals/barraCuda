@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Conv1D (1D Convolution) - f64 canonical
 // Convolution operation for sequences (time-series, NLP, audio)
 //

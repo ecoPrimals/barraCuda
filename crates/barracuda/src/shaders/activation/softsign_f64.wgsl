@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Softsign - x / (1 + |x|) (f64 canonical)
 
 @group(0) @binding(0) var<storage, read> input: array<f64>;

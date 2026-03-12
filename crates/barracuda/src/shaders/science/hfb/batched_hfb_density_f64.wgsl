@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // batched_hfb_density_f64.wgsl — BCS pairing + density construction for spherical HFB
 //
 // hotSpring absorption: nuclear physics GPU-resident SCF.

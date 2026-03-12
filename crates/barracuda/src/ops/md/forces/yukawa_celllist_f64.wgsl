@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Yukawa Cell-List Force (f64) with PBC + potential energy
 //
 // **Physics**: Same as yukawa_f64.wgsl but O(N) via cell-list

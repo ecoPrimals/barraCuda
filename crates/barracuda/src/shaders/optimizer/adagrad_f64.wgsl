@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // AdaGrad Optimizer (Adaptive Gradient Algorithm) (f64 canonical)
 // Adapts learning rate for each parameter based on historical gradients
 //

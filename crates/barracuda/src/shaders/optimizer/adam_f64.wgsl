@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Adam Optimizer: Adaptive moment estimation optimizer (f64 canonical)
 // CUDA equivalent: Custom kernels or cuDNN optimizers
 // Formula: Adaptive learning rate with momentum and RMSprop

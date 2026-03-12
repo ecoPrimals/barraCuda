@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Peak Detection (f64) — parallel local-maxima + prominence
 //
 // One thread per sample. Each thread:

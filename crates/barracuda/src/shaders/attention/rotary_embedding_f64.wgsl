@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 //! Rotary Position Embedding (RoPE) - GPU implementation (f64 canonical)
 //!
 //! Applies 2D rotation to query/key embeddings based on position

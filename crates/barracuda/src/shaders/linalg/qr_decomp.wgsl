@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // QR Decomposition - Shader-First Implementation
 //
 // Householder QR factorization: A = QR

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Runge-Kutta 4th Order (RK4) Time Integration — f64 precision
 //
 // **Physics**: General ODE solver (accurate for smooth systems)

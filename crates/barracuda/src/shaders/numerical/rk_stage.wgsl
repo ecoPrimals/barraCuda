@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Runge-Kutta Stage Evaluation - Shader-First Implementation
 //
 // Parallel computation of RK stages for ODE integration.

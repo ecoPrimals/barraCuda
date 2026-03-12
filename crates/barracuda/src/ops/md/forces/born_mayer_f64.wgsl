@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Born-Mayer Force Kernel — f64 precision
 //
 // **Purpose**: Repulsive core interactions (excluded volume)

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Trace - Sum of diagonal elements - Pure GPU Tree Reduction (f64 canonical)
 // Computes sum of diagonal elements: tr(A) = Σ A[i,i]
 //

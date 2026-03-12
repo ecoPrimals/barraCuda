@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Einsum_f64.wgsl — Einstein summation (f64 canonical)
 // Flexible tensor contraction using Einstein notation
 //

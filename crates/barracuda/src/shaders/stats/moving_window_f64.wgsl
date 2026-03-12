@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Moving window statistics (mean, variance, min, max) (f64 canonical)
 // airSpring IoT sensor streams, wetSpring environmental monitoring
 //

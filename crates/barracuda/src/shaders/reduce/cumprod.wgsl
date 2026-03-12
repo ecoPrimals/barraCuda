@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Cumprod - Cumulative product along a dimension
 //
 // Deep Debt Principles:

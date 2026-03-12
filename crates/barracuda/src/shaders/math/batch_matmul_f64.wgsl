@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // BatchMatMul - Batched matrix multiplication (f64 canonical)
 // Critical for transformer attention: (batch, heads, seq, seq) matrix products
 // More efficient than looping over MatMul for batched operations

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Reflection Pad - Pad tensor with reflection at boundaries (f64 canonical)
 //
 // Deep Debt Principles:

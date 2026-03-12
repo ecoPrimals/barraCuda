@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Factorial n! for f64 input
 //
 // For non-negative integer n < 21: exact lookup table (integer factorials 0!..20!).

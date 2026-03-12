@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // GPU-Resident Cell-List: Particle Scatter (Pass 3 of 3)
 //
 // Writes each particle's sorted index into the cell list using the prefix-sum

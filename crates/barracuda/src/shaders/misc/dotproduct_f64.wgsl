@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // DotProduct_f64.wgsl — Compute inner product of two vectors (f64 canonical)
 // CUDA equivalent: cublas::dot
 // Use cases: Similarity, attention scores

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Fill - fill tensor with a constant value
 
 struct FillParams {

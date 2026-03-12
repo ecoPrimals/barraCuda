@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // SELU (Scaled Exponential Linear Unit) - Simple version (f64 canonical)
 // Formula: SELU(x) = λ * (x if x > 0, else α(e^x - 1))
 // Constants: λ ≈ 1.0507, α ≈ 1.67326

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Cyclic Reduction (f64) — Parallel Tridiagonal Solver for PDEs
 //
 // Solves tridiagonal system: a[i]*x[i-1] + b[i]*x[i] + c[i]*x[i+1] = d[i]

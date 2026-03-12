@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Conv3D - 3D Convolution (f64 canonical)
 // Used for video analysis, medical imaging (CT/MRI), spatiotemporal feature extraction
 

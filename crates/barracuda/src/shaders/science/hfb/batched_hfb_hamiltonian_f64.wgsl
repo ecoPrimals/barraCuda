@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // batched_hfb_hamiltonian_f64.wgsl — Build single-particle Hamiltonian for spherical HFB
 //
 // hotSpring absorption: nuclear physics GPU-resident SCF.

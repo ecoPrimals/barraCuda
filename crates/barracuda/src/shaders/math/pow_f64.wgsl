@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // pow_f64.wgsl — Element-wise power operation (f64 canonical)
 //
 // General case with full pow_f64 for arbitrary exponents.

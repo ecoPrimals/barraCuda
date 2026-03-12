@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Bootstrap resampling for mean estimation
 //
 // Each thread computes one bootstrap sample: draw n values with replacement from

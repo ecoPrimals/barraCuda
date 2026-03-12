@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // ============================================================================
 // kriging_f64.wgsl — Spatial interpolation (Ordinary Kriging) at f64 precision
 // ============================================================================

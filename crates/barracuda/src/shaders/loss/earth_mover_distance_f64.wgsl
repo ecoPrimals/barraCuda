@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // earth_mover_distance_f64.wgsl - Earth Mover's Distance (Wasserstein-1) (f64 canonical)
 //
 // Measures distance between probability distributions

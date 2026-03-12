@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // charge_spread_f64.wgsl — Charge spreading to mesh for PPPM
 //
 // **Physics**: Spread particle charges onto 3D mesh using B-spline weights for PPPM.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Lovasz-Softmax Loss (f64 canonical)
 // IoU-optimized loss for semantic segmentation
 //

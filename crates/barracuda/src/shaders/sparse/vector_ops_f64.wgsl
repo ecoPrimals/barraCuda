@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Vector operations for sparse iterative solvers - f64 Precision
 // All operations use consistent read/read_write bindings
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // PitchShift - Pitch shifting without tempo change
 // Changes pitch by resampling in frequency domain
 // Input: Signal [length]

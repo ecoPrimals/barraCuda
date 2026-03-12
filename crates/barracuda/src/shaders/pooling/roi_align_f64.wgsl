@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // ROI Align - Region of Interest Align (f64 canonical)
 // Extracts fixed-size feature maps from regions using bilinear interpolation
 // Avoids quantization artifacts of ROI Pooling

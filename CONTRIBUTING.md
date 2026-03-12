@@ -35,7 +35,7 @@ cargo doc --workspace --no-deps
 |------|---------|
 | `crates/barracuda/` | Umbrella crate — all math, GPU ops, compute fabric |
 | `crates/barracuda-core/` | Primal lifecycle, IPC, tarpc, UniBin CLI |
-| `crates/barracuda/src/shaders/` | 803 WGSL shaders (see `shaders/README.md`) |
+| `crates/barracuda/src/shaders/` | 805 WGSL shaders (see `shaders/README.md`) |
 | `crates/barracuda/examples/` | Runnable examples |
 | `crates/barracuda/tests/` | 42 integration test files |
 | `crates/barracuda/src/bin/` | Binaries (validate_gpu, bench_*) |
@@ -197,6 +197,11 @@ cargo llvm-cov --workspace --lib --html
 
 # No-GPU build check (must always pass)
 cargo check -p barracuda --no-default-features
+
+# Tiered test dispatch (local dev — fast iteration)
+./scripts/test-tiered.sh           # Tiers 1-3 (clippy + core + targeted)
+./scripts/test-tiered.sh full      # All tests via nextest
+./scripts/test-tiered.sh gpu       # Full suite + GPU workload tests
 ```
 
 ### Test categories
@@ -227,7 +232,7 @@ WGPU_BACKEND=vulkan WGPU_ADAPTER_NAME=llvmpipe cargo test -p barracuda
 ## Code Style
 
 - Follow `CONVENTIONS.md`
-- `#![deny(unsafe_code)]` in barracuda-core — minimize unsafe across the codebase
+- `#![forbid(unsafe_code)]` in both crates — zero unsafe is irrevocable
 - `cargo fmt` before committing
 - `cargo clippy --workspace -- -D warnings` must be clean
 - Suppressions: `#[expect(clippy::lint, reason = "...")]` — compile-time verified; `#[allow]` only when lint may or may not fire depending on context

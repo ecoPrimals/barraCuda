@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Langevin Thermostat (f64)
 //
 // **Physics**: Stochastic dynamics with friction and random noise

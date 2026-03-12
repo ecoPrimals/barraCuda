@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // cross_product_f64.wgsl - Vector cross product (f64 canonical)
 //
 // Computes cross product of 3D vectors

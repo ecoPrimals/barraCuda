@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Finite-Difference Gradient Operations on Structured Grids (f64)
 //
 // Generic gradient computation using central finite differences:

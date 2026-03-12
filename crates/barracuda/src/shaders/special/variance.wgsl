@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Variance and standard deviation computation
 // Var(X) = E[(X-μ)²] = E[X²] - E[X]²
 //

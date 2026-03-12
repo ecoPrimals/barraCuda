@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Runge-Kutta Stage Evaluation - Full f64 Precision
 //
 // Parallel computation of RK stages for ODE integration.

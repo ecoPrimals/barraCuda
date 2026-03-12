@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Matrix Power - M^n via exponentiation by squaring (f64 canonical)
 // Efficiently computes matrix raised to integer power
 //

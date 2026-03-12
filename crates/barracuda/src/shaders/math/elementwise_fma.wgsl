@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Fused multiply-add: C = A * B + C (or C = alpha * A + B)
 // 
 // FMA is a single instruction on modern GPUs - 2 FLOPs in 1 op

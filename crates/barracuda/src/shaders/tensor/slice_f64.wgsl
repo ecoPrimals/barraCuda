@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Slice operation - extract subtensor (f64 canonical)
 // Parameters: start index, length
 

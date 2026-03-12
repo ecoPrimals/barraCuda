@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // adafactor.wgsl - Adafactor Optimizer (f64 canonical)
 //
 // Memory-efficient adaptive learning rate optimizer

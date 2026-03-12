@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // RandomAffine - Random affine transformations
 //
 // Applies random rotation, translation, scale, and shear

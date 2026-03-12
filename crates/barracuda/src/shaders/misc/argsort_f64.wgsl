@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // ArgSort_f64.wgsl — Return indices that sort the tensor (f64 canonical)
 // Returns indices that would sort the input tensor
 //

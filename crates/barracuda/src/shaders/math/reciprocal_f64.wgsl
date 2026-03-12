@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Reciprocal - Compute 1/x element-wise
 //
 // Deep Debt Principles:

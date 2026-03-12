@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // rk45_f64.wgsl — Adaptive Runge-Kutta-Fehlberg (RK45) single step, Dormand-Prince
 //
 // **Math**: Dormand-Prince 5(4) embedded pair. Seven stages, FSAL property.

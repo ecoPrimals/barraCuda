@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Global Pooling - Graph-level representation aggregation (f64 canonical)
 // Aggregate node features to graph-level representation
 // Supports: sum, mean, max aggregation

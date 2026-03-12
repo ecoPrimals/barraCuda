@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // STFT - Short-Time Fourier Transform (f64 canonical)
 // Converts time-domain signal to time-frequency representation
 // Input: signal [length], window [n_fft]

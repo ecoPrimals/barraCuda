@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // gru_cell.wgsl - GRU Cell (single timestep) (f64 canonical)
 //
 // Gated Recurrent Unit cell computation

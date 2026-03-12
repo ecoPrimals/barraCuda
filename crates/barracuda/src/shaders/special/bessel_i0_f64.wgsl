@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Modified Bessel function of the first kind, order 0: I0(x) — f64 precision
 // Abramowitz & Stegun 9.8.1-9.8.2
 // For |x| < 3.75: polynomial approximation in (x/3.75)²

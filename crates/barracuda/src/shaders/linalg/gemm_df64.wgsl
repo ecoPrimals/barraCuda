@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Dense Matrix Multiply (DF64) — Hybrid Core Streaming GEMM
 //
 // Prepend: df64_core.wgsl

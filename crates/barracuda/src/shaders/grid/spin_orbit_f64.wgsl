@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Spin-Orbit Coupling Kernel (f64) — Nuclear HFB Evolution
 //
 // Computes diagonal spin-orbit corrections to the HFB Hamiltonian.

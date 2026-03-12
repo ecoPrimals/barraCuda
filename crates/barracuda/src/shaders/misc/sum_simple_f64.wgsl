@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Sum reduction - Simple single-workgroup version
 // Computes sum of all elements
 

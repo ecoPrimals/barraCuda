@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Argmin Reduction: Find index of minimum value over all elements (f64 canonical)
 // CUDA equivalent: thrust::reduce with argmin operation
 // Algorithm: Tree reduction tracking both value and index

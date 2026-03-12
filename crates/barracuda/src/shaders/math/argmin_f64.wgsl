@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // argmin_f64.wgsl - Find indices of minimum values along a dimension (f64 canonical)
 //
 // Deep Debt Principles:

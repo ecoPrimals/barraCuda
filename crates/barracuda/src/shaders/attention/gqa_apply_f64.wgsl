@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Grouped Query Attention Apply: Apply attention weights to values
 // Pass 3 of GQA multi-pass attention implementation
 //

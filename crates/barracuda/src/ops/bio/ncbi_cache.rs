@@ -67,10 +67,12 @@ impl NcbiCache {
     /// Read data from cache for the given accession.
     /// # Errors
     /// Returns [`Err`] if the accession is invalid or the cache file cannot be read.
-    pub fn load(&self, accession: &str) -> Result<Vec<u8>> {
+    pub fn load(&self, accession: &str) -> Result<bytes::Bytes> {
         validate_accession(accession)?;
         let path = self.cache_path(accession);
-        std::fs::read(&path).map_err(|e| BarracudaError::Internal(format!("read cache: {e}")))
+        std::fs::read(&path)
+            .map(bytes::Bytes::from)
+            .map_err(|e| BarracudaError::Internal(format!("read cache: {e}")))
     }
 
     /// Remove all cached data.
@@ -154,7 +156,7 @@ mod tests {
         let data = b"ACGTACGTACGT";
         cache.store("NM_001234", data).expect("store");
         let loaded = cache.load("NM_001234").expect("load");
-        assert_eq!(loaded, data);
+        assert_eq!(loaded.as_ref(), data.as_slice());
     }
 
     #[test]

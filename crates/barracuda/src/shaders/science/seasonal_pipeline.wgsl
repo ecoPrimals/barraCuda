@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Fused seasonal pipeline: ET0 → Kc → Water Balance → Yield impact
 // One GPU dispatch computes a full growing-season step per spatial cell.
 //

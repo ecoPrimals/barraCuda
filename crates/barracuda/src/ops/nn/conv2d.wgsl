@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Conv2D - Full NCHW 2D convolution compute shader
 //
 // Input:  [N, C_in, H, W]

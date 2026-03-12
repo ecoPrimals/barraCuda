@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // pseudofermion_force_f64.wgsl — Per-link pseudofermion force for dynamical HMC
 //
 // Prepend: complex_f64.wgsl + su3.wgsl

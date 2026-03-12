@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Weighted Inner Product with Workgroup Reduction (f64)
 //
 // Computes: result = Σ_k w[k] · a[k] · b[k]   (weighted dot product)

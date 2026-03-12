@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Matrix Multiplication (fp64 - High Precision)
 //
 // **Purpose**: High-precision matrix multiplication for scientific computing

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Unique - Find unique elements (GPU hash-based approach) (f64 canonical)
 // Returns sorted unique values from input tensor
 //

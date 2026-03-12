@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // mean_reduce.wgsl — Single-workgroup Mean Reduction (f32)
 //
 // Computes the arithmetic mean of an f32 array in a single-workgroup pass.

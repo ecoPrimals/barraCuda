@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Hardshrink - Hard shrinkage activation function (f64 canonical)
 // Hardshrink: f(x) = x if |x| > lambda, 0 otherwise
 

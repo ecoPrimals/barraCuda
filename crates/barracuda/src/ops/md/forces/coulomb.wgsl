@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Coulomb Force Kernel
 //
 // **Purpose**: Electrostatic interactions (q1*q2/r)

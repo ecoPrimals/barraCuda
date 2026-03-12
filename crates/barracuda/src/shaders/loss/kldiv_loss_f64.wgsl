@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // kldiv_loss_f64.wgsl - KL Divergence Loss (f64 canonical)
 //
 // Kullback-Leibler divergence between distributions

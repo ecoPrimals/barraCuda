@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // MFCC - Mel-Frequency Cepstral Coefficients (f64 canonical)
 // Extracts MFCC features from mel spectrogram
 // Input: Mel spectrogram [n_frames, n_mels]

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Sign - Sign function (returns -1, 0, or 1)
 //
 // Deep Debt Principles:

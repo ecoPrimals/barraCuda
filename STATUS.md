@@ -2,7 +2,7 @@
 
 **Version**: 0.3.5
 **Date**: 2026-03-12
-**Overall Grade**: A+ (Zero unsafe, zero unwrap in production, pure safe Rust, all quality gates green, 3,348+ tests, zero TODO/FIXME/unimplemented, NVVM poisoning guard, PrecisionBrain self-routing, HardwareCalibration per-tier probing, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust, device-aware test tolerances, cross-spring pharma/bio/health absorption, FMA policy, stable GPU special functions, sovereign coral-cache dispatch wiring, capability-based PRIMAL_NAMESPACE, VoltaNoPmuFirmware workaround detection)
+**Overall Grade**: A+ (Zero unsafe via `#![forbid(unsafe_code)]`, zero unwrap in production, pure safe Rust, all quality gates green, 3,688 tests passing, zero TODO/FIXME/unimplemented, NVVM poisoning guard, PrecisionBrain self-routing, HardwareCalibration per-tier probing, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust, device-aware test tolerances, cross-spring pharma/bio/health absorption, FMA policy, stable GPU special functions, sovereign coral-cache dispatch wiring, capability-based PRIMAL_NAMESPACE, VoltaNoPmuFirmware workaround detection, namespace-derived IPC method names, 805/805 WGSL SPDX headers, 1062/1062 Rust SPDX headers, pedantic lint promotion)
 
 ---
 
@@ -10,16 +10,16 @@
 
 | Category | Grade | Notes |
 |----------|-------|-------|
-| **Core compute** | A+ | 803 WGSL shaders, 13-tier tolerance architecture, GpuView persistent buffers with ops, BGL builder pattern, PrecisionBrain domain→tier routing |
+| **Core compute** | A+ | 805 WGSL shaders, 13-tier tolerance architecture, GpuView persistent buffers with ops, BGL builder pattern, PrecisionBrain domain→tier routing |
 | **Precision tiers** | A+ | 3-tier model (F32/F64/Df64) aligned with coralReef `Fp64Strategy`; DF64 naga-guided rewrite validated; probe-aware Fp64Strategy; DF64 reduce shaders correctly routed via `.df64()` on Hybrid devices; NVVM poisoning guard for proprietary NVIDIA DF64 transcendentals |
-| **Sovereign compiler** | A+ | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all 803 shaders via rayon parallel validation |
-| **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery; coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support |
+| **Sovereign compiler** | A+ | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all 805 shaders via rayon parallel validation; `erfc_f64` recursion eliminated |
+| **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery; namespace-derived method names via `PRIMAL_NAMESPACE` + `METHOD_SUFFIXES`; coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support |
 | **Device management** | A+ | `GpuBackend` trait abstraction, `CoralReefDevice` scaffold behind `sovereign-dispatch` feature, multi-GPU with PCIe topology sysfs probing (`PcieLinkInfo`), capability-scored discovery, probe-aware f64 strategy, VRAM quota enforcement via `ResourceQuota`/`QuotaTracker`, bounded poll timeout |
-| **Test coverage** | A+ | 3,348 tests (all pass on llvmpipe); proptest; chaos/fault test tiers; nextest CI/stress profiles; optimised test pipeline (nautilus 14.3s→0.01s, sovereign 800+ shaders parallelised via rayon, ESN reservoir shrunk); zero `todo!()`/`unimplemented!()` |
+| **Test coverage** | A+ | 3,688 tests (all pass on llvmpipe); proptest; chaos/fault test tiers; nextest CI/stress profiles; optimised test pipeline (nautilus 14.3s→0.01s, sovereign 800+ shaders parallelised via rayon, ESN reservoir shrunk); zero `todo!()`/`unimplemented!()` |
 | **Dependencies** | A+ | All deps pure Rust (blake3 `pure`, wgpu/naga 28); zero application C deps; ecoBin compliant |
 | **Documentation** | A+ | Comprehensive CHANGELOG, specs, README, CONTRIBUTING, CONVENTIONS, BREAKING_CHANGES; all rustdoc warnings resolved; showcase/ with 9 progressive demos (local, IPC, cross-primal) |
-| **Unsafe code** | A+ | Zero `unsafe` blocks in entire codebase |
-| **Clippy / lint** | A+ | Zero warnings with pedantic + unwrap_used; zero production `unwrap()` calls; `#[expect(reason)]` for clippy suppressions; `#[allow(dead_code, reason)]` for CPU reference implementations; `bytes::Bytes` zero-copy on I/O boundaries; zero undocumented suppressions; zero `#[allow(dead_code)]` without reason |
+| **Unsafe code** | A+ | Zero `unsafe` blocks; `#![forbid(unsafe_code)]` in both crates (irrevocable) |
+| **Clippy / lint** | A+ | Zero warnings with pedantic + unwrap_used + `-D warnings`; 9 bulk-allowed lints promoted to warn (enforced); zero production `unwrap()`; `#[expect(reason)]` for clippy suppressions; `bytes::Bytes` zero-copy on I/O boundaries; zero undocumented suppressions |
 | **Error handling** | A+ | Binary `main()` uses typed `BarracudaCoreError` (not `Box<dyn Error>`); `From` impls for `serde_json::Error`, `BarracudaError`, `io::Error`; `Result` propagation throughout; `let-else` throughout; poison recovery |
 | **Idiomatic Rust** | A+ | Edition 2024; zero `too_many_arguments` (all 9 → builder/struct); documented `#[allow]`/`#[expect]` with reason; `#[derive(Default)]`; zero unsafe; zero production unwrap; `ChamferDirection` enum; smart module decomposition (provenance, coral_compiler); capability version derived from `env!("CARGO_PKG_VERSION")`; method lists derived from `REGISTERED_METHODS` constant |
 | **Spring absorption** | A+ | All P0/P1/P2 items resolved; hotSpring: NVVM poisoning guard, plasma dispersion, LSCFRK, **PrecisionBrain + HardwareCalibration**; groundSpring: F64NativeNoSharedMem, DF64 reduce, shared `estimate_gflops`/`estimate_vram_bytes`; wetSpring: BGL builder, `ComputeDispatch` builder, `Rk45Result::variable_trajectory()`, **`CsrMatrix::from_triplets_summed()`**, **`BipartitionEncodeGpu`**; neuralSpring: activations, Wright-Fisher, `analyze_weight_matrix()`; healthSpring: Hill Emax, Population PK, tridiagonal QL, LCG PRNG, **FOCE/VPC GPU shaders**; toadStool S139: dual-scan discovery |
@@ -154,6 +154,17 @@
 - `VpcSimulateGpu` — GPU Monte Carlo VPC simulation with RK4 PK integration (healthSpring V14 absorption)
 - `foce_gradient_f64.wgsl` + `vpc_simulate_f64.wgsl` + `bipartition_encode.wgsl` — 3 new production WGSL shaders
 
+- **Comprehensive audit & deep debt sprint** (Mar 12): Full codebase audit against wateringHole standards. 12-item remediation completed.
+- **`#![forbid(unsafe_code)]`** (Mar 12): Upgraded from `deny` (overridable) to `forbid` (irrevocable) in both `barracuda` and `barracuda-core` crate roots.
+- **Namespace-derived IPC method names** (Mar 12): All 12 hardcoded `"barracuda.method.name"` strings evolved to `LazyLock<Vec<String>>` built from `PRIMAL_NAMESPACE` + `METHOD_SUFFIXES`. Dispatch routing uses `method_suffix()` to strip namespace prefix. Discovery, tarpc, CLI all consume derived names.
+- **SPDX license headers** (Mar 12): 648 WGSL shaders missing `// SPDX-License-Identifier: AGPL-3.0-only` headers — all 805 shaders now have them. 1062/1062 Rust files already had them.
+- **Pedantic lint promotion** (Mar 12): 9 bulk-allowed clippy lints promoted to `warn` (enforced via `-D warnings`): `needless_raw_string_hashes`, `redundant_closure_for_method_calls`, `bool_to_int_with_if`, `cloned_instead_of_copied`, `map_unwrap_or`, `no_effect_underscore_binding`, `format_push_string`, `explicit_iter_loop`, `used_underscore_binding`.
+- **erfc_f64 recursion fix** (Mar 12): `stable_f64.wgsl` had recursive `erfc_f64` (WGSL forbids recursion). Refactored to non-recursive `erfc_x_nonneg_f64` helper.
+- **Magic numbers extracted** (Mar 12): `CONSERVATIVE_GPR_COUNT`, `DEFAULT_WORKGROUP`, `CORAL_CACHE_ARCHITECTURES` constants in `coral_reef_device.rs`.
+- **Zero-copy evolution** (Mar 12): `async_submit::read_bytes()` and `ncbi_cache::load()` evolved to return `bytes::Bytes`.
+- **`unreachable!` evolved** (Mar 12): Production `unreachable!()` in `df64_rewrite` evolved to `debug_assert!` + graceful fallback.
+- **Rustdoc zero warnings** (Mar 12): Fixed broken `transport::resolve_bind_address` link and private `wgsl_templates` link.
+- **BufferBinding import** (Mar 12): Added missing `BufferBinding` import in `coral_reef_device.rs` — `--all-features` clippy now passes.
 - **Sovereign cache → dispatch wiring** (Mar 12): `CoralReefDevice::dispatch_compute` now checks the coral compiler cache (populated by `spawn_coral_compile`) before recompiling. Cache hits skip compilation, completing the WgpuDevice-compile → CoralReefDevice-dispatch pipeline.
 - **PRIMAL_NAMESPACE constant** (Mar 12): All hardcoded `"barracuda"` strings in IPC namespace, socket paths, PID file paths evolved to `PRIMAL_NAMESPACE` constant for capability-based discovery.
 - **VoltaNoPmuFirmware workaround** (Mar 12): `GpuDriverProfile` detects Volta + NVK as needing software PMU. `needs_software_pmu()` and `sovereign_resolves_poisoning()` methods added.

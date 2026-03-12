@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // LayerNorm Mean+Variance Computation (Single Pass) - f64 canonical
 //
 // **2-DISPATCH LAYERNORM - DISPATCH 1: COMPUTE MEAN AND VARIANCE TOGETHER**

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Fused Multiply-Add: D = A * B + C
 // NVIDIA-optimized: WG=64 (benchmarks show 3x faster than WG=256)
 

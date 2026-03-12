@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // LayerScale - Per-layer learnable scaling (f64 canonical)
 // Used in vision transformers (CaiT, LeViT) to stabilize training
 //

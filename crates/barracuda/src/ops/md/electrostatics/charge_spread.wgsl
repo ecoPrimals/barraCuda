@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Charge spreading kernel for PPPM (f64)
 //
 // **Physics**: Spreads particle charges onto mesh using B-spline interpolation

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Avg Pool 1D - Temporal average pooling
 //
 // Deep Debt Principles:

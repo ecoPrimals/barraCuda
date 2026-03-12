@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // GATConv - Graph Attention Networks (f64 canonical)
 
 struct Params {

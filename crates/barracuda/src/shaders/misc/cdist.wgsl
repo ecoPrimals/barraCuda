@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Cdist - Pairwise distance computation
 // Computes distances between all pairs of vectors
 

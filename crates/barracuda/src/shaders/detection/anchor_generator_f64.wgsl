@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Anchor Generator - Generate anchor boxes (f64 canonical)
 
 struct Params {

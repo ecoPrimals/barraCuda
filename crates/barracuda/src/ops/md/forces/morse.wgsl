@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Morse Force Kernel
 //
 // **Purpose**: Bonded interactions (chemical bonds)

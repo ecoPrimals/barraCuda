@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // MaxPool2D - Max pooling compute shader
 //
 // **Purpose**: Downsampling via local maximum

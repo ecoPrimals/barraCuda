@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Abs - Absolute value operation
 //
 // Deep Debt Principles:

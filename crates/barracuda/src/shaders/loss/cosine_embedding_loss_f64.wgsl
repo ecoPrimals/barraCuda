@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // cosine_embedding_loss_f64.wgsl - Cosine embedding loss (f64 canonical)
 //
 // Measures similarity between embeddings using cosine similarity

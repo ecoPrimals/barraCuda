@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Chi-squared decomposed: residuals and per-bin chi-squared terms
 //
 // For each bin i with observed Oᵢ and expected Eᵢ:

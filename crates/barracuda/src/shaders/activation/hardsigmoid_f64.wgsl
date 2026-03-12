@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Hardsigmoid - Piecewise linear approximation of sigmoid (f64 canonical)
 // Hardsigmoid: clamp((x + 3) / 6, 0, 1)
 

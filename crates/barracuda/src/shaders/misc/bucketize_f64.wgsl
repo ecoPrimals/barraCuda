@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Bucketize_f64.wgsl — Assign values to bins (f64 canonical)
 // Maps each value to a bucket index based on boundaries
 

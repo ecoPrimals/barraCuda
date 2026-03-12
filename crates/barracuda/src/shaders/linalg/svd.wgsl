@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // SVD (Singular Value Decomposition) - Shader-First Implementation
 //
 // Computes A = U Σ Vᵀ where:

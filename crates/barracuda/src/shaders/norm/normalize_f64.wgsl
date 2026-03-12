@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Normalize - L2 normalization along dimension (f64 canonical)
 // Normalizes vectors to unit length: x_normalized = x / ||x||_2
 //

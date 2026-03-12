@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // MSE Loss - Mean Squared Error
 // loss = mean((predictions - targets)²)
 

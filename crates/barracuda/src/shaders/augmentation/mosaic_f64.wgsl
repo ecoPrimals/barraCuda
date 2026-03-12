@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Mosaic - Mosaic augmentation (YOLO-style)
 //
 // Combines 4 images into one mosaic

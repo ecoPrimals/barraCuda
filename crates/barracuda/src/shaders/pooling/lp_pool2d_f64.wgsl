@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Lp Pool 2D - Lp-norm pooling (f64 canonical)
 // Computes (Σ |x_i|^p)^(1/p) over pooling window
 //

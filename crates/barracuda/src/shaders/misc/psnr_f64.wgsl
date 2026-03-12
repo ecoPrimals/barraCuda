@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // PSNR - Peak Signal-to-Noise Ratio (f64 canonical)
 //
 // Computes MSE and PSNR for image quality assessment

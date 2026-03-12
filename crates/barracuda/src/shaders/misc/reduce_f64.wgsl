@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Reduce: Compute sum/max/min/mean over input (f64 canonical)
 // CUDA equivalent: thrust::reduce, cub::DeviceReduce
 // Algorithm: Tree reduction (work-efficient)

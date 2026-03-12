@@ -153,7 +153,7 @@ impl BarraCudaService for BarraCudaServer {
             ],
             methods: crate::ipc::methods::REGISTERED_METHODS
                 .iter()
-                .map(|&m| m.into())
+                .cloned()
                 .collect(),
             gpu_available: has_gpu,
             f64_shaders: has_f64,

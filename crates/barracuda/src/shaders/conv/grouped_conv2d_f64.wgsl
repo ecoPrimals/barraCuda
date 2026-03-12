@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Grouped Conv2D - Convolution with channel groups (f64 canonical)
 
 struct Params {

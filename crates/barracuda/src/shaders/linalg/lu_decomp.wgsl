@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // LU Decomposition - Shader-First Implementation
 //
 // Parallel row elimination for LU factorization: A = LU

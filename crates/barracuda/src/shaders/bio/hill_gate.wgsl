@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // hill_gate.wgsl — Two-input Hill AND gate (f32)
 //
 // neuralSpring absorption: regulatory network signal integration.

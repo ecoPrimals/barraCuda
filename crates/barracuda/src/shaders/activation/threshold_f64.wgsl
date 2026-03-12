@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Threshold - Threshold activation function (f64 canonical)
 // Threshold: f(x) = value if x <= threshold, x otherwise
 

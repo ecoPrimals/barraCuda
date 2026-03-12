@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Map: Generic element-wise transform (f64 canonical)
 // CUDA equivalent: thrust::transform
 // Use cases: Element-wise transforms, activation functions, normalization

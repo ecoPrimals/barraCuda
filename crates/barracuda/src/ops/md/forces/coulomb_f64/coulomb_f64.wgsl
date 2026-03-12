@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Coulomb Force Kernel (f64) — Science-Grade Electrostatics
 //
 // **Deep Debt Evolution (Feb 16, 2026)**:

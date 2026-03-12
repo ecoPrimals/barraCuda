@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Local Attention Softmax: Apply softmax with local window masking (f64 canonical)
 // Pass 2 of local attention (reuses attention matmul and apply passes)
 //

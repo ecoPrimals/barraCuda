@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // batch_fitness_eval.wgsl — Batch Fitness Evaluation (f32)
 //
 // Evaluates fitness for an entire EA population in a single GPU dispatch.

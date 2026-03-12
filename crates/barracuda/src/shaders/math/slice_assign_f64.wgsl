@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Slice Assign - In-place slice assignment with strided writes (f64 canonical)
 //
 // Deep Debt Principles:

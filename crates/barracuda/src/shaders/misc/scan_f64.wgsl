@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Scan (Prefix Sum): Work-efficient parallel scan (Blelloch algorithm) (f64 canonical)
 // CUDA equivalent: thrust::scan, cub::DeviceScan
 // Use cases: Cumulative sums, stream compaction, allocation

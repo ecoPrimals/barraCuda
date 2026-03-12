@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Hinge Loss - SVM-style classification loss
 // Used for support vector machines and max-margin classification
 //

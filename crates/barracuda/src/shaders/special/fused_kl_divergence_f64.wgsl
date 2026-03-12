@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // Fused KL Divergence (f64) — neuralSpring V24
 //
 // D_KL(P||Q) = Σ p_i * log(p_i / q_i)

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // bspline_f64.wgsl — Cardinal B-spline M_n(u) evaluation for PPPM charge spreading
 //
 // **Math**: Cardinal B-spline of order n: M_n(u) defined on [0,n], zero elsewhere.

@@ -215,7 +215,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let input = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![1, 4], device.clone());
+        let input = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![1, 4], device);
         let output = input.layer_norm_wgsl(1e-5).unwrap();
         assert_eq!(output.shape(), &[1, 4]);
         let result = output.to_vec().unwrap();
@@ -228,11 +228,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let input = Tensor::new(
-            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
-            vec![2, 3],
-            device.clone(),
-        );
+        let input = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3], device);
         let output = input.layer_norm_wgsl(1e-5).unwrap();
         assert_eq!(output.shape(), &[2, 3]);
         let r = output.to_vec().unwrap();

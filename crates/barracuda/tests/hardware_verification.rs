@@ -331,7 +331,9 @@ async fn test_cross_vendor_matmul_parity() {
 
         let size = 64;
         let a_data: Vec<f32> = (0..size * size).map(|i| (i as f32) * 0.01).collect();
-        let b_data: Vec<f32> = (0..size * size).map(|i| (i as f32) * 0.01 + 0.5).collect();
+        let b_data: Vec<f32> = (0..size * size)
+            .map(|i| (i as f32).mul_add(0.01, 0.5))
+            .collect();
 
         let mut results: HashMap<String, Vec<f32>> = HashMap::new();
 
@@ -617,7 +619,9 @@ async fn test_multi_gpu_performance_characterization() {
 
         let size = 256;
         let a_data: Vec<f32> = (0..size * size).map(|i| (i as f32) * 0.001).collect();
-        let b_data: Vec<f32> = (0..size * size).map(|i| (i as f32) * 0.001 + 0.5).collect();
+        let b_data: Vec<f32> = (0..size * size)
+            .map(|i| (i as f32).mul_add(0.001, 0.5))
+            .collect();
 
         println!("Benchmark: {size}x{size} matmul x 20 iterations\n");
 

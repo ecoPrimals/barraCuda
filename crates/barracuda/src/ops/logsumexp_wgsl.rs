@@ -183,7 +183,7 @@ mod tests {
             return;
         };
         let data = vec![1.0, 2.0, 3.0, 4.0];
-        let input = Tensor::new(data, vec![4], device.clone());
+        let input = Tensor::new(data, vec![4], device);
         let output = input.logsumexp_wgsl().unwrap();
         let result = output.to_vec().unwrap();
         assert_eq!(result.len(), 1);

@@ -171,7 +171,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..64).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![1, 1, 8, 8], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![1, 1, 8, 8], device).unwrap();
 
         let pooled = LpPool2D::new(input, 2, 2, 0, 2.0)
             .unwrap()
@@ -186,7 +186,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..32).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![1, 1, 4, 8], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![1, 1, 4, 8], device).unwrap();
 
         let pooled = LpPool2D::new(input, 2, 1, 0, 1.0)
             .unwrap()
@@ -200,7 +200,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         assert!(LpPool2D::new(input, 2, 2, 0, 2.0).is_err());
     }
@@ -210,7 +210,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0; 16], vec![1, 1, 4, 4], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0; 16], vec![1, 1, 4, 4], device).unwrap();
 
         assert!(LpPool2D::new(input.clone(), 2, 2, 0, 0.0).is_err());
         assert!(LpPool2D::new(input, 2, 2, 0, -1.0).is_err());
@@ -222,7 +222,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..64).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![1, 1, 8, 8], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![1, 1, 8, 8], device).unwrap();
 
         let pooled = LpPool2D::new(input, 3, 1, 1, 2.0)
             .unwrap()

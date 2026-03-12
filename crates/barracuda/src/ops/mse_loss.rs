@@ -97,7 +97,7 @@ mod tests {
 
         // Targets: [1, 2, 3] (perfect match)
         let target_data = vec![1.0f32, 2.0, 3.0];
-        let targets = Tensor::from_data(&target_data, vec![3], device.clone()).unwrap();
+        let targets = Tensor::from_data(&target_data, vec![3], device).unwrap();
 
         // MSE should be 0
         let result = predictions.mse_loss(targets).unwrap();
@@ -118,7 +118,7 @@ mod tests {
 
         // Targets: [1, 2, 3]
         let target_data = vec![1.0f32, 2.0, 3.0];
-        let targets = Tensor::from_data(&target_data, vec![3], device.clone()).unwrap();
+        let targets = Tensor::from_data(&target_data, vec![3], device).unwrap();
 
         // MSE = ((2-1)² + (4-2)² + (6-3)²) / 3 = (1 + 4 + 9) / 3 = 4.67
         let result = predictions.mse_loss(targets).unwrap();
@@ -146,7 +146,7 @@ mod tests {
         let pred_data = vec![-1.0f32, -2.0, -3.0];
         let predictions = Tensor::from_data(&pred_data, vec![3], device.clone()).unwrap();
         let target_data = vec![-1.5f32, -2.5, -3.5];
-        let targets = Tensor::from_data(&target_data, vec![3], device.clone()).unwrap();
+        let targets = Tensor::from_data(&target_data, vec![3], device).unwrap();
         let expected = mse_loss_cpu(&pred_data, &target_data);
         let result = predictions.mse_loss(targets).unwrap();
         let output = result.to_vec().unwrap();
@@ -172,7 +172,7 @@ mod tests {
         let pred_data = vec![100.0f32, 200.0, 300.0];
         let predictions = Tensor::from_data(&pred_data, vec![3], device.clone()).unwrap();
         let target_data = vec![0.0f32, 0.0, 0.0];
-        let targets = Tensor::from_data(&target_data, vec![3], device.clone()).unwrap();
+        let targets = Tensor::from_data(&target_data, vec![3], device).unwrap();
         let expected = mse_loss_cpu(&pred_data, &target_data);
         let result = predictions.mse_loss(targets).unwrap();
         let output = result.to_vec().unwrap();
@@ -189,7 +189,7 @@ mod tests {
         let target_data: Vec<f32> = (0..1000).map(|i| i as f32 * 0.1 + 0.5).collect();
 
         let predictions = Tensor::from_data(&pred_data, vec![1000], device.clone()).unwrap();
-        let targets = Tensor::from_data(&target_data, vec![1000], device.clone()).unwrap();
+        let targets = Tensor::from_data(&target_data, vec![1000], device).unwrap();
 
         let expected = mse_loss_cpu(&pred_data, &target_data);
         let result = predictions.mse_loss(targets).unwrap();
@@ -209,7 +209,7 @@ mod tests {
         let target_data = vec![1.111f32, 6.789, 8.901, 3.333, 8.000];
 
         let predictions = Tensor::from_data(&pred_data, vec![5], device.clone()).unwrap();
-        let targets = Tensor::from_data(&target_data, vec![5], device.clone()).unwrap();
+        let targets = Tensor::from_data(&target_data, vec![5], device).unwrap();
 
         let expected = mse_loss_cpu(&pred_data, &target_data);
         let result = predictions.mse_loss(targets).unwrap();

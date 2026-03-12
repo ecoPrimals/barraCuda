@@ -167,7 +167,7 @@ mod tests {
             return;
         };
         let input = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0], vec![5], device.clone());
-        let values = Tensor::new(vec![10.0, 20.0], vec![2], device.clone());
+        let values = Tensor::new(vec![10.0, 20.0], vec![2], device);
 
         let result = input.index_add(0, vec![1, 3], values).unwrap();
         let output_data = result.to_vec().unwrap();

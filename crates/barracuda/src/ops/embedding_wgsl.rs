@@ -145,7 +145,7 @@ mod tests {
             7.0, 8.0, 9.0, // embedding 2
             10.0, 11.0, 12.0, // embedding 3
         ];
-        let weight = Tensor::new(weight_data, vec![4, 3], device.clone());
+        let weight = Tensor::new(weight_data, vec![4, 3], device);
 
         let indices = vec![1, 0, 3];
         let Ok(output) = weight.embedding_wgsl(indices) else {

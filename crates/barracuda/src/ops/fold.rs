@@ -287,7 +287,7 @@ mod tests {
         let input = Tensor::from_data(
             &data,
             vec![1, 9, 36], // 1 channel * 9 kernel elements, 36 blocks
-            device.clone(),
+            device,
         )
         .unwrap();
 
@@ -303,7 +303,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         assert!(Fold::new(input, (4, 4), (3, 3), 1, 0, 1).is_err());
     }
@@ -314,7 +314,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..576).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![1, 9, 64], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![1, 9, 64], device).unwrap();
 
         let folded = Fold::new(input, (8, 8), (3, 3), 1, 1, 1)
             .unwrap()

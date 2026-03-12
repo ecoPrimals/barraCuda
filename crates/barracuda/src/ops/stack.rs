@@ -260,7 +260,7 @@ mod tests {
             return;
         };
         let t1 = Tensor::from_data(&[1.0, 2.0], vec![2], device.clone()).unwrap();
-        let t2 = Tensor::from_data(&[3.0, 4.0], vec![2], device.clone()).unwrap();
+        let t2 = Tensor::from_data(&[3.0, 4.0], vec![2], device).unwrap();
 
         let stacked = Stack::new(vec![t1, t2], 0).unwrap().execute().unwrap();
         assert_eq!(stacked.shape(), &vec![2, 2]);
@@ -291,7 +291,7 @@ mod tests {
             return;
         };
         let t1 = Tensor::from_data(&[1.0, 2.0], vec![2], device.clone()).unwrap();
-        let t2 = Tensor::from_data(&[3.0, 4.0, 5.0], vec![3], device.clone()).unwrap();
+        let t2 = Tensor::from_data(&[3.0, 4.0, 5.0], vec![3], device).unwrap();
 
         assert!(Stack::new(vec![t1, t2], 0).is_err());
     }
@@ -302,7 +302,7 @@ mod tests {
             return;
         };
         let t1 = Tensor::from_data(&[1.0, 2.0], vec![2], device.clone()).unwrap();
-        let t2 = Tensor::from_data(&[3.0, 4.0], vec![2], device.clone()).unwrap();
+        let t2 = Tensor::from_data(&[3.0, 4.0], vec![2], device).unwrap();
 
         assert!(Stack::new(vec![t1, t2], 10).is_err());
     }

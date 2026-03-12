@@ -225,7 +225,7 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        let window = WindowFunction::new(512, WindowType::Hann, device.clone())
+        let window = WindowFunction::new(512, WindowType::Hann, device)
             .unwrap()
             .execute()
             .unwrap();
@@ -244,7 +244,7 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        let window = WindowFunction::new(256, WindowType::Hamming, device.clone())
+        let window = WindowFunction::new(256, WindowType::Hamming, device)
             .unwrap()
             .execute()
             .unwrap();
@@ -256,7 +256,7 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        let window = WindowFunction::new(128, WindowType::Rectangular, device.clone())
+        let window = WindowFunction::new(128, WindowType::Rectangular, device)
             .unwrap()
             .execute()
             .unwrap();

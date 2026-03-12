@@ -264,7 +264,7 @@ mod tests {
 
         // Create bias [1]
         let bias_data = vec![0.0f32];
-        let bias = Tensor::from_data(&bias_data, vec![1], device.clone()).unwrap();
+        let bias = Tensor::from_data(&bias_data, vec![1], device).unwrap();
 
         // Apply Conv3D
         let result = input
@@ -293,7 +293,7 @@ mod tests {
         let weight = Tensor::from_data(&weight_data, vec![1, 1, 1, 1, 1], device.clone()).unwrap();
 
         let bias_data = vec![0.0f32];
-        let bias = Tensor::from_data(&bias_data, vec![1], device.clone()).unwrap();
+        let bias = Tensor::from_data(&bias_data, vec![1], device).unwrap();
 
         let result = input
             .conv3d(weight, bias, (1, 1, 1), (0, 0, 0), (1, 1, 1))
@@ -318,7 +318,7 @@ mod tests {
         let weight = Tensor::from_data(&weight_data, vec![1, 1, 2, 2, 2], device.clone()).unwrap();
 
         let bias_data = vec![0.0f32];
-        let bias = Tensor::from_data(&bias_data, vec![1], device.clone()).unwrap();
+        let bias = Tensor::from_data(&bias_data, vec![1], device).unwrap();
 
         // Stride 2 should downsample
         let result = input
@@ -363,7 +363,7 @@ mod tests {
         .unwrap();
 
         let bias_data = vec![0.0f32; out_channels];
-        let bias = Tensor::from_data(&bias_data, vec![out_channels], device.clone()).unwrap();
+        let bias = Tensor::from_data(&bias_data, vec![out_channels], device).unwrap();
 
         let result = input
             .conv3d(weight, bias, (1, 1, 1), (0, 0, 0), (1, 1, 1))
@@ -388,7 +388,7 @@ mod tests {
         let weight = Tensor::from_data(&weight_data, vec![1, 1, 1, 1, 1], device.clone()).unwrap();
 
         let bias_data = vec![0.0f32];
-        let bias = Tensor::from_data(&bias_data, vec![1], device.clone()).unwrap();
+        let bias = Tensor::from_data(&bias_data, vec![1], device).unwrap();
 
         let result = input
             .conv3d(weight, bias, (1, 1, 1), (0, 0, 0), (1, 1, 1))

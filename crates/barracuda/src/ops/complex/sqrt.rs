@@ -163,7 +163,7 @@ mod tests {
 
         // Test sqrt(4+0i) = 2+0i
         let data = vec![4.0f32, 0.0];
-        let tensor = Tensor::from_data(&data, vec![1, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![1, 2], device).unwrap();
 
         let sqrt_op = ComplexSqrt::new(tensor).unwrap();
         let result = sqrt_op.execute().unwrap();
@@ -188,7 +188,7 @@ mod tests {
 
         // Test sqrt(z)^2 = z for z = 3+4i
         let data = vec![3.0f32, 4.0];
-        let tensor = Tensor::from_data(&data, vec![1, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![1, 2], device).unwrap();
 
         let sqrt_op = ComplexSqrt::new(tensor).unwrap();
         let sqrt_result = sqrt_op.execute().unwrap();

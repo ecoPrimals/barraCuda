@@ -260,7 +260,7 @@ mod tests {
             return;
         };
         // Φ(0) = 0.5
-        let input = Tensor::new(vec![0.0], vec![1], device.clone());
+        let input = Tensor::new(vec![0.0], vec![1], device);
         let output = input.norm_cdf().unwrap();
         let result = output.to_vec().unwrap();
         assert!(
@@ -276,7 +276,7 @@ mod tests {
             return;
         };
         // Φ(-1.96) ≈ 0.025, Φ(1.96) ≈ 0.975
-        let input = Tensor::new(vec![-1.96, 1.96], vec![2], device.clone());
+        let input = Tensor::new(vec![-1.96, 1.96], vec![2], device);
         let output = input.norm_cdf().unwrap();
         let result = output.to_vec().unwrap();
         assert!(
@@ -297,7 +297,7 @@ mod tests {
             return;
         };
         // φ(0) = 1/√(2π) ≈ 0.3989
-        let input = Tensor::new(vec![0.0], vec![1], device.clone());
+        let input = Tensor::new(vec![0.0], vec![1], device);
         let output = input.norm_pdf().unwrap();
         let result = output.to_vec().unwrap();
         let expected = 1.0 / (2.0 * std::f32::consts::PI).sqrt();
@@ -315,7 +315,7 @@ mod tests {
             return;
         };
         // Φ(μ; μ, σ) = 0.5 for any σ > 0
-        let input = Tensor::new(vec![5.0], vec![1], device.clone());
+        let input = Tensor::new(vec![5.0], vec![1], device);
         let output = input.norm_cdf_params(5.0, 2.0).unwrap();
         let result = output.to_vec().unwrap();
         assert!(

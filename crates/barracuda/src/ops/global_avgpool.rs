@@ -122,7 +122,7 @@ mod tests {
             1.0f32, 2.0, 3.0, 4.0, // Channel 0: [[1,2],[3,4]]
             5.0, 6.0, 7.0, 8.0, // Channel 1: [[5,6],[7,8]]
         ];
-        let input = Tensor::from_data(&input_data, vec![1, 2, 2, 2], device.clone()).unwrap();
+        let input = Tensor::from_data(&input_data, vec![1, 2, 2, 2], device).unwrap();
 
         // Apply GlobalAvgPool
         let result = input.global_avgpool().unwrap();

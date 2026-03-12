@@ -120,7 +120,7 @@ pub struct FhePointwiseMulResult {
 }
 
 /// Matmul result.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MatmulResult {
     /// Status of the operation.
     pub status: String,

@@ -393,7 +393,7 @@ mod tests {
         let indices = Tensor::new(indices_data, vec![2, 2], device.clone());
 
         // Values: shape [1, 2] to match expected (batch_size=1, num_indices=2)
-        let values = Tensor::new(vec![10.0, 20.0], vec![1, 2], device.clone());
+        let values = Tensor::new(vec![10.0, 20.0], vec![1, 2], device);
 
         let result = input.scatter_nd(indices, values).unwrap();
         let output_data = result.to_vec().unwrap();

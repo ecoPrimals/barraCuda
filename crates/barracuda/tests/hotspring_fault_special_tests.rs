@@ -192,7 +192,7 @@ mod special_functions {
         let mut h_prev = 1.0;
         let mut h_curr = 2.0 * x;
         for k in 1..n {
-            let h_next = 2.0 * x * h_curr - 2.0 * f64::from(k) * h_prev;
+            let h_next = (2.0 * x).mul_add(h_curr, -(2.0 * f64::from(k) * h_prev));
             h_prev = h_curr;
             h_curr = h_next;
         }
@@ -210,8 +210,9 @@ mod special_functions {
         let mut l_curr = 1.0 + alpha - x;
         for k in 1..n {
             let kf = f64::from(k);
-            let l_next =
-                ((2.0 * kf + 1.0 + alpha - x) * l_curr - (kf + alpha) * l_prev) / (kf + 1.0);
+            let l_next = (2.0f64.mul_add(kf, 1.0) + alpha - x)
+                .mul_add(l_curr, -((kf + alpha) * l_prev))
+                / (kf + 1.0);
             l_prev = l_curr;
             l_curr = l_next;
         }
@@ -236,7 +237,7 @@ mod special_functions {
     #[test]
     fn test_hermite_n2() {
         for x in [-2.0_f64, -1.0, 0.0, 0.5, 1.0, 2.0] {
-            let expected = 4.0 * x * x - 2.0;
+            let expected = (4.0 * x).mul_add(x, -2.0);
             assert!(
                 (hermite_cpu(2, x) - expected).abs() < 1e-13,
                 "H_2({}) = {} vs expected {}",
@@ -250,7 +251,7 @@ mod special_functions {
     #[test]
     fn test_hermite_n3() {
         for x in [-2.0_f64, -1.0, 0.0, 0.5, 1.0, 2.0] {
-            let expected = 8.0 * x.powi(3) - 12.0 * x;
+            let expected = 8.0f64.mul_add(x.powi(3), -(12.0 * x));
             assert!(
                 (hermite_cpu(3, x) - expected).abs() < 1e-12,
                 "H_3({}) = {} vs expected {}",
@@ -294,7 +295,7 @@ mod special_functions {
     #[test]
     fn test_laguerre_n2() {
         for x in [0.0_f64, 0.5, 1.0, 2.0, 5.0] {
-            let expected = f64::midpoint(x * x - 4.0 * x, 2.0);
+            let expected = f64::midpoint(x.mul_add(x, -(4.0 * x)), 2.0);
             assert!(
                 (laguerre_cpu(2, 0.0, x) - expected).abs() < 1e-13,
                 "L_2({}) = {} vs expected {}",

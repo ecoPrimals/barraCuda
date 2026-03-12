@@ -151,7 +151,7 @@ mod tests {
         let b: Vec<f64> = (0..100).map(|i| (i + 1) as f64).collect();
 
         // Using check_interval=10 to reduce GPU↔CPU syncs
-        let result = CgGpu::solve_gpu_resident(device.clone(), &a, &b, 1e-10, 500, 10).unwrap();
+        let result = CgGpu::solve_gpu_resident(device, &a, &b, 1e-10, 500, 10).unwrap();
 
         assert!(result.converged, "GPU-resident CG should converge");
         assert!(
@@ -182,8 +182,7 @@ mod tests {
         let b: Vec<f64> = (0..50).map(|i| ((i + 1) as f64).sin()).collect();
 
         let result_original = CgGpu::solve(device.clone(), &a, &b, 1e-10, 200).unwrap();
-        let result_resident =
-            CgGpu::solve_gpu_resident(device.clone(), &a, &b, 1e-10, 200, 5).unwrap();
+        let result_resident = CgGpu::solve_gpu_resident(device, &a, &b, 1e-10, 200, 5).unwrap();
 
         // Both should converge
         assert!(result_original.converged, "Original CG should converge");
@@ -214,7 +213,7 @@ mod tests {
         let a = create_spd_tridiagonal(100);
         let b: Vec<f64> = (0..100).map(|i| (i + 1) as f64).collect();
 
-        let result = CgGpu::solve_preconditioned(device.clone(), &a, &b, 1e-10, 500, 10).unwrap();
+        let result = CgGpu::solve_preconditioned(device, &a, &b, 1e-10, 500, 10).unwrap();
 
         assert!(result.converged, "Preconditioned CG should converge");
         assert!(
@@ -246,8 +245,7 @@ mod tests {
 
         let result_unprecond =
             CgGpu::solve_gpu_resident(device.clone(), &a, &b, 1e-10, 500, 1).unwrap();
-        let result_precond =
-            CgGpu::solve_preconditioned(device.clone(), &a, &b, 1e-10, 500, 1).unwrap();
+        let result_precond = CgGpu::solve_preconditioned(device, &a, &b, 1e-10, 500, 1).unwrap();
 
         assert!(
             result_unprecond.converged,

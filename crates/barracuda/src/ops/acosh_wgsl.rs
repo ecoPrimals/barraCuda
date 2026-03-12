@@ -191,7 +191,7 @@ mod tests {
         };
         // acosh(x) is defined for x >= 1
         let data = vec![1.0, 1.5, 2.0, 3.0, 4.0];
-        let input = Tensor::new(data, vec![5], device.clone());
+        let input = Tensor::new(data, vec![5], device);
         let output = input.acosh().unwrap();
         let result = output.to_vec().unwrap();
         assert!(result.iter().all(|&x| x.is_finite()));

@@ -379,7 +379,7 @@ mod tests {
                 contents: force_bytes,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
             });
-        let force_tensor = Tensor::from_buffer(force_buffer, vec![1, 3], device.clone());
+        let force_tensor = Tensor::from_buffer(force_buffer, vec![1, 3], device);
 
         let dt = 0.01;
         let mass = 3.0;

@@ -212,7 +212,7 @@ mod tests {
             return;
         };
         let data = vec![-2.0, 0.0, 2.0];
-        let input = Tensor::new(data, vec![3], device.clone());
+        let input = Tensor::new(data, vec![3], device);
 
         let output = input.softplus_wgsl(1.0).unwrap();
 
@@ -233,7 +233,7 @@ mod tests {
             return;
         };
         let data = vec![0.0, 1.0];
-        let input = Tensor::new(data, vec![2], device.clone());
+        let input = Tensor::new(data, vec![2], device);
 
         let output = input.softplus_wgsl(2.0).unwrap();
 

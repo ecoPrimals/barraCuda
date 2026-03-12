@@ -17,7 +17,7 @@ async fn test_fft_ifft_inverse_property() {
         7.0, 8.0, // 7+8i
     ];
 
-    let tensor = Tensor::from_data(&data, vec![4, 2], device.clone()).unwrap();
+    let tensor = Tensor::from_data(&data, vec![4, 2], device).unwrap();
 
     // Forward FFT
     let fft = Fft1D::new(tensor, 4).unwrap();

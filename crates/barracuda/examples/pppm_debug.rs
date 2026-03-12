@@ -17,7 +17,7 @@ fn main() {
     let positions = vec![[4.0, 5.0, 5.0], [6.0, 5.0, 5.0]];
     let charges = vec![1.0, -1.0];
 
-    let pppm = Pppm::new(device.clone(), params.clone());
+    let pppm = Pppm::new(device, params.clone());
     let (forces, energy) = pppm
         .compute(&positions, &charges)
         .expect("PPPM compute failed");

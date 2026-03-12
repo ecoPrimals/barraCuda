@@ -295,7 +295,7 @@ mod tests {
 
         assert!(Chunk::new(input.clone(), 0, 0).is_err());
         // Non-divisible chunks are now allowed (PyTorch-style)
-        let chunks = Chunk::new(input.clone(), 2, 0).unwrap().execute().unwrap();
+        let chunks = Chunk::new(input, 2, 0).unwrap().execute().unwrap();
         assert_eq!(chunks.len(), 2);
         assert_eq!(chunks[0].shape(), &[2]);
         assert_eq!(chunks[1].shape(), &[1]);

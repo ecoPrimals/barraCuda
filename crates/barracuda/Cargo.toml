@@ -115,11 +115,20 @@ no_effect_underscore_binding = "warn"
 format_push_string = "warn"
 explicit_iter_loop = "warn"
 used_underscore_binding = "warn"
-# Remaining bulk-allow — needs manual refactoring in numerical code.
-# 56 needless_range_loop sites use multi-array indexed access patterns
-# that are clearer with explicit indexing in scientific compute contexts.
-if_same_then_else = "allow"
+# Promoted from allow — all 7 sites fixed.
+if_same_then_else = "warn"
+# Remaining bulk-allow — 56 needless_range_loop sites use multi-array indexed
+# access patterns that are clearer with explicit indexing in scientific code.
 needless_range_loop = "allow"
+# Nursery lints — selectively promoted for code quality.
+# Auto-fixable, low false-positive, high value.
+redundant_clone = "warn"
+imprecise_flops = "warn"
+unnecessary_struct_initialization = "warn"
+derive_partial_eq_without_eq = "warn"
+# suboptimal_flops: kept as allow — mul_add() is less readable in
+# scientific code where a*b + c is the canonical mathematical form.
+suboptimal_flops = "allow"
 
 [lints.rust]
 missing_docs = "warn"

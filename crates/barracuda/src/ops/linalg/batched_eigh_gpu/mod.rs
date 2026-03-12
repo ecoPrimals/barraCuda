@@ -207,7 +207,7 @@ mod tests {
         };
         let data = vec![4.0_f64, 2.0, 2.0, 3.0];
         let (eigenvalues, eigenvectors) =
-            BatchedEighGpu::execute_f64(device.clone(), &data, 2, 1, 30).unwrap();
+            BatchedEighGpu::execute_f64(device, &data, 2, 1, 30).unwrap();
         assert_eq!(eigenvalues.len(), 2);
         assert_eq!(eigenvectors.len(), 4);
         let trace = eigenvalues[0] + eigenvalues[1];
@@ -232,7 +232,7 @@ mod tests {
             1.0_f64, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0,
         ];
         let (eigenvalues, eigenvectors) =
-            BatchedEighGpu::execute_f64(device.clone(), &data, 2, 3, 10).unwrap();
+            BatchedEighGpu::execute_f64(device, &data, 2, 3, 10).unwrap();
         assert_eq!(eigenvalues.len(), 6);
         assert_eq!(eigenvectors.len(), 12);
         for (i, &val) in eigenvalues.iter().enumerate() {
@@ -257,7 +257,7 @@ mod tests {
                 data[b * n * n + i * n + i] = (i + 1) as f64;
             }
         }
-        let result = BatchedEighGpu::execute_f64(device.clone(), &data, n, batch_size, 30);
+        let result = BatchedEighGpu::execute_f64(device, &data, n, batch_size, 30);
         let (eigenvalues, _) = match result {
             Ok(v) => v,
             Err(e) if e.is_device_lost() => return,
@@ -377,8 +377,7 @@ mod tests {
         };
         let data: Vec<f64> = vec![4.0, 2.0, 2.0, 3.0, 2.0, 1.0, 1.0, 2.0];
         let (eigenvalues, eigenvectors) =
-            BatchedEighGpu::execute_single_dispatch(device.clone(), &data, 2, 2, 30, 1e-12)
-                .unwrap();
+            BatchedEighGpu::execute_single_dispatch(device, &data, 2, 2, 30, 1e-12).unwrap();
         assert_eq!(eigenvalues.len(), 4);
         assert_eq!(eigenvectors.len(), 8);
         assert!(approx_eq_f64(eigenvalues[0] + eigenvalues[1], 7.0, 1e-4));
@@ -399,15 +398,9 @@ mod tests {
                 data[b * n * n + i * n + i] = (i + 1) as f64;
             }
         }
-        let (eigenvalues, _) = BatchedEighGpu::execute_single_dispatch(
-            device.clone(),
-            &data,
-            n,
-            batch_size,
-            30,
-            1e-12,
-        )
-        .unwrap();
+        let (eigenvalues, _) =
+            BatchedEighGpu::execute_single_dispatch(device, &data, n, batch_size, 30, 1e-12)
+                .unwrap();
         assert_eq!(eigenvalues.len(), batch_size * n);
         let first_sum: f64 = eigenvalues[0..n].iter().sum();
         assert!(approx_eq_f64(first_sum, 78.0, 1e-3));

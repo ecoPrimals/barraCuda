@@ -72,13 +72,12 @@ pub fn upload_twiddles_f32(
     degree: u32,
 ) -> (wgpu::Buffer, wgpu::Buffer) {
     let pi = std::f32::consts::PI;
-    let mut re = Vec::with_capacity(degree as usize);
-    let mut im = Vec::with_capacity(degree as usize);
-    for k in 0..degree {
-        let angle = -2.0 * pi * (k as f32) / (degree as f32);
-        re.push(angle.cos());
-        im.push(angle.sin());
-    }
+    let (re, im): (Vec<f32>, Vec<f32>) = (0..degree)
+        .map(|k| {
+            let angle = -2.0 * pi * (k as f32) / (degree as f32);
+            (angle.cos(), angle.sin())
+        })
+        .unzip();
     let re_buf = device
         .device
         .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -103,13 +102,12 @@ pub fn upload_twiddles_f64(
     degree: u32,
 ) -> (wgpu::Buffer, wgpu::Buffer) {
     let pi = std::f64::consts::PI;
-    let mut re = Vec::with_capacity(degree as usize);
-    let mut im = Vec::with_capacity(degree as usize);
-    for k in 0..degree {
-        let angle = -2.0 * pi * (k as f64) / (degree as f64);
-        re.push(angle.cos());
-        im.push(angle.sin());
-    }
+    let (re, im): (Vec<f64>, Vec<f64>) = (0..degree)
+        .map(|k| {
+            let angle = -2.0 * pi * (k as f64) / (degree as f64);
+            (angle.cos(), angle.sin())
+        })
+        .unzip();
     let re_buf = device
         .device
         .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -428,7 +426,7 @@ mod tests {
 
         let data = vec![1.0f32, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
 
-        let tensor = Tensor::from_data(&data, vec![4, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![4, 2], device).unwrap();
         let fft = Fft1D::new(tensor, 4).unwrap();
         let result = fft.execute().unwrap();
 

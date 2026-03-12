@@ -152,7 +152,7 @@ mod tests {
             return;
         };
 
-        let input = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![4], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![4], device).unwrap();
 
         let result = input.scan(false).unwrap();
         let output = result.to_vec().unwrap();

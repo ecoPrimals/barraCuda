@@ -189,7 +189,7 @@ mod tests {
 
         // conj(3+4i) = 3-4i
         let data = vec![3.0f32, 4.0];
-        let tensor = Tensor::from_data(&data, vec![1, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![1, 2], device).unwrap();
 
         let op = ComplexConj::new(tensor).unwrap();
         let result = op.execute().unwrap();
@@ -207,7 +207,7 @@ mod tests {
         };
         // conj(conj(z)) = z
         let data = vec![3.0f32, 4.0];
-        let tensor = Tensor::from_data(&data, vec![1, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![1, 2], device).unwrap();
         let conj1 = ComplexConj::new(tensor).unwrap().execute().unwrap();
         let conj2 = ComplexConj::new(conj1).unwrap().execute().unwrap();
         let result = conj2.to_vec().unwrap();

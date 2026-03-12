@@ -247,7 +247,7 @@ mod tests {
 
         // Create bias [1]
         let bias_data = vec![0.0f32];
-        let bias = Tensor::from_data(&bias_data, vec![1], device.clone()).unwrap();
+        let bias = Tensor::from_data(&bias_data, vec![1], device).unwrap();
 
         // Store input shape before moving
         let input_h = input.shape()[2];

@@ -231,7 +231,7 @@ mod tests {
             return;
         };
         let data = vec![5.0, 1.0, 3.0, 2.0];
-        let input = Tensor::new(data, vec![4], device.clone());
+        let input = Tensor::new(data, vec![4], device);
 
         let output = input.argmin_wgsl(0).unwrap();
 
@@ -246,7 +246,7 @@ mod tests {
             return;
         };
         let data = vec![4.0, 6.0, 3.0, 2.0, 5.0, 1.0];
-        let input = Tensor::new(data, vec![3, 2], device.clone());
+        let input = Tensor::new(data, vec![3, 2], device);
 
         let output = input.argmin_wgsl(0).unwrap();
 
@@ -262,7 +262,7 @@ mod tests {
             return;
         };
         let data = vec![5.0, 1.0, 3.0, 2.0];
-        let input = Tensor::new(data, vec![4], device.clone());
+        let input = Tensor::new(data, vec![4], device);
 
         let output = input.argmin().unwrap();
 
@@ -277,7 +277,7 @@ mod tests {
             return;
         };
         let data = vec![4.0, 6.0, 3.0, 2.0, 5.0, 1.0];
-        let input = Tensor::new(data, vec![3, 2], device.clone());
+        let input = Tensor::new(data, vec![3, 2], device);
 
         let output = input.argmin_dim(0, true).unwrap();
 

@@ -375,7 +375,7 @@ mod tests {
 
         // Indices: [[0,0], [2,1]]
         let indices_data: Vec<f32> = vec![0.0, 0.0, 2.0, 1.0];
-        let indices = Tensor::new(indices_data, vec![2, 2], device.clone());
+        let indices = Tensor::new(indices_data, vec![2, 2], device);
 
         let result = input.gather_nd(indices).unwrap();
         let output_data = result.to_vec().unwrap();

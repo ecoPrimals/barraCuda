@@ -201,7 +201,7 @@ mod tests {
                 16.0,
             ],
             vec![1, 1, 4, 4],
-            device.clone(),
+            device,
         )
         .unwrap();
 
@@ -230,8 +230,7 @@ mod tests {
         };
 
         // Test global max pooling (adaptive pool to 1x1)
-        let input =
-            Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![1, 1, 2, 2], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![1, 1, 2, 2], device).unwrap();
 
         let result = input.adaptive_maxpool2d((1, 1)).unwrap();
         let output = result.to_vec().unwrap();

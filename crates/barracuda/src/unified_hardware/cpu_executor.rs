@@ -43,8 +43,6 @@ impl CpuExecutor {
                 16
             } else if std::arch::is_x86_feature_detected!("avx2") {
                 8
-            } else if std::arch::is_x86_feature_detected!("sse4.1") {
-                4
             } else {
                 4
             }

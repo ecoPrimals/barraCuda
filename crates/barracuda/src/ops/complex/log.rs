@@ -167,7 +167,7 @@ mod tests {
 
         // Test log(1+0i) = 0+0i
         let data = vec![1.0f32, 0.0];
-        let tensor = Tensor::from_data(&data, vec![1, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![1, 2], device).unwrap();
 
         let log_op = ComplexLog::new(tensor).unwrap();
         let result = log_op.execute().unwrap();
@@ -193,7 +193,7 @@ mod tests {
         // Test log(e+0i) = 1+0i (approximately)
         let e = std::f32::consts::E;
         let data = vec![e, 0.0];
-        let tensor = Tensor::from_data(&data, vec![1, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![1, 2], device).unwrap();
 
         let log_op = ComplexLog::new(tensor).unwrap();
         let result = log_op.execute().unwrap();

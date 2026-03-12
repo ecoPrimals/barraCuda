@@ -126,7 +126,7 @@ mod tests {
         };
         // Simple 1D split
         let input_data = vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let input = Tensor::from_data(&input_data, vec![6], device.clone()).unwrap();
+        let input = Tensor::from_data(&input_data, vec![6], device).unwrap();
 
         // Split at position 3 (middle)
         let (left, right) = input.split(3).unwrap();
@@ -154,7 +154,7 @@ mod tests {
 
         // Split near end
         let input_data = vec![1.0, 2.0, 3.0, 4.0];
-        let input = Tensor::from_data(&input_data, vec![4], device.clone()).unwrap();
+        let input = Tensor::from_data(&input_data, vec![4], device).unwrap();
         let (left, right) = input.split(3).unwrap();
         assert_eq!(left.to_vec().unwrap().len(), 3);
         assert_eq!(right.to_vec().unwrap().len(), 1);
@@ -174,7 +174,7 @@ mod tests {
 
         // Unequal split
         let input_data = vec![1.0; 100];
-        let input = Tensor::from_data(&input_data, vec![100], device.clone()).unwrap();
+        let input = Tensor::from_data(&input_data, vec![100], device).unwrap();
         let (left, right) = input.split(30).unwrap();
         assert_eq!(left.to_vec().unwrap().len(), 30);
         assert_eq!(right.to_vec().unwrap().len(), 70);
@@ -187,7 +187,7 @@ mod tests {
         };
         // 10000 elements
         let input_data = vec![1.0; 10_000];
-        let input = Tensor::from_data(&input_data, vec![10_000], device.clone()).unwrap();
+        let input = Tensor::from_data(&input_data, vec![10_000], device).unwrap();
         let (left, right) = input.split(5000).unwrap();
         assert_eq!(left.to_vec().unwrap().len(), 5000);
         assert_eq!(right.to_vec().unwrap().len(), 5000);
@@ -200,7 +200,7 @@ mod tests {
         };
         // Verify data preservation
         let input_data: Vec<f32> = (0..10).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&input_data, vec![10], device.clone()).unwrap();
+        let input = Tensor::from_data(&input_data, vec![10], device).unwrap();
         let (left, right) = input.split(5).unwrap();
 
         let left_data = left.to_vec().unwrap();

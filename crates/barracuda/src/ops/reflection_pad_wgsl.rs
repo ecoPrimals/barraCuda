@@ -248,7 +248,7 @@ mod tests {
         };
         // 1x1x2x2 input
         let data = vec![1.0, 2.0, 3.0, 4.0];
-        let input = Tensor::new(data, vec![1, 1, 2, 2], device.clone());
+        let input = Tensor::new(data, vec![1, 1, 2, 2], device);
 
         // Pad by 1 on all sides
         let output = input.reflection_pad_wgsl((1, 1, 1, 1)).unwrap();
@@ -264,7 +264,7 @@ mod tests {
         };
         // 1x1x2x2 input
         let data = vec![1.0, 2.0, 3.0, 4.0];
-        let input = Tensor::new(data, vec![1, 1, 2, 2], device.clone());
+        let input = Tensor::new(data, vec![1, 1, 2, 2], device);
 
         // Asymmetric padding
         let output = input.reflection_pad_wgsl((1, 2, 0, 1)).unwrap();

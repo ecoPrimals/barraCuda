@@ -62,7 +62,7 @@ async fn bench_yukawa_allpairs_256() {
     let positions = cubic_lattice(n_side, box_side);
     let n = positions.len() / 3;
 
-    let pos_tensor = Tensor::from_f64_data(&positions, vec![n, 3], device.clone()).unwrap();
+    let pos_tensor = Tensor::from_f64_data(&positions, vec![n, 3], device).unwrap();
 
     let kappa = 2.0;
     let prefactor = 1.0;

@@ -107,7 +107,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let input = Tensor::new(vec![-0.9, -0.5, 0.0, 0.5, 0.9], vec![5], device.clone());
+        let input = Tensor::new(vec![-0.9, -0.5, 0.0, 0.5, 0.9], vec![5], device);
         let output = input.atanh().unwrap();
         let result = output.to_vec().unwrap();
         assert!(

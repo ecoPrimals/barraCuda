@@ -179,7 +179,7 @@ mod tests {
             return;
         };
         let image1 = Tensor::new(vec![0.5; 64 * 64], vec![64, 64], device.clone());
-        let image2 = Tensor::new(vec![0.5; 64 * 64], vec![64, 64], device.clone());
+        let image2 = Tensor::new(vec![0.5; 64 * 64], vec![64, 64], device);
         let similarity = image1.ssim(image2, 11, 0.01, 0.03).unwrap();
         assert!(similarity.is_finite());
         assert!(similarity > 0.9); // Should be close to 1.0 for identical images
@@ -198,7 +198,7 @@ mod tests {
 
         // Different images
         let image1 = Tensor::new(vec![0.0; 32 * 32], vec![32, 32], device.clone());
-        let image2 = Tensor::new(vec![1.0; 32 * 32], vec![32, 32], device.clone());
+        let image2 = Tensor::new(vec![1.0; 32 * 32], vec![32, 32], device);
         let similarity = image1.ssim(image2, 7, 0.01, 0.03).unwrap();
         assert!(similarity < 1.0);
     }

@@ -303,7 +303,7 @@ mod tests {
         let data: Vec<f64> = vec![1.0, 2.0, 3.0, 4.0];
         // p=3 norm: (1^3 + 2^3 + 3^3 + 4^3)^(1/3) = (1+8+27+64)^(1/3) = 100^(1/3)
         let norm = NormReduceF64::p_norm(device, &data, 3.0).unwrap();
-        let expected = 100.0_f64.powf(1.0 / 3.0);
+        let expected = 100.0_f64.cbrt();
         assert!(
             (norm - expected).abs() < 1e-4,
             "p=3 norm should be {expected}, got {norm}"

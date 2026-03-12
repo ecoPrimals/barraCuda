@@ -234,7 +234,7 @@ mod tests {
             return;
         };
         let data = vec![-2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0];
-        let input = Tensor::new(data, vec![7], device.clone());
+        let input = Tensor::new(data, vec![7], device);
 
         let output = input.clamp_wgsl(0.0, 2.0).unwrap();
 
@@ -254,7 +254,7 @@ mod tests {
             return;
         };
         let data = vec![0.5, 1.0, 1.5];
-        let input = Tensor::new(data.clone(), vec![3], device.clone());
+        let input = Tensor::new(data, vec![3], device);
 
         let output = input.clamp_wgsl(0.0, 2.0).unwrap();
 

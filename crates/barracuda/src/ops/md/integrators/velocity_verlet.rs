@@ -344,7 +344,7 @@ mod tests {
         let vel_tensor = Tensor::from_data(&velocities, vec![1, 3], device.clone()).unwrap();
         let f_old_tensor = Tensor::from_data(&forces_old, vec![1, 3], device.clone()).unwrap();
         let f_new_tensor = Tensor::from_data(&forces_new, vec![1, 3], device.clone()).unwrap();
-        let mass_tensor = Tensor::from_data(&masses, vec![1], device.clone()).unwrap();
+        let mass_tensor = Tensor::from_data(&masses, vec![1], device).unwrap();
 
         // Verify inputs are correct
         let pos_check = pos_tensor.to_vec().unwrap();

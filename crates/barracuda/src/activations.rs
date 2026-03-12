@@ -70,7 +70,7 @@ pub fn softplus(x: f64) -> f64 {
     } else if x < -20.0 {
         x.exp()
     } else {
-        (1.0 + x.exp()).ln()
+        x.exp().ln_1p()
     }
 }
 

@@ -184,7 +184,7 @@ mod tests {
         };
         // J₀(0) = 1, J₀ has oscillatory behavior
         let data = vec![0.0, 1.0, 2.0, 5.0, 8.0];
-        let input = Tensor::new(data, vec![5], device.clone());
+        let input = Tensor::new(data, vec![5], device);
         let output = input.bessel_j0().unwrap();
         let result = output.to_vec().unwrap();
         assert!(

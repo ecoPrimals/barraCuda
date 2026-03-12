@@ -230,7 +230,7 @@ mod tests {
 
         let hat = Tensor::new(hat_matrix, vec![2, 2], device.clone());
         let y_t = Tensor::new(y, vec![2], device.clone());
-        let pred_t = Tensor::new(pred, vec![2], device.clone());
+        let pred_t = Tensor::new(pred, vec![2], device);
 
         let output = hat.loo_cv(y_t, pred_t).unwrap();
         let result = output.to_vec().unwrap();

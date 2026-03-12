@@ -227,7 +227,7 @@ mod tests {
         };
         // 1 batch, 1 channel, 2x2 spatial
         let data = vec![1.0, 2.0, 3.0, 4.0];
-        let input = Tensor::new(data, vec![1, 1, 2, 2], device.clone());
+        let input = Tensor::new(data, vec![1, 1, 2, 2], device);
 
         let output = input.instance_norm_wgsl(1e-5).unwrap();
 
@@ -249,7 +249,7 @@ mod tests {
             1.0, 2.0, // batch 0, channel 0
             3.0, 4.0, // batch 1, channel 0
         ];
-        let input = Tensor::new(data, vec![2, 1, 2, 1], device.clone());
+        let input = Tensor::new(data, vec![2, 1, 2, 1], device);
 
         let output = input.instance_norm_wgsl(1e-5).unwrap();
 

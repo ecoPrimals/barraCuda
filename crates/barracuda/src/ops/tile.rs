@@ -340,7 +340,7 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         let tiled = Tile::new(input, vec![2]).unwrap().execute().unwrap();
         assert_eq!(tiled.shape(), &vec![6]);
@@ -352,7 +352,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..6).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![2, 3], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![2, 3], device).unwrap();
 
         let tiled = Tile::new(input, vec![2, 1]).unwrap().execute().unwrap();
         assert_eq!(tiled.shape(), &vec![4, 3]);
@@ -363,7 +363,7 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0, 2.0], vec![2], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0], vec![2], device).unwrap();
 
         assert!(Tile::new(input, vec![2, 3]).is_err());
     }
@@ -373,7 +373,7 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0, 2.0], vec![2], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0], vec![2], device).unwrap();
 
         assert!(Tile::new(input, vec![0]).is_err());
     }
@@ -384,7 +384,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..12).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![2, 3, 2], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![2, 3, 2], device).unwrap();
 
         let tiled = Tile::new(input, vec![2, 2, 2]).unwrap().execute().unwrap();
         assert_eq!(tiled.shape(), &vec![4, 6, 4]);

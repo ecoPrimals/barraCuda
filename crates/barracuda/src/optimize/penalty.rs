@@ -130,7 +130,7 @@ pub fn adaptive_penalty(feasible_values: &[f64], config: PenaltyConfig) -> Resul
         // No feasible points - use minimum penalty
         let raw_penalty = config.min_penalty;
         let penalty = if config.use_log {
-            (1.0 + raw_penalty).ln()
+            raw_penalty.ln_1p()
         } else {
             raw_penalty
         };
@@ -173,7 +173,7 @@ pub fn adaptive_penalty(feasible_values: &[f64], config: PenaltyConfig) -> Resul
     let penalty = if config.use_log {
         // Penalty such that log(1 + raw_penalty) exceeds max feasible
         let target = feasible_max * config.safety_margin;
-        (1.0 + raw_penalty.max(target.exp() - 1.0)).ln()
+        raw_penalty.max(target.exp_m1()).ln_1p()
     } else {
         raw_penalty
     };

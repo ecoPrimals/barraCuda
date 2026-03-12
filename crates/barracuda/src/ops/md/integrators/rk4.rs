@@ -292,7 +292,7 @@ mod tests {
 
         let pos_tensor = Tensor::from_data(&positions, vec![1, 3], device.clone()).unwrap();
         let vel_tensor = Tensor::from_data(&velocities, vec![1, 3], device.clone()).unwrap();
-        let acc_tensor = Tensor::from_data(&accelerations, vec![1, 3], device.clone()).unwrap();
+        let acc_tensor = Tensor::from_data(&accelerations, vec![1, 3], device).unwrap();
 
         // Verify inputs
         assert_eq!(pos_tensor.to_vec().unwrap(), positions);

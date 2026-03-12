@@ -128,7 +128,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..24).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![2, 3, 4], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![2, 3, 4], device).unwrap();
 
         let flattened = Flatten::new(input, 1, 2).unwrap().execute().unwrap();
         assert_eq!(flattened.shape(), &vec![2, 12]);
@@ -140,7 +140,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..12).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![2, 3, 2], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![2, 3, 2], device).unwrap();
 
         let flattened = Flatten::new(input, 0, 2).unwrap().execute().unwrap();
         assert_eq!(flattened.shape(), &vec![12]);
@@ -152,7 +152,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..60).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![2, 3, 5, 2], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![2, 3, 5, 2], device).unwrap();
 
         let flattened = Flatten::new(input, 1, 2).unwrap().execute().unwrap();
         assert_eq!(flattened.shape(), &vec![2, 15, 2]);
@@ -164,7 +164,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..20).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![4, 5], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![4, 5], device).unwrap();
 
         let flattened = Flatten::new(input, 0, 0).unwrap().execute().unwrap();
         assert_eq!(flattened.shape(), &vec![4, 5]);
@@ -176,9 +176,9 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..12).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![2, 3, 2], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![2, 3, 2], device).unwrap();
 
         assert!(Flatten::new(input.clone(), 3, 2).is_err());
-        assert!(Flatten::new(input.clone(), 1, 0).is_err());
+        assert!(Flatten::new(input, 1, 0).is_err());
     }
 }

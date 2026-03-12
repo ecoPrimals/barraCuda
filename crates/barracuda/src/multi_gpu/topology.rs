@@ -4,7 +4,7 @@
 //! Extracted from `multi_gpu.rs` for separation of concerns.
 
 /// GPU vendor classification for capability-based routing.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GpuVendor {
     /// NVIDIA GPUs (`GeForce`, RTX, Quadro, Tesla, etc.)
     Nvidia,
@@ -68,7 +68,7 @@ impl GpuVendor {
 }
 
 /// GPU driver type (affects f64 builtin support).
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GpuDriver {
     /// NVIDIA proprietary driver (NVVM/PTXAS)
     NvidiaProprietary,
@@ -124,7 +124,7 @@ impl GpuDriver {
 }
 
 /// Workload classification for intelligent GPU routing.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WorkloadType {
     /// High-throughput streaming workloads (matmul, conv)
     Streaming,

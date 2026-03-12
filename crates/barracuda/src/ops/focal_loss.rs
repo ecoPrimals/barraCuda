@@ -208,7 +208,7 @@ mod tests {
         let predictions =
             Tensor::from_data(&[0.9, 0.1, 0.8, 0.2], vec![4], device.clone()).unwrap();
 
-        let targets = Tensor::from_data(&[1.0, 0.0, 1.0, 0.0], vec![4], device.clone()).unwrap();
+        let targets = Tensor::from_data(&[1.0, 0.0, 1.0, 0.0], vec![4], device).unwrap();
 
         let result = predictions.focal_loss(&targets, 0.25, 2.0).unwrap();
         let loss = result.to_vec().unwrap();
@@ -245,7 +245,7 @@ mod tests {
         };
         // Different alpha values
         let predictions = Tensor::from_data(&[0.6, 0.4], vec![2], device.clone()).unwrap();
-        let targets = Tensor::from_data(&[1.0, 0.0], vec![2], device.clone()).unwrap();
+        let targets = Tensor::from_data(&[1.0, 0.0], vec![2], device).unwrap();
         let result1 = predictions.clone().focal_loss(&targets, 0.25, 2.0).unwrap();
         let loss1 = result1.to_vec().unwrap();
 
@@ -286,7 +286,7 @@ mod tests {
         };
         // Gamma parameter effect
         let predictions = Tensor::from_data(&[0.5, 0.9], vec![2], device.clone()).unwrap();
-        let targets = Tensor::from_data(&[1.0, 1.0], vec![2], device.clone()).unwrap();
+        let targets = Tensor::from_data(&[1.0, 1.0], vec![2], device).unwrap();
 
         // Low gamma
         let result_low = predictions.clone().focal_loss(&targets, 0.25, 0.5).unwrap();

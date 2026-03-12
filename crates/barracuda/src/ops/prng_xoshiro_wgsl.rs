@@ -229,7 +229,7 @@ mod tests {
         };
         // Seeds as u32 (one per output element)
         let seeds: Vec<u32> = vec![1, 2, 3, 4, 5, 100, 200, 300];
-        let seeds_tensor = Tensor::from_data_pod(&seeds, vec![8], device.clone()).unwrap();
+        let seeds_tensor = Tensor::from_data_pod(&seeds, vec![8], device).unwrap();
         let output = seeds_tensor.prng_xoshiro(0).unwrap();
         let result = output.to_f64_vec().unwrap();
         assert_eq!(result.len(), 8);

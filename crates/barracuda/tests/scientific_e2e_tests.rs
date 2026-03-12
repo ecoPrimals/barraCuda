@@ -63,10 +63,10 @@ async fn e2e_signal_processing_pipeline() {
 
         // Step 3: Apply filter (identity filter for simplicity)
         let filter_data = (0..degree).flat_map(|_| [1.0f32, 0.0]).collect::<Vec<_>>(); // All-pass filter
-        let filter = Tensor::from_data(&filter_data, vec![degree, 2], device.clone()).unwrap();
+        let filter = Tensor::from_data(&filter_data, vec![degree, 2], device).unwrap();
 
         let start = Instant::now();
-        let filter_op = ComplexMul::new(spectrum.clone(), filter).unwrap();
+        let filter_op = ComplexMul::new(spectrum, filter).unwrap();
         let filtered_spectrum = filter_op.execute().unwrap();
         println!("   ✅ Filter: {:?}", start.elapsed());
 
@@ -109,7 +109,7 @@ async fn e2e_complex_arithmetic_chain() {
         let z2_data = vec![1.0f32, 2.0];
 
         let z1 = Tensor::from_data(&z1_data, vec![1, 2], device.clone()).unwrap();
-        let z2 = Tensor::from_data(&z2_data, vec![1, 2], device.clone()).unwrap();
+        let z2 = Tensor::from_data(&z2_data, vec![1, 2], device).unwrap();
 
         // Step 1: z1 + z2
         let add_op = ComplexAdd::new(z1.clone(), z2.clone()).unwrap();
@@ -117,12 +117,12 @@ async fn e2e_complex_arithmetic_chain() {
         println!("   ✅ z1 + z2");
 
         // Step 2: (z1 + z2) * z1
-        let mul_op = ComplexMul::new(sum, z1.clone()).unwrap();
+        let mul_op = ComplexMul::new(sum, z1).unwrap();
         let product = mul_op.execute().unwrap();
         println!("   ✅ (z1 + z2) * z1");
 
         // Step 3: ((z1 + z2) * z1) / z2
-        let div_op = ComplexDiv::new(product, z2.clone()).unwrap();
+        let div_op = ComplexDiv::new(product, z2).unwrap();
         let result = div_op.execute().unwrap();
         println!("   ✅ Result / z2");
 
@@ -167,7 +167,7 @@ async fn e2e_fft_1d_2d_workflow() {
             }
         }
 
-        let tensor_2d = Tensor::from_data(&data, vec![rows, cols, 2], device.clone()).unwrap();
+        let tensor_2d = Tensor::from_data(&data, vec![rows, cols, 2], device).unwrap();
 
         // Compute 2D FFT
         let start = Instant::now();
@@ -212,7 +212,7 @@ async fn e2e_fft_3d_workflow() {
                     let dx = (x as f32) - center;
                     let dy = (y as f32) - center;
                     let dz = (z as f32) - center;
-                    let r2 = dx * dx + dy * dy + dz * dz;
+                    let r2 = dz.mul_add(dz, dx.mul_add(dx, dy * dy));
                     let charge = (-r2 / 4.0).exp();
                     data.push(charge); // Real part
                     data.push(0.0); // Imaginary part
@@ -220,7 +220,7 @@ async fn e2e_fft_3d_workflow() {
             }
         }
 
-        let tensor_3d = Tensor::from_data(&data, vec![nx, ny, nz, 2], device.clone()).unwrap();
+        let tensor_3d = Tensor::from_data(&data, vec![nx, ny, nz, 2], device).unwrap();
 
         // Compute 3D FFT (reciprocal space transform)
         let start = Instant::now();
@@ -274,7 +274,7 @@ async fn e2e_complex_exp_to_fft() {
         }
 
         // Step 1: Compute exp(i*phase) using ComplexExp
-        let phase_tensor = Tensor::from_data(&phase_data, vec![degree, 2], device.clone()).unwrap();
+        let phase_tensor = Tensor::from_data(&phase_data, vec![degree, 2], device).unwrap();
         let exp_op = ComplexExp::new(phase_tensor).unwrap();
         let chirp = exp_op.execute().unwrap();
         println!("   ✅ ComplexExp: Generated chirp signal");
@@ -353,7 +353,7 @@ async fn e2e_full_molecular_dynamics_simulation() {
         let greens = Tensor::from_data(
             &greens_data,
             vec![grid_size, grid_size, grid_size, 2],
-            device.clone(),
+            device,
         )
         .unwrap();
 

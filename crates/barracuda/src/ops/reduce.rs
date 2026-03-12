@@ -201,7 +201,7 @@ mod tests {
             return;
         };
 
-        let input = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![4], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![4], device).unwrap();
 
         let result = input.reduce(ReduceOperation::Sum).unwrap();
         println!("Result shape: {:?}, len: {}", result.shape(), result.len());
@@ -220,7 +220,7 @@ mod tests {
             return;
         };
 
-        let input = Tensor::from_data(&[1.0, 5.0, 3.0, 2.0], vec![4], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 5.0, 3.0, 2.0], vec![4], device).unwrap();
 
         let result = input.reduce(ReduceOperation::Max).unwrap();
         let partial_maxes = result.to_vec().unwrap();

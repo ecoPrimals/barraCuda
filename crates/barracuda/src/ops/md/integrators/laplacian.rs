@@ -225,7 +225,7 @@ mod tests {
         // Set all values to same number, Laplacian should be zero everywhere
         let data = vec![1.0f32; size];
 
-        let field_tensor = Tensor::from_data(&data, vec![nx, ny, nz], device.clone()).unwrap();
+        let field_tensor = Tensor::from_data(&data, vec![nx, ny, nz], device).unwrap();
 
         // Verify input (explicit validation to prevent rustc optimization issues)
         let field_check = field_tensor.to_vec().unwrap();

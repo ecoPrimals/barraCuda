@@ -146,7 +146,7 @@ mod tests {
 
         // Targets (one-hot): [1, 0, 0]
         let target_data = vec![1.0f32, 0.0, 0.0];
-        let targets = Tensor::from_data(&target_data, vec![3], device.clone()).unwrap();
+        let targets = Tensor::from_data(&target_data, vec![3], device).unwrap();
 
         // Cross entropy = -log(0.7) ≈ 0.357
         let result = predictions.cross_entropy(targets).unwrap();
@@ -176,7 +176,7 @@ mod tests {
         let pred_data = vec![0.33f32, 0.33, 0.34];
         let predictions = Tensor::from_data(&pred_data, vec![3], device.clone()).unwrap();
         let target_data = vec![0.33f32, 0.33, 0.34];
-        let targets = Tensor::from_data(&target_data, vec![3], device.clone()).unwrap();
+        let targets = Tensor::from_data(&target_data, vec![3], device).unwrap();
         let result = predictions.cross_entropy(targets).unwrap();
         let output = result.to_vec().unwrap();
         let expected = cross_entropy_cpu(&pred_data, &target_data);
@@ -202,7 +202,7 @@ mod tests {
         let pred_data = vec![0.5, 0.2, 0.1, 0.1, 0.05, 0.03, 0.02];
         let predictions = Tensor::from_data(&pred_data, vec![7], device.clone()).unwrap();
         let target_data = vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-        let targets = Tensor::from_data(&target_data, vec![7], device.clone()).unwrap();
+        let targets = Tensor::from_data(&target_data, vec![7], device).unwrap();
         let result = predictions.cross_entropy(targets).unwrap();
         let output = result.to_vec().unwrap();
         let expected = cross_entropy_cpu(&pred_data, &target_data);

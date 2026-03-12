@@ -194,7 +194,7 @@ mod tests {
             return;
         };
         // B(1,1) = Γ(1)Γ(1)/Γ(2) = 1*1/1 = 1
-        let input = Tensor::new(vec![1.0, 1.0], vec![2], device.clone());
+        let input = Tensor::new(vec![1.0, 1.0], vec![2], device);
         let output = input.beta().unwrap();
         let result = output.to_vec().unwrap();
         assert!(
@@ -210,7 +210,7 @@ mod tests {
             return;
         };
         // B(2,2) = Γ(2)Γ(2)/Γ(4) = 1*1/6 = 1/6 ≈ 0.1667
-        let input = Tensor::new(vec![2.0, 2.0], vec![2], device.clone());
+        let input = Tensor::new(vec![2.0, 2.0], vec![2], device);
         let output = input.beta().unwrap();
         let result = output.to_vec().unwrap();
         let expected = 1.0 / 6.0;
@@ -228,7 +228,7 @@ mod tests {
             return;
         };
         // B(1,2) = 1/2, B(2,3) = 1/12, B(3,4) = 1/60
-        let input = Tensor::new(vec![1.0, 2.0, 2.0, 3.0, 3.0, 4.0], vec![6], device.clone());
+        let input = Tensor::new(vec![1.0, 2.0, 2.0, 3.0, 3.0, 4.0], vec![6], device);
         let output = input.beta().unwrap();
         let result = output.to_vec().unwrap();
 

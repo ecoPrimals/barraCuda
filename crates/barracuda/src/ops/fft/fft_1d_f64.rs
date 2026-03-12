@@ -186,7 +186,7 @@ mod tests {
         for k in 0..n as usize {
             let re = freq[k * 2];
             let im = freq[k * 2 + 1];
-            let mag = (re * re + im * im).sqrt();
+            let mag = re.hypot(im);
             assert!(
                 (mag - 1.0).abs() < 1e-10,
                 "Bin {k}: expected magnitude 1.0, got {mag:.15e}"
@@ -257,7 +257,7 @@ mod tests {
 
         let re_t = freq[target_bin * 2];
         let im_t = freq[target_bin * 2 + 1];
-        let mag_t = (re_t * re_t + im_t * im_t).sqrt();
+        let mag_t = re_t.hypot(im_t);
         assert!(
             (mag_t - n as f64).abs() < 1e-8,
             "Bin {target_bin}: expected magnitude {n}, got {mag_t:.15e}"
@@ -269,7 +269,7 @@ mod tests {
             }
             let re = freq[k * 2];
             let im = freq[k * 2 + 1];
-            let mag = (re * re + im * im).sqrt();
+            let mag = re.hypot(im);
             assert!(
                 mag < 1e-8,
                 "Bin {k}: expected near-zero magnitude, got {mag:.15e}"

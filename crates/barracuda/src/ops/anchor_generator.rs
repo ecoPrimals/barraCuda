@@ -279,15 +279,8 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let op = AnchorGenerator::new(
-            4,
-            4,
-            16,
-            vec![32.0, 64.0],
-            vec![0.5, 1.0, 2.0],
-            device.clone(),
-        )
-        .unwrap();
+        let op =
+            AnchorGenerator::new(4, 4, 16, vec![32.0, 64.0], vec![0.5, 1.0, 2.0], device).unwrap();
         let anchors = op.execute().unwrap();
         assert_eq!(anchors.shape(), &[4 * 4 * 2 * 3, 4]); // h*w*sizes*ratios, 4
     }
@@ -306,7 +299,7 @@ mod tests {
         assert!(anchors1.iter().all(|&x| x.is_finite()));
 
         // Test with single aspect ratio
-        let op2 = AnchorGenerator::new(2, 2, 16, vec![32.0], vec![1.0], device.clone()).unwrap();
+        let op2 = AnchorGenerator::new(2, 2, 16, vec![32.0], vec![1.0], device).unwrap();
         let result2 = op2.execute().unwrap();
         let anchors2 = result2.to_vec().unwrap();
         assert_eq!(anchors2.len(), 2 * 2 * 4);
@@ -323,7 +316,7 @@ mod tests {
         let result1 = op1.execute().unwrap();
         let anchors1 = result1.to_vec().unwrap();
 
-        let op2 = AnchorGenerator::new(3, 3, 16, vec![16.0], vec![1.0], device.clone()).unwrap();
+        let op2 = AnchorGenerator::new(3, 3, 16, vec![16.0], vec![1.0], device).unwrap();
         let result2 = op2.execute().unwrap();
         let anchors2 = result2.to_vec().unwrap();
 
@@ -354,7 +347,7 @@ mod tests {
             16,
             sizes.clone(),
             ratios.clone(),
-            device.clone(),
+            device,
         )
         .unwrap();
         let result = op.execute().unwrap();
@@ -374,7 +367,7 @@ mod tests {
         };
 
         // Test with known values - single anchor at (0,0)
-        let op = AnchorGenerator::new(1, 1, 16, vec![32.0], vec![1.0], device.clone()).unwrap();
+        let op = AnchorGenerator::new(1, 1, 16, vec![32.0], vec![1.0], device).unwrap();
         let result = op.execute().unwrap();
         let anchors = result.to_vec().unwrap();
 

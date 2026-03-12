@@ -283,7 +283,7 @@ mod tests {
             return;
         };
         let output = Tensor::from_data(&[0.0, 0.0, 0.0, 0.0], vec![4], device.clone()).unwrap();
-        let values = Tensor::from_data(&[10.0, 30.0], vec![2], device.clone()).unwrap();
+        let values = Tensor::from_data(&[10.0, 30.0], vec![2], device).unwrap();
 
         let result = Put::new(output, vec![0, 2], values, false)
             .unwrap()
@@ -303,7 +303,7 @@ mod tests {
             return;
         };
         let output = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![4], device.clone()).unwrap();
-        let values = Tensor::from_data(&[10.0, 20.0], vec![2], device.clone()).unwrap();
+        let values = Tensor::from_data(&[10.0, 20.0], vec![2], device).unwrap();
 
         let result = Put::new(output, vec![0, 1], values, true)
             .unwrap()
@@ -322,7 +322,7 @@ mod tests {
             return;
         };
         let output = Tensor::from_data(&[0.0, 0.0], vec![2], device.clone()).unwrap();
-        let values = Tensor::from_data(&[1.0], vec![1], device.clone()).unwrap();
+        let values = Tensor::from_data(&[1.0], vec![1], device).unwrap();
 
         assert!(Put::new(output, vec![5], values, false).is_err());
     }
@@ -333,7 +333,7 @@ mod tests {
             return;
         };
         let output = Tensor::from_data(&[0.0, 0.0], vec![2], device.clone()).unwrap();
-        let values = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device.clone()).unwrap();
+        let values = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         assert!(Put::new(output, vec![0], values, false).is_err());
     }
@@ -344,7 +344,7 @@ mod tests {
             return;
         };
         let output = Tensor::from_data(&[0.0, 0.0], vec![2], device.clone()).unwrap();
-        let values = Tensor::from_data(&[1.0, 2.0], vec![2], device.clone()).unwrap();
+        let values = Tensor::from_data(&[1.0, 2.0], vec![2], device).unwrap();
 
         // Same index twice - race condition without atomics: either write can win
         let result = Put::new(output, vec![0, 0], values, false)

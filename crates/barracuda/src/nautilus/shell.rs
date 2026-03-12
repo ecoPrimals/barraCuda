@@ -102,7 +102,7 @@ impl NautilusShell {
         let n_out = config.output_dim.unwrap_or(3);
         let readout = LinearReadout::new(input_dim, n_out, config.lambda);
         Self {
-            config: config.clone(),
+            config,
             population: pop,
             readout,
             history: Vec::new(),
@@ -320,7 +320,7 @@ mod tests {
         let targets = test_targets();
 
         let _ = shell1.evolve_generation(&inputs, &targets).unwrap();
-        let mut shell2_mut = shell2.clone();
+        let mut shell2_mut = shell2;
         let _ = shell2_mut.evolve_generation(&inputs, &targets).unwrap();
 
         shell1.merge_shell(&shell2_mut);

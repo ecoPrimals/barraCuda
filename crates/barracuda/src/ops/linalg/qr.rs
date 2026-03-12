@@ -204,9 +204,7 @@ pub fn qr_decompose(a: &[f64], m: usize, n: usize) -> Result<QrDecomposition> {
     // Clean up small values in R below diagonal
     for i in 0..m {
         for j in 0..n {
-            if i > j {
-                r[i * n + j] = 0.0;
-            } else if r[i * n + j].abs() < 1e-14 {
+            if i > j || r[i * n + j].abs() < 1e-14 {
                 r[i * n + j] = 0.0;
             }
         }

@@ -165,7 +165,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let input = Tensor::new(vec![1.0f32, 2.0, 3.0], vec![3], device.clone());
+        let input = Tensor::new(vec![1.0f32, 2.0, 3.0], vec![3], device);
         let result = input
             .rrelu_wgsl(0.125, 0.333, 42)
             .unwrap()
@@ -179,7 +179,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let input = Tensor::new(vec![-1.0f32, -2.0], vec![2], device.clone());
+        let input = Tensor::new(vec![-1.0f32, -2.0], vec![2], device);
         let result = input
             .rrelu_wgsl(0.125, 0.333, 42)
             .unwrap()

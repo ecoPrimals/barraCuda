@@ -134,7 +134,7 @@ mod tests {
             return;
         };
         let original = Tensor::new(vec![0.5; 1000], vec![1000], device.clone());
-        let reconstructed = Tensor::new(vec![0.5; 1000], vec![1000], device.clone());
+        let reconstructed = Tensor::new(vec![0.5; 1000], vec![1000], device);
         let psnr_val = original.psnr(reconstructed, 1.0).unwrap();
         assert!(psnr_val > 100.0); // Should be very high for identical signals
     }
@@ -152,7 +152,7 @@ mod tests {
 
         // Significant difference (low PSNR)
         let original = Tensor::new(vec![1.0; 100], vec![100], device.clone());
-        let reconstructed = Tensor::new(vec![0.5; 100], vec![100], device.clone());
+        let reconstructed = Tensor::new(vec![0.5; 100], vec![100], device);
         let psnr_val = original.psnr(reconstructed, 1.0).unwrap();
         assert!(psnr_val.is_finite());
         assert!(psnr_val < 10.0); // Poor quality

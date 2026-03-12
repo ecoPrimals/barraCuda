@@ -184,7 +184,7 @@ mod tests {
         for i in 0..size {
             let re = freq[i * 2];
             let im = freq[i * 2 + 1];
-            let mag = (re * re + im * im).sqrt();
+            let mag = re.hypot(im);
             assert!(
                 (mag - 1.0).abs() < 1e-10,
                 "Expected magnitude 1.0, got {mag}"

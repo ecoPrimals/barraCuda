@@ -202,7 +202,7 @@ mod tests {
                 contents: pos_bytes,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
             });
-        let pos_tensor = Tensor::from_buffer(pos_buffer, vec![n, 3], device.clone());
+        let pos_tensor = Tensor::from_buffer(pos_buffer, vec![n, 3], device);
 
         // κ=1, prefactor=1, cutoff=10, box=10
         let yukawa = YukawaForceF64::new(pos_tensor, 1.0, 1.0, 10.0, 10.0, None).unwrap();

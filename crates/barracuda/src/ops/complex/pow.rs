@@ -178,7 +178,7 @@ mod tests {
 
         // Test (2+0i)^2 = 4+0i
         let data = vec![2.0f32, 0.0];
-        let tensor = Tensor::from_data(&data, vec![1, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![1, 2], device).unwrap();
 
         let pow_op = ComplexPow::new(tensor, 2.0).unwrap();
         let result = pow_op.execute().unwrap();
@@ -203,7 +203,7 @@ mod tests {
 
         // Test z^1 = z
         let data = vec![3.0f32, 4.0];
-        let tensor = Tensor::from_data(&data, vec![1, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![1, 2], device).unwrap();
 
         let pow_op = ComplexPow::new(tensor, 1.0).unwrap();
         let result = pow_op.execute().unwrap();
@@ -228,7 +228,7 @@ mod tests {
 
         // Test z^0 = 1+0i
         let data = vec![5.0f32, 12.0];
-        let tensor = Tensor::from_data(&data, vec![1, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![1, 2], device).unwrap();
 
         let pow_op = ComplexPow::new(tensor, 0.0).unwrap();
         let result = pow_op.execute().unwrap();

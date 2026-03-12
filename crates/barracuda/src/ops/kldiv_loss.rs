@@ -67,13 +67,8 @@ impl KLDivLoss {
 
         let size = self.input.shape().iter().product::<usize>();
 
-        // Output size depends on reduction
-        let output_size = if self.reduction == 0 {
-            size
-        } else {
-            size // Shader outputs per-element, reduction happens in post-processing
-        };
-        let output_buffer = device.create_buffer_f32(output_size)?;
+        // Shader outputs per-element; reduction happens in post-processing
+        let output_buffer = device.create_buffer_f32(size)?;
 
         // Create uniform buffer for parameters
         #[repr(C)]
@@ -221,12 +216,8 @@ impl KLDivLoss {
 
         device.submit_and_poll(Some(encoder.finish()));
 
-        // Create output tensor
-        let output_shape = if self.reduction == 0 {
-            self.input.shape().to_vec()
-        } else {
-            self.input.shape().to_vec() // Shader handles reduction
-        };
+        // Shader handles reduction internally
+        let output_shape = self.input.shape().to_vec();
 
         Ok(Tensor::from_buffer(
             output_buffer,

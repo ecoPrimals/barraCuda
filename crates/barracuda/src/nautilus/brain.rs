@@ -202,7 +202,7 @@ impl NautilusBrain {
             0x9a17b5,
         );
         Self {
-            config: config.clone(),
+            config,
             shell,
             observations: Vec::new(),
             recent_delta_h: Vec::new(),

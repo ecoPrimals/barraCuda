@@ -253,7 +253,7 @@ mod grid_unit {
                 let abs_error = (val - expected).abs();
                 // Combined tolerance: absolute near x=0 (where expected ~ 0) and
                 // relative elsewhere. FD truncation error is O(dx^2) ≈ 0.0025.
-                let tol = 0.05 * expected.abs() + dx * dx * 10.0;
+                let tol = 0.05f64.mul_add(expected.abs(), dx * dx * 10.0);
                 assert!(
                     abs_error < tol,
                     "At i={i}: abs_error={abs_error}, tol={tol}"

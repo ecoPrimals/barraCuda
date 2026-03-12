@@ -297,7 +297,7 @@ mod tests {
         let content_data = vec![1.0; 3 * 4 * 4];
         let content = Tensor::new(content_data.clone(), vec![1, 3, 4, 4], dev.clone());
         let style_mean = Tensor::new(vec![0.5, 0.5, 0.5], vec![3], dev.clone());
-        let style_std = Tensor::new(vec![0.2, 0.2, 0.2], vec![3], dev.clone());
+        let style_std = Tensor::new(vec![0.2, 0.2, 0.2], vec![3], dev);
         let output_tensor = content
             .adaptive_instance_norm(style_mean, style_std)
             .unwrap();
@@ -324,7 +324,7 @@ mod tests {
         // Test with single channel, single pixel
         let content = Tensor::new(vec![5.0], vec![1, 1, 1, 1], dev.clone());
         let style_mean = Tensor::new(vec![1.0], vec![1], dev.clone());
-        let style_std = Tensor::new(vec![2.0], vec![1], dev.clone());
+        let style_std = Tensor::new(vec![2.0], vec![1], dev);
         let output_tensor = content
             .adaptive_instance_norm(style_mean, style_std)
             .unwrap();
@@ -351,9 +351,9 @@ mod tests {
         let output1 = result1.to_vec().unwrap();
 
         // Style 2: mean=10, std=5
-        let content2 = Tensor::new(content_data.clone(), vec![1, 1, 2, 2], dev.clone());
+        let content2 = Tensor::new(content_data, vec![1, 1, 2, 2], dev.clone());
         let style_mean2 = Tensor::new(vec![10.0], vec![1], dev.clone());
-        let style_std2 = Tensor::new(vec![5.0], vec![1], dev.clone());
+        let style_std2 = Tensor::new(vec![5.0], vec![1], dev);
         let result2 = content2
             .adaptive_instance_norm(style_mean2, style_std2)
             .unwrap();
@@ -387,7 +387,7 @@ mod tests {
             dev.clone(),
         );
         let style_mean = Tensor::new(vec![0.5, 1.0, 1.5, 2.0], vec![channels], dev.clone());
-        let style_std = Tensor::new(vec![0.1, 0.2, 0.3, 0.4], vec![channels], dev.clone());
+        let style_std = Tensor::new(vec![0.1, 0.2, 0.3, 0.4], vec![channels], dev);
 
         let output_tensor = content
             .adaptive_instance_norm(style_mean, style_std)
@@ -409,7 +409,7 @@ mod tests {
         ];
         let content = Tensor::new(content_data, vec![1, 1, 2, 2], dev.clone());
         let style_mean = Tensor::new(vec![5.0], vec![1], dev.clone()); // Target mean
-        let style_std = Tensor::new(vec![2.0], vec![1], dev.clone()); // Target std
+        let style_std = Tensor::new(vec![2.0], vec![1], dev); // Target std
 
         let result = content
             .adaptive_instance_norm(style_mean, style_std)

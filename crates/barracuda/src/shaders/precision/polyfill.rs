@@ -249,9 +249,6 @@ pub fn split_enable_directives(source: &str) -> (String, String) {
             if trimmed.starts_with("enable ") {
                 enables.push_str(line);
                 enables.push('\n');
-            } else if enables.is_empty() {
-                rest.push_str(line);
-                rest.push('\n');
             } else {
                 rest.push_str(line);
                 rest.push('\n');

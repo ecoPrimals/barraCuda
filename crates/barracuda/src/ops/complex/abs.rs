@@ -196,7 +196,7 @@ mod tests {
 
         // |3+4i| = 5
         let data = vec![3.0f32, 4.0];
-        let tensor = Tensor::from_data(&data, vec![1, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![1, 2], device).unwrap();
 
         let op = ComplexAbs::new(tensor).unwrap();
         let result = op.execute().unwrap();

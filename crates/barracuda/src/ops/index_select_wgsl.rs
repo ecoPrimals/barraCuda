@@ -293,7 +293,7 @@ mod tests {
         };
         // Input: [5] = [0, 1, 2, 3, 4]
         let data = vec![0.0, 1.0, 2.0, 3.0, 4.0];
-        let input = Tensor::new(data, vec![5], device.clone());
+        let input = Tensor::new(data, vec![5], device);
 
         let output = input.index_select_wgsl(0, vec![1, 3, 4]).unwrap();
 
@@ -311,7 +311,7 @@ mod tests {
         };
         // Input: [3, 2] = [[0,1], [2,3], [4,5]]
         let data = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
-        let input = Tensor::new(data, vec![3, 2], device.clone());
+        let input = Tensor::new(data, vec![3, 2], device);
 
         let output = input.index_select_wgsl(0, vec![2, 0]).unwrap();
 
@@ -331,7 +331,7 @@ mod tests {
         };
         // Input: [2, 3] = [[0,1,2], [3,4,5]]
         let data = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
-        let input = Tensor::new(data, vec![2, 3], device.clone());
+        let input = Tensor::new(data, vec![2, 3], device);
 
         let output = input.index_select_wgsl(1, vec![2, 0]).unwrap();
 

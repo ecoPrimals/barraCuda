@@ -44,7 +44,7 @@ enum Commands {
         tarpc_bind: Option<String>,
 
         /// Unix socket path override. Defaults to
-        /// `$XDG_RUNTIME_DIR/barracuda/barracuda.sock`.
+        /// `$XDG_RUNTIME_DIR/{PRIMAL_NAMESPACE}/{PRIMAL_NAMESPACE}.sock`.
         #[cfg(unix)]
         #[arg(long, num_args = 0..=1, default_missing_value = "__default__")]
         unix: Option<String>,
@@ -341,7 +341,7 @@ fn print_version() {
 /// IPC methods — no hardcoded values. Per wateringHole capability-based discovery.
 ///
 /// Supports both TCP (`host:port`) and Unix socket (`unix:///path`) transports.
-/// File path: `$XDG_RUNTIME_DIR/ecoPrimals/barracuda-core.json`
+/// File path: `$XDG_RUNTIME_DIR/ecoPrimals/{PRIMAL_NAMESPACE}-core.json`
 fn write_discovery_file(
     tcp_addr: Option<&str>,
     tarpc_addr: Option<&str>,
@@ -351,7 +351,8 @@ fn write_discovery_file(
     if std::fs::create_dir_all(&dir).is_err() {
         return;
     }
-    let path = dir.join("barracuda-core.json");
+    let filename = format!("{}-core.json", barracuda_core::PRIMAL_NAMESPACE);
+    let path = dir.join(&filename);
 
     let mut transports = serde_json::Map::new();
     if let Some(addr) = tcp_addr {
@@ -411,7 +412,8 @@ fn write_discovery_file(
 /// Remove the discovery file on shutdown.
 fn remove_discovery_file() {
     if let Some(dir) = discovery_dir() {
-        let path = dir.join("barracuda-core.json");
+        let filename = format!("{}-core.json", barracuda_core::PRIMAL_NAMESPACE);
+        let path = dir.join(&filename);
         if path.exists() {
             let _ = std::fs::remove_file(&path);
         }
@@ -535,7 +537,8 @@ fn resolve_client_addr(
     }
 
     if let Some(dir) = discovery_dir() {
-        let path = dir.join("barracuda-core.json");
+        let filename = format!("{}-core.json", barracuda_core::PRIMAL_NAMESPACE);
+        let path = dir.join(&filename);
         if let Ok(content) = std::fs::read_to_string(&path) {
             if let Ok(info) = serde_json::from_str::<serde_json::Value>(&content) {
                 let transports = info.get("transports");

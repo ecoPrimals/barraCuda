@@ -50,7 +50,7 @@ async fn batched_encoder_two_passes_execute() {
     let out = device.read_buffer_f32(&buf_b, n).unwrap();
     for (i, &v) in out.iter().enumerate() {
         assert!(
-            (v - (i as f32 * 2.0)).abs() < 1e-5,
+            (i as f32).mul_add(-2.0, v).abs() < 1e-5,
             "buf_b[{}] = {}, expected {}",
             i,
             v,

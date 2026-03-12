@@ -272,7 +272,7 @@ fn cpu_activation(data: &[f32], operation: &str) -> Vec<f32> {
         "SiLU" | "Swish" => data.iter().map(|&x| x / (1.0 + (-x).exp())).collect(),
         "Sigmoid" => data.iter().map(|&x| 1.0 / (1.0 + (-x).exp())).collect(),
         "Tanh" => data.iter().map(|&x| x.tanh()).collect(),
-        "Softplus" => data.iter().map(|&x| (1.0 + x.exp()).ln()).collect(),
+        "Softplus" => data.iter().map(|&x| x.exp().ln_1p()).collect(),
         _ => data.to_vec(), // Identity for unknown ops
     }
 }

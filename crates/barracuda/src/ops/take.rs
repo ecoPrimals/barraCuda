@@ -238,7 +238,7 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        let input = Tensor::from_data(&[10.0, 20.0, 30.0, 40.0], vec![4], device.clone()).unwrap();
+        let input = Tensor::from_data(&[10.0, 20.0, 30.0, 40.0], vec![4], device).unwrap();
 
         let result = Take::new(input, vec![0, 2, 1]).unwrap().execute().unwrap();
         let output = result.to_vec().unwrap();
@@ -254,7 +254,7 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         let result = Take::new(input, vec![0, 0, 1, 1, 2])
             .unwrap()
@@ -276,7 +276,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..1000).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![1000], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![1000], device).unwrap();
 
         let indices: Vec<u32> = (0..100).map(|i| (i * 10) as u32).collect();
         let result = Take::new(input, indices).unwrap().execute().unwrap();
@@ -293,7 +293,7 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         let result = Take::new(input, vec![]).unwrap().execute().unwrap();
         let output = result.to_vec().unwrap();
@@ -306,7 +306,7 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         assert!(Take::new(input, vec![0, 5]).is_err());
     }

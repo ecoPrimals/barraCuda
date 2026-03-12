@@ -118,7 +118,7 @@ fn check_fao56_et0() -> CheckResult {
 }
 
 fn check_brent_sqrt2() -> CheckResult {
-    let result = brent(|x| x * x - 2.0, 0.0, 2.0, 1e-12, 100);
+    let result = brent(|x| x.mul_add(x, -2.0), 0.0, 2.0, 1e-12, 100);
     let passed = match &result {
         Ok(r) => (r.root - std::f64::consts::SQRT_2).abs() < 1e-8,
         Err(_) => false,
@@ -132,7 +132,7 @@ fn check_brent_sqrt2() -> CheckResult {
 }
 
 fn check_lbfgs_quadratic() -> CheckResult {
-    let quad = |x: &[f64]| x[0] * x[0] + x[1] * x[1];
+    let quad = |x: &[f64]| x[0].mul_add(x[0], x[1] * x[1]);
     let config = LbfgsConfig {
         memory: 5,
         max_iter: 200,
@@ -258,7 +258,10 @@ fn welford_matches_two_pass_covariance() {
     use barracuda::stats::welford::WelfordCovState;
 
     let xs: Vec<f64> = (0..100).map(|i| (i as f64) * 0.1).collect();
-    let ys: Vec<f64> = xs.iter().map(|x| 2.0 * x + 1.0 + x.sin() * 0.01).collect();
+    let ys: Vec<f64> = xs
+        .iter()
+        .map(|x| x.sin().mul_add(0.01, 2.0 * x + 1.0))
+        .collect();
 
     let two_pass = covariance(&xs, &ys).unwrap();
     let welford = WelfordCovState::from_slices(&xs, &ys);

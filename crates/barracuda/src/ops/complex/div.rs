@@ -207,7 +207,7 @@ mod tests {
         let a = vec![1.0f32, 0.0];
         let b = vec![2.0f32, 0.0];
         let ta = Tensor::from_data(&a, vec![1, 2], device.clone()).unwrap();
-        let tb = Tensor::from_data(&b, vec![1, 2], device.clone()).unwrap();
+        let tb = Tensor::from_data(&b, vec![1, 2], device).unwrap();
         let result = ComplexDiv::new(ta, tb)
             .unwrap()
             .execute()

@@ -174,7 +174,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![4], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![4], device).unwrap();
 
         let result = input.map(MapOperation::Square).unwrap();
         let output = result.to_vec().unwrap();
@@ -196,7 +196,7 @@ mod tests {
         assert!(output[0].is_finite());
 
         // Negate operation
-        let input = Tensor::from_data(&[1.0, -2.0, 3.0], vec![3], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, -2.0, 3.0], vec![3], device).unwrap();
         let result = input.map(MapOperation::Negate).unwrap();
         let output = result.to_vec().unwrap();
         assert_eq!(output.len(), 3);
@@ -215,7 +215,7 @@ mod tests {
         assert!(output.iter().all(|&x| x.is_finite()));
 
         // Abs with negative values
-        let input = Tensor::from_data(&[-1.0, -2.0, -3.0], vec![3], device.clone()).unwrap();
+        let input = Tensor::from_data(&[-1.0, -2.0, -3.0], vec![3], device).unwrap();
         let result = input.map(MapOperation::Abs).unwrap();
         let output = result.to_vec().unwrap();
         assert!(output.iter().all(|&x| x >= 0.0));

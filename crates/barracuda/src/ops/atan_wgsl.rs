@@ -191,7 +191,7 @@ mod tests {
             return;
         };
         let data = vec![0.0, 1.0, 2.0, 3.0, 4.0];
-        let input = Tensor::new(data, vec![5], device.clone());
+        let input = Tensor::new(data, vec![5], device);
         let output = input.atan().unwrap();
         let result = output.to_vec().unwrap();
         assert!(result.iter().all(|&x| x.is_finite()));

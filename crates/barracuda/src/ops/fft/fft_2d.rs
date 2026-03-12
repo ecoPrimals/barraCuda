@@ -164,7 +164,7 @@ mod tests {
             return;
         };
         let data = vec![1.0f32, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0];
-        let tensor = Tensor::from_data(&data, vec![2, 2, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![2, 2, 2], device).unwrap();
         let fft = Fft2D::new(tensor, 2, 2).unwrap();
         let result = fft.execute().unwrap();
         let result_data = result.to_vec().unwrap();

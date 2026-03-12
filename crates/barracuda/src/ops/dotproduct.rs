@@ -138,7 +138,7 @@ mod tests {
 
         let a = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![4], device.clone()).unwrap();
 
-        let b = Tensor::from_data(&[1.0, 1.0, 1.0, 1.0], vec![4], device.clone()).unwrap();
+        let b = Tensor::from_data(&[1.0, 1.0, 1.0, 1.0], vec![4], device).unwrap();
 
         let result = a.dotproduct(&b).unwrap();
         let partial_sums = result.to_vec().unwrap();
@@ -172,7 +172,7 @@ mod tests {
 
         // Orthogonal vectors (perpendicular)
         let ortho_a = Tensor::from_data(&[1.0, 0.0, 0.0, 0.0], vec![4], device.clone()).unwrap();
-        let ortho_b = Tensor::from_data(&[0.0, 1.0, 0.0, 0.0], vec![4], device.clone()).unwrap();
+        let ortho_b = Tensor::from_data(&[0.0, 1.0, 0.0, 0.0], vec![4], device).unwrap();
         let result = ortho_a.dotproduct(&ortho_b).unwrap();
         let total: f32 = result.to_vec().unwrap().iter().sum();
         assert!((total - 0.0).abs() < 0.1); // Relaxed tolerance
@@ -198,7 +198,7 @@ mod tests {
         // Power of 2 size (256)
         let size = 256;
         let ones_a = Tensor::from_data(&vec![1.0; size], vec![size], device.clone()).unwrap();
-        let twos_b = Tensor::from_data(&vec![2.0; size], vec![size], device.clone()).unwrap();
+        let twos_b = Tensor::from_data(&vec![2.0; size], vec![size], device).unwrap();
         let result = ones_a.dotproduct(&twos_b).unwrap();
         let total: f32 = result.to_vec().unwrap().iter().sum();
         // Should be roughly size*2, but allow wide tolerance
@@ -218,7 +218,7 @@ mod tests {
         let b_data = vec![1.0; size];
 
         let a = Tensor::from_data(&a_data, vec![size], device.clone()).unwrap();
-        let b = Tensor::from_data(&b_data, vec![size], device.clone()).unwrap();
+        let b = Tensor::from_data(&b_data, vec![size], device).unwrap();
 
         let result = a.dotproduct(&b).unwrap();
         let total: f32 = result.to_vec().unwrap().iter().sum();
@@ -250,7 +250,7 @@ mod tests {
 
         // Test negative values
         let neg_a = Tensor::from_data(&[1.0, -1.0, 1.0, -1.0], vec![4], device.clone()).unwrap();
-        let neg_b = Tensor::from_data(&[1.0, 1.0, 1.0, 1.0], vec![4], device.clone()).unwrap();
+        let neg_b = Tensor::from_data(&[1.0, 1.0, 1.0, 1.0], vec![4], device).unwrap();
         let result = neg_a.dotproduct(&neg_b).unwrap();
         let total: f32 = result.to_vec().unwrap().iter().sum();
         // Should be close to 0 (cancellation), but allow tolerance

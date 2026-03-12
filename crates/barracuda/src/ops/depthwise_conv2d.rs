@@ -240,7 +240,7 @@ mod tests {
 
         // Create bias [2]
         let bias_data = vec![0.0f32, 0.0];
-        let bias = Tensor::from_data(&bias_data, vec![2], device.clone()).unwrap();
+        let bias = Tensor::from_data(&bias_data, vec![2], device).unwrap();
 
         // Apply DepthwiseConv2D
         let result = input
@@ -274,7 +274,7 @@ mod tests {
         let weight_data = vec![1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]; // [2, 1, 2, 2]
         let weight = Tensor::from_data(&weight_data, vec![2, 1, 2, 2], device.clone()).unwrap();
         let bias_data = vec![0.0, 0.0];
-        let bias = Tensor::from_data(&bias_data, vec![2], device.clone()).unwrap();
+        let bias = Tensor::from_data(&bias_data, vec![2], device).unwrap();
         let result = input
             .depthwise_conv2d(weight, bias, (1, 1), (0, 0))
             .unwrap();
@@ -305,7 +305,7 @@ mod tests {
         let weight_data = vec![1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]; // [2, 1, 2, 2]
         let weight = Tensor::from_data(&weight_data, vec![2, 1, 2, 2], device.clone()).unwrap();
         let bias_data = vec![0.0, 0.0];
-        let bias = Tensor::from_data(&bias_data, vec![2], device.clone()).unwrap();
+        let bias = Tensor::from_data(&bias_data, vec![2], device).unwrap();
         let result = input
             .depthwise_conv2d(weight, bias, (2, 2), (0, 0))
             .unwrap();
@@ -340,7 +340,7 @@ mod tests {
         )
         .unwrap();
         let bias_data = vec![0.0; channels];
-        let bias = Tensor::from_data(&bias_data, vec![channels], device.clone()).unwrap();
+        let bias = Tensor::from_data(&bias_data, vec![channels], device).unwrap();
 
         let result = input
             .depthwise_conv2d(weight, bias, (1, 1), (1, 1))
@@ -362,7 +362,7 @@ mod tests {
         let weight_data = vec![1.0, 1.0, 1.0, 1.0]; // [1, 1, 2, 2]
         let weight = Tensor::from_data(&weight_data, vec![1, 1, 2, 2], device.clone()).unwrap();
         let bias_data = vec![0.0];
-        let bias = Tensor::from_data(&bias_data, vec![1], device.clone()).unwrap();
+        let bias = Tensor::from_data(&bias_data, vec![1], device).unwrap();
 
         let result = input
             .depthwise_conv2d(weight, bias, (1, 1), (0, 0))

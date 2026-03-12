@@ -233,7 +233,7 @@ fn test_loo_cv_hat_diagonal_correct() {
     // And with H_ii < 1, the LOO residuals should also be non-zero
 
     // First verify we have some residuals (smoothed predictions differ from targets)
-    let train_points: Vec<Vec<f64>> = x_train.clone();
+    let train_points: Vec<Vec<f64>> = x_train;
     let predictions = surrogate.predict(&train_points).unwrap();
     let max_residual: f64 = predictions
         .iter()

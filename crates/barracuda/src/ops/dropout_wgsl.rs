@@ -157,7 +157,7 @@ mod tests {
             return;
         };
         let data = vec![1.0, 2.0, 3.0];
-        let input = Tensor::new(data.clone(), vec![3], device.clone());
+        let input = Tensor::new(data, vec![3], device.clone());
 
         let Ok(output) = input.dropout_wgsl(0.0, 42) else {
             if device.is_lost() {

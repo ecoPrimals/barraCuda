@@ -210,7 +210,7 @@ mod tests {
             return;
         };
         // Φ⁻¹(0.5) = 0
-        let input = Tensor::new(vec![0.5], vec![1], device.clone());
+        let input = Tensor::new(vec![0.5], vec![1], device);
         let output = input.norm_ppf().unwrap();
         let result = output.to_vec().unwrap();
         assert!(
@@ -226,7 +226,7 @@ mod tests {
             return;
         };
         // Φ⁻¹(0.25) ≈ -0.6745, Φ⁻¹(0.75) ≈ 0.6745
-        let input = Tensor::new(vec![0.25, 0.75], vec![2], device.clone());
+        let input = Tensor::new(vec![0.25, 0.75], vec![2], device);
         let output = input.norm_ppf().unwrap();
         let result = output.to_vec().unwrap();
         assert!(
@@ -247,7 +247,7 @@ mod tests {
             return;
         };
         // Φ⁻¹(0.025) ≈ -1.96, Φ⁻¹(0.975) ≈ 1.96
-        let input = Tensor::new(vec![0.025, 0.975], vec![2], device.clone());
+        let input = Tensor::new(vec![0.025, 0.975], vec![2], device);
         let output = input.norm_ppf().unwrap();
         let result = output.to_vec().unwrap();
         assert!(
@@ -268,7 +268,7 @@ mod tests {
             return;
         };
         // For N(μ=10, σ=2): Φ⁻¹(0.5) = μ = 10
-        let input = Tensor::new(vec![0.5], vec![1], device.clone());
+        let input = Tensor::new(vec![0.5], vec![1], device);
         let output = input.norm_ppf_params(10.0, 2.0).unwrap();
         let result = output.to_vec().unwrap();
         assert!(

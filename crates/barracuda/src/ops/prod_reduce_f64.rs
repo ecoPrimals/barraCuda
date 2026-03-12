@@ -241,7 +241,7 @@ mod tests {
 
         // Use small values to avoid overflow
         let data: Vec<f64> = vec![1.1; 100];
-        let prod = ProdReduceF64::prod(device.clone(), &data).unwrap();
+        let prod = ProdReduceF64::prod(device, &data).unwrap();
         let expected = 1.1_f64.powi(100);
         let rel_error = (prod - expected).abs() / expected;
         assert!(

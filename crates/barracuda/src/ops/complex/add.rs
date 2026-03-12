@@ -252,7 +252,7 @@ mod tests {
         let data_b = vec![1.0f32, 2.0];
 
         let tensor_a = Tensor::from_data(&data_a, vec![1, 2], device.clone()).unwrap();
-        let tensor_b = Tensor::from_data(&data_b, vec![1, 2], device.clone()).unwrap();
+        let tensor_b = Tensor::from_data(&data_b, vec![1, 2], device).unwrap();
 
         let op = ComplexAdd::new(tensor_a, tensor_b).unwrap();
         let result = op.execute().unwrap();
@@ -274,7 +274,7 @@ mod tests {
         let data_b = vec![1.0f32, 1.0, 1.0, 1.0, 1.0, 1.0];
 
         let tensor_a = Tensor::from_data(&data_a, vec![3, 2], device.clone()).unwrap();
-        let tensor_b = Tensor::from_data(&data_b, vec![3, 2], device.clone()).unwrap();
+        let tensor_b = Tensor::from_data(&data_b, vec![3, 2], device).unwrap();
 
         let op = ComplexAdd::new(tensor_a, tensor_b).unwrap();
         let result = op.execute().unwrap();

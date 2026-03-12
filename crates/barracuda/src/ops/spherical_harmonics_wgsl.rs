@@ -212,7 +212,7 @@ mod tests {
         };
         // Y_0^0 = 1/(2*sqrt(pi)) = 0.282094...
         let theta_phi = vec![0.0f32, 0.0, 1.0, 2.0]; // two points
-        let input = Tensor::new(theta_phi, vec![4], device.clone());
+        let input = Tensor::new(theta_phi, vec![4], device);
         let output = input.spherical_harmonics(0, 0).unwrap();
         let result = output.to_vec().unwrap();
         let expected = 0.5 / std::f32::consts::PI.sqrt(); // Y_0^0 = 1/sqrt(4*pi)

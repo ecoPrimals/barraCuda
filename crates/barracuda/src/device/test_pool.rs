@@ -146,7 +146,7 @@ fn resolve_gpu_adapter_selector() -> String {
         if info.device_type == wgpu::DeviceType::DiscreteGpu
             && adapter.features().contains(wgpu::Features::SHADER_F64)
         {
-            return info.name.clone();
+            return info.name;
         }
     }
     "auto".to_string()

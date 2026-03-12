@@ -258,7 +258,7 @@ mod tests {
             return;
         };
         // Generate with skip=8 should give different first point
-        let result = sobol_gpu_skip(device.clone(), 8, 1, 8).unwrap();
+        let result = sobol_gpu_skip(device, 8, 1, 8).unwrap();
         let data = result.to_vec().unwrap();
 
         // With skip=8, first point won't be 0

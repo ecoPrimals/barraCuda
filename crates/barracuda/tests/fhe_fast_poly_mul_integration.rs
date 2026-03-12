@@ -32,7 +32,7 @@ async fn test_tensor_creation() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create a simple tensor
     let data: Vec<u32> = vec![1, 0, 2, 0, 3, 0, 4, 0]; // 4 coefficients as u32 pairs
-    let tensor = Tensor::from_data_pod(&data, vec![8], device.clone())?;
+    let tensor = Tensor::from_data_pod(&data, vec![8], device)?;
 
     assert_eq!(tensor.len(), 8);
     println!("✅ Tensor creation successful");

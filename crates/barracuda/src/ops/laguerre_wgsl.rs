@@ -203,7 +203,7 @@ mod tests {
             return;
         };
         let data = vec![0.0, 1.0, 2.0, 5.0];
-        let input = Tensor::new(data.clone(), vec![4], device.clone());
+        let input = Tensor::new(data, vec![4], device);
         let output = input.laguerre_simple(0).unwrap();
         let result = output.to_vec().unwrap();
         // L_0(x) = 1 for all x
@@ -218,7 +218,7 @@ mod tests {
             return;
         };
         let data = vec![0.0, 1.0, 3.0];
-        let input = Tensor::new(data.clone(), vec![3], device.clone());
+        let input = Tensor::new(data.clone(), vec![3], device);
         let output = input.laguerre_simple(1).unwrap();
         let result = output.to_vec().unwrap();
         // L_1(x) = 1 - x
@@ -240,7 +240,7 @@ mod tests {
             return;
         };
         let data = vec![0.0, 1.0, 2.0];
-        let input = Tensor::new(data.clone(), vec![3], device.clone());
+        let input = Tensor::new(data.clone(), vec![3], device);
         let output = input.laguerre_simple(2).unwrap();
         let result = output.to_vec().unwrap();
         // L_2(x) = (x² - 4x + 2) / 2
@@ -261,7 +261,7 @@ mod tests {
         };
         // L_1^(1)(x) = 2 - x
         let data = vec![0.0, 2.0];
-        let input = Tensor::new(data.clone(), vec![2], device.clone());
+        let input = Tensor::new(data, vec![2], device);
         let output = input.laguerre(1, 1.0).unwrap();
         let result = output.to_vec().unwrap();
         assert!(

@@ -220,8 +220,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let gradients =
-            Tensor::from_data(&[3.0, -4.0, 5.0, -6.0], vec![4], device.clone()).unwrap();
+        let gradients = Tensor::from_data(&[3.0, -4.0, 5.0, -6.0], vec![4], device).unwrap();
 
         let clipped = ClipGradValue::new(gradients, 2.0)
             .unwrap()
@@ -241,7 +240,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let gradients = Tensor::from_data(&[0.5, -0.3, 0.1], vec![3], device.clone()).unwrap();
+        let gradients = Tensor::from_data(&[0.5, -0.3, 0.1], vec![3], device).unwrap();
 
         let clipped = ClipGradValue::new(gradients, 1.0)
             .unwrap()
@@ -259,7 +258,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let gradients = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device.clone()).unwrap();
+        let gradients = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         let clipped = ClipGradValue::new(gradients, 0.0)
             .unwrap()
@@ -276,7 +275,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..1000).map(|i| (i % 20) as f32 - 10.0).collect();
-        let gradients = Tensor::from_data(&data, vec![1000], device.clone()).unwrap();
+        let gradients = Tensor::from_data(&data, vec![1000], device).unwrap();
 
         let clipped = ClipGradValue::new(gradients, 5.0)
             .unwrap()
@@ -293,7 +292,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let gradients = Tensor::from_data(&[1.0, 2.0], vec![2], device.clone()).unwrap();
+        let gradients = Tensor::from_data(&[1.0, 2.0], vec![2], device).unwrap();
 
         assert!(ClipGradValue::new(gradients, -1.0).is_err());
     }

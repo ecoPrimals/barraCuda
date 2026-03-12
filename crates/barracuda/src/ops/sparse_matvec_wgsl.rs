@@ -267,7 +267,7 @@ mod tests {
         let vector = vec![1.0f32, 2.0, 3.0];
 
         let values_tensor = Tensor::new(values, vec![3], device.clone());
-        let vector_tensor = Tensor::new(vector, vec![3], device.clone());
+        let vector_tensor = Tensor::new(vector, vec![3], device);
 
         let output = SparseMatVec::new(values_tensor, col_indices, row_ptrs, vector_tensor)
             .execute()

@@ -321,9 +321,11 @@ async fn test_grid_quadrature_gemm_batched() {
         .map(|i| ((i as f64) * 0.01).sin())
         .collect();
     let w: Vec<f64> = (0..batch * grid)
-        .map(|i| 1.0 + ((i as f64) * 0.02).cos() * 0.5)
+        .map(|i| ((i as f64) * 0.02).cos().mul_add(0.5, 1.0))
         .collect();
-    let quad_weights: Vec<f64> = (0..grid).map(|i| 1.0 / (1.0 + i as f64 * 0.1)).collect();
+    let quad_weights: Vec<f64> = (0..grid)
+        .map(|i| 1.0 / (i as f64).mul_add(0.1, 1.0))
+        .collect();
 
     let gemm = GridQuadratureGemm::new(device, batch, n, grid).unwrap();
     let result = gemm.execute(&phi, &w, &quad_weights).unwrap();
@@ -393,7 +395,7 @@ async fn test_scf_convergence_loop_simulation() {
     let max_iter = 50;
 
     // Initial "energies"
-    let mut e_old: Vec<f64> = (0..10).map(|i| -100.0 + f64::from(i) * 0.1).collect();
+    let mut e_old: Vec<f64> = (0..10).map(|i| f64::from(i).mul_add(0.1, -100.0)).collect();
 
     // Simulate convergence by reducing differences each iteration
     for iter in 0..max_iter {
@@ -428,8 +430,12 @@ async fn test_hotspring_nucleus_count() {
     let batch = 169; // hotSpring validation count
 
     // Create test data for 169 nuclei
-    let a: Vec<f64> = (0..batch).map(|i| -100.0 - i as f64 * 0.5).collect();
-    let b: Vec<f64> = (0..batch).map(|i| -100.1 - i as f64 * 0.5).collect();
+    let a: Vec<f64> = (0..batch)
+        .map(|i| (i as f64).mul_add(-0.5, -100.0))
+        .collect();
+    let b: Vec<f64> = (0..batch)
+        .map(|i| (i as f64).mul_add(-0.5, -100.1))
+        .collect();
 
     let diff = MaxAbsDiffF64::compute(device.clone(), &a, &b).unwrap();
 
@@ -439,7 +445,7 @@ async fn test_hotspring_nucleus_count() {
     );
 
     // Also test bisection for 169 problems
-    let bisect = BatchedBisectionGpu::new(device.clone(), 64, 1e-10).unwrap();
+    let bisect = BatchedBisectionGpu::new(device, 64, 1e-10).unwrap();
     let lower = vec![0.0; batch];
     let upper = vec![20.0; batch];
     let targets: Vec<f64> = (1..=batch).map(|i| i as f64).collect();
@@ -557,7 +563,7 @@ async fn test_e2e_gpu_resident_scf_iteration() {
         // Simulate SCF update (in real code, would solve eigenvalue problem)
         // Here we just dampen the potential to simulate convergence
         for idx in 0..batch * grid {
-            w_current[idx] = w_current[idx] * 0.95 + w_old[idx] * 0.05;
+            w_current[idx] = w_current[idx].mul_add(0.95, w_old[idx] * 0.05);
         }
 
         h_old = h_new;
@@ -576,7 +582,7 @@ async fn test_e2e_persistent_buffers_scf() {
     };
 
     let device = wgpu_device;
-    let ctx = TensorContext::new(device.clone());
+    let ctx = TensorContext::new(device);
 
     // Pin solver buffers for the entire SCF calculation
     let batch = 5;
@@ -641,7 +647,7 @@ async fn test_e2e_batched_vs_sequential_performance() {
 
     // GPU Batched (single dispatch)
     let start = Instant::now();
-    let bisect = BatchedBisectionGpu::new(device.clone(), max_iter as u32, tol).unwrap();
+    let bisect = BatchedBisectionGpu::new(device, max_iter as u32, tol).unwrap();
     let result = bisect.solve_polynomial(&lower, &upper, &targets).unwrap();
     let gpu_time = start.elapsed();
 

@@ -266,7 +266,7 @@ mod tests {
         let charges = vec![1.0, 1.0]; // Same sign = repulsion
 
         let pos_tensor = Tensor::from_data(&positions, vec![2, 3], device.clone()).unwrap();
-        let charge_tensor = Tensor::from_data(&charges, vec![2], device.clone()).unwrap();
+        let charge_tensor = Tensor::from_data(&charges, vec![2], device).unwrap();
 
         // First verify input tensors are correct
         let pos_check = pos_tensor.to_vec().unwrap();
@@ -317,7 +317,7 @@ mod tests {
         let charges = vec![1.0, -1.0]; // Opposite signs = attraction
 
         let pos_tensor = Tensor::from_data(&positions, vec![2, 3], device.clone()).unwrap();
-        let charge_tensor = Tensor::from_data(&charges, vec![2], device.clone()).unwrap();
+        let charge_tensor = Tensor::from_data(&charges, vec![2], device).unwrap();
 
         // Verify inputs
         let pos_check = pos_tensor.to_vec().unwrap();

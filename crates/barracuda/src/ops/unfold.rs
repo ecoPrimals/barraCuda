@@ -172,7 +172,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..48).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![1, 1, 6, 8], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![1, 1, 6, 8], device).unwrap();
 
         let unfolded = Unfold::new(input, (3, 3), 1, 0, 1)
             .unwrap()
@@ -188,7 +188,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..32).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![1, 1, 4, 8], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![1, 1, 4, 8], device).unwrap();
 
         let unfolded = Unfold::new(input, (3, 3), 1, 1, 1)
             .unwrap()
@@ -202,7 +202,7 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         assert!(Unfold::new(input, (3, 3), 1, 0, 1).is_err());
     }
@@ -213,7 +213,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..64).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![1, 1, 8, 8], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![1, 1, 8, 8], device).unwrap();
 
         let unfolded = Unfold::new(input, (3, 3), 1, 0, 2)
             .unwrap()
@@ -228,7 +228,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..128).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![1, 1, 8, 16], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![1, 1, 8, 16], device).unwrap();
 
         let unfolded = Unfold::new(input, (3, 3), 2, 0, 1)
             .unwrap()

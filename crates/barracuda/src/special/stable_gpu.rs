@@ -75,7 +75,7 @@ mod tests {
     fn test_expm1_moderate() {
         let x = 0.5;
         let result = expm1_f64(x);
-        let expected = (0.5_f64).exp() - 1.0;
+        let expected = (0.5_f64).exp_m1();
         assert!((result - expected).abs() < 1e-14);
     }
 

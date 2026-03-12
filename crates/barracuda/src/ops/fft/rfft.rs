@@ -198,7 +198,7 @@ mod tests {
             .map(|k| (2.0 * std::f32::consts::PI * (k as f32) / (n as f32)).sin())
             .collect();
 
-        let tensor = Tensor::from_data(&data, vec![n], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![n], device).unwrap();
 
         let rfft = Rfft::new(tensor, n as u32).unwrap();
         let spectrum = rfft.execute().unwrap();
@@ -216,7 +216,7 @@ mod tests {
         let n = 16;
         let data = vec![1.0f32; n];
 
-        let tensor = Tensor::from_data(&data, vec![n], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![n], device).unwrap();
 
         let rfft = Rfft::new(tensor, n as u32).unwrap();
         let spectrum = rfft.execute().unwrap();
@@ -226,7 +226,7 @@ mod tests {
         assert!((dc_real - (n as f32)).abs() < 1e-4, "DC component = N");
 
         for i in 1..=(n / 2) {
-            let mag = (spectrum_data[i * 2].powi(2) + spectrum_data[i * 2 + 1].powi(2)).sqrt();
+            let mag = spectrum_data[i * 2].hypot(spectrum_data[i * 2 + 1]);
             assert!(mag < 1e-3, "Non-DC components near zero");
         }
     }
@@ -247,7 +247,7 @@ mod tests {
             })
             .collect();
 
-        let tensor = Tensor::from_data(&data, vec![n], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![n], device).unwrap();
 
         let rfft = Rfft::new(tensor, n as u32).unwrap();
         let spectrum = rfft.execute().unwrap();
@@ -272,7 +272,7 @@ mod tests {
         let n = 4096;
         let data: Vec<f32> = (0..n).map(|k| (k as f32).sin() / 100.0).collect();
 
-        let tensor = Tensor::from_data(&data, vec![n], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![n], device).unwrap();
 
         let start = std::time::Instant::now();
         let rfft = Rfft::new(tensor, n as u32).unwrap();

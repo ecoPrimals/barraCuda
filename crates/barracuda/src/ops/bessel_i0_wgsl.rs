@@ -184,7 +184,7 @@ mod tests {
         };
         // I₀(0) = 1
         let data = vec![0.0, 1.0, 2.0, 3.75];
-        let input = Tensor::new(data, vec![4], device.clone());
+        let input = Tensor::new(data, vec![4], device);
         let output = input.bessel_i0().unwrap();
         let result = output.to_vec().unwrap();
         assert!(

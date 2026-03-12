@@ -146,7 +146,7 @@ mod tests {
 
         let pos_tensor = Tensor::from_data(&positions, vec![2, 3], device.clone()).unwrap();
         let sigma_tensor = Tensor::from_data(&sigmas, vec![2], device.clone()).unwrap();
-        let epsilon_tensor = Tensor::from_data(&epsilons, vec![2], device.clone()).unwrap();
+        let epsilon_tensor = Tensor::from_data(&epsilons, vec![2], device).unwrap();
 
         let lj = LennardJonesForce::new(pos_tensor, sigma_tensor, epsilon_tensor, None).unwrap();
         let forces = lj.execute().unwrap();

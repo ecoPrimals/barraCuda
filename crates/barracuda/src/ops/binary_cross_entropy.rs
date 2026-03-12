@@ -135,7 +135,7 @@ mod tests {
 
         // Targets (binary): [1, 0, 1]
         let target_data = vec![1.0f32, 0.0, 1.0];
-        let targets = Tensor::from_data(&target_data, vec![3], device.clone()).unwrap();
+        let targets = Tensor::from_data(&target_data, vec![3], device).unwrap();
 
         // BCE should be low (good predictions)
         let result = predictions.binary_cross_entropy(targets).unwrap();
@@ -156,7 +156,7 @@ mod tests {
         let predictions = Tensor::from_data(&pred_data, vec![3], device.clone()).unwrap();
 
         let target_data = vec![1.0f32, 0.0, 1.0];
-        let targets = Tensor::from_data(&target_data, vec![3], device.clone()).unwrap();
+        let targets = Tensor::from_data(&target_data, vec![3], device).unwrap();
 
         let result = predictions.binary_cross_entropy(targets).unwrap();
         let output = result.to_vec().unwrap();
@@ -176,7 +176,7 @@ mod tests {
         let predictions = Tensor::from_data(&pred_data, vec![3], device.clone()).unwrap();
 
         let target_data = vec![1.0f32, 0.0, 1.0];
-        let targets = Tensor::from_data(&target_data, vec![3], device.clone()).unwrap();
+        let targets = Tensor::from_data(&target_data, vec![3], device).unwrap();
 
         let result = predictions.binary_cross_entropy(targets).unwrap();
         let output = result.to_vec().unwrap();
@@ -197,7 +197,7 @@ mod tests {
         let predictions = Tensor::from_data(&pred_data, vec![size], device.clone()).unwrap();
 
         let target_data = vec![1.0f32; size];
-        let targets = Tensor::from_data(&target_data, vec![size], device.clone()).unwrap();
+        let targets = Tensor::from_data(&target_data, vec![size], device).unwrap();
 
         let result = predictions.binary_cross_entropy(targets).unwrap();
         let output = result.to_vec().unwrap();
@@ -220,7 +220,7 @@ mod tests {
         let targets1 = Tensor::from_data(&target_data, vec![4], device.clone()).unwrap();
 
         let predictions2 = Tensor::from_data(&pred_data, vec![4], device.clone()).unwrap();
-        let targets2 = Tensor::from_data(&target_data, vec![4], device.clone()).unwrap();
+        let targets2 = Tensor::from_data(&target_data, vec![4], device).unwrap();
 
         let result1 = predictions1.binary_cross_entropy(targets1).unwrap();
         let result2 = predictions2.binary_cross_entropy(targets2).unwrap();

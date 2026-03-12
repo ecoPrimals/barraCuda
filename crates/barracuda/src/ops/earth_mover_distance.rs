@@ -95,7 +95,7 @@ impl EarthMoverDistance {
             .submit()?;
 
         // Create output tensor (scalar)
-        Ok(Tensor::from_buffer(output_buffer, vec![1], device.clone()))
+        Ok(Tensor::from_buffer(output_buffer, vec![1], device))
     }
 }
 

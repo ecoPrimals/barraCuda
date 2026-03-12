@@ -79,10 +79,8 @@ pub fn is_gpu_available() -> bool {
 #[must_use]
 pub fn is_npu_available() -> bool {
     // Check for /dev/akida* devices (C kernel driver path)
-    for i in 0..16 {
-        if std::path::Path::new(&format!("/dev/akida{i}")).exists() {
-            return true;
-        }
+    if (0..16).any(|i| std::path::Path::new(&format!("/dev/akida{i}")).exists()) {
+        return true;
     }
     // Check for VFIO-eligible devices (future pure Rust path)
     // Scan IOMMU groups for BrainChip vendor 0x1e7c

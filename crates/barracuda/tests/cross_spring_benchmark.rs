@@ -37,7 +37,7 @@ impl std::fmt::Display for BenchResult {
 fn bench_welford_univariate(n: usize) -> BenchResult {
     use barracuda::stats::welford::WelfordState;
 
-    let data: Vec<f64> = (0..n).map(|i| 1e9 + (i as f64) * 0.001).collect();
+    let data: Vec<f64> = (0..n).map(|i| (i as f64).mul_add(0.001, 1e9)).collect();
 
     let start = Instant::now();
     let state = WelfordState::from_slice(&data);
@@ -60,7 +60,7 @@ fn bench_welford_covariance(n: usize) -> BenchResult {
     use barracuda::stats::welford::WelfordCovState;
 
     let xs: Vec<f64> = (0..n).map(|i| (i as f64) * 0.1).collect();
-    let ys: Vec<f64> = xs.iter().map(|x| 2.0 * x + x.sin() * 0.01).collect();
+    let ys: Vec<f64> = xs.iter().map(|x| x.sin().mul_add(0.01, 2.0 * x)).collect();
 
     let start = Instant::now();
     let state = WelfordCovState::from_slices(&xs, &ys);

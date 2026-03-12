@@ -232,7 +232,7 @@ mod tests {
         let data_b = vec![1.0f32, 2.0];
 
         let tensor_a = Tensor::from_data(&data_a, vec![1, 2], device.clone()).unwrap();
-        let tensor_b = Tensor::from_data(&data_b, vec![1, 2], device.clone()).unwrap();
+        let tensor_b = Tensor::from_data(&data_b, vec![1, 2], device).unwrap();
 
         let op = ComplexMul::new(tensor_a, tensor_b).unwrap();
         let result = op.execute().unwrap();
@@ -254,9 +254,9 @@ mod tests {
         let data_one = vec![1.0f32, 0.0];
 
         let tensor_z = Tensor::from_data(&data_z, vec![1, 2], device.clone()).unwrap();
-        let tensor_one = Tensor::from_data(&data_one, vec![1, 2], device.clone()).unwrap();
+        let tensor_one = Tensor::from_data(&data_one, vec![1, 2], device).unwrap();
 
-        let op = ComplexMul::new(tensor_z.clone(), tensor_one).unwrap();
+        let op = ComplexMul::new(tensor_z, tensor_one).unwrap();
         let result = op.execute().unwrap();
 
         let result_data = result.to_vec().unwrap();

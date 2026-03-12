@@ -137,7 +137,7 @@ async fn test_bcs_with_degeneracy() {
             let eps_k = eigenvalues[base + k];
             let deg_k = degeneracies[base + k];
             let diff = eps_k - mu;
-            let e_k = (diff * diff + delta_i * delta_i).sqrt();
+            let e_k = diff.hypot(delta_i);
             let v2_k = 0.5 * (1.0 - diff / e_k);
             sum += deg_k * v2_k;
         }

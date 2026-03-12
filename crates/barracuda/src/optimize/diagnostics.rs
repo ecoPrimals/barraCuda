@@ -178,8 +178,6 @@ pub fn convergence_diagnostics(
         && improvement_rate.abs() < improvement_threshold
     {
         ConvergenceState::Oscillating
-    } else if stagnant_count >= patience {
-        ConvergenceState::Stagnant
     } else {
         ConvergenceState::Stagnant
     };

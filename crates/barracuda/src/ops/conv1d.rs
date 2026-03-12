@@ -236,7 +236,7 @@ mod tests {
 
         // Create bias [1]
         let bias_data = vec![0.0f32];
-        let bias = Tensor::from_data(&bias_data, vec![1], device.clone()).unwrap();
+        let bias = Tensor::from_data(&bias_data, vec![1], device).unwrap();
 
         // Apply Conv1D with stride=1, padding=0, dilation=1
         let result = input.conv1d(weight, bias, 1, 0, 1).unwrap();
@@ -263,7 +263,7 @@ mod tests {
         let weight = Tensor::from_data(&weight_data, vec![1, 1, 1], device.clone()).unwrap();
 
         let bias_data = vec![0.0f32];
-        let bias = Tensor::from_data(&bias_data, vec![1], device.clone()).unwrap();
+        let bias = Tensor::from_data(&bias_data, vec![1], device).unwrap();
 
         let result = input.conv1d(weight, bias, 1, 0, 1).unwrap();
 
@@ -285,7 +285,7 @@ mod tests {
         let weight = Tensor::from_data(&weight_data, vec![1, 1, 3], device.clone()).unwrap();
 
         let bias_data = vec![0.0f32];
-        let bias = Tensor::from_data(&bias_data, vec![1], device.clone()).unwrap();
+        let bias = Tensor::from_data(&bias_data, vec![1], device).unwrap();
 
         // With padding=1, output length should be same as input
         let result = input.conv1d(weight, bias, 1, 1, 1).unwrap();
@@ -324,7 +324,7 @@ mod tests {
         .unwrap();
 
         let bias_data = vec![0.0f32; out_channels];
-        let bias = Tensor::from_data(&bias_data, vec![out_channels], device.clone()).unwrap();
+        let bias = Tensor::from_data(&bias_data, vec![out_channels], device).unwrap();
 
         let result = input.conv1d(weight, bias, 1, 0, 1).unwrap();
 
@@ -347,7 +347,7 @@ mod tests {
         let weight = Tensor::from_data(&weight_data, vec![1, 1, 1], device.clone()).unwrap();
 
         let bias_data = vec![0.0f32];
-        let bias = Tensor::from_data(&bias_data, vec![1], device.clone()).unwrap();
+        let bias = Tensor::from_data(&bias_data, vec![1], device).unwrap();
 
         let result = input.conv1d(weight, bias, 1, 0, 1).unwrap();
         let output = result.to_vec().unwrap();

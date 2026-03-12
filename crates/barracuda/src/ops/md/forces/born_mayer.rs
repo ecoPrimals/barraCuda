@@ -264,7 +264,7 @@ mod tests {
 
         let pos_tensor = Tensor::from_data(&positions, vec![2, 3], device.clone()).unwrap();
         let amp_tensor = Tensor::from_data(&amplitudes, vec![2], device.clone()).unwrap();
-        let range_tensor = Tensor::from_data(&ranges, vec![2], device.clone()).unwrap();
+        let range_tensor = Tensor::from_data(&ranges, vec![2], device).unwrap();
 
         let bm = BornMayerForce::new(pos_tensor, amp_tensor, range_tensor, None).unwrap();
         let forces = bm.execute().unwrap();

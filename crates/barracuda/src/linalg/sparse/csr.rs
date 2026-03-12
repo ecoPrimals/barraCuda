@@ -320,13 +320,7 @@ impl CsrMatrix {
     #[must_use]
     pub fn diagonal(&self) -> Vec<f64> {
         let n = self.n_rows.min(self.n_cols);
-        let mut diag = vec![0.0; n];
-
-        for i in 0..n {
-            diag[i] = self.get(i, i);
-        }
-
-        diag
+        (0..n).map(|i| self.get(i, i)).collect()
     }
 
     /// Matrix-vector multiplication: y = A * x

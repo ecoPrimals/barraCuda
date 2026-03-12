@@ -260,7 +260,7 @@ mod tests {
         };
         // Input: [1, 1, 8] - single batch, single channel, 8 elements
         let data = vec![1.0, 3.0, 2.0, 4.0, 5.0, 1.0, 6.0, 2.0];
-        let input = Tensor::new(data, vec![1, 1, 8], device.clone());
+        let input = Tensor::new(data, vec![1, 1, 8], device);
 
         let output = input.max_pool1d_wgsl(2, 2).unwrap();
 
@@ -283,7 +283,7 @@ mod tests {
             1.0, 2.0, 3.0, 4.0, // Channel 0
             4.0, 3.0, 2.0, 1.0, // Channel 1
         ];
-        let input = Tensor::new(data, vec![1, 2, 4], device.clone());
+        let input = Tensor::new(data, vec![1, 2, 4], device);
 
         let output = input.max_pool1d_wgsl(2, 2).unwrap();
 
@@ -304,7 +304,7 @@ mod tests {
         };
         // Input: [1, 1, 5] - overlapping windows
         let data = vec![1.0, 5.0, 2.0, 3.0, 4.0];
-        let input = Tensor::new(data, vec![1, 1, 5], device.clone());
+        let input = Tensor::new(data, vec![1, 1, 5], device);
 
         let output = input.max_pool1d_wgsl(3, 1).unwrap();
 

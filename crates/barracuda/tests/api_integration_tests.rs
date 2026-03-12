@@ -181,7 +181,7 @@ async fn test_multi_api_workflow() {
     let scores: Vec<f32> = processed
         .iter()
         .enumerate()
-        .map(|(i, _)| 0.5 + (i as f32 * 0.1))
+        .map(|(i, _)| (i as f32).mul_add(0.1, 0.5))
         .collect();
 
     // Step 3: Forecast future trends

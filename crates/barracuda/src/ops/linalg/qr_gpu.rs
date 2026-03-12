@@ -346,7 +346,7 @@ mod tests {
         };
 
         let a = vec![1.0f32, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
-        let input = Tensor::from_data(&a, vec![3, 3], device.clone()).unwrap();
+        let input = Tensor::from_data(&a, vec![3, 3], device).unwrap();
 
         let qr_gpu = QrGpu::new(input);
         let (r_tensor, tau) = qr_gpu.execute().unwrap();
@@ -367,7 +367,7 @@ mod tests {
         };
 
         let a = vec![3.0f32, 4.0, 0.0, 5.0]; // Column-major friendly
-        let input = Tensor::from_data(&a, vec![2, 2], device.clone()).unwrap();
+        let input = Tensor::from_data(&a, vec![2, 2], device).unwrap();
 
         let qr_gpu = QrGpu::new(input);
         let (r_tensor, tau) = qr_gpu.execute().unwrap();

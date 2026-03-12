@@ -39,10 +39,10 @@ async fn chaos_complex_large_scale() {
         let size = 1_000_000;
         let data: Vec<f32> = (0..size * 2).map(|i| (i as f32) % 100.0).collect();
 
-        let tensor = Tensor::from_data(&data, vec![size, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![size, 2], device).unwrap();
 
         let start = Instant::now();
-        let mul_op = ComplexMul::new(tensor.clone(), tensor.clone()).unwrap();
+        let mul_op = ComplexMul::new(tensor.clone(), tensor).unwrap();
         let result = mul_op.execute().unwrap();
         let elapsed = start.elapsed();
 
@@ -64,7 +64,7 @@ async fn chaos_fft_large_scale() {
         .map(|i| ((i as f32) / 1000.0).sin())
         .collect();
 
-    let tensor = Tensor::from_data(&data, vec![degree, 2], device.clone()).unwrap();
+    let tensor = Tensor::from_data(&data, vec![degree, 2], device).unwrap();
 
     let fft_op = Fft1D::new(tensor, degree as u32).unwrap();
     let result = fft_op.execute().unwrap();
@@ -86,7 +86,7 @@ async fn chaos_fft_3d_medium_scale() {
     let data: Vec<f32> = (0..total * 2)
         .map(|i| ((i as f32) / 10000.0).cos())
         .collect();
-    let tensor = Tensor::from_data(&data, vec![nx, ny, nz, 2], device.clone()).unwrap();
+    let tensor = Tensor::from_data(&data, vec![nx, ny, nz, 2], device).unwrap();
 
     let fft_3d = Fft3D::new(tensor, nx as u32, ny as u32, nz as u32).unwrap();
     let result = fft_3d.execute();
@@ -114,10 +114,10 @@ async fn chaos_precision_extremes_complex() {
         1e38, 1e-38, // Extreme mixed
     ];
 
-    let tensor = Tensor::from_data(&data, vec![4, 2], device.clone()).unwrap();
+    let tensor = Tensor::from_data(&data, vec![4, 2], device).unwrap();
 
     // Should not panic (even if some values overflow/underflow)
-    let mul_op = ComplexMul::new(tensor.clone(), tensor.clone()).unwrap();
+    let mul_op = ComplexMul::new(tensor.clone(), tensor).unwrap();
     let result = mul_op.execute();
 
     assert!(result.is_ok(), "Handled precision extremes");
@@ -131,7 +131,7 @@ async fn chaos_precision_fft_extremes() {
     // Chaos: FFT with extreme magnitudes
     let data = vec![1e20f32, 0.0, 1e-20, 0.0, 1e20, 1e-20, 0.0, 1e20];
 
-    let tensor = Tensor::from_data(&data, vec![4, 2], device.clone()).unwrap();
+    let tensor = Tensor::from_data(&data, vec![4, 2], device).unwrap();
 
     let fft_op = Fft1D::new(tensor, 4).unwrap();
     let result = fft_op.execute();
@@ -158,7 +158,7 @@ async fn chaos_concurrent_complex_ops() {
             let data = vec![i as f32, (i + 1) as f32, (i + 2) as f32, (i + 3) as f32];
             let tensor = Tensor::from_data(&data, vec![2, 2], device_clone).unwrap();
 
-            let mul_op = ComplexMul::new(tensor.clone(), tensor.clone()).unwrap();
+            let mul_op = ComplexMul::new(tensor.clone(), tensor).unwrap();
             mul_op.execute().unwrap();
         });
         handles.push(handle);

@@ -198,8 +198,8 @@ fn random_spd_batch(n: usize, batch: usize) -> Vec<f64> {
                 for k in 0..n {
                     let qki = q[k * n + i];
                     let qkj = q[k * n + j];
-                    q[k * n + i] = c * qki - s * qkj;
-                    q[k * n + j] = s * qki + c * qkj;
+                    q[k * n + i] = c.mul_add(qki, -(s * qkj));
+                    q[k * n + j] = s.mul_add(qki, c * qkj);
                 }
             }
         }

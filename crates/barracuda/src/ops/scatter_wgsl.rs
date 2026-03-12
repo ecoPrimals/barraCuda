@@ -160,7 +160,7 @@ mod tests {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let input = Tensor::new(data, vec![5], device.clone());
 
-        let values = Tensor::new(vec![10.0, 20.0], vec![2], device.clone());
+        let values = Tensor::new(vec![10.0, 20.0], vec![2], device);
         let output = input.scatter_wgsl(0, vec![1, 3], values).unwrap();
 
         assert_eq!(output.shape(), &[5]);
@@ -180,7 +180,7 @@ mod tests {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let input = Tensor::new(data, vec![3, 2], device.clone());
 
-        let values = Tensor::new(vec![10.0, 20.0], vec![1, 2], device.clone());
+        let values = Tensor::new(vec![10.0, 20.0], vec![1, 2], device);
         let output = input.scatter_wgsl(0, vec![1], values).unwrap();
 
         assert_eq!(output.shape(), &[3, 2]);

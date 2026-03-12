@@ -172,7 +172,7 @@ mod tests {
     fn two_by_two() {
         // Matrix: [[2, 1], [1, 2]] → eigenvalues 1 and 3
         let (vals, vecs) = tridiagonal_ql(&[2.0, 2.0], &[1.0]);
-        let mut sorted = vals.clone();
+        let mut sorted = vals;
         sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
         assert!((sorted[0] - 1.0).abs() < 1e-12, "got {}", sorted[0]);
         assert!((sorted[1] - 3.0).abs() < 1e-12, "got {}", sorted[1]);
@@ -219,7 +219,7 @@ mod tests {
         let sub_diag = [0.0, 0.0, 0.0];
         let (vals, _) = tridiagonal_ql(&diag, &sub_diag);
 
-        let mut sorted = vals.clone();
+        let mut sorted = vals;
         sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
         let mut expected = diag.to_vec();
         expected.sort_by(|a, b| a.partial_cmp(b).unwrap());

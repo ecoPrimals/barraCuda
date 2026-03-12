@@ -247,7 +247,7 @@ async fn validate_gpu_stack(primal: &BarraCudaPrimal, id: Value) -> JsonRpcRespo
     // Tensor round-trip validation
     let roundtrip_pass = {
         let data = vec![std::f32::consts::PI, 2.71, 1.41, 0.57];
-        barracuda::tensor::Tensor::from_data(&data, vec![4], dev_arc.clone())
+        barracuda::tensor::Tensor::from_data(&data, vec![4], dev_arc)
             .and_then(|t| t.to_vec())
             .is_ok_and(|v| v.iter().zip(&data).all(|(a, b)| (a - b).abs() < 1e-6))
     };
@@ -294,7 +294,7 @@ async fn compute_dispatch(primal: &BarraCudaPrimal, params: &Value, id: Value) -
     };
 
     match op {
-        "zeros" => {
+        "zeros" | "ones" => {
             let Some(shape) = params.get("shape").and_then(|v| v.as_array()) else {
                 return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: shape");
             };
@@ -306,42 +306,22 @@ async fn compute_dispatch(primal: &BarraCudaPrimal, params: &Value, id: Value) -
                 );
             };
             let dev_arc = std::sync::Arc::new(dev);
-            match barracuda::tensor::Tensor::zeros_on(shape_vec.clone(), dev_arc).await {
+            let result = if op == "zeros" {
+                barracuda::tensor::Tensor::zeros_on(shape_vec.clone(), dev_arc).await
+            } else {
+                barracuda::tensor::Tensor::ones_on(shape_vec.clone(), dev_arc).await
+            };
+            match result {
                 Ok(t) => {
                     let tensor_id = primal.store_tensor(t);
                     JsonRpcResponse::success(
                         id,
                         serde_json::json!({
-                            "status": "completed", "op": "zeros", "tensor_id": tensor_id, "shape": shape_vec,
+                            "status": "completed", "op": op, "tensor_id": tensor_id, "shape": shape_vec,
                         }),
                     )
                 }
-                Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("zeros failed: {e}")),
-            }
-        }
-        "ones" => {
-            let Some(shape) = params.get("shape").and_then(|v| v.as_array()) else {
-                return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: shape");
-            };
-            let Some(shape_vec) = parse_shape(shape) else {
-                return JsonRpcResponse::error(
-                    id,
-                    INVALID_PARAMS,
-                    "Shape dimension exceeds platform usize",
-                );
-            };
-            let dev_arc = std::sync::Arc::new(dev);
-            match barracuda::tensor::Tensor::ones_on(shape_vec.clone(), dev_arc).await {
-                Ok(t) => {
-                    let tensor_id = primal.store_tensor(t);
-                    JsonRpcResponse::success(
-                        id,
-                        serde_json::json!({
-                            "status": "completed", "op": "ones", "tensor_id": tensor_id, "shape": shape_vec,
-                        }),
-                    )
-                }
-                Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("ones failed: {e}")),
+                Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("{op} failed: {e}")),
             }
         }
         "read" => {
@@ -529,7 +509,7 @@ async fn fhe_ntt(primal: &BarraCudaPrimal, params: &Value, id: Value) -> JsonRpc
     let input_tensor = match barracuda::tensor::Tensor::from_data(
         &f32_bits,
         vec![poly.len() * 2],
-        std::sync::Arc::new(dev.clone()),
+        std::sync::Arc::new(dev),
     ) {
         Ok(t) => t,
         Err(e) => {

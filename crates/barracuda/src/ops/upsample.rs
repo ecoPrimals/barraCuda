@@ -273,7 +273,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..12).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![1, 1, 3, 4], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![1, 1, 3, 4], device).unwrap();
 
         let upsampled = Upsample::new(input, Some((6, 8)), None, UpsampleMode::Nearest, false)
             .unwrap()
@@ -289,7 +289,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..8).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![1, 1, 2, 4], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![1, 1, 2, 4], device).unwrap();
 
         let upsampled = Upsample::new(input, None, Some((2.0, 2.0)), UpsampleMode::Bilinear, false)
             .unwrap()
@@ -304,7 +304,7 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         assert!(Upsample::new(input, Some((10, 10)), None, UpsampleMode::Nearest, false,).is_err());
     }
@@ -314,7 +314,7 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0; 12], vec![1, 1, 3, 4], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0; 12], vec![1, 1, 3, 4], device).unwrap();
 
         assert!(Upsample::new(input, None, None, UpsampleMode::Nearest, false,).is_err());
     }
@@ -325,7 +325,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..256).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![1, 1, 16, 16], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![1, 1, 16, 16], device).unwrap();
 
         let upsampled = Upsample::new(input, Some((32, 32)), None, UpsampleMode::Bilinear, true)
             .unwrap()

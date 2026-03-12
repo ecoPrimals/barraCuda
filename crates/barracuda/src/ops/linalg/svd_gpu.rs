@@ -403,7 +403,7 @@ mod tests {
         };
 
         let a = vec![1.0f32, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
-        let input = Tensor::from_data(&a, vec![3, 3], device.clone()).unwrap();
+        let input = Tensor::from_data(&a, vec![3, 3], device).unwrap();
 
         let svd_gpu = SvdGpu::new(input);
         let (sigma, v_tensor) = svd_gpu.execute().unwrap();
@@ -430,7 +430,7 @@ mod tests {
 
         // Diagonal matrix with known singular values
         let a = vec![3.0f32, 0.0, 0.0, 4.0];
-        let input = Tensor::from_data(&a, vec![2, 2], device.clone()).unwrap();
+        let input = Tensor::from_data(&a, vec![2, 2], device).unwrap();
 
         let svd_gpu = SvdGpu::new(input);
         let (sigma, _v) = svd_gpu.execute().unwrap();

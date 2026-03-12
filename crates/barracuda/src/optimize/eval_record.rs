@@ -368,7 +368,7 @@ mod tests {
             x: vec![1.0, 2.0, 3.0],
             f: 42.0,
         };
-        let cloned = record.clone();
+        let cloned = record;
         assert_eq!(cloned.x, vec![1.0, 2.0, 3.0]);
         assert_eq!(cloned.f, 42.0);
     }

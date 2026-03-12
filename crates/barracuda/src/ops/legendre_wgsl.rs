@@ -216,7 +216,7 @@ mod tests {
             return;
         };
         let data = vec![-1.0, -0.5, 0.0, 0.5, 1.0];
-        let input = Tensor::new(data.clone(), vec![5], device.clone());
+        let input = Tensor::new(data, vec![5], device);
         let output = input.legendre(0).unwrap();
         let result = output.to_vec().unwrap();
         // P₀(x) = 1 for all x
@@ -231,7 +231,7 @@ mod tests {
             return;
         };
         let data = vec![-1.0, -0.5, 0.0, 0.5, 1.0];
-        let input = Tensor::new(data.clone(), vec![5], device.clone());
+        let input = Tensor::new(data.clone(), vec![5], device);
         let output = input.legendre(1).unwrap();
         let result = output.to_vec().unwrap();
         // P₁(x) = x
@@ -252,7 +252,7 @@ mod tests {
             return;
         };
         let data = vec![-1.0, -0.5, 0.0, 0.5, 1.0];
-        let input = Tensor::new(data.clone(), vec![5], device.clone());
+        let input = Tensor::new(data.clone(), vec![5], device);
         let output = input.legendre(2).unwrap();
         let result = output.to_vec().unwrap();
         // P₂(x) = (3x² - 1) / 2
@@ -273,7 +273,7 @@ mod tests {
         };
         // P₁¹(x) = -sqrt(1 - x²) (Condon-Shortley)
         let data = vec![0.0, 0.5, -0.5];
-        let input = Tensor::new(data.clone(), vec![3], device.clone());
+        let input = Tensor::new(data.clone(), vec![3], device);
         let output = input.assoc_legendre(1, 1).unwrap();
         let result = output.to_vec().unwrap();
         for (i, &v) in result.iter().enumerate() {

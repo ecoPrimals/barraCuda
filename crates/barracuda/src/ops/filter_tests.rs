@@ -7,7 +7,7 @@ async fn test_filter_gt_basic() {
         return;
     };
     // [1.0, 5.0, 3.0, 7.0] > 4.0 → keep [5.0, 7.0], count=2
-    let input = Tensor::from_data(&[1.0f32, 5.0, 3.0, 7.0], vec![4], device.clone()).unwrap();
+    let input = Tensor::from_data(&[1.0f32, 5.0, 3.0, 7.0], vec![4], device).unwrap();
     let result = input.filter(FilterOperation::GreaterThan, 4.0).unwrap();
     assert_eq!(result.count, 2, "Expected 2 elements > 4.0");
     let out = result.selected.to_vec().unwrap();

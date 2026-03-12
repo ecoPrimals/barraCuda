@@ -187,7 +187,7 @@ mod tests {
             return;
         };
         // ψ(1) = -γ
-        let input = Tensor::new(vec![1.0], vec![1], device.clone());
+        let input = Tensor::new(vec![1.0], vec![1], device);
         let output = input.digamma().unwrap();
         let result = output.to_vec().unwrap();
         let expected = -EULER_MASCHERONI;
@@ -205,7 +205,7 @@ mod tests {
             return;
         };
         // ψ(2) = 1 - γ
-        let input = Tensor::new(vec![2.0], vec![1], device.clone());
+        let input = Tensor::new(vec![2.0], vec![1], device);
         let output = input.digamma().unwrap();
         let result = output.to_vec().unwrap();
         let expected = 1.0 - EULER_MASCHERONI;
@@ -223,7 +223,7 @@ mod tests {
             return;
         };
         // For large x: ψ(x) ≈ ln(x) - 1/(2x)
-        let input = Tensor::new(vec![100.0], vec![1], device.clone());
+        let input = Tensor::new(vec![100.0], vec![1], device);
         let output = input.digamma().unwrap();
         let result = output.to_vec().unwrap();
         let expected = 100.0_f32.ln() - 0.5 / 100.0;

@@ -240,7 +240,7 @@ mod tests {
             return;
         };
         let data = vec![1.0, 2.0, 3.0];
-        let input = Tensor::from_data(&data, vec![3], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![3], device).unwrap();
 
         let output = input.repeat_wgsl(vec![2]).unwrap();
 
@@ -260,7 +260,7 @@ mod tests {
             return;
         };
         let data = vec![1.0, 2.0, 3.0, 4.0];
-        let input = Tensor::from_data(&data, vec![2, 2], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![2, 2], device).unwrap();
 
         let output = input.repeat_wgsl(vec![2, 1]).unwrap();
 

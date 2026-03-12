@@ -90,7 +90,7 @@ async fn validate_case(case: &OcpCase) -> bool {
     let cutoff = case.cutoff();
     let positions = ocp_lattice(n, box_side);
 
-    let pos_tensor = Tensor::from_f64_data(&positions, vec![n, 3], device.clone()).unwrap();
+    let pos_tensor = Tensor::from_f64_data(&positions, vec![n, 3], device).unwrap();
 
     let yukawa =
         YukawaForceF64::new(pos_tensor, case.kappa, case.gamma, cutoff, box_side, None).unwrap();
@@ -113,12 +113,16 @@ async fn validate_case(case: &OcpCase) -> bool {
         total_force[1] += forces[i * 3 + 1];
         total_force[2] += forces[i * 3 + 2];
     }
-    let total_mag =
-        (total_force[0].powi(2) + total_force[1].powi(2) + total_force[2].powi(2)).sqrt();
+    let total_mag = total_force[2]
+        .mul_add(
+            total_force[2],
+            total_force[1].mul_add(total_force[1], total_force[0].powi(2)),
+        )
+        .sqrt();
 
     let max_force = forces
         .chunks(3)
-        .map(|f| (f[0].powi(2) + f[1].powi(2) + f[2].powi(2)).sqrt())
+        .map(|f| f[2].mul_add(f[2], f[1].mul_add(f[1], f[0].powi(2))).sqrt())
         .fold(0.0f64, f64::max);
     let n3_relative = if max_force > 0.0 {
         total_mag / (max_force * n as f64)

@@ -172,7 +172,7 @@ mod tests {
             1.0f32, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0, 5.0, 0.0, 6.0, 0.0, 7.0, 0.0, 8.0, 0.0,
         ];
 
-        let tensor = Tensor::from_data(&data, vec![2, 2, 2, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![2, 2, 2, 2], device).unwrap();
         let fft = Fft3D::new(tensor, 2, 2, 2).unwrap();
         let result = fft.execute().unwrap();
         let result_data = result.to_vec().unwrap();

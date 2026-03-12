@@ -67,7 +67,7 @@ async fn fault_complex_shape_mismatch() {
         let data_b = vec![1.0f32, 2.0];
 
         let tensor_a = Tensor::from_data(&data_a, vec![2, 2], device.clone()).unwrap();
-        let tensor_b = Tensor::from_data(&data_b, vec![1, 2], device.clone()).unwrap();
+        let tensor_b = Tensor::from_data(&data_b, vec![1, 2], device).unwrap();
 
         // Should fail with shape mismatch
         let result = ComplexAdd::new(tensor_a, tensor_b);
@@ -85,10 +85,10 @@ async fn fault_complex_empty_tensor() {
 
         // Inject fault: Empty tensor
         let data: Vec<f32> = vec![];
-        let tensor = Tensor::from_data(&data, vec![0, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![0, 2], device).unwrap();
 
         // Should handle empty tensor gracefully
-        let result = ComplexAdd::new(tensor.clone(), tensor.clone());
+        let result = ComplexAdd::new(tensor.clone(), tensor);
         // Either Ok (handles empty) or Err (rejects empty) - just don't panic
         println!("✅ Handled empty tensor gracefully: {:?}", result.is_ok());
     }) {
@@ -103,10 +103,10 @@ async fn fault_complex_nan_input() {
 
         // Inject fault: NaN values
         let data = vec![f32::NAN, 0.0, 1.0, f32::NAN];
-        let tensor = Tensor::from_data(&data, vec![2, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![2, 2], device).unwrap();
 
         // Should not panic (even if result is NaN)
-        let result = ComplexMul::new(tensor.clone(), tensor.clone());
+        let result = ComplexMul::new(tensor.clone(), tensor);
         assert!(result.is_ok(), "Should handle NaN without panic");
 
         let op = result.unwrap();
@@ -125,10 +125,10 @@ async fn fault_complex_infinity_input() {
 
         // Inject fault: Infinity values
         let data = vec![f32::INFINITY, 0.0, -f32::INFINITY, 1.0];
-        let tensor = Tensor::from_data(&data, vec![2, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![2, 2], device).unwrap();
 
         // Should not panic
-        let result = ComplexMul::new(tensor.clone(), tensor.clone());
+        let result = ComplexMul::new(tensor.clone(), tensor);
         assert!(result.is_ok(), "Should handle Infinity without panic");
         println!("✅ Handled Infinity input without panic");
     }) {
@@ -169,7 +169,7 @@ async fn fault_fft_degree_zero() {
 
         // Inject fault: degree = 0
         let data: Vec<f32> = vec![];
-        let tensor = Tensor::from_data(&data, vec![0, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![0, 2], device).unwrap();
 
         let result = Fft1D::new(tensor, 0);
         assert!(result.is_err(), "Should reject degree 0");
@@ -186,7 +186,7 @@ async fn fault_fft_degree_mismatch() {
 
         // Inject fault: Tensor size doesn't match degree
         let data = vec![1.0f32; 16]; // 8 complex numbers
-        let tensor = Tensor::from_data(&data, vec![8, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![8, 2], device).unwrap();
 
         // Claim degree is 16 (but tensor has 8)
         let result = Fft1D::new(tensor, 16);
@@ -206,7 +206,7 @@ async fn fault_fft_excessive_degree() {
         let degree = 1 << 30; // 1 billion points = ~8GB minimum
 
         let data = vec![1.0f32; 8]; // Small tensor
-        let tensor = Tensor::from_data(&data, vec![4, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![4, 2], device).unwrap();
 
         let result = Fft1D::new(tensor, degree);
         // Should either reject upfront or fail gracefully during execution
@@ -224,7 +224,7 @@ async fn fault_fft_wrong_input_dimension() {
 
         // Inject fault: Input not complex (last dim != 2)
         let data = vec![1.0f32; 16];
-        let tensor = Tensor::from_data(&data, vec![16], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![16], device).unwrap();
 
         let result = Fft1D::new(tensor, 16);
         assert!(result.is_err(), "Should reject non-complex input");
@@ -248,7 +248,7 @@ async fn fault_fft_large_magnitude() {
         let data = vec![
             large_val, 0.0, large_val, 0.0, large_val, 0.0, large_val, 0.0,
         ];
-        let tensor = Tensor::from_data(&data, vec![4, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![4, 2], device).unwrap();
 
         // Should not panic (even if result overflows)
         let result = Fft1D::new(tensor, 4);
@@ -271,7 +271,7 @@ async fn fault_fft_tiny_magnitude() {
         // Inject fault: Very small magnitude (near 0, potential underflow)
         let tiny_val = 1e-38f32;
         let data = vec![tiny_val, 0.0, tiny_val, 0.0, tiny_val, 0.0, tiny_val, 0.0];
-        let tensor = Tensor::from_data(&data, vec![4, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![4, 2], device).unwrap();
 
         // Should not panic
         let result = Fft1D::new(tensor, 4);
@@ -293,7 +293,7 @@ async fn fault_fft_2d_non_square() {
 
         // 2D FFT with non-square dimensions (valid, but test it)
         let data = vec![1.0f32; 16]; // 4x2 complex
-        let tensor = Tensor::from_data(&data, vec![4, 2, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![4, 2, 2], device).unwrap();
 
         // rows=4, cols=2 (both power of 2)
         let result = Fft2D::new(tensor, 4, 2);
@@ -311,7 +311,7 @@ async fn fault_fft_3d_wrong_shape() {
 
         // Inject fault: 3D tensor shape doesn't match claimed dimensions
         let data = vec![1.0f32; 32]; // 16 complex numbers
-        let tensor = Tensor::from_data(&data, vec![4, 4, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![4, 4, 2], device).unwrap();
 
         // Claim nx=8, ny=2, nz=1 (product = 16, matches!)
         let result = Fft3D::new(tensor, 8, 2, 1);

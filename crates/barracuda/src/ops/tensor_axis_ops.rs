@@ -138,7 +138,7 @@ mod tests {
         };
         // 2x3: row 0 max at index 2, row 1 max at index 0
         let data = vec![1.0, 2.0, 3.0, 5.0, 4.0, 3.0];
-        let t = Tensor::from_data(&data, vec![2, 3], device.clone()).unwrap();
+        let t = Tensor::from_data(&data, vec![2, 3], device).unwrap();
         let out = t.argmax_dim(1).unwrap();
         assert_eq!(out.shape(), &[2]);
         let indices = out.to_vec_u32().unwrap();
@@ -152,7 +152,7 @@ mod tests {
         };
         // 3x2: column 0 max at row 1, column 1 max at row 2
         let data = vec![1.0, 2.0, 5.0, 3.0, 2.0, 6.0];
-        let t = Tensor::from_data(&data, vec![3, 2], device.clone()).unwrap();
+        let t = Tensor::from_data(&data, vec![3, 2], device).unwrap();
         let out = t.argmax_dim(0).unwrap();
         assert_eq!(out.shape(), &[2]);
         let indices = out.to_vec_u32().unwrap();
@@ -165,7 +165,7 @@ mod tests {
             return;
         };
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-        let t = Tensor::from_data(&data, vec![2, 3], device.clone()).unwrap();
+        let t = Tensor::from_data(&data, vec![2, 3], device).unwrap();
         let out = t.softmax_dim(1).unwrap();
         assert_eq!(out.shape(), &[2, 3]);
         let result = out.to_vec().unwrap();
@@ -182,7 +182,7 @@ mod tests {
             return;
         };
         let data = vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0];
-        let t = Tensor::from_data(&data, vec![3, 2], device.clone()).unwrap();
+        let t = Tensor::from_data(&data, vec![3, 2], device).unwrap();
         let out = t.softmax_dim(0).unwrap();
         assert_eq!(out.shape(), &[3, 2]);
         let result = out.to_vec().unwrap();
@@ -198,7 +198,7 @@ mod tests {
             return;
         };
         let data = vec![1.0, 2.0, 3.0];
-        let t = Tensor::from_data(&data, vec![3, 1], device.clone()).unwrap();
+        let t = Tensor::from_data(&data, vec![3, 1], device).unwrap();
         let out = t.softmax_dim(1).unwrap();
         assert_eq!(out.shape(), &[3, 1]);
         let result = out.to_vec().unwrap();
@@ -211,7 +211,7 @@ mod tests {
             return;
         };
         let data = vec![1.0, 2.0, 3.0];
-        let t = Tensor::from_data(&data, vec![3, 1], device.clone()).unwrap();
+        let t = Tensor::from_data(&data, vec![3, 1], device).unwrap();
         let out = t.argmax_dim(1).unwrap();
         assert_eq!(out.shape(), &[3]);
         let indices = out.to_vec_u32().unwrap();
@@ -223,7 +223,7 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        let t = Tensor::from_data(&[1.0, 2.0], vec![2], device.clone()).unwrap();
+        let t = Tensor::from_data(&[1.0, 2.0], vec![2], device).unwrap();
         let err = t.argmax_dim(1).unwrap_err();
         assert!(err.to_string().contains("out of bounds"));
     }
@@ -233,7 +233,7 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        let t = Tensor::from_data(&[1.0, 2.0], vec![2], device.clone()).unwrap();
+        let t = Tensor::from_data(&[1.0, 2.0], vec![2], device).unwrap();
         let err = t.softmax_dim(1).unwrap_err();
         assert!(err.to_string().contains("out of bounds"));
     }

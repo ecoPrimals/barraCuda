@@ -191,7 +191,7 @@ mod tests {
         // (Euler's identity: exp(iπ) + 1 = 0)
         let pi = std::f32::consts::PI;
         let data = vec![0.0f32, pi]; // 0 + πi
-        let tensor = Tensor::from_data(&data, vec![1, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![1, 2], device).unwrap();
 
         let op = ComplexExp::new(tensor).unwrap();
         let result = op.execute().unwrap();
@@ -209,7 +209,7 @@ mod tests {
         };
         // exp(0) = 1+0i
         let data = vec![0.0f32, 0.0];
-        let tensor = Tensor::from_data(&data, vec![1, 2], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![1, 2], device).unwrap();
         let result = ComplexExp::new(tensor)
             .unwrap()
             .execute()

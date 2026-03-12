@@ -94,9 +94,7 @@ impl SphericalHarmonicsF64 {
         if t <= 0.0 {
             // At x = ±1: P_l(1) = 1, P_l(-1) = (-1)^l, P_l^m(±1) = 0 for m > 0
             if m == 0 {
-                return if x > 0.0 {
-                    1.0
-                } else if l.is_multiple_of(2) {
+                return if x > 0.0 || l.is_multiple_of(2) {
                     1.0
                 } else {
                     -1.0

@@ -198,7 +198,7 @@ mod tests {
             return;
         };
         let data = vec![0.0, 0.5, -0.5, 1.0, -1.0];
-        let input = Tensor::new(data, vec![5], device.clone());
+        let input = Tensor::new(data, vec![5], device);
         let output = input.asin().unwrap();
         let result = output.to_vec().unwrap();
         assert!((result[0] - 0.0).abs() < 1e-5);

@@ -177,7 +177,7 @@ mod tests {
             return;
         };
         let input = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0], vec![5], device.clone());
-        let values = Tensor::new(vec![10.0, 20.0], vec![2], device.clone());
+        let values = Tensor::new(vec![10.0, 20.0], vec![2], device);
 
         let slice_range = SliceRange {
             start: 1,
@@ -203,7 +203,7 @@ mod tests {
         };
         let input = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0], vec![5], device.clone());
         // Stride 2 over [0..5] yields indices 0, 2, 4 → need 3 values
-        let values = Tensor::new(vec![10.0, 20.0, 30.0], vec![3], device.clone());
+        let values = Tensor::new(vec![10.0, 20.0, 30.0], vec![3], device);
 
         let slice_range = SliceRange {
             start: 0,

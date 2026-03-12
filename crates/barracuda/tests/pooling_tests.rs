@@ -45,7 +45,7 @@ async fn e2e_tensor_add_uses_pooling() {
 
     // Create input tensors (owned buffers)
     let a = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![4], device.clone()).unwrap();
-    let b = Tensor::from_data(&[5.0, 6.0, 7.0, 8.0], vec![4], device.clone()).unwrap();
+    let b = Tensor::from_data(&[5.0, 6.0, 7.0, 8.0], vec![4], device).unwrap();
 
     // Perform add operation (output uses pooled buffer)
     let c = a.add(&b).unwrap();
@@ -70,7 +70,7 @@ async fn e2e_tensor_mul_uses_pooling() {
     let device = get_test_device().await;
 
     let a = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![4], device.clone()).unwrap();
-    let b = Tensor::from_data(&[2.0, 3.0, 4.0, 5.0], vec![4], device.clone()).unwrap();
+    let b = Tensor::from_data(&[2.0, 3.0, 4.0, 5.0], vec![4], device).unwrap();
 
     let c = a.mul(&b).unwrap();
 
@@ -85,7 +85,7 @@ async fn e2e_chained_operations_reuse_pool() {
     let ctx = get_device_context(&device);
 
     let a = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![4], device.clone()).unwrap();
-    let b = Tensor::from_data(&[1.0, 1.0, 1.0, 1.0], vec![4], device.clone()).unwrap();
+    let b = Tensor::from_data(&[1.0, 1.0, 1.0, 1.0], vec![4], device).unwrap();
 
     // Chain of operations with explicit drops to return buffers
     let c = a.add(&b).unwrap();
@@ -114,7 +114,7 @@ async fn e2e_multiple_operations_steady_state() {
     let size = 1000;
     let data: Vec<f32> = (0..size).map(|i| i as f32).collect();
     let a = Tensor::from_data(&data, vec![size], device.clone()).unwrap();
-    let b = Tensor::from_data(&data, vec![size], device.clone()).unwrap();
+    let b = Tensor::from_data(&data, vec![size], device).unwrap();
 
     // Warmup - populate pool
     for _ in 0..5 {
@@ -150,7 +150,7 @@ async fn chaos_concurrent_tensor_operations() {
 
     let data: Vec<f32> = (0..100).map(|i| i as f32).collect();
     let a = Tensor::from_data(&data, vec![100], device.clone()).unwrap();
-    let b = Tensor::from_data(&data, vec![100], device.clone()).unwrap();
+    let b = Tensor::from_data(&data, vec![100], device).unwrap();
 
     // Multiple operations on same tensors - tests thread safety
     for _ in 0..20 {
@@ -244,7 +244,7 @@ async fn fault_small_tensor_operations() {
 
     // Create small tensors (edge case)
     let a = Tensor::from_data(&[1.0], vec![1], device.clone()).unwrap();
-    let b = Tensor::from_data(&[2.0], vec![1], device.clone()).unwrap();
+    let b = Tensor::from_data(&[2.0], vec![1], device).unwrap();
 
     let c = a.add(&b).unwrap();
     let result = c.to_vec().unwrap();
@@ -288,7 +288,7 @@ async fn fault_tensor_is_pooled_check() {
 
     // Operation output IS pooled
     let a = Tensor::from_data(&[1.0, 2.0], vec![2], device.clone()).unwrap();
-    let b = Tensor::from_data(&[3.0, 4.0], vec![2], device.clone()).unwrap();
+    let b = Tensor::from_data(&[3.0, 4.0], vec![2], device).unwrap();
     let pooled = a.add(&b).unwrap();
     assert!(pooled.is_pooled(), "Operation output should be pooled");
 }
@@ -329,7 +329,7 @@ async fn correctness_pooled_results_accurate() {
     let b_data: Vec<f32> = (0..1000).map(|i| (i * 2) as f32).collect();
 
     let a = Tensor::from_data(&a_data, vec![1000], device.clone()).unwrap();
-    let b = Tensor::from_data(&b_data, vec![1000], device.clone()).unwrap();
+    let b = Tensor::from_data(&b_data, vec![1000], device).unwrap();
 
     // Run multiple times - results should always be correct
     for iteration in 0..10 {
@@ -368,7 +368,7 @@ async fn correctness_reused_buffer_no_stale_data() {
 
     // Second operation: 10+10=20 (same size, should reuse buffer)
     let a2 = Tensor::from_data(&[10.0; 100], vec![100], device.clone()).unwrap();
-    let b2 = Tensor::from_data(&[10.0; 100], vec![100], device.clone()).unwrap();
+    let b2 = Tensor::from_data(&[10.0; 100], vec![100], device).unwrap();
     let c2 = a2.add(&b2).unwrap();
     let result2 = c2.to_vec().unwrap();
 

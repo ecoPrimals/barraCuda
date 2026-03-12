@@ -166,7 +166,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..24).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![2, 3, 4], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![2, 3, 4], device).unwrap();
 
         let permuted = Permute::new(input, vec![0, 2, 1])
             .unwrap()
@@ -181,7 +181,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..12).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![2, 3, 2], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![2, 3, 2], device).unwrap();
 
         let permuted = Permute::new(input, vec![0, 1, 2])
             .unwrap()
@@ -195,7 +195,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         assert!(Permute::new(input, vec![0, 1, 2, 3]).is_err());
     }
@@ -205,7 +205,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         assert!(Permute::new(input, vec![5]).is_err());
     }
@@ -215,7 +215,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![2, 2], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![2, 2], device).unwrap();
 
         assert!(Permute::new(input, vec![0, 0]).is_err());
     }

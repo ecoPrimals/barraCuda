@@ -155,7 +155,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..12).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![3, 4], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![3, 4], device).unwrap();
 
         let splits = TensorSplit::new(input, vec![1, 2], 0)
             .unwrap()
@@ -173,7 +173,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..20).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![4, 5], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![4, 5], device).unwrap();
 
         let splits = TensorSplit::new(input, vec![2], 0)
             .unwrap()
@@ -189,7 +189,7 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         assert!(TensorSplit::new(input, vec![1], 10).is_err());
     }
@@ -199,7 +199,7 @@ mod tests {
         let Some(device) = get_test_device_if_gpu_available().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         assert!(TensorSplit::new(input, vec![5], 0).is_err());
     }
@@ -210,7 +210,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..10).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![5, 2], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![5, 2], device).unwrap();
 
         let splits = TensorSplit::new(input, vec![], 0)
             .unwrap()

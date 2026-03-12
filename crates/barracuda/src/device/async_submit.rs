@@ -127,7 +127,7 @@ impl AsyncSubmitter {
 
         // Register a callback to update completed index when done
         let completed = Arc::new(AtomicU64::new(0));
-        let completed_clone = completed.clone();
+        let completed_clone = completed;
         let idx = index;
 
         self.device.queue().on_submitted_work_done(move || {

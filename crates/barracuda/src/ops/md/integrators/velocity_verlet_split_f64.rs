@@ -499,7 +499,7 @@ mod tests {
                 contents: force_bytes2,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
             });
-        let force_tensor2 = Tensor::from_buffer(force_buffer2, vec![1, 3], device.clone());
+        let force_tensor2 = Tensor::from_buffer(force_buffer2, vec![1, 3], device);
 
         let half_kick = VelocityVerletHalfKick::new(vel_after, force_tensor2, dt, mass).unwrap();
         let _vel_final = half_kick.execute().unwrap();

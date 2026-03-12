@@ -216,7 +216,7 @@ mod tests {
         let data_b = vec![2.0f32, 3.0];
 
         let tensor_a = Tensor::from_data(&data_a, vec![1, 2], device.clone()).unwrap();
-        let tensor_b = Tensor::from_data(&data_b, vec![1, 2], device.clone()).unwrap();
+        let tensor_b = Tensor::from_data(&data_b, vec![1, 2], device).unwrap();
 
         let op = ComplexSub::new(tensor_a, tensor_b).unwrap();
         let result = op.execute().unwrap();
@@ -235,8 +235,8 @@ mod tests {
         // Test components for Euler's identity validation
         // conj(a+bi) + (a+bi) = 2a (imag cancels)
         let data = vec![3.0f32, 4.0];
-        let tensor = Tensor::from_data(&data, vec![1, 2], device.clone()).unwrap();
-        let op = ComplexSub::new(tensor.clone(), tensor.clone()).unwrap();
+        let tensor = Tensor::from_data(&data, vec![1, 2], device).unwrap();
+        let op = ComplexSub::new(tensor.clone(), tensor).unwrap();
         let result = op.execute().unwrap().to_vec().unwrap();
         assert!((result[0] - 0.0).abs() < 1e-6);
         assert!((result[1] - 0.0).abs() < 1e-6);

@@ -188,7 +188,7 @@ mod kriging_unit {
         };
         assert!(model.gamma(0.0).abs() < 1e-10, "γ(0) should be 0");
         let gamma_at_range = model.gamma(10.0);
-        let expected = 0.1 + 0.9 * (1.0 - (-3.0_f64).exp());
+        let expected = 0.9f64.mul_add(1.0 - (-3.0_f64).exp(), 0.1);
         assert!(
             (gamma_at_range - expected).abs() < 1e-6,
             "Exponential γ(a) incorrect: {gamma_at_range} vs {expected}"
@@ -339,7 +339,7 @@ mod kriging_unit {
                 (0..10).map(move |j| {
                     let x = i as f64 * 2.0;
                     let y = j as f64 * 2.0;
-                    let z = x * 0.1 + y * 0.1 + (x * y * 0.01);
+                    let z = (x * y).mul_add(0.01, x * 0.1 + y * 0.1);
                     (x, y, z)
                 })
             })

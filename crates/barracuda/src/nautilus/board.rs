@@ -71,14 +71,7 @@ impl Board {
             }
         }
 
-        Self {
-            cells,
-            config: BoardConfig {
-                grid_size: config.grid_size,
-                range_per_column: config.range_per_column,
-                seed: config.seed,
-            },
-        }
+        Self { cells, config }
     }
 
     /// Compute response to reservoir input.

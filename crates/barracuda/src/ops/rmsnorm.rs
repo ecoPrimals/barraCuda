@@ -181,7 +181,7 @@ mod tests {
 
         // Create gamma (scale) parameters - one per feature
         let gamma_data = vec![1.0f32, 1.0, 1.0, 1.0];
-        let gamma = Tensor::from_data(&gamma_data, vec![4], device.clone()).unwrap();
+        let gamma = Tensor::from_data(&gamma_data, vec![4], device).unwrap();
 
         // Apply RMSNorm
         let result = input.rmsnorm(gamma, 1e-6).unwrap();
@@ -206,7 +206,7 @@ mod tests {
 
         // Small epsilon
         let input = Tensor::from_data(&[1.0, 1.0], vec![1, 2], device.clone()).unwrap();
-        let gamma = Tensor::from_data(&[1.0, 1.0], vec![2], device.clone()).unwrap();
+        let gamma = Tensor::from_data(&[1.0, 1.0], vec![2], device).unwrap();
         let result = input.rmsnorm(gamma, 1e-8).unwrap();
         let output = result.to_vec().unwrap();
         assert!(output.iter().all(|&x| x.is_finite()));
@@ -227,7 +227,7 @@ mod tests {
 
         // Different gamma values
         let input = Tensor::from_data(&[1.0; 4], vec![1, 4], device.clone()).unwrap();
-        let gamma = Tensor::from_data(&[0.5, 1.0, 1.5, 2.0], vec![4], device.clone()).unwrap();
+        let gamma = Tensor::from_data(&[0.5, 1.0, 1.5, 2.0], vec![4], device).unwrap();
         let result = input.rmsnorm(gamma, 1e-6).unwrap();
         let output = result.to_vec().unwrap();
         assert!(output.iter().all(|&x| x.is_finite()));
@@ -241,7 +241,7 @@ mod tests {
         // 100 samples, 10 features
         let input_data: Vec<f32> = (0..1000).map(|i| i as f32).collect();
         let input = Tensor::from_data(&input_data, vec![100, 10], device.clone()).unwrap();
-        let gamma = Tensor::from_data(&[1.0; 10], vec![10], device.clone()).unwrap();
+        let gamma = Tensor::from_data(&[1.0; 10], vec![10], device).unwrap();
         let result = input.rmsnorm(gamma, 1e-6).unwrap();
         let output = result.to_vec().unwrap();
         assert_eq!(output.len(), 1000);
@@ -254,7 +254,7 @@ mod tests {
         };
         // Verify normalization behavior
         let input = Tensor::from_data(&[2.0, 2.0, 2.0, 2.0], vec![1, 4], device.clone()).unwrap();
-        let gamma = Tensor::from_data(&[1.0, 1.0, 1.0, 1.0], vec![4], device.clone()).unwrap();
+        let gamma = Tensor::from_data(&[1.0, 1.0, 1.0, 1.0], vec![4], device).unwrap();
         let result = input.rmsnorm(gamma, 1e-6).unwrap();
         let output = result.to_vec().unwrap();
 

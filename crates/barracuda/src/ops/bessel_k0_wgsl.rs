@@ -184,7 +184,7 @@ mod tests {
         };
         // K₀ decreases as x grows; K₀(1) > K₀(2) > K₀(5)
         let data = vec![0.5, 1.0, 2.0, 5.0, 10.0];
-        let input = Tensor::new(data, vec![5], device.clone());
+        let input = Tensor::new(data, vec![5], device);
         let output = input.bessel_k0().unwrap();
         let result = output.to_vec().unwrap();
         // K₀(0.5) > K₀(1) > K₀(2) > K₀(5) > K₀(10)

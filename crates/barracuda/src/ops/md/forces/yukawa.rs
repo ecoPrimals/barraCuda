@@ -258,7 +258,7 @@ mod tests {
         let charges = vec![1.0, 1.0];
 
         let pos_tensor = Tensor::from_data(&positions, vec![2, 3], device.clone()).unwrap();
-        let charge_tensor = Tensor::from_data(&charges, vec![2], device.clone()).unwrap();
+        let charge_tensor = Tensor::from_data(&charges, vec![2], device).unwrap();
 
         let yukawa = YukawaForce::new(
             pos_tensor,
@@ -287,7 +287,7 @@ mod tests {
         let charges = vec![1.0, 1.0];
 
         let pos_tensor = Tensor::from_data(&positions, vec![2, 3], device.clone()).unwrap();
-        let charge_tensor = Tensor::from_data(&charges, vec![2], device.clone()).unwrap();
+        let charge_tensor = Tensor::from_data(&charges, vec![2], device).unwrap();
 
         let yukawa = YukawaForce::new(
             pos_tensor,

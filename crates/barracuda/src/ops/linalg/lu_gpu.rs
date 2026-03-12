@@ -408,7 +408,7 @@ mod tests {
         };
 
         let a = vec![4.0f32, 3.0, 6.0, 3.0];
-        let input = Tensor::from_data(&a, vec![2, 2], device.clone()).unwrap();
+        let input = Tensor::from_data(&a, vec![2, 2], device).unwrap();
 
         let lu_gpu = LuGpu::new(input);
         let (lu_tensor, perm) = lu_gpu.execute().unwrap();
@@ -429,7 +429,7 @@ mod tests {
         };
 
         let a = vec![1.0f32, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
-        let input = Tensor::from_data(&a, vec![3, 3], device.clone()).unwrap();
+        let input = Tensor::from_data(&a, vec![3, 3], device).unwrap();
 
         let lu_gpu = LuGpu::new(input);
         let (lu_tensor, _perm) = lu_gpu.execute().unwrap();

@@ -243,7 +243,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         let result = RepeatInterleave::new(input, 2, 0)
             .unwrap()
@@ -258,7 +258,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..6).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![2, 3], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![2, 3], device).unwrap();
 
         let result = RepeatInterleave::new(input, 3, 1)
             .unwrap()
@@ -272,7 +272,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0, 2.0], vec![2], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0], vec![2], device).unwrap();
 
         assert!(RepeatInterleave::new(input, 2, 10).is_err());
     }
@@ -282,7 +282,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let input = Tensor::from_data(&[1.0, 2.0], vec![2], device.clone()).unwrap();
+        let input = Tensor::from_data(&[1.0, 2.0], vec![2], device).unwrap();
 
         assert!(RepeatInterleave::new(input, 0, 0).is_err());
     }
@@ -293,7 +293,7 @@ mod tests {
             return;
         };
         let data: Vec<f32> = (0..100).map(|i| i as f32).collect();
-        let input = Tensor::from_data(&data, vec![10, 10], device.clone()).unwrap();
+        let input = Tensor::from_data(&data, vec![10, 10], device).unwrap();
 
         let result = RepeatInterleave::new(input, 5, 0)
             .unwrap()

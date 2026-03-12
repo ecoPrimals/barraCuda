@@ -246,7 +246,7 @@ mod tests {
         };
         // 1x1x2x2 input
         let data = vec![1.0, 2.0, 3.0, 4.0];
-        let input = Tensor::new(data, vec![1, 1, 2, 2], device.clone());
+        let input = Tensor::new(data, vec![1, 1, 2, 2], device);
 
         let output = input.interpolate_wgsl(4, 4).unwrap();
 
@@ -263,7 +263,7 @@ mod tests {
         let data = vec![
             1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
         ];
-        let input = Tensor::new(data, vec![1, 1, 4, 4], device.clone());
+        let input = Tensor::new(data, vec![1, 1, 4, 4], device);
 
         let output = input.interpolate_wgsl(2, 2).unwrap();
 

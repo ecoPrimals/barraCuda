@@ -193,7 +193,7 @@ mod tests {
             return;
         };
         let data = vec![0.0, 1.0, 2.0, -1.0, 0.5];
-        let input = Tensor::new(data.clone(), vec![5], device.clone());
+        let input = Tensor::new(data, vec![5], device);
         let output = input.hermite(0).unwrap();
         let result = output.to_vec().unwrap();
         // H₀(x) = 1 for all x
@@ -208,7 +208,7 @@ mod tests {
             return;
         };
         let data = vec![0.0, 1.0, 2.0, -1.0, 0.5];
-        let input = Tensor::new(data.clone(), vec![5], device.clone());
+        let input = Tensor::new(data.clone(), vec![5], device);
         let output = input.hermite(1).unwrap();
         let result = output.to_vec().unwrap();
         // H₁(x) = 2x
@@ -230,7 +230,7 @@ mod tests {
             return;
         };
         let data = vec![0.0, 1.0, 2.0, -1.0, 0.5];
-        let input = Tensor::new(data.clone(), vec![5], device.clone());
+        let input = Tensor::new(data.clone(), vec![5], device);
         let output = input.hermite(2).unwrap();
         let result = output.to_vec().unwrap();
         // H₂(x) = 4x² - 2

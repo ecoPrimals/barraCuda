@@ -398,7 +398,7 @@ mod tests {
                 contents: noise_bytes,
                 usage: wgpu::BufferUsages::STORAGE,
             });
-        let noise_tensor = Tensor::from_buffer(noise_buffer, vec![1, 3], device.clone());
+        let noise_tensor = Tensor::from_buffer(noise_buffer, vec![1, 3], device);
 
         let params = LangevinParams::new(1.0, 0.1, 3.0, 0.01);
         let step = LangevinStep::new(vel_tensor, noise_tensor, params).unwrap();

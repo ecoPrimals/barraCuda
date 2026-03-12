@@ -190,7 +190,7 @@ mod tests {
         };
         // acos(x) is defined for x ∈ [-1, 1]
         let data = vec![-1.0, -0.5, 0.0, 0.5, 1.0];
-        let input = Tensor::new(data, vec![5], device.clone());
+        let input = Tensor::new(data, vec![5], device);
         let output = input.acos().unwrap();
         let result = output.to_vec().unwrap();
         assert!(result.iter().all(|&x| x.is_finite()));

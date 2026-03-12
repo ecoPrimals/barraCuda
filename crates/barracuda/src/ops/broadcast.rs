@@ -248,7 +248,7 @@ mod tests {
         };
         // Create scalar [5.0]
         let input_data = vec![5.0f32];
-        let input = Tensor::from_data(&input_data, vec![1], device.clone()).unwrap();
+        let input = Tensor::from_data(&input_data, vec![1], device).unwrap();
 
         // Broadcast to shape [10]
         let result = input.broadcast(vec![10]).unwrap();
@@ -268,7 +268,7 @@ mod tests {
         };
         // Broadcast single element to multiple
         let input_data = vec![9.0f32];
-        let input = Tensor::from_data(&input_data, vec![1], device.clone()).unwrap();
+        let input = Tensor::from_data(&input_data, vec![1], device).unwrap();
 
         let result = input.broadcast(vec![5]).unwrap();
         let output = result.to_vec().unwrap();
@@ -284,7 +284,7 @@ mod tests {
         };
         // Small to large broadcast
         let input_data = vec![7.0f32];
-        let input = Tensor::from_data(&input_data, vec![1], device.clone()).unwrap();
+        let input = Tensor::from_data(&input_data, vec![1], device).unwrap();
 
         let result = input.broadcast(vec![100]).unwrap();
         let output = result.to_vec().unwrap();
@@ -300,7 +300,7 @@ mod tests {
         };
         // Broadcast to large size
         let input_data = vec![2.78f32];
-        let input = Tensor::from_data(&input_data, vec![1], device.clone()).unwrap();
+        let input = Tensor::from_data(&input_data, vec![1], device).unwrap();
 
         let result = input.broadcast(vec![1000]).unwrap();
         let output = result.to_vec().unwrap();
@@ -318,7 +318,7 @@ mod tests {
         let input_data = vec![2.5f32];
 
         let input1 = Tensor::from_data(&input_data, vec![1], device.clone()).unwrap();
-        let input2 = Tensor::from_data(&input_data, vec![1], device.clone()).unwrap();
+        let input2 = Tensor::from_data(&input_data, vec![1], device).unwrap();
 
         let result1 = input1.broadcast(vec![5]).unwrap();
         let result2 = input2.broadcast(vec![5]).unwrap();

@@ -306,7 +306,9 @@ async fn test_performance_comparison() {
     // Benchmark: 64x64 matmul
     let size = 64;
     let a_data: Vec<f32> = (0..size * size).map(|i| (i as f32) * 0.01).collect();
-    let b_data: Vec<f32> = (0..size * size).map(|i| (i as f32) * 0.01 + 0.5).collect();
+    let b_data: Vec<f32> = (0..size * size)
+        .map(|i| (i as f32).mul_add(0.01, 0.5))
+        .collect();
 
     for (name, device) in &devices {
         let _warmup = Tensor::from_vec_on(a_data.clone(), vec![size, size], device.clone())

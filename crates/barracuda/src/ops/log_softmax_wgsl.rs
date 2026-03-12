@@ -154,7 +154,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let input = Tensor::new(vec![1.0, 2.0, 3.0], vec![1, 3], device.clone());
+        let input = Tensor::new(vec![1.0, 2.0, 3.0], vec![1, 3], device);
         let output = input.log_softmax_wgsl().unwrap();
         assert_eq!(output.shape(), &[1, 3]);
         let result = output.to_vec().unwrap();
@@ -170,11 +170,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let input = Tensor::new(
-            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
-            vec![2, 3],
-            device.clone(),
-        );
+        let input = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3], device);
         let output = input.log_softmax_wgsl().unwrap();
         assert_eq!(output.shape(), &[2, 3]);
         assert_eq!(output.to_vec().unwrap().len(), 6);

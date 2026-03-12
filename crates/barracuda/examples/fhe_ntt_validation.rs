@@ -199,7 +199,7 @@ async fn main() -> Result<(), BarracudaError> {
         .collect();
 
     let a_f32: Vec<f32> = a_u32.iter().map(|&x| f32::from_bits(x)).collect();
-    let tensor_a = Tensor::from_data(&a_f32, vec![degree_large * 2], device.clone())?;
+    let tensor_a = Tensor::from_data(&a_f32, vec![degree_large * 2], device)?;
 
     let start = Instant::now();
 

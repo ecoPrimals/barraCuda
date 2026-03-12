@@ -191,7 +191,7 @@ mod tests {
             0.0, 1.0, 1.0, 1.0, 2.0, 0.0, // Batch 1
             0.0, 2.0, 1.0, 1.0,
         ];
-        let b = Tensor::from_data(&b_data, vec![2, 3, 2], device.clone()).unwrap();
+        let b = Tensor::from_data(&b_data, vec![2, 3, 2], device).unwrap();
 
         // Compute C = A @ B
         let result = a.batch_matmul(&b).unwrap();
@@ -213,7 +213,7 @@ mod tests {
         let b_data = vec![1.0, 2.0, 3.0, 4.0]; // [1, 2, 2]
 
         let a = Tensor::from_data(&a_data, vec![1, 2, 2], device.clone()).unwrap();
-        let b = Tensor::from_data(&b_data, vec![1, 2, 2], device.clone()).unwrap();
+        let b = Tensor::from_data(&b_data, vec![1, 2, 2], device).unwrap();
 
         let result = a.batch_matmul(&b).unwrap();
         let output = result.to_vec().unwrap();
@@ -232,7 +232,7 @@ mod tests {
         let b_data = vec![1.0; 2 * 3 * 5]; // [2, 3, 5]
 
         let a = Tensor::from_data(&a_data, vec![2, 4, 3], device.clone()).unwrap();
-        let b = Tensor::from_data(&b_data, vec![2, 3, 5], device.clone()).unwrap();
+        let b = Tensor::from_data(&b_data, vec![2, 3, 5], device).unwrap();
 
         let result = a.batch_matmul(&b).unwrap();
 
@@ -257,7 +257,7 @@ mod tests {
         let b_data = vec![1.0; batch_size * d_k * seq_len];
 
         let a = Tensor::from_data(&a_data, vec![batch_size, seq_len, d_k], device.clone()).unwrap();
-        let b = Tensor::from_data(&b_data, vec![batch_size, d_k, seq_len], device.clone()).unwrap();
+        let b = Tensor::from_data(&b_data, vec![batch_size, d_k, seq_len], device).unwrap();
 
         let result = a.batch_matmul(&b).unwrap();
 
@@ -280,7 +280,7 @@ mod tests {
         let b1 = Tensor::from_data(&b_data, vec![1, 2, 2], device.clone()).unwrap();
 
         let a2 = Tensor::from_data(&a_data, vec![1, 2, 2], device.clone()).unwrap();
-        let b2 = Tensor::from_data(&b_data, vec![1, 2, 2], device.clone()).unwrap();
+        let b2 = Tensor::from_data(&b_data, vec![1, 2, 2], device).unwrap();
 
         // Run twice to check determinism
         let result1 = a1.batch_matmul(&b1).unwrap();

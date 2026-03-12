@@ -263,7 +263,7 @@ mod tests {
 
         // Mask: [0, 1, 0, 1] (fill positions 1 and 3)
         let mask_data = vec![0.0, 1.0, 0.0, 1.0];
-        let mask = Tensor::new(mask_data, vec![4], device.clone());
+        let mask = Tensor::new(mask_data, vec![4], device);
 
         let output = input.masked_fill_wgsl(mask, 99.0).unwrap();
 
@@ -286,7 +286,7 @@ mod tests {
 
         // Mask: [[1,0], [0,1]]
         let mask_data = vec![1.0, 0.0, 0.0, 1.0];
-        let mask = Tensor::new(mask_data, vec![2, 2], device.clone());
+        let mask = Tensor::new(mask_data, vec![2, 2], device);
 
         let output = input.masked_fill_wgsl(mask, -1.0).unwrap();
 
@@ -304,10 +304,10 @@ mod tests {
             return;
         };
         let data = vec![1.0, 2.0, 3.0];
-        let input = Tensor::new(data.clone(), vec![3], device.clone());
+        let input = Tensor::new(data, vec![3], device.clone());
 
         let mask_data = vec![0.0, 0.0, 0.0];
-        let mask = Tensor::new(mask_data, vec![3], device.clone());
+        let mask = Tensor::new(mask_data, vec![3], device);
 
         let output = input.masked_fill_wgsl(mask, 99.0).unwrap();
 

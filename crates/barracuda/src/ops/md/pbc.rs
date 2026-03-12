@@ -336,7 +336,7 @@ mod tests {
         let pos_b = vec![0.9, 0.8, 0.7]; // 1 particle
 
         let tensor_a = Tensor::from_data(&pos_a, vec![2, 3], device.clone()).unwrap();
-        let tensor_b = Tensor::from_data(&pos_b, vec![1, 3], device.clone()).unwrap();
+        let tensor_b = Tensor::from_data(&pos_b, vec![1, 3], device).unwrap();
 
         let box_dims = vec![1.0, 1.0, 1.0]; // Unit box
 
@@ -365,7 +365,7 @@ mod tests {
         println!("Direct distance: {}", (0.9 - 0.1));
 
         let tensor_a = Tensor::from_data(&pos_a, vec![1, 3], device.clone()).unwrap();
-        let tensor_b = Tensor::from_data(&pos_b, vec![1, 3], device.clone()).unwrap();
+        let tensor_b = Tensor::from_data(&pos_b, vec![1, 3], device).unwrap();
 
         // Verify tensors
         println!("tensor_a: {:?}", tensor_a.to_vec().unwrap());
@@ -403,7 +403,7 @@ mod tests {
         // 4 particles
         let pos = vec![0.1, 0.1, 0.1, 0.5, 0.5, 0.5, 0.9, 0.9, 0.9, 0.2, 0.8, 0.3];
 
-        let tensor = Tensor::from_data(&pos, vec![4, 3], device.clone()).unwrap();
+        let tensor = Tensor::from_data(&pos, vec![4, 3], device).unwrap();
         let box_dims = vec![1.0, 1.0, 1.0];
 
         let pbc =

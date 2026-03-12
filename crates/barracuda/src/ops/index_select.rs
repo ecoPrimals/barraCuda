@@ -273,7 +273,7 @@ mod tests {
         let Some(device) = get_test_device().await else {
             return;
         };
-        let input = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0], vec![5], device.clone());
+        let input = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0], vec![5], device);
         let result = input.index_select(vec![0, 2, 4]).unwrap();
 
         assert_eq!(result.shape(), &[3]);

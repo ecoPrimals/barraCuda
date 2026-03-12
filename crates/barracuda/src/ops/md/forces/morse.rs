@@ -326,7 +326,7 @@ mod tests {
         let pairs_tensor = Tensor::from_data(&bond_pairs, vec![1, 2], device.clone()).unwrap();
         let d_tensor = Tensor::from_data(&dissociation, vec![1], device.clone()).unwrap();
         let a_tensor = Tensor::from_data(&width, vec![1], device.clone()).unwrap();
-        let r0_tensor = Tensor::from_data(&r0, vec![1], device.clone()).unwrap();
+        let r0_tensor = Tensor::from_data(&r0, vec![1], device).unwrap();
 
         let morse =
             MorseForce::new(pos_tensor, pairs_tensor, d_tensor, a_tensor, r0_tensor).unwrap();

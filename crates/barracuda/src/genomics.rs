@@ -69,7 +69,7 @@ impl Default for SequenceConfig {
 }
 
 /// Region of interest in a sequence.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Region {
     /// Start position (0-indexed)
     pub start: usize,
@@ -82,7 +82,7 @@ pub struct Region {
 }
 
 /// Nucleotide composition counts.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct NucleotideCounts {
     /// Adenine count.
     pub a: usize,

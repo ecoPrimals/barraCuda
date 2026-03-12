@@ -161,7 +161,7 @@ mod chaos {
             None => return,
         };
         let fmr = FusedMapReduceF64::new(device.clone()).unwrap();
-        let kriging = KrigingF64::new(device.clone()).unwrap();
+        let kriging = KrigingF64::new(device).unwrap();
         for i in 0..100 {
             let counts: Vec<f64> = (0..100).map(|j| ((i * 100 + j) % 50 + 1) as f64).collect();
             let _ = fmr.shannon_entropy(&counts).unwrap();

@@ -255,7 +255,7 @@ mod tests {
         let anchors_data = vec![0.0, 0.0, 10.0, 10.0];
         let deltas_data = vec![0.0, 0.0, 0.0, 0.0]; // Identity transform
         let anchors = Tensor::new(anchors_data, vec![1, 4], dev.clone());
-        let deltas = Tensor::new(deltas_data, vec![1, 4], dev.clone());
+        let deltas = Tensor::new(deltas_data, vec![1, 4], dev);
         let result = anchors.bbox_transform(deltas).unwrap();
         let output = result.to_vec().unwrap();
         assert_eq!(output.len(), 4);
@@ -279,7 +279,7 @@ mod tests {
 
         // Test with translation only (no scaling)
         let anchors = Tensor::new(vec![10.0, 10.0, 20.0, 20.0], vec![1, 4], dev.clone());
-        let deltas = Tensor::new(vec![0.5, 0.5, 0.0, 0.0], vec![1, 4], dev.clone());
+        let deltas = Tensor::new(vec![0.5, 0.5, 0.0, 0.0], vec![1, 4], dev);
         let result = anchors.bbox_transform(deltas).unwrap();
         let output = result.to_vec().unwrap();
         assert!(output.iter().all(|&x| x.is_finite()));
@@ -305,7 +305,7 @@ mod tests {
 
         // Test with negative scaling
         let anchors = Tensor::new(vec![0.0, 0.0, 10.0, 10.0], vec![1, 4], dev.clone());
-        let deltas = Tensor::new(vec![0.0, 0.0, -0.693, -0.693], vec![1, 4], dev.clone()); // exp(-0.693) ≈ 0.5
+        let deltas = Tensor::new(vec![0.0, 0.0, -0.693, -0.693], vec![1, 4], dev); // exp(-0.693) ≈ 0.5
         let result = anchors.bbox_transform(deltas).unwrap();
         let output = result.to_vec().unwrap();
         let out_w = output[2] - output[0];
@@ -329,7 +329,7 @@ mod tests {
         }
 
         let anchors = Tensor::new(anchors_data, vec![num_boxes, 4], dev.clone());
-        let deltas = Tensor::new(deltas_data, vec![num_boxes, 4], dev.clone());
+        let deltas = Tensor::new(deltas_data, vec![num_boxes, 4], dev);
         let result = anchors.bbox_transform(deltas).unwrap();
         let output = result.to_vec().unwrap();
 
@@ -346,7 +346,7 @@ mod tests {
         // Anchor: [0, 0, 10, 10] → center (5, 5), size (10, 10)
         // Deltas: [0.1, 0.2, 0, 0] → shift center by (1, 2)
         let anchors = Tensor::new(vec![0.0, 0.0, 10.0, 10.0], vec![1, 4], dev.clone());
-        let deltas = Tensor::new(vec![0.1, 0.2, 0.0, 0.0], vec![1, 4], dev.clone());
+        let deltas = Tensor::new(vec![0.1, 0.2, 0.0, 0.0], vec![1, 4], dev);
         let result = anchors.bbox_transform(deltas).unwrap();
         let output = result.to_vec().unwrap();
 

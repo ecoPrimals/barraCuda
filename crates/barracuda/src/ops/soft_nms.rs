@@ -170,7 +170,7 @@ mod tests {
             vec![2, 4],
             device.clone(),
         );
-        let scores = Tensor::new(vec![0.9, 0.8], vec![2], device.clone());
+        let scores = Tensor::new(vec![0.9, 0.8], vec![2], device);
         let keep = boxes.soft_nms(scores, 0.5, 0.5).unwrap();
         assert!(!keep.is_empty());
     }
@@ -193,7 +193,7 @@ mod tests {
             vec![2, 4],
             device.clone(),
         );
-        let scores = Tensor::new(vec![0.9, 0.8], vec![2], device.clone());
+        let scores = Tensor::new(vec![0.9, 0.8], vec![2], device);
         let keep = boxes.soft_nms(scores, 0.5, 0.5).unwrap();
         assert_eq!(keep.len(), 2);
     }
@@ -217,7 +217,7 @@ mod tests {
         // Different sigma
         let boxes_data = vec![0.0, 0.0, 10.0, 10.0, 1.0, 1.0, 11.0, 11.0];
         let boxes = Tensor::new(boxes_data, vec![2, 4], device.clone());
-        let scores = Tensor::new(vec![0.9, 0.8], vec![2], device.clone());
+        let scores = Tensor::new(vec![0.9, 0.8], vec![2], device);
         let keep = boxes.soft_nms(scores, 0.5, 0.3).unwrap();
         assert!(!keep.is_empty());
     }
@@ -236,7 +236,7 @@ mod tests {
             scores_data.push(0.9 - i as f32 * 0.001);
         }
         let boxes = Tensor::new(boxes_data, vec![100, 4], device.clone());
-        let scores = Tensor::new(scores_data, vec![100], device.clone());
+        let scores = Tensor::new(scores_data, vec![100], device);
         let keep = boxes.soft_nms(scores, 0.5, 0.5).unwrap();
         assert!(!keep.is_empty());
     }
@@ -253,7 +253,7 @@ mod tests {
             2.0, 2.0, 12.0, 12.0, // Box 1 (overlaps with box 0)
         ];
         let boxes = Tensor::new(boxes_data, vec![2, 4], device.clone());
-        let scores = Tensor::new(vec![0.9, 0.8], vec![2], device.clone());
+        let scores = Tensor::new(vec![0.9, 0.8], vec![2], device);
         let keep = boxes.soft_nms(scores, 0.5, 0.5).unwrap();
 
         assert!(!keep.is_empty());

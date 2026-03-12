@@ -331,6 +331,8 @@ version = "0.1.0"
 dependencies = [
  "bytemuck",
  "rustix",
+ "serde",
+ "serde_json",
  "thiserror",
  "tracing",
 ]

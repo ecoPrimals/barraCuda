@@ -4,7 +4,6 @@
 // Dihedral angle from 4 consecutive backbone atoms: phi = atan2(dot(n1×n2, u), dot(n1, n2))
 // M = N-3 angles from quadruplets (p0,p1,p2,p3), (p1,p2,p3,p4), ...
 // Requires: df64_core.wgsl, df64_transcendentals.wgsl (via compile_shader_df64)
-// DF64_POLYFILL_PLACEHOLDER
 
 struct Vec3Df64 {
     x: Df64,

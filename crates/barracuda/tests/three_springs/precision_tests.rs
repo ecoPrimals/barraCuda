@@ -41,7 +41,7 @@ mod precision {
                 error < t || rel_error < t,
                 "Case {i} failed: error={error}, rel_error={rel_error} (tol: {t})"
             );
-            println!("  Case {}: H={:.10}, error={:.2e}", i, gpu, error);
+            println!("  Case {i}: H={gpu:.10}, error={error:.2e}");
         }
     }
 
@@ -64,7 +64,7 @@ mod precision {
             let cpu = cpu_simpson(counts);
             let error = (gpu - cpu).abs();
             assert!(error < t, "Case {i} failed: error={error} (tol: {t})");
-            println!("  Case {}: D={:.12}, error={:.2e}", i, gpu, error);
+            println!("  Case {i}: D={gpu:.12}, error={error:.2e}");
         }
     }
 

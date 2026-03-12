@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-//! Kokkos parity benchmarks — barraCuda vs sarkas_gpu baseline.
+//! Kokkos parity benchmarks — barraCuda vs `sarkas_gpu` baseline.
 //!
 //! GPU optimization strategies applied:
 //! - Pipeline cache warmup (10 iterations discarded)

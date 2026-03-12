@@ -4,7 +4,6 @@
 // Computes d[i,j] = ||pos[i] - pos[j]|| for all residue pairs.
 // Output: N×N distance matrix, stored row-major.
 // Requires: df64_core.wgsl, df64_transcendentals.wgsl (via compile_shader_df64)
-// DF64_POLYFILL_PLACEHOLDER
 
 struct Vec3Df64 {
     x: Df64,

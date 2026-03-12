@@ -4,7 +4,6 @@
 // V(r) = k_e * q_i * q_j / (epsilon_r * r)
 // k_e = 1/(4*pi*epsilon_0) in appropriate units. Per pair.
 // Requires: df64_core.wgsl, df64_transcendentals.wgsl (via compile_shader_df64)
-// DF64_POLYFILL_PLACEHOLDER
 
 struct CoulombParams {
     n_pairs: u32,

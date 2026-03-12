@@ -41,6 +41,14 @@ pub enum Workaround {
     /// coralReef Iter 33 validated that sovereign compilation (bypassing naga
     /// SPIR-V) produces correct results for the exact same shaders.
     Df64SpirVPoisoning,
+    /// Volta (GV100) lacks PMU firmware for desktop GPUs. nouveau cannot
+    /// create compute channels without PMU. When nvPmu (software PMU) has
+    /// initialized the compute engine via BAR0 MMIO register writes,
+    /// sovereign dispatch becomes possible through coralReef + coral-driver.
+    ///
+    /// When this workaround is active, the device requires nvPmu init before
+    /// any compute dispatch via the sovereign path.
+    VoltaNoPmuFirmware,
 }
 
 /// Detect which workarounds apply for the given driver/arch combination.
@@ -58,5 +66,11 @@ pub(crate) fn detect_workarounds(driver: DriverKind, arch: GpuArch) -> Vec<Worka
     // naga WGSL->SPIR-V codegen zeroes DF64 transcendentals on all Vulkan
     // backends. Root cause is naga, not the driver JIT (hotSpring Exp 055).
     w.push(Workaround::Df64SpirVPoisoning);
+    // Volta desktop GPUs lack PMU firmware — nouveau cannot create compute
+    // channels without it. nvPmu (software PMU) is required for sovereign
+    // dispatch on these devices.
+    if driver == DriverKind::Nvk && arch == GpuArch::Volta {
+        w.push(Workaround::VoltaNoPmuFirmware);
+    }
     w
 }

@@ -4,7 +4,6 @@
 // x_new = x_old - step * grad
 // Per-coordinate update. Input: positions, gradients. Output: updated positions.
 // Requires: df64_core.wgsl, df64_transcendentals.wgsl (via compile_shader_df64)
-// DF64_POLYFILL_PLACEHOLDER
 
 struct GradientParams {
     n_coords: u32,

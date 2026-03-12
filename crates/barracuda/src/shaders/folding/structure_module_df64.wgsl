@@ -4,7 +4,6 @@
 // IPA score: q*k^T/sqrt(d) + w_l * ||T_i(q_pts) - T_j(k_pts)||^2
 // Scalar attention for (i,j). Simplified: identity transforms.
 // Requires: df64_core.wgsl, df64_transcendentals.wgsl (via compile_shader_df64)
-// DF64_POLYFILL_PLACEHOLDER
 
 struct IpaParams {
     n: u32,

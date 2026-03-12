@@ -4,7 +4,6 @@
 // contact[i,j] = 1 if dist[i,j] <= threshold else 0
 // Input: distance matrix [N*N] as DF64. Output: binary [N*N] as f32 (0 or 1).
 // Requires: df64_core.wgsl, df64_transcendentals.wgsl (via compile_shader_df64)
-// DF64_POLYFILL_PLACEHOLDER
 
 struct ContactParams {
     n: u32,

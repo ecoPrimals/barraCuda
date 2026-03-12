@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-//! barraCuda UniBin — single binary, multiple modes.
+//! barraCuda `UniBin` — single binary, multiple modes.
 //!
 //! Per wateringHole `UNIBIN_ARCHITECTURE_STANDARD.md` and
 //! `GENOMEBIN_ARCHITECTURE_STANDARD.md`:
@@ -59,7 +59,7 @@ enum Commands {
     ///
     /// Per genomeBin standard: Unix socket by default (Unix), no interactive
     /// output, graceful shutdown on SIGTERM/SIGINT, optional PID file,
-    /// systemd Type=notify support via NOTIFY_SOCKET.
+    /// systemd Type=notify support via `NOTIFY_SOCKET`.
     Service,
 
     /// Health check and diagnostics.
@@ -113,214 +113,226 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
             #[cfg(unix)]
             no_unix,
         } => {
-            let mut primal = BarraCudaPrimal::new();
-            primal.start().await.map_err(|e| {
-                barracuda_core::error::BarracudaCoreError::lifecycle(format!(
-                    "Failed to start: {e}"
-                ))
-            })?;
-            let primal = Arc::new(primal);
-
-            let server = barracuda_core::ipc::IpcServer::new(Arc::clone(&primal));
-
-            if let Some(ref tarpc_addr) = tarpc_bind {
-                let tarpc_server = barracuda_core::ipc::IpcServer::new(Arc::clone(&primal));
-                let tarpc_addr = tarpc_addr.clone();
-                tokio::spawn(async move {
-                    if let Err(e) = tarpc_server.serve_tarpc(&tarpc_addr).await {
-                        tracing::error!("tarpc server error: {e}");
-                    }
-                });
-            }
-
-            // ecoBin transport priority: Unix socket → TCP fallback.
-            // When --bind is explicitly provided, TCP is primary.
-            // Otherwise, Unix socket is the default on Unix platforms.
-            #[cfg(unix)]
-            {
-                let use_unix = !no_unix && bind.is_none();
-                let explicit_unix = unix.is_some();
-
-                if use_unix || explicit_unix {
-                    let sock_path = match &unix {
-                        Some(p) if p != "__default__" => std::path::PathBuf::from(p),
-                        _ => barracuda_core::ipc::IpcServer::default_socket_path(),
-                    };
-                    write_discovery_file(None, tarpc_bind.as_deref(), Some(&sock_path));
-                    server.serve_unix(&sock_path, None::<fn()>).await?;
-                    remove_discovery_file();
-                    return Ok(());
-                }
-            }
-
-            let bind_addr = barracuda_core::ipc::transport::resolve_bind_address(bind.as_deref());
-
-            write_discovery_file(Some(&bind_addr), tarpc_bind.as_deref(), None);
-
-            server.serve_tcp(&bind_addr).await?;
-
-            remove_discovery_file();
+            run_server(
+                bind,
+                tarpc_bind,
+                #[cfg(unix)]
+                unix,
+                #[cfg(unix)]
+                no_unix,
+            )
+            .await?;
         }
-
         Commands::Service => run_service_mode().await?,
-
-        Commands::Doctor => {
-            let mut primal = BarraCudaPrimal::new();
-            primal.start().await.map_err(|e| {
-                barracuda_core::error::BarracudaCoreError::lifecycle(format!(
-                    "Failed to start: {e}"
-                ))
-            })?;
-
-            let report = primal.health_check().await.map_err(|e| {
-                barracuda_core::error::BarracudaCoreError::health(format!(
-                    "Health check failed: {e}"
-                ))
-            })?;
-
-            println!("barraCuda Doctor");
-            println!("================");
-            println!("Name:    {}", report.name);
-            println!("Version: {}", report.version);
-            println!("Status:  {}", report.status);
-
-            if let Some(dev) = primal.device() {
-                let info = dev.adapter_info();
-                println!("\nGPU Device:");
-                println!("  Adapter:  {}", info.name);
-                println!("  Type:     {:?}", info.device_type);
-                println!("  Backend:  {:?}", info.backend);
-                println!("  Driver:   {} {}", info.driver, info.driver_info);
-
-                let limits = dev.device().limits();
-                println!("\n  Limits:");
-                println!(
-                    "    Max buffer size:       {} MiB",
-                    limits.max_buffer_size / (1024 * 1024)
-                );
-                println!(
-                    "    Max storage buffers:   {}",
-                    limits.max_storage_buffers_per_shader_stage
-                );
-                println!(
-                    "    Max workgroup size X:  {}",
-                    limits.max_compute_workgroup_size_x
-                );
-            } else {
-                println!("\nNo GPU device available (CPU-only mode)");
-            }
-        }
-
-        Commands::Validate { extended } => {
-            let mut primal = BarraCudaPrimal::new();
-            primal.start().await.map_err(|e| {
-                barracuda_core::error::BarracudaCoreError::lifecycle(format!(
-                    "Failed to start: {e}"
-                ))
-            })?;
-
-            if primal.device().is_none() {
-                println!("No GPU device available. Cannot run validation.");
-                std::process::exit(1);
-            }
-
-            println!("barraCuda GPU Validation");
-            println!("========================");
-            println!(
-                "Device: {}",
-                primal
-                    .device()
-                    .map_or("none".to_string(), |d| d.adapter_info().name.clone())
-            );
-            println!("Mode: {}", if extended { "extended" } else { "standard" });
-            println!();
-            println!("GPU device available and responsive.");
-            println!(
-                "For full FHE/QCD validation, use: cargo run --bin validate_gpu --features gpu"
-            );
-        }
-
+        Commands::Doctor => run_doctor().await?,
+        Commands::Validate { extended } => run_validate(extended).await?,
         Commands::Client {
             method,
             params,
             addr,
-        } => {
-            let server_addr = resolve_client_addr(addr.as_deref())?;
-
-            let params: serde_json::Value = serde_json::from_str(&params)?;
-
-            let request = serde_json::json!({
-                "jsonrpc": "2.0",
-                "method": method,
-                "params": params,
-                "id": 1,
-            });
-
-            let mut line = serde_json::to_string(&request)?;
-            line.push('\n');
-
-            use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
-
-            let response_line = if let Some(sock_path) = server_addr.strip_prefix("unix://") {
-                #[cfg(unix)]
-                {
-                    let stream = tokio::net::UnixStream::connect(sock_path)
-                        .await
-                        .map_err(|e| {
-                            barracuda_core::error::BarracudaCoreError::ipc(format!(
-                                "connect to unix://{sock_path}: {e}"
-                            ))
-                        })?;
-                    let (reader, mut writer) = stream.into_split();
-                    writer.write_all(line.as_bytes()).await?;
-                    writer.shutdown().await?;
-                    tokio::io::BufReader::new(reader).lines().next_line().await
-                }
-
-                #[cfg(not(unix))]
-                {
-                    let _ = sock_path;
-                    return Err(barracuda_core::error::BarracudaCoreError::ipc(
-                        "Unix sockets not supported on this platform",
-                    ));
-                }
-            } else {
-                let stream = tokio::net::TcpStream::connect(&server_addr)
-                    .await
-                    .map_err(|e| {
-                        barracuda_core::error::BarracudaCoreError::ipc(format!(
-                            "connect to {server_addr}: {e}"
-                        ))
-                    })?;
-                let (reader, mut writer) = stream.into_split();
-                writer.write_all(line.as_bytes()).await?;
-                writer.shutdown().await?;
-                tokio::io::BufReader::new(reader).lines().next_line().await
-            };
-
-            if let Ok(Some(resp)) = response_line {
-                let response: serde_json::Value = serde_json::from_str(&resp)
-                    .unwrap_or_else(|_| serde_json::json!({"raw": resp}));
-                println!(
-                    "{}",
-                    serde_json::to_string_pretty(&response).unwrap_or(resp)
-                );
-            } else {
-                eprintln!("No response from server");
-                std::process::exit(1);
-            }
-        }
-
-        Commands::Version => {
-            println!("barraCuda {}", env!("CARGO_PKG_VERSION"));
-            println!("License: AGPL-3.0-only");
-            println!("MSRV:    {}", env!("CARGO_PKG_RUST_VERSION"));
-            println!("Arch:    {}", std::env::consts::ARCH);
-            println!("OS:      {}", std::env::consts::OS);
-        }
+        } => run_client(&method, &params, addr.as_deref()).await?,
+        Commands::Version => print_version(),
     }
 
     Ok(())
+}
+
+async fn run_server(
+    bind: Option<String>,
+    tarpc_bind: Option<String>,
+    #[cfg(unix)] unix: Option<String>,
+    #[cfg(unix)] no_unix: bool,
+) -> Result<(), barracuda_core::error::BarracudaCoreError> {
+    let mut primal = BarraCudaPrimal::new();
+    primal.start().await.map_err(|e| {
+        barracuda_core::error::BarracudaCoreError::lifecycle(format!("Failed to start: {e}"))
+    })?;
+    let primal = Arc::new(primal);
+
+    let server = barracuda_core::ipc::IpcServer::new(Arc::clone(&primal));
+
+    if let Some(ref tarpc_addr) = tarpc_bind {
+        let tarpc_server = barracuda_core::ipc::IpcServer::new(Arc::clone(&primal));
+        let tarpc_addr = tarpc_addr.clone();
+        tokio::spawn(async move {
+            if let Err(e) = tarpc_server.serve_tarpc(&tarpc_addr).await {
+                tracing::error!("tarpc server error: {e}");
+            }
+        });
+    }
+
+    #[cfg(unix)]
+    {
+        let use_unix = !no_unix && bind.is_none();
+        let explicit_unix = unix.is_some();
+
+        if use_unix || explicit_unix {
+            let sock_path = match &unix {
+                Some(p) if p != "__default__" => std::path::PathBuf::from(p),
+                _ => barracuda_core::ipc::IpcServer::default_socket_path(),
+            };
+            write_discovery_file(None, tarpc_bind.as_deref(), Some(&sock_path));
+            server.serve_unix(&sock_path, None::<fn()>).await?;
+            remove_discovery_file();
+            return Ok(());
+        }
+    }
+
+    let bind_addr = barracuda_core::ipc::transport::resolve_bind_address(bind.as_deref());
+    write_discovery_file(Some(&bind_addr), tarpc_bind.as_deref(), None);
+    server.serve_tcp(&bind_addr).await?;
+    remove_discovery_file();
+    Ok(())
+}
+
+async fn run_doctor() -> Result<(), barracuda_core::error::BarracudaCoreError> {
+    let mut primal = BarraCudaPrimal::new();
+    primal.start().await.map_err(|e| {
+        barracuda_core::error::BarracudaCoreError::lifecycle(format!("Failed to start: {e}"))
+    })?;
+
+    let report = primal.health_check().await.map_err(|e| {
+        barracuda_core::error::BarracudaCoreError::health(format!("Health check failed: {e}"))
+    })?;
+
+    println!("barraCuda Doctor");
+    println!("================");
+    println!("Name:    {}", report.name);
+    println!("Version: {}", report.version);
+    println!("Status:  {}", report.status);
+
+    if let Some(dev) = primal.device() {
+        let info = dev.adapter_info();
+        println!("\nGPU Device:");
+        println!("  Adapter:  {}", info.name);
+        println!("  Type:     {:?}", info.device_type);
+        println!("  Backend:  {:?}", info.backend);
+        println!("  Driver:   {} {}", info.driver, info.driver_info);
+
+        let limits = dev.device().limits();
+        println!("\n  Limits:");
+        println!(
+            "    Max buffer size:       {} MiB",
+            limits.max_buffer_size / (1024 * 1024)
+        );
+        println!(
+            "    Max storage buffers:   {}",
+            limits.max_storage_buffers_per_shader_stage
+        );
+        println!(
+            "    Max workgroup size X:  {}",
+            limits.max_compute_workgroup_size_x
+        );
+    } else {
+        println!("\nNo GPU device available (CPU-only mode)");
+    }
+    Ok(())
+}
+
+async fn run_validate(extended: bool) -> Result<(), barracuda_core::error::BarracudaCoreError> {
+    let mut primal = BarraCudaPrimal::new();
+    primal.start().await.map_err(|e| {
+        barracuda_core::error::BarracudaCoreError::lifecycle(format!("Failed to start: {e}"))
+    })?;
+
+    if primal.device().is_none() {
+        println!("No GPU device available. Cannot run validation.");
+        std::process::exit(1);
+    }
+
+    println!("barraCuda GPU Validation");
+    println!("========================");
+    println!(
+        "Device: {}",
+        primal
+            .device()
+            .map_or("none".to_string(), |d| d.adapter_info().name.clone())
+    );
+    println!("Mode: {}", if extended { "extended" } else { "standard" });
+    println!();
+    println!("GPU device available and responsive.");
+    println!("For full FHE/QCD validation, use: cargo run --bin validate_gpu --features gpu");
+    Ok(())
+}
+
+async fn run_client(
+    method: &str,
+    params: &str,
+    addr: Option<&str>,
+) -> Result<(), barracuda_core::error::BarracudaCoreError> {
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
+
+    let server_addr = resolve_client_addr(addr)?;
+
+    let params: serde_json::Value = serde_json::from_str(params)?;
+
+    let request = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": method,
+        "params": params,
+        "id": 1,
+    });
+
+    let mut line = serde_json::to_string(&request)?;
+    line.push('\n');
+
+    let response_line = if let Some(sock_path) = server_addr.strip_prefix("unix://") {
+        #[cfg(unix)]
+        {
+            let stream = tokio::net::UnixStream::connect(sock_path)
+                .await
+                .map_err(|e| {
+                    barracuda_core::error::BarracudaCoreError::ipc(format!(
+                        "connect to unix://{sock_path}: {e}"
+                    ))
+                })?;
+            let (reader, mut writer) = stream.into_split();
+            writer.write_all(line.as_bytes()).await?;
+            writer.shutdown().await?;
+            tokio::io::BufReader::new(reader).lines().next_line().await
+        }
+
+        #[cfg(not(unix))]
+        {
+            let _ = sock_path;
+            return Err(barracuda_core::error::BarracudaCoreError::ipc(
+                "Unix sockets not supported on this platform",
+            ));
+        }
+    } else {
+        let stream = tokio::net::TcpStream::connect(&server_addr)
+            .await
+            .map_err(|e| {
+                barracuda_core::error::BarracudaCoreError::ipc(format!(
+                    "connect to {server_addr}: {e}"
+                ))
+            })?;
+        let (reader, mut writer) = stream.into_split();
+        writer.write_all(line.as_bytes()).await?;
+        writer.shutdown().await?;
+        tokio::io::BufReader::new(reader).lines().next_line().await
+    };
+
+    if let Ok(Some(resp)) = response_line {
+        let response: serde_json::Value =
+            serde_json::from_str(&resp).unwrap_or_else(|_| serde_json::json!({"raw": resp}));
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&response).unwrap_or(resp)
+        );
+    } else {
+        eprintln!("No response from server");
+        std::process::exit(1);
+    }
+    Ok(())
+}
+
+fn print_version() {
+    println!("barraCuda {}", env!("CARGO_PKG_VERSION"));
+    println!("License: AGPL-3.0-only");
+    println!("MSRV:    {}", env!("CARGO_PKG_RUST_VERSION"));
+    println!("Arch:    {}", std::env::consts::ARCH);
+    println!("OS:      {}", std::env::consts::OS);
 }
 
 /// Write a discovery file so peer primals can find barraCuda.
@@ -408,7 +420,7 @@ fn remove_discovery_file() {
 
 /// Run the server in service mode (systemd/init).
 ///
-/// Per genomeBin: Unix socket default, PID file, NOTIFY_SOCKET, no banner.
+/// Per genomeBin: Unix socket default, PID file, `NOTIFY_SOCKET`, no banner.
 async fn run_service_mode() -> Result<(), barracuda_core::error::BarracudaCoreError> {
     let _pid_guard = write_pid_file();
 
@@ -464,7 +476,7 @@ impl Drop for PidFileGuard {
     }
 }
 
-/// Send READY=1 to NOTIFY_SOCKET for systemd Type=notify (best-effort).
+/// Send READY=1 to `NOTIFY_SOCKET` for systemd Type=notify (best-effort).
 #[cfg(unix)]
 fn notify_systemd_ready() {
     let Ok(socket_path) = std::env::var("NOTIFY_SOCKET") else {

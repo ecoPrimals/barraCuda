@@ -5,7 +5,6 @@
 // Or distance-angle: V = A/r^12 - B/r^10 for D-H...A geometry.
 // Per H-bond pair. Input: D-A distance, optional angle factor.
 // Requires: df64_core.wgsl, df64_transcendentals.wgsl (via compile_shader_df64)
-// DF64_POLYFILL_PLACEHOLDER
 
 struct HbondParams {
     n_pairs: u32,

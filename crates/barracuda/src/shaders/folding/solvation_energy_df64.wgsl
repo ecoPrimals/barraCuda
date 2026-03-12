@@ -4,7 +4,6 @@
 // GBSA: DeltaG_solv = -0.5 * (1/eps_in - 1/eps_out) * sum_i q_i^2 / R_i
 // R_i = effective Born radius. Per-atom contribution: -0.5 * (1/eps_in - 1/eps_out) * q^2/R
 // Requires: df64_core.wgsl, df64_transcendentals.wgsl (via compile_shader_df64)
-// DF64_POLYFILL_PLACEHOLDER
 
 struct SolvationParams {
     n_atoms: u32,

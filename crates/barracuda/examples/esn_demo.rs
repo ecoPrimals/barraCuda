@@ -52,12 +52,12 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         train_targets.push(vec![(t + 0.1).sin()]);
     }
 
-    println!("   {} training samples\n", num_train);
+    println!("   {num_train} training samples\n");
 
     // Train (pure Rust - no GPU!)
     println!("🎓 Training ESN...");
     let mse = esn.train(&train_inputs, &train_targets).await?;
-    println!("✅ Training MSE: {:.6}\n", mse);
+    println!("✅ Training MSE: {mse:.6}\n");
 
     // Test
     println!("🔮 Testing predictions...");

@@ -5,7 +5,6 @@
 // Per pair contribution. Input: pairwise distances [M], sigma, epsilon.
 // Output: LJ energy per pair [M].
 // Requires: df64_core.wgsl, df64_transcendentals.wgsl (via compile_shader_df64)
-// DF64_POLYFILL_PLACEHOLDER
 
 struct LjParams {
     n_pairs: u32,

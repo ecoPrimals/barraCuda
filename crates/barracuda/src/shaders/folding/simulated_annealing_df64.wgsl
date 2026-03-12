@@ -4,7 +4,6 @@
 // accept = exp(-(E_new - E_old) / kT) > random(0,1)
 // Per-state: input E_old, E_new, kT, random; output accept (1 or 0).
 // Requires: df64_core.wgsl, df64_transcendentals.wgsl (via compile_shader_df64)
-// DF64_POLYFILL_PLACEHOLDER
 
 struct SaParams {
     n_states: u32,

@@ -139,6 +139,31 @@ pub trait GpuBackend: Send + Sync {
         Ok(())
     }
 
+    /// Dispatch a pre-compiled native binary (SASS, GFX) without shader
+    /// compilation.
+    ///
+    /// Used by the sovereign dispatch path: coralReef compiles WGSL → native
+    /// binary once, then dispatches the binary directly. This bypasses
+    /// naga/SPIR-V entirely, avoiding the DF64 transcendental poisoning bug.
+    ///
+    /// The default implementation returns an error — only backends with
+    /// native binary support (e.g. `CoralReefDevice`) override this.
+    ///
+    /// # Errors
+    /// Returns [`Err`] if the backend does not support binary dispatch, or
+    /// if dispatch fails.
+    fn dispatch_binary(
+        &self,
+        _binary: &[u8],
+        _bindings: Vec<BufferBinding<'_, Self>>,
+        _workgroups: (u32, u32, u32),
+        _entry_point: &str,
+    ) -> Result<()> {
+        Err(crate::error::BarracudaError::Device(
+            "dispatch_binary: not supported by this backend".into(),
+        ))
+    }
+
     // ── Typed convenience methods (defaults via bytemuck) ─────────────
 
     /// Allocate a storage buffer for `n` f32 values.
@@ -260,6 +285,25 @@ impl<B: GpuBackend> GpuBackend for Arc<B> {
     fn dispatch_compute_batch(&self, descs: Vec<DispatchDescriptor<'_, Self>>) -> Result<()> {
         let reborrowed = descs.into_iter().map(reborrow_descriptor).collect();
         (**self).dispatch_compute_batch(reborrowed)
+    }
+
+    fn dispatch_binary(
+        &self,
+        binary: &[u8],
+        bindings: Vec<BufferBinding<'_, Self>>,
+        workgroups: (u32, u32, u32),
+        entry_point: &str,
+    ) -> Result<()> {
+        let reborrowed = bindings
+            .iter()
+            .map(|b| BufferBinding {
+                index: b.index,
+                buffer: b.buffer,
+                read_only: b.read_only,
+                is_uniform: b.is_uniform,
+            })
+            .collect();
+        (**self).dispatch_binary(binary, reborrowed, workgroups, entry_point)
     }
 }
 

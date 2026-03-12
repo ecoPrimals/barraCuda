@@ -4,7 +4,6 @@
 // out[i,j,c] = (1/S) * sum_s a[s,i,c] * b[s,j,c]
 // AlphaFold2 Evoformer outer product mean over MSA sequences.
 // Requires: df64_core.wgsl, df64_transcendentals.wgsl (via compile_shader_df64)
-// DF64_POLYFILL_PLACEHOLDER
 
 struct PairRepParams {
     s: u32,

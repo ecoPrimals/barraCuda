@@ -5,7 +5,6 @@
 // Simplified: score = -log(1 + exp(-E)) for softmax-like ranking.
 // Per-rotamer energy input, output score for selection.
 // Requires: df64_core.wgsl, df64_transcendentals.wgsl (via compile_shader_df64)
-// DF64_POLYFILL_PLACEHOLDER
 
 struct PackingParams {
     n_rotamers: u32,

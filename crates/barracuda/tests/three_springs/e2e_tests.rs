@@ -27,8 +27,7 @@ mod e2e {
         assert!(simpson > 0.0 && simpson < 1.0);
         assert!(evenness > 0.0 && evenness <= 1.0);
         println!(
-            "✓ Biodiversity pipeline: Shannon H' = {:.4}, Simpson D = {:.4}, Evenness = {:.4}",
-            shannon, simpson, evenness
+            "✓ Biodiversity pipeline: Shannon H' = {shannon:.4}, Simpson D = {simpson:.4}, Evenness = {evenness:.4}"
         );
     }
 
@@ -60,19 +59,17 @@ mod e2e {
         for (i, &v) in result.values.iter().enumerate() {
             assert!(
                 (0.0..=1.0).contains(&v),
-                "VWC at point {} out of range: {}",
-                i,
-                v
+                "VWC at point {i} out of range: {v}"
             );
         }
         for (i, &var) in result.variances.iter().enumerate() {
-            assert!(var >= 0.0, "Negative variance at point {}: {}", i, var);
+            assert!(var >= 0.0, "Negative variance at point {i}: {var}");
         }
-        let min_vwc = result.values.iter().cloned().fold(f64::INFINITY, f64::min);
+        let min_vwc = result.values.iter().copied().fold(f64::INFINITY, f64::min);
         let max_vwc = result
             .values
             .iter()
-            .cloned()
+            .copied()
             .fold(f64::NEG_INFINITY, f64::max);
         println!(
             "✓ Soil moisture mapping: Grid 10x10, VWC {:.2}% - {:.2}%",
@@ -110,9 +107,7 @@ mod e2e {
         for (i, &h) in result.values.iter().enumerate() {
             assert!(
                 h > 0.5 && h < 2.0,
-                "Interpolated Shannon at site {} out of range: {}",
-                i,
-                h
+                "Interpolated Shannon at site {i} out of range: {h}"
             );
         }
         println!(

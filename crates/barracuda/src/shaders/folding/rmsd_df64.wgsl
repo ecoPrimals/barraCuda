@@ -6,7 +6,6 @@
 // This shader computes squared deviations; caller reduces and sqrt.
 // Alternatively: single workgroup computes full RMSD for small N.
 // Requires: df64_core.wgsl, df64_transcendentals.wgsl (via compile_shader_df64)
-// DF64_POLYFILL_PLACEHOLDER
 
 struct RmsdParams {
     n: u32,

@@ -22,7 +22,7 @@ mod chaos {
         let error = (result - expected).abs();
         let t = tol(&device, 1e-8);
         assert!(error < t, "Large counts Shannon error: {error} (tol: {t})");
-        println!("✓ Shannon large counts: {} (error: {:.2e})", result, error);
+        println!("✓ Shannon large counts: {result} (error: {error:.2e})");
     }
 
     #[test]
@@ -38,10 +38,9 @@ mod chaos {
         let error = (result - expected).abs();
         assert!(
             error < 1e-6 || (result - expected).abs() / expected.abs() < 1e-6,
-            "Small counts Shannon error: {}",
-            error
+            "Small counts Shannon error: {error}"
         );
-        println!("✓ Shannon small counts: {} (error: {:.2e})", result, error);
+        println!("✓ Shannon small counts: {result} (error: {error:.2e})");
     }
 
     #[test]
@@ -62,7 +61,7 @@ mod chaos {
         let error = (result - expected).abs();
         let t = tol(&device, 1e-10);
         assert!(error < t, "Sparse Shannon error: {error} (tol: {t})");
-        println!("✓ Shannon sparse (5 non-zero of 1000): {}", result);
+        println!("✓ Shannon sparse (5 non-zero of 1000): {result}");
     }
 
     #[test]
@@ -110,9 +109,7 @@ mod chaos {
         for (i, &var) in result.variances.iter().enumerate() {
             assert!(
                 var > 0.5,
-                "Extrapolation variance should be high: got {} at {}",
-                var,
-                i
+                "Extrapolation variance should be high: got {var} at {i}"
             );
         }
         println!("✓ Kriging extrapolation: variances={:?}", result.variances);
@@ -132,13 +129,9 @@ mod chaos {
         let rel_error = (sum - expected).abs() / expected.abs();
         assert!(
             rel_error < 1e-10,
-            "Large array sum relative error: {}",
-            rel_error
+            "Large array sum relative error: {rel_error}"
         );
-        println!(
-            "✓ Array ({} elements) sum: {} (rel error: {:.2e})",
-            n, sum, rel_error
-        );
+        println!("✓ Array ({n} elements) sum: {sum} (rel error: {rel_error:.2e})");
     }
 
     #[test]
@@ -156,13 +149,9 @@ mod chaos {
         let rel_error = (sum - expected).abs() / expected.abs();
         assert!(
             rel_error < 1e-8,
-            "Large array sum relative error: {}",
-            rel_error
+            "Large array sum relative error: {rel_error}"
         );
-        println!(
-            "✓ Large array (1M elements) sum: {} (rel error: {:.2e})",
-            sum, rel_error
-        );
+        println!("✓ Large array (1M elements) sum: {sum} (rel error: {rel_error:.2e})");
     }
 
     #[test]
@@ -206,7 +195,7 @@ mod fault {
                 assert!(v.abs() < 1e-10, "Empty Shannon should be 0 or error");
                 println!("✓ Empty Shannon: returned 0.0");
             }
-            Err(e) => println!("✓ Empty Shannon: returned error ({})", e),
+            Err(e) => println!("✓ Empty Shannon: returned error ({e})"),
         }
     }
 
@@ -222,9 +211,9 @@ mod fault {
         match result {
             Ok(v) => {
                 assert!(v.is_finite(), "All-zero Shannon should be finite");
-                println!("✓ All-zero Shannon: {}", v);
+                println!("✓ All-zero Shannon: {v}");
             }
-            Err(e) => println!("✓ All-zero Shannon: returned error ({})", e),
+            Err(e) => println!("✓ All-zero Shannon: returned error ({e})"),
         }
     }
 
@@ -238,7 +227,7 @@ mod fault {
         let counts = vec![1.0, f64::NAN, 3.0, 4.0];
         let result = fmr.sum(&counts).unwrap();
         assert!(result.is_nan(), "NaN should propagate");
-        println!("✓ NaN propagation: sum of [1, NaN, 3, 4] = {}", result);
+        println!("✓ NaN propagation: sum of [1, NaN, 3, 4] = {result}");
     }
 
     #[test]
@@ -251,7 +240,7 @@ mod fault {
         let counts = vec![1.0, f64::INFINITY, 3.0];
         let result = fmr.sum(&counts).unwrap();
         assert!(result.is_infinite(), "Infinity should propagate");
-        println!("✓ Infinity propagation: sum = {}", result);
+        println!("✓ Infinity propagation: sum = {result}");
     }
 
     #[test]
@@ -264,8 +253,8 @@ mod fault {
         let counts = vec![10.0, -5.0, 15.0];
         let result = fmr.shannon_entropy(&counts);
         match result {
-            Ok(v) => println!("✓ Negative counts: Shannon = {} (may be NaN)", v),
-            Err(e) => println!("✓ Negative counts: returned error ({})", e),
+            Ok(v) => println!("✓ Negative counts: Shannon = {v} (may be NaN)"),
+            Err(e) => println!("✓ Negative counts: returned error ({e})"),
         }
     }
 
@@ -332,7 +321,7 @@ mod fault {
         let result = kriging.interpolate(&known, &targets, model);
         match result {
             Ok(r) => println!("✓ Invalid variogram: value={:?}", r.values),
-            Err(e) => println!("✓ Invalid variogram: error ({})", e),
+            Err(e) => println!("✓ Invalid variogram: error ({e})"),
         }
     }
 }

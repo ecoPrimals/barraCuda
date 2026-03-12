@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-//! Debug PPPM (GPU FFT) - run: cargo run -p barracuda --example pppm_debug
+//! Debug PPPM (GPU FFT) - run: cargo run -p barracuda --example `pppm_debug`
 
 use barracuda::device::WgpuDevice;
 use barracuda::ops::md::electrostatics::{
@@ -37,10 +37,7 @@ fn main() {
     let e_kspace = greens.kspace_energy(&rho_k, 1000.0);
 
     println!("CPU PPPM (opposite charges):");
-    println!(
-        "  e_kspace={} e_short={} e_self={} e_dipole={}",
-        e_kspace, e_short, e_self, e_dipole
-    );
+    println!("  e_kspace={e_kspace} e_short={e_short} e_self={e_self} e_dipole={e_dipole}");
     println!(
         "  energy = {} (sum = {})",
         energy,

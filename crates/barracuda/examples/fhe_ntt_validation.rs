@@ -68,7 +68,7 @@ async fn main() -> Result<(), BarracudaError> {
             Arc::new(dev)
         }
         Err(e) => {
-            eprintln!("❌ Failed to create GPU device: {}", e);
+            eprintln!("❌ Failed to create GPU device: {e}");
             eprintln!("   Falling back to CPU-only validation");
             return Ok(());
         }
@@ -86,11 +86,11 @@ async fn main() -> Result<(), BarracudaError> {
 
     let poly_small = vec![1u64, 2, 3, 4];
 
-    println!("Input polynomial: {:?}", poly_small);
-    println!("Degree: {}", degree_small);
-    println!("Modulus: {}", modulus_small);
-    println!("Root of unity: {}", root_small);
-    println!("Inverse root: {}", inv_root_small);
+    println!("Input polynomial: {poly_small:?}");
+    println!("Degree: {degree_small}");
+    println!("Modulus: {modulus_small}");
+    println!("Root of unity: {root_small}");
+    println!("Inverse root: {inv_root_small}");
 
     // Convert u64 polynomial to u32 pairs (GPU format)
     let poly_u32: Vec<u32> = poly_small
@@ -109,7 +109,7 @@ async fn main() -> Result<(), BarracudaError> {
     let ntt_op = FheNtt::new(poly_tensor, degree_small, modulus_small, root_small)?;
     let ntt_result = ntt_op.execute()?;
     let ntt_time = start.elapsed();
-    println!("✅ NTT complete: {:?}", ntt_time);
+    println!("✅ NTT complete: {ntt_time:?}");
 
     // Read back NTT result to verify
     let ntt_u32 = ntt_result.to_vec_u32()?;
@@ -117,7 +117,7 @@ async fn main() -> Result<(), BarracudaError> {
         .chunks(2)
         .map(|c| (c[0] as u64) | ((c[1] as u64) << 32))
         .collect();
-    println!("   NTT output: {:?}", ntt_poly);
+    println!("   NTT output: {ntt_poly:?}");
     println!("   Expected:   [10, 7, 15, 6] (from reference)");
 
     // Inverse NTT (round-trip)
@@ -126,7 +126,7 @@ async fn main() -> Result<(), BarracudaError> {
     let intt_op = FheIntt::new(ntt_result, degree_small, modulus_small, inv_root_small)?;
     let result_tensor = intt_op.execute()?;
     let intt_time = start.elapsed();
-    println!("✅ INTT complete: {:?}", intt_time);
+    println!("✅ INTT complete: {intt_time:?}");
 
     // Read back result
     let result_u32 = result_tensor.to_vec_u32()?;
@@ -135,7 +135,7 @@ async fn main() -> Result<(), BarracudaError> {
         .map(|c| (c[0] as u64) | ((c[1] as u64) << 32))
         .collect();
 
-    println!("\nOutput polynomial: {:?}", result_poly);
+    println!("\nOutput polynomial: {result_poly:?}");
 
     // Validate round-trip (NTT → INTT should recover original)
     let mut all_match = true;
@@ -143,10 +143,7 @@ async fn main() -> Result<(), BarracudaError> {
         let expected = poly_small[i];
         let actual = result_poly[i] % modulus_small; // Modulo for comparison
         if actual != expected {
-            println!(
-                "❌ Mismatch at index {}: expected {}, got {}",
-                i, expected, actual
-            );
+            println!("❌ Mismatch at index {i}: expected {expected}, got {actual}");
             all_match = false;
         }
     }
@@ -159,8 +156,8 @@ async fn main() -> Result<(), BarracudaError> {
     }
 
     println!("\n📊 GPU Timings:");
-    println!("   NTT:  {:?}", ntt_time);
-    println!("   INTT: {:?}", intt_time);
+    println!("   NTT:  {ntt_time:?}");
+    println!("   INTT: {intt_time:?}");
     println!("   Total: {:?}", ntt_time + intt_time);
 
     // Step 3: Performance test (degree 4096)
@@ -172,8 +169,8 @@ async fn main() -> Result<(), BarracudaError> {
     let a_large = random_polynomial(degree_large, modulus_large);
     let b_large = random_polynomial(degree_large, modulus_large);
 
-    println!("Degree: {}", degree_large);
-    println!("Modulus: {}", modulus_large);
+    println!("Degree: {degree_large}");
+    println!("Modulus: {modulus_large}");
 
     // CPU baseline (naive multiply)
     println!("\n⏱️  Benchmarking CPU (naive)...");
@@ -181,7 +178,7 @@ async fn main() -> Result<(), BarracudaError> {
     let _cpu_result_large = naive_poly_multiply_cpu(&a_large, &b_large, modulus_large);
     let cpu_time_large = start.elapsed();
 
-    println!("✅ CPU Time: {:?}", cpu_time_large);
+    println!("✅ CPU Time: {cpu_time_large:?}");
     println!(
         "   Estimated GPU target: ~{}μs (56x speedup)",
         cpu_time_large.as_micros() / 56
@@ -221,11 +218,11 @@ async fn main() -> Result<(), BarracudaError> {
 
     let gpu_time_large = start.elapsed();
 
-    println!("✅ GPU Time (NTT+INTT): {:?}", gpu_time_large);
+    println!("✅ GPU Time (NTT+INTT): {gpu_time_large:?}");
 
     // Compare to CPU
     let speedup = cpu_time_large.as_secs_f64() / gpu_time_large.as_secs_f64();
-    println!("\n🎉 Speedup vs CPU: {:.1}x", speedup);
+    println!("\n🎉 Speedup vs CPU: {speedup:.1}x");
 
     if speedup >= 10.0 {
         println!("🏆 Excellent GPU Acceleration!");

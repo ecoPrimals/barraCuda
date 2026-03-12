@@ -6,7 +6,6 @@
 // Column: for (n,i,j) score[n,i,j] = dot(q[i,n,:], k[j,n,:])/sqrt(d)
 // This shader does row attention. Layout: q[S*N*D], k[S*N*D], out[S*N*N]
 // Requires: df64_core.wgsl, df64_transcendentals.wgsl (via compile_shader_df64)
-// DF64_POLYFILL_PLACEHOLDER
 
 struct MsaAttnParams {
     s: u32,

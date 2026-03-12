@@ -290,6 +290,29 @@ impl GpuDriverProfile {
         self.workarounds.is_empty() && !matches!(self.driver, DriverKind::Software)
     }
 
+    /// Whether this device requires nvPmu (software PMU) initialization
+    /// before sovereign compute dispatch.
+    ///
+    /// True for Volta desktop GPUs (Titan V, GV100) on NVK — NVIDIA does
+    /// not ship PMU firmware for desktop Volta, so nouveau cannot create
+    /// compute channels without software-assisted engine initialization.
+    #[must_use]
+    pub fn needs_software_pmu(&self) -> bool {
+        self.workarounds.contains(&Workaround::VoltaNoPmuFirmware)
+    }
+
+    /// Whether sovereign dispatch (coralReef + coral-driver) can bypass
+    /// naga/SPIR-V poisoning on this device.
+    ///
+    /// Returns `true` for devices where native binary dispatch resolves
+    /// the DF64 transcendental poisoning — i.e., any device with
+    /// `Df64SpirVPoisoning` that has a sovereign compilation path available.
+    /// Devices requiring nvPmu init should check `needs_software_pmu()` first.
+    #[must_use]
+    pub fn sovereign_resolves_poisoning(&self) -> bool {
+        self.has_df64_spir_v_poisoning()
+    }
+
     /// Whether DF64 shaders containing transcendentals (exp, sqrt, log, pow)
     /// produce all-zero output due to naga WGSL->SPIR-V codegen bugs.
     ///

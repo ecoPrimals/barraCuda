@@ -181,6 +181,38 @@ impl CoralReefDevice {
              use with_auto_device() or from_descriptor() for dispatch"
         )))
     }
+
+    /// Dispatch a pre-compiled `CompiledKernel` with full metadata.
+    ///
+    /// Preferred over [`GpuBackend::dispatch_binary`] because the kernel
+    /// carries GPR count, shared memory, and workgroup size from the
+    /// compiler — the driver needs these for correct QMD construction.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if no hardware device is attached or dispatch fails.
+    #[cfg(feature = "sovereign-dispatch")]
+    pub fn dispatch_kernel(
+        &self,
+        kernel: &coral_gpu::CompiledKernel,
+        buffers: &[CoralBuffer],
+        workgroups: (u32, u32, u32),
+    ) -> Result<()> {
+        if !self.has_device {
+            return self.require_device("dispatch_kernel");
+        }
+        let mut ctx = self
+            .ctx
+            .lock()
+            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: lock poisoned: {e}")))?;
+        let buffer_handles: Vec<coral_gpu::BufferHandle> =
+            buffers.iter().map(|b| b.handle).collect();
+        let dims = [workgroups.0, workgroups.1, workgroups.2];
+        ctx.dispatch(kernel, &buffer_handles, dims)
+            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: dispatch: {e}")))?;
+        ctx.sync()
+            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: sync: {e}")))
+    }
 }
 
 impl GpuBackend for CoralReefDevice {
@@ -323,6 +355,56 @@ impl GpuBackend for CoralReefDevice {
 
     #[cfg(not(feature = "sovereign-dispatch"))]
     fn dispatch_compute(&self, _desc: DispatchDescriptor<'_, Self>) -> Result<()> {
+        Err(BarracudaError::Device(
+            "sovereign-dispatch not enabled".into(),
+        ))
+    }
+
+    #[cfg(feature = "sovereign-dispatch")]
+    fn dispatch_binary(
+        &self,
+        binary: &[u8],
+        bindings: Vec<BufferBinding<'_, Self>>,
+        workgroups: (u32, u32, u32),
+        _entry_point: &str,
+    ) -> Result<()> {
+        use coral_gpu::{BufferHandle, CompiledKernel, GpuTarget};
+
+        if !self.has_device {
+            return self.require_device("dispatch_binary");
+        }
+
+        let kernel = CompiledKernel {
+            binary: bytes::Bytes::copy_from_slice(binary),
+            source_hash: 0,
+            target: GpuTarget::default(),
+            gpr_count: 128,
+            instr_count: 0,
+            shared_mem_bytes: 0,
+            barrier_count: 0,
+            workgroup: [64, 1, 1],
+        };
+
+        let mut ctx = self
+            .ctx
+            .lock()
+            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: lock poisoned: {e}")))?;
+        let buffer_handles: Vec<BufferHandle> = bindings.iter().map(|b| b.buffer.handle).collect();
+        let dims = [workgroups.0, workgroups.1, workgroups.2];
+        ctx.dispatch(&kernel, &buffer_handles, dims)
+            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: dispatch: {e}")))?;
+        ctx.sync()
+            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: sync: {e}")))
+    }
+
+    #[cfg(not(feature = "sovereign-dispatch"))]
+    fn dispatch_binary(
+        &self,
+        _binary: &[u8],
+        _bindings: Vec<BufferBinding<'_, Self>>,
+        _workgroups: (u32, u32, u32),
+        _entry_point: &str,
+    ) -> Result<()> {
         Err(BarracudaError::Device(
             "sovereign-dispatch not enabled".into(),
         ))

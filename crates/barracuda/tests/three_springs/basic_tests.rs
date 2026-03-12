@@ -11,12 +11,11 @@ mod fused_map_reduce_unit {
 
     #[test]
     fn test_shannon_wetspring_reference() {
-        let device = match create_device_sync() {
-            Some(d) => d,
-            None => {
-                println!("SKIP: No f64-capable device");
-                return;
-            }
+        let device = if let Some(d) = create_device_sync() {
+            d
+        } else {
+            println!("SKIP: No f64-capable device");
+            return;
         };
 
         let fmr = FusedMapReduceF64::new(device.clone()).unwrap();
@@ -27,15 +26,9 @@ mod fused_map_reduce_unit {
         let t = tol(&device, 1e-10);
         assert!(
             error < t,
-            "Shannon entropy error {} exceeds {t} (got {}, expected {})",
-            error,
-            result,
-            expected
+            "Shannon entropy error {error} exceeds {t} (got {result}, expected {expected})"
         );
-        println!(
-            "✓ Shannon wetSpring reference: {} (error: {:.2e})",
-            result, error
-        );
+        println!("✓ Shannon wetSpring reference: {result} (error: {error:.2e})");
     }
 
     #[test]
@@ -51,10 +44,7 @@ mod fused_map_reduce_unit {
         let error = (result - expected).abs();
         let t = tol(&device, 1e-10);
         assert!(error < t, "Uniform Shannon error: {error} (tol: {t})");
-        println!(
-            "✓ Shannon uniform: {} (expected ln(4) = {})",
-            result, expected
-        );
+        println!("✓ Shannon uniform: {result} (expected ln(4) = {expected})");
     }
 
     #[test]
@@ -68,10 +58,9 @@ mod fused_map_reduce_unit {
         let result = fmr.shannon_entropy(&counts).unwrap();
         assert!(
             result.abs() < 1e-10,
-            "Single element Shannon should be 0, got {}",
-            result
+            "Single element Shannon should be 0, got {result}"
         );
-        println!("✓ Shannon single element: {} (expected 0)", result);
+        println!("✓ Shannon single element: {result} (expected 0)");
     }
 
     #[test]
@@ -87,7 +76,7 @@ mod fused_map_reduce_unit {
         let error = (result - expected).abs();
         let t = tol(&device, 1e-12);
         assert!(error < t, "Simpson error: {error} (tol: {t})");
-        println!("✓ Simpson index: {} (error: {:.2e})", result, error);
+        println!("✓ Simpson index: {result} (error: {error:.2e})");
     }
 
     #[test]
@@ -101,8 +90,8 @@ mod fused_map_reduce_unit {
         let result = fmr.simpson_index(&counts).unwrap();
         let expected = 0.25;
         let error = (result - expected).abs();
-        assert!(error < 1e-12, "Uniform Simpson error: {}", error);
-        println!("✓ Simpson uniform: {} (expected 0.25)", result);
+        assert!(error < 1e-12, "Uniform Simpson error: {error}");
+        println!("✓ Simpson uniform: {result} (expected 0.25)");
     }
 
     #[test]
@@ -116,8 +105,8 @@ mod fused_map_reduce_unit {
         let result = fmr.sum(&data).unwrap();
         let expected: f64 = data.iter().sum();
         let error = (result - expected).abs();
-        assert!(error < 1e-10, "Sum error: {}", error);
-        println!("✓ Sum 1..100: {} (expected {})", result, expected);
+        assert!(error < 1e-10, "Sum error: {error}");
+        println!("✓ Sum 1..100: {result} (expected {expected})");
     }
 
     #[test]
@@ -131,10 +120,9 @@ mod fused_map_reduce_unit {
         let result = fmr.max(&data).unwrap();
         assert!(
             (result - 9.0).abs() < 1e-10,
-            "Max should be 9.0, got {}",
-            result
+            "Max should be 9.0, got {result}"
         );
-        println!("✓ Max: {} (expected 9.0)", result);
+        println!("✓ Max: {result} (expected 9.0)");
     }
 
     #[test]
@@ -148,10 +136,9 @@ mod fused_map_reduce_unit {
         let result = fmr.min(&data).unwrap();
         assert!(
             (result - 1.0).abs() < 1e-10,
-            "Min should be 1.0, got {}",
-            result
+            "Min should be 1.0, got {result}"
         );
-        println!("✓ Min: {} (expected 1.0)", result);
+        println!("✓ Min: {result} (expected 1.0)");
     }
 
     #[test]
@@ -165,8 +152,8 @@ mod fused_map_reduce_unit {
         let result = fmr.sum_of_squares(&data).unwrap();
         let expected: f64 = data.iter().map(|x| x * x).sum();
         let error = (result - expected).abs();
-        assert!(error < 1e-10, "Sum of squares error: {}", error);
-        println!("✓ Sum of squares: {} (expected {})", result, expected);
+        assert!(error < 1e-10, "Sum of squares error: {error}");
+        println!("✓ Sum of squares: {result} (expected {expected})");
     }
 }
 
@@ -204,14 +191,9 @@ mod kriging_unit {
         let expected = 0.1 + 0.9 * (1.0 - (-3.0_f64).exp());
         assert!(
             (gamma_at_range - expected).abs() < 1e-6,
-            "Exponential γ(a) incorrect: {} vs {}",
-            gamma_at_range,
-            expected
+            "Exponential γ(a) incorrect: {gamma_at_range} vs {expected}"
         );
-        println!(
-            "✓ Exponential variogram: γ(0)=0, γ(10)≈{:.4}",
-            gamma_at_range
-        );
+        println!("✓ Exponential variogram: γ(0)=0, γ(10)≈{gamma_at_range:.4}");
     }
 
     #[test]

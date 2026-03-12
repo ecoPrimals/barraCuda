@@ -3,7 +3,7 @@
 //!
 //! **Deep Debt**: Runtime discovery, zero hardcoding
 //!
-//! This example demonstrates how BarraCuda detects device capabilities
+//! This example demonstrates how `BarraCuda` detects device capabilities
 //! at runtime and adapts optimal configurations for any GPU.
 
 use barracuda::device::{DeviceCapabilities, WgpuDevice, WorkloadType};
@@ -22,7 +22,7 @@ async fn main() -> barracuda::error::Result<()> {
     let caps = DeviceCapabilities::from_device(&device);
 
     // Print comprehensive capabilities
-    println!("{}", caps);
+    println!("{caps}");
 
     // Demonstrate optimal workgroup sizes
     println!("\n📊 Optimal Workgroup Sizes by Workload:");
@@ -41,8 +41,8 @@ async fn main() -> barracuda::error::Result<()> {
         let size_2d = caps.optimal_workgroup_size_2d(workload);
         let size_3d = caps.optimal_workgroup_size_3d(workload);
 
-        println!("\n{}:", name);
-        println!("  1D: {} threads", size_1d);
+        println!("\n{name}:");
+        println!("  1D: {size_1d} threads");
         println!("  2D: {}×{} threads", size_2d.0, size_2d.1);
         println!("  3D: {}×{}×{} threads", size_3d.0, size_3d.1, size_3d.2);
     }
@@ -81,7 +81,7 @@ async fn main() -> barracuda::error::Result<()> {
         let status = if supported { "✅" } else { "❌" };
         let memory_mb = (m * k + k * n + m * n) * 4 / (1024 * 1024);
 
-        println!("{} {}×{}×{} matmul (~{} MB)", status, m, n, k, memory_mb);
+        println!("{status} {m}×{n}×{k} matmul (~{memory_mb} MB)");
     }
 
     // Vendor-specific insights
@@ -120,7 +120,7 @@ async fn main() -> barracuda::error::Result<()> {
             );
         }
         vendor => {
-            println!("{} GPU detected!", vendor);
+            println!("{vendor} GPU detected!");
             println!("  → Using conservative defaults");
             println!(
                 "  → Matrix tile: {}×{}",

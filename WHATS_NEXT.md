@@ -6,6 +6,15 @@ Prioritized work items, ordered by impact. Updated 2026-03-12.
 
 ## Recently Completed
 
+- **Deep debt sprint 2 — nursery lints & iterator evolution (Mar 12)**: 5 nursery
+  lints promoted (redundant_clone, imprecise_flops, unnecessary_struct_initialization,
+  derive_partial_eq_without_eq; suboptimal_flops kept allow with rationale). 193 files
+  auto-fixed. All 7 if_same_then_else sites fixed and lint promoted to warn. Iterator
+  evolution: csr diagonal, device_info NPU scan, fft_1d twiddle gen converted from
+  range loops to idiomatic iterators. Discovery file paths derived from
+  PRIMAL_NAMESPACE (3 sites). zeros/ones dispatch duplication eliminated via combined
+  match arm. Total: 14 bulk-allowed lints now promoted (9 pedantic + 5 nursery).
+  All quality gates green. 3,688 tests pass, 0 fail, 15 skip.
 - **Comprehensive audit & deep debt sprint (Mar 12)**: Full codebase audit against
   wateringHole standards (uniBin, ecoBin, semantic naming, sovereignty, zero-copy,
   license compliance, code quality). 12-item remediation: `#![forbid(unsafe_code)]`

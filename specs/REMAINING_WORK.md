@@ -6,6 +6,35 @@
 
 ---
 
+## Achieved (March 12, 2026 — Deep Debt Sprint 2: Nursery Lints & Iterator Evolution)
+
+### Nursery Lint Promotion (5 lints, 193 files)
+- **`redundant_clone`**: Removed unnecessary `.clone()` across workspace (auto-fixed).
+- **`imprecise_flops`**: Evolved to `ln_1p()`, `to_radians()`, `hypot()`, `exp2()` for better numerical precision.
+- **`unnecessary_struct_initialization`**: Simplified struct construction patterns.
+- **`derive_partial_eq_without_eq`**: Added `Eq` where `PartialEq` was derived.
+- **`suboptimal_flops`**: Analyzed, kept as `allow` — `mul_add()` less readable than `a*b + c` in scientific code.
+
+### `if_same_then_else` (7 sites fixed, lint promoted to warn)
+- `qr.rs`: Merged identical below-diagonal and small-value cleanup branches.
+- `spherical_harmonics_f64_wgsl.rs`: Merged `x > 0` and even-`l` branches.
+- `kldiv_loss.rs`: Removed redundant reduction-size branching (2 sites).
+- `diagnostics.rs`: Merged duplicate `Stagnant` convergence states.
+- `polyfill.rs`: Merged `enables.is_empty()` branches.
+- `cpu_executor.rs`: Removed redundant SSE4.1 detection (same as fallback).
+
+### Iterator Evolution
+- `csr.rs`: `diagonal()` → `(0..n).map(|i| self.get(i,i)).collect()`.
+- `device_info.rs`: NPU scan → `(0..16).any()`.
+- `fft_1d.rs`: Twiddle gen → `(0..degree).map().unzip()` (f32 and f64).
+
+### Hardcoding Evolution
+- Discovery file paths derived from `PRIMAL_NAMESPACE` (3 sites: write, remove, resolve).
+- `zeros`/`ones` dispatch duplication eliminated via combined `"zeros" | "ones"` match arm.
+- Doc comments updated to `{PRIMAL_NAMESPACE}` placeholder.
+
+---
+
 ## Achieved (March 12, 2026 — Comprehensive Audit & Deep Debt)
 
 ### wateringHole Standards Compliance
@@ -100,7 +129,7 @@
 - `cargo fmt --check`: Pass
 - `cargo clippy --all-targets --all-features -D warnings`: Pass (zero warnings)
 - `cargo doc --no-deps`: Pass
-- `cargo test --no-run`: Pass (all 28 integration suites compile)
+- `cargo test --no-run`: Pass (all 42 integration test files compile)
 
 ## Achieved (March 10, 2026 — Deep Debt & Test Pipeline Evolution)
 
@@ -291,7 +320,7 @@ Previously limited to Vulkan with SPIR-V passthrough.
 - **Phase 7 — K-quant**: Q2_K through Q6_K super-block formats (GGML parity)
 
 #### Test Coverage to 90%
-- Current: 3,688 total tests (workspace), 43 integration test files
+- Current: 3,688 total tests (workspace), 42 integration test files
 - Evolve CI `--fail-under` from 80 to 90
 - Add GPU-conditional tests for new ops
 - GPU_TEST_TIMEOUT (60s) prevents hangs; coordination harness with

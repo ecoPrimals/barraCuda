@@ -1,10 +1,29 @@
 # barraCuda — Remaining Work
 
 **Version**: 0.3.5
-**Date**: March 10, 2026
+**Date**: March 12, 2026
 **Status**: Active — tracks all open work items for barraCuda evolution
 
 ---
+
+## Achieved (March 11-12, 2026 — Sovereign Wiring & Deep Debt)
+
+### Sovereign Dispatch Wiring
+- **Coral cache → dispatch**: `CoralReefDevice::dispatch_compute` now checks coral compiler cache (populated by `spawn_coral_compile`) before recompiling. Cache hits use pre-compiled native binaries directly.
+- **`dispatch_binary` implemented**: `GpuBackend::dispatch_binary` on `CoralReefDevice` accepts raw native binaries from coralReef with conservative `ShaderInfo` defaults.
+- **`dispatch_kernel` added**: Preferred dispatch path with full `CompiledKernel` metadata (GPR count, shared mem, barrier count, workgroup size).
+- **`VoltaNoPmuFirmware` workaround**: Auto-detected for Volta + NVK. `needs_software_pmu()` and `sovereign_resolves_poisoning()` on `GpuDriverProfile`.
+
+### Capability-Based Discovery
+- **`PRIMAL_NAMESPACE` constant**: All hardcoded `"barracuda"` strings in IPC namespace, socket paths, PID file paths evolved to centralized `PRIMAL_NAMESPACE` constant.
+
+### Code Quality & Refactoring
+- **`ode_generic` refactored**: 890L → 613L (mod.rs) + 290L (wgsl_templates.rs). WGSL RK4 codegen cleanly separated from solver logic.
+- **CLI refactored**: Monolithic `main()` split into `run_server`, `run_doctor`, `run_validate`, `run_client`, `print_version`.
+- **DF64 shader cleanup**: Removed misleading `DF64_POLYFILL_PLACEHOLDER` from 15 protein folding shaders (injection handled at compile time by `compile_shader_df64`).
+- **Arc allocation elimination**: `Arc::from(format!(...).as_str())` → `Arc::from(format!(...))` across 11 files.
+- **Pedantic clippy**: All warnings resolved across all crates including benchmarks, examples, tests.
+- **External deps audited**: `pollster` (sync wgpu enumeration), `futures` (tarpc stream API), `half` (IEEE f16 quantization) — all justified, pure Rust, minimal.
 
 ## Achieved (March 10, 2026 — Cross-Spring Absorption & Deep Evolution Sprint)
 

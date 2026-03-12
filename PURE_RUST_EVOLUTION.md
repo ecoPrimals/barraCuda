@@ -1,7 +1,7 @@
 # Pure Rust Evolution — barraCuda
 
-**Date**: March 9, 2026
-**Status**: Layer 1 complete — zero unsafe, zero application C deps, GpuBackend trait abstraction
+**Date**: March 12, 2026
+**Status**: Layer 1 complete — zero unsafe, zero application C deps, GpuBackend trait abstraction, dispatch_binary wired, coral cache → dispatch integrated
 
 ---
 
@@ -48,6 +48,9 @@ Layer 4  toadStool    █░░░░░░░░░  Planned    Sovereign GPU d
 | Capability-based discovery (no hardcoding) | Done | Mar 6, 2026 |
 | `GpuBackend` trait + `ComputeDispatch<B>` generic | Done | Mar 9, 2026 |
 | `CoralReefDevice` scaffold (sovereign-dispatch feature) | Done | Mar 9, 2026 |
+| `dispatch_binary` + `dispatch_kernel` on `CoralReefDevice` | Done | Mar 12, 2026 |
+| Coral cache → dispatch wiring (spawn_coral_compile) | Done | Mar 12, 2026 |
+| `PRIMAL_NAMESPACE` capability-based discovery | Done | Mar 12, 2026 |
 
 ### Remaining Layer 1 Work
 - DF64 NVK end-to-end verification on hardware
@@ -133,7 +136,7 @@ memory management, command submission, and kernel dispatch from Rust.
 
 ## The Stack Today vs Target
 
-### Today (March 7, 2026)
+### Today (March 12, 2026)
 ```
 Layer 1  barraCuda         Rust    WE OWN     Zero unsafe ✓
 Layer 2  coralReef         Rust    WE OWN     2 unsafe (evolving) ✓

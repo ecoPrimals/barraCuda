@@ -1,6 +1,6 @@
 # Sovereign Pipeline Tracker
 
-**Date**: March 10, 2026
+**Date**: March 12, 2026
 **Type**: Actionable tracker (updated as work progresses)
 **Scope**: All remaining work for the pure Rust sovereign GPU pipeline
 
@@ -133,6 +133,8 @@ a C library target until Phase 3 completes.
 |------|-------|------------|--------|
 | `GpuBackend` trait + `ComputeDispatch` generic | barraCuda | — | **Done** (Mar 9) |
 | `CoralReefDevice` scaffold (behind `sovereign-dispatch`) | barraCuda | — | **Done** (Mar 9) |
+| `dispatch_binary` + `dispatch_kernel` on `CoralReefDevice` | barraCuda | — | **Done** (Mar 12) |
+| Coral compiler cache → dispatch wiring | barraCuda | — | **Done** (Mar 12) |
 | `CoralReefDevice` functional implementation | barraCuda | `coral-gpu` crate publishable | Blocked |
 | `coral-gpu` crate as standalone dependency | coralReef | — | In progress |
 

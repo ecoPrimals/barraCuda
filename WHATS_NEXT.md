@@ -1,11 +1,21 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-03-10.
+Prioritized work items, ordered by impact. Updated 2026-03-12.
 
 ---
 
 ## Recently Completed
 
+- **Sovereign dispatch wiring & deep debt evolution (Mar 11-12)**: Wired coral
+  compiler cache → `CoralReefDevice::dispatch_compute` (sovereign cache hits
+  skip recompilation). Implemented `dispatch_binary` and `dispatch_kernel` on
+  `CoralReefDevice`. Added `PRIMAL_NAMESPACE` constant, replacing all hardcoded
+  `"barracuda"` strings in IPC/socket/PID paths. Refactored `ode_generic` (890L →
+  613L + 290L WGSL codegen). Cleaned 15 DF64 shader placeholder comments.
+  Refactored CLI into modular subcommand handlers. Added `VoltaNoPmuFirmware`
+  workaround detection. Eliminated double heap allocation in `Arc::from` across
+  11 files. All clippy pedantic clean. External deps (pollster, futures, half)
+  audited and justified. Zero production unwrap/expect confirmed.
 - **Cross-spring absorption & deep evolution (Mar 10)**: PrecisionTier/PhysicsDomain
   enums for domain-aware precision selection. HardwareCalibration safe per-tier GPU
   probing with NVVM poisoning guard (synthesizes from cached driver profile — no device

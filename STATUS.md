@@ -1,8 +1,8 @@
 # barraCuda Status
 
 **Version**: 0.3.5
-**Date**: 2026-03-10
-**Overall Grade**: A+ (Zero unsafe, zero unwrap in production, pure safe Rust, all quality gates green, 3,348+ tests, zero TODO/FIXME/unimplemented, NVVM poisoning guard, PrecisionBrain self-routing, HardwareCalibration per-tier probing, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust, device-aware test tolerances, cross-spring pharma/bio/health absorption, FMA policy, stable GPU special functions)
+**Date**: 2026-03-12
+**Overall Grade**: A+ (Zero unsafe, zero unwrap in production, pure safe Rust, all quality gates green, 3,348+ tests, zero TODO/FIXME/unimplemented, NVVM poisoning guard, PrecisionBrain self-routing, HardwareCalibration per-tier probing, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust, device-aware test tolerances, cross-spring pharma/bio/health absorption, FMA policy, stable GPU special functions, sovereign coral-cache dispatch wiring, capability-based PRIMAL_NAMESPACE, VoltaNoPmuFirmware workaround detection)
 
 ---
 
@@ -153,6 +153,15 @@
 - `FoceGradientGpu` — GPU-accelerated FOCE per-subject gradient computation for population PK (healthSpring V14 absorption)
 - `VpcSimulateGpu` — GPU Monte Carlo VPC simulation with RK4 PK integration (healthSpring V14 absorption)
 - `foce_gradient_f64.wgsl` + `vpc_simulate_f64.wgsl` + `bipartition_encode.wgsl` — 3 new production WGSL shaders
+
+- **Sovereign cache → dispatch wiring** (Mar 12): `CoralReefDevice::dispatch_compute` now checks the coral compiler cache (populated by `spawn_coral_compile`) before recompiling. Cache hits skip compilation, completing the WgpuDevice-compile → CoralReefDevice-dispatch pipeline.
+- **PRIMAL_NAMESPACE constant** (Mar 12): All hardcoded `"barracuda"` strings in IPC namespace, socket paths, PID file paths evolved to `PRIMAL_NAMESPACE` constant for capability-based discovery.
+- **VoltaNoPmuFirmware workaround** (Mar 12): `GpuDriverProfile` detects Volta + NVK as needing software PMU. `needs_software_pmu()` and `sovereign_resolves_poisoning()` methods added.
+- **`dispatch_binary` implemented** (Mar 12): `GpuBackend::dispatch_binary` method on `CoralReefDevice` accepts raw native binaries from coralReef. `dispatch_kernel` method for full `CompiledKernel` metadata.
+- **ODE solver refactored** (Mar 12): `ode_generic` split into mod.rs (solver/trait/tests) + wgsl_templates.rs (codegen) — clean concern separation.
+- **DF64 shader comments cleaned** (Mar 12): Removed misleading `DF64_POLYFILL_PLACEHOLDER` from 15 protein folding shaders (polyfill injection handled at compile time).
+- **CLI refactored** (Mar 12): `barracuda` binary's monolithic main() split into modular subcommand handlers.
+- **Arc allocation elimination** (Mar 12): `Arc::from(format!(...).as_str())` → `Arc::from(format!(...))` across 11 files, eliminating double heap allocation.
 
 ## What's Not Working Yet
 

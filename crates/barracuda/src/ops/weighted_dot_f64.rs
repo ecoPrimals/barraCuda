@@ -20,26 +20,21 @@ use std::sync::Arc;
 
 const SHADER: &str = include_str!("../shaders/reduce/weighted_dot_f64.wgsl");
 const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
+const DF64_SHADER: &str = include_str!("../shaders/reduce/weighted_dot_df64.wgsl");
 
-/// Select shader based on FP64 strategy: native f64 or DF64 auto-rewrite.
+/// Select shader based on FP64 strategy: native f64 or hand-written DF64.
 ///
-/// On Hybrid devices the native f64 shader may silently produce zeros,
-/// so we require the DF64 rewrite to succeed rather than falling back.
+/// On Hybrid devices the native f64 shader may silently produce zeros in
+/// `var<workgroup>` shared memory. The hand-written DF64 shader uses f32-pair
+/// accumulators in workgroup memory, avoiding the reliability issue entirely.
 fn shader_for_device(device: &WgpuDevice) -> Result<&'static str> {
     let profile = GpuDriverProfile::from_device(device);
     match profile.fp64_strategy() {
         Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => Ok(SHADER),
         Fp64Strategy::Hybrid => {
-            static DF64_RESULT: std::sync::LazyLock<std::result::Result<String, Arc<str>>> =
-                std::sync::LazyLock::new(|| {
-                    crate::shaders::sovereign::df64_rewrite::rewrite_f64_infix_full(SHADER)
-                        .map(|src| format!("enable f64;\n{DF64_CORE}\n{src}"))
-                        .map_err(|e| Arc::from(format!("weighted_dot DF64 rewrite failed: {e}")))
-                });
-            match DF64_RESULT.as_ref() {
-                Ok(src) => Ok(src),
-                Err(msg) => Err(BarracudaError::ShaderCompilation(Arc::clone(msg))),
-            }
+            static DF64_COMBINED: std::sync::LazyLock<String> =
+                std::sync::LazyLock::new(|| format!("enable f64;\n{DF64_CORE}\n{DF64_SHADER}"));
+            Ok(&DF64_COMBINED)
         }
     }
 }

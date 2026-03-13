@@ -26,8 +26,8 @@ results.
 
 ### Key capabilities
 
-- **805 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,062 Rust source files**, 42 integration test files, 3,688+ tests passing
+- **806 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
+- **1,062 Rust source files**, 42 integration test files, 3,698+ tests passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -130,7 +130,7 @@ barraCuda/
 │       │   ├── sample/              # LHS, Sobol, Metropolis, sparsity
 │       │   ├── ops/                 # GPU ops (matmul, softmax, FHE, bio)
 │       │   ├── tensor/              # GPU tensor type
-│       │   ├── shaders/             # 805 WGSL shaders (see shaders/README.md)
+│       │   ├── shaders/             # 806 WGSL shaders (see shaders/README.md)
 │       │   ├── device/              # GpuBackend trait, WgpuDevice, CoralReefDevice, concurrency
 │       │   ├── staging/             # Ring buffers, unidirectional pipelines
 │       │   ├── pipeline/            # ComputeDispatch, batched pipelines
@@ -177,7 +177,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo test --workspace --lib            # 3,688+ test functions
+cargo test --workspace --lib            # 3,698+ test functions
 cargo llvm-cov --workspace --lib        # 90%+ line coverage target (70% on llvmpipe; GPU hardware needed for 90%)
 ```
 

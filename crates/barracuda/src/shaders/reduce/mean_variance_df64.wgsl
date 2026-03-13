@@ -37,13 +37,14 @@ fn merge_welford_df64(
     if c.hi == 0.0 && c.lo == 0.0 {
         return array<Df64, 3>(df64_zero(), df64_zero(), df64_zero());
     }
+    // @ilp_region begin — delta, d2, ca_cb are mutually independent
     let delta = df64_sub(mb, ma);
-    let mean = df64_add(ma, df64_div(df64_mul(delta, cb), c));
-    // m2 = m2a + m2b + delta * delta * ca * cb / c
     let d2 = df64_mul(delta, delta);
     let ca_cb = df64_mul(ca, cb);
+    let mean = df64_add(ma, df64_div(df64_mul(delta, cb), c));
     let correction = df64_div(df64_mul(d2, ca_cb), c);
     let m2 = df64_add(df64_add(m2a, m2b), correction);
+    // @ilp_region end
     return array<Df64, 3>(c, mean, m2);
 }
 

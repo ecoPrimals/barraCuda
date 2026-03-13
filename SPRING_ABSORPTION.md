@@ -95,7 +95,7 @@ groundSpring → ALL:        2 shaders (chi_squared universal, Welford mean+vari
 |---|------|--------|--------|--------|
 | 9 | `GpuView<T>` ops: `mean_variance`, `sum`, `correlation` | groundSpring, hotSpring | `pipeline::gpu_view` | ✅ Done |
 | 10 | `mean_variance_to_buffer()` fused GPU stats | hotSpring | `ops::variance_f64_wgsl` | ✅ Done |
-| 11 | RHMC multi-shift CG solver | hotSpring ladder L4 | `ops::lattice` | 🔲 Pending |
+| 11 | RHMC multi-shift CG solver + rational approximation + RHMC HMC | hotSpring ladder L4 | `ops::lattice::rhmc`, `ops::lattice::rhmc_hmc` | ✅ Done (Mar 12) |
 | 12 | Adaptive HMC dt from acceptance rate | hotSpring | `ops::lattice` | 🔲 Pending |
 | 13 | Anderson Lyapunov shaders | groundSpring | `ops` | ✅ Done (shaders absorbed: `anderson_lyapunov_f64.wgsl`, `anderson_lyapunov_f32.wgsl`) |
 | 14 | airSpring local ops (Makkink, Turc, Hamon) | airSpring | `stats::hydrology` | ✅ Done (already absorbed) |

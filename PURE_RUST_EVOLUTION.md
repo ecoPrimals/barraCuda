@@ -38,7 +38,7 @@ Layer 4  toadStool    █░░░░░░░░░  Planned    Sovereign GPU d
 
 | Milestone | Status | Date |
 |-----------|--------|------|
-| 805 WGSL shaders, 3-tier precision (F32/F64/Df64) | Done | Mar 12, 2026 |
+| 806 WGSL shaders, 3-tier precision (F32/F64/Df64) | Done | Mar 12, 2026 |
 | Sovereign compiler (FMA fusion, dead expr) | Done | Mar 5, 2026 |
 | SPIR-V passthrough → safe WGSL roundtrip | Done | Mar 6, 2026 |
 | Pipeline cache unsafe → deferred | Done | Mar 6, 2026 |
@@ -58,6 +58,12 @@ Layer 4  toadStool    █░░░░░░░░░  Planned    Sovereign GPU d
 - Kokkos GPU parity benchmarks
 - Sovereign compiler: deeper naga IR optimisations
 - CPU shader interpreter (execute WGSL without GPU)
+
+### Recent Layer 1 Evolution (Mar 12, 2026 — Sovereign Pipeline Deep Debt)
+- Hand-written `weighted_dot_df64.wgsl` (6 kernels) avoids shared-memory f64 on Hybrid devices
+- Covariance f64 confirmed safe with auto-rewrite (thread-local only, no workgroup f64)
+- RHMC multi-shift CG + rational approximation absorbed from hotSpring (`rhmc.rs`, `rhmc_hmc.rs`)
+- `@ilp_region` annotations on high-value DF64 reduction shaders (variance, weighted_dot, mean_variance, covariance)
 
 ### Transitive C Boundaries (not barraCuda code)
 | Crate | Why | Evolves Via |

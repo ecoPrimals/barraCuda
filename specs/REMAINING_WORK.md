@@ -40,7 +40,7 @@
 ### wateringHole Standards Compliance
 - **`#![forbid(unsafe_code)]`**: Upgraded from `deny` (overridable) to `forbid` (irrevocable) in both `barracuda` and `barracuda-core` crate roots.
 - **Namespace-derived IPC method names**: All 12 hardcoded `"barracuda.method.name"` strings evolved to `LazyLock<Vec<String>>` built from `PRIMAL_NAMESPACE` + `METHOD_SUFFIXES`. Dispatch routing uses `method_suffix()`. Discovery, tarpc, CLI all consume derived names. Primal has self-knowledge only.
-- **SPDX license compliance**: 648 WGSL shaders were missing `// SPDX-License-Identifier: AGPL-3.0-only` — all 805 shaders now have headers. 1,062/1,062 Rust files confirmed.
+- **SPDX license compliance**: 648 WGSL shaders were missing `// SPDX-License-Identifier: AGPL-3.0-only` — all 806 shaders now have headers. 1,062/1,062 Rust files confirmed.
 - **BufferBinding import**: Added missing import in `coral_reef_device.rs` — `--all-features` clippy now passes.
 
 ### Code Quality Evolution
@@ -57,7 +57,7 @@
 - **Clippy** (`-D warnings`): Pass (all configs)
 - **Rustdoc**: Zero warnings
 - **cargo deny**: Pass (advisories ok, bans ok, licenses ok, sources ok)
-- **Tests**: 3,688 pass, 0 fail, 15 skip
+- **Tests**: 3,698 pass, 0 fail, 15 skip
 
 ---
 
@@ -320,7 +320,7 @@ Previously limited to Vulkan with SPIR-V passthrough.
 - **Phase 7 — K-quant**: Q2_K through Q6_K super-block formats (GGML parity)
 
 #### Test Coverage to 90%
-- Current: 3,688 total tests (workspace), 42 integration test files
+- Current: 3,698 total tests (workspace), 42 integration test files
 - Evolve CI `--fail-under` from 80 to 90
 - Add GPU-conditional tests for new ops
 - GPU_TEST_TIMEOUT (60s) prevents hangs; coordination harness with
@@ -424,7 +424,7 @@ path and cross-compilation target matrix.
 | Clippy | Pass (zero warnings, `-D warnings`) | `cargo clippy --workspace --all-targets -- -D warnings` |
 | Rustdoc | Pass (zero warnings) | `cargo doc --workspace --no-deps` |
 | Deny | Pass (advisories, bans, licenses, sources) | `cargo deny check` |
-| Tests | 3,688 pass / 0 fail / 15 skip | `cargo nextest run --workspace --no-fail-fast` |
+| Tests | 3,698 pass / 0 fail / 15 skip | `cargo nextest run --workspace --no-fail-fast` |
 | Check (no GPU) | Pass | `cargo check --no-default-features` |
 | Check (GPU only) | Pass | `cargo check --no-default-features --features gpu` |
 | Check (all) | Pass | `cargo check` |

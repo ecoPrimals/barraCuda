@@ -6,6 +6,13 @@ Prioritized work items, ordered by impact. Updated 2026-03-12.
 
 ## Recently Completed
 
+- **Sovereign pipeline deep debt sprint (Mar 12)**: Hand-written `weighted_dot_df64.wgsl`
+  (6 kernels with DF64 workgroup accumulators) replaces auto-rewrite for Hybrid devices.
+  RHMC multi-shift CG + rational approximation + RHMC HMC absorbed from hotSpring into
+  `ops::lattice::rhmc` and `ops::lattice::rhmc_hmc`. `@ilp_region` annotations added to
+  high-value DF64 reduction shaders (variance_reduce_df64, weighted_dot_df64,
+  mean_variance_df64, covariance_f64). Covariance f64 confirmed auto-rewrite safe
+  (thread-local accumulators only). All quality gates green.
 - **Deep debt sprint 2 — nursery lints & iterator evolution (Mar 12)**: 5 nursery
   lints promoted (redundant_clone, imprecise_flops, unnecessary_struct_initialization,
   derive_partial_eq_without_eq; suboptimal_flops kept allow with rationale). 193 files
@@ -14,18 +21,18 @@ Prioritized work items, ordered by impact. Updated 2026-03-12.
   range loops to idiomatic iterators. Discovery file paths derived from
   PRIMAL_NAMESPACE (3 sites). zeros/ones dispatch duplication eliminated via combined
   match arm. Total: 14 bulk-allowed lints now promoted (9 pedantic + 5 nursery).
-  All quality gates green. 3,688 tests pass, 0 fail, 15 skip.
+  All quality gates green. 3,698 tests pass, 0 fail, 15 skip.
 - **Comprehensive audit & deep debt sprint (Mar 12)**: Full codebase audit against
   wateringHole standards (uniBin, ecoBin, semantic naming, sovereignty, zero-copy,
   license compliance, code quality). 12-item remediation: `#![forbid(unsafe_code)]`
   in both crates; namespace-derived IPC method names via `PRIMAL_NAMESPACE` +
-  `METHOD_SUFFIXES` (LazyLock); 648 WGSL SPDX headers added (805/805 complete);
+  `METHOD_SUFFIXES` (LazyLock); 648 WGSL SPDX headers added (806/806 complete);
   9 bulk-allowed pedantic lints promoted to warn (enforced); erfc_f64 recursion
   fix in stable_f64.wgsl; magic numbers extracted (CONSERVATIVE_GPR_COUNT,
   DEFAULT_WORKGROUP, CORAL_CACHE_ARCHITECTURES); zero-copy evolution
   (async_submit::read_bytes, ncbi_cache::load -> bytes::Bytes); unreachable! ->
   debug_assert! + graceful fallback; rustdoc zero warnings; BufferBinding import
-  for --all-features clippy. 3,688 tests pass, 0 fail, 15 skip.
+  for --all-features clippy. 3,698 tests pass, 0 fail, 15 skip.
 - **Sovereign dispatch wiring & deep debt evolution (Mar 11-12)**: Wired coral
   compiler cache → `CoralReefDevice::dispatch_compute` (sovereign cache hits
   skip recompilation). Implemented `dispatch_binary` and `dispatch_kernel` on
@@ -233,9 +240,9 @@ Prioritized work items, ordered by impact. Updated 2026-03-12.
   auto-fallback if native f64 fails.
 - **coralNAK extraction**: When org repo fork lands, create the sovereign NVIDIA shader
   compiler primal.
-- **Dedicated DF64 shaders for covariance + weighted_dot**: The auto-rewrite works and
-  the native f64 path is now fixed via `create_f64_data_pipeline()`. Hand-written DF64
-  shaders (like variance/correlation already have) would be more robust on Hybrid devices.
+- **~~Dedicated DF64 shaders for covariance + weighted_dot~~**: Done (Mar 12). Hand-written
+  `weighted_dot_df64.wgsl` with 6 kernels. Covariance confirmed safe with auto-rewrite
+  (thread-local only — no `var<workgroup> array<f64, N>`).
 - **`BatchedTridiagEigh` GPU op**: groundSpring local QL implicit eigensolver is a candidate
   for absorption as a batched GPU tridiagonal eigenvector solver.
 - **Multi-GPU OOM recovery**: `QuotaTracker` is wired into buffer allocation; next step
@@ -249,10 +256,10 @@ Prioritized work items, ordered by impact. Updated 2026-03-12.
   shader performance numbers for apples-to-apples comparison.
 - **Kokkos GPU parity benchmarks**: Run barraCuda GPU benchmarks on matching hardware,
   publish comparison data.
-- **WGSL optimizer annotation coverage**: Expand `@ilp_region` / `@unroll_hint` annotations
-  across science shaders for architecture-specific ILP optimization.
-- **RHMC multi-shift CG absorb**: hotSpring has RHMC with Hasenbusch preconditioning;
-  barraCuda already has the CG solver but multi-shift variant is pending.
+- **~~WGSL optimizer annotation coverage~~**: Done (Mar 12). `@ilp_region` added to
+  variance_reduce_df64, weighted_dot_df64, mean_variance_df64, covariance_f64.
+- **~~RHMC multi-shift CG absorb~~**: Done (Mar 12). `rhmc.rs` (RationalApproximation,
+  multi_shift_cg_solve, Remez exchange) + `rhmc_hmc.rs` (RhmcConfig, heatbath, action, force).
 
 ## Medium-term (P3)
 

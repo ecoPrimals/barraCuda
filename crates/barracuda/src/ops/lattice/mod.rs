@@ -41,6 +41,8 @@
 //! | `wilson` | Wilson lattice CPU (test reference) |
 //! | `cpu_dirac` | Dirac/CG CPU solver (test reference) |
 //! | `pseudofermion` | Pseudofermion HMC CPU (test reference) |
+//! | `rhmc` | Rational approximation + multi-shift CG (RHMC core) |
+//! | `rhmc_hmc` | RHMC heatbath, action, force CPU (test reference) |
 //!
 //! # Neighbor Resolution
 //!
@@ -83,6 +85,9 @@ pub mod cpu_dirac;
 pub mod cpu_su3;
 #[cfg(test)]
 pub mod pseudofermion;
+pub mod rhmc;
+#[cfg(test)]
+pub mod rhmc_hmc;
 #[cfg(test)]
 pub mod wilson;
 

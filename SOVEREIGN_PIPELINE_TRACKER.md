@@ -103,7 +103,7 @@ a C library target until Phase 3 completes.
 
 | Need | Status | Notes |
 |------|--------|-------|
-| WGSL shaders parseable by naga | Done | 805 shaders, all naga-valid |
+| WGSL shaders parseable by naga | Done | 806 shaders, all naga-valid |
 | Precision metadata in compile requests | Done | `fp64_strategy` field in IPC |
 | `naga::Module` for direct consumption | Planned | Skip SPIR-V round-trip, needs Layer 3 |
 
@@ -145,7 +145,7 @@ a C library target until Phase 3 completes.
 | DF64 NVK end-to-end verification on hardware | barraCuda | NVK + NAK hardware | Planned |
 | NVIDIA hardware validation (SM70 dispatch) | coralReef | NVIDIA hardware access | Planned |
 | `nak-ir-proc` unsafe → safe (array-field or bytemuck) | coralReef | — | Planned |
-| Dedicated DF64 shaders for covariance + weighted_dot | barraCuda | — | Planned |
+| Hand-written DF64 shader for weighted_dot | barraCuda | — | **Done** (Mar 12) |
 | `BatchedTridiagEigh` GPU op (from groundSpring) | barraCuda | — | Planned |
 
 ### P2 — Near-term
@@ -155,8 +155,8 @@ a C library target until Phase 3 completes.
 | coral-driver `libc` → `rustix` | toadStool + coralReef | — | Planned |
 | Test coverage 80% → 90% | barraCuda | — | In progress |
 | Kokkos validation baseline + GPU parity benchmarks | barraCuda | Matching hardware | Planned |
-| WGSL optimizer annotation coverage (`@ilp_region`) | barraCuda | — | Planned |
-| RHMC multi-shift CG absorb (from hotSpring) | barraCuda | — | Planned |
+| WGSL optimizer annotation coverage (`@ilp_region`) | barraCuda | — | **Done** (Mar 12) — variance_reduce_df64, weighted_dot_df64, mean_variance_df64, covariance_f64 |
+| RHMC multi-shift CG absorb (from hotSpring) | barraCuda | — | **Done** (Mar 12) — rhmc.rs + rhmc_hmc.rs |
 
 ### P3 — Medium-term
 

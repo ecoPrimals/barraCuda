@@ -24,7 +24,7 @@ Together they produce a stable, sovereign, pure Rust compute stack.
 
 ```
 Layer 1  barraCuda    ██████████  COMPLETE       Zero unsafe, zero C deps
-Layer 2  coralReef    ████████░░  Phase 10 I42   DRM E2E proven; VFIO 6/7; 2 unsafe (nak-ir-proc)
+Layer 2  coralReef    ████████░░  Phase 10 I44   DRM E2E proven; USERD_TARGET fix applied; hw revalidation pending
 Layer 3  coralReef    ██░░░░░░░░  Planned        Standalone coral-reef crate, multi-arch ISA
 Layer 4  toadStool    █████████░  S153 complete  All infra gaps resolved; VFIO hw validation 6/7
 ```
@@ -133,9 +133,8 @@ Vulkan/NVK with a minimal pure-Rust compute runtime using IOMMU hardware
 isolation for exclusive device access, deterministic scheduling, and zero
 kernel driver in the data path.
 
-toadStool S153 resolved all 12 software infrastructure gaps. coralReef Iter 43
-provides PFIFO channel init + V2 MMU and passes 6/7 VFIO hardware tests on
-Titan V. The remaining blocker is PFIFO channel init in coralReef for VFIO dispatch.
+toadStool S153 resolved all 12 software infrastructure gaps. coralReef Iter 44
+has USERD_TARGET + INST_TARGET runlist fix applied. Hardware revalidation on Titan V expected to yield 7/7 VFIO tests.
 
 | Component | Description | Status |
 |-----------|-------------|--------|

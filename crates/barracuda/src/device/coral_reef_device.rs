@@ -31,7 +31,7 @@
 //! | IPC compile (coralReef) | Done | `shader.compile.wgsl` via `coral_compiler/` |
 //! | IPC dispatch (toadStool) | In progress | `compute.dispatch.submit` (S152) |
 //! | DRM (nouveau/amdgpu) | E2E verified | Titan V + RTX 3090 proven via coralReef |
-//! | VFIO/GPFIFO | 6/7 tests pass | PFIFO channel init pending in coralReef |
+//! | VFIO/GPFIFO | Fix applied | USERD_TARGET + INST_TARGET fix (Iter 44); hw revalidation pending |
 //!
 //! # Activation
 //!

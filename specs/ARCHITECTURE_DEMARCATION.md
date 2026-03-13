@@ -119,13 +119,19 @@ backends) with hardware intelligence. It owns:
 - Unified CPU/GPU/NPU as parallel compute units
 - Capability-based discovery, no hardcoded backends
 
-### VFIO GPU Dispatch (`vfio` — **primary dispatch path**)
-- VFIO device lifecycle: bind/unbind GPUs to `vfio-pci`, manage IOMMU groups
+### VFIO GPU Dispatch (`vfio` — **primary dispatch path**, S152 infrastructure complete)
+- VFIO device lifecycle: `bind_vfio()` / `unbind_vfio()` with DRM/IOMMU checks (S151)
 - Exclusive device access with hardware-enforced IOMMU isolation
-- Huge page DMA buffer allocation (2 MiB / 1 GiB pages)
+- Huge page DMA: `DmaAllocator::allocate_huge()` — 2 MiB / 1 GiB pages (S152)
+- MSI-X / eventfd GPU interrupt completion signaling (S152)
 - Dual-use model: VFIO for compute, passback for gaming
 - `VfioGpuInfo` descriptor provided to barraCuda's `CoralReefDevice::from_vfio_device()`
-- `RegisterAccess` trait (toadStool S149) for safe register I/O
+- `RegisterAccess` trait (S149) for safe register I/O
+- `GpuPowerController` — GPU reset/power (D0/D3hot, FLR) (S152)
+- Thermal safety: pre-dispatch temperature checks (S151)
+- Multi-GPU parallel init with rollback: `compute.hardware.auto_init_all` (S152)
+- Cross-gate GPU pooling: `RemoteDispatcher`, `compute.dispatch.forward` (S152)
+- Multi-arch classifier: `GpuGen` enum (Maxwell→Ampere) with `from_chip()` (S152)
 
 ### Distribution & Services
 - `server`/`client` — HTTP/WebSocket/Unix compute service API

@@ -24,9 +24,9 @@ Together they produce a stable, sovereign, pure Rust compute stack.
 
 ```
 Layer 1  barraCuda    ██████████  COMPLETE       Zero unsafe, zero C deps
-Layer 2  coralReef    ██████░░░░  Phase 10       2 unsafe (nak-ir-proc), pure Rust chain
+Layer 2  coralReef    ████████░░  Phase 10 I42   DRM E2E proven; VFIO 6/7; 2 unsafe (nak-ir-proc)
 Layer 3  coralReef    ██░░░░░░░░  Planned        Standalone coral-reef crate, multi-arch ISA
-Layer 4  toadStool    ███░░░░░░░  Active design  VFIO GPU dispatch (primary), DRM (fallback)
+Layer 4  toadStool    ████████░░  S152 complete  All infra gaps resolved; VFIO hw validation 6/7
 ```
 
 ---
@@ -124,7 +124,7 @@ Enable WGSL → ISA direct path (bypass SPIR-V).
 
 ---
 
-## Layer 4 — toadStool: Sovereign Hardware (ACTIVE DESIGN)
+## Layer 4 — toadStool: Sovereign Hardware (S152 INFRASTRUCTURE COMPLETE)
 
 **Owner**: toadStool (VFIO lifecycle + runtime), coralReef (coral-driver)
 
@@ -133,12 +133,19 @@ Vulkan/NVK with a minimal pure-Rust compute runtime using IOMMU hardware
 isolation for exclusive device access, deterministic scheduling, and zero
 kernel driver in the data path.
 
+toadStool S152 resolved all 12 software infrastructure gaps. coralReef Iter 42
+provides `GpuContext::from_vfio()` API and passes 6/7 VFIO hardware tests on
+Titan V. The remaining blocker is PFIFO channel init in coralReef for VFIO dispatch.
+
 | Component | Description | Status |
 |-----------|-------------|--------|
-| coralDriver | Userspace GPU driver (BAR0 MMIO, GPFIFO, fences) | BAR0 absorbed (Mar 12) |
-| coral-gpu | `GpuContext` API (compile, alloc, dispatch, sync) | In progress |
-| toadStool VFIO | IOMMU group management, device bind/unbind | `RegisterAccess` trait done |
-| Huge page DMA | 2 MiB / 1 GiB page allocation for DMA buffers | toadStool owns |
+| coralDriver | Userspace GPU driver (BAR0 MMIO, GPFIFO, fences) | DRM E2E verified; VFIO 6/7 |
+| coral-gpu | `GpuContext` API (compile, alloc, dispatch, sync) | **Done** (Iter 42) — incl. `from_vfio()` |
+| toadStool VFIO | IOMMU group management, device bind/unbind | **Done** (S150–S152) |
+| Huge page DMA | 2 MiB / 1 GiB page allocation for DMA buffers | **Done** (S152) — `DmaAllocator::allocate_huge()` |
+| MSI-X / eventfd | GPU interrupt completion signaling | **Done** (S152) — `VfioMsixInterrupt` |
+| Thermal safety | Pre-dispatch GPU temperature checks | **Done** (S151) |
+| Multi-GPU init | Parallel init with rollback | **Done** (S152) — `compute.hardware.auto_init_all` |
 | BearDog encrypt | Encrypted shader transport to GPU | BearDog team owns |
 
 ### Why VFIO over Vulkan/DRM

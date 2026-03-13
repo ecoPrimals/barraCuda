@@ -180,9 +180,19 @@
 
 ## What's Not Working Yet
 
+- P0: `coral-gpu` not yet publishable as standalone dependency (API available: coralReef Iter 42)
+- P0: VFIO dispatch blocked on PFIFO channel init in coralReef (6/7 VFIO tests pass on Titan V)
 - P1: DF64 end-to-end NVK hardware verification (Yukawa shaders)
 - P1: coralNAK extraction (pending org repo fork)
+- P1: Kokkos validation baseline documentation (unblocked by VFIO strategy)
 - P2: Test coverage ~75% on llvmpipe (target: 90%, requires real GPU hardware for GPU-path coverage)
-- P1: Kokkos validation baseline documentation
 - P2: Kokkos GPU parity benchmarks
-- P2: RHMC multi-shift CG solver (hotSpring ladder L4)
+- ~~P2: RHMC multi-shift CG solver~~ — **Done** (Mar 12, rhmc.rs + rhmc_hmc.rs)
+
+### Cross-Primal Pins (current)
+
+| Primal | Version/Session | Key capability |
+|--------|-----------------|----------------|
+| toadStool | S152 | All 12 sovereign infra gaps resolved; VFIO backend, DMA, thermal, multi-GPU |
+| coralReef | Phase 10 Iter 42 | DRM E2E proven; `GpuContext::from_vfio()`; 1669+35 tests |
+| hotSpring | v0.6.31 | `sovereign_resolves_poisoning()` wired; RHMC/CG absorbed |

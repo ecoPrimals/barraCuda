@@ -30,10 +30,10 @@
 //!
 //! | Backend | Status | Notes |
 //! |---------|--------|-------|
-//! | VFIO/GPFIFO | Active design | toadStool VFIO GPU backend + `from_vfio_device` |
+//! | VFIO/GPFIFO | API available | `GpuContext::from_vfio()` (Iter 42); 6/7 tests pass; PFIFO channel init pending |
 //! | amdgpu (DRM) | E2E verified | coralReef Phase 10 |
-//! | nouveau (DRM) | Partial | Compute subchannel bound (Iter 26), validation pending |
-//! | nvidia-drm | Pending | UVM integration needed |
+//! | nouveau (DRM) | E2E verified | Titan V + RTX 3090 sovereign dispatch proven |
+//! | nvidia-drm | UVM partial | UVM dispatch pipeline validated (Iter 37+) |
 //!
 //! # Activation
 //!
@@ -188,17 +188,20 @@ impl CoralReefDevice {
     /// # Errors
     ///
     /// Returns [`Err`] if the VFIO device cannot be opened or is unsupported.
-    /// Currently returns `Err` unconditionally — blocked on `coral-gpu` VFIO
-    /// backend and toadStool's `VfioGpuInfo` type.
+    /// Currently returns `Err` unconditionally — `coral-gpu` provides
+    /// `GpuContext::from_vfio(bdf)` as of Iter 42, but coral-gpu is not
+    /// yet publishable as a standalone dependency.
     #[cfg(feature = "sovereign-dispatch")]
     pub fn from_vfio_device(pci_address: &str, vendor_id: u16, iommu_group: u32) -> Result<Self> {
-        // Blocked on: coral-gpu VFIO backend + toadStool VfioGpuInfo type.
-        // When unblocked, this will call coral_gpu::GpuContext::from_vfio(...)
-        // with the VFIO device fd obtained from toadStool.
+        // coralReef Iter 42 provides GpuContext::from_vfio(bdf) and
+        // GpuContext::from_vfio_with_sm(bdf, sm). Blocked on: coral-gpu
+        // publishable as a standalone crate dependency.
+        // toadStool S152 has all VFIO infrastructure (bind/unbind, DMA,
+        // huge pages, MSI-X, thermal safety, multi-GPU init).
         Err(BarracudaError::Device(format!(
-            "CoralReefDevice::from_vfio_device: VFIO backend not yet available \
+            "CoralReefDevice::from_vfio_device: coral-gpu not yet publishable as dependency \
              (PCI {pci_address}, vendor 0x{vendor_id:04x}, IOMMU group {iommu_group}) — \
-             blocked on coral-gpu VFIO support and toadStool VfioGpuInfo type"
+             API exists (GpuContext::from_vfio), blocked on crate publishing"
         )))
     }
 

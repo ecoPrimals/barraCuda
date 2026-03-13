@@ -10,9 +10,9 @@
 
 ```
 Layer 1  barraCuda    ██████████  COMPLETE       Zero unsafe, zero C deps
-Layer 2  coralReef    ██████░░░░  Phase 10       9 unsafe (coral-driver RAII + nak-ir-proc)
+Layer 2  coralReef    ████████░░  Phase 10 I42   DRM E2E proven; VFIO 6/7; PFIFO channel pending
 Layer 3  Standalone   ██░░░░░░░░  Planned        Standalone coral-reef crate, multi-arch ISA
-Layer 4  Sovereign HW ███░░░░░░░  Active design  VFIO via toadStool (primary), DRM (fallback)
+Layer 4  Sovereign HW ████████░░  S152 complete  toadStool infra done; VFIO hw validation 6/7
 ```
 
 ### Dispatch Chain (VFIO primary)
@@ -57,7 +57,7 @@ barraCuda dispatches GPU work through two backends:
 | VFIO provider | toadStool owns VFIO device lifecycle; barraCuda receives `VfioGpuInfo` |
 | First target | AMD RDNA2 (GFX1030 — E2E verified in coralReef) |
 | Blocked by | `coral-gpu` crate publishable as `cargo add` dependency |
-| NVIDIA | Pending hardware validation in coralReef (SM70 codegen exists, dispatch untested) |
+| NVIDIA | DRM dispatch E2E proven on Titan V + RTX 3090; VFIO 6/7 tests pass, channel init pending |
 
 This is the critical bridge between barraCuda (Layer 1) and the sovereign
 stack (Layers 2-4). Without it, the sovereign pipeline has no consumer.
@@ -176,9 +176,12 @@ a C library target until Phase 3 completes.
 
 | Need | Status | Notes |
 |------|--------|-------|
-| `VfioGpuInfo` descriptor for VFIO GPU devices | Planned | toadStool VFIO GPU backend owns device lifecycle |
-| VFIO device bind/unbind lifecycle management | Planned | toadStool owns IOMMU group management |
-| Huge page DMA buffer descriptors | Planned | toadStool allocates, barraCuda consumes via `GpuBackend` |
+| `VfioGpuInfo` descriptor for VFIO GPU devices | **Done** (S150) | `VfioBar0Access`, unified PCI discovery |
+| VFIO device bind/unbind lifecycle management | **Done** (S151) | `bind_vfio()` / `unbind_vfio()` with DRM/IOMMU checks |
+| Huge page DMA buffer descriptors | **Done** (S152) | `DmaAllocator::allocate_huge()` (2M / 1G pages) |
+| Thermal safety for GPU devices | **Done** (S151) | Pre-dispatch thermal checks |
+| Multi-GPU parallel init | **Done** (S152) | `compute.hardware.auto_init_all` JSON-RPC |
+| Cross-gate GPU pooling | **Done** (S152) | `RemoteDispatcher`, `compute.dispatch.forward` |
 
 ### toadStool needs from coralReef
 
@@ -194,7 +197,7 @@ a C library target until Phase 3 completes.
 | Stable IPC for shader compilation | coralReef | Done (Phase 10) |
 | Capability-based hardware discovery | toadStool | Done |
 | Precision strategy (F32/F64/Df64) | barraCuda | Done (3-tier model) |
-| Direct sovereign dispatch | barraCuda + coralReef | Blocked on P0 |
+| Direct sovereign dispatch | barraCuda + coralReef | Blocked on coral-gpu publishable; DRM path E2E verified |
 
 ---
 
@@ -208,19 +211,19 @@ a C library target until Phase 3 completes.
 | `CoralReefDevice` scaffold (behind `sovereign-dispatch`) | barraCuda | — | **Done** (Mar 9) |
 | `dispatch_binary` + `dispatch_kernel` on `CoralReefDevice` | barraCuda | — | **Done** (Mar 12) |
 | Coral compiler cache → dispatch wiring | barraCuda | — | **Done** (Mar 12) |
-| `CoralReefDevice` functional implementation | barraCuda | `coral-gpu` crate publishable | Blocked |
-| `coral-gpu` crate as standalone dependency | coralReef | — | In progress |
-| VFIO as target dispatch backend for `CoralReefDevice` | barraCuda + toadStool | toadStool VFIO GPU backend | Active design |
+| `CoralReefDevice` functional implementation | barraCuda | `coral-gpu` crate publishable | Blocked (API exists: Iter 42) |
+| `coral-gpu` crate as standalone dependency | coralReef | — | In progress (Iter 42 has full API) |
+| VFIO as target dispatch backend for `CoralReefDevice` | barraCuda + toadStool | PFIFO channel init (coralReef) | toadStool ready (S152); coralReef 6/7 VFIO tests pass |
 
 ### P1 — Immediate
 
 | Item | Owner | Depends On | Status |
 |------|-------|------------|--------|
-| `from_vfio_device` constructor on `CoralReefDevice` | barraCuda | toadStool `VfioGpuInfo` type | **Done** (Mar 13) — stub, feature-gated |
+| `from_vfio_device` constructor on `CoralReefDevice` | barraCuda | coral-gpu publishable | **Done** (Mar 13) — stub; API available via `GpuContext::from_vfio()` (Iter 42) |
 | `is_vfio_gpu_available()` device discovery | barraCuda | — | **Done** (Mar 13) |
 | VFIO dispatch path documentation across all root docs | barraCuda | — | **Done** (Mar 13) |
 | DF64 NVK end-to-end verification on hardware | barraCuda | NVK + NAK hardware | Planned |
-| NVIDIA hardware validation (SM70 dispatch) | coralReef | NVIDIA hardware access | Planned |
+| NVIDIA hardware validation (SM70 dispatch) | coralReef | PFIFO channel init | 6/7 VFIO tests pass on Titan V; dispatch blocked on channel init |
 | `nak-ir-proc` unsafe → safe (array-field or bytemuck) | coralReef | — | Planned |
 | Hand-written DF64 shader for weighted_dot | barraCuda | — | **Done** (Mar 12) |
 | `BatchedTridiagEigh` GPU op (from groundSpring) | barraCuda | — | Planned |
@@ -230,7 +233,7 @@ a C library target until Phase 3 completes.
 
 | Item | Owner | Depends On | Status |
 |------|-------|------------|--------|
-| coral-driver `libc` → `rustix` | toadStool + coralReef | — | In progress (toadStool S149) |
+| coral-driver `libc` → `rustix` | toadStool + coralReef | — | In progress (toadStool S149+; extern "C" removal done S152) |
 | Test coverage 80% → 90% | barraCuda | — | In progress |
 | WGSL optimizer annotation coverage (`@ilp_region`) | barraCuda | — | **Done** (Mar 12) — variance_reduce_df64, weighted_dot_df64, mean_variance_df64, covariance_f64 |
 | RHMC multi-shift CG absorb (from hotSpring) | barraCuda | — | **Done** (Mar 12) — rhmc.rs + rhmc_hmc.rs |
@@ -250,7 +253,7 @@ a C library target until Phase 3 completes.
 
 | Item | Owner | Depends On | Status |
 |------|-------|------------|--------|
-| Sovereign hardware driver (VFIO + coralDriver DMA) | toadStool | Layer 3 + VFIO GPU backend | Active design |
+| Sovereign hardware driver (VFIO + coralDriver DMA) | toadStool | PFIFO channel init (coralReef) | toadStool S152 infra complete; coralReef VFIO 6/7 |
 | AMD RDNA3/CDNA2 ISA support | coralReef | Hardware access | Planned |
 | Intel Xe ISA support | coralReef | Hardware access | Future |
 | WebGPU browser target (wasm-pack) | barraCuda | wgpu WebGPU backend | Future |

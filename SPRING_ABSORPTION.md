@@ -2,7 +2,7 @@
 
 **Version**: 0.3.5
 **Date**: March 13, 2026
-**Source**: hotSpring v0.6.27, groundSpring V99, neuralSpring S143, wetSpring V107, airSpring v0.7.5, healthSpring V19, toadStool S147
+**Source**: hotSpring v0.6.31, groundSpring V99, neuralSpring S143, wetSpring V107, airSpring v0.7.5, healthSpring V19, toadStool S152, coralReef Phase 10 Iter 42
 
 Cross-spring evolution follows **Write → Absorb → Lean**: springs implement
 domain-specific primitives, barraCuda absorbs and generalises, springs consume

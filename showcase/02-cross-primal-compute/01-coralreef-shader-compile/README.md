@@ -22,7 +22,7 @@ barraCuda                    coralReef
    |<---------------------------|
    |                            |
    |  dispatch via wgpu or      |
-   |  coral-gpu (sovereign)     |
+   |  sovereign IPC (coralReef + toadStool) |
 ```
 
 ## Run

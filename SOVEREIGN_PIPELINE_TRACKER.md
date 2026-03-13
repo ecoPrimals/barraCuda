@@ -15,16 +15,17 @@ Layer 3  Standalone   ██░░░░░░░░  Planned        Standalone 
 Layer 4  Sovereign HW ████████░░  S152 complete  toadStool infra done; VFIO hw validation 6/7
 ```
 
-### Dispatch Chain (VFIO primary)
+### Dispatch Chain (sovereign primary — IPC-first)
 
 ```
 barraCuda (WGSL math)
-  → CoralReefDevice (sovereign-dispatch feature)
-    → coralReef (WGSL → native SASS/GFX binary)
-      → coral-driver (GPFIFO submission)
-        → VFIO/IOMMU (toadStool exclusive device access)
-          → GPU hardware (any PCIe GPU — NVIDIA, AMD, Intel)
+  → [JSON-RPC] coralReef (WGSL → native SASS/GFX binary)
+    → [JSON-RPC] toadStool (dispatch binary → VFIO/DRM → GPU)
+      → GPU hardware (any PCIe GPU — NVIDIA, AMD, Intel)
 ```
+
+All inter-primal communication is JSON-RPC 2.0 IPC at runtime.
+No compile-time coupling between primals.
 
 ### Dispatch Chain (wgpu fallback — development / non-VFIO)
 
@@ -40,8 +41,8 @@ barraCuda (WGSL math)
 
 barraCuda dispatches GPU work through two backends:
 
-1. **`CoralReefDevice` (VFIO primary)** — dispatches via `coral-gpu::GpuContext`
-   through VFIO/toadStool, bypassing the entire Vulkan/Mesa/kernel driver stack.
+1. **`CoralReefDevice` (VFIO primary)** — dispatches via JSON-RPC IPC to coralReef (compile) + toadStool (dispatch),
+   bypassing the entire Vulkan/Mesa/kernel driver stack.
    VFIO provides exclusive device access, zero kernel driver in the data path,
    deterministic scheduling, and IOMMU hardware isolation.
 2. **`WgpuDevice` (fallback)** — dispatches through wgpu → Vulkan/Metal/DX12.
@@ -52,11 +53,11 @@ barraCuda dispatches GPU work through two backends:
 | Feature flag | `sovereign-dispatch` in barraCuda `Cargo.toml` |
 | Primary module | `crates/barracuda/src/device/coral_reef_device.rs` |
 | Fallback module | `crates/barracuda/src/device/wgpu_device.rs` |
-| API surface | Wraps `GpuContext` — `compile_wgsl`, `alloc`, `upload`, `dispatch`, `sync`, `readback` |
-| VFIO dispatch | `dispatch_binary` is the fast path (pre-compiled binary → GPFIFO → GPU) |
-| VFIO provider | toadStool owns VFIO device lifecycle; barraCuda receives `VfioGpuInfo` |
+| API surface | IPC to coralReef (`shader.compile.wgsl`) + toadStool (`compute.dispatch.submit`) |
+| Sovereign dispatch | Binary from coralReef IPC → toadStool IPC → GPU |
+| Hardware lifecycle | toadStool owns VFIO/DRM lifecycle; barraCuda never sees hardware |
 | First target | AMD RDNA2 (GFX1030 — E2E verified in coralReef) |
-| Blocked by | `coral-gpu` crate publishable as `cargo add` dependency |
+| Architecture | IPC-first — no compile-time deps between primals |
 | NVIDIA | DRM dispatch E2E proven on Titan V + RTX 3090; VFIO 6/7 tests pass, channel init pending |
 
 This is the critical bridge between barraCuda (Layer 1) and the sovereign
@@ -159,8 +160,8 @@ a C library target until Phase 3 completes.
 
 | Need | Status | Notes |
 |------|--------|-------|
-| `coral-gpu` as `cargo add` dependency | Not yet | Required for `sovereign-dispatch` feature |
-| `GpuContext` API stability | Stable | `compile_wgsl`, `alloc`, `upload`, `dispatch`, `sync`, `readback` |
+| Shader compilation via IPC | Done | `shader.compile.wgsl` JSON-RPC endpoint |
+| Compilation result format | Stable | Binary + metadata returned via IPC |
 | `Fp64Strategy` in `CompileOptions` | Done | barraCuda passes via IPC `CompileWgslRequest.fp64_strategy` |
 | `shader.compile.capabilities` endpoint | Done | Phase 10, with fallback for pre-Phase 10 |
 
@@ -176,7 +177,7 @@ a C library target until Phase 3 completes.
 
 | Need | Status | Notes |
 |------|--------|-------|
-| `VfioGpuInfo` descriptor for VFIO GPU devices | **Done** (S150) | `VfioBar0Access`, unified PCI discovery |
+| `compute.dispatch.submit` IPC endpoint | **Done** (S152) | toadStool dispatches binaries to GPU |
 | VFIO device bind/unbind lifecycle management | **Done** (S151) | `bind_vfio()` / `unbind_vfio()` with DRM/IOMMU checks |
 | Huge page DMA buffer descriptors | **Done** (S152) | `DmaAllocator::allocate_huge()` (2M / 1G pages) |
 | Thermal safety for GPU devices | **Done** (S151) | Pre-dispatch thermal checks |
@@ -197,7 +198,7 @@ a C library target until Phase 3 completes.
 | Stable IPC for shader compilation | coralReef | Done (Phase 10) |
 | Capability-based hardware discovery | toadStool | Done |
 | Precision strategy (F32/F64/Df64) | barraCuda | Done (3-tier model) |
-| Direct sovereign dispatch | barraCuda + coralReef | Blocked on coral-gpu publishable; DRM path E2E verified |
+| Direct sovereign dispatch | barraCuda + coralReef + toadStool | IPC wiring in progress; DRM path E2E verified |
 
 ---
 
@@ -211,16 +212,14 @@ a C library target until Phase 3 completes.
 | `CoralReefDevice` scaffold (behind `sovereign-dispatch`) | barraCuda | — | **Done** (Mar 9) |
 | `dispatch_binary` + `dispatch_kernel` on `CoralReefDevice` | barraCuda | — | **Done** (Mar 12) |
 | Coral compiler cache → dispatch wiring | barraCuda | — | **Done** (Mar 12) |
-| `CoralReefDevice` functional implementation | barraCuda | `coral-gpu` crate publishable | Blocked (API exists: Iter 42) |
-| `coral-gpu` crate as standalone dependency | coralReef | — | In progress (Iter 42 has full API) |
-| VFIO as target dispatch backend for `CoralReefDevice` | barraCuda + toadStool | PFIFO channel init (coralReef) | toadStool ready (S152); coralReef 6/7 VFIO tests pass |
+| `CoralReefDevice` IPC dispatch wiring | barraCuda | toadStool `compute.dispatch.submit` | In progress (IPC client scaffold done) |
+| toadStool dispatch IPC endpoint | toadStool | — | API design done (S152); integration pending |
+| VFIO dispatch via toadStool IPC | toadStool + coralReef | PFIFO channel init (coralReef) | toadStool ready (S152); coralReef 6/7 VFIO tests pass |
 
 ### P1 — Immediate
 
 | Item | Owner | Depends On | Status |
 |------|-------|------------|--------|
-| `from_vfio_device` constructor on `CoralReefDevice` | barraCuda | coral-gpu publishable | **Done** (Mar 13) — stub; API available via `GpuContext::from_vfio()` (Iter 42) |
-| `is_vfio_gpu_available()` device discovery | barraCuda | — | **Done** (Mar 13) |
 | VFIO dispatch path documentation across all root docs | barraCuda | — | **Done** (Mar 13) |
 | DF64 NVK end-to-end verification on hardware | barraCuda | NVK + NAK hardware | Planned |
 | NVIDIA hardware validation (SM70 dispatch) | coralReef | PFIFO channel init | 6/7 VFIO tests pass on Titan V; dispatch blocked on channel init |

@@ -6,11 +6,11 @@
 //!
 //! Two backends implement this trait:
 //!
-//! - **`CoralReefDevice`** (VFIO primary) — dispatches through `coral-gpu` →
-//!   GPFIFO → GPU via toadStool's VFIO device lifecycle. `dispatch_binary` is
-//!   the fast path: pre-compiled native binaries submitted directly without
-//!   shader recompilation. Requires `sovereign-dispatch` feature + `coral-gpu`
-//!   crate + VFIO-capable hardware managed by toadStool.
+//! - **`CoralReefDevice`** (sovereign, IPC-first) — compiles WGSL via coralReef
+//!   JSON-RPC (`shader.compile.wgsl`) and dispatches via toadStool JSON-RPC
+//!   (`compute.dispatch.submit`). No compile-time coupling to any primal crate.
+//!   toadStool routes to the best hardware path (VFIO/DRM) at runtime.
+//!   Requires `sovereign-dispatch` feature.
 //!
 //! - **`WgpuDevice`** (fallback) — dispatches through wgpu → Vulkan/Metal/DX12.
 //!   Used for development, CI, non-VFIO environments, and platforms without
@@ -64,7 +64,7 @@ pub struct DispatchDescriptor<'a, B: GpuBackend + ?Sized> {
 /// # Associated Types
 ///
 /// - `Buffer`: The backend's buffer handle. For wgpu this is `wgpu::Buffer`;
-///   for coral-gpu it will be `coral_gpu::BufferHandle`.
+///   for `CoralReefDevice` it is `CoralBuffer` (IPC-managed by toadStool).
 ///
 /// # Design
 ///
@@ -124,7 +124,7 @@ pub trait GpuBackend: Send + Sync {
     /// record compute pass, submit, and wait for completion.
     ///
     /// This is the core abstraction — each backend implements the full
-    /// pipeline using its own API (wgpu, coral-gpu, etc.).
+    /// pipeline using its own API (wgpu, sovereign IPC, etc.).
     ///
     /// # Errors
     /// Returns [`Err`] if compilation, dispatch, or synchronization fails.

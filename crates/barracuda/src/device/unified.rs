@@ -122,7 +122,7 @@ pub enum DeviceContext {
     /// NPU context (Akida)
     NPU(AkidaBoard),
 
-    /// Sovereign GPU context (coralReef → DRM, no wgpu/Vulkan).
+    /// Sovereign GPU context (IPC: coralReef compile + toadStool dispatch).
     #[cfg(feature = "sovereign-dispatch")]
     Sovereign(super::coral_reef_device::CoralReefDevice),
 

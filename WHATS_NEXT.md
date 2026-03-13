@@ -7,9 +7,10 @@ Prioritized work items, ordered by impact. Updated 2026-03-13.
 ## Recently Completed
 
 - **VFIO-primary architecture adoption (Mar 13)**: VFIO via toadStool adopted as
-  primary GPU dispatch path. All root docs and specs updated. `from_vfio_device`
-  constructor stub added to `CoralReefDevice` (feature-gated). `is_vfio_gpu_available()`
-  + `VfioGpuInfo` added to device discovery. wgpu demoted to development/fallback.
+  primary GPU dispatch path. All root docs and specs updated. CoralReefDevice
+  evolved to IPC-first architecture (no coral-gpu dependency). VFIO detection
+  responsibility moved to toadStool (barraCuda queries via IPC). wgpu demoted to
+  development/fallback.
 - **Sovereign pipeline deep debt sprint (Mar 12)**: Hand-written `weighted_dot_df64.wgsl`
   (6 kernels with DF64 workgroup accumulators) replaces auto-rewrite for Hybrid devices.
   RHMC multi-shift CG + rational approximation + RHMC HMC absorbed from hotSpring into

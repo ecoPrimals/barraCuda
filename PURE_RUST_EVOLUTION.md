@@ -140,7 +140,7 @@ Titan V. The remaining blocker is PFIFO channel init in coralReef for VFIO dispa
 | Component | Description | Status |
 |-----------|-------------|--------|
 | coralDriver | Userspace GPU driver (BAR0 MMIO, GPFIFO, fences) | DRM E2E verified; VFIO 6/7 |
-| coral-gpu | `GpuContext` API (compile, alloc, dispatch, sync) | **Done** (Iter 42) — incl. `from_vfio()` |
+| IPC to coralReef | `shader.compile.wgsl` JSON-RPC (compile) | **Done** (coral_compiler/ module) |
 | toadStool VFIO | IOMMU group management, device bind/unbind | **Done** (S150–S152) |
 | Huge page DMA | 2 MiB / 1 GiB page allocation for DMA buffers | **Done** (S152) — `DmaAllocator::allocate_huge()` |
 | MSI-X / eventfd | GPU interrupt completion signaling | **Done** (S152) — `VfioMsixInterrupt` |
@@ -186,7 +186,7 @@ Layer 4  coral-driver      Rust    WE OWN     BAR0 MMIO, GPFIFO submission
 
 ### Dispatch Chain (VFIO primary)
 ```
-barraCuda → CoralReefDevice → coral-gpu → GPFIFO → GPU (via VFIO/toadStool)
+barraCuda → [JSON-RPC] coralReef (compile) → [JSON-RPC] toadStool (dispatch) → GPU
 ```
 
 ### Dispatch Chain (wgpu fallback)

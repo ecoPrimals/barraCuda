@@ -106,112 +106,10 @@ pub fn is_npu_available() -> bool {
     false
 }
 
-/// Information about a GPU bound to `vfio-pci`, suitable for handoff to
-/// toadStool or `CoralReefDevice::from_vfio_device`.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct VfioGpuInfo {
-    /// PCI address (e.g. `"0000:01:00.0"`).
-    pub pci_address: String,
-    /// PCI vendor ID (e.g. `0x10de` for NVIDIA).
-    pub vendor_id: u16,
-    /// PCI device ID.
-    pub device_id: u16,
-    /// IOMMU group number.
-    pub iommu_group: u32,
-}
-
-/// Check if any GPU is bound to `vfio-pci` (available for sovereign VFIO dispatch).
-///
-/// Scans `/sys/kernel/iommu_groups/*/devices/*/` for devices with a known
-/// GPU vendor ID (NVIDIA `0x10de`, AMD `0x1002`, Intel `0x8086`) whose
-/// `driver` symlink resolves to `vfio-pci`.
-#[must_use]
-pub fn is_vfio_gpu_available() -> bool {
-    !discover_vfio_gpus().is_empty()
-}
-
-/// Discover all GPUs currently bound to `vfio-pci`.
-///
-/// Returns a `Vec<VfioGpuInfo>` for each GPU found. Empty if no VFIO GPUs
-/// are available (no IOMMU, no GPUs bound to `vfio-pci`, or non-Linux).
-#[must_use]
-pub fn discover_vfio_gpus() -> Vec<VfioGpuInfo> {
-    #[cfg(target_os = "linux")]
-    {
-        discover_vfio_gpus_linux()
-    }
-    #[cfg(not(target_os = "linux"))]
-    {
-        Vec::new()
-    }
-}
-
-#[cfg(target_os = "linux")]
-fn discover_vfio_gpus_linux() -> Vec<VfioGpuInfo> {
-    const GPU_VENDOR_NVIDIA: &str = "0x10de";
-    const GPU_VENDOR_AMD: &str = "0x1002";
-    const GPU_VENDOR_INTEL: &str = "0x8086";
-
-    let mut results = Vec::new();
-    let iommu_groups = std::path::Path::new("/sys/kernel/iommu_groups");
-    let Ok(groups) = std::fs::read_dir(iommu_groups) else {
-        return results;
-    };
-    for group_entry in groups.flatten() {
-        let group_name = group_entry.file_name();
-        let Ok(iommu_group) = group_name.to_string_lossy().parse::<u32>() else {
-            continue;
-        };
-        let devices_dir = group_entry.path().join("devices");
-        let Ok(devices) = std::fs::read_dir(devices_dir) else {
-            continue;
-        };
-        for dev in devices.flatten() {
-            let dev_path = dev.path();
-            let pci_address = dev.file_name().to_string_lossy().to_string();
-
-            let Ok(vendor_str) = std::fs::read_to_string(dev_path.join("vendor")) else {
-                continue;
-            };
-            let vendor_trimmed = vendor_str.trim();
-
-            if vendor_trimmed != GPU_VENDOR_NVIDIA
-                && vendor_trimmed != GPU_VENDOR_AMD
-                && vendor_trimmed != GPU_VENDOR_INTEL
-            {
-                continue;
-            }
-
-            let driver_link = dev_path.join("driver");
-            if let Ok(driver_target) = std::fs::read_link(&driver_link) {
-                let driver_name = driver_target
-                    .file_name()
-                    .map(|n| n.to_string_lossy().to_string())
-                    .unwrap_or_default();
-                if driver_name != "vfio-pci" {
-                    continue;
-                }
-            } else {
-                continue;
-            }
-
-            let vendor_id =
-                u16::from_str_radix(vendor_trimmed.trim_start_matches("0x"), 16).unwrap_or(0);
-            let device_id = std::fs::read_to_string(dev_path.join("device"))
-                .ok()
-                .and_then(|s| u16::from_str_radix(s.trim().trim_start_matches("0x"), 16).ok())
-                .unwrap_or(0);
-
-            results.push(VfioGpuInfo {
-                pci_address,
-                vendor_id,
-                device_id,
-                iommu_group,
-            });
-        }
-    }
-    results
-}
+// VFIO GPU discovery (VfioGpuInfo, is_vfio_gpu_available, discover_vfio_gpus)
+// was previously defined here but has been removed. VFIO device detection
+// is owned by toadStool — barraCuda queries hardware capabilities via IPC
+// at runtime, not by scanning sysfs directly.
 
 /// Estimate system memory (GB) via OS-level detection.
 ///
@@ -328,11 +226,7 @@ pub fn build_device_info(device: Device) -> DeviceInfo {
 
         Device::Sovereign => DeviceInfo {
             device,
-            name: if is_vfio_gpu_available() {
-                "Sovereign (coralReef → VFIO)".to_string()
-            } else {
-                "Sovereign (coralReef → DRM)".to_string()
-            },
+            name: "Sovereign (IPC: coralReef compile + toadStool dispatch)".to_string(),
             available: is_sovereign_available(),
             capabilities: vec![
                 Capability::Compute,

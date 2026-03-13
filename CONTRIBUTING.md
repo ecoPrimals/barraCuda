@@ -7,7 +7,7 @@ This guide covers everything you need to start contributing.
 
 barraCuda uses a **dual-path GPU dispatch architecture**:
 - **VFIO primary** (via toadStool): exclusive device access, IOMMU isolation,
-  deterministic scheduling through `CoralReefDevice` → `coral-gpu` → GPFIFO → GPU
+  deterministic scheduling through `CoralReefDevice` → [JSON-RPC] coralReef (compile) → [JSON-RPC] toadStool (dispatch) → GPU
 - **wgpu fallback**: Vulkan/Metal/DX12 for development, non-VFIO environments,
   and platforms without IOMMU support
 

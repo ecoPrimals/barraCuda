@@ -253,7 +253,7 @@ barracuda version
 | `domain-genomics` | via umbrella | Bioinformatics and genomics API. |
 | `domain-vision` | via umbrella | Computer vision pipelines. |
 | `domain-timeseries` | via umbrella | Time series analysis (implies `domain-esn`). |
-| `sovereign-dispatch` | No | Sovereign GPU dispatch via coralReef `coral-gpu` (bypasses wgpu/Vulkan). |
+| `sovereign-dispatch` | No | Sovereign GPU dispatch via IPC to coralReef + toadStool (bypasses wgpu/Vulkan). |
 | `serde` | No | Serde derive support. |
 | `parallel` | No | Rayon parallelism hints. |
 

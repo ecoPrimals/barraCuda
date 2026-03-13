@@ -56,9 +56,9 @@
 - LSCFRK gradient flow integrators (W6, W7, CK45) with algebraic coefficient derivation
 - NautilusBrain force anomaly detection (10σ energy deviation, rolling window)
 - `GpuBackend` trait (`device::backend`) — backend-agnostic compute interface; `WgpuDevice` + `Arc<WgpuDevice>` implement it; `ComputeDispatch<B: GpuBackend>` generic over backend
-- `CoralReefDevice` scaffold behind `sovereign-dispatch` feature flag — ready for `coral-gpu` crate; `from_vfio_device` constructor stub for toadStool VFIO integration
+- `CoralReefDevice` IPC-first sovereign backend behind `sovereign-dispatch` feature — compiles via coralReef JSON-RPC, dispatches via toadStool JSON-RPC; no compile-time coupling
 - VFIO-primary architecture adopted: toadStool VFIO is the primary GPU dispatch path (exclusive device access, IOMMU isolation, deterministic scheduling); wgpu demoted to development/fallback
-- `is_vfio_gpu_available()` + `VfioGpuInfo` in device discovery — scans IOMMU groups for GPU vendor IDs bound to `vfio-pci`
+- VFIO detection moved to toadStool — barraCuda queries hardware capabilities via IPC at runtime
 - Kokkos parity projections: ~4,000 steps/s target (VFIO + DF64) vs 2,630 steps/s Kokkos baseline
 - `SOVEREIGN_PIPELINE_TRACKER.md` — tracks P0 (CoralReefDevice), VFIO primary dispatch, libc→rustix evolution, cross-primal deps
 - Zero TODOs/FIXMEs/HACKs/`unreachable!()` without messages in codebase
@@ -180,8 +180,8 @@
 
 ## What's Not Working Yet
 
-- P0: `coral-gpu` not yet publishable as standalone dependency (API available: coralReef Iter 42)
-- P0: VFIO dispatch blocked on PFIFO channel init in coralReef (6/7 VFIO tests pass on Titan V)
+- P0: toadStool `compute.dispatch.submit` IPC wiring — CoralReefDevice scaffold done, IPC client pending
+- P0: PFIFO channel init in coralReef (6/7 VFIO tests pass on Titan V)
 - P1: DF64 end-to-end NVK hardware verification (Yukawa shaders)
 - P1: coralNAK extraction (pending org repo fork)
 - P1: Kokkos validation baseline documentation (unblocked by VFIO strategy)

@@ -15,8 +15,5 @@ panic = "abort"
 inherits = "release"
 opt-level = 3
 
-# Local coralReef checkout for sovereign-dispatch development
-[patch.crates-io]
-coral-gpu = { path = "../coralReef/crates/coral-gpu" }
-coral-reef = { path = "../coralReef/crates/coral-reef" }
-coral-driver = { path = "../coralReef/crates/coral-driver" }
+# No patch.crates-io needed — barraCuda communicates with coralReef
+# and toadStool via JSON-RPC IPC at runtime, not compile-time deps.

@@ -16,7 +16,7 @@ fast, silent, instant math across any silicon.
 
 barraCuda is vendor-agnostic. It runs on any GPU through two dispatch paths:
 - **VFIO primary** (via toadStool): exclusive device access, IOMMU isolation,
-  deterministic scheduling — `CoralReefDevice` → `coral-gpu` → GPFIFO → GPU
+  deterministic scheduling — `CoralReefDevice` → [JSON-RPC] coralReef (compile) → [JSON-RPC] toadStool (dispatch) → GPU
 - **wgpu fallback**: Vulkan/Metal/DX12/WebGPU — development and non-VFIO environments
 
 One WGSL source, any backend, identical results.

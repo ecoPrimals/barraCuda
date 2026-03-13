@@ -37,8 +37,10 @@ num-traits = { workspace = true }
 half = { workspace = true }
 bytes = { workspace = true }
 
-# Sovereign GPU dispatch (optional, feature-gated)
-coral-gpu = { version = "0.1", optional = true }
+# coral-gpu was previously listed here as an optional compile-time dep.
+# Removed: barraCuda uses IPC-first architecture — coralReef compiles
+# shaders and toadStool dispatches, all via JSON-RPC at runtime.
+# No compile-time coupling between primals.
 
 [dev-dependencies]
 tempfile = { workspace = true }
@@ -138,10 +140,10 @@ default = ["gpu", "domain-models"]
 
 gpu = ["dep:wgpu", "dep:bytemuck", "dep:naga"]
 
-# Sovereign dispatch via coralReef's coral-gpu crate (bypasses wgpu/Vulkan stack).
-# Enable when coral-gpu is available as a cargo dependency.
-# Requires: gpu (for shared buffer types during transition)
-sovereign-dispatch = ["gpu", "dep:coral-gpu"]
+# Sovereign dispatch via IPC to coralReef (compile) + toadStool (dispatch).
+# Enables CoralReefDevice which uses JSON-RPC to communicate with the
+# sovereign pipeline at runtime — no compile-time coupling to coral-gpu.
+sovereign-dispatch = ["gpu"]
 
 # Domain model umbrella — enables all domain-specific modules.
 # Disable with default-features = false to get pure math + GPU compute only.

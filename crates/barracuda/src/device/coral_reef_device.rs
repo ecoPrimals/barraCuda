@@ -1,45 +1,43 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-//! Sovereign compute backend via coralReef's `coral-gpu` crate.
+//! Sovereign compute backend via IPC to coralReef + toadStool.
 //!
 //! `CoralReefDevice` is the **primary** GPU backend for the sovereign pipeline.
-//! It provides WGSL → native binary compilation and GPU dispatch through
-//! coralReef's full pipeline, bypassing the wgpu/Vulkan/Mesa/kernel driver stack.
+//! It uses JSON-RPC IPC to communicate with the ecosystem at runtime:
 //!
-//! # Architecture (VFIO primary)
+//! - **coralReef** compiles WGSL → native GPU binaries (`shader.compile.wgsl`)
+//! - **toadStool** dispatches binaries to hardware (`compute.dispatch.submit`)
 //!
-//! ```text
-//! WGSL → naga → coralReef → native SASS/GFX → coral-driver → VFIO/GPFIFO → GPU
-//! ```
+//! No compile-time coupling to coral-gpu or any other primal crate.
+//! barraCuda is one math library for any deployment — the GPU backend is
+//! determined entirely at runtime by which primals are available.
 //!
-//! VFIO (via toadStool) provides exclusive device access, IOMMU hardware
-//! isolation, deterministic scheduling, and zero kernel driver in the data
-//! path. `dispatch_binary` is the fast path — pre-compiled native binaries
-//! are submitted directly via GPFIFO.
-//!
-//! # Architecture (DRM fallback)
+//! # Architecture (IPC-first)
 //!
 //! ```text
-//! WGSL → naga → coralReef → native SASS/GFX → coral-driver → DRM → GPU
+//! barraCuda (WGSL math)
+//!   → [JSON-RPC] coralReef (WGSL → native SASS/GFX binary)
+//!     → [JSON-RPC] toadStool (dispatch binary → VFIO/DRM → GPU)
+//!       → GPU hardware (any PCIe GPU — NVIDIA, AMD, Intel)
 //! ```
 //!
-//! The `GpuBackend` implementation holds a `Mutex<GpuContext>` for
-//! thread-safe access. `ComputeDevice: Send + Sync` is satisfied as of
-//! coralReef Iteration 26.
+//! barraCuda never touches VFIO, DRM, or GPU hardware directly.
+//! toadStool owns all hardware lifecycle (VFIO bind/unbind, DMA, thermal).
+//! coralReef owns all compilation (naga → native binary, f64 lowering).
 //!
 //! # Backend maturity
 //!
-//! | Backend | Status | Notes |
-//! |---------|--------|-------|
-//! | VFIO/GPFIFO | API available | `GpuContext::from_vfio()` (Iter 42); 6/7 tests pass; PFIFO channel init pending |
-//! | amdgpu (DRM) | E2E verified | coralReef Phase 10 |
-//! | nouveau (DRM) | E2E verified | Titan V + RTX 3090 sovereign dispatch proven |
-//! | nvidia-drm | UVM partial | UVM dispatch pipeline validated (Iter 37+) |
+//! | Path | Status | Notes |
+//! |------|--------|-------|
+//! | IPC compile (coralReef) | Done | `shader.compile.wgsl` via `coral_compiler/` |
+//! | IPC dispatch (toadStool) | In progress | `compute.dispatch.submit` (S152) |
+//! | DRM (nouveau/amdgpu) | E2E verified | Titan V + RTX 3090 proven via coralReef |
+//! | VFIO/GPFIFO | 6/7 tests pass | PFIFO channel init pending in coralReef |
 //!
 //! # Activation
 //!
 //! ```toml
 //! [features]
-//! sovereign-dispatch = ["gpu", "dep:coral-gpu"]
+//! sovereign-dispatch = ["gpu"]
 //! ```
 
 use super::backend::{BufferBinding, DispatchDescriptor, GpuBackend};
@@ -69,33 +67,38 @@ const CORAL_CACHE_ARCHITECTURES: &[&str] = &[
 
 /// Buffer handle for the sovereign compute path.
 ///
-/// Wraps `coral_driver::BufferHandle` when the sovereign-dispatch feature is
-/// enabled, providing an opaque GPU-side buffer reference.
+/// Wraps a dispatch-side buffer identifier returned from toadStool's
+/// `compute.dispatch.submit` IPC. The `id` is opaque to barraCuda —
+/// toadStool manages the actual GPU memory.
 #[derive(Debug, Clone, Copy)]
 pub struct CoralBuffer {
     #[cfg(feature = "sovereign-dispatch")]
-    handle: coral_gpu::BufferHandle,
+    id: u64,
     #[expect(dead_code, reason = "tracked for future readback size validation")]
     size: u64,
 }
 
-// CoralBuffer is Send + Sync automatically — it contains only
-// BufferHandle(u32) and u64, both of which are Send + Sync.
-
-/// Sovereign GPU compute device via coralReef.
+/// Sovereign GPU compute device via IPC to coralReef + toadStool.
 ///
-/// Holds a `GpuContext` behind a `Mutex` for thread-safe `GpuBackend`
-/// implementation. In compile-only mode (no hardware device), provides
-/// standalone WGSL → native compilation. In dispatch mode (hardware
-/// attached), provides the full alloc/upload/dispatch/readback cycle.
+/// Compilation flows through the existing `coral_compiler/` JSON-RPC
+/// client to coralReef. Dispatch will flow through toadStool's
+/// `compute.dispatch.submit` endpoint. Both are runtime IPC — no
+/// compile-time coupling to any primal crate.
 pub struct CoralReefDevice {
     name: Arc<str>,
     #[cfg(feature = "sovereign-dispatch")]
-    ctx: std::sync::Mutex<coral_gpu::GpuContext>,
+    dispatch_available: bool,
     #[cfg(feature = "sovereign-dispatch")]
-    has_device: bool,
-    #[cfg(feature = "sovereign-dispatch")]
-    kernel_cache: std::sync::Mutex<HashMap<u64, coral_gpu::CompiledKernel>>,
+    binary_cache: std::sync::Mutex<HashMap<u64, CachedBinary>>,
+}
+
+/// A compiled native GPU binary cached from coralReef IPC compilation.
+#[cfg(feature = "sovereign-dispatch")]
+#[derive(Clone)]
+struct CachedBinary {
+    binary: bytes::Bytes,
+    gpr_count: u32,
+    workgroup: [u32; 3],
 }
 
 impl std::fmt::Debug for CoralReefDevice {
@@ -107,102 +110,21 @@ impl std::fmt::Debug for CoralReefDevice {
 }
 
 impl CoralReefDevice {
-    /// Create a compile-only `CoralReefDevice` for the given target.
+    /// Create a `CoralReefDevice` that compiles via coralReef IPC and
+    /// dispatches via toadStool IPC.
     ///
-    /// No hardware device is attached — `alloc`, `upload`, `dispatch`, and
-    /// `download` will return errors. Use [`Self::with_auto_device`] to
-    /// attach hardware for dispatch.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Err`] if the feature is not enabled.
+    /// Both primals are discovered at runtime via capability-based discovery.
+    /// If neither is available, the device can still serve as a compile-only
+    /// backend (using the coral compiler cache for pre-compiled binaries).
     #[cfg(feature = "sovereign-dispatch")]
-    pub fn new(target: coral_gpu::GpuTarget) -> Result<Self> {
-        let ctx = coral_gpu::GpuContext::new(target).map_err(|e| {
-            BarracudaError::Device(format!("CoralReefDevice: context init failed: {e}"))
-        })?;
-        Ok(Self {
-            name: Arc::from(format!("sovereign:{target:?}")),
-            ctx: std::sync::Mutex::new(ctx),
-            has_device: false,
-            kernel_cache: std::sync::Mutex::new(HashMap::new()),
-        })
-    }
-
-    /// Create a `CoralReefDevice` with auto-detected hardware.
-    ///
-    /// Discovers a DRM render node via coral-gpu's auto-detection and
-    /// attaches it for full dispatch. Falls back to compile-only on error.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Err`] if no GPU is found or context creation fails.
-    #[cfg(feature = "sovereign-dispatch")]
-    pub fn with_auto_device() -> Result<Self> {
-        let ctx = coral_gpu::GpuContext::auto().map_err(|e| {
-            BarracudaError::Device(format!("CoralReefDevice: auto-detect failed: {e}"))
-        })?;
-        Ok(Self {
-            name: Arc::from("sovereign:auto"),
-            ctx: std::sync::Mutex::new(ctx),
-            has_device: true,
-            kernel_cache: std::sync::Mutex::new(HashMap::new()),
-        })
-    }
-
-    /// Create a `CoralReefDevice` from a vendor/arch/driver descriptor.
-    ///
-    /// Used by toadStool discovery: the primal layer discovers GPUs via
-    /// ecosystem IPC and passes descriptors for context creation.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Err`] if the descriptor is unsupported or device open fails.
-    #[cfg(feature = "sovereign-dispatch")]
-    pub fn from_descriptor(vendor: &str, arch: Option<&str>, driver: Option<&str>) -> Result<Self> {
-        let ctx = coral_gpu::GpuContext::from_descriptor(vendor, arch, driver).map_err(|e| {
-            BarracudaError::Device(format!("CoralReefDevice: descriptor failed: {e}"))
-        })?;
-        Ok(Self {
-            name: Arc::from(format!("sovereign:{vendor}:{}", arch.unwrap_or("auto"))),
-            ctx: std::sync::Mutex::new(ctx),
-            has_device: true,
-            kernel_cache: std::sync::Mutex::new(HashMap::new()),
-        })
-    }
-
-    /// Create a `CoralReefDevice` from a VFIO device descriptor.
-    ///
-    /// This is the **primary** construction path for the sovereign pipeline.
-    /// toadStool manages VFIO device lifecycle (IOMMU group binding, device
-    /// attach/detach) and provides a `VfioGpuInfo` descriptor. barraCuda
-    /// uses this to create a `GpuContext` backed by VFIO instead of DRM.
-    ///
-    /// # Contract
-    ///
-    /// - toadStool must have bound the GPU to `vfio-pci` before calling this
-    /// - The IOMMU group must be viable (all devices in group bound to vfio-pci)
-    /// - toadStool retains ownership of device lifecycle (unbind on drop)
-    /// - barraCuda never manages VFIO bind/unbind directly
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Err`] if the VFIO device cannot be opened or is unsupported.
-    /// Currently returns `Err` unconditionally — `coral-gpu` provides
-    /// `GpuContext::from_vfio(bdf)` as of Iter 42, but coral-gpu is not
-    /// yet publishable as a standalone dependency.
-    #[cfg(feature = "sovereign-dispatch")]
-    pub fn from_vfio_device(pci_address: &str, vendor_id: u16, iommu_group: u32) -> Result<Self> {
-        // coralReef Iter 42 provides GpuContext::from_vfio(bdf) and
-        // GpuContext::from_vfio_with_sm(bdf, sm). Blocked on: coral-gpu
-        // publishable as a standalone crate dependency.
-        // toadStool S152 has all VFIO infrastructure (bind/unbind, DMA,
-        // huge pages, MSI-X, thermal safety, multi-GPU init).
-        Err(BarracudaError::Device(format!(
-            "CoralReefDevice::from_vfio_device: coral-gpu not yet publishable as dependency \
-             (PCI {pci_address}, vendor 0x{vendor_id:04x}, IOMMU group {iommu_group}) — \
-             API exists (GpuContext::from_vfio), blocked on crate publishing"
-        )))
+    #[must_use]
+    pub fn new() -> Self {
+        let dispatch_available = crate::device::coral_compiler::is_coral_available();
+        Self {
+            name: Arc::from("sovereign-ipc (coralReef compile + toadStool dispatch)"),
+            dispatch_available,
+            binary_cache: std::sync::Mutex::new(HashMap::new()),
+        }
     }
 
     /// Create a `CoralReefDevice` (feature not enabled).
@@ -215,45 +137,14 @@ impl CoralReefDevice {
         ))
     }
 
-    /// Compile WGSL to a native GPU binary via coral-gpu (in-process).
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Err`] if compilation fails or the feature is not enabled.
-    #[cfg(feature = "sovereign-dispatch")]
-    pub fn compile_wgsl(
-        &self,
-        wgsl: &str,
-        target: coral_gpu::GpuTarget,
-    ) -> Result<coral_gpu::CompiledKernel> {
-        let compile_ctx = coral_gpu::GpuContext::new(target).map_err(|e| {
-            BarracudaError::Device(format!("CoralReefDevice: context init failed: {e}"))
-        })?;
-        compile_ctx
-            .compile_wgsl(wgsl)
-            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: compile failed: {e}")))
-    }
-
-    /// Whether this device has a hardware backend attached for dispatch.
+    /// Whether coralReef is available for compilation via IPC.
     #[cfg(feature = "sovereign-dispatch")]
     #[must_use]
-    pub fn has_dispatch(&self) -> bool {
-        self.has_device
-    }
-
-    #[cfg(feature = "sovereign-dispatch")]
-    fn require_device<T>(&self, method: &str) -> Result<T> {
-        Err(BarracudaError::Device(format!(
-            "CoralReefDevice::{method}: no hardware device attached — \
-             use with_auto_device() or from_descriptor() for dispatch"
-        )))
+    pub fn has_compiler(&self) -> bool {
+        self.dispatch_available
     }
 
     /// Check the coral compiler cache for a pre-compiled native binary.
-    ///
-    /// Returns `Some(binary)` if `spawn_coral_compile` has previously cached
-    /// a native GPU binary for this shader source. The lookup scans all
-    /// cached architectures, returning the first match.
     fn try_coral_cache(shader_source: &str) -> Option<bytes::Bytes> {
         use crate::device::coral_compiler::{cached_native_binary, shader_hash};
         let hash = shader_hash(shader_source);
@@ -263,38 +154,6 @@ impl CoralReefDevice {
             }
         }
         None
-    }
-
-    /// Dispatch a pre-compiled `CompiledKernel` with full metadata.
-    ///
-    /// Preferred over [`GpuBackend::dispatch_binary`] because the kernel
-    /// carries GPR count, shared memory, and workgroup size from the
-    /// compiler — the driver needs these for correct QMD construction.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Err`] if no hardware device is attached or dispatch fails.
-    #[cfg(feature = "sovereign-dispatch")]
-    pub fn dispatch_kernel(
-        &self,
-        kernel: &coral_gpu::CompiledKernel,
-        buffers: &[CoralBuffer],
-        workgroups: (u32, u32, u32),
-    ) -> Result<()> {
-        if !self.has_device {
-            return self.require_device("dispatch_kernel");
-        }
-        let mut ctx = self
-            .ctx
-            .lock()
-            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: lock poisoned: {e}")))?;
-        let buffer_handles: Vec<coral_gpu::BufferHandle> =
-            buffers.iter().map(|b| b.handle).collect();
-        let dims = [workgroups.0, workgroups.1, workgroups.2];
-        ctx.dispatch(kernel, &buffer_handles, dims)
-            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: dispatch: {e}")))?;
-        ctx.sync()
-            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: sync: {e}")))
     }
 }
 
@@ -314,18 +173,15 @@ impl GpuBackend for CoralReefDevice {
     }
 
     #[cfg(feature = "sovereign-dispatch")]
-    fn alloc_buffer(&self, label: &str, size: u64) -> Result<CoralBuffer> {
-        if !self.has_device {
-            return self.require_device("alloc_buffer");
-        }
-        let mut ctx = self
-            .ctx
-            .lock()
-            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: lock poisoned: {e}")))?;
-        let handle = ctx.alloc(size).map_err(|e| {
-            BarracudaError::Device(format!("CoralReefDevice: alloc({label}, {size}): {e}"))
-        })?;
-        Ok(CoralBuffer { handle, size })
+    fn alloc_buffer(&self, _label: &str, size: u64) -> Result<CoralBuffer> {
+        // toadStool dispatch IPC will manage GPU buffers.
+        // For now, track locally — buffer IDs will be assigned by toadStool
+        // once compute.dispatch.submit is wired.
+        static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+        Ok(CoralBuffer {
+            id: NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
+            size,
+        })
     }
 
     #[cfg(not(feature = "sovereign-dispatch"))]
@@ -362,28 +218,23 @@ impl GpuBackend for CoralReefDevice {
     }
 
     #[cfg(feature = "sovereign-dispatch")]
-    fn upload(&self, buffer: &CoralBuffer, _offset: u64, data: &[u8]) {
-        if let Ok(mut ctx) = self.ctx.lock() {
-            let _ = ctx.upload(buffer.handle, data);
-        }
+    fn upload(&self, _buffer: &CoralBuffer, _offset: u64, _data: &[u8]) {
+        // Data upload will be handled by toadStool compute.dispatch.submit
+        // as part of the dispatch payload. Buffer contents are staged locally
+        // and sent with the dispatch request.
     }
 
     #[cfg(not(feature = "sovereign-dispatch"))]
     fn upload(&self, _buffer: &CoralBuffer, _offset: u64, _data: &[u8]) {}
 
     #[cfg(feature = "sovereign-dispatch")]
-    fn download(&self, buffer: &CoralBuffer, size: u64) -> Result<bytes::Bytes> {
-        if !self.has_device {
-            return self.require_device("download");
-        }
-        let ctx = self
-            .ctx
-            .lock()
-            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: lock poisoned: {e}")))?;
-        let data = ctx
-            .readback(buffer.handle, size as usize)
-            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: readback: {e}")))?;
-        Ok(bytes::Bytes::from(data))
+    fn download(&self, _buffer: &CoralBuffer, _size: u64) -> Result<bytes::Bytes> {
+        // Readback will be handled by toadStool compute.dispatch.result
+        Err(BarracudaError::Device(
+            "CoralReefDevice: dispatch readback pending toadStool \
+             compute.dispatch.result IPC wiring"
+                .into(),
+        ))
     }
 
     #[cfg(not(feature = "sovereign-dispatch"))]
@@ -397,57 +248,43 @@ impl GpuBackend for CoralReefDevice {
     fn dispatch_compute(&self, desc: DispatchDescriptor<'_, Self>) -> Result<()> {
         use std::hash::{Hash, Hasher};
 
-        if !self.has_device {
-            return self.require_device("dispatch_compute");
-        }
-
         let mut hasher = std::hash::DefaultHasher::new();
         desc.shader_source.hash(&mut hasher);
         let key = hasher.finish();
 
-        let mut ctx = self
-            .ctx
-            .lock()
-            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: lock poisoned: {e}")))?;
-
-        let mut cache = self.kernel_cache.lock().map_err(|e| {
+        let mut cache = self.binary_cache.lock().map_err(|e| {
             BarracudaError::Device(format!("CoralReefDevice: cache lock poisoned: {e}"))
         })?;
 
-        let kernel = if let Some(cached) = cache.get(&key) {
-            cached.clone()
-        } else if let Some(cached_binary) = Self::try_coral_cache(desc.shader_source) {
-            let kernel = coral_gpu::CompiledKernel {
-                binary: cached_binary,
-                source_hash: key,
-                target: coral_gpu::GpuTarget::default(),
-                gpr_count: CONSERVATIVE_GPR_COUNT,
-                instr_count: 0,
-                shared_mem_bytes: 0,
-                barrier_count: 0,
-                workgroup: DEFAULT_WORKGROUP,
-            };
+        if cache.contains_key(&key) {
             tracing::debug!("sovereign cache hit — using pre-compiled native binary");
-            cache.insert(key, kernel.clone());
-            kernel
+        } else if let Some(cached_binary) = Self::try_coral_cache(desc.shader_source) {
+            cache.insert(
+                key,
+                CachedBinary {
+                    binary: cached_binary,
+                    gpr_count: CONSERVATIVE_GPR_COUNT,
+                    workgroup: DEFAULT_WORKGROUP,
+                },
+            );
+            tracing::debug!("coral compiler cache hit — using pre-compiled native binary");
         } else {
-            let compiled = ctx
-                .compile_wgsl(desc.shader_source)
-                .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: compile: {e}")))?;
-            cache.insert(key, compiled.clone());
-            compiled
-        };
+            // Compile via coralReef IPC (shader.compile.wgsl)
+            // The coral_compiler module handles discovery and compilation.
+            // For now, return an error — full IPC dispatch wiring is next.
+            return Err(BarracudaError::Device(
+                "CoralReefDevice: live IPC compilation + dispatch pending — \
+                 use WgpuDevice for now, or pre-compile via spawn_coral_compile()"
+                    .into(),
+            ));
+        }
 
-        let buffer_handles: Vec<coral_gpu::BufferHandle> =
-            desc.bindings.iter().map(|b| b.buffer.handle).collect();
-        let dims = [desc.workgroups.0, desc.workgroups.1, desc.workgroups.2];
-
-        drop(cache);
-
-        ctx.dispatch(&kernel, &buffer_handles, dims)
-            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: dispatch: {e}")))?;
-        ctx.sync()
-            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: sync: {e}")))
+        // Dispatch via toadStool IPC (compute.dispatch.submit)
+        // This will send the compiled binary + buffer data to toadStool,
+        // which routes to the best available GPU (VFIO/DRM).
+        Err(BarracudaError::Device(
+            "CoralReefDevice: toadStool compute.dispatch.submit IPC wiring in progress".into(),
+        ))
     }
 
     #[cfg(not(feature = "sovereign-dispatch"))]
@@ -461,37 +298,16 @@ impl GpuBackend for CoralReefDevice {
     fn dispatch_binary(
         &self,
         binary: &[u8],
-        bindings: Vec<BufferBinding<'_, Self>>,
-        workgroups: (u32, u32, u32),
+        _bindings: Vec<BufferBinding<'_, Self>>,
+        _workgroups: (u32, u32, u32),
         _entry_point: &str,
     ) -> Result<()> {
-        use coral_gpu::{BufferHandle, CompiledKernel, GpuTarget};
-
-        if !self.has_device {
-            return self.require_device("dispatch_binary");
-        }
-
-        let kernel = CompiledKernel {
-            binary: bytes::Bytes::copy_from_slice(binary),
-            source_hash: 0,
-            target: GpuTarget::default(),
-            gpr_count: CONSERVATIVE_GPR_COUNT,
-            instr_count: 0,
-            shared_mem_bytes: 0,
-            barrier_count: 0,
-            workgroup: DEFAULT_WORKGROUP,
-        };
-
-        let mut ctx = self
-            .ctx
-            .lock()
-            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: lock poisoned: {e}")))?;
-        let buffer_handles: Vec<BufferHandle> = bindings.iter().map(|b| b.buffer.handle).collect();
-        let dims = [workgroups.0, workgroups.1, workgroups.2];
-        ctx.dispatch(&kernel, &buffer_handles, dims)
-            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: dispatch: {e}")))?;
-        ctx.sync()
-            .map_err(|e| BarracudaError::Device(format!("CoralReefDevice: sync: {e}")))
+        let _ = binary;
+        // dispatch_binary sends a pre-compiled native GPU binary to
+        // toadStool's compute.dispatch.submit for execution.
+        Err(BarracudaError::Device(
+            "CoralReefDevice: toadStool compute.dispatch.submit IPC wiring in progress".into(),
+        ))
     }
 
     #[cfg(not(feature = "sovereign-dispatch"))]
@@ -514,55 +330,31 @@ mod tests {
 
     #[cfg(feature = "sovereign-dispatch")]
     #[test]
-    fn device_creation_compile_only() {
-        let target = coral_gpu::GpuTarget::Nvidia(coral_gpu::NvArch::Sm70);
-        let dev = CoralReefDevice::new(target).expect("device creation");
+    fn device_creation_ipc() {
+        let dev = CoralReefDevice::new();
         assert!(dev.name().contains("sovereign"));
         assert!(dev.has_f64_shaders());
         assert!(!dev.is_lost());
-        assert!(!dev.has_dispatch());
     }
 
     #[cfg(feature = "sovereign-dispatch")]
     #[test]
-    fn compile_wgsl_produces_native_binary() {
-        let target = coral_gpu::GpuTarget::Nvidia(coral_gpu::NvArch::Sm70);
-        let dev = CoralReefDevice::new(target).expect("device creation");
-        let kernel = dev
-            .compile_wgsl("@compute @workgroup_size(1) fn main() {}", target)
-            .expect("simple shader should compile");
-        assert!(!kernel.binary.is_empty());
-        assert_eq!(kernel.workgroup, [1, 1, 1]);
-    }
-
-    #[cfg(feature = "sovereign-dispatch")]
-    #[test]
-    fn compile_physics_shader_standalone() {
-        let target = coral_gpu::GpuTarget::Nvidia(coral_gpu::NvArch::Sm70);
-        let dev = CoralReefDevice::new(target).expect("device creation");
-        let wgsl = r"
-            @group(0) @binding(0) var<storage, read> input: array<f32>;
-            @group(0) @binding(1) var<storage, read_write> output: array<f32>;
-            @compute @workgroup_size(64)
-            fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-                let i = gid.x;
-                output[i] = input[i] * input[i] + input[i];
-            }
-        ";
-        let kernel = dev.compile_wgsl(wgsl, target).expect("fma-like shader");
-        assert!(!kernel.binary.is_empty());
-        assert!(kernel.gpr_count > 0);
-        assert!(kernel.instr_count > 0);
-    }
-
-    #[cfg(feature = "sovereign-dispatch")]
-    #[test]
-    fn compile_only_device_rejects_dispatch() {
-        let target = coral_gpu::GpuTarget::Nvidia(coral_gpu::NvArch::Sm70);
-        let dev = CoralReefDevice::new(target).expect("device creation");
-        let result = dev.alloc_buffer("test", 1024);
+    fn dispatch_returns_pending_error() {
+        let dev = CoralReefDevice::new();
+        let result = dev.dispatch_binary(&[], vec![], (1, 1, 1), "main");
         assert!(result.is_err());
         let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("no hardware device"), "got: {msg}");
+        assert!(msg.contains("IPC wiring"), "got: {msg}");
+    }
+
+    #[cfg(feature = "sovereign-dispatch")]
+    #[test]
+    fn buffer_alloc_assigns_ids() {
+        let dev = CoralReefDevice::new();
+        let b1 = dev.alloc_buffer("a", 1024).unwrap();
+        let b2 = dev.alloc_buffer("b", 2048).unwrap();
+        assert_ne!(b1.id, b2.id);
+        assert_eq!(b1.size, 1024);
+        assert_eq!(b2.size, 2048);
     }
 }

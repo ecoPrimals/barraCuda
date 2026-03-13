@@ -125,7 +125,7 @@ backends) with hardware intelligence. It owns:
 - Huge page DMA: `DmaAllocator::allocate_huge()` — 2 MiB / 1 GiB pages (S152)
 - MSI-X / eventfd GPU interrupt completion signaling (S152)
 - Dual-use model: VFIO for compute, passback for gaming
-- `VfioGpuInfo` descriptor provided to barraCuda's `CoralReefDevice::from_vfio_device()`
+- toadStool provides hardware info to barraCuda via `compute.hardware.capabilities` IPC
 - `RegisterAccess` trait (S149) for safe register I/O
 - `GpuPowerController` — GPU reset/power (D0/D3hot, FLR) (S152)
 - Thermal safety: pre-dispatch temperature checks (S151)

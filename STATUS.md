@@ -2,7 +2,7 @@
 
 **Version**: 0.3.5
 **Date**: 2026-03-13
-**Overall Grade**: A+ (Zero unsafe via `#![forbid(unsafe_code)]`, zero unwrap in production, pure safe Rust, all quality gates green, 3,698 tests passing, zero TODO/FIXME/unimplemented, NVVM poisoning guard, PrecisionBrain self-routing, HardwareCalibration per-tier probing, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust, device-aware test tolerances, cross-spring pharma/bio/health absorption, FMA policy, stable GPU special functions, sovereign coral-cache dispatch wiring, capability-based PRIMAL_NAMESPACE, VoltaNoPmuFirmware workaround detection, namespace-derived IPC method names, 806/806 WGSL SPDX headers, 1062/1062 Rust SPDX headers, pedantic lint promotion)
+**Overall Grade**: A+ (Zero unsafe via `#![forbid(unsafe_code)]`, zero unwrap in production, pure safe Rust, all quality gates green, 3,415 tests passing, zero TODO/FIXME/unimplemented, NVVM poisoning guard, PrecisionBrain self-routing, HardwareCalibration per-tier probing, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust, device-aware test tolerances, cross-spring pharma/bio/health absorption, FMA policy, stable GPU special functions, sovereign coral-cache dispatch wiring, capability-based PRIMAL_NAMESPACE, VoltaNoPmuFirmware workaround detection, namespace-derived IPC method names, 806/806 WGSL SPDX headers, 1064/1064 Rust SPDX headers, pedantic lint promotion)
 
 ---
 
@@ -15,7 +15,7 @@
 | **Sovereign compiler** | A+ | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all 806 shaders via rayon parallel validation; `erfc_f64` recursion eliminated |
 | **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery; namespace-derived method names via `PRIMAL_NAMESPACE` + `METHOD_SUFFIXES`; coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support |
 | **Device management** | A+ | `GpuBackend` trait abstraction, `CoralReefDevice` scaffold behind `sovereign-dispatch` feature, multi-GPU with PCIe topology sysfs probing (`PcieLinkInfo`), capability-scored discovery, probe-aware f64 strategy, VRAM quota enforcement via `ResourceQuota`/`QuotaTracker`, bounded poll timeout |
-| **Test coverage** | A+ | 3,698 tests (all pass on llvmpipe); proptest; chaos/fault test tiers; nextest CI/stress profiles; optimised test pipeline (nautilus 14.3s→0.01s, sovereign 800+ shaders parallelised via rayon, ESN reservoir shrunk); zero `todo!()`/`unimplemented!()` |
+| **Test coverage** | A+ | 3,415 tests (all pass on llvmpipe); proptest; chaos/fault test tiers; nextest CI/stress profiles; optimised test pipeline (nautilus 14.3s→0.01s, sovereign 800+ shaders parallelised via rayon, ESN reservoir shrunk); zero `todo!()`/`unimplemented!()` |
 | **Dependencies** | A+ | All deps pure Rust (blake3 `pure`, wgpu/naga 28); zero application C deps; ecoBin compliant |
 | **Documentation** | A+ | Comprehensive CHANGELOG, specs, README, CONTRIBUTING, CONVENTIONS, BREAKING_CHANGES; all rustdoc warnings resolved; showcase/ with 9 progressive demos (local, IPC, cross-primal) |
 | **Unsafe code** | A+ | Zero `unsafe` blocks; `#![forbid(unsafe_code)]` in both crates (irrevocable) |
@@ -183,6 +183,6 @@
 - P1: DF64 end-to-end NVK hardware verification (Yukawa shaders)
 - P1: coralNAK extraction (pending org repo fork)
 - P2: Test coverage ~75% on llvmpipe (target: 90%, requires real GPU hardware for GPU-path coverage)
-- P2: Kokkos validation baseline documentation
+- P1: Kokkos validation baseline documentation
 - P2: Kokkos GPU parity benchmarks
 - P2: RHMC multi-shift CG solver (hotSpring ladder L4)

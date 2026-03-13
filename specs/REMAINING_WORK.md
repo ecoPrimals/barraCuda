@@ -1,12 +1,28 @@
 # barraCuda — Remaining Work
 
 **Version**: 0.3.5
-**Date**: March 12, 2026
+**Date**: March 13, 2026
 **Status**: Active — tracks all open work items for barraCuda evolution
 
 ---
 
-## Achieved (March 12, 2026 — Deep Debt Sprint 2: Nursery Lints & Iterator Evolution)
+## Achieved Summary
+
+14 deep debt and evolution sprints completed between March 7–13, 2026.
+See `CHANGELOG.md` for detailed fossil record of each sprint.
+
+Key milestones: `#![forbid(unsafe_code)]` in both crates, 14 clippy lints
+promoted (9 pedantic + 5 nursery), 806/806 WGSL SPDX headers, 1,064/1,064
+Rust SPDX headers, VFIO-primary architecture adopted, RHMC/CG absorbed from
+hotSpring, DF64 hand-written shaders, `@ilp_region` optimizer annotations,
+capability-based PRIMAL_NAMESPACE, cross-spring absorption (6 springs),
+zero-copy evolution (`bytes::Bytes`), sovereign dispatch wiring, all quality
+gates green.
+
+<details>
+<summary>Sprint history (click to expand)</summary>
+
+### March 12 — Deep Debt Sprint 2: Nursery Lints & Iterator Evolution
 
 ### Nursery Lint Promotion (5 lints, 193 files)
 - **`redundant_clone`**: Removed unnecessary `.clone()` across workspace (auto-fixed).
@@ -40,7 +56,7 @@
 ### wateringHole Standards Compliance
 - **`#![forbid(unsafe_code)]`**: Upgraded from `deny` (overridable) to `forbid` (irrevocable) in both `barracuda` and `barracuda-core` crate roots.
 - **Namespace-derived IPC method names**: All 12 hardcoded `"barracuda.method.name"` strings evolved to `LazyLock<Vec<String>>` built from `PRIMAL_NAMESPACE` + `METHOD_SUFFIXES`. Dispatch routing uses `method_suffix()`. Discovery, tarpc, CLI all consume derived names. Primal has self-knowledge only.
-- **SPDX license compliance**: 648 WGSL shaders were missing `// SPDX-License-Identifier: AGPL-3.0-only` — all 806 shaders now have headers. 1,062/1,062 Rust files confirmed.
+- **SPDX license compliance**: 648 WGSL shaders were missing `// SPDX-License-Identifier: AGPL-3.0-only` — all 806 shaders now have headers. 1,064/1,064 Rust files confirmed.
 - **BufferBinding import**: Added missing import in `coral_reef_device.rs` — `--all-features` clippy now passes.
 
 ### Code Quality Evolution
@@ -280,6 +296,8 @@ The sovereign compiler (FMA fusion, dead expression elimination) now runs on
 **all backends** (Vulkan, Metal, DX12, WebGPU) via safe WGSL roundtrip.
 Previously limited to Vulkan with SPIR-V passthrough.
 
+</details>
+
 ---
 
 ## Remaining Work
@@ -320,7 +338,7 @@ Previously limited to Vulkan with SPIR-V passthrough.
 - **Phase 7 — K-quant**: Q2_K through Q6_K super-block formats (GGML parity)
 
 #### Test Coverage to 90%
-- Current: 3,698 total tests (workspace), 42 integration test files
+- Current: 3,415 total tests (workspace), 42 integration test files
 - Evolve CI `--fail-under` from 80 to 90
 - Add GPU-conditional tests for new ops
 - GPU_TEST_TIMEOUT (60s) prevents hangs; coordination harness with
@@ -424,7 +442,7 @@ path and cross-compilation target matrix.
 | Clippy | Pass (zero warnings, `-D warnings`) | `cargo clippy --workspace --all-targets -- -D warnings` |
 | Rustdoc | Pass (zero warnings) | `cargo doc --workspace --no-deps` |
 | Deny | Pass (advisories, bans, licenses, sources) | `cargo deny check` |
-| Tests | 3,698 pass / 0 fail / 15 skip | `cargo nextest run --workspace --no-fail-fast` |
+| Tests | 3,415 pass / 0 fail / 15 skip | `cargo nextest run --workspace --no-fail-fast` |
 | Check (no GPU) | Pass | `cargo check --no-default-features` |
 | Check (GPU only) | Pass | `cargo check --no-default-features --features gpu` |
 | Check (all) | Pass | `cargo check` |

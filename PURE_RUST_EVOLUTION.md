@@ -1,7 +1,7 @@
 # Pure Rust Evolution — barraCuda
 
-**Date**: March 12, 2026
-**Status**: Layer 1 complete — zero unsafe, zero application C deps, GpuBackend trait abstraction, dispatch_binary wired, coral cache → dispatch integrated
+**Date**: March 13, 2026
+**Status**: Layer 1 complete — zero unsafe, zero application C deps, VFIO-primary architecture adopted, GpuBackend trait abstraction, dispatch_binary wired, coral cache → dispatch integrated
 
 ---
 
@@ -23,10 +23,10 @@ Together they produce a stable, sovereign, pure Rust compute stack.
 ## Layer Status
 
 ```
-Layer 1  barraCuda    ██████████  COMPLETE   Zero unsafe, zero C deps
-Layer 2  coralReef    ██████░░░░  Phase 10   2 unsafe (nak-ir-proc), pure Rust chain
-Layer 3  coralReef    ██░░░░░░░░  Planned    Standalone coral-reef crate, multi-arch ISA
-Layer 4  toadStool    █░░░░░░░░░  Planned    Sovereign GPU driver, DMA, command submit
+Layer 1  barraCuda    ██████████  COMPLETE       Zero unsafe, zero C deps
+Layer 2  coralReef    ██████░░░░  Phase 10       2 unsafe (nak-ir-proc), pure Rust chain
+Layer 3  coralReef    ██░░░░░░░░  Planned        Standalone coral-reef crate, multi-arch ISA
+Layer 4  toadStool    ███░░░░░░░  Active design  VFIO GPU dispatch (primary), DRM (fallback)
 ```
 
 ---
@@ -124,46 +124,71 @@ Enable WGSL → ISA direct path (bypass SPIR-V).
 
 ---
 
-## Layer 4 — toadStool: Sovereign Hardware (PLANNED)
+## Layer 4 — toadStool: Sovereign Hardware (ACTIVE DESIGN)
 
-**Owner**: toadStool (runtime), groundSpring (driver)
+**Owner**: toadStool (VFIO lifecycle + runtime), coralReef (coral-driver)
 
-Replace Vulkan/NVK with a minimal pure-Rust compute runtime. Direct GPU
-memory management, command submission, and kernel dispatch from Rust.
+VFIO via toadStool is the **primary** GPU dispatch path. This replaces
+Vulkan/NVK with a minimal pure-Rust compute runtime using IOMMU hardware
+isolation for exclusive device access, deterministic scheduling, and zero
+kernel driver in the data path.
 
-| Component | Description | Scaffolds From |
-|-----------|-------------|----------------|
-| coralDriver | Userspace GPU driver (memory, cmd buffers, fences) | NVK (Mesa) |
-| coralMem | Buffer create/map/copy, staging pool | NVK + nouveau |
-| coralQueue | Compute queue, async dispatch, streaming | NVK command submission |
-| vfio backend | Userspace DMA, IOMMU isolation | Linux vfio-pci |
+| Component | Description | Status |
+|-----------|-------------|--------|
+| coralDriver | Userspace GPU driver (BAR0 MMIO, GPFIFO, fences) | BAR0 absorbed (Mar 12) |
+| coral-gpu | `GpuContext` API (compile, alloc, dispatch, sync) | In progress |
+| toadStool VFIO | IOMMU group management, device bind/unbind | `RegisterAccess` trait done |
+| Huge page DMA | 2 MiB / 1 GiB page allocation for DMA buffers | toadStool owns |
+| BearDog encrypt | Encrypted shader transport to GPU | BearDog team owns |
+
+### Why VFIO over Vulkan/DRM
+
+| Property | VFIO (primary) | Vulkan/DRM (fallback) |
+|----------|----------------|----------------------|
+| Kernel driver in data path | None | Yes (nouveau/amdgpu) |
+| Device exclusivity | Hardware-enforced (IOMMU) | Shared with desktop |
+| Scheduling determinism | Deterministic (user-space GPFIFO) | Non-deterministic |
+| Memory isolation | IOMMU DMA remapping | Process-level only |
+| Gaming compatibility | Dual-use (passback for gaming) | Always available |
 
 ---
 
 ## The Stack Today vs Target
 
-### Today (March 12, 2026)
+### Today (March 13, 2026)
 ```
 Layer 1  barraCuda         Rust    WE OWN     Zero unsafe ✓
 Layer 2  coralReef         Rust    WE OWN     2 unsafe (evolving) ✓
          naga              Rust    Mozilla    Upstream dependency
-Layer 3  wgpu              Rust    gfx-rs     Upstream dependency
+Layer 3  wgpu              Rust    gfx-rs     Development/fallback path
          Vulkan API        C       Khronos    System library
-Layer 4  NVK/RADV          C+Rust  Mesa       GPU driver
-         nouveau/amdgpu    C       Linux      Kernel driver
+Layer 4  NVK/RADV          C+Rust  Mesa       GPU driver (fallback)
+         nouveau/amdgpu    C       Linux      Kernel driver (fallback)
 ```
 
-### Target (Sovereign)
+### Target (Sovereign — VFIO primary)
 ```
 Layer 1  barraCuda         Rust    WE OWN     Zero unsafe ✓
 Layer 2  coralReef         Rust    WE OWN     Zero unsafe (target)
-         naga (fork/upstream) Rust WE USE     WGSL ↔ IR
-Layer 3  coralReef ISA     Rust    WE OWN     WGSL → native binary
-Layer 4  coralDriver       Rust    WE OWN     Direct GPU dispatch
-         vfio-pci / kmod   Rust    WE OWN     Kernel interface
+         naga              Rust    WE USE     WGSL ↔ IR
+Layer 3  coralReef ISA     Rust    WE OWN     WGSL → native binary (SASS/GFX)
+Layer 4  coral-driver      Rust    WE OWN     BAR0 MMIO, GPFIFO submission
+         toadStool VFIO    Rust    WE OWN     IOMMU isolation, device lifecycle
+         VFIO/IOMMU        Linux   Kernel     Hardware DMA isolation
+```
+
+### Dispatch Chain (VFIO primary)
+```
+barraCuda → CoralReefDevice → coral-gpu → GPFIFO → GPU (via VFIO/toadStool)
+```
+
+### Dispatch Chain (wgpu fallback)
+```
+barraCuda → WgpuDevice → wgpu → Vulkan → Mesa/NVK → nouveau → GPU
 ```
 
 Every layer pure Rust. No C FFI. Hardware is interchangeable.
+VFIO provides hardware-enforced isolation; wgpu remains as development fallback.
 The math is sovereign.
 
 ---

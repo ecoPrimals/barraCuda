@@ -119,6 +119,14 @@ backends) with hardware intelligence. It owns:
 - Unified CPU/GPU/NPU as parallel compute units
 - Capability-based discovery, no hardcoded backends
 
+### VFIO GPU Dispatch (`vfio` — **primary dispatch path**)
+- VFIO device lifecycle: bind/unbind GPUs to `vfio-pci`, manage IOMMU groups
+- Exclusive device access with hardware-enforced IOMMU isolation
+- Huge page DMA buffer allocation (2 MiB / 1 GiB pages)
+- Dual-use model: VFIO for compute, passback for gaming
+- `VfioGpuInfo` descriptor provided to barraCuda's `CoralReefDevice::from_vfio_device()`
+- `RegisterAccess` trait (toadStool S149) for safe register I/O
+
 ### Distribution & Services
 - `server`/`client` — HTTP/WebSocket/Unix compute service API
 - `distributed` — multi-node compute via songBird
@@ -140,6 +148,12 @@ toadStool knows about specific hardware. It is the reality layer — it
 understands that an RTX 3090 has 10496 CUDA cores and 24GB GDDR6X, that a
 Titan V has tensor cores, that an RX 7900 XTX has different optimal workgroup
 sizes. barraCuda is hardware-agnostic; toadStool is hardware-aware.
+
+toadStool also owns the **VFIO GPU dispatch path** — the primary dispatch
+mechanism for the sovereign pipeline. VFIO provides exclusive device access,
+zero kernel driver in the data path, and deterministic scheduling via
+IOMMU hardware isolation. barraCuda consumes VFIO devices through the
+`GpuBackend` trait; it never manages VFIO lifecycle directly.
 
 ---
 

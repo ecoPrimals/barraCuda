@@ -1,6 +1,6 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-03-12.
+Prioritized work items, ordered by impact. Updated 2026-03-13.
 
 ---
 
@@ -234,6 +234,10 @@ Prioritized work items, ordered by impact. Updated 2026-03-12.
 
 ## Immediate (P1)
 
+- **VFIO-primary architecture adoption (Mar 13)**: VFIO via toadStool is now the primary
+  GPU dispatch path. All root docs updated. `from_vfio_device` constructor stub added to
+  `CoralReefDevice` (feature-gated). `is_vfio_gpu_available()` + `VfioGpuInfo` added to
+  device discovery. wgpu demoted to development/fallback backend.
 - **DF64 NVK end-to-end verification**: Run df64 compilation on Yukawa force kernels through
   NVK/NAK on hardware. Validate sovereign compiler's safe WGSL roundtrip produces correct
   numerical results across all backends. Probe-aware `fp64_strategy()` is now in place to
@@ -247,13 +251,14 @@ Prioritized work items, ordered by impact. Updated 2026-03-12.
   for absorption as a batched GPU tridiagonal eigenvector solver.
 - **Multi-GPU OOM recovery**: `QuotaTracker` is wired into buffer allocation; next step
   is automatic workload migration when a device hits VRAM quota.
+- **Kokkos parity validation baseline**: Document `sarkas_gpu` validation results, extract
+  PPPM shader performance numbers for apples-to-apples comparison. Now unblocked by VFIO
+  strategy — projected ~4,000 steps/s vs Kokkos 2,630 steps/s.
 
 ## Near-term (P2)
 
 - **Test coverage to 90%**: Evolve CI `--fail-under` from 80 to 90. Add GPU-conditional
   tests for new ops (SCS-CN, Stewart, Blaney-Criddle, autocorrelation).
-- **Kokkos validation baseline**: Document `sarkas_gpu` validation results, extract PPPM
-  shader performance numbers for apples-to-apples comparison.
 - **Kokkos GPU parity benchmarks**: Run barraCuda GPU benchmarks on matching hardware,
   publish comparison data.
 - **~~WGSL optimizer annotation coverage~~**: Done (Mar 12). `@ilp_region` added to
@@ -281,7 +286,8 @@ including cross-primal dependencies, libc/musl → rustix evolution, and
 cross-compilation target matrix.
 
 - **Sovereign Compute Evolution**: Replace entire non-Rust GPU stack with coral-prefixed
-  pure Rust components (coralNak, coralDriver, coralMem, coralQueue, coralGpu).
+  pure Rust components (coralNak, coralDriver, coralMem, coralQueue, coralGpu) via VFIO
+  primary dispatch path (toadStool VFIO GPU backend + IOMMU isolation).
 - **WebGPU browser target**: Compile barraCuda shaders for browser execution via wasm-pack
   and wgpu's WebGPU backend.
 - **Distributed compute**: Cross-node GPU dispatch via primal-to-primal IPC for HPC clusters.

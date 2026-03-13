@@ -14,8 +14,12 @@
 More concept than exact acronym. The barracuda stands still until it strikes —
 fast, silent, instant math across any silicon.
 
-barraCuda is vendor-agnostic. It runs on any GPU via WGSL/wgpu — Vulkan, Metal,
-DX12, WebGPU. One source, any backend, identical results.
+barraCuda is vendor-agnostic. It runs on any GPU through two dispatch paths:
+- **VFIO primary** (via toadStool): exclusive device access, IOMMU isolation,
+  deterministic scheduling — `CoralReefDevice` → `coral-gpu` → GPFIFO → GPU
+- **wgpu fallback**: Vulkan/Metal/DX12/WebGPU — development and non-VFIO environments
+
+One WGSL source, any backend, identical results.
 
 ---
 
@@ -122,11 +126,14 @@ WGSL source
   → df64_rewrite (infix → bridge functions, when DF64)
   → sovereign compiler: FMA fusion, dead expression elimination
   → naga wgsl-out → optimised WGSL
-  → wgpu create_shader_module (safe) → driver compile
+  ├─→ CoralReefDevice: coralReef compile → native binary → VFIO/GPFIFO → GPU (primary)
+  └─→ WgpuDevice: wgpu create_shader_module → Vulkan/Metal/DX12 → GPU (fallback)
 ```
 
 Zero `unsafe` in the entire pipeline. The sovereign compiler runs on all
-backends (Vulkan, Metal, DX12, WebGPU). No SPIR-V passthrough needed.
+backends. VFIO dispatch (`dispatch_binary`) is the fast path — pre-compiled
+native binaries submitted directly via GPFIFO. wgpu remains for development,
+non-VFIO platforms, and WebGPU browser targets. No SPIR-V passthrough needed.
 No external SDK needed for correctness.
 
 ---

@@ -25,8 +25,8 @@ pub use crate::device::driver_profile::{
 
 pub use device_info::{Capability, DeviceInfo};
 pub use device_info::{
-    build_device_info, detect_system_memory_bytes, estimate_system_memory, is_gpu_available,
-    is_npu_available,
+    VfioGpuInfo, build_device_info, detect_system_memory_bytes, discover_vfio_gpus,
+    estimate_system_memory, is_gpu_available, is_npu_available, is_vfio_gpu_available,
 };
 pub use wgpu_caps::{
     DeviceCapabilities, FHE_MIN_BUFFER_SIZE, WORKGROUP_SIZE_1D, WORKGROUP_SIZE_2D,

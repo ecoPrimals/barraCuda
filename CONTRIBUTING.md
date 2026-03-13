@@ -3,6 +3,17 @@
 Welcome. barraCuda is the sovereign math engine for the ecoPrimals ecosystem.
 This guide covers everything you need to start contributing.
 
+### Architecture Note
+
+barraCuda uses a **dual-path GPU dispatch architecture**:
+- **VFIO primary** (via toadStool): exclusive device access, IOMMU isolation,
+  deterministic scheduling through `CoralReefDevice` → `coral-gpu` → GPFIFO → GPU
+- **wgpu fallback**: Vulkan/Metal/DX12 for development, non-VFIO environments,
+  and platforms without IOMMU support
+
+For local development, wgpu (or llvmpipe software rendering) is all you need.
+VFIO dispatch requires toadStool's VFIO GPU backend and IOMMU-capable hardware.
+
 ---
 
 ## Quick Start

@@ -2,10 +2,19 @@
 //! Backend-agnostic GPU compute trait.
 //!
 //! `GpuBackend` defines the minimal surface a compute backend must implement:
-//! buffer lifecycle, shader compilation, and compute dispatch. `WgpuDevice`
-//! implements it today; `CoralReefDevice` will implement it when `coral-gpu`
-//! is available as a standalone crate, enabling sovereign dispatch without
-//! the Vulkan stack.
+//! buffer lifecycle, shader compilation, and compute dispatch.
+//!
+//! Two backends implement this trait:
+//!
+//! - **`CoralReefDevice`** (VFIO primary) — dispatches through `coral-gpu` →
+//!   GPFIFO → GPU via toadStool's VFIO device lifecycle. `dispatch_binary` is
+//!   the fast path: pre-compiled native binaries submitted directly without
+//!   shader recompilation. Requires `sovereign-dispatch` feature + `coral-gpu`
+//!   crate + VFIO-capable hardware managed by toadStool.
+//!
+//! - **`WgpuDevice`** (fallback) — dispatches through wgpu → Vulkan/Metal/DX12.
+//!   Used for development, CI, non-VFIO environments, and platforms without
+//!   IOMMU support. No feature flag needed — this is the default backend.
 //!
 //! Ops that use `ComputeDispatch` work through this trait automatically.
 //! Ops that use raw `wgpu::Device` calls can be migrated incrementally.

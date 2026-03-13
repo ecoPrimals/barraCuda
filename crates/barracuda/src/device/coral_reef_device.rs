@@ -1,10 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 //! Sovereign compute backend via coralReef's `coral-gpu` crate.
 //!
-//! `CoralReefDevice` provides WGSL → native binary compilation and GPU
-//! dispatch through coralReef's full pipeline, bypassing wgpu/Vulkan/Metal.
+//! `CoralReefDevice` is the **primary** GPU backend for the sovereign pipeline.
+//! It provides WGSL → native binary compilation and GPU dispatch through
+//! coralReef's full pipeline, bypassing the wgpu/Vulkan/Mesa/kernel driver stack.
 //!
-//! # Architecture
+//! # Architecture (VFIO primary)
+//!
+//! ```text
+//! WGSL → naga → coralReef → native SASS/GFX → coral-driver → VFIO/GPFIFO → GPU
+//! ```
+//!
+//! VFIO (via toadStool) provides exclusive device access, IOMMU hardware
+//! isolation, deterministic scheduling, and zero kernel driver in the data
+//! path. `dispatch_binary` is the fast path — pre-compiled native binaries
+//! are submitted directly via GPFIFO.
+//!
+//! # Architecture (DRM fallback)
 //!
 //! ```text
 //! WGSL → naga → coralReef → native SASS/GFX → coral-driver → DRM → GPU
@@ -14,11 +26,14 @@
 //! thread-safe access. `ComputeDevice: Send + Sync` is satisfied as of
 //! coralReef Iteration 26.
 //!
-//! # DRM backend maturity
+//! # Backend maturity
 //!
-//! - **amdgpu**: E2E verified (coralReef Phase 10)
-//! - **nouveau**: compute subchannel bound (Iter 26), hardware validation pending
-//! - **nvidia-drm**: pending UVM integration
+//! | Backend | Status | Notes |
+//! |---------|--------|-------|
+//! | VFIO/GPFIFO | Active design | toadStool VFIO GPU backend + `from_vfio_device` |
+//! | amdgpu (DRM) | E2E verified | coralReef Phase 10 |
+//! | nouveau (DRM) | Partial | Compute subchannel bound (Iter 26), validation pending |
+//! | nvidia-drm | Pending | UVM integration needed |
 //!
 //! # Activation
 //!
@@ -154,6 +169,37 @@ impl CoralReefDevice {
             has_device: true,
             kernel_cache: std::sync::Mutex::new(HashMap::new()),
         })
+    }
+
+    /// Create a `CoralReefDevice` from a VFIO device descriptor.
+    ///
+    /// This is the **primary** construction path for the sovereign pipeline.
+    /// toadStool manages VFIO device lifecycle (IOMMU group binding, device
+    /// attach/detach) and provides a `VfioGpuInfo` descriptor. barraCuda
+    /// uses this to create a `GpuContext` backed by VFIO instead of DRM.
+    ///
+    /// # Contract
+    ///
+    /// - toadStool must have bound the GPU to `vfio-pci` before calling this
+    /// - The IOMMU group must be viable (all devices in group bound to vfio-pci)
+    /// - toadStool retains ownership of device lifecycle (unbind on drop)
+    /// - barraCuda never manages VFIO bind/unbind directly
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the VFIO device cannot be opened or is unsupported.
+    /// Currently returns `Err` unconditionally — blocked on `coral-gpu` VFIO
+    /// backend and toadStool's `VfioGpuInfo` type.
+    #[cfg(feature = "sovereign-dispatch")]
+    pub fn from_vfio_device(pci_address: &str, vendor_id: u16, iommu_group: u32) -> Result<Self> {
+        // Blocked on: coral-gpu VFIO backend + toadStool VfioGpuInfo type.
+        // When unblocked, this will call coral_gpu::GpuContext::from_vfio(...)
+        // with the VFIO device fd obtained from toadStool.
+        Err(BarracudaError::Device(format!(
+            "CoralReefDevice::from_vfio_device: VFIO backend not yet available \
+             (PCI {pci_address}, vendor 0x{vendor_id:04x}, IOMMU group {iommu_group}) — \
+             blocked on coral-gpu VFIO support and toadStool VfioGpuInfo type"
+        )))
     }
 
     /// Create a `CoralReefDevice` (feature not enabled).

@@ -1,7 +1,7 @@
 # barraCuda Status
 
 **Version**: 0.3.5
-**Date**: 2026-03-12
+**Date**: 2026-03-13
 **Overall Grade**: A+ (Zero unsafe via `#![forbid(unsafe_code)]`, zero unwrap in production, pure safe Rust, all quality gates green, 3,698 tests passing, zero TODO/FIXME/unimplemented, NVVM poisoning guard, PrecisionBrain self-routing, HardwareCalibration per-tier probing, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust, device-aware test tolerances, cross-spring pharma/bio/health absorption, FMA policy, stable GPU special functions, sovereign coral-cache dispatch wiring, capability-based PRIMAL_NAMESPACE, VoltaNoPmuFirmware workaround detection, namespace-derived IPC method names, 806/806 WGSL SPDX headers, 1062/1062 Rust SPDX headers, pedantic lint promotion)
 
 ---
@@ -56,8 +56,11 @@
 - LSCFRK gradient flow integrators (W6, W7, CK45) with algebraic coefficient derivation
 - NautilusBrain force anomaly detection (10σ energy deviation, rolling window)
 - `GpuBackend` trait (`device::backend`) — backend-agnostic compute interface; `WgpuDevice` + `Arc<WgpuDevice>` implement it; `ComputeDispatch<B: GpuBackend>` generic over backend
-- `CoralReefDevice` scaffold behind `sovereign-dispatch` feature flag — ready for `coral-gpu` crate
-- `SOVEREIGN_PIPELINE_TRACKER.md` — tracks P0 (CoralReefDevice), libc→rustix evolution, cross-primal deps
+- `CoralReefDevice` scaffold behind `sovereign-dispatch` feature flag — ready for `coral-gpu` crate; `from_vfio_device` constructor stub for toadStool VFIO integration
+- VFIO-primary architecture adopted: toadStool VFIO is the primary GPU dispatch path (exclusive device access, IOMMU isolation, deterministic scheduling); wgpu demoted to development/fallback
+- `is_vfio_gpu_available()` + `VfioGpuInfo` in device discovery — scans IOMMU groups for GPU vendor IDs bound to `vfio-pci`
+- Kokkos parity projections: ~4,000 steps/s target (VFIO + DF64) vs 2,630 steps/s Kokkos baseline
+- `SOVEREIGN_PIPELINE_TRACKER.md` — tracks P0 (CoralReefDevice), VFIO primary dispatch, libc→rustix evolution, cross-primal deps
 - Zero TODOs/FIXMEs/HACKs/`unreachable!()` without messages in codebase
 - Zero `#[expect(clippy::too_many_arguments)]` — all 9 evolved to builder/struct patterns
 - All quality gates green (fmt, clippy -D warnings, rustdoc -D warnings, deny)

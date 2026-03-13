@@ -181,7 +181,7 @@
 ## What's Not Working Yet
 
 - P0: toadStool `compute.dispatch.submit` IPC wiring — CoralReefDevice scaffold done, IPC client pending
-- P0: PFIFO channel init in coralReef (6/7 VFIO tests pass on Titan V)
+- P0: PFIFO USERD_TARGET fix in coralReef runlist — single register encoding (6/7 VFIO tests pass on Titan V; GP_PUT last mile)
 - P1: DF64 end-to-end NVK hardware verification (Yukawa shaders)
 - P1: coralNAK extraction (pending org repo fork)
 - P1: Kokkos validation baseline documentation (unblocked by VFIO strategy)
@@ -193,6 +193,6 @@
 
 | Primal | Version/Session | Key capability |
 |--------|-----------------|----------------|
-| toadStool | S152 | All 12 sovereign infra gaps resolved; VFIO backend, DMA, thermal, multi-GPU |
-| coralReef | Phase 10 Iter 42 | DRM E2E proven; `GpuContext::from_vfio()`; 1669+35 tests |
-| hotSpring | v0.6.31 | `sovereign_resolves_poisoning()` wired; RHMC/CG absorbed |
+| toadStool | S153 | All 12 sovereign infra gaps resolved; `compute.hardware.vfio_devices` IPC; `ecoprimals-mode` CLI |
+| coralReef | Phase 10 Iter 43 | PFIFO channel init + V2 MMU; GP_BASE_HI aperture fix; 1693+47 tests |
+| hotSpring | v0.6.31 | `sovereign_resolves_poisoning()` wired; VFIO validation (6/7); GP_PUT root cause found |

@@ -119,7 +119,7 @@ backends) with hardware intelligence. It owns:
 - Unified CPU/GPU/NPU as parallel compute units
 - Capability-based discovery, no hardcoded backends
 
-### VFIO GPU Dispatch (`vfio` — **primary dispatch path**, S152 infrastructure complete)
+### VFIO GPU Dispatch (`vfio` — **primary dispatch path**, S153 infrastructure complete)
 - VFIO device lifecycle: `bind_vfio()` / `unbind_vfio()` with DRM/IOMMU checks (S151)
 - Exclusive device access with hardware-enforced IOMMU isolation
 - Huge page DMA: `DmaAllocator::allocate_huge()` — 2 MiB / 1 GiB pages (S152)

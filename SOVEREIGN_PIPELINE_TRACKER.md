@@ -10,9 +10,9 @@
 
 ```
 Layer 1  barraCuda    ██████████  COMPLETE       Zero unsafe, zero C deps
-Layer 2  coralReef    ████████░░  Phase 10 I42   DRM E2E proven; VFIO 6/7; PFIFO channel pending
+Layer 2  coralReef    █████████░  Phase 10 I43   DRM E2E proven; VFIO 6/7; GP_PUT USERD_TARGET last mile
 Layer 3  Standalone   ██░░░░░░░░  Planned        Standalone coral-reef crate, multi-arch ISA
-Layer 4  Sovereign HW ████████░░  S152 complete  toadStool infra done; VFIO hw validation 6/7
+Layer 4  Sovereign HW █████████░  S153 complete  toadStool infra done; VFIO hw validation 6/7
 ```
 
 ### Dispatch Chain (sovereign primary — IPC-first)
@@ -222,7 +222,7 @@ a C library target until Phase 3 completes.
 |------|-------|------------|--------|
 | VFIO dispatch path documentation across all root docs | barraCuda | — | **Done** (Mar 13) |
 | DF64 NVK end-to-end verification on hardware | barraCuda | NVK + NAK hardware | Planned |
-| NVIDIA hardware validation (SM70 dispatch) | coralReef | PFIFO channel init | 6/7 VFIO tests pass on Titan V; dispatch blocked on channel init |
+| NVIDIA hardware validation (SM70 dispatch) | coralReef | USERD_TARGET fix in runlist | 6/7 VFIO tests pass on Titan V; GP_PUT last mile — single register encoding in `populate_runlist()` |
 | `nak-ir-proc` unsafe → safe (array-field or bytemuck) | coralReef | — | Planned |
 | Hand-written DF64 shader for weighted_dot | barraCuda | — | **Done** (Mar 12) |
 | `BatchedTridiagEigh` GPU op (from groundSpring) | barraCuda | — | Planned |

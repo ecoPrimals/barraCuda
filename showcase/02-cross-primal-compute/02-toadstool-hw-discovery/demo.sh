@@ -83,7 +83,7 @@ echo "─── Summary ──────────────────�
 echo
 echo "  Compute triangle:"
 echo "    toadStool → hardware discovery + GPU management"
-echo "    barraCuda → math engine (803 WGSL shaders)"
+echo "    barraCuda → math engine (806 WGSL shaders)"
 echo "    coralReef → sovereign shader compilation"
 echo
 echo "  When toadStool is available:"

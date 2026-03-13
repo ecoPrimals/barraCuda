@@ -190,7 +190,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added — Showcase Collection (Mar 9 2026)
 
-- **`showcase/` directory**: 10 progressive demos across 3 tiers, following
+- **`showcase/` directory**: 9 progressive demos across 3 tiers, following
   ecosystem conventions (numbered subdirs, standalone Cargo crates, shell scripts)
 - **00-local-primal/01-device-discovery**: GPU detection, capability scoring,
   precision routing advice (`Fp64Strategy`), vendor-specific workgroup sizing
@@ -250,8 +250,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `submit()` delegates to `GpuBackend::dispatch_compute()`.
 - **`CoralReefDevice` scaffold** (`device::coral_reef_device`): Behind `sovereign-dispatch`
   feature flag. Implements `GpuBackend` with stub methods that return clear error messages
-  pointing to `SOVEREIGN_PIPELINE_TRACKER.md`. Zero unsafe. Will wrap `coral-gpu::GpuContext`
-  when the crate is available.
+  pointing to `SOVEREIGN_PIPELINE_TRACKER.md`. Zero unsafe. Now uses IPC-first architecture
+  (JSON-RPC to coralReef for compilation + toadStool for dispatch).
 - **`sovereign-dispatch` feature flag**: Added to `Cargo.toml`. Enables `CoralReefDevice`
   module and re-export. Requires `gpu` feature during transition period.
 - **`SOVEREIGN_PIPELINE_TRACKER.md`**: New root tracking doc for the sovereign pipeline —

@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Moving window statistics (mean, variance, min, max) (f64 canonical)
+// Moving window statistics (mean, variance, min, max) — f32 precision
 // airSpring IoT sensor streams, wetSpring environmental monitoring
 //
 // Each invocation computes all four statistics for one output position.
 // Window slides across the input with stride 1.
+//
+// Note: file retains the _f64 name for shader registry compatibility.
+// Rust host sends f32 buffers; f32 precision is sufficient for sensor
+// smoothing (temperature, soil moisture, PAR).
 
 struct Params {
     n: u32,          // input length
@@ -13,11 +17,11 @@ struct Params {
 }
 
 @group(0) @binding(0) var<uniform> params: Params;
-@group(0) @binding(1) var<storage, read> input: array<f64>;
-@group(0) @binding(2) var<storage, read_write> out_mean: array<f64>;
-@group(0) @binding(3) var<storage, read_write> out_var: array<f64>;
-@group(0) @binding(4) var<storage, read_write> out_min: array<f64>;
-@group(0) @binding(5) var<storage, read_write> out_max: array<f64>;
+@group(0) @binding(1) var<storage, read> input: array<f32>;
+@group(0) @binding(2) var<storage, read_write> out_mean: array<f32>;
+@group(0) @binding(3) var<storage, read_write> out_var: array<f32>;
+@group(0) @binding(4) var<storage, read_write> out_min: array<f32>;
+@group(0) @binding(5) var<storage, read_write> out_max: array<f32>;
 
 @compute @workgroup_size(256)
 fn moving_window_stats(@builtin(global_invocation_id) gid: vec3<u32>) {
@@ -27,10 +31,10 @@ fn moving_window_stats(@builtin(global_invocation_id) gid: vec3<u32>) {
     }
 
     let w = params.window;
-    var sum: f64 = 0.0;
-    var sum_sq: f64 = 0.0;
-    var lo: f64 = input[idx];
-    var hi: f64 = input[idx];
+    var sum: f32 = 0.0;
+    var sum_sq: f32 = 0.0;
+    var lo: f32 = input[idx];
+    var hi: f32 = input[idx];
 
     for (var j: u32 = 0u; j < w; j = j + 1u) {
         let v = input[idx + j];
@@ -40,8 +44,8 @@ fn moving_window_stats(@builtin(global_invocation_id) gid: vec3<u32>) {
         hi = max(hi, v);
     }
 
-    let mean = sum / f64(w);
-    let variance = sum_sq / f64(w) - mean * mean;
+    let mean = sum / f32(w);
+    let variance = sum_sq / f32(w) - mean * mean;
 
     out_mean[idx] = mean;
     out_var[idx] = max(variance, 0.0);

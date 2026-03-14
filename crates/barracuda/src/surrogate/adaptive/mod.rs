@@ -469,9 +469,8 @@ fn assemble_and_solve(
 
     b[..n_train].copy_from_slice(y_data);
 
-    let solution = solve_f64(device.clone(), &a, &b, n_total)?;
-    let weights = solution[..n_train].to_vec();
-    let poly_coeffs = solution[n_train..].to_vec();
+    let mut weights = solve_f64(device.clone(), &a, &b, n_total)?;
+    let poly_coeffs = weights.split_off(n_train);
 
     Ok(RBFSurrogate::from_parts(
         device,

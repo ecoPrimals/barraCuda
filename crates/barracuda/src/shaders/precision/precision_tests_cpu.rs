@@ -106,7 +106,7 @@ fn test_kahan_sum() {
     let naive = cpu::reduce_sum(&input);
     assert!(result.is_finite());
     assert!(naive.is_finite());
-    assert!((result - (1e10 + 3.0 * 1e-10)).abs() < 1e-6);
+    assert!((result - 3.0f64.mul_add(1e-10, 1e10)).abs() < 1e-6);
 }
 
 #[test]

@@ -262,7 +262,7 @@ fn test_loo_cv_smoothing_effect() {
     let x_train: Vec<Vec<f64>> = (0..10).map(|i| vec![i as f64 * 0.1]).collect();
     let y_train: Vec<f64> = x_train
         .iter()
-        .map(|x| 2.0 * x[0] + 0.1 * (x[0] * 10.0).sin())
+        .map(|x| 2.0f64.mul_add(x[0], 0.1 * (x[0] * 10.0).sin()))
         .collect();
 
     let Some(dev) = device() else { return };

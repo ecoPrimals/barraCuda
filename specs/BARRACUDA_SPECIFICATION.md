@@ -56,7 +56,7 @@ barraCuda/
 │   │   │   ├── pipeline/     # ComputeDispatch, batched pipelines
 │   │   │   ├── multi_gpu/    # GpuPool, MultiDevicePool, load balancing
 │   │   │   └── ...           # + nn, snn, esn, pde, genomics, vision (feature-gated)
-│   │   ├── tests/            # 43 integration test files
+│   │   ├── tests/            # 42 integration test files
 │   │   └── examples/         # 4 runnable examples
 │   └── barracuda-core/       # Primal lifecycle wrapper
 │       ├── src/

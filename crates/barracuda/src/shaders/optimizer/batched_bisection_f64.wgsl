@@ -88,8 +88,8 @@ fn bcs_particle_number(mu: f64, problem_idx: u32) -> f64 {
     return sum - target_n;
 }
 
-// Generic bisection with custom function evaluation
-// For now, hardcoded to BCS. Could be extended with function selector.
+// BCS bisection entry point — dispatches with bcs_particle_number evaluator.
+// Additional evaluators (e.g. polynomial_test) use separate entry points below.
 @compute @workgroup_size(64)
 fn batched_bisection(
     @builtin(global_invocation_id) gid: vec3<u32>,

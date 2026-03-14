@@ -48,7 +48,7 @@ cargo doc --workspace --no-deps
 | `crates/barracuda-core/` | Primal lifecycle, IPC, tarpc, UniBin CLI |
 | `crates/barracuda/src/shaders/` | 806 WGSL shaders (see `shaders/README.md`) |
 | `crates/barracuda/examples/` | Runnable examples |
-| `crates/barracuda/tests/` | 43 integration test files |
+| `crates/barracuda/tests/` | 42 integration test files |
 | `crates/barracuda/src/bin/` | Binaries (validate_gpu, bench_*) |
 | `crates/barracuda-core/src/bin/` | `barracuda` UniBin CLI binary |
 | `specs/` | Architecture specs and design documents |

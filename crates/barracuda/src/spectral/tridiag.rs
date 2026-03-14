@@ -257,12 +257,12 @@ mod tests {
             let v: Vec<f64> = (0..3).map(|i| vecs[i * 3 + k]).collect();
             // T*v
             let mut tv = [0.0; 3];
-            tv[0] = d[0] * v[0] + e[0] * v[1];
-            tv[1] = e[0] * v[0] + d[1] * v[1] + e[1] * v[2];
-            tv[2] = e[1] * v[1] + d[2] * v[2];
+            tv[0] = d[0].mul_add(v[0], e[0] * v[1]);
+            tv[1] = e[0].mul_add(v[0], d[1].mul_add(v[1], e[1] * v[2]));
+            tv[2] = e[1].mul_add(v[1], d[2] * v[2]);
 
             for i in 0..3 {
-                let diff = (tv[i] - evals[k] * v[i]).abs();
+                let diff = evals[k].mul_add(-v[i], tv[i]).abs();
                 assert!(diff < 1e-8, "T*v[{k}][{i}] - λ*v[{k}][{i}] = {diff:.2e}");
             }
         }
@@ -282,14 +282,14 @@ mod tests {
         for k in [0, n / 4, n / 2, 3 * n / 4, n - 1] {
             let v: Vec<f64> = (0..n).map(|i| vecs[i * n + k]).collect();
             let mut tv = vec![0.0; n];
-            tv[0] = d[0] * v[0] + e[0] * v[1];
+            tv[0] = d[0].mul_add(v[0], e[0] * v[1]);
             for i in 1..n - 1 {
-                tv[i] = e[i - 1] * v[i - 1] + d[i] * v[i] + e[i] * v[i + 1];
+                tv[i] = e[i - 1].mul_add(v[i - 1], d[i].mul_add(v[i], e[i] * v[i + 1]));
             }
-            tv[n - 1] = e[n - 2] * v[n - 2] + d[n - 1] * v[n - 1];
+            tv[n - 1] = e[n - 2].mul_add(v[n - 2], d[n - 1] * v[n - 1]);
 
             let max_err: f64 = (0..n)
-                .map(|i| (tv[i] - evals[k] * v[i]).abs())
+                .map(|i| evals[k].mul_add(-v[i], tv[i]).abs())
                 .fold(0.0, f64::max);
             assert!(
                 max_err < 1e-8,

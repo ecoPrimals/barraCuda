@@ -57,7 +57,7 @@ fn test_sparsity_sampler_captures_all_evals() {
     let Some(dev) = get_test_device_if_f64_gpu_available_sync() else {
         return;
     };
-    let f = |x: &[f64]| x[0].powi(2) + x[1].powi(2);
+    let f = |x: &[f64]| x[0].mul_add(x[0], x[1].powi(2));
     let bounds = vec![(-5.0, 5.0), (-5.0, 5.0)];
     let config = SparsitySamplerConfig::new(2, 42)
         .with_initial_samples(10)
@@ -150,7 +150,7 @@ fn test_sparsity_sampler_1d() {
     let Some(dev) = get_test_device_if_f64_gpu_available_sync() else {
         return;
     };
-    let f = |x: &[f64]| (x[0] - 3.0).powi(2) + 1.0;
+    let f = |x: &[f64]| (x[0] - 3.0).mul_add(x[0] - 3.0, 1.0);
     let bounds = vec![(-10.0, 10.0)];
     let config = SparsitySamplerConfig::new(1, 42)
         .with_initial_samples(10)
@@ -172,7 +172,7 @@ fn test_sparsity_sampler_with_gaussian_kernel() {
     let Some(dev) = get_test_device_if_f64_gpu_available_sync() else {
         return;
     };
-    let f = |x: &[f64]| x[0].powi(2) + x[1].powi(2);
+    let f = |x: &[f64]| x[0].mul_add(x[0], x[1].powi(2));
     let bounds = vec![(-5.0, 5.0), (-5.0, 5.0)];
     let config = SparsitySamplerConfig::new(2, 42)
         .with_initial_samples(15)

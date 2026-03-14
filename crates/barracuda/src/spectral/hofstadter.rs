@@ -97,7 +97,7 @@ mod tests {
         let n = 500;
         let (d, e) = almost_mathieu_hamiltonian(n, lambda, GOLDEN_RATIO, 0.0);
         let evals = find_all_eigenvalues(&d, &e);
-        let bound = 2.0 + 2.0 * lambda + 0.01;
+        let bound = 2.0f64.mul_add(lambda, 2.0) + 0.01;
         for &ev in &evals {
             assert!(
                 ev.abs() <= bound,

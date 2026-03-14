@@ -1,11 +1,21 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-03-13.
+Prioritized work items, ordered by impact. Updated 2026-03-14.
 
 ---
 
 ## Recently Completed
 
+- **Deep debt sprint 3 — lint evolution & refactoring (Mar 14)**:
+  `missing_errors_doc` and `missing_panics_doc` promoted to warn in both crates
+  (zero violations). Cast lints (`cast_possible_truncation`, `cast_sign_loss`,
+  `cast_precision_loss`, `cast_lossless`) promoted in barracuda-core.
+  `large_stack_frames` documented as test framework artifact. `suboptimal_flops`
+  evolved in all test files (mul_add with type annotations). `ode_bio/params.rs`
+  refactored into 7-file modular structure. RBF `assemble_and_solve` zero-copy
+  via `split_off`. CI: 80% coverage gate and chaos/fault tests now blocking;
+  cross-compile job added for musl targets. Dead `ring` config removed from
+  deny.toml. All quality gates green.
 - **VFIO-primary architecture adoption (Mar 13)**: VFIO via toadStool adopted as
   primary GPU dispatch path. All root docs and specs updated. CoralReefDevice
   evolved to IPC-first architecture (no coral-gpu dependency). VFIO detection
@@ -75,8 +85,9 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
 
 ## Near-term (P2)
 
-- **Test coverage to 90%**: Evolve CI `--fail-under` from 80 to 90. Add GPU-conditional
-  tests for new ops (SCS-CN, Stewart, Blaney-Criddle, autocorrelation).
+- **Test coverage to 90%**: CI 80% gate now blocking (Sprint 3). Evolve `--fail-under`
+  from 80 to 90 with real GPU hardware. Add GPU-conditional tests for new ops
+  (SCS-CN, Stewart, Blaney-Criddle, autocorrelation).
 - **Kokkos GPU parity benchmarks**: Run barraCuda GPU benchmarks on matching hardware,
   publish comparison data.
 - **~~WGSL optimizer annotation coverage~~**: Done (Mar 12). `@ilp_region` added to
@@ -94,8 +105,8 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
 - **Shader hot-reload**: File watcher for `.wgsl` files during development, automatic
   recompilation through sovereign pipeline.
 - **Zero-copy evolution**: `bytes::Bytes` on I/O boundaries + `CpuTensorStorageSimple` +
-  `CosineSimilarityF64` done; remaining: pre-allocated buffers for `domain_ops.rs` CPU
-  fallback clones, LSTM hidden state clones, RBF assembly allocations.
+  `CosineSimilarityF64` + RBF `assemble_and_solve` done; remaining: pre-allocated buffers
+  for `domain_ops.rs` CPU fallback clones, LSTM hidden state clones.
 
 ## Long-term (P4)
 

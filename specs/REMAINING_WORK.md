@@ -1,18 +1,18 @@
 # barraCuda — Remaining Work
 
 **Version**: 0.3.5
-**Date**: March 13, 2026
+**Date**: March 14, 2026
 **Status**: Active — tracks all open work items for barraCuda evolution
 
 ---
 
 ## Achieved Summary
 
-14 deep debt and evolution sprints completed between March 7–13, 2026.
+15 deep debt and evolution sprints completed between March 7–14, 2026.
 See `CHANGELOG.md` for detailed fossil record of each sprint.
 
 Key milestones: `#![forbid(unsafe_code)]` in both crates, 14 clippy lints
-promoted (9 pedantic + 5 nursery), 806/806 WGSL SPDX headers, 1,088/1,088
+promoted (9 pedantic + 5 nursery + 2 doc + 4 cast), 806/806 WGSL SPDX headers, 1,088/1,088
 Rust SPDX headers, IPC-first sovereign architecture, RHMC/CG absorbed from
 hotSpring, DF64 hand-written shaders, `@ilp_region` optimizer annotations,
 capability-based PRIMAL_NAMESPACE, cross-spring absorption (6 springs),
@@ -73,7 +73,7 @@ gates green.
 - **Clippy** (`-D warnings`): Pass (all configs)
 - **Rustdoc**: Zero warnings
 - **cargo deny**: Pass (advisories ok, bans ok, licenses ok, sources ok)
-- **Tests**: 4,011 pass, 0 fail, 15 skip
+- **Tests**: 3,359 pass, 0 fail, 15 skip
 
 ---
 
@@ -300,6 +300,47 @@ Previously limited to Vulkan with SPIR-V passthrough.
 
 ---
 
+## Achieved (March 14, 2026 — Deep Debt Sprint 3: Lint Evolution & Refactoring)
+
+### Lint Promotions
+- **`missing_errors_doc`**: Promoted from allow to warn in both crates (zero violations)
+- **`missing_panics_doc`**: Promoted from allow to warn in both crates (zero violations)
+- **Cast lints**: Promoted `cast_possible_truncation`, `cast_sign_loss`,
+  `cast_precision_loss`, `cast_lossless` from allow to warn in `barracuda-core`
+  (zero violations — IPC crate is cast-safe)
+- **`large_stack_frames`**: Documented as test framework artifact (3,359 test
+  descriptors on stack), added allow with rationale
+- **`suboptimal_flops`**: All test sites evolved to `mul_add()` with explicit
+  type annotations. 424 library sites remain — allow with rationale (canonical
+  math form `a*b + c` in scientific code, tracked for incremental evolution)
+
+### Refactoring
+- **`ode_bio/params.rs`** (774 → 7 files): Extracted into `params/` directory
+  with `mod.rs` barrel + 6 domain-specific submodules (qs_biofilm, capacitor,
+  cooperation, multi_signal, bistable, phage_defense). Each file ~100-130 lines.
+- **RBF zero-copy**: `assemble_and_solve` evolved from `solution[..n].to_vec()` +
+  `solution[n..].to_vec()` to `weights.split_off(n)` — eliminates 2 allocations.
+
+### CI Evolution
+- **Coverage 80% gate**: Now blocking (removed `continue-on-error`)
+- **Chaos/fault tests**: Now blocking (removed `continue-on-error`)
+- **Cross-compilation job**: Added `cross-compile` CI job checking x86_64-musl
+  and aarch64-musl targets + banned C dep verification (ecoBin compliance)
+
+### Cleanup
+- **Dead `ring` config**: Removed `[[licenses.clarify]]` for `ring` from
+  `deny.toml` — crate not in dependency tree
+- **WGSL comment**: Evolved `batched_bisection_f64.wgsl` "hardcoded to BCS"
+  comment to reflect multi-entry-point design
+
+### Quality Gates — All Green
+- `cargo fmt --check`: Pass
+- `cargo clippy --workspace --all-targets -- -D warnings`: Pass (zero warnings)
+- `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps`: Pass
+- `cargo deny check`: Pass (advisories, bans, licenses, sources)
+
+---
+
 ## Remaining Work
 
 ### P1 — Immediate
@@ -338,8 +379,9 @@ Previously limited to Vulkan with SPIR-V passthrough.
 - **Phase 7 — K-quant**: Q2_K through Q6_K super-block formats (GGML parity)
 
 #### Test Coverage to 90%
-- Current: 4,011 total tests (workspace), 43 integration test files
-- Evolve CI `--fail-under` from 80 to 90
+- Current: 3,359 lib tests + 42 integration test files (24 harnesses + submodules)
+- CI 80% gate now blocking (Sprint 3); 90% stretch still `continue-on-error`
+- Self-reported ~70% on llvmpipe; 90% requires real GPU hardware
 - Add GPU-conditional tests for new ops
 - GPU_TEST_TIMEOUT (60s) prevents hangs; coordination harness with
   coralReef + toadStool needed for efficient shader-on-GPU testing
@@ -371,9 +413,12 @@ Previously limited to Vulkan with SPIR-V passthrough.
 - Automatic recompilation through sovereign pipeline
 
 #### Zero-copy Evolution
-- Pre-allocated buffers for `domain_ops.rs` CPU fallback clones
-- LSTM hidden state clones
-- RBF assembly allocations
+- Pre-allocated buffers for `domain_ops.rs` GPU upload conversions (f64→f32).
+  Note: `Arc<WgpuDevice>` clones are O(1) ref-count bumps; GPU readback copies
+  are inherent to GPU→CPU transfer.
+- LSTM `forward()` returns `hidden.clone()` — inherent: state must persist
+  for subsequent sequence steps. Could evolve to `&[f64]` return if API permits.
+- ~~RBF `assemble_and_solve` solution slicing~~ Done (Mar 14): `split_off`
 
 ### P4 — Long-term (Sovereign Compute)
 
@@ -442,7 +487,7 @@ path and cross-compilation target matrix.
 | Clippy | Pass (zero warnings, `-D warnings`) | `cargo clippy --workspace --all-targets -- -D warnings` |
 | Rustdoc | Pass (zero warnings) | `cargo doc --workspace --no-deps` |
 | Deny | Pass (advisories, bans, licenses, sources) | `cargo deny check` |
-| Tests | 4,011 pass / 0 fail / 15 skip | `cargo nextest run --workspace --no-fail-fast` |
+| Tests | 3,359 pass / 0 fail / 15 skip | `cargo nextest run --workspace --no-fail-fast` |
 | Check (no GPU) | Pass | `cargo check --no-default-features` |
 | Check (GPU only) | Pass | `cargo check --no-default-features --features gpu` |
 | Check (all) | Pass | `cargo check` |

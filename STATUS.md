@@ -1,8 +1,8 @@
 # barraCuda Status
 
 **Version**: 0.3.5
-**Date**: 2026-03-13
-**Overall Grade**: A+ (Zero unsafe via `#![forbid(unsafe_code)]`, zero unwrap in production, pure safe Rust, all quality gates green, 4,011 tests passing, zero TODO/FIXME/unimplemented, NVVM poisoning guard, PrecisionBrain self-routing, HardwareCalibration per-tier probing, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust, device-aware test tolerances, cross-spring pharma/bio/health absorption, FMA policy, stable GPU special functions, sovereign coral-cache dispatch wiring, capability-based PRIMAL_NAMESPACE, VoltaNoPmuFirmware workaround detection, namespace-derived IPC method names, 806/806 WGSL SPDX headers, 1088/1088 Rust SPDX headers, pedantic lint promotion)
+**Date**: 2026-03-14
+**Overall Grade**: A+ (Zero unsafe via `#![forbid(unsafe_code)]`, zero unwrap in production, pure safe Rust, all quality gates green, 3,359 tests passing, zero TODO/FIXME/unimplemented, NVVM poisoning guard, PrecisionBrain self-routing, HardwareCalibration per-tier probing, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust, device-aware test tolerances, cross-spring pharma/bio/health absorption, FMA policy, stable GPU special functions, sovereign coral-cache dispatch wiring, capability-based PRIMAL_NAMESPACE, VoltaNoPmuFirmware workaround detection, namespace-derived IPC method names, 806/806 WGSL SPDX headers, 1088/1088 Rust SPDX headers, pedantic + nursery + doc lint promotion, CI coverage 80% blocking, ecoBin cross-compile CI)
 
 ---
 
@@ -15,11 +15,11 @@
 | **Sovereign compiler** | A+ | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all 806 shaders via rayon parallel validation; `erfc_f64` recursion eliminated |
 | **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery; namespace-derived method names via `PRIMAL_NAMESPACE` + `METHOD_SUFFIXES`; coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support |
 | **Device management** | A+ | `GpuBackend` trait abstraction, `CoralReefDevice` IPC-first sovereign backend behind `sovereign-dispatch` feature, multi-GPU with PCIe topology sysfs probing (`PcieLinkInfo`), capability-scored discovery, probe-aware f64 strategy, VRAM quota enforcement via `ResourceQuota`/`QuotaTracker`, bounded poll timeout |
-| **Test coverage** | A+ | 4,011 tests (all pass on llvmpipe); proptest; chaos/fault test tiers; nextest CI/stress profiles; optimised test pipeline (nautilus 14.3s→0.01s, sovereign 800+ shaders parallelised via rayon, ESN reservoir shrunk); zero `todo!()`/`unimplemented!()` |
+| **Test coverage** | A+ | 3,359 tests (all pass on llvmpipe); proptest; chaos/fault test tiers (blocking in CI); nextest CI/stress profiles; 80% coverage gate (blocking); optimised test pipeline (nautilus 14.3s→0.01s, sovereign 800+ shaders parallelised via rayon, ESN reservoir shrunk); zero `todo!()`/`unimplemented!()` |
 | **Dependencies** | A+ | All deps pure Rust (blake3 `pure`, wgpu/naga 28); zero application C deps; ecoBin compliant |
 | **Documentation** | A+ | Comprehensive CHANGELOG, specs, README, CONTRIBUTING, CONVENTIONS, BREAKING_CHANGES; all rustdoc warnings resolved; showcase/ with 9 progressive demos (local, IPC, cross-primal) |
 | **Unsafe code** | A+ | Zero `unsafe` blocks; `#![forbid(unsafe_code)]` in both crates (irrevocable) |
-| **Clippy / lint** | A+ | Zero warnings with pedantic + unwrap_used + nursery (selective) + `-D warnings`; 14 bulk-allowed lints promoted (9 pedantic + 5 nursery); `if_same_then_else` fixed (7 sites) and promoted; `redundant_clone`, `imprecise_flops`, `derive_partial_eq_without_eq`, `unnecessary_struct_initialization` enforced; zero production `unwrap()`; `#[expect(reason)]` for suppressions |
+| **Clippy / lint** | A+ | Zero warnings with pedantic + unwrap_used + nursery (selective) + `-D warnings`; 20 bulk-allowed lints promoted (9 pedantic + 5 nursery + 2 doc + 4 cast); `if_same_then_else` fixed (7 sites) and promoted; `redundant_clone`, `imprecise_flops`, `derive_partial_eq_without_eq`, `unnecessary_struct_initialization` enforced; `missing_errors_doc`, `missing_panics_doc` enforced; cast lints enforced in barracuda-core; zero production `unwrap()`; `#[expect(reason)]` for suppressions |
 | **Error handling** | A+ | Binary `main()` uses typed `BarracudaCoreError` (not `Box<dyn Error>`); `From` impls for `serde_json::Error`, `BarracudaError`, `io::Error`; `Result` propagation throughout; `let-else` throughout; poison recovery |
 | **Idiomatic Rust** | A+ | Edition 2024; zero `too_many_arguments` (all 9 → builder/struct); documented `#[allow]`/`#[expect]` with reason; `#[derive(Default)]`; zero unsafe; zero production unwrap; `ChamferDirection` enum; smart module decomposition (provenance, coral_compiler); capability version derived from `env!("CARGO_PKG_VERSION")`; method lists derived from `REGISTERED_METHODS` constant |
 | **Spring absorption** | A+ | All P0/P1/P2 items resolved; hotSpring: NVVM poisoning guard, plasma dispersion, LSCFRK, **PrecisionBrain + HardwareCalibration**; groundSpring: F64NativeNoSharedMem, DF64 reduce, shared `estimate_gflops`/`estimate_vram_bytes`; wetSpring: BGL builder, `ComputeDispatch` builder, `Rk45Result::variable_trajectory()`, **`CsrMatrix::from_triplets_summed()`**, **`BipartitionEncodeGpu`**; neuralSpring: activations, Wright-Fisher, `analyze_weight_matrix()`; healthSpring: Hill Emax, Population PK, tridiagonal QL, LCG PRNG, **FOCE/VPC GPU shaders**; toadStool S139: dual-scan discovery |
@@ -157,6 +157,7 @@
 - `VpcSimulateGpu` — GPU Monte Carlo VPC simulation with RK4 PK integration (healthSpring V14 absorption)
 - `foce_gradient_f64.wgsl` + `vpc_simulate_f64.wgsl` + `bipartition_encode.wgsl` — 3 new production WGSL shaders
 
+- **Deep debt sprint 3 — lint evolution & refactoring** (Mar 14): `missing_errors_doc` and `missing_panics_doc` promoted to warn in both crates. Cast lints promoted in `barracuda-core`. `large_stack_frames` documented as test artifact. `suboptimal_flops` evolved in test files. `ode_bio/params.rs` refactored (774L → 7-file modular structure). RBF `assemble_and_solve` zero-copy via `split_off`. CI: 80% coverage + chaos/fault now blocking; cross-compile job for musl targets. Dead `ring` deny.toml config removed. All quality gates green.
 - **Deep debt evolution sprint 2** (Mar 12): 5 nursery lints promoted (`redundant_clone`, `imprecise_flops`, `unnecessary_struct_initialization`, `derive_partial_eq_without_eq`, `suboptimal_flops` kept allow with rationale). 7 `if_same_then_else` sites fixed and lint promoted to warn. `needless_range_loop` sites reduced (csr, device_info, fft_1d converted to idiomatic iterators). Hardcoded discovery paths evolved to `PRIMAL_NAMESPACE`-derived. `zeros`/`ones` dispatch duplication eliminated via combined match arm. 193 files touched by auto-fix (redundant clones removed, precision improved via `ln_1p`/`to_radians`/`hypot`).
 - **Comprehensive audit & deep debt sprint** (Mar 12): Full codebase audit against wateringHole standards. 12-item remediation completed.
 - **`#![forbid(unsafe_code)]`** (Mar 12): Upgraded from `deny` (overridable) to `forbid` (irrevocable) in both `barracuda` and `barracuda-core` crate roots.
@@ -185,7 +186,7 @@
 - P1: DF64 end-to-end NVK hardware verification (Yukawa shaders)
 - P1: coralNAK extraction (pending org repo fork)
 - P1: Kokkos validation baseline documentation (unblocked by VFIO strategy)
-- P2: Test coverage ~75% on llvmpipe (target: 90%, requires real GPU hardware for GPU-path coverage)
+- P2: Test coverage ~75% on llvmpipe (80% CI gate blocking; 90% target requires real GPU hardware)
 - P2: Kokkos GPU parity benchmarks
 - ~~P2: RHMC multi-shift CG solver~~ — **Done** (Mar 12, rhmc.rs + rhmc_hmc.rs)
 

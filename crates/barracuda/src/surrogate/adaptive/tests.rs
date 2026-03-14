@@ -178,7 +178,7 @@ fn test_f32_vs_f64_distances_accuracy() {
     let mut train_x = Vec::with_capacity(n * n_dim);
     for i in 0..n {
         for d in 0..n_dim {
-            train_x.push((i as f64 * 0.1) + (d as f64 * 0.3));
+            train_x.push((i as f64).mul_add(0.1, d as f64 * 0.3));
         }
     }
 
@@ -220,7 +220,10 @@ fn test_adaptive_2d_function() {
         vec![1.0, 1.0],
         vec![0.5, 0.5],
     ];
-    let y_train: Vec<f64> = x_train.iter().map(|x| x[0] * x[0] + x[1] * x[1]).collect();
+    let y_train: Vec<f64> = x_train
+        .iter()
+        .map(|x: &Vec<f64>| x[0].mul_add(x[0], x[1] * x[1]))
+        .collect();
     let config = AdaptiveConfig::default();
     let (surrogate, diag) = train_adaptive(
         device,
@@ -393,7 +396,10 @@ mod gpu_tests {
             vec![0.25, 0.75],
             vec![0.75, 0.25],
         ];
-        let y_train: Vec<f64> = x_train.iter().map(|x| x[0] * x[0] + x[1] * x[1]).collect();
+        let y_train: Vec<f64> = x_train
+            .iter()
+            .map(|x: &Vec<f64>| x[0].mul_add(x[0], x[1] * x[1]))
+            .collect();
 
         let (surrogate, diag) = train_adaptive_gpu(
             &x_train,
@@ -410,7 +416,7 @@ mod gpu_tests {
         assert_eq!(diag.n_dim, 2);
 
         let y_pred = surrogate.predict(&[vec![0.5, 0.5]]).unwrap();
-        let expected = 0.5 * 0.5 + 0.5 * 0.5;
+        let expected = 0.5f64.mul_add(0.5, 0.5 * 0.5);
         assert!(
             (y_pred[0] - expected).abs() < 0.5,
             "GPU 2D interpolation error: {} vs {}",
@@ -564,7 +570,7 @@ mod gpu_tests {
         ];
         let y_train: Vec<f64> = x_train
             .iter()
-            .map(|x| x[0] * x[0] + x[1] * x[1] + x[2] * x[2])
+            .map(|x: &Vec<f64>| x[0].mul_add(x[0], x[1].mul_add(x[1], x[2] * x[2])))
             .collect();
 
         let (surrogate, diag) = train_adaptive_gpu(

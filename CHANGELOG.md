@@ -5,7 +5,27 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.5] — 2026-03-10
+## [0.3.5] — 2026-03-14
+
+### Changed — Deep Debt Sprint 3: Lint Evolution & Refactoring (Mar 14 2026)
+
+- **Lint promotions**: `missing_errors_doc` and `missing_panics_doc` promoted from
+  allow to warn in both crates (zero violations). Cast lints (`cast_possible_truncation`,
+  `cast_sign_loss`, `cast_precision_loss`, `cast_lossless`) promoted to warn in
+  `barracuda-core` (zero violations). 20 total lints promoted (9 pedantic + 5 nursery
+  + 2 doc + 4 cast).
+- **`ode_bio/params.rs` refactored**: 774-line monolith → 7-file modular structure
+  (`params/mod.rs` barrel + `qs_biofilm`, `capacitor`, `cooperation`, `multi_signal`,
+  `bistable`, `phage_defense`). Each submodule ~100-130 lines.
+- **RBF zero-copy**: `assemble_and_solve` evolved from `solution[..n].to_vec()` +
+  `solution[n..].to_vec()` to `Vec::split_off()` — eliminates 2 allocations.
+- **CI evolution**: 80% coverage gate now blocking (removed `continue-on-error`).
+  Chaos/fault tests now blocking. Added `cross-compile` job for `x86_64-unknown-linux-musl`
+  and `aarch64-unknown-linux-musl` targets with banned C dependency verification.
+- **`suboptimal_flops` in tests**: All test-file sites evolved to `f64::mul_add()` with
+  explicit type annotations resolving ambiguity errors.
+- **Cleanup**: Dead `ring` clarification removed from `deny.toml`. WGSL comment evolved
+  in `batched_bisection_f64.wgsl`. Integration test count aligned to 42 across all docs.
 
 ### Added — Cross-Spring Deep Absorption & Evolution Sprint 2 (Mar 10 2026)
 

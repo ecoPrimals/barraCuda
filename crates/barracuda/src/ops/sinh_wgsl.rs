@@ -155,7 +155,7 @@ impl Sinh {
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         Ok(Tensor::from_buffer(
             output_buffer,

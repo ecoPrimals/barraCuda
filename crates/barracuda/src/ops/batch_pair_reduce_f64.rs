@@ -201,7 +201,7 @@ impl BatchPairReduceF64 {
             pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(n_a.div_ceil(16), n_b.div_ceil(16), 1);
         }
-        dev.submit_and_poll(Some(encoder.finish()));
+        dev.submit_commands(Some(encoder.finish()));
 
         crate::utils::read_buffer_f64(dev, &out_buf, out_n)
     }

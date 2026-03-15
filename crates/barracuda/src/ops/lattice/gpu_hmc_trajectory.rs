@@ -626,7 +626,7 @@ impl GpuHmcTrajectory {
             pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(n_pairs.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
         }
-        self.device.submit_and_poll(Some(enc.finish()));
+        self.device.submit_commands(Some(enc.finish()));
 
         let reducer = ReduceScalarPipeline::new(self.device.clone(), n_pairs as usize)?;
         reducer.sum_f64(&cg_bufs.dot_out)
@@ -709,7 +709,7 @@ impl GpuHmcTrajectory {
             pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(n.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
         }
-        self.device.submit_and_poll(Some(enc.finish()));
+        self.device.submit_commands(Some(enc.finish()));
         Ok(())
     }
 
@@ -721,7 +721,7 @@ impl GpuHmcTrajectory {
     fn copy_buffer_sized(&self, src: &wgpu::Buffer, dst: &wgpu::Buffer, size: u64) {
         let mut enc = self.device.create_encoder_guarded(&Default::default());
         enc.copy_buffer_to_buffer(src, 0, dst, 0, size);
-        self.device.submit_and_poll(Some(enc.finish()));
+        self.device.submit_commands(Some(enc.finish()));
     }
 }
 

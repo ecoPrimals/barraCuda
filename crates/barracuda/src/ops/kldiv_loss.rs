@@ -214,7 +214,7 @@ impl KLDivLoss {
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         // Shader handles reduction internally
         let output_shape = self.input.shape().to_vec();

@@ -196,7 +196,7 @@ impl MatrixPower {
                 pass.dispatch_workgroups(workgroups_x, workgroups_y, 1);
             }
 
-            device.submit_and_poll(Some(encoder.finish()));
+            device.submit_commands(Some(encoder.finish()));
 
             let output_shape = shape.to_vec();
             let output_elem_count = output_shape.iter().product::<usize>();

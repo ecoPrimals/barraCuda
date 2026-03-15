@@ -197,7 +197,7 @@ impl Adafactor {
         };
 
         // Submit buffer copies
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         let adafactor_params_buffer =
             device
@@ -335,7 +335,7 @@ impl Adafactor {
             compute_pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         let updated_params =
             Tensor::from_buffer(params_buffer, self.params.shape().to_vec(), device.clone());

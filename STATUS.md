@@ -1,8 +1,8 @@
 # barraCuda Status
 
 **Version**: 0.3.5
-**Date**: 2026-03-14
-**Overall Grade**: A+ (Zero unsafe via `#![forbid(unsafe_code)]`, zero unwrap in production, pure safe Rust, all quality gates green, 3,359 tests passing, zero TODO/FIXME/unimplemented, NVVM poisoning guard, PrecisionBrain self-routing, HardwareCalibration per-tier probing, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust, device-aware test tolerances, cross-spring pharma/bio/health absorption, FMA policy, stable GPU special functions, sovereign coral-cache dispatch wiring, capability-based PRIMAL_NAMESPACE, VoltaNoPmuFirmware workaround detection, namespace-derived IPC method names, 806/806 WGSL SPDX headers, 1088/1088 Rust SPDX headers, pedantic + nursery + doc lint promotion, CI coverage 80% blocking, ecoBin cross-compile CI)
+**Date**: 2026-03-15
+**Overall Grade**: A+ (Zero unsafe via `#![forbid(unsafe_code)]`, zero unwrap in production, pure safe Rust, all quality gates green, 3,407 tests passing, zero TODO/FIXME/unimplemented, NVVM poisoning guard, PrecisionBrain self-routing, HardwareCalibration per-tier probing, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust, device-aware test tolerances, cross-spring pharma/bio/health absorption, FMA policy, stable GPU special functions, sovereign coral-cache dispatch wiring, capability-based PRIMAL_NAMESPACE, VoltaNoPmuFirmware workaround detection, namespace-derived IPC method names, 806/806 WGSL SPDX headers, 1088/1088 Rust SPDX headers, pedantic + nursery + doc lint promotion, CI coverage 80% blocking, ecoBin cross-compile CI)
 
 ---
 
@@ -14,8 +14,8 @@
 | **Precision tiers** | A+ | 3-tier model (F32/F64/Df64) aligned with coralReef `Fp64Strategy`; DF64 naga-guided rewrite validated; probe-aware Fp64Strategy; DF64 reduce shaders correctly routed via `.df64()` on Hybrid devices; NVVM poisoning guard for proprietary NVIDIA DF64 transcendentals |
 | **Sovereign compiler** | A+ | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all 806 shaders via rayon parallel validation; `erfc_f64` recursion eliminated |
 | **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; Unix socket default + TCP; capability-based discovery; namespace-derived method names via `PRIMAL_NAMESPACE` + `METHOD_SUFFIXES`; coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support |
-| **Device management** | A+ | `GpuBackend` trait abstraction, `CoralReefDevice` IPC-first sovereign backend behind `sovereign-dispatch` feature, multi-GPU with PCIe topology sysfs probing (`PcieLinkInfo`), capability-scored discovery, probe-aware f64 strategy, VRAM quota enforcement via `ResourceQuota`/`QuotaTracker`, bounded poll timeout |
-| **Test coverage** | A+ | 3,359 tests (all pass on llvmpipe); proptest; chaos/fault test tiers (blocking in CI); nextest CI/stress profiles; 80% coverage gate (blocking); optimised test pipeline (nautilus 14.3s→0.01s, sovereign 800+ shaders parallelised via rayon, ESN reservoir shrunk); zero `todo!()`/`unimplemented!()` |
+| **Device management** | A+ | `GpuBackend` trait abstraction, `CoralReefDevice` IPC-first sovereign backend behind `sovereign-dispatch` feature (`is_coral_available`, `with_auto_device`, `has_dispatch`), multi-GPU with PCIe topology sysfs probing (`PcieLinkInfo`), capability-scored discovery, probe-aware f64 strategy, VRAM quota enforcement via `ResourceQuota`/`QuotaTracker`, bounded poll timeout, split-lock GPU submission |
+| **Test coverage** | A+ | 3,450 tests (all pass on llvmpipe); proptest; chaos/fault test tiers (blocking in CI); nextest CI/stress profiles; 80% coverage gate (blocking); GPU streaming: split-lock dispatch, fire-and-forget `submit_commands`, single-poll `submit_and_map` readback; optimised test pipeline (nautilus 14.3s→0.01s, sovereign 800+ shaders parallelised via rayon, ESN reservoir shrunk); zero `todo!()`/`unimplemented!()` |
 | **Dependencies** | A+ | All deps pure Rust (blake3 `pure`, wgpu/naga 28); zero application C deps; ecoBin compliant |
 | **Documentation** | A+ | Comprehensive CHANGELOG, specs, README, CONTRIBUTING, CONVENTIONS, BREAKING_CHANGES; all rustdoc warnings resolved; showcase/ with 9 progressive demos (local, IPC, cross-primal) |
 | **Unsafe code** | A+ | Zero `unsafe` blocks; `#![forbid(unsafe_code)]` in both crates (irrevocable) |
@@ -157,6 +157,7 @@
 - `VpcSimulateGpu` — GPU Monte Carlo VPC simulation with RK4 PK integration (healthSpring V14 absorption)
 - `foce_gradient_f64.wgsl` + `vpc_simulate_f64.wgsl` + `bipartition_encode.wgsl` — 3 new production WGSL shaders
 
+- **GPU streaming & audit sprint** (Mar 15): `submit_and_poll_inner` split into separate `submit_commands_inner` + `poll_wait_inner` lock acquisitions — other threads interleave submits while one polls (eliminates 120s lock convoy). 279 fire-and-forget ops migrated from blocking `submit_and_poll` to non-blocking `submit_commands`. New `submit_and_map<T>` method collapses double-poll (submit+poll then map+poll) into single submit → `map_async` → `poll_safe` cycle. `read_buffer<T>` now uses single-poll path. `--all-features` clippy fixed: `is_coral_available()`, `CoralReefDevice::with_auto_device()`, `CoralReefDevice::has_dispatch()` added. Pre-existing doc_markdown lints fixed (bcs, screened_coulomb, chi2). All quality gates green. 3,407 tests pass, 0 fail.
 - **Deep debt sprint 3 — lint evolution & refactoring** (Mar 14): `missing_errors_doc` and `missing_panics_doc` promoted to warn in both crates. Cast lints promoted in `barracuda-core`. `large_stack_frames` documented as test artifact. `suboptimal_flops` evolved in test files. `ode_bio/params.rs` refactored (774L → 7-file modular structure). RBF `assemble_and_solve` zero-copy via `split_off`. CI: 80% coverage + chaos/fault now blocking; cross-compile job for musl targets. Dead `ring` deny.toml config removed. All quality gates green.
 - **Deep debt evolution sprint 2** (Mar 12): 5 nursery lints promoted (`redundant_clone`, `imprecise_flops`, `unnecessary_struct_initialization`, `derive_partial_eq_without_eq`, `suboptimal_flops` kept allow with rationale). 7 `if_same_then_else` sites fixed and lint promoted to warn. `needless_range_loop` sites reduced (csr, device_info, fft_1d converted to idiomatic iterators). Hardcoded discovery paths evolved to `PRIMAL_NAMESPACE`-derived. `zeros`/`ones` dispatch duplication eliminated via combined match arm. 193 files touched by auto-fix (redundant clones removed, precision improved via `ln_1p`/`to_radians`/`hypot`).
 - **Comprehensive audit & deep debt sprint** (Mar 12): Full codebase audit against wateringHole standards. 12-item remediation completed.
@@ -186,7 +187,7 @@
 - P1: DF64 end-to-end NVK hardware verification (Yukawa shaders)
 - P1: coralNAK extraction (pending org repo fork)
 - P1: Kokkos validation baseline documentation (unblocked by VFIO strategy)
-- P2: Test coverage ~75% on llvmpipe (80% CI gate blocking; 90% target requires real GPU hardware)
+- P2: Test coverage ~75% on llvmpipe (80% CI gate blocking; 90% target requires real GPU hardware; 3,407 tests passing)
 - P2: Kokkos GPU parity benchmarks
 - ~~P2: RHMC multi-shift CG solver~~ — **Done** (Mar 12, rhmc.rs + rhmc_hmc.rs)
 

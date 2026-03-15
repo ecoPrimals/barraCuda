@@ -169,7 +169,7 @@ impl GLU {
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         // Output shape is half the input size
         let mut output_shape = self.input.shape().to_vec();

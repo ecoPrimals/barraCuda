@@ -178,7 +178,7 @@ pub(crate) fn dispatch_axis_inner(
             label: Some("FFT Copy BR"),
         });
         encoder.copy_buffer_to_buffer(buf_b, 0, buf_a, 0, buffer_bytes);
-        device.submit_and_poll(std::iter::once(encoder.finish()));
+        device.submit_commands(std::iter::once(encoder.finish()));
     }
 
     // Butterfly stages
@@ -218,7 +218,7 @@ pub(crate) fn dispatch_axis_inner(
                 label: Some("FFT Copy Stage"),
             });
             encoder.copy_buffer_to_buffer(buf_b, 0, buf_a, 0, buffer_bytes);
-            device.submit_and_poll(std::iter::once(encoder.finish()));
+            device.submit_commands(std::iter::once(encoder.finish()));
         }
     }
 
@@ -228,7 +228,7 @@ pub(crate) fn dispatch_axis_inner(
             label: Some("FFT Copy Final"),
         });
         encoder.copy_buffer_to_buffer(buf_b, 0, buf_a, 0, buffer_bytes);
-        device.submit_and_poll(std::iter::once(encoder.finish()));
+        device.submit_commands(std::iter::once(encoder.finish()));
     }
     Ok(())
 }
@@ -371,7 +371,7 @@ impl Fft1D {
                 label: Some("FFT Copy Input"),
             });
             encoder.copy_buffer_to_buffer(self.input.buffer(), 0, &buf_a, 0, buffer_bytes);
-            device.submit_and_poll(std::iter::once(encoder.finish()));
+            device.submit_commands(std::iter::once(encoder.finish()));
         }
 
         let buf_b = device.device.create_buffer(&wgpu::BufferDescriptor {

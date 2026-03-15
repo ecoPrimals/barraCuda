@@ -135,7 +135,7 @@ impl FheIntt {
         }
 
         // Submit bit-reversal pass before butterfly stages
-        device.submit_and_poll(std::iter::once(encoder.finish()));
+        device.submit_commands(std::iter::once(encoder.finish()));
 
         // Pass 2-N: Butterfly stages (submit each separately for sequential execution)
         let num_stages = (self.degree() as f32).log2() as u32;
@@ -200,7 +200,7 @@ impl FheIntt {
             }
 
             // Submit this stage before next
-            device.submit_and_poll(std::iter::once(stage_encoder.finish()));
+            device.submit_commands(std::iter::once(stage_encoder.finish()));
 
             std::mem::swap(&mut current_input, &mut current_output);
         }
@@ -278,7 +278,7 @@ impl FheIntt {
         }
 
         // Submit scaling pass
-        device.submit_and_poll(std::iter::once(encoder.finish()));
+        device.submit_commands(std::iter::once(encoder.finish()));
 
         // Create result tensor
         Ok(Tensor::from_buffer(

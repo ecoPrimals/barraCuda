@@ -175,7 +175,7 @@ impl Bucketize {
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         // Read u32 buffer and convert to f32 for Tensor compatibility
         let u32_data = crate::utils::read_buffer_u32(device, &output_buffer, input_size)?;

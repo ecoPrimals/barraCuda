@@ -350,7 +350,7 @@ impl LSTMCell {
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         let h_size = self.batch_size * self.hidden_size;
         let h_data = crate::utils::read_buffer(device, &h_next_buffer, h_size)?;

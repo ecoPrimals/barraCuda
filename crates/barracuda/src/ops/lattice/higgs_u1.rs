@@ -215,7 +215,7 @@ impl HiggsU1HmcForce {
             pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(self.volume.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
         }
-        self.device.submit_and_poll(Some(enc.finish()));
+        self.device.submit_commands(Some(enc.finish()));
         Ok(())
     }
 
@@ -338,7 +338,7 @@ mod tests {
             });
             let mut enc = device.create_encoder_guarded(&Default::default());
             enc.copy_buffer_to_buffer(src, 0, &staging, 0, buf_bytes as u64);
-            device.submit_and_poll(Some(enc.finish()));
+            device.submit_commands(Some(enc.finish()));
             let n_f64 = buf_bytes / std::mem::size_of::<f64>();
             device.map_staging_buffer(&staging, n_f64).unwrap()
         };

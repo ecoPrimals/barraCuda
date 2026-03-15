@@ -8,6 +8,9 @@ impl WgpuDevice {
     /// Read typed values from a GPU buffer.
     /// Creates a staging buffer, copies data, maps it, and extracts via bytemuck.
     /// All typed read variants delegate here.
+    ///
+    /// Uses the single-poll path: submit → `map_async` → one `poll_safe` — no
+    /// double-poll.
     /// # Errors
     /// Returns [`Err`] if the device is lost before or during the readback copy,
     /// if [`poll_safe`] fails (e.g. device lost during poll), or if
@@ -41,15 +44,63 @@ impl WgpuDevice {
             label: Some("readback"),
         });
         encoder.copy_buffer_to_buffer(buffer, 0, &staging, 0, byte_size);
-        self.submit_and_poll_inner(Some(encoder.finish()));
 
+        self.submit_and_map::<T>(Some(encoder.finish()), &staging, count)
+    }
+
+    /// Submit command buffers then map and read a staging buffer in one pass.
+    ///
+    /// Collapses the old `submit_and_poll` → `map_staging_buffer` double-poll
+    /// into a single submit → `map_async` → `poll_safe` cycle.  The single
+    /// `poll_safe` processes both the compute/copy **and** the map callback.
+    /// # Errors
+    /// Returns [`Err`] if the device is lost, if [`poll_safe`] fails, if the
+    /// buffer mapping channel closes, or if `map_async` reports an error.
+    pub fn submit_and_map<T: bytemuck::Pod>(
+        &self,
+        commands: impl IntoIterator<Item = wgpu::CommandBuffer>,
+        staging: &wgpu::Buffer,
+        count: usize,
+    ) -> Result<Vec<T>> {
+        if count == 0 {
+            self.submit_commands(commands);
+            return Ok(Vec::new());
+        }
         if self.is_lost() {
             return Err(BarracudaError::device_lost(
-                "device lost during readback copy",
+                "cannot submit_and_map — device lost",
             ));
         }
 
-        self.map_staging_buffer(&staging, count)
+        // Submit without polling — release the lock so other threads can
+        // interleave their submits while we set up the map callback.
+        self.submit_commands(commands);
+
+        // Register the map callback before polling so that a single
+        // poll(Wait) processes both the compute/copy AND the map request.
+        let slice = staging.slice(..);
+        let (sender, receiver) = std::sync::mpsc::channel();
+        self.encoding_guard();
+        slice.map_async(wgpu::MapMode::Read, move |result| {
+            let _ = sender.send(result);
+        });
+        self.encoding_complete();
+
+        self.poll_safe()?;
+
+        receiver
+            .recv()
+            .map_err(|_| BarracudaError::execution_failed("GPU buffer mapping channel closed"))?
+            .map_err(|e| BarracudaError::execution_failed(e.to_string()))?;
+
+        self.encoding_guard();
+        let data = slice.get_mapped_range();
+        let result: Vec<T> = bytemuck::cast_slice(&data).to_vec();
+        drop(data);
+        staging.unmap();
+        self.encoding_complete();
+
+        Ok(result)
     }
 
     /// Map a staging buffer and extract typed data.
@@ -57,6 +108,9 @@ impl WgpuDevice {
     /// and polled (e.g., via `submit_and_poll`). This handles the
     /// `map_async` → `poll` → `get_mapped_range` → `unmap` dance that
     /// was previously duplicated across ~40 ops.
+    ///
+    /// Prefer [`submit_and_map`] for new code — it avoids the double-poll
+    /// that occurs when calling `submit_and_poll` followed by this method.
     /// # Errors
     /// Returns [`Err`] if the device is lost, if [`poll_safe`] fails (device lost
     /// during poll), if the GPU buffer mapping channel is closed before the

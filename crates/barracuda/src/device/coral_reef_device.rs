@@ -137,11 +137,48 @@ impl CoralReefDevice {
         ))
     }
 
+    /// Attempt to create a `CoralReefDevice` with auto-detected hardware.
+    ///
+    /// Returns `Ok(device)` when the `sovereign-dispatch` feature is enabled
+    /// and IPC discovery succeeds.  Callers check `has_dispatch()` to
+    /// determine whether the device can actually dispatch compute.
+    #[cfg(feature = "sovereign-dispatch")]
+    pub fn with_auto_device() -> Result<Self> {
+        Ok(Self::new())
+    }
+
+    /// Attempt to create a `CoralReefDevice` (feature not enabled).
+    #[cfg(not(feature = "sovereign-dispatch"))]
+    pub fn with_auto_device() -> Result<Self> {
+        Err(BarracudaError::Device(
+            "CoralReefDevice: enable the 'sovereign-dispatch' feature".into(),
+        ))
+    }
+
     /// Whether coralReef is available for compilation via IPC.
     #[cfg(feature = "sovereign-dispatch")]
     #[must_use]
     pub fn has_compiler(&self) -> bool {
         self.dispatch_available
+    }
+
+    /// Whether toadStool dispatch is available for this device.
+    ///
+    /// Currently mirrors `has_compiler` — the compile path is a prerequisite
+    /// for dispatch, and actual toadStool IPC wiring is still in progress
+    /// (P0 remaining work). Once `compute.dispatch.submit` is live, this
+    /// will probe toadStool directly.
+    #[cfg(feature = "sovereign-dispatch")]
+    #[must_use]
+    pub fn has_dispatch(&self) -> bool {
+        self.dispatch_available
+    }
+
+    /// Dispatch is never available without the feature.
+    #[cfg(not(feature = "sovereign-dispatch"))]
+    #[must_use]
+    pub fn has_dispatch(&self) -> bool {
+        false
     }
 
     /// Check the coral compiler cache for a pre-compiled native binary.

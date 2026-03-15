@@ -182,7 +182,7 @@ impl TriangularSolveF64 {
             pass.dispatch_workgroups(1, 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         crate::utils::read_buffer_f64(&device, &solution_buffer, n)
     }
@@ -374,7 +374,7 @@ impl TriangularSolveF64 {
             pass.dispatch_workgroups(1, 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         crate::utils::read_buffer_f64(&device, &solution_buffer, n)
     }

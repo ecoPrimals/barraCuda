@@ -303,7 +303,7 @@ impl Tensor {
             (size * std::mem::size_of::<f32>()) as u64,
         );
 
-        self.device.submit_and_poll(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
 
         Ok(Self {
             buffer: TensorBuffer::Owned(Arc::new(new_buffer)),

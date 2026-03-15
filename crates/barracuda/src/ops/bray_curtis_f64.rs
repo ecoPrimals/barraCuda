@@ -209,7 +209,7 @@ impl BrayCurtisF64 {
             pass.dispatch_workgroups(n_workgroups as u32, 1, 1);
         }
 
-        self.device.submit_and_poll(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
 
         // Read results
         self.read_results(&output_buffer, n_pairs)
@@ -230,7 +230,7 @@ impl BrayCurtisF64 {
                 label: Some("BC Copy Encoder"),
             });
         encoder.copy_buffer_to_buffer(buffer, 0, &staging, 0, (count * 8) as u64);
-        self.device.submit_and_poll(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
 
         let results: Vec<f64> = self.device.map_staging_buffer(&staging, count)?;
         Ok(results)

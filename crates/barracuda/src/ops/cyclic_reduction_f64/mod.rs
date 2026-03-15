@@ -327,7 +327,7 @@ impl CyclicReductionF64 {
         });
 
         encoder.copy_buffer_to_buffer(&d_buf, 0, &staging, 0, (n * 8) as u64);
-        self.device.submit_and_poll(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
 
         let result: Vec<f64> = self.device.map_staging_buffer(&staging, n)?;
         Ok(result)
@@ -559,7 +559,7 @@ impl CyclicReductionF64 {
                 pass.dispatch_workgroups(n_workgroups.max(1) as u32, 1, 1);
             }
 
-            self.device.submit_and_poll(Some(encoder.finish()));
+            self.device.submit_commands(Some(encoder.finish()));
         }
 
         // Substitution phase: O(log n) passes in reverse
@@ -629,7 +629,7 @@ impl CyclicReductionF64 {
                 pass.dispatch_workgroups(n_workgroups.max(1) as u32, 1, 1);
             }
 
-            self.device.submit_and_poll(Some(encoder.finish()));
+            self.device.submit_commands(Some(encoder.finish()));
         }
 
         // Read back solution (stored in d_buf)
@@ -646,7 +646,7 @@ impl CyclicReductionF64 {
                 label: Some("Copy Encoder"),
             });
         encoder.copy_buffer_to_buffer(&d_buf, 0, &staging, 0, (n * 8) as u64);
-        self.device.submit_and_poll(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
 
         let result: Vec<f64> = self.device.map_staging_buffer(&staging, n)?;
         Ok(result)

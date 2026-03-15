@@ -77,7 +77,7 @@ impl GpuTensorStorage {
                     label: Some("GpuTensorStorage copy"),
                 });
             enc.copy_buffer_to_buffer(tensor.buffer(), 0, &new.buffer, 0, byte_size);
-            new.device.submit_and_poll(Some(enc.finish()));
+            new.device.submit_commands(Some(enc.finish()));
             new
         }
     }
@@ -118,7 +118,7 @@ impl TensorStorage for GpuTensorStorage {
                 label: Some("GpuTensorStorage read"),
             });
             encoder.copy_buffer_to_buffer(&buffer, 0, &staging, 0, byte_size);
-            device.submit_and_poll(Some(encoder.finish()));
+            device.submit_commands(Some(encoder.finish()));
             let slice = staging.slice(..);
             let (tx, rx) = std::sync::mpsc::channel();
             slice.map_async(wgpu::MapMode::Read, move |r| {

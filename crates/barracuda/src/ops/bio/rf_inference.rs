@@ -153,7 +153,7 @@ impl RfBatchInferenceGpu {
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        self.device.submit_and_poll(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
     }
 }
 

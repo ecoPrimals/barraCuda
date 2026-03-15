@@ -344,7 +344,7 @@ impl GpuCgSolver {
     fn copy_buffer(&self, src: &wgpu::Buffer, dst: &wgpu::Buffer, size: u64) {
         let mut enc = self.device.create_encoder_guarded(&Default::default());
         enc.copy_buffer_to_buffer(src, 0, dst, 0, size);
-        self.device.submit_and_poll(Some(enc.finish()));
+        self.device.submit_commands(Some(enc.finish()));
     }
 
     fn complex_dot_re(
@@ -409,7 +409,7 @@ impl GpuCgSolver {
             pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(self.n_pairs.div_ceil(CG_WG), 1, 1);
         }
-        self.device.submit_and_poll(Some(enc.finish()));
+        self.device.submit_commands(Some(enc.finish()));
 
         self.reducer.sum_f64(out)
     }
@@ -466,7 +466,7 @@ impl GpuCgSolver {
             pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(self.n_f64.div_ceil(CG_WG), 1, 1);
         }
-        self.device.submit_and_poll(Some(enc.finish()));
+        self.device.submit_commands(Some(enc.finish()));
         Ok(())
     }
 
@@ -522,7 +522,7 @@ impl GpuCgSolver {
             pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(self.n_f64.div_ceil(CG_WG), 1, 1);
         }
-        self.device.submit_and_poll(Some(enc.finish()));
+        self.device.submit_commands(Some(enc.finish()));
         Ok(())
     }
 

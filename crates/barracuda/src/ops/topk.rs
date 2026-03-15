@@ -238,7 +238,7 @@ impl TopK {
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         // Read u32 indices back and convert to f32
         let staging_buffer = device.device.create_buffer(&wgpu::BufferDescriptor {
@@ -258,7 +258,7 @@ impl TopK {
             0,
             (self.k * std::mem::size_of::<u32>()) as u64,
         );
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         let indices_u32: Vec<u32> = device.map_staging_buffer(&staging_buffer, self.k)?;
         let indices_f32: Vec<f32> = indices_u32.iter().map(|&x| x as f32).collect();

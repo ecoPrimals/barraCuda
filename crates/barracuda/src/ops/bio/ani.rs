@@ -130,7 +130,7 @@ impl AniBatchF64 {
             pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(n_pairs.div_ceil(WORKGROUP_SIZE_1D), 1, 1);
         }
-        self.device.submit_and_poll(Some(enc.finish()));
+        self.device.submit_commands(Some(enc.finish()));
         Ok(())
     }
 }

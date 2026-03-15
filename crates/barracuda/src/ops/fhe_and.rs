@@ -165,7 +165,7 @@ mod tests {
             0,
             (size * std::mem::size_of::<u32>()) as u64,
         );
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         let result_u32: Vec<u32> = device.map_staging_buffer(&staging_buffer, size).unwrap();
 

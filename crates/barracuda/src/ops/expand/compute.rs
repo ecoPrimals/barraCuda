@@ -406,7 +406,7 @@ pub fn execute_expand(input: Tensor, target_shape: Vec<usize>) -> Result<Tensor>
 
     let commands = encoder.finish();
     device.encoding_complete();
-    device.submit_and_poll(Some(commands));
+    device.submit_commands(Some(commands));
 
     Ok(Tensor::from_buffer(
         output_buffer,

@@ -253,7 +253,7 @@ impl<'a> PeakDetectF64<'a> {
         encoder.copy_buffer_to_buffer(&is_peak_buf, 0, &is_peak_staging, 0, (n * 4) as u64);
         encoder.copy_buffer_to_buffer(&prominence_buf, 0, &prominence_staging, 0, (n * 8) as u64);
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         let is_peak_data: Vec<u32> = device.map_staging_buffer(&is_peak_staging, n)?;
         let prominence_data: Vec<f64> = device.map_staging_buffer(&prominence_staging, n)?;

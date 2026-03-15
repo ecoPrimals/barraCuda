@@ -79,7 +79,7 @@ impl Fft1DF64 {
                 label: Some("FFT1D f64 Copy Input"),
             });
             encoder.copy_buffer_to_buffer(self.input.buffer(), 0, &buf_a, 0, buffer_bytes);
-            device.submit_and_poll(std::iter::once(encoder.finish()));
+            device.submit_commands(std::iter::once(encoder.finish()));
         }
 
         let buf_b = device.device.create_buffer(&wgpu::BufferDescriptor {

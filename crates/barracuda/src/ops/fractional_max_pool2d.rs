@@ -312,7 +312,7 @@ impl FractionalMaxPool2d {
             pass.dispatch_workgroups(workgroups_x, workgroups_y, workgroups_z);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         // Create output tensor
         Ok(Tensor::from_buffer(

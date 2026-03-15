@@ -436,7 +436,7 @@ impl OctaveConv2D {
             compute_pass.dispatch_workgroups(workgroups_x, workgroups_y, workgroups_z as u32);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         let output_data = crate::utils::read_buffer(device, &output_buffer, output_size)?;
         Ok(Tensor::new(

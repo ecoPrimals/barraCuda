@@ -75,7 +75,7 @@ impl AdamW {
             0,
             (size * std::mem::size_of::<f32>()) as u64,
         );
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         // Compile shader
         let shader = device.compile_shader(Self::shader(), Some("AdamW"));
@@ -214,7 +214,7 @@ impl AdamW {
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         // Return all three outputs
         Ok((

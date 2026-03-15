@@ -33,6 +33,33 @@ pub use cache::{cache_native_binary, cached_native_binary, shader_hash};
 pub use discovery::discover_shader_compiler;
 pub use types::{CoralBinary, HealthResponse, arch_to_coral};
 
+/// Synchronous check: can we discover a coralReef shader-compiler endpoint?
+///
+/// Tries env-based, capability-file-based, and (if configured) port-based
+/// discovery without blocking on a full compile round-trip.  Used by
+/// `CoralReefDevice::new()` at startup to decide whether the sovereign
+/// compile path is viable.
+#[must_use]
+pub fn is_coral_available() -> bool {
+    if let Ok(h) = tokio::runtime::Handle::try_current() {
+        let can_block = std::panic::catch_unwind(|| {
+            tokio::task::block_in_place(|| {});
+        })
+        .is_ok();
+        if can_block {
+            return tokio::task::block_in_place(|| {
+                h.block_on(async { discover_shader_compiler().await.is_some() })
+            });
+        }
+    }
+
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map(|r| r.block_on(async { discover_shader_compiler().await.is_some() }))
+        .unwrap_or(false)
+}
+
 use jsonrpc::{jsonrpc_call, wgsl_to_spirv};
 use std::sync::Arc;
 use tokio::sync::RwLock;

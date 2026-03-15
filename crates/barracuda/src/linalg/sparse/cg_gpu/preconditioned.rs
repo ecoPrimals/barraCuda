@@ -490,7 +490,7 @@ impl CgGpu {
                 );
             }
 
-            device.submit_and_poll(Some(encoder.finish()));
+            device.submit_commands(Some(encoder.finish()));
 
             // Copy z to p: p₀ = z₀
             SparseBuffers::copy_f64(&device, &z_buffer, &p_buffer, n);
@@ -513,7 +513,7 @@ impl CgGpu {
                 });
                 cg_dispatch_pass(&mut pass, &pl.reduce, &reduce_rz_bg, 1, 1, 1);
             }
-            device.submit_and_poll(Some(encoder.finish()));
+            device.submit_commands(Some(encoder.finish()));
         }
 
         // Main PCG iteration
@@ -630,7 +630,7 @@ impl CgGpu {
                 );
             }
 
-            device.submit_and_poll(Some(encoder.finish()));
+            device.submit_commands(Some(encoder.finish()));
 
             // Check convergence
             if (iter + 1) % check_interval == 0 || iter == max_iter - 1 {
@@ -651,7 +651,7 @@ impl CgGpu {
                     });
                     cg_dispatch_pass(&mut pass, &pl.reduce, &reduce_rz_new_bg, 1, 1, 1);
                 }
-                device.submit_and_poll(Some(encoder.finish()));
+                device.submit_commands(Some(encoder.finish()));
 
                 let rr = SparseBuffers::read_f64(&device, &rz_new_buffer, 1)?;
                 let r_norm = rr[0].sqrt();

@@ -340,7 +340,7 @@ impl ReduceScalarPipeline {
                 label: Some("ReduceScalar:readback"),
             });
         enc.copy_buffer_to_buffer(&self.scalar_output, 0, &self.scalar_staging, 0, 8);
-        self.device.submit_and_poll(Some(enc.finish()));
+        self.device.submit_commands(Some(enc.finish()));
 
         let slice = self.scalar_staging.slice(..);
         let (tx, rx) = std::sync::mpsc::channel();
@@ -450,7 +450,7 @@ impl ReduceScalarPipeline {
         }
 
         enc.copy_buffer_to_buffer(&self.scalar_output, 0, &self.scalar_staging, 0, 8);
-        self.device.submit_and_poll(Some(enc.finish()));
+        self.device.submit_commands(Some(enc.finish()));
 
         let slice = self.scalar_staging.slice(..);
         let (tx, rx) = std::sync::mpsc::channel();

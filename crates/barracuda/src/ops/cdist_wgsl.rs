@@ -209,7 +209,7 @@ pub fn compute_distances_f64_gpu(
         label: Some("cdist_f64:copy"),
     });
     enc.copy_buffer_to_buffer(&out_buf, 0, &readback, 0, out_size);
-    device.submit_and_poll(Some(enc.finish()));
+    device.submit_commands(Some(enc.finish()));
 
     let result: Vec<f64> = device.map_staging_buffer(&readback, n1 * n2)?;
     Ok(result)

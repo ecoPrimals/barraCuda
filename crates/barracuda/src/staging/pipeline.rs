@@ -177,7 +177,7 @@ impl StreamingPipeline {
             }
         }
 
-        self.device.submit_and_poll(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
         Ok(())
     }
 
@@ -219,7 +219,7 @@ impl StreamingPipeline {
             }
         }
 
-        self.device.submit_and_poll(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
         Ok(())
     }
 

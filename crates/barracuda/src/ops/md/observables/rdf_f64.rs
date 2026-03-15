@@ -113,7 +113,7 @@ impl RdfHistogramF64 {
                 label: Some("RDF:enc"),
             });
         enc.copy_buffer_to_buffer(&hist_buf, 0, &readback, 0, (n_bins * 4) as u64);
-        self.device.submit_and_poll(Some(enc.finish()));
+        self.device.submit_commands(Some(enc.finish()));
 
         self.device.map_staging_buffer::<u32>(&readback, n_bins)
     }

@@ -242,7 +242,7 @@ impl WrightFisherF32 {
             pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(wg, 1, 1);
         }
-        dev.submit_and_poll(Some(encoder.finish()));
+        dev.submit_commands(Some(encoder.finish()));
 
         let freq_out = crate::utils::read_buffer(dev, &out_buf, total)?;
         let new_prng = crate::utils::read_buffer_u32(dev, &prng_buf, expected_prng)?;

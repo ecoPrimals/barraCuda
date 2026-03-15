@@ -482,7 +482,7 @@ impl TensorSession {
             self.dispatch_op(&mut encoder, op);
         }
 
-        self.device.submit_and_poll(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
         self.device.poll_safe()?;
         self.executed = true;
         Ok(())

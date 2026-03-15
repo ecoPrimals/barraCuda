@@ -177,7 +177,7 @@ mod tests {
         });
         let mut enc = device.create_encoder_guarded(&Default::default());
         enc.copy_buffer_to_buffer(&action_buf, 0, &staging, 0, action_bytes as u64);
-        device.submit_and_poll(Some(enc.finish()));
+        device.submit_commands(Some(enc.finish()));
 
         let action_out: Vec<f64> = device.map_staging_buffer(&staging, volume).unwrap();
 

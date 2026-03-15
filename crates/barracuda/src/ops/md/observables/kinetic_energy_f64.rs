@@ -94,7 +94,7 @@ impl KineticEnergyF64 {
         });
         let mut enc = self.device.create_encoder_guarded(&Default::default());
         enc.copy_buffer_to_buffer(&ke_buf, 0, &rb, 0, out_size);
-        self.device.submit_and_poll(Some(enc.finish()));
+        self.device.submit_commands(Some(enc.finish()));
 
         self.device.map_staging_buffer::<f64>(&rb, n)
     }

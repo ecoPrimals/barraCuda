@@ -144,7 +144,7 @@ impl FheNtt {
         }
 
         // Submit bit-reversal pass before butterfly stages
-        device.submit_and_poll(std::iter::once(encoder.finish()));
+        device.submit_commands(std::iter::once(encoder.finish()));
 
         // ============================================================
         // Pass 2-N: Butterfly stages (log₂(N) stages)
@@ -215,7 +215,7 @@ impl FheNtt {
             }
 
             // Submit THIS stage before moving to next
-            device.submit_and_poll(std::iter::once(stage_encoder.finish()));
+            device.submit_commands(std::iter::once(stage_encoder.finish()));
 
             // Ping-pong buffers for next stage
             std::mem::swap(&mut current_input, &mut current_output);

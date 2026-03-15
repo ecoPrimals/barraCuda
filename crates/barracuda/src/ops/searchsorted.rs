@@ -221,7 +221,7 @@ impl SearchSorted {
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         // Convert u32 indices to f32 on GPU (for Tensor compatibility)
         let indices_f32_buffer = device.create_buffer_f32(values_size)?;
@@ -350,7 +350,7 @@ impl SearchSorted {
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        device.submit_and_poll(Some(convert_encoder.finish()));
+        device.submit_commands(Some(convert_encoder.finish()));
 
         Ok(Tensor::from_buffer(
             indices_f32_buffer,

@@ -231,7 +231,7 @@ impl YukawaCellListF64 {
             pass.dispatch_workgroups(n_workgroups, 1, 1);
         }
 
-        self.device.submit_and_poll(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
 
         let forces = self.read_f64_buffer(&forces_buffer, n * 3)?;
         let energies = self.read_f64_buffer(&pe_buffer, n)?;
@@ -264,7 +264,7 @@ impl YukawaCellListF64 {
                 label: Some("YCL Copy"),
             });
         encoder.copy_buffer_to_buffer(buffer, 0, &staging, 0, (count * 8) as u64);
-        self.device.submit_and_poll(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
 
         let results: Vec<f64> = self.device.map_staging_buffer(&staging, count)?;
         Ok(results)

@@ -265,7 +265,7 @@ fn bench_shader_inner(
             pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
     }
 
     let t0 = Instant::now();
@@ -282,7 +282,7 @@ fn bench_shader_inner(
             pass.set_bind_group(0, Some(&bind_group), &[]);
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
     }
     t0.elapsed().as_secs_f64() / MEASURE as f64
 }

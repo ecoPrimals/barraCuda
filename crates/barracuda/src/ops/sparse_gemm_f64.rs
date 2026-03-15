@@ -186,7 +186,7 @@ impl SparseGemmF64<'_> {
             (output_size * std::mem::size_of::<f64>()) as u64,
         );
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         let result: Vec<f64> = device.map_staging_buffer(&staging, output_size)?;
         Ok(result)

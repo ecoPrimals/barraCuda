@@ -186,7 +186,7 @@ impl Covariance {
                 label: Some("Covariance Copy"),
             });
         encoder.copy_buffer_to_buffer(&output_buf, 0, &staging, 0, 4);
-        self.device.submit_and_poll(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
 
         let result_vec: Vec<f32> = self.device.map_staging_buffer(&staging, 1)?;
         Ok(result_vec[0])

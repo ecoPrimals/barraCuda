@@ -269,7 +269,7 @@ impl MatrixRank {
             pass.dispatch_workgroups(workgroups.max(1), 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         // Read rank result
         let staging_buffer = device.device.create_buffer(&wgpu::BufferDescriptor {
@@ -289,7 +289,7 @@ impl MatrixRank {
             0,
             std::mem::size_of::<u32>() as u64,
         );
-        device.submit_and_poll(Some(read_encoder.finish()));
+        device.submit_commands(Some(read_encoder.finish()));
 
         let rank_data: Vec<u32> = device.map_staging_buffer(&staging_buffer, 1)?;
         Ok(rank_data[0] as usize)

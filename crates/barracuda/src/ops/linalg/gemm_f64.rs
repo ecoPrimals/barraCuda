@@ -413,7 +413,7 @@ impl GemmCachedF64 {
             pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(wg_x, wg_y, wg_z);
         }
-        dev.submit_and_poll(Some(encoder.finish()));
+        dev.submit_commands(Some(encoder.finish()));
 
         Ok(c_buf)
     }

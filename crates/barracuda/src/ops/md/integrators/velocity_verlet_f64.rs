@@ -117,7 +117,7 @@ impl VelocityVerletF64 {
         let mut enc = self.device.create_encoder_guarded(&Default::default());
         enc.copy_buffer_to_buffer(&pos_out, 0, &rb_pos, 0, out_size);
         enc.copy_buffer_to_buffer(&vel_out, 0, &rb_vel, 0, out_size);
-        self.device.submit_and_poll(Some(enc.finish()));
+        self.device.submit_commands(Some(enc.finish()));
 
         let new_pos = self.device.map_staging_buffer::<f64>(&rb_pos, n3)?;
         let new_vel = self.device.map_staging_buffer::<f64>(&rb_vel, n3)?;
@@ -192,7 +192,7 @@ impl VelocityVerletF64 {
         let rb = readback_buf(d, out_size);
         let mut enc = self.device.create_encoder_guarded(&Default::default());
         enc.copy_buffer_to_buffer(&vel_out, 0, &rb, 0, out_size);
-        self.device.submit_and_poll(Some(enc.finish()));
+        self.device.submit_commands(Some(enc.finish()));
 
         self.device.map_staging_buffer::<f64>(&rb, n3)
     }
@@ -258,7 +258,7 @@ impl VelocityVerletF64 {
         let rb = readback_buf(d, out_size);
         let mut enc = self.device.create_encoder_guarded(&Default::default());
         enc.copy_buffer_to_buffer(&pos_out, 0, &rb, 0, out_size);
-        self.device.submit_and_poll(Some(enc.finish()));
+        self.device.submit_commands(Some(enc.finish()));
 
         self.device.map_staging_buffer::<f64>(&rb, n3)
     }

@@ -197,7 +197,7 @@ impl TranseScoreF64<'_> {
         });
         encoder.copy_buffer_to_buffer(&scores_buf, 0, &staging, 0, (n_triples * 8) as u64);
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         let result: Vec<f64> = device.map_staging_buffer(&staging, n_triples)?;
         Ok(result)

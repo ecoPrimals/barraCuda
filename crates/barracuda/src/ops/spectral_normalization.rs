@@ -243,7 +243,7 @@ impl SpectralNormalization {
             compute_pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         // Return normalized weight (modified in-place)
         Ok(self.weight)

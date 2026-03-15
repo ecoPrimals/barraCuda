@@ -175,7 +175,7 @@ impl VacfGpu {
             pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(wg_x, wg_y, 1);
         }
-        gpu_d.submit_and_poll(Some(encoder.finish()));
+        gpu_d.submit_commands(Some(encoder.finish()));
 
         // ── Readback c_raw[T × L] ─────────────────────────────────────────────
         let c_raw_f64: Vec<f64> = gpu_d.read_buffer_f64(&c_raw_buf, n_frames * actual_lag)?;

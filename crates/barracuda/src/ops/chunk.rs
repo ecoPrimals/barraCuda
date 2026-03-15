@@ -223,7 +223,7 @@ impl Chunk {
                 pass.dispatch_workgroups(workgroups, 1, 1);
             }
 
-            device.submit_and_poll(Some(encoder.finish()));
+            device.submit_commands(Some(encoder.finish()));
 
             // Compute output shape
             let mut output_shape = shape.to_vec();

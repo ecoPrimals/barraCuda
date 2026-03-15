@@ -163,14 +163,17 @@ must follow these rules to prevent wgpu-core races:
    and decremented afterward. Call `device.encoding_guard()` /
    `device.encoding_complete()`, or use `GuardedEncoder` for RAII.
 2. **`gpu_lock: Mutex<()>`** — serializes `queue.submit()` and `device.poll()`.
-   Before proceeding, `brief_encoder_wait()` yields until active encoders reach
-   zero (microsecond-scale CPU work, never blocks).
+   Submit and poll use **separate** lock acquisitions so other threads can
+   interleave submits while one thread polls. Before proceeding,
+   `brief_encoder_wait()` yields until active encoders reach zero
+   (microsecond-scale CPU work, never blocks).
 3. **`dispatch_semaphore`** — hardware-aware cap (2 for CPU/llvmpipe, 8 for
    discrete GPU) preventing driver overload.
 
 ### Rules
 
-- **Submit work**: `device.submit_and_poll_inner(...)` — never call `queue.submit()` directly
+- **Fire-and-forget**: `device.submit_commands(...)` — for ops returning `Tensor` (GPU-resident result, no readback needed)
+- **Submit + readback**: `device.submit_and_map::<T>(commands, &staging, count)` — single-poll path for reading back GPU results
 - **Read back**: `device.read_buffer::<T>(buffer, count)` — never map buffers manually
 - **Poll**: `device.poll_safe()` — never call `device.device().poll()` directly
 - **Resource creation**: `GuardedDeviceHandle` auto-protects all `device.device.create_*()` calls

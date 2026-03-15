@@ -304,7 +304,7 @@ impl Correlation {
             pass.dispatch_workgroups(n_workgroups as u32, 1, 1);
         }
 
-        self.device.submit_and_poll(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
 
         // Read back results
         let staging = self.device.device.create_buffer(&wgpu::BufferDescriptor {
@@ -320,7 +320,7 @@ impl Correlation {
                 label: Some("Copy Encoder"),
             });
         encoder2.copy_buffer_to_buffer(&output_buf, 0, &staging, 0, (num_pairs * 4) as u64);
-        self.device.submit_and_poll(Some(encoder2.finish()));
+        self.device.submit_commands(Some(encoder2.finish()));
 
         let results: Vec<f32> = self.device.map_staging_buffer(&staging, num_pairs)?;
         Ok(results)

@@ -426,15 +426,23 @@ impl WgpuDevice {
 
     /// Submit without acquiring a dispatch permit.
     /// Use when the caller already holds a `DispatchPermit`.
-    /// Submit and poll use SEPARATE write-lock acquisitions. This allows
-    /// other threads to interleave their submits between our submit and poll,
-    /// dramatically reducing lock-convoy stalls on software rasterizers.
-    /// poll(Wait) processes ALL pending work, so interleaved submits from
-    /// other threads are completed too.
+    ///
+    /// Submit and poll use **separate** lock acquisitions so other threads
+    /// can interleave their submits while we poll.  `poll(Wait)` processes
+    /// ALL pending work, so interleaved submits from other threads are
+    /// completed too — no work is lost.
     pub(crate) fn submit_and_poll_inner(
         &self,
         commands: impl IntoIterator<Item = wgpu::CommandBuffer>,
     ) {
+        self.submit_commands_inner(commands);
+        self.poll_wait_inner();
+    }
+
+    /// Submit command buffers without polling.
+    /// Serialised via `gpu_lock`; callers poll separately when they need
+    /// completion (e.g. before a `map_async` readback).
+    fn submit_commands_inner(&self, commands: impl IntoIterator<Item = wgpu::CommandBuffer>) {
         if self.is_lost() {
             return;
         }
@@ -443,53 +451,62 @@ impl WgpuDevice {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         self.brief_encoder_wait();
-        {
-            let queue = self.queue.clone();
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
-                queue.submit(commands);
-            }));
-            if let Err(payload) = result {
-                if Self::is_device_lost_panic(&payload) {
-                    self.lost.store(true, Ordering::Release);
-                    tracing::warn!(
-                        "submit_and_poll: device lost during submit: {}",
-                        Self::panic_message(&payload)
-                    );
-                    return;
-                }
-                std::panic::resume_unwind(payload);
+        let queue = self.queue.clone();
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+            queue.submit(commands);
+        }));
+        if let Err(payload) = result {
+            if Self::is_device_lost_panic(&payload) {
+                self.lost.store(true, Ordering::Release);
+                tracing::warn!(
+                    "submit_commands_inner: device lost: {}",
+                    Self::panic_message(&payload)
+                );
+                return;
             }
+            std::panic::resume_unwind(payload);
         }
+    }
+
+    /// Block until all submitted work completes.
+    /// Separate from submit so other threads can interleave submits while
+    /// we wait.
+    fn poll_wait_inner(&self) {
+        if self.is_lost() {
+            return;
+        }
+        let _guard = self
+            .gpu_lock
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         self.brief_encoder_wait();
-        {
-            let device = self.device.clone();
-            let timeout = poll_timeout();
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
-                let queue_empty = match device.poll(wgpu::PollType::Wait {
-                    submission_index: None,
-                    timeout,
-                }) {
-                    Ok(status) => status.is_queue_empty(),
-                    Err(_) => false,
-                };
-                if !queue_empty {
-                    tracing::warn!(
-                        "submit_and_poll: GPU poll timed out after {}s",
-                        timeout.map_or(0, |d| d.as_secs())
-                    );
-                }
-            }));
-            if let Err(payload) = result {
-                if Self::is_device_lost_panic(&payload) {
-                    self.lost.store(true, Ordering::Release);
-                    tracing::warn!(
-                        "submit_and_poll: device lost during poll: {}",
-                        Self::panic_message(&payload)
-                    );
-                    return;
-                }
-                std::panic::resume_unwind(payload);
+        let device = self.device.clone();
+        let timeout = poll_timeout();
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+            let queue_empty = match device.poll(wgpu::PollType::Wait {
+                submission_index: None,
+                timeout,
+            }) {
+                Ok(status) => status.is_queue_empty(),
+                Err(_) => false,
+            };
+            if !queue_empty {
+                tracing::warn!(
+                    "poll_wait_inner: GPU poll timed out after {}s",
+                    timeout.map_or(0, |d| d.as_secs())
+                );
             }
+        }));
+        if let Err(payload) = result {
+            if Self::is_device_lost_panic(&payload) {
+                self.lost.store(true, Ordering::Release);
+                tracing::warn!(
+                    "poll_wait_inner: device lost: {}",
+                    Self::panic_message(&payload)
+                );
+                return;
+            }
+            std::panic::resume_unwind(payload);
         }
     }
 

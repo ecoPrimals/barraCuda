@@ -258,7 +258,7 @@ impl SinkhornDistance {
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         // Create output tensor
         Ok(Tensor::from_buffer(output_buffer, vec![1], device.clone()))

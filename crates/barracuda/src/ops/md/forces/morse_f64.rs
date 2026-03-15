@@ -168,7 +168,7 @@ fn reduce_bond_forces(
     });
     let mut enc_clear = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor { label: None });
     enc_clear.clear_buffer(&particle_forces_buf, 0, None);
-    dev.submit_and_poll(Some(enc_clear.finish()));
+    dev.submit_commands(Some(enc_clear.finish()));
 
     #[repr(C)]
     #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]

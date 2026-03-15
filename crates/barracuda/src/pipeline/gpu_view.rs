@@ -139,7 +139,7 @@ impl<T: GpuViewElement> GpuView<T> {
                 label: Some("GpuView:download"),
             });
         encoder.copy_buffer_to_buffer(&self.buffer, 0, &staging, 0, byte_size);
-        self.device.submit_and_poll(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
 
         let slice = staging.slice(..);
         let (tx, rx) = std::sync::mpsc::channel();

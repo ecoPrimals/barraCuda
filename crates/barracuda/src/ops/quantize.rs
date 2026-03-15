@@ -135,7 +135,7 @@ impl Quantize {
             0,
             (size * std::mem::size_of::<i32>()) as u64,
         );
-        device.submit_and_poll(Some(copy_encoder.finish()));
+        device.submit_commands(Some(copy_encoder.finish()));
 
         let i32_data: Vec<i32> = device.map_staging_buffer(&staging_buffer, size)?;
         let f32_data: Vec<f32> = i32_data.iter().map(|&x| x as f32).collect();

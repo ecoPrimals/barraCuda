@@ -193,7 +193,7 @@ impl MaxPool2D {
             pass.dispatch_workgroups(workgroups_x, workgroups_y, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         Ok(Tensor::from_buffer(
             output_buffer,

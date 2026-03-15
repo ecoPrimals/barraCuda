@@ -5,7 +5,26 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.5] — 2026-03-14
+## [0.3.5] — 2026-03-15
+
+### Changed — GPU Streaming & Comprehensive Audit Sprint (Mar 15 2026)
+
+- **GPU lock split**: `submit_and_poll_inner` refactored into separate
+  `submit_commands_inner` (lock → submit → unlock) + `poll_wait_inner`
+  (lock → poll → unlock). Other threads now interleave submits while one
+  thread polls — eliminates 120s lock convoy at 16-thread nextest parallelism.
+- **Fire-and-forget migration**: 279 GPU ops migrated from blocking
+  `submit_and_poll` to non-blocking `submit_commands`. These ops return
+  `Tensor` with GPU buffers — the blocking poll was pure waste.
+- **Single-poll readback**: New `submit_and_map<T>` method collapses
+  old double-poll (`submit_and_poll` → `map_staging_buffer`) into a single
+  submit → `map_async` → `poll_safe` cycle. `read_buffer<T>` now uses this
+  path internally.
+- **`--all-features` clippy fixed**: Added `is_coral_available()` to
+  `coral_compiler/mod.rs`, `with_auto_device()` and `has_dispatch()` to
+  `CoralReefDevice`. Sovereign-dispatch feature now compiles cleanly.
+- **Codebase audit**: Zero archive code, zero dead scripts, zero TODO/FIXME
+  in production code, zero files over 1000 lines, zero .bak/.tmp debris.
 
 ### Changed — Deep Debt Sprint 3: Lint Evolution & Refactoring (Mar 14 2026)
 

@@ -194,7 +194,7 @@ impl GpuLatticeInit {
             pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(self.n_links.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
         }
-        self.device.submit_and_poll(Some(enc.finish()));
+        self.device.submit_commands(Some(enc.finish()));
         Ok(())
     }
 
@@ -284,7 +284,7 @@ mod tests {
         });
         let mut enc = device.create_encoder_guarded(&Default::default());
         enc.copy_buffer_to_buffer(&links_buf, 0, &staging, 0, links_bytes as u64);
-        device.submit_and_poll(Some(enc.finish()));
+        device.submit_commands(Some(enc.finish()));
 
         let n_f64 = links_bytes / std::mem::size_of::<f64>();
         let data: Vec<f64> = device.map_staging_buffer(&staging, n_f64).unwrap();

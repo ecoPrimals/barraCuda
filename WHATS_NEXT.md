@@ -1,11 +1,25 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-03-14.
+Prioritized work items, ordered by impact. Updated 2026-03-15.
 
 ---
 
 ## Recently Completed
 
+- **GPU streaming & comprehensive audit sprint (Mar 15)**: Full GPU submission
+  pipeline refactored to eliminate blocking. `submit_and_poll_inner` split into
+  separate `submit_commands_inner` + `poll_wait_inner` lock acquisitions —
+  other threads interleave submits while one thread polls (eliminates 120s
+  lock convoy on 16-thread nextest). 279 fire-and-forget GPU ops migrated from
+  blocking `submit_and_poll` to non-blocking `submit_commands` (zero CPU wait
+  for GPU-resident results). New `submit_and_map<T>` single-poll readback method
+  collapses old double-poll into one `poll_safe` cycle. `read_buffer<T>` optimized
+  internally. `--all-features` clippy compilation fixed (`is_coral_available`,
+  `CoralReefDevice::with_auto_device`, `has_dispatch`). Pre-existing lints fixed
+  (doc_markdown in bcs/screened_coulomb/chi2, approx_constant in kinetics test,
+  double_must_use in critical_screening/chi_squared). Full codebase audit: zero
+  archive code, zero dead scripts, zero TODO/FIXME in production, zero files over
+  1000 lines, zero .bak/.tmp debris. All quality gates green. 3,407 tests, 0 failures.
 - **Deep debt sprint 3 — lint evolution & refactoring (Mar 14)**:
   `missing_errors_doc` and `missing_panics_doc` promoted to warn in both crates
   (zero violations). Cast lints (`cast_possible_truncation`, `cast_sign_loss`,

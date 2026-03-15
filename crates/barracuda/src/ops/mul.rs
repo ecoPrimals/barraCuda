@@ -151,7 +151,7 @@ impl Mul {
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         // Create output tensor with pooled buffer (auto-returns to pool on drop!)
         Ok(Tensor::from_pooled_buffer(

@@ -226,7 +226,7 @@ impl CyclicalLr {
             pass.dispatch_workgroups(workgroups.max(1), 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         // Create output tensor (scalar)
         Ok(Tensor::from_buffer(

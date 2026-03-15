@@ -23,5 +23,5 @@ pub(crate) fn run_sweep_pass(
         pass.set_bind_group(0, Some(sweep_bg), &[]);
         pass.dispatch_workgroups(dispatch.0, dispatch.1, dispatch.2);
     }
-    device.submit_and_poll(Some(encoder.finish()));
+    device.submit_commands(Some(encoder.finish()));
 }

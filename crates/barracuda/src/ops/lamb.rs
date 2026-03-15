@@ -168,7 +168,7 @@ impl Lamb {
         };
 
         // Submit buffer copies
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         // Create intermediate adam_step buffer
         let adam_step_buffer = device.create_buffer_f32(size)?;
@@ -399,7 +399,7 @@ impl Lamb {
             pass.dispatch_workgroups(workgroups.max(1), 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         let updated_params = Tensor::from_buffer(
             output_buffer,

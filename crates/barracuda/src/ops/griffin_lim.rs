@@ -266,7 +266,7 @@ impl GriffinLim {
             compute_pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         // Output shape: [n_frames, n_freqs, 2] (complex pairs)
         let output_shape = vec![self.n_frames, self.n_freqs, 2];

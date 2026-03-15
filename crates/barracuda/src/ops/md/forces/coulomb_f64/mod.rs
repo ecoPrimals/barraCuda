@@ -291,7 +291,7 @@ impl CoulombForceF64 {
 
         let (staging, count) =
             read_f64_via_staging(dev, &mut encoder, &bufs.forces, n * 3, "Coulomb Staging");
-        dev.submit_and_poll(Some(encoder.finish()));
+        dev.submit_commands(Some(encoder.finish()));
         dev.map_staging_buffer::<f64>(&staging, count)
     }
 
@@ -394,7 +394,7 @@ impl CoulombForceF64 {
         );
         let (energy_stg, energy_count) =
             read_f64_via_staging(dev, &mut encoder, &energy_buf, n, "Coulomb Energy Staging");
-        dev.submit_and_poll(Some(encoder.finish()));
+        dev.submit_commands(Some(encoder.finish()));
 
         let forces = dev.map_staging_buffer::<f64>(&forces_stg, forces_count)?;
         let energies = dev.map_staging_buffer::<f64>(&energy_stg, energy_count)?;

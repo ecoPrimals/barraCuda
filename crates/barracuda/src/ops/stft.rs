@@ -234,7 +234,7 @@ impl STFT {
             compute_pass.dispatch_workgroups(workgroups_x, workgroups_y, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         // Output shape: [num_frames, bins_per_frame, 2] (real, imag pairs)
         let output_shape = vec![num_frames, bins_per_frame, 2];

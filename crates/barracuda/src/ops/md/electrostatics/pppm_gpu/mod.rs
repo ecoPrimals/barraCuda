@@ -314,7 +314,7 @@ impl PppmGpu {
             pass.dispatch_workgroups(particle_workgroups, 1, 1);
         }
 
-        self.wgpu_device.submit_and_poll(Some(encoder.finish()));
+        self.wgpu_device.submit_commands(Some(encoder.finish()));
         let forces =
             SparseBuffers::read_f64_raw(self.wgpu_device().as_ref(), &forces_buffer, n * 3)?;
         let pe_values = SparseBuffers::read_f64_raw(self.wgpu_device().as_ref(), &pe_buffer, n)?;

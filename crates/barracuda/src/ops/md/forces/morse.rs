@@ -104,7 +104,7 @@ impl MorseForce {
             label: Some("Morse Clear Encoder"),
         });
         encoder.clear_buffer(&atomic_buffer, 0, None);
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         #[repr(C)]
         #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -292,7 +292,7 @@ impl MorseForce {
         });
 
         encoder.copy_buffer_to_buffer(&atomic_buffer, 0, &staging_buffer, 0, atomic_buffer_size);
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         // Read back and convert i32 -> f32
         let n_force_elements = n_particles * 3;

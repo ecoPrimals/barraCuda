@@ -390,7 +390,7 @@ impl BatchedBisectionGpu {
                 label: Some("BatchedBisection u32 readback"),
             });
         encoder.copy_buffer_to_buffer(buffer, 0, &staging, 0, (count * 4) as u64);
-        self.device.submit_and_poll(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
 
         let slice = staging.slice(..);
         let (sender, receiver) = std::sync::mpsc::channel();

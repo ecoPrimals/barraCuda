@@ -229,7 +229,7 @@ impl FusedMapReduceF64 {
                 0,
                 (n_workgroups * 8) as u64,
             );
-            self.device.submit_and_poll(Some(copy_enc.finish()));
+            self.device.submit_commands(Some(copy_enc.finish()));
 
             let pass2_params = Params {
                 n: n_workgroups as u32,
@@ -285,7 +285,7 @@ impl FusedMapReduceF64 {
                 label: Some("FMR Copy Encoder"),
             });
         encoder.copy_buffer_to_buffer(buffer, 0, &staging, 0, (n_partials * 8) as u64);
-        self.device.submit_and_poll(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
 
         let partials: Vec<f64> = self.device.map_staging_buffer(&staging, n_partials)?;
 
@@ -315,7 +315,7 @@ impl FusedMapReduceF64 {
                 label: Some("FMR Result Encoder"),
             });
         encoder.copy_buffer_to_buffer(buffer, 0, &staging, 0, 8);
-        self.device.submit_and_poll(Some(encoder.finish()));
+        self.device.submit_commands(Some(encoder.finish()));
 
         let result_vec: Vec<f64> = self.device.map_staging_buffer(&staging, 1)?;
         Ok(result_vec[0])

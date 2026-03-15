@@ -303,7 +303,7 @@ impl RbfKernel {
             pass.dispatch_workgroups(workgroups_x.max(1), workgroups_y.max(1), 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         let output_size = n_rows * n_cols;
         let output_data = crate::utils::read_buffer(device, &output_buffer, output_size)?;

@@ -243,7 +243,7 @@ impl RotaryEmbedding {
             pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         // Return output tensor (same shape as input)
         Ok(Tensor::from_buffer(

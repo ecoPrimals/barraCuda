@@ -190,7 +190,7 @@ impl GpuHmcLeapfrog {
             pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups(self.n_links.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
         }
-        self.device.submit_and_poll(Some(enc.finish()));
+        self.device.submit_commands(Some(enc.finish()));
         Ok(())
     }
 

@@ -272,7 +272,7 @@ impl FheExtract {
             compute_pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        device.submit_and_poll(std::iter::once(encoder.finish()));
+        device.submit_commands(std::iter::once(encoder.finish()));
 
         // Return result tensor
         Ok(Tensor::from_buffer(

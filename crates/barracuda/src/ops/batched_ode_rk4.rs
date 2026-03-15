@@ -244,7 +244,7 @@ impl BatchedOdeRK4F64 {
             pass.set_bind_group(0, Some(&bg), &[]);
             pass.dispatch_workgroups((b as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1);
         }
-        dev.submit_and_poll(Some(encoder.finish()));
+        dev.submit_commands(Some(encoder.finish()));
 
         crate::utils::read_buffer_f64(dev, &out_buf, b * Self::N_VARS)
     }

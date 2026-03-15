@@ -216,7 +216,7 @@ impl Adam {
             compute_pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         let updated_params = Tensor::from_buffer(
             params_buffer,

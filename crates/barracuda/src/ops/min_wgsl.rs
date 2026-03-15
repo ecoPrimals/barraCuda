@@ -207,7 +207,7 @@ impl Min {
                     compute_pass.dispatch_workgroups(num_workgroups, 1, 1);
                 }
 
-                device.submit_and_poll(Some(encoder.finish()));
+                device.submit_commands(Some(encoder.finish()));
 
                 // Read back partial results and reduce them on CPU
                 // For now, we'll do a simple CPU reduction of partial results
@@ -370,7 +370,7 @@ impl Min {
                     compute_pass.dispatch_workgroups(workgroups, 1, 1);
                 }
 
-                device.submit_and_poll(Some(encoder.finish()));
+                device.submit_commands(Some(encoder.finish()));
 
                 // Read back results
                 let output_data = device.read_buffer_f32(&output_buffer, output_size)?;

@@ -439,7 +439,7 @@ impl CrankNicolson {
                 pass.dispatch_workgroups(n_workgroups as u32, 1, 1);
             }
 
-            self.device.submit_and_poll(Some(encoder.finish()));
+            self.device.submit_commands(Some(encoder.finish()));
 
             // Read back RHS
             let staging = self.device.device.create_buffer(&wgpu::BufferDescriptor {
@@ -455,7 +455,7 @@ impl CrankNicolson {
                         label: Some("Copy Encoder"),
                     });
             encoder2.copy_buffer_to_buffer(&rhs_buf, 0, &staging, 0, (n * 4) as u64);
-            self.device.submit_and_poll(Some(encoder2.finish()));
+            self.device.submit_commands(Some(encoder2.finish()));
 
             let rhs: Vec<f32> = self.device.map_staging_buffer(&staging, n)?;
 

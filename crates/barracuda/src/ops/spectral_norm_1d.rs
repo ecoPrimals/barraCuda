@@ -251,7 +251,7 @@ impl SpectralNorm1D {
             compute_pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         // Output shape: same as input
         let output_shape = self.weights.shape().to_vec();

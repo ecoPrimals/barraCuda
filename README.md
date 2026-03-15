@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **806 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,088 Rust source files**, 42 integration test files, 3,359+ tests passing
+- **1,078 Rust source files**, 42 integration test files, 3,400+ tests passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -51,7 +51,7 @@ results.
 2. **Vendor-agnostic** — same binary, identical results on any GPU
 3. **Sovereign** — zero external SDK dependency for correctness or performance
 4. **Pure Rust** — `#![forbid(unsafe_code)]` in both crates, zero `unsafe` blocks, zero external C dependencies, zero dependencies on any other primal (lifecycle and health traits internalized from sourDough scaffold)
-5. **Fully concurrent** — `GuardedDeviceHandle` + atomic encoder barrier prevents wgpu-core races without lock contention; wgpu 28 `Device`/`Queue` are `Clone` — zero `Arc` overhead for handle sharing; all tests pass at 16 threads on llvmpipe
+5. **Fully concurrent** — `GuardedDeviceHandle` + atomic encoder barrier prevents wgpu-core races without lock contention; split-lock GPU submission (submit and poll use separate lock acquisitions); fire-and-forget dispatch via `submit_commands` for non-readback ops; wgpu 28 `Device`/`Queue` are `Clone` — zero `Arc` overhead for handle sharing; all tests pass at 16 threads on llvmpipe
 6. **AGPL-3.0** — free as in freedom
 
 ---
@@ -159,8 +159,10 @@ wgpu-core internal races without lock contention:
    any wgpu-core activity (buffer creation, shader compilation, command
    encoding). Multiple threads increment simultaneously with zero contention.
 2. **`gpu_lock: Mutex<()>`** — serializes `queue.submit()` and `device.poll()`
-   against each other. Before poll, a bounded yield loop waits for active
-   encoders to reach zero (encoding is CPU-speed microsecond work).
+   against each other. Submit and poll use **separate** lock acquisitions so
+   other threads can interleave submits while one thread polls. Before poll,
+   a bounded yield loop waits for active encoders to reach zero (encoding is
+   CPU-speed microsecond work).
 3. **`dispatch_semaphore`** — hardware-aware cap (2 for CPU/llvmpipe, 8 for
    discrete GPU) preventing driver overload.
 
@@ -177,7 +179,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo test --workspace --lib            # 3,359+ test functions
+cargo test --workspace --lib            # 3,400+ test functions
 cargo llvm-cov --workspace --lib        # 80% CI gate (blocking), 90% target (requires GPU hardware)
 ```
 

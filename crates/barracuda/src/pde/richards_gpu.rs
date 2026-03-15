@@ -185,7 +185,7 @@ impl RichardsGpu {
                     label: Some("Richards copy h→h_old"),
                 });
             enc.copy_buffer_to_buffer(&h_buf, 0, &h_old_buf, 0, buf_size);
-            self.device.submit_and_poll(Some(enc.finish()));
+            self.device.submit_commands(Some(enc.finish()));
 
             for _picard in 0..config.max_picard_iter {
                 total_picard += 1;

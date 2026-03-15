@@ -187,7 +187,7 @@ impl Spectrogram {
             compute_pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
-        device.submit_and_poll(Some(encoder.finish()));
+        device.submit_commands(Some(encoder.finish()));
 
         // Output shape: [num_complex_pairs] (flattened from original shape)
         let mut output_shape = self.stft_data.shape().to_vec();

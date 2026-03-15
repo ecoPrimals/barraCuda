@@ -25,7 +25,10 @@ mod model;
 mod multi_head;
 mod npu;
 
-pub use config::{ESNConfig, expect_size, validate_config};
+pub use config::{
+    DEFAULT_SGD_LEARNING_RATE, DEFAULT_SGD_MAX_ITERATIONS, DEFAULT_SGD_MIN_ITERATIONS, ESNConfig,
+    expect_size, validate_config,
+};
 pub use model::{ESN, ExportedWeights};
 pub use multi_head::{HeadConfig, HeadGroup, MultiHeadEsn};
 pub use npu::{NpuReadoutWeights, dequantize_affine_i8_f64, quantize_affine_i8_f64};

@@ -134,9 +134,8 @@ impl CpuExecutor {
     }
 
     pub(crate) fn pack_f32(data: Vec<f32>, desc: TensorDescriptor) -> Arc<dyn TensorStorage> {
-        let bytes: Vec<u8> = bytemuck::cast_slice(&data).to_vec();
         let mut s = CpuTensorStorage::new(desc);
-        s.data = bytes;
+        s.data = bytes::BytesMut::from(bytemuck::cast_slice::<f32, u8>(&data));
         Arc::new(s)
     }
 

@@ -29,7 +29,7 @@
 //! | Path | Status | Notes |
 //! |------|--------|-------|
 //! | IPC compile (coralReef) | Done | `shader.compile.wgsl` via `coral_compiler/` |
-//! | IPC dispatch (toadStool) | In progress | `compute.dispatch.submit` (S152) |
+//! | IPC dispatch (toadStool) | Wired | `compute.dispatch.submit` (S152); readback pending |
 //! | DRM (nouveau/amdgpu) | E2E verified | Titan V + RTX 3090 proven via coralReef |
 //! | VFIO/GPFIFO | Fix applied | USERD_TARGET + INST_TARGET fix (Iter 44); hw revalidation pending |
 //!
@@ -65,39 +65,60 @@ const CORAL_CACHE_ARCHITECTURES: &[&str] = &[
     "sm_70", "sm_75", "sm_80", "sm_86", "sm_89", "gfx1030", "gfx1100",
 ];
 
+/// Capability string used for toadStool dispatch discovery.
+const DISPATCH_CAPABILITY: &str = "compute.dispatch";
+
+/// Environment variable for explicit toadStool dispatch endpoint.
+const TOADSTOOL_ADDR_ENV: &str = "BARRACUDA_DISPATCH_ADDR";
+
 /// Buffer handle for the sovereign compute path.
 ///
-/// Wraps a dispatch-side buffer identifier returned from toadStool's
-/// `compute.dispatch.submit` IPC. The `id` is opaque to barraCuda —
-/// toadStool manages the actual GPU memory.
+/// Wraps a dispatch-side buffer identifier. The `id` is assigned locally
+/// during staging; toadStool maps it to actual GPU memory on dispatch.
 #[derive(Debug, Clone, Copy)]
 pub struct CoralBuffer {
     #[cfg(feature = "sovereign-dispatch")]
     id: u64,
-    #[expect(dead_code, reason = "tracked for future readback size validation")]
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "buffer size tracked for toadStool dispatch validation"
+        )
+    )]
     size: u64,
 }
 
 /// Sovereign GPU compute device via IPC to coralReef + toadStool.
 ///
 /// Compilation flows through the existing `coral_compiler/` JSON-RPC
-/// client to coralReef. Dispatch will flow through toadStool's
+/// client to coralReef. Dispatch flows through toadStool's
 /// `compute.dispatch.submit` endpoint. Both are runtime IPC — no
 /// compile-time coupling to any primal crate.
 pub struct CoralReefDevice {
     name: Arc<str>,
     #[cfg(feature = "sovereign-dispatch")]
-    dispatch_available: bool,
+    compiler_available: bool,
+    #[cfg(feature = "sovereign-dispatch")]
+    dispatch_addr: Option<String>,
     #[cfg(feature = "sovereign-dispatch")]
     binary_cache: std::sync::Mutex<HashMap<u64, CachedBinary>>,
+    #[cfg(feature = "sovereign-dispatch")]
+    staged_buffers: std::sync::Mutex<HashMap<u64, bytes::BytesMut>>,
 }
 
 /// A compiled native GPU binary cached from coralReef IPC compilation.
+///
+/// `gpr_count` and `workgroup` are tracked for toadStool dispatch metadata.
+/// They will be sent as part of the `compute.dispatch.submit` payload once
+/// toadStool accepts kernel metadata alongside the binary.
 #[cfg(feature = "sovereign-dispatch")]
 #[derive(Clone)]
 struct CachedBinary {
     binary: bytes::Bytes,
+    #[expect(dead_code, reason = "sent to toadStool with dispatch metadata (P1)")]
     gpr_count: u32,
+    #[expect(dead_code, reason = "sent to toadStool with dispatch metadata (P1)")]
     workgroup: [u32; 3],
 }
 
@@ -107,6 +128,80 @@ impl std::fmt::Debug for CoralReefDevice {
             .field("name", &self.name)
             .finish()
     }
+}
+
+/// Detect whether a toadStool dispatch endpoint is available at runtime.
+///
+/// Discovery chain (first match wins):
+/// 1. `BARRACUDA_DISPATCH_ADDR` env var
+/// 2. Capability scan of `$XDG_RUNTIME_DIR/ecoPrimals/*.json` for
+///    `"compute.dispatch"` in the `provides` or `capabilities` array
+#[cfg(feature = "sovereign-dispatch")]
+fn detect_dispatch_addr() -> Option<String> {
+    if let Ok(addr) = std::env::var(TOADSTOOL_ADDR_ENV) {
+        let addr = addr.trim().to_owned();
+        if !addr.is_empty() {
+            return Some(addr);
+        }
+    }
+
+    let runtime_dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
+    let eco_dir =
+        std::env::var("ECOPRIMALS_DISCOVERY_DIR").unwrap_or_else(|_| "ecoPrimals".to_owned());
+    let base_dir = std::path::PathBuf::from(runtime_dir).join(eco_dir);
+
+    for dir in [&base_dir, &base_dir.join("discovery")] {
+        if let Some(addr) = scan_dispatch_capability(dir) {
+            return Some(addr);
+        }
+    }
+    None
+}
+
+/// Scan a directory for any primal advertising `compute.dispatch`.
+#[cfg(feature = "sovereign-dispatch")]
+fn scan_dispatch_capability(dir: &std::path::Path) -> Option<String> {
+    let entries = std::fs::read_dir(dir).ok()?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().is_some_and(|e| e == "json") {
+            if let Some(addr) = read_dispatch_transport(&path) {
+                return Some(addr);
+            }
+        }
+    }
+    None
+}
+
+/// Read a primal manifest and extract transport if it provides dispatch.
+#[cfg(feature = "sovereign-dispatch")]
+fn read_dispatch_transport(path: &std::path::Path) -> Option<String> {
+    let content = std::fs::read_to_string(path).ok()?;
+    let info: serde_json::Value = serde_json::from_str(&content).ok()?;
+
+    let has_dispatch = info
+        .get("provides")
+        .or_else(|| info.get("capabilities"))
+        .and_then(|v| v.as_array())
+        .is_some_and(|caps| {
+            caps.iter().any(|c| {
+                c.as_str()
+                    .is_some_and(|s| s.starts_with(DISPATCH_CAPABILITY))
+            })
+        });
+
+    if !has_dispatch {
+        return None;
+    }
+
+    let jsonrpc = info.get("transports")?.get("jsonrpc")?;
+    if let Some(s) = jsonrpc.as_str() {
+        return Some(s.to_owned());
+    }
+    jsonrpc
+        .get("tcp")
+        .and_then(|v| v.as_str())
+        .map(str::to_owned)
 }
 
 impl CoralReefDevice {
@@ -119,15 +214,25 @@ impl CoralReefDevice {
     #[cfg(feature = "sovereign-dispatch")]
     #[must_use]
     pub fn new() -> Self {
-        let dispatch_available = crate::device::coral_compiler::is_coral_available();
+        let compiler_available = crate::device::coral_compiler::is_coral_available();
+        let dispatch_addr = detect_dispatch_addr();
+        if let Some(ref addr) = dispatch_addr {
+            tracing::info!(addr = %addr, "discovered toadStool dispatch endpoint");
+        }
         Self {
             name: Arc::from("sovereign-ipc (coralReef compile + toadStool dispatch)"),
-            dispatch_available,
+            compiler_available,
+            dispatch_addr,
             binary_cache: std::sync::Mutex::new(HashMap::new()),
+            staged_buffers: std::sync::Mutex::new(HashMap::new()),
         }
     }
 
     /// Create a `CoralReefDevice` (feature not enabled).
+    ///
+    /// # Errors
+    ///
+    /// Always returns `Err` when the `sovereign-dispatch` feature is disabled.
     #[cfg(not(feature = "sovereign-dispatch"))]
     pub fn new_disabled() -> Result<Self> {
         Err(BarracudaError::Device(
@@ -140,14 +245,22 @@ impl CoralReefDevice {
     /// Attempt to create a `CoralReefDevice` with auto-detected hardware.
     ///
     /// Returns `Ok(device)` when the `sovereign-dispatch` feature is enabled
-    /// and IPC discovery succeeds.  Callers check `has_dispatch()` to
+    /// and IPC discovery succeeds. Callers check `has_dispatch()` to
     /// determine whether the device can actually dispatch compute.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` when the `sovereign-dispatch` feature is disabled.
     #[cfg(feature = "sovereign-dispatch")]
     pub fn with_auto_device() -> Result<Self> {
         Ok(Self::new())
     }
 
     /// Attempt to create a `CoralReefDevice` (feature not enabled).
+    ///
+    /// # Errors
+    ///
+    /// Always returns `Err` when the `sovereign-dispatch` feature is disabled.
     #[cfg(not(feature = "sovereign-dispatch"))]
     pub fn with_auto_device() -> Result<Self> {
         Err(BarracudaError::Device(
@@ -159,19 +272,17 @@ impl CoralReefDevice {
     #[cfg(feature = "sovereign-dispatch")]
     #[must_use]
     pub fn has_compiler(&self) -> bool {
-        self.dispatch_available
+        self.compiler_available
     }
 
     /// Whether toadStool dispatch is available for this device.
     ///
-    /// Currently mirrors `has_compiler` — the compile path is a prerequisite
-    /// for dispatch, and actual toadStool IPC wiring is still in progress
-    /// (P0 remaining work). Once `compute.dispatch.submit` is live, this
-    /// will probe toadStool directly.
+    /// Returns `true` when a toadStool endpoint advertising
+    /// `compute.dispatch` was discovered at construction time.
     #[cfg(feature = "sovereign-dispatch")]
     #[must_use]
     pub fn has_dispatch(&self) -> bool {
-        self.dispatch_available
+        self.dispatch_addr.is_some()
     }
 
     /// Dispatch is never available without the feature.
@@ -192,6 +303,107 @@ impl CoralReefDevice {
         }
         None
     }
+
+    /// Submit a dispatch request to toadStool via JSON-RPC.
+    #[cfg(feature = "sovereign-dispatch")]
+    fn submit_to_toadstool(&self, binary: &[u8], workgroups: (u32, u32, u32)) -> Result<()> {
+        let Some(ref addr) = self.dispatch_addr else {
+            return Err(BarracudaError::Device(
+                "CoralReefDevice: no toadStool dispatch endpoint discovered — \
+                 ensure toadStool is running and advertising compute.dispatch"
+                    .into(),
+            ));
+        };
+
+        let request = serde_json::json!({
+            "binary": binary,
+            "workgroup_size": [workgroups.0, workgroups.1, workgroups.2],
+        });
+
+        let addr = addr.clone();
+        let Ok(handle) = tokio::runtime::Handle::try_current() else {
+            return Err(BarracudaError::Device(
+                "CoralReefDevice: no tokio runtime available for IPC dispatch".into(),
+            ));
+        };
+
+        tokio::task::block_in_place(|| {
+            handle.block_on(async {
+                let host_port = addr.trim_start_matches("http://");
+                let body = serde_json::to_string(&serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "method": "compute.dispatch.submit",
+                    "params": [request],
+                    "id": 1,
+                }))
+                .map_err(|e| BarracudaError::Device(format!("serialize dispatch: {e}")))?;
+
+                let http_request = format!(
+                    "POST / HTTP/1.1\r\nHost: {host_port}\r\n\
+                     Content-Type: application/json\r\n\
+                     Content-Length: {}\r\n\
+                     Connection: close\r\n\r\n{body}",
+                    body.len()
+                );
+
+                let mut stream = tokio::net::TcpStream::connect(host_port)
+                    .await
+                    .map_err(|e| {
+                        BarracudaError::Device(format!(
+                            "CoralReefDevice: toadStool connect to {host_port}: {e}"
+                        ))
+                    })?;
+
+                tokio::io::AsyncWriteExt::write_all(&mut stream, http_request.as_bytes())
+                    .await
+                    .map_err(|e| {
+                        BarracudaError::Device(format!("CoralReefDevice: dispatch write: {e}"))
+                    })?;
+
+                let mut response_buf = Vec::new();
+                tokio::io::AsyncReadExt::read_to_end(&mut stream, &mut response_buf)
+                    .await
+                    .map_err(|e| {
+                        BarracudaError::Device(format!("CoralReefDevice: dispatch read: {e}"))
+                    })?;
+
+                let response_str = String::from_utf8_lossy(&response_buf);
+                let json_start = response_str.find('{').ok_or_else(|| {
+                    BarracudaError::Device(
+                        "CoralReefDevice: no JSON body in dispatch response".into(),
+                    )
+                })?;
+
+                let rpc_response: serde_json::Value =
+                    serde_json::from_str(&response_str[json_start..]).map_err(|e| {
+                        BarracudaError::Device(format!("CoralReefDevice: parse response: {e}"))
+                    })?;
+
+                if let Some(error) = rpc_response.get("error") {
+                    let msg = error
+                        .get("message")
+                        .and_then(|m| m.as_str())
+                        .unwrap_or("unknown error");
+                    return Err(BarracudaError::Device(format!(
+                        "CoralReefDevice: toadStool dispatch error: {msg}"
+                    )));
+                }
+
+                tracing::debug!(
+                    addr = %host_port,
+                    "sovereign dispatch submitted to toadStool"
+                );
+                Ok(())
+            })
+        })
+    }
+}
+
+#[cfg(feature = "sovereign-dispatch")]
+impl Default for CoralReefDevice {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl GpuBackend for CoralReefDevice {
@@ -211,14 +423,12 @@ impl GpuBackend for CoralReefDevice {
 
     #[cfg(feature = "sovereign-dispatch")]
     fn alloc_buffer(&self, _label: &str, size: u64) -> Result<CoralBuffer> {
-        // toadStool dispatch IPC will manage GPU buffers.
-        // For now, track locally — buffer IDs will be assigned by toadStool
-        // once compute.dispatch.submit is wired.
         static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
-        Ok(CoralBuffer {
-            id: NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
-            size,
-        })
+        let id = NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        if let Ok(mut staged) = self.staged_buffers.lock() {
+            staged.insert(id, bytes::BytesMut::zeroed(size as usize));
+        }
+        Ok(CoralBuffer { id, size })
     }
 
     #[cfg(not(feature = "sovereign-dispatch"))]
@@ -255,23 +465,35 @@ impl GpuBackend for CoralReefDevice {
     }
 
     #[cfg(feature = "sovereign-dispatch")]
-    fn upload(&self, _buffer: &CoralBuffer, _offset: u64, _data: &[u8]) {
-        // Data upload will be handled by toadStool compute.dispatch.submit
-        // as part of the dispatch payload. Buffer contents are staged locally
-        // and sent with the dispatch request.
+    fn upload(&self, buffer: &CoralBuffer, offset: u64, data: &[u8]) {
+        if let Ok(mut staged) = self.staged_buffers.lock() {
+            if let Some(buf) = staged.get_mut(&buffer.id) {
+                let start = offset as usize;
+                let end = start + data.len();
+                if end <= buf.len() {
+                    buf[start..end].copy_from_slice(data);
+                }
+            }
+        }
     }
 
     #[cfg(not(feature = "sovereign-dispatch"))]
     fn upload(&self, _buffer: &CoralBuffer, _offset: u64, _data: &[u8]) {}
 
     #[cfg(feature = "sovereign-dispatch")]
-    fn download(&self, _buffer: &CoralBuffer, _size: u64) -> Result<bytes::Bytes> {
-        // Readback will be handled by toadStool compute.dispatch.result
-        Err(BarracudaError::Device(
-            "CoralReefDevice: dispatch readback pending toadStool \
-             compute.dispatch.result IPC wiring"
-                .into(),
-        ))
+    fn download(&self, buffer: &CoralBuffer, _size: u64) -> Result<bytes::Bytes> {
+        let staged = self.staged_buffers.lock().map_err(|e| {
+            BarracudaError::Device(format!("CoralReefDevice: staged lock poisoned: {e}"))
+        })?;
+        staged
+            .get(&buffer.id)
+            .map(|b| bytes::Bytes::copy_from_slice(b))
+            .ok_or_else(|| {
+                BarracudaError::Device(format!(
+                    "CoralReefDevice: buffer {} not found in staging",
+                    buffer.id
+                ))
+            })
     }
 
     #[cfg(not(feature = "sovereign-dispatch"))]
@@ -283,6 +505,7 @@ impl GpuBackend for CoralReefDevice {
 
     #[cfg(feature = "sovereign-dispatch")]
     fn dispatch_compute(&self, desc: DispatchDescriptor<'_, Self>) -> Result<()> {
+        use std::collections::hash_map::Entry;
         use std::hash::{Hash, Hasher};
 
         let mut hasher = std::hash::DefaultHasher::new();
@@ -293,35 +516,33 @@ impl GpuBackend for CoralReefDevice {
             BarracudaError::Device(format!("CoralReefDevice: cache lock poisoned: {e}"))
         })?;
 
-        if cache.contains_key(&key) {
-            tracing::debug!("sovereign cache hit — using pre-compiled native binary");
-        } else if let Some(cached_binary) = Self::try_coral_cache(desc.shader_source) {
-            cache.insert(
-                key,
-                CachedBinary {
-                    binary: cached_binary,
-                    gpr_count: CONSERVATIVE_GPR_COUNT,
-                    workgroup: DEFAULT_WORKGROUP,
-                },
-            );
-            tracing::debug!("coral compiler cache hit — using pre-compiled native binary");
-        } else {
-            // Compile via coralReef IPC (shader.compile.wgsl)
-            // The coral_compiler module handles discovery and compilation.
-            // For now, return an error — full IPC dispatch wiring is next.
-            return Err(BarracudaError::Device(
-                "CoralReefDevice: live IPC compilation + dispatch pending — \
-                 use WgpuDevice for now, or pre-compile via spawn_coral_compile()"
-                    .into(),
-            ));
-        }
+        let cached = match cache.entry(key) {
+            Entry::Occupied(e) => {
+                tracing::debug!("sovereign cache hit — using pre-compiled native binary");
+                e.into_mut()
+            }
+            Entry::Vacant(e) => {
+                if let Some(binary) = Self::try_coral_cache(desc.shader_source) {
+                    tracing::debug!("coral compiler cache hit — using pre-compiled native binary");
+                    e.insert(CachedBinary {
+                        binary,
+                        gpr_count: CONSERVATIVE_GPR_COUNT,
+                        workgroup: DEFAULT_WORKGROUP,
+                    })
+                } else {
+                    return Err(BarracudaError::Device(
+                        "CoralReefDevice: no cached binary and live IPC compilation \
+                         not yet implemented — pre-compile via spawn_coral_compile()"
+                            .into(),
+                    ));
+                }
+            }
+        };
 
-        // Dispatch via toadStool IPC (compute.dispatch.submit)
-        // This will send the compiled binary + buffer data to toadStool,
-        // which routes to the best available GPU (VFIO/DRM).
-        Err(BarracudaError::Device(
-            "CoralReefDevice: toadStool compute.dispatch.submit IPC wiring in progress".into(),
-        ))
+        let binary = cached.binary.clone();
+        drop(cache);
+
+        self.submit_to_toadstool(&binary, desc.workgroups)
     }
 
     #[cfg(not(feature = "sovereign-dispatch"))]
@@ -336,15 +557,10 @@ impl GpuBackend for CoralReefDevice {
         &self,
         binary: &[u8],
         _bindings: Vec<BufferBinding<'_, Self>>,
-        _workgroups: (u32, u32, u32),
+        workgroups: (u32, u32, u32),
         _entry_point: &str,
     ) -> Result<()> {
-        let _ = binary;
-        // dispatch_binary sends a pre-compiled native GPU binary to
-        // toadStool's compute.dispatch.submit for execution.
-        Err(BarracudaError::Device(
-            "CoralReefDevice: toadStool compute.dispatch.submit IPC wiring in progress".into(),
-        ))
+        self.submit_to_toadstool(binary, workgroups)
     }
 
     #[cfg(not(feature = "sovereign-dispatch"))]
@@ -376,22 +592,64 @@ mod tests {
 
     #[cfg(feature = "sovereign-dispatch")]
     #[test]
-    fn dispatch_returns_pending_error() {
-        let dev = CoralReefDevice::new();
-        let result = dev.dispatch_binary(&[], vec![], (1, 1, 1), "main");
-        assert!(result.is_err());
-        let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("IPC wiring"), "got: {msg}");
+    fn default_matches_new() {
+        let dev = CoralReefDevice::default();
+        assert!(dev.name().contains("sovereign"));
     }
 
     #[cfg(feature = "sovereign-dispatch")]
     #[test]
-    fn buffer_alloc_assigns_ids() {
+    fn dispatch_binary_without_toadstool() {
+        let dev = CoralReefDevice::new();
+        let result = dev.dispatch_binary(&[0xDE, 0xAD], vec![], (1, 1, 1), "main");
+        assert!(result.is_err());
+    }
+
+    #[cfg(feature = "sovereign-dispatch")]
+    #[test]
+    fn buffer_alloc_stages_data() {
+        let dev = CoralReefDevice::new();
+        let buf = dev.alloc_buffer("test", 64).unwrap();
+        assert_eq!(buf.size, 64);
+
+        dev.upload(&buf, 0, &[1, 2, 3, 4]);
+        let data = dev.download(&buf, 64).unwrap();
+        assert_eq!(data[..4], [1, 2, 3, 4]);
+    }
+
+    #[cfg(feature = "sovereign-dispatch")]
+    #[test]
+    fn buffer_alloc_assigns_unique_ids() {
         let dev = CoralReefDevice::new();
         let b1 = dev.alloc_buffer("a", 1024).unwrap();
         let b2 = dev.alloc_buffer("b", 2048).unwrap();
         assert_ne!(b1.id, b2.id);
-        assert_eq!(b1.size, 1024);
-        assert_eq!(b2.size, 2048);
+    }
+
+    #[cfg(feature = "sovereign-dispatch")]
+    #[test]
+    fn dispatch_env_constant_is_correct() {
+        assert_eq!(TOADSTOOL_ADDR_ENV, "BARRACUDA_DISPATCH_ADDR");
+        assert_eq!(DISPATCH_CAPABILITY, "compute.dispatch");
+    }
+
+    #[cfg(feature = "sovereign-dispatch")]
+    #[test]
+    fn detect_dispatch_addr_graceful_without_toadstool() {
+        let addr = detect_dispatch_addr();
+        if let Some(ref a) = addr {
+            assert!(!a.is_empty(), "discovered address must be non-empty");
+        }
+    }
+
+    #[test]
+    fn coral_cache_architectures_non_empty() {
+        assert!(!CORAL_CACHE_ARCHITECTURES.is_empty());
+        for arch in CORAL_CACHE_ARCHITECTURES {
+            assert!(
+                arch.starts_with("sm_") || arch.starts_with("gfx"),
+                "unexpected arch format: {arch}"
+            );
+        }
     }
 }

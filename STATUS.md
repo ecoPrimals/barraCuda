@@ -2,7 +2,7 @@
 
 **Version**: 0.3.5
 **Date**: 2026-03-15
-**Overall Grade**: A+ (Zero unsafe via `#![forbid(unsafe_code)]`, zero unwrap in production, pure safe Rust, all quality gates green, 3,407 tests passing, zero TODO/FIXME/unimplemented, NVVM poisoning guard, PrecisionBrain self-routing, HardwareCalibration per-tier probing, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust, device-aware test tolerances, cross-spring pharma/bio/health absorption, FMA policy, stable GPU special functions, sovereign coral-cache dispatch wiring, capability-based PRIMAL_NAMESPACE, VoltaNoPmuFirmware workaround detection, namespace-derived IPC method names, 806/806 WGSL SPDX headers, 1088/1088 Rust SPDX headers, pedantic + nursery + doc lint promotion, CI coverage 80% blocking, ecoBin cross-compile CI)
+**Overall Grade**: A+ (Zero unsafe via `#![forbid(unsafe_code)]`, zero unwrap in production, pure safe Rust, all quality gates green, 3,400+ tests passing, zero TODO/FIXME/unimplemented, NVVM poisoning guard, PrecisionBrain self-routing, HardwareCalibration per-tier probing, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust, device-aware test tolerances, cross-spring pharma/bio/health absorption, FMA policy, stable GPU special functions, sovereign coral-cache dispatch wiring, capability-based PRIMAL_NAMESPACE, VoltaNoPmuFirmware workaround detection, namespace-derived IPC method names, 806/806 WGSL SPDX headers, 1088/1088 Rust SPDX headers, `#![deny(clippy::pedantic)]` + nursery + doc lint promotion, CI coverage 80% blocking, ecoBin cross-compile CI, CoralReefDevice→toadStool dispatch wired, capability-based toadStool discovery, RwLock tensor store, zero-copy BytesMut/Bytes evolution)
 
 ---
 
@@ -157,7 +157,8 @@
 - `VpcSimulateGpu` — GPU Monte Carlo VPC simulation with RK4 PK integration (healthSpring V14 absorption)
 - `foce_gradient_f64.wgsl` + `vpc_simulate_f64.wgsl` + `bipartition_encode.wgsl` — 3 new production WGSL shaders
 
-- **GPU streaming & audit sprint** (Mar 15): `submit_and_poll_inner` split into separate `submit_commands_inner` + `poll_wait_inner` lock acquisitions — other threads interleave submits while one polls (eliminates 120s lock convoy). 279 fire-and-forget ops migrated from blocking `submit_and_poll` to non-blocking `submit_commands`. New `submit_and_map<T>` method collapses double-poll (submit+poll then map+poll) into single submit → `map_async` → `poll_safe` cycle. `read_buffer<T>` now uses single-poll path. `--all-features` clippy fixed: `is_coral_available()`, `CoralReefDevice::with_auto_device()`, `CoralReefDevice::has_dispatch()` added. Pre-existing doc_markdown lints fixed (bcs, screened_coulomb, chi2). All quality gates green. 3,407 tests pass, 0 fail.
+- **Deep debt sprint 4 — sovereign wiring & zero-copy** (Mar 15): `CoralReefDevice` wired to toadStool `compute.dispatch.submit` via JSON-RPC. `detect_dispatch_addr()` discovers toadStool via capability-based scanning of `$XDG_RUNTIME_DIR/ecoPrimals/*.json`. Buffer staging via `BytesMut`. `dispatch_compute` evolved to `Entry` API. `Default` impl added. `#![deny(clippy::pedantic)]` in both crates. Tensor store `Mutex` → `RwLock`. Zero-copy: `CpuTensorStorage` → `BytesMut`, `EventCodec` → `Bytes`, `CompileResponse::into_bytes()`. Edition 2024 safety: `set_var` eliminated from tests. coralNAK → coralReef in all active docs.
+- **GPU streaming & audit sprint** (Mar 15): `submit_and_poll_inner` split into separate `submit_commands_inner` + `poll_wait_inner` lock acquisitions — other threads interleave submits while one polls (eliminates 120s lock convoy). 279 fire-and-forget ops migrated from blocking `submit_and_poll` to non-blocking `submit_commands`. New `submit_and_map<T>` method collapses double-poll (submit+poll then map+poll) into single submit → `map_async` → `poll_safe` cycle. `read_buffer<T>` now uses single-poll path. `--all-features` clippy fixed: `is_coral_available()`, `CoralReefDevice::with_auto_device()`, `CoralReefDevice::has_dispatch()` added. Pre-existing doc_markdown lints fixed (bcs, screened_coulomb, chi2). All quality gates green. 3,400+ tests pass, 0 fail.
 - **Deep debt sprint 3 — lint evolution & refactoring** (Mar 14): `missing_errors_doc` and `missing_panics_doc` promoted to warn in both crates. Cast lints promoted in `barracuda-core`. `large_stack_frames` documented as test artifact. `suboptimal_flops` evolved in test files. `ode_bio/params.rs` refactored (774L → 7-file modular structure). RBF `assemble_and_solve` zero-copy via `split_off`. CI: 80% coverage + chaos/fault now blocking; cross-compile job for musl targets. Dead `ring` deny.toml config removed. All quality gates green.
 - **Deep debt evolution sprint 2** (Mar 12): 5 nursery lints promoted (`redundant_clone`, `imprecise_flops`, `unnecessary_struct_initialization`, `derive_partial_eq_without_eq`, `suboptimal_flops` kept allow with rationale). 7 `if_same_then_else` sites fixed and lint promoted to warn. `needless_range_loop` sites reduced (csr, device_info, fft_1d converted to idiomatic iterators). Hardcoded discovery paths evolved to `PRIMAL_NAMESPACE`-derived. `zeros`/`ones` dispatch duplication eliminated via combined match arm. 193 files touched by auto-fix (redundant clones removed, precision improved via `ln_1p`/`to_radians`/`hypot`).
 - **Comprehensive audit & deep debt sprint** (Mar 12): Full codebase audit against wateringHole standards. 12-item remediation completed.
@@ -182,12 +183,12 @@
 
 ## What's Not Working Yet
 
-- P0: toadStool `compute.dispatch.submit` IPC wiring — CoralReefDevice scaffold done, IPC client pending
+- ~~P0: toadStool `compute.dispatch.submit` IPC wiring~~ — **Done** (Mar 15). `CoralReefDevice` discovers toadStool via capability scan and dispatches via JSON-RPC
 - P0: VFIO dispatch hardware revalidation on Titan V — coralReef Iter 44 applied USERD_TARGET + INST_TARGET fix; 7/7 expected
 - P1: DF64 end-to-end NVK hardware verification (Yukawa shaders)
-- P1: coralNAK extraction (pending org repo fork)
+- P1: coralReef sovereign compiler evolution (unified compiler and driver for all GPU targets)
 - P1: Kokkos validation baseline documentation (unblocked by VFIO strategy)
-- P2: Test coverage ~75% on llvmpipe (80% CI gate blocking; 90% target requires real GPU hardware; 3,407 tests passing)
+- P2: Test coverage ~75% on llvmpipe (80% CI gate blocking; 90% target requires real GPU hardware; 3,346+ tests passing)
 - P2: Kokkos GPU parity benchmarks
 - ~~P2: RHMC multi-shift CG solver~~ — **Done** (Mar 12, rhmc.rs + rhmc_hmc.rs)
 

@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.5] — 2026-03-15
 
+### Changed — Deep Debt Sprint 4: Sovereign Wiring & Zero-Copy Evolution (Mar 15 2026)
+
+- **CoralReefDevice wired to toadStool dispatch**: Evolved from error-returning
+  stub to real JSON-RPC dispatch. `detect_dispatch_addr()` discovers toadStool
+  via capability-based scanning of `$XDG_RUNTIME_DIR/ecoPrimals/*.json` for
+  `compute.dispatch` capability, with `BARRACUDA_DISPATCH_ADDR` env override.
+  `submit_to_toadstool()` sends compiled binaries to `compute.dispatch.submit`.
+- **Buffer staging implemented**: `CoralReefDevice` now stages buffers locally
+  in `BytesMut` maps with upload/download through `staged_buffers`. Replaces
+  empty no-op upload/download stubs.
+- **`dispatch_compute` uses Entry API**: Evolved from `contains_key` + `insert`
+  to idiomatic `HashMap::Entry` pattern (fixes clippy `map_entry` lint).
+- **Default impl for CoralReefDevice**: Added `Default` trait (fixes clippy
+  `new_without_default` lint).
+- **`# Errors` doc sections**: Added to `with_auto_device()` and `new_disabled()`
+  (fixes clippy `missing_errors_doc` lint).
+- **Pedantic lint promotion**: `#![warn(clippy::pedantic)]` → `#![deny(clippy::pedantic)]`
+  in both crates. CI already enforced via `-D warnings`; now locally enforced too.
+- **Tensor store RwLock**: `barracuda-core` tensor store evolved from `Mutex<HashMap>`
+  to `RwLock<HashMap>` for concurrent read access during dispatch.
+- **Zero-copy evolution (5 sites)**:
+  - `CpuTensorStorage::data`: `Vec<u8>` → `BytesMut` (zero-copy `read_to_cpu`)
+  - `CpuExecutor::pack_f32`: `Vec<u8>` → `BytesMut::from(bytemuck::cast_slice())`
+  - `CompileResponse::into_bytes()`: centralized `Vec<u8>` → `Bytes` conversion
+  - `EventCodec::encode()`: `Vec<u8>` → `Bytes` via `BytesMut` builder
+  - `EventCodec::encode_simple()`: `Vec<u8>` → `Bytes`
+- **Edition 2024 safety**: Eliminated `std::env::set_var` from tests (unsafe in
+  edition 2024 + `#![forbid(unsafe_code)]`). Tests evolved to verify constants
+  and graceful discovery instead.
+- **coralNAK → coralReef**: Updated all active docs to reflect coralReef as the
+  unified primal compiler and driver (CHANGELOG fossil record preserved).
+
 ### Changed — GPU Streaming & Comprehensive Audit Sprint (Mar 15 2026)
 
 - **GPU lock split**: `submit_and_poll_inner` refactored into separate

@@ -135,7 +135,7 @@ impl CoralCompiler {
         .await
         {
             Ok(resp) => Some(CoralBinary {
-                binary: bytes::Bytes::from(resp.binary),
+                binary: resp.into_bytes(),
                 arch: arch.to_owned(),
             }),
             Err(e) => {
@@ -182,7 +182,7 @@ impl CoralCompiler {
         .await
         {
             Ok(resp) => Some(CoralBinary {
-                binary: bytes::Bytes::from(resp.binary),
+                binary: resp.into_bytes(),
                 arch: arch.to_owned(),
             }),
             Err(e) => {

@@ -6,6 +6,15 @@ Prioritized work items, ordered by impact. Updated 2026-03-15.
 
 ## Recently Completed
 
+- **Deep debt sprint 4 — sovereign wiring & zero-copy (Mar 15)**: CoralReefDevice
+  wired to toadStool `compute.dispatch.submit` via capability-based discovery
+  (`detect_dispatch_addr` scans `$XDG_RUNTIME_DIR/ecoPrimals/*.json` for
+  `compute.dispatch`). Buffer staging via `BytesMut`. `dispatch_compute` evolved
+  to `Entry` API. `Default` impl added. `# Errors` doc sections added. Pedantic
+  lint promoted to `deny` in both crates. Tensor store `Mutex` → `RwLock`.
+  Zero-copy: `CpuTensorStorage` → `BytesMut`, `EventCodec` → `Bytes`,
+  `CompileResponse::into_bytes()`. Edition 2024 safety: `set_var` eliminated
+  from tests. coralNAK → coralReef in all active docs. All quality gates green.
 - **GPU streaming & comprehensive audit sprint (Mar 15)**: Full GPU submission
   pipeline refactored to eliminate blocking. `submit_and_poll_inner` split into
   separate `submit_commands_inner` + `poll_wait_inner` lock acquisitions —
@@ -84,8 +93,8 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
   NVK/NAK on hardware. Validate sovereign compiler's safe WGSL roundtrip produces correct
   numerical results across all backends. Probe-aware `fp64_strategy()` is now in place to
   auto-fallback if native f64 fails.
-- **coralNAK extraction**: When org repo fork lands, create the sovereign NVIDIA shader
-  compiler primal.
+- **coralReef sovereign compiler evolution**: coralReef is the unified primal compiler
+  and driver for all GPU targets — eventually also the Rust compiler for the ecosystem.
 - **~~Dedicated DF64 shaders for covariance + weighted_dot~~**: Done (Mar 12). Hand-written
   `weighted_dot_df64.wgsl` with 6 kernels. Covariance confirmed safe with auto-rewrite
   (thread-local only — no `var<workgroup> array<f64, N>`).
@@ -119,8 +128,9 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
 - **Shader hot-reload**: File watcher for `.wgsl` files during development, automatic
   recompilation through sovereign pipeline.
 - **Zero-copy evolution**: `bytes::Bytes` on I/O boundaries + `CpuTensorStorageSimple` +
-  `CosineSimilarityF64` + RBF `assemble_and_solve` done; remaining: pre-allocated buffers
-  for `domain_ops.rs` CPU fallback clones, LSTM hidden state clones.
+  `CosineSimilarityF64` + RBF `assemble_and_solve` + `CpuTensorStorage` → `BytesMut` +
+  `EventCodec` → `Bytes` + `CompileResponse::into_bytes()` done; remaining: pre-allocated
+  buffers for `domain_ops.rs` CPU fallback clones, LSTM hidden state clones.
 
 ## Long-term (P4)
 
@@ -128,9 +138,9 @@ See `SOVEREIGN_PIPELINE_TRACKER.md` for the full sovereign pipeline tracker
 including cross-primal dependencies, libc/musl → rustix evolution, and
 cross-compilation target matrix.
 
-- **Sovereign Compute Evolution**: Replace entire non-Rust GPU stack with coral-prefixed
-  pure Rust components (coralNak, coralDriver, coralMem, coralQueue, coralGpu) via VFIO
-  primary dispatch path (toadStool VFIO GPU backend + IOMMU isolation).
+- **Sovereign Compute Evolution**: Replace entire non-Rust GPU stack with coralReef
+  as the unified compiler and driver for all GPU targets (eventually also the Rust
+  compiler) via VFIO primary dispatch path (toadStool VFIO GPU backend + IOMMU isolation).
 - **WebGPU browser target**: Compile barraCuda shaders for browser execution via wasm-pack
   and wgpu's WebGPU backend.
 - **Distributed compute**: Cross-node GPU dispatch via primal-to-primal IPC for HPC clusters.
@@ -180,8 +190,8 @@ the IPC interface is unaffected.
 
 **Layer 3 — GPU drivers (external, OS-level)**: `wgpu → ash → libvulkan.so` is the
 system driver boundary. This is where the sovereign compute evolution eliminates the
-last C dependency: coralReef's pure-Rust NVIDIA codegen (coralNak) replaces NAK, then
-coralDriver replaces the Vulkan loader. The math never changes — only the substrate.
+last C dependency: coralReef's pure-Rust NVIDIA codegen replaces NAK, then
+coralReef's driver layer replaces the Vulkan loader. The math never changes — only the substrate.
 
 **Layer 4 — Kernel ABI (`libc`)**: Every Rust program on Linux calls the kernel through
 `libc` (syscalls for memory, I/O, signals). This evolves via `rustix` (pure Rust syscalls

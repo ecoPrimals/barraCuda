@@ -1,68 +1,52 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-//! Event Codec - Dense ↔ Sparse Event Conversion
+//! Event Codec — Dense ↔ Sparse Event Conversion.
 //!
 //! Converts between dense tensor representations and sparse event streams
-//! for NPU execution. This is where the energy efficiency comes from!
-//!
-//! **Deep Debt Principles**:
-//! - Pure Rust conversion (no unsafe)
-//! - Runtime threshold configuration
-//! - No hardcoded encoding schemes
+//! for NPU execution. Sparse encoding is where NPU energy efficiency comes
+//! from — only above-threshold activations are transmitted.
 
-/// Event codec for NPU dense/sparse conversion
+use bytes::{Bytes, BytesMut};
+
+/// Event codec for NPU dense/sparse conversion.
 pub struct EventCodec {
-    /// Threshold for event generation (0.0-1.0)
     threshold: f32,
 }
 
 impl EventCodec {
-    /// Create new codec with threshold
-    ///
-    /// **Deep Debt**: Configurable threshold, no hardcoding
+    /// Create a codec with the given activation threshold (0.0–1.0).
     #[must_use]
     pub fn new(threshold: f32) -> Self {
         Self { threshold }
     }
 
-    /// Convert dense activations to sparse events
+    /// Convert dense activations to sparse events (index + value pairs).
     ///
-    /// Only encodes values above threshold. This is where NPU's
-    /// energy efficiency comes from - sparse event processing!
-    ///
-    /// **Deep Debt**: Pure Rust, no unsafe
-    ///
-    /// # Arguments
-    /// * `input` - Dense tensor data
-    ///
-    /// # Returns
-    /// Sparse event stream (u8 encoded)
+    /// Returns `Bytes` for zero-copy sharing with downstream consumers.
+    /// Each event is 5 bytes: 4-byte LE index + 1-byte quantized value.
     #[must_use]
-    pub fn encode(&self, input: &[f32]) -> Vec<u8> {
-        input
-            .iter()
-            .enumerate()
-            .filter(|&(_, val)| *val > self.threshold)
-            .flat_map(|(idx, val)| {
-                let mut bytes = Vec::with_capacity(5);
-                bytes.extend_from_slice(&(idx as u32).to_le_bytes());
-                bytes.push((*val * 255.0).clamp(0.0, 255.0) as u8);
-                bytes
-            })
-            .collect()
+    pub fn encode(&self, input: &[f32]) -> Bytes {
+        let mut buf = BytesMut::with_capacity(input.len() * 5);
+        for (idx, &val) in input.iter().enumerate() {
+            if val > self.threshold {
+                buf.extend_from_slice(&(idx as u32).to_le_bytes());
+                buf.extend_from_slice(&[(val * 255.0).clamp(0.0, 255.0) as u8]);
+            }
+        }
+        buf.freeze()
     }
 
-    /// Convert dense to events (simplified for small inputs)
+    /// Convert dense to events (simplified sequential encoding).
     ///
-    /// For small inputs (like MNIST 784 dims), use simpler encoding
-    ///
-    /// **Deep Debt**: No unsafe, runtime size adaptation
+    /// For small inputs (e.g. MNIST 784 dims) where indices are implicit.
+    /// Returns `Bytes` for zero-copy sharing.
     #[must_use]
-    pub fn encode_simple(&self, input: &[f32]) -> Vec<u8> {
-        input
+    pub fn encode_simple(&self, input: &[f32]) -> Bytes {
+        let buf: Vec<u8> = input
             .iter()
             .filter(|&&val| val > self.threshold)
             .map(|&val| (val * 255.0).clamp(0.0, 255.0) as u8)
-            .collect()
+            .collect();
+        Bytes::from(buf)
     }
 
     /// Convert sparse events back to dense

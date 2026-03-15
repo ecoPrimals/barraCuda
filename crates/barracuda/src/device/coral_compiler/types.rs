@@ -60,10 +60,20 @@ pub fn precision_to_coral_strategy(
 }
 
 /// Compile response — mirrors `coralreef-core::service::CompileResponse`.
+///
+/// `binary` deserializes as `Vec<u8>` from JSON but is immediately converted
+/// to `bytes::Bytes` at the call site for zero-copy sharing downstream.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(super) struct CompileResponse {
     pub binary: Vec<u8>,
     pub size: usize,
+}
+
+impl CompileResponse {
+    /// Convert the owned binary to a shared `bytes::Bytes` (zero-copy freeze).
+    pub fn into_bytes(self) -> Bytes {
+        Bytes::from(self.binary)
+    }
 }
 
 /// Health response from coralReef.

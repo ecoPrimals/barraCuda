@@ -19,7 +19,7 @@
 )]
 #![warn(missing_docs)]
 #![warn(clippy::all)]
-#![warn(clippy::pedantic)]
+#![deny(clippy::pedantic)]
 #![expect(
     clippy::doc_markdown,
     reason = "domain terms like barraCuda, wgpu, WebGPU"
@@ -84,17 +84,21 @@ use error::BarracudaCoreError;
 use health::{HealthReport, HealthStatus, PrimalHealth};
 use lifecycle::{PrimalLifecycle, PrimalState};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 /// barraCuda primal — sovereign GPU compute engine.
 ///
 /// Manages GPU device discovery, shader compilation, and compute dispatch
 /// across any vendor's hardware. Holds a tensor store for IPC-created
 /// tensors that persist across requests.
+///
+/// Uses `RwLock` for the tensor store: reads (dispatch, lookup) are
+/// concurrent; writes (store) take exclusive access. This matches the
+/// read-heavy IPC workload where many handlers read tensors concurrently.
 pub struct BarraCudaPrimal {
     state: PrimalState,
     device: Option<barracuda::device::WgpuDevice>,
-    tensors: Mutex<HashMap<String, Arc<barracuda::tensor::Tensor>>>,
+    tensors: RwLock<HashMap<String, Arc<barracuda::tensor::Tensor>>>,
 }
 
 impl BarraCudaPrimal {
@@ -104,12 +108,12 @@ impl BarraCudaPrimal {
         Self {
             state: PrimalState::Created,
             device: None,
-            tensors: Mutex::new(HashMap::new()),
+            tensors: RwLock::new(HashMap::new()),
         }
     }
 
     /// Access the compute device (available after `start()`).
-    /// Returns a clone for sharing across handlers; WgpuDevice is cheap to clone.
+    /// Returns a clone for sharing across handlers; `WgpuDevice` is cheap to clone.
     #[must_use]
     pub fn device(&self) -> Option<barracuda::device::WgpuDevice> {
         self.device.clone()
@@ -123,7 +127,7 @@ impl BarraCudaPrimal {
         )
         .to_hex()[..16]
             .to_string();
-        if let Ok(mut store) = self.tensors.lock() {
+        if let Ok(mut store) = self.tensors.write() {
             store.insert(id.clone(), tensor_arc);
         }
         id
@@ -131,12 +135,12 @@ impl BarraCudaPrimal {
 
     /// Look up a tensor by ID.
     pub fn get_tensor(&self, id: &str) -> Option<Arc<barracuda::tensor::Tensor>> {
-        self.tensors.lock().ok()?.get(id).cloned()
+        self.tensors.read().ok()?.get(id).cloned()
     }
 
     /// Number of tensors currently stored.
     pub fn tensor_count(&self) -> usize {
-        self.tensors.lock().map(|s| s.len()).unwrap_or(0)
+        self.tensors.read().map(|s| s.len()).unwrap_or(0)
     }
 }
 

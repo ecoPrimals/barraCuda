@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-//! CPU tensor storage implementation
+//! CPU tensor storage implementation — zero-copy via `BytesMut`.
 
 use crate::error::Result;
 use crate::unified_hardware::{HardwareType, TensorStorage};
 use crate::unified_math::TensorDescriptor;
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 
-/// CPU tensor storage implementation
+/// CPU tensor storage backed by `BytesMut`.
+///
+/// `read_to_cpu()` freezes a clone of the internal buffer into shared
+/// `Bytes` — downstream consumers get a ref-counted view without copying.
 pub(super) struct CpuTensorStorage {
     pub(super) descriptor: TensorDescriptor,
-    pub(super) data: Vec<u8>,
+    pub(super) data: BytesMut,
 }
 
 impl CpuTensorStorage {
@@ -17,7 +20,7 @@ impl CpuTensorStorage {
         let byte_size = descriptor.numel * descriptor.dtype.size_bytes();
         Self {
             descriptor,
-            data: vec![0u8; byte_size],
+            data: BytesMut::zeroed(byte_size),
         }
     }
 }
@@ -34,7 +37,7 @@ impl TensorStorage for CpuTensorStorage {
     fn read_to_cpu(
         &self,
     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Bytes>> + Send + '_>> {
-        let data = Bytes::from(self.data.clone());
+        let data = Bytes::copy_from_slice(&self.data);
         Box::pin(async move { Ok(data) })
     }
 

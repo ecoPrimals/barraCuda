@@ -351,8 +351,9 @@ Previously limited to Vulkan with SPIR-V passthrough.
   numerical results across all backends
 - Probe-aware `fp64_strategy()` is in place for auto-fallback
 
-#### coralNAK Extraction
-- When org repo fork lands, create the sovereign NVIDIA shader compiler primal
+#### coralReef Sovereign Compiler Evolution
+- coralReef is the unified primal compiler and driver for all GPU targets
+- Eventually coralReef will also serve as the Rust compiler for the ecosystem
 - See `ecoPrimals/wateringHole/SOVEREIGN_COMPUTE_EVOLUTION.md` Level 2-3
 
 #### coralReef Phase 10 — Verified

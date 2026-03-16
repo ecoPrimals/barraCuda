@@ -1,11 +1,20 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-03-15.
+Prioritized work items, ordered by impact. Updated 2026-03-16.
 
 ---
 
 ## Recently Completed
 
+- **Deep debt sprint 5 — audit execution & evolution (Mar 16)**: Comprehensive
+  audit execution: 22 "for now" patterns evolved to proper engineering
+  documentation with performance crossover thresholds. Device-lost panic handling
+  DRY-refactored (4× duplicate eliminated). CUDA benchmark stub honestly
+  relabeled as CPU baseline. Hardcoded bincount 256 → `DEFAULT_NUM_BINS`.
+  21 new ODE bio system tests (all 5 models). Dependency analysis: all direct
+  deps pure Rust, blake3 `pure` avoids C, rand 0.8/0.9 duplicate tracked.
+  Zero-copy gap analysis documented (f64→f32 inherent, LSTM clone inherent).
+  All quality gates green (fmt, clippy, doc, test compile).
 - **Deep debt sprint 4 — sovereign wiring & zero-copy (Mar 15)**: CoralReefDevice
   wired to toadStool `compute.dispatch.submit` via capability-based discovery
   (`detect_dispatch_addr` scans `$XDG_RUNTIME_DIR/ecoPrimals/*.json` for

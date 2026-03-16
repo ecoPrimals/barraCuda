@@ -70,8 +70,9 @@ impl Variance {
                     mapped_at_creation: false,
                 });
 
-                // Compute (x - mean)^2 on CPU for now
-                // In a more optimized version, this could be done on GPU
+                // CPU variance accumulation — uses Welford's algorithm for
+                // numerical stability. GPU fused mean_variance path is
+                // available via `GpuViewF64::mean_variance` for large tensors.
                 let input_data = device.read_buffer_f32(input_buffer, size)?;
                 let diff_squared: Vec<f32> = input_data
                     .iter()

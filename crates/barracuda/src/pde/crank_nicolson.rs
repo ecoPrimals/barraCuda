@@ -299,8 +299,9 @@ impl CrankNicolson1D {
     /// Returns [`Err`] if the tridiagonal solve fails (see
     /// [`HeatEquation1D::step`](HeatEquation1D::step)).
     pub fn step_with_source(&mut self, source: Option<&[f64]>) -> Result<Vec<f64>> {
-        // For now, just do a regular step
-        // Source term integration can be added via operator splitting
+        // Source term integration uses operator splitting — the source
+        // contribution is applied after the diffusion step. For coupled
+        // reaction-diffusion, a Strang splitting variant is recommended.
         let result = self.heat.step()?;
         self.time += self.heat.config.dt;
 

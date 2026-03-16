@@ -60,11 +60,11 @@ pub fn fuse_multiply_add(expressions: &mut Arena<Expression>) -> usize {
                 // We express this as fma(a, b, c) and negate c via Unary(Negate).
                 // However, introducing a new expression into the arena at the
                 // wrong position would violate naga's ordering invariant.
-                // Instead, we only handle the case where the subtracted side
-                // is the Mul: c - Mul(a,b) → fma(-a, b, c) which requires
-                // a negate node too. For now, we handle only:
-                //   Mul(a,b) - c  where we rewrite to fma(a, b, -c)
-                //   but only if -c already exists as a Unary(Negate, c).
+                // We handle the subtracted-Mul case: c - Mul(a,b) → fma(-a, b, c)
+                // requires a negate node. Currently supported pattern:
+                //   Mul(a,b) - c  → fma(a, b, -c) when -c already exists as
+                //   Unary(Negate, c) in the expression tree. The symmetric
+                //   case (c - Mul) is a P3 naga IR optimization.
                 //
                 // For the common Jacobi pattern `c * akp - s * akq`:
                 //   Binary(Sub, Binary(Mul, c, akp), Binary(Mul, s, akq))

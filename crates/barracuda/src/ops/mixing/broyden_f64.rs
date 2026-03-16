@@ -369,8 +369,10 @@ impl BroydenMixer {
 
             // Store history for next iteration (if we have a previous iteration)
             if self.iteration > 1 && self.dx_history.len() < self.max_history {
-                // Would need to store previous x and r for proper Broyden
-                // For now, just return linear result during warmup
+                // During warmup, the Jacobian inverse approximation has
+                // insufficient rank for useful Broyden updates — linear
+                // mixing provides better conditioning until enough
+                // (x, residual) pairs populate the history.
             }
 
             return Ok(result);

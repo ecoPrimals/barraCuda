@@ -269,12 +269,11 @@ impl ESN {
             expect_size("Input", self.config.input_size, input_seq.len())?;
             expect_size("Target", self.config.output_size, target_seq.len())?;
 
-            let input_tensor = Tensor::from_vec_on(
-                input_seq.clone(),
+            let input_tensor = Tensor::from_data(
+                input_seq,
                 vec![self.config.input_size, 1],
                 self.device.clone(),
-            )
-            .await?;
+            )?;
 
             let state = self.update(&input_tensor).await?;
 
@@ -460,12 +459,8 @@ impl ESN {
 
         expect_size("Input", self.config.input_size, input.len())?;
 
-        let input_tensor = Tensor::from_vec_on(
-            input.to_vec(),
-            vec![self.config.input_size, 1],
-            self.device.clone(),
-        )
-        .await?;
+        let input_tensor =
+            Tensor::from_data(input, vec![self.config.input_size, 1], self.device.clone())?;
 
         let state = self.update(&input_tensor).await?;
         let raw_state = state.to_vec()?;

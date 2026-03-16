@@ -265,7 +265,8 @@ impl KrigingF64 {
             }
             k_vec[n] = 1.0; // Lagrange constraint
 
-            // Solve Kw = k using LU decomposition (CPU path for now)
+            // CPU LU solve — kriging systems are typically small (N < 1000
+            // observation points); GPU LU is beneficial at N > ~2048
             let weights = Self::solve_lu(&k_matrix, &k_vec, n1)?;
 
             // Interpolate: z* = Σ w_i * z_i

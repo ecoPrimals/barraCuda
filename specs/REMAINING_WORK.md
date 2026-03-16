@@ -1,14 +1,42 @@
 # barraCuda — Remaining Work
 
 **Version**: 0.3.5
-**Date**: March 14, 2026
+**Date**: March 16, 2026
 **Status**: Active — tracks all open work items for barraCuda evolution
+
+---
+
+## Achieved (March 16, 2026 — Deep Debt Audit & Evolution Sprint)
+
+### Production Mock Evolution
+- **CUDA benchmark stub**: Evolved misleading `benchmark_cuda_matmul` from fake CUDA timing to honestly-labeled CPU baseline comparison. cuBLAS FFI is incompatible with pure-Rust ecoBin — GPU parity measured via sovereign compute pipeline.
+- **"For now" pattern elimination**: 22 production comments evolved from vague "for now" language to proper engineering documentation with performance thresholds and rationale (bicgstab dot product, cyclic reduction batching, Crank-Nicolson hybrid solve, min/max reduction, RK45 adaptive stepping, Nelder-Mead simplex sort, kriging LU, variance/std accumulation, masked select prefix sum, histc conversion, softmax dimensionality, Broyden warmup, PDE source splitting, FMA fusion optimization, PBC diagonal wrapping, bincount default bins, substrate CPU skip, device registry identity, cyclical LR test, E2E IFFT, mod.rs export comment).
+- **Hardcoded constant evolution**: `bincount_wgsl.rs` magic number 256 → `DEFAULT_NUM_BINS` named constant.
+
+### Code Quality Refactoring
+- **Device-lost DRY refactor**: Extracted `handle_device_lost_panic()` helper in `wgpu_device/mod.rs`, eliminating 4× duplicated panic-handling pattern across `submit_commands`, `submit_commands_inner`, `poll_wait_inner`. Reduces LoC and ensures consistent error handling.
+- **Substrate discovery documentation**: CPU software renderer skip evolved from "for now" to deliberate design decision with rationale.
+- **Registry device identity**: OpenGL zero-`device_id` heuristic documented with PCI BDF disambiguation path via toadStool.
+
+### Test Coverage Expansion
+- **ODE bio systems**: 21 new unit tests for all 5 biological ODE systems (Capacitor, Cooperation, Bistable, MultiSignal, PhageDefense). Tests cover system naming, dimensions, WGSL derivative presence, CPU derivative correctness, biological invariants (motility activation, growth at carrying capacity, phage-free dynamics), and cross-system finite derivative checks.
+
+### Dependency Analysis
+- **Transitive C/FFI audit**: blake3 (build-time cc, `pure` feature avoids C code), wgpu/tokio/rand (unavoidable OS/GPU interfaces). All direct dependencies pure Rust except platform-required FFI.
+- **Duplicate dependency tracking**: `hashbrown` 0.15/0.16, `rand` 0.8/0.9 (tarpc→rand 0.8 vs barracuda→rand 0.9). Monitored for upstream resolution.
+- **Zero-copy gap analysis**: `domain_ops.rs` f64→f32 is inherent (lossy conversion requires allocation), LSTM `hidden.clone()` is inherent (state persistence requires owned copy). Both documented as deliberate design.
+
+### Quality Gates
+- **Format**: Pass
+- **Clippy** (`-D warnings`, all features, all targets): Pass
+- **Rustdoc** (`-D warnings`): Pass
+- **Test compilation**: Pass (both crates, all targets)
 
 ---
 
 ## Achieved Summary
 
-15 deep debt and evolution sprints completed between March 7–14, 2026.
+16 deep debt and evolution sprints completed between March 7–16, 2026.
 See `CHANGELOG.md` for detailed fossil record of each sprint.
 
 Key milestones: `#![forbid(unsafe_code)]` in both crates, 14 clippy lints

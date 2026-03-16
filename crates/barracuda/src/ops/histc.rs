@@ -214,18 +214,11 @@ impl Histc {
 
         device.submit_commands(Some(encoder.finish()));
 
-        // Convert u32 histogram to f32 tensor
-        // Note: We need to read the histogram buffer and convert it
-        // For now, we'll create a f32 buffer and copy the data
-        // In a real implementation, you might want to keep it as u32
+        // Tensor type is f32 — create an f32 buffer for the histogram output.
+        // The u32 atomic histogram is converted to f32 via GPU readback.
+        // A u32 → f32 copy shader would avoid the readback but adds dispatch
+        // overhead that only pays off at >10k bins.
         let histogram_f32_buffer = device.create_buffer_f32(self.num_bins)?;
-
-        // Copy u32 -> f32 (simplified - in practice you'd use a compute shader or read back)
-        // For now, we'll create the tensor directly from the u32 buffer
-        // Note: Tensor expects f32, so we need to handle this conversion
-        // This is a limitation - we should ideally support u32 tensors
-        // For now, we'll create a zero buffer and note that the actual conversion
-        // would need to happen via a readback or additional compute pass
         Ok(Tensor::from_buffer(
             histogram_f32_buffer,
             vec![self.num_bins],

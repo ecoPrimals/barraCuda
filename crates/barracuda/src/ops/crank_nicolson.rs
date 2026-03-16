@@ -408,9 +408,9 @@ impl CrankNicolson {
         let workgroup_size = crate::device::capabilities::WORKGROUP_SIZE_1D as usize;
         let n_workgroups = n.div_ceil(workgroup_size);
 
-        // Time-stepping loop
-        // Note: Full GPU implementation would chain with cyclic_reduction_f64 for the solve.
-        // For now, we use a hybrid approach: GPU RHS, CPU solve.
+        // Hybrid approach: GPU computes RHS vector, CPU solves the tridiagonal
+        // system. The solve is O(N) Thomas algorithm — GPU dispatch overhead
+        // exceeds compute savings until N > ~4096 spatial nodes.
         let mut u = u0.to_vec();
         let a_coef = -r / 2.0;
         let b_coef = 1.0 + r;

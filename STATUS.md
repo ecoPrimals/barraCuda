@@ -1,8 +1,8 @@
 # barraCuda Status
 
 **Version**: 0.3.5
-**Date**: 2026-03-15
-**Overall Grade**: A+ (Zero unsafe via `#![forbid(unsafe_code)]`, zero unwrap in production, pure safe Rust, all quality gates green, 3,400+ tests passing, zero TODO/FIXME/unimplemented, NVVM poisoning guard, PrecisionBrain self-routing, HardwareCalibration per-tier probing, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust, device-aware test tolerances, cross-spring pharma/bio/health absorption, FMA policy, stable GPU special functions, sovereign coral-cache dispatch wiring, capability-based PRIMAL_NAMESPACE, VoltaNoPmuFirmware workaround detection, namespace-derived IPC method names, 806/806 WGSL SPDX headers, 1088/1088 Rust SPDX headers, `#![deny(clippy::pedantic)]` + nursery + doc lint promotion, CI coverage 80% blocking, ecoBin cross-compile CI, CoralReefDevice→toadStool dispatch wired, capability-based toadStool discovery, RwLock tensor store, zero-copy BytesMut/Bytes evolution)
+**Date**: 2026-03-16
+**Overall Grade**: A+ (Zero unsafe via `#![forbid(unsafe_code)]`, zero unwrap in production, pure safe Rust, all quality gates green, 3,400+ tests passing, zero TODO/FIXME/unimplemented, zero "for now" debt language, NVVM poisoning guard, PrecisionBrain self-routing, HardwareCalibration per-tier probing, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust, device-aware test tolerances, cross-spring pharma/bio/health absorption, FMA policy, stable GPU special functions, sovereign coral-cache dispatch wiring, capability-based PRIMAL_NAMESPACE, VoltaNoPmuFirmware workaround detection, namespace-derived IPC method names, 806/806 WGSL SPDX headers, 1088/1088 Rust SPDX headers, `#![deny(clippy::pedantic)]` + nursery + doc lint promotion, CI coverage 80% blocking, ecoBin cross-compile CI, CoralReefDevice→toadStool dispatch wired, capability-based toadStool discovery, RwLock tensor store, zero-copy BytesMut/Bytes evolution, device-lost DRY refactor, ODE bio system test coverage)
 
 ---
 
@@ -62,6 +62,9 @@
 - Kokkos parity projections: ~4,000 steps/s target (VFIO + DF64) vs 2,630 steps/s Kokkos baseline
 - `SOVEREIGN_PIPELINE_TRACKER.md` — tracks P0 (CoralReefDevice), VFIO primary dispatch, libc→rustix evolution, cross-primal deps
 - Zero TODOs/FIXMEs/HACKs/`unreachable!()` without messages in codebase
+- Zero "for now" debt language — all 22 instances evolved to proper engineering documentation with performance thresholds
+- Device-lost panic handling DRY-refactored via `handle_device_lost_panic()` helper
+- 21 new ODE bio system unit tests covering all 5 biological models
 - Zero `#[expect(clippy::too_many_arguments)]` — all 9 evolved to builder/struct patterns
 - All quality gates green (fmt, clippy -D warnings, rustdoc -D warnings, deny)
 - Compile-time verified `#[expect(reason)]` for lint suppressions; `#[allow(dead_code, reason)]` on all CPU reference implementations

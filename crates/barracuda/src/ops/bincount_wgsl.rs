@@ -50,12 +50,8 @@ impl Bincount {
         let device = self.input.device();
         let input_size = self.input.len();
 
-        // Determine number of bins
-        let num_bins = self.num_bins.unwrap_or({
-            // Default: max value + 1 (would need to compute max first)
-            // For now, use a reasonable default
-            256
-        });
+        const DEFAULT_NUM_BINS: usize = 256;
+        let num_bins = self.num_bins.unwrap_or(DEFAULT_NUM_BINS);
 
         // Create output buffer initialized to zeros
         let output_buffer = device.create_buffer_u32_zeros(num_bins)?;

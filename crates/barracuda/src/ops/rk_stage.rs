@@ -311,9 +311,10 @@ impl RkIntegrator {
         h_init: f64,
         tol: f64,
     ) -> Result<(Vec<f64>, Vec<Vec<f64>>)> {
-        // For now, use CPU implementation
-        // Full GPU implementation would need:
-        // 1. GPU prepare_stage kernel for linear combinations
+        // CPU adaptive RK45 — the error-controlled step rejection loop is
+        // inherently serial (next step depends on error of current step).
+        // GPU acceleration applies to the stage evaluations within each step,
+        // which is handled by `BatchedOdeRK45F64` for large ODE systems.
         // 2. User-provided GPU f(t,y) kernel or CPU callback
         // 3. GPU error estimation kernel
         //

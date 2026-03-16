@@ -97,15 +97,18 @@ async fn benchmark_barracuda_matmul(
     compute_benchmark_result("MatMul", "CPU", Framework::BarraCuda, times, m, n, k)
 }
 
-/// CUDA matmul benchmark (requires CUDA hardware)
+/// CPU baseline matmul benchmark for comparison.
+///
+/// Provides an honest CPU-only baseline measurement. GPU benchmarks use
+/// `benchmark_barracuda_matmul` which dispatches through the real wgpu
+/// compute pipeline. cuBLAS FFI is not available in a pure-Rust ecoBin
+/// — GPU parity is measured via the sovereign compute pipeline instead.
 async fn benchmark_cuda_matmul(
     config: &BenchmarkConfig,
     m: usize,
     n: usize,
     k: usize,
 ) -> Result<BenchmarkResult> {
-    // Real CUDA execution would go through cuBLAS FFI.
-    // For now, run CPU baseline as reference (labeled honestly).
     let mut times = Vec::new();
 
     let a: Vec<f32> = (0..m * k).map(|i| (i % 17) as f32 * 0.1).collect();
@@ -117,7 +120,7 @@ async fn benchmark_cuda_matmul(
         times.push(start.elapsed());
     }
 
-    compute_benchmark_result("MatMul", "CPU-reference", Framework::CUDA, times, m, n, k)
+    compute_benchmark_result("MatMul", "CPU-baseline", Framework::CUDA, times, m, n, k)
 }
 
 /// Actual CPU matrix multiplication (naive, for benchmarking baseline)

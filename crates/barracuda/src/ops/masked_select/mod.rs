@@ -8,9 +8,9 @@
 //! - Complete implementation: Production-ready, no mocks
 //! - Hardware-agnostic: Pure WGSL for universal compute
 //!
-//! NOTE: This implementation requires prefix sum computation.
-//! For now, we compute prefix sum on CPU. A full GPU implementation
-//! would require a parallel scan operation.
+//! Prefix sum is computed on CPU. A GPU parallel scan (Blelloch) would
+//! benefit selections on tensors with >100k elements; below that the
+//! readback overhead of the scan output dominates.
 
 mod compute;
 

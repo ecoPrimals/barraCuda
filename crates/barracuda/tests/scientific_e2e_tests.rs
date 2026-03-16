@@ -362,7 +362,7 @@ async fn e2e_full_molecular_dynamics_simulation() {
         println!("   ✅ Step 3: Applied Green's function");
 
         // Step 4: IFFT back to real space
-        // (For 3D, we'd need Ifft3D which we don't have, so skip for now)
+        // IFFT 3D is a P3 evolution (requires 3D grid decomposition)
         println!("   ⚠️  Step 4: IFFT 3D not yet implemented (would complete here)");
 
         // Verify intermediate results

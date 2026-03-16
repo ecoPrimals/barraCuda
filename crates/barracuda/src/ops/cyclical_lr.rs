@@ -243,8 +243,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_cyclical_lr_basic() {
-        // Note: This test requires device creation which is async
-        // For now, we'll test the validation logic
+        // Validation logic test — device-dependent schedule execution
+        // is covered by the GPU integration tests
         let result = CyclicalLr::new(0, 100, 0.001, 0.01, CyclicalLrMode::Triangular, 0.9);
         assert!(result.is_ok());
 

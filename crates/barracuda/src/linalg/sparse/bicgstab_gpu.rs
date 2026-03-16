@@ -222,7 +222,8 @@ impl BiCgStabGpu {
             // Read current r
             let r_data = device.read_f64_buffer(&r_buffer, n)?;
 
-            // ρ_new = r̂ᵀr (use CPU for now - could use GPU dot product)
+            // ρ_new = r̂ᵀr — CPU dot product (GPU dot requires readback sync;
+            // net benefit only at N > ~10k where readback cost is amortized)
             let r_hat_data = device.read_f64_buffer(&r_hat_buffer, n)?;
             let rho_new: f64 = r_data.iter().zip(&r_hat_data).map(|(a, b)| a * b).sum();
 

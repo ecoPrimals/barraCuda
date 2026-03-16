@@ -182,7 +182,9 @@ impl Substrate {
         for adapter in adapters {
             let info = adapter.get_info();
 
-            // Skip CPU software renderers for now (we'll add explicit CPU later)
+            // CPU software renderers (llvmpipe, lavapipe) are excluded from
+            // substrate discovery — they are development/fallback devices accessed
+            // directly via `WgpuDevice`, not production substrates for dispatch.
             if info.device_type == wgpu::DeviceType::Cpu {
                 continue;
             }

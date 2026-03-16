@@ -148,8 +148,11 @@ impl PhysicalDeviceId {
         // If one has device_id=0, compare name hashes
         // This handles OpenGL backends that don't report device_id
         if self.device_id == 0 || other.device_id == 0 {
-            // Get the valid device_id and check if it matches a known pattern
-            // For now, assume same vendor + same name hash = same device
+            // OpenGL and some Vulkan backends report device_id=0. Fall back
+            // to vendor + name_hash equality which is correct for single-GPU
+            // and multi-GPU-different-model setups. Identical multi-GPU configs
+            // (e.g. 2x same card) would need PCI BDF from toadStool for
+            // disambiguation — handled at the substrate layer, not here.
             return self.name_hash == other.name_hash && self.name_hash != 0;
         }
 

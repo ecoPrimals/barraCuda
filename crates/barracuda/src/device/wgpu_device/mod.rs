@@ -361,15 +361,7 @@ impl WgpuDevice {
             queue.submit(commands);
         }));
         if let Err(payload) = result {
-            if Self::is_device_lost_panic(&payload) {
-                self.lost.store(true, Ordering::Release);
-                tracing::warn!(
-                    "submit_commands: device lost (flagged): {}",
-                    Self::panic_message(&payload)
-                );
-                return;
-            }
-            std::panic::resume_unwind(payload);
+            self.handle_device_lost_panic(payload, "submit_commands");
         }
     }
 
@@ -402,6 +394,19 @@ impl WgpuDevice {
     fn is_device_lost_panic(payload: &Box<dyn std::any::Any + Send>) -> bool {
         let msg = Self::panic_message(payload);
         msg.contains("lost") || msg.contains("Lost") || msg.contains("Parent device")
+    }
+
+    /// Handle a `catch_unwind` result from a GPU operation.
+    ///
+    /// If the payload indicates a device-lost error, flags the device as
+    /// lost and returns `true`. Otherwise resumes the panic.
+    fn handle_device_lost_panic(&self, payload: Box<dyn std::any::Any + Send>, context: &str) {
+        if Self::is_device_lost_panic(&payload) {
+            self.lost.store(true, Ordering::Release);
+            tracing::warn!("{context}: device lost: {}", Self::panic_message(&payload));
+            return;
+        }
+        std::panic::resume_unwind(payload);
     }
 
     /// Submit commands and poll, respecting the device's concurrency budget.
@@ -456,15 +461,7 @@ impl WgpuDevice {
             queue.submit(commands);
         }));
         if let Err(payload) = result {
-            if Self::is_device_lost_panic(&payload) {
-                self.lost.store(true, Ordering::Release);
-                tracing::warn!(
-                    "submit_commands_inner: device lost: {}",
-                    Self::panic_message(&payload)
-                );
-                return;
-            }
-            std::panic::resume_unwind(payload);
+            self.handle_device_lost_panic(payload, "submit_commands_inner");
         }
     }
 
@@ -498,15 +495,7 @@ impl WgpuDevice {
             }
         }));
         if let Err(payload) = result {
-            if Self::is_device_lost_panic(&payload) {
-                self.lost.store(true, Ordering::Release);
-                tracing::warn!(
-                    "poll_wait_inner: device lost: {}",
-                    Self::panic_message(&payload)
-                );
-                return;
-            }
-            std::panic::resume_unwind(payload);
+            self.handle_device_lost_panic(payload, "poll_wait_inner");
         }
     }
 

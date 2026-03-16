@@ -209,9 +209,9 @@ impl Min {
 
                 device.submit_commands(Some(encoder.finish()));
 
-                // Read back partial results and reduce them on CPU
-                // For now, we'll do a simple CPU reduction of partial results
-                // In production, you might want to do a second GPU pass
+                // CPU final reduction of partial workgroup results.
+                // A two-pass GPU reduce is worthwhile at >1M elements;
+                // below that threshold, readback + CPU reduce is faster.
                 let partial_results =
                     device.read_buffer_f32(&output_buffer, num_workgroups as usize)?;
                 let global_min = partial_results.iter().fold(f32::INFINITY, |a, &b| a.min(b));

@@ -20,6 +20,12 @@ use std::sync::Arc;
 /// Small constant to avoid division by zero (matches neuralSpring primitives).
 const LOG_GUARD: f64 = 1e-300;
 
+/// Convert an f64 slice to f32 for GPU upload. Centralized to avoid
+/// repeated `iter().map().collect()` allocations across every GPU path.
+fn to_f32(data: &[f64]) -> Vec<f32> {
+    data.iter().map(|&x| x as f32).collect()
+}
+
 // -----------------------------------------------------------------------------
 // CPU primitives (pure f64, no device)
 // -----------------------------------------------------------------------------
@@ -133,12 +139,9 @@ fn matmul_gpu(
     n: usize,
     device: &Arc<WgpuDevice>,
 ) -> Result<Vec<f64>> {
-    let a_f32: Vec<f32> = a.iter().map(|&x| x as f32).collect();
-    let b_f32: Vec<f32> = b.iter().map(|&x| x as f32).collect();
-
-    let a_t = Tensor::from_data(&a_f32, vec![m, k], device.clone())
+    let a_t = Tensor::from_data(&to_f32(a), vec![m, k], device.clone())
         .map_err(|e| BarracudaError::Gpu(format!("matmul A upload: {e}")))?;
-    let b_t = Tensor::from_data(&b_f32, vec![k, n], device.clone())
+    let b_t = Tensor::from_data(&to_f32(b), vec![k, n], device.clone())
         .map_err(|e| BarracudaError::Gpu(format!("matmul B upload: {e}")))?;
 
     let c_t = a_t
@@ -153,7 +156,7 @@ fn matmul_gpu(
 }
 
 fn frobenius_norm_gpu(a: &[f64], device: &Arc<WgpuDevice>) -> Result<f64> {
-    let a_f32: Vec<f32> = a.iter().map(|&x| x as f32).collect();
+    let a_f32 = to_f32(a);
     let n = a_f32.len();
 
     let a_t = Tensor::from_data(&a_f32, vec![n], device.clone())
@@ -176,9 +179,7 @@ fn transpose_gpu(
     cols: usize,
     device: &Arc<WgpuDevice>,
 ) -> Result<Vec<f64>> {
-    let a_f32: Vec<f32> = a.iter().map(|&x| x as f32).collect();
-
-    let a_t = Tensor::from_data(&a_f32, vec![rows, cols], device.clone())
+    let a_t = Tensor::from_data(&to_f32(a), vec![rows, cols], device.clone())
         .map_err(|e| BarracudaError::Gpu(format!("transpose upload: {e}")))?;
 
     let t_t = a_t
@@ -193,7 +194,7 @@ fn transpose_gpu(
 }
 
 fn softmax_gpu(x: &[f64], device: &Arc<WgpuDevice>) -> Result<Vec<f64>> {
-    let x_f32: Vec<f32> = x.iter().map(|&v| v as f32).collect();
+    let x_f32 = to_f32(x);
     let n = x_f32.len();
 
     let x_t = Tensor::from_data(&x_f32, vec![n], device.clone())
@@ -211,7 +212,7 @@ fn softmax_gpu(x: &[f64], device: &Arc<WgpuDevice>) -> Result<Vec<f64>> {
 }
 
 fn gelu_gpu(x: &[f64], device: &Arc<WgpuDevice>) -> Result<Vec<f64>> {
-    let x_f32: Vec<f32> = x.iter().map(|&v| v as f32).collect();
+    let x_f32 = to_f32(x);
     let n = x_f32.len();
 
     let x_t = Tensor::from_data(&x_f32, vec![n], device.clone())
@@ -229,13 +230,12 @@ fn gelu_gpu(x: &[f64], device: &Arc<WgpuDevice>) -> Result<Vec<f64>> {
 }
 
 fn l2_distance_gpu(a: &[f64], b: &[f64], device: &Arc<WgpuDevice>) -> Result<f64> {
-    let a_f32: Vec<f32> = a.iter().map(|&x| x as f32).collect();
-    let b_f32: Vec<f32> = b.iter().map(|&x| x as f32).collect();
+    let a_f32 = to_f32(a);
     let n = a_f32.len();
 
     let a_t = Tensor::from_data(&a_f32, vec![n], device.clone())
         .map_err(|e| BarracudaError::Gpu(format!("l2_distance A: {e}")))?;
-    let b_t = Tensor::from_data(&b_f32, vec![n], device.clone())
+    let b_t = Tensor::from_data(&to_f32(b), vec![n], device.clone())
         .map_err(|e| BarracudaError::Gpu(format!("l2_distance B: {e}")))?;
 
     let diff = a_t
@@ -254,7 +254,7 @@ fn l2_distance_gpu(a: &[f64], b: &[f64], device: &Arc<WgpuDevice>) -> Result<f64
 }
 
 fn mean_gpu(data: &[f64], device: &Arc<WgpuDevice>) -> Result<f64> {
-    let data_f32: Vec<f32> = data.iter().map(|&x| x as f32).collect();
+    let data_f32 = to_f32(data);
     let n = data_f32.len();
 
     let t = Tensor::from_data(&data_f32, vec![n], device.clone())
@@ -272,7 +272,7 @@ fn mean_gpu(data: &[f64], device: &Arc<WgpuDevice>) -> Result<f64> {
 }
 
 fn variance_gpu(data: &[f64], device: &Arc<WgpuDevice>) -> Result<f64> {
-    let data_f32: Vec<f32> = data.iter().map(|&x| x as f32).collect();
+    let data_f32 = to_f32(data);
     let n = data_f32.len();
 
     let t = Tensor::from_data(&data_f32, vec![n], device.clone())
@@ -313,20 +313,20 @@ fn hmm_forward_step_gpu(
     n_states: usize,
     device: &Arc<WgpuDevice>,
 ) -> Result<(Vec<f64>, f64)> {
-    let a_f32: Vec<f32> = alpha_prev.iter().map(|&x| x as f32).collect();
-    let t_f32: Vec<f32> = transition.iter().map(|&x| x as f32).collect();
-    let e_f32: Vec<f32> = emission_col.iter().map(|&x| x as f32).collect();
-
-    let alpha_t = Tensor::from_data(&a_f32, vec![1, n_states], device.clone())
+    let alpha_t = Tensor::from_data(&to_f32(alpha_prev), vec![1, n_states], device.clone())
         .map_err(|e| BarracudaError::Gpu(format!("hmm_fwd alpha: {e}")))?;
-    let trans_t = Tensor::from_data(&t_f32, vec![n_states, n_states], device.clone())
-        .map_err(|e| BarracudaError::Gpu(format!("hmm_fwd trans: {e}")))?;
+    let trans_t = Tensor::from_data(
+        &to_f32(transition),
+        vec![n_states, n_states],
+        device.clone(),
+    )
+    .map_err(|e| BarracudaError::Gpu(format!("hmm_fwd trans: {e}")))?;
 
     let propagated = alpha_t
         .matmul(&trans_t)
         .map_err(|e| BarracudaError::Gpu(format!("hmm_fwd matmul: {e}")))?;
 
-    let emit_t = Tensor::from_data(&e_f32, vec![1, n_states], device.clone())
+    let emit_t = Tensor::from_data(&to_f32(emission_col), vec![1, n_states], device.clone())
         .map_err(|e| BarracudaError::Gpu(format!("hmm_fwd emit: {e}")))?;
 
     let raw = propagated

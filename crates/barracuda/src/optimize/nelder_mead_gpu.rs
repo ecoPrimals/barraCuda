@@ -152,7 +152,8 @@ impl NelderMeadGpu {
 
         // Main optimization loop
         for iter in 0..max_iter {
-            // Sort simplex by function value (CPU for now - could be GPU)
+            // CPU simplex sort — N+1 vertices is O((N+1)log(N+1)), negligible
+            // compared to N+1 GPU function evaluations per iteration
             let mut indices: Vec<usize> = (0..n_vertices).collect();
             indices.sort_by(|&i, &j| {
                 f_vals[i]

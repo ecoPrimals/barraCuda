@@ -39,7 +39,7 @@ impl Softmax {
     /// # Errors
     /// Returns [`Err`] if input tensor is empty.
     pub fn new(input: Tensor) -> Result<Self> {
-        // Softmax expects 1D or last dimension for now
+        // Softmax operates on the last dimension (standard convention)
         if input.shape().is_empty() {
             return Err(BarracudaError::invalid_op(
                 "Softmax",

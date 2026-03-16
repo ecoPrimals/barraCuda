@@ -120,7 +120,8 @@ impl CyclicReductionF64 {
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
     pub fn solve_batch(&self, systems: &[TridiagonalSystem]) -> Result<Vec<Vec<f64>>> {
-        // For now, solve sequentially (batched GPU version coming)
+        // Sequential per-system solve — batched GPU version (parallel across
+        // systems) is a P2 evolution when batch sizes exceed ~64 systems
         systems
             .iter()
             .map(|(a, b, c, d)| self.solve(a, b, c, d))

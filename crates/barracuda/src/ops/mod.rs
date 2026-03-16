@@ -738,4 +738,4 @@ pub use lgamma_wgsl::Lgamma;
 pub use logsumexp_wgsl::LogsumexpWgsl;
 pub use sinh_wgsl::Sinh;
 pub use smooth_l1_loss::SmoothL1Loss; // Using smooth_l1_loss.rs (has WGSL shader)
-pub use tanh::Tanh; // Using tanh.rs (has WGSL shader) // Keep for now, need to analyze logsumexp.rs
+pub use tanh::Tanh;

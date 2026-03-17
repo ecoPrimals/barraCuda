@@ -28,7 +28,7 @@ allow = [
 
 [bans]
 multiple-versions = "warn"
-wildcards = "allow"
+wildcards = "deny"
 
 deny = [
     # ecoBin: no OpenSSL

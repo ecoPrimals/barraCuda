@@ -263,6 +263,9 @@ pub use rk_stage::{
 };
 pub use wright_fisher_f32::{WrightFisherConfig, WrightFisherF32, seed_xoshiro_state};
 
+// Mean reduce WGSL shaders (f32 + f64) — public for downstream shader composition
+pub use mean::{WGSL_MEAN_REDUCE, WGSL_MEAN_REDUCE_F64};
+
 // DF64 universal math shaders (compile via compile_shader_df64)
 pub use df64_shaders::{
     WGSL_ELEMENTWISE_ADD_DF64, WGSL_ELEMENTWISE_FMA_DF64, WGSL_ELEMENTWISE_MUL_DF64,

@@ -197,16 +197,18 @@ impl IpcServer {
         Ok(())
     }
 
-    /// Resolve the default IPC socket path per wateringHole standards.
+    /// Resolve the default IPC socket path per wateringHole `PRIMAL_IPC_PROTOCOL`.
     ///
-    /// Prefers `$XDG_RUNTIME_DIR/{namespace}/{namespace}.sock`, falls back to
-    /// `$TMPDIR/{namespace}/{namespace}.sock` via `std::env::temp_dir()`.
+    /// Path: `$XDG_RUNTIME_DIR/{namespace}/{namespace}-{family_id}.sock`
+    /// Family ID: `$BIOMEOS_FAMILY_ID` or `"default"`.
+    /// Fallback base: `$TMPDIR/{namespace}/` via `std::env::temp_dir()`.
     #[cfg(unix)]
     pub fn default_socket_path() -> std::path::PathBuf {
         let ns = crate::PRIMAL_NAMESPACE;
+        let family_id = std::env::var("BIOMEOS_FAMILY_ID").unwrap_or_else(|_| "default".to_owned());
         let base = std::env::var("XDG_RUNTIME_DIR")
             .map_or_else(|_| std::env::temp_dir(), std::path::PathBuf::from);
-        base.join(ns).join(format!("{ns}.sock"))
+        base.join(ns).join(format!("{ns}-{family_id}.sock"))
     }
 }
 

@@ -22,6 +22,8 @@ struct GemmParams {
     batch_size: u32,
     alpha: f64,
     beta: f64,
+    trans_a: u32,
+    trans_b: u32,
 }
 
 @group(0) @binding(0) var<uniform> params: GemmParams;

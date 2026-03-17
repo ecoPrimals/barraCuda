@@ -21,12 +21,14 @@
 // - Self-contained (no external dependencies)
 
 struct GemmParams {
-    M: u32,            // Rows of A / C
-    K: u32,            // Cols of A / Rows of B
-    N: u32,            // Cols of B / C
+    M: u32,            // Rows of A / C (after transpose)
+    K: u32,            // Cols of A / Rows of B (after transpose)
+    N: u32,            // Cols of B / C (after transpose)
     batch_size: u32,   // Number of independent multiplications
-    alpha: f64,        // Scalar: C = alpha * A * B + beta * C
+    alpha: f64,        // Scalar: C = alpha * op(A) * op(B) + beta * C
     beta: f64,         // Scalar for accumulation (0.0 for pure multiply)
+    trans_a: u32,      // 0 = A as-is [M×K], 1 = A transposed (stored [K×M])
+    trans_b: u32,      // 0 = B as-is [K×N], 1 = B transposed (stored [N×K])
 }
 
 @group(0) @binding(0) var<uniform> params: GemmParams;
@@ -68,30 +70,33 @@ fn gemm_f64(
 
     var acc: f64 = f64(0.0);
 
-    // Tile over K dimension
+    // A storage dims: trans_a==0 → [M×K], trans_a==1 → [K×M]
+    // B storage dims: trans_b==0 → [K×N], trans_b==1 → [N×K]
+    let a_stride_row = select(K, 1u, params.trans_a != 0u);
+    let a_stride_col = select(1u, M, params.trans_a != 0u);
+    let b_stride_row = select(N, 1u, params.trans_b != 0u);
+    let b_stride_col = select(1u, K, params.trans_b != 0u);
+
     let n_tiles = (K + TILE - 1u) / TILE;
     for (var t = 0u; t < n_tiles; t++) {
-        // Load tile of A: rows [wg_id.y*TILE .. (wg_id.y+1)*TILE], cols [t*TILE .. (t+1)*TILE]
         let a_row = row;
         let a_col = t * TILE + lid_x;
         if (a_row < M && a_col < K) {
-            tile_A[lid_y * TILE + lid_x] = A_batch[a_base + a_row * K + a_col];
+            tile_A[lid_y * TILE + lid_x] = A_batch[a_base + a_row * a_stride_row + a_col * a_stride_col];
         } else {
             tile_A[lid_y * TILE + lid_x] = f64(0.0);
         }
 
-        // Load tile of B: rows [t*TILE .. (t+1)*TILE], cols [wg_id.x*TILE .. (wg_id.x+1)*TILE]
         let b_row = t * TILE + lid_y;
         let b_col = col;
         if (b_row < K && b_col < N) {
-            tile_B[lid_y * TILE + lid_x] = B_batch[b_base + b_row * N + b_col];
+            tile_B[lid_y * TILE + lid_x] = B_batch[b_base + b_row * b_stride_row + b_col * b_stride_col];
         } else {
             tile_B[lid_y * TILE + lid_x] = f64(0.0);
         }
 
         workgroupBarrier();
 
-        // Accumulate dot product for this tile
         for (var kk = 0u; kk < TILE; kk++) {
             acc = acc + tile_A[lid_y * TILE + kk] * tile_B[kk * TILE + lid_x];
         }

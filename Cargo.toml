@@ -50,7 +50,7 @@ rand = "0.9"
 
 # Cryptographic hashing (for provenance, not crypto operations)
 # 'pure' feature: no C SIMD assembly, fully pure Rust dependency chain
-blake3 = { version = "1.8", features = ["pure"] }
+blake3 = { version = "1.8", default-features = false, features = ["pure"] }
 
 # Utilities
 half = "2.4"

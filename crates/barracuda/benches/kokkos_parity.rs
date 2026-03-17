@@ -9,7 +9,10 @@
 //!
 //! Run with: `cargo bench --bench kokkos_parity`
 
-#![allow(clippy::unwrap_used)]
+#![expect(
+    clippy::unwrap_used,
+    reason = "benchmarks use unwrap for concise GPU setup"
+)]
 
 use barracuda::device::WgpuDevice;
 use barracuda::ops::variance_f64_wgsl::VarianceF64;

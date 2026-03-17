@@ -167,10 +167,6 @@ impl Mul<Complex64> for f64 {
 impl Div for Complex64 {
     type Output = Self;
     #[inline]
-    #[allow(
-        clippy::suspicious_arithmetic_impl,
-        reason = "complex division uses addition in the cross-term — standard formula"
-    )]
     fn div(self, rhs: Self) -> Self {
         let d = rhs.abs_sq();
         Self {

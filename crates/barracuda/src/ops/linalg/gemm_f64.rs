@@ -37,10 +37,23 @@ struct GemmParams {
     alpha_hi: u32,
     beta_lo: u32,
     beta_hi: u32,
+    trans_a: u32, // 0 = no transpose, 1 = transpose A
+    trans_b: u32, // 0 = no transpose, 1 = transpose B
+    _pad0: u32,
+    _pad1: u32,
 }
 
 impl GemmParams {
-    fn new(m: u32, k: u32, n: u32, batch_size: u32, alpha: f64, beta: f64) -> Self {
+    fn new(
+        m: u32,
+        k: u32,
+        n: u32,
+        batch_size: u32,
+        alpha: f64,
+        beta: f64,
+        trans_a: bool,
+        trans_b: bool,
+    ) -> Self {
         let alpha_bits = alpha.to_bits();
         let beta_bits = beta.to_bits();
         GemmParams {
@@ -52,6 +65,10 @@ impl GemmParams {
             alpha_hi: (alpha_bits >> 32) as u32,
             beta_lo: beta_bits as u32,
             beta_hi: (beta_bits >> 32) as u32,
+            trans_a: u32::from(trans_a),
+            trans_b: u32::from(trans_b),
+            _pad0: 0,
+            _pad1: 0,
         }
     }
 }
@@ -122,6 +139,38 @@ impl GemmF64 {
         alpha: f64,
         beta: f64,
     ) -> Result<Vec<f64>> {
+        Self::execute_gemm_ex(device, a, b, m, k, n, batch_size, alpha, beta, false, false)
+    }
+
+    /// Execute batched GEMM with transpose flags:
+    /// `C = alpha * op(A) * op(B) + beta * C`
+    /// where `op(X) = X` if `trans_x == false`, `op(X) = X^T` if `trans_x == true`.
+    ///
+    /// Storage layout follows the transpose convention:
+    /// - `trans_a == false`: A is `[batch × M × K]` row-major
+    /// - `trans_a == true`:  A is `[batch × K × M]` row-major (logically transposed to `[M × K]`)
+    /// - `trans_b == false`: B is `[batch × K × N]` row-major
+    /// - `trans_b == true`:  B is `[batch × N × K]` row-major (logically transposed to `[K × N]`)
+    ///
+    /// This enables `A^T * A` and `A^T * b` patterns without materializing the
+    /// transpose — critical for Tikhonov regularization and least-squares solvers.
+    /// # Errors
+    /// Returns [`Err`] if dimensions don't match storage layout, or if buffer
+    /// allocation or readback fails (e.g., device lost).
+    pub fn execute_gemm_ex(
+        device: Arc<WgpuDevice>,
+        a: &[f64],
+        b: &[f64],
+        m: usize,
+        k: usize,
+        n: usize,
+        batch_size: usize,
+        alpha: f64,
+        beta: f64,
+        trans_a: bool,
+        trans_b: bool,
+    ) -> Result<Vec<f64>> {
+        // Storage sizes account for transpose: A is [K×M] when transposed
         let expected_a = batch_size * m * k;
         let expected_b = batch_size * k * n;
         if a.len() != expected_a {
@@ -137,7 +186,6 @@ impl GemmF64 {
 
         let c_size = batch_size * m * n;
 
-        // Create buffers
         let a_bytes: &[u8] = bytemuck::cast_slice(a);
         let a_buffer = device
             .device
@@ -163,7 +211,16 @@ impl GemmF64 {
             mapped_at_creation: false,
         });
 
-        let params = GemmParams::new(m as u32, k as u32, n as u32, batch_size as u32, alpha, beta);
+        let params = GemmParams::new(
+            m as u32,
+            k as u32,
+            n as u32,
+            batch_size as u32,
+            alpha,
+            beta,
+            trans_a,
+            trans_b,
+        );
         let params_buffer = device.create_uniform_buffer("GEMM Params", &params);
 
         use crate::device::compute_pipeline::ComputeDispatch;
@@ -349,7 +406,16 @@ impl GemmCachedF64 {
         let dev = &self.device;
         let c_size = batch_size * m * n;
 
-        let params = GemmParams::new(m as u32, k as u32, n as u32, batch_size as u32, 1.0, 0.0);
+        let params = GemmParams::new(
+            m as u32,
+            k as u32,
+            n as u32,
+            batch_size as u32,
+            1.0,
+            0.0,
+            false,
+            false,
+        );
         let params_buf = dev
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -472,7 +538,7 @@ mod tests {
 
     #[test]
     fn gemm_params_layout() {
-        assert_eq!(std::mem::size_of::<GemmParams>(), 32);
+        assert_eq!(std::mem::size_of::<GemmParams>(), 48);
     }
 
     #[test]
@@ -501,6 +567,54 @@ mod tests {
         let b = vec![5.0_f64, 6.0, 7.0, 8.0];
 
         let c = GemmF64::execute(device, &a, &b, 2, 2, 2, 1).unwrap();
+
+        assert_eq!(c.len(), 4);
+        assert!(approx_eq(c[0], 19.0, 1e-10));
+        assert!(approx_eq(c[1], 22.0, 1e-10));
+        assert!(approx_eq(c[2], 43.0, 1e-10));
+        assert!(approx_eq(c[3], 50.0, 1e-10));
+    }
+
+    #[tokio::test]
+    async fn test_gemm_transpose_a() {
+        let Some(device) = crate::device::test_pool::get_test_device_if_f64_gpu_available().await
+        else {
+            return;
+        };
+
+        // A stored as [K×M] = [[1, 3], [2, 4]] (column-major of [[1,2],[3,4]])
+        // trans_a=true means read as A^T = [[1,2],[3,4]] (M=2, K=2)
+        // B = [[5, 6], [7, 8]]
+        // A^T * B = [[1,2],[3,4]] * [[5,6],[7,8]] = [[19,22],[43,50]]
+        let a_stored = vec![1.0_f64, 3.0, 2.0, 4.0]; // [K=2 × M=2]
+        let b = vec![5.0_f64, 6.0, 7.0, 8.0];
+
+        let c = GemmF64::execute_gemm_ex(device, &a_stored, &b, 2, 2, 2, 1, 1.0, 0.0, true, false)
+            .unwrap();
+
+        assert_eq!(c.len(), 4);
+        assert!(approx_eq(c[0], 19.0, 1e-10));
+        assert!(approx_eq(c[1], 22.0, 1e-10));
+        assert!(approx_eq(c[2], 43.0, 1e-10));
+        assert!(approx_eq(c[3], 50.0, 1e-10));
+    }
+
+    #[tokio::test]
+    async fn test_gemm_transpose_b() {
+        let Some(device) = crate::device::test_pool::get_test_device_if_f64_gpu_available().await
+        else {
+            return;
+        };
+
+        // A = [[1, 2], [3, 4]]
+        // B stored as [N×K] = [[5, 7], [6, 8]] (column-major of [[5,6],[7,8]])
+        // trans_b=true means read as B^T = [[5,6],[7,8]] (K=2, N=2)
+        // A * B^T = [[1,2],[3,4]] * [[5,6],[7,8]] = [[19,22],[43,50]]
+        let a = vec![1.0_f64, 2.0, 3.0, 4.0];
+        let b_stored = vec![5.0_f64, 7.0, 6.0, 8.0]; // [N=2 × K=2]
+
+        let c = GemmF64::execute_gemm_ex(device, &a, &b_stored, 2, 2, 2, 1, 1.0, 0.0, false, true)
+            .unwrap();
 
         assert_eq!(c.len(), 4);
         assert!(approx_eq(c[0], 19.0, 1e-10));

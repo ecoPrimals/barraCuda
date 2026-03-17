@@ -248,3 +248,76 @@ impl SparsitySamplerConfig {
         self.gpu_device.is_some() && dataset_size >= self.gpu_threshold
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, reason = "test code")]
+
+    use super::*;
+    use crate::surrogate::RBFKernel;
+
+    #[test]
+    fn config_new_scales_initial_by_dims() {
+        let config = SparsitySamplerConfig::new(5, 123);
+        assert_eq!(config.n_initial, 50);
+        assert_eq!(config.seed, 123);
+        assert_eq!(config.n_solvers, 8);
+        assert_eq!(config.n_direct_solvers, 2);
+    }
+
+    #[test]
+    fn config_total_budget() {
+        let config = SparsitySamplerConfig::new(2, 0)
+            .with_initial_samples(20)
+            .with_solvers(4)
+            .with_eval_budget(30)
+            .with_iterations(3);
+        // n_initial + n_iterations * n_solvers * max_eval_per_solver
+        assert_eq!(config.total_budget(), 20 + 3 * 4 * 30);
+    }
+
+    #[test]
+    fn config_should_use_gpu_no_device() {
+        let config = SparsitySamplerConfig::new(1, 0);
+        assert!(!config.should_use_gpu(1000));
+    }
+
+    #[test]
+    fn config_with_direct_solvers_clamps_to_n_solvers() {
+        let config = SparsitySamplerConfig::new(2, 0)
+            .with_solvers(4)
+            .with_direct_solvers(10);
+        assert_eq!(config.n_direct_solvers, 4);
+    }
+
+    #[test]
+    fn config_builder_chain() {
+        let config = SparsitySamplerConfig::new(3, 42)
+            .with_initial_samples(50)
+            .with_solvers(6)
+            .with_direct_solvers(3)
+            .with_kernel(RBFKernel::Gaussian { epsilon: 1.0 })
+            .with_smoothing(1e-5)
+            .with_auto_smoothing(false)
+            .with_penalty_filter(PenaltyFilter::Threshold(100.0));
+        assert_eq!(config.n_initial, 50);
+        assert_eq!(config.n_solvers, 6);
+        assert_eq!(config.n_direct_solvers, 3);
+        assert!(matches!(
+            config.kernel,
+            RBFKernel::Gaussian { epsilon: 1.0 }
+        ));
+        assert!((config.smoothing - 1e-5).abs() < 1e-10);
+        assert!(!config.auto_smoothing);
+        assert!(matches!(
+            config.penalty_filter,
+            PenaltyFilter::Threshold(100.0)
+        ));
+    }
+
+    #[test]
+    fn penalty_filter_default_is_none() {
+        let filter = PenaltyFilter::default();
+        assert!(matches!(filter, PenaltyFilter::None));
+    }
+}

@@ -501,6 +501,10 @@ async fn fhe_ntt(primal: &BarraCudaPrimal, params: &Value, id: Value) -> JsonRpc
     }
 
     // u64 → u32 pairs → f32 bit patterns → Tensor
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "intentional u64→u32 split for FHE coefficient layout"
+    )]
     let u32_pairs: Vec<u32> = poly
         .iter()
         .flat_map(|&x| [x as u32, (x >> 32) as u32])
@@ -603,6 +607,10 @@ async fn fhe_pointwise_mul(primal: &BarraCudaPrimal, params: &Value, id: Value) 
     }
 
     let to_tensor = |poly: &[u64]| -> barracuda::error::Result<barracuda::tensor::Tensor> {
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "intentional u64→u32 split for FHE coefficient layout"
+        )]
         let u32_pairs: Vec<u32> = poly
             .iter()
             .flat_map(|&x| [x as u32, (x >> 32) as u32])

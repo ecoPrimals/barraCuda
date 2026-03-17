@@ -48,10 +48,6 @@
     clippy::result_large_err,
     reason = "BarracudaCoreError carries diagnostic context"
 )]
-#![expect(
-    clippy::cast_possible_truncation,
-    reason = "tensor dimensions validated upstream"
-)]
 
 /// Runtime discovery of peer primals via mDNS and fallback scanning.
 pub mod discovery;

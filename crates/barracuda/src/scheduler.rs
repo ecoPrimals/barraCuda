@@ -49,21 +49,21 @@ impl UnifiedScheduler {
     pub async fn discover() -> Result<Self> {
         let mut executors: Vec<Arc<dyn ComputeExecutor>> = Vec::new();
 
-        println!("🔍 Discovering compute hardware...");
+        tracing::info!("Discovering compute hardware");
 
         // 1. CPU is always available (guaranteed fallback)
         let cpu = Arc::new(CpuExecutor::new());
-        println!("  ✅ CPU: {}", cpu.name());
+        tracing::info!("CPU: {}", cpu.name());
         executors.push(cpu.clone());
 
         // 2. Try to discover GPU
         match GpuExecutor::new().await {
             Ok(gpu) => {
-                println!("  ✅ GPU: {}", gpu.name());
+                tracing::info!("GPU: {}", gpu.name());
                 executors.push(Arc::new(gpu));
             }
             Err(_) => {
-                println!("  ⚠️  No GPU available (using CPU fallback)");
+                tracing::debug!("No GPU available (using CPU fallback)");
             }
         }
 
@@ -150,36 +150,26 @@ impl UnifiedScheduler {
 
     /// Print summary of available hardware
     pub fn print_summary(&self) {
-        println!("\n📊 Compute Hardware Summary");
-        println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
+        tracing::info!("Compute Hardware Summary");
         for executor in &self.executors {
             let caps = executor.capabilities();
-            println!("\n🔧 {}", executor.name());
-            println!("   Type: {:?}", executor.hardware_type());
-            println!("   Parallel Units: {}", caps.parallelism.max_parallel_units);
-            println!("   Memory: {:.1} GB", caps.memory.total_bytes as f64 / 1e9);
-            println!(
-                "   Peak TFLOPS (FP32): {:.1}",
-                caps.performance.peak_tflops_fp32
+            tracing::info!(
+                executor = %executor.name(),
+                hardware_type = ?executor.hardware_type(),
+                parallel_units = caps.parallelism.max_parallel_units,
+                memory_gb = caps.memory.total_bytes as f64 / 1e9,
+                peak_tflops_fp32 = caps.performance.peak_tflops_fp32,
+                "executor capabilities"
             );
-            println!("   Operations:");
-            if caps.operations.matmul {
-                println!("     ✅ Matrix Multiply");
-            }
-            if caps.operations.convolution {
-                println!("     ✅ Convolution");
-            }
-            if caps.operations.reductions {
-                println!("     ✅ Reductions");
-            }
-            if caps.operations.custom_kernels {
-                println!("     ✅ Custom Kernels");
-            }
+            tracing::debug!(
+                matmul = caps.operations.matmul,
+                convolution = caps.operations.convolution,
+                reductions = caps.operations.reductions,
+                custom_kernels = caps.operations.custom_kernels,
+                "executor operations"
+            );
         }
-
-        println!("\n✨ Default Fallback: {}", self.default_executor.name());
-        println!();
+        tracing::info!(default = %self.default_executor.name(), "default fallback");
     }
 }
 

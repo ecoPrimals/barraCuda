@@ -103,6 +103,18 @@
     reason = "GPU dispatch routes multiple precision variants to the same kernel"
 )]
 #![expect(
+    clippy::missing_fields_in_debug,
+    reason = "Debug impls intentionally omit large buffer fields"
+)]
+#![expect(
+    clippy::match_wildcard_for_single_variants,
+    reason = "wildcard matching is intentional for forward compatibility — new variants caught at compile time"
+)]
+#![expect(
+    clippy::pub_underscore_fields,
+    reason = "GPU uniform structs use pub _padding fields for repr(C) alignment with bytemuck::Pod"
+)]
+#![expect(
     clippy::unused_async,
     reason = "async signatures required by trait even when implementation is synchronous"
 )]
@@ -129,22 +141,6 @@
 #![expect(
     clippy::trivially_copy_pass_by_ref,
     reason = "passing single bytes by reference is acceptable for trait consistency"
-)]
-#![expect(
-    clippy::missing_fields_in_debug,
-    reason = "Debug impls intentionally omit large buffer fields"
-)]
-#![expect(
-    clippy::match_wildcard_for_single_variants,
-    reason = "wildcard matching is intentional for forward compatibility — new variants caught at compile time"
-)]
-#![expect(
-    clippy::inline_always,
-    reason = "hot GPU dispatch paths where the cost model is known"
-)]
-#![expect(
-    clippy::pub_underscore_fields,
-    reason = "GPU uniform structs use pub _padding fields for repr(C) alignment with bytemuck::Pod"
 )]
 #![cfg_attr(
     test,

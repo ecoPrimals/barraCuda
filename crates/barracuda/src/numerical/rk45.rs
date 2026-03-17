@@ -312,7 +312,7 @@ where
             .iter()
             .zip(y_new.iter())
             .map(|(e, yi)| {
-                let scale = config.atol + config.rtol * yi.abs();
+                let scale = config.rtol.mul_add(yi.abs(), config.atol);
                 (e / scale).powi(2)
             })
             .sum::<f64>()

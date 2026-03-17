@@ -168,6 +168,10 @@ impl CgPipelineSet {
 }
 
 /// Helper to dispatch a compute pass (reduces verbosity in CG iteration).
+#[expect(
+    clippy::inline_always,
+    reason = "hot GPU dispatch path; cost model known for CG iteration"
+)]
 #[inline(always)]
 pub fn cg_dispatch_pass(
     pass: &mut wgpu::ComputePass<'_>,

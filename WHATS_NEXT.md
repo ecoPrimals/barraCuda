@@ -1,11 +1,22 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-03-16.
+Prioritized work items, ordered by impact. Updated 2026-03-17.
 
 ---
 
 ## Recently Completed
 
+- **Deep debt sprint 7 — comprehensive audit & evolution (Mar 17)**: Smart
+  module refactoring: `ode_bio/systems.rs` (744L) into `systems/` directory
+  (5 per-system files, matching `params/` pattern). `gpu_hmc_trajectory.rs`
+  (794L → 531L) with types extracted to `gpu_hmc_types.rs` (280L). 10
+  `mul_add` evolutions in RK45 tolerance + cubic spline. 2 crate-level lint
+  suppressions localized to per-site `#[expect(reason)]`. 28 new unit tests
+  across 5 previously untested modules (utils, sparsity config/result,
+  nn/config, session/types). Hardcoding evolution: transport defaults,
+  discovery paths, resource quota presets → named constants. `cargo update`
+  applied. `test_infinity_input` fixed with device-aware guard. 3,772 tests
+  pass. All gates green.
 - **Deep debt sprint 6 — cross-ecosystem absorption (Mar 16)**: GemmF64
   `execute_gemm_ex(trans_a, trans_b)` with WGSL `select()`-based stride swapping.
   FAMILY_ID socket paths per PRIMAL_IPC_PROTOCOL. blake3 `default-features=false`

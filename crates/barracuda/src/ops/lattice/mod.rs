@@ -64,6 +64,7 @@ pub mod gpu_cg_resident;
 pub mod gpu_cg_solver;
 pub mod gpu_hmc_leapfrog;
 pub mod gpu_hmc_trajectory;
+pub mod gpu_hmc_types;
 pub mod gpu_kinetic_energy;
 pub mod gpu_lattice_init;
 pub mod gpu_polyakov;

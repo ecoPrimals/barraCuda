@@ -368,7 +368,7 @@ pub fn warmup_device(device: &WgpuDevice, config: &WarmupConfig) -> Result<Warmu
     let mut pipelines = 0;
 
     if config.verbose {
-        println!("  Warming up: {}", adapter_info.name);
+        tracing::info!("Warming up: {}", adapter_info.name);
     }
 
     for op in &config.ops {
@@ -447,18 +447,18 @@ pub fn warmup_pool(
     if config.verbose {
         let total_time = total_start.elapsed();
         let total_pipelines: usize = results.iter().map(|r| r.pipelines_created).sum();
-        println!(
-            "\n  Total: {} pipelines across {} GPUs in {:.1}ms",
+        tracing::info!(
             total_pipelines,
-            devices.len(),
-            total_time.as_secs_f64() * 1000.0
+            devices = devices.len(),
+            elapsed_ms = total_time.as_secs_f64() * 1000.0,
+            "warmup pool complete"
         );
-
-        // Show cache stats
         let stats = GLOBAL_CACHE.stats();
-        println!(
-            "  Cache: {} shaders, {} layouts, {} pipelines\n",
-            stats.shaders, stats.layouts, stats.pipelines
+        tracing::debug!(
+            shaders = stats.shaders,
+            layouts = stats.layouts,
+            pipelines = stats.pipelines,
+            "cache stats"
         );
     }
 

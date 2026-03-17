@@ -414,12 +414,18 @@ impl WgpuDevice {
     }
 
     /// Minimal 8-byte storage buffer for unused **read-only** bind-group slots.
-    /// wgpu requires every slot in a bind-group layout to be populated.
-    /// When a shader entry point doesn't use all slots (e.g., a velocity
-    /// half-step that ignores position output), callers previously
-    /// allocated ad-hoc "dummy" buffers at every call site.
+    ///
+    /// WGSL and the WebGPU spec require every binding in a bind-group layout
+    /// to be populated when creating a bind group — there is no optional-binding
+    /// mechanism. When a shader entry point doesn't use all slots (e.g., a
+    /// velocity half-step that ignores position output, or shared layouts with
+    /// multiple entry points), callers must provide a valid buffer for each slot.
+    /// This method returns a singleton placeholder to avoid ad-hoc dummy buffers
+    /// at every call site.
+    ///
     /// WebGPU forbids aliasing the same buffer across `storage_read` and
-    /// `storage_rw` bindings, so we provide separate placeholders for each.
+    /// `storage_rw` bindings, so use [`placeholder_buffer_rw`] for unused
+    /// read-write slots.
     pub fn placeholder_buffer(&self) -> &wgpu::Buffer {
         static PLACEHOLDER_RO: std::sync::OnceLock<wgpu::Buffer> = std::sync::OnceLock::new();
         PLACEHOLDER_RO.get_or_init(|| {
@@ -433,8 +439,10 @@ impl WgpuDevice {
     }
 
     /// Minimal 8-byte storage buffer for unused **read-write** bind-group slots.
+    ///
     /// Separate from [`placeholder_buffer`] to avoid WebGPU aliasing violations
     /// when both read and read-write slots are unused in the same dispatch.
+    /// See [`placeholder_buffer`] for the WGSL/WebGPU rationale.
     pub fn placeholder_buffer_rw(&self) -> &wgpu::Buffer {
         static PLACEHOLDER_RW: std::sync::OnceLock<wgpu::Buffer> = std::sync::OnceLock::new();
         PLACEHOLDER_RW.get_or_init(|| {

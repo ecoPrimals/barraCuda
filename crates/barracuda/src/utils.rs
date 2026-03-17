@@ -55,3 +55,64 @@ pub fn read_buffer_f64(
 ) -> Result<Vec<f64>> {
     device.read_buffer_f64(buffer, size)
 }
+
+#[cfg(test)]
+mod tests {
+    #![expect(clippy::unwrap_used, reason = "test code")]
+
+    use super::*;
+    use crate::error::BarracudaError;
+
+    #[test]
+    fn chunk_to_array_exact_length_succeeds() {
+        let chunk: [u8; 8] = [1, 2, 3, 4, 5, 6, 7, 8];
+        let arr = chunk_to_array::<8>(&chunk).unwrap();
+        assert_eq!(arr, [1, 2, 3, 4, 5, 6, 7, 8]);
+    }
+
+    #[test]
+    fn chunk_to_array_too_short_returns_err() {
+        let chunk: [u8; 4] = [1, 2, 3, 4];
+        let err = chunk_to_array::<8>(&chunk).unwrap_err();
+        match &err {
+            BarracudaError::InvalidInput { message } => {
+                assert!(message.contains('4'));
+                assert!(message.contains('8'));
+            }
+            _ => panic!("expected InvalidInput, got {err:?}"),
+        }
+    }
+
+    #[test]
+    fn chunk_to_array_too_long_returns_err() {
+        let chunk: [u8; 12] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+        let err = chunk_to_array::<8>(&chunk).unwrap_err();
+        match &err {
+            BarracudaError::InvalidInput { message } => {
+                assert!(message.contains("12"));
+                assert!(message.contains('8'));
+            }
+            _ => panic!("expected InvalidInput, got {err:?}"),
+        }
+    }
+
+    #[test]
+    fn chunk_to_array_empty_returns_err() {
+        let chunk: [u8; 0] = [];
+        let err = chunk_to_array::<1>(chunk.as_slice()).unwrap_err();
+        match &err {
+            BarracudaError::InvalidInput { message } => {
+                assert!(message.contains('0'));
+                assert!(message.contains('1'));
+            }
+            _ => panic!("expected InvalidInput, got {err:?}"),
+        }
+    }
+
+    #[test]
+    fn chunk_to_array_size_one() {
+        let chunk = [42u8];
+        let arr = chunk_to_array::<1>(&chunk).unwrap();
+        assert_eq!(arr, [42]);
+    }
+}

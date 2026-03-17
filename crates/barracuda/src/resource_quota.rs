@@ -511,22 +511,49 @@ fn format_bytes(bytes: u64) -> String {
 pub mod presets {
     use super::ResourceQuota;
 
+    /// VRAM limit for small task preset (512 MiB).
+    const PRESET_SMALL_VRAM_MB: u64 = 512;
+
+    /// VRAM limit for medium task preset (2 GiB).
+    const PRESET_MEDIUM_VRAM_GB: u64 = 2;
+
+    /// VRAM limit for large task preset (8 GiB).
+    const PRESET_LARGE_VRAM_GB: u64 = 8;
+
+    /// VRAM limit for scientific preset (4 GiB).
+    const PRESET_SCIENTIFIC_VRAM_GB: u64 = 4;
+
+    /// Buffer limit for scientific preset.
+    const PRESET_SCIENTIFIC_MAX_BUFFERS: usize = 1000;
+
+    /// VRAM limit for ML inference preset (2 GiB).
+    const PRESET_ML_INFERENCE_VRAM_GB: u64 = 2;
+
+    /// Buffer limit for ML inference preset.
+    const PRESET_ML_INFERENCE_MAX_BUFFERS: usize = 100;
+
+    /// VRAM limit for ML training preset (8 GiB).
+    const PRESET_ML_TRAINING_VRAM_GB: u64 = 8;
+
+    /// Buffer limit for ML training preset.
+    const PRESET_ML_TRAINING_MAX_BUFFERS: usize = 500;
+
     /// Small task: 512 MB VRAM
     #[must_use]
     pub fn small() -> ResourceQuota {
-        ResourceQuota::named("small").with_max_vram_mb(512)
+        ResourceQuota::named("small").with_max_vram_mb(PRESET_SMALL_VRAM_MB)
     }
 
     /// Medium task: 2 GB VRAM
     #[must_use]
     pub fn medium() -> ResourceQuota {
-        ResourceQuota::named("medium").with_max_vram_gb(2)
+        ResourceQuota::named("medium").with_max_vram_gb(PRESET_MEDIUM_VRAM_GB)
     }
 
     /// Large task: 8 GB VRAM
     #[must_use]
     pub fn large() -> ResourceQuota {
-        ResourceQuota::named("large").with_max_vram_gb(8)
+        ResourceQuota::named("large").with_max_vram_gb(PRESET_LARGE_VRAM_GB)
     }
 
     /// Unlimited (for testing or privileged tasks)
@@ -539,24 +566,24 @@ pub mod presets {
     #[must_use]
     pub fn scientific() -> ResourceQuota {
         ResourceQuota::named("scientific")
-            .with_max_vram_gb(4)
-            .with_max_buffers(1000)
+            .with_max_vram_gb(PRESET_SCIENTIFIC_VRAM_GB)
+            .with_max_buffers(PRESET_SCIENTIFIC_MAX_BUFFERS)
     }
 
     /// ML inference: 2 GB VRAM per model
     #[must_use]
     pub fn ml_inference() -> ResourceQuota {
         ResourceQuota::named("ml_inference")
-            .with_max_vram_gb(2)
-            .with_max_buffers(100)
+            .with_max_vram_gb(PRESET_ML_INFERENCE_VRAM_GB)
+            .with_max_buffers(PRESET_ML_INFERENCE_MAX_BUFFERS)
     }
 
     /// ML training: 8 GB VRAM, high buffer limits
     #[must_use]
     pub fn ml_training() -> ResourceQuota {
         ResourceQuota::named("ml_training")
-            .with_max_vram_gb(8)
-            .with_max_buffers(500)
+            .with_max_vram_gb(PRESET_ML_TRAINING_VRAM_GB)
+            .with_max_buffers(PRESET_ML_TRAINING_MAX_BUFFERS)
     }
 }
 

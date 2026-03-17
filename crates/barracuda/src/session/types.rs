@@ -179,3 +179,111 @@ pub(super) enum SessionOp {
         head_dim: u32,
     },
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, reason = "test code")]
+
+    use super::*;
+    use crate::device::capabilities::DeviceCapabilities;
+    use crate::device::vendor::VENDOR_NVIDIA;
+    use wgpu::Backend;
+
+    fn gpu_caps() -> DeviceCapabilities {
+        DeviceCapabilities {
+            device_name: "Test GPU".to_string(),
+            device_type: wgpu::DeviceType::DiscreteGpu,
+            max_buffer_size: 1024 * 1024 * 1024,
+            max_workgroup_size: (256, 256, 64),
+            max_compute_workgroups: (65_535, 65_535, 65_535),
+            max_compute_invocations_per_workgroup: 256,
+            max_storage_buffers_per_shader_stage: 8,
+            max_uniform_buffers_per_shader_stage: 12,
+            max_bind_groups: 4,
+            backend: Backend::Vulkan,
+            vendor: VENDOR_NVIDIA,
+            gpu_dispatch_threshold_override: None,
+            subgroup_min_size: 32,
+            subgroup_max_size: 32,
+            f64_shaders: true,
+            f64_shared_memory: false,
+        }
+    }
+
+    fn cpu_caps() -> DeviceCapabilities {
+        DeviceCapabilities {
+            device_name: "Test CPU".to_string(),
+            device_type: wgpu::DeviceType::Cpu,
+            max_buffer_size: 1024 * 1024 * 1024,
+            max_workgroup_size: (256, 256, 64),
+            max_compute_workgroups: (65_535, 65_535, 65_535),
+            max_compute_invocations_per_workgroup: 256,
+            max_storage_buffers_per_shader_stage: 8,
+            max_uniform_buffers_per_shader_stage: 12,
+            max_bind_groups: 4,
+            backend: Backend::Vulkan,
+            vendor: VENDOR_NVIDIA,
+            gpu_dispatch_threshold_override: None,
+            subgroup_min_size: 32,
+            subgroup_max_size: 32,
+            f64_shaders: true,
+            f64_shared_memory: false,
+        }
+    }
+
+    #[test]
+    fn matmul_tier_small_dims_naive() {
+        let caps = gpu_caps();
+        let tier = MatMulTier::select(&caps, 16, 16);
+        assert_eq!(tier, MatMulTier::Naive);
+    }
+
+    #[test]
+    fn matmul_tier_boundary_31_naive() {
+        let caps = gpu_caps();
+        let tier = MatMulTier::select(&caps, 31, 31);
+        assert_eq!(tier, MatMulTier::Naive);
+    }
+
+    #[test]
+    fn matmul_tier_boundary_32_tiled16() {
+        let caps = gpu_caps();
+        let tier = MatMulTier::select(&caps, 32, 32);
+        assert_eq!(tier, MatMulTier::Tiled16);
+    }
+
+    #[test]
+    fn matmul_tier_large_gpu_evolved() {
+        let caps = gpu_caps();
+        let tier = MatMulTier::select(&caps, 256, 256);
+        assert_eq!(tier, MatMulTier::GpuEvolved32);
+    }
+
+    #[test]
+    fn matmul_tier_cpu_uses_cpu_tiled32() {
+        let caps = cpu_caps();
+        let tier = MatMulTier::select(&caps, 64, 64);
+        assert_eq!(tier, MatMulTier::CpuTiled32);
+    }
+
+    #[test]
+    fn matmul_tier_dispatch_naive() {
+        let (x, y) = MatMulTier::Naive.dispatch(16, 16);
+        assert_eq!(x, 2);
+        assert_eq!(y, 2);
+    }
+
+    #[test]
+    fn matmul_tier_dispatch_tiled16() {
+        let (x, y) = MatMulTier::Tiled16.dispatch(32, 48);
+        assert_eq!(x, 2);
+        assert_eq!(y, 3);
+    }
+
+    #[test]
+    fn matmul_tier_dispatch_zero_dims() {
+        let (x, y) = MatMulTier::Naive.dispatch(0, 0);
+        assert_eq!(x, 0);
+        assert_eq!(y, 0);
+    }
+}

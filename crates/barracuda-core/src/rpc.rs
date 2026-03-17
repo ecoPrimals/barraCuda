@@ -105,6 +105,10 @@ fn u64_to_tensor(
     coeffs: &[u64],
     dev: &barracuda::device::WgpuDevice,
 ) -> std::result::Result<barracuda::tensor::Tensor, barracuda::error::BarracudaError> {
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "intentional u64→u32 split for FHE coefficient layout"
+    )]
     let f32_bits: Vec<f32> = coeffs
         .iter()
         .flat_map(|&x| [f32::from_bits(x as u32), f32::from_bits((x >> 32) as u32)])

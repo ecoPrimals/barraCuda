@@ -121,7 +121,7 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
             evolution_note: "Verlet neighbor list for MD force calculations. Shared between \
                             hotSpring nuclear MD and wetSpring bio-molecular pipelines.",
             created: "Mar 2026 hotSpring V0619",
-            absorbed: "Mar 2026 barraCuda v0.3.3",
+            absorbed: "Mar 2026 barraCuda v0.3.5",
         },
         // ── Statistics (neuralSpring → multiple) ────────────────────
         ShaderRecord {
@@ -171,7 +171,7 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
             evolution_note: "Inverse participation ratio for eigenstate localization. \
                             hotSpring spectral diagnostics.",
             created: "Mar 2026 neuralSpring V128",
-            absorbed: "Mar 2026 barraCuda v0.3.3",
+            absorbed: "Mar 2026 barraCuda v0.3.5",
         },
         // ── Bioinformatics (wetSpring) ──────────────────────────────
         ShaderRecord {
@@ -247,7 +247,7 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
             evolution_note: "Anderson localization via transfer-matrix Lyapunov exponent. \
                             hotSpring spectral diagnostics, neuralSpring disorder sweeps.",
             created: "Mar 2026 groundSpring V74",
-            absorbed: "Mar 2026 barraCuda v0.3.3",
+            absorbed: "Mar 2026 barraCuda v0.3.5",
         },
         ShaderRecord {
             path: "special/chi_squared_f64.wgsl",
@@ -262,7 +262,7 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
             category: C::Statistics,
             evolution_note: "Chi-squared CDF+quantile from V74. Universal statistical test for all springs.",
             created: "Mar 2026 groundSpring V74",
-            absorbed: "Mar 2026 barraCuda v0.3.3",
+            absorbed: "Mar 2026 barraCuda v0.3.5",
         },
         // ── ML / ESN (hotSpring → wetSpring) ────────────────────────
         ShaderRecord {
@@ -282,7 +282,7 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
             category: C::Statistics,
             evolution_note: "Sliding window stats for IoT sensor streams. neuralSpring streaming inference.",
             created: "Mar 2026 airSpring V068",
-            absorbed: "Mar 2026 barraCuda v0.3.3",
+            absorbed: "Mar 2026 barraCuda v0.3.5",
         },
         // ── Nuclear Physics (hotSpring) ─────────────────────────────
         ShaderRecord {
@@ -308,7 +308,7 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
             evolution_note: "Welford single-pass fused mean+variance. Universal reduction primitive \
                             for all springs' GPU statistics.",
             created: "Mar 2026 groundSpring V80",
-            absorbed: "Mar 2026 barraCuda v0.3.3",
+            absorbed: "Mar 2026 barraCuda v0.3.5",
         },
         // ── Plasma Physics (hotSpring Chuna Papers 43-45) ───────────
         ShaderRecord {
@@ -320,7 +320,7 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
                             Completed Mermin (momentum-conserving) variant from Chuna & Murillo (2024). \
                             Depends on complex_f64.wgsl.",
             created: "Mar 2026 hotSpring v0.6.23 (Chuna P44)",
-            absorbed: "Mar 2026 barraCuda v0.3.3",
+            absorbed: "Mar 2026 barraCuda v0.3.5",
         },
         ShaderRecord {
             path: "science/plasma/dielectric_multicomponent_f64.wgsl",
@@ -331,7 +331,7 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
                             Species layout: [mass, charge, density, temp, nu, v_th, k_debye] × N. \
                             Uses cscale() for correct complex scalar multiplication.",
             created: "Mar 2026 hotSpring v0.6.23 (Chuna P44)",
-            absorbed: "Mar 2026 barraCuda v0.3.3",
+            absorbed: "Mar 2026 barraCuda v0.3.5",
         },
         ShaderRecord {
             path: "science/plasma/bgk_relaxation_f64.wgsl",
@@ -342,7 +342,7 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
                             Pass 1: velocity-space moments. Pass 2: relax f toward Maxwellian. \
                             CPU reduces moments between passes (WGSL lacks f64 atomics).",
             created: "Mar 2026 hotSpring v0.6.23 (Chuna P45)",
-            absorbed: "Mar 2026 barraCuda v0.3.3",
+            absorbed: "Mar 2026 barraCuda v0.3.5",
         },
         ShaderRecord {
             path: "science/plasma/euler_hll_f64.wgsl",
@@ -353,7 +353,7 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
                             Two-pass: compute HLL flux at interfaces, then conservative update. \
                             For kinetic-fluid coupling pipeline (Chuna P45).",
             created: "Mar 2026 hotSpring v0.6.23 (Chuna P45)",
-            absorbed: "Mar 2026 barraCuda v0.3.3",
+            absorbed: "Mar 2026 barraCuda v0.3.5",
         },
     ]
 });

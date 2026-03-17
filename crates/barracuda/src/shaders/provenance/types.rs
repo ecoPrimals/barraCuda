@@ -48,7 +48,7 @@ pub struct ShaderRecord {
     pub evolution_note: &'static str,
     /// When this shader was first created (e.g. "Feb 2026 S58")
     pub created: &'static str,
-    /// When barraCuda absorbed this shader (e.g. "Mar 2026 v0.3.3")
+    /// When barraCuda absorbed this shader (e.g. "Mar 2026 v0.3.5")
     pub absorbed: &'static str,
 }
 

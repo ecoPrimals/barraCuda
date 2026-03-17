@@ -60,3 +60,107 @@ impl SparsitySamplerResult {
             .collect()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, reason = "test code")]
+
+    use super::*;
+
+    fn make_result_with_cache(records: Vec<(Vec<f64>, f64)>) -> SparsitySamplerResult {
+        let mut cache = EvaluationCache::new();
+        for (x, f) in records {
+            cache.record(x, f);
+        }
+        SparsitySamplerResult {
+            x_best: cache.best_x().unwrap().to_vec(),
+            f_best: cache.best_f().unwrap(),
+            cache,
+            surrogate: None,
+            iteration_results: vec![],
+        }
+    }
+
+    #[test]
+    fn total_evals_matches_cache_len() {
+        let result = make_result_with_cache(vec![
+            (vec![1.0, 2.0], 5.0),
+            (vec![0.5, 1.5], 3.0),
+            (vec![0.0, 0.0], 0.0),
+        ]);
+        assert_eq!(result.total_evals(), 3);
+    }
+
+    #[test]
+    fn top_k_seeds_returns_best_k_by_f() {
+        let result = make_result_with_cache(vec![
+            (vec![1.0, 2.0], 5.0),
+            (vec![0.5, 1.5], 3.0),
+            (vec![0.0, 0.0], 0.0),
+            (vec![2.0, 1.0], 4.0),
+        ]);
+        let seeds = result.top_k_seeds(2);
+        assert_eq!(seeds.len(), 2);
+        assert_eq!(seeds[0], vec![0.0, 0.0]);
+        assert_eq!(seeds[1], vec![0.5, 1.5]);
+    }
+
+    #[test]
+    fn top_k_seeds_k_zero_returns_empty() {
+        let result = make_result_with_cache(vec![(vec![1.0], 1.0)]);
+        let seeds = result.top_k_seeds(0);
+        assert!(seeds.is_empty());
+    }
+
+    #[test]
+    fn top_k_seeds_k_exceeds_len_returns_all() {
+        let result = make_result_with_cache(vec![(vec![1.0], 1.0), (vec![2.0], 2.0)]);
+        let seeds = result.top_k_seeds(10);
+        assert_eq!(seeds.len(), 2);
+    }
+
+    #[test]
+    fn top_k_seeds_empty_cache_returns_empty() {
+        let result = SparsitySamplerResult {
+            x_best: vec![],
+            f_best: 0.0,
+            cache: EvaluationCache::new(),
+            surrogate: None,
+            iteration_results: vec![],
+        };
+        let seeds = result.top_k_seeds(5);
+        assert!(seeds.is_empty());
+    }
+
+    #[test]
+    fn evals_per_iteration() {
+        let mut cache = EvaluationCache::new();
+        cache.record(vec![1.0], 1.0);
+        cache.record(vec![2.0], 2.0);
+        let result = SparsitySamplerResult {
+            x_best: vec![1.0],
+            f_best: 1.0,
+            cache,
+            surrogate: None,
+            iteration_results: vec![
+                IterationResult {
+                    iteration: 0,
+                    best_f: 1.5,
+                    n_new_evals: 5,
+                    total_evals: 5,
+                    surrogate_error: None,
+                    used_gpu: false,
+                },
+                IterationResult {
+                    iteration: 1,
+                    best_f: 1.0,
+                    n_new_evals: 3,
+                    total_evals: 8,
+                    surrogate_error: Some(0.01),
+                    used_gpu: true,
+                },
+            ],
+        };
+        assert_eq!(result.evals_per_iteration(), vec![5, 3]);
+    }
+}

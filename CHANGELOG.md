@@ -5,7 +5,26 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.5] — 2026-03-16
+## [0.3.5] — 2026-03-17
+
+### Changed — Deep Debt Sprint 7: Comprehensive Audit & Evolution (Mar 17 2026)
+
+- **Smart module refactoring**: `ode_bio/systems.rs` (744L) split into per-system
+  files following `params/` pattern. `gpu_hmc_trajectory.rs` (794L → 531L) types
+  extracted to `gpu_hmc_types.rs`.
+- **Test fix**: `test_infinity_input` evolved with device-aware guard for llvmpipe
+  IEEE infinity semantics.
+- **28 new unit tests**: `utils`, `sparsity/config`, `sparsity/result`, `nn/config`,
+  `session/types` — previously untested modules.
+- **Hardcoding evolution**: Transport defaults, discovery paths, and resource quotas
+  evolved from inline literals to named constants.
+- **10 `mul_add()` evolutions**: RK45 adaptive tolerance + cubic spline evaluation +
+  tridiagonal solver for improved FMA precision.
+- **2 lint suppressions localized**: `inline_always` and `cast_possible_truncation`
+  evolved from crate-level `#![expect]` to per-site `#[expect(reason)]`.
+- **`placeholder_buffer()` docs**: Expanded with WGSL/WebGPU bind-group rationale.
+- **`cargo update`**: Applied minor/patch dependency bumps.
+- **Quality gates**: All green. 3,772 tests pass (was 3,744).
 
 ### Changed — Deep Debt Sprint 6: Cross-Ecosystem Absorption (Mar 16 2026)
 

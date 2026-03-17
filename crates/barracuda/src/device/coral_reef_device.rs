@@ -71,6 +71,12 @@ const DISPATCH_CAPABILITY: &str = "compute.dispatch";
 /// Environment variable for explicit toadStool dispatch endpoint.
 const TOADSTOOL_ADDR_ENV: &str = "BARRACUDA_DISPATCH_ADDR";
 
+/// Default discovery directory fallback when `ECOPRIMALS_DISCOVERY_DIR` is not set.
+const DEFAULT_ECOPRIMALS_DISCOVERY_DIR: &str = "ecoPrimals";
+
+/// Canonical discovery subdirectory name.
+const DISCOVERY_SUBDIR: &str = "discovery";
+
 /// Buffer handle for the sovereign compute path.
 ///
 /// Wraps a dispatch-side buffer identifier. The `id` is assigned locally
@@ -146,11 +152,11 @@ fn detect_dispatch_addr() -> Option<String> {
     }
 
     let runtime_dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
-    let eco_dir =
-        std::env::var("ECOPRIMALS_DISCOVERY_DIR").unwrap_or_else(|_| "ecoPrimals".to_owned());
+    let eco_dir = std::env::var("ECOPRIMALS_DISCOVERY_DIR")
+        .unwrap_or_else(|_| DEFAULT_ECOPRIMALS_DISCOVERY_DIR.to_owned());
     let base_dir = std::path::PathBuf::from(runtime_dir).join(eco_dir);
 
-    for dir in [&base_dir, &base_dir.join("discovery")] {
+    for dir in [&base_dir, &base_dir.join(DISCOVERY_SUBDIR)] {
         if let Some(addr) = scan_dispatch_capability(dir) {
             return Some(addr);
         }

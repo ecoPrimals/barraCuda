@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **806 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,070 Rust source files**, 43 integration test files, 3,466 tests passing
+- **1,077 Rust source files**, 43 integration test files, 3,772 tests passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -179,7 +179,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo test --workspace --lib            # 3,466 test functions
+cargo test --workspace --lib            # 3,772 test functions
 cargo llvm-cov --workspace --lib        # 80% CI gate (blocking), 90% target (requires GPU hardware)
 ```
 

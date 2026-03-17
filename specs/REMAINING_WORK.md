@@ -6,6 +6,34 @@
 
 ---
 
+## Achieved (March 16, 2026 — Cross-Ecosystem Absorption Sprint)
+
+### GemmF64 Transpose Flags
+- **`execute_gemm_ex(trans_a, trans_b)`**: New public API for in-place transposed GEMM without materializing transpose. WGSL kernel uses `select()`-based stride swapping. `GemmParams` extended to 48 bytes with `trans_a: u32, trans_b: u32`. Two new GPU tests pass on llvmpipe.
+- **Enables**: groundSpring Tikhonov `A^T*A`, airSpring least-squares `A^T*b`, neuralSpring backprop `W^T * δ`.
+
+### FAMILY_ID Socket Paths
+- **`default_socket_path()`** incorporates `$BIOMEOS_FAMILY_ID` per `PRIMAL_IPC_PROTOCOL`. Multiple biomeOS families on same host.
+
+### ecoBin Compliance
+- **blake3**: `default-features = false, features = ["pure"]` — zero C deps.
+- **deny.toml**: `wildcards = "deny"` — strict supply chain audit. `barracuda-core → barracuda` path dep pinned to `0.3.5`.
+
+### Public Re-exports
+- **`WGSL_MEAN_REDUCE` + `WGSL_MEAN_REDUCE_F64`**: Re-exported from `ops/mod.rs` for neuralSpring.
+
+### Lint Hygiene
+- 3 stale `#[expect]` removed (unfulfilled `dead_code` + `suspicious_arithmetic_impl`). `kokkos_parity.rs` `#[allow]` promoted to `#[expect(reason)]`.
+
+### Quality Gates
+- **Format**: Pass
+- **Clippy** (`-D warnings`, all features, all targets): Pass
+- **Rustdoc** (`-D warnings`): Pass
+- **Deny** (advisories, bans, licenses, sources): Pass
+- **Tests**: 3,466 pass, 0 fail
+
+---
+
 ## Achieved (March 16, 2026 — Typed Error Evolution & Coverage Sprint)
 
 ### Typed Error Evolution
@@ -21,7 +49,7 @@
 - **Format**: Pass
 - **Clippy** (`-D warnings`, all features, all targets): Pass (zero warnings)
 - **Rustdoc** (`-D warnings`): Pass
-- **Tests**: 3,464 pass, 0 fail
+- **Tests**: 3,466 pass, 0 fail
 
 ---
 
@@ -120,7 +148,7 @@ gates green.
 - **Clippy** (`-D warnings`): Pass (all configs)
 - **Rustdoc**: Zero warnings
 - **cargo deny**: Pass (advisories ok, bans ok, licenses ok, sources ok)
-- **Tests**: 3,359 pass, 0 fail, 15 skip
+- **Tests**: 3,466 pass, 0 fail
 
 ---
 
@@ -355,7 +383,7 @@ Previously limited to Vulkan with SPIR-V passthrough.
 - **Cast lints**: Promoted `cast_possible_truncation`, `cast_sign_loss`,
   `cast_precision_loss`, `cast_lossless` from allow to warn in `barracuda-core`
   (zero violations — IPC crate is cast-safe)
-- **`large_stack_frames`**: Documented as test framework artifact (3,359 test
+- **`large_stack_frames`**: Documented as test framework artifact (3,466 test
   descriptors on stack), added allow with rationale
 - **`suboptimal_flops`**: All test sites evolved to `mul_add()` with explicit
   type annotations. 424 library sites remain — allow with rationale (canonical
@@ -427,7 +455,7 @@ Previously limited to Vulkan with SPIR-V passthrough.
 - **Phase 7 — K-quant**: Q2_K through Q6_K super-block formats (GGML parity)
 
 #### Test Coverage to 90%
-- Current: 3,464 lib tests + 24 integration test harnesses (43 test files)
+- Current: 3,466 lib tests + 24 integration test harnesses (43 test files)
 - CI 80% gate now blocking (Sprint 3); 90% stretch still `continue-on-error`
 - Self-reported ~75% on llvmpipe; 90% requires real GPU hardware
 - Add GPU-conditional tests for new ops
@@ -535,7 +563,7 @@ path and cross-compilation target matrix.
 | Clippy | Pass (zero warnings, `-D warnings`) | `cargo clippy --workspace --all-targets -- -D warnings` |
 | Rustdoc | Pass (zero warnings) | `cargo doc --workspace --no-deps` |
 | Deny | Pass (advisories, bans, licenses, sources) | `cargo deny check` |
-| Tests | 3,464 pass / 0 fail | `cargo nextest run --workspace --no-fail-fast` |
+| Tests | 3,466 pass / 0 fail | `cargo nextest run --workspace --no-fail-fast` |
 | Check (no GPU) | Pass | `cargo check --no-default-features` |
 | Check (GPU only) | Pass | `cargo check --no-default-features --features gpu` |
 | Check (all) | Pass | `cargo check` |

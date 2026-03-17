@@ -133,7 +133,7 @@ derive_partial_eq_without_eq = "warn"
 # for FMA accuracy. Test code already evolved.
 suboptimal_flops = "allow"
 # large_stack_frames: test framework artifact — the auto-generated test main
-# allocates [&TestDescAndFn; 3359] on the stack. Not production code.
+# allocates [&TestDescAndFn; 3466] on the stack. Not production code.
 large_stack_frames = "allow"
 
 [lints.rust]

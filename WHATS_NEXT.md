@@ -6,6 +6,11 @@ Prioritized work items, ordered by impact. Updated 2026-03-16.
 
 ## Recently Completed
 
+- **Deep debt sprint 6 — cross-ecosystem absorption (Mar 16)**: GemmF64
+  `execute_gemm_ex(trans_a, trans_b)` with WGSL `select()`-based stride swapping.
+  FAMILY_ID socket paths per PRIMAL_IPC_PROTOCOL. blake3 `default-features=false`
+  ecoBin pure. `deny.toml` `wildcards=deny`. `WGSL_MEAN_REDUCE` re-export for
+  neuralSpring. 3 stale lint suppressions removed. 3,466 tests pass. All gates green.
 - **Deep debt sprint 5 — audit execution & evolution (Mar 16)**: Comprehensive
   audit execution: 22 "for now" patterns evolved to proper engineering
   documentation with performance crossover thresholds. Device-lost panic handling
@@ -37,7 +42,7 @@ Prioritized work items, ordered by impact. Updated 2026-03-16.
   (doc_markdown in bcs/screened_coulomb/chi2, approx_constant in kinetics test,
   double_must_use in critical_screening/chi_squared). Full codebase audit: zero
   archive code, zero dead scripts, zero TODO/FIXME in production, zero files over
-  1000 lines, zero .bak/.tmp debris. All quality gates green. 3,407 tests, 0 failures.
+  1000 lines, zero .bak/.tmp debris. All quality gates green.
 - **Deep debt sprint 3 — lint evolution & refactoring (Mar 14)**:
   `missing_errors_doc` and `missing_panics_doc` promoted to warn in both crates
   (zero violations). Cast lints (`cast_possible_truncation`, `cast_sign_loss`,
@@ -104,9 +109,6 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
   auto-fallback if native f64 fails.
 - **coralReef sovereign compiler evolution**: coralReef is the unified primal compiler
   and driver for all GPU targets — eventually also the Rust compiler for the ecosystem.
-- **~~Dedicated DF64 shaders for covariance + weighted_dot~~**: Done (Mar 12). Hand-written
-  `weighted_dot_df64.wgsl` with 6 kernels. Covariance confirmed safe with auto-rewrite
-  (thread-local only — no `var<workgroup> array<f64, N>`).
 - **`BatchedTridiagEigh` GPU op**: groundSpring local QL implicit eigensolver is a candidate
   for absorption as a batched GPU tridiagonal eigenvector solver.
 - **Multi-GPU OOM recovery**: `QuotaTracker` is wired into buffer allocation; next step
@@ -122,10 +124,6 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
   (SCS-CN, Stewart, Blaney-Criddle, autocorrelation).
 - **Kokkos GPU parity benchmarks**: Run barraCuda GPU benchmarks on matching hardware,
   publish comparison data.
-- **~~WGSL optimizer annotation coverage~~**: Done (Mar 12). `@ilp_region` added to
-  variance_reduce_df64, weighted_dot_df64, mean_variance_df64, covariance_f64.
-- **~~RHMC multi-shift CG absorb~~**: Done (Mar 12). `rhmc.rs` (RationalApproximation,
-  multi_shift_cg_solve, Remez exchange) + `rhmc_hmc.rs` (RhmcConfig, heatbath, action, force).
 
 ## Medium-term (P3)
 

@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.5] — 2026-03-16
 
+### Changed — Deep Debt Sprint 6: Cross-Ecosystem Absorption (Mar 16 2026)
+
+- **GemmF64 TransA/TransB flags**: New `execute_gemm_ex()` method with `trans_a`/`trans_b`
+  parameters. WGSL kernel evolved with `select()`-based stride indexing for in-place
+  transposition without materializing. `GemmParams` extended to 48 bytes. Enables
+  `A^T*A` and `A^T*b` for groundSpring Tikhonov and airSpring least-squares. Two
+  new GPU roundtrip tests (`test_gemm_transpose_a`, `test_gemm_transpose_b`).
+- **FAMILY_ID socket paths**: `default_socket_path()` incorporates `$BIOMEOS_FAMILY_ID`
+  per `PRIMAL_IPC_PROTOCOL`. Socket path: `{XDG_RUNTIME_DIR}/{ns}/{ns}-{family_id}.sock`.
+  Defaults to `"default"` when unset. Enables multiple biomeOS families on same host.
+- **blake3 ecoBin compliance**: `blake3 = { version = "1.8", default-features = false,
+  features = ["pure"] }` — eliminates cc/C dependency chain. Pure Rust only.
+- **deny.toml wildcards=deny**: Supply chain audit strictness upgraded. Path dependency
+  `barracuda-core → barracuda` pinned to version `0.3.5` to pass wildcard ban.
+- **WGSL_MEAN_REDUCE re-export**: `pub use mean::{WGSL_MEAN_REDUCE, WGSL_MEAN_REDUCE_F64}`
+  from `ops/mod.rs` — enables neuralSpring to compose custom reduction pipelines.
+- **Stale lint suppression cleanup**: 3 unfulfilled `#[expect]` removed
+  (`cpu_complex.rs`, `yukawa_celllist_f64.rs`, `bfgs.rs`). `kokkos_parity.rs`
+  benchmark `#[allow]` promoted to `#[expect(reason)]`.
+- **Quality gates**: All green. 3,466 tests pass (3,464 + 2 GemmF64 transpose).
+
 ### Changed — Deep Debt Sprint 5: Typed Errors, Nursery Lints & Coverage (Mar 16 2026)
 
 - **`Result<T, String>` evolved to typed errors**: 15 production sites across 5 files

@@ -5,7 +5,30 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.5] — 2026-03-15
+## [0.3.5] — 2026-03-16
+
+### Changed — Deep Debt Sprint 5: Typed Errors, Nursery Lints & Coverage (Mar 16 2026)
+
+- **`Result<T, String>` evolved to typed errors**: 15 production sites across 5 files
+  (`async_submit.rs`, `coral_compiler/jsonrpc.rs`, `df64_rewrite/mod.rs`,
+  `test_harness.rs`, `ipc/methods.rs`) evolved from `Result<T, String>` to
+  `Result<T, BarracudaError>` with typed variants (`device_lost`, `gpu`,
+  `shader_compilation`, `Internal`). Zero callers broken — `BarracudaError`
+  implements `Display` and `Error`.
+- **Clippy nursery clean**: 6 nursery warnings in `barracuda-core` eliminated:
+  `option_if_let_else` (2), `missing_const_for_fn` (2), `or_fun_call` (1),
+  `iter_on_single_items` (1). `IpcServer::new()` and `BarraCudaServer::new()`
+  promoted to `const fn`.
+- **Async readback `&mut self` → `&self`**: `poll_until_ready` no longer requires
+  mutable self — `mpsc::Receiver::try_recv()` takes `&self`.
+- **Test coverage expansion**: 5 new `async_submit` tests (queue/submit lifecycle,
+  multiple submissions, empty submit, f32 readback roundtrip, bytes readback
+  roundtrip). 14 new genomics edge-case tests (empty sequence, RNA uracil,
+  lowercase input, pattern edge cases, motif error paths, quality filter batch,
+  N-heavy detection, GC bias, config defaults, parallel batch).
+- **Quality gates**: All green — `cargo fmt --check`, `cargo clippy --workspace
+  --all-targets --all-features -- -D warnings`, `RUSTDOCFLAGS="-D warnings"
+  cargo doc --workspace --no-deps`. 3,464 tests pass, 0 fail.
 
 ### Changed — Deep Debt Sprint 4: Sovereign Wiring & Zero-Copy Evolution (Mar 15 2026)
 

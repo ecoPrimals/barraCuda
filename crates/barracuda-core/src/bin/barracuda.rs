@@ -246,7 +246,7 @@ async fn run_validate(extended: bool) -> Result<(), barracuda_core::error::Barra
         "Device: {}",
         primal
             .device()
-            .map_or("none".to_string(), |d| d.adapter_info().name.clone())
+            .map_or_else(|| "none".to_string(), |d| d.adapter_info().name.clone())
     );
     println!("Mode: {}", if extended { "extended" } else { "standard" });
     println!();
@@ -497,8 +497,7 @@ fn notify_systemd_ready() {
     let addr: std::path::PathBuf = if socket_path.starts_with('@') {
         use std::ffi::OsStr;
         use std::os::unix::ffi::OsStrExt;
-        let bytes: Vec<u8> = [0]
-            .into_iter()
+        let bytes: Vec<u8> = std::iter::once(0)
             .chain(socket_path.trim_start_matches('@').bytes())
             .collect();
         std::path::PathBuf::from(OsStr::from_bytes(&bytes))

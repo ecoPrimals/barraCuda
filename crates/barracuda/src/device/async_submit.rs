@@ -284,7 +284,8 @@ impl AsyncReadback {
     /// Yields to the Tokio executor between device polls to avoid starving
     /// other tasks. Poll is serialized via `poll_lock` to prevent wgpu-core
     /// cleanup races.
-    async fn poll_until_ready(&mut self) -> Result<(), String> {
+    async fn poll_until_ready(&self) -> crate::error::Result<()> {
+        use crate::error::BarracudaError;
         loop {
             let poll_ok = !self.device.is_lost();
             if poll_ok {
@@ -292,18 +293,20 @@ impl AsyncReadback {
             }
 
             if !poll_ok {
-                return Err("GPU device lost during poll".to_string());
+                return Err(BarracudaError::device_lost(
+                    "GPU device lost during async poll",
+                ));
             }
 
             match self.receiver.try_recv() {
                 Ok(result) => {
-                    return result.map_err(|e| format!("Map error: {e:?}"));
+                    return result.map_err(|e| BarracudaError::gpu(format!("buffer map: {e:?}")));
                 }
                 Err(std::sync::mpsc::TryRecvError::Empty) => {
                     tokio::task::yield_now().await;
                 }
                 Err(std::sync::mpsc::TryRecvError::Disconnected) => {
-                    return Err("Readback cancelled — sender dropped".to_string());
+                    return Err(BarracudaError::gpu("readback cancelled — sender dropped"));
                 }
             }
         }
@@ -314,12 +317,10 @@ impl AsyncReadback {
     /// # Errors
     /// Returns [`Err`] if the GPU device is lost during poll, buffer mapping fails,
     /// or the readback is cancelled (sender dropped).
-    pub async fn read_f32(mut self) -> Result<Vec<f32>, String> {
+    pub async fn read_f32(self) -> crate::error::Result<Vec<f32>> {
         self.poll_until_ready().await?;
 
-        // Read data
         let data = self.staging_buffer.slice(..).get_mapped_range();
-        // Allocation required: mapped range is dropped before return; caller receives owned Vec
         let result: Vec<f32> = bytemuck::cast_slice(&data).to_vec();
 
         drop(data);
@@ -332,11 +333,10 @@ impl AsyncReadback {
     /// # Errors
     /// Returns [`Err`] if the GPU device is lost during poll, buffer mapping fails,
     /// or the readback is cancelled (sender dropped).
-    pub async fn read_f64(mut self) -> Result<Vec<f64>, String> {
+    pub async fn read_f64(self) -> crate::error::Result<Vec<f64>> {
         self.poll_until_ready().await?;
 
         let data = self.staging_buffer.slice(..).get_mapped_range();
-        // Allocation required: mapped range is dropped before return; caller receives owned Vec
         let result: Vec<f64> = bytemuck::cast_slice(&data).to_vec();
 
         drop(data);
@@ -349,11 +349,10 @@ impl AsyncReadback {
     /// # Errors
     /// Returns [`Err`] if the GPU device is lost during poll, buffer mapping fails,
     /// or the readback is cancelled (sender dropped).
-    pub async fn read_u32(mut self) -> Result<Vec<u32>, String> {
+    pub async fn read_u32(self) -> crate::error::Result<Vec<u32>> {
         self.poll_until_ready().await?;
 
         let data = self.staging_buffer.slice(..).get_mapped_range();
-        // Allocation required: mapped range is dropped before return; caller receives owned Vec
         let result: Vec<u32> = bytemuck::cast_slice(&data).to_vec();
 
         drop(data);
@@ -366,7 +365,7 @@ impl AsyncReadback {
     /// # Errors
     /// Returns [`Err`] if the GPU device is lost during poll, buffer mapping fails,
     /// or the readback is cancelled (sender dropped).
-    pub async fn read_bytes(mut self) -> Result<bytes::Bytes, String> {
+    pub async fn read_bytes(self) -> crate::error::Result<bytes::Bytes> {
         self.poll_until_ready().await?;
 
         let data = self.staging_buffer.slice(..).get_mapped_range();
@@ -383,18 +382,18 @@ impl AsyncReadback {
     /// # Errors
     /// Returns [`Err`] if the GPU device is lost during poll, buffer mapping fails,
     /// or the readback is cancelled (sender dropped).
-    pub fn read_f32_blocking(self) -> Result<Vec<f32>, String> {
+    pub fn read_f32_blocking(self) -> crate::error::Result<Vec<f32>> {
+        use crate::error::BarracudaError;
         self.device
             .poll_safe()
-            .map_err(|_| "GPU device lost during blocking poll".to_string())?;
+            .map_err(|_| BarracudaError::device_lost("GPU device lost during blocking poll"))?;
 
         self.receiver
             .recv()
-            .map_err(|_| "Readback cancelled — sender dropped".to_string())?
-            .map_err(|e| format!("Map error: {e:?}"))?;
+            .map_err(|_| BarracudaError::gpu("readback cancelled — sender dropped"))?
+            .map_err(|e| BarracudaError::gpu(format!("buffer map: {e:?}")))?;
 
         let data = self.staging_buffer.slice(..).get_mapped_range();
-        // Allocation required: mapped range is dropped before return; caller receives owned Vec
         let result = bytemuck::cast_slice::<u8, f32>(&data).to_vec();
         drop(data);
         self.staging_buffer.unmap();
@@ -405,18 +404,18 @@ impl AsyncReadback {
     /// # Errors
     /// Returns [`Err`] if the GPU device is lost during poll, buffer mapping fails,
     /// or the readback is cancelled (sender dropped).
-    pub fn read_f64_blocking(self) -> Result<Vec<f64>, String> {
+    pub fn read_f64_blocking(self) -> crate::error::Result<Vec<f64>> {
+        use crate::error::BarracudaError;
         self.device
             .poll_safe()
-            .map_err(|_| "GPU device lost during blocking poll".to_string())?;
+            .map_err(|_| BarracudaError::device_lost("GPU device lost during blocking poll"))?;
 
         self.receiver
             .recv()
-            .map_err(|_| "Readback cancelled — sender dropped".to_string())?
-            .map_err(|e| format!("Map error: {e:?}"))?;
+            .map_err(|_| BarracudaError::gpu("readback cancelled — sender dropped"))?
+            .map_err(|e| BarracudaError::gpu(format!("buffer map: {e:?}")))?;
 
         let data = self.staging_buffer.slice(..).get_mapped_range();
-        // Allocation required: mapped range is dropped before return; caller receives owned Vec
         let result = bytemuck::cast_slice::<u8, f64>(&data).to_vec();
         drop(data);
         self.staging_buffer.unmap();
@@ -438,7 +437,7 @@ mod tests {
     async fn test_submitter_creation() {
         let Some(wgpu_device) = crate::device::test_pool::get_test_device_if_gpu_available().await
         else {
-            return; // Skip if no GPU available
+            return;
         };
 
         let submitter = AsyncSubmitter::new(Arc::clone(&wgpu_device));
@@ -448,9 +447,120 @@ mod tests {
 
     #[test]
     fn test_submission_index_increment() {
-        // Test that submission index increments correctly (no GPU needed)
         let index = AtomicU64::new(0);
         assert_eq!(index.fetch_add(1, Ordering::SeqCst) + 1, 1);
         assert_eq!(index.fetch_add(1, Ordering::SeqCst) + 1, 2);
+    }
+
+    #[tokio::test]
+    async fn test_submitter_queue_and_submit() {
+        let Some(wgpu_device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
+            return;
+        };
+
+        let submitter = AsyncSubmitter::new(Arc::clone(&wgpu_device));
+
+        submitter.queue_operation(|encoder| {
+            let _ = encoder; // noop command buffer
+        });
+        assert_eq!(submitter.pending_count(), 1);
+
+        submitter.queue_operation(|encoder| {
+            let _ = encoder;
+        });
+        assert_eq!(submitter.pending_count(), 2);
+
+        let idx = submitter.submit_all();
+        assert_eq!(idx, 1);
+        assert_eq!(submitter.pending_count(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_submitter_multiple_submissions() {
+        let Some(wgpu_device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
+            return;
+        };
+
+        let submitter = AsyncSubmitter::new(Arc::clone(&wgpu_device));
+
+        submitter.queue_operation(|_| {});
+        let idx1 = submitter.submit_all();
+
+        submitter.queue_operation(|_| {});
+        let idx2 = submitter.submit_all();
+
+        assert_eq!(idx1, 1);
+        assert_eq!(idx2, 2);
+        assert_eq!(submitter.current_index(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_submitter_empty_submit() {
+        let Some(wgpu_device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
+            return;
+        };
+
+        let submitter = AsyncSubmitter::new(Arc::clone(&wgpu_device));
+        let idx = submitter.submit_all();
+        assert_eq!(idx, 0, "empty submit should not increment index");
+    }
+
+    #[tokio::test]
+    async fn test_readback_creation_and_f32_roundtrip() {
+        use wgpu::util::DeviceExt;
+        let Some(wgpu_device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
+            return;
+        };
+
+        let data: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
+        wgpu_device.encoding_guard();
+        let buffer = wgpu_device
+            .device()
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("test_readback_src"),
+                contents: bytemuck::cast_slice(&data),
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            });
+        wgpu_device.encoding_complete();
+
+        let readback = AsyncReadback::new(&wgpu_device, &buffer, buffer.size());
+        assert_eq!(readback.size_bytes(), buffer.size());
+
+        match readback.read_f32().await {
+            Ok(result) => assert_eq!(result, data),
+            Err(e) if e.is_retriable() => return,
+            Err(e) => panic!("readback failed: {e}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_readback_bytes_roundtrip() {
+        use wgpu::util::DeviceExt;
+        let Some(wgpu_device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
+            return;
+        };
+
+        let data: Vec<f32> = vec![42.0, 99.0];
+        wgpu_device.encoding_guard();
+        let buffer = wgpu_device
+            .device()
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("test_readback_bytes"),
+                contents: bytemuck::cast_slice(&data),
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            });
+        wgpu_device.encoding_complete();
+
+        let readback = AsyncReadback::new(&wgpu_device, &buffer, buffer.size());
+        match readback.read_bytes().await {
+            Ok(result) => assert_eq!(result.len(), std::mem::size_of::<f32>() * 2),
+            Err(e) if e.is_retriable() => return,
+            Err(e) => panic!("readback failed: {e}"),
+        }
     }
 }

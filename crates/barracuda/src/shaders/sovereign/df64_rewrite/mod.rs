@@ -149,9 +149,10 @@ impl<'a> RewriteCtx<'a> {
 /// # Errors
 ///
 /// Returns [`Err`] if the source fails to parse or validate as f64 WGSL.
-pub fn rewrite_f64_infix_to_df64(f64_source: &str) -> Result<String, String> {
-    let module =
-        naga::front::wgsl::parse_str(f64_source).map_err(|e| format!("naga parse: {e}"))?;
+pub fn rewrite_f64_infix_to_df64(f64_source: &str) -> crate::error::Result<String> {
+    use crate::error::BarracudaError;
+    let module = naga::front::wgsl::parse_str(f64_source)
+        .map_err(|e| BarracudaError::shader_compilation(format!("naga parse: {e}")))?;
 
     let mut validator = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
@@ -159,7 +160,7 @@ pub fn rewrite_f64_infix_to_df64(f64_source: &str) -> Result<String, String> {
     );
     let info = validator
         .validate(&module)
-        .map_err(|e| format!("naga validate: {e}"))?;
+        .map_err(|e| BarracudaError::shader_compilation(format!("naga validate: {e}")))?;
 
     let mut replacements: Vec<Replacement> = Vec::new();
 
@@ -235,9 +236,10 @@ fn dedup_overlapping(replacements: &mut Vec<Replacement>) {
 /// # Errors
 ///
 /// Returns [`Err`] if the source fails to parse or validate as f64 WGSL.
-pub fn count_f64_infix_ops(f64_source: &str) -> Result<usize, String> {
-    let module =
-        naga::front::wgsl::parse_str(f64_source).map_err(|e| format!("naga parse: {e}"))?;
+pub fn count_f64_infix_ops(f64_source: &str) -> crate::error::Result<usize> {
+    use crate::error::BarracudaError;
+    let module = naga::front::wgsl::parse_str(f64_source)
+        .map_err(|e| BarracudaError::shader_compilation(format!("naga parse: {e}")))?;
 
     let mut validator = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
@@ -245,7 +247,7 @@ pub fn count_f64_infix_ops(f64_source: &str) -> Result<usize, String> {
     );
     let info = validator
         .validate(&module)
-        .map_err(|e| format!("naga validate: {e}"))?;
+        .map_err(|e| BarracudaError::shader_compilation(format!("naga validate: {e}")))?;
 
     let mut count = 0usize;
 
@@ -580,7 +582,7 @@ pub(crate) fn resolve_spans(rewritten: &str, original: &str) -> String {
 /// # Errors
 ///
 /// Returns [`Err`] if the source fails to parse or validate as f64 WGSL.
-pub fn rewrite_f64_infix_full(f64_source: &str) -> Result<String, String> {
+pub fn rewrite_f64_infix_full(f64_source: &str) -> crate::error::Result<String> {
     let rewritten = rewrite_f64_infix_to_df64(f64_source)?;
     if rewritten == *f64_source {
         return Ok(f64_source.to_string());

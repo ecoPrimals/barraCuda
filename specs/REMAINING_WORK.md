@@ -6,6 +6,25 @@
 
 ---
 
+## Achieved (March 16, 2026 — Typed Error Evolution & Coverage Sprint)
+
+### Typed Error Evolution
+- **Zero `Result<T, String>` in production**: 15 sites across 5 files evolved to `Result<T, BarracudaError>` with typed variants. `async_submit.rs` (7 methods → `device_lost`, `gpu`), `coral_compiler/jsonrpc.rs` (1 function → `Internal`), `df64_rewrite/mod.rs` (3 functions → `shader_compilation`), `test_harness.rs` (3 functions → `shader_compilation`), `ipc/methods.rs` (1 closure → `BarracudaError`).
+- **Clippy nursery clean in `barracuda-core`**: 6 warnings eliminated. `IpcServer::new()` and `BarraCudaServer::new()` promoted to `const fn`. `option_if_let_else`, `or_fun_call`, `iter_on_single_items` resolved.
+- **`poll_until_ready` `&mut self` → `&self`**: No mutation needed — `mpsc::Receiver::try_recv()` takes `&self`.
+
+### Test Coverage Expansion
+- **`async_submit`**: 5 new tests (was 2): queue/submit lifecycle, multiple submissions, empty submit, f32 readback GPU roundtrip, bytes readback roundtrip.
+- **Genomics**: 14 new edge-case tests (was 11, now 25): empty sequence, RNA uracil, lowercase, pattern edge cases, motif error paths, quality filter batch, N-heavy, GC bias, config defaults, parallel batch.
+
+### Quality Gates
+- **Format**: Pass
+- **Clippy** (`-D warnings`, all features, all targets): Pass (zero warnings)
+- **Rustdoc** (`-D warnings`): Pass
+- **Tests**: 3,464 pass, 0 fail
+
+---
+
 ## Achieved (March 16, 2026 — Deep Debt Audit & Evolution Sprint)
 
 ### Production Mock Evolution
@@ -408,9 +427,9 @@ Previously limited to Vulkan with SPIR-V passthrough.
 - **Phase 7 — K-quant**: Q2_K through Q6_K super-block formats (GGML parity)
 
 #### Test Coverage to 90%
-- Current: 3,359 lib tests + 42 integration test files (24 harnesses + submodules)
+- Current: 3,464 lib tests + 24 integration test harnesses (43 test files)
 - CI 80% gate now blocking (Sprint 3); 90% stretch still `continue-on-error`
-- Self-reported ~70% on llvmpipe; 90% requires real GPU hardware
+- Self-reported ~75% on llvmpipe; 90% requires real GPU hardware
 - Add GPU-conditional tests for new ops
 - GPU_TEST_TIMEOUT (60s) prevents hangs; coordination harness with
   coralReef + toadStool needed for efficient shader-on-GPU testing
@@ -516,7 +535,7 @@ path and cross-compilation target matrix.
 | Clippy | Pass (zero warnings, `-D warnings`) | `cargo clippy --workspace --all-targets -- -D warnings` |
 | Rustdoc | Pass (zero warnings) | `cargo doc --workspace --no-deps` |
 | Deny | Pass (advisories, bans, licenses, sources) | `cargo deny check` |
-| Tests | 3,359 pass / 0 fail / 15 skip | `cargo nextest run --workspace --no-fail-fast` |
+| Tests | 3,464 pass / 0 fail | `cargo nextest run --workspace --no-fail-fast` |
 | Check (no GPU) | Pass | `cargo check --no-default-features` |
 | Check (GPU only) | Pass | `cargo check --no-default-features --features gpu` |
 | Check (all) | Pass | `cargo check` |

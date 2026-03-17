@@ -380,17 +380,18 @@ async fn tensor_create(primal: &BarraCudaPrimal, params: &Value, id: Value) -> J
 
     let elements: usize = shape_vec.iter().product();
 
-    let data: Vec<f32> = if let Some(arr) = params.get("data").and_then(|v| v.as_array()) {
-        #[expect(
-            clippy::cast_possible_truncation,
-            reason = "f64→f32 narrowing is intentional for JSON numeric inputs"
-        )]
-        arr.iter()
-            .filter_map(|v| v.as_f64().map(|n| n as f32))
-            .collect()
-    } else {
-        vec![0.0; elements]
-    };
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "f64→f32 narrowing is intentional for JSON numeric inputs"
+    )]
+    let data: Vec<f32> = params.get("data").and_then(|v| v.as_array()).map_or_else(
+        || vec![0.0; elements],
+        |arr| {
+            arr.iter()
+                .filter_map(|v| v.as_f64().map(|n| n as f32))
+                .collect()
+        },
+    );
 
     if data.len() != elements {
         return JsonRpcResponse::error(
@@ -601,7 +602,7 @@ async fn fhe_pointwise_mul(primal: &BarraCudaPrimal, params: &Value, id: Value) 
         );
     }
 
-    let to_tensor = |poly: &[u64]| -> Result<barracuda::tensor::Tensor, String> {
+    let to_tensor = |poly: &[u64]| -> barracuda::error::Result<barracuda::tensor::Tensor> {
         let u32_pairs: Vec<u32> = poly
             .iter()
             .flat_map(|&x| [x as u32, (x >> 32) as u32])
@@ -612,7 +613,6 @@ async fn fhe_pointwise_mul(primal: &BarraCudaPrimal, params: &Value, id: Value) 
             vec![poly.len() * 2],
             std::sync::Arc::new(dev.clone()),
         )
-        .map_err(|e| e.to_string())
     };
 
     let (a_tensor, b_tensor) = match (to_tensor(&a), to_tensor(&b)) {

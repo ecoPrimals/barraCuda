@@ -64,10 +64,8 @@ pub fn resolve_bind_address(explicit: Option<&str>) -> String {
     }
     let host =
         std::env::var("BARRACUDA_IPC_HOST").unwrap_or_else(|_| DEFAULT_BIND_HOST.to_string());
-    match std::env::var("BARRACUDA_IPC_PORT") {
-        Ok(port) => format!("{host}:{port}"),
-        Err(_) => format!("{host}:0"),
-    }
+    std::env::var("BARRACUDA_IPC_PORT")
+        .map_or_else(|_| format!("{host}:0"), |port| format!("{host}:{port}"))
 }
 
 /// IPC server for barraCuda primal.
@@ -81,7 +79,7 @@ pub struct IpcServer {
 
 impl IpcServer {
     /// Create a new IPC server wrapping the primal.
-    pub fn new(primal: Arc<BarraCudaPrimal>) -> Self {
+    pub const fn new(primal: Arc<BarraCudaPrimal>) -> Self {
         Self { primal }
     }
 

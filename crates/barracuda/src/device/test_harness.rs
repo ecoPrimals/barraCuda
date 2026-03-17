@@ -191,8 +191,10 @@ where
 ///
 /// Returns `Err` with a description if naga parsing or validation fails.
 #[cfg(feature = "gpu")]
-pub fn validate_wgsl_shader(wgsl_source: &str) -> Result<(), String> {
-    let module = naga::front::wgsl::parse_str(wgsl_source).map_err(|e| format!("parse: {e}"))?;
+pub fn validate_wgsl_shader(wgsl_source: &str) -> crate::error::Result<()> {
+    use crate::error::BarracudaError;
+    let module = naga::front::wgsl::parse_str(wgsl_source)
+        .map_err(|e| BarracudaError::shader_compilation(format!("parse: {e}")))?;
 
     let mut validator = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
@@ -200,7 +202,7 @@ pub fn validate_wgsl_shader(wgsl_source: &str) -> Result<(), String> {
     );
     validator
         .validate(&module)
-        .map_err(|e| format!("validate: {e}"))?;
+        .map_err(|e| BarracudaError::shader_compilation(format!("validate: {e}")))?;
 
     Ok(())
 }
@@ -215,7 +217,7 @@ pub fn validate_wgsl_shader(wgsl_source: &str) -> Result<(), String> {
 ///
 /// Returns `Err` if preamble concatenation produces invalid WGSL.
 #[cfg(feature = "gpu")]
-pub fn validate_df64_shader(shader_body: &str) -> Result<(), String> {
+pub fn validate_df64_shader(shader_body: &str) -> crate::error::Result<()> {
     let df64_core = include_str!("../shaders/math/df64_core.wgsl");
     let df64_trans = include_str!("../shaders/math/df64_transcendentals.wgsl");
     let full_source = format!("{df64_core}\n{df64_trans}\n{shader_body}");
@@ -231,7 +233,7 @@ pub fn validate_df64_shader(shader_body: &str) -> Result<(), String> {
 #[must_use]
 pub fn validate_shader_batch<'a>(
     shaders: &'a [(&'a str, &'a str)],
-) -> Vec<(&'a str, Result<(), String>)> {
+) -> Vec<(&'a str, crate::error::Result<()>)> {
     shaders
         .iter()
         .map(|(name, source)| (*name, validate_wgsl_shader(source)))

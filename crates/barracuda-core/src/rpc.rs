@@ -95,7 +95,7 @@ pub struct BarraCudaServer {
 
 impl BarraCudaServer {
     /// Create a new tarpc server wrapping the primal.
-    pub fn new(primal: std::sync::Arc<crate::BarraCudaPrimal>) -> Self {
+    pub const fn new(primal: std::sync::Arc<crate::BarraCudaPrimal>) -> Self {
         Self { primal }
     }
 }

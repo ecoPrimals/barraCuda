@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // su3_hmc_force_df64.wgsl — Hybrid SU(3) HMC gauge force (DF64 core streaming)
 //
 // Prepend: complex_f64.wgsl + su3.wgsl + df64_core.wgsl + su3_df64.wgsl

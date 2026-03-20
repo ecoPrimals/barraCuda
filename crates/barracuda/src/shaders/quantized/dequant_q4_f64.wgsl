@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Q4_0 Dequantization Shader (f64 canonical)
 //
 // Dequantizes 4-bit quantized weights to f64 for inference.

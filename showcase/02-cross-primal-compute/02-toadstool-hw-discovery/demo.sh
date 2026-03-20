@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # toadStool Hardware Discovery Showcase
 #
 # Demonstrates toadStool hardware inventory feeding barraCuda GPU selection.

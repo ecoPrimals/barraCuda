@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU compute pipeline builder — eliminates bind-group/pipeline boilerplate.
 //!
 //! The ~80 lines of `create_bind_group_layout` → `create_bind_group` →
@@ -180,6 +180,7 @@ impl<'a, B: GpuBackend> ComputeDispatch<'a, B> {
             workgroups: self.workgroups,
             f64_shader: self.f64_shader,
             df64_shader: self.df64_shader,
+            hardware_hint: crate::device::backend::HardwareHint::default(),
         })
     }
 

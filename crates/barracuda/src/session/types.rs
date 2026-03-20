@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! `TensorSession` — internal types: op enum, params structs, matmul tier
 
 use crate::device::capabilities::DeviceCapabilities;
@@ -9,6 +9,21 @@ use wgpu::DeviceType;
 
 const MATMUL_SMALL_THRESHOLD: usize = 32;
 const MATMUL_GPU_EVOLVED_THRESHOLD: usize = 256;
+
+static MATMUL_SMALL_THRESHOLD_RESOLVED: std::sync::LazyLock<usize> =
+    std::sync::LazyLock::new(|| {
+        std::env::var("BARRACUDA_MATMUL_SMALL_THRESHOLD")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(MATMUL_SMALL_THRESHOLD)
+    });
+
+static MATMUL_GPU_THRESHOLD_RESOLVED: std::sync::LazyLock<usize> = std::sync::LazyLock::new(|| {
+    std::env::var("BARRACUDA_MATMUL_GPU_THRESHOLD")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(MATMUL_GPU_EVOLVED_THRESHOLD)
+});
 
 /// Tiered matmul shader selection — same logic as `ops::MatMul::select_tier`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -22,13 +37,13 @@ pub(super) enum MatMulTier {
 impl MatMulTier {
     pub(super) fn select(caps: &DeviceCapabilities, m: usize, n: usize) -> Self {
         let max_dim = m.max(n);
-        if max_dim < MATMUL_SMALL_THRESHOLD {
+        if max_dim < *MATMUL_SMALL_THRESHOLD_RESOLVED {
             return Self::Naive;
         }
         if caps.device_type == DeviceType::Cpu {
             return Self::CpuTiled32;
         }
-        if max_dim >= MATMUL_GPU_EVOLVED_THRESHOLD {
+        if max_dim >= *MATMUL_GPU_THRESHOLD_RESOLVED {
             Self::GpuEvolved32
         } else {
             Self::Tiled16

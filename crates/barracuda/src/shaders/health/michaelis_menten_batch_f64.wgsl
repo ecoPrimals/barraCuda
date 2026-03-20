@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // michaelis_menten_batch_f64.wgsl — Batch Michaelis-Menten PK simulation
 //

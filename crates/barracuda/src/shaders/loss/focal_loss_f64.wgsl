@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Focal Loss (f64 canonical)
 // Addresses class imbalance in object detection by down-weighting easy examples
 //

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Tiled Matrix Multiplication - Memory-Optimized (f64 canonical)
 //
 // **OPTIMIZATION**: Shared memory tiling for 70-80% bandwidth utilization

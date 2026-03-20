@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Shader provenance tracking — cross-spring evolution registry.
 //!
 //! Tracks which spring domain each WGSL shader originated from, which

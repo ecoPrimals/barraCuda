@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // multi_obj_fitness_f64.wgsl — Multi-objective fitness evaluation (f64)
 //

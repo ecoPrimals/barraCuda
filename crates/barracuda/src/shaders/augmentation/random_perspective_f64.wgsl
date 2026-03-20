@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // RandomPerspective - Random perspective transformation (f64 canonical)
 //
 // Applies random perspective distortion

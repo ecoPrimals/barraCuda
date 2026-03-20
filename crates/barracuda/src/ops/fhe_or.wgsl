@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // FHE OR Gate - GPU Implementation
 //
 // Implements Boolean OR operation on FHE-encrypted data

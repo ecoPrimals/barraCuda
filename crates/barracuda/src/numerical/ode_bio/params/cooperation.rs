@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Cooperative QS game theory parameters (Bruger & Waters 2018).
 
 /// Cooperative QS game theory: cooperators vs cheaters with frequency-dependent fitness.

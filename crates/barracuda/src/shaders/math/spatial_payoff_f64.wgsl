@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // spatial_payoff_f64.wgsl — Spatial Prisoner's Dilemma Payoff Stencil (f64 canonical)
 //
 // Each thread computes the cumulative PD payoff for one cell in a

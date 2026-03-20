@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // gillespie_ssa_f64.wgsl — Parallel Gillespie Stochastic Simulation Algorithm (f64)
 //
 // Each GPU thread runs one independent trajectory from t=0 to t_max using

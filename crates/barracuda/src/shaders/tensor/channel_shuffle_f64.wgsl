@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Channel Shuffle - Rearrange channels for efficient group convolutions (f64 canonical)
 // Used in ShuffleNet and other efficient CNN architectures
 

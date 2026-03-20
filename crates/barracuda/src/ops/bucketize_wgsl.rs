@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Bucketize - Assign values to bins - Pure WGSL
 //!
 //! **Deep Debt Principles**:

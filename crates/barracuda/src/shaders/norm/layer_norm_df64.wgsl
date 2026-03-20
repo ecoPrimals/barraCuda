@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Layer normalization in DF64 precision
 // y_i = gamma * (x_i - mean) / sqrt(var + eps) + beta
 // Requires: df64_core.wgsl, df64_transcendentals.wgsl (via compile_shader_df64)

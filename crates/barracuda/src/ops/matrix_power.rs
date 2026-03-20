@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Matrix Power - Exponentiation by squaring (GPU implementation)
 //!
 //! **Deep Debt Principles**:

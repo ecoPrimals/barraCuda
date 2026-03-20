@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // head_concat.wgsl — Reshape [B, H, S, D] → [B, S, H*D] (f64 canonical)
 //
 // Inverse of head_split: merges multi-head attention output back into

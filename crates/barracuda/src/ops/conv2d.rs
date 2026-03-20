@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! `Conv2D` operation - 2D convolution
 //! Pure WGSL implementation
 //! Shader: f64 canonical (downcast to f32 at compile)

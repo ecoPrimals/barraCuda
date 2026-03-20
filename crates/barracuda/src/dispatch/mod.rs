@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Auto-dispatch system for CPU/GPU routing
 //!
 //! Provides intelligent, size-based dispatch for mathematical operations.

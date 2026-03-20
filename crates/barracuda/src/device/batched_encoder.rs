@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Batched command encoder — fuses multiple compute dispatches into one submission.
 //!
 //! Reduces per-op `queue.submit()` overhead for multi-op pipelines (MLP, transformer layers).

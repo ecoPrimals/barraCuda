@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Density Accumulation, BCS, Energy Functional, and Observables
 // for Deformed HFB on 2D Cylindrical Grid (f64)
 //

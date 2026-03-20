@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Tversky Loss - Generalized Dice Loss with FP/FN weighting (f64 canonical)
 // Allows control over false positive vs false negative trade-off
 //

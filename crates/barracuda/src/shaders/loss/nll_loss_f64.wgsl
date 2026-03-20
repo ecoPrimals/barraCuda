@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // nll_loss_f64.wgsl - Negative Log Likelihood Loss (f64 canonical)
 //
 // Standard loss for classification with log probabilities

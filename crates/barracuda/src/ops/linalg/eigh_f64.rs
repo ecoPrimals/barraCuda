@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! CPU f64 Symmetric Eigenvalue Decomposition: Householder + implicit QR.
 //!
 //! Achieves LAPACK-level accuracy (~1e-14) at all matrix sizes, replacing

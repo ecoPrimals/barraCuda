@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // B-spline evaluation for PPPM charge assignment (f64)
 //
 // **Physics**: Cardinal B-splines M_p(x) for smooth particle-mesh interpolation

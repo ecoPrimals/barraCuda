@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Interpolation methods
 //!
 //! This module provides various interpolation methods for approximating
@@ -38,7 +38,7 @@
 
 pub mod cubic_spline;
 
-pub use cubic_spline::{CubicSpline, SplineBoundary};
+pub use cubic_spline::{CubicSpline, CubicSplineInput, SplineBoundary};
 
 /// GPU shader for Ordinary Kriging interpolation (f64).
 ///

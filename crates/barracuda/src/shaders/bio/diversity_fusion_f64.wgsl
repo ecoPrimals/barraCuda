@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // diversity_fusion_f64.wgsl — fused Shannon + Simpson + evenness in single dispatch
 //

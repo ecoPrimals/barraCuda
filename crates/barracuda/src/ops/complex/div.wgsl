@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Complex Division: (a+bi)/(c+di) = (a+bi)(c-di)/(c²+d²)
 
 @group(0) @binding(0) var<storage, read> input_a: array<f32>;

@@ -6,9 +6,9 @@ members = [
 ]
 
 [workspace.package]
-version = "0.3.5"
+version = "0.3.6"
 edition = "2024"
-license = "AGPL-3.0-only"
+license = "AGPL-3.0-or-later"
 repository = "https://github.com/ecoPrimals/barraCuda"
 authors = ["ecoPrimals Project"]
 rust-version = "1.87"

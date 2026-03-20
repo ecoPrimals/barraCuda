@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Per-Particle Kinetic Energy — f64 precision
 //
 // **Physics**: KE = 0.5 * m * v² per particle

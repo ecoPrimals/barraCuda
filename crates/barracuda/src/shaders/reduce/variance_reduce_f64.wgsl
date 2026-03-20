@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Variance/Std Reduction (f64) - Compute variance and std deviation in double precision
 //
 // Algorithm: Welford's online algorithm (numerically stable)

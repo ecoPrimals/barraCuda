@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Instance Normalization (f64 canonical)
 // Normalizes each instance (sample) independently across spatial dimensions
 //

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Max Dim: Compute maximum along a specific dimension (f64 canonical)
 // Similar to PyTorch's torch.max(dim=N)
 // Returns maximum values along the specified dimension

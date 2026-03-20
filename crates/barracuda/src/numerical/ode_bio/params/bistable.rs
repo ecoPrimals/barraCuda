@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Bistable phenotypic switching parameters (Fernandez et al. 2020).
 
 use super::qs_biofilm::{QS_BIOFILM_N_PARAMS, QsBiofilmParams};

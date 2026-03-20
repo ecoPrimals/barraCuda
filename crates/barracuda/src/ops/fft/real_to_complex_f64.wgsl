@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Real-to-complex zero-interleave — f64 canonical.
 // Converts a real signal [N] to complex [N, 2] by appending zero imaginary parts.
 // coralReef handles precision lowering; barraCuda emits max precision.

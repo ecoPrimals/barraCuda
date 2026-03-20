@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Device Registry — Physical device tracking with backend preference
 //!
 //! This module provides deduplication of physical devices that may appear

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Multi-component Mermin dielectric function (electron-ion plasma).
 //
 // Each thread computes ε(k,ω) for one frequency point, summing species

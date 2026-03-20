@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! QS / c-di-GMP / biofilm model parameters (Waters 2008).
 
 /// QS / c-di-GMP / biofilm model parameters (Waters 2008).

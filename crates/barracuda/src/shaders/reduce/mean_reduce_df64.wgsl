@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Parallel mean reduction at DF64 precision (f32-pair).
 // Same structure as sum_reduce_df64 but divides by n at the end.
 // Requires: df64_core.wgsl (auto-injected by compile_shader_df64)

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // plddt_f64.wgsl — Predicted LDDT confidence score per residue (AlphaFold2)
 //

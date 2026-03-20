@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Inverse hyperbolic tangent operation (f64 canonical)
 // atanh(x) = 0.5 * ln((1 + x) / (1 - x))
 // Defined for |x| < 1

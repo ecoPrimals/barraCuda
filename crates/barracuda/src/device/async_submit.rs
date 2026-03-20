@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Async Submission System for `BarraCuda`
 //!
 //! Provides non-blocking GPU submission with operation batching.
@@ -369,7 +369,7 @@ impl AsyncReadback {
         self.poll_until_ready().await?;
 
         let data = self.staging_buffer.slice(..).get_mapped_range();
-        let result = bytes::Bytes::from(data.to_vec());
+        let result = bytes::Bytes::copy_from_slice(&data);
 
         drop(data);
         self.staging_buffer.unmap();

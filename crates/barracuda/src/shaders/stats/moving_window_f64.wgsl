@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Moving window statistics (mean, variance, min, max) — f32 precision
 // airSpring IoT sensor streams, wetSpring environmental monitoring
 //

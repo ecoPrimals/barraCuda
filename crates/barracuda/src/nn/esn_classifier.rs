@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Echo State Network classifier with ridge regression readout.
 //!
 //! CPU reference implementation with JSON weight serialization.

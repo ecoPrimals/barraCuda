@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Dot product and reduction operations for sparse solvers - f64 Precision
 // Separate shader to avoid binding conflicts with other sparse operations
 

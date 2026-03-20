@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // spectral_norm.wgsl - Spectral Normalization (f64 canonical)
 //
 // Normalizes weights by their spectral norm (largest singular value)

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Inter-Primal Communication (IPC) for barraCuda.
 //!
 //! Implements JSON-RPC 2.0 per wateringHole `PRIMAL_IPC_PROTOCOL.md` and
@@ -7,7 +7,7 @@
 //!
 //! ## Transport
 //!
-//! Primary: Unix domain socket at `$XDG_RUNTIME_DIR/{PRIMAL_NAMESPACE}/{PRIMAL_NAMESPACE}.sock`
+//! Primary: Unix domain socket at `$XDG_RUNTIME_DIR/biomeos/barracuda-{family_id}.sock`
 //! Fallback: TCP, resolved via [`transport::resolve_bind_address()`](crate::ipc::transport::resolve_bind_address) —
 //! `BARRACUDA_IPC_BIND` or `BARRACUDA_IPC_HOST`:`BARRACUDA_IPC_PORT`,
 //! default `localhost:0` (ephemeral)

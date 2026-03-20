@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU path for `SparsitySampler` algorithm.
 
 use crate::optimize::eval_record::EvaluationCache;

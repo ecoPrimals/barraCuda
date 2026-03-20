@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 use super::*;
 
 mod precision_chaos_tests;
@@ -11,6 +11,25 @@ fn test_precision_types() {
     assert!(Precision::F32.has_vec4());
     assert!(!Precision::F64.has_vec4());
     assert!(!Precision::Df64.has_vec4());
+}
+
+#[test]
+fn test_precision_f16() {
+    assert_eq!(Precision::F16.scalar(), "f16");
+    assert_eq!(Precision::F16.vec2(), "vec2<f16>");
+    assert_eq!(Precision::F16.vec4(), "vec4<f16>");
+    assert_eq!(Precision::F16.bytes_per_element(), 2);
+    assert!(Precision::F16.has_vec4());
+    assert_eq!(
+        Precision::F16.required_feature(),
+        Some(wgpu::Features::SHADER_F16)
+    );
+    assert!(!Precision::F16.is_f64_class());
+    assert!(Precision::F16.is_reduced());
+    assert!(
+        Precision::F16.op_preamble().contains("enable f16;"),
+        "F16 op_preamble must contain enable f16;"
+    );
 }
 
 #[test]
@@ -514,7 +533,12 @@ fn test_op_preamble_df64_routes_to_library() {
 
 #[test]
 fn test_op_preamble_all_precisions_consistent() {
-    for prec in [Precision::F32, Precision::F64, Precision::Df64] {
+    for prec in [
+        Precision::F16,
+        Precision::F32,
+        Precision::F64,
+        Precision::Df64,
+    ] {
         let p = prec.op_preamble();
         assert!(p.contains("fn op_add("), "{prec:?} missing op_add");
         assert!(p.contains("fn op_mul("), "{prec:?} missing op_mul");

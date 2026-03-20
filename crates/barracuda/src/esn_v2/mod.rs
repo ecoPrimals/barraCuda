@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Hardware-Agnostic Echo State Network (ESN) API
 //!
 //! **EVOLVED v2**: Uses `BarraCuda` Tensors - Works on ANY hardware!
@@ -36,10 +36,7 @@ pub use npu::{NpuReadoutWeights, dequantize_affine_i8_f64, quantize_affine_i8_f6
 /// GPU shader for fused reservoir update: `W_in·input` + `W_res·state` → leaky tanh → new state.
 #[must_use]
 pub fn wgsl_reservoir_update() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        include_str!("../shaders/ml/esn_reservoir_update_f64.wgsl").to_string()
-    });
-    std::sync::LazyLock::force(&SHADER).as_str()
+    include_str!("../shaders/ml/esn_reservoir_update_f64.wgsl")
 }
 
 /// GPU shader for readout: output[i] = `W_out`[i,:] · state (matrix-vector product).

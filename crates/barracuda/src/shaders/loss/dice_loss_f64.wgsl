@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // dice_loss_f64.wgsl - Dice coefficient loss for segmentation (f64 canonical)
 //
 // Dice Loss = 1 - (2 * intersection + smooth_val) / (sum_pred + sum_target + smooth_val)

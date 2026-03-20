@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! `OneCycle` - 1cycle Learning Rate Policy (Smith)
 //!
 //! Single cycle: warmup to `max_lr`, then anneal to `min_lr`.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // deformed_density_f64.wgsl — Axially-deformed nuclear density on (ρ,z) grid
 //
 // hotSpring absorption: constructs ρ(ρ,z) from BCS occupation numbers and

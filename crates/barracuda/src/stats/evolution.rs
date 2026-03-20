@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Population genetics primitives.
 //!
 //! Provenance: groundSpring `drift.rs` / `quasispecies.rs` -> toadStool absorption (S70).

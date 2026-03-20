@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 use super::*;
 use crate::device::test_pool::{
     get_test_device_if_f64_gpu_available, get_test_device_if_gpu_available,

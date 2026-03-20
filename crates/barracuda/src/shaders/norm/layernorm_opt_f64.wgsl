@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // LayerNorm OPTIMIZED - 4 Practical Optimizations (f64 canonical)
 // Performance Target: 2.6x improvement (118ms → 46ms)
 //

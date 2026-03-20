@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Fused Multiply-Add: D = A * B + C (f64 canonical)
 // Single memory pass instead of mul then add (2 passes)
 // This is a key optimization for patterns like:

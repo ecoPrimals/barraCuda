@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // batch_fitness_eval_f64.wgsl — Batch Fitness Evaluation (f64)
 //

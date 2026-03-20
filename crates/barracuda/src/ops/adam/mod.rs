@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Adam Optimizer - GPU-accelerated Adaptive Moment Estimation
 //!
 //! **Deep Debt Principles**:

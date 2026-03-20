@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // multi_margin_loss_f64.wgsl - Multi-class Margin Loss (f64 canonical)
 //
 // Hinge loss for multi-class classification

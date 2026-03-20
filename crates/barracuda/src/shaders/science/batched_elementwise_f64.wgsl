@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // ============================================================================
 // batched_elementwise_f64.wgsl — Unified batched element-wise computation
 // ============================================================================
@@ -16,7 +16,7 @@
 //
 // REQUIRES: SHADER_F64 feature
 // Date: February 16, 2026
-// License: AGPL-3.0-only
+// License: AGPL-3.0-or-later
 // ============================================================================
 
 // ============================================================================

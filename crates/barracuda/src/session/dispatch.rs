@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Op dispatch for `TensorSession::run()`.
 //!
 //! Separated from `mod.rs` to keep files under the 1 000-line limit.

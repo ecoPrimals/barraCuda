@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // correlation_full_f64.wgsl — Fused 5-accumulator Pearson correlation
 //

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! PPPM Electrostatics Orchestration
 //!
 //! Combines all PPPM components into a complete long-range electrostatics solver.
@@ -235,7 +235,10 @@ impl Pppm {
     }
 
     /// CPU 3D FFT using dimension-wise 1D FFTs (test only)
-    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
+    #[allow(
+        dead_code,
+        reason = "CPU reference implementation for GPU parity validation"
+    )]
     fn fft_3d_cpu(
         &self,
         data: &mut [f64],
@@ -316,7 +319,10 @@ impl Pppm {
     }
 
     /// CPU 1D FFT (Cooley-Tukey radix-2)
-    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
+    #[allow(
+        dead_code,
+        reason = "CPU reference implementation for GPU parity validation"
+    )]
     fn fft_1d_cpu(&self, data: &mut [f64], n: usize, inverse: bool) {
         // Bit-reversal permutation
         let mut j = 0;

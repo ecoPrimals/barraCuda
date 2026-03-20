@@ -1,11 +1,18 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-03-17.
+Prioritized work items, ordered by impact. Updated 2026-03-20.
 
 ---
 
 ## Recently Completed
 
+- **Deep debt sprint 12 — module decomposition & build optimisation (Mar 20)**:
+  IPC `methods.rs` (675L) decomposed into `methods/` directory with 6 domain
+  files. Hydrology `gpu.rs` (648L) decomposed into barrel + 3 pipeline files.
+  Kernel router magic numbers evolved to named constants. `with_device_retry`
+  double-permit fix restores full GPU test parallelism. Build profiles
+  optimised (codegen-units=256, split-debuginfo, opt-level=2 for deps). 16 new
+  tests (compute_graph + Lanczos). 3,555 tests pass. All gates green.
 - **Deep debt sprint 7 — comprehensive audit & evolution (Mar 17)**: Smart
   module refactoring: `ode_bio/systems.rs` (744L) into `systems/` directory
   (5 per-system files, matching `params/` pattern). `gpu_hmc_trajectory.rs`

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Renorm - Renormalize with max norm constraint (f64 canonical)
 // Clamps L2 norm of vectors to maximum value
 // Used in training for gradient clipping alternative

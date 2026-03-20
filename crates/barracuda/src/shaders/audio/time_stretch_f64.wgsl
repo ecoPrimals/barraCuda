@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // TimeStretch - Time-domain stretching without pitch change
 // Phase vocoder-based time stretching
 // Input: Signal [length]

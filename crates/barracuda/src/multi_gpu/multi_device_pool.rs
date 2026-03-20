@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Advanced multi-device pool with requirements-based selection and resource quotas.
 
 use super::{BYTES_PER_GIB, estimate_gflops, estimate_vram_bytes};

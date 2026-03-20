@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Buffer allocation and data transfer — generic `read_buffer`<T: Pod> + typed helpers
 
 use super::WgpuDevice;

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Max Absolute Difference Reduction (f64) — GPU-Accelerated Convergence Check
 //!
 //! Computes `max|a[i] - b[i]|` over all elements of two f64 buffers.

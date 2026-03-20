@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // VectorAdd: C = A * alpha + B (f64 canonical)
 // CUDA equivalent: cublas::axpy
 // Use cases: Gradient updates, residual connections

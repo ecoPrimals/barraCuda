@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // ! Akida NPU Backend for barraCuda
 //!
 //! Provides Akida-specific acceleration for neuromorphic operations
@@ -415,19 +415,21 @@ fn check_board_health(address: &str) -> Result<BoardHealth> {
     }
 }
 
-/// Well-known system locations for the Akida SDK — tried only after
-/// environment variables (`AKIDA_SDK_DIR`, `XDG_DATA_HOME`) are exhausted.
-pub(crate) const AKIDA_SDK_SYSTEM_DIRS: &[&str] =
-    &["/opt/akida", "/usr/local/akida", "/usr/share/akida"];
+const AKIDA_SDK_SYSTEM_DIRS: &[&str] = &["/opt/akida", "/usr/local/akida", "/usr/share/akida"];
 
 /// Detect Akida SDK version via capability-based discovery.
 ///
 /// Resolution chain (first match wins):
-/// 1. `AKIDA_SDK_DIR` environment variable → `$AKIDA_SDK_DIR/version`
-/// 2. XDG data dirs → `$XDG_DATA_HOME/akida/version`
-/// 3. System paths from [`AKIDA_SDK_SYSTEM_DIRS`]
+/// 1. `AKIDA_HOME` environment variable → `$AKIDA_HOME/version`
+/// 2. `AKIDA_SDK_DIR` environment variable → `$AKIDA_SDK_DIR/version`
+/// 3. XDG data dirs → `$XDG_DATA_HOME/akida/version`
+/// 4. System paths: `/opt/akida`, `/usr/local/akida`, `/usr/share/akida`
 fn detect_akida_sdk_version() -> Option<String> {
     let mut search_paths = Vec::new();
+
+    if let Ok(home) = std::env::var("AKIDA_HOME") {
+        search_paths.push(format!("{home}/version"));
+    }
 
     if let Ok(sdk_dir) = std::env::var("AKIDA_SDK_DIR") {
         search_paths.push(format!("{sdk_dir}/version"));
@@ -450,6 +452,42 @@ fn detect_akida_sdk_version() -> Option<String> {
     }
 
     None
+}
+
+/// Model search directories for NPU model discovery.
+///
+/// Resolution chain (first match wins):
+/// 1. `AKIDA_MODEL_PATH` environment variable
+/// 2. `AKIDA_HOME` + `/models` if set
+/// 3. `AKIDA_MODELS_DIR` environment variable (backward compat)
+/// 4. XDG data dirs
+/// 5. System paths: `/opt/akida/models`, `/usr/local/akida/models`, `/usr/share/akida/models`
+pub(crate) fn akida_model_dirs() -> Vec<std::path::PathBuf> {
+    let mut dirs = Vec::new();
+
+    if let Ok(path) = std::env::var("AKIDA_MODEL_PATH") {
+        dirs.push(std::path::PathBuf::from(path));
+    }
+
+    if let Ok(home) = std::env::var("AKIDA_HOME") {
+        dirs.push(std::path::PathBuf::from(home).join("models"));
+    }
+
+    if let Ok(dir) = std::env::var("AKIDA_MODELS_DIR") {
+        dirs.push(std::path::PathBuf::from(dir));
+    }
+
+    if let Ok(data_home) = std::env::var("XDG_DATA_HOME") {
+        dirs.push(std::path::PathBuf::from(data_home).join("akida/models"));
+    } else if let Ok(home) = std::env::var("HOME") {
+        dirs.push(std::path::PathBuf::from(home).join(".local/share/akida/models"));
+    }
+
+    for dir in AKIDA_SDK_SYSTEM_DIRS {
+        dirs.push(std::path::PathBuf::from(dir).join("models"));
+    }
+
+    dirs
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! BFGS Quasi-Newton Optimizer
 //!
 //! The Broyden-Fletcher-Goldfarb-Shanno (BFGS) algorithm is a quasi-Newton
@@ -26,10 +26,6 @@
 //! - Broyden, C. G. (1970)
 
 use crate::error::{BarracudaError, Result};
-
-/// Maximum iterations for difficult optimization problems (e.g. Rosenbrock).
-#[allow(dead_code, reason = "available for extended BFGS convergence tests")]
-const BFGS_MAX_ITER_EXTENDED: usize = 5000;
 
 /// GPU shader for BFGS inverse Hessian update (O(n²) parallel).
 ///
@@ -406,6 +402,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Maximum iterations for difficult optimization problems (e.g. Rosenbrock).
+    const BFGS_MAX_ITER_EXTENDED: usize = 5000;
 
     #[test]
     fn test_bfgs_quadratic() {

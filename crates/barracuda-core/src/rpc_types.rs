@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Shared types for the barraCuda RPC interface.
 //!
 //! Used by both the tarpc service and JSON-RPC method handlers. Kept in a
@@ -243,12 +243,12 @@ mod tests {
             version: "0.3.5".into(),
             protocol: "jsonrpc-2.0".into(),
             namespace: "barracuda".into(),
-            license: "AGPL-3.0-only".into(),
+            license: "AGPL-3.0-or-later".into(),
         };
         let json = serde_json::to_string(&info).unwrap();
         let parsed: PrimalInfo = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.primal, "barraCuda");
-        assert_eq!(parsed.license, "AGPL-3.0-only");
+        assert_eq!(parsed.license, "AGPL-3.0-or-later");
     }
 
     #[test]

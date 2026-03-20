@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Contrastive Loss (NT-Xent) - SimCLR, MoCo style (f64 canonical)
 // Self-supervised learning by contrasting positive/negative pairs
 //

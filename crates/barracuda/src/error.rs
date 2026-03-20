@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Error types for barraCuda
 //!
 //! **Deep Debt Excellence**: Rich error context, zero panic paths

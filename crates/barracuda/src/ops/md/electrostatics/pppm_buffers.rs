@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! PPPM GPU buffer helpers
 //!
 //! Extracted from `pppm_gpu.rs` for modularity (Feb 14, 2026).

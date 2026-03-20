@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Complex Conjugate Shader
 // Operation: conj(a + bi) = a - bi
 // **CRITICAL FOR FFT**: Used in inverse FFT and normalization

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Core device type — minimal enum for routing and capability modules.
 //!
 //! Extracted from unified.rs to avoid circular dependencies. The full `Device`

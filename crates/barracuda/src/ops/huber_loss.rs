@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Huber Loss - GPU-accelerated robust regression loss
 //!
 //! **Deep Debt Principles**:

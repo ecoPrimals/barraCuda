@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // sinkhorn_distance_f64.wgsl - Sinkhorn Distance (Regularized Optimal Transport) (f64 canonical)
 //
 // Approximates Wasserstein distance using Sinkhorn iterations

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Scaled Dot-Product Attention - Transformer core operation (f64 canonical)
 // attention(Q, K, V) = softmax(QK^T / sqrt(d_k)) * V
 //

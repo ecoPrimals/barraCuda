@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Leave-one-out jackknife for the mean — GPU parallel.
 // Thread i computes leave-out-i mean = (full_sum - data[i]) / (n-1).
 // Also computes partial (θ_i - θ_bar)^2 for variance reduction on CPU.

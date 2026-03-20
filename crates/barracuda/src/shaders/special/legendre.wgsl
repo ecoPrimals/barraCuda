@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Legendre polynomials Pₙ(x) and associated Legendre functions Pₙᵐ(x)
 // Uses three-term recurrence relations:
 //   P₀(x) = 1

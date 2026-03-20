@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Ridge regression readout for reservoir outputs.
 
 #[cfg(feature = "gpu")]
@@ -150,5 +150,65 @@ impl LinearReadout {
             }
         }
         Some(out)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_defaults() {
+        let r = LinearReadout::new(4, 2, 1e-3);
+        assert_eq!(r.input_dim, 4);
+        assert_eq!(r.output_dim, 2);
+        assert!(r.weights.is_none());
+        assert!((r.lambda - 1e-3).abs() < 1e-15);
+    }
+
+    #[test]
+    fn negative_lambda_clamps() {
+        let r = LinearReadout::new(4, 2, -1.0);
+        assert!((r.lambda - 1e-3).abs() < 1e-15);
+    }
+
+    #[test]
+    fn predict_untrained_returns_none() {
+        let r = LinearReadout::new(3, 1, 1e-3);
+        assert!(r.predict(&[1.0, 2.0, 3.0]).is_none());
+    }
+
+    #[test]
+    fn predict_with_known_weights() {
+        let mut r = LinearReadout::new(3, 2, 1e-3);
+        r.weights = Some(vec![1.0, 0.0, 0.0, 0.0, 1.0, 0.0]);
+        let pred = r.predict(&[3.0, 7.0, 11.0]).unwrap();
+        assert!((pred[0] - 3.0).abs() < 1e-12);
+        assert!((pred[1] - 7.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn train_identity_mapping() {
+        let mut r = LinearReadout::new(2, 2, 1e-6);
+        let responses = vec![vec![1.0, 0.0], vec![0.0, 1.0], vec![1.0, 1.0]];
+        let targets = vec![vec![1.0, 0.0], vec![0.0, 1.0], vec![1.0, 1.0]];
+        let mse = r.train(&responses, &targets).unwrap();
+        assert!(mse < 0.1, "MSE should be small for identity mapping: {mse}");
+        assert!(r.weights.is_some());
+    }
+
+    #[test]
+    fn train_empty_returns_max() {
+        let mut r = LinearReadout::new(2, 1, 1e-3);
+        let mse = r.train(&[], &[]).unwrap();
+        assert_eq!(mse, f64::MAX);
+    }
+
+    #[test]
+    fn predict_shorter_input_pads_zeros() {
+        let mut r = LinearReadout::new(4, 1, 1e-3);
+        r.weights = Some(vec![1.0, 2.0, 3.0, 4.0]);
+        let pred = r.predict(&[1.0, 1.0]).unwrap();
+        assert!((pred[0] - 3.0).abs() < 1e-12);
     }
 }

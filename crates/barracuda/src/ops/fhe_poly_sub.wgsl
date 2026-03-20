@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! FHE Polynomial Subtraction Shader
 //!
 //! **Purpose**: Subtract two polynomials modulo q (FHE ciphertext operation)

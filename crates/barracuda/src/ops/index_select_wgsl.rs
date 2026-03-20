@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Index Select - Gather elements along a dimension - Pure WGSL
 //!
 //! Deep Debt Principles:

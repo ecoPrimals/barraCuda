@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // quality_filter.wgsl — Per-read parallel quality trimming
 //
 // One GPU thread per FASTQ read. Replicates the exact CPU logic:

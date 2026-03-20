@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Dequantize operation - Convert quantized integers to floating point
 //!
 //! Dequantization: Convert low-precision integers back to FP32

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Broyden Mixing GPU Implementation (f64)
 //!
 //! GPU-accelerated vector mixing for SCF convergence.

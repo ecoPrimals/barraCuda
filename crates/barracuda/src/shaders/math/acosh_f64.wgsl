@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // acosh_f64.wgsl - Inverse hyperbolic cosine operation (f64 canonical)
 // acosh(x) = ln(x + sqrt(x² - 1))
 // Defined for x >= 1

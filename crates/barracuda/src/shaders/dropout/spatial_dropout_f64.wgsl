@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // spatial_dropout_f64.wgsl - Spatial Dropout (Channel-wise dropout) (f64 canonical)
 //
 // Drops entire feature maps (channels) instead of individual elements

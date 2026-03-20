@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Multi-Head Attention: Input Projection with Head Splitting
 // Projects Q/K/V through weight matrix and splits into heads
 //

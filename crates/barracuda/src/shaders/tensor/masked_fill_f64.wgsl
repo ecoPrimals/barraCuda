@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Masked Fill - Fill values where mask is true (f64 canonical)
 //
 // Deep Debt Principles:

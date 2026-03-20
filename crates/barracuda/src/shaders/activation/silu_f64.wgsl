@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // SiLU - Sigmoid Linear Unit (same as Swish) (f64 canonical)
 // silu(x) = x * sigmoid(x) = x / (1 + e^(-x))
 

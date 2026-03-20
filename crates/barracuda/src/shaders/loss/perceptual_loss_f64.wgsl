@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Perceptual Loss - Feature-based perceptual loss (f64 canonical)
 // Compares high-level features instead of pixels
 // Used in style transfer and super-resolution

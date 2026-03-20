@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // mixup.wgsl - Mixup data augmentation
 //
 // Mixes two training examples and their labels

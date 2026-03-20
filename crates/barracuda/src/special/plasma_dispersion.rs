@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Plasma dispersion function W(z) and its companion Z(z).
 //!
 //! Absorbed from hotSpring `physics/dielectric.rs` — these are the numerically

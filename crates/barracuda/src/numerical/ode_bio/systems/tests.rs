@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 use super::super::params::{
     BISTABLE_N_VARS, BistableParams, CAPACITOR_N_PARAMS, CAPACITOR_N_VARS, COOPERATION_N_VARS,

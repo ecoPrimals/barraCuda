@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // rf_batch_inference.wgsl — Batch Random Forest Inference (SoA layout)
 //
 // One thread per (sample, tree) pair. Each thread traverses one tree

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Repeat Interleave - Repeat each element along dimension (f64 canonical)
 // Repeats each element `repeats` times along specified dimension
 //

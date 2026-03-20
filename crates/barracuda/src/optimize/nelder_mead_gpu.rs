@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU-Resident Nelder-Mead Optimizer
 //!
 //! **EVOLUTION (Feb 14, 2026)**: GPU-resident optimization to minimize CPU↔GPU transfers.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Device Capability Detection — Runtime Hardware Limits (wgpu).
 //!
 //! Answers "what can this wgpu device do?" by querying the adapter at
@@ -35,7 +35,7 @@ pub const WORKGROUP_SIZE_2D: u32 = 16;
 pub fn workgroup_size_for_arch(arch: &GpuArch) -> u32 {
     match arch {
         GpuArch::Volta | GpuArch::Turing => 64,
-        GpuArch::Ampere | GpuArch::Ada => 256,
+        GpuArch::Ampere | GpuArch::Ada | GpuArch::Blackwell => 256,
         GpuArch::Rdna2 | GpuArch::Rdna3 => 64,
         GpuArch::Cdna2 => 256,
         GpuArch::IntelArc => 128,
@@ -48,7 +48,7 @@ pub fn workgroup_size_for_arch(arch: &GpuArch) -> u32 {
 #[must_use]
 pub fn workgroup_size_2d_for_arch(arch: &GpuArch) -> u32 {
     match arch {
-        GpuArch::Ampere | GpuArch::Ada | GpuArch::Cdna2 => 16,
+        GpuArch::Ampere | GpuArch::Ada | GpuArch::Blackwell | GpuArch::Cdna2 => 16,
         _ => 8,
     }
 }

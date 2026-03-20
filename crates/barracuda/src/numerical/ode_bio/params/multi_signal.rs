@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Dual-signal QS regulatory network parameters (Srivastava et al. 2011).
 
 /// Dual-signal QS regulatory network: CAI-1 + AI-2 converge on `HapR`.

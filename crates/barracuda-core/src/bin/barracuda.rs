@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! barraCuda `UniBin` — single binary, multiple modes.
 //!
 //! Per wateringHole `UNIBIN_ARCHITECTURE_STANDARD.md` and
@@ -44,7 +44,7 @@ enum Commands {
         tarpc_bind: Option<String>,
 
         /// Unix socket path override. Defaults to
-        /// `$XDG_RUNTIME_DIR/{PRIMAL_NAMESPACE}/{PRIMAL_NAMESPACE}.sock`.
+        /// `$XDG_RUNTIME_DIR/biomeos/barracuda-{family_id}.sock`.
         #[cfg(unix)]
         #[arg(long, num_args = 0..=1, default_missing_value = "__default__")]
         unix: Option<String>,
@@ -74,7 +74,7 @@ enum Commands {
 
     /// Invoke a JSON-RPC method against a running barraCuda server.
     ///
-    /// Discovers the server via `$XDG_RUNTIME_DIR/ecoPrimals/barracuda-core.json`,
+    /// Discovers the server via `$XDG_RUNTIME_DIR/biomeos/barracuda-core.json`,
     /// `BARRACUDA_IPC_BIND`, or falls back to `--addr`.
     Client {
         /// JSON-RPC method name (e.g. `barracuda.device.list`).
@@ -329,7 +329,7 @@ async fn run_client(
 
 fn print_version() {
     println!("barraCuda {}", env!("CARGO_PKG_VERSION"));
-    println!("License: AGPL-3.0-only");
+    println!("License: AGPL-3.0-or-later");
     println!("MSRV:    {}", env!("CARGO_PKG_RUST_VERSION"));
     println!("Arch:    {}", std::env::consts::ARCH);
     println!("OS:      {}", std::env::consts::OS);
@@ -341,7 +341,7 @@ fn print_version() {
 /// IPC methods — no hardcoded values. Per wateringHole capability-based discovery.
 ///
 /// Supports both TCP (`host:port`) and Unix socket (`unix:///path`) transports.
-/// File path: `$XDG_RUNTIME_DIR/ecoPrimals/{PRIMAL_NAMESPACE}-core.json`
+/// File path: `$XDG_RUNTIME_DIR/biomeos/barracuda-core.json`
 fn write_discovery_file(
     tcp_addr: Option<&str>,
     tarpc_addr: Option<&str>,
@@ -515,7 +515,7 @@ fn notify_systemd_ready() {
 fn discovery_dir() -> Option<std::path::PathBuf> {
     std::env::var("XDG_RUNTIME_DIR")
         .ok()
-        .map(|d| std::path::PathBuf::from(d).join("ecoPrimals"))
+        .map(|d| std::path::PathBuf::from(d).join("biomeos"))
 }
 
 /// Resolve the server address for the `client` subcommand.
@@ -523,7 +523,7 @@ fn discovery_dir() -> Option<std::path::PathBuf> {
 /// Resolution chain (first match wins):
 /// 1. Explicit `--addr` CLI argument
 /// 2. `BARRACUDA_IPC_BIND` environment variable
-/// 3. Discovery file at `$XDG_RUNTIME_DIR/ecoPrimals/barracuda-core.json`
+/// 3. Discovery file at `$XDG_RUNTIME_DIR/biomeos/barracuda-core.json`
 fn resolve_client_addr(
     explicit: Option<&str>,
 ) -> std::result::Result<String, barracuda_core::error::BarracudaCoreError> {

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Force interpolation kernel for PPPM (f64)
 //
 // **Physics**: Interpolates potential gradient from mesh to particle positions

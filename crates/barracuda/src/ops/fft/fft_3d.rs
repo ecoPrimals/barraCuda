@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! 3D Fast Fourier Transform Operation
 //!
 //! **Purpose**: 3D frequency analysis for PPPM molecular dynamics

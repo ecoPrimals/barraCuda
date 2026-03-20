@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Tensor Split - Split tensor at specific indices (f64 canonical)
 // Splits tensor into multiple chunks at specified positions
 //

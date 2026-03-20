@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Precision Tiers Showcase
 //!
 //! Demonstrates the 3-tier precision model (F32 / F64 / DF64) by computing

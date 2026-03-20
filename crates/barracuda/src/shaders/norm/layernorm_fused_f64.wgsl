@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Fused LayerNorm: Single-pass layer normalization (f64 canonical)
 //
 // **OPTIMIZATION**: Combines all 3 passes into ONE kernel launch!

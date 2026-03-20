@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Soft NMS - Soft Non-Maximum Suppression (f64 canonical)
 
 struct Params {

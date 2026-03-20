@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Sum Reduction (f64) — GPU-Accelerated via WGSL
 //!
 //! Computes sum, max, or min over all elements of an f64 buffer.

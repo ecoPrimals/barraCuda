@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Inverse tangent (arctangent) operation (f64 canonical)
 // atan(x) returns the angle whose tangent is x, in range [-π/2, π/2]
 // Accepts all real numbers

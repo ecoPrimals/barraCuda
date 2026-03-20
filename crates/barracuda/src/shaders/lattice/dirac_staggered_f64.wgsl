@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // dirac_staggered_f64.wgsl — Staggered Dirac operator for lattice QCD
 //
 // (D_st ψ)(x) = m ψ(x) + (1/2) Σ_μ η_μ(x) [U_μ(x) ψ(x+μ) - U_μ†(x-μ) ψ(x-μ)]

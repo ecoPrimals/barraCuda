@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU-Resident Pipeline Tests
 //!
 //! Comprehensive tests for the GPU-resident physics pipeline components:

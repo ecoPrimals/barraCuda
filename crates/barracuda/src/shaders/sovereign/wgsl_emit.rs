@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! WGSL Re-emission — safe alternative to SPIR-V passthrough.
 //!
 //! Takes a validated, optimised `naga::Module` + `naga::valid::ModuleInfo` and

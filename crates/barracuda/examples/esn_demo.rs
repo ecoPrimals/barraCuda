@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Echo State Network Time Series Prediction Demo
 //!
 //! This example demonstrates using the high-level ESN API for time series

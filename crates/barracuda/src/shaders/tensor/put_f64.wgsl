@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Put - Scatter operation with indexing (f64 canonical)
 // Places values at specified indices in output tensor
 //

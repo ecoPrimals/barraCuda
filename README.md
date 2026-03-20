@@ -1,8 +1,8 @@
 # barraCuda
 
-**Version**: 0.3.5
+**Version**: 0.3.6
 **Status**: Standalone primal — zero cross-dependencies, fully concurrent, all quality gates passing
-**License**: AGPL-3.0-only
+**License**: AGPL-3.0-or-later (scyBorg provenance trio)
 **MSRV**: 1.87
 
 ---
@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **806 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,077 Rust source files**, 43 integration test files, 3,772 tests passing
+- **1,076 Rust source files**, 43 integration test files, 3,555 tests passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -110,7 +110,7 @@ barraCuda/
 ├── START_HERE.md                    # Developer quick start
 ├── PURE_RUST_EVOLUTION.md           # Sovereign compute evolution log
 ├── SPRING_ABSORPTION.md             # Cross-spring absorption tracker
-├── LICENSE                          # AGPL-3.0-only
+├── LICENSE                          # AGPL-3.0-or-later (scyBorg trio)
 ├── .github/workflows/ci.yml        # CI: fmt, clippy, deny, doc, test, coverage
 ├── crates/
 │   ├── barracuda-core/              # Primal lifecycle wrapper
@@ -139,7 +139,7 @@ barraCuda/
 │       │   ├── unified_hardware/    # Unified CPU/GPU/NPU abstraction
 │       │   └── ...                  # + nn, snn, esn, pde, genomics, vision
 │       ├── examples/                # Runnable examples
-│       ├── tests/                   # 42 integration test files (24 harnesses + submodules)
+│       ├── tests/                   # 43 integration test files (25 harnesses + submodules)
 │       └── src/bin/                 # validate_gpu, bench_*
 └── specs/
     ├── BARRACUDA_SPECIFICATION.md       # Crate architecture + IPC contract
@@ -179,7 +179,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo test --workspace --lib            # 3,772 test functions
+cargo test --workspace --lib            # lib tests (3,555 total)
 cargo llvm-cov --workspace --lib        # 80% CI gate (blocking), 90% target (requires GPU hardware)
 ```
 

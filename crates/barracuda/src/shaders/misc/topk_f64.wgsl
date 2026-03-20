@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // TopK - Find top-k largest elements (pure WGSL) (f64 canonical)
 // Returns indices of the k largest elements, sorted descending by value
 //

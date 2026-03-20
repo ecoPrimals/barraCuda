@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Concatenate tensors along axis 0 (f64 canonical)
 // Simplified version: concatenate two 1D tensors
 

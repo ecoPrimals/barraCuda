@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Yukawa Cell-List Force (f64) with PBC
 //!
 //! **Physics**: Same as `yukawa_f64` but O(N) via cell-list algorithm
@@ -327,7 +327,10 @@ impl YukawaCellListF64 {
         Ok((sorted_positions, particle_indices, cell_start, cell_count))
     }
 
-    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
+    #[expect(
+        dead_code,
+        reason = "CPU reference implementation for GPU parity validation"
+    )]
     fn build_cell_list(
         &self,
         positions: &[f64],
@@ -366,7 +369,10 @@ impl YukawaCellListF64 {
     }
 
     /// CPU reference (test/validation only — production always dispatches shader).
-    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
+    #[expect(
+        dead_code,
+        reason = "CPU reference implementation for GPU parity validation"
+    )]
     fn compute_cpu(
         &self,
         positions: &[f64],

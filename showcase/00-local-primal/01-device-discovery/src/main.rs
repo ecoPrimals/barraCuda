@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Device Discovery Showcase
 //!
 //! Demonstrates barraCuda's runtime GPU detection, capability scoring,

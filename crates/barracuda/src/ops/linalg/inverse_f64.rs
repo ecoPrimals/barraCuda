@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Matrix Inverse (f64) — Gauss-Jordan GPU elimination
 //!
 //! Computes A⁻¹ via [A | I] → [I | A⁻¹] with partial pivoting.

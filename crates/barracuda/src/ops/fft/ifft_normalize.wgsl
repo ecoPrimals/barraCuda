@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // IFFT Normalization Shader
 // Divides each complex number by N (the FFT size)
 

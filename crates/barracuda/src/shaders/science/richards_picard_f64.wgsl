@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // richards_picard_f64.wgsl — GPU kernels for Richards PDE Picard iteration
 //
 // Three entry points for the iterative solver pipeline:

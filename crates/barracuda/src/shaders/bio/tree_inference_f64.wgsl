@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // tree_inference_f64.wgsl — GPU Decision Tree / Random Forest Inference (f64)
 //
 // Each thread processes one (sample, tree) pair, traversing from the root

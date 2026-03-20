@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Fused Chi-Squared Test (f64) — neuralSpring V24
 //
 // Computes observed vs expected, chi-squared statistic, and p-value in a single GPU dispatch.

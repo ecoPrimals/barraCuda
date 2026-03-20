@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Neighbor Search for Molecular Dynamics
 //!
 //! O(N) neighbor search algorithms for efficient force computation.

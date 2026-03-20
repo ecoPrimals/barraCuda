@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Batched BGK relaxation step for multi-species kinetic plasma.
 //
 // Each thread handles one velocity grid point for one species.

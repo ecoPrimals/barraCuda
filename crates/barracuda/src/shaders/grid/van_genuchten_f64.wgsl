@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // van_genuchten_f64.wgsl — Van Genuchten soil moisture retention
 //

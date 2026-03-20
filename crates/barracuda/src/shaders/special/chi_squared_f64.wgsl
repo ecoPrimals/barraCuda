@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // chi_squared_f64.wgsl — Chi-squared CDF and quantile (f64)
 //

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Hardswish - MobileNetV3 activation function (f64 canonical)
 // hardswish(x) = x * ReLU6(x + 3) / 6
 // where ReLU6(x) = min(max(x, 0), 6)

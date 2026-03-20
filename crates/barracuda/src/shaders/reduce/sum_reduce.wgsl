@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Sum Reduction: Compute sum over all elements
 // CUDA equivalent: thrust::reduce with sum operation
 // Algorithm: Tree reduction (work-efficient)

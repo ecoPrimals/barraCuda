@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Sovereign compute backend via IPC to coralReef + toadStool.
 //!
 //! `CoralReefDevice` is the **primary** GPU backend for the sovereign pipeline.
@@ -47,22 +47,33 @@ use std::sync::Arc;
 #[cfg(feature = "sovereign-dispatch")]
 use std::collections::HashMap;
 
-/// Conservative default GPR count for pre-compiled binary dispatch.
-///
-/// Used when the compiler cache returns a binary without metadata.
-/// 128 is safe for all current targets (SM70+, GFX1030+) — the driver
-/// may over-allocate registers but will not fail.
 #[cfg(feature = "sovereign-dispatch")]
 const CONSERVATIVE_GPR_COUNT: u32 = 128;
 
-/// Default workgroup size for pre-compiled binary dispatch.
 #[cfg(feature = "sovereign-dispatch")]
 const DEFAULT_WORKGROUP: [u32; 3] = [64, 1, 1];
+
+#[cfg(feature = "sovereign-dispatch")]
+static GPR_COUNT: std::sync::LazyLock<u32> = std::sync::LazyLock::new(|| {
+    std::env::var("BARRACUDA_GPR_COUNT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(CONSERVATIVE_GPR_COUNT)
+});
+
+#[cfg(feature = "sovereign-dispatch")]
+static RESOLVED_DEFAULT_WORKGROUP: std::sync::LazyLock<[u32; 3]> = std::sync::LazyLock::new(|| {
+    let x = std::env::var("BARRACUDA_DEFAULT_WORKGROUP_X")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(DEFAULT_WORKGROUP[0]);
+    [x, 1, 1]
+});
 
 /// Architectures to scan when looking up pre-compiled native binaries
 /// from the coral compiler cache.
 const CORAL_CACHE_ARCHITECTURES: &[&str] = &[
-    "sm_70", "sm_75", "sm_80", "sm_86", "sm_89", "gfx1030", "gfx1100",
+    "sm_70", "sm_75", "sm_80", "sm_86", "sm_89", "sm_100", "gfx1030", "gfx1100",
 ];
 
 /// Capability string used for toadStool dispatch discovery.
@@ -77,6 +88,20 @@ const DEFAULT_ECOPRIMALS_DISCOVERY_DIR: &str = "ecoPrimals";
 /// Canonical discovery subdirectory name.
 const DISCOVERY_SUBDIR: &str = "discovery";
 
+/// Serialisable buffer binding descriptor for IPC dispatch to toadStool.
+///
+/// Carries the buffer identity and access mode across the JSON-RPC boundary.
+/// toadStool uses `buffer_id` to resolve staged GPU memory, `size` for
+/// validation, and `read_only` to set appropriate access flags.
+#[cfg(feature = "sovereign-dispatch")]
+#[derive(Debug, Clone)]
+struct IpcBufferBinding {
+    index: u32,
+    buffer_id: u64,
+    size: u64,
+    read_only: bool,
+}
+
 /// Buffer handle for the sovereign compute path.
 ///
 /// Wraps a dispatch-side buffer identifier. The `id` is assigned locally
@@ -85,13 +110,6 @@ const DISCOVERY_SUBDIR: &str = "discovery";
 pub struct CoralBuffer {
     #[cfg(feature = "sovereign-dispatch")]
     id: u64,
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "buffer size tracked for toadStool dispatch validation"
-        )
-    )]
     size: u64,
 }
 
@@ -311,8 +329,18 @@ impl CoralReefDevice {
     }
 
     /// Submit a dispatch request to toadStool via JSON-RPC.
+    ///
+    /// Sends the compiled native binary, workgroup dimensions, buffer binding
+    /// descriptors (IDs + access mode), and hardware routing hint. toadStool
+    /// maps buffer IDs to GPU memory and routes to the appropriate hardware unit.
     #[cfg(feature = "sovereign-dispatch")]
-    fn submit_to_toadstool(&self, binary: &[u8], workgroups: (u32, u32, u32)) -> Result<()> {
+    fn submit_to_toadstool(
+        &self,
+        binary: &[u8],
+        workgroups: (u32, u32, u32),
+        bindings: &[IpcBufferBinding],
+        hardware_hint: super::backend::HardwareHint,
+    ) -> Result<()> {
         let Some(ref addr) = self.dispatch_addr else {
             return Err(BarracudaError::Device(
                 "CoralReefDevice: no toadStool dispatch endpoint discovered — \
@@ -321,9 +349,32 @@ impl CoralReefDevice {
             ));
         };
 
+        let binding_descriptors: Vec<serde_json::Value> = bindings
+            .iter()
+            .map(|b| {
+                serde_json::json!({
+                    "index": b.index,
+                    "buffer_id": b.buffer_id,
+                    "size": b.size,
+                    "read_only": b.read_only,
+                })
+            })
+            .collect();
+
+        let hint_str = match hardware_hint {
+            super::backend::HardwareHint::Compute => "compute",
+            super::backend::HardwareHint::TensorCore => "tensor_core",
+            super::backend::HardwareHint::RtCore => "rt_core",
+            super::backend::HardwareHint::ZBuffer => "zbuffer",
+            super::backend::HardwareHint::TextureUnit => "texture_unit",
+            super::backend::HardwareHint::RopBlend => "rop_blend",
+        };
+
         let request = serde_json::json!({
             "binary": binary,
             "workgroup_size": [workgroups.0, workgroups.1, workgroups.2],
+            "bindings": binding_descriptors,
+            "hardware_hint": hint_str,
         });
 
         let addr = addr.clone();
@@ -532,8 +583,8 @@ impl GpuBackend for CoralReefDevice {
                     tracing::debug!("coral compiler cache hit — using pre-compiled native binary");
                     e.insert(CachedBinary {
                         binary,
-                        gpr_count: CONSERVATIVE_GPR_COUNT,
-                        workgroup: DEFAULT_WORKGROUP,
+                        gpr_count: *GPR_COUNT,
+                        workgroup: *RESOLVED_DEFAULT_WORKGROUP,
                     })
                 } else {
                     return Err(BarracudaError::Device(
@@ -548,7 +599,18 @@ impl GpuBackend for CoralReefDevice {
         let binary = cached.binary.clone();
         drop(cache);
 
-        self.submit_to_toadstool(&binary, desc.workgroups)
+        let ipc_bindings: Vec<IpcBufferBinding> = desc
+            .bindings
+            .iter()
+            .map(|b| IpcBufferBinding {
+                index: b.index,
+                buffer_id: b.buffer.id,
+                size: b.buffer.size,
+                read_only: b.read_only,
+            })
+            .collect();
+
+        self.submit_to_toadstool(&binary, desc.workgroups, &ipc_bindings, desc.hardware_hint)
     }
 
     #[cfg(not(feature = "sovereign-dispatch"))]
@@ -562,11 +624,26 @@ impl GpuBackend for CoralReefDevice {
     fn dispatch_binary(
         &self,
         binary: &[u8],
-        _bindings: Vec<BufferBinding<'_, Self>>,
+        bindings: Vec<BufferBinding<'_, Self>>,
         workgroups: (u32, u32, u32),
         _entry_point: &str,
     ) -> Result<()> {
-        self.submit_to_toadstool(binary, workgroups)
+        let ipc_bindings: Vec<IpcBufferBinding> = bindings
+            .iter()
+            .map(|b| IpcBufferBinding {
+                index: b.index,
+                buffer_id: b.buffer.id,
+                size: b.buffer.size,
+                read_only: b.read_only,
+            })
+            .collect();
+
+        self.submit_to_toadstool(
+            binary,
+            workgroups,
+            &ipc_bindings,
+            super::backend::HardwareHint::Compute,
+        )
     }
 
     #[cfg(not(feature = "sovereign-dispatch"))]

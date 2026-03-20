@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Bray-Curtis Distance (f64) — GPU-Accelerated All-Pairs Distance Matrix
 //!
 //! ABSORBED from wetSpring (Feb 16, 2026) — general-purpose distance metric
@@ -237,7 +237,10 @@ impl BrayCurtisF64 {
     }
 
     /// CPU fallback for small inputs
-    #[allow(dead_code, reason = "CPU reference for GPU parity validation")]
+    #[allow(
+        dead_code,
+        reason = "CPU reference implementation for GPU parity validation"
+    )]
     fn condensed_distance_matrix_cpu(
         &self,
         samples: &[f64],
@@ -280,7 +283,10 @@ impl BrayCurtisF64 {
 }
 
 /// CPU reference: Bray-Curtis distance between samples i and j
-#[allow(dead_code, reason = "CPU reference for GPU parity validation")]
+#[allow(
+    dead_code,
+    reason = "CPU reference implementation for GPU parity validation"
+)]
 fn bray_curtis_cpu(samples: &[f64], i: usize, j: usize, n_features: usize) -> f64 {
     let base_i = i * n_features;
     let base_j = j * n_features;

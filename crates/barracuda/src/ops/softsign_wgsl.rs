@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Softsign - Pure WGSL
 //!
 //! f64 canonical — f32 derived via `downcast_f64_to_f32` when needed.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // MSE Loss (f64) - Mean Squared Error at double precision
 //
 // output = sum((pred - target)^2) / n

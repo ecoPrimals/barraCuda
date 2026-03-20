@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // FHE Inverse Number Theoretic Transform (INTT) - U64 Emulation Version
 //
 // **Purpose**: Convert NTT-domain polynomial back to coefficient domain

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // LAMB - Layer-wise Adaptive Moments optimizer for Batch training (f64 canonical)
 // Enables large batch training (e.g., BERT with 64K batch size)
 // Combines Adam with layer-wise adaptation (trust ratio)

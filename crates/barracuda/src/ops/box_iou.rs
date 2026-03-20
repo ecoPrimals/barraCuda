@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Intersection over Union for bounding boxes
 //!
 //! **Pure WGSL**: Single implementation via WebGPU shader

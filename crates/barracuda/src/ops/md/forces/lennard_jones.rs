@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Lennard-Jones Force Calculation
 //!
 //! **Physics**: Van der Waals interactions (noble gases, simple liquids)

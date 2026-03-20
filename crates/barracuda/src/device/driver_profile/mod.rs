@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU Driver Profile — data-driven shader specialisation.
 //!
 //! This module answers the question **"who is driving the hardware?"** and
@@ -598,7 +598,7 @@ impl GpuDriverProfile {
         match arch {
             GpuArch::Volta => Fp64Rate::Full,
             GpuArch::Ampere => Fp64Rate::Throttled,
-            GpuArch::Ada => Fp64Rate::Throttled,
+            GpuArch::Ada | GpuArch::Blackwell => Fp64Rate::Throttled,
             GpuArch::Turing => Fp64Rate::Throttled,
             GpuArch::Rdna2 | GpuArch::Rdna3 => Fp64Rate::Throttled,
             GpuArch::Cdna2 => Fp64Rate::Full,
@@ -623,7 +623,7 @@ impl GpuDriverProfile {
     pub fn preferred_workgroup_size(&self) -> u32 {
         match self.arch {
             GpuArch::Volta | GpuArch::Turing => 64,
-            GpuArch::Ampere | GpuArch::Ada => 256,
+            GpuArch::Ampere | GpuArch::Ada | GpuArch::Blackwell => 256,
             GpuArch::Rdna2 | GpuArch::Rdna3 => 256,
             _ => 128,
         }

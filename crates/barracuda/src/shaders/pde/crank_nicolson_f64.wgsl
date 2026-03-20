@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Crank-Nicolson PDE Solver (f64) - Shader-First Implementation
 //
 // Full f64 precision for long-time integration stability.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Normal distribution CDF Φ(x) = P(X ≤ x) where X ~ N(μ, σ²) (f64 canonical)
 // Standard normal: Φ(x) = 0.5 * (1 + erf(x / √2))
 // General normal: Φ(x; μ, σ) = 0.5 * (1 + erf((x - μ) / (σ√2)))

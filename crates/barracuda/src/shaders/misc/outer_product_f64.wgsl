@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Outer Product - Tensor product of vectors (complete parallel implementation) (f64 canonical)
 // Creates matrix M[i,j] = a[i] * b[j]
 //

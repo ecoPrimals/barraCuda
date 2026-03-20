@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! SPIR-V Emission — Sovereign Compiler Phase 4.
 //!
 //! Takes a validated `naga::Module` + `naga::valid::ModuleInfo` and emits

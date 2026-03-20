@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // BFGS Inverse Hessian Update - f64 canonical
 //
 // Updates the inverse Hessian approximation H⁻¹ using the BFGS formula:

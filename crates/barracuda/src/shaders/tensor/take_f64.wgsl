@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Take - Advanced indexing operation (gather) (f64 canonical)
 // Gathers elements from input using index array
 //

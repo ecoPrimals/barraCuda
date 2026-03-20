@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Device module - Unified Hardware Abstraction
 //!
 //! **Phase 2: Unified Device Architecture**:

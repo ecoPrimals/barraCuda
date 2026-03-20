@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Optimization convergence diagnostics
 //!
 //! Provides tools for detecting convergence, stagnation, and oscillation

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! `BatchToleranceSearchF64` — GPU PFAS ion batch tolerance search
 //!
 //! Matches S environmental sample ion masses against R PFAS library reference

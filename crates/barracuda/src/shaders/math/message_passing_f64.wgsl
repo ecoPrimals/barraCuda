@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // message_passing_f64.wgsl - Message Passing for Graph Neural Networks (f64 canonical)
 //
 // Generic message passing framework

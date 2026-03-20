@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! `GpuSession` Builder API — Pre-warmed GPU sessions (L-004)
 //!
 //! Builds GPU sessions with optional pipeline pre-warming to eliminate

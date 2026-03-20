@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Complementary error function (erfc) operation (f64 canonical)
 // erfc(x) = 1 - erf(x)
 // Approximation using Abramowitz and Stegun formula

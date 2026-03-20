@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // lennard_jones_df64.wgsl — 12-6 Lennard-Jones potential for van der Waals
 //
 // V(r) = 4*eps*((sigma/r)^12 - (sigma/r)^6)

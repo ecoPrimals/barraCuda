@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // SGD (Stochastic Gradient Descent) Optimizer - f64 canonical
 //
 // Update rule: weight = weight - learning_rate * gradient

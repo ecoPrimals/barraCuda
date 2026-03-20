@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // fbm_2d_f64.wgsl — Batch 2D Fractal Brownian Motion (f64)
 //

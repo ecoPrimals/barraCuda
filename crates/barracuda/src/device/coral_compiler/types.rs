@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Wire types for the coralReef IPC protocol.
 
 use bytes::Bytes;
@@ -53,6 +53,7 @@ pub fn precision_to_coral_strategy(
 ) -> &'static str {
     use crate::shaders::precision::Precision;
     match precision {
+        Precision::F16 => "f16_fast",
         Precision::F32 => "f32_only",
         Precision::F64 => "native",
         Precision::Df64 => "double_float",
@@ -102,6 +103,7 @@ pub fn arch_to_coral(arch: &crate::device::driver_profile::GpuArch) -> Option<&'
         GpuArch::Turing => Some("sm_75"),
         GpuArch::Ampere => Some("sm_80"),
         GpuArch::Ada => Some("sm_89"),
+        GpuArch::Blackwell => Some("sm_100"),
         GpuArch::Rdna2 => Some("gfx1030"),
         GpuArch::Rdna3 => Some("gfx1100"),
         GpuArch::Cdna2 => Some("gfx90a"),

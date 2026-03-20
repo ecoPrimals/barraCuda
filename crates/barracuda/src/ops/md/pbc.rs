@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Periodic Boundary Conditions (PBC) Distance Calculation
 //!
 //! **Purpose**: Minimum image convention for molecular dynamics simulations

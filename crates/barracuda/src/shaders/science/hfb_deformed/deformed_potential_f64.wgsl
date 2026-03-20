@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // deformed_potential_f64.wgsl — Axially-deformed nuclear mean-field potential
 //
 // hotSpring absorption: Skyrme + Coulomb potentials on (ρ,z) grid for

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Global Max Pooling
 // Reduces spatial dimensions (H x W) to 1x1 by taking maximum across all spatial locations
 //

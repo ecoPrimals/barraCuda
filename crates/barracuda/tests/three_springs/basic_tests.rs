@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Basic unit tests: Fused Map-Reduce and Kriging primitives.
 
 #![expect(clippy::unwrap_used, reason = "tests")]

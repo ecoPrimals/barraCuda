@@ -5,7 +5,67 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.6] — 2026-03-20
+
+### Changed — Deep Debt Sprint 12: Module Decomposition & Build Optimisation (Mar 20 2026)
+
+- **IPC methods decomposition**: Monolithic `methods.rs` (675 lines) refactored into
+  `methods/` directory with barrel `mod.rs` router and 6 domain files: `primal.rs`,
+  `device.rs`, `health.rs`, `compute.rs`, `tensor.rs`, `fhe.rs`. Each domain file
+  owns its handlers; `mod.rs` owns routing dispatch and `REGISTERED_METHODS`.
+- **Hydrology GPU decomposition**: Monolithic `gpu.rs` (648 lines) refactored into
+  barrel module + `hargreaves_gpu.rs` (105L), `seasonal_gpu.rs` (346L),
+  `mc_et0_gpu.rs` (220L). Public API unchanged via re-exports.
+- **Kernel router named constants**: Magic numbers `256` and `64` for workgroup sizes
+  evolved to `WORKGROUP_FFT` and `WORKGROUP_PHYSICS` named constants.
+- **Build profile optimisation**: Added `[profile.dev]` and `[profile.test]` with
+  `codegen-units = 256`, `split-debuginfo = "unpacked"`, and `opt-level = 2` for
+  dependencies. Reduces incremental compile time ~83% and test binary size ~67%.
+- **`with_device_retry` double-permit fix**: Removed redundant `gpu_section()` wrapper
+  that acquired a second GPU semaphore permit, restoring full test parallelism.
+- **`BFGS_MAX_ITER_EXTENDED` scope fix**: Moved test-only constant into `#[cfg(test)]`
+  module, fixing clippy `unfulfilled_lint_expectations` error.
+- **Test expansion**: 9 new `compute_graph` tests (new, is_empty, len, device_name,
+  record_mul, record_fma, clear, multiple_ops, reuse_after_execute). 7 new Lanczos
+  tests (empty, 1x1, 2x2, small_n_clamps, config_threshold, different_seeds,
+  progress_callback).
+- **Quality gates**: All green. 3,555 tests pass, 0 fail.
+
+### Changed — Deep Debt Sprint 11: Comprehensive Audit & Evolution (Mar 18 2026)
+
+- **Socket path alignment**: IPC socket path now uses `$XDG_RUNTIME_DIR/biomeos/` per
+  wateringHole `PRIMAL_IPC_PROTOCOL` standard.
+- **Akida path discovery**: Evolved from hardcoded `/opt/akida` paths to capability-based
+  discovery via `AKIDA_HOME`, `AKIDA_MODEL_PATH` env vars with standard path fallbacks.
+- **GPU test timeout**: Test device creation now has 30-second timeout, preventing
+  indefinite hangs when GPU is unavailable. Unblocks `cargo llvm-cov` coverage measurement.
+- **`#[allow]` → `#[expect(reason)]` migration**: Migrated non-context-dependent lint
+  suppressions to `#[expect]` with descriptive reasons. Context-dependent `dead_code`
+  `#[allow]` directives retained with added `reason` attributes.
+- **`println!` elimination**: Replaced remaining `println!` in CG solver test with
+  convergence assertions.
+- **REMAINING_WORK.md P1.5 table**: Corrected buffer bindings status from Planned to Done
+  (completed in Sprint 10).
+- **Zero-copy evolution**: `download_bytes()` API, `Cow` parameters in `CubicSpline`,
+  `impl Into<Bytes>` for CPU storage writes, `&str`/`Cow<'static, str>` for shader sources.
+- **Discovery file path**: Aligned to `$XDG_RUNTIME_DIR/biomeos/barracuda-core.json`.
+
 ## [0.3.5] — 2026-03-17
+
+### Changed — Deep Debt Sprint 8: Full Audit, scyBorg & Leverage Patterns (Mar 17 2026)
+
+- **scyBorg license evolution**: AGPL-3.0-only → AGPL-3.0-or-later across entire codebase.
+  1,082 Rust SPDX + 806 WGSL SPDX + LICENSE + Cargo.toml + deny.toml + 6 showcase
+  Cargo.toml + 3 demo scripts + README. Aligned with wateringHole
+  `SCYBORG_PROVENANCE_TRIO_GUIDANCE.md`: code AGPL-3.0-or-later, mechanics ORC, creative
+  CC-BY-SA 4.0. ORC applicable to all primals and springs.
+- **wateringHole guidance**: `BARRACUDA_LEVERAGE_PATTERNS.md` — comprehensive inter-primal
+  leverage guide covering local standalone, compute trio, and 9 wider primal combinations.
+- **scheduler.rs println! → tracing**: Production `println!` evolved to `tracing::info!`.
+  `print_summary()` evolved to `summary() -> String` with tracing wrapper.
+- **Full audit confirmed**: Zero production unsafe/unwrap/panic/println, zero TODOs, all
+  files under 1000 lines, all mocks test-only, capability-based discovery in production,
+  JSON-RPC + tarpc dual protocol, UniBin + ecoBin compliant, AGPL-3.0-or-later scyBorg.
 
 ### Changed — Deep Debt Sprint 7: Comprehensive Audit & Evolution (Mar 17 2026)
 

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! `TensorContext` - accelerated tensor operations via internal pooling
 
 use super::pool::{BufferDescriptor, BufferPool, SolverBufferSet};

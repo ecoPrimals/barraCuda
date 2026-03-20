@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // RFFT extract — copy first N/2+1 complex values from full spectrum.
 // Exploits conjugate symmetry: X[k] = conj(X[N-k]) for real inputs.
 // f64 canonical; coralReef handles precision lowering.

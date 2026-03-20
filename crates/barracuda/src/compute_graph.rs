@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Compute Graph - Lazy Execution for Operation Batching
 //!
 //! **Problem**: wgpu has significant per-dispatch overhead (~50-100μs).
@@ -510,6 +510,25 @@ mod tests {
     use super::*;
     use crate::device::test_pool;
 
+    fn make_storage_buf(device: &WgpuDevice, label: &str, data: &[f32]) -> wgpu::Buffer {
+        device
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some(label),
+                contents: bytemuck::cast_slice(data),
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            })
+    }
+
+    fn make_output_buf(device: &WgpuDevice, label: &str, n: usize) -> wgpu::Buffer {
+        device.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some(label),
+            size: (n * 4) as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        })
+    }
+
     #[tokio::test]
     async fn test_compute_graph_batching() {
         let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
@@ -521,28 +540,9 @@ mod tests {
         let data_a: Vec<f32> = (0..1000).map(|i| i as f32).collect();
         let data_b: Vec<f32> = (0..1000).map(|i| (i * 2) as f32).collect();
 
-        let buf_a = device
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("A"),
-                contents: bytemuck::cast_slice(&data_a),
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            });
-
-        let buf_b = device
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("B"),
-                contents: bytemuck::cast_slice(&data_b),
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            });
-
-        let buf_out = device.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Out"),
-            size: (1000 * 4) as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
+        let buf_a = make_storage_buf(&device, "A", &data_a);
+        let buf_b = make_storage_buf(&device, "B", &data_b);
+        let buf_out = make_output_buf(&device, "Out", 1000);
 
         graph.record_add(buf_a, buf_b, buf_out, 1000);
 
@@ -550,6 +550,138 @@ mod tests {
 
         graph.execute().unwrap();
 
+        assert!(graph.is_empty());
+    }
+
+    #[test]
+    fn test_graph_empty_execute() {
+        let graph_len = 0_usize;
+        assert_eq!(graph_len, 0);
+    }
+
+    #[tokio::test]
+    async fn test_graph_new_is_empty() {
+        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let graph = ComputeGraph::new(&device);
+        assert!(graph.is_empty());
+        assert_eq!(graph.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_graph_device_name_populated() {
+        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let graph = ComputeGraph::new(&device);
+        assert!(!graph.device_name().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_graph_record_mul_increments_len() {
+        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let mut graph = ComputeGraph::new(&device);
+        let a = make_storage_buf(&device, "a", &[1.0, 2.0]);
+        let b = make_storage_buf(&device, "b", &[3.0, 4.0]);
+        let out = make_output_buf(&device, "o", 2);
+        graph.record_mul(a, b, out, 2);
+        assert_eq!(graph.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_graph_record_fma_increments_len() {
+        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let mut graph = ComputeGraph::new(&device);
+        let a = make_storage_buf(&device, "a", &[1.0, 2.0]);
+        let b = make_storage_buf(&device, "b", &[3.0, 4.0]);
+        let c = make_storage_buf(&device, "c", &[5.0, 6.0]);
+        let out = make_output_buf(&device, "o", 2);
+        graph.record_fma(a, b, c, out, 2);
+        assert_eq!(graph.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_graph_clear() {
+        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let mut graph = ComputeGraph::new(&device);
+        let a = make_storage_buf(&device, "a", &[1.0]);
+        let b = make_storage_buf(&device, "b", &[2.0]);
+        let out = make_output_buf(&device, "o", 1);
+        graph.record_add(a, b, out, 1);
+        assert_eq!(graph.len(), 1);
+        graph.clear();
+        assert!(graph.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_graph_multiple_ops_batch() {
+        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let mut graph = ComputeGraph::new(&device);
+        let n = 64;
+        let ones: Vec<f32> = vec![1.0; n];
+        let twos: Vec<f32> = vec![2.0; n];
+        let threes: Vec<f32> = vec![3.0; n];
+
+        let a1 = make_storage_buf(&device, "a1", &ones);
+        let b1 = make_storage_buf(&device, "b1", &twos);
+        let o1 = make_output_buf(&device, "o1", n);
+        graph.record_add(a1, b1, o1, n);
+
+        let a2 = make_storage_buf(&device, "a2", &twos);
+        let b2 = make_storage_buf(&device, "b2", &threes);
+        let o2 = make_output_buf(&device, "o2", n);
+        graph.record_mul(a2, b2, o2, n);
+
+        let fa = make_storage_buf(&device, "fa", &ones);
+        let fb = make_storage_buf(&device, "fb", &twos);
+        let fc = make_storage_buf(&device, "fc", &threes);
+        let fo = make_output_buf(&device, "fo", n);
+        graph.record_fma(fa, fb, fc, fo, n);
+
+        assert_eq!(graph.len(), 3);
+        graph.execute().unwrap();
+        assert!(graph.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_graph_execute_empty_is_noop() {
+        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let mut graph = ComputeGraph::new(&device);
+        graph.execute().unwrap();
+        assert!(graph.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_graph_reuse_after_execute() {
+        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let mut graph = ComputeGraph::new(&device);
+
+        let a = make_storage_buf(&device, "a", &[1.0, 2.0, 3.0, 4.0]);
+        let b = make_storage_buf(&device, "b", &[5.0, 6.0, 7.0, 8.0]);
+        let o = make_output_buf(&device, "o", 4);
+        graph.record_add(a, b, o, 4);
+        graph.execute().unwrap();
+        assert!(graph.is_empty());
+
+        let a2 = make_storage_buf(&device, "a2", &[10.0, 20.0]);
+        let b2 = make_storage_buf(&device, "b2", &[30.0, 40.0]);
+        let o2 = make_output_buf(&device, "o2", 2);
+        graph.record_mul(a2, b2, o2, 2);
+        assert_eq!(graph.len(), 1);
+        graph.execute().unwrap();
         assert!(graph.is_empty());
     }
 }

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // ============================================================================
 // math_f64.wgsl — f64 math library for GPU compute
 // ============================================================================

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Crank-Nicolson PDE Solver — GPU-Accelerated via WGSL
 //!
 //! Implicit PDE solver for diffusion-type equations:

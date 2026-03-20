@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // tridiag_eigh_f64.wgsl — GPU tridiagonal symmetric eigenvector solver (f64)
 //

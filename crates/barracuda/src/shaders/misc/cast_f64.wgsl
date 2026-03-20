@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Cast_f64.wgsl — Type conversion with multiple modes (f64 canonical)
 //
 // Supports f64↔i32 and f64↔u32 conversions via a mode parameter.

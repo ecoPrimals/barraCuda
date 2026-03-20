@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 //! `BatchedStatefulF64` — GPU-resident state buffer for sequential multi-step pipelines.
 //!

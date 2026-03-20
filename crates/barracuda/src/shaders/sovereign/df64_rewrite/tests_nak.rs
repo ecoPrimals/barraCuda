@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! NAK/NVK stress tests — patterns from hotSpring Yukawa handoff.
 //! Extracted from `tests.rs` for maintainability (wateringHole 1000-line convention).
 

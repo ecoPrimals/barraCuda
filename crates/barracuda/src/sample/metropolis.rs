@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Metropolis-Hastings MCMC sampling with Boltzmann acceptance.
 //!
 //! CPU implementation complementing the GPU shader [`crate::sample::WGSL_METROPOLIS`].

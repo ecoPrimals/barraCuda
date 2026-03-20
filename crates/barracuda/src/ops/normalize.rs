@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Normalize - L2 normalization along dimension (Pure WGSL)
 //!
 //! Normalizes vectors to unit length: `x_normalized` = x / ||x||_2

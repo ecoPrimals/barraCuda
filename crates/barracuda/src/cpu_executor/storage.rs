@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! CPU tensor storage implementation — zero-copy via `BytesMut`.
 
 use crate::error::Result;
@@ -45,19 +45,35 @@ impl TensorStorage for CpuTensorStorage {
         &mut self,
         data: &[u8],
     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
-        let data = data.to_vec();
-        Box::pin(async move {
-            if data.len() != self.data.len() {
-                return Err(crate::error::BarracudaError::InvalidInput {
-                    message: format!(
-                        "Data size mismatch: expected {}, got {}",
-                        self.data.len(),
-                        data.len()
-                    ),
-                });
-            }
-            self.data.copy_from_slice(&data);
-            Ok(())
-        })
+        if data.len() != self.data.len() {
+            let msg = format!(
+                "Data size mismatch: expected {}, got {}",
+                self.data.len(),
+                data.len()
+            );
+            return Box::pin(async move {
+                Err(crate::error::BarracudaError::InvalidInput { message: msg })
+            });
+        }
+        self.data.copy_from_slice(data);
+        Box::pin(async { Ok(()) })
+    }
+
+    fn write_from_cpu_bytes(
+        &mut self,
+        data: Bytes,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
+        if data.len() != self.data.len() {
+            let msg = format!(
+                "Data size mismatch: expected {}, got {}",
+                self.data.len(),
+                data.len()
+            );
+            return Box::pin(async move {
+                Err(crate::error::BarracudaError::InvalidInput { message: msg })
+            });
+        }
+        self.data.copy_from_slice(&data);
+        Box::pin(async { Ok(()) })
     }
 }

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Fused Map-Reduce at f64 precision — single-dispatch unified pattern
 //!
 //! UNIFIED PATTERN (Feb 16 2026) — Serves all springs:

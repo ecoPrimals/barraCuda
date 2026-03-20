@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Cholesky Decomposition - L·Lᵀ factorization of symmetric positive-definite matrices
 // Computes lower triangular matrix L such that A = L·Lᵀ
 //

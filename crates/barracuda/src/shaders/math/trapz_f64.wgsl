@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // trapz_f64.wgsl — Parallel trapezoidal integration for f64
 //
 // **Math**: Trapezoidal rule approximates ∫_a^b f(x) dx ≈ Σ_i 0.5*(y[i]+y[i+1])*(x[i+1]-x[i])

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Optimized LayerNorm - 2-Pass Algorithm
 //!
 //! Performance Target: 10x improvement over 3-pass

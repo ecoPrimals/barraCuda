@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Incomplete gamma functions: lower γ(a,x) and upper Γ(a,x)
 //
 // Lower: γ(a,x) = ∫₀ˣ t^(a-1) e^(-t) dt = P(a,x) · Γ(a)

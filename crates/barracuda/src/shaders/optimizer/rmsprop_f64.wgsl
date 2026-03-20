@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // RMSprop Optimizer (f64 canonical)
 // Adaptive learning rate method, addresses AdaGrad's diminishing learning rates
 //

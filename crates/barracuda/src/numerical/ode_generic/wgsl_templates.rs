@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! WGSL RK4 kernel code generation for the generic ODE solver.
 //!
 //! Two templates: f64-typed (via `compile_shader_f64`) and universal-precision

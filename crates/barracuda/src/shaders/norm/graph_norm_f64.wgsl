@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // graph_norm_f64.wgsl - Graph Normalization (f64 canonical)
 //
 // Normalizes node features across the graph

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Broyden Density Mixing for Self-Consistent Field Solvers (f64)
 //
 // Generic vector mixing operations for SCF convergence:

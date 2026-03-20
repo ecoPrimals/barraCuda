@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU-accelerated Conjugate Gradient Solver (f64)
 //!
 //! **Deep Debt Principles**:
@@ -255,9 +255,15 @@ mod tests {
 
         // For this specific matrix (tridiagonal with constant diagonal),
         // both should converge quickly, but let's at least verify they both work
-        println!(
-            "Iterations: unprecond={}, precond={}",
-            result_unprecond.iterations, result_precond.iterations
+        assert!(
+            result_unprecond.iterations < 500,
+            "Unpreconditioned took too many iterations: {}",
+            result_unprecond.iterations
+        );
+        assert!(
+            result_precond.iterations < 500,
+            "Preconditioned took too many iterations: {}",
+            result_precond.iterations
         );
 
         // Solutions should be nearly identical

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! `DeformableConv2D` - Deformable Convolution 2D
 //!
 //! **Deep Debt Principles**:

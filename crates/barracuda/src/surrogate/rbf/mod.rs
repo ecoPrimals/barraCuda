@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Radial basis function surrogate for expensive function approximation
 
 use super::kernels::RBFKernel;

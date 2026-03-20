@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Norm Reduction (f64) - Compute p-norm over all elements in double precision
 //
 // Formula: ||x||_p = (sum(|x_i|^p))^(1/p)

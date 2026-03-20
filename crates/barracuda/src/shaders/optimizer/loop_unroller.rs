@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! WGSL loop unroller for `// @unroll_hint N` annotated bounded loops.
 //!
 //! Handles loops annotated with `// @unroll_hint N` where `N ≤ 32` and the

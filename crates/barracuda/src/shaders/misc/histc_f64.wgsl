@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Histc_f64.wgsl — Histogram with custom bins (f64 canonical)
 // Computes histogram of input values into specified bins
 // Uses atomic operations for parallel histogram computation

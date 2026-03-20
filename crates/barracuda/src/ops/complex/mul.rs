@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Complex Multiplication Operation
 //!
 //! **Operation**: (a + bi)(c + di) = (ac - bd) + (ad + bc)i

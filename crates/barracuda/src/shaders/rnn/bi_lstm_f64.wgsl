@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // bi_lstm.wgsl - Bidirectional LSTM (f64 canonical)
 //
 // Processes sequence in both forward and backward directions

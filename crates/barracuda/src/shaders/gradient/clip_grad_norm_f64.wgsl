@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Clip Grad Norm - Gradient clipping by total norm (f64 canonical)
 
 struct Params {

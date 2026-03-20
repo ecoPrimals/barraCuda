@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // deformed_bcs_f64.wgsl — BCS pairing for axially-deformed nuclei
 //
 // hotSpring absorption: same BCS physics as spherical but with deformed

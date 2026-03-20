@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! High-level Bioinformatics and Genomics API
 //!
 //! **EVOLVED**: Pure Rust string processing - No GPU dependencies!

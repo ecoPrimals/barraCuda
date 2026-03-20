@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // focal_loss_alpha_f64.wgsl - Focal Loss with class weighting (f64 canonical)
 //
 // Extension of focal loss with per-class weights (alpha)

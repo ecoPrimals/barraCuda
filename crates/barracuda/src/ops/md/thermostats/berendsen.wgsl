@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Berendsen Thermostat (f64)
 //
 // **Physics**: Weak coupling to heat bath via velocity rescaling

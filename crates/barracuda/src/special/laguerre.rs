@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Generalized Laguerre polynomials — CPU reference implementations.
 //!
 //! **Shader-first architecture**: f64 WGSL equivalents in `shaders/math/`

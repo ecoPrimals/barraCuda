@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // box_iou.wgsl - Intersection over Union for bounding boxes (f64 canonical)
 
 struct Params {

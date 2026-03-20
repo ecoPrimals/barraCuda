@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Complex Exponential Shader
 // Operation: exp(a + bi) = exp(a)[cos(b) + i·sin(b)]
 // **CRITICAL FOR FFT**: Generates twiddle factors W_N^k = exp(-2πik/N)

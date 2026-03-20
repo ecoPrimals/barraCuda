@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Bootstrap confidence intervals
 //!
 //! Provides non-parametric confidence interval estimation using the bootstrap

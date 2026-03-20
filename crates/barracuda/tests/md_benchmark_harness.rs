@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 //! MD Benchmark Harness — Tier 1 timing for Yukawa OCP and PPPM.
 //!

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // fake_quantize_f64.wgsl - Simulate quantization for training (f64 canonical)
 //
 // Fake quantization simulates the effect of quantization during training

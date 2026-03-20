@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // rk4_parallel.wgsl — Parallel Multi-System RK4 Integration (f64 canonical)
 //
 // Integrates N independent ODE systems simultaneously on GPU.

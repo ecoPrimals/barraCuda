@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // multilabel_margin_loss_f64.wgsl - Multi-label Margin Loss (f64 canonical)
 //
 // Margin-based loss for multi-label classification

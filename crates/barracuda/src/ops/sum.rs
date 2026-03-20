@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Sum reduction — GPU-resident, pipeline-cached, buffer-pooled
 //!
 //! Evolved from per-call buffer allocation to pooled `TensorContext` path.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 //! Hardware calibration: safe per-tier compilation probe.
 //!
@@ -77,6 +77,18 @@ impl HardwareCalibration {
 
         use super::driver_profile::PrecisionRoutingAdvice as PRA;
 
+        let has_f16 = device
+            .device()
+            .features()
+            .contains(wgpu::Features::SHADER_F16);
+
+        let f16_cap = TierCapability {
+            tier: PrecisionTier::F16,
+            compiles: has_f16,
+            dispatches: has_f16,
+            transcendentals_safe: has_f16,
+        };
+
         let f32_cap = TierCapability {
             tier: PrecisionTier::F32,
             compiles: true,
@@ -112,7 +124,7 @@ impl HardwareCalibration {
             transcendentals_safe: f64_works && profile.supports_f64_builtins(),
         };
 
-        let tiers = vec![f32_cap, df64_cap, f64_cap, f64_precise_cap];
+        let tiers = vec![f16_cap, f32_cap, df64_cap, f64_cap, f64_precise_cap];
 
         let has_any_f64 = tiers.iter().any(|t| {
             t.dispatches && matches!(t.tier, PrecisionTier::F64 | PrecisionTier::F64Precise)

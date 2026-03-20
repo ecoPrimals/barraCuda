@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Multi-Head Attention: Output Projection with Head Concatenation (f64 canonical)
 // Concatenates heads and projects through output weight matrix
 //

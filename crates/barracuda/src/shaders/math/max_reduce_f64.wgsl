@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Max Reduction: Compute maximum over all elements (f64 canonical)
 // CUDA equivalent: thrust::reduce with max operation
 // Algorithm: Tree reduction (work-efficient)

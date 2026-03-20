@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // GPU-resident SU(3) algebra momentum generation via PCG hash PRNG.
 //
 // Each thread generates one anti-Hermitian traceless 3×3 complex matrix

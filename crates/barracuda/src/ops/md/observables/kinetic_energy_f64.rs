@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! KINETIC ENERGY F64 — Per-particle and total kinetic energy — GPU shader dispatch.
 //!
 //! All math originates as `kinetic_energy_f64.wgsl`.

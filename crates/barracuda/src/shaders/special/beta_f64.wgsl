@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Beta function B(a,b) = Γ(a)Γ(b)/Γ(a+b) — f64 precision
 // For numerical stability: B(a,b) = exp(lgamma(a) + lgamma(b) - lgamma(a+b))
 //

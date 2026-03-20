@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Sparse iterative solvers
 //!
 //! Provides iterative methods for solving sparse linear systems Ax = b.

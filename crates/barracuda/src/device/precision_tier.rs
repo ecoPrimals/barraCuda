@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 //! Precision tiers and physics domains for GPU shader compilation routing.
 //!
@@ -28,6 +28,9 @@ use serde::{Deserialize, Serialize};
 /// | `F64Precise` | `compile_shader_f64()` + FMA-free | 52 | Slowest |
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PrecisionTier {
+    /// 16-bit float: ML inference, screening, tensor core fast path.
+    /// Requires `SHADER_F16`; emulated via pack/unpack on older hardware.
+    F16,
     /// 32-bit float: screening, preview, throughput-bound work.
     F32,
     /// Double-float emulation (f32-pair): ~14 decimal digits on FP32 cores.
@@ -45,6 +48,7 @@ impl PrecisionTier {
     #[must_use]
     pub const fn mantissa_bits(self) -> u32 {
         match self {
+            Self::F16 => 10,
             Self::F32 => 23,
             Self::DF64 => 48,
             Self::F64 | Self::F64Precise => 52,
@@ -55,6 +59,7 @@ impl PrecisionTier {
 impl std::fmt::Display for PrecisionTier {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::F16 => write!(f, "F16"),
             Self::F32 => write!(f, "F32"),
             Self::DF64 => write!(f, "DF64"),
             Self::F64 => write!(f, "F64"),
@@ -150,6 +155,7 @@ mod tests {
 
     #[test]
     fn tier_display() {
+        assert_eq!(PrecisionTier::F16.to_string(), "F16");
         assert_eq!(PrecisionTier::F32.to_string(), "F32");
         assert_eq!(PrecisionTier::DF64.to_string(), "DF64");
         assert_eq!(PrecisionTier::F64.to_string(), "F64");
@@ -158,6 +164,7 @@ mod tests {
 
     #[test]
     fn mantissa_bits_ordered() {
+        assert!(PrecisionTier::F16.mantissa_bits() < PrecisionTier::F32.mantissa_bits());
         assert!(PrecisionTier::F32.mantissa_bits() < PrecisionTier::DF64.mantissa_bits());
         assert!(PrecisionTier::DF64.mantissa_bits() < PrecisionTier::F64.mantissa_bits());
         assert_eq!(

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Linear System Solve - Gaussian elimination with partial pivoting
 //!
 //! **Deep Debt Principles**:

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // torsion_angles_df64.wgsl — phi/psi/omega backbone torsion angles from Cα coordinates
 //
 // Dihedral angle from 4 consecutive backbone atoms: phi = atan2(dot(n1×n2, u), dot(n1, n2))

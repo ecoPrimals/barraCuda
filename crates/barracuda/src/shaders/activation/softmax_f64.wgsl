@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Softmax: Numerically stable softmax activation (f64 canonical)
 // CUDA equivalent: cudnn::Softmax
 // Formula: softmax(x_i) = exp(x_i - max(x)) / sum(exp(x_j - max(x)))

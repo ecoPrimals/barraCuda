@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # cargo-deny configuration for barraCuda
 # ecoBin compliance: pure Rust, no banned C wrappers
@@ -22,7 +22,7 @@ allow = [
     "ISC",
     "Zlib",
     "Unicode-3.0",
-    "AGPL-3.0-only",
+    "AGPL-3.0-or-later",
     "CC0-1.0",
 ]
 
@@ -36,6 +36,9 @@ deny = [
     { name = "openssl-sys" },
     # ecoBin: no C TLS
     { name = "native-tls" },
+    # ecoBin: no C crypto (ring uses C assembly / aws-lc)
+    { name = "ring" },
+    { name = "aws-lc-sys" },
 ]
 
 [sources]

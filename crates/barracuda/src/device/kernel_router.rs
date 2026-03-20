@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Compute Kernel Routing - Unified Math Language → Hardware-Specific Implementation
 //!
 //! **Evolution (Feb 15, 2026)**: Completes the NPU pipeline!
@@ -59,6 +59,12 @@ const MATMUL_LARGE_DIM: usize = 256;
 
 /// Matmul dimensions above which 8x8 tile workgroup is used.
 const MATMUL_MEDIUM_DIM: usize = 64;
+
+/// Default 1D workgroup size for FFT and binary prescreen shaders.
+const WORKGROUP_FFT: [u32; 3] = [256, 1, 1];
+
+/// Default 1D workgroup size for physics force computations.
+const WORKGROUP_PHYSICS: [u32; 3] = [64, 1, 1];
 
 /// Compute workload description
 ///
@@ -247,7 +253,7 @@ impl KernelRouter {
                 Ok(KernelTarget::Wgsl {
                     shader: "fft".to_string(),
                     device,
-                    workgroup_size: [256, 1, 1],
+                    workgroup_size: WORKGROUP_FFT,
                 })
             }
 
@@ -259,7 +265,7 @@ impl KernelRouter {
                 Ok(KernelTarget::Wgsl {
                     shader: format!("forces/{force_type}"),
                     device,
-                    workgroup_size: [64, 1, 1],
+                    workgroup_size: WORKGROUP_PHYSICS,
                 })
             }
 
@@ -365,7 +371,7 @@ impl KernelRouter {
                 Ok(KernelTarget::Wgsl {
                     shader: "prescreen/binary_threshold".to_string(),
                     device,
-                    workgroup_size: [256, 1, 1],
+                    workgroup_size: WORKGROUP_FFT,
                 })
             }
         }
@@ -415,31 +421,16 @@ impl KernelRouter {
     /// Discover available NPU models via capability-based filesystem search.
     ///
     /// Resolution chain (first match wins):
-    /// 1. `AKIDA_MODELS_DIR` environment variable
-    /// 2. XDG data dirs → `$XDG_DATA_HOME/akida/models`
-    /// 3. `$HOME/.local/share/akida/models`
-    /// 4. System paths → `/usr/share/akida/models`, `/opt/akida/models`
+    /// 1. `AKIDA_MODEL_PATH` environment variable
+    /// 2. `AKIDA_HOME` + `/models` if set
+    /// 3. `AKIDA_MODELS_DIR` environment variable
+    /// 4. XDG data dirs
+    /// 5. System paths: `/opt/akida/models`, `/usr/local/akida/models`, `/usr/share/akida/models`
     fn discover_npu_models() -> Result<HashMap<String, NpuModelInfo>> {
         let mut models = HashMap::new();
 
-        let mut model_dirs = Vec::new();
-
-        if let Ok(dir) = std::env::var("AKIDA_MODELS_DIR") {
-            model_dirs.push(dir);
-        }
-
-        if let Ok(data_home) = std::env::var("XDG_DATA_HOME") {
-            model_dirs.push(format!("{data_home}/akida/models"));
-        } else if let Ok(home) = std::env::var("HOME") {
-            model_dirs.push(format!("{home}/.local/share/akida/models"));
-        }
-
-        for dir in super::akida::AKIDA_SDK_SYSTEM_DIRS {
-            model_dirs.push(format!("{dir}/models"));
-        }
-
-        for dir in model_dirs {
-            let path = std::path::Path::new(&dir);
+        for dir in super::akida::akida_model_dirs() {
+            let path = dir.as_path();
             if path.exists() {
                 if let Ok(entries) = std::fs::read_dir(path) {
                     for entry in entries.flatten() {

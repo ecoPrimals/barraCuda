@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Stack - Stack tensors along new dimension (f64 canonical)
 // Concatenates tensors along a new axis
 //

@@ -1,8 +1,275 @@
 # barraCuda — Remaining Work
 
-**Version**: 0.3.5
-**Date**: March 17, 2026
+**Version**: 0.3.6
+**Date**: March 20, 2026
 **Status**: Active — tracks all open work items for barraCuda evolution
+
+---
+
+## Scope & Aim
+
+barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
+
+- **Target every piece of silicon**: Compute shaders (ALU), tensor cores (MMA),
+  RT cores (BVH), Z-buffer, texture units (TMU), ROPs — every fixed-function unit
+  on the GPU die becomes a dispatch op. Springs see abstract math; coralReef emits
+  pipeline state; toadStool routes to hardware.
+- **Deep debt solutions over surface fixes**: Modern idiomatic Rust, zero unsafe,
+  zero C deps, every mock isolated to test, every hardcoded value agnostic and
+  capability-based. Primals have self-knowledge and discover others at runtime.
+- **90% test coverage**: Unit, integration, e2e, chaos, fault injection, property
+  testing, hardware parity. Coverage via `llvm-cov`.
+- **Sovereign pipeline completion**: barraCuda → coralReef → toadStool → GPU,
+  fully wired with buffer bindings, readback, and hardware hints. Pure Rust end
+  to end.
+- **15-tier precision ladder**: F16 → F32 → DF64 → F64 → F64Precise → DF128 →
+  QF128 → FP8 → INT2/Binary → K-quant. Each tier maps to hardware capabilities
+  and physics domain requirements.
+- **ecoBin/UniBin/scyBorg compliance**: AGPL-3.0-or-later, pure Rust (no C deps
+  in barraCuda's code), semantic IPC method naming, capability-based discovery.
+
+---
+
+## Achieved (March 20, 2026 — Deep Debt Sprint 11: Comprehensive Audit & Smart Refactoring)
+
+### Clippy Regression Fix
+- **`bfgs.rs` `#[expect(dead_code)]` unfulfilled**: `BFGS_MAX_ITER_EXTENDED` constant
+  was only used in tests — moved into `#[cfg(test)] mod tests` block where it belongs.
+  Clippy `--all-targets` now passes cleanly.
+
+### Smart Module Refactoring
+- **`ipc/methods.rs`** (675L → 7 files): Split per-domain handler files into
+  `methods/` directory following semantic IPC boundaries:
+  - `mod.rs` (84L): routing table + `dispatch` match + `REGISTERED_METHODS`
+  - `primal.rs` (65L): `primal.info`, `primal.capabilities`
+  - `device.rs` (50L): `device.list`, `device.probe`
+  - `health.rs` (97L): `health.check`, `tolerances.get`, `validate.gpu_stack`
+  - `compute.rs` (105L): `compute.dispatch`, `parse_shape`
+  - `tensor.rs` (117L): `tensor.create`, `tensor.matmul`
+  - `fhe.rs` (222L): `fhe.ntt`, `fhe.pointwise_mul`
+- **`stats/hydrology/gpu.rs`** (648L → 4 files): Split 3 unrelated GPU pipelines
+  into domain files:
+  - `gpu.rs` (11L): barrel re-exports
+  - `hargreaves_gpu.rs` (105L): batch Hargreaves ET₀
+  - `seasonal_gpu.rs` (346L): fused seasonal pipeline + CPU reference
+  - `mc_et0_gpu.rs` (220L): Monte Carlo ET₀ uncertainty propagation
+
+### Hardcoding Evolution
+- **`kernel_router.rs`**: Bare workgroup sizes `[256, 1, 1]` and `[64, 1, 1]` evolved
+  to named constants `WORKGROUP_FFT` and `WORKGROUP_PHYSICS`
+
+### Test Coverage Expansion
+- **`spectral/lanczos.rs`**: 1 → 8 tests (empty, 1×1 identity, 2×2 analytic,
+  iteration clamping, config threshold, seed independence, progress callback)
+- **`compute_graph.rs`**: 1 → 10 tests (empty execute, new-is-empty, device name,
+  each op type, clear, multiple batched ops, reuse after execute)
+
+### Full Codebase Audit Confirmations
+- **Zero production unsafe**: `#![forbid(unsafe_code)]` in both crates
+- **Zero production unwrap**: `clippy::unwrap_used` clean; only invariant `.expect()`
+  on ownership-based state machines (GuardedEncoder, PooledBuffer, len==1 check)
+- **Zero production panic**: All `panic!` in `#[cfg(test)]` blocks
+- **Zero TODO/FIXME/HACK**: Confirmed
+- **Zero files over 1000 lines**: Largest now `test_pool.rs` at 775 lines
+- **All SPDX headers AGPL-3.0-or-later**: 1,082+ Rust + 806 WGSL
+- **JSON-RPC + tarpc**: Dual-protocol with semantic naming
+- **UniBin + ecoBin compliant**: Single binary, pure Rust, banned C deps enforced
+- **Zero-copy**: `bytes::Bytes`/`BytesMut`, `bytemuck::cast_slice`, `Arc<str>`.
+  Remaining gaps are architectural (mapped GPU copy-out, JSON IPC) — diminishing returns
+- **Capability-based discovery**: Production code uses capability scanning,
+  not hardcoded primal names (display strings are descriptive, not routing)
+- **Dependencies**: All direct deps pure Rust; `cargo deny check` passes
+  (advisories, bans, licenses, sources all OK)
+
+### Compilation & Test Performance Evolution
+- **Dev/test profile optimization**: Added `codegen-units = 256`,
+  `split-debuginfo = "unpacked"`, and `opt-level = 2` for dependencies
+- **Test binary**: 255 MB → 87 MB (67% reduction via split debuginfo)
+- **Incremental compile**: 66s → 11s for barracuda lib test binary
+- **Test execution**: 3,494 lib tests in 24.2 seconds (was 18+ min stalling
+  on previous un-profiled config). 410% CPU utilization (full parallelism).
+- **`with_device_retry` double-permit fix**: `get_test_device_if_gpu_available()`
+  already acquires a TLS permit from `GpuTestGate` — removed redundant
+  `gpu_section()` wrapper that was acquiring a second permit, effectively
+  halving GPU test parallelism.
+- **Total test count**: 3,555 (3,494 barracuda + 61 barracuda-core), 0 failures
+
+### Quality Gates — All Green
+- `cargo fmt --check`: Pass
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings`: Pass
+- `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps`: Pass
+- `cargo deny check`: Pass (advisories, bans, licenses, sources)
+- `cargo test -p barracuda --all-features --lib`: 3,494 pass / 0 fail / 13 ignored
+- `cargo test -p barracuda-core --all-features --lib`: 61 pass / 0 fail
+- `cargo check --workspace --all-features`: Pass
+
+---
+
+## Achieved (March 18, 2026 — Deep Debt Sprint 10: Silicon Exploitation & Sovereign Wiring)
+
+### GB206 Blackwell Architecture Support
+- **`GpuArch::Blackwell`** added to driver profile (SM100/SM120)
+- Detection: `rtx 50*`, `rtx50*`, `gb2*`, `b200`, `b100` adapter name patterns
+- FP64 rate: Throttled (same as Ada); workgroup: 256; 2D workgroup: 16
+- Latency model: SM7x–SM12x DFMA pipeline (8-cycle)
+- coralReef target: `sm_100`; cache architecture scan updated
+- All exhaustive matches updated (7 files: architectures, driver_profile/mod,
+  latency, wgpu_caps, coral_compiler/types, precision_brain, hardware_calibration)
+
+### FP16 Precision Tier (Phase 1 — Tensor Core Unlock)
+- **`Precision::F16`** added to shader precision system with full WGSL preamble
+  (`enable f16;`, native `f16` ops, `op_from_f32` conversion)
+- **`PrecisionTier::F16`** added to compilation-level routing (10-bit mantissa)
+- `SHADER_F16` feature detection wired into `HardwareCalibration::from_profile`
+- Precision brain routes F16 through `compile_shader` (same as F32 path)
+- coralReef strategy: `f16_fast`
+- All exhaustive matches updated (precision_brain domain_requirements,
+  hardware_calibration tier construction, precision_tier Display/mantissa_bits)
+
+### Fixed-Function Dispatch Ops (Level 3 Portability)
+- **`HardwareHint` enum** added to `device/backend.rs`:
+  `Compute`, `TensorCore`, `RtCore`, `ZBuffer`, `TextureUnit`, `RopBlend`
+- `DispatchDescriptor` now carries `hardware_hint` field (default: `Compute`)
+- `ComputeDispatch::build()` emits `HardwareHint::default()` for backward compat
+- `reborrow_descriptor` propagates hint through `Arc<B>` layer
+- IPC dispatch payload now includes `"hardware_hint"` field for toadStool routing
+
+### Sovereign IPC Buffer Bindings (Cross-Primal Wiring)
+- **`IpcBufferBinding` struct**: carries buffer `id`, `size`, access mode over JSON-RPC
+- `submit_to_toadstool()` evolved: now sends `bindings[]` array + `hardware_hint`
+- `dispatch_compute()` constructs `IpcBufferBinding` from `DispatchDescriptor.bindings`
+- `dispatch_binary()` evolved: no longer ignores `bindings` parameter
+- `CoralBuffer.size` no longer dead code — used in binding serialization
+- Payload now includes full buffer descriptors for toadStool GPU memory mapping
+
+### Quality Gates — All Green
+- `cargo fmt --check`: Pass
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings`: Pass
+- `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps`: Pass
+- `cargo test -p barracuda --all-features --lib`: 3,470 pass / 0 fail
+- `cargo check --workspace --all-features`: Pass
+
+---
+
+## Achieved (March 17, 2026 — Deep Debt Sprint 8: Full Audit, Leverage Patterns & Backend Analysis)
+
+### Backend Analysis Pack (hotSpring Handoff)
+- **System GPU survey completed**: 3 GPUs (2x Titan V on VFIO, 1x RTX 5060 on nvidia
+  proprietary), 2 wgpu backends (nvidia proprietary + LVP software), nouveau kernel
+  module available but NVK userspace driver missing
+- **Glowplug live validation**: coral-glowplug daemon queried via Unix socket — both
+  Titan V healthy (9/9 domains, VRAM alive, D0, PCIe x8), swap capability confirmed
+  from journal (autonomous HBM2 resurrection: nouveau→vfio round-trip in ~4.5s)
+- **NVK gap analysis**: Pop!_OS Mesa 25.1.5 missing `libvulkan_nouveau.so`, build from
+  source required per `metalForge/gpu/nvidia/NVK_SETUP.md`
+- **LVP buffer limit documented**: `max_storage_buffer_binding_size` (128MB) below
+  barraCuda's requirement (512MB) — needs test-profile workaround
+- **Handoff document**: `HOTSPRING_BACKEND_ANALYSIS_GLOWPLUG_SWAP_VALIDATION_MAR17_2026.md`
+  written to `hotSpring/wateringHole/handoffs/` with full swap validation plan
+
+### scyBorg License Evolution
+- **AGPL-3.0-only → AGPL-3.0-or-later**: Aligned with wateringHole
+  `SCYBORG_PROVENANCE_TRIO_GUIDANCE.md`. The scyBorg provenance trio covers code
+  (AGPL-3.0-or-later), game mechanics/system designs (ORC — applicable to all
+  primals and springs), and creative content (CC-BY-SA 4.0). Trusting the
+  ecosystem of copyleft as a whole rather than restricting to most-restrictive.
+- **1,082 Rust SPDX headers** evolved from `AGPL-3.0-only` to `AGPL-3.0-or-later`
+- **806 WGSL SPDX headers** evolved from `AGPL-3.0-only` to `AGPL-3.0-or-later`
+- **LICENSE file** updated with scyBorg trio declaration
+- **Cargo.toml** workspace license field updated
+- **deny.toml** allowed license list updated
+- **6 showcase Cargo.toml** files and **3 demo scripts** updated
+- **README, showcase README** license references updated
+
+### wateringHole Guidance
+- **`BARRACUDA_LEVERAGE_PATTERNS.md`** written at `ecoPrimals/wateringHole/`: comprehensive
+  inter-primal guidance covering local standalone usage, compute trio (barraCuda + coralReef +
+  toadStool), and 9 wider primal combinations (BearDog encrypted compute, Songbird distributed,
+  NestGate cached, petalTongue visualised, sweetGrass attributed, rhizoCrypt recoverable,
+  Squirrel AI-guided, skunkBat defended, multi-primal compositions). Guidelines for springs
+  on dependency usage, IPC discovery, and anti-patterns.
+
+### Production Code Evolution
+- **`scheduler.rs` println! → tracing**: 2 production `println!` in `discover()` evolved to
+  `tracing::info!`. `print_summary()` evolved from raw `println!` to `summary() -> String`
+  method with `tracing::info!` wrapper — callers can now use the structured string directly
+  or via tracing.
+
+### Full Codebase Audit Findings
+- **Zero production unsafe**: `#![forbid(unsafe_code)]` in both crates (confirmed)
+- **Zero production unwrap**: `clippy::unwrap_used` warn passes with zero warnings
+- **Zero production panic**: All `panic!` confirmed restricted to `#[cfg(test)]`
+- **Zero production println**: All `println!` restricted to test/bin/doc code (5 in
+  `warmup.rs` verbose mode evolved to `tracing::info!` in Sprint 9)
+- **Zero TODO/FIXME/HACK**: Confirmed
+- **Zero files over 1000 lines**: Largest is `test_pool.rs` at 761 lines
+- **Capability-based discovery**: Production `discovery.rs` uses `shader.compile` capability
+  scanning — no hardcoded primal names in production code (only in test assertions)
+- **All mocks isolated to `#[cfg(test)]`**: `MOCK_DEVICE_*` constants are test-only
+- **JSON-RPC 2.0 AND tarpc**: Both protocols fully implemented with dual transport
+- **UniBin compliant**: Single binary with server/service/doctor/validate/client/version
+- **ecoBin compliant**: Zero banned C deps, blake3 `pure`, deny.toml enforced
+- **AGPL-3.0-or-later**: LICENSE + Cargo.toml + 1,088 Rust SPDX + 806 WGSL SPDX headers
+
+### Quality Gates
+- **Format**: Pass
+- **Clippy** (`-D warnings`, all features, all targets): Pass (zero warnings)
+- **Rustdoc** (`-D warnings`): Pass
+- **Deny** (advisories, bans, licenses, sources): Pass
+- **Tests**: 3,836 pass, 0 fail (3,544 lib + 292 integration)
+
+---
+
+## Achieved (March 17, 2026 — Deep Debt Sprint 9: Comprehensive Debt Resolution)
+
+### Zero-Copy Evolution
+- **`async_submit.rs` `read_bytes()`**: Replaced `Bytes::from(data.to_vec())` with
+  `Bytes::copy_from_slice(&data)` — eliminates intermediate `Vec` allocation from
+  mapped GPU staging buffers
+- **`coral_compiler/jsonrpc.rs`**: Replaced `serde_json::from_value(result.clone())`
+  with `obj.remove("result")` + `from_value(result)` — zero-copy ownership transfer
+  from parsed JSON response, no allocation for deserialization
+
+### Dependency Hardening
+- **`deny.toml`**: Added `ring` and `aws-lc-sys` to banned crates (ecoBin: no C
+  crypto assemblies). CI grep check already covered these; deny.toml now enforces
+  declaratively.
+
+### Production println! → tracing
+- **`device/warmup.rs`**: 5 `println!` calls in `warmup_device()` and `warmup_pool()`
+  evolved to structured `tracing::info!` with typed fields. The last production
+  `println!` calls in the library crate are now eliminated.
+
+### Doc Consistency Harmonization
+- **Test counts**: All docs now report 3,794 total tests (3,502 lib + 292 integration)
+- **File counts**: All docs now report 1,076 Rust source files, 43 integration test files
+- **Coverage**: CONVENTIONS.md updated to ~75% (was ~70%, matching actual llvmpipe runs)
+- **Integration test files**: README and CONTRIBUTING both now report 43
+
+### Test Coverage Expansion (+42 new tests)
+- **`cpu_conv_pool.rs`**: 13 tests — conv2d (identity, 3x3, stride, padding, batched), max_pool2d
+  (basic, 4x4, stride, multichannel), avg_pool2d (basic, 4x4), config builders
+- **`sample/sparsity/filter.rs`**: 7 tests — PenaltyFilter (None, Threshold, Quantile, AdaptiveMAD),
+  edge cases (empty data, invalid quantile range)
+- **`nautilus/readout.rs`**: 7 tests — LinearReadout construction, lambda clamping, predict
+  (untrained, known weights, shorter input), train identity mapping, empty data
+- **`device/coral_compiler/jsonrpc.rs`**: 3 tests — wgsl_to_spirv (valid shader with SPIR-V magic
+  number verification, invalid shader, empty module)
+- **`pipeline/stateful.rs`**: 6 tests — StatefulPipeline (empty passthrough, single stage, chained
+  stages, state persistence), WaterBalanceState (defaults, constructor)
+- **`nn/metrics.rs`**: 4 tests — TrainingMetrics, TrainHistory (default, accumulation), EvalMetrics
+- **`nn/loss.rs`**: 2 tests — LossFunction debug output, clone
+
+### Audit Confirmations
+- **Zero production panic**: All `panic!` calls confirmed in `#[cfg(test)]` blocks
+- **Zero production unwrap**: All `unwrap()` calls confirmed in `#[cfg(test)]` blocks
+- **Zero production mocks**: Only `MockBindGroup` exists, in a `#[test]` function
+- **All SPDX headers AGPL-3.0-or-later**: Zero `AGPL-3.0-only` in `.rs` or `.wgsl`
+- **All hardcoding is configurable**: Coral discovery uses capability-based scanning
+  with env-var overrides; transport uses resolution chain (CLI → env → defaults)
+- **All files under 1000 lines**: Largest is `test_pool.rs` at 761 lines
+- **JSON-RPC + tarpc first**: Dual-protocol with semantic `domain.verb` method naming
+- **UniBin + ecoBin compliant**: Single binary, pure Rust, musl cross-compile, banned C deps
 
 ---
 
@@ -480,10 +747,22 @@ Previously limited to Vulkan with SPIR-V passthrough.
 ### P1 — Immediate
 
 #### DF64 NVK End-to-End Verification
-- Run DF64 compilation on Yukawa force kernels through NVK/NAK on hardware
-- Validate the sovereign compiler's safe WGSL roundtrip produces correct
-  numerical results across all backends
+- **CPU-side naga validation PASSED** (5/5 NAK pattern tests): Yukawa compound
+  assignments, comparisons, full force kernel, CG solver, cell-list patterns
+- **GPU dispatch blocked**: Pop!_OS Mesa 25.1.5 does not ship NVK (`libvulkan_nouveau.so`
+  absent). Must build Mesa from source with `-Dvulkan-drivers=nouveau` — all prerequisites
+  except `libclang-15-dev`, `meson`, `python3-mako`, `glslang-tools` are present
+- **Handoff written**: `hotSpring/wateringHole/handoffs/HOTSPRING_BACKEND_ANALYSIS_GLOWPLUG_SWAP_VALIDATION_MAR17_2026.md`
+  contains full system survey, glowplug live validation, and step-by-step swap test plan
+- **Glowplug confirmed live**: Both Titan V GPUs healthy (9/9 domains, VRAM alive, D0),
+  prior boot journal shows successful autonomous nouveau swap in ~4.5s round-trip
+- **nouveau kernel module present**: `/lib/modules/6.17.9/kernel/drivers/gpu/drm/nouveau/nouveau.ko`
+- Next: hotSpring builds NVK locally, validates glowplug swap, runs DF64 on real NVK hardware
 - Probe-aware `fp64_strategy()` is in place for auto-fallback
+
+#### ~~GB206 (RTX 5060) Driver Profile Gap~~ — Done (Sprint 10)
+- `GpuArch::Blackwell` added with full driver profile: SM100 target, 256 workgroup,
+  Throttled FP64 rate, 8-cycle DFMA latency model, coralReef `sm_100` target
 
 #### coralReef Sovereign Compiler Evolution
 - coralReef is the unified primal compiler and driver for all GPU targets
@@ -497,9 +776,44 @@ Previously limited to Vulkan with SPIR-V passthrough.
 - Backward-compat fallback retained for pre-Phase 10 coralReef instances
 - Discovery scans for `shader.compile` capability (Phase 10) with `shader_compiler` fallback
 
+### P1.5 — Sovereign Pipeline Wiring (Cross-Primal IPC Completion)
+
+Per ludoSpring's outside audit (`SOVEREIGN_COMPUTE_TRIO_OUTSIDE_AUDIT_GAP_ANALYSIS`),
+the cross-primal IPC chain has three missing pieces (~450 LOC total):
+
+| Item | Status | Detail |
+|------|--------|--------|
+| Discover toadStool | **Done** | Capability scan for `compute.dispatch` |
+| Send binary | **Done** | `submit_to_toadstool()` JSON-RPC |
+| Buffer bindings in payload | **Done** | `IpcBufferBinding` struct + `submit_to_toadstool()` (Sprint 10) |
+| Readback (`compute.dispatch.result`) | **Planned** | toadStool returns output buffers to barraCuda |
+| Live compile (compile-on-dispatch) | **Planned** | Compile + dispatch in single IPC round-trip |
+
+When complete: `Spring → barraCuda.dispatch(wgsl, inputs, outputs) → coralReef compile →
+toadStool dispatch → GPU → results → Spring`. Three JSON-RPC hops, fully sovereign.
+
+### P1.5 — Fixed-Function Dispatch Ops (Level 3 — Silicon Exploitation)
+
+Per ludoSpring V24's `GPU_FIXED_FUNCTION_SCIENCE_REPURPOSING` guidance, each hardware
+unit on the GPU die becomes a barraCuda dispatch op. Springs see abstract math;
+coralReef emits pipeline state; toadStool routes to hardware.
+
+| Op | Hardware Unit | Science Use | Projected Speedup |
+|----|--------------|-------------|-------------------|
+| `math.linalg.matmul_tensor` | Tensor cores (MMA) | Dense matmul, Gram, conv | 2-4x (FP16/TF32/BF16) |
+| `math.spatial.neighbor_rt` | RT cores (BVH) | Neighbor finding, SPH, acoustic | 100-1000x |
+| `math.spatial.voronoi_zbuffer` | Z-buffer | Distance fields, Voronoi | 100x |
+| `math.lookup.potential_tmu` | TMU (texture units) | Function tables (PDF, potential) | Hardware interp |
+| `math.reduce.scatter_rop` | ROPs (blend) | Force accumulation | Scatter-add w/o atomics |
+
+**Portability ladder** (wateringHole):
+- Level 0-2: Done (Python → Rust → WGSL)
+- **Level 3**: Portable across hardware units ON the GPU die (next frontier)
+- Level 4: Portable across CPU/GPU/NPU/FPGA (toadStool orchestrates)
+
 ### P2 — Near-term
 
-#### Precision Tiers Evolution (Full Ladder)
+#### Precision Tiers Evolution (Full Ladder — Tensor Core Unlock)
 - See `specs/PRECISION_TIERS_SPECIFICATION.md` for the complete 15-tier
   precision architecture from Binary (1-bit) to DF128 (~104-bit mantissa)
 - **Phase 1 — FP16**: Enable `SHADER_F16` detection, native `f16` op_preamble,

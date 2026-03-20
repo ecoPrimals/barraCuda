@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Yukawa Force (f64) with PBC + Potential Energy
 //!
 //! **Physics**: Screened Coulomb with f64 precision, validated against Sarkas

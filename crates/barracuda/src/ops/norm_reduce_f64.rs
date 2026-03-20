@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Norm Reduction (f64) — GPU-Accelerated via WGSL
 //!
 //! Computes vector norms over f64 arrays:

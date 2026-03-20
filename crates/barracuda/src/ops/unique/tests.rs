@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 use crate::device::test_pool::get_test_device_if_gpu_available;
 use crate::ops::unique::Unique;
 use crate::tensor::Tensor;

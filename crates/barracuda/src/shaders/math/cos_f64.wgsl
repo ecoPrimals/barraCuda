@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Element-wise cosine operation (f64 canonical)
 // Universal compute via WGSL - works on any hardware
 

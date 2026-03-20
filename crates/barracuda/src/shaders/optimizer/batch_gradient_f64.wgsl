@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Batch Numerical Gradient Computation - f64 canonical
 //
 // Computes ∇f(x) using central differences, FULLY PARALLEL

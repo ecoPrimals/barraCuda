@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Pearson correlation coefficient for batch vectors
 // r = Σ(x-μx)(y-μy) / (σx·σy·n)
 //

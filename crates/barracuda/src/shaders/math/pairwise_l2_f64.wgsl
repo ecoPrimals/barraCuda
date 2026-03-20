@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // pairwise_l2_f64.wgsl — Pairwise Euclidean distance matrix (f64 canonical)
 //
 // neuralSpring absorption: novelty search / MODES diversity metric.

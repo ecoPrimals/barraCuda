@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Inverse Normal CDF (Percent Point Function / Probit) (f64 canonical)
 // Φ⁻¹(p) = x such that Φ(x) = p
 //

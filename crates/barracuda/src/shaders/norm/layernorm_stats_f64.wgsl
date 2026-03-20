@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // LayerNorm Statistics Computation (Dispatch 1 of 2) - f64 canonical
 //
 // **2-DISPATCH FUSED LAYERNORM - PART 1: STATISTICS**

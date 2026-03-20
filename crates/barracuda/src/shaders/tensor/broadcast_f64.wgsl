@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Broadcast - expand tensor dimensions using NumPy-style broadcasting (f64 canonical)
 //
 // Maps each output element to its corresponding input element via

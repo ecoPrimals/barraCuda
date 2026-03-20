@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Inverse sine (arcsine) operation (f64 canonical)
 // asin(x) returns the angle whose sine is x, in range [-π/2, π/2]
 // Input must be in range [-1, 1]

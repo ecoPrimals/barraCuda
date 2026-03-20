@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Softmax in DF64 precision — single workgroup, 3 phases
 // softmax(x_i) = exp(x_i - max) / sum(exp(x_j - max))
 // Requires: df64_core.wgsl, df64_transcendentals.wgsl (via compile_shader_df64)

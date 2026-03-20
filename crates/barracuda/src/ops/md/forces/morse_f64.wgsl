@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Morse Force Kernel (f64) — Science-Grade Bonded Interactions
 //
 // **Deep Debt Evolution (Feb 16, 2026)**:

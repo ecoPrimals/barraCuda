@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // SpectralNorm1D - Spectral normalization for 1D convolutions (f64 canonical)
 //
 // Normalizes weight matrix W by its largest singular value σ₁:

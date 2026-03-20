@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Batched Brent root-finding at f64 precision
 // Finds x such that f(x) = 0 for each batch element independently.
 // Each workgroup processes one root-finding problem.

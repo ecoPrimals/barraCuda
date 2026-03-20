@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Hydrological primitives for environmental and agricultural computing.
 //!
 //! | Function | Reference | Use case |
@@ -20,12 +20,19 @@
 //! cross-validated with Python `ETo` library within 1e-5 tolerance.
 
 #[cfg(feature = "gpu")]
+mod hargreaves_gpu;
+#[cfg(feature = "gpu")]
+mod mc_et0_gpu;
+#[cfg(feature = "gpu")]
+mod seasonal_gpu;
+
+#[cfg(feature = "gpu")]
 pub mod gpu;
 
 #[cfg(feature = "gpu")]
 pub use gpu::{
     Fao56BaseInputs, Fao56Uncertainties, HargreavesBatchGpu, McEt0PropagateGpu, SeasonalGpuParams,
-    SeasonalOutput, SeasonalPipelineF64,
+    SeasonalGpuParamsBuilder, SeasonalOutput, SeasonalPipelineF64,
 };
 
 /// Hargreaves empirical coefficient (dimensionless).

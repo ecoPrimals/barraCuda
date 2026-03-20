@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Bessel function of the first kind, order 1: J1(x) — f64 precision
 // Uses rational polynomial approximation (Abramowitz & Stegun 9.4.4-9.4.6)
 // For |x| < 8: x * P(x²)/Q(x²)

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Optimized element-wise multiplication for NVIDIA GPUs
 // Workgroup size 64 provides best performance on NVIDIA Vulkan driver
 

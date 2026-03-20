@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! `KmdGroupingF64` — Kendrick Mass Defect homologue grouping (f64)
 //!
 //! Computes `[KM, NKM, KMD]` per ion.  Ions with matching NKM and KMD within

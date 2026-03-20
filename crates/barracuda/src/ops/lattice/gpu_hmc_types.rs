@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Types, configuration, and buffer management for GPU HMC trajectories.
 
 use super::constants;
@@ -210,7 +210,10 @@ impl GpuHmcBuffers {
 /// WGSL uniform params for complex dot product (`n_pairs` layout).
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-#[allow(missing_docs)]
+#[expect(
+    missing_docs,
+    reason = "GPU pipeline types follow WGSL struct layout, not public API"
+)]
 pub struct DotParamsLocal {
     pub n_pairs: u32,
     pub pad0: u32,
@@ -221,7 +224,10 @@ pub struct DotParamsLocal {
 /// WGSL uniform params for axpy (`y = alpha*x + y`).
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-#[allow(missing_docs)]
+#[expect(
+    missing_docs,
+    reason = "GPU pipeline types follow WGSL struct layout, not public API"
+)]
 pub struct AxpyParamsLocal {
     pub n: u32,
     pub pad0: u32,

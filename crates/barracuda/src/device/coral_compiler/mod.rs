@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! coralReef shader compiler IPC client.
 //!
 //! Discovers and connects to the coralReef primal's JSON-RPC 2.0 endpoint,
@@ -461,6 +461,7 @@ mod tests {
         assert_eq!(arch_to_coral(&GpuArch::Turing), Some("sm_75"));
         assert_eq!(arch_to_coral(&GpuArch::Ampere), Some("sm_80"));
         assert_eq!(arch_to_coral(&GpuArch::Ada), Some("sm_89"));
+        assert_eq!(arch_to_coral(&GpuArch::Blackwell), Some("sm_100"));
     }
 
     #[test]

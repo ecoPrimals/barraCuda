@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Fused Multiply-Add: D = A * B + C
 // AMD-optimized: WG=128 (benchmarks show 2x faster than WG=64)
 

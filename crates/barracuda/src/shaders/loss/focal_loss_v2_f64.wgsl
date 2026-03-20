@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Focal Loss v2 - Enhanced focal loss with alpha balancing (f64 canonical)
 // Improved version with class balancing parameter
 //

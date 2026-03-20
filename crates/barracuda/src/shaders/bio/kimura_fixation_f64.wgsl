@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Kimura (1962) fixation probability — batch computation over parameter sets.
 // Each thread computes P_fix for one (pop_size, selection, initial_freq) triplet.
 // P_fix = (1 - exp(-4Ns·p0)) / (1 - exp(-4Ns))  [neutral case: p0]

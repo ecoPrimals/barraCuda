@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // NAdam Optimizer (Nesterov-accelerated Adaptive Moment Estimation) (f64 canonical)
 // Combines Adam with Nesterov momentum for faster convergence
 //

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Tril - Lower triangular matrix (complete parallel implementation) - f64 canonical
 // Zeros elements above diagonal
 //

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // wright_fisher_step_f64.wgsl — Wright-Fisher drift + selection (f64)
 

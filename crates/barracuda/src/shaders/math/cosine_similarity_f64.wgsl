@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // cosine_similarity_f64.wgsl - Cosine Similarity at f64 precision
 //
 // Computes cosine similarity between pairs of vectors using f64 arithmetic
@@ -12,7 +12,7 @@
 // - Biological sequence comparison
 //
 // Date: February 16, 2026
-// License: AGPL-3.0-only
+// License: AGPL-3.0-or-later
 
 // Import sqrt_f64 from math_f64.wgsl (include via ShaderTemplate or inline)
 // For standalone use, inline the sqrt function:

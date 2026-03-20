@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Latin Hypercube Sampling (LHS) and uniform random sampling
 //!
 //! Latin Hypercube Sampling provides better space coverage than pure random

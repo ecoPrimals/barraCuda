@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // higgs_u1_hmc_f64.wgsl — U(1) Abelian Higgs model HMC force computation
 //
 // Prepend: complex_f64.wgsl

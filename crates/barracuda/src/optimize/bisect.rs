@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Bisection root-finding algorithm
 
 use crate::error::{BarracudaError, Result};

@@ -14,7 +14,7 @@ the sourDough scaffold. barraCuda owns its own standards.
 - **Docs**: `#![warn(missing_docs, missing_errors_doc, missing_panics_doc)]` — `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` clean
 - **Unsafe**: `#![forbid(unsafe_code)]`
 - **Max file size**: 1000 LOC
-- **Test coverage**: 90%+ target (currently ~70% on llvmpipe; GPU hardware needed for 90%)
+- **Test coverage**: 90%+ target (currently ~75% on llvmpipe; GPU hardware needed for 90%)
 
 ## Error Handling
 

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! barraCuda GPU Validation Binary
 //!
 //! Runs the canary suite to verify GPU compute correctness before

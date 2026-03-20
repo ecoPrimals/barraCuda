@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // laguerre_generalized_f64.wgsl — Generalized Laguerre polynomials L_n^α(x)
 //
 // **Math**: Generalized Laguerre (Sonine) polynomials L_n^α(x), n ≥ 0, α > -1.

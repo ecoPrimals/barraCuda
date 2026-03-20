@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // SU(3) gauge force (DF64 core streaming) — hotSpring neighbor-buffer indexing.
 //
 // Prepend: df64_core.wgsl + su3_df64.wgsl (for Df64/Cdf64 types and su3_*_df64 ops)

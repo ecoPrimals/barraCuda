@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // ! Workload Analysis Module for BarraCuda v2.0
 //!
 //! Analyzes workloads and selects optimal compute device (CPU, GPU, NPU)

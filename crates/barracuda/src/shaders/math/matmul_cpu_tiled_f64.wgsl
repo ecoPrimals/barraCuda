@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // matmul_cpu_tiled_f64.wgsl — Double-buffered 32×32 tiled matmul for CPU (f64 canonical)
 //
 // Absorbed from neuralSpring local evolutions (neuralSpring handoff #11).

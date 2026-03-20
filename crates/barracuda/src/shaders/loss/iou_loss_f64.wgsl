@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // IoU Loss - Intersection over Union loss (f64 canonical)
 // Direct optimization of IoU metric
 // Used in segmentation and object detection

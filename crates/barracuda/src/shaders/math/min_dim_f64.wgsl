@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Min Dim: Compute minimum along a specific dimension (f64 canonical)
 // Similar to PyTorch's torch.min(dim=N)
 // Returns minimum values along the specified dimension

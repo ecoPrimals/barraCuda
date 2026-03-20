@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // SearchSorted - Binary search insertion indices (GPU parallel) (f64 canonical)
 // Finds insertion points for values in a sorted array
 //

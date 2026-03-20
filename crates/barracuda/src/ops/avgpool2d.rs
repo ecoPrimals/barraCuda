@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! `AvgPool2D` operation - Average pooling for 2D tensors
 //! Pure WGSL implementation
 

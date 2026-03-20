@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Transport layer for barraCuda IPC.
 //!
 //! Transport-agnostic JSON-RPC 2.0 handler over any `AsyncRead + AsyncWrite`.
@@ -13,37 +13,29 @@ use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
 
-/// Default maximum tarpc frame length (256 MiB).
-///
-/// Overridable via `BARRACUDA_IPC_MAX_FRAME_BYTES`. Large enough for any
-/// tensor payload, bounded enough for DoS protection.
 const DEFAULT_MAX_FRAME_BYTES: usize = 256 * 1024 * 1024;
-
-/// Default maximum concurrent tarpc connections.
-///
-/// Overridable via `BARRACUDA_IPC_MAX_CONNECTIONS`.
 const DEFAULT_MAX_CONNECTIONS: usize = 10;
 
-/// Maximum tarpc frame length.
-///
-/// Configurable via `BARRACUDA_IPC_MAX_FRAME_BYTES`.  Defaults to 256 MiB —
-/// large enough for any tensor payload, bounded enough for DoS protection.
-/// The previous default of `usize::MAX` offered no transport-layer protection.
-fn tarpc_max_frame_length() -> usize {
-    std::env::var("BARRACUDA_IPC_MAX_FRAME_BYTES")
+static MAX_FRAME_BYTES: std::sync::LazyLock<usize> = std::sync::LazyLock::new(|| {
+    std::env::var("BARRACUDA_MAX_FRAME_BYTES")
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(DEFAULT_MAX_FRAME_BYTES)
-}
+});
 
-/// Maximum concurrent tarpc connections.
-///
-/// Configurable via `BARRACUDA_IPC_MAX_CONNECTIONS`.  Defaults to 10.
-fn tarpc_max_concurrent_connections() -> usize {
-    std::env::var("BARRACUDA_IPC_MAX_CONNECTIONS")
+static MAX_CONNECTIONS: std::sync::LazyLock<usize> = std::sync::LazyLock::new(|| {
+    std::env::var("BARRACUDA_MAX_CONNECTIONS")
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(DEFAULT_MAX_CONNECTIONS)
+});
+
+fn max_frame_bytes() -> usize {
+    *MAX_FRAME_BYTES
+}
+
+fn max_connections() -> usize {
+    *MAX_CONNECTIONS
 }
 
 /// Default TCP bind host when no environment or CLI override is provided.
@@ -114,9 +106,7 @@ impl IpcServer {
         let local_addr = listener.local_addr();
         tracing::info!("barraCuda tarpc listening on tcp://{local_addr}");
 
-        listener
-            .config_mut()
-            .max_frame_length(tarpc_max_frame_length());
+        listener.config_mut().max_frame_length(max_frame_bytes());
 
         let server = BarraCudaServer::new(Arc::clone(&self.primal));
 
@@ -130,7 +120,7 @@ impl IpcServer {
                     async {}
                 })
             })
-            .buffer_unordered(tarpc_max_concurrent_connections())
+            .buffer_unordered(max_connections())
             .for_each(|()| async {})
             .await;
 
@@ -211,17 +201,17 @@ impl IpcServer {
 
     /// Resolve the default IPC socket path per wateringHole `PRIMAL_IPC_PROTOCOL`.
     ///
-    /// Path: `$XDG_RUNTIME_DIR/{namespace}/{namespace}-{family_id}.sock`
+    /// Path: `$XDG_RUNTIME_DIR/biomeos/barracuda-{family_id}.sock`
     /// Family ID: `$BIOMEOS_FAMILY_ID` or `"default"`.
-    /// Fallback base: `$TMPDIR/{namespace}/` via `std::env::temp_dir()`.
+    /// Fallback base: `$TMPDIR/biomeos/` via `std::env::temp_dir()`.
     #[cfg(unix)]
     pub fn default_socket_path() -> std::path::PathBuf {
-        let ns = crate::PRIMAL_NAMESPACE;
         let family_id =
             std::env::var("BIOMEOS_FAMILY_ID").unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_owned());
         let base = std::env::var("XDG_RUNTIME_DIR")
             .map_or_else(|_| std::env::temp_dir(), std::path::PathBuf::from);
-        base.join(ns).join(format!("{ns}-{family_id}.sock"))
+        base.join("biomeos")
+            .join(format!("barracuda-{family_id}.sock"))
     }
 }
 

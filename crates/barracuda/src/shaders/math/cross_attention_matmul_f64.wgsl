@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Cross Attention Matrix Multiplication: Compute QK^T scores (f64 canonical)
 // Pass 1 of cross-attention (decoder attends to encoder)
 //

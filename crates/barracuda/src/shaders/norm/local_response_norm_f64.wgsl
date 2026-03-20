@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // local_response_norm.wgsl - Local Response Normalization (LRN) (f64 canonical)
 //
 // Normalizes activations within local neighborhoods

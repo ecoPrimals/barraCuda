@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // chamfer_distance_f64.wgsl - Chamfer Distance for point clouds (f64 canonical)
 //
 // Measures similarity between two point clouds

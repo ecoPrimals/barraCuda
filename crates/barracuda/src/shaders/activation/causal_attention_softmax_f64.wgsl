@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Causal Attention Softmax: Apply softmax with causal masking (f64 canonical)
 // Pass 2 of causal attention (reuses attention matmul and apply passes)
 //

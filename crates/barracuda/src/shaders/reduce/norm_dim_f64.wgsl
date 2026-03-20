@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Norm Dim: Compute p-norm along a specific dimension (f64 canonical)
 // Similar to PyTorch's torch.norm(dim=N, p=p)
 // Formula: (sum(|x|^p))^(1/p) along dimension

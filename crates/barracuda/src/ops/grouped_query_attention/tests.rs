@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Tests for Grouped Query Attention
 //!
 //! Validates GQA with grouped key/value heads (LLaMA-style).

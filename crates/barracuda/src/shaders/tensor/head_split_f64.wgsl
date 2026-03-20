@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // head_split.wgsl — Reshape [B, S, H*D] → [B, H, S, D] (f64 canonical)
 //
 // Converts a packed QKV projection output (batch-first, sequence-first layout)

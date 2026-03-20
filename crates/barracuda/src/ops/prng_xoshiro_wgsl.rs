@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! PRNG Xoshiro128** - High-quality pseudorandom f64 generator - Pure WGSL
 //!
 //! Deep Debt Principles:

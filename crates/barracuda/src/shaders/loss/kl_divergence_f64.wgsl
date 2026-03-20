@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // KL divergence: sum(p * ln(p / q)) (f64).
 // Single-pass fused — replaces CPU log-ratio + GPU sum pipeline.

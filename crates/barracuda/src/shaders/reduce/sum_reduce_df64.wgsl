@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // sum_reduce_df64.wgsl — Sum/Max/Min reduction using DF64 workgroup memory
 //

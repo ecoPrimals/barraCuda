@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // ============================================================================
 // bray_curtis_f64.wgsl — All-pairs Bray-Curtis distance matrix (f64)
 // ============================================================================
@@ -31,7 +31,7 @@
 // Dispatch: (ceil(n_pairs / 256), 1, 1)
 //
 // Date: February 16, 2026 (absorbed from wetSpring)
-// License: AGPL-3.0-only
+// License: AGPL-3.0-or-later
 // ============================================================================
 
 struct BcParams {

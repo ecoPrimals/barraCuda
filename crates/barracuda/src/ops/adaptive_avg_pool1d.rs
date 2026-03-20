@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! `AdaptiveAvgPool1D` - 1D Adaptive Average Pooling
 //!
 //! **Deep Debt Principles**:

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // random_crop.wgsl - Random crop augmentation
 //
 // Randomly crops images to specified size

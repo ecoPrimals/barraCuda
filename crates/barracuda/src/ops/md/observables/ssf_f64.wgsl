@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // ssf_f64.wgsl — Static Structure Factor S(k)
 //
 // **Physics**: S(k) = |Σ_j exp(ik·r_j)|² / N = (1/N) * [(Σ cos(k·r_j))² + (Σ sin(k·r_j))²]

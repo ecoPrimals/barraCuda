@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Precision tests: f64 accuracy vs CPU reference.
 
 #![expect(clippy::unwrap_used, reason = "tests")]

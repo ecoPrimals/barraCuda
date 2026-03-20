@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 //! Lanczos tridiagonalization for sparse symmetric eigensolve.
 //!
@@ -198,12 +198,8 @@ mod tests {
     use super::*;
     use crate::spectral::{SpectralCsrMatrix, anderson_hamiltonian, find_all_eigenvalues};
 
-    #[test]
-    fn lanczos_vs_sturm_1d() {
-        let n = 100;
-        let (d, e) = anderson_hamiltonian(n, 2.0, 42);
-
-        // Build 1D Anderson as CSR for Lanczos
+    fn tridiag_to_csr(d: &[f64], e: &[f64]) -> SpectralCsrMatrix {
+        let n = d.len();
         let mut row_ptr = vec![0usize];
         let mut col_idx = Vec::new();
         let mut values = Vec::new();
@@ -220,12 +216,19 @@ mod tests {
             }
             row_ptr.push(col_idx.len());
         }
-        let csr = SpectralCsrMatrix {
+        SpectralCsrMatrix {
             n,
             row_ptr,
             col_idx,
             values,
-        };
+        }
+    }
+
+    #[test]
+    fn lanczos_vs_sturm_1d() {
+        let n = 100;
+        let (d, e) = anderson_hamiltonian(n, 2.0, 42);
+        let csr = tridiag_to_csr(&d, &e);
 
         let sturm_evals = find_all_eigenvalues(&d, &e);
         let lanczos_result = lanczos(&csr, n, 42);
@@ -234,7 +237,6 @@ mod tests {
         let sturm_min = sturm_evals[0];
         let sturm_max = sturm_evals[n - 1];
         let lanczos_min = lanczos_evals[0];
-        // infallible: lanczos(&csr, n, seed) with n=100 yields m=100 iterations, so lanczos_evals is non-empty
         let lanczos_max = *lanczos_evals.last().expect("collection verified non-empty");
 
         assert!(
@@ -245,5 +247,128 @@ mod tests {
             (sturm_max - lanczos_max).abs() < 1e-8,
             "max: Sturm={sturm_max:.8}, Lanczos={lanczos_max:.8}"
         );
+    }
+
+    #[test]
+    fn lanczos_eigenvalues_empty_returns_empty() {
+        let result = LanczosTridiag {
+            alpha: vec![],
+            beta: vec![],
+            iterations: 0,
+        };
+        let evals = lanczos_eigenvalues(&result);
+        assert!(evals.is_empty());
+    }
+
+    #[test]
+    fn lanczos_1x1_identity() {
+        let csr = SpectralCsrMatrix {
+            n: 1,
+            row_ptr: vec![0, 1],
+            col_idx: vec![0],
+            values: vec![5.0],
+        };
+        let result = lanczos(&csr, 1, 1);
+        let evals = lanczos_eigenvalues(&result);
+        assert_eq!(evals.len(), 1);
+        assert!((evals[0] - 5.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn lanczos_2x2_symmetric() {
+        let csr = SpectralCsrMatrix {
+            n: 2,
+            row_ptr: vec![0, 2, 4],
+            col_idx: vec![0, 1, 0, 1],
+            values: vec![2.0, 1.0, 1.0, 3.0],
+        };
+        let result = lanczos(&csr, 2, 7);
+        let mut evals = lanczos_eigenvalues(&result);
+        evals.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+        let trace: f64 = 2.0 + 3.0;
+        let det: f64 = 2.0 * 3.0 - 1.0;
+        let disc = (trace * trace - 4.0 * det).sqrt();
+        let half_trace = trace * 0.5;
+        let half_disc = disc * 0.5;
+        let expected_min = half_trace - half_disc;
+        let expected_max = half_trace + half_disc;
+
+        assert!(
+            (evals[0] - expected_min).abs() < 1e-10,
+            "min: {:.10} vs {expected_min:.10}",
+            evals[0]
+        );
+        assert!(
+            (evals[1] - expected_max).abs() < 1e-10,
+            "max: {:.10} vs {expected_max:.10}",
+            evals[1]
+        );
+    }
+
+    #[test]
+    fn lanczos_small_n_clamps_iterations() {
+        let n = 5;
+        let (d, e) = anderson_hamiltonian(n, 1.0, 99);
+        let csr = tridiag_to_csr(&d, &e);
+        let result = lanczos(&csr, 1000, 99);
+        assert!(result.iterations <= n);
+    }
+
+    #[test]
+    fn lanczos_with_config_threshold() {
+        let n = 50;
+        let (d, e) = anderson_hamiltonian(n, 1.0, 42);
+        let csr = tridiag_to_csr(&d, &e);
+        let config = LanczosConfig {
+            convergence_threshold: 1.0,
+            progress: None,
+        };
+        let result = lanczos_with_config(&csr, n, 42, &config);
+        assert!(
+            result.iterations <= n,
+            "early termination with high threshold"
+        );
+    }
+
+    #[test]
+    fn lanczos_different_seeds_converge() {
+        let n = 30;
+        let (d, e) = anderson_hamiltonian(n, 2.0, 0);
+        let csr = tridiag_to_csr(&d, &e);
+        let sturm_evals = find_all_eigenvalues(&d, &e);
+
+        for seed in [1, 42, 999, 12345] {
+            let result = lanczos(&csr, n, seed);
+            let mut evals = lanczos_eigenvalues(&result);
+            evals.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+            assert!(
+                (evals[0] - sturm_evals[0]).abs() < 1e-6,
+                "seed {seed}: min mismatch"
+            );
+            let last = evals.last().unwrap();
+            assert!(
+                (last - sturm_evals[n - 1]).abs() < 1e-6,
+                "seed {seed}: max mismatch"
+            );
+        }
+    }
+
+    #[test]
+    fn lanczos_progress_callback_fires() {
+        let n = 20;
+        let (d, e) = anderson_hamiltonian(n, 1.0, 42);
+        let csr = tridiag_to_csr(&d, &e);
+        let count = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let count_clone = count.clone();
+        let config = LanczosConfig {
+            convergence_threshold: 1e-14,
+            progress: Some(Box::new(move |_iter, _total| {
+                count_clone.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            })),
+        };
+        let _result = lanczos_with_config(&csr, n, 42, &config);
+        assert!(count.load(std::sync::atomic::Ordering::Relaxed) > 0);
     }
 }

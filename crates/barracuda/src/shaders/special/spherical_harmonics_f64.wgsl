@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Real spherical harmonics Y_l^m(theta, phi) — f64 precision
 // Input: theta and phi interleaved [theta0, phi0, theta1, phi1, ...]
 // Params: size, l (degree 0..6), m (order, can be negative)

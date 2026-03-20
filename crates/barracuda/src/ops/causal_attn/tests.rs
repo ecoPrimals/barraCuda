@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Tests for Causal Attention
 //!
 //! Validates GPT-style autoregressive attention with causal masking.

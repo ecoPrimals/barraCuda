@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // structure_violation_f64.wgsl — Steric clash + bond geometry violations (AlphaFold2)
 //

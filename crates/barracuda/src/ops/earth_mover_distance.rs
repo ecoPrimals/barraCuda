@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Earth Mover's Distance operation (Wasserstein-1)
 //!
 //! Measures distance between probability distributions

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Tril - Complete triangular (GPU implementation)
 //!
 //! **Deep Debt Principles**:

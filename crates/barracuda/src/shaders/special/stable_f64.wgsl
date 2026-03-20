@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // stable_f64.wgsl — Numerically stable GPU special function primitives (f64)
 //

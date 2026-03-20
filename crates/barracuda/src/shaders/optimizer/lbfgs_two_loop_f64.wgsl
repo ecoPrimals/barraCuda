@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // L-BFGS Two-Loop Recursion — f64 canonical
 //
 // Implements the Nocedal (1980) two-loop recursion on GPU:

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // AdaDelta Optimizer (f64 canonical)
 // Extension of AdaGrad that seeks to reduce monotonically decreasing learning rate
 //

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU compute operations for FHE Number Theoretic Transform
 //!
 //! This module contains the GPU execution logic for NTT transformation,

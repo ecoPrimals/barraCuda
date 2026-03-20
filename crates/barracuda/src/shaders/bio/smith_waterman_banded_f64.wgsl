@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // smith_waterman_banded_f64.wgsl — Banded Smith-Waterman local alignment (f64)
 //
 // Local sequence alignment with affine gap penalties.

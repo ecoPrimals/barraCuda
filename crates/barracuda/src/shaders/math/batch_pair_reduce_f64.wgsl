@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // batch_pair_reduce_f64.wgsl — Generic O(N²) pairwise batch reduction (f64)
 //
 // **WetSpring handoff absorption** — DADA2 E-step, BrayCurtis, spectral match.

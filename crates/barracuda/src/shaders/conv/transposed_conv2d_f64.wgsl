@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // TransposedConv2D (Deconvolution) - f64 canonical
 
 struct TransposedConv2DParams {

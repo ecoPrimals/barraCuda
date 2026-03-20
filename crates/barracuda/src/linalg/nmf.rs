@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Non-Negative Matrix Factorization (NMF) — Lee & Seung multiplicative updates.
 //!
 //! Factorises a non-negative matrix **V** (m x n) into two non-negative factors

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Velocity-Verlet Split Integrator (f64) — Kick-Drift-Kick Pattern
 //
 // **Algorithm**: Split VV for flexible thermostating and force kernel swap

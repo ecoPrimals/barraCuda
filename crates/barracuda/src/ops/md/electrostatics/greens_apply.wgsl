@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Green's function application for PPPM k-space (f64)
 //
 // **Physics**: Applies Green's function in k-space: φ(k) = G(k) * ρ(k)

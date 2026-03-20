@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Shared test utilities for barracuda integration tests.
 //!
 //! Provides `run_gpu_resilient_async` to wrap GPU test bodies and gracefully

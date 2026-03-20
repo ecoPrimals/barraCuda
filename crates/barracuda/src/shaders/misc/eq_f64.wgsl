@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Equal - element-wise comparison (f64 canonical)
 // output[i] = (a[i] == b[i]) ? 1.0 : 0.0
 

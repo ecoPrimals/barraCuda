@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! ATAN - Inverse tangent operation - Pure WGSL
 //!
 //! Deep Debt Principles:

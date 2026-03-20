@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // groundSpring — Monte Carlo uncertainty propagation through FAO-56 ET₀
 //

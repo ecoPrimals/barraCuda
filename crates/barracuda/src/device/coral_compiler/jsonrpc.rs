@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Low-level JSON-RPC 2.0 transport over TCP.
 
 use serde::{Deserialize, Serialize};
@@ -54,7 +54,7 @@ pub async fn jsonrpc_call<P: Serialize, R: for<'de> Deserialize<'de>>(
         .ok_or_else(|| BarracudaError::Internal("no JSON body in HTTP response".into()))?;
     let json_body = &response_str[json_start..];
 
-    let rpc_response: serde_json::Value = serde_json::from_str(json_body)
+    let mut rpc_response: serde_json::Value = serde_json::from_str(json_body)
         .map_err(|e| BarracudaError::Internal(format!("JSON parse: {e}")))?;
 
     if let Some(error) = rpc_response.get("error") {
@@ -66,10 +66,11 @@ pub async fn jsonrpc_call<P: Serialize, R: for<'de> Deserialize<'de>>(
     }
 
     let result = rpc_response
-        .get("result")
+        .as_object_mut()
+        .and_then(|obj| obj.remove("result"))
         .ok_or_else(|| BarracudaError::Internal("no result field in JSON-RPC response".into()))?;
 
-    serde_json::from_value(result.clone())
+    serde_json::from_value(result)
         .map_err(|e| BarracudaError::Internal(format!("deserialize result: {e}")))
 }
 
@@ -107,5 +108,42 @@ pub fn wgsl_to_spirv(wgsl: &str) -> Option<Vec<u32>> {
             tracing::debug!("coralReef: SPIR-V emit failed: {e}");
             None
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wgsl_to_spirv_valid_shader() {
+        let wgsl = r"
+            @group(0) @binding(0) var<storage, read> input: array<f32>;
+            @group(0) @binding(1) var<storage, read_write> output: array<f32>;
+            @compute @workgroup_size(64)
+            fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+                output[gid.x] = input[gid.x] * 2.0;
+            }
+        ";
+        let spirv = wgsl_to_spirv(wgsl);
+        assert!(spirv.is_some(), "valid WGSL should produce SPIR-V");
+        let words = spirv.unwrap();
+        assert!(!words.is_empty());
+        assert_eq!(words[0], 0x0723_0203, "SPIR-V magic number");
+    }
+
+    #[test]
+    fn wgsl_to_spirv_invalid_shader() {
+        let spirv = wgsl_to_spirv("this is not valid wgsl {{{");
+        assert!(spirv.is_none());
+    }
+
+    #[test]
+    fn wgsl_to_spirv_empty_produces_module() {
+        let spirv = wgsl_to_spirv("");
+        assert!(
+            spirv.is_some(),
+            "empty WGSL is a valid empty module in naga"
+        );
     }
 }

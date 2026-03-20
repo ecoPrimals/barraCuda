@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // recycling_update_f64.wgsl — AlphaFold2 recycling iteration update
 //

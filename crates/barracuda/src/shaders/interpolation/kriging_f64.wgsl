@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // ============================================================================
 // kriging_f64.wgsl — Spatial interpolation (Ordinary Kriging) at f64 precision
 // ============================================================================
@@ -15,7 +15,7 @@
 //
 // REQUIRES: SHADER_F64 feature
 // Date: February 16, 2026
-// License: AGPL-3.0-only
+// License: AGPL-3.0-or-later
 // ============================================================================
 
 // ============================================================================

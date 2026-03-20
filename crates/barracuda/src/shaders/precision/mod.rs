@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Generic Precision Shader System
 //!
 //! Provides compile-time and runtime shader generation for any precision type.
@@ -18,16 +18,21 @@ pub use compiler::{
 /// Hardware precision tiers.
 ///
 /// Math is written in f64-canonical WGSL — pure math, conceptually infinite
-/// precision. The compilation pipeline then targets one of three hardware
+/// precision. The compilation pipeline then targets one of four hardware
 /// tiers. This maps directly to coralReef's `Fp64Strategy`:
 ///
 /// | Tier | coralReef strategy | Mantissa | Throughput (RTX 3090) |
 /// |------|-------------------|----------|----------------------|
+/// | F16  | `F16Fast`         | 10 bits  | ~119,080 GFLOPS (tensor) |
 /// | F32  | `F32Only`         | 24 bits  | ~29,770 GFLOPS       |
 /// | Df64 | `DoubleFloat`     | ~48 bits | ~7,000–10,000 GFLOPS |
 /// | F64  | `Native`          | 52 bits  | ~556 GFLOPS          |
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Precision {
+    /// 16-bit float (half precision) — ML inference, screening, tensor core path.
+    /// Requires `SHADER_F16` feature. Falls back to f32 pack/unpack emulation
+    /// on hardware without native f16 support.
+    F16,
     /// 32-bit float (single precision) — default, broadly supported.
     /// coralReef: `Fp64Strategy::F32Only`.
     F32,
@@ -46,6 +51,7 @@ impl Precision {
     #[must_use]
     pub fn scalar(&self) -> &'static str {
         match self {
+            Precision::F16 => "f16",
             Precision::F32 => "f32",
             Precision::F64 => "f64",
             Precision::Df64 => "vec2<f32>",
@@ -56,6 +62,7 @@ impl Precision {
     #[must_use]
     pub fn vec2(&self) -> &'static str {
         match self {
+            Precision::F16 => "vec2<f16>",
             Precision::F32 => "vec2<f32>",
             Precision::F64 => "f64",
             Precision::Df64 => "vec2<f32>",
@@ -66,6 +73,7 @@ impl Precision {
     #[must_use]
     pub fn vec4(&self) -> &'static str {
         match self {
+            Precision::F16 => "vec4<f16>",
             Precision::F32 => "vec4<f32>",
             Precision::F64 => "f64",
             Precision::Df64 => "vec2<f32>",
@@ -75,13 +83,14 @@ impl Precision {
     /// Whether this precision supports vectorized operations (vec4).
     #[must_use]
     pub fn has_vec4(&self) -> bool {
-        matches!(self, Precision::F32)
+        matches!(self, Precision::F16 | Precision::F32)
     }
 
     /// Bytes per element.
     #[must_use]
     pub fn bytes_per_element(&self) -> usize {
         match self {
+            Precision::F16 => 2,
             Precision::F32 => 4,
             Precision::F64 => 8,
             Precision::Df64 => 8,
@@ -92,6 +101,7 @@ impl Precision {
     #[must_use]
     pub fn required_feature(&self) -> Option<wgpu::Features> {
         match self {
+            Precision::F16 => Some(wgpu::Features::SHADER_F16),
             Precision::F32 => None,
             Precision::F64 => Some(wgpu::Features::SHADER_F64),
             Precision::Df64 => None,
@@ -104,13 +114,19 @@ impl Precision {
         matches!(self, Precision::F64 | Precision::Df64)
     }
 
+    /// Whether this is a reduced-precision tier (f16 or lower).
+    #[must_use]
+    pub fn is_reduced(&self) -> bool {
+        matches!(self, Precision::F16)
+    }
+
     /// Generate the operation preamble for this precision.
     ///
     /// The preamble defines abstract operations (`op_add`, `op_mul`, etc.)
     /// whose implementation varies per precision. Shaders written against
     /// these ops are truly universal — math is the same, precision is silicon.
     ///
-    /// For f32/f64: trivial inline wrappers around native operators.
+    /// For f16/f32/f64: trivial inline wrappers around native operators.
     /// For DF64: routes to `df64_add/df64_mul/etc` from the DF64 core library.
     ///
     /// All preambles provide identity `op_pack`/`op_unpack` for uniform
@@ -119,12 +135,41 @@ impl Precision {
     #[must_use]
     pub fn op_preamble(&self) -> &'static str {
         match self {
+            Precision::F16 => OP_PREAMBLE_F16,
             Precision::F32 => OP_PREAMBLE_F32,
             Precision::F64 => OP_PREAMBLE_F64,
             Precision::Df64 => OP_PREAMBLE_DF64,
         }
     }
 }
+
+/// f16 operation preamble — native half-precision ops.
+///
+/// Requires `enable f16;` directive and `SHADER_F16` adapter feature.
+/// On hardware without native f16, falls back to f32 with pack/unpack
+/// (handled by the compilation pipeline, not this preamble).
+const OP_PREAMBLE_F16: &str = r"
+// Universal operation preamble — f16 precision (half float, 10-bit mantissa)
+enable f16;
+alias Scalar = f16;
+fn op_add(a: f16, b: f16) -> f16 { return a + b; }
+fn op_sub(a: f16, b: f16) -> f16 { return a - b; }
+fn op_mul(a: f16, b: f16) -> f16 { return a * b; }
+fn op_div(a: f16, b: f16) -> f16 { return a / b; }
+fn op_neg(a: f16) -> f16 { return -a; }
+fn op_abs(a: f16) -> f16 { return abs(a); }
+fn op_max(a: f16, b: f16) -> f16 { return max(a, b); }
+fn op_min(a: f16, b: f16) -> f16 { return min(a, b); }
+fn op_gt(a: f16, b: f16) -> bool { return a > b; }
+fn op_lt(a: f16, b: f16) -> bool { return a < b; }
+fn op_ge(a: f16, b: f16) -> bool { return a >= b; }
+fn op_le(a: f16, b: f16) -> bool { return a <= b; }
+fn op_from_f32(v: f32) -> f16 { return f16(v); }
+fn op_zero() -> f16 { return f16(0.0); }
+fn op_one() -> f16 { return f16(1.0); }
+fn op_pack(v: f16) -> f16 { return v; }
+fn op_unpack(v: f16) -> f16 { return v; }
+";
 
 /// f32 operation preamble — trivial wrappers, compiler inlines everything.
 const OP_PREAMBLE_F32: &str = r"

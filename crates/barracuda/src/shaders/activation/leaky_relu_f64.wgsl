@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Leaky ReLU - Leaky Rectified Linear Unit (f64 canonical)
 // output = x if x ≥ 0 else α·x
 

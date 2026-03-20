@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! `MaxPool2D` operation - Max pooling for 2D tensors
 //! Pure WGSL implementation
 

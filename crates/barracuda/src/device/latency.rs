@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU instruction latency models for WGSL ILP scheduling.
 //!
 //! ## Background
@@ -305,8 +305,8 @@ impl LatencyModel for AppleMLatencyModel {
 pub fn model_for_arch(arch: super::capabilities::GpuArch) -> Box<dyn LatencyModel> {
     use super::capabilities::GpuArch;
     match arch {
-        // All NVIDIA SM7x–SM8x share the 8-cycle DFMA pipeline
-        GpuArch::Volta | GpuArch::Turing | GpuArch::Ampere | GpuArch::Ada => {
+        // All NVIDIA SM7x–SM12x share the 8-cycle DFMA pipeline
+        GpuArch::Volta | GpuArch::Turing | GpuArch::Ampere | GpuArch::Ada | GpuArch::Blackwell => {
             Box::new(Sm70LatencyModel)
         }
         // AMD RDNA2 / RDNA3 — similar 4-cycle VFMA64 pipeline

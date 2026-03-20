@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Hargreaves & Samani (1985) batch ET0 — GPU parallel over days.
 // ET0 = 0.0023 * Ra * (t_mean + 17.8) * sqrt(t_max - t_min)

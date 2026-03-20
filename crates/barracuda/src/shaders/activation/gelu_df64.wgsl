@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // GELU activation in DF64 precision — approximate via tanh
 // gelu(x) = 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
 // Requires: df64_core.wgsl, df64_transcendentals.wgsl (via compile_shader_df64)

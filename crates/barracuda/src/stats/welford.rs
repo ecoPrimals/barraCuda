@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Welford's online algorithm for numerically stable mean, variance, and covariance.
 //!
 //! Single-pass, constant-memory accumulators for streaming statistics.

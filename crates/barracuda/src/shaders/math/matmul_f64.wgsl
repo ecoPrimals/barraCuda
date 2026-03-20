@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // MatMul - Matrix multiplication (f64 canonical)
 // C = A * B
 // Simplified version: 2D matrix multiplication

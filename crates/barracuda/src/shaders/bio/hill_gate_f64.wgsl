@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // hill_gate_f64.wgsl — Two-input Hill AND gate (f64)
 //

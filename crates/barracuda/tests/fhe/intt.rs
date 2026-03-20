@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! INTT (Inverse Number Theoretic Transform) unit tests.
 
 #![expect(clippy::unwrap_used, reason = "tests")]

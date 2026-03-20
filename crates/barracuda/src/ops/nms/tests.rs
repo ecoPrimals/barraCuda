@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Tests for NMS
 //!
 //! Validates Non-Maximum Suppression for bounding box filtering.

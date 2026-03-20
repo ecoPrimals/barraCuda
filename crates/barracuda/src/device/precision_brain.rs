@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 //! Self-routing precision brain — absorbed from hotSpring v0.6.25.
 //!
@@ -123,7 +123,9 @@ impl PrecisionBrain {
     ) -> wgpu::ShaderModule {
         let tier = self.route(domain);
         match tier {
-            PrecisionTier::F32 => device.compile_shader(shader_source, Some(label)),
+            PrecisionTier::F16 | PrecisionTier::F32 => {
+                device.compile_shader(shader_source, Some(label))
+            }
             PrecisionTier::F64 | PrecisionTier::F64Precise => {
                 device.compile_shader_f64(shader_source, Some(label))
             }
@@ -245,9 +247,9 @@ fn domain_requirements(domain: PhysicsDomain, tier: PrecisionTier) -> (bool, &'s
                 false,
                 "DF64 emulation: ~14 digits, sufficient for most physics",
             ),
-            PrecisionTier::F32 => (
+            PrecisionTier::F16 | PrecisionTier::F32 => (
                 true,
-                "F32 fallback: reduced precision, validation recommended",
+                "F32/F16 fallback: reduced precision, validation recommended",
             ),
         };
     }
@@ -261,6 +263,7 @@ fn domain_requirements(domain: PhysicsDomain, tier: PrecisionTier) -> (bool, &'s
                 true,
                 "DF64 throughput mode: f32 cores for max dispatch rate",
             ),
+            PrecisionTier::F16 => (true, "F16 tensor core fast path: max throughput"),
             PrecisionTier::F32 => (true, "F32 screening/preview mode"),
         };
     }
@@ -270,6 +273,7 @@ fn domain_requirements(domain: PhysicsDomain, tier: PrecisionTier) -> (bool, &'s
             (true, "Native f64 for moderate precision needs")
         }
         PrecisionTier::DF64 => (true, "DF64 provides sufficient precision"),
+        PrecisionTier::F16 => (true, "F16 fast path: screening/ML inference"),
         PrecisionTier::F32 => (true, "F32 fallback: validate results"),
     }
 }

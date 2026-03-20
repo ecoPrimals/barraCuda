@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Modified Bessel function of the third kind, order 0: K0(x)
 // Abramowitz & Stegun 9.8.3-9.8.6
 // For 0 < x <= 2: polynomial in x² + I0(x) * ln(x/2)

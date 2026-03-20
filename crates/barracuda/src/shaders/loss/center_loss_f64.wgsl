@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // center_loss_f64.wgsl - Center Loss for metric learning (f64 canonical)
 //
 // Learns class centers and penalizes intra-class variance

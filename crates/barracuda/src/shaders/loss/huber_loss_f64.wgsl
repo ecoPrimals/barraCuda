@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Huber Loss (Smooth L1 Loss)
 // Robust regression loss that's less sensitive to outliers than MSE
 //

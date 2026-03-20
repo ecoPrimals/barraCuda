@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Tile - Repeat tensor along dimensions (f64 canonical)
 // Repeats the input tensor according to the repetition counts
 //

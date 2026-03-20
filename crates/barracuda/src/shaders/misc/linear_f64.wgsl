@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Linear - Fully connected layer (complete parallel implementation) (f64 canonical)
 // Computes y = xW^T + b
 //

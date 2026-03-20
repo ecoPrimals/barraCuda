@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // lstm_cell.wgsl - LSTM Cell (single timestep) (f64 canonical)
 //
 // Long Short-Term Memory cell computation

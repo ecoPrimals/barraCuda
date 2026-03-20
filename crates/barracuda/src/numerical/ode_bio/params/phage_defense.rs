@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Phage-bacteria defense arms race parameters (Hsueh, Severin et al. 2022).
 
 /// Phage-bacteria defense arms race: `DCD` deaminase reduces phage burst size

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Cubic Spline Interpolation
 //!
 //! Natural and clamped cubic spline interpolation for smooth function approximation.
@@ -34,6 +34,27 @@ use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 
 const WGSL_CUBIC_SPLINE_EVAL_F64: &str = include_str!("../shaders/math/cubic_spline_eval_f64.wgsl");
+
+/// Input that can be converted to owned `Vec<f64>` for spline construction.
+pub trait CubicSplineInput {
+    /// Convert to owned `Vec<f64>`; `Vec<f64>` passes through without cloning.
+    fn into_spline_vec(self) -> Vec<f64>;
+}
+impl CubicSplineInput for Vec<f64> {
+    fn into_spline_vec(self) -> Vec<f64> {
+        self
+    }
+}
+impl CubicSplineInput for &[f64] {
+    fn into_spline_vec(self) -> Vec<f64> {
+        self.to_vec()
+    }
+}
+impl CubicSplineInput for &Vec<f64> {
+    fn into_spline_vec(self) -> Vec<f64> {
+        self.clone()
+    }
+}
 
 /// Cubic spline interpolator
 #[derive(Debug, Clone)]
@@ -79,7 +100,7 @@ impl CubicSpline {
     /// let y_mid = spline.eval(1.5)?;
     /// # Ok::<(), barracuda::error::BarracudaError>(())
     /// ```
-    pub fn natural(x: &[f64], y: &[f64]) -> Result<Self> {
+    pub fn natural(x: impl CubicSplineInput, y: impl CubicSplineInput) -> Result<Self> {
         Self::new(x, y, SplineBoundary::Natural)
     }
 
@@ -91,7 +112,12 @@ impl CubicSpline {
     /// * `dy_right` - First derivative at right endpoint
     /// # Errors
     /// Returns [`Err`] if [`new`](Self::new) fails (see [`new`](Self::new) for conditions).
-    pub fn clamped(x: &[f64], y: &[f64], dy_left: f64, dy_right: f64) -> Result<Self> {
+    pub fn clamped(
+        x: impl CubicSplineInput,
+        y: impl CubicSplineInput,
+        dy_left: f64,
+        dy_right: f64,
+    ) -> Result<Self> {
         Self::new(
             x,
             y,
@@ -110,7 +136,13 @@ impl CubicSpline {
     /// # Errors
     /// Returns [`Err`] if there are fewer than 2 data points, `x` and `y` have different
     /// lengths, `x` is not strictly increasing, or the tridiagonal system is singular.
-    pub fn new(x: &[f64], y: &[f64], boundary: SplineBoundary) -> Result<Self> {
+    pub fn new(
+        x: impl CubicSplineInput,
+        y: impl CubicSplineInput,
+        boundary: SplineBoundary,
+    ) -> Result<Self> {
+        let x = x.into_spline_vec();
+        let y = y.into_spline_vec();
         let n = x.len();
 
         if n < 2 {
@@ -125,7 +157,6 @@ impl CubicSpline {
             });
         }
 
-        // Check that x is strictly increasing
         for i in 1..n {
             if x[i] <= x[i - 1] {
                 return Err(BarracudaError::InvalidInput {
@@ -139,9 +170,6 @@ impl CubicSpline {
                 });
             }
         }
-
-        let x = x.to_vec();
-        let y = y.to_vec();
 
         // Compute second derivatives by solving tridiagonal system
         let y2 = compute_second_derivatives(&x, &y, boundary)?;

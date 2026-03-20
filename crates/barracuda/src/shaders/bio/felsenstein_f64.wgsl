@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // felsenstein_f64.wgsl — Felsenstein Pruning Phylogenetic Likelihood (f64)
 //
 // Computes per-site conditional likelihoods for maximum-likelihood

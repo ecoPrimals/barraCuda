@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // bcs_bisection_f64.wgsl — BCS chemical potential bisection solver
 //
 // hotSpring absorption: nuclear physics BCS pairing.

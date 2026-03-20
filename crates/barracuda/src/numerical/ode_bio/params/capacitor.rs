@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Phenotypic capacitor model parameters (Mhatre et al. 2020).
 
 /// Phenotypic capacitor model — `VpsR` integrates c-di-GMP and distributes

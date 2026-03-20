@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // hmm_forward_log.wgsl — HMM Forward Pass, Log-Domain (f32)
 //
 // Computes a single forward step for Hidden Markov Models on GPU

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Generalized Eigenvalue Decomposition (`gen_eigh`) - GPU-Accelerated Implementation (f64)
 //!
 //! Solves the generalized eigenvalue problem: Ax = λBx

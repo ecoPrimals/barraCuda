@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Squeeze - remove dimensions of size 1 (f64 canonical)
 // This is a metadata-only operation in most frameworks
 // For GPU, we just copy the data (shape handled by tensor metadata)

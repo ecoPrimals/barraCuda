@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU dynamical fermion HMC trajectory.
 //!
 //! Orchestrates all lattice QCD GPU primitives into a complete HMC trajectory:

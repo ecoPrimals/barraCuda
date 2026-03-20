@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // ============================================================================
 // fused_map_reduce_f64.wgsl — Single-dispatch map + reduce at f64 precision
 // ============================================================================
@@ -18,7 +18,7 @@
 // PRECISION: Uses (zero + literal) pattern for full f64 constants
 //
 // Date: February 16, 2026
-// License: AGPL-3.0-only
+// License: AGPL-3.0-or-later
 // ============================================================================
 
 // ============================================================================

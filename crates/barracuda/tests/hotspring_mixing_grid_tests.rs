@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! hotSpring Evolution: Mixing and Grid unit tests.
 //!
 //! `LinearMixer`, `BroydenMixer`, `Gradient1D`, `Gradient2D`, `Laplacian2D`, Cylindrical.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Markdown report generation for cross-spring shader evolution.
 
 use std::fmt::Write;

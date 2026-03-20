@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // RAdam - Rectified Adam Optimizer (f64 canonical)
 // Addresses variance warmup issue in Adam
 // Automatically adjusts learning rate based on variance tractability

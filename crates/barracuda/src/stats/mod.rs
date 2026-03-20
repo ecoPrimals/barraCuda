@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Statistical functions
 //!
 //! Provides core statistical distributions, measures, and agreement metrics

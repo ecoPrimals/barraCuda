@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Conv2D - 2D convolution (f64 canonical)
 // Simplified version: single channel, no padding, stride 1
 

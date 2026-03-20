@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Low-storage commutator-free Runge-Kutta (LSCFRK) integrator coefficients.
 //!
 //! Absorbed from hotSpring gradient flow; these are **standalone numerical

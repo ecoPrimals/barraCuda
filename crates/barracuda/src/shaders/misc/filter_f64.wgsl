@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // filter_f64.wgsl — Stream compaction (predicate evaluation + scatter) (f64 canonical)
 //
 // Pass 1 — evaluate_predicate:

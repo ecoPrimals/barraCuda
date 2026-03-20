@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // hmm_forward_log_f64.wgsl — HMM Forward Pass, Log-Domain (f64)
 //

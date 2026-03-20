@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // PRNG xoshiro128** - High-quality 32-bit pseudorandom number generator
 // Adapted for WGSL from the algorithm by David Blackman and Sebastiano Vigna
 // Each thread generates one random value from its seed; seeds passed as f32 (bitcast from u32)

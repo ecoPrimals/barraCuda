@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // label_smoothing_f64.wgsl - Label Smoothing for classification (f64 canonical)
 //
 // Prevents overconfidence by smoothing hard labels

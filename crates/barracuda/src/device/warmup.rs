@@ -28,6 +28,7 @@
 use crate::device::WgpuDevice;
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::error::Result;
+use std::borrow::Cow;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -64,9 +65,9 @@ pub enum WarmupOp {
 
 impl WarmupOp {
     /// Get shader source for this operation
-    fn shader_source(&self, workgroup_size: u32) -> String {
+    fn shader_source(&self, workgroup_size: u32) -> Cow<'static, str> {
         match self {
-            WarmupOp::Add => format!(
+            WarmupOp::Add => Cow::Owned(format!(
                 r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read> b: array<f32>;
@@ -79,9 +80,9 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     out[idx] = a[idx] + b[idx];
 }}
 "
-            ),
+            )),
 
-            WarmupOp::Mul => format!(
+            WarmupOp::Mul => Cow::Owned(format!(
                 r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read> b: array<f32>;
@@ -94,9 +95,9 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     out[idx] = a[idx] * b[idx];
 }}
 "
-            ),
+            )),
 
-            WarmupOp::Fma => format!(
+            WarmupOp::Fma => Cow::Owned(format!(
                 r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read> b: array<f32>;
@@ -110,9 +111,9 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     out[idx] = fma(a[idx], b[idx], c[idx]);
 }}
 "
-            ),
+            )),
 
-            WarmupOp::Scale => format!(
+            WarmupOp::Scale => Cow::Owned(format!(
                 r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read_write> out: array<f32>;
@@ -125,9 +126,9 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     out[idx] = a[idx] * scale;
 }}
 "
-            ),
+            )),
 
-            WarmupOp::ReLU => format!(
+            WarmupOp::ReLU => Cow::Owned(format!(
                 r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read_write> out: array<f32>;
@@ -139,10 +140,9 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     out[idx] = max(a[idx], 0.0);
 }}
 "
-            ),
+            )),
 
-            // For complex ops, use placeholder shaders that exercise the pipeline
-            WarmupOp::Matmul | WarmupOp::Reduce | WarmupOp::Softmax => format!(
+            WarmupOp::Matmul | WarmupOp::Reduce | WarmupOp::Softmax => Cow::Owned(format!(
                 r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read> b: array<f32>;
@@ -156,9 +156,9 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     out[idx] = a[idx] + b[idx];
 }}
 "
-            ),
+            )),
 
-            WarmupOp::BinaryOp => format!(
+            WarmupOp::BinaryOp => Cow::Owned(format!(
                 r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read> b: array<f32>;
@@ -171,9 +171,9 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     out[idx] = a[idx] + b[idx];
 }}
 "
-            ),
+            )),
 
-            WarmupOp::UnaryOp => format!(
+            WarmupOp::UnaryOp => Cow::Owned(format!(
                 r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read_write> out: array<f32>;
@@ -185,18 +185,16 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     out[idx] = a[idx];
 }}
 "
-            ),
+            )),
 
             WarmupOp::MeanVarianceF64 => {
-                include_str!("../shaders/reduce/mean_variance_f64.wgsl").to_string()
+                Cow::Borrowed(include_str!("../shaders/reduce/mean_variance_f64.wgsl"))
             }
-
             WarmupOp::CorrelationF64 => {
-                include_str!("../shaders/stats/correlation_full_f64.wgsl").to_string()
+                Cow::Borrowed(include_str!("../shaders/stats/correlation_full_f64.wgsl"))
             }
-
             WarmupOp::SumReduceF64 => {
-                include_str!("../shaders/reduce/sum_reduce_f64.wgsl").to_string()
+                Cow::Borrowed(include_str!("../shaders/reduce/sum_reduce_f64.wgsl"))
             }
         }
     }
@@ -394,12 +392,12 @@ pub fn warmup_device(device: &WgpuDevice, config: &WarmupConfig) -> Result<Warmu
     let elapsed = start.elapsed();
 
     if config.verbose {
-        println!(
-            "    {} ops × {} workgroup sizes = {} pipelines in {:.1}ms",
-            config.ops.len(),
-            config.workgroup_sizes.len(),
+        tracing::info!(
+            ops = config.ops.len(),
+            workgroup_sizes = config.workgroup_sizes.len(),
             pipelines,
-            elapsed.as_secs_f64() * 1000.0
+            elapsed_ms = elapsed.as_secs_f64() * 1000.0,
+            "warmup: compiled pipelines"
         );
     }
 
@@ -426,15 +424,7 @@ pub fn warmup_pool(
     let total_start = Instant::now();
 
     if config.verbose {
-        println!(
-            "╔══════════════════════════════════════════════════════════════════════════════╗"
-        );
-        println!(
-            "║  barraCuda Mise en Place - Shader Warmup                                      ║"
-        );
-        println!(
-            "╚══════════════════════════════════════════════════════════════════════════════╝\n"
-        );
+        tracing::info!("barraCuda Mise en Place — Shader Warmup starting");
     }
 
     let mut results = Vec::with_capacity(devices.len());
@@ -449,16 +439,17 @@ pub fn warmup_pool(
         let total_pipelines: usize = results.iter().map(|r| r.pipelines_created).sum();
         tracing::info!(
             total_pipelines,
-            devices = devices.len(),
+            gpus = devices.len(),
             elapsed_ms = total_time.as_secs_f64() * 1000.0,
-            "warmup pool complete"
+            "warmup complete"
         );
+
         let stats = GLOBAL_CACHE.stats();
-        tracing::debug!(
+        tracing::info!(
             shaders = stats.shaders,
             layouts = stats.layouts,
             pipelines = stats.pipelines,
-            "cache stats"
+            "warmup cache stats"
         );
     }
 

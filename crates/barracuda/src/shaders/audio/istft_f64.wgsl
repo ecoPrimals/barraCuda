@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // ISTFT - Inverse Short-Time Fourier Transform (f64 canonical)
 // Reconstructs time-domain signal from STFT using overlap-add method
 // Input: Complex STFT [num_frames, bins_per_frame] as [real, imag, real, imag, ...]

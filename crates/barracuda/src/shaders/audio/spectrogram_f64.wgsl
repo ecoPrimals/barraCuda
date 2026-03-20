@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Spectrogram - Power spectrogram computation (f64 canonical)
 // Computes magnitude squared of STFT
 // Input: Complex STFT [real, imag, real, imag, ...]

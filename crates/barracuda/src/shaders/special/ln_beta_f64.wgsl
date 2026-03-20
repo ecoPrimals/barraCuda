@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Natural log of the Beta function: ln(B(a,b)) = lgamma(a) + lgamma(b) - lgamma(a+b)
 //
 // Numerically stable formulation avoiding overflow/underflow that occurs when

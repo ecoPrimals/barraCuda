@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Expand - Multi-dimensional broadcasting (NumPy-style) (f64 canonical)
 // Broadcasts tensor to larger shape by expanding singleton dimensions
 //

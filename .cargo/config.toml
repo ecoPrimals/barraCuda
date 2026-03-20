@@ -4,6 +4,24 @@
 # at any concurrency level. Override with RUST_TEST_THREADS=N if needed.
 [env]
 
+# ── Dev / test builds: prioritize compile speed over runtime perf ────
+[profile.dev]
+# Max codegen units → parallel LLVM → faster compile
+codegen-units = 256
+# Split debug info keeps binary smaller and link time lower
+split-debuginfo = "unpacked"
+# Opt dependencies at O2 — wgpu/naga are large; optimized deps run
+# faster in tests (GPU init, shader validation) without slowing our compile.
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.test]
+codegen-units = 256
+split-debuginfo = "unpacked"
+[profile.test.package."*"]
+opt-level = 2
+
+# ── Release: size-optimized binary ───────────────────────────────────
 [profile.release]
 opt-level = "z"
 lto = true

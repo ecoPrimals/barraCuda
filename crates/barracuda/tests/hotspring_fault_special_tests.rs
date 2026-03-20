@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! hotSpring Evolution: Fault (error handling) and Special functions (Hermite, Laguerre).
 
 #![expect(clippy::unwrap_used, reason = "tests")]

@@ -1,6 +1,6 @@
 # Sovereign Pipeline Tracker
 
-**Date**: March 13, 2026
+**Date**: March 20, 2026
 **Type**: Actionable tracker (updated as work progresses)
 **Scope**: All remaining work for the pure Rust sovereign GPU pipeline
 
@@ -212,7 +212,7 @@ a C library target until Phase 3 completes.
 | `CoralReefDevice` scaffold (behind `sovereign-dispatch`) | barraCuda | — | **Done** (Mar 9) |
 | `dispatch_binary` + `dispatch_kernel` on `CoralReefDevice` | barraCuda | — | **Done** (Mar 12) |
 | Coral compiler cache → dispatch wiring | barraCuda | — | **Done** (Mar 12) |
-| `CoralReefDevice` IPC dispatch wiring | barraCuda | toadStool `compute.dispatch.submit` | In progress (IPC client scaffold done) |
+| `CoralReefDevice` IPC dispatch wiring | barraCuda | toadStool `compute.dispatch.submit` | **Done** (Mar 15) — discovers toadStool via capability scan, dispatches via JSON-RPC |
 | toadStool dispatch IPC endpoint | toadStool | — | API design done (S152); integration pending |
 | VFIO dispatch via toadStool IPC | toadStool + coralReef | PFIFO channel init (coralReef) | toadStool ready (S152); coralReef 6/7 VFIO tests pass |
 

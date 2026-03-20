@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // sdpa_scores_f64.wgsl — QK^T / sqrt(d_k) — Pass 1 of 3-pass SDPA (f64 canonical)
 //
 // Computes scaled dot-product scores for each (batch, head, query_pos) triple.

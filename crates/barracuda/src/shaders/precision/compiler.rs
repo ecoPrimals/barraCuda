@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Shader compilation pipeline: type substitution and downcast transforms.
 //!
 //! Handles f64 → f32 and f64 → df64 text-based transforms. The "math is

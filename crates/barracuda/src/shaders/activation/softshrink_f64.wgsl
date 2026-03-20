@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Softshrink - Soft shrinkage activation function (f64 canonical)
 // Softshrink: f(x) = x - lambda if x > lambda, x + lambda if x < -lambda, 0 otherwise
 

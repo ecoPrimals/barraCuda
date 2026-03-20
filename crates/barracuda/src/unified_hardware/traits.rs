@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Core compute execution and tensor storage abstractions.
 //!
 //! These traits define the hardware-agnostic interface that CPU, GPU, TPU,
@@ -59,6 +59,12 @@ pub trait TensorStorage: Send + Sync {
     fn read_to_cpu(&self) -> BoxFuture<'_, Result<Bytes>>;
     /// Write tensor data from CPU memory.
     fn write_from_cpu(&mut self, data: &[u8]) -> BoxFuture<'_, Result<()>>;
+
+    /// Write tensor data from CPU memory (Bytes). Default delegates to [`write_from_cpu`].
+    fn write_from_cpu_bytes(&mut self, data: Bytes) -> BoxFuture<'_, Result<()>> {
+        let slice = data.as_ref().to_vec();
+        self.write_from_cpu(&slice)
+    }
 
     /// True if tensor is on CPU.
     fn is_cpu(&self) -> bool {

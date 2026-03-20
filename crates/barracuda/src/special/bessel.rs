@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Bessel functions of the first and second kind
 //!
 //! Implements J₀, J₁, I₀, K₀ using rational polynomial approximations

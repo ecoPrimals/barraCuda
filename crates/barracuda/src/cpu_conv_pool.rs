@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! CPU implementations of `Conv2D`, `MaxPool2D`, and `AvgPool2D`.
 //!
 //! Extracted from `cpu_executor.rs` for file-size compliance and logical separation.
@@ -281,4 +281,140 @@ pub fn avg_pool2d(input: &[f32], shape: TensorShape, cfg: Pool2dConfig) -> Resul
     }
 
     Ok(output)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn shape(n: usize, c: usize, h: usize, w: usize) -> TensorShape {
+        TensorShape { n, c, h, w }
+    }
+
+    #[test]
+    fn conv2d_identity_kernel() {
+        let input = vec![1.0, 2.0, 3.0, 4.0];
+        let kernel = vec![1.0];
+        let result = conv2d(
+            &input,
+            &kernel,
+            shape(1, 1, 2, 2),
+            Conv2dConfig::new(1, 1, 1),
+        )
+        .unwrap();
+        assert_eq!(result, vec![1.0, 2.0, 3.0, 4.0]);
+    }
+
+    #[test]
+    fn conv2d_3x3_no_padding() {
+        let input: Vec<f32> = (1..=16).map(|x| x as f32).collect();
+        let kernel = vec![0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0];
+        let result = conv2d(
+            &input,
+            &kernel,
+            shape(1, 1, 4, 4),
+            Conv2dConfig::new(1, 3, 3),
+        )
+        .unwrap();
+        assert_eq!(result, vec![6.0, 7.0, 10.0, 11.0]);
+    }
+
+    #[test]
+    fn conv2d_with_stride() {
+        let input: Vec<f32> = (1..=16).map(|x| x as f32).collect();
+        let kernel = vec![1.0];
+        let cfg = Conv2dConfig::new(1, 1, 1).stride(2, 2);
+        let result = conv2d(&input, &kernel, shape(1, 1, 4, 4), cfg).unwrap();
+        assert_eq!(result, vec![1.0, 3.0, 9.0, 11.0]);
+    }
+
+    #[test]
+    fn conv2d_with_padding() {
+        let input = vec![1.0, 2.0, 3.0, 4.0];
+        let kernel = vec![1.0];
+        let cfg = Conv2dConfig::new(1, 1, 1).padding(1, 1);
+        let result = conv2d(&input, &kernel, shape(1, 1, 2, 2), cfg).unwrap();
+        assert_eq!(result.len(), 16);
+        assert_eq!(result[5], 1.0);
+        assert_eq!(result[6], 2.0);
+    }
+
+    #[test]
+    fn conv2d_batched() {
+        let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let kernel = vec![1.0];
+        let result = conv2d(
+            &input,
+            &kernel,
+            shape(2, 1, 2, 2),
+            Conv2dConfig::new(1, 1, 1),
+        )
+        .unwrap();
+        assert_eq!(result, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+    }
+
+    #[test]
+    fn max_pool2d_basic() {
+        let input = vec![1.0, 2.0, 3.0, 4.0];
+        let result = max_pool2d(&input, shape(1, 1, 2, 2), Pool2dConfig::new(2, 2)).unwrap();
+        assert_eq!(result, vec![4.0]);
+    }
+
+    #[test]
+    fn max_pool2d_4x4() {
+        let input: Vec<f32> = (1..=16).map(|x| x as f32).collect();
+        let result = max_pool2d(&input, shape(1, 1, 4, 4), Pool2dConfig::new(2, 2)).unwrap();
+        assert_eq!(result, vec![6.0, 8.0, 14.0, 16.0]);
+    }
+
+    #[test]
+    fn max_pool2d_with_stride() {
+        let input: Vec<f32> = (1..=16).map(|x| x as f32).collect();
+        let cfg = Pool2dConfig::new(2, 2).stride(1, 1);
+        let result = max_pool2d(&input, shape(1, 1, 4, 4), cfg).unwrap();
+        assert_eq!(result.len(), 9);
+        assert_eq!(result[0], 6.0);
+    }
+
+    #[test]
+    fn avg_pool2d_basic() {
+        let input = vec![1.0, 2.0, 3.0, 4.0];
+        let result = avg_pool2d(&input, shape(1, 1, 2, 2), Pool2dConfig::new(2, 2)).unwrap();
+        assert_eq!(result, vec![2.5]);
+    }
+
+    #[test]
+    fn avg_pool2d_4x4() {
+        let input: Vec<f32> = (1..=16).map(|x| x as f32).collect();
+        let result = avg_pool2d(&input, shape(1, 1, 4, 4), Pool2dConfig::new(2, 2)).unwrap();
+        assert_eq!(result.len(), 4);
+        assert!((result[0] - 3.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn conv2d_config_builder() {
+        let cfg = Conv2dConfig::new(16, 3, 3)
+            .stride(2, 2)
+            .padding(1, 1)
+            .dilation(2, 2);
+        assert_eq!(cfg.c_out, 16);
+        assert_eq!(cfg.stride, [2, 2]);
+        assert_eq!(cfg.padding, [1, 1]);
+        assert_eq!(cfg.dilation, [2, 2]);
+    }
+
+    #[test]
+    fn pool2d_config_builder() {
+        let cfg = Pool2dConfig::new(3, 3).stride(2, 2).padding(1, 1);
+        assert_eq!(cfg.k_h, 3);
+        assert_eq!(cfg.stride, [2, 2]);
+        assert_eq!(cfg.padding, [1, 1]);
+    }
+
+    #[test]
+    fn max_pool2d_multichannel() {
+        let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let result = max_pool2d(&input, shape(1, 2, 2, 2), Pool2dConfig::new(2, 2)).unwrap();
+        assert_eq!(result, vec![4.0, 8.0]);
+    }
 }

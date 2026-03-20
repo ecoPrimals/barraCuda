@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Adaptive Average Pooling 2D
 // Pools input to a specific output size regardless of input dimensions
 //

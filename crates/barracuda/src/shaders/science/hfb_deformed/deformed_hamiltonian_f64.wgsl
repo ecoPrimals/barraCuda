@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // deformed_hamiltonian_f64.wgsl — Axially-deformed HFB Hamiltonian matrix
 //
 // hotSpring absorption: builds single-particle Hamiltonian matrix elements

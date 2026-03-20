@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // batched_hfb_potentials_f64.wgsl — Skyrme + Coulomb potentials for spherical HFB
 //
 // hotSpring absorption: nuclear physics GPU-resident SCF.

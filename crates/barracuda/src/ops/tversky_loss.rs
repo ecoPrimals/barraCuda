@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Tversky Loss - GPU-accelerated generalized Dice Loss
 //!
 //! **Deep Debt Principles**:

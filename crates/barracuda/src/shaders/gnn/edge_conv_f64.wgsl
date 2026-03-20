@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // edge_conv.wgsl - Edge Convolution for Graph Neural Networks (f64 canonical)
 
 struct Params {

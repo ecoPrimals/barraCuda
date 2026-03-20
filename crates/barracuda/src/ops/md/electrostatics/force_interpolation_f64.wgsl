@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // force_interpolation_f64.wgsl — Interpolate forces from mesh to particles (PPPM)
 //
 // **Physics**: F_i = -q_i * E(r_i). E = ∇φ is stored on mesh (Ex, Ey, Ez).

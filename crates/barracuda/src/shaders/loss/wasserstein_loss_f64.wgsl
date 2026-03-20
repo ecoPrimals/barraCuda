@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // wasserstein_loss_f64.wgsl - Wasserstein Loss (1D case) (f64 canonical)
 //
 // Wasserstein distance for 1D distributions (Earth Mover's Distance)

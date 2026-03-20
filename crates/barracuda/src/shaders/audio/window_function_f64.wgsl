@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // WindowFunction - Various windowing functions for signal processing (f64 canonical)
 // Implements Hann, Hamming, Blackman, Bartlett, and Rectangular windows
 

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // RDF Pair Distance Histogram — f64 precision
 //
 // **Physics**: Radial distribution function g(r)

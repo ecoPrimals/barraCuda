@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // acos_f64.wgsl - Inverse cosine (arccosine) operation (f64 canonical)
 // acos(x) returns the angle whose cosine is x, in range [0, π]
 // Input must be in range [-1, 1]

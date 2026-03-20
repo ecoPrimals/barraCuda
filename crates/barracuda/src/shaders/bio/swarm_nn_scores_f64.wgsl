@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // swarm_nn_scores_f64.wgsl — Max activation output for mean_reduce chaining (f64 canonical)
 //

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Min reduction - Find minimum value (f64 canonical)
 
 @group(0) @binding(0) var<storage, read> input: array<f64>;

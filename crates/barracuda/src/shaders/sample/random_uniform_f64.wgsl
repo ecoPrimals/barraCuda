@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Uniform random sampling - GPU accelerated (f64 canonical)
 // Uses PCG hash for thread-safe parallel random generation
 //

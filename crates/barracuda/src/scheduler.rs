@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Unified Scheduler - Automatic Hardware Selection
 //!
 //! **Philosophy**: Pick the best hardware for each operation automatically
@@ -72,9 +72,8 @@ impl UnifiedScheduler {
             use crate::device::detect_akida_boards;
             match detect_akida_boards() {
                 Ok(caps) if !caps.boards.is_empty() => {
-                    println!("  ✅ NPU: {} Akida board(s)", caps.boards.len());
-                    // Pending: NpuExecutor must implement ComputeExecutor and wrap Akida board handles.
-                    // Dependency chain: detect_akida_boards -> NpuExecutor (new) -> executors.push().
+                    tracing::info!(boards = caps.boards.len(), "NPU: Akida board(s) detected");
+                    // NpuExecutor must implement ComputeExecutor and wrap Akida board handles.
                     // Blocked until NpuExecutor implements unified_hardware::ComputeExecutor.
                 }
                 _ => {
@@ -83,7 +82,7 @@ impl UnifiedScheduler {
             }
         }
 
-        println!("✨ Discovered {} executor(s)", executors.len());
+        tracing::info!(count = executors.len(), "Discovered executor(s)");
 
         // CPU is the default fallback
         let default_executor = cpu;
@@ -148,28 +147,59 @@ impl UnifiedScheduler {
             .cloned()
     }
 
-    /// Print summary of available hardware
-    pub fn print_summary(&self) {
-        tracing::info!("Compute Hardware Summary");
+    /// Build a human-readable summary of available hardware.
+    #[must_use]
+    pub fn summary(&self) -> String {
+        use std::fmt::Write;
+        let mut out = String::with_capacity(512);
+
+        let _ = writeln!(out, "\nCompute Hardware Summary");
+        let _ = writeln!(out, "{}", "=".repeat(30));
+
         for executor in &self.executors {
             let caps = executor.capabilities();
-            tracing::info!(
-                executor = %executor.name(),
-                hardware_type = ?executor.hardware_type(),
-                parallel_units = caps.parallelism.max_parallel_units,
-                memory_gb = caps.memory.total_bytes as f64 / 1e9,
-                peak_tflops_fp32 = caps.performance.peak_tflops_fp32,
-                "executor capabilities"
+            let _ = writeln!(out, "\n  {}", executor.name());
+            let _ = writeln!(out, "   Type: {:?}", executor.hardware_type());
+            let _ = writeln!(
+                out,
+                "   Parallel Units: {}",
+                caps.parallelism.max_parallel_units
             );
-            tracing::debug!(
-                matmul = caps.operations.matmul,
-                convolution = caps.operations.convolution,
-                reductions = caps.operations.reductions,
-                custom_kernels = caps.operations.custom_kernels,
-                "executor operations"
+            #[expect(clippy::cast_precision_loss, reason = "display-only byte count")]
+            let mem_gb = caps.memory.total_bytes as f64 / 1e9;
+            let _ = writeln!(out, "   Memory: {mem_gb:.1} GB");
+            let _ = writeln!(
+                out,
+                "   Peak TFLOPS (FP32): {:.1}",
+                caps.performance.peak_tflops_fp32
             );
+            let _ = write!(out, "   Operations:");
+            if caps.operations.matmul {
+                let _ = write!(out, " MatMul");
+            }
+            if caps.operations.convolution {
+                let _ = write!(out, " Conv");
+            }
+            if caps.operations.reductions {
+                let _ = write!(out, " Reduce");
+            }
+            if caps.operations.custom_kernels {
+                let _ = write!(out, " Custom");
+            }
+            let _ = writeln!(out);
         }
-        tracing::info!(default = %self.default_executor.name(), "default fallback");
+
+        let _ = writeln!(
+            out,
+            "\n  Default Fallback: {}",
+            self.default_executor.name()
+        );
+        out
+    }
+
+    /// Log a human-readable summary of available hardware via `tracing::info!`.
+    pub fn print_summary(&self) {
+        tracing::info!("{}", self.summary());
     }
 }
 

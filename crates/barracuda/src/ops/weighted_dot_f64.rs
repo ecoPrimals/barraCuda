@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Weighted Dot Product (f64) — GPU-resident, pipeline-cached, buffer-pooled
 //!
 //! Computes weighted inner products: result = `Σ_k` w[k] · a[k] · b[k]

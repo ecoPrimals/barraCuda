@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! `PopulationPkF64` — GPU-vectorized population pharmacokinetics Monte Carlo
 //!
 //! Simulates N virtual patients with inter-individual clearance (CL) variability

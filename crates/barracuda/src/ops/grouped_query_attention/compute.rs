@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU compute operations for Grouped Query Attention
 //!
 //! This module contains the 3-pass GPU execution:

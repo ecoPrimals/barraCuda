@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Argmin - Find indices of minimum values - Pure WGSL
 //!
 //! Deep Debt Principles:

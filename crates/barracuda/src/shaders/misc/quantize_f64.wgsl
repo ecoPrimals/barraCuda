@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // quantize_f64.wgsl - Convert FP32 to INT8/INT4 quantization (f64 canonical)
 //
 // Quantization: Convert floating point values to low-precision integers

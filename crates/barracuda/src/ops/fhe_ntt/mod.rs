@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! FHE Number Theoretic Transform (NTT) Operation
 //!
 //! **Purpose**: Fast polynomial multiplication using NTT

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Triplet Loss - Learn embeddings where similar items are close, dissimilar items are far (f64 canonical)
 //
 // For each triplet (anchor, positive, negative):

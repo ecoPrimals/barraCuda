@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // GLU - Gated Linear Unit (f64 canonical)
 // glu(x) = a * sigmoid(b)
 // where x is split into two halves: a and b

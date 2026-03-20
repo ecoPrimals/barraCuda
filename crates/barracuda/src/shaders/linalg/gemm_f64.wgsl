@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Dense Matrix Multiply (f64) - Batched GEMM
 //
 // C = A * B  where A is [M x K], B is [K x N], C is [M x N]

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // TransE Knowledge Graph Triple Scoring (f64)
 //
 // score(h, r, t) = -‖h + r - t‖₂

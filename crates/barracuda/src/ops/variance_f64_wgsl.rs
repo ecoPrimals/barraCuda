@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Fused mean+variance (f64) — single-pass Welford, GPU-resident, pipeline-cached
 //!
 //! Evolved from separate mean+deviation passes to a single fused dispatch.

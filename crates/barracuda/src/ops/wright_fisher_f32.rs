@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! `WrightFisherF32` — GPU-vectorized Wright-Fisher population genetics.
 //!
 //! Simulates allele frequency evolution under selection + genetic drift for

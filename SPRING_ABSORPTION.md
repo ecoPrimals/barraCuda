@@ -1,7 +1,7 @@
 # Spring Absorption Tracker
 
-**Version**: 0.3.5
-**Date**: March 16, 2026
+**Version**: 0.3.6
+**Date**: March 20, 2026
 **Source**: hotSpring v0.6.32, groundSpring V99, neuralSpring S143, wetSpring V107, airSpring v0.7.5, healthSpring V19, toadStool S156, coralReef Phase 10 Iter 50
 
 Cross-spring evolution follows **Write → Absorb → Lean**: springs implement

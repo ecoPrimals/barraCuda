@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Backend-agnostic GPU compute trait.
 //!
 //! `GpuBackend` defines the minimal surface a compute backend must implement:
@@ -21,6 +21,35 @@
 
 use crate::error::Result;
 use std::sync::Arc;
+
+/// Hardware unit hint for fixed-function science dispatch (Level 3 portability).
+///
+/// Springs express abstract math ops; the dispatch pipeline maps them to
+/// the best hardware unit. This hint travels through the IPC chain:
+/// barraCuda → coralReef (pipeline state) → toadStool (hardware routing).
+///
+/// Reference: `wateringHole/GPU_FIXED_FUNCTION_SCIENCE_REPURPOSING.md`
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum HardwareHint {
+    /// Standard compute shader path (ALU/FP32/FP64 cores).
+    #[default]
+    Compute,
+    /// Tensor core MMA path — dense matmul, Gram matrices, convolutions.
+    /// Requires FP16/BF16/TF32 input precision; coralReef emits MMA instructions.
+    TensorCore,
+    /// RT core BVH traversal — neighbor finding, SPH, acoustic ray tracing.
+    /// coralReef emits `TraceRay`; toadStool binds acceleration structure.
+    RtCore,
+    /// Z-buffer hardware — distance fields, Voronoi diagrams.
+    /// coralReef emits rasterization pipeline state; toadStool routes to ROPs.
+    ZBuffer,
+    /// Texture unit hardware interpolation — lookup tables, PDF evaluation.
+    /// coralReef binds texture with interpolation mode; toadStool routes to TMUs.
+    TextureUnit,
+    /// ROP blend/scatter — force accumulation, scatter-add without atomics.
+    /// coralReef emits blend state; toadStool routes to ROPs.
+    RopBlend,
+}
 
 /// Descriptor for a single buffer binding in a compute dispatch.
 pub struct BufferBinding<'a, B: GpuBackend + ?Sized> {
@@ -53,6 +82,10 @@ pub struct DispatchDescriptor<'a, B: GpuBackend + ?Sized> {
     pub f64_shader: bool,
     /// Use DF64 (double-float f32-pair) compilation path.
     pub df64_shader: bool,
+    /// Hardware unit hint for fixed-function dispatch (Level 3 portability).
+    /// Defaults to `Compute` (standard ALU path). coralReef uses this to
+    /// emit the correct pipeline state; toadStool routes to the hardware unit.
+    pub hardware_hint: HardwareHint,
 }
 
 /// Backend-agnostic GPU compute interface.
@@ -244,6 +277,13 @@ pub trait GpuBackend: Send + Sync {
         Ok(bytemuck::cast_slice(&bytes).to_vec())
     }
 
+    /// Read raw bytes from a buffer without conversion.
+    /// # Errors
+    /// Returns [`Err`] if readback fails.
+    fn download_bytes(&self, buffer: &Self::Buffer, size: u64) -> Result<bytes::Bytes> {
+        self.download(buffer, size)
+    }
+
     /// Allocate a uniform buffer from a `Pod` value.
     /// # Errors
     /// Returns [`Err`] if allocation fails.
@@ -337,5 +377,32 @@ fn reborrow_descriptor<B: GpuBackend>(
         workgroups: desc.workgroups,
         f64_shader: desc.f64_shader,
         df64_shader: desc.df64_shader,
+        hardware_hint: desc.hardware_hint,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hardware_hint_default_is_compute() {
+        assert_eq!(HardwareHint::default(), HardwareHint::Compute);
+    }
+
+    #[test]
+    fn hardware_hint_equality() {
+        assert_eq!(HardwareHint::Compute, HardwareHint::Compute);
+        assert_eq!(HardwareHint::TensorCore, HardwareHint::TensorCore);
+        assert_ne!(HardwareHint::Compute, HardwareHint::TensorCore);
+        assert_ne!(HardwareHint::RtCore, HardwareHint::ZBuffer);
+    }
+
+    #[test]
+    fn hardware_hint_debug_formatting() {
+        let s = format!("{:?}", HardwareHint::Compute);
+        assert!(s.contains("Compute"));
+        let s = format!("{:?}", HardwareHint::TensorCore);
+        assert!(s.contains("TensorCore"));
     }
 }

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Core probe runner — compile, dispatch, validate
 //!
 //! Runs a single probe shader and returns whether it produced the expected result.

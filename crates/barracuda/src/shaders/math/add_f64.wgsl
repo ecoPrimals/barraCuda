@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // SAXPY: Scaled Addition (c[i] = alpha * a[i] + b[i]) (f64 canonical)
 //
 // Efficient scaled vector addition.

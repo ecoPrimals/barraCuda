@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Primal lifecycle management.
 //!
 //! Modeled on the ecoPrimals pattern (sourDough scaffold), owned by barraCuda.

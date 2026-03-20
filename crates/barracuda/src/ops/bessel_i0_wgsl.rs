@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! BESSEL I0 - Modified Bessel function of the first kind, order 0
 //!
 //! I₀(x) for cylindrical coordinate physics. Uses polynomial approximation

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // locus_variance_f64.wgsl — Per-Locus Allele Frequency Variance (f64)
 //

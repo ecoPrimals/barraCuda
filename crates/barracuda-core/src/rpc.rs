@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! tarpc service definition for barraCuda.
 //!
 //! High-performance binary RPC alongside the JSON-RPC 2.0 text protocol.
@@ -134,7 +134,7 @@ impl BarraCudaService for BarraCudaServer {
             version: env!("CARGO_PKG_VERSION").into(),
             protocol: "json-rpc-2.0".into(),
             namespace: crate::PRIMAL_NAMESPACE.into(),
-            license: "AGPL-3.0-only".into(),
+            license: "AGPL-3.0-or-later".into(),
         }
     }
 

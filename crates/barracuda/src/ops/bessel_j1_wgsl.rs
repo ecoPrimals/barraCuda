@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! BESSEL J1 - Bessel function of the first kind, order 1
 //!
 //! J₁(x) for cylindrical coordinate physics. Uses rational polynomial

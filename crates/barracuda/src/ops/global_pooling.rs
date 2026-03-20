@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Global Pooling - Graph-level representation aggregation (Pure WGSL)
 //!
 //! Aggregate node features to graph-level representation

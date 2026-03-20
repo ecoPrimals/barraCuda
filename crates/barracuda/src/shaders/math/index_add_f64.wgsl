@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Index Add - Scatter-add operation with atomic CAS for overlapping indices (f64 canonical)
 //
 // Deep Debt Principles:

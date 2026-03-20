@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU compute operations for `RMSprop` Optimizer
 //!
 //! This module contains the GPU execution for `RMSprop` optimizer

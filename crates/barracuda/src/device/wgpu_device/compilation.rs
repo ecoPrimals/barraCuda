@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Shader compilation — WGSL, SPIR-V, f64, DF64, universal precision pipelines
 
 use super::WgpuDevice;

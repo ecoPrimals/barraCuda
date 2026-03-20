@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Lennard-Jones Force Kernel (DF64) — Full FP32 Core Streaming
 //
 // Prepend: df64_core.wgsl, df64_transcendentals.wgsl

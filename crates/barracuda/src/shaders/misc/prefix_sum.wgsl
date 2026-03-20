@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // prefix_sum.wgsl — GPU exclusive prefix sum (Blelloch scan)
 //
 // Hierarchical 2-pass scan for arrays of arbitrary length:

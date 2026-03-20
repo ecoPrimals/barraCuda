@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // U32 to F32 Conversion - Convert u32 indices to f64 for Tensor compatibility (f64 canonical)
 // Converts u32 buffer to f64 buffer (for operations that output indices)
 // Downcast produces f32 for GPU

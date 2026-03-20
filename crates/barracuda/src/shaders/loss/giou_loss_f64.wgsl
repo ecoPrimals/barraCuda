@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // giou_loss_f64.wgsl - Generalized IoU Loss for object detection (f64 canonical)
 //
 // Improves upon IoU by considering the smallest enclosing box

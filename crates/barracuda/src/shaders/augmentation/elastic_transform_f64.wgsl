@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // elastic_transform.wgsl - Elastic deformation for data augmentation
 //
 // Elastic deformations: Random displacement fields for image augmentation

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // adaptive_max_pool1d.wgsl - Adaptive Max Pooling 1D
 //
 // Applies max pooling with adaptive kernel size to produce fixed output size

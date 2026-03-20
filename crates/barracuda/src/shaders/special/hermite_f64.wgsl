@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Physicist's Hermite polynomials Hₙ(x) — f64 precision
 // Uses three-term recurrence relation:
 //   H₀(x) = 1

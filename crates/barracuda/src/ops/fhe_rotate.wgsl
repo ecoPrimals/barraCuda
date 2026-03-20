@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // FHE Rotation Shader (Galois Automorphism)
 //
 // **Purpose**: Apply X → X^(2k+1) automorphism for slot rotation

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Fold - Inverse of unfold (col2im) (f64 canonical)
 // Combines sliding local blocks back into tensor
 // Used in transposed convolutions

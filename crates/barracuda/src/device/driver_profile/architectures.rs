@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU microarchitecture detection — name-based identification of GPU families.
 //!
 //! Maps adapter names (e.g. "NVIDIA `GeForce` RTX 4090") to `GpuArch` for
@@ -17,6 +17,8 @@ pub enum GpuArch {
     Ampere,
     /// NVIDIA Ada Lovelace (SM89) — RTX 4000 series
     Ada,
+    /// NVIDIA Blackwell (SM100/SM120) — RTX 5000 series
+    Blackwell,
     /// AMD RDNA 2 — RX 6000 series
     Rdna2,
     /// AMD RDNA 3 — RX 7000 series
@@ -36,9 +38,12 @@ pub enum GpuArch {
     Unknown,
 }
 
-/// Detect GPU architecture from device adapter name.
-pub(crate) fn detect_arch(device: &WgpuDevice) -> GpuArch {
-    let name = device.adapter_info().name.to_lowercase();
+/// Detect GPU architecture from adapter name string.
+///
+/// Used by [`detect_arch`]; exposed for unit testing.
+#[must_use]
+pub(crate) fn arch_from_adapter_name(name: &str) -> GpuArch {
+    let name = name.to_lowercase();
 
     if name.contains("titan v") || name.contains("gv100") || name.contains("v100") {
         return GpuArch::Volta;
@@ -51,6 +56,14 @@ pub(crate) fn detect_arch(device: &WgpuDevice) -> GpuArch {
     }
     if name.contains("rtx 40") || name.contains("rtx40") || name.contains("l40") {
         return GpuArch::Ada;
+    }
+    if name.contains("rtx 50")
+        || name.contains("rtx50")
+        || name.contains("gb2")
+        || name.contains("b200")
+        || name.contains("b100")
+    {
+        return GpuArch::Blackwell;
     }
 
     if name.contains("rx 6") || name.contains("rx6") {
@@ -76,4 +89,46 @@ pub(crate) fn detect_arch(device: &WgpuDevice) -> GpuArch {
     }
 
     GpuArch::Unknown
+}
+
+/// Detect GPU architecture from device adapter name.
+pub(crate) fn detect_arch(device: &WgpuDevice) -> GpuArch {
+    arch_from_adapter_name(&device.adapter_info().name)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn blackwell_detection_rtx_50() {
+        assert_eq!(
+            arch_from_adapter_name("NVIDIA GeForce RTX 5060"),
+            GpuArch::Blackwell
+        );
+        assert_eq!(
+            arch_from_adapter_name("NVIDIA GeForce RTX 50"),
+            GpuArch::Blackwell
+        );
+    }
+
+    #[test]
+    fn blackwell_detection_rtx50_no_space() {
+        assert_eq!(
+            arch_from_adapter_name("NVIDIA RTX50 Series"),
+            GpuArch::Blackwell
+        );
+    }
+
+    #[test]
+    fn blackwell_detection_gb2() {
+        assert_eq!(arch_from_adapter_name("NVIDIA GB200"), GpuArch::Blackwell);
+        assert_eq!(arch_from_adapter_name("NVIDIA GB2"), GpuArch::Blackwell);
+    }
+
+    #[test]
+    fn blackwell_detection_b200_b100() {
+        assert_eq!(arch_from_adapter_name("NVIDIA B200"), GpuArch::Blackwell);
+        assert_eq!(arch_from_adapter_name("NVIDIA B100"), GpuArch::Blackwell);
+    }
 }

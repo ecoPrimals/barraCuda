@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Shared PRNG core: PCG hash → uniform f64 on [0, 1).
 //
 // Requires a `Params` struct with fields { *, traj_id: u32, seed_lo: u32, seed_hi: u32 }

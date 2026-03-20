@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 #![expect(clippy::needless_raw_string_hashes, reason = "WGSL readability")]
 

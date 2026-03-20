@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Penalty filtering and surrogate quality utilities.
 
 use super::config::PenaltyFilter;
@@ -96,5 +96,77 @@ pub(crate) fn compute_surrogate_rmse(
             mse.sqrt()
         }
         Err(_) => f64::INFINITY,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_x() -> Vec<Vec<f64>> {
+        vec![vec![1.0], vec![2.0], vec![3.0], vec![4.0], vec![5.0]]
+    }
+
+    #[test]
+    fn filter_none_passes_all() {
+        let x = sample_x();
+        let y = vec![10.0, 20.0, 30.0, 40.0, 50.0];
+        let (xf, yf) = filter_training_data(&x, &y, PenaltyFilter::None);
+        assert_eq!(xf.len(), 5);
+        assert_eq!(yf, y);
+    }
+
+    #[test]
+    fn filter_threshold() {
+        let x = sample_x();
+        let y = vec![10.0, 20.0, 30.0, 40.0, 50.0];
+        let (xf, yf) = filter_training_data(&x, &y, PenaltyFilter::Threshold(25.0));
+        assert_eq!(yf, vec![10.0, 20.0]);
+        assert_eq!(xf.len(), 2);
+    }
+
+    #[test]
+    fn filter_quantile_keeps_lower() {
+        let x = sample_x();
+        let y = vec![10.0, 20.0, 30.0, 40.0, 50.0];
+        let (filtered_x, yf) = filter_training_data(&x, &y, PenaltyFilter::Quantile(0.5));
+        assert!(yf.len() <= 5);
+        assert_eq!(filtered_x.len(), yf.len());
+        assert!(yf.iter().all(|&v| v <= 30.0));
+    }
+
+    #[test]
+    fn filter_quantile_empty() {
+        let x: Vec<Vec<f64>> = vec![];
+        let y: Vec<f64> = vec![];
+        let (xf, yf) = filter_training_data(&x, &y, PenaltyFilter::Quantile(0.5));
+        assert!(xf.is_empty());
+        assert!(yf.is_empty());
+    }
+
+    #[test]
+    fn filter_quantile_invalid_range() {
+        let x = sample_x();
+        let y = vec![10.0, 20.0, 30.0, 40.0, 50.0];
+        let (_, yf) = filter_training_data(&x, &y, PenaltyFilter::Quantile(2.0));
+        assert_eq!(yf.len(), 5);
+    }
+
+    #[test]
+    fn filter_adaptive_mad() {
+        let x = sample_x();
+        let y = vec![10.0, 10.0, 10.0, 10.0, 100.0];
+        let (xf, yf) = filter_training_data(&x, &y, PenaltyFilter::AdaptiveMAD(2.0));
+        assert!(yf.len() < 5, "outlier should be filtered");
+        assert!(xf.len() == yf.len());
+    }
+
+    #[test]
+    fn filter_adaptive_mad_empty() {
+        let x: Vec<Vec<f64>> = vec![];
+        let y: Vec<f64> = vec![];
+        let (xf, yf) = filter_training_data(&x, &y, PenaltyFilter::AdaptiveMAD(3.0));
+        assert!(xf.is_empty());
+        assert!(yf.is_empty());
     }
 }

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Binary Cross Entropy Loss (f64 canonical)
 // loss = -mean(targets * log(predictions) + (1 - targets) * log(1 - predictions))
 

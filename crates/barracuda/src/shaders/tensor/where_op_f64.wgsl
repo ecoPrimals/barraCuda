@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Where - Conditional selection (complete parallel implementation) (f64 canonical)
 // Selects from two tensors based on condition mask
 //

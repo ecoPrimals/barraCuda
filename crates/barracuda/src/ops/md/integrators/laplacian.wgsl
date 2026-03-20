@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Laplacian Stencil (7-point 3D)
 //!
 //! **Physics**: Diffusion, wave equations, Poisson solver

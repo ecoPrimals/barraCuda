@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // PReLU - Parametric Rectified Linear Unit (f64 canonical)
 // PReLU: f(x) = x if x > 0, alpha * x otherwise
 

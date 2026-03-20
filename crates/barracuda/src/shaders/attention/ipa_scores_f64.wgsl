@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // ipa_scores_f64.wgsl — Invariant Point Attention scores (AlphaFold2)
 //

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Matrix Rank - Compute rank via Gaussian elimination (complete implementation) - f64 canonical
 // Counts linearly independent rows/columns using row reduction
 //

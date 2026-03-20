@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // LayerNorm: Layer normalization with Welford's algorithm (f64 canonical)
 // CUDA equivalent: cudnn::LayerNormalization
 // Formula: output = (input - mean) / sqrt(variance + epsilon) * gamma + beta

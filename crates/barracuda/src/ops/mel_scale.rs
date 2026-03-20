@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! `MelScale` - Mel filterbank for audio feature extraction
 //!
 //! Converts linear frequency scale to mel scale.

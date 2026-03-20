@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Kronecker Product_f64.wgsl — Tensor product of matrices (f64 canonical)
 // Computes Kronecker product: C[i*m+k, j*n+l] = A[i,j] * B[k,l]
 

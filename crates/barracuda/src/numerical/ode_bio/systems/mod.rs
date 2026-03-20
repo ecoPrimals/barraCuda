@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! `OdeSystem` trait implementations connecting biological parameter structs
 //! to the generic `BatchedOdeRK4<S>` GPU/CPU framework.
 //!

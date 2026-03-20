@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Mask Convert - Convert f32 mask to u32 mask (0 or 1) (f64 canonical)
 // Converts f64 mask values to u32 boolean mask (1 if non-zero, 0 if zero)
 //

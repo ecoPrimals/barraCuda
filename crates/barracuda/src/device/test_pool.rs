@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Test device pool — dual-backend with automatic recovery
 //!
 //! **Architecture**: Math is the contract, hardware is the target.
@@ -77,6 +77,7 @@ static GPU_IS_REAL: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 static GPU_HAS_F64: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 static GPU_F64_COMPUTES: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 static CPU_AVAILABLE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+static GPU_CREATION_FAILED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 
 // ============================================================================
 // Thread-local GPU test gate permits
@@ -124,8 +125,6 @@ fn prefer_gpu() -> bool {
 // GPU adapter pinning
 // ============================================================================
 
-static GPU_ADAPTER_SELECTOR: std::sync::OnceLock<String> = std::sync::OnceLock::new();
-
 fn resolve_gpu_adapter_selector() -> String {
     if let Ok(v) = std::env::var("BARRACUDA_GPU_ADAPTER") {
         if !v.is_empty() {
@@ -168,10 +167,11 @@ const DEVICE_CREATION_MAX_RETRIES: u32 = 5;
 const DEVICE_CREATION_BASE_DELAY_MS: u64 = 100;
 
 /// Timeout for GPU device creation (per attempt).
-///
-/// Prevents indefinite hangs when the driver stalls during adapter/device
-/// initialization. Used in `create_gpu_device()`.
 const DEVICE_CREATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
+
+/// Total timeout for GPU device creation (adapter resolution + device creation).
+/// Returns None instead of hanging when no GPU is present.
+pub const TEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
 
 /// Timeout for GPU test execution.
 ///
@@ -180,64 +180,69 @@ const DEVICE_CREATION_TIMEOUT: std::time::Duration = std::time::Duration::from_s
 /// deadlock). Exported for use by the test helper infrastructure.
 pub const GPU_TEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
 
-async fn create_gpu_device() -> Arc<WgpuDevice> {
-    let selector = GPU_ADAPTER_SELECTOR.get_or_init(resolve_gpu_adapter_selector);
+async fn create_gpu_device() -> Option<Arc<WgpuDevice>> {
+    let create_future = async {
+        let selector = tokio::task::spawn_blocking(resolve_gpu_adapter_selector)
+            .await
+            .unwrap_or_else(|_| "auto".to_string());
 
-    let mut last_err = String::new();
-    for attempt in 0..=DEVICE_CREATION_MAX_RETRIES {
-        match tokio::time::timeout(
-            DEVICE_CREATION_TIMEOUT,
-            WgpuDevice::with_adapter_selector(selector),
-        )
-        .await
-        {
-            Ok(Ok(device)) => {
-                if attempt > 0 {
-                    tracing::info!("test_pool[gpu]: device created after {} retries", attempt);
+        for attempt in 0..=DEVICE_CREATION_MAX_RETRIES {
+            match tokio::time::timeout(
+                DEVICE_CREATION_TIMEOUT,
+                WgpuDevice::with_adapter_selector(&selector),
+            )
+            .await
+            {
+                Ok(Ok(device)) => {
+                    if attempt > 0 {
+                        tracing::info!("test_pool[gpu]: device created after {} retries", attempt);
+                    }
+                    tracing::info!(
+                        "test_pool[gpu]: '{}' ({:?})",
+                        device.adapter_info().name,
+                        device.adapter_info().device_type,
+                    );
+                    return Some(Arc::new(device));
                 }
-                tracing::info!(
-                    "test_pool[gpu]: '{}' ({:?})",
-                    device.adapter_info().name,
-                    device.adapter_info().device_type,
-                );
-                return Arc::new(device);
-            }
-            Ok(Err(e)) => {
-                last_err = e.to_string();
-                let is_transient = last_err.contains("lost")
-                    || last_err.contains("overloaded")
-                    || last_err.contains("busy");
-                if !is_transient || attempt == DEVICE_CREATION_MAX_RETRIES {
-                    break;
+                Ok(Err(e)) => {
+                    let err_str = e.to_string();
+                    let is_transient = err_str.contains("lost")
+                        || err_str.contains("overloaded")
+                        || err_str.contains("busy");
+                    if !is_transient || attempt == DEVICE_CREATION_MAX_RETRIES {
+                        break;
+                    }
+                    let jitter = (attempt as u64).wrapping_mul(7) % 50;
+                    let delay_ms = DEVICE_CREATION_BASE_DELAY_MS * 2u64.pow(attempt) + jitter;
+                    tracing::warn!(
+                        "test_pool[gpu]: device creation failed (attempt {}/{}): {} — retrying in {}ms",
+                        attempt + 1,
+                        DEVICE_CREATION_MAX_RETRIES,
+                        err_str,
+                        delay_ms,
+                    );
+                    tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
                 }
-                let jitter = (attempt as u64).wrapping_mul(7) % 50;
-                let delay_ms = DEVICE_CREATION_BASE_DELAY_MS * 2u64.pow(attempt) + jitter;
-                tracing::warn!(
-                    "test_pool[gpu]: device creation failed (attempt {}/{}): {} — retrying in {}ms",
-                    attempt + 1,
-                    DEVICE_CREATION_MAX_RETRIES,
-                    last_err,
-                    delay_ms,
-                );
-                tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
-            }
-            Err(_timeout) => {
-                last_err = format!("timed out after {DEVICE_CREATION_TIMEOUT:?}");
-                if attempt == DEVICE_CREATION_MAX_RETRIES {
-                    break;
+                Err(_timeout) => {
+                    if attempt == DEVICE_CREATION_MAX_RETRIES {
+                        break;
+                    }
+                    tracing::warn!(
+                        "test_pool[gpu]: device creation timed out (attempt {}/{}) — retrying",
+                        attempt + 1,
+                        DEVICE_CREATION_MAX_RETRIES,
+                    );
                 }
-                tracing::warn!(
-                    "test_pool[gpu]: device creation timed out (attempt {}/{}) — retrying",
-                    attempt + 1,
-                    DEVICE_CREATION_MAX_RETRIES,
-                );
             }
         }
+        None
+    };
+
+    match tokio::time::timeout(TEST_TIMEOUT, create_future).await {
+        Ok(Some(device)) => Some(device),
+        Ok(None) => None,
+        Err(_) => None,
     }
-    panic!(
-        "GPU device creation failed after {} attempts: {last_err}",
-        DEVICE_CREATION_MAX_RETRIES + 1
-    );
 }
 
 async fn create_cpu_device() -> Option<Arc<WgpuDevice>> {
@@ -365,14 +370,23 @@ pub fn get_test_cpu_device() -> Option<Arc<WgpuDevice>> {
 
 /// Get the GPU test device. Returns None if no real GPU is available.
 pub async fn get_test_gpu_device() -> Option<Arc<WgpuDevice>> {
+    if *GPU_CREATION_FAILED.get().unwrap_or(&false) {
+        return None;
+    }
     if let Some(dev) = try_get_cached(&GPU_POOL) {
         return Some(dev);
     }
     let _guard = GPU_CREATE_GUARD.lock().await;
+    if *GPU_CREATION_FAILED.get().unwrap_or(&false) {
+        return None;
+    }
     if let Some(dev) = try_get_cached(&GPU_POOL) {
         return Some(dev);
     }
-    let dev = create_gpu_device().await;
+    let Some(dev) = create_gpu_device().await else {
+        GPU_CREATION_FAILED.get_or_init(|| true);
+        return None;
+    };
     GPU_IS_REAL.get_or_init(|| dev.adapter_info().device_type != wgpu::DeviceType::Cpu);
     GPU_HAS_F64.get_or_init(|| dev.has_f64_shaders());
     Some(insert_into_pool(&GPU_POOL, dev))
@@ -686,13 +700,14 @@ pub mod test_prelude {
         F: Fn(Arc<WgpuDevice>) -> Fut,
         Fut: std::future::Future<Output = crate::error::Result<()>>,
     {
-        use crate::device::test_harness::gpu_section;
-
+        // get_test_device_if_gpu_available already holds a TLS permit from the
+        // GpuTestGate semaphore — do NOT wrap in gpu_section() which would
+        // acquire a second permit and halve effective GPU test parallelism.
         let device = super::get_test_device_if_gpu_available().await;
         let Some(device) = device else {
             return;
         };
-        let result = gpu_section(|| f(Arc::clone(&device))).await;
+        let result = f(Arc::clone(&device)).await;
         match result {
             Ok(()) => {}
             Err(e) if e.is_retriable() => {
@@ -702,7 +717,7 @@ pub mod test_prelude {
                     tracing::warn!("GPU unavailable on retry — skipping test");
                     return;
                 };
-                match gpu_section(|| f(fresh)).await {
+                match f(fresh).await {
                     Ok(()) => {}
                     Err(e) if e.is_retriable() => {
                         tracing::warn!(

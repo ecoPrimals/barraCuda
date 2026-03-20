@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // ElementwiseBinary_f64.wgsl — C = A op B (f64 canonical)
 // Supports: Add(0), Sub(1), Mul(2), Div(3), Pow(4), Max(5), Min(6)
 

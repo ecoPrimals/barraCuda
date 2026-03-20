@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // band_edges_parallel_f64.wgsl — Band edges from eigensystem results
 //

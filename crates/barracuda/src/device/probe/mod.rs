@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Runtime GPU capability probing for f64 built-in functions
 //!
 //! Dispatches tiny test shaders to empirically verify hardware capabilities

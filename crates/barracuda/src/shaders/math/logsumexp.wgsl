@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // LogSumExp - Numerically stable log(sum(exp(x)))
 // Computes: log(Σ exp(x_i)) = max(x) + log(Σ exp(x_i - max(x)))
 //

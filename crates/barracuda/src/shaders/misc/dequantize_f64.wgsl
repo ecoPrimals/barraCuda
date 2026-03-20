@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // dequantize_f64.wgsl - Convert quantized integers to floating point (f64 canonical)
 //
 // Dequantization: Convert low-precision integers back to FP

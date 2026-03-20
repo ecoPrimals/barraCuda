@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! `TopK` - GPU-accelerated top-K largest values selection
 //!
 //! **Deep Debt Principles**:

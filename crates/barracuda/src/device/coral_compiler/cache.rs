@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Native binary cache for coralReef-compiled GPU binaries.
 
 use super::types::CoralBinary;

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // GELU - Gaussian Error Linear Unit (f64 canonical)
 //
 // Deep Debt Principles:

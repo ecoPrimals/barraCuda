@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Mish - Self-regularizing activation function (f64 canonical)
 // mish(x) = x * tanh(softplus(x)) = x * tanh(ln(1 + e^x))
 

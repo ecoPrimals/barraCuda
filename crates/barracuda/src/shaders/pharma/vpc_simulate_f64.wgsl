@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // VPC (Visual Predictive Check) Monte Carlo simulation — GPU kernel.
 //
 // Each thread simulates one individual under the population PK model with

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Device creation and adapter selection
 //!
 //! **Why this file is large (~640 lines)**: Single concern—"how do I obtain a

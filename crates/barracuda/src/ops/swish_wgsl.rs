@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Swish (`SiLU`) - Self-gated activation function - Pure WGSL
 //!
 //! Deep Debt Principles:

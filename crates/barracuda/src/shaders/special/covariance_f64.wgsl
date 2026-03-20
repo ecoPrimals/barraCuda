@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Covariance computation — f64 precision
 // Cov(X,Y) = E[(X-μx)(Y-μy)] = Σ(x-μx)(y-μy) / (n - ddof)
 //

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Batched Bisection Root-Finding (GPU) — Parallel Root-Finding
 //!
 //! Solves many independent root-finding problems in parallel on GPU.

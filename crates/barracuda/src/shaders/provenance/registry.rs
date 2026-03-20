@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Shader provenance registry and cross-spring dependency queries.
 
 use std::collections::HashMap;

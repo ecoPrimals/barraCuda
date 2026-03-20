@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! `PitchShift` - Pitch shifting without tempo change
 //!
 //! Changes pitch by resampling in frequency domain.

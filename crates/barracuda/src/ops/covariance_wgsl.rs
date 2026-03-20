@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Covariance — GPU-Accelerated via WGSL
 //!
 //! Computes covariance: Cov(X,Y) = E[(X-μx)(Y-μy)]

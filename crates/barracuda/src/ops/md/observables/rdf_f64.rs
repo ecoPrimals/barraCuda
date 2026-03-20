@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! RDF F64 - Radial Distribution Function histogram - f64 precision WGSL
 //!
 //! GPU-accelerated O(N²) pair-distance histogram with PBC.

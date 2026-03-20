@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Center Loss for metric learning
 //!
 //! **Pure WGSL**: Single implementation via WebGPU shader

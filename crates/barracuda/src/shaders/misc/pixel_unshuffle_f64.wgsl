@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // pixel_unshuffle_f64.wgsl - Pixel Unshuffle (Space to Depth) (f64 canonical)
 //
 // Rearranges elements in a tensor from spatial dimensions to depth

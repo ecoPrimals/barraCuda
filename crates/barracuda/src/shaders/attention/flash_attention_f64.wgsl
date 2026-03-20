@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // flash_attention_f64.wgsl - Memory-efficient attention mechanism (f64 canonical)
 //
 // Flash Attention: Memory-efficient attention that reduces memory usage from O(N²) to O(N)

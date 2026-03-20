@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Batched GPU Nelder-Mead — N independent Nelder-Mead optimizations in parallel.
 
 use crate::device::WgpuDevice;

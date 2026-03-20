@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // LU Decomposition (f64) - Shader-First Implementation
 //
 // Full f64 precision via WGSL native f64 support (SPIR-V/Vulkan)

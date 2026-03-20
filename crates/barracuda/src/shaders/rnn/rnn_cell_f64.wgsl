@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // rnn_cell.wgsl - RNN Cell (single timestep) (f64 canonical)
 //
 // Basic recurrent neural network cell computation

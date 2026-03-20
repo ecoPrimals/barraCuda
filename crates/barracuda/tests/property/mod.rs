@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Property-Based Tests - Mathematical correctness validation
 //!
 //! **Purpose**: Verify fundamental mathematical properties hold across inputs

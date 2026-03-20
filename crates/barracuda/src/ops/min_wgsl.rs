@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Min - Reduction operation finding minimum values - Pure WGSL
 //!
 //! Deep Debt Principles:

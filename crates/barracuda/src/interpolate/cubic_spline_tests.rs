@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+#![expect(clippy::unwrap_used, reason = "tests")]
+
 use super::*;
 use std::f64::consts::PI;
+
+const TIGHT: f64 = 1e-10;
+const LOOSE: f64 = 1e-8;
 
 #[test]
 fn test_natural_spline_passes_through_points() {
@@ -292,4 +297,70 @@ fn test_quadratic_integration() {
         (integral - expected).abs() < 0.01,
         "Integral of x^2 from 0 to 2 should be ~2.667: got {integral}"
     );
+}
+
+#[test]
+fn test_integrate_reversed_limits_negates() {
+    let x = vec![0.0, 1.0, 2.0];
+    let y = vec![0.0, 1.0, 2.0];
+    let spline = CubicSpline::natural(&x, &y).unwrap();
+    let forward = spline.integrate(0.2, 1.7).unwrap();
+    let backward = spline.integrate(1.7, 0.2).unwrap();
+    assert!((forward + backward).abs() < LOOSE);
+}
+
+#[test]
+fn test_integrate_spans_multiple_segments() {
+    let x = vec![0.0, 1.0, 2.0, 3.0];
+    let y = vec![0.0, 1.0, 0.0, 1.0];
+    let spline = CubicSpline::natural(&x, &y).unwrap();
+    let piecewise: f64 = spline.integrate(0.5, 1.5).unwrap() + spline.integrate(1.5, 2.5).unwrap();
+    let whole = spline.integrate(0.5, 2.5).unwrap();
+    assert!((piecewise - whole).abs() < LOOSE);
+}
+
+#[test]
+fn test_cubic_spline_input_slice_and_vec_ref() {
+    let x = [0.0_f64, 1.0, 2.0];
+    let y_vec = vec![0.0_f64, 1.0, 4.0];
+    let s1 = CubicSpline::natural(x.as_slice(), &y_vec).unwrap();
+    let s2 = CubicSpline::natural(&x[..], y_vec.as_slice()).unwrap();
+    let xi = 0.25;
+    assert!((s1.eval(xi).unwrap() - s2.eval(xi).unwrap()).abs() < TIGHT);
+
+    let xv = vec![0.0_f64, 1.0, 2.0];
+    let s3 = CubicSpline::natural(&xv, &y_vec).unwrap();
+    assert!((s3.eval(xi).unwrap() - s1.eval(xi).unwrap()).abs() < TIGHT);
+}
+
+#[test]
+fn test_find_interval_extrapolation_branches() {
+    let x = vec![1.0, 2.0, 4.0];
+    let y = vec![10.0, 20.0, 40.0];
+    let spline = CubicSpline::natural(&x, &y).unwrap();
+    assert_eq!(spline.find_interval(0.5).unwrap(), 0);
+    assert_eq!(spline.find_interval(10.0).unwrap(), 1);
+}
+
+#[cfg(feature = "gpu")]
+#[tokio::test]
+async fn test_eval_many_gpu_matches_cpu() {
+    use crate::device::test_pool::test_prelude::*;
+    let Some(device) = test_gpu_device().await else {
+        return;
+    };
+    let x = vec![0.0, 1.0, 2.0, 3.0, 4.0];
+    let y = vec![0.0, 1.0, 4.0, 9.0, 16.0];
+    let spline = CubicSpline::natural(&x, &y).unwrap();
+    let queries = [0.3, 1.7, 2.2, 3.9];
+    let cpu = spline.eval_many(&queries).unwrap();
+    let gpu = match spline.eval_many_gpu(&queries, &device) {
+        Ok(v) => v,
+        Err(e) if e.is_device_lost() => return,
+        Err(e) => panic!("eval_many_gpu: {e}"),
+    };
+    assert_eq!(cpu.len(), gpu.len());
+    for (c, g) in cpu.iter().zip(gpu.iter()) {
+        assert!((c - g).abs() < LOOSE, "cpu {c} vs gpu {g}");
+    }
 }

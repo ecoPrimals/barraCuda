@@ -293,4 +293,38 @@ mod tests {
             "F64Precise should show ✗: {s}"
         );
     }
+
+    #[test]
+    fn tier_cap_returns_none_for_unlisted_tier() {
+        let cal = make_cal(true, true, true, true);
+        assert!(cal.tier_cap(PrecisionTier::F16).is_none());
+    }
+
+    #[test]
+    fn best_any_tier_prefers_df64_when_native_unavailable() {
+        let cal = make_cal(true, true, false, false);
+        assert_eq!(cal.best_any_tier(), Some(PrecisionTier::DF64));
+    }
+
+    #[test]
+    fn display_compiles_without_dispatch_shows_triangle_comp() {
+        let mut cal = make_cal(true, true, true, true);
+        if let Some(t) = cal.tiers.iter_mut().find(|t| t.tier == PrecisionTier::DF64) {
+            t.compiles = true;
+            t.dispatches = false;
+            t.transcendentals_safe = false;
+        }
+        let s = cal.to_string();
+        assert!(s.contains("△comp"), "expected compile-only mark: {s}");
+    }
+
+    #[test]
+    fn display_shows_arith_when_dispatch_but_transcendentals_unsafe() {
+        let mut cal = make_cal(true, true, true, true);
+        if let Some(t) = cal.tiers.iter_mut().find(|t| t.tier == PrecisionTier::DF64) {
+            t.transcendentals_safe = false;
+        }
+        let s = cal.to_string();
+        assert!(s.contains("△arith"), "expected arith-only mark: {s}");
+    }
 }

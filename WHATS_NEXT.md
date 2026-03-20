@@ -6,6 +6,17 @@ Prioritized work items, ordered by impact. Updated 2026-03-20.
 
 ## Recently Completed
 
+- **Deep debt sprint 13 — comprehensive audit, coverage & test hardening (Mar 20)**:
+  Full codebase audit against wateringHole standards with systematic execution.
+  Cross-vendor GPU tolerance constants (`CROSS_VENDOR_MATMUL_F32_TOL`,
+  `CROSS_VENDOR_ELEMENTWISE_F32_TOL`). FHE cold-start budgets
+  (`NTT_N4096_COLD_BUDGET`, `FAST_POLY_MUL_N4096_COLD_BUDGET`). llvm-cov
+  SIGSEGV resolved via nextest coverage profile excluding `hardware_verification`
+  binary. 40+ new tests across `driver_profile`, `precision_brain`,
+  `hardware_calibration`, `cubic_spline`, `solve`, `jackknife`. Stale
+  `#[expect(clippy::unwrap_used)]` attributes removed. Coverage: 71.38% line /
+  77.94% function (GPU-architectural ceiling on llvmpipe). Doc numbers aligned.
+  3,886 tests pass. All gates green.
 - **Deep debt sprint 12 — module decomposition & build optimisation (Mar 20)**:
   IPC `methods.rs` (675L) decomposed into `methods/` directory with 6 domain
   files. Hydrology `gpu.rs` (648L) decomposed into barrel + 3 pipeline files.

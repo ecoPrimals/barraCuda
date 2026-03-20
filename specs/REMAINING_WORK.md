@@ -92,15 +92,14 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   already acquires a TLS permit from `GpuTestGate` — removed redundant
   `gpu_section()` wrapper that was acquiring a second permit, effectively
   halving GPU test parallelism.
-- **Total test count**: 3,555 (3,494 barracuda + 61 barracuda-core), 0 failures
+- **Total test count**: 3,886 (nextest, all features, 0 failures)
 
 ### Quality Gates — All Green
 - `cargo fmt --check`: Pass
 - `cargo clippy --workspace --all-targets --all-features -- -D warnings`: Pass
 - `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps`: Pass
 - `cargo deny check`: Pass (advisories, bans, licenses, sources)
-- `cargo test -p barracuda --all-features --lib`: 3,494 pass / 0 fail / 13 ignored
-- `cargo test -p barracuda-core --all-features --lib`: 61 pass / 0 fail
+- `cargo nextest run --workspace --all-features --no-fail-fast`: 3,886 pass / 0 fail
 - `cargo check --workspace --all-features`: Pass
 
 ---
@@ -241,8 +240,8 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   `println!` calls in the library crate are now eliminated.
 
 ### Doc Consistency Harmonization
-- **Test counts**: All docs now report 3,794 total tests (3,502 lib + 292 integration)
-- **File counts**: All docs now report 1,076 Rust source files, 43 integration test files
+- **Test counts**: All docs now report 3,886 total tests (nextest --all-features)
+- **File counts**: All docs now report 1,091 Rust source files, 43 integration test files
 - **Coverage**: CONVENTIONS.md updated to ~75% (was ~70%, matching actual llvmpipe runs)
 - **Integration test files**: README and CONTRIBUTING both now report 43
 
@@ -328,7 +327,7 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 - **Clippy** (`-D warnings`, all features, all targets): Pass (zero warnings)
 - **Rustdoc** (`-D warnings`): Pass
 - **Deny** (advisories, bans, licenses, sources): Pass
-- **Tests**: 3,772 pass, 0 fail (was 3,744 — +28 new tests, 1 test fix)
+- **Tests**: 3,886 pass, 0 fail
 
 ---
 
@@ -457,7 +456,7 @@ gates green.
 ### wateringHole Standards Compliance
 - **`#![forbid(unsafe_code)]`**: Upgraded from `deny` (overridable) to `forbid` (irrevocable) in both `barracuda` and `barracuda-core` crate roots.
 - **Namespace-derived IPC method names**: All 12 hardcoded `"barracuda.method.name"` strings evolved to `LazyLock<Vec<String>>` built from `PRIMAL_NAMESPACE` + `METHOD_SUFFIXES`. Dispatch routing uses `method_suffix()`. Discovery, tarpc, CLI all consume derived names. Primal has self-knowledge only.
-- **SPDX license compliance**: 648 WGSL shaders were missing `// SPDX-License-Identifier: AGPL-3.0-only` — all 806 shaders now have headers. 1,088/1,088 Rust files confirmed.
+- **SPDX license compliance**: 648 WGSL shaders were missing `// SPDX-License-Identifier: AGPL-3.0-or-later` — all 806 shaders now have headers. 1,088/1,088 Rust files confirmed.
 - **BufferBinding import**: Added missing import in `coral_reef_device.rs` — `--all-features` clippy now passes.
 
 ### Code Quality Evolution
@@ -936,7 +935,7 @@ path and cross-compilation target matrix.
 | Clippy | Pass (zero warnings, `-D warnings`) | `cargo clippy --workspace --all-targets -- -D warnings` |
 | Rustdoc | Pass (zero warnings) | `cargo doc --workspace --no-deps` |
 | Deny | Pass (advisories, bans, licenses, sources) | `cargo deny check` |
-| Tests | 3,772 pass / 0 fail | `cargo nextest run --workspace --no-fail-fast` |
+| Tests | 3,886 pass / 0 fail | `cargo nextest run --workspace --all-features --no-fail-fast` |
 | Check (no GPU) | Pass | `cargo check --no-default-features` |
 | Check (GPU only) | Pass | `cargo check --no-default-features --features gpu` |
 | Check (all) | Pass | `cargo check` |

@@ -101,3 +101,23 @@ slow-timeout = { period = "180s", terminate-after = 2 }
 filter = "test(/fft|conv2d|conv3d|flash_attention|deformable|fhe_polynomial|edge_conv/)"
 test-group = "gpu-heavy"
 slow-timeout = { period = "120s", terminate-after = 2 }
+
+# ─── Coverage profile: excludes multi-GPU hardware verification ──────
+# hardware_verification runs real multi-vendor GPU dispatch which can
+# SIGSEGV under LLVM instrumentation (driver FFI + coverage probes).
+# Excluding it lets llvm-cov complete cleanly on single-GPU / llvmpipe.
+[profile.coverage]
+test-threads = 16
+fail-fast = false
+slow-timeout = { period = "120s", terminate-after = 2 }
+status-level = "fail"
+final-status-level = "all"
+
+[[profile.coverage.overrides]]
+filter = "binary(hardware_verification)"
+exclude = true
+
+[[profile.coverage.overrides]]
+filter = "test(/fft|conv2d|conv3d|flash_attention|deformable|fhe_polynomial|edge_conv/)"
+test-group = "gpu-heavy"
+slow-timeout = { period = "180s", terminate-after = 2 }

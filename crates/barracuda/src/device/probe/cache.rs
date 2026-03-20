@@ -111,6 +111,12 @@ pub(super) fn insert_full_caps(key: String, caps: F64BuiltinCapabilities) {
     lock_cache(&F64_CAPS_CACHE).insert(key, caps);
 }
 
+/// Seeds the global probe cache for unit tests (synthetic adapter keys).
+#[cfg(test)]
+pub(crate) fn insert_caps_for_test(key: String, caps: F64BuiltinCapabilities) {
+    insert_full_caps(key, caps);
+}
+
 pub(super) fn get_cached_full(key: &str) -> Option<F64BuiltinCapabilities> {
     lock_cache(&F64_CAPS_CACHE).get(key).copied()
 }

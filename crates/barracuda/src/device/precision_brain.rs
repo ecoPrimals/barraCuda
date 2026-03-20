@@ -281,6 +281,9 @@ fn domain_requirements(domain: PhysicsDomain, tier: PrecisionTier) -> (bool, &'s
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::device::driver_profile::{
+        CompilerKind, DriverKind, Fp64Rate, GpuArch, GpuDriverProfile,
+    };
     use crate::device::hardware_calibration::TierCapability;
 
     #[expect(
@@ -380,5 +383,56 @@ mod tests {
     fn advice_throughput_bound() {
         let (fma_safe, _) = domain_requirements(PhysicsDomain::LatticeQcd, PrecisionTier::DF64);
         assert!(fma_safe);
+    }
+
+    fn test_profile_volta_full() -> GpuDriverProfile {
+        GpuDriverProfile {
+            driver: DriverKind::NvidiaProprietary,
+            compiler: CompilerKind::NvidiaPtxas,
+            arch: GpuArch::Volta,
+            fp64_rate: Fp64Rate::Full,
+            workarounds: vec![],
+            adapter_key: String::new(),
+        }
+    }
+
+    #[test]
+    fn domain_requirements_moderate_domains_native_f64() {
+        let (fma, rationale) = domain_requirements(PhysicsDomain::GradientFlow, PrecisionTier::F64);
+        assert!(fma);
+        assert!(rationale.contains("moderate"));
+    }
+
+    #[test]
+    fn route_advice_dielectric_includes_fma_flag() {
+        let cal = make_cal(true, true, true, true);
+        let brain = PrecisionBrain::from_calibration(cal, &test_profile_volta_full());
+        let adv = brain.route_advice(PhysicsDomain::Dielectric);
+        assert_eq!(adv.tier, PrecisionTier::F64Precise);
+        assert!(!adv.fma_safe);
+        assert!(!adv.rationale.is_empty());
+    }
+
+    #[test]
+    fn precision_brain_display_covers_adapter_name() {
+        let cal = make_cal(true, true, true, true);
+        let brain = PrecisionBrain::from_calibration(cal, &test_profile_volta_full());
+        let s = brain.to_string();
+        assert!(s.contains("Test GPU"));
+        assert!(s.contains("LatticeQcd"));
+    }
+
+    #[test]
+    fn has_native_f64_true_when_profile_reports_native_paths() {
+        let cal = make_cal(true, true, true, true);
+        let brain = PrecisionBrain::from_calibration(cal, &test_profile_volta_full());
+        assert!(brain.has_native_f64());
+    }
+
+    #[test]
+    fn adapter_name_accessor() {
+        let cal = make_cal(true, true, true, true);
+        let brain = PrecisionBrain::from_calibration(cal, &test_profile_volta_full());
+        assert_eq!(brain.adapter_name(), "Test GPU");
     }
 }

@@ -2,6 +2,9 @@
 
 use super::*;
 
+use crate::device::probe::F64BuiltinCapabilities;
+use crate::device::probe::cache::insert_caps_for_test;
+
 fn make_profile(rate: Fp64Rate, arch: GpuArch) -> GpuDriverProfile {
     GpuDriverProfile {
         driver: DriverKind::NvidiaProprietary,
@@ -242,4 +245,294 @@ fn ada_proprietary_precision_routing_no_shared_mem() {
         PrecisionRoutingAdvice::F64NativeNoSharedMem,
         "Ada + proprietary should route to F64NativeNoSharedMem"
     );
+}
+
+#[test]
+fn optimal_eigensolve_nak_warp_packed() {
+    let p = GpuDriverProfile {
+        driver: DriverKind::Nvk,
+        compiler: CompilerKind::Nak,
+        arch: GpuArch::Volta,
+        fp64_rate: Fp64Rate::Full,
+        workarounds: vec![],
+        adapter_key: String::new(),
+    };
+    assert!(matches!(
+        p.optimal_eigensolve_strategy(),
+        EigensolveStrategy::WarpPacked { wg_size: 32 }
+    ));
+}
+
+#[test]
+fn optimal_eigensolve_aco_rdna2_warp_packed() {
+    let p = GpuDriverProfile {
+        driver: DriverKind::Radv,
+        compiler: CompilerKind::Aco,
+        arch: GpuArch::Rdna2,
+        fp64_rate: Fp64Rate::Throttled,
+        workarounds: vec![],
+        adapter_key: String::new(),
+    };
+    assert!(matches!(
+        p.optimal_eigensolve_strategy(),
+        EigensolveStrategy::WarpPacked { wg_size: 32 }
+    ));
+}
+
+#[test]
+fn optimal_eigensolve_aco_cdna2_wave_packed() {
+    let p = GpuDriverProfile {
+        driver: DriverKind::Radv,
+        compiler: CompilerKind::Aco,
+        arch: GpuArch::Cdna2,
+        fp64_rate: Fp64Rate::Full,
+        workarounds: vec![],
+        adapter_key: String::new(),
+    };
+    assert!(matches!(
+        p.optimal_eigensolve_strategy(),
+        EigensolveStrategy::WavePacked { wave_size: 64 }
+    ));
+}
+
+#[test]
+fn optimal_eigensolve_intel_standard() {
+    let p = GpuDriverProfile {
+        driver: DriverKind::Intel,
+        compiler: CompilerKind::Anv,
+        arch: GpuArch::IntelArc,
+        fp64_rate: Fp64Rate::Minimal,
+        workarounds: vec![],
+        adapter_key: String::new(),
+    };
+    assert_eq!(
+        p.optimal_eigensolve_strategy(),
+        EigensolveStrategy::Standard
+    );
+}
+
+#[test]
+fn needs_exp_log_pow_workarounds_ada_nvvm() {
+    let p = GpuDriverProfile {
+        driver: DriverKind::NvidiaProprietary,
+        compiler: CompilerKind::NvidiaPtxas,
+        arch: GpuArch::Ada,
+        fp64_rate: Fp64Rate::Throttled,
+        workarounds: vec![Workaround::NvvmAdaF64Transcendentals],
+        adapter_key: String::new(),
+    };
+    assert!(p.needs_exp_f64_workaround());
+    assert!(p.needs_log_f64_workaround());
+    assert!(p.needs_pow_f64_workaround());
+}
+
+#[test]
+fn supports_f64_builtins_false_when_workarounds_or_software() {
+    let sw = GpuDriverProfile {
+        driver: DriverKind::Software,
+        compiler: CompilerKind::Software,
+        arch: GpuArch::Software,
+        fp64_rate: Fp64Rate::Software,
+        workarounds: vec![],
+        adapter_key: String::new(),
+    };
+    assert!(!sw.supports_f64_builtins());
+
+    let with_w = GpuDriverProfile {
+        driver: DriverKind::NvidiaProprietary,
+        compiler: CompilerKind::NvidiaPtxas,
+        arch: GpuArch::Volta,
+        fp64_rate: Fp64Rate::Full,
+        workarounds: vec![Workaround::NvkExpF64Crash],
+        adapter_key: String::new(),
+    };
+    assert!(!with_w.supports_f64_builtins());
+
+    let clean = make_profile(Fp64Rate::Full, GpuArch::Volta);
+    assert!(clean.supports_f64_builtins());
+}
+
+#[test]
+fn needs_software_pmu_volta_nvk() {
+    let p = GpuDriverProfile {
+        driver: DriverKind::Nvk,
+        compiler: CompilerKind::Nak,
+        arch: GpuArch::Volta,
+        fp64_rate: Fp64Rate::Full,
+        workarounds: vec![Workaround::VoltaNoPmuFirmware],
+        adapter_key: String::new(),
+    };
+    assert!(p.needs_software_pmu());
+}
+
+#[test]
+fn sovereign_resolves_poisoning_tracks_df64_spirv() {
+    let p = GpuDriverProfile {
+        driver: DriverKind::NvidiaProprietary,
+        compiler: CompilerKind::NvidiaPtxas,
+        arch: GpuArch::Ampere,
+        fp64_rate: Fp64Rate::Throttled,
+        workarounds: vec![Workaround::Df64SpirVPoisoning],
+        adapter_key: String::new(),
+    };
+    assert!(p.has_df64_spir_v_poisoning());
+    assert!(p.sovereign_resolves_poisoning());
+}
+
+#[test]
+fn df64_transcendentals_safe_delegates_to_caps() {
+    let p = make_profile(Fp64Rate::Full, GpuArch::Volta);
+    let mut caps = F64BuiltinCapabilities::full();
+    caps.df64_transcendentals_safe = false;
+    assert!(!p.df64_transcendentals_safe(&caps));
+    caps.df64_transcendentals_safe = true;
+    assert!(p.df64_transcendentals_safe(&caps));
+}
+
+#[test]
+fn is_open_source_nvk_radv_only() {
+    let nvk = make_profile_with_driver(Fp64Rate::Full, GpuArch::Volta, DriverKind::Nvk);
+    assert!(nvk.is_open_source());
+    let radv = make_profile_with_driver(Fp64Rate::Throttled, GpuArch::Rdna2, DriverKind::Radv);
+    assert!(radv.is_open_source());
+    let prop = make_profile(Fp64Rate::Full, GpuArch::Volta);
+    assert!(!prop.is_open_source());
+}
+
+#[test]
+fn preferred_workgroup_size_by_arch() {
+    let volta = make_profile(Fp64Rate::Full, GpuArch::Volta);
+    assert_eq!(volta.preferred_workgroup_size(), 64);
+    let ada = make_profile(Fp64Rate::Throttled, GpuArch::Ada);
+    assert_eq!(ada.preferred_workgroup_size(), 256);
+    let unknown = GpuDriverProfile {
+        driver: DriverKind::Unknown,
+        compiler: CompilerKind::Unknown,
+        arch: GpuArch::Unknown,
+        fp64_rate: Fp64Rate::Throttled,
+        workarounds: vec![],
+        adapter_key: String::new(),
+    };
+    assert_eq!(unknown.preferred_workgroup_size(), 128);
+}
+
+#[test]
+fn preferred_workgroup_size_subgroup_aligns_to_multiple() {
+    let ada = make_profile(Fp64Rate::Throttled, GpuArch::Ada);
+    assert_eq!(ada.preferred_workgroup_size_subgroup(Some(32)), 256);
+    assert_eq!(ada.preferred_workgroup_size_subgroup(Some(0)), 256);
+    assert_eq!(ada.preferred_workgroup_size_subgroup(None), 256);
+}
+
+#[test]
+fn display_includes_workarounds_line_when_non_empty() {
+    let p = GpuDriverProfile {
+        driver: DriverKind::Nvk,
+        compiler: CompilerKind::Nak,
+        arch: GpuArch::Volta,
+        fp64_rate: Fp64Rate::Full,
+        workarounds: vec![Workaround::NvkExpF64Crash],
+        adapter_key: String::new(),
+    };
+    let s = format!("{p}");
+    assert!(s.contains("Workarounds"));
+}
+
+#[test]
+fn has_reliable_f64_reads_probe_cache_false() {
+    let key = "synthetic:driver_profile:has_reliable_f64:false".to_string();
+    let mut caps = F64BuiltinCapabilities::full();
+    caps.basic_f64 = false;
+    insert_caps_for_test(key.clone(), caps);
+
+    let p = GpuDriverProfile {
+        driver: DriverKind::NvidiaProprietary,
+        compiler: CompilerKind::NvidiaPtxas,
+        arch: GpuArch::Volta,
+        fp64_rate: Fp64Rate::Full,
+        workarounds: vec![],
+        adapter_key: key,
+    };
+    assert!(!p.has_reliable_f64());
+}
+
+#[test]
+fn precision_routing_native_fails_routes_df64_only_when_not_software_fp64() {
+    let key = "synthetic:driver_profile:precision:df64_only".to_string();
+    let mut caps = F64BuiltinCapabilities::full();
+    caps.basic_f64 = false;
+    insert_caps_for_test(key.clone(), caps);
+
+    let p = GpuDriverProfile {
+        driver: DriverKind::NvidiaProprietary,
+        compiler: CompilerKind::NvidiaPtxas,
+        arch: GpuArch::Volta,
+        fp64_rate: Fp64Rate::Full,
+        workarounds: vec![],
+        adapter_key: key,
+    };
+    assert_eq!(p.precision_routing(), PrecisionRoutingAdvice::Df64Only);
+}
+
+#[test]
+fn precision_routing_native_fails_and_fp64_software_is_f32_only() {
+    let key = "synthetic:driver_profile:precision:f32_only".to_string();
+    let mut caps = F64BuiltinCapabilities::full();
+    caps.basic_f64 = false;
+    insert_caps_for_test(key.clone(), caps);
+
+    let p = GpuDriverProfile {
+        driver: DriverKind::Software,
+        compiler: CompilerKind::Software,
+        arch: GpuArch::Software,
+        fp64_rate: Fp64Rate::Software,
+        workarounds: vec![],
+        adapter_key: key,
+    };
+    assert_eq!(p.precision_routing(), PrecisionRoutingAdvice::F32Only);
+}
+
+#[test]
+fn precision_routing_shared_mem_probe_false_full_rate_non_nvk() {
+    let key = "synthetic:driver_profile:precision:shared_mem_false".to_string();
+    let mut caps = F64BuiltinCapabilities::full();
+    caps.shared_mem_f64 = false;
+    insert_caps_for_test(key.clone(), caps);
+
+    let p = GpuDriverProfile {
+        driver: DriverKind::NvidiaProprietary,
+        compiler: CompilerKind::NvidiaPtxas,
+        arch: GpuArch::Volta,
+        fp64_rate: Fp64Rate::Full,
+        workarounds: vec![],
+        adapter_key: key,
+    };
+    assert_eq!(
+        p.precision_routing(),
+        PrecisionRoutingAdvice::F64NativeNoSharedMem
+    );
+}
+
+#[test]
+fn fp64_strategy_hybrid_when_cached_basic_f64_false() {
+    let key = "synthetic:driver_profile:fp64_strategy:cache".to_string();
+    let mut caps = F64BuiltinCapabilities::full();
+    caps.basic_f64 = false;
+    insert_caps_for_test(key.clone(), caps);
+
+    let p = GpuDriverProfile {
+        driver: DriverKind::NvidiaProprietary,
+        compiler: CompilerKind::NvidiaPtxas,
+        arch: GpuArch::Volta,
+        fp64_rate: Fp64Rate::Full,
+        workarounds: vec![],
+        adapter_key: key,
+    };
+    assert_eq!(p.fp64_strategy(), Fp64Strategy::Hybrid);
+}
+
+#[test]
+fn latency_model_returns_boxed_trait_object() {
+    let p = make_profile(Fp64Rate::Full, GpuArch::Volta);
+    let _m = p.latency_model();
 }

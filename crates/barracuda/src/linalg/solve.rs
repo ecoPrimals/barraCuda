@@ -177,8 +177,12 @@ pub fn solve_f64_cpu(a: &[f64], b: &[f64], n: usize) -> Result<Vec<f64>> {
 
 #[cfg(test)]
 mod tests {
+    #![expect(clippy::unwrap_used, reason = "tests")]
+
     use super::*;
     use crate::device::test_pool::get_test_device_if_f64_gpu_available_sync;
+
+    const SOL_TOL: f64 = 1e-10;
 
     fn device() -> Option<Arc<WgpuDevice>> {
         get_test_device_if_f64_gpu_available_sync()
@@ -335,12 +339,45 @@ mod tests {
                 ax_i += a[i * n + j] * x[j];
             }
             assert!(
-                (ax_i - b[i]).abs() < 1e-10,
+                (ax_i - b[i]).abs() < SOL_TOL,
                 "Row {}: Ax = {}, b = {}",
                 i,
                 ax_i,
                 b[i]
             );
         }
+    }
+
+    #[test]
+    fn test_solve_f64_cpu_partial_pivot_swap() {
+        // First column needs a row swap for a non-zero pivot.
+        let a = vec![0.0, 1.0, 1.0, 1.0];
+        let b = vec![1.0, 2.0];
+        let x = solve_f64_cpu(&a, &b, 2).expect("well-conditioned 2x2");
+        assert!((x[0] - 1.0).abs() < SOL_TOL);
+        assert!((x[1] - 1.0).abs() < SOL_TOL);
+    }
+
+    #[test]
+    fn test_solve_f64_cpu_b_wrong_length() {
+        let a = vec![1.0, 0.0, 0.0, 1.0];
+        let b = vec![1.0, 2.0, 3.0];
+        let err = solve_f64_cpu(&a, &b, 2);
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn test_solve_f64_cpu_matrix_wrong_length() {
+        let a = vec![1.0, 2.0];
+        let b = vec![1.0, 2.0];
+        assert!(solve_f64_cpu(&a, &b, 2).is_err());
+    }
+
+    #[test]
+    fn test_solve_f64_b_wrong_length() {
+        let Some(dev) = device() else { return };
+        let a = vec![1.0, 0.0, 0.0, 1.0];
+        let b = vec![1.0, 2.0, 3.0];
+        assert!(solve_f64(dev, &a, &b, 2).is_err());
     }
 }

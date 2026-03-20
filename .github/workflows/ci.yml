@@ -134,8 +134,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y mesa-vulkan-drivers
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
       - name: Generate coverage
-        run: cargo llvm-cov --workspace --ignore-run-fail --lcov --output-path lcov.info
+        run: cargo llvm-cov nextest --workspace --profile coverage --lcov --output-path lcov.info
         env:
           BARRACUDA_POLL_TIMEOUT_SECS: 120
       - name: Coverage gate (80% floor — blocking)

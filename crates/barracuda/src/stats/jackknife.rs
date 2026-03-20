@@ -204,7 +204,11 @@ where
 
 #[cfg(test)]
 mod tests {
+    #![expect(clippy::unwrap_used, reason = "tests")]
+
     use super::*;
+
+    const JK_TOL: f64 = 1e-12;
 
     #[test]
     fn test_jackknife_mean_basic() {
@@ -291,8 +295,8 @@ mod tests {
     #[cfg(feature = "gpu")]
     #[tokio::test]
     async fn test_jackknife_gpu_dispatch() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_f64_gpu_available().await
-        else {
+        use crate::device::test_pool::test_prelude::*;
+        let Some(device) = test_f64_device().await else {
             return;
         };
         let data = [1.0, 2.0, 3.0, 4.0, 5.0];
@@ -307,7 +311,39 @@ mod tests {
             Err(e) if e.is_device_lost() => return,
             Err(e) => panic!("unexpected: {e}"),
         };
-        assert!((cpu_result.estimate - gpu_result.estimate).abs() < 1e-10);
-        assert!((cpu_result.variance - gpu_result.variance).abs() < 1e-10);
+        assert!((cpu_result.estimate - gpu_result.estimate).abs() < JK_TOL);
+        assert!((cpu_result.variance - gpu_result.variance).abs() < JK_TOL);
+    }
+
+    #[cfg(feature = "gpu")]
+    #[tokio::test]
+    async fn test_jackknife_gpu_requires_at_least_two_observations() {
+        use crate::device::test_pool::test_prelude::*;
+        let Some(device) = test_f64_device().await else {
+            return;
+        };
+        let gpu = match super::JackknifeMeanGpu::new(device) {
+            Ok(g) => g,
+            Err(e) if e.is_device_lost() => return,
+            Err(e) => panic!("unexpected: {e}"),
+        };
+        let empty: [f64; 0] = [];
+        assert!(gpu.dispatch(&empty).is_err());
+        assert!(gpu.dispatch(&[1.0]).is_err());
+    }
+
+    #[test]
+    fn test_jackknife_identity_statistic_matches_mean_jackknife() {
+        let data = [2.0, 4.0, 6.0, 8.0];
+        let mean_jk = jackknife_mean_variance(&data).unwrap();
+        let id_jk = jackknife(&data, |d| d.iter().sum::<f64>() / d.len() as f64).unwrap();
+        assert!((mean_jk.estimate - id_jk.estimate).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_jackknife_result_std_error_is_sqrt_variance() {
+        let data = [1.0, 3.0, 5.0];
+        let r = jackknife_mean_variance(&data).unwrap();
+        assert!((r.std_error - r.variance.sqrt()).abs() < JK_TOL);
     }
 }

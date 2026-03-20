@@ -643,28 +643,35 @@ async fn test_multi_gpu_performance_characterization() {
         println!("Benchmark: {size}x{size} matmul x 20 iterations\n");
 
         for (name, device) in &devices {
-            let _warmup = Tensor::from_vec_on(a_data.clone(), vec![size, size], device.clone())
-                .await
-                .unwrap();
-
-            let b = Tensor::from_vec_on(b_data.clone(), vec![size, size], device.clone())
-                .await
-                .unwrap();
-
-            let start = std::time::Instant::now();
-            let iterations = 20;
-            for _ in 0..iterations {
-                let a = Tensor::from_vec_on(a_data.clone(), vec![size, size], device.clone())
+            // Scope all tensors to ensure GPU buffers are fully released
+            // before moving to the next device — avoids wgpu cross-device
+            // buffer lifetime assertions.
+            let (total_ms, per_op_ms, gflops) = {
+                let _warmup = Tensor::from_vec_on(a_data.clone(), vec![size, size], device.clone())
                     .await
                     .unwrap();
-                let _result = a.matmul(&b).unwrap();
-            }
-            let elapsed = start.elapsed();
 
-            let total_ms = elapsed.as_secs_f64() * 1000.0;
-            let per_op_ms = total_ms / f64::from(iterations);
-            let gflops =
-                (2.0 * (size as f64).powi(3) * f64::from(iterations)) / elapsed.as_secs_f64() / 1e9;
+                let b = Tensor::from_vec_on(b_data.clone(), vec![size, size], device.clone())
+                    .await
+                    .unwrap();
+
+                let start = std::time::Instant::now();
+                let iterations = 20;
+                for _ in 0..iterations {
+                    let a = Tensor::from_vec_on(a_data.clone(), vec![size, size], device.clone())
+                        .await
+                        .unwrap();
+                    let _result = a.matmul(&b).unwrap();
+                }
+                let elapsed = start.elapsed();
+
+                let total = elapsed.as_secs_f64() * 1000.0;
+                let per_op = total / f64::from(iterations);
+                let gf = (2.0 * (size as f64).powi(3) * f64::from(iterations))
+                    / elapsed.as_secs_f64()
+                    / 1e9;
+                (total, per_op, gf)
+            };
 
             println!("  {name}: {total_ms:.2} ms total, {per_op_ms:.3} ms/op, {gflops:.2} GFLOP/s");
         }

@@ -16,7 +16,8 @@ pub const WGSL_COMPLEX64: &str = include_str!("../../shaders/math/complex_f64.wg
 /// ```rust
 /// use barracuda::ops::lattice::complex_f64::prepend_complex;
 /// let full_src = prepend_complex("// my shader\nfn foo() {}");
-/// assert!(full_src.starts_with("// complex_f64"));
+/// assert!(full_src.contains("c64_mul"));
+/// assert!(full_src.ends_with("// my shader\nfn foo() {}"));
 /// ```
 #[must_use]
 pub fn prepend_complex(shader: &str) -> String {

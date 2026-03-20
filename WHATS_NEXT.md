@@ -6,6 +6,13 @@ Prioritized work items, ordered by impact. Updated 2026-03-20.
 
 ## Recently Completed
 
+- **Deep debt sprint 14 — audit completion, doctest & hardware fixes (Mar 20)**:
+  Fixed 2 pre-existing doctest failures (`complex_f64.rs` stale assertion,
+  `sobol.rs` Rust 2024 edition `gen` keyword + merged doctest wrapper). Fixed
+  hardware verification multi-GPU buffer lifetime panic (scoped tensors per
+  device). 12 clippy new-edition lints fixed. SPDX header fix. Device-aware
+  pooling test. 50 new tests (RBF surrogate, adaptive distance, Kimura, jackknife).
+  108 doctests now all pass. 3,936 tests pass. All gates green.
 - **Deep debt sprint 13 — comprehensive audit, coverage & test hardening (Mar 20)**:
   Full codebase audit against wateringHole standards with systematic execution.
   Cross-vendor GPU tolerance constants (`CROSS_VENDOR_MATMUL_F32_TOL`,

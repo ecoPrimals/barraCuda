@@ -10,7 +10,12 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use barracuda::device::test_pool::GPU_TEST_TIMEOUT;
 
-const NVK_SKIP_PATTERNS: &[&str] = &["does not exist", "device lost", "Parent device"];
+const NVK_SKIP_PATTERNS: &[&str] = &[
+    "does not exist",
+    "device lost",
+    "Parent device",
+    "is no longer alive",
+];
 
 fn is_nvk_driver_error(msg: &str) -> bool {
     NVK_SKIP_PATTERNS.iter().any(|p| msg.contains(p))

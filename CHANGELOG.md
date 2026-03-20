@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.6] — 2026-03-20
 
+### Changed — Deep Debt Sprint 14: Audit Completion, Doctest & Hardware Fixes (Mar 20 2026)
+
+- **Doctest fixes**: `complex_f64.rs` assertion referenced stale WGSL first-line
+  (`// complex_f64`) that changed when SPDX headers were added — assertion now checks
+  for `c64_mul` content and correct suffix. `sobol.rs` doctest failed under Rust 2024
+  merged doctests (bare `let` without `fn main()` wrapper) and used reserved keyword
+  `gen` — added `# fn main()` wrapper and renamed to `sampler`. All 108 doctests pass.
+- **Hardware verification fix**: `test_multi_gpu_performance_characterization` hit wgpu
+  `Buffer[Id] is no longer alive` panic due to cross-device buffer lifetime overlap.
+  Fixed by scoping tensors per-device iteration. Added `"is no longer alive"` to
+  GPU-resilient test skip patterns.
+- **Clippy new-edition lints (12)**: `identity_op` (index arithmetic `0 * 3 + 1` →
+  literal `1`), `manual_range_contains` (`v >= 0.0 && v <= 1.0` →
+  `(0.0..=1.0).contains(&v)`), `manual_is_multiple_of` (`n % 2 == 0` →
+  `.is_multiple_of(2)`), `manual_midpoint` (manual average → `f64::midpoint`).
+- **SPDX header**: `warmup.rs` corrected from `AGPL-3.0-only` to `AGPL-3.0-or-later`.
+- **Device-aware pooling test**: `fault_large_tensor_allocation` evolved from strict
+  `buffer_reuses` assertion to activity-based assertion (works on software adapters).
+- **Coverage expansion (+50 tests → 3,936 total)**: RBF surrogate error-path tests,
+  adaptive distance function CPU tests, Kimura fixation edge cases, jackknife
+  generalized statistics. All pass on llvmpipe.
+- **Documentation alignment**: Test counts updated to 3,936 across all docs. File
+  count corrected to 1,085. Doctest gate added (108 pass / 0 fail).
+- **Quality gates**: All green. 3,936 tests + 108 doctests, 0 fail.
+
 ### Changed — Deep Debt Sprint 13: Comprehensive Audit, Coverage & Test Hardening (Mar 20 2026)
 
 - **Cross-vendor tolerance hardening**: `CROSS_VENDOR_MATMUL_F32_TOL` (0.05) and

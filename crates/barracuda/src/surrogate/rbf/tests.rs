@@ -3,12 +3,39 @@
 
 use super::*;
 use crate::device::WgpuDevice;
-use crate::device::test_pool::get_test_device_if_f64_gpu_available_sync;
+use crate::device::test_pool::{
+    get_test_device_if_f64_gpu_available_sync, get_test_device_if_gpu_available_sync,
+};
 use crate::surrogate::kernels::RBFKernel;
 use std::sync::Arc;
 
 fn device() -> Option<Arc<WgpuDevice>> {
     get_test_device_if_f64_gpu_available_sync()
+}
+
+fn any_device() -> Option<Arc<WgpuDevice>> {
+    get_test_device_if_gpu_available_sync()
+}
+
+/// Construct a minimal `RBFSurrogate` from parts for testing predict
+/// validation paths without needing GPU compute for training.
+fn fake_surrogate(device: Arc<WgpuDevice>, n_dim: usize) -> RBFSurrogate {
+    let n_train = 3;
+    RBFSurrogate::from_parts(
+        device,
+        RbfTrainingData {
+            train_x: vec![0.0; n_train * n_dim],
+            train_y: vec![0.0; n_train],
+            n_train,
+            n_dim,
+        },
+        RbfTrainedModel {
+            weights: vec![1.0; n_train],
+            poly_coeffs: vec![0.0; n_dim + 1],
+            kernel: RBFKernel::ThinPlateSpline,
+            smoothing: 1e-12,
+        },
+    )
 }
 
 #[test]
@@ -111,14 +138,14 @@ fn test_rbf_gaussian_kernel() {
 
 #[test]
 fn test_rbf_empty_training_data() {
-    let Some(dev) = device() else { return };
+    let Some(dev) = any_device() else { return };
     let result = RBFSurrogate::train(dev, &[], &[], RBFKernel::ThinPlateSpline, 1e-12);
     assert!(result.is_err());
 }
 
 #[test]
 fn test_rbf_mismatched_lengths() {
-    let Some(dev) = device() else { return };
+    let Some(dev) = any_device() else { return };
     let x_train = vec![vec![0.0], vec![1.0]];
     let y_train = vec![0.0, 1.0, 2.0];
     let result = RBFSurrogate::train(dev, &x_train, &y_train, RBFKernel::ThinPlateSpline, 1e-12);
@@ -283,4 +310,123 @@ fn test_loo_cv_smoothing_effect() {
         (rmse_low - rmse_high).abs() > 1e-6,
         "LOO-CV should be sensitive to smoothing. low={rmse_low}, high={rmse_high}"
     );
+}
+
+// === Tests that work on any GPU (including llvmpipe) ===
+// These exercise validation paths that return before GPU compute.
+
+#[test]
+fn test_predict_empty_eval_returns_empty() {
+    let Some(dev) = any_device() else { return };
+    let surrogate = fake_surrogate(dev, 2);
+    let result = surrogate.predict(&[]).unwrap();
+    assert!(result.is_empty());
+}
+
+#[test]
+fn test_predict_dimension_mismatch() {
+    let Some(dev) = any_device() else { return };
+    let surrogate = fake_surrogate(dev, 2);
+    let result = surrogate.predict(&[vec![1.0, 2.0, 3.0]]);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_accessors_from_parts() {
+    let Some(dev) = any_device() else { return };
+    let surrogate = fake_surrogate(dev, 3);
+    assert_eq!(surrogate.n_train(), 3);
+    assert_eq!(surrogate.n_dim(), 3);
+}
+
+#[test]
+fn test_loo_cv_empty_training_data() {
+    let Some(dev) = any_device() else { return };
+    let surrogate = RBFSurrogate::from_parts(
+        dev,
+        RbfTrainingData {
+            train_x: vec![],
+            train_y: vec![],
+            n_train: 0,
+            n_dim: 1,
+        },
+        RbfTrainedModel {
+            weights: vec![],
+            poly_coeffs: vec![0.0, 0.0],
+            kernel: RBFKernel::ThinPlateSpline,
+            smoothing: 1e-6,
+        },
+    );
+    let errors = surrogate.loo_cv_errors().unwrap();
+    assert!(errors.is_empty());
+}
+
+#[test]
+fn test_loo_optimal_smoothing_empty_grid() {
+    let Some(dev) = any_device() else { return };
+    let x = vec![vec![0.0], vec![1.0], vec![2.0]];
+    let y = vec![0.0, 1.0, 4.0];
+    let result = loo_cv_optimal_smoothing(dev, &x, &y, RBFKernel::ThinPlateSpline, Some(&[]));
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_loo_optimal_smoothing() {
+    let Some(dev) = device() else { return };
+    let x: Vec<Vec<f64>> = (0..8).map(|i| vec![i as f64 * 0.5]).collect();
+    let y: Vec<f64> = x.iter().map(|v| 2.0f64.mul_add(v[0], 0.1)).collect();
+    let result = loo_cv_optimal_smoothing(dev, &x, &y, RBFKernel::ThinPlateSpline, None).unwrap();
+    assert!(result.smoothing > 0.0);
+    assert!(result.rmse >= 0.0);
+    assert!(!result.grid_results.is_empty());
+}
+
+#[test]
+fn test_loo_optimal_smoothing_custom_grid() {
+    let Some(dev) = device() else { return };
+    let x = vec![vec![0.0], vec![1.0], vec![2.0], vec![3.0]];
+    let y = vec![0.0, 1.0, 4.0, 9.0];
+    let grid = [1e-8, 1e-4, 1e-2];
+    let result =
+        loo_cv_optimal_smoothing(dev, &x, &y, RBFKernel::ThinPlateSpline, Some(&grid)).unwrap();
+    assert!(result.grid_results.len() <= 3);
+    assert!(result.rmse.is_finite());
+}
+
+#[test]
+fn test_rbf_training_data_struct() {
+    let data = RbfTrainingData {
+        train_x: vec![1.0, 2.0, 3.0, 4.0],
+        train_y: vec![10.0, 20.0],
+        n_train: 2,
+        n_dim: 2,
+    };
+    assert_eq!(data.n_train, 2);
+    assert_eq!(data.n_dim, 2);
+    assert_eq!(data.train_x.len(), 4);
+}
+
+#[test]
+fn test_rbf_trained_model_struct() {
+    let model = RbfTrainedModel {
+        weights: vec![1.0, 2.0],
+        poly_coeffs: vec![0.5, 0.3, 0.1],
+        kernel: RBFKernel::Cubic,
+        smoothing: 1e-6,
+    };
+    assert_eq!(model.weights.len(), 2);
+    assert_eq!(model.poly_coeffs.len(), 3);
+    assert_eq!(model.kernel.name(), "Cubic");
+}
+
+#[test]
+fn test_loo_smoothing_struct() {
+    let s = LooSmoothing {
+        smoothing: 1e-4,
+        rmse: 0.01,
+        grid_results: vec![(1e-6, 0.1), (1e-4, 0.01), (1e-2, 0.05)],
+    };
+    assert_eq!(s.smoothing, 1e-4);
+    assert_eq!(s.rmse, 0.01);
+    assert_eq!(s.grid_results.len(), 3);
 }

@@ -197,6 +197,53 @@ mod tests {
     }
 
     #[test]
+    fn test_kimura_absent() {
+        let p = kimura_fixation_prob(100, 0.1, 0.0);
+        assert!(p.abs() < 1e-12, "absent allele (p0=0) should have P_fix≈0");
+    }
+
+    #[test]
+    fn test_kimura_very_small_selection() {
+        let p = kimura_fixation_prob(1000, 1e-12, 0.5);
+        assert!((p - 0.5).abs() < 1e-4, "near-neutral: P_fix ≈ p0, got {p}");
+    }
+
+    #[test]
+    fn test_kimura_strong_beneficial() {
+        let p = kimura_fixation_prob(10_000, 0.1, 0.001);
+        assert!(
+            p > 0.001,
+            "strong beneficial should have higher fixation prob"
+        );
+        assert!(p < 1.0);
+    }
+
+    #[test]
+    fn test_kimura_strong_deleterious() {
+        let p = kimura_fixation_prob(100, -0.05, 0.5);
+        assert!(
+            p < 0.5,
+            "strong deleterious should reduce fixation prob, got {p}"
+        );
+        assert!(p >= 0.0);
+    }
+
+    #[test]
+    fn test_kimura_small_population() {
+        let p = kimura_fixation_prob(2, 0.01, 0.5);
+        assert!(p > 0.0 && p <= 1.0, "small pop: P_fix in [0,1], got {p}");
+    }
+
+    #[test]
+    fn test_kimura_denominator_near_zero() {
+        let p = kimura_fixation_prob(1, 1e-16, 0.3);
+        assert!(
+            (p - 0.3).abs() < 0.01,
+            "degenerate denominator should fall back to p0"
+        );
+    }
+
+    #[test]
     fn test_error_threshold() {
         let mu_c = error_threshold(10.0, 100).unwrap();
         assert!(mu_c > 0.0 && mu_c < 1.0, "μ_c={mu_c}");
@@ -206,6 +253,24 @@ mod tests {
     fn test_error_threshold_invalid() {
         assert!(error_threshold(0.5, 100).is_none());
         assert!(error_threshold(10.0, 0).is_none());
+    }
+
+    #[test]
+    fn test_error_threshold_edge_sigma_one() {
+        assert!(error_threshold(1.0, 100).is_none());
+    }
+
+    #[test]
+    fn test_error_threshold_large_genome() {
+        let mu_c = error_threshold(2.0, 10_000).unwrap();
+        assert!(mu_c > 0.0 && mu_c < 0.01, "large genome: μ_c very small");
+    }
+
+    #[test]
+    fn test_error_threshold_high_fitness() {
+        let mu_c = error_threshold(100.0, 10).unwrap();
+        let mu_c2 = error_threshold(10.0, 10).unwrap();
+        assert!(mu_c > mu_c2, "higher fitness → higher error threshold");
     }
 
     #[test]
@@ -221,8 +286,114 @@ mod tests {
     }
 
     #[test]
+    fn test_detection_power_negative_abundance() {
+        assert_eq!(detection_power(-0.5, 100), 0.0);
+    }
+
+    #[test]
+    fn test_detection_power_monotonic_in_depth() {
+        let p1 = detection_power(0.01, 100);
+        let p2 = detection_power(0.01, 1000);
+        assert!(p2 > p1, "more depth → higher power");
+    }
+
+    #[test]
+    fn test_detection_power_zero_depth() {
+        let p = detection_power(0.5, 0);
+        assert!(p.abs() < 1e-12, "zero depth → zero power");
+    }
+
+    #[test]
     fn test_detection_threshold() {
         let d = detection_threshold(0.001, 0.95);
         assert!(d > 2000, "need ~3000 reads for 95% power at 0.1%");
+    }
+
+    #[test]
+    fn test_detection_threshold_invalid_abundance() {
+        assert_eq!(detection_threshold(0.0, 0.95), 0);
+        assert_eq!(detection_threshold(1.0, 0.95), 0);
+        assert_eq!(detection_threshold(-0.1, 0.95), 0);
+    }
+
+    #[test]
+    fn test_detection_threshold_high_abundance() {
+        let d = detection_threshold(0.5, 0.95);
+        assert!(d <= 10, "abundant taxon needs few reads, got {d}");
+    }
+
+    #[test]
+    fn test_detection_roundtrip() {
+        let abundance = 0.005;
+        let target_power = 0.99;
+        let depth = detection_threshold(abundance, target_power);
+        let achieved = detection_power(abundance, depth);
+        assert!(
+            achieved >= target_power,
+            "threshold depth {depth} should achieve ≥{target_power} power, got {achieved}"
+        );
+    }
+
+    #[cfg(feature = "gpu")]
+    #[tokio::test]
+    async fn test_kimura_gpu_dispatch() {
+        use crate::device::test_pool::get_test_device_if_f64_gpu_available;
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
+            return;
+        };
+        let gpu = match KimuraGpu::new(device) {
+            Ok(g) => g,
+            Err(e) if e.is_device_lost() => return,
+            Err(e) => panic!("unexpected: {e}"),
+        };
+        let pops = [100.0, 1000.0, 500.0];
+        let sels = [0.01, 0.0, -0.01];
+        let freqs = [0.1, 0.01, 0.5];
+        let result = match gpu.dispatch(&pops, &sels, &freqs) {
+            Ok(r) => r,
+            Err(e) if e.is_device_lost() => return,
+            Err(e) => panic!("unexpected: {e}"),
+        };
+        assert_eq!(result.len(), 3);
+        for &v in &result {
+            assert!((0.0..=1.0).contains(&v), "fixation prob out of [0,1]: {v}");
+        }
+        let cpu_neutral = kimura_fixation_prob(1000, 0.0, 0.01);
+        assert!(
+            (result[1] - cpu_neutral).abs() < 0.01,
+            "GPU neutral case should match CPU: {} vs {cpu_neutral}",
+            result[1]
+        );
+    }
+
+    #[cfg(feature = "gpu")]
+    #[tokio::test]
+    async fn test_kimura_gpu_empty_input() {
+        use crate::device::test_pool::get_test_device_if_f64_gpu_available;
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
+            return;
+        };
+        let gpu = match KimuraGpu::new(device) {
+            Ok(g) => g,
+            Err(e) if e.is_device_lost() => return,
+            Err(e) => panic!("unexpected: {e}"),
+        };
+        let result = gpu.dispatch(&[], &[], &[]).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[cfg(feature = "gpu")]
+    #[tokio::test]
+    async fn test_kimura_gpu_length_mismatch() {
+        use crate::device::test_pool::get_test_device_if_f64_gpu_available;
+        let Some(device) = get_test_device_if_f64_gpu_available().await else {
+            return;
+        };
+        let gpu = match KimuraGpu::new(device) {
+            Ok(g) => g,
+            Err(e) if e.is_device_lost() => return,
+            Err(e) => panic!("unexpected: {e}"),
+        };
+        assert!(gpu.dispatch(&[100.0], &[0.01, 0.02], &[0.1]).is_err());
     }
 }

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Shader Warmup System - "Mise en Place" for GPU Computing
 //!
 //! Pre-compiles commonly used shader patterns before task execution.

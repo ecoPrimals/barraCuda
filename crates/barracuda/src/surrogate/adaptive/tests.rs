@@ -4,7 +4,9 @@
 #![expect(clippy::unwrap_used, reason = "tests")]
 
 use super::*;
-use crate::device::test_pool::get_test_device_if_f64_gpu_available_sync;
+use crate::device::test_pool::{
+    get_test_device_if_f64_gpu_available_sync, get_test_device_if_gpu_available_sync,
+};
 
 #[test]
 fn test_adaptive_config_default() {
@@ -34,6 +36,162 @@ fn test_adaptive_config_cpu_only() {
     let config = AdaptiveConfig::cpu_only();
     assert!(!config.prefer_gpu);
     assert!(!config.force_f64);
+}
+
+// === CPU distance function tests (no GPU needed) ===
+
+#[test]
+fn test_compute_distances_f64_identity() {
+    let x = vec![0.0, 1.0, 2.0];
+    let d = compute_distances_f64(&x, &x, 3, 3, 1);
+    assert_eq!(d.len(), 9);
+    for i in 0..3 {
+        assert!((d[i * 3 + i]).abs() < 1e-14, "self-distance should be 0");
+    }
+    assert!((d[1] - 1.0).abs() < 1e-14);
+    assert!((d[2] - 2.0).abs() < 1e-14);
+    assert!((d[5] - 1.0).abs() < 1e-14);
+}
+
+#[test]
+fn test_compute_distances_f64_2d() {
+    let x = vec![0.0, 0.0, 3.0, 4.0];
+    let d = compute_distances_f64(&x, &x, 2, 2, 2);
+    assert!((d[0]).abs() < 1e-14);
+    assert!((d[1] - 5.0).abs() < 1e-14, "3-4-5 triangle");
+    assert!((d[2] - 5.0).abs() < 1e-14);
+    assert!((d[3]).abs() < 1e-14);
+}
+
+#[test]
+fn test_compute_distances_f64_asymmetric() {
+    let x1 = vec![0.0];
+    let x2 = vec![3.0, 5.0];
+    let d = compute_distances_f64(&x1, &x2, 1, 2, 1);
+    assert_eq!(d.len(), 2);
+    assert!((d[0] - 3.0).abs() < 1e-14);
+    assert!((d[1] - 5.0).abs() < 1e-14);
+}
+
+#[test]
+fn test_compute_distances_f32_promoted_matches_f64() {
+    let n = 10;
+    let x: Vec<f64> = (0..n).map(|i| i as f64 * 0.7).collect();
+    let d_f64 = compute_distances_f64(&x, &x, n, n, 1);
+    let d_f32 = compute_distances_f32_promoted(&x, &x, n, n, 1);
+    assert_eq!(d_f64.len(), d_f32.len());
+    let max_err = d_f64
+        .iter()
+        .zip(d_f32.iter())
+        .map(|(a, b)| (a - b).abs())
+        .fold(0.0_f64, f64::max);
+    assert!(max_err < 1e-5, "f32/f64 max distance error: {max_err}");
+}
+
+#[test]
+fn test_compute_distances_f32_promoted_zero_distance() {
+    let x = vec![1.0, 2.0, 3.0];
+    let d = compute_distances_f32_promoted(&x, &x, 3, 3, 1);
+    for i in 0..3 {
+        assert!(d[i * 3 + i].abs() < 1e-6, "self-distance should be ~0");
+    }
+}
+
+#[test]
+fn test_compute_distances_f64_single_point() {
+    let x = vec![42.0, -7.0];
+    let d = compute_distances_f64(&x, &x, 1, 1, 2);
+    assert_eq!(d.len(), 1);
+    assert!(d[0].abs() < 1e-14);
+}
+
+#[test]
+fn test_compute_distances_f32_promoted_high_dim() {
+    let n_dim = 10;
+    let x1: Vec<f64> = (0..n_dim).map(|i| i as f64).collect();
+    let x2: Vec<f64> = (0..n_dim).map(|i| (i as f64) + 1.0).collect();
+    let d = compute_distances_f32_promoted(&x1, &x2, 1, 1, n_dim);
+    let expected = (n_dim as f64).sqrt();
+    assert!(
+        (d[0] - expected).abs() < 1e-3,
+        "10D unit offset: got {}, expected {expected}",
+        d[0]
+    );
+}
+
+#[test]
+fn test_diagnostics_debug_clone() {
+    let d = TrainingDiagnostics {
+        used_f32_distances: true,
+        used_gpu: false,
+        n_train: 10,
+        n_dim: 2,
+        system_size: 13,
+        max_distance_error: Some(0.001),
+    };
+    let d2 = d.clone();
+    assert_eq!(d2.n_train, 10);
+    assert!(d2.max_distance_error.is_some());
+    let _ = format!("{d:?}");
+}
+
+#[test]
+fn test_adaptive_config_clone_debug() {
+    let c = AdaptiveConfig::default();
+    let c2 = c.clone();
+    assert_eq!(c2.f32_threshold, 200);
+    let _ = format!("{c:?}");
+}
+
+// === Error-path tests using any GPU (including llvmpipe) ===
+
+#[test]
+fn test_train_adaptive_empty_data_error() {
+    let Some(device) = get_test_device_if_gpu_available_sync() else {
+        return;
+    };
+    let config = AdaptiveConfig::default();
+    assert!(train_adaptive(device, &[], &[], RBFKernel::ThinPlateSpline, 1e-12, &config).is_err());
+}
+
+#[test]
+fn test_train_adaptive_length_mismatch_error() {
+    let Some(device) = get_test_device_if_gpu_available_sync() else {
+        return;
+    };
+    let config = AdaptiveConfig::default();
+    let result = train_adaptive(
+        device,
+        &[vec![0.0], vec![1.0]],
+        &[0.0],
+        RBFKernel::ThinPlateSpline,
+        1e-12,
+        &config,
+    );
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_train_with_validation_empty_data_error() {
+    let Some(device) = get_test_device_if_gpu_available_sync() else {
+        return;
+    };
+    assert!(train_with_validation(device, &[], &[], RBFKernel::ThinPlateSpline, 1e-12).is_err());
+}
+
+#[test]
+fn test_train_with_validation_length_mismatch_error() {
+    let Some(device) = get_test_device_if_gpu_available_sync() else {
+        return;
+    };
+    let result = train_with_validation(
+        device,
+        &[vec![0.0]],
+        &[0.0, 1.0],
+        RBFKernel::ThinPlateSpline,
+        1e-12,
+    );
+    assert!(result.is_err());
 }
 
 #[test]

@@ -185,8 +185,10 @@ impl SobolGenerator {
     /// # Example
     /// ```
     /// use barracuda::sample::sobol::SobolGenerator;
-    /// let mut gen = SobolGenerator::new(5).unwrap();
-    /// let point = gen.next_point();  // 5-dimensional point
+    /// # fn main() {
+    /// let mut sampler = SobolGenerator::new(5).unwrap();
+    /// let point = sampler.next_point();  // 5-dimensional point
+    /// # }
     /// ```
     /// # Errors
     /// Returns [`Err`] if `dim` is 0 or greater than [`MAX_SOBOL_DIM`].

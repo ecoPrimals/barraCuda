@@ -346,4 +346,108 @@ mod tests {
         let r = jackknife_mean_variance(&data).unwrap();
         assert!((r.std_error - r.variance.sqrt()).abs() < JK_TOL);
     }
+
+    #[test]
+    fn test_jackknife_generalized_median_statistic() {
+        fn median(d: &[f64]) -> f64 {
+            let mut sorted = d.to_vec();
+            sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            let n = sorted.len();
+            if n.is_multiple_of(2) {
+                f64::midpoint(sorted[n / 2 - 1], sorted[n / 2])
+            } else {
+                sorted[n / 2]
+            }
+        }
+        let data = [1.0, 2.0, 3.0, 4.0, 5.0];
+        let result = jackknife(&data, median).unwrap();
+        assert!(result.variance >= 0.0);
+        assert!(result.std_error >= 0.0);
+    }
+
+    #[test]
+    fn test_jackknife_generalized_two_elements() {
+        let data = [10.0, 20.0];
+        let result = jackknife(&data, |d| d.iter().sum::<f64>() / d.len() as f64).unwrap();
+        assert!((result.estimate - 15.0).abs() < 1e-8);
+    }
+
+    #[test]
+    fn test_jackknife_mean_variance_all_identical_large() {
+        let data = vec![7.0; 100];
+        let r = jackknife_mean_variance(&data).unwrap();
+        assert!((r.estimate - 7.0).abs() < JK_TOL);
+        assert!(r.variance < 1e-20, "identical values → zero variance");
+    }
+
+    #[test]
+    fn test_jackknife_mean_variance_two_values() {
+        let data = [0.0, 100.0];
+        let r = jackknife_mean_variance(&data).unwrap();
+        assert!((r.estimate - 50.0).abs() < JK_TOL);
+        assert!(r.variance > 0.0);
+    }
+
+    #[test]
+    fn test_jackknife_result_debug_clone() {
+        let r = JackknifeResult {
+            estimate: 5.0,
+            variance: 0.5,
+            std_error: 0.5_f64.sqrt(),
+        };
+        let r2 = r;
+        assert_eq!(r2.estimate, 5.0);
+        let _ = format!("{r2:?}");
+    }
+
+    #[test]
+    fn test_jackknife_generalized_sum_statistic() {
+        let data = [1.0, 2.0, 3.0];
+        let result = jackknife(&data, |d| d.iter().sum::<f64>()).unwrap();
+        assert!(result.variance >= 0.0);
+    }
+
+    #[test]
+    fn test_jackknife_generalized_max_statistic() {
+        let data = [1.0, 5.0, 3.0, 4.0, 2.0];
+        let result = jackknife(&data, |d| {
+            d.iter().copied().fold(f64::NEG_INFINITY, f64::max)
+        })
+        .unwrap();
+        assert!(result.std_error >= 0.0);
+    }
+
+    #[test]
+    fn test_jackknife_mean_linear_data() {
+        let data: Vec<f64> = (1..=50).map(|i| i as f64).collect();
+        let r = jackknife_mean_variance(&data).unwrap();
+        assert!((r.estimate - 25.5).abs() < 1e-10);
+    }
+
+    #[cfg(feature = "gpu")]
+    #[tokio::test]
+    async fn test_jackknife_gpu_large_dataset() {
+        use crate::device::test_pool::test_prelude::*;
+        let Some(device) = test_f64_device().await else {
+            return;
+        };
+        let data: Vec<f64> = (0..200).map(|i| (i as f64) * 0.1).collect();
+        let cpu_result = jackknife_mean_variance(&data).unwrap();
+        let gpu = match super::JackknifeMeanGpu::new(device) {
+            Ok(g) => g,
+            Err(e) if e.is_device_lost() => return,
+            Err(e) => panic!("unexpected: {e}"),
+        };
+        let gpu_result = match gpu.dispatch(&data) {
+            Ok(r) => r,
+            Err(e) if e.is_device_lost() => return,
+            Err(e) => panic!("unexpected: {e}"),
+        };
+        assert!(
+            (cpu_result.estimate - gpu_result.estimate).abs() < 1e-6,
+            "CPU={} GPU={}",
+            cpu_result.estimate,
+            gpu_result.estimate
+        );
+    }
 }

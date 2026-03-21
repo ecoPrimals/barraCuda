@@ -50,20 +50,20 @@ pub const GPU_DISPATCH_OVERHEAD_US: f64 = 1500.0;
 
 /// PCIe/interconnect bandwidth tier for transfer cost estimation.
 ///
-/// Runtime-detected from GPU adapter name heuristics. Used by
+/// Runtime-detected from sysfs probing or adapter name heuristics. Used by
 /// `dispatch_with_transfer_cost()` to factor data movement cost
 /// into the CPU/GPU dispatch decision.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BandwidthTier {
-    /// `PCIe` 3.0 x16 — ~15.75 GB/s (Titan V, RTX 2000 series)
+    /// `PCIe` 3.0 x16 — ~15.75 GB/s
     PciE3x16,
-    /// `PCIe` 4.0 x16 — ~31.5 GB/s (RTX 3000/4000, RX 6000/7000)
+    /// `PCIe` 4.0 x16 — ~31.5 GB/s
     PciE4x16,
-    /// `PCIe` 5.0 x16 — ~63 GB/s (next-gen data center)
+    /// `PCIe` 5.0 x16 — ~63 GB/s (data center)
     PciE5x16,
-    /// `NVLink` — ~300 GB/s (A100, H100 multi-GPU)
-    NvLink,
-    /// Shared/unified memory — effectively infinite (Apple M-series, integrated)
+    /// High-bandwidth interconnect — ~300 GB/s (data-center multi-GPU)
+    HighBandwidthInterconnect,
+    /// Shared/unified memory — effectively infinite (integrated/unified GPUs)
     SharedMemory,
     /// Unknown — conservative fallback (`PCIe` 3.0 assumptions)
     Unknown,
@@ -77,7 +77,7 @@ impl BandwidthTier {
             Self::PciE3x16 => 15.75,
             Self::PciE4x16 => 31.5,
             Self::PciE5x16 => 63.0,
-            Self::NvLink => 300.0,
+            Self::HighBandwidthInterconnect => 300.0,
             Self::SharedMemory => 1000.0,
             Self::Unknown => 15.75,
         }
@@ -88,7 +88,7 @@ impl BandwidthTier {
     pub const fn latency_us(self) -> f64 {
         match self {
             Self::SharedMemory => 0.1,
-            Self::NvLink => 1.0,
+            Self::HighBandwidthInterconnect => 1.0,
             _ => PCIE_DMA_LATENCY_US,
         }
     }
@@ -102,20 +102,33 @@ impl BandwidthTier {
         }
     }
 
-    /// Detect bandwidth tier from GPU adapter name (heuristic).
+    /// Detect bandwidth tier from GPU adapter name (heuristic fallback).
+    ///
+    /// Prefer sysfs-probed `PcieLinkInfo::bandwidth_tier()` when available.
+    /// This name-based heuristic covers cases where sysfs is unavailable
+    /// (non-Linux, containers without /sys access).
     #[must_use]
     pub fn detect_from_adapter_name(name: &str) -> Self {
         let lower = name.to_lowercase();
 
-        if lower.contains("a100") || lower.contains("h100") || lower.contains("h200") {
-            return Self::NvLink;
+        // Data-center GPUs with high-bandwidth interconnects (any vendor)
+        if lower.contains("a100")
+            || lower.contains("h100")
+            || lower.contains("h200")
+            || lower.contains("mi250")
+            || lower.contains("mi300")
+        {
+            return Self::HighBandwidthInterconnect;
         }
+        // Unified/shared memory architectures
         if lower.contains("apple") || lower.contains("llvmpipe") || lower.contains("swiftshader") {
             return Self::SharedMemory;
         }
+        // PCIe 5.0 generation
         if lower.contains("b100") || lower.contains("b200") {
             return Self::PciE5x16;
         }
+        // PCIe 4.0 generation (consumer discrete GPUs, ~2020+)
         if lower.contains("rtx 30")
             || lower.contains("rtx 40")
             || lower.contains("rx 6")
@@ -124,10 +137,10 @@ impl BandwidthTier {
             || lower.contains("a770")
             || lower.contains("a750")
             || lower.contains("mi2")
-            || lower.contains("mi3")
         {
             return Self::PciE4x16;
         }
+        // PCIe 3.0 generation (pre-2020 discrete GPUs)
         if lower.contains("rtx 20")
             || lower.contains("titan v")
             || lower.contains("v100")
@@ -449,7 +462,7 @@ mod tests {
     fn test_bandwidth_tier_detect_additional_adapters() {
         assert_eq!(
             BandwidthTier::detect_from_adapter_name("NVIDIA H200"),
-            BandwidthTier::NvLink
+            BandwidthTier::HighBandwidthInterconnect
         );
         assert_eq!(
             BandwidthTier::detect_from_adapter_name("NVIDIA B100"),
@@ -465,14 +478,14 @@ mod tests {
         );
         assert_eq!(
             BandwidthTier::detect_from_adapter_name("AMD MI250"),
-            BandwidthTier::PciE4x16
+            BandwidthTier::HighBandwidthInterconnect
         );
     }
 
     #[test]
     fn test_bandwidth_tier_latency() {
         assert!((BandwidthTier::SharedMemory.latency_us() - 0.1).abs() < 0.01);
-        assert!((BandwidthTier::NvLink.latency_us() - 1.0).abs() < 0.01);
+        assert!((BandwidthTier::HighBandwidthInterconnect.latency_us() - 1.0).abs() < 0.01);
         assert!((BandwidthTier::PciE4x16.latency_us() - PCIE_DMA_LATENCY_US).abs() < 0.01);
     }
 

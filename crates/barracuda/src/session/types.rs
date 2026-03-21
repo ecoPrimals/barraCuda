@@ -222,6 +222,7 @@ mod tests {
             subgroup_max_size: 32,
             f64_shaders: true,
             f64_shared_memory: false,
+            f64_capabilities: None,
         }
     }
 
@@ -243,6 +244,7 @@ mod tests {
             subgroup_max_size: 32,
             f64_shaders: true,
             f64_shared_memory: false,
+            f64_capabilities: None,
         }
     }
 

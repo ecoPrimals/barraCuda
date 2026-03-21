@@ -16,19 +16,16 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Compute substrate type (hardware target)
 ///
-/// **Deep Debt**: Runtime-discoverable, no hardcoding
+/// Vendor-agnostic: classifies by device form factor, not manufacturer.
+/// Uses wgpu `DeviceType` as the source of truth.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SubstrateType {
     /// CPU execution (any socket)
     Cpu,
-    /// NVIDIA GPU (any generation)
-    NvidiaGpu,
-    /// AMD GPU (any generation)
-    AmdGpu,
-    /// Intel GPU
-    IntelGpu,
-    /// Apple GPU (Metal)
-    AppleGpu,
+    /// Discrete GPU (PCIe-attached, any vendor)
+    DiscreteGpu,
+    /// Integrated GPU (unified memory, any vendor)
+    IntegratedGpu,
     /// NPU (neuromorphic processor)
     Npu,
     /// Other/Unknown
@@ -246,26 +243,15 @@ impl Substrate {
         Ok(substrates)
     }
 
-    /// Classify substrate type from adapter info using PCI vendor IDs.
-    /// Primary detection uses standard PCI vendor IDs (reliable across drivers).
-    /// Falls back to name-based detection for non-PCI devices (Apple, NPU).
+    /// Classify substrate type from wgpu `DeviceType` (vendor-agnostic).
     fn classify_substrate(info: &wgpu::AdapterInfo) -> SubstrateType {
-        use super::vendor::{VENDOR_AMD, VENDOR_APPLE, VENDOR_INTEL, VENDOR_NVIDIA};
-
-        match info.vendor {
-            VENDOR_NVIDIA => SubstrateType::NvidiaGpu,
-            VENDOR_AMD => SubstrateType::AmdGpu,
-            VENDOR_INTEL => SubstrateType::IntelGpu,
-            VENDOR_APPLE => SubstrateType::AppleGpu,
+        match info.device_type {
+            wgpu::DeviceType::DiscreteGpu => SubstrateType::DiscreteGpu,
+            wgpu::DeviceType::IntegratedGpu => SubstrateType::IntegratedGpu,
+            wgpu::DeviceType::Cpu => SubstrateType::Cpu,
             _ => {
                 let name_lower = info.name.to_lowercase();
-                if name_lower.contains("apple")
-                    || name_lower.contains("m1")
-                    || name_lower.contains("m2")
-                    || name_lower.contains("m3")
-                {
-                    SubstrateType::AppleGpu
-                } else if name_lower.contains("npu") || name_lower.contains("akida") {
+                if name_lower.contains("npu") || name_lower.contains("akida") {
                     SubstrateType::Npu
                 } else {
                     SubstrateType::Other
@@ -316,10 +302,8 @@ impl std::fmt::Display for SubstrateType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             SubstrateType::Cpu => write!(f, "CPU"),
-            SubstrateType::NvidiaGpu => write!(f, "NVIDIA GPU"),
-            SubstrateType::AmdGpu => write!(f, "AMD GPU"),
-            SubstrateType::IntelGpu => write!(f, "Intel GPU"),
-            SubstrateType::AppleGpu => write!(f, "Apple GPU"),
+            SubstrateType::DiscreteGpu => write!(f, "Discrete GPU"),
+            SubstrateType::IntegratedGpu => write!(f, "Integrated GPU"),
             SubstrateType::Npu => write!(f, "NPU"),
             SubstrateType::Other => write!(f, "Other"),
         }
@@ -351,5 +335,100 @@ mod tests {
             let device = substrate.create_device().await.unwrap();
             println!("✓ Created device: {}", device.name());
         }
+    }
+
+    #[test]
+    fn substrate_type_display() {
+        assert_eq!(format!("{}", SubstrateType::Cpu), "CPU");
+        assert_eq!(format!("{}", SubstrateType::DiscreteGpu), "Discrete GPU");
+        assert_eq!(
+            format!("{}", SubstrateType::IntegratedGpu),
+            "Integrated GPU"
+        );
+        assert_eq!(format!("{}", SubstrateType::Npu), "NPU");
+        assert_eq!(format!("{}", SubstrateType::Other), "Other");
+    }
+
+    #[test]
+    fn substrate_type_serde_roundtrip() {
+        for ty in [
+            SubstrateType::Cpu,
+            SubstrateType::DiscreteGpu,
+            SubstrateType::IntegratedGpu,
+            SubstrateType::Npu,
+            SubstrateType::Other,
+        ] {
+            let json = serde_json::to_string(&ty).unwrap();
+            let back: SubstrateType = serde_json::from_str(&json).unwrap();
+            assert_eq!(ty, back);
+        }
+    }
+
+    #[test]
+    fn substrate_capability_labels_all_nonempty() {
+        let caps = [
+            SubstrateCapability::F64Compute,
+            SubstrateCapability::F32Compute,
+            SubstrateCapability::QuantizedInference { bits: 8 },
+            SubstrateCapability::BatchInference { max_batch: 32 },
+            SubstrateCapability::WeightMutation,
+            SubstrateCapability::ScalarReduce,
+            SubstrateCapability::SparseSpMV,
+            SubstrateCapability::Eigensolve,
+            SubstrateCapability::ConjugateGradient,
+            SubstrateCapability::ShaderDispatch,
+            SubstrateCapability::SimdVector,
+            SubstrateCapability::TimestampQuery,
+        ];
+        for cap in &caps {
+            assert!(!cap.label().is_empty());
+        }
+    }
+
+    #[test]
+    fn substrate_new_starts_empty_capabilities() {
+        let sub = Substrate::new(SubstrateType::DiscreteGpu, "Test GPU", "Vulkan", 0);
+        assert!(sub.capabilities.is_empty());
+        assert_eq!(sub.substrate_type, SubstrateType::DiscreteGpu);
+        assert_eq!(sub.name, "Test GPU");
+        assert_eq!(sub.backend, "Vulkan");
+        assert_eq!(sub.index, 0);
+    }
+
+    #[test]
+    fn substrate_has_capability() {
+        let mut sub = Substrate::new(SubstrateType::DiscreteGpu, "GPU", "Vulkan", 0);
+        sub.capabilities.push(SubstrateCapability::F64Compute);
+        sub.capabilities.push(SubstrateCapability::ShaderDispatch);
+        assert!(sub.has(&SubstrateCapability::F64Compute));
+        assert!(sub.has(&SubstrateCapability::ShaderDispatch));
+        assert!(!sub.has(&SubstrateCapability::Eigensolve));
+    }
+
+    #[test]
+    fn substrate_capability_summary() {
+        let mut sub = Substrate::new(SubstrateType::DiscreteGpu, "GPU", "Vulkan", 0);
+        sub.capabilities.push(SubstrateCapability::F64Compute);
+        sub.capabilities.push(SubstrateCapability::ShaderDispatch);
+        let summary = sub.capability_summary();
+        assert!(summary.contains("f64"));
+        assert!(summary.contains("shader"));
+    }
+
+    #[test]
+    fn substrate_display_includes_name_and_type() {
+        let sub = Substrate::new(SubstrateType::DiscreteGpu, "MyGPU", "Vulkan", 0);
+        let display = format!("{sub}");
+        assert!(display.contains("MyGPU"));
+        assert!(display.contains("DiscreteGpu"));
+    }
+
+    #[test]
+    fn substrate_serde_roundtrip() {
+        let mut sub = Substrate::new(SubstrateType::IntegratedGpu, "iGPU", "Metal", 1);
+        sub.capabilities.push(SubstrateCapability::F32Compute);
+        let json = serde_json::to_string(&sub).unwrap();
+        let back: Substrate = serde_json::from_str(&json).unwrap();
+        assert_eq!(sub, back);
     }
 }

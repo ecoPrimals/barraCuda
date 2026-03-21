@@ -430,47 +430,12 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         Self::estimate(device)
     }
 
-    /// Classify substrate type from adapter info.
-    ///
-    /// Strategy: vendor ID first (authoritative, set by driver), then name
-    /// substring matching as a fallback for unknown/zero vendor IDs.
+    /// Classify substrate type from wgpu `DeviceType` (vendor-agnostic).
     fn classify_substrate(info: &wgpu::AdapterInfo) -> SubstrateType {
-        use crate::device::vendor::{
-            VENDOR_AMD, VENDOR_APPLE, VENDOR_ARM, VENDOR_INTEL, VENDOR_NVIDIA, VENDOR_QUALCOMM,
-        };
-
         match info.device_type {
+            wgpu::DeviceType::DiscreteGpu => SubstrateType::DiscreteGpu,
+            wgpu::DeviceType::IntegratedGpu => SubstrateType::IntegratedGpu,
             wgpu::DeviceType::Cpu => SubstrateType::Cpu,
-
-            wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::IntegratedGpu => {
-                // Primary: vendor ID is authoritative when the driver reports it.
-                match info.vendor {
-                    VENDOR_NVIDIA => SubstrateType::NvidiaGpu,
-                    VENDOR_AMD => SubstrateType::AmdGpu,
-                    VENDOR_INTEL => SubstrateType::IntelGpu,
-                    VENDOR_APPLE => SubstrateType::AppleGpu,
-                    VENDOR_ARM | VENDOR_QUALCOMM => SubstrateType::Other,
-                    _ => {
-                        // Fallback: name-based heuristic for drivers that report
-                        // vendor_id = 0 (e.g. some Mesa/software configurations).
-                        const NAME_TABLE: &[(&[&str], SubstrateType)] = &[
-                            (
-                                &["nvidia", "geforce", "quadro", "tesla"],
-                                SubstrateType::NvidiaGpu,
-                            ),
-                            (&["amd", "radeon", "rx ", "navi"], SubstrateType::AmdGpu),
-                            (&["intel", "arc", "iris"], SubstrateType::IntelGpu),
-                            (&["apple", "m1", "m2", "m3"], SubstrateType::AppleGpu),
-                        ];
-                        let n = info.name.to_lowercase();
-                        NAME_TABLE
-                            .iter()
-                            .find(|(patterns, _)| patterns.iter().any(|p| n.contains(p)))
-                            .map_or(SubstrateType::Other, |(_, st)| *st)
-                    }
-                }
-            }
-
             _ => SubstrateType::Other,
         }
     }

@@ -4,7 +4,7 @@
 //! Demonstrates barraCuda's runtime GPU detection, capability scoring,
 //! and precision routing — zero hardcoding, fully capability-based.
 
-use barracuda::device::{DeviceCapabilities, GpuDriverProfile, WgpuDevice, WorkloadType};
+use barracuda::device::{DeviceCapabilities, WgpuDevice, WorkloadType};
 use std::sync::Arc;
 
 #[tokio::main]
@@ -59,14 +59,13 @@ async fn main() -> barracuda::error::Result<()> {
     // --- Phase 4: Precision Routing ---
     println!("─── Phase 4: Precision Routing ───────────────────────────────");
     println!();
-    let profile = GpuDriverProfile::from_device(&device);
-    let strategy = profile.fp64_strategy();
-    println!("  Driver profile:");
-    println!("    Driver kind:   {:?}", profile.driver);
-    println!("    Compiler kind: {:?}", profile.compiler);
-    println!("    Architecture:  {:?}", profile.arch);
-    println!("    FP64 rate:     {:?}", profile.fp64_rate);
-    println!("    Fp64Strategy:  {strategy:?}");
+    let strategy = caps.fp64_strategy();
+    let routing = caps.precision_routing();
+    println!("  Capability-based precision:");
+    println!("    Device:            {}", caps.device_name);
+    println!("    Vendor:            0x{:04X}", caps.vendor);
+    println!("    PrecisionRouting:  {routing:?}");
+    println!("    Fp64Strategy:      {strategy:?}");
     println!();
 
     match strategy {

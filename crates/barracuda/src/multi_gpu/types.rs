@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Types and configuration for multi-GPU workload distribution.
 
-use super::topology::{GpuDriver, GpuVendor};
+use super::topology::DeviceClass;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 
@@ -34,8 +34,8 @@ impl Default for WorkloadConfig {
 pub struct DeviceRequirements {
     /// Minimum VRAM in bytes.
     pub min_vram_bytes: Option<u64>,
-    /// Preferred GPU vendor.
-    pub preferred_vendor: Option<GpuVendor>,
+    /// Preferred device class.
+    pub preferred_class: Option<DeviceClass>,
     /// Exclude software renderer.
     pub exclude_software: bool,
     /// Require discrete GPU.
@@ -67,17 +67,10 @@ impl DeviceRequirements {
         self.with_min_vram_bytes(gb * 1024 * 1024 * 1024)
     }
 
-    /// Prefer NVIDIA GPUs.
+    /// Prefer discrete GPUs.
     #[must_use]
-    pub fn prefer_nvidia(mut self) -> Self {
-        self.preferred_vendor = Some(GpuVendor::Nvidia);
-        self
-    }
-
-    /// Prefer AMD GPUs.
-    #[must_use]
-    pub fn prefer_amd(mut self) -> Self {
-        self.preferred_vendor = Some(GpuVendor::Amd);
+    pub fn prefer_discrete(mut self) -> Self {
+        self.preferred_class = Some(DeviceClass::DiscreteGpu);
         self
     }
 
@@ -97,7 +90,7 @@ impl DeviceRequirements {
 
     /// Score a device against these requirements; `None` if device doesn't qualify.
     pub(crate) fn score(&self, info: &DeviceInfo) -> Option<i64> {
-        if self.exclude_software && info.vendor == GpuVendor::Software {
+        if self.exclude_software && info.device_class == DeviceClass::Software {
             return None;
         }
         if self.require_discrete && !info.is_discrete {
@@ -114,15 +107,15 @@ impl DeviceRequirements {
             }
         }
 
-        const PREFERRED_VENDOR_BONUS: i64 = 1000;
+        const PREFERRED_CLASS_BONUS: i64 = 1000;
         const DISCRETE_BONUS: i64 = 100;
         const IDLE_BONUS: i64 = 50;
         const GFLOPS_DIVISOR: f64 = 100.0;
 
         let mut score: i64 = 0;
-        if let Some(pref) = self.preferred_vendor {
-            if info.vendor == pref {
-                score += PREFERRED_VENDOR_BONUS;
+        if let Some(pref) = self.preferred_class {
+            if info.device_class == pref {
+                score += PREFERRED_CLASS_BONUS;
             }
         }
         #[expect(
@@ -160,16 +153,16 @@ pub struct DeviceInfo {
     /// `Arc<str>` instead of `String` so that cloning `DeviceInfo` (which
     /// happens on every device lease) is a ref-count bump, not a heap alloc.
     pub name: Arc<str>,
-    /// GPU vendor.
-    pub vendor: GpuVendor,
-    /// Driver type (e.g. Nvk, Cuda).
-    pub driver: GpuDriver,
+    /// Device class (discrete / integrated / software / unknown).
+    pub device_class: DeviceClass,
     /// Estimated VRAM in bytes.
     pub vram_bytes: u64,
     /// Estimated FP32 GFLOPS.
     pub estimated_gflops: f64,
     /// True if discrete (not integrated).
     pub is_discrete: bool,
+    /// Whether native f64 builtins (exp, log, pow) work on this device.
+    pub f64_builtins_available: bool,
     pub(crate) allocations: Arc<AtomicUsize>,
     pub(crate) allocated_bytes: Arc<AtomicU64>,
     pub(crate) busy: Arc<AtomicBool>,
@@ -216,7 +209,7 @@ impl DeviceInfo {
     /// Returns true if native f64 shader builtins are supported.
     #[must_use]
     pub fn supports_f64_builtins(&self) -> bool {
-        !matches!(self.driver, GpuDriver::Nvk | GpuDriver::Software)
+        self.f64_builtins_available
     }
 }
 
@@ -225,8 +218,7 @@ mod tests {
     use super::*;
 
     fn make_device_info(
-        vendor: GpuVendor,
-        driver: GpuDriver,
+        device_class: DeviceClass,
         vram_gb: u64,
         gflops: f64,
         discrete: bool,
@@ -235,11 +227,11 @@ mod tests {
             index: 0,
             pool_index: 0,
             name: Arc::from("Test GPU"),
-            vendor,
-            driver,
+            device_class,
             vram_bytes: vram_gb * 1024 * 1024 * 1024,
             estimated_gflops: gflops,
             is_discrete: discrete,
+            f64_builtins_available: !matches!(device_class, DeviceClass::Software),
             allocations: Arc::new(AtomicUsize::new(0)),
             allocated_bytes: Arc::new(AtomicU64::new(0)),
             busy: Arc::new(AtomicBool::new(false)),
@@ -259,11 +251,11 @@ mod tests {
     fn device_requirements_builder() {
         let req = DeviceRequirements::new()
             .with_min_vram_gb(8)
-            .prefer_nvidia()
+            .prefer_discrete()
             .require_discrete()
             .with_min_gflops(500.0);
         assert_eq!(req.min_vram_bytes, Some(8 * 1024 * 1024 * 1024));
-        assert_eq!(req.preferred_vendor, Some(GpuVendor::Nvidia));
+        assert_eq!(req.preferred_class, Some(DeviceClass::DiscreteGpu));
         assert!(req.require_discrete);
         assert_eq!(req.min_gflops, Some(500.0));
         assert!(req.exclude_software);
@@ -272,65 +264,41 @@ mod tests {
     #[test]
     fn score_excludes_software_when_required() {
         let req = DeviceRequirements::new();
-        let info = make_device_info(GpuVendor::Software, GpuDriver::Software, 4, 50.0, false);
+        let info = make_device_info(DeviceClass::Software, 4, 50.0, false);
         assert!(req.score(&info).is_none());
     }
 
     #[test]
     fn score_excludes_integrated_when_discrete_required() {
         let req = DeviceRequirements::new().require_discrete();
-        let info = make_device_info(
-            GpuVendor::Nvidia,
-            GpuDriver::NvidiaProprietary,
-            8,
-            1000.0,
-            false,
-        );
+        let info = make_device_info(DeviceClass::IntegratedGpu, 8, 1000.0, false);
         assert!(req.score(&info).is_none());
     }
 
     #[test]
     fn score_excludes_below_min_vram() {
         let req = DeviceRequirements::new().with_min_vram_gb(16);
-        let info = make_device_info(
-            GpuVendor::Nvidia,
-            GpuDriver::NvidiaProprietary,
-            8,
-            1000.0,
-            true,
-        );
+        let info = make_device_info(DeviceClass::DiscreteGpu, 8, 1000.0, true);
         assert!(req.score(&info).is_none());
     }
 
     #[test]
     fn score_excludes_below_min_gflops() {
         let req = DeviceRequirements::new().with_min_gflops(2000.0);
-        let info = make_device_info(
-            GpuVendor::Nvidia,
-            GpuDriver::NvidiaProprietary,
-            24,
-            1000.0,
-            true,
-        );
+        let info = make_device_info(DeviceClass::DiscreteGpu, 24, 1000.0, true);
         assert!(req.score(&info).is_none());
     }
 
     #[test]
-    fn score_prefers_vendor_bonus() {
-        let req = DeviceRequirements::new().prefer_nvidia();
-        let nvidia = make_device_info(
-            GpuVendor::Nvidia,
-            GpuDriver::NvidiaProprietary,
-            8,
-            1000.0,
-            true,
-        );
-        let amd = make_device_info(GpuVendor::Amd, GpuDriver::Radv, 8, 1000.0, true);
-        let s_nvidia = req.score(&nvidia).unwrap();
-        let s_amd = req.score(&amd).unwrap();
+    fn score_prefers_class_bonus() {
+        let req = DeviceRequirements::new().prefer_discrete();
+        let discrete = make_device_info(DeviceClass::DiscreteGpu, 8, 1000.0, true);
+        let integrated = make_device_info(DeviceClass::IntegratedGpu, 8, 1000.0, false);
+        let s_discrete = req.score(&discrete).unwrap();
+        let s_integrated = req.score(&integrated).unwrap();
         assert!(
-            s_nvidia > s_amd,
-            "NVIDIA ({s_nvidia}) should score higher than AMD ({s_amd})"
+            s_discrete > s_integrated,
+            "DiscreteGpu ({s_discrete}) should score higher than IntegratedGpu ({s_integrated})"
         );
     }
 
@@ -340,20 +308,8 @@ mod tests {
             exclude_software: false,
             ..DeviceRequirements::default()
         };
-        let big = make_device_info(
-            GpuVendor::Nvidia,
-            GpuDriver::NvidiaProprietary,
-            24,
-            1000.0,
-            true,
-        );
-        let small = make_device_info(
-            GpuVendor::Nvidia,
-            GpuDriver::NvidiaProprietary,
-            8,
-            1000.0,
-            true,
-        );
+        let big = make_device_info(DeviceClass::DiscreteGpu, 24, 1000.0, true);
+        let small = make_device_info(DeviceClass::DiscreteGpu, 8, 1000.0, true);
         assert!(req.score(&big).unwrap() > req.score(&small).unwrap());
     }
 
@@ -363,8 +319,8 @@ mod tests {
             exclude_software: false,
             ..DeviceRequirements::default()
         };
-        let discrete = make_device_info(GpuVendor::Intel, GpuDriver::Intel, 8, 500.0, true);
-        let integrated = make_device_info(GpuVendor::Intel, GpuDriver::Intel, 8, 500.0, false);
+        let discrete = make_device_info(DeviceClass::DiscreteGpu, 8, 500.0, true);
+        let integrated = make_device_info(DeviceClass::IntegratedGpu, 8, 500.0, false);
         assert!(req.score(&discrete).unwrap() > req.score(&integrated).unwrap());
     }
 
@@ -374,33 +330,15 @@ mod tests {
             exclude_software: false,
             ..DeviceRequirements::default()
         };
-        let idle = make_device_info(
-            GpuVendor::Nvidia,
-            GpuDriver::NvidiaProprietary,
-            8,
-            1000.0,
-            true,
-        );
-        let busy = make_device_info(
-            GpuVendor::Nvidia,
-            GpuDriver::NvidiaProprietary,
-            8,
-            1000.0,
-            true,
-        );
+        let idle = make_device_info(DeviceClass::DiscreteGpu, 8, 1000.0, true);
+        let busy = make_device_info(DeviceClass::DiscreteGpu, 8, 1000.0, true);
         busy.busy.store(true, Ordering::Relaxed);
         assert!(req.score(&idle).unwrap() > req.score(&busy).unwrap());
     }
 
     #[test]
     fn device_info_available_vram() {
-        let info = make_device_info(
-            GpuVendor::Nvidia,
-            GpuDriver::NvidiaProprietary,
-            8,
-            1000.0,
-            true,
-        );
+        let info = make_device_info(DeviceClass::DiscreteGpu, 8, 1000.0, true);
         let one_gb = 1024 * 1024 * 1024_u64;
         info.allocated_bytes.store(one_gb, Ordering::Relaxed);
         assert_eq!(info.available_vram_bytes(), 7 * one_gb);
@@ -408,13 +346,7 @@ mod tests {
 
     #[test]
     fn device_info_usage_percent() {
-        let info = make_device_info(
-            GpuVendor::Nvidia,
-            GpuDriver::NvidiaProprietary,
-            10,
-            1000.0,
-            true,
-        );
+        let info = make_device_info(DeviceClass::DiscreteGpu, 10, 1000.0, true);
         let half = 5 * 1024 * 1024 * 1024_u64;
         info.allocated_bytes.store(half, Ordering::Relaxed);
         assert!((info.usage_percent() - 50.0).abs() < 0.1);
@@ -422,30 +354,27 @@ mod tests {
 
     #[test]
     fn device_info_zero_vram_usage() {
-        let mut info = make_device_info(
-            GpuVendor::Nvidia,
-            GpuDriver::NvidiaProprietary,
-            0,
-            0.0,
-            false,
-        );
+        let mut info = make_device_info(DeviceClass::DiscreteGpu, 0, 0.0, false);
         info.vram_bytes = 0;
         assert!((info.usage_percent()).abs() < f64::EPSILON);
     }
 
     #[test]
-    fn f64_builtins_supported_by_proprietary_not_nvk() {
-        let prop = make_device_info(
-            GpuVendor::Nvidia,
-            GpuDriver::NvidiaProprietary,
-            8,
-            1000.0,
-            true,
-        );
-        let nvk = make_device_info(GpuVendor::Nvidia, GpuDriver::Nvk, 8, 1000.0, true);
-        let sw = make_device_info(GpuVendor::Software, GpuDriver::Software, 4, 50.0, false);
-        assert!(prop.supports_f64_builtins());
-        assert!(!nvk.supports_f64_builtins());
-        assert!(!sw.supports_f64_builtins());
+    fn f64_builtins_based_on_field() {
+        let discrete = make_device_info(DeviceClass::DiscreteGpu, 8, 1000.0, true);
+        assert!(discrete.f64_builtins_available);
+        assert!(discrete.supports_f64_builtins());
+
+        let integrated = make_device_info(DeviceClass::IntegratedGpu, 8, 1000.0, false);
+        assert!(integrated.f64_builtins_available);
+        assert!(integrated.supports_f64_builtins());
+
+        let software = make_device_info(DeviceClass::Software, 4, 50.0, false);
+        assert!(!software.f64_builtins_available);
+        assert!(!software.supports_f64_builtins());
+
+        let mut toggled = make_device_info(DeviceClass::DiscreteGpu, 8, 1000.0, true);
+        toggled.f64_builtins_available = false;
+        assert!(!toggled.supports_f64_builtins());
     }
 }

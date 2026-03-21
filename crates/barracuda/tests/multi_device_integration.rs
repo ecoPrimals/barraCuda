@@ -19,7 +19,7 @@
 
 #![expect(clippy::unwrap_used, reason = "tests")]
 use barracuda::device::WgpuDevice;
-use barracuda::multi_gpu::{DeviceRequirements, GpuVendor, MultiDevicePool, WorkloadConfig};
+use barracuda::multi_gpu::{DeviceClass, DeviceRequirements, MultiDevicePool, WorkloadConfig};
 use barracuda::resource_quota::{ResourceQuota, presets};
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
@@ -145,11 +145,14 @@ async fn test_multi_device_pool_discovers_both_gpus() {
             let device_count = pool.device_count();
             println!("\nTotal devices: {device_count}");
 
-            // Check for vendor diversity
-            let has_nvidia = pool.devices().iter().any(|d| d.vendor == GpuVendor::Nvidia);
-            let has_amd = pool.devices().iter().any(|d| d.vendor == GpuVendor::Amd);
+            // Count discrete-class devices (vendor is not distinguished at pool level)
+            let discrete_count = pool
+                .devices()
+                .iter()
+                .filter(|d| d.device_class == DeviceClass::DiscreteGpu)
+                .count();
 
-            println!("Vendor coverage: NVIDIA={has_nvidia}, AMD={has_amd}");
+            println!("Discrete GPU devices in pool: {discrete_count}");
 
             if device_count >= 2 {
                 println!("✓ Multi-GPU configuration detected");
@@ -168,7 +171,7 @@ async fn test_multi_device_pool_discovers_both_gpus() {
 // ============================================================================
 
 #[tokio::test]
-async fn test_acquire_device_with_nvidia_preference() {
+async fn test_acquire_device_with_discrete_preference() {
     let pool = MultiDevicePool::new().await;
     if let Err(e) = &pool {
         println!("Skipping test - no GPU available: {e}");
@@ -176,50 +179,22 @@ async fn test_acquire_device_with_nvidia_preference() {
     }
     let pool = pool.unwrap();
 
-    let reqs = DeviceRequirements::new().prefer_nvidia();
+    let reqs = DeviceRequirements::new().prefer_discrete();
 
     match pool.acquire(&reqs).await {
         Ok(lease) => {
-            println!("Acquired with NVIDIA preference: {}", lease.info().name);
+            println!("Acquired with discrete preference: {}", lease.info().name);
 
-            // If an NVIDIA GPU exists, we should get it
-            let has_nvidia = pool.devices().iter().any(|d| d.vendor == GpuVendor::Nvidia);
-            if has_nvidia {
+            // If any discrete GPU exists in the pool, acquisition should prefer that class
+            let has_discrete = pool
+                .devices()
+                .iter()
+                .any(|d| d.device_class == DeviceClass::DiscreteGpu);
+            if has_discrete {
                 assert_eq!(
-                    lease.info().vendor,
-                    GpuVendor::Nvidia,
-                    "Should have selected NVIDIA GPU when available"
-                );
-            }
-        }
-        Err(e) => {
-            println!("Could not acquire device: {e}");
-        }
-    }
-}
-
-#[tokio::test]
-async fn test_acquire_device_with_amd_preference() {
-    let pool = MultiDevicePool::new().await;
-    if let Err(e) = &pool {
-        println!("Skipping test - no GPU available: {e}");
-        return;
-    }
-    let pool = pool.unwrap();
-
-    let reqs = DeviceRequirements::new().prefer_amd();
-
-    match pool.acquire(&reqs).await {
-        Ok(lease) => {
-            println!("Acquired with AMD preference: {}", lease.info().name);
-
-            // If an AMD GPU exists, we should get it
-            let has_amd = pool.devices().iter().any(|d| d.vendor == GpuVendor::Amd);
-            if has_amd {
-                assert_eq!(
-                    lease.info().vendor,
-                    GpuVendor::Amd,
-                    "Should have selected AMD GPU when available"
+                    lease.info().device_class,
+                    DeviceClass::DiscreteGpu,
+                    "Should have selected a discrete GPU when available"
                 );
             }
         }
@@ -382,11 +357,7 @@ async fn test_concurrent_device_acquisition() {
     for i in 0..4 {
         let pool_clone = pool.clone();
         let handle = tokio::spawn(async move {
-            let reqs = if i % 2 == 0 {
-                DeviceRequirements::new().prefer_nvidia()
-            } else {
-                DeviceRequirements::new().prefer_amd()
-            };
+            let reqs = DeviceRequirements::new().prefer_discrete();
 
             match pool_clone.acquire(&reqs).await {
                 Ok(lease) => {
@@ -482,7 +453,7 @@ async fn test_pool_status_reporting() {
     println!("\nDetailed device info:");
     for device in pool.devices() {
         println!("  [{}] {}", device.index, device.name);
-        println!("      Vendor: {:?}", device.vendor);
+        println!("      Class: {:?}", device.device_class);
         println!(
             "      VRAM: {} GB (estimated)",
             device.vram_bytes / (1024 * 1024 * 1024)

@@ -24,7 +24,7 @@
 //! // Acquire a device with specific requirements
 //! let reqs = DeviceRequirements::new()
 //!     .with_min_vram_gb(8)
-//!     .prefer_nvidia();
+//!     .prefer_discrete();
 //!
 //! let lease = pool.acquire(&reqs).await?;
 //! // Use lease.device() for operations
@@ -49,8 +49,8 @@ mod types;
 #[cfg(test)]
 mod tests;
 
-// Topology (vendor, driver, workload types)
-pub use topology::{GpuDriver, GpuInfo, GpuVendor, WorkloadType};
+// Topology (device class, workload types)
+pub use topology::{DeviceClass, GpuInfo, WorkloadType};
 
 // Interconnect topology (PCIe bus links, bandwidth tiers, P2P routing)
 pub use interconnect::{BandwidthTier, InterconnectTopology, Link};
@@ -72,33 +72,25 @@ const BYTES_PER_GIB: u64 = 1024 * 1024 * 1024;
 
 /// Conservative GFLOPS estimate when runtime probing is unavailable.
 ///
-/// Values are lower bounds by vendor and device class. The scheduler always
+/// Values are lower bounds by device class. The scheduler always
 /// prefers runtime-probed metrics when available; these exist only so device
 /// scoring never divides by zero.
-pub(crate) fn estimate_gflops(vendor: GpuVendor, device_type: wgpu::DeviceType) -> f64 {
-    match (vendor, device_type) {
-        (GpuVendor::Software, _) => 10.0,
-        (GpuVendor::Nvidia, wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::Other) => 5_000.0,
-        (GpuVendor::Amd, wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::Other) => 4_000.0,
-        (_, wgpu::DeviceType::DiscreteGpu) => 1_000.0,
-        (_, wgpu::DeviceType::IntegratedGpu) => 200.0,
+pub(crate) fn estimate_gflops(device_class: DeviceClass, device_type: wgpu::DeviceType) -> f64 {
+    match (device_class, device_type) {
+        (DeviceClass::Software, _) => 10.0,
+        (DeviceClass::DiscreteGpu, _) | (_, wgpu::DeviceType::DiscreteGpu) => 3_000.0,
+        (DeviceClass::IntegratedGpu, _) | (_, wgpu::DeviceType::IntegratedGpu) => 200.0,
         (_, wgpu::DeviceType::Cpu) => 50.0,
         _ => 100.0,
     }
 }
 
 /// Conservative VRAM estimate when runtime probing is unavailable.
-pub(crate) fn estimate_vram_bytes(vendor: GpuVendor, device_type: wgpu::DeviceType) -> u64 {
-    match (vendor, device_type) {
-        (GpuVendor::Software, _) | (_, wgpu::DeviceType::Cpu) => 0,
-        (GpuVendor::Nvidia, wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::Other) => {
-            12 * BYTES_PER_GIB
-        }
-        (GpuVendor::Amd, wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::Other) => {
-            16 * BYTES_PER_GIB
-        }
-        (_, wgpu::DeviceType::DiscreteGpu) => 8 * BYTES_PER_GIB,
-        (_, wgpu::DeviceType::IntegratedGpu) => 2 * BYTES_PER_GIB,
+pub(crate) fn estimate_vram_bytes(device_class: DeviceClass, device_type: wgpu::DeviceType) -> u64 {
+    match (device_class, device_type) {
+        (DeviceClass::Software, _) | (_, wgpu::DeviceType::Cpu) => 0,
+        (DeviceClass::DiscreteGpu, _) | (_, wgpu::DeviceType::DiscreteGpu) => 8 * BYTES_PER_GIB,
+        (DeviceClass::IntegratedGpu, _) | (_, wgpu::DeviceType::IntegratedGpu) => 2 * BYTES_PER_GIB,
         _ => 4 * BYTES_PER_GIB,
     }
 }

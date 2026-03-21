@@ -28,6 +28,22 @@ pub fn cache_native_binary(shader_hash: &str, arch: &str, binary: CoralBinary) {
     cache.insert((shader_hash.to_owned(), arch.to_owned()), binary);
 }
 
+/// Find any cached native binary matching this shader hash, regardless of arch/adapter key.
+///
+/// Used when the caller does not know the exact compilation target — for example,
+/// the sovereign dispatch path in `CoralReefDevice` which receives binaries from
+/// any coralReef-supported architecture.
+#[must_use]
+pub fn cached_native_binary_any_arch(shader_hash: &str) -> Option<CoralBinary> {
+    let cache = NATIVE_BINARY_CACHE
+        .read()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    cache
+        .iter()
+        .find(|((hash, _), _)| hash == shader_hash)
+        .map(|(_, binary)| binary.clone())
+}
+
 /// Hash shader source for cache keying (uses blake3 for consistency with barraCuda).
 #[must_use]
 pub fn shader_hash(source: &str) -> String {

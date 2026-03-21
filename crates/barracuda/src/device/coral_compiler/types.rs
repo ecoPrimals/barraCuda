@@ -40,6 +40,11 @@ pub(super) struct CompileWgslRequest {
     /// Ignored by Phase 1 servers that only read `fp64_software`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fp64_strategy: Option<String>,
+    /// Adapter descriptor for arch-agnostic compilation (Phase 2).
+    /// When present, coralReef determines the ISA target from adapter info
+    /// rather than requiring barraCuda to specify `arch` explicitly.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub adapter: Option<AdapterDescriptor>,
 }
 
 /// Map a barraCuda `Precision` tier to coralReef's `Fp64Strategy` string.
@@ -90,23 +95,35 @@ pub struct HealthResponse {
     pub supported_archs: Vec<String>,
 }
 
-/// Map a barraCuda `GpuArch` to coralReef's arch string.
+/// Adapter descriptor for IPC compile requests.
 ///
-/// Supports NVIDIA (SM70+) and AMD RDNA2+ architectures per coralReef Phase 10.
-/// Returns `None` for architectures that coralReef cannot compile for
-/// (Intel Arc, Apple M, software rasterizers, unknowns).
-#[must_use]
-pub fn arch_to_coral(arch: &crate::device::driver_profile::GpuArch) -> Option<&'static str> {
-    use crate::device::driver_profile::GpuArch;
-    match arch {
-        GpuArch::Volta => Some("sm_70"),
-        GpuArch::Turing => Some("sm_75"),
-        GpuArch::Ampere => Some("sm_80"),
-        GpuArch::Ada => Some("sm_89"),
-        GpuArch::Blackwell => Some("sm_100"),
-        GpuArch::Rdna2 => Some("gfx1030"),
-        GpuArch::Rdna3 => Some("gfx1100"),
-        GpuArch::Cdna2 => Some("gfx90a"),
-        _ => None,
+/// Carries adapter identification to `coralReef` so it can determine the correct
+/// ISA compilation target. `barraCuda` does not embed per-generation ISA knowledge
+/// — `coralReef` owns the adapter-to-ISA mapping.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdapterDescriptor {
+    /// PCI vendor ID (e.g. `0x10DE` for NVIDIA, `0x1002` for AMD).
+    pub vendor_id: u32,
+    /// Adapter name as reported by wgpu (e.g. "NVIDIA `GeForce` RTX 3090").
+    pub device_name: String,
+    /// Device type as string (`DiscreteGpu`, `IntegratedGpu`, `Cpu`, etc.).
+    pub device_type: String,
+}
+
+impl AdapterDescriptor {
+    /// Build an adapter descriptor from wgpu adapter info.
+    #[must_use]
+    pub fn from_adapter_info(info: &wgpu::AdapterInfo) -> Self {
+        Self {
+            vendor_id: info.vendor,
+            device_name: info.name.clone(),
+            device_type: format!("{:?}", info.device_type),
+        }
+    }
+
+    /// Cache key derived from this adapter descriptor.
+    #[must_use]
+    pub fn cache_key(&self) -> String {
+        format!("adapter:{:04x}:{}", self.vendor_id, self.device_name)
     }
 }

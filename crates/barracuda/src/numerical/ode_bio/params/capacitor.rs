@@ -121,3 +121,38 @@ impl CapacitorParams {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_roundtrip() {
+        let d = CapacitorParams::default();
+        let r = CapacitorParams::from_flat(&d.to_flat());
+        assert!(f64::abs(d.mu_max - r.mu_max) < 1e-15);
+        assert!(f64::abs(d.k_cap - r.k_cap) < 1e-15);
+        assert!(f64::abs(d.death_rate - r.death_rate) < 1e-15);
+        assert!(f64::abs(d.k_cdg_prod - r.k_cdg_prod) < 1e-15);
+        assert!(f64::abs(d.d_cdg - r.d_cdg) < 1e-15);
+        assert!(f64::abs(d.k_vpsr_charge - r.k_vpsr_charge) < 1e-15);
+        assert!(f64::abs(d.k_vpsr_discharge - r.k_vpsr_discharge) < 1e-15);
+        assert!(f64::abs(d.n_vpsr - r.n_vpsr) < 1e-15);
+        assert!(f64::abs(d.k_vpsr_cdg - r.k_vpsr_cdg) < 1e-15);
+        assert!(f64::abs(d.w_biofilm - r.w_biofilm) < 1e-15);
+        assert!(f64::abs(d.w_motility - r.w_motility) < 1e-15);
+        assert!(f64::abs(d.w_rugose - r.w_rugose) < 1e-15);
+        assert!(f64::abs(d.d_bio - r.d_bio) < 1e-15);
+        assert!(f64::abs(d.d_mot - r.d_mot) < 1e-15);
+        assert!(f64::abs(d.d_rug - r.d_rug) < 1e-15);
+        assert!(f64::abs(d.stress_factor - r.stress_factor) < 1e-15);
+    }
+
+    #[test]
+    fn test_flat_length() {
+        assert_eq!(
+            CapacitorParams::default().to_flat().len(),
+            CAPACITOR_N_PARAMS
+        );
+    }
+}

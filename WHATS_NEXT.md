@@ -1,11 +1,15 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-03-20.
+Prioritized work items, ordered by impact. Updated 2026-03-21.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 14: Full vendor-agnostic evolution (Mar 21)**:
+  `DeviceCapabilities` replaces `GpuDriverProfile` across 50+ files, `DeviceClass` replaces
+  `GpuVendor`/`GpuDriver`, `SubstrateType::DiscreteGpu`/`IntegratedGpu` replaces vendor variants,
+  `prefer_discrete()` replaces vendor preferences, +75 new tests (4,052+ total).
 - **Deep debt sprint 14 — audit completion, doctest & hardware fixes (Mar 20)**:
   Fixed 2 pre-existing doctest failures (`complex_f64.rs` stale assertion,
   `sobol.rs` Rust 2024 edition `gen` keyword + merged doctest wrapper). Fixed

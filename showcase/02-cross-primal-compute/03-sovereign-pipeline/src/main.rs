@@ -7,11 +7,30 @@
 //! Each layer degrades gracefully when cross-primal services are absent.
 
 use barracuda::device::coral_compiler::GLOBAL_CORAL;
-use barracuda::device::{DeviceCapabilities, GpuDriverProfile, WgpuDevice};
+use barracuda::device::coral_compiler::types::AdapterDescriptor;
+use barracuda::device::vendor::{VENDOR_AMD, VENDOR_NVIDIA};
+use barracuda::device::{DeviceCapabilities, WgpuDevice};
 use barracuda::ops::variance_f64_wgsl::VarianceF64;
 use barracuda::pipeline::GpuViewF64;
 use std::sync::Arc;
 use std::time::Instant;
+
+/// Pick a coralReef ISA string from the server's list for this adapter (NVIDIA `sm_*`, AMD `gfx*`).
+fn coral_target_for_adapter(
+    supported_archs: &[String],
+    adapter: &AdapterDescriptor,
+) -> Option<String> {
+    let prefix = match adapter.vendor_id {
+        VENDOR_NVIDIA => "sm_",
+        VENDOR_AMD => "gfx",
+        _ => return None,
+    };
+    supported_archs
+        .iter()
+        .filter(|a| a.starts_with(prefix))
+        .min()
+        .cloned()
+}
 
 #[tokio::main]
 async fn main() -> barracuda::error::Result<()> {
@@ -59,12 +78,11 @@ async fn main() -> barracuda::error::Result<()> {
     let discovery_time = t.elapsed();
 
     let caps = DeviceCapabilities::from_device(&device);
-    let profile = GpuDriverProfile::from_device(&device);
-    let strategy = profile.fp64_strategy();
+    let strategy = caps.fp64_strategy();
 
-    println!("  GPU:           {}", device.adapter_info().name);
-    println!("  Backend:       {:?}", device.adapter_info().backend);
-    println!("  Arch:          {:?}", profile.arch);
+    println!("  GPU:           {}", caps.device_name);
+    println!("  Backend:       {:?}", caps.backend);
+    println!("  Vendor:        0x{:04X}", caps.vendor);
     println!("  Fp64Strategy:  {strategy:?}");
     println!("  f64 shaders:   {}", caps.f64_shaders);
     println!(
@@ -85,8 +103,13 @@ async fn main() -> barracuda::error::Result<()> {
     match &coral_health {
         Some(h) => {
             println!("  coralReef: AVAILABLE (v{})", h.version);
-            let arch_display = barracuda::device::coral_compiler::arch_to_coral(&profile.arch)
-                .unwrap_or("unknown");
+            let adapter = AdapterDescriptor::from_adapter_info(device.adapter_info());
+            let arch_display = coral
+                .supported_archs()
+                .await
+                .as_ref()
+                .and_then(|archs| coral_target_for_adapter(archs, &adapter))
+                .unwrap_or_else(|| "unknown".to_owned());
             println!("  Compilation: WGSL → coralReef IPC → native binary ({arch_display})");
 
             if let Some(archs) = coral.supported_archs().await {

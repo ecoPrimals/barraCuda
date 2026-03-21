@@ -104,9 +104,8 @@ pub use cache_hierarchy::{
     CacheAwareTiler, CacheLevel, CacheResidency, MainMemory, SubstrateMemoryHierarchy, TileConfig,
 };
 pub use capabilities::{
-    CompilerKind, DeviceCapabilities, DriverKind, EigensolveStrategy, Fp64Rate, Fp64Strategy,
-    GpuArch, GpuDriverProfile, Workaround, WorkloadType, optimal_workgroup_size_arch,
-    workgroup_size_2d_for_arch, workgroup_size_for_arch,
+    DeviceCapabilities, EigensolveStrategy, Fp64Rate, Fp64Strategy, PrecisionRoutingAdvice,
+    WorkloadType, optimal_workgroup_size_arch, workgroup_size_2d_for_arch, workgroup_size_for_arch,
 };
 pub use compute_pipeline::{
     BatchedComputeDispatch, ComputeDispatch, storage_bgl_entry, uniform_bgl_entry,
@@ -224,7 +223,10 @@ impl Auto {
     /// **Architecture**: Uses LazyLock-based pool (Rust 1.80+) for idiomatic lazy initialization.
     /// # Errors
     /// Returns [`Err`] if no WGPU adapter is found or device creation fails.
-    #[expect(clippy::new_ret_no_self, reason = "suppressed")]
+    #[expect(
+        clippy::new_ret_no_self,
+        reason = "returns Arc<WgpuDevice> from global pool for thread-safe shared access"
+    )]
     pub async fn new() -> Result<Arc<WgpuDevice>> {
         Ok(test_pool::get_test_device().await)
     }

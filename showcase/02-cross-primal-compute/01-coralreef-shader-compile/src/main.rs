@@ -6,8 +6,27 @@
 //! and gracefully degrades to the wgpu path if coralReef is absent.
 
 use barracuda::device::coral_compiler::GLOBAL_CORAL;
-use barracuda::device::{DeviceCapabilities, GpuDriverProfile, WgpuDevice};
+use barracuda::device::coral_compiler::types::AdapterDescriptor;
+use barracuda::device::vendor::{VENDOR_AMD, VENDOR_NVIDIA};
+use barracuda::device::{DeviceCapabilities, WgpuDevice};
 use std::sync::Arc;
+
+/// Pick a coralReef ISA string from the server's list for this adapter (NVIDIA `sm_*`, AMD `gfx*`).
+fn coral_target_for_adapter(
+    supported_archs: &[String],
+    adapter: &AdapterDescriptor,
+) -> Option<String> {
+    let prefix = match adapter.vendor_id {
+        VENDOR_NVIDIA => "sm_",
+        VENDOR_AMD => "gfx",
+        _ => return None,
+    };
+    supported_archs
+        .iter()
+        .filter(|a| a.starts_with(prefix))
+        .min()
+        .cloned()
+}
 
 const DEMO_SHADER: &str = r"
 @group(0) @binding(0) var<storage, read> input: array<f32>;
@@ -36,10 +55,9 @@ async fn main() -> barracuda::error::Result<()> {
     let device = WgpuDevice::new().await?;
     let device = Arc::new(device);
     let caps = DeviceCapabilities::from_device(&device);
-    let profile = GpuDriverProfile::from_device(&device);
-    println!("  GPU:  {}", device.adapter_info().name);
-    println!("  Arch: {:?}", profile.arch);
-    println!("  f64:  {}", caps.f64_shaders);
+    println!("  GPU:    {}", caps.device_name);
+    println!("  Vendor: 0x{:04X}", caps.vendor);
+    println!("  f64:    {}", caps.f64_shaders);
     println!();
 
     // --- Phase 2: Probe coralReef ---
@@ -86,14 +104,23 @@ async fn main() -> barracuda::error::Result<()> {
     println!("  Demo shader: x^2 + x (elementwise, workgroup_size=256)");
     println!();
 
-    let arch_str = barracuda::device::coral_compiler::arch_to_coral(&profile.arch);
-    let arch_display = arch_str.unwrap_or("unknown");
+    let adapter = AdapterDescriptor::from_adapter_info(device.adapter_info());
+    let arch_str = if health.is_some() {
+        coral
+            .supported_archs()
+            .await
+            .as_ref()
+            .and_then(|archs| coral_target_for_adapter(archs, &adapter))
+    } else {
+        None
+    };
+    let arch_display = arch_str.as_deref().unwrap_or("unknown");
 
     if health.is_some() {
         println!("  Attempting coralReef compilation (arch={arch_display})...");
 
         if let Some(target) = arch_str {
-            match coral.compile_wgsl_direct(DEMO_SHADER, target, false).await {
+            match coral.compile_wgsl_direct(DEMO_SHADER, &target, false).await {
                 Some(binary) => {
                     println!("  Compilation successful:");
                     println!("    Binary size: {} bytes", binary.binary.len());

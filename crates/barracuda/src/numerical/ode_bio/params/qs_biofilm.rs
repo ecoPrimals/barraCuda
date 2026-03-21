@@ -131,3 +131,40 @@ impl QsBiofilmParams {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_roundtrip() {
+        let d = QsBiofilmParams::default();
+        let r = QsBiofilmParams::from_flat(&d.to_flat());
+        assert!(f64::abs(d.mu_max - r.mu_max) < 1e-15);
+        assert!(f64::abs(d.k_cap - r.k_cap) < 1e-15);
+        assert!(f64::abs(d.death_rate - r.death_rate) < 1e-15);
+        assert!(f64::abs(d.k_ai_prod - r.k_ai_prod) < 1e-15);
+        assert!(f64::abs(d.d_ai - r.d_ai) < 1e-15);
+        assert!(f64::abs(d.k_hapr_max - r.k_hapr_max) < 1e-15);
+        assert!(f64::abs(d.k_hapr_ai - r.k_hapr_ai) < 1e-15);
+        assert!(f64::abs(d.n_hapr - r.n_hapr) < 1e-15);
+        assert!(f64::abs(d.d_hapr - r.d_hapr) < 1e-15);
+        assert!(f64::abs(d.k_dgc_basal - r.k_dgc_basal) < 1e-15);
+        assert!(f64::abs(d.k_dgc_rep - r.k_dgc_rep) < 1e-15);
+        assert!(f64::abs(d.k_pde_basal - r.k_pde_basal) < 1e-15);
+        assert!(f64::abs(d.k_pde_act - r.k_pde_act) < 1e-15);
+        assert!(f64::abs(d.d_cdg - r.d_cdg) < 1e-15);
+        assert!(f64::abs(d.k_bio_max - r.k_bio_max) < 1e-15);
+        assert!(f64::abs(d.k_bio_cdg - r.k_bio_cdg) < 1e-15);
+        assert!(f64::abs(d.n_bio - r.n_bio) < 1e-15);
+        assert!(f64::abs(d.d_bio - r.d_bio) < 1e-15);
+    }
+
+    #[test]
+    fn test_flat_length() {
+        assert_eq!(
+            QsBiofilmParams::default().to_flat().len(),
+            QS_BIOFILM_N_PARAMS
+        );
+    }
+}

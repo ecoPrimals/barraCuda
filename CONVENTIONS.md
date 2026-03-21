@@ -14,7 +14,7 @@ the sourDough scaffold. barraCuda owns its own standards.
 - **Docs**: `#![warn(missing_docs, missing_errors_doc, missing_panics_doc)]` — `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` clean
 - **Unsafe**: `#![forbid(unsafe_code)]`
 - **Max file size**: 1000 LOC
-- **Test coverage**: 90%+ target (currently ~71% line / ~78% function on llvmpipe; GPU hardware needed for 90%)
+- **Test coverage**: 90%+ target (currently ~72% line / ~79% function on llvmpipe; GPU hardware needed for 90%)
 
 ## Error Handling
 
@@ -81,6 +81,11 @@ let queue: wgpu::Queue = wgpu_device.queue_clone();
 
 `GuardedDeviceHandle` derefs to `wgpu::Device` and auto-protects all `create_*`
 calls with the atomic encoder barrier.
+
+## Device capabilities
+
+Use **`DeviceCapabilities`** as the canonical type for device feature and capability
+queries. **`GpuDriverProfile`** is deprecated; do not use it for new code.
 
 ## IPC
 

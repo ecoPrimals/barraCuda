@@ -201,24 +201,45 @@ fn test_substitute_fossil_f64() {
 
 #[test]
 fn test_sin_cos_taylor_workaround_asin_acos_protected() {
-    use crate::device::capabilities::{
-        CompilerKind, DriverKind, Fp64Rate, GpuArch, GpuDriverProfile, Workaround,
-    };
+    use crate::device::capabilities::DeviceCapabilities;
+    use crate::device::probe::F64BuiltinCapabilities;
+    use crate::device::vendor::VENDOR_NVIDIA;
 
-    let nvk_profile = GpuDriverProfile {
-        driver: DriverKind::Nvk,
-        compiler: CompilerKind::Nak,
-        arch: GpuArch::Volta,
-        fp64_rate: Fp64Rate::Full,
-        workarounds: vec![
-            Workaround::NvkExpF64Crash,
-            Workaround::NvkLogF64Crash,
-            Workaround::NvkSinCosF64Imprecise,
-        ],
-        adapter_key: String::new(),
+    let nvk_caps = DeviceCapabilities {
+        device_name: "NVK Test".into(),
+        device_type: wgpu::DeviceType::DiscreteGpu,
+        max_buffer_size: 1024 * 1024 * 1024,
+        max_workgroup_size: (256, 256, 64),
+        max_compute_workgroups: (65_535, 65_535, 65_535),
+        max_compute_invocations_per_workgroup: 1024,
+        max_storage_buffers_per_shader_stage: 8,
+        max_uniform_buffers_per_shader_stage: 12,
+        max_bind_groups: 4,
+        backend: wgpu::Backend::Vulkan,
+        vendor: VENDOR_NVIDIA,
+        gpu_dispatch_threshold_override: None,
+        subgroup_min_size: 32,
+        subgroup_max_size: 32,
+        f64_shaders: true,
+        f64_shared_memory: false,
+        f64_capabilities: Some(F64BuiltinCapabilities {
+            basic_f64: true,
+            exp: false,
+            log: false,
+            exp2: false,
+            log2: false,
+            sin: false,
+            cos: false,
+            sqrt: true,
+            fma: true,
+            abs_min_max: true,
+            shared_mem_f64: false,
+            df64_arith: true,
+            df64_transcendentals_safe: true,
+        }),
     };
     let shader = "let a = sin(x); let b = cos(y); let c = asin(z); let d = acos(w);";
-    let result = ShaderTemplate::for_driver_profile(shader, true, &nvk_profile);
+    let result = ShaderTemplate::for_device_capabilities(shader, true, &nvk_caps);
     assert!(
         result.contains("sin_f64_safe("),
         "sin must become sin_f64_safe"

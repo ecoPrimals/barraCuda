@@ -7,7 +7,7 @@
 use super::BatchedEighGpu;
 use super::params::SingleDispatchParams;
 use crate::device::WgpuDevice;
-use crate::device::capabilities::{EigensolveStrategy, GpuDriverProfile};
+use crate::device::capabilities::{DeviceCapabilities, EigensolveStrategy};
 use crate::error::{BarracudaError, Result};
 use crate::shaders::precision::ShaderTemplate;
 use std::sync::Arc;
@@ -79,8 +79,8 @@ impl BatchedEighGpu {
         };
         let params_buffer = device.create_uniform_buffer("SingleDispatch Params", &params);
 
-        // Determine optimal wave/warp size from driver profile
-        let wave_size = match GpuDriverProfile::from_device(&device).optimal_eigensolve_strategy() {
+        let caps = DeviceCapabilities::from_device(&device);
+        let wave_size = match caps.optimal_eigensolve_strategy() {
             EigensolveStrategy::WarpPacked { wg_size } => wg_size,
             EigensolveStrategy::WavePacked { wave_size } => wave_size,
             EigensolveStrategy::Standard => 1,
@@ -234,7 +234,8 @@ impl BatchedEighGpu {
         let params_buffer =
             device.create_uniform_buffer("SingleDispatch Params (buffers)", &params);
 
-        let wave_size = match GpuDriverProfile::from_device(device).optimal_eigensolve_strategy() {
+        let caps = DeviceCapabilities::from_device(device);
+        let wave_size = match caps.optimal_eigensolve_strategy() {
             EigensolveStrategy::WarpPacked { wg_size } => wg_size,
             EigensolveStrategy::WavePacked { wave_size } => wave_size,
             EigensolveStrategy::Standard => 1,

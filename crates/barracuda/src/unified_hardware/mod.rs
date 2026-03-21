@@ -380,7 +380,7 @@ mod tests {
         assert!((BandwidthTier::PciE3x16.bandwidth_gbps() - 15.75).abs() < 0.01);
         assert!((BandwidthTier::PciE4x16.bandwidth_gbps() - 31.5).abs() < 0.01);
         assert!((BandwidthTier::PciE5x16.bandwidth_gbps() - 63.0).abs() < 0.01);
-        assert!(BandwidthTier::NvLink.bandwidth_gbps() > 200.0);
+        assert!(BandwidthTier::HighBandwidthInterconnect.bandwidth_gbps() > 200.0);
         assert!(BandwidthTier::SharedMemory.bandwidth_gbps() > 500.0);
     }
 
@@ -404,11 +404,11 @@ mod tests {
         );
         assert_eq!(
             BandwidthTier::detect_from_adapter_name("NVIDIA A100"),
-            BandwidthTier::NvLink
+            BandwidthTier::HighBandwidthInterconnect
         );
         assert_eq!(
             BandwidthTier::detect_from_adapter_name("NVIDIA H100"),
-            BandwidthTier::NvLink
+            BandwidthTier::HighBandwidthInterconnect
         );
     }
 

@@ -302,8 +302,8 @@ impl LatencyModel for AppleMLatencyModel {
 /// Returns a `Box<dyn LatencyModel>` — caller decides whether to keep it
 /// as a trait object or downcast.
 #[must_use]
-pub fn model_for_arch(arch: super::capabilities::GpuArch) -> Box<dyn LatencyModel> {
-    use super::capabilities::GpuArch;
+pub fn model_for_arch(arch: super::driver_profile::GpuArch) -> Box<dyn LatencyModel> {
+    use super::driver_profile::GpuArch;
     match arch {
         // All NVIDIA SM7x–SM12x share the 8-cycle DFMA pipeline
         GpuArch::Volta | GpuArch::Turing | GpuArch::Ampere | GpuArch::Ada | GpuArch::Blackwell => {
@@ -373,7 +373,7 @@ mod tests {
 
     #[test]
     fn test_model_for_arch() {
-        use super::super::capabilities::GpuArch;
+        use super::super::driver_profile::GpuArch;
         // Volta → SM70 model → 8-cycle DFMA
         let model = model_for_arch(GpuArch::Volta);
         assert_eq!(model.raw_latency(WgslOpClass::F64Fma), 8);

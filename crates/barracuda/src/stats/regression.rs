@@ -76,7 +76,10 @@ impl FitResult {
 ///
 /// Returns `None` if fewer than 2 points or the system is singular.
 #[must_use]
-#[expect(clippy::many_single_char_names, reason = "suppressed")]
+#[expect(
+    clippy::many_single_char_names,
+    reason = "standard statistical notation: n, x, y, sx, sy, sxx, sxy"
+)]
 pub fn fit_linear(x: &[f64], y: &[f64]) -> Option<FitResult> {
     let n = x.len() as f64;
     if x.len() < 2 || x.len() != y.len() {

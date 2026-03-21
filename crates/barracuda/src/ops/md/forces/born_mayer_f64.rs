@@ -11,9 +11,8 @@
 //! - Steric effects modeling
 
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::capabilities::{DeviceCapabilities, Fp64Strategy, WORKGROUP_SIZE_1D};
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::error::Result;
 use std::sync::Arc;
 
@@ -45,8 +44,8 @@ impl BornMayerForceF64 {
     }
 
     fn wgsl_shader_for_device(device: &WgpuDevice) -> String {
-        let profile = GpuDriverProfile::from_device(device);
-        let strategy = profile.fp64_strategy();
+        let caps = DeviceCapabilities::from_device(device);
+        let strategy = caps.fp64_strategy();
         tracing::info!(
             ?strategy,
             "BornMayer F64: using {:?} FP64 strategy",

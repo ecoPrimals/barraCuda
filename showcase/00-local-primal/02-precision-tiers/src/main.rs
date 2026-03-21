@@ -5,7 +5,7 @@
 //! mean+variance on the same dataset at each tier, comparing error bounds
 //! against a CPU f64 reference.
 
-use barracuda::device::{DeviceCapabilities, GpuDriverProfile, WgpuDevice};
+use barracuda::device::{DeviceCapabilities, WgpuDevice};
 use barracuda::ops::variance_f64_wgsl::VarianceF64;
 use barracuda::pipeline::GpuViewF32;
 use std::sync::Arc;
@@ -40,8 +40,7 @@ async fn main() -> barracuda::error::Result<()> {
     let device = WgpuDevice::new().await?;
     let device = Arc::new(device);
     let caps = DeviceCapabilities::from_device(&device);
-    let profile = GpuDriverProfile::from_device(&device);
-    let strategy = profile.fp64_strategy();
+    let strategy = caps.fp64_strategy();
 
     println!("  GPU:           {}", device.adapter_info().name);
     println!("  Fp64Strategy:  {strategy:?}");

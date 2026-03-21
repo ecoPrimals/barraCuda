@@ -297,7 +297,10 @@ async fn handle_line(primal: &BarraCudaPrimal, line: &str) -> Option<JsonRpcResp
 }
 
 #[cfg(test)]
-#[expect(clippy::unwrap_used, reason = "suppressed")]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions: unwrap is idiomatic for test code"
+)]
 mod tests {
     use super::*;
 

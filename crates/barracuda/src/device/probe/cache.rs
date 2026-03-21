@@ -52,33 +52,34 @@ pub fn cached_probe_result(device: &WgpuDevice) -> Option<bool> {
     lock_cache(&F64_EXP_PROBE_CACHE).get(&key).copied()
 }
 
-/// Pre-populate probe cache from device name heuristics before any GPU dispatch.
+/// Pre-populate probe cache from device heuristics before any GPU dispatch.
 ///
 /// Call this immediately after device creation to prime the cache without
 /// waiting for an async probe. The async probe overrides this when run.
+///
+/// Uses `DeviceCapabilities` for vendor-agnostic heuristic seeding.
+/// Note: `DeviceCapabilities` is constructed before the cache lock to avoid
+/// deadlock (it reads the cache internally via `cached_f64_builtins`).
 pub fn seed_cache_from_heuristics(device: &WgpuDevice) {
     let key = adapter_key(device);
+    let caps = crate::device::capabilities::DeviceCapabilities::from_device(device);
+    let heuristic = F64BuiltinCapabilities {
+        basic_f64: true,
+        exp: caps.has_reliable_f64(),
+        log: caps.has_reliable_f64(),
+        exp2: caps.has_reliable_f64(),
+        log2: caps.has_reliable_f64(),
+        sin: !caps.needs_sin_f64_workaround(),
+        cos: !caps.needs_cos_f64_workaround(),
+        sqrt: true,
+        fma: true,
+        abs_min_max: true,
+        shared_mem_f64: !device.is_nvk(),
+        df64_arith: true,
+        df64_transcendentals_safe: caps.df64_transcendentals_safe(),
+    };
     let mut cache = lock_cache(&F64_CAPS_CACHE);
-    cache.entry(key.clone()).or_insert_with(|| {
-        let exp_log_works = !device.needs_f64_exp_log_workaround();
-        let shared_mem_works = !device.is_nvk();
-        let is_nvidia_proprietary = device.is_nvidia_proprietary();
-        F64BuiltinCapabilities {
-            basic_f64: true,
-            exp: exp_log_works,
-            log: exp_log_works,
-            exp2: exp_log_works,
-            log2: exp_log_works,
-            sin: exp_log_works,
-            cos: exp_log_works,
-            sqrt: true,
-            fma: true,
-            abs_min_max: true,
-            shared_mem_f64: shared_mem_works,
-            df64_arith: true,
-            df64_transcendentals_safe: !is_nvidia_proprietary,
-        }
-    });
+    cache.entry(key.clone()).or_insert(heuristic);
     let exp_capable = cache.get(&key).is_some_and(|c| c.exp);
     drop(cache);
     lock_cache(&F64_EXP_PROBE_CACHE)

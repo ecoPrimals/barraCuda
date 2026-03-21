@@ -160,3 +160,46 @@ impl MultiSignalParams {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_roundtrip() {
+        let d = MultiSignalParams::default();
+        let r = MultiSignalParams::from_flat(&d.to_flat());
+        assert!(f64::abs(d.mu_max - r.mu_max) < 1e-15);
+        assert!(f64::abs(d.k_cap - r.k_cap) < 1e-15);
+        assert!(f64::abs(d.death_rate - r.death_rate) < 1e-15);
+        assert!(f64::abs(d.k_cai1_prod - r.k_cai1_prod) < 1e-15);
+        assert!(f64::abs(d.d_cai1 - r.d_cai1) < 1e-15);
+        assert!(f64::abs(d.k_cqs - r.k_cqs) < 1e-15);
+        assert!(f64::abs(d.k_ai2_prod - r.k_ai2_prod) < 1e-15);
+        assert!(f64::abs(d.d_ai2 - r.d_ai2) < 1e-15);
+        assert!(f64::abs(d.k_luxpq - r.k_luxpq) < 1e-15);
+        assert!(f64::abs(d.k_luxo_phos - r.k_luxo_phos) < 1e-15);
+        assert!(f64::abs(d.d_luxo_p - r.d_luxo_p) < 1e-15);
+        assert!(f64::abs(d.k_hapr_max - r.k_hapr_max) < 1e-15);
+        assert!(f64::abs(d.n_repress - r.n_repress) < 1e-15);
+        assert!(f64::abs(d.k_repress - r.k_repress) < 1e-15);
+        assert!(f64::abs(d.d_hapr - r.d_hapr) < 1e-15);
+        assert!(f64::abs(d.k_dgc_basal - r.k_dgc_basal) < 1e-15);
+        assert!(f64::abs(d.k_dgc_rep - r.k_dgc_rep) < 1e-15);
+        assert!(f64::abs(d.k_pde_basal - r.k_pde_basal) < 1e-15);
+        assert!(f64::abs(d.k_pde_act - r.k_pde_act) < 1e-15);
+        assert!(f64::abs(d.d_cdg - r.d_cdg) < 1e-15);
+        assert!(f64::abs(d.k_bio_max - r.k_bio_max) < 1e-15);
+        assert!(f64::abs(d.k_bio_cdg - r.k_bio_cdg) < 1e-15);
+        assert!(f64::abs(d.n_bio - r.n_bio) < 1e-15);
+        assert!(f64::abs(d.d_bio - r.d_bio) < 1e-15);
+    }
+
+    #[test]
+    fn test_flat_length() {
+        assert_eq!(
+            MultiSignalParams::default().to_flat().len(),
+            MULTI_SIGNAL_N_PARAMS
+        );
+    }
+}

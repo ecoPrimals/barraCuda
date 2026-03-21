@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 use super::*;
 
+use crate::multi_gpu::DeviceClass;
+
 #[test]
 fn test_quota_builder() {
     let quota = ResourceQuota::new()
         .with_max_vram_gb(4)
         .with_max_buffers(100)
-        .with_preferred_vendor(GpuVendor::Nvidia);
+        .with_preferred_class(DeviceClass::DiscreteGpu);
     assert_eq!(quota.max_vram_bytes, Some(4 * 1024 * 1024 * 1024));
     assert_eq!(quota.max_buffers, Some(100));
-    assert_eq!(quota.preferred_vendor, Some(GpuVendor::Nvidia));
+    assert_eq!(quota.preferred_class, Some(DeviceClass::DiscreteGpu));
 }
 
 #[test]
@@ -94,23 +96,23 @@ fn test_summary() {
 #[test]
 fn test_device_meets_requirements_min_vram() {
     let quota = ResourceQuota::new().with_min_vram_gb(4);
-    assert!(!quota.device_meets_requirements(2 * 1024 * 1024 * 1024, GpuVendor::Nvidia));
-    assert!(quota.device_meets_requirements(4 * 1024 * 1024 * 1024, GpuVendor::Nvidia));
-    assert!(quota.device_meets_requirements(8 * 1024 * 1024 * 1024, GpuVendor::Nvidia));
+    assert!(!quota.device_meets_requirements(2 * 1024 * 1024 * 1024, DeviceClass::DiscreteGpu));
+    assert!(quota.device_meets_requirements(4 * 1024 * 1024 * 1024, DeviceClass::DiscreteGpu));
+    assert!(quota.device_meets_requirements(8 * 1024 * 1024 * 1024, DeviceClass::DiscreteGpu));
 }
 
 #[test]
-fn test_device_meets_requirements_vendor_preference() {
-    let quota = ResourceQuota::new().with_preferred_vendor(GpuVendor::Nvidia);
-    assert!(quota.device_meets_requirements(4 * 1024 * 1024 * 1024, GpuVendor::Amd));
-    assert!(quota.device_meets_requirements(4 * 1024 * 1024 * 1024, GpuVendor::Nvidia));
+fn test_device_meets_requirements_class_preference() {
+    let quota = ResourceQuota::new().with_preferred_class(DeviceClass::DiscreteGpu);
+    assert!(quota.device_meets_requirements(4 * 1024 * 1024 * 1024, DeviceClass::IntegratedGpu));
+    assert!(quota.device_meets_requirements(4 * 1024 * 1024 * 1024, DeviceClass::DiscreteGpu));
 }
 
 #[test]
 fn test_device_meets_requirements_no_constraints() {
     let quota = ResourceQuota::new();
-    assert!(quota.device_meets_requirements(512 * 1024 * 1024, GpuVendor::Intel));
-    assert!(quota.device_meets_requirements(1024, GpuVendor::Unknown));
+    assert!(quota.device_meets_requirements(512 * 1024 * 1024, DeviceClass::IntegratedGpu));
+    assert!(quota.device_meets_requirements(1024, DeviceClass::Unknown));
 }
 
 #[test]

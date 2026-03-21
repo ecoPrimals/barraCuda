@@ -3,7 +3,7 @@
 
 use super::{BYTES_PER_GIB, estimate_gflops, estimate_vram_bytes};
 
-use super::topology::{GpuDriver, GpuVendor};
+use super::topology::DeviceClass;
 use super::types::{DeviceInfo, DeviceRequirements, WorkloadConfig};
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
@@ -119,17 +119,17 @@ impl MultiDevicePool {
         let mut device_busy = Vec::new();
 
         for (idx, adapter) in adapters.iter().enumerate() {
-            let vendor = GpuVendor::from_name(&adapter.name);
-            if config.exclude_software && vendor == GpuVendor::Software {
+            let device_class = DeviceClass::from_device_type(adapter.device_type, &adapter.name);
+            if config.exclude_software && device_class == DeviceClass::Software {
                 continue;
             }
 
             let is_likely_discrete = adapter.device_type == wgpu::DeviceType::DiscreteGpu
                 || (adapter.device_type == wgpu::DeviceType::Other
-                    && (vendor == GpuVendor::Nvidia || vendor == GpuVendor::Amd));
+                    && device_class == DeviceClass::DiscreteGpu);
 
-            let estimated_gflops = estimate_gflops(vendor, adapter.device_type);
-            let estimated_vram = estimate_vram_bytes(vendor, adapter.device_type);
+            let estimated_gflops = estimate_gflops(device_class, adapter.device_type);
+            let estimated_vram = estimate_vram_bytes(device_class, adapter.device_type);
 
             if estimated_gflops < config.min_gflops {
                 continue;
@@ -153,21 +153,17 @@ impl MultiDevicePool {
                     let allocations = Arc::new(std::sync::atomic::AtomicUsize::new(0));
                     let allocated_bytes = Arc::new(std::sync::atomic::AtomicU64::new(0));
 
-                    let driver = GpuDriver::from_adapter_info(
-                        &adapter.name,
-                        &adapter.driver,
-                        &adapter.driver_info,
-                    );
+                    let f64_builtins = !device.needs_f64_exp_log_workaround();
 
                     info.push(DeviceInfo {
                         index: idx,
                         pool_index: 0,
                         name: Arc::from(adapter.name.as_str()),
-                        vendor,
-                        driver,
+                        device_class,
                         vram_bytes: estimated_vram,
                         estimated_gflops,
                         is_discrete: is_likely_discrete,
+                        f64_builtins_available: f64_builtins,
                         allocations: allocations.clone(),
                         allocated_bytes: allocated_bytes.clone(),
                         busy: busy.clone(),
@@ -216,7 +212,7 @@ impl MultiDevicePool {
             tracing::info!(
                 "  - {} ({:?}, ~{:.0} GFLOPS, ~{} GB VRAM)",
                 di.name,
-                di.vendor,
+                di.device_class,
                 di.estimated_gflops,
                 di.vram_bytes / BYTES_PER_GIB
             );
@@ -347,17 +343,11 @@ impl MultiDevicePool {
             .sum();
         let total_gflops: f64 = self.inner.info.iter().map(|d| d.estimated_gflops).sum();
 
-        let nvidia_count = self
+        let discrete_count = self
             .inner
             .info
             .iter()
-            .filter(|d| d.vendor == GpuVendor::Nvidia)
-            .count();
-        let amd_count = self
-            .inner
-            .info
-            .iter()
-            .filter(|d| d.vendor == GpuVendor::Amd)
+            .filter(|d| d.device_class == DeviceClass::DiscreteGpu)
             .count();
         let busy_count = self
             .inner
@@ -367,10 +357,9 @@ impl MultiDevicePool {
             .count();
 
         format!(
-            "{} GPUs ({} NVIDIA, {} AMD), ~{:.0} GFLOPS, ~{} GB total VRAM ({} GB allocated), {} busy",
+            "{} GPUs ({} discrete), ~{:.0} GFLOPS, ~{} GB total VRAM ({} GB allocated), {} busy",
             self.inner.devices.len(),
-            nvidia_count,
-            amd_count,
+            discrete_count,
             total_gflops,
             total_vram / BYTES_PER_GIB,
             allocated_vram / BYTES_PER_GIB,
@@ -391,7 +380,7 @@ impl MultiDevicePool {
                     "[{}] {} ({:?}): {:.1}% used, {} allocations, {}",
                     i,
                     info.name,
-                    info.vendor,
+                    info.device_class,
                     info.usage_percent(),
                     info.allocation_count(),
                     if busy { "BUSY" } else { "available" }

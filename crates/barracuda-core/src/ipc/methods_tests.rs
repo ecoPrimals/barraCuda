@@ -1,16 +1,156 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-use super::super::jsonrpc::METHOD_NOT_FOUND;
-use super::compute::compute_dispatch;
-use super::device::list as device_list;
+use super::super::jsonrpc::{INTERNAL_ERROR, METHOD_NOT_FOUND};
+use super::compute::{compute_dispatch, parse_shape};
+use super::device::{list as device_list, probe as device_probe};
 use super::dispatch;
 use super::fhe::{fhe_ntt, fhe_pointwise_mul};
 use super::health::{health_check, tolerances_get, validate_gpu_stack};
+use super::primal::{capabilities, info};
 use super::tensor::{tensor_create, tensor_matmul};
+use super::{REGISTERED_METHODS, method_suffix};
 use crate::BarraCudaPrimal;
 
 fn test_primal() -> BarraCudaPrimal {
     BarraCudaPrimal::new()
 }
+
+// ── parse_shape helper ──────────────────────────────────────────────────
+
+#[test]
+fn parse_shape_valid() {
+    let arr = vec![
+        serde_json::json!(2),
+        serde_json::json!(3),
+        serde_json::json!(4),
+    ];
+    let shape = parse_shape(&arr).expect("valid shape");
+    assert_eq!(shape, vec![2, 3, 4]);
+}
+
+#[test]
+fn parse_shape_single_element() {
+    let arr = vec![serde_json::json!(128)];
+    assert_eq!(parse_shape(&arr), Some(vec![128]));
+}
+
+#[test]
+fn parse_shape_empty() {
+    let arr: Vec<serde_json::Value> = vec![];
+    assert_eq!(parse_shape(&arr), Some(vec![]));
+}
+
+#[test]
+fn parse_shape_with_non_numeric() {
+    let arr = vec![serde_json::json!(2), serde_json::json!("bad")];
+    let shape = parse_shape(&arr);
+    assert!(
+        shape.is_none() || shape.as_ref().is_some_and(|s| s.len() < 2),
+        "non-numeric values should be filtered out"
+    );
+}
+
+// ── method_suffix and REGISTERED_METHODS ────────────────────────────────
+
+#[test]
+fn method_suffix_strips_namespace() {
+    let full = format!("{}.device.list", crate::PRIMAL_NAMESPACE);
+    assert_eq!(method_suffix(&full), Some("device.list"));
+}
+
+#[test]
+fn method_suffix_returns_none_for_foreign() {
+    assert_eq!(method_suffix("other_primal.device.list"), None);
+}
+
+#[test]
+fn method_suffix_returns_none_for_empty() {
+    assert_eq!(method_suffix(""), None);
+}
+
+#[test]
+fn registered_methods_count() {
+    assert_eq!(REGISTERED_METHODS.len(), 12);
+}
+
+#[test]
+fn registered_methods_all_namespaced() {
+    let ns = crate::PRIMAL_NAMESPACE;
+    for method in REGISTERED_METHODS.iter() {
+        assert!(
+            method.starts_with(ns),
+            "method {method} should start with {ns}"
+        );
+    }
+}
+
+// ── primal.info and primal.capabilities (no GPU needed) ─────────────────
+
+#[test]
+fn test_primal_info() {
+    let primal = test_primal();
+    let resp = info(&primal, serde_json::json!(100));
+    let result = resp.result.expect("primal.info should always succeed");
+    assert_eq!(result["primal"], "barraCuda");
+    assert_eq!(result["protocol"], "json-rpc-2.0");
+    assert_eq!(result["namespace"], "barracuda");
+    assert_eq!(result["license"], "AGPL-3.0-or-later");
+    assert!(result["version"].is_string());
+}
+
+#[test]
+fn test_primal_capabilities_no_gpu() {
+    let primal = test_primal();
+    let resp = capabilities(&primal, serde_json::json!(101));
+    let result = resp
+        .result
+        .expect("primal.capabilities should always succeed");
+    assert!(result["provides"].is_array());
+    assert!(result["requires"].is_array());
+    assert!(result["domains"].is_array());
+    assert!(result["methods"].is_array());
+    assert_eq!(result["hardware"]["gpu_available"], false);
+    assert_eq!(result["hardware"]["f64_shaders"], false);
+    assert_eq!(result["hardware"]["spirv_passthrough"], false);
+}
+
+// ── primal.info and primal.capabilities via dispatch ────────────────────
+
+#[tokio::test]
+async fn test_dispatch_primal_info() {
+    let primal = test_primal();
+    let method = format!("{}.primal.info", crate::PRIMAL_NAMESPACE);
+    let resp = dispatch(
+        &primal,
+        &method,
+        &serde_json::json!({}),
+        serde_json::json!(110),
+    )
+    .await;
+    assert!(
+        resp.result.is_some(),
+        "primal.info should succeed via dispatch"
+    );
+    assert_eq!(resp.result.unwrap()["primal"], "barraCuda");
+}
+
+#[tokio::test]
+async fn test_dispatch_primal_capabilities() {
+    let primal = test_primal();
+    let method = format!("{}.primal.capabilities", crate::PRIMAL_NAMESPACE);
+    let resp = dispatch(
+        &primal,
+        &method,
+        &serde_json::json!({}),
+        serde_json::json!(111),
+    )
+    .await;
+    assert!(
+        resp.result.is_some(),
+        "primal.capabilities should succeed via dispatch"
+    );
+}
+
+// ── device.list and device.probe ────────────────────────────────────────
 
 #[tokio::test]
 async fn test_device_list_no_gpu() {
@@ -22,10 +162,23 @@ async fn test_device_list_no_gpu() {
 }
 
 #[tokio::test]
+async fn test_device_probe_no_gpu() {
+    let primal = test_primal();
+    let resp = device_probe(&primal, serde_json::json!(120)).await;
+    let result = resp.result.expect("device.probe always returns success");
+    assert_eq!(result["available"], false);
+    assert!(result["reason"].is_string());
+}
+
+// ── health and tolerances ───────────────────────────────────────────────
+
+#[tokio::test]
 async fn test_health_check() {
     let primal = test_primal();
     let resp = health_check(&primal, serde_json::json!(2)).await;
     assert!(resp.result.is_some());
+    let result = resp.result.unwrap();
+    assert_eq!(result["name"], "barraCuda");
 }
 
 #[test]
@@ -42,6 +195,50 @@ fn test_tolerances_fhe() {
     assert_eq!(result["abs_tol"], 0.0);
     assert_eq!(result["rel_tol"], 0.0);
 }
+
+#[test]
+fn test_tolerances_double_alias() {
+    let resp = tolerances_get(
+        &serde_json::json!({"name": "double"}),
+        serde_json::json!(130),
+    );
+    let result = resp.result.unwrap();
+    assert_eq!(result["name"], "double");
+    assert!(result["abs_tol"].as_f64().unwrap() > 0.0);
+}
+
+#[test]
+fn test_tolerances_emulated_double_alias() {
+    let resp = tolerances_get(
+        &serde_json::json!({"name": "emulated_double"}),
+        serde_json::json!(131),
+    );
+    let result = resp.result.unwrap();
+    assert_eq!(result["name"], "emulated_double");
+}
+
+#[test]
+fn test_tolerances_float_alias() {
+    let resp = tolerances_get(
+        &serde_json::json!({"name": "float"}),
+        serde_json::json!(132),
+    );
+    let result = resp.result.unwrap();
+    assert_eq!(result["name"], "float");
+}
+
+#[test]
+fn test_tolerances_unknown_returns_defaults() {
+    let resp = tolerances_get(
+        &serde_json::json!({"name": "some_unknown_precision"}),
+        serde_json::json!(133),
+    );
+    let result = resp.result.unwrap();
+    assert!(result["abs_tol"].as_f64().unwrap() > 0.0);
+    assert!(result["rel_tol"].as_f64().unwrap() > 0.0);
+}
+
+// ── dispatch routing ────────────────────────────────────────────────────
 
 #[tokio::test]
 async fn test_dispatch_routing() {
@@ -68,11 +265,31 @@ async fn test_dispatch_routing() {
 }
 
 #[tokio::test]
+async fn test_dispatch_wrong_namespace() {
+    let primal = test_primal();
+    let resp = dispatch(
+        &primal,
+        "other_primal.device.list",
+        &serde_json::json!({}),
+        serde_json::json!(140),
+    )
+    .await;
+    assert!(resp.error.is_some());
+    assert_eq!(resp.error.unwrap().code, METHOD_NOT_FOUND);
+}
+
+// ── validate ────────────────────────────────────────────────────────────
+
+#[tokio::test]
 async fn test_validate_no_gpu() {
     let primal = test_primal();
     let resp = validate_gpu_stack(&primal, serde_json::json!(10)).await;
     assert!(resp.error.is_some());
+    let err = resp.error.unwrap();
+    assert_eq!(err.code, INTERNAL_ERROR);
 }
+
+// ── compute.dispatch error paths ────────────────────────────────────────
 
 #[tokio::test]
 async fn test_compute_dispatch_no_gpu() {
@@ -84,14 +301,55 @@ async fn test_compute_dispatch_no_gpu() {
     )
     .await;
     assert!(resp.error.is_some());
+    assert_eq!(resp.error.unwrap().code, INTERNAL_ERROR);
 }
 
 #[tokio::test]
 async fn test_compute_dispatch_missing_op() {
     let primal = test_primal();
     let resp = compute_dispatch(&primal, &serde_json::json!({}), serde_json::json!(12)).await;
-    assert!(resp.error.is_some()); // INTERNAL_ERROR (no GPU) or INVALID_PARAMS
+    assert!(resp.error.is_some());
 }
+
+#[tokio::test]
+async fn test_compute_dispatch_ones_no_gpu() {
+    let primal = test_primal();
+    let resp = compute_dispatch(
+        &primal,
+        &serde_json::json!({"op": "ones", "shape": [2, 3]}),
+        serde_json::json!(150),
+    )
+    .await;
+    assert!(resp.error.is_some());
+    assert_eq!(resp.error.unwrap().code, INTERNAL_ERROR);
+}
+
+#[tokio::test]
+async fn test_compute_dispatch_read_no_gpu() {
+    let primal = test_primal();
+    let resp = compute_dispatch(
+        &primal,
+        &serde_json::json!({"op": "read", "tensor_id": "nonexistent"}),
+        serde_json::json!(151),
+    )
+    .await;
+    assert!(resp.error.is_some());
+    assert_eq!(resp.error.unwrap().code, INTERNAL_ERROR);
+}
+
+#[tokio::test]
+async fn test_compute_dispatch_unknown_op_no_gpu() {
+    let primal = test_primal();
+    let resp = compute_dispatch(
+        &primal,
+        &serde_json::json!({"op": "unknown_operation"}),
+        serde_json::json!(152),
+    )
+    .await;
+    assert!(resp.error.is_some());
+}
+
+// ── tensor error paths ──────────────────────────────────────────────────
 
 #[tokio::test]
 async fn test_tensor_create_no_gpu() {
@@ -103,13 +361,14 @@ async fn test_tensor_create_no_gpu() {
     )
     .await;
     assert!(resp.error.is_some());
+    assert_eq!(resp.error.unwrap().code, INTERNAL_ERROR);
 }
 
 #[tokio::test]
 async fn test_tensor_create_missing_shape() {
     let primal = test_primal();
     let resp = tensor_create(&primal, &serde_json::json!({}), serde_json::json!(14)).await;
-    assert!(resp.error.is_some()); // INTERNAL_ERROR (no GPU) or INVALID_PARAMS
+    assert!(resp.error.is_some());
 }
 
 #[tokio::test]
@@ -122,14 +381,34 @@ async fn test_tensor_matmul_no_gpu() {
     )
     .await;
     assert!(resp.error.is_some());
+    assert_eq!(resp.error.unwrap().code, INTERNAL_ERROR);
 }
 
 #[tokio::test]
-async fn test_tensor_matmul_missing_params() {
+async fn test_tensor_matmul_missing_lhs() {
     let primal = test_primal();
-    let resp = tensor_matmul(&primal, &serde_json::json!({}), serde_json::json!(16)).await;
-    assert!(resp.error.is_some()); // INTERNAL_ERROR (no GPU) or INVALID_PARAMS
+    let resp = tensor_matmul(
+        &primal,
+        &serde_json::json!({"rhs_id": "b"}),
+        serde_json::json!(160),
+    )
+    .await;
+    assert!(resp.error.is_some());
 }
+
+#[tokio::test]
+async fn test_tensor_matmul_missing_rhs() {
+    let primal = test_primal();
+    let resp = tensor_matmul(
+        &primal,
+        &serde_json::json!({"lhs_id": "a"}),
+        serde_json::json!(161),
+    )
+    .await;
+    assert!(resp.error.is_some());
+}
+
+// ── FHE error paths ─────────────────────────────────────────────────────
 
 #[tokio::test]
 async fn test_fhe_ntt_no_gpu() {
@@ -141,13 +420,62 @@ async fn test_fhe_ntt_no_gpu() {
     )
     .await;
     assert!(resp.error.is_some());
+    assert_eq!(resp.error.unwrap().code, INTERNAL_ERROR);
+}
+
+#[tokio::test]
+async fn test_fhe_ntt_missing_modulus() {
+    let primal = test_primal();
+    let resp = fhe_ntt(
+        &primal,
+        &serde_json::json!({"degree": 4, "root_of_unity": 4, "coefficients": [1, 2, 3, 4]}),
+        serde_json::json!(170),
+    )
+    .await;
+    assert!(resp.error.is_some());
+}
+
+#[tokio::test]
+async fn test_fhe_ntt_missing_degree() {
+    let primal = test_primal();
+    let resp = fhe_ntt(
+        &primal,
+        &serde_json::json!({"modulus": 17, "root_of_unity": 4, "coefficients": [1, 2, 3, 4]}),
+        serde_json::json!(171),
+    )
+    .await;
+    assert!(resp.error.is_some());
+}
+
+#[tokio::test]
+async fn test_fhe_ntt_missing_root_of_unity() {
+    let primal = test_primal();
+    let resp = fhe_ntt(
+        &primal,
+        &serde_json::json!({"modulus": 17, "degree": 4, "coefficients": [1, 2, 3, 4]}),
+        serde_json::json!(172),
+    )
+    .await;
+    assert!(resp.error.is_some());
+}
+
+#[tokio::test]
+async fn test_fhe_ntt_missing_coefficients() {
+    let primal = test_primal();
+    let resp = fhe_ntt(
+        &primal,
+        &serde_json::json!({"modulus": 17, "degree": 4, "root_of_unity": 4}),
+        serde_json::json!(173),
+    )
+    .await;
+    assert!(resp.error.is_some());
 }
 
 #[tokio::test]
 async fn test_fhe_ntt_missing_params() {
     let primal = test_primal();
     let resp = fhe_ntt(&primal, &serde_json::json!({}), serde_json::json!(18)).await;
-    assert!(resp.error.is_some()); // INTERNAL_ERROR (no GPU) or INVALID_PARAMS
+    assert!(resp.error.is_some());
 }
 
 #[tokio::test]
@@ -160,20 +488,49 @@ async fn test_fhe_pointwise_mul_no_gpu() {
     )
     .await;
     assert!(resp.error.is_some());
+    assert_eq!(resp.error.unwrap().code, INTERNAL_ERROR);
+}
+
+#[tokio::test]
+async fn test_fhe_pointwise_mul_missing_a() {
+    let primal = test_primal();
+    let resp = fhe_pointwise_mul(
+        &primal,
+        &serde_json::json!({"modulus": 17, "degree": 4, "b": [5, 6, 7, 8]}),
+        serde_json::json!(180),
+    )
+    .await;
+    assert!(resp.error.is_some());
+}
+
+#[tokio::test]
+async fn test_fhe_pointwise_mul_missing_b() {
+    let primal = test_primal();
+    let resp = fhe_pointwise_mul(
+        &primal,
+        &serde_json::json!({"modulus": 17, "degree": 4, "a": [1, 2, 3, 4]}),
+        serde_json::json!(181),
+    )
+    .await;
+    assert!(resp.error.is_some());
 }
 
 #[tokio::test]
 async fn test_fhe_pointwise_mul_missing_params() {
     let primal = test_primal();
     let resp = fhe_pointwise_mul(&primal, &serde_json::json!({}), serde_json::json!(20)).await;
-    assert!(resp.error.is_some()); // INTERNAL_ERROR (no GPU) or INVALID_PARAMS
+    assert!(resp.error.is_some());
 }
+
+// ── all routes ──────────────────────────────────────────────────────────
 
 #[tokio::test]
 async fn test_all_dispatch_routes_exist() {
     let primal = test_primal();
     let ns = crate::PRIMAL_NAMESPACE;
     let suffixes = [
+        "primal.info",
+        "primal.capabilities",
         "device.list",
         "device.probe",
         "health.check",
@@ -200,8 +557,10 @@ async fn test_all_dispatch_routes_exist() {
     }
 }
 
+// ── tolerances comprehensive ────────────────────────────────────────────
+
 #[test]
-#[expect(clippy::float_cmp, reason = "tests")]
+#[expect(clippy::float_cmp, reason = "exact tolerance comparison in test")]
 fn test_tolerances_all_precisions() {
     for (name, abs_tol) in [("fhe", 0.0), ("f64", 1e-12), ("f32", 1e-5), ("df64", 1e-10)] {
         let resp = tolerances_get(&serde_json::json!({"name": name}), serde_json::json!(name));
@@ -209,6 +568,8 @@ fn test_tolerances_all_precisions() {
         assert_eq!(result["abs_tol"].as_f64().unwrap(), abs_tol);
     }
 }
+
+// ── tensor store ────────────────────────────────────────────────────────
 
 #[test]
 fn test_tensor_store() {

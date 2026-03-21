@@ -27,7 +27,7 @@
 //!   `BARRACUDA_GPU_ADAPTER=0`     cargo run --release --bin `bench_wgsize_nvk`
 
 use barracuda::device::WgpuDevice;
-use barracuda::device::capabilities::{DriverKind, GpuDriverProfile};
+use barracuda::device::capabilities::DeviceCapabilities;
 use barracuda::ops::linalg::BatchedEighGpu;
 use std::f64::consts::PI;
 use std::sync::Arc;
@@ -79,31 +79,27 @@ async fn main() {
         std::process::exit(1);
     }
 
-    // ── Print driver profile ──────────────────────────────────────────────
-    let profile = GpuDriverProfile::from_device(&device);
-    println!("{profile}");
+    // ── Print device capabilities ─────────────────────────────────────────
+    let caps = DeviceCapabilities::from_device(&device);
+    println!("{caps}");
 
     println!("Expected behavior:");
-    match profile.driver {
-        DriverKind::Nvk => {
-            println!("  NVK/NAK: warp-packing gives ~2.2x speedup (batch=512, dim=30).");
-            println!("  NAK wastes 31/32 SIMD lanes with wg1. wp32 fills the full warp.");
-            println!("  Remaining gap (~9x vs proprietary) is NAK compiler deficiency.");
-            println!("  Evolution: contribute SM70 latency tables + f64 FMA to Mesa NAK.");
-        }
-        DriverKind::NvidiaProprietary => {
-            println!("  Proprietary PTXAS handles wg1 efficiently — warp-packing is neutral.");
-            println!("  Results should be ~same as wg1 baseline.");
-        }
-        DriverKind::Radv => {
-            println!("  RADV/ACO (RDNA2/3): ACO uses wave32 mode for compute by default.");
-            println!("  wg_size=32 is empirically optimal (RX 6950 XT: 67ms vs 117ms for wg64).");
-            println!("  AMD RX 6950 XT beats RTX 3090 on f64: 1:4 ratio vs 1:64 throttling.");
-            println!("  ACO/RADV faster than proprietary for f64-heavy workloads on RDNA2.");
-        }
-        _ => {
-            println!("  Unknown driver — results are informational.");
-        }
+    let name_lower = caps.device_name.to_lowercase();
+    if device.is_nvk() {
+        println!("  NVK/NAK: warp-packing gives ~2.2x speedup (batch=512, dim=30).");
+        println!("  NAK wastes 31/32 SIMD lanes with wg1. wp32 fills the full warp.");
+        println!("  Remaining gap (~9x vs proprietary) is NAK compiler deficiency.");
+        println!("  Evolution: contribute SM70 latency tables + f64 FMA to Mesa NAK.");
+    } else if device.is_nvidia_proprietary() {
+        println!("  Proprietary PTXAS handles wg1 efficiently — warp-packing is neutral.");
+        println!("  Results should be ~same as wg1 baseline.");
+    } else if device.is_radv() || name_lower.contains("amd") || name_lower.contains("radeon") {
+        println!("  RADV/ACO (RDNA2/3): ACO uses wave32 mode for compute by default.");
+        println!("  wg_size=32 is empirically optimal (RX 6950 XT: 67ms vs 117ms for wg64).");
+        println!("  AMD RX 6950 XT beats RTX 3090 on f64: 1:4 ratio vs 1:64 throttling.");
+        println!("  ACO/RADV faster than proprietary for f64-heavy workloads on RDNA2.");
+    } else {
+        println!("  Unknown driver — results are informational.");
     }
     println!();
 

@@ -6,7 +6,7 @@
 
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
-use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
+use crate::device::capabilities::{DeviceCapabilities, Fp64Strategy};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, create_f64_data_pipeline};
 use crate::device::tensor_context::get_device_context;
 use crate::error::Result;
@@ -20,8 +20,8 @@ const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
 /// On Hybrid devices the native f64 shader may silently produce zeros,
 /// so we require the DF64 rewrite to succeed rather than falling back.
 fn shader_for_device(device: &WgpuDevice) -> Result<&'static str> {
-    let profile = GpuDriverProfile::from_device(device);
-    match profile.fp64_strategy() {
+    let caps = DeviceCapabilities::from_device(device);
+    match caps.fp64_strategy() {
         Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => Ok(SHADER),
         Fp64Strategy::Hybrid => {
             static DF64_RESULT: std::sync::LazyLock<std::result::Result<String, Arc<str>>> =

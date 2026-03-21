@@ -78,9 +78,11 @@ pub async fn probe_f64_builtins(device: &WgpuDevice) -> F64BuiltinCapabilities {
         }
     }
 
-    let profile = crate::device::driver_profile::GpuDriverProfile::from_device(device);
     caps.df64_arith = true;
-    caps.df64_transcendentals_safe = !profile.has_df64_spir_v_poisoning();
+    // naga WGSL→SPIR-V codegen zeroes DF64 transcendentals on all Vulkan
+    // backends (root cause: naga, not driver JIT — hotSpring Exp 055).
+    // Safe only when sovereign compilation (coralReef) bypasses naga.
+    caps.df64_transcendentals_safe = false;
 
     insert_full_caps(key, caps);
     caps

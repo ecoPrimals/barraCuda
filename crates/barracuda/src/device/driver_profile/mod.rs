@@ -162,21 +162,14 @@ pub enum PrecisionRoutingAdvice {
 
 /// Unified GPU driver profile for data-driven shader specialisation.
 ///
-/// Consolidates driver detection, compiler quality knowledge, and known
-/// workarounds. Query this instead of string-matching device names at
-/// dispatch time.
-///
-/// ## Construction
-///
-/// ```rust,no_run
-/// # use barracuda::device::{WgpuDevice, driver_profile::GpuDriverProfile};
-/// # async fn example() -> barracuda::error::Result<()> {
-/// let device = WgpuDevice::new().await?;
-/// let profile = GpuDriverProfile::from_device(&device);
-/// println!("{profile}");
-/// # Ok(())
-/// # }
-/// ```
+/// **Deprecated**: Use [`super::capabilities::DeviceCapabilities`] instead.
+/// All consumers were migrated in Sprint 14 (Vendor-Agnostic Evolution).
+/// This struct is retained for its internal test suite and as a reference
+/// for the migration.
+#[deprecated(
+    since = "0.3.6",
+    note = "Use DeviceCapabilities instead. All consumers migrated in Sprint 14."
+)]
 #[derive(Debug, Clone)]
 pub struct GpuDriverProfile {
     /// Driver identity
@@ -193,6 +186,7 @@ pub struct GpuDriverProfile {
     pub(crate) adapter_key: String,
 }
 
+#[allow(deprecated)]
 impl GpuDriverProfile {
     /// Build a driver profile from a `WgpuDevice` using runtime detection.
     #[must_use]
@@ -652,6 +646,7 @@ impl GpuDriverProfile {
     }
 }
 
+#[allow(deprecated)]
 impl fmt::Display for GpuDriverProfile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "GPU Driver Profile:")?;

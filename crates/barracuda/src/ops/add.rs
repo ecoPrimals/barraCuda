@@ -3,8 +3,8 @@
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation (universal compute)
-//! - ✅ Capability-based dispatch (vendor ID, not string matching)
-//! - ✅ Vendor-specific workgroup sizes (NVIDIA: 64, AMD: 128)
+//! - ✅ Capability-based dispatch (hardware limits, not vendor IDs)
+//! - ✅ Workgroup sizing from wgpu device limits
 //! - ✅ Pipeline caching (compile once, dispatch many)
 //! - ✅ Buffer pooling (zero allocation after warmup)
 //!
@@ -46,9 +46,6 @@ const WGSL_VECTORADD_F64: &str = include_str!("../shaders/math/vectoradd_f64.wgs
 pub static WGSL_VECTORADD: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| WGSL_VECTORADD_F64.to_string());
 
-// Vendor IDs for capability-based dispatch (no string matching)
-use crate::device::vendor::{VENDOR_AMD, VENDOR_NVIDIA};
-
 /// Element-wise addition operation
 pub struct Add {
     lhs: Tensor,
@@ -70,44 +67,30 @@ impl Add {
         Ok(Self { lhs, rhs })
     }
 
-    /// Select vendor-optimized shader based on GPU capabilities and tensor size
-    /// **Deep Debt Evolution**: Uses vendor ID (not string matching) for reliable detection
-    /// Benchmarks show:
-    /// - NVIDIA: WG=64 is 3x faster than WG=256
-    /// - AMD: WG=128 is 2x faster than WG=64
-    ///   Note: wgpu limits dispatch to 65535 workgroups per dimension,
-    ///   so for very large tensors we use larger workgroup sizes.
+    /// Select shader variant based on hardware capabilities.
+    ///
+    /// Workgroup size is chosen from the device's reported limits (vendor-agnostic).
+    /// The largest supported workgroup size is preferred for throughput; smaller
+    /// variants avoid exceeding dispatch constraints on large tensors.
     fn wgsl_shader(caps: &DeviceCapabilities, size: usize) -> (&'static str, u32) {
-        // Calculate workgroup size based on tensor size to stay within dispatch limits
-        let max_dispatch = 65535u32;
+        let max_inv = caps.max_compute_invocations_per_workgroup;
+        let max_dispatch = caps.max_compute_workgroups.0;
+        let default: &'static str = &SHADER_DEFAULT;
 
-        // Optimal sizes from benchmarks
-        let (nvidia_wg, amd_wg) = (64u32, 128u32);
+        let (shader, wg) = if max_inv >= 256 {
+            (default, 256u32)
+        } else if max_inv >= 128 {
+            (SHADER_WG128, 128u32)
+        } else {
+            (SHADER_WG64, 64u32)
+        };
 
-        // Capability-based vendor detection (no string matching)
-        match caps.vendor {
-            VENDOR_NVIDIA => {
-                let needed_workgroups = (size as u32).div_ceil(nvidia_wg);
-                if needed_workgroups <= max_dispatch {
-                    (SHADER_WG64, nvidia_wg)
-                } else {
-                    // Fall back to larger workgroup for huge tensors
-                    (&*SHADER_DEFAULT, 256)
-                }
-            }
-            VENDOR_AMD => {
-                let needed_workgroups = (size as u32).div_ceil(amd_wg);
-                if needed_workgroups <= max_dispatch {
-                    (SHADER_WG128, amd_wg)
-                } else {
-                    (&*SHADER_DEFAULT, 256)
-                }
-            }
-            _ => {
-                // Unknown vendor - use safe default
-                (&*SHADER_DEFAULT, 256)
-            }
+        let needed = (size as u32).div_ceil(wg);
+        if needed > max_dispatch && max_inv >= 256 {
+            return (default, 256);
         }
+
+        (shader, wg)
     }
 
     /// Execute addition on tensors

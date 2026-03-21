@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Basic GPU pool with round-robin workload routing and semaphore-based concurrency.
 
-use super::topology::{GpuDriver, GpuInfo, GpuVendor, WorkloadType};
+use super::topology::{DeviceClass, GpuInfo, WorkloadType};
 use super::types::WorkloadConfig;
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
@@ -33,30 +33,26 @@ impl GpuPool {
         let mut info = Vec::new();
 
         for (idx, adapter) in adapters.iter().enumerate() {
-            let vendor = GpuVendor::from_name(&adapter.name);
-            if config.exclude_software && vendor == GpuVendor::Software {
+            let device_class = DeviceClass::from_device_type(adapter.device_type, &adapter.name);
+            if config.exclude_software && device_class == DeviceClass::Software {
                 continue;
             }
 
-            let gflops = super::estimate_gflops(vendor, adapter.device_type);
+            let gflops = super::estimate_gflops(device_class, adapter.device_type);
 
             if gflops < config.min_gflops {
                 continue;
             }
 
             if let Ok(device) = WgpuDevice::from_adapter_index(idx).await {
-                let driver = GpuDriver::from_adapter_info(
-                    &adapter.name,
-                    &adapter.driver,
-                    &adapter.driver_info,
-                );
+                let f64_builtins = !device.needs_f64_exp_log_workaround();
                 info.push(GpuInfo {
                     index: idx,
                     name: adapter.name.clone(),
-                    vendor,
-                    driver,
+                    device_class,
                     gflops,
                     busy: false,
+                    f64_builtins_available: f64_builtins,
                 });
                 devices.push(Arc::new(device));
             }
@@ -76,10 +72,9 @@ impl GpuPool {
         tracing::info!("GPU pool initialized with {} devices", sorted_devices.len());
         for gi in &sorted_info {
             tracing::info!(
-                "  - {} ({:?}, {:?}, ~{:.0} GFLOPS)",
+                "  - {} ({:?}, ~{:.0} GFLOPS)",
                 gi.name,
-                gi.vendor,
-                gi.driver,
+                gi.device_class,
                 gi.gflops
             );
         }
@@ -238,22 +233,16 @@ impl GpuPool {
     #[must_use]
     pub fn summary(&self) -> String {
         let total_gflops: f64 = self.info.iter().map(|g| g.gflops).sum();
-        let nvidia_count = self
+        let discrete_count = self
             .info
             .iter()
-            .filter(|g| g.vendor == GpuVendor::Nvidia)
-            .count();
-        let amd_count = self
-            .info
-            .iter()
-            .filter(|g| g.vendor == GpuVendor::Amd)
+            .filter(|g| g.device_class == DeviceClass::DiscreteGpu)
             .count();
 
         format!(
-            "{} GPUs ({} NVIDIA, {} AMD), ~{:.0} GFLOPS total",
+            "{} GPUs ({} discrete), ~{:.0} GFLOPS total",
             self.devices.len(),
-            nvidia_count,
-            amd_count,
+            discrete_count,
             total_gflops
         )
     }

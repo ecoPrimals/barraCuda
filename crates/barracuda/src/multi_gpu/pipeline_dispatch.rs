@@ -23,7 +23,7 @@ use crate::device::substrate::{Substrate, SubstrateCapability, SubstrateType};
 /// Transfer strategy between pipeline stages.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransferStrategy {
-    /// Direct peer-to-peer DMA (NPU↔GPU via `PCIe`, GPU↔GPU via `NvLink`).
+    /// Direct peer-to-peer DMA (NPU↔GPU via `PCIe`, GPU↔GPU via high-BW interconnect).
     PeerToPeer,
     /// Bounce through CPU host memory.
     HostBounce,
@@ -307,10 +307,8 @@ fn route_workload<'a>(
             .all(|cap| sub.has(cap))
         {
             let priority = match sub.substrate_type {
-                SubstrateType::NvidiaGpu => 100,
-                SubstrateType::AmdGpu => 90,
-                SubstrateType::IntelGpu => 80,
-                SubstrateType::AppleGpu => 80,
+                SubstrateType::DiscreteGpu => 100,
+                SubstrateType::IntegratedGpu => 80,
                 SubstrateType::Npu => 70,
                 SubstrateType::Cpu => 10,
                 SubstrateType::Other => 5,
@@ -336,7 +334,7 @@ mod tests {
 
     fn gpu_sub() -> Substrate {
         Substrate {
-            substrate_type: SubstrateType::NvidiaGpu,
+            substrate_type: SubstrateType::DiscreteGpu,
             name: "Test GPU".to_string(),
             backend: "Vulkan".to_string(),
             index: 0,
@@ -409,7 +407,7 @@ mod tests {
         );
         assert_eq!(
             resolved.stages[1].substrate.unwrap().substrate_type,
-            SubstrateType::NvidiaGpu
+            SubstrateType::DiscreteGpu
         );
     }
 

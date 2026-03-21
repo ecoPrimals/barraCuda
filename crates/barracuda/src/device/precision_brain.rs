@@ -26,7 +26,8 @@
 //! ```
 
 use super::WgpuDevice;
-use super::driver_profile::{GpuDriverProfile, PrecisionRoutingAdvice as HwAdvice};
+use super::capabilities::DeviceCapabilities;
+use super::driver_profile::PrecisionRoutingAdvice as HwAdvice;
 use super::hardware_calibration::HardwareCalibration;
 use super::precision_tier::{PhysicsDomain, PrecisionBrainAdvice, PrecisionTier};
 
@@ -63,16 +64,16 @@ impl PrecisionBrain {
     /// the routing table.
     #[must_use]
     pub fn from_device(device: &WgpuDevice) -> Self {
-        let profile = GpuDriverProfile::from_device(device);
-        let calibration = HardwareCalibration::from_profile(&profile, device);
-        Self::from_calibration(calibration, &profile)
+        let caps = DeviceCapabilities::from_device(device);
+        let calibration = HardwareCalibration::from_capabilities(&caps, device);
+        Self::from_capabilities(calibration, &caps)
     }
 
-    /// Build the brain from pre-computed calibration and profile.
+    /// Build the brain from pre-computed calibration and capabilities.
     #[must_use]
-    pub fn from_calibration(calibration: HardwareCalibration, profile: &GpuDriverProfile) -> Self {
+    pub fn from_capabilities(calibration: HardwareCalibration, caps: &DeviceCapabilities) -> Self {
         let hw_native = matches!(
-            profile.precision_routing(),
+            caps.precision_routing(),
             HwAdvice::F64Native | HwAdvice::F64NativeNoSharedMem
         );
 
@@ -281,10 +282,9 @@ fn domain_requirements(domain: PhysicsDomain, tier: PrecisionTier) -> (bool, &'s
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::driver_profile::{
-        CompilerKind, DriverKind, Fp64Rate, GpuArch, GpuDriverProfile,
-    };
+    use crate::device::capabilities::DeviceCapabilities;
     use crate::device::hardware_calibration::TierCapability;
+    use crate::device::vendor::VENDOR_NVIDIA;
 
     #[expect(
         clippy::fn_params_excessive_bools,
@@ -385,14 +385,25 @@ mod tests {
         assert!(fma_safe);
     }
 
-    fn test_profile_volta_full() -> GpuDriverProfile {
-        GpuDriverProfile {
-            driver: DriverKind::NvidiaProprietary,
-            compiler: CompilerKind::NvidiaPtxas,
-            arch: GpuArch::Volta,
-            fp64_rate: Fp64Rate::Full,
-            workarounds: vec![],
-            adapter_key: String::new(),
+    fn test_caps_volta_full() -> DeviceCapabilities {
+        DeviceCapabilities {
+            device_name: "Test GPU".into(),
+            device_type: wgpu::DeviceType::DiscreteGpu,
+            max_buffer_size: 1024 * 1024 * 1024,
+            max_workgroup_size: (256, 256, 64),
+            max_compute_workgroups: (65_535, 65_535, 65_535),
+            max_compute_invocations_per_workgroup: 1024,
+            max_storage_buffers_per_shader_stage: 8,
+            max_uniform_buffers_per_shader_stage: 12,
+            max_bind_groups: 4,
+            backend: wgpu::Backend::Vulkan,
+            vendor: VENDOR_NVIDIA,
+            gpu_dispatch_threshold_override: None,
+            subgroup_min_size: 32,
+            subgroup_max_size: 32,
+            f64_shaders: true,
+            f64_shared_memory: false,
+            f64_capabilities: None,
         }
     }
 
@@ -406,7 +417,7 @@ mod tests {
     #[test]
     fn route_advice_dielectric_includes_fma_flag() {
         let cal = make_cal(true, true, true, true);
-        let brain = PrecisionBrain::from_calibration(cal, &test_profile_volta_full());
+        let brain = PrecisionBrain::from_capabilities(cal, &test_caps_volta_full());
         let adv = brain.route_advice(PhysicsDomain::Dielectric);
         assert_eq!(adv.tier, PrecisionTier::F64Precise);
         assert!(!adv.fma_safe);
@@ -416,7 +427,7 @@ mod tests {
     #[test]
     fn precision_brain_display_covers_adapter_name() {
         let cal = make_cal(true, true, true, true);
-        let brain = PrecisionBrain::from_calibration(cal, &test_profile_volta_full());
+        let brain = PrecisionBrain::from_capabilities(cal, &test_caps_volta_full());
         let s = brain.to_string();
         assert!(s.contains("Test GPU"));
         assert!(s.contains("LatticeQcd"));
@@ -425,14 +436,14 @@ mod tests {
     #[test]
     fn has_native_f64_true_when_profile_reports_native_paths() {
         let cal = make_cal(true, true, true, true);
-        let brain = PrecisionBrain::from_calibration(cal, &test_profile_volta_full());
+        let brain = PrecisionBrain::from_capabilities(cal, &test_caps_volta_full());
         assert!(brain.has_native_f64());
     }
 
     #[test]
     fn adapter_name_accessor() {
         let cal = make_cal(true, true, true, true);
-        let brain = PrecisionBrain::from_calibration(cal, &test_profile_volta_full());
+        let brain = PrecisionBrain::from_capabilities(cal, &test_caps_volta_full());
         assert_eq!(brain.adapter_name(), "Test GPU");
     }
 }

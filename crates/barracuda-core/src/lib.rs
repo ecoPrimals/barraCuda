@@ -28,10 +28,7 @@
     clippy::module_name_repetitions,
     reason = "primal module names are intentionally descriptive"
 )]
-#![expect(
-    clippy::unused_async,
-    reason = "PrimalLifecycle trait requires async for consistency"
-)]
+#![allow(clippy::unused_async)] // tarpc trait impl requires async signatures the trait defines
 #![expect(
     clippy::must_use_candidate,
     reason = "IPC handlers return values consumed by framework"

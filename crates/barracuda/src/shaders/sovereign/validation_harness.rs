@@ -18,14 +18,26 @@ mod tests {
     use std::path::PathBuf;
 
     fn test_compiler() -> SovereignCompiler {
-        use crate::device::driver_profile::{CompilerKind, DriverKind, Fp64Rate, GpuArch};
-        SovereignCompiler::new(crate::device::driver_profile::GpuDriverProfile {
-            driver: DriverKind::Unknown,
-            compiler: CompilerKind::Unknown,
-            arch: GpuArch::Unknown,
-            fp64_rate: Fp64Rate::Throttled,
-            workarounds: vec![],
-            adapter_key: String::new(),
+        use crate::device::capabilities::DeviceCapabilities;
+        use crate::device::vendor::VENDOR_NVIDIA;
+        SovereignCompiler::new(DeviceCapabilities {
+            device_name: "Test GPU".into(),
+            device_type: wgpu::DeviceType::DiscreteGpu,
+            max_buffer_size: 1024 * 1024 * 1024,
+            max_workgroup_size: (256, 256, 64),
+            max_compute_workgroups: (65_535, 65_535, 65_535),
+            max_compute_invocations_per_workgroup: 1024,
+            max_storage_buffers_per_shader_stage: 8,
+            max_uniform_buffers_per_shader_stage: 12,
+            max_bind_groups: 4,
+            backend: wgpu::Backend::Vulkan,
+            vendor: VENDOR_NVIDIA,
+            gpu_dispatch_threshold_override: None,
+            subgroup_min_size: 32,
+            subgroup_max_size: 32,
+            f64_shaders: true,
+            f64_shared_memory: false,
+            f64_capabilities: None,
         })
     }
 

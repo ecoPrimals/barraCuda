@@ -36,8 +36,8 @@
 //! let optimized = optimizer.optimize(my_shader_source);
 //! ```
 //!
-//! Or use `ShaderTemplate::for_driver_auto` which picks the model automatically
-//! from the detected `GpuDriverProfile`.
+//! Or use `ShaderTemplate::for_device_capabilities` which picks the model
+//! automatically from `DeviceCapabilities`.
 //!
 //! ## Annotation syntax
 //!
@@ -94,7 +94,7 @@ impl WgslOptimizer {
     ///
     /// Convenience wrapper around `model_for_arch`.
     #[must_use]
-    pub fn for_arch(arch: crate::device::capabilities::GpuArch) -> Self {
+    pub fn for_arch(arch: crate::device::driver_profile::GpuArch) -> Self {
         Self::new(model_for_arch(arch))
     }
 
@@ -279,7 +279,7 @@ fn jacobi() {\n\
 
     #[test]
     fn test_for_arch_constructor() {
-        use crate::device::capabilities::GpuArch;
+        use crate::device::driver_profile::GpuArch;
         let opt = WgslOptimizer::for_arch(GpuArch::Volta);
         let result = opt.optimize("// @ilp_region begin\nlet x = 1.0;\n// @ilp_region end\n");
         assert!(result.contains("let x ="));

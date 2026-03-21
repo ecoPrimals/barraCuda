@@ -6,6 +6,7 @@
 
 use crate::device::WgpuDevice;
 use crate::device::driver_profile::GpuArch;
+use crate::device::probe::F64BuiltinCapabilities;
 use crate::device::vendor::{VENDOR_AMD, VENDOR_INTEL, VENDOR_NVIDIA};
 use std::fmt;
 
@@ -166,6 +167,13 @@ pub struct DeviceCapabilities {
     /// whether f64 shared-memory shaders should be attempted or diverted
     /// to DF64.
     pub f64_shared_memory: bool,
+
+    /// Runtime-probed f64 capabilities, or `None` if probing has not occurred.
+    ///
+    /// When `Some`, capability methods like [`Self::fp64_strategy`] use probed
+    /// values for ground-truth behavior. When `None`, they fall back to
+    /// heuristics based on device type and features.
+    pub f64_capabilities: Option<F64BuiltinCapabilities>,
 }
 
 impl DeviceCapabilities {
@@ -202,42 +210,22 @@ impl DeviceCapabilities {
             subgroup_max_size: adapter_info.subgroup_max_size,
             f64_shaders: device.has_f64_shaders(),
             f64_shared_memory: false,
+            f64_capabilities: crate::device::probe::cache::cached_f64_builtins(device),
         }
     }
 
-    /// Get optimal workgroup size for a specific workload
+    /// Get optimal workgroup size for a specific workload.
+    ///
+    /// Selection is based on device type and hardware-reported limits (vendor-agnostic).
+    /// The `.min(max_compute_invocations_per_workgroup)` clamp ensures safety on
+    /// devices with lower invocation limits.
     #[must_use]
     pub fn optimal_workgroup_size(&self, workload: WorkloadType) -> u32 {
         match self.device_type {
-            wgpu::DeviceType::DiscreteGpu => match self.vendor {
-                VENDOR_NVIDIA => match workload {
-                    WorkloadType::ElementWise => 256,
-                    WorkloadType::MatMul => 256,
-                    WorkloadType::Reduction => 512,
-                    WorkloadType::FHE => 256,
-                    WorkloadType::Convolution => 128,
-                },
-                VENDOR_AMD => match workload {
-                    WorkloadType::ElementWise => 256,
-                    WorkloadType::MatMul => 256,
-                    WorkloadType::Reduction => 256,
-                    WorkloadType::FHE => 256,
-                    WorkloadType::Convolution => 128,
-                },
-                VENDOR_INTEL => match workload {
-                    WorkloadType::ElementWise => 128,
-                    WorkloadType::MatMul => 128,
-                    WorkloadType::Reduction => 256,
-                    WorkloadType::FHE => 128,
-                    WorkloadType::Convolution => 64,
-                },
-                _ => match workload {
-                    WorkloadType::ElementWise => 128,
-                    WorkloadType::MatMul => 128,
-                    WorkloadType::Reduction => 256,
-                    WorkloadType::FHE => 128,
-                    WorkloadType::Convolution => 64,
-                },
+            wgpu::DeviceType::DiscreteGpu => match workload {
+                WorkloadType::ElementWise | WorkloadType::MatMul | WorkloadType::FHE => 256,
+                WorkloadType::Reduction => 256,
+                WorkloadType::Convolution => 128,
             },
 
             wgpu::DeviceType::IntegratedGpu => match workload {
@@ -325,16 +313,21 @@ impl DeviceCapabilities {
         required_bytes as u64 <= self.max_allocation_size()
     }
 
-    /// Get optimal tile size for matrix multiplication
+    /// Get optimal tile size for matrix multiplication.
+    ///
+    /// Discrete GPUs with high invocation limits use 32×32 tiles; devices with
+    /// lower compute throughput use smaller tiles. Selection is based on device
+    /// type and hardware limits, not vendor identity.
     #[must_use]
     pub fn optimal_matmul_tile_size(&self) -> u32 {
         match self.device_type {
-            wgpu::DeviceType::DiscreteGpu => match self.vendor {
-                VENDOR_NVIDIA => 32,
-                VENDOR_AMD => 32,
-                VENDOR_INTEL => 16,
-                _ => 16,
-            },
+            wgpu::DeviceType::DiscreteGpu => {
+                if self.max_compute_invocations_per_workgroup >= 1024 {
+                    32
+                } else {
+                    16
+                }
+            }
             wgpu::DeviceType::IntegratedGpu => 16,
             wgpu::DeviceType::Cpu => 8,
             _ => 8,
@@ -422,6 +415,228 @@ impl DeviceCapabilities {
     #[must_use]
     pub fn has_f64_shared_memory(&self) -> bool {
         self.f64_shared_memory
+    }
+
+    /// Enrich with runtime-probed f64 capabilities.
+    ///
+    /// Call after [`crate::device::probe::probe_f64_builtins`] to populate
+    /// probe-based capability queries (`fp64_strategy`, `needs_*_workaround`, etc.).
+    #[must_use]
+    pub fn with_f64_capabilities(mut self, caps: F64BuiltinCapabilities) -> Self {
+        self.f64_capabilities = Some(caps);
+        self
+    }
+
+    // ── Probe-based capability queries ──────────────────────────────────
+
+    /// Whether f64 compute shaders produce correct results on this device.
+    ///
+    /// Probe-based when available; falls back to the `f64_shaders` feature flag.
+    #[must_use]
+    pub fn has_reliable_f64(&self) -> bool {
+        self.f64_capabilities
+            .map_or(self.f64_shaders, |c| c.basic_f64)
+    }
+
+    /// Whether `exp(f64)` needs a software workaround on this device.
+    #[must_use]
+    pub fn needs_exp_f64_workaround(&self) -> bool {
+        self.f64_capabilities.is_some_and(|c| !c.exp)
+    }
+
+    /// Whether `log(f64)` needs a software workaround on this device.
+    #[must_use]
+    pub fn needs_log_f64_workaround(&self) -> bool {
+        self.f64_capabilities.is_some_and(|c| !c.log)
+    }
+
+    /// Whether `sin(f64)` needs a software workaround on this device.
+    #[must_use]
+    pub fn needs_sin_f64_workaround(&self) -> bool {
+        self.f64_capabilities.is_some_and(|c| !c.sin)
+    }
+
+    /// Whether `cos(f64)` needs a software workaround on this device.
+    #[must_use]
+    pub fn needs_cos_f64_workaround(&self) -> bool {
+        self.f64_capabilities.is_some_and(|c| !c.cos)
+    }
+
+    /// Whether `DF64` transcendentals are safe on this device.
+    #[must_use]
+    pub fn df64_transcendentals_safe(&self) -> bool {
+        self.f64_capabilities
+            .is_none_or(|c| c.df64_transcendentals_safe)
+    }
+
+    /// Hardware-adaptive FP64 execution strategy (capability-based).
+    ///
+    /// Uses probed f64 capabilities when available; falls back to heuristics
+    /// based on device type and `f64_shaders` feature flag.
+    #[must_use]
+    pub fn fp64_strategy(&self) -> super::Fp64Strategy {
+        use super::Fp64Strategy;
+
+        if let Some(caps) = &self.f64_capabilities {
+            if !caps.basic_f64 {
+                return Fp64Strategy::Hybrid;
+            }
+            if caps.can_compile_f64() {
+                return Fp64Strategy::Native;
+            }
+            return Fp64Strategy::Hybrid;
+        }
+
+        if self.f64_shaders {
+            Fp64Strategy::Native
+        } else {
+            Fp64Strategy::Hybrid
+        }
+    }
+
+    /// Precision routing advice (capability-based).
+    ///
+    /// Higher-level than `fp64_strategy()`: additionally captures the
+    /// shared-memory reliability axis for workgroup-based f64 reductions.
+    #[must_use]
+    pub fn precision_routing(&self) -> super::super::driver_profile::PrecisionRoutingAdvice {
+        use super::super::driver_profile::PrecisionRoutingAdvice;
+
+        if let Some(caps) = &self.f64_capabilities {
+            if !caps.basic_f64 {
+                if self.f64_shaders {
+                    return PrecisionRoutingAdvice::Df64Only;
+                }
+                return PrecisionRoutingAdvice::F32Only;
+            }
+            if caps.shared_mem_f64 {
+                return PrecisionRoutingAdvice::F64Native;
+            }
+            return PrecisionRoutingAdvice::F64NativeNoSharedMem;
+        }
+
+        if self.f64_shaders {
+            PrecisionRoutingAdvice::F64NativeNoSharedMem
+        } else {
+            PrecisionRoutingAdvice::F32Only
+        }
+    }
+
+    /// Eigensolve workgroup size based on subgroup (warp/wavefront) size.
+    ///
+    /// Vendor-agnostic: uses the reported subgroup size to determine the
+    /// natural SIMT width for warp/wave-packed eigensolve dispatch.
+    /// Falls back to 32 (the most common subgroup size across vendors).
+    #[must_use]
+    pub fn eigensolve_workgroup_size(&self) -> u32 {
+        if self.subgroup_min_size > 0 {
+            self.subgroup_min_size
+        } else {
+            32
+        }
+    }
+
+    /// Optimal eigensolve dispatch strategy based on device capabilities.
+    ///
+    /// Uses subgroup size and device type to determine packing:
+    /// - Discrete GPUs with known subgroup size → warp/wave-packed
+    /// - CPU/Software/unknown → standard (no packing)
+    #[must_use]
+    pub fn optimal_eigensolve_strategy(&self) -> super::EigensolveStrategy {
+        use super::EigensolveStrategy;
+        match self.device_type {
+            wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::IntegratedGpu => {
+                let wg = self.eigensolve_workgroup_size();
+                if wg >= 64 {
+                    EigensolveStrategy::WavePacked { wave_size: wg }
+                } else {
+                    EigensolveStrategy::WarpPacked { wg_size: wg }
+                }
+            }
+            _ => EigensolveStrategy::Standard,
+        }
+    }
+
+    /// Maximum safe combined allocation in bytes, or `None` if no known limit.
+    ///
+    /// Conservative estimate: 75% of `max_buffer_size` to leave headroom for
+    /// driver metadata and command buffers. Individual drivers may have tighter
+    /// limits discovered via runtime probing.
+    #[must_use]
+    pub fn max_safe_allocation_bytes(&self) -> Option<u64> {
+        Some(self.max_allocation_size())
+    }
+
+    /// Whether native f64 builtins (exp, log, pow) work on this device.
+    ///
+    /// Probe-based when available; falls back to the `f64_shaders` flag and
+    /// assumes builtins work unless probing says otherwise.
+    #[must_use]
+    pub fn supports_f64_builtins(&self) -> bool {
+        if let Some(caps) = &self.f64_capabilities {
+            caps.can_compile_f64() && caps.exp && caps.log
+        } else {
+            self.f64_shaders
+        }
+    }
+
+    /// Whether DF64 shaders containing transcendentals produce poisoned output.
+    ///
+    /// Inverse of [`df64_transcendentals_safe`](Self::df64_transcendentals_safe).
+    #[must_use]
+    pub fn has_df64_spir_v_poisoning(&self) -> bool {
+        !self.df64_transcendentals_safe()
+    }
+
+    /// Return a latency model for ILP scheduling based on device characteristics.
+    ///
+    /// Uses vendor ID and device type to select the closest empirical model:
+    /// - NVIDIA discrete GPUs → SM70 model (8-cycle DFMA pipeline)
+    /// - AMD discrete GPUs → RDNA2 model (4-cycle VFMA64 pipeline)
+    /// - Apple GPUs → Apple M model (software-emulated f64)
+    /// - All others → conservative model (safe over-estimate)
+    ///
+    /// When runtime-measured latency data is available (via `bench_f64_builtins`),
+    /// callers should prefer `MeasuredModel` directly.
+    #[must_use]
+    pub fn latency_model(&self) -> Box<dyn crate::device::latency::LatencyModel> {
+        use crate::device::latency::{
+            AppleMLatencyModel, ConservativeModel, Rdna2LatencyModel, Sm70LatencyModel,
+        };
+        use crate::device::vendor::{VENDOR_AMD, VENDOR_APPLE, VENDOR_NVIDIA};
+
+        match self.device_type {
+            wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::IntegratedGpu => match self.vendor {
+                VENDOR_NVIDIA => Box::new(Sm70LatencyModel),
+                VENDOR_AMD => Box::new(Rdna2LatencyModel),
+                VENDOR_APPLE => Box::new(AppleMLatencyModel),
+                _ => Box::new(ConservativeModel),
+            },
+            _ => Box::new(ConservativeModel),
+        }
+    }
+
+    /// Check whether a combined allocation of `total_bytes` is safe on this device.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DeviceLimitExceeded`](crate::error::BarracudaError::DeviceLimitExceeded)
+    /// if the allocation exceeds the safe limit.
+    pub fn check_allocation_safe(&self, total_bytes: u64) -> crate::error::Result<()> {
+        if let Some(limit) = self.max_safe_allocation_bytes() {
+            if total_bytes > limit {
+                return Err(crate::error::BarracudaError::DeviceLimitExceeded {
+                    message: format!(
+                        "Estimated allocation {:.1} MB exceeds safe limit {:.1} MB",
+                        total_bytes as f64 / 1e6,
+                        limit as f64 / 1e6,
+                    ),
+                    requested_bytes: total_bytes,
+                    safe_limit_bytes: limit,
+                });
+            }
+        }
+        Ok(())
     }
 }
 

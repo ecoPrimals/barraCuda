@@ -25,12 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SPDX header**: `warmup.rs` corrected from `AGPL-3.0-only` to `AGPL-3.0-or-later`.
 - **Device-aware pooling test**: `fault_large_tensor_allocation` evolved from strict
   `buffer_reuses` assertion to activity-based assertion (works on software adapters).
-- **Coverage expansion (+50 tests → 3,936 total)**: RBF surrogate error-path tests,
+- **Coverage expansion (+50 tests → 4,052+ total)**: RBF surrogate error-path tests,
   adaptive distance function CPU tests, Kimura fixation edge cases, jackknife
   generalized statistics. All pass on llvmpipe.
-- **Documentation alignment**: Test counts updated to 3,936 across all docs. File
+- **Documentation alignment**: Test counts updated to 4,052+ across all docs. File
   count corrected to 1,085. Doctest gate added (108 pass / 0 fail).
-- **Quality gates**: All green. 3,936 tests + 108 doctests, 0 fail.
+- **Quality gates**: All green. 4,052+ tests + 108 doctests, 0 fail.
 
 ### Changed — Deep Debt Sprint 13: Comprehensive Audit, Coverage & Test Hardening (Mar 20 2026)
 
@@ -60,6 +60,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   STATUS, REMAINING_WORK. File counts updated to 1,091. Historical SPDX
   reference corrected from `AGPL-3.0-only` to `AGPL-3.0-or-later`.
 - **Quality gates**: All green. 3,886 tests pass, 0 fail.
+
+### Sprint 14: Vendor-Agnostic Evolution (March 21, 2026)
+
+#### Vendor-Agnostic API Migration (7 phases)
+- `DeviceCapabilities` replaces `GpuDriverProfile` across 50+ files
+- `DeviceClass` (DiscreteGpu/IntegratedGpu/Software/Unknown) replaces `GpuVendor`/`GpuDriver`
+- `SubstrateType::DiscreteGpu`/`IntegratedGpu` replaces vendor-specific variants
+- `BandwidthTier::HighBandwidthP2P`/`HighBandwidthInterconnect` replaces `NvLink`
+- `prefer_discrete()` replaces `prefer_nvidia()`/`prefer_amd()`
+- ISA target strings removed — coralReef determines targets via `AdapterDescriptor`
+- `GpuDriverProfile` marked `#[deprecated]`
+
+#### Test Coverage Expansion (+75 tests → 4,052+)
+- DeviceCapabilities: 41 tests (fp64_strategy, precision_routing, latency model, eigensolve)
+- coral_compiler: 14 tests (cache, shader_hash, AdapterDescriptor serde, precision mapping)
+- ODE bio params: 12 tests (to_flat/from_flat round-trips for all 6 biological models)
+- Substrate: 8 tests (Display, serde, capability queries)
 
 ### Changed — Deep Debt Sprint 12: Module Decomposition & Build Optimisation (Mar 20 2026)
 

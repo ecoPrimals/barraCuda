@@ -51,8 +51,8 @@ impl WgpuDevice {
         tag: &str,
     ) -> Option<wgpu::ShaderModule> {
         use crate::shaders::sovereign::SovereignCompiler;
-        let profile = crate::device::driver_profile::GpuDriverProfile::from_device(self);
-        let sovereign = SovereignCompiler::new(profile);
+        let caps = crate::device::capabilities::DeviceCapabilities::from_device(self);
+        let sovereign = SovereignCompiler::new(caps);
         match sovereign.compile_to_wgsl(source) {
             Ok((optimized_wgsl, stats)) => {
                 if stats.fma_fusions > 0 || stats.dead_exprs_eliminated > 0 {
@@ -86,18 +86,22 @@ impl WgpuDevice {
     pub fn compile_shader_f64(&self, source: &str, label: Option<&str>) -> wgpu::ShaderModule {
         let source = &source.replace("enable f64;", "");
 
-        let profile = crate::device::driver_profile::GpuDriverProfile::from_device(self);
+        let caps = crate::device::capabilities::DeviceCapabilities::from_device(self);
 
-        let optimized = crate::shaders::precision::ShaderTemplate::for_driver_profile(
+        let optimized = crate::shaders::precision::ShaderTemplate::for_device_capabilities(
             source,
             self.needs_f64_exp_log_workaround(),
-            &profile,
+            &caps,
         );
 
-        // coralReef: async native binary compilation for NVIDIA GPUs.
-        if let Some(coral_arch) = crate::device::coral_compiler::arch_to_coral(&profile.arch) {
-            crate::device::coral_compiler::spawn_coral_compile(&optimized, coral_arch, true);
-        }
+        // coralReef: adapter-aware native binary compilation via IPC.
+        // coralReef determines the ISA target from adapter info — barraCuda
+        // does not embed per-generation ISA knowledge.
+        crate::device::coral_compiler::spawn_coral_compile_for_adapter(
+            &optimized,
+            self.adapter_info(),
+            true,
+        );
 
         // Sovereign compiler — naga IR → FMA fusion → optimised WGSL (safe path).
         // Runs on all backends (Vulkan, Metal, DX12, WebGPU).
@@ -129,11 +133,10 @@ impl WgpuDevice {
         const DF64_TRANSCENDENTALS: &str =
             include_str!("../../shaders/math/df64_transcendentals.wgsl");
 
-        let profile = crate::device::driver_profile::GpuDriverProfile::from_device(self);
-        let include_transcendentals = if profile.has_df64_spir_v_poisoning() {
+        let caps = crate::device::capabilities::DeviceCapabilities::from_device(self);
+        let include_transcendentals = if caps.has_df64_spir_v_poisoning() {
             tracing::warn!(
-                driver = ?profile.driver,
-                arch = ?profile.arch,
+                device = %caps.device_name,
                 "DF64 SPIR-V poisoning (naga codegen) — omitting DF64 transcendentals \
                  (exp, sqrt, log, pow) to prevent all-zero output. \
                  Arithmetic-only DF64 shaders remain safe."
@@ -157,16 +160,18 @@ impl WgpuDevice {
 
         let optimized = if combined.contains("@ilp_region") || combined.contains("@unroll_hint") {
             use crate::shaders::optimizer::WgslOptimizer;
-            let optimizer = WgslOptimizer::new(profile.latency_model());
+            let optimizer = WgslOptimizer::new(caps.latency_model());
             optimizer.optimize(&combined)
         } else {
             combined
         };
 
-        // coralReef: async native binary compilation for NVIDIA GPUs.
-        if let Some(coral_arch) = crate::device::coral_compiler::arch_to_coral(&profile.arch) {
-            crate::device::coral_compiler::spawn_coral_compile(&optimized, coral_arch, false);
-        }
+        // coralReef: adapter-aware native binary compilation via IPC.
+        crate::device::coral_compiler::spawn_coral_compile_for_adapter(
+            &optimized,
+            self.adapter_info(),
+            false,
+        );
 
         // Sovereign compiler — naga IR → FMA fusion → optimised WGSL (safe path).
         if let Some(module) = self.try_sovereign_compile(&optimized, label, "df64") {

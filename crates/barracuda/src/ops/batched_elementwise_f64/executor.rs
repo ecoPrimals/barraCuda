@@ -4,8 +4,8 @@
 use super::cpu_ref;
 use super::op::{Op, StationDayInput, WaterBalanceInput};
 use crate::device::WgpuDevice;
+use crate::device::capabilities::{DeviceCapabilities, Fp64Strategy};
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -144,9 +144,9 @@ impl BatchedElementwiseF64 {
                     usage: wgpu::BufferUsages::UNIFORM,
                 });
 
-        let profile = GpuDriverProfile::from_device(&self.device);
-        let use_df64 = matches!(profile.fp64_strategy(), Fp64Strategy::Hybrid)
-            && df64_shader_source().is_some();
+        let caps = DeviceCapabilities::from_device(&self.device);
+        let use_df64 =
+            matches!(caps.fp64_strategy(), Fp64Strategy::Hybrid) && df64_shader_source().is_some();
 
         if use_df64 {
             let Some(src) = df64_shader_source() else {

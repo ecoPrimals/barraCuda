@@ -35,7 +35,7 @@ pub mod spv_emit;
 mod validation_harness;
 pub mod wgsl_emit;
 
-use crate::device::driver_profile::GpuDriverProfile;
+use crate::device::capabilities::DeviceCapabilities;
 
 /// SPIR-V binary that has been validated by naga's `Validator`.
 ///
@@ -82,17 +82,17 @@ pub struct CompileStats {
 
 /// Top-level sovereign compiler.
 ///
-/// Instantiate once per device (the `GpuDriverProfile` is used for
-/// architecture-specific optimization decisions in future phases).
+/// Instantiate once per device. `DeviceCapabilities` is stored for
+/// architecture-specific optimization decisions in future phases (Phase 4).
 pub struct SovereignCompiler {
-    _profile: GpuDriverProfile,
+    _caps: DeviceCapabilities,
 }
 
 impl SovereignCompiler {
-    /// Create a sovereign compiler for the given driver profile.
+    /// Create a sovereign compiler for the given device capabilities.
     #[must_use]
-    pub fn new(profile: GpuDriverProfile) -> Self {
-        Self { _profile: profile }
+    pub fn new(caps: DeviceCapabilities) -> Self {
+        Self { _caps: caps }
     }
 
     /// Compile WGSL source to optimised WGSL via naga IR (safe path).
@@ -190,15 +190,26 @@ pub enum SovereignError {
 mod tests {
     use super::*;
 
-    fn test_profile() -> GpuDriverProfile {
-        use crate::device::driver_profile::{CompilerKind, DriverKind, Fp64Rate, GpuArch};
-        GpuDriverProfile {
-            driver: DriverKind::Unknown,
-            compiler: CompilerKind::Unknown,
-            arch: GpuArch::Unknown,
-            fp64_rate: Fp64Rate::Throttled,
-            workarounds: vec![],
-            adapter_key: String::new(),
+    fn test_caps() -> DeviceCapabilities {
+        use crate::device::vendor::VENDOR_NVIDIA;
+        DeviceCapabilities {
+            device_name: "Test GPU".into(),
+            device_type: wgpu::DeviceType::DiscreteGpu,
+            max_buffer_size: 1024 * 1024 * 1024,
+            max_workgroup_size: (256, 256, 64),
+            max_compute_workgroups: (65_535, 65_535, 65_535),
+            max_compute_invocations_per_workgroup: 1024,
+            max_storage_buffers_per_shader_stage: 8,
+            max_uniform_buffers_per_shader_stage: 12,
+            max_bind_groups: 4,
+            backend: wgpu::Backend::Vulkan,
+            vendor: VENDOR_NVIDIA,
+            gpu_dispatch_threshold_override: None,
+            subgroup_min_size: 32,
+            subgroup_max_size: 32,
+            f64_shaders: true,
+            f64_shared_memory: false,
+            f64_capabilities: None,
         }
     }
 
@@ -214,7 +225,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     output[idx] = input[idx] * 2.0;
 }
 ";
-        let compiler = SovereignCompiler::new(test_profile());
+        let compiler = SovereignCompiler::new(test_caps());
         let (output, stats) = compiler.compile(wgsl).expect("should compile");
         match output {
             SovereignOutput::Spirv(validated) => {
@@ -228,7 +239,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 
     #[test]
     fn test_sovereign_rejects_invalid_wgsl() {
-        let compiler = SovereignCompiler::new(test_profile());
+        let compiler = SovereignCompiler::new(test_caps());
         let result = compiler.compile("this is not wgsl");
         assert!(result.is_err());
     }
@@ -252,7 +263,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     out[i] = result;
 }
 ";
-        let compiler = SovereignCompiler::new(test_profile());
+        let compiler = SovereignCompiler::new(test_caps());
         let (output, stats) = compiler.compile(wgsl).expect("should compile with FMA");
         assert!(
             stats.fma_fusions >= 1,
@@ -292,7 +303,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     output[idx] = clamped;
 }
 ";
-        let compiler = SovereignCompiler::new(test_profile());
+        let compiler = SovereignCompiler::new(test_caps());
         let (output, _stats) = compiler
             .compile(wgsl)
             .expect("complex shader should compile");
@@ -330,7 +341,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     out[i] = r1 + r2;
 }
 ";
-        let compiler = SovereignCompiler::new(test_profile());
+        let compiler = SovereignCompiler::new(test_caps());
         let (output, stats) = compiler.compile(wgsl).expect("should compile");
         // At least some fusions should fire
         assert!(stats.fma_fusions >= 1, "expected FMA fusions");

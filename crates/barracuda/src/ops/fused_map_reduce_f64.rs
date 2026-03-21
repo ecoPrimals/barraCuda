@@ -37,8 +37,8 @@
 //! ```
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::{DeviceCapabilities, Fp64Strategy};
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -58,8 +58,8 @@ const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
 /// Native/Concurrent/Sovereign: native f64 workgroup memory is reliable.
 /// Hybrid: f64 shared memory returns zeros on some devices; use DF64.
 fn shader_for_device(device: &WgpuDevice) -> &'static str {
-    let profile = GpuDriverProfile::from_device(device);
-    match profile.fp64_strategy() {
+    let caps = DeviceCapabilities::from_device(device);
+    match caps.fp64_strategy() {
         Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => SHADER_NATIVE,
         Fp64Strategy::Hybrid => {
             static DF64_COMBINED: std::sync::LazyLock<String> =

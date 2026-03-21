@@ -3,8 +3,8 @@
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation (universal compute)
-//! - ✅ Capability-based dispatch (vendor ID, not string matching)
-//! - ✅ Vendor-specific workgroup sizes (NVIDIA: 64, AMD: 128)
+//! - ✅ Capability-based dispatch (hardware limits, not vendor IDs)
+//! - ✅ Workgroup sizing from wgpu device limits
 //! - ✅ Pipeline caching (compile once, dispatch many)
 //! - ✅ Buffer pooling (zero allocation after warmup)
 //!
@@ -32,9 +32,6 @@ static SHADER_DEFAULT: std::sync::LazyLock<String> =
 /// Optimized element-wise mul variant.
 pub const WGSL_MUL_OPTIMIZED: &str = include_str!("../shaders/math/elementwise_mul_optimized.wgsl");
 
-// Vendor IDs for capability-based dispatch (no string matching)
-use crate::device::vendor::{VENDOR_AMD, VENDOR_NVIDIA};
-
 /// Element-wise multiplication operation
 pub struct Mul {
     lhs: Tensor,
@@ -55,35 +52,30 @@ impl Mul {
         Ok(Self { lhs, rhs })
     }
 
-    /// Select vendor-optimized shader based on GPU capabilities and tensor size
-    /// **Deep Debt Evolution**: Uses vendor ID (not string matching) for reliable detection
+    /// Select shader variant based on hardware capabilities.
+    ///
+    /// Workgroup size is chosen from the device's reported limits (vendor-agnostic).
+    /// The largest supported workgroup size is preferred for throughput; smaller
+    /// variants avoid exceeding dispatch constraints on large tensors.
     fn wgsl_shader(caps: &DeviceCapabilities, size: usize) -> (&'static str, u32) {
-        let max_dispatch = 65535u32;
-        let (nvidia_wg, amd_wg) = (64u32, 128u32);
+        let max_inv = caps.max_compute_invocations_per_workgroup;
+        let max_dispatch = caps.max_compute_workgroups.0;
+        let default: &'static str = &SHADER_DEFAULT;
 
-        // Capability-based vendor detection (no string matching)
-        match caps.vendor {
-            VENDOR_NVIDIA => {
-                let needed = (size as u32).div_ceil(nvidia_wg);
-                if needed <= max_dispatch {
-                    (SHADER_WG64, nvidia_wg)
-                } else {
-                    (&*SHADER_DEFAULT, 256)
-                }
-            }
-            VENDOR_AMD => {
-                let needed = (size as u32).div_ceil(amd_wg);
-                if needed <= max_dispatch {
-                    (SHADER_WG128, amd_wg)
-                } else {
-                    (&*SHADER_DEFAULT, 256)
-                }
-            }
-            _ => {
-                // Unknown vendor - use safe default
-                (&*SHADER_DEFAULT, 256)
-            }
+        let (shader, wg) = if max_inv >= 256 {
+            (default, 256u32)
+        } else if max_inv >= 128 {
+            (SHADER_WG128, 128u32)
+        } else {
+            (SHADER_WG64, 64u32)
+        };
+
+        let needed = (size as u32).div_ceil(wg);
+        if needed > max_dispatch && max_inv >= 256 {
+            return (default, 256);
         }
+
+        (shader, wg)
     }
 
     /// Execute multiplication on tensors

@@ -344,24 +344,22 @@ impl ShaderTemplate {
         crate::shaders::optimizer::WgslOptimizer::default().optimize(&injected)
     }
 
-    /// Variant of `for_driver_auto` that uses the accurate `LatencyModel` from
-    /// a `GpuDriverProfile` for precise ILP scheduling.
+    /// Variant of `for_driver_auto` that uses device capabilities for
+    /// precise ILP scheduling and workaround detection.
     ///
-    /// Prefer this when a `GpuDriverProfile` is available at shader-compile time.
+    /// Prefer this when `DeviceCapabilities` is available at shader-compile time.
     #[must_use]
-    pub fn for_driver_profile(
+    pub fn for_device_capabilities(
         shader_body: &str,
         needs_exp_log_workaround: bool,
-        profile: &crate::device::capabilities::GpuDriverProfile,
+        caps: &crate::device::capabilities::DeviceCapabilities,
     ) -> String {
-        // Strip `enable f64;` — naga handles f64 via capability flags, not directives.
         let stripped = shader_body
             .lines()
             .filter(|l| l.trim() != "enable f64;")
             .collect::<Vec<_>>()
             .join("\n");
-        let use_sin_cos_taylor =
-            profile.needs_sin_f64_workaround() || profile.needs_cos_f64_workaround();
+        let use_sin_cos_taylor = caps.needs_sin_f64_workaround() || caps.needs_cos_f64_workaround();
         let substituted = polyfill::substitute_fossil_f64(&stripped);
         let patched = polyfill::apply_transcendental_workaround_with_sin_cos(
             &substituted,
@@ -376,7 +374,7 @@ impl ShaderTemplate {
             None
         };
         let injected = polyfill::inject_f64_polyfills(&patched, extra_preamble);
-        crate::shaders::optimizer::WgslOptimizer::new(profile.latency_model()).optimize(&injected)
+        crate::shaders::optimizer::WgslOptimizer::new(caps.latency_model()).optimize(&injected)
     }
 
     /// Inject only the `math_f64` functions used by the shader.

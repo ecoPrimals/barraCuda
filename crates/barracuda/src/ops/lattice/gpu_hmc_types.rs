@@ -4,7 +4,7 @@
 use super::constants;
 use super::gpu_cg_solver::GpuCgBuffers;
 use crate::device::WgpuDevice;
-use crate::device::driver_profile::GpuDriverProfile;
+use crate::device::capabilities::DeviceCapabilities;
 use crate::error::Result;
 use wgpu;
 
@@ -123,8 +123,20 @@ impl GpuHmcBuffers {
             * std::mem::size_of::<u32>() as u64;
         let total_estimate = n_link_bufs * link_bytes + n_field_bufs * field_bytes + scalar_bufs;
 
-        let profile = GpuDriverProfile::from_device(device);
-        profile.check_allocation_safe(total_estimate)?;
+        let caps = DeviceCapabilities::from_device(device);
+        if let Some(limit) = caps.max_safe_allocation_bytes() {
+            if total_estimate > limit {
+                return Err(crate::error::BarracudaError::DeviceLimitExceeded {
+                    message: format!(
+                        "Estimated allocation {:.1} MB exceeds safe limit {:.1} MB",
+                        total_estimate as f64 / 1e6,
+                        limit as f64 / 1e6,
+                    ),
+                    requested_bytes: total_estimate,
+                    safe_limit_bytes: limit,
+                });
+            }
+        }
 
         let make_link_buf = |label: &str| {
             device.device.create_buffer(&wgpu::BufferDescriptor {

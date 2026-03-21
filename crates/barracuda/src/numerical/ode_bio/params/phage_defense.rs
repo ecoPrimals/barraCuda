@@ -96,3 +96,33 @@ impl PhageDefenseParams {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_roundtrip() {
+        let d = PhageDefenseParams::default();
+        let r = PhageDefenseParams::from_flat(&d.to_flat());
+        assert!(f64::abs(d.mu_max - r.mu_max) < 1e-15);
+        assert!(f64::abs(d.defense_cost - r.defense_cost) < 1e-15);
+        assert!(f64::abs(d.k_resource - r.k_resource) < 1e-15);
+        assert!(f64::abs(d.yield_coeff - r.yield_coeff) < 1e-15);
+        assert!(f64::abs(d.adsorption_rate - r.adsorption_rate) < 1e-15);
+        assert!(f64::abs(d.burst_size - r.burst_size) < 1e-15);
+        assert!(f64::abs(d.defense_efficiency - r.defense_efficiency) < 1e-15);
+        assert!(f64::abs(d.phage_decay - r.phage_decay) < 1e-15);
+        assert!(f64::abs(d.resource_inflow - r.resource_inflow) < 1e-15);
+        assert!(f64::abs(d.resource_dilution - r.resource_dilution) < 1e-15);
+        assert!(f64::abs(d.death_rate - r.death_rate) < 1e-15);
+    }
+
+    #[test]
+    fn test_flat_length() {
+        assert_eq!(
+            PhageDefenseParams::default().to_flat().len(),
+            PHAGE_DEFENSE_N_PARAMS
+        );
+    }
+}

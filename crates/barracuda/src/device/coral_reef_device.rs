@@ -70,12 +70,6 @@ static RESOLVED_DEFAULT_WORKGROUP: std::sync::LazyLock<[u32; 3]> = std::sync::La
     [x, 1, 1]
 });
 
-/// Architectures to scan when looking up pre-compiled native binaries
-/// from the coral compiler cache.
-const CORAL_CACHE_ARCHITECTURES: &[&str] = &[
-    "sm_70", "sm_75", "sm_80", "sm_86", "sm_89", "sm_100", "gfx1030", "gfx1100",
-];
-
 /// Capability string used for toadStool dispatch discovery.
 const DISPATCH_CAPABILITY: &str = "compute.dispatch";
 
@@ -317,15 +311,14 @@ impl CoralReefDevice {
     }
 
     /// Check the coral compiler cache for a pre-compiled native binary.
+    ///
+    /// Searches for any cached binary matching the shader hash, regardless of
+    /// ISA target. The correct target was determined by coralReef at compile time;
+    /// toadStool handles hardware routing at dispatch time.
     fn try_coral_cache(shader_source: &str) -> Option<bytes::Bytes> {
-        use crate::device::coral_compiler::{cached_native_binary, shader_hash};
+        use crate::device::coral_compiler::{cache::cached_native_binary_any_arch, shader_hash};
         let hash = shader_hash(shader_source);
-        for arch in CORAL_CACHE_ARCHITECTURES {
-            if let Some(binary) = cached_native_binary(&hash, arch) {
-                return Some(binary.binary);
-            }
-        }
-        None
+        cached_native_binary_any_arch(&hash).map(|b| b.binary)
     }
 
     /// Submit a dispatch request to toadStool via JSON-RPC.
@@ -726,13 +719,8 @@ mod tests {
     }
 
     #[test]
-    fn coral_cache_architectures_non_empty() {
-        assert!(!CORAL_CACHE_ARCHITECTURES.is_empty());
-        for arch in CORAL_CACHE_ARCHITECTURES {
-            assert!(
-                arch.starts_with("sm_") || arch.starts_with("gfx"),
-                "unexpected arch format: {arch}"
-            );
-        }
+    fn coral_cache_lookup_returns_none_for_unknown_shader() {
+        let result = CoralReefDevice::try_coral_cache("nonexistent_shader_source_12345");
+        assert!(result.is_none());
     }
 }

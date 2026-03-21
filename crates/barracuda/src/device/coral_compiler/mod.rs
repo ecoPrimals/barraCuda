@@ -29,9 +29,11 @@ pub mod discovery;
 mod jsonrpc;
 pub mod types;
 
-pub use cache::{cache_native_binary, cached_native_binary, shader_hash};
+pub use cache::{
+    cache_native_binary, cached_native_binary, cached_native_binary_any_arch, shader_hash,
+};
 pub use discovery::discover_shader_compiler;
-pub use types::{CoralBinary, HealthResponse, arch_to_coral};
+pub use types::{AdapterDescriptor, CoralBinary, HealthResponse};
 
 /// Synchronous check: can we discover a coralReef shader-compiler endpoint?
 ///
@@ -172,6 +174,7 @@ impl CoralCompiler {
             opt_level: 2,
             fp64_software,
             fp64_strategy,
+            adapter: None,
         };
 
         match jsonrpc_call::<CompileWgslRequest, CompileResponse>(
@@ -284,19 +287,23 @@ pub async fn probe_health() -> bool {
     GLOBAL_CORAL.health().await.is_some()
 }
 
-/// Fire-and-forget coralReef compilation for the given WGSL source.
+/// Fire-and-forget coralReef compilation using adapter info.
 ///
-/// Spawns a background task that compiles via coralReef IPC and caches
-/// the resulting native binary. Prefers the Phase 10 direct WGSL path
-/// (`shader.compile.wgsl`), falling back to the SPIR-V path for older
-/// coralReef versions. The caller continues with the standard wgpu path —
-/// the cached binary becomes available for future `coralDriver` dispatch.
-pub fn spawn_coral_compile(optimized_wgsl: &str, arch: &str, fp64_software: bool) {
+/// Spawns a background task that queries coralReef for the compilation target
+/// matching this adapter, then compiles via IPC and caches the result.
+/// barraCuda does not embed per-generation ISA knowledge — coralReef determines
+/// the ISA target from the adapter descriptor.
+pub fn spawn_coral_compile_for_adapter(
+    optimized_wgsl: &str,
+    adapter_info: &wgpu::AdapterInfo,
+    fp64_software: bool,
+) {
     let source = optimized_wgsl.to_owned();
-    let arch_owned = arch.to_owned();
     let hash = shader_hash(&source);
+    let adapter = types::AdapterDescriptor::from_adapter_info(adapter_info);
+    let adapter_key = adapter.cache_key();
 
-    if cached_native_binary(&hash, &arch_owned).is_some() {
+    if cached_native_binary(&hash, &adapter_key).is_some() {
         return;
     }
 
@@ -305,19 +312,53 @@ pub fn spawn_coral_compile(optimized_wgsl: &str, arch: &str, fp64_software: bool
     };
 
     handle.spawn(async move {
+        let Some(archs) = GLOBAL_CORAL.supported_archs().await else {
+            return;
+        };
+
+        let Some(target) = best_target_for_adapter(&archs, &adapter) else {
+            return;
+        };
+
         if let Some(binary) = GLOBAL_CORAL
-            .compile_wgsl_direct(&source, &arch_owned, fp64_software)
+            .compile_wgsl_direct(&source, &target, fp64_software)
             .await
         {
             tracing::debug!(
-                arch = %arch_owned,
+                target = %target,
                 size = binary.binary.len(),
-                "cached native binary ({} bytes)",
+                "cached native binary ({} bytes) for adapter {}",
                 binary.binary.len(),
+                adapter.device_name,
             );
-            cache_native_binary(&hash, &arch_owned, binary);
+            cache_native_binary(&hash, &adapter_key, binary);
         }
     });
+}
+
+/// Select the best compilation target from coralReef's supported architectures
+/// for the given adapter. Uses ISA family prefix matching (sm_ for NVIDIA,
+/// gfx for AMD) — the per-generation version knowledge lives in coralReef.
+fn best_target_for_adapter(
+    supported_archs: &[String],
+    adapter: &types::AdapterDescriptor,
+) -> Option<String> {
+    use crate::device::vendor::{VENDOR_AMD, VENDOR_NVIDIA};
+
+    let prefix = match adapter.vendor_id {
+        VENDOR_NVIDIA => "sm_",
+        VENDOR_AMD => "gfx",
+        _ => return None,
+    };
+
+    // From coralReef's supported list, find all matching the vendor's ISA family.
+    // Pick the lowest (most compatible) version — GPU hardware is forward-compatible
+    // with binaries compiled for earlier ISA revisions.
+    supported_archs
+        .iter()
+        .filter(|a| a.starts_with(prefix))
+        .min()
+        .cloned()
 }
 
 #[cfg(test)]
@@ -455,29 +496,157 @@ mod tests {
     }
 
     #[test]
-    fn test_arch_to_coral_nvidia() {
-        use crate::device::driver_profile::GpuArch;
-        assert_eq!(arch_to_coral(&GpuArch::Volta), Some("sm_70"));
-        assert_eq!(arch_to_coral(&GpuArch::Turing), Some("sm_75"));
-        assert_eq!(arch_to_coral(&GpuArch::Ampere), Some("sm_80"));
-        assert_eq!(arch_to_coral(&GpuArch::Ada), Some("sm_89"));
-        assert_eq!(arch_to_coral(&GpuArch::Blackwell), Some("sm_100"));
+    fn test_adapter_descriptor_cache_key() {
+        let desc = types::AdapterDescriptor {
+            vendor_id: 0x10DE,
+            device_name: "NVIDIA GeForce RTX 3090".to_owned(),
+            device_type: "DiscreteGpu".to_owned(),
+        };
+        let key = desc.cache_key();
+        assert!(key.starts_with("adapter:10de:"));
+        assert!(key.contains("RTX 3090"));
     }
 
     #[test]
-    fn test_arch_to_coral_amd() {
-        use crate::device::driver_profile::GpuArch;
-        assert_eq!(arch_to_coral(&GpuArch::Rdna2), Some("gfx1030"));
-        assert_eq!(arch_to_coral(&GpuArch::Rdna3), Some("gfx1100"));
-        assert_eq!(arch_to_coral(&GpuArch::Cdna2), Some("gfx90a"));
+    fn test_best_target_for_adapter_nvidia() {
+        let archs = vec!["sm_70".to_owned(), "sm_80".to_owned(), "gfx1030".to_owned()];
+        let nvidia_adapter = types::AdapterDescriptor {
+            vendor_id: 0x10DE,
+            device_name: "NVIDIA GPU".to_owned(),
+            device_type: "DiscreteGpu".to_owned(),
+        };
+        let target = best_target_for_adapter(&archs, &nvidia_adapter);
+        assert!(target.is_some());
+        assert!(target.unwrap().starts_with("sm_"));
     }
 
     #[test]
-    fn test_arch_to_coral_unsupported() {
-        use crate::device::driver_profile::GpuArch;
-        assert_eq!(arch_to_coral(&GpuArch::IntelArc), None);
-        assert_eq!(arch_to_coral(&GpuArch::AppleM), None);
-        assert_eq!(arch_to_coral(&GpuArch::Software), None);
-        assert_eq!(arch_to_coral(&GpuArch::Unknown), None);
+    fn test_best_target_for_adapter_amd() {
+        let archs = vec![
+            "sm_70".to_owned(),
+            "gfx1030".to_owned(),
+            "gfx1100".to_owned(),
+        ];
+        let amd_adapter = types::AdapterDescriptor {
+            vendor_id: 0x1002,
+            device_name: "AMD Radeon".to_owned(),
+            device_type: "DiscreteGpu".to_owned(),
+        };
+        let target = best_target_for_adapter(&archs, &amd_adapter);
+        assert!(target.is_some());
+        assert!(target.unwrap().starts_with("gfx"));
+    }
+
+    #[test]
+    fn test_best_target_for_adapter_unsupported() {
+        let archs = vec!["sm_70".to_owned()];
+        let intel_adapter = types::AdapterDescriptor {
+            vendor_id: 0x8086,
+            device_name: "Intel Arc".to_owned(),
+            device_type: "DiscreteGpu".to_owned(),
+        };
+        assert!(best_target_for_adapter(&archs, &intel_adapter).is_none());
+    }
+
+    // ── cache tests ─────────────────────────────────────────────────────
+
+    #[test]
+    fn cache_insert_and_lookup() {
+        let hash = cache::shader_hash("test_shader_source_1234");
+        let binary = types::CoralBinary {
+            binary: bytes::Bytes::from_static(&[0xCA, 0xFE]),
+            arch: "sm_70".to_owned(),
+        };
+        cache::cache_native_binary(&hash, "sm_70", binary);
+        let found = cache::cached_native_binary(&hash, "sm_70");
+        assert!(found.is_some());
+        assert_eq!(found.unwrap().arch, "sm_70");
+    }
+
+    #[test]
+    fn cache_miss_returns_none() {
+        assert!(cache::cached_native_binary("nonexistent_hash_xyz", "sm_70").is_none());
+    }
+
+    #[test]
+    fn cache_any_arch_finds_first_match() {
+        let hash = cache::shader_hash("any_arch_test_source_5678");
+        cache::cache_native_binary(
+            &hash,
+            "gfx1030",
+            types::CoralBinary {
+                binary: bytes::Bytes::from_static(&[0xAA]),
+                arch: "gfx1030".to_owned(),
+            },
+        );
+        let found = cache::cached_native_binary_any_arch(&hash);
+        assert!(found.is_some());
+        assert_eq!(found.unwrap().arch, "gfx1030");
+    }
+
+    #[test]
+    fn cache_any_arch_miss() {
+        assert!(cache::cached_native_binary_any_arch("completely_missing_hash").is_none());
+    }
+
+    #[test]
+    fn shader_hash_deterministic() {
+        let h1 = cache::shader_hash("hello world");
+        let h2 = cache::shader_hash("hello world");
+        assert_eq!(h1, h2);
+        let h3 = cache::shader_hash("hello world!");
+        assert_ne!(h1, h3);
+    }
+
+    #[test]
+    fn shader_hash_is_hex() {
+        let h = cache::shader_hash("some shader code");
+        assert!(h.chars().all(|c| c.is_ascii_hexdigit()));
+        assert_eq!(h.len(), 64);
+    }
+
+    // ── types serialization tests ───────────────────────────────────────
+
+    #[test]
+    fn adapter_descriptor_json_roundtrip() {
+        let desc = types::AdapterDescriptor {
+            vendor_id: 0x10DE,
+            device_name: "Test GPU".to_owned(),
+            device_type: "DiscreteGpu".to_owned(),
+        };
+        let json = serde_json::to_string(&desc).unwrap();
+        let back: types::AdapterDescriptor = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.vendor_id, 0x10DE);
+        assert_eq!(back.device_name, "Test GPU");
+        assert_eq!(back.device_type, "DiscreteGpu");
+    }
+
+    #[test]
+    fn health_response_deserialize() {
+        let json = r#"{"name":"coralReef","version":"0.3.0","status":"healthy","supported_archs":["sm_70","sm_80"]}"#;
+        let resp: types::HealthResponse = serde_json::from_str(json).unwrap();
+        assert_eq!(resp.name, "coralReef");
+        assert_eq!(resp.supported_archs.len(), 2);
+    }
+
+    #[test]
+    fn precision_to_coral_strategy_all_variants() {
+        use crate::shaders::precision::Precision;
+        assert_eq!(
+            types::precision_to_coral_strategy(&Precision::F16),
+            "f16_fast"
+        );
+        assert_eq!(
+            types::precision_to_coral_strategy(&Precision::F32),
+            "f32_only"
+        );
+        assert_eq!(
+            types::precision_to_coral_strategy(&Precision::F64),
+            "native"
+        );
+        assert_eq!(
+            types::precision_to_coral_strategy(&Precision::Df64),
+            "double_float"
+        );
     }
 }

@@ -105,3 +105,35 @@ impl CooperationParams {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_roundtrip() {
+        let d = CooperationParams::default();
+        let r = CooperationParams::from_flat(&d.to_flat());
+        assert!(f64::abs(d.mu_coop - r.mu_coop) < 1e-15);
+        assert!(f64::abs(d.mu_cheat - r.mu_cheat) < 1e-15);
+        assert!(f64::abs(d.k_cap - r.k_cap) < 1e-15);
+        assert!(f64::abs(d.death_rate - r.death_rate) < 1e-15);
+        assert!(f64::abs(d.k_ai_prod - r.k_ai_prod) < 1e-15);
+        assert!(f64::abs(d.d_ai - r.d_ai) < 1e-15);
+        assert!(f64::abs(d.benefit - r.benefit) < 1e-15);
+        assert!(f64::abs(d.k_benefit - r.k_benefit) < 1e-15);
+        assert!(f64::abs(d.cost - r.cost) < 1e-15);
+        assert!(f64::abs(d.k_bio - r.k_bio) < 1e-15);
+        assert!(f64::abs(d.k_bio_ai - r.k_bio_ai) < 1e-15);
+        assert!(f64::abs(d.dispersal_bonus - r.dispersal_bonus) < 1e-15);
+        assert!(f64::abs(d.d_bio - r.d_bio) < 1e-15);
+    }
+
+    #[test]
+    fn test_flat_length() {
+        assert_eq!(
+            CooperationParams::default().to_flat().len(),
+            COOPERATION_N_PARAMS
+        );
+    }
+}

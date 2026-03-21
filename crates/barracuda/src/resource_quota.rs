@@ -22,10 +22,10 @@
 //! ```rust,ignore
 //! use barracuda::resource_quota::{ResourceQuota, QuotaPool};
 //!
-//! // Create a quota: 2GB VRAM, prefer NVIDIA
+//! // Create a quota: 2GB VRAM, prefer discrete GPUs
 //! let quota = ResourceQuota::new()
 //!     .with_max_vram_bytes(2 * 1024 * 1024 * 1024)
-//!     .with_preferred_vendor(GpuVendor::Nvidia);
+//!     .with_preferred_class(DeviceClass::DiscreteGpu);
 //!
 //! // Get a device from the pool that fits the quota
 //! let pool = QuotaPool::new().await?;
@@ -45,7 +45,7 @@
 //! - Proper error handling (Result types, no panics)
 
 use crate::error::{BarracudaError, Result};
-use crate::multi_gpu::GpuVendor;
+use crate::multi_gpu::DeviceClass;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -67,8 +67,8 @@ pub struct ResourceQuota {
     /// Maximum single buffer size (None = unlimited)
     pub max_single_buffer_bytes: Option<u64>,
 
-    /// Preferred GPU vendor (None = no preference)
-    pub preferred_vendor: Option<GpuVendor>,
+    /// Preferred device class (None = no preference)
+    pub preferred_class: Option<DeviceClass>,
 
     /// Minimum VRAM required to be usable
     pub min_vram_bytes: Option<u64>,
@@ -83,7 +83,7 @@ impl Default for ResourceQuota {
             max_vram_bytes: None,
             max_buffers: None,
             max_single_buffer_bytes: None,
-            preferred_vendor: None,
+            preferred_class: None,
             min_vram_bytes: None,
             name: "default".to_string(),
         }
@@ -138,10 +138,10 @@ impl ResourceQuota {
         self
     }
 
-    /// Set preferred GPU vendor
+    /// Set preferred device class
     #[must_use]
-    pub fn with_preferred_vendor(mut self, vendor: GpuVendor) -> Self {
-        self.preferred_vendor = Some(vendor);
+    pub fn with_preferred_class(mut self, class: DeviceClass) -> Self {
+        self.preferred_class = Some(class);
         self
     }
 
@@ -159,7 +159,11 @@ impl ResourceQuota {
     }
 
     /// Check if a device meets the minimum requirements
-    pub fn device_meets_requirements(&self, device_vram_bytes: u64, vendor: GpuVendor) -> bool {
+    pub fn device_meets_requirements(
+        &self,
+        device_vram_bytes: u64,
+        device_class: DeviceClass,
+    ) -> bool {
         // Check minimum VRAM
         if let Some(min) = self.min_vram_bytes {
             if device_vram_bytes < min {
@@ -167,14 +171,13 @@ impl ResourceQuota {
             }
         }
 
-        // Vendor preference is soft (doesn't disqualify)
-        // But if we have a preference and it doesn't match, log it
-        if let Some(pref) = self.preferred_vendor {
-            if pref != vendor {
+        // Device class preference is soft (doesn't disqualify)
+        if let Some(pref) = self.preferred_class {
+            if pref != device_class {
                 tracing::debug!(
-                    "Quota '{}': device vendor {:?} doesn't match preference {:?}",
+                    "Quota '{}': device class {:?} doesn't match preference {:?}",
                     self.name,
-                    vendor,
+                    device_class,
                     pref
                 );
             }
@@ -453,8 +456,8 @@ pub struct DeviceQuota {
     /// Device name
     pub device_name: String,
 
-    /// Device vendor
-    pub vendor: GpuVendor,
+    /// Device class
+    pub device_class: DeviceClass,
 
     /// Total VRAM on device (bytes)
     pub total_vram_bytes: u64,

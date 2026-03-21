@@ -6,7 +6,7 @@
 //! Absorbed from Kokkos `parallel_reduce` with `JoinOp` patterns.
 
 use crate::device::WgpuDevice;
-use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
+use crate::device::capabilities::{DeviceCapabilities, Fp64Strategy};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, create_f64_data_pipeline};
 use crate::device::tensor_context::get_device_context;
 use crate::error::Result;
@@ -22,8 +22,8 @@ const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
 
 /// Select the fused correlation shader based on the device's FP64 strategy.
 fn fused_shader_for_device(device: &WgpuDevice) -> &'static str {
-    let profile = GpuDriverProfile::from_device(device);
-    match profile.fp64_strategy() {
+    let caps = DeviceCapabilities::from_device(device);
+    match caps.fp64_strategy() {
         Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => SHADER_FUSED,
         Fp64Strategy::Hybrid => {
             static DF64_COMBINED: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {

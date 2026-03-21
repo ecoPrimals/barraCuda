@@ -12,7 +12,7 @@
 //! | Tier | Bandwidth | Latency | Example |
 //! |------|-----------|---------|---------|
 //! | Local | ∞ | 0 | Same device |
-//! | `NvLink` | 300 GB/s | ~1µs | Multi-GPU `NvLink` bridge |
+//! | `HighBandwidthP2P` | 300 GB/s | ~1µs | Multi-GPU high-BW bridge |
 //! | `PciePeer` | 15.8 GB/s | ~5µs | `PCIe` 4.0 x16 P2P |
 //! | `PcieHost` | 15.8 GB/s | ~50µs | `PCIe` 4.0 via CPU bounce |
 //! | `PcieLow` | 0.5 GB/s | ~100µs | `PCIe` 2.0 x1 (AKD1000) |
@@ -27,8 +27,8 @@ use crate::device::substrate::{Substrate, SubstrateType};
 pub enum BandwidthTier {
     /// Same device — no transfer needed.
     Local,
-    /// NvLink/NvSwitch — GPU-to-GPU high bandwidth.
-    NvLink,
+    /// High-bandwidth peer-to-peer interconnect (e.g. `NVLink`, Infinity Fabric).
+    HighBandwidthP2P,
     /// `PCIe` peer-to-peer — direct DMA between devices (bypasses CPU).
     PciePeer,
     /// `PCIe` via host — data bounces through CPU main memory.
@@ -45,7 +45,7 @@ impl BandwidthTier {
     pub const fn transfer_time_us(self, bytes: u64) -> u64 {
         let (bw_mbps, latency_us): (u64, u64) = match self {
             Self::Local => return 0,
-            Self::NvLink => (300_000, 1),
+            Self::HighBandwidthP2P => (300_000, 1),
             Self::PciePeer => (15_800, 5),
             Self::PcieHost => (15_800, 50),
             Self::PcieLow => (500, 100),
@@ -63,7 +63,7 @@ impl BandwidthTier {
     /// Whether this tier supports peer-to-peer DMA (bypasses CPU).
     #[must_use]
     pub const fn is_peer_to_peer(self) -> bool {
-        matches!(self, Self::Local | Self::NvLink | Self::PciePeer)
+        matches!(self, Self::Local | Self::HighBandwidthP2P | Self::PciePeer)
     }
 
     /// Human-readable label.
@@ -71,7 +71,7 @@ impl BandwidthTier {
     pub const fn label(self) -> &'static str {
         match self {
             Self::Local => "local",
-            Self::NvLink => "nvlink",
+            Self::HighBandwidthP2P => "high-bw-p2p",
             Self::PciePeer => "pcie-p2p",
             Self::PcieHost => "pcie-host",
             Self::PcieLow => "pcie-low",
@@ -165,10 +165,7 @@ impl InterconnectTopology {
 fn is_gpu(st: SubstrateType) -> bool {
     matches!(
         st,
-        SubstrateType::NvidiaGpu
-            | SubstrateType::AmdGpu
-            | SubstrateType::IntelGpu
-            | SubstrateType::AppleGpu
+        SubstrateType::DiscreteGpu | SubstrateType::IntegratedGpu
     )
 }
 
@@ -176,8 +173,8 @@ fn infer_link_tier(src: &Substrate, dst: &Substrate) -> BandwidthTier {
     let (s, d) = (src.substrate_type, dst.substrate_type);
     match (is_gpu(s), is_gpu(d), s, d) {
         (true, true, _, _) => {
-            if is_nvlink_pair(src, dst) {
-                BandwidthTier::NvLink
+            if is_high_bandwidth_pair(src, dst) {
+                BandwidthTier::HighBandwidthP2P
             } else {
                 BandwidthTier::PciePeer
             }
@@ -193,15 +190,29 @@ fn infer_link_tier(src: &Substrate, dst: &Substrate) -> BandwidthTier {
     }
 }
 
-fn is_nvlink_pair(a: &Substrate, b: &Substrate) -> bool {
-    if a.substrate_type != SubstrateType::NvidiaGpu || b.substrate_type != SubstrateType::NvidiaGpu
+/// Heuristic: data-center GPUs with known high-bandwidth interconnects.
+///
+/// Checks device name for known data-center GPU families from any vendor
+/// that ship with high-bandwidth P2P links (`NVLink`, Infinity Fabric, etc.).
+/// Falls back to `PCIe` P2P when unrecognized.
+fn is_high_bandwidth_pair(a: &Substrate, b: &Substrate) -> bool {
+    if !matches!(a.substrate_type, SubstrateType::DiscreteGpu)
+        || !matches!(b.substrate_type, SubstrateType::DiscreteGpu)
     {
         return false;
     }
-    let a_up = a.name.to_uppercase();
-    let b_up = b.name.to_uppercase();
-    (a_up.contains("V100") || a_up.contains("A100"))
-        && (b_up.contains("V100") || b_up.contains("A100"))
+    fn is_datacenter_gpu(name: &str) -> bool {
+        let up = name.to_uppercase();
+        up.contains("V100")
+            || up.contains("A100")
+            || up.contains("H100")
+            || up.contains("H200")
+            || up.contains("B100")
+            || up.contains("B200")
+            || up.contains("MI250")
+            || up.contains("MI300")
+    }
+    is_datacenter_gpu(&a.name) && is_datacenter_gpu(&b.name)
 }
 
 fn is_low_bandwidth_npu(s: &Substrate) -> bool {
@@ -215,7 +226,7 @@ mod tests {
 
     fn gpu(name: &str) -> Substrate {
         Substrate {
-            substrate_type: SubstrateType::NvidiaGpu,
+            substrate_type: SubstrateType::DiscreteGpu,
             name: name.to_string(),
             backend: "Vulkan".to_string(),
             index: 0,
@@ -312,6 +323,7 @@ mod tests {
     #[test]
     fn bandwidth_tier_labels() {
         assert_eq!(BandwidthTier::Local.label(), "local");
+        assert_eq!(BandwidthTier::HighBandwidthP2P.label(), "high-bw-p2p");
         assert_eq!(BandwidthTier::PciePeer.label(), "pcie-p2p");
         assert_eq!(BandwidthTier::Network.label(), "network");
     }

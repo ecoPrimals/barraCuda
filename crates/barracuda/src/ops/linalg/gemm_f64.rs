@@ -17,7 +17,7 @@
 //! - Runtime-configured dimensions and batch size
 
 use crate::device::WgpuDevice;
-use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
+use crate::device::capabilities::{DeviceCapabilities, Fp64Strategy};
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -87,8 +87,8 @@ impl GemmF64 {
     }
 
     fn wgsl_shader_for_device(device: &WgpuDevice) -> String {
-        let profile = GpuDriverProfile::from_device(device);
-        let strategy = profile.fp64_strategy();
+        let caps = DeviceCapabilities::from_device(device);
+        let strategy = caps.fp64_strategy();
         tracing::info!(?strategy, "GEMM: using {:?} FP64 strategy", strategy);
         match strategy {
             Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => {

@@ -24,7 +24,7 @@
 //!   `BARRACUDA_GPU_ADAPTER=1`    cargo run --release --bin `bench_f64_builtins`
 
 use barracuda::device::WgpuDevice;
-use barracuda::device::capabilities::GpuDriverProfile;
+use barracuda::device::capabilities::DeviceCapabilities;
 use barracuda::device::probe::probe_f64_builtins;
 use std::sync::Arc;
 
@@ -70,8 +70,8 @@ async fn main() {
         std::process::exit(1);
     }
 
-    let profile = GpuDriverProfile::from_device(&device);
-    println!("{profile}");
+    let caps = DeviceCapabilities::from_device(&device);
+    println!("{caps}");
 
     println!("─────────────────────────────────────────────────────────────────");
     println!("Probing f64 built-ins (each in isolated shader to catch crashes)…");

@@ -21,8 +21,8 @@
 
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::capabilities::{DeviceCapabilities, Fp64Strategy};
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -45,8 +45,8 @@ const SHADER_DF64: &str = include_str!("../shaders/reduce/norm_reduce_df64.wgsl"
 
 /// Select the reduce shader and compilation mode based on the device's FP64 strategy.
 fn shader_config_for_device(device: &WgpuDevice) -> (&'static str, bool) {
-    let profile = GpuDriverProfile::from_device(device);
-    match profile.fp64_strategy() {
+    let caps = DeviceCapabilities::from_device(device);
+    match caps.fp64_strategy() {
         Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => {
             (SHADER_NATIVE, false)
         }

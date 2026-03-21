@@ -303,7 +303,7 @@ pub mod prelude {
     pub use crate::multi_gpu::DeviceInfo as GpuDeviceInfo;
     #[cfg(feature = "gpu")]
     pub use crate::multi_gpu::{
-        DeviceLease, DeviceRequirements, GpuPool, GpuVendor, MultiDevicePool, WorkloadConfig,
+        DeviceClass, DeviceLease, DeviceRequirements, GpuPool, MultiDevicePool, WorkloadConfig,
     };
     #[cfg(all(feature = "gpu", feature = "domain-nn"))]
     pub use crate::nn::{Layer, LossFunction, Optimizer};

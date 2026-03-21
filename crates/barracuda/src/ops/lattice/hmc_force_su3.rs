@@ -32,8 +32,8 @@
 //! GPU promotion: Feb 2026.  CPU reference unchanged in hotSpring.
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::{DeviceCapabilities, Fp64Strategy};
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::error::Result;
 use std::sync::Arc;
 
@@ -87,8 +87,8 @@ impl Su3HmcForce {
     ) -> Result<Self> {
         let volume = nt * nx * ny * nz;
 
-        let profile = GpuDriverProfile::from_device(&device);
-        let strategy = profile.fp64_strategy();
+        let caps = DeviceCapabilities::from_device(&device);
+        let strategy = caps.fp64_strategy();
         let shader_src = match strategy {
             Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => {
                 format!("{}{}", su3_preamble(), FORCE_SHADER_BODY)

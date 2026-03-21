@@ -12,9 +12,8 @@
 //! **Force**: F = 24ε/r * [2(σ/r)^12 - (σ/r)^6] * r̂
 
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::capabilities::{DeviceCapabilities, Fp64Strategy, WORKGROUP_SIZE_1D};
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
 
@@ -38,8 +37,8 @@ impl LennardJonesF64 {
     }
 
     fn wgsl_shader_for_device(device: &WgpuDevice) -> String {
-        let profile = GpuDriverProfile::from_device(device);
-        let strategy = profile.fp64_strategy();
+        let caps = DeviceCapabilities::from_device(device);
+        let strategy = caps.fp64_strategy();
         tracing::info!(?strategy, "LJ F64: using {:?} FP64 strategy", strategy);
         match strategy {
             Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => {

@@ -3,11 +3,11 @@
 //!
 //! **Deep Debt Principles**:
 //! - ✅ Pure WGSL implementation (universal compute)
-//! - ✅ Capability-based dispatch (vendor-optimized)
-//! - ✅ Vendor-specific workgroup sizes (NVIDIA: 64, AMD: 128)
+//! - ✅ Capability-based dispatch (hardware limits, not vendor names)
+//! - ✅ Workgroup sizing from wgpu device limits
 //! - ✅ Pipeline caching (compile once, dispatch many)
 //! - ✅ Buffer pooling (zero allocation after warmup)
-//! - ✅ Bind group caching (eliminates ~100μs per op on NVIDIA)
+//! - ✅ Bind group caching (eliminates ~100μs per dispatch)
 //!
 //! Formula: D = A * B + C (fused multiply-add)
 //!
@@ -18,6 +18,7 @@
 //! - Residual connections: output = layer(x) + x
 //! - Scaled additions: output = alpha * x + y
 
+use crate::device::capabilities::DeviceCapabilities;
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
 use crate::error::{BarracudaError, Result};
@@ -67,34 +68,30 @@ impl Fma {
         Ok(Self { a, b, c })
     }
 
-    /// Select vendor-optimized shader based on GPU and tensor size
-    fn wgsl_shader(device_name: &str, size: usize) -> (&'static str, u32) {
-        let lower = device_name.to_lowercase();
+    /// Select shader variant based on hardware capabilities.
+    ///
+    /// Workgroup size is chosen from the device's reported limits (vendor-agnostic).
+    /// The largest supported workgroup size is preferred for throughput; smaller
+    /// variants avoid exceeding dispatch constraints on large tensors.
+    fn wgsl_shader(caps: &DeviceCapabilities, size: usize) -> (&'static str, u32) {
+        let max_inv = caps.max_compute_invocations_per_workgroup;
+        let max_dispatch = caps.max_compute_workgroups.0;
 
-        let max_dispatch = 65535u32;
-        let (nvidia_wg, amd_wg) = (64u32, 128u32);
-
-        if lower.contains("nvidia")
-            || lower.contains("geforce")
-            || lower.contains("rtx")
-            || lower.contains("gtx")
-        {
-            let needed_workgroups = (size as u32).div_ceil(nvidia_wg);
-            if needed_workgroups <= max_dispatch {
-                (SHADER_WG64, nvidia_wg)
-            } else {
-                (&*SHADER_DEFAULT, 256)
-            }
-        } else if lower.contains("amd") || lower.contains("radeon") || lower.contains("radv") {
-            let needed_workgroups = (size as u32).div_ceil(amd_wg);
-            if needed_workgroups <= max_dispatch {
-                (SHADER_WG128, amd_wg)
-            } else {
-                (&*SHADER_DEFAULT, 256)
-            }
+        let default: &'static str = &SHADER_DEFAULT;
+        let (shader, wg) = if max_inv >= 256 {
+            (default, 256u32)
+        } else if max_inv >= 128 {
+            (SHADER_WG128, 128u32)
         } else {
-            (&*SHADER_DEFAULT, 256)
+            (SHADER_WG64, 64u32)
+        };
+
+        let needed = (size as u32).div_ceil(wg);
+        if needed > max_dispatch && max_inv >= 256 {
+            return (default, 256);
         }
+
+        (shader, wg)
     }
 
     /// Execute FMA on tensors
@@ -109,9 +106,9 @@ impl Fma {
         // Get device context for buffer pooling and bind group caching
         let ctx = get_device_context(device);
 
-        // Select vendor-optimized shader
-        let device_name = device.name();
-        let (shader_source, workgroup_size) = Self::wgsl_shader(device_name, size);
+        // Select shader variant from hardware capabilities
+        let caps = DeviceCapabilities::from_device(device);
+        let (shader_source, workgroup_size) = Self::wgsl_shader(&caps, size);
 
         // Acquire pooled output buffer
         let output_buffer = ctx.acquire_pooled_output(size);

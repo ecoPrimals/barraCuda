@@ -79,7 +79,10 @@ fn round(x: f64) -> f64 {
 ///
 /// `x = (q - zero_point) * scale`
 #[must_use]
-#[expect(clippy::cast_precision_loss, reason = "suppressed")]
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "i8→i64 and i64→f64 casts are lossless for the value ranges involved (i8: ±127, zero_point: small)"
+)]
 pub fn dequantize_affine_i8_f64(quantized: &[i8], scale: f64, zero_point: i64) -> Vec<f64> {
     quantized
         .iter()

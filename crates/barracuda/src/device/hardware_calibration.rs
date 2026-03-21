@@ -18,7 +18,7 @@
 //! ```
 
 use super::WgpuDevice;
-use super::driver_profile::GpuDriverProfile;
+use super::capabilities::DeviceCapabilities;
 use super::precision_tier::PrecisionTier;
 
 /// Calibrated capability of a single precision tier on this GPU.
@@ -63,17 +63,17 @@ impl HardwareCalibration {
     /// of probe-induced device poisoning on NVIDIA proprietary.
     #[must_use]
     pub fn from_device(device: &WgpuDevice) -> Self {
-        let profile = GpuDriverProfile::from_device(device);
-        Self::from_profile(&profile, device)
+        let caps = DeviceCapabilities::from_device(device);
+        Self::from_capabilities(&caps, device)
     }
 
-    /// Build calibration from a pre-computed driver profile.
+    /// Build calibration from pre-computed device capabilities.
     #[must_use]
-    pub fn from_profile(profile: &GpuDriverProfile, device: &WgpuDevice) -> Self {
+    pub fn from_capabilities(caps: &DeviceCapabilities, device: &WgpuDevice) -> Self {
         let adapter_name = device.name().to_string();
         let has_f64_shaders = device.has_f64_shaders();
-        let has_nvvm_risk = profile.has_df64_spir_v_poisoning();
-        let precision_routing = profile.precision_routing();
+        let has_nvvm_risk = caps.has_df64_spir_v_poisoning();
+        let precision_routing = caps.precision_routing();
 
         use super::driver_profile::PrecisionRoutingAdvice as PRA;
 
@@ -114,14 +114,14 @@ impl HardwareCalibration {
             tier: PrecisionTier::F64,
             compiles: f64_works,
             dispatches: f64_works,
-            transcendentals_safe: f64_works && profile.supports_f64_builtins(),
+            transcendentals_safe: f64_works && caps.supports_f64_builtins(),
         };
 
         let f64_precise_cap = TierCapability {
             tier: PrecisionTier::F64Precise,
             compiles: f64_works,
             dispatches: f64_works,
-            transcendentals_safe: f64_works && profile.supports_f64_builtins(),
+            transcendentals_safe: f64_works && caps.supports_f64_builtins(),
         };
 
         let tiers = vec![f16_cap, f32_cap, df64_cap, f64_cap, f64_precise_cap];

@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **806 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,085 Rust source files**, 43 integration test files, 3,936 tests passing
+- **1,085 Rust source files**, 43 integration test files, 4,052+ tests (3,649 lib + 118 core + integration + doctests) passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -53,6 +53,12 @@ results.
 4. **Pure Rust** — `#![forbid(unsafe_code)]` in both crates, zero `unsafe` blocks, zero external C dependencies, zero dependencies on any other primal (lifecycle and health traits internalized from sourDough scaffold)
 5. **Fully concurrent** — `GuardedDeviceHandle` + atomic encoder barrier prevents wgpu-core races without lock contention; split-lock GPU submission (submit and poll use separate lock acquisitions); fire-and-forget dispatch via `submit_commands` for non-readback ops; wgpu 28 `Device`/`Queue` are `Clone` — zero `Arc` overhead for handle sharing; all tests pass at 16 threads on llvmpipe
 6. **AGPL-3.0** — free as in freedom
+
+---
+
+## Recent
+
+- **Sprint 14**: Full vendor-agnostic evolution — `DeviceCapabilities` replaces `GpuDriverProfile`, `DeviceClass` replaces `GpuVendor`, capability-based device preferences.
 
 ---
 
@@ -179,7 +185,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo test --workspace --lib            # lib tests (3,936 total via nextest)
+cargo test --workspace --lib            # lib tests (4,052+ total via nextest)
 cargo llvm-cov --workspace --lib        # 80% CI gate (blocking), 90% target (requires GPU hardware)
 ```
 

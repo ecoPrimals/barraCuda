@@ -12,9 +12,8 @@
 //! - ✅ Zero unsafe code
 //! - ✅ f64 precision
 
-use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
+use crate::device::capabilities::{DeviceCapabilities, Fp64Strategy, WORKGROUP_SIZE_COMPACT};
 use crate::device::compute_pipeline::ComputeDispatch;
-use crate::device::driver_profile::{Fp64Strategy, GpuDriverProfile};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
@@ -133,8 +132,8 @@ impl YukawaForceF64 {
                 usage: wgpu::BufferUsages::STORAGE,
             });
 
-        let profile = GpuDriverProfile::from_device(device);
-        let strategy = profile.fp64_strategy();
+        let caps = DeviceCapabilities::from_device(device);
+        let strategy = caps.fp64_strategy();
         tracing::info!(
             ?strategy,
             "YukawaForceF64: using {:?} FP64 strategy",

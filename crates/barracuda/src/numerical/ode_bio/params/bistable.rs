@@ -71,3 +71,42 @@ impl BistableParams {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_roundtrip() {
+        let d = BistableParams::default();
+        let r = BistableParams::from_flat(&d.to_flat());
+        let db = &d.base;
+        let rb = &r.base;
+        assert!(f64::abs(db.mu_max - rb.mu_max) < 1e-15);
+        assert!(f64::abs(db.k_cap - rb.k_cap) < 1e-15);
+        assert!(f64::abs(db.death_rate - rb.death_rate) < 1e-15);
+        assert!(f64::abs(db.k_ai_prod - rb.k_ai_prod) < 1e-15);
+        assert!(f64::abs(db.d_ai - rb.d_ai) < 1e-15);
+        assert!(f64::abs(db.k_hapr_max - rb.k_hapr_max) < 1e-15);
+        assert!(f64::abs(db.k_hapr_ai - rb.k_hapr_ai) < 1e-15);
+        assert!(f64::abs(db.n_hapr - rb.n_hapr) < 1e-15);
+        assert!(f64::abs(db.d_hapr - rb.d_hapr) < 1e-15);
+        assert!(f64::abs(db.k_dgc_basal - rb.k_dgc_basal) < 1e-15);
+        assert!(f64::abs(db.k_dgc_rep - rb.k_dgc_rep) < 1e-15);
+        assert!(f64::abs(db.k_pde_basal - rb.k_pde_basal) < 1e-15);
+        assert!(f64::abs(db.k_pde_act - rb.k_pde_act) < 1e-15);
+        assert!(f64::abs(db.d_cdg - rb.d_cdg) < 1e-15);
+        assert!(f64::abs(db.k_bio_max - rb.k_bio_max) < 1e-15);
+        assert!(f64::abs(db.k_bio_cdg - rb.k_bio_cdg) < 1e-15);
+        assert!(f64::abs(db.n_bio - rb.n_bio) < 1e-15);
+        assert!(f64::abs(db.d_bio - rb.d_bio) < 1e-15);
+        assert!(f64::abs(d.alpha_fb - r.alpha_fb) < 1e-15);
+        assert!(f64::abs(d.n_fb - r.n_fb) < 1e-15);
+        assert!(f64::abs(d.k_fb - r.k_fb) < 1e-15);
+    }
+
+    #[test]
+    fn test_flat_length() {
+        assert_eq!(BistableParams::default().to_flat().len(), BISTABLE_N_PARAMS);
+    }
+}

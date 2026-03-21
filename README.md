@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **806 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,085 Rust source files**, 43 integration test files, 4,052+ tests (3,649 lib + 118 core + integration + doctests) passing
+- **1,085 Rust source files**, 43 integration test files, 4,052+ tests (3,659 lib + 130 core + integration + doctests) passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -58,6 +58,7 @@ results.
 
 ## Recent
 
+- **Sprint 15–16**: Comprehensive audit & production hardening — device-lost detection evolution, hardcoded domain lists eliminated, lint evolution (42 `#[allow]` → 14 justified), documentation accuracy, 20 new barracuda-core tests (130 total), zero production `.unwrap()` confirmed, FHE test suite verified (62 pass), all quality gates green.
 - **Sprint 14**: Full vendor-agnostic evolution — `DeviceCapabilities` replaces `GpuDriverProfile`, `DeviceClass` replaces `GpuVendor`, capability-based device preferences.
 
 ---

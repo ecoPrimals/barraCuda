@@ -63,8 +63,6 @@ impl SparsitySamplerResult {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used, reason = "test code")]
-
     use super::*;
 
     fn make_result_with_cache(records: Vec<(Vec<f64>, f64)>) -> SparsitySamplerResult {

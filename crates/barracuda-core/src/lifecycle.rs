@@ -134,7 +134,35 @@ mod tests {
     #[test]
     fn state_display() {
         assert_eq!(PrimalState::Created.to_string(), "created");
+        assert_eq!(PrimalState::Starting.to_string(), "starting");
         assert_eq!(PrimalState::Running.to_string(), "running");
+        assert_eq!(PrimalState::Stopping.to_string(), "stopping");
+        assert_eq!(PrimalState::Stopped.to_string(), "stopped");
         assert_eq!(PrimalState::Failed.to_string(), "failed");
+    }
+
+    #[test]
+    fn starting_and_stopping_cannot_start_or_stop() {
+        assert!(!PrimalState::Starting.can_start());
+        assert!(!PrimalState::Starting.can_stop());
+        assert!(!PrimalState::Starting.is_running());
+
+        assert!(!PrimalState::Stopping.can_start());
+        assert!(!PrimalState::Stopping.can_stop());
+        assert!(!PrimalState::Stopping.is_running());
+    }
+
+    #[test]
+    fn state_debug_impl() {
+        assert_eq!(format!("{:?}", PrimalState::Created), "Created");
+        assert_eq!(format!("{:?}", PrimalState::Running), "Running");
+    }
+
+    #[test]
+    fn state_clone_and_eq() {
+        let state = PrimalState::Running;
+        let cloned = state;
+        assert_eq!(state, cloned);
+        assert_ne!(PrimalState::Running, PrimalState::Stopped);
     }
 }

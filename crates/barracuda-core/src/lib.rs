@@ -28,7 +28,10 @@
     clippy::module_name_repetitions,
     reason = "primal module names are intentionally descriptive"
 )]
-#![allow(clippy::unused_async)] // tarpc trait impl requires async signatures the trait defines
+#![allow(
+    clippy::unused_async,
+    reason = "tarpc trait impl requires async signatures the trait defines"
+)]
 #![expect(
     clippy::must_use_candidate,
     reason = "IPC handlers return values consumed by framework"
@@ -46,7 +49,9 @@
     reason = "BarracudaCoreError carries diagnostic context"
 )]
 
-/// Runtime discovery of peer primals via mDNS and fallback scanning.
+/// Capability-based self-discovery — derives capabilities and provides from
+/// the IPC dispatch table. Peer primals are discovered at runtime via
+/// discovery files and capability scanning, not hardcoded names.
 pub mod discovery;
 /// Primal-specific error types and conversions.
 pub mod error;

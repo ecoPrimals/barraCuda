@@ -160,6 +160,7 @@
 - `VpcSimulateGpu` — GPU Monte Carlo VPC simulation with RK4 PK integration (healthSpring V14 absorption)
 - `foce_gradient_f64.wgsl` + `vpc_simulate_f64.wgsl` + `bipartition_encode.wgsl` — 3 new production WGSL shaders
 
+- **Sprint 15–16: Comprehensive Audit & Production Hardening** (Mar 21): Device-lost detection evolution, hardcoded domain lists eliminated, lint evolution (42→14 `#[allow]`), 20 new barracuda-core tests (130 total), zero production `.unwrap()` confirmed, FHE 62 tests verified, barracuda-core coverage 68.73% function / 63.47% line. All gates green.
 - **Sprint 14: Vendor-Agnostic Evolution** (Mar 21): `DeviceCapabilities` replaces `GpuDriverProfile`, `DeviceClass` replaces `GpuVendor`, `SubstrateType` uses device-class variants, +75 tests
 - **Deep debt sprint 14 — audit completion, doctest & hardware fixes** (Mar 20): Pre-existing doctest failures fixed in `complex_f64.rs` (stale WGSL first-line assertion) and `sobol.rs` (Rust 2024 merged doctests + reserved `gen` keyword). Hardware verification multi-GPU buffer lifetime panic fixed (scoped tensors per-device + `"is no longer alive"` skip pattern). 12 clippy new-edition lints fixed (`identity_op`, `manual_range_contains`, `manual_is_multiple_of`, `manual_midpoint`). SPDX header fix in `warmup.rs`. Device-aware pooling test. 50 new tests across `surrogate/rbf`, `surrogate/adaptive`, `stats/evolution`, `stats/jackknife`. All 108 doctests now pass (was 2 failures). 3,936 tests pass, 0 fail. All gates green.
 - **Deep debt sprint 13 — comprehensive audit, coverage & test hardening** (Mar 20): Cross-vendor GPU tolerance constants (`CROSS_VENDOR_MATMUL_F32_TOL` 0.05, `CROSS_VENDOR_ELEMENTWISE_F32_TOL` 1e-3). FHE cold-start performance budgets (`NTT_N4096_COLD_BUDGET` 10s, `FAST_POLY_MUL_N4096_COLD_BUDGET` 20s). llvm-cov SIGSEGV fix via nextest `[profile.coverage]` excluding `hardware_verification` binary; CI updated to `cargo llvm-cov nextest --profile coverage`. 40+ new tests across `driver_profile` (architecture variants, NAK/ACO/Intel, workaround flags), `precision_brain` (domain requirements, route advice, display), `hardware_calibration` (tier caps, best-any-tier), `cubic_spline` (reversed limits, GPU parity), `solve` (partial pivot, dimension errors), `jackknife` (n<2, identity, SE). Stale `#[expect(clippy::unwrap_used)]` removed from 3 test modules. Coverage measured: 71.38% line / 77.94% function on llvmpipe (remaining gap is f64 GPU-only code paths). Doc alignment: test counts 3,886, file counts 1,091, SPDX historical correction. All quality gates green. 3,886 tests pass, 0 fail.
@@ -197,7 +198,7 @@
 - P1: DF64 end-to-end NVK hardware verification (Yukawa shaders)
 - P1: coralReef sovereign compiler evolution (unified compiler and driver for all GPU targets)
 - P1: Kokkos validation baseline documentation (unblocked by VFIO strategy)
-- P2: Test coverage ~72% line / ~79% function on llvmpipe (80% CI gate blocking; 90% target requires real GPU hardware; 4,052+ tests + 108 doctests passing)
+- P2: Test coverage ~64% line / ~69% function on llvmpipe (80% CI gate blocking; 90% target requires real GPU hardware; 4,052+ tests + 108 doctests passing)
 - P2: Kokkos GPU parity benchmarks
 - ~~P2: RHMC multi-shift CG solver~~ — **Done** (Mar 12, rhmc.rs + rhmc_hmc.rs)
 
@@ -205,6 +206,6 @@
 
 | Primal | Version/Session | Key capability |
 |--------|-----------------|----------------|
-| toadStool | S156 | Full audit specialty resurrection; sovereign infra gaps resolved |
-| coralReef | Phase 10 Iter 50 | Full audit execution; USERD_TARGET + INST_TARGET runlist fix applied |
+| toadStool | S162 | Coverage expansion & code quality |
+| coralReef | Phase 10 Iter 60 | Deep debt & unsafe evolution |
 | hotSpring | v0.6.32 | Trio rewire; VFIO validation; GP_PUT root cause found |

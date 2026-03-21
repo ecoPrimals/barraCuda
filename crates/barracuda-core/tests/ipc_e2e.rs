@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-#![allow(clippy::unwrap_used, clippy::single_match_else)]
+#![expect(
+    clippy::unwrap_used,
+    clippy::single_match_else,
+    reason = "test code uses unwrap and match patterns for readability"
+)]
 //! End-to-end IPC tests for barraCuda JSON-RPC 2.0 over TCP.
 //!
 //! These tests start a real TCP server, connect as a client, send JSON-RPC
 //! requests over the wire, and assert on the responses. This exercises the
 //! full transport pipeline: serialization, framing, dispatch, and response.
-
-#![expect(clippy::unwrap_used, reason = "E2E tests use unwrap for clarity")]
 
 use serde_json::{Value, json};
 use std::sync::Arc;

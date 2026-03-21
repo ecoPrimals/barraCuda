@@ -186,7 +186,10 @@ pub struct GpuDriverProfile {
     pub(crate) adapter_key: String,
 }
 
-#[allow(deprecated)]
+#[allow(
+    deprecated,
+    reason = "impl block for deprecated type retained for latency model"
+)]
 impl GpuDriverProfile {
     /// Build a driver profile from a `WgpuDevice` using runtime detection.
     #[must_use]
@@ -646,7 +649,10 @@ impl GpuDriverProfile {
     }
 }
 
-#[allow(deprecated)]
+#[allow(
+    deprecated,
+    reason = "impl block for deprecated type retained for latency model"
+)]
 impl fmt::Display for GpuDriverProfile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "GPU Driver Profile:")?;

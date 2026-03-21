@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Primal identity and capability advertisement handlers.
+//!
+//! All advertised capabilities, provides, and domains are derived from the
+//! IPC dispatch table — zero hardcoded domain lists. The primal only has
+//! self-knowledge and discovers others at runtime.
 
 use super::super::jsonrpc::JsonRpcResponse;
 use super::REGISTERED_METHODS;
@@ -24,36 +28,29 @@ pub(super) fn info(_primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
 
 /// `barracuda.primal.capabilities` — Advertise capabilities for discovery.
 ///
-/// Returns the set of capabilities this primal provides at runtime. Other
-/// primals use this to discover what barraCuda can do (capability-based
-/// routing) rather than relying on hardcoded primal names.
+/// All three lists (provides, domains, methods) are derived from the dispatch
+/// table via [`crate::discovery`]. Other primals use this to discover what
+/// barraCuda can do (capability-based routing) rather than relying on
+/// hardcoded primal names.
 pub(super) fn capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
     let has_gpu = primal.device().is_some();
     let has_f64 = primal.device().is_some_and(|d| d.has_f64_shaders());
     let has_spirv = primal.device().is_some_and(|d| d.has_spirv_passthrough());
 
     let version = env!("CARGO_PKG_VERSION");
+    let provides_list: Vec<_> = crate::discovery::provides()
+        .iter()
+        .map(|id_str| serde_json::json!({ "id": id_str, "version": version }))
+        .collect();
+
     JsonRpcResponse::success(
         id,
         serde_json::json!({
-            "provides": [
-                { "id": "gpu.compute", "version": version },
-                { "id": "tensor.ops", "version": version },
-                { "id": "gpu.dispatch", "version": version },
-            ],
+            "provides": provides_list,
             "requires": [
                 { "id": "shader.compile", "version": ">=0.1.0", "optional": true },
             ],
-            "domains": [
-                "gpu_compute",
-                "tensor_ops",
-                "fhe",
-                "molecular_dynamics",
-                "lattice_qcd",
-                "statistics",
-                "hydrology",
-                "bio",
-            ],
+            "domains": crate::discovery::capabilities(),
             "methods": &*REGISTERED_METHODS,
             "hardware": {
                 "gpu_available": has_gpu,

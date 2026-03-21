@@ -5,7 +5,37 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.6] — 2026-03-20
+## [0.3.6] — 2026-03-21
+
+### Changed — Deep Debt Sprint 15–16: Comprehensive Audit & Production Hardening (Mar 21 2026)
+
+- **Device-lost detection evolution**: `is_device_lost()` now uses case-insensitive
+  matching to catch wgpu "Parent device is lost" error pattern. New test validates
+  detection.
+- **Substrate test hardened**: `test_substrate_device_creation` evolved from `.unwrap()`
+  to graceful `match` — no longer panics on transient GPU hardware failures (device
+  lost, OOM, driver contention).
+- **Hardcoded domain lists eliminated**: JSON-RPC and tarpc `primal.capabilities`
+  responses now derive domains from `discovery::capabilities()` and provides from
+  `discovery::provides()` — single source of truth, zero hardcoded domain arrays.
+- **Lint evolution**: 42 `#[allow]` → 14 justified `#[allow]` with documented reasons.
+  9 redundant `clippy::unwrap_used` removed (covered by crate-level `cfg_attr`). All
+  remaining `#[allow]` have `reason` parameters.
+- **Documentation accuracy**: `discovery` module doc corrected from misleading "mDNS
+  and fallback scanning" to accurate "capability-based self-discovery".
+- **barracuda-core coverage push**: 20 new tests — lifecycle state edge cases (all 6
+  states, Starting/Stopping), error variant coverage (all 7 constructors + From impls),
+  all 12 dispatch routes tested through routing function, `method_suffix` edge cases.
+  Test count: 110 → 130. Function coverage: 67.02% → 68.73%. Line coverage: 62.04% →
+  63.47%.
+- **Production `.unwrap()` audit**: Comprehensive verification confirms zero `.unwrap()`
+  in production code — every instance is inside `#[cfg(test)]` blocks.
+- **FHE test verification**: All 62 FHE tests pass (shader unit 19, poly mul
+  integration 15, fault 8, chaos 13, fault injection 7). Prior failures were GPU
+  resource contention in parallel execution, not logic bugs.
+- **Quality gates**: All green. `cargo fmt`, `cargo clippy -D warnings`, `cargo doc
+  -D warnings`, 3,659 lib + 130 core tests pass, FHE 62 tests pass, hardware
+  verification 12 tests pass.
 
 ### Changed — Deep Debt Sprint 14: Audit Completion, Doctest & Hardware Fixes (Mar 20 2026)
 

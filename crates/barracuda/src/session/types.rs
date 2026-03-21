@@ -197,8 +197,6 @@ pub(super) enum SessionOp {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used, reason = "test code")]
-
     use super::*;
     use crate::device::capabilities::DeviceCapabilities;
     use crate::device::vendor::VENDOR_NVIDIA;

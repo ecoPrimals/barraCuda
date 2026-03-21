@@ -89,4 +89,45 @@ mod tests {
         let err: BarracudaCoreError = io_err.into();
         assert!(matches!(err, BarracudaCoreError::Io(_)));
     }
+
+    #[test]
+    fn test_ipc_error() {
+        let err = BarracudaCoreError::ipc("connection refused");
+        assert!(err.to_string().contains("ipc"));
+        assert!(err.to_string().contains("connection refused"));
+    }
+
+    #[test]
+    fn test_device_error() {
+        let err = BarracudaCoreError::device("GPU lost");
+        assert!(err.to_string().contains("device"));
+        assert!(err.to_string().contains("GPU lost"));
+    }
+
+    #[test]
+    fn test_serialization_error() {
+        let err = BarracudaCoreError::Serialization("invalid utf-8".into());
+        assert!(err.to_string().contains("serialization"));
+    }
+
+    #[test]
+    fn test_json_error_from() {
+        let json_err = serde_json::from_str::<serde_json::Value>("not json").unwrap_err();
+        let err: BarracudaCoreError = json_err.into();
+        assert!(matches!(err, BarracudaCoreError::Json(_)));
+    }
+
+    #[test]
+    fn test_compute_error_from() {
+        let compute_err = barracuda::error::BarracudaError::device("test");
+        let err: BarracudaCoreError = compute_err.into();
+        assert!(matches!(err, BarracudaCoreError::Compute(_)));
+    }
+
+    #[test]
+    fn test_error_debug_impl() {
+        let err = BarracudaCoreError::lifecycle("test");
+        let debug = format!("{err:?}");
+        assert!(debug.contains("Lifecycle"));
+    }
 }

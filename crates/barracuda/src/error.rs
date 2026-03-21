@@ -257,8 +257,8 @@ impl BarracudaError {
         if matches!(self, Self::DeviceLost(_)) {
             return true;
         }
-        let msg = self.to_string();
-        msg.contains("device lost") || msg.contains("Device lost")
+        let msg = self.to_string().to_lowercase();
+        msg.contains("device lost") || msg.contains("device is lost")
     }
 
     /// Returns `true` when this error is retriable (device lost or transient GPU failure).
@@ -548,6 +548,13 @@ mod tests {
     #[test]
     fn device_lost_detected_from_gpu_string() {
         let e = BarracudaError::gpu("GPU device lost during submit");
+        assert!(e.is_device_lost());
+        assert!(e.is_retriable());
+    }
+
+    #[test]
+    fn device_lost_detected_from_parent_device_is_lost() {
+        let e = BarracudaError::device("Failed to create device: Parent device is lost");
         assert!(e.is_device_lost());
         assert!(e.is_retriable());
     }

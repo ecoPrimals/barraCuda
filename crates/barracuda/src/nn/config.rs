@@ -36,8 +36,6 @@ pub enum HardwarePreference {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used, reason = "test code")]
-
     use super::*;
 
     #[test]

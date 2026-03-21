@@ -6,6 +6,18 @@ Prioritized work items, ordered by impact. Updated 2026-03-21.
 
 ## Recently Completed
 
+- **Sprint 15–16: Comprehensive Audit & Production Hardening (Mar 21)**:
+  Device-lost detection evolution (`is_device_lost()` case-insensitive matching).
+  Hardcoded domain lists eliminated in `primal.capabilities` (both JSON-RPC and tarpc
+  now derive from `discovery::capabilities()` single source of truth). Lint evolution:
+  42 `#[allow]` → 14 justified, `#[expect(reason)]` for all suppressions. Documentation
+  accuracy: `discovery` module doc corrected from "mDNS scanning" to capability-based
+  self-discovery. 20 new barracuda-core tests (lifecycle edge cases, error variant
+  coverage, all 12 dispatch routes): 110 → 130 tests. Zero production `.unwrap()`
+  confirmed across entire workspace (every `.unwrap()` is inside `#[cfg(test)]`).
+  FHE test suite verified: 62 tests pass (prior failures were GPU contention).
+  Hardware verification SIGSEGV resolved (GPU driver race under parallel execution).
+  barracuda-core coverage: 68.73% function / 63.47% line. All quality gates green.
 - **Sprint 14: Full vendor-agnostic evolution (Mar 21)**:
   `DeviceCapabilities` replaces `GpuDriverProfile` across 50+ files, `DeviceClass` replaces
   `GpuVendor`/`GpuDriver`, `SubstrateType::DiscreteGpu`/`IntegratedGpu` replaces vendor variants,

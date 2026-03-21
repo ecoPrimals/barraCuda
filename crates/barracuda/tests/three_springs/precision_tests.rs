@@ -2,7 +2,7 @@
 //! Precision tests: f64 accuracy vs CPU reference.
 
 #![expect(clippy::unwrap_used, reason = "tests")]
-#![allow(
+#![expect(
     clippy::useless_vec,
     reason = "test cases with mixed-length inner vecs"
 )]

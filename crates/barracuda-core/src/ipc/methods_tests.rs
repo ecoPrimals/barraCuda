@@ -577,3 +577,147 @@ fn test_tensor_store() {
     assert_eq!(primal.tensor_count(), 0);
     assert!(primal.get_tensor("nonexistent").is_none());
 }
+
+// ── dispatch via JSON-RPC text protocol (all routes) ────────────────────
+
+#[tokio::test]
+async fn test_dispatch_device_probe() {
+    let primal = test_primal();
+    let method = format!("{}.device.probe", crate::PRIMAL_NAMESPACE);
+    let resp = dispatch(
+        &primal,
+        &method,
+        &serde_json::json!({}),
+        serde_json::json!(200),
+    )
+    .await;
+    let result = resp.result.expect("device.probe always succeeds");
+    assert_eq!(result["available"], false);
+}
+
+#[tokio::test]
+async fn test_dispatch_health_check() {
+    let primal = test_primal();
+    let method = format!("{}.health.check", crate::PRIMAL_NAMESPACE);
+    let resp = dispatch(
+        &primal,
+        &method,
+        &serde_json::json!({}),
+        serde_json::json!(201),
+    )
+    .await;
+    let result = resp.result.expect("health.check succeeds without GPU");
+    assert_eq!(result["name"], "barraCuda");
+}
+
+#[tokio::test]
+async fn test_dispatch_tolerances_get() {
+    let primal = test_primal();
+    let method = format!("{}.tolerances.get", crate::PRIMAL_NAMESPACE);
+    let resp = dispatch(
+        &primal,
+        &method,
+        &serde_json::json!({"name": "f32"}),
+        serde_json::json!(202),
+    )
+    .await;
+    let result = resp.result.expect("tolerances.get always succeeds");
+    assert_eq!(result["name"], "f32");
+}
+
+#[tokio::test]
+async fn test_dispatch_validate_gpu_stack() {
+    let primal = test_primal();
+    let method = format!("{}.validate.gpu_stack", crate::PRIMAL_NAMESPACE);
+    let resp = dispatch(
+        &primal,
+        &method,
+        &serde_json::json!({}),
+        serde_json::json!(203),
+    )
+    .await;
+    assert!(resp.error.is_some(), "validate without GPU returns error");
+}
+
+#[tokio::test]
+async fn test_dispatch_compute_dispatch() {
+    let primal = test_primal();
+    let method = format!("{}.compute.dispatch", crate::PRIMAL_NAMESPACE);
+    let resp = dispatch(
+        &primal,
+        &method,
+        &serde_json::json!({"op": "zeros", "shape": [4]}),
+        serde_json::json!(204),
+    )
+    .await;
+    assert!(resp.error.is_some());
+}
+
+#[tokio::test]
+async fn test_dispatch_tensor_create() {
+    let primal = test_primal();
+    let method = format!("{}.tensor.create", crate::PRIMAL_NAMESPACE);
+    let resp = dispatch(
+        &primal,
+        &method,
+        &serde_json::json!({"shape": [2, 2]}),
+        serde_json::json!(205),
+    )
+    .await;
+    assert!(resp.error.is_some());
+}
+
+#[tokio::test]
+async fn test_dispatch_tensor_matmul() {
+    let primal = test_primal();
+    let method = format!("{}.tensor.matmul", crate::PRIMAL_NAMESPACE);
+    let resp = dispatch(
+        &primal,
+        &method,
+        &serde_json::json!({"lhs_id": "a", "rhs_id": "b"}),
+        serde_json::json!(206),
+    )
+    .await;
+    assert!(resp.error.is_some());
+}
+
+#[tokio::test]
+async fn test_dispatch_fhe_ntt() {
+    let primal = test_primal();
+    let method = format!("{}.fhe.ntt", crate::PRIMAL_NAMESPACE);
+    let resp = dispatch(
+        &primal,
+        &method,
+        &serde_json::json!({"modulus": 17, "degree": 4, "root_of_unity": 4, "coefficients": [1,2,3,4]}),
+        serde_json::json!(207),
+    )
+    .await;
+    assert!(resp.error.is_some());
+}
+
+#[tokio::test]
+async fn test_dispatch_fhe_pointwise_mul() {
+    let primal = test_primal();
+    let method = format!("{}.fhe.pointwise_mul", crate::PRIMAL_NAMESPACE);
+    let resp = dispatch(
+        &primal,
+        &method,
+        &serde_json::json!({"modulus": 17, "degree": 4, "a": [1,2,3,4], "b": [5,6,7,8]}),
+        serde_json::json!(208),
+    )
+    .await;
+    assert!(resp.error.is_some());
+}
+
+// ── method_suffix edge cases ────────────────────────────────────────────
+
+#[test]
+fn method_suffix_just_namespace_no_dot() {
+    assert_eq!(method_suffix(crate::PRIMAL_NAMESPACE), None);
+}
+
+#[test]
+fn method_suffix_namespace_with_dot() {
+    let input = format!("{}.", crate::PRIMAL_NAMESPACE);
+    assert_eq!(method_suffix(&input), Some(""));
+}

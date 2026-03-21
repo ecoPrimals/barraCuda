@@ -145,16 +145,7 @@ impl BarraCudaService for BarraCudaServer {
         let has_spirv = dev.as_ref().is_some_and(|d| d.has_spirv_passthrough());
 
         PrimalCapabilities {
-            domains: vec![
-                "gpu_compute".into(),
-                "tensor_ops".into(),
-                "fhe".into(),
-                "molecular_dynamics".into(),
-                "lattice_qcd".into(),
-                "statistics".into(),
-                "hydrology".into(),
-                "bio".into(),
-            ],
+            domains: crate::discovery::capabilities(),
             methods: crate::ipc::methods::REGISTERED_METHODS
                 .iter()
                 .cloned()

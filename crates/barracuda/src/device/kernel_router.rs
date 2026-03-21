@@ -477,7 +477,7 @@ impl KernelRouter {
 
 impl Default for KernelRouter {
     fn default() -> Self {
-        Self::new().unwrap_or(Self {
+        Self::new().unwrap_or_else(|_| Self {
             npu_models: HashMap::new(),
             has_gpu: true,
             has_npu: false,

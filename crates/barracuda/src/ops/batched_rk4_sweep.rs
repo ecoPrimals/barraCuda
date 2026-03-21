@@ -135,23 +135,19 @@ impl BatchedRK4F64 {
         let device = &self.device;
 
         let results: Vec<Result<TrajectoryResult>> = std::thread::scope(|scope| {
-            let handles: Vec<_> = odes
-                .iter()
-                .zip(y0_batch.iter())
-                .enumerate()
-                .map(|(idx, (f, y0))| {
-                    let dev = device.clone();
-                    scope.spawn(move || -> Result<TrajectoryResult> {
-                        let integrator = RkIntegrator::new(dev)?;
-                        let (times, states) = integrator.integrate_fixed(f, t0, y0, t_end, h)?;
-                        Ok(TrajectoryResult {
-                            times,
-                            states,
-                            instance: idx,
-                        })
+            let mut handles = Vec::with_capacity(odes.len());
+            for (idx, (f, y0)) in odes.iter().zip(y0_batch.iter()).enumerate() {
+                let dev = device.clone();
+                handles.push(scope.spawn(move || -> Result<TrajectoryResult> {
+                    let integrator = RkIntegrator::new(dev)?;
+                    let (times, states) = integrator.integrate_fixed(f, t0, y0, t_end, h)?;
+                    Ok(TrajectoryResult {
+                        times,
+                        states,
+                        instance: idx,
                     })
-                })
-                .collect();
+                }));
+            }
 
             handles
                 .into_iter()
@@ -205,24 +201,20 @@ impl BatchedRK4F64 {
         let device = &self.device;
 
         let results: Vec<Result<TrajectoryResult>> = std::thread::scope(|scope| {
-            let handles: Vec<_> = odes
-                .iter()
-                .zip(y0_batch.iter())
-                .enumerate()
-                .map(|(idx, (f, y0))| {
-                    let dev = device.clone();
-                    scope.spawn(move || -> Result<TrajectoryResult> {
-                        let integrator = RkIntegrator::new(dev)?;
-                        let (times, states) =
-                            integrator.integrate_adaptive(f, t0, y0, t_end, h_init, tol)?;
-                        Ok(TrajectoryResult {
-                            times,
-                            states,
-                            instance: idx,
-                        })
+            let mut handles = Vec::with_capacity(odes.len());
+            for (idx, (f, y0)) in odes.iter().zip(y0_batch.iter()).enumerate() {
+                let dev = device.clone();
+                handles.push(scope.spawn(move || -> Result<TrajectoryResult> {
+                    let integrator = RkIntegrator::new(dev)?;
+                    let (times, states) =
+                        integrator.integrate_adaptive(f, t0, y0, t_end, h_init, tol)?;
+                    Ok(TrajectoryResult {
+                        times,
+                        states,
+                        instance: idx,
                     })
-                })
-                .collect();
+                }));
+            }
 
             handles
                 .into_iter()

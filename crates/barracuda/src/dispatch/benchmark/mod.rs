@@ -146,8 +146,8 @@ impl OperationBenchmark {
     /// Compute optimal threshold with safety margin
     #[must_use]
     pub fn optimal_threshold(&self, min_speedup: f64, safety_margin: f64) -> usize {
-        self.crossover_size(min_speedup).map_or(
-            *self.sizes.last().unwrap_or(&1024), // GPU never faster - use maximum tested size
+        self.crossover_size(min_speedup).map_or_else(
+            || *self.sizes.last().unwrap_or(&1024), // GPU never faster - use maximum tested size
             |size| ((size as f64) / safety_margin).max(1.0) as usize,
         )
     }

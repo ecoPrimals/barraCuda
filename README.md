@@ -1,6 +1,6 @@
 # barraCuda
 
-**Version**: 0.3.6
+**Version**: 0.3.7
 **Status**: Standalone primal — zero cross-dependencies, fully concurrent, all quality gates passing
 **License**: AGPL-3.0-or-later (scyBorg provenance trio)
 **MSRV**: 1.87
@@ -42,7 +42,7 @@ results.
 - **Bioinformatics** — Smith-Waterman, HMM, phylogenetics, bipartition encoding, genomic ops
 - **ML ops** — matmul, softmax, attention, ESN reservoir computing
 - **Sovereign shader compilation** — naga 28 IR optimizer, SPIR-V passthrough
-- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with namespace-derived method names for capability-based discovery
+- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with bare semantic `{domain}.{operation}` method names per wateringHole standard
 - **UniBin CLI** — single `barracuda` binary with `server`, `service`, `doctor`, `validate`, `version`
 
 ### Design principles
@@ -58,7 +58,8 @@ results.
 
 ## Recent
 
-- **Sprint 15–16**: Comprehensive audit & production hardening — device-lost detection evolution, hardcoded domain lists eliminated, lint evolution (42 `#[allow]` → 14 justified), documentation accuracy, 20 new barracuda-core tests (130 total), zero production `.unwrap()` confirmed, FHE test suite verified (62 pass), all quality gates green.
+- **Sprint 17**: Nursery linting, IPC naming evolution & coverage push — `clippy::nursery` blanket-enabled on both crates (13 warnings fixed, scientific false positives selectively allowed), IPC method names evolved to bare `{domain}.{operation}` per wateringHole standard (backward-compatible), 13 pooling tests hardened against device-lost, coverage 71.59% line / 78.44% function (up from 32%/59%). All quality gates green.
+- **Sprint 15–16**: Comprehensive audit & production hardening — device-lost detection evolution, hardcoded domain lists eliminated, lint evolution (42 `#[allow]` → 14 justified), 20 new barracuda-core tests (130 total), zero production `.unwrap()` confirmed, FHE test suite verified (62 pass).
 - **Sprint 14**: Full vendor-agnostic evolution — `DeviceCapabilities` replaces `GpuDriverProfile`, `DeviceClass` replaces `GpuVendor`, capability-based device preferences.
 
 ---
@@ -202,16 +203,19 @@ barraCuda exposes a dual-protocol IPC interface per wateringHole standards:
 
 | Method | Description |
 |--------|-------------|
-| `barracuda.device.list` | List available compute devices |
-| `barracuda.device.probe` | Probe device capabilities and limits |
-| `barracuda.health.check` | Health check (name, version, status) |
-| `barracuda.tolerances.get` | Numerical tolerances for a named operation |
-| `barracuda.validate.gpu_stack` | GPU validation suite |
-| `barracuda.compute.dispatch` | Dispatch a compute shader |
-| `barracuda.tensor.create` | Create a tensor on device |
-| `barracuda.tensor.matmul` | Matrix multiply two tensors |
-| `barracuda.fhe.ntt` | FHE Number Theoretic Transform |
-| `barracuda.fhe.pointwise_mul` | FHE pointwise polynomial multiplication |
+| `device.list` | List available compute devices |
+| `device.probe` | Probe device capabilities and limits |
+| `health.check` | Health check (name, version, status) |
+| `tolerances.get` | Numerical tolerances for a named operation |
+| `validate.gpu_stack` | GPU validation suite |
+| `compute.dispatch` | Dispatch a compute shader |
+| `tensor.create` | Create a tensor on device |
+| `tensor.matmul` | Matrix multiply two tensors |
+| `fhe.ntt` | FHE Number Theoretic Transform |
+| `fhe.pointwise_mul` | FHE pointwise polynomial multiplication |
+
+Method names follow the wateringHole `{domain}.{operation}` Semantic Method Naming
+Standard. Legacy `barracuda.{domain}.{operation}` format accepted for backward compatibility.
 
 **tarpc** (optional, binary, high-throughput primal-to-primal):
 

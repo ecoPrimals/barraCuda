@@ -258,7 +258,7 @@ mod tests {
     fn primal_capabilities_roundtrip() {
         let caps = PrimalCapabilities {
             domains: vec!["gpu_compute".into(), "tensor_ops".into()],
-            methods: vec!["barracuda.device.list".into()],
+            methods: vec!["device.list".into()],
             gpu_available: true,
             f64_shaders: false,
             spirv_passthrough: false,

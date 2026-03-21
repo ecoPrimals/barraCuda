@@ -421,12 +421,10 @@ impl SequenceAnalyzer {
 
         // Check for quality issues
         let mut issues = Vec::new();
-        let mut passes = true;
 
         // Too short
         if sequence.len() < 50 {
             issues.push("Sequence too short (< 50 bp)".to_string());
-            passes = false;
         }
 
         // Too much low complexity
@@ -435,7 +433,6 @@ impl SequenceAnalyzer {
                 "High low-complexity content: {:.1}%",
                 low_complexity_fraction * 100.0
             ));
-            passes = false;
         }
 
         // GC bias
@@ -450,8 +447,11 @@ impl SequenceAnalyzer {
                 "Too many N bases: {}",
                 composition.nucleotide_counts.n
             ));
-            passes = false;
         }
+
+        let passes = sequence.len() >= 50
+            && low_complexity_fraction <= 0.5
+            && composition.nucleotide_counts.n <= sequence.len() / 10;
 
         Ok(QualityReport {
             passes,

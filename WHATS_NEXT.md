@@ -6,6 +6,16 @@ Prioritized work items, ordered by impact. Updated 2026-03-21.
 
 ## Recently Completed
 
+- **Sprint 17: Nursery Linting, IPC Naming Evolution & Coverage Push (Mar 21)**:
+  `clippy::nursery` blanket-enabled on both crates with 13 warnings fixed and
+  scientific/GPU false positives selectively allowed in `Cargo.toml`. IPC method
+  names evolved from `barracuda.{domain}.{operation}` to bare `{domain}.{operation}`
+  per wateringHole Semantic Method Naming Standard — `REGISTERED_METHODS` constant
+  (renamed from `METHOD_SUFFIXES`) + `normalize_method()` backward compatibility.
+  13 pooling tests hardened: `test_pool::get_test_gpu_device()` with graceful skip
+  on device-lost. Dead code audit: all 40+ `#[expect(dead_code)]` sites validated
+  (CPU reference kernels, planned sovereign pipeline, Debug-derive usage). Coverage:
+  71.59% line / 78.44% function / 69.37% region (up from 32%/59%). All gates green.
 - **Sprint 15–16: Comprehensive Audit & Production Hardening (Mar 21)**:
   Device-lost detection evolution (`is_device_lost()` case-insensitive matching).
   Hardcoded domain lists eliminated in `primal.capabilities` (both JSON-RPC and tarpc
@@ -171,9 +181,9 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
 
 ## Near-term (P2)
 
-- **Test coverage to 90%**: CI 80% gate now blocking (Sprint 3). Evolve `--fail-under`
-  from 80 to 90 with real GPU hardware. Add GPU-conditional tests for new ops
-  (SCS-CN, Stewart, Blaney-Criddle, autocorrelation).
+- **Test coverage to 90%**: Currently 71.59% line / 78.44% function on llvmpipe.
+  CI 80% gate blocking (Sprint 3). Evolve `--fail-under` from 80 to 90 with real
+  GPU hardware. Remaining gaps are exclusively GPU-dependent code paths.
 - **Kokkos GPU parity benchmarks**: Run barraCuda GPU benchmarks on matching hardware,
   publish comparison data.
 

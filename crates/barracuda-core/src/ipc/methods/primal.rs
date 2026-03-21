@@ -51,7 +51,7 @@ pub(super) fn capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcRespon
                 { "id": "shader.compile", "version": ">=0.1.0", "optional": true },
             ],
             "domains": crate::discovery::capabilities(),
-            "methods": &*REGISTERED_METHODS,
+            "methods": REGISTERED_METHODS,
             "hardware": {
                 "gpu_available": has_gpu,
                 "f64_shaders": has_f64,

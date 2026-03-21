@@ -307,7 +307,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_valid_request() {
         let primal = BarraCudaPrimal::new();
-        let line = r#"{"jsonrpc":"2.0","method":"barracuda.device.list","params":{},"id":1}"#;
+        let line = r#"{"jsonrpc":"2.0","method":"device.list","params":{},"id":1}"#;
         let resp = handle_line(&primal, line).await.expect("non-notification");
         assert!(resp.result.is_some());
         assert_eq!(resp.id, serde_json::json!(1));
@@ -334,7 +334,7 @@ mod tests {
     #[tokio::test]
     async fn test_notification_no_response() {
         let primal = BarraCudaPrimal::new();
-        let line = r#"{"jsonrpc":"2.0","method":"barracuda.device.list","params":{}}"#;
+        let line = r#"{"jsonrpc":"2.0","method":"device.list","params":{}}"#;
         assert!(
             handle_line(&primal, line).await.is_none(),
             "notification must not produce response"
@@ -344,7 +344,7 @@ mod tests {
     #[tokio::test]
     async fn test_notification_null_id_no_response() {
         let primal = BarraCudaPrimal::new();
-        let line = r#"{"jsonrpc":"2.0","method":"barracuda.device.list","params":{},"id":null}"#;
+        let line = r#"{"jsonrpc":"2.0","method":"device.list","params":{},"id":null}"#;
         assert!(
             handle_line(&primal, line).await.is_none(),
             "null id is a notification"
@@ -370,7 +370,7 @@ mod tests {
     #[tokio::test]
     async fn handle_connection_valid_request() {
         let primal = Arc::new(BarraCudaPrimal::new());
-        let request = r#"{"jsonrpc":"2.0","method":"barracuda.health.check","params":{},"id":1}"#;
+        let request = r#"{"jsonrpc":"2.0","method":"health.check","params":{},"id":1}"#;
         let input = format!("{request}\n");
 
         let (reader, _) = tokio::io::duplex(4096);
@@ -421,7 +421,7 @@ mod tests {
     #[tokio::test]
     async fn handle_connection_notification_no_reply() {
         let primal = Arc::new(BarraCudaPrimal::new());
-        let input = "{\"jsonrpc\":\"2.0\",\"method\":\"barracuda.device.list\",\"params\":{}}\n";
+        let input = "{\"jsonrpc\":\"2.0\",\"method\":\"device.list\",\"params\":{}}\n";
 
         let (client_reader, mut server_writer) = tokio::io::duplex(4096);
         let (mut server_reader_buf, client_writer) = tokio::io::duplex(4096);

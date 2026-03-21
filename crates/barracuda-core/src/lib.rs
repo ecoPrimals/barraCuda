@@ -49,9 +49,11 @@
     reason = "BarracudaCoreError carries diagnostic context"
 )]
 
-/// Capability-based self-discovery — derives capabilities and provides from
-/// the IPC dispatch table. Peer primals are discovered at runtime via
-/// discovery files and capability scanning, not hardcoded names.
+/// Capability-based self-discovery.
+///
+/// Derives capabilities and provides from the IPC dispatch table. Peer primals
+/// are discovered at runtime via discovery files and capability scanning, not
+/// hardcoded names.
 pub mod discovery;
 /// Primal-specific error types and conversions.
 pub mod error;

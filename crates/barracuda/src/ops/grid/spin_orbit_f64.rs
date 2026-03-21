@@ -411,7 +411,7 @@ impl SpinOrbitGpu {
         });
         let drho_buffer = drho_owned
             .as_ref()
-            .unwrap_or(self.device.placeholder_buffer());
+            .unwrap_or_else(|| self.device.placeholder_buffer());
 
         let r_buffer = self
             .device

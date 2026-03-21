@@ -369,7 +369,11 @@ async fn chaos_memory_limit() {
             }
         }
 
-        println!("✅ Memory exhaustion handled gracefully ({total_mb}MB allocated)");
+        println!(
+            "✅ Memory exhaustion handled gracefully ({}MB allocated, {} tensors)",
+            total_mb,
+            tensors.len()
+        );
     }) {
         return;
     }

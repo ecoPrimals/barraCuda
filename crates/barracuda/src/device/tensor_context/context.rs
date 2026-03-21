@@ -125,7 +125,6 @@ impl TensorContext {
                 .unwrap_or_else(std::sync::PoisonError::into_inner)
                 .push(Box::new(op));
             self.ops_batched.fetch_add(1, Ordering::Relaxed);
-            Ok(())
         } else {
             let commands = {
                 self.device.encoding_guard();
@@ -142,8 +141,8 @@ impl TensorContext {
             };
             self.device.submit_commands(Some(commands));
             self.ops_executed.fetch_add(1, Ordering::Relaxed);
-            Ok(())
         }
+        Ok(())
     }
 
     /// Get or create a bind group from layout signature and buffers.

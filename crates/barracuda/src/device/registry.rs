@@ -92,9 +92,8 @@ impl PhysicalDeviceId {
         let name_hash = if info.device == 0 {
             // Hash the normalized name (remove backend suffixes like "/PCIe/SSE2")
             use std::hash::{Hash, Hasher};
-            let normalized = Self::normalize_device_name(&info.name);
             let mut hasher = std::collections::hash_map::DefaultHasher::new();
-            normalized.hash(&mut hasher);
+            Self::normalize_device_name(&info.name).hash(&mut hasher);
             hasher.finish()
         } else {
             0 // Not used when device_id is valid

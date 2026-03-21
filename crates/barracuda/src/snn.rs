@@ -397,12 +397,12 @@ impl SpikingNetwork {
                     });
                 }
 
-                let weights = state.weights.as_ref().ok_or(
+                let weights = state.weights.as_ref().ok_or_else(|| {
                     crate::error::BarracudaError::InvalidOperation {
                         op: "SNN Dense layer".to_string(),
                         reason: "Dense layer weights not initialized".to_string(),
-                    },
-                )?;
+                    }
+                })?;
                 let mut output = vec![0.0; *output_size];
 
                 // Matrix multiply (sparse)

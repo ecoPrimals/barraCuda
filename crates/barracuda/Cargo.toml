@@ -54,6 +54,7 @@ wgpu = { workspace = true }
 [lints.clippy]
 all = { level = "warn", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
 unwrap_used = "warn"
 # Casting — pervasive in GPU compute (u32↔usize↔f32↔f64 constantly)
 cast_possible_truncation = "allow"
@@ -122,16 +123,31 @@ if_same_then_else = "warn"
 # Remaining bulk-allow — 56 needless_range_loop sites use multi-array indexed
 # access patterns that are clearer with explicit indexing in scientific code.
 needless_range_loop = "allow"
-# Nursery lints — selectively promoted for code quality.
-# Auto-fixable, low false-positive, high value.
-redundant_clone = "warn"
-imprecise_flops = "warn"
-unnecessary_struct_initialization = "warn"
-derive_partial_eq_without_eq = "warn"
-# suboptimal_flops: allow in library, warn in tests. 424 sites in scientific
-# code use canonical math form (a*b + c). Evolving incrementally to mul_add()
-# for FMA accuracy. Test code already evolved.
+# Nursery — blanket-enabled above. Suppressions for scientific GPU compute:
+# suboptimal_flops: 424 sites use canonical math form (a*b + c). Evolving
+# incrementally to mul_add() for FMA accuracy. Test code already evolved.
 suboptimal_flops = "allow"
+# missing_const_for_fn: 911 sites — const fn propagation is evolving in Rust;
+# many functions use allocations or traits that aren't const-stable yet.
+missing_const_for_fn = "allow"
+# suspicious_operation_groupings: false positives for x*x (squaring), dx*dx
+# (Courant number), pe*pe/(pe+s) — correct mathematical idioms.
+suspicious_operation_groupings = "allow"
+# use_self: 333 sites — wgpu/physics types use explicit type names for clarity
+# in complex generic contexts. Evolving incrementally.
+use_self = "allow"
+# future_not_send: GPU async futures hold !Send wgpu types by design.
+future_not_send = "allow"
+# redundant_pub_crate: pub(crate) in private modules is intentional API surface.
+redundant_pub_crate = "allow"
+# while_float: scientific iteration with float conditions is intentional.
+while_float = "allow"
+# significant_drop_tightening: false positives in async GPU code where temporaries
+# hold wgpu guards that must live through the await point.
+significant_drop_tightening = "allow"
+significant_drop_in_scrutinee = "allow"
+# tuple_array_conversions: explicit tuple→array is clearer in physics code.
+tuple_array_conversions = "allow"
 # large_stack_frames: test framework artifact — the auto-generated test main
 # allocates [&TestDescAndFn; 3466] on the stack. Not production code.
 large_stack_frames = "allow"

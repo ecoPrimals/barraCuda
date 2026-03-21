@@ -8,13 +8,13 @@ the sourDough scaffold. barraCuda owns its own standards.
 - **Edition**: 2024
 - **MSRV**: 1.87
 - **GPU stack**: wgpu 28, naga 28 — `Device` and `Queue` are `Clone` (no `Arc` wrappers)
-- **Linting**: `warn(clippy::all, clippy::pedantic)` — configured in `Cargo.toml` `[lints]`
-- **Promoted lints**: 14 pedantic + 5 nursery + `missing_errors_doc` + `missing_panics_doc` + cast lints in `barracuda-core` — all enforced via `-D warnings`
+- **Linting**: `warn(clippy::all, clippy::pedantic, clippy::nursery)` — configured in `Cargo.toml` `[lints]`
+- **Promoted lints**: pedantic + nursery (blanket) + `missing_errors_doc` + `missing_panics_doc` + cast lints in `barracuda-core` — all enforced via `-D warnings`. Scientific/GPU false positives (`suboptimal_flops`, `missing_const_for_fn`, `suspicious_operation_groupings`, `future_not_send`, etc.) selectively allowed with rationale in `Cargo.toml`.
 - **Suppressions**: `#[expect(clippy::lint, reason = "...")]` — compile-time verified; `#[allow]` only for context-dependent lints (e.g. `suspicious_arithmetic_impl` in complex division, `unwrap_used` in integration tests outside `cfg_attr(test)` scope)
 - **Docs**: `#![warn(missing_docs, missing_errors_doc, missing_panics_doc)]` — `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` clean
 - **Unsafe**: `#![forbid(unsafe_code)]`
 - **Max file size**: 1000 LOC
-- **Test coverage**: 90%+ target (currently ~64% line / ~69% function on llvmpipe; GPU hardware needed for 90%)
+- **Test coverage**: 90%+ target (currently ~72% line / ~78% function on llvmpipe; GPU hardware needed for 90%)
 
 ## Error Handling
 
@@ -90,7 +90,8 @@ queries. **`GpuDriverProfile`** is deprecated; do not use it for new code.
 ## IPC
 
 - JSON-RPC 2.0 primary, tarpc secondary
-- Methods: `barracuda.{namespace}.{action}` (semantic, dot-separated)
+- Methods: `{domain}.{operation}` per wateringHole semantic naming standard
+- Legacy `barracuda.{domain}.{operation}` accepted for backward compatibility
 - Errors: standard JSON-RPC error codes
 
 ---

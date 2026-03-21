@@ -194,7 +194,10 @@ async fn fault_out_of_gpu_memory() {
             }
         }
 
-        println!("✅ GPU OOM handled gracefully");
+        println!(
+            "✅ GPU OOM handled gracefully ({} tensors retained)",
+            tensors.len()
+        );
     }) {
         return;
     }

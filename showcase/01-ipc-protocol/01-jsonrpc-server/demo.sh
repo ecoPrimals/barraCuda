@@ -69,17 +69,17 @@ call_method() {
 echo "─── Exercising JSON-RPC 2.0 Methods ─────────────────────────"
 echo
 
-call_method "barracuda.primal.info"
-call_method "barracuda.primal.capabilities"
-call_method "barracuda.device.list"
-call_method "barracuda.health.check"
-call_method "barracuda.tolerances.get" '{"name":"default"}'
-call_method "barracuda.validate.gpu_stack"
+call_method "primal.info"
+call_method "primal.capabilities"
+call_method "device.list"
+call_method "health.check"
+call_method "tolerances.get" '{"name":"default"}'
+call_method "validate.gpu_stack"
 
 echo "─── Summary ──────────────────────────────────────────────────"
 echo
 echo "  Protocol:  JSON-RPC 2.0 (notification-compliant)"
 echo "  Transport: TCP ($ADDR)"
-echo "  Methods:   6 exercised from barracuda.{domain}.{operation}"
+echo "  Methods:   6 exercised via {domain}.{operation} semantic naming"
 echo "  Discovery: $DISCOVERY_FILE"
 echo

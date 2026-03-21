@@ -5,6 +5,14 @@ and the migration path.
 
 ## Pre-1.0 (current)
 
+### 0.3.7
+
+| Change | Migration |
+|--------|-----------|
+| **IPC method names evolved to bare semantic format** — Wire method names changed from `barracuda.{domain}.{operation}` to `{domain}.{operation}` per wateringHole Semantic Method Naming Standard | Update JSON-RPC method strings from `"barracuda.device.list"` to `"device.list"`. The server accepts both formats via `normalize_method()` for backward compatibility, but new code should use the bare format. |
+| **`METHOD_SUFFIXES` renamed to `REGISTERED_METHODS`** — The constant holding registered IPC method names was renamed and now contains bare semantic names | Replace `METHOD_SUFFIXES` with `REGISTERED_METHODS`. The type changed from derived `LazyLock<Vec<String>>` to `&[&str]`. |
+| **`method_suffix()` replaced by `normalize_method()`** — The dispatch helper was renamed to reflect its new role | Replace `method_suffix(method)` with `normalize_method(method)`. The new function strips the `PRIMAL_NAMESPACE` prefix if present. |
+
 ### 0.3.3
 
 | Change | Migration |

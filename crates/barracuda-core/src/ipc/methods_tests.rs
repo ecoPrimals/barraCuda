@@ -7,7 +7,7 @@ use super::fhe::{fhe_ntt, fhe_pointwise_mul};
 use super::health::{health_check, tolerances_get, validate_gpu_stack};
 use super::primal::{capabilities, info};
 use super::tensor::{tensor_create, tensor_matmul};
-use super::{REGISTERED_METHODS, method_suffix};
+use super::{REGISTERED_METHODS, normalize_method};
 use crate::BarraCudaPrimal;
 
 fn test_primal() -> BarraCudaPrimal {
@@ -49,22 +49,31 @@ fn parse_shape_with_non_numeric() {
     );
 }
 
-// ── method_suffix and REGISTERED_METHODS ────────────────────────────────
+// ── normalize_method and REGISTERED_METHODS ─────────────────────────────
 
 #[test]
-fn method_suffix_strips_namespace() {
-    let full = format!("{}.device.list", crate::PRIMAL_NAMESPACE);
-    assert_eq!(method_suffix(&full), Some("device.list"));
+fn normalize_strips_legacy_namespace() {
+    let legacy = format!("{}.device.list", crate::PRIMAL_NAMESPACE);
+    assert_eq!(normalize_method(&legacy), "device.list");
 }
 
 #[test]
-fn method_suffix_returns_none_for_foreign() {
-    assert_eq!(method_suffix("other_primal.device.list"), None);
+fn normalize_passes_through_standard_names() {
+    assert_eq!(normalize_method("device.list"), "device.list");
+    assert_eq!(normalize_method("health.check"), "health.check");
 }
 
 #[test]
-fn method_suffix_returns_none_for_empty() {
-    assert_eq!(method_suffix(""), None);
+fn normalize_passes_through_foreign_prefix() {
+    assert_eq!(
+        normalize_method("other_primal.device.list"),
+        "other_primal.device.list"
+    );
+}
+
+#[test]
+fn normalize_empty() {
+    assert_eq!(normalize_method(""), "");
 }
 
 #[test]
@@ -73,12 +82,15 @@ fn registered_methods_count() {
 }
 
 #[test]
-fn registered_methods_all_namespaced() {
-    let ns = crate::PRIMAL_NAMESPACE;
-    for method in REGISTERED_METHODS.iter() {
+fn registered_methods_semantic_format() {
+    for method in REGISTERED_METHODS {
         assert!(
-            method.starts_with(ns),
-            "method {method} should start with {ns}"
+            method.contains('.'),
+            "method {method} should use domain.operation format"
+        );
+        assert!(
+            !method.starts_with(&format!("{}.", crate::PRIMAL_NAMESPACE)),
+            "method {method} should NOT have primal namespace prefix"
         );
     }
 }
@@ -118,10 +130,9 @@ fn test_primal_capabilities_no_gpu() {
 #[tokio::test]
 async fn test_dispatch_primal_info() {
     let primal = test_primal();
-    let method = format!("{}.primal.info", crate::PRIMAL_NAMESPACE);
     let resp = dispatch(
         &primal,
-        &method,
+        "primal.info",
         &serde_json::json!({}),
         serde_json::json!(110),
     )
@@ -136,10 +147,9 @@ async fn test_dispatch_primal_info() {
 #[tokio::test]
 async fn test_dispatch_primal_capabilities() {
     let primal = test_primal();
-    let method = format!("{}.primal.capabilities", crate::PRIMAL_NAMESPACE);
     let resp = dispatch(
         &primal,
-        &method,
+        "primal.capabilities",
         &serde_json::json!({}),
         serde_json::json!(111),
     )
@@ -243,10 +253,9 @@ fn test_tolerances_unknown_returns_defaults() {
 #[tokio::test]
 async fn test_dispatch_routing() {
     let primal = test_primal();
-    let method = format!("{}.device.list", crate::PRIMAL_NAMESPACE);
     let resp = dispatch(
         &primal,
-        &method,
+        "device.list",
         &serde_json::json!({}),
         serde_json::json!(5),
     )
@@ -527,26 +536,10 @@ async fn test_fhe_pointwise_mul_missing_params() {
 #[tokio::test]
 async fn test_all_dispatch_routes_exist() {
     let primal = test_primal();
-    let ns = crate::PRIMAL_NAMESPACE;
-    let suffixes = [
-        "primal.info",
-        "primal.capabilities",
-        "device.list",
-        "device.probe",
-        "health.check",
-        "tolerances.get",
-        "validate.gpu_stack",
-        "compute.dispatch",
-        "tensor.create",
-        "tensor.matmul",
-        "fhe.ntt",
-        "fhe.pointwise_mul",
-    ];
-    for suffix in suffixes {
-        let method = format!("{ns}.{suffix}");
+    for method in REGISTERED_METHODS {
         let resp = dispatch(
             &primal,
-            &method,
+            method,
             &serde_json::json!({}),
             serde_json::json!(99),
         )
@@ -583,10 +576,9 @@ fn test_tensor_store() {
 #[tokio::test]
 async fn test_dispatch_device_probe() {
     let primal = test_primal();
-    let method = format!("{}.device.probe", crate::PRIMAL_NAMESPACE);
     let resp = dispatch(
         &primal,
-        &method,
+        "device.probe",
         &serde_json::json!({}),
         serde_json::json!(200),
     )
@@ -598,10 +590,9 @@ async fn test_dispatch_device_probe() {
 #[tokio::test]
 async fn test_dispatch_health_check() {
     let primal = test_primal();
-    let method = format!("{}.health.check", crate::PRIMAL_NAMESPACE);
     let resp = dispatch(
         &primal,
-        &method,
+        "health.check",
         &serde_json::json!({}),
         serde_json::json!(201),
     )
@@ -613,10 +604,9 @@ async fn test_dispatch_health_check() {
 #[tokio::test]
 async fn test_dispatch_tolerances_get() {
     let primal = test_primal();
-    let method = format!("{}.tolerances.get", crate::PRIMAL_NAMESPACE);
     let resp = dispatch(
         &primal,
-        &method,
+        "tolerances.get",
         &serde_json::json!({"name": "f32"}),
         serde_json::json!(202),
     )
@@ -628,10 +618,9 @@ async fn test_dispatch_tolerances_get() {
 #[tokio::test]
 async fn test_dispatch_validate_gpu_stack() {
     let primal = test_primal();
-    let method = format!("{}.validate.gpu_stack", crate::PRIMAL_NAMESPACE);
     let resp = dispatch(
         &primal,
-        &method,
+        "validate.gpu_stack",
         &serde_json::json!({}),
         serde_json::json!(203),
     )
@@ -642,10 +631,9 @@ async fn test_dispatch_validate_gpu_stack() {
 #[tokio::test]
 async fn test_dispatch_compute_dispatch() {
     let primal = test_primal();
-    let method = format!("{}.compute.dispatch", crate::PRIMAL_NAMESPACE);
     let resp = dispatch(
         &primal,
-        &method,
+        "compute.dispatch",
         &serde_json::json!({"op": "zeros", "shape": [4]}),
         serde_json::json!(204),
     )
@@ -656,10 +644,9 @@ async fn test_dispatch_compute_dispatch() {
 #[tokio::test]
 async fn test_dispatch_tensor_create() {
     let primal = test_primal();
-    let method = format!("{}.tensor.create", crate::PRIMAL_NAMESPACE);
     let resp = dispatch(
         &primal,
-        &method,
+        "tensor.create",
         &serde_json::json!({"shape": [2, 2]}),
         serde_json::json!(205),
     )
@@ -670,10 +657,9 @@ async fn test_dispatch_tensor_create() {
 #[tokio::test]
 async fn test_dispatch_tensor_matmul() {
     let primal = test_primal();
-    let method = format!("{}.tensor.matmul", crate::PRIMAL_NAMESPACE);
     let resp = dispatch(
         &primal,
-        &method,
+        "tensor.matmul",
         &serde_json::json!({"lhs_id": "a", "rhs_id": "b"}),
         serde_json::json!(206),
     )
@@ -684,10 +670,9 @@ async fn test_dispatch_tensor_matmul() {
 #[tokio::test]
 async fn test_dispatch_fhe_ntt() {
     let primal = test_primal();
-    let method = format!("{}.fhe.ntt", crate::PRIMAL_NAMESPACE);
     let resp = dispatch(
         &primal,
-        &method,
+        "fhe.ntt",
         &serde_json::json!({"modulus": 17, "degree": 4, "root_of_unity": 4, "coefficients": [1,2,3,4]}),
         serde_json::json!(207),
     )
@@ -698,10 +683,9 @@ async fn test_dispatch_fhe_ntt() {
 #[tokio::test]
 async fn test_dispatch_fhe_pointwise_mul() {
     let primal = test_primal();
-    let method = format!("{}.fhe.pointwise_mul", crate::PRIMAL_NAMESPACE);
     let resp = dispatch(
         &primal,
-        &method,
+        "fhe.pointwise_mul",
         &serde_json::json!({"modulus": 17, "degree": 4, "a": [1,2,3,4], "b": [5,6,7,8]}),
         serde_json::json!(208),
     )
@@ -709,15 +693,25 @@ async fn test_dispatch_fhe_pointwise_mul() {
     assert!(resp.error.is_some());
 }
 
-// ── method_suffix edge cases ────────────────────────────────────────────
+// ── normalize_method edge cases ─────────────────────────────────────────
 
 #[test]
-fn method_suffix_just_namespace_no_dot() {
-    assert_eq!(method_suffix(crate::PRIMAL_NAMESPACE), None);
+fn normalize_just_namespace_no_dot() {
+    assert_eq!(
+        normalize_method(crate::PRIMAL_NAMESPACE),
+        crate::PRIMAL_NAMESPACE
+    );
 }
 
 #[test]
-fn method_suffix_namespace_with_dot() {
+fn normalize_namespace_with_dot() {
     let input = format!("{}.", crate::PRIMAL_NAMESPACE);
-    assert_eq!(method_suffix(&input), Some(""));
+    assert_eq!(normalize_method(&input), "");
+}
+
+#[test]
+fn normalize_legacy_prefix_accepted() {
+    let legacy = format!("{}.device.list", crate::PRIMAL_NAMESPACE);
+    let resp_method = normalize_method(&legacy);
+    assert_eq!(resp_method, "device.list");
 }

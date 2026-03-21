@@ -128,9 +128,9 @@ mod tests {
 
     #[test]
     fn test_parse_request() {
-        let json = r#"{"jsonrpc":"2.0","method":"barracuda.device.list","params":{},"id":1}"#;
+        let json = r#"{"jsonrpc":"2.0","method":"device.list","params":{},"id":1}"#;
         let req: JsonRpcRequest = serde_json::from_str(json).unwrap();
-        assert_eq!(req.method, "barracuda.device.list");
+        assert_eq!(req.method, "device.list");
         assert_eq!(req.id, Some(serde_json::Value::Number(1.into())));
         assert!(req.validate().is_ok());
     }

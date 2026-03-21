@@ -39,6 +39,7 @@ const SHADER_VITERBI: &str = include_str!("../../shaders/bio/hmm_viterbi_f64.wgs
 pub const WGSL_HMM_FORWARD_LOG_F32: &str = include_str!("../../shaders/ml/hmm_forward_log.wgsl");
 
 /// f64 version of the log-domain HMM forward pass for universal math library.
+///
 /// Wired and ready; no separate log-domain pipeline in this module — `HmmBatchForwardF64`
 /// uses the main `hmm_forward_f64.wgsl` shader via `compile_shader_f64`.
 pub const WGSL_HMM_FORWARD_LOG_F64: &str =

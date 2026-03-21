@@ -148,7 +148,7 @@ impl BarraCudaService for BarraCudaServer {
             domains: crate::discovery::capabilities(),
             methods: crate::ipc::methods::REGISTERED_METHODS
                 .iter()
-                .cloned()
+                .map(|s| (*s).to_string())
                 .collect(),
             gpu_available: has_gpu,
             f64_shaders: has_f64,
@@ -599,8 +599,7 @@ mod tests {
     #[test]
     fn server_construction() {
         let primal = std::sync::Arc::new(crate::BarraCudaPrimal::new());
-        let server = BarraCudaServer::new(primal);
-        let _cloned = server.clone();
+        let _server = BarraCudaServer::new(primal);
     }
 
     #[tokio::test]

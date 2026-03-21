@@ -131,6 +131,7 @@ pub use precision_tier::{PhysicsDomain, PrecisionBrainAdvice, PrecisionTier};
 pub mod test_pool;
 
 /// GPU test coordination harness — admission gate for concurrent test execution.
+///
 /// Always compiled so integration tests can use `gpu_section` and `with_coral`.
 pub mod test_harness;
 

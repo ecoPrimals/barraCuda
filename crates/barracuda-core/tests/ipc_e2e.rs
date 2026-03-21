@@ -90,7 +90,7 @@ async fn e2e_health_check() {
         &mut stream,
         json!({
             "jsonrpc": "2.0",
-            "method": "barracuda.health.check",
+            "method": "health.check",
             "params": {},
             "id": 1
         }),
@@ -114,7 +114,7 @@ async fn e2e_device_list() {
         &mut stream,
         json!({
             "jsonrpc": "2.0",
-            "method": "barracuda.device.list",
+            "method": "device.list",
             "params": {},
             "id": 2
         }),
@@ -137,7 +137,7 @@ async fn e2e_tolerances_get() {
         &mut stream,
         json!({
             "jsonrpc": "2.0",
-            "method": "barracuda.tolerances.get",
+            "method": "tolerances.get",
             "params": {"name": "fhe"},
             "id": 3
         }),
@@ -203,7 +203,7 @@ async fn e2e_multiple_requests_single_connection() {
         &mut stream,
         json!({
             "jsonrpc": "2.0",
-            "method": "barracuda.health.check",
+            "method": "health.check",
             "params": {},
             "id": 10
         }),
@@ -216,7 +216,7 @@ async fn e2e_multiple_requests_single_connection() {
         &mut stream,
         json!({
             "jsonrpc": "2.0",
-            "method": "barracuda.device.list",
+            "method": "device.list",
             "params": {},
             "id": 11
         }),
@@ -229,7 +229,7 @@ async fn e2e_multiple_requests_single_connection() {
         &mut stream,
         json!({
             "jsonrpc": "2.0",
-            "method": "barracuda.tolerances.get",
+            "method": "tolerances.get",
             "params": {"name": "f32"},
             "id": 12
         }),
@@ -252,7 +252,7 @@ async fn e2e_validate_gpu_stack() {
         &mut stream,
         json!({
             "jsonrpc": "2.0",
-            "method": "barracuda.validate.gpu_stack",
+            "method": "validate.gpu_stack",
             "params": {},
             "id": 20
         }),
@@ -275,7 +275,7 @@ async fn e2e_device_probe() {
         &mut stream,
         json!({
             "jsonrpc": "2.0",
-            "method": "barracuda.device.probe",
+            "method": "device.probe",
             "params": {},
             "id": 30
         }),

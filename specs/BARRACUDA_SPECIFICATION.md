@@ -1,6 +1,6 @@
 # barraCuda Specification
 
-**Version**: 0.3.6
+**Version**: 0.3.7
 **Date**: March 13, 2026
 **Status**: Active — standalone primal, fully untangled from toadStool (S89)
 **Origin**: toadStool S88 budding proposal
@@ -102,17 +102,20 @@ binary secondary). Both protocols serve the same 10 endpoints with full
 parameter parity:
 
 ```
-barracuda.device.list           → {devices: [{name, vendor, device_type, backend, driver}]}
-barracuda.device.probe          → {available, max_buffer_size, max_storage_buffers, ...}
-barracuda.health.check          → {name, version, status}
-barracuda.tolerances.get        → {name} → {name, abs_tol, rel_tol}
-barracuda.validate.gpu_stack    → {gpu_available, status, message}
-barracuda.compute.dispatch      → {op, shape?, tensor_id?} → {status, tensor_id?, data?}
-barracuda.tensor.create         → {shape, dtype?, data?} → {tensor_id, shape, elements, dtype}
-barracuda.tensor.matmul         → {lhs_id, rhs_id} → {result_id, shape}
-barracuda.fhe.ntt               → {modulus, degree, root_of_unity, coefficients} → {result}
-barracuda.fhe.pointwise_mul     → {modulus, degree, a, b} → {result}
+device.list           → {devices: [{name, vendor, device_type, backend, driver}]}
+device.probe          → {available, max_buffer_size, max_storage_buffers, ...}
+health.check          → {name, version, status}
+tolerances.get        → {name} → {name, abs_tol, rel_tol}
+validate.gpu_stack    → {gpu_available, status, message}
+compute.dispatch      → {op, shape?, tensor_id?} → {status, tensor_id?, data?}
+tensor.create         → {shape, dtype?, data?} → {tensor_id, shape, elements, dtype}
+tensor.matmul         → {lhs_id, rhs_id} → {result_id, shape}
+fhe.ntt               → {modulus, degree, root_of_unity, coefficients} → {result}
+fhe.pointwise_mul     → {modulus, degree, a, b} → {result}
 ```
+
+Method names follow `{domain}.{operation}` per wateringHole Semantic Method Naming
+Standard. Legacy `barracuda.{domain}.{operation}` accepted for backward compatibility.
 
 Error codes follow JSON-RPC 2.0: -32700 (parse), -32600 (invalid request),
 -32601 (method not found), -32602 (invalid params), -32603 (internal).

@@ -80,9 +80,11 @@ pub use domain_ops::{
     matmul_dispatch, mean_dispatch, softmax_dispatch, transpose_dispatch, variance_dispatch,
 };
 
-/// wgpu limits dispatch to 65535 workgroups per dimension. For large lattices
-/// (32^4+ sites) the total workgroup count can exceed this limit. This helper
-/// splits the count into a 2D `(x, y, 1)` dispatch that covers the full range.
+/// wgpu limits dispatch to 65535 workgroups per dimension.
+///
+/// For large lattices (32^4+ sites) the total workgroup count can exceed this
+/// limit. This helper splits the count into a 2D `(x, y, 1)` dispatch that
+/// covers the full range.
 ///
 /// Shaders must linearize via `gid.x + gid.y * num_workgroups.x * WG_SIZE`.
 #[must_use]

@@ -6,30 +6,17 @@
 //! - Chaos: Concurrent access, stress tests
 //! - Fault: Error handling, edge cases
 //!
-//! All tests share a single device instance to avoid wgpu cache invalidation
-//! issues when devices are dropped while the global pipeline cache retains
-//! references to their layouts/pipelines.
+//! Uses the shared `test_pool` device infrastructure for graceful handling
+//! of GPU device-lost conditions (NVK driver, concurrent test load, etc.).
 
 #![expect(clippy::unwrap_used, reason = "tests")]
-use barracuda::device::{WgpuDevice, get_device_context};
+use barracuda::device::get_device_context;
+use barracuda::device::test_pool;
 use barracuda::prelude::*;
 use std::sync::Arc;
-use tokio::sync::OnceCell;
 
-/// Shared device for all tests (avoids cache invalidation)
-static TEST_DEVICE: OnceCell<Arc<WgpuDevice>> = OnceCell::const_new();
-
-async fn get_test_device() -> Arc<WgpuDevice> {
-    TEST_DEVICE
-        .get_or_init(|| async {
-            Arc::new(
-                WgpuDevice::new()
-                    .await
-                    .expect("Failed to create test device"),
-            )
-        })
-        .await
-        .clone()
+async fn get_test_device() -> Option<Arc<barracuda::device::WgpuDevice>> {
+    test_pool::get_test_gpu_device().await
 }
 
 // ============================================================================
@@ -38,7 +25,9 @@ async fn get_test_device() -> Arc<WgpuDevice> {
 
 #[tokio::test]
 async fn e2e_tensor_add_uses_pooling() {
-    let device = get_test_device().await;
+    let Some(device) = get_test_device().await else {
+        return;
+    };
     let ctx = get_device_context(&device);
 
     let stats_before = ctx.stats();
@@ -67,7 +56,9 @@ async fn e2e_tensor_add_uses_pooling() {
 
 #[tokio::test]
 async fn e2e_tensor_mul_uses_pooling() {
-    let device = get_test_device().await;
+    let Some(device) = get_test_device().await else {
+        return;
+    };
 
     let a = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![4], device.clone()).unwrap();
     let b = Tensor::from_data(&[2.0, 3.0, 4.0, 5.0], vec![4], device).unwrap();
@@ -81,7 +72,9 @@ async fn e2e_tensor_mul_uses_pooling() {
 
 #[tokio::test]
 async fn e2e_chained_operations_reuse_pool() {
-    let device = get_test_device().await;
+    let Some(device) = get_test_device().await else {
+        return;
+    };
     let ctx = get_device_context(&device);
 
     let a = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![4], device.clone()).unwrap();
@@ -108,7 +101,9 @@ async fn e2e_chained_operations_reuse_pool() {
 
 #[tokio::test]
 async fn e2e_multiple_operations_steady_state() {
-    let device = get_test_device().await;
+    let Some(device) = get_test_device().await else {
+        return;
+    };
     let ctx = get_device_context(&device);
 
     let size = 1000;
@@ -146,7 +141,9 @@ async fn e2e_multiple_operations_steady_state() {
 
 #[tokio::test]
 async fn chaos_concurrent_tensor_operations() {
-    let device = get_test_device().await;
+    let Some(device) = get_test_device().await else {
+        return;
+    };
 
     let data: Vec<f32> = (0..100).map(|i| i as f32).collect();
     let a = Tensor::from_data(&data, vec![100], device.clone()).unwrap();
@@ -164,7 +161,9 @@ async fn chaos_concurrent_tensor_operations() {
 
 #[tokio::test]
 async fn chaos_rapid_acquire_release() {
-    let device = get_test_device().await;
+    let Some(device) = get_test_device().await else {
+        return;
+    };
     let ctx = get_device_context(&device);
 
     let stats_before = ctx.stats();
@@ -199,7 +198,9 @@ async fn chaos_rapid_acquire_release() {
 
 #[tokio::test]
 async fn chaos_mixed_sizes_stress() {
-    let device = get_test_device().await;
+    let Some(device) = get_test_device().await else {
+        return;
+    };
     let ctx = get_device_context(&device);
 
     // Mix of different tensor sizes
@@ -241,7 +242,9 @@ async fn chaos_mixed_sizes_stress() {
 
 #[tokio::test]
 async fn fault_small_tensor_operations() {
-    let device = get_test_device().await;
+    let Some(device) = get_test_device().await else {
+        return;
+    };
 
     // Create small tensors (edge case)
     let a = Tensor::from_data(&[1.0], vec![1], device.clone()).unwrap();
@@ -254,7 +257,9 @@ async fn fault_small_tensor_operations() {
 
 #[tokio::test]
 async fn fault_pool_survives_device_poll() {
-    let device = get_test_device().await;
+    let Some(device) = get_test_device().await else {
+        return;
+    };
     let ctx = get_device_context(&device);
 
     // Acquire some buffers
@@ -278,7 +283,9 @@ async fn fault_pool_survives_device_poll() {
 
 #[tokio::test]
 async fn fault_tensor_is_pooled_check() {
-    let device = get_test_device().await;
+    let Some(device) = get_test_device().await else {
+        return;
+    };
 
     // User-created tensor is NOT pooled
     let owned = Tensor::from_data(&[1.0, 2.0], vec![2], device.clone()).unwrap();
@@ -296,7 +303,9 @@ async fn fault_tensor_is_pooled_check() {
 
 #[tokio::test]
 async fn fault_large_tensor_allocation() {
-    let device = get_test_device().await;
+    let Some(device) = get_test_device().await else {
+        return;
+    };
     let ctx = get_device_context(&device);
 
     let stats_before = ctx.stats();
@@ -329,7 +338,9 @@ async fn fault_large_tensor_allocation() {
 
 #[tokio::test]
 async fn correctness_pooled_results_accurate() {
-    let device = get_test_device().await;
+    let Some(device) = get_test_device().await else {
+        return;
+    };
 
     let a_data: Vec<f32> = (0..1000).map(|i| i as f32).collect();
     let b_data: Vec<f32> = (0..1000).map(|i| (i * 2) as f32).collect();
@@ -359,7 +370,9 @@ async fn correctness_pooled_results_accurate() {
 
 #[tokio::test]
 async fn correctness_reused_buffer_no_stale_data() {
-    let device = get_test_device().await;
+    let Some(device) = get_test_device().await else {
+        return;
+    };
 
     // First operation: 1+1=2
     let a1 = Tensor::from_data(&[1.0; 100], vec![100], device.clone()).unwrap();

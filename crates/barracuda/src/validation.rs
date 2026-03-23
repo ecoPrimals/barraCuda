@@ -21,6 +21,8 @@ pub enum ToleranceMode {
     Absolute,
     /// |observed - expected| / |expected| < tolerance
     Relative,
+    /// Pass if absolute *or* relative tolerance holds (see [`ValidationHarness::check_abs_or_rel`]).
+    AbsOrRel,
     /// observed < threshold (upper bound only)
     UpperBound,
     /// observed > threshold (lower bound only)
@@ -32,6 +34,7 @@ impl std::fmt::Display for ToleranceMode {
         match self {
             Self::Absolute => write!(f, "abs"),
             Self::Relative => write!(f, "rel"),
+            Self::AbsOrRel => write!(f, "abs|rel"),
             Self::UpperBound => write!(f, "<"),
             Self::LowerBound => write!(f, ">"),
         }
@@ -51,6 +54,8 @@ pub struct Check {
     pub expected: f64,
     /// Tolerance threshold (interpretation depends on `mode`)
     pub tolerance: f64,
+    /// Second tolerance for [`ToleranceMode::AbsOrRel`] (`None` otherwise).
+    pub rel_tolerance: Option<f64>,
     /// How the tolerance is applied
     pub mode: ToleranceMode,
 }
@@ -83,6 +88,7 @@ impl ValidationHarness {
             observed,
             expected,
             tolerance,
+            rel_tolerance: None,
             mode: ToleranceMode::Absolute,
         });
     }
@@ -100,7 +106,60 @@ impl ValidationHarness {
             observed,
             expected,
             tolerance,
+            rel_tolerance: None,
             mode: ToleranceMode::Relative,
+        });
+    }
+
+    /// Relative tolerance: `|computed - expected| ≤ rel_tol × |expected|` when `|expected|` is not
+    /// near zero; otherwise compares `|computed - expected|` to `rel_tol` (groundSpring V120 /
+    /// `tolerance::compare` style).
+    pub fn check_relative(&mut self, label: &str, computed: f64, expected: f64, rel_tol: f64) {
+        let abs_diff = (computed - expected).abs();
+        let rel_err = if expected.abs() > 1e-15 {
+            abs_diff / expected.abs()
+        } else {
+            abs_diff
+        };
+        let passed = rel_err <= rel_tol;
+        self.checks.push(Check {
+            label: label.to_string(),
+            passed,
+            observed: computed,
+            expected,
+            tolerance: rel_tol,
+            rel_tolerance: None,
+            mode: ToleranceMode::Relative,
+        });
+    }
+
+    /// Pass if **either** `|computed - expected| ≤ abs_tol` **or** the relative error (same
+    /// semantics as [`Self::check_relative`]) is `≤ rel_tol`.
+    pub fn check_abs_or_rel(
+        &mut self,
+        label: &str,
+        computed: f64,
+        expected: f64,
+        abs_tol: f64,
+        rel_tol: f64,
+    ) {
+        let abs_diff = (computed - expected).abs();
+        let abs_ok = abs_diff <= abs_tol;
+        let rel_err = if expected.abs() > 1e-15 {
+            abs_diff / expected.abs()
+        } else {
+            abs_diff
+        };
+        let rel_ok = rel_err <= rel_tol;
+        let passed = abs_ok || rel_ok;
+        self.checks.push(Check {
+            label: label.to_string(),
+            passed,
+            observed: computed,
+            expected,
+            tolerance: abs_tol,
+            rel_tolerance: Some(rel_tol),
+            mode: ToleranceMode::AbsOrRel,
         });
     }
 
@@ -112,6 +171,7 @@ impl ValidationHarness {
             observed,
             expected: threshold,
             tolerance: threshold,
+            rel_tolerance: None,
             mode: ToleranceMode::UpperBound,
         });
     }
@@ -124,6 +184,7 @@ impl ValidationHarness {
             observed,
             expected: threshold,
             tolerance: threshold,
+            rel_tolerance: None,
             mode: ToleranceMode::LowerBound,
         });
     }
@@ -136,6 +197,7 @@ impl ValidationHarness {
             observed: f64::from(u8::from(passed)),
             expected: 1.0,
             tolerance: 0.0,
+            rel_tolerance: None,
             mode: ToleranceMode::Absolute,
         });
     }
@@ -180,14 +242,26 @@ impl ValidationHarness {
         tracing::info!("");
         for check in &self.checks {
             let icon = if check.passed { "PASS" } else { "FAIL" };
-            tracing::info!(
-                "[{icon}] {}: observed={:.10e}, expected={:.10e}, tol={:.2e} ({})",
-                check.label,
-                check.observed,
-                check.expected,
-                check.tolerance,
-                check.mode
-            );
+            if let Some(rel_tol) = check.rel_tolerance {
+                tracing::info!(
+                    "[{icon}] {}: observed={:.10e}, expected={:.10e}, abs_tol={:.2e}, rel_tol={:.2e} ({})",
+                    check.label,
+                    check.observed,
+                    check.expected,
+                    check.tolerance,
+                    rel_tol,
+                    check.mode
+                );
+            } else {
+                tracing::info!(
+                    "[{icon}] {}: observed={:.10e}, expected={:.10e}, tol={:.2e} ({})",
+                    check.label,
+                    check.observed,
+                    check.expected,
+                    check.tolerance,
+                    check.mode
+                );
+            }
         }
 
         tracing::info!("");
@@ -318,8 +392,48 @@ mod tests {
     fn test_tolerance_mode_display() {
         assert_eq!(ToleranceMode::Absolute.to_string(), "abs");
         assert_eq!(ToleranceMode::Relative.to_string(), "rel");
+        assert_eq!(ToleranceMode::AbsOrRel.to_string(), "abs|rel");
         assert_eq!(ToleranceMode::UpperBound.to_string(), "<");
         assert_eq!(ToleranceMode::LowerBound.to_string(), ">");
+    }
+
+    #[test]
+    fn check_relative_pass_and_fail() {
+        let mut h = ValidationHarness::new("test");
+        h.check_relative("close", 1.005, 1.0, 0.01);
+        h.check_relative("far", 1.5, 1.0, 0.01);
+        assert_eq!(h.passed_count(), 1);
+        assert_eq!(h.total_count(), 2);
+        assert!(h.checks[0].passed);
+        assert!(!h.checks[1].passed);
+    }
+
+    #[test]
+    fn check_relative_near_zero_expected() {
+        let mut h = ValidationHarness::new("test");
+        h.check_relative("near_zero", 1e-16, 0.0, 1e-10);
+        assert!(h.checks[0].passed);
+    }
+
+    #[test]
+    fn check_abs_or_rel_pass_via_absolute() {
+        let mut h = ValidationHarness::new("test");
+        h.check_abs_or_rel("abs_wins", 100.001, 100.0, 0.01, 1e-10);
+        assert!(h.checks[0].passed);
+    }
+
+    #[test]
+    fn check_abs_or_rel_pass_via_relative() {
+        let mut h = ValidationHarness::new("test");
+        h.check_abs_or_rel("rel_wins", 1000.5, 1000.0, 0.001, 0.001);
+        assert!(h.checks[0].passed);
+    }
+
+    #[test]
+    fn check_abs_or_rel_fail_both() {
+        let mut h = ValidationHarness::new("test");
+        h.check_abs_or_rel("both_fail", 2.0, 1.0, 0.01, 0.01);
+        assert!(!h.checks[0].passed);
     }
 
     #[test]

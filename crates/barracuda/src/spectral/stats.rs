@@ -109,6 +109,7 @@ impl SpectralAnalysis {
 ///
 /// Intended for neural network weight matrices where the full spectral
 /// profile (bandwidth, condition number, phase, IPR, LSR) is needed.
+#[cfg(feature = "gpu")]
 #[derive(Debug, Clone)]
 pub struct WeightMatrixAnalysis {
     /// Core spectral analysis (eigenvalues, bandwidth, condition number, phase).
@@ -134,6 +135,7 @@ pub struct WeightMatrixAnalysis {
 /// # Errors
 ///
 /// Returns [`Err`] if the eigenvalue decomposition fails.
+#[cfg(feature = "gpu")]
 pub fn analyze_weight_matrix(
     matrix: &[f64],
     n: usize,
@@ -157,6 +159,7 @@ pub fn analyze_weight_matrix(
     })
 }
 
+#[cfg(feature = "gpu")]
 fn compute_mean_ipr(eigenvectors: &[f64], n: usize) -> f64 {
     if n == 0 {
         return 0.0;
@@ -173,6 +176,7 @@ fn compute_mean_ipr(eigenvectors: &[f64], n: usize) -> f64 {
     total_ipr / n as f64
 }
 
+#[cfg_attr(not(feature = "gpu"), allow(dead_code))]
 fn compute_spectral_entropy(eigenvalues: &[f64]) -> f64 {
     let total: f64 = eigenvalues.iter().map(|x| x.abs()).sum();
     if total < 1e-300 {
@@ -345,6 +349,7 @@ mod tests {
         assert_eq!(a.eigenvalues, evals);
     }
 
+    #[cfg(feature = "gpu")]
     #[test]
     fn analyze_weight_matrix_identity() {
         #[rustfmt::skip]
@@ -361,6 +366,7 @@ mod tests {
         assert!(analysis.level_spacing_ratio >= 0.0);
     }
 
+    #[cfg(feature = "gpu")]
     #[test]
     fn analyze_weight_matrix_2x2() {
         #[rustfmt::skip]

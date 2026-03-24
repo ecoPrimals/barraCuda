@@ -5,6 +5,36 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.8] — 2026-03-21
+
+### Changed — Ecosystem Absorption Sprint 18: API Housekeeping & Cross-Spring Evolution (Mar 21 2026)
+
+- **`GpuDriverProfile` struct removed**: Deprecated since v0.3.6, all springs migrated to
+  `DeviceCapabilities` in Sprint 14. The struct, its impl blocks, Display impl, and dedicated
+  test file (16.5 KB) removed. Supporting enums (`DriverKind`, `CompilerKind`, `GpuArch`,
+  `Fp64Rate`, `EigensolveStrategy`, `Fp64Strategy`, `PrecisionRoutingAdvice`, `Workaround`)
+  remain in `device::driver_profile` and are re-exported through `device::capabilities`.
+  Detection functions retained with `#[expect(dead_code)]` for future `DeviceCapabilities` evolution.
+- **`barracuda::cast` module added**: Safe numeric cast helpers (`usize_as_u32`, `f64_as_f32_checked`,
+  `u32_as_f32_lossy`, etc.) replacing raw `as` casts with checked/documented alternatives.
+  Enables gradual migration from `allow(cast_*)` to `warn`.
+- **`CastOverflow` and `PrecisionLoss` error variants**: New typed error variants in `BarracudaError`
+  for numeric cast failures, replacing generic `InvalidInput` for cast-related errors.
+- **`ESN::wgpu_device()` and `MultiHeadEsn::wgpu_device()` accessors**: Direct `&Arc<WgpuDevice>`
+  access for springs building custom GPU pipelines on trained reservoirs (neuralSpring S143 request).
+- **Tolerance stability contract**: Module-level doc in `tolerances.rs` formalizing that tightening
+  tolerances is a breaking change requiring handoff coordination.
+- **`domain-fold` feature gate**: `folding_df64` module (15 AlphaFold2-style DF64 shaders) now
+  gated behind `domain-fold` feature, included in `domain-models` umbrella.
+- **f64 shader constants promoted to public API**: `WGSL_GELU_F64`, `WGSL_SOFTMAX_SIMPLE_F64`,
+  `WGSL_SOFTMAX_BASIC_F64` exposed as `pub const` for springs using `ComputeDispatch` directly.
+- **`cast_lossless` lint promoted to warn**: Zero violations found — codebase already clean.
+- **Ecosystem audit findings**: Pairwise Hamming/Jaccard/L2, chi-squared/KL divergence,
+  xoshiro GPU PRNG, HMM backward/Viterbi all confirmed already implemented. Health ODE
+  infrastructure ready for absorption when healthSpring provides models.
+- **`insert_caps_for_test` dead code addressed**: Annotated with `#[expect]` after
+  `GpuDriverProfile` test removal made it unreferenced.
+
 ## [0.3.7] — 2026-03-21
 
 ### Changed — Deep Debt Sprint 17: Nursery Linting, IPC Naming Evolution & Coverage Push (Mar 21 2026)

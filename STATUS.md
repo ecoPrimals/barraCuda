@@ -1,6 +1,6 @@
 # barraCuda Status
 
-**Version**: 0.3.7
+**Version**: 0.3.8
 **Date**: 2026-03-21
 **Overall Grade**: A+ (Zero unsafe via `#![forbid(unsafe_code)]`, zero unwrap in production, zero println in library code, pure safe Rust, AGPL-3.0-or-later scyBorg trio, all quality gates green, 4,052+ tests passing, zero TODO/FIXME/unimplemented, zero "for now" debt language, zero `Result<T, String>` in production (all typed errors), clippy nursery clean in barracuda-core, wateringHole leverage patterns guide published, scheduler println→tracing evolution, full audit: all mocks test-only, all panics test-only, capability-based discovery confirmed in production, JSON-RPC+tarpc dual protocol, UniBin+ecoBin compliant, all files under 1000 lines, GemmF64 TransA/TransB flags, FAMILY_ID socket paths per PRIMAL_IPC_PROTOCOL, `deny.toml` wildcards=deny supply chain audit, blake3 `default-features=false` ecoBin pure, WGSL_MEAN_REDUCE public re-export, NVVM poisoning guard, PrecisionBrain self-routing, HardwareCalibration per-tier probing, PCIe topology probing, VRAM quota enforcement, rayon-parallel shader validation, optimised test pipeline, all deps pure Rust, device-aware test tolerances, cross-spring pharma/bio/health absorption, FMA policy, stable GPU special functions, sovereign coral-cache dispatch wiring, capability-based PRIMAL_NAMESPACE, VoltaNoPmuFirmware workaround detection, namespace-derived IPC method names, 806/806 WGSL SPDX headers, 1,085 Rust source files, `#![deny(clippy::pedantic)]` + nursery + doc lint promotion, CI coverage 80% blocking, ecoBin cross-compile CI, CoralReefDevice→toadStool dispatch wired, capability-based toadStool discovery, RwLock tensor store, zero-copy BytesMut/Bytes evolution, device-lost DRY refactor, ODE bio system test coverage, async readback typed errors, genomics 25-test coverage, smart module decomposition, transport defaults named constants, cargo update applied)
 
@@ -35,7 +35,7 @@
 - Builder type re-exports at `barracuda::{HmmForwardArgs, Dada2DispatchArgs, GillespieModel, PrecisionRoutingAdvice, Rk45DispatchArgs}`
 - `barracuda::math::{dot, l2_norm}` for springs to drop local implementations
 - `fused_ops_healthy()` canary, `is_software_adapter()`, `baseline_path()` in test harness
-- `GpuDriverProfile::f64_zeros_risk()` for NVK + Ada Lovelace proprietary shared-memory f64 detection (`GpuDriverProfile` is deprecated in favor of `DeviceCapabilities`)
+- `DeviceCapabilities` replaces `GpuDriverProfile` (struct removed in v0.3.8; enums retained)
 - `barracuda::stats::{hill_activation, hill_repression}` — Hill kinetics for regulatory networks
 - Ada Lovelace + proprietary → `F64NativeNoSharedMem` precision routing (probe-aware)
 - `shared_mem_f64` runtime probe — empirically verifies `var<workgroup>` f64 reductions on hardware

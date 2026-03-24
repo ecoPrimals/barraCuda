@@ -10,10 +10,14 @@
 //! - Zero-copy output: buffer pool, no GPU→CPU→GPU round-trip
 //! - Pipeline cached: `GLOBAL_CACHE` eliminates recompilation overhead
 
-/// f64 is the canonical source — math is universal, precision is silicon.
-const SHADER_F64: &str = include_str!("../shaders/activation/gelu_f64.wgsl");
+/// GELU f64 WGSL shader source — canonical.
+///
+/// Uses `array<f64>` storage; requires GPU f64 support. Springs building
+/// custom f64 pipelines via `ComputeDispatch` can use this directly.
+pub const WGSL_GELU_F64: &str = include_str!("../shaders/activation/gelu_f64.wgsl");
+
 pub(crate) static SHADER_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| SHADER_F64.to_string());
+    std::sync::LazyLock::new(|| WGSL_GELU_F64.to_string());
 
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;

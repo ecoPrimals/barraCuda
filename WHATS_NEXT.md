@@ -6,6 +6,15 @@ Prioritized work items, ordered by impact. Updated 2026-03-21.
 
 ## Recently Completed
 
+- **Sprint 18: Ecosystem Absorption & API Housekeeping (Mar 21)**:
+  Full pull + review of 8 springs + 10+ primals. `GpuDriverProfile` struct removed (all
+  springs migrated). `barracuda::cast` module with safe numeric casts and `CastOverflow`/
+  `PrecisionLoss` typed errors. `ESN::wgpu_device()` and `MultiHeadEsn::wgpu_device()`
+  accessors (neuralSpring request). `domain-fold` feature gate for structural biology
+  shaders. f64 shader constants exposed as public API. Tolerance stability contract
+  documented. `cast_lossless` lint promoted (zero violations). Ecosystem audit confirmed
+  Hamming/Jaccard/L2, chi-squared/KL, xoshiro PRNG, HMM backward/Viterbi all already
+  implemented. 3,618 tests pass, zero clippy warnings, all gates green.
 - **Sprint 17: Nursery Linting, IPC Naming Evolution & Coverage Push (Mar 21)**:
   `clippy::nursery` blanket-enabled on both crates with 13 warnings fixed and
   scientific/GPU false positives selectively allowed in `Cargo.toml`. IPC method

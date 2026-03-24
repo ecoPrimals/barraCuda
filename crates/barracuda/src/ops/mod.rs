@@ -89,6 +89,7 @@ pub mod swish_wgsl;
 // DF64 universal math shaders (f32-pair, ~48-bit mantissa, 9.9× f64 throughput)
 pub mod df64_shaders;
 // DF64 protein folding shaders (AlphaFold2-style, neuralSpring V60)
+#[cfg(feature = "domain-fold")]
 pub mod folding_df64;
 
 // Element-wise operations
@@ -271,6 +272,7 @@ pub use df64_shaders::{
     WGSL_ELEMENTWISE_ADD_DF64, WGSL_ELEMENTWISE_FMA_DF64, WGSL_ELEMENTWISE_MUL_DF64,
     WGSL_ELEMENTWISE_SUB_DF64, WGSL_MEAN_REDUCE_DF64, WGSL_SUM_REDUCE_DF64,
 };
+#[cfg(feature = "domain-fold")]
 pub use folding_df64::{FoldingOp, compile_folding_shader};
 
 // Cosine similarity (f64)

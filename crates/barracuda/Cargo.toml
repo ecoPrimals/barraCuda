@@ -60,7 +60,7 @@ unwrap_used = "warn"
 cast_possible_truncation = "allow"
 cast_sign_loss = "allow"
 cast_precision_loss = "allow"
-cast_lossless = "allow"
+cast_lossless = "warn"
 cast_possible_wrap = "allow"
 # Doc — promoted: zero violations, now enforced
 doc_markdown = "allow"
@@ -171,6 +171,7 @@ sovereign-dispatch = ["gpu"]
 # that only need specific domains (e.g., hotSpring enables domain-pde).
 domain-models = [
     "domain-esn",
+    "domain-fold",
     "domain-genomics",
     "domain-nn",
     "domain-pde",
@@ -179,6 +180,7 @@ domain-models = [
     "domain-vision",
 ]
 domain-esn = []
+domain-fold = []
 domain-genomics = []
 domain-nn = []
 domain-pde = []

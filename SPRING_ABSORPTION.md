@@ -1,8 +1,8 @@
 # Spring Absorption Tracker
 
-**Version**: 0.3.7
-**Date**: March 20, 2026
-**Source**: hotSpring v0.6.32, groundSpring V99, neuralSpring S143, wetSpring V107, airSpring v0.7.5, healthSpring V19, toadStool S156, coralReef Phase 10 Iter 50
+**Version**: 0.3.8
+**Date**: March 21, 2026
+**Source**: hotSpring v0.6.32, groundSpring V99, neuralSpring S143, wetSpring V107, airSpring v0.7.5, healthSpring V19, ludoSpring (new), primalSpring (new), toadStool S163, coralReef Phase 10 Iter 62
 
 Cross-spring evolution follows **Write → Absorb → Lean**: springs implement
 domain-specific primitives, barraCuda absorbs and generalises, springs consume
@@ -163,6 +163,28 @@ groundSpring → ALL:        2 shaders (chi_squared universal, Welford mean+vari
 | AT | **P1: `histogram_u32_to_f64()` convenience** | wetSpring V102 | `ops::bio::kmer_histogram` | ✅ Done |
 | AU | **P0: toadStool S139 discovery alignment** | toadStool S139 | `device::coral_compiler::discovery` | ✅ Done |
 | AV | **Audit: confirmed existing coverage** | airSpring v0.7.5 | — | ✅ `regularized_gamma_q`, `CorrelationResult::r_squared()`, ET0 GPU shaders all already present |
+
+---
+
+### Ecosystem-Wide Absorption Sprint 18 (Mar 21 2026)
+
+Full pull + review of 8 springs, 10+ primals. Key findings:
+
+| # | Item | Source | Status |
+|---|------|--------|--------|
+| BC | **Remove deprecated `GpuDriverProfile` struct** | all springs (migrated Sprint 14) | ✅ Done — enums retained |
+| BD | **`barracuda::cast` safe numeric cast module** | groundSpring typed-error pattern | ✅ Done — `CastOverflow`/`PrecisionLoss` error variants |
+| BE | **Tolerance stability contract** | groundSpring V76 pattern | ✅ Done — documented in `tolerances.rs` |
+| BF | **`ESN::wgpu_device()` + `MultiHeadEsn::wgpu_device()`** | neuralSpring S143 request | ✅ Done |
+| BG | **`domain-fold` feature gate** | wetSpring structural biology | ✅ Done — gates `folding_df64` module |
+| BH | **f64 shader constants exposed as public API** | all springs | ✅ Done — `WGSL_GELU_F64`, `WGSL_SOFTMAX_*_F64` |
+| BI | **`cast_lossless` promoted to warn** | internal lint evolution | ✅ Done — zero violations |
+| BJ | **Pairwise Hamming/Jaccard/L2** | neuralSpring request | ✅ Already existed (`ops/bio/pairwise_*`, `cdist`) |
+| BK | **Chi-squared / KL divergence** | neuralSpring request | ✅ Already existed (`special/chi_squared`, `ops/kl_divergence`) |
+| BL | **xoshiro128ss GPU PRNG** | wetSpring V107 | ✅ Already existed (`ops/prng_xoshiro_wgsl`) |
+| BM | **HMM backward/Viterbi** | neuralSpring S143 | ✅ Already existed (`ops/bio/hmm`) |
+| BN | **Health ODE systems** | healthSpring V19 | 🔲 Deferred — infrastructure ready (`ode_bio/` + `OdeSystem` trait) |
+| BO | **ludoSpring / primalSpring** | new repos | ✅ Cloned — no absorption candidates yet (early) |
 
 ---
 

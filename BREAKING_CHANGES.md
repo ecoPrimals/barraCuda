@@ -5,6 +5,13 @@ and the migration path.
 
 ## Pre-1.0 (current)
 
+### 0.3.8
+
+| Change | Migration |
+|--------|-----------|
+| **`GpuDriverProfile` struct removed** — The deprecated struct, all impl blocks, and its test module were removed. Supporting enums (`DriverKind`, `CompilerKind`, `GpuArch`, etc.) remain. | Replace any `GpuDriverProfile::from_device(dev)` calls with `DeviceCapabilities::from_device(dev)`. The enums are still available via `crate::device::driver_profile::*` or `crate::device::capabilities::*`. |
+| **`folding_df64` module now gated behind `domain-fold` feature** — Previously always compiled, now requires the feature flag. Included in `domain-models` umbrella. | Add `domain-fold` to your feature list if you use `FoldingOp` or `compile_folding_shader`. If you use `default` features, no change needed. |
+
 ### 0.3.7
 
 | Change | Migration |

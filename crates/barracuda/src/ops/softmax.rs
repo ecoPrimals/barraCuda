@@ -11,15 +11,15 @@ use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 use bytemuck::{Pod, Zeroable};
 
-/// f64 canonical — simple softmax (single workgroup).
-const SHADER_SOFTMAX_SIMPLE_F64: &str =
+/// Softmax (simple) f64 WGSL shader — single workgroup, `array<f64>` storage.
+pub const WGSL_SOFTMAX_SIMPLE_F64: &str =
     include_str!("../shaders/activation/softmax_simple_f64.wgsl");
 pub(crate) static SHADER_SOFTMAX_SIMPLE_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| SHADER_SOFTMAX_SIMPLE_F64.to_string());
+    std::sync::LazyLock::new(|| WGSL_SOFTMAX_SIMPLE_F64.to_string());
 
-/// f64 canonical — basic softmax (multi-pass).
-const WGSL_SOFTMAX_BASIC_F64: &str = include_str!("../shaders/activation/softmax_f64.wgsl");
-/// WGSL shader for basic softmax (f64 downcast to f32 when needed).
+/// Softmax (multi-pass) f64 WGSL shader — `array<f64>` storage.
+pub const WGSL_SOFTMAX_BASIC_F64: &str = include_str!("../shaders/activation/softmax_f64.wgsl");
+/// WGSL shader for basic softmax (runtime reference).
 pub static WGSL_SOFTMAX_BASIC: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| WGSL_SOFTMAX_BASIC_F64.to_string());
 

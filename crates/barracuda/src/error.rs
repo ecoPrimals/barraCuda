@@ -140,6 +140,28 @@ pub enum BarracudaError {
         feature: String,
     },
 
+    /// Numeric cast would overflow the target type.
+    #[error("Cast overflow: {from_type} → {to_type} ({value_description})")]
+    CastOverflow {
+        /// Source type name (e.g. "usize").
+        from_type: &'static str,
+        /// Target type name (e.g. "u32").
+        to_type: &'static str,
+        /// Human-readable value description.
+        value_description: String,
+    },
+
+    /// Numeric cast would lose precision beyond acceptable bounds.
+    #[error("Precision loss: {from_type} → {to_type} ({value_description})")]
+    PrecisionLoss {
+        /// Source type name (e.g. "f64").
+        from_type: &'static str,
+        /// Target type name (e.g. "f32").
+        to_type: &'static str,
+        /// Human-readable value description.
+        value_description: String,
+    },
+
     /// I/O failure (file read, write).
     #[error("IO error: {context}")]
     Io {

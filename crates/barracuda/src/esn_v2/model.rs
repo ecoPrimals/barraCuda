@@ -605,6 +605,17 @@ impl ESN {
             wgpu::DeviceType::Other => Device::Auto,
         }
     }
+
+    /// Direct access to the underlying `WgpuDevice`.
+    ///
+    /// Springs that build custom GPU pipelines on top of a trained ESN reservoir
+    /// need the device handle for buffer allocation and dispatch. Previously
+    /// required going through `state().device().clone()` — neuralSpring requested
+    /// this accessor to avoid the tensor indirection.
+    #[must_use]
+    pub fn wgpu_device(&self) -> &Arc<WgpuDevice> {
+        &self.device
+    }
 }
 
 #[cfg(test)]

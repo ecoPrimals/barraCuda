@@ -17,9 +17,8 @@ mod device_info;
 mod wgpu_caps;
 
 // Re-export driver-profile types that are part of the public API.
-// `GpuDriverProfile`, `DriverKind`, `CompilerKind`, `GpuArch`, and `Workaround`
-// are deprecated in favour of `DeviceCapabilities` (Phase 3c). They remain
-// available from `crate::device::driver_profile` for internal and test use.
+// The former `GpuDriverProfile` struct was removed in v0.3.8 (Sprint 18).
+// These shared enums remain canonical in `driver_profile` and are re-exported here.
 pub use crate::device::driver_profile::{
     EigensolveStrategy, Fp64Rate, Fp64Strategy, PrecisionRoutingAdvice,
 };

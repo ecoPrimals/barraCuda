@@ -7,6 +7,9 @@
 //!
 //! Provenance: hotSpring V0615 (physics), wetSpring V86 (`BioHeadKind`) → generalized
 
+use std::sync::Arc;
+
+use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result as BarracudaResult};
 use crate::linalg::solve_f64_cpu;
 use crate::tensor::Tensor;
@@ -371,6 +374,15 @@ impl MultiHeadEsn {
             }
         }
         Ok(if count > 0 { total / count as f64 } else { 0.0 })
+    }
+
+    /// Direct access to the underlying `WgpuDevice` (delegates to reservoir).
+    ///
+    /// Springs that build custom GPU pipelines on top of a multi-head ESN
+    /// need the device handle for buffer allocation and dispatch.
+    #[must_use]
+    pub fn wgpu_device(&self) -> &Arc<WgpuDevice> {
+        self.reservoir.wgpu_device()
     }
 
     /// Export weights with `head_labels` populated.

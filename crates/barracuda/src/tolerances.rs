@@ -4,6 +4,17 @@
 //!
 //! Every tolerance threshold used in validation is defined here.
 //! No ad-hoc magic numbers. Imitates the neuralSpring hotSpring pattern.
+//!
+//! # Stability Contract
+//!
+//! All tolerance constants in this module are **SemVer-stable**: tightening
+//! a tolerance (lowering `abs_tol` or `rel_tol`) or removing a constant is a
+//! **breaking change** requiring a major version bump or `BREAKING_CHANGES.md`
+//! entry. Loosening a tolerance (raising values) is a minor/patch change.
+//!
+//! Springs depend on these constants for reproducible validation harnesses.
+//! If a tolerance needs to change, file a `wateringHole` handoff first so
+//! all consuming springs can update their expectations.
 
 /// Tolerance descriptor with absolute and relative bounds plus justification.
 #[derive(Debug, Clone, Copy)]

@@ -92,6 +92,7 @@ pub(crate) fn arch_from_adapter_name(name: &str) -> GpuArch {
 }
 
 /// Detect GPU architecture from device adapter name.
+#[expect(dead_code, reason = "retained for DeviceCapabilities evolution")]
 pub(crate) fn detect_arch(device: &WgpuDevice) -> GpuArch {
     arch_from_adapter_name(&device.adapter_info().name)
 }

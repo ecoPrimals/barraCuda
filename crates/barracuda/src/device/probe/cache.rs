@@ -114,6 +114,7 @@ pub(super) fn insert_full_caps(key: String, caps: F64BuiltinCapabilities) {
 
 /// Seeds the global probe cache for unit tests (synthetic adapter keys).
 #[cfg(test)]
+#[expect(dead_code, reason = "available for future probe-aware tests")]
 pub(crate) fn insert_caps_for_test(key: String, caps: F64BuiltinCapabilities) {
     insert_full_caps(key, caps);
 }

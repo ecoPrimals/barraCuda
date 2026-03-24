@@ -154,6 +154,7 @@
 
 // ── CPU-only modules (always available, no GPU dependency) ────────────────────
 pub mod activations;
+pub mod cast;
 pub mod error;
 pub mod health;
 pub mod linalg;

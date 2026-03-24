@@ -5,6 +5,11 @@ and the migration path.
 
 ## Pre-1.0 (current)
 
+### 0.3.10
+
+No breaking API changes. Internal precision improvements (`mul_add()`), lint
+promotions, and iterator refactoring are all backward-compatible.
+
 ### 0.3.9
 
 | Change | Migration |

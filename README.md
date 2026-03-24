@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **806 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,085 Rust source files**, 43 integration test files, 4,052+ tests (3,659 lib + 130 core + integration + doctests) passing
+- **1,085 Rust source files**, 42 integration test files, 4,052+ tests (3,623 lib + 130 core + integration + doctests) passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -58,9 +58,10 @@ results.
 
 ## Recent
 
-- **Sprint 17**: Nursery linting, IPC naming evolution & coverage push — `clippy::nursery` blanket-enabled on both crates (13 warnings fixed, scientific false positives selectively allowed), IPC method names evolved to bare `{domain}.{operation}` per wateringHole standard (backward-compatible), 13 pooling tests hardened against device-lost, coverage 71.59% line / 78.44% function (up from 32%/59%). All quality gates green.
-- **Sprint 15–16**: Comprehensive audit & production hardening — device-lost detection evolution, hardcoded domain lists eliminated, lint evolution (42 `#[allow]` → 14 justified), 20 new barracuda-core tests (130 total), zero production `.unwrap()` confirmed, FHE test suite verified (62 pass).
-- **Sprint 14**: Full vendor-agnostic evolution — `DeviceCapabilities` replaces `GpuDriverProfile`, `DeviceClass` replaces `GpuVendor`, capability-based device preferences.
+- **Sprint 20**: FMA evolution & lint promotion — 625 `suboptimal_flops` sites evolved to `mul_add()` for hardware FMA precision. 4 lints promoted from `allow` to `warn`: `suboptimal_flops` (415→0), `use_self` (332→0), `tuple_array_conversions` (2→0), `needless_range_loop` (45→0). All `needless_range_loop` sites evolved to idiomatic iterators. 232 files changed, 3,623+ tests pass, zero clippy errors.
+- **Sprint 19**: Deep debt solutions & idiomatic Rust evolution — RPC `tolerances_get` evolved to centralized tolerance registry. Cast safety: all `usize as u32` in `TensorSession` replaced with checked casts. 6 domain feature gates added (`domain-fhe`, `domain-md`, `domain-lattice`, `domain-physics`, `domain-pharma`, `domain-genomics`). `FlatTree::validate()` evolved to typed errors.
+- **Sprint 18**: Ecosystem absorption & API housekeeping — full pull + review of 8 springs + 10 primals. `GpuDriverProfile` removed. `barracuda::cast` module with safe numeric casts. ESN device accessors. f64 shader constants exposed. Tolerance stability contract.
+- **Sprint 17**: Nursery linting, IPC naming evolution & coverage push — `clippy::nursery` blanket-enabled, IPC method names evolved to bare `{domain}.{operation}`, 13 pooling tests hardened, coverage 71.59% line / 78.44% function.
 
 ---
 
@@ -147,7 +148,7 @@ barraCuda/
 │       │   ├── unified_hardware/    # Unified CPU/GPU/NPU abstraction
 │       │   └── ...                  # + nn, snn, esn, pde, genomics, vision
 │       ├── examples/                # Runnable examples
-│       ├── tests/                   # 43 integration test files (25 harnesses + submodules)
+│       ├── tests/                   # 42 integration test files (25 harnesses + submodules)
 │       └── src/bin/                 # validate_gpu, bench_*
 └── specs/
     ├── BARRACUDA_SPECIFICATION.md       # Crate architecture + IPC contract

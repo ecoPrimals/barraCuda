@@ -185,7 +185,7 @@ impl NautilusShell {
     }
 
     /// Merge best boards from another shell into this population.
-    pub fn merge_shell(&mut self, other: &NautilusShell) {
+    pub fn merge_shell(&mut self, other: &Self) {
         let self_fit: Vec<f64> = self
             .population
             .fitness

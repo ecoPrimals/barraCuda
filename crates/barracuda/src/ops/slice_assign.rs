@@ -158,7 +158,7 @@ impl Tensor {
     /// * `values` - Values to assign
     /// # Errors
     /// Returns [`Err`] if validation fails or buffer allocation/GPU dispatch/readback fails (e.g. device lost).
-    pub fn slice_assign(self, slice_range: SliceRange, values: Tensor) -> Result<Self> {
+    pub fn slice_assign(self, slice_range: SliceRange, values: Self) -> Result<Self> {
         SliceAssign::new(self, slice_range, values)?.execute()
     }
 }

@@ -251,7 +251,7 @@ pub fn adaptive_penalty_mad(
     };
 
     // Penalty threshold: median + k × MAD
-    let threshold = median + mad_multiplier * mad;
+    let threshold = mad_multiplier.mul_add(mad, median);
 
     // Filter feasible values (below threshold)
     let feasible: Vec<f64> = valid.iter().filter(|&&v| v <= threshold).copied().collect();

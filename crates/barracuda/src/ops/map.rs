@@ -64,11 +64,11 @@ pub enum MapOperation {
 impl MapOperation {
     fn to_u32(&self) -> u32 {
         match self {
-            MapOperation::Square => 0,
-            MapOperation::Sqrt => 1,
-            MapOperation::Abs => 2,
-            MapOperation::Negate => 3,
-            MapOperation::Reciprocal => 4,
+            Self::Square => 0,
+            Self::Sqrt => 1,
+            Self::Abs => 2,
+            Self::Negate => 3,
+            Self::Reciprocal => 4,
         }
     }
 }

@@ -3,7 +3,7 @@ use super::*;
 
 fn rosenbrock(x: &[f64]) -> f64 {
     let (a, b) = (1.0, 100.0);
-    (a - x[0]).powi(2) + b * (x[1] - x[0].powi(2)).powi(2)
+    (a - x[0]).mul_add(a - x[0], b * x[0].mul_add(-x[0], x[1]).powi(2))
 }
 
 fn init_simplex(x0: &[f64], delta: f64) -> Vec<f64> {
@@ -35,7 +35,7 @@ async fn test_batched_nelder_mead_rosenbrock() {
     let n_problems = 4;
     let mut initial_simplices = Vec::new();
     for p in 0..n_problems {
-        let x0 = [-1.0 + p as f64 * 0.5, -1.0];
+        let x0 = [(p as f64).mul_add(0.5, -1.0), -1.0];
         initial_simplices.extend_from_slice(&init_simplex(&x0, 0.1));
     }
 

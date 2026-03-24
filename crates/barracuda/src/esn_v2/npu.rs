@@ -97,7 +97,7 @@ mod tests {
     #[test]
     fn test_quantize_round_trip_max_error() {
         // Round-trip: quantize then dequantize, verify max error < 1% of range
-        let values: Vec<f64> = (0..100).map(|i| -5.0 + (i as f64 * 0.15)).collect();
+        let values: Vec<f64> = (0..100).map(|i| (i as f64).mul_add(0.15, -5.0)).collect();
         let (quantized, scale, zero_point) = quantize_affine_i8_f64(&values);
         let dequantized = dequantize_affine_i8_f64(&quantized, scale, zero_point);
 

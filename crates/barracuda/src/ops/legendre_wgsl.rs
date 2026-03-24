@@ -258,7 +258,7 @@ mod tests {
         // P₂(x) = (3x² - 1) / 2
         for (i, &v) in result.iter().enumerate() {
             let x = data[i];
-            let expected = (3.0 * x * x - 1.0) / 2.0;
+            let expected = (3.0 * x).mul_add(x, -1.0) / 2.0;
             assert!(
                 (v - expected).abs() < 1e-4,
                 "P₂({x}) = {v}, expected {expected}"

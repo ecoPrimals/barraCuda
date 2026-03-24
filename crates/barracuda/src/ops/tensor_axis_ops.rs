@@ -56,7 +56,7 @@ impl Tensor {
 
         let mut out_shape = shape.to_vec();
         out_shape.remove(axis);
-        Tensor::from_data_pod(&indices, out_shape, self.device().clone())
+        Self::from_data_pod(&indices, out_shape, self.device().clone())
     }
 
     /// Applies softmax along the specified axis.
@@ -122,7 +122,7 @@ impl Tensor {
             }
         }
 
-        Tensor::from_data(&result, shape.to_vec(), self.device().clone())
+        Self::from_data(&result, shape.to_vec(), self.device().clone())
     }
 }
 

@@ -23,10 +23,10 @@ impl PppmAccuracy {
     #[must_use]
     pub fn target_error(&self) -> f64 {
         match self {
-            PppmAccuracy::Low => 1e-3,
-            PppmAccuracy::Medium => 1e-5,
-            PppmAccuracy::High => 1e-7,
-            PppmAccuracy::Custom(e) => *e,
+            Self::Low => 1e-3,
+            Self::Medium => 1e-5,
+            Self::High => 1e-7,
+            Self::Custom(e) => *e,
         }
     }
 }

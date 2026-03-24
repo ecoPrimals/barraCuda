@@ -126,7 +126,7 @@ impl Tensor {
     ///
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
-    pub fn cdist_wgsl(self, other: Tensor, metric: DistanceMetric) -> Result<Self> {
+    pub fn cdist_wgsl(self, other: Self, metric: DistanceMetric) -> Result<Self> {
         Cdist::new(self, other, metric).execute()
     }
 }

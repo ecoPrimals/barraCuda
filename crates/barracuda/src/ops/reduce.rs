@@ -64,10 +64,10 @@ pub enum ReduceOperation {
 impl ReduceOperation {
     fn to_u32(&self) -> u32 {
         match self {
-            ReduceOperation::Sum => 0,
-            ReduceOperation::Max => 1,
-            ReduceOperation::Min => 2,
-            ReduceOperation::Mean => 3,
+            Self::Sum => 0,
+            Self::Max => 1,
+            Self::Min => 2,
+            Self::Mean => 3,
         }
     }
 }

@@ -15,15 +15,15 @@ impl GpuBackend for WgpuDevice {
     type Buffer = wgpu::Buffer;
 
     fn name(&self) -> &str {
-        WgpuDevice::name(self)
+        Self::name(self)
     }
 
     fn has_f64_shaders(&self) -> bool {
-        WgpuDevice::has_f64_shaders(self)
+        Self::has_f64_shaders(self)
     }
 
     fn is_lost(&self) -> bool {
-        WgpuDevice::is_lost(self)
+        Self::is_lost(self)
     }
 
     fn alloc_buffer(&self, label: &str, size: u64) -> Result<wgpu::Buffer> {

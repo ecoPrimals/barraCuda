@@ -61,13 +61,14 @@ impl Board {
         let range = config.range_per_column;
         let mut cells = vec![vec![0u32; l]; l];
 
-        for k in 0..l {
+        for (k, _) in (0..l).enumerate() {
             let lo = range * (k as u32);
             let hi = range * ((k + 1) as u32);
             let mut col_vals: Vec<u32> = (lo..hi).collect();
             col_vals.shuffle(&mut rng);
-            for row in 0..l {
-                cells[row][k] = col_vals[row];
+            col_vals.truncate(l);
+            for (cell_row, val) in cells.iter_mut().zip(col_vals.iter().copied()) {
+                cell_row[k] = val;
             }
         }
 

@@ -245,11 +245,11 @@ impl Tensor {
     /// predict fails.
     pub fn rbf_interpolate(
         &self,
-        y: &Tensor,
-        x_new: &Tensor,
+        y: &Self,
+        x_new: &Self,
         kernel: RbfKernelType,
         epsilon: f32,
-    ) -> Result<Tensor> {
+    ) -> Result<Self> {
         let rbf = RbfInterpolator::fit(self, y, kernel, epsilon)?;
         rbf.predict(x_new)
     }

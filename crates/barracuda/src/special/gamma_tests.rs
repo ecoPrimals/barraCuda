@@ -118,7 +118,7 @@ fn test_digamma_recurrence() {
 #[test]
 fn test_digamma_half() {
     const EULER_MASCHERONI: f64 = 0.5772156649015329;
-    let expected = -EULER_MASCHERONI - 2.0 * 2.0_f64.ln();
+    let expected = 2.0f64.mul_add(-2.0_f64.ln(), -EULER_MASCHERONI);
     let psi_half = digamma(0.5).unwrap();
     assert!(
         (psi_half - expected).abs() < 1e-9,

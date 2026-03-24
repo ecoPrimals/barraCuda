@@ -123,7 +123,7 @@ mod chaos {
         };
         let fmr = FusedMapReduceF64::new(device).unwrap();
         let n = 500;
-        let data: Vec<f64> = (0..n).map(|i| (i as f64) * 0.001).collect();
+        let data: Vec<f64> = (0..n).map(|i| f64::from(i) * 0.001).collect();
         let sum = fmr.sum(&data).unwrap();
         let expected: f64 = data.iter().sum();
         let rel_error = (sum - expected).abs() / expected.abs();
@@ -143,7 +143,7 @@ mod chaos {
         };
         let fmr = FusedMapReduceF64::new(device).unwrap();
         let n = 1_000_000;
-        let data: Vec<f64> = (0..n).map(|i| (i as f64) * 0.000001).collect();
+        let data: Vec<f64> = (0..n).map(|i| f64::from(i) * 0.000001).collect();
         let sum = fmr.sum(&data).unwrap();
         let expected: f64 = data.iter().sum();
         let rel_error = (sum - expected).abs() / expected.abs();
@@ -163,9 +163,11 @@ mod chaos {
         let fmr = FusedMapReduceF64::new(device.clone()).unwrap();
         let kriging = KrigingF64::new(device).unwrap();
         for i in 0..100 {
-            let counts: Vec<f64> = (0..100).map(|j| ((i * 100 + j) % 50 + 1) as f64).collect();
+            let counts: Vec<f64> = (0..100)
+                .map(|j| f64::from((i * 100 + j) % 50 + 1))
+                .collect();
             let _ = fmr.shannon_entropy(&counts).unwrap();
-            let known = vec![(0.0, 0.0, i as f64), (10.0, 10.0, (i + 1) as f64)];
+            let known = vec![(0.0, 0.0, f64::from(i)), (10.0, 10.0, f64::from(i + 1))];
             let targets = vec![(5.0, 5.0)];
             let model = VariogramModel::Linear {
                 nugget: 0.0,

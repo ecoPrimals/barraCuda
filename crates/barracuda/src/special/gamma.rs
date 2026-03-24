@@ -94,7 +94,7 @@ pub fn ln_gamma(x: f64) -> Result<f64> {
         }
 
         let tmp = x + LANCZOS_G + 0.5;
-        Ok((2.0 * std::f64::consts::PI).sqrt().ln() + (x + 0.5) * tmp.ln() - tmp + ag.ln())
+        Ok((x + 0.5).mul_add(tmp.ln(), (2.0 * std::f64::consts::PI).sqrt().ln()) - tmp + ag.ln())
     }
 }
 
@@ -291,7 +291,7 @@ fn gamma_series(a: f64, x: f64, gln: f64) -> Result<f64> {
         sum += term;
 
         if term.abs() < sum.abs() * EPS {
-            return Ok(sum * (-x + a * x.ln() - gln).exp());
+            return Ok(sum * (a.mul_add(x.ln(), -x) - gln).exp());
         }
     }
 
@@ -314,7 +314,7 @@ fn gamma_cf(a: f64, x: f64, gln: f64) -> Result<f64> {
     for n in 1..MAX_ITER {
         let an = -(n as f64) * (n as f64 - a);
         b += 2.0;
-        d = an * d + b;
+        d = an.mul_add(d, b);
         if d.abs() < FPMIN {
             d = FPMIN;
         }
@@ -327,7 +327,7 @@ fn gamma_cf(a: f64, x: f64, gln: f64) -> Result<f64> {
         h *= delta;
 
         if (delta - 1.0).abs() < EPS {
-            return Ok((-x + a * x.ln() - gln).exp() * h);
+            return Ok((a.mul_add(x.ln(), -x) - gln).exp() * h);
         }
     }
 
@@ -399,7 +399,8 @@ pub fn digamma(x: f64) -> Result<f64> {
     let inv_x2 = inv_x * inv_x;
 
     // ψ(x) ≈ ln(x) - 1/(2x) - 1/(12x²) + 1/(120x⁴) - 1/(252x⁶)
-    val += xx.ln() - 0.5 * inv_x - inv_x2 * (1.0 / 12.0 - inv_x2 * (1.0 / 120.0 - inv_x2 / 252.0));
+    val += 0.5f64.mul_add(-inv_x, xx.ln())
+        - inv_x2 * (1.0 / 12.0 - inv_x2 * (1.0 / 120.0 - inv_x2 / 252.0));
 
     Ok(val)
 }

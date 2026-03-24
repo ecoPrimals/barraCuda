@@ -301,11 +301,11 @@ impl std::fmt::Display for Substrate {
 impl std::fmt::Display for SubstrateType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SubstrateType::Cpu => write!(f, "CPU"),
-            SubstrateType::DiscreteGpu => write!(f, "Discrete GPU"),
-            SubstrateType::IntegratedGpu => write!(f, "Integrated GPU"),
-            SubstrateType::Npu => write!(f, "NPU"),
-            SubstrateType::Other => write!(f, "Other"),
+            Self::Cpu => write!(f, "CPU"),
+            Self::DiscreteGpu => write!(f, "Discrete GPU"),
+            Self::IntegratedGpu => write!(f, "Integrated GPU"),
+            Self::Npu => write!(f, "NPU"),
+            Self::Other => write!(f, "Other"),
         }
     }
 }

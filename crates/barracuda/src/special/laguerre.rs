@@ -76,8 +76,9 @@ pub fn laguerre(n: usize, alpha: f64, x: f64) -> f64 {
             for k in 2..=n {
                 let k_f = k as f64;
                 // Three-term recurrence
-                let l_curr =
-                    ((2.0 * k_f - 1.0 + alpha - x) * l_prev1 - (k_f - 1.0 + alpha) * l_prev2) / k_f;
+                let l_curr = (2.0f64.mul_add(k_f, -1.0) + alpha - x)
+                    .mul_add(l_prev1, -((k_f - 1.0 + alpha) * l_prev2))
+                    / k_f;
                 l_prev2 = l_prev1;
                 l_prev1 = l_curr;
             }
@@ -150,8 +151,8 @@ pub fn laguerre_all(n_max: usize, alpha: f64, x: f64) -> Vec<f64> {
 
     for k in 2..=n_max {
         let k_f = k as f64;
-        let l_curr = ((2.0 * k_f - 1.0 + alpha - x) * result[k - 1]
-            - (k_f - 1.0 + alpha) * result[k - 2])
+        let l_curr = (2.0f64.mul_add(k_f, -1.0) + alpha - x)
+            .mul_add(result[k - 1], -((k_f - 1.0 + alpha) * result[k - 2]))
             / k_f;
         result.push(l_curr);
     }
@@ -183,8 +184,8 @@ mod tests {
     #[test]
     fn test_laguerre_degree_2() {
         // L_2^(0)(x) = (x² - 4x + 2) / 2
-        for x in [0.0, 0.5, 1.0, 2.0, 5.0] {
-            let expected = f64::midpoint(x * x - 4.0 * x, 2.0);
+        for x in [0.0_f64, 0.5, 1.0, 2.0, 5.0] {
+            let expected = f64::midpoint(x.mul_add(x, -(4.0 * x)), 2.0);
             assert!(
                 (laguerre(2, 0.0, x) - expected).abs() < 1e-12,
                 "L_2(0, {}) = {} expected {}",
@@ -199,7 +200,7 @@ mod tests {
     fn test_laguerre_degree_3() {
         // L_3^(0)(x) = (-x³ + 9x² - 18x + 6) / 6
         for x in [0.0_f64, 1.0, 2.0, 3.0] {
-            let expected = (-x.powi(3) + 9.0 * x * x - 18.0 * x + 6.0) / 6.0;
+            let expected = (18.0f64.mul_add(-x, (9.0 * x).mul_add(x, -x.powi(3))) + 6.0) / 6.0;
             assert!(
                 (laguerre(3, 0.0, x) - expected).abs() < 1e-11,
                 "L_3(0, {}) = {} expected {}",
@@ -217,8 +218,8 @@ mod tests {
         assert!((laguerre(1, 1.0, 2.0) - 0.0).abs() < 1e-14);
 
         // L_2^(1)(x) = (x² - 6x + 6) / 2
-        for x in [0.0, 1.0, 3.0] {
-            let expected = f64::midpoint(x * x - 6.0 * x, 6.0);
+        for x in [0.0_f64, 1.0, 3.0] {
+            let expected = f64::midpoint(x.mul_add(x, -(6.0 * x)), 6.0);
             assert!(
                 (laguerre(2, 1.0, x) - expected).abs() < 1e-12,
                 "L_2(1, {}) = {} expected {}",

@@ -39,11 +39,11 @@ pub enum WindowType {
 impl WindowType {
     fn to_u32(self) -> u32 {
         match self {
-            WindowType::Hann => 0,
-            WindowType::Hamming => 1,
-            WindowType::Blackman => 2,
-            WindowType::Bartlett => 3,
-            WindowType::Rectangular => 4,
+            Self::Hann => 0,
+            Self::Hamming => 1,
+            Self::Blackman => 2,
+            Self::Bartlett => 3,
+            Self::Rectangular => 4,
         }
     }
 }

@@ -137,7 +137,7 @@ fn apply_activation(values: &mut [f64], activation: Activation) {
         Activation::Gelu => {
             for v in values.iter_mut() {
                 let x = *v;
-                *v = 0.5 * x * (1.0 + (0.797_884_560_8 * (x + 0.044_715 * x * x * x)).tanh());
+                *v = 0.5 * x * (1.0 + (0.797_884_560_8 * (0.044_715 * x * x).mul_add(x, x)).tanh());
             }
         }
         Activation::Identity => {}

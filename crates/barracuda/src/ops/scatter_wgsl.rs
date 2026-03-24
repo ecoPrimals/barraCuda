@@ -139,7 +139,7 @@ impl Tensor {
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
-    pub fn scatter_wgsl(self, dim: usize, indices: Vec<u32>, values: Tensor) -> Result<Self> {
+    pub fn scatter_wgsl(self, dim: usize, indices: Vec<u32>, values: Self) -> Result<Self> {
         Scatter::new(self, dim, indices, values).execute()
     }
 }

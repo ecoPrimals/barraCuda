@@ -143,7 +143,7 @@ impl Tensor {
     /// Returns indices of kept boxes.
     /// # Errors
     /// Returns [`Err`] if validation fails or tensor readback fails (e.g. device lost).
-    pub fn soft_nms(self, scores: Tensor, iou_threshold: f32, sigma: f32) -> Result<Vec<usize>> {
+    pub fn soft_nms(self, scores: Self, iou_threshold: f32, sigma: f32) -> Result<Vec<usize>> {
         SoftNMS::new(self, scores, iou_threshold, sigma)?.execute()
     }
 }
@@ -233,7 +233,7 @@ mod tests {
         let mut scores_data = Vec::new();
         for i in 0..100 {
             boxes_data.extend_from_slice(&[(i * 5) as f32, 0.0, (i * 5 + 10) as f32, 10.0]);
-            scores_data.push(0.9 - i as f32 * 0.001);
+            scores_data.push((i as f32).mul_add(-0.001, 0.9));
         }
         let boxes = Tensor::new(boxes_data, vec![100, 4], device.clone());
         let scores = Tensor::new(scores_data, vec![100], device);

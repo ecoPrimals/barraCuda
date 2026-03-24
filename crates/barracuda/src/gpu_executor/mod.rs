@@ -319,7 +319,7 @@ impl ComputeExecutor for GpuExecutor {
         let op = op.clone();
         let device = self.device.clone();
         Box::pin(async move {
-            let executor = GpuExecutor::from_device_arc(device);
+            let executor = Self::from_device_arc(device);
             dispatch::execute_dispatch(&op, inputs, &executor).await
         })
     }

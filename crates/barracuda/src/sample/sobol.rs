@@ -205,8 +205,8 @@ impl SobolGenerator {
         for d in 0..dim {
             if d == 0 {
                 // First dimension is just powers of 2
-                for i in 0..32 {
-                    v[0][i] = 1 << (31 - i);
+                for (i, v0i) in v[0].iter_mut().enumerate() {
+                    *v0i = 1 << (31 - i);
                 }
             } else {
                 let m_init = &DIRECTION_NUMBERS[d];

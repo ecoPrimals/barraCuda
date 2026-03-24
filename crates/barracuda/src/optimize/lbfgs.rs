@@ -302,7 +302,7 @@ where
         let f_trial = f(&x_trial);
         evals += 1;
 
-        if f_trial <= f0 + c1 * alpha * dg {
+        if f_trial <= (c1 * alpha).mul_add(dg, f0) {
             return (alpha, f_trial, evals);
         }
         alpha *= 0.5;
@@ -324,12 +324,15 @@ mod tests {
     fn test_lbfgs_rosenbrock() {
         let rosenbrock = |x: &[f64]| {
             let (a, b) = (1.0, 100.0);
-            (a - x[0]).powi(2) + b * (x[1] - x[0].powi(2)).powi(2)
+            (a - x[0]).mul_add(a - x[0], b * x[0].mul_add(-x[0], x[1]).powi(2))
         };
         let grad_rosenbrock = |x: &[f64], g: &mut [f64]| {
             let (a, b) = (1.0, 100.0);
-            g[0] = -2.0 * (a - x[0]) + 2.0 * b * (x[1] - x[0].powi(2)) * (-2.0 * x[0]);
-            g[1] = 2.0 * b * (x[1] - x[0].powi(2));
+            g[0] = (-2.0f64).mul_add(
+                a - x[0],
+                2.0 * b * x[0].mul_add(-x[0], x[1]) * (-2.0 * x[0]),
+            );
+            g[1] = 2.0 * b * x[0].mul_add(-x[0], x[1]);
         };
 
         let config = LbfgsConfig {
@@ -355,7 +358,7 @@ mod tests {
 
     #[test]
     fn test_lbfgs_quadratic() {
-        let quad = |x: &[f64]| x[0] * x[0] + 4.0 * x[1] * x[1];
+        let quad = |x: &[f64]| x[0].mul_add(x[0], 4.0 * x[1] * x[1]);
         let grad_quad = |x: &[f64], g: &mut [f64]| {
             g[0] = 2.0 * x[0];
             g[1] = 8.0 * x[1];
@@ -368,7 +371,7 @@ mod tests {
 
     #[test]
     fn test_lbfgs_numerical_gradient() {
-        let quad = |x: &[f64]| x[0] * x[0] + x[1] * x[1] + x[2] * x[2];
+        let quad = |x: &[f64]| x[2].mul_add(x[2], x[0].mul_add(x[0], x[1] * x[1]));
         let result = lbfgs_numerical(quad, &[3.0, 4.0, 5.0], &LbfgsConfig::default()).unwrap();
         assert!(result.converged);
         assert!(result.f_val < 1e-6, "f = {}", result.f_val);

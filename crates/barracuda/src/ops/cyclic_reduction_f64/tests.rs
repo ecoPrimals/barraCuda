@@ -46,17 +46,17 @@ fn test_heat_equation_stencil() {
     let mut c = vec![0.0f64; n];
     let mut d = vec![0.0f64; n];
 
-    for i in 1..n {
-        a[i] = -1.0;
+    for slot in &mut a[1..] {
+        *slot = -1.0;
     }
-    for i in 0..n - 1 {
-        c[i] = -1.0;
+    for slot in &mut c[..n - 1] {
+        *slot = -1.0;
     }
 
     // f(x) = sin(πx), solution: u(x) = sin(πx)/π²
-    for i in 0..n {
+    for (i, slot) in d.iter_mut().enumerate() {
         let x = (i + 1) as f64 * h;
-        d[i] = h * h * (std::f64::consts::PI * x).sin();
+        *slot = h * h * (std::f64::consts::PI * x).sin();
     }
 
     let x = solver.solve(&a, &b, &c, &d).unwrap();

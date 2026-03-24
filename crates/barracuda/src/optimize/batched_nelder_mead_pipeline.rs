@@ -328,8 +328,10 @@ pub fn apply_nm_step(
         if f_r < f_best {
             let mut expand = vec![0.0; n_problems * n];
             for j in 0..n {
-                expand[p * n + j] =
-                    centroid[p * n + j] + gamma * (reflect_pts[p * n + j] - centroid[p * n + j]);
+                expand[p * n + j] = gamma.mul_add(
+                    reflect_pts[p * n + j] - centroid[p * n + j],
+                    centroid[p * n + j],
+                );
             }
             let f_expand = f_values(&expand);
             if f_expand[p] < f_r {

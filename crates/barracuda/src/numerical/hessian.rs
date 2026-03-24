@@ -71,14 +71,14 @@ mod tests {
         // At (1,1): minimum, Hessian positive definite
         let f = |x: &[f64]| {
             let a = 1.0 - x[0];
-            let b = x[1] - x[0] * x[0];
+            let b = x[0].mul_add(-x[0], x[1]);
             a * a + 100.0 * b * b
         };
         let params = vec![1.0, 1.0];
         let h = numerical_hessian(&f, &params, 1e-5);
         // At (1,1): H = [[802, -400], [-400, 200]] (approx)
         // Both eigenvalues positive -> positive definite
-        let det = h[0] * h[3] - h[1] * h[2];
+        let det = h[0].mul_add(h[3], -(h[1] * h[2]));
         assert!(
             det > 0.0,
             "Hessian at minimum should have positive determinant"
@@ -88,7 +88,7 @@ mod tests {
 
     #[test]
     fn test_hessian_symmetric() {
-        let f = |x: &[f64]| x[0] * x[0] * x[1] + x[1] * x[1]; // arbitrary smooth function
+        let f = |x: &[f64]| (x[0] * x[0]).mul_add(x[1], x[1] * x[1]); // arbitrary smooth function
         let params = vec![1.0, 2.0];
         let h = numerical_hessian(&f, &params, 1e-5);
         let n = 2;

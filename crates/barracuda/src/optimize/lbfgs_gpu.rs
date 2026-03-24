@@ -166,7 +166,7 @@ impl LbfgsGpu {
                 two_loop_cpu(&grad, &s_history, &y_history, &rho_history, n, batch_size);
 
             // Backtracking line search (per problem)
-            let mut alphas = vec![1.0; batch_size];
+            let mut alphas = vec![1.0_f64; batch_size];
             for _ in 0..config.max_linesearch {
                 let mut x_trial = vec![0.0; batch_size * n];
                 for b in 0..batch_size {
@@ -177,7 +177,7 @@ impl LbfgsGpu {
                         continue;
                     }
                     for j in 0..n {
-                        x_trial[b * n + j] = x[b * n + j] + alphas[b] * direction[b * n + j];
+                        x_trial[b * n + j] = alphas[b].mul_add(direction[b * n + j], x[b * n + j]);
                     }
                 }
                 let f_trial = f_batch(&x_trial);
@@ -188,7 +188,7 @@ impl LbfgsGpu {
                         continue;
                     }
                     let dg: f64 = (0..n).map(|j| direction[b * n + j] * grad[b * n + j]).sum();
-                    if f_trial[b] <= f_vals[b] + config.c1 * alphas[b] * dg {
+                    if f_trial[b] <= (config.c1 * alphas[b]).mul_add(dg, f_vals[b]) {
                         // Sufficient decrease — accept
                     } else {
                         alphas[b] *= 0.5;
@@ -235,16 +235,25 @@ impl LbfgsGpu {
             let mut rho_k = vec![0.0; batch_size];
             let mut any_valid = false;
 
-            for b in 0..batch_size {
+            for (b, rho_k_b) in rho_k.iter_mut().enumerate() {
                 let mut sy = 0.0;
-                for j in 0..n {
-                    let idx = b * n + j;
-                    s_k[idx] = x[idx] - x_prev[idx];
-                    y_k[idx] = grad[idx] - g_prev[idx];
-                    sy += s_k[idx] * y_k[idx];
+                let base = b * n;
+                for (((s_k_j, y_k_j), (&x_j, &xp_j)), (&g_j, &gp_j)) in s_k[base..base + n]
+                    .iter_mut()
+                    .zip(y_k[base..base + n].iter_mut())
+                    .zip(x[base..base + n].iter().zip(x_prev[base..base + n].iter()))
+                    .zip(
+                        grad[base..base + n]
+                            .iter()
+                            .zip(g_prev[base..base + n].iter()),
+                    )
+                {
+                    *s_k_j = x_j - xp_j;
+                    *y_k_j = g_j - gp_j;
+                    sy += *s_k_j * *y_k_j;
                 }
                 if sy > 1e-30 {
-                    rho_k[b] = 1.0 / sy;
+                    *rho_k_b = 1.0 / sy;
                     any_valid = true;
                 }
             }
@@ -388,7 +397,7 @@ mod tests {
                 .map(|b| {
                     let x0 = x[b * n];
                     let x1 = x[b * n + 1];
-                    (1.0 - x0).powi(2) + 100.0 * (x1 - x0.powi(2)).powi(2)
+                    (1.0 - x0).mul_add(1.0 - x0, 100.0 * x0.mul_add(-x0, x1).powi(2))
                 })
                 .collect()
         };

@@ -158,7 +158,7 @@ impl LstmReservoir {
             };
 
             for j in 0..hidden_size {
-                state[layer_idx].cell[j] = f[j] * state[layer_idx].cell[j] + i[j] * g[j];
+                state[layer_idx].cell[j] = f[j].mul_add(state[layer_idx].cell[j], i[j] * g[j]);
                 state[layer_idx].hidden[j] = o[j] * state[layer_idx].cell[j].tanh();
             }
 

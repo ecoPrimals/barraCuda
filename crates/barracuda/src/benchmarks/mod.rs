@@ -129,10 +129,10 @@ pub enum Framework {
 impl std::fmt::Display for Framework {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Framework::BarraCuda => write!(f, "BarraCuda"),
-            Framework::CUDA => write!(f, "CUDA"),
-            Framework::PyTorchCUDA => write!(f, "PyTorch+CUDA"),
-            Framework::TensorFlowCUDA => write!(f, "TensorFlow+CUDA"),
+            Self::BarraCuda => write!(f, "BarraCuda"),
+            Self::CUDA => write!(f, "CUDA"),
+            Self::PyTorchCUDA => write!(f, "PyTorch+CUDA"),
+            Self::TensorFlowCUDA => write!(f, "TensorFlow+CUDA"),
         }
     }
 }

@@ -339,12 +339,12 @@ impl CsrMatrix {
 
         let mut y = vec![0.0; self.n_rows];
 
-        for row in 0..self.n_rows {
-            let row_start = self.row_ptr[row];
-            let row_end = self.row_ptr[row + 1];
+        for (y_row, w) in y.iter_mut().zip(self.row_ptr.windows(2)) {
+            let row_start = w[0];
+            let row_end = w[1];
 
             for i in row_start..row_end {
-                y[row] += self.values[i] * x[self.col_indices[i]];
+                *y_row += self.values[i] * x[self.col_indices[i]];
             }
         }
 
@@ -367,12 +367,13 @@ impl CsrMatrix {
 
         let mut y = vec![0.0; self.n_cols];
 
-        for row in 0..self.n_rows {
-            let row_start = self.row_ptr[row];
-            let row_end = self.row_ptr[row + 1];
+        for (row, w) in self.row_ptr.windows(2).enumerate() {
+            let row_start = w[0];
+            let row_end = w[1];
+            let x_row = x[row];
 
             for i in row_start..row_end {
-                y[self.col_indices[i]] += self.values[i] * x[row];
+                y[self.col_indices[i]] += self.values[i] * x_row;
             }
         }
 

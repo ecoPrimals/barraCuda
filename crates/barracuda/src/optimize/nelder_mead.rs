@@ -194,11 +194,11 @@ where
                 f_vals[worst_idx] = f_contract;
             } else {
                 // Shrinkage
+                let best_row = simplex[best_idx].clone();
                 for i in 0..=n {
                     if i != best_idx {
-                        for j in 0..n {
-                            simplex[i][j] = simplex[best_idx][j]
-                                + SIGMA * (simplex[i][j] - simplex[best_idx][j]);
+                        for (j, slot) in simplex[i].iter_mut().enumerate() {
+                            *slot = SIGMA.mul_add(*slot - best_row[j], best_row[j]);
                         }
                         simplex[i] = project_bounds(&simplex[i], bounds);
                         f_vals[i] = f(&simplex[i]);
@@ -228,7 +228,7 @@ fn reflect(x: &[f64], centroid: &[f64], alpha: f64) -> Vec<f64> {
     centroid
         .iter()
         .zip(x.iter())
-        .map(|(&c, &xi)| c + alpha * (c - xi))
+        .map(|(&c, &xi)| alpha.mul_add(c - xi, c))
         .collect()
 }
 
@@ -248,7 +248,7 @@ mod tests {
     fn test_nelder_mead_quadratic() {
         // Minimize f(x) = (x-2)² + (y-3)²
         // Minimum at (2, 3)
-        let f = |x: &[f64]| (x[0] - 2.0).powi(2) + (x[1] - 3.0).powi(2);
+        let f = |x: &[f64]| (x[1] - 3.0).mul_add(x[1] - 3.0, (x[0] - 2.0).powi(2));
 
         let x0 = vec![0.0, 0.0];
         let bounds = vec![(-10.0, 10.0), (-10.0, 10.0)];
@@ -266,7 +266,7 @@ mod tests {
         // Global minimum at (1, 1)
         let f = |x: &[f64]| {
             let (a, b) = (1.0, 100.0);
-            (a - x[0]).powi(2) + b * (x[1] - x[0].powi(2)).powi(2)
+            (a - x[0]).mul_add(a - x[0], b * x[0].mul_add(-x[0], x[1]).powi(2))
         };
 
         let x0 = vec![0.0, 0.0];
@@ -285,7 +285,7 @@ mod tests {
     fn test_nelder_mead_with_bounds() {
         // Minimize f(x,y) = x² + y² with bounds [0,10]×[0,10]
         // Optimal unconstrained is (0,0), but starting at (5,5)
-        let f = |x: &[f64]| x[0].powi(2) + x[1].powi(2);
+        let f = |x: &[f64]| x[1].mul_add(x[1], x[0].powi(2));
 
         let x0 = vec![5.0, 5.0];
         let bounds = vec![(0.0, 10.0), (0.0, 10.0)];

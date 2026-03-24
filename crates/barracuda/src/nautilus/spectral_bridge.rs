@@ -154,7 +154,7 @@ mod tests {
     #[test]
     fn spectral_phase_classification() {
         let extended_eigs: Vec<f64> = (0..100)
-            .map(|i| i as f64 + 0.5 * (i as f64).sin())
+            .map(|i| 0.5f64.mul_add((i as f64).sin(), i as f64))
             .collect();
         let feat = SpectralFeatures::from_eigenvalues(&extended_eigs);
         assert_ne!(feat.phase, SpectralPhase::Localized);

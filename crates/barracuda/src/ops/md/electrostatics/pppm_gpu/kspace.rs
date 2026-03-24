@@ -16,9 +16,9 @@ fn wrap_positions(positions: &[f64], box_dims: [f64; 3]) -> Vec<f64> {
         .chunks_exact(3)
         .flat_map(|c| {
             [
-                c[0] - (c[0] / box_dims[0]).floor() * box_dims[0],
-                c[1] - (c[1] / box_dims[1]).floor() * box_dims[1],
-                c[2] - (c[2] / box_dims[2]).floor() * box_dims[2],
+                (c[0] / box_dims[0]).floor().mul_add(-box_dims[0], c[0]),
+                (c[1] / box_dims[1]).floor().mul_add(-box_dims[1], c[1]),
+                (c[2] / box_dims[2]).floor().mul_add(-box_dims[2], c[2]),
             ]
         })
         .collect()

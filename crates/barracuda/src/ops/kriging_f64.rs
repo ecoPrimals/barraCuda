@@ -101,22 +101,22 @@ impl VariogramModel {
     #[must_use]
     pub fn params(&self) -> (f64, f64, f64, u32) {
         match self {
-            VariogramModel::Spherical {
+            Self::Spherical {
                 nugget,
                 sill,
                 range,
             } => (*nugget, *sill, *range, 0),
-            VariogramModel::Exponential {
+            Self::Exponential {
                 nugget,
                 sill,
                 range,
             } => (*nugget, *sill, *range, 1),
-            VariogramModel::Gaussian {
+            Self::Gaussian {
                 nugget,
                 sill,
                 range,
             } => (*nugget, *sill, *range, 2),
-            VariogramModel::Linear {
+            Self::Linear {
                 nugget,
                 sill,
                 range,
@@ -141,17 +141,17 @@ impl VariogramModel {
                     nugget + c
                 } else {
                     let ratio = h / range;
-                    nugget + c * (1.5 * ratio - 0.5 * ratio.powi(3))
+                    c.mul_add(1.5f64.mul_add(ratio, -(0.5 * ratio.powi(3))), nugget)
                 }
             }
             1 => {
                 // Exponential
-                nugget + c * (1.0 - (-3.0 * h / range).exp())
+                c.mul_add(1.0 - (-3.0 * h / range).exp(), nugget)
             }
             2 => {
                 // Gaussian
                 let ratio = h / range;
-                nugget + c * (1.0 - (-3.0 * ratio * ratio).exp())
+                c.mul_add(1.0 - (-3.0 * ratio * ratio).exp(), nugget)
             }
             3 => {
                 // Linear

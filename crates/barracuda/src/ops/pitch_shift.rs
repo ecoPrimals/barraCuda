@@ -63,7 +63,7 @@ impl PitchShift {
         let input_length: usize = self.signal.shape().iter().product();
 
         // Compute shift ratio: 2^(n_steps / bins_per_octave)
-        let rate = 2.0_f32.powf(self.n_steps / self.bins_per_octave);
+        let rate = (self.n_steps / self.bins_per_octave).exp2();
         let output_length = (input_length as f32 / rate) as usize;
 
         // Access input buffer directly (zero-copy)

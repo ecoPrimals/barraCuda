@@ -153,8 +153,8 @@ impl OdeTrajectory {
         let off1 = idx * stride + batch * self.n_vars;
 
         let mut state = vec![0.0; self.n_vars];
-        for i in 0..self.n_vars {
-            state[i] = self.states[off0 + i] * (1.0 - frac) + self.states[off1 + i] * frac;
+        for (i, s) in state.iter_mut().enumerate() {
+            *s = self.states[off0 + i].mul_add(1.0 - frac, self.states[off1 + i] * frac);
         }
         Some(state)
     }
@@ -268,24 +268,26 @@ impl<S: OdeSystem> BatchedOdeRK4<S> {
                 let k1 = S::cpu_derivative(t, &y_buf, p);
 
                 for i in 0..n_vars {
-                    stage_buf[i] = y_buf[i] + 0.5 * dt * k1[i];
+                    stage_buf[i] = (0.5 * dt).mul_add(k1[i], y_buf[i]);
                 }
-                let k2 = S::cpu_derivative(t + 0.5 * dt, &stage_buf, p);
+                let k2 = S::cpu_derivative(0.5f64.mul_add(dt, t), &stage_buf, p);
 
                 for i in 0..n_vars {
-                    stage_buf[i] = y_buf[i] + 0.5 * dt * k2[i];
+                    stage_buf[i] = (0.5 * dt).mul_add(k2[i], y_buf[i]);
                 }
-                let k3 = S::cpu_derivative(t + 0.5 * dt, &stage_buf, p);
+                let k3 = S::cpu_derivative(0.5f64.mul_add(dt, t), &stage_buf, p);
 
                 for i in 0..n_vars {
-                    stage_buf[i] = y_buf[i] + dt * k3[i];
+                    stage_buf[i] = dt.mul_add(k3[i], y_buf[i]);
                 }
                 let k4 = S::cpu_derivative(t + dt, &stage_buf, p);
 
                 let sixth = 1.0 / 6.0;
                 for i in 0..n_vars {
-                    state[s_off + i] =
-                        y_buf[i] + dt * sixth * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
+                    state[s_off + i] = (dt * sixth).mul_add(
+                        2.0f64.mul_add(k3[i], 2.0f64.mul_add(k2[i], k1[i])) + k4[i],
+                        y_buf[i],
+                    );
                 }
             }
             t += dt;
@@ -352,22 +354,24 @@ impl<S: OdeSystem> BatchedOdeRK4<S> {
 
                 let k1 = S::cpu_derivative(t, &y_buf, p);
                 for i in 0..n_vars {
-                    stage_buf[i] = y_buf[i] + 0.5 * dt * k1[i];
+                    stage_buf[i] = (0.5 * dt).mul_add(k1[i], y_buf[i]);
                 }
-                let k2 = S::cpu_derivative(t + 0.5 * dt, &stage_buf, p);
+                let k2 = S::cpu_derivative(0.5f64.mul_add(dt, t), &stage_buf, p);
                 for i in 0..n_vars {
-                    stage_buf[i] = y_buf[i] + 0.5 * dt * k2[i];
+                    stage_buf[i] = (0.5 * dt).mul_add(k2[i], y_buf[i]);
                 }
-                let k3 = S::cpu_derivative(t + 0.5 * dt, &stage_buf, p);
+                let k3 = S::cpu_derivative(0.5f64.mul_add(dt, t), &stage_buf, p);
                 for i in 0..n_vars {
-                    stage_buf[i] = y_buf[i] + dt * k3[i];
+                    stage_buf[i] = dt.mul_add(k3[i], y_buf[i]);
                 }
                 let k4 = S::cpu_derivative(t + dt, &stage_buf, p);
 
                 let sixth = 1.0 / 6.0;
                 for i in 0..n_vars {
-                    state[s_off + i] =
-                        y_buf[i] + dt * sixth * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
+                    state[s_off + i] = (dt * sixth).mul_add(
+                        2.0f64.mul_add(k3[i], 2.0f64.mul_add(k2[i], k1[i])) + k4[i],
+                        y_buf[i],
+                    );
                 }
             }
             t += dt;

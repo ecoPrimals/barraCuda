@@ -74,12 +74,12 @@ pub enum FilterOperation {
 impl FilterOperation {
     fn to_u32(self) -> u32 {
         match self {
-            FilterOperation::GreaterThan => 0,
-            FilterOperation::LessThan => 1,
-            FilterOperation::Equal => 2,
-            FilterOperation::NotEqual => 3,
-            FilterOperation::GreaterOrEqual => 4,
-            FilterOperation::LessOrEqual => 5,
+            Self::GreaterThan => 0,
+            Self::LessThan => 1,
+            Self::Equal => 2,
+            Self::NotEqual => 3,
+            Self::GreaterOrEqual => 4,
+            Self::LessOrEqual => 5,
         }
     }
 }

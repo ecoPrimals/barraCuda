@@ -25,7 +25,7 @@ mod precision {
             vec![100.0, 1.0, 1.0, 1.0],
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
             vec![0.001, 0.01, 0.1, 1.0, 10.0],
-            (1..=100).map(|x| x as f64).collect::<Vec<_>>(),
+            (1..=100).map(f64::from).collect::<Vec<_>>(),
         ];
         println!("Shannon precision suite:");
         for (i, counts) in test_cases.iter().enumerate() {

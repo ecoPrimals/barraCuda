@@ -462,10 +462,10 @@ impl Tensor {
     /// Returns [`Err`] if validation fails or buffer allocation/GPU dispatch/readback fails (e.g. device lost).
     pub fn octave_conv2d(
         self,
-        input_high: Option<Tensor>,
-        input_low: Option<Tensor>,
-        weight: Tensor,
-        bias: Tensor,
+        input_high: Option<Self>,
+        input_low: Option<Self>,
+        weight: Self,
+        bias: Self,
         kernel_size: usize,
         stride: usize,
         padding: usize,

@@ -186,7 +186,7 @@ impl DigammaF64 {
         const B10: f64 = 1.0 / 132.0;
         const B12: f64 = -691.0 / 32_760.0;
 
-        let mut sum = x.ln() - 0.5 * inv_x;
+        let mut sum = 0.5f64.mul_add(-inv_x, x.ln());
         let mut term = inv_x2;
 
         sum -= B2 * term;
@@ -287,7 +287,7 @@ mod tests {
         );
 
         let result = digamma.digamma(&[0.5]).unwrap();
-        let expected = -euler_mascheroni - 2.0 * 2.0_f64.ln();
+        let expected = 2.0f64.mul_add(-2.0_f64.ln(), -euler_mascheroni);
 
         assert!(
             (result[0] - expected).abs() < 1e-6,

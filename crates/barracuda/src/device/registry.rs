@@ -265,7 +265,7 @@ pub struct DeviceRegistry {
 
 impl DeviceRegistry {
     /// Get or create the global device registry
-    pub fn global() -> &'static DeviceRegistry {
+    pub fn global() -> &'static Self {
         GLOBAL_REGISTRY.get_or_init(Self::discover)
     }
 

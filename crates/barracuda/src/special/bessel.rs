@@ -45,13 +45,26 @@ pub fn bessel_j0(x: f64) -> f64 {
     if ax < 8.0 {
         // A&S 9.4.1: polynomial approximation for |x| < 3
         let y = x * x;
-        let ans1 = 57_568_490_574.0
-            + y * (-13_362_590_354.0
-                + y * (651_619_640.7
-                    + y * (-11_214_424.18 + y * (77_392.330_17 + y * (-184.905_245_6)))));
-        let ans2 = 57_568_490_411.0
-            + y * (1_029_532_985.0
-                + y * (9_494_680.718 + y * (59_272.648_53 + y * (267.853_271_2 + y * 1.0))));
+        let ans1 = y.mul_add(
+            y.mul_add(
+                y.mul_add(
+                    y.mul_add(y.mul_add(-184.905_245_6, 77_392.330_17), -11_214_424.18),
+                    651_619_640.7,
+                ),
+                -13_362_590_354.0,
+            ),
+            57_568_490_574.0,
+        );
+        let ans2 = y.mul_add(
+            y.mul_add(
+                y.mul_add(
+                    y.mul_add(y.mul_add(1.0, 267.853_271_2), 59_272.648_53),
+                    9_494_680.718,
+                ),
+                1_029_532_985.0,
+            ),
+            57_568_490_411.0,
+        );
         ans1 / ans2
     } else {
         // A&S 9.4.3: asymptotic expansion for |x| >= 8
@@ -64,7 +77,7 @@ pub fn bessel_j0(x: f64) -> f64 {
         let ans2 = -0.1562499995e-1
             + y * (0.1430488765e-3
                 + y * (-0.6911147651e-5 + y * (0.7621095161e-6 - y * 0.934945152e-7)));
-        (std::f64::consts::FRAC_2_PI / ax).sqrt() * (xx.cos() * ans1 - z * xx.sin() * ans2)
+        (std::f64::consts::FRAC_2_PI / ax).sqrt() * xx.cos().mul_add(ans1, -(z * xx.sin() * ans2))
     }
 }
 
@@ -94,14 +107,26 @@ pub fn bessel_j1(x: f64) -> f64 {
 
     if ax < 8.0 {
         let y = x * x;
-        let ans1 = x
-            * (72362614232.0
-                + y * (-7895059235.0
-                    + y * (242396853.1
-                        + y * (-2972611.439 + y * (15704.48260 + y * (-30.16036606))))));
-        let ans2 = 144725228442.0
-            + y * (2300535178.0
-                + y * (18583304.74 + y * (99447.43394 + y * (376.9991397 + y * 1.0))));
+        let ans1 = x * y.mul_add(
+            y.mul_add(
+                y.mul_add(
+                    y.mul_add(y.mul_add(-30.16036606, 15704.48260), -2972611.439),
+                    242396853.1,
+                ),
+                -7895059235.0,
+            ),
+            72362614232.0,
+        );
+        let ans2 = y.mul_add(
+            y.mul_add(
+                y.mul_add(
+                    y.mul_add(y.mul_add(1.0, 376.9991397), 99447.43394),
+                    18583304.74,
+                ),
+                2300535178.0,
+            ),
+            144725228442.0,
+        );
         ans1 / ans2
     } else {
         let z = 8.0 / ax;
@@ -113,8 +138,8 @@ pub fn bessel_j1(x: f64) -> f64 {
         let ans2 = 0.04687499995
             + y * (-0.2002690873e-3
                 + y * (0.8449199096e-5 + y * (-0.88228987e-6 + y * 0.105787412e-6)));
-        let result =
-            (std::f64::consts::FRAC_2_PI / ax).sqrt() * (xx.cos() * ans1 - z * xx.sin() * ans2);
+        let result = (std::f64::consts::FRAC_2_PI / ax).sqrt()
+            * xx.cos().mul_add(ans1, -(z * xx.sin() * ans2));
         if x < 0.0 { -result } else { result }
     }
 }
@@ -198,12 +223,14 @@ pub fn bessel_k0(x: f64) -> f64 {
     if x <= 2.0 {
         let y = x * x / 4.0;
         // NR formula: K₀(x) = -ln(x/2)·I₀(x) + polynomial
-        -(x / 2.0).ln() * bessel_i0(x)
-            + (-0.577_215_66
+        (-(x / 2.0).ln()).mul_add(
+            bessel_i0(x),
+            -0.577_215_66
                 + y * (0.422_784_20
                     + y * (0.230_697_56
                         + y * (0.348_859_0e-1
-                            + y * (0.262_698e-2 + y * (0.107_50e-3 + y * 0.74e-5))))))
+                            + y * (0.262_698e-2 + y * (0.107_50e-3 + y * 0.74e-5))))),
+        )
     } else {
         let y = 2.0 / x;
         ((-x).exp() / x.sqrt())

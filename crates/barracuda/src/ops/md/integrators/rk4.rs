@@ -310,9 +310,9 @@ mod tests {
 
         // For constant acceleration, RK4 should be exact
         // x = x0 + v0*dt + 0.5*a*dt^2
-        let expected_x = 0.0 + 1.0 * dt + 0.5 * 2.0 * dt * dt;
+        let expected_x = (0.5 * 2.0 * dt).mul_add(dt, 1.0f32.mul_add(dt, 0.0));
         // v = v0 + a*dt
-        let expected_v = 1.0 + 2.0 * dt;
+        let expected_v = 2.0f32.mul_add(dt, 1.0);
 
         println!("Expected x: {}, got: {}", expected_x, pos_data[0]);
         println!("Expected v: {}, got: {}", expected_v, vel_data[0]);

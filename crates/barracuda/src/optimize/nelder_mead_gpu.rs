@@ -241,13 +241,13 @@ impl NelderMeadGpu {
                     f_vals[worst_idx] = f_contract;
                 } else {
                     // Shrinkage - re-evaluate all points except best
-                    for i in 0..n_vertices {
+                    let best_row = simplex[best_idx].clone();
+                    for (i, vertex) in simplex.iter_mut().enumerate() {
                         if i != best_idx {
-                            for j in 0..n {
-                                simplex[i][j] = simplex[best_idx][j]
-                                    + self.sigma * (simplex[i][j] - simplex[best_idx][j]);
+                            for (j, slot) in vertex.iter_mut().enumerate() {
+                                *slot = self.sigma.mul_add(*slot - best_row[j], best_row[j]);
                             }
-                            simplex[i] = self.project_bounds(&simplex[i], bounds);
+                            *vertex = self.project_bounds(vertex, bounds);
                         }
                     }
 
@@ -325,7 +325,7 @@ impl NelderMeadGpu {
         centroid
             .iter()
             .zip(x.iter())
-            .map(|(&c, &xi)| c + alpha * (c - xi))
+            .map(|(&c, &xi)| alpha.mul_add(c - xi, c))
             .collect()
     }
 
@@ -380,7 +380,7 @@ impl NelderMeadGpu {
 
     /// Create GPU buffer for bounds
     fn create_bounds_buffer(&self, bounds: &[(f64, f64)]) -> wgpu::Buffer {
-        let data: Vec<f64> = bounds.iter().flat_map(|&(lo, hi)| [lo, hi]).collect();
+        let data: Vec<f64> = bounds.iter().flat_map(|b| <[f64; 2]>::from(*b)).collect();
         let bytes: &[u8] = bytemuck::cast_slice(&data);
 
         self.device

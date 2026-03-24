@@ -27,10 +27,10 @@ pub(super) fn generate_test_data(operation: &str, size: usize) -> TestData {
             let x = (i as f64) / (n as f64) * 2.0 * PI;
             match operation {
                 "erf" | "erfc" => x.sin(),
-                "gamma" | "lgamma" | "digamma" => 1.0 + (x.sin() * 0.5 + 0.5) * 10.0,
+                "gamma" | "lgamma" | "digamma" => x.sin().mul_add(0.5, 0.5).mul_add(10.0, 1.0),
                 "bessel_j0" | "bessel_j1" => x * 10.0,
                 "exp" => x.sin() * 2.0,
-                "log" | "sqrt" => 1.0 + x.sin().abs() * 10.0,
+                "log" | "sqrt" => x.sin().abs().mul_add(10.0, 1.0),
                 "cholesky" => {
                     let row = i / size;
                     let col = i % size;

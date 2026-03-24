@@ -68,7 +68,7 @@ pub fn hermite(n: usize, x: f64) -> f64 {
     let mut h_curr = 2.0 * x; // H₁
 
     for k in 1..n {
-        let h_next = 2.0 * x * h_curr - 2.0 * (k as f64) * h_prev;
+        let h_next = (2.0 * x).mul_add(h_curr, -(2.0 * (k as f64) * h_prev));
         h_prev = h_curr;
         h_curr = h_next;
     }
@@ -115,7 +115,7 @@ pub fn hermite_all(n: usize, x: f64) -> Vec<f64> {
     result.push(2.0 * x); // H₁
 
     for k in 1..n {
-        let h_next = 2.0 * x * result[k] - 2.0 * (k as f64) * result[k - 1];
+        let h_next = (2.0 * x).mul_add(result[k], -(2.0 * (k as f64) * result[k - 1]));
         result.push(h_next);
     }
 

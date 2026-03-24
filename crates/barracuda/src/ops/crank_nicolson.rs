@@ -158,7 +158,7 @@ impl CrankNicolson {
                     _ => (u[i - 1], u[i + 1]),
                 };
 
-                rhs[i] = (1.0 - r) * u[i] + (r / 2.0) * (u_left + u_right);
+                rhs[i] = (1.0 - r).mul_add(u[i], (r / 2.0) * (u_left + u_right));
 
                 // Neumann zero-flux: no extra boundary term (ghost already in u_left/u_right)
                 // Dirichlet: add implicit boundary contribution
@@ -198,14 +198,14 @@ impl CrankNicolson {
                 } else {
                     (a_coef, b_coef, c_coef)
                 };
-                let m = b_i - a_i * c_prime[i - 1];
+                let m = a_i.mul_add(-c_prime[i - 1], b_i);
                 c_prime[i] = if m.abs() > 1e-10 { c_i / m } else { 0.0 };
-                d_prime[i] = (rhs[i] - a_i * d_prime[i - 1]) / m;
+                d_prime[i] = a_i.mul_add(-d_prime[i - 1], rhs[i]) / m;
             }
 
             u[n - 1] = d_prime[n - 1];
             for i in (0..n - 1).rev() {
-                u[i] = d_prime[i] - c_prime[i] * u[i + 1];
+                u[i] = c_prime[i].mul_add(-u[i + 1], d_prime[i]);
             }
         }
 
@@ -240,7 +240,7 @@ impl CrankNicolson {
                 let u_left = if i == 0 { left_bc } else { u[i - 1] };
                 let u_right = if i == n - 1 { right_bc } else { u[i + 1] };
 
-                rhs[i] = (1.0 - r) * u[i] + (r / 2.0) * (u_left + u_right);
+                rhs[i] = (1.0 - r).mul_add(u[i], (r / 2.0) * (u_left + u_right));
 
                 // Boundary contributions
                 if i == 0 {
@@ -266,7 +266,7 @@ impl CrankNicolson {
 
             u[n - 1] = d_prime[n - 1];
             for i in (0..n - 1).rev() {
-                u[i] = d_prime[i] - c_prime[i] * u[i + 1];
+                u[i] = c_prime[i].mul_add(-u[i + 1], d_prime[i]);
             }
         }
 
@@ -476,7 +476,7 @@ impl CrankNicolson {
 
             u[n - 1] = d_prime[n - 1];
             for i in (0..n - 1).rev() {
-                u[i] = d_prime[i] - c_prime[i] * u[i + 1];
+                u[i] = c_prime[i].mul_add(-u[i + 1], d_prime[i]);
             }
         }
 

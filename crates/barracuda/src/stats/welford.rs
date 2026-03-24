@@ -115,7 +115,7 @@ impl WelfordState {
     }
 
     /// Merge another `WelfordState` into this one (Chan's parallel algorithm).
-    pub fn merge(&mut self, other: &WelfordState) {
+    pub fn merge(&mut self, other: &Self) {
         if other.count == 0 {
             return;
         }
@@ -125,10 +125,11 @@ impl WelfordState {
         }
         let combined_count = self.count + other.count;
         let delta = other.mean - self.mean;
-        let combined_mean = self.mean + delta * (other.count as f64 / combined_count as f64);
-        let combined_m2 = self.m2
-            + other.m2
-            + delta * delta * (self.count as f64 * other.count as f64 / combined_count as f64);
+        let combined_mean = delta.mul_add(other.count as f64 / combined_count as f64, self.mean);
+        let combined_m2 = (delta * delta).mul_add(
+            self.count as f64 * other.count as f64 / combined_count as f64,
+            self.m2 + other.m2,
+        );
         self.count = combined_count;
         self.mean = combined_mean;
         self.m2 = combined_m2;
@@ -266,7 +267,7 @@ impl WelfordCovState {
     }
 
     /// Merge another state (Chan's parallel algorithm for co-moment).
-    pub fn merge(&mut self, other: &WelfordCovState) {
+    pub fn merge(&mut self, other: &Self) {
         if other.count == 0 {
             return;
         }
@@ -278,9 +279,9 @@ impl WelfordCovState {
         let dx = other.mean_x - self.mean_x;
         let dy = other.mean_y - self.mean_y;
         let factor = self.count as f64 * other.count as f64 / combined as f64;
-        self.co_moment += other.co_moment + dx * dy * factor;
-        self.m2_x += other.m2_x + dx * dx * factor;
-        self.m2_y += other.m2_y + dy * dy * factor;
+        self.co_moment += (dx * dy).mul_add(factor, other.co_moment);
+        self.m2_x += (dx * dx).mul_add(factor, other.m2_x);
+        self.m2_y += (dy * dy).mul_add(factor, other.m2_y);
         self.mean_x += dx * (other.count as f64 / combined as f64);
         self.mean_y += dy * (other.count as f64 / combined as f64);
         self.count = combined;

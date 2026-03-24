@@ -123,9 +123,10 @@ pub fn thornthwaite_et0(
     if heat_index <= 0.0 || t_mean < 0.0 {
         return None;
     }
-    let a = 6.75e-7 * heat_index.powi(3) - 7.71e-5 * heat_index.powi(2)
-        + 1.792e-2 * heat_index
-        + 0.49239;
+    let a = 1.792e-2f64.mul_add(
+        heat_index,
+        6.75e-7f64.mul_add(heat_index.powi(3), -(7.71e-5 * heat_index.powi(2))),
+    ) + 0.49239;
     let et_unadj = 16.0 * (10.0 * t_mean / heat_index).powf(a);
     Some(et_unadj * (daylight_hours / 12.0) * (days_in_month / 30.0))
 }
@@ -163,7 +164,7 @@ pub fn makkink_et0(t_mean: f64, rs: f64) -> Option<f64> {
     let delta = 4098.0 * e_tmean / (t_mean + 237.3).powi(2);
     let gamma = 0.0674;
     let lambda = 2.45;
-    let et0 = 0.61 * (delta / (delta + gamma)) * (rs / lambda) - 0.12;
+    let et0 = (0.61 * (delta / (delta + gamma))).mul_add(rs / lambda, -0.12);
     Some(et0.max(0.0))
 }
 
@@ -244,7 +245,7 @@ pub fn fao56_et0(
     }
 
     let tmean = (t_max + t_min) * 0.5;
-    let p = 101.3 * ((293.0 - 0.0065 * elevation) / 293.0).powf(5.26);
+    let p = 101.3 * (0.0065f64.mul_add(-elevation, 293.0) / 293.0).powf(5.26);
     let gamma = 0.000_665 * p;
 
     let e_tmax = 0.6108 * (17.27 * t_max / (t_max + 237.3)).exp();
@@ -255,8 +256,8 @@ pub fn fao56_et0(
     let e_tmean = 0.6108 * (17.27 * tmean / (tmean + 237.3)).exp();
     let delta = 4098.0 * e_tmean / (tmean + 237.3).powi(2);
 
-    let lat_rad = lat_deg * PI / 180.0;
-    let dr = 1.0 + 0.033 * (2.0 * PI * f64::from(doy) / 365.0).cos();
+    let lat_rad = lat_deg.to_radians();
+    let dr = 0.033f64.mul_add((2.0 * PI * f64::from(doy) / 365.0).cos(), 1.0);
     let decl = 0.409 * (2.0 * PI * f64::from(doy) / 365.0 - 1.39).sin();
     let ws_arg = -lat_rad.tan() * decl.tan();
     let ws = if ws_arg.abs() > 1.0 {
@@ -268,8 +269,8 @@ pub fn fao56_et0(
     let ra = 24.0 * 60.0 / PI
         * 0.0820
         * dr
-        * (ws * lat_rad.sin() * decl.sin() + lat_rad.cos() * decl.cos() * ws.sin());
-    let rso = (0.75 + 0.000_02 * elevation) * ra;
+        * (ws * lat_rad.sin()).mul_add(decl.sin(), lat_rad.cos() * decl.cos() * ws.sin());
+    let rso = 0.000_02f64.mul_add(elevation, 0.75) * ra;
     let rns = (1.0 - 0.23) * rs;
 
     let sigma = 4.903e-9;
@@ -278,12 +279,13 @@ pub fn fao56_et0(
     let rnl = sigma
         * (tmax_k.powi(4) + tmin_k.powi(4))
         * 0.5
-        * (0.34 - 0.14 * ea.sqrt())
+        * 0.14f64.mul_add(-ea.sqrt(), 0.34)
         * (1.35 * rs / rso.max(0.001) - 0.35);
     let rn = rns - rnl;
 
-    let numerator = 0.408 * delta * rn + gamma * 900.0 / (tmean + 273.0) * wind_2m * (es - ea);
-    let denominator = delta + gamma * (1.0 + 0.34 * wind_2m);
+    let numerator =
+        (0.408 * delta).mul_add(rn, gamma * 900.0 / (tmean + 273.0) * wind_2m * (es - ea));
+    let denominator = delta + gamma * 0.34f64.mul_add(wind_2m, 1.0);
 
     Some(numerator / denominator)
 }
@@ -311,7 +313,7 @@ pub fn fao56_et0_with_ea(
     }
 
     let tmean = (t_max + t_min) * 0.5;
-    let p = 101.3 * ((293.0 - 0.0065 * elevation) / 293.0).powf(5.26);
+    let p = 101.3 * (0.0065f64.mul_add(-elevation, 293.0) / 293.0).powf(5.26);
     let gamma = 0.000_665 * p;
 
     let e_tmax = 0.6108 * (17.27 * t_max / (t_max + 237.3)).exp();
@@ -322,8 +324,8 @@ pub fn fao56_et0_with_ea(
     let e_tmean = 0.6108 * (17.27 * tmean / (tmean + 237.3)).exp();
     let delta = 4098.0 * e_tmean / (tmean + 237.3).powi(2);
 
-    let lat_rad = lat_deg * PI / 180.0;
-    let dr = 1.0 + 0.033 * (2.0 * PI * f64::from(doy) / 365.0).cos();
+    let lat_rad = lat_deg.to_radians();
+    let dr = 0.033f64.mul_add((2.0 * PI * f64::from(doy) / 365.0).cos(), 1.0);
     let decl = 0.409 * (2.0 * PI * f64::from(doy) / 365.0 - 1.39).sin();
     let ws_arg = -lat_rad.tan() * decl.tan();
     let ws = if ws_arg.abs() > 1.0 {
@@ -335,8 +337,8 @@ pub fn fao56_et0_with_ea(
     let ra = 24.0 * 60.0 / PI
         * 0.0820
         * dr
-        * (ws * lat_rad.sin() * decl.sin() + lat_rad.cos() * decl.cos() * ws.sin());
-    let rso = (0.75 + 0.000_02 * elevation) * ra;
+        * (ws * lat_rad.sin()).mul_add(decl.sin(), lat_rad.cos() * decl.cos() * ws.sin());
+    let rso = 0.000_02f64.mul_add(elevation, 0.75) * ra;
     let rns = (1.0 - 0.23) * rs;
 
     let sigma = 4.903e-9;
@@ -345,12 +347,13 @@ pub fn fao56_et0_with_ea(
     let rnl = sigma
         * (tmax_k.powi(4) + tmin_k.powi(4))
         * 0.5
-        * (0.34 - 0.14 * ea.sqrt())
+        * 0.14f64.mul_add(-ea.sqrt(), 0.34)
         * (1.35 * rs / rso.max(0.001) - 0.35);
     let rn = rns - rnl;
 
-    let numerator = 0.408 * delta * rn + gamma * 900.0 / (tmean + 273.0) * wind_2m * (es - ea);
-    let denominator = delta + gamma * (1.0 + 0.34 * wind_2m);
+    let numerator =
+        (0.408 * delta).mul_add(rn, gamma * 900.0 / (tmean + 273.0) * wind_2m * (es - ea));
+    let denominator = delta + gamma * 0.34f64.mul_add(wind_2m, 1.0);
 
     Some(numerator / denominator)
 }

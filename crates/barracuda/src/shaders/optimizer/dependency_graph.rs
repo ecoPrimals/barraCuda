@@ -124,8 +124,8 @@ impl Node {
     #[must_use]
     pub fn source_line(&self) -> &str {
         match self {
-            Node::Binding(b) => &b.source_line,
-            Node::Passthrough(p) => &p.source_line,
+            Self::Binding(b) => &b.source_line,
+            Self::Passthrough(p) => &p.source_line,
         }
     }
 }

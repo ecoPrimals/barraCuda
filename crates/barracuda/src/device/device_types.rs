@@ -36,12 +36,12 @@ pub enum Device {
 impl fmt::Display for Device {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Device::CPU => write!(f, "CPU"),
-            Device::GPU => write!(f, "GPU"),
-            Device::NPU => write!(f, "NPU"),
-            Device::TPU => write!(f, "TPU"),
-            Device::Sovereign => write!(f, "Sovereign"),
-            Device::Auto => write!(f, "Auto"),
+            Self::CPU => write!(f, "CPU"),
+            Self::GPU => write!(f, "GPU"),
+            Self::NPU => write!(f, "NPU"),
+            Self::TPU => write!(f, "TPU"),
+            Self::Sovereign => write!(f, "Sovereign"),
+            Self::Auto => write!(f, "Auto"),
         }
     }
 }

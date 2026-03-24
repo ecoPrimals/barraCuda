@@ -23,12 +23,12 @@ impl Xoshiro256StarStar {
     fn new(seed: u64) -> Self {
         let mut s = [0u64; 4];
         let mut x = seed;
-        for i in 0..4 {
+        for slot in &mut s {
             x = x.wrapping_add(0x9e37_79b9_7f4a_7c15);
             let mut z = x;
             z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
             z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
-            s[i] = z ^ (z >> 31);
+            *slot = z ^ (z >> 31);
         }
         Self { s }
     }
@@ -89,11 +89,11 @@ pub fn boltzmann_sampling(
         if proposed.len() > 1 {
             proposed[1] += step_size * z2;
         }
-        for i in 2..proposed.len() {
+        for p in proposed.iter_mut().skip(2) {
             let u1 = rng.uniform01();
             let u2 = rng.uniform01();
             let (z, _) = box_muller(u1, u2);
-            proposed[i] += step_size * z;
+            *p += step_size * z;
         }
 
         let proposed_loss = loss_fn(&proposed);

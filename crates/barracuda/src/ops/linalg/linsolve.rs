@@ -140,7 +140,7 @@ impl Tensor {
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
-    pub fn linsolve(&self, rhs: &Tensor) -> Result<Tensor> {
+    pub fn linsolve(&self, rhs: &Self) -> Result<Self> {
         LinSolve::new(self.clone(), rhs.clone()).execute()
     }
 }

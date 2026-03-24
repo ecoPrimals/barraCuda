@@ -158,21 +158,22 @@ impl RkIntegrator {
                 .map(|(yi, k)| yi + 0.5 * h_actual * k)
                 .collect();
 
-            let k2 = f(t + 0.5 * h_actual, &y1);
+            let k2 = f(0.5f64.mul_add(h_actual, t), &y1);
             let y2: Vec<f64> = y
                 .iter()
                 .zip(&k2)
                 .map(|(yi, k)| yi + 0.5 * h_actual * k)
                 .collect();
 
-            let k3 = f(t + 0.5 * h_actual, &y2);
+            let k3 = f(0.5f64.mul_add(h_actual, t), &y2);
             let y3: Vec<f64> = y.iter().zip(&k3).map(|(yi, k)| yi + h_actual * k).collect();
 
             let k4 = f(t + h_actual, &y3);
 
             // Update
             for i in 0..n {
-                y[i] += h_actual / 6.0 * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
+                y[i] +=
+                    h_actual / 6.0 * (2.0f64.mul_add(k3[i], 2.0f64.mul_add(k2[i], k1[i])) + k4[i]);
             }
             t += h_actual;
 
@@ -211,63 +212,92 @@ impl RkIntegrator {
             // RK45 Dormand-Prince stages
             let k1 = f(t, &y);
 
-            let y1: Vec<f64> = (0..n).map(|i| y[i] + h * DP_C[1] * k1[i]).collect();
-            let k2 = f(t + h * DP_C[1], &y1);
+            let y1: Vec<f64> = (0..n).map(|i| (h * DP_C[1]).mul_add(k1[i], y[i])).collect();
+            let k2 = f(h.mul_add(DP_C[1], t), &y1);
 
             let y2: Vec<f64> = (0..n)
-                .map(|i| y[i] + h * (3.0 / 40.0 * k1[i] + 9.0 / 40.0 * k2[i]))
+                .map(|i| h.mul_add((3.0_f64 / 40.0).mul_add(k1[i], 9.0 / 40.0 * k2[i]), y[i]))
                 .collect();
-            let k3 = f(t + h * DP_C[2], &y2);
+            let k3 = f(h.mul_add(DP_C[2], t), &y2);
 
             let y3: Vec<f64> = (0..n)
                 .map(|i| {
-                    y[i] + h * (44.0 / 45.0 * k1[i] - 56.0 / 15.0 * k2[i] + 32.0 / 9.0 * k3[i])
+                    h.mul_add(
+                        (32.0_f64 / 9.0).mul_add(
+                            k3[i],
+                            (44.0_f64 / 45.0).mul_add(k1[i], -(56.0 / 15.0 * k2[i])),
+                        ),
+                        y[i],
+                    )
                 })
                 .collect();
-            let k4 = f(t + h * DP_C[3], &y3);
+            let k4 = f(h.mul_add(DP_C[3], t), &y3);
 
             let y4: Vec<f64> = (0..n)
                 .map(|i| {
-                    y[i] + h
-                        * (19_372.0 / 6561.0 * k1[i] - 25_360.0 / 2187.0 * k2[i]
-                            + 64_448.0 / 6561.0 * k3[i]
-                            - 212.0 / 729.0 * k4[i])
+                    h.mul_add(
+                        (212.0_f64 / 729.0).mul_add(
+                            -k4[i],
+                            (64_448.0_f64 / 6561.0).mul_add(
+                                k3[i],
+                                (19_372.0_f64 / 6561.0)
+                                    .mul_add(k1[i], -(25_360.0 / 2187.0 * k2[i])),
+                            ),
+                        ),
+                        y[i],
+                    )
                 })
                 .collect();
-            let k5 = f(t + h * DP_C[4], &y4);
+            let k5 = f(h.mul_add(DP_C[4], t), &y4);
 
             let y5: Vec<f64> = (0..n)
                 .map(|i| {
-                    y[i] + h
-                        * (9017.0 / 3168.0 * k1[i] - 355.0 / 33.0 * k2[i]
-                            + 46_732.0 / 5247.0 * k3[i]
-                            + 49.0 / 176.0 * k4[i]
-                            - 5103.0 / 18_656.0 * k5[i])
+                    h.mul_add(
+                        (5103.0_f64 / 18_656.0).mul_add(
+                            -k5[i],
+                            (49.0_f64 / 176.0).mul_add(
+                                k4[i],
+                                (46_732.0_f64 / 5247.0).mul_add(
+                                    k3[i],
+                                    (9017.0_f64 / 3168.0).mul_add(k1[i], -(355.0 / 33.0 * k2[i])),
+                                ),
+                            ),
+                        ),
+                        y[i],
+                    )
                 })
                 .collect();
-            let k6 = f(t + h * DP_C[5], &y5);
+            let k6 = f(h.mul_add(DP_C[5], t), &y5);
 
             // 5th order solution
             let y_new: Vec<f64> = (0..n)
                 .map(|i| {
-                    y[i] + h
-                        * (DP_B5[0] * k1[i]
-                            + DP_B5[2] * k3[i]
-                            + DP_B5[3] * k4[i]
-                            + DP_B5[4] * k5[i]
-                            + DP_B5[5] * k6[i])
+                    h.mul_add(
+                        DP_B5[5].mul_add(
+                            k6[i],
+                            DP_B5[4].mul_add(
+                                k5[i],
+                                DP_B5[3].mul_add(k4[i], DP_B5[0].mul_add(k1[i], DP_B5[2] * k3[i])),
+                            ),
+                        ),
+                        y[i],
+                    )
                 })
                 .collect();
 
             // 4th order solution for error estimate
             let y_4th: Vec<f64> = (0..n)
                 .map(|i| {
-                    y[i] + h
-                        * (DP_B4[0] * k1[i]
-                            + DP_B4[2] * k3[i]
-                            + DP_B4[3] * k4[i]
-                            + DP_B4[4] * k5[i]
-                            + DP_B4[5] * k6[i])
+                    h.mul_add(
+                        DP_B4[5].mul_add(
+                            k6[i],
+                            DP_B4[4].mul_add(
+                                k5[i],
+                                DP_B4[3].mul_add(k4[i], DP_B4[0].mul_add(k1[i], DP_B4[2] * k3[i])),
+                            ),
+                        ),
+                        y[i],
+                    )
                 })
                 .collect();
 
@@ -382,7 +412,7 @@ mod tests {
 
         // Check conservation: x² + (x')² = 1
         for state in &states {
-            let energy = state[0].powi(2) + state[1].powi(2);
+            let energy = state[1].mul_add(state[1], state[0].powi(2));
             assert!((energy - 1.0).abs() < 0.01, "Energy = {energy}, expected 1");
         }
 
@@ -405,7 +435,7 @@ mod tests {
         let f: OdeFunction = Box::new(move |_t, y| {
             vec![
                 alpha * y[0] - beta * y[0] * y[1],
-                delta * y[0] * y[1] - gamma * y[1],
+                (delta * y[0]).mul_add(y[1], -(gamma * y[1])),
             ]
         });
 

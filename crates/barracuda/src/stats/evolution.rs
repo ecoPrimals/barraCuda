@@ -161,7 +161,7 @@ pub fn detection_threshold(abundance: f64, target_power: f64) -> u64 {
     if abundance <= 0.0 || abundance >= 1.0 {
         return 0;
     }
-    let d = (1.0 - target_power).ln() / (1.0 - abundance).ln();
+    let d = (1.0 - target_power).log(1.0 - abundance);
     d.ceil() as u64
 }
 

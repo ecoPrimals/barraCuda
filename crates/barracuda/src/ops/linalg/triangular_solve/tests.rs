@@ -183,8 +183,8 @@ async fn test_triangular_solve_f64_cholesky_pipeline() {
     let l = CholeskyF64::execute(device.clone(), &a, n).unwrap();
     let x = TriangularSolveF64::cholesky_solve(device, &l, &b, n).unwrap();
 
-    let ax0 = a[0] * x[0] + a[1] * x[1];
-    let ax1 = a[2] * x[0] + a[3] * x[1];
+    let ax0 = a[0].mul_add(x[0], a[1] * x[1]);
+    let ax1 = a[2].mul_add(x[0], a[3] * x[1]);
 
     assert!(
         (ax0 - b[0]).abs() < 1e-10,

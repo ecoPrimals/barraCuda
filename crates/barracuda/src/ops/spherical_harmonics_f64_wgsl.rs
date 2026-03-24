@@ -102,7 +102,7 @@ impl SphericalHarmonicsF64 {
         if m > l {
             return 0.0;
         }
-        let t = 1.0 - x * x;
+        let t = x.mul_add(-x, 1.0);
         if t <= 0.0 {
             // At x = ±1: P_l(1) = 1, P_l(-1) = (-1)^l, P_l^m(±1) = 0 for m > 0
             if m == 0 {
@@ -130,8 +130,8 @@ impl SphericalHarmonicsF64 {
 
         let (mut pl_m2, mut pl_m1) = (pm, pmp1);
         for ll in (m + 2)..=l {
-            let pl =
-                ((2 * ll - 1) as f64 * x * pl_m1 - (ll + m - 1) as f64 * pl_m2) / (ll - m) as f64;
+            let pl = ((2 * ll - 1) as f64 * x).mul_add(pl_m1, -((ll + m - 1) as f64 * pl_m2))
+                / (ll - m) as f64;
             pl_m2 = pl_m1;
             pl_m1 = pl;
         }

@@ -115,7 +115,7 @@ impl Tensor {
     /// * `max_pixel_value` - Maximum pixel value (typically 1.0 or 255.0)
     /// # Errors
     /// Returns [`Err`] if shapes do not match, tensors are empty, or buffer allocation/GPU dispatch/readback fails (e.g. device lost).
-    pub fn psnr(self, other: Tensor, max_pixel_value: f32) -> Result<f32> {
+    pub fn psnr(self, other: Self, max_pixel_value: f32) -> Result<f32> {
         PSNR::new(self, other, max_pixel_value)?.execute()
     }
 }

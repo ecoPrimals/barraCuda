@@ -262,7 +262,7 @@ mod tests {
         let mut output = vec![0.0f32; n * c_out * h_out * w_out];
 
         for batch in 0..n {
-            for co in 0..c_out {
+            for (co, &bias_co) in bias.iter().enumerate() {
                 let group = co / c_out_per_group;
                 let c_in_start = group * c_in_per_group;
                 for oh in 0..h_out {
@@ -297,7 +297,7 @@ mod tests {
                         }
                         let o_idx =
                             batch * c_out * h_out * w_out + co * h_out * w_out + oh * w_out + ow;
-                        output[o_idx] = sum + bias[co];
+                        output[o_idx] = sum + bias_co;
                     }
                 }
             }

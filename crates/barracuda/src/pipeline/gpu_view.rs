@@ -239,7 +239,7 @@ impl GpuViewF64 {
     /// Compute Pearson correlation between two views.
     /// # Errors
     /// Returns [`Err`] if views have different lengths or GPU dispatch fails.
-    pub fn correlation(a: &GpuViewF64, b: &GpuViewF64) -> Result<f64> {
+    pub fn correlation(a: &Self, b: &Self) -> Result<f64> {
         if a.len() != b.len() {
             return Err(BarracudaError::InvalidInput {
                 message: format!(

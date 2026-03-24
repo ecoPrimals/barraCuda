@@ -161,7 +161,7 @@ impl Tensor {
     /// Subtract another tensor element-wise. Shapes must match.
     /// # Errors
     /// Returns [`Err`] if shapes do not match, or buffer allocation/GPU dispatch fails (e.g. device lost).
-    pub fn sub(&self, other: &Tensor) -> Result<Self> {
+    pub fn sub(&self, other: &Self) -> Result<Self> {
         Sub::new(self.clone(), other.clone())?.execute()
     }
 }

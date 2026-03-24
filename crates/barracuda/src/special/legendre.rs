@@ -69,7 +69,8 @@ pub fn legendre(n: usize, x: f64) -> f64 {
 
     for k in 1..n {
         let k_f64 = k as f64;
-        let p_next = ((2.0 * k_f64 + 1.0) * x * p_curr - k_f64 * p_prev) / (k_f64 + 1.0);
+        let p_next =
+            (2.0f64.mul_add(k_f64, 1.0) * x).mul_add(p_curr, -(k_f64 * p_prev)) / (k_f64 + 1.0);
         p_prev = p_curr;
         p_curr = p_next;
     }
@@ -115,7 +116,8 @@ pub fn legendre_all(n: usize, x: f64) -> Vec<f64> {
 
     for k in 1..n {
         let k_f64 = k as f64;
-        let p_next = ((2.0 * k_f64 + 1.0) * x * result[k] - k_f64 * result[k - 1]) / (k_f64 + 1.0);
+        let p_next = (2.0f64.mul_add(k_f64, 1.0) * x).mul_add(result[k], -(k_f64 * result[k - 1]))
+            / (k_f64 + 1.0);
         result.push(p_next);
     }
 
@@ -172,7 +174,7 @@ pub fn assoc_legendre(n: usize, m: i32, x: f64) -> f64 {
     }
 
     // Compute P_m^m first (starting point)
-    let sin_theta = (1.0 - x * x).sqrt();
+    let sin_theta = x.mul_add(-x, 1.0).sqrt();
     let mut pmm = 1.0;
     let mut fact = 1.0;
 
@@ -210,7 +212,8 @@ pub fn assoc_legendre(n: usize, m: i32, x: f64) -> f64 {
     for l in (m_abs + 2)..=n {
         let l_f64 = l as f64;
         let m_f64 = m_abs as f64;
-        pnm = (x * (2.0 * l_f64 - 1.0) * pmmp1 - (l_f64 + m_f64 - 1.0) * pmm) / (l_f64 - m_f64);
+        pnm = (x * 2.0f64.mul_add(l_f64, -1.0)).mul_add(pmmp1, -((l_f64 + m_f64 - 1.0) * pmm))
+            / (l_f64 - m_f64);
         pmm = pmmp1;
         pmmp1 = pnm;
     }
@@ -279,7 +282,7 @@ mod tests {
     fn test_legendre_p3() {
         // P₃(x) = (5x³ - 3x)/2
         assert!((legendre(3, 0.0) - 0.0).abs() < 1e-14);
-        let p3_half = (5.0 * 0.125 - 1.5) / 2.0; // (5/8 - 3/2)/2 = -7/16
+        let p3_half = 5.0f64.mul_add(0.125, -1.5) / 2.0; // (5/8 - 3/2)/2 = -7/16
         assert!((legendre(3, 0.5) - p3_half).abs() < 1e-14);
     }
 
@@ -343,7 +346,7 @@ mod tests {
     fn test_assoc_legendre_p11() {
         // P₁¹(x) = -(1-x²)^(1/2)
         let x: f64 = 0.5;
-        let expected = -(1.0 - x * x).sqrt();
+        let expected = -x.mul_add(-x, 1.0).sqrt();
         assert!((assoc_legendre(1, 1, x) - expected).abs() < 1e-13);
     }
 
@@ -351,7 +354,7 @@ mod tests {
     fn test_assoc_legendre_p21() {
         // P₂¹(x) = -3x(1-x²)^(1/2)
         let x: f64 = 0.5;
-        let expected = -3.0 * x * (1.0 - x * x).sqrt();
+        let expected = -3.0 * x * x.mul_add(-x, 1.0).sqrt();
         assert!((assoc_legendre(2, 1, x) - expected).abs() < 1e-13);
     }
 

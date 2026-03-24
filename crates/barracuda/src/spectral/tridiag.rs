@@ -160,13 +160,13 @@ fn inverse_iteration_tridiag(diagonal: &[f64], off_diag: &[f64], lambda: f64) ->
 
     for i in 1..n {
         l[i] = off_diag[i - 1] / u[i - 1];
-        u[i] = (diagonal[i] - lambda) - l[i] * off_diag[i - 1];
+        u[i] = l[i].mul_add(-off_diag[i - 1], diagonal[i] - lambda);
         if u[i].abs() < 1e-300 {
             u[i] = 1e-300;
         }
     }
 
-    let mut x: Vec<f64> = (0..n).map(|i| 1.0 + 0.1 * (i as f64)).collect();
+    let mut x: Vec<f64> = (0..n).map(|i| 0.1f64.mul_add(i as f64, 1.0)).collect();
 
     for _ in 0..10 {
         // Forward solve: L y = x  (y stored in-place)
@@ -177,7 +177,7 @@ fn inverse_iteration_tridiag(diagonal: &[f64], off_diag: &[f64], lambda: f64) ->
         // Back solve: U x_new = y
         x[n - 1] = y[n - 1] / u[n - 1];
         for i in (0..n - 1).rev() {
-            x[i] = (y[i] - off_diag[i] * x[i + 1]) / u[i];
+            x[i] = off_diag[i].mul_add(-x[i + 1], y[i]) / u[i];
         }
         // Normalize
         let norm: f64 = x.iter().map(|v| v * v).sum::<f64>().sqrt();

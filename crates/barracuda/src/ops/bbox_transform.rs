@@ -236,7 +236,7 @@ impl Tensor {
     ///
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
-    pub fn bbox_transform(self, deltas: Tensor) -> Result<Self> {
+    pub fn bbox_transform(self, deltas: Self) -> Result<Self> {
         BBoxTransform::new(self, deltas)?.execute()
     }
 }

@@ -85,7 +85,7 @@ impl GridMask {
         let offset_y = ((self.seed * 22_695_477) % self.grid_size as u64) as usize;
 
         let mask_size = (self.grid_size as f32 * self.ratio) as usize;
-        let angle_rad = self.rotate * std::f32::consts::PI / 180.0;
+        let angle_rad = self.rotate.to_radians();
         let cos_a = angle_rad.cos();
         let sin_a = angle_rad.sin();
 

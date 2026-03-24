@@ -148,7 +148,7 @@ impl Tensor {
     /// # Errors
     /// Returns [`Err`] if dimension is out of bounds, values shape does not match, indices are
     /// out of bounds, buffer allocation fails, GPU dispatch fails, or the device is lost.
-    pub fn index_add(self, dim: usize, indices: Vec<u32>, values: Tensor) -> Result<Self> {
+    pub fn index_add(self, dim: usize, indices: Vec<u32>, values: Self) -> Result<Self> {
         IndexAdd::new(self, dim, indices, values)?.execute()
     }
 }

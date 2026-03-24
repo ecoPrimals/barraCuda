@@ -298,7 +298,7 @@ mod tests {
 
     #[test]
     fn test_newton_sqrt2() {
-        let f = |x: f64| x * x - 2.0;
+        let f = |x: f64| x.mul_add(x, -2.0);
         let df = |x: f64| 2.0 * x;
 
         let result = newton(f, df, 1.0, 1e-10, 100).unwrap();
@@ -310,8 +310,8 @@ mod tests {
     #[test]
     fn test_newton_cubic() {
         // x³ - 2x - 5 = 0, root ≈ 2.0946
-        let f = |x: f64| x.powi(3) - 2.0 * x - 5.0;
-        let df = |x: f64| 3.0 * x.powi(2) - 2.0;
+        let f = |x: f64| 2.0f64.mul_add(-x, x.powi(3)) - 5.0;
+        let df = |x: f64| 3.0f64.mul_add(x.powi(2), -2.0);
 
         let result = newton(f, df, 2.0, 1e-10, 100).unwrap();
         assert!(result.converged);
@@ -320,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_newton_numerical_sqrt2() {
-        let f = |x: f64| x * x - 2.0;
+        let f = |x: f64| x.mul_add(x, -2.0);
 
         let result = newton_numerical(f, 1.0, 1e-10, 100, 1e-8).unwrap();
         assert!(result.converged);
@@ -329,7 +329,7 @@ mod tests {
 
     #[test]
     fn test_newton_numerical_cube_root() {
-        let f = |x: f64| x * x * x - 27.0;
+        let f = |x: f64| (x * x).mul_add(x, -27.0);
 
         let result = newton_numerical(f, 3.5, 1e-10, 100, 1e-8).unwrap();
         assert!(result.converged);
@@ -338,7 +338,7 @@ mod tests {
 
     #[test]
     fn test_secant_sqrt2() {
-        let f = |x: f64| x * x - 2.0;
+        let f = |x: f64| x.mul_add(x, -2.0);
 
         let result = secant(f, 1.0, 2.0, 1e-10, 100).unwrap();
         assert!(result.converged);

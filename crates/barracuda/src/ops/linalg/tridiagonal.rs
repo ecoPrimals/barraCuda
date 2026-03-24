@@ -109,7 +109,7 @@ pub fn tridiagonal_solve(a: &[f64], b: &[f64], c: &[f64], d: &[f64]) -> Result<V
 
     // Forward sweep for i = 1..n-1
     for i in 1..n {
-        let denom = b[i] - a[i - 1] * c_prime[i - 1];
+        let denom = a[i - 1].mul_add(-c_prime[i - 1], b[i]);
         if denom.abs() < 1e-15 {
             return Err(BarracudaError::Numerical {
                 message: format!("Division by zero at row {i}: matrix may be singular"),
@@ -118,7 +118,7 @@ pub fn tridiagonal_solve(a: &[f64], b: &[f64], c: &[f64], d: &[f64]) -> Result<V
         if i < n - 1 {
             c_prime[i] = c[i] / denom;
         }
-        d_prime[i] = (d[i] - a[i - 1] * d_prime[i - 1]) / denom;
+        d_prime[i] = a[i - 1].mul_add(-d_prime[i - 1], d[i]) / denom;
     }
 
     // Back substitution
@@ -126,7 +126,7 @@ pub fn tridiagonal_solve(a: &[f64], b: &[f64], c: &[f64], d: &[f64]) -> Result<V
     x[n - 1] = d_prime[n - 1];
 
     for i in (0..n - 1).rev() {
-        x[i] = d_prime[i] - c_prime[i] * x[i + 1];
+        x[i] = c_prime[i].mul_add(-x[i + 1], d_prime[i]);
     }
 
     Ok(x)
@@ -182,7 +182,7 @@ pub fn tridiagonal_solve_f32(a: &[f32], b: &[f32], c: &[f32], d: &[f32]) -> Resu
     d_prime[0] = d[0] / b[0];
 
     for i in 1..n {
-        let denom = b[i] - a[i - 1] * c_prime[i - 1];
+        let denom = a[i - 1].mul_add(-c_prime[i - 1], b[i]);
         if denom.abs() < 1e-7 {
             return Err(BarracudaError::Numerical {
                 message: format!("Division by zero at row {i}: matrix may be singular"),
@@ -191,14 +191,14 @@ pub fn tridiagonal_solve_f32(a: &[f32], b: &[f32], c: &[f32], d: &[f32]) -> Resu
         if i < n - 1 {
             c_prime[i] = c[i] / denom;
         }
-        d_prime[i] = (d[i] - a[i - 1] * d_prime[i - 1]) / denom;
+        d_prime[i] = a[i - 1].mul_add(-d_prime[i - 1], d[i]) / denom;
     }
 
     let mut x = vec![0.0f32; n];
     x[n - 1] = d_prime[n - 1];
 
     for i in (0..n - 1).rev() {
-        x[i] = d_prime[i] - c_prime[i] * x[i + 1];
+        x[i] = c_prime[i].mul_add(-x[i + 1], d_prime[i]);
     }
 
     Ok(x)
@@ -248,9 +248,9 @@ mod tests {
         assert_eq!(x.len(), 3);
 
         // Verify solution by computing A·x
-        let ax0 = b[0] * x[0] + c[0] * x[1];
-        let ax1 = a[0] * x[0] + b[1] * x[1] + c[1] * x[2];
-        let ax2 = a[1] * x[1] + b[2] * x[2];
+        let ax0 = b[0].mul_add(x[0], c[0] * x[1]);
+        let ax1 = c[1].mul_add(x[2], a[0].mul_add(x[0], b[1] * x[1]));
+        let ax2 = a[1].mul_add(x[1], b[2] * x[2]);
 
         assert!((ax0 - d[0]).abs() < 1e-12);
         assert!((ax1 - d[1]).abs() < 1e-12);
@@ -296,8 +296,8 @@ mod tests {
         assert_eq!(x.len(), 2);
 
         // Verify
-        let ax0 = b[0] * x[0] + c[0] * x[1];
-        let ax1 = a[0] * x[0] + b[1] * x[1];
+        let ax0 = b[0].mul_add(x[0], c[0] * x[1]);
+        let ax1 = a[0].mul_add(x[0], b[1] * x[1]);
         assert!((ax0 - d[0]).abs() < 1e-12);
         assert!((ax1 - d[1]).abs() < 1e-12);
     }
@@ -318,11 +318,11 @@ mod tests {
         // Verify residual is small
         for i in 0..n {
             let ax_i = if i == 0 {
-                b[0] * x[0] + c[0] * x[1]
+                b[0].mul_add(x[0], c[0] * x[1])
             } else if i == n - 1 {
-                a[n - 2] * x[n - 2] + b[n - 1] * x[n - 1]
+                a[n - 2].mul_add(x[n - 2], b[n - 1] * x[n - 1])
             } else {
-                a[i - 1] * x[i - 1] + b[i] * x[i] + c[i] * x[i + 1]
+                c[i].mul_add(x[i + 1], a[i - 1].mul_add(x[i - 1], b[i] * x[i]))
             };
             assert!(
                 (ax_i - d[i]).abs() < 1e-10,
@@ -343,7 +343,7 @@ mod tests {
         let x = tridiagonal_solve_f32(&a, &b, &c, &d).unwrap();
         assert_eq!(x.len(), 3);
 
-        let ax0 = b[0] * x[0] + c[0] * x[1];
+        let ax0 = b[0].mul_add(x[0], c[0] * x[1]);
         assert!((ax0 - d[0]).abs() < 1e-5);
     }
 
@@ -364,7 +364,7 @@ mod tests {
 
         // Each solution should satisfy A·x = d
         for (sol, d) in solutions.iter().zip(rhs.iter()) {
-            let ax0 = b[0] * sol[0] + c[0] * sol[1];
+            let ax0 = b[0].mul_add(sol[0], c[0] * sol[1]);
             assert!((ax0 - d[0]).abs() < 1e-12);
         }
     }
@@ -402,7 +402,7 @@ mod tests {
         assert_eq!(x.len(), n);
 
         // Check a few residuals
-        let ax0 = b[0] * x[0] + c[0] * x[1];
+        let ax0 = b[0].mul_add(x[0], c[0] * x[1]);
         assert!((ax0 - d[0]).abs() < 1e-10);
     }
 }

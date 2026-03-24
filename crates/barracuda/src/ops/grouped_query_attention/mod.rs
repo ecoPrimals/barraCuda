@@ -227,7 +227,7 @@ impl Tensor {
     ///
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
-    pub fn grouped_query_attention(self, key: Tensor, value: Tensor) -> Result<Self> {
+    pub fn grouped_query_attention(self, key: Self, value: Self) -> Result<Self> {
         GroupedQueryAttention::new(self, key, value)?.execute()
     }
 }

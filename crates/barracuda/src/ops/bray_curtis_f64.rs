@@ -267,7 +267,7 @@ impl BrayCurtisF64 {
     pub fn condensed_index_to_pair(idx: usize) -> (usize, usize) {
         // i = floor((1 + sqrt(1 + 8*idx)) / 2)
         let k = idx as f64;
-        let i = f64::midpoint(1.0, (1.0 + 8.0 * k).sqrt()).floor() as usize;
+        let i = f64::midpoint(1.0, 8.0f64.mul_add(k, 1.0).sqrt()).floor() as usize;
         let j = idx - i * (i - 1) / 2;
         (i, j)
     }

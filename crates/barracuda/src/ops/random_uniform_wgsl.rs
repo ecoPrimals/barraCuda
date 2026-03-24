@@ -30,7 +30,7 @@ impl RandomUniformGpu {
         bounds: &[(f32, f32)],
         seed: u32,
     ) -> Self {
-        let bounds_flat: Vec<f32> = bounds.iter().flat_map(|&(lo, hi)| [lo, hi]).collect();
+        let bounds_flat: Vec<f32> = bounds.iter().flat_map(|b| <[f32; 2]>::from(*b)).collect();
         Self {
             device,
             n_samples,

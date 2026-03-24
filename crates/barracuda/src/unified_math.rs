@@ -436,9 +436,9 @@ impl DType {
     #[must_use]
     pub fn size_bytes(&self) -> usize {
         match self {
-            DType::F32 | DType::I32 | DType::U32 => 4,
-            DType::F64 | DType::I64 | DType::U64 => 8,
-            DType::Bool => 1,
+            Self::F32 | Self::I32 | Self::U32 => 4,
+            Self::F64 | Self::I64 | Self::U64 => 8,
+            Self::Bool => 1,
         }
     }
 }

@@ -228,7 +228,8 @@ impl BatchedElementwiseF64 {
                 Op::Custom => data[base],
                 Op::SensorCalibration => {
                     let raw = data[base];
-                    2e-13 * raw.powi(3) - 4e-9 * raw.powi(2) + 4e-5 * raw - 0.0677
+                    4e-5f64.mul_add(raw, 2e-13f64.mul_add(raw.powi(3), -(4e-9 * raw.powi(2))))
+                        - 0.0677
                 }
                 Op::HargreavesEt0 => {
                     let tmax = data[base];
@@ -242,8 +243,8 @@ impl BatchedElementwiseF64 {
                     let u2 = data[base + 1];
                     let rh_min = data[base + 2];
                     let h = data[base + 3];
-                    let adj =
-                        (0.04 * (u2 - 2.0) - 0.004 * (rh_min - 45.0)) * (h / 3.0_f64).powf(0.3);
+                    let adj = 0.04f64.mul_add(u2 - 2.0, -(0.004 * (rh_min - 45.0)))
+                        * (h / 3.0_f64).powf(0.3);
                     (kc_table + adj).max(0.0)
                 }
                 Op::DualKcKe => {

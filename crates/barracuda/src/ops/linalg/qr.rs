@@ -49,9 +49,9 @@ impl QrDecomposition {
 
         // Compute Q^T * b
         let mut qtb = vec![0.0; self.m];
-        for i in 0..self.m {
-            for j in 0..self.m {
-                qtb[i] += self.q[j * self.m + i] * b[j]; // Q^T
+        for (i, qtb_i) in qtb.iter_mut().enumerate() {
+            for (j, &b_j) in b.iter().enumerate() {
+                *qtb_i += self.q[j * self.m + i] * b_j; // Q^T
             }
         }
 
@@ -59,8 +59,8 @@ impl QrDecomposition {
         let mut x = vec![0.0; self.n];
         for i in (0..self.n).rev() {
             let mut sum = qtb[i];
-            for j in (i + 1)..self.n {
-                sum -= self.r[i * self.n + j] * x[j];
+            for (j, &x_j) in x.iter().enumerate().skip(i + 1) {
+                sum -= self.r[i * self.n + j] * x_j;
             }
             let diag = self.r[i * self.n + i];
             if diag.abs() < 1e-14 {
@@ -165,8 +165,8 @@ pub fn qr_decompose(a: &[f64], m: usize, n: usize) -> Result<QrDecomposition> {
 
         // Normalize v
         let mut v_norm_sq = 0.0;
-        for i in k..m {
-            v_norm_sq += v[i] * v[i];
+        for &vi in &v[k..] {
+            v_norm_sq += vi * vi;
         }
 
         if v_norm_sq < 1e-28 {
@@ -281,11 +281,11 @@ mod tests {
         // A^T A = [[3, 6], [6, 14]]
         // A^T b = [5, 11]
 
-        let ata = [3.0, 6.0, 6.0, 14.0];
+        let ata = [3.0_f64, 6.0, 6.0, 14.0];
         let atb = [5.0, 11.0];
 
-        let lhs0 = ata[0] * x[0] + ata[1] * x[1];
-        let lhs1 = ata[2] * x[0] + ata[3] * x[1];
+        let lhs0 = ata[0].mul_add(x[0], ata[1] * x[1]);
+        let lhs1 = ata[2].mul_add(x[0], ata[3] * x[1]);
 
         assert!(
             approx_eq(lhs0, atb[0], 1e-10),
@@ -351,8 +351,8 @@ mod tests {
         let x = qr_least_squares(&a, 2, 2, &b).unwrap();
 
         // Verify Ax = b
-        let ax0 = 2.0 * x[0] + 1.0 * x[1];
-        let ax1 = 1.0 * x[0] + 3.0 * x[1];
+        let ax0 = 2.0f64.mul_add(x[0], 1.0 * x[1]);
+        let ax1 = 1.0f64.mul_add(x[0], 3.0 * x[1]);
 
         assert!(approx_eq(ax0, b[0], 1e-10));
         assert!(approx_eq(ax1, b[1], 1e-10));

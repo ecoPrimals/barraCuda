@@ -161,7 +161,7 @@ impl Tensor {
     ///
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
-    pub fn mul(&self, other: &Tensor) -> Result<Self> {
+    pub fn mul(&self, other: &Self) -> Result<Self> {
         Mul::new(self.clone(), other.clone())?.execute()
     }
 }
@@ -259,7 +259,7 @@ mod tests {
         let result = output.to_vec().unwrap();
 
         for (i, &val) in result.iter().enumerate() {
-            assert!((val - (i as f32) * 2.0).abs() < 1e-4);
+            assert!((i as f32).mul_add(-2.0, val).abs() < 1e-4);
         }
     }
 

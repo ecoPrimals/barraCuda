@@ -406,9 +406,14 @@ mod tests {
         let fx_sum = forces[0] + forces[3];
         let fy_sum = forces[1] + forces[4];
         let fz_sum = forces[2] + forces[5];
-        let f1_mag = (forces[0].powi(2) + forces[1].powi(2) + forces[2].powi(2)).sqrt();
+        let f1_mag = forces[2]
+            .mul_add(forces[2], forces[1].mul_add(forces[1], forces[0].powi(2)))
+            .sqrt();
         let relative_error = if f1_mag > 1e-14 {
-            (fx_sum.powi(2) + fy_sum.powi(2) + fz_sum.powi(2)).sqrt() / f1_mag
+            fz_sum
+                .mul_add(fz_sum, fy_sum.mul_add(fy_sum, fx_sum.powi(2)))
+                .sqrt()
+                / f1_mag
         } else {
             0.0
         };
@@ -462,7 +467,7 @@ mod tests {
         let mesh_dims = params.mesh_dims;
         let order = params.interpolation_order;
 
-        let wrap_one = |x: f64, l: f64| x - (x / l).floor() * l;
+        let wrap_one = |x: f64, l: f64| (x / l).floor().mul_add(-l, x);
         let pos0 = [
             wrap_one(positions[0], box_dims[0]),
             wrap_one(positions[1], box_dims[1]),

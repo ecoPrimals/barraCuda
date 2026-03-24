@@ -41,10 +41,10 @@ pub enum SolverStatus {
 impl std::fmt::Display for SolverStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SolverStatus::NotStarted => write!(f, "NotStarted"),
-            SolverStatus::Paused => write!(f, "Paused"),
-            SolverStatus::Converged => write!(f, "Converged"),
-            SolverStatus::BudgetExhausted => write!(f, "BudgetExhausted"),
+            Self::NotStarted => write!(f, "NotStarted"),
+            Self::Paused => write!(f, "Paused"),
+            Self::Converged => write!(f, "Converged"),
+            Self::BudgetExhausted => write!(f, "BudgetExhausted"),
         }
     }
 }
@@ -241,8 +241,10 @@ impl ResumableNelderMead {
                     for i in 0..=n {
                         if i != best_idx {
                             for j in 0..n {
-                                self.simplex[i][j] = self.simplex[best_idx][j]
-                                    + SIGMA * (self.simplex[i][j] - self.simplex[best_idx][j]);
+                                self.simplex[i][j] = SIGMA.mul_add(
+                                    self.simplex[i][j] - self.simplex[best_idx][j],
+                                    self.simplex[best_idx][j],
+                                );
                             }
                             self.simplex[i] = project_bounds(&self.simplex[i], &self.bounds);
                             let point = self.simplex[i].clone();
@@ -352,7 +354,7 @@ fn reflect(x: &[f64], centroid: &[f64], alpha: f64) -> Vec<f64> {
     centroid
         .iter()
         .zip(x.iter())
-        .map(|(&c, &xi)| c + alpha * (c - xi))
+        .map(|(&c, &xi)| alpha.mul_add(c - xi, c))
         .collect()
 }
 
@@ -369,7 +371,7 @@ mod tests {
 
     #[test]
     fn test_resumable_nm_basic() {
-        let f = |x: &[f64]| (x[0] - 2.0).powi(2) + (x[1] - 3.0).powi(2);
+        let f = |x: &[f64]| (x[1] - 3.0).mul_add(x[1] - 3.0, (x[0] - 2.0).powi(2));
         let bounds = vec![(-10.0, 10.0), (-10.0, 10.0)];
         let x0 = vec![0.0, 0.0];
 
@@ -433,7 +435,7 @@ mod tests {
 
     #[test]
     fn test_resumable_nm_cache() {
-        let f = |x: &[f64]| x[0].powi(2) + x[1].powi(2);
+        let f = |x: &[f64]| x[1].mul_add(x[1], x[0].powi(2));
         let bounds = vec![(-5.0, 5.0), (-5.0, 5.0)];
         let x0 = vec![1.0, 1.0];
 
@@ -492,7 +494,7 @@ mod tests {
     #[test]
     fn test_resumable_nm_multi_resume() {
         // Run in 10-eval increments to test repeated pause/resume
-        let f = |x: &[f64]| (x[0] - 3.0).powi(2) + (x[1] + 1.0).powi(2);
+        let f = |x: &[f64]| (x[1] + 1.0).mul_add(x[1] + 1.0, (x[0] - 3.0).powi(2));
         let bounds = vec![(-10.0, 10.0), (-10.0, 10.0)];
         let x0 = vec![0.0, 0.0];
 

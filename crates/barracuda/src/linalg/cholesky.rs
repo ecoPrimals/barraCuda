@@ -48,8 +48,8 @@ impl CholeskyDecomposition {
         let mut y = vec![0.0; self.n];
         for i in 0..self.n {
             let mut sum = b[i];
-            for j in 0..i {
-                sum -= self.l[i * self.n + j] * y[j];
+            for (j, &y_j) in y.iter().enumerate().take(i) {
+                sum -= self.l[i * self.n + j] * y_j;
             }
             let diag = self.l[i * self.n + i];
             if diag.abs() < 1e-14 {
@@ -64,9 +64,9 @@ impl CholeskyDecomposition {
         let mut x = vec![0.0; self.n];
         for i in (0..self.n).rev() {
             let mut sum = y[i];
-            for j in (i + 1)..self.n {
+            for (j, &x_j) in x.iter().enumerate().skip(i + 1) {
                 // Lᵀ[i,j] = L[j,i]
-                sum -= self.l[j * self.n + i] * x[j];
+                sum -= self.l[j * self.n + i] * x_j;
             }
             x[i] = sum / self.l[i * self.n + i];
         }
@@ -241,8 +241,8 @@ mod tests {
         let x = chol.solve(&b).unwrap();
 
         // Verify Ax = b
-        let ax0 = 4.0 * x[0] + 2.0 * x[1];
-        let ax1 = 2.0 * x[0] + 3.0 * x[1];
+        let ax0 = 4.0f64.mul_add(x[0], 2.0 * x[1]);
+        let ax1 = 2.0f64.mul_add(x[0], 3.0 * x[1]);
         assert!(approx_eq(ax0, b[0], 1e-10));
         assert!(approx_eq(ax1, b[1], 1e-10));
     }

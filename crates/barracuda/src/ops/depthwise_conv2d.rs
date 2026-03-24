@@ -201,8 +201,8 @@ impl Tensor {
     /// readback fails (e.g. device lost or out of memory).
     pub fn depthwise_conv2d(
         self,
-        weight: Tensor,
-        bias: Tensor,
+        weight: Self,
+        bias: Self,
         stride: (usize, usize),
         padding: (usize, usize),
     ) -> Result<Self> {

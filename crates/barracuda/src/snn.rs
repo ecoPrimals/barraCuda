@@ -341,19 +341,24 @@ impl SpikingNetwork {
                 let dt = self.config.dt;
                 let decay_factor = 1.0 - (dt / tau);
 
-                for i in 0..*size {
+                for ((membrane, inp), spike) in state
+                    .membrane
+                    .iter_mut()
+                    .zip(input.iter())
+                    .zip(state.spikes.iter_mut())
+                {
                     // Decay membrane potential
-                    state.membrane[i] *= decay_factor;
+                    *membrane *= decay_factor;
 
                     // Integrate input
-                    state.membrane[i] += input[i];
+                    *membrane += *inp;
 
                     // Check for spike
-                    if state.membrane[i] >= *threshold {
-                        state.spikes[i] = 1.0;
-                        state.membrane[i] = *reset; // Reset to reset potential
+                    if *membrane >= *threshold {
+                        *spike = 1.0;
+                        *membrane = *reset; // Reset to reset potential
                     } else {
-                        state.spikes[i] = 0.0;
+                        *spike = 0.0;
                     }
                 }
 

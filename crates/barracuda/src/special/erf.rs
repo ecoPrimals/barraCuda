@@ -65,7 +65,7 @@ pub fn erf(x: f64) -> f64 {
     let t4 = t3 * t;
     let t5 = t4 * t;
 
-    let result = 1.0 - (a1 * t + a2 * t2 + a3 * t3 + a4 * t4 + a5 * t5) * (-x * x).exp();
+    let result = (a1 * t + a2 * t2 + a3 * t3 + a4 * t4 + a5 * t5).mul_add(-(-x * x).exp(), 1.0);
 
     sign * result
 }

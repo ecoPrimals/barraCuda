@@ -166,7 +166,7 @@ impl Tensor {
     /// Element-wise addition
     /// # Errors
     /// Returns [`Err`] if shapes differ, buffer allocation fails, GPU dispatch fails, or the device is lost.
-    pub fn add(&self, other: &Tensor) -> Result<Self> {
+    pub fn add(&self, other: &Self) -> Result<Self> {
         Add::new(self.clone(), other.clone())?.execute()
     }
 }

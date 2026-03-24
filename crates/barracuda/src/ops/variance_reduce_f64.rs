@@ -43,10 +43,10 @@ struct WelfordState {
 }
 
 impl WelfordState {
-    fn merge(self, other: WelfordState) -> WelfordState {
+    fn merge(self, other: Self) -> Self {
         let count = self.count + other.count;
         if count == 0.0 {
-            return WelfordState {
+            return Self {
                 count: 0.0,
                 mean: 0.0,
                 m2: 0.0,
@@ -55,7 +55,7 @@ impl WelfordState {
         let delta = other.mean - self.mean;
         let mean = self.mean + delta * other.count / count;
         let m2 = self.m2 + other.m2 + delta * delta * self.count * other.count / count;
-        WelfordState { count, mean, m2 }
+        Self { count, mean, m2 }
     }
 }
 

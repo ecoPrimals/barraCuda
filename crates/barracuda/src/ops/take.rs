@@ -283,8 +283,8 @@ mod tests {
         let output = result.to_vec().unwrap();
 
         assert_eq!(output.len(), 100);
-        for i in 0..100 {
-            assert_eq!(output[i], (i * 10) as f32);
+        for (i, &val) in output.iter().enumerate() {
+            assert_eq!(val, (i * 10) as f32);
         }
     }
 

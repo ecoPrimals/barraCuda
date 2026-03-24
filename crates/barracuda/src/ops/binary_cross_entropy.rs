@@ -114,7 +114,7 @@ impl Tensor {
     ///
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
-    pub fn binary_cross_entropy(self, targets: Tensor) -> Result<Self> {
+    pub fn binary_cross_entropy(self, targets: Self) -> Result<Self> {
         BinaryCrossEntropy::new(self, targets).execute()
     }
 }

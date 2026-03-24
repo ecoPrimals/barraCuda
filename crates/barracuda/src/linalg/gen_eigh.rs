@@ -55,8 +55,8 @@ impl GenEighDecomposition {
             return None;
         }
         let mut v = vec![0.0; self.n];
-        for row in 0..self.n {
-            v[row] = self.eigenvectors[row * self.n + i];
+        for (row, v_row) in v.iter_mut().enumerate() {
+            *v_row = self.eigenvectors[row * self.n + i];
         }
         Some(v)
     }

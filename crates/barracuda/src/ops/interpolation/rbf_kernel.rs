@@ -338,10 +338,10 @@ impl Tensor {
     /// readback fails (e.g. device lost or out of memory).
     pub fn rbf_kernel(
         &self,
-        other: &Tensor,
+        other: &Self,
         kernel_type: RbfKernelType,
         epsilon: f32,
-    ) -> Result<Tensor> {
+    ) -> Result<Self> {
         RbfKernel::new(self.clone(), other.clone(), kernel_type, epsilon).execute()
     }
 }

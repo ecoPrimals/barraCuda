@@ -357,8 +357,8 @@ impl Pppm {
                     let tw_im = angle.sin();
 
                     // Butterfly
-                    let t_re = tw_re * data[j * 2] - tw_im * data[j * 2 + 1];
-                    let t_im = tw_re * data[j * 2 + 1] + tw_im * data[j * 2];
+                    let t_re = tw_re.mul_add(data[j * 2], -(tw_im * data[j * 2 + 1]));
+                    let t_im = tw_re.mul_add(data[j * 2 + 1], tw_im * data[j * 2]);
 
                     data[j * 2] = data[i * 2] - t_re;
                     data[j * 2 + 1] = data[i * 2 + 1] - t_im;
@@ -390,13 +390,13 @@ pub enum PppmError {
 impl std::fmt::Display for PppmError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PppmError::SizeMismatch { positions, charges } => {
+            Self::SizeMismatch { positions, charges } => {
                 write!(
                     f,
                     "Position count ({positions}) doesn't match charge count ({charges})"
                 )
             }
-            PppmError::FftError(msg) => write!(f, "FFT error: {msg}"),
+            Self::FftError(msg) => write!(f, "FFT error: {msg}"),
         }
     }
 }

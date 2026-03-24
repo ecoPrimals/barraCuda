@@ -134,19 +134,48 @@ pub fn norm_ppf(p: f64) -> f64 {
     if p < P_LOW {
         // Lower tail region
         let q = (-2.0 * p.ln()).sqrt();
-        x = (((((C[0] * q + C[1]) * q + C[2]) * q + C[3]) * q + C[4]) * q + C[5])
-            / ((((D[0] * q + D[1]) * q + D[2]) * q + D[3]) * q + 1.0);
+        x = C[0]
+            .mul_add(q, C[1])
+            .mul_add(q, C[2])
+            .mul_add(q, C[3])
+            .mul_add(q, C[4])
+            .mul_add(q, C[5])
+            / (D[0]
+                .mul_add(q, D[1])
+                .mul_add(q, D[2])
+                .mul_add(q, D[3])
+                .mul_add(q, 1.0));
     } else if p <= P_HIGH {
         // Central region
         let q = p - 0.5;
         let r = q * q;
-        x = (((((A[0] * r + A[1]) * r + A[2]) * r + A[3]) * r + A[4]) * r + A[5]) * q
-            / (((((B[0] * r + B[1]) * r + B[2]) * r + B[3]) * r + B[4]) * r + 1.0);
+        x = A[0]
+            .mul_add(r, A[1])
+            .mul_add(r, A[2])
+            .mul_add(r, A[3])
+            .mul_add(r, A[4])
+            .mul_add(r, A[5])
+            * q
+            / (B[0]
+                .mul_add(r, B[1])
+                .mul_add(r, B[2])
+                .mul_add(r, B[3])
+                .mul_add(r, B[4])
+                .mul_add(r, 1.0));
     } else {
         // Upper tail region
         let q = (-2.0 * (1.0 - p).ln()).sqrt();
-        x = -(((((C[0] * q + C[1]) * q + C[2]) * q + C[3]) * q + C[4]) * q + C[5])
-            / ((((D[0] * q + D[1]) * q + D[2]) * q + D[3]) * q + 1.0);
+        x = -(C[0]
+            .mul_add(q, C[1])
+            .mul_add(q, C[2])
+            .mul_add(q, C[3])
+            .mul_add(q, C[4])
+            .mul_add(q, C[5])
+            / D[0]
+                .mul_add(q, D[1])
+                .mul_add(q, D[2])
+                .mul_add(q, D[3])
+                .mul_add(q, 1.0));
     }
 
     x
@@ -185,7 +214,7 @@ pub fn norm_pdf_general(x: f64, mu: f64, sigma: f64) -> f64 {
 /// μ + σ Φ⁻¹(p)
 #[must_use]
 pub fn norm_ppf_general(p: f64, mu: f64, sigma: f64) -> f64 {
-    mu + sigma * norm_ppf(p)
+    sigma.mul_add(norm_ppf(p), mu)
 }
 
 #[cfg(test)]

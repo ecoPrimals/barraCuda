@@ -296,11 +296,11 @@ where
                 f_vals[worst_idx] = f_contract;
             } else {
                 // Shrinkage
+                let best_row = simplex[best_idx].clone();
                 for i in 0..=n {
                     if i != best_idx {
-                        for j in 0..n {
-                            simplex[i][j] = simplex[best_idx][j]
-                                + SIGMA * (simplex[i][j] - simplex[best_idx][j]);
+                        for (j, slot) in simplex[i].iter_mut().enumerate() {
+                            *slot = SIGMA.mul_add(*slot - best_row[j], best_row[j]);
                         }
                         simplex[i] = project_bounds(&simplex[i], bounds);
                         f_vals[i] = eval(&simplex[i], cache);
@@ -331,7 +331,7 @@ fn reflect(x: &[f64], centroid: &[f64], alpha: f64) -> Vec<f64> {
     centroid
         .iter()
         .zip(x.iter())
-        .map(|(&c, &xi)| c + alpha * (c - xi))
+        .map(|(&c, &xi)| alpha.mul_add(c - xi, c))
         .collect()
 }
 
@@ -350,7 +350,7 @@ mod tests {
     #[test]
     fn test_multi_start_quadratic() {
         // Simple quadratic: minimum at (2, 3)
-        let f = |x: &[f64]| (x[0] - 2.0).powi(2) + (x[1] - 3.0).powi(2);
+        let f = |x: &[f64]| (x[1] - 3.0).mul_add(x[1] - 3.0, (x[0] - 2.0).powi(2));
         let bounds = vec![(-10.0, 10.0), (-10.0, 10.0)];
 
         let (best, cache, results) = multi_start_nelder_mead(f, &bounds, 5, 500, 1e-8, 42).unwrap();
@@ -365,7 +365,8 @@ mod tests {
     #[test]
     fn test_multi_start_rosenbrock() {
         // Rosenbrock: global minimum at (1, 1)
-        let f = |x: &[f64]| (1.0 - x[0]).powi(2) + 100.0 * (x[1] - x[0].powi(2)).powi(2);
+        let f =
+            |x: &[f64]| (1.0 - x[0]).mul_add(1.0 - x[0], 100.0 * x[0].mul_add(-x[0], x[1]).powi(2));
         let bounds = vec![(-5.0, 5.0), (-5.0, 5.0)];
 
         let (best, cache, _) = multi_start_nelder_mead(f, &bounds, 10, 2000, 1e-8, 42).unwrap();
@@ -381,10 +382,12 @@ mod tests {
         // Rastrigin: many local minima, global min at (0, 0) with f=0
         let rastrigin = |x: &[f64]| {
             let n = x.len() as f64;
-            10.0 * n
-                + x.iter()
-                    .map(|&xi| xi.powi(2) - 10.0 * (2.0 * std::f64::consts::PI * xi).cos())
-                    .sum::<f64>()
+            10.0f64.mul_add(
+                n,
+                x.iter()
+                    .map(|&xi| xi.mul_add(xi, -(10.0 * (2.0 * std::f64::consts::PI * xi).cos())))
+                    .sum::<f64>(),
+            )
         };
 
         let bounds = vec![(-5.12, 5.12), (-5.12, 5.12)];
@@ -415,7 +418,7 @@ mod tests {
     #[test]
     fn test_multi_start_training_data() {
         // Verify training data extraction works
-        let f = |x: &[f64]| x[0].powi(2) + x[1].powi(2);
+        let f = |x: &[f64]| x[1].mul_add(x[1], x[0].powi(2));
         let bounds = vec![(-5.0, 5.0), (-5.0, 5.0)];
 
         let (_, cache, _) = multi_start_nelder_mead(f, &bounds, 5, 100, 1e-8, 42).unwrap();
@@ -426,7 +429,7 @@ mod tests {
 
         // Verify consistency: f(x) == y for all records
         for (xi, &yi) in x_data.iter().zip(y_data.iter()) {
-            let expected = xi[0].powi(2) + xi[1].powi(2);
+            let expected = xi[1].mul_add(xi[1], xi[0].powi(2));
             assert!(
                 (expected - yi).abs() < 1e-10,
                 "Inconsistent: f({xi:?}) = {expected} != {yi}"
@@ -485,7 +488,7 @@ mod tests {
             let x0 = x[0];
             // Two wells: one at x=1 (depth 0) and one at x=-3 (depth -1)
             let well1 = (x0 - 1.0).powi(2);
-            let well2 = (x0 + 3.0).powi(2) - 1.0;
+            let well2 = (x0 + 3.0).mul_add(x0 + 3.0, -1.0);
             well1.min(well2)
         };
 

@@ -28,13 +28,11 @@ pub async fn alibi_position(
 
     // Head-specific slopes (geometric sequence)
     let slopes: Vec<f32> = (0..num_heads)
-        .map(|h| 2.0_f32.powf(-(8.0 * (h + 1) as f32 / num_heads as f32)))
+        .map(|h| (-(8.0 * (h + 1) as f32 / num_heads as f32)).exp2())
         .collect();
 
     for b in 0..batch_size {
-        for h in 0..num_heads {
-            let slope = slopes[h];
-
+        for (h, &slope) in slopes.iter().enumerate() {
             for i in 0..seq_len {
                 for j in 0..seq_len {
                     let distance = (i as isize - j as isize).abs() as f32;
@@ -154,7 +152,7 @@ mod tests {
             .unwrap();
 
         // Slope for head 0: 2^(-8/1) = 2^-8 = 1/256
-        let slope = 2.0_f32.powf(-8.0);
+        let slope = 2.0_f32.powi(-8);
 
         // Position [0,0]: distance=0, bias=0
         assert!(output[0].abs() < 1e-6);

@@ -172,12 +172,12 @@ async fn test_expand_2d_broadcast_first_dim() {
 
             assert_eq!(result.shape(), &vec![4, 5]);
             for i in 0..4 {
-                for j in 0..5 {
+                for (j, &inp_j) in input_data.iter().enumerate() {
                     let idx = i * 5 + j;
                     assert!(
-                        (output[idx] - input_data[j]).abs() < 1e-6,
+                        (output[idx] - inp_j).abs() < 1e-6,
                         "Expected {} at [{i}, {j}], got {}",
-                        input_data[j],
+                        inp_j,
                         output[idx]
                     );
                 }
@@ -203,8 +203,7 @@ async fn test_expand_add_dimension() {
 
     assert_eq!(result.shape(), &vec![3, 5]);
     // Each row should repeat the same value: [1,1,1,1,1], [2,2,2,2,2], [3,3,3,3,3]
-    for i in 0..3 {
-        let expected_val = input_data[i];
+    for (i, &expected_val) in input_data.iter().enumerate() {
         for j in 0..5 {
             let idx = i * 5 + j;
             assert!(

@@ -1,6 +1,6 @@
 # barraCuda — Remaining Work
 
-**Version**: 0.3.9
+**Version**: 0.3.10
 **Date**: March 21, 2026
 **Status**: Sprint 17 — tracks all open work items for barraCuda evolution
 
@@ -39,10 +39,13 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   shortened doc paragraphs, eliminated needless `collect()`, read collections to avoid
   dead-store warnings
 - Domain-specific false positives selectively allowed in `Cargo.toml` with rationale:
-  `suboptimal_flops` (scientific `a*b+c`), `missing_const_for_fn` (const fn evolving),
+  `missing_const_for_fn` (const fn evolving),
   `suspicious_operation_groupings` (false positives for `x*x`), `future_not_send`
   (GPU async holds `!Send` wgpu types), `redundant_pub_crate`, `while_float`,
-  `significant_drop_tightening/in_scrutinee`, `tuple_array_conversions`, `large_stack_frames`
+  `significant_drop_tightening/in_scrutinee`, `large_stack_frames`
+- Promoted to `warn` (Sprint 20): `suboptimal_flops` (625 sites → `mul_add()`),
+  `use_self` (332 sites → `Self`), `tuple_array_conversions` (2 sites),
+  `needless_range_loop` (45 sites → iterators)
 
 ### IPC Method Naming Evolution
 - Wire method names evolved from `barracuda.{domain}.{operation}` to bare
@@ -791,7 +794,10 @@ gates green.
 - **`imprecise_flops`**: Evolved to `ln_1p()`, `to_radians()`, `hypot()`, `exp2()` for better numerical precision.
 - **`unnecessary_struct_initialization`**: Simplified struct construction patterns.
 - **`derive_partial_eq_without_eq`**: Added `Eq` where `PartialEq` was derived.
-- **`suboptimal_flops`**: Analyzed, kept as `allow` — `mul_add()` less readable than `a*b + c` in scientific code.
+- **`suboptimal_flops`**: **Promoted to `warn`** — all 625 sites (415 lib + 210 test) evolved to `mul_add()` for FMA precision. SVD rank-deficient threshold relaxed `1e-10` → `1e-7`.
+- **`use_self`**: **Promoted to `warn`** — all 332 sites auto-fixed to `Self`.
+- **`tuple_array_conversions`**: **Promoted to `warn`** — 2 sites evolved to `<[T; N]>::from()`.
+- **`needless_range_loop`**: **Promoted to `warn`** — all 45 sites evolved to idiomatic iterators.
 
 ### `if_same_then_else` (7 sites fixed, lint promoted to warn)
 - `qr.rs`: Merged identical below-diagonal and small-value cleanup branches.

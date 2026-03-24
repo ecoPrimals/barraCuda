@@ -77,7 +77,7 @@ pub async fn causal_attention(
                 let mut scores = vec![f32::NEG_INFINITY; seq_len];
 
                 // Only attend to current and previous positions (causal mask)
-                for j in 0..=i {
+                for (j, score_slot) in scores[..=i].iter_mut().enumerate() {
                     let mut score = 0.0;
                     for d in 0..head_dim {
                         let q_idx = b * num_heads * seq_len * head_dim
@@ -90,7 +90,7 @@ pub async fn causal_attention(
                             + d;
                         score += query[q_idx] * key[k_idx];
                     }
-                    scores[j] = score / scale;
+                    *score_slot = score / scale;
                 }
 
                 // Softmax (only over valid positions due to -inf masking)
@@ -115,12 +115,12 @@ pub async fn causal_attention(
                 // Apply to values
                 for d in 0..head_dim {
                     let mut weighted_sum = 0.0;
-                    for j in 0..seq_len {
+                    for (j, &s_j) in scores.iter().enumerate() {
                         let v_idx = b * num_heads * seq_len * head_dim
                             + h * seq_len * head_dim
                             + j * head_dim
                             + d;
-                        weighted_sum += scores[j] * value[v_idx];
+                        weighted_sum += s_j * value[v_idx];
                     }
                     let out_idx = b * num_heads * seq_len * head_dim
                         + h * seq_len * head_dim

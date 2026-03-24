@@ -68,10 +68,10 @@ mod tests {
         assert_eq!(result.len(), 4);
         // Verify: M * M^{-1} ≈ I
         let prod = [
-            4.0 * result[0] + 7.0 * result[2],
-            4.0 * result[1] + 7.0 * result[3],
-            2.0 * result[0] + 6.0 * result[2],
-            2.0 * result[1] + 6.0 * result[3],
+            4.0f32.mul_add(result[0], 7.0 * result[2]),
+            4.0f32.mul_add(result[1], 7.0 * result[3]),
+            2.0f32.mul_add(result[0], 6.0 * result[2]),
+            2.0f32.mul_add(result[1], 6.0 * result[3]),
         ];
         assert!((prod[0] - 1.0).abs() < 0.01);
         assert!(prod[1].abs() < 0.01);

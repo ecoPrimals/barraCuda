@@ -204,8 +204,10 @@ mod tests {
         let pi = std::f64::consts::PI;
         let mut data = vec![0.0f64; (n * 2) as usize];
         for i in 0..n as usize {
-            data[i * 2] = (2.0 * pi * i as f64 / n as f64).sin()
-                + 0.5 * (4.0 * pi * i as f64 / n as f64).cos();
+            data[i * 2] = 0.5f64.mul_add(
+                (4.0 * pi * i as f64 / n as f64).cos(),
+                (2.0 * pi * i as f64 / n as f64).sin(),
+            );
         }
         let original = data.clone();
 

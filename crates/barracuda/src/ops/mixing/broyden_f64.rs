@@ -445,7 +445,7 @@ impl BroydenMixer {
             let dx_k = &self.dx_history[k];
             let df_k = &self.df_history[k];
             for ((r, &dx), &df) in result.iter_mut().zip(dx_k.iter()).zip(df_k.iter()) {
-                *r -= gamma_k * (dx + alpha * df);
+                *r -= gamma_k * alpha.mul_add(df, dx);
             }
         }
 
@@ -487,9 +487,7 @@ fn solve_symmetric_positive(m: usize, a: &mut [f64], b: &mut [f64]) {
         }
         if s <= 0.0 {
             // Not positive definite — zero out remaining gammas
-            for i in j..m {
-                b[i] = 0.0;
-            }
+            b[j..m].fill(0.0);
             return;
         }
         let ljj = s.sqrt();

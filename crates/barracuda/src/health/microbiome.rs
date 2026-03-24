@@ -123,7 +123,7 @@ pub fn antibiotic_perturbation(
 #[must_use]
 pub fn gut_serotonin_production(tryptophan_mg: f64, microbiome_factor: f64) -> f64 {
     let base_rate = 0.05 * tryptophan_mg;
-    let microbial_boost = 1.0 + 0.6 * microbiome_factor;
+    let microbial_boost = 0.6f64.mul_add(microbiome_factor, 1.0);
     base_rate * microbial_boost
 }
 

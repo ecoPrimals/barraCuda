@@ -30,8 +30,8 @@ impl TensorBuffer {
     /// Borrow the underlying `wgpu::Buffer`.
     pub fn as_ref(&self) -> &wgpu::Buffer {
         match self {
-            TensorBuffer::Owned(buf) => buf.as_ref(),
-            TensorBuffer::Pooled(buf) => buf.buffer(),
+            Self::Owned(buf) => buf.as_ref(),
+            Self::Pooled(buf) => buf.buffer(),
         }
     }
 
@@ -41,8 +41,8 @@ impl TensorBuffer {
     /// shared `Arc` ownership (`GpuTensorStorage::from_tensor`).
     pub fn try_arc(&self) -> Option<Arc<wgpu::Buffer>> {
         match self {
-            TensorBuffer::Owned(arc) => Some(Arc::clone(arc)),
-            TensorBuffer::Pooled(_) => None,
+            Self::Owned(arc) => Some(Arc::clone(arc)),
+            Self::Pooled(_) => None,
         }
     }
 }
@@ -51,8 +51,8 @@ impl Clone for TensorBuffer {
     /// Cheap clone: increments an `Arc` reference count, never copies GPU memory.
     fn clone(&self) -> Self {
         match self {
-            TensorBuffer::Owned(buf) => TensorBuffer::Owned(Arc::clone(buf)),
-            TensorBuffer::Pooled(buf) => TensorBuffer::Pooled(Arc::clone(buf)),
+            Self::Owned(buf) => Self::Owned(Arc::clone(buf)),
+            Self::Pooled(buf) => Self::Pooled(Arc::clone(buf)),
         }
     }
 }

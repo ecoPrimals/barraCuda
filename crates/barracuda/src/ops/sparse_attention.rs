@@ -73,12 +73,12 @@ pub async fn sparse_attention(
 
                 for d in 0..head_dim {
                     let mut weighted_sum = 0.0;
-                    for j in 0..seq_len {
+                    for (j, &score) in scores.iter().enumerate() {
                         let v_idx = b * num_heads * seq_len * head_dim
                             + h * seq_len * head_dim
                             + j * head_dim
                             + d;
-                        weighted_sum += scores[j] * value[v_idx];
+                        weighted_sum += score * value[v_idx];
                     }
                     let out_idx = b * num_heads * seq_len * head_dim
                         + h * seq_len * head_dim

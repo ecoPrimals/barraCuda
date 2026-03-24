@@ -5,6 +5,32 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.10] — 2026-03-21
+
+### Changed — Sprint 20: FMA Evolution & Lint Promotion (Mar 21 2026)
+
+- **FMA evolution: 625 `suboptimal_flops` sites → `mul_add()`** — All `a*b + c` patterns across
+  library (415) and tests (210) evolved to `f64::mul_add()` / `f32::mul_add()` for fused
+  multiply-add precision (single rounding instead of two). Bessel functions, RK45/RK4 solvers,
+  ODE generic integrators, normal distribution, Jacobi eigensolvers, Crank-Nicolson PDE,
+  polynomial evaluations, MD observables, and all scientific kernels now use hardware FMA.
+  SVD rank-deficient test threshold relaxed from `1e-10` to `1e-7` to accommodate different
+  FMA rounding path.
+- **4 clippy lints promoted from `allow` to `warn`** —
+  `suboptimal_flops` (415 → 0), `use_self` (332 → 0, auto-fixed to `Self`),
+  `tuple_array_conversions` (2 → 0, evolved to `<[T; N]>::from()`),
+  `needless_range_loop` (45 → 0, all evolved to idiomatic iterators with `.enumerate()`,
+  `.iter_mut()`, `.zip()`).
+- **45 `needless_range_loop` sites evolved to idiomatic iterators** — Multi-array indexed
+  `for i in 0..n { a[i] = f(b[i]) }` patterns refactored to `.zip()`, `.enumerate()`,
+  slice iteration across QR, SVD, CSR, Cholesky, attention, ESN, Nautilus evolution,
+  Nelder-Mead, L-BFGS, Metropolis, conv2d, bootstrap, and more.
+
+### Stats
+- 232 files changed, 1,250 insertions, 989 deletions
+- 3,623+ tests pass, zero clippy errors on lib + tests
+- All quality gates green
+
 ## [0.3.9] — 2026-03-21
 
 ### Changed — Deep Debt Solutions Sprint 19: Idiomatic Rust Evolution (Mar 21 2026)

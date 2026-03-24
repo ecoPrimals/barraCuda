@@ -93,14 +93,13 @@ impl MelScale {
         // Build filterbank
         let mut filterbank = vec![vec![0.0f32; self.n_freqs]; self.n_mels];
         for m in 0..self.n_mels {
-            for f in 0..self.n_freqs {
+            for (f, fb) in filterbank[m].iter_mut().enumerate() {
                 let freq = f as f32 * freq_bin;
 
                 if freq >= mel_points[m] && freq <= mel_points[m + 1] {
-                    filterbank[m][f] = (freq - mel_points[m]) / (mel_points[m + 1] - mel_points[m]);
+                    *fb = (freq - mel_points[m]) / (mel_points[m + 1] - mel_points[m]);
                 } else if freq >= mel_points[m + 1] && freq <= mel_points[m + 2] {
-                    filterbank[m][f] =
-                        (mel_points[m + 2] - freq) / (mel_points[m + 2] - mel_points[m + 1]);
+                    *fb = (mel_points[m + 2] - freq) / (mel_points[m + 2] - mel_points[m + 1]);
                 }
             }
         }

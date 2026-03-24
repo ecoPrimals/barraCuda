@@ -155,8 +155,8 @@ where
 
     for _ in 0..n_bootstrap {
         // Resample with replacement
-        for i in 0..n {
-            resample[i] = data[rng.usize_range(n)];
+        for slot in &mut resample {
+            *slot = data[rng.usize_range(n)];
         }
         bootstrap_stats.push(statistic(&resample));
     }

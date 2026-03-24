@@ -56,7 +56,7 @@ impl GemmParams {
     ) -> Self {
         let alpha_bits = alpha.to_bits();
         let beta_bits = beta.to_bits();
-        GemmParams {
+        Self {
             m,
             k,
             n,

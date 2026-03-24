@@ -341,7 +341,7 @@ mod tests {
         let op = Correlation::new(device).unwrap();
 
         let x: Vec<f32> = (0..100).map(|i| i as f32).collect();
-        let y: Vec<f32> = (0..100).map(|i| i as f32 * 2.0 + 1.0).collect();
+        let y: Vec<f32> = (0..100).map(|i| (i as f32).mul_add(2.0, 1.0)).collect();
 
         let r = op.correlate(&x, &y).unwrap();
         assert!((r - 1.0).abs() < 0.001, "Expected r≈1.0, got {r}");

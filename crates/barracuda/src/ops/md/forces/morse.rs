@@ -335,7 +335,12 @@ mod tests {
         let force_data = forces.to_vec().unwrap();
 
         // At equilibrium, force should be very small
-        let f0_mag = (force_data[0].powi(2) + force_data[1].powi(2) + force_data[2].powi(2)).sqrt();
+        let f0_mag = force_data[2]
+            .mul_add(
+                force_data[2],
+                force_data[1].mul_add(force_data[1], force_data[0].powi(2)),
+            )
+            .sqrt();
         println!("✅ Morse equilibrium force: |F| = {f0_mag} (expect ≈0)");
     }
 }

@@ -139,7 +139,7 @@ impl RdfHistogramF64 {
         let mut r = Vec::with_capacity(n_bins);
         let mut gr = Vec::with_capacity(n_bins);
 
-        for i in 0..n_bins {
+        for (i, &hist_bin) in hist.iter().enumerate().take(n_bins) {
             let r_lo = i as f64 * dr;
             let r_hi = (i + 1) as f64 * dr;
             let r_mid = f64::midpoint(r_lo, r_hi);
@@ -148,7 +148,7 @@ impl RdfHistogramF64 {
 
             r.push(r_mid);
             gr.push(if expected > 0.0 {
-                hist[i] as f64 / expected
+                hist_bin as f64 / expected
             } else {
                 0.0
             });

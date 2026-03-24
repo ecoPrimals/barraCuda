@@ -113,7 +113,8 @@ impl LegendreF64 {
 
         for k in 1..n {
             let k_f64 = k as f64;
-            let p_next = ((2.0 * k_f64 + 1.0) * x * p_curr - k_f64 * p_prev) / (k_f64 + 1.0);
+            let p_next =
+                (2.0f64.mul_add(k_f64, 1.0) * x).mul_add(p_curr, -(k_f64 * p_prev)) / (k_f64 + 1.0);
             p_prev = p_curr;
             p_curr = p_next;
         }
@@ -148,7 +149,7 @@ impl LegendreF64 {
             return Self::legendre_scalar(n, x);
         }
 
-        let sin_sq = 1.0 - x * x;
+        let sin_sq = x.mul_add(-x, 1.0);
         if sin_sq <= 0.0 {
             return 0.0;
         }
@@ -178,7 +179,8 @@ impl LegendreF64 {
         for l in (m + 2)..=n {
             let l_f64 = l as f64;
             let m_f64 = m as f64;
-            let pl = ((2.0 * l_f64 - 1.0) * x * pl_minus1 - (l_f64 + m_f64 - 1.0) * pl_minus2)
+            let pl = (2.0f64.mul_add(l_f64, -1.0) * x)
+                .mul_add(pl_minus1, -((l_f64 + m_f64 - 1.0) * pl_minus2))
                 / (l_f64 - m_f64);
             pl_minus2 = pl_minus1;
             pl_minus1 = pl;
@@ -304,7 +306,10 @@ mod tests {
         let result = leg.legendre(&x, 2)?;
 
         // P₂(x) = (3x² - 1)/2
-        let expected: Vec<f64> = x.iter().map(|&xi| (3.0 * xi * xi - 1.0) / 2.0).collect();
+        let expected: Vec<f64> = x
+            .iter()
+            .map(|&xi| (3.0 * xi).mul_add(xi, -1.0) / 2.0)
+            .collect();
 
         for (i, &val) in result.iter().enumerate() {
             assert!(
@@ -330,7 +335,7 @@ mod tests {
 
         // P₁¹(x) = -√(1-x²) [Condon-Shortley]
         for (i, &val) in result.iter().enumerate() {
-            let expected = -(1.0 - x[i] * x[i]).sqrt();
+            let expected = -x[i].mul_add(-x[i], 1.0).sqrt();
             assert!(
                 (val - expected).abs() < 1e-10,
                 "P₁¹({}) = {}, expected {}",

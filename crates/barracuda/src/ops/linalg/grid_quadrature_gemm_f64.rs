@@ -490,7 +490,9 @@ mod tests {
         let w: Vec<f64> = (0..batch * grid)
             .map(|i| ((i as f64) * 0.02).cos())
             .collect();
-        let quad_weights: Vec<f64> = (0..grid).map(|i| 1.0 / (1.0 + i as f64 * 0.1)).collect();
+        let quad_weights: Vec<f64> = (0..grid)
+            .map(|i| 1.0 / (i as f64).mul_add(0.1, 1.0))
+            .collect();
 
         let gemm = GridQuadratureGemm::new(device, batch, n, grid).unwrap();
         let result = gemm.execute(&phi, &w, &quad_weights).unwrap();

@@ -126,7 +126,7 @@ impl SoilParams {
     /// Water content θ(h) via van Genuchten.
     #[must_use]
     pub fn theta(&self, h: f64) -> f64 {
-        self.theta_r + (self.theta_s - self.theta_r) * self.effective_saturation(h)
+        (self.theta_s - self.theta_r).mul_add(self.effective_saturation(h), self.theta_r)
     }
 
     /// Specific moisture capacity C(h) = dθ/dh via van Genuchten.
@@ -296,12 +296,15 @@ pub fn solve_richards(
 
                 a_tri[i] = -0.5 * dt * coeff_l;
                 c_tri[i] = -0.5 * dt * coeff_r;
-                b_tri[i] = ci_max + 0.5 * dt * (coeff_l + coeff_r);
+                b_tri[i] = (0.5 * dt).mul_add(coeff_l + coeff_r, ci_max);
 
-                d_vec[i] = ci_max * h_old[i] + 0.5 * dt * coeff_l * h_old[i - 1]
-                    - 0.5 * dt * (coeff_l + coeff_r) * h_old[i]
-                    + 0.5 * dt * coeff_r * h_old[i + 1]
-                    + dt * (k_half[i] - k_half[i - 1]) / dz;
+                d_vec[i] = (0.5 * dt * coeff_r).mul_add(
+                    h_old[i + 1],
+                    (0.5 * dt * (coeff_l + coeff_r)).mul_add(
+                        -h_old[i],
+                        ci_max * h_old[i] + 0.5 * dt * coeff_l * h_old[i - 1],
+                    ),
+                ) + dt * (k_half[i] - k_half[i - 1]) / dz;
 
                 d_vec[i] += theta_old[i] - soil.theta(h[i]);
             }
@@ -314,10 +317,10 @@ pub fn solve_richards(
                 RichardsBc::Flux(q_top) => {
                     let coeff_r = k_half[0] / dz2;
                     let ci_max = c_buf[0].max(MIN_CAPACITY);
-                    b_tri[0] = ci_max + 0.5 * dt * coeff_r;
+                    b_tri[0] = (0.5 * dt).mul_add(coeff_r, ci_max);
                     c_tri[0] = -0.5 * dt * coeff_r;
-                    d_vec[0] = ci_max * h_old[0] - 0.5 * dt * coeff_r * h_old[0]
-                        + 0.5 * dt * coeff_r * h_old[1]
+                    d_vec[0] = (0.5 * dt * coeff_r)
+                        .mul_add(h_old[1], ci_max * h_old[0] - 0.5 * dt * coeff_r * h_old[0])
                         + dt * q_top / dz;
                 }
             }
@@ -331,10 +334,11 @@ pub fn solve_richards(
                     let coeff_l = k_half[n - 2] / dz2;
                     let ci_max = c_buf[n - 1].max(MIN_CAPACITY);
                     a_tri[n - 1] = -0.5 * dt * coeff_l;
-                    b_tri[n - 1] = ci_max + 0.5 * dt * coeff_l;
-                    d_vec[n - 1] = ci_max * h_old[n - 1] + 0.5 * dt * coeff_l * h_old[n - 2]
-                        - 0.5 * dt * coeff_l * h_old[n - 1]
-                        + dt * q_bot / dz;
+                    b_tri[n - 1] = (0.5 * dt).mul_add(coeff_l, ci_max);
+                    d_vec[n - 1] = (0.5 * dt * coeff_l).mul_add(
+                        -h_old[n - 1],
+                        ci_max * h_old[n - 1] + 0.5 * dt * coeff_l * h_old[n - 2],
+                    ) + dt * q_bot / dz;
                 }
             }
 
@@ -376,15 +380,15 @@ fn thomas_solve(a: &[f64], b: &[f64], c: &[f64], d: &[f64]) -> Vec<f64> {
     d_star[0] = d[0] / b[0];
 
     for i in 1..n {
-        let m = b[i] - a[i] * c_star[i - 1];
+        let m = a[i].mul_add(-c_star[i - 1], b[i]);
         c_star[i] = c[i] / m;
-        d_star[i] = (d[i] - a[i] * d_star[i - 1]) / m;
+        d_star[i] = a[i].mul_add(-d_star[i - 1], d[i]) / m;
     }
 
     // Back substitution
     x[n - 1] = d_star[n - 1];
     for i in (0..n - 1).rev() {
-        x[i] = d_star[i] - c_star[i] * x[i + 1];
+        x[i] = c_star[i].mul_add(-x[i + 1], d_star[i]);
     }
 
     x

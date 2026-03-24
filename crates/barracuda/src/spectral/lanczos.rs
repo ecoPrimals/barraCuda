@@ -287,8 +287,8 @@ mod tests {
         evals.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
         let trace: f64 = 2.0 + 3.0;
-        let det: f64 = 2.0 * 3.0 - 1.0;
-        let disc = (trace * trace - 4.0 * det).sqrt();
+        let det: f64 = 2.0f64.mul_add(3.0, -1.0);
+        let disc = trace.mul_add(trace, -(4.0 * det)).sqrt();
         let half_trace = trace * 0.5;
         let half_disc = disc * 0.5;
         let expected_min = half_trace - half_disc;

@@ -98,7 +98,7 @@ impl BornMayerForceF64 {
             for j in (i + 1)..n {
                 let pj = [positions[j * 3], positions[j * 3 + 1], positions[j * 3 + 2]];
                 let rv = [pj[0] - pi[0], pj[1] - pi[1], pj[2] - pi[2]];
-                let r_sq = rv[0] * rv[0] + rv[1] * rv[1] + rv[2] * rv[2];
+                let r_sq = rv[2].mul_add(rv[2], rv[0].mul_add(rv[0], rv[1] * rv[1]));
                 if r_sq > cutoff_sq || r_sq < 1e-20 {
                     continue;
                 }
@@ -213,7 +213,8 @@ impl BornMayerForceF64 {
                 let rhoj = rho_params[j];
 
                 let r_vec = [pj[0] - pi[0], pj[1] - pi[1], pj[2] - pi[2]];
-                let r_sq = r_vec[0] * r_vec[0] + r_vec[1] * r_vec[1] + r_vec[2] * r_vec[2];
+                let r_sq =
+                    r_vec[2].mul_add(r_vec[2], r_vec[0].mul_add(r_vec[0], r_vec[1] * r_vec[1]));
 
                 if r_sq > cutoff_sq || r_sq < 1e-20 {
                     continue;
@@ -266,7 +267,8 @@ impl BornMayerForceF64 {
                 let rhoj = rho_params[j];
 
                 let r_vec = [pj[0] - pi[0], pj[1] - pi[1], pj[2] - pi[2]];
-                let r_sq = r_vec[0] * r_vec[0] + r_vec[1] * r_vec[1] + r_vec[2] * r_vec[2];
+                let r_sq =
+                    r_vec[2].mul_add(r_vec[2], r_vec[0].mul_add(r_vec[0], r_vec[1] * r_vec[1]));
 
                 if r_sq > cutoff_sq || r_sq < 1e-20 {
                     continue;

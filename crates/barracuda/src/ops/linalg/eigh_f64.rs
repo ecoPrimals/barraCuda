@@ -150,8 +150,8 @@ fn eigh_2x2(a: &[f64]) -> EighDecompositionF64 {
     let a11 = a[3];
 
     let trace = a00 + a11;
-    let det = a00 * a11 - a01 * a01;
-    let disc = (trace * trace - 4.0 * det).max(0.0).sqrt();
+    let det = a00.mul_add(a11, -(a01 * a01));
+    let disc = trace.mul_add(trace, -(4.0 * det)).max(0.0).sqrt();
 
     let l0 = (trace - disc) * 0.5;
     let l1 = (trace + disc) * 0.5;
@@ -317,7 +317,7 @@ fn ql_implicit(diag_in: &[f64], off_in: &[f64], n: usize) -> (Vec<f64>, Vec<f64>
                 s = f / r;
                 c = g / r;
                 let g_new = d[i + 1] - p;
-                let r2 = (d[i] - g_new) * s + 2.0 * c * b;
+                let r2 = (d[i] - g_new).mul_add(s, 2.0 * c * b);
                 p = s * r2;
                 d[i + 1] = g_new + p;
                 g = c * r2 - b;
@@ -384,7 +384,7 @@ mod tests {
         let mut a = vec![0.0; n * n];
         for i in 0..n {
             for j in i..n {
-                let v = rng.uniform() * 10.0 - 5.0;
+                let v = rng.uniform().mul_add(10.0, -5.0);
                 a[i * n + j] = v;
                 a[j * n + i] = v;
             }

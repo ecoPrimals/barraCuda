@@ -17,7 +17,7 @@ impl Tensor {
     /// # Errors
     /// Returns [`Err`] if buffer allocation fails, buffer write fails, or the
     /// element-wise multiply operation fails (e.g., device lost, out of memory).
-    pub fn mul_scalar(&self, scalar: f32) -> Result<Tensor> {
+    pub fn mul_scalar(&self, scalar: f32) -> Result<Self> {
         let scalar_tensor = self.broadcast_scalar(scalar)?;
         self.mul(&scalar_tensor)
     }
@@ -30,7 +30,7 @@ impl Tensor {
     /// # Errors
     /// Returns [`Err`] if buffer allocation fails, buffer write fails, or the
     /// element-wise add operation fails (e.g., device lost, out of memory).
-    pub fn add_scalar(&self, scalar: f32) -> Result<Tensor> {
+    pub fn add_scalar(&self, scalar: f32) -> Result<Self> {
         let scalar_tensor = self.broadcast_scalar(scalar)?;
         self.add(&scalar_tensor)
     }
@@ -43,13 +43,13 @@ impl Tensor {
     /// # Errors
     /// Returns [`Err`] if `mul_scalar(1.0 / scalar)` fails (buffer allocation,
     /// buffer write, or multiply operation failure).
-    pub fn div_scalar(&self, scalar: f32) -> Result<Tensor> {
+    pub fn div_scalar(&self, scalar: f32) -> Result<Self> {
         self.mul_scalar(1.0 / scalar)
     }
 
-    fn broadcast_scalar(&self, scalar: f32) -> Result<Tensor> {
+    fn broadcast_scalar(&self, scalar: f32) -> Result<Self> {
         let data = vec![scalar; self.len()];
-        Tensor::from_vec_on_sync(data, self.shape.clone(), self.device.clone())
+        Self::from_vec_on_sync(data, self.shape.clone(), self.device.clone())
     }
 
     // ── Random generation ────────────────────────────────────────────────────

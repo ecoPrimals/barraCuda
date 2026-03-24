@@ -411,7 +411,7 @@ impl YukawaCellListF64 {
                         let dy = self.pbc_delta(yj - yi, params.box_size[1]);
                         let dz = self.pbc_delta(zj - zi, params.box_size[2]);
 
-                        let r_sq = dx * dx + dy * dy + dz * dz + eps_sq;
+                        let r_sq = dz.mul_add(dz, dx.mul_add(dx, dy * dy)) + eps_sq;
                         if r_sq > cutoff_sq {
                             continue;
                         }
@@ -449,7 +449,7 @@ impl YukawaCellListF64 {
     }
 
     fn pbc_delta(&self, delta: f64, box_size: f64) -> f64 {
-        delta - box_size * (delta / box_size).round()
+        box_size.mul_add(-(delta / box_size).round(), delta)
     }
 
     fn get_neighbor_cells(&self, cell_idx: usize, params: &CellListParams) -> Vec<usize> {

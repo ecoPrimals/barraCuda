@@ -69,7 +69,7 @@ pub fn gradient_1d(f: &[f64], dx: f64) -> Vec<f64> {
 
     // 2nd-order forward difference at start
     // Derived from Taylor expansion: f'(x) ≈ (-3f(x) + 4f(x+h) - f(x+2h)) / (2h)
-    grad[0] = (-3.0 * f[0] + 4.0 * f[1] - f[2]) / (2.0 * dx);
+    grad[0] = ((-3.0f64).mul_add(f[0], 4.0 * f[1]) - f[2]) / (2.0 * dx);
 
     // Central difference for interior points (2nd-order)
     for i in 1..n - 1 {
@@ -78,7 +78,7 @@ pub fn gradient_1d(f: &[f64], dx: f64) -> Vec<f64> {
 
     // 2nd-order backward difference at end
     // Derived from Taylor expansion: f'(x) ≈ (3f(x) - 4f(x-h) + f(x-2h)) / (2h)
-    grad[n - 1] = (3.0 * f[n - 1] - 4.0 * f[n - 2] + f[n - 3]) / (2.0 * dx);
+    grad[n - 1] = (3.0f64.mul_add(f[n - 1], -(4.0 * f[n - 2])) + f[n - 3]) / (2.0 * dx);
 
     grad
 }

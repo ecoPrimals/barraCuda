@@ -203,7 +203,7 @@ impl Tensor {
     ///
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
-    pub fn l1_loss_wgsl(self, targets: Tensor) -> Result<Self> {
+    pub fn l1_loss_wgsl(self, targets: Self) -> Result<Self> {
         L1Loss::new(self, targets).execute()
     }
 }

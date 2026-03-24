@@ -129,14 +129,14 @@ mod tests {
     #[test]
     fn test_sensor_calibration_cpu() {
         let raw = 15_000.0_f64;
-        let vwc = 2e-13 * raw.powi(3) - 4e-9 * raw.powi(2) + 4e-5 * raw - 0.0677;
+        let vwc =
+            4e-5f64.mul_add(raw, 2e-13f64.mul_add(raw.powi(3), -(4e-9 * raw.powi(2)))) - 0.0677;
         assert!(vwc > 0.0 && vwc < 1.0, "VWC={vwc} out of range");
     }
 
     #[test]
     fn test_hargreaves_et0_cpu() {
-        use std::f64::consts::PI;
-        let lat_rad = 50.8 * PI / 180.0;
+        let lat_rad = 50.8_f64.to_radians();
         let et0 = hargreaves_et0_cpu(21.5, 12.3, lat_rad, 187.0);
         assert!(
             et0 > 1.0 && et0 < 10.0,

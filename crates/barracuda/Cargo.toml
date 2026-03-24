@@ -120,22 +120,17 @@ explicit_iter_loop = "warn"
 used_underscore_binding = "warn"
 # Promoted from allow — all 7 sites fixed.
 if_same_then_else = "warn"
-# Remaining bulk-allow — 56 needless_range_loop sites use multi-array indexed
-# access patterns that are clearer with explicit indexing in scientific code.
-needless_range_loop = "allow"
+needless_range_loop = "warn"
 # Nursery — blanket-enabled above. Suppressions for scientific GPU compute:
-# suboptimal_flops: 424 sites use canonical math form (a*b + c). Evolving
-# incrementally to mul_add() for FMA accuracy. Test code already evolved.
-suboptimal_flops = "allow"
+suboptimal_flops = "warn"
 # missing_const_for_fn: 911 sites — const fn propagation is evolving in Rust;
 # many functions use allocations or traits that aren't const-stable yet.
 missing_const_for_fn = "allow"
 # suspicious_operation_groupings: false positives for x*x (squaring), dx*dx
 # (Courant number), pe*pe/(pe+s) — correct mathematical idioms.
 suspicious_operation_groupings = "allow"
-# use_self: 333 sites — wgpu/physics types use explicit type names for clarity
-# in complex generic contexts. Evolving incrementally.
-use_self = "allow"
+# Promoted from allow — all 332 sites evolved to Self.
+use_self = "warn"
 # future_not_send: GPU async futures hold !Send wgpu types by design.
 future_not_send = "allow"
 # redundant_pub_crate: pub(crate) in private modules is intentional API surface.
@@ -146,8 +141,8 @@ while_float = "allow"
 # hold wgpu guards that must live through the await point.
 significant_drop_tightening = "allow"
 significant_drop_in_scrutinee = "allow"
-# tuple_array_conversions: explicit tuple→array is clearer in physics code.
-tuple_array_conversions = "allow"
+# Promoted from allow — all 2 sites evolved to <[T; N]>::from().
+tuple_array_conversions = "warn"
 # large_stack_frames: test framework artifact — the auto-generated test main
 # allocates [&TestDescAndFn; 3466] on the stack. Not production code.
 large_stack_frames = "allow"

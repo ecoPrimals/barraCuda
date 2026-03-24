@@ -167,11 +167,13 @@ pub fn latin_hypercube(
         // For each sample, place it uniformly within its assigned interval
         for i in 0..n_samples {
             let interval_idx = perm[i];
-            let interval_lo = lo + interval_idx as f64 * interval_width;
+            let interval_lo = (interval_idx as f64).mul_add(interval_width, lo);
             let interval_hi = interval_lo + interval_width;
 
             // Uniform random within interval
-            samples[i][d] = interval_lo + rng.next_f64() * (interval_hi - interval_lo);
+            samples[i][d] = rng
+                .next_f64()
+                .mul_add(interval_hi - interval_lo, interval_lo);
         }
     }
 
@@ -202,7 +204,7 @@ pub fn random_uniform(n_samples: usize, bounds: &[(f64, f64)], seed: u64) -> Vec
             (0..n_dims)
                 .map(|d| {
                     let (lo, hi) = bounds[d];
-                    lo + rng.next_f64() * (hi - lo)
+                    rng.next_f64().mul_add(hi - lo, lo)
                 })
                 .collect()
         })

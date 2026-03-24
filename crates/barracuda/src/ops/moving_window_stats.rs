@@ -297,7 +297,7 @@ impl MovingWindowStats {
             let sum: f32 = window.iter().sum();
             let sum_sq: f32 = window.iter().map(|v| v * v).sum();
             let m = sum / w;
-            let v = (sum_sq / w - m * m).max(0.0);
+            let v = m.mul_add(-m, sum_sq / w).max(0.0);
 
             let lo = window.iter().copied().fold(f32::INFINITY, f32::min);
             let hi = window.iter().copied().fold(f32::NEG_INFINITY, f32::max);

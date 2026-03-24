@@ -188,7 +188,7 @@ impl EsnClassifier {
 
         let mut new_state = vec![0.0; n];
 
-        for i in 0..n {
+        for (i, new_state_i) in new_state.iter_mut().enumerate() {
             let mut sum = 0.0;
             for (j, &w) in self.w_in[i * self.config.input_size..(i + 1) * self.config.input_size]
                 .iter()
@@ -196,14 +196,14 @@ impl EsnClassifier {
             {
                 sum += w * input[j];
             }
-            for j in 0..n {
-                sum += self.w_res[i * n + j] * self.state[j];
+            for (&w, &s_j) in self.w_res[i * n..(i + 1) * n].iter().zip(self.state.iter()) {
+                sum += w * s_j;
             }
-            new_state[i] = sum.tanh();
+            *new_state_i = sum.tanh();
         }
 
-        for i in 0..n {
-            self.state[i] = (1.0 - leak) * self.state[i] + leak * new_state[i];
+        for (s_i, &new_i) in self.state.iter_mut().zip(new_state.iter()) {
+            *s_i = (1.0 - leak).mul_add(*s_i, leak * new_i);
         }
 
         Ok(())

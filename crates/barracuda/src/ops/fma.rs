@@ -176,7 +176,7 @@ impl Tensor {
     /// # Errors
     /// Returns [`Err`] if tensor shapes do not match, buffer allocation fails,
     /// GPU dispatch fails, or the device is lost.
-    pub fn fma(&self, other: &Tensor, addend: &Tensor) -> Result<Self> {
+    pub fn fma(&self, other: &Self, addend: &Self) -> Result<Self> {
         Fma::new(self.clone(), other.clone(), addend.clone())?.execute()
     }
 
@@ -185,7 +185,7 @@ impl Tensor {
     /// # Errors
     /// Returns [`Err`] if tensor shapes do not match, buffer allocation fails,
     /// GPU dispatch fails, or the device is lost.
-    pub fn mul_add(&self, multiplier: &Tensor, addend: &Tensor) -> Result<Self> {
+    pub fn mul_add(&self, multiplier: &Self, addend: &Self) -> Result<Self> {
         self.fma(multiplier, addend)
     }
 }
@@ -276,7 +276,7 @@ mod tests {
 
         // Verify first few and last few
         for i in 0..10 {
-            let expected = a_data[i] * b_data[i] + c_data[i];
+            let expected = a_data[i].mul_add(b_data[i], c_data[i]);
             assert!(
                 (result[i] - expected).abs() < 1e-4,
                 "Mismatch at {}: {} vs {}",

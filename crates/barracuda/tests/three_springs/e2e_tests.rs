@@ -46,7 +46,7 @@ mod e2e {
             (50.0, 50.0, 0.30),
         ];
         let targets: Vec<(f64, f64)> = (0..10)
-            .flat_map(|i| (0..10).map(move |j| (i as f64 * 10.0, j as f64 * 10.0)))
+            .flat_map(|i| (0..10).map(move |j| (f64::from(i) * 10.0, f64::from(j) * 10.0)))
             .collect();
         let model = VariogramModel::Spherical {
             nugget: 0.001,

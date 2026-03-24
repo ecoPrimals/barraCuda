@@ -64,14 +64,14 @@ impl FlatTree {
     #[must_use]
     pub fn from_edges(edges: &[(usize, usize, f64)]) -> Self {
         if edges.is_empty() {
-            return FlatTree {
+            return Self {
                 parent: vec![-1],
                 branch_length: vec![0.0],
                 n_leaves: 1,
             };
         }
         let (parent, branch_length, n_leaves) = build_from_edges(edges);
-        FlatTree {
+        Self {
             parent,
             branch_length,
             n_leaves,

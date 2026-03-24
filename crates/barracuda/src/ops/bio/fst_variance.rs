@@ -121,13 +121,13 @@ pub fn fst_variance_decomposition(
 
     // Weir-Cockerham variance components (biallelic, expected H under HWE)
     let a = (n_bar / n_c)
-        * (s_squared
-            - (1.0 / (n_bar - 1.0))
-                * (p_bar * (1.0 - p_bar) - (r - 1) as f64 * s_squared / r as f64 - h_bar / 4.0));
+        * (1.0 / (n_bar - 1.0)).mul_add(
+            -(p_bar.mul_add(1.0 - p_bar, -((r - 1) as f64 * s_squared / r as f64)) - h_bar / 4.0),
+            s_squared,
+        );
     let b = (n_bar / (n_bar - 1.0))
-        * (p_bar * (1.0 - p_bar)
-            - (r - 1) as f64 * s_squared / r as f64
-            - ((2.0 * n_bar - 1.0) * h_bar / (4.0 * n_bar)));
+        * (p_bar.mul_add(1.0 - p_bar, -((r - 1) as f64 * s_squared / r as f64))
+            - (2.0f64.mul_add(n_bar, -1.0) * h_bar / (4.0 * n_bar)));
     let c = h_bar / 2.0;
 
     let denom = a + b + c;

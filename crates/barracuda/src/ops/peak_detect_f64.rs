@@ -303,16 +303,16 @@ pub fn find_peaks_cpu(
 
         // Prominence: scan left/right for min valley before higher peak
         let mut left_min = val;
-        for j in (0..i).rev() {
-            left_min = left_min.min(signal[j]);
-            if signal[j] > val {
+        for &sig_j in signal[..i].iter().rev() {
+            left_min = left_min.min(sig_j);
+            if sig_j > val {
                 break;
             }
         }
         let mut right_min = val;
-        for j in (i + 1)..n {
-            right_min = right_min.min(signal[j]);
-            if signal[j] > val {
+        for &sig_j in &signal[(i + 1)..n] {
+            right_min = right_min.min(sig_j);
+            if sig_j > val {
                 break;
             }
         }
@@ -433,7 +433,7 @@ mod tests {
         let signal: Vec<f64> = (0..100)
             .map(|i| {
                 let x = i as f64 * 0.1;
-                (x * 2.0).sin() + 0.5 * (x * 5.0).sin()
+                0.5f64.mul_add((x * 5.0).sin(), (x * 2.0).sin())
             })
             .collect();
 

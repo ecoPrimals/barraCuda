@@ -217,8 +217,8 @@ impl PppmCpuFft {
                     let tw_im = angle.sin();
 
                     // Butterfly
-                    let t_re = tw_re * data[j_idx * 2] - tw_im * data[j_idx * 2 + 1];
-                    let t_im = tw_re * data[j_idx * 2 + 1] + tw_im * data[j_idx * 2];
+                    let t_re = tw_re.mul_add(data[j_idx * 2], -(tw_im * data[j_idx * 2 + 1]));
+                    let t_im = tw_re.mul_add(data[j_idx * 2 + 1], tw_im * data[j_idx * 2]);
 
                     data[j_idx * 2] = data[i * 2] - t_re;
                     data[j_idx * 2 + 1] = data[i * 2 + 1] - t_im;

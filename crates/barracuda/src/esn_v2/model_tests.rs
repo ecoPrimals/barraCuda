@@ -309,7 +309,7 @@ async fn test_esn_train_ridge_regression_linear() {
         states[n_samples + k] = x;
         states[2 * n_samples + k] = x * x;
         states[3 * n_samples + k] = x * x * x;
-        targets[k] = 2.0 + 3.0 * x;
+        targets[k] = 3.0f64.mul_add(x, 2.0);
     }
 
     esn.train_ridge_regression(&states, &targets, 1e-6).unwrap();

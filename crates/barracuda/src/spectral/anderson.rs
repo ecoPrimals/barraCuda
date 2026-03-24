@@ -68,7 +68,7 @@ pub fn lyapunov_exponent(potential: &[f64], energy: f64) -> f64 {
     let mut log_growth = 0.0f64;
 
     for &v_i in potential {
-        let v_next = (energy - v_i) * v_curr - v_prev;
+        let v_next = (energy - v_i).mul_add(v_curr, -v_prev);
         v_prev = v_curr;
         v_curr = v_next;
 
@@ -471,7 +471,7 @@ pub fn find_w_c(sweep: &[AndersonSweepPoint], midpoint: f64) -> Option<f64> {
         let (w1, r1) = (sweep[i].w, sweep[i].r_mean);
         if r0 > midpoint && r1 <= midpoint {
             let t = (midpoint - r0) / (r1 - r0);
-            last = Some(w0 + t * (w1 - w0));
+            last = Some(t.mul_add(w1 - w0, w0));
         }
     }
     last

@@ -59,7 +59,7 @@ impl BerendsenThermostat {
         if t_current < 1e-30 {
             return 1.0; // avoid division by zero
         }
-        let ratio = 1.0 + (dt / tau) * (t_target / t_current - 1.0);
+        let ratio = (dt / tau).mul_add(t_target / t_current - 1.0, 1.0);
         ratio.max(0.0).sqrt()
     }
 

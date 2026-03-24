@@ -239,7 +239,7 @@ impl Tensor {
     ///
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
-    pub fn masked_fill_wgsl(self, mask: Tensor, value: f32) -> Result<Self> {
+    pub fn masked_fill_wgsl(self, mask: Self, value: f32) -> Result<Self> {
         MaskedFill::new(self, mask, value).execute()
     }
 }

@@ -6,6 +6,12 @@ Prioritized work items, ordered by impact. Updated 2026-03-21.
 
 ## Recently Completed
 
+- **Sprint 20: FMA Evolution & Lint Promotion (Mar 21)**:
+  625 `suboptimal_flops` sites (415 lib + 210 test) evolved to `mul_add()` for hardware FMA
+  precision. 4 clippy lints promoted from `allow` to `warn`: `suboptimal_flops` (415→0),
+  `use_self` (332→0), `tuple_array_conversions` (2→0), `needless_range_loop` (45→0).
+  All `needless_range_loop` sites evolved to idiomatic iterators (`.zip()`, `.enumerate()`,
+  `.iter_mut()`). 232 files changed, 3,623+ tests pass, zero clippy errors.
 - **Sprint 19: Deep Debt Solutions & Idiomatic Rust Evolution (Mar 21)**:
   Comprehensive audit across all dimensions: large files, mocks, hardcoding, unsafe, deps,
   TODO markers, `.unwrap()` in production. RPC `tolerances_get` evolved to centralized

@@ -125,7 +125,7 @@ impl Tensor {
     ///
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
-    pub fn view(&self, shape: &[usize]) -> Result<Tensor> {
+    pub fn view(&self, shape: &[usize]) -> Result<Self> {
         View::new(self.clone(), shape.to_vec())?.execute()
     }
 }

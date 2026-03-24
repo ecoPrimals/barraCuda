@@ -50,7 +50,7 @@ impl RBFKernel {
     #[must_use]
     pub fn eval(&self, r: f64) -> f64 {
         match self {
-            RBFKernel::ThinPlateSpline => {
+            Self::ThinPlateSpline => {
                 if r < 1e-14 {
                     0.0 // Limit as r → 0
                 } else {
@@ -58,20 +58,20 @@ impl RBFKernel {
                     0.5 * r2 * r2.ln()
                 }
             }
-            RBFKernel::Gaussian { epsilon } => {
+            Self::Gaussian { epsilon } => {
                 let er = epsilon * r;
                 (-er * er).exp()
             }
-            RBFKernel::Multiquadric { epsilon } => {
+            Self::Multiquadric { epsilon } => {
                 let er2 = (epsilon * r).powi(2);
                 (1.0 + er2).sqrt()
             }
-            RBFKernel::InverseMultiquadric { epsilon } => {
+            Self::InverseMultiquadric { epsilon } => {
                 let er2 = (epsilon * r).powi(2);
                 1.0 / (1.0 + er2).sqrt()
             }
-            RBFKernel::Cubic => r.powi(3),
-            RBFKernel::Quintic => r.powi(5),
+            Self::Cubic => r.powi(3),
+            Self::Quintic => r.powi(5),
         }
     }
 
@@ -79,12 +79,12 @@ impl RBFKernel {
     #[must_use]
     pub fn name(&self) -> &str {
         match self {
-            RBFKernel::ThinPlateSpline => "ThinPlateSpline",
-            RBFKernel::Gaussian { .. } => "Gaussian",
-            RBFKernel::Multiquadric { .. } => "Multiquadric",
-            RBFKernel::InverseMultiquadric { .. } => "InverseMultiquadric",
-            RBFKernel::Cubic => "Cubic",
-            RBFKernel::Quintic => "Quintic",
+            Self::ThinPlateSpline => "ThinPlateSpline",
+            Self::Gaussian { .. } => "Gaussian",
+            Self::Multiquadric { .. } => "Multiquadric",
+            Self::InverseMultiquadric { .. } => "InverseMultiquadric",
+            Self::Cubic => "Cubic",
+            Self::Quintic => "Quintic",
         }
     }
 }

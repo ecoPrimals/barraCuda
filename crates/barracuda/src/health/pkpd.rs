@@ -37,7 +37,7 @@ pub fn mm_pk_simulate(
     result.push(c);
     for _ in 0..n_steps {
         let elim = params.vmax * c / (params.km + c);
-        c = (c - (elim / params.vd) * dt).max(0.0);
+        c = (elim / params.vd).mul_add(-dt, c).max(0.0);
         result.push(c);
     }
     result
@@ -83,7 +83,7 @@ pub fn mm_auc_analytical(params: &MichaelisMentenParams, c0: f64, c_final: f64) 
     if c_final <= 0.0 || c0 <= 0.0 {
         return 0.0;
     }
-    params.vd / params.vmax * (params.km * (c0 / c_final).ln() + (c0 - c_final))
+    params.vd / params.vmax * params.km.mul_add((c0 / c_final).ln(), c0 - c_final)
 }
 
 /// Nonlinearity ratio: `C / (Km + C)`. Measures departure from first-order kinetics.

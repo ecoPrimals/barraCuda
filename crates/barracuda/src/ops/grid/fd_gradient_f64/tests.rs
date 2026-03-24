@@ -17,15 +17,15 @@ async fn test_gradient_1d() {
     let input: Vec<f64> = (0..n).map(|i| (i as f64 * dx).powi(2)).collect();
     let result = grad.compute(&input).await.unwrap();
 
-    for i in 1..n - 1 {
+    for (i, &val) in result.iter().enumerate().take(n - 1).skip(1) {
         let x = i as f64 * dx;
         let expected = 2.0 * x;
-        let error = (result[i] - expected).abs();
+        let error = (val - expected).abs();
         assert!(
             error < 0.02,
             "At i={}, got {}, expected {}, error={}",
             i,
-            result[i],
+            val,
             expected,
             error
         );
@@ -145,7 +145,7 @@ async fn test_cylindrical_gradient() {
     for i_rho in 0..n_rho {
         for i_z in 0..n_z {
             let rho = (i_rho + 1) as f64 * d_rho;
-            let z = z_min + (i_z as f64 + 0.5) * d_z;
+            let z = (i_z as f64 + 0.5).mul_add(d_z, z_min);
             input[i_rho * n_z + i_z] = rho * rho + z;
         }
     }
@@ -200,7 +200,7 @@ async fn test_cylindrical_laplacian() {
     let mut input = vec![0.0; n_rho * n_z];
     for i_rho in 0..n_rho {
         for i_z in 0..n_z {
-            let z = z_min + (i_z as f64 + 0.5) * d_z;
+            let z = (i_z as f64 + 0.5).mul_add(d_z, z_min);
             input[i_rho * n_z + i_z] = z * z;
         }
     }

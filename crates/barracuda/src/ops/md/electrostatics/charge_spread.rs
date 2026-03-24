@@ -195,9 +195,9 @@ pub fn spread_charges_with_coeffs(
 /// Wrap position to box using periodic boundary conditions
 fn wrap_position(pos: [f64; 3], box_dims: [f64; 3]) -> [f64; 3] {
     [
-        pos[0] - (pos[0] / box_dims[0]).floor() * box_dims[0],
-        pos[1] - (pos[1] / box_dims[1]).floor() * box_dims[1],
-        pos[2] - (pos[2] / box_dims[2]).floor() * box_dims[2],
+        (pos[0] / box_dims[0]).floor().mul_add(-box_dims[0], pos[0]),
+        (pos[1] / box_dims[1]).floor().mul_add(-box_dims[1], pos[1]),
+        (pos[2] / box_dims[2]).floor().mul_add(-box_dims[2], pos[2]),
     ]
 }
 

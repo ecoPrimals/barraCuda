@@ -311,7 +311,7 @@ impl BatchedOdeRK45F64 {
             let errors = self.device.read_buffer_f64(&error_buf, sys_dim)?;
             let max_err = errors.iter().copied().fold(0.0_f64, f64::max).max(1e-15);
 
-            let tol = config.atol + config.rtol * max_err;
+            let tol = config.rtol.mul_add(max_err, config.atol);
             let err_ratio = tol / max_err;
 
             if err_ratio >= 1.0 {

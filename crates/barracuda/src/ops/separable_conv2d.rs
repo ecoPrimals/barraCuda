@@ -306,8 +306,8 @@ impl Tensor {
     /// Returns [`Err`] if validation fails or buffer allocation/GPU dispatch/readback fails (e.g. device lost).
     pub fn separable_conv2d(
         self,
-        weight: Tensor,
-        bias: Tensor,
+        weight: Self,
+        bias: Self,
         kernel_size: usize,
         stride: usize,
         padding: usize,

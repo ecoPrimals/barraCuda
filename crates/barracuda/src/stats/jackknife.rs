@@ -185,7 +185,7 @@ where
         leave_out.extend_from_slice(&data[..i]);
         leave_out.extend_from_slice(&data[i + 1..]);
         let theta_i = statistic(&leave_out);
-        pseudovalues.push(n_f * full_stat - (n_f - 1.0) * theta_i);
+        pseudovalues.push(n_f.mul_add(full_stat, -((n_f - 1.0) * theta_i)));
     }
 
     let mean_pseudo: f64 = pseudovalues.iter().sum::<f64>() / n_f;

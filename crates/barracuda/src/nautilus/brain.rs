@@ -285,7 +285,7 @@ impl NautilusBrain {
                 (
                     b,
                     self.predict_dynamical(b, None)
-                        .map_or(0.0, |(a, x, c)| (a * a + x * x + c * c) / 3.0),
+                        .map_or(0.0, |(a, x, c)| c.mul_add(c, a.mul_add(a, x * x)) / 3.0),
                 )
             })
             .collect()
@@ -313,10 +313,13 @@ impl NautilusBrain {
             if let Some(pred) = shell.predict(&obs_to_input(obs)) {
                 edges.push((
                     obs.beta,
-                    ((pred[0] - obs.cg_iters).powi(2)
-                        + (pred[1] - obs.plaquette).powi(2)
-                        + (pred[2] - obs.acceptance).powi(2))
-                    .sqrt(),
+                    (pred[2] - obs.acceptance)
+                        .mul_add(
+                            pred[2] - obs.acceptance,
+                            (pred[1] - obs.plaquette)
+                                .mul_add(pred[1] - obs.plaquette, (pred[0] - obs.cg_iters).powi(2)),
+                        )
+                        .sqrt(),
                 ));
             }
         }
@@ -384,9 +387,9 @@ mod tests {
         for i in 0..6 {
             brain.observe(make_obs(
                 (i as f64) * 0.1,
-                0.5 + (i as f64) * 0.01,
+                (i as f64).mul_add(0.01, 0.5),
                 (i as f64) * 10.0,
-                0.7 + (i as f64) * 0.02,
+                (i as f64).mul_add(0.02, 0.7),
             ));
         }
 
@@ -478,7 +481,7 @@ mod tests {
         for i in 0..6 {
             brain.observe(make_obs(
                 (i as f64) * 0.1,
-                0.5 + (i as f64) * 0.01,
+                (i as f64).mul_add(0.01, 0.5),
                 (i as f64) * 10.0,
                 0.8,
             ));

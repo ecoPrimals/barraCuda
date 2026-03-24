@@ -303,7 +303,12 @@ mod tests {
         let force_data = forces.to_vec().unwrap();
 
         // Force should be heavily screened (small magnitude)
-        let f0_mag = (force_data[0].powi(2) + force_data[1].powi(2) + force_data[2].powi(2)).sqrt();
+        let f0_mag = force_data[2]
+            .mul_add(
+                force_data[2],
+                force_data[1].mul_add(force_data[1], force_data[0].powi(2)),
+            )
+            .sqrt();
         println!("✅ Yukawa screening validated: |F| = {f0_mag}");
     }
 }

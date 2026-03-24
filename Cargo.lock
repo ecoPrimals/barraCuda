@@ -120,7 +120,7 @@ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 
 [[package]]
 name = "barracuda"
-version = "0.3.9"
+version = "0.3.10"
 dependencies = [
  "approx",
  "blake3",
@@ -144,7 +144,7 @@ dependencies = [
 
 [[package]]
 name = "barracuda-core"
-version = "0.3.9"
+version = "0.3.10"
 dependencies = [
  "barracuda",
  "blake3",

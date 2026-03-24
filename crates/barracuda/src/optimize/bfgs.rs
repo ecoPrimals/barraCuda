@@ -299,7 +299,7 @@ where
         n_evals += 1;
 
         // Armijo condition: f(x + αd) ≤ f(x) + c₁·α·∇f·d
-        if fx_new <= fx + config.c1 * alpha * dg {
+        if fx_new <= (config.c1 * alpha).mul_add(dg, fx) {
             return Ok((alpha, fx_new, n_evals));
         }
 
@@ -332,11 +332,12 @@ fn bfgs_update(h_inv: &mut [Vec<f64>], s: &[f64], y: &[f64], rho: f64) {
     // = H - ρ(s⊗Hy + Hy⊗s) + (ρ²yHy + ρ)(s⊗s)
     // = H - ρ(s⊗Hy + Hy⊗s) + ρ(1 + ρyHy)(s⊗s)
 
-    let factor = rho * (1.0 + rho * yhy);
+    let factor = rho * rho.mul_add(yhy, 1.0);
 
     for i in 0..n {
         for j in 0..n {
-            h_inv[i][j] += factor * s[i] * s[j] - rho * (s[i] * hy[j] + hy[i] * s[j]);
+            h_inv[i][j] +=
+                (factor * s[i]).mul_add(s[j], -(rho * s[i].mul_add(hy[j], hy[i] * s[j])));
         }
     }
 }
@@ -344,8 +345,8 @@ fn bfgs_update(h_inv: &mut [Vec<f64>], s: &[f64], y: &[f64], rho: f64) {
 /// Create n×n identity matrix.
 fn identity_matrix(n: usize) -> Vec<Vec<f64>> {
     let mut mat = vec![vec![0.0; n]; n];
-    for i in 0..n {
-        mat[i][i] = 1.0;
+    for (i, row) in mat.iter_mut().enumerate() {
+        row[i] = 1.0;
     }
     mat
 }
@@ -409,7 +410,7 @@ mod tests {
     #[test]
     fn test_bfgs_quadratic() {
         // Minimize f(x) = x₀² + 2x₁²
-        let f = |x: &[f64]| x[0] * x[0] + 2.0 * x[1] * x[1];
+        let f = |x: &[f64]| x[0].mul_add(x[0], 2.0 * x[1] * x[1]);
         let grad = |x: &[f64]| vec![2.0 * x[0], 4.0 * x[1]];
 
         let config = BfgsConfig::default();
@@ -424,11 +425,12 @@ mod tests {
     #[test]
     fn test_bfgs_rosenbrock() {
         // Rosenbrock function: f(x) = (1-x₀)² + 100(x₁-x₀²)²
-        let f = |x: &[f64]| (1.0 - x[0]).powi(2) + 100.0 * (x[1] - x[0].powi(2)).powi(2);
+        let f =
+            |x: &[f64]| (1.0 - x[0]).mul_add(1.0 - x[0], 100.0 * x[0].mul_add(-x[0], x[1]).powi(2));
         let grad = |x: &[f64]| {
             vec![
-                -2.0 * (1.0 - x[0]) - 400.0 * x[0] * (x[1] - x[0].powi(2)),
-                200.0 * (x[1] - x[0].powi(2)),
+                (-2.0f64).mul_add(1.0 - x[0], -(400.0 * x[0] * x[0].mul_add(-x[0], x[1]))),
+                200.0 * x[0].mul_add(-x[0], x[1]),
             ]
         };
 
@@ -447,7 +449,7 @@ mod tests {
 
     #[test]
     fn test_bfgs_numerical_gradient() {
-        let f = |x: &[f64]| x[0] * x[0] + x[1] * x[1];
+        let f = |x: &[f64]| x[0].mul_add(x[0], x[1] * x[1]);
 
         let config = BfgsConfig::default();
         let result = bfgs_numerical(&f, &[1.0, 1.0], &config).unwrap();
@@ -459,7 +461,7 @@ mod tests {
 
     #[test]
     fn test_numerical_gradient() {
-        let f = |x: &[f64]| x[0] * x[0] + 2.0 * x[1] * x[1] + x[0] * x[1];
+        let f = |x: &[f64]| x[0].mul_add(x[1], x[0].mul_add(x[0], 2.0 * x[1] * x[1]));
         let x = vec![1.0, 2.0];
 
         let grad = numerical_gradient(&f, &x, 1e-6);

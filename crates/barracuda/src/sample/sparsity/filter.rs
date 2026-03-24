@@ -66,7 +66,7 @@ pub fn filter_training_data(
                 deviations[deviations.len() / 2]
             };
 
-            let threshold = median + k * mad;
+            let threshold = k.mul_add(mad, median);
 
             let (x_filt, y_filt): (Vec<_>, Vec<_>) = x_data
                 .iter()

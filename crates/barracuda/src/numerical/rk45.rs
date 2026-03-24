@@ -261,7 +261,7 @@ where
         let y2: Vec<f64> = y
             .iter()
             .zip(k1.iter())
-            .map(|(yi, k1i)| yi + h * A21 * k1i)
+            .map(|(yi, k1i)| (h * A21).mul_add(*k1i, *yi))
             .collect();
         let k2 = f(t + h / 5.0, &y2);
 
@@ -269,23 +269,34 @@ where
             .iter()
             .zip(k1.iter())
             .zip(k2.iter())
-            .map(|((yi, k1i), k2i)| yi + h * (A31 * k1i + A32 * k2i))
+            .map(|((yi, k1i), k2i)| h.mul_add(A31.mul_add(*k1i, A32 * *k2i), *yi))
             .collect();
         let k3 = f(t + 3.0 * h / 10.0, &y3);
 
         let y4: Vec<f64> = (0..n)
-            .map(|i| y[i] + h * (A41 * k1[i] + A42 * k2[i] + A43 * k3[i]))
+            .map(|i| h.mul_add(A43.mul_add(k3[i], A41.mul_add(k1[i], A42 * k2[i])), y[i]))
             .collect();
         let k4 = f(t + 4.0 * h / 5.0, &y4);
 
         let y5: Vec<f64> = (0..n)
-            .map(|i| y[i] + h * (A51 * k1[i] + A52 * k2[i] + A53 * k3[i] + A54 * k4[i]))
+            .map(|i| {
+                h.mul_add(
+                    A53.mul_add(k3[i], A51.mul_add(k1[i], A52.mul_add(k2[i], A54 * k4[i]))),
+                    y[i],
+                )
+            })
             .collect();
         let k5 = f(t + 8.0 * h / 9.0, &y5);
 
         let y6: Vec<f64> = (0..n)
             .map(|i| {
-                y[i] + h * (A61 * k1[i] + A62 * k2[i] + A63 * k3[i] + A64 * k4[i] + A65 * k5[i])
+                h.mul_add(
+                    A63.mul_add(
+                        k3[i],
+                        A61.mul_add(k1[i], A62.mul_add(k2[i], A64.mul_add(k4[i], A65 * k5[i]))),
+                    ),
+                    y[i],
+                )
             })
             .collect();
         let k6 = f(t + h, &y6);
@@ -293,7 +304,13 @@ where
         // 5th order solution (y_new)
         let y_new: Vec<f64> = (0..n)
             .map(|i| {
-                y[i] + h * (A71 * k1[i] + A73 * k3[i] + A74 * k4[i] + A75 * k5[i] + A76 * k6[i])
+                h.mul_add(
+                    A74.mul_add(
+                        k4[i],
+                        A71.mul_add(k1[i], A73.mul_add(k3[i], A75.mul_add(k5[i], A76 * k6[i]))),
+                    ),
+                    y[i],
+                )
             })
             .collect();
 
@@ -303,7 +320,16 @@ where
         // Error estimate
         let error: Vec<f64> = (0..n)
             .map(|i| {
-                h * (E1 * k1[i] + E3 * k3[i] + E4 * k4[i] + E5 * k5[i] + E6 * k6[i] + E7 * k7[i])
+                h.mul_add(
+                    E4.mul_add(
+                        k4[i],
+                        E1.mul_add(
+                            k1[i],
+                            E3.mul_add(k3[i], E5.mul_add(k5[i], E6.mul_add(k6[i], E7 * k7[i]))),
+                        ),
+                    ),
+                    0.0,
+                )
             })
             .collect();
 

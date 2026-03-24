@@ -316,9 +316,9 @@ impl Tensor {
     /// GPU dispatch fails, or the device is lost.
     pub fn deformable_conv2d(
         self,
-        offset: Tensor,
-        weight: Tensor,
-        bias: Tensor,
+        offset: Self,
+        weight: Self,
+        bias: Self,
         kernel_size: usize,
         stride: usize,
         padding: usize,

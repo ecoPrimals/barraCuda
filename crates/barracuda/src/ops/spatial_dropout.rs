@@ -255,7 +255,7 @@ impl Tensor {
     /// - `training`: Whether in training mode
     /// # Errors
     /// Returns [`Err`] if validation fails or buffer allocation/GPU dispatch fails (e.g. device lost).
-    pub fn spatial_dropout(self, mask: Tensor, drop_prob: f32, training: bool) -> Result<Self> {
+    pub fn spatial_dropout(self, mask: Self, drop_prob: f32, training: bool) -> Result<Self> {
         SpatialDropout::new(self, mask, drop_prob, training)?.execute()
     }
 }

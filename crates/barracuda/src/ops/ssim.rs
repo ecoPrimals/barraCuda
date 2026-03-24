@@ -160,7 +160,7 @@ impl Tensor {
     /// * `c2` - Stability constant for contrast (typically 0.03^2)
     /// # Errors
     /// Returns [`Err`] if validation fails or buffer allocation/GPU dispatch/readback fails (e.g. device lost).
-    pub fn ssim(self, other: Tensor, window_size: usize, c1: f32, c2: f32) -> Result<f32> {
+    pub fn ssim(self, other: Self, window_size: usize, c1: f32, c2: f32) -> Result<f32> {
         SSIM::new(self, other, window_size, c1, c2)?.execute()
     }
 }

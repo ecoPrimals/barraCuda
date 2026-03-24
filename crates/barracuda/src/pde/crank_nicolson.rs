@@ -210,7 +210,7 @@ impl HeatEquation1D {
         // RHS_i = (1-r)uⁿᵢ + (r/2)uⁿᵢ₋₁ + (r/2)uⁿᵢ₊₁ + boundary terms
         let mut rhs = vec![0.0; n];
 
-        for i in 0..n {
+        for (i, rhs_i) in rhs.iter_mut().enumerate() {
             let u_left = if i == 0 {
                 self.config.left_bc
             } else {
@@ -222,7 +222,7 @@ impl HeatEquation1D {
                 self.u[i + 1]
             };
 
-            rhs[i] = (1.0 - self.r) * self.u[i] + (self.r / 2.0) * (u_left + u_right);
+            *rhs_i = (1.0 - self.r).mul_add(self.u[i], (self.r / 2.0) * (u_left + u_right));
         }
 
         // Add boundary contributions to first and last equations
@@ -375,7 +375,7 @@ pub fn crank_nicolson_step(
     for i in 0..n {
         let u_left = if i == 0 { left_bc } else { u[i - 1] };
         let u_right = if i == n - 1 { right_bc } else { u[i + 1] };
-        rhs[i] = (1.0 - r) * u[i] + (r / 2.0) * (u_left + u_right);
+        rhs[i] = (1.0 - r).mul_add(u[i], (r / 2.0) * (u_left + u_right));
     }
     rhs[0] += (r / 2.0) * left_bc;
     rhs[n - 1] += (r / 2.0) * right_bc;

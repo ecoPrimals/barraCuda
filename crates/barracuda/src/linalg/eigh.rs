@@ -44,8 +44,8 @@ impl EighDecomposition {
             return None;
         }
         let mut v = vec![0.0; self.n];
-        for row in 0..self.n {
-            v[row] = self.eigenvectors[row * self.n + i];
+        for (row, v_row) in v.iter_mut().enumerate() {
+            *v_row = self.eigenvectors[row * self.n + i];
         }
         Some(v)
     }
@@ -244,16 +244,16 @@ pub fn eigh_f64(a: &[f64], n: usize) -> Result<EighDecomposition> {
             if k != p && k != q {
                 let dkp = d[k * n + p];
                 let dkq = d[k * n + q];
-                d[k * n + p] = c * dkp - s * dkq;
+                d[k * n + p] = c.mul_add(dkp, -(s * dkq));
                 d[p * n + k] = d[k * n + p];
-                d[k * n + q] = s * dkp + c * dkq;
+                d[k * n + q] = s.mul_add(dkp, c * dkq);
                 d[q * n + k] = d[k * n + q];
             }
         }
 
         // Update diagonal elements
-        let new_pp = c * c * app - 2.0 * c * s * apq + s * s * aqq;
-        let new_qq = s * s * app + 2.0 * c * s * apq + c * c * aqq;
+        let new_pp = (s * s).mul_add(aqq, (c * c).mul_add(app, -(2.0 * c * s * apq)));
+        let new_qq = (c * c).mul_add(aqq, (s * s).mul_add(app, 2.0 * c * s * apq));
         d[p * n + p] = new_pp;
         d[q * n + q] = new_qq;
         d[p * n + q] = 0.0;
@@ -263,8 +263,8 @@ pub fn eigh_f64(a: &[f64], n: usize) -> Result<EighDecomposition> {
         for k in 0..n {
             let vkp = v[k * n + p];
             let vkq = v[k * n + q];
-            v[k * n + p] = c * vkp - s * vkq;
-            v[k * n + q] = s * vkp + c * vkq;
+            v[k * n + p] = c.mul_add(vkp, -(s * vkq));
+            v[k * n + q] = s.mul_add(vkp, c * vkq);
         }
     }
 

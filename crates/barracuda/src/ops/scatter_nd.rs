@@ -367,7 +367,7 @@ impl Tensor {
     /// * `values` - Values to scatter
     /// # Errors
     /// Returns [`Err`] if validation fails or buffer allocation/GPU dispatch/readback fails (e.g. device lost).
-    pub fn scatter_nd(self, indices: Tensor, values: Tensor) -> Result<Self> {
+    pub fn scatter_nd(self, indices: Self, values: Self) -> Result<Self> {
         ScatterNd::new(self, indices, values)?.execute()
     }
 }

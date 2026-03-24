@@ -173,7 +173,7 @@ impl GreensFunction {
             let g = self.values[i];
             let re = rho_k[i * 2];
             let im = rho_k[i * 2 + 1];
-            let rho_sq = re * re + im * im;
+            let rho_sq = re.mul_add(re, im * im);
 
             energy += g * rho_sq;
         }
@@ -195,7 +195,7 @@ fn compute_g(
     box_dims: [f64; 3],
     mesh_dims: [usize; 3],
 ) -> f64 {
-    let k_sq = kx * kx + ky * ky + kz * kz;
+    let k_sq = kz.mul_add(kz, kx.mul_add(kx, ky * ky));
 
     // k = 0 gives no contribution
     if k_sq < 1e-14 {

@@ -194,7 +194,12 @@ impl CubicSpline {
         let b = (x_eval - self.x[i]) / h;
 
         let result = a.mul_add(self.y[i], b * self.y[i + 1])
-            + ((a * a * a - a).mul_add(self.y2[i], (b * b * b - b) * self.y2[i + 1])) * h * h / 6.0;
+            + ((a * a)
+                .mul_add(a, -a)
+                .mul_add(self.y2[i], (b * b).mul_add(b, -b) * self.y2[i + 1]))
+                * h
+                * h
+                / 6.0;
 
         Ok(result)
     }
@@ -325,8 +330,9 @@ impl CubicSpline {
         let a = (self.x[i + 1] - x_eval) / h;
         let b = (x_eval - self.x[i]) / h;
 
-        let dy = (self.y[i + 1] - self.y[i]) / h - (3.0 * a * a - 1.0) * h * self.y2[i] / 6.0
-            + (3.0 * b * b - 1.0) * h * self.y2[i + 1] / 6.0;
+        let dy = (self.y[i + 1] - self.y[i]) / h
+            - (3.0 * a).mul_add(a, -1.0) * h * self.y2[i] / 6.0
+            + (3.0 * b).mul_add(b, -1.0) * h * self.y2[i + 1] / 6.0;
 
         Ok(dy)
     }
@@ -548,7 +554,10 @@ fn integrate_segment(x: &[f64], y: &[f64], y2: &[f64], i: usize, x0: f64, x1: f6
     // S(t) = (1-t)*y[i] + t*y[i+1] + h²/6 * ((1-t)³ - (1-t))*y2[i] + h²/6 * (t³ - t)*y2[i+1]
     //
     // Integrate from t0 to t1:
-    let linear_part = y[i].mul_add(t1 - t0, 0.5 * (y[i + 1] - y[i]) * (t1 * t1 - t0 * t0));
+    let linear_part = y[i].mul_add(
+        t1 - t0,
+        0.5 * (y[i + 1] - y[i]) * t1.mul_add(t1, -(t0 * t0)),
+    );
 
     // Integral of (1-t)³ - (1-t) = -(1-t)⁴/4 + (1-t)²/2
     let term1 = |t: f64| -(1.0 - t).powi(4) / 4.0 + (1.0 - t).powi(2) / 2.0;

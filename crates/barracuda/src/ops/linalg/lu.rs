@@ -307,8 +307,8 @@ mod tests {
         let x = lu_solve(&a, 2, &b).unwrap();
 
         // Verify: Ax = b
-        let ax0 = 4.0 * x[0] + 3.0 * x[1];
-        let ax1 = 6.0 * x[0] + 3.0 * x[1];
+        let ax0 = 4.0f64.mul_add(x[0], 3.0 * x[1]);
+        let ax1 = 6.0f64.mul_add(x[0], 3.0 * x[1]);
         assert!(approx_eq(ax0, b[0], 1e-10));
         assert!(approx_eq(ax1, b[1], 1e-10));
     }
@@ -320,9 +320,9 @@ mod tests {
         let x = lu_solve(&a, 3, &b).unwrap();
 
         // Verify: Ax = b
-        let ax0 = 2.0 * x[0] - x[1];
-        let ax1 = -x[0] + 2.0 * x[1] - x[2];
-        let ax2 = -x[1] + 2.0 * x[2];
+        let ax0 = 2.0f64.mul_add(x[0], -x[1]);
+        let ax1 = 2.0f64.mul_add(x[1], -x[0]) - x[2];
+        let ax2 = 2.0f64.mul_add(x[2], -x[1]);
 
         assert!(approx_eq(ax0, b[0], 1e-10));
         assert!(approx_eq(ax1, b[1], 1e-10));
@@ -346,10 +346,10 @@ mod tests {
         let inv = lu_inverse(&a, 2).unwrap();
 
         // A * A^(-1) should be identity
-        let i00 = a[0] * inv[0] + a[1] * inv[2];
-        let i01 = a[0] * inv[1] + a[1] * inv[3];
-        let i10 = a[2] * inv[0] + a[3] * inv[2];
-        let i11 = a[2] * inv[1] + a[3] * inv[3];
+        let i00 = a[0].mul_add(inv[0], a[1] * inv[2]);
+        let i01 = a[0].mul_add(inv[1], a[1] * inv[3]);
+        let i10 = a[2].mul_add(inv[0], a[3] * inv[2]);
+        let i11 = a[2].mul_add(inv[1], a[3] * inv[3]);
 
         assert!(approx_eq(i00, 1.0, 1e-10));
         assert!(approx_eq(i01, 0.0, 1e-10));
@@ -395,8 +395,8 @@ mod tests {
 
         let x = lu.solve(&[3.0, 4.0]).unwrap();
         // Verify
-        let ax0 = 0.0 * x[0] + 1.0 * x[1];
-        let ax1 = 1.0 * x[0] + 1.0 * x[1];
+        let ax0 = 0.0f64.mul_add(x[0], 1.0 * x[1]);
+        let ax1 = 1.0f64.mul_add(x[0], 1.0 * x[1]);
         assert!(approx_eq(ax0, 3.0, 1e-10));
         assert!(approx_eq(ax1, 4.0, 1e-10));
     }

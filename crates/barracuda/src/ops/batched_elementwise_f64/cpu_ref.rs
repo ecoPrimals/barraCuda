@@ -8,12 +8,13 @@
 pub fn hargreaves_et0_cpu(tmax: f64, tmin: f64, lat_rad: f64, doy: f64) -> f64 {
     use std::f64::consts::PI;
     let two_pi = 2.0 * PI;
-    let dr = 1.0 + 0.033 * (two_pi * doy / 365.0).cos();
+    let dr = 0.033f64.mul_add((two_pi * doy / 365.0).cos(), 1.0);
     let decl = 0.409 * (two_pi * doy / 365.0 - 1.39).sin();
     let ws_arg = (-lat_rad.tan() * decl.tan()).clamp(-1.0, 1.0);
     let ws = ws_arg.acos();
-    let ra_mj =
-        37.586 * dr * (ws * lat_rad.sin() * decl.sin() + lat_rad.cos() * decl.cos() * ws.sin());
+    let ra_mj = 37.586
+        * dr
+        * (ws * lat_rad.sin()).mul_add(decl.sin(), lat_rad.cos() * decl.cos() * ws.sin());
     let ra_mm = ra_mj * 0.408;
     let tmean = (tmax + tmin) * 0.5;
     let td = (tmax - tmin).max(0.0);
@@ -23,7 +24,8 @@ pub fn hargreaves_et0_cpu(tmax: f64, tmin: f64, lat_rad: f64, doy: f64) -> f64 {
 /// FAO-56 Eq. 62 Kc climate adjustment (CPU reference)
 #[must_use]
 pub fn kc_climate_adjust_cpu(kc_table: f64, u2: f64, rh_min: f64, crop_height_m: f64) -> f64 {
-    let adj = (0.04 * (u2 - 2.0) - 0.004 * (rh_min - 45.0)) * (crop_height_m / 3.0_f64).powf(0.3);
+    let adj =
+        0.04f64.mul_add(u2 - 2.0, -(0.004 * (rh_min - 45.0))) * (crop_height_m / 3.0_f64).powf(0.3);
     (kc_table + adj).max(0.0)
 }
 
@@ -37,7 +39,7 @@ pub fn van_genuchten_theta_cpu(theta_r: f64, theta_s: f64, alpha: f64, n: f64, h
     let m = 1.0 - 1.0 / n;
     let alpha_h = alpha * (-h);
     let se = 1.0 / (1.0 + alpha_h.powf(n)).powf(m);
-    theta_r + (theta_s - theta_r) * se
+    (theta_s - theta_r).mul_add(se, theta_r)
 }
 
 /// Van Genuchten K(h) — hydraulic conductivity (CPU reference)
@@ -85,7 +87,7 @@ pub fn thornthwaite_et0_cpu(
 /// ET₀ = 0.61 * (Δ/(Δ+γ)) * Rs/λ − 0.12
 #[must_use]
 pub fn makkink_et0_cpu(rs_mj: f64, t_mean: f64, elevation: f64) -> f64 {
-    let p = 101.3 * ((293.0 - 0.0065 * elevation) / 293.0).powf(5.26);
+    let p = 101.3 * (0.0065f64.mul_add(-elevation, 293.0) / 293.0).powf(5.26);
     let gamma = 0.000665 * p;
     let e_t = 0.6108 * (17.27 * t_mean / (t_mean + 237.3)).exp();
     let delta = 4098.0 * e_t / (t_mean + 237.3_f64).powi(2);
@@ -141,7 +143,7 @@ pub(crate) fn scs_cn_runoff_cpu(p: f64, cn: f64, ia_ratio: f64) -> f64 {
 /// `Ya/Ym` = 1 − Ky × (1 − `ETa/ETc`)
 #[must_use]
 pub(crate) fn stewart_yield_water_cpu(ky: f64, eta_etc_ratio: f64) -> f64 {
-    1.0 - ky * (1.0 - eta_etc_ratio)
+    ky.mul_add(-(1.0 - eta_etc_ratio), 1.0)
 }
 
 /// Blaney-Criddle (1950) ET₀ (CPU reference)
@@ -149,7 +151,7 @@ pub(crate) fn stewart_yield_water_cpu(ky: f64, eta_etc_ratio: f64) -> f64 {
 #[must_use]
 pub(crate) fn blaney_criddle_et0_cpu(t_mean: f64, daylight_hours: f64) -> f64 {
     let p = daylight_hours / 43.80;
-    (p * (0.46 * t_mean + 8.13)).max(0.0)
+    (p * 0.46f64.mul_add(t_mean, 8.13)).max(0.0)
 }
 
 /// Pedotransfer polynomial — Horner form (CPU reference)
@@ -164,7 +166,11 @@ pub fn pedotransfer_polynomial_cpu(
     a5: f64,
     x: f64,
 ) -> f64 {
-    ((((a5 * x + a4) * x + a3) * x + a2) * x + a1) * x + a0
+    a5.mul_add(x, a4)
+        .mul_add(x, a3)
+        .mul_add(x, a2)
+        .mul_add(x, a1)
+        .mul_add(x, a0)
 }
 
 /// FAO-56 Penman-Monteith ET₀ (CPU reference)
@@ -184,7 +190,7 @@ pub(crate) fn fao56_et0_cpu(
     let tmean = f64::midpoint(tmax, tmin);
 
     // Atmospheric pressure (FAO-56 Eq. 7)
-    let p = 101.3 * ((293.0 - 0.0065 * elevation) / 293.0).powf(5.26);
+    let p = 101.3 * (0.0065f64.mul_add(-elevation, 293.0) / 293.0).powf(5.26);
 
     // Psychrometric constant
     let gamma = 0.000665 * p;
@@ -202,8 +208,8 @@ pub(crate) fn fao56_et0_cpu(
     let delta = 4098.0 * e_tmean / (tmean + 237.3).powi(2);
 
     // Extraterrestrial radiation
-    let lat_rad = lat * PI / 180.0;
-    let dr = 1.0 + 0.033 * (2.0 * PI * doy as f64 / 365.0).cos();
+    let lat_rad = lat.to_radians();
+    let dr = 0.033f64.mul_add((2.0 * PI * doy as f64 / 365.0).cos(), 1.0);
     let decl = 0.409 * (2.0 * PI * doy as f64 / 365.0 - 1.39).sin();
 
     let tan_lat = lat_rad.tan();
@@ -219,10 +225,10 @@ pub(crate) fn fao56_et0_cpu(
     let ra = 24.0 * 60.0 / PI
         * gsc
         * dr
-        * (ws * lat_rad.sin() * decl.sin() + lat_rad.cos() * decl.cos() * ws.sin());
+        * (ws * lat_rad.sin()).mul_add(decl.sin(), lat_rad.cos() * decl.cos() * ws.sin());
 
     // Clear-sky radiation
-    let rso = (0.75 + 0.00002 * elevation) * ra;
+    let rso = 0.00002f64.mul_add(elevation, 0.75) * ra;
 
     // Net shortwave radiation
     let rns = (1.0 - 0.23) * rs;
@@ -232,15 +238,16 @@ pub(crate) fn fao56_et0_cpu(
     let tmax_k = tmax + 273.16;
     let tmin_k = tmin + 273.16;
     let rnl = sigma * (tmax_k.powi(4) + tmin_k.powi(4)) / 2.0
-        * (0.34 - 0.14 * ea.sqrt())
+        * 0.14f64.mul_add(-ea.sqrt(), 0.34)
         * (1.35 * rs / rso.max(0.001) - 0.35);
 
     // Net radiation
     let rn = rns - rnl;
 
     // FAO-56 Penman-Monteith equation
-    let numerator = 0.408 * delta * rn + gamma * 900.0 / (tmean + 273.0) * wind_2m * (es - ea);
-    let denominator = delta + gamma * (1.0 + 0.34 * wind_2m);
+    let numerator =
+        (0.408 * delta).mul_add(rn, gamma * 900.0 / (tmean + 273.0) * wind_2m * (es - ea));
+    let denominator = delta + gamma * 0.34f64.mul_add(wind_2m, 1.0);
 
     numerator / denominator
 }

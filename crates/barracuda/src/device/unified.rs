@@ -73,17 +73,17 @@ impl Device {
     /// List all available devices
     /// **Runtime discovery** — No assumptions!
     #[must_use]
-    pub fn available_devices() -> Vec<Device> {
+    pub fn available_devices() -> Vec<Self> {
         vec![
-            Device::CPU,
-            Device::GPU,
-            Device::NPU,
-            Device::TPU,
-            Device::Sovereign,
-            Device::Auto,
+            Self::CPU,
+            Self::GPU,
+            Self::NPU,
+            Self::TPU,
+            Self::Sovereign,
+            Self::Auto,
         ]
         .into_iter()
-        .filter(super::device_types::Device::is_available)
+        .filter(Self::is_available)
         .collect()
     }
 
@@ -94,7 +94,7 @@ impl Device {
     /// This is `BarraCuda`'s recommendation. To override, use
     /// [`Device::select_with_preference`] or construct a [`DeviceContext`] directly.
     #[must_use]
-    pub fn select_for_workload(workload: &WorkloadHint) -> Device {
+    pub fn select_for_workload(workload: &WorkloadHint) -> Self {
         select_for_workload(workload)
     }
 
@@ -104,7 +104,7 @@ impl Device {
     /// Fallback chain when the preferred device is unavailable:
     /// `preferred → auto-route recommendation → GPU → CPU`
     #[must_use]
-    pub fn select_with_preference(preferred: Option<Device>, workload: &WorkloadHint) -> Device {
+    pub fn select_with_preference(preferred: Option<Self>, workload: &WorkloadHint) -> Self {
         select_with_preference(preferred, workload)
     }
 }
@@ -138,11 +138,11 @@ impl DeviceContext {
     /// boards for NPU, or driver initialization errors).
     pub async fn for_device(device: Device) -> BarracudaResult<Self> {
         match device {
-            Device::CPU => Ok(DeviceContext::CPU),
+            Device::CPU => Ok(Self::CPU),
 
             Device::GPU => {
                 let wgpu_device = WgpuDevice::new().await?;
-                Ok(DeviceContext::GPU(wgpu_device))
+                Ok(Self::GPU(wgpu_device))
             }
 
             Device::NPU => {
@@ -153,7 +153,7 @@ impl DeviceContext {
                         reason: "No Akida boards detected".to_string(),
                     });
                 }
-                Ok(DeviceContext::NPU(capabilities.boards[0].clone()))
+                Ok(Self::NPU(capabilities.boards[0].clone()))
             }
 
             Device::TPU => Err(BarracudaError::DeviceNotAvailable {
@@ -172,11 +172,11 @@ impl DeviceContext {
 
                 if Device::GPU.is_available() {
                     match WgpuDevice::new().await {
-                        Ok(wgpu_device) => Ok(DeviceContext::GPU(wgpu_device)),
-                        Err(_) => Ok(DeviceContext::CPU),
+                        Ok(wgpu_device) => Ok(Self::GPU(wgpu_device)),
+                        Err(_) => Ok(Self::CPU),
                     }
                 } else {
-                    Ok(DeviceContext::CPU)
+                    Ok(Self::CPU)
                 }
             }
         }

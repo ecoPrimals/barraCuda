@@ -62,7 +62,10 @@ fn test_lotka_volterra() {
     let f = move |_t: f64, y: &[f64]| {
         let x = y[0];
         let prey = y[1];
-        vec![alpha * x - beta * x * prey, delta * x * prey - gamma * prey]
+        vec![
+            alpha * x - beta * x * prey,
+            (delta * x).mul_add(prey, -(gamma * prey)),
+        ]
     };
 
     let config = Rk45Config::new(1e-6, 1e-8);

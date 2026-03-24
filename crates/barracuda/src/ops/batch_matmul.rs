@@ -161,7 +161,7 @@ impl Tensor {
     ///
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
-    pub fn batch_matmul(self, other: &Tensor) -> Result<Self> {
+    pub fn batch_matmul(self, other: &Self) -> Result<Self> {
         BatchMatMul::new(self, other.clone()).execute()
     }
 }

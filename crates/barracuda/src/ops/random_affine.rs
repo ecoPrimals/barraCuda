@@ -89,8 +89,8 @@ impl RandomAffine {
         let sh = self.shear * (((self.seed * 69_621) % 2000) as f32 / 1000.0 - 1.0);
 
         // Build affine matrix
-        let angle_rad = angle * std::f32::consts::PI / 180.0;
-        let shear_rad = sh * std::f32::consts::PI / 180.0;
+        let angle_rad = angle.to_radians();
+        let shear_rad = sh.to_radians();
 
         let cos_a = angle_rad.cos();
         let sin_a = angle_rad.sin();

@@ -95,8 +95,10 @@ fn parse_unroll_hint(trimmed: &str) -> Option<u32> {
 
 /// Find the next `for (var` line at or after `start_idx`.
 fn find_next_for_loop(lines: &[&str], start_idx: usize) -> Option<usize> {
-    for i in start_idx..lines.len().min(start_idx + 5) {
-        let t = lines[i].trim();
+    let end = lines.len().min(start_idx + 5);
+    for (i, line) in lines[start_idx..end].iter().enumerate() {
+        let i = start_idx + i;
+        let t = line.trim();
         if t.starts_with("for (var") || t.starts_with("for(var") {
             return Some(i);
         }
@@ -168,8 +170,8 @@ fn parse_for_header(line: &str) -> Option<(String, ForBound)> {
 fn find_loop_end(lines: &[&str], for_idx: usize) -> usize {
     let mut depth: i32 = 0;
     let mut found_open = false;
-    for i in for_idx..lines.len() {
-        for ch in lines[i].chars() {
+    for (i, line) in lines.iter().enumerate().skip(for_idx) {
+        for ch in line.chars() {
             match ch {
                 '{' => {
                     depth += 1;
@@ -200,8 +202,8 @@ fn collect_body(lines: &[&str], for_idx: usize) -> Vec<String> {
     let mut body = Vec::new();
     let mut depth = 0i32;
     let mut past_open = false;
-    for i in for_idx..=end_idx {
-        let line = lines[i];
+    for (rel_i, line) in lines[for_idx..=end_idx].iter().enumerate() {
+        let i = for_idx + rel_i;
         for ch in line.chars() {
             if ch == '{' {
                 depth += 1;

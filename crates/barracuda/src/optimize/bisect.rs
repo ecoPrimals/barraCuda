@@ -100,7 +100,7 @@ mod tests {
     #[test]
     fn test_bisect_sqrt2() {
         // Find √2 by solving x² - 2 = 0
-        let f = |x: f64| x * x - 2.0;
+        let f = |x: f64| x.mul_add(x, -2.0);
         let root = bisect(f, 0.0, 2.0, 1e-10, 100).unwrap();
         assert!((root - 2.0_f64.sqrt()).abs() < 1e-10);
     }
@@ -143,7 +143,7 @@ mod tests {
     #[test]
     fn test_bisect_max_iter_exceeded() {
         // Require impossible tolerance with few iterations
-        let f = |x: f64| x * x - 2.0;
+        let f = |x: f64| x.mul_add(x, -2.0);
         let result = bisect(f, 0.0, 2.0, 1e-15, 5); // Only 5 iterations
         assert!(result.is_err());
     }

@@ -465,7 +465,7 @@ impl TimeSeriesAnalyzer {
         // Calculate smoothed value
         let mut smoothed = history[0];
         for &value in &history[1..] {
-            smoothed = alpha * value + (1.0 - alpha) * smoothed;
+            smoothed = alpha.mul_add(value, (1.0 - alpha) * smoothed);
         }
 
         // Simple level forecast

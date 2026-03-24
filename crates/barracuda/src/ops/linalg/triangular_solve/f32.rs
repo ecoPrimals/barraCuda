@@ -234,7 +234,7 @@ impl Tensor {
     /// # Errors
     /// Returns [`Err`] if matrix is not square, rhs size does not match, buffer allocation fails,
     /// GPU dispatch fails, or buffer readback fails (e.g. device lost).
-    pub fn solve_triangular_forward(&self, rhs: &Tensor) -> Result<Tensor> {
+    pub fn solve_triangular_forward(&self, rhs: &Self) -> Result<Self> {
         TriangularSolve::forward(self.clone(), rhs.clone()).execute()
     }
 
@@ -246,7 +246,7 @@ impl Tensor {
     /// # Errors
     /// Returns [`Err`] if matrix is not square, rhs size does not match, buffer allocation fails,
     /// GPU dispatch fails, or buffer readback fails (e.g. device lost).
-    pub fn solve_triangular_backward(&self, rhs: &Tensor) -> Result<Tensor> {
+    pub fn solve_triangular_backward(&self, rhs: &Self) -> Result<Self> {
         TriangularSolve::backward(self.clone(), rhs.clone()).execute()
     }
 
@@ -257,7 +257,7 @@ impl Tensor {
     /// # Errors
     /// Returns [`Err`] if matrix is not square, rhs size does not match, buffer allocation fails,
     /// GPU dispatch fails, or buffer readback fails (e.g. device lost).
-    pub fn solve_triangular(&self, rhs: &Tensor, lower: bool) -> Result<Tensor> {
+    pub fn solve_triangular(&self, rhs: &Self, lower: bool) -> Result<Self> {
         TriangularSolve::new(self.clone(), rhs.clone(), lower).execute()
     }
 }

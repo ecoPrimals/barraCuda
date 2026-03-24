@@ -320,10 +320,10 @@ impl Tensor {
     /// GPU dispatch fails, or the device is lost.
     pub fn gated_conv2d(
         self,
-        weight_feature: Tensor,
-        weight_gate: Tensor,
-        bias_feature: Tensor,
-        bias_gate: Tensor,
+        weight_feature: Self,
+        weight_gate: Self,
+        bias_feature: Self,
+        bias_gate: Self,
         kernel_size: usize,
         stride: usize,
         padding: usize,

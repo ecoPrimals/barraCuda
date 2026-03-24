@@ -257,7 +257,7 @@ fn welford_matches_two_pass_covariance() {
     use barracuda::stats::correlation::covariance;
     use barracuda::stats::welford::WelfordCovState;
 
-    let xs: Vec<f64> = (0..100).map(|i| (i as f64) * 0.1).collect();
+    let xs: Vec<f64> = (0..100).map(|i| f64::from(i) * 0.1).collect();
     let ys: Vec<f64> = xs
         .iter()
         .map(|x| x.sin().mul_add(0.01, 2.0 * x + 1.0))

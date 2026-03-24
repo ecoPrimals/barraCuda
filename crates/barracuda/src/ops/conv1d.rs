@@ -199,8 +199,8 @@ impl Tensor {
     /// readback fails (e.g. device lost or out of memory).
     pub fn conv1d(
         self,
-        weight: Tensor,
-        bias: Tensor,
+        weight: Self,
+        bias: Self,
         stride: usize,
         padding: usize,
         dilation: usize,

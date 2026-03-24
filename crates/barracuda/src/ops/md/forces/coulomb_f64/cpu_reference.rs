@@ -35,7 +35,7 @@ pub fn compute_cpu(positions: &[f64], charges: &[f64], k: f64, cutoff: f64, eps:
             let dy = yj - yi;
             let dz = zj - zi;
 
-            let r_sq = dx * dx + dy * dy + dz * dz + eps_sq;
+            let r_sq = dz.mul_add(dz, dx.mul_add(dx, dy * dy)) + eps_sq;
             if r_sq > cutoff_sq {
                 continue;
             }
@@ -91,7 +91,7 @@ pub fn compute_cpu_with_energy(
             let dy = yj - yi;
             let dz = zj - zi;
 
-            let r_sq = dx * dx + dy * dy + dz * dz + eps_sq;
+            let r_sq = dz.mul_add(dz, dx.mul_add(dx, dy * dy)) + eps_sq;
             if r_sq > cutoff_sq {
                 continue;
             }

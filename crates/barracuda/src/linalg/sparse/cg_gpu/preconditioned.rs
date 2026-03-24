@@ -92,11 +92,11 @@ impl CgGpu {
         let beta_buffer = SparseBuffers::f64_zeros(&device, "PCG beta", 1);
 
         // Compile shader modules
-        let spmv_shader = device.compile_shader_f64(CgGpu::spmv_shader(), Some("PCG SpMV"));
+        let spmv_shader = device.compile_shader_f64(Self::spmv_shader(), Some("PCG SpMV"));
         let dot_reduce_shader =
-            device.compile_shader_f64(CgGpu::dot_reduce_shader(), Some("PCG Dot/Reduce"));
+            device.compile_shader_f64(Self::dot_reduce_shader(), Some("PCG Dot/Reduce"));
         let cg_kernels_shader =
-            device.compile_shader_f64(CgGpu::cg_kernels_shader(), Some("PCG Kernels"));
+            device.compile_shader_f64(Self::cg_kernels_shader(), Some("PCG Kernels"));
         let vector_ops_shader = device.compile_shader_f64(
             include_str!("../../../shaders/sparse/vector_ops_f64.wgsl"),
             Some("PCG VecOps"),

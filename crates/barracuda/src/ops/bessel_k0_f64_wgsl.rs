@@ -169,7 +169,7 @@ impl BesselK0F64 {
                 + z * (0.42278420
                     + z * (0.23069756
                         + z * (0.03488590 + z * (0.00262698 + z * (0.00010750 + z * 0.00000740)))));
-            p - Self::i0_small(x) * y.ln()
+            Self::i0_small(x).mul_add(-y.ln(), p)
         } else {
             let t = 2.0 / x;
             let p = 1.25331414

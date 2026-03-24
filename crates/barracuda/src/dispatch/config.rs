@@ -228,13 +228,13 @@ impl DispatchTarget {
     /// Check if this is CPU target
     #[must_use]
     pub fn is_cpu(self) -> bool {
-        matches!(self, DispatchTarget::Cpu)
+        matches!(self, Self::Cpu)
     }
 
     /// Check if this is GPU target
     #[must_use]
     pub fn is_gpu(self) -> bool {
-        matches!(self, DispatchTarget::Gpu)
+        matches!(self, Self::Gpu)
     }
 }
 

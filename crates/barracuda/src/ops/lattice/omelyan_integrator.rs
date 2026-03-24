@@ -89,7 +89,7 @@ impl OmelyanIntegrator {
 
         // Step 3: central kick with (1-2λ)ε
         self.leapfrog
-            .momentum_kick(&buffers, volume, (1.0 - 2.0 * lam) * dt)?;
+            .momentum_kick(&buffers, volume, 2.0f64.mul_add(-lam, 1.0) * dt)?;
 
         // Step 4: full position update with ε/2
         self.leapfrog.link_update(&buffers, volume, dt * 0.5)?;
@@ -153,7 +153,7 @@ mod tests {
     fn omelyan_step_sizes_sum_to_dt() {
         let lam = OMELYAN_LAMBDA;
         let dt = 0.1;
-        let kick_total = lam * dt + (1.0 - 2.0 * lam) * dt + lam * dt;
+        let kick_total = lam.mul_add(dt, lam.mul_add(dt, 2.0f64.mul_add(-lam, 1.0) * dt));
         assert!(
             (kick_total - dt).abs() < 1e-15,
             "Kick sum {kick_total} != dt {dt}"

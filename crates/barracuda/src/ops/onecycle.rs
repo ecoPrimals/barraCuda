@@ -70,12 +70,12 @@ impl OneCycle {
             // Warmup phase: increase from initial_lr to max_lr
             let initial_lr = self.max_lr / self.div_factor;
             let pct = step / warmup_steps;
-            initial_lr + (self.max_lr - initial_lr) * pct
+            (self.max_lr - initial_lr).mul_add(pct, initial_lr)
         } else {
             // Annealing phase: decrease from max_lr to final_lr
             let final_lr = self.max_lr / self.final_div_factor;
             let pct = (step - warmup_steps) / (total - warmup_steps);
-            self.max_lr - (self.max_lr - final_lr) * pct
+            (self.max_lr - final_lr).mul_add(-pct, self.max_lr)
         };
 
         Ok(lr)

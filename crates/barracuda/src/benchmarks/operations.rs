@@ -270,7 +270,7 @@ fn cpu_activation(data: &[f32], operation: &str) -> Vec<f32> {
         "ReLU" => data.iter().map(|&x| x.max(0.0)).collect(),
         "GELU" => data
             .iter()
-            .map(|&x| 0.5 * x * (1.0 + (x * 0.797_884_6 * (1.0 + 0.044715 * x * x)).tanh()))
+            .map(|&x| 0.5 * x * (1.0 + (x * 0.797_884_6 * (0.044715 * x).mul_add(x, 1.0)).tanh()))
             .collect(),
         "SiLU" | "Swish" => data.iter().map(|&x| x / (1.0 + (-x).exp())).collect(),
         "Sigmoid" => data.iter().map(|&x| 1.0 / (1.0 + (-x).exp())).collect(),

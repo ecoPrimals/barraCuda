@@ -98,7 +98,7 @@ fn bond_geometry(positions: &[f64], bond: &MorseBond) -> (f64, f64, f64, f64) {
     let dx = positions[bond.j as usize * 3] - positions[bond.i as usize * 3];
     let dy = positions[bond.j as usize * 3 + 1] - positions[bond.i as usize * 3 + 1];
     let dz = positions[bond.j as usize * 3 + 2] - positions[bond.i as usize * 3 + 2];
-    let r = (dx * dx + dy * dy + dz * dz).sqrt();
+    let r = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
     (dx, dy, dz, r)
 }
 

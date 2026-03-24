@@ -119,10 +119,10 @@ pub fn nmf(v: &[f64], m: usize, n: usize, config: &NmfConfig) -> Result<NmfResul
     let mut w = vec![0.0; m * k];
     let mut h = vec![0.0; k * n];
     for val in &mut w {
-        *val = rng.next_f64() * 0.1 + 1e-10;
+        *val = rng.next_f64().mul_add(0.1, 1e-10);
     }
     for val in &mut h {
-        *val = rng.next_f64() * 0.1 + 1e-10;
+        *val = rng.next_f64().mul_add(0.1, 1e-10);
     }
 
     let mut errors = Vec::with_capacity(config.max_iter);

@@ -241,7 +241,7 @@ mod tests {
 
         // At r = 2^(1/6) * σ ≈ 1.122 * σ, force should be zero (equilibrium)
         let sigma = 1.0;
-        let r_eq = sigma * 2.0_f64.powf(1.0 / 6.0);
+        let r_eq = sigma * (1.0_f64 / 6.0).exp2();
         let positions: Vec<f64> = vec![0.0, 0.0, 0.0, r_eq, 0.0, 0.0];
 
         let forces =

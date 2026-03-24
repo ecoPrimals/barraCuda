@@ -370,7 +370,7 @@ pub mod eps {
     /// Uses `a + (b - a) / 2` which is safe even when `a + b` overflows.
     #[must_use]
     pub fn midpoint(a: f64, b: f64) -> f64 {
-        a + (b - a) * 0.5
+        (b - a).mul_add(0.5, a)
     }
 }
 

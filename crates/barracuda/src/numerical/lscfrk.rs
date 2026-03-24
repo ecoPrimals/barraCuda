@@ -322,9 +322,9 @@ mod tests {
 
         let a21 = b[0];
         let a32 = b[1];
-        let a31 = a21 + a32 * a[1];
-        let b1 = b[0] + b[1] * a[1] + b[2] * a[2] * a[1];
-        let b2_butcher = b[1] + b[2] * a[2];
+        let a31 = a32.mul_add(a[1], a21);
+        let b1 = (b[2] * a[2]).mul_add(a[1], b[1].mul_add(a[1], b[0]));
+        let b2_butcher = b[2].mul_add(a[2], b[1]);
         let b3 = b[2];
 
         assert!(
@@ -333,17 +333,17 @@ mod tests {
             b1 + b2_butcher + b3
         );
         assert!(
-            (b2_butcher * c2 + b3 * c3 - 0.5).abs() < 1e-14,
+            (b2_butcher.mul_add(c2, b3 * c3) - 0.5).abs() < 1e-14,
             "1st order: {}",
-            b2_butcher * c2 + b3 * c3
+            b2_butcher.mul_add(c2, b3 * c3)
         );
         assert!(
-            (b2_butcher * c2 * c2 + b3 * c3 * c3 - 1.0 / 3.0).abs() < 1e-14,
+            ((b2_butcher * c2).mul_add(c2, b3 * c3 * c3) - 1.0 / 3.0).abs() < 1e-14,
             "2nd order: {}",
-            b2_butcher * c2 * c2 + b3 * c3 * c3
+            (b2_butcher * c2).mul_add(c2, b3 * c3 * c3)
         );
         assert!(
-            (b3 * a32 * c2 - 1.0 / 6.0).abs() < 1e-14,
+            (b3 * a32).mul_add(c2, -(1.0 / 6.0)).abs() < 1e-14,
             "tree: {}",
             b3 * a32 * c2
         );

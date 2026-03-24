@@ -93,21 +93,21 @@ impl FoldingOp {
     #[must_use]
     pub fn source(&self) -> &'static str {
         match self {
-            FoldingOp::TorsionAngles => WGSL_TORSION_ANGLES_DF64,
-            FoldingOp::DistanceMatrix => WGSL_DISTANCE_MATRIX_DF64,
-            FoldingOp::Rmsd => WGSL_RMSD_DF64,
-            FoldingOp::ContactMap => WGSL_CONTACT_MAP_DF64,
-            FoldingOp::LennardJones => WGSL_LENNARD_JONES_DF64,
-            FoldingOp::CoulombElectrostatic => WGSL_COULOMB_ELECTROSTATIC_DF64,
-            FoldingOp::HydrogenBond => WGSL_HYDROGEN_BOND_DF64,
-            FoldingOp::SolvationEnergy => WGSL_SOLVATION_ENERGY_DF64,
-            FoldingOp::GradientDescent => WGSL_GRADIENT_DESCENT_DF64,
-            FoldingOp::SimulatedAnnealing => WGSL_SIMULATED_ANNEALING_DF64,
-            FoldingOp::BackboneRestraints => WGSL_BACKBONE_RESTRAINTS_DF64,
-            FoldingOp::SideChainPacking => WGSL_SIDE_CHAIN_PACKING_DF64,
-            FoldingOp::MsaAttention => WGSL_MSA_ATTENTION_DF64,
-            FoldingOp::PairRepresentation => WGSL_PAIR_REPRESENTATION_DF64,
-            FoldingOp::StructureModule => WGSL_STRUCTURE_MODULE_DF64,
+            Self::TorsionAngles => WGSL_TORSION_ANGLES_DF64,
+            Self::DistanceMatrix => WGSL_DISTANCE_MATRIX_DF64,
+            Self::Rmsd => WGSL_RMSD_DF64,
+            Self::ContactMap => WGSL_CONTACT_MAP_DF64,
+            Self::LennardJones => WGSL_LENNARD_JONES_DF64,
+            Self::CoulombElectrostatic => WGSL_COULOMB_ELECTROSTATIC_DF64,
+            Self::HydrogenBond => WGSL_HYDROGEN_BOND_DF64,
+            Self::SolvationEnergy => WGSL_SOLVATION_ENERGY_DF64,
+            Self::GradientDescent => WGSL_GRADIENT_DESCENT_DF64,
+            Self::SimulatedAnnealing => WGSL_SIMULATED_ANNEALING_DF64,
+            Self::BackboneRestraints => WGSL_BACKBONE_RESTRAINTS_DF64,
+            Self::SideChainPacking => WGSL_SIDE_CHAIN_PACKING_DF64,
+            Self::MsaAttention => WGSL_MSA_ATTENTION_DF64,
+            Self::PairRepresentation => WGSL_PAIR_REPRESENTATION_DF64,
+            Self::StructureModule => WGSL_STRUCTURE_MODULE_DF64,
         }
     }
 
@@ -115,21 +115,21 @@ impl FoldingOp {
     #[must_use]
     pub fn label(&self) -> &'static str {
         match self {
-            FoldingOp::TorsionAngles => "torsion_angles_df64",
-            FoldingOp::DistanceMatrix => "distance_matrix_df64",
-            FoldingOp::Rmsd => "rmsd_df64",
-            FoldingOp::ContactMap => "contact_map_df64",
-            FoldingOp::LennardJones => "lennard_jones_df64",
-            FoldingOp::CoulombElectrostatic => "coulomb_electrostatic_df64",
-            FoldingOp::HydrogenBond => "hydrogen_bond_df64",
-            FoldingOp::SolvationEnergy => "solvation_energy_df64",
-            FoldingOp::GradientDescent => "gradient_descent_df64",
-            FoldingOp::SimulatedAnnealing => "simulated_annealing_df64",
-            FoldingOp::BackboneRestraints => "backbone_restraints_df64",
-            FoldingOp::SideChainPacking => "side_chain_packing_df64",
-            FoldingOp::MsaAttention => "msa_attention_df64",
-            FoldingOp::PairRepresentation => "pair_representation_df64",
-            FoldingOp::StructureModule => "structure_module_df64",
+            Self::TorsionAngles => "torsion_angles_df64",
+            Self::DistanceMatrix => "distance_matrix_df64",
+            Self::Rmsd => "rmsd_df64",
+            Self::ContactMap => "contact_map_df64",
+            Self::LennardJones => "lennard_jones_df64",
+            Self::CoulombElectrostatic => "coulomb_electrostatic_df64",
+            Self::HydrogenBond => "hydrogen_bond_df64",
+            Self::SolvationEnergy => "solvation_energy_df64",
+            Self::GradientDescent => "gradient_descent_df64",
+            Self::SimulatedAnnealing => "simulated_annealing_df64",
+            Self::BackboneRestraints => "backbone_restraints_df64",
+            Self::SideChainPacking => "side_chain_packing_df64",
+            Self::MsaAttention => "msa_attention_df64",
+            Self::PairRepresentation => "pair_representation_df64",
+            Self::StructureModule => "structure_module_df64",
         }
     }
 }

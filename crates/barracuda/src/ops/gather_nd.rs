@@ -348,7 +348,7 @@ impl Tensor {
     /// # Errors
     /// Returns [`Err`] if indices have fewer than 2 dimensions, index rank exceeds input rank,
     /// buffer allocation fails, GPU dispatch fails, or buffer readback fails (e.g. device lost).
-    pub fn gather_nd(self, indices: Tensor) -> Result<Self> {
+    pub fn gather_nd(self, indices: Self) -> Result<Self> {
         GatherNd::new(self, indices)?.execute()
     }
 }

@@ -154,7 +154,7 @@ impl Tensor {
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
-    pub fn rmsnorm(self, gamma: Tensor, epsilon: f32) -> Result<Self> {
+    pub fn rmsnorm(self, gamma: Self, epsilon: f32) -> Result<Self> {
         RMSNorm::new(self, gamma, epsilon).execute()
     }
 }

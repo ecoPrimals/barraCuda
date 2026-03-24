@@ -182,7 +182,7 @@ impl HermiteF64 {
         let mut h_curr = 2.0 * x;
 
         for k in 1..n {
-            let h_next = 2.0 * x * h_curr - 2.0 * (k as f64) * h_prev;
+            let h_next = (2.0 * x).mul_add(h_curr, -(2.0 * (k as f64) * h_prev));
             h_prev = h_curr;
             h_curr = h_next;
         }
@@ -259,9 +259,9 @@ mod tests {
         let result = op.hermite(&x, 2).unwrap();
 
         let expected = [
-            4.0 * 0.0 * 0.0 - 2.0,
-            4.0 * 1.0 * 1.0 - 2.0,
-            4.0 * 2.0 * 2.0 - 2.0,
+            (4.0_f64 * 0.0).mul_add(0.0, -2.0),
+            (4.0_f64 * 1.0).mul_add(1.0, -2.0),
+            (4.0_f64 * 2.0).mul_add(2.0, -2.0),
         ];
 
         for (i, &v) in result.iter().enumerate() {

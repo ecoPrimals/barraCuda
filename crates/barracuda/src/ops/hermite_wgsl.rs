@@ -236,7 +236,7 @@ mod tests {
         // H₂(x) = 4x² - 2
         for (i, &v) in result.iter().enumerate() {
             let x = data[i];
-            let expected = 4.0 * x * x - 2.0;
+            let expected = (4.0 * x).mul_add(x, -2.0);
             assert!(
                 (v - expected).abs() < 1e-4,
                 "H₂({x}) = {v}, expected {expected}"

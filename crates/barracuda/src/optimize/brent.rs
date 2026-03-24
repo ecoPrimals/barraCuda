@@ -139,7 +139,7 @@ where
                 let q = fa / fc;
                 let r = fb / fc;
                 (
-                    s * (2.0 * m * q * (q - r) - (b - a) * (r - 1.0)),
+                    s * (2.0 * m * q).mul_add(q - r, -((b - a) * (r - 1.0))),
                     (q - 1.0) * (r - 1.0) * (s - 1.0),
                 )
             };
@@ -148,7 +148,7 @@ where
             let (p, q) = if p > 0.0 { (p, -q) } else { (-p, q) };
 
             // Accept interpolation if it stays well within bounds
-            if 2.0 * p < 3.0 * m * q - (tol * q).abs() && p < (0.5 * e * q).abs() {
+            if 2.0 * p < (3.0 * m).mul_add(q, -(tol * q).abs()) && p < (0.5 * e * q).abs() {
                 e = d;
                 d = p / q;
                 use_bisection = false;
@@ -268,11 +268,11 @@ where
 
     for iter in 0..max_iter {
         let xm = 0.5 * (a + c);
-        let tol1 = tol * x.abs() + 1e-10;
+        let tol1 = tol.mul_add(x.abs(), 1e-10);
         let tol2 = 2.0 * tol1;
 
         // Check convergence
-        if (x - xm).abs() <= tol2 - 0.5 * (c - a) {
+        if (x - xm).abs() <= 0.5f64.mul_add(-(c - a), tol2) {
             return Ok((x, fx, iter));
         }
 
@@ -283,7 +283,7 @@ where
             // Fit parabola through x, w, v
             let r = (x - w) * (fx - fv);
             let q = (x - v) * (fx - fw);
-            let mut p = (x - v) * q - (x - w) * r;
+            let mut p = (x - v).mul_add(q, -((x - w) * r));
             let mut q = 2.0 * (q - r);
 
             if q > 0.0 {
@@ -368,7 +368,7 @@ mod tests {
 
     #[test]
     fn test_brent_sqrt2() {
-        let f = |x: f64| x * x - 2.0;
+        let f = |x: f64| x.mul_add(x, -2.0);
         let result = brent(f, 0.0, 2.0, 1e-10, 100).unwrap();
 
         assert!((result.root - SQRT_2).abs() < 1e-10);
@@ -395,7 +395,7 @@ mod tests {
     #[test]
     fn test_brent_cubic() {
         // x³ - 2x - 5 = 0, root between 2 and 3
-        let f = |x: f64| x.powi(3) - 2.0 * x - 5.0;
+        let f = |x: f64| 2.0f64.mul_add(-x, x.powi(3)) - 5.0;
         let result = brent(f, 2.0, 3.0, 1e-10, 100).unwrap();
 
         assert!(f(result.root).abs() < 1e-10);
@@ -411,7 +411,7 @@ mod tests {
 
     #[test]
     fn test_brent_faster_than_bisection() {
-        let f = |x: f64| x * x - 2.0;
+        let f = |x: f64| x.mul_add(x, -2.0);
 
         // Brent should converge faster than 50 iterations
         let result = brent(f, 1.0, 2.0, 1e-12, 100).unwrap();

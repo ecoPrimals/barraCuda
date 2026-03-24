@@ -86,7 +86,7 @@ impl CellList {
 
         let n_cells_total = n_cells[0] * n_cells[1] * n_cells[2];
 
-        CellList {
+        Self {
             n_cells,
             cell_size,
             n_cells_total,

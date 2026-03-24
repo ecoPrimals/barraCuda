@@ -536,7 +536,7 @@ impl SpinOrbitGpu {
 #[must_use]
 pub fn compute_ls_factor(l: u32, j: f64) -> f64 {
     let l_f = l as f64;
-    (j * (j + 1.0) - l_f * (l_f + 1.0) - 0.75) / 2.0
+    (j.mul_add(j + 1.0, -(l_f * (l_f + 1.0))) - 0.75) / 2.0
 }
 
 #[cfg(test)]

@@ -161,7 +161,7 @@ impl Tensor {
     /// Divide by another tensor element-wise. Shapes must match.
     /// # Errors
     /// Returns [`Err`] if shapes differ, buffer allocation fails, GPU dispatch fails, or the device is lost.
-    pub fn div(&self, other: &Tensor) -> Result<Self> {
+    pub fn div(&self, other: &Self) -> Result<Self> {
         Div::new(self.clone(), other.clone())?.execute()
     }
 }
@@ -246,7 +246,7 @@ mod tests {
 
         let result = lhs.div(&rhs).unwrap().to_vec().unwrap();
         for (i, &val) in result.iter().enumerate() {
-            assert!((val - (i + 1) as f32 * 10.0).abs() < 1e-3);
+            assert!(((i + 1) as f32).mul_add(-10.0, val).abs() < 1e-3);
         }
     }
 

@@ -207,7 +207,7 @@ pub fn gemv_quantized_cpu(
     let k_blocks = k.div_ceil(quant_type.block_size());
     let bytes_per_block = quant_type.bytes_per_block();
 
-    for row in 0..m {
+    for (row, y_row) in y.iter_mut().enumerate() {
         let row_offset = row * k_blocks * bytes_per_block;
         let row_data = &a_quant[row_offset..row_offset + k_blocks * bytes_per_block];
 
@@ -217,7 +217,7 @@ pub fn gemv_quantized_cpu(
             QuantType::Q8_0 => dequant_q8_cpu(row_data, k),
         };
 
-        y[row] = row_f32.iter().zip(x.iter()).map(|(a, b)| a * b).sum();
+        *y_row = row_f32.iter().zip(x.iter()).map(|(a, b)| a * b).sum();
     }
 
     y

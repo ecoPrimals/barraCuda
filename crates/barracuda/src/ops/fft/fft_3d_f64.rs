@@ -219,8 +219,10 @@ mod tests {
             for iy in 0..n {
                 for iz in 0..n {
                     let idx = (ix * n * n + iy * n + iz) * 2;
-                    data[idx] = (2.0 * pi * ix as f64 / n as f64).sin()
-                        + 0.5 * (2.0 * pi * iz as f64 / n as f64).cos();
+                    data[idx] = 0.5f64.mul_add(
+                        (2.0 * pi * iz as f64 / n as f64).cos(),
+                        (2.0 * pi * ix as f64 / n as f64).sin(),
+                    );
                 }
             }
         }
@@ -264,7 +266,7 @@ mod tests {
         let back = fft.inverse(&freq).await.unwrap();
 
         let norm = (size as f64).recip();
-        assert!((back[0] * norm - 1.0).abs() < 1e-10);
+        assert!(back[0].mul_add(norm, -1.0).abs() < 1e-10);
         for i in 1..size {
             assert!((back[i * 2] * norm).abs() < 1e-10);
         }

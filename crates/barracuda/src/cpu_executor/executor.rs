@@ -152,7 +152,7 @@ impl CpuExecutor {
                 Tanh => x.tanh(),
                 GELU => {
                     let sqrt_2_over_pi = 0.797_884_6;
-                    0.5 * x * (1.0 + (sqrt_2_over_pi * (x + 0.044715 * x * x * x)).tanh())
+                    0.5 * x * (1.0 + (sqrt_2_over_pi * (0.044715 * x * x).mul_add(x, x)).tanh())
                 }
                 Negate => -x,
                 Abs => x.abs(),

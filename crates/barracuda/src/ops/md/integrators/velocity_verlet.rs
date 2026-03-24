@@ -385,13 +385,13 @@ mod tests {
 
         // Check physics: x = x0 + v*t + 0.5*a*t^2
         // x = 0 + 1*0.1 + 0.5*2*0.01 = 0.11
-        let expected_x = 0.0 + 1.0 * dt + 0.5 * 2.0 * dt * dt;
+        let expected_x = (0.5 * 2.0 * dt).mul_add(dt, 1.0f32.mul_add(dt, 0.0));
         println!("Expected x: {}, got: {}", expected_x, pos_data[0]);
         assert!((pos_data[0] - expected_x).abs() < 1e-5, "Position update");
 
         // v = v0 + a*t
         // v = 1 + 2*0.1 = 1.2
-        let expected_v = 1.0 + 2.0 * dt;
+        let expected_v = 2.0f32.mul_add(dt, 1.0);
         println!("Expected v: {}, got: {}", expected_v, vel_data[0]);
         assert!((vel_data[0] - expected_v).abs() < 1e-5, "Velocity update");
 

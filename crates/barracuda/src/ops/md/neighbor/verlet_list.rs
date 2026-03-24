@@ -120,7 +120,7 @@ impl VerletList {
                 let dx = Self::min_image(positions[j * 3] - xi, self.box_dims[0]);
                 let dy = Self::min_image(positions[j * 3 + 1] - yi, self.box_dims[1]);
                 let dz = Self::min_image(positions[j * 3 + 2] - zi, self.box_dims[2]);
-                let r_sq = dx * dx + dy * dy + dz * dz;
+                let r_sq = dz.mul_add(dz, dx.mul_add(dx, dy * dy));
 
                 if r_sq <= r_list_sq {
                     self.neighbors.push(j as u32);
@@ -156,7 +156,7 @@ impl VerletList {
                 current_positions[i * 3 + 2] - self.positions_at_build[i * 3 + 2],
                 self.box_dims[2],
             );
-            if dx * dx + dy * dy + dz * dz > half_skin_sq {
+            if dz.mul_add(dz, dx.mul_add(dx, dy * dy)) > half_skin_sq {
                 return true;
             }
         }
@@ -247,9 +247,9 @@ mod tests {
         for iz in 0..n_per_dim {
             for iy in 0..n_per_dim {
                 for ix in 0..n_per_dim {
-                    positions.push(ix as f64 * spacing + 0.1);
-                    positions.push(iy as f64 * spacing + 0.1);
-                    positions.push(iz as f64 * spacing + 0.1);
+                    positions.push((ix as f64).mul_add(spacing, 0.1));
+                    positions.push((iy as f64).mul_add(spacing, 0.1));
+                    positions.push((iz as f64).mul_add(spacing, 0.1));
                 }
             }
         }

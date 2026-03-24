@@ -28,8 +28,8 @@ use crate::error::{BarracudaError, Result};
 /// Localization length in units of lattice spacing.
 #[must_use]
 pub fn localization_length(disorder_strength: f64, energy: f64) -> f64 {
-    let w_sq = disorder_strength * disorder_strength + 0.01;
-    let band_factor = (4.0 - energy * energy).max(0.01);
+    let w_sq = disorder_strength.mul_add(disorder_strength, 0.01);
+    let band_factor = energy.mul_add(-energy, 4.0).max(0.01);
     105.0 * band_factor / w_sq
 }
 

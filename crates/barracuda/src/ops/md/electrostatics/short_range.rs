@@ -28,7 +28,7 @@ pub fn erfc(x: f64) -> f64 {
 
     // Rational approximation (Abramowitz & Stegun 7.1.26)
     // Accurate to ~1.5e-7
-    let t = 1.0 / (1.0 + 0.327_591_1 * x);
+    let t = 1.0 / 0.327_591_1f64.mul_add(x, 1.0);
     let poly = t
         * (0.254_829_592
             + t * (-0.284_496_736
@@ -89,7 +89,7 @@ pub fn compute_short_range(
             let dy = minimum_image(ri[1] - rj[1], box_dims[1]);
             let dz = minimum_image(ri[2] - rj[2], box_dims[2]);
 
-            let r_sq = dx * dx + dy * dy + dz * dz;
+            let r_sq = dz.mul_add(dz, dx.mul_add(dx, dy * dy));
 
             // Skip if beyond cutoff
             if r_sq >= rc_sq {
@@ -162,7 +162,7 @@ pub fn compute_short_range_forces(
             let dy = minimum_image(ri[1] - rj[1], box_dims[1]);
             let dz = minimum_image(ri[2] - rj[2], box_dims[2]);
 
-            let r_sq = dx * dx + dy * dy + dz * dz;
+            let r_sq = dz.mul_add(dz, dx.mul_add(dx, dy * dy));
 
             if r_sq >= rc_sq {
                 continue;
@@ -235,7 +235,7 @@ pub fn dipole_correction(
 /// Minimum image convention for periodic boundaries
 #[inline]
 fn minimum_image(d: f64, box_len: f64) -> f64 {
-    d - box_len * (d / box_len).round()
+    box_len.mul_add(-(d / box_len).round(), d)
 }
 
 #[cfg(test)]

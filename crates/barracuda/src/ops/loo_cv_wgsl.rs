@@ -202,7 +202,7 @@ impl Tensor {
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
-    pub fn loo_cv(self, y: Tensor, predictions: Tensor) -> Result<Self> {
+    pub fn loo_cv(self, y: Self, predictions: Self) -> Result<Self> {
         LooCv::new(self, y, predictions).execute()
     }
 }

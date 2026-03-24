@@ -348,7 +348,7 @@ mod tests {
             let masses = vec![1.0];
             let dt = 0.01;
 
-            let initial_energy = 0.5 * pos[0] * pos[0] + 0.5 * vel[0] * vel[0];
+            let initial_energy = (0.5_f64 * pos[0]).mul_add(pos[0], 0.5 * vel[0] * vel[0]);
 
             for _ in 0..1000 {
                 let forces_old = vec![-pos[0], 0.0, 0.0];
@@ -358,7 +358,7 @@ mod tests {
                 vel = vv.velocity_half_step(&half_vel, &forces_new, &masses, dt)?;
             }
 
-            let final_energy = 0.5 * pos[0] * pos[0] + 0.5 * vel[0] * vel[0];
+            let final_energy = (0.5 * pos[0]).mul_add(pos[0], 0.5 * vel[0] * vel[0]);
             let rel_err = (final_energy - initial_energy).abs() / initial_energy;
 
             assert!(

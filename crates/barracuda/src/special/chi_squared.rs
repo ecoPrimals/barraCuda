@@ -80,7 +80,8 @@ pub fn chi_squared_pdf(x: f64, k: f64) -> Result<f64> {
     }
 
     let half_k = k / 2.0;
-    let ln_pdf = (half_k - 1.0) * x.ln() - x / 2.0 - half_k * 2.0_f64.ln() - ln_gamma(half_k)?;
+    let ln_pdf =
+        (half_k - 1.0).mul_add(x.ln(), -(x / 2.0)) - half_k * 2.0_f64.ln() - ln_gamma(half_k)?;
 
     Ok(ln_pdf.exp())
 }

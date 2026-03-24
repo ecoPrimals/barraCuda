@@ -184,7 +184,7 @@ impl BetaF64 {
             }
             let t = x_shifted + g + 0.5;
             let sqrt_2pi: f64 = 2.5066282746310005;
-            sqrt_2pi.ln() + sum.ln() + (x_shifted + 0.5) * t.ln() - t
+            (x_shifted + 0.5).mul_add(t.ln(), sqrt_2pi.ln() + sum.ln()) - t
         }
 
         let log_beta = lgamma(a) + lgamma(b) - lgamma(a + b);

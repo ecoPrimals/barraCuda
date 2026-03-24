@@ -101,7 +101,7 @@ mod fused_map_reduce_unit {
             None => return,
         };
         let fmr = FusedMapReduceF64::new(device).unwrap();
-        let data: Vec<f64> = (1..=100).map(|x| x as f64).collect();
+        let data: Vec<f64> = (1..=100).map(f64::from).collect();
         let result = fmr.sum(&data).unwrap();
         let expected: f64 = data.iter().sum();
         let error = (result - expected).abs();
@@ -337,8 +337,8 @@ mod kriging_unit {
         let known: Vec<(f64, f64, f64)> = (0..10)
             .flat_map(|i| {
                 (0..10).map(move |j| {
-                    let x = i as f64 * 2.0;
-                    let y = j as f64 * 2.0;
+                    let x = f64::from(i) * 2.0;
+                    let y = f64::from(j) * 2.0;
                     let z = (x * y).mul_add(0.01, x * 0.1 + y * 0.1);
                     (x, y, z)
                 })

@@ -242,8 +242,10 @@ mod tests {
         let data: Vec<f32> = (0..n)
             .map(|k| {
                 let t = (k as f32) / (n as f32);
-                (2.0 * std::f32::consts::PI * 3.0 * t).sin()
-                    + 0.5 * (2.0 * std::f32::consts::PI * 7.0 * t).cos()
+                0.5f32.mul_add(
+                    (2.0 * std::f32::consts::PI * 7.0 * t).cos(),
+                    (2.0 * std::f32::consts::PI * 3.0 * t).sin(),
+                )
             })
             .collect();
 
@@ -256,7 +258,10 @@ mod tests {
 
         let spectrum_data = spectrum.to_vec().unwrap();
         let total_energy: f32 = (0..17)
-            .map(|i| spectrum_data[i * 2].powi(2) + spectrum_data[i * 2 + 1].powi(2))
+            .map(|i| {
+                spectrum_data[i * 2 + 1]
+                    .mul_add(spectrum_data[i * 2 + 1], spectrum_data[i * 2].powi(2))
+            })
             .sum();
 
         assert!(total_energy > 1.0, "Spectrum has energy");

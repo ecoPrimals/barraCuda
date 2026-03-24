@@ -270,7 +270,7 @@ pub fn influence_function(
     box_dims: [f64; 3],
     mesh_dims: [usize; 3],
 ) -> f64 {
-    let k_sq = kx * kx + ky * ky + kz * kz;
+    let k_sq = kz.mul_add(kz, kx.mul_add(kx, ky * ky));
 
     // Handle k = 0 (no contribution)
     if k_sq < 1e-14 {
@@ -370,9 +370,9 @@ mod tests {
         for order in 2..=6 {
             for i in 0..10 {
                 let pos = [
-                    (i as f64) * 0.73 + 0.1,
-                    (i as f64) * 0.91 + 0.2,
-                    (i as f64) * 0.67 + 0.3,
+                    (i as f64).mul_add(0.73, 0.1),
+                    (i as f64).mul_add(0.91, 0.2),
+                    (i as f64).mul_add(0.67, 0.3),
                 ];
                 let mesh_dims = [16, 16, 16];
                 let box_dims = [10.0, 10.0, 10.0];

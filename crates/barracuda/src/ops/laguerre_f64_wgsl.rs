@@ -93,8 +93,9 @@ impl LaguerreF64 {
         for k in 1..n {
             let kf = k as f64;
             // Three-term recurrence: n·Lₙ = (2n-1+α-x)·L_{n-1} - (n-1+α)·L_{n-2}
-            let l_next =
-                ((2.0 * kf + 1.0 + alpha - x) * l_curr - (kf + alpha) * l_prev) / (kf + 1.0);
+            let l_next = (2.0f64.mul_add(kf, 1.0) + alpha - x)
+                .mul_add(l_curr, -((kf + alpha) * l_prev))
+                / (kf + 1.0);
             l_prev = l_curr;
             l_curr = l_next;
         }
@@ -223,7 +224,7 @@ mod tests {
         // L₂(x) = (x² - 4x + 2) / 2 = 0.5x² - 2x + 1
         for (i, &v) in result.iter().enumerate() {
             let xi = x[i];
-            let expected = 0.5 * xi * xi - 2.0 * xi + 1.0;
+            let expected = (0.5 * xi).mul_add(xi, -(2.0 * xi)) + 1.0;
             assert!(
                 (v - expected).abs() < 1e-10,
                 "L₂({xi}) = {v}, expected {expected}"

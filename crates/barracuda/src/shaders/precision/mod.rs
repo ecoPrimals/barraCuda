@@ -51,10 +51,10 @@ impl Precision {
     #[must_use]
     pub fn scalar(&self) -> &'static str {
         match self {
-            Precision::F16 => "f16",
-            Precision::F32 => "f32",
-            Precision::F64 => "f64",
-            Precision::Df64 => "vec2<f32>",
+            Self::F16 => "f16",
+            Self::F32 => "f32",
+            Self::F64 => "f64",
+            Self::Df64 => "vec2<f32>",
         }
     }
 
@@ -62,10 +62,10 @@ impl Precision {
     #[must_use]
     pub fn vec2(&self) -> &'static str {
         match self {
-            Precision::F16 => "vec2<f16>",
-            Precision::F32 => "vec2<f32>",
-            Precision::F64 => "f64",
-            Precision::Df64 => "vec2<f32>",
+            Self::F16 => "vec2<f16>",
+            Self::F32 => "vec2<f32>",
+            Self::F64 => "f64",
+            Self::Df64 => "vec2<f32>",
         }
     }
 
@@ -73,27 +73,27 @@ impl Precision {
     #[must_use]
     pub fn vec4(&self) -> &'static str {
         match self {
-            Precision::F16 => "vec4<f16>",
-            Precision::F32 => "vec4<f32>",
-            Precision::F64 => "f64",
-            Precision::Df64 => "vec2<f32>",
+            Self::F16 => "vec4<f16>",
+            Self::F32 => "vec4<f32>",
+            Self::F64 => "f64",
+            Self::Df64 => "vec2<f32>",
         }
     }
 
     /// Whether this precision supports vectorized operations (vec4).
     #[must_use]
     pub fn has_vec4(&self) -> bool {
-        matches!(self, Precision::F16 | Precision::F32)
+        matches!(self, Self::F16 | Self::F32)
     }
 
     /// Bytes per element.
     #[must_use]
     pub fn bytes_per_element(&self) -> usize {
         match self {
-            Precision::F16 => 2,
-            Precision::F32 => 4,
-            Precision::F64 => 8,
-            Precision::Df64 => 8,
+            Self::F16 => 2,
+            Self::F32 => 4,
+            Self::F64 => 8,
+            Self::Df64 => 8,
         }
     }
 
@@ -101,23 +101,23 @@ impl Precision {
     #[must_use]
     pub fn required_feature(&self) -> Option<wgpu::Features> {
         match self {
-            Precision::F16 => Some(wgpu::Features::SHADER_F16),
-            Precision::F32 => None,
-            Precision::F64 => Some(wgpu::Features::SHADER_F64),
-            Precision::Df64 => None,
+            Self::F16 => Some(wgpu::Features::SHADER_F16),
+            Self::F32 => None,
+            Self::F64 => Some(wgpu::Features::SHADER_F64),
+            Self::Df64 => None,
         }
     }
 
     /// Whether this is an f64-class precision (native f64 or df64 emulation).
     #[must_use]
     pub fn is_f64_class(&self) -> bool {
-        matches!(self, Precision::F64 | Precision::Df64)
+        matches!(self, Self::F64 | Self::Df64)
     }
 
     /// Whether this is a reduced-precision tier (f16 or lower).
     #[must_use]
     pub fn is_reduced(&self) -> bool {
-        matches!(self, Precision::F16)
+        matches!(self, Self::F16)
     }
 
     /// Generate the operation preamble for this precision.
@@ -135,10 +135,10 @@ impl Precision {
     #[must_use]
     pub fn op_preamble(&self) -> &'static str {
         match self {
-            Precision::F16 => OP_PREAMBLE_F16,
-            Precision::F32 => OP_PREAMBLE_F32,
-            Precision::F64 => OP_PREAMBLE_F64,
-            Precision::Df64 => OP_PREAMBLE_DF64,
+            Self::F16 => OP_PREAMBLE_F16,
+            Self::F32 => OP_PREAMBLE_F32,
+            Self::F64 => OP_PREAMBLE_F64,
+            Self::Df64 => OP_PREAMBLE_DF64,
         }
     }
 }

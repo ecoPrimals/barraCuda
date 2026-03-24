@@ -112,7 +112,7 @@ pub fn compute_rdf(snapshots: &[Vec<f64>], n: usize, box_side: f64, n_bins: usiz
                 dy -= box_side * (dy / box_side).round();
                 dz -= box_side * (dz / box_side).round();
 
-                let r = (dx * dx + dy * dy + dz * dz).sqrt();
+                let r = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
                 let bin = (r / dr) as usize;
                 if bin < n_bins {
                     histogram[bin] += 1;
@@ -166,9 +166,10 @@ pub fn compute_vacf(vel_snapshots: &[Vec<f64>], n: usize, dt_dump: f64, max_lag:
 
             let mut dot_sum = 0.0;
             for i in 0..n {
-                dot_sum += v0[i * 3] * v1[i * 3]
-                    + v0[i * 3 + 1] * v1[i * 3 + 1]
-                    + v0[i * 3 + 2] * v1[i * 3 + 2];
+                dot_sum += v0[i * 3 + 2].mul_add(
+                    v1[i * 3 + 2],
+                    v0[i * 3].mul_add(v1[i * 3], v0[i * 3 + 1] * v1[i * 3 + 1]),
+                );
             }
             c_values[lag] += dot_sum / n as f64;
             counts[lag] += 1;
@@ -299,7 +300,7 @@ pub fn compute_msd(
                 let dx = unwrapped[t1][i * 3] - unwrapped[t0][i * 3];
                 let dy = unwrapped[t1][i * 3 + 1] - unwrapped[t0][i * 3 + 1];
                 let dz = unwrapped[t1][i * 3 + 2] - unwrapped[t0][i * 3 + 2];
-                msd_sum += dx * dx + dy * dy + dz * dz;
+                msd_sum += dz.mul_add(dz, dx.mul_add(dx, dy * dy));
                 count += 1;
             }
         }
@@ -354,14 +355,14 @@ fn unwrap_positions(snapshots: &[Vec<f64>], n: usize, box_side: f64) -> Vec<Vec<
                 let r_curr = curr[i * 3 + d];
 
                 // Detect box crossing
-                let delta = r_curr - (r_prev - image_counts[i][d] as f64 * box_side);
+                let delta = r_curr - (image_counts[i][d] as f64).mul_add(-box_side, r_prev);
                 if delta > box_side / 2.0 {
                     image_counts[i][d] -= 1;
                 } else if delta < -box_side / 2.0 {
                     image_counts[i][d] += 1;
                 }
 
-                unwrapped_frame.push(r_curr + image_counts[i][d] as f64 * box_side);
+                unwrapped_frame.push((image_counts[i][d] as f64).mul_add(box_side, r_curr));
             }
         }
 
@@ -383,12 +384,12 @@ fn linear_fit_slope(x: &[f64], y: &[f64]) -> f64 {
     let sum_xy: f64 = x.iter().zip(y.iter()).map(|(xi, yi)| xi * yi).sum();
     let sum_x2: f64 = x.iter().map(|xi| xi * xi).sum();
 
-    let denom = n * sum_x2 - sum_x * sum_x;
+    let denom = n.mul_add(sum_x2, -(sum_x * sum_x));
     if denom.abs() < 1e-30 {
         return 0.0;
     }
 
-    (n * sum_xy - sum_x * sum_y) / denom
+    n.mul_add(sum_xy, -(sum_x * sum_y)) / denom
 }
 
 /// Validate energy conservation from energy history

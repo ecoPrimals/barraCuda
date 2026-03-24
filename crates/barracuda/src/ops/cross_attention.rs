@@ -81,7 +81,7 @@ pub async fn cross_attention(
                 // Compute attention scores with encoder
                 let mut scores = vec![0.0f32; encoder_len];
 
-                for j in 0..encoder_len {
+                for (j, score_slot) in scores.iter_mut().enumerate() {
                     let mut score = 0.0;
                     for d in 0..head_dim {
                         let q_idx = b * num_heads * decoder_len * head_dim
@@ -94,7 +94,7 @@ pub async fn cross_attention(
                             + d;
                         score += query[q_idx] * key[k_idx];
                     }
-                    scores[j] = score / scale;
+                    *score_slot = score / scale;
                 }
 
                 // Softmax
@@ -111,12 +111,12 @@ pub async fn cross_attention(
                 // Apply to encoder values
                 for d in 0..head_dim {
                     let mut weighted_sum = 0.0;
-                    for j in 0..encoder_len {
+                    for (j, &s_j) in scores.iter().enumerate() {
                         let v_idx = b * num_heads * encoder_len * head_dim
                             + h * encoder_len * head_dim
                             + j * head_dim
                             + d;
-                        weighted_sum += scores[j] * value[v_idx];
+                        weighted_sum += s_j * value[v_idx];
                     }
                     let out_idx = b * num_heads * decoder_len * head_dim
                         + h * decoder_len * head_dim

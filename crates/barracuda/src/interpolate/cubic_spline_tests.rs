@@ -56,8 +56,7 @@ fn test_spline_continuity() {
     let spline = CubicSpline::natural(&x, &y).unwrap();
 
     // Check C² continuity at interior knots
-    for i in 1..x.len() - 1 {
-        let xi = x[i];
+    for &xi in &x[1..x.len() - 1] {
         let eps = 1e-6;
 
         let y_left = spline.eval(xi - eps).unwrap();

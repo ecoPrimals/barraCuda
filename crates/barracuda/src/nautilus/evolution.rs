@@ -131,10 +131,10 @@ pub fn evolve(
 pub fn crossover_columns(a: &Board, b: &Board, rng: &mut impl Rng) -> Board {
     let l = a.config.grid_size;
     let mut cells = a.cells.clone();
-    for k in 0..l {
+    for (k, _) in a.cells[0].iter().enumerate().take(l) {
         if rng.random::<bool>() {
-            for row in 0..l {
-                cells[row][k] = b.cells[row][k];
+            for (row_a, row_b) in cells.iter_mut().zip(b.cells.iter()) {
+                row_a[k] = row_b[k];
             }
         }
     }

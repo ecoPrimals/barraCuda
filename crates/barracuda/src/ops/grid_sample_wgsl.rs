@@ -228,7 +228,7 @@ impl Tensor {
     ///
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
-    pub fn grid_sample_wgsl(self, grid: Tensor) -> Result<Self> {
+    pub fn grid_sample_wgsl(self, grid: Self) -> Result<Self> {
         GridSample::new(self, grid).execute()
     }
 }

@@ -278,7 +278,7 @@ impl Tensor {
     /// # Errors
     /// Returns [`Err`] if content is not 4D, style mean/std shapes are invalid, channel count
     /// mismatches, buffer allocation fails, GPU dispatch fails, buffer readback fails, or the device is lost.
-    pub fn adaptive_instance_norm(self, style_mean: Tensor, style_std: Tensor) -> Result<Self> {
+    pub fn adaptive_instance_norm(self, style_mean: Self, style_std: Self) -> Result<Self> {
         AdaptiveInstanceNorm::new(self, style_mean, style_std)?.execute()
     }
 }

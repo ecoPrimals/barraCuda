@@ -66,7 +66,7 @@ impl Tensor {
     ///
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
-    pub fn mse_loss(self, targets: Tensor) -> Result<Self> {
+    pub fn mse_loss(self, targets: Self) -> Result<Self> {
         MseLoss::new(self, targets).execute()
     }
 }
@@ -186,7 +186,7 @@ mod tests {
         };
         // 1000 elements
         let pred_data: Vec<f32> = (0..1000).map(|i| i as f32 * 0.1).collect();
-        let target_data: Vec<f32> = (0..1000).map(|i| i as f32 * 0.1 + 0.5).collect();
+        let target_data: Vec<f32> = (0..1000).map(|i| (i as f32).mul_add(0.1, 0.5)).collect();
 
         let predictions = Tensor::from_data(&pred_data, vec![1000], device.clone()).unwrap();
         let targets = Tensor::from_data(&target_data, vec![1000], device).unwrap();

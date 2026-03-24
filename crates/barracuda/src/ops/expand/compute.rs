@@ -119,8 +119,8 @@ fn compute_input_strides(broadcasted_input_shape: &[usize], num_dims: usize) -> 
         } else {
             // Compute stride as product of all dimensions after this one
             let mut stride = 1u32;
-            for j in (i + 1)..num_dims {
-                stride *= broadcasted_input_shape[j] as u32;
+            for &dim in &broadcasted_input_shape[(i + 1)..num_dims] {
+                stride *= dim as u32;
             }
             input_strides[i] = stride as usize;
         }

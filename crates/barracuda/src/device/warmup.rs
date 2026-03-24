@@ -67,7 +67,7 @@ impl WarmupOp {
     /// Get shader source for this operation
     fn shader_source(&self, workgroup_size: u32) -> Cow<'static, str> {
         match self {
-            WarmupOp::Add => Cow::Owned(format!(
+            Self::Add => Cow::Owned(format!(
                 r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read> b: array<f32>;
@@ -82,7 +82,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
 "
             )),
 
-            WarmupOp::Mul => Cow::Owned(format!(
+            Self::Mul => Cow::Owned(format!(
                 r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read> b: array<f32>;
@@ -97,7 +97,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
 "
             )),
 
-            WarmupOp::Fma => Cow::Owned(format!(
+            Self::Fma => Cow::Owned(format!(
                 r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read> b: array<f32>;
@@ -113,7 +113,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
 "
             )),
 
-            WarmupOp::Scale => Cow::Owned(format!(
+            Self::Scale => Cow::Owned(format!(
                 r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read_write> out: array<f32>;
@@ -128,7 +128,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
 "
             )),
 
-            WarmupOp::ReLU => Cow::Owned(format!(
+            Self::ReLU => Cow::Owned(format!(
                 r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read_write> out: array<f32>;
@@ -142,7 +142,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
 "
             )),
 
-            WarmupOp::Matmul | WarmupOp::Reduce | WarmupOp::Softmax => Cow::Owned(format!(
+            Self::Matmul | Self::Reduce | Self::Softmax => Cow::Owned(format!(
                 r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read> b: array<f32>;
@@ -158,7 +158,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
 "
             )),
 
-            WarmupOp::BinaryOp => Cow::Owned(format!(
+            Self::BinaryOp => Cow::Owned(format!(
                 r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read> b: array<f32>;
@@ -173,7 +173,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
 "
             )),
 
-            WarmupOp::UnaryOp => Cow::Owned(format!(
+            Self::UnaryOp => Cow::Owned(format!(
                 r"
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(1) var<storage, read_write> out: array<f32>;
@@ -187,13 +187,13 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
 "
             )),
 
-            WarmupOp::MeanVarianceF64 => {
+            Self::MeanVarianceF64 => {
                 Cow::Borrowed(include_str!("../shaders/reduce/mean_variance_f64.wgsl"))
             }
-            WarmupOp::CorrelationF64 => {
+            Self::CorrelationF64 => {
                 Cow::Borrowed(include_str!("../shaders/stats/correlation_full_f64.wgsl"))
             }
-            WarmupOp::SumReduceF64 => {
+            Self::SumReduceF64 => {
                 Cow::Borrowed(include_str!("../shaders/reduce/sum_reduce_f64.wgsl"))
             }
         }
@@ -202,27 +202,23 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
     /// Get bind group layout signature for this operation
     fn layout_signature(&self) -> BindGroupLayoutSignature {
         match self {
-            WarmupOp::Add | WarmupOp::Mul | WarmupOp::BinaryOp => {
+            Self::Add | Self::Mul | Self::BinaryOp => {
                 BindGroupLayoutSignature::elementwise_binary()
             }
-            WarmupOp::ReLU | WarmupOp::UnaryOp => BindGroupLayoutSignature::elementwise_unary(),
-            WarmupOp::Scale => BindGroupLayoutSignature {
+            Self::ReLU | Self::UnaryOp => BindGroupLayoutSignature::elementwise_unary(),
+            Self::Scale => BindGroupLayoutSignature {
                 read_only_buffers: 1,
                 read_write_buffers: 1,
                 uniform_buffers: 1,
             },
-            WarmupOp::Fma => BindGroupLayoutSignature {
+            Self::Fma => BindGroupLayoutSignature {
                 read_only_buffers: 3,
                 read_write_buffers: 1,
                 uniform_buffers: 0,
             },
-            WarmupOp::Matmul | WarmupOp::Reduce | WarmupOp::Softmax => {
-                BindGroupLayoutSignature::matmul()
-            }
-            WarmupOp::MeanVarianceF64 | WarmupOp::SumReduceF64 => {
-                BindGroupLayoutSignature::reduction()
-            }
-            WarmupOp::CorrelationF64 => BindGroupLayoutSignature {
+            Self::Matmul | Self::Reduce | Self::Softmax => BindGroupLayoutSignature::matmul(),
+            Self::MeanVarianceF64 | Self::SumReduceF64 => BindGroupLayoutSignature::reduction(),
+            Self::CorrelationF64 => BindGroupLayoutSignature {
                 read_only_buffers: 2,
                 read_write_buffers: 1,
                 uniform_buffers: 1,
@@ -232,42 +228,42 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{
 
     /// All standard operations for full warmup
     #[must_use]
-    pub fn all() -> &'static [WarmupOp] {
+    pub fn all() -> &'static [Self] {
         &[
-            WarmupOp::Add,
-            WarmupOp::Mul,
-            WarmupOp::Fma,
-            WarmupOp::Scale,
-            WarmupOp::ReLU,
-            WarmupOp::BinaryOp,
-            WarmupOp::UnaryOp,
+            Self::Add,
+            Self::Mul,
+            Self::Fma,
+            Self::Scale,
+            Self::ReLU,
+            Self::BinaryOp,
+            Self::UnaryOp,
         ]
     }
 
     /// ML inference operations
     #[must_use]
-    pub fn ml_inference() -> &'static [WarmupOp] {
+    pub fn ml_inference() -> &'static [Self] {
         &[
-            WarmupOp::Add,
-            WarmupOp::Mul,
-            WarmupOp::Matmul,
-            WarmupOp::ReLU,
-            WarmupOp::Softmax,
+            Self::Add,
+            Self::Mul,
+            Self::Matmul,
+            Self::ReLU,
+            Self::Softmax,
         ]
     }
 
     /// Scientific computing operations (includes f64 fused reductions)
     #[must_use]
-    pub fn scientific() -> &'static [WarmupOp] {
+    pub fn scientific() -> &'static [Self] {
         &[
-            WarmupOp::Add,
-            WarmupOp::Mul,
-            WarmupOp::Fma,
-            WarmupOp::Scale,
-            WarmupOp::Reduce,
-            WarmupOp::MeanVarianceF64,
-            WarmupOp::CorrelationF64,
-            WarmupOp::SumReduceF64,
+            Self::Add,
+            Self::Mul,
+            Self::Fma,
+            Self::Scale,
+            Self::Reduce,
+            Self::MeanVarianceF64,
+            Self::CorrelationF64,
+            Self::SumReduceF64,
         ]
     }
 }
@@ -476,9 +472,9 @@ impl WarmupWorkloadHint {
     #[must_use]
     pub fn to_config(&self) -> WarmupConfig {
         match self {
-            WarmupWorkloadHint::General => WarmupConfig::default(),
-            WarmupWorkloadHint::MlInference => WarmupConfig::ml(),
-            WarmupWorkloadHint::MlTraining => WarmupConfig {
+            Self::General => WarmupConfig::default(),
+            Self::MlInference => WarmupConfig::ml(),
+            Self::MlTraining => WarmupConfig {
                 ops: vec![
                     WarmupOp::Add,
                     WarmupOp::Mul,
@@ -492,8 +488,8 @@ impl WarmupWorkloadHint {
                 workgroup_sizes: vec![64, 128, 256],
                 verbose: false,
             },
-            WarmupWorkloadHint::Scientific => WarmupConfig::scientific(),
-            WarmupWorkloadHint::Custom(ops) => WarmupConfig {
+            Self::Scientific => WarmupConfig::scientific(),
+            Self::Custom(ops) => WarmupConfig {
                 ops: ops.clone(),
                 workgroup_sizes: vec![64, 128, 256],
                 verbose: false,

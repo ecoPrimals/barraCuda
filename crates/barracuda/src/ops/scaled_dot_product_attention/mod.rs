@@ -222,7 +222,7 @@ impl Tensor {
     /// Output tensor [batch, heads, `seq_len`, `head_dim`]
     /// # Errors
     /// Returns [`Err`] if shape validation fails or buffer allocation/GPU dispatch fails (e.g. device lost).
-    pub fn scaled_dot_product_attention(self, key: Tensor, value: Tensor) -> Result<Self> {
+    pub fn scaled_dot_product_attention(self, key: Self, value: Self) -> Result<Self> {
         ScaledDotProductAttention::new(self, key, value)?.execute()
     }
 }

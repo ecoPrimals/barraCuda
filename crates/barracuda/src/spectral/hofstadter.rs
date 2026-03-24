@@ -31,7 +31,12 @@ pub fn almost_mathieu_hamiltonian(
     theta: f64,
 ) -> (Vec<f64>, Vec<f64>) {
     let diagonal: Vec<f64> = (0..n)
-        .map(|i| 2.0 * lambda * (std::f64::consts::TAU * alpha * i as f64 + theta).cos())
+        .map(|i| {
+            2.0 * lambda
+                * (std::f64::consts::TAU * alpha)
+                    .mul_add(i as f64, theta)
+                    .cos()
+        })
         .collect();
     let off_diag = vec![1.0; n - 1];
 

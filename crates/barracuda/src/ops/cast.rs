@@ -347,7 +347,7 @@ mod tests {
             return;
         };
         // 1000 elements
-        let input_data: Vec<f32> = (0..1000).map(|i| (i as f32) * 0.1 - 50.0).collect();
+        let input_data: Vec<f32> = (0..1000).map(|i| (i as f32).mul_add(0.1, -50.0)).collect();
         let input = Tensor::from_vec_on(input_data.clone(), vec![1000], device)
             .await
             .unwrap();

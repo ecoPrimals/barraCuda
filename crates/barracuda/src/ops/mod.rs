@@ -57,21 +57,35 @@ pub mod rope;
 pub mod sparse_attn;
 
 // Homomorphic encryption operations (FHE - GPU accelerated)
+#[cfg(feature = "domain-fhe")]
 pub mod fhe_and;
-pub mod fhe_extract; // Coefficient extraction (selective decryption!)
+#[cfg(feature = "domain-fhe")]
+pub mod fhe_extract;
 /// Fast polynomial multiply in NTT domain (NTT-based, 56x speedup).
+#[cfg(feature = "domain-fhe")]
 pub mod fhe_fast_poly_mul;
-pub mod fhe_intt; // Inverse NTT (completes NTT pipeline!)
-pub mod fhe_key_switch; // Key switching (multi-key FHE!)
-pub mod fhe_modulus_switch; // Modulus switching (noise reduction!)
-pub mod fhe_ntt; // Number Theoretic Transform (56x speedup!)
+#[cfg(feature = "domain-fhe")]
+pub mod fhe_intt;
+#[cfg(feature = "domain-fhe")]
+pub mod fhe_key_switch;
+#[cfg(feature = "domain-fhe")]
+pub mod fhe_modulus_switch;
+#[cfg(feature = "domain-fhe")]
+pub mod fhe_ntt;
+#[cfg(feature = "domain-fhe")]
 pub mod fhe_or;
 /// Point-wise multiply in NTT domain (O(N)).
+#[cfg(feature = "domain-fhe")]
 pub mod fhe_pointwise_mul;
+#[cfg(feature = "domain-fhe")]
 pub mod fhe_poly_add;
-pub mod fhe_poly_mul; // Naive polynomial multiply (for comparison)
+#[cfg(feature = "domain-fhe")]
+pub mod fhe_poly_mul;
+#[cfg(feature = "domain-fhe")]
 pub mod fhe_poly_sub;
-pub mod fhe_rotate; // CKKS rotation (Galois automorphism!)
+#[cfg(feature = "domain-fhe")]
+pub mod fhe_rotate;
+#[cfg(feature = "domain-fhe")]
 pub mod fhe_xor;
 
 // Activation operations
@@ -481,18 +495,19 @@ pub mod complex;
 pub mod fft;
 
 // Molecular Dynamics primitives
+#[cfg(feature = "domain-md")]
 pub mod md;
 
 // Lattice QCD / gauge field theory (hotSpring v0.5.16 absorption, Feb 2026)
-// complex_f64 + SU(3) WGSL libraries, Wilson plaquette, U(1) Higgs HMC, SU(3) HMC force
+#[cfg(feature = "domain-lattice")]
 pub mod lattice;
 
 // Nuclear structure GPU primitives (HFB, BCS, Skyrme)
-// Absorbed from hotSpring v0.6.4 (Feb 2026)
+#[cfg(feature = "domain-physics")]
 pub mod physics;
 
 // AlphaFold2 Evoformer primitives (neuralSpring S69 absorption)
-// Triangle multiplication, MSA attention, IPA, triangle attention, backbone update, torsion angles
+#[cfg(feature = "domain-fold")]
 pub mod alphafold2;
 
 // Anderson coupling (tight-binding Hamiltonian, groundSpring S69 absorption)
@@ -505,9 +520,11 @@ pub mod lanczos;
 pub mod stats_f64;
 
 // Life-science + analytical chemistry GPU primitives (wetSpring handoff v4, Feb 2026)
-// Smith-Waterman banded alignment, Gillespie SSA, decision-tree inference, Felsenstein pruning
+#[cfg(feature = "domain-genomics")]
 pub mod bio;
+#[cfg(feature = "domain-pharma")]
 pub mod health;
+#[cfg(feature = "domain-pharma")]
 pub mod pharma;
 
 // Procedural generation (ludoSpring V2 absorption — Perlin noise, fBm)

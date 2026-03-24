@@ -5,6 +5,14 @@ and the migration path.
 
 ## Pre-1.0 (current)
 
+### 0.3.9
+
+| Change | Migration |
+|--------|-----------|
+| **6 ops submodules now feature-gated** — `ops::fhe_*` requires `domain-fhe`, `ops::md` requires `domain-md`, `ops::lattice` requires `domain-lattice`, `ops::physics` requires `domain-physics`, `ops::bio` requires `domain-genomics`, `ops::pharma`/`ops::health` require `domain-pharma`, `ops::alphafold2` requires `domain-fold`. | All features included in `domain-models` umbrella (on by default). Only affects consumers using `default-features = false`. Add the needed domain feature to your `Cargo.toml`. |
+| **`FlatTree::validate()` return type changed** — From `Result<(), &'static str>` to `crate::error::Result<()>`. | Replace `.map_err(|e| ...)` wrappers with `?`. Error messages are now `BarracudaError::InvalidInput`. |
+| **`tolerances_get` RPC values changed** — Tolerance values for `"fhe"`, `"f64"`, `"f32"`, `"df64"` now sourced from centralized `tolerances` module instead of hardcoded. | If you depended on exact tolerance values from this endpoint, verify against the new tiered values (`DETERMINISM`, `ACCUMULATION`, `STATISTICAL`, `TRANSCENDENTAL`). |
+
 ### 0.3.8
 
 | Change | Migration |

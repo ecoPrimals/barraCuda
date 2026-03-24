@@ -1,6 +1,6 @@
 # barraCuda
 
-**Version**: 0.3.8
+**Version**: 0.3.9
 **Status**: Standalone primal — zero cross-dependencies, fully concurrent, all quality gates passing
 **License**: AGPL-3.0-or-later (scyBorg provenance trio)
 **MSRV**: 1.87

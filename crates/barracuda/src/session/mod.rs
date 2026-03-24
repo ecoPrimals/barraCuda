@@ -79,6 +79,24 @@ impl AttentionDims {
     pub const fn total_elements(&self) -> usize {
         self.batch_size * self.n_heads * self.seq_len * self.head_dim
     }
+
+    /// Convert all dimensions to `u32` for GPU dispatch uniforms.
+    ///
+    /// Returns `(batch_size, seq_len, n_heads, head_dim)`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::error::BarracudaError::CastOverflow`] if any dimension
+    /// exceeds `u32::MAX`.
+    pub fn as_u32(&self) -> Result<(u32, u32, u32, u32)> {
+        use crate::cast::usize_as_u32;
+        Ok((
+            usize_as_u32(self.batch_size)?,
+            usize_as_u32(self.seq_len)?,
+            usize_as_u32(self.n_heads)?,
+            usize_as_u32(self.head_dim)?,
+        ))
+    }
 }
 
 // ─── TensorSession ─────────────────────────────────────────────────────────────
@@ -260,6 +278,8 @@ impl TensorSession {
     /// Returns [`Err`] if `a` or `b` is not 2-D, or if `a`'s inner dimension
     /// `k` does not match `b`'s first dimension.
     pub fn matmul(&mut self, a: &SessionTensor, b: &SessionTensor) -> Result<SessionTensor> {
+        use crate::cast::usize_as_u32;
+
         if a.shape.len() != 2 || b.shape.len() != 2 {
             return Err(BarracudaError::invalid_shape(
                 a.shape.clone(),
@@ -279,9 +299,9 @@ impl TensorSession {
             input_a: a.buffer_id,
             input_b: b.buffer_id,
             output: out,
-            m: m as u32,
-            k: k as u32,
-            n: n as u32,
+            m: usize_as_u32(m)?,
+            k: usize_as_u32(k)?,
+            n: usize_as_u32(n)?,
             tier,
         });
         Ok(self.make_tensor(out, &out_shape))
@@ -332,6 +352,8 @@ impl TensorSession {
     /// Returns [`Err`] if the total number of elements in `a` is not divisible
     /// by `feature_size`.
     pub fn layer_norm(&mut self, a: &SessionTensor, feature_size: usize) -> Result<SessionTensor> {
+        use crate::cast::usize_as_u32;
+
         let total: usize = a.shape.iter().product();
         if !total.is_multiple_of(feature_size) {
             return Err(BarracudaError::InvalidInput {
@@ -344,7 +366,7 @@ impl TensorSession {
         self.ops.push(SessionOp::LayerNorm {
             input: a.buffer_id,
             output: out,
-            feature_size: feature_size as u32,
+            feature_size: usize_as_u32(feature_size)?,
         });
         Ok(self.make_tensor(out, &a.shape))
     }
@@ -382,15 +404,16 @@ impl TensorSession {
                 message: format!("head_split: input len {} ≠ B×S×H×D={expected}", a.len()),
             });
         }
+        let (batch_u32, seq_u32, heads_u32, dim_u32) = dims.as_u32()?;
         let out_shape = [dims.batch_size, dims.n_heads, dims.seq_len, dims.head_dim];
         let out = self.alloc_output(&out_shape);
         self.ops.push(SessionOp::HeadSplit {
             input: a.buffer_id,
             output: out,
-            batch_size: dims.batch_size as u32,
-            seq_len: dims.seq_len as u32,
-            num_heads: dims.n_heads as u32,
-            head_dim: dims.head_dim as u32,
+            batch_size: batch_u32,
+            seq_len: seq_u32,
+            num_heads: heads_u32,
+            head_dim: dim_u32,
         });
         Ok(self.make_tensor(out, &out_shape))
     }
@@ -410,15 +433,16 @@ impl TensorSession {
                 message: format!("head_concat: input len {} ≠ B×H×S×D={expected}", a.len()),
             });
         }
+        let (batch_u32, seq_u32, heads_u32, dim_u32) = dims.as_u32()?;
         let out_shape = [dims.batch_size, dims.seq_len, dims.n_heads * dims.head_dim];
         let out = self.alloc_output(&out_shape);
         self.ops.push(SessionOp::HeadConcat {
             input: a.buffer_id,
             output: out,
-            batch_size: dims.batch_size as u32,
-            seq_len: dims.seq_len as u32,
-            num_heads: dims.n_heads as u32,
-            head_dim: dims.head_dim as u32,
+            batch_size: batch_u32,
+            seq_len: seq_u32,
+            num_heads: heads_u32,
+            head_dim: dim_u32,
         });
         Ok(self.make_tensor(out, &out_shape))
     }
@@ -444,6 +468,7 @@ impl TensorSession {
                 });
             }
         }
+        let (batch_u32, seq_u32, heads_u32, dim_u32) = dims.as_u32()?;
         let out_shape = [dims.batch_size, dims.n_heads, dims.seq_len, dims.head_dim];
         let out = self.alloc_output(&out_shape);
         self.ops.push(SessionOp::Attention {
@@ -451,10 +476,10 @@ impl TensorSession {
             k: k.buffer_id,
             v: v.buffer_id,
             output: out,
-            batch_size: dims.batch_size as u32,
-            num_heads: dims.n_heads as u32,
-            seq_len: dims.seq_len as u32,
-            head_dim: dims.head_dim as u32,
+            batch_size: batch_u32,
+            num_heads: heads_u32,
+            seq_len: seq_u32,
+            head_dim: dim_u32,
         });
         Ok(self.make_tensor(out, &out_shape))
     }

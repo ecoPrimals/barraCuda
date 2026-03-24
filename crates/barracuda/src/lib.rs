@@ -256,7 +256,7 @@ pub mod unified_math;
 #[cfg(feature = "gpu")]
 pub use ops::sparse_matmul_quantized::sparse_matmul_quantized;
 
-#[cfg(feature = "gpu")]
+#[cfg(all(feature = "gpu", feature = "domain-genomics"))]
 pub use ops::bio::{
     AniBatchF64, BatchFitnessGpu, Dada2Buffers, Dada2Dimensions, Dada2DispatchArgs, Dada2EStepGpu,
     DnDsBatchF64, FelsensteinGpu, FelsensteinResult, FlatForest, FlatTree, GillespieConfig,

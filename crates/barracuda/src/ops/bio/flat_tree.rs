@@ -90,24 +90,39 @@ impl FlatTree {
     ///
     /// Returns [`Err`] if the tree structure violates invariants (branch
     /// length mismatch, invalid root, out-of-bounds parent, etc.).
-    pub fn validate(&self) -> Result<(), &'static str> {
+    pub fn validate(&self) -> crate::error::Result<()> {
+        use crate::error::BarracudaError;
+
         let n = self.n_nodes();
         if self.branch_length.len() != n {
-            return Err("branch_length length mismatch");
+            return Err(BarracudaError::InvalidInput {
+                message: format!(
+                    "branch_length len {} != n_nodes {n}",
+                    self.branch_length.len()
+                ),
+            });
         }
         if self.n_leaves > n {
-            return Err("n_leaves exceeds n_nodes");
+            return Err(BarracudaError::InvalidInput {
+                message: format!("n_leaves {} exceeds n_nodes {n}", self.n_leaves),
+            });
         }
         let root_count = self.parent.iter().filter(|&&p| p < 0).count();
         if root_count != 1 {
-            return Err("tree must have exactly one root");
+            return Err(BarracudaError::InvalidInput {
+                message: format!("tree must have exactly one root (found {root_count})"),
+            });
         }
         for (i, &p) in self.parent.iter().enumerate() {
             if p >= 0 && p as usize >= n {
-                return Err("parent index out of bounds");
+                return Err(BarracudaError::InvalidInput {
+                    message: format!("parent[{i}]={p} out of bounds (n={n})"),
+                });
             }
             if p >= 0 && p as usize == i {
-                return Err("self-loop detected");
+                return Err(BarracudaError::InvalidInput {
+                    message: format!("self-loop at node {i}"),
+                });
             }
         }
         Ok(())
@@ -348,9 +363,7 @@ fn build_flat_tree_from_parsed(
         branch_length,
         n_leaves,
     };
-    tree.validate().map_err(|e| BarracudaError::InvalidInput {
-        message: e.to_string(),
-    })?;
+    tree.validate()?;
     Ok(tree)
 }
 

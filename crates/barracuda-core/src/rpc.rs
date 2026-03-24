@@ -101,13 +101,16 @@ impl BarraCudaServer {
 }
 
 /// Pack u64 coefficients into a wgpu-compatible tensor (u64 → split u32 pairs → f32 bits).
+///
+/// This is a bit-preserving reinterpretation, not a numeric cast: each u64 is
+/// split into its low and high u32 halves, then transmitted as f32 bit patterns.
 fn u64_to_tensor(
     coeffs: &[u64],
     dev: &barracuda::device::WgpuDevice,
 ) -> std::result::Result<barracuda::tensor::Tensor, barracuda::error::BarracudaError> {
     #[expect(
         clippy::cast_possible_truncation,
-        reason = "intentional u64→u32 split for FHE coefficient layout"
+        reason = "bit-preserving u64→u32 split: low/high halves, not numeric conversion"
     )]
     let f32_bits: Vec<f32> = coeffs
         .iter()
@@ -209,17 +212,26 @@ impl BarraCudaService for BarraCudaServer {
     }
 
     async fn tolerances_get(self, _: tarpc::context::Context, name: String) -> Tolerances {
-        let (abs_tol, rel_tol) = match name.as_str() {
-            "fhe" => (0.0, 0.0),
-            "f64" | "double" => (1e-12, 1e-10),
-            "f32" | "float" => (1e-5, 1e-4),
-            "df64" | "emulated_double" => (1e-10, 1e-8),
-            _ => (1e-6, 1e-5),
+        use barracuda::tolerances;
+
+        if let Some(tol) = tolerances::by_name(&name).or_else(|| tolerances::tier(&name)) {
+            return Tolerances {
+                name,
+                abs_tol: tol.abs_tol,
+                rel_tol: tol.rel_tol,
+            };
+        }
+
+        let tol = match name.as_str() {
+            "fhe" => &tolerances::DETERMINISM,
+            "f64" | "double" => &tolerances::ACCUMULATION,
+            "df64" | "emulated_double" => &tolerances::TRANSCENDENTAL,
+            _ => &tolerances::STATISTICAL,
         };
         Tolerances {
             name,
-            abs_tol,
-            rel_tol,
+            abs_tol: tol.abs_tol,
+            rel_tol: tol.rel_tol,
         }
     }
 
@@ -651,7 +663,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[expect(clippy::float_cmp, reason = "exact tolerance comparison in test")]
     async fn tarpc_tolerances_get_fhe() {
         let primal = std::sync::Arc::new(crate::BarraCudaPrimal::new());
         let server = BarraCudaServer::new(primal);
@@ -659,11 +670,17 @@ mod tests {
             BarraCudaService::tolerances_get(server, tarpc::context::current(), "fhe".to_string())
                 .await;
         assert_eq!(tol.name, "fhe");
-        assert_eq!(tol.abs_tol, 0.0);
-        assert_eq!(tol.rel_tol, 0.0);
+        assert!(
+            tol.abs_tol <= f64::EPSILON,
+            "FHE maps to DETERMINISM tier (near-zero abs_tol)"
+        );
     }
 
     #[tokio::test]
+    #[expect(
+        clippy::float_cmp,
+        reason = "comparing exact constants from tolerance registry"
+    )]
     async fn tarpc_tolerances_get_f64() {
         let primal = std::sync::Arc::new(crate::BarraCudaPrimal::new());
         let server = BarraCudaServer::new(primal);
@@ -671,7 +688,47 @@ mod tests {
             BarraCudaService::tolerances_get(server, tarpc::context::current(), "f64".to_string())
                 .await;
         assert_eq!(tol.name, "f64");
-        assert!(tol.abs_tol > 0.0);
+        let acc = barracuda::tolerances::ACCUMULATION;
+        assert_eq!(tol.abs_tol, acc.abs_tol);
+        assert_eq!(tol.rel_tol, acc.rel_tol);
+    }
+
+    #[tokio::test]
+    #[expect(
+        clippy::float_cmp,
+        reason = "comparing exact constants from tolerance registry"
+    )]
+    async fn tarpc_tolerances_get_by_name() {
+        let primal = std::sync::Arc::new(crate::BarraCudaPrimal::new());
+        let server = BarraCudaServer::new(primal);
+        let tol = BarraCudaService::tolerances_get(
+            server,
+            tarpc::context::current(),
+            "pharma_foce".to_string(),
+        )
+        .await;
+        assert_eq!(tol.name, "pharma_foce");
+        let expected = barracuda::tolerances::PHARMA_FOCE;
+        assert_eq!(tol.abs_tol, expected.abs_tol);
+    }
+
+    #[tokio::test]
+    #[expect(
+        clippy::float_cmp,
+        reason = "comparing exact constants from tolerance registry"
+    )]
+    async fn tarpc_tolerances_get_by_tier() {
+        let primal = std::sync::Arc::new(crate::BarraCudaPrimal::new());
+        let server = BarraCudaServer::new(primal);
+        let tol = BarraCudaService::tolerances_get(
+            server,
+            tarpc::context::current(),
+            "transcendental".to_string(),
+        )
+        .await;
+        assert_eq!(tol.name, "transcendental");
+        let expected = barracuda::tolerances::TRANSCENDENTAL;
+        assert_eq!(tol.abs_tol, expected.abs_tol);
     }
 
     #[tokio::test]

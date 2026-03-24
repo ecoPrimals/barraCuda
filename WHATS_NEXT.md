@@ -6,6 +6,16 @@ Prioritized work items, ordered by impact. Updated 2026-03-21.
 
 ## Recently Completed
 
+- **Sprint 19: Deep Debt Solutions & Idiomatic Rust Evolution (Mar 21)**:
+  Comprehensive audit across all dimensions: large files, mocks, hardcoding, unsafe, deps,
+  TODO markers, `.unwrap()` in production. RPC `tolerances_get` evolved to centralized
+  tolerance registry (by-name + by-tier lookup). Cast safety: all `usize as u32` in
+  `TensorSession` replaced with `barracuda::cast::usize_as_u32()`. 6 new domain feature
+  gates (`domain-fhe`, `domain-md`, `domain-lattice`, `domain-physics`, `domain-pharma`,
+  `domain-genomics` for `ops::bio`). `FlatTree::validate()` evolved from `Result<(), &str>`
+  to typed errors. Audit confirmed: zero unsafe, zero production `.unwrap()`/`.expect()`,
+  zero TODO/FIXME markers, zero production mocks, all deps pure Rust, all large files
+  justified (barrel modules or test-heavy). 3,623+ tests pass, zero clippy errors.
 - **Sprint 18: Ecosystem Absorption & API Housekeeping (Mar 21)**:
   Full pull + review of 8 springs + 10+ primals. `GpuDriverProfile` struct removed (all
   springs migrated). `barracuda::cast` module with safe numeric casts and `CastOverflow`/

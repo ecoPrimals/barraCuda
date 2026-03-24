@@ -171,19 +171,29 @@ sovereign-dispatch = ["gpu"]
 # that only need specific domains (e.g., hotSpring enables domain-pde).
 domain-models = [
     "domain-esn",
+    "domain-fhe",
     "domain-fold",
     "domain-genomics",
+    "domain-lattice",
+    "domain-md",
     "domain-nn",
     "domain-pde",
+    "domain-pharma",
+    "domain-physics",
     "domain-snn",
     "domain-timeseries",
     "domain-vision",
 ]
 domain-esn = []
+domain-fhe = []
 domain-fold = []
 domain-genomics = []
+domain-lattice = []
+domain-md = []
 domain-nn = []
 domain-pde = []
+domain-pharma = []
+domain-physics = []
 domain-snn = []
 domain-timeseries = ["domain-esn"]
 domain-vision = []
@@ -194,7 +204,7 @@ benchmarks = []
 debug-pppm = []
 [[bin]]
 name = "validate_gpu"
-required-features = ["gpu"]
+required-features = ["gpu", "domain-fhe"]
 
 [[bin]]
 name = "bench_fp64_ratio"

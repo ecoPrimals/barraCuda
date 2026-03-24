@@ -5,6 +5,29 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.9] — 2026-03-21
+
+### Changed — Deep Debt Solutions Sprint 19: Idiomatic Rust Evolution (Mar 21 2026)
+
+- **RPC `tolerances_get` evolved to centralized tolerance registry** — Previously hardcoded
+  `(abs_tol, rel_tol)` pairs; now delegates to `barracuda::tolerances::by_name()` and
+  `tier()` for runtime introspection. Springs can query any registered tolerance by name
+  (e.g., `"pharma_foce"`, `"signal_fft"`) or by tier (e.g., `"transcendental"`, `"accumulation"`).
+  Legacy precision-type aliases (`"fhe"`, `"f64"`, `"f32"`, `"df64"`) mapped to tiered constants.
+- **Cast safety evolution in `TensorSession`** — All `usize as u32` casts in `session/mod.rs`
+  replaced with `barracuda::cast::usize_as_u32()` returning `CastOverflow` on overflow.
+  New `AttentionDims::as_u32()` helper centralizes attention dimension conversion.
+- **6 new domain feature gates** — `domain-fhe`, `domain-md`, `domain-lattice`,
+  `domain-physics`, `domain-pharma` added to `Cargo.toml` and wired in `ops/mod.rs`.
+  `domain-genomics` now gates `ops::bio`. `domain-fold` now gates `ops::alphafold2`.
+  All included in `domain-models` umbrella — default builds unchanged.
+  Springs needing only math+GPU can compile with `default-features = false, features = ["gpu"]`.
+- **Typed errors in `FlatTree::validate()`** — Evolved from `Result<(), &'static str>` to
+  `Result<(), BarracudaError::InvalidInput>`. Caller `from_newick()` no longer needs
+  `map_err` wrapper.
+- **3 new tarpc tolerance tests** — `tarpc_tolerances_get_by_name`, `tarpc_tolerances_get_by_tier`,
+  `tarpc_tolerances_get_f64` now verify values against centralized constants.
+
 ## [0.3.8] — 2026-03-21
 
 ### Changed — Ecosystem Absorption Sprint 18: API Housekeeping & Cross-Spring Evolution (Mar 21 2026)

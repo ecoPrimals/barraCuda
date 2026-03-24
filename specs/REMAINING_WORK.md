@@ -1,6 +1,6 @@
 # barraCuda — Remaining Work
 
-**Version**: 0.3.8
+**Version**: 0.3.9
 **Date**: March 21, 2026
 **Status**: Sprint 17 — tracks all open work items for barraCuda evolution
 

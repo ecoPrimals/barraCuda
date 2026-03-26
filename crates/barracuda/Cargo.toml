@@ -37,6 +37,11 @@ num-traits = { workspace = true }
 half = { workspace = true }
 bytes = { workspace = true }
 
+# SPIR-V passthrough bridge — isolates the single unsafe call to
+# wgpu::Device::create_shader_module_passthrough. Enables Tier 1
+# sovereign SPIR-V compilation (naga IR → SPIR-V → GPU, no WGSL re-emit).
+barracuda-spirv = { path = "../barracuda-spirv", version = "0.3.6", optional = true }
+
 # coral-gpu was previously listed here as an optional compile-time dep.
 # Removed: barraCuda uses IPC-first architecture — coralReef compiles
 # shaders and toadStool dispatches, all via JSON-RPC at runtime.
@@ -159,6 +164,11 @@ gpu = ["dep:wgpu", "dep:bytemuck", "dep:naga"]
 # Enables CoralReefDevice which uses JSON-RPC to communicate with the
 # sovereign pipeline at runtime — no compile-time coupling to coral-gpu.
 sovereign-dispatch = ["gpu"]
+
+# SPIR-V passthrough: enables Tier 1 sovereign compilation (naga IR → SPIR-V
+# → GPU driver, bypassing naga's WGSL re-emission). Requires the barracuda-spirv
+# bridge crate which isolates the single unsafe create_shader_module_passthrough call.
+spirv-passthrough = ["gpu", "dep:barracuda-spirv"]
 
 # Domain model umbrella — enables all domain-specific modules.
 # Disable with default-features = false to get pure math + GPU compute only.

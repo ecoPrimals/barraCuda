@@ -68,16 +68,50 @@ impl WgpuDevice {
         self.compile_shader_raw(source, label)
     }
 
-    /// Tier 1 (future): Sovereign SPIR-V → wgpu passthrough.
+    /// Tier 1: Sovereign SPIR-V → wgpu passthrough.
     ///
-    /// The `SovereignCompiler::compile()` method already produces validated
-    /// SPIR-V (`ValidatedSpirv`) that could be fed to wgpu's
-    /// `create_shader_module_spirv`. This bypasses naga's WGSL re-emission
-    /// entirely.
+    /// Parses WGSL → naga IR → FMA fusion + dead-expr elimination → SPIR-V
+    /// emission → `create_shader_module_passthrough`. Bypasses naga's WGSL
+    /// re-emission entirely, eliminating round-trip fidelity risks.
     ///
-    /// Blocked by `#![forbid(unsafe_code)]`: wgpu 28's SPIR-V passthrough
-    /// requires `unsafe`. Evolution path: a `barracuda-spirv` bridge crate
-    /// (or coralReef native dispatch via coral-driver) will provide this tier.
+    /// Requires the `spirv-passthrough` feature flag, which pulls in the
+    /// `barracuda-spirv` bridge crate (the only `unsafe` in the pipeline).
+    /// Without the feature, this is a no-op that returns `None`.
+    #[cfg(feature = "spirv-passthrough")]
+    fn try_sovereign_spirv_compile(
+        &self,
+        source: &str,
+        label: Option<&str>,
+        tag: &str,
+    ) -> Option<wgpu::ShaderModule> {
+        use crate::shaders::sovereign::SovereignCompiler;
+        let caps = crate::device::capabilities::DeviceCapabilities::from_device(self);
+        let sovereign = SovereignCompiler::new(caps);
+        match sovereign.compile(source) {
+            Ok((crate::shaders::sovereign::SovereignOutput::Spirv(validated), stats)) => {
+                if stats.fma_fusions > 0 || stats.dead_exprs_eliminated > 0 {
+                    tracing::debug!(
+                        "sovereign-spirv {tag}: {} FMA fusions, {} dead exprs eliminated",
+                        stats.fma_fusions,
+                        stats.dead_exprs_eliminated,
+                    );
+                }
+                let module = barracuda_spirv::compile_spirv_passthrough(
+                    self.device(),
+                    validated.words(),
+                    label,
+                );
+                Some(module)
+            }
+            Err(e) => {
+                tracing::debug!("sovereign-spirv {tag} fallback to WGSL path: {e}");
+                None
+            }
+        }
+    }
+
+    /// Tier 1 stub: returns `None` when `spirv-passthrough` feature is not enabled.
+    #[cfg(not(feature = "spirv-passthrough"))]
     fn try_sovereign_spirv_compile(
         &self,
         _source: &str,

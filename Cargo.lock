@@ -123,6 +123,7 @@ name = "barracuda"
 version = "0.3.10"
 dependencies = [
  "approx",
+ "barracuda-spirv",
  "blake3",
  "bytemuck",
  "bytes",
@@ -157,6 +158,13 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "barracuda-spirv"
+version = "0.3.10"
+dependencies = [
+ "wgpu",
 ]
 
 [[package]]

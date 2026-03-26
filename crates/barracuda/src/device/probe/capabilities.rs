@@ -53,7 +53,7 @@ pub struct F64BuiltinCapabilities {
     /// correctly in f32. This is the core of `two_prod` in `df64_core.wgsl`.
     /// When `false`, Dekker splitting must be used instead of FMA.
     pub df64_fma_two_prod: bool,
-    /// DF64 workgroup tree reduction (shared_hi/shared_lo arrays with
+    /// DF64 workgroup tree reduction (`shared_hi`/`shared_lo` arrays with
     /// `workgroupBarrier()`) produces correct results. When `false`,
     /// `ReduceScalarPipeline` must route through a storage-only or
     /// scalar fallback path.
@@ -159,14 +159,14 @@ impl F64BuiltinCapabilities {
     /// workgroup reduction pattern on this device.
     ///
     /// When `true`, the standard DF64 tree reduction in workgroup memory
-    /// (shared_hi/shared_lo arrays) returns incorrect results. The pipeline
+    /// (`shared_hi`/`shared_lo` arrays) returns incorrect results. The pipeline
     /// must route through a storage-only, scalar, or CPU fallback path.
     #[must_use]
     pub fn needs_df64_reduce_workaround(&self) -> bool {
         !self.df64_workgroup_reduce
     }
 
-    /// Whether the `fma(a, b, -p)` two_prod pattern works correctly on f32.
+    /// Whether the `fma(a, b, -p)` `two_prod` pattern works correctly on f32.
     /// When `false`, the Dekker splitting approach should be used instead.
     #[must_use]
     pub fn needs_df64_fma_workaround(&self) -> bool {

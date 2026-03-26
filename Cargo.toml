@@ -3,6 +3,7 @@ resolver = "3"
 members = [
     "crates/barracuda-core",
     "crates/barracuda",
+    "crates/barracuda-spirv",
 ]
 
 [workspace.package]

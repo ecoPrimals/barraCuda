@@ -1,0 +1,30 @@
+[package]
+name = "barracuda-spirv"
+description = "SPIR-V passthrough bridge for barraCuda — isolates the single unsafe create_shader_module_spirv call"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+wgpu = { workspace = true }
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+unwrap_used = "warn"
+missing_const_for_fn = "allow"
+use_self = "allow"
+future_not_send = "allow"
+redundant_pub_crate = "allow"
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+doc_markdown = "allow"
+
+[lints.rust]
+missing_docs = "warn"

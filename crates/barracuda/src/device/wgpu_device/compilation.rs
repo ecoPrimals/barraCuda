@@ -1,5 +1,34 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Shader compilation — WGSL, SPIR-V, f64, DF64, universal precision pipelines
+//!
+//! ## f64 in naga 28 / wgpu 28
+//!
+//! naga 28 does NOT support `enable f64;` as a WGSL enable-extension. The
+//! only recognized enable-extension is `f16`. f64 type support is gated by
+//! the `SHADER_F64` device feature at device creation time, which sets
+//! `Capabilities::FLOAT64` in naga's validator. Source directives like
+//! `enable f64;` must be **stripped** before passing to `create_shader_module`
+//! — naga's parser will reject them as "unknown enable-extension".
+//!
+//! ## Compilation tiers (f64 shaders)
+//!
+//! `compile_shader_f64` attempts compilation in order of preference:
+//!
+//! 1. **Sovereign SPIR-V** (future): naga parse → FMA fusion → dead-expr
+//!    elimination → SPIR-V emit → `create_shader_module_spirv`. Bypasses
+//!    naga's WGSL backend entirely. Blocked by `#![forbid(unsafe_code)]`.
+//!
+//! 2. **Sovereign WGSL**: same naga IR optimisation, but re-emitted as WGSL
+//!    text and compiled through the safe `create_shader_module` API. Works on
+//!    all backends. naga parse is lenient: accepts f64 types without any
+//!    enable directive when `Capabilities::FLOAT64` is set.
+//!
+//! 3. **Raw WGSL**: template-processed source compiled directly. Fallback when
+//!    sovereign compilation fails (parse/validate/emit error).
+//!
+//! In parallel, `spawn_coral_compile_for_adapter` fires off a background
+//! coralReef IPC compile that populates the native binary cache for future
+//! sovereign-dispatch use (coral-driver direct GPU submission without wgpu).
 
 use super::WgpuDevice;
 use crate::shaders::precision::compiler::source_is_f64;
@@ -39,12 +68,36 @@ impl WgpuDevice {
         self.compile_shader_raw(source, label)
     }
 
-    /// Run the sovereign compiler's naga-level optimisations on WGSL and
-    /// compile the result through the safe `create_shader_module` path.
+    /// Tier 1 (future): Sovereign SPIR-V → wgpu passthrough.
+    ///
+    /// The `SovereignCompiler::compile()` method already produces validated
+    /// SPIR-V (`ValidatedSpirv`) that could be fed to wgpu's
+    /// `create_shader_module_spirv`. This bypasses naga's WGSL re-emission
+    /// entirely.
+    ///
+    /// Blocked by `#![forbid(unsafe_code)]`: wgpu 28's SPIR-V passthrough
+    /// requires `unsafe`. Evolution path: a `barracuda-spirv` bridge crate
+    /// (or coralReef native dispatch via coral-driver) will provide this tier.
+    fn try_sovereign_spirv_compile(
+        &self,
+        _source: &str,
+        _label: Option<&str>,
+        _tag: &str,
+    ) -> Option<wgpu::ShaderModule> {
+        None
+    }
+
+    /// Tier 2: Sovereign WGSL — naga IR optimisation → re-emit WGSL.
+    ///
+    /// Applies FMA fusion and dead-expression elimination at the naga IR level,
+    /// then re-emits valid WGSL through naga's WGSL writer. naga 28's parser
+    /// is lenient — it accepts f64 types without `enable f64;` when
+    /// `Capabilities::FLOAT64` is set (which it always is in the sovereign
+    /// compiler's validation pass).
     ///
     /// Returns `None` if the sovereign pipeline fails (caller should fall
     /// back to the un-optimised WGSL).
-    fn try_sovereign_compile(
+    fn try_sovereign_wgsl_compile(
         &self,
         source: &str,
         label: Option<&str>,
@@ -57,7 +110,7 @@ impl WgpuDevice {
             Ok((optimized_wgsl, stats)) => {
                 if stats.fma_fusions > 0 || stats.dead_exprs_eliminated > 0 {
                     tracing::debug!(
-                        "sovereign {tag}: {} FMA fusions, {} dead exprs eliminated",
+                        "sovereign-wgsl {tag}: {} FMA fusions, {} dead exprs eliminated",
                         stats.fma_fusions,
                         stats.dead_exprs_eliminated,
                     );
@@ -65,23 +118,18 @@ impl WgpuDevice {
                 Some(self.compile_shader_raw(&optimized_wgsl, label))
             }
             Err(e) => {
-                tracing::debug!("sovereign {tag} fallback to raw WGSL: {e}");
+                tracing::debug!("sovereign-wgsl {tag} fallback to raw WGSL: {e}");
                 None
             }
         }
     }
 
-    /// Compile an f64 WGSL shader with automatic driver-aware patching and ILP optimization.
+    /// Compile an f64 WGSL shader through the tiered sovereign pipeline.
     ///
-    /// Pipeline:
-    /// 1. `ShaderTemplate::for_driver_auto` — patches exp/log for drivers that lack native f64
-    /// 2. `WgslOptimizer::optimize` — reorders `@ilp_region` blocks + unrolls `@unroll_hint` loops
-    ///    (Phase 3 `SOVEREIGN_COMPUTE_EVOLUTION`; only active when annotations are present)
-    /// 3. `SovereignCompiler::compile_to_wgsl` — Phase 4: naga IR optimisation (FMA fusion,
-    ///    dead expr elimination) → re-emit optimised WGSL (safe, no SPIR-V passthrough).
-    ///
-    /// The optimizer is keyed to the actual GPU arch detected at device-creation time,
-    /// so the ILP fill width matches the hardware (8 cy on SM70, 4 cy on RDNA2, etc.).
+    /// `enable f64;` is stripped (naga 28 rejects it — f64 is gated by the
+    /// `SHADER_F64` device feature instead). The shader then passes through
+    /// driver-aware polyfills, ILP optimisation, and coralReef IPC before
+    /// tiered compilation.
     #[must_use]
     pub fn compile_shader_f64(&self, source: &str, label: Option<&str>) -> wgpu::ShaderModule {
         let source = &source.replace("enable f64;", "");
@@ -95,20 +143,24 @@ impl WgpuDevice {
         );
 
         // coralReef: adapter-aware native binary compilation via IPC.
-        // coralReef determines the ISA target from adapter info — barraCuda
-        // does not embed per-generation ISA knowledge.
         crate::device::coral_compiler::spawn_coral_compile_for_adapter(
             &optimized,
             self.adapter_info(),
             true,
         );
 
-        // Sovereign compiler — naga IR → FMA fusion → optimised WGSL (safe path).
-        // Runs on all backends (Vulkan, Metal, DX12, WebGPU).
-        if let Some(module) = self.try_sovereign_compile(&optimized, label, "f64") {
+        // Tier 1: Sovereign SPIR-V passthrough (future).
+        if let Some(module) = self.try_sovereign_spirv_compile(&optimized, label, "f64") {
             return module;
         }
 
+        // Tier 2: Sovereign WGSL (naga IR → optimise → re-emit WGSL).
+        // Fixed: f64 FMA fusion skip + entry point name restoration.
+        if let Some(module) = self.try_sovereign_wgsl_compile(&optimized, label, "f64") {
+            return module;
+        }
+
+        // Tier 3: Raw WGSL (template-processed, enable f64; already stripped).
         self.compile_shader_raw(&optimized, label)
     }
 
@@ -122,11 +174,6 @@ impl WgpuDevice {
     /// DF64 shaders run entirely on FP32 cores (no f64 hardware needed), achieving
     /// ~48-bit mantissa (~14 decimal digits) at up to 9.9× the throughput of native
     /// f64 on consumer GPUs (Ampere/Ada fp64:fp32 ≈ 1:64).
-    ///
-    /// Pipeline mirrors [`compile_shader_f64`] minus the f64 driver patching:
-    /// 1. Prepend DF64 preamble (core + transcendentals)
-    /// 2. ILP optimizer (when `@ilp_region`/`@unroll_hint` annotations present)
-    /// 3. Sovereign compiler optimised WGSL path (safe, all backends)
     #[must_use]
     pub fn compile_shader_df64(&self, source: &str, label: Option<&str>) -> wgpu::ShaderModule {
         const DF64_CORE: &str = include_str!("../../shaders/math/df64_core.wgsl");
@@ -173,11 +220,18 @@ impl WgpuDevice {
             false,
         );
 
-        // Sovereign compiler — naga IR → FMA fusion → optimised WGSL (safe path).
-        if let Some(module) = self.try_sovereign_compile(&optimized, label, "df64") {
+        // Tier 1: Sovereign SPIR-V (future).
+        if let Some(module) = self.try_sovereign_spirv_compile(&optimized, label, "df64") {
             return module;
         }
 
+        // Tier 2: Sovereign WGSL (naga IR → optimise → re-emit WGSL).
+        // Fixed: f64 FMA fusion skip + entry point name restoration.
+        if let Some(module) = self.try_sovereign_wgsl_compile(&optimized, label, "df64") {
+            return module;
+        }
+
+        // Tier 3: Raw WGSL.
         self.compile_shader_raw(&optimized, label)
     }
 }

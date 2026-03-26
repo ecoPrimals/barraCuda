@@ -77,6 +77,8 @@ pub fn seed_cache_from_heuristics(device: &WgpuDevice) {
         shared_mem_f64: !device.is_nvk(),
         df64_arith: true,
         df64_transcendentals_safe: caps.df64_transcendentals_safe(),
+        df64_fma_two_prod: true,
+        df64_workgroup_reduce: true,
     };
     let mut cache = lock_cache(&F64_CAPS_CACHE);
     cache.entry(key.clone()).or_insert(heuristic);

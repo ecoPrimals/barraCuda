@@ -107,7 +107,26 @@ impl SovereignCompiler {
     /// fails validation, or WGSL re-emission fails.
     pub fn compile_to_wgsl(&self, wgsl: &str) -> Result<(String, CompileStats), SovereignError> {
         let (module, info, stats) = self.parse_optimize_validate(wgsl)?;
-        let optimized_wgsl = wgsl_emit::emit_wgsl(&module, &info)?;
+        let mut optimized_wgsl = wgsl_emit::emit_wgsl(&module, &info)?;
+
+        // naga's WGSL writer appends underscores to identifiers ending in
+        // digits (e.g. `sum_reduce_f64` → `sum_reduce_f64_`) to avoid
+        // clashes with its internal `_eN` naming. This silently breaks
+        // pipeline creation which matches entry points by their original
+        // name. Restore the original entry point names from the IR module.
+        for ep in &module.entry_points {
+            let original = &ep.name;
+            let fn_original = format!("fn {original}(");
+            if optimized_wgsl.contains(&fn_original) {
+                continue;
+            }
+            let renamed = format!("{original}_");
+            let fn_renamed = format!("fn {renamed}(");
+            if optimized_wgsl.contains(&fn_renamed) {
+                optimized_wgsl = optimized_wgsl.replacen(&fn_renamed, &fn_original, 1);
+            }
+        }
+
         Ok((optimized_wgsl, stats))
     }
 

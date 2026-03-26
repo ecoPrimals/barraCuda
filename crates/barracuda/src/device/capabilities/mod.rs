@@ -212,6 +212,8 @@ mod tests {
             shared_mem_f64: true,
             df64_arith: true,
             df64_transcendentals_safe: true,
+            df64_fma_two_prod: true,
+            df64_workgroup_reduce: true,
         }
     }
 
@@ -230,6 +232,8 @@ mod tests {
             shared_mem_f64: false,
             df64_arith: false,
             df64_transcendentals_safe: false,
+            df64_fma_two_prod: false,
+            df64_workgroup_reduce: false,
         }
     }
 

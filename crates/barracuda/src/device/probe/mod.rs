@@ -70,6 +70,9 @@ pub async fn probe_f64_builtins(device: &WgpuDevice) -> F64BuiltinCapabilities {
             "fma" => caps.fma = ok,
             "abs_min_max" => caps.abs_min_max = ok,
             "shared_mem_f64" => caps.shared_mem_f64 = ok,
+            "df64_arith" => caps.df64_arith = ok,
+            "df64_fma_two_prod" => caps.df64_fma_two_prod = ok,
+            "df64_workgroup_reduce" => caps.df64_workgroup_reduce = ok,
             _ => {}
         }
         if probe.name == "basic_f64" && !ok {
@@ -78,7 +81,6 @@ pub async fn probe_f64_builtins(device: &WgpuDevice) -> F64BuiltinCapabilities {
         }
     }
 
-    caps.df64_arith = true;
     // naga WGSL→SPIR-V codegen zeroes DF64 transcendentals on all Vulkan
     // backends (root cause: naga, not driver JIT — hotSpring Exp 055).
     // Safe only when sovereign compilation (coralReef) bypasses naga.
@@ -169,7 +171,7 @@ mod tests {
     #[test]
     fn test_f64_caps_full() {
         let c = F64BuiltinCapabilities::full();
-        assert_eq!(c.native_count(), 12);
+        assert_eq!(c.native_count(), 14);
         assert!(c.can_compile_f64());
         assert!(!c.needs_exp_log_workaround());
         assert!(!c.needs_sin_f64_workaround());
@@ -177,6 +179,8 @@ mod tests {
         assert!(!c.needs_shared_mem_f64_workaround());
         assert!(c.can_use_df64());
         assert!(!c.needs_df64_transcendental_stripping());
+        assert!(!c.needs_df64_reduce_workaround());
+        assert!(!c.needs_df64_fma_workaround());
     }
 
     #[test]
@@ -195,6 +199,8 @@ mod tests {
             shared_mem_f64: true,
             df64_arith: true,
             df64_transcendentals_safe: true,
+            df64_fma_two_prod: true,
+            df64_workgroup_reduce: true,
         };
         assert_eq!(
             c.native_count(),

@@ -236,6 +236,8 @@ fn test_sin_cos_taylor_workaround_asin_acos_protected() {
             shared_mem_f64: false,
             df64_arith: true,
             df64_transcendentals_safe: true,
+            df64_fma_two_prod: true,
+            df64_workgroup_reduce: true,
         }),
     };
     let shader = "let a = sin(x); let b = cos(y); let c = asin(z); let d = acos(w);";
@@ -371,7 +373,7 @@ fn test_downcast_f64_to_f32_elementwise() {
 @group(0) @binding(1) var<storage, read> b: array<f64>;
 @group(0) @binding(2) var<storage, read_write> output: array<f64>;
 
-var<workgroup> shared: array<f64, 256>;
+var<workgroup> wg_data: array<f64, 256>;
 
 @compute @workgroup_size(256)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {

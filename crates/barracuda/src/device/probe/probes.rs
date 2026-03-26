@@ -20,11 +20,96 @@ pub(super) struct ProbeShader {
     pub tolerance: f64,
 }
 
+// ── DF64 probe shader source fragments ──────────────────────────────────────
+// Self-contained WGSL shaders that test DF64 arithmetic and workgroup patterns.
+// Each includes the minimal DF64 core inline (probes must be independent).
+
+const PROBE_DF64_ARITH_WGSL: &str = "\
+struct Df64 { hi: f32, lo: f32, }\n\
+fn two_sum(a: f32, b: f32) -> Df64 {\n\
+    let s = a + b;\n\
+    let v = s - a;\n\
+    let e = (a - (s - v)) + (b - v);\n\
+    return Df64(s, e);\n\
+}\n\
+fn df64_add(a: Df64, b: Df64) -> Df64 {\n\
+    let s = two_sum(a.hi, b.hi);\n\
+    let e = a.lo + b.lo;\n\
+    let v = two_sum(s.hi, s.lo + e);\n\
+    return v;\n\
+}\n\
+fn df64_to_f64(v: Df64) -> f64 {\n\
+    return f64(v.hi) + f64(v.lo);\n\
+}\n\
+@group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
+@compute @workgroup_size(1)\n\
+fn probe(@builtin(global_invocation_id) _id: vec3<u32>) {\n\
+    let one = Df64(1.0, 0.0);\n\
+    let two = df64_add(one, one);\n\
+    out[0] = df64_to_f64(two);\n\
+}";
+
+const PROBE_DF64_FMA_TWO_PROD_WGSL: &str = "\
+struct Df64 { hi: f32, lo: f32, }\n\
+fn two_prod(a: f32, b: f32) -> Df64 {\n\
+    let p = a * b;\n\
+    let e = fma(a, b, -p);\n\
+    return Df64(p, e);\n\
+}\n\
+@group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
+@compute @workgroup_size(1)\n\
+fn probe(@builtin(global_invocation_id) _id: vec3<u32>) {\n\
+    let x: f32 = 1234567.0;\n\
+    let y: f32 = 7654321.0;\n\
+    let t = two_prod(x, y);\n\
+    out[0] = f64(t.hi) + f64(t.lo);\n\
+}";
+
+const PROBE_DF64_WORKGROUP_REDUCE_WGSL: &str = "\
+struct Df64 { hi: f32, lo: f32, }\n\
+fn two_sum(a: f32, b: f32) -> Df64 {\n\
+    let s = a + b;\n\
+    let v = s - a;\n\
+    let e = (a - (s - v)) + (b - v);\n\
+    return Df64(s, e);\n\
+}\n\
+fn df64_add(a: Df64, b: Df64) -> Df64 {\n\
+    let s = two_sum(a.hi, b.hi);\n\
+    let e = a.lo + b.lo;\n\
+    let v = two_sum(s.hi, s.lo + e);\n\
+    return v;\n\
+}\n\
+fn df64_to_f64(v: Df64) -> f64 {\n\
+    return f64(v.hi) + f64(v.lo);\n\
+}\n\
+@group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
+var<workgroup> shared_hi: array<f32, 256>;\n\
+var<workgroup> shared_lo: array<f32, 256>;\n\
+@compute @workgroup_size(256)\n\
+fn probe(@builtin(local_invocation_id) lid: vec3<u32>) {\n\
+    let tid = lid.x;\n\
+    shared_hi[tid] = 1.0;\n\
+    shared_lo[tid] = 0.0;\n\
+    workgroupBarrier();\n\
+    for (var stride = 128u; stride > 0u; stride = stride >> 1u) {\n\
+        if (tid < stride) {\n\
+            let a = Df64(shared_hi[tid], shared_lo[tid]);\n\
+            let b = Df64(shared_hi[tid + stride], shared_lo[tid + stride]);\n\
+            let s = df64_add(a, b);\n\
+            shared_hi[tid] = s.hi;\n\
+            shared_lo[tid] = s.lo;\n\
+        }\n\
+        workgroupBarrier();\n\
+    }\n\
+    if (tid == 0u) {\n\
+        out[0] = df64_to_f64(Df64(shared_hi[0], shared_lo[0]));\n\
+    }\n\
+}";
+
 pub(super) const PROBES: &[ProbeShader] = &[
     ProbeShader {
         name: "basic_f64",
-        wgsl: "enable f64;\n\
-               @group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
+        wgsl: "@group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
                @compute @workgroup_size(1)\n\
                fn probe(@builtin(global_invocation_id) _id: vec3<u32>) {\n\
                    let x: f64 = f64(3.0);\n\
@@ -36,8 +121,7 @@ pub(super) const PROBES: &[ProbeShader] = &[
     },
     ProbeShader {
         name: "exp",
-        wgsl: "enable f64;\n\
-               @group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
+        wgsl: "@group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
                @compute @workgroup_size(1)\n\
                fn probe(@builtin(global_invocation_id) _id: vec3<u32>) {\n\
                    out[0] = exp(f64(1.0));\n\
@@ -47,8 +131,7 @@ pub(super) const PROBES: &[ProbeShader] = &[
     },
     ProbeShader {
         name: "log",
-        wgsl: "enable f64;\n\
-               @group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
+        wgsl: "@group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
                @compute @workgroup_size(1)\n\
                fn probe(@builtin(global_invocation_id) _id: vec3<u32>) {\n\
                    out[0] = log(f64(2.718281828459045));\n\
@@ -58,8 +141,7 @@ pub(super) const PROBES: &[ProbeShader] = &[
     },
     ProbeShader {
         name: "exp2",
-        wgsl: "enable f64;\n\
-               @group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
+        wgsl: "@group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
                @compute @workgroup_size(1)\n\
                fn probe(@builtin(global_invocation_id) _id: vec3<u32>) {\n\
                    out[0] = exp2(f64(3.0));\n\
@@ -69,8 +151,7 @@ pub(super) const PROBES: &[ProbeShader] = &[
     },
     ProbeShader {
         name: "log2",
-        wgsl: "enable f64;\n\
-               @group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
+        wgsl: "@group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
                @compute @workgroup_size(1)\n\
                fn probe(@builtin(global_invocation_id) _id: vec3<u32>) {\n\
                    out[0] = log2(f64(8.0));\n\
@@ -80,8 +161,7 @@ pub(super) const PROBES: &[ProbeShader] = &[
     },
     ProbeShader {
         name: "sin",
-        wgsl: "enable f64;\n\
-               @group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
+        wgsl: "@group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
                @compute @workgroup_size(1)\n\
                fn probe(@builtin(global_invocation_id) _id: vec3<u32>) {\n\
                    out[0] = sin(f64(1.5707963267948966));\n\
@@ -91,8 +171,7 @@ pub(super) const PROBES: &[ProbeShader] = &[
     },
     ProbeShader {
         name: "cos",
-        wgsl: "enable f64;\n\
-               @group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
+        wgsl: "@group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
                @compute @workgroup_size(1)\n\
                fn probe(@builtin(global_invocation_id) _id: vec3<u32>) {\n\
                    out[0] = cos(f64(0.0));\n\
@@ -102,8 +181,7 @@ pub(super) const PROBES: &[ProbeShader] = &[
     },
     ProbeShader {
         name: "sqrt",
-        wgsl: "enable f64;\n\
-               @group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
+        wgsl: "@group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
                @compute @workgroup_size(1)\n\
                fn probe(@builtin(global_invocation_id) _id: vec3<u32>) {\n\
                    out[0] = sqrt(f64(2.0));\n\
@@ -113,8 +191,7 @@ pub(super) const PROBES: &[ProbeShader] = &[
     },
     ProbeShader {
         name: "fma",
-        wgsl: "enable f64;\n\
-               @group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
+        wgsl: "@group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
                @compute @workgroup_size(1)\n\
                fn probe(@builtin(global_invocation_id) _id: vec3<u32>) {\n\
                    out[0] = fma(f64(2.0), f64(3.0), f64(1.0));\n\
@@ -124,8 +201,7 @@ pub(super) const PROBES: &[ProbeShader] = &[
     },
     ProbeShader {
         name: "abs_min_max",
-        wgsl: "enable f64;\n\
-               @group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
+        wgsl: "@group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
                @compute @workgroup_size(1)\n\
                fn probe(@builtin(global_invocation_id) _id: vec3<u32>) {\n\
                    let a = abs(f64(-3.5));\n\
@@ -138,18 +214,40 @@ pub(super) const PROBES: &[ProbeShader] = &[
     },
     ProbeShader {
         name: "shared_mem_f64",
-        wgsl: "enable f64;\n\
-               @group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
-               var<workgroup> shared: array<f64, 4>;\n\
+        wgsl: "@group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
+               var<workgroup> wg_data: array<f64, 4>;\n\
                @compute @workgroup_size(4)\n\
                fn probe(@builtin(local_invocation_id) lid: vec3<u32>) {\n\
-                   shared[lid.x] = f64(lid.x + 1u);\n\
+                   wg_data[lid.x] = f64(lid.x + 1u);\n\
                    workgroupBarrier();\n\
                    if lid.x == 0u {\n\
-                       out[0] = shared[0] + shared[1] + shared[2] + shared[3];\n\
+                       out[0] = wg_data[0] + wg_data[1] + wg_data[2] + wg_data[3];\n\
                    }\n\
                }",
         expected: 10.0,
         tolerance: PROBE_F64_TOLERANCE_TIGHT,
+    },
+    // ── DF64 (f32-pair) capability probes ────────────────────────────────────
+    // These test whether DF64 arithmetic patterns compile and execute correctly.
+    // The production ReduceScalarPipeline depends on these patterns.
+    ProbeShader {
+        name: "df64_arith",
+        wgsl: PROBE_DF64_ARITH_WGSL,
+        expected: 2.0,
+        tolerance: PROBE_F64_TOLERANCE_TIGHT,
+    },
+    ProbeShader {
+        name: "df64_fma_two_prod",
+        wgsl: PROBE_DF64_FMA_TWO_PROD_WGSL,
+        // 1234567.0_f32 and 7654321.0_f32 are exact in f32.
+        // two_prod reconstructs the exact f64 product: 1234567 * 7654321
+        expected: 9_449_772_114_007.0,
+        tolerance: 1024.0,
+    },
+    ProbeShader {
+        name: "df64_workgroup_reduce",
+        wgsl: PROBE_DF64_WORKGROUP_REDUCE_WGSL,
+        expected: 256.0,
+        tolerance: PROBE_F64_TOLERANCE_STANDARD,
     },
 ];

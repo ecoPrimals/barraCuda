@@ -23,7 +23,41 @@
 
 use naga::{Arena, BinaryOperator, Expression, Handle, MathFunction};
 
+/// Build a flat boolean map marking expressions whose resolved type is f64.
+///
+/// WGSL `fma()` is defined for f32/f16/AbstractFloat only — NOT f64.
+/// Fusing f64 multiply-add patterns into `Fma` produces WGSL that silently
+/// returns 0 on all GPU backends. This map lets the fusion pass skip them.
+///
+/// The naga arena is topologically sorted (expressions only reference earlier
+/// handles), so a single forward pass propagates f64-ness correctly.
+fn mark_f64_expressions(expressions: &Arena<Expression>) -> Vec<bool> {
+    let mut is_f64 = vec![false; expressions.len()];
+    for (handle, expr) in expressions.iter() {
+        is_f64[handle.index()] = match *expr {
+            Expression::Literal(naga::Literal::F64(_)) => true,
+            Expression::As {
+                kind: naga::ScalarKind::Float,
+                convert: Some(8),
+                ..
+            } => true,
+            Expression::Binary { left, right, .. } => {
+                is_f64[left.index()] || is_f64[right.index()]
+            }
+            Expression::Math { arg, .. } => is_f64[arg.index()],
+            Expression::Unary { expr, .. } => is_f64[expr.index()],
+            Expression::Select {
+                accept, reject, ..
+            } => is_f64[accept.index()] || is_f64[reject.index()],
+            _ => false,
+        };
+    }
+    is_f64
+}
+
 /// Fuse `Mul + Add/Sub` patterns into `Fma` in the given expression arena.
+///
+/// Skips f64 expressions: WGSL `fma()` is f32/f16 only.
 ///
 /// Returns the number of fusions performed.
 pub fn fuse_multiply_add(expressions: &mut Arena<Expression>) -> usize {
@@ -31,6 +65,9 @@ pub fn fuse_multiply_add(expressions: &mut Arena<Expression>) -> usize {
     if len < 2 {
         return 0;
     }
+
+    // Phase 0: Mark f64 expressions so we can skip them during fusion.
+    let is_f64 = mark_f64_expressions(expressions);
 
     // Phase 1: Count how many times each expression handle is referenced
     // as an operand. We only fuse Mul results consumed exactly once.
@@ -52,8 +89,8 @@ pub fn fuse_multiply_add(expressions: &mut Arena<Expression>) -> usize {
                     op: BinaryOperator::Add,
                     left,
                     right,
-                } => try_fuse_add(expressions, left, right, &ref_counts)
-                    .or_else(|| try_fuse_add(expressions, right, left, &ref_counts))
+                } => try_fuse_add(expressions, left, right, &ref_counts, &is_f64)
+                    .or_else(|| try_fuse_add(expressions, right, left, &ref_counts, &is_f64))
                     .map(|fma| (handle, fma)),
 
                 // Pattern: Mul(a,b) - c  →  fma(a, b, -c)
@@ -74,8 +111,10 @@ pub fn fuse_multiply_add(expressions: &mut Arena<Expression>) -> usize {
                     op: BinaryOperator::Subtract,
                     left: mul_candidate,
                     right: addend,
-                } => try_fuse_sub_left(expressions, mul_candidate, addend, &ref_counts)
-                    .map(|fma| (handle, fma)),
+                } => {
+                    try_fuse_sub_left(expressions, mul_candidate, addend, &ref_counts, &is_f64)
+                        .map(|fma| (handle, fma))
+                }
 
                 _ => None,
             }
@@ -95,8 +134,12 @@ fn try_fuse_add(
     mul_candidate: Handle<Expression>,
     addend: Handle<Expression>,
     ref_counts: &[u32],
+    is_f64: &[bool],
 ) -> Option<Expression> {
     if ref_counts[mul_candidate.index()] != 1 {
+        return None;
+    }
+    if is_f64[mul_candidate.index()] {
         return None;
     }
     match expressions[mul_candidate] {
@@ -125,8 +168,12 @@ fn try_fuse_sub_left(
     mul_candidate: Handle<Expression>,
     subtrahend: Handle<Expression>,
     ref_counts: &[u32],
+    is_f64: &[bool],
 ) -> Option<Expression> {
     if ref_counts[mul_candidate.index()] != 1 {
+        return None;
+    }
+    if is_f64[mul_candidate.index()] {
         return None;
     }
     match expressions[mul_candidate] {
@@ -357,6 +404,32 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         assert_eq!(
             total_fusions, 0,
             "should not fuse when mul has multiple consumers"
+        );
+    }
+
+    #[test]
+    fn test_no_fusion_on_f64_multiply_add() {
+        let wgsl = r"
+@group(0) @binding(0) var<storage, read_write> out: array<f64>;
+
+@compute @workgroup_size(1)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let x: f64 = f64(3.0);
+    let y: f64 = x * f64(2.0) + f64(1.0);
+    out[gid.x] = y;
+}
+";
+        let mut module = naga::front::wgsl::parse_str(wgsl).expect("parse");
+        let mut total_fusions = 0usize;
+        for (_h, func) in module.functions.iter_mut() {
+            total_fusions += fuse_multiply_add(&mut func.expressions);
+        }
+        for ep in &mut module.entry_points {
+            total_fusions += fuse_multiply_add(&mut ep.function.expressions);
+        }
+        assert_eq!(
+            total_fusions, 0,
+            "must not fuse f64 multiply-add: WGSL fma() is f32/f16 only"
         );
     }
 }

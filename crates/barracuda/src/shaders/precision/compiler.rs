@@ -18,6 +18,24 @@ pub fn source_is_f64(source: &str) -> bool {
         || source.contains("-> f64")
 }
 
+/// Strip `enable f64;` from WGSL source.
+///
+/// naga 28 does NOT recognize `enable f64;` as a valid WGSL enable-extension
+/// (only `f16` is supported). f64 types are gated by the `SHADER_F64` device
+/// feature at device creation time, not by a source directive. Shaders
+/// authored with `enable f64;` (for forward compatibility or documentation)
+/// must have it stripped before feeding to `wgpu::create_shader_module`.
+///
+/// Called at the entry of `compile_shader_f64` and by `ShaderTemplate`.
+#[must_use]
+pub fn strip_f64_enable(source: &str) -> String {
+    source
+        .lines()
+        .filter(|l| l.trim() != "enable f64;")
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 /// Downcast an f64 shader source to f32 via text substitution.
 ///
 /// This is the core of "math is universal, precision is silicon": the shader

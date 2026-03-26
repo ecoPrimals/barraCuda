@@ -45,21 +45,33 @@ use std::sync::Arc;
 const SHADER_DF64: &str = include_str!("../shaders/reduce/sum_reduce_df64.wgsl");
 /// DF64 core arithmetic library (Dekker-pair: `df64_from_f64`, `df64_add`, etc.).
 const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
+/// Scalar f64 storage reduction (no workgroup memory — fallback path).
+const SHADER_SCALAR_F64: &str = include_str!("../shaders/reduce/sum_reduce_scalar_f64.wgsl");
 
-/// Select the reduce shader for this device.
+/// Select the reduce shader for this device based on probed capabilities.
 ///
-/// Always uses DF64 (f32-pair) accumulation in `var<workgroup>` memory.
-/// Native f64 in workgroup shared memory (`var<workgroup> array<f64, N>`)
-/// returns zeros on ALL tested naga -> SPIR-V backends: NVIDIA proprietary,
-/// NVK/NAK, and llvmpipe. Global-memory f64 (`var<storage>`) is unaffected.
+/// Prefers the DF64 (f32-pair) workgroup tree reduction for throughput, but
+/// falls back to a scalar f64 storage path when the probe system reports
+/// that DF64 workgroup reduction produces incorrect results on this silicon.
 ///
 /// The DF64 path uses `shared_hi/shared_lo: array<f32, 256>` for the tree
 /// reduction and converts at the storage boundary via `df64_from_f64` /
 /// `df64_to_f64`. Precision loss is ~4 mantissa bits (48 vs 52) which is
 /// acceptable for sum/max/min reductions.
 ///
-/// Diagnostic: hotSpring Exp 055, `HOTSPRING_DF64_NAGA_POISONING_DIAGNOSTIC`
-fn shader_for_device(_device: &WgpuDevice) -> &'static str {
+/// The scalar fallback dispatches 1 thread per workgroup, each sequentially
+/// summing 256 f64 elements from storage. Slower but always correct on any
+/// device with `SHADER_F64` storage support.
+fn shader_for_device(device: &WgpuDevice) -> &'static str {
+    if let Some(caps) = crate::device::probe::cached_f64_builtins(device) {
+        if !caps.df64_workgroup_reduce {
+            tracing::info!(
+                "DF64 workgroup reduce not verified on {} — using scalar f64 storage reduction",
+                device.adapter_info().name
+            );
+            return SHADER_SCALAR_F64;
+        }
+    }
     static DF64_COMBINED: std::sync::LazyLock<String> =
         std::sync::LazyLock::new(|| format!("{DF64_CORE}\n{SHADER_DF64}"));
     &DF64_COMBINED

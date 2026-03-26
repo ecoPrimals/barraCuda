@@ -49,6 +49,15 @@ pub struct F64BuiltinCapabilities {
     /// On NVIDIA proprietary, NVVM cannot handle DF64 transcendentals
     /// and a failed compilation permanently poisons the wgpu device.
     pub df64_transcendentals_safe: bool,
+    /// `fma(a, b, -p)` error-free product extraction compiles and dispatches
+    /// correctly in f32. This is the core of `two_prod` in `df64_core.wgsl`.
+    /// When `false`, Dekker splitting must be used instead of FMA.
+    pub df64_fma_two_prod: bool,
+    /// DF64 workgroup tree reduction (shared_hi/shared_lo arrays with
+    /// `workgroupBarrier()`) produces correct results. When `false`,
+    /// `ReduceScalarPipeline` must route through a storage-only or
+    /// scalar fallback path.
+    pub df64_workgroup_reduce: bool,
 }
 
 impl F64BuiltinCapabilities {
@@ -69,6 +78,8 @@ impl F64BuiltinCapabilities {
             shared_mem_f64: false,
             df64_arith: false,
             df64_transcendentals_safe: false,
+            df64_fma_two_prod: false,
+            df64_workgroup_reduce: false,
         }
     }
 
@@ -89,6 +100,8 @@ impl F64BuiltinCapabilities {
             shared_mem_f64: true,
             df64_arith: true,
             df64_transcendentals_safe: true,
+            df64_fma_two_prod: true,
+            df64_workgroup_reduce: true,
         }
     }
 
@@ -142,6 +155,24 @@ impl F64BuiltinCapabilities {
         self.df64_arith
     }
 
+    /// Whether `ReduceScalarPipeline` needs a workaround for the DF64
+    /// workgroup reduction pattern on this device.
+    ///
+    /// When `true`, the standard DF64 tree reduction in workgroup memory
+    /// (shared_hi/shared_lo arrays) returns incorrect results. The pipeline
+    /// must route through a storage-only, scalar, or CPU fallback path.
+    #[must_use]
+    pub fn needs_df64_reduce_workaround(&self) -> bool {
+        !self.df64_workgroup_reduce
+    }
+
+    /// Whether the `fma(a, b, -p)` two_prod pattern works correctly on f32.
+    /// When `false`, the Dekker splitting approach should be used instead.
+    #[must_use]
+    pub fn needs_df64_fma_workaround(&self) -> bool {
+        !self.df64_fma_two_prod
+    }
+
     /// Total count of natively-supported functions (excluding `basic_f64` gate).
     #[must_use]
     pub fn native_count(&self) -> u8 {
@@ -161,6 +192,8 @@ impl F64BuiltinCapabilities {
             self.shared_mem_f64,
             self.df64_arith,
             self.df64_transcendentals_safe,
+            self.df64_fma_two_prod,
+            self.df64_workgroup_reduce,
         ]
         .iter()
         .filter(|&&b| b)
@@ -191,11 +224,17 @@ impl std::fmt::Display for F64BuiltinCapabilities {
         )?;
         writeln!(f, "    abs/min/max={}", sym(self.abs_min_max))?;
         writeln!(f, "    shared_mem_f64={}", sym(self.shared_mem_f64))?;
-        write!(
+        writeln!(
             f,
             "    df64_arith={} df64_transcendentals={}",
             sym(self.df64_arith),
             sym(self.df64_transcendentals_safe)
+        )?;
+        write!(
+            f,
+            "    df64_fma_two_prod={} df64_workgroup_reduce={}",
+            sym(self.df64_fma_two_prod),
+            sym(self.df64_workgroup_reduce)
         )
     }
 }

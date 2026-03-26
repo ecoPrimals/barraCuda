@@ -22,7 +22,7 @@ struct Params {
 @group(0) @binding(1) var<storage, read_write> output: array<f64>;
 @group(0) @binding(2) var<uniform> params: Params;
 
-var<workgroup> shared: array<f64, 256>;
+var<workgroup> wg_data: array<f64, 256>;
 
 @compute @workgroup_size(256)
 fn main(
@@ -42,19 +42,19 @@ fn main(
         acc += input[idx] * input[idx + lag];
         idx += 256u;
     }
-    shared[tid] = acc;
+    wg_data[tid] = acc;
     workgroupBarrier();
 
     for (var stride = 128u; stride > 0u; stride >>= 1u) {
         if tid < stride {
-            shared[tid] += shared[tid + stride];
+            wg_data[tid] += wg_data[tid + stride];
         }
         workgroupBarrier();
     }
 
     if tid == 0u {
         if valid > 0u {
-            output[lag] = shared[0] / f64(valid);
+            output[lag] = wg_data[0] / f64(valid);
         } else {
             output[lag] = 0.0;
         }

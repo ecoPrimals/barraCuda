@@ -12,11 +12,17 @@ use crate::device::WgpuDevice;
 /// numeric result. Returns `false` on any failure.
 pub(super) async fn run_single_probe(wgpu_device: &WgpuDevice, probe: &ProbeShader) -> bool {
     let device = wgpu_device.device();
+    // naga 28 rejects `enable f64;` — f64 support is gated by SHADER_F64 feature.
+    let wgsl: std::borrow::Cow<'_, str> = if probe.wgsl.contains("enable f64;") {
+        probe.wgsl.replace("enable f64;", "").into()
+    } else {
+        probe.wgsl.into()
+    };
     // Phase 1: shader compilation
     let scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some(probe.name),
-        source: wgpu::ShaderSource::Wgsl(probe.wgsl.into()),
+        source: wgpu::ShaderSource::Wgsl(wgsl),
     });
     if scope.pop().await.is_some() {
         return false;

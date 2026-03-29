@@ -102,6 +102,16 @@ mod tests {
         assert!(caps.contains(&"gpu_compute".to_string()));
         assert!(caps.contains(&"tensor_ops".to_string()));
         assert!(caps.contains(&"fhe".to_string()));
+        assert!(caps.contains(&"core".to_string()));
+    }
+
+    #[test]
+    fn test_capabilities_includes_all_domains() {
+        let caps = capabilities();
+        assert!(
+            caps.contains(&"capabilities".to_string()),
+            "capabilities domain should be derived from capabilities.list method"
+        );
     }
 
     #[test]
@@ -110,6 +120,7 @@ mod tests {
         assert!(p.contains(&"gpu.compute".to_string()));
         assert!(p.contains(&"tensor.ops".to_string()));
         assert!(p.contains(&"gpu.dispatch".to_string()));
+        assert!(p.contains(&"gpu.device".to_string()));
     }
 
     #[test]
@@ -132,5 +143,41 @@ mod tests {
     fn test_registered_methods_contains_dispatch() {
         let methods = registered_methods();
         assert!(methods.contains(&"compute.dispatch".to_string()));
+    }
+
+    #[test]
+    fn test_registered_methods_contains_ecosystem_probes() {
+        let methods = registered_methods();
+        assert!(methods.contains(&"health.liveness".to_string()));
+        assert!(methods.contains(&"health.readiness".to_string()));
+        assert!(methods.contains(&"health.check".to_string()));
+        assert!(methods.contains(&"capabilities.list".to_string()));
+    }
+
+    #[test]
+    fn test_domain_of_helper() {
+        assert_eq!(domain_of("health.check"), Some("health"));
+        assert_eq!(domain_of("compute.dispatch"), Some("compute"));
+        assert_eq!(domain_of("nodot"), Some("nodot"));
+        assert_eq!(domain_of(""), Some(""));
+    }
+
+    #[test]
+    fn test_derive_capabilities_custom_methods() {
+        let caps = derive_capabilities(&["custom.thing", "compute.dispatch"]);
+        assert!(caps.contains(&"custom".to_string()));
+        assert!(caps.contains(&"gpu_compute".to_string()));
+    }
+
+    #[test]
+    fn test_derive_provides_no_compute() {
+        let provides = derive_provides(&["health.check", "primal.info"]);
+        assert!(provides.is_empty());
+    }
+
+    #[test]
+    fn test_derive_provides_device_domain() {
+        let provides = derive_provides(&["device.list"]);
+        assert!(provides.contains(&"gpu.device".to_string()));
     }
 }

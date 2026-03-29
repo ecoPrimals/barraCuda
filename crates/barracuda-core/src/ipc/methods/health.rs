@@ -1,11 +1,46 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Health, tolerances, and GPU stack validation handlers.
+//!
+//! Per wateringHole `SEMANTIC_METHOD_NAMING_STANDARD.md` v2.2.0, the `health.*`
+//! endpoints are non-negotiable ecosystem probes. Every primal MUST respond to:
+//!
+//! | Canonical Name     | Required Aliases            | Response shape            |
+//! |--------------------|-----------------------------|---------------------------|
+//! | `health.liveness`  | `ping`, `health`            | `{"status": "alive"}`     |
+//! | `health.readiness` | (none)                      | `{"status": "ready", …}`  |
+//! | `health.check`     | `status`, `check`           | `{"status": "healthy", …}`|
 
 use super::super::jsonrpc::{INTERNAL_ERROR, JsonRpcResponse};
 use crate::BarraCudaPrimal;
 use serde_json::Value;
 
-/// `barracuda.health.check` — Primal health status.
+/// `health.liveness` — fast liveness probe (always alive if process is up).
+///
+/// Springs, orchestrators, and load balancers use this to determine whether the
+/// primal process is alive. Responds unconditionally; does not probe hardware.
+pub(super) fn health_liveness(id: Value) -> JsonRpcResponse {
+    JsonRpcResponse::success(id, serde_json::json!({"status": "alive"}))
+}
+
+/// `health.readiness` — can the primal serve compute requests?
+///
+/// Returns `"ready"` if the primal is running and can accept work (even in
+/// degraded/CPU-only mode). Returns `"not_ready"` during startup or after
+/// stop.
+pub(super) fn health_readiness(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
+    use crate::health::PrimalHealth;
+    let ready = primal.is_ready();
+    let has_gpu = primal.device().is_some();
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({
+            "status": if ready { "ready" } else { "not_ready" },
+            "gpu_available": has_gpu,
+        }),
+    )
+}
+
+/// `health.check` — full health report (may probe hardware).
 pub(super) async fn health_check(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
     use crate::health::PrimalHealth;
     match primal.health_check().await {

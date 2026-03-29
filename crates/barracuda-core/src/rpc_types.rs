@@ -42,6 +42,27 @@ pub struct DeviceProbe {
     pub max_workgroups_per_dimension: u32,
 }
 
+/// Liveness probe result from `health_liveness`.
+///
+/// Per wateringHole `SEMANTIC_METHOD_NAMING_STANDARD.md` v2.2.0:
+/// always responds `{"status": "alive"}` when the process is up.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LivenessReport {
+    /// Always `"alive"` — the process is running.
+    pub status: String,
+}
+
+/// Readiness probe result from `health_readiness`.
+///
+/// Indicates whether the primal can accept and serve compute requests.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReadinessReport {
+    /// `"ready"` or `"not_ready"`.
+    pub status: String,
+    /// Whether a GPU device is available.
+    pub gpu_available: bool,
+}
+
 /// Health report from `health_check`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthReport {
@@ -197,6 +218,28 @@ mod tests {
         let parsed: DeviceProbe = serde_json::from_str(&json).unwrap();
         assert!(parsed.available);
         assert_eq!(parsed.max_buffer_size, 2_147_483_648);
+    }
+
+    #[test]
+    fn liveness_report_roundtrip() {
+        let report = LivenessReport {
+            status: "alive".into(),
+        };
+        let json = serde_json::to_string(&report).unwrap();
+        let parsed: LivenessReport = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.status, "alive");
+    }
+
+    #[test]
+    fn readiness_report_roundtrip() {
+        let report = ReadinessReport {
+            status: "ready".into(),
+            gpu_available: true,
+        };
+        let json = serde_json::to_string(&report).unwrap();
+        let parsed: ReadinessReport = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.status, "ready");
+        assert!(parsed.gpu_available);
     }
 
     #[test]

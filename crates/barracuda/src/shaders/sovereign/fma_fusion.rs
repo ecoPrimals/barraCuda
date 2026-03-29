@@ -41,14 +41,12 @@ fn mark_f64_expressions(expressions: &Arena<Expression>) -> Vec<bool> {
                 convert: Some(8),
                 ..
             } => true,
-            Expression::Binary { left, right, .. } => {
-                is_f64[left.index()] || is_f64[right.index()]
-            }
+            Expression::Binary { left, right, .. } => is_f64[left.index()] || is_f64[right.index()],
             Expression::Math { arg, .. } => is_f64[arg.index()],
             Expression::Unary { expr, .. } => is_f64[expr.index()],
-            Expression::Select {
-                accept, reject, ..
-            } => is_f64[accept.index()] || is_f64[reject.index()],
+            Expression::Select { accept, reject, .. } => {
+                is_f64[accept.index()] || is_f64[reject.index()]
+            }
             _ => false,
         };
     }
@@ -111,10 +109,8 @@ pub fn fuse_multiply_add(expressions: &mut Arena<Expression>) -> usize {
                     op: BinaryOperator::Subtract,
                     left: mul_candidate,
                     right: addend,
-                } => {
-                    try_fuse_sub_left(expressions, mul_candidate, addend, &ref_counts, &is_f64)
-                        .map(|fma| (handle, fma))
-                }
+                } => try_fuse_sub_left(expressions, mul_candidate, addend, &ref_counts, &is_f64)
+                    .map(|fma| (handle, fma)),
 
                 _ => None,
             }

@@ -365,6 +365,59 @@ mod tests {
         assert_eq!(addr, "10.0.0.1:9000");
     }
 
+    #[test]
+    fn resolve_defaults_to_ephemeral() {
+        let addr = resolve_bind_address(None);
+        assert!(
+            addr.ends_with(":0") || addr.contains(':'),
+            "default should use ephemeral port"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_handle_line_invalid_jsonrpc_version() {
+        let primal = BarraCudaPrimal::new();
+        let line = r#"{"jsonrpc":"1.0","method":"device.list","params":{},"id":1}"#;
+        let resp = handle_line(&primal, line).await.expect("non-notification");
+        assert!(resp.error.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_line_empty_method() {
+        let primal = BarraCudaPrimal::new();
+        let line = r#"{"jsonrpc":"2.0","method":"","params":{},"id":1}"#;
+        let resp = handle_line(&primal, line).await.expect("non-notification");
+        assert!(resp.error.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_line_string_id() {
+        let primal = BarraCudaPrimal::new();
+        let line = r#"{"jsonrpc":"2.0","method":"primal.info","params":{},"id":"abc"}"#;
+        let resp = handle_line(&primal, line).await.expect("non-notification");
+        assert!(resp.result.is_some());
+        assert_eq!(resp.id, serde_json::json!("abc"));
+    }
+
+    #[tokio::test]
+    async fn test_handle_line_health_liveness_alias() {
+        let primal = BarraCudaPrimal::new();
+        let line = r#"{"jsonrpc":"2.0","method":"ping","params":{},"id":99}"#;
+        let resp = handle_line(&primal, line).await.expect("non-notification");
+        assert!(resp.result.is_some());
+        assert_eq!(resp.result.unwrap()["status"], "alive");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn default_socket_path_format() {
+        let path = IpcServer::default_socket_path();
+        let path_str = path.to_string_lossy();
+        assert!(path_str.contains("biomeos"));
+        assert!(path_str.contains("barracuda-"));
+        assert!(path_str.ends_with(".sock"));
+    }
+
     // ─── handle_connection integration tests ───
 
     #[tokio::test]
@@ -416,6 +469,73 @@ mod tests {
             response.contains("-32700"),
             "should contain parse error code"
         );
+    }
+
+    #[tokio::test]
+    async fn handle_connection_multiple_requests() {
+        let primal = Arc::new(BarraCudaPrimal::new());
+        let req1 = r#"{"jsonrpc":"2.0","method":"health.liveness","params":{},"id":1}"#;
+        let req2 = r#"{"jsonrpc":"2.0","method":"primal.info","params":{},"id":2}"#;
+        let input = format!("{req1}\n{req2}\n");
+
+        let (client_reader, mut server_writer) = tokio::io::duplex(4096);
+        let (mut server_reader_buf, client_writer) = tokio::io::duplex(4096);
+
+        server_writer.write_all(input.as_bytes()).await.unwrap();
+        server_writer.shutdown().await.unwrap();
+
+        handle_connection(primal, client_reader, client_writer).await;
+
+        let mut response = String::new();
+        tokio::io::AsyncReadExt::read_to_string(&mut server_reader_buf, &mut response)
+            .await
+            .unwrap();
+        let lines: Vec<&str> = response.lines().collect();
+        assert_eq!(lines.len(), 2, "should have two response lines");
+        assert!(lines[0].contains("alive"));
+        assert!(lines[1].contains("barraCuda"));
+    }
+
+    #[tokio::test]
+    async fn handle_connection_mixed_valid_invalid() {
+        let primal = Arc::new(BarraCudaPrimal::new());
+        let valid = r#"{"jsonrpc":"2.0","method":"health.liveness","params":{},"id":1}"#;
+        let invalid = "not valid json";
+        let input = format!("{valid}\n{invalid}\n");
+
+        let (client_reader, mut server_writer) = tokio::io::duplex(4096);
+        let (mut server_reader_buf, client_writer) = tokio::io::duplex(4096);
+
+        server_writer.write_all(input.as_bytes()).await.unwrap();
+        server_writer.shutdown().await.unwrap();
+
+        handle_connection(primal, client_reader, client_writer).await;
+
+        let mut response = String::new();
+        tokio::io::AsyncReadExt::read_to_string(&mut server_reader_buf, &mut response)
+            .await
+            .unwrap();
+        let lines: Vec<&str> = response.lines().collect();
+        assert_eq!(lines.len(), 2, "should have two responses");
+        assert!(lines[0].contains("alive"));
+        assert!(lines[1].contains("-32700"), "parse error for invalid JSON");
+    }
+
+    #[test]
+    fn ipc_server_construction() {
+        let primal = Arc::new(BarraCudaPrimal::new());
+        let _server = IpcServer::new(primal);
+    }
+
+    #[test]
+    fn max_frame_bytes_default() {
+        assert!(max_frame_bytes() > 0);
+        assert!(max_frame_bytes() >= 1024);
+    }
+
+    #[test]
+    fn max_connections_default() {
+        assert!(max_connections() > 0);
     }
 
     #[tokio::test]

@@ -7,15 +7,13 @@ use crate::BarraCudaPrimal;
 use serde_json::Value;
 
 /// `barracuda.tensor.create` — Create a real tensor on the GPU device.
+///
+/// Validates shape and data before checking device availability.
 pub(super) async fn tensor_create(
     primal: &BarraCudaPrimal,
     params: &Value,
     id: Value,
 ) -> JsonRpcResponse {
-    let Some(dev) = primal.device() else {
-        return JsonRpcResponse::error(id, INTERNAL_ERROR, "No GPU device available");
-    };
-
     let Some(shape) = params.get("shape").and_then(|v| v.as_array()) else {
         return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: shape");
     };
@@ -54,6 +52,10 @@ pub(super) async fn tensor_create(
         );
     }
 
+    let Some(dev) = primal.device() else {
+        return JsonRpcResponse::error(id, INTERNAL_ERROR, "No GPU device available");
+    };
+
     match barracuda::tensor::Tensor::from_data(&data, shape_vec.clone(), std::sync::Arc::new(dev)) {
         Ok(tensor) => {
             let tensor_id = primal.store_tensor(tensor);
@@ -74,15 +76,13 @@ pub(super) async fn tensor_create(
 }
 
 /// `barracuda.tensor.matmul` — Matrix multiply two stored tensors.
+///
+/// Validates params and tensor existence before attempting computation.
 pub(super) async fn tensor_matmul(
     primal: &BarraCudaPrimal,
     params: &Value,
     id: Value,
 ) -> JsonRpcResponse {
-    if primal.device().is_none() {
-        return JsonRpcResponse::error(id, INTERNAL_ERROR, "No GPU device available");
-    }
-
     let Some(lhs_str) = params.get("lhs_id").and_then(|v| v.as_str()) else {
         return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: lhs_id");
     };

@@ -17,8 +17,15 @@
 //!
 //! The bridge accepts `&[u32]` to avoid a circular dependency with `barracuda`.
 //! The type-level safety enforcement remains in `barracuda` via `ValidatedSpirv`.
+//!
+//! ## Evolution Path
+//!
+//! When wgpu exposes a safe `create_shader_module_trusted` API (tracking
+//! wgpu#4854), this crate collapses to a safe wrapper and the `unsafe`
+//! disappears entirely. Until then, this is the minimal, auditable surface.
 
 #![warn(missing_docs)]
+#![deny(unsafe_code)]
 
 use std::borrow::Cow;
 
@@ -27,18 +34,31 @@ use std::borrow::Cow;
 /// This bypasses naga's WGSL re-emission entirely, feeding SPIR-V directly to
 /// the Vulkan/Metal/DX12 backend.
 ///
-/// # Safety
+/// # Panics
 ///
-/// The caller must ensure `spirv_words` was produced by a trusted pipeline.
-/// In `barracuda`, this is enforced by the `ValidatedSpirv` type which gates
-/// construction to naga-validated IR only. The SPIR-V is passed directly to
-/// the GPU driver without further validation by wgpu.
+/// Panics if `spirv_words` is empty (a zero-length SPIR-V module is never
+/// valid and indicates a caller bug).
+///
+/// # Safety Argument (not `unsafe fn`)
+///
+/// This function is safe to call because the unsafe operation inside is
+/// bounded by a contract enforced at the type level in the `barracuda` crate:
+/// only `ValidatedSpirv::words()` can produce the `&[u32]` that reaches here,
+/// and `ValidatedSpirv` can only be constructed from naga-validated IR.
+///
+/// The `#[allow(unsafe_code)]` below is the sole exception to the crate-level
+/// `#![deny(unsafe_code)]`, auditable in one place.
 #[must_use]
 pub fn compile_spirv_passthrough(
     device: &wgpu::Device,
     spirv_words: &[u32],
     label: Option<&str>,
 ) -> wgpu::ShaderModule {
+    assert!(
+        !spirv_words.is_empty(),
+        "SPIR-V words must be non-empty — empty modules are never valid"
+    );
+
     let desc = wgpu::ShaderModuleDescriptorPassthrough {
         label,
         spirv: Some(Cow::Borrowed(spirv_words)),
@@ -57,5 +77,8 @@ pub fn compile_spirv_passthrough(
     // enforces this through the ValidatedSpirv type — only code paths that
     // pass naga::valid::Validator::validate() can construct ValidatedSpirv,
     // and only ValidatedSpirv::words() can produce the &[u32] passed here.
-    unsafe { device.create_shader_module_passthrough(desc) }
+    #[allow(unsafe_code)]
+    unsafe {
+        device.create_shader_module_passthrough(desc)
+    }
 }

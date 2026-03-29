@@ -561,7 +561,7 @@ mod tests {
 
         // Should be ~0
         for (j, &val) in atr.iter().enumerate() {
-            assert!(val.abs() < 1e-10, "A^T r[{}] = {}", j, val);
+            assert!(val.abs() < 1e-10, "A^T r[{j}] = {val}");
         }
     }
 

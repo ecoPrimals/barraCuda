@@ -29,13 +29,21 @@ enum Commands {
     /// Start the barraCuda IPC server.
     ///
     /// Per ecoBin standard, Unix domain sockets are the primary transport
-    /// on Unix platforms. TCP is used as fallback or when `--bind` is
-    /// explicitly provided. Use `--no-unix` to force TCP-only mode.
+    /// on Unix platforms. TCP is used as fallback or when `--bind`/`--port`
+    /// is explicitly provided. Use `--no-unix` to force TCP-only mode.
     Server {
-        /// TCP bind address for JSON-RPC.
-        /// Resolved in order: `--bind`, `BARRACUDA_IPC_BIND`,
+        /// TCP port for newline-delimited JSON-RPC.
+        /// Per UniBin v1.1: `--port` is the universal entry point for
+        /// orchestration. Springs and launchers compose primals via
+        /// `{binary} server --port {port}`. Binds to `127.0.0.1:{port}`.
+        #[arg(long)]
+        port: Option<u16>,
+
+        /// TCP bind address for JSON-RPC (full `host:port` form).
+        /// Overrides `--port` when both are provided.
+        /// Resolved in order: `--bind`, `--port`, `BARRACUDA_IPC_BIND`,
         /// `BARRACUDA_IPC_HOST`:`BARRACUDA_IPC_PORT`, or `127.0.0.1:0` (ephemeral).
-        /// When `--bind` is provided, TCP becomes the primary transport.
+        /// When `--bind` or `--port` is provided, TCP becomes the primary transport.
         #[arg(long)]
         bind: Option<String>,
 
@@ -106,6 +114,7 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
 
     match cli.command {
         Commands::Server {
+            port,
             bind,
             tarpc_bind,
             #[cfg(unix)]
@@ -113,8 +122,9 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
             #[cfg(unix)]
             no_unix,
         } => {
+            let effective_bind = bind.or_else(|| port.map(|p| format!("127.0.0.1:{p}")));
             run_server(
-                bind,
+                effective_bind,
                 tarpc_bind,
                 #[cfg(unix)]
                 unix,

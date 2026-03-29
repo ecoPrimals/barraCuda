@@ -1,11 +1,23 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-03-21.
+Prioritized work items, ordered by impact. Updated 2026-03-29.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 21: Compliance, Coverage & Validation-First Evolution (Mar 29)**:
+  `health.liveness`, `health.readiness`, `capabilities.list` endpoints
+  implemented per wateringHole Semantic Method Naming Standard v2.2.0
+  (non-negotiable probes). All required aliases (`ping`, `health`, `status`,
+  `check`, `capability.list`). `--port <PORT>` CLI flag per UniBin standard.
+  Validation-first handler refactoring across JSON-RPC and tarpc — validate
+  inputs before device check, enabling comprehensive testing without GPU.
+  `barracuda-spirv` unsafe evolved to `#![deny(unsafe_code)]` + targeted
+  `#[allow]`. Coverage 59.33% → 72.83% line (+13.5pp). 214 unit + 8 e2e
+  tests in barracuda-core (up from 148). `rpc.rs` refactored (861→572
+  lines via test extraction). `fhe_ntt_validation.rs` clippy cast_lossless
+  resolved. All quality gates green.
 - **Sprint 20: FMA Evolution & Lint Promotion (Mar 21)**:
   625 `suboptimal_flops` sites (415 lib + 210 test) evolved to `mul_add()` for hardware FMA
   precision. 4 clippy lints promoted from `allow` to `warn`: `suboptimal_flops` (415→0),
@@ -206,9 +218,10 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
 
 ## Near-term (P2)
 
-- **Test coverage to 90%**: Currently 71.59% line / 78.44% function on llvmpipe.
-  CI 80% gate blocking (Sprint 3). Evolve `--fail-under` from 80 to 90 with real
-  GPU hardware. Remaining gaps are exclusively GPU-dependent code paths.
+- **Test coverage to 90%**: Currently 72.83% line on llvmpipe (Sprint 21:
+  +13.5pp from validation-first refactoring). CI 80% gate blocking (Sprint 3).
+  Evolve `--fail-under` from 80 to 90 with real GPU hardware. Remaining gaps
+  are exclusively GPU-dependent code paths.
 - **Kokkos GPU parity benchmarks**: Run barraCuda GPU benchmarks on matching hardware,
   publish comparison data.
 

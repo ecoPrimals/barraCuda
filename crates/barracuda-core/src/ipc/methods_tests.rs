@@ -4,7 +4,9 @@ use super::compute::{compute_dispatch, parse_shape};
 use super::device::{list as device_list, probe as device_probe};
 use super::dispatch;
 use super::fhe::{fhe_ntt, fhe_pointwise_mul};
-use super::health::{health_check, tolerances_get, validate_gpu_stack};
+use super::health::{
+    health_check, health_liveness, health_readiness, tolerances_get, validate_gpu_stack,
+};
 use super::primal::{capabilities, info};
 use super::tensor::{tensor_create, tensor_matmul};
 use super::{REGISTERED_METHODS, normalize_method};
@@ -78,7 +80,7 @@ fn normalize_empty() {
 
 #[test]
 fn registered_methods_count() {
-    assert_eq!(REGISTERED_METHODS.len(), 12);
+    assert_eq!(REGISTERED_METHODS.len(), 15);
 }
 
 #[test]
@@ -182,6 +184,22 @@ async fn test_device_probe_no_gpu() {
 
 // ── health and tolerances ───────────────────────────────────────────────
 
+#[test]
+fn test_health_liveness() {
+    let resp = health_liveness(serde_json::json!(200));
+    let result = resp.result.expect("health.liveness always succeeds");
+    assert_eq!(result["status"], "alive");
+}
+
+#[test]
+fn test_health_readiness_not_started() {
+    let primal = test_primal();
+    let resp = health_readiness(&primal, serde_json::json!(201));
+    let result = resp.result.expect("health.readiness always succeeds");
+    assert_eq!(result["status"], "not_ready");
+    assert_eq!(result["gpu_available"], false);
+}
+
 #[tokio::test]
 async fn test_health_check() {
     let primal = test_primal();
@@ -189,6 +207,114 @@ async fn test_health_check() {
     assert!(resp.result.is_some());
     let result = resp.result.unwrap();
     assert_eq!(result["name"], "barraCuda");
+}
+
+// ── health alias dispatch tests ─────────────────────────────────────────
+
+#[tokio::test]
+async fn test_dispatch_health_liveness() {
+    let primal = test_primal();
+    let resp = dispatch(
+        &primal,
+        "health.liveness",
+        &serde_json::json!({}),
+        serde_json::json!(210),
+    )
+    .await;
+    assert_eq!(resp.result.unwrap()["status"], "alive");
+}
+
+#[tokio::test]
+async fn test_dispatch_ping_alias() {
+    let primal = test_primal();
+    let resp = dispatch(
+        &primal,
+        "ping",
+        &serde_json::json!({}),
+        serde_json::json!(211),
+    )
+    .await;
+    assert_eq!(resp.result.unwrap()["status"], "alive");
+}
+
+#[tokio::test]
+async fn test_dispatch_health_alias() {
+    let primal = test_primal();
+    let resp = dispatch(
+        &primal,
+        "health",
+        &serde_json::json!({}),
+        serde_json::json!(212),
+    )
+    .await;
+    assert_eq!(resp.result.unwrap()["status"], "alive");
+}
+
+#[tokio::test]
+async fn test_dispatch_health_readiness() {
+    let primal = test_primal();
+    let resp = dispatch(
+        &primal,
+        "health.readiness",
+        &serde_json::json!({}),
+        serde_json::json!(213),
+    )
+    .await;
+    let result = resp.result.unwrap();
+    assert!(result["status"].is_string());
+}
+
+#[tokio::test]
+async fn test_dispatch_status_alias() {
+    let primal = test_primal();
+    let resp = dispatch(
+        &primal,
+        "status",
+        &serde_json::json!({}),
+        serde_json::json!(214),
+    )
+    .await;
+    assert!(resp.result.is_some(), "status alias for health.check");
+}
+
+#[tokio::test]
+async fn test_dispatch_check_alias() {
+    let primal = test_primal();
+    let resp = dispatch(
+        &primal,
+        "check",
+        &serde_json::json!({}),
+        serde_json::json!(215),
+    )
+    .await;
+    assert!(resp.result.is_some(), "check alias for health.check");
+}
+
+#[tokio::test]
+async fn test_dispatch_capabilities_list() {
+    let primal = test_primal();
+    let resp = dispatch(
+        &primal,
+        "capabilities.list",
+        &serde_json::json!({}),
+        serde_json::json!(216),
+    )
+    .await;
+    assert!(resp.result.is_some(), "capabilities.list canonical");
+    assert!(resp.result.unwrap()["methods"].is_array());
+}
+
+#[tokio::test]
+async fn test_dispatch_capability_list_alias() {
+    let primal = test_primal();
+    let resp = dispatch(
+        &primal,
+        "capability.list",
+        &serde_json::json!({}),
+        serde_json::json!(217),
+    )
+    .await;
+    assert!(resp.result.is_some(), "capability.list alias");
 }
 
 #[test]
@@ -334,7 +460,7 @@ async fn test_compute_dispatch_ones_no_gpu() {
 }
 
 #[tokio::test]
-async fn test_compute_dispatch_read_no_gpu() {
+async fn test_compute_dispatch_read_nonexistent_tensor() {
     let primal = test_primal();
     let resp = compute_dispatch(
         &primal,
@@ -342,8 +468,9 @@ async fn test_compute_dispatch_read_no_gpu() {
         serde_json::json!(151),
     )
     .await;
-    assert!(resp.error.is_some());
-    assert_eq!(resp.error.unwrap().code, INTERNAL_ERROR);
+    let err = resp.error.expect("nonexistent tensor returns error");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("Tensor not found"));
 }
 
 #[tokio::test]
@@ -381,7 +508,7 @@ async fn test_tensor_create_missing_shape() {
 }
 
 #[tokio::test]
-async fn test_tensor_matmul_no_gpu() {
+async fn test_tensor_matmul_tensors_not_found() {
     let primal = test_primal();
     let resp = tensor_matmul(
         &primal,
@@ -389,8 +516,9 @@ async fn test_tensor_matmul_no_gpu() {
         serde_json::json!(15),
     )
     .await;
-    assert!(resp.error.is_some());
-    assert_eq!(resp.error.unwrap().code, INTERNAL_ERROR);
+    let err = resp.error.expect("nonexistent tensors return error");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("Tensor not found"));
 }
 
 #[tokio::test]

@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **806 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,085 Rust source files**, 42 integration test files, 4,052+ tests (3,623 lib + 130 core + integration + doctests) passing
+- **1,085 Rust source files**, 42 integration test files, 4,100+ tests (3,623 lib + 214 core + 8 e2e + integration + doctests) passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -42,8 +42,8 @@ results.
 - **Bioinformatics** — Smith-Waterman, HMM, phylogenetics, bipartition encoding, genomic ops
 - **ML ops** — matmul, softmax, attention, ESN reservoir computing
 - **Sovereign shader compilation** — naga 28 IR optimizer, SPIR-V passthrough
-- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with bare semantic `{domain}.{operation}` method names per wateringHole standard
-- **UniBin CLI** — single `barracuda` binary with `server`, `service`, `doctor`, `validate`, `version`
+- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with 15 bare semantic `{domain}.{operation}` methods per wateringHole standard v2.2.0
+- **UniBin CLI** — single `barracuda` binary with `server --port <PORT>`, `service`, `doctor`, `validate`, `version`
 
 ### Design principles
 
@@ -58,6 +58,7 @@ results.
 
 ## Recent
 
+- **Sprint 21**: Compliance & coverage deep evolution — `health.liveness`, `health.readiness`, `capabilities.list` endpoints implemented per wateringHole Semantic Method Naming Standard v2.2.0 with all required aliases (`ping`, `health`, `status`, `check`, `capability.list`). Validation-first handler refactoring across JSON-RPC and tarpc layers (validate inputs before device check). `--port` CLI flag per UniBin standard. `barracuda-spirv` unsafe code evolved to `#![deny(unsafe_code)]` + targeted `#[allow]`. barracuda-core coverage 59.33% → 72.83% line (+13.5pp), 214 unit tests + 8 e2e (up from 148). rpc.rs refactored to extract tests (861→572 lines). All quality gates green.
 - **Sprint 20**: FMA evolution & lint promotion — 625 `suboptimal_flops` sites evolved to `mul_add()` for hardware FMA precision. 4 lints promoted from `allow` to `warn`: `suboptimal_flops` (415→0), `use_self` (332→0), `tuple_array_conversions` (2→0), `needless_range_loop` (45→0). All `needless_range_loop` sites evolved to idiomatic iterators. 232 files changed, 3,623+ tests pass, zero clippy errors.
 - **Sprint 19**: Deep debt solutions & idiomatic Rust evolution — RPC `tolerances_get` evolved to centralized tolerance registry. Cast safety: all `usize as u32` in `TensorSession` replaced with checked casts. 6 domain feature gates added (`domain-fhe`, `domain-md`, `domain-lattice`, `domain-physics`, `domain-pharma`, `domain-genomics`). `FlatTree::validate()` evolved to typed errors.
 - **Sprint 18**: Ecosystem absorption & API housekeeping — full pull + review of 8 springs + 10 primals. `GpuDriverProfile` removed. `barracuda::cast` module with safe numeric casts. ESN device accessors. f64 shader constants exposed. Tolerance stability contract.
@@ -124,8 +125,8 @@ barraCuda/
 ├── crates/
 │   ├── barracuda-core/              # Primal lifecycle wrapper
 │   │   ├── src/lib.rs               # BarraCudaPrimal: start/stop/health
-│   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport
-│   │   ├── src/rpc.rs               # tarpc service definition (10 endpoints, parity with JSON-RPC)
+│   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport (15 methods)
+│   │   ├── src/rpc.rs               # tarpc service definition (14 endpoints, parity with JSON-RPC)
 │   │   └── src/bin/barracuda.rs     # UniBin CLI
 │   └── barracuda/                   # Umbrella crate — all math + GPU
 │       ├── src/
@@ -204,23 +205,30 @@ barraCuda exposes a dual-protocol IPC interface per wateringHole standards:
 
 | Method | Description |
 |--------|-------------|
+| `primal.info` | Primal identity (name, version, protocol, namespace, license) |
+| `primal.capabilities` | Advertise capabilities, methods, hardware state |
+| `capabilities.list` | Ecosystem-standard capability probe (alias for `primal.capabilities`) |
 | `device.list` | List available compute devices |
 | `device.probe` | Probe device capabilities and limits |
-| `health.check` | Health check (name, version, status) |
+| `health.liveness` | Fast liveness probe (aliases: `ping`, `health`) |
+| `health.readiness` | Readiness probe — can the primal serve requests? |
+| `health.check` | Full health check (aliases: `status`, `check`) |
 | `tolerances.get` | Numerical tolerances for a named operation |
 | `validate.gpu_stack` | GPU validation suite |
-| `compute.dispatch` | Dispatch a compute shader |
+| `compute.dispatch` | Dispatch a named compute operation (zeros, ones, read) |
 | `tensor.create` | Create a tensor on device |
 | `tensor.matmul` | Matrix multiply two tensors |
 | `fhe.ntt` | FHE Number Theoretic Transform |
 | `fhe.pointwise_mul` | FHE pointwise polynomial multiplication |
 
-Method names follow the wateringHole `{domain}.{operation}` Semantic Method Naming
-Standard. Legacy `barracuda.{domain}.{operation}` format accepted for backward compatibility.
+15 methods follow the wateringHole `{domain}.{operation}` Semantic Method Naming
+Standard v2.2.0. `health.liveness`, `health.readiness`, `health.check`, and
+`capabilities.list` are non-negotiable ecosystem probes. Legacy
+`barracuda.{domain}.{operation}` format accepted for backward compatibility.
 
 **tarpc** (optional, binary, high-throughput primal-to-primal):
 
-Same 10 endpoints with strongly-typed Rust signatures and full parameter
+Same 14 endpoints with strongly-typed Rust signatures and full parameter
 parity with the JSON-RPC handlers. Enabled via
 `barracuda server --tarpc-bind 127.0.0.1:9001`.
 
@@ -230,6 +238,7 @@ parity with the JSON-RPC handlers. Enabled via
 
 ```bash
 # Start IPC server (JSON-RPC on TCP)
+barracuda server --port 9000
 barracuda server --bind 127.0.0.1:9000
 
 # Start with tarpc alongside JSON-RPC

@@ -20,20 +20,19 @@ pub(super) fn parse_shape(arr: &[Value]) -> Option<Vec<usize>> {
 /// Rather than accepting raw WGSL (which would require shader security auditing),
 /// this dispatches named operations from barraCuda's shader library. Pass input
 /// data and the operation produces output stored in the tensor store.
+///
+/// Validates all input parameters before checking device availability so that
+/// callers receive precise validation errors regardless of hardware state.
 pub(super) async fn compute_dispatch(
     primal: &BarraCudaPrimal,
     params: &Value,
     id: Value,
 ) -> JsonRpcResponse {
-    let Some(dev) = primal.device() else {
-        return JsonRpcResponse::error(id, INTERNAL_ERROR, "No GPU device available");
-    };
-
     let Some(op) = params.get("op").and_then(|v| v.as_str()) else {
         return JsonRpcResponse::error(
             id,
             INVALID_PARAMS,
-            "Missing required param: op (e.g. 'zeros', 'ones', 'from_data')",
+            "Missing required param: op (e.g. 'zeros', 'ones', 'read')",
         );
     };
 
@@ -48,6 +47,9 @@ pub(super) async fn compute_dispatch(
                     INVALID_PARAMS,
                     "Shape dimension exceeds platform usize",
                 );
+            };
+            let Some(dev) = primal.device() else {
+                return JsonRpcResponse::error(id, INTERNAL_ERROR, "No GPU device available");
             };
             let dev_arc = std::sync::Arc::new(dev);
             let result = if op == "zeros" {

@@ -23,11 +23,18 @@ use serde_json::Value;
 ///
 /// Single source of truth for which operations this primal provides.
 /// Wire names are these exact strings — no primal prefix.
+///
+/// Per `SEMANTIC_METHOD_NAMING_STANDARD.md` v2.2.0, `health.liveness`,
+/// `health.readiness`, `health.check`, and `capabilities.list` are
+/// non-negotiable ecosystem probes registered as canonical names.
 pub const REGISTERED_METHODS: &[&str] = &[
     "primal.info",
     "primal.capabilities",
+    "capabilities.list",
     "device.list",
     "device.probe",
+    "health.liveness",
+    "health.readiness",
     "health.check",
     "tolerances.get",
     "validate.gpu_stack",
@@ -48,6 +55,13 @@ pub fn normalize_method(method: &str) -> &str {
 }
 
 /// Route a JSON-RPC method call to the appropriate handler.
+///
+/// Canonical names and required aliases per wateringHole standards:
+/// - `health.liveness` + aliases `ping`, `health`
+/// - `health.readiness` (no aliases)
+/// - `health.check` + aliases `status`, `check`
+/// - `capabilities.list` + alias `capability.list`
+/// - `primal.capabilities` (legacy alias for `capabilities.list`)
 pub async fn dispatch(
     primal: &BarraCudaPrimal,
     method: &str,
@@ -56,10 +70,14 @@ pub async fn dispatch(
 ) -> JsonRpcResponse {
     match normalize_method(method) {
         "primal.info" => primal::info(primal, id),
-        "primal.capabilities" => primal::capabilities(primal, id),
+        "primal.capabilities" | "capabilities.list" | "capability.list" => {
+            primal::capabilities(primal, id)
+        }
         "device.list" => device::list(primal, id).await,
         "device.probe" => device::probe(primal, id).await,
-        "health.check" => health::health_check(primal, id).await,
+        "health.liveness" | "ping" | "health" => health::health_liveness(id),
+        "health.readiness" => health::health_readiness(primal, id),
+        "health.check" | "status" | "check" => health::health_check(primal, id).await,
         "tolerances.get" => health::tolerances_get(params, id),
         "validate.gpu_stack" => health::validate_gpu_stack(primal, id).await,
         "compute.dispatch" => compute::compute_dispatch(primal, params, id).await,
@@ -74,3 +92,7 @@ pub async fn dispatch(
 #[cfg(test)]
 #[path = "../methods_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "../methods_coverage_tests.rs"]
+mod coverage_tests;

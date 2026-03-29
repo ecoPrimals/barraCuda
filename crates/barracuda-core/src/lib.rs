@@ -258,4 +258,111 @@ mod tests {
             assert!(primal.health_status().is_healthy());
         }
     }
+
+    #[test]
+    fn test_default_impl() {
+        let primal = BarraCudaPrimal::default();
+        assert_eq!(primal.state(), PrimalState::Created);
+        assert!(primal.device().is_none());
+        assert_eq!(primal.tensor_count(), 0);
+    }
+
+    #[test]
+    fn test_health_status_before_start() {
+        let primal = BarraCudaPrimal::new();
+        let status = primal.health_status();
+        assert_eq!(status, HealthStatus::Unknown);
+        assert!(!primal.is_ready());
+    }
+
+    #[tokio::test]
+    async fn test_health_status_running_no_gpu() {
+        let mut primal = BarraCudaPrimal::new();
+        primal.start().await.unwrap();
+        if primal.device().is_none() {
+            let status = primal.health_status();
+            assert!(
+                matches!(status, HealthStatus::Degraded { .. }),
+                "running without GPU should be degraded"
+            );
+            assert!(status.is_serving());
+            assert!(primal.is_ready());
+        }
+    }
+
+    #[tokio::test]
+    async fn test_health_status_after_stop() {
+        let mut primal = BarraCudaPrimal::new();
+        primal.start().await.unwrap();
+        primal.stop().await.unwrap();
+        assert_eq!(primal.health_status(), HealthStatus::Unknown);
+        assert!(!primal.is_ready());
+    }
+
+    #[tokio::test]
+    async fn test_health_check_report_fields() {
+        let mut primal = BarraCudaPrimal::new();
+        primal.start().await.unwrap();
+        let report = primal.health_check().await.unwrap();
+        assert_eq!(report.name, PRIMAL_NAME);
+        assert_eq!(report.version, env!("CARGO_PKG_VERSION"));
+        if primal.device().is_some() {
+            assert!(report.details.contains_key("adapter"));
+            assert!(report.details.contains_key("device_type"));
+        }
+    }
+
+    #[test]
+    fn test_tensor_store_empty() {
+        let primal = BarraCudaPrimal::new();
+        assert_eq!(primal.tensor_count(), 0);
+        assert!(primal.get_tensor("nonexistent").is_none());
+    }
+
+    #[tokio::test]
+    async fn test_cannot_start_while_running() {
+        let mut primal = BarraCudaPrimal::new();
+        primal.start().await.unwrap();
+        let err = primal.start().await;
+        assert!(err.is_err(), "should not start while already running");
+    }
+
+    #[test]
+    fn test_cannot_stop_before_start() {
+        let mut primal = BarraCudaPrimal::new();
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let err = rt.block_on(primal.stop());
+        assert!(err.is_err(), "should not stop before starting");
+    }
+
+    #[tokio::test]
+    async fn test_restart_after_stop() {
+        let mut primal = BarraCudaPrimal::new();
+        primal.start().await.unwrap();
+        primal.stop().await.unwrap();
+        primal.start().await.unwrap();
+        assert_eq!(primal.state(), PrimalState::Running);
+    }
+
+    #[tokio::test]
+    async fn test_reload() {
+        let mut primal = BarraCudaPrimal::new();
+        primal.start().await.unwrap();
+        primal.reload().await.unwrap();
+        assert_eq!(primal.state(), PrimalState::Running);
+    }
+
+    #[tokio::test]
+    async fn test_shutdown() {
+        let mut primal = BarraCudaPrimal::new();
+        primal.start().await.unwrap();
+        primal.shutdown().await.unwrap();
+        assert_eq!(primal.state(), PrimalState::Stopped);
+    }
+
+    #[test]
+    fn test_primal_constants() {
+        assert_eq!(PRIMAL_NAME, "barraCuda");
+        assert_eq!(PRIMAL_NAMESPACE, "barracuda");
+    }
 }

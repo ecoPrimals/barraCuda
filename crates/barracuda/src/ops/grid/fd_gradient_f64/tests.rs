@@ -23,11 +23,7 @@ async fn test_gradient_1d() {
         let error = (val - expected).abs();
         assert!(
             error < 0.02,
-            "At i={}, got {}, expected {}, error={}",
-            i,
-            val,
-            expected,
-            error
+            "At i={i}, got {val}, expected {expected}, error={error}",
         );
     }
 }

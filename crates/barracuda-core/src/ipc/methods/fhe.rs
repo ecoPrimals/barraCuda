@@ -6,15 +6,13 @@ use crate::BarraCudaPrimal;
 use serde_json::Value;
 
 /// `barracuda.fhe.ntt` — Execute Number Theoretic Transform on GPU.
+///
+/// Validates all parameters before checking device availability.
 pub(super) async fn fhe_ntt(
     primal: &BarraCudaPrimal,
     params: &Value,
     id: Value,
 ) -> JsonRpcResponse {
-    let Some(dev) = primal.device() else {
-        return JsonRpcResponse::error(id, INTERNAL_ERROR, "No GPU device available");
-    };
-
     let Some(modulus) = params.get("modulus").and_then(|v| v.as_u64()) else {
         return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: modulus");
     };
@@ -47,7 +45,10 @@ pub(super) async fn fhe_ntt(
         );
     }
 
-    // u64 → u32 pairs → f32 bit patterns → Tensor
+    let Some(dev) = primal.device() else {
+        return JsonRpcResponse::error(id, INTERNAL_ERROR, "No GPU device available");
+    };
+
     #[expect(
         clippy::cast_possible_truncation,
         reason = "intentional u64→u32 split for FHE coefficient layout"
@@ -86,43 +87,36 @@ pub(super) async fn fhe_ntt(
     };
 
     match ntt.execute() {
-        Ok(result_tensor) => {
-            // Read back and convert u32 pairs → u64
-            match result_tensor.to_vec_u32() {
-                Ok(u32_data) => {
-                    let result_u64: Vec<u64> = u32_data
-                        .chunks(2)
-                        .map(|c| u64::from(c[0]) | (u64::from(c[1]) << 32))
-                        .collect();
-                    JsonRpcResponse::success(
-                        id,
-                        serde_json::json!({
-                            "status": "completed",
-                            "modulus": modulus,
-                            "degree": degree,
-                            "result": result_u64,
-                        }),
-                    )
-                }
-                Err(e) => {
-                    JsonRpcResponse::error(id, INTERNAL_ERROR, format!("Readback failed: {e}"))
-                }
+        Ok(result_tensor) => match result_tensor.to_vec_u32() {
+            Ok(u32_data) => {
+                let result_u64: Vec<u64> = u32_data
+                    .chunks(2)
+                    .map(|c| u64::from(c[0]) | (u64::from(c[1]) << 32))
+                    .collect();
+                JsonRpcResponse::success(
+                    id,
+                    serde_json::json!({
+                        "status": "completed",
+                        "modulus": modulus,
+                        "degree": degree,
+                        "result": result_u64,
+                    }),
+                )
             }
-        }
+            Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("Readback failed: {e}")),
+        },
         Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("NTT execution failed: {e}")),
     }
 }
 
 /// `barracuda.fhe.pointwise_mul` — Execute pointwise polynomial multiplication on GPU.
+///
+/// Validates all parameters before checking device availability.
 pub(super) async fn fhe_pointwise_mul(
     primal: &BarraCudaPrimal,
     params: &Value,
     id: Value,
 ) -> JsonRpcResponse {
-    let Some(dev) = primal.device() else {
-        return JsonRpcResponse::error(id, INTERNAL_ERROR, "No GPU device available");
-    };
-
     let Some(modulus) = params.get("modulus").and_then(|v| v.as_u64()) else {
         return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: modulus");
     };
@@ -156,6 +150,10 @@ pub(super) async fn fhe_pointwise_mul(
             format!("coefficient arrays must have {degree} elements"),
         );
     }
+
+    let Some(dev) = primal.device() else {
+        return JsonRpcResponse::error(id, INTERNAL_ERROR, "No GPU device available");
+    };
 
     let to_tensor = |poly: &[u64]| -> barracuda::error::Result<barracuda::tensor::Tensor> {
         #[expect(

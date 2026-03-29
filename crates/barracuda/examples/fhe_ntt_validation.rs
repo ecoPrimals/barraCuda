@@ -36,8 +36,8 @@ fn naive_poly_multiply_cpu(a: &[u64], b: &[u64], modulus: u64) -> Vec<u64> {
     for (i, &a_val) in a.iter().enumerate() {
         for (j, &b_val) in b.iter().enumerate() {
             let idx = (i + j) % degree;
-            let product = ((a_val as u128) * (b_val as u128)) % (modulus as u128);
-            result[idx] = (result[idx] as u128 + product) as u64 % modulus;
+            let product = (u128::from(a_val) * u128::from(b_val)) % u128::from(modulus);
+            result[idx] = (u128::from(result[idx]) + product) as u64 % modulus;
         }
     }
 
@@ -93,9 +93,10 @@ async fn main() -> Result<(), BarracudaError> {
     println!("Inverse root: {inv_root_small}");
 
     // Convert u64 polynomial to u32 pairs (GPU format)
+    #[allow(clippy::cast_possible_truncation)]
     let poly_u32: Vec<u32> = poly_small
         .iter()
-        .flat_map(|&x| vec![(x & 0xFFFFFFFF) as u32, (x >> 32) as u32])
+        .flat_map(|&x| vec![(x & 0xFFFF_FFFF) as u32, (x >> 32) as u32])
         .collect();
 
     // Create tensor -- reinterpret u32 as f32 for GPU transport (FHE convention)
@@ -115,7 +116,7 @@ async fn main() -> Result<(), BarracudaError> {
     let ntt_u32 = ntt_result.to_vec_u32()?;
     let ntt_poly: Vec<u64> = ntt_u32
         .chunks(2)
-        .map(|c| (c[0] as u64) | ((c[1] as u64) << 32))
+        .map(|c| u64::from(c[0]) | (u64::from(c[1]) << 32))
         .collect();
     println!("   NTT output: {ntt_poly:?}");
     println!("   Expected:   [10, 7, 15, 6] (from reference)");
@@ -132,7 +133,7 @@ async fn main() -> Result<(), BarracudaError> {
     let result_u32 = result_tensor.to_vec_u32()?;
     let result_poly: Vec<u64> = result_u32
         .chunks(2)
-        .map(|c| (c[0] as u64) | ((c[1] as u64) << 32))
+        .map(|c| u64::from(c[0]) | (u64::from(c[1]) << 32))
         .collect();
 
     println!("\nOutput polynomial: {result_poly:?}");
@@ -193,9 +194,10 @@ async fn main() -> Result<(), BarracudaError> {
     let inv_root_large = compute_inverse_root(degree_large as u32, modulus_large, root_large);
 
     // Convert to u32 pairs
+    #[allow(clippy::cast_possible_truncation)]
     let a_u32: Vec<u32> = a_large
         .iter()
-        .flat_map(|&x| vec![(x & 0xFFFFFFFF) as u32, (x >> 32) as u32])
+        .flat_map(|&x| vec![(x & 0xFFFF_FFFF) as u32, (x >> 32) as u32])
         .collect();
 
     let a_f32: Vec<f32> = a_u32.iter().map(|&x| f32::from_bits(x)).collect();

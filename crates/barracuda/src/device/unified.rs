@@ -191,7 +191,7 @@ impl DeviceContext {
         {
             let dev = super::coral_reef_device::CoralReefDevice::with_auto_device()?;
             if dev.has_dispatch() {
-                return Ok(DeviceContext::Sovereign(dev));
+                return Ok(Self::Sovereign(dev));
             }
             Err(BarracudaError::DeviceNotAvailable {
                 device: "Sovereign".into(),

@@ -76,6 +76,7 @@ static GPU_CREATE_GUARD: std::sync::LazyLock<tokio::sync::Mutex<()>> =
 static GPU_IS_REAL: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 static GPU_HAS_F64: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 static GPU_F64_COMPUTES: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+static GPU_F64_TRANSCENDENTALS: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 static CPU_AVAILABLE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 static GPU_CREATION_FAILED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 
@@ -484,6 +485,136 @@ fn f64_computation_probe(device: &WgpuDevice) -> bool {
     }
 }
 
+/// Run the full probe suite asynchronously and log the per-operation
+/// capability matrix. Returns whether all f64 transcendentals are working.
+async fn probe_and_log_f64_transcendentals(device: &WgpuDevice) -> bool {
+    let caps = crate::device::probe::probe_f64_builtins(device).await;
+    let info = device.adapter_info();
+
+    tracing::info!(
+        adapter = %info.name,
+        vendor = format_args!("{:#06x}", info.vendor),
+        driver = %info.driver,
+        driver_info = %info.driver_info,
+        basic_f64 = caps.basic_f64,
+        sqrt = caps.sqrt,
+        abs_min_max = caps.abs_min_max,
+        sin = caps.sin,
+        cos = caps.cos,
+        exp = caps.exp,
+        log = caps.log,
+        exp2 = caps.exp2,
+        log2 = caps.log2,
+        fma = caps.fma,
+        shared_mem_f64 = caps.shared_mem_f64,
+        df64_arith = caps.df64_arith,
+        composite_transcendental = caps.composite_transcendental,
+        exp_log_chain = caps.exp_log_chain,
+        transcendentals = caps.has_f64_transcendentals(),
+        native_count = caps.native_count(),
+        "f64 capability probe complete"
+    );
+
+    if !caps.has_f64_transcendentals() {
+        let mut missing = Vec::new();
+        if !caps.sqrt {
+            missing.push("sqrt");
+        }
+        if !caps.abs_min_max {
+            missing.push("abs/min/max");
+        }
+        if !caps.sin {
+            missing.push("sin");
+        }
+        if !caps.cos {
+            missing.push("cos");
+        }
+        if !caps.exp {
+            missing.push("exp");
+        }
+        if !caps.log {
+            missing.push("log");
+        }
+        if !caps.fma {
+            missing.push("fma");
+        }
+        if !caps.composite_transcendental {
+            missing.push("composite_transcendental");
+        }
+        if !caps.exp_log_chain {
+            missing.push("exp_log_chain");
+        }
+        tracing::warn!(
+            adapter = %info.name,
+            driver = %info.driver,
+            missing = %missing.join(", "),
+            "f64 transcendentals BROKEN — shaders using these ops need polyfill"
+        );
+    }
+
+    caps.has_f64_transcendentals()
+}
+
+/// Get a device only if f64 transcendentals (sqrt, sin, cos, log, exp)
+/// all work correctly with full f64 precision.
+///
+/// Runs the full probe suite (cached per adapter). Use this for tests
+/// that exercise transcendental-heavy shaders (Bessel, Beta, etc.).
+pub async fn get_test_device_if_f64_transcendentals_available() -> Option<Arc<WgpuDevice>> {
+    release_held_permit();
+    let permit = super::test_harness::global_gate().acquire_owned().await;
+    let device = get_test_gpu_device().await?;
+    let is_real =
+        *GPU_IS_REAL.get_or_init(|| device.adapter_info().device_type != wgpu::DeviceType::Cpu);
+    let has_f64 = *GPU_HAS_F64.get_or_init(|| device.has_f64_shaders());
+    if !is_real || !has_f64 {
+        return None;
+    }
+
+    let transcendentals = if let Some(&cached) = GPU_F64_TRANSCENDENTALS.get() {
+        cached
+    } else {
+        let result = probe_and_log_f64_transcendentals(&device).await;
+        let _ = GPU_F64_TRANSCENDENTALS.set(result);
+        result
+    };
+
+    if transcendentals {
+        hold_gpu_permit(permit);
+        Some(device)
+    } else {
+        None
+    }
+}
+
+/// Sync wrapper for `get_test_device_if_f64_transcendentals_available`.
+#[must_use]
+pub fn get_test_device_if_f64_transcendentals_available_sync() -> Option<Arc<WgpuDevice>> {
+    release_held_permit();
+    let permit = super::test_harness::global_gate().acquire_owned_blocking();
+    let device = tokio_block_on(async {
+        let device = get_test_gpu_device().await?;
+        let is_real =
+            *GPU_IS_REAL.get_or_init(|| device.adapter_info().device_type != wgpu::DeviceType::Cpu);
+        let has_f64 = *GPU_HAS_F64.get_or_init(|| device.has_f64_shaders());
+        if !is_real || !has_f64 {
+            return None;
+        }
+        let transcendentals = if let Some(&cached) = GPU_F64_TRANSCENDENTALS.get() {
+            cached
+        } else {
+            let result = probe_and_log_f64_transcendentals(&device).await;
+            let _ = GPU_F64_TRANSCENDENTALS.set(result);
+            result
+        };
+        if transcendentals { Some(device) } else { None }
+    });
+    if device.is_some() {
+        hold_gpu_permit(permit);
+    }
+    device
+}
+
 // ============================================================================
 // Sync helpers
 // ============================================================================
@@ -599,6 +730,12 @@ pub mod test_prelude {
     /// Get f64-capable test device, or None if unavailable
     pub async fn test_f64_device() -> Option<Arc<WgpuDevice>> {
         get_test_device_if_f64_gpu_available().await
+    }
+
+    /// Get device with verified f64 transcendentals (sqrt, sin, cos, log, exp).
+    /// Use for Bessel, Beta, and other transcendental-heavy shader tests.
+    pub async fn test_f64_transcendental_device() -> Option<Arc<WgpuDevice>> {
+        super::get_test_device_if_f64_transcendentals_available().await
     }
 
     /// Create test tensor on shared device

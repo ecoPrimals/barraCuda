@@ -74,6 +74,8 @@ pub fn seed_cache_from_heuristics(device: &WgpuDevice) {
         sqrt: true,
         fma: true,
         abs_min_max: true,
+        composite_transcendental: false,
+        exp_log_chain: false,
         shared_mem_f64: !device.is_nvk(),
         df64_arith: true,
         df64_transcendentals_safe: caps.df64_transcendentals_safe(),

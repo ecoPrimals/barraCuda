@@ -312,7 +312,7 @@ mod tests {
     use super::*;
 
     fn create_test_device() -> Option<Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_f64_gpu_available_sync()
+        crate::device::test_pool::get_test_device_if_f64_transcendentals_available_sync()
     }
 
     #[test]

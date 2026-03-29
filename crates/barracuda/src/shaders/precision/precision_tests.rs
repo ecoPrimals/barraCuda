@@ -233,6 +233,8 @@ fn test_sin_cos_taylor_workaround_asin_acos_protected() {
             sqrt: true,
             fma: true,
             abs_min_max: true,
+            composite_transcendental: false,
+            exp_log_chain: false,
             shared_mem_f64: false,
             df64_arith: true,
             df64_transcendentals_safe: true,

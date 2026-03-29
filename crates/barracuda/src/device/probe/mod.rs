@@ -69,6 +69,8 @@ pub async fn probe_f64_builtins(device: &WgpuDevice) -> F64BuiltinCapabilities {
             "sqrt" => caps.sqrt = ok,
             "fma" => caps.fma = ok,
             "abs_min_max" => caps.abs_min_max = ok,
+            "composite_transcendental" => caps.composite_transcendental = ok,
+            "exp_log_chain" => caps.exp_log_chain = ok,
             "shared_mem_f64" => caps.shared_mem_f64 = ok,
             "df64_arith" => caps.df64_arith = ok,
             "df64_fma_two_prod" => caps.df64_fma_two_prod = ok,
@@ -171,7 +173,7 @@ mod tests {
     #[test]
     fn test_f64_caps_full() {
         let c = F64BuiltinCapabilities::full();
-        assert_eq!(c.native_count(), 14);
+        assert_eq!(c.native_count(), 16);
         assert!(c.can_compile_f64());
         assert!(!c.needs_exp_log_workaround());
         assert!(!c.needs_sin_f64_workaround());
@@ -196,6 +198,8 @@ mod tests {
             sqrt: true,
             fma: true,
             abs_min_max: true,
+            composite_transcendental: true,
+            exp_log_chain: true,
             shared_mem_f64: true,
             df64_arith: true,
             df64_transcendentals_safe: true,

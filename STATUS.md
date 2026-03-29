@@ -49,6 +49,9 @@
 - Capability-scored multi-GPU adapter discovery
 - Probe-aware Fp64Strategy (NVK f64 detection via runtime probe cache)
 - GPU f64 computational accuracy probe (dispatches `3*2+1=7` to verify real f64 execution)
+- **Multi-tier f64 probe**: 16 isolated probe shaders (basic arithmetic, sqrt, abs, sin, cos, exp, log, fma, shared-mem, DF64, composite transcendental, exp/log chain) with per-operation tracing metadata; `has_f64_transcendentals()` capability gate catches NVVM JIT failures that single-function probes miss
+- **Composite transcendental probes**: catch NVVM compiler crash when combining log+exp+sqrt+sin+cos in a single shader (RTX 3090 passes individual probes but fails composite)
+- **`get_test_device_if_f64_transcendentals_available()`**: transcendental-aware test gate for Bessel/Beta/Digamma/Born-Mayer and other transcendental-heavy shader tests — no blind routing
 - Capability-based shader-compiler discovery (env → `shader.compile` capability scan → `shader_compiler` fallback → well-known port)
 - Bounded GPU poll timeout (configurable via `BARRACUDA_POLL_TIMEOUT_SECS`, default 120s)
 - RwLock poison recovery in autotune (no panics on poisoned calibration cache)

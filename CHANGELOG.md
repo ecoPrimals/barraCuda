@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.11] — 2026-03-29
 
+### Changed — Sprint 22d: f64 Transcendental Pipeline Awareness (Mar 29 2026)
+
+- **Composite transcendental probes** — two new probe shaders that combine
+  log+exp+sqrt+sin+cos in a single shader, catching NVVM JIT failures that
+  per-function probes miss. RTX 3090 passes individual f64 probes but crashes
+  on composite shaders — now detected and gated at the probe level.
+- **`F64BuiltinCapabilities` evolved** — added `composite_transcendental` and
+  `exp_log_chain` fields; `has_f64_transcendentals()` requires both for true.
+- **`get_test_device_if_f64_transcendentals_available()`** — new test gate that
+  runs the full probe suite and skips tests when transcendentals are broken.
+  Async-first design (no nested `tokio_block_on`); sync wrapper provided.
+- **10 failing tests → 0** — Bessel J₀/K₀, Beta, Digamma, Born-Mayer tests
+  now use the transcendental gate instead of the basic f64 arithmetic gate.
+  Tests gracefully skip on hardware that lacks composite transcendental support.
+- **Sin/cos probes use non-trivial arguments** — probe `sin(9.21...)` and
+  `cos(9.21...)` instead of `sin(π/2)` and `cos(0)`, catching large-argument
+  precision loss on some NVIDIA drivers.
+- **Per-operation tracing metadata** — probe results logged via `tracing::info`
+  with adapter name, vendor, driver version, and per-op pass/fail for backtrace.
+- **`DeviceCapabilities` evolved** — added `needs_sqrt_f64_workaround()` and
+  `has_f64_transcendentals()` methods; `seed_cache_from_heuristics` defaults
+  composite probes to `false` (pessimistic until real probe runs).
+- **coralReef `shader.compile.capabilities` evolved** — response now returns
+  structured `CompileCapabilitiesResponse` with `supported_archs` AND
+  `f64_transcendentals` object (per-op polyfill availability: sin, cos, sqrt,
+  exp2, log2, rcp, exp, log, composite_lowering). No blind routing.
+- **coralReef pin**: Phase 10 Iter 70.
+
 ### Changed — Sprint 22c: coralReef IPC Evolution (Mar 29 2026)
 
 - **Newline-delimited JSON-RPC framing** (wateringHole v3.1 mandatory) — `jsonrpc_call`

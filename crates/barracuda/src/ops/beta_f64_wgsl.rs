@@ -195,11 +195,11 @@ impl BetaF64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_f64_gpu_available;
+    use crate::device::test_pool::get_test_device_if_f64_transcendentals_available;
 
     #[tokio::test]
     async fn test_beta_symmetric() {
-        let Some(device) = get_test_device_if_f64_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_transcendentals_available().await else {
             return;
         };
 
@@ -218,7 +218,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_beta_known_values() {
-        let Some(device) = get_test_device_if_f64_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_transcendentals_available().await else {
             return;
         };
 
@@ -255,7 +255,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_beta_relation_to_gamma() {
-        let Some(device) = get_test_device_if_f64_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_transcendentals_available().await else {
             return;
         };
 

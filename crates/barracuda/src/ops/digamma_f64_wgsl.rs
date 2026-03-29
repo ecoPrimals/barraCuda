@@ -208,11 +208,11 @@ impl DigammaF64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_f64_gpu_available;
+    use crate::device::test_pool::get_test_device_if_f64_transcendentals_available;
 
     #[tokio::test]
     async fn test_digamma_at_1() {
-        let Some(device) = get_test_device_if_f64_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_transcendentals_available().await else {
             return;
         };
 
@@ -251,14 +251,14 @@ mod tests {
             Ok::<(), crate::error::BarracudaError>(())
         };
 
-        let Some(device) = get_test_device_if_f64_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_transcendentals_available().await else {
             return;
         };
         match run(device) {
             Ok(()) => {}
             Err(e) if e.is_device_lost() => {
                 tracing::warn!("device lost in digamma recurrence, retrying");
-                let fresh = get_test_device_if_f64_gpu_available()
+                let fresh = get_test_device_if_f64_transcendentals_available()
                     .await
                     .expect("f64 GPU unavailable on retry");
                 run(fresh).expect("failed on retry after device recovery");
@@ -269,7 +269,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_digamma_known_values() {
-        let Some(device) = get_test_device_if_f64_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_transcendentals_available().await else {
             return;
         };
 
@@ -299,7 +299,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_digamma_large_x() {
-        let Some(device) = get_test_device_if_f64_gpu_available().await else {
+        let Some(device) = get_test_device_if_f64_transcendentals_available().await else {
             return;
         };
 

@@ -462,6 +462,23 @@ impl DeviceCapabilities {
         self.f64_capabilities.is_some_and(|c| !c.cos)
     }
 
+    /// Whether `sqrt(f64)` needs a software workaround on this device.
+    #[must_use]
+    pub fn needs_sqrt_f64_workaround(&self) -> bool {
+        self.f64_capabilities.is_some_and(|c| !c.sqrt)
+    }
+
+    /// Whether all f64 transcendentals (sqrt, sin, cos, exp, log, abs, fma)
+    /// work correctly on this device with full f64 precision.
+    ///
+    /// When `false`, shaders using transcendentals should route through
+    /// polyfill, DF64, or CPU fallback. Probe-based when available.
+    #[must_use]
+    pub fn has_f64_transcendentals(&self) -> bool {
+        self.f64_capabilities
+            .map_or(self.f64_shaders, |c| c.has_f64_transcendentals())
+    }
+
     /// Whether `DF64` transcendentals are safe on this device.
     #[must_use]
     pub fn df64_transcendentals_safe(&self) -> bool {

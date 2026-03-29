@@ -164,9 +164,9 @@ pub(super) const PROBES: &[ProbeShader] = &[
         wgsl: "@group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
                @compute @workgroup_size(1)\n\
                fn probe(@builtin(global_invocation_id) _id: vec3<u32>) {\n\
-                   out[0] = sin(f64(1.5707963267948966));\n\
+                   out[0] = sin(f64(9.21460183660255));\n\
                }",
-        expected: 1.0,
+        expected: 0.156_434_465_040_230_9,
         tolerance: PROBE_F64_TOLERANCE_RELAXED,
     },
     ProbeShader {
@@ -174,10 +174,10 @@ pub(super) const PROBES: &[ProbeShader] = &[
         wgsl: "@group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
                @compute @workgroup_size(1)\n\
                fn probe(@builtin(global_invocation_id) _id: vec3<u32>) {\n\
-                   out[0] = cos(f64(0.0));\n\
+                   out[0] = cos(f64(9.21460183660255));\n\
                }",
-        expected: 1.0,
-        tolerance: PROBE_F64_TOLERANCE_STANDARD,
+        expected: -0.987_688_340_595_137_8,
+        tolerance: PROBE_F64_TOLERANCE_RELAXED,
     },
     ProbeShader {
         name: "sqrt",
@@ -226,6 +226,39 @@ pub(super) const PROBES: &[ProbeShader] = &[
                }",
         expected: 10.0,
         tolerance: PROBE_F64_TOLERANCE_TIGHT,
+    },
+    // ── Composite transcendental probe ───────────────────────────────────────
+    // NVVM can compile individual f64 transcendentals but crashes when combining
+    // log+exp+sqrt in a single shader. This probe catches that failure mode.
+    ProbeShader {
+        name: "composite_transcendental",
+        wgsl: "@group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
+               @compute @workgroup_size(1)\n\
+               fn probe(@builtin(global_invocation_id) _id: vec3<u32>) {\n\
+                   let x = f64(2.0);\n\
+                   let a = log(x);\n\
+                   let b = exp(a);\n\
+                   let c = sqrt(b);\n\
+                   let d = sin(c) * sin(c) + cos(c) * cos(c);\n\
+                   out[0] = d;\n\
+               }",
+        expected: 1.0,
+        tolerance: PROBE_F64_TOLERANCE_RELAXED,
+    },
+    // Chained lgamma-like pattern: exp(log(Gamma)) where the shader exercises
+    // the same op mix as Bessel K₀ / Beta function shaders.
+    ProbeShader {
+        name: "exp_log_chain",
+        wgsl: "@group(0) @binding(0) var<storage, read_write> out: array<f64>;\n\
+               @compute @workgroup_size(1)\n\
+               fn probe(@builtin(global_invocation_id) _id: vec3<u32>) {\n\
+                   let x = f64(3.0);\n\
+                   let lg = log(exp(x));\n\
+                   let r = exp(lg - log(x));\n\
+                   out[0] = r * sqrt(abs(f64(1.0)));\n\
+               }",
+        expected: 1.0,
+        tolerance: PROBE_F64_TOLERANCE_RELAXED,
     },
     // ── DF64 (f32-pair) capability probes ────────────────────────────────────
     // These test whether DF64 arithmetic patterns compile and execute correctly.

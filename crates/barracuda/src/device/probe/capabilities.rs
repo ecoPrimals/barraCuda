@@ -37,6 +37,12 @@ pub struct F64BuiltinCapabilities {
     pub fma: bool,
     /// `abs(f64)`, `min(f64, f64)`, `max(f64, f64)` — bit-level ops, always work
     pub abs_min_max: bool,
+    /// Combined log+exp+sqrt+sin+cos in a single shader — catches NVVM crash
+    /// when the JIT compiler cannot handle multiple f64 transcendentals together.
+    pub composite_transcendental: bool,
+    /// Chained exp(log(x)) pattern that exercises the same op mix
+    /// as Bessel K₀ / Beta shaders (lgamma-like chains).
+    pub exp_log_chain: bool,
     /// `var<workgroup>` f64 reduction — writes f64 to shared memory, barriers,
     /// reads back. Fails on NVK/NAK and Ada Lovelace proprietary where
     /// shared-memory f64 accumulators return zeros.
@@ -75,6 +81,8 @@ impl F64BuiltinCapabilities {
             sqrt: false,
             fma: false,
             abs_min_max: false,
+            composite_transcendental: false,
+            exp_log_chain: false,
             shared_mem_f64: false,
             df64_arith: false,
             df64_transcendentals_safe: false,
@@ -97,6 +105,8 @@ impl F64BuiltinCapabilities {
             sqrt: true,
             fma: true,
             abs_min_max: true,
+            composite_transcendental: true,
+            exp_log_chain: true,
             shared_mem_f64: true,
             df64_arith: true,
             df64_transcendentals_safe: true,
@@ -112,10 +122,34 @@ impl F64BuiltinCapabilities {
         self.basic_f64
     }
 
+    /// Whether all f64 transcendental functions work correctly on this device.
+    ///
+    /// Tests: sqrt, abs/min/max, sin, cos, exp, log, exp2, log2, fma.
+    /// When `false`, shaders using transcendentals need polyfill or DF64.
+    #[must_use]
+    pub fn has_f64_transcendentals(&self) -> bool {
+        self.basic_f64
+            && self.sqrt
+            && self.abs_min_max
+            && self.sin
+            && self.cos
+            && self.exp
+            && self.log
+            && self.fma
+            && self.composite_transcendental
+            && self.exp_log_chain
+    }
+
     /// Whether exp/log workarounds are needed (drives `ShaderTemplate` patching).
     #[must_use]
     pub fn needs_exp_log_workaround(&self) -> bool {
         !self.basic_f64 || !self.exp || !self.log
+    }
+
+    /// Whether sqrt(f64) needs software substitution.
+    #[must_use]
+    pub fn needs_sqrt_f64_workaround(&self) -> bool {
+        !self.basic_f64 || !self.sqrt
     }
 
     /// Whether sin(f64) needs software substitution.
@@ -189,6 +223,8 @@ impl F64BuiltinCapabilities {
             self.sqrt,
             self.fma,
             self.abs_min_max,
+            self.composite_transcendental,
+            self.exp_log_chain,
             self.shared_mem_f64,
             self.df64_arith,
             self.df64_transcendentals_safe,
@@ -223,6 +259,12 @@ impl std::fmt::Display for F64BuiltinCapabilities {
             sym(self.fma)
         )?;
         writeln!(f, "    abs/min/max={}", sym(self.abs_min_max))?;
+        writeln!(
+            f,
+            "    composite_transcendental={} exp_log_chain={}",
+            sym(self.composite_transcendental),
+            sym(self.exp_log_chain)
+        )?;
         writeln!(f, "    shared_mem_f64={}", sym(self.shared_mem_f64))?;
         writeln!(
             f,

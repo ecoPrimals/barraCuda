@@ -198,43 +198,11 @@ mod tests {
     }
 
     fn full_f64_caps() -> crate::device::probe::F64BuiltinCapabilities {
-        crate::device::probe::F64BuiltinCapabilities {
-            basic_f64: true,
-            exp: true,
-            log: true,
-            exp2: true,
-            log2: true,
-            sin: true,
-            cos: true,
-            sqrt: true,
-            fma: true,
-            abs_min_max: true,
-            shared_mem_f64: true,
-            df64_arith: true,
-            df64_transcendentals_safe: true,
-            df64_fma_two_prod: true,
-            df64_workgroup_reduce: true,
-        }
+        crate::device::probe::F64BuiltinCapabilities::full()
     }
 
     fn broken_f64_caps() -> crate::device::probe::F64BuiltinCapabilities {
-        crate::device::probe::F64BuiltinCapabilities {
-            basic_f64: false,
-            exp: false,
-            log: false,
-            exp2: false,
-            log2: false,
-            sin: false,
-            cos: false,
-            sqrt: false,
-            fma: false,
-            abs_min_max: false,
-            shared_mem_f64: false,
-            df64_arith: false,
-            df64_transcendentals_safe: false,
-            df64_fma_two_prod: false,
-            df64_workgroup_reduce: false,
-        }
+        crate::device::probe::F64BuiltinCapabilities::none()
     }
 
     // ── fp64_strategy tests ─────────────────────────────────────────────

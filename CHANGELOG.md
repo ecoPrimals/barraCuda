@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.11] — 2026-03-29
 
+### Changed — Sprint 22f: PrecisionBrain-coralReef Integration & Dispatch Metadata (Mar 29 2026)
+
+- **PrecisionBrain coralReef-aware routing** — new `from_device_with_coral()` and
+  `from_capabilities_with_coral()` constructors accept a `coral_f64_lowering` flag.
+  When coralReef reports full f64 transcendental lowering, the brain routes F64/DF64
+  tiers as safe even when hardware probes fail — coralReef's sovereign compilation
+  bypasses naga/NVVM, so driver bugs are irrelevant. New `needs_sovereign_compile()`
+  method tells callers when the wgpu path should be replaced by coralReef IPC.
+- **CoralF64Capabilities + structured capability query** — new `CoralF64Capabilities`
+  type mirrors coralReef's `F64TranscendentalCapabilities` with per-op (sin, cos,
+  sqrt, exp2, log2, rcp, exp, log) and composite lowering fields.
+  `CoralCompiler::capabilities_structured()` queries the full structured response;
+  `has_f64_lowering()` convenience method wraps the composite check.
+- **PrecisionAdvice in compile requests** — `CompileWgslRequest` now carries optional
+  `PrecisionAdvice` (tier, `needs_transcendental_lowering`, `df64_naga_poisoned`,
+  domain) so coralReef can make informed compilation decisions based on barraCuda's
+  hardware probe results.
+- **Dispatch metadata wired** — `submit_to_toadstool()` now sends `gpr_count` and
+  `workgroup` from `CachedBinary` in the JSON-RPC dispatch request. Dead-code
+  suppressions on `CachedBinary` fields removed. New `ShaderDispatchInfo` struct
+  carries the metadata cleanly through the dispatch path.
+- **DF64 sovereign routing** — `compile_shader_df64()` sends the full DF64 source
+  (with transcendentals) to coralReef via `spawn_coral_compile_for_adapter` when
+  naga SPIR-V poisoning is detected, before stripping for the wgpu fallback.
+- **12 new tests** — 5 PrecisionBrain coral-aware routing tests, 7 CoralCompiler
+  type/serialization/structured-capability tests. All 4,206 tests pass.
+
 ### Changed — Sprint 22e: Probe Test Coverage & GPU Silicon Capability Matrix (Mar 29 2026)
 
 - **14 new probe unit tests** — comprehensive coverage of composite transcendental

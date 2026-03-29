@@ -45,6 +45,28 @@ pub(super) struct CompileWgslRequest {
     /// rather than requiring barraCuda to specify `arch` explicitly.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub adapter: Option<AdapterDescriptor>,
+    /// Precision routing advice from barraCuda's `PrecisionBrain`.
+    /// Tells coralReef which precision tier was selected and whether
+    /// f64 transcendental lowering is needed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub precision_advice: Option<PrecisionAdvice>,
+}
+
+/// Precision routing advice carried in compile requests.
+///
+/// Enables coralReef to make informed compilation decisions based on
+/// barraCuda's hardware probe results and domain requirements.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrecisionAdvice {
+    /// The precision tier selected by `PrecisionBrain` (e.g. "F64", "DF64", "F32").
+    pub tier: String,
+    /// Whether hardware native f64 transcendentals are broken (probed).
+    pub needs_transcendental_lowering: bool,
+    /// Whether DF64 (f32-pair) transcendentals are poisoned by naga.
+    pub df64_naga_poisoned: bool,
+    /// Physics domain that motivated this compilation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub domain: Option<String>,
 }
 
 /// Map a barraCuda `Precision` tier to coralReef's `Fp64Strategy` string.
@@ -93,6 +115,59 @@ pub struct HealthResponse {
     pub status: String,
     /// Supported GPU architectures (e.g. `["sm_70", "sm_75", "sm_80", "sm_89"]`)
     pub supported_archs: Vec<String>,
+}
+
+/// f64 transcendental polyfill capabilities reported by coralReef.
+///
+/// Mirrors `coralreef-core::service::F64TranscendentalCapabilities`.
+/// Each field indicates whether coralReef can provide a software polyfill
+/// for that operation via its sovereign compilation pipeline.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct CoralF64Capabilities {
+    /// Software sin(f64) lowering available.
+    pub sin: bool,
+    /// Software cos(f64) lowering available.
+    pub cos: bool,
+    /// Software sqrt(f64) lowering available (Newton-Raphson).
+    pub sqrt: bool,
+    /// Software exp2(f64) lowering available.
+    pub exp2: bool,
+    /// Software log2(f64) lowering available.
+    pub log2: bool,
+    /// Software 1/x (reciprocal) lowering available.
+    pub rcp: bool,
+    /// Software exp(f64) lowering available.
+    pub exp: bool,
+    /// Software log(f64) lowering available.
+    pub log: bool,
+    /// Full composite lowering available (all ops can be combined in one shader).
+    pub composite_lowering: bool,
+}
+
+impl CoralF64Capabilities {
+    /// Whether coralReef can lower all f64 transcendentals (full polyfill).
+    #[must_use]
+    pub fn has_full_lowering(&self) -> bool {
+        self.sin
+            && self.cos
+            && self.sqrt
+            && self.exp2
+            && self.log2
+            && self.exp
+            && self.log
+            && self.composite_lowering
+    }
+}
+
+/// Structured capabilities response from coralReef.
+///
+/// Mirrors `coralreef-core::service::CompileCapabilitiesResponse`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoralCapabilitiesResponse {
+    /// Supported GPU ISA architectures (e.g. `["sm_70", "sm_80", "gfx1030"]`).
+    pub supported_archs: Vec<String>,
+    /// Per-operation f64 transcendental polyfill availability.
+    pub f64_transcendental_capabilities: CoralF64Capabilities,
 }
 
 /// Adapter descriptor for IPC compile requests.

@@ -57,6 +57,11 @@ pub struct PrecisionBrain {
     pub calibration: HardwareCalibration,
     route_table: [PrecisionTier; NUM_DOMAINS],
     hw_native: bool,
+    /// Whether coralReef sovereign compilation is available for f64 lowering.
+    /// When true, F64 tiers are accessible even when hardware native
+    /// transcendentals fail — coralReef provides software polyfills in the
+    /// compiled native binary.
+    coral_f64_lowering: bool,
 }
 
 impl PrecisionBrain {
@@ -69,18 +74,42 @@ impl PrecisionBrain {
         Self::from_capabilities(calibration, &caps)
     }
 
+    /// Build the brain with coralReef f64 lowering awareness.
+    ///
+    /// When `coral_f64_lowering` is true, the brain routes more aggressively
+    /// to F64/DF64 tiers because coralReef provides software polyfills for
+    /// transcendentals that hardware probes report as broken. The sovereign
+    /// compilation pipeline bypasses naga/NVVM, so driver bugs are irrelevant.
+    #[must_use]
+    pub fn from_device_with_coral(device: &WgpuDevice, coral_f64_lowering: bool) -> Self {
+        let caps = DeviceCapabilities::from_device(device);
+        let calibration = HardwareCalibration::from_capabilities(&caps, device);
+        Self::from_capabilities_with_coral(calibration, &caps, coral_f64_lowering)
+    }
+
     /// Build the brain from pre-computed calibration and capabilities.
     #[must_use]
     pub fn from_capabilities(calibration: HardwareCalibration, caps: &DeviceCapabilities) -> Self {
+        Self::from_capabilities_with_coral(calibration, caps, false)
+    }
+
+    /// Build the brain with explicit coralReef lowering flag.
+    #[must_use]
+    pub fn from_capabilities_with_coral(
+        calibration: HardwareCalibration,
+        caps: &DeviceCapabilities,
+        coral_f64_lowering: bool,
+    ) -> Self {
         let hw_native = matches!(
             caps.precision_routing(),
             HwAdvice::F64Native | HwAdvice::F64NativeNoSharedMem
         );
 
-        let route_table = ALL_DOMAINS.map(|domain| route_domain(domain, &calibration, hw_native));
+        let route_table = ALL_DOMAINS
+            .map(|domain| route_domain(domain, &calibration, hw_native, coral_f64_lowering));
 
         tracing::info!(
-            "PrecisionBrain[{}]: {calibration}",
+            "PrecisionBrain[{}]: {calibration} (coral_f64_lowering={coral_f64_lowering})",
             calibration.adapter_name
         );
         for (i, domain) in ALL_DOMAINS.iter().enumerate() {
@@ -91,6 +120,7 @@ impl PrecisionBrain {
             calibration,
             route_table,
             hw_native,
+            coral_f64_lowering,
         }
     }
 
@@ -146,10 +176,34 @@ impl PrecisionBrain {
         self.hw_native
     }
 
+    /// Whether coralReef sovereign f64 lowering is available.
+    #[must_use]
+    pub fn has_coral_f64_lowering(&self) -> bool {
+        self.coral_f64_lowering
+    }
+
     /// Adapter name.
     #[must_use]
     pub fn adapter_name(&self) -> &str {
         &self.calibration.adapter_name
+    }
+
+    /// Whether the routed tier for this domain requires sovereign compilation.
+    ///
+    /// Returns `true` when the domain routes to F64/F64Precise/DF64 and the
+    /// hardware doesn't natively support that tier, but coralReef lowering
+    /// makes it viable. In this case, the caller should prefer the coralReef
+    /// `compile_wgsl_direct` path over the wgpu/naga path.
+    #[must_use]
+    pub fn needs_sovereign_compile(&self, domain: PhysicsDomain) -> bool {
+        if !self.coral_f64_lowering {
+            return false;
+        }
+        let tier = self.route(domain);
+        matches!(
+            tier,
+            PrecisionTier::F64 | PrecisionTier::F64Precise | PrecisionTier::DF64
+        ) && !self.hw_native
     }
 }
 
@@ -186,15 +240,20 @@ fn route_domain(
     domain: PhysicsDomain,
     cal: &HardwareCalibration,
     hw_native: bool,
+    coral_f64_lowering: bool,
 ) -> PrecisionTier {
+    let f64_safe = cal.tier_safe(PrecisionTier::F64) || coral_f64_lowering;
+    let df64_safe = cal.tier_safe(PrecisionTier::DF64) || coral_f64_lowering;
+    let precise_safe = cal.tier_safe(PrecisionTier::F64Precise) || coral_f64_lowering;
+
     match domain {
         // Precision-critical: prefer F64Precise, cascade through tiers
         PhysicsDomain::Dielectric | PhysicsDomain::Eigensolve => {
-            if hw_native && cal.tier_safe(PrecisionTier::F64Precise) {
+            if (hw_native || coral_f64_lowering) && precise_safe {
                 PrecisionTier::F64Precise
-            } else if cal.tier_safe(PrecisionTier::F64) {
+            } else if f64_safe {
                 PrecisionTier::F64
-            } else if cal.tier_safe(PrecisionTier::DF64) {
+            } else if df64_safe {
                 PrecisionTier::DF64
             } else {
                 PrecisionTier::F32
@@ -206,9 +265,9 @@ fn route_domain(
         | PhysicsDomain::NuclearEos
         | PhysicsDomain::PopulationPk
         | PhysicsDomain::Hydrology => {
-            if cal.tier_safe(PrecisionTier::F64) {
+            if f64_safe {
                 PrecisionTier::F64
-            } else if cal.tier_safe(PrecisionTier::DF64) {
+            } else if df64_safe {
                 PrecisionTier::DF64
             } else {
                 PrecisionTier::F32
@@ -222,9 +281,9 @@ fn route_domain(
         | PhysicsDomain::Bioinformatics
         | PhysicsDomain::Statistics
         | PhysicsDomain::General => {
-            if cal.tier_safe(PrecisionTier::F64) {
+            if f64_safe {
                 PrecisionTier::F64
-            } else if cal.tier_safe(PrecisionTier::DF64) {
+            } else if df64_safe {
                 PrecisionTier::DF64
             } else {
                 PrecisionTier::F32
@@ -319,49 +378,49 @@ mod tests {
     #[test]
     fn full_hw_routes_dielectric_to_precise() {
         let cal = make_cal(true, true, true, true);
-        let tier = route_domain(PhysicsDomain::Dielectric, &cal, true);
+        let tier = route_domain(PhysicsDomain::Dielectric, &cal, true, false);
         assert_eq!(tier, PrecisionTier::F64Precise);
     }
 
     #[test]
     fn no_precise_routes_dielectric_to_f64() {
         let cal = make_cal(true, true, true, false);
-        let tier = route_domain(PhysicsDomain::Dielectric, &cal, true);
+        let tier = route_domain(PhysicsDomain::Dielectric, &cal, true, false);
         assert_eq!(tier, PrecisionTier::F64);
     }
 
     #[test]
     fn no_f64_routes_to_df64() {
         let cal = make_cal(true, true, false, false);
-        let tier = route_domain(PhysicsDomain::Dielectric, &cal, false);
+        let tier = route_domain(PhysicsDomain::Dielectric, &cal, false, false);
         assert_eq!(tier, PrecisionTier::DF64);
     }
 
     #[test]
     fn nothing_works_falls_to_f32() {
         let cal = make_cal(true, false, false, false);
-        let tier = route_domain(PhysicsDomain::LatticeQcd, &cal, false);
+        let tier = route_domain(PhysicsDomain::LatticeQcd, &cal, false, false);
         assert_eq!(tier, PrecisionTier::F32);
     }
 
     #[test]
     fn throughput_domain_prefers_f64() {
         let cal = make_cal(true, true, true, true);
-        let tier = route_domain(PhysicsDomain::MolecularDynamics, &cal, true);
+        let tier = route_domain(PhysicsDomain::MolecularDynamics, &cal, true, false);
         assert_eq!(tier, PrecisionTier::F64);
     }
 
     #[test]
     fn population_pk_routes_moderate() {
         let cal = make_cal(true, true, true, false);
-        let tier = route_domain(PhysicsDomain::PopulationPk, &cal, true);
+        let tier = route_domain(PhysicsDomain::PopulationPk, &cal, true, false);
         assert_eq!(tier, PrecisionTier::F64);
     }
 
     #[test]
     fn hydrology_fallback_to_df64() {
         let cal = make_cal(true, true, false, false);
-        let tier = route_domain(PhysicsDomain::Hydrology, &cal, false);
+        let tier = route_domain(PhysicsDomain::Hydrology, &cal, false, false);
         assert_eq!(tier, PrecisionTier::DF64);
     }
 
@@ -431,6 +490,63 @@ mod tests {
         let s = brain.to_string();
         assert!(s.contains("Test GPU"));
         assert!(s.contains("LatticeQcd"));
+    }
+
+    #[test]
+    fn coral_aware_routes_f64_when_hw_broken_but_coral_available() {
+        let cal = make_cal(true, false, false, false);
+        let brain =
+            PrecisionBrain::from_capabilities_with_coral(cal, &test_caps_volta_full(), true);
+        let tier = brain.route(PhysicsDomain::LatticeQcd);
+        assert_eq!(
+            tier,
+            PrecisionTier::F64,
+            "with coral lowering, F64 should be routed even without hw native"
+        );
+    }
+
+    #[test]
+    fn coral_aware_routes_precise_for_dielectric() {
+        let cal = make_cal(true, true, true, true);
+        let brain =
+            PrecisionBrain::from_capabilities_with_coral(cal, &test_caps_volta_full(), true);
+        let tier = brain.route(PhysicsDomain::Dielectric);
+        assert_eq!(tier, PrecisionTier::F64Precise);
+    }
+
+    fn test_caps_no_f64() -> DeviceCapabilities {
+        DeviceCapabilities {
+            f64_shaders: false,
+            ..test_caps_volta_full()
+        }
+    }
+
+    #[test]
+    fn needs_sovereign_compile_true_when_coral_and_no_hw() {
+        let cal = make_cal(true, false, false, false);
+        let brain = PrecisionBrain::from_capabilities_with_coral(cal, &test_caps_no_f64(), true);
+        assert!(brain.needs_sovereign_compile(PhysicsDomain::LatticeQcd));
+        assert!(brain.has_coral_f64_lowering());
+    }
+
+    #[test]
+    fn needs_sovereign_compile_false_when_hw_native() {
+        let cal = make_cal(true, true, true, true);
+        let brain =
+            PrecisionBrain::from_capabilities_with_coral(cal, &test_caps_volta_full(), true);
+        assert!(
+            !brain.needs_sovereign_compile(PhysicsDomain::LatticeQcd),
+            "hw native means wgpu path works, no sovereign needed"
+        );
+    }
+
+    #[test]
+    fn needs_sovereign_compile_false_without_coral() {
+        let cal = make_cal(true, false, false, false);
+        let brain =
+            PrecisionBrain::from_capabilities_with_coral(cal, &test_caps_volta_full(), false);
+        assert!(!brain.needs_sovereign_compile(PhysicsDomain::LatticeQcd));
+        assert!(!brain.has_coral_f64_lowering());
     }
 
     #[test]

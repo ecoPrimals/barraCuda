@@ -82,6 +82,17 @@ const DEFAULT_ECOPRIMALS_DISCOVERY_DIR: &str = "ecoPrimals";
 /// Canonical discovery subdirectory name.
 const DISCOVERY_SUBDIR: &str = "discovery";
 
+/// Metadata about a compiled shader needed for GPU dispatch.
+///
+/// Sent to the dispatch primal so it can configure QMD (NVIDIA) or PM4 (AMD)
+/// descriptors with the correct register count and workgroup dimensions.
+#[cfg(feature = "sovereign-dispatch")]
+#[derive(Debug, Clone, Copy)]
+struct ShaderDispatchInfo {
+    gpr_count: u32,
+    workgroup: [u32; 3],
+}
+
 /// Serialisable buffer binding descriptor for IPC compute dispatch.
 ///
 /// Carries the buffer identity and access mode across the JSON-RPC boundary.
@@ -134,15 +145,7 @@ pub struct SovereignDevice {
 #[derive(Clone)]
 struct CachedBinary {
     binary: bytes::Bytes,
-    #[expect(
-        dead_code,
-        reason = "sent to dispatch primal with dispatch metadata (P1)"
-    )]
     gpr_count: u32,
-    #[expect(
-        dead_code,
-        reason = "sent to dispatch primal with dispatch metadata (P1)"
-    )]
     workgroup: [u32; 3],
 }
 
@@ -340,6 +343,7 @@ impl SovereignDevice {
         workgroups: (u32, u32, u32),
         bindings: &[IpcBufferBinding],
         hardware_hint: super::backend::HardwareHint,
+        shader_info: ShaderDispatchInfo,
     ) -> Result<()> {
         let Some(ref addr) = self.dispatch_addr else {
             return Err(BarracudaError::Device(
@@ -375,6 +379,8 @@ impl SovereignDevice {
             "workgroup_size": [workgroups.0, workgroups.1, workgroups.2],
             "bindings": binding_descriptors,
             "hardware_hint": hint_str,
+            "gpr_count": shader_info.gpr_count,
+            "workgroup": shader_info.workgroup,
         });
 
         let addr = addr.clone();
@@ -597,6 +603,10 @@ impl GpuBackend for SovereignDevice {
         };
 
         let binary = cached.binary.clone();
+        let info = ShaderDispatchInfo {
+            gpr_count: cached.gpr_count,
+            workgroup: cached.workgroup,
+        };
         drop(cache);
 
         let ipc_bindings: Vec<IpcBufferBinding> = desc
@@ -610,7 +620,13 @@ impl GpuBackend for SovereignDevice {
             })
             .collect();
 
-        self.submit_to_toadstool(&binary, desc.workgroups, &ipc_bindings, desc.hardware_hint)
+        self.submit_to_toadstool(
+            &binary,
+            desc.workgroups,
+            &ipc_bindings,
+            desc.hardware_hint,
+            info,
+        )
     }
 
     #[cfg(not(feature = "sovereign-dispatch"))]
@@ -643,6 +659,10 @@ impl GpuBackend for SovereignDevice {
             workgroups,
             &ipc_bindings,
             super::backend::HardwareHint::Compute,
+            ShaderDispatchInfo {
+                gpr_count: *GPR_COUNT,
+                workgroup: *RESOLVED_DEFAULT_WORKGROUP,
+            },
         )
     }
 

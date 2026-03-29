@@ -33,7 +33,10 @@ pub use cache::{
     cache_native_binary, cached_native_binary, cached_native_binary_any_arch, shader_hash,
 };
 pub use discovery::discover_shader_compiler;
-pub use types::{AdapterDescriptor, CoralBinary, HealthResponse};
+pub use types::{
+    AdapterDescriptor, CoralBinary, CoralCapabilitiesResponse, CoralF64Capabilities,
+    HealthResponse,
+};
 
 /// Synchronous check: can we discover a coralReef shader-compiler endpoint?
 ///
@@ -65,7 +68,7 @@ pub fn is_coral_available() -> bool {
 use jsonrpc::{jsonrpc_call, wgsl_to_spirv};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use types::{CompileRequest, CompileResponse, CompileWgslRequest};
+use types::{CompileRequest, CompileResponse, CompileWgslRequest, PrecisionAdvice};
 
 /// Connection state for the coralReef IPC client.
 #[derive(Debug)]
@@ -175,6 +178,7 @@ impl CoralCompiler {
             fp64_software,
             fp64_strategy,
             adapter: None,
+            precision_advice: None,
         };
 
         match jsonrpc_call::<CompileWgslRequest, CompileResponse>(
@@ -191,6 +195,53 @@ impl CoralCompiler {
             Err(e) => {
                 tracing::debug!("shader compile_wgsl direct failed: {e}, trying SPIR-V path");
                 self.compile_wgsl(wgsl, arch, fp64_software).await
+            }
+        }
+    }
+
+    /// Compile WGSL with precision routing advice for informed lowering.
+    ///
+    /// Extends [`compile_wgsl_direct`] with `PrecisionAdvice` metadata that
+    /// tells coralReef whether f64 transcendental lowering is needed and
+    /// which physics domain motivated the compilation.
+    pub async fn compile_wgsl_with_advice(
+        &self,
+        wgsl: &str,
+        arch: &str,
+        fp64_software: bool,
+        advice: PrecisionAdvice,
+    ) -> Option<CoralBinary> {
+        let addr = self.ensure_connected().await?;
+
+        let fp64_strategy = if fp64_software {
+            Some("native".to_owned())
+        } else {
+            Some("f32_only".to_owned())
+        };
+        let request = CompileWgslRequest {
+            wgsl_source: wgsl.to_owned(),
+            arch: arch.to_owned(),
+            opt_level: 2,
+            fp64_software,
+            fp64_strategy,
+            adapter: None,
+            precision_advice: Some(advice),
+        };
+
+        match jsonrpc_call::<CompileWgslRequest, CompileResponse>(
+            &addr,
+            "shader.compile.wgsl",
+            &request,
+        )
+        .await
+        {
+            Ok(resp) => Some(CoralBinary {
+                binary: resp.into_bytes(),
+                arch: arch.to_owned(),
+            }),
+            Err(e) => {
+                tracing::debug!("shader compile_wgsl with advice failed: {e}, trying basic path");
+                self.compile_wgsl_direct(wgsl, arch, fp64_software).await
             }
         }
     }
@@ -216,6 +267,32 @@ impl CoralCompiler {
         jsonrpc_call::<(), Vec<String>>(&addr, "shader.compile.capabilities", &())
             .await
             .ok()
+    }
+
+    /// Query structured capabilities including f64 transcendental polyfill info.
+    ///
+    /// Returns the full `CoralCapabilitiesResponse` with per-op f64 lowering
+    /// availability. Falls back to `None` if coralReef is unavailable or the
+    /// endpoint returns the legacy flat arch list format.
+    pub async fn capabilities_structured(&self) -> Option<CoralCapabilitiesResponse> {
+        let addr = self.ensure_connected().await?;
+        jsonrpc_call::<(), CoralCapabilitiesResponse>(
+            &addr,
+            "shader.compile.capabilities",
+            &(),
+        )
+        .await
+        .ok()
+    }
+
+    /// Query whether coralReef can provide f64 transcendental lowering.
+    ///
+    /// Convenience wrapper over [`capabilities_structured`] that returns `true`
+    /// when coralReef reports full composite lowering for all f64 transcendentals.
+    pub async fn has_f64_lowering(&self) -> bool {
+        self.capabilities_structured()
+            .await
+            .is_some_and(|c| c.f64_transcendental_capabilities.has_full_lowering())
     }
 
     /// Check if coralReef is reachable and healthy via `shader.compile.status`.
@@ -493,6 +570,103 @@ mod tests {
                     || matches!(&*state, ConnectionState::Unavailable)
             );
         }
+    }
+
+    #[test]
+    fn test_coral_f64_capabilities_full() {
+        let caps = types::CoralF64Capabilities {
+            sin: true,
+            cos: true,
+            sqrt: true,
+            exp2: true,
+            log2: true,
+            rcp: true,
+            exp: true,
+            log: true,
+            composite_lowering: true,
+        };
+        assert!(caps.has_full_lowering());
+    }
+
+    #[test]
+    fn test_coral_f64_capabilities_partial() {
+        let mut caps = types::CoralF64Capabilities {
+            sin: true,
+            cos: true,
+            sqrt: true,
+            exp2: true,
+            log2: true,
+            rcp: true,
+            exp: true,
+            log: true,
+            composite_lowering: false,
+        };
+        assert!(
+            !caps.has_full_lowering(),
+            "composite_lowering=false should fail"
+        );
+        caps.composite_lowering = true;
+        caps.sin = false;
+        assert!(!caps.has_full_lowering(), "sin=false should fail");
+    }
+
+    #[test]
+    fn test_coral_f64_capabilities_default_empty() {
+        let caps = types::CoralF64Capabilities::default();
+        assert!(!caps.has_full_lowering());
+    }
+
+    #[test]
+    fn test_coral_capabilities_response_json_roundtrip() {
+        let resp = types::CoralCapabilitiesResponse {
+            supported_archs: vec!["sm_70".to_owned(), "gfx1030".to_owned()],
+            f64_transcendental_capabilities: types::CoralF64Capabilities {
+                sin: true,
+                cos: true,
+                sqrt: true,
+                exp2: true,
+                log2: true,
+                rcp: true,
+                exp: true,
+                log: true,
+                composite_lowering: true,
+            },
+        };
+        let json = serde_json::to_string(&resp).unwrap();
+        let back: types::CoralCapabilitiesResponse = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.supported_archs.len(), 2);
+        assert!(back.f64_transcendental_capabilities.has_full_lowering());
+    }
+
+    #[test]
+    fn test_precision_advice_json_roundtrip() {
+        let advice = types::PrecisionAdvice {
+            tier: "F64".to_owned(),
+            needs_transcendental_lowering: true,
+            df64_naga_poisoned: true,
+            domain: Some("LatticeQcd".to_owned()),
+        };
+        let json = serde_json::to_string(&advice).unwrap();
+        let back: types::PrecisionAdvice = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.tier, "F64");
+        assert!(back.needs_transcendental_lowering);
+        assert!(back.df64_naga_poisoned);
+        assert_eq!(back.domain.as_deref(), Some("LatticeQcd"));
+    }
+
+    #[tokio::test]
+    async fn test_capabilities_structured_graceful_without_coralreef() {
+        let cc = CoralCompiler::new();
+        let caps = cc.capabilities_structured().await;
+        if let Some(ref c) = caps {
+            assert!(!c.supported_archs.is_empty());
+        }
+    }
+
+    #[tokio::test]
+    async fn test_has_f64_lowering_graceful_without_coralreef() {
+        let cc = CoralCompiler::new();
+        let _ = cc.has_f64_lowering().await;
     }
 
     #[test]

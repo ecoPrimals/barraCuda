@@ -209,7 +209,12 @@ impl WgpuDevice {
     ///
     /// DF64 shaders run entirely on FP32 cores (no f64 hardware needed), achieving
     /// ~48-bit mantissa (~14 decimal digits) at up to 9.9× the throughput of native
-    /// f64 on consumer GPUs (Ampere/Ada fp64:fp32 ≈ 1:64).
+    /// f64 on consumer GPUs (Ampere/Ada fp64:fp32 = 1:64).
+    ///
+    /// When naga SPIR-V codegen poisons DF64 transcendentals, this method sends
+    /// the full (un-stripped) source to coralReef for sovereign compilation. If
+    /// coralReef is unavailable, the transcendentals are stripped and the shader
+    /// runs in arithmetic-only mode.
     #[must_use]
     pub fn compile_shader_df64(&self, source: &str, label: Option<&str>) -> wgpu::ShaderModule {
         const DF64_CORE: &str = include_str!("../../shaders/math/df64_core.wgsl");
@@ -217,29 +222,41 @@ impl WgpuDevice {
             include_str!("../../shaders/math/df64_transcendentals.wgsl");
 
         let caps = crate::device::capabilities::DeviceCapabilities::from_device(self);
-        let include_transcendentals = if caps.has_df64_spir_v_poisoning() {
-            tracing::warn!(
-                device = %caps.device_name,
-                "DF64 SPIR-V poisoning (naga codegen) — omitting DF64 transcendentals \
-                 (exp, sqrt, log, pow) to prevent all-zero output. \
-                 Arithmetic-only DF64 shaders remain safe."
-            );
-            false
-        } else {
-            true
-        };
+        let naga_poisoned = caps.has_df64_spir_v_poisoning();
 
-        let combined = if include_transcendentals {
-            format!("{DF64_CORE}\n{DF64_TRANSCENDENTALS}\n{source}")
-        } else {
-            format!("{DF64_CORE}\n{source}")
-        };
-
-        let combined = combined
+        let full_combined = format!("{DF64_CORE}\n{DF64_TRANSCENDENTALS}\n{source}");
+        let full_combined = full_combined
             .lines()
             .filter(|l| l.trim() != "enable f64;")
             .collect::<Vec<_>>()
             .join("\n");
+
+        if naga_poisoned {
+            tracing::warn!(
+                device = %caps.device_name,
+                "DF64 SPIR-V poisoning (naga codegen) — requesting coralReef sovereign \
+                 compilation to bypass naga. Falling back to arithmetic-only if unavailable."
+            );
+
+            // Send the FULL DF64 source (with transcendentals) to coralReef.
+            // coralReef bypasses naga and compiles to native ISA, so the
+            // poisoning is irrelevant in the sovereign path.
+            crate::device::coral_compiler::spawn_coral_compile_for_adapter(
+                &full_combined,
+                self.adapter_info(),
+                false,
+            );
+        }
+
+        let combined = if naga_poisoned {
+            format!("{DF64_CORE}\n{source}")
+                .lines()
+                .filter(|l| l.trim() != "enable f64;")
+                .collect::<Vec<_>>()
+                .join("\n")
+        } else {
+            full_combined
+        };
 
         let optimized = if combined.contains("@ilp_region") || combined.contains("@unroll_hint") {
             use crate::shaders::optimizer::WgslOptimizer;
@@ -249,12 +266,13 @@ impl WgpuDevice {
             combined
         };
 
-        // coralReef: adapter-aware native binary compilation via IPC.
-        crate::device::coral_compiler::spawn_coral_compile_for_adapter(
-            &optimized,
-            self.adapter_info(),
-            false,
-        );
+        if !naga_poisoned {
+            crate::device::coral_compiler::spawn_coral_compile_for_adapter(
+                &optimized,
+                self.adapter_info(),
+                false,
+            );
+        }
 
         // Tier 1: Sovereign SPIR-V (future).
         if let Some(module) = self.try_sovereign_spirv_compile(&optimized, label, "df64") {
@@ -262,12 +280,11 @@ impl WgpuDevice {
         }
 
         // Tier 2: Sovereign WGSL (naga IR → optimise → re-emit WGSL).
-        // Fixed: f64 FMA fusion skip + entry point name restoration.
         if let Some(module) = self.try_sovereign_wgsl_compile(&optimized, label, "df64") {
             return module;
         }
 
-        // Tier 3: Raw WGSL.
+        // Tier 3: Raw WGSL (may be arithmetic-only if naga poisoned).
         self.compile_shader_raw(&optimized, label)
     }
 }

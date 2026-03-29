@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **816 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,090 Rust source files**, 42 integration test files, 4,162+ tests (3,650+ lib + 214 core + 8 e2e + integration + doctests)
+- **1,090 Rust source files**, 42 integration test files, 4,206+ tests (3,650+ lib + 214 core + 8 e2e + integration + doctests)
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -362,6 +362,7 @@ Lifecycle and health traits are modeled on the ecoPrimals pattern but fully owne
 | `specs/PRECISION_TIERS_SPECIFICATION.md` | Full 15-tier precision ladder (Binary to DF128) |
 | `specs/ARCHITECTURE_DEMARCATION.md` | barraCuda vs toadStool boundary definition |
 | `specs/REMAINING_WORK.md` | P1-P4 open work items |
+| `specs/GPU_SILICON_CAPABILITY_MATRIX.md` | GPU hardware FP64 rates, DF64 strategy, silicon exposure |
 | `SOVEREIGN_PIPELINE_TRACKER.md` | Sovereign pipeline tracker (P0 blocker, libc evolution, cross-compilation) |
 | `crates/barracuda/src/shaders/README.md` | Shader organization |
 

@@ -34,8 +34,7 @@ pub use cache::{
 };
 pub use discovery::discover_shader_compiler;
 pub use types::{
-    AdapterDescriptor, CoralBinary, CoralCapabilitiesResponse, CoralF64Capabilities,
-    HealthResponse,
+    AdapterDescriptor, CoralBinary, CoralCapabilitiesResponse, CoralF64Capabilities, HealthResponse,
 };
 
 /// Synchronous check: can we discover a coralReef shader-compiler endpoint?
@@ -276,13 +275,9 @@ impl CoralCompiler {
     /// endpoint returns the legacy flat arch list format.
     pub async fn capabilities_structured(&self) -> Option<CoralCapabilitiesResponse> {
         let addr = self.ensure_connected().await?;
-        jsonrpc_call::<(), CoralCapabilitiesResponse>(
-            &addr,
-            "shader.compile.capabilities",
-            &(),
-        )
-        .await
-        .ok()
+        jsonrpc_call::<(), CoralCapabilitiesResponse>(&addr, "shader.compile.capabilities", &())
+            .await
+            .ok()
     }
 
     /// Query whether coralReef can provide f64 transcendental lowering.

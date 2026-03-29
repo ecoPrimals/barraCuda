@@ -22,10 +22,10 @@ cargo build --workspace --all-features
 cargo test --workspace --all-features
 
 # Run the doctor (device diagnostics)
-cargo run --bin barracuda -- doctor
+cargo run -p barracuda-core -- doctor
 
 # Start the IPC server
-cargo run --bin barracuda -- server
+cargo run -p barracuda-core -- server
 ```
 
 ## Repository Layout

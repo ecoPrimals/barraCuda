@@ -6,6 +6,26 @@ Prioritized work items, ordered by impact. Updated 2026-03-29.
 
 ## Recently Completed
 
+- **Sprint 22f: PrecisionBrain-coralReef Integration (Mar 29)**:
+  `PrecisionBrain` now accepts coralReef f64 lowering availability, routing
+  F64/DF64 tiers as safe when coralReef sovereign compilation bypasses naga/NVVM.
+  `needs_sovereign_compile()` method for callers. `CoralF64Capabilities` type +
+  `capabilities_structured()` queries per-op polyfill availability from coralReef.
+  `PrecisionAdvice` in `CompileWgslRequest` for informed coralReef decisions.
+  Dispatch metadata (gpr_count, workgroup) wired into toadStool IPC. DF64
+  sovereign routing: `compile_shader_df64` sends full source to coralReef before
+  naga stripping when SPIR-V poisoning detected. 4,206 tests, 0 failures.
+- **Sprint 22e: Probe Test Coverage & GPU Silicon Capability Matrix (Mar 29)**:
+  14 new probe unit tests + 5 DeviceCapabilities tests. `GPU_SILICON_CAPABILITY_MATRIX.md`
+  spec documenting FP64 rates (NVIDIA/AMD/Intel), DF64 strategy, toadStool VFIO
+  silicon exposure. 4,194 tests.
+- **Sprint 22d: f64 Transcendental Pipeline Awareness (Mar 29)**:
+  Composite transcendental probes (NVVM JIT failure detection), `F64BuiltinCapabilities`
+  evolved, `get_test_device_if_f64_transcendentals_available()` test gate, 10 failing
+  tests → 0 via graceful skip. coralReef structured `CompileCapabilitiesResponse`.
+- **Sprint 22c: IPC Evolution (Mar 29)**:
+  Newline-delimited JSON-RPC framing (wateringHole v3.1). Unix socket discovery
+  via `$XDG_RUNTIME_DIR/biomeos/shader.sock`. `biomeos` namespace alignment.
 - **Sprint 22: Spring Absorption & Deep Debt Evolution (Mar 29)**:
   Critical fermion force sign fix (neg_eta convention) in 2 WGSL shaders.
   8 hotSpring WGSL shaders absorbed (5 multi-shift CG + 3 GPU-resident
@@ -212,12 +232,16 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
 
 ## Immediate (P1)
 
+- **PrecisionBrain → coralReef → SovereignDevice end-to-end test**: Integration test
+  that exercises: brain routes to F64 via coral, `compile_wgsl_with_advice` sends
+  `PrecisionAdvice`, sovereign dispatch sends gpr_count/workgroup metadata. Requires
+  coralReef running in test CI.
 - **DF64 NVK end-to-end verification**: Run df64 compilation on Yukawa force kernels through
   NVK/NAK on hardware. Validate sovereign compiler's safe WGSL roundtrip produces correct
   numerical results across all backends. Probe-aware `fp64_strategy()` is now in place to
   auto-fallback if native f64 fails.
-- **coralReef sovereign compiler evolution**: coralReef is the unified primal compiler
-  and driver for all GPU targets — eventually also the Rust compiler for the ecosystem.
+- **Tensor core GEMM routing**: Eigensolvers/preconditioners via toadStool VFIO + coralReef
+  HMMA/WGMMA emission for mixed-precision iterative refinement.
 - **`BatchedTridiagEigh` GPU op**: groundSpring local QL implicit eigensolver is a candidate
   for absorption as a batched GPU tridiagonal eigenvector solver.
 - **Multi-GPU OOM recovery**: `QuotaTracker` is wired into buffer allocation; next step

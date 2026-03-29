@@ -1,8 +1,8 @@
 # barraCuda — Remaining Work
 
 **Version**: 0.3.11
-**Date**: March 21, 2026
-**Status**: Through Sprint 20 — tracks all open work items for barraCuda evolution
+**Date**: March 29, 2026
+**Status**: Through Sprint 22f — tracks all open work items for barraCuda evolution
 
 ---
 
@@ -1311,7 +1311,7 @@ path and cross-compilation target matrix.
 | Clippy | Pass (zero warnings, `-D warnings`) | `cargo clippy --workspace --all-targets -- -D warnings` |
 | Rustdoc | Pass (zero warnings) | `cargo doc --workspace --no-deps` |
 | Deny | Pass (advisories, bans, licenses, sources) | `cargo deny check` |
-| Tests | 4,052+ pass / 0 fail | `cargo nextest run --workspace --all-features --no-fail-fast` |
+| Tests | 4,206+ pass / 0 fail | `cargo nextest run --workspace --all-features --no-fail-fast` |
 | Check (no GPU) | Pass | `cargo check --no-default-features` |
 | Check (GPU only) | Pass | `cargo check --no-default-features --features gpu` |
 | Check (all) | Pass | `cargo check` |

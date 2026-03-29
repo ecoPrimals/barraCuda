@@ -1,6 +1,6 @@
 # Sovereign Pipeline Tracker
 
-**Date**: March 20, 2026
+**Date**: March 29, 2026
 **Type**: Actionable tracker (updated as work progresses)
 **Scope**: All remaining work for the pure Rust sovereign GPU pipeline
 
@@ -9,10 +9,10 @@
 ## Pipeline Status
 
 ```
-Layer 1  barraCuda    ██████████  COMPLETE       Zero unsafe, zero C deps
-Layer 2  coralReef    █████████░  Phase 10 I50   DRM E2E proven; VFIO USERD_TARGET fix applied (Iter 50); hw revalidation pending
+Layer 1  barraCuda    ██████████  COMPLETE       Zero unsafe, zero C deps, PrecisionBrain-coralReef routing
+Layer 2  coralReef    █████████░  Phase 10 I70   f64 transcendental polyfills, structured capabilities, DRM E2E
 Layer 3  Standalone   ██░░░░░░░░  Planned        Standalone coral-reef crate, multi-arch ISA
-Layer 4  Sovereign HW █████████░  S156 complete  toadStool infra done; VFIO hw validation 6/7
+Layer 4  Sovereign HW █████████░  S163 complete  toadStool infra done; VFIO hw validation 6/7
 ```
 
 ### Dispatch Chain (sovereign primary — IPC-first)

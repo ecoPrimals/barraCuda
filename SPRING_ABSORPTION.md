@@ -1,8 +1,8 @@
 # Spring Absorption Tracker
 
 **Version**: 0.3.11
-**Date**: March 21, 2026
-**Source**: hotSpring v0.6.32, groundSpring V99, neuralSpring S143, wetSpring V107, airSpring v0.7.5, healthSpring V19, ludoSpring (new), primalSpring (new), toadStool S163, coralReef Phase 10 Iter 62
+**Date**: March 29, 2026
+**Source**: hotSpring v0.6.32, groundSpring V99, neuralSpring S143, wetSpring V107, airSpring v0.7.5, healthSpring V19, ludoSpring (new), primalSpring (new), toadStool S163, coralReef Phase 10 Iter 70
 
 Cross-spring evolution follows **Write → Absorb → Lean**: springs implement
 domain-specific primitives, barraCuda absorbs and generalises, springs consume

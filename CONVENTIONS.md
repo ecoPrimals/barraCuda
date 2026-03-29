@@ -85,7 +85,8 @@ calls with the atomic encoder barrier.
 ## Device capabilities
 
 Use **`DeviceCapabilities`** as the canonical type for device feature and capability
-queries. **`GpuDriverProfile`** is deprecated; do not use it for new code.
+queries. `GpuDriverProfile` was removed in v0.3.8 — all driver-profile logic now
+lives in `DeviceCapabilities` and `PrecisionBrain`.
 
 ## IPC
 

@@ -83,8 +83,6 @@ jobs:
           sudo apt-get install -y mesa-vulkan-drivers
       - name: Run full test suite (nextest ci profile)
         run: cargo nextest run --workspace --profile ci
-      - name: Run barracuda-core tests
-        run: cargo nextest run -p barracuda-core --profile ci
 
   test-pure-math:
     name: Test (pure math, no GPU)

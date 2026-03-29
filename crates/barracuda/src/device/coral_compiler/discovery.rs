@@ -1,5 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Capability-based runtime discovery of shader-compiler primals.
+//!
+//! Discovery is purely capability-based — no hardcoded primal names or ports.
+//! Any primal advertising the `shader.compile` capability is accepted.
+//!
+//! Supports three transport mechanisms per wateringHole IPC v3.1:
+//! - **Unix socket** via capability-domain symlink (`shader.sock` in
+//!   `$XDG_RUNTIME_DIR/biomeos/`)
+//! - **JSON manifest** scan for `shader.compile` in `provides`/`capabilities`
+//! - **TCP** via explicit port (operator-configured)
 
 use std::path::PathBuf;
 
@@ -9,13 +18,15 @@ use super::types::HealthResponse;
 /// Environment variable for overriding the shader-compiler endpoint address.
 ///
 /// When set, skips capability-based and port-based discovery entirely.
+/// Supports `unix:/path/to/socket` for Unix socket addresses and
+/// `host:port` for TCP addresses.
 const COMPILER_ADDR_ENV: &str = "BARRACUDA_SHADER_COMPILER_ADDR";
 
 /// Environment variable for an explicit shader-compiler port.
 ///
 /// When set, enables a localhost probe as the final discovery fallback.
-/// Without this, only env-address and capability-file discovery are tried —
-/// no hardcoded port is ever probed.
+/// Without this, only env-address, socket, and capability-file discovery
+/// are tried — no hardcoded port is ever probed.
 const COMPILER_PORT_ENV: &str = "BARRACUDA_SHADER_COMPILER_PORT";
 
 /// Loopback address for localhost-only discovery probes.
@@ -27,16 +38,30 @@ const LOCALHOST: &str = "127.0.0.1";
 /// This fallback reads transport info from any remaining pre-capability manifest.
 const LEGACY_DISCOVERY_FILENAME: &str = "shader-compiler.json";
 
+/// Ecosystem shared namespace for socket-based discovery.
+///
+/// Per wateringHole `PRIMAL_IPC_PROTOCOL` v3.0, all primals share this
+/// namespace under `$XDG_RUNTIME_DIR`. We scan it for capability-domain
+/// symlinks (`shader.sock`) without knowing the specific primal name.
+const ECOSYSTEM_SOCKET_NAMESPACE: &str = "biomeos";
+
+/// Capability-domain symlink filename for shader compilation.
+///
+/// Per wateringHole `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.1, the shader
+/// compiler primal creates `shader.sock` as a symlink to its instance socket.
+const SHADER_CAPABILITY_SOCKET: &str = "shader.sock";
+
 /// Discover a shader-compiler primal's JSON-RPC endpoint via capability-based
 /// runtime discovery. No hardcoded primal names or ports — any primal
 /// advertising the `shader.compile` capability is accepted.
 ///
 /// Discovery order:
 /// 1. `BARRACUDA_SHADER_COMPILER_ADDR` — explicit override (operator-set)
-/// 2. Capability scan of `$XDG_RUNTIME_DIR/ecoPrimals/*.json` for
-///    `"shader.compile"` in the `capabilities` array (falls back to legacy
-///    `"shader_compiler"` for pre-Phase 10 primals)
-/// 3. Localhost probe on `BARRACUDA_SHADER_COMPILER_PORT` (only if set)
+/// 2. Unix socket: `$XDG_RUNTIME_DIR/biomeos/shader.sock` (capability-domain
+///    symlink per `CAPABILITY_BASED_DISCOVERY` v1.1)
+/// 3. JSON manifest scan of `$XDG_RUNTIME_DIR/ecoPrimals/*.json` for
+///    `"shader.compile"` in `provides`/`capabilities` (toadStool S139 compat)
+/// 4. Localhost probe on `BARRACUDA_SHADER_COMPILER_PORT` (only if set)
 pub async fn discover_shader_compiler() -> Option<String> {
     if let Ok(addr) = std::env::var(COMPILER_ADDR_ENV) {
         let addr = addr.trim().to_owned();
@@ -44,6 +69,10 @@ pub async fn discover_shader_compiler() -> Option<String> {
             tracing::debug!(addr = %addr, "shader compiler discovered via {COMPILER_ADDR_ENV}");
             return Some(addr);
         }
+    }
+
+    if let Some(addr) = discover_from_socket().await {
+        return Some(addr);
     }
 
     if let Some(addr) = discover_from_file().await {
@@ -65,32 +94,68 @@ pub async fn discover_shader_compiler() -> Option<String> {
     None
 }
 
+/// Discover shader compiler via Unix socket capability-domain symlink.
+///
+/// Scans `$XDG_RUNTIME_DIR/biomeos/shader.sock` (the v1.1 standard path).
+/// The symlink is created by the shader compiler primal and points to its
+/// instance-specific socket. We probe it with a health check.
+#[cfg(unix)]
+async fn discover_from_socket() -> Option<String> {
+    let runtime_dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
+    let socket_path = PathBuf::from(&runtime_dir)
+        .join(ECOSYSTEM_SOCKET_NAMESPACE)
+        .join(SHADER_CAPABILITY_SOCKET);
+
+    if !socket_path.exists() {
+        return None;
+    }
+
+    let addr = format!("unix:{}", socket_path.display());
+    if probe_jsonrpc(&addr).await {
+        tracing::debug!(
+            path = %socket_path.display(),
+            "shader compiler discovered via capability-domain socket"
+        );
+        return Some(addr);
+    }
+    None
+}
+
+#[cfg(not(unix))]
+async fn discover_from_socket() -> Option<String> {
+    None
+}
+
 /// Read transport info from the file-based discovery directory.
 ///
 /// Scans both `$XDG_RUNTIME_DIR/ecoPrimals/` (toadStool S139 compat write)
 /// and `$XDG_RUNTIME_DIR/ecoPrimals/discovery/` (canonical path) for any
-/// primal advertising a `shader.compile` capability. Falls back to the
-/// legacy `shader_compiler` capability name, then the well-known filename.
+/// primal advertising a `shader.compile` capability. Also scans the
+/// `biomeos` namespace for JSON manifests. Falls back to the legacy
+/// `shader_compiler` capability name, then the well-known filename.
 async fn discover_from_file() -> Option<String> {
     let runtime_dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
     let eco_dir =
         std::env::var("ECOPRIMALS_DISCOVERY_DIR").unwrap_or_else(|_| "ecoPrimals".to_owned());
-    let base_dir = PathBuf::from(runtime_dir).join(eco_dir);
-    let canonical_dir = base_dir.join("discovery");
+    let eco_base = PathBuf::from(&runtime_dir).join(&eco_dir);
+    let eco_canonical = eco_base.join("discovery");
+    let biomeos_base = PathBuf::from(&runtime_dir).join(ECOSYSTEM_SOCKET_NAMESPACE);
 
-    for dir in [&base_dir, &canonical_dir] {
+    let dirs = [&eco_base, &eco_canonical, &biomeos_base];
+
+    for dir in &dirs {
         if let Some(addr) = scan_capability(dir, "shader.compile") {
             return Some(addr);
         }
     }
 
-    for dir in [&base_dir, &canonical_dir] {
+    for dir in &dirs {
         if let Some(addr) = scan_capability(dir, "shader_compiler") {
             return Some(addr);
         }
     }
 
-    let legacy_path = base_dir.join(LEGACY_DISCOVERY_FILENAME);
+    let legacy_path = eco_base.join(LEGACY_DISCOVERY_FILENAME);
     read_jsonrpc_transport(&legacy_path)
 }
 
@@ -137,13 +202,22 @@ fn read_jsonrpc_transport(path: &std::path::Path) -> Option<String> {
 
 /// Extract JSON-RPC address from a parsed transport manifest.
 ///
-/// Handles both formats:
+/// Handles three formats with Unix socket preference:
 /// - String: `"transports": { "jsonrpc": "127.0.0.1:5000" }`
-/// - Object (Phase 10): `"transports": { "jsonrpc": { "tcp": "127.0.0.1:5000", "path": "..." } }`
+/// - Object with Unix socket: `"transports": { "jsonrpc": { "unix": "/run/biomeos/shader.sock", "tcp": "..." } }`
+/// - Object with TCP only: `"transports": { "jsonrpc": { "tcp": "127.0.0.1:5000" } }`
+///
+/// When both `unix` and `tcp` are present, prefers Unix socket for
+/// lower-latency local IPC (zero network overhead).
 fn read_jsonrpc_from_value(info: &serde_json::Value) -> Option<String> {
     let jsonrpc = info.get("transports")?.get("jsonrpc")?;
     if let Some(s) = jsonrpc.as_str() {
         return Some(s.to_owned());
+    }
+    if let Some(unix_path) = jsonrpc.get("unix").and_then(|v| v.as_str()) {
+        if std::path::Path::new(unix_path).exists() {
+            return Some(format!("unix:{unix_path}"));
+        }
     }
     jsonrpc
         .get("tcp")
@@ -208,6 +282,48 @@ mod tests {
     }
 
     #[test]
+    fn read_jsonrpc_from_value_unix_socket_preferred_when_exists() {
+        let dir = std::env::temp_dir().join("barracuda_test_unix_pref");
+        let _ = std::fs::create_dir_all(&dir);
+        let sock = dir.join("shader.sock");
+        std::fs::write(&sock, b"").unwrap();
+
+        let info: serde_json::Value = serde_json::json!({
+            "transports": {
+                "jsonrpc": {
+                    "unix": sock.to_str().unwrap(),
+                    "tcp": "127.0.0.1:5000"
+                }
+            }
+        });
+        let result = read_jsonrpc_from_value(&info);
+        assert!(result.is_some());
+        let addr = result.unwrap();
+        assert!(
+            addr.starts_with("unix:"),
+            "should prefer unix socket: {addr}"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn read_jsonrpc_from_value_unix_falls_back_to_tcp_when_missing() {
+        let info: serde_json::Value = serde_json::json!({
+            "transports": {
+                "jsonrpc": {
+                    "unix": "/nonexistent/path/shader.sock",
+                    "tcp": "127.0.0.1:5000"
+                }
+            }
+        });
+        assert_eq!(
+            read_jsonrpc_from_value(&info),
+            Some("127.0.0.1:5000".to_owned()),
+        );
+    }
+
+    #[test]
     fn read_jsonrpc_from_value_no_transport() {
         let info: serde_json::Value = serde_json::json!({
             "name": "some-primal"
@@ -264,15 +380,25 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    #[test]
+    fn constants_match_expected_values() {
+        assert_eq!(ECOSYSTEM_SOCKET_NAMESPACE, "biomeos");
+        assert_eq!(SHADER_CAPABILITY_SOCKET, "shader.sock");
+        assert_eq!(COMPILER_ADDR_ENV, "BARRACUDA_SHADER_COMPILER_ADDR");
+        assert_eq!(COMPILER_PORT_ENV, "BARRACUDA_SHADER_COMPILER_PORT");
+    }
+
     #[tokio::test]
     async fn discover_returns_none_without_env() {
-        // Without the env var set and no running primals, discovery should
-        // return None gracefully — no panics.
         let result = discover_shader_compiler().await;
-        // Can't assert None because a real primal might be running;
-        // just verify it doesn't panic.
         if let Some(ref addr) = result {
             assert!(!addr.is_empty());
         }
+    }
+
+    #[tokio::test]
+    async fn discover_from_socket_returns_none_without_socket() {
+        let result = discover_from_socket().await;
+        assert!(result.is_none(), "should return None when no socket exists");
     }
 }

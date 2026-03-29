@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.11] — 2026-03-29
 
+### Changed — Sprint 22c: coralReef IPC Evolution (Mar 29 2026)
+
+- **Newline-delimited JSON-RPC framing** (wateringHole v3.1 mandatory) — `jsonrpc_call`
+  now tries ndjson first (one JSON object per line, `\n` delimiter) and falls back to
+  HTTP-wrapped framing for pre-v3.1 endpoints. Aligns with coralReef Iter 69.
+- **Unix socket IPC transport** — `jsonrpc_call` supports `unix:/path/to/socket` addresses
+  via `tokio::net::UnixStream`. Lower latency than TCP for local IPC.
+- **Capability-domain socket discovery** — `discover_shader_compiler()` now scans
+  `$XDG_RUNTIME_DIR/biomeos/shader.sock` (coralReef's capability-domain symlink)
+  before falling back to JSON manifest scan and TCP port probe.
+- **`biomeos` namespace integration** — discovery scans both `ecoPrimals` and `biomeos`
+  directories under `$XDG_RUNTIME_DIR` for JSON manifests, resolving the namespace
+  mismatch between ecosystems.
+- **Unix socket preference in manifests** — `read_jsonrpc_from_value` now extracts
+  `"unix"` transport from Phase 10 manifests, preferring it over TCP when the socket
+  file exists.
+- **Response parsing factored** — `parse_jsonrpc_response` shared between ndjson,
+  HTTP, and Unix socket paths (DRY).
+- Cross-primal pin: coralReef Phase 10 Iter 62 → **Iter 69**.
+
 ### Added — Sprint 22: Spring Absorption & Deep Debt Evolution (Mar 29 2026)
 
 - **Critical fermion force sign fix** — `staggered_fermion_force_f64.wgsl` and

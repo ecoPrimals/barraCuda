@@ -1,17 +1,130 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Low-level JSON-RPC 2.0 transport over TCP.
+//! Low-level JSON-RPC 2.0 transport over TCP and Unix sockets.
+//!
+//! Supports two wire formats per wateringHole IPC v3.1:
+//! - **Newline-delimited** (mandatory for inter-primal composition): one JSON
+//!   object per line, `\n` delimiter. Tried first for both TCP and Unix socket.
+//! - **HTTP-wrapped** (legacy fallback): standard `POST / HTTP/1.1` framing.
+//!   Used when the newline-delimited attempt returns an HTTP response.
 
 use serde::{Deserialize, Serialize};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 
-/// Low-level JSON-RPC 2.0 call over TCP.
+/// JSON-RPC 2.0 call over TCP, with newline-delimited v3.1 framing.
 ///
-/// Opens a fresh TCP connection per call (simple, stateless). For the
-/// shader compilation use case, connection overhead is negligible compared
-/// to compilation time.
+/// Opens a fresh TCP connection per call (simple, stateless). Tries
+/// newline-delimited framing first (wateringHole v3.1 mandatory), falls
+/// back to HTTP-wrapped framing for pre-v3.1 endpoints.
 pub async fn jsonrpc_call<P: Serialize, R: for<'de> Deserialize<'de>>(
     addr: &str,
+    method: &str,
+    params: &P,
+) -> crate::error::Result<R> {
+    let host_port = addr.trim_start_matches("http://");
+
+    if let Some(path) = host_port.strip_prefix("unix:") {
+        return jsonrpc_call_unix::<P, R>(path, method, params).await;
+    }
+
+    match jsonrpc_call_ndjson_tcp::<P, R>(host_port, method, params).await {
+        Ok(result) => Ok(result),
+        Err(_) => jsonrpc_call_http::<P, R>(host_port, method, params).await,
+    }
+}
+
+/// Newline-delimited JSON-RPC 2.0 over TCP (wateringHole v3.1).
+async fn jsonrpc_call_ndjson_tcp<P: Serialize, R: for<'de> Deserialize<'de>>(
+    host_port: &str,
+    method: &str,
+    params: &P,
+) -> crate::error::Result<R> {
+    use crate::error::BarracudaError;
+
+    let stream = TcpStream::connect(host_port)
+        .await
+        .map_err(|e| BarracudaError::Internal(format!("TCP connect to {host_port}: {e}")))?;
+
+    jsonrpc_call_ndjson_stream(stream, method, params).await
+}
+
+/// Newline-delimited JSON-RPC 2.0 over a Unix socket.
+#[cfg(unix)]
+async fn jsonrpc_call_unix<P: Serialize, R: for<'de> Deserialize<'de>>(
+    path: &str,
+    method: &str,
+    params: &P,
+) -> crate::error::Result<R> {
+    use crate::error::BarracudaError;
+
+    let stream = tokio::net::UnixStream::connect(path)
+        .await
+        .map_err(|e| BarracudaError::Internal(format!("Unix connect to {path}: {e}")))?;
+
+    jsonrpc_call_ndjson_stream(stream, method, params).await
+}
+
+#[cfg(not(unix))]
+async fn jsonrpc_call_unix<P: Serialize, R: for<'de> Deserialize<'de>>(
+    path: &str,
+    _method: &str,
+    _params: &P,
+) -> crate::error::Result<R> {
+    Err(crate::error::BarracudaError::Internal(format!(
+        "Unix sockets not supported on this platform: {path}"
+    )))
+}
+
+/// Send a JSON-RPC request over a newline-delimited stream (TCP or Unix).
+async fn jsonrpc_call_ndjson_stream<
+    S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
+    P: Serialize,
+    R: for<'de> Deserialize<'de>,
+>(
+    mut stream: S,
+    method: &str,
+    params: &P,
+) -> crate::error::Result<R> {
+    use crate::error::BarracudaError;
+
+    let request = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": method,
+        "params": [params],
+        "id": 1,
+    });
+    let mut body = serde_json::to_string(&request)
+        .map_err(|e| BarracudaError::Internal(format!("JSON-RPC serialize: {e}")))?;
+    body.push('\n');
+
+    stream
+        .write_all(body.as_bytes())
+        .await
+        .map_err(|e| BarracudaError::Internal(format!("ndjson write: {e}")))?;
+    stream
+        .flush()
+        .await
+        .map_err(|e| BarracudaError::Internal(format!("ndjson flush: {e}")))?;
+
+    let mut reader = BufReader::new(&mut stream);
+    let mut line = String::new();
+    reader
+        .read_line(&mut line)
+        .await
+        .map_err(|e| BarracudaError::Internal(format!("ndjson read: {e}")))?;
+
+    if line.is_empty() {
+        return Err(BarracudaError::Internal(
+            "empty response from ndjson endpoint".into(),
+        ));
+    }
+
+    parse_jsonrpc_response(&line)
+}
+
+/// HTTP-wrapped JSON-RPC 2.0 over TCP (legacy fallback for pre-v3.1 endpoints).
+async fn jsonrpc_call_http<P: Serialize, R: for<'de> Deserialize<'de>>(
+    host_port: &str,
     method: &str,
     params: &P,
 ) -> crate::error::Result<R> {
@@ -26,7 +139,6 @@ pub async fn jsonrpc_call<P: Serialize, R: for<'de> Deserialize<'de>>(
     let body = serde_json::to_string(&request)
         .map_err(|e| BarracudaError::Internal(format!("JSON-RPC serialize: {e}")))?;
 
-    let host_port = addr.trim_start_matches("http://");
     let http_request = format!(
         "POST / HTTP/1.1\r\nHost: {host_port}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
         body.len()
@@ -53,6 +165,15 @@ pub async fn jsonrpc_call<P: Serialize, R: for<'de> Deserialize<'de>>(
         .find('{')
         .ok_or_else(|| BarracudaError::Internal("no JSON body in HTTP response".into()))?;
     let json_body = &response_str[json_start..];
+
+    parse_jsonrpc_response(json_body)
+}
+
+/// Parse a JSON-RPC 2.0 response string, extracting the result or error.
+fn parse_jsonrpc_response<R: for<'de> Deserialize<'de>>(
+    json_body: &str,
+) -> crate::error::Result<R> {
+    use crate::error::BarracudaError;
 
     let mut rpc_response: serde_json::Value = serde_json::from_str(json_body)
         .map_err(|e| BarracudaError::Internal(format!("JSON parse: {e}")))?;
@@ -145,5 +266,109 @@ mod tests {
             spirv.is_some(),
             "empty WGSL is a valid empty module in naga"
         );
+    }
+
+    #[test]
+    fn parse_jsonrpc_response_ok() {
+        let json = r#"{"jsonrpc":"2.0","result":"hello","id":1}"#;
+        let result: crate::error::Result<String> = parse_jsonrpc_response(json);
+        assert_eq!(result.unwrap(), "hello");
+    }
+
+    #[test]
+    fn parse_jsonrpc_response_error() {
+        let json =
+            r#"{"jsonrpc":"2.0","error":{"code":-32600,"message":"Invalid Request"},"id":1}"#;
+        let result: crate::error::Result<String> = parse_jsonrpc_response(json);
+        assert!(result.is_err());
+        let err = format!("{}", result.unwrap_err());
+        assert!(err.contains("Invalid Request"), "got: {err}");
+    }
+
+    #[test]
+    fn parse_jsonrpc_response_no_result() {
+        let json = r#"{"jsonrpc":"2.0","id":1}"#;
+        let result: crate::error::Result<String> = parse_jsonrpc_response(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn parse_jsonrpc_response_invalid_json() {
+        let result: crate::error::Result<String> = parse_jsonrpc_response("not json");
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn ndjson_roundtrip_via_mock_server() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut reader = BufReader::new(&mut stream);
+            let mut line = String::new();
+            reader.read_line(&mut line).await.unwrap();
+
+            let req: serde_json::Value = serde_json::from_str(&line).unwrap();
+            assert_eq!(req["method"], "test.echo");
+
+            let resp = serde_json::json!({
+                "jsonrpc": "2.0",
+                "result": "pong",
+                "id": req["id"],
+            });
+            let mut resp_line = serde_json::to_string(&resp).unwrap();
+            resp_line.push('\n');
+
+            use tokio::io::AsyncWriteExt;
+            stream.write_all(resp_line.as_bytes()).await.unwrap();
+            stream.flush().await.unwrap();
+        });
+
+        let addr = format!("127.0.0.1:{port}");
+        let result: String = jsonrpc_call(&addr, "test.echo", &"ping")
+            .await
+            .expect("ndjson call should succeed");
+        assert_eq!(result, "pong");
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn unix_socket_roundtrip_via_mock_server() {
+        let dir = std::env::temp_dir().join("barracuda_test_unix_rpc");
+        let _ = std::fs::create_dir_all(&dir);
+        let sock_path = dir.join("test.sock");
+        let _ = std::fs::remove_file(&sock_path);
+
+        let sock_path_clone = sock_path.clone();
+        let listener = tokio::net::UnixListener::bind(&sock_path_clone).unwrap();
+
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut reader = BufReader::new(&mut stream);
+            let mut line = String::new();
+            reader.read_line(&mut line).await.unwrap();
+
+            let req: serde_json::Value = serde_json::from_str(&line).unwrap();
+            let resp = serde_json::json!({
+                "jsonrpc": "2.0",
+                "result": 42,
+                "id": req["id"],
+            });
+            let mut resp_line = serde_json::to_string(&resp).unwrap();
+            resp_line.push('\n');
+
+            use tokio::io::AsyncWriteExt;
+            stream.write_all(resp_line.as_bytes()).await.unwrap();
+            stream.flush().await.unwrap();
+        });
+
+        let addr = format!("unix:{}", sock_path.display());
+        let result: i64 = jsonrpc_call(&addr, "math.add", &[1, 2])
+            .await
+            .expect("unix socket call should succeed");
+        assert_eq!(result, 42);
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

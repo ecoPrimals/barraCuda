@@ -13,7 +13,7 @@
 | **Core compute** | A+ | 816 WGSL shaders, 13-tier tolerance architecture (42 constants), GpuView persistent buffers with ops, BGL builder pattern, PrecisionBrain domain→tier routing, GPU multi-shift CG orchestration, GPU-resident RHMC observables |
 | **Precision tiers** | A+ | 3-tier model (F32/F64/Df64) aligned with coralReef `Fp64Strategy`; DF64 naga-guided rewrite validated; probe-aware Fp64Strategy; DF64 reduce shaders correctly routed via `.df64()` on Hybrid devices; NVVM poisoning guard for proprietary NVIDIA DF64 transcendentals |
 | **Sovereign compiler** | A+ | FMA fusion + dead expr elimination + safe WGSL roundtrip (all backends); sovereign validation harness covers all 816 shaders via rayon parallel validation; `erfc_f64` recursion eliminated |
-| **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; 15 registered methods / 14 tarpc endpoints; `health.liveness`, `health.readiness`, `health.check` + `capabilities.list` non-negotiable probes per Semantic Method Naming Standard v2.2.0; all required aliases (`ping`, `health`, `status`, `check`, `capability.list`); `--port <PORT>` CLI flag per UniBin standard; Unix socket default + TCP; capability-based discovery; bare semantic `{domain}.{operation}` method names via `REGISTERED_METHODS` + `normalize_method()` backward compatibility; validation-first handler pattern (validate inputs before device check); coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support |
+| **IPC / primal protocol** | A+ | JSON-RPC 2.0 (notification-compliant) + tarpc; 15 registered methods / 14 tarpc endpoints; `health.liveness`, `health.readiness`, `health.check` + `capabilities.list` non-negotiable probes per Semantic Method Naming Standard v2.2.0; all required aliases (`ping`, `health`, `status`, `check`, `capability.list`); `--port <PORT>` CLI flag per UniBin standard; Unix socket default + TCP; capability-based discovery; bare semantic `{domain}.{operation}` method names via `REGISTERED_METHODS` + `normalize_method()` backward compatibility; validation-first handler pattern (validate inputs before device check); coralReef Phase 10 `shader.compile.*` semantic naming; AMD arch support; **newline-delimited JSON-RPC framing (wateringHole v3.1 mandatory)** with HTTP-wrapped fallback; **Unix socket discovery via `$XDG_RUNTIME_DIR/biomeos/shader.sock` capability-domain symlink** |
 | **Device management** | A+ | `GpuBackend` trait abstraction, `SovereignDevice` (capability-based IPC sovereign backend) behind `sovereign-dispatch` feature (`is_coral_available`, `with_auto_device`, `has_dispatch`), multi-GPU with PCIe topology sysfs probing (`PcieLinkInfo`), capability-scored discovery, probe-aware f64 strategy, VRAM quota enforcement via `ResourceQuota`/`QuotaTracker`, bounded poll timeout, split-lock GPU submission |
 | **Test coverage** | A+ | 4,150+ tests + 108 doctests (all pass on llvmpipe); barracuda-core 214 unit + 8 e2e tests (72.83% line coverage); validation-first handler testing (no GPU required for input validation paths); GPU test timeout guards (30s); proptest; chaos/fault test tiers (blocking in CI); nextest CI/stress profiles; 80% coverage gate (blocking); GPU streaming: split-lock dispatch, fire-and-forget `submit_commands`, single-poll `submit_and_map` readback; optimised test pipeline (nautilus 14.3s→0.01s, sovereign 800+ shaders parallelised via rayon, ESN reservoir shrunk); zero `todo!()`/`unimplemented!()`; async readback GPU roundtrip tests; genomics 25-test edge-case coverage; GemmF64 transpose roundtrip tests; smart module decomposition (IPC methods/ directory, hydrology GPU barrel); optimised build profiles (codegen-units=256, split-debuginfo); with_device_retry double-permit fix |
 | **Dependencies** | A+ | All deps pure Rust (blake3 `pure`, wgpu/naga 28); zero application C deps; ecoBin compliant |
@@ -72,6 +72,9 @@
 - AMD RDNA2 (`gfx1030`), RDNA3 (`gfx1100`), CDNA2 (`gfx90a`) architecture mappings for coralReef
 - `shader.compile.capabilities` preferred for arch enumeration with health-response fallback
 - Backward-compat fallback for pre-Phase 10 coralReef (probe + discovery)
+- **Newline-delimited JSON-RPC** (wateringHole v3.1 mandatory framing) with HTTP-wrapped fallback for pre-v3.1 endpoints
+- **Unix socket IPC** via `$XDG_RUNTIME_DIR/biomeos/shader.sock` capability-domain symlink discovery
+- `biomeos` namespace integration for socket-based discovery alongside `ecoPrimals` namespace
 - Cross-spring shader provenance registry with Write → Absorb → Lean tracking
 - Deprecated PPPM constructors removed (zero callers)
 - Akida SDK paths extracted to shared capability constant
@@ -210,5 +213,5 @@
 | Primal | Version/Session | Key capability |
 |--------|-----------------|----------------|
 | toadStool | S163 | Dependency audit, zero-copy, code quality |
-| coralReef | Phase 10 Iter 62 | Deep audit, coverage, hardcoding evolution |
+| coralReef | Phase 10 Iter 69 | Newline-delimited JSON-RPC, capability-domain symlinks, 1000 LOC compliance, sovereign pipeline 7/10 layers |
 | hotSpring | v0.6.32 | Trio rewire; VFIO validation; GP_PUT root cause found |

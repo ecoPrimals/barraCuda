@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.11] — 2026-03-29
 
+### Changed — Sprint 22e: Probe Test Coverage & GPU Silicon Capability Matrix (Mar 29 2026)
+
+- **14 new probe unit tests** — comprehensive coverage of composite transcendental
+  gate logic: `has_f64_transcendentals` false when composite/chain/individual ops
+  fail, composite fields counted in `native_count`, heuristic seed pessimism for
+  composites, `Display` output includes composite fields, `PROBES` array contains
+  composite entries.
+- **5 new `DeviceCapabilities` tests** — `has_f64_transcendentals` true/false/fallback,
+  `needs_sqrt_f64_workaround` true/false with full and broken probe data.
+- **`GPU_SILICON_CAPABILITY_MATRIX.md` spec** — living specification documenting:
+  - FP64 rate by GPU generation (NVIDIA Kepler→Blackwell Ultra, AMD GCN5→CDNA4,
+    Intel Arc→Xe-HPC) — both vendors deprioritizing FP64
+  - DF64 decomposition strategy: complete f32-pair transcendental library exists
+    in barraCuda (20+ functions), blocked by naga SPIR-V poisoning, unblocked
+    by coralReef sovereign compilation
+  - toadStool VFIO silicon exposure: BAR0 MMIO, userspace DMA, tensor cores,
+    RT cores, TMU — available via sovereign pipeline
+  - Decision matrix: which f64 path for which hardware class
+  - Industry trend: Blackwell Ultra drops to 1:64 FP64:FP32, MI350X halves
+    FP64 matrix throughput vs MI300X — DF64 is the future-proof substrate
+- **4,194 tests pass, 0 fail** (up from 4,180). All quality gates green.
+
 ### Changed — Sprint 22d: f64 Transcendental Pipeline Awareness (Mar 29 2026)
 
 - **Composite transcendental probes** — two new probe shaders that combine

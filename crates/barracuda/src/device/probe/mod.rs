@@ -232,4 +232,111 @@ mod tests {
         c.df64_transcendentals_safe = false;
         assert!(!c.can_use_df64());
     }
+
+    #[test]
+    fn test_has_f64_transcendentals_full() {
+        let c = F64BuiltinCapabilities::full();
+        assert!(c.has_f64_transcendentals());
+    }
+
+    #[test]
+    fn test_has_f64_transcendentals_false_when_composite_fails() {
+        let mut c = F64BuiltinCapabilities::full();
+        c.composite_transcendental = false;
+        assert!(
+            !c.has_f64_transcendentals(),
+            "composite_transcendental=false must fail transcendentals check"
+        );
+    }
+
+    #[test]
+    fn test_has_f64_transcendentals_false_when_chain_fails() {
+        let mut c = F64BuiltinCapabilities::full();
+        c.exp_log_chain = false;
+        assert!(
+            !c.has_f64_transcendentals(),
+            "exp_log_chain=false must fail transcendentals check"
+        );
+    }
+
+    #[test]
+    fn test_has_f64_transcendentals_false_when_sqrt_fails() {
+        let mut c = F64BuiltinCapabilities::full();
+        c.sqrt = false;
+        assert!(
+            !c.has_f64_transcendentals(),
+            "sqrt=false must fail transcendentals check"
+        );
+        assert!(c.needs_sqrt_f64_workaround());
+    }
+
+    #[test]
+    fn test_has_f64_transcendentals_false_when_any_individual_fails() {
+        for field in ["sin", "cos", "exp", "log", "fma", "abs_min_max"] {
+            let mut c = F64BuiltinCapabilities::full();
+            match field {
+                "sin" => c.sin = false,
+                "cos" => c.cos = false,
+                "exp" => c.exp = false,
+                "log" => c.log = false,
+                "fma" => c.fma = false,
+                "abs_min_max" => c.abs_min_max = false,
+                _ => unreachable!(),
+            }
+            assert!(
+                !c.has_f64_transcendentals(),
+                "{field}=false must fail transcendentals check"
+            );
+        }
+    }
+
+    #[test]
+    fn test_composite_fields_counted_in_native_count() {
+        let c = F64BuiltinCapabilities::full();
+        let full_count = c.native_count();
+        let mut c2 = c;
+        c2.composite_transcendental = false;
+        assert_eq!(c2.native_count(), full_count - 1);
+        c2.exp_log_chain = false;
+        assert_eq!(c2.native_count(), full_count - 2);
+    }
+
+    #[test]
+    fn test_heuristic_seed_composite_pessimistic() {
+        use crate::device::test_pool::get_test_device_sync;
+        let dev = get_test_device_sync();
+        seed_cache_from_heuristics(&dev);
+        let caps = cached_f64_builtins(&dev);
+        if let Some(c) = caps {
+            assert!(
+                !c.composite_transcendental,
+                "Heuristic seed must be pessimistic for composite_transcendental"
+            );
+            assert!(
+                !c.exp_log_chain,
+                "Heuristic seed must be pessimistic for exp_log_chain"
+            );
+        }
+    }
+
+    #[test]
+    fn test_display_includes_composite_fields() {
+        let c = F64BuiltinCapabilities::full();
+        let output = format!("{c}");
+        assert!(output.contains("composite_transcendental"));
+        assert!(output.contains("exp_log_chain"));
+    }
+
+    #[test]
+    fn test_probe_array_has_composite_entries() {
+        let names: Vec<&str> = PROBES.iter().map(|p| p.name).collect();
+        assert!(
+            names.contains(&"composite_transcendental"),
+            "PROBES must include composite_transcendental"
+        );
+        assert!(
+            names.contains(&"exp_log_chain"),
+            "PROBES must include exp_log_chain"
+        );
+    }
 }

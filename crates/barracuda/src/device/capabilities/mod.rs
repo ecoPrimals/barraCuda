@@ -371,6 +371,44 @@ mod tests {
         assert!(!caps_no_f64.supports_f64_builtins());
     }
 
+    // ── has_f64_transcendentals tests ─────────────────────────────────
+
+    #[test]
+    fn has_f64_transcendentals_true_with_full_probe() {
+        let caps = mock_caps(wgpu::DeviceType::DiscreteGpu, VENDOR_NVIDIA)
+            .with_f64_capabilities(full_f64_caps());
+        assert!(caps.has_f64_transcendentals());
+    }
+
+    #[test]
+    fn has_f64_transcendentals_false_with_broken_probe() {
+        let caps = mock_caps(wgpu::DeviceType::DiscreteGpu, VENDOR_NVIDIA)
+            .with_f64_capabilities(broken_f64_caps());
+        assert!(!caps.has_f64_transcendentals());
+    }
+
+    #[test]
+    fn has_f64_transcendentals_fallback_to_feature_flag() {
+        let caps = mock_caps(wgpu::DeviceType::DiscreteGpu, VENDOR_NVIDIA);
+        assert!(caps.has_f64_transcendentals());
+    }
+
+    #[test]
+    fn needs_sqrt_f64_workaround_when_probed_broken() {
+        let mut f64_caps = full_f64_caps();
+        f64_caps.sqrt = false;
+        let caps =
+            mock_caps(wgpu::DeviceType::DiscreteGpu, VENDOR_NVIDIA).with_f64_capabilities(f64_caps);
+        assert!(caps.needs_sqrt_f64_workaround());
+    }
+
+    #[test]
+    fn needs_sqrt_f64_workaround_false_with_full_probe() {
+        let caps = mock_caps(wgpu::DeviceType::DiscreteGpu, VENDOR_NVIDIA)
+            .with_f64_capabilities(full_f64_caps());
+        assert!(!caps.needs_sqrt_f64_workaround());
+    }
+
     // ── eigensolve strategy tests ───────────────────────────────────────
 
     #[test]

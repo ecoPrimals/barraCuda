@@ -1,6 +1,6 @@
 # barraCuda Specification
 
-**Version**: 0.3.10
+**Version**: 0.3.11
 **Date**: March 21, 2026
 **Status**: Active — standalone primal, fully untangled from toadStool (S89)
 **Origin**: toadStool S88 budding proposal
@@ -50,7 +50,7 @@ barraCuda/
 │   │   │   ├── sample/       # LHS, Sobol, Metropolis, sparsity
 │   │   │   ├── ops/          # GPU ops (matmul, softmax, FHE NTT, bio, MD)
 │   │   │   ├── tensor/       # GPU tensor type, buffer management
-│   │   │   ├── shaders/      # 806 WGSL shaders
+│   │   │   ├── shaders/      # 816 WGSL shaders
 │   │   │   ├── device/       # WgpuDevice, capabilities, test pool
 │   │   │   ├── staging/      # Ring buffers, unidirectional pipelines
 │   │   │   ├── pipeline/     # ComputeDispatch, batched pipelines

@@ -9,7 +9,7 @@
 
 use super::anderson::LcgRng;
 use super::sparse::SpectralCsrMatrix;
-use super::tridiag::find_all_eigenvalues;
+use super::tridiag::{find_all_eigenvalues, tridiag_eigenvectors};
 
 /// Result of the Lanczos algorithm: a tridiagonal representation of the
 /// original matrix restricted to the Krylov subspace.
@@ -20,6 +20,18 @@ pub struct LanczosTridiag {
     pub beta: Vec<f64>,
     /// Number of Lanczos iterations performed.
     pub iterations: usize,
+}
+
+/// Extended Lanczos result that also retains the Krylov basis vectors `Q`.
+///
+/// The basis vectors are needed for computing Ritz eigenvectors:
+///   `v_i` = `Q` × `z_i` (where `z_i` are tridiagonal eigenvectors)
+pub struct LanczosTridiagWithBasis {
+    /// The tridiagonal decomposition.
+    pub tridiag: LanczosTridiag,
+    /// Lanczos basis vectors Q[j] (each of length n), stored row-major.
+    /// Q has dimensions m × n where m = iterations.
+    pub basis: Vec<Vec<f64>>,
 }
 
 /// Lanczos tridiagonalization with full reorthogonalization.
@@ -48,8 +60,8 @@ pub fn lanczos(matrix: &SpectralCsrMatrix, max_iter: usize, seed: u64) -> Lanczo
 
 /// Configuration for Lanczos tridiagonalization.
 pub struct LanczosConfig {
-    /// Convergence threshold for β (off-diagonal element).
-    /// When β < threshold, invariant subspace found.
+    /// Convergence threshold for `β` (off-diagonal element).
+    /// When `β < threshold`, invariant subspace found.
     pub convergence_threshold: f64,
     /// Optional progress callback: called with (iteration, total).
     /// Useful for long runs (N > 1000) to report progress.
@@ -147,11 +159,167 @@ pub fn lanczos_with_config(
         }
     }
 
+    let iterations = alpha.len();
     LanczosTridiag {
-        iterations: alpha.len(),
         alpha,
         beta,
+        iterations,
     }
+}
+
+/// Lanczos tridiagonalization that also retains the Krylov basis vectors.
+///
+/// Required for eigenvector computation (Ritz vectors = `Q` × tridiag eigenvectors).
+/// Memory: O(m × n) where m = iterations performed.
+#[must_use]
+pub fn lanczos_with_basis(
+    matrix: &SpectralCsrMatrix,
+    max_iter: usize,
+    seed: u64,
+    config: &LanczosConfig,
+) -> LanczosTridiagWithBasis {
+    let n = matrix.n;
+    let m = max_iter.min(n);
+
+    let mut rng = LcgRng::new(seed);
+
+    let mut v: Vec<f64> = (0..n).map(|_| rng.uniform() - 0.5).collect();
+    let norm = dot(&v, &v).sqrt();
+    for x in &mut v {
+        *x /= norm;
+    }
+
+    let mut alpha = Vec::with_capacity(m);
+    let mut beta = Vec::with_capacity(m);
+
+    let mut vecs: Vec<Vec<f64>> = Vec::with_capacity(m + 1);
+    vecs.push(v.clone());
+
+    let mut v_prev = vec![0.0; n];
+    let mut beta_prev = 0.0;
+    let mut w = vec![0.0; n];
+
+    for j in 0..m {
+        matrix.spmv(&v, &mut w);
+
+        if j > 0 {
+            for i in 0..n {
+                w[i] -= beta_prev * v_prev[i];
+            }
+        }
+
+        let a_j = dot(&w, &v);
+        alpha.push(a_j);
+
+        for i in 0..n {
+            w[i] -= a_j * v[i];
+        }
+
+        for _pass in 0..2 {
+            for prev in &vecs {
+                let proj = dot(&w, prev);
+                for i in 0..n {
+                    w[i] -= proj * prev[i];
+                }
+            }
+        }
+
+        let b_next = dot(&w, &w).sqrt();
+
+        if b_next < config.convergence_threshold {
+            beta.push(0.0);
+            break;
+        }
+
+        beta.push(b_next);
+
+        v_prev.copy_from_slice(&v);
+        beta_prev = b_next;
+        for i in 0..n {
+            v[i] = w[i] / b_next;
+        }
+        vecs.push(v.clone());
+
+        if let Some(ref progress) = config.progress {
+            progress(j + 1, m);
+        }
+    }
+
+    let iterations = alpha.len();
+    let basis = vecs[..iterations].to_vec();
+
+    LanczosTridiagWithBasis {
+        tridiag: LanczosTridiag {
+            alpha,
+            beta,
+            iterations,
+        },
+        basis,
+    }
+}
+
+/// Compute the k dominant eigenpairs (eigenvalue, eigenvector) of a sparse symmetric matrix.
+///
+/// Uses Lanczos tridiagonalization + Ritz vector construction:
+/// 1. Run Lanczos to build tridiagonal `T` and basis `Q`
+/// 2. Compute eigenpairs of `T`: (`λ_i`, `z_i`)
+/// 3. Ritz vectors: `v_i` = `Q^T` × `z_i` (back-transform to original space)
+/// 4. Return top-k by eigenvalue magnitude
+///
+/// # Arguments
+/// - `matrix`: symmetric sparse matrix in CSR format
+/// - `k`: number of eigenpairs to return
+/// - `config`: optional Lanczos configuration (uses default if `None`)
+///
+/// # Returns
+/// Vec of (eigenvalue, eigenvector) pairs sorted by descending |eigenvalue|.
+#[must_use]
+pub fn lanczos_eigenvectors(
+    matrix: &SpectralCsrMatrix,
+    k: usize,
+    config: Option<LanczosConfig>,
+) -> Vec<(f64, Vec<f64>)> {
+    let config = config.unwrap_or_default();
+    let n = matrix.n;
+    let max_iter = n.min(k * 3 + 20).max(k);
+    let result = lanczos_with_basis(matrix, max_iter, 42, &config);
+    let m = result.tridiag.iterations;
+
+    if m == 0 {
+        return Vec::new();
+    }
+
+    let off_diag: Vec<f64> = result.tridiag.beta[..m.saturating_sub(1)].to_vec();
+    let (evals, evecs_flat) = tridiag_eigenvectors(&result.tridiag.alpha, &off_diag);
+
+    let mut eigenpairs: Vec<(f64, Vec<f64>)> = evals
+        .iter()
+        .enumerate()
+        .map(|(i, &lam)| {
+            let z: Vec<f64> = (0..m).map(|j| evecs_flat[j * m + i]).collect();
+
+            let mut v = vec![0.0; n];
+            for (j, q_j) in result.basis.iter().enumerate() {
+                let z_j = z[j];
+                for (idx, val) in q_j.iter().enumerate() {
+                    v[idx] += z_j * val;
+                }
+            }
+
+            let norm = dot(&v, &v).sqrt();
+            if norm > 1e-14 {
+                for x in &mut v {
+                    *x /= norm;
+                }
+            }
+
+            (lam, v)
+        })
+        .collect();
+
+    eigenpairs.sort_by(|a, b| b.0.abs().total_cmp(&a.0.abs()));
+    eigenpairs.truncate(k);
+    eigenpairs
 }
 
 /// Compute the k largest eigenvalues using Lanczos with early termination.
@@ -370,5 +538,110 @@ mod tests {
         };
         let _result = lanczos_with_config(&csr, n, 42, &config);
         assert!(count.load(std::sync::atomic::Ordering::Relaxed) > 0);
+    }
+
+    #[test]
+    fn lanczos_eigenvectors_identity() {
+        let csr = SpectralCsrMatrix {
+            n: 3,
+            row_ptr: vec![0, 1, 2, 3],
+            col_idx: vec![0, 1, 2],
+            values: vec![3.0, 2.0, 1.0],
+        };
+        let pairs = lanczos_eigenvectors(&csr, 3, None);
+        assert_eq!(pairs.len(), 3);
+
+        let eigenvalues: Vec<f64> = pairs.iter().map(|(e, _)| *e).collect();
+        assert!(
+            (eigenvalues[0].abs() - 3.0).abs() < 1e-8,
+            "largest eigenvalue should be 3.0, got {}",
+            eigenvalues[0]
+        );
+    }
+
+    #[test]
+    fn lanczos_eigenvectors_orthonormality() {
+        let n = 30;
+        let (d, e) = anderson_hamiltonian(n, 2.0, 42);
+        let csr = tridiag_to_csr(&d, &e);
+
+        let pairs = lanczos_eigenvectors(&csr, 5, None);
+        assert_eq!(pairs.len(), 5);
+
+        for (i, (_, vi)) in pairs.iter().enumerate() {
+            let norm_sq: f64 = vi.iter().map(|x| x * x).sum();
+            assert!(
+                (norm_sq - 1.0).abs() < 1e-8,
+                "eigenvector {i} norm = {}, expected 1",
+                norm_sq.sqrt()
+            );
+        }
+
+        for i in 0..pairs.len() {
+            for j in (i + 1)..pairs.len() {
+                let d: f64 = pairs[i]
+                    .1
+                    .iter()
+                    .zip(pairs[j].1.iter())
+                    .map(|(a, b)| a * b)
+                    .sum();
+                assert!(
+                    d.abs() < 1e-6,
+                    "eigenvectors {i},{j} not orthogonal: dot = {d}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn lanczos_eigenvectors_residual() {
+        let n = 20;
+        let (d, e) = anderson_hamiltonian(n, 1.0, 42);
+        let csr = tridiag_to_csr(&d, &e);
+
+        let pairs = lanczos_eigenvectors(&csr, 3, None);
+
+        for (lam, v) in &pairs {
+            let mut av = vec![0.0; n];
+            csr.spmv(v, &mut av);
+
+            let residual: f64 = av
+                .iter()
+                .zip(v.iter())
+                .map(|(avi, vi)| (avi - lam * vi).powi(2))
+                .sum::<f64>()
+                .sqrt();
+            assert!(residual < 1e-6, "||Av - λv|| = {residual} for λ = {lam}");
+        }
+    }
+
+    #[test]
+    fn lanczos_eigenvectors_empty() {
+        let csr = SpectralCsrMatrix {
+            n: 0,
+            row_ptr: vec![0],
+            col_idx: vec![],
+            values: vec![],
+        };
+        let pairs = lanczos_eigenvectors(&csr, 5, None);
+        assert!(pairs.is_empty());
+    }
+
+    #[test]
+    fn lanczos_with_basis_preserves_vectors() {
+        let n = 10;
+        let (d, e) = anderson_hamiltonian(n, 1.0, 42);
+        let csr = tridiag_to_csr(&d, &e);
+
+        let result = lanczos_with_basis(&csr, n, 42, &LanczosConfig::default());
+        assert_eq!(result.basis.len(), result.tridiag.iterations);
+        for q in &result.basis {
+            assert_eq!(q.len(), n);
+            let norm: f64 = q.iter().map(|x| x * x).sum::<f64>().sqrt();
+            assert!(
+                (norm - 1.0).abs() < 1e-10,
+                "basis vector not normalized: {norm}"
+            );
+        }
     }
 }

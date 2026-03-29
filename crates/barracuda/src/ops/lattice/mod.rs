@@ -29,6 +29,8 @@
 //! | `gpu_kinetic_energy` | Per-link kinetic energy from momenta |
 //! | `gpu_pseudofermion` | Pseudofermion heatbath noise + fermion force |
 //! | `gpu_cg_solver` | GPU CG solver orchestration (D†D solve via multi-dispatch) |
+//! | `gpu_multi_shift_cg` | GPU multi-shift CG for RHMC (shared Krylov, Jegerlehner) |
+//! | `gpu_resident_observables` | GPU-resident O(1)-readback plaquette, KE, Hamiltonian, Metropolis |
 //! | `gpu_hmc_trajectory` | Full dynamical fermion HMC trajectory on GPU |
 //!
 //! # Test-Only CPU Reference
@@ -67,8 +69,10 @@ pub mod gpu_hmc_trajectory;
 pub mod gpu_hmc_types;
 pub mod gpu_kinetic_energy;
 pub mod gpu_lattice_init;
+pub mod gpu_multi_shift_cg;
 pub mod gpu_polyakov;
 pub mod gpu_pseudofermion;
+pub mod gpu_resident_observables;
 pub mod gpu_wilson_action;
 pub mod higgs_u1;
 pub mod hmc_force_su3;

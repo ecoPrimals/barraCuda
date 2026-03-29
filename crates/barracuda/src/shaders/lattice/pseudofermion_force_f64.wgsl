@@ -6,6 +6,9 @@
 // Computes dS_F/dU_μ(x) for all links from CG solution X and Y = D·X.
 // The force is projected onto the su(3) algebra (traceless anti-Hermitian).
 //
+// Sign convention: the gauge force shader outputs ∂S_G/∂U (positive gradient)
+// and momentum applies P += α_s·dt·F, so F = −η·TA[U(x⊗y†−y⊗x†)].
+//
 // Buffer layout:
 //   links[V × 4 × 18]:    gauge links
 //   x_field[V × 6]:       CG solution field (3 color components × 2 f64)
@@ -115,14 +118,14 @@ fn pseudofermion_force_kernel(@builtin(global_invocation_id) gid: vec3<u32>) {
         var y_here = load_y_color(site);
         var y_fwd  = load_y_color(fwd_idx);
 
-        // Build 3×3 outer product matrix M[a][b]
-        let half_eta: f64 = eta * f64(0.5);
+        // Build 3×3 outer product matrix M[a][b] with −η sign convention
+        let neg_eta: f64 = f64(0.0) - eta;
         var m_mat: array<vec2<f64>, 9>;
         for (var a = 0u; a < 3u; a = a + 1u) {
             for (var b = 0u; b < 3u; b = b + 1u) {
                 let c1 = c64_mul(x_fwd[a], c64_conj(y_here[b]));
                 let c2 = c64_mul(y_fwd[a], c64_conj(x_here[b]));
-                m_mat[a * 3u + b] = c64_scale(c64_sub(c1, c2), half_eta);
+                m_mat[a * 3u + b] = c64_scale(c64_sub(c1, c2), neg_eta);
             }
         }
 

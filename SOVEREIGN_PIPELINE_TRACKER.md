@@ -169,7 +169,7 @@ a C library target until Phase 3 completes.
 
 | Need | Status | Notes |
 |------|--------|-------|
-| WGSL shaders parseable by naga | Done | 806 shaders, all naga-valid |
+| WGSL shaders parseable by naga | Done | 816 shaders, all naga-valid |
 | Precision metadata in compile requests | Done | `fp64_strategy` field in IPC |
 | `naga::Module` for direct consumption | Planned | Skip SPIR-V round-trip, needs Layer 3 |
 

@@ -1,6 +1,6 @@
 # barraCuda
 
-**Version**: 0.3.10
+**Version**: 0.3.11
 **Status**: Standalone primal — zero cross-dependencies, fully concurrent, all quality gates passing
 **License**: AGPL-3.0-or-later (scyBorg provenance trio)
 **MSRV**: 1.87
@@ -26,14 +26,14 @@ results.
 
 ### Key capabilities
 
-- **806 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,085 Rust source files**, 42 integration test files, 4,100+ tests (3,623 lib + 214 core + 8 e2e + integration + doctests) passing
+- **816 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
+- **1,090 Rust source files**, 42 integration test files, 4,150+ tests (3,650+ lib + 214 core + 8 e2e + integration + doctests)
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
   cross-vendor FHE GPU implementation in existence.
-- **Lattice QCD** — SU(3) gauge theory, staggered Dirac, CG solver, HMC
-- **Spectral analysis** — Anderson localization, Lanczos eigensolver
+- **Lattice QCD** — SU(3) gauge theory, staggered Dirac, CG solver, HMC, GPU multi-shift CG (Jegerlehner), GPU-resident RHMC observables (Hamiltonian/Metropolis/fermion action)
+- **Spectral analysis** — Anderson localization, Lanczos eigensolver with Ritz eigenvector extraction
 - **Molecular dynamics** — Yukawa, PPPM, VV integrator, cell-list neighbor search
 - **Linear algebra** — dense, sparse (CSR SpMV, CG, BiCGStab), eigensolvers, L-BFGS
 - **Statistics** — bootstrap, jackknife, diversity indices, hydrology
@@ -58,6 +58,7 @@ results.
 
 ## Recent
 
+- **Sprint 22**: Spring absorption & deep debt evolution — Critical fermion force sign fix (neg_eta convention) in 2 staggered/pseudofermion WGSL shaders. 8 WGSL shaders absorbed from hotSpring: 5 multi-shift CG (Jegerlehner zeta, shifted alpha/xr/x/p) + 3 GPU-resident (Hamiltonian assembly, fermion action, Metropolis). `gpu_multi_shift_cg.rs` orchestration with generic CPU reference. `gpu_resident_observables.rs` with O(1)-readback pipelines. 6 RHMC/lattice tolerance constants (42 total). f32 Perlin 2D shader + API for ludoSpring. 32-bit LCG contract for ludoSpring. Lanczos eigenvector pipeline with Ritz vector Q×z back-transform for groundSpring. 816 WGSL shaders, all quality gates green.
 - **Sprint 21**: Compliance & coverage deep evolution — `health.liveness`, `health.readiness`, `capabilities.list` endpoints implemented per wateringHole Semantic Method Naming Standard v2.2.0 with all required aliases (`ping`, `health`, `status`, `check`, `capability.list`). Validation-first handler refactoring across JSON-RPC and tarpc layers (validate inputs before device check). `--port` CLI flag per UniBin standard. `barracuda-spirv` unsafe code evolved to `#![deny(unsafe_code)]` + targeted `#[allow]`. barracuda-core coverage 59.33% → 72.83% line (+13.5pp), 214 unit tests + 8 e2e (up from 148). rpc.rs refactored to extract tests (861→572 lines). All quality gates green.
 - **Sprint 20**: FMA evolution & lint promotion — 625 `suboptimal_flops` sites evolved to `mul_add()` for hardware FMA precision. 4 lints promoted from `allow` to `warn`: `suboptimal_flops` (415→0), `use_self` (332→0), `tuple_array_conversions` (2→0), `needless_range_loop` (45→0). All `needless_range_loop` sites evolved to idiomatic iterators. 232 files changed, 3,623+ tests pass, zero clippy errors.
 - **Sprint 19**: Deep debt solutions & idiomatic Rust evolution — RPC `tolerances_get` evolved to centralized tolerance registry. Cast safety: all `usize as u32` in `TensorSession` replaced with checked casts. 6 domain feature gates added (`domain-fhe`, `domain-md`, `domain-lattice`, `domain-physics`, `domain-pharma`, `domain-genomics`). `FlatTree::validate()` evolved to typed errors.
@@ -140,7 +141,7 @@ barraCuda/
 │       │   ├── sample/              # LHS, Sobol, Metropolis, sparsity
 │       │   ├── ops/                 # GPU ops (matmul, softmax, FHE, bio)
 │       │   ├── tensor/              # GPU tensor type
-│       │   ├── shaders/             # 806 WGSL shaders (see shaders/README.md)
+│       │   ├── shaders/             # 816 WGSL shaders (see shaders/README.md)
 │       │   ├── device/              # GpuBackend trait, WgpuDevice, CoralReefDevice, concurrency
 │       │   ├── staging/             # Ring buffers, unidirectional pipelines
 │       │   ├── pipeline/            # ComputeDispatch, batched pipelines
@@ -189,7 +190,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo test --workspace --lib            # lib tests (4,052+ total via nextest)
+cargo test --workspace --lib            # lib tests (3,650+ total via nextest)
 cargo llvm-cov --workspace --lib        # 80% CI gate (blocking), 90% target (requires GPU hardware)
 ```
 

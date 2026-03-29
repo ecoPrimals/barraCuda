@@ -232,6 +232,67 @@ pub const PHYSICS_LYAPUNOV: Tolerance = Tolerance {
 };
 
 // ═══════════════════════════════════════════════════════════════════
+// RHMC / lattice HMC tolerances (hotSpring absorption, Mar 2026)
+// ═══════════════════════════════════════════════════════════════════
+
+/// CG solver tolerance for fermion force computation.
+///
+/// Moderate precision sufficient for force term; O(100) iterations typical.
+/// Tighter than RHMC approx error but looser than Metropolis CG.
+pub const LATTICE_CG_FORCE: Tolerance = Tolerance {
+    name: "lattice_cg_force",
+    abs_tol: 1e-6,
+    rel_tol: 1e-6,
+    justification: "CG for force term: moderate precision, O(100) iterations typical",
+};
+
+/// CG solver tolerance for Metropolis Hamiltonian evaluation.
+///
+/// High precision required to preserve detailed balance in the accept/reject step.
+pub const LATTICE_CG_METROPOLIS: Tolerance = Tolerance {
+    name: "lattice_cg_metropolis",
+    abs_tol: 1e-8,
+    rel_tol: 1e-8,
+    justification: "CG for Metropolis: high precision for detailed balance",
+};
+
+/// Maximum relative error bound for rational approximation in RHMC.
+pub const LATTICE_RHMC_APPROX_ERROR: Tolerance = Tolerance {
+    name: "lattice_rhmc_approx_error",
+    abs_tol: 1e-3,
+    rel_tol: 1e-3,
+    justification: "rational approximation max relative error bound (Remez exchange)",
+};
+
+/// Plaquette expectation value validation (cold start = 1.0, strong coupling = 0.0).
+pub const LATTICE_PLAQUETTE: Tolerance = Tolerance {
+    name: "lattice_plaquette",
+    abs_tol: 1e-6,
+    rel_tol: 1e-4,
+    justification: "plaquette trace from GPU reduction; same as physics_lattice_action",
+};
+
+/// Fermion force magnitude validation.
+///
+/// Force depends on CG solution quality; looser than CG tolerance itself.
+pub const LATTICE_FERMION_FORCE: Tolerance = Tolerance {
+    name: "lattice_fermion_force",
+    abs_tol: 1e-4,
+    rel_tol: 1e-3,
+    justification: "fermion force depends on CG solution accuracy and gauge fluctuations",
+};
+
+/// Metropolis ΔH precision for accept/reject validation.
+///
+/// Small ΔH indicates reversibility; large ΔH triggers trajectory rejection.
+pub const LATTICE_METROPOLIS_DELTA_H: Tolerance = Tolerance {
+    name: "lattice_metropolis_delta_h",
+    abs_tol: 1.0,
+    rel_tol: 0.5,
+    justification: "ΔH of O(1) expected for well-tuned HMC; acceptance rate ~70-90%",
+};
+
+// ═══════════════════════════════════════════════════════════════════
 // diversity tolerances (wetSpring cross-spring)
 // ═══════════════════════════════════════════════════════════════════
 
@@ -457,6 +518,12 @@ pub fn all_tolerances() -> &'static [Tolerance] {
         PHYSICS_ANDERSON_EIGENVALUE,
         PHYSICS_LATTICE_ACTION,
         PHYSICS_LYAPUNOV,
+        LATTICE_CG_FORCE,
+        LATTICE_CG_METROPOLIS,
+        LATTICE_RHMC_APPROX_ERROR,
+        LATTICE_PLAQUETTE,
+        LATTICE_FERMION_FORCE,
+        LATTICE_METROPOLIS_DELTA_H,
         BIO_DIVERSITY_SHANNON,
         BIO_DIVERSITY_SIMPSON,
         BIO_PHYLOGENETIC,
@@ -567,7 +634,7 @@ mod tests {
     #[test]
     fn all_tolerances_registry() {
         let all = all_tolerances();
-        assert!(all.len() >= 30, "registry should have 30+ tolerances");
+        assert!(all.len() >= 36, "registry should have 36+ tolerances");
         for t in all {
             assert!(!t.name.is_empty());
             assert!(!t.justification.is_empty());

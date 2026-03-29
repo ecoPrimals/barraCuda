@@ -19,6 +19,7 @@ use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
 const PERLIN_SHADER: &str = include_str!("../../shaders/procedural/perlin_2d_f64.wgsl");
+const PERLIN_F32_SHADER: &str = include_str!("../../shaders/procedural/perlin_2d_f32.wgsl");
 const FBM_SHADER: &str = include_str!("../../shaders/procedural/fbm_2d_f64.wgsl");
 
 /// Standard Perlin permutation table (Perlin 2002).
@@ -163,6 +164,119 @@ impl PerlinNoiseGpu {
     }
 }
 
+/// GPU-accelerated batch 2D Perlin noise (f32 variant).
+///
+/// Identical algorithm to [`PerlinNoiseGpu`] but operates on f32 data.
+/// Does not require the `f64` GPU extension — runs on all WebGPU devices.
+/// Designed for game/real-time use (ludoSpring).
+pub struct PerlinNoiseGpuF32 {
+    device: Arc<WgpuDevice>,
+}
+
+impl PerlinNoiseGpuF32 {
+    /// Create a new f32 Perlin noise compute instance.
+    #[must_use]
+    pub fn new(device: Arc<WgpuDevice>) -> Self {
+        Self { device }
+    }
+
+    /// Compute Perlin 2D noise for a batch of (x, y) coordinate pairs (f32).
+    ///
+    /// `coords` must have even length: `[x0, y0, x1, y1, ...]`.
+    /// Returns one f32 per coordinate pair, approximately in \[-1, 1\].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] on GPU dispatch or buffer mapping failure.
+    pub fn perlin_2d(&self, coords: &[f32]) -> Result<Vec<f32>> {
+        let n_points = coords.len() / 2;
+        if n_points == 0 {
+            return Ok(vec![]);
+        }
+
+        let params = PerlinParams {
+            n_points: crate::error::u32_from_usize(n_points)?,
+            _pad0: 0,
+            _pad1: 0,
+            _pad2: 0,
+        };
+
+        let wg_count = params.n_points.div_ceil(256);
+
+        let coord_buf = self
+            .device
+            .create_buffer_f32_init("perlin_f32:coords", coords);
+        let out_buf = self.device.create_buffer_f32(n_points)?;
+        let perm_buf = self
+            .device
+            .create_buffer_u32_init("perlin_f32:perm", &PERM_TABLE);
+        let params_buf = self
+            .device
+            .create_uniform_buffer("perlin_f32:params", &params);
+
+        crate::device::compute_pipeline::ComputeDispatch::new(&self.device, "perlin_2d_f32")
+            .shader(PERLIN_F32_SHADER, "main")
+            .storage_read(0, &coord_buf)
+            .storage_rw(1, &out_buf)
+            .storage_read(2, &perm_buf)
+            .uniform(3, &params_buf)
+            .dispatch(wg_count, 1, 1)
+            .submit()?;
+
+        self.device.read_buffer_f32(&out_buf, n_points)
+    }
+}
+
+/// CPU reference: 2D Perlin noise (f32). Returns value in approximately \[-1, 1\].
+///
+/// Matches the f32 GPU shader output for cross-validation.
+#[must_use]
+pub fn perlin_2d_cpu_f32(x: f32, y: f32) -> f32 {
+    fn fade(t: f32) -> f32 {
+        t * t * t * t.mul_add(t.mul_add(6.0, -15.0), 10.0)
+    }
+    fn lerp(a: f32, b: f32, t: f32) -> f32 {
+        t.mul_add(b - a, a)
+    }
+    fn grad2(hash: u32, x: f32, y: f32) -> f32 {
+        match hash & 3 {
+            0 => x + y,
+            1 => -x + y,
+            2 => x - y,
+            _ => -x - y,
+        }
+    }
+
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "floor + mask to 0..255 guarantees valid index"
+    )]
+    let xi = x.floor() as usize & 255;
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "floor + mask to 0..255 guarantees valid index"
+    )]
+    let yi = y.floor() as usize & 255;
+    let xf = x - x.floor();
+    let yf = y - y.floor();
+
+    let u = fade(xf);
+    let v = fade(yf);
+
+    let aa = PERM_TABLE[(PERM_TABLE[xi] as usize + yi) & 255];
+    let ab = PERM_TABLE[(PERM_TABLE[xi] as usize + yi + 1) & 255];
+    let ba = PERM_TABLE[(PERM_TABLE[(xi + 1) & 255] as usize + yi) & 255];
+    let bb = PERM_TABLE[(PERM_TABLE[(xi + 1) & 255] as usize + yi + 1) & 255];
+
+    lerp(
+        lerp(grad2(aa, xf, yf), grad2(ba, xf - 1.0, yf), u),
+        lerp(grad2(ab, xf, yf - 1.0), grad2(bb, xf - 1.0, yf - 1.0), u),
+        v,
+    )
+}
+
 /// CPU reference: 2D Perlin noise. Returns value in approximately \[-1, 1\].
 ///
 /// Matches the GPU shader output for cross-validation.
@@ -298,5 +412,45 @@ mod tests {
         for (i, &s) in seen.iter().enumerate() {
             assert!(s, "perm table missing value {i}");
         }
+    }
+
+    #[test]
+    fn perlin_2d_f32_in_range() {
+        for i in 0..50_i32 {
+            for j in 0..50_i32 {
+                let v = perlin_2d_cpu_f32(i as f32 * 0.1, j as f32 * 0.1);
+                assert!((-2.0..=2.0).contains(&v), "f32 value {v} out of range");
+            }
+        }
+    }
+
+    #[test]
+    fn perlin_2d_f32_at_integer_is_zero() {
+        let v = perlin_2d_cpu_f32(1.0, 1.0);
+        assert!(
+            v.abs() < 1e-5,
+            "f32 perlin at integer coords should be ~0, got {v}"
+        );
+    }
+
+    #[test]
+    fn perlin_2d_f32_matches_f64() {
+        for i in 0..20_i32 {
+            let x = (i as f64).mul_add(0.37, 0.1);
+            let y = (i as f64).mul_add(0.41, 0.2);
+            let v64 = perlin_2d_cpu(x, y);
+            let v32 = perlin_2d_cpu_f32(x as f32, y as f32);
+            assert!(
+                (v64 as f32 - v32).abs() < 0.01,
+                "f32/f64 mismatch at ({x},{y}): f64={v64}, f32={v32}"
+            );
+        }
+    }
+
+    #[test]
+    fn f32_shader_source_valid() {
+        assert!(PERLIN_F32_SHADER.contains("perlin"));
+        assert!(PERLIN_F32_SHADER.contains("perm_lookup"));
+        assert!(!PERLIN_F32_SHADER.contains("f64"));
     }
 }

@@ -55,7 +55,10 @@ pub use anderson::{
 #[cfg(feature = "gpu")]
 pub use batch_ipr::BatchIprGpu;
 pub use hofstadter::{GOLDEN_RATIO, almost_mathieu_hamiltonian, gcd, hofstadter_butterfly};
-pub use lanczos::{LanczosTridiag, lanczos, lanczos_eigenvalues};
+pub use lanczos::{
+    LanczosTridiag, LanczosTridiagWithBasis, lanczos, lanczos_eigenvalues, lanczos_eigenvectors,
+    lanczos_with_basis,
+};
 pub use sparse::{SpectralCsrMatrix, WGSL_SPMV_CSR_F64};
 pub use stats::{
     GOE_R, POISSON_R, SpectralAnalysis, SpectralPhase, classify_spectral_phase, detect_bands,

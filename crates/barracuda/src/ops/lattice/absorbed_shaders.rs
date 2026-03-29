@@ -90,3 +90,55 @@ pub const WGSL_COMPLEX_DOT_RE_FILE_F64: &str =
 ///
 /// Standalone version of the inline [`super::cg::WGSL_XPAY_F64`].
 pub const WGSL_XPAY_FILE_F64: &str = include_str!("../../shaders/lattice/xpay_f64.wgsl");
+
+// ── Multi-shift CG absorption (hotSpring, Mar 2026) ─────────────────
+
+/// Multi-shift CG: Jegerlehner `ζ` recurrence + shifted `α`/`β` scalars.
+///
+/// Per-shift kernel that updates `ζ_prev`, `ζ_curr`, `α_s`, and `β_ratio`
+/// from the base CG scalars (`α_j`, `β_{j-1}`, `α_{j-1}`).
+pub const WGSL_MS_ZETA_UPDATE_F64: &str =
+    include_str!("../../shaders/lattice/ms_zeta_update_f64.wgsl");
+
+/// Multi-shift CG: `x_σ += α_σ × p_σ` (shifted solution update).
+pub const WGSL_MS_X_UPDATE_F64: &str = include_str!("../../shaders/lattice/ms_x_update_f64.wgsl");
+
+/// Multi-shift CG: `p_σ = ζ_σ × r + β_σ × p_σ` (shifted direction update).
+///
+/// `β_σ = ratio² × β_base` where `ratio = ζ_new / ζ_curr`.
+pub const WGSL_MS_P_UPDATE_F64: &str = include_str!("../../shaders/lattice/ms_p_update_f64.wgsl");
+
+/// Shifted CG scalar: `α = rz / (pAp + σ × pp)`.
+///
+/// Single-thread kernel for shifted CG systems `(D†D + σ)x = b`.
+pub const WGSL_CG_COMPUTE_ALPHA_SHIFTED_F64: &str =
+    include_str!("../../shaders/lattice/cg_compute_alpha_shifted_f64.wgsl");
+
+/// Shifted CG vector update: `x += α × p`, `r -= α × (Ap + σ × p)`.
+///
+/// Fuses the shift correction into the residual update.
+pub const WGSL_CG_UPDATE_XR_SHIFTED_F64: &str =
+    include_str!("../../shaders/lattice/cg_update_xr_shifted_f64.wgsl");
+
+// ── GPU-resident Hamiltonian / Metropolis absorption (hotSpring, Mar 2026) ──
+
+/// GPU-resident Hamiltonian assembly: `H = β×(6V − plaq_sum) + T + S_f`.
+///
+/// Single-thread kernel that eliminates CPU readback for Hamiltonian computation.
+/// Outputs both `H` and per-sector diagnostics (`S_gauge`, `T`, `S_ferm`).
+pub const WGSL_HAMILTONIAN_ASSEMBLY_F64: &str =
+    include_str!("../../shaders/lattice/hamiltonian_assembly_f64.wgsl");
+
+/// GPU-resident fermion action sum for one RHMC sector.
+///
+/// `S_f = α₀·dots[0] + Σ_s(α[s]·dots[s+1])`. Accumulates into `s_ferm` buffer
+/// so multiple sectors can call sequentially.
+pub const WGSL_FERMION_ACTION_SUM_F64: &str =
+    include_str!("../../shaders/lattice/fermion_action_sum_f64.wgsl");
+
+/// GPU-resident Metropolis accept/reject test with 9-entry diagnostics.
+///
+/// Computes `ΔH = H_new − H_old`, applies `min(1, exp(−ΔH))` criterion,
+/// and writes acceptance flag + per-sector diagnostics in a single readback.
+pub const WGSL_GPU_METROPOLIS_F64: &str =
+    include_str!("../../shaders/lattice/gpu_metropolis_f64.wgsl");

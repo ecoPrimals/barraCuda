@@ -6,6 +6,16 @@ Prioritized work items, ordered by impact. Updated 2026-03-29.
 
 ## Recently Completed
 
+- **Sprint 22: Spring Absorption & Deep Debt Evolution (Mar 29)**:
+  Critical fermion force sign fix (neg_eta convention) in 2 WGSL shaders.
+  8 hotSpring WGSL shaders absorbed (5 multi-shift CG + 3 GPU-resident
+  Hamiltonian/Metropolis/fermion-action). `gpu_multi_shift_cg.rs` orchestration
+  with pipelines, buffers, and generic CPU reference. `gpu_resident_observables.rs`
+  with O(1)-readback plaquette/KE/Hamiltonian/Metropolis pipeline. 6 RHMC/lattice
+  tolerance constants. f32 Perlin 2D shader + API for ludoSpring. 32-bit LCG
+  contract for ludoSpring. Lanczos eigenvector pipeline (`lanczos_eigenvectors`
+  with Ritz vector construction) for groundSpring. All quality gates green
+  (717 + 214 tests, clippy pedantic+nursery, doc).
 - **Sprint 21: Compliance, Coverage & Validation-First Evolution (Mar 29)**:
   `health.liveness`, `health.readiness`, `capabilities.list` endpoints
   implemented per wateringHole Semantic Method Naming Standard v2.2.0

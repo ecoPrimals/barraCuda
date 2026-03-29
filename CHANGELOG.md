@@ -5,6 +5,50 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.11] — 2026-03-29
+
+### Added — Sprint 22: Spring Absorption & Deep Debt Evolution (Mar 29 2026)
+
+- **Critical fermion force sign fix** — `staggered_fermion_force_f64.wgsl` and
+  `pseudofermion_force_f64.wgsl` corrected from `half_eta` (+η/2) to `neg_eta` (−η)
+  sign convention, matching hotSpring's validated `F = −d(x†D†Dx)/dU` derivation.
+  Incorrect sign produced wrong HMC trajectories.
+- **5 multi-shift CG WGSL shaders** absorbed from hotSpring — Jegerlehner zeta
+  recurrence (`ms_zeta_update_f64`), shifted solution update (`ms_x_update_f64`),
+  shifted direction update (`ms_p_update_f64`), shifted alpha scalar
+  (`cg_compute_alpha_shifted_f64`), and fused shifted xr update
+  (`cg_update_xr_shifted_f64`). All under `AGPL-3.0-or-later`.
+- **`gpu_multi_shift_cg.rs`** — GPU multi-shift CG orchestration module with
+  `GpuMultiShiftCgPipelines` (pre-compiled pipelines for all 5 shaders),
+  `GpuMultiShiftCgBuffers` (per-solve GPU buffers), `GpuMultiShiftCgConfig`,
+  and `multi_shift_cg_generic()` — a framework-agnostic CPU reference that
+  works with closure-based matrix-vector products (no lattice type dependency).
+- **3 GPU-resident WGSL shaders** — `hamiltonian_assembly_f64` (H = S_gauge + T +
+  S_ferm, eliminates CPU readback), `fermion_action_sum_f64` (RHMC sector
+  accumulation), `gpu_metropolis_f64` (accept/reject with 9-entry diagnostics).
+- **`gpu_resident_observables.rs`** — O(1)-readback pipeline with
+  `ResidentObservablePipelines`, `ResidentObservableBuffers`, and
+  `MetropolisResult` struct parsing the 9-entry GPU result.
+- **6 RHMC/lattice tolerance constants** — `LATTICE_CG_FORCE` (1e-6),
+  `LATTICE_CG_METROPOLIS` (1e-8), `LATTICE_RHMC_APPROX_ERROR` (1e-3),
+  `LATTICE_PLAQUETTE` (1e-6), `LATTICE_FERMION_FORCE` (1e-4),
+  `LATTICE_METROPOLIS_DELTA_H` (1.0). All registered in `all_tolerances()`.
+- **f32 Perlin 2D** — `perlin_2d_f32.wgsl` shader (no f64 extension needed),
+  `PerlinNoiseGpuF32` struct, `perlin_2d_cpu_f32()` reference. For ludoSpring
+  real-time procedural generation.
+- **32-bit LCG contract** — `lcg_step_u32()`, `state_to_f32()`,
+  `uniform_f32_sequence()` in `rng.rs` using Knuth MMIX 32-bit constants
+  (multiplier 1664525, increment 1013904223). For ludoSpring game-speed PRNG.
+- **Lanczos eigenvector pipeline** — `lanczos_with_basis()` retains Krylov basis
+  vectors Q, `lanczos_eigenvectors()` computes Ritz vectors via Q×z
+  back-transform, returns top-k eigenpairs sorted by |eigenvalue|. For
+  groundSpring spectral analysis.
+
+### Stats
+- 8 new WGSL shaders, 3 new Rust modules, 6 new tolerance constants
+- 717 + 214 tests pass, zero clippy errors (pedantic + nursery)
+- All quality gates green (fmt, clippy, doc, tests)
+
 ## [0.3.10] — 2026-03-21
 
 ### Changed — Sprint 20: FMA Evolution & Lint Promotion (Mar 21 2026)

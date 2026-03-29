@@ -2,7 +2,25 @@
 
 **Version**: 0.3.11
 **Date**: March 29, 2026
-**Source**: hotSpring v0.6.32, groundSpring V99, neuralSpring S143, wetSpring V107, airSpring v0.7.5, healthSpring V19, ludoSpring (new), primalSpring (new), toadStool S163, coralReef Phase 10 Iter 70
+**Source**: hotSpring v0.6.32, groundSpring V99, neuralSpring S143, wetSpring V107, airSpring v0.7.5, healthSpring V44, ludoSpring V34, primalSpring (new), toadStool S163, coralReef Phase 10 Iter 70
+
+## Sprint 22g — Cross-Spring Deep Absorption (Mar 29 2026)
+
+| # | Item | Source | Module | Status |
+|---|------|--------|--------|--------|
+| AA | TMU Box-Muller PRNG shader | hotSpring V0632 | `shaders/lattice/su3_random_momenta_tmu_f64.wgsl` | Done |
+| AB | Subgroup-accelerated reduction | hotSpring V0632 | `shaders/reduce/sum_reduce_subgroup_f64.wgsl` | Done |
+| AC | ROP fermion force accumulation | hotSpring V0632 | `shaders/lattice/su3_fermion_force_accumulate_rop_f64.wgsl` | Done |
+| AD | Atomic force → momentum conversion | hotSpring V0632 | `shaders/lattice/su3_force_atomic_to_momentum_f64.wgsl` | Done |
+| AE | TMU lookup table builder | hotSpring V0632 | `ops/lattice/tmu_tables.rs` | Done |
+| AF | ROP fixed-point accum params | hotSpring V0632 | `ops/lattice/rop_force_accum.rs` | Done |
+| AG | Hill dose-response shader + dispatch | healthSpring V44 | `ops/health/hill_dose_response.rs` | Done |
+| AH | Population PK Monte Carlo | healthSpring V44 | `ops/health/population_pk.rs` | Done |
+| AI | Shannon/Simpson diversity | healthSpring V44 | `ops/health/diversity.rs` | Done |
+| AJ | `SiliconProfile` + tier routing | hotSpring V0632 | `device/silicon_profile.rs` | Done |
+| AK | `SUBGROUP` feature negotiation | hotSpring V0632 | `device/wgpu_device/creation.rs` | Done |
+| AL | 6-format capability parser | ludoSpring V34 | `discovery/capabilities.rs` | Done |
+| AM | Env-configurable IPC tolerances | ludoSpring V34 | `discovery/tolerances.rs` | Done |
 
 Cross-spring evolution follows **Write → Absorb → Lean**: springs implement
 domain-specific primitives, barraCuda absorbs and generalises, springs consume

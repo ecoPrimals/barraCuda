@@ -6,6 +6,19 @@ Prioritized work items, ordered by impact. Updated 2026-03-29.
 
 ## Recently Completed
 
+- **Sprint 22g: Cross-Spring Deep Absorption (Mar 29)**:
+  6 hotSpring WGSL shaders absorbed (TMU-accelerated Box-Muller PRNG, subgroup-accelerated
+  reduce, ROP fixed-point force accumulation + conversion, shifted CG alpha + vector update).
+  `tmu_tables.rs` TMU lookup table builder + `rop_force_accum.rs` fixed-point accumulation
+  params. 3 healthSpring WGSL shaders absorbed (Hill dose-response, population PK Monte Carlo,
+  Shannon/Simpson diversity) with full Rust dispatch modules + CPU reference implementations.
+  `SiliconProfile` + `SiliconUnit` + `UnitThroughput` + `CompositionEntry` silicon personality
+  model with tier-based workload routing. `has_subgroups` field + `wgpu::Features::SUBGROUP`
+  feature negotiation for subgroup-accelerated shaders. 6-format capability parser absorbed
+  from ludoSpring (Formats A–F for diverse primal response shapes) with semantic alias
+  generation. Env-configurable IPC tolerances (`BARRACUDA_RPC_TIMEOUT_SECS`,
+  `BARRACUDA_PROBE_TIMEOUT_MS`, `BARRACUDA_CONNECT_PROBE_TIMEOUT_MS`). 4,030+ tests,
+  0 failures. Clippy pedantic+nursery clean.
 - **Sprint 22f: PrecisionBrain-coralReef Integration (Mar 29)**:
   `PrecisionBrain` now accepts coralReef f64 lowering availability, routing
   F64/DF64 tiers as safe when coralReef sovereign compilation bypasses naga/NVVM.

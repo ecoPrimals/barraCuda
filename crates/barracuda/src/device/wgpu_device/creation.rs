@@ -23,7 +23,11 @@ pub const ADAPTER_ENV_VAR: &str = "BARRACUDA_GPU_ADAPTER";
 
 /// Desired features to negotiate with any adapter.
 fn desired_features() -> Vec<wgpu::Features> {
-    vec![wgpu::Features::SHADER_F64, wgpu::Features::SHADER_F16]
+    vec![
+        wgpu::Features::SHADER_F64,
+        wgpu::Features::SHADER_F16,
+        wgpu::Features::SUBGROUP,
+    ]
 }
 
 /// Extended feature set that also includes `TIMESTAMP_QUERY` (for benchmarks).
@@ -32,6 +36,7 @@ fn desired_features_extended() -> Vec<wgpu::Features> {
         wgpu::Features::SHADER_F64,
         wgpu::Features::SHADER_F16,
         wgpu::Features::TIMESTAMP_QUERY,
+        wgpu::Features::SUBGROUP,
     ]
 }
 

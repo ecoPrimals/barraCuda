@@ -183,6 +183,18 @@ impl WgpuDevice {
         super::probe::cached_f64_builtins(self).is_none_or(|caps| caps.can_compile_f64())
     }
 
+    /// Whether the device supports WGSL subgroup intrinsics (`subgroupAdd`, etc).
+    ///
+    /// True when `wgpu::Features::SUBGROUP` was granted at device creation.
+    /// Enables subgroup-accelerated reduction shaders (fewer barriers, fewer
+    /// shared memory steps). Do NOT add `enable subgroups;` to WGSL — naga 28
+    /// generates broken SPIR-V when the directive is present; the feature flag
+    /// is sufficient.
+    #[must_use]
+    pub fn has_subgroups(&self) -> bool {
+        self.device.features().contains(wgpu::Features::SUBGROUP)
+    }
+
     /// Check if the Sovereign Compiler's SPIR-V passthrough path is available.
     /// In wgpu 28 SPIR-V passthrough is gated by the `spirv` cargo feature
     /// on the wgpu crate (always enabled in our workspace). The Vulkan

@@ -155,6 +155,13 @@ pub struct DeviceCapabilities {
     /// Maximum subgroup (warp/wavefront) size reported by the adapter.
     pub subgroup_max_size: u32,
 
+    /// Whether the device negotiated `wgpu::Features::SUBGROUP`.
+    ///
+    /// When `true`, subgroup intrinsics (`subgroupAdd`, `subgroupBroadcast`, etc.)
+    /// are available in WGSL shaders. Enables subgroup-accelerated reductions
+    /// that bypass shared memory for intra-warp communication.
+    pub has_subgroups: bool,
+
     /// Whether the device supports native f64 shader operations.
     pub f64_shaders: bool,
 
@@ -208,6 +215,7 @@ impl DeviceCapabilities {
             gpu_dispatch_threshold_override: None,
             subgroup_min_size: adapter_info.subgroup_min_size,
             subgroup_max_size: adapter_info.subgroup_max_size,
+            has_subgroups: device.has_subgroups(),
             f64_shaders: device.has_f64_shaders(),
             f64_shared_memory: false,
             f64_capabilities: crate::device::probe::cache::cached_f64_builtins(device),
@@ -386,8 +394,8 @@ impl DeviceCapabilities {
     /// Whether the adapter reports subgroup (warp/wavefront) sizes.
     ///
     /// True when `subgroup_min_size > 0`, indicating the driver exposes
-    /// subgroup metadata. Note: WGSL subgroup intrinsics require a future
-    /// wgpu feature flag (`SUBGROUP`) that is not yet stabilized.
+    /// subgroup metadata. For actual subgroup intrinsic support (e.g.
+    /// `subgroupAdd`), check [`has_subgroups`](Self::has_subgroups) instead.
     #[must_use]
     pub fn has_subgroup_info(&self) -> bool {
         self.subgroup_min_size > 0

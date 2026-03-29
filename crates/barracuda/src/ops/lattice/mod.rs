@@ -78,6 +78,8 @@ pub mod higgs_u1;
 pub mod hmc_force_su3;
 pub mod omelyan_integrator;
 pub mod plaquette;
+pub mod rop_force_accum;
+pub mod tmu_tables;
 
 /// LCG PRNG and lattice constants (used at runtime by `HostRng`).
 pub mod constants;

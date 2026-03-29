@@ -220,6 +220,7 @@ fn test_sin_cos_taylor_workaround_asin_acos_protected() {
         gpu_dispatch_threshold_override: None,
         subgroup_min_size: 32,
         subgroup_max_size: 32,
+        has_subgroups: false,
         f64_shaders: true,
         f64_shared_memory: false,
         f64_capabilities: Some(F64BuiltinCapabilities {

@@ -8,7 +8,10 @@ use super::{DriverKind, GpuArch};
 
 /// Conservative allocation limit for NVK (nouveau) to avoid kernel PTE fault.
 /// Observed on GV100/Titan V: nouveau driver faults above ~1.4 GB combined allocation.
-#[expect(dead_code, reason = "retained for DeviceCapabilities evolution")]
+#[allow(
+    dead_code,
+    reason = "used by DeviceCapabilities; exercised in workarounds::tests"
+)]
 pub(crate) const NVK_MAX_SAFE_ALLOCATION_BYTES: u64 = 1_200_000_000;
 
 /// A known driver/compiler workaround that must be active for a given profile.
@@ -53,7 +56,10 @@ pub enum Workaround {
 }
 
 /// Detect which workarounds apply for the given driver/arch combination.
-#[expect(dead_code, reason = "retained for DeviceCapabilities evolution")]
+#[allow(
+    dead_code,
+    reason = "used by DeviceCapabilities; exercised in workarounds::tests"
+)]
 pub(crate) fn detect_workarounds(driver: DriverKind, arch: GpuArch) -> Vec<Workaround> {
     let mut w = Vec::new();
     if driver == DriverKind::Nvk {
@@ -75,4 +81,68 @@ pub(crate) fn detect_workarounds(driver: DriverKind, arch: GpuArch) -> Vec<Worka
         w.push(Workaround::VoltaNoPmuFirmware);
     }
     w
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn nvk_ampere_has_exp_log_sincos_buffer_limit() {
+        let w = detect_workarounds(DriverKind::Nvk, GpuArch::Ampere);
+        assert!(w.contains(&Workaround::NvkExpF64Crash));
+        assert!(w.contains(&Workaround::NvkLogF64Crash));
+        assert!(w.contains(&Workaround::NvkLargeBufferLimit));
+        assert!(w.contains(&Workaround::NvkSinCosF64Imprecise));
+        assert!(w.contains(&Workaround::Df64SpirVPoisoning));
+        assert!(!w.contains(&Workaround::NvvmAdaF64Transcendentals));
+    }
+
+    #[test]
+    fn nvk_volta_includes_pmu_workaround() {
+        let w = detect_workarounds(DriverKind::Nvk, GpuArch::Volta);
+        assert!(w.contains(&Workaround::VoltaNoPmuFirmware));
+        assert!(w.contains(&Workaround::NvkExpF64Crash));
+    }
+
+    #[test]
+    fn nvidia_proprietary_ada_gets_nvvm_transcendentals() {
+        let w = detect_workarounds(DriverKind::NvidiaProprietary, GpuArch::Ada);
+        assert!(w.contains(&Workaround::NvvmAdaF64Transcendentals));
+        assert!(w.contains(&Workaround::Df64SpirVPoisoning));
+        assert!(!w.contains(&Workaround::NvkExpF64Crash));
+    }
+
+    #[test]
+    fn nvidia_proprietary_ampere_no_ada_workaround() {
+        let w = detect_workarounds(DriverKind::NvidiaProprietary, GpuArch::Ampere);
+        assert!(!w.contains(&Workaround::NvvmAdaF64Transcendentals));
+        assert!(w.contains(&Workaround::Df64SpirVPoisoning));
+    }
+
+    #[test]
+    fn radv_only_gets_spirv_poisoning() {
+        let w = detect_workarounds(DriverKind::Radv, GpuArch::Rdna2);
+        assert_eq!(w, vec![Workaround::Df64SpirVPoisoning]);
+    }
+
+    #[test]
+    fn intel_only_gets_spirv_poisoning() {
+        let w = detect_workarounds(DriverKind::Intel, GpuArch::Unknown);
+        assert_eq!(w, vec![Workaround::Df64SpirVPoisoning]);
+    }
+
+    #[test]
+    fn software_only_gets_spirv_poisoning() {
+        let w = detect_workarounds(DriverKind::Software, GpuArch::Unknown);
+        assert_eq!(w, vec![Workaround::Df64SpirVPoisoning]);
+    }
+
+    #[test]
+    fn nvk_safe_allocation_constant() {
+        const {
+            assert!(NVK_MAX_SAFE_ALLOCATION_BYTES < 1_500_000_000);
+            assert!(NVK_MAX_SAFE_ALLOCATION_BYTES > 1_000_000_000);
+        }
+    }
 }

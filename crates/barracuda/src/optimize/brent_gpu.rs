@@ -316,11 +316,11 @@ impl BrentGpu {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_gpu_device;
+    use crate::device::test_pool::test_prelude::test_f64_device;
 
     #[tokio::test]
     async fn test_brent_gpu_sqrt() {
-        let Some(device) = get_test_gpu_device().await else {
+        let Some(device) = test_f64_device().await else {
             return;
         };
         let brent = BrentGpu::new(device, 100, 1e-12).unwrap();
@@ -342,7 +342,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_brent_gpu_empty() {
-        let Some(device) = get_test_gpu_device().await else {
+        let Some(device) = test_f64_device().await else {
             return;
         };
         let brent = BrentGpu::new(device, 100, 1e-12).unwrap();

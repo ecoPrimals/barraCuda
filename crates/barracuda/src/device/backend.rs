@@ -6,10 +6,10 @@
 //!
 //! Two backends implement this trait:
 //!
-//! - **`CoralReefDevice`** (sovereign, IPC-first) — compiles WGSL via coralReef
-//!   JSON-RPC (`shader.compile.wgsl`) and dispatches via toadStool JSON-RPC
-//!   (`compute.dispatch.submit`). No compile-time coupling to any primal crate.
-//!   toadStool routes to the best hardware path (VFIO/DRM) at runtime.
+//! - **`SovereignDevice`** (sovereign, IPC-first) — compiles WGSL via the shader
+//!   compiler primal's JSON-RPC (`shader.compile.wgsl`) and dispatches via the
+//!   compute.dispatch primal's JSON-RPC (`compute.dispatch.submit`). No compile-time coupling to any primal crate.
+//!   The dispatch primal routes to the best hardware path (VFIO/DRM) at runtime.
 //!   Requires `sovereign-dispatch` feature.
 //!
 //! - **`WgpuDevice`** (fallback) — dispatches through wgpu → Vulkan/Metal/DX12.
@@ -26,7 +26,7 @@ use std::sync::Arc;
 ///
 /// Springs express abstract math ops; the dispatch pipeline maps them to
 /// the best hardware unit. This hint travels through the IPC chain:
-/// barraCuda → coralReef (pipeline state) → toadStool (hardware routing).
+/// barraCuda → shader.compile primal (pipeline state) → compute.dispatch primal (hardware routing).
 ///
 /// Reference: `wateringHole/GPU_FIXED_FUNCTION_SCIENCE_REPURPOSING.md`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -35,19 +35,19 @@ pub enum HardwareHint {
     #[default]
     Compute,
     /// Tensor core MMA path — dense matmul, Gram matrices, convolutions.
-    /// Requires FP16/BF16/TF32 input precision; coralReef emits MMA instructions.
+    /// Requires FP16/BF16/TF32 input precision; the shader compiler primal emits MMA instructions.
     TensorCore,
     /// RT core BVH traversal — neighbor finding, SPH, acoustic ray tracing.
-    /// coralReef emits `TraceRay`; toadStool binds acceleration structure.
+    /// The shader compiler primal emits `TraceRay`; the compute.dispatch primal binds acceleration structure.
     RtCore,
     /// Z-buffer hardware — distance fields, Voronoi diagrams.
-    /// coralReef emits rasterization pipeline state; toadStool routes to ROPs.
+    /// The shader compiler primal emits rasterization pipeline state; the compute.dispatch primal routes to ROPs.
     ZBuffer,
     /// Texture unit hardware interpolation — lookup tables, PDF evaluation.
-    /// coralReef binds texture with interpolation mode; toadStool routes to TMUs.
+    /// The shader compiler primal binds texture with interpolation mode; the compute.dispatch primal routes to TMUs.
     TextureUnit,
     /// ROP blend/scatter — force accumulation, scatter-add without atomics.
-    /// coralReef emits blend state; toadStool routes to ROPs.
+    /// The shader compiler primal emits blend state; the compute.dispatch primal routes to ROPs.
     RopBlend,
 }
 
@@ -83,8 +83,8 @@ pub struct DispatchDescriptor<'a, B: GpuBackend + ?Sized> {
     /// Use DF64 (double-float f32-pair) compilation path.
     pub df64_shader: bool,
     /// Hardware unit hint for fixed-function dispatch (Level 3 portability).
-    /// Defaults to `Compute` (standard ALU path). coralReef uses this to
-    /// emit the correct pipeline state; toadStool routes to the hardware unit.
+    /// Defaults to `Compute` (standard ALU path). The shader compiler primal uses this to
+    /// emit the correct pipeline state; the compute.dispatch primal routes to the hardware unit.
     pub hardware_hint: HardwareHint,
 }
 
@@ -97,7 +97,7 @@ pub struct DispatchDescriptor<'a, B: GpuBackend + ?Sized> {
 /// # Associated Types
 ///
 /// - `Buffer`: The backend's buffer handle. For wgpu this is `wgpu::Buffer`;
-///   for `CoralReefDevice` it is `CoralBuffer` (IPC-managed by toadStool).
+///   for `SovereignDevice` it is `SovereignBuffer` (IPC-managed by the compute.dispatch primal).
 ///
 /// # Design
 ///
@@ -184,12 +184,12 @@ pub trait GpuBackend: Send + Sync {
     /// Dispatch a pre-compiled native binary (SASS, GFX) without shader
     /// compilation.
     ///
-    /// Used by the sovereign dispatch path: coralReef compiles WGSL → native
+    /// Used by the sovereign dispatch path: the shader compiler primal compiles WGSL → native
     /// binary once, then dispatches the binary directly. This bypasses
     /// naga/SPIR-V entirely, avoiding the DF64 transcendental poisoning bug.
     ///
     /// The default implementation returns an error — only backends with
-    /// native binary support (e.g. `CoralReefDevice`) override this.
+    /// native binary support (e.g. `SovereignDevice`) override this.
     ///
     /// # Errors
     /// Returns [`Err`] if the backend does not support binary dispatch, or

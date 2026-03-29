@@ -47,8 +47,8 @@ Layer 4  toadStool    █████████░  S156 complete  All infra g
 | All production expect/unwrap → Result | Done | Mar 6, 2026 |
 | Capability-based discovery (no hardcoding) | Done | Mar 6, 2026 |
 | `GpuBackend` trait + `ComputeDispatch<B>` generic | Done | Mar 9, 2026 |
-| `CoralReefDevice` scaffold (sovereign-dispatch feature) | Done | Mar 9, 2026 |
-| `dispatch_binary` + `dispatch_kernel` on `CoralReefDevice` | Done | Mar 12, 2026 |
+| `SovereignDevice` scaffold (sovereign-dispatch feature) | Done | Mar 9, 2026 |
+| `dispatch_binary` + `dispatch_kernel` on `SovereignDevice` | Done | Mar 12, 2026 |
 | Coral cache → dispatch wiring (spawn_coral_compile) | Done | Mar 12, 2026 |
 | `PRIMAL_NAMESPACE` capability-based discovery | Done | Mar 12, 2026 |
 

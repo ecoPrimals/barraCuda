@@ -160,13 +160,15 @@ impl WgpuDevice {
 
     /// Compile an f64 WGSL shader through the tiered sovereign pipeline.
     ///
-    /// `enable f64;` is stripped (naga 28 rejects it — f64 is gated by the
-    /// `SHADER_F64` device feature instead). The shader then passes through
-    /// driver-aware polyfills, ILP optimisation, and coralReef IPC before
-    /// tiered compilation.
+    /// `enable f64;` and `enable subgroups;` are stripped — naga 28 rejects
+    /// `enable f64;`, and `enable subgroups;` causes naga to emit broken SPIR-V
+    /// where all subgroup operations return zero. Both extensions are gated by
+    /// device features (`SHADER_F64`, `SUBGROUP`) instead of WGSL directives.
     #[must_use]
     pub fn compile_shader_f64(&self, source: &str, label: Option<&str>) -> wgpu::ShaderModule {
-        let source = &source.replace("enable f64;", "");
+        let source = &source
+            .replace("enable f64;", "")
+            .replace("enable subgroups;", "");
 
         let caps = crate::device::capabilities::DeviceCapabilities::from_device(self);
 

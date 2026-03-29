@@ -278,12 +278,12 @@ impl RichardsGpu {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_gpu_device;
+    use crate::device::test_pool::test_prelude::test_f64_device;
     use crate::pde::richards::SoilParams;
 
     #[tokio::test]
     async fn test_richards_gpu_steady_state() {
-        let Some(device) = get_test_gpu_device().await else {
+        let Some(device) = test_f64_device().await else {
             return;
         };
         let solver = RichardsGpu::new(device);

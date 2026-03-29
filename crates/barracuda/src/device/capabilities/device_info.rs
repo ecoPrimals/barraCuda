@@ -226,7 +226,7 @@ pub fn build_device_info(device: Device) -> DeviceInfo {
 
         Device::Sovereign => DeviceInfo {
             device,
-            name: "Sovereign (IPC: coralReef compile + toadStool dispatch)".to_string(),
+            name: "Sovereign (IPC: shader.compile primal + compute.dispatch primal)".to_string(),
             available: is_sovereign_available(),
             capabilities: vec![
                 Capability::Compute,
@@ -252,7 +252,7 @@ pub fn build_device_info(device: Device) -> DeviceInfo {
 fn is_sovereign_available() -> bool {
     #[cfg(feature = "sovereign-dispatch")]
     {
-        crate::device::coral_reef_device::CoralReefDevice::with_auto_device()
+        crate::device::sovereign_device::SovereignDevice::with_auto_device()
             .map(|d| d.has_dispatch())
             .unwrap_or(false)
     }

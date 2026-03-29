@@ -34,7 +34,7 @@ cargo run --bin barracuda -- server
 crates/
   barracuda/           Core compute library
     src/
-      device/          GpuBackend trait, WgpuDevice, CoralReefDevice (IPC dispatch), driver profiles
+      device/          GpuBackend trait, WgpuDevice, SovereignDevice (IPC dispatch), driver profiles
       shaders/         816 WGSL shaders + sovereign compiler
         math/          DF64 core, transcendentals
         sovereign/     Naga-based compiler (FMA fusion, dead expr, SPIR-V emit)

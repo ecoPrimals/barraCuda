@@ -9,14 +9,14 @@ use super::types::HealthResponse;
 /// Environment variable for overriding the shader-compiler endpoint address.
 ///
 /// When set, skips capability-based and port-based discovery entirely.
-const CORALREEF_ADDR_ENV: &str = "BARRACUDA_SHADER_COMPILER_ADDR";
+const COMPILER_ADDR_ENV: &str = "BARRACUDA_SHADER_COMPILER_ADDR";
 
 /// Environment variable for an explicit shader-compiler port.
 ///
 /// When set, enables a localhost probe as the final discovery fallback.
 /// Without this, only env-address and capability-file discovery are tried —
 /// no hardcoded port is ever probed.
-const CORALREEF_PORT_ENV: &str = "BARRACUDA_SHADER_COMPILER_PORT";
+const COMPILER_PORT_ENV: &str = "BARRACUDA_SHADER_COMPILER_PORT";
 
 /// Loopback address for localhost-only discovery probes.
 const LOCALHOST: &str = "127.0.0.1";
@@ -38,10 +38,10 @@ const LEGACY_DISCOVERY_FILENAME: &str = "shader-compiler.json";
 ///    `"shader_compiler"` for pre-Phase 10 primals)
 /// 3. Localhost probe on `BARRACUDA_SHADER_COMPILER_PORT` (only if set)
 pub async fn discover_shader_compiler() -> Option<String> {
-    if let Ok(addr) = std::env::var(CORALREEF_ADDR_ENV) {
+    if let Ok(addr) = std::env::var(COMPILER_ADDR_ENV) {
         let addr = addr.trim().to_owned();
         if !addr.is_empty() && probe_jsonrpc(&addr).await {
-            tracing::debug!(addr = %addr, "shader compiler discovered via {CORALREEF_ADDR_ENV}");
+            tracing::debug!(addr = %addr, "shader compiler discovered via {COMPILER_ADDR_ENV}");
             return Some(addr);
         }
     }
@@ -52,7 +52,7 @@ pub async fn discover_shader_compiler() -> Option<String> {
         }
     }
 
-    if let Some(port) = std::env::var(CORALREEF_PORT_ENV)
+    if let Some(port) = std::env::var(COMPILER_PORT_ENV)
         .ok()
         .and_then(|s| s.trim().parse::<u16>().ok())
     {

@@ -206,7 +206,7 @@ pub fn multinomial_sample_cpu(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
+    use crate::device::test_pool::test_prelude::test_f64_device;
 
     #[test]
     fn cpu_total_equals_depth() {
@@ -241,7 +241,7 @@ mod tests {
 
     #[tokio::test]
     async fn gpu_total_equals_depth() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = test_f64_device().await else {
             return;
         };
 
@@ -275,7 +275,7 @@ mod tests {
 
     #[tokio::test]
     async fn gpu_seed_path() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = test_f64_device().await else {
             return;
         };
 
@@ -303,7 +303,7 @@ mod tests {
 
     #[tokio::test]
     async fn gpu_raw_probs_path() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = test_f64_device().await else {
             return;
         };
 

@@ -37,9 +37,6 @@ pub mod capabilities;
 pub mod compute_pipeline;
 /// coralReef sovereign compiler discovery and gRPC bridge.
 pub mod coral_compiler;
-/// coralReef device implementation (sovereign dispatch feature gate).
-#[cfg(feature = "sovereign-dispatch")]
-pub mod coral_reef_device;
 mod device_types;
 /// GPU driver/compiler identity and shader strategy selection.
 pub mod driver_profile;
@@ -64,6 +61,9 @@ pub mod probe_throughput;
 /// Physical device registry with backend preference ordering.
 pub mod registry;
 mod routing;
+/// Sovereign device implementation (capability-based IPC dispatch).
+#[cfg(feature = "sovereign-dispatch")]
+pub mod sovereign_device;
 /// GPU memory substrate — allocation, lifetime, and residency tracking.
 pub mod substrate;
 /// Zero-overhead tensor context with buffer pooling.
@@ -111,7 +111,11 @@ pub use compute_pipeline::{
     BatchedComputeDispatch, ComputeDispatch, storage_bgl_entry, uniform_bgl_entry,
 };
 #[cfg(feature = "sovereign-dispatch")]
-pub use coral_reef_device::CoralReefDevice;
+pub use sovereign_device::SovereignDevice;
+#[cfg(feature = "sovereign-dispatch")]
+#[doc(hidden)]
+#[deprecated(note = "renamed to SovereignDevice — capability-based naming")]
+pub type CoralReefDevice = SovereignDevice;
 pub use kernel_router::{ComputeWorkload, KernelRouter, KernelTarget, NpuModelInfo};
 pub use registry::{
     BackendInfo, DeviceCapabilities as PhysicalDeviceCapabilities, DeviceRegistry, DeviceVendor,
@@ -144,7 +148,7 @@ pub enum DeviceSelection {
     Cpu,
     /// NPU via Akida driver - runs pre-compiled SNN models only
     Npu,
-    /// Sovereign GPU via coralReef → DRM (no wgpu/Vulkan/Metal)
+    /// Sovereign GPU via IPC dispatch (no wgpu/Vulkan/Metal)
     Sovereign,
 }
 
@@ -168,16 +172,17 @@ impl DeviceSelection {
     }
 }
 
-/// Check whether sovereign dispatch (coralReef → DRM) is available.
+/// Check whether sovereign dispatch is available at runtime.
 ///
 /// Returns `true` when the `sovereign-dispatch` feature is enabled **and**
-/// `CoralReefDevice::with_auto_device()` finds a dispatchable GPU.
+/// `SovereignDevice::with_auto_device()` finds a dispatchable GPU via
+/// capability-based IPC discovery.
 /// This is a runtime probe — call once at startup, cache the result.
 #[must_use]
 pub fn sovereign_available() -> bool {
     #[cfg(feature = "sovereign-dispatch")]
     {
-        coral_reef_device::CoralReefDevice::with_auto_device()
+        sovereign_device::SovereignDevice::with_auto_device()
             .map(|d| d.has_dispatch())
             .unwrap_or(false)
     }

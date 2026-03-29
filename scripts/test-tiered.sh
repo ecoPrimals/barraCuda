@@ -12,7 +12,7 @@
 #   1. STATIC — clippy + compile (catches 80% of issues in seconds)
 #   2. CORE  — barracuda-core lib tests (IPC, lifecycle, RPC)
 #   3. TARGETED — changed-module tests only (sovereign, tolerances, etc.)
-#   4. FULL  — all 4,052+ tests via nextest (bounded parallelism)
+#   4. FULL  — all 4,162+ tests via nextest (bounded parallelism)
 #   5. CORAL — coralReef cross-primal validation (shader compilation probes)
 #   6. GPU   — hardware workload tests (BARRACUDA_TEST_BACKEND=gpu)
 #

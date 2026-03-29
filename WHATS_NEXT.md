@@ -129,8 +129,8 @@ Prioritized work items, ordered by impact. Updated 2026-03-29.
   deps pure Rust, blake3 `pure` avoids C, rand 0.8/0.9 duplicate tracked.
   Zero-copy gap analysis documented (f64→f32 inherent, LSTM clone inherent).
   All quality gates green (fmt, clippy, doc, test compile).
-- **Deep debt sprint 4 — sovereign wiring & zero-copy (Mar 15)**: CoralReefDevice
-  wired to toadStool `compute.dispatch.submit` via capability-based discovery
+- **Deep debt sprint 4 — sovereign wiring & zero-copy (Mar 15)**: SovereignDevice
+  (then CoralReefDevice) wired to `compute.dispatch.submit` via capability-based discovery
   (`detect_dispatch_addr` scans `$XDG_RUNTIME_DIR/ecoPrimals/*.json` for
   `compute.dispatch`). Buffer staging via `BytesMut`. `dispatch_compute` evolved
   to `Entry` API. `Default` impl added. `# Errors` doc sections added. Pedantic
@@ -147,7 +147,7 @@ Prioritized work items, ordered by impact. Updated 2026-03-29.
   for GPU-resident results). New `submit_and_map<T>` single-poll readback method
   collapses old double-poll into one `poll_safe` cycle. `read_buffer<T>` optimized
   internally. `--all-features` clippy compilation fixed (`is_coral_available`,
-  `CoralReefDevice::with_auto_device`, `has_dispatch`). Pre-existing lints fixed
+  `SovereignDevice::with_auto_device`, `has_dispatch`). Pre-existing lints fixed
   (doc_markdown in bcs/screened_coulomb/chi2, approx_constant in kinetics test,
   double_must_use in critical_screening/chi_squared). Full codebase audit: zero
   archive code, zero dead scripts, zero TODO/FIXME in production, zero files over
@@ -163,8 +163,8 @@ Prioritized work items, ordered by impact. Updated 2026-03-29.
   cross-compile job added for musl targets. Dead `ring` config removed from
   deny.toml. All quality gates green.
 - **VFIO-primary architecture adoption (Mar 13)**: VFIO via toadStool adopted as
-  primary GPU dispatch path. All root docs and specs updated. CoralReefDevice
-  evolved to IPC-first architecture (no coral-gpu dependency). VFIO detection
+  primary GPU dispatch path. All root docs and specs updated. SovereignDevice
+  (then CoralReefDevice) evolved to IPC-first architecture (no coral-gpu dependency). VFIO detection
   responsibility moved to toadStool (barraCuda queries via IPC). wgpu demoted to
   development/fallback.
 - **Sovereign pipeline deep debt sprint (Mar 12)**: Hand-written `weighted_dot_df64.wgsl`
@@ -195,9 +195,9 @@ Prioritized work items, ordered by impact. Updated 2026-03-29.
   debug_assert! + graceful fallback; rustdoc zero warnings; BufferBinding import
   for --all-features clippy.
 - **Sovereign dispatch wiring & deep debt evolution (Mar 11-12)**: Wired coral
-  compiler cache → `CoralReefDevice::dispatch_compute` (sovereign cache hits
+  compiler cache → `SovereignDevice::dispatch_compute` (sovereign cache hits
   skip recompilation). Implemented `dispatch_binary` and `dispatch_kernel` on
-  `CoralReefDevice`. Added `PRIMAL_NAMESPACE` constant, replacing all hardcoded
+  `SovereignDevice`. Added `PRIMAL_NAMESPACE` constant, replacing all hardcoded
   `"barracuda"` strings in IPC/socket/PID paths. Refactored `ode_generic` (890L →
   613L + 290L WGSL codegen). Cleaned 15 DF64 shader placeholder comments.
   Refactored CLI into modular subcommand handlers. Added `VoltaNoPmuFirmware`

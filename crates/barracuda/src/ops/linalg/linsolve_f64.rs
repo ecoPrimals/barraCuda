@@ -111,7 +111,7 @@ impl LinSolveF64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
+    use crate::device::test_pool::test_prelude::test_f64_device;
 
     #[test]
     fn linsolve_f64_params_layout() {
@@ -126,7 +126,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_linsolve_f64_identity() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = test_f64_device().await else {
             return;
         };
         let solver = LinSolveF64::new(device);
@@ -139,7 +139,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_linsolve_f64_2x2() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = test_f64_device().await else {
             return;
         };
         let solver = LinSolveF64::new(device);

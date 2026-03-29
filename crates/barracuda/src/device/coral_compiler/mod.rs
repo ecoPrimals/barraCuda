@@ -39,7 +39,7 @@ pub use types::{AdapterDescriptor, CoralBinary, HealthResponse};
 ///
 /// Tries env-based, capability-file-based, and (if configured) port-based
 /// discovery without blocking on a full compile round-trip.  Used by
-/// `CoralReefDevice::new()` at startup to decide whether the sovereign
+/// `SovereignDevice::new()` at startup to decide whether the sovereign
 /// compile path is viable.
 #[must_use]
 pub fn is_coral_available() -> bool {

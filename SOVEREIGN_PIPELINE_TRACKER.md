@@ -37,11 +37,11 @@ barraCuda (WGSL math)
 
 ---
 
-## P0 — CoralReefDevice Backend (the bridge)
+## P0 — SovereignDevice Backend (the bridge)
 
 barraCuda dispatches GPU work through two backends:
 
-1. **`CoralReefDevice` (VFIO primary)** — dispatches via JSON-RPC IPC to coralReef (compile) + toadStool (dispatch),
+1. **`SovereignDevice` (VFIO primary)** — dispatches via JSON-RPC IPC to shader.compile primal + compute.dispatch primal,
    bypassing the entire Vulkan/Mesa/kernel driver stack.
    VFIO provides exclusive device access, zero kernel driver in the data path,
    deterministic scheduling, and IOMMU hardware isolation.
@@ -51,9 +51,9 @@ barraCuda dispatches GPU work through two backends:
 | Item | Detail |
 |------|--------|
 | Feature flag | `sovereign-dispatch` in barraCuda `Cargo.toml` |
-| Primary module | `crates/barracuda/src/device/coral_reef_device.rs` |
+| Primary module | `crates/barracuda/src/device/sovereign_device.rs` |
 | Fallback module | `crates/barracuda/src/device/wgpu_device.rs` |
-| API surface | IPC to coralReef (`shader.compile.wgsl`) + toadStool (`compute.dispatch.submit`) |
+| API surface | IPC to shader.compile primal (`shader.compile.wgsl`) + compute.dispatch primal (`compute.dispatch.submit`) |
 | Sovereign dispatch | Binary from coralReef IPC → toadStool IPC → GPU |
 | Hardware lifecycle | toadStool owns VFIO/DRM lifecycle; barraCuda never sees hardware |
 | First target | AMD RDNA2 (GFX1030 — E2E verified in coralReef) |
@@ -134,11 +134,11 @@ hardware layer and have already proven the libc → rustix pattern.
 
 | Crate | Pulls In libc Via | Sovereign Evolution |
 |-------|-------------------|---------------------|
-| `wgpu-hal` | `ash` → `libvulkan.so` | Eliminated by CoralReefDevice (P0) |
+| `wgpu-hal` | `ash` → `libvulkan.so` | Eliminated by SovereignDevice (P0) |
 | `mio` | `tokio` → epoll/kqueue | Already uses rustix on Linux |
 | `signal-hook-registry` | `tokio` → signal handlers | Kernel ABI — Rust std evolves |
 | `getrandom` | `rand_core` → `getrandom(2)` | Has linux-raw-sys backend |
-| `parking_lot_core` | `wgpu-core` → futex | Eliminated by CoralReefDevice (P0) |
+| `parking_lot_core` | `wgpu-core` → futex | Eliminated by SovereignDevice (P0) |
 | `cpufeatures` | `blake3` → CPUID | Pure feature detection, minimal |
 | `socket2` | `tokio` → socket ops | Kernel ABI — Rust std evolves |
 
@@ -209,10 +209,10 @@ a C library target until Phase 3 completes.
 | Item | Owner | Depends On | Status |
 |------|-------|------------|--------|
 | `GpuBackend` trait + `ComputeDispatch` generic | barraCuda | — | **Done** (Mar 9) |
-| `CoralReefDevice` scaffold (behind `sovereign-dispatch`) | barraCuda | — | **Done** (Mar 9) |
-| `dispatch_binary` + `dispatch_kernel` on `CoralReefDevice` | barraCuda | — | **Done** (Mar 12) |
+| `SovereignDevice` scaffold (behind `sovereign-dispatch`) | barraCuda | — | **Done** (Mar 9) |
+| `dispatch_binary` + `dispatch_kernel` on `SovereignDevice` | barraCuda | — | **Done** (Mar 12) |
 | Coral compiler cache → dispatch wiring | barraCuda | — | **Done** (Mar 12) |
-| `CoralReefDevice` IPC dispatch wiring | barraCuda | toadStool `compute.dispatch.submit` | **Done** (Mar 15) — discovers toadStool via capability scan, dispatches via JSON-RPC |
+| `SovereignDevice` IPC dispatch wiring | barraCuda | `compute.dispatch.submit` capability | **Done** (Mar 15) — discovers dispatch primal via capability scan, dispatches via JSON-RPC |
 | toadStool dispatch IPC endpoint | toadStool | — | API design done (S152); integration pending |
 | VFIO dispatch via toadStool IPC | toadStool + coralReef | PFIFO channel init (coralReef) | toadStool ready (S152); coralReef 6/7 VFIO tests pass |
 

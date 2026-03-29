@@ -345,7 +345,7 @@ fn test_find_interval_extrapolation_branches() {
 #[tokio::test]
 async fn test_eval_many_gpu_matches_cpu() {
     use crate::device::test_pool::test_prelude::*;
-    let Some(device) = test_gpu_device().await else {
+    let Some(device) = test_f64_device().await else {
         return;
     };
     let x = vec![0.0, 1.0, 2.0, 3.0, 4.0];

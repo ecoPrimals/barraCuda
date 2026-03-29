@@ -451,6 +451,9 @@ mod tests {
     fn f32_shader_source_valid() {
         assert!(PERLIN_F32_SHADER.contains("perlin"));
         assert!(PERLIN_F32_SHADER.contains("perm_lookup"));
-        assert!(!PERLIN_F32_SHADER.contains("f64"));
+        assert!(
+            !PERLIN_F32_SHADER.contains("enable f64;"),
+            "f32 shader must not use the f64 WGSL extension"
+        );
     }
 }

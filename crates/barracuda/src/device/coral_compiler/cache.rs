@@ -31,8 +31,8 @@ pub fn cache_native_binary(shader_hash: &str, arch: &str, binary: CoralBinary) {
 /// Find any cached native binary matching this shader hash, regardless of arch/adapter key.
 ///
 /// Used when the caller does not know the exact compilation target — for example,
-/// the sovereign dispatch path in `CoralReefDevice` which receives binaries from
-/// any coralReef-supported architecture.
+/// the sovereign dispatch path in `SovereignDevice` which receives binaries from
+/// any architecture supported by the shader compiler primal.
 #[must_use]
 pub fn cached_native_binary_any_arch(shader_hash: &str) -> Option<CoralBinary> {
     let cache = NATIVE_BINARY_CACHE

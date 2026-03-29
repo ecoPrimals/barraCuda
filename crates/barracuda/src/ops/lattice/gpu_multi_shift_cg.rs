@@ -368,6 +368,7 @@ pub fn multi_shift_cg_generic(
     let mut zeta_prev = vec![1.0; n_shifts];
     let mut zeta_curr = vec![1.0; n_shifts];
     let mut alpha_prev = 0.0_f64;
+    let mut beta_prev = 0.0_f64;
     let mut active = vec![true; n_shifts];
     let mut ap = vec![0.0; n];
 
@@ -399,13 +400,12 @@ pub fn multi_shift_cg_generic(
             }
 
             let ds = shifts[s] - shifts[0];
-            let denom = alpha.mul_add(ds, 1.0)
-                + alpha * alpha_prev * (1.0 - zeta_prev[s] / zeta_curr[s])
-                    / if active[s] {
-                        (rz / b_norm_sq.max(1e-30)).max(1e-30)
-                    } else {
-                        1e-30
-                    };
+            let shift_term = if alpha_prev.abs() > 1e-30 {
+                (alpha / alpha_prev) * beta_prev * (1.0 - zeta_curr[s] / zeta_prev[s])
+            } else {
+                0.0
+            };
+            let denom = alpha.mul_add(ds, 1.0) + shift_term;
             if denom.abs() < 1e-30 {
                 active[s] = false;
                 continue;
@@ -438,6 +438,7 @@ pub fn multi_shift_cg_generic(
         }
 
         alpha_prev = alpha;
+        beta_prev = if rz.abs() > 1e-30 { rz_new / rz } else { 0.0 };
         rz = rz_new;
 
         if rz < tol_sq {

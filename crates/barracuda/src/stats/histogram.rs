@@ -175,16 +175,18 @@ mod tests {
     #![expect(clippy::unwrap_used, reason = "tests")]
 
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available_sync;
+    use crate::device::test_pool::test_prelude::test_f64_device;
     use std::sync::Arc;
 
-    fn get_device() -> Option<Arc<WgpuDevice>> {
-        get_test_device_if_gpu_available_sync()
+    async fn get_device() -> Option<Arc<WgpuDevice>> {
+        // dispatch() selects f64 path on f64-capable devices, so require a
+        // device that passes the f64 computation probe.
+        test_f64_device().await
     }
 
     #[tokio::test]
     async fn test_histogram_uniform() {
-        let Some(device) = get_device() else {
+        let Some(device) = get_device().await else {
             return;
         };
         let hist = HistogramGpu::new(device).unwrap();
@@ -206,7 +208,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_histogram_single_bin() {
-        let Some(device) = get_device() else {
+        let Some(device) = get_device().await else {
             return;
         };
         let hist = HistogramGpu::new(device).unwrap();
@@ -225,7 +227,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_histogram_empty_error() {
-        let Some(device) = get_device() else {
+        let Some(device) = get_device().await else {
             return;
         };
         let hist = HistogramGpu::new(device).unwrap();
@@ -236,7 +238,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_histogram_zero_bins_error() {
-        let Some(device) = get_device() else {
+        let Some(device) = get_device().await else {
             return;
         };
         let hist = HistogramGpu::new(device).unwrap();

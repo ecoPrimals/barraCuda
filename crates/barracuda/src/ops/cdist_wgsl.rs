@@ -219,6 +219,7 @@ pub fn compute_distances_f64_gpu(
 mod tests {
     use super::*;
     use crate::device::test_pool::get_test_device_if_gpu_available;
+    use crate::device::test_pool::test_prelude::test_f64_device;
 
     #[tokio::test]
     async fn test_cdist_euclidean() {
@@ -264,7 +265,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cdist_f64_euclidean() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = test_f64_device().await else {
             return;
         };
         // 2 points in 3D: (1,2,3) and (4,6,3)

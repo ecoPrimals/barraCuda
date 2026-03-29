@@ -386,17 +386,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — Deep Debt Sprint 4: Sovereign Wiring & Zero-Copy Evolution (Mar 15 2026)
 
-- **CoralReefDevice wired to toadStool dispatch**: Evolved from error-returning
-  stub to real JSON-RPC dispatch. `detect_dispatch_addr()` discovers toadStool
+- **SovereignDevice (then CoralReefDevice) wired to dispatch primal**: Evolved from error-returning
+  stub to real JSON-RPC dispatch. `detect_dispatch_addr()` discovers dispatch primal
   via capability-based scanning of `$XDG_RUNTIME_DIR/ecoPrimals/*.json` for
   `compute.dispatch` capability, with `BARRACUDA_DISPATCH_ADDR` env override.
-  `submit_to_toadstool()` sends compiled binaries to `compute.dispatch.submit`.
-- **Buffer staging implemented**: `CoralReefDevice` now stages buffers locally
+  `submit_to_dispatch()` sends compiled binaries to `compute.dispatch.submit`.
+- **Buffer staging implemented**: `SovereignDevice` now stages buffers locally
   in `BytesMut` maps with upload/download through `staged_buffers`. Replaces
   empty no-op upload/download stubs.
 - **`dispatch_compute` uses Entry API**: Evolved from `contains_key` + `insert`
   to idiomatic `HashMap::Entry` pattern (fixes clippy `map_entry` lint).
-- **Default impl for CoralReefDevice**: Added `Default` trait (fixes clippy
+- **Default impl for SovereignDevice**: Added `Default` trait (fixes clippy
   `new_without_default` lint).
 - **`# Errors` doc sections**: Added to `with_auto_device()` and `new_disabled()`
   (fixes clippy `missing_errors_doc` lint).
@@ -431,7 +431,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   path internally.
 - **`--all-features` clippy fixed**: Added `is_coral_available()` to
   `coral_compiler/mod.rs`, `with_auto_device()` and `has_dispatch()` to
-  `CoralReefDevice`. Sovereign-dispatch feature now compiles cleanly.
+  `SovereignDevice` (then `CoralReefDevice`). Sovereign-dispatch feature now compiles cleanly.
 - **Codebase audit**: Zero archive code, zero dead scripts, zero TODO/FIXME
   in production code, zero files over 1000 lines, zero .bak/.tmp debris.
 
@@ -696,14 +696,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`ComputeDispatch<'a, B: GpuBackend>`**: Now generic over backend, defaulting to
   `WgpuDevice`. All existing callers compile unchanged — type parameter is inferred.
   `submit()` delegates to `GpuBackend::dispatch_compute()`.
-- **`CoralReefDevice` scaffold** (`device::coral_reef_device`): Behind `sovereign-dispatch`
+- **`SovereignDevice` scaffold** (`device::sovereign_device`): Behind `sovereign-dispatch`
   feature flag. Implements `GpuBackend` with stub methods that return clear error messages
   pointing to `SOVEREIGN_PIPELINE_TRACKER.md`. Zero unsafe. Now uses IPC-first architecture
-  (JSON-RPC to coralReef for compilation + toadStool for dispatch).
-- **`sovereign-dispatch` feature flag**: Added to `Cargo.toml`. Enables `CoralReefDevice`
+  (JSON-RPC to shader.compile primal + compute.dispatch primal).
+- **`sovereign-dispatch` feature flag**: Added to `Cargo.toml`. Enables `SovereignDevice`
   module and re-export. Requires `gpu` feature during transition period.
 - **`SOVEREIGN_PIPELINE_TRACKER.md`**: New root tracking doc for the sovereign pipeline —
-  P0 blocker (CoralReefDevice), libc/musl → rustix evolution (toadStool-led), cross-primal
+  P0 blocker (SovereignDevice), libc/musl → rustix evolution, cross-primal
   dependency matrix, prioritized remaining work, cross-compilation target matrix.
 
 ### Added — Plasma Physics Absorption and Deep Debt (Mar 8 2026)

@@ -137,3 +137,43 @@ impl QualityFilterGpu {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_config_sane() {
+        let c = QualityConfig::default();
+        assert_eq!(c.leading_min_quality, 3);
+        assert_eq!(c.trailing_min_quality, 3);
+        assert_eq!(c.window_min_quality, 15);
+        assert_eq!(c.window_size, 4);
+        assert_eq!(c.min_length, 36);
+        assert_eq!(c.phred_offset, 33, "Sanger/Illumina 1.8+ default");
+    }
+
+    #[test]
+    fn config_clone_round_trips() {
+        let c = QualityConfig {
+            leading_min_quality: 10,
+            trailing_min_quality: 20,
+            window_min_quality: 25,
+            window_size: 8,
+            min_length: 50,
+            phred_offset: 64,
+        };
+        let c2 = c.clone();
+        assert_eq!(c.leading_min_quality, c2.leading_min_quality);
+        assert_eq!(c.phred_offset, c2.phred_offset);
+    }
+
+    #[test]
+    fn params_struct_layout() {
+        assert_eq!(
+            std::mem::size_of::<QualityFilterParams>(),
+            32,
+            "8 × u32 = 32 bytes for uniform alignment"
+        );
+    }
+}

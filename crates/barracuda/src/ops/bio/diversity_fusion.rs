@@ -175,7 +175,7 @@ pub fn diversity_fusion_cpu(abundances: &[f64], n_species: usize) -> Vec<Diversi
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
+    use crate::device::test_pool::test_prelude::test_f64_device;
 
     const TOL: f64 = 1e-12;
 
@@ -253,7 +253,7 @@ mod tests {
 
     #[tokio::test]
     async fn gpu_parity() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = test_f64_device().await else {
             return;
         };
 

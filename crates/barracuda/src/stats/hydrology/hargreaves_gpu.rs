@@ -81,11 +81,11 @@ impl HargreavesBatchGpu {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool;
+    use crate::device::test_pool::test_prelude::test_f64_device;
 
     #[tokio::test]
     async fn test_hargreaves_batch_gpu_dispatch() {
-        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
+        let Some(device) = test_f64_device().await else {
             return;
         };
         let Ok(gpu) = HargreavesBatchGpu::new(device) else {

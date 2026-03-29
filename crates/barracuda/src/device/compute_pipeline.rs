@@ -8,7 +8,7 @@
 //!
 //! `ComputeDispatch` is generic over `GpuBackend`, defaulting to `WgpuDevice`.
 //! Existing callers need no changes — the type parameter is inferred. Future
-//! backends (e.g. `CoralReefDevice`) work through the same builder.
+//! backends (e.g. `SovereignDevice`) work through the same builder.
 //!
 //! # Example
 //!

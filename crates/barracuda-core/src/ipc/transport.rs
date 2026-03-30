@@ -127,6 +127,65 @@ impl IpcServer {
         Ok(())
     }
 
+    /// Serve the tarpc binary RPC endpoint on a Unix domain socket.
+    ///
+    /// Transport parity with `serve_tarpc` (TCP) — both JSON-RPC and tarpc
+    /// are now available on Unix sockets for local composition without TCP
+    /// overhead. Uses `serde_transport::new` over a `UnixStream` split.
+    #[cfg(unix)]
+    pub async fn serve_tarpc_unix(&self, path: &std::path::Path) -> Result<()> {
+        use crate::rpc::{BarraCudaServer, BarraCudaService};
+        use futures::StreamExt;
+        use tarpc::server::{self, Channel};
+        use tokio_serde::formats::Json;
+
+        if path.exists() {
+            std::fs::remove_file(path)?;
+        }
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        let listener = tokio::net::UnixListener::bind(path)?;
+        tracing::info!("barraCuda tarpc listening on unix://{}", path.display());
+
+        let server = BarraCudaServer::new(Arc::clone(&self.primal));
+
+        loop {
+            tokio::select! {
+                result = listener.accept() => {
+                    let (stream, _) = result?;
+                    let srv = server.clone();
+                    tokio::spawn(async move {
+                        let transport = tarpc::serde_transport::new(
+                            tokio_util::codec::LengthDelimitedCodec::builder()
+                                .max_frame_length(max_frame_bytes())
+                                .new_framed(stream),
+                            Json::default(),
+                        );
+                        let channel = server::BaseChannel::with_defaults(transport);
+                        channel
+                            .execute(srv.serve())
+                            .for_each(|response| {
+                                tokio::spawn(response);
+                                async {}
+                            })
+                            .await;
+                    });
+                }
+                () = shutdown_signal() => {
+                    tracing::info!("Shutdown signal received, stopping tarpc Unix server");
+                    break;
+                }
+            }
+        }
+
+        if path.exists() {
+            std::fs::remove_file(path).ok();
+        }
+        Ok(())
+    }
+
     /// Start listening on TCP (JSON-RPC 2.0) with graceful shutdown on
     /// SIGINT/SIGTERM per wateringHole `UNIBIN_ARCHITECTURE_STANDARD.md`.
     pub async fn serve_tcp(&self, addr: &str) -> Result<()> {
@@ -201,17 +260,34 @@ impl IpcServer {
 
     /// Resolve the default IPC socket path per wateringHole `PRIMAL_IPC_PROTOCOL`.
     ///
-    /// Path: `$XDG_RUNTIME_DIR/biomeos/barracuda-{family_id}.sock`
-    /// Family ID: `$BIOMEOS_FAMILY_ID` or `"default"`.
+    /// Standard path: `$XDG_RUNTIME_DIR/biomeos/barracuda.sock`
+    /// With family ID: `$XDG_RUNTIME_DIR/biomeos/barracuda-{family_id}.sock`
     /// Fallback base: `$TMPDIR/biomeos/` via `std::env::temp_dir()`.
+    ///
+    /// Per `PRIMAL_IPC_PROTOCOL.md`: socket at `$XDG_RUNTIME_DIR/biomeos/<primal>.sock`.
+    /// The family suffix is only added when `BIOMEOS_FAMILY_ID` is explicitly set,
+    /// ensuring the default path matches the ecosystem discovery convention.
     #[cfg(unix)]
     pub fn default_socket_path() -> std::path::PathBuf {
-        let family_id =
-            std::env::var("BIOMEOS_FAMILY_ID").unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_owned());
         let base = std::env::var("XDG_RUNTIME_DIR")
             .map_or_else(|_| std::env::temp_dir(), std::path::PathBuf::from);
-        base.join("biomeos")
-            .join(format!("barracuda-{family_id}.sock"))
+        let sock_name = match std::env::var("BIOMEOS_FAMILY_ID") {
+            Ok(family_id) if family_id != DEFAULT_FAMILY_ID => {
+                format!("barracuda-{family_id}.sock")
+            }
+            _ => "barracuda.sock".to_owned(),
+        };
+        base.join("biomeos").join(sock_name)
+    }
+
+    /// Resolve the default TCP port from environment.
+    ///
+    /// Per `plasmidBin/ports.env`, each primal has a canonical TCP port assigned
+    /// via `{PRIMAL}_PORT` env var. When set, the server binds TCP alongside UDS.
+    pub fn default_tcp_port() -> Option<u16> {
+        std::env::var("BARRACUDA_PORT")
+            .ok()
+            .and_then(|v| v.parse().ok())
     }
 }
 
@@ -414,8 +490,10 @@ mod tests {
         let path = IpcServer::default_socket_path();
         let path_str = path.to_string_lossy();
         assert!(path_str.contains("biomeos"));
-        assert!(path_str.contains("barracuda-"));
-        assert!(path_str.ends_with(".sock"));
+        assert!(
+            path_str.ends_with("barracuda.sock"),
+            "default path should be barracuda.sock, got {path_str}"
+        );
     }
 
     // ─── handle_connection integration tests ───

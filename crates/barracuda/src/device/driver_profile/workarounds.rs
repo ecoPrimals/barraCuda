@@ -8,9 +8,9 @@ use super::{DriverKind, GpuArch};
 
 /// Conservative allocation limit for NVK (nouveau) to avoid kernel PTE fault.
 /// Observed on GV100/Titan V: nouveau driver faults above ~1.4 GB combined allocation.
-#[allow(
-    dead_code,
-    reason = "used by DeviceCapabilities; exercised in workarounds::tests"
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "exercised in workarounds::tests")
 )]
 pub(crate) const NVK_MAX_SAFE_ALLOCATION_BYTES: u64 = 1_200_000_000;
 
@@ -56,9 +56,9 @@ pub enum Workaround {
 }
 
 /// Detect which workarounds apply for the given driver/arch combination.
-#[allow(
-    dead_code,
-    reason = "used by DeviceCapabilities; exercised in workarounds::tests"
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "exercised in workarounds::tests")
 )]
 pub(crate) fn detect_workarounds(driver: DriverKind, arch: GpuArch) -> Vec<Workaround> {
     let mut w = Vec::new();

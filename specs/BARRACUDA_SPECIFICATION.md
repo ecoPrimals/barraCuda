@@ -1,7 +1,7 @@
 # barraCuda Specification
 
 **Version**: 0.3.11
-**Date**: March 21, 2026
+**Date**: March 30, 2026
 **Status**: Active — standalone primal, fully untangled from toadStool (S89)
 **Origin**: toadStool S88 budding proposal
 
@@ -62,7 +62,7 @@ barraCuda/
 │       ├── src/
 │       │   ├── lib.rs        # BarraCudaPrimal: start/stop/health, tensor store
 │       │   ├── ipc/          # JSON-RPC 2.0 server + transport
-│       │   ├── rpc.rs        # tarpc service (10 endpoints, full JSON-RPC parity)
+│       │   ├── rpc.rs        # tarpc service (14 endpoints, JSON-RPC parity)
 │       │   └── bin/barracuda.rs  # UniBin CLI
 │       └── tests/            # IPC E2E integration tests
 └── specs/                    # Architecture specs
@@ -98,18 +98,55 @@ Three-config check (all must pass):
 ### Primal interface
 
 barraCuda exposes a dual-protocol IPC interface (JSON-RPC 2.0 primary, tarpc
-binary secondary). Both protocols serve the same 10 endpoints with full
-parameter parity:
+binary secondary). JSON-RPC serves 30 semantic `{domain}.{operation}` methods;
+tarpc mirrors the original 14 with full parameter parity:
 
 ```
+# Ecosystem probes (non-negotiable)
+health.liveness       → {status: "alive"}
+health.readiness      → {ready, state}
+health.check          → {name, version, status}
+capabilities.list     → {provides, domains, methods, hardware}
+
+# Primal identity
+primal.info           → {primal, version, protocol, namespace, license}
+primal.capabilities   → (alias for capabilities.list)
+
+# Device
 device.list           → {devices: [{name, vendor, device_type, backend, driver}]}
 device.probe          → {available, max_buffer_size, max_storage_buffers, ...}
-health.check          → {name, version, status}
 tolerances.get        → {name} → {name, abs_tol, rel_tol}
 validate.gpu_stack    → {gpu_available, status, message}
+
+# Compute
 compute.dispatch      → {op, shape?, tensor_id?} → {status, tensor_id?, data?}
+
+# Math & activation (CPU — ludoSpring composition)
+math.sigmoid          → {data: [f64]} → {result: [f64]}
+math.log2             → {data: [f64]} → {result: [f64]}
+activation.fitts      → {distance, width, a?, b?} → {movement_time, index_of_difficulty}
+activation.hick       → {n_choices, a?, b?} → {reaction_time, information_bits}
+
+# Statistics (CPU)
+stats.mean            → {data: [f64]} → {result: f64}
+stats.std_dev         → {data: [f64]} → {result: f64}
+stats.weighted_mean   → {values, weights} → {result: f64}
+
+# Noise & RNG (CPU)
+noise.perlin2d        → {x, y} → {result: f64}
+noise.perlin3d        → {x, y, z} → {result: f64}
+rng.uniform           → {n?, min?, max?, seed?} → {result: [f64]}
+
+# Tensor (GPU)
 tensor.create         → {shape, dtype?, data?} → {tensor_id, shape, elements, dtype}
 tensor.matmul         → {lhs_id, rhs_id} → {result_id, shape}
+tensor.add            → {tensor_id, other_id|scalar} → {result_id, shape}
+tensor.scale          → {tensor_id, scalar} → {result_id, shape}
+tensor.clamp          → {tensor_id, min, max} → {result_id, shape}
+tensor.reduce         → {tensor_id, op} → {result, op}
+tensor.sigmoid        → {tensor_id} → {result_id, shape}
+
+# FHE
 fhe.ntt               → {modulus, degree, root_of_unity, coefficients} → {result}
 fhe.pointwise_mul     → {modulus, degree, a, b} → {result}
 ```

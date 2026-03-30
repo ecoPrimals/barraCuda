@@ -286,12 +286,13 @@ mod tests {
             WGSL_SUM_REDUCE_SUBGROUP_F64.contains("subgroupAdd"),
             "subgroup reduce shader must use subgroupAdd"
         );
-        let has_directive = WGSL_SUM_REDUCE_SUBGROUP_F64
-            .lines()
-            .any(|l| {
-                let trimmed = l.trim();
-                !trimmed.starts_with("//") && trimmed.contains("enable subgroups;")
-            });
-        assert!(!has_directive, "must not contain enable subgroups; directive");
+        let has_directive = WGSL_SUM_REDUCE_SUBGROUP_F64.lines().any(|l| {
+            let trimmed = l.trim();
+            !trimmed.starts_with("//") && trimmed.contains("enable subgroups;")
+        });
+        assert!(
+            !has_directive,
+            "must not contain enable subgroups; directive"
+        );
     }
 }

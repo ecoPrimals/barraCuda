@@ -184,7 +184,10 @@ mod tests {
         let proportions = vec![0.5, 0.3, 0.2];
         let h = shannon_entropy_cpu(&proportions);
         let d = simpson_diversity_cpu(&proportions);
-        assert!(h > 0.0, "Shannon entropy must be positive for mixed community");
+        assert!(
+            h > 0.0,
+            "Shannon entropy must be positive for mixed community"
+        );
         assert!(
             d > 0.0 && d < 1.0,
             "Simpson diversity must be in (0,1) for mixed community"
@@ -200,7 +203,7 @@ mod tests {
         };
 
         let stride: u32 = 8;
-        let communities = vec![
+        let communities = [
             vec![0.25, 0.25, 0.25, 0.25, 0.0, 0.0, 0.0, 0.0],
             vec![0.5, 0.3, 0.1, 0.05, 0.03, 0.01, 0.005, 0.005],
             vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],

@@ -26,8 +26,8 @@ results.
 
 ### Key capabilities
 
-- **823 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,100+ Rust source files**, 42 integration test files, 4,230+ tests (3,650+ lib + 214 core + 8 e2e + integration + doctests)
+- **824 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
+- **1,100+ Rust source files**, 42 integration test files, 4,000+ tests (3,785+ lib + 214 core + 8 e2e + integration + doctests)
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -42,7 +42,7 @@ results.
 - **Bioinformatics** — Smith-Waterman, HMM, phylogenetics, bipartition encoding, genomic ops
 - **ML ops** — matmul, softmax, attention, ESN reservoir computing
 - **Sovereign shader compilation** — naga 28 IR optimizer, SPIR-V passthrough
-- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with 15 bare semantic `{domain}.{operation}` methods per wateringHole standard v2.2.0
+- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with 30 bare semantic `{domain}.{operation}` methods per wateringHole standard v2.2.0
 - **UniBin CLI** — single `barracuda` binary with `server --port <PORT>`, `service`, `doctor`, `validate`, `version`
 
 ### Design principles
@@ -58,6 +58,7 @@ results.
 
 ## Recent
 
+- **Sprint 23**: ludoSpring V35 gap resolution — 15 new IPC methods wired (math.sigmoid, math.log2, stats.mean, stats.std_dev, stats.weighted_mean, noise.perlin2d, noise.perlin3d, rng.uniform, activation.fitts, activation.hick, tensor.add, tensor.scale, tensor.clamp, tensor.reduce, tensor.sigmoid). 30 total JSON-RPC methods. Socket path fixed to `barracuda.sock` per PRIMAL_IPC_PROTOCOL. Dual-transport startup (UDS + TCP via `BARRACUDA_PORT` env var). All `#[allow(` migrated to `#[expect(` or `cfg_attr` in both crates. Release binary 4.7MB. 3,808 tests, all quality gates green.
 - **Sprint 22**: Spring absorption & deep debt evolution — Critical fermion force sign fix (neg_eta convention) in 2 staggered/pseudofermion WGSL shaders. 8 WGSL shaders absorbed from hotSpring: 5 multi-shift CG (Jegerlehner zeta, shifted alpha/xr/x/p) + 3 GPU-resident (Hamiltonian assembly, fermion action, Metropolis). `gpu_multi_shift_cg.rs` orchestration with generic CPU reference. `gpu_resident_observables.rs` with O(1)-readback pipelines. 6 RHMC/lattice tolerance constants (42 total). f32 Perlin 2D shader + API for ludoSpring. 32-bit LCG contract for ludoSpring. Lanczos eigenvector pipeline with Ritz vector Q×z back-transform for groundSpring. 816 WGSL shaders, all quality gates green.
 - **Sprint 21**: Compliance & coverage deep evolution — `health.liveness`, `health.readiness`, `capabilities.list` endpoints implemented per wateringHole Semantic Method Naming Standard v2.2.0 with all required aliases (`ping`, `health`, `status`, `check`, `capability.list`). Validation-first handler refactoring across JSON-RPC and tarpc layers (validate inputs before device check). `--port` CLI flag per UniBin standard. `barracuda-spirv` unsafe code evolved to `#![deny(unsafe_code)]` + targeted `#[allow]`. barracuda-core coverage 59.33% → 72.83% line (+13.5pp), 214 unit tests + 8 e2e (up from 148). rpc.rs refactored to extract tests (861→572 lines). All quality gates green.
 - **Sprint 20**: FMA evolution & lint promotion — 625 `suboptimal_flops` sites evolved to `mul_add()` for hardware FMA precision. 4 lints promoted from `allow` to `warn`: `suboptimal_flops` (415→0), `use_self` (332→0), `tuple_array_conversions` (2→0), `needless_range_loop` (45→0). All `needless_range_loop` sites evolved to idiomatic iterators. 232 files changed, 3,623+ tests pass, zero clippy errors.

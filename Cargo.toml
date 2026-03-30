@@ -64,6 +64,10 @@ clap = { version = "4", features = ["derive"] }
 tarpc = { version = "0.37", features = ["tokio1", "serde-transport", "serde-transport-json", "tcp"] }
 futures = "0.3"
 
+# Framing for tarpc Unix-socket transport (already a transitive dep via tarpc)
+tokio-util = { version = "0.7", features = ["codec"] }
+tokio-serde = { version = "0.9", features = ["json"] }
+
 # Block-on for sync contexts (wgpu 28 enumerate_adapters is async)
 pollster = "0.3"
 

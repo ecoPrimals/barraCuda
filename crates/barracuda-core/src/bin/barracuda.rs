@@ -51,8 +51,14 @@ enum Commands {
         #[arg(long)]
         tarpc_bind: Option<String>,
 
+        /// Unix socket path for tarpc binary RPC (default: disabled).
+        /// When set, serves tarpc over a Unix socket alongside TCP and JSON-RPC.
+        #[cfg(unix)]
+        #[arg(long)]
+        tarpc_unix: Option<String>,
+
         /// Unix socket path override. Defaults to
-        /// `$XDG_RUNTIME_DIR/biomeos/barracuda-{family_id}.sock`.
+        /// `$XDG_RUNTIME_DIR/biomeos/barracuda.sock`.
         #[cfg(unix)]
         #[arg(long, num_args = 0..=1, default_missing_value = "__default__")]
         unix: Option<String>,
@@ -118,6 +124,8 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
             bind,
             tarpc_bind,
             #[cfg(unix)]
+            tarpc_unix,
+            #[cfg(unix)]
             unix,
             #[cfg(unix)]
             no_unix,
@@ -126,6 +134,8 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
             run_server(
                 effective_bind,
                 tarpc_bind,
+                #[cfg(unix)]
+                tarpc_unix,
                 #[cfg(unix)]
                 unix,
                 #[cfg(unix)]
@@ -150,6 +160,7 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
 async fn run_server(
     bind: Option<String>,
     tarpc_bind: Option<String>,
+    #[cfg(unix)] tarpc_unix: Option<String>,
     #[cfg(unix)] unix: Option<String>,
     #[cfg(unix)] no_unix: bool,
 ) -> Result<(), barracuda_core::error::BarracudaCoreError> {
@@ -166,14 +177,25 @@ async fn run_server(
         let tarpc_addr = tarpc_addr.clone();
         tokio::spawn(async move {
             if let Err(e) = tarpc_server.serve_tarpc(&tarpc_addr).await {
-                tracing::error!("tarpc server error: {e}");
+                tracing::error!("tarpc TCP server error: {e}");
+            }
+        });
+    }
+
+    #[cfg(unix)]
+    if let Some(ref tarpc_sock) = tarpc_unix {
+        let tarpc_server = barracuda_core::ipc::IpcServer::new(Arc::clone(&primal));
+        let tarpc_path = std::path::PathBuf::from(tarpc_sock);
+        tokio::spawn(async move {
+            if let Err(e) = tarpc_server.serve_tarpc_unix(&tarpc_path).await {
+                tracing::error!("tarpc Unix server error: {e}");
             }
         });
     }
 
     #[cfg(unix)]
     {
-        let use_unix = !no_unix && bind.is_none();
+        let use_unix = !no_unix;
         let explicit_unix = unix.is_some();
 
         if use_unix || explicit_unix {
@@ -181,7 +203,24 @@ async fn run_server(
                 Some(p) if p != "__default__" => std::path::PathBuf::from(p),
                 _ => barracuda_core::ipc::IpcServer::default_socket_path(),
             };
-            write_discovery_file(None, tarpc_bind.as_deref(), Some(&sock_path));
+
+            // Per plasmidBin convention: also bind TCP alongside UDS when a
+            // port is available (--port, --bind, or BARRACUDA_PORT env var).
+            let tcp_addr = bind.or_else(|| {
+                barracuda_core::ipc::IpcServer::default_tcp_port().map(|p| format!("127.0.0.1:{p}"))
+            });
+            if let Some(tcp) = tcp_addr {
+                let tcp_server = barracuda_core::ipc::IpcServer::new(Arc::clone(&primal));
+                write_discovery_file(Some(&tcp), tarpc_bind.as_deref(), Some(&sock_path));
+                tokio::spawn(async move {
+                    if let Err(e) = tcp_server.serve_tcp(&tcp).await {
+                        tracing::error!("TCP server error: {e}");
+                    }
+                });
+            } else {
+                write_discovery_file(None, tarpc_bind.as_deref(), Some(&sock_path));
+            }
+
             server.serve_unix(&sock_path, None::<fn()>).await?;
             remove_discovery_file();
             return Ok(());

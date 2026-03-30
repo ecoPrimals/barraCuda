@@ -19,6 +19,10 @@ pub struct SphericalHarmonicsF64 {
     device: Arc<WgpuDevice>,
 }
 
+#[expect(
+    dead_code,
+    reason = "CPU reference path for GPU parity validation in tests"
+)]
 impl SphericalHarmonicsF64 {
     /// Creates a new f64 spherical harmonics evaluator for the given WGPU device.
     /// # Errors
@@ -55,10 +59,6 @@ impl SphericalHarmonicsF64 {
         self.ylm_gpu(theta_phi, l, m)
     }
 
-    #[allow(
-        dead_code,
-        reason = "CPU reference implementation for GPU parity validation"
-    )]
     fn ylm_cpu(&self, theta_phi: &[f64], l: u32, m: i32) -> Vec<f64> {
         let size = theta_phi.len() / 2;
         let _ = m.unsigned_abs(); // Reserved for GPU path validation
@@ -72,10 +72,6 @@ impl SphericalHarmonicsF64 {
         result
     }
 
-    #[allow(
-        dead_code,
-        reason = "CPU reference implementation for GPU parity validation"
-    )]
     fn factorial(n: u32) -> f64 {
         match n {
             0 | 1 => 1.0,
@@ -83,10 +79,6 @@ impl SphericalHarmonicsF64 {
         }
     }
 
-    #[allow(
-        dead_code,
-        reason = "CPU reference implementation for GPU parity validation"
-    )]
     fn double_factorial(m: u32) -> f64 {
         if m == 0 {
             return 1.0;
@@ -94,10 +86,6 @@ impl SphericalHarmonicsF64 {
         (1..=m).map(|k| (2 * k - 1) as f64).product()
     }
 
-    #[allow(
-        dead_code,
-        reason = "CPU reference implementation for GPU parity validation"
-    )]
     fn assoc_legendre(l: u32, m: u32, x: f64) -> f64 {
         if m > l {
             return 0.0;
@@ -138,10 +126,6 @@ impl SphericalHarmonicsF64 {
         pl_m1
     }
 
-    #[allow(
-        dead_code,
-        reason = "CPU reference implementation for GPU parity validation"
-    )]
     fn ylm_scalar(l: u32, m: i32, theta: f64, phi: f64) -> f64 {
         let abs_m = m.unsigned_abs();
         if abs_m > l {

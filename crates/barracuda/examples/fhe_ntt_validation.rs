@@ -92,8 +92,6 @@ async fn main() -> Result<(), BarracudaError> {
     println!("Root of unity: {root_small}");
     println!("Inverse root: {inv_root_small}");
 
-    // Convert u64 polynomial to u32 pairs (GPU format)
-    #[allow(clippy::cast_possible_truncation)]
     let poly_u32: Vec<u32> = poly_small
         .iter()
         .flat_map(|&x| vec![(x & 0xFFFF_FFFF) as u32, (x >> 32) as u32])
@@ -193,8 +191,6 @@ async fn main() -> Result<(), BarracudaError> {
     let root_large = 3u64; // Primitive 4096-th root of unity mod 12289
     let inv_root_large = compute_inverse_root(degree_large as u32, modulus_large, root_large);
 
-    // Convert to u32 pairs
-    #[allow(clippy::cast_possible_truncation)]
     let a_u32: Vec<u32> = a_large
         .iter()
         .flat_map(|&x| vec![(x & 0xFFFF_FFFF) as u32, (x >> 32) as u32])

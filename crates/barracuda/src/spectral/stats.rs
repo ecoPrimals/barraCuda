@@ -176,7 +176,7 @@ fn compute_mean_ipr(eigenvectors: &[f64], n: usize) -> f64 {
     total_ipr / n as f64
 }
 
-#[cfg_attr(not(feature = "gpu"), allow(dead_code))]
+#[cfg_attr(not(feature = "gpu"), expect(dead_code))]
 fn compute_spectral_entropy(eigenvalues: &[f64]) -> f64 {
     let total: f64 = eigenvalues.iter().map(|x| x.abs()).sum();
     if total < 1e-300 {

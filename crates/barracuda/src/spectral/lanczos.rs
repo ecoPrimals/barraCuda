@@ -7,9 +7,9 @@
 //!
 //! Provenance: hotSpring v0.6.0 (Kachkovskiy spectral theory)
 
-use crate::rng::LcgRng;
 use super::sparse::SpectralCsrMatrix;
 use super::tridiag::{find_all_eigenvalues, tridiag_eigenvectors};
+use crate::rng::LcgRng;
 
 /// Result of the Lanczos algorithm: a tridiagonal representation of the
 /// original matrix restricted to the Krylov subspace.

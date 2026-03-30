@@ -7,7 +7,11 @@
 /// Minimal float trait: the subset of float operations needed by CPU
 /// reference implementations. Implemented for `f32` and `f64`.
 pub trait CpuFloat:
-    Copy + Default + std::ops::Add<Output = Self> + std::ops::Sub<Output = Self> + std::ops::Mul<Output = Self>
+    Copy
+    + Default
+    + std::ops::Add<Output = Self>
+    + std::ops::Sub<Output = Self>
+    + std::ops::Mul<Output = Self>
 {
     /// Fused multiply-add: `self * a + b`.
     #[must_use]

@@ -68,6 +68,10 @@ pub struct BrayCurtisF64 {
     pipeline: wgpu::ComputePipeline,
 }
 
+#[expect(
+    dead_code,
+    reason = "CPU reference path for GPU parity validation in tests"
+)]
 impl BrayCurtisF64 {
     /// Create a new Bray-Curtis GPU operator
     ///
@@ -237,10 +241,6 @@ impl BrayCurtisF64 {
     }
 
     /// CPU fallback for small inputs
-    #[allow(
-        dead_code,
-        reason = "CPU reference implementation for GPU parity validation"
-    )]
     fn condensed_distance_matrix_cpu(
         &self,
         samples: &[f64],
@@ -283,10 +283,6 @@ impl BrayCurtisF64 {
 }
 
 /// CPU reference: Bray-Curtis distance between samples i and j
-#[allow(
-    dead_code,
-    reason = "CPU reference implementation for GPU parity validation"
-)]
 fn bray_curtis_cpu(samples: &[f64], i: usize, j: usize, n_features: usize) -> f64 {
     let base_i = i * n_features;
     let base_j = j * n_features;

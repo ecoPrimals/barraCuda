@@ -695,7 +695,6 @@ pub fn wegner_block_4d(original: &SpectralCsrMatrix, l: usize) -> SpectralCsrMat
     }
 }
 
-
 #[cfg(test)]
 #[path = "anderson_tests.rs"]
 mod tests;

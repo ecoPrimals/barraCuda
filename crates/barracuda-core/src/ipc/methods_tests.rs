@@ -80,7 +80,7 @@ fn normalize_empty() {
 
 #[test]
 fn registered_methods_count() {
-    assert_eq!(REGISTERED_METHODS.len(), 15);
+    assert_eq!(REGISTERED_METHODS.len(), 30);
 }
 
 #[test]

@@ -27,6 +27,10 @@ pub struct LegendreF64 {
     device: Arc<WgpuDevice>,
 }
 
+#[expect(
+    dead_code,
+    reason = "CPU reference path for GPU parity validation in tests"
+)]
 impl LegendreF64 {
     /// Create new Legendre f64 polynomial operation
     /// # Errors
@@ -78,28 +82,16 @@ impl LegendreF64 {
         self.execute_kernel(x, n, m, true)
     }
 
-    #[allow(
-        dead_code,
-        reason = "CPU reference implementation for GPU parity validation"
-    )]
     fn legendre_cpu(&self, x: &[f64], n: u32) -> Vec<f64> {
         x.iter().map(|&xi| Self::legendre_scalar(n, xi)).collect()
     }
 
-    #[allow(
-        dead_code,
-        reason = "CPU reference implementation for GPU parity validation"
-    )]
     fn assoc_legendre_cpu(&self, x: &[f64], n: u32, m: u32) -> Vec<f64> {
         x.iter()
             .map(|&xi| Self::assoc_legendre_scalar(n, m, xi))
             .collect()
     }
 
-    #[allow(
-        dead_code,
-        reason = "CPU reference implementation for GPU parity validation"
-    )]
     fn legendre_scalar(n: u32, x: f64) -> f64 {
         if n == 0 {
             return 1.0;
@@ -122,10 +114,6 @@ impl LegendreF64 {
         p_curr
     }
 
-    #[allow(
-        dead_code,
-        reason = "CPU reference implementation for GPU parity validation"
-    )]
     fn double_factorial(m: u32) -> f64 {
         if m == 0 {
             return 1.0;
@@ -137,10 +125,6 @@ impl LegendreF64 {
         r
     }
 
-    #[allow(
-        dead_code,
-        reason = "CPU reference implementation for GPU parity validation"
-    )]
     fn assoc_legendre_scalar(n: u32, m: u32, x: f64) -> f64 {
         if m > n {
             return 0.0;

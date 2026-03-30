@@ -231,8 +231,7 @@ mod tests {
 
     #[tokio::test]
     async fn gpu_vs_cpu_parity() {
-        let Some(device) =
-            crate::device::test_pool::get_test_device_if_f64_gpu_available().await
+        let Some(device) = crate::device::test_pool::get_test_device_if_f64_gpu_available().await
         else {
             return;
         };

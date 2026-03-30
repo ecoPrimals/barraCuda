@@ -45,6 +45,10 @@ pub struct BesselI0F64 {
     device: Arc<WgpuDevice>,
 }
 
+#[expect(
+    dead_code,
+    reason = "CPU reference path for GPU parity validation in tests"
+)]
 impl BesselI0F64 {
     /// Creates a new I₀ Bessel function evaluator for the given WGPU device.
     ///
@@ -133,18 +137,10 @@ impl BesselI0F64 {
         self.device.read_buffer_f64(&output_buf, size)
     }
 
-    #[allow(
-        dead_code,
-        reason = "CPU reference implementation for GPU parity validation"
-    )]
     fn i0_cpu(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| Self::i0_scalar(xi)).collect()
     }
 
-    #[allow(
-        dead_code,
-        reason = "CPU reference implementation for GPU parity validation"
-    )]
     fn i0_scalar(x: f64) -> f64 {
         let ax = x.abs();
         if ax < 3.75 {

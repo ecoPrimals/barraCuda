@@ -548,6 +548,11 @@ impl GpuBackend for SovereignDevice {
         let staged = self.staged_buffers.lock().map_err(|e| {
             BarracudaError::Device(format!("SovereignDevice: staged lock poisoned: {e}"))
         })?;
+        // `copy_from_slice` is required here: staged buffers remain mutable
+        // (`BytesMut`) for future `upload()` calls, so we cannot `freeze()`
+        // in-place. The copy is bounded by buffer size and only occurs on
+        // explicit download requests. The wgpu backend achieves true zero-copy
+        // via GPU buffer mapping; this path is for the sovereign staging layer.
         staged
             .get(&buffer.id)
             .map(|b| bytes::Bytes::copy_from_slice(b))

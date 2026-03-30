@@ -20,6 +20,8 @@ blake3 = { workspace = true }
 clap = { workspace = true }
 tarpc = { workspace = true }
 futures = { workspace = true }
+tokio-util = { workspace = true }
+tokio-serde = { workspace = true }
 
 [lints.clippy]
 all = { level = "warn", priority = -1 }

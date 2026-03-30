@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // wright_fisher_step_f64.wgsl — Wright-Fisher drift + selection (f64)
-
-enable f64;
 //
 // Each thread handles one locus across all populations:
 //   1. Selection: p' = p * w_A / (p * w_A + (1-p) * w_a)

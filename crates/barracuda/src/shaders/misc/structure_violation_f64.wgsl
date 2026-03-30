@@ -8,8 +8,6 @@
 // Bindings: @0 positions[N*3], @1 bond_pairs[B*2], @2 out_clash[N], @3 out_bond[B],
 //          @4 uniform{n_atoms, n_bonds, d_vdw}
 
-enable f64;
-
 struct StructureViolationParams {
     n_atoms: u32,
     n_bonds: u32,

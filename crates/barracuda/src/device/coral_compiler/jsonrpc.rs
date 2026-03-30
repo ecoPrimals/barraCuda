@@ -200,7 +200,7 @@ pub fn wgsl_to_spirv(wgsl: &str) -> Option<Vec<u32>> {
     let module = match naga::front::wgsl::parse_str(wgsl) {
         Ok(m) => m,
         Err(e) => {
-            tracing::debug!("coralReef: WGSL parse failed: {e}");
+            tracing::debug!("naga WGSL parse failed: {e}");
             return None;
         }
     };
@@ -212,7 +212,7 @@ pub fn wgsl_to_spirv(wgsl: &str) -> Option<Vec<u32>> {
     let info = match validator.validate(&module) {
         Ok(i) => i,
         Err(e) => {
-            tracing::debug!("coralReef: WGSL validation failed: {e}");
+            tracing::debug!("naga WGSL validation failed: {e}");
             return None;
         }
     };
@@ -226,7 +226,7 @@ pub fn wgsl_to_spirv(wgsl: &str) -> Option<Vec<u32>> {
     match naga::back::spv::write_vec(&module, &info, &options, pipeline_options) {
         Ok(words) => Some(words),
         Err(e) => {
-            tracing::debug!("coralReef: SPIR-V emit failed: {e}");
+            tracing::debug!("naga SPIR-V emit failed: {e}");
             None
         }
     }

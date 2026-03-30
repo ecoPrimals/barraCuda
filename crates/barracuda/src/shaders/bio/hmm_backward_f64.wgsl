@@ -18,8 +18,6 @@
 //
 // Dispatch: (ceil(S / 256), 1, 1) per timestep (backwards from T-2 to 0)
 
-enable f64;
-
 struct Params {
     n_states: u32,
     next_timestep: u32,

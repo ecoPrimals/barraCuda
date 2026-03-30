@@ -9,8 +9,6 @@
 // Bindings: @0 pred_pos[N*M*3], @1 true_pos[N*M*3], @2 pred_frames[N*12], @3 true_frames[N*12],
 //          @4 out[N], @5 uniform{n_residues, n_atoms, d_clamp}
 
-enable f64;
-
 struct FapeParams {
     n_residues: u32,
     n_atoms: u32,

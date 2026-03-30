@@ -65,6 +65,12 @@ Layer 4  toadStool    █████████░  S156 complete  All infra g
 - RHMC multi-shift CG + rational approximation absorbed from hotSpring (`rhmc.rs`, `rhmc_hmc.rs`)
 - `@ilp_region` annotations on high-value DF64 reduction shaders (variance, weighted_dot, mean_variance, covariance)
 
+### Recent Layer 1 Evolution (Mar 29, 2026 — Dependency Purge)
+- `num-traits` direct dependency eliminated — replaced with local `CpuFloat` trait
+- `LcgRng` PRNG consolidated from `spectral::anderson` to `crate::rng`
+- Subgroup `subgroupAdd` reduction wired as fastest-tier path in `ReduceScalarPipeline`
+- 47 WGSL `enable f64;` directives removed (compile-time preamble handles injection)
+
 ### Transitive C Boundaries (not barraCuda code)
 | Crate | Why | Evolves Via |
 |-------|-----|------------|

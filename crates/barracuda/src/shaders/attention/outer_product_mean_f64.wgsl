@@ -7,8 +7,6 @@
 //
 // Bindings: @0 a[S,N,C], @1 b[S,N,C], @2 out[N,N,C], @3 uniform{s,n,c}
 
-enable f64;
-
 struct OpmParams {
     s: u32,
     n: u32,

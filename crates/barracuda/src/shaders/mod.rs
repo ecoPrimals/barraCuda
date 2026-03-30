@@ -4,7 +4,7 @@
 //! This module provides:
 //! - **3-tier precision model**: f32 / f64 / df64 (fp48) — aligned with coralReef's `Fp64Strategy`
 //! - **Driver-aware shader preparation**: polyfill injection, ILP optimization
-//! - **CPU implementations**: Same algorithms via `num-traits` for CPU fallback
+//! - **CPU implementations**: Same algorithms via local `CpuFloat` trait for CPU fallback
 //! - **Quantized inference shaders**: INT4/INT8 dequantization and GEMV
 //!
 //! # Design Philosophy

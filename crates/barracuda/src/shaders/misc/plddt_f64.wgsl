@@ -8,8 +8,6 @@
 //
 // Bindings: @0 pred_pos[N*3], @1 true_pos[N*3], @2 out[N], @3 uniform{n_residues, cutoff}
 
-enable f64;
-
 struct PlddtParams {
     n_residues: u32,
     _pad: [u32; 3],

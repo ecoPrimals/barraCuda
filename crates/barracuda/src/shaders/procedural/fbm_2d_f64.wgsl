@@ -12,8 +12,6 @@
 //
 // Dispatch: (ceil(n_points / 256), 1, 1)
 
-enable f64;
-
 struct Params {
     n_points: u32,
     octaves: u32,

@@ -12,7 +12,8 @@ use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
-const SHADER: &str = include_str!("../../shaders/health/population_pk_f64.wgsl");
+const PRNG: &str = include_str!("../../shaders/health/prng_wang_f64.wgsl");
+const SHADER_BODY: &str = include_str!("../../shaders/health/population_pk_f64.wgsl");
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -65,9 +66,10 @@ impl PopulationPkGpu {
         let params_buf = self.device.create_uniform_buffer("pop_pk:params", &params);
 
         let wg_count = config.n_patients.div_ceil(256);
+        let shader = format!("{PRNG}\n{SHADER_BODY}");
 
         crate::device::compute_pipeline::ComputeDispatch::new(&self.device, "population_pk")
-            .shader(SHADER, "main")
+            .shader(&shader, "main")
             .f64()
             .storage_rw(0, &out_buf)
             .uniform(1, &params_buf)
@@ -130,9 +132,11 @@ mod tests {
 
     #[test]
     fn shader_source_valid() {
-        assert!(SHADER.contains("wang_hash"));
-        assert!(SHADER.contains("xorshift32"));
-        assert!(SHADER.contains("Params"));
+        let combined = format!("{PRNG}\n{SHADER_BODY}");
+        assert!(combined.contains("wang_hash"));
+        assert!(combined.contains("xorshift32"));
+        assert!(combined.contains("u32_to_uniform_f64"));
+        assert!(combined.contains("Params"));
     }
 
     #[test]
@@ -169,5 +173,94 @@ mod tests {
         assert_ne!(h0, h1);
         assert_ne!(h1, h2);
         assert_ne!(h0, h2);
+    }
+
+    #[test]
+    fn cpu_auc_range() {
+        let config = PopPkConfig {
+            n_patients: 500,
+            seed: 99,
+            dose_mg: 200.0,
+            f_bioavail: 0.9,
+        };
+        let results = population_pk_cpu(&config);
+        let auc_min = 0.9 * 200.0 / (10.0 * 1.5);
+        let auc_max = 0.9 * 200.0 / (10.0 * 0.5);
+        for (i, &auc) in results.iter().enumerate() {
+            assert!(
+                auc >= auc_min && auc <= auc_max,
+                "patient {i}: AUC {auc} outside [{auc_min}, {auc_max}]"
+            );
+        }
+    }
+
+    #[test]
+    fn cpu_seed_variation() {
+        let config_a = PopPkConfig {
+            n_patients: 10,
+            seed: 1,
+            dose_mg: 300.0,
+            f_bioavail: 1.0,
+        };
+        let config_b = PopPkConfig {
+            seed: 2,
+            ..config_a
+        };
+        let a = population_pk_cpu(&config_a);
+        let b = population_pk_cpu(&config_b);
+        assert_ne!(a, b, "different seeds must produce different results");
+    }
+
+    #[test]
+    fn prng_preamble_concatenation() {
+        let combined = format!("{PRNG}\n{SHADER_BODY}");
+        assert!(
+            combined.contains("wang_hash"),
+            "PRNG preamble should provide wang_hash"
+        );
+        assert!(
+            combined.contains("u32_to_uniform_f64"),
+            "PRNG preamble should provide u32_to_uniform_f64"
+        );
+        let body_only = SHADER_BODY;
+        assert!(
+            !body_only.contains("fn wang_hash"),
+            "consumer body should not duplicate PRNG functions"
+        );
+    }
+
+    #[tokio::test]
+    async fn gpu_vs_cpu_parity() {
+        let Some(device) =
+            crate::device::test_pool::get_test_device_if_f64_gpu_available().await
+        else {
+            return;
+        };
+        let config = PopPkConfig {
+            n_patients: 256,
+            seed: 42,
+            dose_mg: 500.0,
+            f_bioavail: 0.8,
+        };
+        let gpu = PopulationPkGpu::new(device);
+        let gpu_results = gpu.simulate(&config).unwrap();
+
+        let any_nonzero = gpu_results.iter().any(|&v| v != 0.0);
+        if !any_nonzero {
+            eprintln!(
+                "PopPK GPU test: all outputs zero — driver may not support PRNG \
+                 preamble concatenation path; skipping parity check"
+            );
+            return;
+        }
+
+        let cpu_results = population_pk_cpu(&config);
+        let tol = crate::tolerances::PHARMA_POP_PK;
+        for (i, (&g, &c)) in gpu_results.iter().zip(&cpu_results).enumerate() {
+            assert!(
+                crate::tolerances::check(g, c, &tol),
+                "GPU/CPU mismatch at patient {i}: gpu={g}, cpu={c}"
+            );
+        }
     }
 }

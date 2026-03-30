@@ -53,8 +53,10 @@ pub struct PopulationPkF64 {
 }
 
 impl PopulationPkF64 {
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/science/population_pk_f64.wgsl")
+    fn wgsl_shader() -> String {
+        const PRNG: &str = include_str!("../shaders/health/prng_wang_f64.wgsl");
+        const BODY: &str = include_str!("../shaders/science/population_pk_f64.wgsl");
+        format!("{PRNG}\n{BODY}")
     }
 
     /// Create a new population PK simulation.
@@ -159,7 +161,8 @@ impl PopulationPkF64 {
             ],
         });
 
-        let shader = dev.compile_shader_f64(Self::wgsl_shader(), Some("PopPK"));
+        let wgsl = Self::wgsl_shader();
+        let shader = dev.compile_shader_f64(&wgsl, Some("PopPK"));
         let pl = dev
             .device
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // groundSpring — Batched multinomial sampling for rarefaction
-
-enable f64;
 //
 // Each invocation runs one replicate: draws `depth` reads from a
 // community described by cumulative abundance probabilities, counting

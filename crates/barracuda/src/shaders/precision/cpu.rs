@@ -1,13 +1,38 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! CPU implementations that match GPU algorithms exactly
+//! CPU implementations that match GPU algorithms exactly.
+//!
+//! Uses a minimal local trait instead of `num_traits::Float` to avoid
+//! pulling in an external dependency for three methods.
 
-use num_traits::Float;
+/// Minimal float trait: the subset of float operations needed by CPU
+/// reference implementations. Implemented for `f32` and `f64`.
+pub trait CpuFloat:
+    Copy + Default + std::ops::Add<Output = Self> + std::ops::Sub<Output = Self> + std::ops::Mul<Output = Self>
+{
+    /// Fused multiply-add: `self * a + b`.
+    #[must_use]
+    fn mul_add(self, a: Self, b: Self) -> Self;
+}
+
+impl CpuFloat for f32 {
+    #[inline]
+    fn mul_add(self, a: Self, b: Self) -> Self {
+        Self::mul_add(self, a, b)
+    }
+}
+
+impl CpuFloat for f64 {
+    #[inline]
+    fn mul_add(self, a: Self, b: Self) -> Self {
+        Self::mul_add(self, a, b)
+    }
+}
 
 /// Element-wise addition: C = A + B
 /// # Panics
 /// Panics if `a.len() != b.len()` or `a.len() != output.len()`.
 #[inline]
-pub fn elementwise_add<T: Float>(a: &[T], b: &[T], output: &mut [T]) {
+pub fn elementwise_add<T: CpuFloat>(a: &[T], b: &[T], output: &mut [T]) {
     assert_eq!(a.len(), b.len());
     assert_eq!(a.len(), output.len());
     for ((o, &ai), &bi) in output.iter_mut().zip(a).zip(b) {
@@ -19,7 +44,7 @@ pub fn elementwise_add<T: Float>(a: &[T], b: &[T], output: &mut [T]) {
 /// # Panics
 /// Panics if `a.len() != b.len()` or `a.len() != output.len()`.
 #[inline]
-pub fn elementwise_mul<T: Float>(a: &[T], b: &[T], output: &mut [T]) {
+pub fn elementwise_mul<T: CpuFloat>(a: &[T], b: &[T], output: &mut [T]) {
     assert_eq!(a.len(), b.len());
     assert_eq!(a.len(), output.len());
     for ((o, &ai), &bi) in output.iter_mut().zip(a).zip(b) {
@@ -31,7 +56,7 @@ pub fn elementwise_mul<T: Float>(a: &[T], b: &[T], output: &mut [T]) {
 /// # Panics
 /// Panics if `a.len() != b.len()`, `a.len() != c.len()`, or `a.len() != output.len()`.
 #[inline]
-pub fn elementwise_fma<T: Float>(a: &[T], b: &[T], c: &[T], output: &mut [T]) {
+pub fn elementwise_fma<T: CpuFloat>(a: &[T], b: &[T], c: &[T], output: &mut [T]) {
     assert_eq!(a.len(), b.len());
     assert_eq!(a.len(), c.len());
     assert_eq!(a.len(), output.len());
@@ -44,18 +69,18 @@ pub fn elementwise_fma<T: Float>(a: &[T], b: &[T], c: &[T], output: &mut [T]) {
 /// # Panics
 /// Panics if `a.len() != b.len()`.
 #[inline]
-pub fn dot_product<T: Float>(a: &[T], b: &[T]) -> T {
+pub fn dot_product<T: CpuFloat>(a: &[T], b: &[T]) -> T {
     assert_eq!(a.len(), b.len());
     a.iter()
         .zip(b)
-        .fold(T::zero(), |acc, (&ai, &bi)| acc + ai * bi)
+        .fold(T::default(), |acc, (&ai, &bi)| acc + ai * bi)
 }
 
-/// Kahan summation for high-precision reduction
+/// Kahan summation for high-precision reduction.
 #[inline]
-pub fn kahan_sum<T: Float>(input: &[T]) -> T {
-    let mut sum = T::zero();
-    let mut c = T::zero(); // Compensation
+pub fn kahan_sum<T: CpuFloat>(input: &[T]) -> T {
+    let mut sum = T::default();
+    let mut c = T::default();
     for &x in input {
         let y = x - c;
         let t = sum + y;
@@ -65,8 +90,8 @@ pub fn kahan_sum<T: Float>(input: &[T]) -> T {
     sum
 }
 
-/// Naive sum
+/// Naive sum.
 #[inline]
-pub fn reduce_sum<T: Float>(input: &[T]) -> T {
-    input.iter().fold(T::zero(), |acc, &x| acc + x)
+pub fn reduce_sum<T: CpuFloat>(input: &[T]) -> T {
+    input.iter().fold(T::default(), |acc, &x| acc + x)
 }

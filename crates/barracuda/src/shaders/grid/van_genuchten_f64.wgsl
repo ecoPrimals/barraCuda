@@ -8,8 +8,6 @@
 //
 // Provenance: airSpring → ToadStool absorption
 
-enable f64;
-
 struct VanGenuchtenParams {
     n: u32,
     _pad: u32,

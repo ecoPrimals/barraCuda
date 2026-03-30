@@ -9,8 +9,6 @@
 //
 // Provenance: neuralSpring → ToadStool absorption
 
-enable f64;
-
 struct OLSParams {
     b: u32,
     n: u32,

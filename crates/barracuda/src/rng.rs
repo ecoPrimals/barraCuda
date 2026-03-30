@@ -24,7 +24,7 @@ pub const LCG_MULTIPLIER: u64 = 6_364_136_223_846_793_005;
 /// `state_{n+1} = state_n × LCG_MULTIPLIER + 1 (mod 2^64)`
 #[must_use]
 #[inline]
-pub fn lcg_step(state: u64) -> u64 {
+pub const fn lcg_step(state: u64) -> u64 {
     state.wrapping_mul(LCG_MULTIPLIER).wrapping_add(1)
 }
 
@@ -87,7 +87,7 @@ pub const LCG32_INCREMENT: u32 = 1_013_904_223;
 /// `state_{n+1} = state_n × 1664525 + 1013904223 (mod 2^32)`
 #[must_use]
 #[inline]
-pub fn lcg_step_u32(state: u32) -> u32 {
+pub const fn lcg_step_u32(state: u32) -> u32 {
     state
         .wrapping_mul(LCG32_MULTIPLIER)
         .wrapping_add(LCG32_INCREMENT)
@@ -116,6 +116,37 @@ pub fn uniform_f32_sequence(seed: u32, n: usize) -> Vec<f32> {
             state_to_f32(state)
         })
         .collect()
+}
+
+/// Lightweight LCG RNG for reproducible disorder generation.
+///
+/// Uses the Knuth MMIX full-period LCG (period 2^64). Suitable for
+/// Monte Carlo sampling and disordered system construction where
+/// cryptographic strength is unnecessary.
+///
+/// Consolidates the LCG PRNG previously duplicated in `spectral::anderson`
+/// and `spectral::lanczos`.
+pub struct LcgRng(u64);
+
+impl LcgRng {
+    /// Create a new LCG with the given seed (shifted by +1 to avoid zero state).
+    #[must_use]
+    pub const fn new(seed: u64) -> Self {
+        Self(seed.wrapping_add(1))
+    }
+
+    const fn next_u64(&mut self) -> u64 {
+        self.0 = self
+            .0
+            .wrapping_mul(LCG_MULTIPLIER)
+            .wrapping_add(1_442_695_040_888_963_407);
+        self.0
+    }
+
+    /// Generate a uniform f64 in \[0, 1).
+    pub fn uniform(&mut self) -> f64 {
+        (self.next_u64() >> 11) as f64 / (1u64 << 53) as f64
+    }
 }
 
 #[cfg(test)]
@@ -210,5 +241,23 @@ mod tests {
     fn lcg32_known_value() {
         let state = lcg_step_u32(0);
         assert_eq!(state, LCG32_INCREMENT);
+    }
+
+    #[test]
+    fn lcg_rng_uniform_range() {
+        let mut rng = LcgRng::new(42);
+        for _ in 0..1000 {
+            let u = rng.uniform();
+            assert!((0.0..1.0).contains(&u));
+        }
+    }
+
+    #[test]
+    fn lcg_rng_deterministic() {
+        let mut a = LcgRng::new(123);
+        let mut b = LcgRng::new(123);
+        for _ in 0..100 {
+            assert_eq!(a.uniform().to_bits(), b.uniform().to_bits());
+        }
     }
 }

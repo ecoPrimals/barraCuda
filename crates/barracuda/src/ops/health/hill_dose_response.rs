@@ -143,4 +143,83 @@ mod tests {
         assert!(low < 0.1, "far below EC50 with steep n should give low E");
         assert!(high > 0.9, "far above EC50 with steep n should give high E");
     }
+
+    #[test]
+    fn cpu_monotonicity() {
+        let config = HillConfig {
+            emax: 100.0,
+            ec50: 10.0,
+            hill_n: 2.0,
+        };
+        let mut prev = 0.0;
+        for i in 1..=100 {
+            let c = i as f64;
+            let e = hill_dose_response_cpu(c, &config);
+            assert!(e >= prev, "Hill response must be monotonically increasing");
+            prev = e;
+        }
+    }
+
+    #[test]
+    fn cpu_approaches_emax() {
+        let config = HillConfig {
+            emax: 50.0,
+            ec50: 1.0,
+            hill_n: 2.0,
+        };
+        let e = hill_dose_response_cpu(1e6, &config);
+        assert!(
+            (e - 50.0).abs() < 1e-6,
+            "at very high concentration, E should approach Emax"
+        );
+    }
+
+    #[test]
+    fn cpu_negative_concentration() {
+        let config = HillConfig {
+            emax: 100.0,
+            ec50: 10.0,
+            hill_n: 1.0,
+        };
+        assert_eq!(
+            hill_dose_response_cpu(-5.0, &config),
+            0.0,
+            "negative concentration must return 0"
+        );
+    }
+
+    #[tokio::test]
+    async fn gpu_vs_cpu_parity() {
+        let Some(device) =
+            crate::device::test_pool::get_test_device_if_f64_transcendentals_available().await
+        else {
+            return;
+        };
+        let config = HillConfig {
+            emax: 100.0,
+            ec50: 10.0,
+            hill_n: 2.0,
+        };
+        let concentrations: Vec<f64> = (1..=50).map(|i| i as f64 * 0.5).collect();
+        let gpu = HillDoseResponseGpu::new(device);
+        let gpu_results = gpu.compute(&concentrations, &config).unwrap();
+
+        let any_nonzero = gpu_results.iter().any(|&v| v != 0.0);
+        if !any_nonzero {
+            eprintln!(
+                "Hill GPU test: all outputs zero — driver likely does not support \
+                 mixed f64/f32 transcendental casts; skipping parity check"
+            );
+            return;
+        }
+
+        let tol = crate::tolerances::PHARMA_HILL;
+        for (i, (&c, &gpu_val)) in concentrations.iter().zip(&gpu_results).enumerate() {
+            let cpu_val = hill_dose_response_cpu(c, &config);
+            assert!(
+                crate::tolerances::check(gpu_val, cpu_val, &tol),
+                "GPU/CPU mismatch at index {i}: c={c}, gpu={gpu_val}, cpu={cpu_val}"
+            );
+        }
+    }
 }

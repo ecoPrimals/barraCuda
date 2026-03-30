@@ -17,8 +17,6 @@
 //
 // Dispatch: (ceil(B / 256), 1, 1)
 
-enable f64;
-
 struct Params {
     n_states:  u32,
     n_symbols: u32,

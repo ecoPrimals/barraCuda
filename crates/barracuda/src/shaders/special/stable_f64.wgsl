@@ -9,8 +9,6 @@
 // These are pure f64 polyfills for use in GPU shaders where the naive
 // implementation would lose significant precision.
 
-enable f64;
-
 /// log(1 + x) without cancellation for small x.
 ///
 /// For |x| < 1e-4, uses Taylor series: x - x²/2 + x³/3 - x⁴/4.

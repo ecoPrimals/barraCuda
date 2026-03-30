@@ -15,8 +15,6 @@
 //
 // Provenance: ToadStool spectral eigensolver
 
-enable f64;
-
 struct LanczosParams {
     n: u32,
     _pad: u32,

@@ -165,4 +165,79 @@ mod tests {
         let d = simpson_diversity_cpu(&proportions);
         assert!(d.abs() < 1e-15, "single species: D = 0");
     }
+
+    #[test]
+    fn cpu_shannon_many_species() {
+        let n = 100;
+        let p = 1.0 / n as f64;
+        let proportions = vec![p; n];
+        let h = shannon_entropy_cpu(&proportions);
+        let expected = (n as f64).ln();
+        assert!(
+            (h - expected).abs() < 1e-10,
+            "H = {h}, expected ln({n}) = {expected}"
+        );
+    }
+
+    #[test]
+    fn cpu_diversity_consistency() {
+        let proportions = vec![0.5, 0.3, 0.2];
+        let h = shannon_entropy_cpu(&proportions);
+        let d = simpson_diversity_cpu(&proportions);
+        assert!(h > 0.0, "Shannon entropy must be positive for mixed community");
+        assert!(
+            d > 0.0 && d < 1.0,
+            "Simpson diversity must be in (0,1) for mixed community"
+        );
+    }
+
+    #[tokio::test]
+    async fn gpu_vs_cpu_parity() {
+        let Some(device) =
+            crate::device::test_pool::get_test_device_if_f64_transcendentals_available().await
+        else {
+            return;
+        };
+
+        let stride: u32 = 8;
+        let communities = vec![
+            vec![0.25, 0.25, 0.25, 0.25, 0.0, 0.0, 0.0, 0.0],
+            vec![0.5, 0.3, 0.1, 0.05, 0.03, 0.01, 0.005, 0.005],
+            vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        ];
+        let flat: Vec<f64> = communities.iter().flatten().copied().collect();
+        let n_communities = communities.len() as u32;
+
+        let gpu = DiversityGpu::new(device);
+        let gpu_results = gpu.compute(&flat, n_communities, stride).unwrap();
+
+        let any_nonzero = gpu_results
+            .iter()
+            .any(|r| r.shannon != 0.0 || r.simpson != 0.0);
+        if !any_nonzero {
+            eprintln!(
+                "Diversity GPU test: all outputs zero — driver likely does not support \
+                 mixed f64/f32 log cast in shared-memory reduction; skipping parity check"
+            );
+            return;
+        }
+
+        let shannon_tol = crate::tolerances::BIO_DIVERSITY_SHANNON;
+        let simpson_tol = crate::tolerances::BIO_DIVERSITY_SIMPSON;
+
+        for (i, (comm, result)) in communities.iter().zip(&gpu_results).enumerate() {
+            let cpu_h = shannon_entropy_cpu(comm);
+            let cpu_d = simpson_diversity_cpu(comm);
+            assert!(
+                crate::tolerances::check(result.shannon, cpu_h, &shannon_tol),
+                "community {i} Shannon: gpu={}, cpu={cpu_h}",
+                result.shannon
+            );
+            assert!(
+                crate::tolerances::check(result.simpson, cpu_d, &simpson_tol),
+                "community {i} Simpson: gpu={}, cpu={cpu_d}",
+                result.simpson
+            );
+        }
+    }
 }

@@ -12,8 +12,6 @@
 //
 // Provenance: neuralSpring → ToadStool absorption
 
-enable f64;
-
 struct HmmViterbiParams {
     t_steps:  u32,
     n_states: u32,

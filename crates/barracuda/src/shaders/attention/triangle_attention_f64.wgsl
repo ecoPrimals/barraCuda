@@ -8,8 +8,6 @@
 //
 // Bindings: @0 pair[N*N], @1 q[N*N*D], @2 k[N*N*D], @3 v[N*N*D], @4 out[N*N*D], @5 uniform{n: u32, d: u32}
 
-enable f64;
-
 struct TriangleAttnParams {
     n: u32,
     d: u32,

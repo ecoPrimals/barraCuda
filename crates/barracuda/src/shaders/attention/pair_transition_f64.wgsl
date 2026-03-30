@@ -8,8 +8,6 @@
 // Bindings: @0 pair[N*N*C_in], @1 weights1[C_in*C_hidden], @2 weights2[C_hidden*C_out],
 //          @3 bias1[C_hidden], @4 bias2[C_out], @5 out[N*N*C_out], @6 uniform{n, c_in, c_hidden, c_out}
 
-enable f64;
-
 struct PairTransitionParams {
     n: u32,
     c_in: u32,

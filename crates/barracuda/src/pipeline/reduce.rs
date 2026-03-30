@@ -47,23 +47,36 @@ const SHADER_DF64: &str = include_str!("../shaders/reduce/sum_reduce_df64.wgsl")
 const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
 /// Scalar f64 storage reduction (no workgroup memory — fallback path).
 const SHADER_SCALAR_F64: &str = include_str!("../shaders/reduce/sum_reduce_scalar_f64.wgsl");
+/// Subgroup-accelerated f64 tree reduction (fewest barriers, fastest path).
+const SHADER_SUBGROUP_F64: &str = include_str!("../shaders/reduce/sum_reduce_subgroup_f64.wgsl");
 
-/// Select the reduce shader for this device based on probed capabilities.
+/// Select the best reduce shader for this device based on probed capabilities.
 ///
-/// Prefers the DF64 (f32-pair) workgroup tree reduction for throughput, but
-/// falls back to a scalar f64 storage path when the probe system reports
-/// that DF64 workgroup reduction produces incorrect results on this silicon.
+/// Three tiers, highest performance first:
 ///
-/// The DF64 path uses `shared_hi/shared_lo: array<f32, 256>` for the tree
-/// reduction and converts at the storage boundary via `df64_from_f64` /
-/// `df64_to_f64`. Precision loss is ~4 mantissa bits (48 vs 52) which is
-/// acceptable for sum/max/min reductions.
+/// 1. **Subgroup** (`subgroupAdd` + shared memory): fewest barriers, full f64
+///    precision. Requires `SUBGROUP` device feature AND verified f64 builtins.
+///    RTX 3090 (sg=32): 3 barrier steps. RX 6950 XT (sg=64): 2 barrier steps.
 ///
-/// The scalar fallback dispatches 1 thread per workgroup, each sequentially
-/// summing 256 f64 elements from storage. Slower but always correct on any
-/// device with `SHADER_F64` storage support.
+/// 2. **DF64** (f32-pair workgroup tree): good throughput, ~48-bit precision.
+///    Requires verified `df64_workgroup_reduce` probe.
+///
+/// 3. **Scalar** (sequential per-workgroup): always correct on any device
+///    with `SHADER_F64` storage support. Slowest path.
 fn shader_for_device(device: &WgpuDevice) -> &'static str {
-    if let Some(caps) = crate::device::probe::cached_f64_builtins(device) {
+    let has_subgroups = device.has_subgroups();
+    let f64_builtins = crate::device::probe::cached_f64_builtins(device);
+
+    if has_subgroups && f64_builtins.is_some() {
+        tracing::info!(
+            "Subgroup f64 reduction on {} (max_subgroup_size={})",
+            device.adapter_info().name,
+            device.adapter_info().subgroup_max_size,
+        );
+        return SHADER_SUBGROUP_F64;
+    }
+
+    if let Some(caps) = f64_builtins {
         if !caps.df64_workgroup_reduce {
             tracing::info!(
                 "DF64 workgroup reduce not verified on {} — using scalar f64 storage reduction",

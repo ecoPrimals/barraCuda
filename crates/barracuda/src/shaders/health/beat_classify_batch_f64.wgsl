@@ -8,8 +8,8 @@
 //
 // Absorbed from healthSpring V19 (Exp082, Exp085).
 // Dispatch: (ceil(n_beats / 256), 1, 1)
-
-enable f64;
+//
+// f64 enabled by compile_shader_f64() preamble — do not use `enable f64;`.
 
 struct Params {
     n_beats: u32,
@@ -65,6 +65,9 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         }
 
         let denom_sq = beat_var * tmpl_var;
+        // Guard: (1e-14)^2 — below this both signals are effectively constant
+        // and normalized correlation is undefined. f32 sqrt is safe because
+        // denom_sq > 1e-28 keeps the value well within f32 dynamic range.
         if denom_sq > 1e-28 {
             let denom = f64(sqrt(f32(denom_sq)));
             let corr = cov / denom;

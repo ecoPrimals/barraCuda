@@ -46,8 +46,8 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
     let idx = gid.x + gid.y * nwg.x * 64u;
     if idx >= params.n_links { return; }
 
-    let scale = f64(0.7071067811865476);
-    let inv_sqrt3 = f64(0.5773502691896258);
+    let scale = f64(0.7071067811865476);       // 1/sqrt(2)
+    let inv_sqrt3 = f64(0.5773502691896258);   // 1/sqrt(3)
     let a3 = scale * box_muller_tmu(idx, 0u);
     let a8 = scale * box_muller_tmu(idx, 1u);
     let re_01 = scale * box_muller_tmu(idx, 2u);

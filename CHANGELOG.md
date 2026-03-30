@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.11] — 2026-03-29
 
+### Changed — Sprint 22h: Deep Debt Evolution & Dependency Purge (Mar 29 2026)
+
+- **Subgroup reduce wired into `ReduceScalarPipeline`** — three-tier shader selection:
+  (1) subgroup `subgroupAdd` when `has_subgroups && f64_builtins` (fewest barriers,
+  full f64 precision), (2) DF64 f32-pair workgroup tree (good throughput, ~48-bit),
+  (3) scalar f64 sequential fallback. Previously only tiers 2 and 3 existed.
+- **`enable f64;` removed from 47 WGSL shaders** — `compile_shader_f64()` preamble
+  injection handles this at compile time; source directives were redundant and
+  inconsistent with newer absorbed shaders.
+- **`num-traits` dependency eliminated** — replaced `num_traits::Float` with local
+  `CpuFloat` trait in `shaders/precision/cpu.rs` providing `Default + Add + Sub +
+  Mul + mul_add` for `f32`/`f64`. One fewer external dependency.
+- **`LcgRng` consolidated to `crate::rng`** — the lightweight LCG PRNG previously
+  duplicated in `spectral::anderson` is now the single `rng::LcgRng` type with
+  `const fn new()`, used by both `anderson.rs` and `lanczos.rs`.
+- **Hardcoded log prefixes evolved** — misleading `"coralReef:"` log prefixes in
+  `coral_compiler/jsonrpc.rs::wgsl_to_spirv()` replaced with accurate `"naga"`
+  prefixes (the function performs local naga WGSL→SPIR-V conversion, not IPC).
+- **`const fn` promotions** — `lcg_step`, `lcg_step_u32`, `LcgRng::new`,
+  `LcgRng::next_u64` promoted to `const fn`.
+- **`#[must_use]` on `CpuFloat::mul_add`** — clippy pedantic compliance.
+- All 4,059 tests pass, 0 failures. Clippy pedantic+nursery clean in changed files.
+
 ### Changed — Sprint 22f: PrecisionBrain-coralReef Integration & Dispatch Metadata (Mar 29 2026)
 
 - **PrecisionBrain coralReef-aware routing** — new `from_device_with_coral()` and

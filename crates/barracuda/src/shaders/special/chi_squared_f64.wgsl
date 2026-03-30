@@ -19,8 +19,6 @@
 //
 // Dispatch: (ceil(N / 256), 1, 1) — one thread per element
 
-enable f64;
-
 struct Params {
     n: u32,
     op: u32,

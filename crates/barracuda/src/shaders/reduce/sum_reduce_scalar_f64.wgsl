@@ -12,8 +12,6 @@
 //
 // Buffer layout: identical to sum_reduce_df64.wgsl — drop-in replacement.
 
-enable f64;
-
 struct ReduceParams {
     size: u32,
     _pad1: u32,

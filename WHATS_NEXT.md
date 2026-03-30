@@ -6,6 +6,15 @@ Prioritized work items, ordered by impact. Updated 2026-03-29.
 
 ## Recently Completed
 
+- **Sprint 22h: Deep Debt Evolution & Dependency Purge (Mar 29)**:
+  Subgroup `subgroupAdd` reduction wired as top-tier path in `ReduceScalarPipeline`
+  (3-tier: subgroup→DF64→scalar fallback). `enable f64;` directive removed from 47
+  WGSL shaders (compile-time preamble injection handles it). `num-traits` external
+  dependency eliminated — replaced with local `CpuFloat` trait in
+  `shaders/precision/cpu.rs`. `LcgRng` consolidated from `spectral::anderson` to
+  `crate::rng` (single source of truth for both anderson and lanczos modules).
+  Hardcoded `"coralReef:"` log prefixes evolved to accurate `"naga"` labels.
+  `const fn` promotions across rng module. 4,059 tests, 0 failures. Clippy clean.
 - **Sprint 22g: Cross-Spring Deep Absorption (Mar 29)**:
   6 hotSpring WGSL shaders absorbed (TMU-accelerated Box-Muller PRNG, subgroup-accelerated
   reduce, ROP fixed-point force accumulation + conversion, shifted CG alpha + vector update).

@@ -11,8 +11,6 @@
 // - Five accumulators fused into one grid-stride + tree reduction
 // - Replaces 3+ sequential dispatches with a single kernel launch
 
-enable f64;
-
 struct Params {
     n: u32,
     _pad0: u32,

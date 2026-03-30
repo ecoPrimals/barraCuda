@@ -7,7 +7,7 @@
 //!
 //! Provenance: hotSpring v0.6.0 (Kachkovskiy spectral theory)
 
-use super::anderson::LcgRng;
+use crate::rng::LcgRng;
 use super::sparse::SpectralCsrMatrix;
 use super::tridiag::{find_all_eigenvalues, tridiag_eigenvectors};
 

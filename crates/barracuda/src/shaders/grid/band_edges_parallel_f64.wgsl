@@ -8,8 +8,6 @@
 //
 // Provenance: groundSpring → ToadStool absorption
 
-enable f64;
-
 struct BandEdgesParams {
     n: u32,   // Number of eigensystems
     m: u32,   // Eigenvalues per system

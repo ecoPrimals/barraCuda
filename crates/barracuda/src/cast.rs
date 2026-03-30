@@ -119,6 +119,64 @@ pub fn f64_as_f32_lossy(value: f64) -> f32 {
     result
 }
 
+/// Convert `u32` to `f64` (lossless — all `u32` values are exactly
+/// representable in f64's 53-bit mantissa).
+#[inline]
+#[must_use]
+pub const fn u32_as_f64(value: u32) -> f64 {
+    value as f64
+}
+
+/// Convert `u64` to `f64` with documented precision loss.
+///
+/// Values above 2^53 lose precision in the mantissa.
+#[inline]
+#[must_use]
+pub fn u64_as_f64_lossy(value: u64) -> f64 {
+    value as f64
+}
+
+/// Convert `i32` to `f64` (lossless — all `i32` values are exactly
+/// representable in f64's 53-bit mantissa).
+#[inline]
+#[must_use]
+pub const fn i32_as_f64(value: i32) -> f64 {
+    value as f64
+}
+
+/// Convert `f64` to `usize`, returning an error if the value is negative,
+/// non-finite, or exceeds `usize::MAX`.
+///
+/// # Errors
+///
+/// Returns [`BarracudaError::CastOverflow`] when `value` cannot be represented
+/// as a `usize`.
+#[inline]
+pub fn f64_as_usize(value: f64) -> Result<usize> {
+    if !value.is_finite() || value < 0.0 || value > usize::MAX as f64 {
+        return Err(BarracudaError::CastOverflow {
+            from_type: "f64",
+            to_type: "usize",
+            value_description: format!("{value}"),
+        });
+    }
+    Ok(value as usize)
+}
+
+/// Truncate `u64` to `u32`, saturating at `u32::MAX`.
+///
+/// Useful when an exact overflow error is not needed and clamping to the
+/// maximum dispatch dimension is acceptable.
+#[inline]
+#[must_use]
+pub const fn u64_as_u32_saturating(value: u64) -> u32 {
+    if value > u32::MAX as u64 {
+        u32::MAX
+    } else {
+        value as u32
+    }
+}
+
 /// Convert `f32` to `f64` (lossless).
 #[inline]
 #[must_use]
@@ -167,5 +225,56 @@ mod tests {
     #[test]
     fn round_trip_u32_usize() {
         assert_eq!(u32_as_usize(usize_as_u32(42).unwrap()), 42);
+    }
+
+    #[test]
+    fn u32_as_f64_exact() {
+        assert_eq!(u32_as_f64(0), 0.0);
+        assert_eq!(u32_as_f64(u32::MAX), f64::from(u32::MAX));
+    }
+
+    #[test]
+    fn u64_as_f64_lossy_small() {
+        assert_eq!(u64_as_f64_lossy(1_000_000), 1_000_000.0);
+    }
+
+    #[test]
+    fn i32_as_f64_exact() {
+        assert_eq!(i32_as_f64(-1), -1.0);
+        assert_eq!(i32_as_f64(i32::MAX), f64::from(i32::MAX));
+        assert_eq!(i32_as_f64(i32::MIN), f64::from(i32::MIN));
+    }
+
+    #[test]
+    fn f64_as_usize_valid() {
+        assert_eq!(f64_as_usize(0.0).unwrap(), 0);
+        assert_eq!(f64_as_usize(42.9).unwrap(), 42);
+    }
+
+    #[test]
+    fn f64_as_usize_negative() {
+        assert!(f64_as_usize(-1.0).is_err());
+    }
+
+    #[test]
+    fn f64_as_usize_nan() {
+        assert!(f64_as_usize(f64::NAN).is_err());
+    }
+
+    #[test]
+    fn f64_as_usize_infinity() {
+        assert!(f64_as_usize(f64::INFINITY).is_err());
+    }
+
+    #[test]
+    fn u64_as_u32_saturating_within_range() {
+        assert_eq!(u64_as_u32_saturating(100), 100);
+        assert_eq!(u64_as_u32_saturating(u64::from(u32::MAX)), u32::MAX);
+    }
+
+    #[test]
+    fn u64_as_u32_saturating_overflow() {
+        assert_eq!(u64_as_u32_saturating(u64::from(u32::MAX) + 1), u32::MAX);
+        assert_eq!(u64_as_u32_saturating(u64::MAX), u32::MAX);
     }
 }

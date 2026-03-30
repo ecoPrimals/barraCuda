@@ -8,7 +8,6 @@
 // Output: sampled indices (one per batch element)
 //
 // f64 enabled by compile_shader_f64() preamble injection
-enable f64;
 
 struct Params {
     batch_size: u32,

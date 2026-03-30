@@ -463,6 +463,53 @@ pub const PHARMA_NCA: Tolerance = Tolerance {
     justification: "trapezoidal AUC: exact for linear interpolation; f64 accumulation",
 };
 
+/// Population PK Monte Carlo: per-patient AUC with stochastic clearance.
+///
+/// Provenance constants for the reference model:
+/// - `BASE_CL` = 10.0 L/hr (typical oral small-molecule clearance)
+/// - `CL_CV` = ±50% (coefficient of variation; `cl_factor` ∈ \[0.5, 1.5\])
+/// - AUC = F × Dose / CL  (single-compartment)
+///
+/// GPU/CPU parity is deterministic given the same seed, but absolute
+/// AUC values depend on stochastic CL — tolerance is relative only.
+pub const PHARMA_POP_PK: Tolerance = Tolerance {
+    name: "pharma_pop_pk",
+    abs_tol: 1e-10,
+    rel_tol: 1e-10,
+    justification: "F*Dose/CL: three f64 multiplies/divides; deterministic PRNG parity",
+};
+
+/// Hill dose-response: E(c) = Emax × c^n / (c^n + EC50^n).
+///
+/// The f32-cast `exp(n*log(c))` path introduces ~6 decimal digits of
+/// precision; for typical Hill coefficients 0.5 ≤ n ≤ 4 the error is
+/// dominated by the `log`/`exp` round-trip through f32.
+pub const PHARMA_HILL: Tolerance = Tolerance {
+    name: "pharma_hill",
+    abs_tol: 1e-6,
+    rel_tol: 1e-5,
+    justification: "f32 log/exp cast: ~7 sig digits; typical Hill n ∈ [0.5, 4]",
+};
+
+/// Michaelis-Menten batch: Euler-integrated PK with per-patient variation.
+///
+/// Error is dominated by Euler discretisation (O(dt)) and stochastic
+/// Vmax variation.
+pub const PHARMA_MICHAELIS_MENTEN: Tolerance = Tolerance {
+    name: "pharma_michaelis_menten",
+    abs_tol: 1e-6,
+    rel_tol: 1e-4,
+    justification: "Euler integration O(dt); per-patient stochastic Vmax; f64 accumulation",
+};
+
+/// SCFA production: element-wise Michaelis-Menten (no accumulation).
+pub const PHARMA_SCFA: Tolerance = Tolerance {
+    name: "pharma_scfa",
+    abs_tol: 1e-12,
+    rel_tol: 1e-12,
+    justification: "Vmax*S/(Km+S): two f64 multiplies, one divide; no accumulation",
+};
+
 // ═══════════════════════════════════════════════════════════════════
 // signal processing tolerances (healthSpring, neuralSpring)
 // ═══════════════════════════════════════════════════════════════════
@@ -538,6 +585,10 @@ pub fn all_tolerances() -> &'static [Tolerance] {
         PHARMA_FOCE,
         PHARMA_VPC,
         PHARMA_NCA,
+        PHARMA_POP_PK,
+        PHARMA_HILL,
+        PHARMA_MICHAELIS_MENTEN,
+        PHARMA_SCFA,
         SIGNAL_FFT,
         SIGNAL_QRS,
     ]

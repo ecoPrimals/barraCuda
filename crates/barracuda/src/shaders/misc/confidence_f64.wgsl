@@ -7,8 +7,6 @@
 //
 // Bindings: @0 logits[N*B], @1 bin_centers[B], @2 out[N], @3 uniform{n_residues, n_bins}
 
-enable f64;
-
 struct ConfidenceParams {
     n_residues: u32,
     n_bins: u32,

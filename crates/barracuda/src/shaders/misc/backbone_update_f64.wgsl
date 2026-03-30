@@ -11,8 +11,6 @@
 //
 // Provenance: neuralSpring → ToadStool absorption
 
-enable f64;
-
 struct BackboneParams {
     n: u32,
 }

@@ -4,8 +4,6 @@
 // ET0 = 0.0023 * Ra * (t_mean + 17.8) * sqrt(t_max - t_min)
 // Each thread processes one day.
 
-enable f64;
-
 struct Params {
     n_days: u32,
 }

@@ -15,6 +15,7 @@
 //! Provenance: hotSpring v0.6.0 (Kachkovskiy spectral theory)
 
 use super::sparse::SpectralCsrMatrix;
+use crate::rng::LcgRng;
 
 /// Construct the 1D Anderson Hamiltonian on N sites with periodic boundary
 /// conditions: H = -Δ + V, where `V_i` ~ Uniform[-W/2, W/2].
@@ -694,26 +695,6 @@ pub fn wegner_block_4d(original: &SpectralCsrMatrix, l: usize) -> SpectralCsrMat
     }
 }
 
-/// LCG RNG for reproducible disorder; used by Anderson models and Lanczos.
-pub(crate) struct LcgRng(u64);
-
-impl LcgRng {
-    pub(crate) fn new(seed: u64) -> Self {
-        Self(seed.wrapping_add(1))
-    }
-
-    fn next_u64(&mut self) -> u64 {
-        self.0 = self
-            .0
-            .wrapping_mul(6_364_136_223_846_793_005)
-            .wrapping_add(1_442_695_040_888_963_407);
-        self.0
-    }
-
-    pub(crate) fn uniform(&mut self) -> f64 {
-        (self.next_u64() >> 11) as f64 / (1u64 << 53) as f64
-    }
-}
 
 #[cfg(test)]
 #[path = "anderson_tests.rs"]

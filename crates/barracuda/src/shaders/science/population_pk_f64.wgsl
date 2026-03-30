@@ -10,8 +10,10 @@
 // Uses u32-only PRNG (no SHADER_INT64 needed).
 //
 // Dispatch: (ceil(n_patients / WORKGROUP_SIZE), 1, 1)
-
-// f64 is enabled by compile_shader_f64() preamble injection — do not use `enable f64;`
+//
+// f64 is enabled by compile_shader_f64() preamble injection — do not use `enable f64;`.
+// Requires prng_wang_f64.wgsl prepended for wang_hash, xorshift32,
+// u32_to_uniform_f64.
 
 struct Params {
     n_patients: u32,
@@ -26,25 +28,6 @@ struct Params {
 @group(0) @binding(0) var<storage, read_write> output: array<f64>;
 @group(0) @binding(1) var<uniform> params: Params;
 
-fn wang_hash(input: u32) -> u32 {
-    var x = input;
-    x = (x ^ 61u) ^ (x >> 16u);
-    x = x * 9u;
-    x = x ^ (x >> 4u);
-    x = x * 0x27d4eb2du;
-    x = x ^ (x >> 15u);
-    return x;
-}
-
-fn xorshift32(state: ptr<function, u32>) -> u32 {
-    var x = *state;
-    x ^= x << 13u;
-    x ^= x >> 17u;
-    x ^= x << 5u;
-    *state = x;
-    return x;
-}
-
 @compute @workgroup_size(256)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let idx = gid.x;
@@ -58,7 +41,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     }
 
     let bits = xorshift32(&rng_state);
-    let u = f64(bits) / 4294967295.0;
+    let u = u32_to_uniform_f64(bits);
 
     let cl_factor = params.cl_low + u * (params.cl_high - params.cl_low);
     let cl = params.base_cl * cl_factor;

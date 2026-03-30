@@ -142,3 +142,156 @@ pub const WGSL_FERMION_ACTION_SUM_F64: &str =
 /// and writes acceptance flag + per-sector diagnostics in a single readback.
 pub const WGSL_GPU_METROPOLIS_F64: &str =
     include_str!("../../shaders/lattice/gpu_metropolis_f64.wgsl");
+
+// ── Sprint 22g: cross-spring deep absorption (hotSpring V0632, Mar 2026) ──
+
+/// TMU-accelerated Box-Muller SU(3) momentum generation.
+///
+/// Offloads log/cos/sin transcendentals to TMU texture lookups; ALU handles
+/// PCG hash, sqrt, and Gell-Mann construction only. Requires `prng_pcg_f64.wgsl`
+/// prepended.
+pub const WGSL_SU3_RANDOM_MOMENTA_TMU_F64: &str =
+    include_str!("../../shaders/lattice/su3_random_momenta_tmu_f64.wgsl");
+
+/// ROP-accelerated fermion force accumulation via `atomicAdd(i32)`.
+///
+/// Fixed-point scale 2^20 allows multiple poles to dispatch simultaneously
+/// with no inter-pole barriers. A conversion kernel adds accumulated i32
+/// values back to the f64 momentum buffer.
+pub const WGSL_SU3_FERMION_FORCE_ACCUMULATE_ROP_F64: &str =
+    include_str!("../../shaders/lattice/su3_fermion_force_accumulate_rop_f64.wgsl");
+
+/// Fixed-point i32 → f64 conversion for ROP force accumulation.
+///
+/// Dispatched once after all fermion force poles have accumulated.
+/// `mom[i] += f64(force_accum[i]) / scale_factor`.
+pub const WGSL_SU3_FORCE_ATOMIC_TO_MOMENTUM_F64: &str =
+    include_str!("../../shaders/lattice/su3_force_atomic_to_momentum_f64.wgsl");
+
+/// Subgroup-accelerated f64 tree reduction.
+///
+/// Uses `subgroupAdd` for warp/wavefront-level reduction, then shared memory
+/// for cross-subgroup accumulation. Requires `wgpu::Features::SUBGROUP`.
+pub const WGSL_SUM_REDUCE_SUBGROUP_F64: &str =
+    include_str!("../../shaders/reduce/sum_reduce_subgroup_f64.wgsl");
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_non_empty(name: &str, src: &str) {
+        assert!(
+            src.len() > 50,
+            "{name} shader source is too short ({} bytes)",
+            src.len()
+        );
+    }
+
+    fn assert_has_entry_point(name: &str, src: &str) {
+        assert!(
+            src.contains("fn main("),
+            "{name} must contain fn main() entry point"
+        );
+    }
+
+    fn assert_no_enable_f64(name: &str, src: &str) {
+        assert!(
+            !src.contains("enable f64;"),
+            "{name} must not contain `enable f64;` — stripped by compile_shader_f64()"
+        );
+    }
+
+    fn assert_agpl_header(name: &str, src: &str) {
+        assert!(
+            src.starts_with("// SPDX-License-Identifier: AGPL-3.0"),
+            "{name} must start with AGPL SPDX header"
+        );
+    }
+
+    #[test]
+    fn s60_shaders_valid() {
+        for (name, src) in [
+            ("gauge_force", WGSL_SU3_GAUGE_FORCE_F64),
+            ("kinetic_energy", WGSL_SU3_KINETIC_ENERGY_F64),
+            ("link_update", WGSL_SU3_LINK_UPDATE_F64),
+            ("momentum_update", WGSL_SU3_MOMENTUM_UPDATE_F64),
+            ("random_momenta", WGSL_SU3_RANDOM_MOMENTA_F64),
+            ("gaussian_fermion", WGSL_GAUSSIAN_FERMION_F64),
+            ("staggered_fermion_force", WGSL_STAGGERED_FERMION_FORCE_F64),
+        ] {
+            assert_non_empty(name, src);
+            assert_has_entry_point(name, src);
+            assert_agpl_header(name, src);
+        }
+    }
+
+    #[test]
+    fn s64_shaders_valid() {
+        for (name, src) in [
+            ("gauge_force_df64", WGSL_SU3_GAUGE_FORCE_DF64),
+            ("kinetic_energy_df64", WGSL_SU3_KINETIC_ENERGY_DF64),
+        ] {
+            assert_non_empty(name, src);
+            assert_has_entry_point(name, src);
+            assert_agpl_header(name, src);
+        }
+    }
+
+    #[test]
+    fn preamble_shaders_valid() {
+        for (name, src) in [
+            ("su3_math", WGSL_SU3_MATH_F64),
+            ("su3_lattice", WGSL_SU3_LATTICE_F64),
+            ("prng_pcg", WGSL_PRNG_PCG_F64),
+        ] {
+            assert_non_empty(name, src);
+            assert_agpl_header(name, src);
+        }
+    }
+
+    #[test]
+    fn sprint_22g_shaders_valid() {
+        for (name, src) in [
+            ("tmu_momenta", WGSL_SU3_RANDOM_MOMENTA_TMU_F64),
+            ("rop_force", WGSL_SU3_FERMION_FORCE_ACCUMULATE_ROP_F64),
+            ("atomic_to_momentum", WGSL_SU3_FORCE_ATOMIC_TO_MOMENTUM_F64),
+            ("subgroup_reduce", WGSL_SUM_REDUCE_SUBGROUP_F64),
+        ] {
+            assert_non_empty(name, src);
+            assert_has_entry_point(name, src);
+            assert_no_enable_f64(name, src);
+            assert_agpl_header(name, src);
+        }
+    }
+
+    #[test]
+    fn tmu_momenta_requires_pcg_preamble() {
+        assert!(
+            WGSL_SU3_RANDOM_MOMENTA_TMU_F64.contains("uniform_f64"),
+            "TMU momenta shader must use uniform_f64 from PCG preamble"
+        );
+    }
+
+    #[test]
+    fn rop_force_uses_atomic_add() {
+        assert!(
+            WGSL_SU3_FERMION_FORCE_ACCUMULATE_ROP_F64.contains("atomicAdd"),
+            "ROP force shader must use atomicAdd"
+        );
+    }
+
+    #[test]
+    fn subgroup_reduce_uses_subgroup_add() {
+        assert!(
+            WGSL_SUM_REDUCE_SUBGROUP_F64.contains("subgroupAdd"),
+            "subgroup reduce shader must use subgroupAdd"
+        );
+        let has_directive = WGSL_SUM_REDUCE_SUBGROUP_F64
+            .lines()
+            .any(|l| {
+                let trimmed = l.trim();
+                !trimmed.starts_with("//") && trimmed.contains("enable subgroups;")
+            });
+        assert!(!has_directive, "must not contain enable subgroups; directive");
+    }
+}

@@ -74,7 +74,9 @@ fn main(
     }
 
     if local == 0u {
+        // Shannon entropy H' = -sum(p_i * ln(p_i))
         output[community * 2u] = shared_shannon[0];
+        // Simpson diversity = 1 - sum(p_i^2)  (complement of concentration)
         output[community * 2u + 1u] = 1.0 - shared_simpson[0];
     }
 }

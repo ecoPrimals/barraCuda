@@ -9,8 +9,6 @@
 //
 // Bindings: @0 q[N*D], @1 k[N*D], @2 q_pts[N*P*3], @3 k_pts[N*P*3], @4 out[N*N], @5 uniform{n, d, p, w_l}
 
-enable f64;
-
 struct IpaParams {
     n: u32,
     d: u32,

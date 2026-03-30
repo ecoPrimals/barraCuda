@@ -7,8 +7,6 @@
 //
 // Bindings: @0 prev[N*C], @1 current[N*C], @2 out[N*C], @3 uniform{n, c, eps}
 
-enable f64;
-
 struct RecyclingParams {
     n: u32,
     c: u32,

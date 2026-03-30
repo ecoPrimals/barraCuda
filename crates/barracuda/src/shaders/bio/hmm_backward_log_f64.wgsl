@@ -11,8 +11,6 @@
 //
 // Provenance: neuralSpring → ToadStool absorption
 
-enable f64;
-
 struct HmmBackwardParams {
     t_steps:  u32,
     n_states: u32,

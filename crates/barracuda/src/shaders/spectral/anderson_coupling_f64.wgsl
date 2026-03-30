@@ -13,8 +13,6 @@
 //
 // Provenance: airSpring → ToadStool absorption
 
-enable f64;
-
 struct AndersonParams {
     n: u32,           // Total number of sites
     dim: u32,         // Lattice dimensionality

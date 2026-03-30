@@ -13,8 +13,6 @@
 // - Grid-stride loop amortizes dispatch overhead for large inputs
 // - Workgroup tree reduction via shared memory
 
-enable f64;
-
 struct Params {
     n: u32,
     ddof: u32,

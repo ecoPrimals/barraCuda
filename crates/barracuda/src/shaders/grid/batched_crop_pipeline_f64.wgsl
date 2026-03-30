@@ -13,8 +13,6 @@
 //
 // Provenance: airSpring → ToadStool absorption
 
-enable f64;
-
 struct BatchedCropParams {
     n_steps: u32,
     n_cells: u32,

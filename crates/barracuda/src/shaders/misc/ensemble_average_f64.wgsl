@@ -7,8 +7,6 @@
 //
 // Bindings: @0 positions[M*N*D], @1 out[N*D], @2 uniform{n_models, n_atoms, n_dims}
 
-enable f64;
-
 struct EnsembleAverageParams {
     n_models: u32,
     n_atoms: u32,

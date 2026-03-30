@@ -7,8 +7,6 @@
 //
 // Bindings: @0 templates[T*N*N*C], @1 out[N*N*C], @2 uniform{t, n, c}
 
-enable f64;
-
 struct TemplateEmbeddingParams {
     t: u32,
     n: u32,

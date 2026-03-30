@@ -9,8 +9,6 @@
 //
 // Provenance: neuralSpring → ToadStool absorption
 
-enable f64;
-
 struct CorrParams {
     n: u32,
     p: u32,

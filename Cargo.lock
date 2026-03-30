@@ -129,7 +129,6 @@ dependencies = [
  "bytes",
  "half",
  "naga",
- "num-traits",
  "pollster",
  "proptest",
  "rand 0.9.2",

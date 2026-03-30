@@ -9,8 +9,6 @@
 //
 // Output: array<f64> of length max_lag, where out[k] = C(k).
 
-enable f64;
-
 struct Params {
     n: u32,
     max_lag: u32,

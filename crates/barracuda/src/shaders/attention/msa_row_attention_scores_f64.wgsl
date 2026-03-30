@@ -8,8 +8,6 @@
 //
 // Bindings: @0 q[S*N*D], @1 k[S*N*D], @2 out[S*N*N], @3 uniform{s: u32, n: u32, d: u32}
 
-enable f64;
-
 struct MsaRowParams {
     s: u32,
     n: u32,

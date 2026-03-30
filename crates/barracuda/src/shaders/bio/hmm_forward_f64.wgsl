@@ -20,8 +20,6 @@
 // Dispatch: (ceil(S / 256), 1, 1) per timestep
 // The Rust driver orchestrates T dispatches with buffer swaps.
 
-enable f64;
-
 struct Params {
     n_states: u32,
     timestep: u32,

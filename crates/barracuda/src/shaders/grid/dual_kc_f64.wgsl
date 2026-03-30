@@ -8,8 +8,6 @@
 //
 // Provenance: airSpring → ToadStool absorption
 
-enable f64;
-
 struct DualKcParams {
     n: u32,
     _pad0: u32,

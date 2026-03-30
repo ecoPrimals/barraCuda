@@ -11,8 +11,6 @@
 // Absorbed from groundSpring request / wateringHole spectral handoff.
 // Dispatch: (n_batches, 1, 1)
 
-enable f64;
-
 struct Params {
     n: u32,
     n_batches: u32,

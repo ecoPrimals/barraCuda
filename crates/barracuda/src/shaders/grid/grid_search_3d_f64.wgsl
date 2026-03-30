@@ -10,8 +10,6 @@
 //
 // Provenance: groundSpring → ToadStool absorption
 
-enable f64;
-
 struct GridSearchParams {
     nx: u32,
     ny: u32,

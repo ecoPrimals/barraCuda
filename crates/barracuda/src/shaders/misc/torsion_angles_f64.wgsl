@@ -9,8 +9,6 @@
 //
 // Provenance: neuralSpring → ToadStool absorption
 
-enable f64;
-
 struct TorsionParams {
     n: u32,
     m: u32,

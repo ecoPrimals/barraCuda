@@ -7,8 +7,8 @@
 //
 // Absorbed from healthSpring V19 (Exp079, Exp085).
 // Dispatch: (ceil(n_elements / 256), 1, 1)
-
-enable f64;
+//
+// f64 enabled by compile_shader_f64() preamble — do not use `enable f64;`.
 
 struct Params {
     vmax_acetate: f64,

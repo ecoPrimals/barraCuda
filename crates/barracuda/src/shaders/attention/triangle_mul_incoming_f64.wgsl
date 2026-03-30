@@ -7,8 +7,6 @@
 //
 // Bindings: @0 a[N*N], @1 b[N*N], @2 gate[N*N], @3 out[N*N], @4 uniform{n: u32}
 
-enable f64;
-
 struct TriangleMulParams {
     n: u32,
 }

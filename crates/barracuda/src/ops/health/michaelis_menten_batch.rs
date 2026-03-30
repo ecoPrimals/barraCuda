@@ -10,7 +10,8 @@ use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
-const SHADER: &str = include_str!("../../shaders/health/michaelis_menten_batch_f64.wgsl");
+const PRNG: &str = include_str!("../../shaders/health/prng_wang_f64.wgsl");
+const SHADER_BODY: &str = include_str!("../../shaders/health/michaelis_menten_batch_f64.wgsl");
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -79,9 +80,10 @@ impl MichaelisMentenBatchGpu {
             .create_uniform_buffer("mm_batch:params", &params);
 
         let wg_count = config.n_patients.div_ceil(256);
+        let shader = format!("{PRNG}\n{SHADER_BODY}");
 
         crate::device::compute_pipeline::ComputeDispatch::new(&self.device, "mm_batch")
-            .shader(SHADER, "main")
+            .shader(&shader, "main")
             .f64()
             .storage_rw(0, &out_buf)
             .uniform(1, &params_buf)
@@ -103,8 +105,10 @@ mod tests {
 
     #[test]
     fn shader_source_valid() {
-        assert!(SHADER.contains("michaelis"));
-        assert!(SHADER.contains("wang_hash"));
-        assert!(SHADER.contains("Params"));
+        let combined = format!("{PRNG}\n{SHADER_BODY}");
+        assert!(combined.contains("michaelis"));
+        assert!(combined.contains("wang_hash"));
+        assert!(combined.contains("u32_to_uniform_f64"));
+        assert!(combined.contains("Params"));
     }
 }

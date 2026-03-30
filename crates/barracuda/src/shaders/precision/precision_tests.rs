@@ -560,10 +560,19 @@ fn test_op_preamble_df64_routes_to_library() {
 #[test]
 fn test_op_preamble_all_precisions_consistent() {
     for prec in [
+        Precision::Binary,
+        Precision::Int2,
+        Precision::Q4,
+        Precision::Q8,
+        Precision::Fp8E5M2,
+        Precision::Fp8E4M3,
+        Precision::Bf16,
         Precision::F16,
         Precision::F32,
         Precision::F64,
         Precision::Df64,
+        Precision::Qf128,
+        Precision::Df128,
     ] {
         let p = prec.op_preamble();
         assert!(p.contains("fn op_add("), "{prec:?} missing op_add");

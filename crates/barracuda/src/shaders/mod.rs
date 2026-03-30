@@ -2,7 +2,7 @@
 //! WGSL Shader Infrastructure
 //!
 //! This module provides:
-//! - **3-tier precision model**: f32 / f64 / df64 (fp48) — aligned with coralReef's `Fp64Strategy`
+//! - **15-tier precision continuum**: Binary→DF128 with per-tier `op_preamble` WGSL and coralReef strategy mapping
 //! - **Driver-aware shader preparation**: polyfill injection, ILP optimization
 //! - **CPU implementations**: Same algorithms via local `CpuFloat` trait for CPU fallback
 //! - **Quantized inference shaders**: INT4/INT8 dequantization and GEMV

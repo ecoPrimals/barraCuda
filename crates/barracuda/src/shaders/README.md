@@ -1,6 +1,6 @@
 # BarraCuda WGSL Shader Library
 
-**741 Production WGSL Shaders** (816 total including ops/) | 3-Tier Precision (f32/f64/df64) | Cross-Vendor Compatible
+**749 Production WGSL Shaders** (824 total including ops/) | 15-Tier Precision Continuum (Binary→DF128) | Cross-Vendor Compatible
 
 ---
 
@@ -232,13 +232,15 @@ All shaders follow these conventions:
 - **2D ops**: `@workgroup_size(16, 16)` typically
 - **3D ops**: `@workgroup_size(8, 8, 8)` typically
 
-### Precision (3-Tier — Aligned with coralReef `Fp64Strategy`)
+### Precision (15-Tier Continuum — `PrecisionBrain` + coralReef Strategy Mapping)
 - **Canonical**: All shaders are f64-canonical WGSL — pure math, conceptually infinite precision.
-- **3 tiers**: `compile_shader()` (f32), `compile_shader_f64()` (f64), `compile_shader_df64()` (df64/fp48).
-- **Routing**: `fp64_strategy()` selects f64-native vs df64 based on hardware capabilities.
+- **15 tiers**: Binary → Int2 → Q4 → Q8 → FP8-E5M2 → FP8-E4M3 → BF16 → F16 → TF32 → F32 → DF64 → F64 → F64Precise → QF128 → DF128.
+- **Compile paths**: `compile_shader()` (f32 + sub-f32), `compile_shader_f64()` (f64/DF128), `compile_shader_df64()` (df64).
+- **Routing**: `PrecisionBrain` routes `PhysicsDomain` to optimal tier based on `HardwareCalibration` probing.
 - **DF64**: `compile_shader_df64()` auto-injects `df64_core.wgsl` + `df64_transcendentals.wgsl`.
+- **Scale-up**: QF128 (Bailey quad-double on f32), DF128 (double-double on f64).
+- **Scale-down**: BF16/FP8 compute in f32 with pack/unpack helpers; Q4/Q8/Int2/Binary dequantize to f32.
 - **FHE**: `u32` for modular arithmetic
-- **Quantization**: `u8`, `i8`, `i4` via bit packing
 
 ---
 

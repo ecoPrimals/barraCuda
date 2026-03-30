@@ -69,21 +69,34 @@ pub struct PrecisionAdvice {
     pub domain: Option<String>,
 }
 
-/// Map a barraCuda `Precision` tier to coralReef's `Fp64Strategy` string.
+/// Map a barraCuda `Precision` tier to coralReef's compilation strategy string.
 ///
 /// This is the interface between barraCuda's precision model and coralReef's
 /// compilation pipeline. barraCuda decides WHICH precision; coralReef decides
-/// HOW to compile it to hardware.
+/// HOW to compile it to hardware. toadStool routes to silicon.
+///
+/// Strategy strings are the wire-protocol contract with coralReef.
+/// New tiers added here require corresponding support in coralReef's
+/// `CompileStrategy` dispatcher.
 #[must_use]
 pub fn precision_to_coral_strategy(
     precision: &crate::shaders::precision::Precision,
 ) -> &'static str {
     use crate::shaders::precision::Precision;
     match precision {
+        Precision::Binary => "binary",
+        Precision::Int2 => "int2",
+        Precision::Q4 => "q4_block",
+        Precision::Q8 => "q8_block",
+        Precision::Fp8E5M2 => "fp8_e5m2",
+        Precision::Fp8E4M3 => "fp8_e4m3",
+        Precision::Bf16 => "bf16_emulated",
         Precision::F16 => "f16_fast",
         Precision::F32 => "f32_only",
         Precision::F64 => "native",
         Precision::Df64 => "double_float",
+        Precision::Qf128 => "quad_float",
+        Precision::Df128 => "double_double_f64",
     }
 }
 

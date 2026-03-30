@@ -197,7 +197,7 @@ a C library target until Phase 3 completes.
 |------|----------|--------|
 | Stable IPC for shader compilation | coralReef | Done (Phase 10) |
 | Capability-based hardware discovery | toadStool | Done |
-| Precision strategy (F32/F64/Df64) | barraCuda | Done (3-tier model) |
+| Precision strategy (15-tier: Binary→DF128) | barraCuda | Done (15-tier continuum) |
 | Direct sovereign dispatch | barraCuda + coralReef + toadStool | IPC wiring in progress; DRM path E2E verified |
 
 ---

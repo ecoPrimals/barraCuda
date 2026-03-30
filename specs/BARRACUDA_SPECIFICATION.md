@@ -50,7 +50,7 @@ barraCuda/
 │   │   │   ├── sample/       # LHS, Sobol, Metropolis, sparsity
 │   │   │   ├── ops/          # GPU ops (matmul, softmax, FHE NTT, bio, MD)
 │   │   │   ├── tensor/       # GPU tensor type, buffer management
-│   │   │   ├── shaders/      # 816 WGSL shaders
+│   │   │   ├── shaders/      # 824 WGSL shaders
 │   │   │   ├── device/       # WgpuDevice, capabilities, test pool
 │   │   │   ├── staging/      # Ring buffers, unidirectional pipelines
 │   │   │   ├── pipeline/     # ComputeDispatch, batched pipelines
@@ -161,7 +161,7 @@ Error codes follow JSON-RPC 2.0: -32700 (parse), -32600 (invalid request),
 
 ```
 WGSL source
-  → op_preamble (abstract ops for F32/F64/Df64)
+  → op_preamble (abstract ops per precision tier: 13 Precision variants, Binary→DF128)
   → naga parse → naga IR
   → df64_rewrite (infix → bridge functions, when DF64)
   → sovereign compiler: FMA fusion, dead expression elimination

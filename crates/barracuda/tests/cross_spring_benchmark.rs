@@ -18,7 +18,10 @@ struct BenchResult {
     name: &'static str,
     origin: &'static str,
     consumers: &'static str,
-    #[expect(dead_code, reason = "used by Debug derive in --nocapture output")]
+    #[expect(
+        dead_code,
+        reason = "read by Debug derive (rustc ignores derived Debug in dead code analysis)"
+    )]
     n: usize,
     wall_us: f64,
     throughput: String,

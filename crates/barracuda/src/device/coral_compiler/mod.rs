@@ -802,6 +802,31 @@ mod tests {
     fn precision_to_coral_strategy_all_variants() {
         use crate::shaders::precision::Precision;
         assert_eq!(
+            types::precision_to_coral_strategy(&Precision::Binary),
+            "binary"
+        );
+        assert_eq!(types::precision_to_coral_strategy(&Precision::Int2), "int2");
+        assert_eq!(
+            types::precision_to_coral_strategy(&Precision::Q4),
+            "q4_block"
+        );
+        assert_eq!(
+            types::precision_to_coral_strategy(&Precision::Q8),
+            "q8_block"
+        );
+        assert_eq!(
+            types::precision_to_coral_strategy(&Precision::Fp8E5M2),
+            "fp8_e5m2"
+        );
+        assert_eq!(
+            types::precision_to_coral_strategy(&Precision::Fp8E4M3),
+            "fp8_e4m3"
+        );
+        assert_eq!(
+            types::precision_to_coral_strategy(&Precision::Bf16),
+            "bf16_emulated"
+        );
+        assert_eq!(
             types::precision_to_coral_strategy(&Precision::F16),
             "f16_fast"
         );
@@ -816,6 +841,14 @@ mod tests {
         assert_eq!(
             types::precision_to_coral_strategy(&Precision::Df64),
             "double_float"
+        );
+        assert_eq!(
+            types::precision_to_coral_strategy(&Precision::Qf128),
+            "quad_float"
+        );
+        assert_eq!(
+            types::precision_to_coral_strategy(&Precision::Df128),
+            "double_double_f64"
         );
     }
 }

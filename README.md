@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **824 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,100+ Rust source files**, 42 integration test files, 4,000+ tests (3,785+ lib + 214 core + 8 e2e + integration + doctests)
+- **1,101 Rust source files**, 42 integration test files, 4,307+ tests (3,785+ lib + 214 core + 8 e2e + integration + doctests)
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -142,7 +142,7 @@ barraCuda/
 │       │   ├── sample/              # LHS, Sobol, Metropolis, sparsity
 │       │   ├── ops/                 # GPU ops (matmul, softmax, FHE, bio)
 │       │   ├── tensor/              # GPU tensor type
-│       │   ├── shaders/             # 816 WGSL shaders (see shaders/README.md)
+│       │   ├── shaders/             # 824 WGSL shaders (see shaders/README.md)
 │       │   ├── device/              # GpuBackend trait, WgpuDevice, SovereignDevice, concurrency
 │       │   ├── staging/             # Ring buffers, unidirectional pipelines
 │       │   ├── pipeline/            # ComputeDispatch, batched pipelines

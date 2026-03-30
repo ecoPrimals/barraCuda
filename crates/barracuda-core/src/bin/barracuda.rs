@@ -91,7 +91,7 @@ enum Commands {
     /// Discovers the server via `$XDG_RUNTIME_DIR/biomeos/barracuda-core.json`,
     /// `BARRACUDA_IPC_BIND`, or falls back to `--addr`.
     Client {
-        /// JSON-RPC method name (e.g. `barracuda.device.list`).
+        /// JSON-RPC method name (e.g. `device.list`).
         method: String,
 
         /// JSON params (as a JSON string). Defaults to `{}`.

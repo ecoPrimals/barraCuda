@@ -68,6 +68,10 @@ impl HardwareCalibration {
     }
 
     /// Build calibration from pre-computed device capabilities.
+    ///
+    /// Probes all 15 precision tiers. Sub-f32 tiers that use only u32/f32
+    /// bit manipulation are universally available. Tiers requiring
+    /// `SHADER_F16` or `SHADER_F64` are conditioned on hardware features.
     #[must_use]
     pub fn from_capabilities(caps: &DeviceCapabilities, device: &WgpuDevice) -> Self {
         let adapter_name = device.name().to_string();
@@ -82,18 +86,18 @@ impl HardwareCalibration {
             .features()
             .contains(wgpu::Features::SHADER_F16);
 
+        let universal = |tier| TierCapability {
+            tier,
+            compiles: true,
+            dispatches: true,
+            transcendentals_safe: true,
+        };
+
         let f16_cap = TierCapability {
             tier: PrecisionTier::F16,
             compiles: has_f16,
             dispatches: has_f16,
             transcendentals_safe: has_f16,
-        };
-
-        let f32_cap = TierCapability {
-            tier: PrecisionTier::F32,
-            compiles: true,
-            dispatches: true,
-            transcendentals_safe: true,
         };
 
         let df64_compiles = !matches!(precision_routing, PRA::F32Only);
@@ -124,7 +128,33 @@ impl HardwareCalibration {
             transcendentals_safe: f64_works && caps.supports_f64_builtins(),
         };
 
-        let tiers = vec![f16_cap, f32_cap, df64_cap, f64_cap, f64_precise_cap];
+        let tiers = vec![
+            universal(PrecisionTier::Binary),
+            universal(PrecisionTier::Int2),
+            universal(PrecisionTier::Quantized4),
+            universal(PrecisionTier::Quantized8),
+            universal(PrecisionTier::Fp8E5M2),
+            universal(PrecisionTier::Fp8E4M3),
+            universal(PrecisionTier::Bf16),
+            f16_cap,
+            TierCapability {
+                tier: PrecisionTier::Tf32,
+                compiles: false,
+                dispatches: false,
+                transcendentals_safe: false,
+            },
+            universal(PrecisionTier::F32),
+            df64_cap,
+            f64_cap,
+            f64_precise_cap,
+            universal(PrecisionTier::QF128),
+            TierCapability {
+                tier: PrecisionTier::DF128,
+                compiles: f64_works,
+                dispatches: f64_works,
+                transcendentals_safe: f64_works && caps.supports_f64_builtins(),
+            },
+        ];
 
         let has_any_f64 = tiers.iter().any(|t| {
             t.dispatches && matches!(t.tier, PrecisionTier::F64 | PrecisionTier::F64Precise)
@@ -232,13 +262,25 @@ mod tests {
             dispatches: ok,
             transcendentals_safe: ok,
         };
+        let universal = |tier| mk(tier, true);
         HardwareCalibration {
             adapter_name: "Test GPU".into(),
             tiers: vec![
+                universal(PrecisionTier::Binary),
+                universal(PrecisionTier::Int2),
+                universal(PrecisionTier::Quantized4),
+                universal(PrecisionTier::Quantized8),
+                universal(PrecisionTier::Fp8E5M2),
+                universal(PrecisionTier::Fp8E4M3),
+                universal(PrecisionTier::Bf16),
+                mk(PrecisionTier::F16, false),
+                mk(PrecisionTier::Tf32, false),
                 mk(PrecisionTier::F32, f32_ok),
                 mk(PrecisionTier::DF64, df64_ok),
                 mk(PrecisionTier::F64, f64_ok),
                 mk(PrecisionTier::F64Precise, precise_ok),
+                universal(PrecisionTier::QF128),
+                mk(PrecisionTier::DF128, f64_ok),
             ],
             has_any_f64: f64_ok || precise_ok,
             df64_safe: df64_ok,
@@ -253,6 +295,19 @@ mod tests {
         assert!(cal.tier_safe(PrecisionTier::DF64));
         assert!(cal.tier_safe(PrecisionTier::F64));
         assert!(!cal.tier_safe(PrecisionTier::F64Precise));
+    }
+
+    #[test]
+    fn universal_tiers_always_safe() {
+        let cal = make_cal(true, false, false, false);
+        assert!(cal.tier_safe(PrecisionTier::Binary));
+        assert!(cal.tier_safe(PrecisionTier::Int2));
+        assert!(cal.tier_safe(PrecisionTier::Quantized4));
+        assert!(cal.tier_safe(PrecisionTier::Quantized8));
+        assert!(cal.tier_safe(PrecisionTier::Fp8E5M2));
+        assert!(cal.tier_safe(PrecisionTier::Fp8E4M3));
+        assert!(cal.tier_safe(PrecisionTier::Bf16));
+        assert!(cal.tier_safe(PrecisionTier::QF128));
     }
 
     #[test]
@@ -295,9 +350,18 @@ mod tests {
     }
 
     #[test]
-    fn tier_cap_returns_none_for_unlisted_tier() {
+    fn calibration_has_all_15_tiers() {
         let cal = make_cal(true, true, true, true);
-        assert!(cal.tier_cap(PrecisionTier::F16).is_none());
+        assert_eq!(cal.tiers.len(), 15, "calibration should have all 15 tiers");
+    }
+
+    #[test]
+    fn df128_follows_f64_availability() {
+        let cal_with_f64 = make_cal(true, true, true, true);
+        assert!(cal_with_f64.tier_safe(PrecisionTier::DF128));
+
+        let cal_no_f64 = make_cal(true, true, false, false);
+        assert!(!cal_no_f64.tier_safe(PrecisionTier::DF128));
     }
 
     #[test]

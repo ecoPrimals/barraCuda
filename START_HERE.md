@@ -35,10 +35,10 @@ crates/
   barracuda/           Core compute library
     src/
       device/          GpuBackend trait, WgpuDevice, SovereignDevice (IPC dispatch), driver profiles
-      shaders/         816 WGSL shaders + sovereign compiler
+      shaders/         824 WGSL shaders + sovereign compiler
         math/          DF64 core, transcendentals
         sovereign/     Naga-based compiler (FMA fusion, dead expr, SPIR-V emit)
-        precision/     3-tier model: F32/F64/Df64 (aligned with coralReef Fp64Strategy)
+        precision/     15-tier precision continuum: Binary→Int2→Q4→Q8→FP8→BF16→F16→TF32→F32→DF64→F64→F64Precise→QF128→DF128
       tensor/          Tensor types, GpuView persistent buffers
       ops/             Science operations (FHE, statistics, physics, bio)
       pipeline/        GPU dispatch pipeline, workgroup sizing
@@ -67,14 +67,22 @@ specs/                 Formal specifications
 ## Architecture
 
 The precision pipeline is the core abstraction. Math is authored in f64 (the
-canonical precision), and barraCuda handles the 3-tier hardware mapping:
+canonical precision), and barraCuda defines the full 15-tier precision
+continuum. coralReef handles compilation at each tier; toadStool routes to
+silicon features (tensor cores, RT cores):
 
 ```
 f64 source (the "true math")
-  → Precision selected by Fp64Strategy (aligned with coralReef)
-    → F32:  downcast types → standard compilation
-    → F64:  driver patching → ILP optimization → sovereign compiler → SPIR-V
-    → Df64: naga-guided infix rewrite → DF64 library injection → compilation
+  → PrecisionBrain selects tier per PhysicsDomain + hardware probing
+    ┌─ Scale-down (throughput): Binary → Int2 → Q4 → Q8 → FP8 → BF16 → F16 → TF32
+    ├─ Baseline:               F32 (universal, all GPUs)
+    └─ Scale-up (precision):   DF64 → F64 → F64Precise → QF128 → DF128
+
+  → Compile path per tier:
+    → F32/sub-F32:  standard compilation (compute in f32 after dequantization)
+    → F64/DF128:    driver patching → ILP optimization → sovereign compiler
+    → DF64:         naga-guided infix rewrite → DF64 library injection
+    → QF128:        f32-only Bailey quad-double (universal, no f64 hardware needed)
 ```
 
 The sovereign compiler pipeline:

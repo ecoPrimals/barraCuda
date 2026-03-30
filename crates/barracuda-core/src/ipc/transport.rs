@@ -300,6 +300,11 @@ const SERIALIZATION_ERROR: &str =
 /// or future transports (named pipes, abstract sockets). This is the
 /// ecoBin v2.0 transport-agnostic protocol handler: add a new transport
 /// by binding a listener and passing accepted connections here.
+///
+/// Supports both single requests and JSON-RPC 2.0 batch requests (JSON
+/// arrays). Per spec: an empty batch returns a parse error; notifications
+/// within a batch produce no response entries; if all requests are
+/// notifications, no response is sent.
 async fn handle_connection<R, W>(primal: Arc<BarraCudaPrimal>, reader: R, mut writer: W)
 where
     R: AsyncRead + Unpin + Send,
@@ -307,14 +312,26 @@ where
 {
     let mut lines = BufReader::new(reader).lines();
     while let Ok(Some(line)) = lines.next_line().await {
-        let Some(response) = handle_line(&primal, &line).await else {
-            continue;
-        };
-        let mut json =
-            serde_json::to_string(&response).unwrap_or_else(|_| SERIALIZATION_ERROR.to_string());
-        json.push('\n');
-        if writer.write_all(json.as_bytes()).await.is_err() {
-            break;
+        let trimmed = line.trim_start();
+        if trimmed.starts_with('[') {
+            let Some(batch_json) = handle_batch(&primal, trimmed).await else {
+                continue;
+            };
+            let mut out = batch_json;
+            out.push('\n');
+            if writer.write_all(out.as_bytes()).await.is_err() {
+                break;
+            }
+        } else {
+            let Some(response) = handle_line(&primal, &line).await else {
+                continue;
+            };
+            let mut json = serde_json::to_string(&response)
+                .unwrap_or_else(|_| SERIALIZATION_ERROR.to_string());
+            json.push('\n');
+            if writer.write_all(json.as_bytes()).await.is_err() {
+                break;
+            }
         }
     }
 }
@@ -370,6 +387,50 @@ async fn handle_line(primal: &BarraCudaPrimal, line: &str) -> Option<JsonRpcResp
         _ => return None,
     };
     Some(methods::dispatch(primal, &request.method, &request.params, id).await)
+}
+
+/// Handle a JSON-RPC 2.0 batch request (JSON array on a single line).
+///
+/// Per JSON-RPC 2.0 spec §6:
+/// - An empty array is an invalid request.
+/// - Each element is processed independently; notifications produce no entry.
+/// - If all elements are notifications, no response is returned (`None`).
+/// - Non-array elements within the batch produce individual parse errors.
+async fn handle_batch(primal: &BarraCudaPrimal, line: &str) -> Option<String> {
+    let items: Vec<serde_json::Value> = match serde_json::from_str(line) {
+        Ok(v) => v,
+        Err(_) => {
+            return Some(
+                serde_json::to_string(&JsonRpcResponse::parse_error())
+                    .unwrap_or_else(|_| SERIALIZATION_ERROR.to_string()),
+            );
+        }
+    };
+
+    if items.is_empty() {
+        return Some(
+            serde_json::to_string(&JsonRpcResponse::error(
+                serde_json::Value::Null,
+                super::jsonrpc::INVALID_REQUEST,
+                "empty batch",
+            ))
+            .unwrap_or_else(|_| SERIALIZATION_ERROR.to_string()),
+        );
+    }
+
+    let mut responses = Vec::new();
+    for item in &items {
+        let item_str = item.to_string();
+        if let Some(resp) = handle_line(primal, &item_str).await {
+            responses.push(resp);
+        }
+    }
+
+    if responses.is_empty() {
+        return None;
+    }
+
+    Some(serde_json::to_string(&responses).unwrap_or_else(|_| SERIALIZATION_ERROR.to_string()))
 }
 
 #[cfg(test)]
@@ -597,6 +658,95 @@ mod tests {
         assert_eq!(lines.len(), 2, "should have two responses");
         assert!(lines[0].contains("alive"));
         assert!(lines[1].contains("-32700"), "parse error for invalid JSON");
+    }
+
+    // ─── JSON-RPC batch tests ───
+
+    #[tokio::test]
+    async fn test_batch_two_requests() {
+        let primal = BarraCudaPrimal::new();
+        let batch = r#"[
+            {"jsonrpc":"2.0","method":"health.liveness","params":{},"id":1},
+            {"jsonrpc":"2.0","method":"primal.info","params":{},"id":2}
+        ]"#;
+        let resp = handle_batch(&primal, batch).await.expect("batch response");
+        let arr: Vec<serde_json::Value> = serde_json::from_str(&resp).unwrap();
+        assert_eq!(arr.len(), 2);
+        assert_eq!(arr[0]["id"], 1);
+        assert_eq!(arr[1]["id"], 2);
+    }
+
+    #[tokio::test]
+    async fn test_batch_empty_array_is_invalid() {
+        let primal = BarraCudaPrimal::new();
+        let resp = handle_batch(&primal, "[]").await.expect("error response");
+        let parsed: serde_json::Value = serde_json::from_str(&resp).unwrap();
+        assert_eq!(
+            parsed["error"]["code"],
+            super::super::jsonrpc::INVALID_REQUEST
+        );
+    }
+
+    #[tokio::test]
+    async fn test_batch_invalid_json() {
+        let primal = BarraCudaPrimal::new();
+        let resp = handle_batch(&primal, "[invalid")
+            .await
+            .expect("parse error");
+        let parsed: serde_json::Value = serde_json::from_str(&resp).unwrap();
+        assert_eq!(parsed["error"]["code"], super::super::jsonrpc::PARSE_ERROR);
+    }
+
+    #[tokio::test]
+    async fn test_batch_all_notifications_no_response() {
+        let primal = BarraCudaPrimal::new();
+        let batch = r#"[
+            {"jsonrpc":"2.0","method":"health.liveness","params":{}},
+            {"jsonrpc":"2.0","method":"device.list","params":{}}
+        ]"#;
+        assert!(
+            handle_batch(&primal, batch).await.is_none(),
+            "all-notification batch must not produce a response"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_batch_mixed_request_and_notification() {
+        let primal = BarraCudaPrimal::new();
+        let batch = r#"[
+            {"jsonrpc":"2.0","method":"health.liveness","params":{}},
+            {"jsonrpc":"2.0","method":"primal.info","params":{},"id":"abc"}
+        ]"#;
+        let resp = handle_batch(&primal, batch).await.expect("one response");
+        let arr: Vec<serde_json::Value> = serde_json::from_str(&resp).unwrap();
+        assert_eq!(
+            arr.len(),
+            1,
+            "only the non-notification should produce a response"
+        );
+        assert_eq!(arr[0]["id"], "abc");
+    }
+
+    #[tokio::test]
+    async fn test_batch_via_connection_handler() {
+        let primal = Arc::new(BarraCudaPrimal::new());
+        let batch = r#"[{"jsonrpc":"2.0","method":"health.liveness","params":{},"id":1},{"jsonrpc":"2.0","method":"primal.info","params":{},"id":2}]"#;
+        let input = format!("{batch}\n");
+
+        let (client_reader, mut server_writer) = tokio::io::duplex(4096);
+        let (mut server_reader_buf, client_writer) = tokio::io::duplex(4096);
+
+        server_writer.write_all(input.as_bytes()).await.unwrap();
+        server_writer.shutdown().await.unwrap();
+
+        handle_connection(primal, client_reader, client_writer).await;
+
+        let mut response = String::new();
+        tokio::io::AsyncReadExt::read_to_string(&mut server_reader_buf, &mut response)
+            .await
+            .unwrap();
+        let arr: Vec<serde_json::Value> = serde_json::from_str(response.trim()).unwrap();
+        assert_eq!(arr.len(), 2, "batch via connection should return array");
     }
 
     #[test]

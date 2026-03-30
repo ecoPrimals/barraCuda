@@ -156,7 +156,18 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 
 #[test]
 fn test_fault_preamble_consistency_under_concatenation() {
-    for prec in [Precision::F32, Precision::F64, Precision::Df64] {
+    for prec in [
+        Precision::Binary,
+        Precision::Int2,
+        Precision::Q4,
+        Precision::Q8,
+        Precision::Fp8E5M2,
+        Precision::Fp8E4M3,
+        Precision::Bf16,
+        Precision::F32,
+        Precision::F64,
+        Precision::Df64,
+    ] {
         let p = prec.op_preamble();
         let opens = p.matches('{').count();
         let closes = p.matches('}').count();
@@ -174,9 +185,15 @@ fn test_fault_downcast_idempotent_f32() {
 
 #[test]
 fn test_fault_precision_bytes_consistent() {
+    assert_eq!(Precision::Binary.bytes_per_element(), 1);
+    assert_eq!(Precision::Fp8E4M3.bytes_per_element(), 1);
+    assert_eq!(Precision::Bf16.bytes_per_element(), 2);
+    assert_eq!(Precision::F16.bytes_per_element(), 2);
     assert_eq!(Precision::F32.bytes_per_element(), 4);
     assert_eq!(Precision::F64.bytes_per_element(), 8);
     assert_eq!(Precision::Df64.bytes_per_element(), 8);
+    assert_eq!(Precision::Qf128.bytes_per_element(), 16);
+    assert_eq!(Precision::Df128.bytes_per_element(), 16);
 }
 
 #[test]
@@ -184,4 +201,27 @@ fn test_fault_precision_is_f64_class() {
     assert!(!Precision::F32.is_f64_class());
     assert!(Precision::F64.is_f64_class());
     assert!(Precision::Df64.is_f64_class());
+    assert!(Precision::Df128.is_f64_class());
+    assert!(!Precision::Qf128.is_f64_class());
+}
+
+#[test]
+fn test_precision_reduced_and_extended() {
+    assert!(Precision::Binary.is_reduced());
+    assert!(Precision::Bf16.is_reduced());
+    assert!(Precision::F16.is_reduced());
+    assert!(!Precision::F32.is_reduced());
+    assert!(Precision::Qf128.is_extended());
+    assert!(Precision::Df128.is_extended());
+    assert!(!Precision::F64.is_extended());
+}
+
+#[test]
+fn test_precision_is_quantized() {
+    assert!(Precision::Binary.is_quantized());
+    assert!(Precision::Int2.is_quantized());
+    assert!(Precision::Q4.is_quantized());
+    assert!(Precision::Q8.is_quantized());
+    assert!(!Precision::Fp8E4M3.is_quantized());
+    assert!(!Precision::F32.is_quantized());
 }

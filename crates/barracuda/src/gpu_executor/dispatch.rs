@@ -79,6 +79,16 @@ pub async fn build_tensor(
             .iter()
             .map(|&b| if b != 0 { 1.0f32 } else { 0.0 })
             .collect(),
+        DType::F16 | DType::Bf16 => data_bytes
+            .chunks_exact(2)
+            .map(|c| {
+                let bits = u16::from_ne_bytes([c[0], c[1]]);
+                f32::from_bits((u32::from(bits)) << 16)
+            })
+            .collect(),
+        DType::I8 => data_bytes.iter().map(|&b| f32::from(b as i8)).collect(),
+        DType::F8E4M3 | DType::F8E5M2 => data_bytes.iter().map(|&b| f32::from(b as i8)).collect(),
+        DType::Binary | DType::I2 | DType::I4 => data_bytes.iter().map(|&b| f32::from(b)).collect(),
     };
     crate::tensor::Tensor::from_data(&floats, desc.shape.clone(), device.clone())
 }

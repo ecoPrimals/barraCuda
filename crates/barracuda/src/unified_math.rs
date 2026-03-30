@@ -412,9 +412,28 @@ impl TensorDescriptor {
     }
 }
 
-/// Data type enumeration
+/// Data type enumeration covering the full precision continuum.
+///
+/// Extends from packed 1-bit binary through native 64-bit types.
+/// New sub-f32 types map to the precision tier storage formats.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DType {
+    /// Packed 1-bit binary (32 values per u32).
+    Binary,
+    /// Packed 2-bit integer (16 values per u32).
+    I2,
+    /// Packed 4-bit integer (8 values per u32).
+    I4,
+    /// Signed 8-bit integer.
+    I8,
+    /// 8-bit float E4M3 (OFP): 3-bit mantissa, 4-bit exponent.
+    F8E4M3,
+    /// 8-bit float E5M2 (OFP): 2-bit mantissa, 5-bit exponent.
+    F8E5M2,
+    /// 16-bit bfloat (Google Brain): f32 exponent range, 7-bit mantissa.
+    Bf16,
+    /// 16-bit IEEE half precision (binary16).
+    F16,
     /// 32-bit floating point
     F32,
     /// 64-bit floating point
@@ -433,13 +452,50 @@ pub enum DType {
 
 impl DType {
     /// Returns the size in bytes of a single element of this type.
+    ///
+    /// For sub-byte types (Binary, I2, I4), returns 1 as the minimum
+    /// addressable unit. Actual packing is handled at the buffer level.
     #[must_use]
     pub fn size_bytes(&self) -> usize {
         match self {
+            Self::Binary | Self::I2 | Self::I4 | Self::I8 => 1,
+            Self::F8E4M3 | Self::F8E5M2 => 1,
+            Self::Bf16 | Self::F16 => 2,
             Self::F32 | Self::I32 | Self::U32 => 4,
             Self::F64 | Self::I64 | Self::U64 => 8,
             Self::Bool => 1,
         }
+    }
+
+    /// Whether this is a floating-point type (including reduced and extended).
+    #[must_use]
+    pub fn is_float(&self) -> bool {
+        matches!(
+            self,
+            Self::F8E4M3 | Self::F8E5M2 | Self::Bf16 | Self::F16 | Self::F32 | Self::F64
+        )
+    }
+
+    /// Whether this is an integer type (including sub-byte packed).
+    #[must_use]
+    pub fn is_integer(&self) -> bool {
+        matches!(
+            self,
+            Self::Binary
+                | Self::I2
+                | Self::I4
+                | Self::I8
+                | Self::I32
+                | Self::I64
+                | Self::U32
+                | Self::U64
+        )
+    }
+
+    /// Whether this is a sub-byte packed format.
+    #[must_use]
+    pub fn is_packed(&self) -> bool {
+        matches!(self, Self::Binary | Self::I2 | Self::I4)
     }
 }
 
@@ -498,9 +554,36 @@ mod tests {
 
     #[test]
     fn test_dtype_size() {
+        assert_eq!(DType::Binary.size_bytes(), 1);
+        assert_eq!(DType::I2.size_bytes(), 1);
+        assert_eq!(DType::I4.size_bytes(), 1);
+        assert_eq!(DType::I8.size_bytes(), 1);
+        assert_eq!(DType::F8E4M3.size_bytes(), 1);
+        assert_eq!(DType::F8E5M2.size_bytes(), 1);
+        assert_eq!(DType::Bf16.size_bytes(), 2);
+        assert_eq!(DType::F16.size_bytes(), 2);
         assert_eq!(DType::F32.size_bytes(), 4);
         assert_eq!(DType::F64.size_bytes(), 8);
         assert_eq!(DType::Bool.size_bytes(), 1);
+    }
+
+    #[test]
+    fn test_dtype_classification() {
+        assert!(DType::F32.is_float());
+        assert!(DType::Bf16.is_float());
+        assert!(DType::F8E4M3.is_float());
+        assert!(!DType::I32.is_float());
+        assert!(!DType::Binary.is_float());
+
+        assert!(DType::I32.is_integer());
+        assert!(DType::Binary.is_integer());
+        assert!(DType::I2.is_integer());
+        assert!(!DType::F32.is_integer());
+
+        assert!(DType::Binary.is_packed());
+        assert!(DType::I2.is_packed());
+        assert!(DType::I4.is_packed());
+        assert!(!DType::I8.is_packed());
     }
 
     #[test]

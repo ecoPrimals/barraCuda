@@ -281,7 +281,7 @@ mod tests {
                 "log" => c.log = false,
                 "fma" => c.fma = false,
                 "abs_min_max" => c.abs_min_max = false,
-                _ => unreachable!(),
+                _ => unreachable!("all F64BuiltinCapabilities fields covered above"),
             }
             assert!(
                 !c.has_f64_transcendentals(),

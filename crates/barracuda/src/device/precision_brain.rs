@@ -32,7 +32,7 @@ use super::hardware_calibration::HardwareCalibration;
 use super::precision_tier::{PhysicsDomain, PrecisionBrainAdvice, PrecisionTier};
 
 /// Number of registered domains for the routing table.
-const NUM_DOMAINS: usize = 12;
+const NUM_DOMAINS: usize = 15;
 
 const ALL_DOMAINS: [PhysicsDomain; NUM_DOMAINS] = [
     PhysicsDomain::LatticeQcd,
@@ -47,6 +47,9 @@ const ALL_DOMAINS: [PhysicsDomain; NUM_DOMAINS] = [
     PhysicsDomain::Hydrology,
     PhysicsDomain::Statistics,
     PhysicsDomain::General,
+    PhysicsDomain::Inference,
+    PhysicsDomain::Training,
+    PhysicsDomain::Hashing,
 ];
 
 /// Self-routing precision brain for a single GPU.
@@ -144,6 +147,12 @@ impl PrecisionBrain {
     }
 
     /// Compile a shader at the brain-selected tier for the given domain.
+    ///
+    /// Scale-down tiers (Binary through Bf16) and F32 use the universal
+    /// `compile_shader` path — compute is in f32 after dequantization.
+    /// Scale-up tiers route to their respective compilation paths.
+    /// QF128 uses the f32 path (all f32 arithmetic, no f64 hardware needed).
+    /// DF128 uses the f64 path (Dekker double-double on f64).
     #[must_use]
     pub fn compile(
         &self,
@@ -154,10 +163,18 @@ impl PrecisionBrain {
     ) -> wgpu::ShaderModule {
         let tier = self.route(domain);
         match tier {
-            PrecisionTier::F16 | PrecisionTier::F32 => {
-                device.compile_shader(shader_source, Some(label))
-            }
-            PrecisionTier::F64 | PrecisionTier::F64Precise => {
+            PrecisionTier::Binary
+            | PrecisionTier::Int2
+            | PrecisionTier::Quantized4
+            | PrecisionTier::Quantized8
+            | PrecisionTier::Fp8E5M2
+            | PrecisionTier::Fp8E4M3
+            | PrecisionTier::Bf16
+            | PrecisionTier::F16
+            | PrecisionTier::Tf32
+            | PrecisionTier::F32
+            | PrecisionTier::QF128 => device.compile_shader(shader_source, Some(label)),
+            PrecisionTier::F64 | PrecisionTier::F64Precise | PrecisionTier::DF128 => {
                 device.compile_shader_f64(shader_source, Some(label))
             }
             PrecisionTier::DF64 => device.compile_shader_df64(shader_source, Some(label)),
@@ -190,8 +207,8 @@ impl PrecisionBrain {
 
     /// Whether the routed tier for this domain requires sovereign compilation.
     ///
-    /// Returns `true` when the domain routes to F64/F64Precise/DF64 and the
-    /// hardware doesn't natively support that tier, but coralReef lowering
+    /// Returns `true` when the domain routes to an f64-class tier and the
+    /// hardware doesn't natively support it, but coralReef lowering
     /// makes it viable. In this case, the caller should prefer the coralReef
     /// `compile_wgsl_direct` path over the wgpu/naga path.
     #[must_use]
@@ -202,7 +219,10 @@ impl PrecisionBrain {
         let tier = self.route(domain);
         matches!(
             tier,
-            PrecisionTier::F64 | PrecisionTier::F64Precise | PrecisionTier::DF64
+            PrecisionTier::F64
+                | PrecisionTier::F64Precise
+                | PrecisionTier::DF64
+                | PrecisionTier::DF128
         ) && !self.hw_native
     }
 }
@@ -233,6 +253,9 @@ const fn domain_index(domain: PhysicsDomain) -> usize {
         PhysicsDomain::Hydrology => 9,
         PhysicsDomain::Statistics => 10,
         PhysicsDomain::General => 11,
+        PhysicsDomain::Inference => 12,
+        PhysicsDomain::Training => 13,
+        PhysicsDomain::Hashing => 14,
     }
 }
 
@@ -245,6 +268,8 @@ fn route_domain(
     let f64_safe = cal.tier_safe(PrecisionTier::F64) || coral_f64_lowering;
     let df64_safe = cal.tier_safe(PrecisionTier::DF64) || coral_f64_lowering;
     let precise_safe = cal.tier_safe(PrecisionTier::F64Precise) || coral_f64_lowering;
+    let f16_safe = cal.tier_safe(PrecisionTier::F16);
+    let bf16_safe = cal.tier_safe(PrecisionTier::Bf16);
 
     match domain {
         // Precision-critical: prefer F64Precise, cascade through tiers
@@ -289,6 +314,41 @@ fn route_domain(
                 PrecisionTier::F32
             }
         }
+
+        // Inference: maximize throughput with quantized/reduced precision.
+        // Q4 → Q8 → FP8 → F16 → BF16 → F32 cascade.
+        PhysicsDomain::Inference => {
+            if cal.tier_safe(PrecisionTier::Quantized4) {
+                PrecisionTier::Quantized4
+            } else if cal.tier_safe(PrecisionTier::Quantized8) {
+                PrecisionTier::Quantized8
+            } else if cal.tier_safe(PrecisionTier::Fp8E4M3) {
+                PrecisionTier::Fp8E4M3
+            } else if f16_safe {
+                PrecisionTier::F16
+            } else if bf16_safe {
+                PrecisionTier::Bf16
+            } else {
+                PrecisionTier::F32
+            }
+        }
+
+        // Training: mixed precision with accumulation in f32.
+        // BF16 → F16 → F32 → DF64 cascade.
+        PhysicsDomain::Training => {
+            if bf16_safe {
+                PrecisionTier::Bf16
+            } else if f16_safe {
+                PrecisionTier::F16
+            } else if df64_safe {
+                PrecisionTier::DF64
+            } else {
+                PrecisionTier::F32
+            }
+        }
+
+        // Hashing: binary XNOR+popcount.
+        PhysicsDomain::Hashing => PrecisionTier::Binary,
     }
 }
 
@@ -299,41 +359,59 @@ fn domain_requirements(domain: PhysicsDomain, tier: PrecisionTier) -> (bool, &'s
                 false,
                 "FMA-free f64: cancellation-safe for complex arithmetic",
             ),
-            PrecisionTier::F64 => (
+            PrecisionTier::F64 | PrecisionTier::DF128 => (
                 true,
                 "Native f64 (FMA-free unavailable, acceptable precision)",
             ),
-            PrecisionTier::DF64 => (
+            PrecisionTier::DF64 | PrecisionTier::QF128 => (
                 false,
-                "DF64 emulation: ~14 digits, sufficient for most physics",
+                "Emulated precision: ~14+ digits, sufficient for most physics",
             ),
-            PrecisionTier::F16 | PrecisionTier::F32 => (
-                true,
-                "F32/F16 fallback: reduced precision, validation recommended",
-            ),
+            _ => (true, "Reduced precision fallback: validation recommended"),
         };
     }
 
     if domain.throughput_bound() {
         return match tier {
-            PrecisionTier::F64 | PrecisionTier::F64Precise => {
+            PrecisionTier::F64 | PrecisionTier::F64Precise | PrecisionTier::DF128 => {
                 (true, "Native f64 for compute-bound domains")
             }
-            PrecisionTier::DF64 => (
+            PrecisionTier::DF64 | PrecisionTier::QF128 => (
                 true,
-                "DF64 throughput mode: f32 cores for max dispatch rate",
+                "Emulated precision throughput mode: f32 cores for max dispatch rate",
             ),
+            PrecisionTier::Binary => (true, "Binary XNOR+popcount: maximum throughput"),
+            PrecisionTier::Int2 | PrecisionTier::Quantized4 | PrecisionTier::Quantized8 => {
+                (true, "Quantized fast path: dequantize→f32 compute")
+            }
+            PrecisionTier::Fp8E4M3 | PrecisionTier::Fp8E5M2 => {
+                (true, "FP8 fast path: 4× throughput over f32")
+            }
+            PrecisionTier::Bf16 => (true, "BF16 mixed precision: training fast path"),
             PrecisionTier::F16 => (true, "F16 tensor core fast path: max throughput"),
+            PrecisionTier::Tf32 => (true, "TF32 tensor core: f32 range, reduced mantissa"),
             PrecisionTier::F32 => (true, "F32 screening/preview mode"),
         };
     }
 
     match tier {
-        PrecisionTier::F64 | PrecisionTier::F64Precise => {
+        PrecisionTier::F64 | PrecisionTier::F64Precise | PrecisionTier::DF128 => {
             (true, "Native f64 for moderate precision needs")
         }
-        PrecisionTier::DF64 => (true, "DF64 provides sufficient precision"),
+        PrecisionTier::DF64 | PrecisionTier::QF128 => {
+            (true, "Emulated precision provides sufficient accuracy")
+        }
         PrecisionTier::F16 => (true, "F16 fast path: screening/ML inference"),
+        PrecisionTier::Bf16 => (
+            true,
+            "BF16: ML training, range-preserving reduced precision",
+        ),
+        PrecisionTier::Fp8E4M3 | PrecisionTier::Fp8E5M2 => (true, "FP8: ultra-low precision ML"),
+        PrecisionTier::Binary | PrecisionTier::Int2 => (true, "Integer quantized: exact discrete"),
+        PrecisionTier::Quantized4 | PrecisionTier::Quantized8 => {
+            (true, "Block quantized: dequantize→compute→quantize")
+        }
+        PrecisionTier::Tf32 => (true, "TF32: tensor core internal format"),
         PrecisionTier::F32 => (true, "F32 fallback: validate results"),
     }
 }
@@ -361,13 +439,25 @@ mod tests {
             dispatches: ok,
             transcendentals_safe: ok,
         };
+        let universal = |tier| mk(tier, true);
         HardwareCalibration {
             adapter_name: "Test GPU".into(),
             tiers: vec![
+                universal(PrecisionTier::Binary),
+                universal(PrecisionTier::Int2),
+                universal(PrecisionTier::Quantized4),
+                universal(PrecisionTier::Quantized8),
+                universal(PrecisionTier::Fp8E5M2),
+                universal(PrecisionTier::Fp8E4M3),
+                universal(PrecisionTier::Bf16),
+                mk(PrecisionTier::F16, false),
+                mk(PrecisionTier::Tf32, false),
                 mk(PrecisionTier::F32, f32_ok),
                 mk(PrecisionTier::DF64, df64_ok),
                 mk(PrecisionTier::F64, f64_ok),
                 mk(PrecisionTier::F64Precise, precise_ok),
+                universal(PrecisionTier::QF128),
+                mk(PrecisionTier::DF128, f64_ok),
             ],
             has_any_f64: f64_ok || precise_ok,
             df64_safe: df64_ok,
@@ -562,5 +652,52 @@ mod tests {
         let cal = make_cal(true, true, true, true);
         let brain = PrecisionBrain::from_capabilities(cal, &test_caps_volta_full());
         assert_eq!(brain.adapter_name(), "Test GPU");
+    }
+
+    #[test]
+    fn inference_domain_routes_to_q4() {
+        let cal = make_cal(true, true, true, true);
+        let tier = route_domain(PhysicsDomain::Inference, &cal, true, false);
+        assert_eq!(tier, PrecisionTier::Quantized4);
+    }
+
+    #[test]
+    fn training_domain_routes_to_bf16() {
+        let cal = make_cal(true, true, true, true);
+        let tier = route_domain(PhysicsDomain::Training, &cal, true, false);
+        assert_eq!(tier, PrecisionTier::Bf16);
+    }
+
+    #[test]
+    fn hashing_domain_routes_to_binary() {
+        let cal = make_cal(true, true, true, true);
+        let tier = route_domain(PhysicsDomain::Hashing, &cal, true, false);
+        assert_eq!(tier, PrecisionTier::Binary);
+    }
+
+    #[test]
+    fn domain_index_roundtrip_all_15() {
+        for (i, &domain) in ALL_DOMAINS.iter().enumerate() {
+            assert_eq!(
+                domain_index(domain),
+                i,
+                "domain_index mismatch for {domain:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn inference_requirements_throughput() {
+        let (fma_safe, _) =
+            domain_requirements(PhysicsDomain::Inference, PrecisionTier::Quantized4);
+        assert!(fma_safe);
+    }
+
+    #[test]
+    fn hashing_requirements_binary() {
+        let (fma_safe, rationale) =
+            domain_requirements(PhysicsDomain::Hashing, PrecisionTier::Binary);
+        assert!(fma_safe);
+        assert!(rationale.contains("XNOR") || rationale.contains("maximum"));
     }
 }

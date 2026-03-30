@@ -175,12 +175,168 @@ impl CoralF64Capabilities {
 /// Structured capabilities response from coralReef.
 ///
 /// Mirrors `coralreef-core::service::CompileCapabilitiesResponse`.
+/// Phase 3 adds CPU compilation and validation capabilities.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoralCapabilitiesResponse {
     /// Supported GPU ISA architectures (e.g. `["sm_70", "sm_80", "gfx1030"]`).
     pub supported_archs: Vec<String>,
     /// Per-operation f64 transcendental polyfill availability.
     pub f64_transcendental_capabilities: CoralF64Capabilities,
+    /// Supported CPU architectures for `shader.compile.cpu` (Phase 3).
+    /// Empty if CPU compilation is not available.
+    #[serde(default)]
+    pub cpu_archs: Vec<String>,
+    /// Whether `shader.execute.cpu` is available (Phase 3).
+    #[serde(default)]
+    pub supports_cpu_execution: bool,
+    /// Whether `shader.validate` is available (Phase 3).
+    #[serde(default)]
+    pub supports_validation: bool,
+}
+
+// ============================================================================
+// Phase 3: CPU compilation, execution, and validation wire types
+// ============================================================================
+
+/// CPU compilation request (`shader.compile.cpu`).
+///
+/// Compiles a WGSL compute shader to a native CPU binary via Cranelift.
+/// The binary can be loaded and executed directly — no GPU driver needed.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompileCpuRequest {
+    /// WGSL source code.
+    pub wgsl_source: String,
+    /// Target CPU architecture: `"x86_64"`, `"aarch64"`, or `"auto"` (host).
+    pub arch: String,
+    /// Optimization level (0 = debug, 1 = default, 2 = aggressive).
+    pub opt_level: u32,
+    /// Compute shader entry point name.
+    pub entry_point: String,
+}
+
+/// CPU compilation response (`shader.compile.cpu`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompileCpuResponse {
+    /// Native CPU binary.
+    pub binary: Vec<u8>,
+    /// Target architecture the binary was compiled for.
+    pub arch: String,
+    /// Binary size in bytes.
+    pub size: usize,
+}
+
+/// CPU execution request (`shader.execute.cpu`).
+///
+/// Compile and execute a WGSL compute shader on the CPU in one IPC call.
+/// coralReef compiles the shader to native code, simulates the dispatch,
+/// and returns the modified buffer contents.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExecuteCpuRequest {
+    /// WGSL source code.
+    pub wgsl_source: String,
+    /// Compute shader entry point name.
+    pub entry_point: String,
+    /// Workgroup dispatch dimensions `[x, y, z]`.
+    pub workgroups: [u32; 3],
+    /// Storage and read-only storage buffer bindings.
+    pub bindings: Vec<BufferBinding>,
+    /// Uniform buffer bindings.
+    #[serde(default)]
+    pub uniforms: Vec<BufferBinding>,
+}
+
+/// CPU execution response (`shader.execute.cpu`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExecuteCpuResponse {
+    /// Modified buffer contents after execution.
+    pub bindings: Vec<BufferBinding>,
+    /// Execution wall-clock time in nanoseconds.
+    pub execution_time_ns: u64,
+}
+
+/// Shader validation request (`shader.validate`).
+///
+/// Execute a shader on CPU and compare results against expected values
+/// with per-element tolerances. Used for automated correctness testing.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidateRequest {
+    /// WGSL source code.
+    pub wgsl_source: String,
+    /// Compute shader entry point name.
+    pub entry_point: String,
+    /// Workgroup dispatch dimensions `[x, y, z]`.
+    pub workgroups: [u32; 3],
+    /// Input buffer bindings (storage + read-only storage).
+    pub bindings: Vec<BufferBinding>,
+    /// Uniform buffer bindings.
+    #[serde(default)]
+    pub uniforms: Vec<BufferBinding>,
+    /// Expected output values with tolerances.
+    pub expected: Vec<ExpectedBinding>,
+}
+
+/// Shader validation response (`shader.validate`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidateResponse {
+    /// Whether all expected values matched within tolerance.
+    pub passed: bool,
+    /// Per-element mismatches (empty if `passed` is true).
+    #[serde(default)]
+    pub mismatches: Vec<ValidationMismatch>,
+}
+
+/// A GPU buffer binding for CPU execution requests.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BufferBinding {
+    /// Bind group index.
+    pub group: u32,
+    /// Binding index within the group.
+    pub binding: u32,
+    /// Buffer contents as base64-encoded bytes.
+    pub data: String,
+    /// Buffer usage: `"storage"`, `"storage_read"`, or `"uniform"`.
+    pub usage: String,
+}
+
+/// Expected output for shader validation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExpectedBinding {
+    /// Bind group index.
+    pub group: u32,
+    /// Binding index within the group.
+    pub binding: u32,
+    /// Expected buffer contents as base64-encoded bytes.
+    pub data: String,
+    /// Tolerance for comparison.
+    pub tolerance: ValidationTolerance,
+}
+
+/// Per-element tolerance for shader validation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidationTolerance {
+    /// Absolute tolerance (element-wise).
+    pub abs: f64,
+    /// Relative tolerance (element-wise).
+    pub rel: f64,
+}
+
+/// A single element mismatch in shader validation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidationMismatch {
+    /// Bind group of the mismatched buffer.
+    pub group: u32,
+    /// Binding index of the mismatched buffer.
+    pub binding: u32,
+    /// Element index within the buffer.
+    pub index: usize,
+    /// Actual value produced by the shader.
+    pub got: f64,
+    /// Expected value.
+    pub expected: f64,
+    /// Absolute error `|got - expected|`.
+    pub abs_error: f64,
+    /// Relative error `|got - expected| / |expected|`.
+    pub rel_error: f64,
 }
 
 /// Adapter descriptor for IPC compile requests.

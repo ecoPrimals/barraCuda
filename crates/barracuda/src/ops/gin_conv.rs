@@ -366,13 +366,10 @@ impl GinConv {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_gin_conv_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let num_nodes = 4;
         let in_features = 8;
         let out_features = 16;
@@ -408,9 +405,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_gin_conv_with_epsilon() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let num_nodes = 3;
         let in_features = 4;
         let out_features = 8;
@@ -446,9 +441,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_gin_conv_large_batch() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let num_nodes = 100;
         let in_features = 64;
         let out_features = 128;

@@ -5,7 +5,43 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.11] — 2026-03-29
+## [0.3.11] — 2026-03-30
+
+### Added — Sprint 24: WGSL-as-Truth + NagaExecutor + coralReef CPU Compilation (Mar 30 2026)
+
+- **New crate `barracuda-naga-exec`** — Pure-Rust CPU interpreter for naga IR. Parses
+  WGSL, interprets compute entry points on CPU without GPU. Supports f32/f64 native,
+  workgroup shared memory, `workgroupBarrier()`, atomics (`atomicAdd`, `atomicMax`,
+  `atomicMin`, `atomicLoad`, `atomicStore`, `Exchange`). 16 tests covering elementwise
+  ops, math builtins, f64 transcendentals, shared memory, and atomic accumulation.
+- **Test architecture restructure (337 files)** — Migrated GPU op test files from
+  `get_test_device_if_gpu_available()` to `get_test_device()`. 2,770 tests now run
+  on CPU/llvmpipe. 17 modules correctly re-gated to GPU-only (atomics, complex memory
+  patterns not supported by llvmpipe).
+- **coralReef IPC contract** — 10 new wire types (`CompileCpuRequest/Response`,
+  `ExecuteCpuRequest/Response`, `ValidateRequest/Response`, `BufferBinding`,
+  `ExpectedBinding`, `ValidationTolerance`, `ValidationMismatch`). 5 new
+  `CoralCompiler` methods (`supports_cpu_execution`, `supports_validation`,
+  `compile_cpu`, `execute_cpu`, `validate_shader`). Capability discovery for
+  `shader.compile.cpu` and `shader.validate`.
+- **`ShaderValidationBackend` enum** — CoralReef → Llvmpipe fallback chain with
+  dynamic capability discovery in test harness.
+- **`assert_shader_math!` / `assert_shader_math_f64!` macros** — Validate WGSL
+  shader math on CPU in a single macro invocation, no GPU required.
+- **Semantic test aliases** — `get_test_device_for_shader_validation()`,
+  `get_test_device_for_f64_shader_validation()` with prelude re-exports
+  `test_shader_device()`, `test_f64_shader_device()`.
+
+### Changed — Sprint 23: ludoSpring V35 Gap Resolution (Mar 29 2026)
+
+- 15 new IPC methods wired (30 total): `math.sigmoid`, `math.log2`, `stats.mean`,
+  `stats.std_dev`, `stats.weighted_mean`, `noise.perlin2d`, `noise.perlin3d`,
+  `rng.uniform`, `activation.fitts`, `activation.hick`, `tensor.add`, `tensor.scale`,
+  `tensor.clamp`, `tensor.reduce`, `tensor.sigmoid`.
+- Socket path fixed to `barracuda.sock` per PRIMAL_IPC_PROTOCOL.
+- Dual-transport startup (UDS + TCP via `BARRACUDA_PORT`).
+- All `#[allow(` migrated to `#[expect(` or `cfg_attr` in both crates.
+- 3,808 tests pass, all quality gates green.
 
 ### Changed — Sprint 22h: Deep Debt Evolution & Dependency Purge (Mar 29 2026)
 

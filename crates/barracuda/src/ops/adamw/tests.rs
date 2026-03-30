@@ -2,7 +2,7 @@
 //! Tests for `AdamW` Optimizer
 
 use super::*;
-use crate::device::test_pool::get_test_device_if_gpu_available;
+use crate::device::test_pool::get_test_device;
 
 fn default_config() -> AdamConfig {
     AdamConfig::new(0.001).weight_decay(0.01)
@@ -10,9 +10,7 @@ fn default_config() -> AdamConfig {
 
 #[tokio::test]
 async fn test_adamw_gpu_basic() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     let size = 1000;
     let params = Tensor::from_vec_on(vec![1.0; size], vec![size], device.clone())
         .await
@@ -49,9 +47,7 @@ async fn test_adamw_gpu_basic() {
 
 #[tokio::test]
 async fn test_adamw_gpu_convergence() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     let size = 100;
     let mut params = Tensor::from_vec_on(vec![5.0; size], vec![size], device.clone())
         .await
@@ -83,9 +79,7 @@ async fn test_adamw_gpu_convergence() {
 
 #[tokio::test]
 async fn test_adamw_gpu_weight_decay_stronger() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     let size = 100;
     let params = Tensor::from_vec_on(vec![10.0; size], vec![size], device.clone())
         .await
@@ -127,9 +121,7 @@ async fn test_adamw_gpu_weight_decay_stronger() {
 
 #[tokio::test]
 async fn test_adamw_gpu_shape_validation() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     let params = Tensor::from_vec_on(vec![1.0; 100], vec![100], device.clone())
         .await
         .unwrap();
@@ -152,9 +144,7 @@ async fn test_adamw_gpu_shape_validation() {
 
 #[tokio::test]
 async fn test_adamw_gpu_multidimensional() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     let params = Tensor::from_vec_on(vec![1.0; 100], vec![10, 10], device.clone())
         .await
         .unwrap();
@@ -182,9 +172,7 @@ async fn test_adamw_gpu_multidimensional() {
 
 #[tokio::test]
 async fn test_adamw_vs_adam_difference() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     let size = 100;
     let params = Tensor::from_vec_on(vec![10.0; size], vec![size], device.clone())
         .await

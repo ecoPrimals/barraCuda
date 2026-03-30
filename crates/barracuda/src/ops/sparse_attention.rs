@@ -96,18 +96,10 @@ pub async fn sparse_attention(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::WgpuDevice;
-    use std::sync::Arc;
-
-    async fn get_test_device() -> Option<Arc<WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
 
     #[tokio::test]
     async fn test_sparse_attention_basic() {
-        let Some(dev) = get_test_device().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         let size = 2 * 8 * 4;
         let q = vec![0.5; size];
         let output = sparse_attention(&dev.device, &dev.queue, &q, &q, &q, 1, 2, 8, 4, 2)
@@ -119,9 +111,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sparse_attention_edge_cases() {
-        let Some(dev) = get_test_device().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         // Single head
         let size = 4 * 4;
         let q = vec![1.0; size];
@@ -141,9 +131,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sparse_attention_boundary() {
-        let Some(dev) = get_test_device().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         // Large stride
         let size = 2 * 16 * 8;
         let q = vec![0.5; size];
@@ -163,9 +151,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sparse_attention_large_batch() {
-        let Some(dev) = get_test_device().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         // Batch size 4
         let size = 4 * 4 * 16 * 8;
         let q = vec![0.5; size];
@@ -177,9 +163,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sparse_attention_precision() {
-        let Some(dev) = get_test_device().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         // Verify attention output properties
         let size = 4 * 4;
         let q = vec![1.0; size];

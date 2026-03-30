@@ -270,18 +270,10 @@ impl Fold {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::WgpuDevice;
-    use std::sync::Arc;
-
-    async fn get_test_device() -> Option<Arc<WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
 
     #[tokio::test]
     async fn test_fold_basic() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Input shape: [B, C*K*K, L] where K=3, so C*9
         let data: Vec<f32> = (0..324).map(|i| i as f32).collect();
         let input = Tensor::from_data(
@@ -300,9 +292,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fold_invalid_shape() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         assert!(Fold::new(input, (4, 4), (3, 3), 1, 0, 1).is_err());
@@ -310,9 +300,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fold_with_padding() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data: Vec<f32> = (0..576).map(|i| i as f32).collect();
         let input = Tensor::from_data(&data, vec![1, 9, 64], device).unwrap();
 

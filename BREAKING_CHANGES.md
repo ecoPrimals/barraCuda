@@ -5,6 +5,13 @@ and the migration path.
 
 ## Pre-1.0 (current)
 
+### 0.3.11
+
+| Change | Migration |
+|--------|-----------|
+| **`get_test_device_if_gpu_available()` semantics unchanged but most op tests no longer call it** — Tests now use `get_test_device()` (CPU/llvmpipe) for shader math validation. `get_test_device_if_gpu_available()` still exists for hardware integration tests. | If you wrote tests using `get_test_device_if_gpu_available()` for numerical correctness, switch to `get_test_device()` or `get_test_device_for_shader_validation()`. |
+| **New crate `barracuda-naga-exec`** — Added as dev-dependency of `barracuda`. | No consumer impact (dev-dependency only). |
+
 ### 0.3.10
 
 No breaking API changes. Internal precision improvements (`mul_add()`), lint

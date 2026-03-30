@@ -146,11 +146,11 @@ impl PerceptualLoss {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_perceptual_loss() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
             return;
         };
         let features1 = Tensor::from_vec_on(vec![0.5; 1000], vec![1000], device.clone())

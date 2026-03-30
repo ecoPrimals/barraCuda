@@ -158,18 +158,10 @@ impl LpPool2D {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::WgpuDevice;
-    use std::sync::Arc;
-
-    async fn get_test_device() -> Option<Arc<WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
 
     #[tokio::test]
     async fn test_lp_pool2d_basic() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data: Vec<f32> = (0..64).map(|i| i as f32).collect();
         let input = Tensor::from_data(&data, vec![1, 1, 8, 8], device).unwrap();
 
@@ -182,9 +174,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_lp_pool2d_l1() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data: Vec<f32> = (0..32).map(|i| i as f32).collect();
         let input = Tensor::from_data(&data, vec![1, 1, 4, 8], device).unwrap();
 
@@ -197,9 +187,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_lp_pool2d_invalid_shape() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         assert!(LpPool2D::new(input, 2, 2, 0, 2.0).is_err());
@@ -207,9 +195,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_lp_pool2d_invalid_p() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_data(&[1.0; 16], vec![1, 1, 4, 4], device).unwrap();
 
         assert!(LpPool2D::new(input.clone(), 2, 2, 0, 0.0).is_err());
@@ -218,9 +204,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_lp_pool2d_with_padding() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data: Vec<f32> = (0..64).map(|i| i as f32).collect();
         let input = Tensor::from_data(&data, vec![1, 1, 8, 8], device).unwrap();
 

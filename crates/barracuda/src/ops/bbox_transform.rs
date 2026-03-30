@@ -245,13 +245,10 @@ impl Tensor {
 mod tests {
     use super::*;
     // No longer needed - using Tensor method API
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_bbox_transform_basic() {
-        let Some(dev) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         let anchors_data = vec![0.0, 0.0, 10.0, 10.0];
         let deltas_data = vec![0.0, 0.0, 0.0, 0.0]; // Identity transform
         let anchors = Tensor::new(anchors_data, vec![1, 4], dev.clone());
@@ -267,9 +264,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_bbox_transform_edge_cases() {
-        let Some(dev) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         // Test with single anchor at origin
         let anchors = Tensor::new(vec![0.0, 0.0, 1.0, 1.0], vec![1, 4], dev.clone());
         let deltas = Tensor::new(vec![0.0, 0.0, 0.0, 0.0], vec![1, 4], dev.clone());
@@ -287,9 +282,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_bbox_transform_boundary() {
-        let Some(dev) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         // Test with scaling (exponential deltas)
         let anchors = Tensor::new(vec![0.0, 0.0, 10.0, 10.0], vec![1, 4], dev.clone());
         let deltas = Tensor::new(vec![0.0, 0.0, 0.693, 0.693], vec![1, 4], dev.clone()); // exp(0.693) ≈ 2.0
@@ -314,9 +307,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_bbox_transform_large_batch() {
-        let Some(dev) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         // Multiple anchors
         let num_boxes = 100;
         let mut anchors_data = Vec::new();
@@ -339,9 +330,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_bbox_transform_precision() {
-        let Some(dev) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         // Test with known values
         // Anchor: [0, 0, 10, 10] → center (5, 5), size (10, 10)
         // Deltas: [0.1, 0.2, 0, 0] → shift center by (1, 2)

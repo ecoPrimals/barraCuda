@@ -21,7 +21,7 @@
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! # use barracuda::tensor::Tensor;
 //! # use barracuda::device::test_pool;
-//! # let device = test_pool::tokio_block_on(test_pool::get_test_device_if_gpu_available()).unwrap();
+//! # let device = test_pool::tokio_block_on(test_pool::get_test_device()).unwrap();
 //! # let input = Tensor::from_data(&[1.0f32; 196], vec![1, 1, 14, 14], device).unwrap();
 //! // Input: [batch, channels, 14, 14]
 //! // Output: [batch, channels, 7, 7] (adaptive to target size)
@@ -161,7 +161,7 @@ impl Tensor {
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # use barracuda::tensor::Tensor;
     /// # use barracuda::device::test_pool;
-    /// # let device = test_pool::tokio_block_on(test_pool::get_test_device_if_gpu_available()).unwrap();
+    /// # let device = test_pool::tokio_block_on(test_pool::get_test_device()).unwrap();
     /// # let input = Tensor::from_data(&[1.0f32; 49], vec![1, 1, 7, 7], device).unwrap();
     /// // Adaptive max pool to 7x7 (regardless of input size)
     /// let _pooled = input.adaptive_maxpool2d((7, 7))?;
@@ -188,10 +188,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_adaptive_maxpool2d() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Test case: 4x4 input -> 2x2 output
         let input = Tensor::from_data(
@@ -224,10 +221,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_adaptive_maxpool2d_1x1_output() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Test global max pooling (adaptive pool to 1x1)
         let input = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![1, 1, 2, 2], device).unwrap();

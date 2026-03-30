@@ -317,7 +317,6 @@ fn bgl_uniform(idx: u32) -> wgpu::BindGroupLayoutEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[test]
     fn seed_state_length() {
@@ -340,9 +339,7 @@ mod tests {
 
     #[tokio::test]
     async fn wright_fisher_neutral_drift() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let n_pops = 4;
         let n_loci = 8;
         let total = n_pops * n_loci;
@@ -372,9 +369,7 @@ mod tests {
 
     #[tokio::test]
     async fn wright_fisher_strong_selection() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let n_pops = 10;
         let n_loci = 1;
         let total = n_pops * n_loci;
@@ -406,9 +401,7 @@ mod tests {
 
     #[tokio::test]
     async fn wright_fisher_fixation() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let wf = WrightFisherF32::new(
             device,
             WrightFisherConfig {

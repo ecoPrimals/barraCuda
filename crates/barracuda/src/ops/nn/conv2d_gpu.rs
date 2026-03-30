@@ -237,7 +237,6 @@ fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     fn conv2d_cpu_nchw(
         input: &[f32],
@@ -307,9 +306,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_conv2d_gpu_stride_pad() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let (n, c_in, h, w) = (1, 3, 8, 8);
         let (c_out, k_h, k_w) = (4, 3, 3);
         let stride = (2, 2);
@@ -377,9 +374,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_conv2d_gpu_dilation() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let (n, c_in, h, w) = (1, 1, 7, 7);
         let (c_out, k_h, k_w) = (1, 3, 3);
         let stride = (1, 1);
@@ -438,9 +433,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_conv2d_gpu_no_bias() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let (n, c_in, h, w) = (2, 2, 6, 6);
         let (c_out, k_h, k_w) = (3, 3, 3);
 

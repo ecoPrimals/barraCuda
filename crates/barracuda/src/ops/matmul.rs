@@ -264,7 +264,6 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     fn matmul_cpu(a: &[f32], b: &[f32], m: usize, k: usize, n: usize) -> Vec<f32> {
         let mut result = vec![0.0; m * n];
@@ -282,7 +281,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_matmul_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
             return;
         };
         // 2x3 * 3x2 = 2x2
@@ -310,7 +310,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_matmul_edge_cases() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
             return;
         };
         // Identity matrix
@@ -353,7 +354,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_matmul_boundary() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
             return;
         };
         // 1x1 matrices
@@ -395,7 +397,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_matmul_large_tensor() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
             return;
         };
         // 64x32 * 32x64 = 64x64
@@ -426,7 +429,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_matmul_precision() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
             return;
         };
         // Test FP32 precision with typical values

@@ -363,13 +363,9 @@ mod tests {
     use super::*;
     use crate::device::test_pool::get_test_device_sync;
 
-    fn get_test_device() -> Arc<WgpuDevice> {
-        get_test_device_sync()
-    }
-
     #[test]
     fn test_exponential_decay() {
-        let device = get_test_device();
+        let device = get_test_device_sync();
         let integrator = RkIntegrator::new(device).unwrap();
 
         // dy/dt = -y, y(0) = 1 → y(t) = e^(-t)
@@ -391,7 +387,7 @@ mod tests {
 
     #[test]
     fn test_harmonic_oscillator() {
-        let device = get_test_device();
+        let device = get_test_device_sync();
         let integrator = RkIntegrator::new(device).unwrap();
 
         // d²x/dt² = -x → x'' + x = 0
@@ -421,7 +417,7 @@ mod tests {
 
     #[test]
     fn test_lotka_volterra() {
-        let device = get_test_device();
+        let device = get_test_device_sync();
         let integrator = RkIntegrator::new(device).unwrap();
 
         // Predator-prey model

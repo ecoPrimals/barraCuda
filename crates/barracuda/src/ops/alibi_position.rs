@@ -52,13 +52,10 @@ pub async fn alibi_position(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_alibi_position_basic() {
-        let Some(dev) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         let scores = vec![1.0; 2 * 4 * 4]; // batch=1, heads=2, seq=4
         let output = alibi_position(&dev.device, &dev.queue, &scores, 1, 2, 4)
             .await
@@ -71,9 +68,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_alibi_position_edge_cases() {
-        let Some(dev) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         // Test with single head, single token
         let scores = vec![5.0];
         let output = alibi_position(&dev.device, &dev.queue, &scores, 1, 1, 1)
@@ -93,9 +88,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_alibi_position_boundary() {
-        let Some(dev) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         // Test with different numbers of heads (slope variations)
         let scores1 = vec![0.0; 4 * 4];
         let output1 = alibi_position(&dev.device, &dev.queue, &scores1, 1, 1, 4)
@@ -116,9 +109,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_alibi_position_large_batch() {
-        let Some(dev) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         // Multiple batches, heads, longer sequences
         let batch_size = 4;
         let num_heads = 8;
@@ -142,9 +133,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_alibi_position_precision() {
-        let Some(dev) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         // Test with known distances and biases
         let scores = vec![0.0; 3 * 3]; // seq_len=3
         let output = alibi_position(&dev.device, &dev.queue, &scores, 1, 1, 3)

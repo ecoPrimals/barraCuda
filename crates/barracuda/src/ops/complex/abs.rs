@@ -189,10 +189,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_complex_abs() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // |3+4i| = 5
         let data = vec![3.0f32, 4.0];

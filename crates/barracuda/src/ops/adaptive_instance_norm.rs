@@ -287,13 +287,10 @@ impl Tensor {
 mod tests {
     use super::*;
     // No longer needed - using Tensor method API
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_adaptive_instance_norm_basic() {
-        let Some(dev) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         let content_data = vec![1.0; 3 * 4 * 4];
         let content = Tensor::new(content_data.clone(), vec![1, 3, 4, 4], dev.clone());
         let style_mean = Tensor::new(vec![0.5, 0.5, 0.5], vec![3], dev.clone());
@@ -308,9 +305,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_adaptive_instance_norm_edge_cases() {
-        let Some(dev) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         // Test with zero style std (should clamp)
         let content = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![1, 1, 2, 2], dev.clone());
         let style_mean = Tensor::new(vec![0.0], vec![1], dev.clone());
@@ -335,9 +330,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_adaptive_instance_norm_boundary() {
-        let Some(dev) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         // Test with different style statistics
         let content_data = vec![0.0, 1.0, 2.0, 3.0];
 
@@ -369,9 +362,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_adaptive_instance_norm_large_batch() {
-        let Some(dev) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         // Multiple batches and channels
         let batch_size = 2;
         let channels = 4;
@@ -400,9 +391,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_adaptive_instance_norm_precision() {
-        let Some(dev) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         // Test with known values for style transfer
         let content_data = vec![
             0.0, 1.0, 2.0, 3.0, // Mean = 1.5

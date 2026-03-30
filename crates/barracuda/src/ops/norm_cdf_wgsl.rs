@@ -250,15 +250,9 @@ impl Tensor {
 mod tests {
     use super::*;
 
-    async fn get_test_device() -> Option<std::sync::Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_norm_cdf_zero() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Φ(0) = 0.5
         let input = Tensor::new(vec![0.0], vec![1], device);
         let output = input.norm_cdf().unwrap();
@@ -272,9 +266,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_norm_cdf_critical() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Φ(-1.96) ≈ 0.025, Φ(1.96) ≈ 0.975
         let input = Tensor::new(vec![-1.96, 1.96], vec![2], device);
         let output = input.norm_cdf().unwrap();
@@ -293,9 +285,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_norm_pdf_peak() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // φ(0) = 1/√(2π) ≈ 0.3989
         let input = Tensor::new(vec![0.0], vec![1], device);
         let output = input.norm_pdf().unwrap();
@@ -311,9 +301,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_norm_cdf_general() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Φ(μ; μ, σ) = 0.5 for any σ > 0
         let input = Tensor::new(vec![5.0], vec![1], device);
         let output = input.norm_cdf_params(5.0, 2.0).unwrap();

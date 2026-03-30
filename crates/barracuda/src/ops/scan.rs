@@ -21,7 +21,7 @@
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! # use barracuda::tensor::Tensor;
 //! # use barracuda::device::test_pool;
-//! # let device = test_pool::tokio_block_on(test_pool::get_test_device_if_gpu_available()).unwrap();
+//! # let device = test_pool::tokio_block_on(test_pool::get_test_device()).unwrap();
 //! let input = Tensor::from_data(&[1.0f32, 2.0, 3.0, 4.0], vec![4], device)?;
 //! let _cumsum = input.scan(false)?;  // Inclusive scan
 //! # Ok(())
@@ -120,7 +120,7 @@ impl Tensor {
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # use barracuda::tensor::Tensor;
     /// # use barracuda::device::test_pool;
-    /// # let device = test_pool::tokio_block_on(test_pool::get_test_device_if_gpu_available()).unwrap();
+    /// # let device = test_pool::tokio_block_on(test_pool::get_test_device()).unwrap();
     /// # let input = Tensor::from_data(&[1.0f32, 2.0, 3.0, 4.0], vec![4], device).unwrap();
     /// // Inclusive scan: [1, 2, 3, 4] → [1, 3, 6, 10]
     /// let cumsum = input.clone().scan(false)?;
@@ -147,10 +147,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_scan_inclusive() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         let input = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![4], device).unwrap();
 

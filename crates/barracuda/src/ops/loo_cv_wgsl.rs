@@ -210,17 +210,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
-
-    async fn get_test_device() -> Option<Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
 
     #[tokio::test]
     async fn test_loo_cv() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Simple 2x2 case: H = [[0.5, 0.5], [0.5, 0.5]], y = [1, 2], pred = [0.8, 1.7]
         // LOO_0 = (1 - 0.8) / (1 - 0.5) = 0.2/0.5 = 0.4
         // LOO_1 = (2 - 1.7) / (1 - 0.5) = 0.3/0.5 = 0.6

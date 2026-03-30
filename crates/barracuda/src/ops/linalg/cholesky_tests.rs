@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 use super::*;
-use crate::device::test_pool::{
-    get_test_device_if_f64_gpu_available, get_test_device_if_gpu_available,
-};
+use crate::device::test_pool::{get_test_device, get_test_device_if_f64_gpu_available};
 
 const CHOLESKY_F32_SHADER: &str = include_str!("../../shaders/linalg/cholesky.wgsl");
 const CHOLESKY_F64_SHADER: &str = include_str!("../../shaders/linalg/cholesky_f64.wgsl");
@@ -21,9 +19,7 @@ fn cholesky_f64_shader_source_valid() {
 
 #[tokio::test]
 async fn test_cholesky_2x2() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     // Simple 2x2 SPD matrix: [[4, 2], [2, 3]]
     // Expected L: [[2, 0], [1, sqrt(2)]]
     // Verification: L·Lᵀ = [[4, 2], [2, 3]] ✓
@@ -69,9 +65,7 @@ async fn test_cholesky_2x2() {
 
 #[tokio::test]
 async fn test_cholesky_identity() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     // Identity matrix should have L = I
     let input_data = vec![1.0, 0.0, 0.0, 1.0];
     let input = Tensor::from_vec_on(input_data, vec![2, 2], device)
@@ -90,9 +84,7 @@ async fn test_cholesky_identity() {
 
 #[tokio::test]
 async fn test_cholesky_3x3() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     // 3x3 SPD matrix
     let input_data = vec![4.0, 2.0, 1.0, 2.0, 3.0, 1.0, 1.0, 1.0, 3.0];
     let input = Tensor::from_vec_on(input_data, vec![3, 3], device)
@@ -118,9 +110,7 @@ async fn test_cholesky_3x3() {
 
 #[tokio::test]
 async fn test_cholesky_reconstruction() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     // Test that L·Lᵀ = A
     let input_data = vec![4.0, 2.0, 2.0, 3.0];
     let input = Tensor::from_vec_on(input_data.clone(), vec![2, 2], device.clone())

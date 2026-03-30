@@ -182,10 +182,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_complex_exp_euler() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // exp(iπ) = cos(π) + i·sin(π) = -1 + 0i
         // (Euler's identity: exp(iπ) + 1 = 0)
@@ -203,10 +200,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_complex_exp_zero() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // exp(0) = 1+0i
         let data = vec![0.0f32, 0.0];
         let tensor = Tensor::from_data(&data, vec![1, 2], device).unwrap();

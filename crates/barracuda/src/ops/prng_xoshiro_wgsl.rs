@@ -216,17 +216,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
-
-    async fn get_test_device() -> Option<Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_f64_gpu_available().await
-    }
 
     #[tokio::test]
     async fn test_prng_xoshiro() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Seeds as u32 (one per output element)
         let seeds: Vec<u32> = vec![1, 2, 3, 4, 5, 100, 200, 300];
         let seeds_tensor = Tensor::from_data_pod(&seeds, vec![8], device).unwrap();

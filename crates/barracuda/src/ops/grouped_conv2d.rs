@@ -362,13 +362,10 @@ impl GroupedConv2D {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_grouped_conv2d_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let batch_size = 1;
         let in_channels = 8;
         let in_height = 32;
@@ -406,9 +403,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_grouped_conv2d_no_bias() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let batch_size = 1;
         let in_channels = 4;
         let in_height = 16;

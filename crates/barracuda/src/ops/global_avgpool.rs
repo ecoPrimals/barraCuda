@@ -106,17 +106,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
-
-    async fn get_test_device() -> Option<Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
 
     #[tokio::test]
     async fn test_global_avgpool_basic() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Create input [1, 2, 2, 2] - 1 batch, 2 channels, 2×2 spatial
         let input_data = vec![
             1.0f32, 2.0, 3.0, 4.0, // Channel 0: [[1,2],[3,4]]
@@ -140,9 +133,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_global_avgpool_edge_cases() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Single 1x1 spatial (no pooling needed)
         let input_data = vec![42.0, 99.0]; // [1, 2, 1, 1]
         let input = Tensor::from_data(&input_data, vec![1, 2, 1, 1], device.clone()).unwrap();
@@ -162,9 +153,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_global_avgpool_boundary() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Large spatial dimensions
         let input_data = vec![1.0; 32 * 32];
         let input = Tensor::from_data(&input_data, vec![1, 1, 32, 32], device.clone()).unwrap();
@@ -184,9 +173,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_global_avgpool_large_batch() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Batch size 16, EfficientNet scale
         let batch_size = 16;
         let channels = 32;
@@ -201,9 +188,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_global_avgpool_precision() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Known average with varying values
         let input_data = vec![1.0, 2.0, 3.0, 4.0]; // [1, 1, 2, 2] - Channel 0
         let input = Tensor::from_data(&input_data, vec![1, 1, 2, 2], device).unwrap();

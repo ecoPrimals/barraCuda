@@ -204,7 +204,6 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     fn conv2d_cpu(
         input: &[f32],
@@ -236,9 +235,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_conv2d_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // 4x4 input, 2x2 kernel -> 3x3 output
         let input_data = vec![
             1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
@@ -265,9 +262,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_conv2d_edge_cases() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Identity kernel
         let input_data = vec![1.0, 2.0, 3.0, 4.0];
         let kernel_data = vec![1.0];
@@ -300,9 +295,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_conv2d_boundary() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Minimal convolution (2x2 input, 2x2 kernel -> 1x1 output)
         let input_data = vec![1.0, 2.0, 3.0, 4.0];
         let kernel_data = vec![0.5, 0.5, 0.5, 0.5];
@@ -340,9 +333,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_conv2d_large_tensor() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // 16x16 input, 3x3 kernel -> 14x14 output
         let input_data: Vec<f32> = (0..256).map(|i| (i as f32) * 0.01).collect();
         let kernel_data = vec![0.0, 0.125, 0.0, 0.125, 0.5, 0.125, 0.0, 0.125, 0.0];
@@ -367,9 +358,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_conv2d_precision() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Test FP32 precision with typical CNN values
         let input_data = vec![
             0.123, 0.234, 0.345, 0.456, 0.567, 0.678, 0.789, 0.890, 0.901, 0.012, 0.123, 0.234,

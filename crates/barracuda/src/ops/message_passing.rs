@@ -313,13 +313,10 @@ impl MessagePassing {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_message_passing_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let num_nodes = 4;
         let num_edges = 3;
         let node_feat_dim = 8;

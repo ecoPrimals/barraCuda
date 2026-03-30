@@ -215,10 +215,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_conv1d_basic() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Create input [1, 2, 4] - 1 batch, 2 channels, length 4
         let input_data = vec![
@@ -250,10 +247,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_conv1d_edge_cases() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Single channel, kernel size 1 (no reduction)
         let input_data = vec![1.0f32, 2.0, 3.0];
@@ -272,10 +266,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_conv1d_boundary() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Test with padding
         let input_data = vec![1.0f32, 2.0, 3.0, 4.0];
@@ -295,10 +286,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_conv1d_large_batch() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Larger sequence
         let batch = 2;
@@ -334,10 +322,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_conv1d_precision() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Simple identity-like convolution
         let input_data = vec![1.0f32, 2.0, 3.0];

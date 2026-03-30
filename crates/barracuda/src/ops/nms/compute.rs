@@ -53,8 +53,7 @@ impl NMS {
             return Ok(vec![0]);
         }
 
-        let device = crate::device::test_pool::get_test_device_if_gpu_available_sync()
-            .ok_or_else(|| crate::error::BarracudaError::device("No GPU available for NMS"))?;
+        let device = crate::device::test_pool::get_test_device_sync();
 
         self.execute_inner(device, num_boxes)
     }

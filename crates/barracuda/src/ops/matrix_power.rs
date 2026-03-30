@@ -233,13 +233,10 @@ impl MatrixPower {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_matrix_power_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let matrix = Tensor::from_vec_on(vec![2.0, 0.0, 0.0, 2.0], vec![2, 2], device.clone())
             .await
             .unwrap();
@@ -253,9 +250,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_matrix_power_zero() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let matrix = Tensor::from_vec_on(vec![5.0, 3.0, 2.0, 1.0], vec![2, 2], device.clone())
             .await
             .unwrap();
@@ -270,9 +265,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_matrix_power_one() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let matrix = Tensor::from_vec_on(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2], device.clone())
             .await
             .unwrap();

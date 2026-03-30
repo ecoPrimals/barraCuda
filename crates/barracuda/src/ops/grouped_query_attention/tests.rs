@@ -20,9 +20,7 @@ async fn create_test_tensor(
 
 #[tokio::test]
 async fn test_grouped_query_attention_basic() {
-    let Some(dev) = crate::device::test_pool::get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let dev = crate::device::test_pool::get_test_device().await;
 
     // 8 query heads, 2 KV heads (4 heads per group)
     let query = create_test_tensor(dev.clone(), vec![1, 8, 4, 4], 0.5)

@@ -299,13 +299,10 @@ impl MatrixRank {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_matrix_rank_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let matrix = Tensor::from_vec_on(vec![1.0, 2.0, 2.0, 4.0], vec![2, 2], device.clone())
             .await
             .unwrap();
@@ -316,9 +313,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_matrix_rank_full_rank() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let matrix = Tensor::from_vec_on(vec![1.0, 0.0, 0.0, 1.0], vec![2, 2], device.clone())
             .await
             .unwrap();
@@ -329,9 +324,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_matrix_rank_zero() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let matrix = Tensor::from_vec_on(vec![0.0, 0.0, 0.0, 0.0], vec![2, 2], device.clone())
             .await
             .unwrap();

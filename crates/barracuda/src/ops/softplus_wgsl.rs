@@ -202,15 +202,9 @@ impl Tensor {
 mod tests {
     use super::*;
 
-    async fn get_test_device() -> Option<std::sync::Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_softplus_basic() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![-2.0, 0.0, 2.0];
         let input = Tensor::new(data, vec![3], device);
 
@@ -229,9 +223,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_softplus_beta() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![0.0, 1.0];
         let input = Tensor::new(data, vec![2], device);
 

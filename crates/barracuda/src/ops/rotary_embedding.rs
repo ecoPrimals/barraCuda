@@ -126,13 +126,10 @@ impl RotaryEmbedding {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_rotary_embedding_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_vec_on(vec![1.0; 4 * 2 * 8], vec![1, 4, 2, 8], device)
             .await
             .unwrap();
@@ -145,9 +142,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rotary_embedding_edge_cases() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Single position
         let input = Tensor::from_vec_on(vec![1.0; 2 * 8], vec![1, 1, 2, 8], device.clone())
             .await
@@ -172,9 +167,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rotary_embedding_shape_validation() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Valid: even head_dim
         let input = Tensor::from_vec_on(vec![1.0; 4 * 2 * 8], vec![1, 4, 2, 8], device.clone())
             .await

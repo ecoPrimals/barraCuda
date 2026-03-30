@@ -1,0 +1,16 @@
+[package]
+name = "barracuda-naga-exec"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+description = "CPU interpreter for naga IR — executes WGSL compute shaders without GPU"
+
+[dependencies]
+naga = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]

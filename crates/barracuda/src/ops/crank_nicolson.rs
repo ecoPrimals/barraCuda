@@ -488,13 +488,9 @@ impl CrankNicolson {
 mod tests {
     use super::*;
 
-    fn get_test_device() -> Arc<crate::device::WgpuDevice> {
-        crate::device::test_pool::get_test_device_sync()
-    }
-
     #[test]
     fn test_heat_diffusion_steady_state() {
-        let device = get_test_device();
+        let device = crate::device::test_pool::get_test_device_sync();
         let solver = CrankNicolson::new(device).unwrap();
 
         // Heat equation with fixed boundaries should approach linear profile.
@@ -531,7 +527,7 @@ mod tests {
 
     #[test]
     fn test_conservation() {
-        let device = get_test_device();
+        let device = crate::device::test_pool::get_test_device_sync();
         let solver = CrankNicolson::new(device).unwrap();
 
         // With zero Dirichlet BCs, total "heat" should decrease over time
@@ -569,7 +565,7 @@ mod tests {
 
     #[test]
     fn test_neumann_zero_flux_conservation() {
-        let device = get_test_device();
+        let device = crate::device::test_pool::get_test_device_sync();
         let solver = CrankNicolson::new(device).unwrap();
 
         // With zero-flux Neumann BCs, total "mass" must be conserved

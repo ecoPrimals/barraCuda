@@ -271,13 +271,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_lovasz_loss_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let predictions = Tensor::from_vec_on(vec![0.9, 0.8, 0.7, 0.6], vec![4], device.clone())
             .await
             .unwrap();
@@ -295,9 +292,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_lovasz_loss_perfect_prediction() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Perfect prediction should have very low loss
         let predictions = Tensor::from_vec_on(vec![1.0, 1.0, 1.0, 1.0], vec![4], device.clone())
             .await
@@ -318,9 +313,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_lovasz_loss_poor_prediction() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Poor prediction should have higher loss
         let predictions = Tensor::from_vec_on(vec![0.1, 0.2, 0.3, 0.1], vec![4], device.clone())
             .await
@@ -337,9 +330,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_lovasz_loss_validation() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Shape mismatch
         let predictions = Tensor::from_vec_on(vec![0.5; 10], vec![10], device.clone())
             .await
@@ -353,9 +344,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_lovasz_loss_large_batch() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let size = 1000;
         let pred_data: Vec<f32> = (0..size).map(|i| (i as f32) / size as f32).collect();
         let target_data = vec![1.0; size];

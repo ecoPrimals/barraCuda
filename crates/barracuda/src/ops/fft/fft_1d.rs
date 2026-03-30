@@ -419,10 +419,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fft_1d_simple() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         let data = vec![1.0f32, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
 
@@ -438,10 +435,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fft_1d_degree_zero_rejected() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![1.0f32, 0.0, 0.0, 0.0];
         let tensor = Tensor::from_data(&data, vec![2, 2], device).unwrap();
         assert!(Fft1D::new(tensor, 0).is_err());
@@ -449,10 +443,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fft_1d_power_of_2_validation() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![1.0f32, 0.0, 0.0, 0.0, 0.0, 0.0];
         let tensor = Tensor::from_data(&data, vec![3, 2], device).unwrap();
         assert!(Fft1D::new(tensor, 3).is_err());

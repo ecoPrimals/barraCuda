@@ -322,7 +322,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_cpu_constant_signal() {
+    fn rejects_zero_window_size() {
+        let device = crate::device::test_pool::get_test_device_sync();
+        let mw = MovingWindowStats::new(device);
+        let result = mw.compute(&[1.0, 2.0, 3.0], 0);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_window_larger_than_input() {
+        let device = crate::device::test_pool::get_test_device_sync();
+        let mw = MovingWindowStats::new(device);
+        let result = mw.compute(&[1.0, 2.0], 5);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn cpu_constant_signal() {
         let input = vec![5.0f32; 100];
         let result = MovingWindowStats::compute_cpu(&input, 10);
 
@@ -342,17 +358,37 @@ mod tests {
     }
 
     #[test]
-    fn test_cpu_ramp() {
+    fn cpu_ramp() {
         let input: Vec<f32> = (0..20).map(|i| i as f32).collect();
         let result = MovingWindowStats::compute_cpu(&input, 5);
 
         assert_eq!(result.mean.len(), 16);
-        // First window [0,1,2,3,4] → mean=2.0
         assert!((result.mean[0] - 2.0).abs() < 1e-5);
         assert!((result.min[0] - 0.0).abs() < 1e-5);
         assert!((result.max[0] - 4.0).abs() < 1e-5);
-
-        // Variance of [0,1,2,3,4] = 2.0
         assert!((result.variance[0] - 2.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn cpu_single_element_window() {
+        let input: Vec<f32> = (0..5).map(|i| i as f32).collect();
+        let result = MovingWindowStats::compute_cpu(&input, 1);
+        assert_eq!(result.mean.len(), 5);
+        for (i, &m) in result.mean.iter().enumerate() {
+            assert!((m - i as f32).abs() < 1e-5);
+        }
+        for &v in &result.variance {
+            assert!(v.abs() < 1e-5, "single-element window has zero variance");
+        }
+    }
+
+    #[test]
+    fn cpu_full_window() {
+        let input = vec![1.0f32, 2.0, 3.0, 4.0, 5.0];
+        let result = MovingWindowStats::compute_cpu(&input, 5);
+        assert_eq!(result.mean.len(), 1);
+        assert!((result.mean[0] - 3.0).abs() < 1e-5);
+        assert!((result.min[0] - 1.0).abs() < 1e-5);
+        assert!((result.max[0] - 5.0).abs() < 1e-5);
     }
 }

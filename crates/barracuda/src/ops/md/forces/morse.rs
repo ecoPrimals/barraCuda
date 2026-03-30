@@ -310,10 +310,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_morse_force_equilibrium() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Two bonded particles at equilibrium (should have near-zero force)
         let positions = vec![0.0, 0.0, 0.0, 1.5, 0.0, 0.0]; // r₀ = 1.5

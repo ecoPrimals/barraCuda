@@ -213,13 +213,10 @@ impl DiceLoss {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_dice_loss_perfect_overlap() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Perfect prediction = target
         let pred = Tensor::from_vec_on(vec![1.0, 1.0, 0.0, 0.0], vec![4], device.clone())
             .await
@@ -237,9 +234,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dice_loss_no_overlap() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // No overlap
         let pred = Tensor::from_vec_on(vec![1.0, 1.0, 0.0, 0.0], vec![4], device.clone())
             .await
@@ -257,9 +252,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dice_loss_partial_overlap() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let pred = Tensor::from_vec_on(vec![0.8, 0.6, 0.2, 0.1], vec![4], device.clone())
             .await
             .unwrap();

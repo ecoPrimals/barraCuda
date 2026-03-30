@@ -331,13 +331,9 @@ impl Correlation {
 mod tests {
     use super::*;
 
-    fn get_test_device() -> Arc<crate::device::WgpuDevice> {
-        crate::device::test_pool::get_test_device_sync()
-    }
-
     #[test]
     fn test_correlation_perfect_positive() {
-        let device = get_test_device();
+        let device = crate::device::test_pool::get_test_device_sync();
         let op = Correlation::new(device).unwrap();
 
         let x: Vec<f32> = (0..100).map(|i| i as f32).collect();
@@ -349,7 +345,7 @@ mod tests {
 
     #[test]
     fn test_correlation_perfect_negative() {
-        let device = get_test_device();
+        let device = crate::device::test_pool::get_test_device_sync();
         let op = Correlation::new(device).unwrap();
 
         let x: Vec<f32> = (0..100).map(|i| i as f32).collect();
@@ -361,7 +357,7 @@ mod tests {
 
     #[test]
     fn test_correlation_uncorrelated() {
-        let device = get_test_device();
+        let device = crate::device::test_pool::get_test_device_sync();
         let op = Correlation::new(device).unwrap();
 
         // Sin and cos are orthogonal

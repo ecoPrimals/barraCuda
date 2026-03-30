@@ -204,13 +204,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_bucketize_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input_data = vec![0.5, 1.5, 2.5, 3.5];
         let input = Tensor::from_vec_on(input_data, vec![4], device)
             .await
@@ -230,9 +227,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_bucketize_edge_cases() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input_data = vec![0.0, 1.0, 2.0, 10.0];
         let input = Tensor::from_vec_on(input_data, vec![4], device)
             .await

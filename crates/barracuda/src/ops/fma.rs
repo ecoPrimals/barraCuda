@@ -193,13 +193,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_fma_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let a = Tensor::from_vec_on(vec![1.0, 2.0, 3.0, 4.0, 5.0], vec![5], device.clone())
             .await
             .unwrap();
@@ -222,9 +219,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fma_vs_separate_ops() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let a = Tensor::from_vec_on(vec![1.5, 2.5, 3.5, 4.5, 5.5], vec![5], device.clone())
             .await
             .unwrap();
@@ -253,9 +248,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fma_large_tensor() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let size = 10_000;
         let a_data: Vec<f32> = (0..size).map(|i| (i as f32) * 0.001).collect();
         let b_data: Vec<f32> = (0..size).map(|i| (size - i) as f32 * 0.001).collect();
@@ -289,9 +282,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fma_precision() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Test with values that could cause precision issues
         let a_data = vec![1e-6, 1e6, -1e-6, -1e6, 0.0];
         let b_data = vec![1e6, 1e-6, 1e6, 1e-6, 1.0];

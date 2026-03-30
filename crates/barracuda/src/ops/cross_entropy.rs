@@ -117,7 +117,6 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     fn cross_entropy_cpu(predictions: &[f32], targets: &[f32]) -> f32 {
         let n = predictions.len() as f32;
@@ -137,9 +136,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cross_entropy_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Predictions (probabilities): [0.7, 0.2, 0.1]
         let pred_data = vec![0.7f32, 0.2, 0.1];
         let predictions = Tensor::from_data(&pred_data, vec![3], device.clone()).unwrap();
@@ -160,9 +157,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cross_entropy_edge_cases() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Perfect prediction (target = prediction)
         let pred_data = vec![1.0f32, 0.0, 0.0];
         let predictions = Tensor::from_data(&pred_data, vec![3], device.clone()).unwrap();
@@ -185,9 +180,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cross_entropy_boundary() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Binary classification
         let pred_data = vec![0.8f32, 0.2];
         let predictions = Tensor::from_data(&pred_data, vec![2], device.clone()).unwrap();
@@ -211,9 +204,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cross_entropy_large_tensor() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // 100 classes
         let mut pred_data = vec![0.01f32; 100];
         pred_data[0] = 0.5;
@@ -232,9 +223,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cross_entropy_precision() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Test FP32 precision
         let pred_data = vec![0.123, 0.234, 0.345, 0.298];
         let target_data = vec![0.0, 1.0, 0.0, 0.0];

@@ -21,7 +21,7 @@
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! # use barracuda::tensor::Tensor;
 //! # use barracuda::device::test_pool;
-//! # let device = test_pool::tokio_block_on(test_pool::get_test_device_if_gpu_available()).unwrap();
+//! # let device = test_pool::tokio_block_on(test_pool::get_test_device()).unwrap();
 //! let a = Tensor::from_data(&[1.0f32, 2.0, 3.0], vec![3], device.clone())?;
 //! let b = Tensor::from_data(&[4.0f32, 5.0, 6.0], vec![3], device)?;
 //! let _partial_sums = a.dotproduct(&b)?;
@@ -104,7 +104,7 @@ impl Tensor {
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # use barracuda::tensor::Tensor;
     /// # use barracuda::device::test_pool;
-    /// # let device = test_pool::tokio_block_on(test_pool::get_test_device_if_gpu_available()).unwrap();
+    /// # let device = test_pool::tokio_block_on(test_pool::get_test_device()).unwrap();
     /// # let a = Tensor::from_data(&[1.0f32, 2.0, 3.0, 4.0], vec![4], device.clone()).unwrap();
     /// # let b = Tensor::from_data(&[1.0f32, 1.0, 1.0, 1.0], vec![4], device).unwrap();
     /// // Compute a · b
@@ -131,10 +131,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dotproduct_basic() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         let a = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![4], device.clone()).unwrap();
 
@@ -158,10 +155,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dotproduct_edge_cases() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Zero vectors
         let zero_a = Tensor::from_data(&[0.0; 8], vec![8], device.clone()).unwrap();
@@ -180,10 +174,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dotproduct_boundary() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Single element
         let single_a = Tensor::from_data(&[5.0], vec![1], device.clone()).unwrap();
@@ -207,10 +198,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dotproduct_large_tensor() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Large vectors (1024 elements)
         let size = 1024;
@@ -232,10 +220,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dotproduct_precision() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Test with fractional values
         let a = Tensor::from_data(&[0.1, 0.2, 0.3, 0.4, 0.5], vec![5], device.clone()).unwrap();

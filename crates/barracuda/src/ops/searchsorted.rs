@@ -363,13 +363,10 @@ impl SearchSorted {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_searchsorted_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let sorted = Tensor::from_vec_on(vec![1.0, 3.0, 5.0, 7.0], vec![4], device.clone())
             .await
             .unwrap();
@@ -388,9 +385,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_searchsorted_right() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let sorted = Tensor::from_vec_on(vec![1.0, 3.0, 5.0], vec![3], device.clone())
             .await
             .unwrap();

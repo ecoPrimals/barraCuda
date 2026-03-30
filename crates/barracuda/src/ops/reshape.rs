@@ -102,9 +102,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_reshape_2d_to_1d() {
-        let Some(dev) = crate::device::test_pool::get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         let device = &dev.device;
         let queue = &dev.queue;
 
@@ -118,9 +116,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_reshape_1d_to_2d() {
-        let Some(dev) = crate::device::test_pool::get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         let device = &dev.device;
         let queue = &dev.queue;
 
@@ -134,9 +130,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_reshape_3d() {
-        let Some(dev) = crate::device::test_pool::get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         let device = &dev.device;
         let queue = &dev.queue;
 
@@ -150,9 +144,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_reshape_invalid_size() {
-        let Some(dev) = crate::device::test_pool::get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         let device = &dev.device;
         let queue = &dev.queue;
 

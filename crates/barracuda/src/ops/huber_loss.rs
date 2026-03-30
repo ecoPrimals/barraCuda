@@ -175,13 +175,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_huber_loss_small_errors() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Small errors (< delta): should use quadratic (MSE-like)
         let predictions = Tensor::from_vec_on(vec![1.0, 2.0, 3.0, 4.0], vec![4], device.clone())
             .await
@@ -204,9 +201,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_huber_loss_large_errors() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Large errors (> delta): should use linear (MAE-like)
         let predictions = Tensor::from_vec_on(vec![1.0, 2.0], vec![2], device.clone())
             .await

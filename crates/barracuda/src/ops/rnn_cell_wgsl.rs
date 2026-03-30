@@ -344,13 +344,10 @@ impl RNNCell {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_rnn_cell_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let batch_size = 2;
         let input_size = 4;
         let hidden_size = 8;
@@ -417,9 +414,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rnn_cell_with_nonzero_hidden() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let batch_size = 1;
         let input_size = 3;
         let hidden_size = 4;

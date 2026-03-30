@@ -188,10 +188,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rfft_simple() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         let n = 8;
         let data: Vec<f32> = (0..n)
@@ -208,10 +205,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rfft_dc_component() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         let n = 16;
         let data = vec![1.0f32; n];
@@ -233,10 +227,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rfft_conjugate_symmetry() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         let n = 32;
         let data: Vec<f32> = (0..n)
@@ -269,10 +260,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rfft_performance_benefit() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         let n = 4096;
         let data: Vec<f32> = (0..n).map(|k| (k as f32).sin() / 100.0).collect();

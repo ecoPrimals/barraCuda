@@ -182,13 +182,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_random_perspective() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let image_data = vec![1.0; 3 * 100 * 100];
         let tensor = Tensor::from_vec_on(image_data.clone(), vec![3, 100, 100], device)
             .await

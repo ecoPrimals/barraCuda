@@ -246,15 +246,11 @@ impl SparseMatVec {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
-
-    async fn get_test_device() -> Option<Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
 
     #[tokio::test]
     async fn test_sparse_matvec() {
-        let Some(device) = get_test_device().await else {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
             return;
         };
         // 2x3 matrix: [[1, 0, 2], [0, 3, 0]]

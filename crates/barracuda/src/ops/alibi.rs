@@ -183,13 +183,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_alibi_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let batch = 1;
         let heads = 2;
         let seq = 4;
@@ -211,9 +208,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_alibi_single_token() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let batch = 1;
         let heads = 1;
         let seq = 1;
@@ -231,9 +226,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_alibi_bloom_dims() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // BLOOM-style dimensions
         let batch = 2;
         let heads = 8;
@@ -258,9 +251,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_alibi_diagonal_zero() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let batch = 1;
         let heads = 1;
         let seq = 4;
@@ -285,9 +276,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_alibi_shape_validation() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Valid: square attention matrix
         let scores = Tensor::from_vec_on(vec![1.0; 2 * 4 * 4], vec![1, 2, 4, 4], device.clone())
             .await

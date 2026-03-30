@@ -129,13 +129,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_argmax_dim_2d_known_positions() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // 2x3: row 0 max at index 2, row 1 max at index 0
         let data = vec![1.0, 2.0, 3.0, 5.0, 4.0, 3.0];
         let t = Tensor::from_data(&data, vec![2, 3], device).unwrap();
@@ -147,9 +144,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_argmax_dim_axis0() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // 3x2: column 0 max at row 1, column 1 max at row 2
         let data = vec![1.0, 2.0, 5.0, 3.0, 2.0, 6.0];
         let t = Tensor::from_data(&data, vec![3, 2], device).unwrap();
@@ -161,9 +156,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_softmax_dim_axis1_rows_sum_to_one() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
         let t = Tensor::from_data(&data, vec![2, 3], device).unwrap();
         let out = t.softmax_dim(1).unwrap();
@@ -178,9 +171,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_softmax_dim_axis0_cols_sum_to_one() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0];
         let t = Tensor::from_data(&data, vec![3, 2], device).unwrap();
         let out = t.softmax_dim(0).unwrap();
@@ -194,9 +185,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_softmax_dim_single_element_axis() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![1.0, 2.0, 3.0];
         let t = Tensor::from_data(&data, vec![3, 1], device).unwrap();
         let out = t.softmax_dim(1).unwrap();
@@ -207,9 +196,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_argmax_dim_single_element_axis() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![1.0, 2.0, 3.0];
         let t = Tensor::from_data(&data, vec![3, 1], device).unwrap();
         let out = t.argmax_dim(1).unwrap();
@@ -220,9 +207,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_argmax_dim_axis_out_of_bounds() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let t = Tensor::from_data(&[1.0, 2.0], vec![2], device).unwrap();
         let err = t.argmax_dim(1).unwrap_err();
         assert!(err.to_string().contains("out of bounds"));
@@ -230,9 +215,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_softmax_dim_axis_out_of_bounds() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let t = Tensor::from_data(&[1.0, 2.0], vec![2], device).unwrap();
         let err = t.softmax_dim(1).unwrap_err();
         assert!(err.to_string().contains("out of bounds"));

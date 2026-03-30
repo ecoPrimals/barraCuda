@@ -156,10 +156,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_complex_sqrt_basic() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Test sqrt(4+0i) = 2+0i
         let data = vec![4.0f32, 0.0];
@@ -181,10 +178,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_complex_sqrt_identity() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Test sqrt(z)^2 = z for z = 3+4i
         let data = vec![3.0f32, 4.0];

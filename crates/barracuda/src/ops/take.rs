@@ -231,13 +231,10 @@ impl Take {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_take_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_data(&[10.0, 20.0, 30.0, 40.0], vec![4], device).unwrap();
 
         let result = Take::new(input, vec![0, 2, 1]).unwrap().execute().unwrap();
@@ -251,9 +248,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_take_repeated() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         let result = Take::new(input, vec![0, 0, 1, 1, 2])
@@ -272,9 +267,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_take_large() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data: Vec<f32> = (0..1000).map(|i| i as f32).collect();
         let input = Tensor::from_data(&data, vec![1000], device).unwrap();
 
@@ -290,9 +283,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_take_empty() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         let result = Take::new(input, vec![]).unwrap().execute().unwrap();
@@ -303,9 +294,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_take_invalid() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         assert!(Take::new(input, vec![0, 5]).is_err());

@@ -161,15 +161,9 @@ impl Tensor {
 mod tests {
     use super::*;
 
-    async fn get_test_device() -> Option<std::sync::Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_fill_basic() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Fill [3, 4] tensor with 7.5
         let result = Tensor::fill(vec![3, 4], 7.5, device).unwrap();
         let output = result.to_vec().unwrap();
@@ -183,9 +177,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fill_edge_cases() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Single element
         let result = Tensor::fill(vec![1], 99.0, device.clone()).unwrap();
         let output = result.to_vec().unwrap();
@@ -206,9 +198,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fill_boundary() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Very small value
         let result = Tensor::fill(vec![4], 1e-10, device.clone()).unwrap();
         let output = result.to_vec().unwrap();
@@ -228,9 +218,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fill_large_batch() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Large tensor
         let result = Tensor::fill(vec![100, 100], 42.0, device).unwrap();
         let output = result.to_vec().unwrap();
@@ -240,9 +228,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fill_precision() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Fractional value with exact FP32 representation
         let result = Tensor::fill(vec![10], 2.5, device.clone()).unwrap();
         let output = result.to_vec().unwrap();

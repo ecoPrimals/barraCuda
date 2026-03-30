@@ -218,13 +218,10 @@ impl WindowFunction {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_window_hann() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let window = WindowFunction::new(512, WindowType::Hann, device)
             .unwrap()
             .execute()
@@ -241,9 +238,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_window_hamming() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let window = WindowFunction::new(256, WindowType::Hamming, device)
             .unwrap()
             .execute()
@@ -253,9 +248,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_window_rectangular() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let window = WindowFunction::new(128, WindowType::Rectangular, device)
             .unwrap()
             .execute()

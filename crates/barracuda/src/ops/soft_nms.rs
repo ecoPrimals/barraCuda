@@ -152,15 +152,9 @@ impl Tensor {
 mod tests {
     use super::*;
 
-    async fn get_test_device() -> Option<std::sync::Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_soft_nms_basic() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Boxes: [N, 4] format
         let boxes = Tensor::new(
             vec![
@@ -177,9 +171,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_soft_nms_edge_cases() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Single box
         let boxes = Tensor::new(vec![0.0, 0.0, 10.0, 10.0], vec![1, 4], device.clone());
@@ -200,9 +192,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_soft_nms_boundary() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // High overlap - boxes [N, 4] format
         let boxes_data = vec![
@@ -224,9 +214,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_soft_nms_large_batch() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // 100 boxes
         let mut boxes_data = Vec::new();
@@ -243,9 +231,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_soft_nms_precision() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Verify score reduction - boxes [N, 4] format
         let boxes_data = vec![

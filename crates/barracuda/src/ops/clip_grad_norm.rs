@@ -276,15 +276,10 @@ impl ClipGradNorm {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
-
-    async fn get_test_device() -> Arc<crate::device::WgpuDevice> {
-        crate::device::test_pool::get_test_device().await
-    }
 
     #[tokio::test]
     async fn test_clip_grad_norm_basic() {
-        let device = get_test_device().await;
+        let device = crate::device::test_pool::get_test_device().await;
         let gradients = Tensor::from_data(&[3.0, 4.0], vec![2], device).unwrap();
 
         let clipped = ClipGradNorm::new(gradients, 1.0)
@@ -300,7 +295,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_clip_grad_norm_no_clip() {
-        let device = get_test_device().await;
+        let device = crate::device::test_pool::get_test_device().await;
         let gradients = Tensor::from_data(&[0.1, 0.2, 0.3], vec![3], device).unwrap();
 
         let clipped = ClipGradNorm::new(gradients, 1.0)
@@ -316,7 +311,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_clip_grad_norm_zero() {
-        let device = get_test_device().await;
+        let device = crate::device::test_pool::get_test_device().await;
         let gradients = Tensor::from_data(&[0.0, 0.0, 0.0], vec![3], device).unwrap();
 
         let clipped = ClipGradNorm::new(gradients, 1.0)
@@ -330,7 +325,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_clip_grad_norm_large() {
-        let device = get_test_device().await;
+        let device = crate::device::test_pool::get_test_device().await;
         let data: Vec<f32> = (0..1000).map(|i| (i % 10) as f32).collect();
         let gradients = Tensor::from_data(&data, vec![1000], device).unwrap();
 
@@ -347,7 +342,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_clip_grad_norm_invalid() {
-        let device = get_test_device().await;
+        let device = crate::device::test_pool::get_test_device().await;
         let gradients = Tensor::from_data(&[1.0, 2.0], vec![2], device).unwrap();
 
         assert!(ClipGradNorm::new(gradients, -1.0).is_err());

@@ -4,6 +4,7 @@ members = [
     "crates/barracuda-core",
     "crates/barracuda",
     "crates/barracuda-spirv",
+    "crates/barracuda-naga-exec",
 ]
 
 [workspace.package]

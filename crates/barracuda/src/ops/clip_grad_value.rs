@@ -208,18 +208,10 @@ impl ClipGradValue {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::WgpuDevice;
-    use std::sync::Arc;
-
-    async fn get_test_device() -> Option<Arc<WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
 
     #[tokio::test]
     async fn test_clip_grad_value_basic() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let gradients = Tensor::from_data(&[3.0, -4.0, 5.0, -6.0], vec![4], device).unwrap();
 
         let clipped = ClipGradValue::new(gradients, 2.0)
@@ -237,9 +229,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_clip_grad_value_no_clip() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let gradients = Tensor::from_data(&[0.5, -0.3, 0.1], vec![3], device).unwrap();
 
         let clipped = ClipGradValue::new(gradients, 1.0)
@@ -255,9 +245,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_clip_grad_value_zero() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let gradients = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         let clipped = ClipGradValue::new(gradients, 0.0)
@@ -271,9 +259,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_clip_grad_value_large() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data: Vec<f32> = (0..1000).map(|i| (i % 20) as f32 - 10.0).collect();
         let gradients = Tensor::from_data(&data, vec![1000], device).unwrap();
 
@@ -289,9 +275,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_clip_grad_value_invalid() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let gradients = Tensor::from_data(&[1.0, 2.0], vec![2], device).unwrap();
 
         assert!(ClipGradValue::new(gradients, -1.0).is_err());

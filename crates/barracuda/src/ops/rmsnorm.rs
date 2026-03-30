@@ -163,15 +163,9 @@ impl Tensor {
 mod tests {
     use super::*;
 
-    async fn get_test_device() -> Option<std::sync::Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_rmsnorm_basic() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Create input [2, 4] - 2 samples, 4 features each
         let input_data = vec![
             1.0f32, 2.0, 3.0, 4.0, // Sample 1
@@ -194,9 +188,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rmsnorm_edge_cases() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Single sample
         let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![1, 3], device.clone()).unwrap();
         let gamma = Tensor::from_data(&[1.0, 1.0, 1.0], vec![3], device.clone()).unwrap();
@@ -214,9 +206,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rmsnorm_boundary() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Large feature size
         let input_data: Vec<f32> = (0..100).map(|i| i as f32).collect();
         let input = Tensor::from_data(&input_data, vec![1, 100], device.clone()).unwrap();
@@ -235,9 +225,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rmsnorm_large_batch() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // 100 samples, 10 features
         let input_data: Vec<f32> = (0..1000).map(|i| i as f32).collect();
         let input = Tensor::from_data(&input_data, vec![100, 10], device.clone()).unwrap();
@@ -249,9 +237,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rmsnorm_precision() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Verify normalization behavior
         let input = Tensor::from_data(&[2.0, 2.0, 2.0, 2.0], vec![1, 4], device.clone()).unwrap();
         let gamma = Tensor::from_data(&[1.0, 1.0, 1.0, 1.0], vec![4], device).unwrap();

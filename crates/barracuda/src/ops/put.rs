@@ -270,18 +270,10 @@ impl Put {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::WgpuDevice;
-    use std::sync::Arc;
-
-    async fn get_test_device() -> Option<Arc<WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
 
     #[tokio::test]
     async fn test_put_basic() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let output = Tensor::from_data(&[0.0, 0.0, 0.0, 0.0], vec![4], device.clone()).unwrap();
         let values = Tensor::from_data(&[10.0, 30.0], vec![2], device).unwrap();
 
@@ -299,9 +291,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_put_accumulate() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let output = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![4], device.clone()).unwrap();
         let values = Tensor::from_data(&[10.0, 20.0], vec![2], device).unwrap();
 
@@ -318,9 +308,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_put_invalid_index() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let output = Tensor::from_data(&[0.0, 0.0], vec![2], device.clone()).unwrap();
         let values = Tensor::from_data(&[1.0], vec![1], device).unwrap();
 
@@ -329,9 +317,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_put_length_mismatch() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let output = Tensor::from_data(&[0.0, 0.0], vec![2], device.clone()).unwrap();
         let values = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
@@ -340,9 +326,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_put_repeated_indices() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let output = Tensor::from_data(&[0.0, 0.0], vec![2], device.clone()).unwrap();
         let values = Tensor::from_data(&[1.0, 2.0], vec![2], device).unwrap();
 

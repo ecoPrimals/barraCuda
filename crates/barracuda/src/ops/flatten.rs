@@ -115,18 +115,10 @@ impl Flatten {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::WgpuDevice;
-    use std::sync::Arc;
-
-    async fn get_test_device() -> Option<Arc<WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
 
     #[tokio::test]
     async fn test_flatten_basic() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data: Vec<f32> = (0..24).map(|i| i as f32).collect();
         let input = Tensor::from_data(&data, vec![2, 3, 4], device).unwrap();
 
@@ -136,9 +128,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_flatten_all() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data: Vec<f32> = (0..12).map(|i| i as f32).collect();
         let input = Tensor::from_data(&data, vec![2, 3, 2], device).unwrap();
 
@@ -148,9 +138,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_flatten_partial() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data: Vec<f32> = (0..60).map(|i| i as f32).collect();
         let input = Tensor::from_data(&data, vec![2, 3, 5, 2], device).unwrap();
 
@@ -160,9 +148,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_flatten_single_dim() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data: Vec<f32> = (0..20).map(|i| i as f32).collect();
         let input = Tensor::from_data(&data, vec![4, 5], device).unwrap();
 
@@ -172,9 +158,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_flatten_invalid() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data: Vec<f32> = (0..12).map(|i| i as f32).collect();
         let input = Tensor::from_data(&data, vec![2, 3, 2], device).unwrap();
 

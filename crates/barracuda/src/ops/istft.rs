@@ -287,16 +287,14 @@ impl ISTFT {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
+
     use crate::ops::window_function::{WindowFunction, WindowType};
     #[expect(unused_imports, reason = "conditional imports")]
     use std::sync::Arc;
 
     #[tokio::test]
     async fn test_istft_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Create complex STFT data: [real, imag, real, imag, ...]
         let bins_per_frame = 257;
         let num_frames = 5;

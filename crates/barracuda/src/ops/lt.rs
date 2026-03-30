@@ -159,17 +159,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
-
-    async fn get_test_device() -> Option<Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
 
     #[tokio::test]
     async fn test_lt_basic() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let a = Tensor::from_vec_on(vec![1.0, 3.0, 2.0], vec![3], device.clone())
             .await
             .unwrap();
@@ -184,9 +177,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_lt_edge_cases() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // All less than
         let a = Tensor::from_vec_on(vec![1.0, 2.0, 3.0], vec![3], device.clone())
             .await
@@ -210,9 +201,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_lt_boundary() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Equal values
         let a = Tensor::from_vec_on(vec![2.0, 2.0, 2.0], vec![3], device.clone())
             .await
@@ -236,9 +225,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_lt_large_tensor() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // 1000 elements
         let a_data: Vec<f32> = (0..1000).map(|i| i as f32).collect();
         let b_data: Vec<f32> = (0..1000).map(|i| (i + 500) as f32).collect();
@@ -254,9 +241,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_lt_precision() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Mixed comparisons
         let a = Tensor::from_vec_on(vec![1.0, 5.0, 3.0], vec![3], device.clone())
             .await

@@ -204,13 +204,10 @@ impl WassersteinLoss {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_wasserstein_loss_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let size = 10;
 
         let pred = Tensor::from_vec_on(vec![0.1; size], vec![size], device.clone())

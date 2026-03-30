@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **824 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,101 Rust source files**, 42 integration test files, 4,307+ tests (3,785+ lib + 214 core + 8 e2e + integration + doctests)
+- **1,108 Rust source files**, 42 integration test files, 2,786+ lib tests + 214 core + 8 e2e + doctests (2,770 GPU ops + 16 naga-exec on CPU)
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -42,6 +42,8 @@ results.
 - **Bioinformatics** — Smith-Waterman, HMM, phylogenetics, bipartition encoding, genomic ops
 - **ML ops** — matmul, softmax, attention, ESN reservoir computing
 - **Sovereign shader compilation** — naga 28 IR optimizer, SPIR-V passthrough
+- **NagaExecutor** — CPU interpreter for naga IR, executes WGSL compute shaders without GPU (f32+f64 native, shared memory, barriers, atomics)
+- **coralReef IPC contract** — sovereign CPU compilation (`shader.compile.cpu`, `shader.execute.cpu`) and validation (`shader.validate`) via JSON-RPC
 - **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with 30 bare semantic `{domain}.{operation}` methods per wateringHole standard v2.2.0
 - **UniBin CLI** — single `barracuda` binary with `server --port <PORT>`, `service`, `doctor`, `validate`, `version`
 
@@ -58,6 +60,7 @@ results.
 
 ## Recent
 
+- **Sprint 24**: WGSL-as-truth test architecture + NagaExecutor + coralReef sovereign compilation — Migrated 337 GPU op test files from `get_test_device_if_gpu_available()` to `get_test_device()`, enabling 2,770 tests to run on CPU/llvmpipe (was ~0 coverage on CI). 17 GPU-exclusive modules correctly identified and re-gated. New crate `barracuda-naga-exec`: pure-Rust CPU interpreter for naga IR with f32/f64 native support, workgroup shared memory, barriers, atomics (16 tests). `assert_shader_math!` and `assert_shader_math_f64!` macros for zero-GPU shader validation. coralReef IPC contract: 10 new wire types, 5 new `CoralCompiler` methods (`compile_cpu`, `execute_cpu`, `validate_shader`), capability discovery for `shader.compile.cpu` and `shader.validate`. `ShaderValidationBackend` enum with coralReef-first fallback chain. 4-layer validation architecture (llvmpipe / NagaExecutor / coralReef CPU / real GPU). All quality gates green. 2,786 total tests, 0 failures.
 - **Sprint 23**: ludoSpring V35 gap resolution — 15 new IPC methods wired (math.sigmoid, math.log2, stats.mean, stats.std_dev, stats.weighted_mean, noise.perlin2d, noise.perlin3d, rng.uniform, activation.fitts, activation.hick, tensor.add, tensor.scale, tensor.clamp, tensor.reduce, tensor.sigmoid). 30 total JSON-RPC methods. Socket path fixed to `barracuda.sock` per PRIMAL_IPC_PROTOCOL. Dual-transport startup (UDS + TCP via `BARRACUDA_PORT` env var). All `#[allow(` migrated to `#[expect(` or `cfg_attr` in both crates. Release binary 4.7MB. 3,808 tests, all quality gates green.
 - **Sprint 22**: Spring absorption & deep debt evolution — Critical fermion force sign fix (neg_eta convention) in 2 staggered/pseudofermion WGSL shaders. 8 WGSL shaders absorbed from hotSpring: 5 multi-shift CG (Jegerlehner zeta, shifted alpha/xr/x/p) + 3 GPU-resident (Hamiltonian assembly, fermion action, Metropolis). `gpu_multi_shift_cg.rs` orchestration with generic CPU reference. `gpu_resident_observables.rs` with O(1)-readback pipelines. 6 RHMC/lattice tolerance constants (42 total). f32 Perlin 2D shader + API for ludoSpring. 32-bit LCG contract for ludoSpring. Lanczos eigenvector pipeline with Ritz vector Q×z back-transform for groundSpring. 816 WGSL shaders, all quality gates green.
 - **Sprint 21**: Compliance & coverage deep evolution — `health.liveness`, `health.readiness`, `capabilities.list` endpoints implemented per wateringHole Semantic Method Naming Standard v2.2.0 with all required aliases (`ping`, `health`, `status`, `check`, `capability.list`). Validation-first handler refactoring across JSON-RPC and tarpc layers (validate inputs before device check). `--port` CLI flag per UniBin standard. `barracuda-spirv` unsafe code evolved to `#![deny(unsafe_code)]` + targeted `#[allow]`. barracuda-core coverage 59.33% → 72.83% line (+13.5pp), 214 unit tests + 8 e2e (up from 148). rpc.rs refactored to extract tests (861→572 lines). All quality gates green.
@@ -70,10 +73,15 @@ results.
 
 ## Architecture
 
-barraCuda is a library crate (`barracuda`) wrapped by a primal lifecycle crate
-(`barracuda-core`) that exposes IPC, tarpc, and the UniBin CLI. Springs and
-other consumers `cargo add barracuda`. toadStool orchestrates above it;
-barraCuda owns the math.
+barraCuda is a 4-crate workspace:
+
+- **`barracuda`** — the math engine (824 WGSL shaders, 15-tier precision, all GPU ops)
+- **`barracuda-core`** — primal lifecycle (JSON-RPC, tarpc, UniBin CLI)
+- **`barracuda-spirv`** — SPIR-V passthrough bridge (isolates the single `unsafe` call)
+- **`barracuda-naga-exec`** — CPU interpreter for naga IR (shader validation without GPU)
+
+Springs and other consumers `cargo add barracuda`. toadStool orchestrates above
+it; barraCuda owns the math.
 
 ```
 Your Code / Springs

@@ -183,13 +183,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_contrastive_loss_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // 4 positive pairs (8 samples), 16-dim embeddings
         let data: Vec<f32> = (0..8 * 16).map(|i| ((i % 100) as f32) / 100.0).collect();
         let embeddings = Tensor::from_vec_on(data, vec![8, 16], device.clone())
@@ -207,9 +204,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_contrastive_loss_similar_pairs() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Create similar positive pairs (should have relatively low loss)
         let data: Vec<f32> = (0..8 * 16)
             .map(|i| {
@@ -232,9 +227,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_contrastive_loss_temperature_effect() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data: Vec<f32> = (0..6 * 32).map(|i| ((i % 100) as f32) / 100.0).collect();
         let embeddings = Tensor::from_vec_on(data, vec![6, 32], device.clone())
             .await
@@ -253,9 +246,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_contrastive_loss_validation() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Test odd batch size (should fail)
         let embeddings = Tensor::from_vec_on(vec![0.5; 7 * 16], vec![7, 16], device.clone())
             .await
@@ -280,9 +271,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_contrastive_loss_large_batch() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Large batch: 32 pairs (64 samples), 128-dim
         let data: Vec<f32> = (0..64 * 128).map(|i| ((i % 100) as f32) / 100.0).collect();
         let embeddings = Tensor::from_vec_on(data, vec![64, 128], device.clone())

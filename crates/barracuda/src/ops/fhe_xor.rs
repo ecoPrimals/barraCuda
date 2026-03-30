@@ -128,10 +128,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fhe_xor_same() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let poly_a_data = vec![1u64; 8];
         let poly_b_data = vec![1u64; 8];
 

@@ -247,18 +247,10 @@ impl Stack {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::WgpuDevice;
-    use std::sync::Arc;
-
-    async fn get_test_device() -> Option<Arc<WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
 
     #[tokio::test]
     async fn test_stack_basic() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let t1 = Tensor::from_data(&[1.0, 2.0], vec![2], device.clone()).unwrap();
         let t2 = Tensor::from_data(&[3.0, 4.0], vec![2], device).unwrap();
 
@@ -268,9 +260,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_stack_multiple() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let tensors: Vec<Tensor> = (0..5)
             .map(|i| Tensor::from_data(&[i as f32; 4], vec![2, 2], device.clone()).unwrap())
             .collect();
@@ -281,15 +271,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_stack_empty() {
-        let _device = get_test_device().await;
+        let _device = crate::device::test_pool::get_test_device().await;
         assert!(Stack::new(vec![], 0).is_err());
     }
 
     #[tokio::test]
     async fn test_stack_shape_mismatch() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let t1 = Tensor::from_data(&[1.0, 2.0], vec![2], device.clone()).unwrap();
         let t2 = Tensor::from_data(&[3.0, 4.0, 5.0], vec![3], device).unwrap();
 
@@ -298,9 +286,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_stack_dim_invalid() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let t1 = Tensor::from_data(&[1.0, 2.0], vec![2], device.clone()).unwrap();
         let t2 = Tensor::from_data(&[3.0, 4.0], vec![2], device).unwrap();
 

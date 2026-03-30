@@ -249,10 +249,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_conv3d_basic() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Create input [1, 1, 2, 2, 2] - 1 batch, 1 channel, 2x2x2 volume
         let input_data = vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
@@ -280,10 +277,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_conv3d_edge_cases() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Small 3D volume, kernel size 1 (no reduction)
         let input_data = vec![1.0f32; 8];
@@ -305,10 +299,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_conv3d_boundary() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Test with stride > 1 (downsampling)
         let input_data = vec![1.0f32; 4 * 4 * 4];
@@ -330,10 +321,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_conv3d_large_batch() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Larger 3D volume
         let batch = 1;
@@ -375,10 +363,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_conv3d_precision() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Simple identity-like 3D convolution
         let input_data = vec![1.0f32; 8];

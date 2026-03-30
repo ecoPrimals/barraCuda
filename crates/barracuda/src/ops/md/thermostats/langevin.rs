@@ -346,11 +346,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_langevin_noise_generation() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            println!("Skipping: No GPU available");
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         let mut rng = rand::rng();
         let noise = LangevinStep::generate_noise(100, &device, &mut rng).unwrap();
@@ -361,11 +357,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_langevin_step() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            println!("Skipping: No GPU available");
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Check for f64 support
         if !device

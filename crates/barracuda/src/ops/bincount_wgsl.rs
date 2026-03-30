@@ -183,13 +183,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_bincount_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input_data = [0u32, 1, 1, 2, 2, 2];
         // Convert u32 to f32 for Tensor
         let input_f32: Vec<f32> = input_data.iter().map(|&x| x as f32).collect();
@@ -211,9 +208,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_bincount_sparse() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input_data = [0u32, 0, 5, 5, 5];
         // Convert u32 to f32 for Tensor
         let input_f32: Vec<f32> = input_data.iter().map(|&x| x as f32).collect();

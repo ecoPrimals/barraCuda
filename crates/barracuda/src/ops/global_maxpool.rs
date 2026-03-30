@@ -21,7 +21,7 @@
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! # use barracuda::tensor::Tensor;
 //! # use barracuda::device::test_pool;
-//! # let device = test_pool::tokio_block_on(test_pool::get_test_device_if_gpu_available()).unwrap();
+//! # let device = test_pool::tokio_block_on(test_pool::get_test_device()).unwrap();
 //! # let data = [1.0f32; 2 * 64 * 7 * 7];
 //! // Input: [batch=2, channels=64, height=7, width=7]
 //! let input = Tensor::from_data(&data, vec![2, 64, 7, 7], device)?;
@@ -154,7 +154,7 @@ impl Tensor {
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # use barracuda::tensor::Tensor;
     /// # use barracuda::device::test_pool;
-    /// # let device = test_pool::tokio_block_on(test_pool::get_test_device_if_gpu_available()).unwrap();
+    /// # let device = test_pool::tokio_block_on(test_pool::get_test_device()).unwrap();
     /// # let input = Tensor::from_data(&[1.0f32; 49], vec![1, 1, 7, 7], device).unwrap();
     /// // Pool spatial dimensions (7x7 → 1x1)
     /// let _pooled = input.global_maxpool()?;
@@ -175,18 +175,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::WgpuDevice;
-    use std::sync::Arc;
-
-    async fn get_test_device() -> Option<Arc<WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
 
     #[tokio::test]
     async fn test_global_maxpool_basic() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_data(
             &vec![
                 // Batch 0, Channel 0
@@ -211,9 +203,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_global_maxpool_edge_cases() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Single 1x1 spatial
         let input = Tensor::from_data(&[42.0, 99.0], vec![1, 2, 1, 1], device.clone()).unwrap();
         let result = input.global_maxpool().unwrap();
@@ -231,9 +221,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_global_maxpool_boundary() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Large spatial dimensions
         let input =
             Tensor::from_data(&vec![1.0; 32 * 32], vec![1, 1, 32, 32], device.clone()).unwrap();
@@ -251,9 +239,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_global_maxpool_large_batch() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Batch size 16
         let batch_size = 16;
         let channels = 32;
@@ -271,9 +257,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_global_maxpool_precision() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Known max with varying values
         let input = Tensor::from_data(
             &[1.0, 5.0, 3.0, 2.0], // Max = 5.0

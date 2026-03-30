@@ -258,13 +258,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_rbf_interpolator_linear() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Train on simple linear function: y = 2x
         // Use Gaussian kernel (positive definite, stable) - Linear kernel has φ(0)=0 causing singular K
         let x_train_data = vec![1.0, 2.0, 3.0];
@@ -293,9 +290,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rbf_interpolator_properties() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Create simple dataset
         let x_data = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
         let y_data = vec![0.0, 1.0, 4.0, 9.0, 16.0, 25.0]; // y = x²
@@ -316,9 +311,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rbf_tensor_extension() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Test convenience method
         let x_train_data = vec![1.0, 2.0, 3.0];
         let y_train_data = vec![1.0, 2.0, 3.0];

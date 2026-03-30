@@ -2,9 +2,7 @@
 //! Triangular solve tests
 
 use super::f64::TriangularSolveF64;
-use crate::device::test_pool::{
-    get_test_device_if_f64_gpu_available, get_test_device_if_gpu_available,
-};
+use crate::device::test_pool::{get_test_device, get_test_device_if_f64_gpu_available};
 use crate::tensor::Tensor;
 
 const TRIANGULAR_SOLVE_F32_SHADER: &str =
@@ -32,9 +30,7 @@ fn triangular_solve_f64_shader_source_valid() {
 
 #[tokio::test]
 async fn test_forward_substitution_2x2() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     // Lower triangular matrix L = [[2, 0], [3, 4]]
     // Solve L·x = b where b = [6, 17]
     // Expected: x = [3, 2]
@@ -64,9 +60,7 @@ async fn test_forward_substitution_2x2() {
 
 #[tokio::test]
 async fn test_backward_substitution_2x2() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     let u_data = vec![2.0, 3.0, 0.0, 4.0];
     let b_data = vec![12.0, 8.0];
 
@@ -93,9 +87,7 @@ async fn test_backward_substitution_2x2() {
 
 #[tokio::test]
 async fn test_cholesky_solve_pipeline() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     let a_data = vec![4.0, 2.0, 2.0, 3.0];
     let b_expected = vec![6.0, 5.0];
 

@@ -235,13 +235,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_color_jitter_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Small 1x3x2x2 image (1 batch, 3 channels RGB, 2x2 pixels)
         let input_data = vec![
             // R channel

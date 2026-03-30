@@ -327,13 +327,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_trace_2x2() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input_data = vec![1.0, 2.0, 3.0, 4.0];
         let input = Tensor::from_vec_on(input_data, vec![2, 2], device)
             .await
@@ -350,9 +347,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_trace_3x3() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Matrix: [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
         // Diagonal: [1, 5, 9], trace = 15
         let input_data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0];
@@ -369,9 +364,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_trace_large_matrix() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let n = 512; // Larger than workgroup size to test multi-workgroup reduction
         let mut input_data = vec![0.0; n * n];
 

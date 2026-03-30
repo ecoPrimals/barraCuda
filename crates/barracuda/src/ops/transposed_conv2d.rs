@@ -232,10 +232,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_transposed_conv2d_basic() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Create input [1, 1, 2, 2] - simple upsampling test
         let input_data = vec![1.0f32, 2.0, 3.0, 4.0];

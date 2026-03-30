@@ -2,7 +2,7 @@
 
 **Version**: 0.3.11
 **Date**: March 30, 2026
-**Status**: Through Sprint 23 — tracks all open work items for barraCuda evolution
+**Status**: Through Sprint 24 — tracks all open work items for barraCuda evolution
 
 ---
 
@@ -30,7 +30,35 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 
 ---
 
-## Achieved (March 30, 2026 — Sprint 23: ludoSpring V35 Gap Resolution)
+## Achieved (March 30, 2026 — Sprint 24: WGSL-as-Truth + NagaExecutor + coralReef CPU Compilation)
+
+### New Crate: `barracuda-naga-exec`
+- Pure-Rust CPU interpreter for naga IR (f32/f64 native, shared memory, barriers, atomics)
+- 16 tests: elementwise ops, math builtins, f64 transcendentals, shared memory, atomics
+- `#![forbid(unsafe_code)]`, clippy pedantic clean
+
+### Test Architecture Restructure
+- 337 GPU op test files migrated from `get_test_device_if_gpu_available()` to `get_test_device()`
+- 2,770 tests now run on CPU/llvmpipe (was ~0 for GPU-gated ops on CI)
+- 17 modules correctly re-gated to GPU-only (atomics, complex memory patterns)
+- `assert_shader_math!` / `assert_shader_math_f64!` macros for zero-GPU shader validation
+- Semantic test aliases: `test_shader_device()`, `test_f64_shader_device()`
+
+### coralReef IPC Contract
+- 10 new wire types in `coral_compiler/types.rs`
+- 5 new `CoralCompiler` methods (`compile_cpu`, `execute_cpu`, `validate_shader`)
+- Capability discovery for `shader.compile.cpu` and `shader.validate`
+- `ShaderValidationBackend` enum with coralReef-first fallback chain
+
+### Quality Gates
+- `cargo test -p barracuda-naga-exec`: 16 passed
+- `cargo test -p barracuda --lib`: 2,770 passed, 13 ignored
+- Total: 2,786 tests, 0 failures
+- All clippy/fmt/doc gates green
+
+---
+
+## Achieved (March 29, 2026 — Sprint 23: ludoSpring V35 Gap Resolution)
 
 ### P0: barraCuda Binary Ready for plasmidBin
 - **Socket path fixed**: `default_socket_path()` now returns `barracuda.sock` (was
@@ -66,7 +94,7 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 - `cargo clippy --all-features --all-targets -- -D warnings`: Pass (zero warnings)
 - `RUSTDOCFLAGS="-D warnings" cargo doc --all-features --no-deps`: Pass
 - `cargo deny check`: Pass (advisories, bans, licenses, sources)
-- `cargo test --all-features`: 3,808 pass, 0 fail (3,785 lib + 214 core + doctests)
+- `cargo test --all-features`: 2,786+ pass, 0 fail (2,770 lib + 16 naga-exec + 214 core + doctests)
 - Zero `#[allow(` in either crate
 
 ---

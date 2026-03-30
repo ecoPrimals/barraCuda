@@ -169,13 +169,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_mul_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let lhs = Tensor::from_vec_on(vec![1.0, 2.0, 3.0, 4.0, 5.0], vec![5], device.clone())
             .await
             .unwrap();
@@ -194,9 +191,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mul_edge_cases() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Zero multiplication, small values
         let lhs = Tensor::from_vec_on(vec![0.0, 1e-6, -1e-6, 1.0, -1.0], vec![5], device.clone())
             .await
@@ -216,9 +211,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mul_boundary() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let lhs = Tensor::from_vec_on(
             vec![f32::NEG_INFINITY, -1e10, 0.0, 1e10, f32::INFINITY],
             vec![5],
@@ -241,9 +234,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mul_large_tensor() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let size = 1000;
         let lhs_data: Vec<f32> = (0..size).map(|i| i as f32).collect();
         let rhs_data = vec![2.0; size];
@@ -265,9 +256,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mul_precision() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let lhs_data = vec![-5.0, -2.5, -1.0, 0.0, 1.0, 2.5, 5.0];
         let rhs_data = vec![2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
 

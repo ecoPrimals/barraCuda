@@ -200,13 +200,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_glu() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // 6 elements: first 3 for a, last 3 for b
         let input_data = vec![1.0, 2.0, 3.0, 0.0, 0.0, 0.0];
         let input = Tensor::from_vec_on(input_data, vec![6], device)

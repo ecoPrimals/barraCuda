@@ -157,13 +157,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_squeeze_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Shape [1, 3, 1] should become [3]
         let input = Tensor::from_vec_on(vec![1.0, 2.0, 3.0], vec![1, 3, 1], device)
             .await
@@ -177,9 +174,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_squeeze_edge_cases() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // All dimensions = 1 (scalar)
         let input = Tensor::from_vec_on(vec![5.0], vec![1, 1, 1], device.clone())
             .await
@@ -197,9 +192,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_squeeze_boundary() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Multiple singleton dimensions
         let input = Tensor::from_vec_on(vec![1.0; 10], vec![1, 1, 10, 1], device.clone())
             .await
@@ -217,9 +210,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_squeeze_large_batch() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Large tensor with singleton dim
         let input = Tensor::from_vec_on(vec![1.0; 1000], vec![1, 1000], device)
             .await
@@ -231,9 +222,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_squeeze_precision() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Verify data preservation (zero-copy: from_data borrows slice)
         let input_data = vec![1.0, 2.0, 3.0, 4.0];
         let input = Tensor::from_data(&input_data, vec![1, 4, 1], device).unwrap();

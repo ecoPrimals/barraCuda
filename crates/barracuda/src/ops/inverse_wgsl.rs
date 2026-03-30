@@ -204,13 +204,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_inverse_2x2() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Simple 2x2 matrix: [[1, 2], [3, 4]]
         // Inverse: [[-2, 1], [1.5, -0.5]]
         let input_data = vec![1.0, 2.0, 3.0, 4.0];
@@ -232,9 +229,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_inverse_identity() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Identity matrix should invert to itself
         let input_data = vec![1.0, 0.0, 0.0, 1.0];
         let input = Tensor::from_vec_on(input_data, vec![2, 2], device)

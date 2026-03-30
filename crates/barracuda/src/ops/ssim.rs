@@ -169,15 +169,9 @@ impl Tensor {
 mod tests {
     use super::*;
 
-    async fn get_test_device() -> Option<std::sync::Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_ssim_basic() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let image1 = Tensor::new(vec![0.5; 64 * 64], vec![64, 64], device.clone());
         let image2 = Tensor::new(vec![0.5; 64 * 64], vec![64, 64], device);
         let similarity = image1.ssim(image2, 11, 0.01, 0.03).unwrap();
@@ -187,9 +181,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ssim_edge_cases() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Small image
         let image1 = Tensor::new(vec![0.5; 16 * 16], vec![16, 16], device.clone());
         let image2 = Tensor::new(vec![0.5; 16 * 16], vec![16, 16], device.clone());

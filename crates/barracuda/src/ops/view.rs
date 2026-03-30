@@ -136,10 +136,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_view_2d_to_1d() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::zeros_on(vec![2, 3], device.clone()).await.unwrap();
 
         let output = input.view(&[6]).unwrap();
@@ -150,10 +147,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_view_1d_to_2d() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::zeros_on(vec![6], device.clone()).await.unwrap();
 
         let output = input.view(&[2, 3]).unwrap();
@@ -164,10 +158,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_view_3d() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::zeros_on(vec![2, 3, 4], device.clone())
             .await
             .unwrap();
@@ -180,10 +171,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_view_invalid_size() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::zeros_on(vec![6], device).await.unwrap();
 
         let result = input.view(&[2, 4]); // Needs 8 elements, but input has 6
@@ -193,10 +181,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_view_same_shape() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::zeros_on(vec![2, 3], device.clone()).await.unwrap();
 
         let output = input.view(&[2, 3]).unwrap();

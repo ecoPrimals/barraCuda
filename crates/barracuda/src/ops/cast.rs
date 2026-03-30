@@ -242,7 +242,6 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     fn cast_cpu(x: f32) -> f32 {
         // Currently f32 -> f32 identity
@@ -274,9 +273,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cast_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input_data = vec![1.0, 2.0, 3.0];
         let input = Tensor::from_vec_on(input_data.clone(), vec![3], device)
             .await
@@ -291,9 +288,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cast_edge_cases() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Negative values
         let input_data = vec![-10.0, -5.0, -1.0];
         let input = Tensor::from_vec_on(input_data.clone(), vec![3], device.clone())
@@ -317,9 +312,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cast_boundary() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Very small values
         let input_data = vec![1e-10, -1e-10, 1e-6, -1e-6];
         let input = Tensor::from_vec_on(input_data.clone(), vec![4], device.clone())
@@ -343,9 +336,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cast_large_tensor() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // 1000 elements
         let input_data: Vec<f32> = (0..1000).map(|i| (i as f32).mul_add(0.1, -50.0)).collect();
         let input = Tensor::from_vec_on(input_data.clone(), vec![1000], device)
@@ -362,9 +353,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cast_precision() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Test FP32 precision preservation
         let input_data = vec![-123.456, -78.901, -2.345, 0.0, 1.234, 56.789, 123.456];
         let input = Tensor::from_vec_on(input_data.clone(), vec![7], device)

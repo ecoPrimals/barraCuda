@@ -229,13 +229,10 @@ impl PoissonNLLLoss {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_poisson_nll_loss_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let size = 10;
 
         let input = Tensor::from_vec_on(vec![1.0; size], vec![size], device.clone())

@@ -216,15 +216,9 @@ impl Tensor {
 mod tests {
     use super::*;
 
-    async fn get_test_device() -> Option<std::sync::Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_instance_norm_simple() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // 1 batch, 1 channel, 2x2 spatial
         let data = vec![1.0, 2.0, 3.0, 4.0];
         let input = Tensor::new(data, vec![1, 1, 2, 2], device);
@@ -241,9 +235,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_instance_norm_batch() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // 2 batches, 1 channel each, 2x1 spatial
         let data = vec![
             1.0, 2.0, // batch 0, channel 0

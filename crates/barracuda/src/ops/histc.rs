@@ -230,13 +230,10 @@ impl Histc {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_histc_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input =
             Tensor::from_vec_on(vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0], vec![6], device.clone())
                 .await
@@ -250,9 +247,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_histc_large_batch() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let size = 1000;
         let input = Tensor::from_vec_on(vec![1.0; size], vec![size], device.clone())
             .await

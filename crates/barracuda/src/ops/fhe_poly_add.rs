@@ -330,10 +330,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fhe_poly_add_basic() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let degree = 8; // Small for testing
         let modulus = 97; // Small prime for testing
 
@@ -384,10 +381,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fhe_poly_add_with_modular_reduction() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let degree = 4;
         let modulus = 100;
 

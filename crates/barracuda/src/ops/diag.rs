@@ -151,13 +151,10 @@ impl Diag {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_diag_extract() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Matrix: [[1, 2], [3, 4]]
         let matrix = Tensor::from_vec_on(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2], device)
             .await
@@ -174,9 +171,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_diag_create() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let vector = Tensor::from_vec_on(vec![1.0, 2.0, 3.0], vec![3], device)
             .await
             .unwrap();
@@ -196,9 +191,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_diag_extract_3x3() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let matrix = Tensor::from_vec_on(
             vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0],
             vec![3, 3],

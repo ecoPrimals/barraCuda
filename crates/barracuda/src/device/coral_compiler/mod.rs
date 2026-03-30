@@ -5,14 +5,17 @@
 //! providing native GPU binary compilation for NVIDIA (SM70+) and AMD (RDNA2+)
 //! architectures.
 //!
-//! ## IPC Contract (coralReef Phase 10)
+//! ## IPC Contract (coralReef Phase 10 + Phase 3 CPU)
 //!
 //! | Method | Purpose |
 //! |--------|---------|
-//! | `shader.compile.spirv` | SPIR-V → native binary |
-//! | `shader.compile.wgsl` | WGSL → native binary |
+//! | `shader.compile.spirv` | SPIR-V → native GPU binary |
+//! | `shader.compile.wgsl` | WGSL → native GPU binary |
+//! | `shader.compile.cpu` | WGSL → native CPU binary (Phase 3) |
+//! | `shader.execute.cpu` | WGSL + buffers → executed results on CPU (Phase 3) |
+//! | `shader.validate` | WGSL + inputs + expected → validation report (Phase 3) |
 //! | `shader.compile.status` | Health / readiness |
-//! | `shader.compile.capabilities` | Supported architectures |
+//! | `shader.compile.capabilities` | Supported architectures + CPU/validation flags |
 //!
 //! ## Module structure
 //!
@@ -32,9 +35,14 @@ pub mod types;
 pub use cache::{
     cache_native_binary, cached_native_binary, cached_native_binary_any_arch, shader_hash,
 };
-pub use discovery::discover_shader_compiler;
+pub use discovery::{
+    discover_cpu_shader_compiler, discover_shader_compiler, discover_shader_validator,
+};
 pub use types::{
-    AdapterDescriptor, CoralBinary, CoralCapabilitiesResponse, CoralF64Capabilities, HealthResponse,
+    AdapterDescriptor, BufferBinding, CompileCpuRequest, CompileCpuResponse, CoralBinary,
+    CoralCapabilitiesResponse, CoralF64Capabilities, ExecuteCpuRequest, ExecuteCpuResponse,
+    ExpectedBinding, HealthResponse, ValidateRequest, ValidateResponse, ValidationMismatch,
+    ValidationTolerance,
 };
 
 /// Synchronous check: can we discover a coralReef shader-compiler endpoint?
@@ -298,6 +306,115 @@ impl CoralCompiler {
             .ok()
     }
 
+    // ========================================================================
+    // Phase 3: CPU compilation, execution, and validation
+    // ========================================================================
+
+    /// Whether coralReef supports CPU shader execution (`shader.execute.cpu`).
+    ///
+    /// Queries the structured capabilities endpoint and checks for the
+    /// `supports_cpu_execution` flag. Returns `false` if coralReef is
+    /// unavailable or doesn't advertise CPU capabilities.
+    pub async fn supports_cpu_execution(&self) -> bool {
+        self.capabilities_structured()
+            .await
+            .is_some_and(|c| c.supports_cpu_execution)
+    }
+
+    /// Whether coralReef supports shader validation (`shader.validate`).
+    pub async fn supports_validation(&self) -> bool {
+        self.capabilities_structured()
+            .await
+            .is_some_and(|c| c.supports_validation)
+    }
+
+    /// Compile WGSL to a native CPU binary via `shader.compile.cpu`.
+    ///
+    /// Returns `None` if coralReef is unavailable or doesn't support CPU
+    /// compilation. The binary is a native executable for the specified
+    /// architecture (`x86_64`, `aarch64`, or `auto`-detect).
+    pub async fn compile_cpu(
+        &self,
+        wgsl: &str,
+        entry_point: &str,
+        arch: &str,
+    ) -> Option<types::CompileCpuResponse> {
+        let addr = self.ensure_connected().await?;
+        let request = types::CompileCpuRequest {
+            wgsl_source: wgsl.to_owned(),
+            arch: arch.to_owned(),
+            opt_level: 2,
+            entry_point: entry_point.to_owned(),
+        };
+        match jsonrpc_call::<types::CompileCpuRequest, types::CompileCpuResponse>(
+            &addr,
+            "shader.compile.cpu",
+            &request,
+        )
+        .await
+        {
+            Ok(resp) => Some(resp),
+            Err(e) => {
+                tracing::debug!("shader.compile.cpu failed: {e}");
+                None
+            }
+        }
+    }
+
+    /// Execute a WGSL shader on CPU via `shader.execute.cpu`.
+    ///
+    /// Compiles and runs the shader in one IPC call. coralReef handles
+    /// compilation, dispatch simulation, and buffer read-back.
+    ///
+    /// Returns `None` if coralReef is unavailable or execution fails.
+    pub async fn execute_cpu(
+        &self,
+        request: &types::ExecuteCpuRequest,
+    ) -> Option<types::ExecuteCpuResponse> {
+        let addr = self.ensure_connected().await?;
+        match jsonrpc_call::<types::ExecuteCpuRequest, types::ExecuteCpuResponse>(
+            &addr,
+            "shader.execute.cpu",
+            request,
+        )
+        .await
+        {
+            Ok(resp) => Some(resp),
+            Err(e) => {
+                tracing::debug!("shader.execute.cpu failed: {e}");
+                None
+            }
+        }
+    }
+
+    /// Validate a WGSL shader's output against expected values via `shader.validate`.
+    ///
+    /// coralReef executes the shader on CPU and compares each output element
+    /// against the expected values with the specified tolerances. Returns a
+    /// validation report with pass/fail status and per-element mismatches.
+    ///
+    /// Returns `None` if coralReef is unavailable or the validation endpoint
+    /// is not supported.
+    pub async fn validate_shader(
+        &self,
+        request: &types::ValidateRequest,
+    ) -> Option<types::ValidateResponse> {
+        let addr = self.ensure_connected().await?;
+        match jsonrpc_call::<types::ValidateRequest, types::ValidateResponse>(
+            &addr,
+            "shader.validate",
+            request,
+        )
+        .await
+        {
+            Ok(resp) => Some(resp),
+            Err(e) => {
+                tracing::debug!("shader.validate failed: {e}");
+                None
+            }
+        }
+    }
+
     /// Ensure we have a connection, discovering coralReef if needed.
     ///
     /// Fast path (read lock): returns the cached address if already connected.
@@ -350,6 +467,14 @@ impl Default for CoralCompiler {
 /// Global coralReef compiler client (lazy singleton like `GLOBAL_CACHE`).
 pub static GLOBAL_CORAL: std::sync::LazyLock<CoralCompiler> =
     std::sync::LazyLock::new(CoralCompiler::new);
+
+/// Get a reference to the global coralReef compiler client.
+///
+/// Lazily initialized on first access. Thread-safe.
+#[must_use]
+pub fn global_coral() -> &'static CoralCompiler {
+    &GLOBAL_CORAL
+}
 
 /// Lightweight health probe for coralReef availability.
 ///
@@ -615,6 +740,9 @@ mod tests {
     fn test_coral_capabilities_response_json_roundtrip() {
         let resp = types::CoralCapabilitiesResponse {
             supported_archs: vec!["sm_70".to_owned(), "gfx1030".to_owned()],
+            cpu_archs: vec!["x86_64".to_owned()],
+            supports_cpu_execution: true,
+            supports_validation: true,
             f64_transcendental_capabilities: types::CoralF64Capabilities {
                 sin: true,
                 cos: true,

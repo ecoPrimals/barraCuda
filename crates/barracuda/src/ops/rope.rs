@@ -284,13 +284,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_rope_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let batch = 1;
         let seq = 4;
         let heads = 2;
@@ -313,9 +310,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rope_single_position() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let batch = 1;
         let seq = 1;
         let heads = 2;
@@ -336,9 +331,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rope_llama_dims() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Llama-style dimensions
         let batch = 2;
         let seq = 128;
@@ -362,9 +355,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rope_magnitude_preservation() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let batch = 1;
         let seq = 4;
         let heads = 1;
@@ -387,9 +378,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rope_shape_validation() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Valid: even head_dim
         let input = Tensor::from_vec_on(vec![1.0; 4 * 2 * 8], vec![1, 4, 2, 8], device.clone())
             .await

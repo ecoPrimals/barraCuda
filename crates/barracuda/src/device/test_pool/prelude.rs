@@ -20,13 +20,15 @@
 //! ```
 
 use super::{
-    Arc, WgpuDevice, get_test_device, get_test_device_if_f64_gpu_available,
-    get_test_device_if_gpu_available, get_test_device_sync, tokio_block_on,
+    Arc, WgpuDevice, get_test_device, get_test_device_for_shader_validation,
+    get_test_device_if_f64_gpu_available, get_test_device_if_gpu_available, get_test_device_sync,
+    tokio_block_on,
 };
 use crate::tensor::Tensor;
 
 pub use crate::device::test_harness::{
-    baseline_path, coral_available, fused_ops_healthy, gpu_section, is_software_adapter, with_coral,
+    ShaderValidationBackend, baseline_path, coral_available, coral_validation_available,
+    fused_ops_healthy, gpu_section, is_software_adapter, shader_validation_backend, with_coral,
 };
 
 /// Get shared test device (async). CPU by default, GPU with env var.
@@ -43,8 +45,27 @@ pub fn test_device_blocking() -> Arc<WgpuDevice> {
     get_test_device_sync()
 }
 
+/// Get a device for validating shader math correctness.
+///
+/// Returns the CPU adapter (llvmpipe/software Vulkan). The shader IS the
+/// math — this runs WGSL on CPU to validate correctness without hardware.
+/// Use for all numerical correctness tests.
+pub async fn test_shader_device() -> Arc<WgpuDevice> {
+    get_test_device_for_shader_validation().await
+}
+
+/// Get a device for validating f64 shader math correctness.
+///
+/// Returns a real GPU if f64-capable, None otherwise.
+/// Phase 2: will return naga interpreter (no hardware needed).
+/// Phase 3: will use coralReef sovereign CPU execution.
+pub async fn test_f64_shader_device() -> Option<Arc<WgpuDevice>> {
+    super::get_test_device_for_f64_shader_validation().await
+}
+
 /// Get GPU-only test device, or None if unavailable.
-/// Use for tests that specifically validate GPU pipeline behavior.
+/// Use for tests that specifically validate GPU pipeline behavior,
+/// driver integration, or performance — NOT for shader math validation.
 pub async fn test_gpu_device() -> Option<Arc<WgpuDevice>> {
     get_test_device_if_gpu_available().await
 }
@@ -126,6 +147,124 @@ pub async fn test_rand(shape: &[usize], device: &Arc<WgpuDevice>) -> Tensor {
     Tensor::from_vec_on(data, shape.to_vec(), Arc::clone(device))
         .await
         .expect("Failed to create rand tensor")
+}
+
+// ============================================================================
+// NagaExecutor shader math validation (dev-dependency)
+// ============================================================================
+
+/// Assert that a WGSL compute shader produces expected f32 output on CPU.
+///
+/// Parses the WGSL, dispatches via `NagaExecutor` (no GPU needed), and
+/// compares output buffer to expected values within tolerance.
+///
+/// # Example
+/// ```rust,ignore
+/// assert_shader_math!(
+///     "@group(0) @binding(0) var<storage, read> input: array<f32>;
+///      @group(0) @binding(1) var<storage, read_write> output: array<f32>;
+///      @compute @workgroup_size(1)
+///      fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+///          output[gid.x] = input[gid.x] * 2.0;
+///      }",
+///     "main",
+///     inputs: { (0, 0) => &[1.0, 2.0, 3.0] },
+///     outputs: { (0, 1) => 3 },
+///     expected: &[2.0, 4.0, 6.0],
+///     tolerance: 1e-6
+/// );
+/// ```
+#[cfg(test)]
+#[macro_export]
+macro_rules! assert_shader_math {
+    (
+        $wgsl:expr,
+        $entry:expr,
+        inputs: { $( ($ig:expr, $ib:expr) => $idata:expr ),* $(,)? },
+        outputs: { $( ($og:expr, $ob:expr) => $osize:expr ),* $(,)? },
+        expected: $expected:expr,
+        tolerance: $tol:expr
+    ) => {{
+        use barracuda_naga_exec::{NagaExecutor, SimBuffer};
+        use std::collections::BTreeMap;
+
+        let exec = NagaExecutor::new($wgsl, $entry)
+            .expect("WGSL parse/validation failed in assert_shader_math!");
+
+        let mut bindings = BTreeMap::new();
+        $( bindings.insert(($ig, $ib), SimBuffer::from_f32_readonly($idata)); )*
+        $( bindings.insert(($og, $ob), SimBuffer::from_f32(&vec![0.0f32; $osize])); )*
+
+        let total_elements: usize = 0 $( + $osize )*;
+        exec.dispatch(
+            (total_elements.max(1) as u32, 1, 1),
+            &mut bindings,
+        )
+        .expect("NagaExecutor dispatch failed in assert_shader_math!");
+
+        let expected_slice: &[f32] = $expected;
+        let mut result_idx = 0usize;
+        $(
+            let result = bindings[&($og, $ob)].as_f32();
+            for (i, &val) in result.iter().enumerate() {
+                let exp = expected_slice[result_idx + i];
+                assert!(
+                    (val - exp).abs() < $tol,
+                    "shader math mismatch at output({}, {})[{}]: got {}, expected {}, tol={}",
+                    $og, $ob, i, val, exp, $tol
+                );
+            }
+            result_idx += result.len();
+        )*
+        let _ = result_idx;
+    }};
+}
+
+/// Assert f64 shader math correctness via `NagaExecutor` (no GPU required).
+#[cfg(test)]
+#[macro_export]
+macro_rules! assert_shader_math_f64 {
+    (
+        $wgsl:expr,
+        $entry:expr,
+        inputs: { $( ($ig:expr, $ib:expr) => $idata:expr ),* $(,)? },
+        outputs: { $( ($og:expr, $ob:expr) => $osize:expr ),* $(,)? },
+        expected: $expected:expr,
+        tolerance: $tol:expr
+    ) => {{
+        use barracuda_naga_exec::{NagaExecutor, SimBuffer};
+        use std::collections::BTreeMap;
+
+        let exec = NagaExecutor::new($wgsl, $entry)
+            .expect("WGSL parse/validation failed in assert_shader_math_f64!");
+
+        let mut bindings = BTreeMap::new();
+        $( bindings.insert(($ig, $ib), SimBuffer::from_f64($idata)); )*
+        $( bindings.insert(($og, $ob), SimBuffer::from_f64(&vec![0.0f64; $osize])); )*
+
+        let total_elements: usize = 0 $( + $osize )*;
+        exec.dispatch(
+            (total_elements.max(1) as u32, 1, 1),
+            &mut bindings,
+        )
+        .expect("NagaExecutor dispatch failed in assert_shader_math_f64!");
+
+        let expected_slice: &[f64] = $expected;
+        let mut result_idx = 0usize;
+        $(
+            let result = bindings[&($og, $ob)].as_f64();
+            for (i, &val) in result.iter().enumerate() {
+                let exp = expected_slice[result_idx + i];
+                assert!(
+                    (val - exp).abs() < $tol,
+                    "f64 shader math mismatch at output({}, {})[{}]: got {}, expected {}, tol={}",
+                    $og, $ob, i, val, exp, $tol
+                );
+            }
+            result_idx += result.len();
+        )*
+        let _ = result_idx;
+    }};
 }
 
 /// Run a GPU test with automatic device-lost recovery.

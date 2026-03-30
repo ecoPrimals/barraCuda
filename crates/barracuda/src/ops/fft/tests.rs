@@ -4,9 +4,7 @@ use crate::tensor::Tensor;
 
 #[tokio::test]
 async fn test_fft_ifft_inverse_property() {
-    let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = crate::device::test_pool::get_test_device().await;
 
     // Test FFT(IFFT(x)) = x property
     // Input: Random complex signal

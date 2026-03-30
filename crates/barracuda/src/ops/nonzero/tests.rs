@@ -2,14 +2,12 @@
 //! Tests for `NonZero` operation
 
 use super::NonZero;
-use crate::device::test_pool::get_test_device_if_gpu_available;
+use crate::device::test_pool::get_test_device;
 use crate::tensor::Tensor;
 
 #[tokio::test]
 async fn test_nonzero_basic() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     let input = Tensor::from_vec_on(vec![0.0, 1.0, 0.0, 2.0, 0.0], vec![5], device.clone())
         .await
         .unwrap();
@@ -23,9 +21,7 @@ async fn test_nonzero_basic() {
 
 #[tokio::test]
 async fn test_nonzero_all_zero() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     let input = Tensor::from_vec_on(vec![0.0, 0.0, 0.0], vec![3], device.clone())
         .await
         .unwrap();
@@ -36,9 +32,7 @@ async fn test_nonzero_all_zero() {
 
 #[tokio::test]
 async fn test_nonzero_all_nonzero() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     let input = Tensor::from_vec_on(vec![1.0, 2.0, 3.0], vec![3], device.clone())
         .await
         .unwrap();
@@ -50,9 +44,7 @@ async fn test_nonzero_all_nonzero() {
 
 #[tokio::test]
 async fn test_nonzero_2d() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     let input = Tensor::from_vec_on(
         vec![0.0, 1.0, 0.0, 2.0, 0.0, 3.0],
         vec![2, 3],
@@ -68,9 +60,7 @@ async fn test_nonzero_2d() {
 
 #[tokio::test]
 async fn test_nonzero_empty() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     let input = Tensor::from_vec_on(vec![], vec![0], device.clone())
         .await
         .unwrap();

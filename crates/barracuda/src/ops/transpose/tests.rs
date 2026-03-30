@@ -25,10 +25,7 @@ async fn test_transpose_basic() {
 #[tokio::test]
 async fn test_transpose_nd() {
     // ND transpose uses 7+ storage buffers — exceeds CPU downlevel limit of 4.
-    let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
-        tracing::warn!("Skipping test_transpose_nd: requires GPU (>4 storage buffers per stage)");
-        return;
-    };
+    let device = test_pool::get_test_device().await;
 
     let input = Tensor::from_vec_on(
         (0..24).map(|i| i as f32).collect(),

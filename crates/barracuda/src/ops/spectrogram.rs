@@ -207,7 +207,7 @@ impl Spectrogram {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
+
     use crate::tensor::Tensor;
     #[expect(unused_imports, reason = "conditional imports")]
     use std::sync::Arc;
@@ -215,9 +215,7 @@ mod tests {
     #[tokio::test]
     async fn test_spectrogram_basic() {
         // Create complex STFT data: [real, imag, real, imag, ...]
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let stft_data = vec![3.0, 4.0, 3.0, 4.0, 3.0, 4.0]; // 3 complex pairs, magnitude = 5.0
         let stft_tensor = Tensor::from_vec_on(stft_data, vec![3, 2], device.clone())
             .await
@@ -232,9 +230,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_spectrogram_edge_cases() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Single complex pair
         let stft_data = vec![1.0, 0.0];
         let stft_tensor = Tensor::from_vec_on(stft_data, vec![1, 2], device.clone())

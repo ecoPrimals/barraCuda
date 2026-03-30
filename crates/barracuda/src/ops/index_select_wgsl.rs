@@ -282,15 +282,9 @@ impl Tensor {
 mod tests {
     use super::*;
 
-    async fn get_test_device() -> Option<std::sync::Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_index_select_1d() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Input: [5] = [0, 1, 2, 3, 4]
         let data = vec![0.0, 1.0, 2.0, 3.0, 4.0];
         let input = Tensor::new(data, vec![5], device);
@@ -306,9 +300,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_index_select_2d_rows() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Input: [3, 2] = [[0,1], [2,3], [4,5]]
         let data = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
         let input = Tensor::new(data, vec![3, 2], device);
@@ -326,9 +318,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_index_select_2d_cols() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Input: [2, 3] = [[0,1,2], [3,4,5]]
         let data = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
         let input = Tensor::new(data, vec![2, 3], device);

@@ -149,11 +149,10 @@ pub fn compile_folding_shader(device: &WgpuDevice, op: FoldingOp) -> Result<wgpu
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_sync;
 
     #[test]
     fn test_folding_shaders_compile() {
-        let device = get_test_device_sync();
+        let device = crate::device::test_pool::get_test_device_sync();
         let ops = [
             FoldingOp::TorsionAngles,
             FoldingOp::DistanceMatrix,

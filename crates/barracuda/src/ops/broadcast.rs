@@ -211,7 +211,6 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[test]
     fn test_compute_input_strides_scalar_broadcast() {
@@ -243,9 +242,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_broadcast_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Create scalar [5.0]
         let input_data = vec![5.0f32];
         let input = Tensor::from_data(&input_data, vec![1], device).unwrap();
@@ -263,9 +260,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_broadcast_edge_cases() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Broadcast single element to multiple
         let input_data = vec![9.0f32];
         let input = Tensor::from_data(&input_data, vec![1], device).unwrap();
@@ -279,9 +274,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_broadcast_boundary() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Small to large broadcast
         let input_data = vec![7.0f32];
         let input = Tensor::from_data(&input_data, vec![1], device).unwrap();
@@ -295,9 +288,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_broadcast_large_batch() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Broadcast to large size
         let input_data = vec![2.78f32];
         let input = Tensor::from_data(&input_data, vec![1], device).unwrap();
@@ -311,9 +302,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_broadcast_precision() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Test determinism
         let input_data = vec![2.5f32];
 

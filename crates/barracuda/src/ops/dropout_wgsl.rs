@@ -117,15 +117,9 @@ impl Tensor {
 mod tests {
     use super::*;
 
-    async fn get_test_device() -> Option<std::sync::Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_dropout_deterministic() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![1.0; 100];
         let input = Tensor::new(data, vec![100], device.clone());
 
@@ -153,9 +147,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dropout_zero_probability() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![1.0, 2.0, 3.0];
         let input = Tensor::new(data, vec![3], device.clone());
 
@@ -174,9 +166,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dropout_full_probability() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![1.0, 2.0, 3.0];
         let input = Tensor::new(data, vec![3], device.clone());
 

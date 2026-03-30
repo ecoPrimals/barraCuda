@@ -196,13 +196,9 @@ impl Tensor {
 mod tests {
     use super::*;
 
-    use crate::device::test_pool::get_test_device_if_gpu_available;
-
     #[tokio::test]
     async fn test_swish_zero() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![0.0];
         let input = Tensor::new(data, vec![1], device);
 
@@ -215,9 +211,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_swish_positive() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![1.0, 2.0];
         let input = Tensor::new(data, vec![2], device);
 
@@ -232,9 +226,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_swish_negative() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![-1.0, -2.0];
         let input = Tensor::new(data, vec![2], device);
 

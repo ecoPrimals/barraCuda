@@ -213,15 +213,9 @@ impl Tensor {
 mod tests {
     use super::*;
 
-    async fn get_test_device() -> Option<std::sync::Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_threshold() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
         let input = Tensor::new(data, vec![5], device);
 
@@ -237,9 +231,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_threshold_custom() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![0.5, 1.0, 1.5, 2.0];
         let input = Tensor::new(data, vec![4], device);
 

@@ -156,15 +156,9 @@ impl Tensor {
 mod tests {
     use super::*;
 
-    async fn get_test_device() -> Option<std::sync::Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_rrelu_positive_unchanged() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::new(vec![1.0f32, 2.0, 3.0], vec![3], device);
         let result = input
             .rrelu_wgsl(0.125, 0.333, 42)
@@ -176,9 +170,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rrelu_negative_scaled() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::new(vec![-1.0f32, -2.0], vec![2], device);
         let result = input
             .rrelu_wgsl(0.125, 0.333, 42)
@@ -200,9 +192,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rrelu_deterministic_seed() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let make = || {
             Tensor::new(vec![-1.0f32], vec![1], device.clone())
                 .rrelu_wgsl(0.125, 0.333, 42)

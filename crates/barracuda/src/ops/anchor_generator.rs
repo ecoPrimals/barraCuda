@@ -270,15 +270,9 @@ mod tests {
     use super::*;
     // No longer needed - using Tensor method API
 
-    async fn get_test_device() -> Option<std::sync::Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_anchor_generator_basic() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let op =
             AnchorGenerator::new(4, 4, 16, vec![32.0, 64.0], vec![0.5, 1.0, 2.0], device).unwrap();
         let anchors = op.execute().unwrap();
@@ -287,9 +281,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_anchor_generator_edge_cases() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Single feature map location
         let op1 = AnchorGenerator::new(1, 1, 8, vec![16.0], vec![1.0], device.clone()).unwrap();
@@ -307,9 +299,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_anchor_generator_boundary() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Test with different strides
         let op1 = AnchorGenerator::new(3, 3, 8, vec![16.0], vec![1.0], device.clone()).unwrap();
@@ -331,9 +321,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_anchor_generator_large_batch() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Large feature map with multiple scales and ratios
         let feature_h = 16;
@@ -362,9 +350,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_anchor_generator_precision() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Test with known values - single anchor at (0,0)
         let op = AnchorGenerator::new(1, 1, 16, vec![32.0], vec![1.0], device).unwrap();

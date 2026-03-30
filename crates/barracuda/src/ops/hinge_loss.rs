@@ -168,13 +168,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_hinge_loss_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Good predictions (correct sign, high magnitude)
         let predictions = Tensor::from_vec_on(vec![2.0, -2.0, 1.5], vec![3], device.clone())
             .await
@@ -192,9 +189,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_hinge_loss_wrong_predictions() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Wrong predictions (opposite sign)
         let predictions = Tensor::from_vec_on(vec![-1.0, 1.0], vec![2], device.clone())
             .await
@@ -212,9 +207,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_hinge_loss_exact_margin() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Prediction exactly at margin
         let predictions = Tensor::from_vec_on(vec![0.5], vec![1], device.clone())
             .await
@@ -236,9 +229,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_hinge_loss_validation() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Shape mismatch
         let predictions = Tensor::from_vec_on(vec![1.0; 10], vec![10], device.clone())
             .await
@@ -262,9 +253,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_hinge_loss_large_batch() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let predictions: Vec<f32> = (0..1000)
             .map(|i| if i % 2 == 0 { 2.0 } else { -2.0 })
             .collect();

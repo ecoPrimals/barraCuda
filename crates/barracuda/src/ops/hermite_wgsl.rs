@@ -183,15 +183,9 @@ impl Tensor {
 mod tests {
     use super::*;
 
-    async fn get_test_device() -> Option<std::sync::Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_hermite_h0() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![0.0, 1.0, 2.0, -1.0, 0.5];
         let input = Tensor::new(data, vec![5], device);
         let output = input.hermite(0).unwrap();
@@ -204,9 +198,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_hermite_h1() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![0.0, 1.0, 2.0, -1.0, 0.5];
         let input = Tensor::new(data.clone(), vec![5], device);
         let output = input.hermite(1).unwrap();
@@ -226,9 +218,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_hermite_h2() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![0.0, 1.0, 2.0, -1.0, 0.5];
         let input = Tensor::new(data.clone(), vec![5], device);
         let output = input.hermite(2).unwrap();

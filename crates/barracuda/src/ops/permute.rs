@@ -153,18 +153,10 @@ impl Permute {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::WgpuDevice;
-    use std::sync::Arc;
-
-    async fn get_test_device() -> Option<Arc<WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
 
     #[tokio::test]
     async fn test_permute_basic() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data: Vec<f32> = (0..24).map(|i| i as f32).collect();
         let input = Tensor::from_data(&data, vec![2, 3, 4], device).unwrap();
 
@@ -177,9 +169,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_permute_identity() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data: Vec<f32> = (0..12).map(|i| i as f32).collect();
         let input = Tensor::from_data(&data, vec![2, 3, 2], device).unwrap();
 
@@ -192,9 +182,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_permute_invalid_length() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         assert!(Permute::new(input, vec![0, 1, 2, 3]).is_err());
@@ -202,9 +190,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_permute_invalid_index() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_data(&[1.0, 2.0, 3.0], vec![3], device).unwrap();
 
         assert!(Permute::new(input, vec![5]).is_err());
@@ -212,9 +198,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_permute_duplicate() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![2, 2], device).unwrap();
 
         assert!(Permute::new(input, vec![0, 0]).is_err());

@@ -368,11 +368,11 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_adagrad_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
             return;
         };
         let weights = Tensor::from_vec_on(vec![1.0, 2.0, 3.0, 4.0], vec![4], device.clone())
@@ -396,7 +396,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_adagrad_accumulation() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
             return;
         };
         let weights = Tensor::from_vec_on(vec![1.0; 4], vec![4], device.clone())
@@ -426,7 +427,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_adagrad_validation() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
             return;
         };
         let weights = Tensor::from_vec_on(vec![1.0; 10], vec![10], device.clone())
@@ -459,7 +461,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_adagrad_large_batch() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
             return;
         };
         let size = 128;
@@ -483,7 +486,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_adagrad_multi_step() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
             return;
         };
         let weights = Tensor::from_vec_on(vec![10.0, 20.0], vec![2], device.clone())

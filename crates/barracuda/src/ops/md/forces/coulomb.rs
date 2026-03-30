@@ -256,10 +256,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_coulomb_force_two_particles() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Two particles on x-axis
         let positions = vec![0.0, 0.0, 0.0, 1.0, 0.0, 0.0];
@@ -307,10 +304,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_coulomb_force_opposite_charges() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Two particles with opposite charges
         let positions = vec![0.0, 0.0, 0.0, 2.0, 0.0, 0.0];

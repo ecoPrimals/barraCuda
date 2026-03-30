@@ -122,13 +122,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_binary_cross_entropy_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Predictions (probabilities): [0.9, 0.1, 0.8]
         let pred_data = vec![0.9f32, 0.1, 0.8];
         let predictions = Tensor::from_data(&pred_data, vec![3], device.clone()).unwrap();
@@ -148,9 +145,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_binary_cross_entropy_edge_cases() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Perfect predictions
         let pred_data = vec![1.0f32, 0.0, 1.0];
         let predictions = Tensor::from_data(&pred_data, vec![3], device.clone()).unwrap();
@@ -168,9 +163,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_binary_cross_entropy_boundary() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Worst case predictions (opposite of targets)
         let pred_data = vec![0.1f32, 0.9, 0.1];
         let predictions = Tensor::from_data(&pred_data, vec![3], device.clone()).unwrap();
@@ -188,9 +181,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_binary_cross_entropy_large_batch() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Large batch size
         let size = 1000;
         let pred_data = vec![0.7f32; size];
@@ -209,9 +200,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_binary_cross_entropy_precision() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Test determinism
         let pred_data = vec![0.6f32, 0.4, 0.8, 0.2];
         let target_data = vec![1.0f32, 0.0, 1.0, 0.0];

@@ -242,10 +242,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_complex_add_simple() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // (3+4i) + (1+2i) = 4+6i
         let data_a = vec![3.0f32, 4.0];
@@ -264,10 +261,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_complex_add_batch() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         // Multiple complex numbers
         let data_a = vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0];

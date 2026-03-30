@@ -181,6 +181,65 @@ where
     }
 }
 
+// ============================================================================
+// Sovereign shader validation — layered backend selection
+// ============================================================================
+
+static CORAL_CPU_AVAILABLE: OnceLock<bool> = OnceLock::new();
+static CORAL_VALIDATE_AVAILABLE: OnceLock<bool> = OnceLock::new();
+
+/// Backend used for CPU-side shader math validation.
+///
+/// Tests don't choose the backend directly — [`shader_validation_backend`]
+/// probes the environment once and caches the result. The fallback chain:
+///
+/// 1. **coralReef** (sovereign CPU execution via `shader.execute.cpu`)
+/// 2. **llvmpipe** (software Vulkan via `wgpu`)
+///
+/// Phase 2 will insert a naga interpreter between coralReef and llvmpipe.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShaderValidationBackend {
+    /// coralReef `shader.execute.cpu` — sovereign compiled CPU execution.
+    CoralReef,
+    /// llvmpipe / software Vulkan via wgpu — always available on CI.
+    Llvmpipe,
+}
+
+/// Probe which shader validation backend is available (cached).
+///
+/// Checks once per process whether coralReef supports CPU execution.
+/// Falls back to llvmpipe if coralReef is unavailable or doesn't
+/// advertise `shader.execute.cpu`.
+pub async fn shader_validation_backend() -> ShaderValidationBackend {
+    let coral_cpu = if let Some(&cached) = CORAL_CPU_AVAILABLE.get() {
+        cached
+    } else {
+        let available = coral_available().await
+            && super::coral_compiler::global_coral()
+                .supports_cpu_execution()
+                .await;
+        *CORAL_CPU_AVAILABLE.get_or_init(|| available)
+    };
+
+    if coral_cpu {
+        ShaderValidationBackend::CoralReef
+    } else {
+        ShaderValidationBackend::Llvmpipe
+    }
+}
+
+/// Check whether coralReef supports `shader.validate` (cached).
+pub async fn coral_validation_available() -> bool {
+    if let Some(&cached) = CORAL_VALIDATE_AVAILABLE.get() {
+        return cached;
+    }
+    let available = coral_available().await
+        && super::coral_compiler::global_coral()
+            .supports_validation()
+            .await;
+    *CORAL_VALIDATE_AVAILABLE.get_or_init(|| available)
+}
+
 /// Validate that a WGSL shader parses and validates through naga.
 ///
 /// Used by cross-spring validation to verify absorbed shaders compile

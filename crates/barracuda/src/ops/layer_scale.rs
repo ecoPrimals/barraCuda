@@ -211,13 +211,10 @@ impl LayerScale {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_layer_scale_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_vec_on(vec![1.0, 2.0, 3.0], vec![3], device.clone())
             .await
             .unwrap();
@@ -234,9 +231,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_layer_scale_edge_cases() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Single element
         let input = Tensor::from_vec_on(vec![5.0], vec![1], device.clone())
             .await
@@ -263,9 +258,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_layer_scale_boundary() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Gamma = 0 (complete suppression)
         let input = Tensor::from_vec_on(vec![1.0, 2.0, 3.0], vec![3], device.clone())
             .await

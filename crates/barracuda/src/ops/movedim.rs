@@ -167,13 +167,10 @@ impl MoveDim {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_movedim_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_vec_on(
             vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             vec![2, 3],
@@ -188,9 +185,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_movedim_3d() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_vec_on(
             (0..24).map(|i| i as f32).collect(),
             vec![2, 3, 4],
@@ -205,9 +200,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_movedim_same_dim() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_vec_on(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2], device.clone())
             .await
             .unwrap();
@@ -218,9 +211,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_movedim_invalid_dim() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_vec_on(vec![1.0, 2.0, 3.0], vec![3], device.clone())
             .await
             .unwrap();
@@ -231,9 +222,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_movedim_4d() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_vec_on(
             (0..120).map(|i| i as f32).collect(),
             vec![2, 3, 4, 5],

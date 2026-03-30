@@ -54,6 +54,7 @@ approx = { workspace = true }
 proptest = { workspace = true }
 tracing = { workspace = true }
 wgpu = { workspace = true }
+barracuda-naga-exec = { path = "../barracuda-naga-exec" }
 
 [lints.clippy]
 all = { level = "warn", priority = -1 }

@@ -340,10 +340,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_qr_gpu_identity() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return; // Skip if no GPU
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         let a = vec![1.0f32, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
         let input = Tensor::from_data(&a, vec![3, 3], device).unwrap();
@@ -361,10 +358,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_qr_gpu_2x2() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return; // Skip if no GPU
-        };
+        let device = crate::device::test_pool::get_test_device().await;
 
         let a = vec![3.0f32, 4.0, 0.0, 5.0]; // Column-major friendly
         let input = Tensor::from_data(&a, vec![2, 2], device).unwrap();

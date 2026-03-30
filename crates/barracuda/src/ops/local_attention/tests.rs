@@ -4,13 +4,11 @@
 //! Validates windowed attention for long sequences.
 
 use super::*;
-use crate::device::test_pool::get_test_device_if_gpu_available;
+use crate::device::test_pool::get_test_device;
 
 #[tokio::test]
 async fn test_local_attention_basic() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
 
     let batch = 1;
     let heads = 2;
@@ -36,9 +34,7 @@ async fn test_local_attention_basic() {
 
 #[tokio::test]
 async fn test_local_attention_edge_cases() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
 
     // Window size = 2 (minimal)
     let batch = 1;
@@ -84,9 +80,7 @@ async fn test_local_attention_edge_cases() {
 
 #[tokio::test]
 async fn test_local_attention_boundary() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
 
     // Large window (approaches full attention)
     let batch = 1;
@@ -132,9 +126,7 @@ async fn test_local_attention_boundary() {
 
 #[tokio::test]
 async fn test_local_attention_large_batch() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
 
     // Batch size 4, longer sequence
     let batch = 4;
@@ -158,9 +150,7 @@ async fn test_local_attention_large_batch() {
 
 #[tokio::test]
 async fn test_local_attention_precision() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
 
     // Test attention pattern with known values
     let batch = 1;
@@ -195,9 +185,7 @@ async fn test_local_attention_precision() {
 
 #[tokio::test]
 async fn test_local_attention_window_size_validation() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
 
     let q = Tensor::from_vec_on(vec![0.5; 4 * 2], vec![1, 1, 4, 2], device.clone())
         .await

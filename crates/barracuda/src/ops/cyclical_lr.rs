@@ -241,19 +241,53 @@ impl CyclicalLr {
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_cyclical_lr_basic() {
-        // Validation logic test — device-dependent schedule execution
-        // is covered by the GPU integration tests
-        let result = CyclicalLr::new(0, 100, 0.001, 0.01, CyclicalLrMode::Triangular, 0.9);
-        assert!(result.is_ok());
+    #[test]
+    fn new_triangular_succeeds() {
+        assert!(CyclicalLr::new(0, 100, 0.001, 0.01, CyclicalLrMode::Triangular, 0.9).is_ok());
+    }
 
-        // Test invalid step_size
-        let result = CyclicalLr::new(0, 0, 0.001, 0.01, CyclicalLrMode::Triangular, 0.9);
-        assert!(result.is_err());
+    #[test]
+    fn new_triangular2_succeeds() {
+        assert!(CyclicalLr::new(0, 50, 0.0, 0.1, CyclicalLrMode::Triangular2, 0.9).is_ok());
+    }
 
-        // Test invalid lr range
-        let result = CyclicalLr::new(0, 100, 0.01, 0.001, CyclicalLrMode::Triangular, 0.9);
-        assert!(result.is_err());
+    #[test]
+    fn new_exp_range_succeeds() {
+        assert!(CyclicalLr::new(0, 200, 0.001, 0.01, CyclicalLrMode::ExpRange, 0.99).is_ok());
+    }
+
+    #[test]
+    fn rejects_zero_step_size() {
+        assert!(CyclicalLr::new(0, 0, 0.001, 0.01, CyclicalLrMode::Triangular, 0.9).is_err());
+    }
+
+    #[test]
+    fn rejects_negative_base_lr() {
+        assert!(CyclicalLr::new(0, 100, -0.001, 0.01, CyclicalLrMode::Triangular, 0.9).is_err());
+    }
+
+    #[test]
+    fn rejects_negative_max_lr() {
+        assert!(CyclicalLr::new(0, 100, 0.001, -0.01, CyclicalLrMode::Triangular, 0.9).is_err());
+    }
+
+    #[test]
+    fn rejects_base_lr_greater_than_max_lr() {
+        assert!(CyclicalLr::new(0, 100, 0.01, 0.001, CyclicalLrMode::Triangular, 0.9).is_err());
+    }
+
+    #[test]
+    fn rejects_exp_range_with_zero_gamma() {
+        assert!(CyclicalLr::new(0, 100, 0.001, 0.01, CyclicalLrMode::ExpRange, 0.0).is_err());
+    }
+
+    #[test]
+    fn rejects_exp_range_with_negative_gamma() {
+        assert!(CyclicalLr::new(0, 100, 0.001, 0.01, CyclicalLrMode::ExpRange, -1.0).is_err());
+    }
+
+    #[test]
+    fn allows_equal_lr_range() {
+        assert!(CyclicalLr::new(0, 100, 0.01, 0.01, CyclicalLrMode::Triangular, 0.9).is_ok());
     }
 }

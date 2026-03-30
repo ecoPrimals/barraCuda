@@ -393,7 +393,38 @@ pub async fn get_test_gpu_device() -> Option<Arc<WgpuDevice>> {
     Some(insert_into_pool(&GPU_POOL, dev))
 }
 
+/// Get a device for validating shader math correctness on CPU.
+///
+/// Returns the CPU adapter (llvmpipe/software Vulkan) for validating that
+/// WGSL shaders compute correct results. The shader IS the math — the CPU
+/// adapter runs it without hardware.
+///
+/// Semantically identical to [`get_test_device`] — this alias makes test
+/// intent explicit: "I am validating shader math, not testing hardware."
+pub async fn get_test_device_for_shader_validation() -> Arc<WgpuDevice> {
+    get_test_device().await
+}
+
+/// Get a device for validating f64 shader math correctness.
+///
+/// Phase 1: returns real GPU if f64-capable (existing behavior).
+/// Phase 2: will return naga interpreter device (no hardware needed).
+/// Phase 3: will use coralReef sovereign CPU execution.
+pub async fn get_test_device_for_f64_shader_validation() -> Option<Arc<WgpuDevice>> {
+    get_test_device_if_f64_gpu_available().await
+}
+
+/// Sync wrapper for [`get_test_device_for_shader_validation`].
+#[must_use]
+pub fn get_test_device_for_shader_validation_sync() -> Arc<WgpuDevice> {
+    get_test_device_sync()
+}
+
 /// Get a GPU device only if it's real hardware (not software fallback).
+///
+/// Use for tests that validate hardware pipeline behavior, driver integration,
+/// or performance — NOT for validating shader math correctness. For math
+/// validation, use [`get_test_device_for_shader_validation`] instead.
 ///
 /// Acquires a [`GpuTestGate`](super::test_harness::GpuTestGate) permit that
 /// is held in thread-local storage for the duration of the test. This limits

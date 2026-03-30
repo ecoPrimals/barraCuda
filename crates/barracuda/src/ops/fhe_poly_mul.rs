@@ -271,10 +271,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fhe_poly_mul_basic() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let degree = 8;
         let modulus = 97;
 

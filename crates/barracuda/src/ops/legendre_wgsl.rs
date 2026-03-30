@@ -206,15 +206,9 @@ impl Tensor {
 mod tests {
     use super::*;
 
-    async fn get_test_device() -> Option<std::sync::Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_legendre_p0() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![-1.0, -0.5, 0.0, 0.5, 1.0];
         let input = Tensor::new(data, vec![5], device);
         let output = input.legendre(0).unwrap();
@@ -227,9 +221,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_legendre_p1() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![-1.0, -0.5, 0.0, 0.5, 1.0];
         let input = Tensor::new(data.clone(), vec![5], device);
         let output = input.legendre(1).unwrap();
@@ -248,9 +240,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_legendre_p2() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![-1.0, -0.5, 0.0, 0.5, 1.0];
         let input = Tensor::new(data.clone(), vec![5], device);
         let output = input.legendre(2).unwrap();
@@ -268,9 +258,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_assoc_legendre_p11() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // P₁¹(x) = -sqrt(1 - x²) (Condon-Shortley)
         let data = vec![0.0, 0.5, -0.5];
         let input = Tensor::new(data.clone(), vec![3], device);

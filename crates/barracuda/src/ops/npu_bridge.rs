@@ -94,10 +94,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_tensor_data_roundtrip() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![1.0, 2.0, 3.0, 4.0];
         let shape = vec![2, 2];
 

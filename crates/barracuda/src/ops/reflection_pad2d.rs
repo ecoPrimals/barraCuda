@@ -225,13 +225,10 @@ impl Tensor {
 mod tests {
     use super::*;
 
-    async fn get_test_device() -> Option<std::sync::Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
 
     #[tokio::test]
     async fn test_reflection_pad2d_basic() {
-        let Some(device) = get_test_device().await else { return };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![1, 1, 2, 2], device.clone());
         let output = input.reflection_pad2d((1, 1, 1, 1)).unwrap();
         assert_eq!(output.shape(), &[1, 1, 4, 4]);
@@ -239,7 +236,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_reflection_pad2d_edge_cases() {
-        let Some(device) = get_test_device().await else { return };
+        let device = crate::device::test_pool::get_test_device().await;
         // No padding
         let input = Tensor::new(vec![1.0; 1 * 1 * 4 * 4], vec![1, 1, 4, 4], device.clone());
         let output = input.reflection_pad2d((0, 0, 0, 0)).unwrap();
@@ -253,7 +250,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_reflection_pad2d_boundary() {
-        let Some(device) = get_test_device().await else { return };
+        let device = crate::device::test_pool::get_test_device().await;
         // Large padding
         let input = Tensor::new(vec![1.0; 1 * 3 * 4 * 4], vec![1, 3, 4, 4], device.clone());
         let output = input.reflection_pad2d((2, 2, 2, 2)).unwrap();
@@ -267,7 +264,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_reflection_pad2d_large_batch() {
-        let Some(device) = get_test_device().await else { return };
+        let device = crate::device::test_pool::get_test_device().await;
         // Batch size 4, multiple channels
         let batch_size = 4;
         let channels = 3;

@@ -251,16 +251,14 @@ impl STFT {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
+
     use crate::ops::window_function::{WindowFunction, WindowType};
     #[expect(unused_imports, reason = "conditional imports")]
     use std::sync::Arc;
 
     #[tokio::test]
     async fn test_stft_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let signal = Tensor::from_vec_on(vec![0.0; 1024], vec![1024], device.clone())
             .await
             .unwrap();

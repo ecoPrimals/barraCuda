@@ -281,13 +281,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_grid_mask_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let image_data = vec![1.0; 3 * 224 * 224];
         let tensor = Tensor::from_vec_on(image_data.clone(), vec![3, 224, 224], device)
             .await
@@ -302,9 +299,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_grid_mask_edge_cases() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Ratio = 0 (no masking)
         let image_data = vec![1.0; 32 * 32];
         let tensor = Tensor::from_vec_on(image_data.clone(), vec![1, 32, 32], device.clone())
@@ -326,9 +321,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_grid_mask_boundary() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Ratio = 1.0 (maximum masking)
         let image_data = vec![1.0; 64 * 64];
         let tensor = Tensor::from_vec_on(image_data.clone(), vec![1, 64, 64], device.clone())
@@ -351,9 +344,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_grid_mask_large_batch() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // RGB image (3 channels)
         let channels = 3;
         let height = 128;
@@ -371,9 +362,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_grid_mask_precision() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Deterministic with same seed
         let image_data = vec![1.0; 32 * 32];
         let tensor1 = Tensor::from_vec_on(image_data.clone(), vec![1, 32, 32], device.clone())

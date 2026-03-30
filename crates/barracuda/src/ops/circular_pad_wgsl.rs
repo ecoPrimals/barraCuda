@@ -240,15 +240,9 @@ impl Tensor {
 mod tests {
     use super::*;
 
-    async fn get_test_device() -> Option<std::sync::Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_circular_pad_simple() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // 1x1x2x2 input
         let data = vec![1.0, 2.0, 3.0, 4.0];
         let input = Tensor::new(data, vec![1, 1, 2, 2], device);
@@ -262,9 +256,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_circular_pad_wrapping() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // 1x1x3x3 input (NCHW: row 0 = [1,2,3], row 1 = [4,5,6], row 2 = [7,8,9])
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0];
         let input = Tensor::from_data(&data, vec![1, 1, 3, 3], device).unwrap();

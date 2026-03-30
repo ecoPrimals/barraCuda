@@ -243,13 +243,10 @@ impl Chunk {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_chunk_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_vec_on(
             (0..12).map(|i| i as f32).collect(),
             vec![3, 4],
@@ -268,9 +265,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_chunk_along_dim() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_vec_on(
             (0..12).map(|i| i as f32).collect(),
             vec![2, 6],
@@ -286,9 +281,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_chunk_invalid() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_vec_on(vec![1.0, 2.0, 3.0], vec![3], device.clone())
             .await
             .unwrap();

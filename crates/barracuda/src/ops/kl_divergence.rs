@@ -260,13 +260,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_kl_divergence_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let p = Tensor::from_vec_on(vec![0.25, 0.25, 0.25, 0.25], vec![4], device.clone())
             .await
             .unwrap();
@@ -285,9 +282,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_kl_divergence_identical() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Identical distributions should have KL ≈ 0
         let p = Tensor::from_vec_on(vec![0.25, 0.25, 0.25, 0.25], vec![4], device.clone())
             .await
@@ -305,9 +300,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_kl_divergence_asymmetry() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // KL(P||Q) ≠ KL(Q||P) - use more extreme distributions
         let p = Tensor::from_vec_on(vec![0.9, 0.1], vec![2], device.clone())
             .await
@@ -334,9 +327,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_kl_divergence_validation() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Shape mismatch
         let p = Tensor::from_vec_on(vec![0.5; 10], vec![10], device.clone())
             .await
@@ -350,9 +341,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_kl_divergence_large_batch() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let p: Vec<f32> = (0..1000).map(|i| (i as f32 + 1.0) / 1000.0).collect();
         let q: Vec<f32> = (0..1000)
             .map(|i| ((i + 500) as f32 % 1000.0 + 1.0) / 1000.0)

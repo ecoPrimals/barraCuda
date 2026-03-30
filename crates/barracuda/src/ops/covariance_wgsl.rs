@@ -197,13 +197,9 @@ impl Covariance {
 mod tests {
     use super::*;
 
-    fn get_test_device() -> Arc<crate::device::WgpuDevice> {
-        crate::device::test_pool::get_test_device_sync()
-    }
-
     #[test]
     fn test_variance() {
-        let device = get_test_device();
+        let device = crate::device::test_pool::get_test_device_sync();
         let op = Covariance::new(device).unwrap();
 
         let x = vec![2.0f32, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0];
@@ -215,7 +211,7 @@ mod tests {
 
     #[test]
     fn test_covariance_positive() {
-        let device = get_test_device();
+        let device = crate::device::test_pool::get_test_device_sync();
         let op = Covariance::new(device).unwrap();
 
         let x: Vec<f32> = (0..100).map(|i| i as f32).collect();
@@ -227,7 +223,7 @@ mod tests {
 
     #[test]
     fn test_covariance_negative() {
-        let device = get_test_device();
+        let device = crate::device::test_pool::get_test_device_sync();
         let op = Covariance::new(device).unwrap();
 
         let x: Vec<f32> = (0..100).map(|i| i as f32).collect();
@@ -239,7 +235,7 @@ mod tests {
 
     #[test]
     fn test_population_vs_sample() {
-        let device = get_test_device();
+        let device = crate::device::test_pool::get_test_device_sync();
         let op = Covariance::new(device).unwrap();
 
         let x: Vec<f32> = (0..10).map(|i| i as f32).collect();

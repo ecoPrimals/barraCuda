@@ -357,13 +357,10 @@ impl GraphBatchNorm {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_graph_batch_norm_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let num_nodes = 4;
         let num_features = 8;
 
@@ -392,9 +389,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_graph_batch_norm_large_batch() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let num_nodes = 100;
         let num_features = 128;
 

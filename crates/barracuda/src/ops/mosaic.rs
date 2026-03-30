@@ -280,11 +280,11 @@ impl Mosaic {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_mosaic_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
             return;
         };
         let t1 = Tensor::from_vec_on(vec![1.0; 3 * 640 * 640], vec![3, 640, 640], device.clone())
@@ -310,7 +310,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_mosaic_edge_cases() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
             return;
         };
         // Small images
@@ -356,7 +357,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_mosaic_boundary() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
             return;
         };
         // Different seeds produce different mosaics
@@ -388,7 +390,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_mosaic_large_images() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
             return;
         };
         // HD images
@@ -426,7 +429,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_mosaic_precision() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
+        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
+        else {
             return;
         };
         // Test that all 4 quadrants are represented

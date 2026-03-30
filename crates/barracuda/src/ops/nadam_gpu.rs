@@ -402,11 +402,11 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
+    use crate::device::test_pool::get_test_device;
 
     #[tokio::test]
     async fn test_nadam_gpu_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else { return };
+        let device = crate::device::test_pool::get_test_device().await;
         let params = Tensor::from_vec_on(vec![1.0; 100], vec![100], device.clone())
             .await
             .unwrap();
@@ -428,7 +428,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_nadam_gpu_with_state() {
-        let Some(device) = get_test_device_if_gpu_available().await else { return };
+        let device = crate::device::test_pool::get_test_device().await;
         let params = Tensor::from_vec_on(vec![1.0; 10], vec![10], device.clone())
             .await
             .unwrap();
@@ -448,7 +448,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_nadam_gpu_convergence() {
-        let Some(device) = get_test_device_if_gpu_available().await else { return };
+        let device = crate::device::test_pool::get_test_device().await;
         let mut params = Tensor::from_vec_on(vec![10.0; 50], vec![50], device.clone())
             .await
             .unwrap();

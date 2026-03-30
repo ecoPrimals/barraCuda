@@ -200,15 +200,9 @@ impl Tensor {
 mod tests {
     use super::*;
 
-    async fn get_test_device() -> Option<std::sync::Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_norm_ppf_median() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Φ⁻¹(0.5) = 0
         let input = Tensor::new(vec![0.5], vec![1], device);
         let output = input.norm_ppf().unwrap();
@@ -222,9 +216,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_norm_ppf_quartiles() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Φ⁻¹(0.25) ≈ -0.6745, Φ⁻¹(0.75) ≈ 0.6745
         let input = Tensor::new(vec![0.25, 0.75], vec![2], device);
         let output = input.norm_ppf().unwrap();
@@ -243,9 +235,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_norm_ppf_critical() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Φ⁻¹(0.025) ≈ -1.96, Φ⁻¹(0.975) ≈ 1.96
         let input = Tensor::new(vec![0.025, 0.975], vec![2], device);
         let output = input.norm_ppf().unwrap();
@@ -264,9 +254,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_norm_ppf_general() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // For N(μ=10, σ=2): Φ⁻¹(0.5) = μ = 10
         let input = Tensor::new(vec![0.5], vec![1], device);
         let output = input.norm_ppf_params(10.0, 2.0).unwrap();

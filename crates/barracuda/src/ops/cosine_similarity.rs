@@ -108,13 +108,10 @@ impl CosineSimilarity {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_cosine_similarity_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let num_vectors_a = 3;
         let num_vectors_b = 4;
         let vector_dim = 5;

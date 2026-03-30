@@ -98,15 +98,9 @@ impl Tensor {
 mod tests {
     use super::*;
 
-    async fn get_test_device() -> Option<std::sync::Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_atanh_finite() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::new(vec![-0.9, -0.5, 0.0, 0.5, 0.9], vec![5], device);
         let output = input.atanh().unwrap();
         let result = output.to_vec().unwrap();

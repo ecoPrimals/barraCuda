@@ -199,17 +199,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
-
-    async fn get_test_device() -> Option<Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
 
     #[tokio::test]
     async fn test_spherical_harmonics_y00() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Y_0^0 = 1/(2*sqrt(pi)) = 0.282094...
         let theta_phi = vec![0.0f32, 0.0, 1.0, 2.0]; // two points
         let input = Tensor::new(theta_phi, vec![4], device);

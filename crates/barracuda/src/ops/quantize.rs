@@ -179,13 +179,10 @@ pub fn quantize_affine_i8(input: Tensor) -> Result<(Tensor, f32, f32)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_quantize_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_vec_on(vec![-1.0, 0.0, 1.0], vec![3], device.clone())
             .await
             .unwrap();
@@ -202,9 +199,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_quantize_edge_cases() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Test clamping at boundaries
         let input = Tensor::from_vec_on(vec![-1000.0, 1000.0, 0.0], vec![3], device.clone())
             .await
@@ -224,9 +219,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_quantize_int4() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_vec_on(vec![-10.0, 0.0, 10.0], vec![3], device.clone())
             .await
             .unwrap();

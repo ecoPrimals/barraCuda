@@ -224,13 +224,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_tversky_loss_gpu_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let batch = 2;
         let h = 16;
         let w = 16;
@@ -255,9 +252,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_tversky_loss_gpu_equivalent_to_dice() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let batch = 1;
         let size = 100;
 
@@ -286,9 +281,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_tversky_loss_gpu_recall_focused() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let batch = 1;
         let size = 100;
 
@@ -315,9 +308,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_tversky_loss_gpu_mismatch() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let batch = 1;
         let size = 100;
 
@@ -339,9 +330,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_tversky_loss_gpu_medical_scale() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Medical imaging scale: 128x128 slices
         let batch = 4;
         let h = 128;
@@ -369,9 +358,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_tversky_loss_gpu_validation() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let preds = Tensor::from_vec_on(vec![1.0; 100], vec![100], device.clone())
             .await
             .unwrap();

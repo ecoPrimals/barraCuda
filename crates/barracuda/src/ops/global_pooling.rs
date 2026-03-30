@@ -231,13 +231,10 @@ impl GlobalPooling {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_global_pooling_sum() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let num_nodes = 4;
         let num_features = 8;
 
@@ -257,9 +254,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_global_pooling_mean() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let num_nodes = 3;
         let num_features = 4;
 
@@ -279,9 +274,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_global_pooling_max() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let num_nodes = 5;
         let num_features = 16;
 
@@ -301,9 +294,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_global_pooling_large_batch() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let num_nodes = 100;
         let num_features = 128;
 

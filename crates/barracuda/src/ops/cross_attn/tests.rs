@@ -4,13 +4,11 @@
 //! Validates encoder-decoder attention with asymmetric sequence lengths.
 
 use super::*;
-use crate::device::test_pool::get_test_device_if_gpu_available;
+use crate::device::test_pool::get_test_device;
 
 #[tokio::test]
 async fn test_cross_attention_basic() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
 
     let batch = 1;
     let heads = 2;
@@ -51,9 +49,7 @@ async fn test_cross_attention_basic() {
 
 #[tokio::test]
 async fn test_cross_attention_shape_validation() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
 
     let batch = 2;
     let heads = 4;
@@ -102,9 +98,7 @@ async fn test_cross_attention_shape_validation() {
 
 #[tokio::test]
 async fn test_cross_attention_whisper_style() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
 
     // Whisper-style: short decoder, long encoder (audio)
     let batch = 1;

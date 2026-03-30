@@ -349,13 +349,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_rbf_kernel_same_points() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Two identical points should have kernel value = 0 for TPS (r=0)
         let x_data = vec![1.0, 2.0, 3.0, 1.0, 2.0, 3.0];
         let x = Tensor::from_vec_on(x_data, vec![2, 3], device)
@@ -385,9 +382,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rbf_kernel_gaussian() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Test Gaussian kernel at origin: should be 1.0
         let x_data = vec![0.0, 0.0, 0.0];
         let x = Tensor::from_vec_on(x_data, vec![1, 3], device)
@@ -407,9 +402,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rbf_kernel_dimensions() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Test that output has correct dimensions
         let x_data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]; // 2 points, 3D
         let y_data = vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0]; // 3 points, 3D

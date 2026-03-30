@@ -148,7 +148,6 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     const LINSOLVE_SHADER: &str = include_str!("../../shaders/linalg/linsolve.wgsl");
 
@@ -160,9 +159,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_linsolve_identity() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // I·x = b => x = b
         let i_data = vec![1.0, 0.0, 0.0, 1.0];
         let b_data = vec![3.0, 7.0];
@@ -184,9 +181,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_linsolve_2x2() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // [[2, 1], [1, 2]] · x = [5, 4]
         // Solution: x = [2, 1]
         // Verification: 2*2+1*1=5, 1*2+2*1=4 ✓
@@ -229,9 +224,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_linsolve_3x3() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Simple 3x3: [[1,0,0],[0,1,0],[0,0,1]]·x = [1,2,3] => x = [1,2,3]
         let a_data = vec![1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
         let b_data = vec![1.0, 2.0, 3.0];

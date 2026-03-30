@@ -123,6 +123,7 @@ name = "barracuda"
 version = "0.3.11"
 dependencies = [
  "approx",
+ "barracuda-naga-exec",
  "barracuda-spirv",
  "blake3",
  "bytemuck",
@@ -159,6 +160,15 @@ dependencies = [
  "tokio-util",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "barracuda-naga-exec"
+version = "0.3.11"
+dependencies = [
+ "naga",
+ "thiserror",
+ "tracing",
 ]
 
 [[package]]

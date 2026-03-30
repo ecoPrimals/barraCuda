@@ -4,13 +4,11 @@
 //! Validates sparse attention with various stride values and sequence lengths.
 
 use super::*;
-use crate::device::test_pool::get_test_device_if_gpu_available;
+use crate::device::test_pool::get_test_device;
 
 #[tokio::test]
 async fn test_sparse_attention_basic() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     let batch = 1;
     let heads = 2;
     let seq = 8;
@@ -35,9 +33,7 @@ async fn test_sparse_attention_basic() {
 
 #[tokio::test]
 async fn test_sparse_attention_stride_1() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     // stride=1 should work like full attention
     let batch = 1;
     let heads = 1;
@@ -63,9 +59,7 @@ async fn test_sparse_attention_stride_1() {
 
 #[tokio::test]
 async fn test_sparse_attention_large_stride() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     // Large stride (attend to few positions)
     let batch = 2;
     let heads = 4;
@@ -91,9 +85,7 @@ async fn test_sparse_attention_large_stride() {
 
 #[tokio::test]
 async fn test_sparse_attention_long_sequence() {
-    let Some(device) = get_test_device_if_gpu_available().await else {
-        return;
-    };
+    let device = get_test_device().await;
     // Long sequence (sparse is memory-efficient)
     let batch = 2;
     let heads = 8;

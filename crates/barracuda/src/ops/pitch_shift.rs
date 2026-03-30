@@ -118,13 +118,10 @@ impl PitchShift {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_pitch_shift_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let signal = Tensor::from_vec_on(vec![0.5; 10_000], vec![10_000], device.clone())
             .await
             .unwrap();

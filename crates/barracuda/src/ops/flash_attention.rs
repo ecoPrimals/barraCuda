@@ -286,13 +286,10 @@ impl FlashAttention {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_flash_attention_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let seq_len = 4;
         let head_dim = 8;
 
@@ -327,9 +324,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_flash_attention_shape_validation() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let q = Tensor::from_vec_on(vec![1.0; 16], vec![4, 4], device.clone())
             .await
             .unwrap();
@@ -347,9 +342,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_flash_attention_small_sequence() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let seq_len = 2;
         let head_dim = 4;
 

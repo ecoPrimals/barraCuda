@@ -205,15 +205,9 @@ pub fn sobol_gpu_skip(
 mod tests {
     use super::*;
 
-    async fn get_test_device() -> Option<Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_sobol_basic() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let result = sobol_gpu(device, 16, 2).unwrap();
         let data = result.to_vec().unwrap();
 
@@ -231,9 +225,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sobol_low_discrepancy() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Generate 64 points in 1D
         let result = sobol_gpu(device, 64, 1).unwrap();
         let data = result.to_vec().unwrap();
@@ -254,9 +246,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sobol_with_skip() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Generate with skip=8 should give different first point
         let result = sobol_gpu_skip(device, 8, 1, 8).unwrap();
         let data = result.to_vec().unwrap();

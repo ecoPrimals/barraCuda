@@ -159,10 +159,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fft_2d_simple() {
-        let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await
-        else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let data = vec![1.0f32, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0];
         let tensor = Tensor::from_data(&data, vec![2, 2, 2], device).unwrap();
         let fft = Fft2D::new(tensor, 2, 2).unwrap();

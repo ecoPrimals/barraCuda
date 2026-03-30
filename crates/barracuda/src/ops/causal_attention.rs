@@ -138,13 +138,10 @@ pub async fn causal_attention(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_causal_attention_basic() {
-        let Some(dev) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         let device = &dev.device;
         let queue = &dev.queue;
 
@@ -167,9 +164,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_causal_attention_edge_cases() {
-        let Some(dev) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         let device = &dev.device;
         let queue = &dev.queue;
 
@@ -193,9 +188,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_causal_attention_boundary() {
-        let Some(dev) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         let device = &dev.device;
         let queue = &dev.queue;
 
@@ -219,9 +212,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_causal_attention_large_batch() {
-        let Some(dev) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         let device = &dev.device;
         let queue = &dev.queue;
 
@@ -245,9 +236,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_causal_attention_precision() {
-        let Some(dev) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let dev = crate::device::test_pool::get_test_device().await;
         let device = &dev.device;
         let queue = &dev.queue;
 

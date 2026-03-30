@@ -261,13 +261,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_mae_loss_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let predictions = Tensor::from_vec_on(vec![1.0, 2.0, 3.0, 4.0], vec![4], device.clone())
             .await
             .unwrap();
@@ -286,9 +283,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mae_loss_perfect() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Perfect predictions should have zero loss
         let predictions = Tensor::from_vec_on(vec![1.0, 2.0, 3.0], vec![3], device.clone())
             .await
@@ -306,9 +301,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mae_loss_validation() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Shape mismatch
         let predictions = Tensor::from_vec_on(vec![1.0; 10], vec![10], device.clone())
             .await
@@ -322,9 +315,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mae_loss_large_batch() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let size = 1000;
         let predictions = Tensor::from_vec_on(vec![1.0; size], vec![size], device.clone())
             .await

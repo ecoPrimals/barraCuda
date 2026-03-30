@@ -1,11 +1,24 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-03-29.
+Prioritized work items, ordered by impact. Updated 2026-03-30.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 24: WGSL-as-Truth + NagaExecutor + coralReef CPU Compilation (Mar 30)**:
+  Major test architecture restructure: 337 GPU op test files migrated from `get_test_device_if_gpu_available()`
+  to `get_test_device()`, enabling 2,770 tests to run on CPU/llvmpipe. 17 GPU-exclusive modules correctly
+  re-gated. New crate `barracuda-naga-exec`: pure-Rust CPU interpreter for naga IR with f32/f64 native,
+  workgroup shared memory, barriers, atomics (16 tests). `assert_shader_math!` and `assert_shader_math_f64!`
+  macros for zero-GPU shader validation. coralReef IPC contract: 10 new wire types, 5 new `CoralCompiler`
+  methods (`compile_cpu`, `execute_cpu`, `validate_shader`), capability discovery for `shader.compile.cpu`
+  and `shader.validate`. `ShaderValidationBackend` enum with coralReef-first fallback chain. 4-layer
+  validation architecture (llvmpipe / NagaExecutor / coralReef CPU / real GPU). 2,786 total tests,
+  0 failures. All quality gates green.
+- **Sprint 23: ludoSpring V35 Gap Resolution (Mar 29)**:
+  15 new IPC methods wired (30 total). Socket path fixed to `barracuda.sock`.
+  Dual-transport startup. All `#[allow(` migrated to `#[expect(`. 3,808 tests.
 - **Sprint 22h: Deep Debt Evolution & Dependency Purge (Mar 29)**:
   Subgroup `subgroupAdd` reduction wired as top-tier path in `ReduceScalarPipeline`
   (3-tier: subgroup→DF64→scalar fallback). `enable f64;` directive removed from 47

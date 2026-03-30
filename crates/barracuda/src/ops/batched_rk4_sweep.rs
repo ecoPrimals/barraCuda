@@ -266,7 +266,6 @@ impl BatchedRK4F64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool;
 
     /// Exponential decay: dy/dt = -k*y  →  y(t) = y0 * exp(-k*t)
     fn decay_ode(k: f64) -> OdeFn {
@@ -275,9 +274,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fixed_three_decay_rates() {
-        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let batcher = BatchedRK4F64::new(&device);
 
         let rates = [0.5_f64, 1.0, 2.0];
@@ -303,9 +300,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_adaptive_single_instance() {
-        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let batcher = BatchedRK4F64::new(&device);
 
         let odes: Vec<_> = vec![decay_ode(1.0)];
@@ -326,9 +321,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_empty_batch() {
-        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let batcher = BatchedRK4F64::new(&device);
         let results = batcher.integrate_fixed(&[], 0.0, &[], 1.0, 0.01).unwrap();
         assert!(results.is_empty());
@@ -336,9 +329,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dimension_mismatch_error() {
-        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let batcher = BatchedRK4F64::new(&device);
         let odes: Vec<_> = vec![decay_ode(1.0), decay_ode(2.0)];
         // y0_batch has wrong inner dimension for instance 1

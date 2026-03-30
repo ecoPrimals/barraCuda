@@ -217,15 +217,9 @@ pub fn random_uniform_gpu(
 mod tests {
     use super::*;
 
-    async fn get_test_device() -> Option<Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_random_uniform_basic() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let bounds = vec![(0.0, 1.0), (-1.0, 1.0)];
         let result = random_uniform_gpu(device, 100, &bounds, 42).unwrap();
         let data = result.to_vec().unwrap();
@@ -244,9 +238,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_random_uniform_different_seeds() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let bounds = vec![(0.0, 1.0)];
 
         let r1 = random_uniform_gpu(device.clone(), 10, &bounds, 42).unwrap();

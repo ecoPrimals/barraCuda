@@ -225,6 +225,65 @@ fn read_jsonrpc_from_value(info: &serde_json::Value) -> Option<String> {
         .map(str::to_owned)
 }
 
+/// Discover a shader-compiler primal that supports CPU execution.
+///
+/// Same discovery chain as [`discover_shader_compiler`], but additionally
+/// verifies that the primal advertises the `shader.compile.cpu` or
+/// `shader.execute.cpu` capability. Returns `None` if no CPU-capable
+/// compiler is found.
+pub async fn discover_cpu_shader_compiler() -> Option<String> {
+    let runtime_dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
+    let eco_dir =
+        std::env::var("ECOPRIMALS_DISCOVERY_DIR").unwrap_or_else(|_| "ecoPrimals".to_owned());
+    let eco_base = PathBuf::from(&runtime_dir).join(&eco_dir);
+    let eco_canonical = eco_base.join("discovery");
+    let biomeos_base = PathBuf::from(&runtime_dir).join(ECOSYSTEM_SOCKET_NAMESPACE);
+
+    let dirs = [&eco_base, &eco_canonical, &biomeos_base];
+
+    for dir in &dirs {
+        if let Some(addr) = scan_capability(dir, "shader.compile.cpu") {
+            if probe_jsonrpc(&addr).await {
+                return Some(addr);
+            }
+        }
+    }
+
+    for dir in &dirs {
+        if let Some(addr) = scan_capability(dir, "shader.execute.cpu") {
+            if probe_jsonrpc(&addr).await {
+                return Some(addr);
+            }
+        }
+    }
+
+    None
+}
+
+/// Discover a shader-compiler primal that supports validation.
+///
+/// Scans for the `shader.validate` capability.
+pub async fn discover_shader_validator() -> Option<String> {
+    let runtime_dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
+    let eco_dir =
+        std::env::var("ECOPRIMALS_DISCOVERY_DIR").unwrap_or_else(|_| "ecoPrimals".to_owned());
+    let eco_base = PathBuf::from(&runtime_dir).join(&eco_dir);
+    let eco_canonical = eco_base.join("discovery");
+    let biomeos_base = PathBuf::from(&runtime_dir).join(ECOSYSTEM_SOCKET_NAMESPACE);
+
+    let dirs = [&eco_base, &eco_canonical, &biomeos_base];
+
+    for dir in &dirs {
+        if let Some(addr) = scan_capability(dir, "shader.validate") {
+            if probe_jsonrpc(&addr).await {
+                return Some(addr);
+            }
+        }
+    }
+
+    None
+}
+
 /// Probe whether a JSON-RPC endpoint is alive via `shader.compile.status`.
 ///
 /// Falls back to the legacy `compiler.health` method for pre-Phase 10

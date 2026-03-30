@@ -193,18 +193,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::WgpuDevice;
-    use std::sync::Arc;
-
-    async fn get_test_device() -> Option<Arc<WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
 
     #[tokio::test]
     async fn test_focal_loss_basic() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let predictions =
             Tensor::from_data(&[0.9, 0.1, 0.8, 0.2], vec![4], device.clone()).unwrap();
 
@@ -220,9 +212,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_focal_loss_edge_cases() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Perfect predictions
         let predictions = Tensor::from_data(&[1.0, 0.0, 1.0], vec![3], device.clone()).unwrap();
         let targets = Tensor::from_data(&[1.0, 0.0, 1.0], vec![3], device.clone()).unwrap();
@@ -240,9 +230,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_focal_loss_boundary() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Different alpha values
         let predictions = Tensor::from_data(&[0.6, 0.4], vec![2], device.clone()).unwrap();
         let targets = Tensor::from_data(&[1.0, 0.0], vec![2], device).unwrap();
@@ -259,9 +247,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_focal_loss_large_batch() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // 100 elements
         let mut preds = Vec::with_capacity(100);
         let mut tgts = Vec::with_capacity(100);
@@ -281,9 +267,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_focal_loss_precision() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Gamma parameter effect
         let predictions = Tensor::from_data(&[0.5, 0.9], vec![2], device.clone()).unwrap();
         let targets = Tensor::from_data(&[1.0, 1.0], vec![2], device).unwrap();

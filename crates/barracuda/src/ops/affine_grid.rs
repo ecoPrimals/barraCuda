@@ -228,13 +228,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_affine_grid_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Identity transformation matrix [B=1, 2, 3]
         let theta_data = vec![1.0, 0.0, 0.0, 0.0, 1.0, 0.0];
         let theta = Tensor::from_vec_on(theta_data, vec![1, 2, 3], device.clone())

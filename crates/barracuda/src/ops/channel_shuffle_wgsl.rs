@@ -215,13 +215,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_channel_shuffle_simple() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Shape: [1, 4, 2, 2] with 2 groups
         // Channels 0,1 in group 0, channels 2,3 in group 1
         let input_data = vec![

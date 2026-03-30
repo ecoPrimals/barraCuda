@@ -206,15 +206,9 @@ impl Tensor {
 mod tests {
     use super::*;
 
-    async fn get_test_device() -> Option<std::sync::Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_layer_norm_1d() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![1, 4], device);
         let output = input.layer_norm_wgsl(1e-5).unwrap();
         assert_eq!(output.shape(), &[1, 4]);
@@ -225,9 +219,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_layer_norm_batch() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3], device);
         let output = input.layer_norm_wgsl(1e-5).unwrap();
         assert_eq!(output.shape(), &[2, 3]);

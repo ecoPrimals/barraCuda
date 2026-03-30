@@ -392,13 +392,10 @@ impl RNNCell {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_rnn_cell_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         let input = Tensor::from_vec_on(vec![0.5; 2 * 4], vec![2, 4], device.clone())
             .await
             .unwrap();
@@ -423,9 +420,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rnn_cell_edge_cases() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Single batch
         let input = Tensor::from_vec_on(vec![1.0; 3], vec![1, 3], device.clone())
             .await
@@ -448,9 +443,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rnn_cell_boundary() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Non-zero previous hidden state
         let input = Tensor::from_vec_on(vec![0.5; 4], vec![1, 4], device.clone())
             .await

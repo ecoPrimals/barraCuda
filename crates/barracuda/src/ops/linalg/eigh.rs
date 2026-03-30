@@ -151,7 +151,6 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     const EIGH_SHADER: &str = include_str!("../../shaders/linalg/eigh.wgsl");
 
@@ -168,9 +167,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_eigh_2x2() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Symmetric 2x2: [[4, 2], [2, 3]]
         // Eigenvalues: (5 + sqrt(5))/2 ≈ 3.618, (5 - sqrt(5))/2 ≈ 1.382
         let input_data = vec![4.0, 2.0, 2.0, 3.0];
@@ -211,9 +208,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_eigh_identity() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // Identity matrix: eigenvalues all 1, eigenvectors = I
         let input_data = vec![1.0, 0.0, 0.0, 1.0];
         let input = Tensor::from_vec_on(input_data, vec![2, 2], device)
@@ -234,9 +229,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_eigh_3x3() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // 3x3 symmetric matrix: [[2, -1, 0], [-1, 2, -1], [0, -1, 2]]
         // This is a common tridiagonal matrix with known eigenvalues
         let input_data = vec![2.0, -1.0, 0.0, -1.0, 2.0, -1.0, 0.0, -1.0, 2.0];

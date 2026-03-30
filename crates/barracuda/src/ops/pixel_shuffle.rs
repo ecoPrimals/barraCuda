@@ -242,13 +242,10 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::test_pool::get_test_device_if_gpu_available;
 
     #[tokio::test]
     async fn test_pixel_shuffle_basic() {
-        let Some(device) = get_test_device_if_gpu_available().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // [B=1, C*r^2=4, H=2, W=2] with r=2 → [B=1, C=1, H=4, W=4]
         let input_data = vec![1.0; 4 * 2 * 2];
         let input = Tensor::from_vec_on(input_data, vec![1, 4, 2, 2], device.clone())

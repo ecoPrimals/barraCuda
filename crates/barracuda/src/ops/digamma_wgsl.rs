@@ -177,15 +177,9 @@ mod tests {
     /// Euler-Mascheroni constant γ (not in std)
     const EULER_MASCHERONI: f32 = 0.577_215_7;
 
-    async fn get_test_device() -> Option<std::sync::Arc<crate::device::WgpuDevice>> {
-        crate::device::test_pool::get_test_device_if_gpu_available().await
-    }
-
     #[tokio::test]
     async fn test_digamma_at_1() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // ψ(1) = -γ
         let input = Tensor::new(vec![1.0], vec![1], device);
         let output = input.digamma().unwrap();
@@ -201,9 +195,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_digamma_at_2() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // ψ(2) = 1 - γ
         let input = Tensor::new(vec![2.0], vec![1], device);
         let output = input.digamma().unwrap();
@@ -219,9 +211,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_digamma_large() {
-        let Some(device) = get_test_device().await else {
-            return;
-        };
+        let device = crate::device::test_pool::get_test_device().await;
         // For large x: ψ(x) ≈ ln(x) - 1/(2x)
         let input = Tensor::new(vec![100.0], vec![1], device);
         let output = input.digamma().unwrap();

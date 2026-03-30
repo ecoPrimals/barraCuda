@@ -12,7 +12,7 @@
 #   1. STATIC — clippy + compile (catches 80% of issues in seconds)
 #   2. CORE  — barracuda-core lib tests (IPC, lifecycle, RPC)
 #   3. TARGETED — changed-module tests only (sovereign, tolerances, etc.)
-#   4. FULL  — all 4,206+ tests via nextest (bounded parallelism)
+#   4. FULL  — all tests via nextest (bounded parallelism)
 #   5. CORAL — coralReef cross-primal validation (shader compilation probes)
 #   6. GPU   — hardware workload tests (BARRACUDA_TEST_BACKEND=gpu)
 #
@@ -66,7 +66,7 @@ ok "Clippy clean ($(elapsed $T))"
 tier 2 "Core library (barracuda-core: IPC, lifecycle, RPC)"
 T=$(date +%s%3N)
 $NEXTEST -p barracuda-core --lib --profile default
-ok "barracuda-core: 130 tests ($(elapsed $T))"
+ok "barracuda-core tests ($(elapsed $T))"
 
 # ─── Tier 3: Targeted module tests ────────────────────────────────
 tier 3 "Targeted modules (changed-code validation)"
@@ -89,7 +89,7 @@ ok "Targeted tier complete ($(elapsed $T))"
 }
 
 # ─── Tier 4: Full unit tests (nextest, bounded parallelism) ───────
-tier 4 "Full unit tests (4,206+ via nextest, 16 threads)"
+tier 4 "Full unit tests (via nextest, 16 threads)"
 T=$(date +%s%3N)
 
 $NEXTEST -p barracuda --lib --profile default

@@ -1,7 +1,7 @@
 # Pure Rust Evolution — barraCuda
 
-**Date**: March 29, 2026
-**Status**: Layer 1 complete — zero unsafe, zero application C deps, VFIO-primary architecture adopted, GpuBackend trait abstraction, dispatch_binary wired, coral cache → dispatch integrated, PrecisionBrain-coralReef sovereign routing
+**Date**: March 30, 2026
+**Status**: Layer 1 complete — zero unsafe, zero application C deps, VFIO-primary architecture adopted, GpuBackend trait abstraction, dispatch_binary wired, coral cache → dispatch integrated, PrecisionBrain-coralReef sovereign routing, NagaExecutor CPU shader interpreter, coralReef CPU compilation IPC contract
 
 ---
 
@@ -24,7 +24,7 @@ Together they produce a stable, sovereign, pure Rust compute stack.
 
 ```
 Layer 1  barraCuda    ██████████  COMPLETE       Zero unsafe, zero C deps
-Layer 2  coralReef    ████████░░  Phase 10 I50   DRM E2E proven; USERD_TARGET fix applied; hw revalidation pending
+Layer 2  coralReef    █████████░  Phase 10 I70   f64 polyfills, DRM E2E proven, CPU compilation IPC contract defined
 Layer 3  coralReef    ██░░░░░░░░  Planned        Standalone coral-reef crate, multi-arch ISA
 Layer 4  toadStool    █████████░  S156 complete  All infra gaps resolved; VFIO hw validation 6/7
 ```
@@ -57,13 +57,20 @@ Layer 4  toadStool    █████████░  S156 complete  All infra g
 - Test coverage 80% → 90%
 - Kokkos GPU parity benchmarks
 - Sovereign compiler: deeper naga IR optimisations
-- CPU shader interpreter (execute WGSL without GPU)
+- ~~CPU shader interpreter (execute WGSL without GPU)~~ **DONE** — `barracuda-naga-exec` crate
 
 ### Recent Layer 1 Evolution (Mar 12, 2026 — Sovereign Pipeline Deep Debt)
 - Hand-written `weighted_dot_df64.wgsl` (6 kernels) avoids shared-memory f64 on Hybrid devices
 - Covariance f64 confirmed safe with auto-rewrite (thread-local only, no workgroup f64)
 - RHMC multi-shift CG + rational approximation absorbed from hotSpring (`rhmc.rs`, `rhmc_hmc.rs`)
 - `@ilp_region` annotations on high-value DF64 reduction shaders (variance, weighted_dot, mean_variance, covariance)
+
+### Recent Layer 1 Evolution (Mar 30, 2026 — WGSL-as-Truth + NagaExecutor)
+- New crate `barracuda-naga-exec`: pure-Rust CPU interpreter for naga IR (f32/f64 native, shared memory, barriers, atomics)
+- 337 op test files migrated from GPU-gated to CPU/llvmpipe (2,770 tests now run without GPU hardware)
+- coralReef IPC contract: `shader.compile.cpu`, `shader.execute.cpu`, `shader.validate` wire types and discovery
+- `ShaderValidationBackend` enum with coralReef-first fallback chain
+- `assert_shader_math!` / `assert_shader_math_f64!` macros for zero-GPU shader validation
 
 ### Recent Layer 1 Evolution (Mar 29, 2026 — Dependency Purge)
 - `num-traits` direct dependency eliminated — replaced with local `CpuFloat` trait

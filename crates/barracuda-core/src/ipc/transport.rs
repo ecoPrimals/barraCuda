@@ -48,6 +48,11 @@ const DEFAULT_BIND_HOST: &str = "127.0.0.1";
 /// Default family ID when `BIOMEOS_FAMILY_ID` is not set.
 const DEFAULT_FAMILY_ID: &str = "default";
 
+/// Ecosystem socket namespace per `PRIMAL_IPC_PROTOCOL.md`.
+///
+/// All primals place Unix sockets under `$XDG_RUNTIME_DIR/{ECOSYSTEM_SOCKET_DIR}/`.
+const ECOSYSTEM_SOCKET_DIR: &str = "biomeos";
+
 /// Resolve the TCP bind address from the primal's own configuration.
 ///
 /// Resolution chain (first match wins):
@@ -277,7 +282,7 @@ impl IpcServer {
             }
             _ => "barracuda.sock".to_owned(),
         };
-        base.join("biomeos").join(sock_name)
+        base.join(ECOSYSTEM_SOCKET_DIR).join(sock_name)
     }
 
     /// Resolve the default TCP port from environment.
@@ -550,7 +555,7 @@ mod tests {
     fn default_socket_path_format() {
         let path = IpcServer::default_socket_path();
         let path_str = path.to_string_lossy();
-        assert!(path_str.contains("biomeos"));
+        assert!(path_str.contains(ECOSYSTEM_SOCKET_DIR));
         assert!(
             path_str.ends_with("barracuda.sock"),
             "default path should be barracuda.sock, got {path_str}"

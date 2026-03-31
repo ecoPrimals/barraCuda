@@ -569,7 +569,7 @@ heuristics in production routing. All classification is device-class-based
 
 ### Sovereign IPC Buffer Bindings (Cross-Primal Wiring)
 - **`IpcBufferBinding` struct**: carries buffer `id`, `size`, access mode over JSON-RPC
-- `submit_to_toadstool()` evolved: now sends `bindings[]` array + `hardware_hint`
+- `submit_dispatch()` evolved: now sends `bindings[]` array + `hardware_hint`
 - `dispatch_compute()` constructs `IpcBufferBinding` from `DispatchDescriptor.bindings`
 - `dispatch_binary()` evolved: no longer ignores `bindings` parameter
 - `CoralBuffer.size` no longer dead code — used in binding serialization
@@ -1220,8 +1220,8 @@ the cross-primal IPC chain has three missing pieces (~450 LOC total):
 | Item | Status | Detail |
 |------|--------|--------|
 | Discover toadStool | **Done** | Capability scan for `compute.dispatch` |
-| Send binary | **Done** | `submit_to_toadstool()` JSON-RPC |
-| Buffer bindings in payload | **Done** | `IpcBufferBinding` struct + `submit_to_toadstool()` (Sprint 10) |
+| Send binary | **Done** | `submit_dispatch()` JSON-RPC |
+| Buffer bindings in payload | **Done** | `IpcBufferBinding` struct + `submit_dispatch()` (Sprint 10) |
 | Readback (`compute.dispatch.result`) | **Planned** | toadStool returns output buffers to barraCuda |
 | Live compile (compile-on-dispatch) | **Planned** | Compile + dispatch in single IPC round-trip |
 

@@ -5,7 +5,40 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.11] — 2026-03-30
+## [0.3.11] — 2026-03-31
+
+### Changed — Sprint 25: Deep Debt Evolution & Modern Idiomatic Rust (Mar 31 2026)
+
+- **Zero production panics in naga-exec**: All 5 `panic!()` in `Value::as_f32/f64/u32/i32/bool`
+  evolved to return `Result<T, NagaExecError::TypeMismatch>`. Error propagation cascaded through
+  `eval.rs` (17 sites) and `executor.rs` (8 sites).
+- **Zero production `.expect()` in naga-exec**: All 6 `.expect("workgroup var")` in
+  `WorkgroupMemory` methods evolved to return `Result`. New `get_mut()` helper with typed error.
+  `atomic_load_u32`, `atomic_add_u32`, `atomic_max_u32`, `atomic_min_u32`, `atomic_add_i32`,
+  `atomic_store_u32`, and `write()` all return `Result`.
+- **Convention compliance: `#[allow(` → `#[expect(`**: All 10 `#[allow(` annotations in
+  `barracuda-naga-exec` migrated to `#[expect(` with `reason` parameters. Removed unfulfilled
+  `cast_sign_loss` expectations.
+- **barracuda-spirv unsafe evolved**: Production `assert!` → `Result<_, SpirvError>` return.
+  New `SpirvError` error type. `#[allow(unsafe_code)]` → `#[expect(unsafe_code, reason)]`.
+- **Idiomatic iterator patterns**: 5 production `for i in 0..vec.len()` loops evolved:
+  `multi_head.rs` → `.iter().enumerate()` + slice indexing, `genomics.rs` (2 sites) →
+  `.windows(n).enumerate()`, `df64_rewrite/mod.rs` → `.iter().enumerate()`.
+- **Capability-based naming**: `submit_dispatch` → `submit_dispatch`. Provenance
+  string evolved from primal-specific to capability-based. Hardcoded `"biomeos"` socket
+  namespace → named `ECOSYSTEM_SOCKET_DIR` constants in transport and binary.
+- **Showcase tokio pin**: All 6 showcase `Cargo.toml` pinned from `"1"` to `"1.50"` matching
+  workspace.
+- **Smart refactor `coral_compiler/mod.rs`**: 982 → 563 lines. Test module (422 lines) extracted
+  to `coral_compiler_tests.rs` using `#[path]` pattern, preserving private field access.
+- **Fitts formula (BC-01)**: `activation.fitts` now accepts `variant` parameter (default
+  `"shannon"` for ISO 9241-411 `log2(2D/W+1)`, optional `"fitts"` for original `log2(2D/W)`).
+- **Hick formula (BC-02)**: `activation.hick` now accepts `include_no_choice` parameter
+  (default `false`) to switch between standard `log2(n)` and `log2(n+1)`.
+- **Perlin 3D fix (BC-03)**: True 3D Perlin noise implementation with proper gradient vectors,
+  trilinear interpolation, and quintic fade. Zero at integer lattice points.
+- **executor.rs refactored (BC-04)**: 1,913 → 991 lines. Extracted `sim_buffer.rs` (101 lines),
+  `eval.rs` (404 lines), `executor_tests.rs` (439 lines). 29 clippy warnings fixed.
 
 ### Added — Sprint 24: WGSL-as-Truth + NagaExecutor + coralReef CPU Compilation (Mar 30 2026)
 
@@ -83,7 +116,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `PrecisionAdvice` (tier, `needs_transcendental_lowering`, `df64_naga_poisoned`,
   domain) so coralReef can make informed compilation decisions based on barraCuda's
   hardware probe results.
-- **Dispatch metadata wired** — `submit_to_toadstool()` now sends `gpr_count` and
+- **Dispatch metadata wired** — `submit_dispatch()` now sends `gpr_count` and
   `workgroup` from `CachedBinary` in the JSON-RPC dispatch request. Dead-code
   suppressions on `CachedBinary` fields removed. New `ShaderDispatchInfo` struct
   carries the metadata cleanly through the dispatch path.

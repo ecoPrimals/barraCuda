@@ -55,8 +55,8 @@
 //! |--------|--------|--------|-----|
 //! | `math.sigmoid` | `{"data": [f64]}` | `{"result": [f64]}` | no |
 //! | `math.log2` | `{"data": [f64]}` | `{"result": [f64]}` | no |
-//! | `activation.fitts` | `{"distance": f64, "width": f64, "a"?: f64, "b"?: f64}` | `{"movement_time": f64, "index_of_difficulty": f64}` | no |
-//! | `activation.hick` | `{"n_choices": u64, "a"?: f64, "b"?: f64}` | `{"reaction_time": f64, "information_bits": f64}` | no |
+//! | `activation.fitts` | `{"distance": f64, "width": f64, "a"?: f64, "b"?: f64, "variant"?: "shannon"\|"fitts"}` | `{"movement_time": f64, "index_of_difficulty": f64, "variant": str}` | no |
+//! | `activation.hick` | `{"n_choices": u64, "a"?: f64, "b"?: f64, "include_no_choice"?: bool}` | `{"reaction_time": f64, "information_bits": f64, "include_no_choice": bool}` | no |
 //!
 //! ### Statistics (CPU)
 //!

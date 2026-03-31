@@ -79,7 +79,7 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
             origin: SD::HOT_SPRING,
             consumers: &[SD::HOT_SPRING],
             category: C::LatticeQcd,
-            evolution_note: "DF64 Wilson plaquette from core-streaming discovery. Production wiring via toadStool.",
+            evolution_note: "DF64 Wilson plaquette from core-streaming discovery. Production wiring via compute.dispatch capability.",
             created: "Feb 2026 hotSpring S58",
             absorbed: "Mar 2026 barraCuda v0.3.0",
         },

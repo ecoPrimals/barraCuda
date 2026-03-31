@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Runtime value representation for the naga IR interpreter.
 
+use crate::error::{NagaExecError, Result};
+
 /// A runtime value during interpretation.
 ///
 /// Mirrors naga's type system but holds concrete data. All numeric types
@@ -30,106 +32,100 @@ pub enum Value {
 }
 
 impl Value {
-    /// Extract as f32, panicking on type mismatch.
+    /// Extract as f32, returning an error on type mismatch.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics if `self` is not one of `F32`, `F64`, `I32`, or `U32`.
-    #[must_use]
-    #[allow(
+    /// Returns [`NagaExecError::TypeMismatch`] if `self` is not a numeric scalar.
+    #[expect(
         clippy::cast_possible_truncation,
         clippy::cast_precision_loss,
-        clippy::cast_sign_loss
+        reason = "WGSL numeric coercions: naga type system guarantees valid source types"
     )]
-    pub fn as_f32(&self) -> f32 {
+    pub fn as_f32(&self) -> Result<f32> {
         match self {
-            Self::F32(v) => *v,
-            Self::F64(v) => *v as f32,
-            Self::I32(v) => *v as f32,
-            Self::U32(v) => *v as f32,
-            _ => panic!("Value::as_f32 on {self:?}"),
+            Self::F32(v) => Ok(*v),
+            Self::F64(v) => Ok(*v as f32),
+            Self::I32(v) => Ok(*v as f32),
+            Self::U32(v) => Ok(*v as f32),
+            _ => Err(NagaExecError::TypeMismatch(format!(
+                "expected f32-coercible, got {self:?}"
+            ))),
         }
     }
 
-    /// Extract as f64, panicking on type mismatch.
+    /// Extract as f64, returning an error on type mismatch.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics if `self` is not one of `F64`, `F32`, `I32`, or `U32`.
-    #[must_use]
-    #[allow(
-        clippy::cast_possible_truncation,
-        clippy::cast_precision_loss,
-        clippy::cast_sign_loss
-    )]
-    pub fn as_f64(&self) -> f64 {
+    /// Returns [`NagaExecError::TypeMismatch`] if `self` is not a numeric scalar.
+    pub fn as_f64(&self) -> Result<f64> {
         match self {
-            Self::F64(v) => *v,
-            Self::F32(v) => f64::from(*v),
-            Self::I32(v) => f64::from(*v),
-            Self::U32(v) => f64::from(*v),
-            _ => panic!("Value::as_f64 on {self:?}"),
+            Self::F64(v) => Ok(*v),
+            Self::F32(v) => Ok(f64::from(*v)),
+            Self::I32(v) => Ok(f64::from(*v)),
+            Self::U32(v) => Ok(f64::from(*v)),
+            _ => Err(NagaExecError::TypeMismatch(format!(
+                "expected f64-coercible, got {self:?}"
+            ))),
         }
     }
 
-    /// Extract as u32, panicking on type mismatch.
+    /// Extract as u32, returning an error on type mismatch.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics if `self` is not one of `U32`, `I32`, `F32`, or `Bool`.
-    #[must_use]
-    #[allow(
+    /// Returns [`NagaExecError::TypeMismatch`] if `self` is not a u32-coercible scalar.
+    #[expect(
         clippy::cast_possible_truncation,
-        clippy::cast_precision_loss,
-        clippy::cast_sign_loss
+        clippy::cast_sign_loss,
+        reason = "WGSL numeric coercions: naga type system guarantees valid source types"
     )]
-    pub fn as_u32(&self) -> u32 {
+    pub fn as_u32(&self) -> Result<u32> {
         match self {
-            Self::U32(v) => *v,
-            Self::I32(v) => *v as u32,
-            Self::F32(v) => *v as u32,
-            Self::Bool(v) => u32::from(*v),
-            _ => panic!("Value::as_u32 on {self:?}"),
+            Self::U32(v) => Ok(*v),
+            Self::I32(v) => Ok(*v as u32),
+            Self::F32(v) => Ok(*v as u32),
+            Self::Bool(v) => Ok(u32::from(*v)),
+            _ => Err(NagaExecError::TypeMismatch(format!(
+                "expected u32-coercible, got {self:?}"
+            ))),
         }
     }
 
-    /// Extract as i32, panicking on type mismatch.
+    /// Extract as i32, returning an error on type mismatch.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics if `self` is not one of `I32`, `U32`, or `F32`.
-    #[must_use]
-    #[allow(
+    /// Returns [`NagaExecError::TypeMismatch`] if `self` is not an i32-coercible scalar.
+    #[expect(
         clippy::cast_possible_truncation,
-        clippy::cast_precision_loss,
-        clippy::cast_sign_loss
+        reason = "WGSL numeric coercions: f32 as i32 may truncate"
     )]
-    pub fn as_i32(&self) -> i32 {
+    pub fn as_i32(&self) -> Result<i32> {
         match self {
-            Self::I32(v) => *v,
-            Self::U32(v) => v.cast_signed(),
-            Self::F32(v) => *v as i32,
-            _ => panic!("Value::as_i32 on {self:?}"),
+            Self::I32(v) => Ok(*v),
+            Self::U32(v) => Ok(v.cast_signed()),
+            Self::F32(v) => Ok(*v as i32),
+            _ => Err(NagaExecError::TypeMismatch(format!(
+                "expected i32-coercible, got {self:?}"
+            ))),
         }
     }
 
-    /// Extract as bool, panicking on type mismatch.
+    /// Extract as bool, returning an error on type mismatch.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics if `self` is not one of `Bool`, `U32`, or `I32`.
-    #[must_use]
-    #[allow(
-        clippy::cast_possible_truncation,
-        clippy::cast_precision_loss,
-        clippy::cast_sign_loss
-    )]
-    pub fn as_bool(&self) -> bool {
+    /// Returns [`NagaExecError::TypeMismatch`] if `self` is not a bool-coercible scalar.
+    pub fn as_bool(&self) -> Result<bool> {
         match self {
-            Self::Bool(v) => *v,
-            Self::U32(v) => *v != 0,
-            Self::I32(v) => *v != 0,
-            _ => panic!("Value::as_bool on {self:?}"),
+            Self::Bool(v) => Ok(*v),
+            Self::U32(v) => Ok(*v != 0),
+            Self::I32(v) => Ok(*v != 0),
+            _ => Err(NagaExecError::TypeMismatch(format!(
+                "expected bool-coercible, got {self:?}"
+            ))),
         }
     }
 

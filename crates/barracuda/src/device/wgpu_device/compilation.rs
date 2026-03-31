@@ -96,12 +96,17 @@ impl WgpuDevice {
                         stats.dead_exprs_eliminated,
                     );
                 }
-                let module = barracuda_spirv::compile_spirv_passthrough(
+                match barracuda_spirv::compile_spirv_passthrough(
                     self.device(),
                     validated.words(),
                     label,
-                );
-                Some(module)
+                ) {
+                    Ok(module) => Some(module),
+                    Err(e) => {
+                        tracing::debug!("spirv passthrough failed: {e}");
+                        None
+                    }
+                }
             }
             Err(e) => {
                 tracing::debug!("sovereign-spirv {tag} fallback to WGSL path: {e}");

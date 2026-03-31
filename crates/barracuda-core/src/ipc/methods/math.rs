@@ -107,9 +107,10 @@ pub(super) fn noise_perlin2d(params: &Value, id: Value) -> JsonRpcResponse {
     JsonRpcResponse::success(id, serde_json::json!({ "result": result }))
 }
 
-/// `noise.perlin3d` — CPU Perlin noise at (x, y, z).
+/// `noise.perlin3d` — CPU 3D Perlin noise at (x, y, z).
 ///
-/// Extends 2D Perlin with z-axis interpolation.
+/// Classic Perlin (2002) with 3D gradient vectors and trilinear interpolation.
+/// Guarantees zero at all integer lattice points.
 pub(super) fn noise_perlin3d(params: &Value, id: Value) -> JsonRpcResponse {
     let Some(x) = extract_f64(params, "x") else {
         return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: x");
@@ -120,16 +121,7 @@ pub(super) fn noise_perlin3d(params: &Value, id: Value) -> JsonRpcResponse {
     let Some(z) = extract_f64(params, "z") else {
         return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: z");
     };
-    let n0 = barracuda::ops::procedural::perlin_noise::perlin_2d_cpu(
-        z.mul_add(0.7, x),
-        z.mul_add(1.3, y),
-    );
-    let n1 = barracuda::ops::procedural::perlin_noise::perlin_2d_cpu(
-        z.mul_add(-1.1, x),
-        z.mul_add(-0.9, y),
-    );
-    let t = z.fract().abs();
-    let result = n0.mul_add(1.0 - t, n1 * t);
+    let result = barracuda::ops::procedural::perlin_noise::perlin_3d_cpu(x, y, z);
     JsonRpcResponse::success(id, serde_json::json!({ "result": result }))
 }
 
@@ -155,7 +147,11 @@ pub(super) fn rng_uniform(params: &Value, id: Value) -> JsonRpcResponse {
     JsonRpcResponse::success(id, serde_json::json!({ "result": result }))
 }
 
-/// `activation.fitts` — Fitts' law: movement time = a + b * log2(2D/W).
+/// `activation.fitts` — Fitts' law movement time prediction.
+///
+/// Supports two formulations via the `variant` parameter:
+/// - `"shannon"` (default): ID = log2(2D/W + 1) — MacKenzie 1992, ISO 9241-411
+/// - `"fitts"`: ID = log2(2D/W) — Fitts' original 1954 formulation
 pub(super) fn activation_fitts(params: &Value, id: Value) -> JsonRpcResponse {
     let Some(distance) = extract_f64(params, "distance") else {
         return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: distance");
@@ -168,29 +164,57 @@ pub(super) fn activation_fitts(params: &Value, id: Value) -> JsonRpcResponse {
     }
     let a = extract_f64(params, "a").unwrap_or(0.0);
     let b = extract_f64(params, "b").unwrap_or(0.155);
-    let id_bits = (2.0 * distance / width).log2().max(0.0);
+    let variant = params
+        .get("variant")
+        .and_then(|v| v.as_str())
+        .unwrap_or("shannon");
+    let id_bits = match variant {
+        "shannon" => (2.0 * distance / width + 1.0).log2().max(0.0),
+        "fitts" => (2.0 * distance / width).log2().max(0.0),
+        other => {
+            return JsonRpcResponse::error(
+                id,
+                INVALID_PARAMS,
+                format!("Unknown variant: {other}. Expected \"shannon\" or \"fitts\""),
+            );
+        }
+    };
     let mt = b.mul_add(id_bits, a);
     JsonRpcResponse::success(
         id,
-        serde_json::json!({ "movement_time": mt, "index_of_difficulty": id_bits }),
+        serde_json::json!({ "movement_time": mt, "index_of_difficulty": id_bits, "variant": variant }),
     )
 }
 
-/// `activation.hick` — Hick's law: reaction time = a + b * log2(n + 1).
+/// `activation.hick` — Hick-Hyman law reaction time prediction.
+///
+/// - Default (`include_no_choice: false`): H = log2(n) — standard information-theoretic form
+/// - With `include_no_choice: true`: H = log2(n + 1) — includes the no-go/no-choice stimulus
 pub(super) fn activation_hick(params: &Value, id: Value) -> JsonRpcResponse {
     let Some(n_choices) = params.get("n_choices").and_then(|v| v.as_u64()) else {
         return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: n_choices");
     };
+    if n_choices == 0 {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "n_choices must be > 0");
+    }
     let a = extract_f64(params, "a").unwrap_or(0.0);
     let b = extract_f64(params, "b").unwrap_or(0.155);
+    let include_no_choice = params
+        .get("include_no_choice")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
     #[expect(
         clippy::cast_precision_loss,
         reason = "n_choices is user-provided, fits f64 mantissa"
     )]
-    let hick_bits = ((n_choices + 1) as f64).log2();
+    let hick_bits = if include_no_choice {
+        ((n_choices + 1) as f64).log2()
+    } else {
+        (n_choices as f64).log2()
+    };
     let rt = b.mul_add(hick_bits, a);
     JsonRpcResponse::success(
         id,
-        serde_json::json!({ "reaction_time": rt, "information_bits": hick_bits }),
+        serde_json::json!({ "reaction_time": rt, "information_bits": hick_bits, "include_no_choice": include_no_choice }),
     )
 }

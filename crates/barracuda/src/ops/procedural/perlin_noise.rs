@@ -327,6 +327,108 @@ pub fn perlin_2d_cpu(x: f64, y: f64) -> f64 {
     )
 }
 
+/// CPU reference: 3D Perlin noise. Returns value in approximately \[-1, 1\].
+///
+/// Classic Perlin (2002) with 3D gradient vectors, trilinear interpolation,
+/// and quintic fade. Guarantees zero at all integer lattice points.
+///
+/// # References
+///
+/// - Perlin, K. (2002). "Improving noise." SIGGRAPH '02.
+#[must_use]
+pub fn perlin_3d_cpu(x: f64, y: f64, z: f64) -> f64 {
+    fn fade(t: f64) -> f64 {
+        t * t * t * t.mul_add(t.mul_add(6.0, -15.0), 10.0)
+    }
+    fn lerp(a: f64, b: f64, t: f64) -> f64 {
+        t.mul_add(b - a, a)
+    }
+    fn grad3(hash: u32, x: f64, y: f64, z: f64) -> f64 {
+        match hash & 15 {
+            0 => x + y,
+            1 => -x + y,
+            2 => x - y,
+            3 => -x - y,
+            4 => x + z,
+            5 => -x + z,
+            6 => x - z,
+            7 => -x - z,
+            8 => y + z,
+            9 => -y + z,
+            10 => y - z,
+            11 => -y - z,
+            12 => y + x,
+            13 => -y + z,
+            14 => y - x,
+            _ => -y - z,
+        }
+    }
+
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "floor + mask to 0..255 guarantees valid index"
+    )]
+    let xi = x.floor() as usize & 255;
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "floor + mask to 0..255 guarantees valid index"
+    )]
+    let yi = y.floor() as usize & 255;
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "floor + mask to 0..255 guarantees valid index"
+    )]
+    let zi = z.floor() as usize & 255;
+    let xf = x - x.floor();
+    let yf = y - y.floor();
+    let zf = z - z.floor();
+
+    let u = fade(xf);
+    let v = fade(yf);
+    let w = fade(zf);
+
+    let p = &PERM_TABLE;
+    let a = p[xi] as usize + yi;
+    let aa = p[a & 255] as usize + zi;
+    let ab = p[(a + 1) & 255] as usize + zi;
+    let b = p[(xi + 1) & 255] as usize + yi;
+    let ba = p[b & 255] as usize + zi;
+    let bb = p[(b + 1) & 255] as usize + zi;
+
+    lerp(
+        lerp(
+            lerp(
+                grad3(p[aa & 255], xf, yf, zf),
+                grad3(p[ba & 255], xf - 1.0, yf, zf),
+                u,
+            ),
+            lerp(
+                grad3(p[ab & 255], xf, yf - 1.0, zf),
+                grad3(p[bb & 255], xf - 1.0, yf - 1.0, zf),
+                u,
+            ),
+            v,
+        ),
+        lerp(
+            lerp(
+                grad3(p[(aa + 1) & 255], xf, yf, zf - 1.0),
+                grad3(p[(ba + 1) & 255], xf - 1.0, yf, zf - 1.0),
+                u,
+            ),
+            lerp(
+                grad3(p[(ab + 1) & 255], xf, yf - 1.0, zf - 1.0),
+                grad3(p[(bb + 1) & 255], xf - 1.0, yf - 1.0, zf - 1.0),
+                u,
+            ),
+            v,
+        ),
+        w,
+    )
+}
+
 /// CPU reference: 2D fBm using Perlin noise.
 #[must_use]
 pub fn fbm_2d_cpu(x: f64, y: f64, octaves: u32, lacunarity: f64, persistence: f64) -> f64 {
@@ -412,6 +514,41 @@ mod tests {
         for (i, &s) in seen.iter().enumerate() {
             assert!(s, "perm table missing value {i}");
         }
+    }
+
+    #[test]
+    fn perlin_3d_cpu_in_range() {
+        for i in 0..10_i32 {
+            for j in 0..10_i32 {
+                for k in 0..10_i32 {
+                    let v =
+                        perlin_3d_cpu(f64::from(i) * 0.3, f64::from(j) * 0.3, f64::from(k) * 0.3);
+                    assert!((-2.0..=2.0).contains(&v), "3D value {v} out of range");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn perlin_3d_at_integer_coords_is_zero() {
+        for x in 0..5_i32 {
+            for y in 0..5_i32 {
+                for z in 0..5_i32 {
+                    let v = perlin_3d_cpu(f64::from(x), f64::from(y), f64::from(z));
+                    assert!(
+                        v.abs() < 1e-10,
+                        "3D perlin at integer ({x},{y},{z}) should be ~0, got {v}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn perlin_3d_is_coherent() {
+        let a = perlin_3d_cpu(0.5, 0.5, 0.5);
+        let b = perlin_3d_cpu(0.501, 0.501, 0.501);
+        assert!((a - b).abs() < 0.1, "nearby 3D samples should be similar");
     }
 
     #[test]

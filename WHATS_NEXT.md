@@ -1,11 +1,19 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-03-30.
+Prioritized work items, ordered by impact. Updated 2026-03-31.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 25: Deep Debt Evolution & Modern Idiomatic Rust (Mar 31)**:
+  Zero production panics in naga-exec (5 `panic!` → `Result`). Zero production `.expect()` (6 sites
+  → `Result`). All `#[allow(` → `#[expect(` with reason. barracuda-spirv `assert!` → `Result` + typed
+  `SpirvError`. 5 index loops → idiomatic iterators. `submit_dispatch` → `submit_dispatch`
+  (capability-based). `"biomeos"` → `ECOSYSTEM_SOCKET_DIR` constants. Showcase tokio `"1"` → `"1.50"`.
+  `coral_compiler/mod.rs` 982 → 563 lines (smart test extraction). BC-01 Fitts variant param. BC-02
+  Hick `include_no_choice`. BC-03 true 3D Perlin noise. BC-04 executor.rs 1,913 → 991 lines.
+  All quality gates green, 4,100+ tests, 0 failures.
 - **Sprint 24: WGSL-as-Truth + NagaExecutor + coralReef CPU Compilation (Mar 30)**:
   Major test architecture restructure: 337 GPU op test files migrated from `get_test_device_if_gpu_available()`
   to `get_test_device()`, enabling 2,770 tests to run on CPU/llvmpipe. 17 GPU-exclusive modules correctly

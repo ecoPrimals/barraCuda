@@ -10,4 +10,4 @@ publish = false
 
 [dependencies]
 barracuda = { path = "../../../crates/barracuda" }
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1.50", features = ["full"] }

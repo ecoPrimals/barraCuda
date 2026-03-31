@@ -196,9 +196,7 @@ impl SequenceAnalyzer {
         let mut region_start = 0;
 
         // Sliding window analysis
-        for i in 0..=(sequence.len() - self.config.complexity_window) {
-            let window = &sequence[i..i + self.config.complexity_window];
-
+        for (i, window) in sequence.windows(self.config.complexity_window).enumerate() {
             // Count unique bases in window
             let unique_bases: HashSet<u8> =
                 window.iter().map(|&b| b.to_ascii_uppercase()).collect();
@@ -297,11 +295,7 @@ impl SequenceAnalyzer {
 
         let mut positions = Vec::new();
 
-        // Simple sliding window (fast for short patterns)
-        // For production: use Boyer-Moore or similar
-        for i in 0..=(sequence.len() - pattern.len()) {
-            let window = &sequence[i..i + pattern.len()];
-
+        for (i, window) in sequence.windows(pattern.len()).enumerate() {
             // Case-insensitive comparison
             let matches = window
                 .iter()

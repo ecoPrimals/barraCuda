@@ -337,7 +337,7 @@ impl SovereignDevice {
     /// primal maps buffer IDs to GPU memory and routes to the appropriate
     /// hardware unit.
     #[cfg(feature = "sovereign-dispatch")]
-    fn submit_to_toadstool(
+    fn submit_dispatch(
         &self,
         binary: &[u8],
         workgroups: (u32, u32, u32),
@@ -625,7 +625,7 @@ impl GpuBackend for SovereignDevice {
             })
             .collect();
 
-        self.submit_to_toadstool(
+        self.submit_dispatch(
             &binary,
             desc.workgroups,
             &ipc_bindings,
@@ -659,7 +659,7 @@ impl GpuBackend for SovereignDevice {
             })
             .collect();
 
-        self.submit_to_toadstool(
+        self.submit_dispatch(
             binary,
             workgroups,
             &ipc_bindings,

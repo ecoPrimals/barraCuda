@@ -199,18 +199,16 @@ pub fn rewrite_f64_infix_to_df64(f64_source: &str) -> crate::error::Result<Strin
 /// Input must be sorted by `span_start` descending.
 fn dedup_overlapping(replacements: &mut Vec<Replacement>) {
     let mut keep = vec![true; replacements.len()];
-    for i in 0..replacements.len() {
+    for (i, rep_i) in replacements.iter().enumerate() {
         if !keep[i] {
             continue;
         }
-        for j in (i + 1)..replacements.len() {
+        for (j, rep_j) in replacements.iter().enumerate().skip(i + 1) {
             if !keep[j] {
                 continue;
             }
             // j has earlier (or equal) span_start since sorted descending
-            if replacements[j].span_start <= replacements[i].span_start
-                && replacements[j].span_end >= replacements[i].span_end
-            {
+            if rep_j.span_start <= rep_i.span_start && rep_j.span_end >= rep_i.span_end {
                 // j contains i — keep j (outermost), drop i
                 keep[i] = false;
                 break;

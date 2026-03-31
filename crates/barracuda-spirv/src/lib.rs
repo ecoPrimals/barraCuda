@@ -28,16 +28,38 @@
 #![deny(unsafe_code)]
 
 use std::borrow::Cow;
+use std::fmt;
+
+/// Errors from SPIR-V passthrough compilation.
+#[derive(Debug)]
+pub enum SpirvError {
+    /// Caller passed an empty SPIR-V module (never valid per the spec).
+    EmptyModule,
+}
+
+impl fmt::Display for SpirvError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::EmptyModule => {
+                write!(
+                    f,
+                    "SPIR-V words must be non-empty — empty modules are never valid"
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for SpirvError {}
 
 /// Compile SPIR-V words into a wgpu shader module via the passthrough path.
 ///
 /// This bypasses naga's WGSL re-emission entirely, feeding SPIR-V directly to
 /// the Vulkan/Metal/DX12 backend.
 ///
-/// # Panics
+/// # Errors
 ///
-/// Panics if `spirv_words` is empty (a zero-length SPIR-V module is never
-/// valid and indicates a caller bug).
+/// Returns [`SpirvError::EmptyModule`] if `spirv_words` is empty.
 ///
 /// # Safety Argument (not `unsafe fn`)
 ///
@@ -46,18 +68,16 @@ use std::borrow::Cow;
 /// only `ValidatedSpirv::words()` can produce the `&[u32]` that reaches here,
 /// and `ValidatedSpirv` can only be constructed from naga-validated IR.
 ///
-/// The `#[allow(unsafe_code)]` below is the sole exception to the crate-level
+/// The `#[expect(unsafe_code)]` below is the sole exception to the crate-level
 /// `#![deny(unsafe_code)]`, auditable in one place.
-#[must_use]
 pub fn compile_spirv_passthrough(
     device: &wgpu::Device,
     spirv_words: &[u32],
     label: Option<&str>,
-) -> wgpu::ShaderModule {
-    assert!(
-        !spirv_words.is_empty(),
-        "SPIR-V words must be non-empty — empty modules are never valid"
-    );
+) -> Result<wgpu::ShaderModule, SpirvError> {
+    if spirv_words.is_empty() {
+        return Err(SpirvError::EmptyModule);
+    }
 
     let desc = wgpu::ShaderModuleDescriptorPassthrough {
         label,
@@ -77,8 +97,9 @@ pub fn compile_spirv_passthrough(
     // enforces this through the ValidatedSpirv type — only code paths that
     // pass naga::valid::Validator::validate() can construct ValidatedSpirv,
     // and only ValidatedSpirv::words() can produce the &[u32] passed here.
-    #[allow(unsafe_code)]
-    unsafe {
-        device.create_shader_module_passthrough(desc)
-    }
+    #[expect(
+        unsafe_code,
+        reason = "wgpu passthrough requires unsafe until wgpu#4854 lands"
+    )]
+    Ok(unsafe { device.create_shader_module_passthrough(desc) })
 }

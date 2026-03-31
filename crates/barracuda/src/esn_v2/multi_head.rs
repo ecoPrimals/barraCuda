@@ -335,8 +335,8 @@ impl MultiHeadEsn {
     /// device error).
     pub fn predict_all(&self, state: &Tensor) -> BarracudaResult<Vec<Tensor>> {
         let mut out = Vec::with_capacity(self.heads.len());
-        for i in 0..self.heads.len() {
-            if self.heads[i].trained {
+        for (i, head) in self.heads.iter().enumerate() {
+            if head.trained {
                 out.push(self.predict_head(i, state)?);
             }
         }
@@ -358,10 +358,8 @@ impl MultiHeadEsn {
 
         let mut total = 0.0;
         let mut count = 0usize;
-        for i in 0..preds.len() {
-            for j in (i + 1)..preds.len() {
-                let a = &preds[i];
-                let b = &preds[j];
+        for (i, a) in preds.iter().enumerate() {
+            for b in &preds[i + 1..] {
                 let len = a.len().min(b.len());
                 let d2: f64 = (0..len)
                     .map(|k| {

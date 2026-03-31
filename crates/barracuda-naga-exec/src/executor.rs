@@ -4,112 +4,15 @@
 use std::collections::BTreeMap;
 
 use naga::{
-    AddressSpace, BinaryOperator, Expression, Function, GlobalVariable, Handle, Literal,
-    MathFunction, Module, ScalarKind, Statement, TypeInner, UnaryOperator,
+    AddressSpace, Expression, Function, GlobalVariable, Handle, Literal, Module, Statement,
+    TypeInner,
 };
 use tracing::trace;
 
 use crate::error::{NagaExecError, Result};
+use crate::eval::{compose_vector, eval_binary, eval_cast, eval_math, eval_unary, type_byte_size};
+use crate::sim_buffer::SimBuffer;
 use crate::value::Value;
-
-/// Usage hint for a simulated buffer.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SimBufferUsage {
-    Storage,
-    StorageReadOnly,
-    Uniform,
-}
-
-/// A simulated GPU buffer — just bytes on the heap.
-#[derive(Debug, Clone)]
-pub struct SimBuffer {
-    pub data: Vec<u8>,
-    pub usage: SimBufferUsage,
-}
-
-impl SimBuffer {
-    /// Create a storage buffer from raw bytes.
-    #[must_use]
-    pub fn storage(data: Vec<u8>) -> Self {
-        Self {
-            data,
-            usage: SimBufferUsage::Storage,
-        }
-    }
-
-    /// Create a read-only storage buffer from raw bytes.
-    #[must_use]
-    pub fn storage_read_only(data: Vec<u8>) -> Self {
-        Self {
-            data,
-            usage: SimBufferUsage::StorageReadOnly,
-        }
-    }
-
-    /// Create a uniform buffer from raw bytes.
-    #[must_use]
-    pub fn uniform(data: Vec<u8>) -> Self {
-        Self {
-            data,
-            usage: SimBufferUsage::Uniform,
-        }
-    }
-
-    /// Create a storage buffer from a slice of f32 values.
-    #[must_use]
-    pub fn from_f32(values: &[f32]) -> Self {
-        let data: Vec<u8> = values.iter().flat_map(|v| v.to_le_bytes()).collect();
-        Self::storage(data)
-    }
-
-    /// Create a read-only storage buffer from a slice of f32 values.
-    #[must_use]
-    pub fn from_f32_readonly(values: &[f32]) -> Self {
-        let data: Vec<u8> = values.iter().flat_map(|v| v.to_le_bytes()).collect();
-        Self::storage_read_only(data)
-    }
-
-    /// Read back as f32 values.
-    #[must_use]
-    pub fn as_f32(&self) -> Vec<f32> {
-        self.data
-            .chunks_exact(4)
-            .map(|c| f32::from_le_bytes(c.try_into().unwrap_or([0; 4])))
-            .collect()
-    }
-
-    /// Create a storage buffer from a slice of f64 values.
-    #[must_use]
-    pub fn from_f64(values: &[f64]) -> Self {
-        let data: Vec<u8> = values.iter().flat_map(|v| v.to_le_bytes()).collect();
-        Self::storage(data)
-    }
-
-    /// Read back as f64 values.
-    #[must_use]
-    pub fn as_f64(&self) -> Vec<f64> {
-        self.data
-            .chunks_exact(8)
-            .map(|c| f64::from_le_bytes(c.try_into().unwrap_or([0; 8])))
-            .collect()
-    }
-
-    /// Create a storage buffer from a slice of u32 values.
-    #[must_use]
-    pub fn from_u32(values: &[u32]) -> Self {
-        let data: Vec<u8> = values.iter().flat_map(|v| v.to_le_bytes()).collect();
-        Self::storage(data)
-    }
-
-    /// Read back as u32 values.
-    #[must_use]
-    pub fn as_u32(&self) -> Vec<u32> {
-        self.data
-            .chunks_exact(4)
-            .map(|c| u32::from_le_bytes(c.try_into().unwrap_or([0; 4])))
-            .collect()
-    }
-}
 
 /// CPU execution context for a validated WGSL compute shader.
 ///
@@ -313,51 +216,68 @@ impl WorkgroupMemory {
         &buf[offset..offset + len]
     }
 
-    fn write(&mut self, handle_idx: usize, offset: usize, data: &[u8]) {
-        let buf = self.buffers.get_mut(&handle_idx).expect("workgroup var");
-        buf[offset..offset + data.len()].copy_from_slice(data);
+    fn get_mut(&mut self, handle_idx: usize) -> Result<&mut Vec<u8>> {
+        self.buffers
+            .get_mut(&handle_idx)
+            .ok_or(NagaExecError::TypeMismatch(format!(
+                "workgroup var handle {handle_idx} not allocated"
+            )))
     }
 
-    fn atomic_add_u32(&mut self, handle_idx: usize, offset: usize, val: u32) -> u32 {
-        let buf = self.buffers.get_mut(&handle_idx).expect("workgroup var");
+    fn write(&mut self, handle_idx: usize, offset: usize, data: &[u8]) -> Result<()> {
+        let buf = self.get_mut(handle_idx)?;
+        buf[offset..offset + data.len()].copy_from_slice(data);
+        Ok(())
+    }
+
+    fn atomic_add_u32(&mut self, handle_idx: usize, offset: usize, val: u32) -> Result<u32> {
+        let buf = self.get_mut(handle_idx)?;
         let old = u32::from_le_bytes(buf[offset..offset + 4].try_into().unwrap_or([0; 4]));
         let new = old.wrapping_add(val);
         buf[offset..offset + 4].copy_from_slice(&new.to_le_bytes());
-        old
+        Ok(old)
     }
 
-    fn atomic_max_u32(&mut self, handle_idx: usize, offset: usize, val: u32) -> u32 {
-        let buf = self.buffers.get_mut(&handle_idx).expect("workgroup var");
+    fn atomic_max_u32(&mut self, handle_idx: usize, offset: usize, val: u32) -> Result<u32> {
+        let buf = self.get_mut(handle_idx)?;
         let old = u32::from_le_bytes(buf[offset..offset + 4].try_into().unwrap_or([0; 4]));
         let new = old.max(val);
         buf[offset..offset + 4].copy_from_slice(&new.to_le_bytes());
-        old
+        Ok(old)
     }
 
-    fn atomic_min_u32(&mut self, handle_idx: usize, offset: usize, val: u32) -> u32 {
-        let buf = self.buffers.get_mut(&handle_idx).expect("workgroup var");
+    fn atomic_min_u32(&mut self, handle_idx: usize, offset: usize, val: u32) -> Result<u32> {
+        let buf = self.get_mut(handle_idx)?;
         let old = u32::from_le_bytes(buf[offset..offset + 4].try_into().unwrap_or([0; 4]));
         let new = old.min(val);
         buf[offset..offset + 4].copy_from_slice(&new.to_le_bytes());
-        old
+        Ok(old)
     }
 
-    fn atomic_add_i32(&mut self, handle_idx: usize, offset: usize, val: i32) -> i32 {
-        let buf = self.buffers.get_mut(&handle_idx).expect("workgroup var");
+    fn atomic_add_i32(&mut self, handle_idx: usize, offset: usize, val: i32) -> Result<i32> {
+        let buf = self.get_mut(handle_idx)?;
         let old = i32::from_le_bytes(buf[offset..offset + 4].try_into().unwrap_or([0; 4]));
         let new = old.wrapping_add(val);
         buf[offset..offset + 4].copy_from_slice(&new.to_le_bytes());
-        old
+        Ok(old)
     }
 
-    fn atomic_load_u32(&self, handle_idx: usize, offset: usize) -> u32 {
-        let buf = &self.buffers[&handle_idx];
-        u32::from_le_bytes(buf[offset..offset + 4].try_into().unwrap_or([0; 4]))
+    fn atomic_load_u32(&self, handle_idx: usize, offset: usize) -> Result<u32> {
+        let buf = self
+            .buffers
+            .get(&handle_idx)
+            .ok_or(NagaExecError::TypeMismatch(format!(
+                "workgroup var handle {handle_idx} not allocated"
+            )))?;
+        Ok(u32::from_le_bytes(
+            buf[offset..offset + 4].try_into().unwrap_or([0; 4]),
+        ))
     }
 
-    fn atomic_store_u32(&mut self, handle_idx: usize, offset: usize, val: u32) {
-        let buf = self.buffers.get_mut(&handle_idx).expect("workgroup var");
+    fn atomic_store_u32(&mut self, handle_idx: usize, offset: usize, val: u32) -> Result<()> {
+        let buf = self.get_mut(handle_idx)?;
         buf[offset..offset + 4].copy_from_slice(&val.to_le_bytes());
+        Ok(())
     }
 }
 
@@ -408,7 +328,10 @@ fn split_at_barriers(body: &naga::Block) -> Vec<naga::Block> {
 /// Per-invocation state: expression cache, local variables, buffer access.
 struct InvocationContext<'a> {
     module: &'a Module,
-    #[allow(dead_code)]
+    #[expect(
+        dead_code,
+        reason = "retained for future validation-aware interpretation"
+    )]
     info: &'a naga::valid::ModuleInfo,
     function: &'a Function,
     bindings: &'a mut BTreeMap<(u32, u32), SimBuffer>,
@@ -421,6 +344,10 @@ struct InvocationContext<'a> {
 }
 
 impl<'a> InvocationContext<'a> {
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "invocation context requires all GPU execution state"
+    )]
     fn new(
         module: &'a Module,
         info: &'a naga::valid::ModuleInfo,
@@ -495,7 +422,7 @@ impl<'a> InvocationContext<'a> {
                 ref reject,
             } => {
                 let cond = self.get_value(condition)?;
-                if cond.as_bool() {
+                if cond.as_bool()? {
                     self.execute_body(accept)
                 } else {
                     self.execute_body(reject)
@@ -511,7 +438,7 @@ impl<'a> InvocationContext<'a> {
                     self.execute_body(continuing)?;
                     if let Some(break_cond) = break_if {
                         let cond = self.get_value(break_cond)?;
-                        if cond.as_bool() {
+                        if cond.as_bool()? {
                             break;
                         }
                     }
@@ -531,7 +458,10 @@ impl<'a> InvocationContext<'a> {
         Ok(val)
     }
 
-    #[allow(clippy::too_many_lines)]
+    #[expect(
+        clippy::too_many_lines,
+        reason = "exhaustive naga Expression dispatch — splitting would obscure the interpretation flow"
+    )]
     fn eval_expr(&mut self, handle: Handle<Expression>) -> Result<Value> {
         let expr = &self.function.expressions[handle];
         match *expr {
@@ -568,7 +498,10 @@ impl<'a> InvocationContext<'a> {
                     | AddressSpace::Uniform
                     | AddressSpace::WorkGroup =>
                     {
-                        #[allow(clippy::cast_possible_truncation)]
+                        #[expect(
+                            clippy::cast_possible_truncation,
+                            reason = "naga global variable handle index fits u32"
+                        )]
                         Ok(Value::U32(gv_handle.index() as u32))
                     }
                     _ => Err(NagaExecError::UnsupportedExpression(format!(
@@ -641,7 +574,7 @@ impl<'a> InvocationContext<'a> {
 
             Expression::Access { base, index } => {
                 let idx = self.get_value(index)?;
-                let idx_u = idx.as_u32() as usize;
+                let idx_u = idx.as_u32()? as usize;
 
                 let base_expr = &self.function.expressions[base];
                 if let Expression::GlobalVariable(gv_handle) = *base_expr {
@@ -713,7 +646,7 @@ impl<'a> InvocationContext<'a> {
                 reject,
             } => {
                 let cond = self.get_value(condition)?;
-                if cond.as_bool() {
+                if cond.as_bool()? {
                     self.get_value(accept)
                 } else {
                     self.get_value(reject)
@@ -791,7 +724,7 @@ impl<'a> InvocationContext<'a> {
                 .unwrap_or(Value::U32(0))),
             Expression::Access { base, index } => {
                 let idx = self.get_value(index)?;
-                let idx_u = idx.as_u32() as usize;
+                let idx_u = idx.as_u32()? as usize;
 
                 let base_expr = &self.function.expressions[base];
                 if let Expression::GlobalVariable(gv_handle) = *base_expr {
@@ -843,7 +776,7 @@ impl<'a> InvocationContext<'a> {
             }
             Expression::Access { base, index } => {
                 let idx = self.get_value(index)?;
-                let idx_u = idx.as_u32() as usize;
+                let idx_u = idx.as_u32()? as usize;
 
                 let base_expr = &self.function.expressions[base];
                 if let Expression::GlobalVariable(gv_handle) = *base_expr {
@@ -867,7 +800,7 @@ impl<'a> InvocationContext<'a> {
                 if gv.space == AddressSpace::WorkGroup {
                     let mut tmp = vec![0u8; val.byte_size()];
                     val.write_to_buffer(&mut tmp, 0);
-                    self.shared.write(gv_handle.index(), 0, &tmp);
+                    self.shared.write(gv_handle.index(), 0, &tmp)?;
                     return Ok(());
                 }
                 let (group, binding) =
@@ -900,8 +833,8 @@ impl<'a> InvocationContext<'a> {
 
         let old = match fun {
             naga::AtomicFunction::Add => match &val {
-                Value::U32(v) => Value::U32(self.shared.atomic_add_u32(handle_idx, offset, *v)),
-                Value::I32(v) => Value::I32(self.shared.atomic_add_i32(handle_idx, offset, *v)),
+                Value::U32(v) => Value::U32(self.shared.atomic_add_u32(handle_idx, offset, *v)?),
+                Value::I32(v) => Value::I32(self.shared.atomic_add_i32(handle_idx, offset, *v)?),
                 _ => {
                     return Err(NagaExecError::TypeMismatch(format!(
                         "atomic add on {val:?}"
@@ -909,7 +842,7 @@ impl<'a> InvocationContext<'a> {
                 }
             },
             naga::AtomicFunction::Max => match &val {
-                Value::U32(v) => Value::U32(self.shared.atomic_max_u32(handle_idx, offset, *v)),
+                Value::U32(v) => Value::U32(self.shared.atomic_max_u32(handle_idx, offset, *v)?),
                 _ => {
                     return Err(NagaExecError::TypeMismatch(format!(
                         "atomic max on {val:?}"
@@ -917,7 +850,7 @@ impl<'a> InvocationContext<'a> {
                 }
             },
             naga::AtomicFunction::Min => match &val {
-                Value::U32(v) => Value::U32(self.shared.atomic_min_u32(handle_idx, offset, *v)),
+                Value::U32(v) => Value::U32(self.shared.atomic_min_u32(handle_idx, offset, *v)?),
                 _ => {
                     return Err(NagaExecError::TypeMismatch(format!(
                         "atomic min on {val:?}"
@@ -925,9 +858,9 @@ impl<'a> InvocationContext<'a> {
                 }
             },
             naga::AtomicFunction::Exchange { compare: None } => {
-                let old_val = Value::U32(self.shared.atomic_load_u32(handle_idx, offset));
+                let old_val = Value::U32(self.shared.atomic_load_u32(handle_idx, offset)?);
                 self.shared
-                    .atomic_store_u32(handle_idx, offset, val.as_u32());
+                    .atomic_store_u32(handle_idx, offset, val.as_u32()?)?;
                 old_val
             }
             _ => {
@@ -952,7 +885,7 @@ impl<'a> InvocationContext<'a> {
                     .get(&index)
                     .cloned()
                     .unwrap_or(Value::U32(0));
-                let idx_u = idx.as_u32() as usize;
+                let idx_u = idx.as_u32()? as usize;
                 let base_expr = &self.function.expressions[base];
                 if let Expression::GlobalVariable(gv_handle) = *base_expr {
                     let gv = &self.module.global_variables[gv_handle];
@@ -1057,7 +990,7 @@ impl<'a> InvocationContext<'a> {
         if gv.space == AddressSpace::WorkGroup {
             let mut tmp = vec![0u8; elem_size];
             val.write_to_buffer(&mut tmp, 0);
-            self.shared.write(gv_handle.index(), offset, &tmp);
+            self.shared.write(gv_handle.index(), offset, &tmp)?;
             return Ok(());
         }
 
@@ -1082,831 +1015,6 @@ impl<'a> InvocationContext<'a> {
     }
 }
 
-// ── Arithmetic helpers ───────────────────────────────────────────────────
-
-fn eval_binary(op: BinaryOperator, l: &Value, r: &Value) -> Result<Value> {
-    match (l, r) {
-        (Value::F32(a), Value::F32(b)) => binary_f32(op, *a, *b),
-        (Value::F64(a), Value::F64(b)) => binary_f64(op, *a, *b),
-        (Value::U32(a), Value::U32(b)) => binary_u32(op, *a, *b),
-        (Value::I32(a), Value::I32(b)) => binary_i32(op, *a, *b),
-        (Value::Bool(a), Value::Bool(b)) => binary_bool(op, *a, *b),
-        _ => Err(NagaExecError::TypeMismatch(format!(
-            "binary {op:?} on {l:?} and {r:?}"
-        ))),
-    }
-}
-
-fn binary_f32(op: BinaryOperator, a: f32, b: f32) -> Result<Value> {
-    Ok(match op {
-        BinaryOperator::Add => Value::F32(a + b),
-        BinaryOperator::Subtract => Value::F32(a - b),
-        BinaryOperator::Multiply => Value::F32(a * b),
-        BinaryOperator::Divide => Value::F32(a / b),
-        BinaryOperator::Modulo => Value::F32(a % b),
-        BinaryOperator::Less => Value::Bool(a < b),
-        BinaryOperator::LessEqual => Value::Bool(a <= b),
-        BinaryOperator::Greater => Value::Bool(a > b),
-        BinaryOperator::GreaterEqual => Value::Bool(a >= b),
-        BinaryOperator::Equal => Value::Bool((a - b).abs() < f32::EPSILON),
-        BinaryOperator::NotEqual => Value::Bool((a - b).abs() >= f32::EPSILON),
-        _ => {
-            return Err(NagaExecError::UnsupportedExpression(format!(
-                "binary f32 {op:?}"
-            )));
-        }
-    })
-}
-
-fn binary_f64(op: BinaryOperator, a: f64, b: f64) -> Result<Value> {
-    Ok(match op {
-        BinaryOperator::Add => Value::F64(a + b),
-        BinaryOperator::Subtract => Value::F64(a - b),
-        BinaryOperator::Multiply => Value::F64(a * b),
-        BinaryOperator::Divide => Value::F64(a / b),
-        BinaryOperator::Modulo => Value::F64(a % b),
-        BinaryOperator::Less => Value::Bool(a < b),
-        BinaryOperator::LessEqual => Value::Bool(a <= b),
-        BinaryOperator::Greater => Value::Bool(a > b),
-        BinaryOperator::GreaterEqual => Value::Bool(a >= b),
-        BinaryOperator::Equal => Value::Bool((a - b).abs() < f64::EPSILON),
-        BinaryOperator::NotEqual => Value::Bool((a - b).abs() >= f64::EPSILON),
-        _ => {
-            return Err(NagaExecError::UnsupportedExpression(format!(
-                "binary f64 {op:?}"
-            )));
-        }
-    })
-}
-
-fn binary_u32(op: BinaryOperator, a: u32, b: u32) -> Result<Value> {
-    Ok(match op {
-        BinaryOperator::Add => Value::U32(a.wrapping_add(b)),
-        BinaryOperator::Subtract => Value::U32(a.wrapping_sub(b)),
-        BinaryOperator::Multiply => Value::U32(a.wrapping_mul(b)),
-        BinaryOperator::Divide => Value::U32(if b == 0 { 0 } else { a / b }),
-        BinaryOperator::Modulo => Value::U32(if b == 0 { 0 } else { a % b }),
-        BinaryOperator::Less => Value::Bool(a < b),
-        BinaryOperator::LessEqual => Value::Bool(a <= b),
-        BinaryOperator::Greater => Value::Bool(a > b),
-        BinaryOperator::GreaterEqual => Value::Bool(a >= b),
-        BinaryOperator::Equal => Value::Bool(a == b),
-        BinaryOperator::NotEqual => Value::Bool(a != b),
-        BinaryOperator::And => Value::U32(a & b),
-        BinaryOperator::InclusiveOr => Value::U32(a | b),
-        BinaryOperator::ExclusiveOr => Value::U32(a ^ b),
-        BinaryOperator::ShiftLeft => Value::U32(a.wrapping_shl(b)),
-        BinaryOperator::ShiftRight => Value::U32(a.wrapping_shr(b)),
-        _ => {
-            return Err(NagaExecError::UnsupportedExpression(format!(
-                "binary u32 {op:?}"
-            )));
-        }
-    })
-}
-
-fn binary_i32(op: BinaryOperator, a: i32, b: i32) -> Result<Value> {
-    Ok(match op {
-        BinaryOperator::Add => Value::I32(a.wrapping_add(b)),
-        BinaryOperator::Subtract => Value::I32(a.wrapping_sub(b)),
-        BinaryOperator::Multiply => Value::I32(a.wrapping_mul(b)),
-        BinaryOperator::Divide => Value::I32(if b == 0 { 0 } else { a / b }),
-        BinaryOperator::Modulo => Value::I32(if b == 0 { 0 } else { a % b }),
-        BinaryOperator::Less => Value::Bool(a < b),
-        BinaryOperator::LessEqual => Value::Bool(a <= b),
-        BinaryOperator::Greater => Value::Bool(a > b),
-        BinaryOperator::GreaterEqual => Value::Bool(a >= b),
-        BinaryOperator::Equal => Value::Bool(a == b),
-        BinaryOperator::NotEqual => Value::Bool(a != b),
-        BinaryOperator::And => Value::I32(a & b),
-        BinaryOperator::InclusiveOr => Value::I32(a | b),
-        BinaryOperator::ExclusiveOr => Value::I32(a ^ b),
-        BinaryOperator::ShiftLeft => Value::I32(a.wrapping_shl(b.cast_unsigned())),
-        BinaryOperator::ShiftRight => Value::I32(a.wrapping_shr(b.cast_unsigned())),
-        _ => {
-            return Err(NagaExecError::UnsupportedExpression(format!(
-                "binary i32 {op:?}"
-            )));
-        }
-    })
-}
-
-fn binary_bool(op: BinaryOperator, a: bool, b: bool) -> Result<Value> {
-    Ok(match op {
-        BinaryOperator::LogicalAnd => Value::Bool(a && b),
-        BinaryOperator::LogicalOr => Value::Bool(a || b),
-        BinaryOperator::Equal => Value::Bool(a == b),
-        BinaryOperator::NotEqual => Value::Bool(a != b),
-        _ => {
-            return Err(NagaExecError::UnsupportedExpression(format!(
-                "binary bool {op:?}"
-            )));
-        }
-    })
-}
-
-fn eval_unary(op: UnaryOperator, v: &Value) -> Result<Value> {
-    Ok(match (op, v) {
-        (UnaryOperator::Negate, Value::F32(f)) => Value::F32(-f),
-        (UnaryOperator::Negate, Value::F64(f)) => Value::F64(-f),
-        (UnaryOperator::Negate, Value::I32(i)) => Value::I32(-i),
-        (UnaryOperator::BitwiseNot, Value::U32(u)) => Value::U32(!u),
-        (UnaryOperator::BitwiseNot, Value::I32(i)) => Value::I32(!i),
-        (UnaryOperator::LogicalNot, Value::Bool(b)) => Value::Bool(!b),
-        _ => {
-            return Err(NagaExecError::UnsupportedExpression(format!(
-                "unary {op:?} on {v:?}"
-            )));
-        }
-    })
-}
-
-#[allow(clippy::too_many_lines)]
-fn eval_math(fun: MathFunction, a: &Value, b: Option<&Value>) -> Result<Value> {
-    match a {
-        Value::F32(x) => {
-            let x = *x;
-            Ok(Value::F32(match fun {
-                MathFunction::Abs => x.abs(),
-                MathFunction::Ceil => x.ceil(),
-                MathFunction::Floor => x.floor(),
-                MathFunction::Round => x.round(),
-                MathFunction::Fract => x.fract(),
-                MathFunction::Trunc => x.trunc(),
-                MathFunction::Sign => {
-                    if x > 0.0 {
-                        1.0
-                    } else if x < 0.0 {
-                        -1.0
-                    } else {
-                        0.0
-                    }
-                }
-                MathFunction::Sqrt => x.sqrt(),
-                MathFunction::InverseSqrt => 1.0 / x.sqrt(),
-                MathFunction::Log => x.ln(),
-                MathFunction::Log2 => x.log2(),
-                MathFunction::Exp => x.exp(),
-                MathFunction::Exp2 => x.exp2(),
-                MathFunction::Sin => x.sin(),
-                MathFunction::Cos => x.cos(),
-                MathFunction::Tan => x.tan(),
-                MathFunction::Asin => x.asin(),
-                MathFunction::Acos => x.acos(),
-                MathFunction::Atan => x.atan(),
-                MathFunction::Sinh => x.sinh(),
-                MathFunction::Cosh => x.cosh(),
-                MathFunction::Tanh => x.tanh(),
-                MathFunction::Asinh => x.asinh(),
-                MathFunction::Acosh => x.acosh(),
-                MathFunction::Atanh => x.atanh(),
-                MathFunction::Saturate => x.clamp(0.0, 1.0),
-                MathFunction::Pow => {
-                    let y = b
-                        .ok_or(NagaExecError::TypeMismatch("pow needs 2 args".into()))?
-                        .as_f32();
-                    x.powf(y)
-                }
-                MathFunction::Min => {
-                    let y = b
-                        .ok_or(NagaExecError::TypeMismatch("min needs 2 args".into()))?
-                        .as_f32();
-                    x.min(y)
-                }
-                MathFunction::Max => {
-                    let y = b
-                        .ok_or(NagaExecError::TypeMismatch("max needs 2 args".into()))?
-                        .as_f32();
-                    x.max(y)
-                }
-                MathFunction::Atan2 => {
-                    let y = b
-                        .ok_or(NagaExecError::TypeMismatch("atan2 needs 2 args".into()))?
-                        .as_f32();
-                    x.atan2(y)
-                }
-                MathFunction::Step => {
-                    let edge = b
-                        .ok_or(NagaExecError::TypeMismatch("step needs 2 args".into()))?
-                        .as_f32();
-                    if x >= edge { 1.0 } else { 0.0 }
-                }
-                _ => return Err(NagaExecError::UnsupportedMathBuiltin(fun)),
-            }))
-        }
-        Value::F64(x) => {
-            let x = *x;
-            Ok(Value::F64(match fun {
-                MathFunction::Abs => x.abs(),
-                MathFunction::Ceil => x.ceil(),
-                MathFunction::Floor => x.floor(),
-                MathFunction::Round => x.round(),
-                MathFunction::Fract => x.fract(),
-                MathFunction::Trunc => x.trunc(),
-                MathFunction::Sign => {
-                    if x > 0.0 {
-                        1.0
-                    } else if x < 0.0 {
-                        -1.0
-                    } else {
-                        0.0
-                    }
-                }
-                MathFunction::Sqrt => x.sqrt(),
-                MathFunction::InverseSqrt => 1.0 / x.sqrt(),
-                MathFunction::Log => x.ln(),
-                MathFunction::Log2 => x.log2(),
-                MathFunction::Exp => x.exp(),
-                MathFunction::Exp2 => x.exp2(),
-                MathFunction::Sin => x.sin(),
-                MathFunction::Cos => x.cos(),
-                MathFunction::Tan => x.tan(),
-                MathFunction::Asin => x.asin(),
-                MathFunction::Acos => x.acos(),
-                MathFunction::Atan => x.atan(),
-                MathFunction::Sinh => x.sinh(),
-                MathFunction::Cosh => x.cosh(),
-                MathFunction::Tanh => x.tanh(),
-                MathFunction::Asinh => x.asinh(),
-                MathFunction::Acosh => x.acosh(),
-                MathFunction::Atanh => x.atanh(),
-                MathFunction::Saturate => x.clamp(0.0, 1.0),
-                MathFunction::Pow => {
-                    let y = b
-                        .ok_or(NagaExecError::TypeMismatch("pow needs 2 args".into()))?
-                        .as_f64();
-                    x.powf(y)
-                }
-                MathFunction::Min => {
-                    let y = b
-                        .ok_or(NagaExecError::TypeMismatch("min needs 2 args".into()))?
-                        .as_f64();
-                    x.min(y)
-                }
-                MathFunction::Max => {
-                    let y = b
-                        .ok_or(NagaExecError::TypeMismatch("max needs 2 args".into()))?
-                        .as_f64();
-                    x.max(y)
-                }
-                MathFunction::Atan2 => {
-                    let y = b
-                        .ok_or(NagaExecError::TypeMismatch("atan2 needs 2 args".into()))?
-                        .as_f64();
-                    x.atan2(y)
-                }
-                MathFunction::Step => {
-                    let edge = b
-                        .ok_or(NagaExecError::TypeMismatch("step needs 2 args".into()))?
-                        .as_f64();
-                    if x >= edge { 1.0 } else { 0.0 }
-                }
-                _ => return Err(NagaExecError::UnsupportedMathBuiltin(fun)),
-            }))
-        }
-        Value::U32(x) => {
-            let x = *x;
-            Ok(match fun {
-                MathFunction::Min => {
-                    let y = b
-                        .ok_or(NagaExecError::TypeMismatch("min needs 2 args".into()))?
-                        .as_u32();
-                    Value::U32(x.min(y))
-                }
-                MathFunction::Max => {
-                    let y = b
-                        .ok_or(NagaExecError::TypeMismatch("max needs 2 args".into()))?
-                        .as_u32();
-                    Value::U32(x.max(y))
-                }
-                _ => return Err(NagaExecError::UnsupportedMathBuiltin(fun)),
-            })
-        }
-        Value::I32(x) => {
-            let x = *x;
-            Ok(match fun {
-                MathFunction::Abs => Value::I32(x.abs()),
-                MathFunction::Min => {
-                    let y = b
-                        .ok_or(NagaExecError::TypeMismatch("min needs 2 args".into()))?
-                        .as_i32();
-                    Value::I32(x.min(y))
-                }
-                MathFunction::Max => {
-                    let y = b
-                        .ok_or(NagaExecError::TypeMismatch("max needs 2 args".into()))?
-                        .as_i32();
-                    Value::I32(x.max(y))
-                }
-                _ => return Err(NagaExecError::UnsupportedMathBuiltin(fun)),
-            })
-        }
-        _ => Err(NagaExecError::UnsupportedExpression(format!(
-            "Math({fun:?}) on {a:?}"
-        ))),
-    }
-}
-
-fn eval_cast(v: &Value, kind: ScalarKind, convert: Option<u8>) -> Result<Value> {
-    let width = convert.unwrap_or(4);
-    Ok(match (kind, width) {
-        (ScalarKind::Float, 4) => Value::F32(v.as_f32()),
-        (ScalarKind::Float, 8) => Value::F64(v.as_f64()),
-        (ScalarKind::Uint, 4) => Value::U32(v.as_u32()),
-        (ScalarKind::Sint, 4) => Value::I32(v.as_i32()),
-        (ScalarKind::Bool, _) => Value::Bool(v.as_bool()),
-        _ => {
-            return Err(NagaExecError::UnsupportedType(format!(
-                "cast to {kind:?} width={width}"
-            )));
-        }
-    })
-}
-
-fn compose_vector(size: naga::VectorSize, scalar: naga::Scalar, vals: &[Value]) -> Result<Value> {
-    match (scalar.kind, scalar.width, size) {
-        (ScalarKind::Float, 4, naga::VectorSize::Bi) => {
-            Ok(Value::Vec2([vals[0].as_f32(), vals[1].as_f32()]))
-        }
-        (ScalarKind::Float, 4, naga::VectorSize::Tri) => Ok(Value::Vec3([
-            vals[0].as_f32(),
-            vals[1].as_f32(),
-            vals[2].as_f32(),
-        ])),
-        (ScalarKind::Float, 4, naga::VectorSize::Quad) => Ok(Value::Vec4([
-            vals[0].as_f32(),
-            vals[1].as_f32(),
-            vals[2].as_f32(),
-            vals[3].as_f32(),
-        ])),
-        (ScalarKind::Uint, 4, naga::VectorSize::Tri) => Ok(Value::Vec3U32([
-            vals[0].as_u32(),
-            vals[1].as_u32(),
-            vals[2].as_u32(),
-        ])),
-        _ => Err(NagaExecError::UnsupportedType(format!(
-            "compose vector {scalar:?} x {size:?}"
-        ))),
-    }
-}
-
-fn type_byte_size(module: &Module, inner: &TypeInner) -> usize {
-    match *inner {
-        TypeInner::Scalar(s) | TypeInner::Atomic(s) => s.width as usize,
-        TypeInner::Vector { size, scalar } => {
-            let n = match size {
-                naga::VectorSize::Bi => 2,
-                naga::VectorSize::Tri => 3,
-                naga::VectorSize::Quad => 4,
-            };
-            n * scalar.width as usize
-        }
-        TypeInner::Array { base, size, .. } => {
-            let elem = type_byte_size(module, &module.types[base].inner);
-            match size {
-                naga::ArraySize::Constant(n) => elem * n.get() as usize,
-                naga::ArraySize::Pending(_) | naga::ArraySize::Dynamic => elem,
-            }
-        }
-        TypeInner::Struct { ref members, .. } => members
-            .iter()
-            .map(|m| type_byte_size(module, &module.types[m.ty].inner))
-            .sum(),
-        _ => 4,
-    }
-}
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_elementwise_add() {
-        let wgsl = r#"
-@group(0) @binding(0) var<storage, read> input_a: array<f32>;
-@group(0) @binding(1) var<storage, read> input_b: array<f32>;
-@group(0) @binding(2) var<storage, read_write> output: array<f32>;
-
-@compute @workgroup_size(1)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let idx = gid.x;
-    output[idx] = input_a[idx] + input_b[idx];
-}
-"#;
-        let exec = NagaExecutor::new(wgsl, "main").unwrap();
-        let mut bindings = BTreeMap::new();
-        bindings.insert((0, 0), SimBuffer::from_f32_readonly(&[1.0, 2.0, 3.0, 4.0]));
-        bindings.insert(
-            (0, 1),
-            SimBuffer::from_f32_readonly(&[10.0, 20.0, 30.0, 40.0]),
-        );
-        bindings.insert((0, 2), SimBuffer::from_f32(&[0.0; 4]));
-
-        exec.dispatch((4, 1, 1), &mut bindings).unwrap();
-
-        let result = bindings[&(0, 2)].as_f32();
-        assert_eq!(result, vec![11.0, 22.0, 33.0, 44.0]);
-    }
-
-    #[test]
-    fn test_elementwise_mul() {
-        let wgsl = r#"
-@group(0) @binding(0) var<storage, read> a: array<f32>;
-@group(0) @binding(1) var<storage, read_write> b: array<f32>;
-
-@compute @workgroup_size(1)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-    b[gid.x] = a[gid.x] * 2.0;
-}
-"#;
-        let exec = NagaExecutor::new(wgsl, "main").unwrap();
-        let mut bindings = BTreeMap::new();
-        bindings.insert((0, 0), SimBuffer::from_f32_readonly(&[1.0, 2.0, 3.0]));
-        bindings.insert((0, 1), SimBuffer::from_f32(&[0.0; 3]));
-
-        exec.dispatch((3, 1, 1), &mut bindings).unwrap();
-        assert_eq!(bindings[&(0, 1)].as_f32(), vec![2.0, 4.0, 6.0]);
-    }
-
-    #[test]
-    fn test_math_builtins() {
-        let wgsl = r#"
-@group(0) @binding(0) var<storage, read> input: array<f32>;
-@group(0) @binding(1) var<storage, read_write> output: array<f32>;
-
-@compute @workgroup_size(1)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let x = input[gid.x];
-    output[gid.x] = sin(x);
-}
-"#;
-        let exec = NagaExecutor::new(wgsl, "main").unwrap();
-        let mut bindings = BTreeMap::new();
-        bindings.insert(
-            (0, 0),
-            SimBuffer::from_f32_readonly(&[0.0, std::f32::consts::FRAC_PI_2, std::f32::consts::PI]),
-        );
-        bindings.insert((0, 1), SimBuffer::from_f32(&[0.0; 3]));
-
-        exec.dispatch((3, 1, 1), &mut bindings).unwrap();
-        let result = bindings[&(0, 1)].as_f32();
-        assert!((result[0] - 0.0).abs() < 1e-6);
-        assert!((result[1] - 1.0).abs() < 1e-6);
-        assert!(result[2].abs() < 1e-6);
-    }
-
-    #[test]
-    fn test_f64_native() {
-        let wgsl = r#"
-enable f16;
-
-@group(0) @binding(0) var<storage, read> input: array<f32>;
-@group(0) @binding(1) var<storage, read_write> output: array<f32>;
-
-@compute @workgroup_size(1)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-    output[gid.x] = input[gid.x] * input[gid.x];
-}
-"#;
-        let exec = NagaExecutor::new(wgsl, "main").unwrap();
-        let mut bindings = BTreeMap::new();
-        bindings.insert((0, 0), SimBuffer::from_f32_readonly(&[3.0, 7.0]));
-        bindings.insert((0, 1), SimBuffer::from_f32(&[0.0; 2]));
-
-        exec.dispatch((2, 1, 1), &mut bindings).unwrap();
-        let result = bindings[&(0, 1)].as_f32();
-        assert!((result[0] - 9.0).abs() < 1e-6);
-        assert!((result[1] - 49.0).abs() < 1e-6);
-    }
-
-    #[test]
-    fn test_conditional_clamp() {
-        let wgsl = r#"
-@group(0) @binding(0) var<storage, read> input: array<f32>;
-@group(0) @binding(1) var<storage, read_write> output: array<f32>;
-
-@compute @workgroup_size(1)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let x = input[gid.x];
-    output[gid.x] = max(min(x, 1.0), 0.0);
-}
-"#;
-        let exec = NagaExecutor::new(wgsl, "main").unwrap();
-        let mut bindings = BTreeMap::new();
-        bindings.insert((0, 0), SimBuffer::from_f32_readonly(&[-0.5, 0.3, 0.7, 1.5]));
-        bindings.insert((0, 1), SimBuffer::from_f32(&[0.0; 4]));
-
-        exec.dispatch((4, 1, 1), &mut bindings).unwrap();
-        assert_eq!(bindings[&(0, 1)].as_f32(), vec![0.0, 0.3, 0.7, 1.0]);
-    }
-
-    #[test]
-    fn test_relu() {
-        let wgsl = r#"
-@group(0) @binding(0) var<storage, read> input: array<f32>;
-@group(0) @binding(1) var<storage, read_write> output: array<f32>;
-
-@compute @workgroup_size(1)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let x = input[gid.x];
-    output[gid.x] = max(x, 0.0);
-}
-"#;
-        let exec = NagaExecutor::new(wgsl, "main").unwrap();
-        let mut bindings = BTreeMap::new();
-        bindings.insert(
-            (0, 0),
-            SimBuffer::from_f32_readonly(&[-2.0, -0.5, 0.0, 0.5, 2.0]),
-        );
-        bindings.insert((0, 1), SimBuffer::from_f32(&[0.0; 5]));
-
-        exec.dispatch((5, 1, 1), &mut bindings).unwrap();
-        assert_eq!(bindings[&(0, 1)].as_f32(), vec![0.0, 0.0, 0.0, 0.5, 2.0]);
-    }
-
-    #[test]
-    fn test_workgroup_size_larger_than_one() {
-        let wgsl = r#"
-@group(0) @binding(0) var<storage, read> input: array<f32>;
-@group(0) @binding(1) var<storage, read_write> output: array<f32>;
-
-@compute @workgroup_size(4)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-    output[gid.x] = input[gid.x] + 1.0;
-}
-"#;
-        let exec = NagaExecutor::new(wgsl, "main").unwrap();
-        let mut bindings = BTreeMap::new();
-        bindings.insert(
-            (0, 0),
-            SimBuffer::from_f32_readonly(&[10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0]),
-        );
-        bindings.insert((0, 1), SimBuffer::from_f32(&[0.0; 8]));
-
-        exec.dispatch((2, 1, 1), &mut bindings).unwrap();
-        assert_eq!(
-            bindings[&(0, 1)].as_f32(),
-            vec![11.0, 21.0, 31.0, 41.0, 51.0, 61.0, 71.0, 81.0]
-        );
-    }
-
-    #[test]
-    fn test_exp_log_roundtrip() {
-        let wgsl = r#"
-@group(0) @binding(0) var<storage, read> input: array<f32>;
-@group(0) @binding(1) var<storage, read_write> output: array<f32>;
-
-@compute @workgroup_size(1)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-    output[gid.x] = log(exp(input[gid.x]));
-}
-"#;
-        let exec = NagaExecutor::new(wgsl, "main").unwrap();
-        let mut bindings = BTreeMap::new();
-        bindings.insert((0, 0), SimBuffer::from_f32_readonly(&[0.0, 1.0, 2.0, -1.0]));
-        bindings.insert((0, 1), SimBuffer::from_f32(&[0.0; 4]));
-
-        exec.dispatch((4, 1, 1), &mut bindings).unwrap();
-        let result = bindings[&(0, 1)].as_f32();
-        for (i, &expected) in [0.0f32, 1.0, 2.0, -1.0].iter().enumerate() {
-            assert!(
-                (result[i] - expected).abs() < 1e-5,
-                "index {i}: got {}, expected {expected}",
-                result[i]
-            );
-        }
-    }
-
-    #[test]
-    fn test_tanh_activation() {
-        let wgsl = r#"
-@group(0) @binding(0) var<storage, read> input: array<f32>;
-@group(0) @binding(1) var<storage, read_write> output: array<f32>;
-
-@compute @workgroup_size(1)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-    output[gid.x] = tanh(input[gid.x]);
-}
-"#;
-        let exec = NagaExecutor::new(wgsl, "main").unwrap();
-        let mut bindings = BTreeMap::new();
-        bindings.insert(
-            (0, 0),
-            SimBuffer::from_f32_readonly(&[0.0, 1.0, -1.0, 100.0]),
-        );
-        bindings.insert((0, 1), SimBuffer::from_f32(&[0.0; 4]));
-
-        exec.dispatch((4, 1, 1), &mut bindings).unwrap();
-        let result = bindings[&(0, 1)].as_f32();
-        assert!((result[0] - 0.0).abs() < 1e-6);
-        assert!((result[1] - 0.7615942).abs() < 1e-5);
-        assert!((result[2] - (-0.7615942)).abs() < 1e-5);
-        assert!((result[3] - 1.0).abs() < 1e-6);
-    }
-
-    // ── f64 native tests ─────────────────────────────────────────────
-
-    #[test]
-    fn test_f64_elementwise_add() {
-        let wgsl = r#"
-@group(0) @binding(0) var<storage, read> a: array<f64>;
-@group(0) @binding(1) var<storage, read> b: array<f64>;
-@group(0) @binding(2) var<storage, read_write> out: array<f64>;
-
-@compute @workgroup_size(1)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-    out[gid.x] = a[gid.x] + b[gid.x];
-}
-"#;
-        let exec = NagaExecutor::new(wgsl, "main").unwrap();
-        let mut bindings = BTreeMap::new();
-        bindings.insert(
-            (0, 0),
-            SimBuffer::from_f64(&[1.0000000000001, 2.0000000000002]),
-        );
-        bindings.insert(
-            (0, 1),
-            SimBuffer::from_f64(&[0.0000000000001, 0.0000000000002]),
-        );
-        bindings.insert((0, 2), SimBuffer::from_f64(&[0.0; 2]));
-
-        exec.dispatch((2, 1, 1), &mut bindings).unwrap();
-        let result = bindings[&(0, 2)].as_f64();
-        assert!(
-            (result[0] - 1.0000000000002).abs() < 1e-13,
-            "f64 precision lost: {}",
-            result[0]
-        );
-        assert!(
-            (result[1] - 2.0000000000004).abs() < 1e-13,
-            "f64 precision lost: {}",
-            result[1]
-        );
-    }
-
-    #[test]
-    fn test_f64_transcendentals() {
-        let wgsl = r#"
-@group(0) @binding(0) var<storage, read> input: array<f64>;
-@group(0) @binding(1) var<storage, read_write> output: array<f64>;
-
-@compute @workgroup_size(1)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-    output[gid.x] = sin(input[gid.x]);
-}
-"#;
-        let exec = NagaExecutor::new(wgsl, "main").unwrap();
-        let mut bindings = BTreeMap::new();
-        bindings.insert(
-            (0, 0),
-            SimBuffer::from_f64(&[0.0, std::f64::consts::FRAC_PI_2, std::f64::consts::PI]),
-        );
-        bindings.insert((0, 1), SimBuffer::from_f64(&[0.0; 3]));
-
-        exec.dispatch((3, 1, 1), &mut bindings).unwrap();
-        let result = bindings[&(0, 1)].as_f64();
-        assert!(result[0].abs() < 1e-15, "sin(0) = {}", result[0]);
-        assert!((result[1] - 1.0).abs() < 1e-15, "sin(pi/2) = {}", result[1]);
-        assert!(result[2].abs() < 1e-15, "sin(pi) = {}", result[2]);
-    }
-
-    #[test]
-    fn test_f64_precision_vs_f32() {
-        let val: f64 = 1.0 + 1e-15;
-        let f32_val = val as f32;
-        assert_eq!(f32_val, 1.0, "f32 should lose the 1e-15 precision");
-
-        let wgsl = r#"
-@group(0) @binding(0) var<storage, read> input: array<f64>;
-@group(0) @binding(1) var<storage, read_write> output: array<f64>;
-
-@compute @workgroup_size(1)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-    output[gid.x] = input[gid.x] * input[gid.x];
-}
-"#;
-        let exec = NagaExecutor::new(wgsl, "main").unwrap();
-        let mut bindings = BTreeMap::new();
-        bindings.insert((0, 0), SimBuffer::from_f64(&[1.00000000000001]));
-        bindings.insert((0, 1), SimBuffer::from_f64(&[0.0]));
-
-        exec.dispatch((1, 1, 1), &mut bindings).unwrap();
-        let result = bindings[&(0, 1)].as_f64();
-        let expected = 1.00000000000001_f64 * 1.00000000000001_f64;
-        assert!(
-            (result[0] - expected).abs() < 1e-14,
-            "f64 precision: got {}, expected {expected}",
-            result[0]
-        );
-    }
-
-    #[test]
-    fn test_f64_exp_log_roundtrip() {
-        let wgsl = r#"
-@group(0) @binding(0) var<storage, read> input: array<f64>;
-@group(0) @binding(1) var<storage, read_write> output: array<f64>;
-
-@compute @workgroup_size(1)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-    output[gid.x] = log(exp(input[gid.x]));
-}
-"#;
-        let exec = NagaExecutor::new(wgsl, "main").unwrap();
-        let mut bindings = BTreeMap::new();
-        bindings.insert((0, 0), SimBuffer::from_f64(&[0.0, 1.0, 2.0, -1.0, 0.5]));
-        bindings.insert((0, 1), SimBuffer::from_f64(&[0.0; 5]));
-
-        exec.dispatch((5, 1, 1), &mut bindings).unwrap();
-        let result = bindings[&(0, 1)].as_f64();
-        for (i, &expected) in [0.0, 1.0, 2.0, -1.0, 0.5].iter().enumerate() {
-            assert!(
-                (result[i] - expected).abs() < 1e-14,
-                "index {i}: got {}, expected {expected} (f64 precision)",
-                result[i]
-            );
-        }
-    }
-
-    // ── Workgroup shared memory + barrier tests ──────────────────────
-
-    #[test]
-    fn test_shared_memory_reverse() {
-        let wgsl = r#"
-var<workgroup> wg_data: array<f32, 4>;
-
-@group(0) @binding(0) var<storage, read> input: array<f32>;
-@group(0) @binding(1) var<storage, read_write> output: array<f32>;
-
-@compute @workgroup_size(4)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>,
-        @builtin(local_invocation_id) lid: vec3<u32>) {
-    wg_data[lid.x] = input[gid.x];
-    workgroupBarrier();
-    output[gid.x] = wg_data[3u - lid.x];
-}
-"#;
-        let exec = NagaExecutor::new(wgsl, "main").unwrap();
-        let mut bindings = BTreeMap::new();
-        bindings.insert((0, 0), SimBuffer::from_f32_readonly(&[1.0, 2.0, 3.0, 4.0]));
-        bindings.insert((0, 1), SimBuffer::from_f32(&[0.0; 4]));
-
-        exec.dispatch((1, 1, 1), &mut bindings).unwrap();
-        assert_eq!(bindings[&(0, 1)].as_f32(), vec![4.0, 3.0, 2.0, 1.0]);
-    }
-
-    #[test]
-    fn test_shared_memory_broadcast() {
-        let wgsl = r#"
-var<workgroup> leader_val: f32;
-
-@group(0) @binding(0) var<storage, read> input: array<f32>;
-@group(0) @binding(1) var<storage, read_write> output: array<f32>;
-
-@compute @workgroup_size(4)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>,
-        @builtin(local_invocation_id) lid: vec3<u32>) {
-    if lid.x == 0u {
-        leader_val = input[0u];
-    }
-    workgroupBarrier();
-    output[gid.x] = leader_val;
-}
-"#;
-        let exec = NagaExecutor::new(wgsl, "main").unwrap();
-        let mut bindings = BTreeMap::new();
-        bindings.insert((0, 0), SimBuffer::from_f32_readonly(&[42.0, 0.0, 0.0, 0.0]));
-        bindings.insert((0, 1), SimBuffer::from_f32(&[0.0; 4]));
-
-        exec.dispatch((1, 1, 1), &mut bindings).unwrap();
-        assert_eq!(bindings[&(0, 1)].as_f32(), vec![42.0, 42.0, 42.0, 42.0]);
-    }
-
-    // ── Atomic operation tests ───────────────────────────────────────
-
-    #[test]
-    fn test_atomic_add_accumulate() {
-        let wgsl = r#"
-var<workgroup> sum: atomic<u32>;
-
-@group(0) @binding(0) var<storage, read> input: array<u32>;
-@group(0) @binding(1) var<storage, read_write> output: array<u32>;
-
-@compute @workgroup_size(4)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>,
-        @builtin(local_invocation_id) lid: vec3<u32>) {
-    atomicAdd(&sum, input[gid.x]);
-    workgroupBarrier();
-    if lid.x == 0u {
-        output[0u] = atomicLoad(&sum);
-    }
-}
-"#;
-        let exec = NagaExecutor::new(wgsl, "main").unwrap();
-        let mut bindings = BTreeMap::new();
-        bindings.insert((0, 0), SimBuffer::from_u32(&[1, 2, 3, 4]));
-        bindings.insert((0, 1), SimBuffer::from_u32(&[0]));
-
-        exec.dispatch((1, 1, 1), &mut bindings).unwrap();
-        assert_eq!(bindings[&(0, 1)].as_u32(), vec![10]);
-    }
-}
+#[path = "executor_tests.rs"]
+mod tests;

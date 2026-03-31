@@ -24,9 +24,12 @@
 #![allow(clippy::module_name_repetitions)]
 
 mod error;
+mod eval;
 mod executor;
+mod sim_buffer;
 mod value;
 
 pub use error::NagaExecError;
-pub use executor::{NagaExecutor, SimBuffer, SimBufferUsage};
+pub use executor::NagaExecutor;
+pub use sim_buffer::{SimBuffer, SimBufferUsage};
 pub use value::Value;

@@ -10,11 +10,11 @@ the sourDough scaffold. barraCuda owns its own standards.
 - **GPU stack**: wgpu 28, naga 28 — `Device` and `Queue` are `Clone` (no `Arc` wrappers)
 - **Linting**: `warn(clippy::all, clippy::pedantic, clippy::nursery)` — configured in `Cargo.toml` `[lints]`
 - **Promoted lints**: pedantic + nursery (blanket) + `missing_errors_doc` + `missing_panics_doc` + cast lints in `barracuda-core` + `suboptimal_flops` + `use_self` + `tuple_array_conversions` + `needless_range_loop` — all enforced via `-D warnings`. Scientific/GPU false positives (`missing_const_for_fn`, `suspicious_operation_groupings`, `future_not_send`, etc.) selectively allowed with rationale in `Cargo.toml`.
-- **Suppressions**: `#[expect(clippy::lint, reason = "...")]` — compile-time verified; `#[allow]` only for context-dependent lints in the main `barracuda` crate (e.g. `suspicious_arithmetic_impl` in complex division, `unwrap_used` in integration tests outside `cfg_attr(test)` scope). Zero `#[allow(` in `barracuda-naga-exec`.
+- **Suppressions**: `#[expect(clippy::lint, reason = "...")]` — compile-time verified; `#[allow]` only for context-dependent lints in the main `barracuda` crate (e.g. `suspicious_arithmetic_impl` in complex division, `unwrap_used` in integration tests outside `cfg_attr(test)` scope). Zero `#[allow(` in `barracuda-naga-exec` or `barracuda-core` (all evolved to `#[expect(` with reason).
 - **Docs**: `#![warn(missing_docs, missing_errors_doc, missing_panics_doc)]` — `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` clean
 - **Unsafe**: `#![forbid(unsafe_code)]`
 - **Max file size**: 1000 LOC
-- **Test coverage**: 90%+ target (currently ~72% line / ~78% function on llvmpipe; GPU hardware needed for 90%)
+- **Test coverage**: 90%+ target (currently ~80.5% line / ~83% function on llvmpipe; GPU hardware needed for 90%)
 
 ## Error Handling
 

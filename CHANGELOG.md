@@ -5,7 +5,33 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.11] — 2026-03-31
+## [0.3.11] — 2026-04-01
+
+### Changed — Sprint 26: Comprehensive Audit, Refactor & Compliance (Apr 1 2026)
+
+- **executor.rs smart refactor**: `WorkgroupMemory`, `InvocationState`, and `split_at_barriers`
+  extracted to `workgroup.rs` module — executor.rs 1,020 → 886 lines (was the sole file over the
+  1000-line limit). Coherent domain boundary: workgroup-scoped shared memory and barrier-aware
+  execution support.
+- **cargo deny bans fix**: Added `allow-wildcard-paths = true` to `deny.toml` `[bans]` section,
+  resolving wildcard path dependency error on workspace members. All four checks now pass:
+  advisories ok, bans ok, licenses ok, sources ok.
+- **Stale lint suppression removed**: `#![allow(clippy::module_name_repetitions)]` in
+  `barracuda-naga-exec/src/lib.rs` was never triggered — discovered via `#[expect]` evolution
+  (unfulfilled expectation correctly identified dead suppression). Removed entirely.
+- **`#[allow]` → `#[expect]` in barracuda-core**: `#![allow(clippy::unused_async)]` evolved to
+  `#![expect(clippy::unused_async)]` — will automatically warn when tarpc no longer requires
+  unused async signatures, enabling timely removal.
+- **Full codebase audit**: Confirmed all 5,511 `unwrap()` calls are inside `#[cfg(test)]` modules
+  (zero production unwrap). All 74 `panic!()` calls are test-only. All `.clone()` calls are
+  architecturally justified (interpreter state snapshots, Arc for async RPC). Discovery is fully
+  capability-based with env fallbacks. JSON-RPC + tarpc dual protocol compliant with wateringHole
+  semantic naming standard.
+- **Coverage measured**: 80.54% line / 83.45% function / 79.31% region via llvm-cov (up from
+  72.83% baseline; target 90% requires discrete GPU hardware).
+- **Doc alignment**: STATUS.md, CONVENTIONS.md, CONTRIBUTING.md, PURE_RUST_EVOLUTION.md updated
+  with current metrics (1,136 .rs files, 824 .wgsl, 80.5% coverage, 42 integration test files,
+  zero stale lint suppressions).
 
 ### Changed — Sprint 25: Deep Debt Evolution & Modern Idiomatic Rust (Mar 31 2026)
 

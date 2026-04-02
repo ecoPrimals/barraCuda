@@ -21,13 +21,13 @@
 //! - Subgroup operations
 #![forbid(unsafe_code)]
 #![deny(clippy::pedantic)]
-#![allow(clippy::module_name_repetitions)]
 
 mod error;
 mod eval;
 mod executor;
 mod sim_buffer;
 mod value;
+mod workgroup;
 
 pub use error::NagaExecError;
 pub use executor::NagaExecutor;

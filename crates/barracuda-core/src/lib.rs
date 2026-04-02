@@ -28,7 +28,7 @@
     clippy::module_name_repetitions,
     reason = "primal module names are intentionally descriptive"
 )]
-#![allow(
+#![expect(
     clippy::unused_async,
     reason = "tarpc trait impl requires async signatures the trait defines"
 )]

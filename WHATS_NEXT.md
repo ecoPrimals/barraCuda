@@ -1,11 +1,19 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-03-31.
+Prioritized work items, ordered by impact. Updated 2026-04-01.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 26: Comprehensive Audit, Refactor & Compliance (Apr 1)**:
+  Full codebase audit against wateringHole standards. `executor.rs` smart refactor (1,020 → 886
+  lines via WorkgroupMemory extraction to `workgroup.rs`). `cargo deny` bans fixed
+  (`allow-wildcard-paths`). Stale `#[allow(clippy::module_name_repetitions)]` removed from
+  naga-exec (never triggered). `#[allow(unused_async)]` → `#[expect(unused_async)]` in
+  barracuda-core. Coverage measured at 80.54% line. Confirmed: zero production unwrap/panic/expect,
+  all `.clone()` justified, discovery fully capability-based. Doc alignment across STATUS,
+  CONVENTIONS, CONTRIBUTING, CHANGELOG. All quality gates green, 4,100+ tests, 0 failures.
 - **Sprint 25: Deep Debt Evolution & Modern Idiomatic Rust (Mar 31)**:
   Zero production panics in naga-exec (5 `panic!` → `Result`). Zero production `.expect()` (6 sites
   → `Result`). All `#[allow(` → `#[expect(` with reason. barracuda-spirv `assert!` → `Result` + typed
@@ -295,8 +303,8 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
 
 ## Near-term (P2)
 
-- **Test coverage to 90%**: Currently 72.83% line on llvmpipe (Sprint 21:
-  +13.5pp from validation-first refactoring). CI 80% gate blocking (Sprint 3).
+- **Test coverage to 90%**: Currently 80.54% line on llvmpipe (Sprint 26:
+  measured via llvm-cov). CI 80% gate blocking (Sprint 3).
   Evolve `--fail-under` from 80 to 90 with real GPU hardware. Remaining gaps
   are exclusively GPU-dependent code paths.
 - **Kokkos GPU parity benchmarks**: Run barraCuda GPU benchmarks on matching hardware,

@@ -124,7 +124,10 @@ mod tests {
     #[test]
     fn scale_precision_absolute() {
         let val = 0.5;
-        #[expect(clippy::cast_possible_truncation)]
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "f64 → i32 fixed-point conversion verified within test tolerance"
+        )]
         let fixed = (val * FIXED_POINT_SCALE) as i32;
         let recovered = f64::from(fixed) / FIXED_POINT_SCALE;
         let abs_err = (recovered - val).abs();
@@ -137,7 +140,10 @@ mod tests {
     #[test]
     fn scale_precision_force_range() {
         let val = 0.01;
-        #[expect(clippy::cast_possible_truncation)]
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "f64 → i32 fixed-point conversion verified within test tolerance"
+        )]
         let fixed = (val * FIXED_POINT_SCALE) as i32;
         let recovered = f64::from(fixed) / FIXED_POINT_SCALE;
         let rel_err = ((recovered - val) / val).abs();

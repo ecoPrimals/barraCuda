@@ -146,7 +146,10 @@
 #![cfg_attr(
     test,
     expect(clippy::unwrap_used, reason = "test code uses unwrap for brevity"),
-    expect(clippy::large_stack_arrays)
+    expect(
+        clippy::large_stack_arrays,
+        reason = "test fixtures use large stack arrays for deterministic verification"
+    )
 )]
 #![expect(
     rustdoc::broken_intra_doc_links,

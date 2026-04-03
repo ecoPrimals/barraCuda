@@ -104,7 +104,7 @@ pub fn population_pk_cpu(config: &PopPkConfig) -> Vec<f64> {
 #[must_use]
 const fn wang_hash(input: u32) -> u32 {
     let mut x = input;
-    x = (x ^ 61) ^ (x >> 16);
+    x = (x ^ 0x3D) ^ (x >> 16);
     x = x.wrapping_mul(9);
     x = x ^ (x >> 4);
     x = x.wrapping_mul(0x27d4_eb2d);

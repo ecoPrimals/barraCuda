@@ -1,11 +1,15 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-04-01.
+Prioritized work items, ordered by impact. Updated 2026-04-03.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 27: primalSpring Audit Remediation & Doc Alignment (Apr 3)**:
+  Hex bitwise literal fix (`0x3D`), `#[expect]` reason strings, barracuda-core lint promotions
+  (`use_self`/`map_unwrap_or` → warn). Doc reconciliation: Rust files 1,113, tests 4,600+,
+  SOVEREIGN_PIPELINE_TRACKER CPU interpreter updated from "Future" to "Shipped". All gates green.
 - **Sprint 26: Comprehensive Audit, Refactor & Compliance (Apr 1)**:
   Full codebase audit against wateringHole standards. `executor.rs` smart refactor (1,020 → 886
   lines via WorkgroupMemory extraction to `workgroup.rs`). `cargo deny` bans fixed
@@ -13,7 +17,7 @@ Prioritized work items, ordered by impact. Updated 2026-04-01.
   naga-exec (never triggered). `#[allow(unused_async)]` → `#[expect(unused_async)]` in
   barracuda-core. Coverage measured at 80.54% line. Confirmed: zero production unwrap/panic/expect,
   all `.clone()` justified, discovery fully capability-based. Doc alignment across STATUS,
-  CONVENTIONS, CONTRIBUTING, CHANGELOG. All quality gates green, 4,100+ tests, 0 failures.
+  CONVENTIONS, CONTRIBUTING, CHANGELOG. All quality gates green, 4,600+ tests, 0 failures.
 - **Sprint 25: Deep Debt Evolution & Modern Idiomatic Rust (Mar 31)**:
   Zero production panics in naga-exec (5 `panic!` → `Result`). Zero production `.expect()` (6 sites
   → `Result`). All `#[allow(` → `#[expect(` with reason. barracuda-spirv `assert!` → `Result` + typed

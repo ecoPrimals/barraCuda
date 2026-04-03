@@ -26,7 +26,7 @@ Together they produce a stable, sovereign, pure Rust compute stack.
 Layer 1  barraCuda    ██████████  COMPLETE       Zero unsafe, zero C deps
 Layer 2  coralReef    █████████░  Phase 10 I70   f64 polyfills, DRM E2E proven, CPU compilation IPC contract defined
 Layer 3  coralReef    ██░░░░░░░░  Planned        Standalone coral-reef crate, multi-arch ISA
-Layer 4  toadStool    █████████░  S156 complete  All infra gaps resolved; VFIO hw validation 6/7
+Layer 4  toadStool    █████████░  S163 complete  All infra gaps resolved; VFIO hw validation 6/7
 ```
 
 ---
@@ -137,7 +137,7 @@ Enable WGSL → ISA direct path (bypass SPIR-V).
 
 ---
 
-## Layer 4 — toadStool: Sovereign Hardware (S156 INFRASTRUCTURE COMPLETE)
+## Layer 4 — toadStool: Sovereign Hardware (S163 INFRASTRUCTURE COMPLETE)
 
 **Owner**: toadStool (VFIO lifecycle + runtime), coralReef (coral-driver)
 
@@ -146,7 +146,7 @@ Vulkan/NVK with a minimal pure-Rust compute runtime using IOMMU hardware
 isolation for exclusive device access, deterministic scheduling, and zero
 kernel driver in the data path.
 
-toadStool S156 resolved all 12 software infrastructure gaps. coralReef Iter 50
+toadStool S163 resolved all 12 software infrastructure gaps. coralReef Iter 50
 has USERD_TARGET + INST_TARGET runlist fix applied. Hardware revalidation on Titan V expected to yield 7/7 VFIO tests.
 
 | Component | Description | Status |
@@ -174,7 +174,7 @@ has USERD_TARGET + INST_TARGET runlist fix applied. Hardware revalidation on Tit
 
 ## The Stack Today vs Target
 
-### Today (March 13, 2026)
+### Today (April 3, 2026)
 ```
 Layer 1  barraCuda         Rust    WE OWN     Zero unsafe ✓
 Layer 2  coralReef         Rust    WE OWN     2 unsafe (evolving) ✓

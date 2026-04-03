@@ -1,6 +1,6 @@
 # Sovereign Pipeline Tracker
 
-**Date**: March 30, 2026
+**Date**: April 3, 2026
 **Type**: Actionable tracker (updated as work progresses)
 **Scope**: All remaining work for the pure Rust sovereign GPU pipeline
 
@@ -169,7 +169,7 @@ a C library target until Phase 3 completes.
 
 | Need | Status | Notes |
 |------|--------|-------|
-| WGSL shaders parseable by naga | Done | 816 shaders, all naga-valid |
+| WGSL shaders parseable by naga | Done | 824 shaders, all naga-valid |
 | Precision metadata in compile requests | Done | `fp64_strategy` field in IPC |
 | `naga::Module` for direct consumption | Planned | Skip SPIR-V round-trip, needs Layer 3 |
 
@@ -257,7 +257,7 @@ a C library target until Phase 3 completes.
 | Intel Xe ISA support | coralReef | Hardware access | Future |
 | WebGPU browser target (wasm-pack) | barraCuda | wgpu WebGPU backend | Future |
 | Distributed compute (cross-node IPC) | barraCuda + songBird | — | Future |
-| CPU shader interpreter (naga + cranelift) | barraCuda | — | Future |
+| CPU shader interpreter (naga IR) | barracuda-naga-exec | Sprint 24 | **Shipped** — f32/f64 native, shared memory, barriers, atomics (16 tests) |
 | Rust std `linux-raw-sys` adoption (eliminates musl) | Rust project | — | Watching |
 
 ---

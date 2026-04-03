@@ -5,7 +5,20 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.11] — 2026-04-01
+## [0.3.11] — 2026-04-03
+
+### Changed — Sprint 27: primalSpring Audit Remediation & Doc Alignment (Apr 3 2026)
+
+- **Hex bitwise literal**: `population_pk.rs` wang_hash `x ^ 61` → `x ^ 0x3D` — makes bitwise
+  intent explicit for clippy `decimal_literal_representation` compliance.
+- **`#[expect]` reason strings**: Added reason to `#[expect(clippy::large_stack_arrays)]` in
+  `lib.rs` (lint is valid — test fixtures allocate >16KB for deterministic verification, not stale).
+  Added reasons to bare `#[expect(clippy::cast_possible_truncation)]` in `rop_force_accum.rs`.
+- **barracuda-core lint promotions**: `use_self` and `map_unwrap_or` promoted from `allow` to
+  `warn` (zero violations), aligning with main barracuda crate lint standards.
+- **Doc reconciliation**: Rust file count reconciled to 1,113 (was 1,108 in README, 1,136 in
+  STATUS). Test count reconciled to 4,600+ (3,826 lib + 16 naga-exec + 229 core + 297 doc).
+  Stale "816 WGSL" in README Sprint 22 entry corrected to 824.
 
 ### Changed — Sprint 26: Comprehensive Audit, Refactor & Compliance (Apr 1 2026)
 
@@ -30,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Coverage measured**: 80.54% line / 83.45% function / 79.31% region via llvm-cov (up from
   72.83% baseline; target 90% requires discrete GPU hardware).
 - **Doc alignment**: STATUS.md, CONVENTIONS.md, CONTRIBUTING.md, PURE_RUST_EVOLUTION.md updated
-  with current metrics (1,136 .rs files, 824 .wgsl, 80.5% coverage, 42 integration test files,
+  with current metrics (1,113 .rs files, 824 .wgsl, 80.5% coverage, 42 integration test files,
   zero stale lint suppressions).
 
 ### Changed — Sprint 25: Deep Debt Evolution & Modern Idiomatic Rust (Mar 31 2026)

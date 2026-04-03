@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **824 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,108 Rust source files**, 42 integration test files, 2,786+ lib tests + 214 core + 8 e2e + doctests (2,770 GPU ops + 16 naga-exec on CPU)
+- **1,113 Rust source files**, 42 integration test files, 4,600+ tests (3,826 lib + 16 naga-exec + 229 core + 297 doc)
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -60,9 +60,12 @@ results.
 
 ## Recent
 
+- **Sprint 27**: primalSpring downstream audit remediation — hex bitwise literal (`0x3D`), `#[expect]` reason strings, barracuda-core lint promotions (`use_self`/`map_unwrap_or` → warn). All clippy/fmt/deny/doc gates green. 4,600+ tests, zero debt markers.
+- **Sprint 26**: Comprehensive audit, executor refactor, cargo deny fix — WorkgroupMemory subsystem extracted (executor.rs 1,020→886 lines). Stale `#[allow]` removed, `#[allow(unused_async)]` → `#[expect]` in core. Full audit confirmed zero production unwrap/panic/expect. 80.54% coverage.
+- **Sprint 25**: Deep debt evolution — zero panics, modern idiomatic Rust, capability-based naming across all production code.
 - **Sprint 24**: WGSL-as-truth test architecture + NagaExecutor + coralReef sovereign compilation — Migrated 337 GPU op test files from `get_test_device_if_gpu_available()` to `get_test_device()`, enabling 2,770 tests to run on CPU/llvmpipe (was ~0 coverage on CI). 17 GPU-exclusive modules correctly identified and re-gated. New crate `barracuda-naga-exec`: pure-Rust CPU interpreter for naga IR with f32/f64 native support, workgroup shared memory, barriers, atomics (16 tests). `assert_shader_math!` and `assert_shader_math_f64!` macros for zero-GPU shader validation. coralReef IPC contract: 10 new wire types, 5 new `CoralCompiler` methods (`compile_cpu`, `execute_cpu`, `validate_shader`), capability discovery for `shader.compile.cpu` and `shader.validate`. `ShaderValidationBackend` enum with coralReef-first fallback chain. 4-layer validation architecture (llvmpipe / NagaExecutor / coralReef CPU / real GPU). All quality gates green. 2,786 total tests, 0 failures.
 - **Sprint 23**: ludoSpring V35 gap resolution — 15 new IPC methods wired (math.sigmoid, math.log2, stats.mean, stats.std_dev, stats.weighted_mean, noise.perlin2d, noise.perlin3d, rng.uniform, activation.fitts, activation.hick, tensor.add, tensor.scale, tensor.clamp, tensor.reduce, tensor.sigmoid). 30 total JSON-RPC methods. Socket path fixed to `barracuda.sock` per PRIMAL_IPC_PROTOCOL. Dual-transport startup (UDS + TCP via `BARRACUDA_PORT` env var). All `#[allow(` migrated to `#[expect(` or `cfg_attr` in both crates. Release binary 4.7MB. 3,808 tests, all quality gates green.
-- **Sprint 22**: Spring absorption & deep debt evolution — Critical fermion force sign fix (neg_eta convention) in 2 staggered/pseudofermion WGSL shaders. 8 WGSL shaders absorbed from hotSpring: 5 multi-shift CG (Jegerlehner zeta, shifted alpha/xr/x/p) + 3 GPU-resident (Hamiltonian assembly, fermion action, Metropolis). `gpu_multi_shift_cg.rs` orchestration with generic CPU reference. `gpu_resident_observables.rs` with O(1)-readback pipelines. 6 RHMC/lattice tolerance constants (42 total). f32 Perlin 2D shader + API for ludoSpring. 32-bit LCG contract for ludoSpring. Lanczos eigenvector pipeline with Ritz vector Q×z back-transform for groundSpring. 816 WGSL shaders, all quality gates green.
+- **Sprint 22**: Spring absorption & deep debt evolution — Critical fermion force sign fix (neg_eta convention) in 2 staggered/pseudofermion WGSL shaders. 8 WGSL shaders absorbed from hotSpring: 5 multi-shift CG (Jegerlehner zeta, shifted alpha/xr/x/p) + 3 GPU-resident (Hamiltonian assembly, fermion action, Metropolis). `gpu_multi_shift_cg.rs` orchestration with generic CPU reference. `gpu_resident_observables.rs` with O(1)-readback pipelines. 6 RHMC/lattice tolerance constants (42 total). f32 Perlin 2D shader + API for ludoSpring. 32-bit LCG contract for ludoSpring. Lanczos eigenvector pipeline with Ritz vector Q×z back-transform for groundSpring. 824 WGSL shaders, all quality gates green.
 - **Sprint 21**: Compliance & coverage deep evolution — `health.liveness`, `health.readiness`, `capabilities.list` endpoints implemented per wateringHole Semantic Method Naming Standard v2.2.0 with all required aliases (`ping`, `health`, `status`, `check`, `capability.list`). Validation-first handler refactoring across JSON-RPC and tarpc layers (validate inputs before device check). `--port` CLI flag per UniBin standard. `barracuda-spirv` unsafe code evolved to `#![deny(unsafe_code)]` + targeted `#[allow]`. barracuda-core coverage 59.33% → 72.83% line (+13.5pp), 214 unit tests + 8 e2e (up from 148). rpc.rs refactored to extract tests (861→572 lines). All quality gates green.
 - **Sprint 20**: FMA evolution & lint promotion — 625 `suboptimal_flops` sites evolved to `mul_add()` for hardware FMA precision. 4 lints promoted from `allow` to `warn`: `suboptimal_flops` (415→0), `use_self` (332→0), `tuple_array_conversions` (2→0), `needless_range_loop` (45→0). All `needless_range_loop` sites evolved to idiomatic iterators. 232 files changed, 3,623+ tests pass, zero clippy errors.
 - **Sprint 19**: Deep debt solutions & idiomatic Rust evolution — RPC `tolerances_get` evolved to centralized tolerance registry. Cast safety: all `usize as u32` in `TensorSession` replaced with checked casts. 6 domain feature gates added (`domain-fhe`, `domain-md`, `domain-lattice`, `domain-physics`, `domain-pharma`, `domain-genomics`). `FlatTree::validate()` evolved to typed errors.
@@ -199,7 +202,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo test --workspace --lib            # lib tests (3,650+ total via nextest)
+cargo test --workspace --lib            # lib tests (4,600+ total via nextest)
 cargo llvm-cov --workspace --lib        # 80% CI gate (blocking), 90% target (requires GPU hardware)
 ```
 

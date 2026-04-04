@@ -5,7 +5,27 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.11] — 2026-04-03
+## [0.3.11] — 2026-04-04
+
+### Changed — Sprint 28: Zero-Copy ESN, Capability Naming & Error Evolution (Apr 4 2026)
+
+- **Zero-copy ESN matmul**: 5 unnecessary `Tensor::clone().matmul()` in `esn_v2/model.rs` evolved to
+  `matmul_ref()` — forward pass (`w_in`, `w_res`), ridge regression (`states_tensor`), and SGD loop
+  (`states`, `states_t`) no longer clone tensors before matrix multiply. `matmul(self)` consumes
+  ownership but delegates to `matmul_ref(&self)`, so the clones were pure waste.
+- **Capability-based sovereign naming**: 4 runtime references to sibling primal name "coralReef" in
+  `compilation.rs` neutralized to capability-based language ("sovereign shader compiler"). Module-level
+  doc comments preserved as architectural fossil record. Primal code now only describes capabilities,
+  not siblings, in runtime logs and user-facing strings.
+- **Error source chain preservation**: `transport.rs` tarpc listener bind error handling evolved from
+  `map_err(|e: io::Error| BarracudaError::Internal(e.to_string()))` to bare `?` — leverages existing
+  `BarracudaCoreError::Io(#[from] std::io::Error)` impl to preserve full error source chain instead
+  of flattening to string.
+- **Comprehensive quality gate sweep**: Confirmed zero `#[allow(]` suppressions in any crate (all
+  evolved to `#[expect(` with reason), zero `todo!()`/`unimplemented!()`, zero production `.unwrap()`,
+  zero files over 1000 lines, zero `println!` in library code, zero mock implementations in production
+  paths, zero hardcoded sibling primal names in runtime strings. Debris audit: no archive directory,
+  no temp files, no stale scripts, single well-structured `test-tiered.sh` utility.
 
 ### Changed — Sprint 27: primalSpring Audit Remediation & Doc Alignment (Apr 3 2026)
 

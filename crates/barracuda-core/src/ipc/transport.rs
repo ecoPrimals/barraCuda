@@ -104,10 +104,7 @@ impl IpcServer {
 
         let mut listener =
             tarpc::serde_transport::tcp::listen(addr, tarpc::tokio_serde::formats::Json::default)
-                .await
-                .map_err(|e: std::io::Error| {
-                    barracuda::error::BarracudaError::Internal(e.to_string())
-                })?;
+                .await?;
         let local_addr = listener.local_addr();
         tracing::info!("barraCuda tarpc listening on tcp://{local_addr}");
 

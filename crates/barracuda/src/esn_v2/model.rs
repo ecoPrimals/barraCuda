@@ -227,8 +227,8 @@ impl ESN {
 
         let leak = self.config.leak_rate;
 
-        let input_contrib = self.w_in.clone().matmul(input)?;
-        let recurrent_contrib = self.w_res.clone().matmul(&self.state)?;
+        let input_contrib = self.w_in.matmul_ref(input)?;
+        let recurrent_contrib = self.w_res.matmul_ref(&self.state)?;
         let combined = input_contrib.add(&recurrent_contrib)?;
         let activated = combined.tanh()?;
 
@@ -297,7 +297,7 @@ impl ESN {
             .ridge_regression_solve(&states_tensor, &targets_tensor)
             .await?;
 
-        let predictions = states_tensor.clone().matmul(&w_out)?;
+        let predictions = states_tensor.matmul_ref(&w_out)?;
         let diff = predictions.sub(&targets_tensor)?;
         let error_vec = diff.to_vec()?;
         let error: f32 = error_vec.iter().map(|x| x * x).sum::<f32>() / n_samples as f32;
@@ -419,11 +419,11 @@ impl ESN {
         let lambda = self.config.regularization;
 
         for _iter in 0..iterations {
-            let predictions = states.clone().matmul(&w_out)?;
+            let predictions = states.matmul_ref(&w_out)?;
             let diff = predictions.sub(targets)?;
 
             let states_t = states.transpose()?;
-            let grad = states_t.clone().matmul(&diff)?;
+            let grad = states_t.matmul_ref(&diff)?;
             let reg_term = w_out.mul_scalar(lambda)?;
             let total_grad = grad.add(&reg_term)?;
             let scaled_grad = total_grad.mul_scalar(learning_rate)?;

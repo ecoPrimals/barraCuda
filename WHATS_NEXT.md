@@ -1,11 +1,17 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-04-03.
+Prioritized work items, ordered by impact. Updated 2026-04-04.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 28: Zero-Copy ESN, Capability Naming & Error Evolution (Apr 4)**:
+  5 `Tensor::clone().matmul()` → `matmul_ref()` zero-copy in ESN model. Runtime "coralReef" →
+  "sovereign shader compiler" capability-based naming. tarpc `io::Error` source chain preserved via
+  `From` impl. Comprehensive quality gate sweep: zero `#[allow(]`, zero `todo!()`, zero production
+  unwrap, zero files >1000 lines, zero hardcoded sibling names in runtime. All gates green (4,446
+  passing, 0 failures). Debris audit clean (no archive dir, no temp files, no stale scripts).
 - **Sprint 27: primalSpring Audit Remediation & Doc Alignment (Apr 3)**:
   Hex bitwise literal fix (`0x3D`), `#[expect]` reason strings, barracuda-core lint promotions
   (`use_self`/`map_unwrap_or` → warn). Doc reconciliation: Rust files 1,113, tests 4,600+,

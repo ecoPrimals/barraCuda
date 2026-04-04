@@ -183,7 +183,7 @@ impl WgpuDevice {
             &caps,
         );
 
-        // coralReef: adapter-aware native binary compilation via IPC.
+        // Sovereign shader compiler: adapter-aware native binary compilation via IPC.
         crate::device::coral_compiler::spawn_coral_compile_for_adapter(
             &optimized,
             self.adapter_info(),
@@ -217,8 +217,8 @@ impl WgpuDevice {
     /// f64 on consumer GPUs (Ampere/Ada fp64:fp32 = 1:64).
     ///
     /// When naga SPIR-V codegen poisons DF64 transcendentals, this method sends
-    /// the full (un-stripped) source to coralReef for sovereign compilation. If
-    /// coralReef is unavailable, the transcendentals are stripped and the shader
+    /// the full (un-stripped) source to the sovereign shader compiler. If the
+    /// compiler is unavailable, the transcendentals are stripped and the shader
     /// runs in arithmetic-only mode.
     #[must_use]
     pub fn compile_shader_df64(&self, source: &str, label: Option<&str>) -> wgpu::ShaderModule {
@@ -239,13 +239,13 @@ impl WgpuDevice {
         if naga_poisoned {
             tracing::warn!(
                 device = %caps.device_name,
-                "DF64 SPIR-V poisoning (naga codegen) — requesting coralReef sovereign \
+                "DF64 SPIR-V poisoning (naga codegen) — requesting sovereign shader \
                  compilation to bypass naga. Falling back to arithmetic-only if unavailable."
             );
 
-            // Send the FULL DF64 source (with transcendentals) to coralReef.
-            // coralReef bypasses naga and compiles to native ISA, so the
-            // poisoning is irrelevant in the sovereign path.
+            // Send the FULL DF64 source (with transcendentals) to the sovereign
+            // shader compiler. The sovereign path bypasses naga and compiles to
+            // native ISA, so the poisoning is irrelevant.
             crate::device::coral_compiler::spawn_coral_compile_for_adapter(
                 &full_combined,
                 self.adapter_info(),

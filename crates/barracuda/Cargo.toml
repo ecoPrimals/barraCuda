@@ -41,6 +41,11 @@ bytes = { workspace = true }
 # sovereign SPIR-V compilation (naga IR → SPIR-V → GPU, no WGSL re-emit).
 barracuda-spirv = { path = "../barracuda-spirv", version = "0.3.6", optional = true }
 
+# CPU shader interpretation — run WGSL shaders on CPU via naga-exec.
+# Enables the shader-as-truth architecture where the same WGSL used on GPU
+# can also execute on CPU for validation, testing, and CPU-only deployments.
+barracuda-naga-exec = { path = "../barracuda-naga-exec", optional = true }
+
 # coral-gpu was previously listed here as an optional compile-time dep.
 # Removed: barraCuda uses IPC-first architecture — coralReef compiles
 # shaders and toadStool dispatches, all via JSON-RPC at runtime.
@@ -169,6 +174,9 @@ sovereign-dispatch = ["gpu"]
 # → GPU driver, bypassing naga's WGSL re-emission). Requires the barracuda-spirv
 # bridge crate which isolates the single unsafe create_shader_module_passthrough call.
 spirv-passthrough = ["gpu", "dep:barracuda-spirv"]
+
+# CPU shader dispatch via naga-exec: interpret WGSL compute shaders on CPU.
+cpu-shader = ["dep:barracuda-naga-exec"]
 
 # Domain model umbrella — enables all domain-specific modules.
 # Disable with default-features = false to get pure math + GPU compute only.

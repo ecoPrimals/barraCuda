@@ -41,6 +41,7 @@
 //! ```
 
 use super::backend::{BufferBinding, DispatchDescriptor, GpuBackend};
+use super::coral_compiler::DEFAULT_ECOPRIMALS_DISCOVERY_DIR;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
 
@@ -75,9 +76,6 @@ const DISPATCH_CAPABILITY: &str = "compute.dispatch";
 
 /// Environment variable for explicit compute dispatch endpoint override.
 const DISPATCH_ADDR_ENV: &str = "BARRACUDA_DISPATCH_ADDR";
-
-/// Default discovery directory fallback when `ECOPRIMALS_DISCOVERY_DIR` is not set.
-const DEFAULT_ECOPRIMALS_DISCOVERY_DIR: &str = "ecoPrimals";
 
 /// Canonical discovery subdirectory name.
 const DISCOVERY_SUBDIR: &str = "discovery";

@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **824 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,113 Rust source files**, 42 integration test files, 4,600+ tests (3,826 lib + 16 naga-exec + 229 core + 297 doc)
+- **1,113 Rust source files**, 42 integration test files, 4,600+ tests (3,815 lib + 16 naga-exec + 229 core + 297 doc)
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -60,6 +60,7 @@ results.
 
 ## Recent
 
+- **Sprint 29: Deep Debt Cleanup & Shader-First Evolution (Apr 4)**: Unified magic `256` workgroup size → `WORKGROUP_SIZE_1D` constant across 15+ files (shader_dispatch, jackknife, biosignal, gradient, cpu_executor, perlin_noise, population_pk, hill_dose_response, michaelis_menten_batch, scfa_batch, beat_classify, rop_force_accum). Removed unused `num-traits` from workspace. Smart refactor of `executor.rs` (1,097→932 lines, vector ops extracted to `vector_ops.rs`). `eval_math` decomposed into 4 focused functions (eval.rs 629→527 lines, `too_many_lines` suppression eliminated). Production `expect()` in `wgpu_backend.rs` evolved to safe pattern-match + `Result`. Misleading `nautilus/readout.rs` "no-op" doc corrected. `coralReef` doc references evolved to capability-based discovery language. `"biomeos"` / `"ecoPrimals"` namespace strings consolidated into shared constants. Perlin noise 7× `#[expect]` blocks consolidated to 2 helper functions. All quality gates green (3,815 lib + 16 naga-exec tests, 0 failures).
 - **Sprint 27**: primalSpring downstream audit remediation — hex bitwise literal (`0x3D`), `#[expect]` reason strings, barracuda-core lint promotions (`use_self`/`map_unwrap_or` → warn). All clippy/fmt/deny/doc gates green. 4,600+ tests, zero debt markers.
 - **Sprint 26**: Comprehensive audit, executor refactor, cargo deny fix — WorkgroupMemory subsystem extracted (executor.rs 1,020→886 lines). Stale `#[allow]` removed, `#[allow(unused_async)]` → `#[expect]` in core. Full audit confirmed zero production unwrap/panic/expect. 80.54% coverage.
 - **Sprint 25**: Deep debt evolution — zero panics, modern idiomatic Rust, capability-based naming across all production code.
@@ -81,7 +82,7 @@ barraCuda is a 4-crate workspace:
 - **`barracuda`** — the math engine (824 WGSL shaders, 15-tier precision, all GPU ops)
 - **`barracuda-core`** — primal lifecycle (JSON-RPC, tarpc, UniBin CLI)
 - **`barracuda-spirv`** — SPIR-V passthrough bridge (isolates the single `unsafe` call)
-- **`barracuda-naga-exec`** — CPU interpreter for naga IR (shader validation without GPU)
+- **`barracuda-naga-exec`** — CPU interpreter for naga IR (shader-first CPU execution + GPU validation)
 
 Springs and other consumers `cargo add barracuda`. toadStool orchestrates above
 it; barraCuda owns the math.

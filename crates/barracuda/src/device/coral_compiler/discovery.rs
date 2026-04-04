@@ -43,7 +43,17 @@ const LEGACY_DISCOVERY_FILENAME: &str = "shader-compiler.json";
 /// Per wateringHole `PRIMAL_IPC_PROTOCOL` v3.0, all primals share this
 /// namespace under `$XDG_RUNTIME_DIR`. We scan it for capability-domain
 /// symlinks (`shader.sock`) without knowing the specific primal name.
-const ECOSYSTEM_SOCKET_NAMESPACE: &str = "biomeos";
+///
+/// Same string as `ECOSYSTEM_SOCKET_DIR` in `barracuda-core` (`ipc/transport.rs`).
+/// Defined here so `barracuda` does not need a `barracuda-core` dependency for
+/// discovery-only builds.
+pub const ECOSYSTEM_SOCKET_NAMESPACE: &str = "biomeos";
+
+/// Default directory name under `XDG_RUNTIME_DIR` for JSON primal manifests
+/// (toadStool S139 / capability-file discovery).
+///
+/// Override with the `ECOPRIMALS_DISCOVERY_DIR` environment variable.
+pub const DEFAULT_ECOPRIMALS_DISCOVERY_DIR: &str = "ecoPrimals";
 
 /// Capability-domain symlink filename for shader compilation.
 ///
@@ -135,8 +145,8 @@ async fn discover_from_socket() -> Option<String> {
 /// `shader_compiler` capability name, then the well-known filename.
 async fn discover_from_file() -> Option<String> {
     let runtime_dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
-    let eco_dir =
-        std::env::var("ECOPRIMALS_DISCOVERY_DIR").unwrap_or_else(|_| "ecoPrimals".to_owned());
+    let eco_dir = std::env::var("ECOPRIMALS_DISCOVERY_DIR")
+        .unwrap_or_else(|_| DEFAULT_ECOPRIMALS_DISCOVERY_DIR.to_owned());
     let eco_base = PathBuf::from(&runtime_dir).join(&eco_dir);
     let eco_canonical = eco_base.join("discovery");
     let biomeos_base = PathBuf::from(&runtime_dir).join(ECOSYSTEM_SOCKET_NAMESPACE);
@@ -233,8 +243,8 @@ fn read_jsonrpc_from_value(info: &serde_json::Value) -> Option<String> {
 /// compiler is found.
 pub async fn discover_cpu_shader_compiler() -> Option<String> {
     let runtime_dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
-    let eco_dir =
-        std::env::var("ECOPRIMALS_DISCOVERY_DIR").unwrap_or_else(|_| "ecoPrimals".to_owned());
+    let eco_dir = std::env::var("ECOPRIMALS_DISCOVERY_DIR")
+        .unwrap_or_else(|_| DEFAULT_ECOPRIMALS_DISCOVERY_DIR.to_owned());
     let eco_base = PathBuf::from(&runtime_dir).join(&eco_dir);
     let eco_canonical = eco_base.join("discovery");
     let biomeos_base = PathBuf::from(&runtime_dir).join(ECOSYSTEM_SOCKET_NAMESPACE);
@@ -265,8 +275,8 @@ pub async fn discover_cpu_shader_compiler() -> Option<String> {
 /// Scans for the `shader.validate` capability.
 pub async fn discover_shader_validator() -> Option<String> {
     let runtime_dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
-    let eco_dir =
-        std::env::var("ECOPRIMALS_DISCOVERY_DIR").unwrap_or_else(|_| "ecoPrimals".to_owned());
+    let eco_dir = std::env::var("ECOPRIMALS_DISCOVERY_DIR")
+        .unwrap_or_else(|_| DEFAULT_ECOPRIMALS_DISCOVERY_DIR.to_owned());
     let eco_base = PathBuf::from(&runtime_dir).join(&eco_dir);
     let eco_canonical = eco_base.join("discovery");
     let biomeos_base = PathBuf::from(&runtime_dir).join(ECOSYSTEM_SOCKET_NAMESPACE);
@@ -287,7 +297,7 @@ pub async fn discover_shader_validator() -> Option<String> {
 /// Probe whether a JSON-RPC endpoint is alive via `shader.compile.status`.
 ///
 /// Falls back to the legacy `compiler.health` method for pre-Phase 10
-/// coralReef instances.
+/// shader compiler primals (before `shader.compile.status` was standardized).
 pub async fn probe_jsonrpc(addr: &str) -> bool {
     match jsonrpc_call::<(), HealthResponse>(addr, "shader.compile.status", &()).await {
         Ok(resp) => {

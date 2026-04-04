@@ -14,6 +14,7 @@
 //! - Gustavson, S. (2005). "Simplex noise demystified."
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -92,7 +93,7 @@ impl PerlinNoiseGpu {
             _pad2: 0,
         };
 
-        let wg_count = params.n_points.div_ceil(256);
+        let wg_count = params.n_points.div_ceil(WORKGROUP_SIZE_1D);
 
         let coord_buf = self.device.create_buffer_f64_init("perlin:coords", coords);
         let out_buf = self.device.create_buffer_f64(n_points)?;
@@ -143,7 +144,7 @@ impl PerlinNoiseGpu {
             persistence,
         };
 
-        let wg_count = params.n_points.div_ceil(256);
+        let wg_count = params.n_points.div_ceil(WORKGROUP_SIZE_1D);
 
         let coord_buf = self.device.create_buffer_f64_init("fbm:coords", coords);
         let out_buf = self.device.create_buffer_f64(n_points)?;
@@ -201,7 +202,7 @@ impl PerlinNoiseGpuF32 {
             _pad2: 0,
         };
 
-        let wg_count = params.n_points.div_ceil(256);
+        let wg_count = params.n_points.div_ceil(WORKGROUP_SIZE_1D);
 
         let coord_buf = self
             .device
@@ -227,6 +228,26 @@ impl PerlinNoiseGpuF32 {
     }
 }
 
+/// Floor-and-mask to permutation table index (0..=255).
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "floor + mask to 0..255 guarantees valid usize index"
+)]
+fn perm_index(v: f64) -> usize {
+    v.floor() as usize & 255
+}
+
+/// f32 variant of [`perm_index`].
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "floor + mask to 0..255 guarantees valid usize index"
+)]
+fn perm_index_f32(v: f32) -> usize {
+    v.floor() as usize & 255
+}
+
 /// CPU reference: 2D Perlin noise (f32). Returns value in approximately \[-1, 1\].
 ///
 /// Matches the f32 GPU shader output for cross-validation.
@@ -247,18 +268,8 @@ pub fn perlin_2d_cpu_f32(x: f32, y: f32) -> f32 {
         }
     }
 
-    #[expect(
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        reason = "floor + mask to 0..255 guarantees valid index"
-    )]
-    let xi = x.floor() as usize & 255;
-    #[expect(
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        reason = "floor + mask to 0..255 guarantees valid index"
-    )]
-    let yi = y.floor() as usize & 255;
+    let xi = perm_index_f32(x);
+    let yi = perm_index_f32(y);
     let xf = x - x.floor();
     let yf = y - y.floor();
 
@@ -297,18 +308,8 @@ pub fn perlin_2d_cpu(x: f64, y: f64) -> f64 {
         }
     }
 
-    #[expect(
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        reason = "floor + mask to 0..255 guarantees valid index"
-    )]
-    let xi = x.floor() as usize & 255;
-    #[expect(
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        reason = "floor + mask to 0..255 guarantees valid index"
-    )]
-    let yi = y.floor() as usize & 255;
+    let xi = perm_index(x);
+    let yi = perm_index(y);
     let xf = x - x.floor();
     let yf = y - y.floor();
 
@@ -364,24 +365,9 @@ pub fn perlin_3d_cpu(x: f64, y: f64, z: f64) -> f64 {
         }
     }
 
-    #[expect(
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        reason = "floor + mask to 0..255 guarantees valid index"
-    )]
-    let xi = x.floor() as usize & 255;
-    #[expect(
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        reason = "floor + mask to 0..255 guarantees valid index"
-    )]
-    let yi = y.floor() as usize & 255;
-    #[expect(
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        reason = "floor + mask to 0..255 guarantees valid index"
-    )]
-    let zi = z.floor() as usize & 255;
+    let xi = perm_index(x);
+    let yi = perm_index(y);
+    let zi = perm_index(z);
     let xf = x - x.floor();
     let yf = y - y.floor();
     let zf = z - z.floor();

@@ -135,15 +135,14 @@ pub fn jackknife_mean_variance(data: &[f64]) -> Option<JackknifeResult> {
     let full_sum: f64 = data.iter().sum();
     let full_mean = full_sum / n_f;
 
-    let mut jk_mean_sum = 0.0;
-    let mut jk_means = Vec::with_capacity(n);
+    #[cfg(feature = "cpu-shader")]
+    let jk_means = jackknife_leave_means_shader(data, full_sum, n);
 
-    for &d in data {
-        let leave_mean = (full_sum - d) / (n_f - 1.0);
-        jk_means.push(leave_mean);
-        jk_mean_sum += leave_mean;
-    }
+    #[cfg(not(feature = "cpu-shader"))]
+    #[expect(deprecated, reason = "fallback retained until cpu-shader is default")]
+    let jk_means = jackknife_leave_means_cpu(data, full_sum, n_f);
 
+    let jk_mean_sum: f64 = jk_means.iter().sum();
     let jk_grand_mean = jk_mean_sum / n_f;
     let jk_var = (n_f - 1.0) / n_f
         * jk_means
@@ -156,6 +155,76 @@ pub fn jackknife_mean_variance(data: &[f64]) -> Option<JackknifeResult> {
         variance: jk_var,
         std_error: jk_var.sqrt(),
     })
+}
+
+#[cfg(not(feature = "cpu-shader"))]
+#[deprecated(
+    since = "0.4.0",
+    note = "use `cpu-shader` feature for WGSL-backed jackknife"
+)]
+fn jackknife_leave_means_cpu(data: &[f64], full_sum: f64, n_f: f64) -> Vec<f64> {
+    data.iter().map(|&d| (full_sum - d) / (n_f - 1.0)).collect()
+}
+
+#[cfg(feature = "cpu-shader")]
+fn jackknife_leave_means_shader(data: &[f64], full_sum: f64, n: usize) -> Vec<f64> {
+    use crate::unified_hardware::{CpuShaderDispatch, ShaderBinding, ShaderDispatch};
+
+    let wgsl = include_str!("../shaders/stats/jackknife_mean_f64.wgsl");
+    let dispatcher = CpuShaderDispatch::new();
+
+    let mut data_buf: Vec<u8> = data.iter().flat_map(|v| v.to_le_bytes()).collect();
+    let mut out_buf = vec![0u8; n * 8];
+
+    let mut params_buf = vec![0u8; 8]; // Params { n: u32, _pad: u32 }
+    params_buf[..4].copy_from_slice(&(n as u32).to_le_bytes());
+
+    let mut sum_buf: Vec<u8> = full_sum.to_le_bytes().to_vec();
+
+    let mut bindings = vec![
+        ShaderBinding {
+            group: 0,
+            binding: 0,
+            data: &mut data_buf,
+            read_only: true,
+        },
+        ShaderBinding {
+            group: 0,
+            binding: 1,
+            data: &mut out_buf,
+            read_only: false,
+        },
+        ShaderBinding {
+            group: 0,
+            binding: 2,
+            data: &mut params_buf,
+            read_only: true,
+        },
+        ShaderBinding {
+            group: 0,
+            binding: 3,
+            data: &mut sum_buf,
+            read_only: true,
+        },
+    ];
+
+    let workgroups = (
+        (n as u32).div_ceil(crate::device::capabilities::WORKGROUP_SIZE_1D),
+        1,
+        1,
+    );
+    if dispatcher
+        .dispatch_wgsl(wgsl, "main", &mut bindings, workgroups)
+        .is_ok()
+    {
+        return out_buf
+            .chunks_exact(8)
+            .map(|c| f64::from_le_bytes([c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]]))
+            .collect();
+    }
+
+    let n_f = n as f64;
+    data.iter().map(|&d| (full_sum - d) / (n_f - 1.0)).collect()
 }
 
 /// Generalized jackknife for an arbitrary statistic.

@@ -6,6 +6,21 @@ Prioritized work items, ordered by impact. Updated 2026-04-04.
 
 ## Recently Completed
 
+- **Sprint 29: Deep Debt Cleanup & Shader-First Evolution (Apr 4)**:
+  Unified magic `256` workgroup size → `WORKGROUP_SIZE_1D` constant across 15+ files
+  (shader dispatch, jackknife, biosignal, gradient, cpu_executor, all health ops, perlin,
+  lattice ops). Removed dead `num-traits` from workspace deps. Smart refactoring:
+  `executor.rs` 1,097→932 lines (vector ops extracted to `vector_ops.rs`), `eval_math`
+  decomposed from 264-line monolith into 4 focused dispatch functions (eval.rs 629→527
+  lines, `#[expect(too_many_lines)]` suppression eliminated). Production `expect()` in
+  `wgpu_backend.rs` evolved to safe pattern-match + `Result` propagation. Misleading
+  `nautilus/readout.rs` "no-op" documentation corrected to describe actual CPU ridge
+  regression. `coralReef` documentation evolved to capability-based discovery language
+  throughout coral_compiler module. Hardcoded `"biomeos"` and `"ecoPrimals"` namespace
+  strings consolidated to shared constants across crates. Perlin noise 7× `#[expect]`
+  blocks consolidated to 2 `perm_index` helper functions. All gates green (3,815 lib +
+  16 naga-exec tests, 0 failures). Clippy pedantic+nursery clean, `cargo doc -D warnings`
+  clean, `cargo fmt` clean.
 - **Sprint 28: Zero-Copy ESN, Capability Naming & Error Evolution (Apr 4)**:
   5 `Tensor::clone().matmul()` → `matmul_ref()` zero-copy in ESN model. Runtime "coralReef" →
   "sovereign shader compiler" capability-based naming. tarpc `io::Error` source chain preserved via

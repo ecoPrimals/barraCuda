@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! CPU executor core and op dispatch
+//! CPU executor core and op dispatch.
+//!
+//! When the `cpu-shader` feature is enabled, the executor gains shader dispatch
+//! capabilities via [`crate::unified_hardware::CpuShaderDispatch`], enabling WGSL
+//! math execution on CPU. The f64 math library (activations, special, numerical)
+//! routes through WGSL when available; the f32 tensor `MathOp` dispatch remains
+//! native Rust pending f32 shader migration.
 
 mod defaults {
     pub const FALLBACK_MEMORY_BYTES: u64 = 16 * 1024 * 1024 * 1024;
@@ -232,6 +238,66 @@ impl CpuExecutor {
     }
 }
 
+#[cfg(feature = "cpu-shader")]
+impl CpuExecutor {
+    #[expect(dead_code, reason = "reserved for MathOp shader dispatch migration")]
+    pub(crate) fn shader_unary(
+        wgsl: &str,
+        entry: &str,
+        input: &[f64],
+    ) -> crate::error::Result<Vec<f64>> {
+        crate::unified_hardware::shader_batch_unary_f64(wgsl, entry, input)
+    }
+
+    #[expect(dead_code, reason = "reserved for MathOp shader dispatch migration")]
+    pub(crate) fn shader_binary(
+        wgsl: &str,
+        entry: &str,
+        a: &[f64],
+        b: &[f64],
+    ) -> crate::error::Result<Vec<f64>> {
+        use crate::unified_hardware::{CpuShaderDispatch, ShaderBinding, ShaderDispatch};
+        let dispatcher = CpuShaderDispatch::new();
+        let mut a_buf: Vec<u8> = a.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let mut b_buf: Vec<u8> = b.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let mut out_buf = vec![0u8; a_buf.len()];
+        let n = a.len() as u32;
+        let workgroups = (
+            n.div_ceil(crate::device::capabilities::WORKGROUP_SIZE_1D),
+            1,
+            1,
+        );
+
+        let mut bindings = vec![
+            ShaderBinding {
+                group: 0,
+                binding: 0,
+                data: &mut a_buf,
+                read_only: true,
+            },
+            ShaderBinding {
+                group: 0,
+                binding: 1,
+                data: &mut b_buf,
+                read_only: true,
+            },
+            ShaderBinding {
+                group: 0,
+                binding: 2,
+                data: &mut out_buf,
+                read_only: false,
+            },
+        ];
+
+        dispatcher.dispatch_wgsl(wgsl, entry, &mut bindings, workgroups)?;
+
+        Ok(out_buf
+            .chunks_exact(8)
+            .map(|c| f64::from_le_bytes([c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]]))
+            .collect())
+    }
+}
+
 impl Default for CpuExecutor {
     fn default() -> Self {
         Self::new()
@@ -240,7 +306,11 @@ impl Default for CpuExecutor {
 
 impl ComputeExecutor for CpuExecutor {
     fn name(&self) -> &'static str {
-        "CPU (Native Rust + SIMD)"
+        if cfg!(feature = "cpu-shader") {
+            "CPU (WGSL via naga-exec + Native Rust)"
+        } else {
+            "CPU (Native Rust + SIMD)"
+        }
     }
 
     fn hardware_type(&self) -> HardwareType {

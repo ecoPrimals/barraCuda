@@ -13,6 +13,7 @@ use crate::error::{NagaExecError, Result};
 use crate::eval::{compose_vector, eval_binary, eval_cast, eval_math, eval_unary, type_byte_size};
 use crate::sim_buffer::SimBuffer;
 use crate::value::Value;
+use crate::vector_ops::{access_index_val, splat_value, swizzle_value};
 use crate::workgroup::{InvocationState, WorkgroupMemory, split_at_barriers};
 
 /// CPU execution context for a validated WGSL compute shader.
@@ -78,6 +79,7 @@ impl NagaExecutor {
         let wg_size = ep.workgroup_size;
         let has_workgroup_vars = self.has_workgroup_vars();
 
+        let num_wg = [workgroups.0, workgroups.1, workgroups.2];
         for wg_z in 0..workgroups.2 {
             for wg_y in 0..workgroups.1 {
                 for wg_x in 0..workgroups.0 {
@@ -85,10 +87,16 @@ impl NagaExecutor {
                         self.dispatch_workgroup_barrier_aware(
                             [wg_x, wg_y, wg_z],
                             wg_size,
+                            num_wg,
                             bindings,
                         )?;
                     } else {
-                        self.dispatch_workgroup_simple([wg_x, wg_y, wg_z], wg_size, bindings)?;
+                        self.dispatch_workgroup_simple(
+                            [wg_x, wg_y, wg_z],
+                            wg_size,
+                            num_wg,
+                            bindings,
+                        )?;
                     }
                 }
             }
@@ -107,6 +115,7 @@ impl NagaExecutor {
         &self,
         wg_id: [u32; 3],
         wg_size: [u32; 3],
+        num_workgroups: [u32; 3],
         bindings: &mut BTreeMap<(u32, u32), SimBuffer>,
     ) -> Result<()> {
         let ep = &self.module.entry_points[self.entry_point_index];
@@ -128,7 +137,9 @@ impl NagaExecutor {
                         &mut shared,
                         global_id,
                         local_id,
+                        wg_id,
                         wg_size,
+                        num_workgroups,
                     );
                     ctx.execute_body(&ep.function.body)?;
                 }
@@ -146,6 +157,7 @@ impl NagaExecutor {
         &self,
         wg_id: [u32; 3],
         wg_size: [u32; 3],
+        num_workgroups: [u32; 3],
         bindings: &mut BTreeMap<(u32, u32), SimBuffer>,
     ) -> Result<()> {
         let ep = &self.module.entry_points[self.entry_point_index];
@@ -180,7 +192,9 @@ impl NagaExecutor {
                     &mut shared,
                     *global_id,
                     *local_id,
+                    wg_id,
                     wg_size,
+                    num_workgroups,
                 );
                 ctx.restore_state(&inv_states[i]);
                 ctx.execute_body(segment)?;
@@ -189,6 +203,14 @@ impl NagaExecutor {
         }
         Ok(())
     }
+}
+
+/// Control flow signal for structured WGSL execution.
+enum Flow {
+    Proceed,
+    LoopBreak,
+    LoopContinue,
+    EarlyReturn,
 }
 
 /// Per-invocation state: expression cache, local variables, buffer access.
@@ -204,7 +226,9 @@ struct InvocationContext<'a> {
     shared: &'a mut WorkgroupMemory,
     global_id: [u32; 3],
     local_id: [u32; 3],
+    workgroup_id: [u32; 3],
     workgroup_size: [u32; 3],
+    num_workgroups: [u32; 3],
     expr_cache: BTreeMap<Handle<Expression>, Value>,
     local_vars: BTreeMap<Handle<naga::LocalVariable>, Value>,
 }
@@ -222,7 +246,9 @@ impl<'a> InvocationContext<'a> {
         shared: &'a mut WorkgroupMemory,
         global_id: [u32; 3],
         local_id: [u32; 3],
+        workgroup_id: [u32; 3],
         workgroup_size: [u32; 3],
+        num_workgroups: [u32; 3],
     ) -> Self {
         Self {
             module,
@@ -232,7 +258,9 @@ impl<'a> InvocationContext<'a> {
             shared,
             global_id,
             local_id,
+            workgroup_id,
             workgroup_size,
+            num_workgroups,
             expr_cache: BTreeMap::new(),
             local_vars: BTreeMap::new(),
         }
@@ -250,38 +278,44 @@ impl<'a> InvocationContext<'a> {
         self.local_vars.clone_from(&state.local_vars);
     }
 
-    fn execute_body(&mut self, body: &naga::Block) -> Result<()> {
+    fn execute_body(&mut self, body: &naga::Block) -> Result<Flow> {
         for stmt in body {
-            self.execute_stmt(stmt)?;
+            match self.execute_stmt(stmt)? {
+                Flow::Proceed => {}
+                other => return Ok(other),
+            }
         }
-        Ok(())
+        Ok(Flow::Proceed)
     }
 
-    fn execute_stmt(&mut self, stmt: &Statement) -> Result<()> {
+    fn execute_stmt(&mut self, stmt: &Statement) -> Result<Flow> {
         match *stmt {
             Statement::Emit(ref range) => {
                 for handle in range.clone() {
                     let val = self.eval_expr(handle)?;
                     self.expr_cache.insert(handle, val);
                 }
-                Ok(())
+                Ok(Flow::Proceed)
             }
             Statement::Store { pointer, value } => {
                 let val = self.get_value(value)?;
-                self.store_pointer(pointer, &val)
+                self.store_pointer(pointer, &val)?;
+                Ok(Flow::Proceed)
             }
             Statement::Block(ref block) => self.execute_body(block),
-            Statement::Return { .. }
-            | Statement::Break
-            | Statement::Continue
-            | Statement::ControlBarrier(_)
-            | Statement::MemoryBarrier(_) => Ok(()),
+            Statement::Return { .. } => Ok(Flow::EarlyReturn),
+            Statement::Break => Ok(Flow::LoopBreak),
+            Statement::Continue => Ok(Flow::LoopContinue),
+            Statement::ControlBarrier(_) | Statement::MemoryBarrier(_) => Ok(Flow::Proceed),
             Statement::Atomic {
                 pointer,
                 fun,
                 value,
                 result,
-            } => self.execute_atomic(pointer, fun, value, result),
+            } => {
+                self.execute_atomic(pointer, fun, value, result)?;
+                Ok(Flow::Proceed)
+            }
             Statement::If {
                 condition,
                 ref accept,
@@ -300,8 +334,16 @@ impl<'a> InvocationContext<'a> {
                 break_if,
             } => {
                 for _ in 0..100_000 {
-                    self.execute_body(body)?;
-                    self.execute_body(continuing)?;
+                    match self.execute_body(body)? {
+                        Flow::LoopBreak => break,
+                        Flow::EarlyReturn => return Ok(Flow::EarlyReturn),
+                        Flow::LoopContinue | Flow::Proceed => {}
+                    }
+                    match self.execute_body(continuing)? {
+                        Flow::LoopBreak => break,
+                        Flow::EarlyReturn => return Ok(Flow::EarlyReturn),
+                        Flow::LoopContinue | Flow::Proceed => {}
+                    }
                     if let Some(break_cond) = break_if {
                         let cond = self.get_value(break_cond)?;
                         if cond.as_bool()? {
@@ -309,7 +351,36 @@ impl<'a> InvocationContext<'a> {
                         }
                     }
                 }
-                Ok(())
+                Ok(Flow::Proceed)
+            }
+            Statement::Switch {
+                selector,
+                ref cases,
+            } => {
+                let sel = self.get_value(selector)?;
+                let sel_i32 = sel.as_i32().unwrap_or(0);
+                let mut matched = false;
+                for case in cases {
+                    let hit = match case.value {
+                        naga::SwitchValue::I32(v) => v == sel_i32,
+                        naga::SwitchValue::U32(v) => v == sel.as_u32().unwrap_or(0),
+                        naga::SwitchValue::Default => !matched,
+                    };
+                    if hit || matched {
+                        matched = true;
+                        match self.execute_body(&case.body)? {
+                            Flow::LoopBreak | Flow::Proceed => {
+                                if case.fall_through {
+                                    continue;
+                                }
+                                return Ok(Flow::Proceed);
+                            }
+                            Flow::EarlyReturn => return Ok(Flow::EarlyReturn),
+                            Flow::LoopContinue => return Ok(Flow::LoopContinue),
+                        }
+                    }
+                }
+                Ok(Flow::Proceed)
             }
             _ => Err(NagaExecError::UnsupportedStatement(format!("{stmt:?}"))),
         }
@@ -349,7 +420,13 @@ impl<'a> InvocationContext<'a> {
                         Ok(Value::U32(idx))
                     }
                     Some(naga::Binding::BuiltIn(naga::BuiltIn::NumWorkGroups)) => {
-                        Ok(Value::Vec3U32([0, 0, 0]))
+                        Ok(Value::Vec3U32(self.num_workgroups))
+                    }
+                    Some(naga::Binding::BuiltIn(naga::BuiltIn::WorkGroupId)) => {
+                        Ok(Value::Vec3U32(self.workgroup_id))
+                    }
+                    Some(naga::Binding::BuiltIn(naga::BuiltIn::WorkGroupSize)) => {
+                        Ok(Value::Vec3U32(self.workgroup_size))
                     }
                     _ => Err(NagaExecError::UnsupportedExpression(format!(
                         "FunctionArgument({idx})"
@@ -396,10 +473,17 @@ impl<'a> InvocationContext<'a> {
                 eval_unary(op, &v)
             }
 
-            Expression::Math { fun, arg, arg1, .. } => {
+            Expression::Math {
+                fun,
+                arg,
+                arg1,
+                arg2,
+                ..
+            } => {
                 let a = self.get_value(arg)?;
                 let b = arg1.map(|h| self.get_value(h)).transpose()?;
-                eval_math(fun, &a, b.as_ref())
+                let c = arg2.map(|h| self.get_value(h)).transpose()?;
+                eval_math(fun, &a, b.as_ref(), c.as_ref())
             }
 
             Expression::As {
@@ -417,25 +501,7 @@ impl<'a> InvocationContext<'a> {
                     return self.load_buffer_element(gv_handle, index as usize);
                 }
                 let base_val = self.get_value(base)?;
-                match base_val {
-                    Value::Vec2(v) => Ok(Value::F32(v[index as usize])),
-                    Value::Vec3(v) => Ok(Value::F32(v[index as usize])),
-                    Value::Vec4(v) => Ok(Value::F32(v[index as usize])),
-                    Value::Vec3U32(v) => Ok(Value::U32(v[index as usize])),
-                    Value::Vec4U32(v) => Ok(Value::U32(v[index as usize])),
-                    Value::Composite(ref fields) => {
-                        fields
-                            .get(index as usize)
-                            .cloned()
-                            .ok_or(NagaExecError::OutOfBounds {
-                                index: index as usize,
-                                length: fields.len(),
-                            })
-                    }
-                    _ => Err(NagaExecError::UnsupportedExpression(format!(
-                        "AccessIndex on {base_val:?}"
-                    ))),
-                }
+                access_index_val(&base_val, index as usize)
             }
 
             Expression::Access { base, index } => {
@@ -448,20 +514,7 @@ impl<'a> InvocationContext<'a> {
                 }
 
                 let base_val = self.get_value(base)?;
-                match base_val {
-                    Value::Composite(ref fields) => {
-                        fields
-                            .get(idx_u)
-                            .cloned()
-                            .ok_or(NagaExecError::OutOfBounds {
-                                index: idx_u,
-                                length: fields.len(),
-                            })
-                    }
-                    _ => Err(NagaExecError::UnsupportedExpression(format!(
-                        "Access on {base_val:?}"
-                    ))),
-                }
+                access_index_val(&base_val, idx_u)
             }
 
             Expression::Compose { ty, ref components } => {
@@ -484,26 +537,7 @@ impl<'a> InvocationContext<'a> {
 
             Expression::Splat { size, value } => {
                 let v = self.get_value(value)?;
-                let n = match size {
-                    naga::VectorSize::Bi => 2,
-                    naga::VectorSize::Tri => 3,
-                    naga::VectorSize::Quad => 4,
-                };
-                match v {
-                    Value::F32(f) => match n {
-                        2 => Ok(Value::Vec2([f; 2])),
-                        3 => Ok(Value::Vec3([f; 3])),
-                        _ => Ok(Value::Vec4([f; 4])),
-                    },
-                    Value::F64(f) => match n {
-                        2 => Ok(Value::Vec2F64([f; 2])),
-                        3 => Ok(Value::Vec3F64([f; 3])),
-                        _ => Ok(Value::Vec4F64([f; 4])),
-                    },
-                    _ => Err(NagaExecError::UnsupportedExpression(format!(
-                        "Splat of {v:?}"
-                    ))),
-                }
+                splat_value(size, &v)
             }
 
             Expression::Select {
@@ -517,6 +551,46 @@ impl<'a> InvocationContext<'a> {
                 } else {
                     self.get_value(reject)
                 }
+            }
+
+            Expression::ArrayLength(expr_handle) => {
+                let inner_expr = &self.function.expressions[expr_handle];
+                if let Expression::GlobalVariable(gv_handle) = *inner_expr {
+                    let gv = &self.module.global_variables[gv_handle];
+                    let ty = &self.module.types[gv.ty];
+                    if let TypeInner::Array { base, .. } = ty.inner {
+                        let elem_size = crate::eval::type_byte_size(
+                            self.module,
+                            &self.module.types[base].inner,
+                        );
+                        let (group, binding) = self.resolve_binding(gv_handle).ok_or(
+                            NagaExecError::UnsupportedExpression(
+                                "ArrayLength on variable without binding".into(),
+                            ),
+                        )?;
+                        let buf = self
+                            .bindings
+                            .get(&(group, binding))
+                            .ok_or(NagaExecError::BindingNotFound { group, binding })?;
+                        #[expect(
+                            clippy::cast_possible_truncation,
+                            reason = "buffer element count fits u32 for WGSL arrays"
+                        )]
+                        return Ok(Value::U32((buf.data.len() / elem_size) as u32));
+                    }
+                }
+                Err(NagaExecError::UnsupportedExpression(
+                    "ArrayLength on non-array".into(),
+                ))
+            }
+
+            Expression::Swizzle {
+                size,
+                vector,
+                pattern,
+            } => {
+                let base = self.get_value(vector)?;
+                swizzle_value(size, pattern, &base)
             }
 
             _ => Err(NagaExecError::UnsupportedExpression(format!("{expr:?}"))),
@@ -597,37 +671,11 @@ impl<'a> InvocationContext<'a> {
                     return self.load_buffer_element(gv_handle, idx_u);
                 }
                 let base_val = self.get_value(base)?;
-                match base_val {
-                    Value::Composite(ref fields) => {
-                        fields
-                            .get(idx_u)
-                            .cloned()
-                            .ok_or(NagaExecError::OutOfBounds {
-                                index: idx_u,
-                                length: fields.len(),
-                            })
-                    }
-                    _ => Err(NagaExecError::UnsupportedExpression(format!(
-                        "Load(Access) on {base_val:?}"
-                    ))),
-                }
+                access_index_val(&base_val, idx_u)
             }
             Expression::AccessIndex { base, index } => {
                 let base_val = self.load_pointer(base)?;
-                match base_val {
-                    Value::Composite(ref fields) => {
-                        fields
-                            .get(index as usize)
-                            .cloned()
-                            .ok_or(NagaExecError::OutOfBounds {
-                                index: index as usize,
-                                length: fields.len(),
-                            })
-                    }
-                    _ => Err(NagaExecError::UnsupportedExpression(format!(
-                        "Load(AccessIndex) on {base_val:?}"
-                    ))),
-                }
+                access_index_val(&base_val, index as usize)
             }
             _ => self.get_value(pointer),
         }

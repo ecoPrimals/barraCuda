@@ -6,6 +6,7 @@
 //! Absorbed from healthSpring V19 (Exp083, Exp085).
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -79,7 +80,7 @@ impl MichaelisMentenBatchGpu {
             .device
             .create_uniform_buffer("mm_batch:params", &params);
 
-        let wg_count = config.n_patients.div_ceil(256);
+        let wg_count = config.n_patients.div_ceil(WORKGROUP_SIZE_1D);
         let shader = format!("{PRNG}\n{SHADER_BODY}");
 
         crate::device::compute_pipeline::ComputeDispatch::new(&self.device, "mm_batch")

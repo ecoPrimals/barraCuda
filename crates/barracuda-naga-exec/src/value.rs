@@ -181,7 +181,37 @@ impl Value {
                     buf[offset + i * 8..offset + (i + 1) * 8].copy_from_slice(&c.to_le_bytes());
                 }
             }
-            _ => {}
+            Self::Vec2U32(v) => {
+                for (i, c) in v.iter().enumerate() {
+                    buf[offset + i * 4..offset + (i + 1) * 4].copy_from_slice(&c.to_le_bytes());
+                }
+            }
+            Self::Vec3U32(v) => {
+                for (i, c) in v.iter().enumerate() {
+                    buf[offset + i * 4..offset + (i + 1) * 4].copy_from_slice(&c.to_le_bytes());
+                }
+            }
+            Self::Vec4U32(v) => {
+                for (i, c) in v.iter().enumerate() {
+                    buf[offset + i * 4..offset + (i + 1) * 4].copy_from_slice(&c.to_le_bytes());
+                }
+            }
+            Self::Vec2I32(v) => {
+                for (i, c) in v.iter().enumerate() {
+                    buf[offset + i * 4..offset + (i + 1) * 4].copy_from_slice(&c.to_le_bytes());
+                }
+            }
+            Self::Vec3I32(v) => {
+                for (i, c) in v.iter().enumerate() {
+                    buf[offset + i * 4..offset + (i + 1) * 4].copy_from_slice(&c.to_le_bytes());
+                }
+            }
+            Self::Vec4I32(v) => {
+                for (i, c) in v.iter().enumerate() {
+                    buf[offset + i * 4..offset + (i + 1) * 4].copy_from_slice(&c.to_le_bytes());
+                }
+            }
+            Self::Composite(_) => {}
         }
     }
 
@@ -206,6 +236,10 @@ impl Value {
         }
     }
 
+    #[expect(
+        clippy::too_many_lines,
+        reason = "exhaustive match over all vector type/size combinations"
+    )]
     fn read_vector(
         buf: &[u8],
         offset: usize,
@@ -252,6 +286,50 @@ impl Value {
                 }
                 Self::Vec4(v)
             }
+            (naga::ScalarKind::Float, 8, 2) => {
+                let mut v = [0f64; 2];
+                for i in 0..2 {
+                    v[i] = f64::from_le_bytes(
+                        buf[offset + i * w..offset + (i + 1) * w]
+                            .try_into()
+                            .unwrap_or([0; 8]),
+                    );
+                }
+                Self::Vec2F64(v)
+            }
+            (naga::ScalarKind::Float, 8, 3) => {
+                let mut v = [0f64; 3];
+                for i in 0..3 {
+                    v[i] = f64::from_le_bytes(
+                        buf[offset + i * w..offset + (i + 1) * w]
+                            .try_into()
+                            .unwrap_or([0; 8]),
+                    );
+                }
+                Self::Vec3F64(v)
+            }
+            (naga::ScalarKind::Float, 8, 4) => {
+                let mut v = [0f64; 4];
+                for i in 0..4 {
+                    v[i] = f64::from_le_bytes(
+                        buf[offset + i * w..offset + (i + 1) * w]
+                            .try_into()
+                            .unwrap_or([0; 8]),
+                    );
+                }
+                Self::Vec4F64(v)
+            }
+            (naga::ScalarKind::Uint, 4, 2) => {
+                let mut v = [0u32; 2];
+                for i in 0..2 {
+                    v[i] = u32::from_le_bytes(
+                        buf[offset + i * w..offset + (i + 1) * w]
+                            .try_into()
+                            .unwrap_or([0; 4]),
+                    );
+                }
+                Self::Vec2U32(v)
+            }
             (naga::ScalarKind::Uint, 4, 3) => {
                 let mut v = [0u32; 3];
                 for i in 0..3 {
@@ -262,6 +340,50 @@ impl Value {
                     );
                 }
                 Self::Vec3U32(v)
+            }
+            (naga::ScalarKind::Uint, 4, 4) => {
+                let mut v = [0u32; 4];
+                for i in 0..4 {
+                    v[i] = u32::from_le_bytes(
+                        buf[offset + i * w..offset + (i + 1) * w]
+                            .try_into()
+                            .unwrap_or([0; 4]),
+                    );
+                }
+                Self::Vec4U32(v)
+            }
+            (naga::ScalarKind::Sint, 4, 2) => {
+                let mut v = [0i32; 2];
+                for i in 0..2 {
+                    v[i] = i32::from_le_bytes(
+                        buf[offset + i * w..offset + (i + 1) * w]
+                            .try_into()
+                            .unwrap_or([0; 4]),
+                    );
+                }
+                Self::Vec2I32(v)
+            }
+            (naga::ScalarKind::Sint, 4, 3) => {
+                let mut v = [0i32; 3];
+                for i in 0..3 {
+                    v[i] = i32::from_le_bytes(
+                        buf[offset + i * w..offset + (i + 1) * w]
+                            .try_into()
+                            .unwrap_or([0; 4]),
+                    );
+                }
+                Self::Vec3I32(v)
+            }
+            (naga::ScalarKind::Sint, 4, 4) => {
+                let mut v = [0i32; 4];
+                for i in 0..4 {
+                    v[i] = i32::from_le_bytes(
+                        buf[offset + i * w..offset + (i + 1) * w]
+                            .try_into()
+                            .unwrap_or([0; 4]),
+                    );
+                }
+                Self::Vec4I32(v)
             }
             _ => Self::U32(0),
         }

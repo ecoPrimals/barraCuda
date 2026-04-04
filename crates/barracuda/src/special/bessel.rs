@@ -242,27 +242,71 @@ pub fn bessel_k0(x: f64) -> f64 {
     }
 }
 
-/// Compute J₀ for a batch of values (CPU path).
+/// Compute J₀ for a batch of values.
+///
+/// With `cpu-shader`, dispatches through `bessel_j0_f64.wgsl` via naga-exec.
+/// The native Rust fallback is deprecated and will be removed in 0.5.0.
 #[must_use]
 pub fn bessel_j0_batch(x: &[f64]) -> Vec<f64> {
+    #[cfg(feature = "cpu-shader")]
+    {
+        let wgsl = include_str!("../shaders/special/bessel_j0_f64.wgsl");
+        if let Ok(out) = crate::unified_hardware::shader_batch_unary_f64_with_size(wgsl, "main", x)
+        {
+            return out;
+        }
+    }
     x.iter().map(|&v| bessel_j0(v)).collect()
 }
 
-/// Compute J₁ for a batch of values (CPU path).
+/// Compute J₁ for a batch of values.
+///
+/// With `cpu-shader`, dispatches through `bessel_j1_f64.wgsl` via naga-exec.
+/// The native Rust fallback is deprecated and will be removed in 0.5.0.
 #[must_use]
 pub fn bessel_j1_batch(x: &[f64]) -> Vec<f64> {
+    #[cfg(feature = "cpu-shader")]
+    {
+        let wgsl = include_str!("../shaders/special/bessel_j1_f64.wgsl");
+        if let Ok(out) = crate::unified_hardware::shader_batch_unary_f64_with_size(wgsl, "main", x)
+        {
+            return out;
+        }
+    }
     x.iter().map(|&v| bessel_j1(v)).collect()
 }
 
-/// Compute I₀ for a batch of values (CPU path).
+/// Compute I₀ for a batch of values.
+///
+/// With `cpu-shader`, dispatches through `bessel_i0_f64.wgsl` via naga-exec.
+/// The native Rust fallback is deprecated and will be removed in 0.5.0.
 #[must_use]
 pub fn bessel_i0_batch(x: &[f64]) -> Vec<f64> {
+    #[cfg(feature = "cpu-shader")]
+    {
+        let wgsl = include_str!("../shaders/special/bessel_i0_f64.wgsl");
+        if let Ok(out) = crate::unified_hardware::shader_batch_unary_f64_with_size(wgsl, "main", x)
+        {
+            return out;
+        }
+    }
     x.iter().map(|&v| bessel_i0(v)).collect()
 }
 
-/// Compute K₀ for a batch of values (CPU path).
+/// Compute K₀ for a batch of values.
+///
+/// With `cpu-shader`, dispatches through `bessel_k0_f64.wgsl` via naga-exec.
+/// The native Rust fallback is deprecated and will be removed in 0.5.0.
 #[must_use]
 pub fn bessel_k0_batch(x: &[f64]) -> Vec<f64> {
+    #[cfg(feature = "cpu-shader")]
+    {
+        let wgsl = include_str!("../shaders/special/bessel_k0_f64.wgsl");
+        if let Ok(out) = crate::unified_hardware::shader_batch_unary_f64_with_size(wgsl, "main", x)
+        {
+            return out;
+        }
+    }
     x.iter().map(|&v| bessel_k0(v)).collect()
 }
 

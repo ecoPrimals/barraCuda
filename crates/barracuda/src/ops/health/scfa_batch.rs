@@ -6,6 +6,7 @@
 //! Absorbed from healthSpring V19 (Exp079, Exp085).
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -66,7 +67,7 @@ impl ScfaBatchGpu {
         let out_buf = self.device.create_buffer_f64(n * 3)?;
         let params_buf = self.device.create_uniform_buffer("scfa:params", &params);
 
-        let wg_count = (n as u32).div_ceil(256);
+        let wg_count = (n as u32).div_ceil(WORKGROUP_SIZE_1D);
 
         crate::device::compute_pipeline::ComputeDispatch::new(&self.device, "scfa_batch")
             .shader(SHADER, "main")

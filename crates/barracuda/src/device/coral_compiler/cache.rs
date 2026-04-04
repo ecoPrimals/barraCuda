@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Native binary cache for coralReef-compiled GPU binaries.
+//! Native binary cache for GPU binaries from a shader compiler primal
+//! (discovered via the `shader.compile` capability).
 
 use super::types::CoralBinary;
 
-/// Cache of native GPU binaries produced by coralReef, keyed by
+/// Cache of native GPU binaries returned by the discovered compiler, keyed by
 /// (blake3 hash of shader source, target arch).
 static NATIVE_BINARY_CACHE: std::sync::LazyLock<
     std::sync::RwLock<std::collections::HashMap<(String, String), CoralBinary>>,

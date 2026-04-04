@@ -6,6 +6,7 @@
 //! Absorbed from healthSpring V19 (Exp082, Exp085).
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -71,7 +72,7 @@ impl BeatClassifyGpu {
         let out_buf = self.device.create_buffer_f64((n_beats as usize) * 2)?;
         let params_buf = self.device.create_uniform_buffer("beats:params", &params);
 
-        let wg_count = n_beats.div_ceil(256);
+        let wg_count = n_beats.div_ceil(WORKGROUP_SIZE_1D);
 
         crate::device::compute_pipeline::ComputeDispatch::new(&self.device, "beat_classify")
             .shader(SHADER, "main")

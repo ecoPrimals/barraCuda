@@ -46,7 +46,6 @@ bytemuck = { version = "1.25", features = ["derive"] }
 naga = { version = "28", features = ["wgsl-in", "wgsl-out", "spv-out"] }
 
 # Numerics
-num-traits = "0.2"
 rayon = "1.8"
 rand = "0.9"
 

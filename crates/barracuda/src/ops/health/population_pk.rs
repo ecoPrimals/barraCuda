@@ -8,6 +8,7 @@
 //! Absorbed from healthSpring V44 (March 2026).
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -65,7 +66,7 @@ impl PopulationPkGpu {
         let out_buf = self.device.create_buffer_f64(n)?;
         let params_buf = self.device.create_uniform_buffer("pop_pk:params", &params);
 
-        let wg_count = config.n_patients.div_ceil(256);
+        let wg_count = config.n_patients.div_ceil(WORKGROUP_SIZE_1D);
         let shader = format!("{PRNG}\n{SHADER_BODY}");
 
         crate::device::compute_pipeline::ComputeDispatch::new(&self.device, "population_pk")

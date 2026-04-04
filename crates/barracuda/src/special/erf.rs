@@ -121,17 +121,85 @@ pub fn erfc(x: f64) -> f64 {
     }
 }
 
-/// Compute erf for a batch of values (CPU path).
+#[cfg(feature = "cpu-shader")]
+const ERF_F64_WGSL: &str = r"
+@group(0) @binding(0) var<storage, read> input: array<f64>;
+@group(0) @binding(1) var<storage, read_write> output: array<f64>;
+
+@compute @workgroup_size(256)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = gid.x;
+    if idx >= arrayLength(&input) { return; }
+    let x_raw = input[idx];
+    var sign = 1.0;
+    var x = x_raw;
+    if x < 0.0 { sign = -1.0; x = -x; }
+    let p = 0.3275911;
+    let t = 1.0 / (1.0 + p * x);
+    let t2 = t * t; let t3 = t2 * t; let t4 = t3 * t; let t5 = t4 * t;
+    let poly = 0.254829592 * t + (-0.284496736) * t2 + 1.421413741 * t3
+        + (-1.453152027) * t4 + 1.061405429 * t5;
+    output[idx] = sign * (1.0 - poly * exp(-x * x));
+}
+";
+
+/// Compute erf for a batch of values.
 ///
-/// For GPU batch processing, use `ErfGpu` from `barracuda::special`.
+/// With `cpu-shader`, dispatches through inline WGSL via naga-exec.
+/// The native Rust fallback is deprecated and will be removed in 0.5.0.
 #[must_use]
 pub fn erf_batch(x: &[f64]) -> Vec<f64> {
+    #[cfg(feature = "cpu-shader")]
+    {
+        if let Ok(out) = crate::unified_hardware::shader_batch_unary_f64(ERF_F64_WGSL, "main", x) {
+            return out;
+        }
+    }
     x.iter().map(|&v| erf(v)).collect()
 }
 
-/// Compute erfc for a batch of values (CPU path).
+#[cfg(feature = "cpu-shader")]
+const ERFC_F64_WGSL: &str = r"
+@group(0) @binding(0) var<storage, read> input: array<f64>;
+@group(0) @binding(1) var<storage, read_write> output: array<f64>;
+
+@compute @workgroup_size(256)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = gid.x;
+    if idx >= arrayLength(&input) { return; }
+    let x = input[idx];
+    if x == 0.0 { output[idx] = 1.0; return; }
+    if x > 0.0 {
+        let p = 0.3275911;
+        let t = 1.0 / (1.0 + p * x);
+        let t2 = t * t; let t3 = t2 * t; let t4 = t3 * t; let t5 = t4 * t;
+        let poly = 0.254829592 * t + (-0.284496736) * t2 + 1.421413741 * t3
+            + (-1.453152027) * t4 + 1.061405429 * t5;
+        output[idx] = poly * exp(-x * x);
+    } else {
+        let ax = -x;
+        let p = 0.3275911;
+        let t = 1.0 / (1.0 + p * ax);
+        let t2 = t * t; let t3 = t2 * t; let t4 = t3 * t; let t5 = t4 * t;
+        let poly = 0.254829592 * t + (-0.284496736) * t2 + 1.421413741 * t3
+            + (-1.453152027) * t4 + 1.061405429 * t5;
+        output[idx] = 1.0 + (1.0 - poly * exp(-ax * ax));
+    }
+}
+";
+
+/// Compute erfc for a batch of values.
+///
+/// With `cpu-shader`, dispatches through inline WGSL via naga-exec.
+/// The native Rust fallback is deprecated and will be removed in 0.5.0.
 #[must_use]
 pub fn erfc_batch(x: &[f64]) -> Vec<f64> {
+    #[cfg(feature = "cpu-shader")]
+    {
+        if let Ok(out) = crate::unified_hardware::shader_batch_unary_f64(ERFC_F64_WGSL, "main", x) {
+            return out;
+        }
+    }
     x.iter().map(|&v| erfc(v)).collect()
 }
 

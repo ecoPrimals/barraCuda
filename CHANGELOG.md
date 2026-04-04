@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.11] — 2026-04-04
 
+### Changed — Sprint 29: Deep Debt Cleanup & Shader-First Evolution (Apr 4 2026)
+
+- **Workgroup size constant unification**: Magic `256` replaced with `WORKGROUP_SIZE_1D` constant
+  across 15+ files spanning shader dispatch, CPU executor, stats (jackknife), health (biosignal),
+  numerical (gradient), ops (perlin_noise, population_pk, hill_dose_response, michaelis_menten_batch,
+  scfa_batch, beat_classify, rop_force_accum). Single source of truth for workgroup sizing.
+- **Dependency cleanup**: Removed unused `num-traits` from workspace `Cargo.toml` (was declared but
+  never consumed by any crate). Audited tarpc features — `rand` 0.8 and OpenTelemetry are mandatory
+  upstream deps, documented as known issue.
+- **Smart refactor — naga-exec executor**: `executor.rs` 1,097 → 932 lines. Vector operation helpers
+  (`access_index_val`, `splat_value`, `swizzle_value`, component extractors) extracted to focused
+  `vector_ops.rs` module (174 lines). All 16 naga-exec tests pass.
+- **Smart refactor — eval_math decomposition**: Monolithic 264-line `eval_math` function decomposed
+  into `math_f32`, `math_f64`, `math_u32`, `math_i32` dispatch functions + shared `require_arg`
+  helper. `eval.rs` 629 → 527 lines. `#[expect(clippy::too_many_lines)]` suppression eliminated.
+- **Error handling evolution**: `wgpu_backend.rs` `dispatch_compute_batch` `expect("len == 1 checked
+  above")` evolved to safe `if let [_]` pattern + `Result` propagation.
+- **Documentation accuracy**: `nautilus/readout.rs` misleading "no-op when GPU disabled" doc corrected
+  to describe actual CPU ridge regression training path.
+- **Capability-based discovery docs**: All `coralReef` documentation in coral_compiler module evolved
+  to describe capability-based discovery (`shader.compile`) rather than naming specific primals.
+- **Namespace constants**: Hardcoded `"biomeos"` and `"ecoPrimals"` strings consolidated to shared
+  named constants (`ECOSYSTEM_SOCKET_DIR` made pub, `DEFAULT_ECOPRIMALS_DISCOVERY_DIR` created).
+- **Perlin noise suppression cleanup**: 7 identical `#[expect(cast_possible_truncation, cast_sign_loss)]`
+  blocks consolidated into 2 helper functions (`perm_index`, `perm_index_f32`).
+
 ### Changed — Sprint 28: Zero-Copy ESN, Capability Naming & Error Evolution (Apr 4 2026)
 
 - **Zero-copy ESN matmul**: 5 unnecessary `Tensor::clone().matmul()` in `esn_v2/model.rs` evolved to

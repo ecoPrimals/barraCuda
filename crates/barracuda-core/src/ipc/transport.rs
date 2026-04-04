@@ -51,7 +51,7 @@ const DEFAULT_FAMILY_ID: &str = "default";
 /// Ecosystem socket namespace per `PRIMAL_IPC_PROTOCOL.md`.
 ///
 /// All primals place Unix sockets under `$XDG_RUNTIME_DIR/{ECOSYSTEM_SOCKET_DIR}/`.
-const ECOSYSTEM_SOCKET_DIR: &str = "biomeos";
+pub const ECOSYSTEM_SOCKET_DIR: &str = "biomeos";
 
 /// Resolve the TCP bind address from the primal's own configuration.
 ///

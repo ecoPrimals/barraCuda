@@ -11,6 +11,7 @@
 pub(crate) mod cpu_executor;
 mod discovery;
 mod scheduler;
+pub mod shader_dispatch;
 mod traits;
 mod transfer;
 mod types;
@@ -20,6 +21,11 @@ mod types;
 
 pub use discovery::HardwareDiscovery;
 pub use scheduler::ComputeScheduler;
+#[cfg(feature = "cpu-shader")]
+pub use shader_dispatch::{
+    CpuShaderDispatch, shader_batch_unary_f64, shader_batch_unary_f64_with_size,
+};
+pub use shader_dispatch::{ShaderBinding, ShaderDispatch};
 pub use traits::{ComputeExecutor, TensorStorage};
 pub use transfer::{
     BandwidthTier, GPU_DISPATCH_OVERHEAD_US, MixedSubstrate, PCIE_DMA_LATENCY_US,

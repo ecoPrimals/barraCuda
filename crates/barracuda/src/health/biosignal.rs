@@ -55,6 +55,23 @@ pub fn convolve_1d(signal: &[f64], kernel: &[f64]) -> Vec<f64> {
     if kernel.is_empty() || signal.len() < kernel.len() {
         return vec![];
     }
+
+    #[cfg(feature = "cpu-shader")]
+    {
+        if let Ok(out) = convolve_1d_shader(signal, kernel) {
+            return out;
+        }
+    }
+
+    #[expect(deprecated, reason = "fallback retained until cpu-shader is default")]
+    convolve_1d_cpu(signal, kernel)
+}
+
+#[deprecated(
+    since = "0.4.0",
+    note = "use `cpu-shader` feature for WGSL-backed convolve_1d"
+)]
+fn convolve_1d_cpu(signal: &[f64], kernel: &[f64]) -> Vec<f64> {
     let out_len = signal.len() - kernel.len() + 1;
     (0..out_len)
         .map(|i| {
@@ -65,6 +82,63 @@ pub fn convolve_1d(signal: &[f64], kernel: &[f64]) -> Vec<f64> {
                 .sum()
         })
         .collect()
+}
+
+#[cfg(feature = "cpu-shader")]
+fn convolve_1d_shader(signal: &[f64], kernel: &[f64]) -> crate::error::Result<Vec<f64>> {
+    use crate::unified_hardware::{CpuShaderDispatch, ShaderBinding, ShaderDispatch};
+
+    let wgsl = include_str!("../shaders/health/convolve_1d_f64.wgsl");
+    let dispatcher = CpuShaderDispatch::new();
+    let out_len = signal.len() - kernel.len() + 1;
+
+    let mut sig_buf: Vec<u8> = signal.iter().flat_map(|v| v.to_le_bytes()).collect();
+    let mut kern_buf: Vec<u8> = kernel.iter().flat_map(|v| v.to_le_bytes()).collect();
+    let mut out_buf = vec![0u8; out_len * 8];
+
+    // Params { signal_len: u32, kernel_len: u32 } = 8 bytes
+    let mut params_buf = vec![0u8; 8];
+    params_buf[..4].copy_from_slice(&(signal.len() as u32).to_le_bytes());
+    params_buf[4..8].copy_from_slice(&(kernel.len() as u32).to_le_bytes());
+
+    let mut bindings = vec![
+        ShaderBinding {
+            group: 0,
+            binding: 0,
+            data: &mut sig_buf,
+            read_only: true,
+        },
+        ShaderBinding {
+            group: 0,
+            binding: 1,
+            data: &mut kern_buf,
+            read_only: true,
+        },
+        ShaderBinding {
+            group: 0,
+            binding: 2,
+            data: &mut out_buf,
+            read_only: false,
+        },
+        ShaderBinding {
+            group: 0,
+            binding: 3,
+            data: &mut params_buf,
+            read_only: true,
+        },
+    ];
+
+    let workgroups = (
+        (out_len as u32).div_ceil(crate::device::capabilities::WORKGROUP_SIZE_1D),
+        1,
+        1,
+    );
+    dispatcher.dispatch_wgsl(wgsl, "main", &mut bindings, workgroups)?;
+
+    Ok(out_buf
+        .chunks_exact(8)
+        .map(|c| f64::from_le_bytes([c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]]))
+        .collect())
 }
 
 // ── EDA (Electrodermal Activity) ─────────────────────────────────────────────

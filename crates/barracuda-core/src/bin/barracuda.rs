@@ -560,14 +560,11 @@ fn notify_systemd_ready() {
     }
 }
 
-/// Ecosystem socket namespace per `PRIMAL_IPC_PROTOCOL.md`.
-const ECOSYSTEM_SOCKET_DIR: &str = "biomeos";
-
 /// The shared discovery directory for all ecoPrimals.
 fn discovery_dir() -> Option<std::path::PathBuf> {
-    std::env::var("XDG_RUNTIME_DIR")
-        .ok()
-        .map(|d| std::path::PathBuf::from(d).join(ECOSYSTEM_SOCKET_DIR))
+    std::env::var("XDG_RUNTIME_DIR").ok().map(|d| {
+        std::path::PathBuf::from(d).join(barracuda_core::ipc::transport::ECOSYSTEM_SOCKET_DIR)
+    })
 }
 
 /// Resolve the server address for the `client` subcommand.

@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! coralReef shader compiler IPC client.
+//! Shader compiler IPC client — discovers a primal via the `shader.compile` capability.
 //!
-//! Discovers and connects to the coralReef primal's JSON-RPC 2.0 endpoint,
-//! providing native GPU binary compilation for NVIDIA (SM70+) and AMD (RDNA2+)
-//! architectures.
+//! Connects to a discovered shader compiler primal's JSON-RPC 2.0 endpoint
+//! (not a hardcoded primal name), providing native GPU binary compilation for
+//! NVIDIA (SM70+) and AMD (RDNA2+) architectures. **coralReef** is the reference
+//! implementation of this wire protocol.
 //!
-//! ## IPC Contract (coralReef Phase 10 + Phase 3 CPU)
+//! ## IPC Contract (Phase 10 + Phase 3 CPU; coralReef reference)
 //!
 //! | Method | Purpose |
 //! |--------|---------|
@@ -24,7 +25,7 @@
 //! - [`cache`] — native binary cache
 //! - `jsonrpc` (internal) — low-level JSON-RPC 2.0 transport
 //!
-//! Fully optional: if coralReef is unavailable, all methods return `None`
+//! Fully optional: if no shader compiler primal is discovered, all methods return `None`
 //! and the standard wgpu/SovereignCompiler path is used.
 
 pub mod cache;
@@ -36,7 +37,8 @@ pub use cache::{
     cache_native_binary, cached_native_binary, cached_native_binary_any_arch, shader_hash,
 };
 pub use discovery::{
-    discover_cpu_shader_compiler, discover_shader_compiler, discover_shader_validator,
+    DEFAULT_ECOPRIMALS_DISCOVERY_DIR, ECOSYSTEM_SOCKET_NAMESPACE, discover_cpu_shader_compiler,
+    discover_shader_compiler, discover_shader_validator,
 };
 pub use types::{
     AdapterDescriptor, BufferBinding, CompileCpuRequest, CompileCpuResponse, CoralBinary,
@@ -45,7 +47,7 @@ pub use types::{
     ValidationTolerance,
 };
 
-/// Synchronous check: can we discover a coralReef shader-compiler endpoint?
+/// Synchronous check: can we discover a shader-compiler endpoint (`shader.compile`)?
 ///
 /// Tries env-based, capability-file-based, and (if configured) port-based
 /// discovery without blocking on a full compile round-trip.  Used by
@@ -77,7 +79,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use types::{CompileRequest, CompileResponse, CompileWgslRequest, PrecisionAdvice};
 
-/// Connection state for the coralReef IPC client.
+/// Connection state for the shader compiler IPC client.
 #[derive(Debug)]
 enum ConnectionState {
     /// Haven't tried connecting yet.
@@ -88,9 +90,9 @@ enum ConnectionState {
     Unavailable,
 }
 
-/// IPC client for the coralReef shader compiler primal.
+/// IPC client for a shader compiler primal (discovered by `shader.compile` capability).
 ///
-/// Lazily discovers coralReef on first use. Thread-safe via interior `RwLock`
+/// Lazily discovers the endpoint on first use. Thread-safe via interior `RwLock`
 /// — concurrent compile requests share the read lock while discovery and
 /// reset take the write lock.
 #[derive(Debug)]
@@ -107,9 +109,9 @@ impl CoralCompiler {
         }
     }
 
-    /// Attempt to compile WGSL to a native GPU binary via coralReef.
+    /// Attempt to compile WGSL to a native GPU binary via the discovered compiler.
     ///
-    /// Returns `None` if coralReef is unavailable or compilation fails.
+    /// Returns `None` if no compiler is available or compilation fails.
     /// The caller should fall back to the standard wgpu path.
     pub async fn compile_wgsl(
         &self,
@@ -123,7 +125,7 @@ impl CoralCompiler {
 
     /// Compile pre-assembled SPIR-V words to a native binary.
     ///
-    /// Returns `None` if coralReef is unavailable or compilation fails.
+    /// Returns `None` if no compiler is available or compilation fails.
     pub async fn compile_spirv(
         &self,
         spirv_words: &[u32],
@@ -157,14 +159,14 @@ impl CoralCompiler {
         }
     }
 
-    /// Compile WGSL directly via coralReef's Phase 10 `shader.compile.wgsl`.
+    /// Compile WGSL directly via Phase 10 `shader.compile.wgsl`.
     ///
-    /// Unlike [`compile_wgsl`], this sends raw WGSL to coralReef for
+    /// Unlike [`compile_wgsl`], this sends raw WGSL to the remote compiler for
     /// server-side compilation, avoiding the local naga WGSL → SPIR-V step.
-    /// coralReef handles the full pipeline: WGSL → IR → native binary.
+    /// The compiler handles the full pipeline: WGSL → IR → native binary.
     ///
     /// Falls back to the SPIR-V path if the direct endpoint is unavailable
-    /// (older coralReef versions).
+    /// (older implementations).
     pub async fn compile_wgsl_direct(
         &self,
         wgsl: &str,
@@ -209,7 +211,7 @@ impl CoralCompiler {
     /// Compile WGSL with precision routing advice for informed lowering.
     ///
     /// Extends [`compile_wgsl_direct`] with `PrecisionAdvice` metadata that
-    /// tells coralReef whether f64 transcendental lowering is needed and
+    /// tells the remote compiler whether f64 transcendental lowering is needed and
     /// which physics domain motivated the compilation.
     pub async fn compile_wgsl_with_advice(
         &self,
@@ -253,10 +255,10 @@ impl CoralCompiler {
         }
     }
 
-    /// Query supported GPU architectures from coralReef.
+    /// Query supported GPU architectures from the discovered compiler.
     ///
     /// Prefers the Phase 10 `shader.compile.capabilities` endpoint, falling
-    /// back to `shader.compile.status` for older coralReef versions that
+    /// back to `shader.compile.status` for older implementations that
     /// embed arch info in the health response.
     pub async fn supported_archs(&self) -> Option<Vec<String>> {
         if let Some(archs) = self.capabilities().await {
@@ -267,7 +269,7 @@ impl CoralCompiler {
 
     /// Query supported architectures via `shader.compile.capabilities`.
     ///
-    /// Returns `None` if coralReef is unavailable or the endpoint is not
+    /// Returns `None` if no compiler is available or the endpoint is not
     /// supported (pre-Phase 10 versions).
     pub async fn capabilities(&self) -> Option<Vec<String>> {
         let addr = self.ensure_connected().await?;
@@ -279,7 +281,7 @@ impl CoralCompiler {
     /// Query structured capabilities including f64 transcendental polyfill info.
     ///
     /// Returns the full `CoralCapabilitiesResponse` with per-op f64 lowering
-    /// availability. Falls back to `None` if coralReef is unavailable or the
+    /// availability. Falls back to `None` if no compiler is available or the
     /// endpoint returns the legacy flat arch list format.
     pub async fn capabilities_structured(&self) -> Option<CoralCapabilitiesResponse> {
         let addr = self.ensure_connected().await?;
@@ -288,17 +290,17 @@ impl CoralCompiler {
             .ok()
     }
 
-    /// Query whether coralReef can provide f64 transcendental lowering.
+    /// Query whether the discovered compiler can provide f64 transcendental lowering.
     ///
     /// Convenience wrapper over [`capabilities_structured`] that returns `true`
-    /// when coralReef reports full composite lowering for all f64 transcendentals.
+    /// when the endpoint reports full composite lowering for all f64 transcendentals.
     pub async fn has_f64_lowering(&self) -> bool {
         self.capabilities_structured()
             .await
             .is_some_and(|c| c.f64_transcendental_capabilities.has_full_lowering())
     }
 
-    /// Check if coralReef is reachable and healthy via `shader.compile.status`.
+    /// Check if the discovered compiler is reachable and healthy via `shader.compile.status`.
     pub async fn health(&self) -> Option<HealthResponse> {
         let addr = self.ensure_connected().await?;
         jsonrpc_call::<(), HealthResponse>(&addr, "shader.compile.status", &())
@@ -310,18 +312,18 @@ impl CoralCompiler {
     // Phase 3: CPU compilation, execution, and validation
     // ========================================================================
 
-    /// Whether coralReef supports CPU shader execution (`shader.execute.cpu`).
+    /// Whether the discovered compiler supports CPU shader execution (`shader.execute.cpu`).
     ///
     /// Queries the structured capabilities endpoint and checks for the
-    /// `supports_cpu_execution` flag. Returns `false` if coralReef is
-    /// unavailable or doesn't advertise CPU capabilities.
+    /// `supports_cpu_execution` flag. Returns `false` if no compiler is
+    /// available or it doesn't advertise CPU capabilities.
     pub async fn supports_cpu_execution(&self) -> bool {
         self.capabilities_structured()
             .await
             .is_some_and(|c| c.supports_cpu_execution)
     }
 
-    /// Whether coralReef supports shader validation (`shader.validate`).
+    /// Whether the discovered compiler supports shader validation (`shader.validate`).
     pub async fn supports_validation(&self) -> bool {
         self.capabilities_structured()
             .await
@@ -330,8 +332,8 @@ impl CoralCompiler {
 
     /// Compile WGSL to a native CPU binary via `shader.compile.cpu`.
     ///
-    /// Returns `None` if coralReef is unavailable or doesn't support CPU
-    /// compilation. The binary is a native executable for the specified
+    /// Returns `None` if no compiler is available or CPU compilation is unsupported.
+    /// The binary is a native executable for the specified
     /// architecture (`x86_64`, `aarch64`, or `auto`-detect).
     pub async fn compile_cpu(
         &self,
@@ -363,10 +365,10 @@ impl CoralCompiler {
 
     /// Execute a WGSL shader on CPU via `shader.execute.cpu`.
     ///
-    /// Compiles and runs the shader in one IPC call. coralReef handles
+    /// Compiles and runs the shader in one IPC call. The remote compiler handles
     /// compilation, dispatch simulation, and buffer read-back.
     ///
-    /// Returns `None` if coralReef is unavailable or execution fails.
+    /// Returns `None` if no compiler is available or execution fails.
     pub async fn execute_cpu(
         &self,
         request: &types::ExecuteCpuRequest,
@@ -389,11 +391,11 @@ impl CoralCompiler {
 
     /// Validate a WGSL shader's output against expected values via `shader.validate`.
     ///
-    /// coralReef executes the shader on CPU and compares each output element
+    /// The compiler executes the shader on CPU and compares each output element
     /// against the expected values with the specified tolerances. Returns a
     /// validation report with pass/fail status and per-element mismatches.
     ///
-    /// Returns `None` if coralReef is unavailable or the validation endpoint
+    /// Returns `None` if no compiler is available or the validation endpoint
     /// is not supported.
     pub async fn validate_shader(
         &self,
@@ -415,7 +417,7 @@ impl CoralCompiler {
         }
     }
 
-    /// Ensure we have a connection, discovering coralReef if needed.
+    /// Ensure we have a connection, running capability-based discovery if needed.
     ///
     /// Fast path (read lock): returns the cached address if already connected.
     /// Slow path (write lock): performs discovery on first use.
@@ -464,11 +466,11 @@ impl Default for CoralCompiler {
     }
 }
 
-/// Global coralReef compiler client (lazy singleton like `GLOBAL_CACHE`).
+/// Global shader compiler IPC client (lazy singleton like `GLOBAL_CACHE`).
 pub static GLOBAL_CORAL: std::sync::LazyLock<CoralCompiler> =
     std::sync::LazyLock::new(CoralCompiler::new);
 
-/// Get a reference to the global coralReef compiler client.
+/// Get a reference to the global shader compiler client.
 ///
 /// Lazily initialized on first access. Thread-safe.
 #[must_use]
@@ -476,19 +478,19 @@ pub fn global_coral() -> &'static CoralCompiler {
     &GLOBAL_CORAL
 }
 
-/// Lightweight health probe for coralReef availability.
+/// Lightweight health probe for a discovered shader compiler.
 ///
 /// Uses the global singleton — does not create a new `CoralCompiler` instance.
-/// Returns `true` if coralReef is reachable and reports healthy status.
+/// Returns `true` if the endpoint is reachable and reports healthy status.
 pub async fn probe_health() -> bool {
     GLOBAL_CORAL.health().await.is_some()
 }
 
-/// Fire-and-forget coralReef compilation using adapter info.
+/// Fire-and-forget compilation using adapter info (discovered `shader.compile` endpoint).
 ///
-/// Spawns a background task that queries coralReef for the compilation target
+/// Spawns a background task that queries the compiler for the compilation target
 /// matching this adapter, then compiles via IPC and caches the result.
-/// barraCuda does not embed per-generation ISA knowledge — coralReef determines
+/// barraCuda does not embed per-generation ISA knowledge — the remote compiler determines
 /// the ISA target from the adapter descriptor.
 pub fn spawn_coral_compile_for_adapter(
     optimized_wgsl: &str,
@@ -533,9 +535,9 @@ pub fn spawn_coral_compile_for_adapter(
     });
 }
 
-/// Select the best compilation target from coralReef's supported architectures
+/// Select the best compilation target from the compiler's supported architectures
 /// for the given adapter. Uses ISA family prefix matching (sm_ for NVIDIA,
-/// gfx for AMD) — the per-generation version knowledge lives in coralReef.
+/// gfx for AMD) — the per-generation version knowledge lives in the remote compiler.
 fn best_target_for_adapter(
     supported_archs: &[String],
     adapter: &types::AdapterDescriptor,
@@ -548,7 +550,7 @@ fn best_target_for_adapter(
         _ => return None,
     };
 
-    // From coralReef's supported list, find all matching the vendor's ISA family.
+    // From the compiler's supported list, find all matching the vendor's ISA family.
     // Pick the lowest (most compatible) version — GPU hardware is forward-compatible
     // with binaries compiled for earlier ISA revisions.
     supported_archs

@@ -1,5 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! CPU op dispatch - `MathOp` execution logic
+//! CPU op dispatch — `MathOp` execution logic.
+//!
+//! Currently dispatches f32 tensor ops via native Rust. Once `cpu-shader`
+//! matures, these match arms will delegate to WGSL via `CpuShaderDispatch`,
+//! mirroring the f64 library migration already completed in Phase C.
+//!
+//! Ops with existing WGSL twins (candidates for shader migration):
+//! `ReLU`, `Sigmoid`, `GELU`, `Tanh`, `Exp`, `Log`, `Sqrt`, `Sin`, `Cos`,
+//! `Tan`, `Add`, `Sub`, `Mul`, `Div`, `Pow`, `MatMul`, `Softmax`.
 
 use super::executor::CpuExecutor;
 use crate::error::Result;

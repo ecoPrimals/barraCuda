@@ -17,6 +17,8 @@
 //! 2. For each pole: dispatch fused force+atomicAdd shader (independent, no barriers)
 //! 3. Single conversion dispatch: momentum += f64(accum) / scale
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
+
 /// Fixed-point scale factor for i32 atomic accumulation (2^20).
 ///
 /// Provides ~6 decimal digits of precision, sufficient for force
@@ -78,7 +80,7 @@ pub const fn force_workgroups(volume: u32) -> u32 {
 #[inline]
 #[must_use]
 pub const fn convert_workgroups(n_values: u32) -> u32 {
-    n_values.div_ceil(256)
+    n_values.div_ceil(WORKGROUP_SIZE_1D)
 }
 
 #[cfg(test)]

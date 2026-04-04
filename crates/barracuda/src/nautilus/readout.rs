@@ -95,7 +95,9 @@ impl LinearReadout {
         Ok(if n > 0 { mse / (n * no) as f64 } else { 0.0 })
     }
 
-    /// Train (no-op when gpu feature disabled; use ridge_regression fallback).
+    /// Train via ridge regression on CPU using [`crate::linalg::ridge_regression`]
+    /// (the `gpu` build uses a Gram-matrix + [`solve_f64_cpu`](crate::linalg::solve_f64_cpu) path instead).
+    /// Returns mean squared error over the training set.
     /// # Errors
     /// Returns [`Err`] if ridge regression fails (e.g. degenerate data).
     #[cfg(not(feature = "gpu"))]

@@ -56,31 +56,90 @@ pub fn gradient_1d(f: &[f64], dx: f64) -> Vec<f64> {
         return vec![0.0];
     }
 
+    #[cfg(feature = "cpu-shader")]
+    {
+        if let Ok(out) = gradient_1d_shader(f, dx) {
+            return out;
+        }
+    }
+
+    #[expect(deprecated, reason = "fallback retained until cpu-shader is default")]
+    gradient_1d_cpu(f, dx)
+}
+
+#[deprecated(
+    since = "0.4.0",
+    note = "use `cpu-shader` feature for WGSL-backed gradient_1d"
+)]
+fn gradient_1d_cpu(f: &[f64], dx: f64) -> Vec<f64> {
+    let n = f.len();
     let mut grad = vec![0.0; n];
 
     if n == 2 {
-        // Only 2 points: 1st-order forward/backward (only option)
         grad[0] = (f[1] - f[0]) / dx;
         grad[1] = (f[1] - f[0]) / dx;
         return grad;
     }
 
-    // n >= 3: Use 2nd-order stencils at boundaries (matches numpy.gradient)
-
-    // 2nd-order forward difference at start
-    // Derived from Taylor expansion: f'(x) ≈ (-3f(x) + 4f(x+h) - f(x+2h)) / (2h)
     grad[0] = ((-3.0f64).mul_add(f[0], 4.0 * f[1]) - f[2]) / (2.0 * dx);
 
-    // Central difference for interior points (2nd-order)
     for i in 1..n - 1 {
         grad[i] = (f[i + 1] - f[i - 1]) / (2.0 * dx);
     }
 
-    // 2nd-order backward difference at end
-    // Derived from Taylor expansion: f'(x) ≈ (3f(x) - 4f(x-h) + f(x-2h)) / (2h)
     grad[n - 1] = (3.0f64.mul_add(f[n - 1], -(4.0 * f[n - 2])) + f[n - 3]) / (2.0 * dx);
 
     grad
+}
+
+#[cfg(feature = "cpu-shader")]
+fn gradient_1d_shader(f: &[f64], dx: f64) -> crate::error::Result<Vec<f64>> {
+    use crate::unified_hardware::{CpuShaderDispatch, ShaderBinding, ShaderDispatch};
+
+    let wgsl = include_str!("../shaders/numerical/gradient_1d_f64.wgsl");
+    let dispatcher = CpuShaderDispatch::new();
+    let n = f.len();
+
+    let mut f_buf: Vec<u8> = f.iter().flat_map(|v| v.to_le_bytes()).collect();
+    let mut out_buf = vec![0u8; n * 8];
+
+    // Params { n: u32, _pad: u32, dx: f64 } = 16 bytes
+    let mut params_buf = vec![0u8; 16];
+    params_buf[..4].copy_from_slice(&(n as u32).to_le_bytes());
+    params_buf[8..16].copy_from_slice(&dx.to_le_bytes());
+
+    let mut bindings = vec![
+        ShaderBinding {
+            group: 0,
+            binding: 0,
+            data: &mut f_buf,
+            read_only: true,
+        },
+        ShaderBinding {
+            group: 0,
+            binding: 1,
+            data: &mut out_buf,
+            read_only: false,
+        },
+        ShaderBinding {
+            group: 0,
+            binding: 2,
+            data: &mut params_buf,
+            read_only: true,
+        },
+    ];
+
+    let workgroups = (
+        (n as u32).div_ceil(crate::device::capabilities::WORKGROUP_SIZE_1D),
+        1,
+        1,
+    );
+    dispatcher.dispatch_wgsl(wgsl, "main", &mut bindings, workgroups)?;
+
+    Ok(out_buf
+        .chunks_exact(8)
+        .map(|c| f64::from_le_bytes([c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]]))
+        .collect())
 }
 
 #[cfg(test)]

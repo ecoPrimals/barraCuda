@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Wire types for the coralReef IPC protocol.
+//! Wire types for the shader compiler JSON-RPC protocol.
+//!
+//! Any primal discovered at runtime via the `shader.compile` capability (see
+//! [`crate::device::coral_compiler::discovery`]) may implement this contract;
+//! **coralReef** is the reference implementation and historically defined these payloads (`coralreef-core`).
 
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 
-/// Cached native binary produced by coralReef.
+/// Cached native binary from a shader compiler primal (discovered by the
+/// `shader.compile` capability).
 #[derive(Debug, Clone)]
 pub struct CoralBinary {
     /// Raw GPU binary (SM70+ native code).
@@ -24,29 +29,29 @@ pub(super) struct CompileRequest {
 
 /// WGSL direct compile request (Phase 10) — avoids local naga SPIR-V step.
 ///
-/// coralReef Phase 10 (`shader.compile.wgsl`) accepts raw WGSL and handles
-/// the full WGSL → IR → native binary pipeline server-side.
+/// Phase 10 (`shader.compile.wgsl`) accepts raw WGSL and handles the full
+/// WGSL → IR → native binary pipeline server-side (coralReef reference naming).
 ///
-/// `fp64_strategy` is the Phase 2 field aligned with coralReef's `Fp64Strategy`
-/// enum. `fp64_software` is kept for backward compatibility with Phase 1 servers.
+/// `fp64_strategy` is the Phase 2 field aligned with the reference compiler's
+/// `Fp64Strategy` enum. `fp64_software` is kept for backward compatibility with Phase 1 servers.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(super) struct CompileWgslRequest {
     pub wgsl_source: String,
     pub arch: String,
     pub opt_level: u32,
     pub fp64_software: bool,
-    /// Precision strategy hint for coralReef (Phase 2).
-    /// Maps to coralReef's `Fp64Strategy`: `"native"`, `"double_float"`, `"f32_only"`.
+    /// Precision strategy hint for the remote compiler (Phase 2).
+    /// Maps to the wire `Fp64Strategy`: `"native"`, `"double_float"`, `"f32_only"`.
     /// Ignored by Phase 1 servers that only read `fp64_software`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fp64_strategy: Option<String>,
     /// Adapter descriptor for arch-agnostic compilation (Phase 2).
-    /// When present, coralReef determines the ISA target from adapter info
+    /// When present, the shader compiler primal determines the ISA target from adapter info
     /// rather than requiring barraCuda to specify `arch` explicitly.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub adapter: Option<AdapterDescriptor>,
     /// Precision routing advice from barraCuda's `PrecisionBrain`.
-    /// Tells coralReef which precision tier was selected and whether
+    /// Tells the remote shader compiler which precision tier was selected and whether
     /// f64 transcendental lowering is needed.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub precision_advice: Option<PrecisionAdvice>,
@@ -54,7 +59,7 @@ pub(super) struct CompileWgslRequest {
 
 /// Precision routing advice carried in compile requests.
 ///
-/// Enables coralReef to make informed compilation decisions based on
+/// Enables the shader compiler primal to make informed compilation decisions based on
 /// barraCuda's hardware probe results and domain requirements.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrecisionAdvice {
@@ -69,15 +74,15 @@ pub struct PrecisionAdvice {
     pub domain: Option<String>,
 }
 
-/// Map a barraCuda `Precision` tier to coralReef's compilation strategy string.
+/// Map a barraCuda `Precision` tier to the remote compiler's strategy string.
 ///
-/// This is the interface between barraCuda's precision model and coralReef's
-/// compilation pipeline. barraCuda decides WHICH precision; coralReef decides
-/// HOW to compile it to hardware. toadStool routes to silicon.
+/// This is the interface between barraCuda's precision model and a shader compiler primal's
+/// compilation pipeline (discovered via `shader.compile`). barraCuda decides WHICH precision;
+/// the compiler decides HOW to compile it to hardware. toadStool routes to silicon.
 ///
-/// Strategy strings are the wire-protocol contract with coralReef.
-/// New tiers added here require corresponding support in coralReef's
-/// `CompileStrategy` dispatcher.
+/// Strategy strings are the wire-protocol contract with the compiler.
+/// New tiers added here require corresponding support in the reference
+/// `CompileStrategy` dispatcher (coralReef).
 #[must_use]
 pub fn precision_to_coral_strategy(
     precision: &crate::shaders::precision::Precision,
@@ -117,10 +122,10 @@ impl CompileResponse {
     }
 }
 
-/// Health response from coralReef.
+/// Health response from `shader.compile.status`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthResponse {
-    /// Primal name (e.g. `"coralReef"`)
+    /// Primal name as reported by the endpoint (e.g. a reference implementation may use `"coralReef"`).
     pub name: String,
     /// Version string
     pub version: String,
@@ -130,10 +135,10 @@ pub struct HealthResponse {
     pub supported_archs: Vec<String>,
 }
 
-/// f64 transcendental polyfill capabilities reported by coralReef.
+/// f64 transcendental polyfill capabilities from `shader.compile.capabilities`.
 ///
 /// Mirrors `coralreef-core::service::F64TranscendentalCapabilities`.
-/// Each field indicates whether coralReef can provide a software polyfill
+/// Each field indicates whether the shader compiler primal can provide a software polyfill
 /// for that operation via its sovereign compilation pipeline.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CoralF64Capabilities {
@@ -158,7 +163,7 @@ pub struct CoralF64Capabilities {
 }
 
 impl CoralF64Capabilities {
-    /// Whether coralReef can lower all f64 transcendentals (full polyfill).
+    /// Whether the compiler can lower all f64 transcendentals (full polyfill).
     #[must_use]
     pub fn has_full_lowering(&self) -> bool {
         self.sin
@@ -172,7 +177,7 @@ impl CoralF64Capabilities {
     }
 }
 
-/// Structured capabilities response from coralReef.
+/// Structured capabilities response from `shader.compile.capabilities`.
 ///
 /// Mirrors `coralreef-core::service::CompileCapabilitiesResponse`.
 /// Phase 3 adds CPU compilation and validation capabilities.
@@ -228,7 +233,7 @@ pub struct CompileCpuResponse {
 /// CPU execution request (`shader.execute.cpu`).
 ///
 /// Compile and execute a WGSL compute shader on the CPU in one IPC call.
-/// coralReef compiles the shader to native code, simulates the dispatch,
+/// The shader compiler primal compiles the shader to native code, simulates the dispatch,
 /// and returns the modified buffer contents.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExecuteCpuRequest {
@@ -341,9 +346,9 @@ pub struct ValidationMismatch {
 
 /// Adapter descriptor for IPC compile requests.
 ///
-/// Carries adapter identification to `coralReef` so it can determine the correct
+/// Carries adapter identification to the shader compiler primal so it can determine the correct
 /// ISA compilation target. `barraCuda` does not embed per-generation ISA knowledge
-/// — `coralReef` owns the adapter-to-ISA mapping.
+/// — the discovered compiler owns the adapter-to-ISA mapping.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdapterDescriptor {
     /// PCI vendor ID (e.g. `0x10DE` for NVIDIA, `0x1002` for AMD).

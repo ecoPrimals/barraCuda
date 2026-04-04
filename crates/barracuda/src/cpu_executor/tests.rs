@@ -26,7 +26,11 @@ async fn read_f32_output(storage: &dyn TensorStorage) -> Vec<f32> {
 #[test]
 fn test_cpu_executor_creation() {
     let cpu = CpuExecutor::new();
-    assert_eq!(cpu.name(), "CPU (Native Rust + SIMD)");
+    if cfg!(feature = "cpu-shader") {
+        assert_eq!(cpu.name(), "CPU (WGSL via naga-exec + Native Rust)");
+    } else {
+        assert_eq!(cpu.name(), "CPU (Native Rust + SIMD)");
+    }
     assert_eq!(cpu.hardware_type(), HardwareType::CPU);
     assert!(cpu.num_threads > 0);
 }

@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Canonical CPU activation functions for neural networks and signal processing.
+//! Activation functions for neural networks and signal processing.
 //!
-//! These are the single-source-of-truth scalar and batch implementations.
-//! Springs should import `barracuda::activations::*` instead of reimplementing.
+//! **Shader-first architecture**: batch functions (`relu_batch`, `sigmoid_batch`,
+//! `gelu_batch`, `swish_batch`) dispatch through WGSL via naga-exec when the
+//! `cpu-shader` feature is enabled, using the same shader math that runs on GPU.
+//! Scalar functions remain native Rust.
 //!
 //! For GPU activation ops, see `ops::relu`, `ops::sigmoid`, `ops::gelu_wgsl`, etc.
-//!
-//! Created in response to neuralSpring S134 request — 7 duplicate activation
-//! functions across springs consolidated here.
 
 use std::f64::consts::PI;
 
@@ -82,28 +81,125 @@ pub fn leaky_relu(x: f64, alpha: f64) -> f64 {
 }
 
 // ── Batch functions ──────────────────────────────────────────────────────────
+//
+// When the `cpu-shader` feature is enabled, batch functions dispatch through
+// WGSL via naga-exec — the same shader that runs on GPU. Falls back to
+// scalar Rust if the shader fails or the feature is disabled.
 
 /// Apply `ReLU` element-wise to a slice.
+///
+/// With `cpu-shader`, dispatches through `relu_f64.wgsl` via naga-exec.
+/// The native Rust fallback is deprecated and will be removed in 0.5.0.
 #[must_use]
 pub fn relu_batch(input: &[f64]) -> Vec<f64> {
+    #[cfg(feature = "cpu-shader")]
+    {
+        let wgsl = include_str!("shaders/activation/relu_f64.wgsl");
+        if let Ok(out) = crate::unified_hardware::shader_batch_unary_f64(wgsl, "main", input) {
+            return out;
+        }
+    }
     input.iter().map(|&x| relu(x)).collect()
 }
 
+#[cfg(feature = "cpu-shader")]
+const SIGMOID_F64_WGSL: &str = r"
+@group(0) @binding(0) var<storage, read> input: array<f64>;
+@group(0) @binding(1) var<storage, read_write> output: array<f64>;
+
+@compute @workgroup_size(256)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = gid.x;
+    if idx >= arrayLength(&input) { return; }
+    let x = input[idx];
+    if x >= 0.0 {
+        output[idx] = 1.0 / (1.0 + exp(-x));
+    } else {
+        let ez = exp(x);
+        output[idx] = ez / (1.0 + ez);
+    }
+}
+";
+
 /// Apply sigmoid element-wise to a slice.
+///
+/// With `cpu-shader`, dispatches through inline WGSL via naga-exec.
+/// The native Rust fallback is deprecated and will be removed in 0.5.0.
 #[must_use]
 pub fn sigmoid_batch(input: &[f64]) -> Vec<f64> {
+    #[cfg(feature = "cpu-shader")]
+    {
+        if let Ok(out) =
+            crate::unified_hardware::shader_batch_unary_f64(SIGMOID_F64_WGSL, "main", input)
+        {
+            return out;
+        }
+    }
     input.iter().map(|&x| sigmoid(x)).collect()
 }
 
+#[cfg(feature = "cpu-shader")]
+const GELU_F64_WGSL: &str = r"
+@group(0) @binding(0) var<storage, read> input: array<f64>;
+@group(0) @binding(1) var<storage, read_write> output: array<f64>;
+
+@compute @workgroup_size(256)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = gid.x;
+    if idx >= arrayLength(&input) { return; }
+    let x = input[idx];
+    let k = 0.7978845608028654; // sqrt(2/pi)
+    let inner = k * fma(0.044715 * x * x, x, x);
+    output[idx] = 0.5 * x * (1.0 + tanh(inner));
+}
+";
+
 /// Apply GELU element-wise to a slice.
+///
+/// With `cpu-shader`, dispatches through inline WGSL via naga-exec.
+/// The native Rust fallback is deprecated and will be removed in 0.5.0.
 #[must_use]
 pub fn gelu_batch(input: &[f64]) -> Vec<f64> {
+    #[cfg(feature = "cpu-shader")]
+    {
+        if let Ok(out) =
+            crate::unified_hardware::shader_batch_unary_f64(GELU_F64_WGSL, "main", input)
+        {
+            return out;
+        }
+    }
     input.iter().map(|&x| gelu(x)).collect()
 }
 
+#[cfg(feature = "cpu-shader")]
+const SWISH_F64_WGSL: &str = r"
+@group(0) @binding(0) var<storage, read> input: array<f64>;
+@group(0) @binding(1) var<storage, read_write> output: array<f64>;
+
+@compute @workgroup_size(256)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = gid.x;
+    if idx >= arrayLength(&input) { return; }
+    let x = input[idx];
+    let s = 1.0 / (1.0 + exp(-x));
+    output[idx] = x * s;
+}
+";
+
 /// Apply swish element-wise to a slice.
+///
+/// With `cpu-shader`, dispatches through inline WGSL via naga-exec.
+/// The native Rust fallback is deprecated and will be removed in 0.5.0.
 #[must_use]
 pub fn swish_batch(input: &[f64]) -> Vec<f64> {
+    #[cfg(feature = "cpu-shader")]
+    {
+        if let Ok(out) =
+            crate::unified_hardware::shader_batch_unary_f64(SWISH_F64_WGSL, "main", input)
+        {
+            return out;
+        }
+    }
     input.iter().map(|&x| swish(x)).collect()
 }
 

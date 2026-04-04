@@ -213,9 +213,13 @@ impl GpuBackend for WgpuDevice {
         if descs.is_empty() {
             return Ok(());
         }
-        if descs.len() == 1 {
-            return self
-                .dispatch_compute(descs.into_iter().next().expect("len == 1 checked above"));
+        if let [_] = descs.as_slice() {
+            let desc = descs.into_iter().next().ok_or_else(|| {
+                crate::error::BarracudaError::Internal(
+                    "batch dispatch empty after len check".into(),
+                )
+            })?;
+            return self.dispatch_compute(desc);
         }
 
         let _permit = self.acquire_dispatch();

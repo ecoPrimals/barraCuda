@@ -6,6 +6,12 @@ Prioritized work items, ordered by impact. Updated 2026-04-04.
 
 ## Recently Completed
 
+- **Sprint 30: Deep Debt Audit, Smart Refactoring & Test Stability (Apr 5)**:
+  `executor.rs` smart-refactored (934→208L) into `executor.rs` + `invocation.rs` (756L);
+  `DispatchCoords` struct eliminates `too_many_arguments`. SIGSEGV fix: `fhe_chaos_tests` +
+  `fault_injection` excluded from coverage, `gpu-serial` test group serializes chaos/fault/property
+  tests. Disabled `test_nn_vision_integration` evolved to `test_vision_pipeline_preprocessing`.
+  Stale `NeuralNetwork` doc example cleaned. All gates green.
 - **Sprint 29: Deep Debt Cleanup & Shader-First Evolution (Apr 4)**:
   Unified magic `256` workgroup size → `WORKGROUP_SIZE_1D` constant across 15+ files
   (shader dispatch, jackknife, biosignal, gradient, cpu_executor, all health ops, perlin,

@@ -28,6 +28,7 @@
 mod error;
 mod eval;
 mod executor;
+mod invocation;
 mod sim_buffer;
 mod value;
 mod vector_ops;

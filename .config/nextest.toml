@@ -102,10 +102,11 @@ filter = "test(/fft|conv2d|conv3d|flash_attention|deformable|fhe_polynomial|edge
 test-group = "gpu-heavy"
 slow-timeout = { period = "120s", terminate-after = 2 }
 
-# ─── Coverage profile: excludes multi-GPU hardware verification ──────
-# hardware_verification runs real multi-vendor GPU dispatch which can
-# SIGSEGV under LLVM instrumentation (driver FFI + coverage probes).
-# Excluding it lets llvm-cov complete cleanly on single-GPU / llvmpipe.
+# ─── Coverage profile: excludes GPU-intensive integration tests ──────
+# These binaries SIGSEGV under LLVM instrumentation + parallel execution
+# due to GPU driver FFI interaction with coverage probes.  The underlying
+# code is tested by the unit test suite; excluding these integration
+# binaries lets llvm-cov complete cleanly on single-GPU / llvmpipe.
 [profile.coverage]
 test-threads = 16
 fail-fast = false
@@ -114,10 +115,27 @@ status-level = "fail"
 final-status-level = "all"
 
 [[profile.coverage.overrides]]
-filter = "binary(hardware_verification)"
+filter = "binary(hardware_verification) | binary(fhe_chaos_tests) | binary(fault_injection)"
 exclude = true
 
 [[profile.coverage.overrides]]
 filter = "test(/fft|conv2d|conv3d|flash_attention|deformable|fhe_polynomial|edge_conv/)"
 test-group = "gpu-heavy"
 slow-timeout = { period = "180s", terminate-after = 2 }
+
+# ─── Chaos/fault tests: serialized to prevent GPU driver race ────────
+# Property tests and chaos tests exercise GPU driver edge cases that
+# SIGSEGV under concurrent execution (Mesa llvmpipe thread safety).
+# Serializing them is correct: the test validates behavior, not throughput.
+[test-groups.gpu-serial]
+max-threads = 1
+
+[[profile.ci.overrides]]
+filter = "binary(fhe_chaos_tests) | binary(fault_injection) | test(/property/)"
+test-group = "gpu-serial"
+slow-timeout = { period = "180s", terminate-after = 2 }
+
+[[profile.default.overrides]]
+filter = "binary(fhe_chaos_tests) | binary(fault_injection) | test(/property/)"
+test-group = "gpu-serial"
+slow-timeout = { period = "120s", terminate-after = 2 }

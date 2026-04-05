@@ -22,29 +22,19 @@
 //! - `loss` - Loss function implementations
 //! - `metrics` - Training and evaluation metrics
 //!
-//! # Example
+//! # Available Types
 //!
 //! ```rust,ignore
-//! use barracuda::nn::{NeuralNetwork, Layer, Optimizer, LossFunction};
-//! use barracuda::prelude::WgpuDevice;
+//! use barracuda::nn::{Layer, Optimizer, LossFunction, NetworkConfig};
 //!
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! let device = WgpuDevice::new().await?;
-//!
-//! // Build network with capability detection
-//! let mut model = NeuralNetwork::builder(&device)
-//!     .add_layer(Layer::Linear { in_features: 784, out_features: 128 })
-//!     .add_layer(Layer::ReLU)
-//!     .add_layer(Layer::Linear { in_features: 128, out_features: 10 })
-//!     .optimizer(Optimizer::Adam { lr: 0.001, betas: (0.9, 0.999), eps: 1e-8 })
-//!     .loss(LossFunction::CrossEntropy)
-//!     .build()
-//!     .await?;
-//!
-//! // Train (discovers optimal hardware at runtime)
-//! let train_history = model.train(&train_data, epochs).await?;
-//! # Ok(())
-//! # }
+//! let config = NetworkConfig::default();
+//! let layers = vec![
+//!     Layer::Linear { in_features: 784, out_features: 128 },
+//!     Layer::ReLU,
+//!     Layer::Linear { in_features: 128, out_features: 10 },
+//! ];
+//! let optimizer = Optimizer::Adam { lr: 0.001, betas: (0.9, 0.999), eps: 1e-8 };
+//! let loss = LossFunction::CrossEntropy;
 //! ```
 
 // S66: Blanket #![allow(dead_code)] removed. Individual items annotated where

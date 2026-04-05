@@ -1,8 +1,8 @@
 # barraCuda — Remaining Work
 
 **Version**: 0.3.11
-**Date**: April 4, 2026
-**Status**: Through Sprint 29 — tracks all open work items for barraCuda evolution
+**Date**: April 5, 2026
+**Status**: Through Sprint 30 — tracks all open work items for barraCuda evolution
 
 ---
 
@@ -27,6 +27,48 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   and physics domain requirements.
 - **ecoBin/UniBin/scyBorg compliance**: AGPL-3.0-or-later, pure Rust (no C deps
   in barraCuda's code), semantic IPC method naming, capability-based discovery.
+
+---
+
+## Achieved (April 5, 2026 — Sprint 30: Deep Debt Audit, Smart Refactoring & Test Stability)
+
+### Smart Module Refactoring: `barracuda-naga-exec`
+- **`executor.rs`** (934 lines) → `executor.rs` (208) + `invocation.rs` (756)
+- `InvocationContext` extracted to dedicated module with clear separation:
+  executor owns parse/validate/dispatch, invocation owns per-thread IR interpretation
+- `DispatchCoords` config struct replaces 10-parameter constructor
+  (`#[expect(clippy::too_many_arguments)]` eliminated)
+- `LOOP_ITERATION_LIMIT` named constant replaces magic `100_000`
+- All 16 naga-exec tests pass, clippy pedantic clean
+
+### Test Stability: SIGSEGV Resolution via nextest Serialization
+- `fhe_chaos_tests` and `fault_injection` added to coverage profile exclusions
+  (SIGSEGV under LLVM instrumentation + parallel GPU driver FFI)
+- New `gpu-serial` test group (max-threads=1) for chaos/fault/property tests
+  in `ci` and `default` nextest profiles
+- Root cause: Mesa llvmpipe thread safety in Vulkan adapter contention
+
+### Disabled Test Evolution
+- `test_nn_vision_integration` (ignored: "NeuralNetwork API removed") evolved to
+  `test_vision_pipeline_preprocessing` — tests VisionPipeline directly, no ignore
+- All 8 API integration tests pass (was 7 pass + 1 ignored)
+
+### Quality Gates — All Green
+- `cargo fmt --check`: Pass
+- `cargo clippy --workspace --all-features --all-targets -- -D warnings`: Pass
+- `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps`: Pass
+- `cargo deny check`: Pass (advisories, bans, licenses, sources)
+- `cargo test -p barracuda --lib --all-features`: 3,823 pass, 13 ignored
+- `cargo test -p barracuda-core --lib -- --test-threads=1`: 220 pass
+- `cargo test -p barracuda-naga-exec`: 16 pass
+- API integration tests: 8 pass, 0 ignored (was 7+1 ignored)
+- All files under 1000 lines (largest: 845 lines)
+- Zero TODO/FIXME/HACK, zero production `.unwrap()`, zero `#[allow(` without reason
+
+### Dependency Audit
+- 6 duplicate transitive crate pairs confirmed upstream-only:
+  tarpc → rand 0.8 (latest tarpc 0.37.0), wgpu → hashbrown 0.15
+- Cannot be resolved from barraCuda side; tracked for upstream evolution
 
 ---
 

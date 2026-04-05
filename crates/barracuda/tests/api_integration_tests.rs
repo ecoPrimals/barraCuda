@@ -49,35 +49,28 @@ async fn test_esn_timeseries_integration() {
     );
 }
 
-/// Test 2: NN Training → Vision Integration  
-/// Train a network on preprocessed images
-/// NOTE: `NeuralNetwork` API was removed - test disabled until API is re-implemented
+/// Test 2: Vision Pipeline Preprocessing
+/// Validates the vision preprocessing pipeline independently.
 #[tokio::test]
-#[ignore = "NeuralNetwork API was removed - test disabled until API is re-implemented"]
-async fn test_nn_vision_integration() {
+async fn test_vision_pipeline_preprocessing() {
     let Some(device) = barracuda::device::test_pool::get_test_device_if_gpu_available().await
     else {
         return;
     };
 
-    // Step 1: Preprocess images with Vision API
     let pipeline = VisionPipeline::new(&device)
         .add_transform(Transform::RandomFlip)
         .add_transform(Transform::RandomCrop { size: 28 })
-        .build(); // BUILD THE PIPELINE!
+        .build();
 
-    // Create image batch (28x28x3 RGB)
     let image_data = vec![0.5f32; 28 * 28 * 3];
     let labels = vec![1.0];
     let _batch = ImageBatch::new(vec![image_data.clone()], labels, 28, 28, 3).unwrap();
 
-    let images = vec![image_data]; // Extract images for processing
+    let images = vec![image_data];
     let processed = pipeline.process_batch(&images, 28, 28, 3).await.unwrap();
     assert_eq!(processed.len(), 1);
-
     assert_eq!(processed[0].iter().take(784).count(), 784);
-
-    println!("✅ Vision pipeline: Image preprocessing verified");
 }
 
 /// Test 3: SNN Neuromorphic Architecture
@@ -254,7 +247,7 @@ async fn test_all_apis_hardware_agnostic() {
         .await;
     assert!(timeseries.is_ok(), "TimeSeries failed");
 
-    println!("✅ All 6 APIs hardware-agnostic: ESN, Genomics, NN, SNN, Vision, TimeSeries");
+    println!("✅ All 5 APIs hardware-agnostic: ESN, Genomics, SNN, Vision, TimeSeries");
 }
 
 /// Test 7: Error Handling Integration

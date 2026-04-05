@@ -5,7 +5,27 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.11] — 2026-04-04
+## [0.3.11] — 2026-04-05
+
+### Changed — Sprint 30: Deep Debt Audit, Smart Refactoring & Test Stability (Apr 5 2026)
+
+- **Smart module refactoring (naga-exec)**: `executor.rs` (934 lines) split into
+  `executor.rs` (208L, parse/validate/dispatch) + `invocation.rs` (756L, per-thread
+  IR interpretation). `DispatchCoords` config struct replaces 10-parameter constructor
+  (`#[expect(clippy::too_many_arguments)]` eliminated). `LOOP_ITERATION_LIMIT` named
+  constant replaces magic `100_000`.
+- **SIGSEGV fix via nextest serialization**: `fhe_chaos_tests` and `fault_injection`
+  binaries excluded from `profile.coverage` (SIGSEGV under LLVM instrumentation +
+  parallel GPU driver FFI). New `gpu-serial` test group (`max-threads=1`) for
+  chaos/fault/property tests in `ci` and `default` profiles. Root cause: Mesa llvmpipe
+  thread safety in Vulkan adapter contention.
+- **Disabled test evolution**: `test_nn_vision_integration` (ignored: "NeuralNetwork API
+  removed") evolved to `test_vision_pipeline_preprocessing` — tests `VisionPipeline`
+  directly (8/8 integration tests pass, 0 ignored).
+- **Stale doc cleanup**: `nn/mod.rs` doc example updated from removed `NeuralNetwork`
+  type to current re-exported types (`Layer`, `Optimizer`, `LossFunction`, `NetworkConfig`).
+- **Dependency audit**: 6 duplicate transitive crate pairs confirmed upstream-only
+  (tarpc → rand 0.8, wgpu → hashbrown 0.15); cannot resolve from barraCuda side.
 
 ### Changed — Sprint 29: Deep Debt Cleanup & Shader-First Evolution (Apr 4 2026)
 

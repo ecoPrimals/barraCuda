@@ -23,12 +23,12 @@ traits are fully internalized.
 - **Architecture:** 4-crate workspace (barracuda, barracuda-core, barracuda-spirv, barracuda-naga-exec)
 - **Communication:** JSON-RPC 2.0 + tarpc over Unix socket and TCP
 - **License:** AGPL-3.0-or-later (scyBorg provenance trio)
-- **Tests:** 4,600+ (3,815 lib + 16 naga-exec + 229 core + 297 doc)
+- **Tests:** 4,600+ (3,823 lib + 16 naga-exec + 220 core + 297 doc)
 - **Coverage:** 80.54% line on llvmpipe (80% CI gate, 90% target with GPU hardware)
 - **MSRV:** 1.87
 - **Crate count:** 4 workspace crates
 - **Shaders:** 824 WGSL compute shaders with SPDX license headers
-- **Rust files:** 1,113 source files, 42 integration test files
+- **Rust files:** 1,122 source files, 42 integration test files
 - **Unsafe code:** Zero — `#![forbid(unsafe_code)]` in barracuda and barracuda-core
 - **Clippy:** Pedantic + nursery, zero warnings, `-D warnings` enforced
 

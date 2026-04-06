@@ -21,7 +21,7 @@ pub struct SphericalHarmonicsF64 {
 
 #[expect(
     dead_code,
-    reason = "CPU reference path for GPU parity validation in tests"
+    reason = "public API — exercised by tests, available to downstream consumers"
 )]
 impl SphericalHarmonicsF64 {
     /// Creates a new f64 spherical harmonics evaluator for the given WGPU device.

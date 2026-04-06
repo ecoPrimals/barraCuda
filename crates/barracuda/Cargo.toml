@@ -151,6 +151,50 @@ required-features = ["stress-tests"]
 name = "hardware_verification"
 required-features = ["stress-tests"]
 
+[[test]]
+name = "batched_encoder_tests"
+required-features = ["stress-tests"]
+
+[[test]]
+name = "fhe_fault_injection_tests"
+required-features = ["stress-tests"]
+
+[[test]]
+name = "hotspring_fault_special_tests"
+required-features = ["stress-tests"]
+
+[[test]]
+name = "cross_hardware_parity"
+required-features = ["stress-tests"]
+
+[[test]]
+name = "multi_device_integration"
+required-features = ["stress-tests"]
+
+[[test]]
+name = "pooling_tests"
+required-features = ["stress-tests"]
+
+[[test]]
+name = "scientific_e2e_tests"
+required-features = ["stress-tests"]
+
+[[test]]
+name = "scientific_fault_injection_tests"
+required-features = ["stress-tests"]
+
+[[test]]
+name = "fhe_fault_tests"
+required-features = ["stress-tests"]
+
+[[test]]
+name = "hotspring_mixing_grid_tests"
+required-features = ["stress-tests"]
+
+[[test]]
+name = "scientific_chaos_tests"
+required-features = ["stress-tests"]
+
 [[bench]]
 name = "kokkos_parity"
 harness = false

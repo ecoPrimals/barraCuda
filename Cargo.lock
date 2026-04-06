@@ -175,6 +175,7 @@ dependencies = [
 name = "barracuda-spirv"
 version = "0.3.11"
 dependencies = [
+ "thiserror",
  "wgpu",
 ]
 

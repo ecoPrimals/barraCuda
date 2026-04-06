@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.11] — 2026-04-05
 
+### Changed — Sprint 31: Deep Debt Cleanup & Test Stability Hardening (Apr 5 2026)
+
+- **Deprecated alias removal**: `CoralReefDevice` type alias removed — zero consumers,
+  `SovereignDevice` is the canonical capability-based name since v0.3.6.
+- **SpirvError thiserror evolution**: `barracuda-spirv` manual `Display`/`Error` impls
+  replaced with `#[derive(thiserror::Error)]` — consistent with workspace error patterns.
+- **Dead code reason accuracy**: 12 GPU API impl blocks updated from misleading
+  "CPU reference path" to accurate "public API — exercised by tests, available to
+  downstream consumers" reason strings.
+- **Test stability hardening**: 6 additional SIGSEGV-prone integration test binaries
+  (`batched_encoder_tests`, `fhe_fault_injection_tests`, `hotspring_fault_special_tests`,
+  `cross_hardware_parity`, `multi_device_integration`, `pooling_tests`,
+  `scientific_e2e_tests`, `scientific_fault_injection_tests`, `fhe_fault_tests`,
+  `hotspring_mixing_grid_tests`, `scientific_chaos_tests`) gated behind `stress-tests`
+  feature — `cargo test --workspace` now passes cleanly without GPU driver contention.
+- All quality gates green: fmt, clippy (pedantic+nursery, `-D warnings`), doc, deny, tests.
+
 ### Changed — Sprint 30: Deep Debt Audit, Smart Refactoring & Test Stability (Apr 5 2026)
 
 - **Smart module refactoring (naga-exec)**: `executor.rs` (934 lines) split into

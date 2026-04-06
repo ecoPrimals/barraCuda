@@ -70,7 +70,7 @@ pub struct BrayCurtisF64 {
 
 #[expect(
     dead_code,
-    reason = "CPU reference path for GPU parity validation in tests"
+    reason = "public API — exercised by tests, available to downstream consumers"
 )]
 impl BrayCurtisF64 {
     /// Create a new Bray-Curtis GPU operator

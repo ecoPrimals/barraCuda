@@ -49,7 +49,7 @@ pub struct DigammaF64 {
 
 #[expect(
     dead_code,
-    reason = "CPU reference path for GPU parity validation in tests"
+    reason = "public API — exercised by tests, available to downstream consumers"
 )]
 impl DigammaF64 {
     /// Create new Digamma f64 operation

@@ -10,6 +10,7 @@ rust-version.workspace = true
 
 [dependencies]
 wgpu = { workspace = true }
+thiserror = { workspace = true }
 
 [lints]
 workspace = true

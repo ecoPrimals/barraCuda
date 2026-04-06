@@ -51,7 +51,7 @@ pub struct HermiteF64 {
 
 #[expect(
     dead_code,
-    reason = "CPU reference path for GPU parity validation in tests"
+    reason = "public API — exercised by tests, available to downstream consumers"
 )]
 impl HermiteF64 {
     /// Create new Hermite f64 polynomial operation

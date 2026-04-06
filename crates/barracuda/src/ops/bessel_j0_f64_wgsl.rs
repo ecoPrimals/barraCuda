@@ -51,7 +51,7 @@ pub struct BesselJ0F64 {
 
 #[expect(
     dead_code,
-    reason = "CPU reference path for GPU parity validation in tests"
+    reason = "public API — exercised by tests, available to downstream consumers"
 )]
 impl BesselJ0F64 {
     /// Create new Bessel J0 f64 operation

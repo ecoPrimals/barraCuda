@@ -111,17 +111,13 @@ pub use capabilities::{
 pub use compute_pipeline::{
     BatchedComputeDispatch, ComputeDispatch, storage_bgl_entry, uniform_bgl_entry,
 };
-#[cfg(feature = "sovereign-dispatch")]
-pub use sovereign_device::SovereignDevice;
-#[cfg(feature = "sovereign-dispatch")]
-#[doc(hidden)]
-#[deprecated(note = "renamed to SovereignDevice — capability-based naming")]
-pub type CoralReefDevice = SovereignDevice;
 pub use kernel_router::{ComputeWorkload, KernelRouter, KernelTarget, NpuModelInfo};
 pub use registry::{
     BackendInfo, DeviceCapabilities as PhysicalDeviceCapabilities, DeviceRegistry, DeviceVendor,
     PhysicalDevice, PhysicalDeviceId,
 };
+#[cfg(feature = "sovereign-dispatch")]
+pub use sovereign_device::SovereignDevice;
 pub use substrate::{Substrate, SubstrateCapability, SubstrateType};
 pub use unified::{Capability, Device, DeviceContext, DeviceInfo, WorkloadHint};
 pub use wgpu_device::WgpuDevice;

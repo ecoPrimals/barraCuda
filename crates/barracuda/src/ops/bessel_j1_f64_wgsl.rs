@@ -47,7 +47,7 @@ pub struct BesselJ1F64 {
 
 #[expect(
     dead_code,
-    reason = "CPU reference path for GPU parity validation in tests"
+    reason = "public API — exercised by tests, available to downstream consumers"
 )]
 impl BesselJ1F64 {
     /// Creates a new J₁ Bessel function evaluator for the given WGPU device.

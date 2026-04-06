@@ -47,7 +47,7 @@ pub struct BesselK0F64 {
 
 #[expect(
     dead_code,
-    reason = "CPU reference path for GPU parity validation in tests"
+    reason = "public API — exercised by tests, available to downstream consumers"
 )]
 impl BesselK0F64 {
     /// Creates a new K₀ Bessel function evaluator for the given WGPU device.

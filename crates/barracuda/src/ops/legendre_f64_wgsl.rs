@@ -29,7 +29,7 @@ pub struct LegendreF64 {
 
 #[expect(
     dead_code,
-    reason = "CPU reference path for GPU parity validation in tests"
+    reason = "public API — exercised by tests, available to downstream consumers"
 )]
 impl LegendreF64 {
     /// Create new Legendre f64 polynomial operation

@@ -27,29 +27,14 @@
 #![deny(unsafe_code)]
 
 use std::borrow::Cow;
-use std::fmt;
 
 /// Errors from SPIR-V passthrough compilation.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum SpirvError {
     /// Caller passed an empty SPIR-V module (never valid per the spec).
+    #[error("SPIR-V words must be non-empty — empty modules are never valid")]
     EmptyModule,
 }
-
-impl fmt::Display for SpirvError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::EmptyModule => {
-                write!(
-                    f,
-                    "SPIR-V words must be non-empty — empty modules are never valid"
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for SpirvError {}
 
 /// Compile SPIR-V words into a wgpu shader module via the passthrough path.
 ///

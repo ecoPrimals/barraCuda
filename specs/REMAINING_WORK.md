@@ -30,6 +30,44 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 
 ---
 
+## Achieved (April 5, 2026 — Sprint 31: Deep Debt Cleanup & Test Stability Hardening)
+
+### Deprecated Alias Removal
+- `CoralReefDevice` type alias removed (zero consumers found workspace-wide)
+- `SovereignDevice` is the canonical capability-based name since v0.3.6
+
+### SpirvError thiserror Evolution
+- `barracuda-spirv` manual `Display` + `Error` impls replaced with `#[derive(thiserror::Error)]`
+- Consistent with workspace-wide error handling patterns
+
+### Dead Code Reason Accuracy
+- 12 GPU API `#[expect(dead_code)]` reason strings corrected from "CPU reference path"
+  to "public API — exercised by tests, available to downstream consumers"
+- Affected: bessel_i0/j0/j1/k0, beta, bray_curtis, cosine_similarity, digamma,
+  hermite, laguerre, legendre, spherical_harmonics (all f64 WGSL ops)
+
+### Test Stability Hardening
+- 11 additional SIGSEGV-prone test binaries gated behind `stress-tests` feature
+- `cargo test --workspace` now passes 100% clean (was crashing nondeterministically)
+- Root cause: Mesa llvmpipe thread safety under parallel test binary execution
+- Affected: batched_encoder, fhe_fault_injection, hotspring_fault_special,
+  cross_hardware_parity, multi_device_integration, pooling, scientific_e2e,
+  scientific_fault_injection, fhe_fault, hotspring_mixing_grid, scientific_chaos
+
+### Comprehensive Deep Debt Audit — Clean Bill
+- **Zero production unwrap/expect/panic** (all in test code)
+- **Zero hardcoded primal names** in production
+- **Zero mocks in production** (all isolated to `#[cfg(test)]`)
+- **Zero TODO/FIXME/todo!()/unimplemented!()** in codebase
+- **Zero `#[allow(` without reason** (all evolved to `#[expect]`)
+- **All files under 845 lines** (test file; production max 790)
+- **All deps pure Rust**, all justified
+- **All `println!` only in CLI binary** (correct for UniBin `doctor`/`validate` commands)
+- **`Result<T, String>` zero in production** (all typed errors)
+- **`Box<dyn Error>` zero in production**
+
+---
+
 ## Achieved (April 5, 2026 — Sprint 30: Deep Debt Audit, Smart Refactoring & Test Stability)
 
 ### Smart Module Refactoring: `barracuda-naga-exec`

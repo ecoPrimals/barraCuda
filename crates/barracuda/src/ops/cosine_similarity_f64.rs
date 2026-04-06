@@ -69,7 +69,7 @@ pub struct CosineSimilarityF64 {
 
 #[expect(
     dead_code,
-    reason = "CPU reference path for GPU parity validation in tests"
+    reason = "public API — exercised by tests, available to downstream consumers"
 )]
 impl CosineSimilarityF64 {
     /// Create a new `CosineSimilarityF64` orchestrator

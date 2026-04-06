@@ -23,7 +23,10 @@
 //! - Subgroup operations
 //! - Texture/sampler operations
 #![forbid(unsafe_code)]
-#![deny(clippy::pedantic)]
+#![cfg_attr(
+    test,
+    expect(clippy::unwrap_used, reason = "test code uses unwrap for brevity")
+)]
 
 mod error;
 mod eval;

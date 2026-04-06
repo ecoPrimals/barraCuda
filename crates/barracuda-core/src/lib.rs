@@ -17,17 +17,6 @@
     test,
     expect(clippy::unwrap_used, reason = "test code uses unwrap for brevity")
 )]
-#![warn(missing_docs)]
-#![warn(clippy::all)]
-#![deny(clippy::pedantic)]
-#![expect(
-    clippy::doc_markdown,
-    reason = "domain terms like barraCuda, wgpu, WebGPU"
-)]
-#![expect(
-    clippy::module_name_repetitions,
-    reason = "primal module names are intentionally descriptive"
-)]
 #![expect(
     clippy::unused_async,
     reason = "tarpc trait impl requires async signatures the trait defines"

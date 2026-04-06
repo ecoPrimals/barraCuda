@@ -15,6 +15,105 @@ repository = "https://github.com/ecoPrimals/barraCuda"
 authors = ["ecoPrimals Project"]
 rust-version = "1.87"
 
+[workspace.lints.clippy]
+# ─── Lint groups (priority -1 → individual settings below override) ──────
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+
+# ─── Safety (warn not deny: test code suppresses via #[expect]; CI enforces
+# via -D warnings which turns unsuppressed warns into errors) ─────────────
+unwrap_used = "warn"
+
+# ─── Casting — pervasive in GPU compute (u32↔usize↔f32↔f64) ────────────
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+cast_precision_loss = "allow"
+cast_lossless = "warn"
+cast_possible_wrap = "allow"
+
+# ─── Documentation ──────────────────────────────────────────────────────
+doc_markdown = "allow"
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+
+# ─── Naming — wgpu/physics APIs use domain-specific names ───────────────
+module_name_repetitions = "allow"
+similar_names = "allow"
+struct_field_names = "allow"
+many_single_char_names = "allow"
+
+# ─── Style — subjective pedantic lints ──────────────────────────────────
+must_use_candidate = "allow"
+return_self_not_must_use = "allow"
+items_after_statements = "allow"
+too_many_arguments = "allow"
+too_many_lines = "allow"
+wildcard_imports = "allow"
+enum_glob_use = "allow"
+option_if_let_else = "allow"
+manual_let_else = "allow"
+single_match_else = "allow"
+if_not_else = "allow"
+redundant_else = "allow"
+match_same_arms = "allow"
+match_wildcard_for_single_variants = "allow"
+default_trait_access = "allow"
+
+# ─── Numeric — scientific compute uses raw literals and float cmp ───────
+unreadable_literal = "allow"
+float_cmp = "allow"
+manual_midpoint = "allow"
+
+# ─── GPU/async patterns ────────────────────────────────────────────────
+unused_async = "allow"
+needless_pass_by_value = "allow"
+unnecessary_wraps = "allow"
+unused_self = "allow"
+trivially_copy_pass_by_ref = "allow"
+
+# ─── Struct/function complexity ─────────────────────────────────────────
+struct_excessive_bools = "allow"
+fn_params_excessive_bools = "allow"
+implicit_hasher = "allow"
+pub_underscore_fields = "allow"
+missing_fields_in_debug = "allow"
+inline_always = "allow"
+wrong_self_convention = "allow"
+
+# ─── Formatting ─────────────────────────────────────────────────────────
+uninlined_format_args = "allow"
+doc_comment_double_space_linebreaks = "allow"
+
+# ─── Promoted from bulk-allow — all clean, now enforced ─────────────────
+needless_raw_string_hashes = "warn"
+redundant_closure_for_method_calls = "warn"
+bool_to_int_with_if = "warn"
+cloned_instead_of_copied = "warn"
+map_unwrap_or = "warn"
+no_effect_underscore_binding = "warn"
+format_push_string = "warn"
+explicit_iter_loop = "warn"
+used_underscore_binding = "warn"
+if_same_then_else = "warn"
+needless_range_loop = "warn"
+
+# ─── Nursery — blanket-enabled; suppressions for scientific GPU compute ─
+suboptimal_flops = "warn"
+missing_const_for_fn = "allow"
+suspicious_operation_groupings = "allow"
+use_self = "warn"
+future_not_send = "allow"
+redundant_pub_crate = "allow"
+while_float = "allow"
+significant_drop_tightening = "allow"
+significant_drop_in_scrutinee = "allow"
+tuple_array_conversions = "warn"
+large_stack_frames = "allow"
+
+[workspace.lints.rust]
+missing_docs = "warn"
+
 [workspace.dependencies]
 # Async runtime — minimal feature set (no fs, process)
 tokio = { version = "1.50", features = [

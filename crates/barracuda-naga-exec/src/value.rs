@@ -10,25 +10,42 @@ use crate::error::{NagaExecError, Result};
 /// that llvmpipe cannot provide.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
+    /// Boolean scalar.
     Bool(bool),
+    /// Signed 32-bit integer scalar.
     I32(i32),
+    /// Unsigned 32-bit integer scalar.
     U32(u32),
+    /// 32-bit float scalar.
     F32(f32),
+    /// 64-bit float scalar (native — not emulated).
     F64(f64),
+    /// 2-component f32 vector.
     Vec2([f32; 2]),
+    /// 3-component f32 vector.
     Vec3([f32; 3]),
+    /// 4-component f32 vector.
     Vec4([f32; 4]),
+    /// 2-component f64 vector.
     Vec2F64([f64; 2]),
+    /// 3-component f64 vector.
     Vec3F64([f64; 3]),
+    /// 4-component f64 vector.
     Vec4F64([f64; 4]),
+    /// 2-component u32 vector.
     Vec2U32([u32; 2]),
+    /// 3-component u32 vector.
     Vec3U32([u32; 3]),
+    /// 4-component u32 vector.
     Vec4U32([u32; 4]),
+    /// 2-component i32 vector.
     Vec2I32([i32; 2]),
+    /// 3-component i32 vector.
     Vec3I32([i32; 3]),
+    /// 4-component i32 vector.
     Vec4I32([i32; 4]),
     /// Composite (struct or array) — indexed by position.
-    Composite(Vec<Value>),
+    Composite(Vec<Self>),
 }
 
 impl Value {

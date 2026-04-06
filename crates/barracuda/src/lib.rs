@@ -64,8 +64,6 @@
 //! - Zero duplication: One implementation per op
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs)]
-#![deny(clippy::pedantic)]
 // ── Domain-specific expectations ────────────────────────────────────────────
 // Compile-time verified: #[expect] warns if the suppression becomes unnecessary.
 #![expect(

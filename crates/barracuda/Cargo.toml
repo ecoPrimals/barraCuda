@@ -61,104 +61,8 @@ tracing = { workspace = true }
 wgpu = { workspace = true }
 barracuda-naga-exec = { path = "../barracuda-naga-exec" }
 
-[lints.clippy]
-all = { level = "warn", priority = -1 }
-pedantic = { level = "warn", priority = -1 }
-nursery = { level = "warn", priority = -1 }
-unwrap_used = "warn"
-# Casting — pervasive in GPU compute (u32↔usize↔f32↔f64 constantly)
-cast_possible_truncation = "allow"
-cast_sign_loss = "allow"
-cast_precision_loss = "allow"
-cast_lossless = "warn"
-cast_possible_wrap = "allow"
-# Doc — promoted: zero violations, now enforced
-doc_markdown = "allow"
-missing_errors_doc = "warn"
-missing_panics_doc = "warn"
-# Naming — wgpu/physics APIs use domain-specific names
-module_name_repetitions = "allow"
-similar_names = "allow"
-struct_field_names = "allow"
-many_single_char_names = "allow"
-# Style — subjective pedantic lints
-must_use_candidate = "allow"
-return_self_not_must_use = "allow"
-items_after_statements = "allow"
-too_many_arguments = "allow"
-too_many_lines = "allow"
-wildcard_imports = "allow"
-enum_glob_use = "allow"
-option_if_let_else = "allow"
-manual_let_else = "allow"
-single_match_else = "allow"
-if_not_else = "allow"
-redundant_else = "allow"
-match_same_arms = "allow"
-match_wildcard_for_single_variants = "allow"
-default_trait_access = "allow"
-# Numeric — scientific compute uses raw literals and float comparisons
-unreadable_literal = "allow"
-float_cmp = "allow"
-manual_midpoint = "allow"
-# GPU/async patterns
-unused_async = "allow"
-needless_pass_by_value = "allow"
-unnecessary_wraps = "allow"
-unused_self = "allow"
-trivially_copy_pass_by_ref = "allow"
-# Struct/function complexity
-struct_excessive_bools = "allow"
-fn_params_excessive_bools = "allow"
-implicit_hasher = "allow"
-pub_underscore_fields = "allow"
-missing_fields_in_debug = "allow"
-inline_always = "allow"
-wrong_self_convention = "allow"
-# Formatting — scientific code uses specific formats
-uninlined_format_args = "allow"
-doc_comment_double_space_linebreaks = "allow"
-# Promoted from bulk-allow — clean pass, now enforced.
-needless_raw_string_hashes = "warn"
-redundant_closure_for_method_calls = "warn"
-bool_to_int_with_if = "warn"
-cloned_instead_of_copied = "warn"
-map_unwrap_or = "warn"
-no_effect_underscore_binding = "warn"
-format_push_string = "warn"
-explicit_iter_loop = "warn"
-used_underscore_binding = "warn"
-# Promoted from allow — all 7 sites fixed.
-if_same_then_else = "warn"
-needless_range_loop = "warn"
-# Nursery — blanket-enabled above. Suppressions for scientific GPU compute:
-suboptimal_flops = "warn"
-# missing_const_for_fn: 911 sites — const fn propagation is evolving in Rust;
-# many functions use allocations or traits that aren't const-stable yet.
-missing_const_for_fn = "allow"
-# suspicious_operation_groupings: false positives for x*x (squaring), dx*dx
-# (Courant number), pe*pe/(pe+s) — correct mathematical idioms.
-suspicious_operation_groupings = "allow"
-# Promoted from allow — all 332 sites evolved to Self.
-use_self = "warn"
-# future_not_send: GPU async futures hold !Send wgpu types by design.
-future_not_send = "allow"
-# redundant_pub_crate: pub(crate) in private modules is intentional API surface.
-redundant_pub_crate = "allow"
-# while_float: scientific iteration with float conditions is intentional.
-while_float = "allow"
-# significant_drop_tightening: false positives in async GPU code where temporaries
-# hold wgpu guards that must live through the await point.
-significant_drop_tightening = "allow"
-significant_drop_in_scrutinee = "allow"
-# Promoted from allow — all 2 sites evolved to <[T; N]>::from().
-tuple_array_conversions = "warn"
-# large_stack_frames: test framework artifact — the auto-generated test main
-# allocates [&TestDescAndFn; 3466] on the stack. Not production code.
-large_stack_frames = "allow"
-
-[lints.rust]
-missing_docs = "warn"
+[lints]
+workspace = true
 
 [features]
 default = ["gpu", "domain-models"]
@@ -215,6 +119,10 @@ serde = []
 parallel = []
 benchmarks = []
 debug-pppm = []
+# GPU stress tests that SIGSEGV under parallel execution (Mesa llvmpipe
+# thread safety). Gated so `cargo test --workspace` passes cleanly;
+# use `cargo test --features stress-tests` or nextest gpu-serial profile.
+stress-tests = []
 [[bin]]
 name = "validate_gpu"
 required-features = ["gpu", "domain-fhe"]
@@ -230,6 +138,18 @@ required-features = ["gpu"]
 [[bin]]
 name = "bench_f64_builtins"
 required-features = ["gpu"]
+
+[[test]]
+name = "fault_injection"
+required-features = ["stress-tests"]
+
+[[test]]
+name = "fhe_chaos_tests"
+required-features = ["stress-tests"]
+
+[[test]]
+name = "hardware_verification"
+required-features = ["stress-tests"]
 
 [[bench]]
 name = "kokkos_parity"

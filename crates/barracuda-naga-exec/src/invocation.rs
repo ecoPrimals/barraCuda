@@ -389,11 +389,12 @@ impl<'a> InvocationContext<'a> {
                             self.module,
                             &self.module.types[base].inner,
                         );
-                        let (group, binding) = self.resolve_binding(gv_handle).ok_or(
-                            NagaExecError::UnsupportedExpression(
-                                "ArrayLength on variable without binding".into(),
-                            ),
-                        )?;
+                        let (group, binding) =
+                            self.resolve_binding(gv_handle).ok_or_else(|| {
+                                NagaExecError::UnsupportedExpression(
+                                    "ArrayLength on variable without binding".into(),
+                                )
+                            })?;
                         let buf = self
                             .bindings
                             .get(&(group, binding))
@@ -454,11 +455,11 @@ impl<'a> InvocationContext<'a> {
 
                 if let TypeInner::Array { base, .. } = ty.inner {
                     let elem_ty = &self.module.types[base];
-                    let (group, binding) = self.resolve_binding(gv_handle).ok_or(
+                    let (group, binding) = self.resolve_binding(gv_handle).ok_or_else(|| {
                         NagaExecError::UnsupportedExpression(
                             "GlobalVariable without binding".into(),
-                        ),
-                    )?;
+                        )
+                    })?;
                     let buf = self
                         .bindings
                         .get(&(group, binding))
@@ -471,11 +472,11 @@ impl<'a> InvocationContext<'a> {
                     }
                     Ok(Value::Composite(elements))
                 } else {
-                    let (group, binding) = self.resolve_binding(gv_handle).ok_or(
+                    let (group, binding) = self.resolve_binding(gv_handle).ok_or_else(|| {
                         NagaExecError::UnsupportedExpression(
                             "GlobalVariable without binding".into(),
-                        ),
-                    )?;
+                        )
+                    })?;
                     let buf = self
                         .bindings
                         .get(&(group, binding))
@@ -543,11 +544,11 @@ impl<'a> InvocationContext<'a> {
                     self.shared.write(gv_handle.index(), 0, &tmp)?;
                     return Ok(());
                 }
-                let (group, binding) =
-                    self.resolve_binding(gv_handle)
-                        .ok_or(NagaExecError::UnsupportedStatement(
-                            "Store to GlobalVariable without binding".into(),
-                        ))?;
+                let (group, binding) = self.resolve_binding(gv_handle).ok_or_else(|| {
+                    NagaExecError::UnsupportedStatement(
+                        "Store to GlobalVariable without binding".into(),
+                    )
+                })?;
                 let buf = self
                     .bindings
                     .get_mut(&(group, binding))
@@ -678,11 +679,9 @@ impl<'a> InvocationContext<'a> {
             return Ok(Value::read_from_buffer(data, 0, elem_ty));
         }
 
-        let (group, binding) =
-            self.resolve_binding(gv_handle)
-                .ok_or(NagaExecError::UnsupportedExpression(
-                    "GlobalVariable without binding".into(),
-                ))?;
+        let (group, binding) = self.resolve_binding(gv_handle).ok_or_else(|| {
+            NagaExecError::UnsupportedExpression("GlobalVariable without binding".into())
+        })?;
         let buf = self
             .bindings
             .get(&(group, binding))
@@ -734,11 +733,9 @@ impl<'a> InvocationContext<'a> {
             return Ok(());
         }
 
-        let (group, binding) =
-            self.resolve_binding(gv_handle)
-                .ok_or(NagaExecError::UnsupportedStatement(
-                    "GlobalVariable without binding".into(),
-                ))?;
+        let (group, binding) = self.resolve_binding(gv_handle).ok_or_else(|| {
+            NagaExecError::UnsupportedStatement("GlobalVariable without binding".into())
+        })?;
         let buf = self
             .bindings
             .get_mut(&(group, binding))

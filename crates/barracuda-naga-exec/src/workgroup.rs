@@ -40,11 +40,9 @@ impl WorkgroupMemory {
     }
 
     pub(crate) fn get_mut(&mut self, handle_idx: usize) -> Result<&mut Vec<u8>> {
-        self.buffers
-            .get_mut(&handle_idx)
-            .ok_or(NagaExecError::TypeMismatch(format!(
-                "workgroup var handle {handle_idx} not allocated"
-            )))
+        self.buffers.get_mut(&handle_idx).ok_or_else(|| {
+            NagaExecError::TypeMismatch(format!("workgroup var handle {handle_idx} not allocated"))
+        })
     }
 
     pub(crate) fn write(&mut self, handle_idx: usize, offset: usize, data: &[u8]) -> Result<()> {
@@ -106,12 +104,9 @@ impl WorkgroupMemory {
     }
 
     pub(crate) fn atomic_load_u32(&self, handle_idx: usize, offset: usize) -> Result<u32> {
-        let buf = self
-            .buffers
-            .get(&handle_idx)
-            .ok_or(NagaExecError::TypeMismatch(format!(
-                "workgroup var handle {handle_idx} not allocated"
-            )))?;
+        let buf = self.buffers.get(&handle_idx).ok_or_else(|| {
+            NagaExecError::TypeMismatch(format!("workgroup var handle {handle_idx} not allocated"))
+        })?;
         Ok(u32::from_le_bytes(
             buf[offset..offset + 4].try_into().unwrap_or([0; 4]),
         ))

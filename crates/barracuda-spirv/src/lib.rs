@@ -24,7 +24,6 @@
 //! wgpu#4854), this crate collapses to a safe wrapper and the `unsafe`
 //! disappears entirely. Until then, this is the minimal, auditable surface.
 
-#![warn(missing_docs)]
 #![deny(unsafe_code)]
 
 use std::borrow::Cow;

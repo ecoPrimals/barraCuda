@@ -288,6 +288,10 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 }
 
 #[test]
+#[expect(
+    clippy::needless_type_cast,
+    reason = "f64 is intentional: test verifies f32 loses 1e-15 precision"
+)]
 fn test_f64_precision_vs_f32() {
     let val: f64 = 1.0 + 1e-15;
     #[expect(

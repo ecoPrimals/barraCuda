@@ -4,15 +4,20 @@
 /// Usage hint for a simulated buffer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SimBufferUsage {
+    /// Read-write storage buffer (`var<storage, read_write>`).
     Storage,
+    /// Read-only storage buffer (`var<storage, read>`).
     StorageReadOnly,
+    /// Uniform buffer (`var<uniform>`).
     Uniform,
 }
 
 /// A simulated GPU buffer — just bytes on the heap.
 #[derive(Debug, Clone)]
 pub struct SimBuffer {
+    /// Raw byte contents of the buffer.
     pub data: Vec<u8>,
+    /// How this buffer is bound in the shader.
     pub usage: SimBufferUsage,
 }
 

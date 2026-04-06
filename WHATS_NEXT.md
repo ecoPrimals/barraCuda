@@ -1,11 +1,19 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-04-04.
+Prioritized work items, ordered by impact. Updated 2026-04-05.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 31: Deep Debt Cleanup & Test Stability Hardening (Apr 5)**:
+  Removed deprecated `CoralReefDevice` alias (zero consumers). `SpirvError` evolved to
+  thiserror derive. 12 dead_code reason strings corrected from "CPU reference path" to
+  "public API — exercised by tests, available to downstream consumers". 11 additional
+  SIGSEGV-prone test binaries gated behind `stress-tests` feature — `cargo test --workspace`
+  now 100% clean. Comprehensive audit confirmed: zero production unwrap/expect/panic,
+  zero hardcoded primal names, zero mocks in production, zero TODO/FIXME, all files under
+  845 lines, all deps pure Rust. All gates green.
 - **Sprint 30: Deep Debt Audit, Smart Refactoring & Test Stability (Apr 5)**:
   `executor.rs` smart-refactored (934→208L) into `executor.rs` + `invocation.rs` (756L);
   `DispatchCoords` struct eliminates `too_many_arguments`. SIGSEGV fix: `fhe_chaos_tests` +

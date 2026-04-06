@@ -1,8 +1,14 @@
 # barraCuda — Cargo configuration
 
-# No thread cap — the RwLock-guarded encoding model ensures correctness
-# at any concurrency level. Override with RUST_TEST_THREADS=N if needed.
+# ── Test thread cap ──────────────────────────────────────────────────
+# ~11 lib tests call BarraCudaPrimal::start() → barracuda::device::Auto::new()
+# which creates wgpu Instance+Adapter+Device.  Under cargo test (single
+# process, many threads), >2 concurrent device creations can SIGSEGV the
+# Mesa/Vulkan driver.  nextest is unaffected (one device per process).
+# Cap at 2 for safe default; override with RUST_TEST_THREADS=N for nextest
+# or single-threaded debugging.
 [env]
+RUST_TEST_THREADS = { value = "2", force = false }
 
 # ── Dev / test builds: prioritize compile speed over runtime perf ────
 [profile.dev]

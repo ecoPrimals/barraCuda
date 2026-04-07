@@ -35,7 +35,7 @@ crates/
   barracuda/           Core compute library
     src/
       device/          GpuBackend trait, WgpuDevice, SovereignDevice (IPC dispatch), driver profiles
-      shaders/         824 WGSL shaders + sovereign compiler
+      shaders/         826 WGSL shaders + sovereign compiler
         math/          DF64 core, transcendentals
         sovereign/     Naga-based compiler (FMA fusion, dead expr, SPIR-V emit)
         precision/     15-tier precision continuum: Binary→Int2→Q4→Q8→FP8→BF16→F16→TF32→F32→DF64→F64→F64Precise→QF128→DF128

@@ -110,6 +110,7 @@ significant_drop_tightening = "allow"
 significant_drop_in_scrutinee = "allow"
 tuple_array_conversions = "warn"
 large_stack_frames = "allow"
+large_stack_arrays = "allow"
 
 [workspace.lints.rust]
 missing_docs = "warn"

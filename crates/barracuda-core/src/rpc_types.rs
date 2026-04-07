@@ -287,7 +287,7 @@ mod tests {
         let info = PrimalInfo {
             primal: "barraCuda".into(),
             version: "0.3.5".into(),
-            protocol: "jsonrpc-2.0".into(),
+            protocol: "json-rpc-2.0".into(),
             namespace: "barracuda".into(),
             license: "AGPL-3.0-or-later".into(),
         };

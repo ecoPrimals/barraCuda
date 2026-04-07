@@ -23,18 +23,18 @@ traits are fully internalized.
 - **Architecture:** 4-crate workspace (barracuda, barracuda-core, barracuda-spirv, barracuda-naga-exec)
 - **Communication:** JSON-RPC 2.0 + tarpc over Unix socket and TCP
 - **License:** AGPL-3.0-or-later (scyBorg provenance trio)
-- **Tests:** 4,100+ (3,823 lib + 16 naga-exec + 220 core + 107 doc)
+- **Tests:** 4,180+ passing (nextest CI profile)
 - **Coverage:** 80.54% line on llvmpipe (80% CI gate, 90% target with GPU hardware)
 - **MSRV:** 1.87
 - **Crate count:** 4 workspace crates
-- **Shaders:** 824 WGSL compute shaders with SPDX license headers
+- **Shaders:** 826 WGSL compute shaders with SPDX license headers
 - **Rust files:** 1,116 source files, 42 integration test files
 - **Unsafe code:** Zero — `#![forbid(unsafe_code)]` in barracuda and barracuda-core
 - **Clippy:** Pedantic + nursery, zero warnings, `-D warnings` enforced
 
 ## Key Capabilities
 
-- **824 WGSL shaders** spanning: linear algebra, statistics, spectral analysis,
+- **826 WGSL shaders** spanning: linear algebra, statistics, spectral analysis,
   molecular dynamics, lattice QCD, FHE (NTT/INTT), pharmacometrics,
   bioinformatics, ML ops, health/biosignal, procedural generation
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64

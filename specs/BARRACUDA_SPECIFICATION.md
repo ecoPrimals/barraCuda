@@ -50,7 +50,7 @@ barraCuda/
 │   │   │   ├── sample/       # LHS, Sobol, Metropolis, sparsity
 │   │   │   ├── ops/          # GPU ops (matmul, softmax, FHE NTT, bio, MD)
 │   │   │   ├── tensor/       # GPU tensor type, buffer management
-│   │   │   ├── shaders/      # 824 WGSL shaders
+│   │   │   ├── shaders/      # 826 WGSL shaders
 │   │   │   ├── device/       # WgpuDevice, capabilities, test pool
 │   │   │   ├── staging/      # Ring buffers, unidirectional pipelines
 │   │   │   ├── pipeline/     # ComputeDispatch, batched pipelines

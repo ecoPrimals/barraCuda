@@ -26,8 +26,8 @@ results.
 
 ### Key capabilities
 
-- **824 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,116 Rust source files**, 42 integration test files, 4,100+ tests (3,823 lib + 16 naga-exec + 220 core + 107 doc)
+- **826 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
+- **1,116 Rust source files**, 24 integration test harnesses, 4,180+ tests passing via nextest CI profile
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -60,6 +60,7 @@ results.
 
 ## Recent
 
+- **Sprint 32: Fault Injection SIGSEGV Resolution & Deep Debt Audit (Apr 7)**: Root-caused Mesa llvmpipe within-process thread safety SIGSEGV in 3 fault injection tests. Serialized concurrent GPU readbacks in `fault_concurrent_tensor_access` and `test_concurrent_error_handling`. Bounded `fault_out_of_gpu_memory` allocation loop (10,000→256 iterations). Updated nextest coverage profile from deprecated `exclude = true` to `default-filter` syntax. Fixed 4 clippy findings: non-existent `needless_type_cast` lint, protocol string `"jsonrpc-2.0"` → `"json-rpc-2.0"`, 2 unfulfilled `dead_code` expects. Comprehensive 12-axis deep debt audit: zero production unsafe/unwrap/expect/println/mocks/hardcoding/TODO/commented-out code, zero `#[allow(`, zero `Result<T,String>` in production, zero files >1000 lines. 4,180 tests pass (CI profile), 0 failures. All quality gates green.
 - **Sprint 31: Deep Debt Cleanup & Test Stability Hardening (Apr 5)**: Removed deprecated `CoralReefDevice` alias (zero consumers). Evolved `SpirvError` to thiserror derive. Fixed 12 misleading dead_code reason strings on GPU API impls. Gated 11 additional SIGSEGV-prone test binaries behind `stress-tests` feature — `cargo test --workspace` now 100% clean. Comprehensive deep debt audit: zero production unwrap/expect/panic, zero hardcoded primal names, zero mocks in production, zero TODO/FIXME, all files under 845 lines. All quality gates green.
 - **Sprint 30: Deep Debt Audit, Smart Refactoring & Test Stability (Apr 5)**: Smart refactor of `executor.rs` (934→208 lines) + new `invocation.rs` (756 lines) — `DispatchCoords` struct eliminates `too_many_arguments`. SIGSEGV fix via nextest `gpu-serial` test group (chaos/fault/property tests serialized). Disabled `test_nn_vision_integration` evolved to `test_vision_pipeline_preprocessing` (8/8 integration tests pass). All quality gates green.
 - **Sprint 29: Deep Debt Cleanup & Shader-First Evolution (Apr 4)**: Unified magic `256` workgroup size → `WORKGROUP_SIZE_1D` constant across 15+ files (shader_dispatch, jackknife, biosignal, gradient, cpu_executor, perlin_noise, population_pk, hill_dose_response, michaelis_menten_batch, scfa_batch, beat_classify, rop_force_accum). Removed unused `num-traits` from workspace. Smart refactor of `executor.rs` (1,097→932 lines, vector ops extracted to `vector_ops.rs`). `eval_math` decomposed into 4 focused functions (eval.rs 629→527 lines, `too_many_lines` suppression eliminated). Production `expect()` in `wgpu_backend.rs` evolved to safe pattern-match + `Result`. Misleading `nautilus/readout.rs` "no-op" doc corrected. `coralReef` doc references evolved to capability-based discovery language. `"biomeos"` / `"ecoPrimals"` namespace strings consolidated into shared constants. Perlin noise 7× `#[expect]` blocks consolidated to 2 helper functions. All quality gates green (3,815 lib + 16 naga-exec tests, 0 failures).
@@ -81,7 +82,7 @@ results.
 
 barraCuda is a 4-crate workspace:
 
-- **`barracuda`** — the math engine (824 WGSL shaders, 15-tier precision, all GPU ops)
+- **`barracuda`** — the math engine (826 WGSL shaders, 15-tier precision, all GPU ops)
 - **`barracuda-core`** — primal lifecycle (JSON-RPC, tarpc, UniBin CLI)
 - **`barracuda-spirv`** — SPIR-V passthrough bridge (isolates the single `unsafe` call)
 - **`barracuda-naga-exec`** — CPU interpreter for naga IR (shader-first CPU execution + GPU validation)
@@ -156,7 +157,7 @@ barraCuda/
 │       │   ├── sample/              # LHS, Sobol, Metropolis, sparsity
 │       │   ├── ops/                 # GPU ops (matmul, softmax, FHE, bio)
 │       │   ├── tensor/              # GPU tensor type
-│       │   ├── shaders/             # 824 WGSL shaders (see shaders/README.md)
+│       │   ├── shaders/             # 826 WGSL shaders (see shaders/README.md)
 │       │   ├── device/              # GpuBackend trait, WgpuDevice, SovereignDevice, concurrency
 │       │   ├── staging/             # Ring buffers, unidirectional pipelines
 │       │   ├── pipeline/            # ComputeDispatch, batched pipelines
@@ -205,7 +206,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo test --workspace --lib            # lib tests (4,600+ total via nextest)
+cargo nextest run --workspace --profile ci  # 4,180+ tests via nextest
 cargo llvm-cov --workspace --lib        # 80% CI gate (blocking), 90% target (requires GPU hardware)
 ```
 

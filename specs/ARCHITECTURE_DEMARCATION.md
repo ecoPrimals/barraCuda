@@ -50,7 +50,7 @@ barraCuda is a Rust library (`cargo add barracuda`). It owns:
 ### GPU Math (WGSL shaders, wgpu execution)
 - `ops` — matmul, softmax, element-wise, reductions, FHE (NTT/INTT/pointwise)
 - `tensor` — GPU tensor type, buffer management, memory layout
-- `shaders` — 824 WGSL shaders, 15-tier precision continuum (Binary→DF128), sovereign compiler pipeline
+- `shaders` — 826 WGSL shaders, 15-tier precision continuum (Binary→DF128), sovereign compiler pipeline
 - `interpolate` — cubic spline, kriging
 - `optimize` — L-BFGS, Brent, Nelder-Mead (GPU variants)
 - `unified_math` — unified math routing across precision levels

@@ -13,7 +13,7 @@ tolerance architecture.
 
 ## Domains Covered
 
-barraCuda has 824 WGSL shaders across domains:
+barraCuda has 826 WGSL shaders across domains:
 - Molecular dynamics (Yukawa, Morse, PPPM, Verlet)
 - Spectral analysis (FFT, autocorrelation, IPR)
 - Nuclear physics (HFB, Skyrme, BCS)

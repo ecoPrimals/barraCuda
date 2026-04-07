@@ -93,10 +93,6 @@ impl MorseForceF64 {
     }
 }
 
-#[allow(
-    dead_code,
-    reason = "CPU reference helper for Morse CPU paths (GPU parity validation)"
-)]
 fn bond_geometry(positions: &[f64], bond: &MorseBond) -> (f64, f64, f64, f64) {
     let dx = positions[bond.j as usize * 3] - positions[bond.i as usize * 3];
     let dy = positions[bond.j as usize * 3 + 1] - positions[bond.i as usize * 3 + 1];

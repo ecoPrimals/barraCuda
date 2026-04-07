@@ -1,11 +1,21 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-04-05.
+Prioritized work items, ordered by impact. Updated 2026-04-07.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 32: Fault Injection SIGSEGV Resolution & Deep Debt Audit (Apr 7)**:
+  Root-caused Mesa llvmpipe within-process thread safety SIGSEGV in 3 fault injection tests
+  (concurrent GPU readbacks and unbounded OOM loop). Serialized GPU operations sequentially
+  in `fault_concurrent_tensor_access`, `test_concurrent_error_handling`; bounded
+  `fault_out_of_gpu_memory` to 256 iterations. Updated nextest coverage profile from
+  deprecated `exclude = true` to `default-filter` syntax. Fixed 4 clippy findings
+  (non-existent lint, protocol string, unfulfilled expects). Comprehensive 12-axis deep debt
+  audit confirmed clean bill: zero production unsafe/unwrap/expect/println/mocks/hardcoding/
+  TODO/`#[allow(`/commented-out code across all 1,116 Rust files. 4,180 tests pass (CI
+  profile), 0 failures. All quality gates green.
 - **Sprint 31: Deep Debt Cleanup & Test Stability Hardening (Apr 5)**:
   Removed deprecated `CoralReefDevice` alias (zero consumers). `SpirvError` evolved to
   thiserror derive. 12 dead_code reason strings corrected from "CPU reference path" to

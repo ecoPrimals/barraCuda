@@ -38,7 +38,7 @@ Layer 4  toadStool    █████████░  S163 complete  All infra g
 
 | Milestone | Status | Date |
 |-----------|--------|------|
-| 824 WGSL shaders, 15-tier precision continuum (Binary→DF128) | Done | Mar 30, 2026 |
+| 826 WGSL shaders, 15-tier precision continuum (Binary→DF128) | Done | Mar 30, 2026 |
 | Sovereign compiler (FMA fusion, dead expr) | Done | Mar 5, 2026 |
 | SPIR-V passthrough → safe WGSL roundtrip | Done | Mar 6, 2026 |
 | Pipeline cache unsafe → deferred | Done | Mar 6, 2026 |

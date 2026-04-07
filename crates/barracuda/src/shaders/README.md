@@ -1,6 +1,6 @@
 # BarraCuda WGSL Shader Library
 
-**749 Production WGSL Shaders** (824 total including ops/) | 15-Tier Precision Continuum (Binary→DF128) | Cross-Vendor Compatible
+**749 Production WGSL Shaders** (826 total including ops/) | 15-Tier Precision Continuum (Binary→DF128) | Cross-Vendor Compatible
 
 ---
 

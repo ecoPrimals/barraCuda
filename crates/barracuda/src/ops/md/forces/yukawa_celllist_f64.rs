@@ -448,18 +448,10 @@ impl YukawaCellListF64 {
         (forces, energies)
     }
 
-    #[allow(
-        dead_code,
-        reason = "CPU reference helper for compute_cpu (GPU parity validation)"
-    )]
     fn pbc_delta(&self, delta: f64, box_size: f64) -> f64 {
         box_size.mul_add(-(delta / box_size).round(), delta)
     }
 
-    #[allow(
-        dead_code,
-        reason = "CPU reference helper for compute_cpu (GPU parity validation)"
-    )]
     fn get_neighbor_cells(&self, cell_idx: usize, params: &CellListParams) -> Vec<usize> {
         let nx = params.n_cells[0];
         let ny = params.n_cells[1];

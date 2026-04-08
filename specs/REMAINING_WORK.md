@@ -2,7 +2,7 @@
 
 **Version**: 0.3.11
 **Date**: April 8, 2026
-**Status**: Through Sprint 36 — tracks all open work items for barraCuda evolution
+**Status**: Through Sprint 37 — tracks all open work items for barraCuda evolution
 
 ---
 
@@ -27,6 +27,44 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   and physics domain requirements.
 - **ecoBin/UniBin/scyBorg compliance**: AGPL-3.0-or-later, pure Rust (no C deps
   in barraCuda's code), semantic IPC method naming, capability-based discovery.
+
+---
+
+## Achieved (April 8, 2026 — Sprint 37: Deep Debt — Test Module Refactor & Code Cleanup)
+
+### Smart Refactoring
+- `methods_tests.rs` (951 LOC) → 6 domain-focused test modules + hub (`methods_tests/mod.rs`)
+  - `registry_tests.rs` (103L): parse_shape, normalize_method, REGISTERED_METHODS
+  - `primal_wire_tests.rs` (161L): primal.info, identity.get, Wire Standard L2
+  - `device_health_tests.rs` (193L): device, health, tolerances, aliases
+  - `dispatch_compute_tests.rs` (113L): dispatch routing, validate, compute errors
+  - `tensor_fhe_tests.rs` (168L): tensor + FHE error paths
+  - `comprehensive_tests.rs` (167L): all routes, text protocol, tensor store
+
+### Code Cleanup
+- `buffer_test.rs`: 6 `println!` calls removed from test code in library src/ path
+- `nadam_gpu.rs`: Stale `// BEFORE: ... // AFTER: ...` evolution narrative removed
+- `force_interpolation.rs`: Indexed loop `for i in 0..positions.len()` → `iter().zip()`
+
+### 12-Axis Deep Debt Audit: Clean Bill
+1. Files >800L: 0 (largest now 790L `wgpu_caps.rs`)
+2. `unsafe` in production: 1 (wgpu passthrough, documented, cannot avoid)
+3. `#[allow(`: 0 (all migrated to `#[expect(`)
+4. `Result<T, String>` in production: 0
+5. `TODO`/`FIXME`/`HACK` in .rs: 0
+6. `println!`/`eprintln!` in library src/: 0
+7. External C/FFI in crates/: 0
+8. Commented-out code: 0
+9. Mocks in production: 0 (ML "fake_quantize" is standard STE, not a mock)
+10. Other-primal hardcoding: 0
+11. Error types: all on thiserror
+12. Hardcoded paths in production: 0
+
+### Quality Gates
+- 4,207 tests pass, 0 fail, 14 skipped
+- `cargo fmt --all --check` ✓
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings` ✓
+- `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` ✓
 
 ---
 

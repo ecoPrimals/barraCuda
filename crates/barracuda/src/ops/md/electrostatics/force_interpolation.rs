@@ -299,10 +299,10 @@ mod tests {
         let forces2 = interpolate_forces(&potential, &charges, &coeffs, &params);
 
         // Should match
-        for i in 0..positions.len() {
-            assert!((forces1[i][0] - forces2[i][0]).abs() < 1e-10);
-            assert!((forces1[i][1] - forces2[i][1]).abs() < 1e-10);
-            assert!((forces1[i][2] - forces2[i][2]).abs() < 1e-10);
+        for (f1, f2) in forces1.iter().zip(&forces2) {
+            assert!((f1[0] - f2[0]).abs() < 1e-10);
+            assert!((f1[1] - f2[1]).abs() < 1e-10);
+            assert!((f1[2] - f2[2]).abs() < 1e-10);
         }
     }
 }

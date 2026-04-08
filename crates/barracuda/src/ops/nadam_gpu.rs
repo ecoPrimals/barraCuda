@@ -322,9 +322,6 @@ impl NAdam {
             pass.set_pipeline(&pipeline);
             pass.set_bind_group(0, Some(&bind_group), &[]);
             
-            // Deep Debt Evolution: Capability-based dispatch (vendor-optimized)
-            // BEFORE: let workgroups = (size as u32 + 255) / 256;  // Hardcoded
-            // AFTER: Runtime optimization per GPU vendor
             let caps = DeviceCapabilities::from_device(&device);
             let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::ElementWise);
             let workgroups = (size as u32 + optimal_wg_size - 1) / optimal_wg_size;

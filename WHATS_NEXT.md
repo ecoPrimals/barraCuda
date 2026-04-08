@@ -6,6 +6,11 @@ Prioritized work items, ordered by impact. Updated 2026-04-08.
 
 ## Recently Completed
 
+- **Sprint 37: Deep Debt — Test Module Refactor & Code Cleanup (Apr 8)**:
+  `methods_tests.rs` (951L) smart-refactored into 6 domain-focused test modules.
+  `buffer_test.rs` println! removed. `nadam_gpu.rs` stale comment removed.
+  `force_interpolation.rs` indexed loop → iterator. 12-axis clean bill.
+  4,207 tests pass, all quality gates green.
 - **Sprint 36: Domain-Based Socket Naming & Flaky Test Serialization (Apr 8)**:
   Socket naming evolved from `barracuda.sock` to `math.sock` per
   `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §3. Legacy symlink for backward compat. Domain

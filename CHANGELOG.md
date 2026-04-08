@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.11] — 2026-04-08
 
+### Changed — Sprint 37: Deep Debt — Test Module Refactor & Code Cleanup (Apr 8 2026)
+
+- **methods_tests.rs refactor**: Monolithic 951-line test file split into 6 domain-focused
+  modules + hub (`methods_tests/mod.rs`): `registry_tests`, `primal_wire_tests`,
+  `device_health_tests`, `dispatch_compute_tests`, `tensor_fhe_tests`, `comprehensive_tests`.
+  Shared imports and `test_primal()` helper in hub. Largest module 193 lines.
+- **buffer_test.rs cleanup**: Removed 6 `println!` calls from test code in library `src/` path.
+- **nadam_gpu.rs cleanup**: Removed stale `// BEFORE: ...` evolution narrative comment.
+- **force_interpolation.rs**: Indexed loop evolved to idiomatic `iter().zip()`.
+- **12-axis deep debt audit**: Clean bill across all axes — zero `#[allow(`, zero
+  `Result<T, String>` in production, zero TODOs/FIXMEs/HACKs in .rs, zero external C/FFI,
+  zero files >800 lines, all error types on thiserror.
+- All quality gates green: fmt, clippy, doc, 4,207 tests pass.
+
 ### Changed — Sprint 36: Domain-Based Socket Naming & Flaky Test Serialization (Apr 8 2026)
 
 - **Domain-based socket naming**: `barracuda.sock` → `math.sock`, `barracuda-{fid}.sock` →

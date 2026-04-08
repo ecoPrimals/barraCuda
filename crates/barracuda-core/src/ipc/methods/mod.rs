@@ -140,7 +140,7 @@ pub async fn dispatch(
 }
 
 #[cfg(test)]
-#[path = "../methods_tests.rs"]
+#[path = "../methods_tests/mod.rs"]
 mod tests;
 
 #[cfg(test)]

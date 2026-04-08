@@ -316,20 +316,58 @@ impl IpcServer {
 
     /// Resolve the default IPC socket path per wateringHole standards.
     ///
-    /// Standard path: `$BIOMEOS_SOCKET_DIR/barracuda.sock`
-    /// With family ID: `$BIOMEOS_SOCKET_DIR/barracuda-{family_id}.sock`
+    /// Domain-based: `$BIOMEOS_SOCKET_DIR/math.sock`
+    /// With family ID: `$BIOMEOS_SOCKET_DIR/math-{family_id}.sock`
     ///
-    /// Family ID resolution: `BARRACUDA_FAMILY_ID` → `FAMILY_ID` →
-    /// `BIOMEOS_FAMILY_ID` (legacy). Per `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §4
-    /// and `BTSP_PROTOCOL_STANDARD.md` §Socket Naming.
+    /// Per `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §3: primals bind using their
+    /// capability domain stem, not their primal name.
     #[cfg(unix)]
     pub fn default_socket_path() -> std::path::PathBuf {
         let dir = resolve_socket_dir();
+        let domain = crate::PRIMAL_DOMAIN;
         let sock_name = match resolve_family_id() {
-            Some(family_id) => format!("barracuda-{family_id}.sock"),
-            None => "barracuda.sock".to_owned(),
+            Some(family_id) => format!("{domain}-{family_id}.sock"),
+            None => format!("{domain}.sock"),
         };
         dir.join(sock_name)
+    }
+
+    /// Create a legacy primal-named symlink for backward compatibility.
+    ///
+    /// Per `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §3 "Legacy compatibility":
+    /// during migration, primals MAY symlink `{primal}.sock → {domain}.sock`
+    /// so consumers using identity-based discovery can still find the socket.
+    #[cfg(unix)]
+    pub fn create_legacy_symlink(socket_path: &std::path::Path) {
+        let dir = resolve_socket_dir();
+        let ns = crate::PRIMAL_NAMESPACE;
+        let legacy_name = match resolve_family_id() {
+            Some(family_id) => format!("{ns}-{family_id}.sock"),
+            None => format!("{ns}.sock"),
+        };
+        let legacy_path = dir.join(legacy_name);
+        if legacy_path.exists() {
+            std::fs::remove_file(&legacy_path).ok();
+        }
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(socket_path, &legacy_path).ok();
+        }
+    }
+
+    /// Remove the legacy primal-named symlink on shutdown.
+    #[cfg(unix)]
+    pub fn remove_legacy_symlink() {
+        let dir = resolve_socket_dir();
+        let ns = crate::PRIMAL_NAMESPACE;
+        let legacy_name = match resolve_family_id() {
+            Some(family_id) => format!("{ns}-{family_id}.sock"),
+            None => format!("{ns}.sock"),
+        };
+        let legacy_path = dir.join(legacy_name);
+        if legacy_path.is_symlink() {
+            std::fs::remove_file(&legacy_path).ok();
+        }
     }
 
     /// Resolve the default TCP port from environment.

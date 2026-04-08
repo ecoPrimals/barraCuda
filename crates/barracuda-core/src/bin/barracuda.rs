@@ -58,8 +58,8 @@ enum Commands {
         tarpc_unix: Option<String>,
 
         /// Unix socket path override. Defaults to
-        /// `$BIOMEOS_SOCKET_DIR/barracuda.sock` (or `barracuda-{family_id}.sock`
-        /// when `FAMILY_ID` is set).
+        /// `$BIOMEOS_SOCKET_DIR/math.sock` (or `math-{family_id}.sock`
+        /// when `FAMILY_ID` is set). Legacy `barracuda.sock` symlink created.
         #[cfg(unix)]
         #[arg(long, num_args = 0..=1, default_missing_value = "__default__")]
         unix: Option<String>,
@@ -223,7 +223,9 @@ async fn run_server(
                 write_discovery_file(None, tarpc_bind.as_deref(), Some(&sock_path));
             }
 
+            barracuda_core::ipc::IpcServer::create_legacy_symlink(&sock_path);
             server.serve_unix(&sock_path, None::<fn()>).await?;
+            barracuda_core::ipc::IpcServer::remove_legacy_symlink();
             remove_discovery_file();
             return Ok(());
         }
@@ -490,8 +492,10 @@ async fn run_service_mode() -> Result<(), barracuda_core::error::BarracudaCoreEr
     {
         let sock_path = barracuda_core::ipc::IpcServer::default_socket_path();
         write_discovery_file(None, None, Some(&sock_path));
+        barracuda_core::ipc::IpcServer::create_legacy_symlink(&sock_path);
         let on_ready = || notify_systemd_ready();
         server.serve_unix(&sock_path, Some(on_ready)).await?;
+        barracuda_core::ipc::IpcServer::remove_legacy_symlink();
         remove_discovery_file();
     }
 

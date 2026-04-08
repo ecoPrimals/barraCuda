@@ -140,7 +140,7 @@ fn test_identity_get() {
     let result = resp.result.expect("identity.get should always succeed");
     assert_eq!(result["primal"], "barracuda");
     assert!(result["version"].is_string());
-    assert_eq!(result["domain"], "compute");
+    assert_eq!(result["domain"], crate::PRIMAL_DOMAIN);
     assert_eq!(result["license"], "AGPL-3.0-or-later");
 }
 
@@ -156,7 +156,7 @@ async fn test_dispatch_identity_get() {
     .await;
     let result = resp.result.expect("identity.get via dispatch");
     assert_eq!(result["primal"], "barracuda");
-    assert_eq!(result["domain"], "compute");
+    assert_eq!(result["domain"], crate::PRIMAL_DOMAIN);
 }
 
 // ── Wire Standard L2 compliance structural checks ───────────────────────

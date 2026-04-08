@@ -2,7 +2,7 @@
 
 **Version**: 0.3.11
 **Date**: April 8, 2026
-**Status**: Through Sprint 35 — tracks all open work items for barraCuda evolution
+**Status**: Through Sprint 36 — tracks all open work items for barraCuda evolution
 
 ---
 
@@ -27,6 +27,39 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   and physics domain requirements.
 - **ecoBin/UniBin/scyBorg compliance**: AGPL-3.0-or-later, pure Rust (no C deps
   in barraCuda's code), semantic IPC method naming, capability-based discovery.
+
+---
+
+## Achieved (April 8, 2026 — Sprint 36: Domain-Based Socket Naming & Flaky Test Serialization)
+
+### Domain-Based Socket Naming (PRIMAL_SELF_KNOWLEDGE_STANDARD §3)
+- Socket evolved from `barracuda.sock` / `barracuda-{fid}.sock` to
+  `math.sock` / `math-{fid}.sock` (capability domain stem)
+- Legacy `barracuda.sock → math.sock` symlink on startup, removed on shutdown
+- New `PRIMAL_DOMAIN = "math"` constant in `lib.rs`
+- `identity.get` and `primal.capabilities` domain field: `"compute"` → `"math"`
+
+### Flaky Test Serialization
+- `three_springs_tests` added to `gpu-serial` nextest group (max-threads = 1)
+- Same Mesa llvmpipe SIGSEGV mitigation as `fault_injection`, `fhe_chaos_tests`
+
+### Files Changed
+- `crates/barracuda-core/src/lib.rs` (PRIMAL_DOMAIN constant)
+- `crates/barracuda-core/src/ipc/transport.rs` (domain-based socket, legacy symlink)
+- `crates/barracuda-core/src/ipc/transport_tests.rs` (updated assertions)
+- `crates/barracuda-core/src/ipc/mod.rs` (doc update)
+- `crates/barracuda-core/src/ipc/methods/primal.rs` (domain field)
+- `crates/barracuda-core/src/rpc.rs` (domain field)
+- `crates/barracuda-core/src/ipc/methods_tests.rs` (domain assertions)
+- `crates/barracuda-core/src/bin/barracuda.rs` (symlink lifecycle, CLI help)
+- `crates/barracuda-core/tests/btsp_socket_compliance.rs` (updated assertions)
+- `.config/nextest.toml` (three_springs_tests gpu-serial)
+
+### Quality Gates
+- 4,207 tests pass, 0 fail, 14 skipped
+- `cargo fmt --all --check` ✓
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings` ✓
+- `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` ✓
 
 ---
 

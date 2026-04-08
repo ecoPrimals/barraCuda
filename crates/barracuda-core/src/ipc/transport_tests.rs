@@ -116,8 +116,8 @@ fn default_socket_path_format() {
     let path_str = path.to_string_lossy();
     assert!(path_str.contains(ECOSYSTEM_SOCKET_DIR));
     assert!(
-        path_str.ends_with("barracuda.sock") || path_str.contains("barracuda-"),
-        "default path should be barracuda.sock or barracuda-{{fid}}.sock, got {path_str}"
+        path_str.ends_with("math.sock") || path_str.contains("math-"),
+        "default path should be math.sock or math-{{fid}}.sock, got {path_str}"
     );
 }
 

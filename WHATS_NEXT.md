@@ -6,6 +6,12 @@ Prioritized work items, ordered by impact. Updated 2026-04-08.
 
 ## Recently Completed
 
+- **Sprint 36: Domain-Based Socket Naming & Flaky Test Serialization (Apr 8)**:
+  Socket naming evolved from `barracuda.sock` to `math.sock` per
+  `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §3. Legacy symlink for backward compat. Domain
+  field in `identity.get` evolved from `"compute"` to `"math"`. `three_springs_tests`
+  serialized in gpu-serial nextest group (Mesa llvmpipe SIGSEGV mitigation).
+  4,207 tests pass, all quality gates green.
 - **Sprint 35: Deep Debt — Typed Errors, thiserror & Transport Refactor (Apr 8)**:
   `validate_insecure_guard` evolved from `Result<(), String>` to typed `BarracudaCoreError`.
   `PppmError` evolved to `#[derive(thiserror::Error)]`. `transport.rs` smart-refactored:

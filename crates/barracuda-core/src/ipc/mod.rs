@@ -7,8 +7,9 @@
 //!
 //! ## Transport
 //!
-//! Primary: Unix domain socket at `$BIOMEOS_SOCKET_DIR/barracuda.sock`
-//! (or `barracuda-{family_id}.sock` when `FAMILY_ID` is set; per BTSP §Socket Naming)
+//! Primary: Unix domain socket at `$BIOMEOS_SOCKET_DIR/math.sock`
+//! (or `math-{family_id}.sock` when `FAMILY_ID` is set; per PRIMAL_SELF_KNOWLEDGE_STANDARD §3)
+//! Legacy symlink: `barracuda.sock → math.sock` for backward compatibility
 //! Fallback: TCP, resolved via [`transport::resolve_bind_address()`](crate::ipc::transport::resolve_bind_address) —
 //! `BARRACUDA_IPC_BIND` or `BARRACUDA_IPC_HOST`:`BARRACUDA_IPC_PORT`,
 //! default `127.0.0.1:0` (ephemeral)

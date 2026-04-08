@@ -77,7 +77,7 @@ pub(super) fn identity(id: Value) -> JsonRpcResponse {
         serde_json::json!({
             "primal": crate::PRIMAL_NAMESPACE,
             "version": env!("CARGO_PKG_VERSION"),
-            "domain": "compute",
+            "domain": crate::PRIMAL_DOMAIN,
             "license": "AGPL-3.0-or-later",
         }),
     )

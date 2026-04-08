@@ -69,6 +69,12 @@ pub const PRIMAL_NAME: &str = "barraCuda";
 /// camelCase for human-facing display names.
 pub const PRIMAL_NAMESPACE: &str = "barracuda";
 
+/// Capability domain stem per `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §3.
+///
+/// Used for domain-based socket naming (`math.sock` / `math-{fid}.sock`)
+/// and the `domain` field in `identity.get` responses.
+pub const PRIMAL_DOMAIN: &str = "math";
+
 use error::BarracudaCoreError;
 use health::{HealthReport, HealthStatus, PrimalHealth};
 use lifecycle::{PrimalLifecycle, PrimalState};
@@ -353,5 +359,6 @@ mod tests {
     fn test_primal_constants() {
         assert_eq!(PRIMAL_NAME, "barraCuda");
         assert_eq!(PRIMAL_NAMESPACE, "barracuda");
+        assert_eq!(PRIMAL_DOMAIN, "math");
     }
 }

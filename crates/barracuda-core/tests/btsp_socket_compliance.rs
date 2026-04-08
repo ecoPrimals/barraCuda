@@ -151,8 +151,8 @@ fn socket_path_unscoped_when_no_family() {
     unsafe { clear_family_env() };
     let path = IpcServer::default_socket_path();
     assert!(
-        path.to_string_lossy().ends_with("barracuda.sock"),
-        "expected barracuda.sock, got {}",
+        path.to_string_lossy().ends_with("math.sock"),
+        "expected math.sock, got {}",
         path.display()
     );
 }
@@ -164,8 +164,8 @@ fn socket_path_scoped_with_family_id() {
     unsafe { std::env::set_var("FAMILY_ID", "cluster-7") };
     let path = IpcServer::default_socket_path();
     assert!(
-        path.to_string_lossy().ends_with("barracuda-cluster-7.sock"),
-        "expected barracuda-cluster-7.sock, got {}",
+        path.to_string_lossy().ends_with("math-cluster-7.sock"),
+        "expected math-cluster-7.sock, got {}",
         path.display()
     );
 }
@@ -177,9 +177,8 @@ fn socket_path_scoped_with_primal_specific_family() {
     unsafe { std::env::set_var("BARRACUDA_FAMILY_ID", "override-fam") };
     let path = IpcServer::default_socket_path();
     assert!(
-        path.to_string_lossy()
-            .ends_with("barracuda-override-fam.sock"),
-        "expected barracuda-override-fam.sock, got {}",
+        path.to_string_lossy().ends_with("math-override-fam.sock"),
+        "expected math-override-fam.sock, got {}",
         path.display()
     );
 }

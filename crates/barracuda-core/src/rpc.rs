@@ -144,7 +144,7 @@ impl BarraCudaService for BarraCudaServer {
         IdentityInfo {
             primal: crate::PRIMAL_NAMESPACE.into(),
             version: env!("CARGO_PKG_VERSION").into(),
-            domain: "compute".into(),
+            domain: crate::PRIMAL_DOMAIN.into(),
             license: "AGPL-3.0-or-later".into(),
         }
     }

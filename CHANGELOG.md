@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.11] — 2026-04-08
 
+### Changed — Sprint 36: Domain-Based Socket Naming & Flaky Test Serialization (Apr 8 2026)
+
+- **Domain-based socket naming**: `barracuda.sock` → `math.sock`, `barracuda-{fid}.sock` →
+  `math-{fid}.sock` per `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §3. Primals bind using their
+  capability domain stem, not their primal name.
+- **Legacy symlink**: `barracuda.sock → math.sock` created on startup, removed on shutdown,
+  for backward compatibility with consumers using identity-based discovery.
+- **`PRIMAL_DOMAIN` constant**: New `"math"` constant in `lib.rs` for domain-based paths
+  and the `domain` field in `identity.get` / `primal.capabilities` responses.
+- **Domain field**: `"compute"` → `"math"` in `identity.get` and `primal.capabilities`
+  JSON-RPC responses (matches plasmidBin metadata).
+- **Flaky test serialization**: `three_springs_tests` added to `gpu-serial` nextest group
+  to prevent Mesa llvmpipe SIGSEGV under concurrent GPU access (same mitigation as
+  `fault_injection` and `fhe_chaos_tests`).
+- All quality gates green: fmt, clippy, doc, 4,207 tests pass.
+
 ### Changed — Sprint 35: Deep Debt — Typed Errors, thiserror & Transport Refactor (Apr 8 2026)
 
 - **`validate_insecure_guard`**: Evolved from `Result<(), String>` to typed

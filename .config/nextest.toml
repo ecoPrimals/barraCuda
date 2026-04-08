@@ -128,11 +128,11 @@ slow-timeout = { period = "180s", terminate-after = 2 }
 max-threads = 1
 
 [[profile.ci.overrides]]
-filter = "binary(fhe_chaos_tests) | binary(fault_injection) | binary(fhe_fault_injection_tests) | binary(scientific_fault_injection_tests) | test(/property/)"
+filter = "binary(fhe_chaos_tests) | binary(fault_injection) | binary(fhe_fault_injection_tests) | binary(scientific_fault_injection_tests) | binary(three_springs_tests) | test(/property/)"
 test-group = "gpu-serial"
 slow-timeout = { period = "180s", terminate-after = 2 }
 
 [[profile.default.overrides]]
-filter = "binary(fhe_chaos_tests) | binary(fault_injection) | binary(fhe_fault_injection_tests) | binary(scientific_fault_injection_tests) | test(/property/)"
+filter = "binary(fhe_chaos_tests) | binary(fault_injection) | binary(fhe_fault_injection_tests) | binary(scientific_fault_injection_tests) | binary(three_springs_tests) | test(/property/)"
 test-group = "gpu-serial"
 slow-timeout = { period = "120s", terminate-after = 2 }

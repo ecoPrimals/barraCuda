@@ -58,7 +58,8 @@ enum Commands {
         tarpc_unix: Option<String>,
 
         /// Unix socket path override. Defaults to
-        /// `$XDG_RUNTIME_DIR/biomeos/barracuda.sock`.
+        /// `$BIOMEOS_SOCKET_DIR/barracuda.sock` (or `barracuda-{family_id}.sock`
+        /// when `FAMILY_ID` is set).
         #[cfg(unix)]
         #[arg(long, num_args = 0..=1, default_missing_value = "__default__")]
         unix: Option<String>,
@@ -164,6 +165,8 @@ async fn run_server(
     #[cfg(unix)] unix: Option<String>,
     #[cfg(unix)] no_unix: bool,
 ) -> Result<(), barracuda_core::error::BarracudaCoreError> {
+    barracuda_core::ipc::transport::validate_insecure_guard()
+        .map_err(barracuda_core::error::BarracudaCoreError::lifecycle)?;
     let mut primal = BarraCudaPrimal::new();
     primal.start().await.map_err(|e| {
         barracuda_core::error::BarracudaCoreError::lifecycle(format!("Failed to start: {e}"))
@@ -473,6 +476,8 @@ fn remove_discovery_file() {
 ///
 /// Per genomeBin: Unix socket default, PID file, `NOTIFY_SOCKET`, no banner.
 async fn run_service_mode() -> Result<(), barracuda_core::error::BarracudaCoreError> {
+    barracuda_core::ipc::transport::validate_insecure_guard()
+        .map_err(barracuda_core::error::BarracudaCoreError::lifecycle)?;
     let _pid_guard = write_pid_file();
 
     let mut primal = BarraCudaPrimal::new();
@@ -562,9 +567,12 @@ fn notify_systemd_ready() {
 
 /// The shared discovery directory for all ecoPrimals.
 fn discovery_dir() -> Option<std::path::PathBuf> {
-    std::env::var("XDG_RUNTIME_DIR").ok().map(|d| {
-        std::path::PathBuf::from(d).join(barracuda_core::ipc::transport::ECOSYSTEM_SOCKET_DIR)
-    })
+    let dir = barracuda_core::ipc::transport::resolve_socket_dir();
+    if dir.as_os_str().is_empty() {
+        None
+    } else {
+        Some(dir)
+    }
 }
 
 /// Resolve the server address for the `client` subcommand.

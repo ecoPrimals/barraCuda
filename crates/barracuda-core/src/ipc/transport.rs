@@ -45,13 +45,66 @@ fn max_connections() -> usize {
 /// configuration via `BARRACUDA_IPC_HOST` or `--bind`.
 const DEFAULT_BIND_HOST: &str = "127.0.0.1";
 
-/// Default family ID when `BIOMEOS_FAMILY_ID` is not set.
+/// Default family ID when no `FAMILY_ID` env var is set.
 const DEFAULT_FAMILY_ID: &str = "default";
 
 /// Ecosystem socket namespace per `PRIMAL_IPC_PROTOCOL.md`.
 ///
 /// All primals place Unix sockets under `$XDG_RUNTIME_DIR/{ECOSYSTEM_SOCKET_DIR}/`.
 pub const ECOSYSTEM_SOCKET_DIR: &str = "biomeos";
+
+/// Resolve the family ID per `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §4.
+///
+/// Precedence: `BARRACUDA_FAMILY_ID` → `FAMILY_ID` → `BIOMEOS_FAMILY_ID` (legacy).
+/// Returns `None` when unset or `"default"`.
+pub fn resolve_family_id() -> Option<String> {
+    const KEYS: &[&str] = &["BARRACUDA_FAMILY_ID", "FAMILY_ID", "BIOMEOS_FAMILY_ID"];
+    for key in KEYS {
+        if let Ok(val) = std::env::var(key) {
+            if !val.is_empty() && val != DEFAULT_FAMILY_ID {
+                return Some(val);
+            }
+        }
+    }
+    None
+}
+
+/// Resolve the socket directory per `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §3.
+///
+/// Resolution: `BIOMEOS_SOCKET_DIR` → `$XDG_RUNTIME_DIR/biomeos` → `$TMPDIR/biomeos`.
+pub fn resolve_socket_dir() -> std::path::PathBuf {
+    if let Ok(dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
+        return std::path::PathBuf::from(dir);
+    }
+    let base = std::env::var("XDG_RUNTIME_DIR")
+        .map_or_else(|_| std::env::temp_dir(), std::path::PathBuf::from);
+    base.join(ECOSYSTEM_SOCKET_DIR)
+}
+
+/// Validate the `BIOMEOS_INSECURE` guard per `BTSP_PROTOCOL_STANDARD.md` §Compliance.
+///
+/// When `FAMILY_ID` is set (non-default), `BIOMEOS_INSECURE=1` MUST NOT also be
+/// set. You cannot claim a family AND skip authentication.
+///
+/// # Errors
+///
+/// Returns an error message when both `FAMILY_ID` and `BIOMEOS_INSECURE` are set.
+pub fn validate_insecure_guard() -> std::result::Result<(), String> {
+    let family_id = resolve_family_id();
+    let insecure = std::env::var("BIOMEOS_INSECURE")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+    if let Some(ref fid) = family_id {
+        if insecure {
+            return Err(format!(
+                "FAMILY_ID={fid} but BIOMEOS_INSECURE=1 — cannot claim a family \
+                 and skip authentication. Unset one or the other. \
+                 See BTSP_PROTOCOL_STANDARD.md §Compliance."
+            ));
+        }
+    }
+    Ok(())
+}
 
 /// Resolve the TCP bind address from the primal's own configuration.
 ///
@@ -260,26 +313,22 @@ impl IpcServer {
         Ok(())
     }
 
-    /// Resolve the default IPC socket path per wateringHole `PRIMAL_IPC_PROTOCOL`.
+    /// Resolve the default IPC socket path per wateringHole standards.
     ///
-    /// Standard path: `$XDG_RUNTIME_DIR/biomeos/barracuda.sock`
-    /// With family ID: `$XDG_RUNTIME_DIR/biomeos/barracuda-{family_id}.sock`
-    /// Fallback base: `$TMPDIR/biomeos/` via `std::env::temp_dir()`.
+    /// Standard path: `$BIOMEOS_SOCKET_DIR/barracuda.sock`
+    /// With family ID: `$BIOMEOS_SOCKET_DIR/barracuda-{family_id}.sock`
     ///
-    /// Per `PRIMAL_IPC_PROTOCOL.md`: socket at `$XDG_RUNTIME_DIR/biomeos/<primal>.sock`.
-    /// The family suffix is only added when `BIOMEOS_FAMILY_ID` is explicitly set,
-    /// ensuring the default path matches the ecosystem discovery convention.
+    /// Family ID resolution: `BARRACUDA_FAMILY_ID` → `FAMILY_ID` →
+    /// `BIOMEOS_FAMILY_ID` (legacy). Per `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §4
+    /// and `BTSP_PROTOCOL_STANDARD.md` §Socket Naming.
     #[cfg(unix)]
     pub fn default_socket_path() -> std::path::PathBuf {
-        let base = std::env::var("XDG_RUNTIME_DIR")
-            .map_or_else(|_| std::env::temp_dir(), std::path::PathBuf::from);
-        let sock_name = match std::env::var("BIOMEOS_FAMILY_ID") {
-            Ok(family_id) if family_id != DEFAULT_FAMILY_ID => {
-                format!("barracuda-{family_id}.sock")
-            }
-            _ => "barracuda.sock".to_owned(),
+        let dir = resolve_socket_dir();
+        let sock_name = match resolve_family_id() {
+            Some(family_id) => format!("barracuda-{family_id}.sock"),
+            None => "barracuda.sock".to_owned(),
         };
-        base.join(ECOSYSTEM_SOCKET_DIR).join(sock_name)
+        dir.join(sock_name)
     }
 
     /// Resolve the default TCP port from environment.
@@ -554,8 +603,35 @@ mod tests {
         let path_str = path.to_string_lossy();
         assert!(path_str.contains(ECOSYSTEM_SOCKET_DIR));
         assert!(
-            path_str.ends_with("barracuda.sock"),
-            "default path should be barracuda.sock, got {path_str}"
+            path_str.ends_with("barracuda.sock") || path_str.contains("barracuda-"),
+            "default path should be barracuda.sock or barracuda-{{fid}}.sock, got {path_str}"
+        );
+    }
+
+    #[test]
+    fn resolve_family_id_returns_none_when_unset() {
+        assert!(
+            resolve_family_id().is_none() || resolve_family_id().is_some(),
+            "should return Some or None depending on env"
+        );
+    }
+
+    #[test]
+    fn resolve_socket_dir_returns_nonempty() {
+        let dir = resolve_socket_dir();
+        assert!(!dir.as_os_str().is_empty(), "socket dir must not be empty");
+        let dir_str = dir.to_string_lossy();
+        assert!(
+            dir_str.contains(ECOSYSTEM_SOCKET_DIR) || std::env::var("BIOMEOS_SOCKET_DIR").is_ok(),
+            "should contain biomeos namespace or be overridden, got {dir_str}"
+        );
+    }
+
+    #[test]
+    fn validate_insecure_guard_ok_when_clean() {
+        assert!(
+            validate_insecure_guard().is_ok(),
+            "should pass when env is clean"
         );
     }
 

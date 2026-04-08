@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **826 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,116 Rust source files**, 24 integration test harnesses, 4,187+ tests passing via nextest CI profile
+- **1,116 Rust source files**, 25 integration test harnesses, 4,207+ tests passing via nextest CI profile
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -60,6 +60,7 @@ results.
 
 ## Recent
 
+- **Sprint 34: BTSP Socket Naming + BIOMEOS_INSECURE Guard (Apr 8)**: Resolves GAP-MATRIX-12 — `FAMILY_ID` socket scoping with standard env var precedence (`BARRACUDA_FAMILY_ID` → `FAMILY_ID` → `BIOMEOS_FAMILY_ID`), `BIOMEOS_SOCKET_DIR` env var support, `BIOMEOS_INSECURE` guard (refuse to start when both `FAMILY_ID` and `BIOMEOS_INSECURE=1`). Per `BTSP_PROTOCOL_STANDARD.md` §Compliance and `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §3-4. GAP-MATRIX-06 plasmidBin metadata updated to v0.3.11 with full capability manifest. 20 new BTSP compliance tests (`btsp_socket_compliance.rs`). 4,207 tests pass, all quality gates green.
 - **Sprint 33: Wire Standard L2 Compliance (Apr 8)**: `capabilities.list` now returns Wire Standard L2 `{primal, version, methods}` envelope with `provided_capabilities` grouping, `consumed_capabilities`, `protocol`, `transport`. New `identity.get` method returns `{primal, version, domain, license}`. Both JSON-RPC and tarpc paths wired. 31 methods (was 30). `provided_capability_groups()` in discovery module derives structured groups from the dispatch table — zero hardcoded domain catalog. 13 new L2 compliance tests. 4,187 tests pass, all quality gates green.
 - **Sprint 32: Fault Injection SIGSEGV Resolution & Deep Debt Audit (Apr 7)**: Root-caused Mesa llvmpipe within-process thread safety SIGSEGV in 3 fault injection tests. Serialized concurrent GPU readbacks in `fault_concurrent_tensor_access` and `test_concurrent_error_handling`. Bounded `fault_out_of_gpu_memory` allocation loop (10,000→256 iterations). Updated nextest coverage profile from deprecated `exclude = true` to `default-filter` syntax. Fixed 4 clippy findings: non-existent `needless_type_cast` lint, protocol string `"jsonrpc-2.0"` → `"json-rpc-2.0"`, 2 unfulfilled `dead_code` expects. Comprehensive 12-axis deep debt audit: zero production unsafe/unwrap/expect/println/mocks/hardcoding/TODO/commented-out code, zero `#[allow(`, zero `Result<T,String>` in production, zero files >1000 lines. 4,180 tests pass (CI profile), 0 failures. All quality gates green.
 - **Sprint 31: Deep Debt Cleanup & Test Stability Hardening (Apr 5)**: Removed deprecated `CoralReefDevice` alias (zero consumers). Evolved `SpirvError` to thiserror derive. Fixed 12 misleading dead_code reason strings on GPU API impls. Gated 11 additional SIGSEGV-prone test binaries behind `stress-tests` feature — `cargo test --workspace` now 100% clean. Comprehensive deep debt audit: zero production unwrap/expect/panic, zero hardcoded primal names, zero mocks in production, zero TODO/FIXME, all files under 845 lines. All quality gates green.

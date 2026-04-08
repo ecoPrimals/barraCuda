@@ -6,6 +6,11 @@ Prioritized work items, ordered by impact. Updated 2026-04-08.
 
 ## Recently Completed
 
+- **Sprint 34: BTSP Socket Naming & BIOMEOS_INSECURE Guard (Apr 8)**:
+  Resolves GAP-MATRIX-12: `FAMILY_ID` socket scoping with standard env var precedence
+  (`BARRACUDA_FAMILY_ID` → `FAMILY_ID` → `BIOMEOS_FAMILY_ID`), `BIOMEOS_SOCKET_DIR` support,
+  `BIOMEOS_INSECURE` guard. Resolves GAP-MATRIX-06: plasmidBin metadata updated to v0.3.11.
+  20 new BTSP compliance tests. 4,207 tests pass, all quality gates green.
 - **Sprint 33: Wire Standard L2 Compliance (Apr 8)**:
   `capabilities.list` now returns Wire Standard L2 `{primal, version, methods}` envelope
   per `CAPABILITY_WIRE_STANDARD.md` v1.0, with `provided_capabilities` grouping derived

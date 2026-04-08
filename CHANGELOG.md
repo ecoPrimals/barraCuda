@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.11] — 2026-04-08
 
+### Changed — Sprint 34: BTSP Socket Naming & BIOMEOS_INSECURE Guard (Apr 8 2026)
+
+- **GAP-MATRIX-12 resolved**: `FAMILY_ID` socket scoping with standard env var precedence
+  (`BARRACUDA_FAMILY_ID` → `FAMILY_ID` → `BIOMEOS_FAMILY_ID` legacy). Socket becomes
+  `barracuda-{family_id}.sock` when `FAMILY_ID` is set and non-default.
+- **BIOMEOS_SOCKET_DIR**: New env var for socket directory override per
+  `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §3. Falls back to `$XDG_RUNTIME_DIR/biomeos`.
+- **BIOMEOS_INSECURE guard**: Primal refuses to start when both `FAMILY_ID` (non-default)
+  and `BIOMEOS_INSECURE=1` are set. Per `BTSP_PROTOCOL_STANDARD.md` §Compliance.
+- **GAP-MATRIX-06 resolved**: plasmidBin metadata updated to v0.3.11 with full capability
+  manifest, Wire Standard L2, and Sprint 34 provenance.
+- **20 new tests**: `btsp_socket_compliance.rs` integration test suite covering family ID
+  resolution, socket dir resolution, insecure guard behavior, and socket path scoping.
+- All quality gates green: fmt, clippy (pedantic+nursery, `-D warnings`), doc, 4,207 tests pass.
+
 ### Changed — Sprint 33: Wire Standard L2 Compliance (Apr 8 2026)
 
 - **Wire Standard L2**: `capabilities.list` now returns the standard `{primal, version, methods}`

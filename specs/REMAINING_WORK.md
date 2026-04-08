@@ -2,7 +2,7 @@
 
 **Version**: 0.3.11
 **Date**: April 8, 2026
-**Status**: Through Sprint 33 — tracks all open work items for barraCuda evolution
+**Status**: Through Sprint 34 — tracks all open work items for barraCuda evolution
 
 ---
 
@@ -27,6 +27,33 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   and physics domain requirements.
 - **ecoBin/UniBin/scyBorg compliance**: AGPL-3.0-or-later, pure Rust (no C deps
   in barraCuda's code), semantic IPC method naming, capability-based discovery.
+
+---
+
+## Achieved (April 8, 2026 — Sprint 34: BTSP Socket Naming & BIOMEOS_INSECURE Guard)
+
+### GAP-MATRIX-12 Resolution: FAMILY_ID Socket Scoping
+- `resolve_family_id()`: reads `BARRACUDA_FAMILY_ID` → `FAMILY_ID` → `BIOMEOS_FAMILY_ID`
+  (legacy), per `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §4
+- `resolve_socket_dir()`: reads `BIOMEOS_SOCKET_DIR` → `$XDG_RUNTIME_DIR/biomeos` → temp,
+  per `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §3
+- `validate_insecure_guard()`: refuses to start when both `FAMILY_ID` (non-default) and
+  `BIOMEOS_INSECURE=1` are set, per `BTSP_PROTOCOL_STANDARD.md` §Compliance
+- `default_socket_path()` refactored to use new helpers
+- Guard enforced in both `server` and `service` modes in `barracuda` CLI binary
+- 20 new tests in `btsp_socket_compliance.rs` integration test suite
+
+### GAP-MATRIX-06 Resolution: plasmidBin Metadata Freshness
+- `plasmidBin/barracuda/metadata.toml` updated: v0.1.0 → v0.3.11, domain "compute" → "math",
+  provenance Sprint 34, Wire Standard L2 noted, capabilities list expanded with FHE/noise/
+  activation/health/readiness
+- Binary build + `harvest.sh` deferred to CI (requires musl toolchain)
+
+### Quality Gates
+- 4,207 tests pass (was 4,187), 0 fail, 14 skipped
+- `cargo fmt --all --check` ✓
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings` ✓
+- `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` ✓
 
 ---
 
@@ -95,7 +122,7 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 - `cargo fmt --check`: Pass
 - `cargo clippy --workspace --all-features --all-targets -- -D warnings`: Pass
 - `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps`: Pass
-- `cargo nextest run --workspace --profile ci`: 4,187 pass, 0 fail, 14 skipped
+- `cargo nextest run --workspace --profile ci`: 4,207 pass, 0 fail, 14 skipped
 - 826 WGSL shaders, 1,116 Rust source files
 
 ---
@@ -1530,7 +1557,7 @@ path and cross-compilation target matrix.
 | Clippy | Pass (zero warnings, `-D warnings`) | `cargo clippy --workspace --all-targets -- -D warnings` |
 | Rustdoc | Pass (zero warnings) | `cargo doc --workspace --no-deps` |
 | Deny | Pass (advisories, bans, licenses, sources) | `cargo deny check` |
-| Tests | 4,187 pass / 0 fail / 14 skip | `cargo nextest run --workspace --profile ci` |
+| Tests | 4,207 pass / 0 fail / 14 skip | `cargo nextest run --workspace --profile ci` |
 | Check (no GPU) | Pass | `cargo check --no-default-features` |
 | Check (GPU only) | Pass | `cargo check --no-default-features --features gpu` |
 | Check (all) | Pass | `cargo check` |

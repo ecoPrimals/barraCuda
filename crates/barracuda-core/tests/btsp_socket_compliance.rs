@@ -122,7 +122,7 @@ fn insecure_guard_rejects_family_plus_insecure() {
         std::env::set_var("FAMILY_ID", "cluster-7");
         std::env::set_var("BIOMEOS_INSECURE", "1");
     }
-    let err = validate_insecure_guard().unwrap_err();
+    let err = validate_insecure_guard().unwrap_err().to_string();
     assert!(
         err.contains("cluster-7"),
         "error should mention the family ID: {err}"

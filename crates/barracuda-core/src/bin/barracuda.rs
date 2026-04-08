@@ -165,8 +165,7 @@ async fn run_server(
     #[cfg(unix)] unix: Option<String>,
     #[cfg(unix)] no_unix: bool,
 ) -> Result<(), barracuda_core::error::BarracudaCoreError> {
-    barracuda_core::ipc::transport::validate_insecure_guard()
-        .map_err(barracuda_core::error::BarracudaCoreError::lifecycle)?;
+    barracuda_core::ipc::transport::validate_insecure_guard()?;
     let mut primal = BarraCudaPrimal::new();
     primal.start().await.map_err(|e| {
         barracuda_core::error::BarracudaCoreError::lifecycle(format!("Failed to start: {e}"))
@@ -476,8 +475,7 @@ fn remove_discovery_file() {
 ///
 /// Per genomeBin: Unix socket default, PID file, `NOTIFY_SOCKET`, no banner.
 async fn run_service_mode() -> Result<(), barracuda_core::error::BarracudaCoreError> {
-    barracuda_core::ipc::transport::validate_insecure_guard()
-        .map_err(barracuda_core::error::BarracudaCoreError::lifecycle)?;
+    barracuda_core::ipc::transport::validate_insecure_guard()?;
     let _pid_guard = write_pid_file();
 
     let mut primal = BarraCudaPrimal::new();

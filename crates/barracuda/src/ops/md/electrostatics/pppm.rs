@@ -369,35 +369,21 @@ impl Pppm {
     }
 }
 
-/// PPPM computation errors
-#[derive(Debug, Clone)]
+/// PPPM computation errors.
+#[derive(Debug, Clone, thiserror::Error)]
 pub enum PppmError {
-    /// Position and charge array sizes don't match
+    /// Position and charge array sizes don't match.
+    #[error("Position count ({positions}) doesn't match charge count ({charges})")]
     SizeMismatch {
-        /// Number of position entries
+        /// Number of position entries.
         positions: usize,
-        /// Number of charge entries
+        /// Number of charge entries.
         charges: usize,
     },
-    /// FFT computation failed
+    /// FFT computation failed.
+    #[error("FFT error: {0}")]
     FftError(String),
 }
-
-impl std::fmt::Display for PppmError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::SizeMismatch { positions, charges } => {
-                write!(
-                    f,
-                    "Position count ({positions}) doesn't match charge count ({charges})"
-                )
-            }
-            Self::FftError(msg) => write!(f, "FFT error: {msg}"),
-        }
-    }
-}
-
-impl std::error::Error for PppmError {}
 
 #[cfg(test)]
 mod tests {

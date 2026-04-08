@@ -32,10 +32,10 @@ cargo build --workspace
 cargo test -p barracuda --lib
 
 # Quality gate
-cargo fmt --all -- --check
-cargo clippy --workspace -- -D warnings
+cargo fmt --all --check
+cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo deny check
-cargo doc --workspace --no-deps
+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
 ```
 
 ---
@@ -248,7 +248,7 @@ WGPU_BACKEND=vulkan WGPU_ADAPTER_NAME=llvmpipe cargo test -p barracuda
 - Follow `CONVENTIONS.md`
 - `#![forbid(unsafe_code)]` in both crates — zero unsafe is irrevocable
 - `cargo fmt` before committing
-- `cargo clippy --workspace -- -D warnings` must be clean
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings` must be clean
 - Suppressions: `#[expect(clippy::lint, reason = "...")]` — compile-time verified; `#[allow]` only when lint may or may not fire depending on context
 - No `anyhow` — use `thiserror` with `BarracudaError`
 - No `println!` in library code — use `tracing`
@@ -269,7 +269,7 @@ WGPU_BACKEND=vulkan WGPU_ADAPTER_NAME=llvmpipe cargo test -p barracuda
 - GPU ops: `async fn op_name(device: &WgpuDevice, ...) -> Result<Tensor>`
 - CPU math: `fn op_name(...) -> Result<T>`
 - Feature flags: `domain-{name}` for domain modules
-- IPC methods: `barracuda.{namespace}.{action}` (semantic, dot-separated)
+- IPC methods: `{domain}.{operation}` (semantic, dot-separated; legacy `barracuda.{domain}.{op}` accepted)
 
 ---
 
@@ -312,8 +312,8 @@ docs(shaders): update README with audio shader section
 2. Make changes, add tests
 3. Run the quality gate:
    ```bash
-   cargo fmt --all -- --check
-   cargo clippy --workspace -- -D warnings
+   cargo fmt --all --check
+   cargo clippy --workspace --all-targets --all-features -- -D warnings
    cargo deny check
    cargo check --no-default-features
    cargo check --no-default-features --features gpu

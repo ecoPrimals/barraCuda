@@ -62,7 +62,7 @@ results.
 
 - **Sprint 37: Deep Debt — Test Module Refactor & Code Cleanup (Apr 8)**: `methods_tests.rs` (951 LOC) smart-refactored into 6 domain-focused test modules + hub (largest module 193 lines). `buffer_test.rs` println! noise removed. `nadam_gpu.rs` stale evolution comment removed. `force_interpolation.rs` indexed loop → idiomatic iterator. 12-axis deep debt audit: clean bill. Zero files >800L. 4,207 tests pass, all quality gates green.
 - **Sprint 36: Domain-Based Socket Naming & Flaky Test Serialization (Apr 8)**: Socket naming evolved from primal-based (`barracuda.sock`) to domain-based (`math.sock` / `math-{fid}.sock`) per `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §3. Legacy `barracuda.sock` symlink for backward compatibility. New `PRIMAL_DOMAIN` constant. `identity.get` and `primal.capabilities` domain field evolved from `"compute"` to `"math"`. `three_springs_tests` added to `gpu-serial` nextest group (Mesa llvmpipe SIGSEGV mitigation). 4,207 tests pass, all quality gates green.
-- **Sprint 35: Deep Debt — Typed Errors, thiserror, Transport Refactor (Apr 8)**: `validate_insecure_guard` evolved from `Result<(), String>` to typed `BarracudaCoreError::Lifecycle`. `PppmError` manual `Display`+`Error` evolved to `#[derive(thiserror::Error)]`. `transport.rs` (866 LOC) smart-refactored: 380-line test module extracted to `transport_tests.rs` (production file now 490 LOC). 12-axis deep debt audit: clean bill on all axes. 4,207 tests pass, all quality gates green.
+- **Sprint 35: Deep Debt — Typed Errors, thiserror, Transport Refactor (Apr 8)**: `validate_insecure_guard` evolved from `Result<(), String>` to typed `BarracudaCoreError::Lifecycle`. `PppmError` manual `Display`+`Error` evolved to `#[derive(thiserror::Error)]`. `transport.rs` (866 LOC) smart-refactored: test module extracted to `transport_tests.rs`, domain socket naming + legacy symlink added (production file now 528 LOC). 12-axis deep debt audit: clean bill on all axes. 4,207 tests pass, all quality gates green.
 - **Sprint 34: BTSP Socket Naming + BIOMEOS_INSECURE Guard (Apr 8)**: Resolves GAP-MATRIX-12 — `FAMILY_ID` socket scoping with standard env var precedence (`BARRACUDA_FAMILY_ID` → `FAMILY_ID` → `BIOMEOS_FAMILY_ID`), `BIOMEOS_SOCKET_DIR` env var support, `BIOMEOS_INSECURE` guard (refuse to start when both `FAMILY_ID` and `BIOMEOS_INSECURE=1`). Per `BTSP_PROTOCOL_STANDARD.md` §Compliance and `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §3-4. GAP-MATRIX-06 plasmidBin metadata updated to v0.3.11 with full capability manifest. 20 new BTSP compliance tests (`btsp_socket_compliance.rs`). 4,207 tests pass, all quality gates green.
 - **Sprint 33: Wire Standard L2 Compliance (Apr 8)**: `capabilities.list` now returns Wire Standard L2 `{primal, version, methods}` envelope with `provided_capabilities` grouping, `consumed_capabilities`, `protocol`, `transport`. New `identity.get` method returns `{primal, version, domain, license}`. Both JSON-RPC and tarpc paths wired. 31 methods (was 30). `provided_capability_groups()` in discovery module derives structured groups from the dispatch table — zero hardcoded domain catalog. 13 new L2 compliance tests. 4,187 tests pass, all quality gates green.
 - **Sprint 32: Fault Injection SIGSEGV Resolution & Deep Debt Audit (Apr 7)**: Root-caused Mesa llvmpipe within-process thread safety SIGSEGV in 3 fault injection tests. Serialized concurrent GPU readbacks in `fault_concurrent_tensor_access` and `test_concurrent_error_handling`. Bounded `fault_out_of_gpu_memory` allocation loop (10,000→256 iterations). Updated nextest coverage profile from deprecated `exclude = true` to `default-filter` syntax. Fixed 4 clippy findings: non-existent `needless_type_cast` lint, protocol string `"jsonrpc-2.0"` → `"json-rpc-2.0"`, 2 unfulfilled `dead_code` expects. Comprehensive 12-axis deep debt audit: zero production unsafe/unwrap/expect/println/mocks/hardcoding/TODO/commented-out code, zero `#[allow(`, zero `Result<T,String>` in production, zero files >1000 lines. 4,180 tests pass (CI profile), 0 failures. All quality gates green.
@@ -211,7 +211,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo nextest run --workspace --profile ci  # 4,187+ tests via nextest
+cargo nextest run --workspace --profile ci  # 4,207+ tests via nextest
 cargo llvm-cov --workspace --lib        # 80% CI gate (blocking), 90% target (requires GPU hardware)
 ```
 
@@ -270,8 +270,8 @@ barracuda server --bind 127.0.0.1:9000
 # Start with tarpc alongside JSON-RPC
 barracuda server --bind 127.0.0.1:9000 --tarpc-bind 127.0.0.1:9001
 
-# Start with Unix socket
-barracuda server --unix /tmp/barracuda.sock
+# Start with Unix socket (default: $BIOMEOS_SOCKET_DIR/math.sock)
+barracuda server --unix
 
 # Start as systemd/init service (genomeBin mode)
 barracuda service

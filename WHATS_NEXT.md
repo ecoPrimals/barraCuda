@@ -6,6 +6,11 @@ Prioritized work items, ordered by impact. Updated 2026-04-08.
 
 ## Recently Completed
 
+- **Sprint 35: Deep Debt — Typed Errors, thiserror & Transport Refactor (Apr 8)**:
+  `validate_insecure_guard` evolved from `Result<(), String>` to typed `BarracudaCoreError`.
+  `PppmError` evolved to `#[derive(thiserror::Error)]`. `transport.rs` smart-refactored:
+  380-line test module extracted to `transport_tests.rs` (866→490 LOC). 12-axis deep debt
+  audit: clean bill on all axes. 4,207 tests pass, all quality gates green.
 - **Sprint 34: BTSP Socket Naming & BIOMEOS_INSECURE Guard (Apr 8)**:
   Resolves GAP-MATRIX-12: `FAMILY_ID` socket scoping with standard env var precedence
   (`BARRACUDA_FAMILY_ID` → `FAMILY_ID` → `BIOMEOS_FAMILY_ID`), `BIOMEOS_SOCKET_DIR` support,

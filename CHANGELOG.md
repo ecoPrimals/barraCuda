@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.11] — 2026-04-08
 
+### Changed — Sprint 35: Deep Debt — Typed Errors, thiserror & Transport Refactor (Apr 8 2026)
+
+- **`validate_insecure_guard`**: Evolved from `Result<(), String>` to typed
+  `crate::error::Result<()>` returning `BarracudaCoreError::Lifecycle` — eliminates the
+  last `Result<_, String>` in production code.
+- **`PppmError`**: Manual `impl Display` + `impl Error` evolved to `#[derive(thiserror::Error)]`
+  with `#[error(...)]` attributes on each variant.
+- **`transport.rs` smart refactor**: 380-line `#[cfg(test)] mod tests` extracted to
+  `transport_tests.rs` via `#[path]` attribute. Production file: 866 → 490 LOC.
+- **12-axis deep debt audit**: Clean bill — zero production unsafe/unwrap/panic/println,
+  zero `#[allow(`, zero TODO/FIXME, zero mocks in production, zero commented-out code,
+  zero hardcoded primal routing, all files under 800 LOC, all deps pure Rust.
+- All quality gates green: fmt, clippy (pedantic+nursery, `-D warnings`), doc, 4,207 tests pass.
+
 ### Changed — Sprint 34: BTSP Socket Naming & BIOMEOS_INSECURE Guard (Apr 8 2026)
 
 - **GAP-MATRIX-12 resolved**: `FAMILY_ID` socket scoping with standard env var precedence

@@ -2,7 +2,7 @@
 
 **Version**: 0.3.11
 **Date**: April 8, 2026
-**Status**: Through Sprint 34 — tracks all open work items for barraCuda evolution
+**Status**: Through Sprint 35 — tracks all open work items for barraCuda evolution
 
 ---
 
@@ -27,6 +27,40 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   and physics domain requirements.
 - **ecoBin/UniBin/scyBorg compliance**: AGPL-3.0-or-later, pure Rust (no C deps
   in barraCuda's code), semantic IPC method naming, capability-based discovery.
+
+---
+
+## Achieved (April 8, 2026 — Sprint 35: Deep Debt — Typed Errors, thiserror & Transport Refactor)
+
+### Error Evolution
+- `validate_insecure_guard()`: evolved from `Result<(), String>` to typed
+  `crate::error::Result<()>` returning `BarracudaCoreError::Lifecycle` — eliminates
+  the last `Result<_, String>` in production code
+- `PppmError`: manual `impl Display` + `impl Error` evolved to `#[derive(thiserror::Error)]`
+  with `#[error(...)]` attributes on each variant
+
+### Smart Refactoring
+- `transport.rs` (866 LOC): 380-line `#[cfg(test)] mod tests` extracted to
+  `transport_tests.rs` via `#[path]` attribute — production file now 490 LOC
+- No production files exceed 800 lines
+
+### 12-Axis Deep Debt Audit — Clean Bill
+- Zero production unsafe, zero `#[allow(`, zero TODO/FIXME/HACK, zero production
+  unwrap/expect/panic/println, zero `Result<_, String>`, zero mocks in production,
+  zero commented-out code, zero hardcoded primal routing, all deps pure Rust
+
+### Files Changed
+- `crates/barracuda-core/src/ipc/transport.rs` (866→490 LOC)
+- `crates/barracuda-core/src/ipc/transport_tests.rs` (new, 377 LOC)
+- `crates/barracuda-core/src/bin/barracuda.rs` (simplified guard call sites)
+- `crates/barracuda-core/tests/btsp_socket_compliance.rs` (adapted to typed error)
+- `crates/barracuda/src/ops/md/electrostatics/pppm.rs` (thiserror evolution)
+
+### Quality Gates
+- 4,207 tests pass, 0 fail, 14 skipped
+- `cargo fmt --all --check` ✓
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings` ✓
+- `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` ✓
 
 ---
 

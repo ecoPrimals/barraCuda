@@ -143,8 +143,8 @@ barraCuda/
 ├── crates/
 │   ├── barracuda-core/              # Primal lifecycle wrapper
 │   │   ├── src/lib.rs               # BarraCudaPrimal: start/stop/health
-│   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport (15 methods)
-│   │   ├── src/rpc.rs               # tarpc service definition (14 endpoints, parity with JSON-RPC)
+│   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport (31 methods, Wire Standard L2)
+│   │   ├── src/rpc.rs               # tarpc service definition (16 endpoints, parity with JSON-RPC)
 │   │   └── src/bin/barracuda.rs     # UniBin CLI
 │   └── barracuda/                   # Umbrella crate — all math + GPU
 │       ├── src/
@@ -223,6 +223,7 @@ barraCuda exposes a dual-protocol IPC interface per wateringHole standards:
 
 | Method | Description |
 |--------|-------------|
+| `identity.get` | Wire Standard L2 identity: `{primal, version, domain, license}` |
 | `primal.info` | Primal identity (name, version, protocol, namespace, license) |
 | `primal.capabilities` | Advertise capabilities, methods, hardware state |
 | `capabilities.list` | Ecosystem-standard capability probe (alias for `primal.capabilities`) |
@@ -234,19 +235,22 @@ barraCuda exposes a dual-protocol IPC interface per wateringHole standards:
 | `tolerances.get` | Numerical tolerances for a named operation |
 | `validate.gpu_stack` | GPU validation suite |
 | `compute.dispatch` | Dispatch a named compute operation (zeros, ones, read) |
-| `tensor.create` | Create a tensor on device |
-| `tensor.matmul` | Matrix multiply two tensors |
-| `fhe.ntt` | FHE Number Theoretic Transform |
-| `fhe.pointwise_mul` | FHE pointwise polynomial multiplication |
+| `math.*` / `stats.*` | `math.sigmoid`, `math.log2`, `stats.mean`, `stats.std_dev`, `stats.weighted_mean` |
+| `noise.*` / `rng.*` | `noise.perlin2d`, `noise.perlin3d`, `rng.uniform` |
+| `activation.*` | `activation.fitts`, `activation.hick` |
+| `tensor.*` | `tensor.create`, `matmul`, `add`, `scale`, `clamp`, `reduce`, `sigmoid` |
+| `fhe.*` | `fhe.ntt`, `fhe.pointwise_mul` |
 
-15 methods follow the wateringHole `{domain}.{operation}` Semantic Method Naming
-Standard v2.2.0. `health.liveness`, `health.readiness`, `health.check`, and
-`capabilities.list` are non-negotiable ecosystem probes. Legacy
-`barracuda.{domain}.{operation}` format accepted for backward compatibility.
+31 methods follow the wateringHole `{domain}.{operation}` Semantic Method Naming
+Standard v2.2.0. Wire Standard L2 compliant: `capabilities.list` returns the
+`{primal, version, methods}` envelope with `provided_capabilities` grouping.
+`health.liveness`, `health.readiness`, `health.check`, and `capabilities.list`
+are non-negotiable ecosystem probes. Legacy `barracuda.{domain}.{operation}`
+format accepted for backward compatibility.
 
 **tarpc** (optional, binary, high-throughput primal-to-primal):
 
-Same 14 endpoints with strongly-typed Rust signatures and full parameter
+Same 16 endpoints with strongly-typed Rust signatures and full parameter
 parity with the JSON-RPC handlers. Enabled via
 `barracuda server --tarpc-bind 127.0.0.1:9001`.
 

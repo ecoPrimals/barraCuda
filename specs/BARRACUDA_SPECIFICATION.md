@@ -62,7 +62,7 @@ barraCuda/
 │       ├── src/
 │       │   ├── lib.rs        # BarraCudaPrimal: start/stop/health, tensor store
 │       │   ├── ipc/          # JSON-RPC 2.0 server + transport
-│       │   ├── rpc.rs        # tarpc service (14 endpoints, JSON-RPC parity)
+│       │   ├── rpc.rs        # tarpc service (16 endpoints, JSON-RPC parity)
 │       │   └── bin/barracuda.rs  # UniBin CLI
 │       └── tests/            # IPC E2E integration tests
 └── specs/                    # Architecture specs
@@ -99,7 +99,7 @@ Three-config check (all must pass):
 
 barraCuda exposes a dual-protocol IPC interface (JSON-RPC 2.0 primary, tarpc
 binary secondary). JSON-RPC serves 31 semantic `{domain}.{operation}` methods (Wire Standard L2);
-tarpc mirrors the original 14 with full parameter parity:
+tarpc mirrors the original 16 with full parameter parity:
 
 ```
 # Ecosystem probes (non-negotiable)

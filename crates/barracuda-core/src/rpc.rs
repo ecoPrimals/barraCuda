@@ -32,6 +32,9 @@ pub use crate::rpc_types::*;
 /// All methods follow the semantic naming standard: `{domain}.{operation}`.
 #[tarpc::service]
 pub trait BarraCudaService {
+    /// Wire Standard L2 `identity.get` — lightweight primal identity.
+    async fn identity_get() -> IdentityInfo;
+
     /// Primal identity — for runtime discovery, not hardcoded names.
     async fn primal_info() -> PrimalInfo;
 
@@ -137,6 +140,15 @@ fn u32_pairs_to_u64(data: &[u32]) -> Vec<u64> {
 }
 
 impl BarraCudaService for BarraCudaServer {
+    async fn identity_get(self, _: tarpc::context::Context) -> IdentityInfo {
+        IdentityInfo {
+            primal: crate::PRIMAL_NAMESPACE.into(),
+            version: env!("CARGO_PKG_VERSION").into(),
+            domain: "compute".into(),
+            license: "AGPL-3.0-or-later".into(),
+        }
+    }
+
     async fn primal_info(self, _: tarpc::context::Context) -> PrimalInfo {
         PrimalInfo {
             primal: crate::PRIMAL_NAME.into(),

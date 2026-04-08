@@ -23,7 +23,7 @@ traits are fully internalized.
 - **Architecture:** 4-crate workspace (barracuda, barracuda-core, barracuda-spirv, barracuda-naga-exec)
 - **Communication:** JSON-RPC 2.0 + tarpc over Unix socket and TCP
 - **License:** AGPL-3.0-or-later (scyBorg provenance trio)
-- **Tests:** 4,180+ passing (nextest CI profile)
+- **Tests:** 4,187+ passing (nextest CI profile)
 - **Coverage:** 80.54% line on llvmpipe (80% CI gate, 90% target with GPU hardware)
 - **MSRV:** 1.87
 - **Crate count:** 4 workspace crates
@@ -46,6 +46,7 @@ traits are fully internalized.
 
 | Domain | Methods |
 |--------|---------|
+| `identity.*` | `identity.get` |
 | `primal.*` | `primal.info`, `primal.capabilities` |
 | `device.*` | `device.list`, `device.probe` |
 | `health.*` | `health.liveness`, `health.readiness`, `health.check` |
@@ -61,7 +62,7 @@ traits are fully internalized.
 | `tolerances.*` | `tolerances.get` |
 | `validate.*` | `validate.gpu_stack` |
 
-30 methods following wateringHole `{domain}.{operation}` Semantic Method Naming Standard.
+31 methods following wateringHole `{domain}.{operation}` Semantic Method Naming Standard. Wire Standard L2 compliant.
 
 ## What This Does NOT Do
 

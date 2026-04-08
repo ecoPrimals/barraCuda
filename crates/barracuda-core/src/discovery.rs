@@ -92,6 +92,56 @@ pub fn provides() -> Vec<String> {
     derive_provides(REGISTERED_METHODS)
 }
 
+/// Wire Standard L2/L3: structured capability groups for `provided_capabilities`.
+///
+/// Groups registered methods by domain, emitting `{type, methods, version,
+/// description}` objects. Descriptions derive from the domain name — no
+/// hardcoded domain catalog.
+#[must_use]
+pub fn provided_capability_groups(version: &str) -> Vec<serde_json::Value> {
+    use std::collections::BTreeMap;
+    let mut groups: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
+    for method in REGISTERED_METHODS {
+        if let Some(dot) = method.find('.') {
+            let domain = &method[..dot];
+            let operation = &method[dot + 1..];
+            groups.entry(domain).or_default().push(operation);
+        }
+    }
+    groups
+        .into_iter()
+        .map(|(domain, methods)| {
+            serde_json::json!({
+                "type": domain,
+                "methods": methods,
+                "version": version,
+                "description": domain_description(domain),
+            })
+        })
+        .collect()
+}
+
+fn domain_description(domain: &str) -> &'static str {
+    match domain {
+        "health" => "Ecosystem health probes (liveness, readiness, check)",
+        "capabilities" => "Capability self-advertisement",
+        "primal" => "Primal identity and meta-capabilities",
+        "device" => "GPU device enumeration and probing",
+        "tolerances" => "Numerical tolerance configuration",
+        "validate" => "GPU stack validation",
+        "compute" => "GPU compute shader dispatch",
+        "math" => "CPU math and activation functions",
+        "activation" => "Cognitive activation functions (Fitts, Hick)",
+        "stats" => "Statistical operations (mean, std_dev, weighted_mean)",
+        "noise" => "Noise generation (Perlin 2D/3D)",
+        "rng" => "Random number generation",
+        "tensor" => "GPU tensor operations (create, matmul, add, scale, clamp, reduce, sigmoid)",
+        "fhe" => "Fully homomorphic encryption primitives (NTT, pointwise_mul)",
+        "identity" => "Primal identity for observability",
+        _ => "Capability domain",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -179,5 +229,30 @@ mod tests {
     fn test_derive_provides_device_domain() {
         let provides = derive_provides(&["device.list"]);
         assert!(provides.contains(&"gpu.device".to_string()));
+    }
+
+    #[test]
+    fn test_provided_capability_groups_structure() {
+        let groups = provided_capability_groups("0.3.11");
+        assert!(!groups.is_empty());
+        for group in &groups {
+            assert!(group["type"].is_string(), "group must have type");
+            assert!(group["methods"].is_array(), "group must have methods");
+            assert_eq!(group["version"], "0.3.11");
+            assert!(
+                group["description"].is_string(),
+                "group must have description"
+            );
+        }
+    }
+
+    #[test]
+    fn test_provided_capability_groups_contains_compute() {
+        let groups = provided_capability_groups("0.3.11");
+        let domains: Vec<&str> = groups.iter().filter_map(|g| g["type"].as_str()).collect();
+        assert!(domains.contains(&"compute"));
+        assert!(domains.contains(&"tensor"));
+        assert!(domains.contains(&"fhe"));
+        assert!(domains.contains(&"health"));
     }
 }

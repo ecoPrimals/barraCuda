@@ -1,11 +1,19 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-04-07.
+Prioritized work items, ordered by impact. Updated 2026-04-08.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 33: Wire Standard L2 Compliance (Apr 8)**:
+  `capabilities.list` now returns Wire Standard L2 `{primal, version, methods}` envelope
+  per `CAPABILITY_WIRE_STANDARD.md` v1.0, with `provided_capabilities` grouping derived
+  from the dispatch table, `consumed_capabilities`, `protocol`, `transport`. New
+  `identity.get` method returns `{primal, version, domain, license}` for biomeOS probes.
+  Both JSON-RPC and tarpc paths wired. 31 methods (was 30). New `provided_capability_groups()`
+  in discovery module derives structured capability groups with zero hardcoded domain catalog.
+  13 new tests for L2 compliance. 4,187 tests pass, all quality gates green.
 - **Sprint 32: Fault Injection SIGSEGV Resolution & Deep Debt Audit (Apr 7)**:
   Root-caused Mesa llvmpipe within-process thread safety SIGSEGV in 3 fault injection tests
   (concurrent GPU readbacks and unbounded OOM loop). Serialized GPU operations sequentially

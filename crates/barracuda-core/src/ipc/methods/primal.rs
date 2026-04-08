@@ -26,12 +26,11 @@ pub(super) fn info(_primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
     )
 }
 
-/// `barracuda.primal.capabilities` — Advertise capabilities for discovery.
+/// `capabilities.list` / `primal.capabilities` — Advertise capabilities.
 ///
-/// All three lists (provides, domains, methods) are derived from the dispatch
-/// table via [`crate::discovery`]. Other primals use this to discover what
-/// barraCuda can do (capability-based routing) rather than relying on
-/// hardcoded primal names.
+/// Wire Standard L2 compliant: `{primal, version, methods}` envelope with
+/// structured capability groups and hardware state. All lists derived from
+/// the dispatch table via [`crate::discovery`] — zero hardcoded domain lists.
 pub(super) fn capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
     let has_gpu = primal.device().is_some();
     let has_f64 = primal.device().is_some_and(|d| d.has_f64_shaders());
@@ -43,20 +42,43 @@ pub(super) fn capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcRespon
         .map(|id_str| serde_json::json!({ "id": id_str, "version": version }))
         .collect();
 
+    let provided_capabilities = crate::discovery::provided_capability_groups(version);
+
     JsonRpcResponse::success(
         id,
         serde_json::json!({
+            "primal": crate::PRIMAL_NAMESPACE,
+            "version": version,
+            "methods": REGISTERED_METHODS,
+            "provided_capabilities": provided_capabilities,
+            "consumed_capabilities": ["shader.compile.cpu", "shader.validate", "compute.dispatch"],
             "provides": provides_list,
             "requires": [
                 { "id": "shader.compile", "version": ">=0.1.0", "optional": true },
             ],
             "domains": crate::discovery::capabilities(),
-            "methods": REGISTERED_METHODS,
             "hardware": {
                 "gpu_available": has_gpu,
                 "f64_shaders": has_f64,
                 "spirv_passthrough": has_spirv,
             },
+            "protocol": "jsonrpc-2.0",
+            "transport": ["uds", "tcp"],
+        }),
+    )
+}
+
+/// `identity.get` — Lightweight primal identity for observability.
+///
+/// Wire Standard L2: returns `{primal, version, domain, license}`.
+pub(super) fn identity(id: Value) -> JsonRpcResponse {
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({
+            "primal": crate::PRIMAL_NAMESPACE,
+            "version": env!("CARGO_PKG_VERSION"),
+            "domain": "compute",
+            "license": "AGPL-3.0-or-later",
         }),
     )
 }

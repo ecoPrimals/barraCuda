@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **826 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,116 Rust source files**, 24 integration test harnesses, 4,180+ tests passing via nextest CI profile
+- **1,116 Rust source files**, 24 integration test harnesses, 4,187+ tests passing via nextest CI profile
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -44,7 +44,7 @@ results.
 - **Sovereign shader compilation** — naga 28 IR optimizer, SPIR-V passthrough
 - **NagaExecutor** — CPU interpreter for naga IR, executes WGSL compute shaders without GPU (f32+f64 native, shared memory, barriers, atomics)
 - **coralReef IPC contract** — sovereign CPU compilation (`shader.compile.cpu`, `shader.execute.cpu`) and validation (`shader.validate`) via JSON-RPC
-- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with 30 bare semantic `{domain}.{operation}` methods per wateringHole standard v2.2.0
+- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with 31 bare semantic `{domain}.{operation}` methods; Wire Standard L2 compliant (`{primal, version, methods}` envelope, `identity.get`, `provided_capabilities`)
 - **UniBin CLI** — single `barracuda` binary with `server --port <PORT>`, `service`, `doctor`, `validate`, `version`
 
 ### Design principles
@@ -60,6 +60,7 @@ results.
 
 ## Recent
 
+- **Sprint 33: Wire Standard L2 Compliance (Apr 8)**: `capabilities.list` now returns Wire Standard L2 `{primal, version, methods}` envelope with `provided_capabilities` grouping, `consumed_capabilities`, `protocol`, `transport`. New `identity.get` method returns `{primal, version, domain, license}`. Both JSON-RPC and tarpc paths wired. 31 methods (was 30). `provided_capability_groups()` in discovery module derives structured groups from the dispatch table — zero hardcoded domain catalog. 13 new L2 compliance tests. 4,187 tests pass, all quality gates green.
 - **Sprint 32: Fault Injection SIGSEGV Resolution & Deep Debt Audit (Apr 7)**: Root-caused Mesa llvmpipe within-process thread safety SIGSEGV in 3 fault injection tests. Serialized concurrent GPU readbacks in `fault_concurrent_tensor_access` and `test_concurrent_error_handling`. Bounded `fault_out_of_gpu_memory` allocation loop (10,000→256 iterations). Updated nextest coverage profile from deprecated `exclude = true` to `default-filter` syntax. Fixed 4 clippy findings: non-existent `needless_type_cast` lint, protocol string `"jsonrpc-2.0"` → `"json-rpc-2.0"`, 2 unfulfilled `dead_code` expects. Comprehensive 12-axis deep debt audit: zero production unsafe/unwrap/expect/println/mocks/hardcoding/TODO/commented-out code, zero `#[allow(`, zero `Result<T,String>` in production, zero files >1000 lines. 4,180 tests pass (CI profile), 0 failures. All quality gates green.
 - **Sprint 31: Deep Debt Cleanup & Test Stability Hardening (Apr 5)**: Removed deprecated `CoralReefDevice` alias (zero consumers). Evolved `SpirvError` to thiserror derive. Fixed 12 misleading dead_code reason strings on GPU API impls. Gated 11 additional SIGSEGV-prone test binaries behind `stress-tests` feature — `cargo test --workspace` now 100% clean. Comprehensive deep debt audit: zero production unwrap/expect/panic, zero hardcoded primal names, zero mocks in production, zero TODO/FIXME, all files under 845 lines. All quality gates green.
 - **Sprint 30: Deep Debt Audit, Smart Refactoring & Test Stability (Apr 5)**: Smart refactor of `executor.rs` (934→208 lines) + new `invocation.rs` (756 lines) — `DispatchCoords` struct eliminates `too_many_arguments`. SIGSEGV fix via nextest `gpu-serial` test group (chaos/fault/property tests serialized). Disabled `test_nn_vision_integration` evolved to `test_vision_pipeline_preprocessing` (8/8 integration tests pass). All quality gates green.
@@ -206,7 +207,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo nextest run --workspace --profile ci  # 4,180+ tests via nextest
+cargo nextest run --workspace --profile ci  # 4,187+ tests via nextest
 cargo llvm-cov --workspace --lib        # 80% CI gate (blocking), 90% target (requires GPU hardware)
 ```
 

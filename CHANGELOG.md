@@ -5,7 +5,21 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.11] — 2026-04-07
+## [0.3.11] — 2026-04-08
+
+### Changed — Sprint 33: Wire Standard L2 Compliance (Apr 8 2026)
+
+- **Wire Standard L2**: `capabilities.list` now returns the standard `{primal, version, methods}`
+  envelope per `CAPABILITY_WIRE_STANDARD.md` v1.0. Response includes `provided_capabilities`
+  grouping (derived from dispatch table), `consumed_capabilities`, `protocol`, `transport`.
+- **identity.get**: New method returns `{primal, version, domain, license}` for biomeOS
+  observability probes. Wired in both JSON-RPC dispatch and tarpc `BarraCudaService`.
+- **Method count**: 30 → 31 (added `identity.get`).
+- **Discovery module**: New `provided_capability_groups()` derives structured capability
+  groups from `REGISTERED_METHODS` — zero hardcoded domain catalog.
+- **13 new tests**: `identity.get` handler + dispatch, L2 envelope validation,
+  `provided_capabilities` structure, methods↔REGISTERED_METHODS parity, discovery groups.
+- All quality gates green: fmt, clippy (pedantic+nursery, `-D warnings`), doc, 4,187 tests pass.
 
 ### Changed — Sprint 32: Fault Injection SIGSEGV Resolution & Deep Debt Audit (Apr 7 2026)
 

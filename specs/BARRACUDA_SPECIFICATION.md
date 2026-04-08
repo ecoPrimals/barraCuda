@@ -98,7 +98,7 @@ Three-config check (all must pass):
 ### Primal interface
 
 barraCuda exposes a dual-protocol IPC interface (JSON-RPC 2.0 primary, tarpc
-binary secondary). JSON-RPC serves 30 semantic `{domain}.{operation}` methods;
+binary secondary). JSON-RPC serves 31 semantic `{domain}.{operation}` methods (Wire Standard L2);
 tarpc mirrors the original 14 with full parameter parity:
 
 ```

@@ -1,8 +1,8 @@
 # barraCuda — Remaining Work
 
 **Version**: 0.3.11
-**Date**: April 7, 2026
-**Status**: Through Sprint 32 — tracks all open work items for barraCuda evolution
+**Date**: April 8, 2026
+**Status**: Through Sprint 33 — tracks all open work items for barraCuda evolution
 
 ---
 
@@ -27,6 +27,27 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   and physics domain requirements.
 - **ecoBin/UniBin/scyBorg compliance**: AGPL-3.0-or-later, pure Rust (no C deps
   in barraCuda's code), semantic IPC method naming, capability-based discovery.
+
+---
+
+## Achieved (April 8, 2026 — Sprint 33: Wire Standard L2 Compliance)
+
+### Capability Wire Standard L2
+- `capabilities.list` now returns `{primal, version, methods}` envelope per
+  `CAPABILITY_WIRE_STANDARD.md` v1.0, with `provided_capabilities` grouping
+  (derived from dispatch table), `consumed_capabilities`, `protocol`, `transport`
+- New `identity.get` method returns `{primal, version, domain, license}` for biomeOS probes
+- Both JSON-RPC dispatch and tarpc `BarraCudaService` paths wired
+- 31 methods (was 30), `IdentityInfo` rpc type added
+- `provided_capability_groups()` in discovery module derives structured groups
+  with descriptions — zero hardcoded domain catalog
+- 13 new L2 compliance tests (identity handler + dispatch, envelope validation,
+  provided_capabilities structure, methods↔REGISTERED_METHODS parity, discovery groups)
+- All quality gates green: fmt, clippy, doc, 4,187 tests pass
+
+### Future Work (from primalSpring downstream audit)
+- Erasure coding primitive needed for L3 covalent mesh backup pattern (future)
+- Wire Standard L3 full compliance when ecosystem composition patterns stabilize
 
 ---
 
@@ -74,7 +95,7 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 - `cargo fmt --check`: Pass
 - `cargo clippy --workspace --all-features --all-targets -- -D warnings`: Pass
 - `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps`: Pass
-- `cargo nextest run --workspace --profile ci`: 4,180 pass, 0 fail, 14 skipped
+- `cargo nextest run --workspace --profile ci`: 4,187 pass, 0 fail, 14 skipped
 - 826 WGSL shaders, 1,116 Rust source files
 
 ---
@@ -209,7 +230,7 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 - **Tensor element-wise** (GPU): `tensor.add`, `tensor.scale`, `tensor.clamp`,
   `tensor.reduce`, `tensor.sigmoid` — GPU WGSL ops accessible as graph nodes
 - All methods follow `SEMANTIC_METHOD_NAMING_STANDARD.md` `{domain}.{operation}` pattern
-- `capabilities.list` auto-advertises all 30 methods via `discovery::capabilities()`
+- `capabilities.list` auto-advertises all 31 methods via Wire Standard L2 `{primal, version, methods}` envelope
 
 ### Lint Migration: `#[allow(` → `#[expect(`
 - **Zero `#[allow(` remaining** in both `barracuda` and `barracuda-core` crates
@@ -1509,7 +1530,7 @@ path and cross-compilation target matrix.
 | Clippy | Pass (zero warnings, `-D warnings`) | `cargo clippy --workspace --all-targets -- -D warnings` |
 | Rustdoc | Pass (zero warnings) | `cargo doc --workspace --no-deps` |
 | Deny | Pass (advisories, bans, licenses, sources) | `cargo deny check` |
-| Tests | 4,180 pass / 0 fail / 14 skip | `cargo nextest run --workspace --profile ci` |
+| Tests | 4,187 pass / 0 fail / 14 skip | `cargo nextest run --workspace --profile ci` |
 | Check (no GPU) | Pass | `cargo check --no-default-features` |
 | Check (GPU only) | Pass | `cargo check --no-default-features --features gpu` |
 | Check (all) | Pass | `cargo check` |

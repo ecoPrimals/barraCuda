@@ -166,6 +166,21 @@ pub struct PrimalInfo {
     pub license: String,
 }
 
+/// Wire Standard L2 `identity.get` response.
+///
+/// Lightweight primal identity for biomeOS observability probes.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IdentityInfo {
+    /// Canonical primal name (lowercase).
+    pub primal: String,
+    /// SemVer version string.
+    pub version: String,
+    /// Primary capability domain.
+    pub domain: String,
+    /// SPDX license identifier.
+    pub license: String,
+}
+
 /// Capability advertisement for runtime discovery.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrimalCapabilities {

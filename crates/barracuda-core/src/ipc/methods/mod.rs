@@ -35,6 +35,7 @@ pub const REGISTERED_METHODS: &[&str] = &[
     "health.check",
     "capabilities.list",
     // ── Primal identity ───────────────────────────────────────────────
+    "identity.get",
     "primal.info",
     "primal.capabilities",
     // ── Device ────────────────────────────────────────────────────────
@@ -98,6 +99,7 @@ pub async fn dispatch(
         "health.liveness" | "ping" | "health" => health::health_liveness(id),
         "health.readiness" => health::health_readiness(primal, id),
         "health.check" | "status" | "check" => health::health_check(primal, id).await,
+        "identity.get" => primal::identity(id),
         "primal.info" => primal::info(primal, id),
         "primal.capabilities" | "capabilities.list" | "capability.list" => {
             primal::capabilities(primal, id)

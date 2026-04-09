@@ -69,8 +69,12 @@ fn dispatch_semaphore_timeout() -> Duration {
 /// - `active_encoders` is an `AtomicU32` counting live `GuardedEncoder`s.
 ///   Encoding is **never blocked** — just an atomic increment on creation
 ///   and decrement on finish/drop.
-/// - `gpu_lock` is a `Mutex<()>` that serializes submit and poll against
-///   each other. Poll additionally spin-waits until `active_encoders == 0`
+/// - `gpu_lock` is a `std::sync::Mutex<()>` that serializes submit and poll
+///   against each other. `std::sync::Mutex` is deliberately chosen over
+///   `tokio::sync::Mutex` — the lock is **never held across `.await`** and
+///   protects wgpu FFI calls that are inherently synchronous. `std::sync::Mutex`
+///   avoids the overhead of an async lock for these microsecond-scale critical
+///   sections. Poll additionally spin-waits until `active_encoders == 0`
 ///   to prevent wgpu-core storage races between poll cleanup and encoding.
 /// - `dispatch_semaphore` limits how many operations can be in-flight
 ///   simultaneously based on device type (prevents driver overload).
@@ -85,6 +89,7 @@ pub struct WgpuDevice {
     /// Set when the GPU reports a device-lost error.
     pub(crate) lost: Arc<AtomicBool>,
     /// Serializes submit+poll to prevent wgpu-core storage races.
+    /// `std::sync::Mutex` is correct: never held across `.await`.
     gpu_lock: Arc<std::sync::Mutex<()>>,
     /// Counts live `GuardedEncoders` — poll waits for this to reach zero.
     active_encoders: Arc<std::sync::atomic::AtomicU32>,

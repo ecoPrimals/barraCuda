@@ -5,6 +5,7 @@
 //! Each test runs in its own process via `cargo nextest`, so `set_var` /
 //! `remove_var` is safe despite the Rust 2024 `unsafe` requirement.
 
+use barracuda_core::ipc::btsp::{BtspOutcome, guard_connection};
 use barracuda_core::ipc::transport::{
     ECOSYSTEM_SOCKET_DIR, IpcServer, resolve_family_id, resolve_socket_dir, validate_insecure_guard,
 };
@@ -195,4 +196,54 @@ fn socket_path_respects_biomeos_socket_dir() {
         path.display()
     );
     unsafe { std::env::remove_var("BIOMEOS_SOCKET_DIR") };
+}
+
+// ── BTSP Phase 2: guard_connection ──────────────────────────────────
+
+#[tokio::test]
+async fn btsp_guard_dev_mode_when_no_family() {
+    unsafe { clear_family_env() };
+    let outcome = guard_connection().await;
+    assert!(
+        matches!(outcome, BtspOutcome::DevMode),
+        "expected DevMode, got {outcome:?}"
+    );
+    assert!(outcome.should_accept());
+}
+
+#[tokio::test]
+async fn btsp_guard_degrades_when_beardog_absent() {
+    unsafe { clear_family_env() };
+    unsafe { std::env::set_var("FAMILY_ID", "test-family-42") };
+    let outcome = guard_connection().await;
+    assert!(
+        matches!(outcome, BtspOutcome::Degraded { .. }),
+        "expected Degraded (BearDog not running), got {outcome:?}"
+    );
+    assert!(
+        outcome.should_accept(),
+        "degraded mode should still accept connections"
+    );
+}
+
+#[tokio::test]
+async fn btsp_guard_degrades_with_primal_specific_family() {
+    unsafe { clear_family_env() };
+    unsafe { std::env::set_var("BARRACUDA_FAMILY_ID", "primal-override") };
+    let outcome = guard_connection().await;
+    assert!(
+        matches!(outcome, BtspOutcome::Degraded { .. }),
+        "expected Degraded with primal-specific FAMILY_ID, got {outcome:?}"
+    );
+}
+
+#[test]
+fn btsp_outcome_rejected_refuses_connection() {
+    let outcome = BtspOutcome::Rejected {
+        reason: "challenge failed".to_string(),
+    };
+    assert!(
+        !outcome.should_accept(),
+        "rejected outcome should refuse connection"
+    );
 }

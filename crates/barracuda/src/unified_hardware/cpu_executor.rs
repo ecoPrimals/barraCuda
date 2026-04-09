@@ -300,4 +300,28 @@ mod tests {
         let transferred = exec.transfer(tensor).await.unwrap();
         assert!(transferred.is_cpu());
     }
+
+    #[tokio::test]
+    async fn cpu_tensor_default_trait_methods() {
+        let exec = CpuExecutor::new();
+        let desc = TensorDescriptor::new(vec![4], DType::F32);
+        let tensor = exec.allocate(desc).await.unwrap();
+        assert!(tensor.is_cpu());
+        assert!(!tensor.is_gpu());
+        assert!(!tensor.is_tpu());
+        assert!(tensor.as_wgpu_buffer().is_none());
+    }
+
+    #[tokio::test]
+    async fn cpu_tensor_write_from_cpu_bytes() {
+        let desc = TensorDescriptor::new(vec![4], DType::F32);
+        let mut storage = CpuTensorStorageSimple {
+            descriptor: desc,
+            data: Bytes::from(vec![0u8; 16]),
+        };
+        let input = Bytes::copy_from_slice(bytemuck::cast_slice(&[1.0f32, 2.0, 3.0, 4.0]));
+        storage.write_from_cpu_bytes(input.clone()).await.unwrap();
+        let readback = storage.read_to_cpu().await.unwrap();
+        assert_eq!(readback.as_ref(), input.as_ref());
+    }
 }

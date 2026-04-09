@@ -1,11 +1,19 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-04-08.
+Prioritized work items, ordered by impact. Updated 2026-04-09.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 38: Deep Debt — BTSP Phase 2, Capability-Based Discovery & Idiom Sweep (Apr 9)**:
+  BTSP Phase 2 connection authentication guard (`btsp` module) integrated into all
+  accept loops. BearDog discovery evolved to capability-based (`discover_by_capability()`
+  scans `*.json` discovery files for `btsp.session.create`). `Box<dyn Error>` →
+  typed `BarracudaCoreError`. `#[allow]` → `#[expect]` with reason. `precision_brain.rs`
+  smart-refactored (703→421L). 4 GPU test binaries serialized. Musl-static rebuild
+  fixed (static-pie). Comprehensive audit: zero mocks in production, zero hardcoded
+  primal names, all deps pure Rust. 4,421 tests pass, all quality gates green.
 - **Sprint 37: Deep Debt — Test Module Refactor & Code Cleanup (Apr 8)**:
   `methods_tests.rs` (951L) smart-refactored into 6 domain-focused test modules.
   `buffer_test.rs` println! removed. `nadam_gpu.rs` stale comment removed.

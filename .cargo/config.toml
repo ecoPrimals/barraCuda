@@ -39,5 +39,12 @@ panic = "abort"
 inherits = "release"
 opt-level = 3
 
+# ── Cross-compilation: musl-static targets for plasmidBin ───────────
+# x86_64 musl uses the default cc linker (no override needed).
+# aarch64 musl cross-compilation requires an explicit linker.
+[target.aarch64-unknown-linux-musl]
+linker = "aarch64-linux-gnu-gcc"
+rustflags = ["-C", "target-feature=+crt-static"]
+
 # No patch.crates-io needed — barraCuda communicates with coralReef
 # and toadStool via JSON-RPC IPC at runtime, not compile-time deps.

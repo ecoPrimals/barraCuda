@@ -524,4 +524,225 @@ mod tests {
         );
         assert_eq!(sub, MixedSubstrate::CpuOnly);
     }
+
+    #[test]
+    fn test_mixed_substrate_same_gpu() {
+        let sub = mixed_substrate_with_tier(
+            100.0,
+            1024,
+            HardwareType::GPU,
+            HardwareType::GPU,
+            BandwidthTier::PciE4x16,
+        );
+        assert_eq!(sub, MixedSubstrate::GpuOnly);
+    }
+
+    #[test]
+    fn test_mixed_substrate_same_cpu() {
+        let sub = mixed_substrate_with_tier(
+            100.0,
+            1024,
+            HardwareType::CPU,
+            HardwareType::CPU,
+            BandwidthTier::PciE3x16,
+        );
+        assert_eq!(sub, MixedSubstrate::CpuOnly);
+    }
+
+    #[test]
+    fn test_mixed_substrate_same_npu() {
+        let sub = mixed_substrate_with_tier(
+            100.0,
+            1024,
+            HardwareType::NPU,
+            HardwareType::NPU,
+            BandwidthTier::PciE4x16,
+        );
+        assert_eq!(sub, MixedSubstrate::NpuOnly);
+    }
+
+    #[test]
+    fn test_mixed_substrate_gpu_to_cpu() {
+        let sub = mixed_substrate_with_tier(
+            100_000.0,
+            1_048_576,
+            HardwareType::GPU,
+            HardwareType::CPU,
+            BandwidthTier::PciE4x16,
+        );
+        assert_eq!(sub, MixedSubstrate::GpuToCpu);
+    }
+
+    #[test]
+    fn test_mixed_substrate_cpu_to_gpu() {
+        let sub = mixed_substrate_with_tier(
+            100_000.0,
+            1_048_576,
+            HardwareType::CPU,
+            HardwareType::GPU,
+            BandwidthTier::PciE4x16,
+        );
+        assert_eq!(sub, MixedSubstrate::CpuToGpu);
+    }
+
+    #[test]
+    fn test_mixed_substrate_transfer_cost_dominates() {
+        let sub = mixed_substrate_with_tier(
+            1.0,
+            1_000_000_000,
+            HardwareType::CPU,
+            HardwareType::GPU,
+            BandwidthTier::PciE3x16,
+        );
+        assert_eq!(sub, MixedSubstrate::CpuOnly);
+    }
+
+    #[test]
+    fn test_mixed_substrate_default_tier() {
+        let sub = mixed_substrate(100_000.0, 1024, HardwareType::GPU, HardwareType::GPU);
+        assert_eq!(sub, MixedSubstrate::GpuOnly);
+    }
+
+    #[test]
+    fn test_bandwidth_tier_bandwidth_values() {
+        assert!((BandwidthTier::PciE3x16.bandwidth_gbps() - 15.75).abs() < 0.01);
+        assert!((BandwidthTier::PciE4x16.bandwidth_gbps() - 31.5).abs() < 0.01);
+        assert!((BandwidthTier::PciE5x16.bandwidth_gbps() - 63.0).abs() < 0.01);
+        assert!((BandwidthTier::HighBandwidthInterconnect.bandwidth_gbps() - 300.0).abs() < 0.01);
+        assert!((BandwidthTier::SharedMemory.bandwidth_gbps() - 1000.0).abs() < 0.01);
+        assert!((BandwidthTier::Unknown.bandwidth_gbps() - 15.75).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_bandwidth_tier_transfer_cost() {
+        let cost = BandwidthTier::PciE4x16.transfer_cost();
+        assert!((cost.latency_us - PCIE_DMA_LATENCY_US).abs() < 0.01);
+        assert!((cost.bandwidth_gbps - 31.5).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_bandwidth_tier_detect_pcie3_adapters() {
+        assert_eq!(
+            BandwidthTier::detect_from_adapter_name("NVIDIA TITAN V"),
+            BandwidthTier::PciE3x16
+        );
+        assert_eq!(
+            BandwidthTier::detect_from_adapter_name("Tesla V100"),
+            BandwidthTier::PciE3x16
+        );
+        assert_eq!(
+            BandwidthTier::detect_from_adapter_name("GeForce RTX 2080"),
+            BandwidthTier::PciE3x16
+        );
+    }
+
+    #[test]
+    fn test_bandwidth_tier_detect_unknown() {
+        assert_eq!(
+            BandwidthTier::detect_from_adapter_name("SomeUnknownGPU"),
+            BandwidthTier::Unknown
+        );
+    }
+
+    #[test]
+    fn test_pcie_link_info_bandwidth_all_gens() {
+        let make_link = |pcie_gen: u8, width: u8| PcieLinkInfo {
+            bdf_address: String::new(),
+            pcie_gen,
+            lane_width: width,
+            numa_node: None,
+            vendor_id: 0,
+        };
+        assert!((make_link(1, 16).bandwidth_gbps() - 4.0).abs() < 0.1);
+        assert!((make_link(2, 16).bandwidth_gbps() - 8.0).abs() < 0.1);
+        assert!((make_link(3, 16).bandwidth_gbps() - 15.76).abs() < 0.1);
+        assert!((make_link(4, 16).bandwidth_gbps() - 31.504).abs() < 0.1);
+        assert!((make_link(5, 16).bandwidth_gbps() - 63.008).abs() < 0.1);
+        assert!((make_link(6, 16).bandwidth_gbps() - 121.008).abs() < 0.1);
+        assert!(make_link(0, 16).bandwidth_gbps() > 0.0);
+    }
+
+    #[test]
+    fn test_pcie_link_info_bandwidth_tier() {
+        let make = |pcie_gen: u8, width: u8| PcieLinkInfo {
+            bdf_address: String::new(),
+            pcie_gen,
+            lane_width: width,
+            numa_node: None,
+            vendor_id: 0,
+        };
+        assert_eq!(make(5, 16).bandwidth_tier(), BandwidthTier::PciE5x16);
+        assert_eq!(make(4, 16).bandwidth_tier(), BandwidthTier::PciE4x16);
+        assert_eq!(make(3, 16).bandwidth_tier(), BandwidthTier::PciE3x16);
+        assert_eq!(make(2, 16).bandwidth_tier(), BandwidthTier::Unknown);
+    }
+
+    #[test]
+    fn test_pcie_bridge_any_shared_numa_none() {
+        let links: Vec<PcieLinkInfo> = vec![];
+        assert!(!PcieBridge::any_shared_numa(&links));
+    }
+
+    #[test]
+    fn test_pcie_bridge_any_shared_numa_single() {
+        let links = vec![PcieLinkInfo {
+            bdf_address: "0000:01:00.0".into(),
+            pcie_gen: 4,
+            lane_width: 16,
+            numa_node: Some(0),
+            vendor_id: 0x10de,
+        }];
+        assert!(!PcieBridge::any_shared_numa(&links));
+    }
+
+    #[test]
+    fn test_pcie_bridge_any_shared_numa_match() {
+        let links = vec![
+            PcieLinkInfo {
+                bdf_address: "0000:01:00.0".into(),
+                pcie_gen: 4,
+                lane_width: 16,
+                numa_node: Some(0),
+                vendor_id: 0x10de,
+            },
+            PcieLinkInfo {
+                bdf_address: "0000:02:00.0".into(),
+                pcie_gen: 4,
+                lane_width: 16,
+                numa_node: Some(0),
+                vendor_id: 0x10de,
+            },
+        ];
+        assert!(PcieBridge::any_shared_numa(&links));
+    }
+
+    #[test]
+    fn test_pcie_bridge_any_shared_numa_no_match() {
+        let links = vec![
+            PcieLinkInfo {
+                bdf_address: "0000:01:00.0".into(),
+                pcie_gen: 4,
+                lane_width: 16,
+                numa_node: Some(0),
+                vendor_id: 0x10de,
+            },
+            PcieLinkInfo {
+                bdf_address: "0000:41:00.0".into(),
+                pcie_gen: 4,
+                lane_width: 16,
+                numa_node: Some(1),
+                vendor_id: 0x10de,
+            },
+        ];
+        assert!(!PcieBridge::any_shared_numa(&links));
+    }
+
+    #[test]
+    fn test_transfer_cost_zero_bytes() {
+        let cost = TransferCost {
+            latency_us: 5.0,
+            bandwidth_gbps: 31.5,
+        };
+        assert!((cost.estimated_us(0) - 5.0).abs() < 1e-10);
+    }
 }

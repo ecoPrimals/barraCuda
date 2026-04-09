@@ -128,8 +128,10 @@ pub struct SovereignDevice {
     compiler_available: bool,
     #[cfg(feature = "sovereign-dispatch")]
     dispatch_addr: Option<String>,
+    /// Compiled binary cache. `std::sync::Mutex` is correct: never held across `.await`.
     #[cfg(feature = "sovereign-dispatch")]
     binary_cache: std::sync::Mutex<HashMap<u64, CachedBinary>>,
+    /// Staging buffers for IPC dispatch. `std::sync::Mutex` is correct: never held across `.await`.
     #[cfg(feature = "sovereign-dispatch")]
     staged_buffers: std::sync::Mutex<HashMap<u64, bytes::BytesMut>>,
 }

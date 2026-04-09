@@ -101,6 +101,7 @@
 //! | `fhe.ntt` | `{"modulus": u64, "degree": u64, "root_of_unity": u64, "coefficients": [u64]}` | `{"status": "completed", "modulus": u64, "degree": u64, "result": [u64]}` | yes |
 //! | `fhe.pointwise_mul` | `{"modulus": u64, "degree": u64, "a": [u64], "b": [u64]}` | `{"status": "completed", "modulus": u64, "degree": u64, "result": [u64]}` | yes |
 
+pub mod btsp;
 pub mod jsonrpc;
 pub mod methods;
 pub mod transport;

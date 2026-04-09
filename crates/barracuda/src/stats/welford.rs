@@ -420,4 +420,124 @@ mod tests {
             state.population_variance()
         );
     }
+
+    #[test]
+    fn welford_std_dev() {
+        let data = [2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0];
+        let state = WelfordState::from_slice(&data);
+        let expected = state.sample_variance().sqrt();
+        assert!((state.std_dev() - expected).abs() < 1e-15);
+    }
+
+    #[test]
+    fn welford_std_dev_single() {
+        let mut state = WelfordState::new();
+        state.update(5.0);
+        assert_eq!(state.std_dev(), 0.0);
+    }
+
+    #[test]
+    fn welford_default() {
+        let state = WelfordState::default();
+        assert_eq!(state.count(), 0);
+        assert_eq!(state.mean(), 0.0);
+    }
+
+    #[test]
+    fn welford_merge_into_empty() {
+        let b = WelfordState::from_slice(&[1.0, 2.0, 3.0]);
+        let mut a = WelfordState::new();
+        a.merge(&b);
+        assert_eq!(a.count(), 3);
+        assert!((a.mean() - 2.0).abs() < 1e-15);
+    }
+
+    #[test]
+    fn welford_merge_empty_into_nonempty() {
+        let mut a = WelfordState::from_slice(&[1.0, 2.0, 3.0]);
+        let b = WelfordState::new();
+        let mean_before = a.mean();
+        a.merge(&b);
+        assert_eq!(a.count(), 3);
+        assert!((a.mean() - mean_before).abs() < 1e-15);
+    }
+
+    #[test]
+    fn welford_cov_empty() {
+        let state = WelfordCovState::new();
+        assert_eq!(state.count(), 0);
+        assert_eq!(state.mean_x(), 0.0);
+        assert_eq!(state.mean_y(), 0.0);
+        assert_eq!(state.population_covariance(), 0.0);
+        assert_eq!(state.sample_covariance(), 0.0);
+        assert_eq!(state.variance_x(), 0.0);
+        assert_eq!(state.variance_y(), 0.0);
+    }
+
+    #[test]
+    fn welford_cov_single_point() {
+        let mut state = WelfordCovState::new();
+        state.update(3.0, 7.0);
+        assert_eq!(state.count(), 1);
+        assert!((state.mean_x() - 3.0).abs() < 1e-15);
+        assert!((state.mean_y() - 7.0).abs() < 1e-15);
+        assert_eq!(state.population_covariance(), 0.0);
+        assert_eq!(state.sample_covariance(), 0.0);
+    }
+
+    #[test]
+    fn welford_cov_correlation_constant_returns_nan() {
+        let mut state = WelfordCovState::new();
+        state.update(5.0, 5.0);
+        state.update(5.0, 5.0);
+        assert!(state.correlation().is_nan());
+    }
+
+    #[test]
+    fn welford_cov_default() {
+        let state = WelfordCovState::default();
+        assert_eq!(state.count(), 0);
+    }
+
+    #[test]
+    fn welford_cov_population_covariance() {
+        let xs = [1.0, 2.0, 3.0, 4.0, 5.0];
+        let ys = [2.0, 4.0, 6.0, 8.0, 10.0];
+        let state = WelfordCovState::from_slices(&xs, &ys);
+        assert!((state.population_covariance() - 4.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn welford_cov_merge_into_empty() {
+        let b = WelfordCovState::from_slices(&[1.0, 2.0], &[3.0, 4.0]);
+        let mut a = WelfordCovState::new();
+        a.merge(&b);
+        assert_eq!(a.count(), 2);
+        assert!((a.mean_x() - 1.5).abs() < 1e-15);
+        assert!((a.mean_y() - 3.5).abs() < 1e-15);
+    }
+
+    #[test]
+    fn welford_cov_merge_empty_into_nonempty() {
+        let mut a = WelfordCovState::from_slices(&[1.0, 2.0, 3.0], &[2.0, 4.0, 6.0]);
+        let b = WelfordCovState::new();
+        let count_before = a.count();
+        a.merge(&b);
+        assert_eq!(a.count(), count_before);
+    }
+
+    #[test]
+    fn welford_cov_from_slices_unequal_length() {
+        let state = WelfordCovState::from_slices(&[1.0, 2.0, 3.0], &[4.0, 5.0]);
+        assert_eq!(state.count(), 2);
+    }
+
+    #[test]
+    fn welford_cov_variance_xy() {
+        let xs = [1.0, 2.0, 3.0, 4.0, 5.0];
+        let ys = [10.0, 20.0, 30.0, 40.0, 50.0];
+        let state = WelfordCovState::from_slices(&xs, &ys);
+        assert!((state.variance_x() - 2.5).abs() < 1e-10);
+        assert!((state.variance_y() - 250.0).abs() < 1e-10);
+    }
 }

@@ -213,6 +213,11 @@ impl IpcServer {
                     let (stream, _) = result?;
                     let srv = server.clone();
                     tokio::spawn(async move {
+                        let outcome = super::btsp::guard_connection().await;
+                        if !outcome.should_accept() {
+                            tracing::warn!("BTSP handshake rejected tarpc connection: {outcome:?}");
+                            return;
+                        }
                         let transport = tarpc::serde_transport::new(
                             tokio_util::codec::LengthDelimitedCodec::builder()
                                 .max_frame_length(max_frame_bytes())
@@ -256,6 +261,11 @@ impl IpcServer {
                     tracing::debug!("IPC connection from {peer}");
                     let primal = Arc::clone(&self.primal);
                     tokio::spawn(async move {
+                        let outcome = super::btsp::guard_connection().await;
+                        if !outcome.should_accept() {
+                            tracing::warn!("BTSP handshake rejected connection from {peer}: {outcome:?}");
+                            return;
+                        }
                         handle_stream(primal, stream).await;
                     });
                 }
@@ -297,6 +307,11 @@ impl IpcServer {
                     let (stream, _) = result?;
                     let primal = Arc::clone(&self.primal);
                     tokio::spawn(async move {
+                        let outcome = super::btsp::guard_connection().await;
+                        if !outcome.should_accept() {
+                            tracing::warn!("BTSP handshake rejected connection: {outcome:?}");
+                            return;
+                        }
                         let (reader, writer) = stream.into_split();
                         handle_connection(primal, reader, writer).await;
                     });

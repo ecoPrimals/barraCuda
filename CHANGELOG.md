@@ -5,7 +5,35 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.11] — 2026-04-08
+## [0.3.11] — 2026-04-09
+
+### Changed — Sprint 38: Deep Debt — BTSP Phase 2, Capability-Based Discovery, Musl-Static & Idiom Sweep (Apr 9 2026)
+
+- **BTSP Phase 2 guard**: New `btsp` module in `barracuda-core` implements connection
+  authentication guard. `BtspOutcome` enum (DevMode/Authenticated/Degraded/Rejected) with
+  `guard_connection()` async orchestration. Integrated into `serve_unix`, `serve_tcp`, and
+  `serve_tarpc_unix` accept loops — every incoming connection passes through the BTSP guard.
+- **Capability-based security discovery**: BearDog discovery evolved from hardcoded
+  `beardog-core.json` filename to capability-domain pattern. New `SECURITY_DOMAIN = "crypto"`
+  constant + `discover_by_capability()` scans all `*.json` discovery files for primals
+  advertising `btsp.session.create`. Zero primal name literals in production code.
+- **Typed error evolution**: `Box<dyn Error + Send + Sync>` in `create_btsp_session` evolved
+  to typed `BarracudaCoreError::ipc()` — all IPC error paths now use the crate's error type.
+- **`#[allow]` → `#[expect]`**: Last remaining `#[allow(unreachable_code)]` in `executor.rs`
+  evolved to `#[expect(unreachable_code, reason = "...")]` with documented rationale.
+- **Smart refactor**: `precision_brain.rs` test extraction (703 → 421 LOC production,
+  282 LOC in `precision_brain_tests.rs` via `#[path]` attribute).
+- **fault_injection SIGSEGV**: 4 additional GPU-intensive test binaries (`scientific_chaos_tests`,
+  `fhe_fault_tests`, `hotspring_fault_special_tests`, `multi_device_integration`) serialized
+  in `gpu-serial` nextest group and excluded from coverage profile.
+- **Musl-static rebuild**: Fixed `x86_64-unknown-linux-musl` linker config (removed `musl-gcc`
+  override causing dynamic linking SIGSEGV). Both x86_64 and aarch64 binaries now static-pie.
+  `unreachable_code` warning in `detect_simd_width()` resolved for aarch64 target.
+- **plasmidBin metadata**: Updated with fresh SHA-256 checksums and sizes for both targets.
+- **Dependency audit**: All direct deps pure Rust. `cc`/`renderdoc-sys`/`linux-raw-sys` are
+  transitive from wgpu/blake3 — no C code linked into binary. blake3 uses `pure` feature.
+- **Coverage**: 70% line / 78% function overall. Core/IPC code >80%.
+- 4 new BTSP integration tests. All quality gates green: fmt, clippy, doc, deny, 4,421 tests pass.
 
 ### Changed — Sprint 37: Deep Debt — Test Module Refactor & Code Cleanup (Apr 8 2026)
 

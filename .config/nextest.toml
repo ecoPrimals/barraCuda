@@ -113,7 +113,7 @@ fail-fast = false
 slow-timeout = { period = "120s", terminate-after = 2 }
 status-level = "fail"
 final-status-level = "all"
-default-filter = "not binary(hardware_verification) & not binary(fhe_chaos_tests) & not binary(fault_injection) & not binary(fhe_fault_injection_tests) & not binary(scientific_fault_injection_tests)"
+default-filter = "not binary(hardware_verification) & not binary(fhe_chaos_tests) & not binary(fault_injection) & not binary(fhe_fault_injection_tests) & not binary(fhe_fault_tests) & not binary(scientific_fault_injection_tests) & not binary(scientific_chaos_tests) & not binary(hotspring_fault_special_tests) & not binary(multi_device_integration)"
 
 [[profile.coverage.overrides]]
 filter = "test(/fft|conv2d|conv3d|flash_attention|deformable|fhe_polynomial|edge_conv/)"
@@ -128,11 +128,11 @@ slow-timeout = { period = "180s", terminate-after = 2 }
 max-threads = 1
 
 [[profile.ci.overrides]]
-filter = "binary(fhe_chaos_tests) | binary(fault_injection) | binary(fhe_fault_injection_tests) | binary(scientific_fault_injection_tests) | binary(three_springs_tests) | test(/property/)"
+filter = "binary(fhe_chaos_tests) | binary(fault_injection) | binary(fhe_fault_injection_tests) | binary(fhe_fault_tests) | binary(scientific_fault_injection_tests) | binary(scientific_chaos_tests) | binary(hotspring_fault_special_tests) | binary(multi_device_integration) | binary(three_springs_tests) | test(/property/)"
 test-group = "gpu-serial"
 slow-timeout = { period = "180s", terminate-after = 2 }
 
 [[profile.default.overrides]]
-filter = "binary(fhe_chaos_tests) | binary(fault_injection) | binary(fhe_fault_injection_tests) | binary(scientific_fault_injection_tests) | binary(three_springs_tests) | test(/property/)"
+filter = "binary(fhe_chaos_tests) | binary(fault_injection) | binary(fhe_fault_injection_tests) | binary(fhe_fault_tests) | binary(scientific_fault_injection_tests) | binary(scientific_chaos_tests) | binary(hotspring_fault_special_tests) | binary(multi_device_integration) | binary(three_springs_tests) | test(/property/)"
 test-group = "gpu-serial"
 slow-timeout = { period = "120s", terminate-after = 2 }

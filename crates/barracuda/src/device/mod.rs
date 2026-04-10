@@ -14,7 +14,7 @@
 //! - NPU: Akida neuromorphic
 //! - Auto: Smart selection
 
-use crate::error::Result;
+use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
 
 /// Akida neuromorphic hardware detection and board health.
@@ -220,22 +220,36 @@ pub enum HardwareWorkload {
 pub struct Auto;
 
 impl Auto {
-    /// Discover best available device (wgpu handles selection)
-    /// Returns shared `WgpuDevice` from the global pool for thread-safe concurrent access.
-    /// This enables parallel tests and concurrent GPU workloads without resource exhaustion.
-    /// **Architecture**: Uses LazyLock-based pool (Rust 1.80+) for idiomatic lazy initialization.
+    /// Discover the best available compute device for production use.
+    ///
+    /// Tries adapters in order: GPU (HighPerformance) → CPU software rasterizer.
+    /// Returns `Err` if no adapter is available at all — callers (e.g.
+    /// `BarraCudaPrimal::start`) can degrade gracefully instead of panicking.
+    ///
+    /// For tests, prefer `test_pool::get_test_device()` which manages a shared
+    /// pool with concurrency limits.
     /// # Errors
     /// Returns [`Err`] if no WGPU adapter is found or device creation fails.
     #[expect(
         clippy::new_ret_no_self,
-        reason = "returns Arc<WgpuDevice> from global pool for thread-safe shared access"
+        reason = "returns Arc<WgpuDevice> for thread-safe shared access"
     )]
     pub async fn new() -> Result<Arc<WgpuDevice>> {
-        Ok(test_pool::get_test_device().await)
+        if let Ok(dev) = WgpuDevice::new().await {
+            return Ok(Arc::new(dev));
+        }
+        if let Ok(dev) = WgpuDevice::new_cpu_relaxed().await {
+            tracing::info!("GPU unavailable, using CPU software rasterizer");
+            return Ok(Arc::new(dev));
+        }
+        Err(BarracudaError::device(
+            "No compute device available (neither GPU nor CPU software rasterizer)",
+        ))
     }
 
-    /// Create a fresh device (not from pool)
-    /// Use sparingly - creates a new device each call, which can exhaust GPU resources.
+    /// Create a fresh device (not from pool).
+    ///
+    /// Use sparingly — creates a new device each call, which can exhaust GPU resources.
     /// Prefer `Auto::new()` for most cases.
     /// # Errors
     /// Returns [`Err`] if no WGPU adapter is found or device creation fails.

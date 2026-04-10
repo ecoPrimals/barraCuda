@@ -1,11 +1,17 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-04-09.
+Prioritized work items, ordered by impact. Updated 2026-04-10.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 39: primalSpring Audit Remediation (Apr 10)**: BTSP Phase 2 full handshake —
+  `guard_connection()` evolved to 6-step X25519+HMAC relay with legacy fallback.
+  BC-GPU-PANIC fixed — `Auto::new()` decoupled from test pool, returns `Err` instead
+  of panicking. fault_injection SIGSEGV — `gpu-serial` override added to `stress`
+  and `gpu` nextest profiles. Musl rebuild: fresh binaries with checksums.
+  4,422 tests pass, all quality gates green.
 - **Sprint 38: Deep Debt — BTSP Phase 2, Capability-Based Discovery & Idiom Sweep (Apr 9)**:
   BTSP Phase 2 connection authentication guard (`btsp` module) integrated into all
   accept loops. BearDog discovery evolved to capability-based (`discover_by_capability()`

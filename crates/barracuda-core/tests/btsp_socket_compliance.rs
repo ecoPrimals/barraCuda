@@ -200,10 +200,17 @@ fn socket_path_respects_biomeos_socket_dir() {
 
 // ── BTSP Phase 2: guard_connection ──────────────────────────────────
 
+/// Create a duplex stream pair for testing the BTSP guard without a real
+/// network connection. Returns (client_half, server_half).
+fn mock_stream() -> (tokio::io::DuplexStream, tokio::io::DuplexStream) {
+    tokio::io::duplex(4096)
+}
+
 #[tokio::test]
 async fn btsp_guard_dev_mode_when_no_family() {
     unsafe { clear_family_env() };
-    let outcome = guard_connection().await;
+    let (_client, mut server) = mock_stream();
+    let outcome = guard_connection(&mut server).await;
     assert!(
         matches!(outcome, BtspOutcome::DevMode),
         "expected DevMode, got {outcome:?}"
@@ -212,13 +219,15 @@ async fn btsp_guard_dev_mode_when_no_family() {
 }
 
 #[tokio::test]
-async fn btsp_guard_degrades_when_beardog_absent() {
+async fn btsp_guard_degrades_when_provider_absent() {
     unsafe { clear_family_env() };
     unsafe { std::env::set_var("FAMILY_ID", "test-family-42") };
-    let outcome = guard_connection().await;
+    let (_client, mut server) = mock_stream();
+    // Client side doesn't send anything → timeout → legacy fallback → Degraded
+    let outcome = guard_connection(&mut server).await;
     assert!(
         matches!(outcome, BtspOutcome::Degraded { .. }),
-        "expected Degraded (BearDog not running), got {outcome:?}"
+        "expected Degraded (security provider absent / no ClientHello), got {outcome:?}"
     );
     assert!(
         outcome.should_accept(),
@@ -230,10 +239,30 @@ async fn btsp_guard_degrades_when_beardog_absent() {
 async fn btsp_guard_degrades_with_primal_specific_family() {
     unsafe { clear_family_env() };
     unsafe { std::env::set_var("BARRACUDA_FAMILY_ID", "primal-override") };
-    let outcome = guard_connection().await;
+    let (_client, mut server) = mock_stream();
+    let outcome = guard_connection(&mut server).await;
     assert!(
         matches!(outcome, BtspOutcome::Degraded { .. }),
         "expected Degraded with primal-specific FAMILY_ID, got {outcome:?}"
+    );
+}
+
+#[tokio::test]
+async fn btsp_guard_degrades_on_non_hello_first_message() {
+    unsafe { clear_family_env() };
+    unsafe { std::env::set_var("FAMILY_ID", "test-family") };
+    let (mut client, mut server) = mock_stream();
+    // Client sends a JSON-RPC request instead of ClientHello → legacy fallback
+    tokio::spawn(async move {
+        use tokio::io::AsyncWriteExt;
+        let msg = r#"{"jsonrpc":"2.0","method":"health.check","id":1}"#;
+        client.write_all(msg.as_bytes()).await.unwrap();
+        client.write_all(b"\n").await.unwrap();
+    });
+    let outcome = guard_connection(&mut server).await;
+    assert!(
+        matches!(outcome, BtspOutcome::Degraded { .. }),
+        "expected Degraded for non-BTSP client, got {outcome:?}"
     );
 }
 

@@ -1,25 +1,35 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! BTSP Phase 2: connection authentication guard.
+//! BTSP Phase 2: connection authentication guard with full handshake relay.
 //!
 //! Per `BTSP_PROTOCOL_STANDARD.md` §Phase 2: when `FAMILY_ID` is set,
-//! incoming connections must prove family membership via BearDog's
-//! handshake-as-a-service RPC before accessing JSON-RPC methods.
+//! incoming connections must prove family membership via the security-domain
+//! provider's handshake-as-a-service RPC before accessing JSON-RPC methods.
 //!
 //! ## Architecture
 //!
-//! Consumer primals (barraCuda) delegate handshake to BearDog:
+//! Consumer primals (barraCuda) relay the handshake to whichever primal
+//! provides the `crypto` security domain (discovered at runtime via
+//! capability-based socket resolution — zero hardcoded primal names):
+//!
 //! 1. Client connects to barraCuda UDS/TCP listener.
-//! 2. barraCuda calls BearDog `btsp.session.create` → gets challenge.
-//! 3. barraCuda sends challenge to connecting client.
-//! 4. Client responds with proof (X25519 + HMAC-SHA256).
-//! 5. barraCuda calls BearDog `btsp.session.verify` → accept or reject.
+//! 2. barraCuda reads `ClientHello` (with X25519 ephemeral pub) from client.
+//! 3. barraCuda calls security provider `btsp.session.create` with
+//!    `client_ephemeral_pub`.
+//! 4. Provider returns `ServerHello` (server ephemeral pub + HMAC challenge).
+//! 5. barraCuda relays `ServerHello` to client.
+//! 6. Client computes `X25519(client_priv, server_pub)` → shared secret,
+//!    then `HMAC-SHA256(shared_secret, challenge || "btsp-v1")`.
+//! 7. Client sends `ChallengeResponse` (HMAC proof) to barraCuda.
+//! 8. barraCuda calls security provider `btsp.session.verify` with the proof.
+//! 9. Provider verifies and returns `HandshakeComplete` (session_id + cipher).
+//! 10. barraCuda relays `HandshakeComplete` to client.
 //!
 //! ## Degraded Mode
 //!
-//! When `FAMILY_ID` is set but BearDog is unreachable or its session
-//! layer is incomplete (stub-style RPCs), the guard logs a warning
-//! and accepts the connection. This prevents a hard dependency on
-//! BearDog availability during the Phase 2 rollout.
+//! When `FAMILY_ID` is set but the security-domain provider is unreachable,
+//! or the client does not send a `ClientHello` (legacy client), the guard
+//! logs a warning and accepts in degraded mode. This prevents a hard
+//! dependency on provider availability during the Phase 2 rollout.
 
 use super::transport::{resolve_family_id, resolve_socket_dir};
 
@@ -28,12 +38,12 @@ use super::transport::{resolve_family_id, resolve_socket_dir};
 pub enum BtspOutcome {
     /// No `FAMILY_ID` set — development mode, no handshake required.
     DevMode,
-    /// `FAMILY_ID` set, handshake succeeded.
+    /// `FAMILY_ID` set, full handshake succeeded.
     Authenticated {
-        /// BearDog-issued session identifier.
+        /// Security-provider-issued session identifier.
         session_id: String,
     },
-    /// `FAMILY_ID` set, BearDog unreachable or session RPC incomplete.
+    /// `FAMILY_ID` set, security provider unreachable or handshake incomplete.
     /// Connection accepted with warning — operators see actionable log.
     Degraded {
         /// Human-readable explanation for monitoring/alerting.
@@ -56,56 +66,346 @@ impl BtspOutcome {
     }
 }
 
-/// Attempt BTSP handshake guard for an incoming connection.
+/// Attempt full BTSP Phase 2 handshake on an incoming connection stream.
 ///
 /// Called once per accepted connection in the UDS/TCP accept loop,
 /// before routing the stream to `handle_connection`. When `FAMILY_ID`
-/// is unset, returns immediately (`DevMode`). When set, discovers
-/// BearDog and attempts session creation.
-///
-/// Integration with the full BTSP handshake (X25519 challenge-response
-/// over the client stream) will be added when BearDog completes its
-/// `btsp.session.*` RPC layer.
-pub async fn guard_connection() -> BtspOutcome {
+/// is unset, returns immediately (`DevMode`). When set, discovers the
+/// security-domain provider and orchestrates the full X25519+HMAC
+/// challenge-response handshake as a relay between client and provider.
+pub async fn guard_connection<S>(stream: &mut S) -> BtspOutcome
+where
+    S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
+{
     let Some(family_id) = resolve_family_id() else {
         return BtspOutcome::DevMode;
     };
 
-    let Some(beardog_sock) = discover_beardog_socket() else {
+    let Some(provider_sock) = discover_security_provider() else {
         let socket_dir = resolve_socket_dir();
         let reason = format!(
-            "FAMILY_ID={family_id} but BearDog not discoverable at {}. \
-             BTSP handshake cannot be enforced — accepting in degraded mode. \
-             Deploy BearDog to enable BTSP authentication.",
+            "FAMILY_ID={family_id} but security-domain provider not discoverable \
+             at {}. Accepting in degraded mode.",
             socket_dir.display()
         );
         tracing::warn!("{reason}");
         return BtspOutcome::Degraded { reason };
     };
 
-    match create_btsp_session(&beardog_sock, &family_id).await {
+    match perform_handshake_relay(stream, &provider_sock, &family_id).await {
         Ok(session_id) => {
             tracing::debug!(session_id, "BTSP handshake succeeded");
             BtspOutcome::Authenticated { session_id }
         }
-        Err(e) => {
-            let reason = format!(
-                "BTSP session creation failed (BearDog at {}): {e}. \
-                 Accepting in degraded mode.",
-                beardog_sock.display()
-            );
+        Err(HandshakeError::ClientLegacy(reason)) => {
             tracing::warn!("{reason}");
+            BtspOutcome::Degraded { reason }
+        }
+        Err(HandshakeError::ProviderUnavailable(reason)) => {
+            tracing::warn!("{reason}");
+            BtspOutcome::Degraded { reason }
+        }
+        Err(HandshakeError::Rejected(reason)) => {
+            tracing::warn!("BTSP handshake rejected: {reason}");
+            BtspOutcome::Rejected { reason }
+        }
+        Err(HandshakeError::Protocol(reason)) => {
+            tracing::warn!("BTSP protocol error: {reason}");
             BtspOutcome::Degraded { reason }
         }
     }
 }
 
-/// Domain stem for the security capability provider (BTSP handshake).
+/// Internal error type for the handshake relay — not exposed to callers.
+enum HandshakeError {
+    /// Client didn't send ClientHello (legacy/plain JSON-RPC client).
+    ClientLegacy(String),
+    /// Security-domain provider unreachable or RPC failed.
+    ProviderUnavailable(String),
+    /// Provider explicitly rejected the handshake (bad HMAC, etc.).
+    Rejected(String),
+    /// Wire protocol error (malformed JSON, unexpected message type).
+    Protocol(String),
+}
+
+/// Time limit for the client to send ClientHello before we fall back
+/// to treating the connection as a legacy (non-BTSP) client.
+const CLIENT_HELLO_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
+
+/// Full handshake relay between client stream and security-domain provider.
 ///
-/// Per `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §2: primals discover peers
-/// by capability domain, not by primal name. The "crypto" domain owns
-/// encryption, signing, and BTSP handshake — whichever primal provides
-/// that capability is the one we connect to.
+/// Per BTSP_PROTOCOL_STANDARD §Phase 2:
+/// 1. Read ClientHello from client (with timeout for legacy fallback)
+/// 2. Forward to provider via btsp.session.create
+/// 3. Relay ServerHello to client
+/// 4. Read ChallengeResponse from client
+/// 5. Forward to provider via btsp.session.verify
+/// 6. Relay HandshakeComplete to client
+#[cfg(unix)]
+async fn perform_handshake_relay<S>(
+    stream: &mut S,
+    provider_sock: &std::path::Path,
+    family_id: &str,
+) -> std::result::Result<String, HandshakeError>
+where
+    S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
+{
+    use tokio::io::BufReader;
+
+    // Step 1: Read ClientHello from client (with timeout for legacy clients)
+    let mut buf_reader = BufReader::new(&mut *stream);
+    let client_hello_line =
+        match tokio::time::timeout(CLIENT_HELLO_TIMEOUT, read_ndjson_line(&mut buf_reader)).await {
+            Ok(Ok(line)) => line,
+            Ok(Err(e)) => {
+                return Err(HandshakeError::ClientLegacy(format!(
+                    "Client stream error before ClientHello: {e}. Treating as legacy client."
+                )));
+            }
+            Err(_) => {
+                return Err(HandshakeError::ClientLegacy(
+                    "Client did not send ClientHello within timeout. \
+                     Treating as legacy (non-BTSP) client."
+                        .to_string(),
+                ));
+            }
+        };
+
+    let client_hello: serde_json::Value = serde_json::from_str(&client_hello_line)
+        .map_err(|e| HandshakeError::Protocol(format!("Malformed ClientHello JSON: {e}")))?;
+
+    let msg_type = client_hello
+        .get("type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    if msg_type != "ClientHello" {
+        return Err(HandshakeError::ClientLegacy(format!(
+            "Expected ClientHello, got message type '{msg_type}'. \
+             Treating as legacy client."
+        )));
+    }
+
+    let client_ephemeral_pub = client_hello
+        .get("client_ephemeral_pub")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| {
+            HandshakeError::Protocol("ClientHello missing client_ephemeral_pub field".to_string())
+        })?;
+
+    // Step 2: Call security provider btsp.session.create
+    let create_result = session_create_rpc(provider_sock, family_id, client_ephemeral_pub).await?;
+
+    let session_id = create_result
+        .get("session_id")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| {
+            HandshakeError::Protocol("session.create response missing session_id".to_string())
+        })?
+        .to_string();
+
+    // Step 3: Relay ServerHello to client
+    let server_hello = serde_json::json!({
+        "type": "ServerHello",
+        "version": 1,
+        "server_ephemeral_pub": create_result.get("server_ephemeral_pub"),
+        "challenge": create_result.get("challenge"),
+    });
+    write_ndjson_line(stream, &server_hello)
+        .await
+        .map_err(|e| HandshakeError::Protocol(format!("Failed to write ServerHello: {e}")))?;
+
+    // Step 4: Read ChallengeResponse from client
+    let mut buf_reader = BufReader::new(&mut *stream);
+    let challenge_line = read_ndjson_line(&mut buf_reader)
+        .await
+        .map_err(|e| HandshakeError::Protocol(format!("Failed to read ChallengeResponse: {e}")))?;
+
+    let challenge_resp: serde_json::Value = serde_json::from_str(&challenge_line)
+        .map_err(|e| HandshakeError::Protocol(format!("Malformed ChallengeResponse JSON: {e}")))?;
+
+    let hmac_proof = challenge_resp
+        .get("hmac")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| {
+            HandshakeError::Protocol("ChallengeResponse missing hmac field".to_string())
+        })?;
+
+    // Step 5: Call security provider btsp.session.verify
+    let verify_result = session_verify_rpc(provider_sock, &session_id, hmac_proof).await?;
+
+    let verified = verify_result
+        .get("verified")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
+    if !verified {
+        let reason = verify_result
+            .get("reason")
+            .and_then(|v| v.as_str())
+            .unwrap_or("HMAC verification failed");
+        return Err(HandshakeError::Rejected(reason.to_string()));
+    }
+
+    // Step 6: Relay HandshakeComplete to client
+    let complete = serde_json::json!({
+        "type": "HandshakeComplete",
+        "session_id": session_id,
+        "cipher": verify_result.get("cipher").cloned().unwrap_or_else(|| serde_json::json!("none")),
+    });
+    write_ndjson_line(stream, &complete)
+        .await
+        .map_err(|e| HandshakeError::Protocol(format!("Failed to write HandshakeComplete: {e}")))?;
+
+    Ok(session_id)
+}
+
+#[cfg(not(unix))]
+async fn perform_handshake_relay<S>(
+    _stream: &mut S,
+    _provider_sock: &std::path::Path,
+    _family_id: &str,
+) -> std::result::Result<String, HandshakeError>
+where
+    S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
+{
+    Err(HandshakeError::Protocol(
+        "BTSP handshake requires Unix domain sockets".to_string(),
+    ))
+}
+
+// ── NDJSON wire helpers ─────────────────────────────────────────────
+
+async fn read_ndjson_line<R>(reader: &mut R) -> std::io::Result<String>
+where
+    R: tokio::io::AsyncBufRead + Unpin,
+{
+    use tokio::io::AsyncBufReadExt;
+    let mut line = String::new();
+    reader.read_line(&mut line).await?;
+    if line.is_empty() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::UnexpectedEof,
+            "connection closed before NDJSON line",
+        ));
+    }
+    Ok(line)
+}
+
+async fn write_ndjson_line<W>(writer: &mut W, value: &serde_json::Value) -> std::io::Result<()>
+where
+    W: tokio::io::AsyncWrite + Unpin,
+{
+    use tokio::io::AsyncWriteExt;
+    let mut line = serde_json::to_string(value)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    line.push('\n');
+    writer.write_all(line.as_bytes()).await?;
+    writer.flush().await?;
+    Ok(())
+}
+
+// ── Security-domain provider RPC helpers ────────────────────────────
+
+/// Call `btsp.session.create` on the security-domain provider.
+#[cfg(unix)]
+async fn session_create_rpc(
+    provider_sock: &std::path::Path,
+    family_id: &str,
+    client_ephemeral_pub: &str,
+) -> std::result::Result<serde_json::Value, HandshakeError> {
+    let request = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": "btsp.session.create",
+        "params": {
+            "family_id": family_id,
+            "client_ephemeral_pub": client_ephemeral_pub,
+        },
+        "id": 1
+    });
+    security_provider_rpc(provider_sock, &request).await
+}
+
+/// Call `btsp.session.verify` on the security-domain provider.
+#[cfg(unix)]
+async fn session_verify_rpc(
+    provider_sock: &std::path::Path,
+    session_id: &str,
+    hmac: &str,
+) -> std::result::Result<serde_json::Value, HandshakeError> {
+    let request = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": "btsp.session.verify",
+        "params": {
+            "session_id": session_id,
+            "hmac": hmac,
+        },
+        "id": 2
+    });
+    security_provider_rpc(provider_sock, &request).await
+}
+
+/// Send a JSON-RPC request to the security-domain provider and return the
+/// `result` field. The provider is discovered at runtime by capability —
+/// no primal names are hardcoded.
+#[cfg(unix)]
+async fn security_provider_rpc(
+    provider_sock: &std::path::Path,
+    request: &serde_json::Value,
+) -> std::result::Result<serde_json::Value, HandshakeError> {
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+
+    let stream = tokio::net::UnixStream::connect(provider_sock)
+        .await
+        .map_err(|e| {
+            HandshakeError::ProviderUnavailable(format!(
+                "Cannot connect to security-domain provider at {}: {e}. \
+                 Accepting in degraded mode.",
+                provider_sock.display()
+            ))
+        })?;
+    let (reader, mut writer) = stream.into_split();
+
+    let mut line = serde_json::to_string(request)
+        .map_err(|e| HandshakeError::Protocol(format!("Failed to serialize provider RPC: {e}")))?;
+    line.push('\n');
+    writer.write_all(line.as_bytes()).await.map_err(|e| {
+        HandshakeError::ProviderUnavailable(format!("Write to security provider failed: {e}"))
+    })?;
+    writer.shutdown().await.map_err(|e| {
+        HandshakeError::ProviderUnavailable(format!("Provider write shutdown: {e}"))
+    })?;
+
+    let mut lines = BufReader::new(reader).lines();
+    let response_line = lines
+        .next_line()
+        .await
+        .map_err(|e| {
+            HandshakeError::ProviderUnavailable(format!("Read from security provider failed: {e}"))
+        })?
+        .ok_or_else(|| {
+            HandshakeError::ProviderUnavailable(
+                "No response from security-domain provider".to_string(),
+            )
+        })?;
+
+    let response: serde_json::Value = serde_json::from_str(&response_line)
+        .map_err(|e| HandshakeError::Protocol(format!("Malformed provider response: {e}")))?;
+
+    if let Some(error) = response.get("error") {
+        return Err(HandshakeError::ProviderUnavailable(format!(
+            "Security provider RPC error: {error}"
+        )));
+    }
+
+    response
+        .get("result")
+        .cloned()
+        .ok_or_else(|| HandshakeError::Protocol("Provider response missing result".to_string()))
+}
+
+// ── Discovery ───────────────────────────────────────────────────────
+
+/// Domain stem for the security capability provider (BTSP handshake).
 const SECURITY_DOMAIN: &str = "crypto";
 
 /// Discover the security-domain socket for BTSP handshake delegation.
@@ -115,9 +415,7 @@ const SECURITY_DOMAIN: &str = "crypto";
 /// 2. `$BIOMEOS_SOCKET_DIR/{SECURITY_DOMAIN}.sock`
 /// 3. Discovery files in `$BIOMEOS_SOCKET_DIR/*.json` advertising
 ///    `btsp.session.create` capability
-///
-/// Returns `None` if no security-domain provider is discoverable.
-fn discover_beardog_socket() -> Option<std::path::PathBuf> {
+fn discover_security_provider() -> Option<std::path::PathBuf> {
     let sock_dir = resolve_socket_dir();
 
     if let Some(fid) = resolve_family_id() {
@@ -131,16 +429,9 @@ fn discover_beardog_socket() -> Option<std::path::PathBuf> {
         return Some(unscoped);
     }
 
-    // Capability-based fallback: scan discovery files for btsp.session.create
     discover_by_capability(&sock_dir, "btsp.session.create")
 }
 
-/// Scan discovery files for a primal advertising a specific method.
-///
-/// Per wateringHole capability-based discovery: each running primal writes
-/// a `{namespace}-core.json` discovery file listing its methods. We scan
-/// for a primal that provides the requested method and return its Unix
-/// socket path. No primal names are hardcoded.
 fn discover_by_capability(sock_dir: &std::path::Path, method: &str) -> Option<std::path::PathBuf> {
     let entries = std::fs::read_dir(sock_dir).ok()?;
     for entry in entries.flatten() {
@@ -154,7 +445,6 @@ fn discover_by_capability(sock_dir: &std::path::Path, method: &str) -> Option<st
     None
 }
 
-/// Check a single discovery file for a primal advertising a given method.
 fn check_discovery_file_for_method(
     path: &std::path::Path,
     method: &str,
@@ -175,79 +465,6 @@ fn check_discovery_file_for_method(
         .and_then(|s| s.strip_prefix("unix://"))?;
     let sock = std::path::PathBuf::from(unix_addr);
     sock.exists().then_some(sock)
-}
-
-/// Create a BTSP session via BearDog's `btsp.session.create` RPC.
-///
-/// Connects to BearDog over UDS, sends a `btsp.session.create` request,
-/// and returns the session ID on success. This is the client-side
-/// integration point for the full BTSP handshake flow.
-///
-/// # Phase 2 Evolution Path
-///
-/// Currently calls `btsp.session.create` only. The full flow will add:
-/// 1. Parse BearDog's challenge from the `session.create` response
-/// 2. Forward challenge to the connecting client over its stream
-/// 3. Receive client's X25519 proof
-/// 4. Call `btsp.session.verify` with the proof
-/// 5. Return cipher parameters for encrypted framing
-#[cfg(unix)]
-async fn create_btsp_session(
-    beardog_sock: &std::path::Path,
-    family_id: &str,
-) -> crate::error::Result<String> {
-    use crate::error::BarracudaCoreError;
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-
-    let stream = tokio::net::UnixStream::connect(beardog_sock)
-        .await
-        .map_err(|e| BarracudaCoreError::ipc(format!("connect to BearDog: {e}")))?;
-    let (reader, mut writer) = stream.into_split();
-
-    let request = serde_json::json!({
-        "jsonrpc": "2.0",
-        "method": "btsp.session.create",
-        "params": { "family_id": family_id },
-        "id": 1
-    });
-
-    let mut line = serde_json::to_string(&request)?;
-    line.push('\n');
-    writer.write_all(line.as_bytes()).await?;
-    writer.shutdown().await?;
-
-    let mut lines = BufReader::new(reader).lines();
-    let response_line = lines
-        .next_line()
-        .await?
-        .ok_or_else(|| BarracudaCoreError::ipc("no response from BearDog"))?;
-
-    let response: serde_json::Value = serde_json::from_str(&response_line)?;
-
-    if let Some(error) = response.get("error") {
-        return Err(BarracudaCoreError::ipc(format!(
-            "btsp.session.create: {error}"
-        )));
-    }
-
-    response
-        .get("result")
-        .and_then(|r| r.get("session_id"))
-        .and_then(|s| s.as_str())
-        .map(str::to_string)
-        .ok_or_else(|| {
-            BarracudaCoreError::ipc("missing session_id in btsp.session.create response")
-        })
-}
-
-#[cfg(not(unix))]
-async fn create_btsp_session(
-    _beardog_sock: &std::path::Path,
-    _family_id: &str,
-) -> crate::error::Result<String> {
-    Err(crate::error::BarracudaCoreError::ipc(
-        "BTSP handshake requires Unix domain sockets",
-    ))
 }
 
 #[cfg(test)]
@@ -271,7 +488,7 @@ mod tests {
     #[test]
     fn btsp_outcome_degraded_accepts() {
         let outcome = BtspOutcome::Degraded {
-            reason: "BearDog not found".to_string(),
+            reason: "security provider not found".to_string(),
         };
         assert!(outcome.should_accept());
     }
@@ -285,9 +502,8 @@ mod tests {
     }
 
     #[test]
-    fn discover_beardog_returns_none_when_no_socket() {
-        // With no BearDog running, discovery should return None
-        assert!(discover_beardog_socket().is_none());
+    fn discover_security_provider_returns_none_when_no_socket() {
+        assert!(discover_security_provider().is_none());
     }
 
     #[test]

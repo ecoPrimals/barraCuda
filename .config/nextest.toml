@@ -136,3 +136,13 @@ slow-timeout = { period = "180s", terminate-after = 2 }
 filter = "binary(fhe_chaos_tests) | binary(fault_injection) | binary(fhe_fault_injection_tests) | binary(fhe_fault_tests) | binary(scientific_fault_injection_tests) | binary(scientific_chaos_tests) | binary(hotspring_fault_special_tests) | binary(multi_device_integration) | binary(three_springs_tests) | test(/property/)"
 test-group = "gpu-serial"
 slow-timeout = { period = "120s", terminate-after = 2 }
+
+[[profile.stress.overrides]]
+filter = "binary(fhe_chaos_tests) | binary(fault_injection) | binary(fhe_fault_injection_tests) | binary(fhe_fault_tests) | binary(scientific_fault_injection_tests) | binary(scientific_chaos_tests) | binary(hotspring_fault_special_tests) | binary(multi_device_integration) | binary(three_springs_tests) | test(/property/)"
+test-group = "gpu-serial"
+slow-timeout = { period = "180s", terminate-after = 2 }
+
+[[profile.gpu.overrides]]
+filter = "binary(fhe_chaos_tests) | binary(fault_injection) | binary(fhe_fault_injection_tests) | binary(fhe_fault_tests) | binary(scientific_fault_injection_tests) | binary(scientific_chaos_tests) | binary(hotspring_fault_special_tests) | binary(multi_device_integration) | binary(three_springs_tests) | test(/property/)"
+test-group = "gpu-serial"
+slow-timeout = { period = "180s", terminate-after = 2 }

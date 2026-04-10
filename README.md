@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **826 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,116 Rust source files**, 25 integration test harnesses, 4,421+ tests passing via nextest CI profile
+- **1,116 Rust source files**, 25 integration test harnesses, 4,422+ tests passing via nextest CI profile
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -60,6 +60,7 @@ results.
 
 ## Recent
 
+- **Sprint 39: primalSpring Audit Remediation (Apr 10)**: BTSP Phase 2 full handshake — `guard_connection()` evolved to 6-step X25519+HMAC relay (ClientHello/ServerHello/ChallengeResponse/HandshakeComplete) with legacy fallback. BC-GPU-PANIC fixed — `Auto::new()` decoupled from test pool, graceful CPU-only degradation. fault_injection SIGSEGV — `gpu-serial` added to `stress`/`gpu` profiles. Musl rebuild: fresh binaries with checksums. 4,422 tests pass, all quality gates green.
 - **Sprint 38: Deep Debt — BTSP Phase 2, Capability-Based Discovery & Idiom Sweep (Apr 9)**: BTSP Phase 2 connection authentication guard integrated into all accept loops (`serve_unix`/`serve_tcp`/`serve_tarpc_unix`). BearDog discovery evolved from hardcoded `beardog-core.json` to capability-based `discover_by_capability()` — scans all `*.json` discovery files for `btsp.session.create` method. `Box<dyn Error>` → typed `BarracudaCoreError::ipc()`. `#[allow]` → `#[expect]` with reason. `precision_brain.rs` smart-refactored (703→421 LOC). 4 GPU test binaries serialized. Musl-static rebuild fixed (static-pie). 4,421 tests pass, all quality gates green.
 - **Sprint 37: Deep Debt — Test Module Refactor & Code Cleanup (Apr 8)**: `methods_tests.rs` (951 LOC) smart-refactored into 6 domain-focused test modules + hub (largest module 193 lines). `buffer_test.rs` println! noise removed. `nadam_gpu.rs` stale evolution comment removed. `force_interpolation.rs` indexed loop → idiomatic iterator. 12-axis deep debt audit: clean bill. Zero files >800L. 4,207 tests pass, all quality gates green.
 - **Sprint 36: Domain-Based Socket Naming & Flaky Test Serialization (Apr 8)**: Socket naming evolved from primal-based (`barracuda.sock`) to domain-based (`math.sock` / `math-{fid}.sock`) per `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §3. Legacy `barracuda.sock` symlink for backward compatibility. New `PRIMAL_DOMAIN` constant. `identity.get` and `primal.capabilities` domain field evolved from `"compute"` to `"math"`. `three_springs_tests` added to `gpu-serial` nextest group (Mesa llvmpipe SIGSEGV mitigation). 4,207 tests pass, all quality gates green.
@@ -212,7 +213,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo nextest run --workspace --profile ci  # 4,421+ tests via nextest
+cargo nextest run --workspace --profile ci  # 4,422+ tests via nextest
 cargo llvm-cov --workspace --lib        # 80% CI gate (blocking), 90% target (requires GPU hardware)
 ```
 

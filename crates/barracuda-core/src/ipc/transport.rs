@@ -210,10 +210,10 @@ impl IpcServer {
         loop {
             tokio::select! {
                 result = listener.accept() => {
-                    let (stream, _) = result?;
+                    let (mut stream, _) = result?;
                     let srv = server.clone();
                     tokio::spawn(async move {
-                        let outcome = super::btsp::guard_connection().await;
+                        let outcome = super::btsp::guard_connection(&mut stream).await;
                         if !outcome.should_accept() {
                             tracing::warn!("BTSP handshake rejected tarpc connection: {outcome:?}");
                             return;
@@ -257,11 +257,11 @@ impl IpcServer {
         loop {
             tokio::select! {
                 result = listener.accept() => {
-                    let (stream, peer) = result?;
+                    let (mut stream, peer) = result?;
                     tracing::debug!("IPC connection from {peer}");
                     let primal = Arc::clone(&self.primal);
                     tokio::spawn(async move {
-                        let outcome = super::btsp::guard_connection().await;
+                        let outcome = super::btsp::guard_connection(&mut stream).await;
                         if !outcome.should_accept() {
                             tracing::warn!("BTSP handshake rejected connection from {peer}: {outcome:?}");
                             return;
@@ -304,10 +304,10 @@ impl IpcServer {
         loop {
             tokio::select! {
                 result = listener.accept() => {
-                    let (stream, _) = result?;
+                    let (mut stream, _) = result?;
                     let primal = Arc::clone(&self.primal);
                     tokio::spawn(async move {
-                        let outcome = super::btsp::guard_connection().await;
+                        let outcome = super::btsp::guard_connection(&mut stream).await;
                         if !outcome.should_accept() {
                             tracing::warn!("BTSP handshake rejected connection: {outcome:?}");
                             return;

@@ -5,7 +5,28 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.11] — 2026-04-09
+## [0.3.11] — 2026-04-10
+
+### Changed — Sprint 39: primalSpring Audit Remediation — BTSP Full Handshake, GPU Panic Fix, SIGSEGV Profiles (Apr 10 2026)
+
+- **BTSP Phase 2 full handshake**: `guard_connection()` evolved from session-only guard to
+  full 6-step X25519+HMAC challenge-response relay. Now takes `&mut stream`, reads
+  `ClientHello` (with 2s timeout for legacy fallback), calls BearDog `btsp.session.create`
+  with `client_ephemeral_pub`, relays `ServerHello`+challenge to client, reads
+  `ChallengeResponse` HMAC proof, calls BearDog `btsp.session.verify`, relays
+  `HandshakeComplete` with `session_id` + cipher. Legacy (non-BTSP) clients degrade
+  gracefully on timeout. All three accept loops updated (`serve_unix`/`serve_tcp`/`serve_tarpc_unix`).
+- **BC-GPU-PANIC fixed**: `Auto::new()` decoupled from `test_pool::get_test_device()` which
+  panicked via `.expect()` when no adapter was available. Now tries `WgpuDevice::new()` →
+  `WgpuDevice::new_cpu_relaxed()` → `Err`. `BarraCudaPrimal::start()` already handled `Err`
+  with graceful degradation (health: Degraded, `capabilities.list` reflects reduced hardware).
+  Server no longer panics on GPU-less machines.
+- **fault_injection SIGSEGV profiles**: `gpu-serial` override (max-threads=1) added to `stress`
+  and `gpu` nextest profiles — was missing, only `ci` and `default` had it. Chaos/fault tests
+  now properly serialized across all profiles.
+- **Musl-static rebuild**: Fresh binaries for both x86_64 (static-pie, 5.1MB) and aarch64
+  (static, 4.0MB). plasmidBin metadata updated with checksums and sizes.
+- 4,422 tests pass, all quality gates green: fmt, clippy, doc, deny.
 
 ### Changed — Sprint 38: Deep Debt — BTSP Phase 2, Capability-Based Discovery, Musl-Static & Idiom Sweep (Apr 9 2026)
 

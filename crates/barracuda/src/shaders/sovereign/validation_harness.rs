@@ -14,6 +14,7 @@
 
 #[cfg(test)]
 mod tests {
+    use crate::error::BarracudaError;
     use crate::shaders::sovereign::SovereignCompiler;
     use std::path::PathBuf;
 
@@ -119,9 +120,9 @@ mod tests {
         compiler: &SovereignCompiler,
         path: &std::path::Path,
         df64_pre: &str,
-    ) -> Result<ShaderResult, String> {
+    ) -> Result<ShaderResult, BarracudaError> {
         let source = std::fs::read_to_string(path)
-            .map_err(|e| format!("{}: read error: {e}", path.display()))?;
+            .map_err(|e| BarracudaError::io(format!("{}: read error", path.display()), e))?;
 
         let processed = preprocess(&source);
         let is_preamble = path
@@ -172,7 +173,10 @@ mod tests {
                     return Ok(ShaderResult::NeedsPreprocessing);
                 }
 
-                return Err(format!("{}: parse failed: {err_str}", path.display()));
+                return Err(BarracudaError::shader_compilation(format!(
+                    "{}: parse failed: {err_str}",
+                    path.display()
+                )));
             }
         };
 
@@ -211,7 +215,7 @@ mod tests {
         let preprocess_count = AtomicUsize::new(0);
         let total_fma = AtomicUsize::new(0);
         let total_dead = AtomicUsize::new(0);
-        let failures: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
+        let failures: std::sync::Mutex<Vec<BarracudaError>> = std::sync::Mutex::new(Vec::new());
 
         all_files
             .par_iter()
@@ -230,8 +234,8 @@ mod tests {
                 Ok(ShaderResult::NeedsPreprocessing) => {
                     preprocess_count.fetch_add(1, Ordering::Relaxed);
                 }
-                Err(msg) => {
-                    failures.lock().unwrap().push(msg);
+                Err(e) => {
+                    failures.lock().unwrap().push(e);
                 }
             });
 

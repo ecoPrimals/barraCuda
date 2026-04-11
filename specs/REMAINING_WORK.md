@@ -1,8 +1,8 @@
 # barraCuda — Remaining Work
 
 **Version**: 0.3.11
-**Date**: April 10, 2026
-**Status**: Through Sprint 39 — tracks all open work items for barraCuda evolution
+**Date**: April 11, 2026
+**Status**: Through Sprint 40 — tracks all open work items for barraCuda evolution
 
 ---
 
@@ -27,6 +27,33 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   and physics domain requirements.
 - **ecoBin/UniBin/scyBorg compliance**: AGPL-3.0-or-later, pure Rust (no C deps
   in barraCuda's code), semantic IPC method naming, capability-based discovery.
+
+---
+
+## Achieved (April 11, 2026 — Sprint 40: primalSpring Gap Resolution & Deep Debt Overstep Cleanup)
+
+### primalSpring Gap Resolution
+- **BC-07** (Medium): `SovereignDevice` wired into `Auto::new()` fallback chain. `BarraCudaPrimal` detects sovereign IPC dispatch availability when wgpu fails; `health_status()` reflects sovereign fallback; `Auto::new()` docs describe full 4-tier fallback chain
+- **BC-08** (Medium): `cpu-shader` feature now default-on in `crates/barracuda/Cargo.toml`. ecoBin binaries can compute without wgpu
+- **plasma_dispersion feature-gate** (neuralSpring Gap 9): `#[cfg]` gates corrected to `#[cfg(all(feature = "gpu", feature = "domain-lattice"))]` — declares dependency on `domain-lattice`
+- **TensorSession API stabilization**: `device::tensor_context::TensorSession` renamed to `BatchGuard` with `#[deprecated]` alias. `session::TensorSession` documented as stable API for spring adoption
+- **RAWR GPU kernel**: `ops::rawr_weighted_mean_f64::RawrWeightedMeanGpu` already exists (confirmed)
+- **Batched OdeRK45F64**: `ops::rk45_adaptive::BatchedOdeRK45F64` already exists (confirmed)
+
+### Deep Debt Overstep Cleanup
+- **Zero println/eprintln in library src/**: 150+ calls removed from device/, ops/md/, scheduler, multi_gpu, tensor, timeseries, numerical, optimize test modules
+- **Zero println/eprintln in integration tests**: 521 calls removed across 26 standalone test files (tests/*.rs)
+- **validation_harness.rs**: `Result<ShaderResult, String>` evolved to `Result<ShaderResult, BarracudaError>`
+- **FHE integration tests**: `Box<dyn Error>` evolved to `barracuda::error::Result<()>`. Documentation-only test functions (pure println, no assertions) removed
+- **Production eprintln→tracing**: 3 health ops (hill_dose_response, population_pk, diversity) evolved from `eprintln!` to `tracing::warn!`
+- **Clippy clean**: Zero warnings with pedantic+nursery+all-features+all-targets after all changes
+
+### Quality Gates
+- All tests compile, 0 new failures introduced
+- `cargo fmt --all --check` ✓
+- `cargo clippy --workspace --all-targets --all-features` ✓ (zero warnings)
+- `cargo clippy --workspace --all-targets` ✓ (zero warnings)
+- `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps` ✓
 
 ---
 

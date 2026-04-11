@@ -303,10 +303,7 @@ mod grid_unit {
             // Laplacian2D needs 5 storage buffers; some backends (llvmpipe) cap at 4.
             let limits = device.device().limits();
             if limits.max_storage_buffers_per_shader_stage < 5 {
-                println!(
-                    "Skipping: device only supports {} storage buffers (need 5)",
-                    limits.max_storage_buffers_per_shader_stage
-                );
+                // Skip: Laplacian2D needs 5 storage buffers; some backends cap at 4.
                 return;
             }
             let lap = Laplacian2D::new(device, 100, 100, 0.05, 0.05).unwrap();

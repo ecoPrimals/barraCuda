@@ -84,7 +84,7 @@ pub mod gamma;
 pub mod hermite;
 pub mod laguerre;
 pub mod legendre;
-#[cfg(feature = "gpu")]
+#[cfg(all(feature = "gpu", feature = "domain-lattice"))]
 pub mod plasma_dispersion;
 #[cfg(feature = "gpu")]
 pub mod screened_coulomb;
@@ -110,7 +110,7 @@ pub use gamma::{
 pub use hermite::hermite;
 pub use laguerre::{laguerre, laguerre_all, laguerre_simple};
 pub use legendre::{assoc_legendre, legendre};
-#[cfg(feature = "gpu")]
+#[cfg(all(feature = "gpu", feature = "domain-lattice"))]
 pub use plasma_dispersion::{plasma_dispersion_w, plasma_dispersion_w_stable, plasma_dispersion_z};
 #[cfg(feature = "gpu")]
 pub use screened_coulomb::screened_coulomb_eigenvalues;

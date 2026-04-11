@@ -50,7 +50,6 @@ async fn fault_complex_wrong_dimension() {
             // Should fail gracefully
             let result = ComplexAdd::new(tensor.clone(), tensor.clone());
             assert!(result.is_err(), "Should reject shape {shape:?}");
-            println!("✅ Rejected invalid shape: {shape:?}");
         }
     }) {
         return;
@@ -72,7 +71,6 @@ async fn fault_complex_shape_mismatch() {
         // Should fail with shape mismatch
         let result = ComplexAdd::new(tensor_a, tensor_b);
         assert!(result.is_err(), "Should reject mismatched shapes");
-        println!("✅ Rejected shape mismatch");
     }) {
         return;
     }
@@ -90,7 +88,7 @@ async fn fault_complex_empty_tensor() {
         // Should handle empty tensor gracefully
         let result = ComplexAdd::new(tensor.clone(), tensor);
         // Either Ok (handles empty) or Err (rejects empty) - just don't panic
-        println!("✅ Handled empty tensor gracefully: {:?}", result.is_ok());
+        let _ = result.is_ok();
     }) {
         return;
     }
@@ -112,7 +110,6 @@ async fn fault_complex_nan_input() {
         let op = result.unwrap();
         let output = op.execute();
         assert!(output.is_ok(), "Execute should not panic on NaN");
-        println!("✅ Handled NaN input without panic");
     }) {
         return;
     }
@@ -130,7 +127,6 @@ async fn fault_complex_infinity_input() {
         // Should not panic
         let result = ComplexMul::new(tensor.clone(), tensor);
         assert!(result.is_ok(), "Should handle Infinity without panic");
-        println!("✅ Handled Infinity input without panic");
     }) {
         return;
     }
@@ -155,7 +151,6 @@ async fn fault_fft_non_power_of_two_degree() {
             // Should reject non-power-of-2
             let result = Fft1D::new(tensor, degree as u32);
             assert!(result.is_err(), "Should reject degree {degree}");
-            println!("✅ Rejected invalid FFT degree: {degree}");
         }
     }) {
         return;
@@ -173,7 +168,6 @@ async fn fault_fft_degree_zero() {
 
         let result = Fft1D::new(tensor, 0);
         assert!(result.is_err(), "Should reject degree 0");
-        println!("✅ Rejected FFT degree = 0");
     }) {
         return;
     }
@@ -191,7 +185,6 @@ async fn fault_fft_degree_mismatch() {
         // Claim degree is 16 (but tensor has 8)
         let result = Fft1D::new(tensor, 16);
         assert!(result.is_err(), "Should reject degree mismatch");
-        println!("✅ Rejected FFT degree/size mismatch");
     }) {
         return;
     }
@@ -211,7 +204,6 @@ async fn fault_fft_excessive_degree() {
         let result = Fft1D::new(tensor, degree);
         // Should either reject upfront or fail gracefully during execution
         assert!(result.is_err(), "Should reject excessive degree");
-        println!("✅ Rejected excessive FFT degree: {degree}");
     }) {
         return;
     }
@@ -228,7 +220,6 @@ async fn fault_fft_wrong_input_dimension() {
 
         let result = Fft1D::new(tensor, 16);
         assert!(result.is_err(), "Should reject non-complex input");
-        println!("✅ Rejected FFT input without complex dimension");
     }) {
         return;
     }
@@ -257,7 +248,6 @@ async fn fault_fft_large_magnitude() {
         let op = result.unwrap();
         let output = op.execute();
         assert!(output.is_ok(), "FFT should not panic on large magnitudes");
-        println!("✅ Handled large magnitude input without panic");
     }) {
         return;
     }
@@ -276,7 +266,6 @@ async fn fault_fft_tiny_magnitude() {
         // Should not panic
         let result = Fft1D::new(tensor, 4);
         assert!(result.is_ok(), "Should handle tiny magnitudes");
-        println!("✅ Handled tiny magnitude input");
     }) {
         return;
     }
@@ -298,7 +287,6 @@ async fn fault_fft_2d_non_square() {
         // rows=4, cols=2 (both power of 2)
         let result = Fft2D::new(tensor, 4, 2);
         assert!(result.is_ok(), "Should handle non-square 2D FFT");
-        println!("✅ Handled non-square 2D FFT");
     }) {
         return;
     }
@@ -316,7 +304,7 @@ async fn fault_fft_3d_wrong_shape() {
         // Claim nx=8, ny=2, nz=1 (product = 16, matches!)
         let result = Fft3D::new(tensor, 8, 2, 1);
         // This might work or fail depending on implementation
-        println!("✅ Tested 3D FFT dimension mismatch: {:?}", result.is_ok());
+        let _ = result.is_ok();
     }) {
         return;
     }
@@ -328,14 +316,5 @@ async fn fault_fft_3d_wrong_shape() {
 
 #[tokio::test]
 async fn fault_injection_summary() {
-    println!("\n═══════════════════════════════════════════════════");
-    println!("  Scientific Computing Fault Injection Summary");
-    println!("═══════════════════════════════════════════════════");
-    println!("✅ Complex operations: Invalid shapes, NaN, Inf");
-    println!("✅ FFT operations: Non-power-of-2, degree mismatch");
-    println!("✅ Precision limits: Large/tiny magnitudes");
-    println!("✅ Multi-dimensional: 2D/3D FFT edge cases");
-    println!("═══════════════════════════════════════════════════\n");
-    println!("🎯 Result: All fault scenarios handled gracefully!");
-    println!("🎯 Zero panics, proper error types");
+    // Placeholder: documents fault-injection coverage; assertions live in the tests above.
 }

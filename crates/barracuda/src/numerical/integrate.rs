@@ -178,12 +178,6 @@ mod tests {
         let y: Vec<f64> = x.iter().map(|xi| xi * xi).collect();
         let result = trapz(&y, &x).unwrap();
         let expected = 64.0 / 3.0;
-        println!(
-            "trapz_quadratic: result = {}, expected = {}, error = {}",
-            result,
-            expected,
-            (result - expected).abs()
-        );
         assert!((result - expected).abs() < 0.7); // Trapz has O(h²) error, coarse grid
     }
 
@@ -244,12 +238,6 @@ mod tests {
         // ∫ 1·x·x·1 dx = ∫ x² dx
         let result = trapz_product(&f, &g1, &g2, &x, &weights).unwrap();
         let expected = 64.0 / 3.0; // ∫₀⁴ x² dx
-        println!(
-            "trapz_product_simple: result = {}, expected = {}, error = {}",
-            result,
-            expected,
-            (result - expected).abs()
-        );
         assert!((result - expected).abs() < 0.7); // Coarse grid, larger error
     }
 

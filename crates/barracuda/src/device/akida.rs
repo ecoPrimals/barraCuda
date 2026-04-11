@@ -496,17 +496,7 @@ mod tests {
 
     #[test]
     fn test_akida_detection() {
-        let caps = detect_akida_boards().expect("detect_akida_boards should succeed on any system");
-        println!("Detected {} Akida boards", caps.boards.len());
-
-        for board in &caps.boards {
-            println!("  Board {}: {}", board.index, board.chip_name);
-            println!(
-                "    PCIe: Gen{} x{}",
-                board.pcie_generation, board.pcie_lanes
-            );
-            println!("    NPUs: {}", board.npu_count);
-            println!("    Memory: {} MB", board.memory_bytes / (1024 * 1024));
-        }
+        let _caps =
+            detect_akida_boards().expect("detect_akida_boards should succeed on any system");
     }
 }

@@ -24,7 +24,6 @@ use barracuda::optimize::BatchedBisectionGpu;
 async fn test_max_abs_diff_convergence_simulation() {
     let Some(device) = barracuda::device::test_pool::get_test_device_if_f64_gpu_available().await
     else {
-        eprintln!("No f64-capable GPU available, skipping test");
         return;
     };
 
@@ -409,7 +408,6 @@ async fn test_scf_convergence_loop_simulation() {
         let diff = MaxAbsDiffF64::compute(device.clone(), &e_old, &e_new).unwrap();
 
         if diff < tolerance {
-            println!("Converged in {} iterations, diff = {:.2e}", iter + 1, diff);
             return; // Test passed
         }
 
@@ -456,8 +454,6 @@ async fn test_hotspring_nucleus_count() {
     // Spot check
     assert!((result.roots[0] - 1.0).abs() < 1e-9);
     assert!((result.roots[168] - 13.0).abs() < 1e-9); // √169 = 13
-
-    println!("Successfully processed 169 nuclei in parallel");
 }
 
 // ============================================================================
@@ -476,11 +472,8 @@ async fn test_hotspring_nucleus_count() {
 async fn test_e2e_gpu_resident_scf_iteration() {
     let Some(device) = barracuda::device::test_pool::get_test_device_if_gpu_available().await
     else {
-        eprintln!("No GPU available, skipping E2E test");
         return;
     };
-
-    println!("\n=== E2E GPU-Resident SCF Iteration Test ===\n");
 
     // Simulation parameters (like hotSpring study)
     let batch = 10; // 10 nuclei for quick test (use 169 for full)
@@ -522,28 +515,17 @@ async fn test_e2e_gpu_resident_scf_iteration() {
     // Create GEMM operator
     let gemm = GridQuadratureGemm::new(device.clone(), batch, n, grid).unwrap();
 
-    println!("Starting SCF iteration loop...\n");
-    println!("  Batch size: {batch} nuclei");
-    println!("  Basis size: {n}");
-    println!("  Grid points: {grid}");
-    println!("  Tolerance: {tolerance:.2e}\n");
-
     let mut w_current = w_old.clone();
     let mut h_old: Vec<f64> = vec![0.0; batch * n * n];
 
-    for iter in 0..max_iter {
+    for _iter in 0..max_iter {
         // Step 1: Build Hamiltonian on GPU (Grid Quadrature GEMM)
         let h_new = gemm.execute(&phi, &w_current, &quad_weights).unwrap();
 
         // Step 2: Check convergence (Max Abs Diff)
         let diff = MaxAbsDiffF64::compute(device.clone(), &h_old, &h_new).unwrap();
 
-        println!("  Iteration {}: max|ΔH| = {:.6e}", iter + 1, diff);
-
         if diff < tolerance {
-            println!("\n✓ Converged in {} iterations!", iter + 1);
-            println!("  Final max|ΔH| = {diff:.2e}");
-
             // Verify Hamiltonians are symmetric
             let mut max_asym = 0.0_f64;
             for b in 0..batch {
@@ -555,7 +537,7 @@ async fn test_e2e_gpu_resident_scf_iteration() {
                     }
                 }
             }
-            println!("  Max asymmetry: {max_asym:.2e}");
+            let _ = max_asym;
 
             return; // Test passed
         }
@@ -611,19 +593,16 @@ async fn test_e2e_persistent_buffers_scf() {
     );
 
     // Simulate multiple SCF iterations using same buffers
-    for iter in 0..3 {
+    for _iter in 0..3 {
         // In real code, would:
         // 1. Write phi, w, quad_weights to buffers
         // 2. Execute GEMM kernel
         // 3. Check convergence
         // All without CPU readback!
-
-        println!("  SCF iteration {} (buffers persistent)", iter + 1);
     }
 
     // Clean up
     assert!(ctx.release_solver_buffers("scf_e2e"));
-    println!("✓ Persistent buffer SCF test passed");
 }
 
 /// Performance comparison: batched vs sequential root-finding
@@ -659,11 +638,7 @@ async fn test_e2e_batched_vs_sequential_performance() {
         max_error = max_error.max(error);
     }
 
-    println!("\n=== Batched vs Sequential Performance ===");
-    println!("  Problems: {n_problems}");
-    println!("  GPU batched time: {gpu_time:?}");
-    println!("  Max error: {max_error:.2e}");
-    println!("  All roots verified: {}", max_error < 1e-8);
+    let _ = (n_problems, gpu_time, max_error);
 
     assert!(max_error < 1e-8, "GPU results should be accurate");
 }

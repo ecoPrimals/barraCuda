@@ -302,22 +302,14 @@ mod tests {
     #[test]
     fn test_runtime_device_discovery_report() {
         let available = Device::available_devices();
-        println!("=== Runtime Device Discovery ===");
         for dev in &available {
-            let info = dev.info();
-            println!(
-                "  {:?}: available={}, name={:?}, capabilities={:?}, mem={}GB, units={}",
-                dev,
-                info.available,
-                info.name,
-                info.capabilities,
-                info.memory_gb,
-                info.compute_units
-            );
+            let _ = dev.info();
         }
-        println!("  GPU detected: {}", Device::GPU.is_available());
-        println!("  NPU detected: {}", Device::NPU.is_available());
-        println!("  TPU detected: {}", Device::TPU.is_available());
+        let _ = (
+            Device::GPU.is_available(),
+            Device::NPU.is_available(),
+            Device::TPU.is_available(),
+        );
 
         let hints = [
             WorkloadHint::PhysicsForce,
@@ -338,11 +330,9 @@ mod tests {
             WorkloadHint::StringOps,
             WorkloadHint::General,
         ];
-        println!("=== Workload Routing ===");
         for hint in &hints {
-            let auto = Device::select_for_workload(hint);
-            let forced_cpu = Device::select_with_preference(Some(Device::CPU), hint);
-            println!("  {hint:?}: auto={auto:?}, forced_cpu={forced_cpu:?}");
+            let _ = Device::select_for_workload(hint);
+            let _ = Device::select_with_preference(Some(Device::CPU), hint);
         }
 
         assert!(available.contains(&Device::CPU));

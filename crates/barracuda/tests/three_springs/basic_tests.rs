@@ -14,7 +14,6 @@ mod fused_map_reduce_unit {
         let device = if let Some(d) = create_device_sync() {
             d
         } else {
-            println!("SKIP: No f64-capable device");
             return;
         };
 
@@ -28,7 +27,6 @@ mod fused_map_reduce_unit {
             error < t,
             "Shannon entropy error {error} exceeds {t} (got {result}, expected {expected})"
         );
-        println!("✓ Shannon wetSpring reference: {result} (error: {error:.2e})");
     }
 
     #[test]
@@ -44,7 +42,6 @@ mod fused_map_reduce_unit {
         let error = (result - expected).abs();
         let t = tol(&device, 1e-10);
         assert!(error < t, "Uniform Shannon error: {error} (tol: {t})");
-        println!("✓ Shannon uniform: {result} (expected ln(4) = {expected})");
     }
 
     #[test]
@@ -60,7 +57,6 @@ mod fused_map_reduce_unit {
             result.abs() < 1e-10,
             "Single element Shannon should be 0, got {result}"
         );
-        println!("✓ Shannon single element: {result} (expected 0)");
     }
 
     #[test]
@@ -76,7 +72,6 @@ mod fused_map_reduce_unit {
         let error = (result - expected).abs();
         let t = tol(&device, 1e-12);
         assert!(error < t, "Simpson error: {error} (tol: {t})");
-        println!("✓ Simpson index: {result} (error: {error:.2e})");
     }
 
     #[test]
@@ -91,7 +86,6 @@ mod fused_map_reduce_unit {
         let expected = 0.25;
         let error = (result - expected).abs();
         assert!(error < 1e-12, "Uniform Simpson error: {error}");
-        println!("✓ Simpson uniform: {result} (expected 0.25)");
     }
 
     #[test]
@@ -106,7 +100,6 @@ mod fused_map_reduce_unit {
         let expected: f64 = data.iter().sum();
         let error = (result - expected).abs();
         assert!(error < 1e-10, "Sum error: {error}");
-        println!("✓ Sum 1..100: {result} (expected {expected})");
     }
 
     #[test]
@@ -122,7 +115,6 @@ mod fused_map_reduce_unit {
             (result - 9.0).abs() < 1e-10,
             "Max should be 9.0, got {result}"
         );
-        println!("✓ Max: {result} (expected 9.0)");
     }
 
     #[test]
@@ -138,7 +130,6 @@ mod fused_map_reduce_unit {
             (result - 1.0).abs() < 1e-10,
             "Min should be 1.0, got {result}"
         );
-        println!("✓ Min: {result} (expected 1.0)");
     }
 
     #[test]
@@ -153,7 +144,6 @@ mod fused_map_reduce_unit {
         let expected: f64 = data.iter().map(|x| x * x).sum();
         let error = (result - expected).abs();
         assert!(error < 1e-10, "Sum of squares error: {error}");
-        println!("✓ Sum of squares: {result} (expected {expected})");
     }
 }
 
@@ -176,7 +166,6 @@ mod kriging_unit {
             (model.gamma(20.0) - 1.0).abs() < 1e-10,
             "γ(h > range) should equal sill"
         );
-        println!("✓ Spherical variogram: γ(0)=0, γ(10)=1, γ(20)=1");
     }
 
     #[test]
@@ -193,7 +182,6 @@ mod kriging_unit {
             (gamma_at_range - expected).abs() < 1e-6,
             "Exponential γ(a) incorrect: {gamma_at_range} vs {expected}"
         );
-        println!("✓ Exponential variogram: γ(0)=0, γ(10)≈{gamma_at_range:.4}");
     }
 
     #[test]
@@ -226,10 +214,6 @@ mod kriging_unit {
             "Variance at known point should be ~0: got {}",
             result.variances[0]
         );
-        println!(
-            "✓ Kriging at known point: value={:.6}, variance={:.6}",
-            result.values[0], result.variances[0]
-        );
     }
 
     #[test]
@@ -257,10 +241,6 @@ mod kriging_unit {
             "Center interpolation should be ~1.0: got {}",
             result.values[0]
         );
-        println!(
-            "✓ Kriging center: value={:.6}, variance={:.6}",
-            result.values[0], result.variances[0]
-        );
     }
 
     #[test]
@@ -286,10 +266,6 @@ mod kriging_unit {
         assert!(
             (result.values[0] - 1.0).abs() < 0.15,
             "Linear trend center should be ~1.0: got {}",
-            result.values[0]
-        );
-        println!(
-            "✓ Kriging linear trend: value={:.6} (expected ~1.0)",
             result.values[0]
         );
     }
@@ -322,10 +298,6 @@ mod kriging_unit {
             "Simple kriging value out of range: {}",
             result.values[0]
         );
-        println!(
-            "✓ Simple kriging: value={:.6}, variance={:.6}",
-            result.values[0], result.variances[0]
-        );
     }
 
     #[test]
@@ -348,15 +320,9 @@ mod kriging_unit {
             KrigingF64::fit_variogram(&known, 10, 20.0).unwrap();
         assert_eq!(lag_distances.len(), 10);
         assert_eq!(lag_semivariances.len(), 10);
-        let non_empty_lags: Vec<_> = lag_semivariances.iter().filter(|&&v| v > 0.0).collect();
         assert!(
-            !non_empty_lags.is_empty(),
+            lag_semivariances.iter().any(|&v| v > 0.0),
             "Should have computed some lag values"
-        );
-        println!(
-            "✓ Variogram fitting: {} lags computed, {} non-empty",
-            lag_distances.len(),
-            non_empty_lags.len()
         );
     }
 }

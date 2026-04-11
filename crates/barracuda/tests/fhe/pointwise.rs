@@ -46,8 +46,6 @@ async fn test_pointwise_mul_basic() {
         // But in NTT domain, so we need to verify properties
         assert_eq!(result.len(), degree as usize);
         assert!(result.iter().all(|&x| x < modulus));
-
-        println!("✅ Point-wise multiply basic test passed");
     }) {
         return;
     }
@@ -105,8 +103,6 @@ async fn test_pointwise_mul_identity() {
         for (i, (&a, &b)) in result.iter().zip(input_ntt_result.iter()).enumerate() {
             assert_eq!(a, b, "Multiplying by 1 should preserve value at index {i}");
         }
-
-        println!("✅ Point-wise multiply identity test passed");
     }) {
         return;
     }
@@ -152,8 +148,6 @@ async fn test_pointwise_mul_zero() {
             result.iter().all(|&x| x == 0),
             "Multiplying by zero should give zeros"
         );
-
-        println!("✅ Point-wise multiply zero test passed");
     }) {
         return;
     }

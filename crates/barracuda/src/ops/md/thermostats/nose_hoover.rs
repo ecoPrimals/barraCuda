@@ -316,7 +316,6 @@ mod tests {
             expected_q
         );
         assert_eq!(chain.xi, 0.0, "xi should start at 0");
-        println!("✅ Nosé-Hoover chain creation validated");
     }
 
     #[test]
@@ -335,8 +334,6 @@ mod tests {
 
         chain.half_step_xi(ke_cold);
         assert!(chain.xi < 0.0, "xi should decrease when too cold");
-
-        println!("✅ Nosé-Hoover xi dynamics validated");
     }
 
     #[tokio::test]
@@ -349,7 +346,6 @@ mod tests {
             .features()
             .contains(wgpu::Features::SHADER_F64)
         {
-            println!("Skipping: GPU does not support SHADER_F64");
             return;
         }
 
@@ -384,7 +380,5 @@ mod tests {
         let half_kick = NoseHooverHalfKick::new(vel_tensor, force_tensor, dt, mass, xi).unwrap();
 
         let _vel_after = half_kick.execute().unwrap();
-
-        println!("✅ Nosé-Hoover half-kick executed");
     }
 }

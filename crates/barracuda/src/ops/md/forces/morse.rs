@@ -338,6 +338,6 @@ mod tests {
                 force_data[1].mul_add(force_data[1], force_data[0].powi(2)),
             )
             .sqrt();
-        println!("✅ Morse equilibrium force: |F| = {f0_mag} (expect ≈0)");
+        let _ = f0_mag;
     }
 }

@@ -131,7 +131,6 @@ async fn test_esn_forecast() {
     assert_eq!(forecast.values.len(), 5);
 
     // ESN should learn the increasing pattern
-    println!("ESN forecast: {:?}", forecast.values);
 }
 
 #[tokio::test]

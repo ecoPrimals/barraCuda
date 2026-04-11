@@ -201,12 +201,10 @@ mod tests {
         let input = Tensor::from_data(&[1.0, 2.0, 3.0, 4.0], vec![4], device).unwrap();
 
         let result = input.reduce(ReduceOperation::Sum).unwrap();
-        println!("Result shape: {:?}, len: {}", result.shape(), result.len());
         let partial_sums = result.to_vec().unwrap();
 
         // Sum all partial results
         let total: f32 = partial_sums.iter().sum();
-        println!("Partial sums: {partial_sums:?}, Total: {total}");
         assert!((total - 10.0).abs() < 1e-5);
     }
 

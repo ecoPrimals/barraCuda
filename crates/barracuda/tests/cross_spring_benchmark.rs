@@ -302,7 +302,7 @@ fn bench_provenance_registry_queries() -> BenchResult {
 fn cross_spring_evolution_benchmark() {
     let n = 100_000;
 
-    let results = vec![
+    let _results = [
         bench_welford_univariate(n),
         bench_welford_covariance(n),
         bench_welford_parallel_merge(n, 8),
@@ -312,23 +312,4 @@ fn cross_spring_evolution_benchmark() {
         bench_eps_guard_application(n),
         bench_provenance_registry_queries(),
     ];
-
-    println!("\n╔══════════════════════════════════════════════════════════════════════════════╗");
-    println!("║          Cross-Spring Evolution Benchmark — barraCuda v0.3.5               ║");
-    println!("║          hotSpring precision · wetSpring bio · neuralSpring ML              ║");
-    println!("║          groundSpring tolerance · airSpring hydrology                       ║");
-    println!("╠══════════════════════════════════════════════════════════════════════════════╣");
-    for r in &results {
-        println!("║ {r}");
-    }
-    println!("╚══════════════════════════════════════════════════════════════════════════════╝\n");
-
-    println!("Cross-Spring Shader Flow:");
-    let matrix = barracuda::shaders::provenance::cross_spring_matrix();
-    let mut flows: Vec<_> = matrix.iter().collect();
-    flows.sort_by(|a, b| b.1.cmp(a.1));
-    for ((from, to), count) in &flows {
-        println!("  {from} → {to}: {count} shared shaders");
-    }
-    println!();
 }

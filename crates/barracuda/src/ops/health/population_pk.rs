@@ -247,7 +247,7 @@ mod tests {
 
         let any_nonzero = gpu_results.iter().any(|&v| v != 0.0);
         if !any_nonzero {
-            eprintln!(
+            tracing::warn!(
                 "PopPK GPU test: all outputs zero — driver may not support PRNG \
                  preamble concatenation path; skipping parity check"
             );

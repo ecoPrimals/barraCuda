@@ -51,9 +51,6 @@ fn assert_close(label: &str, a: &[f32], b: &[f32], tol: f32) {
 async fn test_enumerate_all_adapters() {
     let adapters = WgpuDevice::enumerate_adapters().await;
 
-    println!("WGPU Adapter Report:");
-    println!("  Total adapters: {}", adapters.len());
-
     let mut has_gpu = false;
     let mut has_cpu = false;
 
@@ -74,13 +71,10 @@ async fn test_enumerate_all_adapters() {
             wgpu::DeviceType::VirtualGpu => "GPU (virtual)",
             wgpu::DeviceType::Other => "Other",
         };
-        println!("  - {} | {} | {:?}", info.name, hw_type, info.backend);
+        let _ = (&info.name, hw_type, &info.backend);
     }
 
-    println!("\n  Hardware summary:");
-    println!("    GPU available: {has_gpu}");
-    println!("    CPU fallback:  {has_cpu}");
-    println!("    Cross-hw test: {}", has_gpu && has_cpu);
+    let _ = (has_gpu, has_cpu);
 
     assert!(!adapters.is_empty(), "Should find at least one adapter");
 }
@@ -93,30 +87,11 @@ async fn test_matmul_gpu_cpu_parity() {
     let cpu = try_cpu().await;
 
     if gpu.is_none() || cpu.is_none() {
-        println!("SKIP: Need both GPU and CPU adapters for parity test");
-        println!(
-            "  GPU: {}",
-            if gpu.is_some() {
-                "available"
-            } else {
-                "not found"
-            }
-        );
-        println!(
-            "  CPU: {}",
-            if cpu.is_some() {
-                "available"
-            } else {
-                "not found"
-            }
-        );
         return;
     }
 
     let gpu = gpu.unwrap();
     let cpu = cpu.unwrap();
-
-    println!("Matmul parity: {} vs {}", gpu.name(), cpu.name());
 
     // Same input data
     let a_data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]; // 2x3
@@ -138,11 +113,7 @@ async fn test_matmul_gpu_cpu_parity() {
     let b_cpu = Tensor::from_vec_on(b_data, vec![3, 2], cpu).await.unwrap();
     let cpu_data = a_cpu.matmul(&b_cpu).unwrap().to_vec().unwrap();
 
-    println!("  GPU result: {gpu_data:?}");
-    println!("  CPU result: {cpu_data:?}");
-
     assert_close("matmul", &gpu_data, &cpu_data, 1e-4);
-    println!("  PASS: GPU and CPU produce identical matmul results");
 }
 
 // ─── Element-wise Add Parity ─────────────────────────────────────────────────
@@ -153,14 +124,11 @@ async fn test_add_gpu_cpu_parity() {
     let cpu = try_cpu().await;
 
     if gpu.is_none() || cpu.is_none() {
-        println!("SKIP: Need both GPU and CPU adapters");
         return;
     }
 
     let gpu = gpu.unwrap();
     let cpu = cpu.unwrap();
-
-    println!("Add parity: {} vs {}", gpu.name(), cpu.name());
 
     let a_data = vec![1.0, 2.0, 3.0, 4.0];
     let b_data = vec![10.0, 20.0, 30.0, 40.0];
@@ -184,7 +152,6 @@ async fn test_add_gpu_cpu_parity() {
     let cpu_data = a_cpu.add(&b_cpu).unwrap().to_vec().unwrap();
 
     assert_close("add", &gpu_data, &cpu_data, 1e-6);
-    println!("  PASS: GPU and CPU produce identical add results");
 }
 
 // ─── Cholesky Parity ─────────────────────────────────────────────────────────
@@ -195,14 +162,11 @@ async fn test_cholesky_gpu_cpu_parity() {
     let cpu = try_cpu().await;
 
     if gpu.is_none() || cpu.is_none() {
-        println!("SKIP: Need both GPU and CPU adapters");
         return;
     }
 
     let gpu = gpu.unwrap();
     let cpu = cpu.unwrap();
-
-    println!("Cholesky parity: {} vs {}", gpu.name(), cpu.name());
 
     // SPD matrix
     let a_data = vec![4.0, 2.0, 2.0, 3.0];
@@ -219,11 +183,7 @@ async fn test_cholesky_gpu_cpu_parity() {
         .unwrap();
     let cpu_data = a_cpu.cholesky().unwrap().to_vec().unwrap();
 
-    println!("  GPU Cholesky: {gpu_data:?}");
-    println!("  CPU Cholesky: {cpu_data:?}");
-
     assert_close("cholesky", &gpu_data, &cpu_data, 1e-4);
-    println!("  PASS: GPU and CPU produce identical Cholesky results");
 }
 
 // ─── Softmax Parity ──────────────────────────────────────────────────────────
@@ -234,14 +194,11 @@ async fn test_softmax_gpu_cpu_parity() {
     let cpu = try_cpu().await;
 
     if gpu.is_none() || cpu.is_none() {
-        println!("SKIP: Need both GPU and CPU adapters");
         return;
     }
 
     let gpu = gpu.unwrap();
     let cpu = cpu.unwrap();
-
-    println!("Softmax parity: {} vs {}", gpu.name(), cpu.name());
 
     let data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
 
@@ -257,9 +214,6 @@ async fn test_softmax_gpu_cpu_parity() {
         .unwrap();
     let cpu_data = t_cpu.softmax().unwrap().to_vec().unwrap();
 
-    println!("  GPU softmax: {gpu_data:?}");
-    println!("  CPU softmax: {cpu_data:?}");
-
     assert_close("softmax", &gpu_data, &cpu_data, 1e-4);
 
     // Verify sum to 1.0
@@ -273,8 +227,6 @@ async fn test_softmax_gpu_cpu_parity() {
         (cpu_sum - 1.0).abs() < 1e-4,
         "CPU softmax should sum to 1.0, got {cpu_sum}"
     );
-
-    println!("  PASS: GPU and CPU produce identical softmax results");
 }
 
 // ─── Performance Comparison (not parity) ─────────────────────────────────────
@@ -283,8 +235,6 @@ async fn test_softmax_gpu_cpu_parity() {
 async fn test_performance_comparison() {
     let gpu = try_gpu().await;
     let cpu = try_cpu().await;
-
-    println!("\n=== Cross-Hardware Performance Report ===\n");
 
     // Test on whatever hardware is available
     let devices: Vec<(String, Arc<WgpuDevice>)> = {
@@ -328,17 +278,6 @@ async fn test_performance_comparison() {
         }
         let elapsed = start.elapsed();
 
-        println!(
-            "  {}: {}x{} matmul x{} = {:.2} ms ({:.2} ms/op)",
-            name,
-            size,
-            size,
-            iterations,
-            elapsed.as_secs_f64() * 1000.0,
-            elapsed.as_secs_f64() * 1000.0 / f64::from(iterations),
-        );
+        let _ = (name, elapsed, iterations);
     }
-
-    println!("\n  Hardware decides its own performance.");
-    println!("  Same WGSL, same math, different speed.\n");
 }

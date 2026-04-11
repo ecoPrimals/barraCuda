@@ -249,7 +249,5 @@ mod tests {
                 "Index {i} Laplacian should be ~0, got {val}"
             );
         }
-
-        println!("✅ Laplacian validated (constant field)");
     }
 }

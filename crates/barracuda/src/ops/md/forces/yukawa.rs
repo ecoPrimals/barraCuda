@@ -269,7 +269,6 @@ mod tests {
 
         let forces = yukawa.execute().unwrap();
         assert_eq!(forces.shape(), &[2, 3]);
-        println!("✅ Yukawa with κ=0 validated");
     }
 
     #[tokio::test]
@@ -303,6 +302,6 @@ mod tests {
                 force_data[1].mul_add(force_data[1], force_data[0].powi(2)),
             )
             .sqrt();
-        println!("✅ Yukawa screening validated: |F| = {f0_mag}");
+        let _ = f0_mag;
     }
 }

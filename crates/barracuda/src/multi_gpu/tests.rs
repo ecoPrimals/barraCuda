@@ -12,10 +12,8 @@ use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize};
 async fn test_gpu_pool_creation() {
     let pool = GpuPool::new().await;
     if let Ok(pool) = pool {
-        println!("Pool: {}", pool.summary());
-        for device in pool.devices() {
-            println!("  - {} ({:?})", device.name, device.device_class);
-        }
+        let _ = pool.summary();
+        for _ in pool.devices() {}
     }
 }
 
@@ -43,13 +41,13 @@ async fn test_multi_device_pool_creation() {
     let pool = MultiDevicePool::new().await;
     match pool {
         Ok(pool) => {
-            println!("MultiDevicePool: {}", pool.summary());
+            let _ = pool.summary();
             for status in pool.device_status() {
-                println!("  {status}");
+                let _ = status;
             }
         }
         Err(e) => {
-            println!("No GPU available: {e}");
+            let _ = e;
         }
     }
 }
@@ -59,13 +57,7 @@ async fn test_device_requirements() {
     let pool = MultiDevicePool::new().await;
     if let Ok(pool) = pool {
         let reqs = DeviceRequirements::new().prefer_discrete();
-        if let Ok(lease) = pool.acquire(&reqs).await {
-            println!(
-                "Acquired: {} ({:?})",
-                lease.info().name,
-                lease.info().device_class
-            );
-        }
+        let _ = pool.acquire(&reqs).await;
         let reqs = DeviceRequirements::new().with_min_vram_gb(100);
         let result = pool.acquire(&reqs).await;
         assert!(result.is_err());

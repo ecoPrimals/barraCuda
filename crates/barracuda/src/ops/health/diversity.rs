@@ -218,7 +218,7 @@ mod tests {
             .iter()
             .any(|r| r.shannon != 0.0 || r.simpson != 0.0);
         if !any_nonzero {
-            eprintln!(
+            tracing::warn!(
                 "Diversity GPU test: all outputs zero — driver likely does not support \
                  mixed f64/f32 log cast in shared-memory reduction; skipping parity check"
             );

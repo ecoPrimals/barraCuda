@@ -627,12 +627,7 @@ mod tests {
         else {
             return;
         };
-        println!("barraCuda device: {}", device.name());
-        if device.is_cpu() {
-            println!("  Using CPU software rasterizer");
-        } else {
-            println!("  Using GPU acceleration");
-        }
+        let _ = (device.name(), device.is_cpu());
     }
 
     #[tokio::test]

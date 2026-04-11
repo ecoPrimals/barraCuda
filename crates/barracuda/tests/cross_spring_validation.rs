@@ -42,7 +42,7 @@ mod tolerances {
 #[derive(Debug)]
 struct CheckResult {
     name: &'static str,
-    origin: &'static str,
+    _origin: &'static str,
     passed: bool,
     detail: String,
 }
@@ -53,7 +53,7 @@ fn check_anderson_1d_localization() -> CheckResult {
     let passed = gamma > 0.0;
     CheckResult {
         name: "anderson_1d_localization",
-        origin: "physics_validation/marine_bio",
+        _origin: "physics_validation/marine_bio",
         passed,
         detail: format!("γ = {gamma:.6} (should be > 0)"),
     }
@@ -67,7 +67,7 @@ fn check_anderson_3d_structure() -> CheckResult {
     let passed = mat.n == n && mat.nnz() == expected_nnz;
     CheckResult {
         name: "anderson_3d_structure",
-        origin: "lattice_qcd",
+        _origin: "lattice_qcd",
         passed,
         detail: format!("n={}, nnz={} (expected {})", mat.n, mat.nnz(), expected_nnz),
     }
@@ -81,7 +81,7 @@ fn check_anderson_4d_structure() -> CheckResult {
     let passed = mat.n == n && mat.nnz() == expected_nnz;
     CheckResult {
         name: "anderson_4d_structure",
-        origin: "physics_validation",
+        _origin: "physics_validation",
         passed,
         detail: format!("n={}, nnz={} (expected {})", mat.n, mat.nnz(), expected_nnz),
     }
@@ -97,7 +97,7 @@ fn check_anderson_eigenvalues_bounded() -> CheckResult {
         min >= -(clean_bw + disorder_half + 1.0) && max <= (clean_bw + disorder_half + 1.0);
     CheckResult {
         name: "anderson_eigenvalues_bounded",
-        origin: "physics_validation/marine_bio",
+        _origin: "physics_validation/marine_bio",
         passed,
         detail: format!("min={min:.3}, max={max:.3}"),
     }
@@ -111,7 +111,7 @@ fn check_fao56_et0() -> CheckResult {
     };
     CheckResult {
         name: "fao56_et0_range",
-        origin: "atmospheric_science",
+        _origin: "atmospheric_science",
         passed,
         detail: format!("ET₀ = {et0:?} (should be 0..20 mm/day)"),
     }
@@ -125,7 +125,7 @@ fn check_brent_sqrt2() -> CheckResult {
     };
     CheckResult {
         name: "brent_sqrt2",
-        origin: "atmospheric_science",
+        _origin: "atmospheric_science",
         passed,
         detail: format!("{result:?}"),
     }
@@ -145,7 +145,7 @@ fn check_lbfgs_quadratic() -> CheckResult {
     };
     CheckResult {
         name: "lbfgs_quadratic",
-        origin: "ml_inference",
+        _origin: "ml_inference",
         passed,
         detail: format!("{result:?}"),
     }
@@ -158,7 +158,7 @@ fn check_spectral_features() -> CheckResult {
     let passed = feat.bandwidth > 0.0 && feat.level_spacing_ratio > 0.0;
     CheckResult {
         name: "spectral_nautilus_bridge",
-        origin: "ml_inference",
+        _origin: "ml_inference",
         passed,
         detail: format!(
             "r={:.3}, bw={:.3}, phase={:?}",
@@ -179,19 +179,6 @@ fn cross_spring_validation_harness() {
         check_lbfgs_quadratic(),
         check_spectral_features(),
     ];
-
-    let n_pass = checks.iter().filter(|c| c.passed).count();
-    let n_total = checks.len();
-
-    println!("\n=== Cross-Spring Validation Harness ===");
-    for c in &checks {
-        let status = if c.passed { "PASS" } else { "FAIL" };
-        println!(
-            "[{status}] {} (origin: {}) — {}",
-            c.name, c.origin, c.detail
-        );
-    }
-    println!("=== {n_pass}/{n_total} PASS ===\n");
 
     for c in &checks {
         assert!(c.passed, "FAILED: {} — {}", c.name, c.detail);

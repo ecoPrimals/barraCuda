@@ -70,7 +70,6 @@ async fn chaos_random_polynomials_1000_cases() {
 
         let hasher_builder = RandomState::new();
         let mut passed = 0;
-        let mut failed = 0;
 
         for test_id in 0..1000usize {
             // Random degree (power of 2)
@@ -93,7 +92,6 @@ async fn chaos_random_polynomials_1000_cases() {
             let input_tensor = if let Ok(t) = create_fhe_poly_tensor(&input, device.clone()).await {
                 t
             } else {
-                failed += 1;
                 continue;
             };
 
@@ -104,21 +102,15 @@ async fn chaos_random_polynomials_1000_cases() {
                 Ok(ntt) => {
                     match ntt.execute() {
                         Ok(_) => passed += 1,
-                        Err(e) => {
+                        Err(_e) => {
                             // Errors are OK if they're graceful
-                            println!("  Test {test_id} failed gracefully: {e}");
-                            failed += 1;
                         }
                     }
                 }
-                Err(e) => {
-                    println!("  Test {test_id} failed gracefully: {e}");
-                    failed += 1;
-                }
+                Err(_e) => {}
             }
         }
 
-        println!("✅ Chaos fuzzing: {passed} passed, {failed} failed");
         assert!(passed > 990, "Should have >99% success rate");
     }) {
         return;
@@ -157,8 +149,6 @@ async fn chaos_random_coefficients_near_modulus() {
             } else {
                 // Some combinations may not be valid, that's OK
             }
-
-            println!("✅ Handled coefficients near modulus (offset={offset})");
         }
     }) {
         return;
@@ -213,12 +203,11 @@ async fn chaos_concurrent_ntt_operations() {
         while let Some(result) = set.join_next().await {
             match result {
                 Ok(Ok(_task_id)) => succeeded += 1,
-                Ok(Err(e)) => println!("  Task failed: {e}"),
-                Err(e) => println!("  Task panicked: {e}"),
+                Ok(Err(_e)) => {}
+                Err(_e) => {}
             }
         }
 
-        println!("✅ Concurrent execution: {succeeded}/100 succeeded");
         assert_eq!(succeeded, 100, "All concurrent operations should succeed");
     }) {
         return;
@@ -231,7 +220,7 @@ async fn chaos_rapid_alloc_dealloc() {
         // Rapidly create and drop tensors
         // Tests GPU memory management under stress
 
-        for iteration in 0..100 {
+        for _ in 0..100 {
             let device = barracuda::device::test_pool::get_test_device().await;
 
             // Allocate
@@ -244,13 +233,7 @@ async fn chaos_rapid_alloc_dealloc() {
 
             // Deallocate (implicit drop)
             drop(tensors);
-
-            if iteration % 10 == 0 {
-                println!("  Iteration {iteration}/100");
-            }
         }
-
-        println!("✅ Rapid alloc/dealloc: 1000 tensors created and destroyed");
     }) {
         return;
     }
@@ -293,11 +276,7 @@ async fn chaos_interleaved_operations() {
             if let Ok(ntt) = ntt_b {
                 let _ntt_result = ntt.execute();
             }
-
-            println!("✅ Iteration completed");
         }
-
-        println!("✅ Interleaved operations: 20 iterations, no corruption");
     }) {
         return;
     }
@@ -330,8 +309,6 @@ async fn chaos_large_polynomial_degrees() {
         } else {
             // Error is acceptable for very large degrees
         }
-
-        println!("✅ Handles maximum degree ({max_degree})");
     }) {
         return;
     }
@@ -345,7 +322,6 @@ async fn chaos_memory_limit() {
 
         let device = barracuda::device::test_pool::get_test_device().await;
         let mut tensors = Vec::new();
-        let mut total_mb = 0;
 
         for i in 0..1000 {
             let size = 1024 * 1024 / 4; // 1MB in u32s
@@ -354,26 +330,18 @@ async fn chaos_memory_limit() {
             match Tensor::from_data_pod(&data, vec![size], device.clone()) {
                 Ok(t) => {
                     tensors.push(t);
-                    total_mb += 1;
                 }
                 Err(_e) => {
                     // Graceful failure expected
-                    println!("  Allocation failed at {total_mb}MB (expected)");
                     break;
                 }
             }
 
             if i >= 999 {
-                println!("  Allocated {total_mb}MB without hitting limit");
                 break;
             }
         }
-
-        println!(
-            "✅ Memory exhaustion handled gracefully ({}MB allocated, {} tensors)",
-            total_mb,
-            tensors.len()
-        );
+        drop(tensors);
     }) {
         return;
     }
@@ -403,16 +371,8 @@ fn mod_pow(mut base: u64, mut exp: u64, modulus: u64) -> u64 {
 
 #[test]
 fn chaos_ntt_mathematical_properties() {
-    // Document mathematical properties that should ALWAYS hold
-
-    println!("\n📊 NTT Mathematical Properties (Invariants):");
-    println!("  1. Linearity: NTT(a + b) = NTT(a) + NTT(b)");
-    println!("  2. Invertibility: INTT(NTT(x)) = x");
-    println!("  3. Convolution: INTT(NTT(a) ⊙ NTT(b)) = a * b");
-    println!("  4. Scaling: INTT must scale by N^(-1) mod q");
-    println!("  5. Bounds: All outputs in [0, modulus)");
-
-    println!("✅ Properties documented");
+    // Documents NTT invariants: linearity; INTT(NTT(x)) = x; convolution via pointwise
+    // product then INTT; INTT scaling by N^(-1) mod q; outputs in [0, modulus).
 }
 
 // Property-based tests with proptest (100+ cases each)
@@ -469,23 +429,6 @@ mod property_tests {
 
 #[test]
 fn chaos_test_summary() {
-    println!("\n╔══════════════════════════════════════════════════════════════╗");
-    println!("║  Chaos Test Suite Summary                                   ║");
-    println!("╚══════════════════════════════════════════════════════════════╝");
-    println!();
-    println!("📊 Test Coverage:");
-    println!("  • Random fuzzing:        1000+ cases");
-    println!("  • Concurrent execution:  100 simultaneous ops");
-    println!("  • Resource exhaustion:   Memory limits");
-    println!("  • Interleaved ops:       Mixed operation sequences");
-    println!("  • Edge cases:            Boundary values, zero, max");
-    println!();
-    println!("🎯 Goals:");
-    println!("  • Discover unexpected edge cases");
-    println!("  • Verify thread safety");
-    println!("  • Validate error handling");
-    println!("  • Ensure resource cleanup");
-    println!();
-    println!("✅ Chaos testing framework created!");
-    println!("⏳ Integration with actual FHE ops pending");
+    // Documents chaos coverage (fuzzing, concurrency, resource limits, interleaving,
+    // edge cases) and goals (robustness, thread safety, errors, cleanup).
 }

@@ -174,7 +174,6 @@ mod tests {
     async fn test_yukawa_f64_repulsive() {
         let Some(device) = crate::device::test_pool::get_test_device_if_f64_gpu_available().await
         else {
-            println!("Skipping: No GPU available");
             return;
         };
 
@@ -184,7 +183,6 @@ mod tests {
             .features()
             .contains(wgpu::Features::SHADER_F64)
         {
-            println!("Skipping: GPU does not support SHADER_F64");
             return;
         }
 
@@ -209,7 +207,5 @@ mod tests {
         let (forces, pe) = yukawa.execute().unwrap();
         assert_eq!(forces.shape(), &[2, 3]);
         assert_eq!(pe.shape(), &[2]);
-
-        println!("✅ Yukawa f64 repulsive force validated");
     }
 }

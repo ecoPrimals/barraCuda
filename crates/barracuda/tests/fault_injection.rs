@@ -28,8 +28,6 @@ use barracuda::tensor::Tensor;
 #[tokio::test]
 async fn test_shape_mismatch_matmul() {
     if !common::run_gpu_resilient_async(|| async {
-        println!("\n=== Shape Mismatch Error Handling ===\n");
-
         let device = barracuda::device::test_pool::get_test_device().await;
 
         // Create incompatible matrices (3x4 * 5x6 - inner dimensions don't match)
@@ -49,8 +47,6 @@ async fn test_shape_mismatch_matmul() {
                 panic!("Matmul with mismatched shapes should fail");
             }
             Err(e) => {
-                println!("  ✓ Shape mismatch correctly rejected");
-                println!("  Error: {e}");
                 // Verify error contains useful info
                 let error_msg = e.to_string().to_lowercase();
                 assert!(
@@ -61,8 +57,6 @@ async fn test_shape_mismatch_matmul() {
                 );
             }
         }
-
-        println!("\n  Shape mismatch handling: PASS\n");
     }) {
         return;
     }
@@ -71,8 +65,6 @@ async fn test_shape_mismatch_matmul() {
 #[tokio::test]
 async fn test_data_shape_mismatch() {
     if !common::run_gpu_resilient_async(|| async {
-        println!("\n=== Data/Shape Mismatch Handling ===\n");
-
         let device = barracuda::device::test_pool::get_test_device().await;
 
         // Data has 10 elements but shape says 12
@@ -83,13 +75,8 @@ async fn test_data_shape_mismatch() {
             Ok(_) => {
                 panic!("Mismatched data/shape should fail");
             }
-            Err(e) => {
-                println!("  ✓ Data/shape mismatch correctly rejected");
-                println!("  Error: {e}");
-            }
+            Err(_e) => {}
         }
-
-        println!("\n  Data/shape mismatch: PASS\n");
     }) {
         return;
     }
@@ -98,8 +85,6 @@ async fn test_data_shape_mismatch() {
 #[tokio::test]
 async fn test_nan_input_handling() {
     if !common::run_gpu_resilient_async(|| async {
-        println!("\n=== NaN Input Handling ===\n");
-
         let device = barracuda::device::test_pool::get_test_device().await;
 
         // Create tensor with NaN values
@@ -113,9 +98,6 @@ async fn test_nan_input_handling() {
 
         // Check that NaN is preserved (not silently converted)
         assert!(result[2].is_nan(), "NaN should be preserved in tensor");
-        println!("  ✓ NaN values preserved correctly");
-
-        println!("\n  NaN handling: PASS\n");
     }) {
         return;
     }
@@ -124,8 +106,6 @@ async fn test_nan_input_handling() {
 #[tokio::test]
 async fn test_inf_input_handling() {
     if !common::run_gpu_resilient_async(|| async {
-        println!("\n=== Inf Input Handling ===\n");
-
         let device = barracuda::device::test_pool::get_test_device().await;
 
         // Create tensor with Inf values
@@ -139,9 +119,6 @@ async fn test_inf_input_handling() {
 
         assert!(result[1].is_infinite() && result[1] > 0.0, "+Inf preserved");
         assert!(result[2].is_infinite() && result[2] < 0.0, "-Inf preserved");
-        println!("  ✓ Inf values preserved correctly");
-
-        println!("\n  Inf handling: PASS\n");
     }) {
         return;
     }
@@ -154,8 +131,6 @@ async fn test_inf_input_handling() {
 #[tokio::test]
 async fn test_cholesky_non_positive_definite() {
     if !common::run_gpu_resilient_async(|| async {
-        println!("\n=== Cholesky Non-Positive-Definite Matrix ===\n");
-
         let device = barracuda::device::test_pool::get_test_device().await;
 
         // Non-positive-definite matrix (negative eigenvalue)
@@ -165,23 +140,9 @@ async fn test_cholesky_non_positive_definite() {
             .await
             .unwrap();
 
-        match tensor.cholesky() {
-            Ok(result) => {
-                // Some implementations produce NaN for non-SPD
-                let result_data = result.to_vec().unwrap();
-                if result_data.iter().any(|x| x.is_nan()) {
-                    println!("  ✓ Non-SPD matrix produced NaN (detected)");
-                } else {
-                    println!("  ⚠ Non-SPD matrix produced result (may be incorrect)");
-                }
-            }
-            Err(e) => {
-                println!("  ✓ Non-SPD matrix correctly rejected");
-                println!("  Error: {e}");
-            }
+        if let Ok(result) = tensor.cholesky() {
+            let _ = result.to_vec().unwrap();
         }
-
-        println!("\n  Cholesky non-SPD handling: PASS\n");
     }) {
         return;
     }
@@ -190,8 +151,6 @@ async fn test_cholesky_non_positive_definite() {
 #[tokio::test]
 async fn test_cholesky_non_square_matrix() {
     if !common::run_gpu_resilient_async(|| async {
-        println!("\n=== Cholesky Non-Square Matrix ===\n");
-
         let device = barracuda::device::test_pool::get_test_device().await;
 
         // Non-square matrix (3x2)
@@ -205,13 +164,8 @@ async fn test_cholesky_non_square_matrix() {
             Ok(_) => {
                 panic!("Cholesky on non-square matrix should fail");
             }
-            Err(e) => {
-                println!("  ✓ Non-square matrix correctly rejected");
-                println!("  Error: {e}");
-            }
+            Err(_e) => {}
         }
-
-        println!("\n  Cholesky non-square: PASS\n");
     }) {
         return;
     }
@@ -223,8 +177,6 @@ async fn test_cholesky_non_square_matrix() {
 
 #[test]
 fn test_kernel_router_invalid_model_fallback() {
-    println!("\n=== Kernel Router Invalid Model Fallback ===\n");
-
     let router = KernelRouter::default();
 
     // Try to route to non-existent NPU model
@@ -237,23 +189,17 @@ fn test_kernel_router_invalid_model_fallback() {
         Ok(target) => {
             // Should fall back to WGSL
             match target {
-                barracuda::device::KernelTarget::Wgsl { .. } => {
-                    println!("  ✓ Missing NPU model correctly falls back to WGSL");
-                }
+                barracuda::device::KernelTarget::Wgsl { .. } => {}
                 barracuda::device::KernelTarget::Npu { .. } => {
                     panic!("Should not route to NPU with non-existent model");
                 }
-                _ => {
-                    println!("  Routed to alternative target");
-                }
+                _ => {}
             }
         }
         Err(e) => {
             panic!("Routing should not fail (should fallback): {e}");
         }
     }
-
-    println!("\n  Kernel router fallback: PASS\n");
 }
 
 // ============================================================================
@@ -263,8 +209,6 @@ fn test_kernel_router_invalid_model_fallback() {
 #[tokio::test]
 async fn test_resource_cleanup_on_error() {
     if !common::run_gpu_resilient_async(|| async {
-        println!("\n=== Resource Cleanup on Error ===\n");
-
         let device = barracuda::device::test_pool::get_test_device().await;
 
         // Track operations that might leak resources
@@ -294,14 +238,9 @@ async fn test_resource_cleanup_on_error() {
             }
         }
 
-        println!("  Iterations: {iterations}");
-        println!("  Expected errors: {}", iterations / 5);
-        println!("  Actual errors: {errors}");
+        let _ = (iterations, errors);
 
         // If we get here without panic or hang, cleanup worked
-        println!("  ✓ No resource leaks detected (completed without hang)");
-
-        println!("\n  Resource cleanup: PASS\n");
     }) {
         return;
     }
@@ -314,8 +253,6 @@ async fn test_resource_cleanup_on_error() {
 #[tokio::test]
 async fn test_operation_timeout_handling() {
     if !common::run_gpu_resilient_async(|| async {
-        println!("\n=== Operation Timeout Handling ===\n");
-
         let device = barracuda::device::test_pool::get_test_device().await;
 
         // Create a reasonably large tensor operation
@@ -341,18 +278,11 @@ async fn test_operation_timeout_handling() {
 
         match timeout_result {
             Ok(Ok(result)) => {
-                println!("  ✓ Operation completed within timeout");
-                println!("  Result size: {} elements", result.len());
+                let _ = result.len();
             }
-            Ok(Err(e)) => {
-                println!("  Operation failed (not timeout): {e}");
-            }
-            Err(_) => {
-                println!("  ⚠ Operation timed out (may indicate performance issue)");
-            }
+            Ok(Err(_e)) => {}
+            Err(_) => {}
         }
-
-        println!("\n  Timeout handling: PASS\n");
     }) {
         return;
     }
@@ -364,8 +294,6 @@ async fn test_operation_timeout_handling() {
 
 #[test]
 fn test_device_unavailability_handling() {
-    println!("\n=== Device Unavailability Handling ===\n");
-
     // Test that Device enum handles unavailable devices gracefully
     let devices = vec![Device::CPU, Device::GPU, Device::NPU, Device::TPU];
 
@@ -373,8 +301,7 @@ fn test_device_unavailability_handling() {
         let is_available = device.is_available();
         let info = device.info();
 
-        println!("  {device} - available: {is_available}");
-        println!("    capabilities: {:?}", info.capabilities);
+        let _ = info.capabilities;
 
         // CPU should always be available
         if matches!(device, Device::CPU) {
@@ -388,9 +315,7 @@ fn test_device_unavailability_handling() {
         !available.is_empty(),
         "At least one device should be available"
     );
-    println!("\n  Available devices: {available:?}");
-
-    println!("\n  Device unavailability handling: PASS\n");
+    let _ = &available;
 }
 
 // ============================================================================
@@ -400,8 +325,6 @@ fn test_device_unavailability_handling() {
 #[tokio::test]
 async fn test_error_messages_are_informative() {
     if !common::run_gpu_resilient_async(|| async {
-        println!("\n=== Error Message Quality ===\n");
-
         let device = barracuda::device::test_pool::get_test_device().await;
 
         // Collection of error-inducing scenarios
@@ -410,14 +333,11 @@ async fn test_error_messages_are_informative() {
             ("Empty data", vec![], vec![0]),
         ];
 
-        for (name, data, shape) in test_cases {
+        for (_name, data, shape) in test_cases {
             match Tensor::from_vec_on(data, shape, device.clone()).await {
-                Ok(_) => {
-                    println!("  {name} - no error (implementation allows)");
-                }
+                Ok(_) => {}
                 Err(e) => {
                     let msg = e.to_string();
-                    println!("  {name} - Error: {msg}");
 
                     // Error messages should:
                     // 1. Not be empty
@@ -425,14 +345,10 @@ async fn test_error_messages_are_informative() {
 
                     // 2. Not contain internal implementation details only
                     // (This is a soft check - we just log it)
-                    if msg.len() < 10 {
-                        println!("    ⚠ Error message might be too terse");
-                    }
+                    let _ = msg.len();
                 }
             }
         }
-
-        println!("\n  Error message quality: PASS\n");
     }) {
         return;
     }
@@ -445,8 +361,6 @@ async fn test_error_messages_are_informative() {
 #[tokio::test]
 async fn test_concurrent_error_handling() {
     if !common::run_gpu_resilient_async(|| async {
-        println!("\n=== Concurrent Error Handling ===\n");
-
         let device = barracuda::device::test_pool::get_test_device().await;
 
         // Serialize GPU operations: Mesa llvmpipe SIGSEGVs under concurrent
@@ -477,10 +391,7 @@ async fn test_concurrent_error_handling() {
             "All operations should succeed or fail correctly"
         );
 
-        println!("  Tasks: {num_tasks}");
-        println!("  All tasks completed without panic");
-
-        println!("\n  Concurrent error handling: PASS\n");
+        let _ = num_tasks;
     }) {
         return;
     }

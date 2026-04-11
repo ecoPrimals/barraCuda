@@ -268,8 +268,6 @@ mod tests {
         // First verify input tensors are correct
         let pos_check = pos_tensor.to_vec().unwrap();
         let charge_check = charge_tensor.to_vec().unwrap();
-        println!("Input positions: {pos_check:?}");
-        println!("Input charges: {charge_check:?}");
         assert_eq!(pos_check, positions);
         assert_eq!(charge_check, charges);
 
@@ -277,7 +275,6 @@ mod tests {
         let forces = coulomb.execute().unwrap();
 
         let force_data = forces.to_vec().unwrap();
-        println!("Output forces: {force_data:?}");
 
         // Force on particle 0 should be negative x (repulsion away from particle 1)
         // With physics direction fixed, force should point in -x
@@ -298,8 +295,6 @@ mod tests {
         let f0 = force_data[0];
         let f1 = force_data[3];
         assert!((f0 + f1).abs() < 1e-4, "Newton's third law");
-
-        println!("✅ Coulomb force validated");
     }
 
     #[tokio::test]
@@ -316,8 +311,6 @@ mod tests {
         // Verify inputs
         let pos_check = pos_tensor.to_vec().unwrap();
         let charge_check = charge_tensor.to_vec().unwrap();
-        println!("Input positions: {pos_check:?}");
-        println!("Input charges: {charge_check:?}");
         assert_eq!(pos_check, positions);
         assert_eq!(charge_check, charges);
 
@@ -333,11 +326,8 @@ mod tests {
         let forces = coulomb.execute().unwrap();
 
         let force_data = forces.to_vec().unwrap();
-        println!("Output forces: {force_data:?}");
 
         // Force on particle 0 should be positive x (attracted toward particle 1)
-        println!("Expected: force[0] > 0 (attraction in +x)");
-        println!("Got: force[0] = {}", force_data[0]);
         assert!(
             force_data[0] > 0.0,
             "Particle 0 attracted in +x direction: got {}",
@@ -345,14 +335,10 @@ mod tests {
         );
 
         // Force on particle 1 should be negative x
-        println!("Expected: force[3] < 0 (attraction in -x)");
-        println!("Got: force[3] = {}", force_data[3]);
         assert!(
             force_data[3] < 0.0,
             "Particle 1 attracted in -x direction: got {}",
             force_data[3]
         );
-
-        println!("✅ Coulomb attraction validated");
     }
 }

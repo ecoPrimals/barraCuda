@@ -39,8 +39,6 @@ async fn test_ntt_basic_known_vector() {
             result.iter().all(|&x| x < modulus),
             "All coefficients should be < modulus"
         );
-
-        println!("✅ NTT basic known vector test passed");
     }) {
         return;
     }
@@ -85,8 +83,6 @@ async fn test_ntt_all_power_of_two_degrees() {
                 result.iter().all(|&x| x < modulus),
                 "All coefficients should be < modulus"
             );
-
-            println!("✅ NTT works for N={degree}");
         }
     }) {
         return;
@@ -130,8 +126,6 @@ async fn test_ntt_round_trip_identity() {
                     "Round-trip should preserve coefficient {i} (degree={degree})"
                 );
             }
-
-            println!("✅ NTT → INTT = identity for N={degree}");
         }
     }) {
         return;
@@ -166,8 +160,6 @@ async fn test_ntt_different_moduli() {
                 assert_eq!(result.len(), degree as usize);
                 assert!(result.iter().all(|&x| x < modulus));
             }
-
-            println!("✅ NTT works with modulus={modulus}");
         }
     }) {
         return;
@@ -202,8 +194,6 @@ async fn test_ntt_zero_polynomial() {
             result.iter().all(|&x| x == 0),
             "NTT of zero polynomial should be zero"
         );
-
-        println!("✅ NTT handles zero polynomial");
     }) {
         return;
     }
@@ -237,8 +227,6 @@ async fn test_ntt_max_coefficients() {
             result.iter().all(|&x| x < modulus),
             "NTT should not overflow with max coefficients"
         );
-
-        println!("✅ NTT handles maximum coefficients");
     }) {
         return;
     }

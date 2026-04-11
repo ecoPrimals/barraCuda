@@ -1,9 +1,4 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-#![expect(
-    clippy::unwrap_used,
-    reason = "test assertions: unwrap is idiomatic for test code"
-)]
-
 use super::*;
 use crate::device::capabilities::DeviceCapabilities;
 use crate::device::hardware_calibration::TierCapability;

@@ -46,7 +46,6 @@ async fn chaos_complex_large_scale() {
         let result = mul_op.execute().unwrap();
         let elapsed = start.elapsed();
 
-        println!("✅ ComplexMul 1M elements: {elapsed:?}");
         assert!(result.len() == size * 2, "Result size matches");
         assert!(elapsed.as_secs() < 10, "Completed in reasonable time");
     }) {
@@ -93,8 +92,6 @@ async fn chaos_fft_3d_medium_scale() {
 
     if let Ok(output) = result {
         assert_eq!(output.len(), total * 2, "3D FFT output size correct");
-    } else {
-        println!("⚠️  3D FFT failed gracefully (acceptable for large scale)");
     }
 }
 
@@ -121,7 +118,6 @@ async fn chaos_precision_extremes_complex() {
     let result = mul_op.execute();
 
     assert!(result.is_ok(), "Handled precision extremes");
-    println!("✅ Precision extremes: No panic");
 }
 
 #[tokio::test]
@@ -137,7 +133,7 @@ async fn chaos_precision_fft_extremes() {
     let result = fft_op.execute();
 
     // May succeed or fail, but shouldn't panic
-    println!("✅ FFT precision extremes: {:?}", result.is_ok());
+    let _ = result.is_ok();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -171,7 +167,6 @@ async fn chaos_concurrent_complex_ops() {
     }
     let elapsed = start.elapsed();
 
-    println!("✅ {num_ops} concurrent ComplexMul: {elapsed:?}");
     assert!(elapsed.as_secs() < 30, "Concurrent ops completed");
 }
 
@@ -204,7 +199,6 @@ async fn chaos_concurrent_fft_ops() {
     }
     let elapsed = start.elapsed();
 
-    println!("✅ {num_ops} concurrent FFT (256 pts each): {elapsed:?}");
     assert!(elapsed.as_secs() < 60, "Concurrent FFTs completed");
 }
 
@@ -229,8 +223,6 @@ async fn chaos_repeated_operations() {
     }
     let elapsed = start.elapsed();
 
-    println!("✅ {iterations} iterations of ComplexMul: {elapsed:?}");
-    println!("   Average per op: {:?}", elapsed / iterations);
     assert!(
         elapsed.as_secs() < 30,
         "No significant slowdown (memory leak check)"
@@ -278,8 +270,7 @@ async fn chaos_mixed_workload() {
     handle1.await.unwrap();
     handle2.await.unwrap();
 
-    let elapsed = start.elapsed();
-    println!("✅ Mixed workload (100 ComplexMul + 10 FFT): {elapsed:?}");
+    let _elapsed = start.elapsed();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -288,16 +279,5 @@ async fn chaos_mixed_workload() {
 
 #[tokio::test]
 async fn chaos_engineering_summary() {
-    println!("\n═══════════════════════════════════════════════════");
-    println!("  Scientific Computing Chaos Engineering Summary");
-    println!("═══════════════════════════════════════════════════");
-    println!("✅ Large-scale: 1M complex elements, 65K FFT points");
-    println!("✅ 3D FFT: 64³ = 262K points tested");
-    println!("✅ Precision extremes: 1e-38 to 1e+38 handled");
-    println!("✅ Concurrent: 50 complex ops, 20 FFTs in parallel");
-    println!("✅ Repetition: 1000 iterations (memory leak check)");
-    println!("✅ Mixed workload: Complex + FFT simultaneously");
-    println!("═══════════════════════════════════════════════════\n");
-    println!("🎯 Result: All chaos scenarios passed!");
-    println!("🎯 Zero panics, graceful degradation, good performance");
+    // Placeholder: documents chaos coverage; assertions live in the tests above.
 }

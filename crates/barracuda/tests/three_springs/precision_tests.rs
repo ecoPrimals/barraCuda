@@ -27,7 +27,6 @@ mod precision {
             vec![0.001, 0.01, 0.1, 1.0, 10.0],
             (1..=100).map(f64::from).collect::<Vec<_>>(),
         ];
-        println!("Shannon precision suite:");
         for (i, counts) in test_cases.iter().enumerate() {
             let gpu = fmr.shannon_entropy(counts).unwrap();
             let cpu = cpu_shannon(counts);
@@ -41,7 +40,6 @@ mod precision {
                 error < t || rel_error < t,
                 "Case {i} failed: error={error}, rel_error={rel_error} (tol: {t})"
             );
-            println!("  Case {i}: H={gpu:.10}, error={error:.2e}");
         }
     }
 
@@ -58,13 +56,11 @@ mod precision {
             vec![100.0, 1.0, 1.0, 1.0],
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
         ];
-        println!("Simpson precision suite:");
         for (i, counts) in test_cases.iter().enumerate() {
             let gpu = fmr.simpson_index(counts).unwrap();
             let cpu = cpu_simpson(counts);
             let error = (gpu - cpu).abs();
             assert!(error < t, "Case {i} failed: error={error} (tol: {t})");
-            println!("  Case {i}: D={gpu:.12}, error={error:.2e}");
         }
     }
 
@@ -90,10 +86,6 @@ mod precision {
             // GPU is executing f32 math despite advertising SHADER_F64.
             // Kahan summation can't compensate when 1e10 + 1.0 == 1e10
             // in the underlying precision. Skip rather than fail.
-            println!(
-                "SKIP: GPU f64 path appears to execute at f32 precision \
-                 (rel_error={rel_error:.2e}); Kahan test requires true f64"
-            );
             return;
         }
         let t = tol(&device, 1e-10);
@@ -101,6 +93,5 @@ mod precision {
             rel_error < t,
             "Kahan summation error too large: {error} (rel: {rel_error}, tol: {t})"
         );
-        println!("✓ Kahan summation: sum={result}, expected={expected}, rel_error={rel_error:.2e}");
     }
 }

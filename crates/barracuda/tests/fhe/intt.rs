@@ -46,8 +46,6 @@ async fn test_intt_basic() {
                 "INTT should recover original coefficient {i}"
             );
         }
-
-        println!("✅ INTT basic test passed");
     }) {
         return;
     }
@@ -90,8 +88,6 @@ async fn test_intt_scaling() {
         for &coeff in &intt_result {
             assert_eq!(coeff, 1, "INTT(NTT(ones)) should recover ones");
         }
-
-        println!("✅ INTT scaling verified");
     }) {
         return;
     }

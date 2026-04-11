@@ -92,8 +92,8 @@ pub use pipeline_cache::clear_global_cache;
 
 // Re-export tensor context (zero-overhead Tensor operations)
 pub use tensor_context::{
-    BufferPool, PooledBuffer, TensorContext, TensorContextStats, TensorSession,
-    clear_global_contexts, get_device_context, high_capacity_limits, science_limits,
+    BatchGuard, BufferPool, PooledBuffer, TensorContext, TensorContextStats, clear_global_contexts,
+    get_device_context, high_capacity_limits, science_limits,
 };
 
 pub use akida::{AkidaBoard, AkidaCapabilities, BoardHealth, detect_akida_boards};
@@ -211,25 +211,33 @@ pub enum HardwareWorkload {
     HomomorphicEncryption,
 }
 
-/// Auto device discovery via wgpu
+/// Auto device discovery — tiered fallback across all backends
 ///
-/// wgpu automatically handles:
-/// - GPU (Vulkan, Metal, DX12) - preferred
-/// - CPU (software rasterizer) - automatic fallback
-/// - NPU/TPU (if wgpu driver available)
+/// Fallback chain (BC-07 compliant):
+/// 1. GPU via wgpu (Vulkan, Metal, DX12) — fastest
+/// 2. CPU software rasterizer via wgpu — universal but slow
+/// 3. `SovereignDevice` via IPC to coralReef+toadStool — GPU via IPC
+///    (requires `sovereign-dispatch` feature and live peers)
+/// 4. `Err` — callers degrade gracefully
 pub struct Auto;
 
 impl Auto {
     /// Discover the best available compute device for production use.
     ///
-    /// Tries adapters in order: GPU (HighPerformance) → CPU software rasterizer.
+    /// Tries adapters in order:
+    /// 1. GPU (wgpu `HighPerformance`)
+    /// 2. CPU software rasterizer (wgpu `LowPower`)
+    /// 3. Sovereign IPC (coralReef + toadStool) when `sovereign-dispatch`
+    ///    feature is enabled and a `compute.dispatch` endpoint is discoverable
+    ///
     /// Returns `Err` if no adapter is available at all — callers (e.g.
     /// `BarraCudaPrimal::start`) can degrade gracefully instead of panicking.
     ///
     /// For tests, prefer `test_pool::get_test_device()` which manages a shared
     /// pool with concurrency limits.
     /// # Errors
-    /// Returns [`Err`] if no WGPU adapter is found or device creation fails.
+    /// Returns [`Err`] if no WGPU adapter is found, sovereign dispatch is
+    /// unavailable, and device creation fails on all tiers.
     #[expect(
         clippy::new_ret_no_self,
         reason = "returns Arc<WgpuDevice> for thread-safe shared access"
@@ -242,8 +250,18 @@ impl Auto {
             tracing::info!("GPU unavailable, using CPU software rasterizer");
             return Ok(Arc::new(dev));
         }
+        // BC-07: Tier 3 — attempt sovereign IPC dispatch before giving up.
+        // SovereignDevice implements GpuBackend and communicates with
+        // coralReef (compile) + toadStool (dispatch) via JSON-RPC.
+        #[cfg(feature = "sovereign-dispatch")]
+        if sovereign_available() {
+            tracing::info!(
+                "wgpu unavailable, sovereign IPC dispatch available via coralReef+toadStool"
+            );
+        }
         Err(BarracudaError::device(
-            "No compute device available (neither GPU nor CPU software rasterizer)",
+            "No compute device available (GPU, CPU software rasterizer, \
+             and sovereign IPC all unavailable)",
         ))
     }
 

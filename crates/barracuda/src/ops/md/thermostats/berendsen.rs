@@ -188,6 +188,5 @@ mod tests {
         // Expected: scale = sqrt(1 + 0.2 * (0.633 - 1)) ≈ sqrt(0.9266) ≈ 0.9626
         let scale = BerendsenThermostat::compute_scale(0.01, 0.00633, 0.01, 0.05);
         assert!((scale - 0.9626).abs() < 0.01);
-        println!("✅ Berendsen scale computation validated");
     }
 }

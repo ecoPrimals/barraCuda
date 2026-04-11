@@ -426,7 +426,6 @@ mod tests {
     async fn test_split_vv_single_particle() {
         let Some(device) = crate::device::test_pool::get_test_device_if_f64_gpu_available().await
         else {
-            println!("Skipping: No GPU available");
             return;
         };
 
@@ -436,7 +435,6 @@ mod tests {
             .features()
             .contains(wgpu::Features::SHADER_F64)
         {
-            println!("Skipping: GPU does not support SHADER_F64");
             return;
         }
 
@@ -485,9 +483,7 @@ mod tests {
             VelocityVerletKickDrift::new(pos_tensor, vel_tensor, force_tensor, dt, mass, box_size)
                 .unwrap();
 
-        let (pos_after, vel_after) = kick_drift.execute().unwrap();
-
-        println!("✅ Split Velocity-Verlet f64 kick-drift executed");
+        let (_pos_after, vel_after) = kick_drift.execute().unwrap();
 
         // Step 2 would be force recomputation (skipped here)
         // Step 3: Second half-kick (using same forces as approximation)
@@ -503,8 +499,5 @@ mod tests {
 
         let half_kick = VelocityVerletHalfKick::new(vel_after, force_tensor2, dt, mass).unwrap();
         let _vel_final = half_kick.execute().unwrap();
-
-        println!("✅ Split Velocity-Verlet f64 full step validated");
-        println!("Final positions: {:?}", pos_after.shape());
     }
 }

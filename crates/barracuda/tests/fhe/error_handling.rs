@@ -31,8 +31,6 @@ async fn test_ntt_invalid_degree_error() {
             // Should return Err, not panic
             let result = FheNtt::new(input_tensor, degree, modulus, root);
             assert!(result.is_err(), "NTT should reject invalid degree {degree}");
-
-            println!("✅ NTT rejects invalid degree: {degree}");
         }
     }) {
         return;
@@ -58,8 +56,6 @@ async fn test_ntt_degree_zero_error() {
         // Should return Err
         let result = FheNtt::new(empty_tensor, 0, modulus, root);
         assert!(result.is_err(), "NTT should reject degree 0");
-
-        println!("✅ NTT rejects degree 0");
     }) {
         return;
     }
@@ -86,12 +82,8 @@ async fn test_ntt_degree_too_large_error() {
         // Should return Err for very large degrees (if validation exists)
         // Note: Current implementation may accept it, but we test the error path
         let result = FheNtt::new(input_tensor, large_degree, modulus, root);
-        // If it doesn't error, that's OK - the test documents the expected behavior
-        if result.is_err() {
-            println!("✅ NTT rejects excessive degrees");
-        } else {
-            println!("✅ NTT accepts large degrees (implementation allows it)");
-        }
+        // If it doesn't error, that's OK — documents that implementation may allow large degrees
+        let _ = result;
     }) {
         return;
     }

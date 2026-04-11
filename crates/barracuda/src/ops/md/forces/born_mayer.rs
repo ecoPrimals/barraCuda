@@ -267,6 +267,5 @@ mod tests {
         let forces = bm.execute().unwrap();
 
         assert_eq!(forces.shape(), &[2, 3]);
-        println!("✅ Born-Mayer repulsion validated");
     }
 }

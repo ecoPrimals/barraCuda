@@ -101,7 +101,15 @@ impl AttentionDims {
 
 // ─── TensorSession ─────────────────────────────────────────────────────────────
 
-/// Session for batching tensor operations.
+/// Session for batching tensor operations — the stable fused-pipeline API.
+///
+/// **Stability**: This is the canonical API for fused multi-op GPU pipelines.
+/// Springs (hotSpring, healthSpring, airSpring, neuralSpring) should adopt
+/// this type for production composition. The API surface (`new`, `with_device`,
+/// `reset`, `tensor`, `tensor_with_shape`, `import`, `add`, `mul`, `fma`,
+/// `scale`, `matmul`, `relu`, `gelu`, `softmax`, `layer_norm`, `reshape`,
+/// `head_split`, `head_concat`, `attention`, `run`) is stable and will not
+/// break without a major version bump.
 ///
 /// Operations are recorded without execution until `run()` is called.
 /// This amortises the ~250 μs per-operation overhead across all operations.

@@ -39,14 +39,8 @@ async fn test_esn_timeseries_integration() {
     assert_eq!(forecast.horizon, 10);
 
     // Verify forecast is reasonable (ESN can produce large values with small datasets)
-    println!("ESN forecast: {:?}", &forecast.values[..3]);
     // ESN with small training data can produce large values - just verify it ran
     assert!(forecast.values.len() == 10, "Should produce 10 forecasts");
-
-    println!(
-        "✅ ESN → TimeSeries integration: {} predictions",
-        forecast.values.len()
-    );
 }
 
 /// Test 2: Vision Pipeline Preprocessing
@@ -106,8 +100,7 @@ async fn test_snn_neuromorphic() {
     assert_eq!(output.len(), 100);
 
     // Verify sparse output (neuromorphic characteristic)
-    let active = output.iter().filter(|&&v| v > 0.1).count();
-    println!("✅ SNN neuromorphic: {active} active neurons (sparse)");
+    let _active = output.iter().filter(|&&v| v > 0.1).count();
 }
 
 /// Test 4: Genomics Workflow
@@ -137,12 +130,6 @@ async fn test_genomics_workflow() {
 
     assert!(composition.gc_content >= 0.0 && composition.gc_content <= 1.0);
     assert_eq!(composition.length, sequence.len());
-
-    println!(
-        "✅ Genomics workflow: {} matches, GC {:.1}%",
-        matches.len(),
-        composition.gc_content * 100.0
-    );
 }
 
 /// Test 5: Multi-API Workflow (Vision + `TimeSeries`)
@@ -186,12 +173,6 @@ async fn test_multi_api_workflow() {
     let forecast = analyzer.forecast(&scores, 3).await.unwrap();
 
     assert_eq!(forecast.values.len(), 3);
-
-    println!(
-        "✅ Multi-API workflow: {} images → {} predictions",
-        processed.len(),
-        forecast.values.len()
-    );
 }
 
 /// Test 6: Hardware Agnostic - All APIs
@@ -246,8 +227,6 @@ async fn test_all_apis_hardware_agnostic() {
         .build()
         .await;
     assert!(timeseries.is_ok(), "TimeSeries failed");
-
-    println!("✅ All 5 APIs hardware-agnostic: ESN, Genomics, SNN, Vision, TimeSeries");
 }
 
 /// Test 7: Error Handling Integration
@@ -282,8 +261,6 @@ async fn test_error_handling() {
 
     let result = unbuilt.forecast(&[1.0, 2.0, 3.0], 5).await;
     assert!(result.is_err(), "Should error if not built");
-
-    println!("✅ Error handling: All validation working");
 }
 
 /// Test 8: Concurrent API Usage
@@ -315,6 +292,4 @@ async fn test_concurrent_apis() {
 
     let esn_result = esn.train(&esn_input, &esn_target).await;
     assert!(esn_result.is_ok(), "ESN training failed");
-
-    println!("✅ Concurrent APIs: ESN training verified");
 }

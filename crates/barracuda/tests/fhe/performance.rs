@@ -46,7 +46,6 @@ async fn test_ntt_performance_n4096() {
         let _result_tensor = ntt.execute().unwrap();
 
         let elapsed = start.elapsed();
-        println!("NTT(N=4096) performance: {elapsed:?}");
 
         assert!(
             elapsed < NTT_N4096_COLD_BUDGET,
@@ -80,7 +79,6 @@ async fn test_fast_poly_mul_performance_n4096() {
         let _result_tensor = fast_mul.execute().unwrap();
 
         let elapsed = start.elapsed();
-        println!("Fast multiply(N=4096) performance: {elapsed:?}");
 
         assert!(
             elapsed < FAST_POLY_MUL_N4096_COLD_BUDGET,

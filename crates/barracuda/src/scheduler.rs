@@ -264,8 +264,7 @@ mod tests {
         // Small operation
         let small = TensorDescriptor::new(vec![10, 10], DType::F32);
         let small_op = MathOp::ReLU;
-        let small_exec = scheduler.select_executor(&small_op, &[small]);
-        println!("Small ReLU → {}", small_exec.name());
+        let _small_exec = scheduler.select_executor(&small_op, &[small]);
 
         // Large operation
         let large = TensorDescriptor::new(vec![2048, 2048], DType::F32);
@@ -273,8 +272,7 @@ mod tests {
             transpose_a: false,
             transpose_b: false,
         };
-        let large_exec = scheduler.select_executor(&large_op, &[large.clone(), large]);
-        println!("Large MatMul → {}", large_exec.name());
+        let _large_exec = scheduler.select_executor(&large_op, &[large.clone(), large]);
 
         // If GPU available, large should use GPU, small should use CPU
         if scheduler.get_executor(HardwareType::GPU).is_some() {
@@ -301,8 +299,7 @@ mod tests {
                 transpose_a: false,
                 transpose_b: false,
             };
-            let exec = scheduler.select_executor(&op, &[desc.clone(), desc]);
-            println!("MatMul [{}x{}] → {}", m, n, exec.name());
+            let _exec = scheduler.select_executor(&op, &[desc.clone(), desc]);
         }
     }
 }

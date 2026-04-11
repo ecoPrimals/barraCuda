@@ -646,7 +646,7 @@ mod tests {
 
         // Should have at least discovered something
         // (could be CPU-only in CI environments)
-        println!("{}", registry.report());
+        let _ = registry.report();
 
         // Verify no duplicate physical devices
         let mut seen_ids = std::collections::HashSet::new();

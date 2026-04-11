@@ -181,7 +181,6 @@ mod tests {
             .features()
             .contains(wgpu::Features::SHADER_F64)
         {
-            println!("Skipping: GPU does not support SHADER_F64");
             return;
         }
 
@@ -221,8 +220,6 @@ mod tests {
             forces[3],
             forces[0] + forces[3]
         );
-
-        println!("✅ LJ f64 two-particle test passed");
     }
 
     #[tokio::test]
@@ -253,7 +250,5 @@ mod tests {
             "Force should be ~0 at equilibrium, got {}",
             forces[0]
         );
-
-        println!("✅ LJ f64 equilibrium test passed");
     }
 }

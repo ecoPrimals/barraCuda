@@ -272,9 +272,7 @@ mod tests {
         let x0 = vec![0.0, 0.0];
         let bounds = vec![(-5.0, 5.0), (-5.0, 5.0)];
 
-        let (x_best, f_best, n_evals) = nelder_mead(f, &x0, &bounds, 2000, 1e-6).unwrap();
-
-        println!("Rosenbrock: x_best = {x_best:?}, f_best = {f_best}, evals = {n_evals}");
+        let (x_best, f_best, _) = nelder_mead(f, &x0, &bounds, 2000, 1e-6).unwrap();
 
         assert!((x_best[0] - 1.0).abs() < 1e-2);
         assert!((x_best[1] - 1.0).abs() < 1e-2);

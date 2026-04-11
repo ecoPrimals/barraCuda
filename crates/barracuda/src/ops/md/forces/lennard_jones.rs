@@ -149,6 +149,5 @@ mod tests {
         let forces = lj.execute().unwrap();
 
         assert_eq!(forces.shape(), &[2, 3]);
-        println!("✅ Lennard-Jones force validated");
     }
 }

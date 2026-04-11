@@ -71,8 +71,6 @@ async fn test_fast_poly_mul_vs_naive() {
                     "Fast and naive multiply should match at index {i} (degree={degree})"
                 );
             }
-
-            println!("✅ Fast multiply matches naive for N={degree}");
         }
     }) {
         return;
@@ -115,8 +113,6 @@ async fn test_fast_poly_mul_commutativity() {
         for (i, (&ab, &ba)) in ab_result.iter().zip(ba_result.iter()).enumerate() {
             assert_eq!(ab, ba, "Commutativity should hold at index {i}");
         }
-
-        println!("✅ Fast multiply is commutative");
     }) {
         return;
     }
@@ -181,8 +177,6 @@ async fn test_fast_poly_mul_distributivity() {
         for (i, (&left, &right)) in a_bc_result.iter().zip(ab_plus_ac.iter()).enumerate() {
             assert_eq!(left, right, "Distributivity should hold at index {i}");
         }
-
-        println!("✅ Fast multiply is distributive");
     }) {
         return;
     }

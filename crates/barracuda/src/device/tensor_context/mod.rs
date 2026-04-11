@@ -11,12 +11,12 @@
 //! The ergonomic entry point is [`TensorSession`]:
 //!
 //! ```ignore
-//! use barracuda::device::tensor_context::{get_device_context, TensorSession};
+//! use barracuda::device::tensor_context::{get_device_context, BatchGuard};
 //!
-//! let session = TensorSession::new(&device);
+//! let guard = BatchGuard::new(&device);
 //! let c = a.add(&b)?;   // queued, not yet submitted
 //! let d = c.add(&e)?;   // queued
-//! session.flush()?;     // single queue.submit() covering both ops
+//! guard.flush()?;        // single queue.submit() covering both ops
 //! ```
 //!
 //! **Note**: Only ops wired through `record_operation()` participate in
@@ -38,20 +38,31 @@ use std::sync::Arc;
 ///
 /// Calls [`TensorContext::begin_batch`] on creation and
 /// [`TensorContext::end_batch`] (flushing all pending ops) on
-/// [`TensorSession::flush`] or [`Drop`].
+/// [`BatchGuard::flush`] or [`Drop`].
+///
+/// This is the low-level batch primitive. For a full op-batching session
+/// with recorded operations (`add`, `matmul`, `relu`, etc.), use
+/// [`crate::session::TensorSession`] instead.
 ///
 /// # Example
 /// ```ignore
-/// let session = TensorSession::new(&device);
+/// let guard = BatchGuard::new(&device);
 /// let sum = a.add(&b)?;
 /// let out = sum.add(&c)?;
-/// session.flush()?;  // one queue.submit() instead of two
+/// guard.flush()?;  // one queue.submit() instead of two
 /// ```
-pub struct TensorSession {
+pub struct BatchGuard {
     ctx: Arc<TensorContext>,
 }
 
-impl TensorSession {
+/// Legacy alias for [`BatchGuard`].
+#[deprecated(
+    since = "0.3.12",
+    note = "renamed to BatchGuard to avoid collision with session::TensorSession"
+)]
+pub type TensorSession = BatchGuard;
+
+impl BatchGuard {
     /// Begin a batch session on `device`.
     #[must_use]
     pub fn new(device: &Arc<WgpuDevice>) -> Self {
@@ -68,7 +79,7 @@ impl TensorSession {
     }
 }
 
-impl Drop for TensorSession {
+impl Drop for BatchGuard {
     /// Flush on drop so batched ops are not silently lost if `flush()` is
     /// not called explicitly.
     fn drop(&mut self) {

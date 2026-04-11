@@ -317,10 +317,6 @@ mod tests {
     #[tokio::test]
     async fn test_substrate_discovery() {
         let substrates = Substrate::discover_all().unwrap();
-        println!("Discovered {} substrates:", substrates.len());
-        for substrate in &substrates {
-            println!("  - {substrate}");
-        }
         assert!(
             !substrates.is_empty(),
             "Should discover at least one substrate"
@@ -333,14 +329,14 @@ mod tests {
         let Some(substrate) = substrates.first() else {
             return;
         };
-        println!("Testing device creation on: {substrate}");
         match substrate.create_device().await {
-            Ok(device) => println!("Created device: {}", device.name()),
-            Err(e) => {
+            Ok(device) => {
+                let _ = device.name();
+            }
+            Err(_e) => {
                 // GPU device creation can fail transiently (device lost, OOM,
                 // driver contention). These are hardware-level failures, not
                 // logic bugs — skip gracefully with diagnostics.
-                println!("Device creation failed (hardware/driver): {e}");
             }
         }
     }

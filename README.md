@@ -296,6 +296,7 @@ barracuda version
 | Feature | Default | Description |
 |---------|---------|-------------|
 | `gpu` | Yes | GPU compute via wgpu/WGSL. |
+| `cpu-shader` | Yes | CPU WGSL interpreter via barracuda-naga-exec. Enables ecoBin compute without wgpu. |
 | `domain-models` | Yes | All domain modules (nn, snn, esn, pde, genomics, vision, timeseries). |
 | `domain-nn` | via umbrella | Neural network training API. |
 | `domain-snn` | via umbrella | Spiking neural networks. |

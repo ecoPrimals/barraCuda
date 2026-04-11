@@ -65,7 +65,7 @@ barracuda-naga-exec = { path = "../barracuda-naga-exec" }
 workspace = true
 
 [features]
-default = ["gpu", "domain-models"]
+default = ["gpu", "domain-models", "cpu-shader"]
 
 gpu = ["dep:wgpu", "dep:bytemuck", "dep:naga"]
 

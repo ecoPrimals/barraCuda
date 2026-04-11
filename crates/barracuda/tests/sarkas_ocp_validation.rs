@@ -33,7 +33,7 @@ use std::f64::consts::PI;
 
 /// Sarkas OCP case parameters.
 struct OcpCase {
-    name: &'static str,
+    _name: &'static str,
     gamma: f64,
     kappa: f64,
     n_particles: usize,
@@ -81,7 +81,6 @@ fn ocp_lattice(n: usize, box_side: f64) -> Vec<f64> {
 
 async fn validate_case(case: &OcpCase) -> bool {
     let Some(device) = test_pool::get_test_device_if_f64_gpu_available().await else {
-        println!("[SKIP] {}: No f64 GPU available", case.name);
         return true;
     };
 
@@ -102,7 +101,6 @@ async fn validate_case(case: &OcpCase) -> bool {
     // --- Check 1: Forces are finite ---
     let all_finite = forces.iter().all(|f| f.is_finite());
     if !all_finite {
-        println!("[FAIL] {}: Non-finite forces detected", case.name);
         return false;
     }
 
@@ -134,44 +132,19 @@ async fn validate_case(case: &OcpCase) -> bool {
     // sanity check (~10% on DF64/llvmpipe), not exact.
     let n3_ok = n3_relative < 0.5;
     if !n3_ok {
-        println!(
-            "[FAIL] {}: Extreme Newton's 3rd law violation: relative={:.2e}",
-            case.name, n3_relative
-        );
         return false;
     }
 
     // --- Check 3: Total PE is finite ---
     let total_pe: f64 = pe.iter().sum();
     if !total_pe.is_finite() {
-        println!("[FAIL] {}: Non-finite total PE: {total_pe}", case.name);
         return false;
     }
 
-    // --- Check 4: PE per particle should scale with Γ ---
-    // For a Yukawa OCP lattice, PE/N ~ -Γ * M(κ) where M(κ) is the
-    // Madelung-like constant. We just verify the sign and rough magnitude.
-    let pe_mean = total_pe / n as f64;
-    let pe_std = (pe.iter().map(|p| (p - pe_mean).powi(2)).sum::<f64>() / n as f64).sqrt();
-    let pe_cv = if pe_mean.abs() > 1e-30 {
-        pe_std / pe_mean.abs()
-    } else {
-        0.0
-    };
-
-    // --- Check 5: Force magnitude should be non-trivial ---
+    // --- Check 4: Force magnitude should be non-trivial ---
     if max_force < 1e-20 {
-        println!(
-            "[FAIL] {}: Zero forces detected: max_F={:.2e}",
-            case.name, max_force
-        );
         return false;
     }
-
-    println!(
-        "[OK]   {}: N={}, Γ={}, κ={}, PE/N={:.6}, PE_cv={:.2e}, N3_rel={:.2e}, max_F={:.4}",
-        case.name, n, case.gamma, case.kappa, pe_mean, pe_cv, n3_relative, max_force,
-    );
 
     true
 }
@@ -179,7 +152,7 @@ async fn validate_case(case: &OcpCase) -> bool {
 #[tokio::test]
 async fn sarkas_case_gamma10_kappa2() {
     let case = OcpCase {
-        name: "dsf_k0_G10",
+        _name: "dsf_k0_G10",
         gamma: 10.0,
         kappa: 2.0,
         n_particles: 125,
@@ -190,7 +163,7 @@ async fn sarkas_case_gamma10_kappa2() {
 #[tokio::test]
 async fn sarkas_case_gamma50_kappa2() {
     let case = OcpCase {
-        name: "dsf_k0_G50",
+        _name: "dsf_k0_G50",
         gamma: 50.0,
         kappa: 2.0,
         n_particles: 125,
@@ -201,7 +174,7 @@ async fn sarkas_case_gamma50_kappa2() {
 #[tokio::test]
 async fn sarkas_case_gamma150_kappa2() {
     let case = OcpCase {
-        name: "dsf_k0_G150",
+        _name: "dsf_k0_G150",
         gamma: 150.0,
         kappa: 2.0,
         n_particles: 125,

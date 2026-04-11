@@ -339,9 +339,6 @@ mod tests {
         // σ = sqrt(T/m) = sqrt(0.1/3) ≈ 0.1826
         // noise_factor = σ * sqrt(1 - exp(-0.02)) ≈ σ * 0.1414
         assert!(params.noise_factor > 0.0, "noise_factor should be positive");
-        println!("✅ Langevin params creation validated");
-        println!("   exp_factor: {}", params.exp_factor);
-        println!("   noise_factor: {}", params.noise_factor);
     }
 
     #[tokio::test]
@@ -352,7 +349,6 @@ mod tests {
         let noise = LangevinStep::generate_noise(100, &device, &mut rng).unwrap();
 
         assert_eq!(noise.shape(), &[100, 3]);
-        println!("✅ Langevin noise generation validated");
     }
 
     #[tokio::test]
@@ -365,7 +361,6 @@ mod tests {
             .features()
             .contains(wgpu::Features::SHADER_F64)
         {
-            println!("Skipping: GPU does not support SHADER_F64");
             return;
         }
 
@@ -395,7 +390,5 @@ mod tests {
         let params = LangevinParams::new(1.0, 0.1, 3.0, 0.01);
         let step = LangevinStep::new(vel_tensor, noise_tensor, params).unwrap();
         let _vel_after = step.execute().unwrap();
-
-        println!("✅ Langevin step executed");
     }
 }

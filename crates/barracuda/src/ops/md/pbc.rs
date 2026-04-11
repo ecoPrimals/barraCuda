@@ -343,7 +343,6 @@ mod tests {
 
         // Result should be [2, 1] matrix
         assert_eq!(result.shape(), &[2, 1]);
-        println!("✅ PBC distance shape correct");
     }
 
     #[tokio::test]
@@ -354,28 +353,15 @@ mod tests {
         let pos_a = vec![0.1, 0.5, 0.5]; // Near left edge
         let pos_b = vec![0.9, 0.5, 0.5]; // Near right edge
 
-        println!("pos_a: {pos_a:?}");
-        println!("pos_b: {pos_b:?}");
-        println!("Direct distance: {}", (0.9 - 0.1));
-
         let tensor_a = Tensor::from_data(&pos_a, vec![1, 3], device.clone()).unwrap();
         let tensor_b = Tensor::from_data(&pos_b, vec![1, 3], device).unwrap();
 
-        // Verify tensors
-        println!("tensor_a: {:?}", tensor_a.to_vec().unwrap());
-        println!("tensor_b: {:?}", tensor_b.to_vec().unwrap());
-
         let box_dims = vec![1.0, 1.0, 1.0];
-        println!("box_dims: {box_dims:?}");
 
         let pbc =
             PbcDistance::new(tensor_a, tensor_b, box_dims, DistanceMetric::Euclidean).unwrap();
         let result = pbc.execute().unwrap();
         let data = result.to_vec().unwrap();
-
-        println!("Distance with PBC: {}", data[0]);
-        println!("Expected: 0.2 (wrapped through boundary)");
-        println!("Got: {} (should be < 0.3)", data[0]);
 
         // Diagonal wrapping can produce distances up to sqrt(2)*cutoff;
         // use a relaxed bound to accommodate corner-case geometries
@@ -384,7 +370,6 @@ mod tests {
             "PBC wrapping should give shorter distance: got {}, expected < 0.5",
             data[0]
         );
-        println!("✅ PBC wrapping validated: distance = {}", data[0]);
     }
 
     #[tokio::test]
@@ -410,7 +395,5 @@ mod tests {
         assert!(data[5] < 1e-5, "Self-distance should be zero");
         assert!(data[10] < 1e-5, "Self-distance should be zero");
         assert!(data[15] < 1e-5, "Self-distance should be zero");
-
-        println!("✅ PBC multiple particles validated");
     }
 }

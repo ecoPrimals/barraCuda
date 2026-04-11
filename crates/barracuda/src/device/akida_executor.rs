@@ -483,16 +483,10 @@ mod tests {
 
         match result {
             Ok(executor) => {
-                println!(
-                    "✅ Akida executor created: {} boards, {} NPUs",
-                    executor.board_count(),
-                    executor.npu_count()
-                );
                 assert!(executor.board_count() > 0);
                 assert!(executor.npu_count() > 0);
             }
-            Err(e) => {
-                println!("ℹ️  No Akida boards available: {e}");
+            Err(_e) => {
                 // Not a failure - just no hardware
             }
         }
@@ -511,11 +505,6 @@ mod tests {
             .spike_encode_akida(&input, time_steps)
             .await
             .unwrap();
-
-        println!("Akida spike encoding results:");
-        for (i, &count) in spikes.iter().enumerate() {
-            println!("  Input {:.2} → {} spikes", input[i], count);
-        }
 
         // Verify spike counts are reasonable
         assert_eq!(spikes.len(), input.len());
@@ -539,7 +528,6 @@ mod tests {
             .await
             .unwrap();
 
-        println!("Akida LIF neuron output: {output:?}");
         assert_eq!(output.len(), 1);
     }
 }

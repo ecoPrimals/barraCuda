@@ -207,7 +207,7 @@ mod tests {
 
         let any_nonzero = gpu_results.iter().any(|&v| v != 0.0);
         if !any_nonzero {
-            eprintln!(
+            tracing::warn!(
                 "Hill GPU test: all outputs zero — driver likely does not support \
                  mixed f64/f32 transcendental casts; skipping parity check"
             );

@@ -52,8 +52,6 @@ async fn fault_ntt_non_power_of_two_degree() {
 
             // Verify error (not panic)
             assert!(result.is_err(), "NTT should reject invalid degree {degree}");
-
-            println!("✅ Rejected invalid degree: {degree}");
         }
     }) {
         return;
@@ -80,8 +78,6 @@ async fn fault_ntt_mismatched_input_length() {
                 result.is_err(),
                 "NTT should reject mismatched length {length} (expected {degree})"
             );
-
-            println!("✅ Rejected mismatched length: {length} (expected {degree})");
         }
     }) {
         return;
@@ -117,8 +113,6 @@ async fn fault_ntt_coefficient_exceeds_modulus() {
                     assert!(val < modulus || val % modulus < modulus);
                 }
             }
-
-            println!("✅ Handled coefficient >= modulus");
         }
     }) {
         return;
@@ -136,8 +130,6 @@ async fn fault_ntt_zero_modulus() {
 
         let result = FheNtt::new(input_tensor, degree, 0, root);
         assert!(result.is_err(), "NTT should reject zero modulus");
-
-        println!("✅ Rejected zero modulus");
     }) {
         return;
     }
@@ -162,8 +154,6 @@ async fn fault_gpu_unavailable() {
             err_msg.contains("adapter") || err_msg.contains("No "),
             "Error should mention adapter/unavailability: {err_msg}"
         );
-
-        println!("✅ GPU unavailable returns clear error (no panic)");
     }) {
         return;
     }
@@ -173,29 +163,22 @@ async fn fault_gpu_unavailable() {
 async fn fault_out_of_gpu_memory() {
     if !common::run_gpu_resilient_async(|| async {
         let device = barracuda::device::test_pool::get_test_device().await;
-        let mut tensors = Vec::new();
+        let mut tensors: Vec<barracuda::tensor::Tensor> = Vec::new();
 
-        // Bounded OOM probe: allocate up to 256 x 4MB = 1GB. Previous 10,000
-        // iteration limit (40GB) could exhaust process address space on
-        // llvmpipe and SIGSEGV before the driver returns an OOM error.
+        // Bounded OOM probe: allocate up to 256 x 4MB = 1GB.
         let max_iterations = 256;
-        for i in 0..max_iterations {
+        for _i in 0..max_iterations {
             let size = 1024 * 1024; // 4MB per tensor
             let data: Vec<u32> = vec![0; size];
 
             match Tensor::from_data_pod(&data, vec![size], device.clone()) {
                 Ok(t) => tensors.push(t),
                 Err(_e) => {
-                    println!("  OOM at iteration {i} (expected)");
                     break;
                 }
             }
         }
-
-        println!(
-            "✅ GPU OOM handled gracefully ({} tensors allocated out of {max_iterations} max)",
-            tensors.len()
-        );
+        drop(tensors);
     }) {
         return;
     }
@@ -221,8 +204,6 @@ async fn fault_u64_overflow_protection() {
     let result = mod_mul(a, b, modulus);
     assert!(result < modulus, "mod_mul output must be in [0, modulus)");
     assert_eq!(result, (a % modulus) * (b % modulus) % modulus);
-
-    println!("✅ Barrett/modular arithmetic handles u64 overflow case");
 }
 
 // Modular exponentiation (for twiddle root verification)
@@ -267,8 +248,6 @@ async fn fault_twiddle_factor_precision() {
 
     // Spot-check: twiddles[i] = root^i mod q
     assert_eq!(twiddles[1], root % modulus);
-
-    println!("✅ Twiddle factor precision verified (ω^N ≡ 1)");
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -295,7 +274,6 @@ async fn fault_concurrent_tensor_access() {
         }
 
         assert_eq!(succeeded, 10, "All reads should succeed");
-        println!("✅ Concurrent tensor access safe");
     }) {
         return;
     }
@@ -327,8 +305,6 @@ async fn fault_ntt_failure_recovery() {
             result.is_ok(),
             "System should recover and allow valid operations"
         );
-
-        println!("✅ System recovers from failures");
     }) {
         return;
     }
@@ -341,12 +317,10 @@ async fn fault_multiple_failures_in_sequence() {
         let modulus = 12289u64;
         let root = 11u64;
 
-        for i in 0..10 {
+        for _ in 0..10 {
             let empty_tensor = create_fhe_poly_tensor(&[], device.clone()).await.unwrap();
             let result = FheNtt::new(empty_tensor, 0, 0, root);
             assert!(result.is_err(), "Should error on invalid input");
-
-            println!("  Failure {i} handled");
         }
 
         let degree = 16u32;
@@ -359,8 +333,6 @@ async fn fault_multiple_failures_in_sequence() {
             result.is_ok(),
             "Valid operation should work after multiple failures"
         );
-
-        println!("✅ Multiple failures don't corrupt state");
     }) {
         return;
     }
@@ -398,8 +370,6 @@ async fn fault_error_messages_are_actionable() {
             error_msg2.contains("zero") || error_msg2.contains("modulus") || !error_msg2.is_empty(),
             "Error message should be informative"
         );
-
-        println!("✅ Error messages are actionable");
     }) {
         return;
     }
@@ -411,23 +381,7 @@ async fn fault_error_messages_are_actionable() {
 
 #[test]
 fn fault_test_summary() {
-    println!("\n╔══════════════════════════════════════════════════════════════╗");
-    println!("║  Fault Injection Test Suite Summary                         ║");
-    println!("╚══════════════════════════════════════════════════════════════╝");
-    println!();
-    println!("📊 Fault Categories:");
-    println!("  • Invalid inputs:        Degree, length, coefficients");
-    println!("  • Resource failures:     OOM, GPU unavailable");
-    println!("  • Precision limits:      Overflow, underflow");
-    println!("  • Concurrent access:     Data races, corruption");
-    println!("  • Error recovery:        Graceful degradation");
-    println!();
-    println!("🎯 Goals:");
-    println!("  • No panics (all errors handled)");
-    println!("  • Clear error messages");
-    println!("  • System recovery");
-    println!("  • Resource cleanup");
-    println!();
-    println!("✅ Fault injection framework created!");
-    println!("⏳ Integration with actual FHE ops pending");
+    // Documents fault categories (invalid inputs, resource failures, precision,
+    // concurrent access, recovery), goals (no panics, clear errors, recovery,
+    // cleanup), and that the fault-injection framework is staged for FHE op integration.
 }

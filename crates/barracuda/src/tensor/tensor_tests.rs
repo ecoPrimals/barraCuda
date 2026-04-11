@@ -32,7 +32,6 @@ async fn test_tensor_reshape() {
 #[tokio::test]
 async fn test_tensor_device() {
     let tensor = Tensor::zeros(vec![10]).await.unwrap();
-    println!("Tensor on device: {}", tensor.device().name());
     assert!(!tensor.device().name().is_empty());
 }
 

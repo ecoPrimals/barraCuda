@@ -38,22 +38,22 @@ use std::sync::Arc;
 #[derive(Debug)]
 struct HardwareInventory {
     gpus: Vec<GpuInfo>,
-    npus: Vec<NpuInfo>,
+    _npus: Vec<NpuInfo>,
 }
 
 #[derive(Debug)]
 struct GpuInfo {
     name: String,
     vendor: String,
-    device_type: wgpu::DeviceType,
-    backend: wgpu::Backend,
+    _device_type: wgpu::DeviceType,
+    _backend: wgpu::Backend,
     adapter_index: usize,
 }
 
 #[derive(Debug)]
 struct NpuInfo {
-    name: String,
-    device_path: String,
+    _name: String,
+    _device_path: String,
 }
 
 impl HardwareInventory {
@@ -84,8 +84,8 @@ impl HardwareInventory {
                 gpus.push(GpuInfo {
                     name: info.name.clone(),
                     vendor: vendor.to_string(),
-                    device_type: info.device_type,
-                    backend: info.backend,
+                    _device_type: info.device_type,
+                    _backend: info.backend,
                     adapter_index: idx,
                 });
             }
@@ -97,48 +97,17 @@ impl HardwareInventory {
             let path = format!("/dev/akida{i}");
             if std::path::Path::new(&path).exists() {
                 npus.push(NpuInfo {
-                    name: format!("Akida NPU {i}"),
-                    device_path: path,
+                    _name: format!("Akida NPU {i}"),
+                    _device_path: path,
                 });
             }
         }
 
-        Self { gpus, npus }
-    }
-
-    fn print_report(&self) {
-        println!("\n╔══════════════════════════════════════════════════════════════╗");
-        println!("║           HARDWARE VERIFICATION INVENTORY                     ║");
-        println!("╠══════════════════════════════════════════════════════════════╣");
-
-        println!(
-            "║ GPUs Detected: {}                                             ",
-            self.gpus.len()
-        );
-        for gpu in &self.gpus {
-            println!(
-                "║   [{:2}] {} ({}) - {:?}/{:?}",
-                gpu.adapter_index, gpu.name, gpu.vendor, gpu.device_type, gpu.backend
-            );
-        }
-
-        println!(
-            "║ NPUs Detected: {}                                             ",
-            self.npus.len()
-        );
-        for npu in &self.npus {
-            println!("║   {} @ {}", npu.name, npu.device_path);
-        }
-
-        println!("╚══════════════════════════════════════════════════════════════╝\n");
+        Self { gpus, _npus: npus }
     }
 
     fn has_multi_gpu(&self) -> bool {
         self.gpus.len() >= 2
-    }
-
-    fn has_npu(&self) -> bool {
-        !self.npus.is_empty()
     }
 }
 
@@ -210,14 +179,8 @@ async fn try_create_device(adapter_index: usize) -> Option<Arc<WgpuDevice>> {
 
     match result {
         Some(Ok(Ok(device))) => Some(Arc::new(device)),
-        Some(Ok(Err(e))) => {
-            eprintln!("Adapter {adapter_index}: skipped (unsupported features): {e}");
-            None
-        }
-        Some(Err(_)) => {
-            eprintln!("Adapter {adapter_index}: skipped (panic during device creation)");
-            None
-        }
+        Some(Ok(Err(_e))) => None,
+        Some(Err(_)) => None,
         None => None,
     }
 }
@@ -259,7 +222,6 @@ fn assert_close(label: &str, a: &[f32], b: &[f32], tol: f32) {
 #[test]
 fn test_hardware_discovery_report() {
     let inventory = HardwareInventory::discover();
-    inventory.print_report();
 
     // Should find at least one compute device
     assert!(
@@ -273,29 +235,19 @@ async fn test_all_gpus_can_create_device() {
     if !common::run_gpu_resilient_async(|| async {
         let inventory = HardwareInventory::discover();
 
-        println!("Testing device creation for {} GPUs", inventory.gpus.len());
-
         let mut successful = 0;
         let mut failed = Vec::new();
 
         for gpu in &inventory.gpus {
             match WgpuDevice::from_adapter_index(gpu.adapter_index).await {
                 Ok(_device) => {
-                    println!("  ✓ {} - Device created", gpu.name);
                     successful += 1;
                 }
-                Err(e) => {
-                    println!("  ✗ {} - Failed: {}", gpu.name, e);
+                Err(_e) => {
                     failed.push(gpu.name.clone());
                 }
             }
         }
-
-        println!(
-            "\nSummary: {}/{} devices created successfully",
-            successful,
-            inventory.gpus.len()
-        );
 
         // At least one GPU should work
         assert!(successful > 0, "No GPUs could create devices: {failed:?}");
@@ -309,8 +261,7 @@ fn test_kernel_router_creation() {
     let router = KernelRouter::new();
     assert!(router.is_ok(), "KernelRouter should initialize");
 
-    let router = router.unwrap();
-    println!("Available NPU models: {:?}", router.available_npu_models());
+    let _router = router.unwrap();
 }
 
 // ============================================================================
@@ -323,11 +274,8 @@ async fn test_cross_vendor_matmul_parity() {
         let inventory = HardwareInventory::discover();
 
         if !inventory.has_multi_gpu() {
-            println!("SKIP: Need 2+ GPUs for cross-vendor parity test");
             return;
         }
-
-        println!("\n=== Cross-Vendor Matmul Parity Test ===\n");
 
         let mut devices: Vec<(String, Arc<WgpuDevice>)> = Vec::new();
         for gpu in &inventory.gpus {
@@ -337,7 +285,6 @@ async fn test_cross_vendor_matmul_parity() {
         }
 
         if devices.len() < 2 {
-            println!("SKIP: Need 2+ working GPUs for parity test");
             return;
         }
 
@@ -358,7 +305,6 @@ async fn test_cross_vendor_matmul_parity() {
                 .unwrap();
 
             let result = a.matmul(&b).unwrap().to_vec().unwrap();
-            println!("  {} - computed (first 4 values: {:?})", name, &result[..4]);
             results.insert(name.clone(), result);
         }
 
@@ -376,11 +322,8 @@ async fn test_cross_vendor_matmul_parity() {
                     result_b,
                     CROSS_VENDOR_MATMUL_F32_TOL,
                 );
-                println!("  ✓ {name_a} matches {name_b}");
             }
         }
-
-        println!("\n  PASS: All GPUs produce identical matmul results\n");
     }) {
         return;
     }
@@ -392,11 +335,8 @@ async fn test_cross_vendor_cholesky_parity() {
         let inventory = HardwareInventory::discover();
 
         if !inventory.has_multi_gpu() {
-            println!("SKIP: Need 2+ GPUs for cross-vendor parity test");
             return;
         }
-
-        println!("\n=== Cross-Vendor Cholesky Parity Test ===\n");
 
         let mut devices: Vec<(String, Arc<WgpuDevice>)> = Vec::new();
         for gpu in &inventory.gpus {
@@ -406,7 +346,6 @@ async fn test_cross_vendor_cholesky_parity() {
         }
 
         if devices.len() < 2 {
-            println!("SKIP: Need 2+ working GPUs");
             return;
         }
 
@@ -420,7 +359,6 @@ async fn test_cross_vendor_cholesky_parity() {
                 .unwrap();
 
             let result = a.cholesky().unwrap().to_vec().unwrap();
-            println!("  {name} Cholesky L: {result:?}");
             results.insert(name.clone(), result);
         }
 
@@ -435,11 +373,8 @@ async fn test_cross_vendor_cholesky_parity() {
                     &results[name_b],
                     CROSS_VENDOR_ELEMENTWISE_F32_TOL,
                 );
-                println!("  ✓ {name_a} matches {name_b}");
             }
         }
-
-        println!("\n  PASS: Cross-vendor Cholesky parity verified\n");
     }) {
         return;
     }
@@ -451,11 +386,8 @@ async fn test_cross_vendor_softmax_parity() {
         let inventory = HardwareInventory::discover();
 
         if !inventory.has_multi_gpu() {
-            println!("SKIP: Need 2+ GPUs for cross-vendor parity test");
             return;
         }
-
-        println!("\n=== Cross-Vendor Softmax Parity Test ===\n");
 
         let mut devices: Vec<(String, Arc<WgpuDevice>)> = Vec::new();
         for gpu in &inventory.gpus {
@@ -479,7 +411,6 @@ async fn test_cross_vendor_softmax_parity() {
 
             let result = t.softmax().unwrap().to_vec().unwrap();
             let sum: f32 = result.iter().sum();
-            println!("  {name} softmax sum: {sum:.6}");
             assert!((sum - 1.0).abs() < 1e-4, "{name} softmax should sum to 1.0");
             results.insert(name.clone(), result);
         }
@@ -495,8 +426,6 @@ async fn test_cross_vendor_softmax_parity() {
                 );
             }
         }
-
-        println!("  PASS: Cross-vendor softmax parity verified\n");
     }) {
         return;
     }
@@ -543,8 +472,6 @@ fn test_kernel_router_dense_workloads_to_wgsl() {
             }
         }
     }
-
-    println!("✓ All dense workloads correctly routed to WGSL");
 }
 
 #[test]
@@ -569,8 +496,6 @@ fn test_kernel_router_small_workloads_to_cpu() {
             );
         }
     }
-
-    println!("✓ Small workloads correctly routed to CPU");
 }
 
 #[test]
@@ -607,8 +532,6 @@ fn test_kernel_router_npu_fallback() {
             }
         }
     }
-
-    println!("✓ NPU workloads correctly handle fallback");
 }
 
 // ============================================================================
@@ -621,11 +544,8 @@ async fn test_multi_gpu_performance_characterization() {
         let inventory = HardwareInventory::discover();
 
         if !inventory.has_multi_gpu() {
-            println!("SKIP: Need 2+ GPUs for performance characterization");
             return;
         }
-
-        println!("\n=== Multi-GPU Performance Characterization ===\n");
 
         let mut devices: Vec<(String, Arc<WgpuDevice>)> = Vec::new();
         for gpu in &inventory.gpus {
@@ -640,9 +560,7 @@ async fn test_multi_gpu_performance_characterization() {
             .map(|i| (i as f32).mul_add(0.001, 0.5))
             .collect();
 
-        println!("Benchmark: {size}x{size} matmul x 20 iterations\n");
-
-        for (name, device) in &devices {
+        for (_name, device) in &devices {
             // Scope all tensors to ensure GPU buffers are fully released
             // before moving to the next device — avoids wgpu cross-device
             // buffer lifetime assertions.
@@ -673,10 +591,8 @@ async fn test_multi_gpu_performance_characterization() {
                 (total, per_op, gf)
             };
 
-            println!("  {name}: {total_ms:.2} ms total, {per_op_ms:.3} ms/op, {gflops:.2} GFLOP/s");
+            let _ = (total_ms, per_op_ms, gflops);
         }
-
-        println!("\n  Performance characterization complete.\n");
     }) {
         return;
     }
@@ -688,20 +604,7 @@ async fn test_multi_gpu_performance_characterization() {
 
 #[test]
 fn test_npu_detection() {
-    let inventory = HardwareInventory::discover();
-
-    println!("\n=== NPU Detection ===\n");
-    println!("NPUs found: {}", inventory.npus.len());
-
-    for npu in &inventory.npus {
-        println!("  - {} @ {}", npu.name, npu.device_path);
-    }
-
-    if inventory.has_npu() {
-        println!("\n  NPU hardware detected - routing tests enabled\n");
-    } else {
-        println!("\n  No NPU hardware - NPU routing tests will be skipped\n");
-    }
+    // Formerly println-only inventory report; no assertions.
 }
 
 #[test]
@@ -726,8 +629,5 @@ fn test_kernel_router_npu_capability_check() {
         model_name: "test".to_string(),
     };
     // This will be false unless we register an NPU model
-    let can_route = router.can_route_to_npu(&sparse);
-    println!(
-        "Sparse inference can route to NPU: {can_route} (expected: depends on model registration)"
-    );
+    let _can_route = router.can_route_to_npu(&sparse);
 }

@@ -353,12 +353,6 @@ mod tests {
         let f_new_check = f_new_tensor.to_vec().unwrap();
         let mass_check = mass_tensor.to_vec().unwrap();
 
-        println!("Input positions: {pos_check:?}");
-        println!("Input velocities: {vel_check:?}");
-        println!("Input forces_old: {f_old_check:?}");
-        println!("Input forces_new: {f_new_check:?}");
-        println!("Input masses: {mass_check:?}");
-
         assert_eq!(pos_check, positions);
         assert_eq!(vel_check, velocities);
         assert_eq!(f_old_check, forces_old);
@@ -380,21 +374,14 @@ mod tests {
         let pos_data = pos_new.to_vec().unwrap();
         let vel_data = vel_new.to_vec().unwrap();
 
-        println!("pos_data: {pos_data:?}");
-        println!("vel_data: {vel_data:?}");
-
         // Check physics: x = x0 + v*t + 0.5*a*t^2
         // x = 0 + 1*0.1 + 0.5*2*0.01 = 0.11
         let expected_x = (0.5 * 2.0 * dt).mul_add(dt, 1.0f32.mul_add(dt, 0.0));
-        println!("Expected x: {}, got: {}", expected_x, pos_data[0]);
         assert!((pos_data[0] - expected_x).abs() < 1e-5, "Position update");
 
         // v = v0 + a*t
         // v = 1 + 2*0.1 = 1.2
         let expected_v = 2.0f32.mul_add(dt, 1.0);
-        println!("Expected v: {}, got: {}", expected_v, vel_data[0]);
         assert!((vel_data[0] - expected_v).abs() < 1e-5, "Velocity update");
-
-        println!("✅ Velocity-Verlet validated");
     }
 }

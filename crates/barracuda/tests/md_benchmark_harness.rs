@@ -53,7 +53,6 @@ impl std::fmt::Display for BenchmarkResult {
 #[tokio::test]
 async fn bench_yukawa_allpairs_256() {
     let Some(device) = test_pool::get_test_device_if_f64_gpu_available().await else {
-        println!("Skipping: No f64 GPU available");
         return;
     };
 
@@ -80,13 +79,12 @@ async fn bench_yukawa_allpairs_256() {
         wall_time_ms: elapsed.as_secs_f64() * 1000.0,
         throughput_pairs_per_sec: n_pairs as f64 / elapsed.as_secs_f64(),
     };
-    println!("[BENCH] {result}");
+    let _ = result;
 }
 
 #[tokio::test]
 async fn bench_yukawa_celllist_512() {
     let Some(device) = test_pool::get_test_device_if_f64_gpu_available().await else {
-        println!("Skipping: No f64 GPU available");
         return;
     };
 
@@ -116,7 +114,7 @@ async fn bench_yukawa_celllist_512() {
         wall_time_ms: elapsed.as_secs_f64() * 1000.0,
         throughput_pairs_per_sec: (n * 27 * (n / 64)) as f64 / elapsed.as_secs_f64(),
     };
-    println!("[BENCH] {result}");
+    let _ = result;
 }
 
 #[tokio::test]
@@ -124,7 +122,6 @@ async fn bench_pppm_1000() {
     use barracuda::ops::md::electrostatics::{PppmAccuracy, PppmParams};
 
     let Some(device) = test_pool::get_test_device_if_f64_gpu_available().await else {
-        println!("Skipping: No f64 GPU available");
         return;
     };
 
@@ -146,7 +143,6 @@ async fn bench_pppm_1000() {
     let pppm =
         barracuda::ops::md::electrostatics::PppmGpu::from_device(&device, params.clone()).await;
     let Ok(pppm) = pppm else {
-        println!("Skipping PPPM bench: GPU PPPM init failed");
         return;
     };
 
@@ -156,14 +152,8 @@ async fn bench_pppm_1000() {
 
     match result {
         Ok((_forces, energy)) => {
-            println!(
-                "[BENCH] PPPM f64: N={n}, wall={:.2}ms, energy={:.6}",
-                elapsed.as_secs_f64() * 1000.0,
-                energy
-            );
+            let _ = (n, elapsed, energy);
         }
-        Err(e) => {
-            println!("[BENCH] PPPM f64: N={n}, FAILED: {e}");
-        }
+        Err(_e) => {}
     }
 }

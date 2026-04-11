@@ -1,11 +1,21 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-04-10.
+Prioritized work items, ordered by impact. Updated 2026-04-11.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 41: BC-07 Full Wiring + BC-06 Docs + TensorSession Migration Guide (Apr 11)**:
+  `Auto::new()` returns `DiscoveredDevice` enum with 3-tier fallback (wgpu GPU → wgpu CPU
+  → SovereignDevice IPC → Err). `BarraCudaPrimal` stores `DiscoveredDevice`. `Auto::new_wgpu()`
+  convenience added. BC-06 musl-static GPU constraint documented in README + CONTEXT. Full
+  TensorSession migration guide published in BREAKING_CHANGES.md. 11-axis deep debt audit:
+  clean bill — hardcoded primal names evolved to capability-based. 4,251 tests pass.
+- **Sprint 40: primalSpring Gap Resolution & Deep Debt Overstep Cleanup (Apr 11)**:
+  BC-07 partial (sovereign probe), BC-08 resolved (cpu-shader default-on), plasma_dispersion
+  feature-gate fixed, TensorSession→BatchGuard rename, validation_harness typed errors, 670+
+  println/eprintln removed, FHE tests typed, health ops tracing::warn. 68 files changed.
 - **Sprint 39: primalSpring Audit Remediation (Apr 10)**: BTSP Phase 2 full handshake —
   `guard_connection()` evolved to 6-step X25519+HMAC relay with legacy fallback.
   BC-GPU-PANIC fixed — `Auto::new()` decoupled from test pool, returns `Err` instead

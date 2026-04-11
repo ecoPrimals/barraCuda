@@ -5,6 +5,37 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.12] — 2026-04-11
+
+### Changed — Sprint 41: BC-07 Full Wiring, BC-06 Documentation, TensorSession Migration Guide (Apr 11 2026)
+
+- **BC-07 fully resolved**: `Auto::new()` returns `DiscoveredDevice` enum with 3-tier fallback
+  (wgpu GPU → wgpu CPU → SovereignDevice IPC → Err). `BarraCudaPrimal` stores
+  `DiscoveredDevice` instead of `WgpuDevice`. `Auto::new_wgpu()` convenience for code
+  requiring local tensor buffers. IPC handlers report `sovereign_ipc` in capabilities/health.
+- **BC-06 documented**: musl-static GPU constraint documented in README.md and CONTEXT.md with
+  deployment matrix (glibc/musl/WASM × GPU/CPU-shader/Sovereign-IPC). Explains `dlopen` constraint.
+- **TensorSession migration guide**: Published in BREAKING_CHANGES.md 0.3.12 section with full
+  stable API surface table (20 public methods + 5 SessionTensor methods), code examples, and
+  BatchGuard/TensorSession disambiguation for spring adoption.
+- **Deep debt 11-axis audit**: Hardcoded primal names in production runtime evolved to
+  capability-based language (`shader.compile` + `compute.dispatch` peers). All other axes clean.
+- 4,251 tests pass, zero clippy warnings, all quality gates green.
+
+### Changed — Sprint 40: primalSpring Gap Resolution & Deep Debt Overstep Cleanup (Apr 11 2026)
+
+- **BC-07 partial**: SovereignDevice probed in fallback chain; `BarraCudaPrimal` detects
+  sovereign IPC availability; `health_status()` reflects sovereign fallback.
+- **BC-08 resolved**: `cpu-shader` feature now default-on. ecoBin binaries compute without wgpu.
+- **plasma_dispersion feature-gate**: Corrected to `#[cfg(all(feature = "gpu", feature = "domain-lattice"))]`.
+- **TensorSession stabilization**: `device::tensor_context::TensorSession` renamed to `BatchGuard`
+  with `#[deprecated]` alias. `session::TensorSession` documented as stable API.
+- **validation_harness.rs**: `Result<ShaderResult, String>` evolved to typed `BarracudaError`.
+- **Zero println/eprintln**: 670+ calls removed from library src and integration tests.
+- **FHE tests**: `Box<dyn Error>` evolved to typed `barracuda::error::Result<()>`.
+- **Health ops**: `eprintln!` evolved to `tracing::warn!`.
+- 68 files changed, zero clippy warnings, all quality gates green.
+
 ## [0.3.11] — 2026-04-10
 
 ### Changed — Sprint 39: primalSpring Audit Remediation — BTSP Full Handshake, GPU Panic Fix, SIGSEGV Profiles (Apr 10 2026)

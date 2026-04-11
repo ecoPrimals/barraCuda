@@ -285,7 +285,7 @@ pub mod prelude {
     #[cfg(feature = "gpu")]
     pub use crate::device::{
         Auto, AutoTuner, Capability, Device, DeviceCapabilities, DeviceContext, DeviceInfo,
-        GLOBAL_TUNER, GpuCalibration, WgpuDevice, WorkloadHint,
+        DiscoveredDevice, GLOBAL_TUNER, GpuCalibration, WgpuDevice, WorkloadHint,
     };
     #[cfg(feature = "gpu")]
     pub use crate::dispatch::{

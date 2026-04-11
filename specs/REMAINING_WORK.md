@@ -30,10 +30,41 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 
 ---
 
+## Achieved (April 11, 2026 — Sprint 41: BC-07 Full Wiring + BC-06 Documentation + TensorSession Migration Guide)
+
+### BC-07 Full Resolution: SovereignDevice wired into Auto::new()
+- `DiscoveredDevice` enum added to `device/mod.rs` — wraps `Wgpu(Arc<WgpuDevice>)` and `Sovereign(Arc<SovereignDevice>)` variants
+- `Auto::new()` now returns `Result<DiscoveredDevice>` with 3-tier fallback: wgpu GPU → wgpu CPU → SovereignDevice IPC → Err
+- `Auto::new_wgpu()` added as convenience for code requiring local wgpu buffers (tensor creation, tests)
+- `BarraCudaPrimal` field changed from `device: Option<WgpuDevice>` to `compute: Option<DiscoveredDevice>`
+- `compute_device()` accessor added returning `Option<&DiscoveredDevice>`
+- `device()` accessor preserved for backward compat (extracts wgpu from DiscoveredDevice)
+- IPC `primal.capabilities` and `health.readiness` now report `sovereign_ipc` status
+- IPC `device.list` shows sovereign devices when in sovereign mode
+- IPC `health_check` reports `device_type: "SovereignIPC"` for sovereign tier
+
+### BC-06 Resolution: musl-static GPU constraint documented
+- README.md: new "Deployment Modes and GPU Constraints" section with deployment matrix (glibc/musl/WASM × GPU/CPU/IPC)
+- CONTEXT.md: new "Deployment Constraints" section explaining `dlopen` constraint and ecoBin fallback paths
+
+### TensorSession Migration Guide Published
+- BREAKING_CHANGES.md 0.3.12 section: `Auto::new()` return type change + `BatchGuard` rename documented
+- Full migration guide with stable API surface table (20 public methods + 5 SessionTensor methods)
+- Code examples for `TensorSession` adoption by springs
+- Clear distinction between `session::TensorSession` (stable fused pipeline) and `BatchGuard` (low-level RAII guard)
+
+### Quality Gates
+- `cargo fmt --all --check` ✓
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings` ✓ (zero warnings)
+- `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` ✓ (zero warnings)
+- `cargo nextest run --workspace --profile ci` ✓ (4,251 passed, 14 skipped, 0 failures)
+
+---
+
 ## Achieved (April 11, 2026 — Sprint 40: primalSpring Gap Resolution & Deep Debt Overstep Cleanup)
 
 ### primalSpring Gap Resolution
-- **BC-07** (Medium): `SovereignDevice` wired into `Auto::new()` fallback chain. `BarraCudaPrimal` detects sovereign IPC dispatch availability when wgpu fails; `health_status()` reflects sovereign fallback; `Auto::new()` docs describe full 4-tier fallback chain
+- **BC-07** (Medium, partial): `SovereignDevice` probed in fallback chain; `BarraCudaPrimal` detects sovereign IPC dispatch availability when wgpu fails; `health_status()` reflects sovereign fallback; `Auto::new()` docs describe full 4-tier fallback chain. **Completed in Sprint 41: Auto::new() now returns SovereignDevice as tier 3.**
 - **BC-08** (Medium): `cpu-shader` feature now default-on in `crates/barracuda/Cargo.toml`. ecoBin binaries can compute without wgpu
 - **plasma_dispersion feature-gate** (neuralSpring Gap 9): `#[cfg]` gates corrected to `#[cfg(all(feature = "gpu", feature = "domain-lattice"))]` — declares dependency on `domain-lattice`
 - **TensorSession API stabilization**: `device::tensor_context::TensorSession` renamed to `BatchGuard` with `#[deprecated]` alias. `session::TensorSession` documented as stable API for spring adoption

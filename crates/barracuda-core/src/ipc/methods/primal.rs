@@ -33,7 +33,8 @@ pub(super) fn info(_primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
 /// the dispatch table via [`crate::discovery`] — zero hardcoded domain lists.
 pub(super) fn capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
     let has_gpu = primal.device().is_some();
-    let has_f64 = primal.device().is_some_and(|d| d.has_f64_shaders());
+    let has_sovereign = primal.has_sovereign_dispatch();
+    let has_f64 = primal.compute_device().is_some_and(|d| d.has_f64_shaders());
     let has_spirv = primal.device().is_some_and(|d| d.has_spirv_passthrough());
 
     let version = env!("CARGO_PKG_VERSION");
@@ -59,6 +60,7 @@ pub(super) fn capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcRespon
             "domains": crate::discovery::capabilities(),
             "hardware": {
                 "gpu_available": has_gpu,
+                "sovereign_ipc": has_sovereign,
                 "f64_shaders": has_f64,
                 "spirv_passthrough": has_spirv,
             },

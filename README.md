@@ -85,6 +85,26 @@ results.
 
 ---
 
+## Deployment Modes and GPU Constraints
+
+| Deployment | GPU Path | CPU Shader | Sovereign IPC |
+|------------|----------|------------|---------------|
+| **glibc host** (desktop, server) | wgpu Vulkan/Metal/DX12 | Yes (default) | Optional |
+| **musl-static** (ecoBin, Alpine, Docker) | **Unavailable** — `dlopen` cannot load GPU drivers | Yes (default) | **Yes** — GPU via IPC to coralReef+toadStool |
+| **WASM** | wgpu WebGPU | Not yet | No |
+
+**Why musl-static cannot use GPU directly:** wgpu requires `dlopen` to load
+Vulkan/Mesa driver shared objects at runtime. musl-static binaries are fully
+statically linked — there are no `.so` files to load. This is a fundamental
+constraint of static linking, not a barraCuda bug.
+
+**Solution:** ecoBin musl-static binaries use the cpu-shader path (now default,
+BC-08) for standalone compute, or sovereign IPC dispatch (BC-07) to delegate
+GPU work to a coralReef+toadStool peer running on a glibc host with GPU access.
+`Auto::new()` handles this automatically: wgpu GPU → wgpu CPU → Sovereign IPC → Err.
+
+---
+
 ## Architecture
 
 barraCuda is a 4-crate workspace:

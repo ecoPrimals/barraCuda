@@ -104,7 +104,7 @@ impl AttentionDims {
 /// Session for batching tensor operations — the stable fused-pipeline API.
 ///
 /// **Stability**: This is the canonical API for fused multi-op GPU pipelines.
-/// Springs (hotSpring, healthSpring, airSpring, neuralSpring) should adopt
+/// Springs (hotSpring, healthSpring, wetSpring, airSpring, neuralSpring) should adopt
 /// this type for production composition. The API surface (`new`, `with_device`,
 /// `reset`, `tensor`, `tensor_with_shape`, `import`, `add`, `mul`, `fma`,
 /// `scale`, `matmul`, `relu`, `gelu`, `softmax`, `layer_norm`, `reshape`,

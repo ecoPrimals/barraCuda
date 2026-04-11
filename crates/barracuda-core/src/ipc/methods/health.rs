@@ -31,11 +31,13 @@ pub(super) fn health_readiness(primal: &BarraCudaPrimal, id: Value) -> JsonRpcRe
     use crate::health::PrimalHealth;
     let ready = primal.is_ready();
     let has_gpu = primal.device().is_some();
+    let has_sovereign = primal.has_sovereign_dispatch();
     JsonRpcResponse::success(
         id,
         serde_json::json!({
             "status": if ready { "ready" } else { "not_ready" },
             "gpu_available": has_gpu,
+            "sovereign_ipc": has_sovereign,
         }),
     )
 }

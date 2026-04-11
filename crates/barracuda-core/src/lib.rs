@@ -97,12 +97,10 @@ use std::sync::{Arc, RwLock};
 /// 1. wgpu GPU (Vulkan/Metal/DX12) — fastest, requires GPU + driver
 /// 2. wgpu CPU software rasterizer — universal but slow
 /// 3. Sovereign IPC via coralReef+toadStool — GPU via IPC (ecoBin/Docker)
-/// 4. Degraded mode — no compute, health reports `Degraded`
+/// 4. Degraded mode — cpu-shader only, health reports `Degraded`
 pub struct BarraCudaPrimal {
     state: PrimalState,
-    device: Option<barracuda::device::WgpuDevice>,
-    /// BC-07: sovereign IPC dispatch available as fallback when wgpu unavailable.
-    sovereign_dispatch_available: bool,
+    compute: Option<barracuda::device::DiscoveredDevice>,
     tensors: RwLock<HashMap<String, Arc<barracuda::tensor::Tensor>>>,
 }
 
@@ -112,27 +110,36 @@ impl BarraCudaPrimal {
     pub fn new() -> Self {
         Self {
             state: PrimalState::Created,
-            device: None,
-            sovereign_dispatch_available: false,
+            compute: None,
             tensors: RwLock::new(HashMap::new()),
         }
     }
 
-    /// Whether sovereign IPC dispatch is available as a compute fallback.
-    ///
-    /// When `true`, `coralReef` (compiler) and `toadStool` (dispatch) were
-    /// discovered via capability-based IPC at startup. Compute can be
-    /// delegated to these peers even without a local wgpu device.
+    /// Whether sovereign IPC dispatch is available as compute backend.
     #[must_use]
     pub fn has_sovereign_dispatch(&self) -> bool {
-        self.sovereign_dispatch_available
+        self.compute
+            .as_ref()
+            .is_some_and(barracuda::device::DiscoveredDevice::is_sovereign)
     }
 
-    /// Access the compute device (available after `start()`).
-    /// Returns a clone for sharing across handlers; `WgpuDevice` is cheap to clone.
+    /// Access the wgpu device (available after `start()` when tiers 1–2 succeed).
+    ///
+    /// Returns `None` when running in sovereign IPC or degraded mode.
+    /// IPC handlers that need local tensor buffers check this; sovereign-aware
+    /// handlers should use [`compute_device()`](Self::compute_device) instead.
     #[must_use]
     pub fn device(&self) -> Option<barracuda::device::WgpuDevice> {
-        self.device.clone()
+        self.compute
+            .as_ref()
+            .and_then(barracuda::device::DiscoveredDevice::wgpu_device)
+            .map(|arc| arc.as_ref().clone())
+    }
+
+    /// Access the compute device (any tier, available after `start()`).
+    #[must_use]
+    pub fn compute_device(&self) -> Option<&barracuda::device::DiscoveredDevice> {
+        self.compute.as_ref()
     }
 
     /// Store a tensor and return its handle ID.
@@ -182,27 +189,13 @@ impl PrimalLifecycle for BarraCudaPrimal {
 
         match barracuda::device::Auto::new().await {
             Ok(dev) => {
-                let info = dev.adapter_info();
-                tracing::info!(
-                    "barraCuda: device ready — {} ({:?})",
-                    info.name,
-                    info.device_type,
-                );
-                self.device = Some(dev.as_ref().clone());
+                tracing::info!("barraCuda: device ready — {}", dev.name());
+                self.compute = Some(dev);
             }
             Err(e) => {
-                // BC-07: Tier 3 — probe for sovereign IPC dispatch before degrading.
-                if barracuda::device::sovereign_available() {
-                    self.sovereign_dispatch_available = true;
-                    tracing::info!(
-                        "barraCuda: wgpu unavailable ({e}), \
-                         sovereign IPC dispatch discovered (coralReef+toadStool)"
-                    );
-                } else {
-                    tracing::warn!(
-                        "barraCuda: no compute device available ({e}), running degraded"
-                    );
-                }
+                tracing::warn!(
+                    "barraCuda: no compute device available ({e}), running degraded (cpu-shader only)"
+                );
             }
         }
 
@@ -216,7 +209,7 @@ impl PrimalLifecycle for BarraCudaPrimal {
                 "Cannot stop from current state",
             ));
         }
-        self.device = None;
+        self.compute = None;
         self.state = PrimalState::Stopped;
         Ok(())
     }
@@ -225,10 +218,9 @@ impl PrimalLifecycle for BarraCudaPrimal {
 impl PrimalHealth for BarraCudaPrimal {
     fn health_status(&self) -> HealthStatus {
         match self.state {
-            PrimalState::Running if self.device.is_some() => HealthStatus::Healthy,
-            PrimalState::Running if self.sovereign_dispatch_available => HealthStatus::Healthy,
+            PrimalState::Running if self.compute.is_some() => HealthStatus::Healthy,
             PrimalState::Running => HealthStatus::Degraded {
-                reason: "No GPU device available".to_string(),
+                reason: "No compute device available (cpu-shader only)".to_string(),
             },
             _ => HealthStatus::Unknown,
         }
@@ -238,11 +230,14 @@ impl PrimalHealth for BarraCudaPrimal {
         let mut report = HealthReport::new(PRIMAL_NAME, env!("CARGO_PKG_VERSION"))
             .with_status(self.health_status());
 
-        if let Some(dev) = &self.device {
-            let info = dev.adapter_info();
-            report = report
-                .with_detail("adapter", &info.name)
-                .with_detail("device_type", format!("{:?}", info.device_type));
+        if let Some(cd) = &self.compute {
+            report = report.with_detail("adapter", cd.name());
+            if cd.is_sovereign() {
+                report = report.with_detail("device_type", "SovereignIPC");
+            } else if let Some(wgpu) = cd.wgpu_device() {
+                let info = wgpu.adapter_info();
+                report = report.with_detail("device_type", format!("{:?}", info.device_type));
+            }
         }
 
         Ok(report)

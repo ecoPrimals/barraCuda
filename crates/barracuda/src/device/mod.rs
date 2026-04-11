@@ -122,6 +122,9 @@ pub use substrate::{Substrate, SubstrateCapability, SubstrateType};
 pub use unified::{Capability, Device, DeviceContext, DeviceInfo, WorkloadHint};
 pub use wgpu_device::WgpuDevice;
 
+// Re-export the tiered discovery result type.
+// `DiscoveredDevice` is the return type of `Auto::new()` after BC-07.
+
 pub use fma_policy::{FmaPolicy, domain_requires_separate_fma};
 pub use hardware_calibration::HardwareCalibration;
 pub use precision_brain::PrecisionBrain;
@@ -211,18 +214,98 @@ pub enum HardwareWorkload {
     HomomorphicEncryption,
 }
 
+/// Discovered compute device — the result of [`Auto::new()`].
+///
+/// Wraps the best available compute backend so callers can dispatch
+/// without knowing which tier was selected.  Use [`wgpu_device()`](Self::wgpu_device)
+/// when a concrete `WgpuDevice` is required (tensor creation, GPU readback).
+#[derive(Debug, Clone)]
+pub enum DiscoveredDevice {
+    /// Tiers 1–2: local GPU or CPU software rasterizer via wgpu.
+    Wgpu(Arc<WgpuDevice>),
+    /// Tier 3: GPU compute via IPC to coralReef (compile) + toadStool (dispatch).
+    #[cfg(feature = "sovereign-dispatch")]
+    Sovereign(Arc<sovereign_device::SovereignDevice>),
+}
+
+impl DiscoveredDevice {
+    /// Human-readable name of the underlying device.
+    #[must_use]
+    pub fn name(&self) -> String {
+        match self {
+            Self::Wgpu(d) => d.adapter_info().name.clone(),
+            #[cfg(feature = "sovereign-dispatch")]
+            Self::Sovereign(d) => {
+                use backend::GpuBackend;
+                d.name().to_owned()
+            }
+        }
+    }
+
+    /// Whether the device supports native f64 shader builtins.
+    #[must_use]
+    pub fn has_f64_shaders(&self) -> bool {
+        match self {
+            Self::Wgpu(d) => d.has_f64_shaders(),
+            #[cfg(feature = "sovereign-dispatch")]
+            Self::Sovereign(d) => {
+                use backend::GpuBackend;
+                d.has_f64_shaders()
+            }
+        }
+    }
+
+    /// Extract the inner `WgpuDevice` if this is a local wgpu backend.
+    ///
+    /// Returns `None` for sovereign IPC — callers that need local tensor
+    /// buffers should degrade gracefully or forward via IPC.
+    #[must_use]
+    pub fn wgpu_device(&self) -> Option<&Arc<WgpuDevice>> {
+        match self {
+            Self::Wgpu(d) => Some(d),
+            #[cfg(feature = "sovereign-dispatch")]
+            Self::Sovereign(_) => None,
+        }
+    }
+
+    /// Whether this is the sovereign IPC path (no local GPU).
+    #[must_use]
+    pub fn is_sovereign(&self) -> bool {
+        match self {
+            Self::Wgpu(_) => false,
+            #[cfg(feature = "sovereign-dispatch")]
+            Self::Sovereign(_) => true,
+        }
+    }
+
+    /// Extract the wgpu device, returning an error for sovereign.
+    ///
+    /// Convenience for call sites that cannot operate without local wgpu buffers.
+    /// # Errors
+    /// Returns [`Err`] when the device is sovereign IPC.
+    pub fn require_wgpu(self) -> Result<Arc<WgpuDevice>> {
+        match self {
+            Self::Wgpu(d) => Ok(d),
+            #[cfg(feature = "sovereign-dispatch")]
+            Self::Sovereign(_) => Err(BarracudaError::device(
+                "Operation requires a local wgpu device; sovereign IPC cannot provide local buffers",
+            )),
+        }
+    }
+}
+
 /// Auto device discovery — tiered fallback across all backends
 ///
-/// Fallback chain (BC-07 compliant):
+/// Fallback chain (BC-07):
 /// 1. GPU via wgpu (Vulkan, Metal, DX12) — fastest
 /// 2. CPU software rasterizer via wgpu — universal but slow
 /// 3. `SovereignDevice` via IPC to coralReef+toadStool — GPU via IPC
 ///    (requires `sovereign-dispatch` feature and live peers)
-/// 4. `Err` — callers degrade gracefully
+/// 4. `Err` — callers degrade gracefully (cpu-shader still available)
 pub struct Auto;
 
 impl Auto {
-    /// Discover the best available compute device for production use.
+    /// Discover the best available compute device.
     ///
     /// Tries adapters in order:
     /// 1. GPU (wgpu `HighPerformance`)
@@ -230,34 +313,35 @@ impl Auto {
     /// 3. Sovereign IPC (coralReef + toadStool) when `sovereign-dispatch`
     ///    feature is enabled and a `compute.dispatch` endpoint is discoverable
     ///
-    /// Returns `Err` if no adapter is available at all — callers (e.g.
-    /// `BarraCudaPrimal::start`) can degrade gracefully instead of panicking.
+    /// Returns [`DiscoveredDevice`] wrapping whichever tier succeeded.
+    /// Returns `Err` only if **all** tiers fail — callers (e.g.
+    /// `BarraCudaPrimal::start`) can still degrade to cpu-shader.
     ///
     /// For tests, prefer `test_pool::get_test_device()` which manages a shared
     /// pool with concurrency limits.
     /// # Errors
-    /// Returns [`Err`] if no WGPU adapter is found, sovereign dispatch is
-    /// unavailable, and device creation fails on all tiers.
+    /// Returns [`Err`] if no wgpu adapter is found and sovereign dispatch is
+    /// unavailable.
     #[expect(
         clippy::new_ret_no_self,
-        reason = "returns Arc<WgpuDevice> for thread-safe shared access"
+        reason = "Auto is a discovery namespace, not a constructible type"
     )]
-    pub async fn new() -> Result<Arc<WgpuDevice>> {
+    pub async fn new() -> Result<DiscoveredDevice> {
         if let Ok(dev) = WgpuDevice::new().await {
-            return Ok(Arc::new(dev));
+            return Ok(DiscoveredDevice::Wgpu(Arc::new(dev)));
         }
         if let Ok(dev) = WgpuDevice::new_cpu_relaxed().await {
             tracing::info!("GPU unavailable, using CPU software rasterizer");
-            return Ok(Arc::new(dev));
+            return Ok(DiscoveredDevice::Wgpu(Arc::new(dev)));
         }
-        // BC-07: Tier 3 — attempt sovereign IPC dispatch before giving up.
-        // SovereignDevice implements GpuBackend and communicates with
-        // coralReef (compile) + toadStool (dispatch) via JSON-RPC.
         #[cfg(feature = "sovereign-dispatch")]
         if sovereign_available() {
-            tracing::info!(
-                "wgpu unavailable, sovereign IPC dispatch available via coralReef+toadStool"
-            );
+            if let Ok(sov) = sovereign_device::SovereignDevice::with_auto_device() {
+                tracing::info!(
+                    "wgpu unavailable, using sovereign IPC dispatch via coralReef+toadStool"
+                );
+                return Ok(DiscoveredDevice::Sovereign(Arc::new(sov)));
+            }
         }
         Err(BarracudaError::device(
             "No compute device available (GPU, CPU software rasterizer, \
@@ -265,12 +349,32 @@ impl Auto {
         ))
     }
 
-    /// Create a fresh device (not from pool).
+    /// Convenience: discover the best **wgpu** device (tiers 1–2 only).
+    ///
+    /// Identical to `Auto::new()` but returns `Arc<WgpuDevice>` directly,
+    /// skipping sovereign IPC. Use this when you need local tensor buffers
+    /// (e.g. `Tensor::from_vec`, `TensorSession`, tests).
+    /// # Errors
+    /// Returns [`Err`] if no wgpu adapter (GPU or CPU software) is found.
+    pub async fn new_wgpu() -> Result<Arc<WgpuDevice>> {
+        if let Ok(dev) = WgpuDevice::new().await {
+            return Ok(Arc::new(dev));
+        }
+        if let Ok(dev) = WgpuDevice::new_cpu_relaxed().await {
+            tracing::info!("GPU unavailable, using CPU software rasterizer");
+            return Ok(Arc::new(dev));
+        }
+        Err(BarracudaError::device(
+            "No wgpu device available (GPU and CPU software rasterizer both unavailable)",
+        ))
+    }
+
+    /// Create a fresh wgpu device (not from pool).
     ///
     /// Use sparingly — creates a new device each call, which can exhaust GPU resources.
     /// Prefer `Auto::new()` for most cases.
     /// # Errors
-    /// Returns [`Err`] if no WGPU adapter is found or device creation fails.
+    /// Returns [`Err`] if no wgpu adapter is found or device creation fails.
     pub async fn new_fresh() -> Result<WgpuDevice> {
         WgpuDevice::new().await
     }

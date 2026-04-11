@@ -64,6 +64,22 @@ traits are fully internalized.
 
 31 methods following wateringHole `{domain}.{operation}` Semantic Method Naming Standard. Wire Standard L2 compliant.
 
+## Deployment Constraints
+
+**musl-static (ecoBin) builds cannot use GPU directly.** wgpu requires `dlopen`
+to load Vulkan/Mesa driver shared objects. musl-static binaries are fully
+statically linked — no `.so` loading is possible. This is a fundamental
+constraint of static linking (BC-06).
+
+ecoBin binaries compute via two fallback paths:
+
+1. **cpu-shader** (default-on, BC-08) — `barracuda-naga-exec` interprets WGSL
+   on CPU. No GPU required. Performance is lower but correctness is identical.
+2. **Sovereign IPC** (BC-07) — `Auto::new()` discovers a coralReef+toadStool
+   peer via capability-based IPC and delegates GPU work over JSON-RPC. The peer
+   runs on a glibc host with GPU access. This gives ecoBin binaries full GPU
+   throughput without local `dlopen`.
+
 ## What This Does NOT Do
 
 - **Does not compile shaders to native GPU binaries** — that is coralReef's domain

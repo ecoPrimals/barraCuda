@@ -5,6 +5,91 @@ and the migration path.
 
 ## Pre-1.0 (current)
 
+### 0.3.12 (upcoming)
+
+| Change | Migration |
+|--------|-----------|
+| **`Auto::new()` returns `DiscoveredDevice` enum** (was `Arc<WgpuDevice>`) — BC-07 tiered device discovery now returns an enum wrapping wgpu (tiers 1–2) or SovereignDevice (tier 3). | Call `.wgpu_device()` to extract the `Arc<WgpuDevice>` for tensor creation. Or use `Auto::new_wgpu()` if you only need the wgpu path. |
+| **`device::tensor_context::TensorSession` renamed to `BatchGuard`** — The old name collided with `session::TensorSession` (the fused pipeline API). | Replace `device::tensor_context::TensorSession` with `BatchGuard`. A `#[deprecated]` alias exists for gradual migration. |
+
+#### TensorSession / BatchGuard Migration Guide
+
+Springs deferring `TensorSession` adoption: this section clarifies the two
+previously-confusing types and documents the stable API surface.
+
+**There are two distinct types:**
+
+| Type | Module | Purpose | Status |
+|------|--------|---------|--------|
+| `session::TensorSession` | `barracuda::session` | Fused multi-op GPU pipeline (record ops, then `run()`) | **Stable** — canonical API for spring adoption |
+| `device::tensor_context::BatchGuard` | `barracuda::device::tensor_context` | Low-level RAII batch guard around `TensorContext` | **Stable** — internal plumbing, rarely needed directly |
+
+**`session::TensorSession` — the API springs should adopt:**
+
+```rust
+use barracuda::session::{TensorSession, SessionTensor, AttentionDims};
+use barracuda::device::WgpuDevice;
+use std::sync::Arc;
+
+// Construction
+let session = TensorSession::new(&device);           // borrow
+let session = TensorSession::with_device(device_arc); // owned Arc
+
+// Record ops (lazy — no GPU work yet)
+let a = session.tensor(&[1.0, 2.0, 3.0, 4.0])?;
+let b = session.tensor(&[5.0, 6.0, 7.0, 8.0])?;
+let c = session.add(&a, &b)?;
+let d = session.relu(&c)?;
+
+// Execute all recorded ops in one GPU submission
+session.run()?;
+
+// Read results (only valid after run())
+let result: Vec<f32> = d.to_vec()?;
+```
+
+**Stable public API surface** (will not break without a major version bump):
+
+| Method | Signature |
+|--------|-----------|
+| `new` | `fn new(device: &WgpuDevice) -> Self` |
+| `with_device` | `fn with_device(device: Arc<WgpuDevice>) -> Self` |
+| `reset` | `fn reset(&mut self)` |
+| `num_ops` | `fn num_ops(&self) -> usize` |
+| `tensor` | `fn tensor(&mut self, data: &[f32]) -> Result<SessionTensor>` |
+| `tensor_with_shape` | `fn tensor_with_shape(&mut self, data: &[f32], shape: &[usize]) -> Result<SessionTensor>` |
+| `import` | `fn import(&mut self, tensor: &Tensor) -> Result<SessionTensor>` |
+| `add`, `mul`, `fma`, `scale` | Elementwise ops |
+| `matmul` | 2D matrix multiply (tiered via `DeviceCapabilities`) |
+| `relu`, `gelu`, `softmax` | Activations |
+| `layer_norm` | Layer normalization |
+| `reshape` | Metadata-only view |
+| `head_split`, `head_concat` | MHA layout transforms (via `AttentionDims`) |
+| `attention` | Scaled dot-product attention (Q, K, V, dims) |
+| `run` | `fn run(&mut self) -> Result<()>` — execute recorded ops |
+
+**`SessionTensor` methods** (only valid after `run()`):
+
+| Method | Returns |
+|--------|---------|
+| `shape()` | `&[usize]` |
+| `len()` | `usize` |
+| `is_empty()` | `bool` |
+| `to_vec()` | `Result<Vec<f32>>` |
+| `to_tensor()` | `Result<Tensor>` |
+
+**If you were using `device::tensor_context::TensorSession`:**
+
+Replace with `BatchGuard`. The API is unchanged:
+
+```rust
+// Before
+let guard = device::tensor_context::TensorSession::new(&device_arc);
+// After
+let guard = device::tensor_context::BatchGuard::new(&device_arc);
+guard.flush()?;  // or let Drop handle it
+```
+
 ### 0.3.11
 
 | Change | Migration |

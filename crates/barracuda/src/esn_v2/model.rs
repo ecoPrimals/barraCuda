@@ -103,7 +103,7 @@ impl ESN {
     pub async fn new(config: ESNConfig) -> BarracudaResult<Self> {
         validate_config(&config)?;
 
-        let device = Auto::new().await?;
+        let device = Auto::new_wgpu().await?;
 
         let w_res = Self::init_reservoir(&config, &device).await?;
         let w_in = Self::init_input_weights(&config, &device).await?;

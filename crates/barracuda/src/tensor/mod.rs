@@ -320,7 +320,7 @@ impl Tensor {
     /// Returns [`Err`] if device discovery fails, the data length does not match the shape
     /// product, buffer allocation fails, or buffer write fails.
     pub async fn from_vec(data: Vec<f32>, shape: Vec<usize>) -> Result<Self> {
-        let device = Auto::new().await?;
+        let device = Auto::new_wgpu().await?;
         Self::from_vec_on(data, shape, device).await
     }
 
@@ -374,7 +374,7 @@ impl Tensor {
     /// # Errors
     /// Returns [`Err`] if device discovery fails, buffer allocation fails, or buffer write fails.
     pub async fn zeros(shape: Vec<usize>) -> Result<Self> {
-        let device = Auto::new().await?;
+        let device = Auto::new_wgpu().await?;
         Self::zeros_on(shape, device).await
     }
 
@@ -391,7 +391,7 @@ impl Tensor {
     /// # Errors
     /// Returns [`Err`] if device discovery fails, buffer allocation fails, or buffer write fails.
     pub async fn ones(shape: Vec<usize>) -> Result<Self> {
-        let device = Auto::new().await?;
+        let device = Auto::new_wgpu().await?;
         Self::ones_on(shape, device).await
     }
 

@@ -162,8 +162,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_gt_basic() {
-        let device = crate::device::Auto::new().await.unwrap();
-        // device is already Arc from Auto::new()
+        let device = crate::device::Auto::new_wgpu().await.unwrap();
+
         let a = Tensor::from_vec_on(vec![1.0, 3.0, 2.0], vec![3], device.clone())
             .await
             .unwrap();

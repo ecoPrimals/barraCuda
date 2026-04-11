@@ -9,16 +9,24 @@ use serde_json::Value;
 pub(super) async fn list(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
     let mut devices = Vec::new();
 
-    if let Some(dev) = primal.device() {
-        let info = dev.adapter_info();
-        devices.push(serde_json::json!({
-            "name": info.name,
-            "vendor": info.vendor,
-            "device_type": format!("{:?}", info.device_type),
-            "backend": format!("{:?}", info.backend),
-            "driver": info.driver,
-            "driver_info": info.driver_info,
-        }));
+    if let Some(cd) = primal.compute_device() {
+        if let Some(dev) = cd.wgpu_device() {
+            let info = dev.adapter_info();
+            devices.push(serde_json::json!({
+                "name": info.name,
+                "vendor": info.vendor,
+                "device_type": format!("{:?}", info.device_type),
+                "backend": format!("{:?}", info.backend),
+                "driver": info.driver,
+                "driver_info": info.driver_info,
+            }));
+        } else {
+            devices.push(serde_json::json!({
+                "name": cd.name(),
+                "device_type": "SovereignIPC",
+                "backend": "coralReef+toadStool",
+            }));
+        }
     }
 
     JsonRpcResponse::success(id, serde_json::json!({ "devices": devices }))

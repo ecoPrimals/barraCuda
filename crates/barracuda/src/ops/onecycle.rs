@@ -89,7 +89,7 @@ impl OneCycle {
     /// Returns [`Err`] if `execute()` fails or device creation fails.
     pub async fn execute_as_tensor(self) -> Result<Tensor> {
         let lr = self.execute()?;
-        let device = crate::device::Auto::new().await?;
+        let device = crate::device::Auto::new_wgpu().await?;
         Ok(Tensor::new(vec![lr], vec![1], device))
     }
 }

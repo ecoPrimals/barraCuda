@@ -72,8 +72,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_concat_basic() {
-        let device = crate::device::Auto::new().await.unwrap();
-        // device is already Arc from Auto::new()
+        let device = crate::device::Auto::new_wgpu().await.unwrap();
 
         let t1 = Tensor::from_vec_on(vec![1.0, 2.0, 3.0], vec![3], device.clone())
             .await
@@ -94,8 +93,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_concat_edge_cases() {
-        let device = crate::device::Auto::new().await.unwrap();
-        // device is already Arc from Auto::new()
+        let device = crate::device::Auto::new_wgpu().await.unwrap();
 
         // Single element tensors
         let t1 = Tensor::from_vec_on(vec![1.0], vec![1], device.clone())
@@ -122,8 +120,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_concat_boundary() {
-        let device = crate::device::Auto::new().await.unwrap();
-        // device is already Arc from Auto::new()
+        let device = crate::device::Auto::new_wgpu().await.unwrap();
 
         // Different sized tensors
         let t1 = Tensor::from_vec_on(vec![1.0; 10], vec![10], device.clone())
@@ -144,8 +141,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_concat_large_tensors() {
-        let device = crate::device::Auto::new().await.unwrap();
-        // device is already Arc from Auto::new()
+        let device = crate::device::Auto::new_wgpu().await.unwrap();
 
         // Large tensors
         let size1 = 1000;
@@ -167,8 +163,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_concat_precision() {
-        let device = crate::device::Auto::new().await.unwrap();
-        // device is already Arc from Auto::new()
+        let device = crate::device::Auto::new_wgpu().await.unwrap();
 
         // Test with specific values
         let t1 = Tensor::from_vec_on(vec![1.5, 2.5, 3.5], vec![3], device.clone())

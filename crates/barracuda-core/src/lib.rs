@@ -96,7 +96,7 @@ use std::sync::{Arc, RwLock};
 /// On `start()`, the primal tries devices in order:
 /// 1. wgpu GPU (Vulkan/Metal/DX12) — fastest, requires GPU + driver
 /// 2. wgpu CPU software rasterizer — universal but slow
-/// 3. Sovereign IPC via coralReef+toadStool — GPU via IPC (ecoBin/Docker)
+/// 3. Sovereign IPC (`shader.compile` + `compute.dispatch` peers, ecoBin/Docker)
 /// 4. Degraded mode — cpu-shader only, health reports `Degraded`
 pub struct BarraCudaPrimal {
     state: PrimalState,

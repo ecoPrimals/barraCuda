@@ -25,7 +25,7 @@ pub mod akida_executor;
 pub mod async_submit;
 /// Auto-tuning framework for workgroup sizes and dispatch parameters.
 pub mod autotune;
-/// `GpuBackend` trait abstracting wgpu, coralReef, and CPU fallback.
+/// `GpuBackend` trait abstracting wgpu, sovereign IPC, and CPU fallback.
 pub mod backend;
 /// Batched command encoder for fusing multiple dispatches.
 pub mod batched_encoder;
@@ -35,7 +35,7 @@ pub mod cache_hierarchy;
 pub mod capabilities;
 /// `ComputeDispatch` builder — the canonical GPU dispatch primitive.
 pub mod compute_pipeline;
-/// coralReef sovereign compiler discovery and gRPC bridge.
+/// Sovereign compiler discovery and JSON-RPC bridge (`shader.compile` capability).
 pub mod coral_compiler;
 mod device_types;
 /// GPU driver/compiler identity and shader strategy selection.
@@ -223,7 +223,7 @@ pub enum HardwareWorkload {
 pub enum DiscoveredDevice {
     /// Tiers 1–2: local GPU or CPU software rasterizer via wgpu.
     Wgpu(Arc<WgpuDevice>),
-    /// Tier 3: GPU compute via IPC to coralReef (compile) + toadStool (dispatch).
+    /// Tier 3: GPU compute via IPC (`shader.compile` + `compute.dispatch` peers).
     #[cfg(feature = "sovereign-dispatch")]
     Sovereign(Arc<sovereign_device::SovereignDevice>),
 }
@@ -299,7 +299,7 @@ impl DiscoveredDevice {
 /// Fallback chain (BC-07):
 /// 1. GPU via wgpu (Vulkan, Metal, DX12) — fastest
 /// 2. CPU software rasterizer via wgpu — universal but slow
-/// 3. `SovereignDevice` via IPC to coralReef+toadStool — GPU via IPC
+/// 3. `SovereignDevice` via IPC (`shader.compile` + `compute.dispatch` peers)
 ///    (requires `sovereign-dispatch` feature and live peers)
 /// 4. `Err` — callers degrade gracefully (cpu-shader still available)
 pub struct Auto;
@@ -310,8 +310,8 @@ impl Auto {
     /// Tries adapters in order:
     /// 1. GPU (wgpu `HighPerformance`)
     /// 2. CPU software rasterizer (wgpu `LowPower`)
-    /// 3. Sovereign IPC (coralReef + toadStool) when `sovereign-dispatch`
-    ///    feature is enabled and a `compute.dispatch` endpoint is discoverable
+    /// 3. Sovereign IPC (`shader.compile` + `compute.dispatch` peers) when
+    ///    `sovereign-dispatch` feature is enabled and endpoints are discoverable
     ///
     /// Returns [`DiscoveredDevice`] wrapping whichever tier succeeded.
     /// Returns `Err` only if **all** tiers fail — callers (e.g.
@@ -338,7 +338,7 @@ impl Auto {
         if sovereign_available() {
             if let Ok(sov) = sovereign_device::SovereignDevice::with_auto_device() {
                 tracing::info!(
-                    "wgpu unavailable, using sovereign IPC dispatch via coralReef+toadStool"
+                    "wgpu unavailable, using sovereign IPC dispatch via shader.compile+compute.dispatch peers"
                 );
                 return Ok(DiscoveredDevice::Sovereign(Arc::new(sov)));
             }

@@ -24,7 +24,7 @@ pub(super) async fn list(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse
             devices.push(serde_json::json!({
                 "name": cd.name(),
                 "device_type": "SovereignIPC",
-                "backend": "coralReef+toadStool",
+                "backend": "sovereign-compile+sovereign-dispatch",
             }));
         }
     }

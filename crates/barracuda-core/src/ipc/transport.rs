@@ -247,12 +247,55 @@ impl IpcServer {
         Ok(())
     }
 
+    /// Try to bind a TCP listener without starting the accept loop.
+    ///
+    /// Returns the bound listener and local address on success, or `None`
+    /// when the port is already occupied (logs a warning). This separates
+    /// bind from serve so callers can write the discovery file only after
+    /// confirming the bind succeeded — avoiding phantom endpoints (LD-05).
+    pub async fn try_bind_tcp(addr: &str) -> Option<(TcpListener, std::net::SocketAddr)> {
+        match TcpListener::bind(addr).await {
+            Ok(listener) => match listener.local_addr() {
+                Ok(local) => Some((listener, local)),
+                Err(e) => {
+                    tracing::warn!(addr, error = %e, "TCP bind succeeded but local_addr failed");
+                    None
+                }
+            },
+            Err(e) if e.kind() == std::io::ErrorKind::AddrInUse => {
+                tracing::warn!(
+                    addr,
+                    "TCP sidecar skipped: address already in use \
+                     (another primal may occupy this port). \
+                     UDS primary transport is unaffected."
+                );
+                None
+            }
+            Err(e) => {
+                tracing::warn!(addr, error = %e, "TCP sidecar bind failed");
+                None
+            }
+        }
+    }
+
     /// Start listening on TCP (JSON-RPC 2.0) with graceful shutdown on
     /// SIGINT/SIGTERM per wateringHole `UNIBIN_ARCHITECTURE_STANDARD.md`.
     pub async fn serve_tcp(&self, addr: &str) -> Result<()> {
         let listener = TcpListener::bind(addr).await?;
         let local_addr = listener.local_addr()?;
         tracing::info!("barraCuda IPC listening on tcp://{local_addr}");
+        self.serve_tcp_listener(listener).await
+    }
+
+    /// Run the JSON-RPC accept loop on a pre-bound TCP listener.
+    ///
+    /// Use [`try_bind_tcp`] to obtain the listener, then call this to start
+    /// serving. This two-step pattern allows writing the discovery file
+    /// between bind and serve — only advertising TCP if the bind succeeded.
+    pub async fn serve_tcp_listener(&self, listener: TcpListener) -> Result<()> {
+        if let Ok(addr) = listener.local_addr() {
+            tracing::info!("barraCuda IPC listening on tcp://{addr}");
+        }
 
         loop {
             tokio::select! {

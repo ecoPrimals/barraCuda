@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.12] — 2026-04-12
 
+### Fixed — Sprint 42: LD-05 TCP AddrInUse on co-deployment (Apr 12 2026)
+
+- **LD-05 resolved**: barraCuda can now start alongside ToadStool in the same NUCLEUS
+  deployment. Root cause: in UDS mode with `BARRACUDA_PORT` set, the discovery file was
+  written with the TCP address *before* the TCP bind attempt. If the port was occupied,
+  the discovery file advertised a phantom TCP endpoint that peer primals tried to connect
+  to and failed.
+- **`IpcServer::try_bind_tcp`**: New method that validates TCP bind before returning the
+  listener. Returns `None` with a warning on `AddrInUse` instead of propagating a fatal error.
+- **`IpcServer::serve_tcp_listener`**: Accepts a pre-bound `TcpListener` — separates bind
+  from serve so discovery file writes happen only after confirming the bind succeeded.
+- **UDS path graceful degradation**: When TCP sidecar fails to bind, discovery file is
+  written with UDS-only transport. No phantom TCP endpoints. Primary UDS transport is
+  unaffected.
+- **TCP-only fallback error context**: `serve_tcp` failure now includes a message suggesting
+  port-conflict diagnosis and UDS mode as an alternative.
+
 ### Changed — Sprint 42: Composition Elevation & Deep Debt Evolution (Apr 12 2026)
 
 - **tensor.* response schema standardized**: All tensor-producing methods return consistent

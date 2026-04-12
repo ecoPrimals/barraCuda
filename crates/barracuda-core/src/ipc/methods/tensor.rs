@@ -3,6 +3,25 @@
 //!
 //! Wired for ludoSpring composition: each op is a graph node consumable
 //! via `tensor.*` JSON-RPC methods per `SEMANTIC_METHOD_NAMING_STANDARD.md`.
+//!
+//! ## Response Schema (Composition Wire Contract)
+//!
+//! All `tensor.*` methods return a **standardized** JSON-RPC success payload
+//! so that spring typed extractors (`call_extract_f64`, `call_extract_vec_f64`)
+//! can rely on consistent keys without per-method guessing.
+//!
+//! **Tensor-producing ops** (create, matmul, add, scale, clamp, sigmoid):
+//! ```json
+//! {"status": "completed", "result_id": "t_...", "shape": [M, N], "elements": N}
+//! ```
+//! `tensor.create` additionally includes `"tensor_id"` (alias of `result_id`)
+//! and `"dtype"` for creation-specific metadata.
+//!
+//! **Scalar-producing ops** (reduce):
+//! ```json
+//! {"status": "completed", "value": 42.0, "op": "sum"}
+//! ```
+//! The scalar lives under `"value"` (never `"result"` or `"data"`).
 
 use super::super::jsonrpc::{INTERNAL_ERROR, INVALID_PARAMS, JsonRpcResponse};
 use super::compute::parse_shape;
@@ -59,13 +78,15 @@ pub(super) async fn tensor_create(
         return JsonRpcResponse::error(id, INTERNAL_ERROR, "No GPU device available");
     };
 
-    match barracuda::tensor::Tensor::from_data(&data, shape_vec.clone(), std::sync::Arc::new(dev)) {
+    match barracuda::tensor::Tensor::from_data(&data, shape_vec.clone(), dev) {
         Ok(tensor) => {
             let tensor_id = primal.store_tensor(tensor);
             JsonRpcResponse::success(
                 id,
                 serde_json::json!({
-                    "tensor_id": tensor_id,
+                    "status": "completed",
+                    "tensor_id": &tensor_id,
+                    "result_id": tensor_id,
                     "shape": shape_vec,
                     "elements": elements,
                     "dtype": "f32",
@@ -270,7 +291,10 @@ pub(super) async fn tensor_reduce(
         }
     };
 
-    JsonRpcResponse::success(id, serde_json::json!({ "result": result, "op": op }))
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({ "status": "completed", "value": result, "op": op }),
+    )
 }
 
 /// `tensor.sigmoid` — element-wise sigmoid via GPU WGSL.
@@ -303,6 +327,7 @@ fn tensor_result_response(
     JsonRpcResponse::success(
         id,
         serde_json::json!({
+            "status": "completed",
             "result_id": result_id,
             "shape": shape,
             "elements": elements,

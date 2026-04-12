@@ -125,15 +125,16 @@ impl BarraCudaPrimal {
 
     /// Access the wgpu device (available after `start()` when tiers 1–2 succeed).
     ///
-    /// Returns `None` when running in sovereign IPC or degraded mode.
-    /// IPC handlers that need local tensor buffers check this; sovereign-aware
-    /// handlers should use [`compute_device()`](Self::compute_device) instead.
+    /// Returns a cheap `Arc` clone — no deep-copy of GPU state. Returns `None`
+    /// when running in sovereign IPC or degraded mode. IPC handlers that need
+    /// local tensor buffers check this; sovereign-aware handlers should use
+    /// [`compute_device()`](Self::compute_device) instead.
     #[must_use]
-    pub fn device(&self) -> Option<barracuda::device::WgpuDevice> {
+    pub fn device(&self) -> Option<std::sync::Arc<barracuda::device::WgpuDevice>> {
         self.compute
             .as_ref()
             .and_then(barracuda::device::DiscoveredDevice::wgpu_device)
-            .map(|arc| arc.as_ref().clone())
+            .cloned()
     }
 
     /// Access the compute device (any tier, available after `start()`).

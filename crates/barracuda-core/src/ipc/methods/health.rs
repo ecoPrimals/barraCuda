@@ -95,7 +95,7 @@ pub(super) async fn validate_gpu_stack(primal: &BarraCudaPrimal, id: Value) -> J
     let mut results = Vec::new();
 
     // Matmul validation: 2×2 identity (minimal, fast, validates GPU stack)
-    let dev_arc = std::sync::Arc::new(dev);
+    let dev_arc = dev;
     let matmul_pass = {
         let eye = vec![1.0, 0.0, 0.0, 1.0];
         let input = vec![1.0, 2.0, 3.0, 4.0];

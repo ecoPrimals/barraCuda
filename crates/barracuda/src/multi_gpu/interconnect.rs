@@ -202,15 +202,11 @@ fn is_high_bandwidth_pair(a: &Substrate, b: &Substrate) -> bool {
         return false;
     }
     fn is_datacenter_gpu(name: &str) -> bool {
+        const DATACENTER_PATTERNS: &[&str] = &[
+            "V100", "A100", "H100", "H200", "B100", "B200", "MI250", "MI300",
+        ];
         let up = name.to_uppercase();
-        up.contains("V100")
-            || up.contains("A100")
-            || up.contains("H100")
-            || up.contains("H200")
-            || up.contains("B100")
-            || up.contains("B200")
-            || up.contains("MI250")
-            || up.contains("MI300")
+        DATACENTER_PATTERNS.iter().any(|p| up.contains(p))
     }
     is_datacenter_gpu(&a.name) && is_datacenter_gpu(&b.name)
 }

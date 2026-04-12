@@ -1,11 +1,20 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-04-11.
+Prioritized work items, ordered by impact. Updated 2026-04-12.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 42: Composition Elevation & Deep Debt Evolution (Apr 12)**:
+  Standardized all `tensor.*` IPC response schemas for primalSpring typed extractors.
+  Implemented `tensor.batch.submit` — fused multi-op GPU pipeline over JSON-RPC wrapping
+  `TensorSession`. Wire contract documented in `specs/TENSOR_WIRE_CONTRACT.md`. Smart
+  refactored `sovereign_device.rs` (758→676, discovery extracted) and `transfer.rs`
+  (748→610, PCIe probe extracted). `primal.device()` evolved from `Option<WgpuDevice>`
+  (deep clone) to `Option<Arc<WgpuDevice>>` (zero-copy Arc bump) — eliminated 6+ deep
+  WgpuDevice clones across all IPC handlers. Showcase hardcoding evolved to
+  capability-based manifest scanning. 32 IPC methods (was 31). 4,296 tests pass.
 - **Sprint 41: BC-07 Full Wiring + BC-06 Docs + TensorSession Migration Guide (Apr 11)**:
   `Auto::new()` returns `DiscoveredDevice` enum with 3-tier fallback (wgpu GPU → wgpu CPU
   → SovereignDevice IPC → Err). `BarraCudaPrimal` stores `DiscoveredDevice`. `Auto::new_wgpu()`

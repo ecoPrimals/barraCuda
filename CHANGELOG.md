@@ -5,7 +5,35 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.12] — 2026-04-11
+## [0.3.12] — 2026-04-12
+
+### Changed — Sprint 42: Composition Elevation & Deep Debt Evolution (Apr 12 2026)
+
+- **tensor.* response schema standardized**: All tensor-producing methods return consistent
+  `{status, result_id, shape, elements}`. Scalar-producing methods (`tensor.reduce`) return
+  `{status, value, op}`. Eliminates ambiguity for primalSpring's typed extractors
+  (`call_extract_f64`, `call_extract_vec_f64`).
+- **`tensor.batch.submit` IPC method**: Fused multi-op pipeline over JSON-RPC wrapping
+  `TensorSession`. Supports create/add/mul/fma/scale/matmul/relu/gelu/softmax/layer_norm/
+  reshape/readback ops in a single GPU submission. Wire contract documented in
+  `specs/TENSOR_WIRE_CONTRACT.md`. 32 registered IPC methods (was 31).
+- **`BarraCudaPrimal::device()` returns `Arc<WgpuDevice>`**: Evolved from returning a
+  deep-cloned `WgpuDevice` to a cheap `Arc` refcount bump. Eliminated 6+ unnecessary
+  WgpuDevice deep-clones across IPC handlers (tensor, batch, FHE, compute, health, rpc).
+- **Smart refactor — sovereign discovery**: `sovereign_device.rs` (758→676 lines) with
+  capability-based dispatch discovery extracted to `sovereign_discovery.rs` (91 lines).
+- **Smart refactor — PCIe probe**: `transfer.rs` (748→610 lines) with Linux sysfs PCIe
+  probing extracted to `pcie_probe.rs` (149 lines). Imperative push loop evolved to
+  functional `filter_map().collect()`.
+- **Showcase hardcoding evolved**: `/tmp/ecoPrimals` fallback → env-driven
+  (`XDG_RUNTIME_DIR`/`TMPDIR`/`ECOPRIMALS_DISCOVERY_DIR`). `toadstool` string detection
+  → capability-based manifest scanning (`has_capability()` checks `compute.dispatch` /
+  `hardware.profile` in JSON manifests).
+- **Idiomatic Rust evolution**: `Tensor::Display` `if let Some` → `as_deref().unwrap_or()`.
+  NUMA check simplified via `u32::try_from`. `TensorSession::with_device()` used in batch
+  handler (avoids double-clone).
+- 10 new `tensor.batch.submit` tests (error paths, dispatch routing).
+- 4,296 tests pass, all quality gates green (fmt, clippy, doc, deny).
 
 ### Changed — Sprint 41: BC-07 Full Wiring, BC-06 Documentation, TensorSession Migration Guide (Apr 11 2026)
 

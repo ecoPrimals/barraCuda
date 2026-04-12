@@ -59,20 +59,17 @@ pub(super) async fn fhe_ntt(
         .collect();
     let f32_bits: Vec<f32> = u32_pairs.iter().map(|&x| f32::from_bits(x)).collect();
 
-    let input_tensor = match barracuda::tensor::Tensor::from_data(
-        &f32_bits,
-        vec![poly.len() * 2],
-        std::sync::Arc::new(dev),
-    ) {
-        Ok(t) => t,
-        Err(e) => {
-            return JsonRpcResponse::error(
-                id,
-                INTERNAL_ERROR,
-                format!("Tensor creation failed: {e}"),
-            );
-        }
-    };
+    let input_tensor =
+        match barracuda::tensor::Tensor::from_data(&f32_bits, vec![poly.len() * 2], dev) {
+            Ok(t) => t,
+            Err(e) => {
+                return JsonRpcResponse::error(
+                    id,
+                    INTERNAL_ERROR,
+                    format!("Tensor creation failed: {e}"),
+                );
+            }
+        };
 
     let ntt = match barracuda::ops::fhe_ntt::FheNtt::new(
         input_tensor,
@@ -168,7 +165,7 @@ pub(super) async fn fhe_pointwise_mul(
         barracuda::tensor::Tensor::from_data(
             &f32_bits,
             vec![poly.len() * 2],
-            std::sync::Arc::new(dev.clone()),
+            std::sync::Arc::clone(&dev),
         )
     };
 

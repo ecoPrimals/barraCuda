@@ -86,13 +86,23 @@
 //!
 //! | Method | Params | Result | GPU |
 //! |--------|--------|--------|-----|
-//! | `tensor.create` | `{"shape": [u64], "data"?: [f32]}` | `{"tensor_id": str, "shape": [u64], "elements": u64, "dtype": "f32"}` | yes |
+//! | `tensor.create` | `{"shape": [u64], "data"?: [f32]}` | `{"status": "completed", "tensor_id": str, "result_id": str, "shape": [u64], "elements": u64, "dtype": "f32"}` | yes |
 //! | `tensor.matmul` | `{"lhs_id": str, "rhs_id": str}` | `{"status": "completed", "result_id": str, "shape": [u64], "elements": u64}` | yes |
-//! | `tensor.add` | `{"tensor_id": str, "other_id"?: str, "scalar"?: f64}` | `{"result_id": str, "shape": [u64], "elements": u64}` | yes |
-//! | `tensor.scale` | `{"tensor_id": str, "scalar": f64}` | `{"result_id": str, "shape": [u64], "elements": u64}` | yes |
-//! | `tensor.clamp` | `{"tensor_id": str, "min": f64, "max": f64}` | `{"result_id": str, "shape": [u64], "elements": u64}` | yes |
-//! | `tensor.reduce` | `{"tensor_id": str, "op"?: "sum"\|"mean"\|"max"\|"min"}` | `{"result": f64, "op": str}` | yes |
-//! | `tensor.sigmoid` | `{"tensor_id": str}` | `{"result_id": str, "shape": [u64], "elements": u64}` | yes |
+//! | `tensor.add` | `{"tensor_id": str, "other_id"?: str, "scalar"?: f64}` | `{"status": "completed", "result_id": str, "shape": [u64], "elements": u64}` | yes |
+//! | `tensor.scale` | `{"tensor_id": str, "scalar": f64}` | `{"status": "completed", "result_id": str, "shape": [u64], "elements": u64}` | yes |
+//! | `tensor.clamp` | `{"tensor_id": str, "min": f64, "max": f64}` | `{"status": "completed", "result_id": str, "shape": [u64], "elements": u64}` | yes |
+//! | `tensor.reduce` | `{"tensor_id": str, "op"?: "sum"\|"mean"\|"max"\|"min"}` | `{"status": "completed", "value": f64, "op": str}` | yes |
+//! | `tensor.sigmoid` | `{"tensor_id": str}` | `{"status": "completed", "result_id": str, "shape": [u64], "elements": u64}` | yes |
+//!
+//! ### Batch Pipeline (GPU)
+//!
+//! | Method | Params | Result | GPU |
+//! |--------|--------|--------|-----|
+//! | `tensor.batch.submit` | `{"ops": [BatchOp]}` | `{"status": "completed", "outputs": {alias: TensorResult\|ReadbackResult}, "ops_executed": u64}` | yes |
+//!
+//! `BatchOp` types: `create`, `add`, `mul`, `fma`, `scale`, `matmul`, `relu`,
+//! `gelu`, `softmax`, `layer_norm`, `reshape`, `readback`. Each op references
+//! previous results by `alias`. See `methods/batch.rs` for full wire contract.
 //!
 //! ### FHE (GPU)
 //!

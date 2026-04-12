@@ -120,7 +120,7 @@ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 
 [[package]]
 name = "barracuda"
-version = "0.3.11"
+version = "0.3.12"
 dependencies = [
  "approx",
  "barracuda-naga-exec",
@@ -145,7 +145,7 @@ dependencies = [
 
 [[package]]
 name = "barracuda-core"
-version = "0.3.11"
+version = "0.3.12"
 dependencies = [
  "barracuda",
  "blake3",
@@ -164,7 +164,7 @@ dependencies = [
 
 [[package]]
 name = "barracuda-naga-exec"
-version = "0.3.11"
+version = "0.3.12"
 dependencies = [
  "naga",
  "thiserror",
@@ -173,7 +173,7 @@ dependencies = [
 
 [[package]]
 name = "barracuda-spirv"
-version = "0.3.11"
+version = "0.3.12"
 dependencies = [
  "thiserror",
  "wgpu",

@@ -8,6 +8,7 @@
 //! For backward compatibility, the legacy `{namespace}.{domain}.{operation}`
 //! form is also accepted and silently normalized.
 
+mod batch;
 mod compute;
 mod device;
 mod fhe;
@@ -66,6 +67,8 @@ pub const REGISTERED_METHODS: &[&str] = &[
     "tensor.clamp",
     "tensor.reduce",
     "tensor.sigmoid",
+    // ── Batch pipeline (GPU) ─────────────────────────────────────────
+    "tensor.batch.submit",
     // ── FHE ───────────────────────────────────────────────────────────
     "fhe.ntt",
     "fhe.pointwise_mul",
@@ -132,6 +135,8 @@ pub async fn dispatch(
         "tensor.clamp" => tensor::tensor_clamp(primal, params, id).await,
         "tensor.reduce" => tensor::tensor_reduce(primal, params, id).await,
         "tensor.sigmoid" => tensor::tensor_sigmoid(primal, params, id).await,
+        // Batch pipeline
+        "tensor.batch.submit" => batch::tensor_batch_submit(primal, params, id).await,
         // FHE
         "fhe.ntt" => fhe::fhe_ntt(primal, params, id).await,
         "fhe.pointwise_mul" => fhe::fhe_pointwise_mul(primal, params, id).await,

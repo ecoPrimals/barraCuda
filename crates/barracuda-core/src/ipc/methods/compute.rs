@@ -51,7 +51,7 @@ pub(super) async fn compute_dispatch(
             let Some(dev) = primal.device() else {
                 return JsonRpcResponse::error(id, INTERNAL_ERROR, "No GPU device available");
             };
-            let dev_arc = std::sync::Arc::new(dev);
+            let dev_arc = dev;
             let result = if op == "zeros" {
                 barracuda::tensor::Tensor::zeros_on(shape_vec.clone(), dev_arc).await
             } else {

@@ -10,6 +10,7 @@
 
 pub(crate) mod cpu_executor;
 mod discovery;
+mod pcie_probe;
 mod scheduler;
 pub mod shader_dispatch;
 mod traits;

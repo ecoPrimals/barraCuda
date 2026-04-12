@@ -5,12 +5,14 @@ and the migration path.
 
 ## Pre-1.0 (current)
 
-### 0.3.12 (upcoming)
+### 0.3.12
 
 | Change | Migration |
 |--------|-----------|
 | **`Auto::new()` returns `DiscoveredDevice` enum** (was `Arc<WgpuDevice>`) — BC-07 tiered device discovery now returns an enum wrapping wgpu (tiers 1–2) or SovereignDevice (tier 3). | Call `.wgpu_device()` to extract the `Arc<WgpuDevice>` for tensor creation. Or use `Auto::new_wgpu()` if you only need the wgpu path. |
 | **`device::tensor_context::TensorSession` renamed to `BatchGuard`** — The old name collided with `session::TensorSession` (the fused pipeline API). | Replace `device::tensor_context::TensorSession` with `BatchGuard`. A `#[deprecated]` alias exists for gradual migration. |
+| **`BarraCudaPrimal::device()` returns `Option<Arc<WgpuDevice>>`** (was `Option<WgpuDevice>`) — eliminates deep-cloning GPU device handles on every call. | Most callers auto-deref through `Arc`. Remove any `Arc::new(dev)` wrapping — `dev` is already an `Arc`. Use `Arc::clone(&dev)` instead of `dev.clone()` when you need an owned `Arc`. |
+| **`tensor.batch.submit` IPC method added** — 32 registered methods (was 31). Fused multi-op pipeline over JSON-RPC. | No migration needed — additive. Springs can now call `tensor.batch.submit` for batched GPU pipelines. |
 
 #### TensorSession / BatchGuard Migration Guide
 

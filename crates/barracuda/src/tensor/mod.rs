@@ -553,11 +553,7 @@ impl std::fmt::Display for Tensor {
             "Tensor{:?} on {} ({})",
             self.shape,
             self.device.name(),
-            if let Some(name) = &self.name {
-                name.as_str()
-            } else {
-                "unnamed"
-            }
+            self.name.as_deref().unwrap_or("unnamed"),
         )
     }
 }

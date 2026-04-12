@@ -66,6 +66,9 @@ pub mod silicon_profile;
 /// Sovereign device implementation (capability-based IPC dispatch).
 #[cfg(feature = "sovereign-dispatch")]
 pub mod sovereign_device;
+/// Capability-based discovery for sovereign compute dispatch endpoints.
+#[cfg(feature = "sovereign-dispatch")]
+mod sovereign_discovery;
 /// GPU memory substrate — allocation, lifetime, and residency tracking.
 pub mod substrate;
 /// Zero-overhead tensor context with buffer pooling.

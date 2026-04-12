@@ -44,7 +44,7 @@ barracuda-spirv = { path = "../barracuda-spirv", version = "0.3.6", optional = t
 # CPU shader interpretation — run WGSL shaders on CPU via naga-exec.
 # Enables the shader-as-truth architecture where the same WGSL used on GPU
 # can also execute on CPU for validation, testing, and CPU-only deployments.
-barracuda-naga-exec = { path = "../barracuda-naga-exec", optional = true }
+barracuda-naga-exec = { path = "../barracuda-naga-exec", version = "0.3.12", optional = true }
 
 # coral-gpu was previously listed here as an optional compile-time dep.
 # Removed: barraCuda uses IPC-first architecture — coralReef compiles

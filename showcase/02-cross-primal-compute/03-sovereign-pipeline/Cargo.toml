@@ -10,4 +10,5 @@ publish = false
 
 [dependencies]
 barracuda = { path = "../../../crates/barracuda" }
+serde_json = "1"
 tokio = { version = "1.50", features = ["full"] }

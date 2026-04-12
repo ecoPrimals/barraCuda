@@ -115,7 +115,7 @@ impl BarraCudaServer {
 /// split into its low and high u32 halves, then transmitted as f32 bit patterns.
 fn u64_to_tensor(
     coeffs: &[u64],
-    dev: &barracuda::device::WgpuDevice,
+    dev: &std::sync::Arc<barracuda::device::WgpuDevice>,
 ) -> std::result::Result<barracuda::tensor::Tensor, barracuda::error::BarracudaError> {
     #[expect(
         clippy::cast_possible_truncation,
@@ -128,7 +128,7 @@ fn u64_to_tensor(
     barracuda::tensor::Tensor::from_data(
         &f32_bits,
         vec![coeffs.len() * 2],
-        std::sync::Arc::new(dev.clone()),
+        std::sync::Arc::clone(dev),
     )
 }
 
@@ -281,7 +281,7 @@ impl BarraCudaService for BarraCudaServer {
             };
         };
 
-        let dev_arc = std::sync::Arc::new(dev);
+        let dev_arc = dev;
         let matmul_pass = {
             let eye = vec![1.0, 0.0, 0.0, 1.0];
             let inp = vec![1.0, 2.0, 3.0, 4.0];
@@ -327,11 +327,7 @@ impl BarraCudaService for BarraCudaServer {
                 let elements: usize = s.iter().product();
                 let fill = if op == "ones" { 1.0f32 } else { 0.0f32 };
                 let values = vec![fill; elements];
-                match barracuda::tensor::Tensor::from_data(
-                    &values,
-                    s.clone(),
-                    std::sync::Arc::new(dev),
-                ) {
+                match barracuda::tensor::Tensor::from_data(&values, s.clone(), dev) {
                     Ok(tensor) => {
                         let tid = self.primal.store_tensor(tensor);
                         DispatchResult {
@@ -402,8 +398,7 @@ impl BarraCudaService for BarraCudaServer {
         };
 
         let values = data.unwrap_or_else(|| vec![0.0f32; elements]);
-        match barracuda::tensor::Tensor::from_data(&values, shape.clone(), std::sync::Arc::new(dev))
-        {
+        match barracuda::tensor::Tensor::from_data(&values, shape.clone(), dev) {
             Ok(tensor) => {
                 let tensor_id = self.primal.store_tensor(tensor);
                 TensorHandle {

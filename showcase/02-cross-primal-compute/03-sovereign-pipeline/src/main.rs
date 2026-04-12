@@ -32,6 +32,25 @@ fn coral_target_for_adapter(
         .cloned()
 }
 
+fn has_capability(manifest_path: &std::path::Path, capability: &str) -> bool {
+    if manifest_path.extension().is_none_or(|e| e != "json") {
+        return false;
+    }
+    let Ok(content) = std::fs::read_to_string(manifest_path) else {
+        return false;
+    };
+    let Ok(info) = serde_json::from_str::<serde_json::Value>(&content) else {
+        return false;
+    };
+    info.get("provides")
+        .or_else(|| info.get("capabilities"))
+        .and_then(|v| v.as_array())
+        .is_some_and(|caps| {
+            caps.iter()
+                .any(|c| c.as_str().is_some_and(|s| s.starts_with(capability)))
+        })
+}
+
 #[tokio::main]
 async fn main() -> barracuda::error::Result<()> {
     println!("╔══════════════════════════════════════════════════════════════╗");
@@ -49,19 +68,21 @@ async fn main() -> barracuda::error::Result<()> {
     println!();
 
     let discovery_dir = std::env::var("XDG_RUNTIME_DIR")
-        .map(|d| format!("{d}/ecoPrimals"))
-        .unwrap_or_else(|_| "/tmp/ecoPrimals".to_string());
+        .or_else(|_| std::env::var("TMPDIR"))
+        .unwrap_or_else(|_| "/tmp".to_string());
+    let ecosystem_dir = std::env::var("ECOPRIMALS_DISCOVERY_DIR")
+        .unwrap_or_else(|_| "ecoPrimals".to_string());
+    let discovery_path = std::path::PathBuf::from(&discovery_dir).join(&ecosystem_dir);
 
-    let toadstool_available = std::path::Path::new(&discovery_dir)
+    let toadstool_available = discovery_path
         .read_dir()
         .ok()
         .map(|entries| {
             entries
                 .filter_map(Result::ok)
                 .any(|e| {
-                    e.file_name()
-                        .to_string_lossy()
-                        .contains("toadstool")
+                    has_capability(&e.path(), "compute.dispatch")
+                        || has_capability(&e.path(), "hardware.profile")
                 })
         })
         .unwrap_or(false);

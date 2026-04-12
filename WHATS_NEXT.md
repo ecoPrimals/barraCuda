@@ -14,7 +14,10 @@ Prioritized work items, ordered by impact. Updated 2026-04-12.
   extractors. Implemented `tensor.batch.submit` — fused multi-op GPU pipeline over
   JSON-RPC. Smart refactored `sovereign_device.rs` and `transfer.rs`. `primal.device()`
   evolved to `Arc<WgpuDevice>`. Showcase hardcoding evolved to capability-based.
-  32 IPC methods (was 31). 4,296 tests pass.
+  **Deep debt cleanup**: `BatchError` typed error (zero `Result<T,String>`), `.expect()`
+  eliminated with `let-else`, `with_device` constructors on 8 types, precision preambles
+  extracted (722→409 lines), lanczos iterator evolution, 7 new tests.
+  32 IPC methods. 4,303 tests pass.
 - **Sprint 41: BC-07 Full Wiring + BC-06 Docs + TensorSession Migration Guide (Apr 11)**:
   `Auto::new()` returns `DiscoveredDevice` enum with 3-tier fallback (wgpu GPU → wgpu CPU
   → SovereignDevice IPC → Err). `BarraCudaPrimal` stores `DiscoveredDevice`. `Auto::new_wgpu()`

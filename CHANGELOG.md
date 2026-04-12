@@ -50,7 +50,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   NUMA check simplified via `u32::try_from`. `TensorSession::with_device()` used in batch
   handler (avoids double-clone).
 - 10 new `tensor.batch.submit` tests (error paths, dispatch routing).
-- 4,296 tests pass, all quality gates green (fmt, clippy, doc, deny).
+
+### Changed — Sprint 42 Phase 2: Deep Debt Cleanup & Evolution (Apr 12 2026)
+
+- **`BatchError` typed error**: `validate_batch_ops` and all batch helper functions evolved
+  from `Result<_, String>` to `Result<_, BatchError>` — maintains zero-`Result<T, String>`
+  invariant in production code.
+- **`.expect("validated above")` eliminated**: 2 `.expect()` calls in batch handler replaced
+  with safe `let-else` patterns and explicit error responses. `unreachable!` replaced with
+  explicit unknown-op error.
+- **`with_device(Arc<WgpuDevice>)` constructors**: Added to 8 types — `TensorSession`,
+  `ComputeGraph`, `AsyncReadback`, `BatchedRK4F64`, `TreeInferenceGpu`, `SmithWatermanGpu`,
+  `FelsensteinGpu`, `GillespieGpu`. `new(&WgpuDevice)` now delegates to `with_device` (DRY).
+  Callers with existing `Arc<WgpuDevice>` avoid unnecessary clone.
+- **Precision preambles extraction**: `shaders/precision/mod.rs` smart-refactored from 722 to
+  409 lines. 315 lines of WGSL operation preamble constants (10 `OP_PREAMBLE_*` + `DF64_PACK_UNPACK`)
+  extracted to `preambles.rs` submodule.
+- **Lanczos iterator evolution**: Index loops (`for i in 0..pairs.len()`) evolved to idiomatic
+  `pairs.iter().enumerate()` with destructured tuple access.
+- **Broken intra-doc link fixed**: `try_bind_tcp` → `IpcServer::try_bind_tcp` in
+  `serve_tcp_listener` doc comment — zero doc warnings.
+- 6 new batch validation edge-case tests (missing op field, missing shape, missing binary
+  operands, missing scale input, FMA missing operand, create without shape).
+- 2 new `try_bind_tcp` tests (free port bind succeeds, AddrInUse returns None).
+- 4,303 tests pass, all quality gates green (fmt, clippy, doc zero warnings, deny, nextest).
 
 ### Changed — Sprint 41: BC-07 Full Wiring, BC-06 Documentation, TensorSession Migration Guide (Apr 11 2026)
 

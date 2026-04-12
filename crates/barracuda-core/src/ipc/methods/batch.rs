@@ -43,6 +43,22 @@ use crate::BarraCudaPrimal;
 use serde_json::Value;
 use std::collections::HashMap;
 
+/// Typed validation error for batch operations — avoids `Result<T, String>`.
+#[derive(Debug)]
+struct BatchError(String);
+
+impl std::fmt::Display for BatchError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl BatchError {
+    fn new(msg: impl Into<String>) -> Self {
+        Self(msg.into())
+    }
+}
+
 /// `tensor.batch.submit` — execute a fused pipeline in a single GPU submission.
 pub(super) async fn tensor_batch_submit(
     primal: &BarraCudaPrimal,
@@ -76,8 +92,8 @@ pub(super) async fn tensor_batch_submit(
         "readback",
     ];
 
-    if let Err(msg) = validate_batch_ops(ops, VALID_OPS) {
-        return JsonRpcResponse::error(id, INVALID_PARAMS, msg);
+    if let Err(e) = validate_batch_ops(ops, VALID_OPS) {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, e.to_string());
     }
 
     let Some(dev) = primal.device() else {
@@ -90,11 +106,17 @@ pub(super) async fn tensor_batch_submit(
     let mut readbacks: Vec<(String, String)> = Vec::new();
 
     for (i, op_val) in ops.iter().enumerate() {
-        let op_name = op_val["op"].as_str().expect("validated above");
+        let Some(op_name) = op_val["op"].as_str() else {
+            return JsonRpcResponse::error(
+                id,
+                INVALID_PARAMS,
+                format!("ops[{i}]: missing 'op' field"),
+            );
+        };
         let alias = op_val
             .get("alias")
             .and_then(|v| v.as_str())
-            .unwrap_or("")
+            .unwrap_or_default()
             .to_string();
 
         let result = match op_name {
@@ -110,11 +132,23 @@ pub(super) async fn tensor_batch_submit(
             "layer_norm" => batch_layer_norm(&mut session, &aliases, op_val, i),
             "reshape" => batch_reshape(&mut session, &aliases, op_val, i),
             "readback" => {
-                let input_alias = op_val["input"].as_str().expect("validated above");
+                let Some(input_alias) = op_val["input"].as_str() else {
+                    return JsonRpcResponse::error(
+                        id,
+                        INVALID_PARAMS,
+                        format!("ops[{i}]: readback missing 'input' alias"),
+                    );
+                };
                 readbacks.push((alias, input_alias.to_string()));
                 continue;
             }
-            _ => unreachable!("validated above"),
+            _ => {
+                return JsonRpcResponse::error(
+                    id,
+                    INVALID_PARAMS,
+                    format!("ops[{i}]: unknown op '{op_name}'"),
+                );
+            }
         };
 
         match result {
@@ -123,7 +157,7 @@ pub(super) async fn tensor_batch_submit(
                     aliases.insert(alias, tensor);
                 }
             }
-            Err(msg) => return JsonRpcResponse::error(id, INVALID_PARAMS, msg),
+            Err(e) => return JsonRpcResponse::error(id, INVALID_PARAMS, e.to_string()),
         }
     }
 
@@ -201,17 +235,17 @@ pub(super) async fn tensor_batch_submit(
 
 // ── Pre-validation (runs before device check so callers get INVALID_PARAMS) ──
 
-fn validate_batch_ops(ops: &[Value], valid_ops: &[&str]) -> Result<(), String> {
+fn validate_batch_ops(ops: &[Value], valid_ops: &[&str]) -> Result<(), BatchError> {
     let mut defined_aliases = std::collections::HashSet::new();
 
     for (i, op_val) in ops.iter().enumerate() {
         let op_name = op_val
             .get("op")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| format!("ops[{i}]: missing 'op' field"))?;
+            .ok_or_else(|| BatchError::new(format!("ops[{i}]: missing 'op' field")))?;
 
         if !valid_ops.contains(&op_name) {
-            return Err(format!("ops[{i}]: unknown op '{op_name}'"));
+            return Err(BatchError::new(format!("ops[{i}]: unknown op '{op_name}'")));
         }
 
         if let Some(alias) = op_val.get("alias").and_then(|v| v.as_str()) {
@@ -223,7 +257,9 @@ fn validate_batch_ops(ops: &[Value], valid_ops: &[&str]) -> Result<(), String> {
         match op_name {
             "create" => {
                 if op_val.get("shape").and_then(|v| v.as_array()).is_none() {
-                    return Err(format!("ops[{i}]: create requires 'shape'"));
+                    return Err(BatchError::new(format!(
+                        "ops[{i}]: create requires 'shape'"
+                    )));
                 }
                 if let (Some(shape_arr), Some(data_arr)) = (
                     op_val.get("shape").and_then(|v| v.as_array()),
@@ -232,9 +268,9 @@ fn validate_batch_ops(ops: &[Value], valid_ops: &[&str]) -> Result<(), String> {
                     let elements: u64 = shape_arr.iter().filter_map(|v| v.as_u64()).product();
                     let data_len = data_arr.len() as u64;
                     if data_len != elements {
-                        return Err(format!(
+                        return Err(BatchError::new(format!(
                             "ops[{i}]: data length {data_len} ≠ shape product {elements}"
-                        ));
+                        )));
                     }
                 }
             }
@@ -242,30 +278,36 @@ fn validate_batch_ops(ops: &[Value], valid_ops: &[&str]) -> Result<(), String> {
                 let input = op_val
                     .get("input")
                     .and_then(|v| v.as_str())
-                    .ok_or_else(|| format!("ops[{i}]: readback requires 'input' alias"))?;
+                    .ok_or_else(|| {
+                        BatchError::new(format!("ops[{i}]: readback requires 'input' alias"))
+                    })?;
                 if !defined_aliases.contains(input) {
-                    return Err(format!("ops[{i}]: unknown alias '{input}'"));
+                    return Err(BatchError::new(format!(
+                        "ops[{i}]: unknown alias '{input}'"
+                    )));
                 }
             }
             "add" | "mul" | "matmul" => {
                 for key in ["a", "b"] {
-                    let ref_name = op_val
-                        .get(key)
-                        .and_then(|v| v.as_str())
-                        .ok_or_else(|| format!("ops[{i}]: {op_name} requires '{key}' alias"))?;
+                    let ref_name = op_val.get(key).and_then(|v| v.as_str()).ok_or_else(|| {
+                        BatchError::new(format!("ops[{i}]: {op_name} requires '{key}' alias"))
+                    })?;
                     if !defined_aliases.contains(ref_name) {
-                        return Err(format!("ops[{i}]: unknown alias '{ref_name}'"));
+                        return Err(BatchError::new(format!(
+                            "ops[{i}]: unknown alias '{ref_name}'"
+                        )));
                     }
                 }
             }
             "fma" => {
                 for key in ["a", "b", "c"] {
-                    let ref_name = op_val
-                        .get(key)
-                        .and_then(|v| v.as_str())
-                        .ok_or_else(|| format!("ops[{i}]: fma requires '{key}' alias"))?;
+                    let ref_name = op_val.get(key).and_then(|v| v.as_str()).ok_or_else(|| {
+                        BatchError::new(format!("ops[{i}]: fma requires '{key}' alias"))
+                    })?;
                     if !defined_aliases.contains(ref_name) {
-                        return Err(format!("ops[{i}]: unknown alias '{ref_name}'"));
+                        return Err(BatchError::new(format!(
+                            "ops[{i}]: unknown alias '{ref_name}'"
+                        )));
                     }
                 }
             }
@@ -273,9 +315,13 @@ fn validate_batch_ops(ops: &[Value], valid_ops: &[&str]) -> Result<(), String> {
                 let ref_name = op_val
                     .get("input")
                     .and_then(|v| v.as_str())
-                    .ok_or_else(|| format!("ops[{i}]: {op_name} requires 'input' alias"))?;
+                    .ok_or_else(|| {
+                        BatchError::new(format!("ops[{i}]: {op_name} requires 'input' alias"))
+                    })?;
                 if !defined_aliases.contains(ref_name) {
-                    return Err(format!("ops[{i}]: unknown alias '{ref_name}'"));
+                    return Err(BatchError::new(format!(
+                        "ops[{i}]: unknown alias '{ref_name}'"
+                    )));
                 }
             }
             _ => {}
@@ -303,14 +349,14 @@ fn resolve<'a>(
     val: &Value,
     key: &str,
     idx: usize,
-) -> Result<&'a barracuda::session::SessionTensor, String> {
+) -> Result<&'a barracuda::session::SessionTensor, BatchError> {
     let name = val
         .get(key)
         .and_then(|v| v.as_str())
-        .ok_or_else(|| format!("ops[{idx}]: missing '{key}' alias"))?;
+        .ok_or_else(|| BatchError::new(format!("ops[{idx}]: missing '{key}' alias")))?;
     aliases
         .get(name)
-        .ok_or_else(|| format!("ops[{idx}]: unknown alias '{name}'"))
+        .ok_or_else(|| BatchError::new(format!("ops[{idx}]: unknown alias '{name}'")))
 }
 
 #[expect(
@@ -321,13 +367,16 @@ fn batch_create(
     session: &mut barracuda::session::TensorSession,
     val: &Value,
     idx: usize,
-) -> Result<barracuda::session::SessionTensor, String> {
+) -> Result<barracuda::session::SessionTensor, BatchError> {
     let shape_arr = val
         .get("shape")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| format!("ops[{idx}]: create requires 'shape'"))?;
-    let shape = parse_shape(shape_arr)
-        .ok_or_else(|| format!("ops[{idx}]: shape dimension exceeds platform usize"))?;
+        .ok_or_else(|| BatchError::new(format!("ops[{idx}]: create requires 'shape'")))?;
+    let shape = parse_shape(shape_arr).ok_or_else(|| {
+        BatchError::new(format!(
+            "ops[{idx}]: shape dimension exceeds platform usize"
+        ))
+    })?;
     let elements: usize = shape.iter().product();
 
     let data: Vec<f32> = val.get("data").and_then(|v| v.as_array()).map_or_else(
@@ -340,15 +389,15 @@ fn batch_create(
     );
 
     if data.len() != elements {
-        return Err(format!(
+        return Err(BatchError::new(format!(
             "ops[{idx}]: data length {} ≠ shape product {elements}",
             data.len()
-        ));
+        )));
     }
 
     session
         .tensor_with_shape(&data, &shape)
-        .map_err(|e| format!("ops[{idx}]: create failed: {e}"))
+        .map_err(|e| BatchError::new(format!("ops[{idx}]: create failed: {e}")))
 }
 
 fn batch_binary(
@@ -357,7 +406,7 @@ fn batch_binary(
     val: &Value,
     idx: usize,
     op: BinaryOp,
-) -> Result<barracuda::session::SessionTensor, String> {
+) -> Result<barracuda::session::SessionTensor, BatchError> {
     let a = resolve(aliases, val, "a", idx)?;
     let b = resolve(aliases, val, "b", idx)?;
     match op {
@@ -365,7 +414,7 @@ fn batch_binary(
         BinaryOp::Mul => session.mul(a, b),
         BinaryOp::MatMul => session.matmul(a, b),
     }
-    .map_err(|e| format!("ops[{idx}]: {e}"))
+    .map_err(|e| BatchError::new(format!("ops[{idx}]: {e}")))
 }
 
 fn batch_fma(
@@ -373,13 +422,13 @@ fn batch_fma(
     aliases: &HashMap<String, barracuda::session::SessionTensor>,
     val: &Value,
     idx: usize,
-) -> Result<barracuda::session::SessionTensor, String> {
+) -> Result<barracuda::session::SessionTensor, BatchError> {
     let a = resolve(aliases, val, "a", idx)?;
     let b = resolve(aliases, val, "b", idx)?;
     let c = resolve(aliases, val, "c", idx)?;
     session
         .fma(a, b, c)
-        .map_err(|e| format!("ops[{idx}]: fma failed: {e}"))
+        .map_err(|e| BatchError::new(format!("ops[{idx}]: fma failed: {e}")))
 }
 
 #[expect(
@@ -391,15 +440,16 @@ fn batch_scale(
     aliases: &HashMap<String, barracuda::session::SessionTensor>,
     val: &Value,
     idx: usize,
-) -> Result<barracuda::session::SessionTensor, String> {
+) -> Result<barracuda::session::SessionTensor, BatchError> {
     let a = resolve(aliases, val, "input", idx)?;
     let scalar = val
         .get("scalar")
         .and_then(|v| v.as_f64())
-        .ok_or_else(|| format!("ops[{idx}]: scale requires 'scalar'"))? as f32;
+        .ok_or_else(|| BatchError::new(format!("ops[{idx}]: scale requires 'scalar'")))?
+        as f32;
     session
         .scale(a, scalar)
-        .map_err(|e| format!("ops[{idx}]: scale failed: {e}"))
+        .map_err(|e| BatchError::new(format!("ops[{idx}]: scale failed: {e}")))
 }
 
 fn batch_unary(
@@ -408,14 +458,14 @@ fn batch_unary(
     val: &Value,
     idx: usize,
     op: UnaryOp,
-) -> Result<barracuda::session::SessionTensor, String> {
+) -> Result<barracuda::session::SessionTensor, BatchError> {
     let a = resolve(aliases, val, "input", idx)?;
     match op {
         UnaryOp::ReLU => session.relu(a),
         UnaryOp::Gelu => session.gelu(a),
         UnaryOp::Softmax => session.softmax(a),
     }
-    .map_err(|e| format!("ops[{idx}]: {e}"))
+    .map_err(|e| BatchError::new(format!("ops[{idx}]: {e}")))
 }
 
 fn batch_layer_norm(
@@ -423,16 +473,16 @@ fn batch_layer_norm(
     aliases: &HashMap<String, barracuda::session::SessionTensor>,
     val: &Value,
     idx: usize,
-) -> Result<barracuda::session::SessionTensor, String> {
+) -> Result<barracuda::session::SessionTensor, BatchError> {
     let a = resolve(aliases, val, "input", idx)?;
     let feature_size = val
         .get("feature_size")
         .and_then(|v| v.as_u64())
-        .ok_or_else(|| format!("ops[{idx}]: layer_norm requires 'feature_size'"))?
+        .ok_or_else(|| BatchError::new(format!("ops[{idx}]: layer_norm requires 'feature_size'")))?
         as usize;
     session
         .layer_norm(a, feature_size)
-        .map_err(|e| format!("ops[{idx}]: layer_norm failed: {e}"))
+        .map_err(|e| BatchError::new(format!("ops[{idx}]: layer_norm failed: {e}")))
 }
 
 fn batch_reshape(
@@ -440,15 +490,18 @@ fn batch_reshape(
     aliases: &HashMap<String, barracuda::session::SessionTensor>,
     val: &Value,
     idx: usize,
-) -> Result<barracuda::session::SessionTensor, String> {
+) -> Result<barracuda::session::SessionTensor, BatchError> {
     let a = resolve(aliases, val, "input", idx)?;
     let shape_arr = val
         .get("shape")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| format!("ops[{idx}]: reshape requires 'shape'"))?;
-    let shape = parse_shape(shape_arr)
-        .ok_or_else(|| format!("ops[{idx}]: shape dimension exceeds platform usize"))?;
+        .ok_or_else(|| BatchError::new(format!("ops[{idx}]: reshape requires 'shape'")))?;
+    let shape = parse_shape(shape_arr).ok_or_else(|| {
+        BatchError::new(format!(
+            "ops[{idx}]: shape dimension exceeds platform usize"
+        ))
+    })?;
     session
         .reshape(a, shape)
-        .map_err(|e| format!("ops[{idx}]: reshape failed: {e}"))
+        .map_err(|e| BatchError::new(format!("ops[{idx}]: reshape failed: {e}")))
 }

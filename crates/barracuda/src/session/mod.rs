@@ -132,16 +132,7 @@ impl TensorSession {
     /// Create a new session — compiles all pipelines once.
     #[must_use]
     pub fn new(device: &WgpuDevice) -> Self {
-        let wg = device.optimal_workgroup_size();
-        Self {
-            device: Arc::new(device.clone()),
-            buffers: Vec::new(),
-            shapes: Vec::new(),
-            ops: Vec::new(),
-            workgroup_size: wg,
-            executed: false,
-            pipelines: SessionPipelines::build(&device.device, wg),
-        }
+        Self::with_device(Arc::new(device.clone()))
     }
 
     /// Create a session with an explicit device `Arc`.

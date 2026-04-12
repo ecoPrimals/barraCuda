@@ -155,9 +155,13 @@ impl FelsensteinGpu {
     /// Create Felsenstein pruner for given device.
     #[must_use]
     pub fn new(device: &WgpuDevice) -> Self {
-        Self {
-            device: Arc::new(device.clone()),
-        }
+        Self::with_device(Arc::new(device.clone()))
+    }
+
+    /// Create Felsenstein pruner with an explicit device `Arc`.
+    #[must_use]
+    pub fn with_device(device: Arc<WgpuDevice>) -> Self {
+        Self { device }
     }
 
     /// Run Felsenstein pruning.

@@ -221,8 +221,12 @@ impl AsyncReadback {
     /// Thread-safe: wgpu's `Queue::submit` handles internal synchronization.
     #[must_use]
     pub fn new(device: &WgpuDevice, source: &wgpu::Buffer, size_bytes: u64) -> Self {
-        let device = Arc::new(device.clone());
+        Self::with_device(Arc::new(device.clone()), source, size_bytes)
+    }
 
+    /// Create a new async readback with an explicit device `Arc`.
+    #[must_use]
+    pub fn with_device(device: Arc<WgpuDevice>, source: &wgpu::Buffer, size_bytes: u64) -> Self {
         let (staging_buffer, commands) = {
             device.encoding_guard();
             let staging = device.device().create_buffer(&wgpu::BufferDescriptor {

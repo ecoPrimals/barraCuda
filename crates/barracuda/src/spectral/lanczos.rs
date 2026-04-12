@@ -577,14 +577,9 @@ mod tests {
             );
         }
 
-        for i in 0..pairs.len() {
-            for j in (i + 1)..pairs.len() {
-                let d: f64 = pairs[i]
-                    .1
-                    .iter()
-                    .zip(pairs[j].1.iter())
-                    .map(|(a, b)| a * b)
-                    .sum();
+        for (i, (_, vi)) in pairs.iter().enumerate() {
+            for (j, (_, vj)) in pairs.iter().enumerate().skip(i + 1) {
+                let d: f64 = vi.iter().zip(vj.iter()).map(|(a, b)| a * b).sum();
                 assert!(
                     d.abs() < 1e-6,
                     "eigenvectors {i},{j} not orthogonal: dot = {d}"

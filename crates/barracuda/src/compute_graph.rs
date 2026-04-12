@@ -102,12 +102,21 @@ impl ComputeGraph {
     /// Create a new compute graph for a device
     #[must_use]
     pub fn new(wgpu_device: &WgpuDevice) -> Self {
+        Self::with_device(Arc::new(wgpu_device.clone()))
+    }
+
+    /// Create a new compute graph with an explicit device `Arc`.
+    #[must_use]
+    pub fn with_device(wgpu_device: Arc<WgpuDevice>) -> Self {
         let optimal_wg = wgpu_device.optimal_workgroup_size();
+        let device = wgpu_device.device.clone();
+        let queue = wgpu_device.queue.clone();
+        let device_name = wgpu_device.name().to_string();
         Self {
-            wgpu_device: Arc::new(wgpu_device.clone()),
-            device: wgpu_device.device.clone(),
-            queue: wgpu_device.queue.clone(),
-            device_name: wgpu_device.name().to_string(),
+            wgpu_device,
+            device,
+            queue,
+            device_name,
             ops: Vec::new(),
             optimal_workgroup_size: optimal_wg,
         }

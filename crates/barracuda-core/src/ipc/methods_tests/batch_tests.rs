@@ -154,3 +154,76 @@ async fn test_batch_dispatch_with_legacy_prefix() {
         "empty ops should error via legacy prefix too"
     );
 }
+
+#[tokio::test]
+async fn test_batch_op_missing_op_field() {
+    let primal = test_primal();
+    let resp = tensor_batch_submit(
+        &primal,
+        &serde_json::json!({"ops": [{"alias": "x", "data": [1]}]}),
+        serde_json::json!(11),
+    )
+    .await;
+    let err = resp.error.unwrap();
+    assert_eq!(err.code, INVALID_PARAMS);
+    assert!(err.message.contains("missing 'op'"));
+}
+
+#[tokio::test]
+async fn test_batch_create_missing_shape() {
+    let primal = test_primal();
+    let resp = tensor_batch_submit(
+        &primal,
+        &serde_json::json!({"ops": [{"op": "create", "alias": "x", "data": [1]}]}),
+        serde_json::json!(12),
+    )
+    .await;
+    let err = resp.error.unwrap();
+    assert_eq!(err.code, INVALID_PARAMS);
+    assert!(err.message.contains("create requires 'shape'"));
+}
+
+#[tokio::test]
+async fn test_batch_binary_missing_operands() {
+    let primal = test_primal();
+    let resp = tensor_batch_submit(
+        &primal,
+        &serde_json::json!({"ops": [{"op": "add", "alias": "z"}]}),
+        serde_json::json!(13),
+    )
+    .await;
+    let err = resp.error.unwrap();
+    assert_eq!(err.code, INVALID_PARAMS);
+    assert!(err.message.contains("requires 'a'"));
+}
+
+#[tokio::test]
+async fn test_batch_scale_missing_input() {
+    let primal = test_primal();
+    let resp = tensor_batch_submit(
+        &primal,
+        &serde_json::json!({"ops": [{"op": "scale", "alias": "s"}]}),
+        serde_json::json!(14),
+    )
+    .await;
+    let err = resp.error.unwrap();
+    assert_eq!(err.code, INVALID_PARAMS);
+    assert!(err.message.contains("requires 'input'"));
+}
+
+#[tokio::test]
+async fn test_batch_fma_missing_operand() {
+    let primal = test_primal();
+    let resp = tensor_batch_submit(
+        &primal,
+        &serde_json::json!({"ops": [
+            {"op": "create", "alias": "x", "shape": [1], "data": [1.0]},
+            {"op": "fma", "alias": "z", "a": "x", "b": "x"}
+        ]}),
+        serde_json::json!(15),
+    )
+    .await;
+    let err = resp.error.unwrap();
+    assert_eq!(err.code, INVALID_PARAMS);
+    assert!(err.message.contains("fma requires 'c'"));
+}

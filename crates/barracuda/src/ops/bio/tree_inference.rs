@@ -130,9 +130,13 @@ impl TreeInferenceGpu {
     /// Create tree inference operator for the given device.
     #[must_use]
     pub fn new(device: &WgpuDevice) -> Self {
-        Self {
-            device: Arc::new(device.clone()),
-        }
+        Self::with_device(Arc::new(device.clone()))
+    }
+
+    /// Create tree inference operator with an explicit device `Arc`.
+    #[must_use]
+    pub fn with_device(device: Arc<WgpuDevice>) -> Self {
+        Self { device }
     }
 
     /// Run batch inference for `n_samples` through all trees in `forest`.

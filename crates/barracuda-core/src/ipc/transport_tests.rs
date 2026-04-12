@@ -375,3 +375,22 @@ async fn handle_connection_notification_no_reply() {
         .unwrap();
     assert!(response.is_empty(), "notification must produce no response");
 }
+
+#[tokio::test]
+async fn test_try_bind_tcp_succeeds_on_free_port() {
+    let result = IpcServer::try_bind_tcp("127.0.0.1:0").await;
+    assert!(result.is_some(), "binding to port 0 should succeed");
+    let (_listener, addr) = result.unwrap();
+    assert_ne!(addr.port(), 0, "OS should assign a real port");
+}
+
+#[tokio::test]
+async fn test_try_bind_tcp_returns_none_on_addr_in_use() {
+    let first = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let occupied_addr = first.local_addr().unwrap().to_string();
+    let result = IpcServer::try_bind_tcp(&occupied_addr).await;
+    assert!(
+        result.is_none(),
+        "try_bind_tcp should return None when address is in use"
+    );
+}

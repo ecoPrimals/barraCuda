@@ -289,7 +289,7 @@ impl IpcServer {
 
     /// Run the JSON-RPC accept loop on a pre-bound TCP listener.
     ///
-    /// Use [`try_bind_tcp`] to obtain the listener, then call this to start
+    /// Use [`IpcServer::try_bind_tcp`] to obtain the listener, then call this to start
     /// serving. This two-step pattern allows writing the discovery file
     /// between bind and serve — only advertising TCP if the bind succeeded.
     pub async fn serve_tcp_listener(&self, listener: TcpListener) -> Result<()> {

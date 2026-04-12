@@ -57,7 +57,7 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 - `cargo fmt --all --check` ✓
 - `cargo clippy --workspace --all-targets --all-features -- -D warnings` ✓ (zero warnings)
 - `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` ✓ (zero warnings)
-- `cargo nextest run --workspace --profile ci` ✓ (4,251 passed, 14 skipped, 0 failures)
+- `cargo nextest run --workspace --profile ci` ✓ (4,303 passed, 14 skipped, 0 failures)
 
 ---
 
@@ -1720,7 +1720,7 @@ path and cross-compilation target matrix.
 | Clippy | Pass (zero warnings, `-D warnings`) | `cargo clippy --workspace --all-targets -- -D warnings` |
 | Rustdoc | Pass (zero warnings) | `cargo doc --workspace --no-deps` |
 | Deny | Pass (advisories, bans, licenses, sources) | `cargo deny check` |
-| Tests | 4,422 pass / 0 fail / 14 skip | `cargo nextest run --workspace --profile ci` |
+| Tests | 4,303 pass / 0 fail / 14 skip | `cargo nextest run --workspace --profile ci` |
 | Check (no GPU) | Pass | `cargo check --no-default-features` |
 | Check (GPU only) | Pass | `cargo check --no-default-features --features gpu` |
 | Check (all) | Pass | `cargo check` |

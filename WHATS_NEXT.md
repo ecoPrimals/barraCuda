@@ -7,17 +7,18 @@ Prioritized work items, ordered by impact. Updated 2026-04-12.
 ## Recently Completed
 
 - **Sprint 42: Composition Elevation, LD-05 Fix & Deep Debt Evolution (Apr 12)**:
-  **LD-05 resolved** — TCP sidecar in UDS mode no longer writes phantom endpoints to
-  discovery file. `try_bind_tcp` validates bind BEFORE discovery write; graceful
-  degradation to UDS-only on `AddrInUse` (unblocks Node Atomic co-deployment with
-  ToadStool). Standardized all `tensor.*` IPC response schemas for primalSpring typed
+  **LD-05 fully resolved** — Phase 1: bind-before-discovery prevents phantom TCP endpoints.
+  Phase 2: UDS mode no longer attempts TCP sidecar from `BARRACUDA_PORT` env var — only
+  explicit `--port`/`--bind` CLI triggers TCP bind, eliminating co-deployment port collisions
+  entirely. `serve_tarpc` gracefully degrades on `AddrInUse`. TCP-only fallback uses
+  `try_bind_tcp`. Standardized all `tensor.*` IPC response schemas for primalSpring typed
   extractors. Implemented `tensor.batch.submit` — fused multi-op GPU pipeline over
   JSON-RPC. Smart refactored `sovereign_device.rs` and `transfer.rs`. `primal.device()`
   evolved to `Arc<WgpuDevice>`. Showcase hardcoding evolved to capability-based.
   **Deep debt cleanup**: `BatchError` typed error (zero `Result<T,String>`), `.expect()`
   eliminated with `let-else`, `with_device` constructors on 8 types, precision preambles
-  extracted (722→409 lines), lanczos iterator evolution, 7 new tests.
-  32 IPC methods. 4,303 tests pass.
+  extracted (722→409 lines), lanczos iterator evolution, 9 new tests.
+  32 IPC methods. 4,305 tests pass.
 - **Sprint 41: BC-07 Full Wiring + BC-06 Docs + TensorSession Migration Guide (Apr 11)**:
   `Auto::new()` returns `DiscoveredDevice` enum with 3-tier fallback (wgpu GPU → wgpu CPU
   → SovereignDevice IPC → Err). `BarraCudaPrimal` stores `DiscoveredDevice`. `Auto::new_wgpu()`

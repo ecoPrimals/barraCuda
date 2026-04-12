@@ -394,3 +394,24 @@ async fn test_try_bind_tcp_returns_none_on_addr_in_use() {
         "try_bind_tcp should return None when address is in use"
     );
 }
+
+#[tokio::test]
+async fn test_serve_tarpc_returns_ok_on_addr_in_use() {
+    let first = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let occupied_addr = first.local_addr().unwrap().to_string();
+    let primal = Arc::new(BarraCudaPrimal::new());
+    let server = IpcServer::new(primal);
+    let result = server.serve_tarpc(&occupied_addr).await;
+    assert!(
+        result.is_ok(),
+        "serve_tarpc should return Ok(()) on AddrInUse, not propagate error"
+    );
+}
+
+#[test]
+fn default_tcp_port_respects_env() {
+    let port = IpcServer::default_tcp_port();
+    if std::env::var("BARRACUDA_PORT").is_ok() {
+        assert!(port.is_some());
+    }
+}

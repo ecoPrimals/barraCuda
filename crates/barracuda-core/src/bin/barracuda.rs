@@ -178,8 +178,9 @@ async fn run_server(
         let tarpc_server = barracuda_core::ipc::IpcServer::new(Arc::clone(&primal));
         let tarpc_addr = tarpc_addr.clone();
         tokio::spawn(async move {
-            if let Err(e) = tarpc_server.serve_tarpc(&tarpc_addr).await {
-                tracing::error!("tarpc TCP server error: {e}");
+            match tarpc_server.serve_tarpc(&tarpc_addr).await {
+                Ok(()) => tracing::info!("tarpc TCP server stopped"),
+                Err(e) => tracing::error!("tarpc TCP server error: {e}"),
             }
         });
     }
@@ -206,18 +207,19 @@ async fn run_server(
                 _ => barracuda_core::ipc::IpcServer::default_socket_path(),
             };
 
-            // Per plasmidBin convention: also bind TCP alongside UDS when a
-            // port is available (--port, --bind, or BARRACUDA_PORT env var).
+            // LD-05 fix: In UDS mode, only attempt TCP sidecar when the
+            // CLI explicitly provides --port or --bind. The BARRACUDA_PORT
+            // env var is NOT consulted here — it is only used for TCP-only
+            // mode (--no-unix). This prevents port collisions when
+            // co-deployed with ToadStool in NUCLEUS, where both primals
+            // may have overlapping port assignments.
             //
-            // LD-05 fix: try-bind TCP BEFORE writing the discovery file.
-            // If the port is occupied (e.g. ToadStool already running),
+            // When a TCP sidecar IS requested, try_bind_tcp validates the
+            // bind BEFORE the discovery file is written. On AddrInUse,
             // degrade gracefully to UDS-only — no phantom TCP in discovery.
-            let tcp_addr = bind.or_else(|| {
-                barracuda_core::ipc::IpcServer::default_tcp_port().map(|p| format!("127.0.0.1:{p}"))
-            });
-            if let Some(tcp) = tcp_addr {
+            if let Some(ref tcp) = bind {
                 if let Some((listener, local_addr)) =
-                    barracuda_core::ipc::IpcServer::try_bind_tcp(&tcp).await
+                    barracuda_core::ipc::IpcServer::try_bind_tcp(tcp).await
                 {
                     let effective_tcp = local_addr.to_string();
                     write_discovery_file(
@@ -247,16 +249,32 @@ async fn run_server(
     }
 
     // TCP-only fallback (--no-unix or non-Unix platform).
-    let bind_addr = barracuda_core::ipc::transport::resolve_bind_address(bind.as_deref());
-    write_discovery_file(Some(&bind_addr), tarpc_bind.as_deref(), None);
-    server.serve_tcp(&bind_addr).await.map_err(|e| {
-        barracuda_core::error::BarracudaCoreError::lifecycle(format!(
-            "TCP bind failed on {bind_addr}: {e}. \
+    // Resolve from CLI --bind, env vars, or ephemeral port as last resort.
+    let bind_addr = bind.unwrap_or_else(|| {
+        barracuda_core::ipc::IpcServer::default_tcp_port()
+            .map_or_else(
+                || barracuda_core::ipc::transport::resolve_bind_address(None),
+                |p| format!("127.0.0.1:{p}"),
+            )
+    });
+    if let Some((listener, local_addr)) =
+        barracuda_core::ipc::IpcServer::try_bind_tcp(&bind_addr).await
+    {
+        let effective_addr = local_addr.to_string();
+        write_discovery_file(Some(&effective_addr), tarpc_bind.as_deref(), None);
+        server.serve_tcp_listener(listener).await.map_err(|e| {
+            barracuda_core::error::BarracudaCoreError::lifecycle(format!(
+                "TCP server error on {effective_addr}: {e}"
+            ))
+        })?;
+        remove_discovery_file();
+    } else {
+        return Err(barracuda_core::error::BarracudaCoreError::lifecycle(format!(
+            "TCP bind failed on {bind_addr}: address already in use. \
              If another primal occupies this port, use a different \
              --port/BARRACUDA_IPC_PORT or run in UDS mode (default on Unix)."
-        ))
-    })?;
-    remove_discovery_file();
+        )));
+    }
     Ok(())
 }
 

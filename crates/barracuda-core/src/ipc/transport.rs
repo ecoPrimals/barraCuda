@@ -151,14 +151,33 @@ impl IpcServer {
     /// This runs alongside `serve_tcp` on a different port. The tarpc
     /// transport uses `serde-transport` with JSON framing for maximum
     /// throughput between Rust primals.
+    ///
+    /// On `AddrInUse`, logs a warning and returns `Ok(())` — the tarpc
+    /// endpoint is optional and should not crash the binary when the port
+    /// is occupied by another primal.
     pub async fn serve_tarpc(&self, addr: &str) -> Result<()> {
         use crate::rpc::{BarraCudaServer, BarraCudaService};
         use futures::prelude::*;
         use tarpc::server::{self, Channel};
 
-        let mut listener =
-            tarpc::serde_transport::tcp::listen(addr, tarpc::tokio_serde::formats::Json::default)
-                .await?;
+        let mut listener = match tarpc::serde_transport::tcp::listen(
+            addr,
+            tarpc::tokio_serde::formats::Json::default,
+        )
+        .await
+        {
+            Ok(l) => l,
+            Err(e) if e.kind() == std::io::ErrorKind::AddrInUse => {
+                tracing::warn!(
+                    addr,
+                    "tarpc TCP skipped: address already in use \
+                     (another primal may occupy this port). \
+                     Primary transport is unaffected."
+                );
+                return Ok(());
+            }
+            Err(e) => return Err(e.into()),
+        };
         let local_addr = listener.local_addr();
         tracing::info!("barraCuda tarpc listening on tcp://{local_addr}");
 

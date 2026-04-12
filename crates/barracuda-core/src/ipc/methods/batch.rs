@@ -475,11 +475,17 @@ fn batch_layer_norm(
     idx: usize,
 ) -> Result<barracuda::session::SessionTensor, BatchError> {
     let a = resolve(aliases, val, "input", idx)?;
-    let feature_size = val
+    let feature_size_u64 = val
         .get("feature_size")
         .and_then(|v| v.as_u64())
-        .ok_or_else(|| BatchError::new(format!("ops[{idx}]: layer_norm requires 'feature_size'")))?
-        as usize;
+        .ok_or_else(|| {
+            BatchError::new(format!("ops[{idx}]: layer_norm requires 'feature_size'"))
+        })?;
+    let feature_size = usize::try_from(feature_size_u64).map_err(|_| {
+        BatchError::new(format!(
+            "ops[{idx}]: feature_size {feature_size_u64} exceeds platform usize"
+        ))
+    })?;
     session
         .layer_norm(a, feature_size)
         .map_err(|e| BatchError::new(format!("ops[{idx}]: layer_norm failed: {e}")))

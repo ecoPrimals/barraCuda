@@ -18,7 +18,11 @@ Prioritized work items, ordered by impact. Updated 2026-04-12.
   **Deep debt cleanup**: `BatchError` typed error (zero `Result<T,String>`), `.expect()`
   eliminated with `let-else`, `with_device` constructors on 8 types, precision preambles
   extracted (722→409 lines), lanczos iterator evolution, 9 new tests.
-  32 IPC methods. 4,305 tests pass.
+  **Phase 3**: `invocation.rs` smart-refactored (754→445, memory ops → `memory.rs`).
+  `wgpu_device/mod.rs` smart-refactored (729→518, submit/poll → `submission.rs`). All
+  production files under 600 lines. `as usize` → `usize::try_from` in batch handler.
+  36 new tests (math/stats/noise/rng/activation/batch validation). Pre-existing clippy
+  debt resolved. 32 IPC methods. 4,341 tests pass.
 - **Sprint 41: BC-07 Full Wiring + BC-06 Docs + TensorSession Migration Guide (Apr 11)**:
   `Auto::new()` returns `DiscoveredDevice` enum with 3-tier fallback (wgpu GPU → wgpu CPU
   → SovereignDevice IPC → Err). `BarraCudaPrimal` stores `DiscoveredDevice`. `Auto::new_wgpu()`

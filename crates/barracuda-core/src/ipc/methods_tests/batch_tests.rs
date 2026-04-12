@@ -227,3 +227,84 @@ async fn test_batch_fma_missing_operand() {
     assert_eq!(err.code, INVALID_PARAMS);
     assert!(err.message.contains("fma requires 'c'"));
 }
+
+#[tokio::test]
+async fn test_batch_layer_norm_missing_input_alias() {
+    let primal = test_primal();
+    let resp = tensor_batch_submit(
+        &primal,
+        &serde_json::json!({"ops": [
+            {"op": "layer_norm", "alias": "y"}
+        ]}),
+        serde_json::json!(16),
+    )
+    .await;
+    let err = resp.error.unwrap();
+    assert_eq!(err.code, INVALID_PARAMS);
+    assert!(err.message.contains("requires 'input'"));
+}
+
+#[tokio::test]
+async fn test_batch_reshape_missing_input_alias() {
+    let primal = test_primal();
+    let resp = tensor_batch_submit(
+        &primal,
+        &serde_json::json!({"ops": [
+            {"op": "reshape", "alias": "y"}
+        ]}),
+        serde_json::json!(17),
+    )
+    .await;
+    let err = resp.error.unwrap();
+    assert_eq!(err.code, INVALID_PARAMS);
+    assert!(err.message.contains("requires 'input'"));
+}
+
+#[tokio::test]
+async fn test_batch_softmax_missing_input_alias() {
+    let primal = test_primal();
+    let resp = tensor_batch_submit(
+        &primal,
+        &serde_json::json!({"ops": [
+            {"op": "softmax", "alias": "y"}
+        ]}),
+        serde_json::json!(18),
+    )
+    .await;
+    let err = resp.error.unwrap();
+    assert_eq!(err.code, INVALID_PARAMS);
+    assert!(err.message.contains("requires 'input'"));
+}
+
+#[tokio::test]
+async fn test_batch_gelu_unknown_alias_ref() {
+    let primal = test_primal();
+    let resp = tensor_batch_submit(
+        &primal,
+        &serde_json::json!({"ops": [
+            {"op": "gelu", "alias": "y", "input": "ghost"}
+        ]}),
+        serde_json::json!(19),
+    )
+    .await;
+    let err = resp.error.unwrap();
+    assert_eq!(err.code, INVALID_PARAMS);
+    assert!(err.message.contains("ghost"));
+}
+
+#[tokio::test]
+async fn test_batch_matmul_missing_b() {
+    let primal = test_primal();
+    let resp = tensor_batch_submit(
+        &primal,
+        &serde_json::json!({"ops": [
+            {"op": "create", "alias": "x", "shape": [2], "data": [1.0, 2.0]},
+            {"op": "matmul", "alias": "y", "a": "x"}
+        ]}),
+        serde_json::json!(20),
+    )
+    .await;
+    let err = resp.error.unwrap();
+    assert_eq!(err.code, INVALID_PARAMS);
+    assert!(err.message.contains("requires 'b'"));
+}

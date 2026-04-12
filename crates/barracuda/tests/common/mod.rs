@@ -6,6 +6,8 @@
 //! Wraps the entire async body in `tokio::time::timeout` to prevent indefinite
 //! hangs when the GPU stalls (driver lockup, compute shader deadlock).
 
+#![allow(dead_code, reason = "shared across multiple test binaries")]
+
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use barracuda::device::test_pool::GPU_TEST_TIMEOUT;

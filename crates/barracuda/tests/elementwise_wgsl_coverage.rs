@@ -265,7 +265,7 @@ elementwise_test!(
     logsigmoid_wgsl,
     [0.0f32, 1.0, -1.0, 5.0, -5.0],
     |r: &[f32]| {
-        assert!((r[0] - (-0.6931)).abs() < 1e-3);
+        assert!((r[0] - (-std::f32::consts::LN_2)).abs() < 1e-3);
         assert!(r[3] > -0.01);
     }
 );

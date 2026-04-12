@@ -78,6 +78,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 2 new `try_bind_tcp` tests (free port bind succeeds, AddrInUse returns None).
 - 4,303 tests pass, all quality gates green (fmt, clippy, doc zero warnings, deny, nextest).
 
+### Changed — Sprint 42 Phase 3: Deep Debt Continuation (Apr 12 2026)
+
+- **Smart refactor — naga-exec invocation**: `invocation.rs` (754→445 lines) — memory
+  operations (load/store/atomic/buffer) extracted to `memory.rs` (330 lines). Indexed
+  loop in `load_pointer` evolved to iterator. `get_value`, `resolve_binding` promoted to
+  `pub(crate)` for cross-module access. Unused `tracing::trace` import removed.
+- **Smart refactor — wgpu submission pipeline**: `wgpu_device/mod.rs` (729→518 lines) —
+  submit/poll infrastructure (poll_safe, submit_commands, poll_nonblocking, panic handling,
+  submit_and_poll) extracted to `submission.rs` (213 lines). All production files now under
+  600 lines.
+- **`as usize` cast evolved**: `batch.rs` `feature_size` cast evolved from bare `as usize`
+  to `usize::try_from` with typed `BatchError` on overflow.
+- **Pre-existing clippy debt resolved**: `LN_2` approximation → `f32::consts::LN_2` in test.
+  Shared test helpers get `#![allow(dead_code, reason)]` for cross-binary compilation.
+- 36 new tests: 10 math/stats (sigmoid, log2, mean, std_dev, weighted_mean), 6 noise/rng
+  (perlin2d, perlin3d, rng_uniform), 14 activation (fitts variants, hick variants),
+  6 batch validation (layer_norm, reshape, softmax, gelu, matmul input alias).
+- 4,341 tests pass, all quality gates green (fmt, clippy, doc zero warnings, deny, nextest).
+
 ### Changed — Sprint 41: BC-07 Full Wiring, BC-06 Documentation, TensorSession Migration Guide (Apr 11 2026)
 
 - **BC-07 fully resolved**: `Auto::new()` returns `DiscoveredDevice` enum with 3-tier fallback

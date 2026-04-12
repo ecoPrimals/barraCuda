@@ -251,11 +251,10 @@ async fn run_server(
     // TCP-only fallback (--no-unix or non-Unix platform).
     // Resolve from CLI --bind, env vars, or ephemeral port as last resort.
     let bind_addr = bind.unwrap_or_else(|| {
-        barracuda_core::ipc::IpcServer::default_tcp_port()
-            .map_or_else(
-                || barracuda_core::ipc::transport::resolve_bind_address(None),
-                |p| format!("127.0.0.1:{p}"),
-            )
+        barracuda_core::ipc::IpcServer::default_tcp_port().map_or_else(
+            || barracuda_core::ipc::transport::resolve_bind_address(None),
+            |p| format!("127.0.0.1:{p}"),
+        )
     });
     if let Some((listener, local_addr)) =
         barracuda_core::ipc::IpcServer::try_bind_tcp(&bind_addr).await
@@ -269,11 +268,13 @@ async fn run_server(
         })?;
         remove_discovery_file();
     } else {
-        return Err(barracuda_core::error::BarracudaCoreError::lifecycle(format!(
-            "TCP bind failed on {bind_addr}: address already in use. \
+        return Err(barracuda_core::error::BarracudaCoreError::lifecycle(
+            format!(
+                "TCP bind failed on {bind_addr}: address already in use. \
              If another primal occupies this port, use a different \
              --port/BARRACUDA_IPC_PORT or run in UDS mode (default on Unix)."
-        )));
+            ),
+        ));
     }
     Ok(())
 }

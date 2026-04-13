@@ -328,7 +328,8 @@ impl IpcServer {
                             tracing::warn!("BTSP handshake rejected connection from {peer}: {outcome:?}");
                             return;
                         }
-                        handle_stream(primal, stream).await;
+                        let replay = outcome.consumed_line().map(String::from);
+                        handle_stream(primal, stream, replay).await;
                     });
                 }
                 () = shutdown_signal() => {
@@ -374,8 +375,9 @@ impl IpcServer {
                             tracing::warn!("BTSP handshake rejected connection: {outcome:?}");
                             return;
                         }
+                        let replay = outcome.consumed_line().map(String::from);
                         let (reader, writer) = stream.into_split();
-                        handle_connection(primal, reader, writer).await;
+                        handle_connection(primal, reader, writer, replay).await;
                     });
                 }
                 () = shutdown_signal() => {
@@ -472,41 +474,72 @@ const SERIALIZATION_ERROR: &str =
 /// arrays). Per spec: an empty batch returns a parse error; notifications
 /// within a batch produce no response entries; if all requests are
 /// notifications, no response is sent.
-async fn handle_connection<R, W>(primal: Arc<BarraCudaPrimal>, reader: R, mut writer: W)
-where
+///
+/// `replay` is an optional first line consumed during the BTSP handshake
+/// guard. When `FAMILY_ID` is set and a legacy (non-BTSP) client connects,
+/// the guard reads the first line looking for a `ClientHello`. If the line
+/// is a plain JSON-RPC request, the guard returns it here for replay so
+/// the request is not silently dropped (LD-10 fix).
+async fn handle_connection<R, W>(
+    primal: Arc<BarraCudaPrimal>,
+    reader: R,
+    mut writer: W,
+    replay: Option<String>,
+) where
     R: AsyncRead + Unpin + Send,
     W: AsyncWrite + Unpin + Send,
 {
+    if let Some(ref line) = replay {
+        if dispatch_line(&primal, line, &mut writer).await.is_err() {
+            return;
+        }
+    }
     let mut lines = BufReader::new(reader).lines();
     while let Ok(Some(line)) = lines.next_line().await {
-        let trimmed = line.trim_start();
-        if trimmed.starts_with('[') {
-            let Some(batch_json) = handle_batch(&primal, trimmed).await else {
-                continue;
-            };
-            let mut out = batch_json;
-            out.push('\n');
-            if writer.write_all(out.as_bytes()).await.is_err() {
-                break;
-            }
-        } else {
-            let Some(response) = handle_line(&primal, &line).await else {
-                continue;
-            };
-            let mut json = serde_json::to_string(&response)
-                .unwrap_or_else(|_| SERIALIZATION_ERROR.to_string());
-            json.push('\n');
-            if writer.write_all(json.as_bytes()).await.is_err() {
-                break;
-            }
+        if dispatch_line(&primal, &line, &mut writer).await.is_err() {
+            break;
         }
     }
 }
 
+/// Dispatch a single NDJSON line (single request or batch array) and write
+/// the response. Returns `Err(())` on write failure (caller should close).
+async fn dispatch_line<W>(
+    primal: &Arc<BarraCudaPrimal>,
+    line: &str,
+    writer: &mut W,
+) -> std::result::Result<(), ()>
+where
+    W: AsyncWrite + Unpin + Send,
+{
+    let trimmed = line.trim_start();
+    if trimmed.starts_with('[') {
+        let Some(batch_json) = handle_batch(primal, trimmed).await else {
+            return Ok(());
+        };
+        let mut out = batch_json;
+        out.push('\n');
+        writer.write_all(out.as_bytes()).await.map_err(|_| ())?;
+    } else {
+        let Some(response) = handle_line(primal, line).await else {
+            return Ok(());
+        };
+        let mut json =
+            serde_json::to_string(&response).unwrap_or_else(|_| SERIALIZATION_ERROR.to_string());
+        json.push('\n');
+        writer.write_all(json.as_bytes()).await.map_err(|_| ())?;
+    }
+    Ok(())
+}
+
 /// Handle a single TCP connection (newline-delimited JSON-RPC).
-async fn handle_stream(primal: Arc<BarraCudaPrimal>, stream: tokio::net::TcpStream) {
+async fn handle_stream(
+    primal: Arc<BarraCudaPrimal>,
+    stream: tokio::net::TcpStream,
+    replay: Option<String>,
+) {
     let (reader, writer) = stream.into_split();
-    handle_connection(primal, reader, writer).await;
+    handle_connection(primal, reader, writer, replay).await;
 }
 
 /// Wait for SIGINT (Ctrl-C) or SIGTERM for graceful shutdown.

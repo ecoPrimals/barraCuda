@@ -48,6 +48,12 @@ pub enum BtspOutcome {
     Degraded {
         /// Human-readable explanation for monitoring/alerting.
         reason: String,
+        /// First NDJSON line consumed during the handshake attempt.
+        /// Non-None when a legacy (non-BTSP) client's request was read by
+        /// the guard before determining it wasn't a `ClientHello`. Must be
+        /// replayed to the JSON-RPC handler so the request isn't silently
+        /// dropped (LD-10 fix).
+        consumed_line: Option<String>,
     },
     /// `FAMILY_ID` set, handshake explicitly failed — connection refused.
     Rejected {
@@ -63,6 +69,18 @@ impl BtspOutcome {
             self,
             Self::DevMode | Self::Authenticated { .. } | Self::Degraded { .. }
         )
+    }
+
+    /// Return any NDJSON line consumed during the handshake that must be
+    /// replayed to the JSON-RPC handler.
+    pub fn consumed_line(&self) -> Option<&str> {
+        match self {
+            Self::Degraded {
+                consumed_line: Some(line),
+                ..
+            } => Some(line),
+            _ => None,
+        }
     }
 }
 
@@ -89,7 +107,10 @@ where
             socket_dir.display()
         );
         tracing::warn!("{reason}");
-        return BtspOutcome::Degraded { reason };
+        return BtspOutcome::Degraded {
+            reason,
+            consumed_line: None,
+        };
     };
 
     match perform_handshake_relay(stream, &provider_sock, &family_id).await {
@@ -97,13 +118,22 @@ where
             tracing::debug!(session_id, "BTSP handshake succeeded");
             BtspOutcome::Authenticated { session_id }
         }
-        Err(HandshakeError::ClientLegacy(reason)) => {
+        Err(HandshakeError::ClientLegacy {
+            reason,
+            consumed_line,
+        }) => {
             tracing::warn!("{reason}");
-            BtspOutcome::Degraded { reason }
+            BtspOutcome::Degraded {
+                reason,
+                consumed_line,
+            }
         }
         Err(HandshakeError::ProviderUnavailable(reason)) => {
             tracing::warn!("{reason}");
-            BtspOutcome::Degraded { reason }
+            BtspOutcome::Degraded {
+                reason,
+                consumed_line: None,
+            }
         }
         Err(HandshakeError::Rejected(reason)) => {
             tracing::warn!("BTSP handshake rejected: {reason}");
@@ -111,7 +141,10 @@ where
         }
         Err(HandshakeError::Protocol(reason)) => {
             tracing::warn!("BTSP protocol error: {reason}");
-            BtspOutcome::Degraded { reason }
+            BtspOutcome::Degraded {
+                reason,
+                consumed_line: None,
+            }
         }
     }
 }
@@ -119,7 +152,12 @@ where
 /// Internal error type for the handshake relay — not exposed to callers.
 enum HandshakeError {
     /// Client didn't send ClientHello (legacy/plain JSON-RPC client).
-    ClientLegacy(String),
+    ClientLegacy {
+        reason: String,
+        /// The first line read from the stream, if any. Must be replayed
+        /// to the JSON-RPC handler to avoid silently dropping the request.
+        consumed_line: Option<String>,
+    },
     /// Security-domain provider unreachable or RPC failed.
     ProviderUnavailable(String),
     /// Provider explicitly rejected the handshake (bad HMAC, etc.).
@@ -158,31 +196,47 @@ where
         match tokio::time::timeout(CLIENT_HELLO_TIMEOUT, read_ndjson_line(&mut buf_reader)).await {
             Ok(Ok(line)) => line,
             Ok(Err(e)) => {
-                return Err(HandshakeError::ClientLegacy(format!(
-                    "Client stream error before ClientHello: {e}. Treating as legacy client."
-                )));
+                return Err(HandshakeError::ClientLegacy {
+                    reason: format!(
+                        "Client stream error before ClientHello: {e}. Treating as legacy client."
+                    ),
+                    consumed_line: None,
+                });
             }
             Err(_) => {
-                return Err(HandshakeError::ClientLegacy(
-                    "Client did not send ClientHello within timeout. \
-                     Treating as legacy (non-BTSP) client."
+                return Err(HandshakeError::ClientLegacy {
+                    reason: "Client did not send ClientHello within timeout. \
+                             Treating as legacy (non-BTSP) client."
                         .to_string(),
-                ));
+                    consumed_line: None,
+                });
             }
         };
 
-    let client_hello: serde_json::Value = serde_json::from_str(&client_hello_line)
-        .map_err(|e| HandshakeError::Protocol(format!("Malformed ClientHello JSON: {e}")))?;
+    let client_hello: serde_json::Value = match serde_json::from_str(&client_hello_line) {
+        Ok(v) => v,
+        Err(e) => {
+            return Err(HandshakeError::ClientLegacy {
+                reason: format!(
+                    "First line is not valid JSON ({e}). Treating as legacy client."
+                ),
+                consumed_line: Some(client_hello_line),
+            });
+        }
+    };
 
     let msg_type = client_hello
         .get("type")
         .and_then(|v| v.as_str())
         .unwrap_or("");
     if msg_type != "ClientHello" {
-        return Err(HandshakeError::ClientLegacy(format!(
-            "Expected ClientHello, got message type '{msg_type}'. \
-             Treating as legacy client."
-        )));
+        return Err(HandshakeError::ClientLegacy {
+            reason: format!(
+                "Expected ClientHello, got message type '{msg_type}'. \
+                 Treating as legacy client."
+            ),
+            consumed_line: Some(client_hello_line),
+        });
     }
 
     let client_ephemeral_pub = client_hello
@@ -489,8 +543,20 @@ mod tests {
     fn btsp_outcome_degraded_accepts() {
         let outcome = BtspOutcome::Degraded {
             reason: "security provider not found".to_string(),
+            consumed_line: None,
         };
         assert!(outcome.should_accept());
+        assert!(outcome.consumed_line().is_none());
+    }
+
+    #[test]
+    fn btsp_outcome_degraded_with_consumed_line() {
+        let outcome = BtspOutcome::Degraded {
+            reason: "legacy client".to_string(),
+            consumed_line: Some(r#"{"jsonrpc":"2.0","method":"tensor.dot","id":1}"#.to_string()),
+        };
+        assert!(outcome.should_accept());
+        assert!(outcome.consumed_line().unwrap().contains("tensor.dot"));
     }
 
     #[test]

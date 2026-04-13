@@ -5,7 +5,23 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.12] — 2026-04-12
+## [0.3.12] — 2026-04-13
+
+### Fixed — Sprint 42 Phase 4: LD-10 BTSP legacy client request drop (Apr 13 2026)
+
+- **LD-10 resolved**: When `FAMILY_ID` was set in NUCLEUS, the BTSP handshake guard read the
+  first line from the stream looking for a `ClientHello`. Plain JSON-RPC clients had their
+  first request consumed and silently dropped — the guard returned `Degraded` (accepted) but
+  the request was lost. Fix: `BtspOutcome::Degraded` now carries the consumed line.
+  `handle_connection` replays it before entering the normal line-reading loop. `dispatch_line`
+  helper extracted for DRY single/batch dispatch shared between replay and stream paths.
+- **Both UDS and TCP paths fixed**: `serve_unix` and `serve_tcp_listener` accept loops both
+  extract `consumed_line()` from the guard outcome and pass it to `handle_connection` as the
+  `replay` parameter.
+- **Malformed-JSON first line handled**: When the BTSP guard reads a first line that isn't
+  valid JSON, it now returns `ClientLegacy` with the consumed line (was `Protocol` error
+  without the line). The request is replayed to the JSON-RPC handler for proper `-32700`
+  parse error response.
 
 ### Fixed — Sprint 42: LD-05 TCP AddrInUse on co-deployment (Apr 12 2026)
 

@@ -1,6 +1,6 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-04-12.
+Prioritized work items, ordered by impact. Updated 2026-04-13.
 
 ---
 
@@ -22,7 +22,9 @@ Prioritized work items, ordered by impact. Updated 2026-04-12.
   `wgpu_device/mod.rs` smart-refactored (729→518, submit/poll → `submission.rs`). All
   production files under 600 lines. `as usize` → `usize::try_from` in batch handler.
   36 new tests (math/stats/noise/rng/activation/batch validation). Pre-existing clippy
-  debt resolved. 32 IPC methods. 4,341 tests pass.
+  debt resolved. **Phase 4**: LD-10 resolved — BTSP guard consumed first line from legacy
+  JSON-RPC clients; `BtspOutcome::Degraded` now carries consumed line for replay.
+  `dispatch_line` helper extracted (DRY). 32 IPC methods. 4,343 tests pass.
 - **Sprint 41: BC-07 Full Wiring + BC-06 Docs + TensorSession Migration Guide (Apr 11)**:
   `Auto::new()` returns `DiscoveredDevice` enum with 3-tier fallback (wgpu GPU → wgpu CPU
   → SovereignDevice IPC → Err). `BarraCudaPrimal` stores `DiscoveredDevice`. `Auto::new_wgpu()`

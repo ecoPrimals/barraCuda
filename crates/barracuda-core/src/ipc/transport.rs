@@ -43,7 +43,7 @@ fn max_connections() -> usize {
 /// `127.0.0.1` = localhost-only. This is the secure default: the primal
 /// listens only on the loopback interface. External access requires explicit
 /// configuration via `BARRACUDA_IPC_HOST` or `--bind`.
-const DEFAULT_BIND_HOST: &str = "127.0.0.1";
+pub const DEFAULT_BIND_HOST: &str = "127.0.0.1";
 
 /// Default family ID when no `FAMILY_ID` env var is set.
 const DEFAULT_FAMILY_ID: &str = "default";

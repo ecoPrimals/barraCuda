@@ -323,6 +323,27 @@ fn validate_batch_ops(ops: &[Value], valid_ops: &[&str]) -> Result<(), BatchErro
                         "ops[{i}]: unknown alias '{ref_name}'"
                     )));
                 }
+                if op_name == "scale" && op_val.get("scalar").and_then(|v| v.as_f64()).is_none() {
+                    return Err(BatchError::new(format!(
+                        "ops[{i}]: scale requires 'scalar'"
+                    )));
+                }
+                if op_name == "layer_norm"
+                    && op_val
+                        .get("feature_size")
+                        .and_then(|v| v.as_u64())
+                        .is_none()
+                {
+                    return Err(BatchError::new(format!(
+                        "ops[{i}]: layer_norm requires 'feature_size'"
+                    )));
+                }
+                if op_name == "reshape" && op_val.get("shape").and_then(|v| v.as_array()).is_none()
+                {
+                    return Err(BatchError::new(format!(
+                        "ops[{i}]: reshape requires 'shape'"
+                    )));
+                }
             }
             _ => {}
         }

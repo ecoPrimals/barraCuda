@@ -16,10 +16,6 @@ pub enum NagaExecError {
     #[error("entry point '{0}' not found")]
     EntryPointNotFound(String),
 
-    /// Entry point exists but is not a compute shader.
-    #[error("entry point '{0}' is not a compute shader")]
-    NotCompute(String),
-
     /// A `@group(g) @binding(b)` referenced by the shader is missing.
     #[error("binding ({group}, {binding}) not found in dispatch bindings")]
     BindingNotFound {

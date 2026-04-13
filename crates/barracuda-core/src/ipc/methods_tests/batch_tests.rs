@@ -293,6 +293,57 @@ async fn test_batch_gelu_unknown_alias_ref() {
 }
 
 #[tokio::test]
+async fn test_batch_scale_missing_scalar() {
+    let primal = test_primal();
+    let resp = tensor_batch_submit(
+        &primal,
+        &serde_json::json!({"ops": [
+            {"op": "create", "alias": "x", "shape": [2], "data": [1.0, 2.0]},
+            {"op": "scale", "alias": "y", "input": "x"}
+        ]}),
+        serde_json::json!(21),
+    )
+    .await;
+    let err = resp.error.unwrap();
+    assert_eq!(err.code, INVALID_PARAMS);
+    assert!(err.message.contains("requires 'scalar'"));
+}
+
+#[tokio::test]
+async fn test_batch_layer_norm_missing_feature_size() {
+    let primal = test_primal();
+    let resp = tensor_batch_submit(
+        &primal,
+        &serde_json::json!({"ops": [
+            {"op": "create", "alias": "x", "shape": [4], "data": [1.0, 2.0, 3.0, 4.0]},
+            {"op": "layer_norm", "alias": "y", "input": "x"}
+        ]}),
+        serde_json::json!(22),
+    )
+    .await;
+    let err = resp.error.unwrap();
+    assert_eq!(err.code, INVALID_PARAMS);
+    assert!(err.message.contains("requires 'feature_size'"));
+}
+
+#[tokio::test]
+async fn test_batch_reshape_missing_shape() {
+    let primal = test_primal();
+    let resp = tensor_batch_submit(
+        &primal,
+        &serde_json::json!({"ops": [
+            {"op": "create", "alias": "x", "shape": [4], "data": [1.0, 2.0, 3.0, 4.0]},
+            {"op": "reshape", "alias": "y", "input": "x"}
+        ]}),
+        serde_json::json!(23),
+    )
+    .await;
+    let err = resp.error.unwrap();
+    assert_eq!(err.code, INVALID_PARAMS);
+    assert!(err.message.contains("requires 'shape'"));
+}
+
+#[tokio::test]
 async fn test_batch_matmul_missing_b() {
     let primal = test_primal();
     let resp = tensor_batch_submit(

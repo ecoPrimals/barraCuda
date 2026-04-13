@@ -131,7 +131,9 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
             #[cfg(unix)]
             no_unix,
         } => {
-            let effective_bind = bind.or_else(|| port.map(|p| format!("127.0.0.1:{p}")));
+            let effective_bind = bind.or_else(|| {
+                port.map(|p| format!("{}:{p}", barracuda_core::ipc::transport::DEFAULT_BIND_HOST))
+            });
             run_server(
                 effective_bind,
                 tarpc_bind,
@@ -253,7 +255,7 @@ async fn run_server(
     let bind_addr = bind.unwrap_or_else(|| {
         barracuda_core::ipc::IpcServer::default_tcp_port().map_or_else(
             || barracuda_core::ipc::transport::resolve_bind_address(None),
-            |p| format!("127.0.0.1:{p}"),
+            |p| format!("{}:{p}", barracuda_core::ipc::transport::DEFAULT_BIND_HOST),
         )
     });
     if let Some((listener, local_addr)) =

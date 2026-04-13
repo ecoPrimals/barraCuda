@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.12] — 2026-04-13
 
+### Changed — Sprint 42 Phase 7: Deep Debt Continuation (Apr 13 2026)
+
+- **Safe cast evolution**: `data_arr.len() as u64` in `validate_batch_ops` evolved to
+  `u64::try_from(data_arr.len()).unwrap_or(u64::MAX)` — eliminates the last uncovered
+  truncation cast in barracuda-core production code.
+- **Version alignment**: Path-dependency versions aligned to 0.3.12 (barracuda-core→barracuda
+  was 0.3.11, barracuda→barracuda-spirv was 0.3.6).
+- **Visibility tightening**: `REGISTERED_METHODS`, `normalize_method`,
+  `provided_capability_groups` narrowed from `pub` to `pub(crate)` (no external consumers).
+- **2 new JSON-RPC FHE degree overflow tests**: `fhe.ntt` and `fhe.pointwise_mul` with
+  `degree > u32::MAX` — validates `usize::try_from` / `u32::try_from` error paths on the
+  JSON-RPC side (tarpc side covered in Phase 6).
+- **4,368 tests pass** (up from 4,366), all quality gates green.
+
 ### Changed — Sprint 42 Phase 6: Deep Debt Continuation (Apr 13 2026)
 
 - **8 new coverage tests**: `identity_get` tarpc handler, FHE NTT/pointwise-mul `degree > u32::MAX`

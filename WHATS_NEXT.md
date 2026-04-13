@@ -30,6 +30,10 @@ Prioritized work items, ordered by impact. Updated 2026-04-13.
   4,358 tests pass. **Phase 6**: 8 new coverage tests (identity_get tarpc, FHE degree overflow,
   has_sovereign_dispatch, compute_device, health_readiness after start, whitespace batch).
   Stale `clippy::unused_async` crate-level expectation removed. 4,366 tests pass.
+  **Phase 7**: `data_arr.len() as u64` → safe `u64::try_from` (last uncovered truncation cast).
+  Path-dep versions aligned (0.3.11/0.3.6 → 0.3.12). Visibility tightened: `REGISTERED_METHODS`,
+  `normalize_method`, `provided_capability_groups` to `pub(crate)`. 2 new JSON-RPC FHE degree
+  overflow tests. 4,368 tests pass.
 - **Sprint 41: BC-07 Full Wiring + BC-06 Docs + TensorSession Migration Guide (Apr 11)**:
   `Auto::new()` returns `DiscoveredDevice` enum with 3-tier fallback (wgpu GPU → wgpu CPU
   → SovereignDevice IPC → Err). `BarraCudaPrimal` stores `DiscoveredDevice`. `Auto::new_wgpu()`

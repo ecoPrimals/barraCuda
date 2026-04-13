@@ -62,7 +62,7 @@ traits are fully internalized.
 | `tolerances.*` | `tolerances.get` |
 | `validate.*` | `validate.gpu_stack` |
 
-31 methods following wateringHole `{domain}.{operation}` Semantic Method Naming Standard. Wire Standard L2 compliant.
+32 methods following wateringHole `{domain}.{operation}` Semantic Method Naming Standard. Wire Standard L2 compliant.
 
 ## Deployment Constraints
 

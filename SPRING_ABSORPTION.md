@@ -1,7 +1,7 @@
 # Spring Absorption Tracker
 
 **Version**: 0.3.12
-**Date**: April 12, 2026
+**Date**: April 13, 2026
 **Source**: hotSpring v0.6.32, groundSpring V99, neuralSpring S143, wetSpring V107, airSpring v0.7.5, healthSpring V44, ludoSpring V34, primalSpring (new), toadStool S163, coralReef Phase 10 Iter 70
 
 ## Sprint 22g — Cross-Spring Deep Absorption (Mar 29 2026)
@@ -24,7 +24,7 @@
 
 Cross-spring evolution follows **Write → Absorb → Lean**: springs implement
 domain-specific primitives, barraCuda absorbs and generalises, springs consume
-the upstream version. All springs are synced to barraCuda v0.3.11 / wgpu 28
+the upstream version. All springs are synced to barraCuda v0.3.12 / wgpu 28
 with zero local WGSL (airSpring and wetSpring fully lean).
 
 ---

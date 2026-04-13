@@ -233,7 +233,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo nextest run --workspace --profile ci  # 4,303+ tests via nextest
+cargo nextest run --workspace --profile ci  # 4,358+ tests via nextest
 cargo llvm-cov --workspace --lib        # 80% CI gate (blocking), 90% target (requires GPU hardware)
 ```
 
@@ -267,7 +267,7 @@ barraCuda exposes a dual-protocol IPC interface per wateringHole standards:
 | `tensor.*` | `tensor.create`, `matmul`, `add`, `scale`, `clamp`, `reduce`, `sigmoid` |
 | `fhe.*` | `fhe.ntt`, `fhe.pointwise_mul` |
 
-31 methods follow the wateringHole `{domain}.{operation}` Semantic Method Naming
+32 methods follow the wateringHole `{domain}.{operation}` Semantic Method Naming
 Standard v2.2.0. Wire Standard L2 compliant: `capabilities.list` returns the
 `{primal, version, methods}` envelope with `provided_capabilities` grouping.
 `health.liveness`, `health.readiness`, `health.check`, and `capabilities.list`

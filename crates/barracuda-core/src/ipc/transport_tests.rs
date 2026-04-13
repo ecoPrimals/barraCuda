@@ -396,7 +396,11 @@ async fn handle_connection_replay_consumed_line() {
         .await
         .unwrap();
     let lines: Vec<&str> = response.lines().collect();
-    assert_eq!(lines.len(), 2, "replay + stream should produce two responses");
+    assert_eq!(
+        lines.len(),
+        2,
+        "replay + stream should produce two responses"
+    );
     assert!(
         lines[0].contains("\"id\":99"),
         "first response is for the replayed request"

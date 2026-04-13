@@ -217,9 +217,7 @@ where
         Ok(v) => v,
         Err(e) => {
             return Err(HandshakeError::ClientLegacy {
-                reason: format!(
-                    "First line is not valid JSON ({e}). Treating as legacy client."
-                ),
+                reason: format!("First line is not valid JSON ({e}). Treating as legacy client."),
                 consumed_line: Some(client_hello_line),
             });
         }

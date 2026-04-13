@@ -157,7 +157,13 @@ impl NagaExecutor {
         bindings: &mut BTreeMap<(u32, u32), SimBuffer>,
     ) -> Result<()> {
         let ep = &self.module.entry_points[self.entry_point_index];
-        let total = (wg_size[0] * wg_size[1] * wg_size[2]) as usize;
+        let total = u64::from(wg_size[0])
+            .checked_mul(u64::from(wg_size[1]))
+            .and_then(|n| n.checked_mul(u64::from(wg_size[2])))
+            .and_then(|n| usize::try_from(n).ok())
+            .ok_or_else(|| {
+                NagaExecError::Overflow("workgroup size product overflows usize".into())
+            })?;
 
         let mut invocations: Vec<([u32; 3], [u32; 3])> = Vec::with_capacity(total);
         for local_z in 0..wg_size[2] {

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.12] — 2026-04-13
 
+### Changed — Sprint 42 Phase 5: Deep Debt Continuation (Apr 13 2026)
+
+- **`NagaExecError::Overflow` variant**: New typed error for numeric overflow in naga-exec
+  runtime. Workgroup size product (`wg_size[0] * wg_size[1] * wg_size[2]`) in
+  `dispatch_workgroup_barrier_aware` now uses `u64::checked_mul` chain with
+  `usize::try_from` instead of unchecked `u32 * u32 * u32 as usize`. Prevents silent
+  overflow on 32-bit platforms and catches pathological workgroup sizes.
+- **15 new tensor IPC handler tests**: Coverage expanded for 5 previously untested handlers
+  (`tensor.add`, `tensor.scale`, `tensor.clamp`, `tensor.reduce`, `tensor.sigmoid`).
+  Tests cover missing parameter validation, tensor-not-found branches, and variant-specific
+  paths (scalar add vs tensor-tensor add). All 31 IPC handlers now have targeted test coverage.
+- **4,358 tests pass** (up from 4,343), all quality gates green (fmt, clippy -D warnings,
+  doc, deny, nextest).
+
 ### Fixed — Sprint 42 Phase 4: LD-10 BTSP legacy client request drop (Apr 13 2026)
 
 - **LD-10 resolved**: When `FAMILY_ID` was set in NUCLEUS, the BTSP handshake guard read the

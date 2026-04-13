@@ -12,7 +12,10 @@ use super::math::{
     activation_fitts, activation_hick, math_log2, math_sigmoid, noise_perlin2d, noise_perlin3d,
     rng_uniform, stats_mean, stats_std_dev, stats_weighted_mean,
 };
-use super::tensor::{tensor_create, tensor_matmul};
+use super::tensor::{
+    tensor_add, tensor_clamp, tensor_create, tensor_matmul, tensor_reduce, tensor_scale,
+    tensor_sigmoid,
+};
 use crate::BarraCudaPrimal;
 use crate::lifecycle::PrimalLifecycle;
 
@@ -742,4 +745,199 @@ fn activation_hick_with_no_choice() {
     assert!(r["include_no_choice"].as_bool().unwrap());
     let bits = r["information_bits"].as_f64().unwrap();
     assert!((bits - 5.0_f64.log2()).abs() < 1e-10);
+}
+
+// ── tensor.add validation paths ─────────────────────────────────────
+
+#[tokio::test]
+async fn tensor_add_missing_tensor_id() {
+    let primal = test_primal();
+    let resp = tensor_add(&primal, &serde_json::json!({}), serde_json::json!(200)).await;
+    let err = resp.error.expect("missing tensor_id should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("tensor_id"));
+}
+
+#[tokio::test]
+async fn tensor_add_tensor_not_found() {
+    let primal = test_primal();
+    let resp = tensor_add(
+        &primal,
+        &serde_json::json!({"tensor_id": "nonexistent"}),
+        serde_json::json!(201),
+    )
+    .await;
+    let err = resp.error.expect("nonexistent tensor should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("not found"));
+}
+
+#[tokio::test]
+async fn tensor_add_scalar_tensor_not_found() {
+    let primal = test_primal();
+    let resp = tensor_add(
+        &primal,
+        &serde_json::json!({"tensor_id": "t_fake", "scalar": 1.0}),
+        serde_json::json!(202),
+    )
+    .await;
+    let err = resp.error.expect("nonexistent tensor should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("not found"));
+}
+
+#[tokio::test]
+async fn tensor_add_other_id_tensor_not_found() {
+    let primal = test_primal();
+    let resp = tensor_add(
+        &primal,
+        &serde_json::json!({"tensor_id": "t_fake", "other_id": "t_missing"}),
+        serde_json::json!(203),
+    )
+    .await;
+    let err = resp.error.expect("nonexistent tensor should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("not found"));
+}
+
+// ── tensor.scale validation paths ───────────────────────────────────
+
+#[tokio::test]
+async fn tensor_scale_missing_tensor_id() {
+    let primal = test_primal();
+    let resp = tensor_scale(&primal, &serde_json::json!({}), serde_json::json!(210)).await;
+    let err = resp.error.expect("missing tensor_id should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("tensor_id"));
+}
+
+#[tokio::test]
+async fn tensor_scale_missing_scalar() {
+    let primal = test_primal();
+    let resp = tensor_scale(
+        &primal,
+        &serde_json::json!({"tensor_id": "t_fake"}),
+        serde_json::json!(211),
+    )
+    .await;
+    let err = resp.error.expect("missing scalar should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("scalar"));
+}
+
+#[tokio::test]
+async fn tensor_scale_tensor_not_found() {
+    let primal = test_primal();
+    let resp = tensor_scale(
+        &primal,
+        &serde_json::json!({"tensor_id": "t_none", "scalar": 2.0}),
+        serde_json::json!(212),
+    )
+    .await;
+    let err = resp.error.expect("nonexistent tensor should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("not found"));
+}
+
+// ── tensor.clamp validation paths ───────────────────────────────────
+
+#[tokio::test]
+async fn tensor_clamp_missing_tensor_id() {
+    let primal = test_primal();
+    let resp = tensor_clamp(&primal, &serde_json::json!({}), serde_json::json!(220)).await;
+    let err = resp.error.expect("missing tensor_id should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("tensor_id"));
+}
+
+#[tokio::test]
+async fn tensor_clamp_missing_min() {
+    let primal = test_primal();
+    let resp = tensor_clamp(
+        &primal,
+        &serde_json::json!({"tensor_id": "t_fake", "max": 1.0}),
+        serde_json::json!(221),
+    )
+    .await;
+    let err = resp.error.expect("missing min should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("min"));
+}
+
+#[tokio::test]
+async fn tensor_clamp_missing_max() {
+    let primal = test_primal();
+    let resp = tensor_clamp(
+        &primal,
+        &serde_json::json!({"tensor_id": "t_fake", "min": 0.0}),
+        serde_json::json!(222),
+    )
+    .await;
+    let err = resp.error.expect("missing max should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("max"));
+}
+
+#[tokio::test]
+async fn tensor_clamp_tensor_not_found() {
+    let primal = test_primal();
+    let resp = tensor_clamp(
+        &primal,
+        &serde_json::json!({"tensor_id": "t_none", "min": 0.0, "max": 1.0}),
+        serde_json::json!(223),
+    )
+    .await;
+    let err = resp.error.expect("nonexistent tensor should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("not found"));
+}
+
+// ── tensor.reduce validation paths ──────────────────────────────────
+
+#[tokio::test]
+async fn tensor_reduce_missing_tensor_id() {
+    let primal = test_primal();
+    let resp = tensor_reduce(&primal, &serde_json::json!({}), serde_json::json!(230)).await;
+    let err = resp.error.expect("missing tensor_id should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("tensor_id"));
+}
+
+#[tokio::test]
+async fn tensor_reduce_tensor_not_found() {
+    let primal = test_primal();
+    let resp = tensor_reduce(
+        &primal,
+        &serde_json::json!({"tensor_id": "t_gone"}),
+        serde_json::json!(231),
+    )
+    .await;
+    let err = resp.error.expect("nonexistent tensor should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("not found"));
+}
+
+// ── tensor.sigmoid validation paths ─────────────────────────────────
+
+#[tokio::test]
+async fn tensor_sigmoid_missing_tensor_id() {
+    let primal = test_primal();
+    let resp = tensor_sigmoid(&primal, &serde_json::json!({}), serde_json::json!(240)).await;
+    let err = resp.error.expect("missing tensor_id should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("tensor_id"));
+}
+
+#[tokio::test]
+async fn tensor_sigmoid_tensor_not_found() {
+    let primal = test_primal();
+    let resp = tensor_sigmoid(
+        &primal,
+        &serde_json::json!({"tensor_id": "t_missing"}),
+        serde_json::json!(241),
+    )
+    .await;
+    let err = resp.error.expect("nonexistent tensor should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("not found"));
 }

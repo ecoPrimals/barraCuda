@@ -24,7 +24,10 @@ Prioritized work items, ordered by impact. Updated 2026-04-13.
   36 new tests (math/stats/noise/rng/activation/batch validation). Pre-existing clippy
   debt resolved. **Phase 4**: LD-10 resolved — BTSP guard consumed first line from legacy
   JSON-RPC clients; `BtspOutcome::Degraded` now carries consumed line for replay.
-  `dispatch_line` helper extracted (DRY). 32 IPC methods. 4,343 tests pass.
+  `dispatch_line` helper extracted (DRY). 32 IPC methods. **Phase 5**: `NagaExecError::Overflow`
+  typed error for workgroup size overflow (checked_mul through u64). 15 new tensor IPC handler
+  tests (tensor.add/scale/clamp/reduce/sigmoid — all 5 previously untested handlers covered).
+  4,358 tests pass.
 - **Sprint 41: BC-07 Full Wiring + BC-06 Docs + TensorSession Migration Guide (Apr 11)**:
   `Auto::new()` returns `DiscoveredDevice` enum with 3-tier fallback (wgpu GPU → wgpu CPU
   → SovereignDevice IPC → Err). `BarraCudaPrimal` stores `DiscoveredDevice`. `Auto::new_wgpu()`

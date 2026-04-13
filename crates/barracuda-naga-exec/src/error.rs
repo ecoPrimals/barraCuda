@@ -66,6 +66,10 @@ pub enum NagaExecError {
         /// The length of the container.
         length: usize,
     },
+
+    /// A numeric overflow or resource limit was hit at runtime.
+    #[error("runtime overflow: {0}")]
+    Overflow(String),
 }
 
 pub type Result<T> = std::result::Result<T, NagaExecError>;

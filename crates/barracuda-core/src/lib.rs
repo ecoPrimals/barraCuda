@@ -18,10 +18,6 @@
     expect(clippy::unwrap_used, reason = "test code uses unwrap for brevity")
 )]
 #![expect(
-    clippy::unused_async,
-    reason = "tarpc trait impl requires async signatures the trait defines"
-)]
-#![expect(
     clippy::must_use_candidate,
     reason = "IPC handlers return values consumed by framework"
 )]
@@ -389,5 +385,31 @@ mod tests {
         assert_eq!(PRIMAL_NAME, "barraCuda");
         assert_eq!(PRIMAL_NAMESPACE, "barracuda");
         assert_eq!(PRIMAL_DOMAIN, "math");
+    }
+
+    #[test]
+    fn test_has_sovereign_dispatch_false_by_default() {
+        let primal = BarraCudaPrimal::new();
+        assert!(!primal.has_sovereign_dispatch());
+    }
+
+    #[test]
+    fn test_compute_device_none_before_start() {
+        let primal = BarraCudaPrimal::new();
+        assert!(primal.compute_device().is_none());
+    }
+
+    #[tokio::test]
+    async fn test_compute_device_consistent_with_device() {
+        let mut primal = BarraCudaPrimal::new();
+        let _ = primal.start().await;
+        if primal.device().is_some() {
+            assert!(primal.compute_device().is_some());
+        } else {
+            assert!(
+                primal.compute_device().is_none() || primal.has_sovereign_dispatch(),
+                "compute_device should be None or sovereign when wgpu unavailable"
+            );
+        }
     }
 }

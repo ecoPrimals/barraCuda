@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.12] — 2026-04-13
 
+### Changed — Sprint 42 Phase 6: Deep Debt Continuation (Apr 13 2026)
+
+- **8 new coverage tests**: `identity_get` tarpc handler, FHE NTT/pointwise-mul `degree > u32::MAX`
+  overflow validation, `has_sovereign_dispatch` / `compute_device` unit coverage,
+  `health_readiness` after `start()`, and leading-whitespace JSON-RPC batch edge case.
+- **Stale lint expectation removed**: `#![expect(clippy::unused_async)]` at crate level was
+  unfulfilled — all async fns now genuinely await. Lint housekeeping keeps the attribute
+  surface honest.
+- **4,366 tests pass** (up from 4,358), all quality gates green (fmt, clippy -D warnings,
+  doc, deny, nextest).
+
 ### Changed — Sprint 42 Phase 5: Deep Debt Continuation (Apr 13 2026)
 
 - **`NagaExecError::Overflow` variant**: New typed error for numeric overflow in naga-exec

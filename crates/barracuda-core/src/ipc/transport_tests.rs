@@ -443,6 +443,39 @@ async fn test_serve_tarpc_returns_ok_on_addr_in_use() {
     );
 }
 
+#[tokio::test]
+async fn handle_connection_whitespace_batch() {
+    let primal = Arc::new(BarraCudaPrimal::new());
+    let batch = concat!(
+        "  \t [",
+        r#"{"jsonrpc":"2.0","method":"health.liveness","params":{},"id":1},"#,
+        r#"{"jsonrpc":"2.0","method":"primal.info","params":{},"id":2}"#,
+        "]\n"
+    );
+
+    let (client_reader, mut server_writer) = tokio::io::duplex(4096);
+    let (mut server_reader_buf, client_writer) = tokio::io::duplex(4096);
+
+    server_writer.write_all(batch.as_bytes()).await.unwrap();
+    server_writer.shutdown().await.unwrap();
+
+    handle_connection(primal, client_reader, client_writer, None).await;
+
+    let mut response = String::new();
+    tokio::io::AsyncReadExt::read_to_string(&mut server_reader_buf, &mut response)
+        .await
+        .unwrap();
+    let lines: Vec<&str> = response.lines().collect();
+    assert_eq!(
+        lines.len(),
+        1,
+        "batch with leading whitespace should still produce one batch response"
+    );
+    let parsed: serde_json::Value = serde_json::from_str(lines[0]).unwrap();
+    assert!(parsed.is_array(), "batch response should be an array");
+    assert_eq!(parsed.as_array().unwrap().len(), 2);
+}
+
 #[test]
 fn default_tcp_port_respects_env() {
     let port = IpcServer::default_tcp_port();

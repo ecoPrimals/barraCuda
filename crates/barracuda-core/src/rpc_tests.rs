@@ -427,3 +427,64 @@ async fn tarpc_tolerances_get_emulated_double() {
     .await;
     assert_eq!(tol.name, "emulated_double");
 }
+
+#[tokio::test]
+async fn tarpc_identity_get() {
+    let primal = std::sync::Arc::new(crate::BarraCudaPrimal::new());
+    let server = BarraCudaServer::new(primal);
+    let info = BarraCudaService::identity_get(server, tarpc::context::current()).await;
+    assert_eq!(info.primal, crate::PRIMAL_NAMESPACE);
+    assert_eq!(info.domain, "math");
+    assert_eq!(info.license, "AGPL-3.0-or-later");
+    assert!(!info.version.is_empty());
+}
+
+#[tokio::test]
+async fn tarpc_fhe_ntt_degree_overflow() {
+    let primal = std::sync::Arc::new(crate::BarraCudaPrimal::new());
+    let server = BarraCudaServer::new(primal);
+    let result = BarraCudaService::fhe_ntt(
+        server,
+        tarpc::context::current(),
+        17,
+        u64::from(u32::MAX) + 1,
+        3,
+        vec![1, 2, 3],
+    )
+    .await;
+    assert!(
+        result.status.contains("error"),
+        "degree exceeding u32::MAX should produce error status"
+    );
+    assert!(result.result.is_empty());
+}
+
+#[tokio::test]
+async fn tarpc_fhe_pointwise_mul_degree_overflow() {
+    let primal = std::sync::Arc::new(crate::BarraCudaPrimal::new());
+    let server = BarraCudaServer::new(primal);
+    let result = BarraCudaService::fhe_pointwise_mul(
+        server,
+        tarpc::context::current(),
+        17,
+        u64::from(u32::MAX) + 1,
+        vec![1],
+        vec![2],
+    )
+    .await;
+    assert!(
+        result.status.contains("error"),
+        "degree exceeding u32::MAX should produce error status"
+    );
+    assert!(result.result.is_empty());
+}
+
+#[tokio::test]
+async fn tarpc_health_readiness_after_start() {
+    let mut primal = crate::BarraCudaPrimal::new();
+    let _ = crate::lifecycle::PrimalLifecycle::start(&mut primal).await;
+    let primal = std::sync::Arc::new(primal);
+    let server = BarraCudaServer::new(primal);
+    let report = BarraCudaService::health_readiness(server, tarpc::context::current()).await;
+    assert_eq!(report.status, "ready");
+}

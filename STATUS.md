@@ -221,7 +221,7 @@
 - P1: DF64 end-to-end NVK hardware verification (Yukawa shaders)
 - P1: coralReef sovereign compiler evolution (unified compiler and driver for all GPU targets)
 - P1: Kokkos validation baseline documentation (unblocked by VFIO strategy)
-- P2: Test coverage ~80% line on llvmpipe (80% CI gate blocking; 90% target requires real GPU hardware; 4,358+ tests)
+- P2: Test coverage ~80% line on llvmpipe (80% CI gate blocking; 90% target requires real GPU hardware; 4,366+ tests)
 - P2: Kokkos GPU parity benchmarks
 - ~~P2: RHMC multi-shift CG solver~~ — **Done** (Mar 12, CPU reference rhmc.rs; Mar 29, GPU multi-shift CG + 5 WGSL shaders + orchestration module)
 

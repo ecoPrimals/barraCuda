@@ -27,7 +27,9 @@ Prioritized work items, ordered by impact. Updated 2026-04-13.
   `dispatch_line` helper extracted (DRY). 32 IPC methods. **Phase 5**: `NagaExecError::Overflow`
   typed error for workgroup size overflow (checked_mul through u64). 15 new tensor IPC handler
   tests (tensor.add/scale/clamp/reduce/sigmoid — all 5 previously untested handlers covered).
-  4,358 tests pass.
+  4,358 tests pass. **Phase 6**: 8 new coverage tests (identity_get tarpc, FHE degree overflow,
+  has_sovereign_dispatch, compute_device, health_readiness after start, whitespace batch).
+  Stale `clippy::unused_async` crate-level expectation removed. 4,366 tests pass.
 - **Sprint 41: BC-07 Full Wiring + BC-06 Docs + TensorSession Migration Guide (Apr 11)**:
   `Auto::new()` returns `DiscoveredDevice` enum with 3-tier fallback (wgpu GPU → wgpu CPU
   → SovereignDevice IPC → Err). `BarraCudaPrimal` stores `DiscoveredDevice`. `Auto::new_wgpu()`

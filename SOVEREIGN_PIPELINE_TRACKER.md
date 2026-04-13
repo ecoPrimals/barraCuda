@@ -10,9 +10,9 @@
 
 ```
 Layer 1  barraCuda    ██████████  COMPLETE       Zero unsafe, zero C deps, PrecisionBrain-coralReef routing, SiliconProfile tier routing
-Layer 2  coralReef    █████████░  Phase 10 I70   f64 transcendental polyfills, structured capabilities, DRM E2E
+Layer 2  coralReef    █████████░  Phase 10 I80   f64 transcendental polyfills, structured capabilities, DRM E2E
 Layer 3  Standalone   ██░░░░░░░░  Planned        Standalone coral-reef crate, multi-arch ISA
-Layer 4  Sovereign HW █████████░  S163 complete  toadStool infra done; VFIO hw validation 6/7
+Layer 4  Sovereign HW █████████░  S202 complete  toadStool infra done; VFIO hw validation 6/7
 ```
 
 ### Dispatch Chain (sovereign primary — IPC-first)

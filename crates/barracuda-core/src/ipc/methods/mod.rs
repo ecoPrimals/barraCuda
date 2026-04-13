@@ -29,7 +29,7 @@ use serde_json::Value;
 /// Per `SEMANTIC_METHOD_NAMING_STANDARD.md` v2.2.0, `health.liveness`,
 /// `health.readiness`, `health.check`, and `capabilities.list` are
 /// non-negotiable ecosystem probes registered as canonical names.
-pub const REGISTERED_METHODS: &[&str] = &[
+pub(crate) const REGISTERED_METHODS: &[&str] = &[
     // ── Ecosystem probes (non-negotiable) ─────────────────────────────
     "health.liveness",
     "health.readiness",
@@ -76,7 +76,7 @@ pub const REGISTERED_METHODS: &[&str] = &[
 
 /// Normalize a method name: accepts both `{domain}.{operation}` (standard)
 /// and legacy `{namespace}.{domain}.{operation}` (backward-compatible).
-pub fn normalize_method(method: &str) -> &str {
+pub(crate) fn normalize_method(method: &str) -> &str {
     method
         .strip_prefix(crate::PRIMAL_NAMESPACE)
         .and_then(|s| s.strip_prefix('.'))

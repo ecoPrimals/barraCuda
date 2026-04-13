@@ -266,7 +266,7 @@ fn validate_batch_ops(ops: &[Value], valid_ops: &[&str]) -> Result<(), BatchErro
                     op_val.get("data").and_then(|v| v.as_array()),
                 ) {
                     let elements: u64 = shape_arr.iter().filter_map(|v| v.as_u64()).product();
-                    let data_len = data_arr.len() as u64;
+                    let data_len = u64::try_from(data_arr.len()).unwrap_or(u64::MAX);
                     if data_len != elements {
                         return Err(BatchError::new(format!(
                             "ops[{i}]: data length {data_len} ≠ shape product {elements}"

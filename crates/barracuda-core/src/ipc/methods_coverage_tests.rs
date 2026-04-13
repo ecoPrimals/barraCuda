@@ -941,3 +941,45 @@ async fn tensor_sigmoid_tensor_not_found() {
     assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
     assert!(err.message.contains("not found"));
 }
+
+// ── FHE degree overflow validation (JSON-RPC path) ──────────────────
+
+#[tokio::test]
+async fn fhe_ntt_degree_exceeds_u32_max() {
+    let primal = test_primal();
+    let big_degree = u64::from(u32::MAX) + 1;
+    let resp = fhe_ntt(
+        &primal,
+        &serde_json::json!({
+            "modulus": 17,
+            "degree": big_degree,
+            "root_of_unity": 3,
+            "coefficients": [1, 2, 3]
+        }),
+        serde_json::json!(500),
+    )
+    .await;
+    let err = resp.error.expect("degree > u32::MAX should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("too large") || err.message.contains("u32::MAX"));
+}
+
+#[tokio::test]
+async fn fhe_pointwise_mul_degree_exceeds_u32_max() {
+    let primal = test_primal();
+    let big_degree = u64::from(u32::MAX) + 1;
+    let resp = fhe_pointwise_mul(
+        &primal,
+        &serde_json::json!({
+            "modulus": 17,
+            "degree": big_degree,
+            "a": [1],
+            "b": [2]
+        }),
+        serde_json::json!(501),
+    )
+    .await;
+    let err = resp.error.expect("degree > u32::MAX should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("too large") || err.message.contains("u32::MAX"));
+}

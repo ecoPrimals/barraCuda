@@ -98,7 +98,7 @@ pub fn provides() -> Vec<String> {
 /// description}` objects. Descriptions derive from the domain name — no
 /// hardcoded domain catalog.
 #[must_use]
-pub fn provided_capability_groups(version: &str) -> Vec<serde_json::Value> {
+pub(crate) fn provided_capability_groups(version: &str) -> Vec<serde_json::Value> {
     use std::collections::BTreeMap;
     let mut groups: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
     for method in REGISTERED_METHODS {

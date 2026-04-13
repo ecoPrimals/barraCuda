@@ -39,7 +39,7 @@ bytes = { workspace = true }
 # SPIR-V passthrough bridge — isolates the single unsafe call to
 # wgpu::Device::create_shader_module_passthrough. Enables Tier 1
 # sovereign SPIR-V compilation (naga IR → SPIR-V → GPU, no WGSL re-emit).
-barracuda-spirv = { path = "../barracuda-spirv", version = "0.3.6", optional = true }
+barracuda-spirv = { path = "../barracuda-spirv", version = "0.3.12", optional = true }
 
 # CPU shader interpretation — run WGSL shaders on CPU via naga-exec.
 # Enables the shader-as-truth architecture where the same WGSL used on GPU

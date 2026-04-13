@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.12] — 2026-04-13
 
+### Changed — Sprint 42 Phase 9: Dead Code Removal & Coverage Expansion (Apr 13 2026)
+
+- **Dead code removal**: 5 functions removed from `WgpuDevice` — `quota_deallocate`,
+  `new_calibrated`, `submit_and_poll`, `dispatch_semaphore_timeout`,
+  `try_acquire_timeout` — all had zero call sites anywhere in the workspace.
+  `submit_and_poll` removal cascaded to its only consumers (timeout + semaphore helpers).
+  Stale doc references in `buffers.rs` updated.
+- **6 new GPU-free coverage tests**: `stats_std_dev` with 0/1 data points (INTERNAL_ERROR
+  path), `noise_perlin3d` missing x-only / y-only, `compute_dispatch` with numeric
+  `tensor_id` (non-string) and empty string op.
+- **4,377 tests pass** (up from 4,371), all quality gates green.
+
 ### Changed — Sprint 42 Phase 8: Deep Debt Continuation (Apr 13 2026)
 
 - **Hardcode elimination**: Duplicated `"127.0.0.1"` literals in `bin/barracuda.rs` replaced

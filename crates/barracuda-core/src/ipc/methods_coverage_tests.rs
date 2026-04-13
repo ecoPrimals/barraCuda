@@ -983,3 +983,77 @@ async fn fhe_pointwise_mul_degree_exceeds_u32_max() {
     assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
     assert!(err.message.contains("too large") || err.message.contains("u32::MAX"));
 }
+
+// ── stats.std_dev edge cases ────────────────────────────────────────
+
+#[test]
+fn stats_std_dev_empty_data() {
+    let resp = stats_std_dev(&serde_json::json!({"data": []}), serde_json::json!(600));
+    let err = resp.error.expect("empty data should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INTERNAL_ERROR);
+    assert!(err.message.contains("std_dev failed"));
+}
+
+#[test]
+fn stats_std_dev_single_element() {
+    let resp = stats_std_dev(&serde_json::json!({"data": [42.0]}), serde_json::json!(601));
+    let err = resp
+        .error
+        .expect("single element should fail for sample std_dev");
+    assert_eq!(err.code, super::super::jsonrpc::INTERNAL_ERROR);
+    assert!(err.message.contains("std_dev failed"));
+}
+
+// ── noise.perlin3d missing individual params ────────────────────────
+
+#[test]
+fn noise_perlin3d_missing_x_only() {
+    let resp = noise_perlin3d(
+        &serde_json::json!({"y": 1.0, "z": 2.0}),
+        serde_json::json!(602),
+    );
+    let err = resp.error.expect("missing x should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("x"));
+}
+
+#[test]
+fn noise_perlin3d_missing_y_only() {
+    let resp = noise_perlin3d(
+        &serde_json::json!({"x": 1.0, "z": 2.0}),
+        serde_json::json!(603),
+    );
+    let err = resp.error.expect("missing y should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("y"));
+}
+
+// ── compute.dispatch edge cases ─────────────────────────────────────
+
+#[tokio::test]
+async fn compute_dispatch_tensor_id_non_string() {
+    let primal = test_primal();
+    let resp = compute_dispatch(
+        &primal,
+        &serde_json::json!({"op": "read", "tensor_id": 12345}),
+        serde_json::json!(604),
+    )
+    .await;
+    let err = resp.error.expect("numeric tensor_id should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("tensor_id"));
+}
+
+#[tokio::test]
+async fn compute_dispatch_empty_op() {
+    let primal = test_primal();
+    let resp = compute_dispatch(
+        &primal,
+        &serde_json::json!({"op": ""}),
+        serde_json::json!(605),
+    )
+    .await;
+    let err = resp.error.expect("empty op should fail");
+    assert_eq!(err.code, super::super::jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("Unknown op"));
+}

@@ -47,36 +47,6 @@ impl DispatchSemaphore {
         DispatchPermit(self)
     }
 
-    /// Acquire with a timeout — returns `None` if the deadline expires
-    /// before a permit is available.  Prevents infinite stalls when the
-    /// device is oversubscribed (same philosophy as GPU fence timeouts).
-    pub(crate) fn try_acquire_timeout(
-        &self,
-        timeout: std::time::Duration,
-    ) -> Option<DispatchPermit<'_>> {
-        let deadline = std::time::Instant::now() + timeout;
-        let mut count = self
-            .state
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
-        while *count == 0 {
-            let remaining = deadline.saturating_duration_since(std::time::Instant::now());
-            if remaining.is_zero() {
-                return None;
-            }
-            let (guard, wait_result) = self
-                .available
-                .wait_timeout(count, remaining)
-                .unwrap_or_else(std::sync::PoisonError::into_inner);
-            count = guard;
-            if wait_result.timed_out() && *count == 0 {
-                return None;
-            }
-        }
-        *count -= 1;
-        Some(DispatchPermit(self))
-    }
-
     pub(crate) fn max_permits(&self) -> usize {
         self.max_permits
     }

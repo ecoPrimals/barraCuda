@@ -7,7 +7,7 @@
 
 use std::sync::atomic::Ordering;
 
-use super::{WgpuDevice, dispatch_semaphore_timeout, poll_timeout};
+use super::{WgpuDevice, poll_timeout};
 use crate::error::Result;
 
 impl WgpuDevice {
@@ -125,26 +125,6 @@ impl WgpuDevice {
             return;
         }
         std::panic::resume_unwind(payload);
-    }
-
-    /// Submit commands and poll, respecting the device's concurrency budget.
-    /// First attempts a timed acquire (30 s) — if the semaphore is
-    /// saturated beyond that, falls back to the blocking path with a
-    /// warning.  This provides observability into dispatch stalls without
-    /// changing correctness: the operation always completes.
-    pub fn submit_and_poll(&self, commands: impl IntoIterator<Item = wgpu::CommandBuffer>) {
-        let timeout = dispatch_semaphore_timeout();
-        let _permit = if let Some(p) = self.dispatch_semaphore.try_acquire_timeout(timeout) {
-            p
-        } else {
-            tracing::warn!(
-                "dispatch semaphore saturated for {}s ({} permits) — blocking until available",
-                timeout.as_secs(),
-                self.dispatch_semaphore.max_permits(),
-            );
-            self.dispatch_semaphore.acquire()
-        };
-        self.submit_and_poll_inner(commands);
     }
 
     /// Submit without acquiring a dispatch permit.

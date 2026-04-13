@@ -105,12 +105,12 @@ impl WgpuDevice {
 
     /// Map a staging buffer and extract typed data.
     /// Use after you've already submitted a copy to the staging buffer
-    /// and polled (e.g., via `submit_and_poll`). This handles the
+    /// and polled (e.g., via [`submit_and_poll_inner`]). This handles the
     /// `map_async` → `poll` → `get_mapped_range` → `unmap` dance that
     /// was previously duplicated across ~40 ops.
     ///
-    /// Prefer [`submit_and_map`] for new code — it avoids the double-poll
-    /// that occurs when calling `submit_and_poll` followed by this method.
+    /// Prefer [`submit_and_map`] for new code — it combines submission and
+    /// mapping into a single call, avoiding double-poll overhead.
     /// # Errors
     /// Returns [`Err`] if the device is lost, if [`poll_safe`] fails (device lost
     /// during poll), if the GPU buffer mapping channel is closed before the

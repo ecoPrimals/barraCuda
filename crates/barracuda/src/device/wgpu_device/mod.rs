@@ -51,19 +51,6 @@ pub(crate) fn poll_timeout() -> Option<Duration> {
     *TIMEOUT
 }
 
-/// Timeout for the dispatch semaphore before falling back to a blocking acquire.
-/// Override with `BARRACUDA_DISPATCH_TIMEOUT_SECS` (default: 30).
-fn dispatch_semaphore_timeout() -> Duration {
-    static TIMEOUT: std::sync::LazyLock<Duration> = std::sync::LazyLock::new(|| {
-        let secs: u64 = std::env::var("BARRACUDA_DISPATCH_TIMEOUT_SECS")
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(30);
-        Duration::from_secs(secs)
-    });
-    *TIMEOUT
-}
-
 /// WebGPU device - executes WGSL on any hardware
 ///
 /// Concurrency model (atomic barrier + Mutex):
@@ -161,17 +148,6 @@ impl WgpuDevice {
             tracker.try_allocate(bytes)?;
         }
         Ok(())
-    }
-
-    /// Record a buffer deallocation against the VRAM quota. No-op if no tracker is set.
-    ///
-    /// Callers should invoke this when a tracked buffer is dropped or returned
-    /// to a pool. Currently called by `DeviceLease` and by buffer-drop hooks
-    /// when a `QuotaTracker` is attached.
-    pub fn quota_deallocate(&self, bytes: u64) {
-        if let Some(tracker) = &self.quota_tracker {
-            tracker.deallocate(bytes);
-        }
     }
 
     /// Check if f64 shaders are truly available on this device.
@@ -394,16 +370,6 @@ impl WgpuDevice {
     #[must_use]
     pub fn dispatch_overhead_us(&self) -> f64 {
         self.get_calibration().dispatch_overhead_us
-    }
-
-    /// Create calibrated device (runs calibration immediately)
-    /// # Errors
-    /// Returns [`Err`] if no WGPU adapter is found or device creation fails.
-    pub async fn new_calibrated() -> Result<Self> {
-        let mut device = Self::new().await?;
-        let cal = device.get_calibration();
-        device.calibration = Some(cal);
-        Ok(device)
     }
 }
 

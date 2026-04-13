@@ -33,7 +33,10 @@ Prioritized work items, ordered by impact. Updated 2026-04-13.
   **Phase 7**: `data_arr.len() as u64` → safe `u64::try_from` (last uncovered truncation cast).
   Path-dep versions aligned (0.3.11/0.3.6 → 0.3.12). Visibility tightened: `REGISTERED_METHODS`,
   `normalize_method`, `provided_capability_groups` to `pub(crate)`. 2 new JSON-RPC FHE degree
-  overflow tests. 4,368 tests pass.
+  overflow tests. 4,368 tests pass. **Phase 8**: Duplicated `"127.0.0.1"` in binary replaced
+  with `transport::DEFAULT_BIND_HOST`. Batch pre-validation elevated (scale/layer_norm/reshape
+  parameter checks before device availability — `INVALID_PARAMS` not `INTERNAL_ERROR`). Dead
+  `NagaExecError::NotCompute` removed. 3 new batch validation tests. 4,371 tests pass.
 - **Sprint 41: BC-07 Full Wiring + BC-06 Docs + TensorSession Migration Guide (Apr 11)**:
   `Auto::new()` returns `DiscoveredDevice` enum with 3-tier fallback (wgpu GPU → wgpu CPU
   → SovereignDevice IPC → Err). `BarraCudaPrimal` stores `DiscoveredDevice`. `Auto::new_wgpu()`

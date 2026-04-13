@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.12] — 2026-04-13
 
+### Changed — Sprint 42 Phase 8: Deep Debt Continuation (Apr 13 2026)
+
+- **Hardcode elimination**: Duplicated `"127.0.0.1"` literals in `bin/barracuda.rs` replaced
+  with `transport::DEFAULT_BIND_HOST` (promoted from `const` to `pub const` for binary access).
+  Single source of truth for the default bind address.
+- **Batch pre-validation elevated**: `scale` requires `scalar`, `layer_norm` requires
+  `feature_size`, `reshape` requires `shape` — all three checks moved into
+  `validate_batch_ops` pre-validation (runs before device availability check). Callers now
+  get `INVALID_PARAMS` (-32602) instead of `INTERNAL_ERROR` (-32603) when GPU is unavailable.
+- **Dead code removal**: `NagaExecError::NotCompute` variant removed — was defined but never
+  constructed anywhere in the workspace. Cleans the error surface.
+- **3 new batch validation tests** covering the elevated pre-validation paths.
+- **4,371 tests pass** (up from 4,368), all quality gates green.
+
 ### Changed — Sprint 42 Phase 7: Deep Debt Continuation (Apr 13 2026)
 
 - **Safe cast evolution**: `data_arr.len() as u64` in `validate_batch_ops` evolved to

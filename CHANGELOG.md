@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.12] — 2026-04-13
 
+### Changed — Sprint 42 Phase 10: BC-09 Docker TCP Bind (Apr 13 2026)
+
+- **BC-09 resolved**: `--port` previously hardcoded `127.0.0.1` as the bind host,
+  bypassing `BARRACUDA_IPC_HOST`. New `resolve_bind_host()` function in `transport.rs`
+  checks the env var first, falling back to `127.0.0.1`. Both binary call sites updated.
+  Docker containers can now `BARRACUDA_IPC_HOST=0.0.0.0 barracuda server --port 9000`
+  for cross-container TCP access. Secure default preserved.
+- **2 new tests**: `resolve_bind_host_returns_valid_ip`, `resolve_bind_host_fallback_matches_default`.
+- **4,379 tests pass**, all quality gates green.
+
 ### Changed — Sprint 42 Phase 9: Dead Code Removal & Coverage Expansion (Apr 13 2026)
 
 - **Dead code removal**: 5 functions removed from `WgpuDevice` — `quota_deallocate`,

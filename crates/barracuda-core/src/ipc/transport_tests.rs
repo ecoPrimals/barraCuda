@@ -53,6 +53,24 @@ async fn test_notification_null_id_no_response() {
     );
 }
 
+// ─── resolve_bind_host tests ───
+
+#[test]
+fn resolve_bind_host_returns_valid_ip() {
+    let host = resolve_bind_host();
+    assert!(
+        host.parse::<std::net::IpAddr>().is_ok(),
+        "resolve_bind_host must return a valid IP, got: {host}"
+    );
+}
+
+#[test]
+fn resolve_bind_host_fallback_matches_default() {
+    if std::env::var("BARRACUDA_IPC_HOST").is_err() {
+        assert_eq!(resolve_bind_host(), DEFAULT_BIND_HOST);
+    }
+}
+
 // ─── resolve_bind_address tests ───
 
 #[test]

@@ -35,7 +35,8 @@ enum Commands {
         /// TCP port for newline-delimited JSON-RPC.
         /// Per UniBin v1.1: `--port` is the universal entry point for
         /// orchestration. Springs and launchers compose primals via
-        /// `{binary} server --port {port}`. Binds to `127.0.0.1:{port}`.
+        /// `{binary} server --port {port}`. Host resolved from
+        /// `BARRACUDA_IPC_HOST` (default `127.0.0.1`).
         #[arg(long)]
         port: Option<u16>,
 
@@ -132,7 +133,12 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
             no_unix,
         } => {
             let effective_bind = bind.or_else(|| {
-                port.map(|p| format!("{}:{p}", barracuda_core::ipc::transport::DEFAULT_BIND_HOST))
+                port.map(|p| {
+                    format!(
+                        "{}:{p}",
+                        barracuda_core::ipc::transport::resolve_bind_host()
+                    )
+                })
             });
             run_server(
                 effective_bind,
@@ -255,7 +261,12 @@ async fn run_server(
     let bind_addr = bind.unwrap_or_else(|| {
         barracuda_core::ipc::IpcServer::default_tcp_port().map_or_else(
             || barracuda_core::ipc::transport::resolve_bind_address(None),
-            |p| format!("{}:{p}", barracuda_core::ipc::transport::DEFAULT_BIND_HOST),
+            |p| {
+                format!(
+                    "{}:{p}",
+                    barracuda_core::ipc::transport::resolve_bind_host()
+                )
+            },
         )
     });
     if let Some((listener, local_addr)) =

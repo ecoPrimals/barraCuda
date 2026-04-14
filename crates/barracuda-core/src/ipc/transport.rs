@@ -45,6 +45,16 @@ fn max_connections() -> usize {
 /// configuration via `BARRACUDA_IPC_HOST` or `--bind`.
 pub const DEFAULT_BIND_HOST: &str = "127.0.0.1";
 
+/// Resolve the TCP bind host from the environment.
+///
+/// Checks `BARRACUDA_IPC_HOST`, falling back to [`DEFAULT_BIND_HOST`].
+/// Used when `--port` supplies only a port number and the host must come
+/// from the environment (e.g. Docker containers that need `0.0.0.0` to
+/// accept cross-container probes).
+pub fn resolve_bind_host() -> String {
+    std::env::var("BARRACUDA_IPC_HOST").unwrap_or_else(|_| DEFAULT_BIND_HOST.to_string())
+}
+
 /// Default family ID when no `FAMILY_ID` env var is set.
 const DEFAULT_FAMILY_ID: &str = "default";
 

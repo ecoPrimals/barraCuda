@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.12] — 2026-04-13
 
+### Changed — Sprint 42 Phase 11: Runtime Extraction & Coverage (Apr 13 2026)
+
+- **`tokio_block_on` extracted** from `device::test_pool` to `crate::runtime` module.
+  Production code (pppm FFT sync wrappers, dispatch config GPU probe, benchmark device
+  creation, test_harness semaphore acquire) no longer depends on a test utility module.
+  `test_pool::tokio_block_on` delegates to `crate::runtime` for backward compat.
+- **14 new GPU-free type validation tests**: non-string tensor IDs (matmul lhs/rhs),
+  non-array shape (tensor.create, compute.dispatch), non-string op (compute.dispatch),
+  string scalar (tensor.scale), string min (tensor.clamp), string modulus (fhe_ntt),
+  non-array a (fhe_pointwise_mul), non-array data (math.sigmoid), empty data
+  (stats.mean), n=0 (rng.uniform), float n_choices (activation.hick), non-array ops
+  (tensor.batch.submit).
+- **4,393 tests pass** (up from 4,379), all quality gates green.
+
 ### Changed — Sprint 42 Phase 10: BC-09 Docker TCP Bind (Apr 13 2026)
 
 - **BC-09 resolved**: `--port` previously hardcoded `127.0.0.1` as the bind host,

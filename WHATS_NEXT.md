@@ -39,6 +39,9 @@ Prioritized work items, ordered by impact. Updated 2026-04-13.
   `NagaExecError::NotCompute` removed. 3 new batch validation tests. 4,371 tests pass.
   **Phase 9 — Dead code removal + coverage**: 5 dead `WgpuDevice` functions removed,
   6 new GPU-free coverage tests. 4,377 tests pass.
+  **Phase 10 — BC-09 Docker TCP bind**: `resolve_bind_host()` respects `BARRACUDA_IPC_HOST`.
+  **Phase 11 — Runtime extraction + coverage**: `tokio_block_on` extracted from test_pool
+  to `crate::runtime`. 14 new GPU-free type validation tests. 4,393 tests pass.
 - **Sprint 41: BC-07 Full Wiring + BC-06 Docs + TensorSession Migration Guide (Apr 11)**:
   `Auto::new()` returns `DiscoveredDevice` enum with 3-tier fallback (wgpu GPU → wgpu CPU
   → SovereignDevice IPC → Err). `BarraCudaPrimal` stores `DiscoveredDevice`. `Auto::new_wgpu()`

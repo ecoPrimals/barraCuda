@@ -193,7 +193,7 @@ impl Pppm {
     }
 
     fn forward_fft(&self, mesh: &ChargeMesh) -> Result<Vec<f64>, PppmError> {
-        crate::device::test_pool::tokio_block_on(self.forward_fft_async(mesh))
+        crate::runtime::tokio_block_on(self.forward_fft_async(mesh))
     }
 
     async fn backward_fft_async(&self, phi_k: &[f64]) -> Result<PotentialMesh, PppmError> {
@@ -235,7 +235,7 @@ impl Pppm {
     }
 
     fn backward_fft(&self, phi_k: &[f64]) -> Result<PotentialMesh, PppmError> {
-        crate::device::test_pool::tokio_block_on(self.backward_fft_async(phi_k))
+        crate::runtime::tokio_block_on(self.backward_fft_async(phi_k))
     }
 
     /// CPU 3D FFT using dimension-wise 1D FFTs (test only)

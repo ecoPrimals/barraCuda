@@ -160,6 +160,7 @@ pub mod linalg;
 pub mod nautilus;
 pub mod numerical;
 pub mod rng;
+pub mod runtime;
 pub mod special;
 pub mod tolerances;
 pub mod validation;

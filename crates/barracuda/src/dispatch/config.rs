@@ -195,7 +195,7 @@ fn default_thresholds() -> HashMap<Arc<str>, usize> {
 /// Uses `WgpuDevice::new()` for a consistent probe rather than duplicating
 /// low-level wgpu setup code.  Returns `false` on software/CPU adapters.
 fn check_gpu_available() -> bool {
-    crate::device::test_pool::tokio_block_on(crate::device::WgpuDevice::new()).is_ok()
+    crate::runtime::tokio_block_on(crate::device::WgpuDevice::new()).is_ok()
 }
 
 /// Get global dispatch config (lazy-initialized)

@@ -74,7 +74,7 @@ impl GpuTestGate {
     pub fn acquire_owned_blocking(&self) -> tokio::sync::OwnedSemaphorePermit {
         Arc::clone(&self.semaphore)
             .try_acquire_owned()
-            .unwrap_or_else(|_| super::test_pool::tokio_block_on(self.acquire_owned()))
+            .unwrap_or_else(|_| crate::runtime::tokio_block_on(self.acquire_owned()))
     }
 
     /// The configured budget for this gate.

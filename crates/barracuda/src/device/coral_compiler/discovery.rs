@@ -38,16 +38,18 @@ const LOCALHOST: &str = "127.0.0.1";
 /// This fallback reads transport info from any remaining pre-capability manifest.
 const LEGACY_DISCOVERY_FILENAME: &str = "shader-compiler.json";
 
-/// Ecosystem shared namespace for socket-based discovery.
+/// Default ecosystem socket namespace per wateringHole `PRIMAL_IPC_PROTOCOL` v3.0.
 ///
-/// Per wateringHole `PRIMAL_IPC_PROTOCOL` v3.0, all primals share this
-/// namespace under `$XDG_RUNTIME_DIR`. We scan it for capability-domain
-/// symlinks (`shader.sock`) without knowing the specific primal name.
-///
-/// Same string as `ECOSYSTEM_SOCKET_DIR` in `barracuda-core` (`ipc/transport.rs`).
-/// Defined here so `barracuda` does not need a `barracuda-core` dependency for
-/// discovery-only builds.
-pub const ECOSYSTEM_SOCKET_NAMESPACE: &str = "biomeos";
+/// All primals place Unix sockets under `$XDG_RUNTIME_DIR/{namespace}/`.
+/// Override at runtime with the `BIOMEOS_SOCKET_DIR` environment variable
+/// (consistent with `barracuda-core` `ipc/transport.rs`).
+const DEFAULT_ECOSYSTEM_SOCKET_NAMESPACE: &str = "biomeos";
+
+/// Resolve the ecosystem socket namespace, respecting env override.
+fn resolve_ecosystem_namespace() -> String {
+    std::env::var("BIOMEOS_SOCKET_DIR")
+        .unwrap_or_else(|_| DEFAULT_ECOSYSTEM_SOCKET_NAMESPACE.to_owned())
+}
 
 /// Default directory name under `XDG_RUNTIME_DIR` for JSON primal manifests
 /// (toadStool S139 / capability-file discovery).
@@ -113,7 +115,7 @@ pub async fn discover_shader_compiler() -> Option<String> {
 async fn discover_from_socket() -> Option<String> {
     let runtime_dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
     let socket_path = PathBuf::from(&runtime_dir)
-        .join(ECOSYSTEM_SOCKET_NAMESPACE)
+        .join(resolve_ecosystem_namespace())
         .join(SHADER_CAPABILITY_SOCKET);
 
     if !socket_path.exists() {
@@ -149,7 +151,7 @@ async fn discover_from_file() -> Option<String> {
         .unwrap_or_else(|_| DEFAULT_ECOPRIMALS_DISCOVERY_DIR.to_owned());
     let eco_base = PathBuf::from(&runtime_dir).join(&eco_dir);
     let eco_canonical = eco_base.join("discovery");
-    let biomeos_base = PathBuf::from(&runtime_dir).join(ECOSYSTEM_SOCKET_NAMESPACE);
+    let biomeos_base = PathBuf::from(&runtime_dir).join(resolve_ecosystem_namespace());
 
     let dirs = [&eco_base, &eco_canonical, &biomeos_base];
 
@@ -247,7 +249,7 @@ pub async fn discover_cpu_shader_compiler() -> Option<String> {
         .unwrap_or_else(|_| DEFAULT_ECOPRIMALS_DISCOVERY_DIR.to_owned());
     let eco_base = PathBuf::from(&runtime_dir).join(&eco_dir);
     let eco_canonical = eco_base.join("discovery");
-    let biomeos_base = PathBuf::from(&runtime_dir).join(ECOSYSTEM_SOCKET_NAMESPACE);
+    let biomeos_base = PathBuf::from(&runtime_dir).join(resolve_ecosystem_namespace());
 
     let dirs = [&eco_base, &eco_canonical, &biomeos_base];
 
@@ -279,7 +281,7 @@ pub async fn discover_shader_validator() -> Option<String> {
         .unwrap_or_else(|_| DEFAULT_ECOPRIMALS_DISCOVERY_DIR.to_owned());
     let eco_base = PathBuf::from(&runtime_dir).join(&eco_dir);
     let eco_canonical = eco_base.join("discovery");
-    let biomeos_base = PathBuf::from(&runtime_dir).join(ECOSYSTEM_SOCKET_NAMESPACE);
+    let biomeos_base = PathBuf::from(&runtime_dir).join(resolve_ecosystem_namespace());
 
     let dirs = [&eco_base, &eco_canonical, &biomeos_base];
 
@@ -451,7 +453,7 @@ mod tests {
 
     #[test]
     fn constants_match_expected_values() {
-        assert_eq!(ECOSYSTEM_SOCKET_NAMESPACE, "biomeos");
+        assert_eq!(DEFAULT_ECOSYSTEM_SOCKET_NAMESPACE, "biomeos");
         assert_eq!(SHADER_CAPABILITY_SOCKET, "shader.sock");
         assert_eq!(COMPILER_ADDR_ENV, "BARRACUDA_SHADER_COMPILER_ADDR");
         assert_eq!(COMPILER_PORT_ENV, "BARRACUDA_SHADER_COMPILER_PORT");

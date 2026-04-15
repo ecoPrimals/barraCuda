@@ -5,7 +5,47 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.12] — 2026-04-13
+## [0.3.12] — 2026-04-15
+
+### Changed — Sprint 43b: Deep Debt Evolution (Apr 15 2026)
+
+- **Smart WGSL refactoring**: `math_f64.wgsl` 840→725 lines. 10 fossil functions
+  + Newton-Raphson `sqrt_f64` extracted to `math_f64_fossils.wgsl` (134L). `asin_f64`
+  evolved from fossil `sqrt_f64` to native `sqrt()` (probe-confirmed on all SHADER_F64
+  hardware). Fossil→active dependency edge eliminated. `math_f64_preamble()` updated
+  for 3-file inclusion (fossils + core + special).
+- **biomeos namespace hardcoding evolved**: `ECOSYSTEM_SOCKET_NAMESPACE` (discovery.rs)
+  and `ECOSYSTEM_SOCKET_DIR` (transport.rs) evolved from public constants to private
+  defaults with `BIOMEOS_SOCKET_DIR` env var override. Consistent env-driven namespace
+  resolution across both crates. All 4 discovery function call sites updated.
+- **HMAC expect elimination**: 2 `expect("HMAC accepts any key size")` in `btsp_frame.rs`
+  evolved to `map_err` with typed `BtspFrameError::AuthFailed`. `compute_hmac` return type
+  evolved from `Vec<u8>` to `Result<Vec<u8>, BtspFrameError>`. Zero `expect()` in crypto paths.
+- **12-axis deep debt audit**: all `.rs` files under 800L; zero TODO/FIXME/HACK; zero
+  `Result<T, String>` in production; zero `println!` in library code; zero mocks in
+  production; all deps pure Rust; single `unsafe` (barracuda-spirv wgpu passthrough).
+- **Benchmark assessment**: Kokkos parity bench operational, in-crate benchmark framework
+  with matmul/activations/reductions/convolutions. No Python CPU baselines in-tree
+  (scipy/numpy referenced in docs only). No Criterion (custom harness throughout).
+
+### Changed — Sprint 43: BTSP Phase 3, BufReader Fix & Gap Resolution (Apr 15 2026)
+
+- **BTSP Phase 3 post-handshake stream encryption**: `BtspCipher` enum
+  (Null/HmacPlain/ChaCha20Poly1305), `BtspSession` struct with session_key + cipher,
+  `BtspFrameReader<R>`/`BtspFrameWriter<W>` length-prefixed frame I/O per
+  `BTSP_PROTOCOL_STANDARD.md` §Wire Framing (4-byte BE, 16 MiB max). Pure Rust crypto
+  via `chacha20poly1305` + `hmac` + `sha2` (RustCrypto). Counter-based nonce generation.
+  Tamper detection for all cipher suites. 14 new frame tests.
+- **Transport integration**: `handle_btsp_connection` for encrypted framing on TCP and
+  UDS accept loops. Automatic cipher routing (non-null → framed, null/dev/degraded → NDJSON).
+- **BufReader lifetime fix**: Single `BufReader` across entire handshake relay with
+  `get_mut()` for writes. Was creating two instances, risking buffered data loss.
+- **plasma_dispersion verified**: Sprint 40 dual gate `gpu+domain-lattice` confirmed
+  correct via `cargo check --features gpu --no-default-features`.
+- **17/17 neuralSpring V131 shader absorption confirmed upstream**: All present as
+  canonical `_f64.wgsl` with Rust integration. Provenance registry path fixed for
+  `batch_ipr` (`special/` → `spectral/`).
+- **Dependencies added**: `chacha20poly1305 0.10`, `hmac 0.12`, `sha2 0.10`, `base64ct 1.6`.
 
 ### Changed — Sprint 42 Phase 11: Runtime Extraction & Coverage (Apr 13 2026)
 

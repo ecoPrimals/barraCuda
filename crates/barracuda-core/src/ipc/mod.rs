@@ -112,9 +112,12 @@
 //! | `fhe.pointwise_mul` | `{"modulus": u64, "degree": u64, "a": [u64], "b": [u64]}` | `{"status": "completed", "modulus": u64, "degree": u64, "result": [u64]}` | yes |
 
 pub mod btsp;
+pub mod btsp_frame;
 pub mod jsonrpc;
 pub mod methods;
 pub mod transport;
 
+pub use btsp::{BtspCipher, BtspSession};
+pub use btsp_frame::{BtspFrameError, BtspFrameReader, BtspFrameWriter};
 pub use jsonrpc::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
 pub use transport::IpcServer;

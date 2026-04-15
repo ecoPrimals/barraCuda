@@ -37,8 +37,8 @@ pub use cache::{
     cache_native_binary, cached_native_binary, cached_native_binary_any_arch, shader_hash,
 };
 pub use discovery::{
-    DEFAULT_ECOPRIMALS_DISCOVERY_DIR, ECOSYSTEM_SOCKET_NAMESPACE, discover_cpu_shader_compiler,
-    discover_shader_compiler, discover_shader_validator,
+    DEFAULT_ECOPRIMALS_DISCOVERY_DIR, discover_cpu_shader_compiler, discover_shader_compiler,
+    discover_shader_validator,
 };
 pub use types::{
     AdapterDescriptor, BufferBinding, CompileCpuRequest, CompileCpuResponse, CoralBinary,

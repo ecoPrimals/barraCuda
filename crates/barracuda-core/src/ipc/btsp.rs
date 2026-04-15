@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! BTSP Phase 2: connection authentication guard with full handshake relay.
+//! BTSP Phase 2+3: connection authentication guard with handshake relay and
+//! post-handshake stream encryption.
 //!
-//! Per `BTSP_PROTOCOL_STANDARD.md` §Phase 2: when `FAMILY_ID` is set,
-//! incoming connections must prove family membership via the security-domain
-//! provider's handshake-as-a-service RPC before accessing JSON-RPC methods.
+//! Per `BTSP_PROTOCOL_STANDARD.md`: when `FAMILY_ID` is set, incoming
+//! connections prove family membership via the security-domain provider's
+//! handshake-as-a-service RPC. Phase 3 adds real cipher negotiation and
+//! encrypted length-prefixed framing after the handshake succeeds.
 //!
 //! ## Architecture
 //!
@@ -21,8 +23,10 @@
 //!    then `HMAC-SHA256(shared_secret, challenge || "btsp-v1")`.
 //! 7. Client sends `ChallengeResponse` (HMAC proof) to barraCuda.
 //! 8. barraCuda calls security provider `btsp.session.verify` with the proof.
-//! 9. Provider verifies and returns `HandshakeComplete` (session_id + cipher).
+//! 9. Provider verifies → returns session_id, cipher, session_key.
 //! 10. barraCuda relays `HandshakeComplete` to client.
+//! 11. **Phase 3**: both sides switch to length-prefixed encrypted frames
+//!     using the negotiated cipher and session key.
 //!
 //! ## Degraded Mode
 //!
@@ -33,16 +37,55 @@
 
 use super::transport::{resolve_family_id, resolve_socket_dir};
 
+/// Negotiated cipher suite per `BTSP_PROTOCOL_STANDARD.md` §Cipher Suites.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BtspCipher {
+    /// `BTSP_NULL` — raw plaintext frames. Authentication only (handshake).
+    /// Only valid for Covalent bonds.
+    Null,
+    /// `BTSP_HMAC_PLAIN` — HMAC-SHA256 tag appended per frame. Integrity
+    /// and authentication without confidentiality.
+    HmacPlain,
+    /// `BTSP_CHACHA20_POLY1305` — full AEAD encryption. Default for all bonds.
+    ChaCha20Poly1305,
+}
+
+impl BtspCipher {
+    /// Parse the cipher name from the provider's handshake response.
+    fn from_wire(s: &str) -> Self {
+        match s {
+            "chacha20_poly1305" | "chacha20" | "BTSP_CHACHA20_POLY1305" => Self::ChaCha20Poly1305,
+            "hmac_plain" | "hmac" | "BTSP_HMAC_PLAIN" => Self::HmacPlain,
+            _ => Self::Null,
+        }
+    }
+
+    /// Whether this cipher requires the session key for frame I/O.
+    pub fn requires_key(self) -> bool {
+        !matches!(self, Self::Null)
+    }
+}
+
+/// Session state after a successful BTSP handshake.
+#[derive(Debug, Clone)]
+pub struct BtspSession {
+    /// Security-provider-issued session identifier.
+    pub session_id: String,
+    /// Negotiated cipher suite for post-handshake frames.
+    pub cipher: BtspCipher,
+    /// Session key material (base64-decoded from provider response).
+    /// Empty when cipher is `Null`.
+    pub session_key: Vec<u8>,
+}
+
 /// Result of a BTSP handshake attempt on an incoming connection.
 #[derive(Debug)]
 pub enum BtspOutcome {
     /// No `FAMILY_ID` set — development mode, no handshake required.
     DevMode,
-    /// `FAMILY_ID` set, full handshake succeeded.
-    Authenticated {
-        /// Security-provider-issued session identifier.
-        session_id: String,
-    },
+    /// `FAMILY_ID` set, full handshake succeeded. Contains the negotiated
+    /// cipher and session key for Phase 3 encrypted framing.
+    Authenticated(BtspSession),
     /// `FAMILY_ID` set, security provider unreachable or handshake incomplete.
     /// Connection accepted with warning — operators see actionable log.
     Degraded {
@@ -67,7 +110,7 @@ impl BtspOutcome {
     pub fn should_accept(&self) -> bool {
         matches!(
             self,
-            Self::DevMode | Self::Authenticated { .. } | Self::Degraded { .. }
+            Self::DevMode | Self::Authenticated(_) | Self::Degraded { .. }
         )
     }
 
@@ -79,6 +122,14 @@ impl BtspOutcome {
                 consumed_line: Some(line),
                 ..
             } => Some(line),
+            _ => None,
+        }
+    }
+
+    /// Extract the session if the handshake was authenticated.
+    pub fn session(&self) -> Option<&BtspSession> {
+        match self {
+            Self::Authenticated(session) => Some(session),
             _ => None,
         }
     }
@@ -114,9 +165,13 @@ where
     };
 
     match perform_handshake_relay(stream, &provider_sock, &family_id).await {
-        Ok(session_id) => {
-            tracing::debug!(session_id, "BTSP handshake succeeded");
-            BtspOutcome::Authenticated { session_id }
+        Ok(session) => {
+            tracing::debug!(
+                session_id = session.session_id,
+                cipher = ?session.cipher,
+                "BTSP handshake succeeded"
+            );
+            BtspOutcome::Authenticated(session)
         }
         Err(HandshakeError::ClientLegacy {
             reason,
@@ -172,28 +227,33 @@ const CLIENT_HELLO_TIMEOUT: std::time::Duration = std::time::Duration::from_secs
 
 /// Full handshake relay between client stream and security-domain provider.
 ///
-/// Per BTSP_PROTOCOL_STANDARD §Phase 2:
+/// Per `BTSP_PROTOCOL_STANDARD.md` §Phase 2+3:
 /// 1. Read ClientHello from client (with timeout for legacy fallback)
-/// 2. Forward to provider via btsp.session.create
+/// 2. Forward to provider via `btsp.session.create`
 /// 3. Relay ServerHello to client
 /// 4. Read ChallengeResponse from client
-/// 5. Forward to provider via btsp.session.verify
-/// 6. Relay HandshakeComplete to client
+/// 5. Forward to provider via `btsp.session.verify`
+/// 6. Relay `HandshakeComplete` to client
+/// 7. Return `BtspSession` with cipher + session_key for Phase 3 framing
 #[cfg(unix)]
 async fn perform_handshake_relay<S>(
     stream: &mut S,
     provider_sock: &std::path::Path,
     family_id: &str,
-) -> std::result::Result<String, HandshakeError>
+) -> std::result::Result<BtspSession, HandshakeError>
 where
     S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
 {
     use tokio::io::BufReader;
 
+    // Single BufReader for the entire handshake — avoids the edge-case where
+    // a second BufReader silently discards data buffered by the first.
+    // Writes go through `get_mut()` to access the underlying stream.
+    let mut buf = BufReader::new(&mut *stream);
+
     // Step 1: Read ClientHello from client (with timeout for legacy clients)
-    let mut buf_reader = BufReader::new(&mut *stream);
     let client_hello_line =
-        match tokio::time::timeout(CLIENT_HELLO_TIMEOUT, read_ndjson_line(&mut buf_reader)).await {
+        match tokio::time::timeout(CLIENT_HELLO_TIMEOUT, read_ndjson_line(&mut buf)).await {
             Ok(Ok(line)) => line,
             Ok(Err(e)) => {
                 return Err(HandshakeError::ClientLegacy {
@@ -255,20 +315,19 @@ where
         })?
         .to_string();
 
-    // Step 3: Relay ServerHello to client
+    // Step 3: Relay ServerHello to client (write through BufReader::get_mut)
     let server_hello = serde_json::json!({
         "type": "ServerHello",
         "version": 1,
         "server_ephemeral_pub": create_result.get("server_ephemeral_pub"),
         "challenge": create_result.get("challenge"),
     });
-    write_ndjson_line(stream, &server_hello)
+    write_ndjson_line(buf.get_mut(), &server_hello)
         .await
         .map_err(|e| HandshakeError::Protocol(format!("Failed to write ServerHello: {e}")))?;
 
-    // Step 4: Read ChallengeResponse from client
-    let mut buf_reader = BufReader::new(&mut *stream);
-    let challenge_line = read_ndjson_line(&mut buf_reader)
+    // Step 4: Read ChallengeResponse from client (same BufReader preserves buffered data)
+    let challenge_line = read_ndjson_line(&mut buf)
         .await
         .map_err(|e| HandshakeError::Protocol(format!("Failed to read ChallengeResponse: {e}")))?;
 
@@ -298,17 +357,44 @@ where
         return Err(HandshakeError::Rejected(reason.to_string()));
     }
 
-    // Step 6: Relay HandshakeComplete to client
+    // Step 6: Extract cipher and session key from provider response
+    let cipher_name = verify_result
+        .get("cipher")
+        .and_then(|v| v.as_str())
+        .unwrap_or("none");
+    let cipher = BtspCipher::from_wire(cipher_name);
+
+    let session_key = if cipher.requires_key() {
+        let key_b64 = verify_result
+            .get("session_key")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| {
+                HandshakeError::Protocol(format!(
+                    "Provider returned cipher '{cipher_name}' but no session_key"
+                ))
+            })?;
+        use base64ct::{Base64, Encoding};
+        Base64::decode_vec(key_b64)
+            .map_err(|e| HandshakeError::Protocol(format!("Invalid base64 session_key: {e}")))?
+    } else {
+        Vec::new()
+    };
+
+    // Step 7: Relay HandshakeComplete to client
     let complete = serde_json::json!({
         "type": "HandshakeComplete",
         "session_id": session_id,
-        "cipher": verify_result.get("cipher").cloned().unwrap_or_else(|| serde_json::json!("none")),
+        "cipher": cipher_name,
     });
-    write_ndjson_line(stream, &complete)
+    write_ndjson_line(buf.get_mut(), &complete)
         .await
         .map_err(|e| HandshakeError::Protocol(format!("Failed to write HandshakeComplete: {e}")))?;
 
-    Ok(session_id)
+    Ok(BtspSession {
+        session_id,
+        cipher,
+        session_key,
+    })
 }
 
 #[cfg(not(unix))]
@@ -316,7 +402,7 @@ async fn perform_handshake_relay<S>(
     _stream: &mut S,
     _provider_sock: &std::path::Path,
     _family_id: &str,
-) -> std::result::Result<String, HandshakeError>
+) -> std::result::Result<BtspSession, HandshakeError>
 where
     S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
 {
@@ -531,10 +617,13 @@ mod tests {
 
     #[test]
     fn btsp_outcome_authenticated_accepts() {
-        let outcome = BtspOutcome::Authenticated {
+        let outcome = BtspOutcome::Authenticated(BtspSession {
             session_id: "test-session".to_string(),
-        };
+            cipher: BtspCipher::Null,
+            session_key: Vec::new(),
+        });
         assert!(outcome.should_accept());
+        assert!(outcome.session().is_some());
     }
 
     #[test]
@@ -572,11 +661,37 @@ mod tests {
 
     #[test]
     fn btsp_outcome_debug_impl() {
-        let outcome = BtspOutcome::Authenticated {
+        let outcome = BtspOutcome::Authenticated(BtspSession {
             session_id: "abc".into(),
-        };
+            cipher: BtspCipher::ChaCha20Poly1305,
+            session_key: vec![0u8; 32],
+        });
         let debug = format!("{outcome:?}");
         assert!(debug.contains("Authenticated"));
         assert!(debug.contains("abc"));
+    }
+
+    #[test]
+    fn btsp_cipher_from_wire_variants() {
+        assert_eq!(
+            BtspCipher::from_wire("chacha20_poly1305"),
+            BtspCipher::ChaCha20Poly1305
+        );
+        assert_eq!(
+            BtspCipher::from_wire("chacha20"),
+            BtspCipher::ChaCha20Poly1305
+        );
+        assert_eq!(BtspCipher::from_wire("hmac_plain"), BtspCipher::HmacPlain);
+        assert_eq!(BtspCipher::from_wire("hmac"), BtspCipher::HmacPlain);
+        assert_eq!(BtspCipher::from_wire("none"), BtspCipher::Null);
+        assert_eq!(BtspCipher::from_wire("null"), BtspCipher::Null);
+        assert_eq!(BtspCipher::from_wire(""), BtspCipher::Null);
+    }
+
+    #[test]
+    fn btsp_cipher_requires_key() {
+        assert!(!BtspCipher::Null.requires_key());
+        assert!(BtspCipher::HmacPlain.requires_key());
+        assert!(BtspCipher::ChaCha20Poly1305.requires_key());
     }
 }

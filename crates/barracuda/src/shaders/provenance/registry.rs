@@ -164,7 +164,7 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
             absorbed: "Mar 2026 barraCuda v0.3.2",
         },
         ShaderRecord {
-            path: "special/batch_ipr_f64.wgsl",
+            path: "spectral/batch_ipr_f64.wgsl",
             origin: SD::NEURAL_SPRING,
             consumers: &[SD::NEURAL_SPRING, SD::HOT_SPRING],
             category: C::Statistics,

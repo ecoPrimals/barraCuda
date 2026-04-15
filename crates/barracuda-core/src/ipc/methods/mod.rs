@@ -149,5 +149,5 @@ pub async fn dispatch(
 mod tests;
 
 #[cfg(test)]
-#[path = "../methods_coverage_tests.rs"]
+#[path = "../methods_coverage_tests/mod.rs"]
 mod coverage_tests;

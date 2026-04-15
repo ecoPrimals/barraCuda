@@ -171,6 +171,12 @@ tokio-serde = { version = "0.9", features = ["json"] }
 # Block-on for sync contexts (wgpu 28 enumerate_adapters is async)
 pollster = "0.3"
 
+# BTSP Phase 3 stream encryption (pure Rust, RustCrypto)
+chacha20poly1305 = "0.10"
+hmac = "0.12"
+sha2 = "0.10"
+base64ct = { version = "1.6", features = ["alloc"] }
+
 # Dev/test
 tempfile = "3.8"
 approx = "0.5"

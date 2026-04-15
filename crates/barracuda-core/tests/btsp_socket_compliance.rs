@@ -7,7 +7,7 @@
 
 use barracuda_core::ipc::btsp::{BtspOutcome, guard_connection};
 use barracuda_core::ipc::transport::{
-    ECOSYSTEM_SOCKET_DIR, IpcServer, resolve_family_id, resolve_socket_dir, validate_insecure_guard,
+    IpcServer, resolve_family_id, resolve_socket_dir, validate_insecure_guard,
 };
 
 /// Helper: clear all family-related env vars to establish a known baseline.
@@ -89,8 +89,8 @@ fn socket_dir_falls_back_to_xdg_biomeos() {
     let dir = resolve_socket_dir();
     let s = dir.to_string_lossy();
     assert!(
-        s.contains(ECOSYSTEM_SOCKET_DIR),
-        "fallback should contain '{ECOSYSTEM_SOCKET_DIR}', got {s}"
+        s.contains("biomeos"),
+        "fallback should contain 'biomeos', got {s}"
     );
 }
 

@@ -58,10 +58,11 @@ pub fn resolve_bind_host() -> String {
 /// Default family ID when no `FAMILY_ID` env var is set.
 const DEFAULT_FAMILY_ID: &str = "default";
 
-/// Ecosystem socket namespace per `PRIMAL_IPC_PROTOCOL.md`.
+/// Default ecosystem socket namespace per `PRIMAL_IPC_PROTOCOL.md`.
 ///
-/// All primals place Unix sockets under `$XDG_RUNTIME_DIR/{ECOSYSTEM_SOCKET_DIR}/`.
-pub const ECOSYSTEM_SOCKET_DIR: &str = "biomeos";
+/// All primals place Unix sockets under `$XDG_RUNTIME_DIR/{namespace}/`.
+/// Override at runtime with the `BIOMEOS_SOCKET_DIR` environment variable.
+pub(crate) const DEFAULT_ECOSYSTEM_SOCKET_DIR: &str = "biomeos";
 
 /// Resolve the family ID per `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §4.
 ///
@@ -88,7 +89,7 @@ pub fn resolve_socket_dir() -> std::path::PathBuf {
     }
     let base = std::env::var("XDG_RUNTIME_DIR")
         .map_or_else(|_| std::env::temp_dir(), std::path::PathBuf::from);
-    base.join(ECOSYSTEM_SOCKET_DIR)
+    base.join(DEFAULT_ECOSYSTEM_SOCKET_DIR)
 }
 
 /// Validate the `BIOMEOS_INSECURE` guard per `BTSP_PROTOCOL_STANDARD.md` §Compliance.
@@ -338,7 +339,15 @@ impl IpcServer {
                             tracing::warn!("BTSP handshake rejected connection from {peer}: {outcome:?}");
                             return;
                         }
+                        let session = outcome.session().cloned();
                         let replay = outcome.consumed_line().map(String::from);
+                        if let Some(ref session) = session {
+                            if session.cipher.requires_key() {
+                                let (reader, writer) = stream.into_split();
+                                handle_btsp_connection(primal, reader, writer, session).await;
+                                return;
+                            }
+                        }
                         handle_stream(primal, stream, replay).await;
                     });
                 }
@@ -385,8 +394,15 @@ impl IpcServer {
                             tracing::warn!("BTSP handshake rejected connection: {outcome:?}");
                             return;
                         }
+                        let session = outcome.session().cloned();
                         let replay = outcome.consumed_line().map(String::from);
                         let (reader, writer) = stream.into_split();
+                        if let Some(ref session) = session {
+                            if session.cipher.requires_key() {
+                                handle_btsp_connection(primal, reader, writer, session).await;
+                                return;
+                            }
+                        }
                         handle_connection(primal, reader, writer, replay).await;
                     });
                 }
@@ -552,6 +568,51 @@ async fn handle_stream(
     handle_connection(primal, reader, writer, replay).await;
 }
 
+/// Handle a BTSP Phase 3 connection using length-prefixed encrypted frames.
+///
+/// Each frame is decrypted, dispatched as JSON-RPC, and the response
+/// encrypted back. Per `BTSP_PROTOCOL_STANDARD.md` §Wire Framing.
+async fn handle_btsp_connection<R, W>(
+    primal: Arc<BarraCudaPrimal>,
+    reader: R,
+    writer: W,
+    session: &super::btsp::BtspSession,
+) where
+    R: AsyncRead + Unpin + Send,
+    W: AsyncWrite + Unpin + Send,
+{
+    use super::btsp_frame::{
+        BtspFrameReader, BtspFrameWriter, read_frame_as_line, write_line_as_frame,
+    };
+
+    let mut frame_reader = BtspFrameReader::new(reader, session);
+    let mut frame_writer = BtspFrameWriter::new(writer, session);
+
+    while let Some(line) = read_frame_as_line(&mut frame_reader).await {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with('[') {
+            let Some(batch_json) = handle_batch(&primal, trimmed).await else {
+                continue;
+            };
+            if write_line_as_frame(&mut frame_writer, &batch_json)
+                .await
+                .is_err()
+            {
+                break;
+            }
+        } else {
+            let Some(response) = handle_line(&primal, &line).await else {
+                continue;
+            };
+            let json = serde_json::to_string(&response)
+                .unwrap_or_else(|_| SERIALIZATION_ERROR.to_string());
+            if write_line_as_frame(&mut frame_writer, &json).await.is_err() {
+                break;
+            }
+        }
+    }
+}
+
 /// Wait for SIGINT (Ctrl-C) or SIGTERM for graceful shutdown.
 async fn shutdown_signal() {
     let ctrl_c = tokio::signal::ctrl_c();
@@ -578,25 +639,36 @@ async fn shutdown_signal() {
     }
 }
 
-/// Parse a single line of JSON-RPC and dispatch to the method handler.
+/// Validate and dispatch a parsed `JsonRpcRequest`, moving the `id` to avoid
+/// cloning the `serde_json::Value` on every request.
 ///
 /// Returns `None` for notifications (requests without `id`), per JSON-RPC 2.0
 /// spec: "The Server MUST NOT reply to a Notification".
+async fn handle_request(
+    primal: &BarraCudaPrimal,
+    request: JsonRpcRequest,
+) -> Option<JsonRpcResponse> {
+    if let Err(err_resp) = request.validate() {
+        return Some(err_resp);
+    }
+
+    let JsonRpcRequest {
+        id, method, params, ..
+    } = request;
+    let id = match id {
+        Some(v) if !v.is_null() => v,
+        _ => return None,
+    };
+    Some(methods::dispatch(primal, &method, &params, id).await)
+}
+
+/// Parse a single line of JSON-RPC and dispatch to the method handler.
 async fn handle_line(primal: &BarraCudaPrimal, line: &str) -> Option<JsonRpcResponse> {
     let request: JsonRpcRequest = match serde_json::from_str(line) {
         Ok(r) => r,
         Err(_) => return Some(JsonRpcResponse::parse_error()),
     };
-
-    if let Err(err_resp) = request.validate() {
-        return Some(err_resp);
-    }
-
-    let id = match request.id {
-        Some(ref v) if !v.is_null() => v.clone(),
-        _ => return None,
-    };
-    Some(methods::dispatch(primal, &request.method, &request.params, id).await)
+    handle_request(primal, request).await
 }
 
 /// Handle a JSON-RPC 2.0 batch request (JSON array on a single line).
@@ -606,6 +678,8 @@ async fn handle_line(primal: &BarraCudaPrimal, line: &str) -> Option<JsonRpcResp
 /// - Each element is processed independently; notifications produce no entry.
 /// - If all elements are notifications, no response is returned (`None`).
 /// - Non-array elements within the batch produce individual parse errors.
+///
+/// Uses `serde_json::from_value` to avoid stringify/re-parse per element.
 async fn handle_batch(primal: &BarraCudaPrimal, line: &str) -> Option<String> {
     let items: Vec<serde_json::Value> = match serde_json::from_str(line) {
         Ok(v) => v,
@@ -629,10 +703,14 @@ async fn handle_batch(primal: &BarraCudaPrimal, line: &str) -> Option<String> {
     }
 
     let mut responses = Vec::new();
-    for item in &items {
-        let item_str = item.to_string();
-        if let Some(resp) = handle_line(primal, &item_str).await {
-            responses.push(resp);
+    for item in items {
+        match serde_json::from_value::<JsonRpcRequest>(item) {
+            Ok(request) => {
+                if let Some(resp) = handle_request(primal, request).await {
+                    responses.push(resp);
+                }
+            }
+            Err(_) => responses.push(JsonRpcResponse::parse_error()),
         }
     }
 

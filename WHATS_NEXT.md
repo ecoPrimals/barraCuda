@@ -1,11 +1,24 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-04-13.
+Prioritized work items, ordered by impact. Updated 2026-04-15.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 43b: Deep Debt Evolution (Apr 15)**: Smart WGSL refactoring
+  (`math_f64.wgsl` 840→725L, fossils extracted to `math_f64_fossils.wgsl`).
+  `asin_f64` evolved from fossil `sqrt_f64` to native `sqrt()`. biomeos namespace
+  hardcoding evolved to env-overridable via `BIOMEOS_SOCKET_DIR`. HMAC expects
+  evolved to `map_err` (zero `expect()` in crypto paths). 12-axis deep debt audit:
+  all `.rs` under 800L, zero TODO/FIXME, zero mocks in production. Benchmark
+  infrastructure assessed (Kokkos parity operational, no Python baselines in-tree).
+- **Sprint 43: BTSP Phase 3, BufReader Fix & Gap Resolution (Apr 15)**: BTSP Phase 3
+  stream encryption — `BtspCipher` + `BtspSession` + `BtspFrameReader`/`BtspFrameWriter`
+  with ChaCha20-Poly1305/HMAC-SHA256/NULL cipher suites. Length-prefixed framing per
+  BTSP spec. Transport integration on all accept loops. BufReader lifetime fix (single
+  instance with `get_mut()`). plasma_dispersion verified. 17/17 neuralSpring shader
+  absorption confirmed. 4 new crypto deps (RustCrypto).
 - **Sprint 42: Composition Elevation, LD-05 Fix & Deep Debt Evolution (Apr 12)**:
   **LD-05 fully resolved** — Phase 1: bind-before-discovery prevents phantom TCP endpoints.
   Phase 2: UDS mode no longer attempts TCP sidecar from `BARRACUDA_PORT` env var — only

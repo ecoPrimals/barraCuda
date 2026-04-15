@@ -132,7 +132,7 @@ async fn test_handle_line_health_liveness_alias() {
 fn default_socket_path_format() {
     let path = IpcServer::default_socket_path();
     let path_str = path.to_string_lossy();
-    assert!(path_str.contains(ECOSYSTEM_SOCKET_DIR));
+    assert!(path_str.contains(DEFAULT_ECOSYSTEM_SOCKET_DIR));
     assert!(
         path_str.ends_with("math.sock") || path_str.contains("math-"),
         "default path should be math.sock or math-{{fid}}.sock, got {path_str}"
@@ -153,7 +153,8 @@ fn resolve_socket_dir_returns_nonempty() {
     assert!(!dir.as_os_str().is_empty(), "socket dir must not be empty");
     let dir_str = dir.to_string_lossy();
     assert!(
-        dir_str.contains(ECOSYSTEM_SOCKET_DIR) || std::env::var("BIOMEOS_SOCKET_DIR").is_ok(),
+        dir_str.contains(DEFAULT_ECOSYSTEM_SOCKET_DIR)
+            || std::env::var("BIOMEOS_SOCKET_DIR").is_ok(),
         "should contain biomeos namespace or be overridden, got {dir_str}"
     );
 }

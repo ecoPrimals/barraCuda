@@ -604,7 +604,9 @@ impl GpuBackend for SovereignDevice {
 #[cfg(test)]
 mod tests {
     #[cfg(feature = "sovereign-dispatch")]
-    use super::super::sovereign_discovery::{DISPATCH_ADDR_ENV, DISPATCH_CAPABILITY};
+    use super::super::sovereign_discovery::{
+        DISPATCH_ADDR_ENV, DISPATCH_CAPABILITY, detect_dispatch_addr,
+    };
     use super::*;
 
     #[cfg(feature = "sovereign-dispatch")]
@@ -662,7 +664,7 @@ mod tests {
     #[cfg(feature = "sovereign-dispatch")]
     #[test]
     fn detect_dispatch_addr_graceful_without_toadstool() {
-        let addr = super::sovereign_discovery::detect_dispatch_addr();
+        let addr = detect_dispatch_addr();
         if let Some(ref a) = addr {
             assert!(!a.is_empty(), "discovered address must be non-empty");
         }

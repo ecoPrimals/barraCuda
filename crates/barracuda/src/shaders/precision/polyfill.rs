@@ -33,12 +33,18 @@ fn cos_f64_safe(x: f64) -> f64 {
 }
 ";
 
-/// Full `math_f64` library preamble (core + special).
+/// Full `math_f64` library preamble (fossils + core + special).
+///
+/// Fossils are included for backward compatibility with legacy shaders
+/// that still reference `abs_f64(`, `sqrt_f64(` etc. New shaders should
+/// use native WGSL builtins directly; `substitute_fossil_f64()` rewrites
+/// legacy calls.
 #[must_use]
 pub fn math_f64_preamble() -> String {
+    let fossils = include_str!("../math/math_f64_fossils.wgsl");
     let core = include_str!("../math/math_f64.wgsl");
     let special = include_str!("../math/math_f64_special.wgsl");
-    format!("{core}\n{special}")
+    format!("{fossils}\n{core}\n{special}")
 }
 
 /// Replace legacy fossil f64 function calls with native WGSL equivalents.

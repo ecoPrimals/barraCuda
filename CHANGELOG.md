@@ -42,9 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `get_mut()` for writes. Was creating two instances, risking buffered data loss.
 - **plasma_dispersion verified**: Sprint 40 dual gate `gpu+domain-lattice` confirmed
   correct via `cargo check --features gpu --no-default-features`.
-- **17/17 neuralSpring V131 shader absorption confirmed upstream**: All present as
-  canonical `_f64.wgsl` with Rust integration. Provenance registry path fixed for
-  `batch_ipr` (`special/` → `spectral/`).
+- **18/18 neuralSpring V131 shader absorption confirmed upstream**: Per-shader audit
+  table in `SPRING_ABSORPTION.md`. All present as canonical `_f64.wgsl` with Rust
+  integration. Provenance registry path fixed for `batch_ipr` (`special/` → `spectral/`).
+  Count reconciliation: 29 (primalSpring total) = 18 candidates + 6 neuralSpring-specific.
 - **Dependencies added**: `chacha20poly1305 0.10`, `hmac 0.12`, `sha2 0.10`, `base64ct 1.6`.
 
 ### Changed — Sprint 42 Phase 11: Runtime Extraction & Coverage (Apr 13 2026)

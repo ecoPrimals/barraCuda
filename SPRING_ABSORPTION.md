@@ -206,6 +206,45 @@ Full pull + review of 8 springs, 10+ primals. Key findings:
 
 ---
 
+## neuralSpring V131 Shader Absorption Audit (Apr 15 2026)
+
+Per-shader verification against `neuralSpring/docs/PRIMAL_GAPS.md` §10.
+The "29 shader absorption candidates" count in primalSpring docs includes
+neuralSpring-specific shaders that stay in neuralSpring (protein folding,
+MSA attention). The barraCuda absorption target is **18 candidates** — all
+confirmed upstream with canonical `.wgsl` files and Rust integration.
+
+| # | neuralSpring candidate | barraCuda WGSL | Rust integration | Status |
+|---|------------------------|----------------|------------------|--------|
+| 1 | `softmax_f64.wgsl` | `shaders/activation/softmax_f64.wgsl` | `ops/softmax.rs` | ✅ Upstream |
+| 2 | `gelu_f64.wgsl` | `shaders/activation/gelu_f64.wgsl` | `ops/gelu_wgsl.rs` | ✅ Upstream |
+| 3 | `sigmoid_f64.wgsl` | `shaders/misc/sigmoid_f64.wgsl` | `ops/sigmoid.rs` | ✅ Upstream |
+| 4 | `hmm_backward_log.wgsl` | `shaders/bio/hmm_backward_log_f64.wgsl` | `ops/bio/hmm.rs` | ✅ Upstream |
+| 5 | `hmm_viterbi.wgsl` | `shaders/bio/hmm_viterbi_f64.wgsl` | `ops/bio/hmm.rs` | ✅ Upstream |
+| 6 | `batch_ipr.wgsl` | `shaders/spectral/batch_ipr_f64.wgsl` | `spectral/batch_ipr.rs` | ✅ Upstream |
+| 7 | `chi_squared_f64.wgsl` | `shaders/special/chi_squared_f64.wgsl` | `special/chi_squared.rs` | ✅ Upstream |
+| 8 | `kl_divergence_f64.wgsl` | `shaders/loss/kl_divergence_f64.wgsl` | `ops/kl_divergence.rs` | ✅ Upstream |
+| 9 | `linear_regression.wgsl` | `shaders/stats/linear_regression_f64.wgsl` | `ops/stats_f64.rs` | ✅ Upstream |
+| 10 | `matrix_correlation.wgsl` | `shaders/stats/matrix_correlation_f64.wgsl` | `ops/stats_f64.rs` | ✅ Upstream |
+| 11 | `rk4_parallel.wgsl` | `shaders/numerical/rk4_parallel_f64.wgsl` | `ops/rk_stage.rs` | ✅ Upstream |
+| 12 | `rk45_adaptive.wgsl` | `shaders/numerical/rk45_adaptive_f64.wgsl` | `ops/rk45_adaptive.rs` | ✅ Upstream |
+| 13 | `wright_fisher_step.wgsl` | `shaders/bio/wright_fisher_step_f64.wgsl` | `ops/bio/wright_fisher.rs` | ✅ Upstream |
+| 14 | `pairwise_hamming.wgsl` | `shaders/math/pairwise_hamming_f64.wgsl` | `ops/bio/pairwise_hamming.rs` | ✅ Upstream |
+| 15 | `pairwise_jaccard.wgsl` | `shaders/math/pairwise_jaccard_f64.wgsl` | `ops/bio/pairwise_jaccard.rs` | ✅ Upstream |
+| 16 | `sdpa_scores_f64.wgsl` | `shaders/attention/sdpa_scores_f64.wgsl` | `ops/attention/mod.rs` | ✅ Upstream |
+| 17 | `layer_norm_f64.wgsl` | `shaders/norm/layer_norm_f64.wgsl` | `ops/layer_norm_wgsl.rs` | ✅ Upstream |
+| 18 | `outer_product_mean_f64.wgsl` | `shaders/attention/outer_product_mean_f64.wgsl` | `ops/alphafold2/embedding.rs` | ✅ Upstream |
+
+**Not candidates (neuralSpring-specific — stay in neuralSpring):**
+`ipa_scores_f64`, `triangle_attention_f64`, `triangle_mul_*`,
+`backbone_update_f64`, `torsion_angles_f64`, `msa_*_attention_scores_f64`
+— protein folding and MSA-specific shaders, not general math primitives.
+
+**Count reconciliation:** 29 (primalSpring total) = 18 candidates + 6 neuralSpring-specific
++ wildcard expansion (triangle_mul has 3 variants, msa has 2).
+
+---
+
 ## Numerical Stability Notes (from springs)
 
 - **f32 accumulation bias**: Green-Kubo gives ~28% bias — use f64/DF64 for reductions

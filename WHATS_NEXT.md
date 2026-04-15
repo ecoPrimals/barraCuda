@@ -17,8 +17,8 @@ Prioritized work items, ordered by impact. Updated 2026-04-15.
   stream encryption — `BtspCipher` + `BtspSession` + `BtspFrameReader`/`BtspFrameWriter`
   with ChaCha20-Poly1305/HMAC-SHA256/NULL cipher suites. Length-prefixed framing per
   BTSP spec. Transport integration on all accept loops. BufReader lifetime fix (single
-  instance with `get_mut()`). plasma_dispersion verified. 17/17 neuralSpring shader
-  absorption confirmed. 4 new crypto deps (RustCrypto).
+  instance with `get_mut()`). plasma_dispersion verified.   18/18 neuralSpring shader absorption confirmed (per-shader audit table in
+  `SPRING_ABSORPTION.md`). 4 new crypto deps (RustCrypto).
 - **Sprint 42: Composition Elevation, LD-05 Fix & Deep Debt Evolution (Apr 12)**:
   **LD-05 fully resolved** — Phase 1: bind-before-discovery prevents phantom TCP endpoints.
   Phase 2: UDS mode no longer attempts TCP sidecar from `BARRACUDA_PORT` env var — only

@@ -1,8 +1,8 @@
 # barraCuda — Remaining Work
 
 **Version**: 0.3.12
-**Date**: April 12, 2026
-**Status**: Through Sprint 42 — tracks all open work items for barraCuda evolution
+**Date**: April 16, 2026
+**Status**: Through Sprint 43b — tracks all open work items for barraCuda evolution
 
 ---
 
@@ -29,6 +29,24 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   in barraCuda's code), semantic IPC method naming, capability-based discovery.
 
 ---
+
+## Achieved (April 16, 2026 — Sprint 43b: Deep Debt Evolution — Smart Refactoring, Idiomatic Rust & Benchmark Assessment)
+
+- **math_f64.wgsl refactor**: 840→725 lines — extracted 10 fossil functions + Newton-Raphson `sqrt_f64` into `math_f64_fossils.wgsl`, `polyfill.rs` updated to `include_str!` both files
+- **asin_f64 native sqrt**: Replaced 3 `sqrt_f64()` call sites with native WGSL `sqrt()` in `asin_f64`
+- **biomeos hardcoding → env-overridable**: `ECOSYSTEM_SOCKET_NAMESPACE` and `ECOSYSTEM_SOCKET_DIR` evolved to `DEFAULT_...` constants with `resolve_*()` functions reading `BIOMEOS_SOCKET_DIR` / `BIOMEOS_SOCKET_NS` env vars
+- **HMAC `expect()` elimination**: Converted 2 `expect()` calls in `btsp_frame.rs` crypto paths to `map_err` returning typed `BtspFrameError`
+- **Benchmark assessment**: Confirmed Kokkos parity benchmark, in-crate benchmark framework, binary benchmarks present; no Python CPU baselines or Criterion/Iai (custom `std::time::Instant` approach adequate)
+- **12-axis deep debt audit clean**: unwrap, expect, TODO/FIXME, hardcoding, async-trait, Box<dyn Error>, Result<T,String>, println, mocks — all clean or test-only
+- **18/18 neuralSpring V131 shader absorption**: Per-shader audit confirmed all candidates upstream with WGSL + Rust wrappers; reconciled 29 (total neuralSpring) vs 18 (barraCuda candidates)
+
+## Achieved (April 15, 2026 — Sprint 43: BTSP Phase 3, BufReader Fix & primalSpring Gap Resolution)
+
+- **BTSP Phase 3 stream encryption**: ChaCha20-Poly1305 AEAD + HMAC-SHA256 integrity via pure Rust RustCrypto (`chacha20poly1305`, `hmac`, `sha2`, `base64ct`). Length-prefixed (4-byte BE) framing in `btsp_frame.rs`. `BtspCipher` enum (Null / HmacPlain / ChaCha20Poly1305), `BtspSession` struct, nonce-counter anti-replay
+- **BufReader data-loss fix**: Single `BufReader` instance in `perform_handshake_relay` with `get_mut()` for writes, preventing buffered data loss on re-instantiation
+- **`plasma_dispersion` feature-gate**: Confirmed correct — `#[cfg(all(feature = "gpu", feature = "domain-lattice"))]` since Sprint 40
+- **Transport routing**: `serve_tcp_listener` / `serve_unix` accept loops route to `handle_btsp_connection` (encrypted frame I/O) or `handle_stream` (NDJSON) based on BTSP handshake outcome
+- **provenance registry fix**: Corrected `batch_ipr_f64.wgsl` path from `special/` to `spectral/`
 
 ## Achieved (April 11, 2026 — Sprint 41: BC-07 Full Wiring + BC-06 Documentation + TensorSession Migration Guide)
 

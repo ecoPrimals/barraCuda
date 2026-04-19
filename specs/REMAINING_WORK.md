@@ -1,8 +1,8 @@
 # barraCuda — Remaining Work
 
 **Version**: 0.3.12
-**Date**: April 16, 2026
-**Status**: Through Sprint 43b — tracks all open work items for barraCuda evolution
+**Date**: April 20, 2026
+**Status**: Through Sprint 44 — tracks all open work items for barraCuda evolution
 
 ---
 
@@ -29,6 +29,19 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   in barraCuda's code), semantic IPC method naming, capability-based discovery.
 
 ---
+
+## Achieved (April 20, 2026 — Sprint 44: primalSpring Composition Audit — 6 Missing Methods, Science Fixes & Schema Standardization)
+
+- **6 missing JSON-RPC methods wired**: `stats.variance`, `stats.correlation`, `linalg.solve`, `linalg.eigenvalues`, `spectral.fft`, `spectral.power_spectrum` — unblocks Level 5 certification for wetSpring, healthSpring, and neuralSpring
+- **`tensor.matmul_inline` convenience path**: CPU inline-data matrix multiplication, eliminates handle-based friction for small matrices
+- **`activation.fitts` Shannon fix**: Corrected from `log₂(2D/W + 1)` to `log₂(D/W + 1)` per MacKenzie 1992 / ISO 9241-411
+- **Response schema standardization**: `activation.fitts`, `activation.hick`, `tensor.reduce` now include `"result"` key for uniform scalar extraction
+- **`stats.std_dev` convention documented**: Response includes `"convention": "sample", "denominator": "N-1"` so springs know Bessel's correction is applied
+- **CPU-side scientific implementations**: Gaussian elimination (`linalg.solve`), Jacobi iteration (`linalg.eigenvalues`), Cooley-Tukey radix-2 FFT (`spectral.fft`), power spectral density (`spectral.power_spectrum`)
+- **Discovery & wire docs updated**: `linalg` and `spectral` domains added to `discovery.rs`, IPC method tables updated in `ipc/mod.rs`
+- **39 registered IPC methods** (was 32), 197 IPC method tests pass
+- **Verified**: `activation.hick` already defaults to `log₂(N)`, `perlin3d(0,0,0)` already returns 0.0 — audit issues not reproducible in barraCuda
+- **12-axis deep debt audit clean**: All axes green (see Sprint 43b detail below)
 
 ## Achieved (April 16, 2026 — Sprint 43b: Deep Debt Evolution — Smart Refactoring, Idiomatic Rust & Benchmark Assessment)
 

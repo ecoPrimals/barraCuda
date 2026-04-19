@@ -54,14 +54,23 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     // ── Statistics (CPU) ──────────────────────────────────────────────
     "stats.mean",
     "stats.std_dev",
+    "stats.variance",
+    "stats.correlation",
     "stats.weighted_mean",
+    // ── Linear algebra (CPU inline-data) ──────────────────────────────
+    "linalg.solve",
+    "linalg.eigenvalues",
+    // ── Spectral (CPU inline-data) ────────────────────────────────────
+    "spectral.fft",
+    "spectral.power_spectrum",
     // ── Noise & RNG (CPU) ─────────────────────────────────────────────
     "noise.perlin2d",
     "noise.perlin3d",
     "rng.uniform",
-    // ── Tensor (GPU) ──────────────────────────────────────────────────
+    // ── Tensor (GPU + inline) ─────────────────────────────────────────
     "tensor.create",
     "tensor.matmul",
+    "tensor.matmul_inline",
     "tensor.add",
     "tensor.scale",
     "tensor.clamp",
@@ -122,7 +131,15 @@ pub async fn dispatch(
         // Statistics (CPU)
         "stats.mean" => math::stats_mean(params, id),
         "stats.std_dev" => math::stats_std_dev(params, id),
+        "stats.variance" => math::stats_variance(params, id),
+        "stats.correlation" => math::stats_correlation(params, id),
         "stats.weighted_mean" => math::stats_weighted_mean(params, id),
+        // Linear algebra (CPU inline-data)
+        "linalg.solve" => math::linalg_solve(params, id),
+        "linalg.eigenvalues" => math::linalg_eigenvalues(params, id),
+        // Spectral (CPU inline-data)
+        "spectral.fft" => math::spectral_fft(params, id),
+        "spectral.power_spectrum" => math::spectral_power_spectrum(params, id),
         // Noise & RNG (CPU)
         "noise.perlin2d" => math::noise_perlin2d(params, id),
         "noise.perlin3d" => math::noise_perlin3d(params, id),
@@ -130,6 +147,7 @@ pub async fn dispatch(
         // Tensor (GPU)
         "tensor.create" => tensor::tensor_create(primal, params, id).await,
         "tensor.matmul" => tensor::tensor_matmul(primal, params, id).await,
+        "tensor.matmul_inline" => tensor::tensor_matmul_inline(params, id),
         "tensor.add" => tensor::tensor_add(primal, params, id).await,
         "tensor.scale" => tensor::tensor_scale(primal, params, id).await,
         "tensor.clamp" => tensor::tensor_clamp(primal, params, id).await,

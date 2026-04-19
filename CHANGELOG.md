@@ -5,7 +5,27 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.12] — 2026-04-15
+## [0.3.12] — 2026-04-20
+
+### Added — Sprint 44: primalSpring Composition Audit (Apr 20 2026)
+
+- **6 new JSON-RPC methods** (32→39 registered): `stats.variance`, `stats.correlation`,
+  `linalg.solve`, `linalg.eigenvalues`, `spectral.fft`, `spectral.power_spectrum`.
+  Unblocks Level 5 NUCLEUS certification for wetSpring, healthSpring, neuralSpring.
+- **`tensor.matmul_inline`**: inline-data matrix multiply (no handle round-trip).
+  Springs send `lhs`/`rhs` as nested arrays, receive product matrix directly.
+- **2 new IPC domains**: `linalg` (CPU inline-data linear algebra), `spectral`
+  (CPU inline-data spectral analysis). Discovery `domain_description` updated.
+- **`stats.std_dev`/`stats.variance` convention metadata**: response includes
+  `"convention": "sample", "denominator": "N-1"` so springs know which to expect.
+
+### Fixed — Sprint 44: Science Correctness & Schema (Apr 20 2026)
+
+- **Fitts' law Shannon formula**: corrected from `log₂(2D/W + 1)` to `log₂(D/W + 1)`
+  per MacKenzie 1992 / ISO 9241-411. The `2*` factor was incorrect for Shannon.
+- **Response schema standardized**: all scalar-returning methods now include a
+  `"result"` key (`activation.fitts`, `activation.hick`, `tensor.reduce`).
+  Springs can uniformly extract `response["result"]` for any method.
 
 ### Changed — Sprint 43b: Deep Debt Evolution (Apr 15 2026)
 

@@ -293,7 +293,7 @@ pub(super) async fn tensor_reduce(
 
     JsonRpcResponse::success(
         id,
-        serde_json::json!({ "status": "completed", "value": result, "op": op }),
+        serde_json::json!({ "result": result, "status": "completed", "value": result, "op": op }),
     )
 }
 
@@ -333,4 +333,67 @@ fn tensor_result_response(
             "elements": elements,
         }),
     )
+}
+
+/// `tensor.matmul_inline` — matrix multiply with inline data (no handle round-trip).
+///
+/// Springs can send `lhs` and `rhs` as nested arrays directly and receive
+/// the product matrix in the response, avoiding the create→operate→extract
+/// three-call pattern for simple cases.
+pub(super) fn tensor_matmul_inline(params: &Value, id: Value) -> JsonRpcResponse {
+    let (Some(lhs_rows), Some(rhs_rows)) = (
+        params.get("lhs").and_then(|v| v.as_array()).map(|rows| {
+            rows.iter()
+                .filter_map(|r| {
+                    r.as_array()
+                        .map(|cols| cols.iter().filter_map(|c| c.as_f64()).collect::<Vec<_>>())
+                })
+                .collect::<Vec<_>>()
+        }),
+        params.get("rhs").and_then(|v| v.as_array()).map(|rows| {
+            rows.iter()
+                .filter_map(|r| {
+                    r.as_array()
+                        .map(|cols| cols.iter().filter_map(|c| c.as_f64()).collect::<Vec<_>>())
+                })
+                .collect::<Vec<_>>()
+        }),
+    ) else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required params: lhs and rhs (2D arrays)",
+        );
+    };
+    let m = lhs_rows.len();
+    if m == 0 {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "lhs must be non-empty");
+    }
+    let k = lhs_rows[0].len();
+    if k == 0 || lhs_rows.iter().any(|r| r.len() != k) {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "lhs rows must have consistent length");
+    }
+    let n = if rhs_rows.is_empty() {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "rhs must be non-empty");
+    } else {
+        rhs_rows[0].len()
+    };
+    if rhs_rows.len() != k || rhs_rows.iter().any(|r| r.len() != n) {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            format!("Shape mismatch: lhs is [{m}x{k}], rhs must be [{k}x{n}]"),
+        );
+    }
+    let mut result = vec![vec![0.0; n]; m];
+    for i in 0..m {
+        for j in 0..n {
+            let mut sum = 0.0;
+            for p in 0..k {
+                sum = lhs_rows[i][p].mul_add(rhs_rows[p][j], sum);
+            }
+            result[i][j] = sum;
+        }
+    }
+    JsonRpcResponse::success(id, serde_json::json!({ "result": result, "shape": [m, n] }))
 }

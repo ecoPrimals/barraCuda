@@ -1,11 +1,21 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-04-15.
+Prioritized work items, ordered by impact. Updated 2026-04-20.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 44: primalSpring Composition Audit (Apr 20)**: 6 new JSON-RPC methods
+  wired (32→39): `stats.variance`, `stats.correlation`, `linalg.solve`,
+  `linalg.eigenvalues`, `spectral.fft`, `spectral.power_spectrum` — unblocks
+  Level 5 NUCLEUS certification for wetSpring, healthSpring, neuralSpring.
+  `tensor.matmul_inline` convenience path (inline data, no handle round-trip).
+  Fitts' law Shannon formula corrected (`log₂(D/W + 1)` per MacKenzie 1992).
+  Response schema standardized (`"result"` key on all scalar methods).
+  `stats.std_dev`/`stats.variance` convention documented (sample, N-1 denominator).
+  Hick default verified (`log₂(N)`). Perlin3d origin verified (returns 0.0).
+  2 new IPC domains: `linalg`, `spectral`.
 - **Sprint 43b: Deep Debt Evolution (Apr 15)**: Smart WGSL refactoring
   (`math_f64.wgsl` 840→725L, fossils extracted to `math_f64_fossils.wgsl`).
   `asin_f64` evolved from fossil `sqrt_f64` to native `sqrt()`. biomeos namespace

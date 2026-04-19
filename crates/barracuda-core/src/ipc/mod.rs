@@ -56,16 +56,35 @@
 //! |--------|--------|--------|-----|
 //! | `math.sigmoid` | `{"data": [f64]}` | `{"result": [f64]}` | no |
 //! | `math.log2` | `{"data": [f64]}` | `{"result": [f64]}` | no |
-//! | `activation.fitts` | `{"distance": f64, "width": f64, "a"?: f64, "b"?: f64, "variant"?: "shannon"\|"fitts"}` | `{"movement_time": f64, "index_of_difficulty": f64, "variant": str}` | no |
-//! | `activation.hick` | `{"n_choices": u64, "a"?: f64, "b"?: f64, "include_no_choice"?: bool}` | `{"reaction_time": f64, "information_bits": f64, "include_no_choice": bool}` | no |
+//! | `activation.fitts` | `{"distance": f64, "width": f64, "a"?: f64, "b"?: f64, "variant"?: "shannon"\|"fitts"}` | `{"result": f64, "movement_time": f64, "index_of_difficulty": f64, "variant": str}` | no |
+//! | `activation.hick` | `{"n_choices": u64, "a"?: f64, "b"?: f64, "include_no_choice"?: bool}` | `{"result": f64, "reaction_time": rt, "information_bits": f64, "include_no_choice": bool}` | no |
 //!
 //! ### Statistics (CPU)
+//!
+//! All stats methods use **sample** statistics (Bessel's correction, N-1 denominator).
+//! `stats.std_dev` and `stats.variance` include `"convention": "sample"` in the response.
 //!
 //! | Method | Params | Result | GPU |
 //! |--------|--------|--------|-----|
 //! | `stats.mean` | `{"data": [f64]}` | `{"result": f64}` | no |
-//! | `stats.std_dev` | `{"data": [f64]}` | `{"result": f64}` | no |
+//! | `stats.std_dev` | `{"data": [f64]}` | `{"result": f64, "convention": "sample", "denominator": "N-1"}` | no |
+//! | `stats.variance` | `{"data": [f64]}` | `{"result": f64, "convention": "sample", "denominator": "N-1"}` | no |
+//! | `stats.correlation` | `{"x": [f64], "y": [f64]}` | `{"result": f64}` (Pearson r ∈ [-1,1]) | no |
 //! | `stats.weighted_mean` | `{"values": [f64], "weights": [f64]}` | `{"result": f64}` | no |
+//!
+//! ### Linear Algebra (CPU inline-data)
+//!
+//! | Method | Params | Result | GPU |
+//! |--------|--------|--------|-----|
+//! | `linalg.solve` | `{"matrix": [[f64]], "b": [f64]}` | `{"result": [f64]}` (solution x where Ax=b) | no |
+//! | `linalg.eigenvalues` | `{"matrix": [[f64]]}` | `{"result": [f64]}` (eigenvalues of symmetric matrix) | no |
+//!
+//! ### Spectral (CPU inline-data)
+//!
+//! | Method | Params | Result | GPU |
+//! |--------|--------|--------|-----|
+//! | `spectral.fft` | `{"data": [f64]}` | `{"result": [f64], "real": [f64], "imag": [f64], "n": u64}` | no |
+//! | `spectral.power_spectrum` | `{"data": [f64]}` | `{"result": [f64], "n": u64}` | no |
 //!
 //! ### Noise & RNG (CPU)
 //!
@@ -88,10 +107,11 @@
 //! |--------|--------|--------|-----|
 //! | `tensor.create` | `{"shape": [u64], "data"?: [f32]}` | `{"status": "completed", "tensor_id": str, "result_id": str, "shape": [u64], "elements": u64, "dtype": "f32"}` | yes |
 //! | `tensor.matmul` | `{"lhs_id": str, "rhs_id": str}` | `{"status": "completed", "result_id": str, "shape": [u64], "elements": u64}` | yes |
+//! | `tensor.matmul_inline` | `{"lhs": [[f64]], "rhs": [[f64]]}` | `{"result": [[f64]], "shape": [u64, u64]}` | no |
 //! | `tensor.add` | `{"tensor_id": str, "other_id"?: str, "scalar"?: f64}` | `{"status": "completed", "result_id": str, "shape": [u64], "elements": u64}` | yes |
 //! | `tensor.scale` | `{"tensor_id": str, "scalar": f64}` | `{"status": "completed", "result_id": str, "shape": [u64], "elements": u64}` | yes |
 //! | `tensor.clamp` | `{"tensor_id": str, "min": f64, "max": f64}` | `{"status": "completed", "result_id": str, "shape": [u64], "elements": u64}` | yes |
-//! | `tensor.reduce` | `{"tensor_id": str, "op"?: "sum"\|"mean"\|"max"\|"min"}` | `{"status": "completed", "value": f64, "op": str}` | yes |
+//! | `tensor.reduce` | `{"tensor_id": str, "op"?: "sum"\|"mean"\|"max"\|"min"}` | `{"result": f64, "status": "completed", "value": f64, "op": str}` | yes |
 //! | `tensor.sigmoid` | `{"tensor_id": str}` | `{"status": "completed", "result_id": str, "shape": [u64], "elements": u64}` | yes |
 //!
 //! ### Batch Pipeline (GPU)

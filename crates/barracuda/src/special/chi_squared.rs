@@ -197,9 +197,9 @@ pub fn chi_squared_quantile(p: f64, k: f64) -> Result<f64> {
         });
     }
 
-    // Use bisection method for robustness
-    // Find bracket [a, b] such that CDF(a) < p < CDF(b)
-    let mut a = 0.001;
+    const BISECTION_LOWER_BRACKET: f64 = 0.001;
+
+    let mut a = BISECTION_LOWER_BRACKET;
     let mut b = k.max(1.0);
 
     // Expand upper bound until CDF(b) > p

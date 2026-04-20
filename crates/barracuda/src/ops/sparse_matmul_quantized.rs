@@ -50,6 +50,9 @@ use std::borrow::Cow;
 use wgpu::util::DeviceExt;
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::{
+    WORKGROUP_SIZE_1D, WORKGROUP_SIZE_COMPACT, WORKGROUP_SIZE_MEDIUM,
+};
 use crate::error::{BarracudaError, Result as BarracudaResult};
 
 /// Sparse matrix multiply with quantized int8 values
@@ -291,12 +294,12 @@ pub fn sparse_matmul_quantized(
         // Use capability-aware workgroup size, respecting device limits
         // Choose optimal size based on device capabilities: prefer 256 for discrete GPUs,
         // 128 for integrated GPUs, but always respect device limits
-        let optimal_wg_size = if max_invocations >= 256 {
-            256 // Optimal for discrete GPUs
-        } else if max_invocations >= 128 {
-            128 // Good for integrated GPUs
+        let optimal_wg_size = if max_invocations >= WORKGROUP_SIZE_1D {
+            WORKGROUP_SIZE_1D
+        } else if max_invocations >= WORKGROUP_SIZE_MEDIUM {
+            WORKGROUP_SIZE_MEDIUM
         } else {
-            max_invocations.max(64) // Fallback: use device max or minimum viable size
+            max_invocations.max(WORKGROUP_SIZE_COMPACT)
         };
         let workgroups = output_size.div_ceil(optimal_wg_size);
         cpass.dispatch_workgroups(workgroups.max(1), 1, 1);

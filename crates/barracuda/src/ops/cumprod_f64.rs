@@ -17,6 +17,7 @@
 //! - Self-contained (no external dependencies)
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 use bytemuck::{Pod, Zeroable};
@@ -256,9 +257,8 @@ impl CumprodF64 {
             });
 
         // Dispatch
-        let workgroup_size = 256u32;
         let total_pairs = (outer_size * inner_size) as u32;
-        let workgroups = total_pairs.div_ceil(workgroup_size);
+        let workgroups = total_pairs.div_ceil(WORKGROUP_SIZE_1D);
 
         let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
             label: Some("CumprodF64 Encoder"),

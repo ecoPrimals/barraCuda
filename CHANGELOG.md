@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.12] — 2026-04-20
 
+### Changed — Sprint 44d: Deep Debt — Magic Number Evolution (Apr 20 2026)
+
+- **Workgroup size constants**: `WORKGROUP_SIZE_MEDIUM = 128` added to capability
+  constants module. 12 production files evolved from bare `256u32`/`128u32`/`64u32`
+  to `WORKGROUP_SIZE_1D`/`WORKGROUP_SIZE_MEDIUM`/`WORKGROUP_SIZE_COMPACT` (`add.rs`,
+  `mul.rs`, `fma.rs`, `sparse_matmul_quantized.rs`, `fhe_ntt/compute.rs`,
+  `fhe_intt/compute.rs`, `fused_kl_divergence_f64.rs`, `fused_chi_squared_f64.rs`,
+  `cumprod_f64.rs`).
+- **chi_squared.rs**: bisection lower bracket `0.001` evolved to `BISECTION_LOWER_BRACKET`
+  named constant.
+
 ### Added — Sprint 44c: Phase 45 Audit — CPU Tensor Fallback (Apr 20 2026)
 
 - **CPU fallback for handle-based tensor ops**: `tensor.create`, `tensor.matmul`,

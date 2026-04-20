@@ -5,6 +5,7 @@
 //! including bit-reversal and butterfly stages.
 
 use super::FheNtt;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
@@ -137,9 +138,7 @@ impl FheNtt {
             compute_pass.set_pipeline(self.pipeline_bit_reverse());
             compute_pass.set_bind_group(0, Some(&bind_group), &[]);
 
-            // Dispatch: one thread per coefficient
-            let workgroup_size = 256u32;
-            let num_workgroups = self.degree().div_ceil(workgroup_size);
+            let num_workgroups = self.degree().div_ceil(WORKGROUP_SIZE_1D);
             compute_pass.dispatch_workgroups(num_workgroups, 1, 1);
         }
 
@@ -209,8 +208,7 @@ impl FheNtt {
 
                 // Dispatch: one thread per butterfly (N/2 butterflies per stage)
                 let num_butterflies = self.degree() / 2;
-                let workgroup_size = 256u32;
-                let num_workgroups = num_butterflies.div_ceil(workgroup_size);
+                let num_workgroups = num_butterflies.div_ceil(WORKGROUP_SIZE_1D);
                 compute_pass.dispatch_workgroups(num_workgroups, 1, 1);
             }
 

@@ -22,6 +22,10 @@ const BYTES_PER_MB: u64 = 1024 * 1024;
 /// Matches `@workgroup_size(256)` in WGSL shaders.
 pub const WORKGROUP_SIZE_1D: u32 = 256;
 
+/// Medium 1D workgroup size for integrated GPUs with lower invocation limits.
+/// Used as the `@workgroup_size(128)` tier in elementwise ops (add, mul, fma).
+pub const WORKGROUP_SIZE_MEDIUM: u32 = 128;
+
 /// Compact 1D workgroup size for physics/lattice shaders with high register pressure.
 /// Matches `@workgroup_size(64)` in MD, lattice QCD, and observable WGSL shaders.
 pub const WORKGROUP_SIZE_COMPACT: u32 = 64;

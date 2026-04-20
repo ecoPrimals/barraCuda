@@ -30,8 +30,8 @@ pub use device_info::{
 };
 pub use wgpu_caps::{
     DeviceCapabilities, FHE_MIN_BUFFER_SIZE, WORKGROUP_SIZE_1D, WORKGROUP_SIZE_2D,
-    WORKGROUP_SIZE_COMPACT, WorkloadType, optimal_workgroup_size_arch, workgroup_size_2d_for_arch,
-    workgroup_size_for_arch,
+    WORKGROUP_SIZE_COMPACT, WORKGROUP_SIZE_MEDIUM, WorkloadType, optimal_workgroup_size_arch,
+    workgroup_size_2d_for_arch, workgroup_size_for_arch,
 };
 
 #[cfg(test)]

@@ -7,6 +7,7 @@
 use std::sync::Arc;
 
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use crate::special::chi_squared_sf;
@@ -77,8 +78,7 @@ impl FusedChiSquaredGpu {
             }
         }
 
-        let wg_size = 256u32;
-        let n_workgroups = n.div_ceil(wg_size as usize) as u32;
+        let n_workgroups = n.div_ceil(WORKGROUP_SIZE_1D as usize) as u32;
 
         let observed_buf = device.create_buffer_f64_init("fused_chi2:observed", observed);
         let expected_buf = device.create_buffer_f64_init("fused_chi2:expected", expected);

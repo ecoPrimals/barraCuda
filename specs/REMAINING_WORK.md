@@ -2,7 +2,7 @@
 
 **Version**: 0.3.12
 **Date**: April 20, 2026
-**Status**: Through Sprint 44c — tracks all open work items for barraCuda evolution
+**Status**: Through Sprint 44d — tracks all open work items for barraCuda evolution
 
 ---
 
@@ -29,6 +29,12 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   in barraCuda's code), semantic IPC method naming, capability-based discovery.
 
 ---
+
+## Achieved (April 20, 2026 — Sprint 44d: Deep Debt — Magic Number Evolution & 12-Axis Audit)
+
+- **Bare workgroup size literals evolved**: `WORKGROUP_SIZE_MEDIUM = 128` added; 12 production files evolved from `256u32`/`128u32`/`64u32` to named constants (`WORKGROUP_SIZE_1D`/`WORKGROUP_SIZE_MEDIUM`/`WORKGROUP_SIZE_COMPACT`)
+- **`chi_squared.rs` bisection bracket**: `0.001` → `BISECTION_LOWER_BRACKET` named constant
+- **12-axis deep debt audit clean**: all axes green (files <800L, zero TODO/FIXME, zero production unwrap except 2 documented panics, 1 guarded unsafe, all deps pure Rust, zero hardcoded names, zero mocks in prod)
 
 ## Achieved (April 20, 2026 — Sprint 44c: Phase 45 Audit — CPU Tensor Fallback, Namespace Guide & Deep Debt Scan)
 

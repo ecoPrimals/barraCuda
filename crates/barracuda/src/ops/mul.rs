@@ -10,7 +10,9 @@
 //!
 //! Formula: C = A * B (element-wise, Hadamard product)
 
-use crate::device::capabilities::DeviceCapabilities;
+use crate::device::capabilities::{
+    DeviceCapabilities, WORKGROUP_SIZE_1D, WORKGROUP_SIZE_COMPACT, WORKGROUP_SIZE_MEDIUM,
+};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
 use crate::error::{BarracudaError, Result};
@@ -62,17 +64,17 @@ impl Mul {
         let max_dispatch = caps.max_compute_workgroups.0;
         let default: &'static str = &SHADER_DEFAULT;
 
-        let (shader, wg) = if max_inv >= 256 {
-            (default, 256u32)
-        } else if max_inv >= 128 {
-            (SHADER_WG128, 128u32)
+        let (shader, wg) = if max_inv >= WORKGROUP_SIZE_1D {
+            (default, WORKGROUP_SIZE_1D)
+        } else if max_inv >= WORKGROUP_SIZE_MEDIUM {
+            (SHADER_WG128, WORKGROUP_SIZE_MEDIUM)
         } else {
-            (SHADER_WG64, 64u32)
+            (SHADER_WG64, WORKGROUP_SIZE_COMPACT)
         };
 
         let needed = (size as u32).div_ceil(wg);
-        if needed > max_dispatch && max_inv >= 256 {
-            return (default, 256);
+        if needed > max_dispatch && max_inv >= WORKGROUP_SIZE_1D {
+            return (default, WORKGROUP_SIZE_1D);
         }
 
         (shader, wg)

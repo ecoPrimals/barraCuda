@@ -25,7 +25,7 @@
 
 use super::super::jsonrpc::{INTERNAL_ERROR, INVALID_PARAMS, JsonRpcResponse};
 use super::compute::parse_shape;
-use crate::BarraCudaPrimal;
+use crate::{BarraCudaPrimal, CpuTensor};
 use serde_json::Value;
 
 /// `barracuda.tensor.create` — Create a real tensor on the GPU device.
@@ -74,28 +74,44 @@ pub(super) async fn tensor_create(
         );
     }
 
-    let Some(dev) = primal.device() else {
-        return JsonRpcResponse::error(id, INTERNAL_ERROR, "No GPU device available");
-    };
-
-    match barracuda::tensor::Tensor::from_data(&data, shape_vec.clone(), dev) {
-        Ok(tensor) => {
-            let tensor_id = primal.store_tensor(tensor);
-            JsonRpcResponse::success(
-                id,
-                serde_json::json!({
-                    "status": "completed",
-                    "tensor_id": &tensor_id,
-                    "result_id": tensor_id,
-                    "shape": shape_vec,
-                    "elements": elements,
-                    "dtype": "f32",
-                }),
-            )
+    if let Some(dev) = primal.device() {
+        match barracuda::tensor::Tensor::from_data(&data, shape_vec.clone(), dev) {
+            Ok(tensor) => {
+                let tensor_id = primal.store_tensor(tensor);
+                JsonRpcResponse::success(
+                    id,
+                    serde_json::json!({
+                        "status": "completed",
+                        "tensor_id": &tensor_id,
+                        "result_id": tensor_id,
+                        "shape": shape_vec,
+                        "elements": elements,
+                        "dtype": "f32",
+                    }),
+                )
+            }
+            Err(e) => {
+                JsonRpcResponse::error(id, INTERNAL_ERROR, format!("Tensor creation failed: {e}"))
+            }
         }
-        Err(e) => {
-            JsonRpcResponse::error(id, INTERNAL_ERROR, format!("Tensor creation failed: {e}"))
-        }
+    } else {
+        let cpu_tensor = CpuTensor {
+            data,
+            shape: shape_vec.clone(),
+        };
+        let tensor_id = primal.store_cpu_tensor(cpu_tensor);
+        JsonRpcResponse::success(
+            id,
+            serde_json::json!({
+                "status": "completed",
+                "tensor_id": &tensor_id,
+                "result_id": tensor_id,
+                "shape": shape_vec,
+                "elements": elements,
+                "dtype": "f32",
+                "backend": "cpu",
+            }),
+        )
     }
 }
 
@@ -114,29 +130,42 @@ pub(super) async fn tensor_matmul(
         return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: rhs_id");
     };
 
-    let Some(lhs) = primal.get_tensor(lhs_str) else {
-        return JsonRpcResponse::error(id, INVALID_PARAMS, format!("Tensor not found: {lhs_str}"));
-    };
-    let Some(rhs) = primal.get_tensor(rhs_str) else {
-        return JsonRpcResponse::error(id, INVALID_PARAMS, format!("Tensor not found: {rhs_str}"));
-    };
-
-    match lhs.matmul_ref(&rhs) {
-        Ok(result) => {
-            let shape: Vec<usize> = result.shape().to_vec();
-            let elements = shape.iter().product::<usize>();
-            let result_id = primal.store_tensor(result);
-            JsonRpcResponse::success(
+    if let Some(lhs) = primal.get_tensor(lhs_str) {
+        let Some(rhs) = primal.get_tensor(rhs_str) else {
+            return JsonRpcResponse::error(
                 id,
-                serde_json::json!({
-                    "status": "completed",
-                    "result_id": result_id,
-                    "shape": shape,
-                    "elements": elements,
-                }),
-            )
+                INVALID_PARAMS,
+                format!("Tensor not found: {rhs_str}"),
+            );
+        };
+        match lhs.matmul_ref(&rhs) {
+            Ok(result) => {
+                let shape: Vec<usize> = result.shape().to_vec();
+                let elements = shape.iter().product::<usize>();
+                let result_id = primal.store_tensor(result);
+                JsonRpcResponse::success(
+                    id,
+                    serde_json::json!({
+                        "status": "completed",
+                        "result_id": result_id,
+                        "shape": shape,
+                        "elements": elements,
+                    }),
+                )
+            }
+            Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("Matmul failed: {e}")),
         }
-        Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("Matmul failed: {e}")),
+    } else if let Some(lhs_cpu) = primal.get_cpu_tensor(lhs_str) {
+        let Some(rhs_cpu) = primal.get_cpu_tensor(rhs_str) else {
+            return JsonRpcResponse::error(
+                id,
+                INVALID_PARAMS,
+                format!("Tensor not found: {rhs_str}"),
+            );
+        };
+        cpu_matmul(primal, &lhs_cpu, &rhs_cpu, id)
+    } else {
+        JsonRpcResponse::error(id, INVALID_PARAMS, format!("Tensor not found: {lhs_str}"))
     }
 }
 
@@ -144,6 +173,7 @@ pub(super) async fn tensor_matmul(
 ///
 /// Accepts `{"tensor_id": "...", "other_id": "..."}` for tensor-tensor add,
 /// or `{"tensor_id": "...", "scalar": 1.0}` for broadcast scalar add.
+/// Falls back to CPU when tensors are CPU-resident.
 pub(super) async fn tensor_add(
     primal: &BarraCudaPrimal,
     params: &Value,
@@ -152,36 +182,69 @@ pub(super) async fn tensor_add(
     let Some(tid) = params.get("tensor_id").and_then(|v| v.as_str()) else {
         return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: tensor_id");
     };
-    let Some(tensor) = primal.get_tensor(tid) else {
-        return JsonRpcResponse::error(id, INVALID_PARAMS, format!("Tensor not found: {tid}"));
-    };
 
-    let result = if let Some(scalar) = params.get("scalar").and_then(|v| v.as_f64()) {
+    if let Some(tensor) = primal.get_tensor(tid) {
+        let result = if let Some(scalar) = params.get("scalar").and_then(|v| v.as_f64()) {
+            #[expect(
+                clippy::cast_possible_truncation,
+                reason = "f64→f32 narrowing is intentional for JSON numeric inputs"
+            )]
+            tensor.add_scalar(scalar as f32)
+        } else if let Some(other_id) = params.get("other_id").and_then(|v| v.as_str()) {
+            let Some(other) = primal.get_tensor(other_id) else {
+                return JsonRpcResponse::error(
+                    id,
+                    INVALID_PARAMS,
+                    format!("Tensor not found: {other_id}"),
+                );
+            };
+            tensor.add(&other)
+        } else {
+            return JsonRpcResponse::error(
+                id,
+                INVALID_PARAMS,
+                "Provide either 'other_id' or 'scalar'",
+            );
+        };
+        match result {
+            Ok(out) => tensor_result_response(primal, out, id),
+            Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("tensor.add failed: {e}")),
+        }
+    } else if let Some(cpu_t) = primal.get_cpu_tensor(tid) {
         #[expect(
             clippy::cast_possible_truncation,
             reason = "f64→f32 narrowing is intentional for JSON numeric inputs"
         )]
-        tensor.add_scalar(scalar as f32)
-    } else if let Some(other_id) = params.get("other_id").and_then(|v| v.as_str()) {
-        let Some(other) = primal.get_tensor(other_id) else {
+        let new_data = if let Some(scalar) = params.get("scalar").and_then(|v| v.as_f64()) {
+            cpu_t.data.iter().map(|&v| v + scalar as f32).collect()
+        } else if let Some(other_id) = params.get("other_id").and_then(|v| v.as_str()) {
+            let Some(other) = primal.get_cpu_tensor(other_id) else {
+                return JsonRpcResponse::error(
+                    id,
+                    INVALID_PARAMS,
+                    format!("Tensor not found: {other_id}"),
+                );
+            };
+            cpu_t
+                .data
+                .iter()
+                .zip(other.data.iter())
+                .map(|(&a, &b)| a + b)
+                .collect()
+        } else {
             return JsonRpcResponse::error(
                 id,
                 INVALID_PARAMS,
-                format!("Tensor not found: {other_id}"),
+                "Provide either 'other_id' or 'scalar'",
             );
         };
-        tensor.add(&other)
+        cpu_tensor_result(primal, new_data, cpu_t.shape, id)
     } else {
-        return JsonRpcResponse::error(id, INVALID_PARAMS, "Provide either 'other_id' or 'scalar'");
-    };
-
-    match result {
-        Ok(out) => tensor_result_response(primal, out, id),
-        Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("tensor.add failed: {e}")),
+        JsonRpcResponse::error(id, INVALID_PARAMS, format!("Tensor not found: {tid}"))
     }
 }
 
-/// `tensor.scale` — multiply tensor by scalar.
+/// `tensor.scale` — multiply tensor by scalar. CPU fallback on headless hosts.
 pub(super) async fn tensor_scale(
     primal: &BarraCudaPrimal,
     params: &Value,
@@ -193,21 +256,31 @@ pub(super) async fn tensor_scale(
     let Some(scalar) = params.get("scalar").and_then(|v| v.as_f64()) else {
         return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: scalar");
     };
-    let Some(tensor) = primal.get_tensor(tid) else {
-        return JsonRpcResponse::error(id, INVALID_PARAMS, format!("Tensor not found: {tid}"));
-    };
 
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "f64→f32 narrowing is intentional for JSON numeric inputs"
-    )]
-    match tensor.mul_scalar(scalar as f32) {
-        Ok(out) => tensor_result_response(primal, out, id),
-        Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("tensor.scale failed: {e}")),
+    if let Some(tensor) = primal.get_tensor(tid) {
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "f64→f32 narrowing is intentional for JSON numeric inputs"
+        )]
+        match tensor.mul_scalar(scalar as f32) {
+            Ok(out) => tensor_result_response(primal, out, id),
+            Err(e) => {
+                JsonRpcResponse::error(id, INTERNAL_ERROR, format!("tensor.scale failed: {e}"))
+            }
+        }
+    } else if let Some(cpu_t) = primal.get_cpu_tensor(tid) {
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "f64→f32 narrowing is intentional for JSON numeric inputs"
+        )]
+        let new_data = cpu_t.data.iter().map(|&v| v * scalar as f32).collect();
+        cpu_tensor_result(primal, new_data, cpu_t.shape, id)
+    } else {
+        JsonRpcResponse::error(id, INVALID_PARAMS, format!("Tensor not found: {tid}"))
     }
 }
 
-/// `tensor.clamp` — clamp tensor values to [min, max] via GPU WGSL.
+/// `tensor.clamp` — clamp tensor values to [min, max]. CPU fallback on headless hosts.
 pub(super) async fn tensor_clamp(
     primal: &BarraCudaPrimal,
     params: &Value,
@@ -222,21 +295,33 @@ pub(super) async fn tensor_clamp(
     let Some(max_val) = params.get("max").and_then(|v| v.as_f64()) else {
         return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: max");
     };
-    let Some(tensor) = primal.get_tensor(tid) else {
-        return JsonRpcResponse::error(id, INVALID_PARAMS, format!("Tensor not found: {tid}"));
-    };
 
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "f64→f32 narrowing is intentional for JSON numeric inputs"
-    )]
-    match (*tensor).clone().clamp_wgsl(min_val as f32, max_val as f32) {
-        Ok(out) => tensor_result_response(primal, out, id),
-        Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("tensor.clamp failed: {e}")),
+    if let Some(tensor) = primal.get_tensor(tid) {
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "f64→f32 narrowing is intentional for JSON numeric inputs"
+        )]
+        match (*tensor).clone().clamp_wgsl(min_val as f32, max_val as f32) {
+            Ok(out) => tensor_result_response(primal, out, id),
+            Err(e) => {
+                JsonRpcResponse::error(id, INTERNAL_ERROR, format!("tensor.clamp failed: {e}"))
+            }
+        }
+    } else if let Some(cpu_t) = primal.get_cpu_tensor(tid) {
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "f64→f32 narrowing is intentional for JSON numeric inputs"
+        )]
+        let (lo, hi) = (min_val as f32, max_val as f32);
+        let new_data = cpu_t.data.iter().map(|&v| v.clamp(lo, hi)).collect();
+        cpu_tensor_result(primal, new_data, cpu_t.shape, id)
+    } else {
+        JsonRpcResponse::error(id, INVALID_PARAMS, format!("Tensor not found: {tid}"))
     }
 }
 
 /// `tensor.reduce` — reduce tensor to scalar (sum, mean, max, min).
+/// Works on both GPU and CPU tensors.
 pub(super) async fn tensor_reduce(
     primal: &BarraCudaPrimal,
     params: &Value,
@@ -246,19 +331,22 @@ pub(super) async fn tensor_reduce(
         return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: tensor_id");
     };
     let op = params.get("op").and_then(|v| v.as_str()).unwrap_or("sum");
-    let Some(tensor) = primal.get_tensor(tid) else {
-        return JsonRpcResponse::error(id, INVALID_PARAMS, format!("Tensor not found: {tid}"));
-    };
 
-    let data = match tensor.to_vec() {
-        Ok(d) => d,
-        Err(e) => {
-            return JsonRpcResponse::error(
-                id,
-                INTERNAL_ERROR,
-                format!("Failed to read tensor: {e}"),
-            );
+    let data: Vec<f32> = if let Some(tensor) = primal.get_tensor(tid) {
+        match tensor.to_vec() {
+            Ok(d) => d,
+            Err(e) => {
+                return JsonRpcResponse::error(
+                    id,
+                    INTERNAL_ERROR,
+                    format!("Failed to read tensor: {e}"),
+                );
+            }
         }
+    } else if let Some(cpu_t) = primal.get_cpu_tensor(tid) {
+        cpu_t.data
+    } else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, format!("Tensor not found: {tid}"));
     };
 
     #[expect(
@@ -297,7 +385,7 @@ pub(super) async fn tensor_reduce(
     )
 }
 
-/// `tensor.sigmoid` — element-wise sigmoid via GPU WGSL.
+/// `tensor.sigmoid` — element-wise sigmoid. CPU fallback on headless hosts.
 pub(super) async fn tensor_sigmoid(
     primal: &BarraCudaPrimal,
     params: &Value,
@@ -306,13 +394,23 @@ pub(super) async fn tensor_sigmoid(
     let Some(tid) = params.get("tensor_id").and_then(|v| v.as_str()) else {
         return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: tensor_id");
     };
-    let Some(tensor) = primal.get_tensor(tid) else {
-        return JsonRpcResponse::error(id, INVALID_PARAMS, format!("Tensor not found: {tid}"));
-    };
 
-    match (*tensor).clone().sigmoid() {
-        Ok(out) => tensor_result_response(primal, out, id),
-        Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("tensor.sigmoid failed: {e}")),
+    if let Some(tensor) = primal.get_tensor(tid) {
+        match (*tensor).clone().sigmoid() {
+            Ok(out) => tensor_result_response(primal, out, id),
+            Err(e) => {
+                JsonRpcResponse::error(id, INTERNAL_ERROR, format!("tensor.sigmoid failed: {e}"))
+            }
+        }
+    } else if let Some(cpu_t) = primal.get_cpu_tensor(tid) {
+        let new_data = cpu_t
+            .data
+            .iter()
+            .map(|&v| 1.0 / (1.0 + (-v).exp()))
+            .collect();
+        cpu_tensor_result(primal, new_data, cpu_t.shape, id)
+    } else {
+        JsonRpcResponse::error(id, INVALID_PARAMS, format!("Tensor not found: {tid}"))
     }
 }
 
@@ -324,6 +422,61 @@ fn tensor_result_response(
     let shape: Vec<usize> = tensor.shape().to_vec();
     let elements = shape.iter().product::<usize>();
     let result_id = primal.store_tensor(tensor);
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({
+            "status": "completed",
+            "result_id": result_id,
+            "shape": shape,
+            "elements": elements,
+        }),
+    )
+}
+
+/// CPU matmul for two CPU-resident tensors (2D matrices).
+fn cpu_matmul(
+    primal: &BarraCudaPrimal,
+    lhs: &CpuTensor,
+    rhs: &CpuTensor,
+    id: Value,
+) -> JsonRpcResponse {
+    if lhs.shape.len() != 2 || rhs.shape.len() != 2 {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "CPU matmul requires 2D tensors");
+    }
+    let (m, k) = (lhs.shape[0], lhs.shape[1]);
+    let (k2, n) = (rhs.shape[0], rhs.shape[1]);
+    if k != k2 {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            format!("Shape mismatch: lhs [{m}x{k}], rhs [{k2}x{n}]"),
+        );
+    }
+    let mut out = vec![0.0f32; m * n];
+    for i in 0..m {
+        for j in 0..n {
+            let mut sum = 0.0f32;
+            for p in 0..k {
+                sum = lhs.data[i * k + p].mul_add(rhs.data[p * n + j], sum);
+            }
+            out[i * n + j] = sum;
+        }
+    }
+    cpu_tensor_result(primal, out, vec![m, n], id)
+}
+
+/// Store a CPU result tensor and return a standard tensor response.
+fn cpu_tensor_result(
+    primal: &BarraCudaPrimal,
+    data: Vec<f32>,
+    shape: Vec<usize>,
+    id: Value,
+) -> JsonRpcResponse {
+    let elements = shape.iter().product::<usize>();
+    let result_id = primal.store_cpu_tensor(CpuTensor {
+        data,
+        shape: shape.clone(),
+    });
     JsonRpcResponse::success(
         id,
         serde_json::json!({

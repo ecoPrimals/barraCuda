@@ -123,7 +123,13 @@ async fn test_dispatch_tensor_create() {
         serde_json::json!(205),
     )
     .await;
-    assert!(resp.error.is_some());
+    assert!(
+        resp.error.is_none(),
+        "CPU fallback should succeed without GPU"
+    );
+    let result = resp.result.unwrap();
+    assert_eq!(result["shape"], serde_json::json!([2, 2]));
+    assert_eq!(result["backend"], "cpu");
 }
 
 #[tokio::test]

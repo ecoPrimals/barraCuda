@@ -2,7 +2,7 @@
 
 **Version**: 0.3.12
 **Date**: April 20, 2026
-**Status**: Through Sprint 44 — tracks all open work items for barraCuda evolution
+**Status**: Through Sprint 44c — tracks all open work items for barraCuda evolution
 
 ---
 
@@ -29,6 +29,13 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   in barraCuda's code), semantic IPC method naming, capability-based discovery.
 
 ---
+
+## Achieved (April 20, 2026 — Sprint 44c: Phase 45 Audit — CPU Tensor Fallback, Namespace Guide & Deep Debt Scan)
+
+- **CPU fallback for handle-based tensor ops**: `CpuTensor` store added to `BarraCudaPrimal`; all 7 handle-based ops (`tensor.create`, `tensor.matmul`, `tensor.add`, `tensor.scale`, `tensor.clamp`, `tensor.reduce`, `tensor.sigmoid`) automatically fall back to CPU when no GPU device available; response includes `"backend": "cpu"` for transparency; 2 new roundtrip tests; resolves primalSpring Phase 45 gap #6
+- **Tensor Wire Contract v1.1.0**: CPU fallback section, IPC namespace guide (9 namespaces), socket naming clarification (authoritative `math.sock` vs legacy `barracuda.sock` symlink)
+- **12-axis deep debt scan clean**: Files <800L, zero TODO/FIXME, zero production unwrap (except 2 documented panics in `runtime.rs`), 1 guarded unsafe (spirv passthrough), zero async-trait/Box\<dyn Error\>/Result\<T,String\> in production, zero println in lib, zero mocks in production, zero hardcoded primal names in runtime, all deps pure Rust, zero bare `#[allow(`
+- **113 IPC method tests pass**, all quality gates green (fmt, clippy, doc)
 
 ## Achieved (April 20, 2026 — Sprint 44: primalSpring Composition Audit — 6 Missing Methods, Science Fixes & Schema Standardization)
 

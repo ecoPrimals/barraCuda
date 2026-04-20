@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.12] — 2026-04-20
 
+### Added — Sprint 44c: Phase 45 Audit — CPU Tensor Fallback (Apr 20 2026)
+
+- **CPU fallback for handle-based tensor ops**: `tensor.create`, `tensor.matmul`,
+  `tensor.add`, `tensor.scale`, `tensor.clamp`, `tensor.reduce`, `tensor.sigmoid`
+  now work on headless hosts without GPU via `CpuTensor` store. GPU path preferred
+  when available; transparent to callers. Response includes `"backend": "cpu"` when
+  CPU path is used. Resolves primalSpring Phase 45 gap #6.
+- **IPC namespace guide**: Tensor Wire Contract updated with 9-namespace reference
+  table documenting which namespace to use for what (`tensor.*`, `stats.*`,
+  `activation.*`, `linalg.*`, `spectral.*`, `noise.*`, `fhe.*`, `math.*`, `compute.*`).
+- **Socket naming documentation**: Authoritative socket (`math.sock` / `math-{fid}.sock`)
+  vs legacy symlink (`barracuda.sock`) clarified in wire contract.
+- 2 new CPU tensor roundtrip tests (create→matmul→reduce, add/scale/clamp/sigmoid).
+
 ### Added — Sprint 44: primalSpring Composition Audit (Apr 20 2026)
 
 - **6 new JSON-RPC methods** (32→39 registered): `stats.variance`, `stats.correlation`,

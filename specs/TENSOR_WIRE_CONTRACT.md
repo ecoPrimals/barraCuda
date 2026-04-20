@@ -2,7 +2,7 @@
 
 # Tensor IPC Wire Contract
 
-**Status**: Sprint 42 — Composition Elevation
+**Status**: Sprint 44c — CPU Fallback + Namespace Guide
 **Version**: 1.0.0
 **Authority**: barraCuda primal (self-knowledge)
 **Implements**: wateringHole `PRIMAL_IPC_PROTOCOL.md` v3.1, `SEMANTIC_METHOD_NAMING_STANDARD.md`
@@ -79,6 +79,31 @@ tensor store and returning a handle for chaining.
 `tensor_id` and `result_id` are identical — `tensor_id` exists for backward
 compatibility; `result_id` exists for uniformity with other tensor-producing ops.
 Springs SHOULD use `result_id` for new code.
+
+#### CPU Fallback (Sprint 44c)
+
+On headless hosts without GPU, `tensor.create` automatically falls back to
+CPU-resident storage. The response includes an additional field:
+
+```json
+{
+  "status": "completed",
+  "tensor_id": "abc123...",
+  "result_id": "abc123...",
+  "shape": [M, N],
+  "elements": E,
+  "dtype": "f32",
+  "backend": "cpu"
+}
+```
+
+When `"backend": "cpu"` is present, the tensor lives in CPU memory. All
+subsequent handle-based ops (`tensor.matmul`, `tensor.add`, `tensor.scale`,
+`tensor.clamp`, `tensor.reduce`, `tensor.sigmoid`) work transparently on
+CPU tensors — callers do not need to change their code.
+
+The `"backend"` field is absent when tensors are GPU-resident (default).
+Springs SHOULD NOT branch on `backend` — the API is identical for both paths.
 
 ### Category 2: Scalar-Producing Operations
 
@@ -197,6 +222,49 @@ All tensor methods use standard JSON-RPC error codes:
 
 Springs using the old `result` key for `tensor.reduce` must update to `value`.
 All other changes are additive (new fields, not renamed fields).
+
+---
+
+## IPC Namespace Guide
+
+barraCuda exposes operations across multiple semantic namespaces. Each namespace
+groups related operations per `SEMANTIC_METHOD_NAMING_STANDARD.md`:
+
+| Namespace | Domain | Methods |
+|-----------|--------|---------|
+| `tensor.*` | Handle-based GPU/CPU tensor ops | `create`, `matmul`, `matmul_inline`, `add`, `scale`, `clamp`, `reduce`, `sigmoid`, `batch.submit` |
+| `stats.*` | Descriptive statistics | `mean`, `std_dev`, `variance`, `weighted_mean`, `correlation` |
+| `activation.*` | Psychophysical / activation functions | `fitts`, `hick` |
+| `linalg.*` | Linear algebra (CPU, inline-data) | `solve`, `eigenvalues` |
+| `spectral.*` | Spectral analysis | `fft`, `power_spectrum` |
+| `noise.*` | Procedural noise | `perlin2d`, `perlin3d` |
+| `fhe.*` | Fully homomorphic encryption | `ntt`, `pointwise_mul` |
+| `math.*` | Scalar math functions | `sigmoid`, `log2` |
+| `compute.*` | Low-level GPU dispatch | `dispatch`, `health` |
+
+**When to use `tensor.matmul_inline` vs `tensor.matmul`**: Use `matmul_inline`
+for one-shot matrix multiplications with inline data (no handle round-trip).
+Use `tensor.create` + `tensor.matmul` for multi-step pipelines where tensors
+are reused across operations.
+
+**The `math.*` namespace is intentionally sparse** — it provides scalar-valued
+functions not covered by other namespaces. Statistics go in `stats.*`, matrix
+ops in `linalg.*`, spectral ops in `spectral.*`.
+
+---
+
+## Socket Naming
+
+barraCuda uses **domain-based socket naming** per `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §3:
+
+- **Authoritative socket**: `$BIOMEOS_SOCKET_DIR/math.sock`
+  (or `math-{family_id}.sock` when `FAMILY_ID` is set)
+- **Legacy symlink**: `barracuda.sock → math.sock` (backward compatibility)
+
+The socket named `math.sock` is the JSON-RPC IPC endpoint. The tarpc binary
+protocol socket is `barracuda-{family_id}.sock`. Springs discovering barraCuda
+should use `discover_by_capability("tensor")` or `discover_by_capability("math")`
+— capability-based discovery, never hardcoded socket names.
 
 ---
 

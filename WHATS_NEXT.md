@@ -6,6 +6,12 @@ Prioritized work items, ordered by impact. Updated 2026-04-20.
 
 ## Recently Completed
 
+- **Sprint 44c: Phase 45 Audit — CPU Tensor Fallback (Apr 20)**: CPU fallback for
+  all 7 handle-based tensor ops (`tensor.create`, `matmul`, `add`, `scale`, `clamp`,
+  `reduce`, `sigmoid`) via `CpuTensor` store — headless hosts no longer return
+  "No GPU device available." IPC namespace guide added to wire contract (9 namespaces).
+  Socket naming clarified (authoritative `math.sock` vs legacy `barracuda.sock`).
+  12-axis deep debt scan clean. Resolves primalSpring Phase 45 gap #6.
 - **Sprint 44: primalSpring Composition Audit (Apr 20)**: 6 new JSON-RPC methods
   wired (32→39): `stats.variance`, `stats.correlation`, `linalg.solve`,
   `linalg.eigenvalues`, `spectral.fft`, `spectral.power_spectrum` — unblocks

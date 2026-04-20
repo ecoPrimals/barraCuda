@@ -77,6 +77,20 @@ use lifecycle::{PrimalLifecycle, PrimalState};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
+/// CPU-resident tensor for headless hosts without GPU.
+///
+/// Stores the same f32 data and shape that a GPU `Tensor` would hold,
+/// enabling handle-based IPC ops (`tensor.create`, `tensor.matmul`, etc.)
+/// to work on any machine. GPU path is preferred when available; this is
+/// the automatic fallback.
+#[derive(Clone, Debug)]
+pub struct CpuTensor {
+    /// Flat f32 data in row-major order.
+    pub data: Vec<f32>,
+    /// Shape dimensions (e.g., `[2, 3]` for a 2x3 matrix).
+    pub shape: Vec<usize>,
+}
+
 /// barraCuda primal — sovereign GPU compute engine.
 ///
 /// Manages GPU device discovery, shader compilation, and compute dispatch
@@ -94,10 +108,14 @@ use std::sync::{Arc, RwLock};
 /// 2. wgpu CPU software rasterizer — universal but slow
 /// 3. Sovereign IPC (`shader.compile` + `compute.dispatch` peers, ecoBin/Docker)
 /// 4. Degraded mode — cpu-shader only, health reports `Degraded`
+///
+/// When no GPU is available, handle-based tensor ops (`tensor.create`,
+/// `tensor.matmul`, etc.) automatically fall back to CPU-resident tensors.
 pub struct BarraCudaPrimal {
     state: PrimalState,
     compute: Option<barracuda::device::DiscoveredDevice>,
     tensors: RwLock<HashMap<String, Arc<barracuda::tensor::Tensor>>>,
+    cpu_tensors: RwLock<HashMap<String, CpuTensor>>,
 }
 
 impl BarraCudaPrimal {
@@ -108,6 +126,7 @@ impl BarraCudaPrimal {
             state: PrimalState::Created,
             compute: None,
             tensors: RwLock::new(HashMap::new()),
+            cpu_tensors: RwLock::new(HashMap::new()),
         }
     }
 
@@ -158,9 +177,27 @@ impl BarraCudaPrimal {
         self.tensors.read().ok()?.get(id).cloned()
     }
 
-    /// Number of tensors currently stored.
+    /// Number of tensors currently stored (GPU + CPU).
     pub fn tensor_count(&self) -> usize {
-        self.tensors.read().map(|s| s.len()).unwrap_or(0)
+        let gpu = self.tensors.read().map(|s| s.len()).unwrap_or(0);
+        let cpu = self.cpu_tensors.read().map(|s| s.len()).unwrap_or(0);
+        gpu + cpu
+    }
+
+    /// Store a CPU-resident tensor and return its handle ID.
+    pub fn store_cpu_tensor(&self, tensor: CpuTensor) -> String {
+        let id = blake3::hash(format!("cpu:{:?}:{}", tensor.shape, self.tensor_count()).as_bytes())
+            .to_hex()[..16]
+            .to_string();
+        if let Ok(mut store) = self.cpu_tensors.write() {
+            store.insert(id.clone(), tensor);
+        }
+        id
+    }
+
+    /// Look up a CPU-resident tensor by ID.
+    pub fn get_cpu_tensor(&self, id: &str) -> Option<CpuTensor> {
+        self.cpu_tensors.read().ok()?.get(id).cloned()
     }
 }
 

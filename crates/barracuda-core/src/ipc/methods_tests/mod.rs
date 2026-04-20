@@ -14,7 +14,10 @@ use super::health::{
     health_check, health_liveness, health_readiness, tolerances_get, validate_gpu_stack,
 };
 use super::primal::{capabilities, identity, info};
-use super::tensor::{tensor_create, tensor_matmul};
+use super::tensor::{
+    tensor_add, tensor_clamp, tensor_create, tensor_matmul, tensor_reduce, tensor_scale,
+    tensor_sigmoid,
+};
 use super::{REGISTERED_METHODS, normalize_method};
 use crate::BarraCudaPrimal;
 

@@ -2,8 +2,8 @@
 
 # Tensor IPC Wire Contract
 
-**Status**: Sprint 44c — CPU Fallback + Namespace Guide
-**Version**: 1.0.0
+**Status**: Sprint 44d — Deep Debt + Magic Number Evolution
+**Version**: 1.1.0
 **Authority**: barraCuda primal (self-knowledge)
 **Implements**: wateringHole `PRIMAL_IPC_PROTOCOL.md` v3.1, `SEMANTIC_METHOD_NAMING_STANDARD.md`
 

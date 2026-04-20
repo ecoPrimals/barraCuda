@@ -108,7 +108,7 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 ## Achieved (April 11, 2026 — Sprint 40: primalSpring Gap Resolution & Deep Debt Overstep Cleanup)
 
 ### primalSpring Gap Resolution
-- **BC-07** (Medium, partial): `SovereignDevice` probed in fallback chain; `BarraCudaPrimal` detects sovereign IPC dispatch availability when wgpu fails; `health_status()` reflects sovereign fallback; `Auto::new()` docs describe full 4-tier fallback chain. **Completed in Sprint 41: Auto::new() now returns SovereignDevice as tier 3.**
+- **BC-07** (Medium, resolved): `SovereignDevice` probed in fallback chain; `BarraCudaPrimal` detects sovereign IPC dispatch availability when wgpu fails; `health_status()` reflects sovereign fallback; `Auto::new()` returns `DiscoveredDevice` enum with 3-tier fallback: wgpu GPU → wgpu CPU → SovereignDevice IPC. Resolved Sprint 41.
 - **BC-08** (Medium): `cpu-shader` feature now default-on in `crates/barracuda/Cargo.toml`. ecoBin binaries can compute without wgpu
 - **plasma_dispersion feature-gate** (neuralSpring Gap 9): `#[cfg]` gates corrected to `#[cfg(all(feature = "gpu", feature = "domain-lattice"))]` — declares dependency on `domain-lattice`
 - **TensorSession API stabilization**: `device::tensor_context::TensorSession` renamed to `BatchGuard` with `#[deprecated]` alias. `session::TensorSession` documented as stable API for spring adoption

@@ -6,6 +6,10 @@ Prioritized work items, ordered by impact. Updated 2026-04-20.
 
 ## Recently Completed
 
+- **Sprint 44d: Deep Debt — Magic Number Evolution (Apr 20)**: `WORKGROUP_SIZE_MEDIUM = 128`
+  added; 12 production files evolved from bare `256u32`/`128u32`/`64u32` to named constants
+  (`add.rs`, `mul.rs`, `fma.rs`, `sparse_matmul_quantized.rs`, FHE NTT/INTT, fused stats,
+  `cumprod_f64.rs`). Chi-squared bisection bracket named. 12-axis deep debt audit clean.
 - **Sprint 44c: Phase 45 Audit — CPU Tensor Fallback (Apr 20)**: CPU fallback for
   all 7 handle-based tensor ops (`tensor.create`, `matmul`, `add`, `scale`, `clamp`,
   `reduce`, `sigmoid`) via `CpuTensor` store — headless hosts no longer return

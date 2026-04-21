@@ -29,7 +29,7 @@
 //! | Path | Status | Notes |
 //! |------|--------|-------|
 //! | IPC compile (`shader.compile`) | Done | via `coral_compiler/` |
-//! | IPC dispatch (`compute.dispatch`) | Wired | `compute.dispatch.submit` (S152); readback pending |
+//! | IPC dispatch (`compute.dispatch`) | Done | `compute.dispatch.submit` + readback via `output_buffers` |
 //! | DRM (nouveau/amdgpu) | E2E verified | Titan V + RTX 3090 proven |
 //! | VFIO/GPFIFO | Fix applied | USERD_TARGET + INST_TARGET fix (Iter 44); hw revalidation pending |
 //!
@@ -73,12 +73,15 @@ static RESOLVED_DEFAULT_WORKGROUP: std::sync::LazyLock<[u32; 3]> = std::sync::La
 /// Metadata about a compiled shader needed for GPU dispatch.
 ///
 /// Sent to the dispatch primal so it can configure QMD (NVIDIA) or PM4 (AMD)
-/// descriptors with the correct register count and workgroup dimensions.
+/// descriptors with the correct register count, workgroup dimensions, shared
+/// memory size, and barrier count.
 #[cfg(feature = "sovereign-dispatch")]
 #[derive(Debug, Clone, Copy)]
 struct ShaderDispatchInfo {
     gpr_count: u32,
     workgroup: [u32; 3],
+    shared_mem_bytes: u32,
+    barrier_count: u32,
 }
 
 /// Serialisable buffer binding descriptor for IPC compute dispatch.
@@ -128,15 +131,16 @@ pub struct SovereignDevice {
 
 /// A compiled native GPU binary cached from IPC compilation.
 ///
-/// `gpr_count` and `workgroup` are tracked for dispatch metadata.
-/// They will be sent as part of the `compute.dispatch.submit` payload once
-/// the dispatch primal accepts kernel metadata alongside the binary.
+/// All compiler metadata (GPR count, workgroup, shared memory, barriers) is
+/// carried so the dispatch primal can configure hardware descriptors (QMD/PM4).
 #[cfg(feature = "sovereign-dispatch")]
 #[derive(Clone)]
 struct CachedBinary {
     binary: bytes::Bytes,
     gpr_count: u32,
     workgroup: [u32; 3],
+    shared_mem_bytes: u32,
+    barrier_count: u32,
 }
 
 impl std::fmt::Debug for SovereignDevice {
@@ -408,6 +412,8 @@ impl SovereignDevice {
                     binary: binary.binary,
                     gpr_count: binary.gpr_count.unwrap_or(*GPR_COUNT),
                     workgroup: binary.workgroup.unwrap_or(*RESOLVED_DEFAULT_WORKGROUP),
+                    shared_mem_bytes: binary.shared_mem_bytes.unwrap_or(0),
+                    barrier_count: binary.barrier_count.unwrap_or(0),
                 })
             })
         })
@@ -457,6 +463,18 @@ impl SovereignDevice {
             super::backend::HardwareHint::RopBlend => "rop_blend",
         };
 
+        let buffer_data: Vec<serde_json::Value> = bindings
+            .iter()
+            .filter_map(|b| {
+                let staged = self.staged_buffers.lock().ok()?;
+                let data = staged.get(&b.buffer_id)?;
+                Some(serde_json::json!({
+                    "buffer_id": b.buffer_id,
+                    "data": data.to_vec(),
+                }))
+            })
+            .collect();
+
         let request = serde_json::json!({
             "binary": binary,
             "workgroup_size": [workgroups.0, workgroups.1, workgroups.2],
@@ -464,6 +482,9 @@ impl SovereignDevice {
             "hardware_hint": hint_str,
             "gpr_count": shader_info.gpr_count,
             "workgroup": shader_info.workgroup,
+            "shared_mem_bytes": shader_info.shared_mem_bytes,
+            "barrier_count": shader_info.barrier_count,
+            "buffer_data": buffer_data,
         });
 
         let addr = addr.clone();
@@ -533,6 +554,34 @@ impl SovereignDevice {
                     return Err(BarracudaError::Device(format!(
                         "SovereignDevice: compute dispatch error: {msg}"
                     )));
+                }
+
+                if let Some(result) = rpc_response.get("result") {
+                    if let Some(output_buffers) = result.get("output_buffers") {
+                        if let Some(arr) = output_buffers.as_array() {
+                            let mut staged = self.staged_buffers.lock().map_err(|e| {
+                                BarracudaError::Device(format!(
+                                    "SovereignDevice: staged lock poisoned: {e}"
+                                ))
+                            })?;
+                            for entry in arr {
+                                let Some(buf_id) = entry.get("buffer_id").and_then(|v| v.as_u64())
+                                else {
+                                    continue;
+                                };
+                                let Some(data) = entry.get("data").and_then(|v| v.as_array())
+                                else {
+                                    continue;
+                                };
+                                let bytes: Vec<u8> =
+                                    data.iter().filter_map(|b| b.as_u64().map(|v| v as u8)).collect();
+                                if let Some(buf) = staged.get_mut(&buf_id) {
+                                    let copy_len = bytes.len().min(buf.len());
+                                    buf[..copy_len].copy_from_slice(&bytes[..copy_len]);
+                                }
+                            }
+                        }
+                    }
                 }
 
                 tracing::debug!(
@@ -679,6 +728,8 @@ impl GpuBackend for SovereignDevice {
                         binary,
                         gpr_count: *GPR_COUNT,
                         workgroup: *RESOLVED_DEFAULT_WORKGROUP,
+                        shared_mem_bytes: 0,
+                        barrier_count: 0,
                     })
                 } else {
                     let cached = self.live_compile(desc.shader_source)?;
@@ -691,6 +742,8 @@ impl GpuBackend for SovereignDevice {
         let info = ShaderDispatchInfo {
             gpr_count: cached.gpr_count,
             workgroup: cached.workgroup,
+            shared_mem_bytes: cached.shared_mem_bytes,
+            barrier_count: cached.barrier_count,
         };
         drop(cache);
 
@@ -747,6 +800,8 @@ impl GpuBackend for SovereignDevice {
             ShaderDispatchInfo {
                 gpr_count: *GPR_COUNT,
                 workgroup: *RESOLVED_DEFAULT_WORKGROUP,
+                shared_mem_bytes: 0,
+                barrier_count: 0,
             },
         )
     }

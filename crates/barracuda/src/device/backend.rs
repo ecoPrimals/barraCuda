@@ -22,6 +22,136 @@
 use crate::error::Result;
 use std::sync::Arc;
 
+/// GPU vendor identity.
+///
+/// Mirrors `coral_driver::hardware::Vendor`. Defined independently to maintain
+/// barraCuda's zero compile-time coupling to coral-driver.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Vendor {
+    /// NVIDIA (nouveau, proprietary, VFIO, CUDA).
+    Nvidia,
+    /// AMD (amdgpu DRM).
+    Amd,
+    /// Intel (future).
+    Intel,
+    /// Unrecognized or software backend.
+    Unknown,
+}
+
+/// GPU driver stack in use.
+///
+/// Distinguishes open-source from proprietary stacks without name-string
+/// matching. Consumers use this for workarounds and transcendental safety
+/// decisions instead of `backend.name().contains("NVK")`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum DriverKind {
+    /// Mesa NVK / nouveau (open-source NVIDIA Vulkan).
+    NvkMesa,
+    /// NVIDIA proprietary Vulkan/CUDA driver.
+    NvidiaProprietary,
+    /// Mesa RADV (open-source AMD Vulkan).
+    RadvMesa,
+    /// AMD proprietary (AMDVLK or amdgpu-pro).
+    AmdProprietary,
+    /// Mesa Intel ANV.
+    IntelMesa,
+    /// Sovereign IPC backend (coral-driver).
+    Sovereign,
+    /// Software rasterizer (llvmpipe, lavapipe, SwiftShader).
+    Software,
+    /// Unknown / unrecognized driver.
+    Unknown,
+}
+
+impl std::fmt::Display for Vendor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Nvidia => f.write_str("NVIDIA"),
+            Self::Amd => f.write_str("AMD"),
+            Self::Intel => f.write_str("Intel"),
+            Self::Unknown => f.write_str("Unknown"),
+        }
+    }
+}
+
+/// GPU memory technology.
+///
+/// Mirrors `coral_driver::hardware::MemoryType`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MemoryKind {
+    /// GDDR5 (Kepler, older AMD).
+    Gddr5,
+    /// HBM2 / HBM2e (datacenter).
+    Hbm2,
+    /// HBM3 / HBM3e (datacenter).
+    Hbm3,
+    /// GDDR6 (Turing, RDNA).
+    Gddr6,
+    /// GDDR6X (Ampere B, Ada).
+    Gddr6x,
+    /// GDDR7 (Blackwell consumer).
+    Gddr7,
+}
+
+/// Vendor-agnostic hardware capabilities exposed by a GPU backend.
+///
+/// Built from vendor-specific profiles at device-open time. Springs and ops
+/// use this to adapt behavior (precision routing, tier skipping, batch sizing)
+/// without branching on vendor identity.
+///
+/// Parallel to `coral_driver::HardwareCapabilities` but decoupled from the
+/// driver crate to maintain barraCuda's IPC-first architecture.
+#[derive(Debug, Clone)]
+pub struct BackendCapabilities {
+    /// GPU vendor.
+    pub vendor: Vendor,
+    /// Driver stack in use (NVK, proprietary, RADV, etc.).
+    pub driver_kind: DriverKind,
+    /// Short device/chip name.
+    pub device_name: String,
+    /// Whether the ALU supports IEEE 754 binary64 natively.
+    pub has_hardware_f64: bool,
+    /// Whether hardware f64 reciprocal is reliable.
+    pub has_hardware_f64_rcp: bool,
+    /// Whether FP64 runs at full rate (1:2 ratio with FP32).
+    pub has_full_rate_fp64: bool,
+    /// Video memory technology.
+    pub memory_kind: MemoryKind,
+}
+
+impl BackendCapabilities {
+    /// Conservative defaults for unknown hardware.
+    pub fn unknown() -> Self {
+        Self {
+            vendor: Vendor::Unknown,
+            driver_kind: DriverKind::Unknown,
+            device_name: String::from("unknown"),
+            has_hardware_f64: false,
+            has_hardware_f64_rcp: false,
+            has_full_rate_fp64: false,
+            memory_kind: MemoryKind::Gddr6,
+        }
+    }
+
+    /// Whether this is an open-source Mesa driver (NVK, RADV, ANV).
+    pub fn is_mesa(&self) -> bool {
+        matches!(
+            self.driver_kind,
+            DriverKind::NvkMesa | DriverKind::RadvMesa | DriverKind::IntelMesa
+        )
+    }
+
+    /// Whether this is the NVK/nouveau open-source NVIDIA Vulkan stack.
+    pub fn is_nvk(&self) -> bool {
+        matches!(self.driver_kind, DriverKind::NvkMesa)
+    }
+
+    /// Whether this is the NVIDIA proprietary driver.
+    pub fn is_nvidia_proprietary(&self) -> bool {
+        matches!(self.driver_kind, DriverKind::NvidiaProprietary)
+    }
+}
+
 /// Hardware unit hint for fixed-function science dispatch (Level 3 portability).
 ///
 /// Springs express abstract math ops; the dispatch pipeline maps them to
@@ -119,6 +249,17 @@ pub trait GpuBackend: Send + Sync {
 
     /// Whether the device has been reported as lost by the driver.
     fn is_lost(&self) -> bool;
+
+    /// Query the hardware capabilities of this device.
+    ///
+    /// Returns a vendor-agnostic description of the GPU's precision support,
+    /// memory type, and vendor. Consumers use this to adapt behavior
+    /// (e.g. precision routing, tier skipping) without knowing the vendor.
+    ///
+    /// The default returns conservative unknowns — backends should override.
+    fn capabilities(&self) -> BackendCapabilities {
+        BackendCapabilities::unknown()
+    }
 
     // ── Buffer lifecycle ──────────────────────────────────────────────
 
@@ -311,6 +452,9 @@ impl<B: GpuBackend> GpuBackend for Arc<B> {
     }
     fn is_lost(&self) -> bool {
         (**self).is_lost()
+    }
+    fn capabilities(&self) -> BackendCapabilities {
+        (**self).capabilities()
     }
     fn alloc_buffer(&self, label: &str, size: u64) -> Result<Self::Buffer> {
         (**self).alloc_buffer(label, size)

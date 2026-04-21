@@ -246,6 +246,173 @@ impl SovereignDevice {
         cached_native_binary_any_arch(&hash).map(|b| b.binary)
     }
 
+    /// Query the dispatch primal's GPU architecture via `compute.dispatch.capabilities`.
+    ///
+    /// Returns `Some(arch)` (e.g. `"sm_89"`) when the dispatch primal is
+    /// reachable and reports a target arch, `None` otherwise.
+    #[cfg(feature = "sovereign-dispatch")]
+    fn query_dispatch_arch(&self) -> Option<String> {
+        let addr = self.dispatch_addr.as_ref()?;
+        let addr = addr.clone();
+
+        let handle = tokio::runtime::Handle::try_current().ok()?;
+        tokio::task::block_in_place(|| {
+            handle.block_on(async {
+                let host_port = addr.trim_start_matches("http://");
+                let body = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "method": "compute.dispatch.capabilities",
+                    "params": [],
+                    "id": 1,
+                });
+                let body_str = serde_json::to_string(&body).ok()?;
+
+                let http_request = format!(
+                    "POST / HTTP/1.1\r\nHost: {host_port}\r\n\
+                     Content-Type: application/json\r\n\
+                     Content-Length: {}\r\n\
+                     Connection: close\r\n\r\n{body_str}",
+                    body_str.len()
+                );
+
+                let timeout = tokio::time::Duration::from_secs(5);
+                let mut stream = tokio::time::timeout(
+                    timeout,
+                    tokio::net::TcpStream::connect(host_port),
+                )
+                .await
+                .ok()?
+                .ok()?;
+
+                tokio::io::AsyncWriteExt::write_all(&mut stream, http_request.as_bytes())
+                    .await
+                    .ok()?;
+                let mut buf = Vec::new();
+                tokio::io::AsyncReadExt::read_to_end(&mut stream, &mut buf)
+                    .await
+                    .ok()?;
+
+                let response_str = String::from_utf8_lossy(&buf);
+                let json_start = response_str.find('{')?;
+                let rpc: serde_json::Value =
+                    serde_json::from_str(&response_str[json_start..]).ok()?;
+
+                let result = rpc.get("result")?;
+                let arch = result.get("arch").and_then(|a| a.as_str());
+                arch.map(str::to_owned)
+            })
+        })
+    }
+
+    /// Select the best compilation target from available architectures.
+    ///
+    /// Priority:
+    /// 1. `BARRACUDA_TARGET_ARCH` env var (explicit override)
+    /// 2. Dispatch primal's reported arch via `compute.dispatch.capabilities`
+    /// 3. Single compiler arch (unambiguous)
+    /// 4. First compiler arch (with warning when ambiguous)
+    #[cfg(feature = "sovereign-dispatch")]
+    fn select_target(&self, archs: &[String]) -> Result<String> {
+        if let Ok(env_target) = std::env::var("BARRACUDA_TARGET_ARCH") {
+            if archs.iter().any(|a| a == &env_target) {
+                return Ok(env_target);
+            }
+            tracing::warn!(
+                requested = %env_target,
+                available = ?archs,
+                "BARRACUDA_TARGET_ARCH not in supported_archs — falling back"
+            );
+        }
+
+        if let Some(dispatch_arch) = self.query_dispatch_arch() {
+            if archs.iter().any(|a| a == &dispatch_arch) {
+                tracing::info!(
+                    arch = %dispatch_arch,
+                    "target selected from dispatch primal capabilities"
+                );
+                return Ok(dispatch_arch);
+            }
+            tracing::warn!(
+                dispatch_arch = %dispatch_arch,
+                compiler_archs = ?archs,
+                "dispatch primal arch not in compiler's supported_archs — falling back"
+            );
+        }
+
+        match archs {
+            [] => Err(BarracudaError::Device(
+                "SovereignDevice: compiler reports no supported architectures".into(),
+            )),
+            [single] => Ok(single.clone()),
+            [first, ..] => {
+                tracing::warn!(
+                    available = ?archs,
+                    selected = %first,
+                    "multiple target architectures — set BARRACUDA_TARGET_ARCH to disambiguate"
+                );
+                Ok(first.clone())
+            }
+        }
+    }
+
+    /// Synchronously compile WGSL via the coral compiler IPC when no cached
+    /// binary is available. Blocks the current thread using `block_in_place`
+    /// (safe because `dispatch_compute` is called from a blocking context).
+    #[cfg(feature = "sovereign-dispatch")]
+    fn live_compile(&self, shader_source: &str) -> Result<CachedBinary> {
+        use crate::device::coral_compiler::{
+            GLOBAL_CORAL, cache::cache_native_binary, shader_hash,
+        };
+
+        let handle = tokio::runtime::Handle::try_current().map_err(|_| {
+            BarracudaError::Device(
+                "SovereignDevice: no tokio runtime for live compilation".into(),
+            )
+        })?;
+
+        let source = shader_source.to_owned();
+        tokio::task::block_in_place(|| {
+            handle.block_on(async {
+                let archs = GLOBAL_CORAL.supported_archs().await.ok_or_else(|| {
+                    BarracudaError::Device(
+                        "SovereignDevice: compiler unreachable — no supported_archs".into(),
+                    )
+                })?;
+
+                let target = self.select_target(&archs)?;
+
+                tracing::info!(
+                    target = %target,
+                    "live compile-on-dispatch: compiling WGSL for {target}"
+                );
+
+                let binary =
+                    GLOBAL_CORAL
+                        .compile_wgsl_direct(&source, &target, false)
+                        .await
+                        .ok_or_else(|| {
+                            BarracudaError::Device(format!(
+                                "SovereignDevice: live compilation failed for target {target}"
+                            ))
+                        })?;
+
+                let hash = shader_hash(&source);
+                cache_native_binary(&hash, &target, binary.clone());
+                tracing::info!(
+                    target = %target,
+                    size = binary.binary.len(),
+                    "live compile-on-dispatch: compiled and cached ({} bytes)",
+                    binary.binary.len()
+                );
+                Ok(CachedBinary {
+                    binary: binary.binary,
+                    gpr_count: binary.gpr_count.unwrap_or(*GPR_COUNT),
+                    workgroup: binary.workgroup.unwrap_or(*RESOLVED_DEFAULT_WORKGROUP),
+                })
+            })
+        })
+    }
+
     /// Submit a dispatch request to the compute.dispatch primal via JSON-RPC.
     ///
     /// Sends the compiled native binary, workgroup dimensions, buffer binding
@@ -514,11 +681,8 @@ impl GpuBackend for SovereignDevice {
                         workgroup: *RESOLVED_DEFAULT_WORKGROUP,
                     })
                 } else {
-                    return Err(BarracudaError::Device(
-                        "SovereignDevice: no cached binary and live IPC compilation \
-                         not yet implemented — pre-compile via spawn_coral_compile()"
-                            .into(),
-                    ));
+                    let cached = self.live_compile(desc.shader_source)?;
+                    e.insert(cached)
                 }
             }
         };
@@ -674,5 +838,35 @@ mod tests {
     fn coral_cache_lookup_returns_none_for_unknown_shader() {
         let result = SovereignDevice::try_coral_cache("nonexistent_shader_source_12345");
         assert!(result.is_none());
+    }
+
+    #[cfg(feature = "sovereign-dispatch")]
+    #[test]
+    fn select_target_single_arch() {
+        let dev = SovereignDevice::new();
+        let archs = vec!["sm_75".to_string()];
+        let result = dev.select_target(&archs).unwrap();
+        assert_eq!(result, "sm_75");
+    }
+
+    #[cfg(feature = "sovereign-dispatch")]
+    #[test]
+    fn select_target_empty_archs() {
+        let dev = SovereignDevice::new();
+        let archs: Vec<String> = vec![];
+        assert!(dev.select_target(&archs).is_err());
+    }
+
+    #[cfg(feature = "sovereign-dispatch")]
+    #[test]
+    fn query_dispatch_arch_no_endpoint() {
+        let dev = SovereignDevice {
+            name: Arc::from("test"),
+            compiler_available: false,
+            dispatch_addr: None,
+            binary_cache: std::sync::Mutex::new(HashMap::new()),
+            staged_buffers: std::sync::Mutex::new(HashMap::new()),
+        };
+        assert!(dev.query_dispatch_arch().is_none());
     }
 }

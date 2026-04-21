@@ -16,6 +16,16 @@ pub struct CoralBinary {
     pub binary: Bytes,
     /// Target architecture (e.g. `sm_70`).
     pub arch: String,
+    /// Compiler-reported GPR count (from register allocation).
+    /// `None` when the compiler doesn't report metadata (legacy servers).
+    pub gpr_count: Option<u32>,
+    /// Compiler-reported workgroup dimensions.
+    /// `None` when the compiler doesn't report metadata.
+    pub workgroup: Option<[u32; 3]>,
+    /// Shared memory in bytes (from shader analysis).
+    pub shared_mem_bytes: Option<u32>,
+    /// Barrier count used by the shader.
+    pub barrier_count: Option<u32>,
 }
 
 /// SPIR-V compile request — mirrors `coralreef-core::service::CompileRequest`.
@@ -33,7 +43,7 @@ pub(super) struct CompileRequest {
 /// WGSL → IR → native binary pipeline server-side (coralReef reference naming).
 ///
 /// `fp64_strategy` is the Phase 2 field aligned with the reference compiler's
-/// `Fp64Strategy` enum. `fp64_software` is kept for backward compatibility with Phase 1 servers.
+/// `Fp64Strategy` enum. `fp64_software` is kept for backward compatibility with legacy servers.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(super) struct CompileWgslRequest {
     pub wgsl_source: String,
@@ -42,7 +52,7 @@ pub(super) struct CompileWgslRequest {
     pub fp64_software: bool,
     /// Precision strategy hint for the remote compiler (Phase 2).
     /// Maps to the wire `Fp64Strategy`: `"native"`, `"double_float"`, `"f32_only"`.
-    /// Ignored by Phase 1 servers that only read `fp64_software`.
+    /// Ignored by legacy servers that only read `fp64_software`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fp64_strategy: Option<String>,
     /// Adapter descriptor for arch-agnostic compilation (Phase 2).
@@ -109,16 +119,70 @@ pub fn precision_to_coral_strategy(
 ///
 /// `binary` deserializes as `Vec<u8>` from JSON but is immediately converted
 /// to `bytes::Bytes` at the call site for zero-copy sharing downstream.
+///
+/// The real coralReef server nests metadata inside `info: CompilationInfoResponse`.
+/// Legacy flat fields are kept for backward compatibility with servers
+/// that send metadata at the top level instead of nested in `info`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(super) struct CompileResponse {
     pub binary: Vec<u8>,
     pub size: usize,
+    /// Nested compilation metadata from the server (coralReef reference format).
+    #[serde(default)]
+    pub info: Option<CompilationInfoResponse>,
+    /// Legacy flat GPR count (servers without nested `info`).
+    #[serde(default)]
+    pub gpr_count: Option<u32>,
+    /// Legacy flat workgroup dimensions (servers without nested `info`).
+    #[serde(default)]
+    pub workgroup: Option<[u32; 3]>,
+    /// Legacy flat shared memory (servers without nested `info`).
+    #[serde(default)]
+    pub shared_mem_bytes: Option<u32>,
+    /// Legacy flat barrier count (servers without nested `info`).
+    #[serde(default)]
+    pub barrier_count: Option<u32>,
+}
+
+/// Compilation metadata nested inside `CompileResponse.info`.
+///
+/// Mirrors `coralreef-core::service::types::CompilationInfoResponse`.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub(super) struct CompilationInfoResponse {
+    #[serde(default)]
+    pub gpr_count: u32,
+    #[serde(default)]
+    pub instr_count: u32,
+    #[serde(default)]
+    pub shared_mem_bytes: u32,
+    #[serde(default)]
+    pub barrier_count: u32,
+    #[serde(default)]
+    pub workgroup_size: [u32; 3],
 }
 
 impl CompileResponse {
-    /// Convert the owned binary to a shared `bytes::Bytes` (zero-copy freeze).
-    pub fn into_bytes(self) -> Bytes {
-        Bytes::from(self.binary)
+    /// Convert to a `CoralBinary`, preferring nested `info` over legacy flat fields.
+    pub fn into_coral_binary(self, arch: String) -> CoralBinary {
+        if let Some(info) = self.info {
+            CoralBinary {
+                binary: Bytes::from(self.binary),
+                arch,
+                gpr_count: Some(info.gpr_count),
+                workgroup: Some(info.workgroup_size),
+                shared_mem_bytes: Some(info.shared_mem_bytes),
+                barrier_count: Some(info.barrier_count),
+            }
+        } else {
+            CoralBinary {
+                binary: Bytes::from(self.binary),
+                arch,
+                gpr_count: self.gpr_count,
+                workgroup: self.workgroup,
+                shared_mem_bytes: self.shared_mem_bytes,
+                barrier_count: self.barrier_count,
+            }
+        }
     }
 }
 

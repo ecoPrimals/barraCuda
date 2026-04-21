@@ -18,6 +18,10 @@ fn test_coral_binary_debug() {
     let binary = CoralBinary {
         binary: bytes::Bytes::from_static(&[0xDE, 0xAD]),
         arch: "sm_70".to_owned(),
+        gpr_count: None,
+        workgroup: None,
+        shared_mem_bytes: None,
+        barrier_count: None,
     };
     assert!(format!("{binary:?}").contains("sm_70"));
 }
@@ -292,6 +296,10 @@ fn cache_insert_and_lookup() {
     let binary = types::CoralBinary {
         binary: bytes::Bytes::from_static(&[0xCA, 0xFE]),
         arch: "sm_70".to_owned(),
+        gpr_count: None,
+        workgroup: None,
+        shared_mem_bytes: None,
+        barrier_count: None,
     };
     cache::cache_native_binary(&hash, "sm_70", binary);
     let found = cache::cached_native_binary(&hash, "sm_70");
@@ -313,6 +321,10 @@ fn cache_any_arch_finds_first_match() {
         types::CoralBinary {
             binary: bytes::Bytes::from_static(&[0xAA]),
             arch: "gfx1030".to_owned(),
+            gpr_count: None,
+            workgroup: None,
+            shared_mem_bytes: None,
+            barrier_count: None,
         },
     );
     let found = cache::cached_native_binary_any_arch(&hash);
@@ -417,4 +429,52 @@ fn precision_to_coral_strategy_all_variants() {
         types::precision_to_coral_strategy(&Precision::Df128),
         "double_double_f64"
     );
+}
+
+#[test]
+fn test_compile_response_nested_info_deserialization() {
+    let json = r#"{
+        "binary": [1, 2, 3],
+        "size": 3,
+        "arch": "sm_89",
+        "status": "success",
+        "info": {
+            "gpr_count": 24,
+            "instr_count": 128,
+            "shared_mem_bytes": 512,
+            "barrier_count": 1,
+            "workgroup_size": [256, 1, 1]
+        }
+    }"#;
+    let resp: types::CompileResponse = serde_json::from_str(json).unwrap();
+    let binary = resp.into_coral_binary("sm_89".to_owned());
+    assert_eq!(binary.gpr_count, Some(24));
+    assert_eq!(binary.workgroup, Some([256, 1, 1]));
+    assert_eq!(binary.shared_mem_bytes, Some(512));
+    assert_eq!(binary.barrier_count, Some(1));
+}
+
+#[test]
+fn test_compile_response_legacy_flat_fields() {
+    let json = r#"{
+        "binary": [4, 5],
+        "size": 2,
+        "gpr_count": 16,
+        "workgroup": [64, 1, 1],
+        "shared_mem_bytes": 0,
+        "barrier_count": 0
+    }"#;
+    let resp: types::CompileResponse = serde_json::from_str(json).unwrap();
+    let binary = resp.into_coral_binary("sm_70".to_owned());
+    assert_eq!(binary.gpr_count, Some(16));
+    assert_eq!(binary.workgroup, Some([64, 1, 1]));
+}
+
+#[test]
+fn test_compile_response_no_metadata() {
+    let json = r#"{ "binary": [6], "size": 1 }"#;
+    let resp: types::CompileResponse = serde_json::from_str(json).unwrap();
+    let binary = resp.into_coral_binary("sm_75".to_owned());
+    assert!(binary.gpr_count.is_none());
+    assert!(binary.workgroup.is_none());
 }

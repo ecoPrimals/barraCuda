@@ -148,10 +148,7 @@ impl CoralCompiler {
         )
         .await
         {
-            Ok(resp) => Some(CoralBinary {
-                binary: resp.into_bytes(),
-                arch: arch.to_owned(),
-            }),
+            Ok(resp) => Some(resp.into_coral_binary(arch.to_owned())),
             Err(e) => {
                 tracing::debug!("shader compile failed: {e}");
                 None
@@ -197,10 +194,7 @@ impl CoralCompiler {
         )
         .await
         {
-            Ok(resp) => Some(CoralBinary {
-                binary: resp.into_bytes(),
-                arch: arch.to_owned(),
-            }),
+            Ok(resp) => Some(resp.into_coral_binary(arch.to_owned())),
             Err(e) => {
                 tracing::debug!("shader compile_wgsl direct failed: {e}, trying SPIR-V path");
                 self.compile_wgsl(wgsl, arch, fp64_software).await
@@ -244,10 +238,7 @@ impl CoralCompiler {
         )
         .await
         {
-            Ok(resp) => Some(CoralBinary {
-                binary: resp.into_bytes(),
-                arch: arch.to_owned(),
-            }),
+            Ok(resp) => Some(resp.into_coral_binary(arch.to_owned())),
             Err(e) => {
                 tracing::debug!("shader compile_wgsl with advice failed: {e}, trying basic path");
                 self.compile_wgsl_direct(wgsl, arch, fp64_software).await

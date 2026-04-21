@@ -7,7 +7,7 @@
 //! `GpuBackend::dispatch_compute()`, making `ComputeDispatch` a thin builder
 //! that works with any backend.
 
-use super::backend::{DispatchDescriptor, GpuBackend};
+use super::backend::{BackendCapabilities, DispatchDescriptor, GpuBackend, MemoryKind, Vendor};
 use super::wgpu_device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 
@@ -24,6 +24,51 @@ impl GpuBackend for WgpuDevice {
 
     fn is_lost(&self) -> bool {
         Self::is_lost(self)
+    }
+
+    fn capabilities(&self) -> BackendCapabilities {
+        use super::backend::DriverKind;
+        let info = self.adapter_info();
+        let vendor = match info.vendor {
+            0x10DE => Vendor::Nvidia,
+            0x1002 => Vendor::Amd,
+            0x8086 => Vendor::Intel,
+            _ => Vendor::Unknown,
+        };
+        let driver_lower = info.driver.to_lowercase();
+        let driver_info_lower = info.driver_info.to_lowercase();
+        let driver_kind = if driver_lower.contains("nvk")
+            || driver_lower.contains("nouveau")
+            || driver_info_lower.contains("nvk")
+            || driver_info_lower.contains("nouveau")
+        {
+            DriverKind::NvkMesa
+        } else if driver_lower.contains("radv") {
+            DriverKind::RadvMesa
+        } else if driver_lower.contains("anv") || driver_lower.contains("intel") {
+            DriverKind::IntelMesa
+        } else if driver_lower.contains("llvmpipe")
+            || driver_lower.contains("lavapipe")
+            || driver_lower.contains("swiftshader")
+            || info.name.to_lowercase().contains("llvmpipe")
+        {
+            DriverKind::Software
+        } else if vendor == Vendor::Nvidia {
+            DriverKind::NvidiaProprietary
+        } else if vendor == Vendor::Amd {
+            DriverKind::AmdProprietary
+        } else {
+            DriverKind::Unknown
+        };
+        BackendCapabilities {
+            vendor,
+            driver_kind,
+            device_name: info.name.clone(),
+            has_hardware_f64: self.has_f64_shaders(),
+            has_hardware_f64_rcp: self.has_f64_shaders(),
+            has_full_rate_fp64: false,
+            memory_kind: MemoryKind::Gddr6,
+        }
     }
 
     fn alloc_buffer(&self, label: &str, size: u64) -> Result<wgpu::Buffer> {

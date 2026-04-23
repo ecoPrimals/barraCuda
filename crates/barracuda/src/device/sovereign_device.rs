@@ -280,13 +280,11 @@ impl SovereignDevice {
                 );
 
                 let timeout = tokio::time::Duration::from_secs(5);
-                let mut stream = tokio::time::timeout(
-                    timeout,
-                    tokio::net::TcpStream::connect(host_port),
-                )
-                .await
-                .ok()?
-                .ok()?;
+                let mut stream =
+                    tokio::time::timeout(timeout, tokio::net::TcpStream::connect(host_port))
+                        .await
+                        .ok()?
+                        .ok()?;
 
                 tokio::io::AsyncWriteExt::write_all(&mut stream, http_request.as_bytes())
                     .await
@@ -369,9 +367,7 @@ impl SovereignDevice {
         };
 
         let handle = tokio::runtime::Handle::try_current().map_err(|_| {
-            BarracudaError::Device(
-                "SovereignDevice: no tokio runtime for live compilation".into(),
-            )
+            BarracudaError::Device("SovereignDevice: no tokio runtime for live compilation".into())
         })?;
 
         let source = shader_source.to_owned();
@@ -390,15 +386,14 @@ impl SovereignDevice {
                     "live compile-on-dispatch: compiling WGSL for {target}"
                 );
 
-                let binary =
-                    GLOBAL_CORAL
-                        .compile_wgsl_direct(&source, &target, false)
-                        .await
-                        .ok_or_else(|| {
-                            BarracudaError::Device(format!(
-                                "SovereignDevice: live compilation failed for target {target}"
-                            ))
-                        })?;
+                let binary = GLOBAL_CORAL
+                    .compile_wgsl_direct(&source, &target, false)
+                    .await
+                    .ok_or_else(|| {
+                        BarracudaError::Device(format!(
+                            "SovereignDevice: live compilation failed for target {target}"
+                        ))
+                    })?;
 
                 let hash = shader_hash(&source);
                 cache_native_binary(&hash, &target, binary.clone());
@@ -565,16 +560,18 @@ impl SovereignDevice {
                                 ))
                             })?;
                             for entry in arr {
-                                let Some(buf_id) = entry.get("buffer_id").and_then(|v| v.as_u64())
+                                let Some(buf_id) = entry.get("buffer_id").and_then(serde_json::Value::as_u64)
                                 else {
                                     continue;
                                 };
-                                let Some(data) = entry.get("data").and_then(|v| v.as_array())
+                                let Some(data) = entry.get("data").and_then(serde_json::Value::as_array)
                                 else {
                                     continue;
                                 };
-                                let bytes: Vec<u8> =
-                                    data.iter().filter_map(|b| b.as_u64().map(|v| v as u8)).collect();
+                                let bytes: Vec<u8> = data
+                                    .iter()
+                                    .filter_map(|b| b.as_u64().map(|v| v as u8))
+                                    .collect();
                                 if let Some(buf) = staged.get_mut(&buf_id) {
                                     let copy_len = bytes.len().min(buf.len());
                                     buf[..copy_len].copy_from_slice(&bytes[..copy_len]);

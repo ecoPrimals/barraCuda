@@ -6,6 +6,12 @@ Prioritized work items, ordered by impact. Updated 2026-04-20.
 
 ## Recently Completed
 
+- **Sprint 44e: Phase 45c BTSP Relay Alignment (Apr 20)**: Fixed 5 BTSP handshake
+  relay issues per primalSpring Phase 45c audit — ClientHello detection now accepts
+  `"protocol":"btsp"` JSON-line format, `session_create_rpc` sends base64-encoded
+  `family_seed`, `session_verify_rpc` passes `client_ephemeral_pub`+`preferred_cipher`,
+  field names aligned to BearDog wire (`session_token`/`response`). 7 new tests.
+  Upstream clippy fix in `sovereign_device.rs`.
 - **Sprint 44d: Deep Debt — Magic Number Evolution (Apr 20)**: `WORKGROUP_SIZE_MEDIUM = 128`
   added; 12 production files evolved from bare `256u32`/`128u32`/`64u32` to named constants
   (`add.rs`, `mul.rs`, `fma.rs`, `sparse_matmul_quantized.rs`, FHE NTT/INTT, fused stats,

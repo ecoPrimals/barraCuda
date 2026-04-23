@@ -135,6 +135,16 @@ impl BtspOutcome {
     }
 }
 
+/// Detect whether a parsed JSON message is a BTSP `ClientHello`.
+///
+/// Accepts both the legacy `{"type":"ClientHello",...}` format and
+/// primalSpring's JSON-line format `{"protocol":"btsp","version":1,...}`.
+fn is_btsp_client_hello(msg: &serde_json::Value) -> bool {
+    let is_type_hello = msg.get("type").and_then(|v| v.as_str()) == Some("ClientHello");
+    let is_protocol_btsp = msg.get("protocol").and_then(|v| v.as_str()) == Some("btsp");
+    is_type_hello || is_protocol_btsp
+}
+
 /// Attempt full BTSP Phase 2 handshake on an incoming connection stream.
 ///
 /// Called once per accepted connection in the UDS/TCP accept loop,
@@ -283,16 +293,11 @@ where
         }
     };
 
-    let msg_type = client_hello
-        .get("type")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-    if msg_type != "ClientHello" {
+    if !is_btsp_client_hello(&client_hello) {
         return Err(HandshakeError::ClientLegacy {
-            reason: format!(
-                "Expected ClientHello, got message type '{msg_type}'. \
-                 Treating as legacy client."
-            ),
+            reason: "First message is not a BTSP ClientHello. \
+                     Treating as legacy client."
+                .to_string(),
             consumed_line: Some(client_hello_line),
         });
     }
@@ -304,14 +309,23 @@ where
             HandshakeError::Protocol("ClientHello missing client_ephemeral_pub field".to_string())
         })?;
 
-    // Step 2: Call security provider btsp.session.create
-    let create_result = session_create_rpc(provider_sock, family_id, client_ephemeral_pub).await?;
+    // Step 2: Load family seed and call security provider btsp.session.create
+    let family_seed = resolve_family_seed_b64().ok_or_else(|| {
+        HandshakeError::Protocol(
+            "BTSP handshake requires BEARDOG_FAMILY_SEED or FAMILY_SEED env var".to_string(),
+        )
+    })?;
+    let create_result =
+        session_create_rpc(provider_sock, family_id, client_ephemeral_pub, &family_seed).await?;
 
     let session_id = create_result
-        .get("session_id")
+        .get("session_token")
+        .or_else(|| create_result.get("session_id"))
         .and_then(|v| v.as_str())
         .ok_or_else(|| {
-            HandshakeError::Protocol("session.create response missing session_id".to_string())
+            HandshakeError::Protocol(
+                "session.create response missing session_token/session_id".to_string(),
+            )
         })?
         .to_string();
 
@@ -334,15 +348,28 @@ where
     let challenge_resp: serde_json::Value = serde_json::from_str(&challenge_line)
         .map_err(|e| HandshakeError::Protocol(format!("Malformed ChallengeResponse JSON: {e}")))?;
 
-    let hmac_proof = challenge_resp
-        .get("hmac")
+    let client_response = challenge_resp
+        .get("response")
+        .or_else(|| challenge_resp.get("hmac"))
         .and_then(|v| v.as_str())
         .ok_or_else(|| {
-            HandshakeError::Protocol("ChallengeResponse missing hmac field".to_string())
+            HandshakeError::Protocol("ChallengeResponse missing response/hmac field".to_string())
         })?;
 
+    let preferred_cipher = challenge_resp
+        .get("preferred_cipher")
+        .and_then(|v| v.as_str())
+        .unwrap_or("chacha20_poly1305");
+
     // Step 5: Call security provider btsp.session.verify
-    let verify_result = session_verify_rpc(provider_sock, &session_id, hmac_proof).await?;
+    let verify_result = session_verify_rpc(
+        provider_sock,
+        &session_id,
+        client_response,
+        client_ephemeral_pub,
+        preferred_cipher,
+    )
+    .await?;
 
     let verified = verify_result
         .get("verified")
@@ -445,11 +472,15 @@ where
 // ── Security-domain provider RPC helpers ────────────────────────────
 
 /// Call `btsp.session.create` on the security-domain provider.
+///
+/// Per Phase 45c: BearDog requires the literal base64-encoded `family_seed`,
+/// not just the `family_id` reference.
 #[cfg(unix)]
 async fn session_create_rpc(
     provider_sock: &std::path::Path,
     family_id: &str,
     client_ephemeral_pub: &str,
+    family_seed: &str,
 ) -> std::result::Result<serde_json::Value, HandshakeError> {
     let request = serde_json::json!({
         "jsonrpc": "2.0",
@@ -457,6 +488,7 @@ async fn session_create_rpc(
         "params": {
             "family_id": family_id,
             "client_ephemeral_pub": client_ephemeral_pub,
+            "family_seed": family_seed,
         },
         "id": 1
     });
@@ -464,18 +496,25 @@ async fn session_create_rpc(
 }
 
 /// Call `btsp.session.verify` on the security-domain provider.
+///
+/// Per Phase 45c: BearDog expects `session_token` (not `session_id`),
+/// `response` (not `hmac`), plus `client_ephemeral_pub` and `preferred_cipher`.
 #[cfg(unix)]
 async fn session_verify_rpc(
     provider_sock: &std::path::Path,
-    session_id: &str,
-    hmac: &str,
+    session_token: &str,
+    response: &str,
+    client_ephemeral_pub: &str,
+    preferred_cipher: &str,
 ) -> std::result::Result<serde_json::Value, HandshakeError> {
     let request = serde_json::json!({
         "jsonrpc": "2.0",
         "method": "btsp.session.verify",
         "params": {
-            "session_id": session_id,
-            "hmac": hmac,
+            "session_token": session_token,
+            "response": response,
+            "client_ephemeral_pub": client_ephemeral_pub,
+            "preferred_cipher": preferred_cipher,
         },
         "id": 2
     });
@@ -539,6 +578,35 @@ async fn security_provider_rpc(
         .get("result")
         .cloned()
         .ok_or_else(|| HandshakeError::Protocol("Provider response missing result".to_string()))
+}
+
+// ── Family seed resolution ───────────────────────────────────────────
+
+/// Load the BTSP family seed and return it as base64.
+///
+/// Reads `BEARDOG_FAMILY_SEED` → `FAMILY_SEED` from environment.
+/// The env value is typically hex-encoded (from `xxd -p`); we decode
+/// to raw bytes and re-encode as base64 for the BearDog RPC wire format.
+fn resolve_family_seed_b64() -> Option<String> {
+    let raw = std::env::var("BEARDOG_FAMILY_SEED")
+        .or_else(|_| std::env::var("FAMILY_SEED"))
+        .ok()
+        .filter(|s| !s.is_empty())?;
+    let bytes = hex_to_bytes(&raw).unwrap_or_else(|| raw.as_bytes().to_vec());
+    use base64ct::{Base64, Encoding};
+    Some(Base64::encode_string(&bytes))
+}
+
+/// Decode a hex string to bytes. Returns `None` if the input is not valid hex.
+fn hex_to_bytes(hex: &str) -> Option<Vec<u8>> {
+    let hex = hex.trim();
+    if !hex.len().is_multiple_of(2) {
+        return None;
+    }
+    (0..hex.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&hex[i..i + 2], 16).ok())
+        .collect()
 }
 
 // ── Discovery ───────────────────────────────────────────────────────
@@ -693,5 +761,55 @@ mod tests {
         assert!(!BtspCipher::Null.requires_key());
         assert!(BtspCipher::HmacPlain.requires_key());
         assert!(BtspCipher::ChaCha20Poly1305.requires_key());
+    }
+
+    #[test]
+    fn is_btsp_client_hello_type_field() {
+        let msg: serde_json::Value =
+            serde_json::json!({"type": "ClientHello", "client_ephemeral_pub": "abc"});
+        assert!(is_btsp_client_hello(&msg));
+    }
+
+    #[test]
+    fn is_btsp_client_hello_protocol_field() {
+        let msg: serde_json::Value =
+            serde_json::json!({"protocol": "btsp", "version": 1, "client_ephemeral_pub": "abc"});
+        assert!(is_btsp_client_hello(&msg));
+    }
+
+    #[test]
+    fn is_btsp_client_hello_rejects_plain_jsonrpc() {
+        let msg: serde_json::Value =
+            serde_json::json!({"jsonrpc": "2.0", "method": "tensor.dot", "id": 1});
+        assert!(!is_btsp_client_hello(&msg));
+    }
+
+    #[test]
+    fn hex_to_bytes_valid() {
+        let bytes = hex_to_bytes("deadbeef").unwrap();
+        assert_eq!(bytes, vec![0xde, 0xad, 0xbe, 0xef]);
+    }
+
+    #[test]
+    fn hex_to_bytes_odd_length() {
+        assert!(hex_to_bytes("abc").is_none());
+    }
+
+    #[test]
+    fn hex_to_bytes_invalid_chars() {
+        assert!(hex_to_bytes("zzzz").is_none());
+    }
+
+    #[test]
+    fn hex_to_bytes_empty() {
+        assert_eq!(hex_to_bytes("").unwrap(), Vec::<u8>::new());
+    }
+
+    #[test]
+    fn resolve_family_seed_b64_returns_none_when_unset() {
+        if std::env::var("BEARDOG_FAMILY_SEED").is_ok() || std::env::var("FAMILY_SEED").is_ok() {
+            return;
+        }
+        assert!(resolve_family_seed_b64().is_none());
     }
 }

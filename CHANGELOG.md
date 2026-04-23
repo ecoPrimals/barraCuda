@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.12] — 2026-04-20
 
+### Fixed — Sprint 44e: Phase 45c BTSP Relay Alignment (Apr 20 2026)
+
+- **BTSP ClientHello detection**: `is_btsp_client_hello()` now accepts both
+  `{"type":"ClientHello"}` (legacy) and `{"protocol":"btsp"}` (primalSpring
+  JSON-line format). Fixes handshake failures when primalSpring connects.
+- **`session_create_rpc` sends `family_seed`**: BearDog requires the literal
+  base64-encoded family seed, not just a family ID reference. New
+  `resolve_family_seed_b64()` reads `BEARDOG_FAMILY_SEED`/`FAMILY_SEED` env,
+  hex-decodes, and re-encodes as base64.
+- **`session_verify_rpc` field alignment**: Now sends `session_token` (not
+  `session_id`), `response` (not `hmac`), plus `client_ephemeral_pub` and
+  `preferred_cipher` — all required by BearDog.
+- **Field name fallbacks**: `session.create` response reads `session_token`
+  with `session_id` fallback. `ChallengeResponse` reads `response` with
+  `hmac` fallback. Ensures compatibility across BearDog versions.
+- **Upstream clippy fix**: `sovereign_device.rs` redundant closure evolved
+  to method reference (`serde_json::Value::as_u64`/`as_array`).
+- 7 new tests for BTSP detection, hex codec, and seed resolution.
+
 ### Changed — Sprint 44d: Deep Debt — Magic Number Evolution (Apr 20 2026)
 
 - **Workgroup size constants**: `WORKGROUP_SIZE_MEDIUM = 128` added to capability

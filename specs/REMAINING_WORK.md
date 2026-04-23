@@ -2,7 +2,7 @@
 
 **Version**: 0.3.12
 **Date**: April 20, 2026
-**Status**: Through Sprint 44d — tracks all open work items for barraCuda evolution
+**Status**: Through Sprint 44f — tracks all open work items for barraCuda evolution
 
 ---
 
@@ -29,6 +29,19 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   in barraCuda's code), semantic IPC method naming, capability-based discovery.
 
 ---
+
+## Achieved (April 20, 2026 — Sprint 44f: Smart Refactoring + 12-Axis Clean)
+
+- **`sovereign_device.rs` smart refactoring** (924→773L): `query_dispatch_arch()` extracted to `sovereign_discovery.rs` (discovery domain boundary); test module extracted to `sovereign_device_tests.rs`
+- **`btsp.rs` smart refactoring** (815→678L): test module extracted to `btsp_tests.rs`
+- **Zero production `.rs` files over 800 lines** across entire codebase
+- **12-axis deep debt audit clean**: all axes green
+
+## Achieved (April 20, 2026 — Sprint 44e: Phase 45c BTSP Relay Alignment)
+
+- **BTSP handshake relay**: 5 fixes per primalSpring Phase 45c — `is_btsp_client_hello()` detects `"protocol":"btsp"`, `session_create_rpc` sends `family_seed`, `session_verify_rpc` passes `client_ephemeral_pub` + `preferred_cipher`, field names aligned (`session_token`/`response`)
+- **7 new tests**: ClientHello detection, hex codec, seed resolution
+- **Upstream clippy**: `sovereign_device.rs` redundant closures evolved to method references
 
 ## Achieved (April 20, 2026 — Sprint 44d: Deep Debt — Magic Number Evolution & 12-Axis Audit)
 

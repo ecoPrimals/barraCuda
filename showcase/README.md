@@ -1,7 +1,7 @@
 # barraCuda Showcase Collection
 ## Sovereign Math Engine Demonstrations
 
-**Status**: Active | **Updated**: April 10, 2026
+**Status**: Active | **Updated**: April 20, 2026
 
 ---
 

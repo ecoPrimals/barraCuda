@@ -6,6 +6,9 @@ Prioritized work items, ordered by impact. Updated 2026-04-20.
 
 ## Recently Completed
 
+- **Sprint 44f: Deep Debt — Smart Refactoring (Apr 20)**: `sovereign_device.rs` 924→773L
+  (query_dispatch_arch extracted to sovereign_discovery.rs + tests extracted).
+  `btsp.rs` 815→678L (tests extracted). Zero production files over 800L. 12-axis clean.
 - **Sprint 44e: Phase 45c BTSP Relay Alignment (Apr 20)**: Fixed 5 BTSP handshake
   relay issues per primalSpring Phase 45c audit — ClientHello detection now accepts
   `"protocol":"btsp"` JSON-line format, `session_create_rpc` sends base64-encoded

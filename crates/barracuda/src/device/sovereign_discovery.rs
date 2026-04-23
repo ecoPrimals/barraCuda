@@ -59,6 +59,59 @@ fn scan_dispatch_capability(dir: &std::path::Path) -> Option<String> {
     None
 }
 
+/// Query the dispatch primal's GPU architecture via `compute.dispatch.capabilities`.
+///
+/// Returns `Some(arch)` (e.g. `"sm_89"`) when the dispatch primal is
+/// reachable and reports a target arch, `None` otherwise.
+#[cfg(feature = "sovereign-dispatch")]
+pub(super) fn query_dispatch_arch(addr: &str) -> Option<String> {
+    let handle = tokio::runtime::Handle::try_current().ok()?;
+    let addr = addr.to_owned();
+    tokio::task::block_in_place(|| {
+        handle.block_on(async {
+            let host_port = addr.trim_start_matches("http://");
+            let body = serde_json::json!({
+                "jsonrpc": "2.0",
+                "method": "compute.dispatch.capabilities",
+                "params": [],
+                "id": 1,
+            });
+            let body_str = serde_json::to_string(&body).ok()?;
+
+            let http_request = format!(
+                "POST / HTTP/1.1\r\nHost: {host_port}\r\n\
+                 Content-Type: application/json\r\n\
+                 Content-Length: {}\r\n\
+                 Connection: close\r\n\r\n{body_str}",
+                body_str.len()
+            );
+
+            let timeout = tokio::time::Duration::from_secs(5);
+            let mut stream =
+                tokio::time::timeout(timeout, tokio::net::TcpStream::connect(host_port))
+                    .await
+                    .ok()?
+                    .ok()?;
+
+            tokio::io::AsyncWriteExt::write_all(&mut stream, http_request.as_bytes())
+                .await
+                .ok()?;
+            let mut buf = Vec::new();
+            tokio::io::AsyncReadExt::read_to_end(&mut stream, &mut buf)
+                .await
+                .ok()?;
+
+            let response_str = String::from_utf8_lossy(&buf);
+            let json_start = response_str.find('{')?;
+            let rpc: serde_json::Value = serde_json::from_str(&response_str[json_start..]).ok()?;
+
+            let result = rpc.get("result")?;
+            let arch = result.get("arch").and_then(serde_json::Value::as_str);
+            arch.map(str::to_owned)
+        })
+    })
+}
+
 /// Read a primal manifest and extract transport if it provides dispatch.
 #[cfg(feature = "sovereign-dispatch")]
 fn read_dispatch_transport(path: &std::path::Path) -> Option<String> {

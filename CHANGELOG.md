@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.12] — 2026-04-20
 
+### Changed — Sprint 44f: Deep Debt — Smart Refactoring + 12-Axis Clean (Apr 20 2026)
+
+- **`sovereign_device.rs` smart refactoring** (924→773L): Extracted `query_dispatch_arch`
+  to `sovereign_discovery.rs` (natural domain boundary — discovery logic in discovery module).
+  Extracted test module to `sovereign_device_tests.rs`.
+- **`btsp.rs` smart refactoring** (815→678L): Extracted test module to `btsp_tests.rs`.
+- **Zero production `.rs` files over 800 lines** across entire codebase.
+- **12-axis deep debt audit clean**: Zero TODO/FIXME, zero production unwrap, zero
+  async-trait/Box\<dyn Error\>/Result\<T,String\> in production, zero println in lib,
+  zero mocks in production, zero hardcoded primal names in runtime, all deps pure Rust,
+  zero bare `#[allow(` — all `#[expect(reason)]`, single documented `unsafe` (wgpu spirv
+  passthrough in barracuda-spirv, pending upstream).
+
 ### Fixed — Sprint 44e: Phase 45c BTSP Relay Alignment (Apr 20 2026)
 
 - **BTSP ClientHello detection**: `is_btsp_client_hello()` now accepts both

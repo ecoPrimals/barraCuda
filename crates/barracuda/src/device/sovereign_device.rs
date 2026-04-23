@@ -251,59 +251,10 @@ impl SovereignDevice {
     }
 
     /// Query the dispatch primal's GPU architecture via `compute.dispatch.capabilities`.
-    ///
-    /// Returns `Some(arch)` (e.g. `"sm_89"`) when the dispatch primal is
-    /// reachable and reports a target arch, `None` otherwise.
     #[cfg(feature = "sovereign-dispatch")]
     fn query_dispatch_arch(&self) -> Option<String> {
         let addr = self.dispatch_addr.as_ref()?;
-        let addr = addr.clone();
-
-        let handle = tokio::runtime::Handle::try_current().ok()?;
-        tokio::task::block_in_place(|| {
-            handle.block_on(async {
-                let host_port = addr.trim_start_matches("http://");
-                let body = serde_json::json!({
-                    "jsonrpc": "2.0",
-                    "method": "compute.dispatch.capabilities",
-                    "params": [],
-                    "id": 1,
-                });
-                let body_str = serde_json::to_string(&body).ok()?;
-
-                let http_request = format!(
-                    "POST / HTTP/1.1\r\nHost: {host_port}\r\n\
-                     Content-Type: application/json\r\n\
-                     Content-Length: {}\r\n\
-                     Connection: close\r\n\r\n{body_str}",
-                    body_str.len()
-                );
-
-                let timeout = tokio::time::Duration::from_secs(5);
-                let mut stream =
-                    tokio::time::timeout(timeout, tokio::net::TcpStream::connect(host_port))
-                        .await
-                        .ok()?
-                        .ok()?;
-
-                tokio::io::AsyncWriteExt::write_all(&mut stream, http_request.as_bytes())
-                    .await
-                    .ok()?;
-                let mut buf = Vec::new();
-                tokio::io::AsyncReadExt::read_to_end(&mut stream, &mut buf)
-                    .await
-                    .ok()?;
-
-                let response_str = String::from_utf8_lossy(&buf);
-                let json_start = response_str.find('{')?;
-                let rpc: serde_json::Value =
-                    serde_json::from_str(&response_str[json_start..]).ok()?;
-
-                let result = rpc.get("result")?;
-                let arch = result.get("arch").and_then(|a| a.as_str());
-                arch.map(str::to_owned)
-            })
-        })
+        super::sovereign_discovery::query_dispatch_arch(addr)
     }
 
     /// Select the best compilation target from available architectures.
@@ -560,11 +511,13 @@ impl SovereignDevice {
                                 ))
                             })?;
                             for entry in arr {
-                                let Some(buf_id) = entry.get("buffer_id").and_then(serde_json::Value::as_u64)
+                                let Some(buf_id) =
+                                    entry.get("buffer_id").and_then(serde_json::Value::as_u64)
                                 else {
                                     continue;
                                 };
-                                let Some(data) = entry.get("data").and_then(serde_json::Value::as_array)
+                                let Some(data) =
+                                    entry.get("data").and_then(serde_json::Value::as_array)
                                 else {
                                     continue;
                                 };
@@ -818,107 +771,5 @@ impl GpuBackend for SovereignDevice {
 }
 
 #[cfg(test)]
-mod tests {
-    #[cfg(feature = "sovereign-dispatch")]
-    use super::super::sovereign_discovery::{
-        DISPATCH_ADDR_ENV, DISPATCH_CAPABILITY, detect_dispatch_addr,
-    };
-    use super::*;
-
-    #[cfg(feature = "sovereign-dispatch")]
-    #[test]
-    fn device_creation_ipc() {
-        let dev = SovereignDevice::new();
-        assert!(dev.name().contains("sovereign"));
-        assert!(dev.has_f64_shaders());
-        assert!(!dev.is_lost());
-    }
-
-    #[cfg(feature = "sovereign-dispatch")]
-    #[test]
-    fn default_matches_new() {
-        let dev = SovereignDevice::default();
-        assert!(dev.name().contains("sovereign"));
-    }
-
-    #[cfg(feature = "sovereign-dispatch")]
-    #[test]
-    fn dispatch_binary_without_toadstool() {
-        let dev = SovereignDevice::new();
-        let result = dev.dispatch_binary(&[0xDE, 0xAD], vec![], (1, 1, 1), "main");
-        assert!(result.is_err());
-    }
-
-    #[cfg(feature = "sovereign-dispatch")]
-    #[test]
-    fn buffer_alloc_stages_data() {
-        let dev = SovereignDevice::new();
-        let buf = dev.alloc_buffer("test", 64).unwrap();
-        assert_eq!(buf.size, 64);
-
-        dev.upload(&buf, 0, &[1, 2, 3, 4]);
-        let data = dev.download(&buf, 64).unwrap();
-        assert_eq!(data[..4], [1, 2, 3, 4]);
-    }
-
-    #[cfg(feature = "sovereign-dispatch")]
-    #[test]
-    fn buffer_alloc_assigns_unique_ids() {
-        let dev = SovereignDevice::new();
-        let b1 = dev.alloc_buffer("a", 1024).unwrap();
-        let b2 = dev.alloc_buffer("b", 2048).unwrap();
-        assert_ne!(b1.id, b2.id);
-    }
-
-    #[cfg(feature = "sovereign-dispatch")]
-    #[test]
-    fn dispatch_env_constant_is_correct() {
-        assert_eq!(DISPATCH_ADDR_ENV, "BARRACUDA_DISPATCH_ADDR");
-        assert_eq!(DISPATCH_CAPABILITY, "compute.dispatch");
-    }
-
-    #[cfg(feature = "sovereign-dispatch")]
-    #[test]
-    fn detect_dispatch_addr_graceful_without_toadstool() {
-        let addr = detect_dispatch_addr();
-        if let Some(ref a) = addr {
-            assert!(!a.is_empty(), "discovered address must be non-empty");
-        }
-    }
-
-    #[test]
-    fn coral_cache_lookup_returns_none_for_unknown_shader() {
-        let result = SovereignDevice::try_coral_cache("nonexistent_shader_source_12345");
-        assert!(result.is_none());
-    }
-
-    #[cfg(feature = "sovereign-dispatch")]
-    #[test]
-    fn select_target_single_arch() {
-        let dev = SovereignDevice::new();
-        let archs = vec!["sm_75".to_string()];
-        let result = dev.select_target(&archs).unwrap();
-        assert_eq!(result, "sm_75");
-    }
-
-    #[cfg(feature = "sovereign-dispatch")]
-    #[test]
-    fn select_target_empty_archs() {
-        let dev = SovereignDevice::new();
-        let archs: Vec<String> = vec![];
-        assert!(dev.select_target(&archs).is_err());
-    }
-
-    #[cfg(feature = "sovereign-dispatch")]
-    #[test]
-    fn query_dispatch_arch_no_endpoint() {
-        let dev = SovereignDevice {
-            name: Arc::from("test"),
-            compiler_available: false,
-            dispatch_addr: None,
-            binary_cache: std::sync::Mutex::new(HashMap::new()),
-            staged_buffers: std::sync::Mutex::new(HashMap::new()),
-        };
-        assert!(dev.query_dispatch_arch().is_none());
-    }
-}
+#[path = "sovereign_device_tests.rs"]
+mod tests;

@@ -548,9 +548,10 @@ async fn security_provider_rpc(
     writer.write_all(line.as_bytes()).await.map_err(|e| {
         HandshakeError::ProviderUnavailable(format!("Write to security provider failed: {e}"))
     })?;
-    writer.flush().await.map_err(|e| {
-        HandshakeError::ProviderUnavailable(format!("Provider write flush: {e}"))
-    })?;
+    writer
+        .flush()
+        .await
+        .map_err(|e| HandshakeError::ProviderUnavailable(format!("Provider write flush: {e}")))?;
 
     let mut lines = BufReader::new(reader).lines();
     let response_line = lines

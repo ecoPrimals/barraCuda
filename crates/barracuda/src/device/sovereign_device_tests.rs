@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Tests for `SovereignDevice` — capability-based IPC dispatch backend.
 
-use super::*;
 #[cfg(feature = "sovereign-dispatch")]
 use super::super::sovereign_discovery::{
     DISPATCH_ADDR_ENV, DISPATCH_CAPABILITY, detect_dispatch_addr,
 };
+use super::*;
 
 #[cfg(feature = "sovereign-dispatch")]
 use std::collections::HashMap;

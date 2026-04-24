@@ -537,19 +537,20 @@ async fn beardog_rpc(
 
 // ── Family seed resolution ───────────────────────────────────────────
 
-/// Load the BTSP family seed as a raw string for BearDog.
+/// Load the BTSP family seed, base64-encoded for BearDog's wire format.
 ///
 /// Reads `FAMILY_SEED` → `BEARDOG_FAMILY_SEED` → `BIOMEOS_FAMILY_SEED`
-/// from environment. Per `SOURDOUGH_BTSP_RELAY_PATTERN.md`: pass the env
-/// value as-is (trimmed). Do NOT hex-decode or base64-encode — BearDog
-/// handles its own key material decoding.
+/// from environment. BearDog base64-decodes the `family_seed` parameter
+/// in `btsp.session.create` to recover raw key bytes, so we must encode
+/// the env string's bytes before sending.
 fn resolve_family_seed_raw() -> Option<String> {
     let raw = std::env::var("FAMILY_SEED")
         .or_else(|_| std::env::var("BEARDOG_FAMILY_SEED"))
         .or_else(|_| std::env::var("BIOMEOS_FAMILY_SEED"))
         .ok()
         .filter(|s| !s.is_empty())?;
-    Some(raw.trim().to_string())
+    use base64ct::{Base64, Encoding};
+    Some(Base64::encode_string(raw.trim().as_bytes()))
 }
 
 /// Decode a hex string to bytes. Returns `None` if the input is not valid hex.

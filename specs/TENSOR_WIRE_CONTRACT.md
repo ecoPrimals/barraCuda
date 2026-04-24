@@ -2,7 +2,7 @@
 
 # Tensor IPC Wire Contract
 
-**Status**: Sprint 44f — Smart Refactoring + 12-Axis Clean
+**Status**: Sprint 44g — BTSP Wire Fix + 12-Axis Deep Debt Audit
 **Version**: 1.1.0
 **Authority**: barraCuda primal (self-knowledge)
 **Implements**: wateringHole `PRIMAL_IPC_PROTOCOL.md` v3.1, `SEMANTIC_METHOD_NAMING_STANDARD.md`

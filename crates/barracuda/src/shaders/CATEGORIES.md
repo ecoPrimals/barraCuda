@@ -284,4 +284,4 @@ Quick reference for finding shaders by name or purpose.
 - By name → Use Ctrl+F / Cmd+F
 - By use case → Check "Use Case" column
 
-**Last Updated**: March 13, 2026
+**Last Updated**: April 24, 2026

@@ -1,7 +1,7 @@
 # Architecture Demarcation: barraCuda / toadStool / songBird
 
 **Version**: 1.0.1
-**Date**: April 10, 2026
+**Date**: April 24, 2026
 **Status**: Active — defines ownership boundaries for Phase 1 primals
 **Origin**: toadStool S89, post-barraCuda extraction
 

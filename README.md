@@ -60,6 +60,13 @@ results.
 
 ## Recent
 
+- **Sprint 44g: BTSP Wire Fix + 12-Axis Audit (Apr 24)**: `security_provider_rpc()` `writer.shutdown()` → `writer.flush()` — fixes BearDog connection loss. 12-axis deep debt audit clean bill. 4,393+ tests, all quality gates green.
+- **Sprint 44f: Smart Refactoring (Apr 20)**: `sovereign_device.rs` 924→773L, `btsp.rs` 815→678L. Zero production files >800L.
+- **Sprint 44e: BTSP Relay Alignment (Apr 20)**: 5 BTSP handshake relay fixes per Phase 45c. 7 new tests.
+- **Sprint 44d: Magic Number Evolution (Apr 20)**: 12 files evolved from bare workgroup size literals to named constants.
+- **Sprint 44c: CPU Tensor Fallback (Apr 20)**: Handle-based tensor ops (`create/matmul/add/scale/clamp/reduce/sigmoid`) work on headless hosts via `CpuTensor` store.
+- **Sprint 44: Composition Audit (Apr 20)**: 6 new JSON-RPC methods (32→39), Fitts' law corrected, response schema standardized, `tensor.matmul_inline`.
+- **Sprint 40–43**: SovereignDevice 3-tier fallback, cpu-shader default-on, Docker bind resolution, deep debt evolution, 826/826 WGSL SPDX headers, BTSP Phase 3, FAMILY_ID scoping, capability-based discovery.
 - **Sprint 39: primalSpring Audit Remediation (Apr 10)**: BTSP Phase 2 full handshake — `guard_connection()` evolved to 6-step X25519+HMAC relay (ClientHello/ServerHello/ChallengeResponse/HandshakeComplete) with legacy fallback. BC-GPU-PANIC fixed — `Auto::new()` decoupled from test pool, graceful CPU-only degradation. fault_injection SIGSEGV — `gpu-serial` added to `stress`/`gpu` profiles. Musl rebuild: fresh binaries with checksums. 4,422 tests pass, all quality gates green.
 - **Sprint 38: Deep Debt — BTSP Phase 2, Capability-Based Discovery & Idiom Sweep (Apr 9)**: BTSP Phase 2 connection authentication guard integrated into all accept loops (`serve_unix`/`serve_tcp`/`serve_tarpc_unix`). BearDog discovery evolved from hardcoded `beardog-core.json` to capability-based `discover_by_capability()` — scans all `*.json` discovery files for `btsp.session.create` method. `Box<dyn Error>` → typed `BarracudaCoreError::ipc()`. `#[allow]` → `#[expect]` with reason. `precision_brain.rs` smart-refactored (703→421 LOC). 4 GPU test binaries serialized. Musl-static rebuild fixed (static-pie). 4,421 tests pass, all quality gates green.
 - **Sprint 37: Deep Debt — Test Module Refactor & Code Cleanup (Apr 8)**: `methods_tests.rs` (951 LOC) smart-refactored into 6 domain-focused test modules + hub (largest module 193 lines). `buffer_test.rs` println! noise removed. `nadam_gpu.rs` stale evolution comment removed. `force_interpolation.rs` indexed loop → idiomatic iterator. 12-axis deep debt audit: clean bill. Zero files >800L. 4,207 tests pass, all quality gates green.

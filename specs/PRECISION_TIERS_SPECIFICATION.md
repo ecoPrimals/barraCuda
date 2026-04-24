@@ -1,7 +1,7 @@
 # barraCuda — Precision Tiers Specification
 
 **Version**: 1.0.0
-**Date**: April 10, 2026
+**Date**: April 24, 2026
 **Status**: Specification — defines the full precision tier architecture from Binary to DF128
 **Authority**: barraCuda (Layer 1 — math and precision strategy)
 

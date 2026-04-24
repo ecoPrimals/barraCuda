@@ -1,7 +1,7 @@
 # GPU Silicon Capability Matrix
 
 **Version**: 1.0.0
-**Date**: April 10, 2026
+**Date**: April 24, 2026
 **Status**: Living specification — updated as hardware probes report new data
 **Authority**: barraCuda (Layer 1) + toadStool (Layer 0) + coralReef (Layer 0)
 
@@ -190,7 +190,7 @@ Vulkan compute shader API exposes. This is the sovereignty path.
 
 ## 5. Implications for barraCuda
 
-### Near-term (current sprint)
+### Near-term (active roadmap)
 
 1. **DF64 transcendentals**: Blocked by naga. Arithmetic works. Tests gated.
 2. **f64 probes**: Multi-tier (individual + composite). Working correctly.

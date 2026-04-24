@@ -1,8 +1,8 @@
 # barraCuda — Remaining Work
 
 **Version**: 0.3.12
-**Date**: April 20, 2026
-**Status**: Through Sprint 44f — tracks all open work items for barraCuda evolution
+**Date**: April 24, 2026
+**Status**: Through Sprint 44g — tracks all open work items for barraCuda evolution
 
 ---
 
@@ -29,6 +29,11 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   in barraCuda's code), semantic IPC method naming, capability-based discovery.
 
 ---
+
+## Achieved (April 24, 2026 — Sprint 44g: BTSP Wire Fix + 12-Axis Deep Debt Audit)
+
+- **BTSP wire fix**: `security_provider_rpc()` `writer.shutdown()` → `writer.flush()` — shutdown sent TCP FIN to BearDog, killing connection before response. Resolves `BTSP_WIRE_CONVERGENCE_APR24_2026.md` barraCuda item.
+- **12-axis deep debt audit clean**: zero files >800L, zero `.unwrap()` in production, 8 documented `.expect()` (ownership invariants), 1 guarded `unsafe` (spirv passthrough), zero async-trait/Box<dyn Error>/Result<T,String>, all deps pure Rust, zero mocks/hardcoding in production, all quality gates green.
 
 ## Achieved (April 20, 2026 — Sprint 44f: Smart Refactoring + 12-Axis Clean)
 
@@ -1661,8 +1666,8 @@ coralReef emits pipeline state; toadStool routes to hardware.
 - **Phase 7 — K-quant**: Q2_K through Q6_K super-block formats (GGML parity)
 
 #### Test Coverage to 90%
-- Current: 3,659+ lib tests (2,433 `#[test]` functions), ~59% function / ~36% line
-  coverage on llvmpipe (lib-only; integration tests add significantly more)
+- Current: 4,393+ tests (nextest CI profile), ~80% coverage blocking
+  (lib + integration; up from 3,659 in Sprint 15)
 - Sprint 15 fixed substrate test failure, expanded error detection tests
 - Sprint 14 expanded DeviceCapabilities, coral_compiler, ODE params, substrate coverage
 - Sprint 13 expanded barracuda-core coverage: rpc.rs 7%→66%, primal.rs 0%→92%

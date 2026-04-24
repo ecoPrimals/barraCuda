@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.12] — 2026-04-20
 
+### Changed — Sprint 44g: BTSP Wire Fix — writer.shutdown() → flush() (Apr 24 2026)
+
+- **`security_provider_rpc()` in `btsp.rs`**: replaced `writer.shutdown().await` with `writer.flush().await`. Shutdown sent TCP FIN to BearDog, causing it to close the connection before responding — `btsp.session.create` could succeed (race condition) but `btsp.session.verify` response was always lost, stalling handshakes after ChallengeResponse. Per `BTSP_WIRE_CONVERGENCE_APR24_2026.md` handoff from primalSpring Phase 45c.
+- All 28 btsp unit + 5 integration tests pass.
+
 ### Changed — Sprint 44f: Deep Debt — Smart Refactoring + 12-Axis Clean (Apr 20 2026)
 
 - **`sovereign_device.rs` smart refactoring** (924→773L): Extracted `query_dispatch_arch`

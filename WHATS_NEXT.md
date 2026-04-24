@@ -1,11 +1,15 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-04-20.
+Prioritized work items, ordered by impact. Updated 2026-04-24.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 44g: BTSP Wire Fix — writer.shutdown() → flush() (Apr 24)**: Replaced
+  `writer.shutdown().await` with `writer.flush().await` in `security_provider_rpc()`.
+  Shutdown sent TCP FIN to BearDog, killing the connection before response arrived.
+  Resolves `BTSP_WIRE_CONVERGENCE_APR24_2026.md` barraCuda item.
 - **Sprint 44f: Deep Debt — Smart Refactoring (Apr 20)**: `sovereign_device.rs` 924→773L
   (query_dispatch_arch extracted to sovereign_discovery.rs + tests extracted).
   `btsp.rs` 815→678L (tests extracted). Zero production files over 800L. 12-axis clean.

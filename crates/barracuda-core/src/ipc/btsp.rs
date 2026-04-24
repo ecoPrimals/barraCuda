@@ -309,14 +309,38 @@ where
             HandshakeError::Protocol("ClientHello missing client_ephemeral_pub field".to_string())
         })?;
 
-    // Step 2: Load family seed and call security provider btsp.session.create
-    let family_seed = resolve_family_seed_b64().ok_or_else(|| {
+    // Step 2: Open ONE connection to BearDog for the entire handshake.
+    // Per SOURDOUGH_BTSP_RELAY_PATTERN: both create and verify must use the
+    // same socket connection — BearDog associates session state with it.
+    let family_seed = resolve_family_seed_raw().ok_or_else(|| {
         HandshakeError::Protocol(
             "BTSP handshake requires BEARDOG_FAMILY_SEED or FAMILY_SEED env var".to_string(),
         )
     })?;
-    let create_result =
-        session_create_rpc(provider_sock, family_id, client_ephemeral_pub, &family_seed).await?;
+
+    let beardog_stream = tokio::net::UnixStream::connect(provider_sock)
+        .await
+        .map_err(|e| {
+            HandshakeError::ProviderUnavailable(format!(
+                "Cannot connect to security-domain provider at {}: {e}. \
+                 Accepting in degraded mode.",
+                provider_sock.display()
+            ))
+        })?;
+    let mut beardog = tokio::io::BufReader::new(beardog_stream);
+
+    // Step 2a: btsp.session.create on BearDog connection
+    let create_request = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": "btsp.session.create",
+        "params": {
+            "family_id": family_id,
+            "client_ephemeral_pub": client_ephemeral_pub,
+            "family_seed": family_seed,
+        },
+        "id": 1
+    });
+    let create_result = beardog_rpc(&mut beardog, &create_request).await?;
 
     let session_id = create_result
         .get("session_token")
@@ -361,15 +385,19 @@ where
         .and_then(|v| v.as_str())
         .unwrap_or("chacha20_poly1305");
 
-    // Step 5: Call security provider btsp.session.verify
-    let verify_result = session_verify_rpc(
-        provider_sock,
-        &session_id,
-        client_response,
-        client_ephemeral_pub,
-        preferred_cipher,
-    )
-    .await?;
+    // Step 5: btsp.session.verify on SAME BearDog connection
+    let verify_request = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": "btsp.session.verify",
+        "params": {
+            "session_token": session_id,
+            "response": client_response,
+            "client_ephemeral_pub": client_ephemeral_pub,
+            "preferred_cipher": preferred_cipher,
+        },
+        "id": 2
+    });
+    let verify_result = beardog_rpc(&mut beardog, &verify_request).await?;
 
     let verified = verify_result
         .get("verified")
@@ -469,102 +497,28 @@ where
     Ok(())
 }
 
-// ── Security-domain provider RPC helpers ────────────────────────────
+// ── BearDog RPC helper ──────────────────────────────────────────────
 
-/// Call `btsp.session.create` on the security-domain provider.
+/// Send a JSON-RPC request to BearDog over an existing connection and return
+/// the `result` field. Uses NDJSON framing (write line + flush, read line).
 ///
-/// Per Phase 45c: BearDog requires the literal base64-encoded `family_seed`,
-/// not just the `family_id` reference.
+/// Per `SOURDOUGH_BTSP_RELAY_PATTERN.md`: both `session.create` and
+/// `session.verify` MUST use the same connection — BearDog associates
+/// session state with it.
 #[cfg(unix)]
-async fn session_create_rpc(
-    provider_sock: &std::path::Path,
-    family_id: &str,
-    client_ephemeral_pub: &str,
-    family_seed: &str,
-) -> std::result::Result<serde_json::Value, HandshakeError> {
-    let request = serde_json::json!({
-        "jsonrpc": "2.0",
-        "method": "btsp.session.create",
-        "params": {
-            "family_id": family_id,
-            "client_ephemeral_pub": client_ephemeral_pub,
-            "family_seed": family_seed,
-        },
-        "id": 1
-    });
-    security_provider_rpc(provider_sock, &request).await
-}
-
-/// Call `btsp.session.verify` on the security-domain provider.
-///
-/// Per Phase 45c: BearDog expects `session_token` (not `session_id`),
-/// `response` (not `hmac`), plus `client_ephemeral_pub` and `preferred_cipher`.
-#[cfg(unix)]
-async fn session_verify_rpc(
-    provider_sock: &std::path::Path,
-    session_token: &str,
-    response: &str,
-    client_ephemeral_pub: &str,
-    preferred_cipher: &str,
-) -> std::result::Result<serde_json::Value, HandshakeError> {
-    let request = serde_json::json!({
-        "jsonrpc": "2.0",
-        "method": "btsp.session.verify",
-        "params": {
-            "session_token": session_token,
-            "response": response,
-            "client_ephemeral_pub": client_ephemeral_pub,
-            "preferred_cipher": preferred_cipher,
-        },
-        "id": 2
-    });
-    security_provider_rpc(provider_sock, &request).await
-}
-
-/// Send a JSON-RPC request to the security-domain provider and return the
-/// `result` field. The provider is discovered at runtime by capability —
-/// no primal names are hardcoded.
-#[cfg(unix)]
-async fn security_provider_rpc(
-    provider_sock: &std::path::Path,
+async fn beardog_rpc(
+    stream: &mut tokio::io::BufReader<tokio::net::UnixStream>,
     request: &serde_json::Value,
 ) -> std::result::Result<serde_json::Value, HandshakeError> {
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-
-    let stream = tokio::net::UnixStream::connect(provider_sock)
+    write_ndjson_line(stream.get_mut(), request)
         .await
         .map_err(|e| {
-            HandshakeError::ProviderUnavailable(format!(
-                "Cannot connect to security-domain provider at {}: {e}. \
-                 Accepting in degraded mode.",
-                provider_sock.display()
-            ))
+            HandshakeError::ProviderUnavailable(format!("Write to security provider failed: {e}"))
         })?;
-    let (reader, mut writer) = stream.into_split();
 
-    let mut line = serde_json::to_string(request)
-        .map_err(|e| HandshakeError::Protocol(format!("Failed to serialize provider RPC: {e}")))?;
-    line.push('\n');
-    writer.write_all(line.as_bytes()).await.map_err(|e| {
-        HandshakeError::ProviderUnavailable(format!("Write to security provider failed: {e}"))
+    let response_line = read_ndjson_line(stream).await.map_err(|e| {
+        HandshakeError::ProviderUnavailable(format!("Read from security provider failed: {e}"))
     })?;
-    writer
-        .flush()
-        .await
-        .map_err(|e| HandshakeError::ProviderUnavailable(format!("Provider write flush: {e}")))?;
-
-    let mut lines = BufReader::new(reader).lines();
-    let response_line = lines
-        .next_line()
-        .await
-        .map_err(|e| {
-            HandshakeError::ProviderUnavailable(format!("Read from security provider failed: {e}"))
-        })?
-        .ok_or_else(|| {
-            HandshakeError::ProviderUnavailable(
-                "No response from security-domain provider".to_string(),
-            )
-        })?;
 
     let response: serde_json::Value = serde_json::from_str(&response_line)
         .map_err(|e| HandshakeError::Protocol(format!("Malformed provider response: {e}")))?;
@@ -583,22 +537,23 @@ async fn security_provider_rpc(
 
 // ── Family seed resolution ───────────────────────────────────────────
 
-/// Load the BTSP family seed and return it as base64.
+/// Load the BTSP family seed as a raw string for BearDog.
 ///
-/// Reads `BEARDOG_FAMILY_SEED` → `FAMILY_SEED` from environment.
-/// The env value is typically hex-encoded (from `xxd -p`); we decode
-/// to raw bytes and re-encode as base64 for the BearDog RPC wire format.
-fn resolve_family_seed_b64() -> Option<String> {
-    let raw = std::env::var("BEARDOG_FAMILY_SEED")
-        .or_else(|_| std::env::var("FAMILY_SEED"))
+/// Reads `FAMILY_SEED` → `BEARDOG_FAMILY_SEED` → `BIOMEOS_FAMILY_SEED`
+/// from environment. Per `SOURDOUGH_BTSP_RELAY_PATTERN.md`: pass the env
+/// value as-is (trimmed). Do NOT hex-decode or base64-encode — BearDog
+/// handles its own key material decoding.
+fn resolve_family_seed_raw() -> Option<String> {
+    let raw = std::env::var("FAMILY_SEED")
+        .or_else(|_| std::env::var("BEARDOG_FAMILY_SEED"))
+        .or_else(|_| std::env::var("BIOMEOS_FAMILY_SEED"))
         .ok()
         .filter(|s| !s.is_empty())?;
-    let bytes = hex_to_bytes(&raw).unwrap_or_else(|| raw.as_bytes().to_vec());
-    use base64ct::{Base64, Encoding};
-    Some(Base64::encode_string(&bytes))
+    Some(raw.trim().to_string())
 }
 
 /// Decode a hex string to bytes. Returns `None` if the input is not valid hex.
+#[cfg(test)]
 fn hex_to_bytes(hex: &str) -> Option<Vec<u8>> {
     let hex = hex.trim();
     if !hex.len().is_multiple_of(2) {

@@ -132,9 +132,12 @@ fn hex_to_bytes_empty() {
 }
 
 #[test]
-fn resolve_family_seed_b64_returns_none_when_unset() {
-    if std::env::var("BEARDOG_FAMILY_SEED").is_ok() || std::env::var("FAMILY_SEED").is_ok() {
+fn resolve_family_seed_raw_returns_none_when_unset() {
+    if std::env::var("FAMILY_SEED").is_ok()
+        || std::env::var("BEARDOG_FAMILY_SEED").is_ok()
+        || std::env::var("BIOMEOS_FAMILY_SEED").is_ok()
+    {
         return;
     }
-    assert!(resolve_family_seed_b64().is_none());
+    assert!(resolve_family_seed_raw().is_none());
 }

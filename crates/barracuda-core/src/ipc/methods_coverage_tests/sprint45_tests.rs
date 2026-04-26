@@ -6,9 +6,10 @@
 use crate::ipc::jsonrpc;
 
 use super::super::math::{
-    activation_gelu, activation_softmax, linalg_eigenvalues, linalg_qr, linalg_svd, spectral_stft,
+    activation_gelu, activation_softmax, linalg_eigenvalues, linalg_qr, linalg_svd,
     stats_anova_oneway, stats_chi_squared, stats_correlation,
 };
+use super::super::spectral::spectral_stft;
 
 // ── stats.eigh alias ───────────────────────────────────────────────
 

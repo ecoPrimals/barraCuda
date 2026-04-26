@@ -5,26 +5,9 @@
 //! composition graph nodes. GPU tensor ops live in `tensor.rs`.
 
 use super::super::jsonrpc::{INVALID_PARAMS, JsonRpcResponse};
+use super::params::{extract_f64_array, extract_matrix};
 use barracuda::nn::simple_mlp::{Activation, DenseLayer, SimpleMlp};
 use serde_json::Value;
-
-fn extract_f64_array(params: &Value, key: &str) -> Option<Vec<f64>> {
-    params
-        .get(key)
-        .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().filter_map(|v| v.as_f64()).collect())
-}
-
-fn extract_matrix(params: &Value, key: &str) -> Option<Vec<Vec<f64>>> {
-    params.get(key).and_then(|v| v.as_array()).map(|rows| {
-        rows.iter()
-            .filter_map(|row| {
-                row.as_array()
-                    .map(|cols| cols.iter().filter_map(|c| c.as_f64()).collect())
-            })
-            .collect()
-    })
-}
 
 fn parse_activation(s: &str) -> Option<Activation> {
     match s {

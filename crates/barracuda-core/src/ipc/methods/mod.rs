@@ -15,7 +15,9 @@ mod fhe;
 mod health;
 mod math;
 mod ml;
+mod params;
 mod primal;
+mod spectral;
 mod tensor;
 
 use super::jsonrpc::{JsonRpcResponse, METHOD_NOT_FOUND};
@@ -156,9 +158,9 @@ pub async fn dispatch(
         "linalg.svd" => math::linalg_svd(params, id),
         "linalg.qr" => math::linalg_qr(params, id),
         // Spectral (CPU inline-data)
-        "spectral.fft" => math::spectral_fft(params, id),
-        "spectral.power_spectrum" => math::spectral_power_spectrum(params, id),
-        "spectral.stft" => math::spectral_stft(params, id),
+        "spectral.fft" => spectral::spectral_fft(params, id),
+        "spectral.power_spectrum" => spectral::spectral_power_spectrum(params, id),
+        "spectral.stft" => spectral::spectral_stft(params, id),
         // Activation (CPU inline-data)
         "activation.softmax" => math::activation_softmax(params, id),
         "activation.gelu" => math::activation_gelu(params, id),

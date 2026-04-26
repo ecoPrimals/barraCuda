@@ -1,8 +1,8 @@
 # barraCuda — Remaining Work
 
 **Version**: 0.3.12
-**Date**: April 24, 2026
-**Status**: Through Sprint 44g — tracks all open work items for barraCuda evolution
+**Date**: April 26, 2026
+**Status**: Through Sprint 45 — tracks all open work items for barraCuda evolution
 
 ---
 
@@ -70,7 +70,7 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 - **`stats.std_dev` convention documented**: Response includes `"convention": "sample", "denominator": "N-1"` so springs know Bessel's correction is applied
 - **CPU-side scientific implementations**: Gaussian elimination (`linalg.solve`), Jacobi iteration (`linalg.eigenvalues`), Cooley-Tukey radix-2 FFT (`spectral.fft`), power spectral density (`spectral.power_spectrum`)
 - **Discovery & wire docs updated**: `linalg` and `spectral` domains added to `discovery.rs`, IPC method tables updated in `ipc/mod.rs`
-- **39 registered IPC methods** (was 32), 197 IPC method tests pass
+- **50 registered IPC methods** (was 39), IPC method tests pass
 - **Verified**: `activation.hick` already defaults to `log₂(N)`, `perlin3d(0,0,0)` already returns 0.0 — audit issues not reproducible in barraCuda
 - **12-axis deep debt audit clean**: All axes green (see Sprint 43b detail below)
 

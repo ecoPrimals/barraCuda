@@ -14,6 +14,7 @@ mod device;
 mod fhe;
 mod health;
 mod math;
+mod ml;
 mod primal;
 mod tensor;
 
@@ -56,13 +57,26 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     "stats.std_dev",
     "stats.variance",
     "stats.correlation",
+    "stats.pearson",
     "stats.weighted_mean",
+    "stats.chi_squared",
+    "stats.anova_oneway",
     // ── Linear algebra (CPU inline-data) ──────────────────────────────
     "linalg.solve",
     "linalg.eigenvalues",
+    "stats.eigh",
+    "linalg.svd",
+    "linalg.qr",
     // ── Spectral (CPU inline-data) ────────────────────────────────────
     "spectral.fft",
     "spectral.power_spectrum",
+    "spectral.stft",
+    // ── Activation (CPU inline-data) ──────────────────────────────────
+    "activation.softmax",
+    "activation.gelu",
+    // ── ML (CPU inline-data) ──────────────────────────────────────────
+    "ml.mlp_forward",
+    "ml.attention",
     // ── Noise & RNG (CPU) ─────────────────────────────────────────────
     "noise.perlin2d",
     "noise.perlin3d",
@@ -132,14 +146,25 @@ pub async fn dispatch(
         "stats.mean" => math::stats_mean(params, id),
         "stats.std_dev" => math::stats_std_dev(params, id),
         "stats.variance" => math::stats_variance(params, id),
-        "stats.correlation" => math::stats_correlation(params, id),
+        "stats.correlation" | "stats.pearson" => math::stats_correlation(params, id),
         "stats.weighted_mean" => math::stats_weighted_mean(params, id),
+        "stats.chi_squared" => math::stats_chi_squared(params, id),
+        "stats.anova_oneway" => math::stats_anova_oneway(params, id),
         // Linear algebra (CPU inline-data)
         "linalg.solve" => math::linalg_solve(params, id),
-        "linalg.eigenvalues" => math::linalg_eigenvalues(params, id),
+        "linalg.eigenvalues" | "stats.eigh" => math::linalg_eigenvalues(params, id),
+        "linalg.svd" => math::linalg_svd(params, id),
+        "linalg.qr" => math::linalg_qr(params, id),
         // Spectral (CPU inline-data)
         "spectral.fft" => math::spectral_fft(params, id),
         "spectral.power_spectrum" => math::spectral_power_spectrum(params, id),
+        "spectral.stft" => math::spectral_stft(params, id),
+        // Activation (CPU inline-data)
+        "activation.softmax" => math::activation_softmax(params, id),
+        "activation.gelu" => math::activation_gelu(params, id),
+        // ML (CPU inline-data)
+        "ml.mlp_forward" => ml::ml_mlp_forward(params, id),
+        "ml.attention" => ml::ml_attention(params, id),
         // Noise & RNG (CPU)
         "noise.perlin2d" => math::noise_perlin2d(params, id),
         "noise.perlin3d" => math::noise_perlin3d(params, id),

@@ -5,7 +5,25 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.12] — 2026-04-24
+## [0.3.12] — 2026-04-26
+
+### Added — Sprint 45: JSON-RPC Surface Expansion (Apr 26 2026)
+
+- **11 new method registrations (39→50)** for neuralSpring parity:
+  - `stats.eigh` — alias for `linalg.eigenvalues`
+  - `stats.pearson` — alias for `stats.correlation`
+  - `linalg.svd` — singular value decomposition (CPU inline-data)
+  - `linalg.qr` — QR decomposition via Householder reflections (CPU inline-data)
+  - `stats.chi_squared` — Pearson's chi-squared goodness-of-fit test with p-value
+  - `stats.anova_oneway` — one-way ANOVA F-test with F-distribution p-value
+  - `activation.softmax` — exp-normalize softmax (CPU inline-data)
+  - `activation.gelu` — GELU activation via `barracuda::activations::gelu_batch`
+  - `spectral.stft` — short-time Fourier transform with Hann window (CPU inline-data)
+  - `ml.mlp_forward` — MLP forward pass via `SimpleMlp` (CPU inline-data)
+  - `ml.attention` — scaled dot-product attention (CPU inline-data)
+- New `methods/ml.rs` module for the `ml.*` IPC namespace
+- F-distribution survival function via regularized incomplete beta (continued fraction)
+- 36 new coverage tests across `sprint45_tests.rs` and `ml_tests.rs`
 
 ### Changed — Sprint 44g: BTSP Wire Fix — writer.shutdown() → flush() (Apr 24 2026)
 

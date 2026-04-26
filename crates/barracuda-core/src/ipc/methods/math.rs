@@ -130,6 +130,176 @@ pub(super) fn stats_weighted_mean(params: &Value, id: Value) -> JsonRpcResponse 
     JsonRpcResponse::success(id, serde_json::json!({ "result": result }))
 }
 
+/// `stats.chi_squared` — Pearson's chi-squared goodness-of-fit test.
+///
+/// Params: `observed` (array), `expected` (array). Returns chi², p-value, and df.
+pub(super) fn stats_chi_squared(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(observed) = extract_f64_array(params, "observed") else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: observed (array)",
+        );
+    };
+    let Some(expected) = extract_f64_array(params, "expected") else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: expected (array)",
+        );
+    };
+    match barracuda::special::chi_squared::chi_squared_test(&observed, &expected) {
+        Ok((chi2, p_value, df)) => JsonRpcResponse::success(
+            id,
+            serde_json::json!({ "chi_squared": chi2, "p_value": p_value, "df": df }),
+        ),
+        Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("chi_squared failed: {e}")),
+    }
+}
+
+/// `stats.anova_oneway` — one-way ANOVA F-test.
+///
+/// Params: `groups` (array of arrays). Returns F-statistic, p-value, df_between, df_within.
+pub(super) fn stats_anova_oneway(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(groups_val) = params.get("groups").and_then(|v| v.as_array()) else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: groups (array of arrays)",
+        );
+    };
+    let groups: Vec<Vec<f64>> = groups_val
+        .iter()
+        .filter_map(|g| {
+            g.as_array()
+                .map(|arr| arr.iter().filter_map(|v| v.as_f64()).collect())
+        })
+        .collect();
+    if groups.len() < 2 {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Need at least 2 groups");
+    }
+    let n_total: usize = groups.iter().map(Vec::len).sum();
+    let k = groups.len();
+    if n_total <= k {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Total observations must exceed number of groups",
+        );
+    }
+    if groups.iter().any(|g| g.is_empty()) {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "All groups must be non-empty");
+    }
+
+    let grand_mean: f64 = groups.iter().flatten().sum::<f64>() / n_total as f64;
+
+    let ss_between: f64 = groups
+        .iter()
+        .map(|g| {
+            let g_mean: f64 = g.iter().sum::<f64>() / g.len() as f64;
+            g.len() as f64 * (g_mean - grand_mean).powi(2)
+        })
+        .sum();
+
+    let ss_within: f64 = groups
+        .iter()
+        .map(|g| {
+            let g_mean: f64 = g.iter().sum::<f64>() / g.len() as f64;
+            g.iter().map(|x| (x - g_mean).powi(2)).sum::<f64>()
+        })
+        .sum();
+
+    let df_between = k - 1;
+    let df_within = n_total - k;
+    let ms_between = ss_between / df_between as f64;
+    let ms_within = ss_within / df_within as f64;
+
+    let f_stat = if ms_within.abs() < 1e-15 {
+        if ms_between.abs() < 1e-15 {
+            0.0
+        } else {
+            f64::INFINITY
+        }
+    } else {
+        ms_between / ms_within
+    };
+
+    let p_value = f_distribution_sf(f_stat, df_between as f64, df_within as f64);
+
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({
+            "f_statistic": f_stat,
+            "p_value": p_value,
+            "df_between": df_between,
+            "df_within": df_within,
+        }),
+    )
+}
+
+/// Survival function (1 - CDF) of the F-distribution via the regularized
+/// incomplete beta function: P(F > x | d1, d2) = I(d2/(d2+d1*x), d2/2, d1/2).
+fn f_distribution_sf(x: f64, d1: f64, d2: f64) -> f64 {
+    if x <= 0.0 {
+        return 1.0;
+    }
+    let z = d2 / d1.mul_add(x, d2);
+    regularized_incomplete_beta(z, d2 / 2.0, d1 / 2.0)
+}
+
+/// Regularized incomplete beta function I_x(a,b) via continued fraction (Lentz's method).
+fn regularized_incomplete_beta(x: f64, a: f64, b: f64) -> f64 {
+    if x <= 0.0 {
+        return 0.0;
+    }
+    if x >= 1.0 {
+        return 1.0;
+    }
+    // Use symmetry relation when x > (a+1)/(a+b+2) for better convergence
+    if x > (a + 1.0) / (a + b + 2.0) {
+        return 1.0 - regularized_incomplete_beta(1.0 - x, b, a);
+    }
+    let ln_prefix = a.mul_add(x.ln(), b * (1.0 - x).ln())
+        - a.ln()
+        - barracuda::special::ln_beta(a, b).unwrap_or(0.0);
+    let prefix = ln_prefix.exp();
+    betacf(x, a, b) * prefix
+}
+
+/// Continued fraction for incomplete beta (modified Lentz's algorithm).
+fn betacf(x: f64, a: f64, b: f64) -> f64 {
+    const MAX_ITER: usize = 200;
+    const EPS: f64 = 3e-14;
+    const TINY: f64 = 1e-30;
+
+    let mut c = 1.0;
+    let mut d = (1.0 - (a + b) * x / (a + 1.0)).recip().max(TINY);
+    let mut h = d;
+
+    for m in 1..=MAX_ITER {
+        let m_f64 = m as f64;
+
+        // Even step
+        let am2 = 2.0f64.mul_add(m_f64, a);
+        let num_even = m_f64 * (b - m_f64) * x / ((am2 - 1.0) * am2);
+        d = (num_even.mul_add(d, 1.0)).recip().max(TINY);
+        c = (num_even / c + 1.0).max(TINY);
+        h *= d * c;
+
+        // Odd step
+        let num_odd = -((a + m_f64) * (a + b + m_f64)) * x / (am2 * (am2 + 1.0));
+        d = (num_odd.mul_add(d, 1.0)).recip().max(TINY);
+        c = (num_odd / c + 1.0).max(TINY);
+        let delta = d * c;
+        h *= delta;
+
+        if (delta - 1.0).abs() < EPS {
+            break;
+        }
+    }
+    h
+}
+
 /// `noise.perlin2d` — CPU Perlin noise at (x, y).
 pub(super) fn noise_perlin2d(params: &Value, id: Value) -> JsonRpcResponse {
     let Some(x) = extract_f64(params, "x") else {
@@ -252,6 +422,30 @@ pub(super) fn activation_hick(params: &Value, id: Value) -> JsonRpcResponse {
         id,
         serde_json::json!({ "result": rt, "reaction_time": rt, "information_bits": hick_bits, "include_no_choice": include_no_choice }),
     )
+}
+
+/// `activation.softmax` — element-wise softmax on f64 array (exp-normalize, CPU).
+pub(super) fn activation_softmax(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(data) = extract_f64_array(params, "data") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: data (array)");
+    };
+    if data.is_empty() {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "data must be non-empty");
+    }
+    let max_val = data.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let exps: Vec<f64> = data.iter().map(|&x| (x - max_val).exp()).collect();
+    let sum: f64 = exps.iter().sum();
+    let result: Vec<f64> = exps.iter().map(|e| e / sum).collect();
+    JsonRpcResponse::success(id, serde_json::json!({ "result": result }))
+}
+
+/// `activation.gelu` — element-wise GELU on f64 array.
+pub(super) fn activation_gelu(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(data) = extract_f64_array(params, "data") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: data (array)");
+    };
+    let result = barracuda::activations::gelu_batch(&data);
+    JsonRpcResponse::success(id, serde_json::json!({ "result": result }))
 }
 
 // ── Linear algebra (CPU inline-data path) ──────────────────────────────
@@ -393,6 +587,80 @@ pub(super) fn linalg_eigenvalues(params: &Value, id: Value) -> JsonRpcResponse {
     JsonRpcResponse::success(id, serde_json::json!({ "result": eigenvalues }))
 }
 
+/// `linalg.svd` — singular value decomposition A = UΣV^T.
+///
+/// Inline-data CPU path. Params: `matrix` (2D), `rows`, `cols`.
+pub(super) fn linalg_svd(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(matrix) = extract_matrix(params, "matrix") else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: matrix (2D array)",
+        );
+    };
+    let m = matrix.len();
+    if m == 0 {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Matrix must be non-empty");
+    }
+    let n = matrix[0].len();
+    if n == 0 || matrix.iter().any(|row| row.len() != n) {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "All rows must have equal non-zero length",
+        );
+    }
+    let flat: Vec<f64> = matrix.into_iter().flatten().collect();
+    match barracuda::ops::linalg::svd::svd_decompose(&flat, m, n) {
+        Ok(svd) => {
+            let u_2d: Vec<Vec<f64>> = svd.u.chunks(m).map(<[f64]>::to_vec).collect();
+            let vt_2d: Vec<Vec<f64>> = svd.vt.chunks(n).map(<[f64]>::to_vec).collect();
+            JsonRpcResponse::success(
+                id,
+                serde_json::json!({ "u": u_2d, "s": svd.s, "vt": vt_2d, "m": m, "n": n }),
+            )
+        }
+        Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("SVD failed: {e}")),
+    }
+}
+
+/// `linalg.qr` — QR decomposition A = QR (Householder reflections).
+///
+/// Inline-data CPU path. Params: `matrix` (2D). Requires m >= n.
+pub(super) fn linalg_qr(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(matrix) = extract_matrix(params, "matrix") else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: matrix (2D array)",
+        );
+    };
+    let m = matrix.len();
+    if m == 0 {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Matrix must be non-empty");
+    }
+    let n = matrix[0].len();
+    if n == 0 || matrix.iter().any(|row| row.len() != n) {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "All rows must have equal non-zero length",
+        );
+    }
+    let flat: Vec<f64> = matrix.into_iter().flatten().collect();
+    match barracuda::ops::linalg::qr::qr_decompose(&flat, m, n) {
+        Ok(qr) => {
+            let q_2d: Vec<Vec<f64>> = qr.q.chunks(m).map(<[f64]>::to_vec).collect();
+            let r_2d: Vec<Vec<f64>> = qr.r.chunks(n).map(<[f64]>::to_vec).collect();
+            JsonRpcResponse::success(
+                id,
+                serde_json::json!({ "q": q_2d, "r": r_2d, "m": m, "n": n }),
+            )
+        }
+        Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("QR failed: {e}")),
+    }
+}
+
 // ── Spectral (CPU inline-data path) ────────────────────────────────────
 
 /// `spectral.fft` — 1D complex FFT (Cooley-Tukey radix-2, zero-padded).
@@ -437,6 +705,74 @@ pub(super) fn spectral_power_spectrum(params: &Value, id: Value) -> JsonRpcRespo
         .map(|(&r, &i)| r.mul_add(r, i * i) * inv_n)
         .collect();
     JsonRpcResponse::success(id, serde_json::json!({ "result": psd, "n": n }))
+}
+
+/// `spectral.stft` — inline CPU short-time Fourier transform.
+///
+/// Params: `data` (signal array), `n_fft` (window size, default 256),
+/// `hop_length` (default n_fft/4). Returns 2D magnitude spectrogram.
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "n_fft and hop_length are user-provided small counts"
+)]
+pub(super) fn spectral_stft(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(data) = extract_f64_array(params, "data") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: data (array)");
+    };
+    if data.is_empty() {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "data must be non-empty");
+    }
+    let n_fft = params.get("n_fft").and_then(|v| v.as_u64()).unwrap_or(256) as usize;
+    if n_fft == 0 || !n_fft.is_power_of_two() {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "n_fft must be a positive power of 2");
+    }
+    let hop_length = params
+        .get("hop_length")
+        .and_then(|v| v.as_u64())
+        .map_or(n_fft / 4, |v| v as usize);
+    if hop_length == 0 {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "hop_length must be > 0");
+    }
+    if data.len() < n_fft {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            format!("data length ({}) must be >= n_fft ({n_fft})", data.len()),
+        );
+    }
+
+    let n_frames = (data.len() - n_fft) / hop_length + 1;
+    let freq_bins = n_fft / 2 + 1;
+    let mut magnitude: Vec<Vec<f64>> = Vec::with_capacity(n_frames);
+
+    for frame_idx in 0..n_frames {
+        let start = frame_idx * hop_length;
+        let mut re: Vec<f64> = data[start..start + n_fft].to_vec();
+        // Hann window
+        for (i, sample) in re.iter_mut().enumerate() {
+            let w = 0.5 * (1.0 - (2.0 * std::f64::consts::PI * i as f64 / n_fft as f64).cos());
+            *sample *= w;
+        }
+        let mut im = vec![0.0; n_fft];
+        fft_in_place(&mut re, &mut im);
+        let frame_mag: Vec<f64> = re[..freq_bins]
+            .iter()
+            .zip(&im[..freq_bins])
+            .map(|(&r, &i)| r.hypot(i))
+            .collect();
+        magnitude.push(frame_mag);
+    }
+
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({
+            "magnitude": magnitude,
+            "n_fft": n_fft,
+            "hop_length": hop_length,
+            "n_frames": n_frames,
+            "freq_bins": freq_bins,
+        }),
+    )
 }
 
 /// Cooley-Tukey radix-2 DIT FFT (in-place, power-of-2 length).

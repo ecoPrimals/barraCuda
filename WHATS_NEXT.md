@@ -1,11 +1,16 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-04-24.
+Prioritized work items, ordered by impact. Updated 2026-04-26.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 45: JSON-RPC Surface Expansion (Apr 26)**: 11 new method registrations
+  (39→50) — 2 aliases (`stats.eigh`, `stats.pearson`) + 9 new handlers (`linalg.svd`,
+  `linalg.qr`, `stats.chi_squared`, `stats.anova_oneway`, `activation.softmax`,
+  `activation.gelu`, `spectral.stft`, `ml.mlp_forward`, `ml.attention`). New
+  `methods/ml.rs` for ML namespace. 36 new coverage tests. Achieves neuralSpring parity.
 - **Sprint 44g: BTSP Wire Fix — writer.shutdown() → flush() (Apr 24)**: Replaced
   `writer.shutdown().await` with `writer.flush().await` in `security_provider_rpc()`.
   Shutdown sent TCP FIN to BearDog, killing the connection before response arrived.

@@ -1,7 +1,7 @@
 # GPU Silicon Capability Matrix
 
 **Version**: 1.0.0
-**Date**: April 24, 2026
+**Date**: April 26, 2026
 **Status**: Living specification — updated as hardware probes report new data
 **Authority**: barraCuda (Layer 1) + toadStool (Layer 0) + coralReef (Layer 0)
 

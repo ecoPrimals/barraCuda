@@ -60,12 +60,13 @@ results.
 
 ## Recent
 
+- **Sprint 45/45b: JSON-RPC Surface Expansion + Deep Debt (Apr 26)**: 11 new method registrations (39→50) for neuralSpring parity — `linalg.svd`, `linalg.qr`, `stats.chi_squared`, `stats.anova_oneway`, `activation.softmax`, `activation.gelu`, `spectral.stft`, `ml.mlp_forward`, `ml.attention` + 2 aliases (`stats.eigh`, `stats.pearson`). New `methods/ml.rs` and `methods/spectral.rs` modules. `math.rs` smart-refactored (819→641L). Shared `params.rs` eliminates DRY violation. 36 new coverage tests. 12-axis deep debt audit clean.
 - **Sprint 44g: BTSP Wire Fix + 12-Axis Audit (Apr 24)**: `security_provider_rpc()` `writer.shutdown()` → `writer.flush()` — fixes BearDog connection loss. 12-axis deep debt audit clean bill. 4,393+ tests, all quality gates green.
 - **Sprint 44f: Smart Refactoring (Apr 20)**: `sovereign_device.rs` 924→773L, `btsp.rs` 815→678L. Zero production files >800L.
 - **Sprint 44e: BTSP Relay Alignment (Apr 20)**: 5 BTSP handshake relay fixes per Phase 45c. 7 new tests.
 - **Sprint 44d: Magic Number Evolution (Apr 20)**: 12 files evolved from bare workgroup size literals to named constants.
 - **Sprint 44c: CPU Tensor Fallback (Apr 20)**: Handle-based tensor ops (`create/matmul/add/scale/clamp/reduce/sigmoid`) work on headless hosts via `CpuTensor` store.
-- **Sprint 44: Composition Audit (Apr 20)**: 6 new JSON-RPC methods (32→39), Fitts' law corrected, response schema standardized, `tensor.matmul_inline`.
+- **Sprint 44: Composition Audit (Apr 20)**: 7 new JSON-RPC methods (32→39), Fitts' law corrected, response schema standardized, `tensor.matmul_inline`.
 - **Sprint 40–43**: SovereignDevice 3-tier fallback, cpu-shader default-on, Docker bind resolution, deep debt evolution, 826/826 WGSL SPDX headers, BTSP Phase 3, FAMILY_ID scoping, capability-based discovery.
 - **Sprint 39: primalSpring Audit Remediation (Apr 10)**: BTSP Phase 2 full handshake — `guard_connection()` evolved to 6-step X25519+HMAC relay (ClientHello/ServerHello/ChallengeResponse/HandshakeComplete) with legacy fallback. BC-GPU-PANIC fixed — `Auto::new()` decoupled from test pool, graceful CPU-only degradation. fault_injection SIGSEGV — `gpu-serial` added to `stress`/`gpu` profiles. Musl rebuild: fresh binaries with checksums. 4,422 tests pass, all quality gates green.
 - **Sprint 38: Deep Debt — BTSP Phase 2, Capability-Based Discovery & Idiom Sweep (Apr 9)**: BTSP Phase 2 connection authentication guard integrated into all accept loops (`serve_unix`/`serve_tcp`/`serve_tarpc_unix`). BearDog discovery evolved from hardcoded `beardog-core.json` to capability-based `discover_by_capability()` — scans all `*.json` discovery files for `btsp.session.create` method. `Box<dyn Error>` → typed `BarracudaCoreError::ipc()`. `#[allow]` → `#[expect]` with reason. `precision_brain.rs` smart-refactored (703→421 LOC). 4 GPU test binaries serialized. Musl-static rebuild fixed (static-pie). 4,421 tests pass, all quality gates green.
@@ -176,7 +177,7 @@ barraCuda/
 ├── crates/
 │   ├── barracuda-core/              # Primal lifecycle wrapper
 │   │   ├── src/lib.rs               # BarraCudaPrimal: start/stop/health
-│   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport (39 methods, Wire Standard L2)
+│   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport (50 methods, Wire Standard L2)
 │   │   ├── src/rpc.rs               # tarpc service definition (16 endpoints, parity with JSON-RPC)
 │   │   └── src/bin/barracuda.rs     # UniBin CLI
 │   └── barracuda/                   # Umbrella crate — all math + GPU
@@ -268,13 +269,16 @@ barraCuda exposes a dual-protocol IPC interface per wateringHole standards:
 | `tolerances.get` | Numerical tolerances for a named operation |
 | `validate.gpu_stack` | GPU validation suite |
 | `compute.dispatch` | Dispatch a named compute operation (zeros, ones, read) |
-| `math.*` / `stats.*` | `math.sigmoid`, `math.log2`, `stats.mean`, `stats.std_dev`, `stats.weighted_mean` |
+| `math.*` / `stats.*` | `math.sigmoid`, `math.log2`, `stats.mean`, `stats.std_dev`, `stats.variance`, `stats.correlation`, `stats.pearson`, `stats.weighted_mean`, `stats.chi_squared`, `stats.anova_oneway`, `stats.eigh` |
+| `linalg.*` | `linalg.solve`, `linalg.eigenvalues`, `linalg.svd`, `linalg.qr` |
+| `spectral.*` | `spectral.fft`, `spectral.power_spectrum`, `spectral.stft` |
 | `noise.*` / `rng.*` | `noise.perlin2d`, `noise.perlin3d`, `rng.uniform` |
-| `activation.*` | `activation.fitts`, `activation.hick` |
-| `tensor.*` | `tensor.create`, `matmul`, `add`, `scale`, `clamp`, `reduce`, `sigmoid` |
+| `activation.*` | `activation.fitts`, `activation.hick`, `activation.softmax`, `activation.gelu` |
+| `ml.*` | `ml.mlp_forward`, `ml.attention` |
+| `tensor.*` | `tensor.create`, `matmul`, `matmul_inline`, `add`, `scale`, `clamp`, `reduce`, `sigmoid` |
 | `fhe.*` | `fhe.ntt`, `fhe.pointwise_mul` |
 
-39 methods follow the wateringHole `{domain}.{operation}` Semantic Method Naming
+50 methods follow the wateringHole `{domain}.{operation}` Semantic Method Naming
 Standard v2.2.0. Wire Standard L2 compliant: `capabilities.list` returns the
 `{primal, version, methods}` envelope with `provided_capabilities` grouping.
 `health.liveness`, `health.readiness`, `health.check`, and `capabilities.list`

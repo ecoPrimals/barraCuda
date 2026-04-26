@@ -352,7 +352,7 @@ cargo test -p barracuda --lib --release
 
 ---
 
-**Last Updated**: April 24, 2026  
+**Last Updated**: April 26, 2026  
 **Shader Count**: 741 in shaders/ (816 total with ops/) — organized by domain, all f64 canonical. DF64 emulated double-precision on hardware without native f64.  
 **Categories**: 41 directories  
 **Status**: Production — dual-layer universal precision operational, 15-function DF64 transcendental suite complete

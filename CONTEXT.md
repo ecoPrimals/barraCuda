@@ -47,22 +47,24 @@ traits are fully internalized.
 | Domain | Methods |
 |--------|---------|
 | `identity.*` | `identity.get` |
-| `primal.*` | `primal.info`, `primal.capabilities` |
-| `device.*` | `device.list`, `device.probe` |
+| `primal.*` | `primal.capabilities` |
 | `health.*` | `health.liveness`, `health.readiness`, `health.check` |
 | `capabilities.*` | `capabilities.list` |
-| `compute.*` | `compute.dispatch` |
-| `tensor.*` | `tensor.create`, `tensor.matmul`, `tensor.add`, `tensor.scale`, `tensor.clamp`, `tensor.reduce`, `tensor.sigmoid` |
+| `compute.*` | `compute.dispatch`, `compute.batch.submit`, `compute.batch.status`, `compute.batch.result` |
+| `tensor.*` | `tensor.create`, `tensor.matmul`, `tensor.matmul_inline`, `tensor.add`, `tensor.scale`, `tensor.clamp`, `tensor.reduce`, `tensor.sigmoid` |
 | `fhe.*` | `fhe.ntt`, `fhe.pointwise_mul` |
 | `math.*` | `math.sigmoid`, `math.log2` |
-| `stats.*` | `stats.mean`, `stats.std_dev`, `stats.weighted_mean` |
+| `stats.*` | `stats.mean`, `stats.std_dev`, `stats.weighted_mean`, `stats.variance`, `stats.correlation`, `stats.pearson`, `stats.eigh`, `stats.chi_squared`, `stats.anova_oneway` |
+| `linalg.*` | `linalg.solve`, `linalg.eigenvalues`, `linalg.svd`, `linalg.qr` |
+| `spectral.*` | `spectral.fft`, `spectral.power_spectrum`, `spectral.stft` |
 | `noise.*` | `noise.perlin2d`, `noise.perlin3d` |
 | `rng.*` | `rng.uniform` |
-| `activation.*` | `activation.fitts`, `activation.hick` |
-| `tolerances.*` | `tolerances.get` |
-| `validate.*` | `validate.gpu_stack` |
+| `activation.*` | `activation.fitts`, `activation.hick`, `activation.softmax`, `activation.gelu` |
+| `ml.*` | `ml.mlp_forward`, `ml.attention` |
+| `doctor.*` | `doctor.validate` |
+| `security.*` | `security.session.create`, `security.session.verify` |
 
-32 methods following wateringHole `{domain}.{operation}` Semantic Method Naming Standard. Wire Standard L2 compliant.
+50 methods following wateringHole `{domain}.{operation}` Semantic Method Naming Standard. Wire Standard L2 compliant.
 
 ## Deployment Constraints
 

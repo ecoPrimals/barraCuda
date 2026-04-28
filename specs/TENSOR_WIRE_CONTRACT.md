@@ -2,7 +2,7 @@
 
 # Tensor IPC Wire Contract
 
-**Status**: Sprint 45b — JSON-RPC Surface Expansion + Deep Debt
+**Status**: Sprint 46b — NUCLEUS env wiring + role-based naming + 12-axis clean
 **Version**: 1.1.0
 **Authority**: barraCuda primal (self-knowledge)
 **Implements**: wateringHole `PRIMAL_IPC_PROTOCOL.md` v3.1, `SEMANTIC_METHOD_NAMING_STANDARD.md`

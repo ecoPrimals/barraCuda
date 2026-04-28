@@ -44,7 +44,7 @@ results.
 - **Sovereign shader compilation** — naga 28 IR optimizer, SPIR-V passthrough
 - **NagaExecutor** — CPU interpreter for naga IR, executes WGSL compute shaders without GPU (f32+f64 native, shared memory, barriers, atomics)
 - **coralReef IPC contract** — sovereign CPU compilation (`shader.compile.cpu`, `shader.execute.cpu`) and validation (`shader.validate`) via JSON-RPC
-- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with 39 bare semantic `{domain}.{operation}` methods; Wire Standard L2 compliant (`{primal, version, methods}` envelope, `identity.get`, `provided_capabilities`)
+- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with 50 bare semantic `{domain}.{operation}` methods; Wire Standard L2 compliant (`{primal, version, methods}` envelope, `identity.get`, `provided_capabilities`)
 - **UniBin CLI** — single `barracuda` binary with `server --port <PORT>`, `service`, `doctor`, `validate`, `version`
 
 ### Design principles
@@ -60,7 +60,7 @@ results.
 
 ## Recent
 
-- **Sprint 46: NUCLEUS Env Var Wiring (Apr 28)**: Per Phase 55 two-tier crypto model — `BEARDOG_SOCKET`/`BTSP_PROVIDER_SOCKET` wired as preferred BearDog discovery, `DISCOVERY_SOCKET` (Songbird) wired as async `ipc.resolve` fallback, `FAMILY_SEED` error message corrected.
+- **Sprint 46: NUCLEUS Env Var Wiring + Deep Debt (Apr 28)**: Per Phase 55 two-tier crypto model — `BEARDOG_SOCKET`/`BTSP_PROVIDER_SOCKET` wired as preferred discovery, `DISCOVERY_SOCKET` (Songbird) wired as async `ipc.resolve` fallback, `FAMILY_SEED` error message corrected. Role-based naming evolution (`beardog_*` → `provider_*`/`security_provider_rpc`). 12-axis deep debt audit clean.
 - **Sprint 45/45b: JSON-RPC Surface Expansion + Deep Debt (Apr 26)**: 11 new method registrations (39→50) for neuralSpring parity — `linalg.svd`, `linalg.qr`, `stats.chi_squared`, `stats.anova_oneway`, `activation.softmax`, `activation.gelu`, `spectral.stft`, `ml.mlp_forward`, `ml.attention` + 2 aliases (`stats.eigh`, `stats.pearson`). New `methods/ml.rs` and `methods/spectral.rs` modules. `math.rs` smart-refactored (819→641L). Shared `params.rs` eliminates DRY violation. 36 new coverage tests. 12-axis deep debt audit clean.
 - **Sprint 44g: BTSP Wire Fix + 12-Axis Audit (Apr 24)**: `security_provider_rpc()` `writer.shutdown()` → `writer.flush()` — fixes BearDog connection loss. 12-axis deep debt audit clean bill. 4,393+ tests, all quality gates green.
 - **Sprint 44f: Smart Refactoring (Apr 20)**: `sovereign_device.rs` 924→773L, `btsp.rs` 815→678L. Zero production files >800L.

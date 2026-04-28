@@ -6,10 +6,12 @@ Prioritized work items, ordered by impact. Updated 2026-04-28.
 
 ## Recently Completed
 
-- **Sprint 46: NUCLEUS Env Var Wiring (Apr 28)**: Per primalSpring Phase 55
-  two-tier crypto model — `BEARDOG_SOCKET` / `BTSP_PROVIDER_SOCKET` wired as
-  preferred BearDog discovery. `DISCOVERY_SOCKET` (Songbird) wired as async
-  fallback via `ipc.resolve`. `FAMILY_SEED` error message corrected.
+- **Sprint 46: NUCLEUS Env Var Wiring + Deep Debt (Apr 28)**: Per primalSpring
+  Phase 55 two-tier crypto model — `BEARDOG_SOCKET` / `BTSP_PROVIDER_SOCKET`
+  wired as preferred discovery. `DISCOVERY_SOCKET` (Songbird) wired as async
+  fallback via `ipc.resolve`. `FAMILY_SEED` error message corrected. Role-based
+  naming evolution (`beardog_*` → `provider_*`/`security_provider_rpc`). 12-axis
+  deep debt audit clean — zero hardcoded sibling primal names in runtime code.
 - **Sprint 45: JSON-RPC Surface Expansion (Apr 26)**: 11 new method registrations
   (39→50) — 2 aliases (`stats.eigh`, `stats.pearson`) + 9 new handlers (`linalg.svd`,
   `linalg.qr`, `stats.chi_squared`, `stats.anova_oneway`, `activation.softmax`,

@@ -1,7 +1,7 @@
 # Spring Absorption Tracker
 
 **Version**: 0.3.12
-**Date**: April 26, 2026
+**Date**: April 28, 2026
 **Source**: hotSpring v0.6.32, groundSpring V99, neuralSpring S143, wetSpring V107, airSpring v0.7.5, healthSpring V44, ludoSpring V34, primalSpring (new), toadStool S202, coralReef Phase 10 Iter 80
 
 ## Sprint 22g — Cross-Spring Deep Absorption (Mar 29 2026)

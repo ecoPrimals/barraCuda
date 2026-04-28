@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`FAMILY_SEED` error message** corrected to list all 3 fallback env var names (was missing `BIOMEOS_FAMILY_SEED`)
 - Per `NUCLEUS_TWO_TIER_CRYPTO_MODEL.md` (primalSpring Phase 55)
 
+### Changed — Sprint 46b: Role-Based Naming + 12-Axis Audit (Apr 28 2026)
+
+- **Role-based naming** in `btsp.rs`: `beardog_stream`→`provider_stream`, `beardog`→`provider`, `beardog_rpc`→`security_provider_rpc` — zero hardcoded sibling primal names in runtime code
+- **12-axis deep debt audit** clean bill: zero TODO/FIXME, zero `unwrap()`/`expect()` regressions, zero mocks in production, all production `.rs` under 800L
+
 ### Added — Sprint 45: JSON-RPC Surface Expansion (Apr 26 2026)
 
 - **11 new method registrations (39→50)** for neuralSpring parity:

@@ -315,16 +315,16 @@ where
             HandshakeError::Protocol("ClientHello missing client_ephemeral_pub field".to_string())
         })?;
 
-    // Step 2: Open ONE connection to BearDog for the entire handshake.
-    // Per SOURDOUGH_BTSP_RELAY_PATTERN: both create and verify must use the
-    // same socket connection — BearDog associates session state with it.
+    // Step 2: Open ONE connection to the security provider for the entire
+    // handshake. Per SOURDOUGH_BTSP_RELAY_PATTERN: both create and verify
+    // must use the same socket — the provider associates session state with it.
     let family_seed = resolve_family_seed_raw().ok_or_else(|| {
         HandshakeError::Protocol(
             "BTSP handshake requires FAMILY_SEED, BEARDOG_FAMILY_SEED, or BIOMEOS_FAMILY_SEED env var".to_string(),
         )
     })?;
 
-    let beardog_stream = tokio::net::UnixStream::connect(provider_sock)
+    let provider_stream = tokio::net::UnixStream::connect(provider_sock)
         .await
         .map_err(|e| {
             HandshakeError::ProviderUnavailable(format!(
@@ -333,9 +333,9 @@ where
                 provider_sock.display()
             ))
         })?;
-    let mut beardog = tokio::io::BufReader::new(beardog_stream);
+    let mut provider = tokio::io::BufReader::new(provider_stream);
 
-    // Step 2a: btsp.session.create on BearDog connection
+    // Step 2a: btsp.session.create on security provider connection
     let create_request = serde_json::json!({
         "jsonrpc": "2.0",
         "method": "btsp.session.create",
@@ -346,7 +346,7 @@ where
         },
         "id": 1
     });
-    let create_result = beardog_rpc(&mut beardog, &create_request).await?;
+    let create_result = security_provider_rpc(&mut provider, &create_request).await?;
 
     let session_id = create_result
         .get("session_token")
@@ -391,7 +391,7 @@ where
         .and_then(|v| v.as_str())
         .unwrap_or("chacha20_poly1305");
 
-    // Step 5: btsp.session.verify on SAME BearDog connection
+    // Step 5: btsp.session.verify on SAME security provider connection
     let verify_request = serde_json::json!({
         "jsonrpc": "2.0",
         "method": "btsp.session.verify",
@@ -403,7 +403,7 @@ where
         },
         "id": 2
     });
-    let verify_result = beardog_rpc(&mut beardog, &verify_request).await?;
+    let verify_result = security_provider_rpc(&mut provider, &verify_request).await?;
 
     let verified = verify_result
         .get("verified")
@@ -503,16 +503,16 @@ where
     Ok(())
 }
 
-// ── BearDog RPC helper ──────────────────────────────────────────────
+// ── Security provider RPC helper ─────────────────────────────────────
 
-/// Send a JSON-RPC request to BearDog over an existing connection and return
-/// the `result` field. Uses NDJSON framing (write line + flush, read line).
+/// Send a JSON-RPC request to the security provider over an existing
+/// connection and return the `result` field. Uses NDJSON framing.
 ///
 /// Per `SOURDOUGH_BTSP_RELAY_PATTERN.md`: both `session.create` and
-/// `session.verify` MUST use the same connection — BearDog associates
+/// `session.verify` MUST use the same connection — the provider associates
 /// session state with it.
 #[cfg(unix)]
-async fn beardog_rpc(
+async fn security_provider_rpc(
     stream: &mut tokio::io::BufReader<tokio::net::UnixStream>,
     request: &serde_json::Value,
 ) -> std::result::Result<serde_json::Value, HandshakeError> {
@@ -543,12 +543,13 @@ async fn beardog_rpc(
 
 // ── Family seed resolution ───────────────────────────────────────────
 
-/// Load the BTSP family seed, base64-encoded for BearDog's wire format.
+/// Load the BTSP family seed, base64-encoded for the security provider's
+/// wire format.
 ///
 /// Reads `FAMILY_SEED` → `BEARDOG_FAMILY_SEED` → `BIOMEOS_FAMILY_SEED`
-/// from environment. BearDog base64-decodes the `family_seed` parameter
-/// in `btsp.session.create` to recover raw key bytes, so we must encode
-/// the env string's bytes before sending.
+/// from environment. The security provider base64-decodes the `family_seed`
+/// parameter in `btsp.session.create` to recover raw key bytes, so we must
+/// encode the env string's bytes before sending.
 fn resolve_family_seed_raw() -> Option<String> {
     let raw = std::env::var("FAMILY_SEED")
         .or_else(|_| std::env::var("BEARDOG_FAMILY_SEED"))

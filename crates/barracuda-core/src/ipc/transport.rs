@@ -721,13 +721,13 @@ async fn handle_batch(primal: &BarraCudaPrimal, line: &str) -> Option<String> {
     Some(serde_json::to_string(&responses).unwrap_or_else(|_| SERIALIZATION_ERROR.to_string()))
 }
 
-/// Self-register capabilities with Songbird via `DISCOVERY_SOCKET` (`ipc.register`).
+/// Self-register capabilities with the discovery service via `DISCOVERY_SOCKET`.
 ///
-/// Per Phase 55b: primals self-register at startup so Songbird can resolve
-/// capabilities for other primals via `ipc.resolve`. Fire-and-forget — any
-/// failure is logged at debug level and does not block startup.
+/// Per Phase 55b: primals self-register at startup so the discovery service can
+/// resolve capabilities for other primals via `ipc.resolve`. Fire-and-forget —
+/// any failure is logged at debug level and does not block startup.
 #[cfg(unix)]
-pub async fn register_with_songbird(endpoint: &str) {
+pub async fn register_with_discovery(endpoint: &str) {
     let Ok(socket_var) = std::env::var("DISCOVERY_SOCKET") else {
         return;
     };
@@ -737,7 +737,7 @@ pub async fn register_with_songbird(endpoint: &str) {
         return;
     }
 
-    let capabilities = crate::discovery::songbird_capability_domains();
+    let capabilities = crate::discovery::discovery_capability_domains();
     let request = serde_json::json!({
         "jsonrpc": "2.0",
         "method": "ipc.register",
@@ -750,7 +750,7 @@ pub async fn register_with_songbird(endpoint: &str) {
     });
 
     let Ok(stream) = tokio::net::UnixStream::connect(socket_path).await else {
-        tracing::debug!("Songbird connect failed — skipping registration");
+        tracing::debug!("discovery service connect failed — skipping registration");
         return;
     };
     let mut reader = BufReader::new(stream);
@@ -761,7 +761,7 @@ pub async fn register_with_songbird(endpoint: &str) {
     if reader.get_mut().write_all(line.as_bytes()).await.is_err()
         || reader.get_mut().flush().await.is_err()
     {
-        tracing::debug!("Songbird write failed — registration may not have reached Songbird");
+        tracing::debug!("discovery service write failed — registration may not have arrived");
         return;
     }
 
@@ -775,9 +775,9 @@ pub async fn register_with_songbird(endpoint: &str) {
             .and_then(|r| r.get("virtual_endpoint"))
             .and_then(|v| v.as_str())
         {
-            tracing::info!(virtual_endpoint = vep, domains = ?capabilities, "registered with Songbird");
+            tracing::info!(virtual_endpoint = vep, domains = ?capabilities, "registered via DISCOVERY_SOCKET");
         } else if let Some(err) = resp.get("error") {
-            tracing::debug!(?err, "Songbird registration returned error");
+            tracing::debug!(?err, "discovery service registration returned error");
         }
     }
 }

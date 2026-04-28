@@ -48,7 +48,11 @@ fn binary_f32_arr<const N: usize>(
                     0.0
                 }
             }
-            _ => 0.0,
+            other => {
+                return Err(NagaExecError::TypeMismatch(format!(
+                    "binary_f32_arr: expected F32 or Bool, got {other:?}"
+                )));
+            }
         };
     }
     Ok(out)
@@ -70,7 +74,11 @@ fn binary_f64_arr<const N: usize>(
                     0.0
                 }
             }
-            _ => 0.0,
+            other => {
+                return Err(NagaExecError::TypeMismatch(format!(
+                    "binary_f64_arr: expected F64 or Bool, got {other:?}"
+                )));
+            }
         };
     }
     Ok(out)
@@ -86,7 +94,11 @@ fn binary_u32_arr<const N: usize>(
         out[i] = match binary_u32(op, a[i], b[i])? {
             Value::U32(v) => v,
             Value::Bool(v) => u32::from(v),
-            _ => 0,
+            other => {
+                return Err(NagaExecError::TypeMismatch(format!(
+                    "binary_u32_arr: expected U32 or Bool, got {other:?}"
+                )));
+            }
         };
     }
     Ok(out)
@@ -102,7 +114,11 @@ fn binary_i32_arr<const N: usize>(
         out[i] = match binary_i32(op, a[i], b[i])? {
             Value::I32(v) => v,
             Value::Bool(v) => i32::from(v),
-            _ => 0,
+            other => {
+                return Err(NagaExecError::TypeMismatch(format!(
+                    "binary_i32_arr: expected I32 or Bool, got {other:?}"
+                )));
+            }
         };
     }
     Ok(out)

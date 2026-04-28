@@ -456,7 +456,9 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
                 .unwrap_or_else(std::sync::PoisonError::into_inner);
             let cal_vec: Vec<&GpuCalibration> = cals.values().collect();
             if let Ok(json) = serde_json::to_string_pretty(&cal_vec) {
-                let _ = std::fs::write(path, json);
+                if let Err(e) = std::fs::write(path, &json) {
+                    tracing::debug!(path = %path.display(), error = %e, "autotune cache write failed");
+                }
             }
         }
     }
@@ -502,9 +504,10 @@ pub static GLOBAL_TUNER: std::sync::LazyLock<AutoTuner> = std::sync::LazyLock::n
         .join(env!("CARGO_PKG_NAME"))
         .join("gpu_calibrations.json");
 
-    // Ensure directory exists
     if let Some(parent) = cache_path.parent() {
-        let _ = std::fs::create_dir_all(parent);
+        if let Err(e) = std::fs::create_dir_all(parent) {
+            tracing::debug!(path = %parent.display(), error = %e, "autotune cache dir creation failed");
+        }
     }
 
     AutoTuner::with_cache(cache_path)

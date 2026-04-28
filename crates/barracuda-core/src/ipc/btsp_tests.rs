@@ -132,6 +132,19 @@ fn hex_to_bytes_empty() {
 }
 
 #[test]
+fn discover_security_provider_checks_beardog_socket_env() {
+    // When BEARDOG_SOCKET points to a non-existent path, the function
+    // should fall through to other resolution methods (not panic).
+    // We can't set env vars safely in parallel tests, but we can verify
+    // that when neither BEARDOG_SOCKET nor filesystem sockets exist,
+    // discovery returns None.
+    if std::env::var("BEARDOG_SOCKET").is_ok() || std::env::var("BTSP_PROVIDER_SOCKET").is_ok() {
+        return;
+    }
+    assert!(discover_security_provider().is_none());
+}
+
+#[test]
 fn resolve_family_seed_raw_returns_none_when_unset() {
     if std::env::var("FAMILY_SEED").is_ok()
         || std::env::var("BEARDOG_FAMILY_SEED").is_ok()

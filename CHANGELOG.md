@@ -5,7 +5,14 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.12] — 2026-04-26
+## [0.3.12] — 2026-04-28
+
+### Changed — Sprint 46: NUCLEUS Env Var Wiring (Apr 28 2026)
+
+- **`BEARDOG_SOCKET` / `BTSP_PROVIDER_SOCKET`** env vars wired as preferred discovery path in `discover_security_provider()` — composition-injected socket path checked before filesystem scan fallback
+- **`DISCOVERY_SOCKET`** (Songbird) wired as async fallback via `ipc.resolve` RPC when local discovery and env var resolution both fail
+- **`FAMILY_SEED` error message** corrected to list all 3 fallback env var names (was missing `BIOMEOS_FAMILY_SEED`)
+- Per `NUCLEUS_TWO_TIER_CRYPTO_MODEL.md` (primalSpring Phase 55)
 
 ### Added — Sprint 45: JSON-RPC Surface Expansion (Apr 26 2026)
 

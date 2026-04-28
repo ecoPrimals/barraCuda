@@ -160,18 +160,24 @@ where
         return BtspOutcome::DevMode;
     };
 
-    let Some(provider_sock) = discover_security_provider() else {
-        let socket_dir = resolve_socket_dir();
-        let reason = format!(
-            "FAMILY_ID={family_id} but security-domain provider not discoverable \
-             at {}. Accepting in degraded mode.",
-            socket_dir.display()
-        );
-        tracing::warn!("{reason}");
-        return BtspOutcome::Degraded {
-            reason,
-            consumed_line: None,
-        };
+    let provider_sock = match discover_security_provider() {
+        Some(p) => p,
+        None => match resolve_via_discovery_socket("btsp.session.create").await {
+            Some(p) => p,
+            None => {
+                let socket_dir = resolve_socket_dir();
+                let reason = format!(
+                    "FAMILY_ID={family_id} but security-domain provider not discoverable \
+                     at {}. Accepting in degraded mode.",
+                    socket_dir.display()
+                );
+                tracing::warn!("{reason}");
+                return BtspOutcome::Degraded {
+                    reason,
+                    consumed_line: None,
+                };
+            }
+        },
     };
 
     match perform_handshake_relay(stream, &provider_sock, &family_id).await {
@@ -314,7 +320,7 @@ where
     // same socket connection — BearDog associates session state with it.
     let family_seed = resolve_family_seed_raw().ok_or_else(|| {
         HandshakeError::Protocol(
-            "BTSP handshake requires BEARDOG_FAMILY_SEED or FAMILY_SEED env var".to_string(),
+            "BTSP handshake requires FAMILY_SEED, BEARDOG_FAMILY_SEED, or BIOMEOS_FAMILY_SEED env var".to_string(),
         )
     })?;
 
@@ -573,12 +579,24 @@ const SECURITY_DOMAIN: &str = "crypto";
 
 /// Discover the security-domain socket for BTSP handshake delegation.
 ///
-/// Resolution chain (capability-based, not primal-name-based):
-/// 1. `$BIOMEOS_SOCKET_DIR/{SECURITY_DOMAIN}-{family_id}.sock`
-/// 2. `$BIOMEOS_SOCKET_DIR/{SECURITY_DOMAIN}.sock`
-/// 3. Discovery files in `$BIOMEOS_SOCKET_DIR/*.json` advertising
+/// Resolution chain (per `NUCLEUS_TWO_TIER_CRYPTO_MODEL.md`):
+/// 1. `$BEARDOG_SOCKET` or `$BTSP_PROVIDER_SOCKET` env var (composition-injected)
+/// 2. `$BIOMEOS_SOCKET_DIR/{SECURITY_DOMAIN}-{family_id}.sock`
+/// 3. `$BIOMEOS_SOCKET_DIR/{SECURITY_DOMAIN}.sock`
+/// 4. Discovery files in `$BIOMEOS_SOCKET_DIR/*.json` advertising
 ///    `btsp.session.create` capability
 fn discover_security_provider() -> Option<std::path::PathBuf> {
+    // Prefer composition-injected socket path (set by NUCLEUS launcher)
+    for var in ["BEARDOG_SOCKET", "BTSP_PROVIDER_SOCKET"] {
+        if let Ok(path) = std::env::var(var) {
+            let p = std::path::PathBuf::from(&path);
+            if p.exists() {
+                return Some(p);
+            }
+            tracing::debug!("{var}={path} set but socket does not exist, falling through");
+        }
+    }
+
     let sock_dir = resolve_socket_dir();
 
     if let Some(fid) = resolve_family_id() {
@@ -593,6 +611,44 @@ fn discover_security_provider() -> Option<std::path::PathBuf> {
     }
 
     discover_by_capability(&sock_dir, "btsp.session.create")
+}
+
+/// Resolve a capability via Songbird's `DISCOVERY_SOCKET` using `ipc.resolve`.
+///
+/// Per `NUCLEUS_TWO_TIER_CRYPTO_MODEL.md`: every primal receives
+/// `DISCOVERY_SOCKET` pointing to Songbird. When local filesystem scanning
+/// fails, we ask Songbird which primal provides the requested capability.
+async fn resolve_via_discovery_socket(capability: &str) -> Option<std::path::PathBuf> {
+    let discovery_path = std::env::var("DISCOVERY_SOCKET").ok()?;
+    let discovery_path = std::path::Path::new(&discovery_path);
+    if !discovery_path.exists() {
+        tracing::debug!(
+            "DISCOVERY_SOCKET={} set but socket does not exist",
+            discovery_path.display()
+        );
+        return None;
+    }
+
+    let stream = tokio::net::UnixStream::connect(discovery_path).await.ok()?;
+    let mut reader = tokio::io::BufReader::new(stream);
+
+    let request = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": "ipc.resolve",
+        "params": { "capability": capability },
+        "id": 1
+    });
+    write_ndjson_line(reader.get_mut(), &request).await.ok()?;
+    let response_line = read_ndjson_line(&mut reader).await.ok()?;
+    let response: serde_json::Value = serde_json::from_str(&response_line).ok()?;
+
+    let result = response.get("result")?;
+    let unix_addr = result
+        .get("unix")
+        .or_else(|| result.get("socket"))
+        .and_then(|v| v.as_str())?;
+    let sock = std::path::PathBuf::from(unix_addr.trim_start_matches("unix://"));
+    sock.exists().then_some(sock)
 }
 
 fn discover_by_capability(sock_dir: &std::path::Path, method: &str) -> Option<std::path::PathBuf> {

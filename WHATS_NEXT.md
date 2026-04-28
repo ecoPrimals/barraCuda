@@ -1,11 +1,15 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-04-26.
+Prioritized work items, ordered by impact. Updated 2026-04-28.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 46: NUCLEUS Env Var Wiring (Apr 28)**: Per primalSpring Phase 55
+  two-tier crypto model — `BEARDOG_SOCKET` / `BTSP_PROVIDER_SOCKET` wired as
+  preferred BearDog discovery. `DISCOVERY_SOCKET` (Songbird) wired as async
+  fallback via `ipc.resolve`. `FAMILY_SEED` error message corrected.
 - **Sprint 45: JSON-RPC Surface Expansion (Apr 26)**: 11 new method registrations
   (39→50) — 2 aliases (`stats.eigh`, `stats.pearson`) + 9 new handlers (`linalg.svd`,
   `linalg.qr`, `stats.chi_squared`, `stats.anova_oneway`, `activation.softmax`,
@@ -498,6 +502,11 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
   are exclusively GPU-dependent code paths.
 - **Kokkos GPU parity benchmarks**: Run barraCuda GPU benchmarks on matching hardware,
   publish comparison data.
+- **Optional tensor encryption via `tensor` purpose key**: Per
+  `NUCLEUS_TWO_TIER_CRYPTO_MODEL.md` — encrypt sensitive tensor data in transit
+  using BearDog ChaCha20-Poly1305 delegation. Not all tensor ops need encryption;
+  opt-in for medical/financial workloads. Deps already present (`chacha20poly1305`,
+  `hmac`, `sha2`). primalSpring Phase 55 rates this as nice-to-have.
 
 ## Medium-term (P3)
 

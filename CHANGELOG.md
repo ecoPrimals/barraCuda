@@ -7,17 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.12] — 2026-04-28
 
-### Added — Sprint 47: Songbird Self-Registration (Apr 28 2026)
+### Changed — Sprint 47b: Deep Debt — Role-Based Naming + naga-exec Correctness (Apr 28 2026)
 
-- **`register_with_songbird()`** in `transport.rs` — `ipc.register` RPC to Songbird via `DISCOVERY_SOCKET` UDS at startup, fire-and-forget
-- **`songbird_capability_domains()`** in `discovery.rs` — derives 11 semantic capability tags from `REGISTERED_METHODS` (tensor, math, stats, linalg, ml, spectral, activation, noise, rng, fhe, device), excluding meta domains
+- **Role-based naming**: `register_with_songbird()`→`register_with_discovery()`, `songbird_capability_domains()`→`discovery_capability_domains()`, `SONGBIRD_EXCLUDED_DOMAINS`→`DISCOVERY_EXCLUDED_DOMAINS` — zero primal-specific names in registration path
+- **naga-exec correctness**: `binary_*_arr` silent `_ => 0.0` fallbacks → typed `NagaExecError::TypeMismatch` errors
+- **Observability**: `autotune.rs` silent `let _ = fs::write` → `tracing::debug` on failure
+
+### Added — Sprint 47: Discovery Self-Registration (Apr 28 2026)
+
+- **`register_with_discovery()`** in `transport.rs` — `ipc.register` RPC to the discovery service via `DISCOVERY_SOCKET` UDS at startup, fire-and-forget
+- **`discovery_capability_domains()`** in `discovery.rs` — derives 11 semantic capability tags from `REGISTERED_METHODS` (tensor, math, stats, linalg, ml, spectral, activation, noise, rng, fhe, device), excluding meta domains
 - Wired into all startup paths (UDS server, TCP-only, service mode)
 - Per primalSpring Phase 55b upstream guidance
 
 ### Changed — Sprint 46: NUCLEUS Env Var Wiring (Apr 28 2026)
 
 - **`BEARDOG_SOCKET` / `BTSP_PROVIDER_SOCKET`** env vars wired as preferred discovery path in `discover_security_provider()` — composition-injected socket path checked before filesystem scan fallback
-- **`DISCOVERY_SOCKET`** (Songbird) wired as async fallback via `ipc.resolve` RPC when local discovery and env var resolution both fail
+- **`DISCOVERY_SOCKET`** (discovery service) wired as async fallback via `ipc.resolve` RPC when local discovery and env var resolution both fail
 - **`FAMILY_SEED` error message** corrected to list all 3 fallback env var names (was missing `BIOMEOS_FAMILY_SEED`)
 - Per `NUCLEUS_TWO_TIER_CRYPTO_MODEL.md` (primalSpring Phase 55)
 

@@ -2,7 +2,7 @@
 
 **Version**: 0.3.12
 **Date**: April 28, 2026
-**Status**: Through Sprint 47 — tracks all open work items for barraCuda evolution
+**Status**: Through Sprint 47b — tracks all open work items for barraCuda evolution
 
 ---
 

@@ -6,6 +6,9 @@ Prioritized work items, ordered by impact. Updated 2026-04-28.
 
 ## Recently Completed
 
+- **Sprint 47: Songbird Self-Registration (Apr 28)**: `ipc.register` to Songbird
+  via `DISCOVERY_SOCKET` at startup — 11 semantic capability domains derived from
+  registered methods. Fire-and-forget, graceful degradation. Per Phase 55b.
 - **Sprint 46: NUCLEUS Env Var Wiring + Deep Debt (Apr 28)**: Per primalSpring
   Phase 55 two-tier crypto model — `BEARDOG_SOCKET` / `BTSP_PROVIDER_SOCKET`
   wired as preferred discovery. `DISCOVERY_SOCKET` (Songbird) wired as async

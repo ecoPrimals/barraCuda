@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.12] — 2026-04-28
 
+### Added — Sprint 47: Songbird Self-Registration (Apr 28 2026)
+
+- **`register_with_songbird()`** in `transport.rs` — `ipc.register` RPC to Songbird via `DISCOVERY_SOCKET` UDS at startup, fire-and-forget
+- **`songbird_capability_domains()`** in `discovery.rs` — derives 11 semantic capability tags from `REGISTERED_METHODS` (tensor, math, stats, linalg, ml, spectral, activation, noise, rng, fhe, device), excluding meta domains
+- Wired into all startup paths (UDS server, TCP-only, service mode)
+- Per primalSpring Phase 55b upstream guidance
+
 ### Changed — Sprint 46: NUCLEUS Env Var Wiring (Apr 28 2026)
 
 - **`BEARDOG_SOCKET` / `BTSP_PROVIDER_SOCKET`** env vars wired as preferred discovery path in `discover_security_provider()` — composition-injected socket path checked before filesystem scan fallback

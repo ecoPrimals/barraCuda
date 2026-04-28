@@ -721,6 +721,67 @@ async fn handle_batch(primal: &BarraCudaPrimal, line: &str) -> Option<String> {
     Some(serde_json::to_string(&responses).unwrap_or_else(|_| SERIALIZATION_ERROR.to_string()))
 }
 
+/// Self-register capabilities with Songbird via `DISCOVERY_SOCKET` (`ipc.register`).
+///
+/// Per Phase 55b: primals self-register at startup so Songbird can resolve
+/// capabilities for other primals via `ipc.resolve`. Fire-and-forget — any
+/// failure is logged at debug level and does not block startup.
+#[cfg(unix)]
+pub async fn register_with_songbird(endpoint: &str) {
+    let Ok(socket_var) = std::env::var("DISCOVERY_SOCKET") else {
+        return;
+    };
+    let socket_path = std::path::Path::new(&socket_var);
+    if !socket_path.exists() {
+        tracing::debug!(path = %socket_path.display(), "DISCOVERY_SOCKET absent — skip register");
+        return;
+    }
+
+    let capabilities = crate::discovery::songbird_capability_domains();
+    let request = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": "ipc.register",
+        "params": {
+            "primal_id": crate::PRIMAL_NAMESPACE,
+            "capabilities": capabilities,
+            "endpoint": endpoint,
+        },
+        "id": 1
+    });
+
+    let Ok(stream) = tokio::net::UnixStream::connect(socket_path).await else {
+        tracing::debug!("Songbird connect failed — skipping registration");
+        return;
+    };
+    let mut reader = BufReader::new(stream);
+    let Ok(mut line) = serde_json::to_string(&request) else {
+        return;
+    };
+    line.push('\n');
+    if reader.get_mut().write_all(line.as_bytes()).await.is_err()
+        || reader.get_mut().flush().await.is_err()
+    {
+        tracing::debug!("Songbird write failed — registration may not have reached Songbird");
+        return;
+    }
+
+    let mut response_line = String::new();
+    if reader.read_line(&mut response_line).await.is_err() {
+        return;
+    }
+    if let Ok(resp) = serde_json::from_str::<serde_json::Value>(&response_line) {
+        if let Some(vep) = resp
+            .get("result")
+            .and_then(|r| r.get("virtual_endpoint"))
+            .and_then(|v| v.as_str())
+        {
+            tracing::info!(virtual_endpoint = vep, domains = ?capabilities, "registered with Songbird");
+        } else if let Some(err) = resp.get("error") {
+            tracing::debug!(?err, "Songbird registration returned error");
+        }
+    }
+}
+
 #[cfg(test)]
 #[path = "transport_tests.rs"]
 mod tests;

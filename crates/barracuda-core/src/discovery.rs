@@ -121,6 +121,39 @@ pub(crate) fn provided_capability_groups(version: &str) -> Vec<serde_json::Value
         .collect()
 }
 
+/// Meta/housekeeping domains excluded from Songbird capability registration.
+///
+/// These are ecosystem probe or infrastructure domains, not functional
+/// capabilities that other primals would resolve via `ipc.resolve`.
+const SONGBIRD_EXCLUDED_DOMAINS: &[&str] = &[
+    "health",
+    "capabilities",
+    "identity",
+    "primal",
+    "tolerances",
+    "validate",
+    "compute",
+];
+
+/// Derive semantic capability domain tags for Songbird `ipc.register`.
+///
+/// Returns the unique first-segment domains from registered methods, excluding
+/// meta/housekeeping domains (health, capabilities, identity, etc.).
+/// Per Phase 55b: these are the functional capability tags that other primals
+/// resolve via `ipc.resolve`.
+#[must_use]
+pub fn songbird_capability_domains() -> Vec<String> {
+    let mut domains = BTreeSet::new();
+    for method in REGISTERED_METHODS {
+        if let Some(domain) = domain_of(method) {
+            if !SONGBIRD_EXCLUDED_DOMAINS.contains(&domain) {
+                domains.insert(domain.to_string());
+            }
+        }
+    }
+    domains.into_iter().collect()
+}
+
 fn domain_description(domain: &str) -> &'static str {
     match domain {
         "health" => "Ecosystem health probes (liveness, readiness, check)",
@@ -225,6 +258,55 @@ mod tests {
     fn test_derive_provides_no_compute() {
         let provides = derive_provides(&["health.check", "primal.info"]);
         assert!(provides.is_empty());
+    }
+
+    #[test]
+    fn songbird_capabilities_include_functional_domains() {
+        let caps = songbird_capability_domains();
+        for expected in &[
+            "tensor",
+            "math",
+            "stats",
+            "linalg",
+            "ml",
+            "spectral",
+            "activation",
+            "noise",
+            "rng",
+            "fhe",
+            "device",
+        ] {
+            assert!(
+                caps.contains(&(*expected).to_string()),
+                "songbird capabilities should include {expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn songbird_capabilities_exclude_meta_domains() {
+        let caps = songbird_capability_domains();
+        for excluded in SONGBIRD_EXCLUDED_DOMAINS {
+            assert!(
+                !caps.contains(&(*excluded).to_string()),
+                "songbird capabilities should NOT include meta domain {excluded}"
+            );
+        }
+    }
+
+    #[test]
+    fn songbird_capabilities_derived_not_hardcoded() {
+        let caps = songbird_capability_domains();
+        let mut expected_domains = BTreeSet::new();
+        for method in REGISTERED_METHODS {
+            if let Some(domain) = domain_of(method) {
+                if !SONGBIRD_EXCLUDED_DOMAINS.contains(&domain) {
+                    expected_domains.insert(domain.to_string());
+                }
+            }
+        }
+        let expected: Vec<String> = expected_domains.into_iter().collect();
+        assert_eq!(caps, expected, "songbird caps must match derived domains");
     }
 
     #[test]

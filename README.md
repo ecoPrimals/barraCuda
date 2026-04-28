@@ -60,6 +60,7 @@ results.
 
 ## Recent
 
+- **Sprint 47: Songbird Self-Registration (Apr 28)**: `ipc.register` to Songbird via `DISCOVERY_SOCKET` at startup — 11 capability domains (tensor, math, stats, linalg, ml, spectral, activation, noise, rng, fhe, device) derived from `REGISTERED_METHODS`. Fire-and-forget. Per Phase 55b.
 - **Sprint 46: NUCLEUS Env Var Wiring + Deep Debt (Apr 28)**: Per Phase 55 two-tier crypto model — `BEARDOG_SOCKET`/`BTSP_PROVIDER_SOCKET` wired as preferred discovery, `DISCOVERY_SOCKET` (Songbird) wired as async `ipc.resolve` fallback, `FAMILY_SEED` error message corrected. Role-based naming evolution (`beardog_*` → `provider_*`/`security_provider_rpc`). 12-axis deep debt audit clean.
 - **Sprint 45/45b: JSON-RPC Surface Expansion + Deep Debt (Apr 26)**: 11 new method registrations (39→50) for neuralSpring parity — `linalg.svd`, `linalg.qr`, `stats.chi_squared`, `stats.anova_oneway`, `activation.softmax`, `activation.gelu`, `spectral.stft`, `ml.mlp_forward`, `ml.attention` + 2 aliases (`stats.eigh`, `stats.pearson`). New `methods/ml.rs` and `methods/spectral.rs` modules. `math.rs` smart-refactored (819→641L). Shared `params.rs` eliminates DRY violation. 36 new coverage tests. 12-axis deep debt audit clean.
 - **Sprint 44g: BTSP Wire Fix + 12-Axis Audit (Apr 24)**: `security_provider_rpc()` `writer.shutdown()` → `writer.flush()` — fixes BearDog connection loss. 12-axis deep debt audit clean bill. 4,393+ tests, all quality gates green.

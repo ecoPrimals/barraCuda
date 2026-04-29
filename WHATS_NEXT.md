@@ -1,11 +1,17 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-04-28.
+Prioritized work items, ordered by impact. Updated 2026-04-29.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 48: BTSP-BARRACUDA-WIRE Closure (Apr 29)**: Confirmed
+  `PRIMAL_GAPS.md` BTSP-BARRACUDA-WIRE gap is stale (resolved Sprint 44h-44i).
+  tarpc keyed-cipher enforcement: `serve_tarpc_unix` rejects BTSP connections
+  with keyed cipher (ChaCha20-Poly1305 / HMAC) — JSON-RPC is the correct
+  transport for encrypted connections. 2 new full-relay integration tests
+  with mock security provider. 26 BTSP compliance tests (was 22).
 - **Sprint 47b: Deep Debt (Apr 28)**: Role-based naming evolution
   (`register_with_songbird`→`register_with_discovery`). naga-exec silent
   `_ => 0.0` fallbacks → typed `TypeMismatch` errors. autotune observability.

@@ -5,7 +5,14 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.12] — 2026-04-28
+## [0.3.12] — 2026-04-29
+
+### Changed — Sprint 48: BTSP-BARRACUDA-WIRE Closure + tarpc Cipher Enforcement (Apr 29 2026)
+
+- **BTSP-BARRACUDA-WIRE gap closed**: `PRIMAL_GAPS.md` entry confirmed stale — full 7-step relay (`ClientHello` → `session.create` → `ServerHello` → `ChallengeResponse` → `session.verify` → `HandshakeComplete` → `BtspSession`) has been implemented since Sprint 44h-44i
+- **tarpc keyed-cipher enforcement**: `serve_tarpc_unix` now rejects connections that negotiated a keyed cipher (ChaCha20-Poly1305 or HMAC-SHA256) with a diagnostic log — tarpc's binary `LengthDelimitedCodec` framing is incompatible with BTSP frame encryption; JSON-RPC is the correct transport for encrypted connections
+- **2 new full-relay integration tests**: `btsp_full_relay_authenticated_null_cipher` (mock security provider, 7-step happy path, asserts `BtspOutcome::Authenticated(Null)`) and `btsp_full_relay_rejected_by_provider` (session.verify rejection, asserts `BtspOutcome::Rejected`). 26 BTSP compliance tests total (was 22)
+- `tempfile` added as dev-dependency for integration test temp sockets
 
 ### Changed — Sprint 47b: Deep Debt — Role-Based Naming + naga-exec Correctness (Apr 28 2026)
 

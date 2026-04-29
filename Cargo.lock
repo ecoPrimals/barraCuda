@@ -168,6 +168,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "tarpc",
+ "tempfile",
  "thiserror",
  "tokio",
  "tokio-serde",

@@ -276,3 +276,235 @@ fn btsp_outcome_rejected_refuses_connection() {
         "rejected outcome should refuse connection"
     );
 }
+
+// ── Full relay integration (mock security provider) ─────────────────
+
+/// Spawn a mock security-domain provider that accepts one connection and
+/// handles `btsp.session.create` + `btsp.session.verify` sequentially
+/// on the same stream (per SOURDOUGH_BTSP_RELAY_PATTERN).
+async fn spawn_mock_provider(sock_path: &std::path::Path) -> tokio::task::JoinHandle<()> {
+    let listener = tokio::net::UnixListener::bind(sock_path).unwrap();
+    tokio::spawn(async move {
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+
+        let (stream, _) = listener.accept().await.unwrap();
+        let mut reader = BufReader::new(stream);
+
+        for id in [1u64, 2] {
+            let mut line = String::new();
+            reader.read_line(&mut line).await.unwrap();
+            let req: serde_json::Value = serde_json::from_str(&line).unwrap();
+
+            let method = req["method"].as_str().unwrap();
+            let response = match method {
+                "btsp.session.create" => serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "result": {
+                        "session_token": "tok-abc123",
+                        "server_ephemeral_pub": "mock_server_pub_b64==",
+                        "challenge": "mock_challenge_b64=="
+                    }
+                }),
+                "btsp.session.verify" => serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "result": {
+                        "verified": true,
+                        "cipher": "none",
+                        "session_key": ""
+                    }
+                }),
+                other => serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "error": { "code": -32601, "message": format!("unknown method: {other}") }
+                }),
+            };
+            let mut resp_line = serde_json::to_string(&response).unwrap();
+            resp_line.push('\n');
+            reader
+                .get_mut()
+                .write_all(resp_line.as_bytes())
+                .await
+                .unwrap();
+            reader.get_mut().flush().await.unwrap();
+        }
+    })
+}
+
+#[tokio::test]
+async fn btsp_full_relay_authenticated_null_cipher() {
+    let tmp = tempfile::tempdir().unwrap();
+    let provider_sock = tmp.path().join("provider.sock");
+
+    unsafe { clear_family_env() };
+    unsafe {
+        std::env::set_var("FAMILY_ID", "relay-test-family");
+        std::env::set_var("FAMILY_SEED", "test-seed-value");
+        std::env::set_var("BTSP_PROVIDER_SOCKET", provider_sock.to_str().unwrap());
+    }
+
+    let provider_handle = spawn_mock_provider(&provider_sock).await;
+    // Small yield to let the listener bind
+    tokio::task::yield_now().await;
+
+    let (mut client, mut server) = tokio::io::duplex(8192);
+
+    let client_task = tokio::spawn(async move {
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+
+        let hello = serde_json::json!({
+            "type": "ClientHello",
+            "version": 1,
+            "client_ephemeral_pub": "mock_client_pub_b64=="
+        });
+        let mut line = serde_json::to_string(&hello).unwrap();
+        line.push('\n');
+        client.write_all(line.as_bytes()).await.unwrap();
+        client.flush().await.unwrap();
+
+        let mut reader = BufReader::new(client);
+        let mut server_hello_line = String::new();
+        reader.read_line(&mut server_hello_line).await.unwrap();
+        let server_hello: serde_json::Value = serde_json::from_str(&server_hello_line).unwrap();
+        assert_eq!(server_hello["type"], "ServerHello");
+        assert_eq!(
+            server_hello["server_ephemeral_pub"],
+            "mock_server_pub_b64=="
+        );
+        assert_eq!(server_hello["challenge"], "mock_challenge_b64==");
+
+        let challenge_resp = serde_json::json!({
+            "type": "ChallengeResponse",
+            "response": "mock_hmac_b64==",
+            "preferred_cipher": "none"
+        });
+        let mut resp_line = serde_json::to_string(&challenge_resp).unwrap();
+        resp_line.push('\n');
+        reader
+            .get_mut()
+            .write_all(resp_line.as_bytes())
+            .await
+            .unwrap();
+        reader.get_mut().flush().await.unwrap();
+
+        let mut complete_line = String::new();
+        reader.read_line(&mut complete_line).await.unwrap();
+        let complete: serde_json::Value = serde_json::from_str(&complete_line).unwrap();
+        assert_eq!(complete["type"], "HandshakeComplete");
+        assert_eq!(complete["session_id"], "tok-abc123");
+    });
+
+    let outcome = guard_connection(&mut server).await;
+    assert!(
+        matches!(&outcome, BtspOutcome::Authenticated(session) if session.cipher == barracuda_core::ipc::btsp::BtspCipher::Null),
+        "expected Authenticated(Null cipher), got {outcome:?}"
+    );
+    let session = outcome.session().unwrap();
+    assert_eq!(session.session_id, "tok-abc123");
+    assert!(session.session_key.is_empty());
+
+    client_task.await.unwrap();
+    provider_handle.await.unwrap();
+}
+
+#[tokio::test]
+async fn btsp_full_relay_rejected_by_provider() {
+    let tmp = tempfile::tempdir().unwrap();
+    let provider_sock = tmp.path().join("provider-reject.sock");
+
+    unsafe { clear_family_env() };
+    unsafe {
+        std::env::set_var("FAMILY_ID", "reject-test-family");
+        std::env::set_var("FAMILY_SEED", "test-seed");
+        std::env::set_var("BTSP_PROVIDER_SOCKET", provider_sock.to_str().unwrap());
+    }
+
+    let listener = tokio::net::UnixListener::bind(&provider_sock).unwrap();
+    let provider_handle = tokio::spawn(async move {
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+        let (stream, _) = listener.accept().await.unwrap();
+        let mut reader = BufReader::new(stream);
+
+        // session.create succeeds
+        let mut line = String::new();
+        reader.read_line(&mut line).await.unwrap();
+        let resp = serde_json::json!({
+            "jsonrpc": "2.0", "id": 1,
+            "result": {
+                "session_token": "tok-rej",
+                "server_ephemeral_pub": "srv_pub==",
+                "challenge": "chal=="
+            }
+        });
+        let mut resp_line = serde_json::to_string(&resp).unwrap();
+        resp_line.push('\n');
+        reader
+            .get_mut()
+            .write_all(resp_line.as_bytes())
+            .await
+            .unwrap();
+        reader.get_mut().flush().await.unwrap();
+
+        // session.verify rejects
+        let mut line2 = String::new();
+        reader.read_line(&mut line2).await.unwrap();
+        let reject = serde_json::json!({
+            "jsonrpc": "2.0", "id": 2,
+            "result": {
+                "verified": false,
+                "reason": "HMAC mismatch"
+            }
+        });
+        let mut rej_line = serde_json::to_string(&reject).unwrap();
+        rej_line.push('\n');
+        reader
+            .get_mut()
+            .write_all(rej_line.as_bytes())
+            .await
+            .unwrap();
+        reader.get_mut().flush().await.unwrap();
+    });
+
+    tokio::task::yield_now().await;
+
+    let (mut client, mut server) = tokio::io::duplex(8192);
+    tokio::spawn(async move {
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+
+        let hello = serde_json::json!({
+            "type": "ClientHello",
+            "client_ephemeral_pub": "client_pub=="
+        });
+        let mut line = serde_json::to_string(&hello).unwrap();
+        line.push('\n');
+        client.write_all(line.as_bytes()).await.unwrap();
+        client.flush().await.unwrap();
+
+        let mut reader = BufReader::new(client);
+        let mut sh = String::new();
+        reader.read_line(&mut sh).await.unwrap();
+
+        let resp = serde_json::json!({
+            "type": "ChallengeResponse",
+            "response": "bad_hmac==",
+            "preferred_cipher": "none"
+        });
+        let mut line = serde_json::to_string(&resp).unwrap();
+        line.push('\n');
+        reader.get_mut().write_all(line.as_bytes()).await.unwrap();
+        reader.get_mut().flush().await.unwrap();
+
+        // Connection may close — that's expected
+        let _ = reader.read_line(&mut String::new()).await;
+    });
+
+    let outcome = guard_connection(&mut server).await;
+    assert!(
+        matches!(&outcome, BtspOutcome::Rejected { reason } if reason.contains("HMAC")),
+        "expected Rejected, got {outcome:?}"
+    );
+
+    provider_handle.await.unwrap();
+}

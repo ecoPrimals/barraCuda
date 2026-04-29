@@ -248,6 +248,17 @@ impl IpcServer {
                             tracing::warn!("BTSP handshake rejected tarpc connection: {outcome:?}");
                             return;
                         }
+                        if let Some(session) = outcome.session() {
+                            if session.cipher.requires_key() {
+                                tracing::warn!(
+                                    cipher = ?session.cipher,
+                                    "tarpc does not support BTSP-encrypted frames — \
+                                     rejecting keyed-cipher connection (use JSON-RPC for \
+                                     encrypted transport)"
+                                );
+                                return;
+                            }
+                        }
                         let transport = tarpc::serde_transport::new(
                             tokio_util::codec::LengthDelimitedCodec::builder()
                                 .max_frame_length(max_frame_bytes())

@@ -187,19 +187,25 @@ impl CpuExecutor {
 
     pub(crate) fn execute_binary_cpu(&self, op: &MathOp, a: &[f32], b: &[f32]) -> Result<Vec<f32>> {
         use MathOp::{Add, Div, Max, Min, Mul, Pow, Sub};
+        let f: Box<dyn Fn(f32, f32) -> f32 + Sync> = match op {
+            Add => Box::new(|x, y| x + y),
+            Sub => Box::new(|x, y| x - y),
+            Mul => Box::new(|x, y| x * y),
+            Div => Box::new(|x, y| x / y),
+            Pow => Box::new(f32::powf),
+            Max => Box::new(f32::max),
+            Min => Box::new(f32::min),
+            other => {
+                return Err(crate::error::BarracudaError::invalid_op(
+                    format!("{other:?}"),
+                    "not a binary elementwise operation",
+                ));
+            }
+        };
         let output: Vec<f32> = a
             .par_iter()
             .zip(b.par_iter())
-            .map(|(&x, &y)| match op {
-                Add => x + y,
-                Sub => x - y,
-                Mul => x * y,
-                Div => x / y,
-                Pow => x.powf(y),
-                Max => x.max(y),
-                Min => x.min(y),
-                _ => 0.0,
-            })
+            .map(|(&x, &y)| f(x, y))
             .collect();
         Ok(output)
     }
@@ -220,7 +226,12 @@ impl CpuExecutor {
                 .fold(|| f32::INFINITY, f32::min)
                 .reduce(|| f32::INFINITY, f32::min),
             ReduceProd { .. } => input.par_iter().product(),
-            _ => 0.0,
+            other => {
+                return Err(crate::error::BarracudaError::invalid_op(
+                    format!("{other:?}"),
+                    "not a reduction operation",
+                ));
+            }
         };
         Ok(result)
     }

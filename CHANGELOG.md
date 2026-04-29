@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.12] — 2026-04-29
 
+### Changed — Sprint 48b: 12-Axis Deep Debt Audit + Remediation (Apr 29 2026)
+
+- **cpu_executor correctness**: `execute_binary_cpu` and `execute_reduce_cpu` silent `_ => 0.0` fallbacks evolved to typed `BarracudaError::InvalidOperation` errors — was producing all-zero tensors for unhandled `MathOp` variants
+- **autotune named constants**: bare `256` default → `WORKGROUP_SIZE_1D`; sweep `[32, 64, 128, 256]` → `CALIBRATION_WG_SIZES`; test size → `CALIBRATION_TEST_SIZE`; non-serde `let _ = read_to_string` → `tracing::debug`
+- **BatchGuard Drop observability**: `let _ = self.ctx.end_batch()` → `tracing::debug` on failure
+- **npu_executor named constant**: `_ => 0.5` default score → `NPU_SCORE_DEFAULT`
+- 12-axis audit confirmed clean across all axes
+
 ### Changed — Sprint 48: BTSP-BARRACUDA-WIRE Closure + tarpc Cipher Enforcement (Apr 29 2026)
 
 - **BTSP-BARRACUDA-WIRE gap closed**: `PRIMAL_GAPS.md` entry confirmed stale — full 7-step relay (`ClientHello` → `session.create` → `ServerHello` → `ChallengeResponse` → `session.verify` → `HandshakeComplete` → `BtspSession`) has been implemented since Sprint 44h-44i

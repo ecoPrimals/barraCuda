@@ -9,10 +9,17 @@
 //! - Work seamlessly with unknown/new hardware
 //! - Cache calibrations per GPU for fast startup
 
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::RwLock;
 use std::time::Instant;
+
+/// Workgroup sizes to sweep during bandwidth calibration.
+const CALIBRATION_WG_SIZES: [u32; 4] = [32, 64, 128, 256];
+
+/// Element count for the bandwidth probe buffer.
+const CALIBRATION_TEST_SIZE: usize = 4_000_000;
 
 use wgpu::util::DeviceExt;
 
@@ -48,7 +55,7 @@ impl Default for GpuCalibration {
         Self {
             device_id: String::new(),
             device_name: String::new(),
-            optimal_workgroup_size: 256, // Safe default
+            optimal_workgroup_size: WORKGROUP_SIZE_1D,
             peak_bandwidth_gbps: 0.0,
             dispatch_overhead_us: 0.0,
             calibrated_at: 0,
@@ -94,9 +101,13 @@ impl AutoTuner {
                 }
             }
         }
-        // Without serde, we still check file exists but can't parse
         #[cfg(not(feature = "serde"))]
-        let _ = std::fs::read_to_string(&cache_path);
+        if let Err(e) = std::fs::read_to_string(&cache_path) {
+            tracing::debug!(
+                "autotune cache at {}: {e} (serde disabled, cannot parse)",
+                cache_path.display()
+            );
+        }
 
         tuner
     }
@@ -140,15 +151,11 @@ impl AutoTuner {
     fn calibrate_device(&self, wgpu_device: &impl GpuDeviceForCalibration) -> GpuCalibration {
         let device = wgpu_device.device();
         let device_name = wgpu_device.name();
-        // Test workgroup sizes
-        let wg_sizes = [32, 64, 128, 256];
-        let test_size = 4_000_000usize;
-
-        let mut best_wg = 256u32;
+        let mut best_wg = WORKGROUP_SIZE_1D;
         let mut best_bw = 0.0f64;
 
-        for &wg_size in &wg_sizes {
-            if let Some(bw) = self.measure_bandwidth(wgpu_device, wg_size, test_size) {
+        for &wg_size in &CALIBRATION_WG_SIZES {
+            if let Some(bw) = self.measure_bandwidth(wgpu_device, wg_size, CALIBRATION_TEST_SIZE) {
                 if bw > best_bw {
                     best_bw = bw;
                     best_wg = wg_size;

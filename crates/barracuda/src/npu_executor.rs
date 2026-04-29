@@ -19,6 +19,9 @@
 /// SIMD width for neuromorphic cores (parallel processing lanes).
 const NPU_SIMD_WIDTH: usize = 256;
 
+/// Default NPU affinity score for ops without explicit scoring.
+const NPU_SCORE_DEFAULT: f64 = 0.5;
+
 pub(crate) mod npu_defaults {
     pub const SRAM_PER_BOARD_BYTES: u64 = 4 * 1024 * 1024;
     pub const AVAILABLE_PER_BOARD_BYTES: u64 = 3 * 1024 * 1024;
@@ -239,8 +242,7 @@ impl ComputeExecutor for NpuExecutor {
             GELU | Softmax { .. } => 0.2,
             Pow | Div => 0.1,
 
-            // Default
-            _ => 0.5,
+            _ => NPU_SCORE_DEFAULT,
         };
 
         size_score * op_score

@@ -84,7 +84,9 @@ impl Drop for BatchGuard {
     /// not called explicitly.
     fn drop(&mut self) {
         if self.ctx.is_batching() {
-            let _ = self.ctx.end_batch();
+            if let Err(e) = self.ctx.end_batch() {
+                tracing::debug!("BatchGuard::drop end_batch failed: {e}");
+            }
         }
     }
 }

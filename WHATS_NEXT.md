@@ -6,6 +6,9 @@ Prioritized work items, ordered by impact. Updated 2026-04-29.
 
 ## Recently Completed
 
+- **Sprint 48b: 12-Axis Deep Debt (Apr 29)**: cpu_executor `_ => 0.0` → typed
+  errors. autotune magic numbers → named constants. BatchGuard Drop observability.
+  npu_executor default score → named constant. 12-axis audit clean.
 - **Sprint 48: BTSP-BARRACUDA-WIRE Closure (Apr 29)**: Confirmed
   `PRIMAL_GAPS.md` BTSP-BARRACUDA-WIRE gap is stale (resolved Sprint 44h-44i).
   tarpc keyed-cipher enforcement: `serve_tarpc_unix` rejects BTSP connections

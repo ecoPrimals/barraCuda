@@ -5,7 +5,14 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.12] — 2026-04-29
+## [0.3.12] — 2026-04-30
+
+### Added — Sprint 49: IPC Surface Expansion Phase 2 (Apr 30 2026)
+
+- **6 new JSON-RPC methods** (50 → 56): `stats.shannon` (Shannon entropy from counts/frequencies), `stats.covariance` (sample covariance), `stats.spearman` (Spearman rank correlation), `stats.fit_linear` (simple linear regression with R²/RMSE), `stats.empirical_spectral_density` (eigenvalue histogram), `linalg.graph_laplacian` (L = D − A)
+- **`linalg.eigenvalues` / `stats.eigh` enhanced**: now returns both eigenvalues AND eigenvectors (column-major V matrix); backwards-compatible (`result` field still contains eigenvalues)
+- Closes 6 of the 18 IPC surface gaps from primalSpring `PRIMAL_GAPS.md` GAP-11 (`stats.pearson`, `stats.chi_squared`, `linalg.solve`, `ml.mlp_forward` already resolved in Sprint 45)
+- Phase 56c audit items reconciled: BufReader edge-case (resolved Sprint 43), 29 shader absorption (resolved Sprint 43), batched OdeRK45F64 (low priority, deferred)
 
 ### Changed — Sprint 48b: 12-Axis Deep Debt Audit + Remediation (Apr 29 2026)
 

@@ -6,6 +6,11 @@ Prioritized work items, ordered by impact. Updated 2026-04-29.
 
 ## Recently Completed
 
+- **Sprint 49: IPC Surface Expansion Phase 2 (Apr 30)**: 6 new JSON-RPC methods
+  (50 → 56): `stats.shannon`, `stats.covariance`, `stats.spearman`,
+  `stats.fit_linear`, `stats.empirical_spectral_density`, `linalg.graph_laplacian`.
+  `linalg.eigenvalues`/`stats.eigh` enhanced with eigenvectors. Closes 6 of 18
+  primalSpring GAP-11 items. BufReader/shader-absorption gaps confirmed stale.
 - **Sprint 48b: 12-Axis Deep Debt (Apr 29)**: cpu_executor `_ => 0.0` → typed
   errors. autotune magic numbers → named constants. BatchGuard Drop observability.
   npu_executor default score → named constant. 12-axis audit clean.

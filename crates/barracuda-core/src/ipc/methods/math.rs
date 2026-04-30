@@ -504,10 +504,10 @@ pub(super) fn linalg_solve(params: &Value, id: Value) -> JsonRpcResponse {
     JsonRpcResponse::success(id, serde_json::json!({ "result": x }))
 }
 
-/// `linalg.eigenvalues` — eigenvalues of a symmetric matrix via Jacobi iteration.
+/// `linalg.eigenvalues` / `stats.eigh` — eigendecomposition of a symmetric matrix via Jacobi.
 ///
-/// Inline-data CPU path for composition graphs (small N). GPU path
-/// available via `tensor.create` + GPU `Eigh` for large matrices.
+/// Returns both eigenvalues and eigenvectors. The eigenvector matrix V is
+/// column-major: column k is the eigenvector for eigenvalue k.
 pub(super) fn linalg_eigenvalues(params: &Value, id: Value) -> JsonRpcResponse {
     let Some(matrix) = extract_matrix(params, "matrix") else {
         return JsonRpcResponse::error(
@@ -524,6 +524,10 @@ pub(super) fn linalg_eigenvalues(params: &Value, id: Value) -> JsonRpcResponse {
         return JsonRpcResponse::error(id, INVALID_PARAMS, "Matrix must be square");
     }
     let mut a: Vec<f64> = matrix.into_iter().flatten().collect();
+    let mut v = vec![0.0; n * n];
+    for i in 0..n {
+        v[i * n + i] = 1.0;
+    }
     let max_iter = 100 * n * n;
     for _ in 0..max_iter {
         let mut max_off = 0.0_f64;
@@ -561,9 +565,21 @@ pub(super) fn linalg_eigenvalues(params: &Value, id: Value) -> JsonRpcResponse {
             new_a[q * n + j] = (-sin_t).mul_add(a[p * n + j], cos_t * a[q * n + j]);
         }
         a = new_a;
+        let mut new_v = v.clone();
+        for i in 0..n {
+            new_v[i * n + p] = cos_t.mul_add(v[i * n + p], sin_t * v[i * n + q]);
+            new_v[i * n + q] = (-sin_t).mul_add(v[i * n + p], cos_t * v[i * n + q]);
+        }
+        v = new_v;
     }
     let eigenvalues: Vec<f64> = (0..n).map(|i| a[i * n + i]).collect();
-    JsonRpcResponse::success(id, serde_json::json!({ "result": eigenvalues }))
+    let eigenvectors: Vec<Vec<f64>> = (0..n)
+        .map(|col| (0..n).map(|row| v[row * n + col]).collect())
+        .collect();
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({ "eigenvalues": eigenvalues, "eigenvectors": eigenvectors, "result": eigenvalues }),
+    )
 }
 
 /// `linalg.svd` — singular value decomposition A = UΣV^T.
@@ -638,4 +654,134 @@ pub(super) fn linalg_qr(params: &Value, id: Value) -> JsonRpcResponse {
         }
         Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("QR failed: {e}")),
     }
+}
+
+/// `linalg.graph_laplacian` — compute graph Laplacian L = D - A.
+///
+/// Params: `adjacency` (flat row-major array), `n` (dimension).
+pub(super) fn linalg_graph_laplacian(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(adjacency) = extract_f64_array(params, "adjacency") else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: adjacency (array)",
+        );
+    };
+    let Some(n) = params.get("n").and_then(|v| v.as_u64()) else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: n (integer)");
+    };
+    #[expect(clippy::cast_possible_truncation, reason = "n is a matrix dimension")]
+    let n = n as usize;
+    if n == 0 || adjacency.len() != n * n {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            format!("adjacency length {} != n*n ({})", adjacency.len(), n * n),
+        );
+    }
+    let laplacian = barracuda::linalg::graph_laplacian(&adjacency, n);
+    let rows: Vec<Vec<f64>> = laplacian.chunks(n).map(<[f64]>::to_vec).collect();
+    JsonRpcResponse::success(id, serde_json::json!({ "result": rows, "n": n }))
+}
+
+// ── New statistics handlers (Sprint 49) ─────────────────────────────────
+
+/// `stats.shannon` — Shannon entropy H' = −Σ pᵢ ln(pᵢ).
+///
+/// Accepts either raw `counts` (normalized internally) or pre-normalized
+/// `frequencies`. Returns natural-log entropy (nats).
+pub(super) fn stats_shannon(params: &Value, id: Value) -> JsonRpcResponse {
+    if let Some(freqs) = extract_f64_array(params, "frequencies") {
+        let h = barracuda::stats::shannon_from_frequencies(&freqs);
+        return JsonRpcResponse::success(id, serde_json::json!({ "result": h, "unit": "nats" }));
+    }
+    let Some(counts) = extract_f64_array(params, "counts") else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: counts or frequencies (array)",
+        );
+    };
+    let h = barracuda::stats::shannon(&counts);
+    JsonRpcResponse::success(id, serde_json::json!({ "result": h, "unit": "nats" }))
+}
+
+/// `stats.covariance` — sample covariance of two vectors.
+pub(super) fn stats_covariance(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(x) = extract_f64_array(params, "x") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: x (array)");
+    };
+    let Some(y) = extract_f64_array(params, "y") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: y (array)");
+    };
+    match barracuda::stats::covariance(&x, &y) {
+        Ok(cov) => JsonRpcResponse::success(
+            id,
+            serde_json::json!({ "result": cov, "convention": "sample", "denominator": "N-1" }),
+        ),
+        Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("covariance failed: {e}")),
+    }
+}
+
+/// `stats.spearman` — Spearman rank correlation coefficient.
+pub(super) fn stats_spearman(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(x) = extract_f64_array(params, "x") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: x (array)");
+    };
+    let Some(y) = extract_f64_array(params, "y") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: y (array)");
+    };
+    match barracuda::stats::spearman_correlation(&x, &y) {
+        Ok(rho) => JsonRpcResponse::success(id, serde_json::json!({ "result": rho })),
+        Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("spearman failed: {e}")),
+    }
+}
+
+/// `stats.fit_linear` — simple linear regression y = a·x + b.
+///
+/// Returns slope, intercept, R², and RMSE.
+pub(super) fn stats_fit_linear(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(x) = extract_f64_array(params, "x") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: x (array)");
+    };
+    let Some(y) = extract_f64_array(params, "y") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: y (array)");
+    };
+    match barracuda::stats::fit_linear(&x, &y) {
+        Some(fit) => JsonRpcResponse::success(
+            id,
+            serde_json::json!({
+                "slope": fit.params[0],
+                "intercept": fit.params[1],
+                "r_squared": fit.r_squared,
+                "rmse": fit.rmse,
+                "result": { "slope": fit.params[0], "intercept": fit.params[1] },
+            }),
+        ),
+        None => JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Linear fit failed (need ≥2 points with non-degenerate x)",
+        ),
+    }
+}
+
+/// `stats.empirical_spectral_density` — eigenvalue histogram (normalized).
+///
+/// Params: `eigenvalues` (array), `n_bins` (integer, default 50).
+pub(super) fn stats_empirical_spectral_density(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(eigenvalues) = extract_f64_array(params, "eigenvalues") else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: eigenvalues (array)",
+        );
+    };
+    #[expect(clippy::cast_possible_truncation, reason = "n_bins is a bin count")]
+    let n_bins = params.get("n_bins").and_then(|v| v.as_u64()).unwrap_or(50) as usize;
+    let (centers, density) = barracuda::stats::empirical_spectral_density(&eigenvalues, n_bins);
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({ "bin_centers": centers, "density": density, "n_bins": n_bins }),
+    )
 }

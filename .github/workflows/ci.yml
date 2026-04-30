@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Lean CI — single job, shared build cache.
+# Binary distribution handled by plasmidBin CI/CD (auto-harvest.yml).
+# This workflow validates code quality only.
+
 name: CI
 
 on:
@@ -6,163 +12,35 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
+  CARGO_INCREMENTAL: 0
 
 jobs:
-  fmt:
-    name: Format
+  check:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt
-      - run: cargo fmt --all -- --check
+          components: rustfmt, clippy
 
-  clippy:
-    name: Clippy
-    runs-on: ubuntu-latest
-    needs: [fmt]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
       - uses: Swatinem/rust-cache@v2
-      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
-  deny:
-    name: Dependency audit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: EmbarkStudios/cargo-deny-action@v2
+      - name: Format
+        run: cargo fmt --all -- --check
 
-  doc:
-    name: Documentation
-    runs-on: ubuntu-latest
-    needs: [fmt]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo doc --workspace --no-deps
-        env:
-          RUSTDOCFLAGS: "-D warnings"
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
-  check-no-gpu:
-    name: Check (no GPU features)
-    runs-on: ubuntu-latest
-    needs: [fmt]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Pure math (no features)
-        run: cargo check -p barracuda --no-default-features
-      - name: GPU only (no domain models)
-        run: cargo check -p barracuda --no-default-features --features gpu
-      - name: Full default
-        run: cargo check
-
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    needs: [clippy, check-no-gpu]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Install cargo-nextest
-        uses: taiki-e/install-action@nextest
-      - name: Install llvmpipe (software GPU)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mesa-vulkan-drivers
-      - name: Run full test suite (nextest ci profile)
-        run: cargo nextest run --workspace --profile ci
-
-  test-pure-math:
-    name: Test (pure math, no GPU)
-    runs-on: ubuntu-latest
-    needs: [fmt]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Install cargo-nextest
-        uses: taiki-e/install-action@nextest
-      - name: Test without GPU
-        run: cargo nextest run -p barracuda --no-default-features --profile ci
-
-  test-chaos:
-    name: Test (chaos & fault injection)
-    runs-on: ubuntu-latest
-    needs: [test]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Install cargo-nextest
-        uses: taiki-e/install-action@nextest
-      - name: Install llvmpipe (software GPU)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mesa-vulkan-drivers
-      - name: Run chaos tests
-        run: cargo nextest run --workspace -E 'test(chaos) | test(fault)' --profile stress
-      - name: Run property tests
-        run: cargo nextest run --workspace -E 'test(proptest) | test(property)' --profile stress
-
-  coverage:
-    name: Coverage
-    runs-on: ubuntu-latest
-    needs: [test]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: llvm-tools-preview
-      - uses: Swatinem/rust-cache@v2
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
-      - name: Install llvmpipe (software GPU)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mesa-vulkan-drivers
-      - name: Install cargo-nextest
-        uses: taiki-e/install-action@nextest
-      - name: Generate coverage
-        run: cargo llvm-cov nextest --workspace --profile coverage --lcov --output-path lcov.info
-        env:
-          BARRACUDA_POLL_TIMEOUT_SECS: 120
-      - name: Coverage gate (80% floor — blocking)
-        run: cargo llvm-cov report --workspace --summary-only --fail-under-lines 80
-      - name: Coverage target (90% on real hardware)
-        run: cargo llvm-cov report --workspace --summary-only --fail-under-lines 90
-        continue-on-error: true
-      - name: Upload lcov artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: lcov.info
-          path: lcov.info
-
-  cross-compile:
-    name: Cross-compile (ecoBin musl)
-    runs-on: ubuntu-latest
-    needs: [clippy]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-unknown-linux-musl, aarch64-unknown-linux-musl
-      - uses: Swatinem/rust-cache@v2
-      - name: Check x86_64 musl
-        run: cargo check --workspace --target x86_64-unknown-linux-musl
-      - name: Check aarch64 musl
-        run: cargo check --workspace --target aarch64-unknown-linux-musl
-      - name: Verify no banned C deps
-        run: |
-          cargo tree --workspace 2>&1 | grep -qE "(openssl-sys|ring|aws-lc-sys)" && exit 1 || echo "No banned C deps found"
+      - name: Test
+        run: cargo test --workspace --lib

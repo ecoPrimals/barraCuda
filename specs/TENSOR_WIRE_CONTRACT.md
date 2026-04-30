@@ -2,7 +2,7 @@
 
 # Tensor IPC Wire Contract
 
-**Status**: Sprint 48b — BTSP-BARRACUDA-WIRE closure + 12-axis deep debt audit clean
+**Status**: Sprint 49b — 56 methods, deny.toml BSD-3-Clause fix, 12-axis audit clean
 **Version**: 1.1.0
 **Authority**: barraCuda primal (self-knowledge)
 **Implements**: wateringHole `PRIMAL_IPC_PROTOCOL.md` v3.1, `SEMANTIC_METHOD_NAMING_STANDARD.md`

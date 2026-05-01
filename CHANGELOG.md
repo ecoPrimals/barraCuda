@@ -5,7 +5,16 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.12] — 2026-04-30
+## [0.3.12] — 2026-05-01
+
+### Added — Sprint 50: Phase 56 PG-47 + Graph PGM (May 1 2026)
+
+- **PG-47 resolved**: `stats.entropy` alias wired → dispatches to `stats.shannon` (Shannon entropy). primalSpring callers using `stats.entropy` no longer get method-not-found
+- **`graph.belief_propagation`**: chain PGM forward pass (HMM-like) via `barracuda::linalg::belief_propagation_chain`. Accepts `input` dist, `transitions` (array of flat row-major matrices), `layer_dims`
+- **IPC method count**: 56 → **58** registered methods
+- **graph.rs module**: extracted `linalg.graph_laplacian` + `graph.belief_propagation` from `math.rs` into dedicated `methods/graph.rs` (math.rs 837→760 lines)
+- **Sprint 50 coverage tests**: 7 tests covering stats.entropy alias, Shannon frequencies path, Shannon missing params, belief propagation identity/two-layer/missing-input/mismatched-lengths
+- **BTSP Phase 3 assessment**: server-side relay + ChaCha20-Poly1305 framing already wired; client-side BTSP deferred to sourDough scaffold; X25519 ECDH by-design BearDog-side
 
 ### Added — Sprint 49: IPC Surface Expansion Phase 2 (Apr 30 2026)
 

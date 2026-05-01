@@ -656,34 +656,6 @@ pub(super) fn linalg_qr(params: &Value, id: Value) -> JsonRpcResponse {
     }
 }
 
-/// `linalg.graph_laplacian` — compute graph Laplacian L = D - A.
-///
-/// Params: `adjacency` (flat row-major array), `n` (dimension).
-pub(super) fn linalg_graph_laplacian(params: &Value, id: Value) -> JsonRpcResponse {
-    let Some(adjacency) = extract_f64_array(params, "adjacency") else {
-        return JsonRpcResponse::error(
-            id,
-            INVALID_PARAMS,
-            "Missing required param: adjacency (array)",
-        );
-    };
-    let Some(n) = params.get("n").and_then(|v| v.as_u64()) else {
-        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: n (integer)");
-    };
-    #[expect(clippy::cast_possible_truncation, reason = "n is a matrix dimension")]
-    let n = n as usize;
-    if n == 0 || adjacency.len() != n * n {
-        return JsonRpcResponse::error(
-            id,
-            INVALID_PARAMS,
-            format!("adjacency length {} != n*n ({})", adjacency.len(), n * n),
-        );
-    }
-    let laplacian = barracuda::linalg::graph_laplacian(&adjacency, n);
-    let rows: Vec<Vec<f64>> = laplacian.chunks(n).map(<[f64]>::to_vec).collect();
-    JsonRpcResponse::success(id, serde_json::json!({ "result": rows, "n": n }))
-}
-
 // ── New statistics handlers (Sprint 49) ─────────────────────────────────
 
 /// `stats.shannon` — Shannon entropy H' = −Σ pᵢ ln(pᵢ).

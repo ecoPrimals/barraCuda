@@ -12,6 +12,7 @@ mod batch;
 mod compute;
 mod device;
 mod fhe;
+mod graph;
 mod health;
 mod math;
 mod ml;
@@ -66,6 +67,7 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     "stats.chi_squared",
     "stats.anova_oneway",
     "stats.shannon",
+    "stats.entropy",
     "stats.fit_linear",
     "stats.empirical_spectral_density",
     // ── Linear algebra (CPU inline-data) ──────────────────────────────
@@ -75,6 +77,8 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     "linalg.svd",
     "linalg.qr",
     "linalg.graph_laplacian",
+    // ── Graph / PGM (CPU inline-data) ─────────────────────────────────
+    "graph.belief_propagation",
     // ── Spectral (CPU inline-data) ────────────────────────────────────
     "spectral.fft",
     "spectral.power_spectrum",
@@ -160,7 +164,7 @@ pub async fn dispatch(
         "stats.weighted_mean" => math::stats_weighted_mean(params, id),
         "stats.chi_squared" => math::stats_chi_squared(params, id),
         "stats.anova_oneway" => math::stats_anova_oneway(params, id),
-        "stats.shannon" => math::stats_shannon(params, id),
+        "stats.shannon" | "stats.entropy" => math::stats_shannon(params, id),
         "stats.fit_linear" => math::stats_fit_linear(params, id),
         "stats.empirical_spectral_density" => math::stats_empirical_spectral_density(params, id),
         // Linear algebra (CPU inline-data)
@@ -168,7 +172,9 @@ pub async fn dispatch(
         "linalg.eigenvalues" | "stats.eigh" => math::linalg_eigenvalues(params, id),
         "linalg.svd" => math::linalg_svd(params, id),
         "linalg.qr" => math::linalg_qr(params, id),
-        "linalg.graph_laplacian" => math::linalg_graph_laplacian(params, id),
+        "linalg.graph_laplacian" => graph::linalg_graph_laplacian(params, id),
+        // Graph / PGM (CPU inline-data)
+        "graph.belief_propagation" => graph::graph_belief_propagation(params, id),
         // Spectral (CPU inline-data)
         "spectral.fft" => spectral::spectral_fft(params, id),
         "spectral.power_spectrum" => spectral::spectral_power_spectrum(params, id),

@@ -1,11 +1,18 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-04-30.
+Prioritized work items, ordered by impact. Updated 2026-05-01.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 50: Phase 56 PG-47 + Graph PGM (May 1)**: `stats.entropy` alias wired
+  (resolves PG-47 — primalSpring callers no longer get method-not-found).
+  `graph.belief_propagation` wired (chain PGM forward pass via
+  `barracuda::linalg::belief_propagation_chain`). 58 registered methods (was 56).
+  Graph handlers extracted to `methods/graph.rs`. 7 new coverage tests.
+  BTSP Phase 3 assessed: server-side relay + ChaCha20-Poly1305 framing already
+  wired; client-side deferred to sourDough scaffold.
 - **Sprint 49: IPC Surface Expansion Phase 2 (Apr 30)**: 6 new JSON-RPC methods
   (50 → 56): `stats.shannon`, `stats.covariance`, `stats.spearman`,
   `stats.fit_linear`, `stats.empirical_spectral_density`, `linalg.graph_laplacian`.

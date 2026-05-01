@@ -180,7 +180,7 @@ barraCuda/
 ├── crates/
 │   ├── barracuda-core/              # Primal lifecycle wrapper
 │   │   ├── src/lib.rs               # BarraCudaPrimal: start/stop/health
-│   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport (50 methods, Wire Standard L2)
+│   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport (58 methods, Wire Standard L2)
 │   │   ├── src/rpc.rs               # tarpc service definition (16 endpoints, parity with JSON-RPC)
 │   │   └── src/bin/barracuda.rs     # UniBin CLI
 │   └── barracuda/                   # Umbrella crate — all math + GPU
@@ -272,8 +272,9 @@ barraCuda exposes a dual-protocol IPC interface per wateringHole standards:
 | `tolerances.get` | Numerical tolerances for a named operation |
 | `validate.gpu_stack` | GPU validation suite |
 | `compute.dispatch` | Dispatch a named compute operation (zeros, ones, read) |
-| `math.*` / `stats.*` | `math.sigmoid`, `math.log2`, `stats.mean`, `stats.std_dev`, `stats.variance`, `stats.correlation`, `stats.pearson`, `stats.weighted_mean`, `stats.chi_squared`, `stats.anova_oneway`, `stats.eigh` |
-| `linalg.*` | `linalg.solve`, `linalg.eigenvalues`, `linalg.svd`, `linalg.qr` |
+| `math.*` / `stats.*` | `math.sigmoid`, `math.log2`, `stats.mean`, `stats.std_dev`, `stats.variance`, `stats.correlation`, `stats.pearson`, `stats.spearman`, `stats.covariance`, `stats.weighted_mean`, `stats.chi_squared`, `stats.anova_oneway`, `stats.eigh`, `stats.shannon`, `stats.entropy`, `stats.fit_linear`, `stats.empirical_spectral_density` |
+| `linalg.*` | `linalg.solve`, `linalg.eigenvalues`, `linalg.svd`, `linalg.qr`, `linalg.graph_laplacian` |
+| `graph.*` | `graph.belief_propagation` |
 | `spectral.*` | `spectral.fft`, `spectral.power_spectrum`, `spectral.stft` |
 | `noise.*` / `rng.*` | `noise.perlin2d`, `noise.perlin3d`, `rng.uniform` |
 | `activation.*` | `activation.fitts`, `activation.hick`, `activation.softmax`, `activation.gelu` |
@@ -281,7 +282,7 @@ barraCuda exposes a dual-protocol IPC interface per wateringHole standards:
 | `tensor.*` | `tensor.create`, `matmul`, `matmul_inline`, `add`, `scale`, `clamp`, `reduce`, `sigmoid` |
 | `fhe.*` | `fhe.ntt`, `fhe.pointwise_mul` |
 
-50 methods follow the wateringHole `{domain}.{operation}` Semantic Method Naming
+58 methods follow the wateringHole `{domain}.{operation}` Semantic Method Naming
 Standard v2.2.0. Wire Standard L2 compliant: `capabilities.list` returns the
 `{primal, version, methods}` envelope with `provided_capabilities` grouping.
 `health.liveness`, `health.readiness`, `health.check`, and `capabilities.list`

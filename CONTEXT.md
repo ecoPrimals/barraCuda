@@ -54,8 +54,9 @@ traits are fully internalized.
 | `tensor.*` | `tensor.create`, `tensor.matmul`, `tensor.matmul_inline`, `tensor.add`, `tensor.scale`, `tensor.clamp`, `tensor.reduce`, `tensor.sigmoid` |
 | `fhe.*` | `fhe.ntt`, `fhe.pointwise_mul` |
 | `math.*` | `math.sigmoid`, `math.log2` |
-| `stats.*` | `stats.mean`, `stats.std_dev`, `stats.weighted_mean`, `stats.variance`, `stats.correlation`, `stats.pearson`, `stats.eigh`, `stats.chi_squared`, `stats.anova_oneway` |
-| `linalg.*` | `linalg.solve`, `linalg.eigenvalues`, `linalg.svd`, `linalg.qr` |
+| `stats.*` | `stats.mean`, `stats.std_dev`, `stats.weighted_mean`, `stats.variance`, `stats.correlation`, `stats.pearson`, `stats.spearman`, `stats.covariance`, `stats.eigh`, `stats.chi_squared`, `stats.anova_oneway`, `stats.shannon`, `stats.entropy`, `stats.fit_linear`, `stats.empirical_spectral_density` |
+| `linalg.*` | `linalg.solve`, `linalg.eigenvalues`, `linalg.svd`, `linalg.qr`, `linalg.graph_laplacian` |
+| `graph.*` | `graph.belief_propagation` |
 | `spectral.*` | `spectral.fft`, `spectral.power_spectrum`, `spectral.stft` |
 | `noise.*` | `noise.perlin2d`, `noise.perlin3d` |
 | `rng.*` | `rng.uniform` |
@@ -64,7 +65,7 @@ traits are fully internalized.
 | `doctor.*` | `doctor.validate` |
 | `security.*` | `security.session.create`, `security.session.verify` |
 
-50 methods following wateringHole `{domain}.{operation}` Semantic Method Naming Standard. Wire Standard L2 compliant.
+58 methods following wateringHole `{domain}.{operation}` Semantic Method Naming Standard. Wire Standard L2 compliant.
 
 ## Deployment Constraints
 

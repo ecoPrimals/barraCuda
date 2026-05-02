@@ -239,7 +239,8 @@ fn negotiate_phase3_invalid_session_id() {
         "preferred_cipher": "chacha20-poly1305",
     });
     let err = negotiate_phase3(&session, &params).unwrap_err();
-    assert!(err.contains("session_id"), "error: {err}");
+    assert!(matches!(err, NegotiateError::InvalidSession));
+    assert!(err.to_string().contains("session_id"));
 }
 
 #[test]
@@ -251,7 +252,7 @@ fn negotiate_phase3_missing_session_id() {
     };
     let params = serde_json::json!({ "preferred_cipher": "chacha20-poly1305" });
     let err = negotiate_phase3(&session, &params).unwrap_err();
-    assert!(err.contains("session_id"), "error: {err}");
+    assert!(matches!(err, NegotiateError::InvalidSession));
 }
 
 #[test]

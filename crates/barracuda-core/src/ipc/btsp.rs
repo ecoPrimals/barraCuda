@@ -482,6 +482,17 @@ where
 
 // ── Phase 3 negotiate ───────────────────────────────────────────────
 
+/// Error during `btsp.negotiate` Phase 3 cipher upgrade.
+#[derive(Debug, thiserror::Error)]
+pub enum NegotiateError {
+    /// The `session_id` in the request does not match the connection's session.
+    #[error("Invalid or unknown session_id")]
+    InvalidSession,
+    /// HKDF key derivation failed (structurally unreachable with valid inputs).
+    #[error("HKDF key derivation failed: {0}")]
+    KeyDerivation(String),
+}
+
 /// Outcome of a successful `btsp.negotiate` cipher upgrade.
 #[derive(Debug)]
 pub struct NegotiateResult {
@@ -500,18 +511,18 @@ pub struct NegotiateResult {
 /// the JSON-RPC response.
 ///
 /// Returns `Ok(NegotiateResult)` on success (including graceful fallback to
-/// NULL cipher when key material is unavailable). Returns `Err(String)` only
-/// for hard failures (e.g. mismatched session_id).
+/// NULL cipher when key material is unavailable). Returns `Err` only for
+/// hard failures (mismatched session_id or key derivation failure).
 pub fn negotiate_phase3(
     session: &BtspSession,
     params: &serde_json::Value,
-) -> std::result::Result<NegotiateResult, String> {
+) -> std::result::Result<NegotiateResult, NegotiateError> {
     let requested_id = params
         .get("session_id")
         .and_then(|v| v.as_str())
         .unwrap_or("");
     if requested_id.is_empty() || requested_id != session.session_id {
-        return Err("Invalid or unknown session_id".to_string());
+        return Err(NegotiateError::InvalidSession);
     }
 
     let preferred = params
@@ -544,7 +555,7 @@ pub fn negotiate_phase3(
     let hkdf = Hkdf::<Sha256>::new(Some(&server_nonce), &session.session_key);
     let mut derived_key = [0u8; 32];
     hkdf.expand(b"btsp-v1-phase3", &mut derived_key)
-        .map_err(|e| format!("HKDF key derivation failed: {e}"))?;
+        .map_err(|e| NegotiateError::KeyDerivation(e.to_string()))?;
 
     let nonce_hex = hex_encode(&server_nonce);
     tracing::info!(

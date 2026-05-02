@@ -575,7 +575,7 @@ where
                 keyed.then_some(nr.session),
             )
         }
-        Err(reason) => (JsonRpcResponse::error(id, -32602, reason), None),
+        Err(e) => (JsonRpcResponse::error(id, -32602, e.to_string()), None),
     };
     let mut json = serde_json::to_string(&resp).unwrap_or_else(|_| SERIALIZATION_ERROR.to_string());
     json.push('\n');

@@ -5,7 +5,19 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.12] — 2026-05-01
+## [0.3.12] — 2026-05-02
+
+### Added — Sprint 51: BTSP Phase 3 `btsp.negotiate` (May 2 2026)
+
+- **`btsp.negotiate` server handler**: Phase 3 cipher upgrade — validates session_id, generates 12-byte random server nonce, derives session keys via HKDF-SHA256 (handshake_key + server_nonce), returns `{"cipher":"chacha20-poly1305","server_nonce":"<hex>"}`. Graceful NULL cipher fallback when key material unavailable or unsupported cipher requested
+- **Transport-layer integration**: `handle_connection` now threads `BtspSession` through from handshake. On successful negotiate with keyed cipher, seamlessly switches from plaintext NDJSON to encrypted `BtspFrameReader`/`BtspFrameWriter` framing — zero application-layer disruption
+- **IPC method count**: 58 → **59** registered methods (btsp.negotiate)
+- **`register_with_discovery` extracted**: moved from `transport.rs` to `discovery.rs` (transport.rs 799→787 lines) — discovery logic belongs with discovery module
+- **`BtspCipher` enhanced**: `from_wire` now accepts `chacha20-poly1305` (hyphenated wire name from primalSpring spec); new `wire_name()` method for canonical wire serialization
+- **Session key always captured**: Phase 1 handshake now stores session_key from verify response even when cipher is NULL — key material available for Phase 3 negotiate
+- **`hkdf` dependency**: added `hkdf 0.12` to workspace (pure Rust, RustCrypto)
+- **10 new tests**: negotiate happy path (ChaCha20-Poly1305 key derivation, 12-byte nonce, 32-byte derived key), NULL fallback (no key material), NULL fallback (unsupported cipher), invalid session_id, missing session_id, nonce randomness (two invocations produce different nonces), wire_name roundtrip, hyphenated cipher from_wire, dispatch fallback (no session returns -32600)
+- All quality gates green: fmt, clippy -D warnings, doc -D warnings, deny licenses+bans, 288 barracuda-core tests + 2,107 barracuda tests + 16 naga-exec tests
 
 ### Added — Sprint 50: Phase 56 PG-47 + Graph PGM (May 1 2026)
 

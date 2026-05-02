@@ -186,7 +186,7 @@ async fn handle_connection_valid_request() {
     drop(reader);
     drop(writer);
 
-    handle_connection(primal, client_reader, client_writer, None).await;
+    handle_connection(primal, client_reader, client_writer, None, None).await;
 
     let mut response = String::new();
     tokio::io::AsyncReadExt::read_to_string(&mut server_reader_buf, &mut response)
@@ -207,7 +207,7 @@ async fn handle_connection_parse_error() {
     server_writer.write_all(input.as_bytes()).await.unwrap();
     server_writer.shutdown().await.unwrap();
 
-    handle_connection(primal, client_reader, client_writer, None).await;
+    handle_connection(primal, client_reader, client_writer, None, None).await;
 
     let mut response = String::new();
     tokio::io::AsyncReadExt::read_to_string(&mut server_reader_buf, &mut response)
@@ -232,7 +232,7 @@ async fn handle_connection_multiple_requests() {
     server_writer.write_all(input.as_bytes()).await.unwrap();
     server_writer.shutdown().await.unwrap();
 
-    handle_connection(primal, client_reader, client_writer, None).await;
+    handle_connection(primal, client_reader, client_writer, None, None).await;
 
     let mut response = String::new();
     tokio::io::AsyncReadExt::read_to_string(&mut server_reader_buf, &mut response)
@@ -257,7 +257,7 @@ async fn handle_connection_mixed_valid_invalid() {
     server_writer.write_all(input.as_bytes()).await.unwrap();
     server_writer.shutdown().await.unwrap();
 
-    handle_connection(primal, client_reader, client_writer, None).await;
+    handle_connection(primal, client_reader, client_writer, None, None).await;
 
     let mut response = String::new();
     tokio::io::AsyncReadExt::read_to_string(&mut server_reader_buf, &mut response)
@@ -348,7 +348,7 @@ async fn test_batch_via_connection_handler() {
     server_writer.write_all(input.as_bytes()).await.unwrap();
     server_writer.shutdown().await.unwrap();
 
-    handle_connection(primal, client_reader, client_writer, None).await;
+    handle_connection(primal, client_reader, client_writer, None, None).await;
 
     let mut response = String::new();
     tokio::io::AsyncReadExt::read_to_string(&mut server_reader_buf, &mut response)
@@ -386,7 +386,7 @@ async fn handle_connection_notification_no_reply() {
     server_writer.write_all(input.as_bytes()).await.unwrap();
     server_writer.shutdown().await.unwrap();
 
-    handle_connection(primal, client_reader, client_writer, None).await;
+    handle_connection(primal, client_reader, client_writer, None, None).await;
 
     let mut response = String::new();
     tokio::io::AsyncReadExt::read_to_string(&mut server_reader_buf, &mut response)
@@ -408,7 +408,7 @@ async fn handle_connection_replay_consumed_line() {
     server_writer.write_all(input.as_bytes()).await.unwrap();
     server_writer.shutdown().await.unwrap();
 
-    handle_connection(primal, client_reader, client_writer, Some(replay)).await;
+    handle_connection(primal, client_reader, client_writer, None, Some(replay)).await;
 
     let mut response = String::new();
     tokio::io::AsyncReadExt::read_to_string(&mut server_reader_buf, &mut response)
@@ -478,7 +478,7 @@ async fn handle_connection_whitespace_batch() {
     server_writer.write_all(batch.as_bytes()).await.unwrap();
     server_writer.shutdown().await.unwrap();
 
-    handle_connection(primal, client_reader, client_writer, None).await;
+    handle_connection(primal, client_reader, client_writer, None, None).await;
 
     let mut response = String::new();
     tokio::io::AsyncReadExt::read_to_string(&mut server_reader_buf, &mut response)

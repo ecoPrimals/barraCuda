@@ -154,3 +154,138 @@ fn resolve_family_seed_raw_returns_none_when_unset() {
     }
     assert!(resolve_family_seed_raw().is_none());
 }
+
+// ── Phase 3 negotiate tests ─────────────────────────────────────────
+
+#[test]
+fn negotiate_phase3_happy_path_chacha() {
+    let session = BtspSession {
+        session_id: "sess-42".into(),
+        cipher: BtspCipher::Null,
+        session_key: vec![0xAB; 32],
+    };
+    let params = serde_json::json!({
+        "session_id": "sess-42",
+        "preferred_cipher": "chacha20-poly1305",
+        "bond_type": "Covalent",
+    });
+    let result = negotiate_phase3(&session, &params).expect("should succeed");
+    assert_eq!(result.session.cipher, BtspCipher::ChaCha20Poly1305);
+    assert_eq!(result.session.session_key.len(), 32);
+    assert_ne!(result.session.session_key, session.session_key);
+    assert_eq!(
+        result.response.get("cipher").and_then(|v| v.as_str()),
+        Some("chacha20-poly1305")
+    );
+    let nonce_hex = result
+        .response
+        .get("server_nonce")
+        .unwrap()
+        .as_str()
+        .unwrap();
+    assert_eq!(nonce_hex.len(), 24, "12-byte nonce = 24 hex chars");
+    let nonce_bytes = hex_to_bytes(nonce_hex).unwrap();
+    assert_eq!(nonce_bytes.len(), 12);
+}
+
+#[test]
+fn negotiate_phase3_null_fallback_no_key_material() {
+    let session = BtspSession {
+        session_id: "sess-no-key".into(),
+        cipher: BtspCipher::Null,
+        session_key: Vec::new(),
+    };
+    let params = serde_json::json!({
+        "session_id": "sess-no-key",
+        "preferred_cipher": "chacha20-poly1305",
+    });
+    let result = negotiate_phase3(&session, &params).expect("should succeed with null fallback");
+    assert_eq!(result.session.cipher, BtspCipher::Null);
+    assert_eq!(
+        result.response.get("cipher").and_then(|v| v.as_str()),
+        Some("null")
+    );
+    assert!(result.response.get("server_nonce").is_none());
+}
+
+#[test]
+fn negotiate_phase3_null_fallback_unsupported_cipher() {
+    let session = BtspSession {
+        session_id: "sess-x".into(),
+        cipher: BtspCipher::Null,
+        session_key: vec![0xAA; 32],
+    };
+    let params = serde_json::json!({
+        "session_id": "sess-x",
+        "preferred_cipher": "null",
+    });
+    let result = negotiate_phase3(&session, &params).expect("should succeed with null");
+    assert_eq!(result.session.cipher, BtspCipher::Null);
+    assert_eq!(
+        result.response.get("cipher").and_then(|v| v.as_str()),
+        Some("null")
+    );
+}
+
+#[test]
+fn negotiate_phase3_invalid_session_id() {
+    let session = BtspSession {
+        session_id: "real-session".into(),
+        cipher: BtspCipher::Null,
+        session_key: vec![0xBB; 32],
+    };
+    let params = serde_json::json!({
+        "session_id": "wrong-session",
+        "preferred_cipher": "chacha20-poly1305",
+    });
+    let err = negotiate_phase3(&session, &params).unwrap_err();
+    assert!(err.contains("session_id"), "error: {err}");
+}
+
+#[test]
+fn negotiate_phase3_missing_session_id() {
+    let session = BtspSession {
+        session_id: "real-session".into(),
+        cipher: BtspCipher::Null,
+        session_key: vec![0xCC; 32],
+    };
+    let params = serde_json::json!({ "preferred_cipher": "chacha20-poly1305" });
+    let err = negotiate_phase3(&session, &params).unwrap_err();
+    assert!(err.contains("session_id"), "error: {err}");
+}
+
+#[test]
+fn negotiate_phase3_derived_key_deterministic_with_same_nonce() {
+    let session = BtspSession {
+        session_id: "deterministic".into(),
+        cipher: BtspCipher::Null,
+        session_key: vec![0x42; 32],
+    };
+    let params = serde_json::json!({
+        "session_id": "deterministic",
+        "preferred_cipher": "chacha20-poly1305",
+    });
+    let r1 = negotiate_phase3(&session, &params).unwrap();
+    let r2 = negotiate_phase3(&session, &params).unwrap();
+    let n1 = r1.response.get("server_nonce").unwrap().as_str().unwrap();
+    let n2 = r2.response.get("server_nonce").unwrap().as_str().unwrap();
+    assert_ne!(n1, n2, "random nonces should differ across invocations");
+}
+
+#[test]
+fn negotiate_phase3_wire_name_roundtrip() {
+    assert_eq!(BtspCipher::Null.wire_name(), "null");
+    assert_eq!(BtspCipher::HmacPlain.wire_name(), "hmac_plain");
+    assert_eq!(
+        BtspCipher::ChaCha20Poly1305.wire_name(),
+        "chacha20-poly1305"
+    );
+}
+
+#[test]
+fn negotiate_phase3_cipher_from_wire_hyphenated() {
+    assert_eq!(
+        BtspCipher::from_wire("chacha20-poly1305"),
+        BtspCipher::ChaCha20Poly1305
+    );
+}

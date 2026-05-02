@@ -53,6 +53,7 @@ traits are fully internalized.
 | `compute.*` | `compute.dispatch`, `compute.batch.submit`, `compute.batch.status`, `compute.batch.result` |
 | `tensor.*` | `tensor.create`, `tensor.matmul`, `tensor.matmul_inline`, `tensor.add`, `tensor.scale`, `tensor.clamp`, `tensor.reduce`, `tensor.sigmoid` |
 | `fhe.*` | `fhe.ntt`, `fhe.pointwise_mul` |
+| `btsp.*` | `btsp.negotiate` — Phase 3 cipher upgrade |
 | `math.*` | `math.sigmoid`, `math.log2` |
 | `stats.*` | `stats.mean`, `stats.std_dev`, `stats.weighted_mean`, `stats.variance`, `stats.correlation`, `stats.pearson`, `stats.spearman`, `stats.covariance`, `stats.eigh`, `stats.chi_squared`, `stats.anova_oneway`, `stats.shannon`, `stats.entropy`, `stats.fit_linear`, `stats.empirical_spectral_density` |
 | `linalg.*` | `linalg.solve`, `linalg.eigenvalues`, `linalg.svd`, `linalg.qr`, `linalg.graph_laplacian` |
@@ -65,7 +66,7 @@ traits are fully internalized.
 | `doctor.*` | `doctor.validate` |
 | `security.*` | `security.session.create`, `security.session.verify` |
 
-58 methods following wateringHole `{domain}.{operation}` Semantic Method Naming Standard. Wire Standard L2 compliant.
+59 methods following wateringHole `{domain}.{operation}` Semantic Method Naming Standard. Wire Standard L2 compliant.
 
 ## Deployment Constraints
 

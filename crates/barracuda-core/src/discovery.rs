@@ -155,6 +155,69 @@ pub fn discovery_capability_domains() -> Vec<String> {
     domains.into_iter().collect()
 }
 
+/// Self-register capabilities with the discovery service via `DISCOVERY_SOCKET`.
+///
+/// Per Phase 55b: primals self-register at startup so the discovery service can
+/// resolve capabilities for other primals via `ipc.resolve`. Fire-and-forget —
+/// any failure is logged at debug level and does not block startup.
+#[cfg(unix)]
+pub async fn register_with_discovery(endpoint: &str) {
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+
+    let Ok(socket_var) = std::env::var("DISCOVERY_SOCKET") else {
+        return;
+    };
+    let socket_path = std::path::Path::new(&socket_var);
+    if !socket_path.exists() {
+        tracing::debug!(path = %socket_path.display(), "DISCOVERY_SOCKET absent — skip register");
+        return;
+    }
+
+    let capabilities = discovery_capability_domains();
+    let request = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": "ipc.register",
+        "params": {
+            "primal_id": crate::PRIMAL_NAMESPACE,
+            "capabilities": capabilities,
+            "endpoint": endpoint,
+        },
+        "id": 1
+    });
+
+    let Ok(stream) = tokio::net::UnixStream::connect(socket_path).await else {
+        tracing::debug!("discovery service connect failed — skipping registration");
+        return;
+    };
+    let mut reader = BufReader::new(stream);
+    let Ok(mut line) = serde_json::to_string(&request) else {
+        return;
+    };
+    line.push('\n');
+    if reader.get_mut().write_all(line.as_bytes()).await.is_err()
+        || reader.get_mut().flush().await.is_err()
+    {
+        tracing::debug!("discovery service write failed — registration may not have arrived");
+        return;
+    }
+
+    let mut response_line = String::new();
+    if reader.read_line(&mut response_line).await.is_err() {
+        return;
+    }
+    if let Ok(resp) = serde_json::from_str::<serde_json::Value>(&response_line) {
+        if let Some(vep) = resp
+            .get("result")
+            .and_then(|r| r.get("virtual_endpoint"))
+            .and_then(|v| v.as_str())
+        {
+            tracing::info!(virtual_endpoint = vep, domains = ?capabilities, "registered via DISCOVERY_SOCKET");
+        } else if let Some(err) = resp.get("error") {
+            tracing::debug!(?err, "discovery service registration returned error");
+        }
+    }
+}
+
 fn domain_description(domain: &str) -> &'static str {
     match domain {
         "health" => "Ecosystem health probes (liveness, readiness, check)",

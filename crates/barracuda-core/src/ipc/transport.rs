@@ -359,7 +359,7 @@ impl IpcServer {
                                 return;
                             }
                         }
-                        handle_stream(primal, stream, replay).await;
+                        handle_stream(primal, stream, session, replay).await;
                     });
                 }
                 () = shutdown_signal() => {
@@ -414,7 +414,7 @@ impl IpcServer {
                                 return;
                             }
                         }
-                        handle_connection(primal, reader, writer, replay).await;
+                        handle_connection(primal, reader, writer, session, replay).await;
                     });
                 }
                 () = shutdown_signal() => {
@@ -521,6 +521,7 @@ async fn handle_connection<R, W>(
     primal: Arc<BarraCudaPrimal>,
     reader: R,
     mut writer: W,
+    session: Option<super::btsp::BtspSession>,
     replay: Option<String>,
 ) where
     R: AsyncRead + Unpin + Send,
@@ -531,12 +532,60 @@ async fn handle_connection<R, W>(
             return;
         }
     }
-    let mut lines = BufReader::new(reader).lines();
+    let mut buf_reader = BufReader::new(reader);
+    let mut lines = (&mut buf_reader).lines();
     while let Ok(Some(line)) = lines.next_line().await {
+        if let Some(upgraded) = try_negotiate_upgrade(session.as_ref(), &line, &mut writer).await {
+            tracing::info!("Phase 3 negotiate: switching to encrypted framing");
+            handle_btsp_connection(primal, buf_reader.into_inner(), writer, &upgraded).await;
+            return;
+        }
         if dispatch_line(&primal, &line, &mut writer).await.is_err() {
             break;
         }
     }
+}
+
+/// If `line` is a `btsp.negotiate` request and the session supports it,
+/// write the response and return the upgraded `BtspSession`. Returns `None`
+/// for non-negotiate lines or when the cipher stays NULL.
+async fn try_negotiate_upgrade<W>(
+    session: Option<&super::btsp::BtspSession>,
+    line: &str,
+    writer: &mut W,
+) -> Option<super::btsp::BtspSession>
+where
+    W: AsyncWrite + Unpin + Send,
+{
+    let session = session.as_ref()?;
+    let parsed: serde_json::Value = serde_json::from_str(line.trim()).ok()?;
+    if parsed.get("method")?.as_str()? != "btsp.negotiate" {
+        return None;
+    }
+    let id = parsed.get("id").cloned().unwrap_or(serde_json::Value::Null);
+    let params = parsed
+        .get("params")
+        .cloned()
+        .unwrap_or(serde_json::Value::Null);
+    let (resp, upgraded) = match super::btsp::negotiate_phase3(session, &params) {
+        Ok(nr) => {
+            let keyed = nr.session.cipher.requires_key();
+            (
+                JsonRpcResponse::success(id, nr.response),
+                keyed.then_some(nr.session),
+            )
+        }
+        Err(reason) => (JsonRpcResponse::error(id, -32602, reason), None),
+    };
+    let mut json = serde_json::to_string(&resp).unwrap_or_else(|_| SERIALIZATION_ERROR.to_string());
+    json.push('\n');
+    if writer.write_all(json.as_bytes()).await.is_err() {
+        return None;
+    }
+    if upgraded.is_some() {
+        let _ = writer.flush().await;
+    }
+    upgraded
 }
 
 /// Dispatch a single NDJSON line (single request or batch array) and write
@@ -573,10 +622,11 @@ where
 async fn handle_stream(
     primal: Arc<BarraCudaPrimal>,
     stream: tokio::net::TcpStream,
+    session: Option<super::btsp::BtspSession>,
     replay: Option<String>,
 ) {
     let (reader, writer) = stream.into_split();
-    handle_connection(primal, reader, writer, replay).await;
+    handle_connection(primal, reader, writer, session, replay).await;
 }
 
 /// Handle a BTSP Phase 3 connection using length-prefixed encrypted frames.
@@ -730,67 +780,6 @@ async fn handle_batch(primal: &BarraCudaPrimal, line: &str) -> Option<String> {
     }
 
     Some(serde_json::to_string(&responses).unwrap_or_else(|_| SERIALIZATION_ERROR.to_string()))
-}
-
-/// Self-register capabilities with the discovery service via `DISCOVERY_SOCKET`.
-///
-/// Per Phase 55b: primals self-register at startup so the discovery service can
-/// resolve capabilities for other primals via `ipc.resolve`. Fire-and-forget —
-/// any failure is logged at debug level and does not block startup.
-#[cfg(unix)]
-pub async fn register_with_discovery(endpoint: &str) {
-    let Ok(socket_var) = std::env::var("DISCOVERY_SOCKET") else {
-        return;
-    };
-    let socket_path = std::path::Path::new(&socket_var);
-    if !socket_path.exists() {
-        tracing::debug!(path = %socket_path.display(), "DISCOVERY_SOCKET absent — skip register");
-        return;
-    }
-
-    let capabilities = crate::discovery::discovery_capability_domains();
-    let request = serde_json::json!({
-        "jsonrpc": "2.0",
-        "method": "ipc.register",
-        "params": {
-            "primal_id": crate::PRIMAL_NAMESPACE,
-            "capabilities": capabilities,
-            "endpoint": endpoint,
-        },
-        "id": 1
-    });
-
-    let Ok(stream) = tokio::net::UnixStream::connect(socket_path).await else {
-        tracing::debug!("discovery service connect failed — skipping registration");
-        return;
-    };
-    let mut reader = BufReader::new(stream);
-    let Ok(mut line) = serde_json::to_string(&request) else {
-        return;
-    };
-    line.push('\n');
-    if reader.get_mut().write_all(line.as_bytes()).await.is_err()
-        || reader.get_mut().flush().await.is_err()
-    {
-        tracing::debug!("discovery service write failed — registration may not have arrived");
-        return;
-    }
-
-    let mut response_line = String::new();
-    if reader.read_line(&mut response_line).await.is_err() {
-        return;
-    }
-    if let Ok(resp) = serde_json::from_str::<serde_json::Value>(&response_line) {
-        if let Some(vep) = resp
-            .get("result")
-            .and_then(|r| r.get("virtual_endpoint"))
-            .and_then(|v| v.as_str())
-        {
-            tracing::info!(virtual_endpoint = vep, domains = ?capabilities, "registered via DISCOVERY_SOCKET");
-        } else if let Some(err) = resp.get("error") {
-            tracing::debug!(?err, "discovery service registration returned error");
-        }
-    }
 }
 
 #[cfg(test)]

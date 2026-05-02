@@ -51,12 +51,23 @@ pub enum BtspCipher {
 }
 
 impl BtspCipher {
-    /// Parse the cipher name from the provider's handshake response.
-    fn from_wire(s: &str) -> Self {
+    /// Parse a cipher name from its wire representation.
+    pub fn from_wire(s: &str) -> Self {
         match s {
-            "chacha20_poly1305" | "chacha20" | "BTSP_CHACHA20_POLY1305" => Self::ChaCha20Poly1305,
+            "chacha20-poly1305" | "chacha20_poly1305" | "chacha20" | "BTSP_CHACHA20_POLY1305" => {
+                Self::ChaCha20Poly1305
+            }
             "hmac_plain" | "hmac" | "BTSP_HMAC_PLAIN" => Self::HmacPlain,
             _ => Self::Null,
+        }
+    }
+
+    /// Wire-format name for the cipher.
+    pub fn wire_name(self) -> &'static str {
+        match self {
+            Self::Null => "null",
+            Self::HmacPlain => "hmac_plain",
+            Self::ChaCha20Poly1305 => "chacha20-poly1305",
         }
     }
 
@@ -425,21 +436,18 @@ where
         .unwrap_or("none");
     let cipher = BtspCipher::from_wire(cipher_name);
 
-    let session_key = if cipher.requires_key() {
-        let key_b64 = verify_result
-            .get("session_key")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| {
-                HandshakeError::Protocol(format!(
-                    "Provider returned cipher '{cipher_name}' but no session_key"
-                ))
-            })?;
-        use base64ct::{Base64, Encoding};
-        Base64::decode_vec(key_b64)
-            .map_err(|e| HandshakeError::Protocol(format!("Invalid base64 session_key: {e}")))?
-    } else {
-        Vec::new()
-    };
+    let session_key =
+        if let Some(key_b64) = verify_result.get("session_key").and_then(|v| v.as_str()) {
+            use base64ct::{Base64, Encoding};
+            Base64::decode_vec(key_b64)
+                .map_err(|e| HandshakeError::Protocol(format!("Invalid base64 session_key: {e}")))?
+        } else if cipher.requires_key() {
+            return Err(HandshakeError::Protocol(format!(
+                "Provider returned cipher '{cipher_name}' but no session_key"
+            )));
+        } else {
+            Vec::new()
+        };
 
     // Step 7: Relay HandshakeComplete to client
     let complete = serde_json::json!({
@@ -470,6 +478,101 @@ where
     Err(HandshakeError::Protocol(
         "BTSP handshake requires Unix domain sockets".to_string(),
     ))
+}
+
+// ── Phase 3 negotiate ───────────────────────────────────────────────
+
+/// Outcome of a successful `btsp.negotiate` cipher upgrade.
+#[derive(Debug)]
+pub struct NegotiateResult {
+    /// Upgraded session with derived key material for the negotiated cipher.
+    pub session: BtspSession,
+    /// JSON-RPC result value to return to the client.
+    pub response: serde_json::Value,
+}
+
+/// Handle a `btsp.negotiate` Phase 3 cipher-upgrade request.
+///
+/// Validates the caller's `session_id` against the connection's authenticated
+/// session, generates a 12-byte random server nonce, derives stream cipher
+/// keys via HKDF-SHA256, and returns the negotiated cipher + nonce. The
+/// caller is responsible for switching to encrypted framing after sending
+/// the JSON-RPC response.
+///
+/// Returns `Ok(NegotiateResult)` on success (including graceful fallback to
+/// NULL cipher when key material is unavailable). Returns `Err(String)` only
+/// for hard failures (e.g. mismatched session_id).
+pub fn negotiate_phase3(
+    session: &BtspSession,
+    params: &serde_json::Value,
+) -> std::result::Result<NegotiateResult, String> {
+    let requested_id = params
+        .get("session_id")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    if requested_id.is_empty() || requested_id != session.session_id {
+        return Err("Invalid or unknown session_id".to_string());
+    }
+
+    let preferred = params
+        .get("preferred_cipher")
+        .and_then(|v| v.as_str())
+        .unwrap_or("chacha20-poly1305");
+
+    if session.session_key.is_empty() {
+        tracing::debug!("btsp.negotiate: no key material from Phase 1 — staying on NULL cipher");
+        return Ok(NegotiateResult {
+            session: session.clone(),
+            response: serde_json::json!({ "cipher": "null" }),
+        });
+    }
+
+    let cipher = BtspCipher::from_wire(preferred);
+    if !cipher.requires_key() {
+        return Ok(NegotiateResult {
+            session: session.clone(),
+            response: serde_json::json!({ "cipher": "null" }),
+        });
+    }
+
+    let mut server_nonce = [0u8; 12];
+    rand::Fill::fill(&mut server_nonce, &mut rand::rng());
+
+    use hkdf::Hkdf;
+    use sha2::Sha256;
+
+    let hkdf = Hkdf::<Sha256>::new(Some(&server_nonce), &session.session_key);
+    let mut derived_key = [0u8; 32];
+    hkdf.expand(b"btsp-v1-phase3", &mut derived_key)
+        .map_err(|e| format!("HKDF key derivation failed: {e}"))?;
+
+    let nonce_hex = hex_encode(&server_nonce);
+    tracing::info!(
+        cipher = cipher.wire_name(),
+        session_id = %session.session_id,
+        "btsp.negotiate: upgraded to encrypted framing"
+    );
+
+    Ok(NegotiateResult {
+        session: BtspSession {
+            session_id: session.session_id.clone(),
+            cipher,
+            session_key: derived_key.to_vec(),
+        },
+        response: serde_json::json!({
+            "cipher": cipher.wire_name(),
+            "server_nonce": nonce_hex,
+        }),
+    })
+}
+
+fn hex_encode(bytes: &[u8]) -> String {
+    let mut s = String::with_capacity(bytes.len() * 2);
+    for b in bytes {
+        use std::fmt::Write;
+        let _ = write!(s, "{b:02x}");
+    }
+    s
 }
 
 // ── NDJSON wire helpers ─────────────────────────────────────────────

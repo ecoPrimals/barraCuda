@@ -103,3 +103,22 @@ fn belief_propagation_mismatched_lengths() {
     assert_eq!(err.code, jsonrpc::INVALID_PARAMS);
     assert!(err.message.contains("equal length"));
 }
+
+// ── btsp.negotiate dispatch fallback (Sprint 51 / Phase 3) ─────────
+
+#[tokio::test]
+async fn btsp_negotiate_dispatch_requires_session() {
+    let primal = super::test_primal();
+    let params = serde_json::json!({
+        "session_id": "fake",
+        "preferred_cipher": "chacha20-poly1305",
+    });
+    let resp =
+        crate::ipc::methods::dispatch(&primal, "btsp.negotiate", &params, serde_json::json!(9001))
+            .await;
+    let err = resp
+        .error
+        .expect("btsp.negotiate without session should fail");
+    assert_eq!(err.code, -32600);
+    assert!(err.message.contains("authenticated BTSP session"));
+}

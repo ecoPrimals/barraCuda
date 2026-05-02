@@ -107,6 +107,8 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     // ── FHE ───────────────────────────────────────────────────────────
     "fhe.ntt",
     "fhe.pointwise_mul",
+    // ── BTSP Phase 3 ─────────────────────────────────────────────────
+    "btsp.negotiate",
 ];
 
 /// Normalize a method name: accepts both `{domain}.{operation}` (standard)
@@ -203,6 +205,13 @@ pub async fn dispatch(
         // FHE
         "fhe.ntt" => fhe::fhe_ntt(primal, params, id).await,
         "fhe.pointwise_mul" => fhe::fhe_pointwise_mul(primal, params, id).await,
+        // BTSP Phase 3 — handled at transport layer; reaching dispatch means
+        // no authenticated session is associated with this connection.
+        "btsp.negotiate" => JsonRpcResponse::error(
+            id,
+            -32600,
+            "btsp.negotiate requires an authenticated BTSP session (Phase 1 handshake first)",
+        ),
         _ => JsonRpcResponse::error(id, METHOD_NOT_FOUND, format!("Unknown method: {method}")),
     }
 }

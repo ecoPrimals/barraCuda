@@ -249,7 +249,7 @@ async fn run_server(
             }
 
             barracuda_core::ipc::IpcServer::create_legacy_symlink(&sock_path);
-            barracuda_core::ipc::transport::register_with_discovery(&format!(
+            barracuda_core::discovery::register_with_discovery(&format!(
                 "unix://{}",
                 sock_path.display()
             ))
@@ -280,7 +280,7 @@ async fn run_server(
         let effective_addr = local_addr.to_string();
         write_discovery_file(Some(&effective_addr), tarpc_bind.as_deref(), None);
         #[cfg(unix)]
-        barracuda_core::ipc::transport::register_with_discovery(&format!("tcp://{effective_addr}"))
+        barracuda_core::discovery::register_with_discovery(&format!("tcp://{effective_addr}"))
             .await;
         server.serve_tcp_listener(listener).await.map_err(|e| {
             barracuda_core::error::BarracudaCoreError::lifecycle(format!(
@@ -555,7 +555,7 @@ async fn run_service_mode() -> Result<(), barracuda_core::error::BarracudaCoreEr
         let sock_path = barracuda_core::ipc::IpcServer::default_socket_path();
         write_discovery_file(None, None, Some(&sock_path));
         barracuda_core::ipc::IpcServer::create_legacy_symlink(&sock_path);
-        barracuda_core::ipc::transport::register_with_discovery(&format!(
+        barracuda_core::discovery::register_with_discovery(&format!(
             "unix://{}",
             sock_path.display()
         ))

@@ -1,11 +1,19 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-05-01.
+Prioritized work items, ordered by impact. Updated 2026-05-02.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 51: BTSP Phase 3 `btsp.negotiate` (May 2)**: Server-side `btsp.negotiate`
+  JSON-RPC handler implemented. Validates session_id, generates 12-byte random
+  server nonce, derives session keys via HKDF-SHA256, returns cipher + nonce.
+  Transport-layer integration: on successful negotiate with keyed cipher,
+  seamlessly switches from plaintext NDJSON to encrypted BtspFrameReader/Writer
+  framing. Graceful NULL cipher fallback. `register_with_discovery` extracted from
+  transport.rs to discovery.rs. 59 registered methods (was 58). 10 new tests.
+  `hkdf 0.12` added. All quality gates green.
 - **Sprint 50: Phase 56 PG-47 + Graph PGM (May 1)**: `stats.entropy` alias wired
   (resolves PG-47 — primalSpring callers no longer get method-not-found).
   `graph.belief_propagation` wired (chain PGM forward pass via

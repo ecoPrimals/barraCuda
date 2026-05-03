@@ -1,11 +1,17 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-05-02.
+Prioritized work items, ordered by impact. Updated 2026-05-03.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 51b: Phase 3 Transport Switch Verification (May 3)**: Fixed interop gap
+  flagged by primalSpring audit — `buf_reader.into_inner()` discarded buffered
+  bytes on negotiate transition (pipelined encrypted frames lost). Fixed by passing
+  `buf_reader` directly. Incorporated `client_nonce` in HKDF salt per spec
+  (`client_nonce || server_nonce`). Discovery helpers extracted to `btsp_discovery.rs`
+  (btsp.rs 831→721). 4 new live-validation tests. All quality gates green.
 - **Sprint 51: BTSP Phase 3 `btsp.negotiate` (May 2)**: Server-side `btsp.negotiate`
   JSON-RPC handler implemented. Validates session_id, generates 12-byte random
   server nonce, derives session keys via HKDF-SHA256, returns cipher + nonce.

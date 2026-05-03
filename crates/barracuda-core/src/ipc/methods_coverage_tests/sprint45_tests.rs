@@ -270,7 +270,7 @@ fn spectral_stft_non_power_of_two() {
 
 #[test]
 fn spectral_stft_happy_path() {
-    let signal: Vec<f64> = (0..512).map(|i| (i as f64 * 0.1).sin()).collect();
+    let signal: Vec<f64> = (0..512).map(|i| (f64::from(i) * 0.1).sin()).collect();
     let resp = spectral_stft(
         &serde_json::json!({"data": signal, "n_fft": 64, "hop_length": 32}),
         serde_json::json!(273),

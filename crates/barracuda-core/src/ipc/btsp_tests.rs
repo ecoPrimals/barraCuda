@@ -290,3 +290,56 @@ fn negotiate_phase3_cipher_from_wire_hyphenated() {
         BtspCipher::ChaCha20Poly1305
     );
 }
+
+#[test]
+fn negotiate_phase3_client_nonce_affects_derived_key() {
+    let session = BtspSession {
+        session_id: "nonce-test".into(),
+        cipher: BtspCipher::Null,
+        session_key: vec![0xCC; 32],
+    };
+
+    let params_without = serde_json::json!({
+        "session_id": "nonce-test",
+        "preferred_cipher": "chacha20-poly1305",
+    });
+    let params_with = serde_json::json!({
+        "session_id": "nonce-test",
+        "preferred_cipher": "chacha20-poly1305",
+        "client_nonce": "aabbccdd11223344aabbccdd",
+    });
+
+    let r1 = negotiate_phase3(&session, &params_without).unwrap();
+    let r2 = negotiate_phase3(&session, &params_with).unwrap();
+
+    assert_eq!(r1.session.session_key.len(), 32);
+    assert_eq!(r2.session.session_key.len(), 32);
+    assert_ne!(
+        r1.session.session_key, r2.session.session_key,
+        "client_nonce must influence derived key"
+    );
+}
+
+#[test]
+fn negotiate_phase3_same_client_nonce_same_server_nonce_yields_same_key() {
+    use hkdf::Hkdf;
+    use sha2::Sha256;
+
+    let ikm = vec![0xDD; 32];
+    let client_nonce = b"abcdefghijkl";
+    let server_nonce = b"123456789012";
+
+    let mut salt = Vec::new();
+    salt.extend_from_slice(client_nonce);
+    salt.extend_from_slice(server_nonce);
+
+    let hkdf = Hkdf::<Sha256>::new(Some(&salt), &ikm);
+    let mut key1 = [0u8; 32];
+    hkdf.expand(b"btsp-v1-phase3", &mut key1).unwrap();
+
+    let hkdf2 = Hkdf::<Sha256>::new(Some(&salt), &ikm);
+    let mut key2 = [0u8; 32];
+    hkdf2.expand(b"btsp-v1-phase3", &mut key2).unwrap();
+
+    assert_eq!(key1, key2, "same inputs must produce same derived key");
+}

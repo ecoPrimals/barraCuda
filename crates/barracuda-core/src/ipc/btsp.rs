@@ -530,6 +530,11 @@ pub fn negotiate_phase3(
         .and_then(|v| v.as_str())
         .unwrap_or("chacha20-poly1305");
 
+    let client_nonce_hex = params
+        .get("client_nonce")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+
     if session.session_key.is_empty() {
         tracing::debug!("btsp.negotiate: no key material from Phase 1 — staying on NULL cipher");
         return Ok(NegotiateResult {
@@ -549,10 +554,16 @@ pub fn negotiate_phase3(
     let mut server_nonce = [0u8; 12];
     rand::Fill::fill(&mut server_nonce, &mut rand::rng());
 
+    let client_nonce = hex_decode(client_nonce_hex);
+
     use hkdf::Hkdf;
     use sha2::Sha256;
 
-    let hkdf = Hkdf::<Sha256>::new(Some(&server_nonce), &session.session_key);
+    let mut salt = Vec::with_capacity(client_nonce.len() + server_nonce.len());
+    salt.extend_from_slice(&client_nonce);
+    salt.extend_from_slice(&server_nonce);
+
+    let hkdf = Hkdf::<Sha256>::new(Some(&salt), &session.session_key);
     let mut derived_key = [0u8; 32];
     hkdf.expand(b"btsp-v1-phase3", &mut derived_key)
         .map_err(|e| NegotiateError::KeyDerivation(e.to_string()))?;
@@ -586,9 +597,23 @@ fn hex_encode(bytes: &[u8]) -> String {
     s
 }
 
+fn hex_decode(hex: &str) -> Vec<u8> {
+    let hex = hex.trim();
+    if hex.is_empty() {
+        return Vec::new();
+    }
+    (0..hex.len())
+        .step_by(2)
+        .filter_map(|i| {
+            hex.get(i..i + 2)
+                .and_then(|pair| u8::from_str_radix(pair, 16).ok())
+        })
+        .collect()
+}
+
 // ── NDJSON wire helpers ─────────────────────────────────────────────
 
-async fn read_ndjson_line<R>(reader: &mut R) -> std::io::Result<String>
+pub(super) async fn read_ndjson_line<R>(reader: &mut R) -> std::io::Result<String>
 where
     R: tokio::io::AsyncBufRead + Unpin,
 {
@@ -604,7 +629,10 @@ where
     Ok(line)
 }
 
-async fn write_ndjson_line<W>(writer: &mut W, value: &serde_json::Value) -> std::io::Result<()>
+pub(super) async fn write_ndjson_line<W>(
+    writer: &mut W,
+    value: &serde_json::Value,
+) -> std::io::Result<()>
 where
     W: tokio::io::AsyncWrite + Unpin,
 {
@@ -687,119 +715,9 @@ fn hex_to_bytes(hex: &str) -> Option<Vec<u8>> {
         .collect()
 }
 
-// ── Discovery ───────────────────────────────────────────────────────
+// ── Discovery (extracted to btsp_discovery.rs) ──────────────────────
 
-/// Domain stem for the security capability provider (BTSP handshake).
-const SECURITY_DOMAIN: &str = "crypto";
-
-/// Discover the security-domain socket for BTSP handshake delegation.
-///
-/// Resolution chain (per `NUCLEUS_TWO_TIER_CRYPTO_MODEL.md`):
-/// 1. `$BEARDOG_SOCKET` or `$BTSP_PROVIDER_SOCKET` env var (composition-injected)
-/// 2. `$BIOMEOS_SOCKET_DIR/{SECURITY_DOMAIN}-{family_id}.sock`
-/// 3. `$BIOMEOS_SOCKET_DIR/{SECURITY_DOMAIN}.sock`
-/// 4. Discovery files in `$BIOMEOS_SOCKET_DIR/*.json` advertising
-///    `btsp.session.create` capability
-fn discover_security_provider() -> Option<std::path::PathBuf> {
-    // Prefer composition-injected socket path (set by NUCLEUS launcher)
-    for var in ["BEARDOG_SOCKET", "BTSP_PROVIDER_SOCKET"] {
-        if let Ok(path) = std::env::var(var) {
-            let p = std::path::PathBuf::from(&path);
-            if p.exists() {
-                return Some(p);
-            }
-            tracing::debug!("{var}={path} set but socket does not exist, falling through");
-        }
-    }
-
-    let sock_dir = resolve_socket_dir();
-
-    if let Some(fid) = resolve_family_id() {
-        let scoped = sock_dir.join(format!("{SECURITY_DOMAIN}-{fid}.sock"));
-        if scoped.exists() {
-            return Some(scoped);
-        }
-    }
-    let unscoped = sock_dir.join(format!("{SECURITY_DOMAIN}.sock"));
-    if unscoped.exists() {
-        return Some(unscoped);
-    }
-
-    discover_by_capability(&sock_dir, "btsp.session.create")
-}
-
-/// Resolve a capability via Songbird's `DISCOVERY_SOCKET` using `ipc.resolve`.
-///
-/// Per `NUCLEUS_TWO_TIER_CRYPTO_MODEL.md`: every primal receives
-/// `DISCOVERY_SOCKET` pointing to Songbird. When local filesystem scanning
-/// fails, we ask Songbird which primal provides the requested capability.
-async fn resolve_via_discovery_socket(capability: &str) -> Option<std::path::PathBuf> {
-    let discovery_path = std::env::var("DISCOVERY_SOCKET").ok()?;
-    let discovery_path = std::path::Path::new(&discovery_path);
-    if !discovery_path.exists() {
-        tracing::debug!(
-            "DISCOVERY_SOCKET={} set but socket does not exist",
-            discovery_path.display()
-        );
-        return None;
-    }
-
-    let stream = tokio::net::UnixStream::connect(discovery_path).await.ok()?;
-    let mut reader = tokio::io::BufReader::new(stream);
-
-    let request = serde_json::json!({
-        "jsonrpc": "2.0",
-        "method": "ipc.resolve",
-        "params": { "capability": capability },
-        "id": 1
-    });
-    write_ndjson_line(reader.get_mut(), &request).await.ok()?;
-    let response_line = read_ndjson_line(&mut reader).await.ok()?;
-    let response: serde_json::Value = serde_json::from_str(&response_line).ok()?;
-
-    let result = response.get("result")?;
-    let unix_addr = result
-        .get("unix")
-        .or_else(|| result.get("socket"))
-        .and_then(|v| v.as_str())?;
-    let sock = std::path::PathBuf::from(unix_addr.trim_start_matches("unix://"));
-    sock.exists().then_some(sock)
-}
-
-fn discover_by_capability(sock_dir: &std::path::Path, method: &str) -> Option<std::path::PathBuf> {
-    let entries = std::fs::read_dir(sock_dir).ok()?;
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.extension().is_some_and(|ext| ext == "json") {
-            if let Some(sock) = check_discovery_file_for_method(&path, method) {
-                return Some(sock);
-            }
-        }
-    }
-    None
-}
-
-fn check_discovery_file_for_method(
-    path: &std::path::Path,
-    method: &str,
-) -> Option<std::path::PathBuf> {
-    let content = std::fs::read_to_string(path).ok()?;
-    let info: serde_json::Value = serde_json::from_str(&content).ok()?;
-    let methods = info.get("methods")?.as_array()?;
-    let has_method = methods
-        .iter()
-        .any(|m| m.as_str().is_some_and(|s| s == method));
-    if !has_method {
-        return None;
-    }
-    let unix_addr = info
-        .get("transports")
-        .and_then(|t| t.get("unix"))
-        .and_then(|v| v.as_str())
-        .and_then(|s| s.strip_prefix("unix://"))?;
-    let sock = std::path::PathBuf::from(unix_addr);
-    sock.exists().then_some(sock)
-}
+use super::btsp_discovery::{discover_security_provider, resolve_via_discovery_socket};
 
 #[cfg(test)]
 #[path = "btsp_tests.rs"]

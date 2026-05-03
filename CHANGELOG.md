@@ -5,7 +5,15 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.12] — 2026-05-02
+## [0.3.12] — 2026-05-03
+
+### Fixed — Sprint 51b: Phase 3 Transport Switch Verification (May 3 2026)
+
+- **BufReader data loss on negotiate transition** (interop gap): `handle_connection` previously called `buf_reader.into_inner()` when switching to encrypted framing after `btsp.negotiate` — discarding any bytes already buffered by the 8KB read-ahead. Under pipelining or fast loopback, the first encrypted frame could be silently dropped. Fixed by passing `buf_reader` directly (preserves buffered data; `BufReader<R>` satisfies `AsyncRead`)
+- **`client_nonce` incorporated in HKDF derivation**: Per BTSP spec, HKDF salt is now `client_nonce || server_nonce` (was server_nonce only). Client sends `client_nonce` hex in params; server concatenates both nonces as HKDF salt. Backward-compatible: empty client_nonce degrades to server_nonce-only salt
+- **Discovery extraction**: security-provider discovery functions (113 lines) extracted from `btsp.rs` to `btsp_discovery.rs` — btsp.rs 831→721 lines
+- **4 new live-validation tests**: `negotiate_then_encrypted_frame_loop` (full end-to-end: negotiate → derive key → send encrypted frame → receive encrypted response), `negotiate_pipelined_frame_not_lost` (BufReader buffering preservation), `negotiate_phase3_client_nonce_affects_derived_key`, `negotiate_phase3_same_client_nonce_same_server_nonce_yields_same_key`
+- All quality gates green: fmt, clippy -D warnings, doc -D warnings, deny, 292 barracuda-core tests pass
 
 ### Added — Sprint 51: BTSP Phase 3 `btsp.negotiate` (May 2 2026)
 

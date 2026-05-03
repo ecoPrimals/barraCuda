@@ -132,6 +132,7 @@
 //! | `fhe.pointwise_mul` | `{"modulus": u64, "degree": u64, "a": [u64], "b": [u64]}` | `{"status": "completed", "modulus": u64, "degree": u64, "result": [u64]}` | yes |
 
 pub mod btsp;
+mod btsp_discovery;
 pub mod btsp_frame;
 pub mod jsonrpc;
 pub mod methods;

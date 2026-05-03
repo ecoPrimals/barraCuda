@@ -533,11 +533,17 @@ async fn handle_connection<R, W>(
         }
     }
     let mut buf_reader = BufReader::new(reader);
-    let mut lines = (&mut buf_reader).lines();
-    while let Ok(Some(line)) = lines.next_line().await {
+    loop {
+        let line = {
+            let mut lines = (&mut buf_reader).lines();
+            match lines.next_line().await {
+                Ok(Some(l)) => l,
+                _ => break,
+            }
+        };
         if let Some(upgraded) = try_negotiate_upgrade(session.as_ref(), &line, &mut writer).await {
             tracing::info!("Phase 3 negotiate: switching to encrypted framing");
-            handle_btsp_connection(primal, buf_reader.into_inner(), writer, &upgraded).await;
+            handle_btsp_connection(primal, buf_reader, writer, &upgraded).await;
             return;
         }
         if dispatch_line(&primal, &line, &mut writer).await.is_err() {

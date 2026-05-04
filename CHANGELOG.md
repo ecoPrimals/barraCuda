@@ -5,7 +5,13 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.12] — 2026-05-03
+## [0.3.12] — 2026-05-04
+
+### Fixed — Sprint 52: Phase 58 Audit Response (May 4 2026)
+
+- **Response format standardization**: Added `result` key to 5 methods that returned domain-specific keys only (`stats.chi_squared`, `stats.anova_oneway`, `linalg.svd`, `linalg.qr`, `stats.empirical_spectral_density`, `graph.belief_propagation`). Backward-compatible — existing domain keys preserved alongside new `result` key. Resolves primalSpring Phase 58 "flex key" gap for all consumers.
+- **Phase 58 audit triage**: HIGH priority (Phase 3 transport encryption) confirmed resolved in Sprint 51b. MEDIUM priority (12 JSON-RPC surface gaps) — all 4 priority methods (`linalg.eigh`, `stats.pearson`, `stats.chi_squared`, `stats.shannon`) confirmed wired since Sprint 49/50. Remaining methods (ESN v2, nautilus) are stateful and require session APIs.
+- All quality gates green: fmt, clippy -D warnings, 292 barracuda-core tests pass
 
 ### Fixed — Sprint 51b: Phase 3 Transport Switch Verification (May 3 2026)
 

@@ -141,7 +141,7 @@ pub(super) fn stats_chi_squared(params: &Value, id: Value) -> JsonRpcResponse {
     match barracuda::special::chi_squared::chi_squared_test(&observed, &expected) {
         Ok((chi2, p_value, df)) => JsonRpcResponse::success(
             id,
-            serde_json::json!({ "chi_squared": chi2, "p_value": p_value, "df": df }),
+            serde_json::json!({ "result": chi2, "chi_squared": chi2, "p_value": p_value, "df": df }),
         ),
         Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("chi_squared failed: {e}")),
     }
@@ -219,6 +219,7 @@ pub(super) fn stats_anova_oneway(params: &Value, id: Value) -> JsonRpcResponse {
     JsonRpcResponse::success(
         id,
         serde_json::json!({
+            "result": f_stat,
             "f_statistic": f_stat,
             "p_value": p_value,
             "df_between": df_between,
@@ -612,7 +613,7 @@ pub(super) fn linalg_svd(params: &Value, id: Value) -> JsonRpcResponse {
             let vt_2d: Vec<Vec<f64>> = svd.vt.chunks(n).map(<[f64]>::to_vec).collect();
             JsonRpcResponse::success(
                 id,
-                serde_json::json!({ "u": u_2d, "s": svd.s, "vt": vt_2d, "m": m, "n": n }),
+                serde_json::json!({ "result": &svd.s, "u": u_2d, "s": svd.s, "vt": vt_2d, "m": m, "n": n }),
             )
         }
         Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("SVD failed: {e}")),
@@ -649,7 +650,7 @@ pub(super) fn linalg_qr(params: &Value, id: Value) -> JsonRpcResponse {
             let r_2d: Vec<Vec<f64>> = qr.r.chunks(n).map(<[f64]>::to_vec).collect();
             JsonRpcResponse::success(
                 id,
-                serde_json::json!({ "q": q_2d, "r": r_2d, "m": m, "n": n }),
+                serde_json::json!({ "result": &q_2d, "q": q_2d, "r": r_2d, "m": m, "n": n }),
             )
         }
         Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("QR failed: {e}")),
@@ -754,6 +755,6 @@ pub(super) fn stats_empirical_spectral_density(params: &Value, id: Value) -> Jso
     let (centers, density) = barracuda::stats::empirical_spectral_density(&eigenvalues, n_bins);
     JsonRpcResponse::success(
         id,
-        serde_json::json!({ "bin_centers": centers, "density": density, "n_bins": n_bins }),
+        serde_json::json!({ "result": &density, "bin_centers": centers, "density": density, "n_bins": n_bins }),
     )
 }

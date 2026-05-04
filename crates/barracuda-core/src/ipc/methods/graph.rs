@@ -85,6 +85,6 @@ pub(super) fn graph_belief_propagation(params: &Value, id: Value) -> JsonRpcResp
         barracuda::linalg::belief_propagation_chain(&input, &trans_refs, &layer_dims);
     JsonRpcResponse::success(
         id,
-        serde_json::json!({ "distributions": distributions, "n_layers": layer_dims.len() }),
+        serde_json::json!({ "result": &distributions, "distributions": distributions, "n_layers": layer_dims.len() }),
     )
 }

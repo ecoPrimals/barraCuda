@@ -1,6 +1,6 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-05-03.
+Prioritized work items, ordered by impact. Updated 2026-05-04.
 
 ---
 

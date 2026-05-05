@@ -13,6 +13,21 @@ and the migration path.
 | **`device::tensor_context::TensorSession` renamed to `BatchGuard`** — The old name collided with `session::TensorSession` (the fused pipeline API). | Replace `device::tensor_context::TensorSession` with `BatchGuard`. A `#[deprecated]` alias exists for gradual migration. |
 | **`BarraCudaPrimal::device()` returns `Option<Arc<WgpuDevice>>`** (was `Option<WgpuDevice>`) — eliminates deep-cloning GPU device handles on every call. | Most callers auto-deref through `Arc`. Remove any `Arc::new(dev)` wrapping — `dev` is already an `Arc`. Use `Arc::clone(&dev)` instead of `dev.clone()` when you need an owned `Arc`. |
 | **`tensor.batch.submit` IPC method added** — Sprint 44 brought count to 39 (+7: stats.variance, stats.correlation, linalg.solve, linalg.eigenvalues, spectral.fft, spectral.power_spectrum, tensor.matmul_inline); Sprint 45 expanded to 50 (+11: SVD, QR, chi², ANOVA, softmax, gelu, STFT, MLP, attention + 2 aliases). Fused multi-op pipeline over JSON-RPC. | No migration needed — additive. Springs can now call `tensor.batch.submit` for batched GPU pipelines. |
+| **`WgpuDevice::submit_and_poll` removed** — Replaced by `submit_and_map<T>` (0.3.5) which collapses the old double-poll pattern (`submit_and_poll` → `map_staging_buffer`) into a single submit → `map_async` → `poll_safe` cycle. For fire-and-forget submissions (no readback), use `submit_commands`. The old method was removed as dead code in Sprint 42. | **Readback path**: Replace `device.submit_and_poll(cmds); let data = device.map_staging_buffer(&buf, n)?;` with `let data = device.submit_and_map::<T>(cmds, &staging_buf, count)?;`. **Fire-and-forget path** (279 ops): Replace `device.submit_and_poll(cmds)` with `device.submit_commands(cmds)` — no poll needed when you only hold a `Tensor` handle. Port `9740` on ironGate confirmed. |
+
+#### Discovery Escalation Hierarchy (Cross-cutting, May 2026)
+
+primalSpring now discovers composition members in this priority order:
+
+| Tier | Mechanism | barraCuda support |
+|------|-----------|-------------------|
+| 1 | Songbird `ipc.resolve` (socket paths) | Yes — `register_with_discovery()` sends `ipc.register` at startup via `DISCOVERY_SOCKET` |
+| 2 | biomeOS Neural API (`capability.discover`) | Not applicable (barraCuda is a producer, not a Neural API consumer) |
+| 3 | UDS filesystem convention (`primal-family.sock`) | Yes — binds at `$BIOMEOS_SOCKET_DIR/math.sock` (or `math-{family_id}.sock`) |
+| 4 | Socket registry / manifests | Yes — `write_discovery_file()` writes JSON manifest at startup |
+| 5 | TCP probing (well-known ports from tolerances) | Yes — `tolerances.port_range` advertises `9740` |
+
+No migration needed — barraCuda already participates in tiers 1, 3, 4, and 5. Tier 1 (Songbird) provides highest-fidelity routing with cross-gate capability.
 
 #### TensorSession / BatchGuard Migration Guide
 

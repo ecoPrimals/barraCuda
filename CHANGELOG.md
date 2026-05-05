@@ -5,7 +5,13 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.12] — 2026-05-04
+## [0.3.12] — 2026-05-05
+
+### Changed — Sprint 53: Phase 58b GPU API Drift Documentation (May 5 2026)
+
+- **`submit_and_poll` deprecation notice**: Documented the `WgpuDevice::submit_and_poll` → `submit_and_map<T>` breaking change in `BREAKING_CHANGES.md` with full migration guide. Resolves primalSpring Phase 58b "GPU API drift" audit item. The old double-poll pattern was replaced by single-poll `submit_and_map` in 0.3.5 (Mar 15) and the dead method removed in Sprint 42 (Apr 13). wetSpring's `bio/pairwise_l2_gpu.rs` one-line migration: replace `submit_and_poll` + `map_staging_buffer` with `submit_and_map`.
+- **Discovery escalation hierarchy**: Documented barraCuda's participation across all relevant tiers in `BREAKING_CHANGES.md`. Tier 1 (Songbird `ipc.resolve`) supported since Sprint 47. Tier 3 (UDS `math.sock`), Tier 4 (discovery file manifest), Tier 5 (TCP 9740) supported since inception.
+- All quality gates green: fmt, clippy -D warnings
 
 ### Fixed — Sprint 52: Phase 58 Audit Response (May 4 2026)
 

@@ -1,11 +1,17 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-05-04.
+Prioritized work items, ordered by impact. Updated 2026-05-05.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 53: Phase 58b GPU API Drift Documentation (May 5)**: Documented
+  `WgpuDevice::submit_and_poll` → `submit_and_map<T>` breaking change in
+  `BREAKING_CHANGES.md` with full migration guide. Documented Discovery Escalation
+  Hierarchy participation (Tiers 1, 3, 4, 5 confirmed). Resolves primalSpring
+  Phase 58b "GPU API drift" audit item for barraCuda side (wetSpring one-line
+  migration is downstream). All quality gates green.
 - **Sprint 51b: Phase 3 Transport Switch Verification (May 3)**: Fixed interop gap
   flagged by primalSpring audit — `buf_reader.into_inner()` discarded buffered
   bytes on negotiate transition (pipelined encrypted frames lost). Fixed by passing

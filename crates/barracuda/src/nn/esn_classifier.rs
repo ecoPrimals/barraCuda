@@ -171,6 +171,18 @@ impl EsnClassifier {
         self.state.fill(0.0);
     }
 
+    /// Get current reservoir state (for client-managed stateless IPC).
+    #[must_use]
+    pub fn get_state(&self) -> &[f64] {
+        &self.state
+    }
+
+    /// Set reservoir state from a snapshot (for client-managed stateless IPC).
+    pub fn set_state(&mut self, state: &[f64]) {
+        self.state.resize(state.len(), 0.0);
+        self.state.copy_from_slice(state);
+    }
+
     /// Update reservoir state with a single input (internal).
     fn update_state(&mut self, input: &[f64]) -> Result<()> {
         if input.len() != self.config.input_size {

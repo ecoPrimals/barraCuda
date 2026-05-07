@@ -5,6 +5,15 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.13] — 2026-05-07
+
+### Added — Sprint 54: Stateful IPC Surface (Path A) (May 7 2026)
+
+- **`ode.step`** JSON-RPC method: stateless RK4 integration of linear ODE systems (dy/dt = A*y + b). Client sends current state, A matrix, forcing vector, dt, n_steps; receives final state and t_final. Path A (client-managed snapshots) per Stateful API Architecture Advisory.
+- **`ml.esn_predict`** JSON-RPC method: stateless ESN prediction. Client sends serialized weights JSON, optional reservoir state snapshot, and input vector; receives prediction and new reservoir state for subsequent calls. Path A (client-managed state) per Advisory.
+- **`EsnClassifier::get_state`/`set_state`**: public accessors for reservoir state vector, enabling IPC round-tripping without internal mutation.
+- Total registered methods: 61 (was 59). All quality gates green: fmt, clippy -D warnings, doc -D warnings, deny, 241+ barracuda-core tests pass.
+
 ## [0.3.12] — 2026-05-05
 
 ### Changed — Sprint 53: Phase 58b GPU API Drift Documentation (May 5 2026)

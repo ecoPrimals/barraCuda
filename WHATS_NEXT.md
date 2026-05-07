@@ -6,6 +6,12 @@ Prioritized work items, ordered by impact. Updated 2026-05-07.
 
 ## Recently Completed
 
+- **Sprint 54: Stateful IPC Surface — Path A (May 7)**: Implemented `ode.step`
+  (linear ODE RK4 integration, stateless) and `ml.esn_predict` (ESN prediction
+  with client-managed reservoir state). Both follow Path A (Stateless with
+  Client-Managed Snapshots) from the Stateful API Architecture Advisory.
+  Added `EsnClassifier::get_state`/`set_state` public accessors. Total methods:
+  61 (was 59). All quality gates green.
 - **Sprint 53: Phase 58b GPU API Drift Documentation (May 5)**: Documented
   `WgpuDevice::submit_and_poll` → `submit_and_map<T>` breaking change in
   `BREAKING_CHANGES.md` with full migration guide. Documented Discovery Escalation

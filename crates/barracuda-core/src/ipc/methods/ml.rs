@@ -4,8 +4,9 @@
 //! Inline-data CPU paths for lightweight ML operations suitable for
 //! composition graph nodes. GPU tensor ops live in `tensor.rs`.
 
-use super::super::jsonrpc::{INVALID_PARAMS, JsonRpcResponse};
+use super::super::jsonrpc::{INTERNAL_ERROR, INVALID_PARAMS, JsonRpcResponse};
 use super::params::{extract_f64_array, extract_matrix};
+use barracuda::nn::esn_classifier::EsnClassifier;
 use barracuda::nn::simple_mlp::{Activation, DenseLayer, SimpleMlp};
 use serde_json::Value;
 
@@ -177,4 +178,64 @@ pub(super) fn ml_attention(params: &Value, id: Value) -> JsonRpcResponse {
             "d_v": d_v,
         }),
     )
+}
+
+/// `ml.esn_predict` — stateless ESN prediction (Path A, client-managed state).
+///
+/// Accepts serialized ESN weights (JSON string from `EsnClassifier::to_json`),
+/// an optional reservoir state snapshot, and the current input vector.
+/// Returns the prediction and the new reservoir state for the next call.
+///
+/// Params:
+/// - `weights_json` (string): serialized ESN weights from `to_json()`
+/// - `input` (array): input vector of length `input_size`
+/// - `state` (array, optional): reservoir state from a previous call (zeros if omitted)
+pub(super) fn ml_esn_predict(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(weights_json) = params.get("weights_json").and_then(|v| v.as_str()) else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: weights_json (string from EsnClassifier::to_json())",
+        );
+    };
+    let Some(input) = extract_f64_array(params, "input") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: input (array)");
+    };
+
+    let mut esn = match EsnClassifier::from_json(weights_json) {
+        Ok(e) => e,
+        Err(e) => {
+            return JsonRpcResponse::error(
+                id,
+                INVALID_PARAMS,
+                format!("Failed to parse weights_json: {e}"),
+            );
+        }
+    };
+
+    if let Some(state_arr) = extract_f64_array(params, "state") {
+        if state_arr.len() != esn.config.reservoir_size {
+            return JsonRpcResponse::error(
+                id,
+                INVALID_PARAMS,
+                format!(
+                    "state length ({}) != reservoir_size ({})",
+                    state_arr.len(),
+                    esn.config.reservoir_size
+                ),
+            );
+        }
+        esn.set_state(&state_arr);
+    }
+
+    match esn.predict(&input) {
+        Ok(prediction) => JsonRpcResponse::success(
+            id,
+            serde_json::json!({
+                "prediction": prediction,
+                "state": esn.get_state(),
+            }),
+        ),
+        Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("ESN predict failed: {e}")),
+    }
 }

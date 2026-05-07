@@ -77,6 +77,8 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     "linalg.svd",
     "linalg.qr",
     "linalg.graph_laplacian",
+    // ── Numerical (CPU inline-data) ───────────────────────────────────
+    "ode.step",
     // ── Graph / PGM (CPU inline-data) ─────────────────────────────────
     "graph.belief_propagation",
     // ── Spectral (CPU inline-data) ────────────────────────────────────
@@ -89,6 +91,7 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     // ── ML (CPU inline-data) ──────────────────────────────────────────
     "ml.mlp_forward",
     "ml.attention",
+    "ml.esn_predict",
     // ── Noise & RNG (CPU) ─────────────────────────────────────────────
     "noise.perlin2d",
     "noise.perlin3d",
@@ -175,6 +178,8 @@ pub async fn dispatch(
         "linalg.svd" => math::linalg_svd(params, id),
         "linalg.qr" => math::linalg_qr(params, id),
         "linalg.graph_laplacian" => graph::linalg_graph_laplacian(params, id),
+        // Numerical (CPU inline-data)
+        "ode.step" => math::ode_step(params, id),
         // Graph / PGM (CPU inline-data)
         "graph.belief_propagation" => graph::graph_belief_propagation(params, id),
         // Spectral (CPU inline-data)
@@ -187,6 +192,7 @@ pub async fn dispatch(
         // ML (CPU inline-data)
         "ml.mlp_forward" => ml::ml_mlp_forward(params, id),
         "ml.attention" => ml::ml_attention(params, id),
+        "ml.esn_predict" => ml::ml_esn_predict(params, id),
         // Noise & RNG (CPU)
         "noise.perlin2d" => math::noise_perlin2d(params, id),
         "noise.perlin3d" => math::noise_perlin3d(params, id),

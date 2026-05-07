@@ -739,6 +739,138 @@ pub(super) fn stats_fit_linear(params: &Value, id: Value) -> JsonRpcResponse {
     }
 }
 
+/// `ode.step` — stateless RK4 integration of a linear ODE system (Path A).
+///
+/// Accepts the current state, linear system matrix A and forcing vector b
+/// (dy/dt = A*y + b), time step, and number of steps. Returns the final state.
+/// The client manages snapshots for multi-call workflows.
+///
+/// Params: `state` (array, n_vars), `a` (matrix n_vars×n_vars),
+///         `b` (array n_vars, optional, default zeros),
+///         `dt` (number), `n_steps` (integer, default 1),
+///         `t0` (number, default 0.0).
+pub(super) fn ode_step(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(state) = extract_f64_array(params, "state") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: state (array)");
+    };
+    let Some(a_matrix) = extract_matrix(params, "a") else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: a (n_vars × n_vars matrix)",
+        );
+    };
+
+    let n_vars = state.len();
+    if n_vars == 0 {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "state must be non-empty");
+    }
+    if a_matrix.len() != n_vars {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            format!(
+                "a: row count ({}) must equal state length ({n_vars})",
+                a_matrix.len()
+            ),
+        );
+    }
+    for (i, row) in a_matrix.iter().enumerate() {
+        if row.len() != n_vars {
+            return JsonRpcResponse::error(
+                id,
+                INVALID_PARAMS,
+                format!(
+                    "a[{i}]: column count ({}) must equal state length ({n_vars})",
+                    row.len()
+                ),
+            );
+        }
+    }
+
+    let b = match extract_f64_array(params, "b") {
+        Some(bv) if bv.len() == n_vars => bv,
+        Some(bv) => {
+            return JsonRpcResponse::error(
+                id,
+                INVALID_PARAMS,
+                format!(
+                    "b: length ({}) must equal state length ({n_vars})",
+                    bv.len()
+                ),
+            );
+        }
+        None => vec![0.0; n_vars],
+    };
+
+    let dt = match params.get("dt").and_then(|v| v.as_f64()) {
+        Some(d) if d > 0.0 => d,
+        Some(_) => {
+            return JsonRpcResponse::error(id, INVALID_PARAMS, "dt must be > 0");
+        }
+        None => {
+            return JsonRpcResponse::error(
+                id,
+                INVALID_PARAMS,
+                "Missing required param: dt (positive number)",
+            );
+        }
+    };
+    #[expect(clippy::cast_possible_truncation, reason = "n_steps is a step count")]
+    let n_steps = params.get("n_steps").and_then(|v| v.as_u64()).unwrap_or(1) as usize;
+    let t0 = params.get("t0").and_then(|v| v.as_f64()).unwrap_or(0.0);
+
+    let deriv = |_t: f64, y: &[f64]| -> Vec<f64> {
+        let mut dy = b.clone();
+        for (i, row) in a_matrix.iter().enumerate() {
+            for (j, &a_ij) in row.iter().enumerate() {
+                dy[i] = a_ij.mul_add(y[j], dy[i]);
+            }
+        }
+        dy
+    };
+
+    let mut y = state;
+    let mut t = t0;
+
+    for _ in 0..n_steps {
+        let k1 = deriv(t, &y);
+        let y2: Vec<f64> = y
+            .iter()
+            .zip(&k1)
+            .map(|(&yi, &k)| (0.5 * dt).mul_add(k, yi))
+            .collect();
+        let t_mid = 0.5f64.mul_add(dt, t);
+        let k2 = deriv(t_mid, &y2);
+        let y3: Vec<f64> = y
+            .iter()
+            .zip(&k2)
+            .map(|(&yi, &k)| (0.5 * dt).mul_add(k, yi))
+            .collect();
+        let k3 = deriv(t_mid, &y3);
+        let y4: Vec<f64> = y
+            .iter()
+            .zip(&k3)
+            .map(|(&yi, &k)| dt.mul_add(k, yi))
+            .collect();
+        let k4 = deriv(t + dt, &y4);
+
+        let sixth = 1.0 / 6.0;
+        for i in 0..n_vars {
+            y[i] = (dt * sixth).mul_add(
+                2.0f64.mul_add(k3[i], 2.0f64.mul_add(k2[i], k1[i])) + k4[i],
+                y[i],
+            );
+        }
+        t += dt;
+    }
+
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({ "state": y, "t_final": t, "n_steps": n_steps }),
+    )
+}
+
 /// `stats.empirical_spectral_density` — eigenvalue histogram (normalized).
 ///
 /// Params: `eigenvalues` (array), `n_bins` (integer, default 50).

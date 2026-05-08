@@ -14,6 +14,7 @@ mod device;
 mod fhe;
 mod graph;
 mod health;
+mod linalg;
 mod math;
 mod ml;
 mod nautilus;
@@ -227,10 +228,10 @@ pub async fn dispatch(
         "stats.fit_linear" => math::stats_fit_linear(params, id),
         "stats.empirical_spectral_density" => math::stats_empirical_spectral_density(params, id),
         // Linear algebra (CPU inline-data)
-        "linalg.solve" => math::linalg_solve(params, id),
-        "linalg.eigenvalues" | "stats.eigh" => math::linalg_eigenvalues(params, id),
-        "linalg.svd" => math::linalg_svd(params, id),
-        "linalg.qr" => math::linalg_qr(params, id),
+        "linalg.solve" => linalg::linalg_solve(params, id),
+        "linalg.eigenvalues" | "stats.eigh" => linalg::linalg_eigenvalues(params, id),
+        "linalg.svd" => linalg::linalg_svd(params, id),
+        "linalg.qr" => linalg::linalg_qr(params, id),
         "linalg.graph_laplacian" => graph::linalg_graph_laplacian(params, id),
         // Numerical (CPU inline-data)
         "ode.step" => math::ode_step(params, id),

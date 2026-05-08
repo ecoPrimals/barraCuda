@@ -5,9 +5,9 @@
 
 use crate::ipc::jsonrpc;
 
+use super::super::linalg::{linalg_eigenvalues, linalg_qr, linalg_svd};
 use super::super::math::{
-    activation_gelu, activation_softmax, linalg_eigenvalues, linalg_qr, linalg_svd,
-    stats_anova_oneway, stats_chi_squared, stats_correlation,
+    activation_gelu, activation_softmax, stats_anova_oneway, stats_chi_squared, stats_correlation,
 };
 use super::super::spectral::spectral_stft;
 

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.13] — 2026-05-08
 
+### Changed — Sprint 56: 12-Axis Deep Debt — Linalg Module Extraction (May 8 2026)
+
+- **`math.rs` smart refactored (892→674L)**: 4 linear algebra handlers (`linalg_solve`, `linalg_eigenvalues`, `linalg_svd`, `linalg_qr`) extracted to dedicated `linalg.rs` module (225L). Domain-aligned split — linalg is a distinct mathematical subdomain. Dispatch updated (`linalg::*` instead of `math::*`). Test imports updated. Zero files >800L across entire codebase. 12-axis deep debt audit: clean bill on all axes.
+
 ### Added — Sprint 55: GAP-11 Complete — MLP Training + Nautilus Sessions (May 8 2026)
 
 - **`SimpleMlp::train()`**: Full backpropagation training via mini-batch SGD. Supports all 5 activation functions (ReLU, Tanh, Sigmoid, GELU, Identity) with analytical derivatives. `TrainConfig` for learning rate and epochs. `TrainError` typed error enum.

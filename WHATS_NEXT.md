@@ -1,11 +1,17 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-05-07.
+Prioritized work items, ordered by impact. Updated 2026-05-08.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 56: 12-Axis Deep Debt — Linalg Module Extraction (May 8)**:
+  `math.rs` 892→674L via extraction of 4 linear algebra handlers (`linalg.solve`,
+  `linalg.eigenvalues`, `linalg.svd`, `linalg.qr`) to cohesive `linalg.rs` (225L).
+  Domain-aligned split: linalg is a distinct mathematical subdomain from stats,
+  activations, and ODE integration. 12-axis audit clean (zero files >800L, zero
+  TODO/FIXME, zero unsafe, zero mocks in production, all deps pure Rust).
 - **Sprint 55: GAP-11 Complete — MLP Training + Nautilus Sessions (May 8)**:
   Implemented `SimpleMlp::train()` (SGD backpropagation, all 5 activations).
   Wired `ml.mlp_train` IPC method. Implemented Nautilus server-session store

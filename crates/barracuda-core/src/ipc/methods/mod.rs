@@ -21,9 +21,14 @@ mod primal;
 mod spectral;
 mod tensor;
 
+use std::sync::LazyLock;
+
 use super::jsonrpc::{JsonRpcResponse, METHOD_NOT_FOUND};
+use super::method_gate::{CallerContext, MethodGate};
 use crate::BarraCudaPrimal;
 use serde_json::Value;
+
+static GATE: LazyLock<MethodGate> = LazyLock::new(MethodGate::from_env);
 
 /// Semantic method names this primal supports (wateringHole `{domain}.{operation}`).
 ///
@@ -39,6 +44,10 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     "health.readiness",
     "health.check",
     "capabilities.list",
+    // ── Auth / gate introspection (JH-0) ───────────────────────────────
+    "auth.check",
+    "auth.mode",
+    "auth.peer_info",
     // ── Primal identity ───────────────────────────────────────────────
     "identity.get",
     "primal.info",
@@ -123,6 +132,23 @@ pub(crate) fn normalize_method(method: &str) -> &str {
         .unwrap_or(method)
 }
 
+/// Extract a [`CallerContext`] from request params.
+///
+/// If params contain `"_auth": {"bearer": "..."}`, the token is extracted.
+/// Otherwise returns a default loopback context (no token, no peer creds).
+fn extract_caller_context(params: &Value) -> CallerContext {
+    let bearer = params
+        .get("_auth")
+        .and_then(|a| a.get("bearer"))
+        .and_then(|b| b.as_str())
+        .map(String::from);
+    CallerContext {
+        bearer_token: bearer,
+        peer: None,
+        origin: super::method_gate::ConnectionOrigin::Loopback,
+    }
+}
+
 /// Route a JSON-RPC method call to the appropriate handler.
 ///
 /// Canonical names and required aliases per wateringHole standards:
@@ -131,13 +157,32 @@ pub(crate) fn normalize_method(method: &str) -> &str {
 /// - `health.check` + aliases `status`, `check`
 /// - `capabilities.list` + alias `capability.list`
 /// - `primal.capabilities` (legacy alias for `capabilities.list`)
+///
+/// Pre-dispatch: the [`MethodGate`] checks caller authorization per
+/// `METHOD_GATE_STANDARD.md` v1.0 (JH-0). Default mode: permissive.
 pub async fn dispatch(
     primal: &BarraCudaPrimal,
     method: &str,
     params: &Value,
     id: Value,
 ) -> JsonRpcResponse {
-    match normalize_method(method) {
+    let caller = extract_caller_context(params);
+    let normalized = normalize_method(method);
+
+    // Auth introspection methods — handled by the gate itself.
+    match normalized {
+        "auth.check" => return GATE.handle_auth_check(&caller, id),
+        "auth.mode" => return GATE.handle_auth_mode(id),
+        "auth.peer_info" => return GATE.handle_auth_peer_info(&caller, id),
+        _ => {}
+    }
+
+    // Pre-dispatch gate check.
+    if let Err(denied) = GATE.check(normalized, &caller, &id) {
+        return denied;
+    }
+
+    match normalized {
         // Ecosystem probes
         "health.liveness" | "ping" | "health" => health::health_liveness(id),
         "health.readiness" => health::health_readiness(primal, id),

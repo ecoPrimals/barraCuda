@@ -135,10 +135,12 @@ pub mod btsp;
 mod btsp_discovery;
 pub mod btsp_frame;
 pub mod jsonrpc;
+pub mod method_gate;
 pub mod methods;
 pub mod transport;
 
 pub use btsp::{BtspCipher, BtspSession};
 pub use btsp_frame::{BtspFrameError, BtspFrameReader, BtspFrameWriter};
 pub use jsonrpc::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
+pub use method_gate::{CallerContext, MethodGate};
 pub use transport::IpcServer;

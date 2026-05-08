@@ -7,12 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.13] — 2026-05-07
 
-### Added — Sprint 54: Stateful IPC Surface (Path A) (May 7 2026)
+### Added — Sprint 54: Stateful IPC Surface (Path A) + Method Gate (JH-0) (May 7 2026)
 
 - **`ode.step`** JSON-RPC method: stateless RK4 integration of linear ODE systems (dy/dt = A*y + b). Client sends current state, A matrix, forcing vector, dt, n_steps; receives final state and t_final. Path A (client-managed snapshots) per Stateful API Architecture Advisory.
 - **`ml.esn_predict`** JSON-RPC method: stateless ESN prediction. Client sends serialized weights JSON, optional reservoir state snapshot, and input vector; receives prediction and new reservoir state for subsequent calls. Path A (client-managed state) per Advisory.
 - **`EsnClassifier::get_state`/`set_state`**: public accessors for reservoir state vector, enabling IPC round-tripping without internal mutation.
-- Total registered methods: 61 (was 59). All quality gates green: fmt, clippy -D warnings, doc -D warnings, deny, 241+ barracuda-core tests pass.
+- **Method Gate (JH-0)**: Pre-dispatch capability authorization per `METHOD_GATE_STANDARD.md` v1.0. Classifies all methods into Public (health, identity, capabilities, auth introspection) and Protected (everything else). Default: permissive mode (log-only). Enforced mode via `BARRACUDA_AUTH_MODE=enforced`. Bearer token extraction from `params._auth.bearer`. Error codes: `-32001 PERMISSION_DENIED`, `-32000 UNAUTHORIZED`.
+- **`auth.check`**, **`auth.mode`**, **`auth.peer_info`** JSON-RPC methods: gate introspection endpoints per JH-0 standard.
+- Total registered methods: 64 (was 59). All quality gates green: fmt, clippy -D warnings, doc -D warnings, deny, 262+ tests pass (21 new gate tests).
 
 ## [0.3.12] — 2026-05-05
 

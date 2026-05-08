@@ -6,6 +6,12 @@ Prioritized work items, ordered by impact. Updated 2026-05-07.
 
 ## Recently Completed
 
+- **Sprint 55: GAP-11 Complete — MLP Training + Nautilus Sessions (May 8)**:
+  Implemented `SimpleMlp::train()` (SGD backpropagation, all 5 activations).
+  Wired `ml.mlp_train` IPC method. Implemented Nautilus server-session store
+  (Path B, `job_id` pattern) with 6 methods: `nautilus.create`, `observe`,
+  `train`, `predict`, `export`, `import`. GAP-11 fully closed (18/18).
+  Total methods: 71. All quality gates green.
 - **Sprint 54: Stateful IPC + Method Gate JH-0 (May 7)**: Implemented `ode.step`
   (linear ODE RK4 integration, stateless) and `ml.esn_predict` (ESN prediction
   with client-managed reservoir state). Both follow Path A (Stateless with

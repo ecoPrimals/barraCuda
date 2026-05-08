@@ -7,7 +7,7 @@
 use super::super::jsonrpc::{INTERNAL_ERROR, INVALID_PARAMS, JsonRpcResponse};
 use super::params::{extract_f64_array, extract_matrix};
 use barracuda::nn::esn_classifier::EsnClassifier;
-use barracuda::nn::simple_mlp::{Activation, DenseLayer, SimpleMlp};
+use barracuda::nn::simple_mlp::{Activation, DenseLayer, SimpleMlp, TrainConfig};
 use serde_json::Value;
 
 fn parse_activation(s: &str) -> Option<Activation> {
@@ -237,5 +237,141 @@ pub(super) fn ml_esn_predict(params: &Value, id: Value) -> JsonRpcResponse {
             }),
         ),
         Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("ESN predict failed: {e}")),
+    }
+}
+
+/// `ml.mlp_train` — inline-data MLP training via backpropagation (CPU).
+///
+/// Params:
+/// - `layers` (array of `{weights, biases, activation}`): initial network architecture
+/// - `inputs` (array of arrays): training input vectors
+/// - `targets` (array of arrays): target output vectors
+/// - `learning_rate` (number, optional, default 0.01)
+/// - `epochs` (integer, optional, default 100)
+///
+/// Returns trained weights (same format as `ml.mlp_forward` layers) and final MSE.
+pub(super) fn ml_mlp_train(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(layers_val) = params.get("layers").and_then(|v| v.as_array()) else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: layers (array of layer specs)",
+        );
+    };
+    if layers_val.is_empty() {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "layers must be non-empty");
+    }
+
+    let mut dense_layers = Vec::with_capacity(layers_val.len());
+    for (i, layer_val) in layers_val.iter().enumerate() {
+        let Some(weights) = extract_matrix(layer_val, "weights") else {
+            return JsonRpcResponse::error(
+                id,
+                INVALID_PARAMS,
+                format!("Layer {i}: missing weights (2D array)"),
+            );
+        };
+        let Some(biases) = extract_f64_array(layer_val, "biases") else {
+            return JsonRpcResponse::error(
+                id,
+                INVALID_PARAMS,
+                format!("Layer {i}: missing biases (array)"),
+            );
+        };
+        if weights.len() != biases.len() {
+            return JsonRpcResponse::error(
+                id,
+                INVALID_PARAMS,
+                format!(
+                    "Layer {i}: weights rows ({}) != biases length ({})",
+                    weights.len(),
+                    biases.len()
+                ),
+            );
+        }
+        let act_str = layer_val
+            .get("activation")
+            .and_then(|v| v.as_str())
+            .unwrap_or("identity");
+        let Some(activation) = parse_activation(act_str) else {
+            return JsonRpcResponse::error(
+                id,
+                INVALID_PARAMS,
+                format!("Layer {i}: unknown activation \"{act_str}\""),
+            );
+        };
+        dense_layers.push(DenseLayer {
+            weight: weights,
+            bias: biases,
+            activation,
+        });
+    }
+
+    let Some(inputs_val) = params.get("inputs").and_then(|v| v.as_array()) else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: inputs (array of arrays)",
+        );
+    };
+    let Some(targets_val) = params.get("targets").and_then(|v| v.as_array()) else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: targets (array of arrays)",
+        );
+    };
+
+    let inputs: Vec<Vec<f64>> = inputs_val
+        .iter()
+        .filter_map(|v| {
+            v.as_array()
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect())
+        })
+        .collect();
+    let targets: Vec<Vec<f64>> = targets_val
+        .iter()
+        .filter_map(|v| {
+            v.as_array()
+                .map(|a| a.iter().filter_map(|x| x.as_f64()).collect())
+        })
+        .collect();
+
+    let learning_rate = params
+        .get("learning_rate")
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.01);
+    #[expect(clippy::cast_possible_truncation, reason = "epochs is a count")]
+    let epochs = params.get("epochs").and_then(|v| v.as_u64()).unwrap_or(100) as usize;
+
+    let config = TrainConfig {
+        learning_rate,
+        epochs,
+    };
+
+    let mut mlp = SimpleMlp::new(dense_layers);
+    match mlp.train(&inputs, &targets, &config) {
+        Ok(mse) => {
+            let trained_layers: Vec<Value> = mlp
+                .layers
+                .iter()
+                .map(|l| {
+                    serde_json::json!({
+                        "weights": l.weight,
+                        "biases": l.bias,
+                        "activation": format!("{:?}", l.activation).to_lowercase(),
+                    })
+                })
+                .collect();
+            JsonRpcResponse::success(
+                id,
+                serde_json::json!({
+                    "layers": trained_layers,
+                    "mse": mse,
+                    "epochs": epochs,
+                }),
+            )
+        }
+        Err(e) => JsonRpcResponse::error(id, INVALID_PARAMS, format!("Training failed: {e}")),
     }
 }

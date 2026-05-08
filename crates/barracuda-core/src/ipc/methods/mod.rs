@@ -16,6 +16,7 @@ mod graph;
 mod health;
 mod math;
 mod ml;
+mod nautilus;
 mod params;
 mod primal;
 mod spectral;
@@ -99,8 +100,16 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     "activation.gelu",
     // ── ML (CPU inline-data) ──────────────────────────────────────────
     "ml.mlp_forward",
+    "ml.mlp_train",
     "ml.attention",
     "ml.esn_predict",
+    // ── Nautilus (server sessions, Path B) ─────────────────────────────
+    "nautilus.create",
+    "nautilus.observe",
+    "nautilus.train",
+    "nautilus.predict",
+    "nautilus.export",
+    "nautilus.import",
     // ── Noise & RNG (CPU) ─────────────────────────────────────────────
     "noise.perlin2d",
     "noise.perlin3d",
@@ -236,8 +245,16 @@ pub async fn dispatch(
         "activation.gelu" => math::activation_gelu(params, id),
         // ML (CPU inline-data)
         "ml.mlp_forward" => ml::ml_mlp_forward(params, id),
+        "ml.mlp_train" => ml::ml_mlp_train(params, id),
         "ml.attention" => ml::ml_attention(params, id),
         "ml.esn_predict" => ml::ml_esn_predict(params, id),
+        // Nautilus (server sessions, Path B)
+        "nautilus.create" => nautilus::nautilus_create(params, id),
+        "nautilus.observe" => nautilus::nautilus_observe(params, id),
+        "nautilus.train" => nautilus::nautilus_train(params, id),
+        "nautilus.predict" => nautilus::nautilus_predict(params, id),
+        "nautilus.export" => nautilus::nautilus_export(params, id),
+        "nautilus.import" => nautilus::nautilus_import(params, id),
         // Noise & RNG (CPU)
         "noise.perlin2d" => math::noise_perlin2d(params, id),
         "noise.perlin3d" => math::noise_perlin3d(params, id),

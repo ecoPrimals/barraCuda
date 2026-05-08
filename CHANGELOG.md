@@ -5,7 +5,20 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.13] — 2026-05-07
+## [0.3.13] — 2026-05-08
+
+### Added — Sprint 55: GAP-11 Complete — MLP Training + Nautilus Sessions (May 8 2026)
+
+- **`SimpleMlp::train()`**: Full backpropagation training via mini-batch SGD. Supports all 5 activation functions (ReLU, Tanh, Sigmoid, GELU, Identity) with analytical derivatives. `TrainConfig` for learning rate and epochs. `TrainError` typed error enum.
+- **`ml.mlp_train`** JSON-RPC method: inline-data MLP training. Accepts architecture, training data, hyperparameters; returns trained weights and final MSE. Closes GAP-11 SimpleMlp training gap.
+- **Nautilus server sessions (Path B)**: In-process session store (`LazyLock<RwLock<HashMap<SessionId, NautilusBrain>>>`). Follows the toadStool `job_id` pattern from the Stateful API Architecture Advisory.
+- **`nautilus.create`**: create a new brain session (returns `session_id`)
+- **`nautilus.observe`**: record HMC observations into a session
+- **`nautilus.train`**: evolve the shell and train on accumulated observations
+- **`nautilus.predict`**: predict observables for a given β
+- **`nautilus.export`**: export full brain state as JSON for persistence
+- **`nautilus.import`**: restore a brain from previously exported JSON
+- GAP-11 fully closed: 18/18. All 4 deferred methods now have complete IPC surfaces.
 
 ### Added — Sprint 54: Stateful IPC Surface (Path A) + Method Gate (JH-0) (May 7 2026)
 
@@ -14,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`EsnClassifier::get_state`/`set_state`**: public accessors for reservoir state vector, enabling IPC round-tripping without internal mutation.
 - **Method Gate (JH-0)**: Pre-dispatch capability authorization per `METHOD_GATE_STANDARD.md` v1.0. Classifies all methods into Public (health, identity, capabilities, auth introspection) and Protected (everything else). Default: permissive mode (log-only). Enforced mode via `BARRACUDA_AUTH_MODE=enforced`. Bearer token extraction from `params._auth.bearer`. Error codes: `-32001 PERMISSION_DENIED`, `-32000 UNAUTHORIZED`.
 - **`auth.check`**, **`auth.mode`**, **`auth.peer_info`** JSON-RPC methods: gate introspection endpoints per JH-0 standard.
-- Total registered methods: 64 (was 59). All quality gates green: fmt, clippy -D warnings, doc -D warnings, deny, 262+ tests pass (21 new gate tests).
+- Total registered methods: 71 (was 59). All quality gates green: fmt, clippy -D warnings, doc -D warnings, deny, 280+ tests pass.
 
 ## [0.3.12] — 2026-05-05
 

@@ -133,6 +133,7 @@ pub const PRECISION_BINARY: Tolerance = Tolerance {
 /// Returns the spec-defined tolerance that reflects each tier's mantissa
 /// width and numerical error characteristics. Use this to validate that
 /// a tier is producing correct results and to decide when to escalate.
+#[cfg(feature = "gpu")]
 #[must_use]
 pub fn for_precision_tier(
     tier: crate::device::precision_tier::PrecisionTier,

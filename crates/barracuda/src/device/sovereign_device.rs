@@ -308,11 +308,39 @@ impl SovereignDevice {
         }
     }
 
+    /// Construct `PrecisionAdvice` from dispatch descriptor flags.
+    ///
+    /// Maps the `f64_shader`/`df64_shader` booleans (set by `PrecisionBrain::compile` callers)
+    /// to the coral wire format so the remote compiler receives full precision context.
+    #[cfg(feature = "sovereign-dispatch")]
+    pub(crate) fn build_precision_advice(
+        f64_shader: bool,
+        df64_shader: bool,
+    ) -> Option<crate::device::coral_compiler::types::PrecisionAdvice> {
+        if !f64_shader && !df64_shader {
+            return None;
+        }
+        let tier = if df64_shader { "DF64" } else { "F64" };
+        Some(crate::device::coral_compiler::types::PrecisionAdvice {
+            tier: tier.to_owned(),
+            needs_transcendental_lowering: f64_shader,
+            df64_naga_poisoned: df64_shader,
+            domain: None,
+        })
+    }
+
     /// Synchronously compile WGSL via the coral compiler IPC when no cached
     /// binary is available. Blocks the current thread using `block_in_place`
     /// (safe because `dispatch_compute` is called from a blocking context).
+    ///
+    /// When `advice` is provided, the compile request carries precision routing
+    /// metadata so the remote compiler can make informed lowering decisions.
     #[cfg(feature = "sovereign-dispatch")]
-    fn live_compile(&self, shader_source: &str) -> Result<CachedBinary> {
+    fn live_compile(
+        &self,
+        shader_source: &str,
+        advice: Option<crate::device::coral_compiler::types::PrecisionAdvice>,
+    ) -> Result<CachedBinary> {
         use crate::device::coral_compiler::{
             GLOBAL_CORAL, cache::cache_native_binary, shader_hash,
         };
@@ -322,6 +350,10 @@ impl SovereignDevice {
         })?;
 
         let source = shader_source.to_owned();
+        let fp64_software = advice
+            .as_ref()
+            .is_some_and(|a| a.needs_transcendental_lowering);
+
         tokio::task::block_in_place(|| {
             handle.block_on(async {
                 let archs = GLOBAL_CORAL.supported_archs().await.ok_or_else(|| {
@@ -334,17 +366,25 @@ impl SovereignDevice {
 
                 tracing::info!(
                     target = %target,
+                    has_advice = advice.is_some(),
                     "live compile-on-dispatch: compiling WGSL for {target}"
                 );
 
-                let binary = GLOBAL_CORAL
-                    .compile_wgsl_direct(&source, &target, false)
-                    .await
-                    .ok_or_else(|| {
-                        BarracudaError::Device(format!(
-                            "SovereignDevice: live compilation failed for target {target}"
-                        ))
-                    })?;
+                let binary = if let Some(adv) = advice {
+                    GLOBAL_CORAL
+                        .compile_wgsl_with_advice(&source, &target, fp64_software, adv)
+                        .await
+                } else {
+                    GLOBAL_CORAL
+                        .compile_wgsl_direct(&source, &target, false)
+                        .await
+                };
+
+                let binary = binary.ok_or_else(|| {
+                    BarracudaError::Device(format!(
+                        "SovereignDevice: live compilation failed for target {target}"
+                    ))
+                })?;
 
                 let hash = shader_hash(&source);
                 cache_native_binary(&hash, &target, binary.clone());
@@ -682,7 +722,8 @@ impl GpuBackend for SovereignDevice {
                         barrier_count: 0,
                     })
                 } else {
-                    let cached = self.live_compile(desc.shader_source)?;
+                    let advice = Self::build_precision_advice(desc.f64_shader, desc.df64_shader);
+                    let cached = self.live_compile(desc.shader_source, advice)?;
                     e.insert(cached)
                 }
             }

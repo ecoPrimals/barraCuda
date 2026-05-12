@@ -269,3 +269,92 @@ fn hashing_requirements_binary() {
     assert!(fma_safe);
     assert!(rationale.contains("XNOR") || rationale.contains("maximum"));
 }
+
+// ── Integration: PrecisionBrain → SovereignDevice advice wiring ─────
+
+#[test]
+#[cfg(feature = "sovereign-dispatch")]
+fn sovereign_advice_built_for_f64_domain() {
+    use crate::device::sovereign_device::SovereignDevice;
+    let cal = make_cal(true, false, false, false);
+    let brain = PrecisionBrain::from_capabilities_with_coral(cal, &test_caps_no_f64(), true);
+
+    let domain = PhysicsDomain::LatticeQcd;
+    assert!(brain.needs_sovereign_compile(domain));
+
+    let tier = brain.route(domain);
+    let (f64_shader, df64_shader) = match tier {
+        PrecisionTier::F64 | PrecisionTier::F64Precise | PrecisionTier::DF128 => (true, false),
+        PrecisionTier::DF64 => (false, true),
+        _ => (false, false),
+    };
+
+    let advice = SovereignDevice::build_precision_advice(f64_shader, df64_shader);
+    assert!(advice.is_some(), "f64 domain should produce advice");
+    let adv = advice.unwrap();
+    assert_eq!(adv.tier, "F64");
+    assert!(adv.needs_transcendental_lowering);
+}
+
+#[test]
+#[cfg(feature = "sovereign-dispatch")]
+fn sovereign_advice_none_for_f32_domain() {
+    use crate::device::sovereign_device::SovereignDevice;
+    let cal = make_cal(true, true, true, true);
+    let brain = PrecisionBrain::from_capabilities(cal, &test_caps_volta_full());
+
+    let domain = PhysicsDomain::Inference;
+    assert!(!brain.needs_sovereign_compile(domain));
+
+    let tier = brain.route(domain);
+    let (f64_shader, df64_shader) = match tier {
+        PrecisionTier::F64 | PrecisionTier::F64Precise | PrecisionTier::DF128 => (true, false),
+        PrecisionTier::DF64 => (false, true),
+        _ => (false, false),
+    };
+
+    let advice = SovereignDevice::build_precision_advice(f64_shader, df64_shader);
+    assert!(advice.is_none(), "f32 domain should not produce advice");
+}
+
+#[test]
+#[cfg(feature = "sovereign-dispatch")]
+fn sovereign_advice_df64_domain() {
+    use crate::device::sovereign_device::SovereignDevice;
+    let cal = make_cal(true, true, false, false);
+    let brain = PrecisionBrain::from_capabilities_with_coral(cal, &test_caps_no_f64(), true);
+
+    let domain = PhysicsDomain::GradientFlow;
+    let tier = brain.route(domain);
+    let (f64_shader, df64_shader) = match tier {
+        PrecisionTier::F64 | PrecisionTier::F64Precise | PrecisionTier::DF128 => (true, false),
+        PrecisionTier::DF64 => (false, true),
+        _ => (false, false),
+    };
+
+    if df64_shader {
+        let advice = SovereignDevice::build_precision_advice(f64_shader, df64_shader);
+        assert!(advice.is_some());
+        let adv = advice.unwrap();
+        assert_eq!(adv.tier, "DF64");
+        assert!(adv.df64_naga_poisoned);
+    }
+}
+
+#[test]
+#[cfg(feature = "sovereign-dispatch")]
+fn precision_advice_serializes_to_coral_wire_format() {
+    use crate::device::coral_compiler::types::PrecisionAdvice;
+    use crate::device::sovereign_device::SovereignDevice;
+
+    let advice = SovereignDevice::build_precision_advice(true, false).unwrap();
+    let wire = PrecisionAdvice {
+        tier: advice.tier.clone(),
+        needs_transcendental_lowering: advice.needs_transcendental_lowering,
+        df64_naga_poisoned: advice.df64_naga_poisoned,
+        domain: advice.domain.clone(),
+    };
+    let json = serde_json::to_string(&wire).unwrap();
+    assert!(json.contains("\"tier\":\"F64\""));
+    assert!(json.contains("\"needs_transcendental_lowering\":true"));
+}

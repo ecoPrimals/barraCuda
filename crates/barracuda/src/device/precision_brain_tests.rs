@@ -358,3 +358,101 @@ fn precision_advice_serializes_to_coral_wire_format() {
     assert!(json.contains("\"tier\":\"F64\""));
     assert!(json.contains("\"needs_transcendental_lowering\":true"));
 }
+
+/// Integration test: walks F32 → DF64 → F64 precision tiers and verifies
+/// the correct `hardware_hint` is emitted at each level through the full
+/// `PrecisionBrain → DispatchDescriptor → sovereign_dispatch_wire` chain.
+#[test]
+#[cfg(feature = "sovereign-dispatch")]
+fn precision_ladder_f32_df64_f64_hardware_hint_chain() {
+    use crate::device::backend::HardwareHint;
+    use crate::device::precision_tier::PrecisionTier;
+    use crate::device::sovereign_device::SovereignDevice;
+
+    struct TierExpectation {
+        tier: PrecisionTier,
+        f64_flag: bool,
+        df64_flag: bool,
+        expected_hint: HardwareHint,
+        expected_advice: bool,
+    }
+
+    let expectations = [
+        TierExpectation {
+            tier: PrecisionTier::F32,
+            f64_flag: false,
+            df64_flag: false,
+            expected_hint: HardwareHint::Compute,
+            expected_advice: false,
+        },
+        TierExpectation {
+            tier: PrecisionTier::DF64,
+            f64_flag: false,
+            df64_flag: true,
+            expected_hint: HardwareHint::Compute,
+            expected_advice: true,
+        },
+        TierExpectation {
+            tier: PrecisionTier::F64,
+            f64_flag: true,
+            df64_flag: false,
+            expected_hint: HardwareHint::Compute,
+            expected_advice: true,
+        },
+    ];
+
+    for exp in &expectations {
+        let hint = exp.tier.recommended_hardware_hint();
+        assert_eq!(
+            hint, exp.expected_hint,
+            "Tier {} should route to {:?}",
+            exp.tier, exp.expected_hint
+        );
+
+        let advice = SovereignDevice::build_precision_advice(exp.f64_flag, exp.df64_flag);
+        assert_eq!(
+            advice.is_some(),
+            exp.expected_advice,
+            "Tier {} advice presence mismatch",
+            exp.tier
+        );
+
+        if let Some(adv) = &advice {
+            if exp.df64_flag {
+                assert_eq!(adv.tier, "DF64");
+                assert!(adv.df64_naga_poisoned);
+            } else if exp.f64_flag {
+                assert_eq!(adv.tier, "F64");
+                assert!(adv.needs_transcendental_lowering);
+            }
+        }
+    }
+}
+
+/// Verifies tensor core tiers map correctly through the hardware hint path.
+#[test]
+#[cfg(feature = "sovereign-dispatch")]
+fn precision_ladder_tensor_core_tiers_hardware_hint() {
+    use crate::device::backend::HardwareHint;
+    use crate::device::precision_tier::PrecisionTier;
+
+    let tensor_tiers = [
+        PrecisionTier::F16,
+        PrecisionTier::Bf16,
+        PrecisionTier::Tf32,
+        PrecisionTier::Fp8E4M3,
+        PrecisionTier::Fp8E5M2,
+    ];
+
+    for tier in tensor_tiers {
+        assert_eq!(
+            tier.recommended_hardware_hint(),
+            HardwareHint::TensorCore,
+            "MMA tier {tier} must route to TensorCore"
+        );
+        assert!(
+            tier.requires_compiler_support(),
+            "MMA tier {tier} requires coralReef compiler support"
+        );
+    }
+}

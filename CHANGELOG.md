@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.13] — 2026-05-12
 
+### Added — Sprint 56d: Precision Ladder + Dispatch Wire Hardening (May 12 2026)
+
+- **`PrecisionTier::recommended_hardware_hint()`**: Maps all 15 precision tiers to their natural hardware unit. TensorCore for F16/BF16/TF32/FP8-E4M3/FP8-E5M2 (MMA-accelerated). Compute for F32/F64/F64Precise/DF64/QF128/DF128/Binary/Int2/Q4/Q8 (ALU path).
+- **`PrecisionTier::requires_compiler_support()`**: Documents which tiers require coralReef compiler involvement (MMA emission, f32-pair rewrite, FMA suppression, multi-word expansion) vs pure barraCuda dispatch.
+- **`.hardware_hint()` builder method on `ComputeDispatch`**: Allows explicit hardware routing override (e.g., TensorCore for F16 MMA workloads). Default remains Compute when not specified.
+- **Precision ladder integration test**: Walks F32→DF64→F64 tiers through the full `PrecisionBrain → build_precision_advice → HardwareHint` chain, verifying correct hardware unit emitted at each level. Tensor core tier test validates MMA routing.
+- **5 dispatch wire error-path tests** (`sovereign_dispatch_wire::tests`): Connection refused, malformed HTTP response, JSON-RPC error propagation (GPU memory exhausted), successful output buffer readback with data verification, hardware hint serialization for all 6 variants via mock TCP servers.
+- **9 IPC coverage gap tests**: `tensor.matmul_inline` (5 tests: missing params, empty lhs, shape mismatch, 2×2 happy path, non-square multiply) and `linalg.graph_laplacian` (4 tests: missing adjacency, missing n, size mismatch, triangle graph happy path). Zero registered-but-never-exercised handlers remain.
+- **bearDog crypto delegation documentation**: Architectural boundary documented in `btsp_frame.rs` and `btsp.rs`. Phase 1-2 delegated to bearDog (`btsp.session.create`/`btsp.session.verify`). Local crypto retained for Phase 3 HKDF key derivation + per-frame ChaCha20-Poly1305/HMAC-SHA256 (performance rationale: per-frame IPC delegation prohibitive).
+
 ### Added — Sprint 56c: Independent Evolution Execution (May 12 2026)
 
 - **45 new CPU coverage tests** (barracuda-core: 447→492 tests): Complete handler-level coverage for `ode.step` (8 tests), `stats.covariance`/`stats.spearman`/`stats.fit_linear`/`stats.empirical_spectral_density` (9 tests), `spectral.fft`/`spectral.power_spectrum` (6 tests), `linalg.solve` (5 tests), `nautilus.*` full lifecycle (9 tests), `ml.mlp_train` (5 tests), `ml.esn_predict` (3 tests). All exercise validation and happy paths on CPU without GPU hardware.

@@ -6,6 +6,18 @@ Prioritized work items, ordered by impact. Updated 2026-05-12.
 
 ## Recently Completed
 
+- **Sprint 56d: Precision Ladder + Dispatch Wire Hardening (May 12)**:
+  primalSpring Evolution Sprint 2 audit execution. Precision ladder evolution:
+  `PrecisionTier::recommended_hardware_hint()` maps all 15 tiers to hardware units
+  (TensorCore for F16/BF16/TF32/FP8, Compute for F32/F64/DF64/QF128/DF128/quantized).
+  `requires_compiler_support()` documents coralReef dependency. `.hardware_hint()`
+  builder on `ComputeDispatch`. Integration tests verify F32→DF64→F64 hint chain +
+  tensor core routing. bearDog crypto delegation audited — Phase 1-2 delegated,
+  local crypto retained for Phase 3 HKDF + per-frame AEAD (documented rationale).
+  5 dispatch wire error-path tests (connection refused, malformed, RPC error,
+  output buffer readback, hardware hint serialization × 6 variants). IPC coverage
+  gap closed: `tensor.matmul_inline` (5 tests) + `linalg.graph_laplacian` (4 tests).
+  Zero registered-but-untested handlers.
 - **Sprint 56c: Independent Evolution Execution (May 12)**:
   Coverage push: 45 new CPU-testable IPC handler tests (447→492 total), covering
   `ode.step`, `stats.covariance`, `stats.spearman`, `stats.fit_linear`,

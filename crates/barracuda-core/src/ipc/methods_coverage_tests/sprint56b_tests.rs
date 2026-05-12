@@ -577,3 +577,162 @@ fn ml_esn_predict_invalid_weights_json() {
     let err = resp.error.unwrap();
     assert!(err.message.contains("parse") || err.message.contains("Failed"));
 }
+
+// ── tensor.matmul_inline ────────────────────────────────────────────
+
+#[test]
+fn tensor_matmul_inline_missing_params() {
+    use super::super::tensor::tensor_matmul_inline;
+    let resp = tensor_matmul_inline(&serde_json::json!({}), serde_json::json!(200));
+    let err = resp.error.unwrap();
+    assert_eq!(err.code, jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("lhs") || err.message.contains("rhs"));
+}
+
+#[test]
+fn tensor_matmul_inline_empty_lhs() {
+    use super::super::tensor::tensor_matmul_inline;
+    let resp = tensor_matmul_inline(
+        &serde_json::json!({"lhs": [], "rhs": [[1.0]]}),
+        serde_json::json!(201),
+    );
+    let err = resp.error.unwrap();
+    assert_eq!(err.code, jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("non-empty"));
+}
+
+#[test]
+fn tensor_matmul_inline_shape_mismatch() {
+    use super::super::tensor::tensor_matmul_inline;
+    let resp = tensor_matmul_inline(
+        &serde_json::json!({"lhs": [[1.0, 2.0]], "rhs": [[1.0], [2.0], [3.0]]}),
+        serde_json::json!(202),
+    );
+    let err = resp.error.unwrap();
+    assert_eq!(err.code, jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("Shape mismatch") || err.message.contains("shape"));
+}
+
+#[test]
+fn tensor_matmul_inline_happy_path_2x2() {
+    use super::super::tensor::tensor_matmul_inline;
+    let resp = tensor_matmul_inline(
+        &serde_json::json!({
+            "lhs": [[1.0, 2.0], [3.0, 4.0]],
+            "rhs": [[5.0, 6.0], [7.0, 8.0]]
+        }),
+        serde_json::json!(203),
+    );
+    assert!(resp.error.is_none(), "Expected success: {:?}", resp.error);
+    let result = resp.result.unwrap();
+    let mat = result["result"].as_array().unwrap();
+    assert_eq!(mat.len(), 2);
+    let row0: Vec<f64> = mat[0]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_f64().unwrap())
+        .collect();
+    let row1: Vec<f64> = mat[1]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_f64().unwrap())
+        .collect();
+    assert_eq!(row0, vec![19.0, 22.0]);
+    assert_eq!(row1, vec![43.0, 50.0]);
+    assert_eq!(result["shape"], serde_json::json!([2, 2]));
+}
+
+#[test]
+fn tensor_matmul_inline_non_square() {
+    use super::super::tensor::tensor_matmul_inline;
+    let resp = tensor_matmul_inline(
+        &serde_json::json!({
+            "lhs": [[1.0, 0.0, 2.0]],
+            "rhs": [[1.0], [0.0], [3.0]]
+        }),
+        serde_json::json!(204),
+    );
+    assert!(resp.error.is_none());
+    let result = resp.result.unwrap();
+    let mat = result["result"].as_array().unwrap();
+    assert_eq!(mat.len(), 1);
+    let row0: Vec<f64> = mat[0]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_f64().unwrap())
+        .collect();
+    assert_eq!(row0, vec![7.0]);
+    assert_eq!(result["shape"], serde_json::json!([1, 1]));
+}
+
+// ── linalg.graph_laplacian ──────────────────────────────────────────
+
+#[test]
+fn graph_laplacian_missing_adjacency() {
+    use super::super::graph::linalg_graph_laplacian;
+    let resp = linalg_graph_laplacian(&serde_json::json!({"n": 2}), serde_json::json!(210));
+    let err = resp.error.unwrap();
+    assert_eq!(err.code, jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("adjacency"));
+}
+
+#[test]
+fn graph_laplacian_missing_n() {
+    use super::super::graph::linalg_graph_laplacian;
+    let resp = linalg_graph_laplacian(
+        &serde_json::json!({"adjacency": [0.0, 1.0, 1.0, 0.0]}),
+        serde_json::json!(211),
+    );
+    let err = resp.error.unwrap();
+    assert_eq!(err.code, jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("n"));
+}
+
+#[test]
+fn graph_laplacian_size_mismatch() {
+    use super::super::graph::linalg_graph_laplacian;
+    let resp = linalg_graph_laplacian(
+        &serde_json::json!({"adjacency": [0.0, 1.0, 1.0], "n": 2}),
+        serde_json::json!(212),
+    );
+    let err = resp.error.unwrap();
+    assert_eq!(err.code, jsonrpc::INVALID_PARAMS);
+    assert!(err.message.contains("length") || err.message.contains("n*n"));
+}
+
+#[test]
+fn graph_laplacian_happy_path_triangle() {
+    use super::super::graph::linalg_graph_laplacian;
+    #[rustfmt::skip]
+    let adj = vec![
+        0.0, 1.0, 1.0,
+        1.0, 0.0, 1.0,
+        1.0, 1.0, 0.0,
+    ];
+    let resp = linalg_graph_laplacian(
+        &serde_json::json!({"adjacency": adj, "n": 3}),
+        serde_json::json!(213),
+    );
+    assert!(resp.error.is_none(), "Expected success: {:?}", resp.error);
+    let result = resp.result.unwrap();
+    let rows = result["result"].as_array().unwrap();
+    assert_eq!(rows.len(), 3);
+    let row0: Vec<f64> = rows[0]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_f64().unwrap())
+        .collect();
+    assert_eq!(row0, vec![2.0, -1.0, -1.0]);
+    let row1: Vec<f64> = rows[1]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_f64().unwrap())
+        .collect();
+    assert_eq!(row1, vec![-1.0, 2.0, -1.0]);
+    assert_eq!(result["n"], 3);
+}

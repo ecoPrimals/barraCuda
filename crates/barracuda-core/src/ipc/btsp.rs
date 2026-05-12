@@ -481,6 +481,16 @@ where
 }
 
 // ── Phase 3 negotiate ───────────────────────────────────────────────
+//
+// Crypto retained locally (not delegated to bearDog):
+//   - `hkdf::Hkdf<Sha256>`: derives per-connection stream cipher keys from the
+//     session_key already held in memory (returned by bearDog during Phase 1-2).
+//   - Delegation would require sending session_key over IPC only to receive a
+//     derived key back — no security benefit, added latency.
+//
+// bearDog's responsibility ends at Phase 2: it performs X25519 DH, validates
+// the HMAC challenge, and returns (session_id, session_key). From Phase 3
+// onward, barraCuda owns key derivation and frame crypto in-process.
 
 /// Error during `btsp.negotiate` Phase 3 cipher upgrade.
 #[derive(Debug, thiserror::Error)]

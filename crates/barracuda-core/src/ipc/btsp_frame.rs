@@ -9,6 +9,22 @@
 //! - `BTSP_CHACHA20_POLY1305`: nonce(12) ‖ ciphertext ‖ tag(16)
 //!
 //! Maximum frame size: 16 MiB (`0x0100_0000`).
+//!
+//! # Crypto Delegation Architecture (bearDog boundary)
+//!
+//! These crates (`chacha20poly1305`, `hmac`, `sha2`) are retained locally because
+//! they serve the **per-frame hot path** — every IPC message traverses this code.
+//! Delegating frame crypto to bearDog via IPC would add per-message round-trip
+//! latency and negate the zero-copy framing design.
+//!
+//! bearDog owns session establishment (Phase 1-2): `btsp.session.create` and
+//! `btsp.session.verify` are IPC-delegated via `security_provider_rpc()` in
+//! `btsp.rs`. Once bearDog returns `session_key`, all subsequent frame-level
+//! crypto operates in-process with that key material.
+//!
+//! Summary of crypto ownership:
+//! - **bearDog (delegated)**: X25519 key exchange, session creation, challenge verify
+//! - **barraCuda (local)**: HKDF key derivation (Phase 3), per-frame AEAD/HMAC
 
 use super::btsp::{BtspCipher, BtspSession};
 use chacha20poly1305::{

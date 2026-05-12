@@ -180,6 +180,67 @@ impl PrecisionTier {
             Self::Binary | Self::Int2 | Self::Quantized4 | Self::Quantized8
         )
     }
+
+    /// Recommended hardware unit for this precision tier.
+    ///
+    /// Maps each tier to the silicon unit best suited for executing it:
+    ///
+    /// | Tier group | Hardware unit | Rationale |
+    /// |------------|---------------|-----------|
+    /// | F16, BF16, TF32, FP8×2 | `TensorCore` | MMA-accelerated matrix ops |
+    /// | F32, F64, F64Precise, DF64, QF128, DF128 | `Compute` | Standard ALU / FP64 cores |
+    /// | Binary, Int2, Q4, Q8 | `Compute` | Bitwise/integer ALU ops |
+    ///
+    /// # Compiler support requirements
+    ///
+    /// Tiers that require `coralReef` compiler involvement (cannot be pure barraCuda dispatch):
+    /// - **TensorCore tiers** (F16, BF16, TF32, FP8): coralReef emits MMA instructions
+    /// - **DF64**: coralReef applies f32-pair rewrite pass
+    /// - **F64Precise**: coralReef disables FMA fusion
+    /// - **QF128/DF128**: coralReef emits multi-word arithmetic expansion
+    ///
+    /// Tiers that are pure barraCuda dispatch (standard WGSL compute):
+    /// - **F32**: baseline compute, no special compiler support needed
+    /// - **F64**: native `SHADER_F64` — standard compile path
+    /// - **Binary/Int2/Q4/Q8**: bitwise ALU on u32, no special lowering
+    #[must_use]
+    pub const fn recommended_hardware_hint(self) -> super::backend::HardwareHint {
+        match self {
+            Self::F16 | Self::Bf16 | Self::Tf32 | Self::Fp8E4M3 | Self::Fp8E5M2 => {
+                super::backend::HardwareHint::TensorCore
+            }
+            Self::Binary
+            | Self::Int2
+            | Self::Quantized4
+            | Self::Quantized8
+            | Self::F32
+            | Self::DF64
+            | Self::F64
+            | Self::F64Precise
+            | Self::QF128
+            | Self::DF128 => super::backend::HardwareHint::Compute,
+        }
+    }
+
+    /// Whether this tier requires coralReef compiler support beyond standard WGSL compilation.
+    ///
+    /// Returns `true` for tiers that need specialized lowering passes (MMA emission,
+    /// f32-pair rewrite, FMA suppression, or multi-word expansion).
+    #[must_use]
+    pub const fn requires_compiler_support(self) -> bool {
+        matches!(
+            self,
+            Self::F16
+                | Self::Bf16
+                | Self::Tf32
+                | Self::Fp8E4M3
+                | Self::Fp8E5M2
+                | Self::DF64
+                | Self::F64Precise
+                | Self::QF128
+                | Self::DF128
+        )
+    }
 }
 
 impl std::fmt::Display for PrecisionTier {
@@ -453,5 +514,110 @@ mod tests {
         assert_eq!(PrecisionTier::QF128.bytes_per_element(), 16);
         assert_eq!(PrecisionTier::F16.bytes_per_element(), 2);
         assert_eq!(PrecisionTier::Bf16.bytes_per_element(), 2);
+    }
+
+    #[test]
+    fn hardware_hint_tensor_core_tiers() {
+        use super::super::backend::HardwareHint;
+        let tensor_tiers = [
+            PrecisionTier::F16,
+            PrecisionTier::Bf16,
+            PrecisionTier::Tf32,
+            PrecisionTier::Fp8E4M3,
+            PrecisionTier::Fp8E5M2,
+        ];
+        for tier in tensor_tiers {
+            assert_eq!(
+                tier.recommended_hardware_hint(),
+                HardwareHint::TensorCore,
+                "{tier} should map to TensorCore"
+            );
+        }
+    }
+
+    #[test]
+    fn hardware_hint_compute_tiers() {
+        use super::super::backend::HardwareHint;
+        let compute_tiers = [
+            PrecisionTier::Binary,
+            PrecisionTier::Int2,
+            PrecisionTier::Quantized4,
+            PrecisionTier::Quantized8,
+            PrecisionTier::F32,
+            PrecisionTier::DF64,
+            PrecisionTier::F64,
+            PrecisionTier::F64Precise,
+            PrecisionTier::QF128,
+            PrecisionTier::DF128,
+        ];
+        for tier in compute_tiers {
+            assert_eq!(
+                tier.recommended_hardware_hint(),
+                HardwareHint::Compute,
+                "{tier} should map to Compute"
+            );
+        }
+    }
+
+    #[test]
+    fn all_15_tiers_have_hardware_hint() {
+        use super::super::backend::HardwareHint;
+        let all = [
+            PrecisionTier::Binary,
+            PrecisionTier::Int2,
+            PrecisionTier::Quantized4,
+            PrecisionTier::Quantized8,
+            PrecisionTier::Fp8E5M2,
+            PrecisionTier::Fp8E4M3,
+            PrecisionTier::Bf16,
+            PrecisionTier::F16,
+            PrecisionTier::Tf32,
+            PrecisionTier::F32,
+            PrecisionTier::DF64,
+            PrecisionTier::F64,
+            PrecisionTier::F64Precise,
+            PrecisionTier::QF128,
+            PrecisionTier::DF128,
+        ];
+        for tier in all {
+            let hint = tier.recommended_hardware_hint();
+            assert!(
+                hint == HardwareHint::Compute || hint == HardwareHint::TensorCore,
+                "{tier} has unexpected hint {hint:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn compiler_support_requirements() {
+        assert!(PrecisionTier::F16.requires_compiler_support());
+        assert!(PrecisionTier::Bf16.requires_compiler_support());
+        assert!(PrecisionTier::Tf32.requires_compiler_support());
+        assert!(PrecisionTier::Fp8E4M3.requires_compiler_support());
+        assert!(PrecisionTier::Fp8E5M2.requires_compiler_support());
+        assert!(PrecisionTier::DF64.requires_compiler_support());
+        assert!(PrecisionTier::F64Precise.requires_compiler_support());
+        assert!(PrecisionTier::QF128.requires_compiler_support());
+        assert!(PrecisionTier::DF128.requires_compiler_support());
+
+        assert!(!PrecisionTier::F32.requires_compiler_support());
+        assert!(!PrecisionTier::F64.requires_compiler_support());
+        assert!(!PrecisionTier::Binary.requires_compiler_support());
+        assert!(!PrecisionTier::Quantized4.requires_compiler_support());
+        assert!(!PrecisionTier::Quantized8.requires_compiler_support());
+        assert!(!PrecisionTier::Int2.requires_compiler_support());
+    }
+
+    #[test]
+    fn precision_ladder_f32_df64_f64_hint_walk() {
+        use super::super::backend::HardwareHint;
+        let tiers = [PrecisionTier::F32, PrecisionTier::DF64, PrecisionTier::F64];
+        for tier in tiers {
+            assert_eq!(
+                tier.recommended_hardware_hint(),
+                HardwareHint::Compute,
+                "F32→DF64→F64 should all route to Compute (FP64/ALU cores)"
+            );
+        }
     }
 }

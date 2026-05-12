@@ -53,6 +53,7 @@ pub struct ComputeDispatch<'a, B: GpuBackend = WgpuDevice> {
     workgroups: (u32, u32, u32),
     f64_shader: bool,
     df64_shader: bool,
+    hardware_hint: Option<crate::device::backend::HardwareHint>,
 }
 
 impl<'a, B: GpuBackend> ComputeDispatch<'a, B> {
@@ -68,6 +69,7 @@ impl<'a, B: GpuBackend> ComputeDispatch<'a, B> {
             workgroups: (1, 1, 1),
             f64_shader: false,
             df64_shader: false,
+            hardware_hint: None,
         }
     }
 
@@ -93,6 +95,20 @@ impl<'a, B: GpuBackend> ComputeDispatch<'a, B> {
     #[must_use]
     pub fn df64(mut self) -> Self {
         self.df64_shader = true;
+        self
+    }
+
+    /// Override the hardware routing hint for this dispatch.
+    ///
+    /// If not set, the hint is derived from precision flags:
+    /// - `f64()` / `df64()` → `Compute` (FP64 cores / ALU emulation)
+    /// - default → `Compute`
+    ///
+    /// Use this to explicitly route to fixed-function units (e.g., `TensorCore`
+    /// for F16/BF16 MMA workloads, `TextureUnit` for lookup tables).
+    #[must_use]
+    pub fn hardware_hint(mut self, hint: crate::device::backend::HardwareHint) -> Self {
+        self.hardware_hint = Some(hint);
         self
     }
 
@@ -172,6 +188,10 @@ impl<'a, B: GpuBackend> ComputeDispatch<'a, B> {
             })
             .collect();
 
+        let resolved_hint = self
+            .hardware_hint
+            .unwrap_or(crate::device::backend::HardwareHint::Compute);
+
         Ok(DispatchDescriptor {
             label: self.label,
             shader_source: source,
@@ -180,7 +200,7 @@ impl<'a, B: GpuBackend> ComputeDispatch<'a, B> {
             workgroups: self.workgroups,
             f64_shader: self.f64_shader,
             df64_shader: self.df64_shader,
-            hardware_hint: crate::device::backend::HardwareHint::default(),
+            hardware_hint: resolved_hint,
         })
     }
 

@@ -199,3 +199,255 @@ pub(super) fn submit_dispatch(
         })
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+    use std::sync::Mutex;
+
+    fn test_bindings() -> Vec<IpcBufferBinding> {
+        vec![IpcBufferBinding {
+            index: 0,
+            buffer_id: 42,
+            size: 1024,
+            read_only: false,
+        }]
+    }
+
+    fn test_info() -> ShaderDispatchInfo {
+        ShaderDispatchInfo {
+            gpr_count: 32,
+            workgroup: [64, 1, 1],
+            shared_mem_bytes: 0,
+            barrier_count: 0,
+        }
+    }
+
+    fn multi_thread_rt() -> tokio::runtime::Runtime {
+        tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .enable_all()
+            .build()
+            .unwrap()
+    }
+
+    #[test]
+    fn connection_refused_returns_device_error() {
+        let rt = multi_thread_rt();
+        let staged = Mutex::new(HashMap::new());
+        let result = rt.block_on(async {
+            submit_dispatch(
+                "http://127.0.0.1:1",
+                &staged,
+                &[0xDE, 0xAD],
+                (1, 1, 1),
+                &test_bindings(),
+                HardwareHint::Compute,
+                test_info(),
+            )
+        });
+        let err = result.unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("dispatch connect") || msg.contains("Connection refused"),
+            "Expected connection error, got: {msg}"
+        );
+    }
+
+    #[test]
+    fn malformed_response_returns_device_error() {
+        let rt = multi_thread_rt();
+
+        let listener =
+            rt.block_on(async { tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap() });
+        let addr = listener.local_addr().unwrap();
+
+        rt.block_on(async {
+            let server_task = tokio::spawn(async move {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let garbage = b"HTTP/1.1 200 OK\r\nContent-Length: 12\r\n\r\nnot-json!!!!";
+                tokio::io::AsyncWriteExt::write_all(&mut stream, garbage)
+                    .await
+                    .unwrap();
+                tokio::io::AsyncWriteExt::shutdown(&mut stream).await.ok();
+            });
+
+            let staged = Mutex::new(HashMap::new());
+            let result = submit_dispatch(
+                &format!("http://127.0.0.1:{}", addr.port()),
+                &staged,
+                &[0xDE, 0xAD],
+                (1, 1, 1),
+                &test_bindings(),
+                HardwareHint::Compute,
+                test_info(),
+            );
+
+            let err = result.unwrap_err();
+            let msg = err.to_string();
+            assert!(
+                msg.contains("parse response") || msg.contains("no JSON body"),
+                "Expected parse error, got: {msg}"
+            );
+            server_task.await.ok();
+        });
+    }
+
+    #[test]
+    fn rpc_error_in_response_returns_device_error() {
+        let rt = multi_thread_rt();
+
+        let listener =
+            rt.block_on(async { tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap() });
+        let addr = listener.local_addr().unwrap();
+
+        rt.block_on(async {
+            let server_task = tokio::spawn(async move {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let body = r#"{"jsonrpc":"2.0","error":{"code":-32000,"message":"GPU memory exhausted"},"id":1}"#;
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{body}",
+                    body.len()
+                );
+                tokio::io::AsyncWriteExt::write_all(&mut stream, response.as_bytes())
+                    .await
+                    .unwrap();
+                tokio::io::AsyncWriteExt::shutdown(&mut stream).await.ok();
+            });
+
+            let staged = Mutex::new(HashMap::new());
+            let result = submit_dispatch(
+                &format!("http://127.0.0.1:{}", addr.port()),
+                &staged,
+                &[0xDE, 0xAD],
+                (1, 1, 1),
+                &test_bindings(),
+                HardwareHint::Compute,
+                test_info(),
+            );
+
+            let err = result.unwrap_err();
+            let msg = err.to_string();
+            assert!(
+                msg.contains("GPU memory exhausted"),
+                "Expected RPC error message, got: {msg}"
+            );
+            server_task.await.ok();
+        });
+    }
+
+    #[test]
+    fn successful_dispatch_with_output_buffers() {
+        let rt = multi_thread_rt();
+
+        let listener =
+            rt.block_on(async { tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap() });
+        let addr = listener.local_addr().unwrap();
+
+        rt.block_on(async {
+            let server_task = tokio::spawn(async move {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let mut buf = vec![0u8; 8192];
+                let n =
+                    tokio::io::AsyncReadExt::read(&mut stream, &mut buf).await.unwrap();
+                let req_str = String::from_utf8_lossy(&buf[..n]);
+                assert!(req_str.contains("compute.dispatch.submit"));
+
+                let body = r#"{"jsonrpc":"2.0","result":{"output_buffers":[{"buffer_id":42,"data":[1,2,3,4]}]},"id":1}"#;
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{body}",
+                    body.len()
+                );
+                tokio::io::AsyncWriteExt::write_all(&mut stream, response.as_bytes())
+                    .await
+                    .unwrap();
+                tokio::io::AsyncWriteExt::shutdown(&mut stream).await.ok();
+            });
+
+            let staged = Mutex::new(HashMap::new());
+            staged
+                .lock()
+                .unwrap()
+                .insert(42u64, bytes::BytesMut::from(&[0u8; 4][..]));
+
+            let result = submit_dispatch(
+                &format!("http://127.0.0.1:{}", addr.port()),
+                &staged,
+                &[0xDE, 0xAD],
+                (1, 1, 1),
+                &test_bindings(),
+                HardwareHint::Compute,
+                test_info(),
+            );
+
+            assert!(result.is_ok(), "dispatch should succeed: {:?}", result.err());
+            let locked = staged.lock().unwrap();
+            let buf = locked.get(&42).unwrap();
+            assert_eq!(&buf[..4], &[1, 2, 3, 4]);
+            server_task.await.ok();
+        });
+    }
+
+    #[test]
+    fn hardware_hint_serialized_correctly() {
+        let hints = [
+            (HardwareHint::Compute, "compute"),
+            (HardwareHint::TensorCore, "tensor_core"),
+            (HardwareHint::RtCore, "rt_core"),
+            (HardwareHint::ZBuffer, "zbuffer"),
+            (HardwareHint::TextureUnit, "texture_unit"),
+            (HardwareHint::RopBlend, "rop_blend"),
+        ];
+
+        let rt = multi_thread_rt();
+
+        for (hint, expected_str) in hints {
+            let listener =
+                rt.block_on(async { tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap() });
+            let addr = listener.local_addr().unwrap();
+            let expected_owned = expected_str.to_owned();
+
+            rt.block_on(async {
+                let server_task = tokio::spawn(async move {
+                    let (mut stream, _) = listener.accept().await.unwrap();
+                    let mut buf = vec![0u8; 16384];
+                    let n = tokio::io::AsyncReadExt::read(&mut stream, &mut buf)
+                        .await
+                        .unwrap();
+                    let req_str = String::from_utf8_lossy(&buf[..n]);
+                    assert!(
+                        req_str.contains(&format!("\"hardware_hint\":\"{expected_owned}\"")),
+                        "Expected hint '{expected_owned}' in request: {req_str}"
+                    );
+                    let body = r#"{"jsonrpc":"2.0","result":{},"id":1}"#;
+                    let response = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{body}",
+                        body.len()
+                    );
+                    tokio::io::AsyncWriteExt::write_all(&mut stream, response.as_bytes())
+                        .await
+                        .unwrap();
+                    tokio::io::AsyncWriteExt::shutdown(&mut stream).await.ok();
+                });
+
+                let staged = Mutex::new(HashMap::new());
+                let result = submit_dispatch(
+                    &format!("http://127.0.0.1:{}", addr.port()),
+                    &staged,
+                    &[0x00],
+                    (1, 1, 1),
+                    &test_bindings(),
+                    hint,
+                    test_info(),
+                );
+                assert!(
+                    result.is_ok(),
+                    "hint {expected_str} failed: {:?}",
+                    result.err()
+                );
+                server_task.await.ok();
+            });
+        }
+    }
+}

@@ -2,7 +2,7 @@
 
 **Version**: 0.3.13
 **Date**: May 12, 2026
-**Status**: Through Sprint 56c — tracks all open work items for barraCuda evolution
+**Status**: Through Sprint 56d — tracks all open work items for barraCuda evolution
 
 ---
 
@@ -29,6 +29,16 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   in barraCuda's code), semantic IPC method naming, capability-based discovery.
 
 ---
+
+## Achieved (May 12, 2026 — Sprint 56d: Precision Ladder + Dispatch Wire Hardening)
+
+- **Precision tier → hardware hint mapping**: `PrecisionTier::recommended_hardware_hint()` maps all 15 tiers to silicon units. TensorCore for F16/BF16/TF32/FP8 (MMA). Compute for all others (ALU/FP64).
+- **Compiler support documentation**: `requires_compiler_support()` codifies which tiers need coralReef lowering vs pure barraCuda dispatch.
+- **`ComputeDispatch::hardware_hint()` builder**: Explicit hardware routing override added to dispatch pipeline.
+- **F32→DF64→F64 integration test**: Full chain verification through PrecisionBrain → HardwareHint → dispatch wire.
+- **5 dispatch wire error-path tests**: Connection refused, malformed response, RPC error, output buffer readback, hardware hint × 6 serialization.
+- **bearDog crypto delegation audit**: Confirmed correct boundary (Phase 1-2 delegated, Phase 3 + per-frame AEAD local). Documented in code.
+- **IPC coverage complete**: `tensor.matmul_inline` + `linalg.graph_laplacian` tested (9 new tests). Zero registered-but-untested handlers.
 
 ## Achieved (April 24, 2026 — Sprint 44g: BTSP Wire Fix + 12-Axis Deep Debt Audit)
 

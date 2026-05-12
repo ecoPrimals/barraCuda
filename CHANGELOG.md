@@ -5,7 +5,14 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.13] — 2026-05-11
+## [0.3.13] — 2026-05-12
+
+### Added — Sprint 56c: Independent Evolution Execution (May 12 2026)
+
+- **45 new CPU coverage tests** (barracuda-core: 447→492 tests): Complete handler-level coverage for `ode.step` (8 tests), `stats.covariance`/`stats.spearman`/`stats.fit_linear`/`stats.empirical_spectral_density` (9 tests), `spectral.fft`/`spectral.power_spectrum` (6 tests), `linalg.solve` (5 tests), `nautilus.*` full lifecycle (9 tests), `ml.mlp_train` (5 tests), `ml.esn_predict` (3 tests). All exercise validation and happy paths on CPU without GPU hardware.
+- **`SovereignDevice` precision advice wiring**: `live_compile()` now accepts optional `PrecisionAdvice` from dispatch descriptor `f64_shader`/`df64_shader` flags. Routes to `compile_wgsl_with_advice()` when advice is present, giving coralReef full precision context for informed f64 transcendental lowering decisions.
+- **4 sovereign integration tests** (feature-gated `sovereign-dispatch`): Validate `PrecisionBrain → build_precision_advice → PrecisionAdvice → coral wire format` chain. Covers F64 domain routing, DF64 domain routing, F32 (no-advice) path, and serialization round-trip.
+- **DF64 NVK Yukawa verification prep**: Production `yukawa_df64.wgsl` naga validation test (combined with DF64 preamble). CPU reference Yukawa implementation with analytical verification (two-particle: Newton's 3rd law, exp(-κr)(1+κr)/r² force magnitude, symmetric PE). Ready for hardware dispatch when NVK access available.
 
 ### Confirmed — Sprint 56b: Compute Trio Wave 8 Triage (May 11 2026)
 

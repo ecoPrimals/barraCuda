@@ -1,11 +1,22 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-05-11.
+Prioritized work items, ordered by impact. Updated 2026-05-12.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 56c: Independent Evolution Execution (May 12)**:
+  Coverage push: 45 new CPU-testable IPC handler tests (447→492 total), covering
+  `ode.step`, `stats.covariance`, `stats.spearman`, `stats.fit_linear`,
+  `stats.empirical_spectral_density`, `spectral.fft`, `spectral.power_spectrum`,
+  `linalg.solve`, `nautilus.*` full lifecycle, `ml.mlp_train`, `ml.esn_predict`.
+  Wired `PrecisionAdvice` through `SovereignDevice::live_compile()` →
+  `compile_wgsl_with_advice()` (coral gets full precision context for f64 lowering).
+  4 sovereign integration tests validate PrecisionBrain → advice → coral wire chain.
+  DF64 NVK Yukawa verification prep: production `yukawa_df64.wgsl` naga validation
+  test + CPU reference implementation with analytical correctness (Newton's 3rd law,
+  force magnitude exp(-κr)(1+κr)/r²). Hardware dispatch deferred to NVK access.
 - **Sprint 56b: Compute Trio Wave 8 Triage (May 11)**:
   primalSpring Compute Trio audit confirms barraCuda is **compute trio ready** — zero
   code changes required. SovereignDevice dispatch E2E live since Sprint 48

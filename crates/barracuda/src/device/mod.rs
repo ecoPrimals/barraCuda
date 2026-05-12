@@ -69,6 +69,9 @@ pub mod sovereign_device;
 /// Capability-based discovery for sovereign compute dispatch endpoints.
 #[cfg(feature = "sovereign-dispatch")]
 mod sovereign_discovery;
+/// JSON-RPC wire protocol for sovereign compute dispatch submission.
+#[cfg(feature = "sovereign-dispatch")]
+mod sovereign_dispatch_wire;
 /// GPU memory substrate — allocation, lifetime, and residency tracking.
 pub mod substrate;
 /// Zero-overhead tensor context with buffer pooling.

@@ -70,33 +70,8 @@ static RESOLVED_DEFAULT_WORKGROUP: std::sync::LazyLock<[u32; 3]> = std::sync::La
     [x, 1, 1]
 });
 
-/// Metadata about a compiled shader needed for GPU dispatch.
-///
-/// Sent to the dispatch primal so it can configure QMD (NVIDIA) or PM4 (AMD)
-/// descriptors with the correct register count, workgroup dimensions, shared
-/// memory size, and barrier count.
 #[cfg(feature = "sovereign-dispatch")]
-#[derive(Debug, Clone, Copy)]
-struct ShaderDispatchInfo {
-    gpr_count: u32,
-    workgroup: [u32; 3],
-    shared_mem_bytes: u32,
-    barrier_count: u32,
-}
-
-/// Serialisable buffer binding descriptor for IPC compute dispatch.
-///
-/// Carries the buffer identity and access mode across the JSON-RPC boundary.
-/// The dispatch primal uses `buffer_id` to resolve staged GPU memory, `size`
-/// for validation, and `read_only` to set appropriate access flags.
-#[cfg(feature = "sovereign-dispatch")]
-#[derive(Debug, Clone)]
-struct IpcBufferBinding {
-    index: u32,
-    buffer_id: u64,
-    size: u64,
-    read_only: bool,
-}
+use super::sovereign_dispatch_wire::{IpcBufferBinding, ShaderDispatchInfo};
 
 /// Buffer handle for the sovereign compute path.
 ///
@@ -406,11 +381,6 @@ impl SovereignDevice {
     }
 
     /// Submit a dispatch request to the compute.dispatch primal via JSON-RPC.
-    ///
-    /// Sends the compiled native binary, workgroup dimensions, buffer binding
-    /// descriptors (IDs + access mode), and hardware routing hint. The dispatch
-    /// primal maps buffer IDs to GPU memory and routes to the appropriate
-    /// hardware unit.
     #[cfg(feature = "sovereign-dispatch")]
     fn submit_dispatch(
         &self,
@@ -427,160 +397,15 @@ impl SovereignDevice {
                     .into(),
             ));
         };
-
-        let binding_descriptors: Vec<serde_json::Value> = bindings
-            .iter()
-            .map(|b| {
-                serde_json::json!({
-                    "index": b.index,
-                    "buffer_id": b.buffer_id,
-                    "size": b.size,
-                    "read_only": b.read_only,
-                })
-            })
-            .collect();
-
-        let hint_str = match hardware_hint {
-            super::backend::HardwareHint::Compute => "compute",
-            super::backend::HardwareHint::TensorCore => "tensor_core",
-            super::backend::HardwareHint::RtCore => "rt_core",
-            super::backend::HardwareHint::ZBuffer => "zbuffer",
-            super::backend::HardwareHint::TextureUnit => "texture_unit",
-            super::backend::HardwareHint::RopBlend => "rop_blend",
-        };
-
-        let buffer_data: Vec<serde_json::Value> = bindings
-            .iter()
-            .filter_map(|b| {
-                let staged = self.staged_buffers.lock().ok()?;
-                let data = staged.get(&b.buffer_id)?;
-                Some(serde_json::json!({
-                    "buffer_id": b.buffer_id,
-                    "data": data.to_vec(),
-                }))
-            })
-            .collect();
-
-        let request = serde_json::json!({
-            "binary": binary,
-            "workgroup_size": [workgroups.0, workgroups.1, workgroups.2],
-            "bindings": binding_descriptors,
-            "hardware_hint": hint_str,
-            "gpr_count": shader_info.gpr_count,
-            "workgroup": shader_info.workgroup,
-            "shared_mem_bytes": shader_info.shared_mem_bytes,
-            "barrier_count": shader_info.barrier_count,
-            "buffer_data": buffer_data,
-        });
-
-        let addr = addr.clone();
-        let Ok(handle) = tokio::runtime::Handle::try_current() else {
-            return Err(BarracudaError::Device(
-                "SovereignDevice: no tokio runtime available for IPC dispatch".into(),
-            ));
-        };
-
-        tokio::task::block_in_place(|| {
-            handle.block_on(async {
-                let host_port = addr.trim_start_matches("http://");
-                let body = serde_json::to_string(&serde_json::json!({
-                    "jsonrpc": "2.0",
-                    "method": "compute.dispatch.submit",
-                    "params": [request],
-                    "id": 1,
-                }))
-                .map_err(|e| BarracudaError::Device(format!("serialize dispatch: {e}")))?;
-
-                let http_request = format!(
-                    "POST / HTTP/1.1\r\nHost: {host_port}\r\n\
-                     Content-Type: application/json\r\n\
-                     Content-Length: {}\r\n\
-                     Connection: close\r\n\r\n{body}",
-                    body.len()
-                );
-
-                let mut stream = tokio::net::TcpStream::connect(host_port)
-                    .await
-                    .map_err(|e| {
-                        BarracudaError::Device(format!(
-                            "SovereignDevice: dispatch connect to {host_port}: {e}"
-                        ))
-                    })?;
-
-                tokio::io::AsyncWriteExt::write_all(&mut stream, http_request.as_bytes())
-                    .await
-                    .map_err(|e| {
-                        BarracudaError::Device(format!("SovereignDevice: dispatch write: {e}"))
-                    })?;
-
-                let mut response_buf = Vec::new();
-                tokio::io::AsyncReadExt::read_to_end(&mut stream, &mut response_buf)
-                    .await
-                    .map_err(|e| {
-                        BarracudaError::Device(format!("SovereignDevice: dispatch read: {e}"))
-                    })?;
-
-                let response_str = String::from_utf8_lossy(&response_buf);
-                let json_start = response_str.find('{').ok_or_else(|| {
-                    BarracudaError::Device(
-                        "SovereignDevice: no JSON body in dispatch response".into(),
-                    )
-                })?;
-
-                let rpc_response: serde_json::Value =
-                    serde_json::from_str(&response_str[json_start..]).map_err(|e| {
-                        BarracudaError::Device(format!("SovereignDevice: parse response: {e}"))
-                    })?;
-
-                if let Some(error) = rpc_response.get("error") {
-                    let msg = error
-                        .get("message")
-                        .and_then(|m| m.as_str())
-                        .unwrap_or("unknown error");
-                    return Err(BarracudaError::Device(format!(
-                        "SovereignDevice: compute dispatch error: {msg}"
-                    )));
-                }
-
-                if let Some(result) = rpc_response.get("result") {
-                    if let Some(output_buffers) = result.get("output_buffers") {
-                        if let Some(arr) = output_buffers.as_array() {
-                            let mut staged = self.staged_buffers.lock().map_err(|e| {
-                                BarracudaError::Device(format!(
-                                    "SovereignDevice: staged lock poisoned: {e}"
-                                ))
-                            })?;
-                            for entry in arr {
-                                let Some(buf_id) =
-                                    entry.get("buffer_id").and_then(serde_json::Value::as_u64)
-                                else {
-                                    continue;
-                                };
-                                let Some(data) =
-                                    entry.get("data").and_then(serde_json::Value::as_array)
-                                else {
-                                    continue;
-                                };
-                                let bytes: Vec<u8> = data
-                                    .iter()
-                                    .filter_map(|b| b.as_u64().map(|v| v as u8))
-                                    .collect();
-                                if let Some(buf) = staged.get_mut(&buf_id) {
-                                    let copy_len = bytes.len().min(buf.len());
-                                    buf[..copy_len].copy_from_slice(&bytes[..copy_len]);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                tracing::debug!(
-                    addr = %host_port,
-                    "sovereign dispatch submitted to compute.dispatch endpoint"
-                );
-                Ok(())
-            })
-        })
+        super::sovereign_dispatch_wire::submit_dispatch(
+            addr,
+            &self.staged_buffers,
+            binary,
+            workgroups,
+            bindings,
+            hardware_hint,
+            shader_info,
+        )
     }
 }
 

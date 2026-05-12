@@ -14,6 +14,7 @@ mod ml_tests;
 mod noise_rng_activation_tests;
 mod sprint45_tests;
 mod sprint50_tests;
+mod sprint56b_tests;
 mod tensor_tests;
 mod type_validation_tests;
 

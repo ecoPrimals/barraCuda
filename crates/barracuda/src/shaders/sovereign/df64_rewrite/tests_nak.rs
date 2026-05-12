@@ -303,9 +303,9 @@ forces[i * 3u + 2u] = fz;
     );
 
     let src = rewritten.unwrap();
-    const DF64_CORE: &str = include_str!("../../../shaders/math/df64_core.wgsl");
-    const DF64_TRANS: &str = include_str!("../../../shaders/math/df64_transcendentals.wgsl");
-    let full = format!("{DF64_CORE}\n{DF64_TRANS}\n{src}");
+    const DF64_CORE_CL: &str = include_str!("../../../shaders/math/df64_core.wgsl");
+    const DF64_TRANS_CL: &str = include_str!("../../../shaders/math/df64_transcendentals.wgsl");
+    let full = format!("{DF64_CORE_CL}\n{DF64_TRANS_CL}\n{src}");
 
     let module = naga::front::wgsl::parse_str(&full)
         .unwrap_or_else(|e| panic!("should parse: {e}\n\nSource:\n{full}"));
@@ -315,4 +315,122 @@ forces[i * 3u + 2u] = fz;
     );
     v.validate(&module)
         .unwrap_or_else(|e| panic!("should validate: {e}\n\nSource:\n{full}"));
+}
+
+/// Validate the **production** `yukawa_df64.wgsl` shader parses and validates
+/// when combined with the DF64 preamble. This shader uses `df64_*` functions
+/// directly (pre-rewritten) and is the actual code dispatched on NVK hardware.
+#[test]
+fn test_production_yukawa_df64_validates() {
+    const DF64_CORE: &str = include_str!("../../../shaders/math/df64_core.wgsl");
+    const DF64_TRANS: &str = include_str!("../../../shaders/math/df64_transcendentals.wgsl");
+    const YUKAWA_DF64: &str = include_str!("../../../ops/md/forces/yukawa_df64.wgsl");
+
+    // The production shader needs `round_f64` from the math_f64 preamble.
+    // Inject a minimal stub — the real preamble is injected by `compile_shader_f64`.
+    let round_stub = "fn round_f64(x: f64) -> f64 { return round(x); }\n";
+
+    let full = format!("{DF64_CORE}\n{DF64_TRANS}\n{round_stub}\n{YUKAWA_DF64}");
+
+    let module = naga::front::wgsl::parse_str(&full)
+        .unwrap_or_else(|e| panic!("production yukawa_df64.wgsl should parse: {e}"));
+    let mut v = naga::valid::Validator::new(
+        naga::valid::ValidationFlags::all(),
+        naga::valid::Capabilities::all(),
+    );
+    v.validate(&module)
+        .unwrap_or_else(|e| panic!("production yukawa_df64.wgsl should validate: {e}"));
+}
+
+/// CPU reference implementation for Yukawa DF64 force/PE verification.
+/// Computes the same quantities as `yukawa_df64.wgsl` using exact f64 arithmetic.
+/// Use this to validate GPU results when NVK hardware is available.
+#[test]
+fn test_yukawa_cpu_reference_two_particles() {
+    let kappa = 2.0_f64;
+    let prefactor = 1.0_f64;
+    let box_side = 10.0_f64;
+
+    // Two particles along x-axis separated by distance 1.0
+    let positions = [0.0, 0.0, 0.0, 1.0, 0.0, 0.0];
+    let n = 2usize;
+
+    let mut forces = [0.0f64; 6];
+    let mut pe = [0.0f64; 2];
+
+    for i in 0..n {
+        let xi = positions[i * 3];
+        let yi = positions[i * 3 + 1];
+        let zi = positions[i * 3 + 2];
+
+        let mut fx = 0.0f64;
+        let mut fy = 0.0f64;
+        let mut fz = 0.0f64;
+        let mut pe_i = 0.0f64;
+
+        for j in 0..n {
+            if i == j {
+                continue;
+            }
+            let dx = positions[j * 3] - xi;
+            let dy = positions[j * 3 + 1] - yi;
+            let dz = positions[j * 3 + 2] - zi;
+
+            // PBC minimum image
+            let dx = dx - box_side * (dx / box_side).round();
+            let dy = dy - box_side * (dy / box_side).round();
+            let dz = dz - box_side * (dz / box_side).round();
+
+            let r_sq = dx * dx + dy * dy + dz * dz;
+            let r = r_sq.sqrt();
+            let screening = (-kappa * r).exp();
+            let kappa_r = kappa * r;
+            let force_mag = prefactor * screening * (1.0 + kappa_r) / r_sq;
+            let inv_r = 1.0 / r;
+
+            // Force: repulsive (subtract, same sign as shader)
+            fx -= force_mag * dx * inv_r;
+            fy -= force_mag * dy * inv_r;
+            fz -= force_mag * dz * inv_r;
+
+            // PE: U = prefactor * exp(-kappa*r) / r * 0.5 (half-counting)
+            pe_i += 0.5 * prefactor * screening * inv_r;
+        }
+        forces[i * 3] = fx;
+        forces[i * 3 + 1] = fy;
+        forces[i * 3 + 2] = fz;
+        pe[i] = pe_i;
+    }
+
+    // Analytical check: r=1, kappa=2, prefactor=1
+    // |F| = prefactor * exp(-kappa*r) * (1 + kappa*r) / r^2 = exp(-2) * 3 ≈ 0.4060
+    // Force is repulsive: particle 0 pushed away from particle 1 (negative x)
+    let expected_force_mag = (-2.0f64).exp() * 3.0;
+    assert!(
+        (forces[0] + expected_force_mag).abs() < 1e-14,
+        "particle 0 fx should be -mag (repulsive): {} vs expected {}",
+        forces[0],
+        -expected_force_mag
+    );
+    assert!(
+        (forces[3] - expected_force_mag).abs() < 1e-14,
+        "particle 1 fx should be +mag (repulsive opposite): {} vs {}",
+        forces[3],
+        expected_force_mag
+    );
+
+    // PE: 0.5 * exp(-2) / 1 = 0.5 * exp(-2) ≈ 0.0677
+    let expected_pe = 0.5 * (-2.0f64).exp();
+    assert!(
+        (pe[0] - expected_pe).abs() < 1e-14,
+        "pe[0]: {} vs expected {}",
+        pe[0],
+        expected_pe
+    );
+    assert!((pe[0] - pe[1]).abs() < 1e-14, "pe should be symmetric");
+
+    // Newton's 3rd law
+    assert!((forces[0] + forces[3]).abs() < 1e-14, "Newton 3rd law x");
+    assert!((forces[1] + forces[4]).abs() < 1e-14, "Newton 3rd law y");
+    assert!((forces[2] + forces[5]).abs() < 1e-14, "Newton 3rd law z");
 }

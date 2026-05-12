@@ -183,13 +183,20 @@ impl PrecisionTier {
 
     /// Recommended hardware unit for this precision tier.
     ///
-    /// Maps each tier to the silicon unit best suited for executing it:
+    /// Maps each tier to the silicon unit best suited for executing it.
+    /// This mapping is the contract barraCuda advertises to toadStool via the
+    /// `compute.dispatch` wire protocol — toadStool uses it for hardware routing.
     ///
     /// | Tier group | Hardware unit | Rationale |
     /// |------------|---------------|-----------|
     /// | F16, BF16, TF32, FP8×2 | `TensorCore` | MMA-accelerated matrix ops |
     /// | F32, F64, F64Precise, DF64, QF128, DF128 | `Compute` | Standard ALU / FP64 cores |
     /// | Binary, Int2, Q4, Q8 | `Compute` | Bitwise/integer ALU ops |
+    ///
+    /// Only `TensorCore` and `Compute` appear here because precision routing is
+    /// orthogonal to operation-driven hints (`RtCore`, `ZBuffer`, `TextureUnit`,
+    /// `RopBlend`). Those are set by the dispatch layer based on the physics
+    /// operation, not the numeric precision.
     ///
     /// # Compiler support requirements
     ///

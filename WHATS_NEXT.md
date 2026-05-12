@@ -6,6 +6,10 @@ Prioritized work items, ordered by impact. Updated 2026-05-12.
 
 ## Recently Completed
 
+- **v0.4.0 Stadial Gate Release (May 12)**: Springs convergence version. Precision
+  ladder complete. Dispatch wire extracted and hardened. bearDog crypto delegation
+  audited and confirmed correct. All cleanup items from primalSpring Evolution Sprint 3
+  Phase C resolved. Tagged for plasmidBin.
 - **Sprint 56d: Precision Ladder + Dispatch Wire Hardening (May 12)**:
   primalSpring Evolution Sprint 2 audit execution. Precision ladder evolution:
   `PrecisionTier::recommended_hardware_hint()` maps all 15 tiers to hardware units

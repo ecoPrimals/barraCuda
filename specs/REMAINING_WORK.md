@@ -1,8 +1,8 @@
 # barraCuda — Remaining Work
 
-**Version**: 0.3.13
+**Version**: 0.4.0
 **Date**: May 12, 2026
-**Status**: Through Sprint 56d — tracks all open work items for barraCuda evolution
+**Status**: Stadial gate release (v0.4.0) — springs convergence version
 
 ---
 

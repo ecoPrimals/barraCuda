@@ -5,7 +5,15 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.13] — 2026-05-08
+## [0.3.13] — 2026-05-11
+
+### Confirmed — Sprint 56b: Compute Trio Wave 8 Triage (May 11 2026)
+
+- **Compute Trio Ready**: primalSpring audit confirms barraCuda is compute trio ready with zero code changes required. SovereignDevice dispatch E2E path has been live since Sprint 48 — calls `shader.compile.wgsl` on coralReef and `compute.dispatch.submit` on toadStool via capability-based IPC discovery. Sovereign dispatch activates automatically when trio peers are discoverable in composition.
+- **4-tier fallback confirmed**: wgpu GPU → wgpu CPU → Sovereign IPC → scalar degradation. Order is wgpu-first intentionally (local GPU latency < IPC roundtrip).
+- **Gate 3 passing**: `stats.mean([2, 4, 6, 8]) = 5.0` round-trip validated with 3 coverage tests.
+- **Crypto IPC delegation deferred**: bearDog Wave 101 ships `crypto.hkdf_sha256` + `crypto.hmac_verify`, but per-frame ChaCha20-Poly1305 AEAD has no bearDog surface and cannot be delegated without prohibitive latency. Correct long-term path: shared `btsp-crypto` crate.
+- **12-axis deep debt audit clean**: All files under 800L (max 793), zero unsafe (1 wgpu tracked), zero non-Rust deps, zero hardcoding, zero production mocks/stubs, clippy all+pedantic+nursery passes clean.
 
 ### Changed — Sprint 56: 12-Axis Deep Debt — Linalg Module Extraction (May 8 2026)
 

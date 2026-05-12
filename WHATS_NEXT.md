@@ -1,11 +1,17 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-05-08.
+Prioritized work items, ordered by impact. Updated 2026-05-11.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 56b: Compute Trio Wave 8 Triage (May 11)**:
+  primalSpring Compute Trio audit confirms barraCuda is **compute trio ready** — zero
+  code changes required. SovereignDevice dispatch E2E live since Sprint 48
+  (`shader.compile.wgsl` → coralReef, `compute.dispatch.submit` → toadStool). 4-tier
+  fallback architecturally correct. Gate 3 (`stats.mean`) passing. Crypto IPC delegation
+  correctly deferred (per-frame AEAD latency prohibitive). 12-axis deep debt audit clean.
 - **Sprint 56: 12-Axis Deep Debt — Linalg Module Extraction (May 8)**:
   `math.rs` 892→674L via extraction of 4 linear algebra handlers (`linalg.solve`,
   `linalg.eigenvalues`, `linalg.svd`, `linalg.qr`) to cohesive `linalg.rs` (225L).

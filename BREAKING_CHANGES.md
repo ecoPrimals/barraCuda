@@ -5,6 +5,15 @@ and the migration path.
 
 ## Pre-1.0 (current)
 
+### 0.4.0 (stadial gate — May 12, 2026)
+
+No breaking API changes. 0.4.0 is a stadial gate release adding new capabilities:
+
+| Change | Migration |
+|--------|-----------|
+| **`precision.route` IPC method added** — 72nd registered method. Upstream primals can query precision routing advisory for any of 15 physics domains. | No migration needed — additive. Springs call `precision.route` with `{"domain": "lattice_qcd"}` to get tier, FMA safety, hardware hint, and compiler requirements. |
+| **Workspace version bump 0.3.13 → 0.4.0** — all internal crate versions aligned. | Update any pinned version references from `0.3.x` to `0.4.0`. |
+
 ### 0.3.12
 
 | Change | Migration |

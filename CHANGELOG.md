@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Changed — Sprint 59: 12-Axis Deep Debt Audit + Docs Hygiene (May 12 2026)
+
+- **`method_gate.rs`**: replaced hardcoded `"barraCuda"` string literal with `crate::PRIMAL_NAME` constant — eliminates the last hardcoded primal identity string in production code.
+- **`precision_brain_tests.rs` split**: extracted 3 trio contract E2E tests (403L) into `precision_brain_trio_e2e_tests.rs` — the only file exceeding 800L (862L, test-only) is now split to 461L + 407L. Zero files >800L in the entire workspace.
+- **Root docs refreshed**: `SOVEREIGN_PIPELINE_TRACKER.md`, `SPRING_ABSORPTION.md`, `PURE_RUST_EVOLUTION.md` updated from 0.3.12/May 7 to 0.4.0/May 12. `BREAKING_CHANGES.md` reconciled with 0.4.0 entry.
+- **12-axis audit clean bill**: zero unsafe (except spirv passthrough), zero unwrap/expect (except 2 documented in runtime.rs), zero TODO/FIXME/HACK, zero production mocks, zero println in library, zero Result\<T,String\>/Box\<dyn Error\>, zero async-trait/lazy_static/once_cell, all #[expect] with reasons, all IPs named constants with env overrides.
+
 ### Added — Sprint 58: Precision Route Advisory Method (May 12 2026)
 
 - **`precision.route` IPC method** (Pass 14 convergence): Exposes `PrecisionBrain`'s domain→tier routing over JSON-RPC. Upstream primals (hotSpring, springs) can query the recommended precision tier, hardware hint, FMA safety, and compiler requirements for any of the 15 physics domains.

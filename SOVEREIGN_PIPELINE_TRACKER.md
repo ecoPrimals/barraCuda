@@ -1,6 +1,7 @@
 # Sovereign Pipeline Tracker
 
-**Date**: May 7, 2026
+**Date**: May 12, 2026
+**Version**: 0.4.0
 **Type**: Actionable tracker (updated as work progresses)
 **Scope**: All remaining work for the pure Rust sovereign GPU pipeline
 
@@ -9,10 +10,10 @@
 ## Pipeline Status
 
 ```
-Layer 1  barraCuda    ██████████  COMPLETE       Zero unsafe, zero C deps, PrecisionBrain-coralReef routing, SiliconProfile tier routing
-Layer 2  coralReef    █████████░  Phase 10 I80   f64 transcendental polyfills, structured capabilities, DRM E2E
+Layer 1  barraCuda    ██████████  COMPLETE       v0.4.0 stadial gate, 72 IPC methods, precision.route advisory, trio E2E validated
+Layer 2  coralReef    █████████░  Sprint 5       bind_stat timeout, FECS cold init, naga::Module direct ingest (Pass 12)
 Layer 3  Standalone   ██░░░░░░░░  Planned        Standalone coral-reef crate, multi-arch ISA
-Layer 4  Sovereign HW █████████░  S202 complete  toadStool infra done; VFIO hw validation 6/7
+Layer 4  Sovereign HW █████████░  S249 complete  toadStool Phase C landed (S245-S249, 415 cylinder tests); Phase D remaining
 ```
 
 ### Dispatch Chain (sovereign primary — IPC-first)

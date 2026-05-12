@@ -6,6 +6,13 @@ Prioritized work items, ordered by impact. Updated 2026-05-12.
 
 ## Recently Completed
 
+- **Sprint 59: 12-Axis Deep Debt Audit + Docs Hygiene (May 12)**: Comprehensive
+  12-axis sweep confirms clean bill of health. Two actionable findings fixed:
+  (1) `method_gate.rs` hardcoded `"barraCuda"` → `crate::PRIMAL_NAME` constant,
+  (2) `precision_brain_tests.rs` 862L → split to 461L + 407L (trio E2E extracted).
+  Root docs refreshed: SOVEREIGN_PIPELINE_TRACKER, SPRING_ABSORPTION,
+  PURE_RUST_EVOLUTION updated to 0.4.0/May 12. BREAKING_CHANGES reconciled.
+  wateringHole README corrected (5 active handoffs, not zero).
 - **Sprint 58: Precision Route Advisory Method (May 12)**: Pass 14 convergence —
   `precision.route` IPC method wired. Exposes `PrecisionBrain` domain→tier routing
   over JSON-RPC for upstream primals (hotSpring, springs) to query recommended

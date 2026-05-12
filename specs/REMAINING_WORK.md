@@ -30,6 +30,10 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 
 ---
 
+## Achieved (May 12, 2026 — Sprint 59: 12-Axis Deep Debt Audit + Docs Hygiene)
+
+- **12-axis deep debt audit clean bill**: `method_gate.rs` hardcoded literal → `crate::PRIMAL_NAME`, `precision_brain_tests.rs` 862L split to 461+407L. Zero files >800L. Root docs refreshed to 0.4.0.
+
 ## Achieved (May 12, 2026 — Sprint 58: Precision Route Advisory Method)
 
 - **`precision.route` IPC method** (Pass 14 convergence): Domain→tier routing advisory over JSON-RPC. 15 physics domains routable. No-GPU fallback returns minimum tier. Runtime coral detection. 22 new tests. 72 registered methods (was 71).

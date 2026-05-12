@@ -17,6 +17,8 @@ Prioritized work items, ordered by impact. Updated 2026-05-12.
   DF64 NVK Yukawa verification prep: production `yukawa_df64.wgsl` naga validation
   test + CPU reference implementation with analytical correctness (Newton's 3rd law,
   force magnitude exp(-κr)(1+κr)/r²). Hardware dispatch deferred to NVK access.
+  12-axis deep debt audit: `sovereign_device.rs` 816→641L via dispatch wire protocol
+  extraction (`sovereign_dispatch_wire.rs`). Zero files >800L across codebase.
 - **Sprint 56b: Compute Trio Wave 8 Triage (May 11)**:
   primalSpring Compute Trio audit confirms barraCuda is **compute trio ready** — zero
   code changes required. SovereignDevice dispatch E2E live since Sprint 48

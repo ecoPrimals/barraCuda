@@ -1,7 +1,7 @@
 # barraCuda
 
-**Version**: 0.3.12
-**Status**: Standalone primal — zero cross-dependencies, fully concurrent, all quality gates passing
+**Version**: 0.4.0
+**Status**: Stadial gate release — springs convergence, zero cross-dependencies, all quality gates passing
 **License**: AGPL-3.0-or-later (scyBorg provenance trio)
 **MSRV**: 1.87
 

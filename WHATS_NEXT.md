@@ -6,6 +6,12 @@ Prioritized work items, ordered by impact. Updated 2026-05-12.
 
 ## Recently Completed
 
+- **Sprint 57: Trio Contract E2E Validation (May 12)**: primalSpring Evolution Sprint 4
+  audit execution. 3 trio contract E2E tests validate complete data-flow chain:
+  PrecisionBrain → PrecisionAdvice → coralReef wire format → ShaderDispatchInfo →
+  toadStool dispatch. Covers F64 (LatticeQcd), DF64 (GradientFlow), and TensorCore
+  (F16 MMA GEMM routing). Mock TCP servers verify correct `hardware_hint`, `gpr_count`,
+  `shared_mem_bytes`, and `barrier_count` propagation on the wire.
 - **v0.4.0 Stadial Gate Release (May 12)**: Springs convergence version. Precision
   ladder complete. Dispatch wire extracted and hardened. bearDog crypto delegation
   audited and confirmed correct. All cleanup items from primalSpring Evolution Sprint 3

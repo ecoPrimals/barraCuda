@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Added — Sprint 57: Trio Contract E2E Validation (May 12 2026)
+
+- **3 trio contract E2E integration tests** (feature-gated `sovereign-dispatch`): Validate the complete data-flow contract between barraCuda (WHAT), coralReef (HOW), and toadStool (WHERE).
+  - `trio_contract_e2e_lattice_qcd_f64_dispatch`: PrecisionBrain routes `LatticeQcd` → F64 tier → `build_precision_advice` → `PrecisionAdvice` wire format verified → mock toadStool receives `hardware_hint:"compute"`, `gpr_count:48`, `shared_mem_bytes:2048`, `barrier_count:1`.
+  - `trio_contract_e2e_gradient_flow_df64_dispatch`: PrecisionBrain routes `GradientFlow` → DF64 tier → `df64_naga_poisoned:true` in advice → mock toadStool receives `hardware_hint:"compute"`.
+  - `trio_contract_e2e_tensor_core_f16_dispatch`: F16 precision → `HardwareHint::TensorCore` → mock toadStool receives `hardware_hint:"tensor_core"`. Validates MMA GEMM routing for mixed-precision iterative refinement.
+- Each test chains the full pipeline: PrecisionBrain domain routing → PrecisionAdvice construction → coralReef wire format verification → ShaderDispatchInfo from compile metadata → mock TCP toadStool server assertion on received JSON-RPC.
+
 ### Release — Stadial Gate (Springs Convergence)
 
 barraCuda 0.4.0 is the stadial gate release where the Compute Trio springs converge.

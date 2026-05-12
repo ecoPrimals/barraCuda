@@ -30,6 +30,13 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 
 ---
 
+## Achieved (May 12, 2026 — Sprint 57: Trio Contract E2E Validation)
+
+- **3 trio contract E2E integration tests**: Complete data-flow validation of the Compute Trio contract (barraCuda WHAT → coralReef HOW → toadStool WHERE). Each test chains PrecisionBrain routing → PrecisionAdvice → coralReef wire format → ShaderDispatchInfo → mock toadStool dispatch server.
+- **F64 LatticeQcd path**: PrecisionBrain routes LatticeQcd to F64, advice carries `needs_transcendental_lowering:true`, mock toadStool receives `hardware_hint:"compute"` with `gpr_count:48` and `shared_mem_bytes:2048`.
+- **DF64 GradientFlow path**: PrecisionBrain routes GradientFlow to DF64, advice carries `df64_naga_poisoned:true`, mock toadStool receives `hardware_hint:"compute"`.
+- **TensorCore F16 path**: F16 tier routes to `HardwareHint::TensorCore`, mock toadStool receives `hardware_hint:"tensor_core"`. Validates MMA GEMM routing for mixed-precision iterative refinement.
+
 ## Achieved (May 12, 2026 — Sprint 56d: Precision Ladder + Dispatch Wire Hardening)
 
 - **Precision tier → hardware hint mapping**: `PrecisionTier::recommended_hardware_hint()` maps all 15 tiers to silicon units. TensorCore for F16/BF16/TF32/FP8 (MMA). Compute for all others (ALU/FP64).

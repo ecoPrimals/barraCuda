@@ -238,7 +238,7 @@ impl MethodGate {
             id,
             serde_json::json!({
                 "mode": self.mode.as_str(),
-                "primal": "barraCuda",
+                "primal": crate::PRIMAL_NAME,
                 "standard": "METHOD_GATE_STANDARD v1.0",
             }),
         )

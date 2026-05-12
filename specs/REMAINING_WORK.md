@@ -30,6 +30,10 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 
 ---
 
+## Achieved (May 12, 2026 — Sprint 58: Precision Route Advisory Method)
+
+- **`precision.route` IPC method** (Pass 14 convergence): Domain→tier routing advisory over JSON-RPC. 15 physics domains routable. No-GPU fallback returns minimum tier. Runtime coral detection. 22 new tests. 72 registered methods (was 71).
+
 ## Achieved (May 12, 2026 — Sprint 57: Trio Contract E2E Validation)
 
 - **3 trio contract E2E integration tests**: Complete data-flow validation of the Compute Trio contract (barraCuda WHAT → coralReef HOW → toadStool WHERE). Each test chains PrecisionBrain routing → PrecisionAdvice → coralReef wire format → ShaderDispatchInfo → mock toadStool dispatch server.

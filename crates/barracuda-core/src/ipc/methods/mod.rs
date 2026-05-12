@@ -19,6 +19,7 @@ mod math;
 mod ml;
 mod nautilus;
 mod params;
+mod precision;
 mod primal;
 mod spectral;
 mod tensor;
@@ -59,6 +60,8 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     "device.probe",
     "tolerances.get",
     "validate.gpu_stack",
+    // ── Precision routing advisory ────────────────────────────────────
+    "precision.route",
     // ── Compute ───────────────────────────────────────────────────────
     "compute.dispatch",
     // ── Math & activation (CPU) ───────────────────────────────────────
@@ -207,6 +210,8 @@ pub async fn dispatch(
         "device.probe" => device::probe(primal, id).await,
         "tolerances.get" => health::tolerances_get(params, id),
         "validate.gpu_stack" => health::validate_gpu_stack(primal, id).await,
+        // Precision routing advisory
+        "precision.route" => precision::precision_route(primal, params, id),
         // Compute
         "compute.dispatch" => compute::compute_dispatch(primal, params, id).await,
         // Math & activation (CPU)

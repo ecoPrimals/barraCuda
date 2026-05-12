@@ -6,6 +6,13 @@ Prioritized work items, ordered by impact. Updated 2026-05-12.
 
 ## Recently Completed
 
+- **Sprint 58: Precision Route Advisory Method (May 12)**: Pass 14 convergence —
+  `precision.route` IPC method wired. Exposes `PrecisionBrain` domain→tier routing
+  over JSON-RPC for upstream primals (hotSpring, springs) to query recommended
+  precision tier, hardware hint, FMA safety, and compiler requirements for all 15
+  physics domains. No-GPU fallback returns domain minimum tier. Runtime coral
+  detection via `is_coral_available()`. 22 new tests (4 validation, 15 domain
+  routing, 1 structure, 2 dispatch integration). 72 registered methods.
 - **Sprint 57: Trio Contract E2E Validation (May 12)**: primalSpring Evolution Sprint 4
   audit execution. 3 trio contract E2E tests validate complete data-flow chain:
   PrecisionBrain → PrecisionAdvice → coralReef wire format → ShaderDispatchInfo →

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Added — Sprint 58: Precision Route Advisory Method (May 12 2026)
+
+- **`precision.route` IPC method** (Pass 14 convergence): Exposes `PrecisionBrain`'s domain→tier routing over JSON-RPC. Upstream primals (hotSpring, springs) can query the recommended precision tier, hardware hint, FMA safety, and compiler requirements for any of the 15 physics domains.
+  - Wire contract: `{ "domain": "lattice_qcd" }` → `{ "recommended_tier": "DF64", "fma_safe": true, "requires_compiler": true, "hardware_hint": "compute", "rationale": "...", "needs_sovereign_compile": bool, "adapter": "..." }`.
+  - No-GPU fallback: returns domain minimum tier requirements as advisory when no GPU is initialized.
+  - Runtime coral detection via `is_coral_available()` — routes through `PrecisionBrain::from_device_with_coral` when coralReef is discoverable.
+  - 22 new tests: 4 param validation error paths, 15 domain-specific no-GPU routing assertions, 1 response structure completeness check, 2 dispatch integration tests (bare + namespace-prefixed).
+  - 72 registered methods (was 71).
+
 ### Added — Sprint 57: Trio Contract E2E Validation (May 12 2026)
 
 - **3 trio contract E2E integration tests** (feature-gated `sovereign-dispatch`): Validate the complete data-flow contract between barraCuda (WHAT), coralReef (HOW), and toadStool (WHERE).

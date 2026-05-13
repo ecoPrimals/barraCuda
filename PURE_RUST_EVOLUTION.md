@@ -140,7 +140,7 @@ Enable WGSL → ISA direct path (bypass SPIR-V).
 
 ## Layer 4 — toadStool: Sovereign Hardware (S163 INFRASTRUCTURE COMPLETE)
 
-**Owner**: toadStool (VFIO lifecycle + runtime), coralReef (coral-driver)
+**Owner**: toadStool (sole owner: VFIO lifecycle + runtime + driver; coral-driver excised from coralReef Sprint 9)
 
 VFIO via toadStool is the **primary** GPU dispatch path. This replaces
 Vulkan/NVK with a minimal pure-Rust compute runtime using IOMMU hardware
@@ -192,8 +192,8 @@ Layer 1  barraCuda         Rust    WE OWN     Zero unsafe ✓
 Layer 2  coralReef         Rust    WE OWN     Zero unsafe (target)
          naga              Rust    WE USE     WGSL ↔ IR
 Layer 3  coralReef ISA     Rust    WE OWN     WGSL → native binary (SASS/GFX)
-Layer 4  coral-driver      Rust    WE OWN     BAR0 MMIO, GPFIFO submission
-         toadStool VFIO    Rust    WE OWN     IOMMU isolation, device lifecycle
+Layer 4  toadStool          Rust    WE OWN     BAR0 MMIO, GPFIFO submission, IOMMU isolation, device lifecycle
+         (coral-driver excised from coralReef Sprint 9 — absorbed into toadStool Phase C)
          VFIO/IOMMU        Linux   Kernel     Hardware DMA isolation
 ```
 

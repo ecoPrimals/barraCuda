@@ -88,10 +88,9 @@ was the only dispatch backend.
 
 ```
 BearDog (encrypted shader transport)
-  → toadStool (VFIO device lifecycle, IOMMU group management)
-    → coralReef (WGSL → native compilation)
-      → coral-driver (GPFIFO submission, BAR0 MMIO)
-        → VFIO/IOMMU → GPU
+  → toadStool (VFIO device lifecycle, IOMMU, GPFIFO submission, BAR0 MMIO)
+    → coralReef (WGSL → native compilation — pure compiler, Sprint 9 excision)
+      → VFIO/IOMMU → GPU
 ```
 
 Rust's memory safety guarantees (`#![forbid(unsafe_code)]` in barraCuda) plus
@@ -126,7 +125,7 @@ hardware layer and have already proven the libc → rustix pattern.
 
 | Phase | What | Owner | Status | Precedent |
 |-------|------|-------|--------|-----------|
-| 1 | coral-driver: `libc` → `rustix` for DRM ioctls, mmap, munmap | toadStool + coralReef | Planned | toadStool akida-driver (done) |
+| 1 | toadStool driver: `libc` → `rustix` for DRM ioctls, mmap, munmap | toadStool | Planned | toadStool akida-driver (done); coral-driver excised Sprint 9 |
 | 2 | Validate tokio/mio rustix backend active on our targets | toadStool | Planned | mio uses rustix on Linux by default |
 | 3 | Track Rust std `linux-raw-sys` adoption | toadStool | Watching | Active work in Rust project |
 | 4 | Zero-package cross-compilation (Android, ARM, RISC-V) | toadStool | Future | Requires Phase 3 for std |
@@ -233,7 +232,7 @@ a C library target until Phase 3 completes.
 
 | Item | Owner | Depends On | Status |
 |------|-------|------------|--------|
-| coral-driver `libc` → `rustix` | toadStool + coralReef | — | In progress (toadStool S149+; extern "C" removal done S152) |
+| toadStool driver `libc` → `rustix` | toadStool | — | In progress (S149+; extern "C" removal done S152; coral-driver excised Sprint 9) |
 | Test coverage 80% → 90% | barraCuda | — | In progress |
 | WGSL optimizer annotation coverage (`@ilp_region`) | barraCuda | — | **Done** (Mar 12) — variance_reduce_df64, weighted_dot_df64, mean_variance_df64, covariance_f64 |
 | RHMC multi-shift CG absorb (from hotSpring) | barraCuda | — | **Done** (Mar 12) — rhmc.rs + rhmc_hmc.rs |

@@ -199,3 +199,13 @@ required-features = ["stress-tests"]
 name = "kokkos_parity"
 harness = false
 required-features = ["gpu"]
+
+[[bench]]
+name = "lammps_parity"
+harness = false
+required-features = ["gpu", "domain-md"]
+
+[[bench]]
+name = "scipy_parity"
+harness = false
+required-features = ["gpu"]

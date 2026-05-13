@@ -293,3 +293,89 @@ impl WgpuDevice {
         self.compile_shader_raw(&optimized, label)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::device::test_pool;
+
+    const SIMPLE_F32_SHADER: &str = r"
+@group(0) @binding(0) var<storage, read> input: array<f32>;
+@group(0) @binding(1) var<storage, read_write> output: array<f32>;
+@compute @workgroup_size(256)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let i = gid.x;
+    if i >= arrayLength(&output) { return; }
+    output[i] = input[i] * 2.0;
+}
+";
+
+    const F64_SHADER: &str = r"
+enable f64;
+@group(0) @binding(0) var<storage, read> input: array<f64>;
+@group(0) @binding(1) var<storage, read_write> output: array<f64>;
+@compute @workgroup_size(256)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let i = gid.x;
+    if i >= arrayLength(&output) { return; }
+    output[i] = input[i] + f64(1.0);
+}
+";
+
+    const DF64_SHADER: &str = r"
+@group(0) @binding(0) var<storage, read_write> out: array<f64>;
+@compute @workgroup_size(1)
+fn main(@builtin(global_invocation_id) _gid: vec3<u32>) {
+    let a = df64_from_f64(f64(3.0));
+    let b = df64_from_f64(f64(4.0));
+    let c = df64_add(a, b);
+    out[0] = df64_to_f64(c);
+}
+";
+
+    #[tokio::test]
+    async fn test_compile_shader_raw_f32() {
+        let device = test_pool::get_test_device().await;
+        let _module = device.compile_shader_raw(SIMPLE_F32_SHADER, Some("test_raw_f32"));
+    }
+
+    #[tokio::test]
+    async fn test_compile_shader_auto_downcast() {
+        let device = test_pool::get_test_device().await;
+        let _module = device.compile_shader(F64_SHADER, Some("test_auto_downcast"));
+    }
+
+    #[tokio::test]
+    async fn test_compile_shader_f64_tiered() {
+        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
+            return;
+        };
+        if !device.has_f64_shaders() {
+            return;
+        }
+        let _module = device.compile_shader_f64(F64_SHADER, Some("test_f64_tiered"));
+    }
+
+    #[tokio::test]
+    async fn test_compile_shader_df64_prepend() {
+        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
+            return;
+        };
+        if !device.has_f64_shaders() {
+            return;
+        }
+        let _module = device.compile_shader_df64(DF64_SHADER, Some("test_df64_prepend"));
+    }
+
+    #[tokio::test]
+    async fn test_compile_shader_raw_with_label() {
+        let device = test_pool::get_test_device().await;
+        let _module = device.compile_shader_raw(SIMPLE_F32_SHADER, Some("labeled_shader"));
+        let _module_no_label = device.compile_shader_raw(SIMPLE_F32_SHADER, None);
+    }
+
+    #[tokio::test]
+    async fn test_compile_shader_f32_passthrough() {
+        let device = test_pool::get_test_device().await;
+        let _module = device.compile_shader(SIMPLE_F32_SHADER, Some("f32_passthrough"));
+    }
+}

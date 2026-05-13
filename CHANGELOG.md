@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Added — Sprint 63: Glacial Debt Niche Tasks (May 13 2026)
+
+- **DF64 NVK E2E tests**: Two GPU-dispatched end-to-end tests for the production `compile_shader_df64` path (`test_df64_e2e_fma_gpu_dispatch`, `test_df64_e2e_kahan_summation_gpu_dispatch`). Compile DF64 kernels via the tiered sovereign pipeline, dispatch on GPU, read back f64 results, and verify against CPU reference values. Closes the gap between naga-only validation and real GPU execution.
+- **LAMMPS parity benchmark** (`cargo bench --bench lammps_parity`): Lennard-Jones f64 and Yukawa f64 force kernels benchmarked at N=256/1K/4K with LAMMPS-reference timings (V100: ~2630 timesteps/s GPU, ~4000 Kokkos/CUDA). Median/P95/min reporting with pipeline warmup.
+- **SciPy parity benchmark** (`cargo bench --bench scipy_parity`): `sum_f64` reduction, `variance_f64` Welford, and `cdist` Euclidean distance benchmarked at multiple sizes with NumPy/SciPy-reference timings.
+- **Compilation smoke tests**: 6 new tests in `compilation.rs` covering all compilation tiers: raw WGSL, auto-downcast (f64→f32), f64 tiered sovereign, DF64 library prepend, labeled/unlabeled, f32 passthrough.
+
 ### Fixed — Sprint 62: Clippy Pedantic All-Targets Clean (May 13 2026)
 
 - **`cargo clippy --all-targets -- -D warnings`**: now passes clean with zero warnings. Fixed 9 test-code lints: `suboptimal_flops` (mul_add evolution in PBC minimum image + linear target + nautilus observe), `assert_eq!(bool, true)` → `assert!(bool)`, `cast_lossless` (i32 → f64::from), `single_char_pattern` (contains("n") → contains('n')).

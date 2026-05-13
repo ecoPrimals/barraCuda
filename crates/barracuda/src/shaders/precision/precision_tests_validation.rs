@@ -225,3 +225,196 @@ fn test_precision_is_quantized() {
     assert!(!Precision::Fp8E4M3.is_quantized());
     assert!(!Precision::F32.is_quantized());
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// DF64 NVK E2E — GPU dispatch tests for the production compile_shader_df64 path
+// ══════════════════════════════════════════════════════════════════════════════
+//
+// These tests close the gap between naga-only validation (above) and real GPU
+// execution. They exercise WgpuDevice::compile_shader_df64 → ComputeDispatch
+// → readback → numerical verification against CPU reference values.
+//
+// Gate: requires real GPU with SHADER_F64 feature (for f64 buffer types).
+// DF64 computation is entirely in f32 pairs, so broken native f64 arithmetic
+// (e.g. NVK/NAK) is fine — that is exactly the DF64 use case.
+
+/// DF64 add+mul kernel: out[i] = df64(a[i]) * df64(b[i]) + df64(c[i])
+/// Tests the full production compilation path including df64_core prepend.
+const DF64_E2E_FMA_KERNEL: &str = r"
+@group(0) @binding(0) var<storage, read> a: array<f64>;
+@group(0) @binding(1) var<storage, read> b: array<f64>;
+@group(0) @binding(2) var<storage, read> c: array<f64>;
+@group(0) @binding(3) var<storage, read_write> out: array<f64>;
+
+@compute @workgroup_size(256)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let i = gid.x;
+    if i >= arrayLength(&out) { return; }
+    let da = df64_from_f64(a[i]);
+    let db = df64_from_f64(b[i]);
+    let dc = df64_from_f64(c[i]);
+    let product = df64_mul(da, db);
+    let result = df64_add(product, dc);
+    out[i] = df64_to_f64(result);
+}
+";
+
+/// DF64 Kahan-style summation kernel: reduces N values to a single sum.
+/// Exercises df64_add in a loop — the pattern used by production reducers.
+const DF64_E2E_KAHAN_KERNEL: &str = r"
+@group(0) @binding(0) var<storage, read> input: array<f64>;
+@group(0) @binding(1) var<storage, read_write> out: array<f64>;
+@group(0) @binding(2) var<uniform> n: u32;
+
+@compute @workgroup_size(1)
+fn main(@builtin(global_invocation_id) _gid: vec3<u32>) {
+    var acc = df64_from_f64(f64(0.0));
+    for (var i = 0u; i < n; i++) {
+        acc = df64_add(acc, df64_from_f64(input[i]));
+    }
+    out[0] = df64_to_f64(acc);
+}
+";
+
+#[tokio::test]
+async fn test_df64_e2e_fma_gpu_dispatch() {
+    use crate::device::compute_pipeline::ComputeDispatch;
+    use crate::device::test_pool::get_test_device_if_gpu_available;
+    use wgpu::util::DeviceExt;
+
+    let Some(device) = get_test_device_if_gpu_available().await else {
+        return;
+    };
+    if !device.has_f64_shaders() {
+        return;
+    }
+
+    let n = 256usize;
+    let a_data: Vec<f64> = (0..n).map(|i| (i as f64).mul_add(0.1, 1.0)).collect();
+    let b_data: Vec<f64> = (0..n).map(|i| (i as f64).mul_add(0.05, 0.5)).collect();
+    let c_data: Vec<f64> = (0..n).map(|i| (i as f64) * 0.01).collect();
+
+    let expected: Vec<f64> = (0..n)
+        .map(|i| a_data[i].mul_add(b_data[i], c_data[i]))
+        .collect();
+
+    let a_buf = device
+        .device()
+        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("a"),
+            contents: bytemuck::cast_slice(&a_data),
+            usage: wgpu::BufferUsages::STORAGE,
+        });
+    let b_buf = device
+        .device()
+        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("b"),
+            contents: bytemuck::cast_slice(&b_data),
+            usage: wgpu::BufferUsages::STORAGE,
+        });
+    let c_buf = device
+        .device()
+        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("c"),
+            contents: bytemuck::cast_slice(&c_data),
+            usage: wgpu::BufferUsages::STORAGE,
+        });
+    let out_buf = device
+        .device()
+        .create_buffer(&wgpu::BufferDescriptor {
+            label: Some("out"),
+            size: (n * 8) as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+
+    ComputeDispatch::new(&*device, "df64_e2e_fma")
+        .shader(DF64_E2E_FMA_KERNEL, "main")
+        .df64()
+        .storage_read(0, &a_buf)
+        .storage_read(1, &b_buf)
+        .storage_read(2, &c_buf)
+        .storage_rw(3, &out_buf)
+        .dispatch_1d(n as u32)
+        .submit()
+        .expect("DF64 FMA dispatch should succeed");
+
+    let results = device
+        .read_f64_buffer(&out_buf, n)
+        .expect("readback should succeed");
+
+    for (i, (&got, &exp)) in results.iter().zip(expected.iter()).enumerate() {
+        let rel_err = if exp.abs() > 1e-15 {
+            (got - exp).abs() / exp.abs()
+        } else {
+            (got - exp).abs()
+        };
+        assert!(
+            rel_err < 1e-6,
+            "DF64 FMA E2E mismatch at [{i}]: got {got}, expected {exp}, rel_err {rel_err}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn test_df64_e2e_kahan_summation_gpu_dispatch() {
+    use crate::device::compute_pipeline::ComputeDispatch;
+    use crate::device::test_pool::get_test_device_if_gpu_available;
+    use wgpu::util::DeviceExt;
+
+    let Some(device) = get_test_device_if_gpu_available().await else {
+        return;
+    };
+    if !device.has_f64_shaders() {
+        return;
+    }
+
+    let n = 1000u32;
+    let input_data: Vec<f64> = (0..n).map(|i| 1.0 / ((i as f64) + 1.0)).collect();
+    let expected: f64 = input_data.iter().sum();
+
+    let input_buf = device
+        .device()
+        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("input"),
+            contents: bytemuck::cast_slice(&input_data),
+            usage: wgpu::BufferUsages::STORAGE,
+        });
+    let out_buf = device
+        .device()
+        .create_buffer(&wgpu::BufferDescriptor {
+            label: Some("out"),
+            size: 8,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+    let n_buf = device
+        .device()
+        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("n"),
+            contents: bytemuck::cast_slice(&[n, 0u32, 0u32, 0u32]),
+            usage: wgpu::BufferUsages::UNIFORM,
+        });
+
+    ComputeDispatch::new(&*device, "df64_e2e_kahan")
+        .shader(DF64_E2E_KAHAN_KERNEL, "main")
+        .df64()
+        .storage_read(0, &input_buf)
+        .storage_rw(1, &out_buf)
+        .uniform(2, &n_buf)
+        .dispatch(1, 1, 1)
+        .submit()
+        .expect("DF64 Kahan dispatch should succeed");
+
+    let results = device
+        .read_f64_buffer(&out_buf, 1)
+        .expect("readback should succeed");
+
+    let rel_err = (results[0] - expected).abs() / expected.abs();
+    // DF64 ≈ 48-bit mantissa; serial chain of 1000 additions degrades to ~1e-5
+    assert!(
+        rel_err < 1e-5,
+        "DF64 Kahan E2E: got {}, expected {expected}, rel_err {rel_err}",
+        results[0]
+    );
+}

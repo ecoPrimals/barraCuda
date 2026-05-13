@@ -30,6 +30,12 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 
 ---
 
+## Achieved (May 13, 2026 — Sprint 63: Glacial Debt Niche Tasks)
+
+- **DF64 NVK E2E**: 2 GPU-dispatched E2E tests exercising production `compile_shader_df64` path (FMA + Kahan summation) with CPU reference verification. Closes niche task from primalSpring Glacial Debt Escalation audit.
+- **Framework parity benchmarks**: `lammps_parity` (LJ f64 + Yukawa f64) and `scipy_parity` (sum, variance, cdist) benchmark suites. 3 `[[bench]]` targets registered.
+- **Compilation coverage**: 6 new compilation smoke tests covering all 4 compilation tiers. `clippy --all-targets` clean.
+
 ## Achieved (May 13, 2026 — Sprint 62: Clippy Pedantic All-Targets Clean)
 
 - **`cargo clippy --all-targets -- -D warnings`** zero warnings: 9 test lints resolved (suboptimal_flops/mul_add, cast_lossless/f64::from, assert_eq literal bool, single_char_pattern). Fresh 12-axis audit confirms zero actionable items. Max file 793L.

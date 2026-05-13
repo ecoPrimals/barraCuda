@@ -6,6 +6,17 @@ Prioritized work items, ordered by impact. Updated 2026-05-13.
 
 ## Recently Completed
 
+- **Sprint 63: Glacial Debt Niche Tasks — DF64 NVK E2E + Framework Parity (May 13)**:
+  Addressed 3 niche tasks from primalSpring Glacial Debt Escalation audit:
+  (1) **DF64 NVK E2E**: Added 2 GPU-dispatched E2E tests exercising production
+  `compile_shader_df64` path (FMA kernel 256-element, Kahan summation 1000-element)
+  with numerical verification against CPU reference. Covers the full DF64 pipeline:
+  df64_core prepend → sovereign compilation → GPU dispatch → f64 readback.
+  (2) **Framework parity benchmarks**: Added `lammps_parity` bench (LJ f64 + Yukawa
+  f64 at N=256/1K/4K with LAMMPS-reference timings) and `scipy_parity` bench
+  (sum_f64, variance_f64 Welford, cdist Euclidean with NumPy/SciPy-reference timings).
+  (3) **Coverage push**: Added 6 compilation smoke tests covering all compilation tiers
+  (raw, auto-downcast, f64-tiered, df64-prepend). All pass. clippy --all-targets clean.
 - **Sprint 62: Clippy Pedantic All-Targets Clean + 12-Axis Audit (May 13)**: 9
   test-code clippy lints resolved (suboptimal_flops, cast_lossless, assert_eq with
   bool, single_char_pattern). `cargo clippy --all-targets -- -D warnings` now zero

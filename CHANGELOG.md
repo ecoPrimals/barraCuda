@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Fixed — Sprint 68: TENSOR_WIRE_CONTRACT Alignment (May 13 2026)
+
+- `specs/TENSOR_WIRE_CONTRACT.md` batch ops table: added `sub` and `negate` (implementations shipped Sprint 66, doc lagged)
+- IPC namespace table updated to reflect full 72-method coverage across all namespaces
+- GEMM tensor-core routing confirmed stable (awaits coralReef HMMA codegen for execution path)
+
 ### Changed — Sprint 67: 12-Axis Deep Debt — Deprecated Ceremony Removal (May 13 2026)
 
 - `convolve_1d_cpu` → `convolve_1d_scalar` (biosignal.rs) — removed stale `#[deprecated]` annotation

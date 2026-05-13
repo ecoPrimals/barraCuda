@@ -6,6 +6,13 @@ Prioritized work items, ordered by impact. Updated 2026-05-13.
 
 ## Recently Completed
 
+- **Sprint 68: hotSpring Trio Audit — TENSOR_WIRE_CONTRACT Alignment (May 13)**:
+  Addressed hotSpring audit item: `TENSOR_WIRE_CONTRACT.md` batch ops table updated to
+  include `sub` and `negate` (Sprint 66 implementations). IPC namespace table updated to
+  reflect full 72-method coverage. GEMM tensor-core routing confirmed stable per audit
+  (routes tensor-core-eligible precisions to `KernelTarget::Sovereign` with
+  `HardwareHint::TensorCore`; awaits coralReef HMMA codegen for end-to-end execution).
+  OOM detection + classification confirmed sufficient; fleet failover deferred.
 - **Sprint 67: 12-Axis Deep Debt Audit — Deprecated Ceremony Removal (May 13)**:
   Comprehensive 12-axis sweep confirms clean bill on all axes: zero files >800L
   (max 797L), zero unsafe in production, zero C deps, zero todo!/unimplemented!,

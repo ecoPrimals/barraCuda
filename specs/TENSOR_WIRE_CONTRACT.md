@@ -2,8 +2,8 @@
 
 # Tensor IPC Wire Contract
 
-**Status**: Sprint 65 — 72 methods, BTSP Phase 3 operational, precision.route with dispatch_path differentiation
-**Version**: 1.1.0
+**Status**: Sprint 67 — 72 methods, BTSP Phase 3 operational, precision.route with dispatch_path differentiation, TensorSession sub/negate for lattice HMC
+**Version**: 1.2.0
 **Authority**: barraCuda primal (self-knowledge)
 **Implements**: wateringHole `PRIMAL_IPC_PROTOCOL.md` v3.1, `SEMANTIC_METHOD_NAMING_STANDARD.md`
 
@@ -166,7 +166,9 @@ command submission. This is the composition primitive for springs that need
 |----|--------|-------------|
 | `create` | `alias`, `shape`, `data?` | Upload data to GPU |
 | `add` | `alias`, `a`, `b` | Element-wise add |
+| `sub` | `alias`, `a`, `b` | Element-wise subtract (Sprint 66 — leapfrog HMC) |
 | `mul` | `alias`, `a`, `b` | Element-wise multiply |
+| `negate` | `alias`, `input` | Element-wise sign flip (Sprint 66 — force conventions) |
 | `fma` | `alias`, `a`, `b`, `c` | Fused multiply-add: a*b+c |
 | `scale` | `alias`, `input`, `scalar` | Scalar multiplication |
 | `matmul` | `alias`, `a`, `b` | Matrix multiplication |
@@ -233,13 +235,18 @@ groups related operations per `SEMANTIC_METHOD_NAMING_STANDARD.md`:
 | Namespace | Domain | Methods |
 |-----------|--------|---------|
 | `tensor.*` | Handle-based GPU/CPU tensor ops | `create`, `matmul`, `matmul_inline`, `add`, `scale`, `clamp`, `reduce`, `sigmoid`, `batch.submit` |
-| `stats.*` | Descriptive statistics | `mean`, `std_dev`, `variance`, `weighted_mean`, `correlation` |
-| `activation.*` | Psychophysical / activation functions | `fitts`, `hick` |
-| `linalg.*` | Linear algebra (CPU, inline-data) | `solve`, `eigenvalues` |
-| `spectral.*` | Spectral analysis | `fft`, `power_spectrum` |
+| `stats.*` | Descriptive statistics | `mean`, `std_dev`, `variance`, `weighted_mean`, `correlation`, `shannon`, `entropy`, `covariance`, `spearman`, `fit_linear`, `empirical_spectral_density`, `chi_squared`, `anova_oneway` |
+| `activation.*` | Psychophysical / activation functions | `fitts`, `hick`, `softmax`, `gelu` |
+| `linalg.*` | Linear algebra (CPU, inline-data) | `solve`, `eigenvalues`, `svd`, `qr`, `graph_laplacian` |
+| `spectral.*` | Spectral analysis | `fft`, `power_spectrum`, `stft` |
 | `noise.*` | Procedural noise | `perlin2d`, `perlin3d` |
+| `rng.*` | Random number generation | `uniform` |
 | `fhe.*` | Fully homomorphic encryption | `ntt`, `pointwise_mul` |
 | `math.*` | Scalar math functions | `sigmoid`, `log2` |
+| `ml.*` | Machine learning | `mlp_forward`, `mlp_train`, `attention`, `esn_predict` |
+| `ode.*` | Differential equations | `step` |
+| `nautilus.*` | Anomaly detection sessions | `create`, `observe`, `train`, `predict`, `export`, `import` |
+| `precision.*` | Precision routing advisory | `route` |
 | `compute.*` | Low-level GPU dispatch | `dispatch`, `health` |
 
 **When to use `tensor.matmul_inline` vs `tensor.matmul`**: Use `matmul_inline`

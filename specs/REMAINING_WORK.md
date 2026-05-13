@@ -30,6 +30,12 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 
 ---
 
+## Achieved (May 13, 2026 — Sprint 68: hotSpring Trio Audit — TENSOR_WIRE_CONTRACT Alignment)
+
+- **Contract doc alignment**: `TENSOR_WIRE_CONTRACT.md` batch ops table updated with `sub` and `negate` (implementations shipped Sprint 66, doc lagged behind). IPC namespace table updated to 72-method full coverage.
+- **GEMM routing stability confirmed**: `DenseMatmul` with tensor-core-eligible precision routes to `KernelTarget::Sovereign` + `HardwareHint::TensorCore`. Awaits coralReef HMMA codegen for execution path completion.
+- **OOM detection sufficient**: Per hotSpring audit, detection + classification is sufficient for now; fleet failover deferred.
+
 ## Achieved (May 13, 2026 — Sprint 67: 12-Axis Deep Debt — Deprecated Ceremony Removal)
 
 - **12-axis audit confirmed clean**: zero files >800L (max 797L), zero unsafe, zero C deps, zero todo!/unimplemented!, zero println! in lib, zero Result<T,String>, zero mocks in production, zero hardcoded primal names.

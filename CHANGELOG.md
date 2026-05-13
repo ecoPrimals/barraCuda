@@ -73,7 +73,7 @@ This version marks architectural completion of the sovereign compute pipeline.
 **Highlights:**
 - **15-tier precision ladder** (Binary→DF128): full `PrecisionTier::recommended_hardware_hint()` mapping to toadStool hardware units. TensorCore routing for F16/BF16/TF32/FP8. Compute routing for F32/F64/DF64/QF128/DF128/quantized. Contract documented for toadStool dispatch.
 - **Dispatch wire extraction**: `sovereign_dispatch_wire.rs` encapsulates all JSON-RPC wire protocol for `compute.dispatch.submit`. Error-path hardened (5 integration tests with mock TCP servers). `HardwareHint` serialization verified for all 6 variants.
-- **IPC coverage sweep**: 71 registered methods, all exercised. 54+ new CPU-testable handler tests across Sprint 56b-d. Zero registered-but-untested handlers.
+- **IPC coverage sweep**: 72 registered methods (71 at Sprint 56d + `precision.route` Sprint 58), all exercised. 54+ new CPU-testable handler tests across Sprint 56b-d. Zero registered-but-untested handlers.
 - **BTSP hardening**: Phase 1-2 delegated to bearDog via IPC. Phase 3 local crypto retained for per-frame AEAD performance (documented rationale). Crypto delegation architecture documented in `btsp_frame.rs`/`btsp.rs`.
 - **bearDog crypto audit complete**: All local `chacha20poly1305`/`hkdf`/`hmac`/`sha2` usage serves the per-frame hot path and is NOT redundant with bearDog session establishment. Cannot be removed or gated behind `#[cfg(test)]`.
 - **12-axis deep debt**: clean bill of health. All files <800L. Zero unsafe. Zero unwrap. Zero hardcoding. Zero production mocks. Clippy all+pedantic+nursery clean. Cargo doc zero warnings.

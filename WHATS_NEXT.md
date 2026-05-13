@@ -659,23 +659,23 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
 
 ## Immediate (P1)
 
-- **PrecisionBrain → coralReef → SovereignDevice end-to-end test**: Integration test
-  that exercises: brain routes to F64 via coral, `compile_wgsl_with_advice` sends
-  `PrecisionAdvice`, sovereign dispatch sends gpr_count/workgroup metadata. Requires
-  coralReef running in test CI.
-- **DF64 NVK end-to-end verification**: Run df64 compilation on Yukawa force kernels through
-  NVK/NAK on hardware. Validate sovereign compiler's safe WGSL roundtrip produces correct
-  numerical results across all backends. Probe-aware `fp64_strategy()` is now in place to
-  auto-fallback if native f64 fails.
-- **Tensor core GEMM routing**: Eigensolvers/preconditioners via toadStool VFIO + coralReef
-  HMMA/WGMMA emission for mixed-precision iterative refinement.
+- **PrecisionBrain → coralReef → SovereignDevice CI integration**: Mock trio E2E validated
+  (Sprint 57). Next: CI with live coralReef instance for full pipeline validation.
+- **DF64 NVK hardware verification**: GPU-dispatched DF64 E2E tests added (Sprint 63, FMA +
+  Kahan summation). Remaining: run Yukawa force kernels through NVK/NAK on physical hardware
+  to validate sovereign compiler numerical correctness on real silicon.
+- **Tensor core GEMM codegen**: `kernel_router` routes F16/BF16/TF32 `DenseMatmul` to
+  `KernelTarget::Sovereign` with `HardwareHint::TensorCore` (Sprint 64). Next: coralReef
+  HMMA/WGMMA emission for eigensolvers/preconditioners via mixed-precision iterative refinement.
 - **`BatchedTridiagEigh` GPU op**: groundSpring local QL implicit eigensolver is a candidate
   for absorption as a batched GPU tridiagonal eigenvector solver.
-- **Multi-GPU OOM recovery**: `QuotaTracker` is wired into buffer allocation; next step
-  is automatic workload migration when a device hits VRAM quota.
+- **Multi-GPU OOM automatic migration**: OOM detection flag wired in `WgpuDevice`, `is_oom()`
+  + `clear_oom()` API live, `is_retriable()` covers OOM (Sprint 64). Next: automatic workload
+  migration when a device hits VRAM quota via `QuotaTracker`.
 - **Kokkos parity validation baseline**: Document `sarkas_gpu` validation results, extract
-  PPPM shader performance numbers for apples-to-apples comparison. Now unblocked by VFIO
-  strategy — projected ~4,000 steps/s vs Kokkos 2,630 steps/s.
+  PPPM shader performance numbers for apples-to-apples comparison. Framework parity benchmarks
+  added (Sprint 63, LAMMPS + SciPy). Now unblocked by VFIO strategy — projected ~4,000
+  steps/s vs Kokkos 2,630 steps/s.
 
 ## Near-term (P2)
 

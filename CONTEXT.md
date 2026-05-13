@@ -28,7 +28,7 @@ traits are fully internalized.
 - **MSRV:** 1.87
 - **Crate count:** 4 workspace crates
 - **Shaders:** 826 WGSL compute shaders with SPDX license headers
-- **Rust files:** 1,116 source files, 42 integration test files
+- **Rust files:** 1,169 source files, 42 integration test files
 - **Unsafe code:** Zero — `#![forbid(unsafe_code)]` in barracuda and barracuda-core
 - **Clippy:** Pedantic + nursery, zero warnings, `-D warnings` enforced
 

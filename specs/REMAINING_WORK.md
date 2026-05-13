@@ -404,7 +404,7 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 - `cargo clippy --workspace --all-features --all-targets -- -D warnings`: Pass
 - `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps`: Pass
 - `cargo nextest run --workspace --profile ci`: 4,207 pass, 0 fail, 14 skipped
-- 826 WGSL shaders, 1,116 Rust source files
+- 826 WGSL shaders, 1,169 Rust source files
 
 ---
 

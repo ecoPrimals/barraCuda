@@ -2,7 +2,7 @@
 
 # Tensor IPC Wire Contract
 
-**Status**: Sprint 51 — 59 methods (+btsp.negotiate Phase 3 cipher upgrade), BTSP Phase 3 negotiate handler implemented
+**Status**: Sprint 65 — 72 methods, BTSP Phase 3 operational, precision.route with dispatch_path differentiation
 **Version**: 1.1.0
 **Authority**: barraCuda primal (self-knowledge)
 **Implements**: wateringHole `PRIMAL_IPC_PROTOCOL.md` v3.1, `SEMANTIC_METHOD_NAMING_STANDARD.md`

@@ -404,7 +404,7 @@ fn nautilus_full_lifecycle() {
                 "session_id": session_id,
                 "beta": beta,
                 "plaquette": 0.5 + beta * 0.1,
-                "cg_iters": 100.0 + (i as f64) * 10.0,
+                "cg_iters": (i as f64).mul_add(10.0, 100.0),
                 "acceptance": 0.8,
                 "delta_h_abs": 0.01 * beta,
             }),
@@ -424,7 +424,7 @@ fn nautilus_full_lifecycle() {
     );
     assert!(resp.error.is_none(), "train failed: {:?}", resp.error);
     let result = resp.result.unwrap();
-    assert_eq!(result["trained"].as_bool().unwrap(), true);
+    assert!(result["trained"].as_bool().unwrap());
 
     // Predict (may return null predictions if model not yet converged)
     let resp = nautilus_predict(
@@ -464,7 +464,7 @@ fn spectral_fft_sine_wave() {
     use std::f64::consts::PI;
     let n = 8;
     let data: Vec<f64> = (0..n)
-        .map(|i| (2.0 * PI * i as f64 / n as f64).sin())
+        .map(|i| (2.0 * PI * f64::from(i) / f64::from(n)).sin())
         .collect();
     let resp = spectral_fft(&serde_json::json!({"data": data}), serde_json::json!(55));
     assert!(resp.error.is_none());
@@ -688,7 +688,7 @@ fn graph_laplacian_missing_n() {
     );
     let err = resp.error.unwrap();
     assert_eq!(err.code, jsonrpc::INVALID_PARAMS);
-    assert!(err.message.contains("n"));
+    assert!(err.message.contains('n'));
 }
 
 #[test]

@@ -377,9 +377,9 @@ fn test_yukawa_cpu_reference_two_particles() {
             let dz = positions[j * 3 + 2] - zi;
 
             // PBC minimum image
-            let dx = dx - box_side * (dx / box_side).round();
-            let dy = dy - box_side * (dy / box_side).round();
-            let dz = dz - box_side * (dz / box_side).round();
+            let dx = box_side.mul_add(-(dx / box_side).round(), dx);
+            let dy = box_side.mul_add(-(dy / box_side).round(), dy);
+            let dz = box_side.mul_add(-(dz / box_side).round(), dz);
 
             let r_sq = dx * dx + dy * dy + dz * dz;
             let r = r_sq.sqrt();

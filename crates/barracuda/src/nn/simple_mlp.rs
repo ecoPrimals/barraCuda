@@ -483,7 +483,7 @@ mod tests {
         }]);
 
         let inputs: Vec<Vec<f64>> = (0..20).map(|i| vec![i as f64]).collect();
-        let targets: Vec<Vec<f64>> = inputs.iter().map(|x| vec![2.0 * x[0] + 1.0]).collect();
+        let targets: Vec<Vec<f64>> = inputs.iter().map(|x| vec![x[0].mul_add(2.0, 1.0)]).collect();
 
         let config = TrainConfig {
             learning_rate: 0.0001,

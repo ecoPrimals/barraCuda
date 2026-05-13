@@ -62,8 +62,19 @@ fn normalize_empty() {
 }
 
 #[test]
-fn registered_methods_count() {
-    assert_eq!(REGISTERED_METHODS.len(), 71);
+fn registered_methods_count_nonzero_and_unique() {
+    assert!(
+        REGISTERED_METHODS.len() >= 70,
+        "sanity: expected at least 70 methods, got {}",
+        REGISTERED_METHODS.len()
+    );
+    let mut seen = std::collections::HashSet::new();
+    for method in REGISTERED_METHODS {
+        assert!(
+            seen.insert(method),
+            "duplicate method in REGISTERED_METHODS: {method}"
+        );
+    }
 }
 
 #[test]

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Fixed — Sprint 62: Clippy Pedantic All-Targets Clean (May 13 2026)
+
+- **`cargo clippy --all-targets -- -D warnings`**: now passes clean with zero warnings. Fixed 9 test-code lints: `suboptimal_flops` (mul_add evolution in PBC minimum image + linear target + nautilus observe), `assert_eq!(bool, true)` → `assert!(bool)`, `cast_lossless` (i32 → f64::from), `single_char_pattern` (contains("n") → contains('n')).
+- **Fresh 12-axis audit**: all axes confirmed clean. 1,160 `.rs` files, zero actionable findings. Max file: 793L (transport.rs). All external deps pure Rust.
+
 ### Changed — Sprint 61: Diesel Engine Migration Prep (May 13 2026)
 
 - **Doc comment evolution**: `backend.rs`, `compilation.rs`, `workarounds.rs` — updated all `coral-driver` hardware runtime references to toadStool. Compiler-domain references (coralReef) remain correct per permanent allocation.

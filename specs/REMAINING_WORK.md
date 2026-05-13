@@ -1,7 +1,7 @@
 # barraCuda — Remaining Work
 
 **Version**: 0.4.0
-**Date**: May 12, 2026
+**Date**: May 13, 2026
 **Status**: Stadial gate release (v0.4.0) — springs convergence version
 
 ---
@@ -29,6 +29,18 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   in barraCuda's code), semantic IPC method naming, capability-based discovery.
 
 ---
+
+## Achieved (May 13, 2026 — Sprint 62: Clippy Pedantic All-Targets Clean)
+
+- **`cargo clippy --all-targets -- -D warnings`** zero warnings: 9 test lints resolved (suboptimal_flops/mul_add, cast_lossless/f64::from, assert_eq literal bool, single_char_pattern). Fresh 12-axis audit confirms zero actionable items. Max file 793L.
+
+## Achieved (May 13, 2026 — Sprint 61: Diesel Engine Migration Prep)
+
+- **Doc comments evolved**: `backend.rs`, `compilation.rs`, `workarounds.rs` — coral-driver → toadStool. hotSpring `fleet_client.rs` toadStool-first socket discovery, `PRIMAL_ALIASES` toadstool-glowplug entry, fleet file toadstool-ember-fleet.json fallback.
+
+## Achieved (May 13, 2026 — Sprint 60: Registry Drift Fix)
+
+- **Registry test evolution**: hardcoded `== 71` → sanity floor (`>= 70`) + uniqueness check. Fresh 12-axis audit clean.
 
 ## Achieved (May 12, 2026 — Sprint 59: 12-Axis Deep Debt Audit + Docs Hygiene)
 

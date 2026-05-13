@@ -76,6 +76,9 @@ pub struct WgpuDevice {
     pipeline_cache: Option<Arc<wgpu::PipelineCache>>,
     /// Set when the GPU reports a device-lost error.
     pub(crate) lost: Arc<AtomicBool>,
+    /// Set when the GPU reports an out-of-memory error. Used by multi-GPU pool
+    /// to migrate work to another device.
+    pub(crate) oom: Arc<AtomicBool>,
     /// Serializes submit+poll to prevent wgpu-core storage races.
     /// `std::sync::Mutex` is correct: never held across `.await`.
     gpu_lock: Arc<std::sync::Mutex<()>>,
@@ -125,6 +128,21 @@ impl WgpuDevice {
     #[must_use]
     pub fn is_lost(&self) -> bool {
         self.lost.load(Ordering::Acquire)
+    }
+
+    /// Check if an out-of-memory condition was signaled by the GPU driver.
+    ///
+    /// When `true`, the device's VRAM is exhausted — multi-GPU pools should
+    /// attempt to migrate workloads to another device. The flag can be cleared
+    /// with [`clear_oom`](Self::clear_oom) after recovery (e.g. buffers freed).
+    #[must_use]
+    pub fn is_oom(&self) -> bool {
+        self.oom.load(Ordering::Acquire)
+    }
+
+    /// Clear the OOM flag after recovery (e.g. buffers freed, workload migrated).
+    pub fn clear_oom(&self) {
+        self.oom.store(false, Ordering::Release);
     }
 
     /// Attach a VRAM quota tracker to this device.

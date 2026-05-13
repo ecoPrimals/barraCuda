@@ -6,6 +6,21 @@ Prioritized work items, ordered by impact. Updated 2026-05-13.
 
 ## Recently Completed
 
+- **Sprint 64: hotSpring Trio Audit — Sovereign Path + GEMM Routing + OOM Recovery (May 13)**:
+  Addressed 3 remaining items from hotSpring compute trio audit:
+  (1) **Sovereign path differentiation**: Added `dispatch_path` field to `precision.route`
+  IPC response (`"wgpu"` | `"sovereign"` | `"unavailable"`). Uses `compute_device()` to
+  resolve active dispatch tier. Enables hotSpring's `PrecisionAdvisory` to route through
+  toadStool VFIO path vs local wgpu without secondary IPC queries.
+  (2) **Tensor-core GEMM routing**: Extended `kernel_router` with `MatmulPrecision` enum
+  and `KernelTarget::Sovereign` variant. `DenseMatmul` with F16/BF16/TF32 precision now
+  routes to `HardwareHint::TensorCore` via sovereign dispatch (coralReef HMMA codegen +
+  toadStool dispatch). F32/F64/None remains WGSL compute path. Forward-compatible for
+  coralReef HMMA codegen readiness.
+  (3) **Multi-GPU OOM recovery**: Added `oom` flag to `WgpuDevice`, wired OOM detection
+  in uncaptured error handler (out of memory / allocation failed / not enough memory),
+  added `is_oom()` + `clear_oom()` public API, extended `is_retriable()` to include OOM.
+  Multi-device pool can now detect OOM and migrate workloads. All clippy clean, all tests pass.
 - **Sprint 63: Glacial Debt Niche Tasks — DF64 NVK E2E + Framework Parity (May 13)**:
   Addressed 3 niche tasks from primalSpring Glacial Debt Escalation audit:
   (1) **DF64 NVK E2E**: Added 2 GPU-dispatched E2E tests exercising production

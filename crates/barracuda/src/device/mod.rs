@@ -117,7 +117,9 @@ pub use capabilities::{
 pub use compute_pipeline::{
     BatchedComputeDispatch, ComputeDispatch, storage_bgl_entry, uniform_bgl_entry,
 };
-pub use kernel_router::{ComputeWorkload, KernelRouter, KernelTarget, NpuModelInfo};
+pub use kernel_router::{
+    ComputeWorkload, KernelRouter, KernelTarget, MatmulPrecision, NpuModelInfo,
+};
 pub use registry::{
     BackendInfo, DeviceCapabilities as PhysicalDeviceCapabilities, DeviceRegistry, DeviceVendor,
     PhysicalDevice, PhysicalDeviceId,

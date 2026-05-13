@@ -439,12 +439,13 @@ async fn test_cross_vendor_softmax_parity() {
 fn test_kernel_router_dense_workloads_to_wgsl() {
     let router = KernelRouter::default();
 
-    // Dense workloads should ALWAYS go to WGSL (GPU/CPU)
+    // Dense workloads should ALWAYS go to WGSL (GPU/CPU) when precision is None/F32/F64
     let dense_workloads = vec![
         ComputeWorkload::DenseMatmul {
             m: 1024,
             n: 1024,
             k: 1024,
+            precision: None,
         },
         ComputeWorkload::FFT {
             size: 1024,
@@ -481,7 +482,7 @@ fn test_kernel_router_small_workloads_to_cpu() {
     // Small workloads should prefer CPU (avoid GPU dispatch overhead).
     // Threshold: DenseMatmul uses m*n*k < 1000; Eigendecomp < 128; LinearSolve < 256.
     let small_workloads = vec![
-        ComputeWorkload::DenseMatmul { m: 9, n: 9, k: 9 }, // 729 < 1000
+        ComputeWorkload::DenseMatmul { m: 9, n: 9, k: 9, precision: None }, // 729 < 1000
         ComputeWorkload::Eigendecomp { matrix_size: 32 },
         ComputeWorkload::LinearSolve { system_size: 64 },
     ];
@@ -617,6 +618,7 @@ fn test_kernel_router_npu_capability_check() {
         m: 1024,
         n: 1024,
         k: 1024,
+        precision: None,
     };
     assert!(
         !router.can_route_to_npu(&dense),

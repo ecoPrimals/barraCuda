@@ -45,6 +45,19 @@ fn hint_to_str(hint: barracuda::device::backend::HardwareHint) -> &'static str {
     }
 }
 
+/// Resolve the active dispatch path from the compute device tier.
+///
+/// - `"wgpu"` — local GPU via wgpu (tiers 1–2), shader execution stays in-process
+/// - `"sovereign"` — VFIO/DRM dispatch via toadStool IPC (`compute.dispatch.submit`)
+/// - `"unavailable"` — no compute device discovered
+fn resolve_dispatch_path(primal: &BarraCudaPrimal) -> &'static str {
+    match primal.compute_device() {
+        Some(dev) if dev.is_sovereign() => "sovereign",
+        Some(_) => "wgpu",
+        None => "unavailable",
+    }
+}
+
 /// `barracuda.precision.route` — Precision routing advisory.
 ///
 /// Routes a physics domain to the recommended precision tier based on
@@ -60,7 +73,8 @@ fn hint_to_str(hint: barracuda::device::backend::HardwareHint) -> &'static str {
 /// Returns:
 /// ```json
 /// { "recommended_tier": "DF64", "fma_safe": true,
-///   "requires_compiler": true, "hardware_hint": "compute" }
+///   "requires_compiler": true, "hardware_hint": "compute",
+///   "dispatch_path": "wgpu" }
 /// ```
 pub(super) fn precision_route(
     primal: &BarraCudaPrimal,
@@ -88,6 +102,8 @@ pub(super) fn precision_route(
         );
     };
 
+    let dispatch_path = resolve_dispatch_path(primal);
+
     if let Some(wgpu_dev) = primal.device() {
         let coral_available = barracuda::device::coral_compiler::is_coral_available();
         let brain = PrecisionBrain::from_device_with_coral(&wgpu_dev, coral_available);
@@ -101,6 +117,7 @@ pub(super) fn precision_route(
                 "fma_safe": advice.fma_safe,
                 "requires_compiler": tier.requires_compiler_support(),
                 "hardware_hint": hint_to_str(tier.recommended_hardware_hint()),
+                "dispatch_path": dispatch_path,
                 "rationale": advice.rationale,
                 "needs_sovereign_compile": brain.needs_sovereign_compile(domain),
                 "adapter": brain.adapter_name(),
@@ -109,8 +126,6 @@ pub(super) fn precision_route(
     }
 
     // No GPU: return the domain's minimum tier requirement as advisory.
-    // The minimum tier is what the domain needs for correctness — the caller
-    // can use this to decide whether to proceed without GPU.
     let min_tier = domain.minimum_tier();
     JsonRpcResponse::success(
         id,
@@ -119,6 +134,7 @@ pub(super) fn precision_route(
             "fma_safe": !domain.fma_sensitive(),
             "requires_compiler": min_tier.requires_compiler_support(),
             "hardware_hint": hint_to_str(min_tier.recommended_hardware_hint()),
+            "dispatch_path": dispatch_path,
             "rationale": "No GPU available — returning domain minimum tier requirement",
             "needs_sovereign_compile": false,
             "adapter": null,

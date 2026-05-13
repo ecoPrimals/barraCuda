@@ -70,13 +70,24 @@ impl WgpuDevice {
     fn install_error_handler(
         device: &wgpu::Device,
         lost_flag: &Arc<std::sync::atomic::AtomicBool>,
+        oom_flag: &Arc<std::sync::atomic::AtomicBool>,
     ) {
-        let flag = Arc::clone(lost_flag);
+        let lost = Arc::clone(lost_flag);
+        let oom = Arc::clone(oom_flag);
         device.on_uncaptured_error(Arc::new(move |error: wgpu::Error| {
             let msg = error.to_string();
             if msg.contains("lost") || msg.contains("Lost") || msg.contains("Parent device") {
-                flag.store(true, std::sync::atomic::Ordering::Release);
+                lost.store(true, std::sync::atomic::Ordering::Release);
                 tracing::warn!("GPU device lost (flagged for pool recovery): {msg}");
+                return;
+            }
+            let lower = msg.to_lowercase();
+            if lower.contains("out of memory")
+                || lower.contains("allocation failed")
+                || lower.contains("not enough memory")
+            {
+                oom.store(true, std::sync::atomic::Ordering::Release);
+                tracing::warn!("GPU OOM detected (flagged for pool migration): {msg}");
                 return;
             }
             tracing::warn!("wgpu uncaptured error (non-fatal): {msg}");
@@ -98,7 +109,8 @@ impl WgpuDevice {
     /// Assemble a `WgpuDevice` from already-created wgpu primitives.
     fn assemble(device: wgpu::Device, queue: wgpu::Queue, adapter_info: wgpu::AdapterInfo) -> Self {
         let lost = Arc::new(std::sync::atomic::AtomicBool::new(false));
-        Self::install_error_handler(&device, &lost);
+        let oom = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        Self::install_error_handler(&device, &lost, &oom);
         let pipeline_cache = Self::make_pipeline_cache(&device);
         let budget = super::concurrency_budget(adapter_info.device_type);
         let active_encoders = Arc::new(std::sync::atomic::AtomicU32::new(0));
@@ -109,6 +121,7 @@ impl WgpuDevice {
             calibration: None,
             pipeline_cache,
             lost,
+            oom,
             gpu_lock: Arc::new(std::sync::Mutex::new(())),
             active_encoders,
             dispatch_semaphore: Arc::new(super::DispatchSemaphore::new(budget)),
@@ -645,7 +658,8 @@ impl WgpuDevice {
         adapter_info: wgpu::AdapterInfo,
     ) -> Self {
         let lost = Arc::new(std::sync::atomic::AtomicBool::new(false));
-        Self::install_error_handler(&device, &lost);
+        let oom = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        Self::install_error_handler(&device, &lost, &oom);
         let pipeline_cache = Self::make_pipeline_cache(&device);
         let budget = super::concurrency_budget(adapter_info.device_type);
         let active_encoders = Arc::new(std::sync::atomic::AtomicU32::new(0));
@@ -656,6 +670,7 @@ impl WgpuDevice {
             calibration: None,
             pipeline_cache,
             lost,
+            oom,
             gpu_lock: Arc::new(std::sync::Mutex::new(())),
             active_encoders,
             dispatch_semaphore: Arc::new(super::DispatchSemaphore::new(budget)),

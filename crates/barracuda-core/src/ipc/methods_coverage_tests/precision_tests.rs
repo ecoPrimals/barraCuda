@@ -201,12 +201,39 @@ fn response_has_all_required_fields() {
         "missing requires_compiler"
     );
     assert!(r.get("hardware_hint").is_some(), "missing hardware_hint");
+    assert!(r.get("dispatch_path").is_some(), "missing dispatch_path");
     assert!(r.get("rationale").is_some(), "missing rationale");
     assert!(
         r.get("needs_sovereign_compile").is_some(),
         "missing needs_sovereign_compile"
     );
     assert!(r.get("adapter").is_some(), "missing adapter");
+}
+
+#[test]
+fn dispatch_path_is_unavailable_without_gpu() {
+    let r = route_no_gpu("lattice_qcd");
+    assert_eq!(
+        r["dispatch_path"], "unavailable",
+        "no compute device → dispatch_path must be 'unavailable'"
+    );
+}
+
+#[test]
+fn dispatch_path_present_for_all_domains() {
+    for domain in &[
+        "lattice_qcd",
+        "gradient_flow",
+        "molecular_dynamics",
+        "inference",
+        "training",
+    ] {
+        let r = route_no_gpu(domain);
+        assert!(
+            r.get("dispatch_path").is_some(),
+            "domain {domain} missing dispatch_path"
+        );
+    }
 }
 
 // ── Dispatch integration test ─────────────────────────────────────────

@@ -30,6 +30,12 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 
 ---
 
+## Achieved (May 13, 2026 — Sprint 64: hotSpring Trio Audit Evolution)
+
+- **Sovereign path differentiation**: `precision.route` gains `dispatch_path` field (`"wgpu"` | `"sovereign"` | `"unavailable"`). Uses `compute_device()` to resolve tier. Covers hotSpring audit item "sovereign path differentiation in precision.route".
+- **Tensor-core GEMM routing**: `kernel_router` gains `MatmulPrecision` enum + `KernelTarget::Sovereign` variant. F16/BF16/TF32 `DenseMatmul` → `HardwareHint::TensorCore` sovereign dispatch. Forward-compat for coralReef HMMA codegen.
+- **Multi-GPU OOM recovery**: `WgpuDevice.oom` flag, `is_oom()` / `clear_oom()` API, OOM-aware `is_retriable()`. Uncaptured error handler wires OOM detection. Pool-level migration infrastructure complete.
+
 ## Achieved (May 13, 2026 — Sprint 63: Glacial Debt Niche Tasks)
 
 - **DF64 NVK E2E**: 2 GPU-dispatched E2E tests exercising production `compile_shader_df64` path (FMA + Kahan summation) with CPU reference verification. Closes niche task from primalSpring Glacial Debt Escalation audit.

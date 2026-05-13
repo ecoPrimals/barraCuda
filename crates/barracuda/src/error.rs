@@ -283,13 +283,29 @@ impl BarracudaError {
         msg.contains("device lost") || msg.contains("device is lost")
     }
 
-    /// Returns `true` when this error is retriable (device lost or transient GPU failure).
+    /// Returns `true` when this error represents a GPU memory allocation failure.
+    ///
+    /// OOM errors are potentially recoverable by moving work to another device
+    /// in a multi-GPU pool, or by reducing allocation size.
+    #[must_use]
+    pub fn is_oom(&self) -> bool {
+        if matches!(self, Self::OutOfMemory(_)) {
+            return true;
+        }
+        let msg = self.to_string().to_lowercase();
+        msg.contains("out of memory")
+            || msg.contains("allocation failed")
+            || msg.contains("not enough memory")
+    }
+
+    /// Returns `true` when this error is retriable (device lost, OOM, or transient GPU failure).
     ///
     /// Includes buffer validation errors that occur transiently under
-    /// instrumentation pressure (e.g. llvm-cov on llvmpipe).
+    /// instrumentation pressure (e.g. llvm-cov on llvmpipe), and OOM errors
+    /// that can be recovered by moving to another GPU in a multi-device pool.
     #[must_use]
     pub fn is_retriable(&self) -> bool {
-        if self.is_device_lost() {
+        if self.is_device_lost() || self.is_oom() {
             return true;
         }
         let msg = self.to_string();

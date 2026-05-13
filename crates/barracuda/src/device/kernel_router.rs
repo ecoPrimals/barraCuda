@@ -42,8 +42,32 @@
 //! ```
 
 use crate::device::{Device, DeviceSelection};
+use crate::device::backend::HardwareHint;
 use crate::error::Result;
 use std::collections::HashMap;
+
+/// Precision hint for matmul workloads — determines tensor-core eligibility.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MatmulPrecision {
+    /// Standard 32-bit float (ALU/FP32 cores).
+    F32,
+    /// Half-precision — tensor-core eligible on SM70+.
+    F16,
+    /// Brain floating point — tensor-core eligible on SM80+.
+    Bf16,
+    /// TensorFloat-32 — tensor-core eligible on SM80+ with 19-bit mantissa.
+    Tf32,
+    /// 64-bit float — always ALU compute path.
+    F64,
+}
+
+impl MatmulPrecision {
+    /// Whether this precision can route through tensor cores (MMA/HMMA/WGMMA).
+    #[must_use]
+    pub const fn is_tensor_core_eligible(self) -> bool {
+        matches!(self, Self::F16 | Self::Bf16 | Self::Tf32)
+    }
+}
 
 /// Workloads smaller than this use CPU to avoid GPU dispatch overhead.
 const CPU_FALLBACK_THRESHOLD: usize = 1_000;
@@ -72,7 +96,8 @@ const WORKGROUP_PHYSICS: [u32; 3] = [64, 1, 1];
 /// The router decides which hardware to target.
 #[derive(Debug, Clone)]
 pub enum ComputeWorkload {
-    /// Dense matrix operations (matmul, conv) - always GPU/CPU
+    /// Dense matrix operations (matmul, conv) — routes to tensor cores when
+    /// precision is F16/BF16/TF32 and hardware supports MMA instructions.
     DenseMatmul {
         /// Rows of output matrix (M)
         m: usize,
@@ -80,6 +105,9 @@ pub enum ComputeWorkload {
         n: usize,
         /// Inner dimension (K)
         k: usize,
+        /// Optional precision hint — enables tensor-core routing for F16/BF16/TF32.
+        /// `None` defaults to F32 (standard compute path).
+        precision: Option<MatmulPrecision>,
     },
 
     /// Sparse inference with high input sparsity - NPU preferred
@@ -173,6 +201,20 @@ pub enum KernelTarget {
         /// Target device for WGSL
         device: DeviceSelection,
     },
+
+    /// Sovereign dispatch via toadStool IPC — tensor-core or specialized hardware.
+    /// Used when the workload needs MMA instructions (HMMA/WGMMA) that cannot
+    /// be expressed in WGSL and require coralReef native codegen + toadStool dispatch.
+    Sovereign {
+        /// Shader path or identifier for coralReef compilation.
+        shader: String,
+        /// Target device (always GPU for sovereign).
+        device: DeviceSelection,
+        /// Hardware unit hint for toadStool dispatch.
+        hardware_hint: HardwareHint,
+        /// Workgroup size hint.
+        workgroup_size: [u32; 3],
+    },
 }
 
 /// Kernel router - maps workloads to hardware
@@ -236,9 +278,21 @@ impl KernelRouter {
     /// capability check fails).
     pub fn route(&self, workload: &ComputeWorkload) -> Result<KernelTarget> {
         match workload {
-            // === Dense compute → Always GPU/CPU (WGSL) ===
-            ComputeWorkload::DenseMatmul { m, n, k } => {
+            // === Dense matmul → tensor-core sovereign when eligible, else WGSL ===
+            ComputeWorkload::DenseMatmul { m, n, k, precision } => {
                 let size = m * n * k;
+
+                if let Some(prec) = precision {
+                    if prec.is_tensor_core_eligible() && self.has_gpu {
+                        return Ok(KernelTarget::Sovereign {
+                            shader: "matmul_mma".to_string(),
+                            device: DeviceSelection::Gpu,
+                            hardware_hint: HardwareHint::TensorCore,
+                            workgroup_size: self.optimal_workgroup_for_matmul(*m, *n, *k),
+                        });
+                    }
+                }
+
                 let device = self.select_wgsl_device(size);
                 Ok(KernelTarget::Wgsl {
                     shader: "matmul".to_string(),
@@ -503,6 +557,7 @@ mod tests {
             m: 1024,
             n: 1024,
             k: 1024,
+            precision: None,
         };
         let target = router.route(&workload).unwrap();
         match target {
@@ -510,7 +565,51 @@ mod tests {
                 assert_eq!(shader, "matmul");
                 assert!(device.supports_wgsl());
             }
-            _ => panic!("Dense matmul should route to WGSL"),
+            _ => panic!("Dense matmul (f32) should route to WGSL"),
+        }
+    }
+
+    #[test]
+    fn test_dense_matmul_f16_routes_to_sovereign_tensor_core() {
+        let router = KernelRouter::default();
+        let workload = ComputeWorkload::DenseMatmul {
+            m: 1024,
+            n: 1024,
+            k: 1024,
+            precision: Some(MatmulPrecision::F16),
+        };
+        let target = router.route(&workload).unwrap();
+        match target {
+            KernelTarget::Sovereign {
+                hardware_hint,
+                shader,
+                ..
+            } => {
+                assert_eq!(hardware_hint, HardwareHint::TensorCore);
+                assert_eq!(shader, "matmul_mma");
+            }
+            KernelTarget::Wgsl { .. } => {
+                // Falls back to WGSL if no GPU available in CI
+            }
+            _ => panic!("F16 matmul should route to Sovereign/TensorCore or Wgsl"),
+        }
+    }
+
+    #[test]
+    fn test_dense_matmul_f64_routes_to_wgsl() {
+        let router = KernelRouter::default();
+        let workload = ComputeWorkload::DenseMatmul {
+            m: 512,
+            n: 512,
+            k: 512,
+            precision: Some(MatmulPrecision::F64),
+        };
+        let target = router.route(&workload).unwrap();
+        match target {
+            KernelTarget::Wgsl { shader, .. } => {
+                assert_eq!(shader, "matmul");
+            }
+            _ => panic!("F64 matmul should route to WGSL compute path"),
         }
     }
 
@@ -575,6 +674,7 @@ mod tests {
             m: 1024,
             n: 1024,
             k: 1024,
+            precision: None,
         };
         assert!(!router.can_route_to_npu(&dense));
     }

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Added — Sprint 64: hotSpring Trio Audit Evolution (May 13 2026)
+
+- **`dispatch_path` in `precision.route`**: New response field differentiates the active dispatch tier (`"wgpu"` for local GPU, `"sovereign"` for toadStool VFIO/DRM IPC, `"unavailable"` when no compute device). Enables hotSpring and upstream primals to route workloads through the correct dispatch stack without secondary capability queries.
+- **Tensor-core GEMM routing**: `kernel_router` gains `MatmulPrecision` enum (F16/BF16/TF32/F32/F64) and `KernelTarget::Sovereign` variant. `DenseMatmul` workloads with F16/BF16/TF32 precision route to `HardwareHint::TensorCore` via sovereign dispatch. F32/F64/None remains WGSL compute path. Forward-compatible stub for coralReef HMMA/WGMMA codegen.
+- **Multi-GPU OOM recovery infrastructure**: `WgpuDevice` gains `oom: Arc<AtomicBool>` flag, wired in `on_uncaptured_error` for out-of-memory signals. Public API: `is_oom()`, `clear_oom()`. `BarracudaError::is_oom()` classifies OOM variants. `is_retriable()` now returns `true` for OOM (pool can migrate work to another device).
+
 ### Added — Sprint 63: Glacial Debt Niche Tasks (May 13 2026)
 
 - **DF64 NVK E2E tests**: Two GPU-dispatched end-to-end tests for the production `compile_shader_df64` path (`test_df64_e2e_fma_gpu_dispatch`, `test_df64_e2e_kahan_summation_gpu_dispatch`). Compile DF64 kernels via the tiered sovereign pipeline, dispatch on GPU, read back f64 results, and verify against CPU reference values. Closes the gap between naga-only validation and real GPU execution.

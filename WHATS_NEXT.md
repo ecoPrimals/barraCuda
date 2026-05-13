@@ -6,6 +6,16 @@ Prioritized work items, ordered by impact. Updated 2026-05-13.
 
 ## Recently Completed
 
+- **Sprint 67: 12-Axis Deep Debt Audit — Deprecated Ceremony Removal (May 13)**:
+  Comprehensive 12-axis sweep confirms clean bill on all axes: zero files >800L
+  (max 797L), zero unsafe in production, zero C deps, zero todo!/unimplemented!,
+  zero println! in library, zero Result<T,String>, zero mocks in production, zero
+  hardcoded primal names in runtime. 3 stale `#[deprecated]` annotations on private
+  CPU fallback functions evolved: `convolve_1d_cpu` → `convolve_1d_scalar`,
+  `gradient_1d_cpu` → `gradient_1d_scalar`, `jackknife_leave_means_cpu` →
+  `jackknife_leave_means_scalar`. Deprecation ceremony (`#[deprecated]` +
+  `#[expect(deprecated)]`) replaced with clean naming — these are active scalar
+  fallbacks, not deprecated API. All clippy --all-targets -D warnings clean.
 - **Sprint 66: hotSpring Trio Audit — TensorSession Lattice Ops (May 13)**:
   Addressed GAP-HS-027 from hotSpring compute trio audit. Added `sub` (subtract)
   and `negate` operations to `TensorSession` for physics/lattice workloads:

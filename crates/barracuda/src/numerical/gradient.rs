@@ -63,15 +63,10 @@ pub fn gradient_1d(f: &[f64], dx: f64) -> Vec<f64> {
         }
     }
 
-    #[expect(deprecated, reason = "fallback retained until cpu-shader is default")]
-    gradient_1d_cpu(f, dx)
+    gradient_1d_scalar(f, dx)
 }
 
-#[deprecated(
-    since = "0.4.0",
-    note = "use `cpu-shader` feature for WGSL-backed gradient_1d"
-)]
-fn gradient_1d_cpu(f: &[f64], dx: f64) -> Vec<f64> {
+fn gradient_1d_scalar(f: &[f64], dx: f64) -> Vec<f64> {
     let n = f.len();
     let mut grad = vec![0.0; n];
 

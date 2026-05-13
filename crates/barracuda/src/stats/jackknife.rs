@@ -139,8 +139,7 @@ pub fn jackknife_mean_variance(data: &[f64]) -> Option<JackknifeResult> {
     let jk_means = jackknife_leave_means_shader(data, full_sum, n);
 
     #[cfg(not(feature = "cpu-shader"))]
-    #[expect(deprecated, reason = "fallback retained until cpu-shader is default")]
-    let jk_means = jackknife_leave_means_cpu(data, full_sum, n_f);
+    let jk_means = jackknife_leave_means_scalar(data, full_sum, n_f);
 
     let jk_mean_sum: f64 = jk_means.iter().sum();
     let jk_grand_mean = jk_mean_sum / n_f;
@@ -158,11 +157,7 @@ pub fn jackknife_mean_variance(data: &[f64]) -> Option<JackknifeResult> {
 }
 
 #[cfg(not(feature = "cpu-shader"))]
-#[deprecated(
-    since = "0.4.0",
-    note = "use `cpu-shader` feature for WGSL-backed jackknife"
-)]
-fn jackknife_leave_means_cpu(data: &[f64], full_sum: f64, n_f: f64) -> Vec<f64> {
+fn jackknife_leave_means_scalar(data: &[f64], full_sum: f64, n_f: f64) -> Vec<f64> {
     data.iter().map(|&d| (full_sum - d) / (n_f - 1.0)).collect()
 }
 

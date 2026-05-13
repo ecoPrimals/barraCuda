@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Changed — Sprint 67: 12-Axis Deep Debt — Deprecated Ceremony Removal (May 13 2026)
+
+- `convolve_1d_cpu` → `convolve_1d_scalar` (biosignal.rs) — removed stale `#[deprecated]` annotation
+- `gradient_1d_cpu` → `gradient_1d_scalar` (gradient.rs) — removed stale `#[deprecated]` annotation
+- `jackknife_leave_means_cpu` → `jackknife_leave_means_scalar` (jackknife.rs) — removed stale `#[deprecated]`+`#[expect(deprecated)]` ceremony
+
 ### Added — Sprint 66: TensorSession Lattice Ops (May 13 2026)
 
 - `TensorSession::sub(a, b)` — elementwise subtract for leapfrog HMC integrators (GAP-HS-027)

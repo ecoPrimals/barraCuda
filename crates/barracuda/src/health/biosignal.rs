@@ -63,15 +63,10 @@ pub fn convolve_1d(signal: &[f64], kernel: &[f64]) -> Vec<f64> {
         }
     }
 
-    #[expect(deprecated, reason = "fallback retained until cpu-shader is default")]
-    convolve_1d_cpu(signal, kernel)
+    convolve_1d_scalar(signal, kernel)
 }
 
-#[deprecated(
-    since = "0.4.0",
-    note = "use `cpu-shader` feature for WGSL-backed convolve_1d"
-)]
-fn convolve_1d_cpu(signal: &[f64], kernel: &[f64]) -> Vec<f64> {
+fn convolve_1d_scalar(signal: &[f64], kernel: &[f64]) -> Vec<f64> {
     let out_len = signal.len() - kernel.len() + 1;
     (0..out_len)
         .map(|i| {

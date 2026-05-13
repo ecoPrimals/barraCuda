@@ -30,6 +30,11 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 
 ---
 
+## Achieved (May 13, 2026 — Sprint 67: 12-Axis Deep Debt — Deprecated Ceremony Removal)
+
+- **12-axis audit confirmed clean**: zero files >800L (max 797L), zero unsafe, zero C deps, zero todo!/unimplemented!, zero println! in lib, zero Result<T,String>, zero mocks in production, zero hardcoded primal names.
+- **3 stale `#[deprecated]` evolved**: private CPU fallback functions renamed from `*_cpu` to `*_scalar`, deprecation ceremony removed. Active fallbacks, not deprecated API.
+
 ## Achieved (May 13, 2026 — Sprint 66: hotSpring Trio Audit — TensorSession Lattice Ops)
 
 - **GAP-HS-027 resolved**: `TensorSession::sub()` and `TensorSession::negate()` added for physics/lattice workloads (leapfrog HMC, force sign conventions). Full stack: SessionOp, SessionPipelines, dispatch encoding, IPC `tensor.batch.submit`.

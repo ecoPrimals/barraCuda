@@ -9,6 +9,9 @@
 
 mod defaults {
     pub const FALLBACK_MEMORY_BYTES: u64 = 16 * 1024 * 1024 * 1024;
+    pub const FALLBACK_THREAD_COUNT: usize = 4;
+    pub const AVAILABLE_MEMORY_RATIO: u64 = 2;
+    pub const ESTIMATED_DDR4_BANDWIDTH: u64 = 50 * 1024 * 1024 * 1024;
     pub const SMALL_TENSOR_THRESHOLD: usize = 1_000;
     pub const MEDIUM_TENSOR_THRESHOLD: usize = 10_000;
     pub const LARGE_TENSOR_THRESHOLD: usize = 1_000_000;
@@ -48,7 +51,7 @@ impl CpuExecutor {
     pub fn new() -> Self {
         let num_threads = std::thread::available_parallelism()
             .map(std::num::NonZero::get)
-            .unwrap_or(4);
+            .unwrap_or(defaults::FALLBACK_THREAD_COUNT);
 
         Self {
             capabilities: Self::detect_capabilities(num_threads),
@@ -73,8 +76,8 @@ impl CpuExecutor {
             },
             memory: MemoryCapabilities {
                 total_bytes: total_memory,
-                available_bytes: total_memory / 2,
-                bandwidth_bytes_per_sec: 50 * 1024 * 1024 * 1024,
+                available_bytes: total_memory / defaults::AVAILABLE_MEMORY_RATIO,
+                bandwidth_bytes_per_sec: defaults::ESTIMATED_DDR4_BANDWIDTH,
                 unified_memory: true,
                 zero_copy: true,
             },

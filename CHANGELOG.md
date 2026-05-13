@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Fixed — Sprint 65: Deep Debt Remediation (May 13 2026)
+
+- **Named constants**: `cpu_executor` magic numbers (`4` thread fallback, `total_memory / 2`, `50 GiB/s bandwidth`) evolved to `defaults::FALLBACK_THREAD_COUNT`, `AVAILABLE_MEMORY_RATIO`, `ESTIMATED_DDR4_BANDWIDTH`.
+- **Error observability**: `transport.rs` IPC write failures now logged before discarding (`tracing::debug!`). `eval_record.rs` `load_or_new` logs load failures instead of silent fallback. `creation.rs` `new_gpu`/`new_cpu` preserves inner error text in `map_err`.
+- **Dead code removal**: Removed deprecated `TensorSession` type alias from `tensor_context/mod.rs` (zero remaining usages, deprecated since 0.3.12). Stale doc reference updated.
+
 ### Added — Sprint 64: hotSpring Trio Audit Evolution (May 13 2026)
 
 - **`dispatch_path` in `precision.route`**: New response field differentiates the active dispatch tier (`"wgpu"` for local GPU, `"sovereign"` for toadStool VFIO/DRM IPC, `"unavailable"` when no compute device). Enables hotSpring and upstream primals to route workloads through the correct dispatch stack without secondary capability queries.

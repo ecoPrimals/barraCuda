@@ -611,7 +611,9 @@ where
         };
         let mut out = batch_json;
         out.push('\n');
-        writer.write_all(out.as_bytes()).await.map_err(|_| ())?;
+        writer.write_all(out.as_bytes()).await.map_err(|e| {
+            tracing::debug!("IPC write failed (batch response): {e}");
+        })?;
     } else {
         let Some(response) = handle_line(primal, line).await else {
             return Ok(());
@@ -619,7 +621,9 @@ where
         let mut json =
             serde_json::to_string(&response).unwrap_or_else(|_| SERIALIZATION_ERROR.to_string());
         json.push('\n');
-        writer.write_all(json.as_bytes()).await.map_err(|_| ())?;
+        writer.write_all(json.as_bytes()).await.map_err(|e| {
+            tracing::debug!("IPC write failed (single response): {e}");
+        })?;
     }
     Ok(())
 }

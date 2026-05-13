@@ -6,6 +6,18 @@ Prioritized work items, ordered by impact. Updated 2026-05-13.
 
 ## Recently Completed
 
+- **Sprint 65: Deep Debt Remediation — Error Observability + Magic Number Evolution (May 13)**:
+  Comprehensive 12-axis audit confirmed zero files >800L, zero unsafe in production, zero
+  C deps, zero todo!/unimplemented!. Addressed remaining debt items:
+  (1) **Magic number evolution**: cpu_executor thread fallback, memory estimate, bandwidth
+  estimate now use named constants (`FALLBACK_THREAD_COUNT`, `AVAILABLE_MEMORY_RATIO`,
+  `ESTIMATED_DDR4_BANDWIDTH`).
+  (2) **Error observability**: transport.rs `dispatch_line` now logs I/O write failures via
+  `tracing::debug!` before discarding. `eval_record.rs` load_or_new logs load failures.
+  `creation.rs` new_gpu/new_cpu preserves inner error context instead of discarding.
+  (3) **Deprecated removal**: Removed dead `TensorSession` type alias from tensor_context
+  (deprecated since 0.3.12, zero remaining usages). Updated stale doc reference.
+  All clippy --all-targets -D warnings clean. All tests pass.
 - **Sprint 64: hotSpring Trio Audit — Sovereign Path + GEMM Routing + OOM Recovery (May 13)**:
   Addressed 3 remaining items from hotSpring compute trio audit:
   (1) **Sovereign path differentiation**: Added `dispatch_path` field to `precision.route`

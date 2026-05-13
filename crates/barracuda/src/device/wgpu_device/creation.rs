@@ -165,7 +165,7 @@ impl WgpuDevice {
             )
         })
         .await
-        .map_err(|_| BarracudaError::device("No GPU adapter found - only CPU available"))
+        .map_err(|e| BarracudaError::device(format!("No GPU adapter found: {e}")))
     }
 
     /// Create device explicitly targeting CPU software rasterizer
@@ -177,7 +177,7 @@ impl WgpuDevice {
             info.device_type == wgpu::DeviceType::Cpu
         })
         .await
-        .map_err(|_| BarracudaError::device("No CPU software rasterizer available"))
+        .map_err(|e| BarracudaError::device(format!("No CPU software rasterizer: {e}")))
     }
 
     /// Create a CPU software-rasterizer device using the adapter's own supported limits.

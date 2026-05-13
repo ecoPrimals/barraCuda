@@ -247,7 +247,15 @@ impl EvaluationCache {
     /// let mut cache = EvaluationCache::load_or_new("results/cache.json");
     /// ```
     pub fn load_or_new<P: AsRef<Path>>(path: P) -> Self {
-        Self::load(&path).unwrap_or_default()
+        match Self::load(&path) {
+            Ok(cache) => cache,
+            Err(e) => {
+                tracing::debug!(
+                    "EvaluationCache: starting fresh (load failed: {e})"
+                );
+                Self::default()
+            }
+        }
     }
 
     /// Create a cache from existing training data.

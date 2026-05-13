@@ -55,12 +55,6 @@ pub struct BatchGuard {
     ctx: Arc<TensorContext>,
 }
 
-/// Legacy alias for [`BatchGuard`].
-#[deprecated(
-    since = "0.3.12",
-    note = "renamed to BatchGuard to avoid collision with session::TensorSession"
-)]
-pub type TensorSession = BatchGuard;
 
 impl BatchGuard {
     /// Begin a batch session on `device`.

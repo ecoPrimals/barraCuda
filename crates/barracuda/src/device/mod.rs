@@ -361,7 +361,7 @@ impl Auto {
     ///
     /// Identical to `Auto::new()` but returns `Arc<WgpuDevice>` directly,
     /// skipping sovereign IPC. Use this when you need local tensor buffers
-    /// (e.g. `Tensor::from_vec`, `TensorSession`, tests).
+    /// (e.g. `Tensor::from_vec`, `BatchGuard`, tests).
     /// # Errors
     /// Returns [`Err`] if no wgpu adapter (GPU or CPU software) is found.
     pub async fn new_wgpu() -> Result<Arc<WgpuDevice>> {

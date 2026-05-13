@@ -30,6 +30,13 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 
 ---
 
+## Achieved (May 13, 2026 — Sprint 65: Deep Debt Remediation)
+
+- **12-axis audit confirmed**: zero files >800L (max 793L), zero unsafe in production, zero C deps, zero todo!/unimplemented!, zero println! in library. Codebase at full deep debt zero.
+- **Named constants**: cpu_executor magic numbers evolved to named defaults module.
+- **Error observability**: IPC write failures, cache load failures, device creation errors now preserve/log context instead of silently discarding.
+- **Dead `#[deprecated]` removal**: `TensorSession` type alias removed (zero remaining usages).
+
 ## Achieved (May 13, 2026 — Sprint 64: hotSpring Trio Audit Evolution)
 
 - **Sovereign path differentiation**: `precision.route` gains `dispatch_path` field (`"wgpu"` | `"sovereign"` | `"unavailable"`). Uses `compute_device()` to resolve tier. Covers hotSpring audit item "sovereign path differentiation in precision.route".

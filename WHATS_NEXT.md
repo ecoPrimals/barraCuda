@@ -1,11 +1,17 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-05-12.
+Prioritized work items, ordered by impact. Updated 2026-05-13.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 60: Registry Drift Fix + Clean Audit (May 13)**: ProjectNUCLEUS audit
+  flagged `registry_tests.rs` asserting `== 71` (was 72 after Sprint 58). Evolved
+  from hardcoded count to sanity floor (`>= 70`) + uniqueness check — prevents
+  future drift. Fresh 12-axis audit confirms zero remaining actionable items
+  across all 1,160 `.rs` files. `cc` transitive dep confirmed phantom (blake3
+  `pure` feature skips all C compilation).
 - **Sprint 59: 12-Axis Deep Debt Audit + Docs Hygiene (May 12)**: Comprehensive
   12-axis sweep confirms clean bill of health. Two actionable findings fixed:
   (1) `method_gate.rs` hardcoded `"barraCuda"` → `crate::PRIMAL_NAME` constant,

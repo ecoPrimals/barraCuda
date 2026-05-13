@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Fixed — Sprint 60: Registry Drift + Clean Audit (May 13 2026)
+
+- **`registry_tests.rs`**: evolved hardcoded `== 71` assertion to sanity floor (`>= 70`) + uniqueness check. Prevents future drift when methods are added. Flagged by ProjectNUCLEUS deep debt audit.
+- **Fresh 12-axis audit**: zero actionable findings across all 1,160 `.rs` files. `cc` transitive dep confirmed phantom (blake3 `pure` skips C compilation).
+
 ### Changed — Sprint 59: 12-Axis Deep Debt Audit + Docs Hygiene (May 12 2026)
 
 - **`method_gate.rs`**: replaced hardcoded `"barraCuda"` string literal with `crate::PRIMAL_NAME` constant — eliminates the last hardcoded primal identity string in production code.

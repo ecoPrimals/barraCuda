@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Changed — Sprint 61: Diesel Engine Migration Prep (May 13 2026)
+
+- **Doc comment evolution**: `backend.rs`, `compilation.rs`, `workarounds.rs` — updated all `coral-driver` hardware runtime references to toadStool. Compiler-domain references (coralReef) remain correct per permanent allocation.
+- **hotSpring forward-compat**: `fleet_client.rs` now discovers toadStool sockets first (`$TOADSTOOL_RUN_DIR`, `/run/toadstool`) before falling back to legacy coralReef paths. `primal_bridge.rs` gains `toadstool → toadstool-glowplug` alias. Fleet file tries `toadstool-ember-fleet.json` before `coral-ember-fleet.json`.
+
 ### Fixed — Sprint 60: Registry Drift + Clean Audit (May 13 2026)
 
 - **`registry_tests.rs`**: evolved hardcoded `== 71` assertion to sanity floor (`>= 70`) + uniqueness check. Prevents future drift when methods are added. Flagged by ProjectNUCLEUS deep debt audit.

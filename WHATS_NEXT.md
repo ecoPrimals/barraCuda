@@ -6,6 +6,14 @@ Prioritized work items, ordered by impact. Updated 2026-05-13.
 
 ## Recently Completed
 
+- **Sprint 61: Diesel Engine Migration Prep (May 13)**: hotSpring audit identified
+  15+ files wired to coralReef's diesel engine stack (hardware runtime) that should
+  target toadStool. Updated `backend.rs`, `compilation.rs`, `workarounds.rs` doc
+  comments from `coral-driver` to toadStool. Evolved hotSpring's `fleet_client.rs`
+  with toadStool-first socket discovery (`hardware_daemon_run_dir()`), added
+  `toadstool-glowplug` alias in `PRIMAL_ALIASES`, updated fleet file resolution to
+  try `toadstool-ember-fleet.json` before legacy. Full cutover gated on toadStool
+  Phase C (C1–C7).
 - **Sprint 60: Registry Drift Fix + Clean Audit (May 13)**: ProjectNUCLEUS audit
   flagged `registry_tests.rs` asserting `== 71` (was 72 after Sprint 58). Evolved
   from hardcoded count to sanity floor (`>= 70`) + uniqueness check — prevents

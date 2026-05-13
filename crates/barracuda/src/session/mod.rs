@@ -29,7 +29,7 @@
 //! # }
 //! ```
 //!
-//! **Supported ops**: `add`, `mul`, `fma`, `scale` (elementwise),
+//! **Supported ops**: `add`, `sub`, `mul`, `negate`, `fma`, `scale` (elementwise),
 //! `matmul` (4-tier tiered), `relu`, `gelu`, `softmax`, `layer_norm`,
 //! `attention`, `head_split`, `head_concat`, `reshape`.
 //!
@@ -106,10 +106,10 @@ impl AttentionDims {
 /// **Stability**: This is the canonical API for fused multi-op GPU pipelines.
 /// Springs (hotSpring, healthSpring, wetSpring, airSpring, neuralSpring) should adopt
 /// this type for production composition. The API surface (`new`, `with_device`,
-/// `reset`, `tensor`, `tensor_with_shape`, `import`, `add`, `mul`, `fma`,
-/// `scale`, `matmul`, `relu`, `gelu`, `softmax`, `layer_norm`, `reshape`,
-/// `head_split`, `head_concat`, `attention`, `run`) is stable and will not
-/// break without a major version bump.
+/// `reset`, `tensor`, `tensor_with_shape`, `import`, `add`, `sub`, `mul`,
+/// `negate`, `fma`, `scale`, `matmul`, `relu`, `gelu`, `softmax`, `layer_norm`,
+/// `reshape`, `head_split`, `head_concat`, `attention`, `run`) is stable and
+/// will not break without a major version bump.
 ///
 /// Operations are recorded without execution until `run()` is called.
 /// This amortises the ~250 μs per-operation overhead across all operations.
@@ -222,6 +222,20 @@ impl TensorSession {
         Ok(self.make_tensor(out, &a.shape))
     }
 
+    /// `output = a - b`
+    /// # Errors
+    /// Returns [`Err`] if `a` and `b` have different shapes.
+    pub fn sub(&mut self, a: &SessionTensor, b: &SessionTensor) -> Result<SessionTensor> {
+        self.check_same_shape(a, b)?;
+        let out = self.alloc_output(&a.shape);
+        self.ops.push(SessionOp::Sub {
+            input_a: a.buffer_id,
+            input_b: b.buffer_id,
+            output: out,
+        });
+        Ok(self.make_tensor(out, &a.shape))
+    }
+
     /// `output = a * b`
     /// # Errors
     /// Returns [`Err`] if `a` and `b` have different shapes.
@@ -231,6 +245,18 @@ impl TensorSession {
         self.ops.push(SessionOp::Mul {
             input_a: a.buffer_id,
             input_b: b.buffer_id,
+            output: out,
+        });
+        Ok(self.make_tensor(out, &a.shape))
+    }
+
+    /// `output = -a`
+    /// # Errors
+    /// Does not return [`Err`] in the current implementation.
+    pub fn negate(&mut self, a: &SessionTensor) -> Result<SessionTensor> {
+        let out = self.alloc_output(&a.shape);
+        self.ops.push(SessionOp::Negate {
+            input: a.buffer_id,
             output: out,
         });
         Ok(self.make_tensor(out, &a.shape))
@@ -587,6 +613,51 @@ mod tests {
         assert_eq!(s.num_ops(), 2);
         s.run().unwrap();
         assert_eq!(d.to_vec().unwrap(), vec![6.0, 8.0, 10.0, 12.0]);
+    }
+
+    #[tokio::test]
+    async fn test_session_sub() {
+        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let mut s = TensorSession::new(&device);
+        let a = s.tensor(&[10.0, 20.0, 30.0, 40.0]).unwrap();
+        let b = s.tensor(&[1.0, 2.0, 3.0, 4.0]).unwrap();
+        let c = s.sub(&a, &b).unwrap();
+        assert_eq!(s.num_ops(), 1);
+        s.run().unwrap();
+        assert_eq!(c.to_vec().unwrap(), vec![9.0, 18.0, 27.0, 36.0]);
+    }
+
+    #[tokio::test]
+    async fn test_session_negate() {
+        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let mut s = TensorSession::new(&device);
+        let a = s.tensor(&[1.0, -2.0, 3.0, -4.0]).unwrap();
+        let b = s.negate(&a).unwrap();
+        s.run().unwrap();
+        assert_eq!(b.to_vec().unwrap(), vec![-1.0, 2.0, -3.0, 4.0]);
+    }
+
+    #[tokio::test]
+    async fn test_session_leapfrog_pattern() {
+        let Some(device) = test_pool::get_test_device_if_gpu_available().await else {
+            return;
+        };
+        let mut s = TensorSession::new(&device);
+        let p = s.tensor(&[1.0, 2.0, 3.0, 4.0]).unwrap();
+        let force = s.tensor(&[0.1, 0.2, 0.3, 0.4]).unwrap();
+        let dt = s.tensor(&[0.5, 0.5, 0.5, 0.5]).unwrap();
+        let dt_force = s.mul(&dt, &force).unwrap();
+        let p_new = s.sub(&p, &dt_force).unwrap();
+        s.run().unwrap();
+        let result = p_new.to_vec().unwrap();
+        let expected = [0.95, 1.9, 2.85, 3.8];
+        for (r, e) in result.iter().zip(expected.iter()) {
+            assert!((r - e).abs() < 1e-5, "leapfrog mismatch: {r} vs {e}");
+        }
     }
 
     #[tokio::test]

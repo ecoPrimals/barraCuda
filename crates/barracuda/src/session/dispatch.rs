@@ -40,6 +40,27 @@ impl TensorSession {
                     size.div_ceil(self.workgroup_size),
                 );
             }
+            SessionOp::Sub {
+                input_a,
+                input_b,
+                output,
+            } => {
+                let size = self.elem_count(*output) as u32;
+                let bg = self.auto_bind_group(
+                    &self.pipelines.sub_pl,
+                    &[
+                        &self.buffers[*input_a],
+                        &self.buffers[*input_b],
+                        &self.buffers[*output],
+                    ],
+                );
+                self.dispatch_1d(
+                    encoder,
+                    &self.pipelines.sub_pl,
+                    &bg,
+                    size.div_ceil(self.workgroup_size),
+                );
+            }
             SessionOp::Mul {
                 input_a,
                 input_b,
@@ -57,6 +78,19 @@ impl TensorSession {
                 self.dispatch_1d(
                     encoder,
                     &self.pipelines.mul_pl,
+                    &bg,
+                    size.div_ceil(self.workgroup_size),
+                );
+            }
+            SessionOp::Negate { input, output } => {
+                let size = self.elem_count(*output) as u32;
+                let bg = self.auto_bind_group(
+                    &self.pipelines.neg_pl,
+                    &[&self.buffers[*input], &self.buffers[*output]],
+                );
+                self.dispatch_1d(
+                    encoder,
+                    &self.pipelines.neg_pl,
                     &bg,
                     size.div_ceil(self.workgroup_size),
                 );

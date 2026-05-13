@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Added — Sprint 66: TensorSession Lattice Ops (May 13 2026)
+
+- `TensorSession::sub(a, b)` — elementwise subtract for leapfrog HMC integrators (GAP-HS-027)
+- `TensorSession::negate(a)` — sign flip for force conventions (GAP-HS-027)
+- `tensor.batch.submit` IPC: `sub` and `negate` ops wired
+- 3 new session tests: sub, negate, leapfrog integration pattern
+
 ### Fixed — Sprint 65: Deep Debt Remediation (May 13 2026)
 
 - **Named constants**: `cpu_executor` magic numbers (`4` thread fallback, `total_memory / 2`, `50 GiB/s bandwidth`) evolved to `defaults::FALLBACK_THREAD_COUNT`, `AVAILABLE_MEMORY_RATIO`, `ESTIMATED_DDR4_BANDWIDTH`.

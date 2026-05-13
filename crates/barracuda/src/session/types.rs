@@ -115,9 +115,18 @@ pub(super) enum SessionOp {
         input_b: usize,
         output: usize,
     },
+    Sub {
+        input_a: usize,
+        input_b: usize,
+        output: usize,
+    },
     Mul {
         input_a: usize,
         input_b: usize,
+        output: usize,
+    },
+    Negate {
+        input: usize,
         output: usize,
     },
     Fma {

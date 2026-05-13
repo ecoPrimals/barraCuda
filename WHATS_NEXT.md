@@ -6,6 +6,20 @@ Prioritized work items, ordered by impact. Updated 2026-05-13.
 
 ## Recently Completed
 
+- **Sprint 66: hotSpring Trio Audit — TensorSession Lattice Ops (May 13)**:
+  Addressed GAP-HS-027 from hotSpring compute trio audit. Added `sub` (subtract)
+  and `negate` operations to `TensorSession` for physics/lattice workloads:
+  (1) **`sub(a, b)`**: `output = a - b` — eliminates the 2-op workaround
+  (`add(a, scale(b, -1.0))`) for leapfrog integrators (`p = p - dt * force`).
+  (2) **`negate(a)`**: `output = -a` — dedicated sign-flip for force conventions.
+  Both ops wired through full stack: `SessionOp` enum, `SessionPipelines` (inline
+  WGSL compiled once at construction), `dispatch.rs` encoding, `TensorSession`
+  public API, and `tensor.batch.submit` IPC handler (`BinaryOp::Sub`,
+  `UnaryOp::Negate`). 3 new tests: sub correctness, negate correctness, leapfrog
+  integration pattern (`p_new = p - dt * force`). GAP-HS-041 (`stats.entropy`)
+  confirmed already resolved (registered alias for `stats.shannon` since Sprint 50).
+  OOM fleet failover: detection infrastructure live (Sprint 64); fleet routing
+  deferred to toadStool multi-GPU readiness. All clippy clean, all tests pass.
 - **Sprint 65: Deep Debt Remediation — Error Observability + Magic Number Evolution (May 13)**:
   Comprehensive 12-axis audit confirmed zero files >800L, zero unsafe in production, zero
   C deps, zero todo!/unimplemented!. Addressed remaining debt items:

@@ -34,8 +34,8 @@
 //! }
 //! ```
 //!
-//! **Supported ops**: `create`, `add`, `mul`, `fma`, `scale`, `matmul`,
-//! `relu`, `gelu`, `softmax`, `layer_norm`, `reshape`, `readback`.
+//! **Supported ops**: `create`, `add`, `sub`, `mul`, `negate`, `fma`, `scale`,
+//! `matmul`, `relu`, `gelu`, `softmax`, `layer_norm`, `reshape`, `readback`.
 
 use super::super::jsonrpc::{INTERNAL_ERROR, INVALID_PARAMS, JsonRpcResponse};
 use super::compute::parse_shape;
@@ -80,7 +80,9 @@ pub(super) async fn tensor_batch_submit(
     const VALID_OPS: &[&str] = &[
         "create",
         "add",
+        "sub",
         "mul",
+        "negate",
         "fma",
         "scale",
         "matmul",
@@ -122,7 +124,9 @@ pub(super) async fn tensor_batch_submit(
         let result = match op_name {
             "create" => batch_create(&mut session, op_val, i),
             "add" => batch_binary(&mut session, &aliases, op_val, i, BinaryOp::Add),
+            "sub" => batch_binary(&mut session, &aliases, op_val, i, BinaryOp::Sub),
             "mul" => batch_binary(&mut session, &aliases, op_val, i, BinaryOp::Mul),
+            "negate" => batch_unary(&mut session, &aliases, op_val, i, UnaryOp::Negate),
             "fma" => batch_fma(&mut session, &aliases, op_val, i),
             "scale" => batch_scale(&mut session, &aliases, op_val, i),
             "matmul" => batch_binary(&mut session, &aliases, op_val, i, BinaryOp::MatMul),
@@ -287,7 +291,7 @@ fn validate_batch_ops(ops: &[Value], valid_ops: &[&str]) -> Result<(), BatchErro
                     )));
                 }
             }
-            "add" | "mul" | "matmul" => {
+            "add" | "sub" | "mul" | "matmul" => {
                 for key in ["a", "b"] {
                     let ref_name = op_val.get(key).and_then(|v| v.as_str()).ok_or_else(|| {
                         BatchError::new(format!("ops[{i}]: {op_name} requires '{key}' alias"))
@@ -311,7 +315,7 @@ fn validate_batch_ops(ops: &[Value], valid_ops: &[&str]) -> Result<(), BatchErro
                     }
                 }
             }
-            "scale" | "relu" | "gelu" | "softmax" | "layer_norm" | "reshape" => {
+            "scale" | "relu" | "gelu" | "softmax" | "negate" | "layer_norm" | "reshape" => {
                 let ref_name = op_val
                     .get("input")
                     .and_then(|v| v.as_str())
@@ -355,6 +359,7 @@ fn validate_batch_ops(ops: &[Value], valid_ops: &[&str]) -> Result<(), BatchErro
 
 enum BinaryOp {
     Add,
+    Sub,
     Mul,
     MatMul,
 }
@@ -363,6 +368,7 @@ enum UnaryOp {
     ReLU,
     Gelu,
     Softmax,
+    Negate,
 }
 
 fn resolve<'a>(
@@ -432,6 +438,7 @@ fn batch_binary(
     let b = resolve(aliases, val, "b", idx)?;
     match op {
         BinaryOp::Add => session.add(a, b),
+        BinaryOp::Sub => session.sub(a, b),
         BinaryOp::Mul => session.mul(a, b),
         BinaryOp::MatMul => session.matmul(a, b),
     }
@@ -485,6 +492,7 @@ fn batch_unary(
         UnaryOp::ReLU => session.relu(a),
         UnaryOp::Gelu => session.gelu(a),
         UnaryOp::Softmax => session.softmax(a),
+        UnaryOp::Negate => session.negate(a),
     }
     .map_err(|e| BatchError::new(format!("ops[{idx}]: {e}")))
 }

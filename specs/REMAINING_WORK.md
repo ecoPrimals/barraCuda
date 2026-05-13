@@ -30,6 +30,12 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 
 ---
 
+## Achieved (May 13, 2026 — Sprint 66: hotSpring Trio Audit — TensorSession Lattice Ops)
+
+- **GAP-HS-027 resolved**: `TensorSession::sub()` and `TensorSession::negate()` added for physics/lattice workloads (leapfrog HMC, force sign conventions). Full stack: SessionOp, SessionPipelines, dispatch encoding, IPC `tensor.batch.submit`.
+- **GAP-HS-041 confirmed resolved**: `stats.entropy` registered as alias for `stats.shannon` since Sprint 50 — hotSpring's PRIMAL_GAPS.md is stale.
+- **OOM fleet failover**: Detection infrastructure live (Sprint 64). Fleet routing deferred to toadStool multi-GPU readiness.
+
 ## Achieved (May 13, 2026 — Sprint 65: Deep Debt Remediation)
 
 - **12-axis audit confirmed**: zero files >800L (max 793L), zero unsafe in production, zero C deps, zero todo!/unimplemented!, zero println! in library. Codebase at full deep debt zero.

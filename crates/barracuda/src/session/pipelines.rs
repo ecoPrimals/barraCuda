@@ -32,7 +32,9 @@ pub(crate) static HEAD_CONCAT_F32: std::sync::LazyLock<String> =
 pub(super) struct SessionPipelines {
     // ── Elementwise — pre-compiled pipelines (upgraded from ShaderModule) ────
     pub add_pl: wgpu::ComputePipeline,
+    pub sub_pl: wgpu::ComputePipeline,
     pub mul_pl: wgpu::ComputePipeline,
+    pub neg_pl: wgpu::ComputePipeline,
     pub fma_pl: wgpu::ComputePipeline,
     pub scale_pl: wgpu::ComputePipeline,
     // ── ML activations / norms ───────────────────────────────────────────────
@@ -92,6 +94,17 @@ impl SessionPipelines {
                  o[i] = a[i] + b[i];\n\
              }}"
         );
+        let sub_src = format!(
+            "@group(0) @binding(0) var<storage, read>       a: array<f32>;\n\
+             @group(0) @binding(1) var<storage, read>       b: array<f32>;\n\
+             @group(0) @binding(2) var<storage, read_write> o: array<f32>;\n\
+             @compute @workgroup_size({workgroup_size})\n\
+             fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{\n\
+                 let i = gid.x;\n\
+                 if i >= arrayLength(&o) {{ return; }}\n\
+                 o[i] = a[i] - b[i];\n\
+             }}"
+        );
         let mul_src = format!(
             "@group(0) @binding(0) var<storage, read>       a: array<f32>;\n\
              @group(0) @binding(1) var<storage, read>       b: array<f32>;\n\
@@ -101,6 +114,16 @@ impl SessionPipelines {
                  let i = gid.x;\n\
                  if i >= arrayLength(&o) {{ return; }}\n\
                  o[i] = a[i] * b[i];\n\
+             }}"
+        );
+        let neg_src = format!(
+            "@group(0) @binding(0) var<storage, read>       a: array<f32>;\n\
+             @group(0) @binding(1) var<storage, read_write> o: array<f32>;\n\
+             @compute @workgroup_size({workgroup_size})\n\
+             fn main(@builtin(global_invocation_id) gid: vec3<u32>) {{\n\
+                 let i = gid.x;\n\
+                 if i >= arrayLength(&o) {{ return; }}\n\
+                 o[i] = -a[i];\n\
              }}"
         );
         let fma_src = format!(
@@ -130,7 +153,9 @@ impl SessionPipelines {
 
         Self {
             add_pl: auto_pipeline(&add_src, "Session Add"),
+            sub_pl: auto_pipeline(&sub_src, "Session Sub"),
             mul_pl: auto_pipeline(&mul_src, "Session Mul"),
+            neg_pl: auto_pipeline(&neg_src, "Session Negate"),
             fma_pl: auto_pipeline(&fma_src, "Session FMA"),
             scale_pl: auto_pipeline(&scale_src, "Session Scale"),
             relu_pl: auto_pipeline(&crate::ops::relu::SHADER_F32, "Session ReLU"),

@@ -101,6 +101,7 @@
 - Hardcoded `"127.0.0.1"` → `LOCALHOST` constant in coral discovery
 - Hardcoded `"2.0"` → `JSONRPC_VERSION` constant in JSON-RPC protocol layer
 - CPU executor magic numbers evolved to `defaults::` named constants
+- `TensorSession::sub()` + `TensorSession::negate()` — leapfrog HMC lattice ops (GAP-HS-027)
 - `is_retriable()` covers buffer validation errors (not just device-lost)
 - `with_device_retry` gracefully skips on persistent llvmpipe instability
 - Flaky GPU tests (erf, erfc, expand, determinant) evolved from `catch_unwind` to `with_device_retry` — production recovery pattern

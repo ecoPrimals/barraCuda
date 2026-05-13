@@ -48,7 +48,7 @@ pub enum Workaround {
     /// Volta (GV100) lacks PMU firmware for desktop GPUs. nouveau cannot
     /// create compute channels without PMU. When nvPmu (software PMU) has
     /// initialized the compute engine via BAR0 MMIO register writes,
-    /// sovereign dispatch becomes possible through coralReef + coral-driver.
+    /// sovereign dispatch becomes possible through coralReef (compilation) + toadStool (hardware).
     ///
     /// When this workaround is active, the device requires nvPmu init before
     /// any compute dispatch via the sovereign path.

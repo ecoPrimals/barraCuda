@@ -24,8 +24,9 @@ use std::sync::Arc;
 
 /// GPU vendor identity.
 ///
-/// Mirrors `coral_driver::hardware::Vendor`. Defined independently to maintain
-/// barraCuda's zero compile-time coupling to coral-driver.
+/// Originally mirrored `coral_driver::hardware::Vendor` (now toadStool hardware
+/// domain). Defined independently to maintain barraCuda's zero compile-time
+/// coupling to any hardware primal.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Vendor {
     /// NVIDIA (nouveau, proprietary, VFIO, CUDA).
@@ -55,7 +56,7 @@ pub enum DriverKind {
     AmdProprietary,
     /// Mesa Intel ANV.
     IntelMesa,
-    /// Sovereign IPC backend (coral-driver).
+    /// Sovereign IPC backend (toadStool hardware dispatch).
     Sovereign,
     /// Software rasterizer (llvmpipe, lavapipe, SwiftShader).
     Software,
@@ -76,7 +77,8 @@ impl std::fmt::Display for Vendor {
 
 /// GPU memory technology.
 ///
-/// Mirrors `coral_driver::hardware::MemoryType`.
+/// Originally mirrored `coral_driver::hardware::MemoryType` (now toadStool
+/// hardware domain). Standalone definition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum MemoryKind {
     /// GDDR5 (Kepler, older AMD).
@@ -99,8 +101,8 @@ pub enum MemoryKind {
 /// use this to adapt behavior (precision routing, tier skipping, batch sizing)
 /// without branching on vendor identity.
 ///
-/// Parallel to `coral_driver::HardwareCapabilities` but decoupled from the
-/// driver crate to maintain barraCuda's IPC-first architecture.
+/// Parallel to toadStool's hardware capabilities (originally `coral_driver`)
+/// but fully decoupled to maintain barraCuda's IPC-first architecture.
 #[derive(Debug, Clone)]
 pub struct BackendCapabilities {
     /// GPU vendor.

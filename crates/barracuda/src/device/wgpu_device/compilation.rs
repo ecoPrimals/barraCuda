@@ -28,7 +28,7 @@
 //!
 //! In parallel, `spawn_coral_compile_for_adapter` fires off a background
 //! coralReef IPC compile that populates the native binary cache for future
-//! sovereign-dispatch use (coral-driver direct GPU submission without wgpu).
+//! sovereign-dispatch use (toadStool direct GPU submission without wgpu).
 
 use super::WgpuDevice;
 use crate::shaders::precision::compiler::source_is_f64;

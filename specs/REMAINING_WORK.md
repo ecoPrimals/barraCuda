@@ -30,6 +30,12 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 
 ---
 
+## Achieved (May 14, 2026 — Sprint 69: hotSpring Trio Audit — `health.version` RPC)
+
+- **`health.version` standalone method**: trio-consistent version probe matching toadStool and coralReef surface. Returns `{ primal, version, rust_version }` without hardware probing. Supports plasmidBin doctor, upgrade scripts, and trio-wide automated version checks.
+- **73 registered IPC methods** total. 2 new tests (handler + dispatch routing).
+- **OOM fleet failover**: intentionally parked per audit — detection sufficient, routing awaits toadStool multi-GPU IPC.
+
 ## Achieved (May 13, 2026 — Sprint 68: hotSpring Trio Audit — TENSOR_WIRE_CONTRACT Alignment)
 
 - **Contract doc alignment**: `TENSOR_WIRE_CONTRACT.md` batch ops table updated with `sub` and `negate` (implementations shipped Sprint 66, doc lagged behind). IPC namespace table updated to 72-method full coverage.

@@ -26,6 +26,29 @@ async fn test_device_probe_no_gpu() {
 // ── health and tolerances ───────────────────────────────────────────────
 
 #[test]
+fn test_health_version() {
+    let resp = health_version(serde_json::json!(199));
+    let result = resp.result.expect("health.version always succeeds");
+    assert_eq!(result["primal"], "barraCuda");
+    assert!(result["version"].as_str().unwrap().contains('.'));
+    assert!(result["rust_version"].is_string());
+}
+
+#[tokio::test]
+async fn test_dispatch_health_version() {
+    let primal = test_primal();
+    let resp = dispatch(
+        &primal,
+        "health.version",
+        &serde_json::json!({}),
+        serde_json::json!(220),
+    )
+    .await;
+    let result = resp.result.expect("health.version dispatch");
+    assert_eq!(result["primal"], "barraCuda");
+}
+
+#[test]
 fn test_health_liveness() {
     let resp = health_liveness(serde_json::json!(200));
     let result = resp.result.expect("health.liveness always succeeds");

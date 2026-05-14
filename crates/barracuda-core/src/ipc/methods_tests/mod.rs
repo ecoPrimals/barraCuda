@@ -11,7 +11,8 @@ use super::device::{list as device_list, probe as device_probe};
 use super::dispatch;
 use super::fhe::{fhe_ntt, fhe_pointwise_mul};
 use super::health::{
-    health_check, health_liveness, health_readiness, tolerances_get, validate_gpu_stack,
+    health_check, health_liveness, health_readiness, health_version, tolerances_get,
+    validate_gpu_stack,
 };
 use super::primal::{capabilities, identity, info};
 use super::tensor::{

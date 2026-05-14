@@ -14,6 +14,22 @@ use super::super::jsonrpc::{INTERNAL_ERROR, JsonRpcResponse};
 use crate::BarraCudaPrimal;
 use serde_json::Value;
 
+/// `health.version` — dedicated version probe for automated tooling.
+///
+/// Returns the primal version and build metadata without probing hardware.
+/// Consistent with toadStool and coralReef `health.version` surface for
+/// plasmidBin doctor, upgrade scripts, and trio-wide version probes.
+pub(super) fn health_version(id: Value) -> JsonRpcResponse {
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({
+            "primal": crate::PRIMAL_NAME,
+            "version": env!("CARGO_PKG_VERSION"),
+            "rust_version": env!("CARGO_PKG_RUST_VERSION"),
+        }),
+    )
+}
+
 /// `health.liveness` — fast liveness probe (always alive if process is up).
 ///
 /// Springs, orchestrators, and load balancers use this to determine whether the

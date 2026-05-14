@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Added — Sprint 69: `health.version` RPC (May 14 2026)
+
+- `health.version` standalone RPC method — returns `{ primal, version, rust_version }` for trio-consistent automated version probes (plasmidBin doctor, upgrade scripts)
+- 73 registered IPC methods total
+- 2 new tests: direct handler + dispatch routing
+
 ### Fixed — Sprint 68: TENSOR_WIRE_CONTRACT Alignment (May 13 2026)
 
 - `specs/TENSOR_WIRE_CONTRACT.md` batch ops table: added `sub` and `negate` (implementations shipped Sprint 66, doc lagged)

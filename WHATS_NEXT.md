@@ -6,6 +6,12 @@ Prioritized work items, ordered by impact. Updated 2026-05-13.
 
 ## Recently Completed
 
+- **Sprint 69: hotSpring Trio Audit — `health.version` RPC (May 14)**:
+  Addressed hotSpring audit item: trio-consistent `health.version` standalone RPC method.
+  toadStool and coralReef both expose `health.version` for plasmidBin doctor and upgrade
+  scripts. barraCuda now matches: returns `{ primal, version, rust_version }` without
+  hardware probing. Registered in `REGISTERED_METHODS` (73 methods total). 2 new tests.
+  OOM fleet failover remains intentionally parked until toadStool multi-GPU IPC readiness.
 - **Sprint 68: hotSpring Trio Audit — TENSOR_WIRE_CONTRACT Alignment (May 13)**:
   Addressed hotSpring audit item: `TENSOR_WIRE_CONTRACT.md` batch ops table updated to
   include `sub` and `negate` (Sprint 66 implementations). IPC namespace table updated to

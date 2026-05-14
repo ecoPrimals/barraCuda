@@ -46,6 +46,7 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     "health.liveness",
     "health.readiness",
     "health.check",
+    "health.version",
     "capabilities.list",
     // ── Auth / gate introspection (JH-0) ───────────────────────────────
     "auth.check",
@@ -200,6 +201,7 @@ pub async fn dispatch(
         "health.liveness" | "ping" | "health" => health::health_liveness(id),
         "health.readiness" => health::health_readiness(primal, id),
         "health.check" | "status" | "check" => health::health_check(primal, id).await,
+        "health.version" => health::health_version(id),
         "identity.get" => primal::identity(id),
         "primal.info" => primal::info(primal, id),
         "primal.capabilities" | "capabilities.list" | "capability.list" => {

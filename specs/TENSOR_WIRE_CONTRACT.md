@@ -2,8 +2,8 @@
 
 # Tensor IPC Wire Contract
 
-**Status**: Sprint 67 — 72 methods, BTSP Phase 3 operational, precision.route with dispatch_path differentiation, TensorSession sub/negate for lattice HMC
-**Version**: 1.2.0
+**Status**: Sprint 69 — 73 methods, BTSP Phase 3 operational, precision.route with dispatch_path differentiation, TensorSession sub/negate, health.version trio-consistent
+**Version**: 1.3.0
 **Authority**: barraCuda primal (self-knowledge)
 **Implements**: wateringHole `PRIMAL_IPC_PROTOCOL.md` v3.1, `SEMANTIC_METHOD_NAMING_STANDARD.md`
 

@@ -2,8 +2,8 @@
 
 # Tensor IPC Wire Contract
 
-**Status**: Sprint 69 — 73 methods, BTSP Phase 3 operational, precision.route with dispatch_path differentiation, TensorSession sub/negate, health.version trio-consistent
-**Version**: 1.3.0
+**Status**: Sprint 70 — 75 methods, stadial gate compliant, BTSP Phase 3 + btsp.capabilities, primal.announce, stability tiers annotated
+**Version**: 1.4.0
 **Authority**: barraCuda primal (self-knowledge)
 **Implements**: wateringHole `PRIMAL_IPC_PROTOCOL.md` v3.1, `SEMANTIC_METHOD_NAMING_STANDARD.md`
 
@@ -257,6 +257,48 @@ are reused across operations.
 **The `math.*` namespace is intentionally sparse** — it provides scalar-valued
 functions not covered by other namespaces. Statistics go in `stats.*`, matrix
 ops in `linalg.*`, spectral ops in `spectral.*`.
+
+---
+
+## Method Stability Tiers
+
+Per `INTERSTADIAL_EXIT_CRITERIA.md`, every registered method has a stability
+tier annotation. Tiers define the contract strength for downstream consumers:
+
+| Tier | Meaning |
+|------|---------|
+| **stable** | Wire format frozen. Breaking changes require semver major bump. |
+| **evolving** | Wire format may change between minor versions. Additive-only changes preferred. |
+| **internal** | Not part of the public contract. May be removed or restructured. |
+
+| Namespace | Stability | Rationale |
+|-----------|-----------|-----------|
+| `health.*` | stable | Non-negotiable ecosystem probes per wateringHole standard |
+| `capabilities.list` | stable | Wire Standard L2 |
+| `identity.get` | stable | Wire Standard L2 |
+| `primal.info` | stable | Runtime discovery contract |
+| `primal.capabilities` | stable | Alias for `capabilities.list` |
+| `primal.announce` | stable | biomeOS composition self-registration |
+| `auth.*` | stable | MethodGate JH-0 introspection |
+| `device.*` | stable | Hardware discovery surface |
+| `precision.route` | stable | Cross-primal routing advisory |
+| `tensor.*` | stable | Core GPU/CPU tensor ops — frozen schemas |
+| `stats.*` | stable | CPU statistics — frozen schemas |
+| `linalg.*` | stable | CPU linear algebra — frozen schemas |
+| `spectral.*` | stable | Spectral analysis — frozen schemas |
+| `math.*` | stable | Scalar math — frozen schemas |
+| `activation.*` | stable | Activation functions — frozen schemas |
+| `compute.dispatch` | stable | Low-level GPU dispatch |
+| `fhe.*` | stable | Fully homomorphic encryption — frozen schemas |
+| `ml.*` | evolving | ML ops — additive expansion expected |
+| `ode.*` | evolving | Differential equation solvers — may grow |
+| `nautilus.*` | evolving | Anomaly detection sessions — schema stabilising |
+| `noise.*` | stable | Procedural noise — frozen |
+| `rng.*` | stable | RNG — frozen |
+| `btsp.negotiate` | stable | BTSP Phase 3 cipher upgrade |
+| `btsp.capabilities` | stable | BTSP cipher suite advertisement |
+| `tolerances.get` | stable | Numerical tolerance query |
+| `validate.gpu_stack` | stable | GPU validation suite |
 
 ---
 

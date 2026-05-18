@@ -74,6 +74,26 @@ pub(super) async fn health_check(primal: &BarraCudaPrimal, id: Value) -> JsonRpc
     }
 }
 
+/// `btsp.capabilities` — Advertise supported BTSP cipher suites.
+///
+/// Per `DARK_FOREST_GLACIAL_GATE_STANDARD.md` §5, every primal must register
+/// this method so orchestrators and springs can query supported ciphers.
+pub(super) fn btsp_capabilities(id: Value) -> JsonRpcResponse {
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({
+            "protocol": "btsp-v1",
+            "cipher_suites": [
+                "chacha20-poly1305",
+                "hmac_plain",
+                "null",
+            ],
+            "preferred": "chacha20-poly1305",
+            "phase3_supported": true,
+        }),
+    )
+}
+
 /// `barracuda.tolerances.get` — Get numerical tolerances for a named operation.
 pub(super) fn tolerances_get(params: &Value, id: Value) -> JsonRpcResponse {
     let name = params

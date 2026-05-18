@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Added — Sprint 70: Wave 22 Stadial Gate Compliance (May 17 2026)
+
+- `primal.announce` — atomic self-registration for biomeOS composition (returns primal identity, methods, capabilities, signal tier, transport)
+- `btsp.capabilities` — BTSP cipher suite advertisement per Dark Forest Glacial Gate Standard §5
+- Method stability tier annotations for all 75 methods in `TENSOR_WIRE_CONTRACT.md`
+- 4 new tests (announce handler + dispatch, btsp.capabilities handler + dispatch)
+
 ### Added — Sprint 69: `health.version` RPC (May 14 2026)
 
 - `health.version` standalone RPC method — returns `{ primal, version, rust_version }` for trio-consistent automated version probes (plasmidBin doctor, upgrade scripts)

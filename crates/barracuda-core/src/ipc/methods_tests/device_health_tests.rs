@@ -34,6 +34,59 @@ fn test_health_version() {
     assert!(result["rust_version"].is_string());
 }
 
+#[test]
+fn test_btsp_capabilities() {
+    let resp = btsp_capabilities(serde_json::json!(230));
+    let result = resp.result.expect("btsp.capabilities always succeeds");
+    assert_eq!(result["protocol"], "btsp-v1");
+    let suites = result["cipher_suites"].as_array().unwrap();
+    assert!(suites.iter().any(|s| s == "chacha20-poly1305"));
+    assert!(suites.iter().any(|s| s == "null"));
+    assert_eq!(result["preferred"], "chacha20-poly1305");
+    assert_eq!(result["phase3_supported"], true);
+}
+
+#[tokio::test]
+async fn test_dispatch_btsp_capabilities() {
+    let primal = test_primal();
+    let resp = dispatch(
+        &primal,
+        "btsp.capabilities",
+        &serde_json::json!({}),
+        serde_json::json!(231),
+    )
+    .await;
+    let result = resp.result.expect("btsp.capabilities dispatch");
+    assert_eq!(result["protocol"], "btsp-v1");
+}
+
+#[test]
+fn test_primal_announce() {
+    let primal = test_primal();
+    let resp = announce(&primal, serde_json::json!(232));
+    let result = resp.result.expect("primal.announce always succeeds");
+    assert_eq!(result["primal"], "barraCuda");
+    assert_eq!(result["domain"], "math");
+    assert!(result["methods"].as_array().unwrap().len() >= 70);
+    assert!(result["capabilities"].as_array().unwrap().len() >= 5);
+    assert_eq!(result["signal_tier"], "passive");
+    assert!(result["transport"].as_array().unwrap().len() >= 2);
+}
+
+#[tokio::test]
+async fn test_dispatch_primal_announce() {
+    let primal = test_primal();
+    let resp = dispatch(
+        &primal,
+        "primal.announce",
+        &serde_json::json!({}),
+        serde_json::json!(233),
+    )
+    .await;
+    let result = resp.result.expect("primal.announce dispatch");
+    assert_eq!(result["primal"], "barraCuda");
+}
+
 #[tokio::test]
 async fn test_dispatch_health_version() {
     let primal = test_primal();

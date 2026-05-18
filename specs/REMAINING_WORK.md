@@ -30,6 +30,14 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 
 ---
 
+## Achieved (May 17, 2026 — Sprint 70: primalSpring Wave 22 Stadial Gate Compliance)
+
+- **`primal.announce`**: atomic self-registration for biomeOS composition. Returns identity, capabilities, methods, signal tier, transport, hardware state.
+- **`btsp.capabilities`**: BTSP cipher suite advertisement (chacha20-poly1305, hmac_plain, null) per Dark Forest Glacial Gate Standard §5.
+- **Stability tier annotations**: every registered method annotated (stable/evolving/internal) in `TENSOR_WIRE_CONTRACT.md`.
+- **75 registered IPC methods**. 4 new tests. Method count discrepancy (audit said 38 — stale snapshot, actual 75).
+- **Stadial checklist fully green**: health triad, UDS socket, TCP fallback, server subcommand, standalone startup, capabilities.list, identity.get, primal.announce, btsp.capabilities, BIOMEOS_INSECURE guard, deny.toml, edition 2024.
+
 ## Achieved (May 14, 2026 — Sprint 69: hotSpring Trio Audit — `health.version` RPC)
 
 - **`health.version` standalone method**: trio-consistent version probe matching toadStool and coralReef surface. Returns `{ primal, version, rust_version }` without hardware probing. Supports plasmidBin doctor, upgrade scripts, and trio-wide automated version checks.

@@ -70,6 +70,33 @@ pub(super) fn capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcRespon
     )
 }
 
+/// `primal.announce` — Atomic self-registration payload for biomeOS composition.
+///
+/// Returns the identity, capabilities, and signal tier so biomeOS can register
+/// this primal into the composition graph without additional round-trips.
+pub(super) fn announce(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
+    let version = env!("CARGO_PKG_VERSION");
+    let has_gpu = primal.device().is_some();
+
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({
+            "primal": crate::PRIMAL_NAME,
+            "namespace": crate::PRIMAL_NAMESPACE,
+            "version": version,
+            "domain": crate::PRIMAL_DOMAIN,
+            "methods": REGISTERED_METHODS,
+            "capabilities": crate::discovery::capabilities(),
+            "signal_tier": "passive",
+            "hardware": {
+                "gpu_available": has_gpu,
+            },
+            "transport": ["uds", "tcp"],
+            "license": "AGPL-3.0-or-later",
+        }),
+    )
+}
+
 /// `identity.get` — Lightweight primal identity for observability.
 ///
 /// Wire Standard L2: returns `{primal, version, domain, license}`.

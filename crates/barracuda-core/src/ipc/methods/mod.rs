@@ -52,10 +52,11 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     "auth.check",
     "auth.mode",
     "auth.peer_info",
-    // ── Primal identity ───────────────────────────────────────────────
+    // ── Primal identity & lifecycle ────────────────────────────────────
     "identity.get",
     "primal.info",
     "primal.capabilities",
+    "primal.announce",
     // ── Device ────────────────────────────────────────────────────────
     "device.list",
     "device.probe",
@@ -135,6 +136,7 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     "fhe.pointwise_mul",
     // ── BTSP Phase 3 ─────────────────────────────────────────────────
     "btsp.negotiate",
+    "btsp.capabilities",
 ];
 
 /// Normalize a method name: accepts both `{domain}.{operation}` (standard)
@@ -207,6 +209,7 @@ pub async fn dispatch(
         "primal.capabilities" | "capabilities.list" | "capability.list" => {
             primal::capabilities(primal, id)
         }
+        "primal.announce" => primal::announce(primal, id),
         // Device
         "device.list" => device::list(primal, id).await,
         "device.probe" => device::probe(primal, id).await,
@@ -281,13 +284,14 @@ pub async fn dispatch(
         // FHE
         "fhe.ntt" => fhe::fhe_ntt(primal, params, id).await,
         "fhe.pointwise_mul" => fhe::fhe_pointwise_mul(primal, params, id).await,
-        // BTSP Phase 3 — handled at transport layer; reaching dispatch means
-        // no authenticated session is associated with this connection.
+        // BTSP Phase 3 — negotiate handled at transport layer; reaching
+        // dispatch means no authenticated session.
         "btsp.negotiate" => JsonRpcResponse::error(
             id,
             -32600,
             "btsp.negotiate requires an authenticated BTSP session (Phase 1 handshake first)",
         ),
+        "btsp.capabilities" => health::btsp_capabilities(id),
         _ => JsonRpcResponse::error(id, METHOD_NOT_FOUND, format!("Unknown method: {method}")),
     }
 }

@@ -6,6 +6,21 @@ Prioritized work items, ordered by impact. Updated 2026-05-13.
 
 ## Recently Completed
 
+- **Sprint 70: primalSpring Wave 22 Stadial Gate — Checklist Compliance (May 17)**:
+  Self-audited against universal standards checklist. Two gaps found and resolved:
+  (1) **`primal.announce`**: atomic self-registration method for biomeOS composition
+  — returns primal name, namespace, version, domain, full method list, capabilities,
+  signal tier, hardware state, transport, and license. Consistent with songbird/
+  esotericWebb adoption pattern.
+  (2) **`btsp.capabilities`**: BTSP cipher suite advertisement per
+  `DARK_FOREST_GLACIAL_GATE_STANDARD.md` §5 — returns supported cipher suites
+  (chacha20-poly1305, hmac_plain, null), preferred cipher, and Phase 3 support flag.
+  (3) **Stability tier annotations**: every registered method annotated with stability
+  tier (stable/evolving/internal) in `TENSOR_WIRE_CONTRACT.md`.
+  75 registered IPC methods total. 4 new tests. All clippy clean.
+  Method count discrepancy (audit said 38 — actual 75) noted as stale snapshot.
+  `submit_and_map` composition gap confirmed already resolved (Sprint 42/53).
+  `build_from_source` is plasmidBin-side, not local.
 - **Sprint 69: hotSpring Trio Audit — `health.version` RPC (May 14)**:
   Addressed hotSpring audit item: trio-consistent `health.version` standalone RPC method.
   toadStool and coralReef both expose `health.version` for plasmidBin doctor and upgrade

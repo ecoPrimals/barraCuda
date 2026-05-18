@@ -231,6 +231,9 @@ impl IpcServer {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
+        if path.exists() {
+            let _ = std::fs::remove_file(path);
+        }
 
         let listener = tokio::net::UnixListener::bind(path)?;
         tracing::info!("barraCuda tarpc listening on unix://{}", path.display());
@@ -385,6 +388,9 @@ impl IpcServer {
         }
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
+        }
+        if path.exists() {
+            let _ = std::fs::remove_file(path);
         }
 
         let listener = tokio::net::UnixListener::bind(path)?;

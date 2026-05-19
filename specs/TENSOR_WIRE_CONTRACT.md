@@ -317,4 +317,78 @@ should use `discover_by_capability("tensor")` or `discover_by_capability("math")
 
 ---
 
+## Sovereign Dispatch Contract (CG-3: GPU API Alignment)
+
+barraCuda's sovereign dispatch wire (`sovereign_dispatch_wire.rs`) defines the
+contract for the HMMA tensor-core execution path: barraCuda → coralReef → toadStool.
+
+### barraCuda → coralReef (compile request)
+
+When `kernel_router` routes a `DenseMatmul` with tensor-core-eligible precision
+(F16/BF16/TF32) to `KernelTarget::Sovereign`, barraCuda calls coralReef's
+`shader.compile.wgsl` (or `shader.compile.gemm`) with:
+
+```json
+{
+  "method": "shader.compile.wgsl",
+  "params": {
+    "wgsl_source": "<matmul shader>",
+    "target_sm": 70,
+    "precision_advice": {
+      "tier": "f16",
+      "needs_transcendental_lowering": false,
+      "hardware_hint": "tensor_core"
+    }
+  }
+}
+```
+
+### coralReef → barraCuda (compile response)
+
+coralReef returns a `CompileResponse` / `CompilationInfoResponse`. The fields
+barraCuda consumes to build `ShaderDispatchInfo`:
+
+| coralReef field | barraCuda field | Type | Description |
+|-----------------|-----------------|------|-------------|
+| `binary_b64` | `binary` (base64-decoded) | `[u8]` | Native PTX/SASS binary |
+| `gprs` | `gpr_count` | `u32` | General-purpose registers used |
+| `workgroup` | `workgroup` | `[u32; 3]` | Workgroup dimensions |
+| `shared_memory` | `shared_mem_bytes` | `u32` | Shared memory bytes |
+| `barriers` | `barrier_count` | `u32` | Barrier count |
+
+### barraCuda → toadStool (dispatch submission)
+
+barraCuda's `submit_dispatch()` sends to toadStool `compute.dispatch.submit`:
+
+```json
+{
+  "method": "compute.dispatch.submit",
+  "params": {
+    "binary": "<base64 native binary>",
+    "workgroups": [Wx, Wy, Wz],
+    "gpr_count": N,
+    "shared_mem_bytes": M,
+    "barrier_count": B,
+    "hardware_hint": "tensor_core",
+    "buffers": [
+      {"index": 0, "data": "<base64>", "size": S, "read_only": true},
+      {"index": 1, "data": "<base64>", "size": S, "read_only": false}
+    ]
+  }
+}
+```
+
+### Status
+
+- barraCuda routing: **DONE** (Sprint 64, `KernelTarget::Sovereign`)
+- barraCuda wire format: **DONE** (`sovereign_dispatch_wire.rs`)
+- coralReef HMMA codegen: **PENDING** (blocks end-to-end execution)
+- toadStool QMD consumption: **PENDING** (QMD builders exist, IPC handshake pending)
+
+The `submit_and_map` internal API is not part of this cross-primal contract —
+it is barraCuda's local GPU readback mechanism for wgpu-resident results. The
+sovereign path uses IPC-based readback via `compute.dispatch.submit` response.
+
+---
+
 **License**: AGPL-3.0-or-later

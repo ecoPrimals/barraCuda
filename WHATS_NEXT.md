@@ -6,6 +6,17 @@ Prioritized work items, ordered by impact. Updated 2026-05-13.
 
 ## Recently Completed
 
+- **Sprint 71: CG-3 Sovereign Dispatch Contract Documentation (May 19)**:
+  Addressed primalSpring "GPU API alignment (`submit_and_map`)" composition gap.
+  Documented the full sovereign dispatch contract in `TENSOR_WIRE_CONTRACT.md`:
+  barraCuda→coralReef compile request (precision_advice + hardware_hint),
+  coralReef→barraCuda compile response (field mapping: binary_b64, gprs, workgroup,
+  shared_memory, barriers → ShaderDispatchInfo), and barraCuda→toadStool dispatch
+  submission (compute.dispatch.submit with binary + metadata + buffer bindings).
+  Clarified that `submit_and_map` is barraCuda's *local* wgpu readback API — not
+  part of the cross-primal sovereign contract. The sovereign path uses IPC-based
+  readback. barraCuda routing + wire format are DONE; coralReef HMMA codegen and
+  toadStool QMD IPC handshake are the remaining blockers.
 - **Sprint 70: primalSpring Wave 22 Stadial Gate — Checklist Compliance (May 17)**:
   Self-audited against universal standards checklist. Two gaps found and resolved:
   (1) **`primal.announce`**: atomic self-registration method for biomeOS composition

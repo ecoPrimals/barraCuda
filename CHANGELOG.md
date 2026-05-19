@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Added — Sprint 71: CG-3 Sovereign Dispatch Contract (May 19 2026)
+
+- Documented sovereign dispatch contract in `TENSOR_WIRE_CONTRACT.md` — full field mapping between coralReef `CompileResponse` and barraCuda `ShaderDispatchInfo`, plus `compute.dispatch.submit` wire format to toadStool
+- Clarified `submit_and_map` is local wgpu readback, not cross-primal sovereign contract
+
 ### Added — Sprint 70: Wave 22 Stadial Gate Compliance (May 17 2026)
 
 - `primal.announce` — atomic self-registration for biomeOS composition (returns primal identity, methods, capabilities, signal tier, transport)

@@ -30,6 +30,12 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 
 ---
 
+## Achieved (May 19, 2026 — Sprint 71: CG-3 Sovereign Dispatch Contract Documentation)
+
+- **Composition Gap 3 resolved (barraCuda side)**: Documented full sovereign dispatch contract in `TENSOR_WIRE_CONTRACT.md`. Field mapping: coralReef `CompileResponse` → barraCuda `ShaderDispatchInfo` → toadStool `compute.dispatch.submit`. Wire formats specified for all 3 hops.
+- **Clarification**: `submit_and_map` is barraCuda's local wgpu readback mechanism. The sovereign (HMMA) path uses IPC-based readback — different code path entirely.
+- **Remaining blockers (not barraCuda)**: coralReef HMMA codegen, toadStool QMD IPC handshake.
+
 ## Achieved (May 17, 2026 — Sprint 70: primalSpring Wave 22 Stadial Gate Compliance)
 
 - **`primal.announce`**: atomic self-registration for biomeOS composition. Returns identity, capabilities, methods, signal tier, transport, hardware state.

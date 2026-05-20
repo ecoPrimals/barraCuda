@@ -78,7 +78,7 @@ ok "Sovereign compiler: df64_rewrite + spv_emit + dead_expr"
 $NEXTEST -p barracuda --lib -E 'test(tolerances)' --profile default 2>&1 | tail -1
 ok "Tolerances: tier ordering + const guards"
 
-$NEXTEST -p barracuda --lib -E 'test(ncbi_cache)' --profile default 2>&1 | tail -1
+$NEXTEST -p barracuda --lib -E 'test(ncbi_cache::)' --profile default 2>&1 | tail -1
 ok "ncbi_cache: XDG paths (pure std)"
 
 ok "Targeted tier complete ($(elapsed $T))"

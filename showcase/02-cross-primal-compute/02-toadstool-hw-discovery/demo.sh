@@ -24,7 +24,7 @@ echo
 echo "─── Phase 1: Discover toadStool ──────────────────────────────"
 echo
 
-DISCOVERY_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ecoPrimals"
+DISCOVERY_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/biomeos"
 TOADSTOOL_FOUND=false
 
 if [ -d "$DISCOVERY_DIR" ]; then

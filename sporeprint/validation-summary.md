@@ -1,7 +1,7 @@
 +++
 title = "barraCuda Validation Summary"
-description = "GPU-accelerated scientific computing engine — 4,393+ tests, 75 IPC methods, 15-tier precision ladder, pure safe Rust, A+ grade"
-date = 2026-05-19
+description = "GPU-accelerated scientific computing engine — 4,393+ tests, 87 IPC methods, 15-tier precision ladder, pure safe Rust, A+ grade"
+date = 2026-05-20
 
 [taxonomies]
 primals = ["barracuda"]
@@ -11,7 +11,7 @@ springs = ["hotspring", "primalspring", "wetspring", "airspring"]
 ## Status
 
 - **4,393+ tests** (nextest CI profile), 0 failed, 80.54% line / 83.45% function coverage
-- **75 registered IPC methods** across 16 semantic namespaces
+- **87 registered IPC methods** across 22 semantic namespaces
 - **1,163 Rust source files**, zero unsafe in production (`#![forbid(unsafe_code)]`)
 - **v0.4.0** — stadial gate cleared (Wave 22), all checklist items green
 - **A+ grade** — zero unwrap/panic/expect in production, zero println in library, zero `Result<T, String>`, zero mocks in production
@@ -24,13 +24,14 @@ springs = ["hotspring", "primalspring", "wetspring", "airspring"]
 | Domain | Methods | Description |
 |--------|---------|-------------|
 | `tensor.*` | 9 | GPU/CPU tensor ops (create, matmul, add, scale, clamp, reduce, sigmoid, batch.submit) |
-| `stats.*` | 14 | Descriptive statistics (mean, std_dev, variance, correlation, entropy, chi_squared, anova, etc.) |
+| `stats.*` | 22 | Statistics, regression, ecology (mean, variance, correlation, chi_squared, fit_quadratic/exp/log, simpson, bray_curtis, hill, rarefaction, gamma_fit/cdf) |
 | `linalg.*` | 5 | Linear algebra (solve, eigenvalues, svd, qr, graph_laplacian) |
 | `ml.*` | 4 | Machine learning (mlp_forward, mlp_train, attention, esn_predict) |
 | `spectral.*` | 3 | FFT, power spectrum, STFT |
 | `fhe.*` | 2 | Fully homomorphic encryption (NTT, pointwise_mul) |
 | `precision.*` | 1 | Precision routing advisory with dispatch_path differentiation |
 | `nautilus.*` | 6 | Anomaly detection sessions (Path B server-side) |
+| `signal.*` | 3 | Signal processing (detect_peaks, bandpass, derivative) |
 | `health.*` | 4 | Liveness, readiness, check, version |
 | `btsp.*` | 2 | Cipher negotiation + capabilities |
 

@@ -66,7 +66,7 @@ traits are fully internalized.
 | `doctor.*` | `doctor.validate` |
 | `security.*` | `security.session.create`, `security.session.verify` |
 
-59 methods following wateringHole `{domain}.{operation}` Semantic Method Naming Standard. Wire Standard L2 compliant.
+87 methods following wateringHole `{domain}.{operation}` Semantic Method Naming Standard. Wire Standard L2 compliant. Namespaces: `health.*`, `device.*`, `tensor.*`, `stats.*`, `linalg.*`, `spectral.*`, `activation.*`, `math.*`, `ml.*`, `ode.*`, `noise.*`, `rng.*`, `nautilus.*`, `precision.*`, `compute.*`, `fhe.*`, `signal.*`, `btsp.*`, `primal.*`, `capabilities.*`, `identity.*`, `tolerances.*`, `validate.*`.
 
 ## Deployment Constraints
 

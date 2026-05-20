@@ -36,7 +36,7 @@ SERVER_PID=$!
 sleep 2
 
 # Find the actual bound address from the discovery file
-DISCOVERY_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ecoPrimals"
+DISCOVERY_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/biomeos"
 DISCOVERY_FILE="$DISCOVERY_DIR/barracuda-core.json"
 
 if [ -f "$DISCOVERY_FILE" ]; then

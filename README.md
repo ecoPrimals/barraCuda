@@ -180,7 +180,7 @@ barraCuda/
 ├── crates/
 │   ├── barracuda-core/              # Primal lifecycle wrapper
 │   │   ├── src/lib.rs               # BarraCudaPrimal: start/stop/health
-│   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport (59 methods, Wire Standard L2)
+│   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport (87 methods, Wire Standard L2)
 │   │   ├── src/rpc.rs               # tarpc service definition (16 endpoints, parity with JSON-RPC)
 │   │   └── src/bin/barracuda.rs     # UniBin CLI
 │   └── barracuda/                   # Umbrella crate — all math + GPU
@@ -283,7 +283,7 @@ barraCuda exposes a dual-protocol IPC interface per wateringHole standards:
 | `fhe.*` | `fhe.ntt`, `fhe.pointwise_mul` |
 | `btsp.*` | `btsp.negotiate` — Phase 3 cipher upgrade (ChaCha20-Poly1305 / NULL fallback) |
 
-59 methods follow the wateringHole `{domain}.{operation}` Semantic Method Naming
+87 methods follow the wateringHole `{domain}.{operation}` Semantic Method Naming
 Standard v2.2.0. Wire Standard L2 compliant: `capabilities.list` returns the
 `{primal, version, methods}` envelope with `provided_capabilities` grouping.
 `health.liveness`, `health.readiness`, `health.check`, and `capabilities.list`

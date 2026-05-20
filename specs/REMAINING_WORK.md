@@ -30,6 +30,13 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 
 ---
 
+## Achieved (May 20, 2026 — Sprint 72: Universal Shader Absorption & IPC Expansion)
+
+- **3 new IPC methods**: `stats.simpson`, `stats.bray_curtis`, `stats.hill` — library functions elevated to JSON-RPC wire surface (78 methods total)
+- **4 spatial compute shaders** absorbed from ludoSpring: BFS wavefront, DDA raycast, fog-of-war, tile lighting → `shaders/spatial/`
+- **Provenance expansion**: `SpringDomain::LUDO_SPRING`, `ShaderCategory::SpatialCompute`, 4 registry entries, evolution timeline event
+- **13 new tests** for the IPC methods
+
 ## Achieved (May 19, 2026 — Sprint 71: CG-3 Sovereign Dispatch Contract Documentation)
 
 - **Composition Gap 3 resolved (barraCuda side)**: Documented full sovereign dispatch contract in `TENSOR_WIRE_CONTRACT.md`. Field mapping: coralReef `CompileResponse` → barraCuda `ShaderDispatchInfo` → toadStool `compute.dispatch.submit`. Wire formats specified for all 3 hops.

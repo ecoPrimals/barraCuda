@@ -1,11 +1,22 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-05-13.
+Prioritized work items, ordered by impact. Updated 2026-05-20.
 
 ---
 
 ## Recently Completed
 
+- **Sprint 72: Universal Shader Absorption & IPC Expansion (May 20)**:
+  Cross-spring audit revealed 4 spatial compute shaders in ludoSpring with no
+  barraCuda equivalent and 3 stats library functions with no IPC exposure. Resolved:
+  (1) **IPC wire exposure**: `stats.simpson`, `stats.bray_curtis`, `stats.hill` —
+  library functions already existed, now wired to JSON-RPC surface (78 methods total).
+  (2) **Spatial compute shader absorption**: BFS wavefront, DDA raycast, fog-of-war,
+  and tile lighting elevated from ludoSpring game engine into universal
+  `shaders/spatial/` directory. These are general-purpose 2D grid primitives reusable
+  by any spring (pathfinding, visibility, influence maps, LiDAR sim, sensor coverage).
+  (3) **Provenance**: `SpringDomain::LUDO_SPRING`, `ShaderCategory::SpatialCompute`,
+  4 registry entries, and evolution timeline event for the absorption.
 - **Sprint 71: CG-3 Sovereign Dispatch Contract Documentation (May 19)**:
   Addressed primalSpring "GPU API alignment (`submit_and_map`)" composition gap.
   Documented the full sovereign dispatch contract in `TENSOR_WIRE_CONTRACT.md`:

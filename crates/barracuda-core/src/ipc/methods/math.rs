@@ -672,3 +672,58 @@ pub(super) fn stats_empirical_spectral_density(params: &Value, id: Value) -> Jso
         serde_json::json!({ "result": &density, "bin_centers": centers, "density": density, "n_bins": n_bins }),
     )
 }
+
+// ── Diversity / ecology statistics (Sprint 72 — spring absorption) ───────
+
+/// `stats.simpson` — Simpson diversity index D = 1 − Σ(pᵢ²).
+///
+/// Accepts `counts` (raw abundances). Returns Simpson diversity [0, 1).
+pub(super) fn stats_simpson(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(counts) = extract_f64_array(params, "counts") else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: counts (array)",
+        );
+    };
+    let d = barracuda::stats::simpson(&counts);
+    JsonRpcResponse::success(id, serde_json::json!({ "result": d, "index": "simpson" }))
+}
+
+/// `stats.bray_curtis` — Bray-Curtis dissimilarity between two sample vectors.
+///
+/// Accepts `a` and `b` (equal-length abundance vectors). Returns distance [0, 1].
+pub(super) fn stats_bray_curtis(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(a) = extract_f64_array(params, "a") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: a (array)");
+    };
+    let Some(b) = extract_f64_array(params, "b") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: b (array)");
+    };
+    if a.len() != b.len() {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            format!("length mismatch: a={}, b={}", a.len(), b.len()),
+        );
+    }
+    let d = barracuda::stats::bray_curtis(&a, &b);
+    JsonRpcResponse::success(id, serde_json::json!({ "result": d, "metric": "bray_curtis" }))
+}
+
+/// `stats.hill` — Hill function (sigmoidal dose-response): x^n / (k^n + x^n).
+///
+/// Accepts `x` (concentration/input), `k` (half-max), `n` (Hill coefficient).
+pub(super) fn stats_hill(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(x) = params.get("x").and_then(|v| v.as_f64()) else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: x (f64)");
+    };
+    let Some(k) = params.get("k").and_then(|v| v.as_f64()) else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: k (f64)");
+    };
+    let Some(n) = params.get("n").and_then(|v| v.as_f64()) else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: n (f64)");
+    };
+    let result = barracuda::stats::hill(x, k, n);
+    JsonRpcResponse::success(id, serde_json::json!({ "result": result, "function": "hill" }))
+}

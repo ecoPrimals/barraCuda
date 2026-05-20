@@ -355,6 +355,47 @@ pub static REGISTRY: LazyLock<Vec<ShaderRecord>> = LazyLock::new(|| {
             created: "Mar 2026 hotSpring v0.6.23 (Chuna P45)",
             absorbed: "Mar 2026 barraCuda v0.3.5",
         },
+        // ── Spatial Compute (ludoSpring → universal) ─────────────────────
+        ShaderRecord {
+            path: "spatial/bfs_wavefront_2d.wgsl",
+            origin: SD::LUDO_SPRING,
+            consumers: &[SD::LUDO_SPRING, SD::NEURAL_SPRING, SD::AIR_SPRING],
+            category: C::SpatialCompute,
+            evolution_note: "GPU BFS wavefront expansion on 2D grids. Pathfinding, \
+                            flood-fill, influence maps. One dispatch = one ring expansion.",
+            created: "Apr 2026 ludoSpring V74",
+            absorbed: "May 2026 barraCuda v0.4.0 (Sprint 72)",
+        },
+        ShaderRecord {
+            path: "spatial/dda_raycast_2d.wgsl",
+            origin: SD::LUDO_SPRING,
+            consumers: &[SD::LUDO_SPRING, SD::AIR_SPRING],
+            category: C::SpatialCompute,
+            evolution_note: "Batch DDA raycasting on 2D grid. Visibility, LiDAR sim, \
+                            line-of-sight. One thread per ray, parallel wall-hit detection.",
+            created: "Apr 2026 ludoSpring V74",
+            absorbed: "May 2026 barraCuda v0.4.0 (Sprint 72)",
+        },
+        ShaderRecord {
+            path: "spatial/fog_of_war_2d.wgsl",
+            origin: SD::LUDO_SPRING,
+            consumers: &[SD::LUDO_SPRING],
+            category: C::SpatialCompute,
+            evolution_note: "Progressive visibility revelation on 2D grids. Radial \
+                            sight-radius check with explored-state persistence.",
+            created: "Apr 2026 ludoSpring V74",
+            absorbed: "May 2026 barraCuda v0.4.0 (Sprint 72)",
+        },
+        ShaderRecord {
+            path: "spatial/tile_lighting_2d.wgsl",
+            origin: SD::LUDO_SPRING,
+            consumers: &[SD::LUDO_SPRING, SD::AIR_SPRING],
+            category: C::SpatialCompute,
+            evolution_note: "Multi-source point lighting with inverse-square falloff on \
+                            2D tile grids. Heat maps, influence propagation, signal attenuation.",
+            created: "Apr 2026 ludoSpring V74",
+            absorbed: "May 2026 barraCuda v0.4.0 (Sprint 72)",
+        },
     ]
 });
 
@@ -463,6 +504,14 @@ pub static EVOLUTION_TIMELINE: LazyLock<Vec<EvolutionEvent>> = LazyLock::new(|| 
             description: "Provenance registry formalized: all cross-spring flows now \
                          tracked programmatically with Write → Absorb → Lean lifecycle, \
                          evolution dates, and bidirectional dependency matrix.",
+        },
+        EvolutionEvent {
+            date: "May 2026 (Sprint 72)",
+            from: SD::LUDO_SPRING,
+            beneficiaries: &[SD::LUDO_SPRING, SD::NEURAL_SPRING, SD::AIR_SPRING],
+            description: "Spatial compute shaders: BFS wavefront, DDA raycast, fog-of-war, \
+                         tile lighting. Universal 2D grid primitives absorbed from ludoSpring \
+                         game engine. Reusable for pathfinding, visibility, influence maps.",
         },
     ]
 });

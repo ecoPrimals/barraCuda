@@ -23,6 +23,8 @@ impl SpringDomain {
     pub const GROUND_SPRING: Self = Self("groundSpring");
     /// Human health, PK/PD, biosignals, microbiome
     pub const HEALTH_SPRING: Self = Self("healthSpring");
+    /// Games, procedural generation, spatial algorithms
+    pub const LUDO_SPRING: Self = Self("ludoSpring");
     /// Internal barraCuda primitive (no spring origin)
     pub const BARRACUDA: Self = Self("barraCuda");
 }
@@ -88,6 +90,8 @@ pub enum ShaderCategory {
     CondensedMatter,
     /// Plasma physics (dielectric, kinetic, fluid)
     PlasmaPhysics,
+    /// Spatial compute (BFS, raycast, visibility, lighting)
+    SpatialCompute,
     /// General compute primitives
     Primitives,
 }
@@ -105,6 +109,7 @@ impl std::fmt::Display for ShaderCategory {
             Self::Hydrology => write!(f, "Hydrology"),
             Self::CondensedMatter => write!(f, "Condensed Matter"),
             Self::PlasmaPhysics => write!(f, "Plasma Physics"),
+            Self::SpatialCompute => write!(f, "Spatial Compute"),
             Self::Primitives => write!(f, "Primitives"),
         }
     }

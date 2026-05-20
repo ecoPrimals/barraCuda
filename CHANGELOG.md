@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Added — Sprint 72: Universal Shader Absorption & IPC Expansion (May 20 2026)
+
+- `stats.simpson` — Simpson diversity index D = 1 − Σ(pᵢ²) on IPC surface
+- `stats.bray_curtis` — Bray-Curtis dissimilarity between abundance vectors on IPC surface
+- `stats.hill` — Hill sigmoidal dose-response function on IPC surface
+- 4 universal spatial compute shaders absorbed from ludoSpring:
+  - `spatial/bfs_wavefront_2d.wgsl` — GPU BFS expansion for pathfinding/flood-fill
+  - `spatial/dda_raycast_2d.wgsl` — batch parallel DDA raycasting
+  - `spatial/fog_of_war_2d.wgsl` — progressive visibility revelation
+  - `spatial/tile_lighting_2d.wgsl` — multi-source inverse-square lighting
+- `SpringDomain::LUDO_SPRING` + `ShaderCategory::SpatialCompute` in provenance registry
+- 13 new tests (3 methods × handler + dispatch + error, plus integration)
+- 78 registered IPC methods total
+
 ### Added — Sprint 71: CG-3 Sovereign Dispatch Contract (May 19 2026)
 
 - Documented sovereign dispatch contract in `TENSOR_WIRE_CONTRACT.md` — full field mapping between coralReef `CompileResponse` and barraCuda `ShaderDispatchInfo`, plus `compute.dispatch.submit` wire format to toadStool

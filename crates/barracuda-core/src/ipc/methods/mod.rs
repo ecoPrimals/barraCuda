@@ -86,6 +86,9 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     "stats.entropy",
     "stats.fit_linear",
     "stats.empirical_spectral_density",
+    "stats.simpson",
+    "stats.bray_curtis",
+    "stats.hill",
     // ── Linear algebra (CPU inline-data) ──────────────────────────────
     "linalg.solve",
     "linalg.eigenvalues",
@@ -237,6 +240,9 @@ pub async fn dispatch(
         "stats.shannon" | "stats.entropy" => math::stats_shannon(params, id),
         "stats.fit_linear" => math::stats_fit_linear(params, id),
         "stats.empirical_spectral_density" => math::stats_empirical_spectral_density(params, id),
+        "stats.simpson" => math::stats_simpson(params, id),
+        "stats.bray_curtis" => math::stats_bray_curtis(params, id),
+        "stats.hill" => math::stats_hill(params, id),
         // Linear algebra (CPU inline-data)
         "linalg.solve" => linalg::linalg_solve(params, id),
         "linalg.eigenvalues" | "stats.eigh" => linalg::linalg_eigenvalues(params, id),

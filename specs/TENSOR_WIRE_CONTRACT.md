@@ -2,8 +2,8 @@
 
 # Tensor IPC Wire Contract
 
-**Status**: Sprint 70 — 75 methods, stadial gate compliant, BTSP Phase 3 + btsp.capabilities, primal.announce, stability tiers annotated
-**Version**: 1.4.0
+**Status**: Sprint 72 — 78 methods, stadial gate compliant, BTSP Phase 3 + spatial compute shaders absorbed from ludoSpring
+**Version**: 1.5.0
 **Authority**: barraCuda primal (self-knowledge)
 **Implements**: wateringHole `PRIMAL_IPC_PROTOCOL.md` v3.1, `SEMANTIC_METHOD_NAMING_STANDARD.md`
 
@@ -235,7 +235,7 @@ groups related operations per `SEMANTIC_METHOD_NAMING_STANDARD.md`:
 | Namespace | Domain | Methods |
 |-----------|--------|---------|
 | `tensor.*` | Handle-based GPU/CPU tensor ops | `create`, `matmul`, `matmul_inline`, `add`, `scale`, `clamp`, `reduce`, `sigmoid`, `batch.submit` |
-| `stats.*` | Descriptive statistics | `mean`, `std_dev`, `variance`, `weighted_mean`, `correlation`, `shannon`, `entropy`, `covariance`, `spearman`, `fit_linear`, `empirical_spectral_density`, `chi_squared`, `anova_oneway` |
+| `stats.*` | Descriptive statistics | `mean`, `std_dev`, `variance`, `weighted_mean`, `correlation`, `shannon`, `entropy`, `covariance`, `spearman`, `fit_linear`, `empirical_spectral_density`, `chi_squared`, `anova_oneway`, `simpson`, `bray_curtis`, `hill` |
 | `activation.*` | Psychophysical / activation functions | `fitts`, `hick`, `softmax`, `gelu` |
 | `linalg.*` | Linear algebra (CPU, inline-data) | `solve`, `eigenvalues`, `svd`, `qr`, `graph_laplacian` |
 | `spectral.*` | Spectral analysis | `fft`, `power_spectrum`, `stft` |

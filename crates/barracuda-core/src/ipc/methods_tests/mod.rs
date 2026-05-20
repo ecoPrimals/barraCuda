@@ -19,7 +19,11 @@ use super::tensor::{
     tensor_add, tensor_clamp, tensor_create, tensor_matmul, tensor_reduce, tensor_scale,
     tensor_sigmoid,
 };
-use super::math::{stats_bray_curtis, stats_hill, stats_simpson};
+use super::math::{
+    signal_bandpass, signal_derivative, signal_detect_peaks, stats_bray_curtis,
+    stats_fit_exponential, stats_fit_logarithmic, stats_fit_quadratic, stats_gamma_cdf,
+    stats_gamma_fit, stats_hill, stats_rarefaction_curve, stats_simpson,
+};
 use super::{REGISTERED_METHODS, normalize_method};
 use crate::BarraCudaPrimal;
 
@@ -33,5 +37,7 @@ mod device_health_tests;
 mod dispatch_compute_tests;
 mod primal_wire_tests;
 mod registry_tests;
+mod signal_tests;
 mod stats_diversity_tests;
+mod stats_regression_tests;
 mod tensor_fhe_tests;

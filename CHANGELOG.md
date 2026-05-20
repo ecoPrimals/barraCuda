@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Added — Sprint 73: Cross-Spring Pattern Absorption (May 20 2026)
+
+- `stats.fit_quadratic` — quadratic model fit (normal equations) from airSpring correction pipeline
+- `stats.fit_exponential` — exponential model fit (log-linearized) from airSpring correction pipeline
+- `stats.fit_logarithmic` — logarithmic model fit from airSpring correction pipeline
+- `stats.rarefaction_curve` — species richness rarefaction (hypergeometric) from groundSpring ecology
+- `stats.gamma_fit` — Gamma distribution MLE via Thom (1958) from airSpring drought/SPI pipeline
+- `stats.gamma_cdf` — Gamma CDF via regularized incomplete gamma from airSpring drought/SPI pipeline
+- `signal.detect_peaks` — local maxima detection with distance/height/prominence from healthSpring ECG
+- `signal.bandpass` — frequency-domain bandpass filter (FFT zeroing) from healthSpring Pan-Tompkins
+- `signal.derivative` — 5-point derivative filter (Pan-Tompkins) from healthSpring ECG pipeline
+- New `signal.*` IPC namespace (evolving stability tier)
+- 23 new tests (regression + signal + ecology + gamma)
+- 87 registered IPC methods total
+
 ### Added — Sprint 72: Universal Shader Absorption & IPC Expansion (May 20 2026)
 
 - `stats.simpson` — Simpson diversity index D = 1 − Σ(pᵢ²) on IPC surface

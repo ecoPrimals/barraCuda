@@ -30,6 +30,17 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 
 ---
 
+## Achieved (May 20, 2026 — Sprint 73: Cross-Spring Pattern Absorption)
+
+- **9 new IPC methods** spanning 3 springs (airSpring, healthSpring, groundSpring):
+  - Multi-model regression: `stats.fit_quadratic`, `.fit_exponential`, `.fit_logarithmic`
+  - Ecology: `stats.rarefaction_curve` (hypergeometric expected richness)
+  - Gamma/SPI: `stats.gamma_fit` (Thom MLE), `stats.gamma_cdf` (incomplete gamma)
+  - Signal processing: `signal.detect_peaks`, `signal.bandpass`, `signal.derivative`
+- **New `signal.*` IPC namespace** — Pan-Tompkins pipeline stages as universal primitives
+- **23 new tests** (143 IPC method tests total)
+- **87 registered IPC methods total**
+
 ## Achieved (May 20, 2026 — Sprint 72: Universal Shader Absorption & IPC Expansion)
 
 - **3 new IPC methods**: `stats.simpson`, `stats.bray_curtis`, `stats.hill` — library functions elevated to JSON-RPC wire surface (78 methods total)

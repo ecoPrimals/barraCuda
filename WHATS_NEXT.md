@@ -6,6 +6,17 @@ Prioritized work items, ordered by impact. Updated 2026-05-20.
 
 ## Recently Completed
 
+- **Sprint 73: Cross-Spring Pattern Absorption (May 20)**:
+  Deeper audit of spring patterns. Absorbed 9 new IPC methods spanning 3 springs:
+  (1) **Multi-model regression** (airSpring): `stats.fit_quadratic`, `.fit_exponential`,
+  `.fit_logarithmic` — sensor correction models now universal (beyond `fit_linear`).
+  (2) **Ecology/rarefaction** (groundSpring): `stats.rarefaction_curve` — hypergeometric
+  expected richness at subsampled depths; library existed, now wired to IPC.
+  (3) **Gamma/SPI** (airSpring): `stats.gamma_fit` (Thom MLE) + `stats.gamma_cdf`
+  (regularized incomplete gamma) — building blocks for drought indices.
+  (4) **Signal processing** (healthSpring): new `signal.*` namespace with
+  `signal.detect_peaks`, `signal.bandpass`, `signal.derivative` — Pan-Tompkins
+  pipeline stages elevated to universal primitives. 87 methods total.
 - **Sprint 72: Universal Shader Absorption & IPC Expansion (May 20)**:
   Cross-spring audit revealed 4 spatial compute shaders in ludoSpring with no
   barraCuda equivalent and 3 stats library functions with no IPC exposure. Resolved:

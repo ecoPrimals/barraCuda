@@ -727,3 +727,320 @@ pub(super) fn stats_hill(params: &Value, id: Value) -> JsonRpcResponse {
     let result = barracuda::stats::hill(x, k, n);
     JsonRpcResponse::success(id, serde_json::json!({ "result": result, "function": "hill" }))
 }
+
+// ── Regression models (Sprint 73 — spring absorption) ────────────────────
+
+/// `stats.fit_quadratic` — fit y = a·x² + b·x + c via normal equations.
+pub(super) fn stats_fit_quadratic(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(x) = extract_f64_array(params, "x") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: x (array)");
+    };
+    let Some(y) = extract_f64_array(params, "y") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: y (array)");
+    };
+    match barracuda::stats::fit_quadratic(&x, &y) {
+        Some(fit) => JsonRpcResponse::success(
+            id,
+            serde_json::json!({
+                "model": "quadratic",
+                "params": fit.params,
+                "r_squared": fit.r_squared,
+                "rmse": fit.rmse,
+            }),
+        ),
+        None => JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Quadratic fit failed (need ≥3 points)",
+        ),
+    }
+}
+
+/// `stats.fit_exponential` — fit y = a·exp(b·x) via log-linearization.
+pub(super) fn stats_fit_exponential(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(x) = extract_f64_array(params, "x") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: x (array)");
+    };
+    let Some(y) = extract_f64_array(params, "y") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: y (array)");
+    };
+    match barracuda::stats::fit_exponential(&x, &y) {
+        Some(fit) => JsonRpcResponse::success(
+            id,
+            serde_json::json!({
+                "model": "exponential",
+                "params": fit.params,
+                "r_squared": fit.r_squared,
+                "rmse": fit.rmse,
+            }),
+        ),
+        None => JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Exponential fit failed (need ≥2 positive y values)",
+        ),
+    }
+}
+
+/// `stats.fit_logarithmic` — fit y = a·ln(x) + b via linearization.
+pub(super) fn stats_fit_logarithmic(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(x) = extract_f64_array(params, "x") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: x (array)");
+    };
+    let Some(y) = extract_f64_array(params, "y") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: y (array)");
+    };
+    match barracuda::stats::fit_logarithmic(&x, &y) {
+        Some(fit) => JsonRpcResponse::success(
+            id,
+            serde_json::json!({
+                "model": "logarithmic",
+                "params": fit.params,
+                "r_squared": fit.r_squared,
+                "rmse": fit.rmse,
+            }),
+        ),
+        None => JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Logarithmic fit failed (need ≥2 positive x values)",
+        ),
+    }
+}
+
+// ── Ecology / rarefaction (Sprint 73) ────────────────────────────────────
+
+/// `stats.rarefaction_curve` — expected species richness E[S] at subsampled depths.
+///
+/// Accepts `counts` (species abundances) and `depths` (subsampling depths).
+pub(super) fn stats_rarefaction_curve(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(counts) = extract_f64_array(params, "counts") else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: counts (array)",
+        );
+    };
+    let Some(depths) = extract_f64_array(params, "depths") else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: depths (array)",
+        );
+    };
+    let curve = barracuda::stats::rarefaction_curve(&counts, &depths);
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({ "result": curve, "depths": depths }),
+    )
+}
+
+// ── Special functions (Sprint 73) ────────────────────────────────────────
+
+/// `stats.gamma_cdf` — Gamma CDF P(X ≤ x) for X ~ Gamma(alpha, beta).
+///
+/// Uses the regularized incomplete gamma function.
+pub(super) fn stats_gamma_cdf(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(x) = params.get("x").and_then(|v| v.as_f64()) else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: x (f64)");
+    };
+    let Some(alpha) = params.get("alpha").and_then(|v| v.as_f64()) else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: alpha (f64)",
+        );
+    };
+    let beta = params.get("beta").and_then(|v| v.as_f64()).unwrap_or(1.0);
+    if x <= 0.0 {
+        return JsonRpcResponse::success(id, serde_json::json!({ "result": 0.0 }));
+    }
+    match barracuda::special::regularized_gamma_p(alpha, x / beta) {
+        Ok(p) => JsonRpcResponse::success(id, serde_json::json!({ "result": p })),
+        Err(e) => {
+            JsonRpcResponse::error(id, INTERNAL_ERROR, format!("gamma_cdf failed: {e}"))
+        }
+    }
+}
+
+/// `stats.gamma_fit` — fit Gamma(α,β) parameters via Thom (1958) MLE approximation.
+///
+/// Accepts `data` (positive observations). Returns alpha and beta.
+pub(super) fn stats_gamma_fit(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(data) = extract_f64_array(params, "data") else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: data (array)",
+        );
+    };
+    let positive: Vec<f64> = data.iter().copied().filter(|&x| x > 0.0).collect();
+    let n = positive.len();
+    if n < 3 {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Need ≥3 positive observations for gamma MLE",
+        );
+    }
+    let nf = n as f64;
+    let mean_val: f64 = positive.iter().sum::<f64>() / nf;
+    let log_mean: f64 = positive.iter().map(|x| x.ln()).sum::<f64>() / nf;
+    let a_param = mean_val.ln() - log_mean;
+    if a_param <= 0.0 {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Gamma MLE: A ≤ 0 (data may be degenerate)",
+        );
+    }
+    let alpha = (1.0 / (4.0 * a_param)) * (1.0 + (a_param.mul_add(4.0 / 3.0, 1.0)).sqrt());
+    let beta = mean_val / alpha;
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({ "alpha": alpha, "beta": beta, "n_positive": n }),
+    )
+}
+
+// ── Signal processing (Sprint 73 — healthSpring absorption) ──────────────
+
+/// `signal.detect_peaks` — find local maxima with minimum distance and height.
+///
+/// Accepts `signal` (f64 array), `distance` (min samples between peaks),
+/// optional `min_height`, optional `min_prominence`.
+pub(super) fn signal_detect_peaks(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(signal) = extract_f64_array(params, "signal") else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: signal (array)",
+        );
+    };
+    let distance = params
+        .get("distance")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(1) as usize;
+    let min_height = params.get("min_height").and_then(|v| v.as_f64());
+    let min_prominence = params.get("min_prominence").and_then(|v| v.as_f64());
+    let peaks =
+        barracuda::ops::peak_detect_f64::find_peaks_cpu(&signal, distance, min_height, min_prominence);
+    let indices: Vec<usize> = peaks.iter().map(|p| p.index).collect();
+    let heights: Vec<f64> = peaks.iter().map(|p| p.height).collect();
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({
+            "indices": indices,
+            "heights": heights,
+            "count": peaks.len(),
+        }),
+    )
+}
+
+/// `signal.bandpass` — frequency-domain bandpass filter (zeros outside [low, high] Hz).
+///
+/// Accepts `signal`, `sample_rate` (Hz), `low_hz`, `high_hz`.
+pub(super) fn signal_bandpass(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(signal) = extract_f64_array(params, "signal") else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: signal (array)",
+        );
+    };
+    let Some(sample_rate) = params.get("sample_rate").and_then(|v| v.as_f64()) else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: sample_rate (f64)",
+        );
+    };
+    let Some(low_hz) = params.get("low_hz").and_then(|v| v.as_f64()) else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: low_hz (f64)",
+        );
+    };
+    let Some(high_hz) = params.get("high_hz").and_then(|v| v.as_f64()) else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: high_hz (f64)",
+        );
+    };
+    if sample_rate <= 0.0 || low_hz < 0.0 || high_hz <= low_hz {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Invalid filter params: need sample_rate > 0, 0 ≤ low_hz < high_hz",
+        );
+    }
+    let filtered = bandpass_filter_cpu(&signal, sample_rate, low_hz, high_hz);
+    JsonRpcResponse::success(id, serde_json::json!({ "result": filtered }))
+}
+
+/// CPU frequency-domain bandpass: FFT → zero outside band → IFFT.
+fn bandpass_filter_cpu(signal: &[f64], fs: f64, low_hz: f64, high_hz: f64) -> Vec<f64> {
+    let n = signal.len();
+    if n == 0 {
+        return vec![];
+    }
+    let n_freq = n / 2 + 1;
+    let mut re = vec![0.0; n_freq];
+    let mut im = vec![0.0; n_freq];
+
+    for k in 0..n_freq {
+        let mut sum_re = 0.0;
+        let mut sum_im = 0.0;
+        let angle_base = -2.0 * std::f64::consts::PI * (k as f64) / (n as f64);
+        for (j, &s) in signal.iter().enumerate() {
+            let angle = angle_base * (j as f64);
+            sum_re += s * angle.cos();
+            sum_im += s * angle.sin();
+        }
+        let freq = (k as f64) * fs / (n as f64);
+        if freq >= low_hz && freq <= high_hz {
+            re[k] = sum_re;
+            im[k] = sum_im;
+        }
+    }
+
+    let mut output = vec![0.0; n];
+    let norm = 1.0 / (n as f64);
+    for (j, out) in output.iter_mut().enumerate() {
+        let mut sum = 0.0;
+        for k in 0..n_freq {
+            let angle = 2.0 * std::f64::consts::PI * (k as f64) * (j as f64) / (n as f64);
+            let contrib = re[k].mul_add(angle.cos(), -(im[k] * angle.sin()));
+            sum += contrib;
+            if k > 0 && k < n_freq - 1 {
+                sum += contrib;
+            }
+        }
+        *out = sum * norm;
+    }
+    output
+}
+
+/// `signal.derivative` — 5-point derivative filter (Pan-Tompkins).
+///
+/// d[i] = (-x[i-2] - 2*x[i-1] + 2*x[i+1] + x[i+2]) / 8
+pub(super) fn signal_derivative(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(signal) = extract_f64_array(params, "signal") else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: signal (array)",
+        );
+    };
+    let n = signal.len();
+    let mut d = vec![0.0; n];
+    for i in 2..n.saturating_sub(2) {
+        d[i] = (2.0f64.mul_add(
+            signal[i + 1],
+            2.0f64.mul_add(-signal[i - 1], -signal[i - 2]),
+        ) + signal[i + 2])
+            / 8.0;
+    }
+    JsonRpcResponse::success(id, serde_json::json!({ "result": d }))
+}

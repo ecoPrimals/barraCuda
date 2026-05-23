@@ -6,6 +6,12 @@ Prioritized work items, ordered by impact. Updated 2026-05-23.
 
 ## Recently Completed
 
+- **Wave 44: Outbound Neural API Startup Announce (May 23)**:
+  Added outbound `primal.announce` push to biomeOS Neural API on startup per
+  Wave 44 P1 audit. New `ipc::neural_announce` module handles 3-tier socket
+  discovery, payload construction, and UDS send. Wired into all server startup
+  paths (UDS, service, TCP-only). Fire-and-forget with graceful standalone
+  degradation. 4 new tests. All 149 IPC + announce tests pass.
 - **Wave 43: Neural API `primal.announce` Schema (May 23)**:
   Upgraded `primal.announce` to biomeOS v3.68+ Neural API wire schema per
   primalSpring Wave 43 audit. Added `socket` (UDS discovery path), `signal_tiers`

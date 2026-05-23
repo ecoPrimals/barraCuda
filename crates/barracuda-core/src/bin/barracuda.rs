@@ -254,6 +254,17 @@ async fn run_server(
                 sock_path.display()
             ))
             .await;
+
+            let announce_socket = sock_path.to_string_lossy().to_string();
+            tokio::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                barracuda_core::ipc::neural_announce::announce_to_neural_api(
+                    &announce_socket,
+                    env!("CARGO_PKG_VERSION"),
+                )
+                .await;
+            });
+
             server.serve_unix(&sock_path, None::<fn()>).await?;
             barracuda_core::ipc::IpcServer::remove_legacy_symlink();
             remove_discovery_file();
@@ -282,6 +293,17 @@ async fn run_server(
         #[cfg(unix)]
         barracuda_core::discovery::register_with_discovery(&format!("tcp://{effective_addr}"))
             .await;
+
+        let announce_addr = format!("tcp://{effective_addr}");
+        tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            barracuda_core::ipc::neural_announce::announce_to_neural_api(
+                &announce_addr,
+                env!("CARGO_PKG_VERSION"),
+            )
+            .await;
+        });
+
         server.serve_tcp_listener(listener).await.map_err(|e| {
             barracuda_core::error::BarracudaCoreError::lifecycle(format!(
                 "TCP server error on {effective_addr}: {e}"
@@ -560,6 +582,17 @@ async fn run_service_mode() -> Result<(), barracuda_core::error::BarracudaCoreEr
             sock_path.display()
         ))
         .await;
+
+        let announce_socket = sock_path.to_string_lossy().to_string();
+        tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            barracuda_core::ipc::neural_announce::announce_to_neural_api(
+                &announce_socket,
+                env!("CARGO_PKG_VERSION"),
+            )
+            .await;
+        });
+
         let on_ready = || notify_systemd_ready();
         server.serve_unix(&sock_path, Some(on_ready)).await?;
         barracuda_core::ipc::IpcServer::remove_legacy_symlink();

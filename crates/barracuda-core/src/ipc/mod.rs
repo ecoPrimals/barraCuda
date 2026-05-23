@@ -137,6 +137,7 @@ pub mod btsp_frame;
 pub mod jsonrpc;
 pub mod method_gate;
 pub mod methods;
+pub mod neural_announce;
 pub mod transport;
 
 pub use btsp::{BtspCipher, BtspSession};

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Added — Wave 44: Outbound Neural API Startup Announce (May 23 2026)
+
+- Outbound `primal.announce` push to biomeOS Neural API on startup
+- New `ipc::neural_announce` module: socket discovery, payload build, UDS send
+- 3-tier Neural API socket resolution (`$NEURAL_API_SOCKET` → XDG → `/tmp`)
+- Wired into `server`, `service`, and TCP-only startup paths
+- Fire-and-forget with 100ms post-bind delay (non-fatal standalone mode)
+- 4 new unit tests for socket resolution and payload structure
+
 ### Changed — Wave 43: Neural API `primal.announce` Schema (May 23 2026)
 
 - `primal.announce` upgraded to biomeOS v3.68+ Neural API schema

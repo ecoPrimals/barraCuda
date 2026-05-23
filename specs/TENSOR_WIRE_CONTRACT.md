@@ -279,7 +279,7 @@ tier annotation. Tiers define the contract strength for downstream consumers:
 | `identity.get` | stable | Wire Standard L2 |
 | `primal.info` | stable | Runtime discovery contract |
 | `primal.capabilities` | stable | Alias for `capabilities.list` |
-| `primal.announce` | stable | biomeOS composition self-registration |
+| `primal.announce` | stable | biomeOS Neural API self-registration (Wave 43 schema) |
 | `auth.*` | stable | MethodGate JH-0 introspection |
 | `device.*` | stable | Hardware discovery surface |
 | `precision.route` | stable | Cross-primal routing advisory |

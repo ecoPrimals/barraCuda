@@ -68,8 +68,11 @@ fn test_primal_announce() {
     assert_eq!(result["primal"], "barraCuda");
     assert_eq!(result["domain"], "math");
     assert!(result["methods"].as_array().unwrap().len() >= 70);
-    assert!(result["capabilities"].as_array().unwrap().len() >= 5);
-    assert_eq!(result["signal_tier"], "passive");
+    assert_eq!(result["capabilities"].as_array().unwrap().len(), 3);
+    assert_eq!(result["signal_tiers"][0], "node");
+    assert!(result["socket"].is_string());
+    assert!(result["cost_hints"].is_object());
+    assert!(result["latency_estimates"].is_object());
     assert!(result["transport"].as_array().unwrap().len() >= 2);
 }
 

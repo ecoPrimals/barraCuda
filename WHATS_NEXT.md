@@ -1,10 +1,18 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-05-20.
+Prioritized work items, ordered by impact. Updated 2026-05-23.
 
 ---
 
 ## Recently Completed
+
+- **Wave 43: Neural API `primal.announce` Schema (May 23)**:
+  Upgraded `primal.announce` to biomeOS v3.68+ Neural API wire schema per
+  primalSpring Wave 43 audit. Added `socket` (UDS discovery path), `signal_tiers`
+  (`["node"]`), `cost_hints` (math/shader/compute weighted), and `latency_estimates`.
+  Capabilities narrowed to canonical routing domains `["math", "shader", "compute"]`.
+  New `discovery_socket_path()` helper. 2 new schema compliance tests. All 145 IPC
+  tests pass.
 
 - **Sprint 73: Cross-Spring Pattern Absorption (May 20)**:
   Deeper audit of spring patterns. Absorbed 9 new IPC methods spanning 3 springs:

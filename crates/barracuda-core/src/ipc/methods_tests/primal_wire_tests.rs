@@ -65,6 +65,74 @@ async fn test_dispatch_identity_get() {
     assert_eq!(result["domain"], crate::PRIMAL_DOMAIN);
 }
 
+// ── primal.announce — Neural API (Wave 43) schema compliance ─────────
+
+#[test]
+fn test_primal_announce_neural_api_schema() {
+    let primal = test_primal();
+    let resp = announce(&primal, serde_json::json!(200));
+    let result = resp.result.expect("primal.announce should always succeed");
+
+    assert_eq!(result["primal"], "barraCuda");
+    assert_eq!(result["namespace"], "barracuda");
+    assert_eq!(result["domain"], "math");
+    assert!(result["version"].is_string());
+    assert!(result["methods"].is_array());
+
+    let caps = result["capabilities"]
+        .as_array()
+        .expect("capabilities must be array");
+    let cap_strs: Vec<&str> = caps.iter().filter_map(|v| v.as_str()).collect();
+    assert!(cap_strs.contains(&"math"));
+    assert!(cap_strs.contains(&"shader"));
+    assert!(cap_strs.contains(&"compute"));
+
+    let tiers = result["signal_tiers"]
+        .as_array()
+        .expect("signal_tiers must be array");
+    assert_eq!(tiers[0], "node");
+
+    assert!(
+        result["socket"].is_string(),
+        "socket field required by biomeOS v3.68+"
+    );
+    let socket = result["socket"].as_str().unwrap();
+    assert!(socket.contains("biomeos"), "socket path should contain biomeos dir");
+    assert!(socket.ends_with(".sock"), "socket path should end in .sock");
+
+    let cost = &result["cost_hints"];
+    assert_eq!(cost["math"], 20.0);
+    assert_eq!(cost["shader"], 50.0);
+    assert_eq!(cost["compute"], 80.0);
+
+    let latency = &result["latency_estimates"];
+    assert_eq!(latency["math"], 10);
+    assert_eq!(latency["shader"], 100);
+    assert_eq!(latency["compute"], 200);
+
+    assert_eq!(result["hardware"]["gpu_available"], false);
+    assert!(result["transport"].is_array());
+    assert_eq!(result["license"], "AGPL-3.0-or-later");
+}
+
+#[tokio::test]
+async fn test_dispatch_primal_announce() {
+    let primal = test_primal();
+    let resp = dispatch(
+        &primal,
+        "primal.announce",
+        &serde_json::json!({}),
+        serde_json::json!(201),
+    )
+    .await;
+    let result = resp.result.expect("primal.announce via dispatch");
+    assert_eq!(result["primal"], "barraCuda");
+    assert!(result["signal_tiers"].is_array());
+    assert!(result["cost_hints"].is_object());
+    assert!(result["latency_estimates"].is_object());
+    assert!(result["socket"].is_string());
+}
+
 // ── Wire Standard L2 compliance structural checks ───────────────────────
 
 #[test]

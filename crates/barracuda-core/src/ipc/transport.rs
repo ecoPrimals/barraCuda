@@ -142,6 +142,28 @@ pub fn resolve_bind_address(explicit: Option<&str>) -> String {
         .map_or_else(|_| format!("{host}:0"), |port| format!("{host}:{port}"))
 }
 
+/// Return the canonical UDS path that biomeOS uses to reach this primal.
+///
+/// Used in `primal.announce` so biomeOS can route `capability.call` traffic
+/// directly. Format: `$XDG_RUNTIME_DIR/biomeos/{domain}[-{family}].sock`.
+#[cfg(unix)]
+#[must_use]
+pub fn discovery_socket_path() -> String {
+    let dir = resolve_socket_dir();
+    let domain = crate::PRIMAL_DOMAIN;
+    let sock_name = match resolve_family_id() {
+        Some(family_id) => format!("{domain}-{family_id}.sock"),
+        None => format!("{domain}.sock"),
+    };
+    dir.join(sock_name).to_string_lossy().into_owned()
+}
+
+#[cfg(not(unix))]
+#[must_use]
+pub fn discovery_socket_path() -> String {
+    String::from("unsupported")
+}
+
 /// IPC server for barraCuda primal.
 ///
 /// Serves both JSON-RPC 2.0 (text, newline-delimited) and tarpc (binary,

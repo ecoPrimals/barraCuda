@@ -72,11 +72,16 @@ pub(super) fn capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcRespon
 
 /// `primal.announce` — Atomic self-registration payload for biomeOS composition.
 ///
-/// Returns the identity, capabilities, and signal tier so biomeOS can register
-/// this primal into the composition graph without additional round-trips.
+/// Returns the identity, capabilities, signal tier, cost hints, and latency
+/// estimates so biomeOS Neural API can register this primal into the composition
+/// graph and compute routing weights without additional round-trips.
+///
+/// Schema aligned with biomeOS v3.68+ Neural API (Wave 43).
 pub(super) fn announce(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
     let version = env!("CARGO_PKG_VERSION");
     let has_gpu = primal.device().is_some();
+
+    let socket = crate::ipc::transport::discovery_socket_path();
 
     JsonRpcResponse::success(
         id,
@@ -86,8 +91,19 @@ pub(super) fn announce(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
             "version": version,
             "domain": crate::PRIMAL_DOMAIN,
             "methods": REGISTERED_METHODS,
-            "capabilities": crate::discovery::capabilities(),
-            "signal_tier": "passive",
+            "capabilities": ["math", "shader", "compute"],
+            "signal_tiers": ["node"],
+            "socket": socket,
+            "cost_hints": {
+                "math": 20.0,
+                "shader": 50.0,
+                "compute": 80.0,
+            },
+            "latency_estimates": {
+                "math": 10,
+                "shader": 100,
+                "compute": 200,
+            },
             "hardware": {
                 "gpu_available": has_gpu,
             },

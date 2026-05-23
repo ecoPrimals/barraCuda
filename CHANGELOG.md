@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Changed — Wave 43: Neural API `primal.announce` Schema (May 23 2026)
+
+- `primal.announce` upgraded to biomeOS v3.68+ Neural API schema
+- Added `socket` field (UDS path for capability.call routing)
+- Added `signal_tiers: ["node"]` (replaces legacy `signal_tier: "passive"`)
+- Added `cost_hints: { math: 20.0, shader: 50.0, compute: 80.0 }`
+- Added `latency_estimates: { math: 10, shader: 100, compute: 200 }`
+- Capabilities narrowed to canonical routing domains: `["math", "shader", "compute"]`
+- New `discovery_socket_path()` helper in transport module
+- 2 new Neural API schema compliance tests
+
 ### Added — Sprint 73: Cross-Spring Pattern Absorption (May 20 2026)
 
 - `stats.fit_quadratic` — quadratic model fit (normal equations) from airSpring correction pipeline

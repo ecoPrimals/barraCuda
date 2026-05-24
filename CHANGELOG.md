@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Changed — Wave 47: Deployment Behavior Convergence (May 24 2026)
+
+- Added `--socket` as visible alias for `--unix` CLI flag per DEPLOYMENT_BEHAVIOR_STANDARD
+- Enables uniform `--socket PATH` invocation from nucleus_launcher.sh / plasmidBin
+
 ### Added — Wave 44: Outbound Neural API Startup Announce (May 23 2026)
 
 - Outbound `primal.announce` push to biomeOS Neural API on startup

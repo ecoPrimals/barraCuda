@@ -62,7 +62,7 @@ enum Commands {
         /// `$BIOMEOS_SOCKET_DIR/math.sock` (or `math-{family_id}.sock`
         /// when `FAMILY_ID` is set). Legacy `barracuda.sock` symlink created.
         #[cfg(unix)]
-        #[arg(long, num_args = 0..=1, default_missing_value = "__default__")]
+        #[arg(long, visible_alias = "socket", num_args = 0..=1, default_missing_value = "__default__")]
         unix: Option<String>,
 
         /// Disable Unix socket transport (force TCP-only).

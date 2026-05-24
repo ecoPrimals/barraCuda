@@ -42,31 +42,37 @@ traits are fully internalized.
 - **NagaExecutor** — CPU interpreter for naga IR (shader-first execution without GPU)
 - **Sovereign compiler** — naga IR optimizer with FMA fusion and dead expr elimination
 
-## Key Capabilities (JSON-RPC methods)
+## IPC Method Surface (87 methods)
 
 | Domain | Methods |
 |--------|---------|
-| `identity.*` | `identity.get` |
-| `primal.*` | `primal.capabilities` |
-| `health.*` | `health.liveness`, `health.readiness`, `health.check` |
-| `capabilities.*` | `capabilities.list` |
-| `compute.*` | `compute.dispatch`, `compute.batch.submit`, `compute.batch.status`, `compute.batch.result` |
-| `tensor.*` | `tensor.create`, `tensor.matmul`, `tensor.matmul_inline`, `tensor.add`, `tensor.scale`, `tensor.clamp`, `tensor.reduce`, `tensor.sigmoid` |
-| `fhe.*` | `fhe.ntt`, `fhe.pointwise_mul` |
-| `btsp.*` | `btsp.negotiate` — Phase 3 cipher upgrade |
-| `math.*` | `math.sigmoid`, `math.log2` |
-| `stats.*` | `stats.mean`, `stats.std_dev`, `stats.weighted_mean`, `stats.variance`, `stats.correlation`, `stats.pearson`, `stats.spearman`, `stats.covariance`, `stats.eigh`, `stats.chi_squared`, `stats.anova_oneway`, `stats.shannon`, `stats.entropy`, `stats.fit_linear`, `stats.empirical_spectral_density` |
-| `linalg.*` | `linalg.solve`, `linalg.eigenvalues`, `linalg.svd`, `linalg.qr`, `linalg.graph_laplacian` |
-| `graph.*` | `graph.belief_propagation` |
-| `spectral.*` | `spectral.fft`, `spectral.power_spectrum`, `spectral.stft` |
-| `noise.*` | `noise.perlin2d`, `noise.perlin3d` |
-| `rng.*` | `rng.uniform` |
-| `activation.*` | `activation.fitts`, `activation.hick`, `activation.softmax`, `activation.gelu` |
-| `ml.*` | `ml.mlp_forward`, `ml.attention` |
-| `doctor.*` | `doctor.validate` |
-| `security.*` | `security.session.create`, `security.session.verify` |
+| `health.*` | `liveness`, `readiness`, `check`, `version` |
+| `auth.*` | `check`, `mode`, `peer_info` |
+| `identity.*` | `get` |
+| `primal.*` | `info`, `capabilities`, `announce` |
+| `capabilities.*` | `list` |
+| `device.*` | `list`, `probe` |
+| `tolerances.*` | `get` |
+| `validate.*` | `gpu_stack` |
+| `precision.*` | `route` |
+| `compute.*` | `dispatch` |
+| `math.*` | `sigmoid`, `log2` |
+| `activation.*` | `fitts`, `hick`, `softmax`, `gelu` |
+| `stats.*` | `mean`, `std_dev`, `variance`, `correlation`, `pearson`, `spearman`, `covariance`, `weighted_mean`, `chi_squared`, `anova_oneway`, `shannon`, `entropy`, `fit_linear`, `fit_quadratic`, `fit_exponential`, `fit_logarithmic`, `empirical_spectral_density`, `simpson`, `bray_curtis`, `hill`, `rarefaction_curve`, `gamma_fit`, `gamma_cdf` |
+| `signal.*` | `detect_peaks`, `bandpass`, `derivative` |
+| `linalg.*` | `solve`, `eigenvalues`, `svd`, `qr`, `graph_laplacian` |
+| `ode.*` | `step` |
+| `graph.*` | `belief_propagation` |
+| `spectral.*` | `fft`, `power_spectrum`, `stft` |
+| `ml.*` | `mlp_forward`, `mlp_train`, `attention`, `esn_predict` |
+| `nautilus.*` | `create`, `observe`, `train`, `predict`, `export`, `import` |
+| `noise.*` | `perlin2d`, `perlin3d` |
+| `rng.*` | `uniform` |
+| `tensor.*` | `create`, `matmul`, `matmul_inline`, `add`, `scale`, `clamp`, `reduce`, `sigmoid`, `batch.submit` |
+| `fhe.*` | `ntt`, `pointwise_mul` |
+| `btsp.*` | `negotiate`, `capabilities` |
 
-87 methods following wateringHole `{domain}.{operation}` Semantic Method Naming Standard. Wire Standard L2 compliant. Namespaces: `health.*`, `device.*`, `tensor.*`, `stats.*`, `linalg.*`, `spectral.*`, `activation.*`, `math.*`, `ml.*`, `ode.*`, `noise.*`, `rng.*`, `nautilus.*`, `precision.*`, `compute.*`, `fhe.*`, `signal.*`, `btsp.*`, `primal.*`, `capabilities.*`, `identity.*`, `tolerances.*`, `validate.*`.
+87 methods following wateringHole `{domain}.{operation}` Semantic Method Naming Standard. Wire Standard L2 compliant. Neural API announce on startup. BTSP Phase 3 encryption.
 
 ## Deployment Constraints
 

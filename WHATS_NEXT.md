@@ -1,11 +1,22 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-05-23.
+Prioritized work items, ordered by impact. Updated 2026-05-24.
 
 ---
 
 ## Recently Completed
 
+- **Deep Debt Remediation Sprint (May 24)**:
+  Full audit and evolution pass. (1) Smart refactor of `math.rs` (1046L → 305L) into
+  domain modules: `stats.rs` (576L) + `signal.rs` (151L). (2) Eliminated `pollster`
+  dependency — unified all sync-async bridge sites to `runtime::tokio_block_on`.
+  (3) Evolved hardcoded `BEARDOG_*` env vars to generic `BTSP_PROVIDER_SOCKET` /
+  `BTSP_FAMILY_SEED` with backward-compatible fallback. (4) Wrapped 47 unsafe
+  env-manipulation sites in safe helpers. (5) Trimmed `transport.rs` from 825L → 799L.
+  Zero lint warnings, all IPC tests pass. `-1,823 +747` net lines.
+- **Wave 47: Deployment Behavior Convergence (May 24)**:
+  Added `--socket` as visible alias for `--unix` CLI flag per
+  DEPLOYMENT_BEHAVIOR_STANDARD. Uniform `--socket PATH` from nucleus_launcher.sh.
 - **Wave 44: Outbound Neural API Startup Announce (May 23)**:
   Added outbound `primal.announce` push to biomeOS Neural API on startup per
   Wave 44 P1 audit. New `ipc::neural_announce` module handles 3-tier socket
@@ -748,8 +759,9 @@ Prioritized work items, ordered by impact. Updated 2026-05-23.
   613L + 290L WGSL codegen). Cleaned 15 DF64 shader placeholder comments.
   Refactored CLI into modular subcommand handlers. Added `VoltaNoPmuFirmware`
   workaround detection. Eliminated double heap allocation in `Arc::from` across
-  11 files. All clippy pedantic clean. External deps (pollster, futures, half)
-  audited and justified. Zero production unwrap/expect confirmed.
+  11 files. All clippy pedantic clean. External deps (futures, half)
+  audited and justified. `pollster` eliminated (May 24 deep debt sprint).
+  Zero production unwrap/expect confirmed.
 
 Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
 `specs/REMAINING_WORK.md`.

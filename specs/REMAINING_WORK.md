@@ -1444,7 +1444,7 @@ gates green.
 - **DF64 shader cleanup**: Removed misleading `DF64_POLYFILL_PLACEHOLDER` from 15 protein folding shaders (injection handled at compile time by `compile_shader_df64`).
 - **Arc allocation elimination**: `Arc::from(format!(...).as_str())` → `Arc::from(format!(...))` across 11 files.
 - **Pedantic clippy**: All warnings resolved across all crates including benchmarks, examples, tests.
-- **External deps audited**: `pollster` (sync wgpu enumeration), `futures` (tarpc stream API), `half` (IEEE f16 quantization) — all justified, pure Rust, minimal.
+- **External deps audited**: `futures` (tarpc stream API), `half` (IEEE f16 quantization) — all justified, pure Rust, minimal. `pollster` eliminated (May 24 — unified to `runtime::tokio_block_on`).
 
 ## Achieved (March 10, 2026 — Cross-Spring Absorption & Deep Evolution Sprint)
 

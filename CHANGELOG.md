@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Changed — Deep Debt Remediation Sprint (May 24 2026)
+
+- **Refactor**: `math.rs` (1046L) → `math.rs` (305L) + `stats.rs` (576L) + `signal.rs` (151L)
+  - Smart domain decomposition: statistics/regression/ecology/special functions,
+    signal processing, and math/activation/noise/ODE into cohesive modules
+- **Refactor**: `transport.rs` trimmed from 825L → 799L (condensed verbose doc comments)
+- **Hardcoding → capability-based**: BTSP provider discovery now prefers generic
+  `BTSP_PROVIDER_SOCKET` and `BTSP_FAMILY_SEED` env vars over legacy `BEARDOG_*`
+  names (backward compat preserved via fallback chain)
+- **Dep elimination**: Removed `pollster` crate — unified all 4 sync-adapter-enumeration
+  sites to existing `runtime::tokio_block_on` (works from any context: sync, tokio
+  multi-thread, or current-thread)
+- **Unsafe evolution**: Test env manipulation in `btsp_socket_compliance.rs` wrapped in
+  safe `env_set`/`env_remove` helpers with documented SAFETY invariant (nextest isolation)
+
 ### Changed — Wave 47: Deployment Behavior Convergence (May 24 2026)
 
 - Added `--socket` as visible alias for `--unix` CLI flag per DEPLOYMENT_BEHAVIOR_STANDARD

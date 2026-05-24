@@ -114,7 +114,7 @@ fn resolve_gpu_adapter_selector() -> String {
         backends: wgpu::Backends::all(),
         ..Default::default()
     });
-    for adapter in pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all())) {
+    for adapter in crate::runtime::tokio_block_on(instance.enumerate_adapters(wgpu::Backends::all())) {
         let info = adapter.get_info();
         if info.device_type == wgpu::DeviceType::DiscreteGpu
             && adapter.features().contains(wgpu::Features::SHADER_F64)

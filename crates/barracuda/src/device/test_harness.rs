@@ -107,7 +107,9 @@ fn resolve_budget() -> u32 {
         backends: wgpu::Backends::all(),
         ..Default::default()
     });
-    let adapters = pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all()));
+    let adapters = crate::runtime::tokio_block_on(
+        instance.enumerate_adapters(wgpu::Backends::all()),
+    );
     if let Some(adapter) = adapters.first() {
         let info = adapter.get_info();
         match info.device_type {

@@ -287,8 +287,8 @@ impl DeviceRegistry {
 
     /// Discover all devices and build the registry (sync).
     ///
-    /// Uses `pollster::block_on` — avoid calling from within an async runtime.
-    /// Prefer [`discover_async`] in async contexts.
+    /// Safe from any context (sync, multi-threaded tokio, or current-thread
+    /// tokio) via [`crate::runtime::tokio_block_on`].
     #[must_use]
     pub fn discover() -> Self {
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
@@ -296,8 +296,9 @@ impl DeviceRegistry {
             ..Default::default()
         });
 
-        let adapters: Vec<wgpu::Adapter> =
-            pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all()));
+        let adapters: Vec<wgpu::Adapter> = crate::runtime::tokio_block_on(
+            instance.enumerate_adapters(wgpu::Backends::all()),
+        );
         let adapter_infos: Vec<wgpu::AdapterInfo> =
             adapters.iter().map(wgpu::Adapter::get_info).collect();
         Self::build_from_adapters(adapter_infos)

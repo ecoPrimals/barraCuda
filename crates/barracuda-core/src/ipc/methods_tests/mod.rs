@@ -19,10 +19,10 @@ use super::tensor::{
     tensor_add, tensor_clamp, tensor_create, tensor_matmul, tensor_reduce, tensor_scale,
     tensor_sigmoid,
 };
-use super::math::{
-    signal_bandpass, signal_derivative, signal_detect_peaks, stats_bray_curtis,
-    stats_fit_exponential, stats_fit_logarithmic, stats_fit_quadratic, stats_gamma_cdf,
-    stats_gamma_fit, stats_hill, stats_rarefaction_curve, stats_simpson,
+use super::signal::{signal_bandpass, signal_derivative, signal_detect_peaks};
+use super::stats::{
+    stats_bray_curtis, stats_fit_exponential, stats_fit_logarithmic, stats_fit_quadratic,
+    stats_gamma_cdf, stats_gamma_fit, stats_hill, stats_rarefaction_curve, stats_simpson,
 };
 use super::{REGISTERED_METHODS, normalize_method};
 use crate::BarraCudaPrimal;

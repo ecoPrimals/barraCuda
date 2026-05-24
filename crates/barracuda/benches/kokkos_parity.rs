@@ -87,7 +87,7 @@ fn bench_mean_variance_resident(device: &Arc<WgpuDevice>, n: usize) {
 }
 
 fn main() {
-    let device = pollster::block_on(WgpuDevice::new());
+    let device = barracuda::runtime::tokio_block_on(WgpuDevice::new());
     match device {
         Ok(dev) => {
             let dev = Arc::new(dev);

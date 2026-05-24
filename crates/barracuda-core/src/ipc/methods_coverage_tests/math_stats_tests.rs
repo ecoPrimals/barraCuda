@@ -6,7 +6,8 @@ use crate::ipc::jsonrpc;
 use crate::lifecycle::PrimalLifecycle;
 
 use super::super::health::health_readiness;
-use super::super::math::{math_log2, math_sigmoid, stats_mean, stats_std_dev, stats_weighted_mean};
+use super::super::math::{math_log2, math_sigmoid};
+use super::super::stats::{stats_mean, stats_std_dev, stats_weighted_mean};
 
 // ── health.readiness after start ────────────────────────────────────
 

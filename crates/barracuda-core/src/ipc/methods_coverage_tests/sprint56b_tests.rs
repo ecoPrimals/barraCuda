@@ -6,8 +6,9 @@
 //! linalg.solve, nautilus.*, ml.mlp_train, ml.esn_predict.
 
 use super::super::linalg::linalg_solve;
-use super::super::math::{
-    ode_step, stats_covariance, stats_empirical_spectral_density, stats_fit_linear, stats_spearman,
+use super::super::math::ode_step;
+use super::super::stats::{
+    stats_covariance, stats_empirical_spectral_density, stats_fit_linear, stats_spearman,
 };
 use super::super::ml::{ml_esn_predict, ml_mlp_train};
 use super::super::nautilus::{

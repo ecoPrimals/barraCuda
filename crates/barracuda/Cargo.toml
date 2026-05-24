@@ -24,9 +24,6 @@ tokio = { workspace = true }
 # Logging
 tracing = { workspace = true }
 
-# Block-on for sync wgpu calls (enumerate_adapters)
-pollster = { workspace = true }
-
 # Utilities
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -53,7 +50,6 @@ barracuda-naga-exec = { path = "../barracuda-naga-exec", version = "0.4.0", opti
 
 [dev-dependencies]
 tempfile = { workspace = true }
-pollster = { workspace = true }
 tokio = { workspace = true }
 approx = { workspace = true }
 proptest = { workspace = true }

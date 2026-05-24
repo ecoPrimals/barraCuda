@@ -158,8 +158,8 @@ impl Substrate {
     }
 
     /// Discover all available substrates (sync convenience wrapper).
-    /// Uses `pollster::block_on` — avoid calling from within an async runtime.
-    /// Prefer [`discover_all_async`] in async contexts.
+    ///
+    /// Safe from any context via [`crate::runtime::tokio_block_on`].
     /// # Errors
     /// Returns [`Err`] if wgpu adapter enumeration fails.
     pub fn discover_all() -> Result<Vec<Self>> {
@@ -168,7 +168,9 @@ impl Substrate {
             ..Default::default()
         });
 
-        let adapters = pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all()));
+        let adapters = crate::runtime::tokio_block_on(
+            instance.enumerate_adapters(wgpu::Backends::all()),
+        );
         Self::build_substrates(adapters)
     }
 

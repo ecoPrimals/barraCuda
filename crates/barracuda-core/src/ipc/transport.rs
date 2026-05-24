@@ -38,19 +38,10 @@ fn max_connections() -> usize {
     *MAX_CONNECTIONS
 }
 
-/// Default TCP bind host when no environment or CLI override is provided.
-///
-/// `127.0.0.1` = localhost-only. This is the secure default: the primal
-/// listens only on the loopback interface. External access requires explicit
-/// configuration via `BARRACUDA_IPC_HOST` or `--bind`.
+/// Default TCP bind host (`127.0.0.1` = localhost-only).
 pub const DEFAULT_BIND_HOST: &str = "127.0.0.1";
 
-/// Resolve the TCP bind host from the environment.
-///
-/// Checks `BARRACUDA_IPC_HOST`, falling back to [`DEFAULT_BIND_HOST`].
-/// Used when `--port` supplies only a port number and the host must come
-/// from the environment (e.g. Docker containers that need `0.0.0.0` to
-/// accept cross-container probes).
+/// Resolve TCP bind host: `BARRACUDA_IPC_HOST` → [`DEFAULT_BIND_HOST`].
 pub fn resolve_bind_host() -> String {
     std::env::var("BARRACUDA_IPC_HOST").unwrap_or_else(|_| DEFAULT_BIND_HOST.to_string())
 }
@@ -58,10 +49,7 @@ pub fn resolve_bind_host() -> String {
 /// Default family ID when no `FAMILY_ID` env var is set.
 const DEFAULT_FAMILY_ID: &str = "default";
 
-/// Default ecosystem socket namespace per `PRIMAL_IPC_PROTOCOL.md`.
-///
-/// All primals place Unix sockets under `$XDG_RUNTIME_DIR/{namespace}/`.
-/// Override at runtime with the `BIOMEOS_SOCKET_DIR` environment variable.
+/// Ecosystem socket namespace. Override via `BIOMEOS_SOCKET_DIR`.
 pub(crate) const DEFAULT_ECOSYSTEM_SOCKET_DIR: &str = "biomeos";
 
 /// Resolve the family ID per `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §4.
@@ -92,15 +80,10 @@ pub fn resolve_socket_dir() -> std::path::PathBuf {
     base.join(DEFAULT_ECOSYSTEM_SOCKET_DIR)
 }
 
-/// Validate the `BIOMEOS_INSECURE` guard per `BTSP_PROTOCOL_STANDARD.md` §Compliance.
+/// Validates that `FAMILY_ID` + `BIOMEOS_INSECURE=1` are never both set.
 ///
-/// When `FAMILY_ID` is set (non-default), `BIOMEOS_INSECURE=1` MUST NOT also be
-/// set. You cannot claim a family AND skip authentication.
-///
-/// # Errors
-///
-/// Returns [`crate::error::BarracudaCoreError::Lifecycle`] when both `FAMILY_ID`
-/// and `BIOMEOS_INSECURE` are set.
+/// Per `BTSP_PROTOCOL_STANDARD.md` §Compliance: you cannot claim a family
+/// AND skip authentication.
 pub fn validate_insecure_guard() -> crate::error::Result<()> {
     let family_id = resolve_family_id();
     let insecure = std::env::var("BIOMEOS_INSECURE")
@@ -118,17 +101,8 @@ pub fn validate_insecure_guard() -> crate::error::Result<()> {
     Ok(())
 }
 
-/// Resolve the TCP bind address from the primal's own configuration.
-///
-/// Resolution chain (first match wins):
-/// 1. `explicit` — CLI `--bind` argument
-/// 2. `BARRACUDA_IPC_BIND` — full `host:port` from environment
-/// 3. `BARRACUDA_IPC_HOST` + `BARRACUDA_IPC_PORT` — composed from environment
-/// 4. `{DEFAULT_BIND_HOST}:0` — localhost, ephemeral port
-///
-/// The primal only has self-knowledge. It does not embed assumptions about
-/// network topology or other primals — it simply resolves its own bind
-/// address from its own configuration sources.
+/// Resolve TCP bind address: `explicit` → `BARRACUDA_IPC_BIND` →
+/// `BARRACUDA_IPC_HOST:BARRACUDA_IPC_PORT` → `127.0.0.1:0`.
 pub fn resolve_bind_address(explicit: Option<&str>) -> String {
     if let Some(addr) = explicit {
         return addr.to_string();

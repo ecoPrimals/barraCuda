@@ -331,7 +331,7 @@ where
     // must use the same socket — the provider associates session state with it.
     let family_seed = resolve_family_seed_raw().ok_or_else(|| {
         HandshakeError::Protocol(
-            "BTSP handshake requires FAMILY_SEED, BEARDOG_FAMILY_SEED, or BIOMEOS_FAMILY_SEED env var".to_string(),
+            "BTSP handshake requires BTSP_FAMILY_SEED, FAMILY_SEED, or BIOMEOS_FAMILY_SEED env var".to_string(),
         )
     })?;
 
@@ -698,14 +698,15 @@ async fn security_provider_rpc(
 /// Load the BTSP family seed, base64-encoded for the security provider's
 /// wire format.
 ///
-/// Reads `FAMILY_SEED` → `BEARDOG_FAMILY_SEED` → `BIOMEOS_FAMILY_SEED`
-/// from environment. The security provider base64-decodes the `family_seed`
-/// parameter in `btsp.session.create` to recover raw key bytes, so we must
-/// encode the env string's bytes before sending.
+/// Resolution: `BTSP_FAMILY_SEED` → `FAMILY_SEED` → `BIOMEOS_FAMILY_SEED`
+/// → `BEARDOG_FAMILY_SEED` (legacy compat). The security provider
+/// base64-decodes the `family_seed` parameter in `btsp.session.create`
+/// to recover raw key bytes, so we must encode the env string's bytes.
 fn resolve_family_seed_raw() -> Option<String> {
-    let raw = std::env::var("FAMILY_SEED")
-        .or_else(|_| std::env::var("BEARDOG_FAMILY_SEED"))
+    let raw = std::env::var("BTSP_FAMILY_SEED")
+        .or_else(|_| std::env::var("FAMILY_SEED"))
         .or_else(|_| std::env::var("BIOMEOS_FAMILY_SEED"))
+        .or_else(|_| std::env::var("BEARDOG_FAMILY_SEED"))
         .ok()
         .filter(|s| !s.is_empty())?;
     use base64ct::{Base64, Encoding};

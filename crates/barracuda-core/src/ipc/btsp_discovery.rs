@@ -2,12 +2,12 @@
 //! BTSP security-provider discovery helpers.
 //!
 //! Resolution chain (per `NUCLEUS_TWO_TIER_CRYPTO_MODEL.md`):
-//! 1. `$BEARDOG_SOCKET` or `$BTSP_PROVIDER_SOCKET` env var (composition-injected)
+//! 1. `$BTSP_PROVIDER_SOCKET` env var (composition-injected, generic)
 //! 2. `$BIOMEOS_SOCKET_DIR/{SECURITY_DOMAIN}-{family_id}.sock`
 //! 3. `$BIOMEOS_SOCKET_DIR/{SECURITY_DOMAIN}.sock`
 //! 4. Discovery files in `$BIOMEOS_SOCKET_DIR/*.json` advertising
 //!    `btsp.session.create` capability
-//! 5. Songbird `DISCOVERY_SOCKET` `ipc.resolve` fallback
+//! 5. `DISCOVERY_SOCKET` `ipc.resolve` fallback
 
 use super::btsp::{read_ndjson_line, write_ndjson_line};
 use super::transport::{resolve_family_id, resolve_socket_dir};
@@ -16,7 +16,7 @@ const SECURITY_DOMAIN: &str = "crypto";
 
 /// Discover the security-domain socket for BTSP handshake delegation.
 pub(super) fn discover_security_provider() -> Option<std::path::PathBuf> {
-    for var in ["BEARDOG_SOCKET", "BTSP_PROVIDER_SOCKET"] {
+    for var in ["BTSP_PROVIDER_SOCKET", "BEARDOG_SOCKET"] {
         if let Ok(path) = std::env::var(var) {
             let p = std::path::PathBuf::from(&path);
             if p.exists() {

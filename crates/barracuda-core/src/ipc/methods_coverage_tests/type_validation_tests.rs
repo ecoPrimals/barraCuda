@@ -9,7 +9,8 @@ use super::super::{
     batch,
     compute::compute_dispatch,
     fhe::{fhe_ntt, fhe_pointwise_mul},
-    math::{activation_hick, math_sigmoid, rng_uniform, stats_mean},
+    math::{activation_hick, math_sigmoid, rng_uniform},
+    stats::stats_mean,
     tensor::{tensor_clamp, tensor_create, tensor_matmul, tensor_scale},
 };
 

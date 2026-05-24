@@ -6,7 +6,7 @@
 use crate::ipc::jsonrpc;
 
 use super::super::graph::graph_belief_propagation;
-use super::super::math::stats_shannon;
+use super::super::stats::stats_shannon;
 
 // ── stats.entropy alias (PG-47) ────────────────────────────────────
 

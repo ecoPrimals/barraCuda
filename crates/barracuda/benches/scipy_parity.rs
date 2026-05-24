@@ -136,7 +136,7 @@ fn bench_cdist(device: &Arc<WgpuDevice>, m: usize, dim: usize) {
 }
 
 fn main() {
-    let device = pollster::block_on(WgpuDevice::new());
+    let device = barracuda::runtime::tokio_block_on(WgpuDevice::new());
     match device {
         Ok(dev) => {
             let dev = Arc::new(dev);

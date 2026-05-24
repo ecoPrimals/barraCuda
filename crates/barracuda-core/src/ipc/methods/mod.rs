@@ -21,7 +21,9 @@ mod nautilus;
 mod params;
 mod precision;
 mod primal;
+mod signal;
 mod spectral;
+mod stats;
 mod tensor;
 
 use std::sync::LazyLock;
@@ -237,31 +239,31 @@ pub async fn dispatch(
         "activation.fitts" => math::activation_fitts(params, id),
         "activation.hick" => math::activation_hick(params, id),
         // Statistics (CPU)
-        "stats.mean" => math::stats_mean(params, id),
-        "stats.std_dev" => math::stats_std_dev(params, id),
-        "stats.variance" => math::stats_variance(params, id),
-        "stats.correlation" | "stats.pearson" => math::stats_correlation(params, id),
-        "stats.spearman" => math::stats_spearman(params, id),
-        "stats.covariance" => math::stats_covariance(params, id),
-        "stats.weighted_mean" => math::stats_weighted_mean(params, id),
-        "stats.chi_squared" => math::stats_chi_squared(params, id),
-        "stats.anova_oneway" => math::stats_anova_oneway(params, id),
-        "stats.shannon" | "stats.entropy" => math::stats_shannon(params, id),
-        "stats.fit_linear" => math::stats_fit_linear(params, id),
-        "stats.empirical_spectral_density" => math::stats_empirical_spectral_density(params, id),
-        "stats.simpson" => math::stats_simpson(params, id),
-        "stats.bray_curtis" => math::stats_bray_curtis(params, id),
-        "stats.hill" => math::stats_hill(params, id),
-        "stats.fit_quadratic" => math::stats_fit_quadratic(params, id),
-        "stats.fit_exponential" => math::stats_fit_exponential(params, id),
-        "stats.fit_logarithmic" => math::stats_fit_logarithmic(params, id),
-        "stats.rarefaction_curve" => math::stats_rarefaction_curve(params, id),
-        "stats.gamma_fit" => math::stats_gamma_fit(params, id),
-        "stats.gamma_cdf" => math::stats_gamma_cdf(params, id),
+        "stats.mean" => stats::stats_mean(params, id),
+        "stats.std_dev" => stats::stats_std_dev(params, id),
+        "stats.variance" => stats::stats_variance(params, id),
+        "stats.correlation" | "stats.pearson" => stats::stats_correlation(params, id),
+        "stats.spearman" => stats::stats_spearman(params, id),
+        "stats.covariance" => stats::stats_covariance(params, id),
+        "stats.weighted_mean" => stats::stats_weighted_mean(params, id),
+        "stats.chi_squared" => stats::stats_chi_squared(params, id),
+        "stats.anova_oneway" => stats::stats_anova_oneway(params, id),
+        "stats.shannon" | "stats.entropy" => stats::stats_shannon(params, id),
+        "stats.fit_linear" => stats::stats_fit_linear(params, id),
+        "stats.empirical_spectral_density" => stats::stats_empirical_spectral_density(params, id),
+        "stats.simpson" => stats::stats_simpson(params, id),
+        "stats.bray_curtis" => stats::stats_bray_curtis(params, id),
+        "stats.hill" => stats::stats_hill(params, id),
+        "stats.fit_quadratic" => stats::stats_fit_quadratic(params, id),
+        "stats.fit_exponential" => stats::stats_fit_exponential(params, id),
+        "stats.fit_logarithmic" => stats::stats_fit_logarithmic(params, id),
+        "stats.rarefaction_curve" => stats::stats_rarefaction_curve(params, id),
+        "stats.gamma_fit" => stats::stats_gamma_fit(params, id),
+        "stats.gamma_cdf" => stats::stats_gamma_cdf(params, id),
         // Signal processing
-        "signal.detect_peaks" => math::signal_detect_peaks(params, id),
-        "signal.bandpass" => math::signal_bandpass(params, id),
-        "signal.derivative" => math::signal_derivative(params, id),
+        "signal.detect_peaks" => signal::signal_detect_peaks(params, id),
+        "signal.bandpass" => signal::signal_bandpass(params, id),
+        "signal.derivative" => signal::signal_derivative(params, id),
         // Linear algebra (CPU inline-data)
         "linalg.solve" => linalg::linalg_solve(params, id),
         "linalg.eigenvalues" | "stats.eigh" => linalg::linalg_eigenvalues(params, id),

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Removed — Wave 49: Ecosystem Tightening (May 25 2026)
+
+- Fossilized `showcase/` (9 demos, 26 files) to `fossilRecord/primals/barraCuda/showcase_wave49/`
+- Removed stale `target/release/barracuda` deployment patterns from 3 demo scripts
+- Replaced `showcase/` with README pointer to fossil archive
+- Post-primordial mandate: plasmidBin is sole binary distribution channel
+
 ### Changed — Deep Debt Remediation Sprint (May 24 2026)
 
 - **Refactor**: `math.rs` (1046L) → `math.rs` (305L) + `stats.rs` (576L) + `signal.rs` (151L)

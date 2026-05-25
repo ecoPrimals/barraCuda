@@ -1520,7 +1520,7 @@ gates green.
 - **4 orphaned test directories removed**: `tests/chaos/`, `tests/fault/`, `tests/e2e/`, `tests/precision/` — never compiled (no root test file importing them), drifted to 84-125 compilation errors each. Root-level test files (`scientific_chaos_tests.rs`, `scientific_e2e_tests.rs`, `scientific_fault_injection_tests.rs`) supersede them. ~4,000 lines of dead code removed.
 - **`three_springs/` wired in**: Was orphaned (compiles but never included). Created `three_springs_tests.rs` root harness. 28 integration test suites now all compiled and linked.
 - **Stale comments cleaned**: Removed informal TODO comments from `ops/mod.rs` (logsumexp/logsumexp_wgsl module declarations).
-- **Doc accuracy**: All test counts (3,262 lib tests, 28 integration suites), file counts (1,044 .rs files), and showcase count (9 demos) verified against actual codebase.
+- **Doc accuracy**: All test counts (3,262 lib tests, 28 integration suites), file counts (1,044 .rs files) verified against actual codebase. Showcase (9 demos) fossilized to `fossilRecord/` in Wave 49.
 
 ## Achieved (March 9, 2026 — Cross-Spring Absorption Sprint 3)
 
@@ -1623,13 +1623,10 @@ Pedantic + `unwrap_used` — zero warnings across all targets (re-verified Mar 8
 - **CI dual coverage**: 80% baseline + 90% stretch target (continue-on-error)
 - **Doc collision fix**: `barracuda-core` binary `doc = false` resolves Cargo #6313
 
-### Showcase Collection (March 9, 2026)
+### Showcase Collection (March 9, 2026) — *Fossilized Wave 49 (May 25, 2026)*
 - **9 progressive demos** across 3 tiers: local primal, IPC protocol, cross-primal compute
-- **00-local-primal**: device-discovery, precision-tiers, fused-gpu-ops, science-shaders (4 standalone Cargo crates)
-- **01-ipc-protocol**: jsonrpc-server, doctor-validate (2 shell script demos)
-- **02-cross-primal-compute**: coralreef-shader-compile, toadstool-hw-discovery, sovereign-pipeline (2 Cargo crates + 1 shell)
-- All Cargo crates compile zero warnings; cross-primal demos degrade gracefully
-- Follows ecosystem conventions: numbered subdirs, standalone workspaces, box-drawing output
+- Archived to `fossilRecord/primals/barraCuda/showcase_wave49/`
+- Active patterns now live in `primalSpring/wateringHole/`
 
 ### Systematic f64 Pipeline Evolution (March 8, 2026)
 - **14 additional f64 ops** fixed: `transe_score_f64`, `triangular_solve/f64`, `variance_f64`, `correlation_f64`, `covariance_f64`, `hermite_f64`, `bessel_i0/j0/j1/k0`, `beta_f64`, `digamma_f64`, `cosine_similarity_f64`, `weighted_dot_f64` — all were silently producing corrupted data on f64-capable GPUs

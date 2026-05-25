@@ -1,11 +1,16 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-05-24.
+Prioritized work items, ordered by impact. Updated 2026-05-25.
 
 ---
 
 ## Recently Completed
 
+- **Wave 49: Ecosystem Tightening (May 25)**:
+  Fossilized `showcase/` (9 demos, 26 files) to `fossilRecord/primals/barraCuda/showcase_wave49/`.
+  Removed 3 stale `target/release/barracuda` deployment patterns from demo scripts.
+  Verified `notify-plasmidbin.yml` active. No local `wateringHole/` tree. No pipeline debt.
+  Post-primordial mandate compliant: plasmidBin is sole binary channel.
 - **Deep Debt Remediation Sprint (May 24)**:
   Full audit and evolution pass. (1) Smart refactor of `math.rs` (1046L → 305L) into
   domain modules: `stats.rs` (576L) + `signal.rs` (151L). (2) Eliminated `pollster`

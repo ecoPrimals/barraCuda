@@ -1,70 +1,10 @@
-# barraCuda Showcase Collection
-## Sovereign Math Engine Demonstrations
+# Showcase (Fossilized)
 
-**Status**: Active | **Updated**: May 1, 2026
+Contents archived to `ecoPrimals/fossilRecord/primals/barraCuda/showcase_wave49/`
+as part of Wave 49 ecosystem tightening (May 2026).
 
----
+These demos powered the prokaryotic → post-primordial evolution and are
+preserved as fossil record. Active patterns live in `primalSpring/wateringHole/`.
 
-## Overview
-
-barraCuda showcases demonstrate GPU-accelerated scientific computing via WGSL
-shaders dispatched through wgpu. Demos progress from local capabilities through
-IPC protocol to cross-primal compute orchestration with toadStool (hardware
-discovery) and coralReef (sovereign shader compilation).
-
-All demos are pure Rust, zero unsafe, AGPL-3.0-or-later.
-
----
-
-## Showcases
-
-### 0. Local Primal (`00-local-primal/`)
-
-Standalone barraCuda capabilities — no other primals required.
-
-- **01-device-discovery** — GPU detection, capability scoring, precision routing
-- **02-precision-tiers** — F32 vs F64 vs DF64 comparison on identical math
-- **03-fused-gpu-ops** — Welford variance, fused correlation, GpuView chains
-- **04-science-shaders** — Molecular dynamics, spectral analysis, Hill kinetics
-
-### 1. IPC Protocol (`01-ipc-protocol/`)
-
-barraCuda as a primal in the ecoPrimals ecosystem.
-
-- **01-jsonrpc-server** — Start server, query methods, exercise JSON-RPC 2.0
-- **02-doctor-validate** — Health diagnostics and GPU validation canary
-
-### 2. Cross-Primal Compute (`02-cross-primal-compute/`)
-
-The sovereign compute triangle: toadStool + barraCuda + coralReef.
-
-- **01-coralreef-shader-compile** — WGSL to native binary via coralReef IPC
-- **02-toadstool-hw-discovery** — Hardware inventory feeding GPU selection
-- **03-sovereign-pipeline** — Full pipeline: discover, route, compile, dispatch
-
----
-
-## Prerequisites
-
-- Rust toolchain (edition 2024, MSRV 1.87)
-- GPU with Vulkan or Metal support (llvmpipe software rendering works for demos)
-- barraCuda workspace built: `cd ../.. && cargo build --release`
-
-For cross-primal demos:
-- coralReef running for `02-cross-primal-compute/01-coralreef-shader-compile`
-- toadStool running for `02-cross-primal-compute/02-toadstool-hw-discovery`
-- Cross-primal demos gracefully degrade if other primals are unavailable
-
-## Building
-
-Each showcase is a standalone workspace excluded from the main build.
-Build individually:
-
-```bash
-cd showcase/00-local-primal/01-device-discovery
-cargo run --release
-```
-
-## License
-
-AGPL-3.0-or-later — same as all barraCuda code (scyBorg provenance trio).
+Binary distribution is handled exclusively by plasmidBin — the stale
+`target/release/barracuda` paths in the archived demo scripts are historical.

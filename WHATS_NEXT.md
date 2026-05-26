@@ -1,11 +1,18 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-05-25.
+Prioritized work items, ordered by impact. Updated 2026-05-26.
 
 ---
 
 ## Recently Completed
 
+- **Wave 53: Coverage Expansion (May 26)**:
+  Filled all handler-level test gaps identified by primalSpring audit. Added 18 new
+  IPC coverage tests: `stats.variance` (4 tests — previously zero), `ml.esn_predict`
+  happy path + state injection (3 tests), `ml.mlp_train` happy path + error paths (3),
+  `stats.correlation` error paths (3), `auth.*` dispatch integration (4). Added 6 tests
+  for `runtime::tokio_block_on` (previously untested utility). 4,501+ tests total.
+  Clippy zero warnings. Live coralReef CI and DF64/HMMA remain hardware-gated (documented).
 - **Wave 49: Ecosystem Tightening (May 25)**:
   Fossilized `showcase/` (9 demos, 26 files) to `fossilRecord/primals/barraCuda/showcase_wave49/`.
   Removed 3 stale `target/release/barracuda` deployment patterns from demo scripts.

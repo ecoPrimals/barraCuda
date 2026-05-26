@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Added — Wave 53: Coverage Expansion (May 26 2026)
+
+- 18 new IPC handler coverage tests (`wave53_coverage_tests.rs`):
+  `stats.variance` (happy path + edge cases), `ml.esn_predict` (full E2E with
+  trained ESN + state injection), `ml.mlp_train` (happy path), `stats.correlation`
+  (error paths), `auth.*` dispatch integration (4 tests)
+- 6 new `runtime::tokio_block_on` tests covering sync context, multi-thread runtime,
+  current-thread runtime, sequential calls, and spawned tasks
+
 ### Removed — Wave 49: Ecosystem Tightening (May 25 2026)
 
 - Fossilized `showcase/` (9 demos, 26 files) to `fossilRecord/primals/barraCuda/showcase_wave49/`

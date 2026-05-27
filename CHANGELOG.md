@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Added — Wave 54: Graceful GPU-less Survival (May 27 2026)
+
+- `--no-gpu-probe` CLI flag on `server` subcommand: skips wgpu adapter enumeration,
+  starts immediately in cpu-shader-only mode (instant startup on GPU-less hosts)
+- `BARRACUDA_NO_GPU_PROBE` env var (`1`/`true`/`yes`): same behavior via environment,
+  works for both `server` and `service` modes
+- 6 integration tests for env-var parsing and degraded-start behavior
+- Addresses southGate ~30s startup delay and deployment stability feedback
+
 ### Added — Wave 53: Coverage Expansion (May 26 2026)
 
 - 18 new IPC handler coverage tests (`wave53_coverage_tests.rs`):

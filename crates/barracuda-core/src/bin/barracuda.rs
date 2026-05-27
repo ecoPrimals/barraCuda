@@ -69,6 +69,12 @@ enum Commands {
         #[cfg(unix)]
         #[arg(long)]
         no_unix: bool,
+
+        /// Skip GPU/wgpu adapter probe — start immediately in cpu-shader-only
+        /// mode. Eliminates ~30s startup delay on GPU-less hosts (broken DRM,
+        /// containers, VPS). Also available via `BARRACUDA_NO_GPU_PROBE=true`.
+        #[arg(long)]
+        no_gpu_probe: bool,
     },
 
     /// Start the barraCuda IPC server in service mode (systemd/init).
@@ -131,7 +137,13 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
             unix,
             #[cfg(unix)]
             no_unix,
+            no_gpu_probe,
         } => {
+            if no_gpu_probe {
+                // SAFETY: called at single-threaded program start, before
+                // any other threads are spawned by the tokio runtime.
+                unsafe { std::env::set_var("BARRACUDA_NO_GPU_PROBE", "1") };
+            }
             let effective_bind = bind.or_else(|| {
                 port.map(|p| {
                     format!(

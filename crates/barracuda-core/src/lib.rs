@@ -207,6 +207,21 @@ impl Default for BarraCudaPrimal {
     }
 }
 
+impl BarraCudaPrimal {
+    /// Whether GPU probe should be skipped (instant degraded startup).
+    ///
+    /// Checks `BARRACUDA_NO_GPU_PROBE` env var. When set to any truthy value
+    /// (`1`, `true`, `yes`), device enumeration is skipped entirely and the
+    /// primal starts in cpu-shader-only mode. This eliminates the ~30s wgpu
+    /// adapter probe delay on GPU-less hosts (broken DRM, containers, VPS).
+    #[must_use]
+    pub fn should_skip_gpu_probe() -> bool {
+        std::env::var("BARRACUDA_NO_GPU_PROBE")
+            .map(|v| matches!(v.to_lowercase().as_str(), "1" | "true" | "yes"))
+            .unwrap_or(false)
+    }
+}
+
 impl PrimalLifecycle for BarraCudaPrimal {
     fn state(&self) -> PrimalState {
         self.state
@@ -219,17 +234,25 @@ impl PrimalLifecycle for BarraCudaPrimal {
             ));
         }
 
-        tracing::info!("barraCuda: discovering compute devices...");
+        if Self::should_skip_gpu_probe() {
+            tracing::info!(
+                "barraCuda: GPU probe skipped (BARRACUDA_NO_GPU_PROBE), \
+                 running in cpu-shader-only mode"
+            );
+        } else {
+            tracing::info!("barraCuda: discovering compute devices...");
 
-        match barracuda::device::Auto::new().await {
-            Ok(dev) => {
-                tracing::info!("barraCuda: device ready — {}", dev.name());
-                self.compute = Some(dev);
-            }
-            Err(e) => {
-                tracing::warn!(
-                    "barraCuda: no compute device available ({e}), running degraded (cpu-shader only)"
-                );
+            match barracuda::device::Auto::new().await {
+                Ok(dev) => {
+                    tracing::info!("barraCuda: device ready — {}", dev.name());
+                    self.compute = Some(dev);
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "barraCuda: no compute device available ({e}), \
+                         running degraded (cpu-shader only)"
+                    );
+                }
             }
         }
 
@@ -449,4 +472,5 @@ mod tests {
             );
         }
     }
+
 }

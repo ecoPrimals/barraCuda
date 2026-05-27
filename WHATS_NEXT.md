@@ -1,11 +1,17 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-05-26.
+Prioritized work items, ordered by impact. Updated 2026-05-27.
 
 ---
 
 ## Recently Completed
 
+- **Wave 54: Graceful GPU-less Survival (May 27)**:
+  Added `--no-gpu-probe` CLI flag and `BARRACUDA_NO_GPU_PROBE` env var. When set,
+  wgpu adapter enumeration is skipped entirely — instant startup in cpu-shader-only
+  degraded mode. Eliminates ~30s DRM probe delay on GPU-less hosts (VPS, containers,
+  broken drivers). Server stays alive indefinitely serving CPU tensor ops. 6 new
+  integration tests. Addresses southGate deployment feedback from primalSpring.
 - **Wave 53: Coverage Expansion (May 26)**:
   Filled all handler-level test gaps identified by primalSpring audit. Added 18 new
   IPC coverage tests: `stats.variance` (4 tests — previously zero), `ml.esn_predict`

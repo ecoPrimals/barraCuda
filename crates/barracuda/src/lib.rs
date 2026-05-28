@@ -153,6 +153,8 @@
 // ── CPU-only modules (always available, no GPU dependency) ────────────────────
 pub mod activations;
 pub mod cast;
+/// Named constants for environment variable keys.
+pub mod env_keys;
 pub mod discovery;
 pub mod error;
 pub mod health;

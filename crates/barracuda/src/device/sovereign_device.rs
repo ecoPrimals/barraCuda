@@ -41,6 +41,7 @@
 //! ```
 
 use super::backend::{BufferBinding, DispatchDescriptor, GpuBackend};
+use crate::env_keys;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
 
@@ -55,7 +56,7 @@ const DEFAULT_WORKGROUP: [u32; 3] = [64, 1, 1];
 
 #[cfg(feature = "sovereign-dispatch")]
 static GPR_COUNT: std::sync::LazyLock<u32> = std::sync::LazyLock::new(|| {
-    std::env::var("BARRACUDA_GPR_COUNT")
+    std::env::var(env_keys::BARRACUDA_GPR_COUNT)
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(CONSERVATIVE_GPR_COUNT)
@@ -63,7 +64,7 @@ static GPR_COUNT: std::sync::LazyLock<u32> = std::sync::LazyLock::new(|| {
 
 #[cfg(feature = "sovereign-dispatch")]
 static RESOLVED_DEFAULT_WORKGROUP: std::sync::LazyLock<[u32; 3]> = std::sync::LazyLock::new(|| {
-    let x = std::env::var("BARRACUDA_DEFAULT_WORKGROUP_X")
+    let x = std::env::var(env_keys::BARRACUDA_DEFAULT_WORKGROUP_X)
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(DEFAULT_WORKGROUP[0]);
@@ -241,7 +242,7 @@ impl SovereignDevice {
     /// 4. First compiler arch (with warning when ambiguous)
     #[cfg(feature = "sovereign-dispatch")]
     fn select_target(&self, archs: &[String]) -> Result<String> {
-        if let Ok(env_target) = std::env::var("BARRACUDA_TARGET_ARCH") {
+        if let Ok(env_target) = std::env::var(env_keys::BARRACUDA_TARGET_ARCH) {
             if archs.iter().any(|a| a == &env_target) {
                 return Ok(env_target);
             }

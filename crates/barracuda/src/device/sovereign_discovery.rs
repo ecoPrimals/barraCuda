@@ -6,6 +6,7 @@
 //! capability-driven per `CAPABILITY_BASED_DISCOVERY_STANDARD.md`.
 
 use super::coral_compiler::DEFAULT_ECOPRIMALS_DISCOVERY_DIR;
+use crate::env_keys;
 
 /// Capability string for compute dispatch discovery.
 pub(super) const DISPATCH_CAPABILITY: &str = "compute.dispatch";
@@ -31,8 +32,8 @@ pub(super) fn detect_dispatch_addr() -> Option<String> {
         }
     }
 
-    let runtime_dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
-    let eco_dir = std::env::var("ECOPRIMALS_DISCOVERY_DIR")
+    let runtime_dir = std::env::var(env_keys::XDG_RUNTIME_DIR).ok()?;
+    let eco_dir = std::env::var(env_keys::ECOPRIMALS_DISCOVERY_DIR)
         .unwrap_or_else(|_| DEFAULT_ECOPRIMALS_DISCOVERY_DIR.to_owned());
     let base_dir = std::path::PathBuf::from(runtime_dir).join(eco_dir);
 

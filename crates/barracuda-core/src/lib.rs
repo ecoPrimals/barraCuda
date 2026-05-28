@@ -34,6 +34,8 @@
     reason = "BarracudaCoreError carries diagnostic context"
 )]
 
+/// Named constants for environment variable keys.
+pub mod env_keys;
 /// Capability-based self-discovery.
 ///
 /// Derives capabilities and provides from the IPC dispatch table. Peer primals
@@ -216,7 +218,7 @@ impl BarraCudaPrimal {
     /// adapter probe delay on GPU-less hosts (broken DRM, containers, VPS).
     #[must_use]
     pub fn should_skip_gpu_probe() -> bool {
-        std::env::var("BARRACUDA_NO_GPU_PROBE")
+        std::env::var(crate::env_keys::BARRACUDA_NO_GPU_PROBE)
             .map(|v| matches!(v.to_lowercase().as_str(), "1" | "true" | "yes"))
             .unwrap_or(false)
     }

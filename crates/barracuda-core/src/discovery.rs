@@ -8,6 +8,7 @@
 //! — the primal only has self-knowledge and discovers others at runtime.
 
 use crate::ipc::methods::REGISTERED_METHODS;
+use crate::env_keys;
 use std::collections::BTreeSet;
 
 /// Extract the domain (first component) from a semantic method name.
@@ -164,7 +165,7 @@ pub fn discovery_capability_domains() -> Vec<String> {
 pub async fn register_with_discovery(endpoint: &str) {
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
-    let Ok(socket_var) = std::env::var("DISCOVERY_SOCKET") else {
+    let Ok(socket_var) = std::env::var(env_keys::DISCOVERY_SOCKET) else {
         return;
     };
     let socket_path = std::path::Path::new(&socket_var);

@@ -14,6 +14,7 @@ use std::path::PathBuf;
 
 use super::jsonrpc::jsonrpc_call;
 use super::types::HealthResponse;
+use crate::env_keys;
 
 /// Environment variable for overriding the shader-compiler endpoint address.
 ///
@@ -47,7 +48,7 @@ const DEFAULT_ECOSYSTEM_SOCKET_NAMESPACE: &str = "biomeos";
 
 /// Resolve the ecosystem socket namespace, respecting env override.
 fn resolve_ecosystem_namespace() -> String {
-    std::env::var("BIOMEOS_SOCKET_DIR")
+    std::env::var(env_keys::BIOMEOS_SOCKET_DIR)
         .unwrap_or_else(|_| DEFAULT_ECOSYSTEM_SOCKET_NAMESPACE.to_owned())
 }
 
@@ -113,7 +114,7 @@ pub async fn discover_shader_compiler() -> Option<String> {
 /// instance-specific socket. We probe it with a health check.
 #[cfg(unix)]
 async fn discover_from_socket() -> Option<String> {
-    let runtime_dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
+    let runtime_dir = std::env::var(env_keys::XDG_RUNTIME_DIR).ok()?;
     let socket_path = PathBuf::from(&runtime_dir)
         .join(resolve_ecosystem_namespace())
         .join(SHADER_CAPABILITY_SOCKET);
@@ -146,8 +147,8 @@ async fn discover_from_socket() -> Option<String> {
 /// `biomeos` namespace for JSON manifests. Falls back to the legacy
 /// `shader_compiler` capability name, then the well-known filename.
 async fn discover_from_file() -> Option<String> {
-    let runtime_dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
-    let eco_dir = std::env::var("ECOPRIMALS_DISCOVERY_DIR")
+    let runtime_dir = std::env::var(env_keys::XDG_RUNTIME_DIR).ok()?;
+    let eco_dir = std::env::var(env_keys::ECOPRIMALS_DISCOVERY_DIR)
         .unwrap_or_else(|_| DEFAULT_ECOPRIMALS_DISCOVERY_DIR.to_owned());
     let eco_base = PathBuf::from(&runtime_dir).join(&eco_dir);
     let eco_canonical = eco_base.join("discovery");
@@ -244,8 +245,8 @@ fn read_jsonrpc_from_value(info: &serde_json::Value) -> Option<String> {
 /// `shader.execute.cpu` capability. Returns `None` if no CPU-capable
 /// compiler is found.
 pub async fn discover_cpu_shader_compiler() -> Option<String> {
-    let runtime_dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
-    let eco_dir = std::env::var("ECOPRIMALS_DISCOVERY_DIR")
+    let runtime_dir = std::env::var(env_keys::XDG_RUNTIME_DIR).ok()?;
+    let eco_dir = std::env::var(env_keys::ECOPRIMALS_DISCOVERY_DIR)
         .unwrap_or_else(|_| DEFAULT_ECOPRIMALS_DISCOVERY_DIR.to_owned());
     let eco_base = PathBuf::from(&runtime_dir).join(&eco_dir);
     let eco_canonical = eco_base.join("discovery");
@@ -276,8 +277,8 @@ pub async fn discover_cpu_shader_compiler() -> Option<String> {
 ///
 /// Scans for the `shader.validate` capability.
 pub async fn discover_shader_validator() -> Option<String> {
-    let runtime_dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
-    let eco_dir = std::env::var("ECOPRIMALS_DISCOVERY_DIR")
+    let runtime_dir = std::env::var(env_keys::XDG_RUNTIME_DIR).ok()?;
+    let eco_dir = std::env::var(env_keys::ECOPRIMALS_DISCOVERY_DIR)
         .unwrap_or_else(|_| DEFAULT_ECOPRIMALS_DISCOVERY_DIR.to_owned());
     let eco_base = PathBuf::from(&runtime_dir).join(&eco_dir);
     let eco_canonical = eco_base.join("discovery");

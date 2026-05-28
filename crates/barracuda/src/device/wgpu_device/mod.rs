@@ -24,6 +24,7 @@ pub(crate) use dispatch::{DispatchPermit, DispatchSemaphore, concurrency_budget}
 pub use guard::{GuardedDeviceHandle, GuardedEncoder};
 
 use super::autotune::{GLOBAL_TUNER, GpuCalibration, GpuDeviceForCalibration};
+use crate::env_keys;
 use crate::error::Result;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -38,7 +39,7 @@ use std::time::Duration;
 /// window; exceeding it signals a driver-level stall, not a compute issue.
 pub(crate) fn poll_timeout() -> Option<Duration> {
     static TIMEOUT: std::sync::LazyLock<Option<Duration>> = std::sync::LazyLock::new(|| {
-        let secs: u64 = std::env::var("BARRACUDA_POLL_TIMEOUT_SECS")
+        let secs: u64 = std::env::var(env_keys::BARRACUDA_POLL_TIMEOUT_SECS)
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(120);

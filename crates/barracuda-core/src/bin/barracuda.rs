@@ -7,6 +7,7 @@
 //! - Subcommands: `server`, `service`, `doctor`, `validate`, `version`
 
 use barracuda_core::BarraCudaPrimal;
+use barracuda_core::env_keys;
 use barracuda_core::health::PrimalHealth;
 use barracuda_core::lifecycle::PrimalLifecycle;
 use clap::{Parser, Subcommand};
@@ -626,7 +627,7 @@ async fn run_service_mode() -> Result<(), barracuda_core::error::BarracudaCoreEr
 /// Returns a guard that removes the file on drop.
 fn write_pid_file() -> Option<PidFileGuard> {
     let ns = barracuda_core::PRIMAL_NAMESPACE;
-    let dir = std::env::var("XDG_RUNTIME_DIR").ok()?;
+    let dir = std::env::var(env_keys::XDG_RUNTIME_DIR).ok()?;
     let dir = std::path::PathBuf::from(dir).join(ns);
     std::fs::create_dir_all(&dir).ok()?;
     let path = dir.join(format!("{ns}.pid"));
@@ -650,7 +651,7 @@ impl Drop for PidFileGuard {
 /// Send READY=1 to `NOTIFY_SOCKET` for systemd Type=notify (best-effort).
 #[cfg(unix)]
 fn notify_systemd_ready() {
-    let Ok(socket_path) = std::env::var("NOTIFY_SOCKET") else {
+    let Ok(socket_path) = std::env::var(env_keys::NOTIFY_SOCKET) else {
         return;
     };
     let sock = match std::os::unix::net::UnixDatagram::unbound() {
@@ -702,7 +703,7 @@ fn resolve_client_addr(
         return Ok(addr.to_string());
     }
 
-    if let Ok(addr) = std::env::var("BARRACUDA_IPC_BIND") {
+    if let Ok(addr) = std::env::var(env_keys::BARRACUDA_IPC_BIND) {
         return Ok(addr);
     }
 

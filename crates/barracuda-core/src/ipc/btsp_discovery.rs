@@ -11,12 +11,13 @@
 
 use super::btsp::{read_ndjson_line, write_ndjson_line};
 use super::transport::{resolve_family_id, resolve_socket_dir};
+use crate::env_keys;
 
 const SECURITY_DOMAIN: &str = "crypto";
 
 /// Discover the security-domain socket for BTSP handshake delegation.
 pub(super) fn discover_security_provider() -> Option<std::path::PathBuf> {
-    for var in ["BTSP_PROVIDER_SOCKET", "BEARDOG_SOCKET"] {
+    for var in [env_keys::BTSP_PROVIDER_SOCKET, env_keys::BEARDOG_SOCKET] {
         if let Ok(path) = std::env::var(var) {
             let p = std::path::PathBuf::from(&path);
             if p.exists() {
@@ -44,7 +45,7 @@ pub(super) fn discover_security_provider() -> Option<std::path::PathBuf> {
 
 /// Resolve a capability via Songbird's `DISCOVERY_SOCKET` using `ipc.resolve`.
 pub(super) async fn resolve_via_discovery_socket(capability: &str) -> Option<std::path::PathBuf> {
-    let discovery_path = std::env::var("DISCOVERY_SOCKET").ok()?;
+    let discovery_path = std::env::var(env_keys::DISCOVERY_SOCKET).ok()?;
     let discovery_path = std::path::Path::new(&discovery_path);
     if !discovery_path.exists() {
         tracing::debug!(

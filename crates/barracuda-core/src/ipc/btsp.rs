@@ -703,10 +703,10 @@ async fn security_provider_rpc(
 /// base64-decodes the `family_seed` parameter in `btsp.session.create`
 /// to recover raw key bytes, so we must encode the env string's bytes.
 fn resolve_family_seed_raw() -> Option<String> {
-    let raw = std::env::var("BTSP_FAMILY_SEED")
-        .or_else(|_| std::env::var("FAMILY_SEED"))
-        .or_else(|_| std::env::var("BIOMEOS_FAMILY_SEED"))
-        .or_else(|_| std::env::var("BEARDOG_FAMILY_SEED"))
+    let raw = std::env::var(crate::env_keys::BTSP_FAMILY_SEED)
+        .or_else(|_| std::env::var(crate::env_keys::FAMILY_SEED))
+        .or_else(|_| std::env::var(crate::env_keys::BIOMEOS_FAMILY_SEED))
+        .or_else(|_| std::env::var(crate::env_keys::BEARDOG_FAMILY_SEED))
         .ok()
         .filter(|s| !s.is_empty())?;
     use base64ct::{Base64, Encoding};

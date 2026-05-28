@@ -14,6 +14,8 @@
 
 use std::process;
 
+use crate::env_keys;
+
 /// How a tolerance threshold is applied.
 #[derive(Debug, Clone, Copy)]
 pub enum ToleranceMode {
@@ -302,7 +304,7 @@ fn parse_gpu_required(val: Option<&str>) -> bool {
 /// instead of silently skipping. For CI pipelines with a known-good GPU.
 #[must_use]
 pub fn gpu_required() -> bool {
-    parse_gpu_required(std::env::var("BARRACUDA_REQUIRE_GPU").ok().as_deref())
+    parse_gpu_required(std::env::var(env_keys::BARRACUDA_REQUIRE_GPU).ok().as_deref())
 }
 
 /// Handle the absence of a GPU adapter in a validation binary.

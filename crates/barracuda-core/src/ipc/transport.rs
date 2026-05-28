@@ -8,6 +8,7 @@
 use super::jsonrpc::{JsonRpcRequest, JsonRpcResponse};
 use super::methods;
 use crate::BarraCudaPrimal;
+use crate::env_keys;
 use barracuda::error::Result;
 use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
@@ -17,14 +18,14 @@ const DEFAULT_MAX_FRAME_BYTES: usize = 256 * 1024 * 1024;
 const DEFAULT_MAX_CONNECTIONS: usize = 10;
 
 static MAX_FRAME_BYTES: std::sync::LazyLock<usize> = std::sync::LazyLock::new(|| {
-    std::env::var("BARRACUDA_MAX_FRAME_BYTES")
+    std::env::var(env_keys::BARRACUDA_MAX_FRAME_BYTES)
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(DEFAULT_MAX_FRAME_BYTES)
 });
 
 static MAX_CONNECTIONS: std::sync::LazyLock<usize> = std::sync::LazyLock::new(|| {
-    std::env::var("BARRACUDA_MAX_CONNECTIONS")
+    std::env::var(env_keys::BARRACUDA_MAX_CONNECTIONS)
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(DEFAULT_MAX_CONNECTIONS)
@@ -43,7 +44,7 @@ pub const DEFAULT_BIND_HOST: &str = "127.0.0.1";
 
 /// Resolve TCP bind host: `BARRACUDA_IPC_HOST` → [`DEFAULT_BIND_HOST`].
 pub fn resolve_bind_host() -> String {
-    std::env::var("BARRACUDA_IPC_HOST").unwrap_or_else(|_| DEFAULT_BIND_HOST.to_string())
+    std::env::var(env_keys::BARRACUDA_IPC_HOST).unwrap_or_else(|_| DEFAULT_BIND_HOST.to_string())
 }
 
 /// Default family ID when no `FAMILY_ID` env var is set.
@@ -57,7 +58,11 @@ pub(crate) const DEFAULT_ECOSYSTEM_SOCKET_DIR: &str = "biomeos";
 /// Precedence: `BARRACUDA_FAMILY_ID` → `FAMILY_ID` → `BIOMEOS_FAMILY_ID` (legacy).
 /// Returns `None` when unset or `"default"`.
 pub fn resolve_family_id() -> Option<String> {
-    const KEYS: &[&str] = &["BARRACUDA_FAMILY_ID", "FAMILY_ID", "BIOMEOS_FAMILY_ID"];
+    const KEYS: &[&str] = &[
+        env_keys::BARRACUDA_FAMILY_ID,
+        env_keys::FAMILY_ID,
+        env_keys::BIOMEOS_FAMILY_ID,
+    ];
     for key in KEYS {
         if let Ok(val) = std::env::var(key) {
             if !val.is_empty() && val != DEFAULT_FAMILY_ID {
@@ -72,10 +77,10 @@ pub fn resolve_family_id() -> Option<String> {
 ///
 /// Resolution: `BIOMEOS_SOCKET_DIR` → `$XDG_RUNTIME_DIR/biomeos` → `$TMPDIR/biomeos`.
 pub fn resolve_socket_dir() -> std::path::PathBuf {
-    if let Ok(dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
+    if let Ok(dir) = std::env::var(env_keys::BIOMEOS_SOCKET_DIR) {
         return std::path::PathBuf::from(dir);
     }
-    let base = std::env::var("XDG_RUNTIME_DIR")
+    let base = std::env::var(env_keys::XDG_RUNTIME_DIR)
         .map_or_else(|_| std::env::temp_dir(), std::path::PathBuf::from);
     base.join(DEFAULT_ECOSYSTEM_SOCKET_DIR)
 }
@@ -86,7 +91,7 @@ pub fn resolve_socket_dir() -> std::path::PathBuf {
 /// AND skip authentication.
 pub fn validate_insecure_guard() -> crate::error::Result<()> {
     let family_id = resolve_family_id();
-    let insecure = std::env::var("BIOMEOS_INSECURE")
+    let insecure = std::env::var(env_keys::BIOMEOS_INSECURE)
         .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
         .unwrap_or(false);
     if let Some(ref fid) = family_id {
@@ -107,12 +112,12 @@ pub fn resolve_bind_address(explicit: Option<&str>) -> String {
     if let Some(addr) = explicit {
         return addr.to_string();
     }
-    if let Ok(addr) = std::env::var("BARRACUDA_IPC_BIND") {
+    if let Ok(addr) = std::env::var(env_keys::BARRACUDA_IPC_BIND) {
         return addr;
     }
     let host =
-        std::env::var("BARRACUDA_IPC_HOST").unwrap_or_else(|_| DEFAULT_BIND_HOST.to_string());
-    std::env::var("BARRACUDA_IPC_PORT")
+        std::env::var(env_keys::BARRACUDA_IPC_HOST).unwrap_or_else(|_| DEFAULT_BIND_HOST.to_string());
+    std::env::var(env_keys::BARRACUDA_IPC_PORT)
         .map_or_else(|_| format!("{host}:0"), |port| format!("{host}:{port}"))
 }
 
@@ -493,7 +498,7 @@ impl IpcServer {
     /// Per `plasmidBin/ports.env`, each primal has a canonical TCP port assigned
     /// via `{PRIMAL}_PORT` env var. When set, the server binds TCP alongside UDS.
     pub fn default_tcp_port() -> Option<u16> {
-        std::env::var("BARRACUDA_PORT")
+        std::env::var(env_keys::BARRACUDA_PORT)
             .ok()
             .and_then(|v| v.parse().ok())
     }

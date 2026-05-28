@@ -127,7 +127,7 @@ impl EnforcementMode {
     /// Defaults to `Permissive` if unset or unrecognized.
     #[must_use]
     pub fn from_env() -> Self {
-        match std::env::var("BARRACUDA_AUTH_MODE")
+        match std::env::var(crate::env_keys::BARRACUDA_AUTH_MODE)
             .unwrap_or_default()
             .to_lowercase()
             .as_str()

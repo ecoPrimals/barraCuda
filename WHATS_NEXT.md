@@ -1,11 +1,17 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-05-27.
+Prioritized work items, ordered by impact. Updated 2026-06-01.
 
 ---
 
 ## Recently Completed
 
+- **Wave 67: Transport Split + Dep Bump (Jun 1)**:
+  Split `transport.rs` (805L → 707L) by extracting config/resolution utilities into
+  `transport_config.rs` (113L). Natural cohesion boundary: env resolution, socket paths,
+  bind address logic live separately from server accept loops and frame handlers.
+  Bumped `tokio` 1.50 → 1.52. Zero debt markers (TODO/FIXME/HACK), zero clippy warnings,
+  zero production `unwrap()`. Audit confirms no stale deps, no `#[allow(`, no `Box<dyn Error>`.
 - **Wave 54: Graceful GPU-less Survival (May 27)**:
   Added `--no-gpu-probe` CLI flag and `BARRACUDA_NO_GPU_PROBE` env var. When set,
   wgpu adapter enumeration is skipped entirely — instant startup in cpu-shader-only

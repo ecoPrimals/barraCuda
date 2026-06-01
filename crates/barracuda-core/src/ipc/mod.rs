@@ -139,6 +139,7 @@ pub mod method_gate;
 pub mod methods;
 pub mod neural_announce;
 pub mod transport;
+pub mod transport_config;
 
 pub use btsp::{BtspCipher, BtspSession};
 pub use btsp_frame::{BtspFrameError, BtspFrameReader, BtspFrameWriter};

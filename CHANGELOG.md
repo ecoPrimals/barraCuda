@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Changed — Wave 67: Transport Split + Dep Bump (Jun 1 2026)
+
+- Extracted `transport_config.rs` (113L) from `transport.rs` (805L → 707L): env resolution,
+  socket paths, bind address, family ID, insecure guard — natural cohesion boundary
+- Bumped `tokio` workspace dep 1.50 → 1.52 (resolved to 1.52.3)
+- Re-exports maintain full backward compatibility (`ipc::transport::resolve_*` paths unchanged)
+- Full audit clean: zero TODO/FIXME/HACK, zero `#[allow(`, zero production `unwrap()`
+
 ### Added — Wave 54: Graceful GPU-less Survival (May 27 2026)
 
 - `--no-gpu-probe` CLI flag on `server` subcommand: skips wgpu adapter enumeration,

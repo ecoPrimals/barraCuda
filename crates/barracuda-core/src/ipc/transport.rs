@@ -4,9 +4,16 @@
 //! Transport-agnostic JSON-RPC 2.0 handler over any `AsyncRead + AsyncWrite`.
 //! Supports Unix domain sockets (primary) and TCP (fallback), per
 //! wateringHole `UNIVERSAL_IPC_STANDARD_V3.md` and `ECOBIN_ARCHITECTURE_STANDARD.md`.
+//!
+//! Configuration utilities (bind address resolution, socket paths, env vars) live
+//! in the sibling [`super::transport_config`] module.
 
 use super::jsonrpc::{JsonRpcRequest, JsonRpcResponse};
 use super::methods;
+pub use super::transport_config::{
+    DEFAULT_BIND_HOST, DEFAULT_ECOSYSTEM_SOCKET_DIR, discovery_socket_path, resolve_bind_address,
+    resolve_bind_host, resolve_family_id, resolve_socket_dir, validate_insecure_guard,
+};
 use crate::BarraCudaPrimal;
 use crate::env_keys;
 use barracuda::error::Result;
@@ -37,110 +44,6 @@ fn max_frame_bytes() -> usize {
 
 fn max_connections() -> usize {
     *MAX_CONNECTIONS
-}
-
-/// Default TCP bind host (`127.0.0.1` = localhost-only).
-pub const DEFAULT_BIND_HOST: &str = "127.0.0.1";
-
-/// Resolve TCP bind host: `BARRACUDA_IPC_HOST` → [`DEFAULT_BIND_HOST`].
-pub fn resolve_bind_host() -> String {
-    std::env::var(env_keys::BARRACUDA_IPC_HOST).unwrap_or_else(|_| DEFAULT_BIND_HOST.to_string())
-}
-
-/// Default family ID when no `FAMILY_ID` env var is set.
-const DEFAULT_FAMILY_ID: &str = "default";
-
-/// Ecosystem socket namespace. Override via `BIOMEOS_SOCKET_DIR`.
-pub(crate) const DEFAULT_ECOSYSTEM_SOCKET_DIR: &str = "biomeos";
-
-/// Resolve the family ID per `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §4.
-///
-/// Precedence: `BARRACUDA_FAMILY_ID` → `FAMILY_ID` → `BIOMEOS_FAMILY_ID` (legacy).
-/// Returns `None` when unset or `"default"`.
-pub fn resolve_family_id() -> Option<String> {
-    const KEYS: &[&str] = &[
-        env_keys::BARRACUDA_FAMILY_ID,
-        env_keys::FAMILY_ID,
-        env_keys::BIOMEOS_FAMILY_ID,
-    ];
-    for key in KEYS {
-        if let Ok(val) = std::env::var(key) {
-            if !val.is_empty() && val != DEFAULT_FAMILY_ID {
-                return Some(val);
-            }
-        }
-    }
-    None
-}
-
-/// Resolve the socket directory per `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §3.
-///
-/// Resolution: `BIOMEOS_SOCKET_DIR` → `$XDG_RUNTIME_DIR/biomeos` → `$TMPDIR/biomeos`.
-pub fn resolve_socket_dir() -> std::path::PathBuf {
-    if let Ok(dir) = std::env::var(env_keys::BIOMEOS_SOCKET_DIR) {
-        return std::path::PathBuf::from(dir);
-    }
-    let base = std::env::var(env_keys::XDG_RUNTIME_DIR)
-        .map_or_else(|_| std::env::temp_dir(), std::path::PathBuf::from);
-    base.join(DEFAULT_ECOSYSTEM_SOCKET_DIR)
-}
-
-/// Validates that `FAMILY_ID` + `BIOMEOS_INSECURE=1` are never both set.
-///
-/// Per `BTSP_PROTOCOL_STANDARD.md` §Compliance: you cannot claim a family
-/// AND skip authentication.
-pub fn validate_insecure_guard() -> crate::error::Result<()> {
-    let family_id = resolve_family_id();
-    let insecure = std::env::var(env_keys::BIOMEOS_INSECURE)
-        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-        .unwrap_or(false);
-    if let Some(ref fid) = family_id {
-        if insecure {
-            return Err(crate::error::BarracudaCoreError::lifecycle(format!(
-                "FAMILY_ID={fid} but BIOMEOS_INSECURE=1 — cannot claim a family \
-                 and skip authentication. Unset one or the other. \
-                 See BTSP_PROTOCOL_STANDARD.md §Compliance."
-            )));
-        }
-    }
-    Ok(())
-}
-
-/// Resolve TCP bind address: `explicit` → `BARRACUDA_IPC_BIND` →
-/// `BARRACUDA_IPC_HOST:BARRACUDA_IPC_PORT` → `127.0.0.1:0`.
-pub fn resolve_bind_address(explicit: Option<&str>) -> String {
-    if let Some(addr) = explicit {
-        return addr.to_string();
-    }
-    if let Ok(addr) = std::env::var(env_keys::BARRACUDA_IPC_BIND) {
-        return addr;
-    }
-    let host =
-        std::env::var(env_keys::BARRACUDA_IPC_HOST).unwrap_or_else(|_| DEFAULT_BIND_HOST.to_string());
-    std::env::var(env_keys::BARRACUDA_IPC_PORT)
-        .map_or_else(|_| format!("{host}:0"), |port| format!("{host}:{port}"))
-}
-
-/// Return the canonical UDS path that biomeOS uses to reach this primal.
-///
-/// Used in `primal.announce` so biomeOS can route `capability.call` traffic
-/// directly. Format: `$XDG_RUNTIME_DIR/biomeos/{domain}[-{family}].sock`.
-#[cfg(unix)]
-#[must_use]
-pub fn discovery_socket_path() -> String {
-    let dir = resolve_socket_dir();
-    let domain = crate::PRIMAL_DOMAIN;
-    let sock_name = match resolve_family_id() {
-        Some(family_id) => format!("{domain}-{family_id}.sock"),
-        None => format!("{domain}.sock"),
-    };
-    dir.join(sock_name).to_string_lossy().into_owned()
-}
-
-#[cfg(not(unix))]
-#[must_use]
-pub fn discovery_socket_path() -> String {
-    String::from("unsupported")
 }
 
 /// IPC server for barraCuda primal.

@@ -117,7 +117,7 @@ missing_docs = "warn"
 
 [workspace.dependencies]
 # Async runtime — minimal feature set (no fs, process)
-tokio = { version = "1.50", features = [
+tokio = { version = "1.52", features = [
     "rt", "rt-multi-thread", "macros", "net", "sync", "io-util", "time", "signal",
 ] }
 

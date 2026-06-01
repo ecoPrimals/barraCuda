@@ -68,6 +68,9 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     "precision.route",
     // ── Compute ───────────────────────────────────────────────────────
     "compute.dispatch",
+    "compute.dispatch.capabilities",
+    "compute.dispatch.submit",
+    "compute.dispatch.result",
     // ── Math & activation (CPU) ───────────────────────────────────────
     "math.sigmoid",
     "math.log2",
@@ -233,6 +236,9 @@ pub async fn dispatch(
         "precision.route" => precision::precision_route(primal, params, id),
         // Compute
         "compute.dispatch" => compute::compute_dispatch(primal, params, id).await,
+        "compute.dispatch.capabilities" => compute::dispatch_capabilities(primal, id),
+        "compute.dispatch.submit" => compute::dispatch_submit(primal, params, id).await,
+        "compute.dispatch.result" => compute::dispatch_result(params, id),
         // Math & activation (CPU)
         "math.sigmoid" => math::math_sigmoid(params, id),
         "math.log2" => math::math_log2(params, id),

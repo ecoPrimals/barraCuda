@@ -6,12 +6,14 @@ Prioritized work items, ordered by impact. Updated 2026-06-01.
 
 ## Recently Completed
 
-- **Wave 67: Transport Split + Dep Bump (Jun 1)**:
-  Split `transport.rs` (805L → 707L) by extracting config/resolution utilities into
-  `transport_config.rs` (113L). Natural cohesion boundary: env resolution, socket paths,
-  bind address logic live separately from server accept loops and frame handlers.
-  Bumped `tokio` 1.50 → 1.52. Zero debt markers (TODO/FIXME/HACK), zero clippy warnings,
-  zero production `unwrap()`. Audit confirms no stale deps, no `#[allow(`, no `Box<dyn Error>`.
+- **Wave 67: Cross-Gate Dispatch Pipeline + Transport Split (Jun 1)**:
+  Implemented 3 new IPC methods for hotSpring cross-gate compute dispatch pipeline:
+  `compute.dispatch.capabilities` (GPU/CPU capability reporting for routing),
+  `compute.dispatch.submit` (shader binary + input → job execution → job_id),
+  `compute.dispatch.result` (job_id → output data retrieval). Wire-compatible with
+  hotSpring's `cross_gate.rs` contract. 9 new tests. Method count 87 → 90.
+  Also: split `transport.rs` (805L → 707L + `transport_config.rs` 113L), bumped
+  `tokio` 1.50 → 1.52. Full audit clean: zero debt markers, zero clippy warnings.
 - **Wave 54: Graceful GPU-less Survival (May 27)**:
   Added `--no-gpu-probe` CLI flag and `BARRACUDA_NO_GPU_PROBE` env var. When set,
   wgpu adapter enumeration is skipped entirely — instant startup in cpu-shader-only

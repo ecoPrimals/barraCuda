@@ -8,6 +8,7 @@
 //! Organised by domain following the Sprint 37 `methods_tests/` pattern.
 
 mod compute_tests;
+mod dispatch_pipeline_tests;
 mod fhe_tests;
 mod math_stats_tests;
 mod ml_tests;

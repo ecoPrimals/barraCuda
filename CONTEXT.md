@@ -42,7 +42,7 @@ traits are fully internalized.
 - **NagaExecutor** — CPU interpreter for naga IR (shader-first execution without GPU)
 - **Sovereign compiler** — naga IR optimizer with FMA fusion and dead expr elimination
 
-## IPC Method Surface (87 methods)
+## IPC Method Surface (90 methods)
 
 | Domain | Methods |
 |--------|---------|
@@ -72,7 +72,7 @@ traits are fully internalized.
 | `fhe.*` | `ntt`, `pointwise_mul` |
 | `btsp.*` | `negotiate`, `capabilities` |
 
-87 methods following wateringHole `{domain}.{operation}` Semantic Method Naming Standard. Wire Standard L2 compliant. Neural API announce on startup. BTSP Phase 3 encryption.
+90 methods following wateringHole `{domain}.{operation}` Semantic Method Naming Standard. Wire Standard L2 compliant. Neural API announce on startup. BTSP Phase 3 encryption.
 
 ## Deployment Constraints
 

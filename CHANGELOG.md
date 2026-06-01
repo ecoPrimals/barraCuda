@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Added — Wave 67: Cross-Gate Dispatch Pipeline (Jun 1 2026)
+
+- `compute.dispatch.capabilities` IPC method: reports GPU/CPU capabilities for
+  cross-gate routing (f32, f64, tensor_ops, spirv_passthrough, cpu math/stats)
+- `compute.dispatch.submit` IPC method: accepts compiled shader binary (base64) +
+  input data array, executes on GPU (or CPU fallback), returns `job_id`
+- `compute.dispatch.result` IPC method: retrieves output data for a submitted job
+- Wire-compatible with hotSpring's `cross_gate.rs` pipeline contract:
+  `capability.call → dispatch.capabilities/submit/result`
+- 9 new tests covering full pipeline roundtrip (capabilities → submit → result)
+- Method count: 87 → 90
+
 ### Changed — Wave 67: Transport Split + Dep Bump (Jun 1 2026)
 
 - Extracted `transport_config.rs` (113L) from `transport.rs` (805L → 707L): env resolution,

@@ -44,17 +44,35 @@ async fn submit_missing_input_returns_invalid_params() {
 }
 
 #[tokio::test]
-async fn submit_empty_data_returns_invalid_params() {
+async fn submit_empty_data_returns_failed_status() {
     let primal = test_primal();
     let params = serde_json::json!({
         "input": {"data": [], "format": "f64_array"},
-        "binary_b64": "placeholder",
         "spring": "hotSpring",
     });
     let resp = dispatch_submit(&primal, &params, serde_json::json!(2)).await;
-    let err = resp.error.expect("empty data should fail");
-    assert_eq!(err.code, jsonrpc::INVALID_PARAMS);
-    assert!(err.message.contains("non-empty"));
+    assert!(resp.error.is_none(), "should return success envelope with failed status");
+    let result = resp.result.expect("should have result");
+    assert_eq!(result["status"], "failed");
+    assert!(result["error"].as_str().unwrap_or("").contains("non-empty"));
+}
+
+#[tokio::test]
+async fn submit_with_binary_and_no_toadstool_falls_back() {
+    let primal = test_primal();
+    let params = serde_json::json!({
+        "binary_b64": "AQIDBAU=",
+        "input": {"data": [1.0, 2.0, 3.0], "format": "f64_array"},
+        "input_hash": "abc",
+        "spring": "hotSpring",
+        "dispatch_mode": "passthrough",
+    });
+    let resp = dispatch_submit(&primal, &params, serde_json::json!(20)).await;
+    assert!(resp.error.is_none());
+    let result = resp.result.expect("should have result");
+    assert_eq!(result["status"], "completed");
+    assert_eq!(result["routed"], false);
+    assert!(result["note"].as_str().unwrap_or("").contains("toadStool"));
 }
 
 #[tokio::test]

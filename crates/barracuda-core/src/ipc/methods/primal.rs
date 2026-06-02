@@ -52,7 +52,7 @@ pub(super) fn capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcRespon
             "version": version,
             "methods": REGISTERED_METHODS,
             "provided_capabilities": provided_capabilities,
-            "consumed_capabilities": ["shader.compile.cpu", "shader.validate", "compute.dispatch"],
+            "consumed_capabilities": ["shader.compile.cpu", "shader.validate", "compute.dispatch", "compute.dispatch.submit"],
             "provides": provides_list,
             "requires": [
                 { "id": "shader.compile", "version": ">=0.1.0", "optional": true },

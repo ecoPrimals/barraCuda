@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Changed — Wave 67: Sovereign Compute FRAGO (Jun 1 2026)
+
+- Evolved `compute.dispatch.submit` wire contract per hotSpring FRAGO:
+  - Mode 1 (shader binary): when `binary_b64` present, resolves toadStool via
+    Songbird `ipc.resolve` and forwards full request; falls back to tensor
+    passthrough with `"routed": false` + explicit note when toadStool unavailable
+  - Mode 2 (tensor): when no binary, pure tensor passthrough (unchanged)
+  - Response always includes `"routed": bool` for pipeline transparency
+- Added toadStool capability resolution via `DISCOVERY_SOCKET` `ipc.resolve`
+- `consumed_capabilities` now advertises `"compute.dispatch.submit"` (toadStool dependency)
+- 10 tests (was 9): added `submit_with_binary_and_no_toadstool_falls_back`
+
 ### Added — Wave 67: Cross-Gate Dispatch Pipeline (Jun 1 2026)
 
 - `compute.dispatch.capabilities` IPC method: reports GPU/CPU capabilities for

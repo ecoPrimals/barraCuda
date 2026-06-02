@@ -182,25 +182,145 @@ pub(super) fn dispatch_capabilities(primal: &BarraCudaPrimal, id: Value) -> Json
     )
 }
 
-/// `compute.dispatch.submit` — Accept a shader workload for GPU execution.
+/// `compute.dispatch.submit` — Accept a shader or tensor workload.
 ///
-/// Wire contract (per hotSpring `compute_dispatch/mod.rs`):
-/// - `binary_b64`: base64-encoded compiled shader binary (SPIR-V or WGSL)
+/// Two modes of operation:
+///
+/// ## Mode 1: Shader binary dispatch (when `binary_b64` is present)
+///
+/// hotSpring sends compiled SPIR-V/PTX binaries from coralReef with:
+/// - `binary_b64`: base64-encoded compiled shader binary
 /// - `input`: `{"data": [f64], "format": "f64_array"}`
-/// - `input_hash`: BLAKE3 hex hash of serialized input (integrity check)
-/// - `spring`: calling spring name (provenance)
-/// - `dispatch_mode`: "passthrough" (execute directly)
-/// - `shader_info`: optional shader metadata from coralReef compilation
+/// - `input_hash`: BLAKE3 hex of serialized input
+/// - `shader_info`: coralReef metadata (workgroup size, bindings, etc.)
+/// - `bindings`: buffer binding descriptors
+/// - `dispatch_mode`: "passthrough"
 /// - `bdf`: optional PCI BDF for GPU targeting
+/// - `spring`: calling spring name
 ///
-/// Returns `{"job_id": str, "status": "completed"|"failed"}`.
+/// When a binary is present, barraCuda attempts to resolve toadStool via
+/// Songbird `ipc.resolve` (capability: `"compute.dispatch.submit"`) and
+/// forwards the full request. If toadStool is unavailable, falls back to
+/// tensor passthrough with `"routed": false` in the response.
 ///
-/// Because barraCuda does not currently execute arbitrary SPIR-V binaries
-/// (that's toadStool's role), this handler accepts the workload, stores
-/// the input as a tensor, and returns the tensor readback as the result.
-/// This provides the wire-format compatibility that the cross-gate pipeline
-/// needs while the full sovereign shader dispatch path is built.
+/// ## Mode 2: Tensor passthrough (no `binary_b64`)
+///
+/// When no shader binary is provided, treats `input.data` as raw tensor
+/// data: uploads to GPU, reads back, stores in job store.
+///
+/// ## Returns
+///
+/// `{"job_id": str, "status": "completed"|"failed", "routed": bool, ...}`
 pub(super) async fn dispatch_submit(
+    primal: &BarraCudaPrimal,
+    params: &Value,
+    id: Value,
+) -> JsonRpcResponse {
+    let has_binary = params.get("binary_b64").is_some();
+
+    if has_binary {
+        return dispatch_submit_shader(primal, params, id).await;
+    }
+
+    dispatch_submit_tensor(primal, params, id).await
+}
+
+/// Shader binary dispatch — attempt toadStool routing, fall back to tensor passthrough.
+async fn dispatch_submit_shader(
+    primal: &BarraCudaPrimal,
+    params: &Value,
+    id: Value,
+) -> JsonRpcResponse {
+    if let Some(result) = try_forward_to_toadstool(params).await {
+        let job_id = generate_job_id();
+        let job = DispatchJob {
+            status: "completed",
+            output: Some(result),
+            error: None,
+        };
+        if let Ok(mut store) = JOB_STORE.write() {
+            store.insert(job_id.clone(), job);
+        }
+        return JsonRpcResponse::success(
+            id,
+            serde_json::json!({
+                "job_id": job_id,
+                "status": "completed",
+                "routed": true,
+                "routed_to": "toadStool",
+            }),
+        );
+    }
+
+    tracing::debug!(
+        "compute.dispatch.submit: binary_b64 present but toadStool unavailable, \
+         falling back to tensor passthrough"
+    );
+
+    let input_data = params
+        .get("input")
+        .and_then(|i| i.get("data"))
+        .and_then(|d| d.as_array());
+
+    let Some(data_arr) = input_data else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Shader binary provided but toadStool unavailable, and no input.data \
+             for tensor fallback. Either deploy toadStool or provide input.data.",
+        );
+    };
+
+    let mut resp = dispatch_submit_tensor_inner(primal, data_arr).await;
+    if let Some(ref mut output) = resp.output {
+        if let Some(obj) = output.as_object_mut() {
+            obj.insert("routed".into(), Value::Bool(false));
+            obj.insert(
+                "note".into(),
+                Value::String(
+                    "binary_b64 ignored — toadStool not available for shader dispatch; \
+                     tensor passthrough used"
+                        .into(),
+                ),
+            );
+        }
+    }
+
+    let job_id = generate_job_id();
+    let status = resp.status;
+    let error = resp.error.clone();
+    let n = data_arr.len();
+
+    if let Ok(mut store) = JOB_STORE.write() {
+        store.insert(job_id.clone(), resp);
+    }
+
+    if status == "completed" {
+        JsonRpcResponse::success(
+            id,
+            serde_json::json!({
+                "job_id": job_id,
+                "status": "completed",
+                "routed": false,
+                "elements": n,
+                "note": "binary_b64 present but toadStool unavailable — tensor passthrough used",
+            }),
+        )
+    } else {
+        JsonRpcResponse::success(
+            id,
+            serde_json::json!({
+                "job_id": job_id,
+                "status": "failed",
+                "routed": false,
+                "error": error,
+            }),
+        )
+    }
+}
+
+/// Tensor passthrough dispatch — upload input to GPU, read back, store result.
+async fn dispatch_submit_tensor(
     primal: &BarraCudaPrimal,
     params: &Value,
     id: Value,
@@ -218,62 +338,11 @@ pub(super) async fn dispatch_submit(
         );
     };
 
-    let data: Vec<f32> = data_arr
-        .iter()
-        .filter_map(|v| v.as_f64().map(|f| f as f32))
-        .collect();
-
-    if data.is_empty() {
-        return JsonRpcResponse::error(id, INVALID_PARAMS, "input.data must be non-empty");
-    }
-
+    let result = dispatch_submit_tensor_inner(primal, data_arr).await;
     let job_id = generate_job_id();
-    let n = data.len();
-
-    let result = if let Some(dev) = primal.device() {
-        match barracuda::tensor::Tensor::from_data(&data, vec![n], dev) {
-            Ok(tensor) => match tensor.to_vec() {
-                Ok(output) => {
-                    let output_value = serde_json::json!({
-                        "output": output,
-                        "format": "f32_array",
-                        "substrate": "gpu",
-                        "shape": [n],
-                    });
-                    DispatchJob {
-                        status: "completed",
-                        output: Some(output_value),
-                        error: None,
-                    }
-                }
-                Err(e) => DispatchJob {
-                    status: "failed",
-                    output: None,
-                    error: Some(format!("GPU readback failed: {e}")),
-                },
-            },
-            Err(e) => DispatchJob {
-                status: "failed",
-                output: None,
-                error: Some(format!("GPU tensor creation failed: {e}")),
-            },
-        }
-    } else {
-        let output_value = serde_json::json!({
-            "output": data,
-            "format": "f32_array",
-            "substrate": "cpu_fallback",
-            "shape": [n],
-        });
-        DispatchJob {
-            status: "completed",
-            output: Some(output_value),
-            error: None,
-        }
-    };
-
     let status = result.status;
     let error = result.error.clone();
+    let n = data_arr.len();
 
     if let Ok(mut store) = JOB_STORE.write() {
         store.insert(job_id.clone(), result);
@@ -285,6 +354,7 @@ pub(super) async fn dispatch_submit(
             serde_json::json!({
                 "job_id": job_id,
                 "status": "completed",
+                "routed": false,
                 "elements": n,
             }),
         )
@@ -298,6 +368,133 @@ pub(super) async fn dispatch_submit(
             }),
         )
     }
+}
+
+/// Core tensor passthrough logic shared by both shader-fallback and tensor modes.
+async fn dispatch_submit_tensor_inner(
+    primal: &BarraCudaPrimal,
+    data_arr: &[Value],
+) -> DispatchJob {
+    let data: Vec<f32> = data_arr
+        .iter()
+        .filter_map(|v| v.as_f64().map(|f| f as f32))
+        .collect();
+
+    if data.is_empty() {
+        return DispatchJob {
+            status: "failed",
+            output: None,
+            error: Some("input.data must be non-empty".into()),
+        };
+    }
+
+    let n = data.len();
+
+    if let Some(dev) = primal.device() {
+        match barracuda::tensor::Tensor::from_data(&data, vec![n], dev) {
+            Ok(tensor) => match tensor.to_vec() {
+                Ok(output) => DispatchJob {
+                    status: "completed",
+                    output: Some(serde_json::json!({
+                        "output": output,
+                        "format": "f32_array",
+                        "substrate": "gpu",
+                        "shape": [n],
+                    })),
+                    error: None,
+                },
+                Err(e) => DispatchJob {
+                    status: "failed",
+                    output: None,
+                    error: Some(format!("GPU readback failed: {e}")),
+                },
+            },
+            Err(e) => DispatchJob {
+                status: "failed",
+                output: None,
+                error: Some(format!("GPU tensor creation failed: {e}")),
+            },
+        }
+    } else {
+        DispatchJob {
+            status: "completed",
+            output: Some(serde_json::json!({
+                "output": data,
+                "format": "f32_array",
+                "substrate": "cpu_fallback",
+                "shape": [n],
+            })),
+            error: None,
+        }
+    }
+}
+
+/// Attempt to forward a shader dispatch request to toadStool via Songbird.
+///
+/// Resolution chain:
+/// 1. `DISCOVERY_SOCKET` → `ipc.resolve { capability: "compute.dispatch.submit" }`
+/// 2. If resolved: forward full params as `compute.dispatch.submit` JSON-RPC
+/// 3. Returns `Some(result)` on success, `None` if toadStool unavailable
+async fn try_forward_to_toadstool(params: &Value) -> Option<Value> {
+    let discovery_path = std::env::var(crate::env_keys::DISCOVERY_SOCKET).ok()?;
+    let discovery_path = std::path::Path::new(&discovery_path);
+    if !discovery_path.exists() {
+        return None;
+    }
+
+    let stream = tokio::net::UnixStream::connect(discovery_path).await.ok()?;
+    let (reader, mut writer) = stream.into_split();
+    let mut buf_reader = tokio::io::BufReader::new(reader);
+
+    let resolve_req = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": "ipc.resolve",
+        "params": { "capability": "compute.dispatch.submit" },
+        "id": 1
+    });
+    let mut line = serde_json::to_string(&resolve_req).ok()?;
+    line.push('\n');
+    tokio::io::AsyncWriteExt::write_all(&mut writer, line.as_bytes())
+        .await
+        .ok()?;
+
+    use tokio::io::AsyncBufReadExt;
+    let mut resp_line = String::new();
+    buf_reader.read_line(&mut resp_line).await.ok()?;
+    let resp: Value = serde_json::from_str(resp_line.trim()).ok()?;
+
+    let result = resp.get("result")?;
+    let unix_addr = result
+        .get("unix")
+        .or_else(|| result.get("socket"))
+        .and_then(|v| v.as_str())?;
+    let sock_path =
+        std::path::PathBuf::from(unix_addr.trim_start_matches("unix://"));
+    if !sock_path.exists() {
+        return None;
+    }
+
+    let ts_stream = tokio::net::UnixStream::connect(&sock_path).await.ok()?;
+    let (ts_reader, mut ts_writer) = ts_stream.into_split();
+    let mut ts_buf = tokio::io::BufReader::new(ts_reader);
+
+    let forward_req = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": "compute.dispatch.submit",
+        "params": params,
+        "id": 1
+    });
+    let mut fwd_line = serde_json::to_string(&forward_req).ok()?;
+    fwd_line.push('\n');
+    tokio::io::AsyncWriteExt::write_all(&mut ts_writer, fwd_line.as_bytes())
+        .await
+        .ok()?;
+
+    let mut ts_resp_line = String::new();
+    ts_buf.read_line(&mut ts_resp_line).await.ok()?;
+    let ts_resp: Value = serde_json::from_str(ts_resp_line.trim()).ok()?;
+
+    ts_resp.get("result").cloned()
 }
 
 /// `compute.dispatch.result` — Retrieve output data for a previously submitted job.

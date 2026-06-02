@@ -34,8 +34,7 @@ pub(crate) struct CpuExecutor {
 impl CpuExecutor {
     pub(crate) fn new() -> Self {
         let cpu_cores = std::thread::available_parallelism()
-            .map(std::num::NonZero::get)
-            .unwrap_or(4);
+            .map_or(4, std::num::NonZero::get);
 
         #[cfg(target_arch = "x86_64")]
         let simd_width = {

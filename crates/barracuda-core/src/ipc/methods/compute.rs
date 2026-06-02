@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Named compute dispatch, shader binary execution, and shape parsing helpers.
 //!
-//! Implements both the barraCuda-native op-based dispatch (`compute.dispatch`)
-//! and the toadStool-compatible pipeline methods (`compute.dispatch.capabilities`,
-//! `compute.dispatch.submit`, `compute.dispatch.result`) for cross-gate compute
-//! routing via the strandGate compute trio.
+//! Implements barraCuda-native op-based dispatch (`compute.dispatch`) and the
+//! cross-gate pipeline methods (`compute.dispatch.capabilities`,
+//! `compute.dispatch.submit`, `compute.dispatch.result`). Peer routing is
+//! resolved at runtime via capability-based discovery — no compile-time
+//! knowledge of which primal serves `compute.dispatch.submit`.
 
 use super::super::jsonrpc::{INTERNAL_ERROR, INVALID_PARAMS, JsonRpcResponse};
 use crate::BarraCudaPrimal;
 use serde_json::Value;
-use std::collections::HashMap;
-use std::sync::{LazyLock, RwLock};
 
 /// Parse a JSON array of u64 values into a `Vec<usize>`, returning `None` if
 /// any dimension overflows the platform `usize`.
@@ -114,35 +113,44 @@ pub(super) async fn compute_dispatch(
 }
 
 // ─── Cross-gate pipeline methods ─────────────────────────────────────────────
-// These implement the toadStool-compatible dispatch contract that hotSpring's
-// cross-gate compute dispatch routes to via `capability.call`.
+// These implement the cross-gate dispatch contract. Any peer primal advertising
+// `compute.dispatch.submit` is resolved at runtime via capability-based discovery.
+
+/// Outcome of a dispatch job — typed for compile-time correctness.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DispatchStatus {
+    Completed,
+    Failed,
+}
 
 /// Stored result of a dispatch job.
 #[derive(Clone)]
-struct DispatchJob {
-    status: &'static str,
-    output: Option<Value>,
-    error: Option<String>,
+pub(crate) struct DispatchJob {
+    pub(crate) status: DispatchStatus,
+    pub(crate) output: Option<Value>,
+    pub(crate) error: Option<String>,
 }
 
-static JOB_STORE: LazyLock<RwLock<HashMap<String, DispatchJob>>> =
-    LazyLock::new(|| RwLock::new(HashMap::new()));
-
 fn generate_job_id() -> String {
+    use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+
     let ts = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_nanos();
-    let hash = blake3::hash(format!("dispatch-{ts}").as_bytes());
+    let seq = COUNTER.fetch_add(1, Ordering::Relaxed);
+    let hash = blake3::hash(format!("dispatch-{ts}-{seq}").as_bytes());
     format!("job-{}", &hash.to_hex()[..16])
 }
 
 /// `compute.dispatch.capabilities` — Report GPU compute capabilities.
 ///
 /// Returns the set of capabilities this primal can serve for cross-gate
-/// dispatch routing. hotSpring/toadStool uses this to decide where to
-/// route shader workloads.
+/// dispatch routing. Peer primals resolve this at runtime via
+/// `ipc.resolve` to decide where to route shader workloads.
 pub(super) fn dispatch_capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
     let mut capabilities: Vec<&str> = Vec::new();
 
@@ -188,20 +196,20 @@ pub(super) fn dispatch_capabilities(primal: &BarraCudaPrimal, id: Value) -> Json
 ///
 /// ## Mode 1: Shader binary dispatch (when `binary_b64` is present)
 ///
-/// hotSpring sends compiled SPIR-V/PTX binaries from coralReef with:
+/// Callers send compiled SPIR-V/PTX binaries with:
 /// - `binary_b64`: base64-encoded compiled shader binary
 /// - `input`: `{"data": [f64], "format": "f64_array"}`
 /// - `input_hash`: BLAKE3 hex of serialized input
-/// - `shader_info`: coralReef metadata (workgroup size, bindings, etc.)
+/// - `shader_info`: compiler metadata (workgroup size, bindings, etc.)
 /// - `bindings`: buffer binding descriptors
 /// - `dispatch_mode`: "passthrough"
 /// - `bdf`: optional PCI BDF for GPU targeting
 /// - `spring`: calling spring name
 ///
-/// When a binary is present, barraCuda attempts to resolve toadStool via
-/// Songbird `ipc.resolve` (capability: `"compute.dispatch.submit"`) and
-/// forwards the full request. If toadStool is unavailable, falls back to
-/// tensor passthrough with `"routed": false` in the response.
+/// When a binary is present, barraCuda resolves the `compute.dispatch.submit`
+/// capability via `ipc.resolve` and forwards the full request to the
+/// resolved peer. If no peer is available, falls back to tensor passthrough
+/// with `"routed": false` in the response.
 ///
 /// ## Mode 2: Tensor passthrough (no `binary_b64`)
 ///
@@ -225,36 +233,34 @@ pub(super) async fn dispatch_submit(
     dispatch_submit_tensor(primal, params, id).await
 }
 
-/// Shader binary dispatch — attempt toadStool routing, fall back to tensor passthrough.
+/// Shader binary dispatch — attempt capability-based routing, fall back to tensor passthrough.
 async fn dispatch_submit_shader(
     primal: &BarraCudaPrimal,
     params: &Value,
     id: Value,
 ) -> JsonRpcResponse {
-    if let Some(result) = try_forward_to_toadstool(params).await {
+    if let Some(forwarded) = try_forward_to_dispatch_peer(params).await {
         let job_id = generate_job_id();
         let job = DispatchJob {
-            status: "completed",
-            output: Some(result),
+            status: DispatchStatus::Completed,
+            output: Some(forwarded.result),
             error: None,
         };
-        if let Ok(mut store) = JOB_STORE.write() {
-            store.insert(job_id.clone(), job);
-        }
+        primal.store_dispatch_job(job_id.clone(), job);
         return JsonRpcResponse::success(
             id,
             serde_json::json!({
                 "job_id": job_id,
                 "status": "completed",
                 "routed": true,
-                "routed_to": "toadStool",
+                "routed_to": forwarded.peer_socket,
             }),
         );
     }
 
     tracing::debug!(
-        "compute.dispatch.submit: binary_b64 present but toadStool unavailable, \
-         falling back to tensor passthrough"
+        "compute.dispatch.submit: binary_b64 present but no peer advertising \
+         compute.dispatch.submit — falling back to tensor passthrough"
     );
 
     let input_data = params
@@ -266,8 +272,8 @@ async fn dispatch_submit_shader(
         return JsonRpcResponse::error(
             id,
             INVALID_PARAMS,
-            "Shader binary provided but toadStool unavailable, and no input.data \
-             for tensor fallback. Either deploy toadStool or provide input.data.",
+            "Shader binary provided but no dispatch peer available, and no input.data \
+             for tensor fallback. Deploy a peer with compute.dispatch.submit or provide input.data.",
         );
     };
 
@@ -278,7 +284,7 @@ async fn dispatch_submit_shader(
             obj.insert(
                 "note".into(),
                 Value::String(
-                    "binary_b64 ignored — toadStool not available for shader dispatch; \
+                    "binary_b64 ignored — no dispatch peer available; \
                      tensor passthrough used"
                         .into(),
                 ),
@@ -287,15 +293,13 @@ async fn dispatch_submit_shader(
     }
 
     let job_id = generate_job_id();
-    let status = resp.status;
+    let is_completed = resp.status == DispatchStatus::Completed;
     let error = resp.error.clone();
     let n = data_arr.len();
 
-    if let Ok(mut store) = JOB_STORE.write() {
-        store.insert(job_id.clone(), resp);
-    }
+    primal.store_dispatch_job(job_id.clone(), resp);
 
-    if status == "completed" {
+    if is_completed {
         JsonRpcResponse::success(
             id,
             serde_json::json!({
@@ -303,7 +307,7 @@ async fn dispatch_submit_shader(
                 "status": "completed",
                 "routed": false,
                 "elements": n,
-                "note": "binary_b64 present but toadStool unavailable — tensor passthrough used",
+                "note": "binary_b64 present but no dispatch peer available — tensor passthrough used",
             }),
         )
     } else {
@@ -340,15 +344,13 @@ async fn dispatch_submit_tensor(
 
     let result = dispatch_submit_tensor_inner(primal, data_arr).await;
     let job_id = generate_job_id();
-    let status = result.status;
+    let is_completed = result.status == DispatchStatus::Completed;
     let error = result.error.clone();
     let n = data_arr.len();
 
-    if let Ok(mut store) = JOB_STORE.write() {
-        store.insert(job_id.clone(), result);
-    }
+    primal.store_dispatch_job(job_id.clone(), result);
 
-    if status == "completed" {
+    if is_completed {
         JsonRpcResponse::success(
             id,
             serde_json::json!({
@@ -382,7 +384,7 @@ async fn dispatch_submit_tensor_inner(
 
     if data.is_empty() {
         return DispatchJob {
-            status: "failed",
+            status: DispatchStatus::Failed,
             output: None,
             error: Some("input.data must be non-empty".into()),
         };
@@ -394,7 +396,7 @@ async fn dispatch_submit_tensor_inner(
         match barracuda::tensor::Tensor::from_data(&data, vec![n], dev) {
             Ok(tensor) => match tensor.to_vec() {
                 Ok(output) => DispatchJob {
-                    status: "completed",
+                    status: DispatchStatus::Completed,
                     output: Some(serde_json::json!({
                         "output": output,
                         "format": "f32_array",
@@ -404,20 +406,20 @@ async fn dispatch_submit_tensor_inner(
                     error: None,
                 },
                 Err(e) => DispatchJob {
-                    status: "failed",
+                    status: DispatchStatus::Failed,
                     output: None,
                     error: Some(format!("GPU readback failed: {e}")),
                 },
             },
             Err(e) => DispatchJob {
-                status: "failed",
+                status: DispatchStatus::Failed,
                 output: None,
                 error: Some(format!("GPU tensor creation failed: {e}")),
             },
         }
     } else {
         DispatchJob {
-            status: "completed",
+            status: DispatchStatus::Completed,
             output: Some(serde_json::json!({
                 "output": data,
                 "format": "f32_array",
@@ -429,13 +431,21 @@ async fn dispatch_submit_tensor_inner(
     }
 }
 
-/// Attempt to forward a shader dispatch request to toadStool via Songbird.
+/// Result of a successful capability-based forward to a dispatch peer.
+struct ForwardedResult {
+    result: Value,
+    peer_socket: String,
+}
+
+/// Capability-based forward to any peer advertising `compute.dispatch.submit`.
 ///
 /// Resolution chain:
 /// 1. `DISCOVERY_SOCKET` → `ipc.resolve { capability: "compute.dispatch.submit" }`
 /// 2. If resolved: forward full params as `compute.dispatch.submit` JSON-RPC
-/// 3. Returns `Some(result)` on success, `None` if toadStool unavailable
-async fn try_forward_to_toadstool(params: &Value) -> Option<Value> {
+/// 3. Returns the result and the socket path of the peer that answered
+///
+/// No primal name hardcoding — any peer with the capability is accepted.
+async fn try_forward_to_dispatch_peer(params: &Value) -> Option<ForwardedResult> {
     let discovery_path = std::env::var(crate::env_keys::DISCOVERY_SOCKET).ok()?;
     let discovery_path = std::path::Path::new(&discovery_path);
     if !discovery_path.exists() {
@@ -474,9 +484,11 @@ async fn try_forward_to_toadstool(params: &Value) -> Option<Value> {
         return None;
     }
 
-    let ts_stream = tokio::net::UnixStream::connect(&sock_path).await.ok()?;
-    let (ts_reader, mut ts_writer) = ts_stream.into_split();
-    let mut ts_buf = tokio::io::BufReader::new(ts_reader);
+    let peer_socket = sock_path.to_string_lossy().into_owned();
+
+    let peer_stream = tokio::net::UnixStream::connect(&sock_path).await.ok()?;
+    let (peer_reader, mut peer_writer) = peer_stream.into_split();
+    let mut peer_buf = tokio::io::BufReader::new(peer_reader);
 
     let forward_req = serde_json::json!({
         "jsonrpc": "2.0",
@@ -486,35 +498,36 @@ async fn try_forward_to_toadstool(params: &Value) -> Option<Value> {
     });
     let mut fwd_line = serde_json::to_string(&forward_req).ok()?;
     fwd_line.push('\n');
-    tokio::io::AsyncWriteExt::write_all(&mut ts_writer, fwd_line.as_bytes())
+    tokio::io::AsyncWriteExt::write_all(&mut peer_writer, fwd_line.as_bytes())
         .await
         .ok()?;
 
-    let mut ts_resp_line = String::new();
-    ts_buf.read_line(&mut ts_resp_line).await.ok()?;
-    let ts_resp: Value = serde_json::from_str(ts_resp_line.trim()).ok()?;
+    let mut peer_resp_line = String::new();
+    peer_buf.read_line(&mut peer_resp_line).await.ok()?;
+    let peer_resp: Value = serde_json::from_str(peer_resp_line.trim()).ok()?;
 
-    ts_resp.get("result").cloned()
+    let forwarded_result = peer_resp.get("result").cloned()?;
+    Some(ForwardedResult {
+        result: forwarded_result,
+        peer_socket,
+    })
 }
 
 /// `compute.dispatch.result` — Retrieve output data for a previously submitted job.
 ///
 /// Wire contract: `{"job_id": str}` → output JSON or error.
-pub(super) fn dispatch_result(params: &Value, id: Value) -> JsonRpcResponse {
+pub(super) fn dispatch_result(
+    primal: &BarraCudaPrimal,
+    params: &Value,
+    id: Value,
+) -> JsonRpcResponse {
     let Some(job_id) = params.get("job_id").and_then(|v| v.as_str()) else {
         return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: job_id");
     };
 
-    let store = match JOB_STORE.read() {
-        Ok(s) => s,
-        Err(_) => {
-            return JsonRpcResponse::error(id, INTERNAL_ERROR, "Job store lock poisoned");
-        }
-    };
-
-    match store.get(job_id) {
-        Some(job) if job.status == "completed" => {
-            let output = job.output.clone().unwrap_or(Value::Null);
+    match primal.get_dispatch_job(job_id) {
+        Some(job) if job.status == DispatchStatus::Completed => {
+            let output = job.output.unwrap_or(Value::Null);
             JsonRpcResponse::success(id, output)
         }
         Some(job) => JsonRpcResponse::error(

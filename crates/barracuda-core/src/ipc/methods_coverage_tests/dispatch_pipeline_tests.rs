@@ -58,7 +58,7 @@ async fn submit_empty_data_returns_failed_status() {
 }
 
 #[tokio::test]
-async fn submit_with_binary_and_no_toadstool_falls_back() {
+async fn submit_with_binary_and_no_dispatch_peer_falls_back() {
     let primal = test_primal();
     let params = serde_json::json!({
         "binary_b64": "AQIDBAU=",
@@ -72,7 +72,7 @@ async fn submit_with_binary_and_no_toadstool_falls_back() {
     let result = resp.result.expect("should have result");
     assert_eq!(result["status"], "completed");
     assert_eq!(result["routed"], false);
-    assert!(result["note"].as_str().unwrap_or("").contains("toadStool"));
+    assert!(result["note"].as_str().unwrap_or("").contains("dispatch peer"));
 }
 
 #[tokio::test]
@@ -109,6 +109,7 @@ async fn submit_then_retrieve_result() {
     let job_id = result["job_id"].as_str().expect("job_id");
 
     let retrieve_resp = dispatch_result(
+        &primal,
         &serde_json::json!({"job_id": job_id}),
         serde_json::json!(5),
     );
@@ -122,7 +123,8 @@ async fn submit_then_retrieve_result() {
 
 #[test]
 fn result_missing_job_id_returns_invalid_params() {
-    let resp = dispatch_result(&serde_json::json!({}), serde_json::json!(6));
+    let primal = test_primal();
+    let resp = dispatch_result(&primal, &serde_json::json!({}), serde_json::json!(6));
     let err = resp.error.expect("missing job_id should fail");
     assert_eq!(err.code, jsonrpc::INVALID_PARAMS);
     assert!(err.message.contains("job_id"));
@@ -130,7 +132,9 @@ fn result_missing_job_id_returns_invalid_params() {
 
 #[test]
 fn result_unknown_job_id_returns_not_found() {
+    let primal = test_primal();
     let resp = dispatch_result(
+        &primal,
         &serde_json::json!({"job_id": "job-nonexistent"}),
         serde_json::json!(7),
     );
@@ -163,6 +167,7 @@ async fn full_pipeline_roundtrip() {
         .expect("job_id");
 
     let result_resp = dispatch_result(
+        &primal,
         &serde_json::json!({"job_id": job_id}),
         serde_json::json!(12),
     );

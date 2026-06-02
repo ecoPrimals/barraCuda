@@ -1,6 +1,6 @@
 +++
 title = "barraCuda Validation Summary"
-description = "GPU-accelerated scientific computing engine — 4,393+ tests, 87 IPC methods, 15-tier precision ladder, pure safe Rust, A+ grade"
+description = "GPU-accelerated scientific computing engine — 4,393+ tests, 90 IPC methods, 15-tier precision ladder, pure safe Rust, A+ grade"
 date = 2026-05-20
 
 [taxonomies]

@@ -292,8 +292,7 @@ impl BarraCudaService for BarraCudaServer {
                     i.matmul(&e)
                 })
                 .and_then(|r| r.to_vec())
-                .map(|v| v.iter().zip(&inp).all(|(a, b)| (a - b).abs() < 1e-4))
-                .unwrap_or(false)
+                .is_ok_and(|v| v.iter().zip(&inp).all(|(a, b)| (a - b).abs() < 1e-4))
         };
 
         ValidationResult {

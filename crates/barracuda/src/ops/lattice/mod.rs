@@ -58,6 +58,10 @@ pub mod lcg;
 pub mod su3;
 pub mod su3_extended;
 
+// Merged WGSL sources for coralReef / IPC standalone compile
+pub mod shader_sources;
+pub use shader_sources::{lattice_preamble, lattice_preamble_df64, lattice_shader_names, lattice_shader_source};
+
 // GPU operators
 pub mod absorbed_shaders;
 pub mod cg;

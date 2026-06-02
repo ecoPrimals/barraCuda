@@ -83,9 +83,10 @@ fn test_primal_announce_neural_api_schema() {
         .as_array()
         .expect("capabilities must be array");
     let cap_strs: Vec<&str> = caps.iter().filter_map(|v| v.as_str()).collect();
-    assert!(cap_strs.contains(&"math"));
-    assert!(cap_strs.contains(&"shader"));
-    assert!(cap_strs.contains(&"compute"));
+    assert!(cap_strs.contains(&"math"), "must advertise math domain");
+    assert!(cap_strs.contains(&"tensor"), "must advertise tensor domain");
+    assert!(cap_strs.contains(&"stats"), "must advertise stats domain");
+    assert!(cap_strs.len() >= 10, "derived capabilities should cover all domains");
 
     let tiers = result["signal_tiers"]
         .as_array()
@@ -101,14 +102,12 @@ fn test_primal_announce_neural_api_schema() {
     assert!(socket.ends_with(".sock"), "socket path should end in .sock");
 
     let cost = &result["cost_hints"];
-    assert_eq!(cost["math"], 20.0);
-    assert_eq!(cost["shader"], 50.0);
-    assert_eq!(cost["compute"], 80.0);
+    assert_eq!(cost["math"], 20.0, "math cost from composition_hints");
+    assert!(cost.is_object(), "cost_hints derived per-domain");
 
     let latency = &result["latency_estimates"];
-    assert_eq!(latency["math"], 10);
-    assert_eq!(latency["shader"], 100);
-    assert_eq!(latency["compute"], 200);
+    assert_eq!(latency["math"], 10, "math latency from composition_hints");
+    assert!(latency.is_object(), "latency_estimates derived per-domain");
 
     assert_eq!(result["hardware"]["gpu_available"], false);
     assert!(result["transport"].is_array());

@@ -327,7 +327,7 @@ impl WgpuDevice {
             .enumerate()
             .map(|(idx, dev)| (idx, score_physical_device(dev)))
             .collect();
-        scored.sort_by(|a, b| b.1.cmp(&a.1));
+        scored.sort_by_key(|entry| std::cmp::Reverse(entry.1));
 
         let primary = if let Some((idx, _)) = scored.first() {
             Self::from_physical_device(*idx).await?

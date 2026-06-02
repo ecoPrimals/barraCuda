@@ -27,6 +27,12 @@ pub const WGSL_DEFORMED_POTENTIAL: &str =
 /// WGSL source for deformed wavefunction evaluation.
 pub const WGSL_DEFORMED_WAVEFUNCTION: &str =
     include_str!("../../shaders/science/hfb_deformed/deformed_wavefunction_f64.wgsl");
+/// WGSL source for deformed density, energy, Q20, and RMS radius.
+pub const WGSL_DEFORMED_DENSITY_ENERGY: &str =
+    include_str!("../../shaders/physics/deformed_density_energy_f64.wgsl");
+/// WGSL source for gradient of deformed densities.
+pub const WGSL_DEFORMED_GRADIENT: &str =
+    include_str!("../../shaders/physics/deformed_gradient_f64.wgsl");
 
 /// Unified axially-deformed HFB pipeline: holds device reference and exposes shader constants.
 ///

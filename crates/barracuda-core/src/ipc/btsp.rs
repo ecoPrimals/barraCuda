@@ -699,16 +699,30 @@ async fn security_provider_rpc(
 /// wire format.
 ///
 /// Resolution: `BTSP_FAMILY_SEED` → `FAMILY_SEED` → `BIOMEOS_FAMILY_SEED`
-/// → `BEARDOG_FAMILY_SEED` (legacy compat). The security provider
+/// → `BEARDOG_FAMILY_SEED` (deprecated). The security provider
 /// base64-decodes the `family_seed` parameter in `btsp.session.create`
 /// to recover raw key bytes, so we must encode the env string's bytes.
 fn resolve_family_seed_raw() -> Option<String> {
-    let raw = std::env::var(crate::env_keys::BTSP_FAMILY_SEED)
+    let preferred = std::env::var(crate::env_keys::BTSP_FAMILY_SEED)
         .or_else(|_| std::env::var(crate::env_keys::FAMILY_SEED))
         .or_else(|_| std::env::var(crate::env_keys::BIOMEOS_FAMILY_SEED))
-        .or_else(|_| std::env::var(crate::env_keys::BEARDOG_FAMILY_SEED))
         .ok()
-        .filter(|s| !s.is_empty())?;
+        .filter(|s| !s.is_empty());
+
+    let raw = if let Some(val) = preferred {
+        val
+    } else {
+        #[expect(deprecated, reason = "intentional legacy fallback with deprecation warning")]
+        let legacy_key = crate::env_keys::BEARDOG_FAMILY_SEED;
+        let legacy = std::env::var(legacy_key)
+            .ok()
+            .filter(|s| !s.is_empty())?;
+        tracing::warn!(
+            "BEARDOG_FAMILY_SEED is deprecated — migrate to BTSP_FAMILY_SEED"
+        );
+        legacy
+    };
+
     use base64ct::{Base64, Encoding};
     Some(Base64::encode_string(raw.trim().as_bytes()))
 }

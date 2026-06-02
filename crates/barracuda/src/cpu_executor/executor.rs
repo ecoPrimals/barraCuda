@@ -50,8 +50,7 @@ impl CpuExecutor {
     #[must_use]
     pub fn new() -> Self {
         let num_threads = std::thread::available_parallelism()
-            .map(std::num::NonZero::get)
-            .unwrap_or(defaults::FALLBACK_THREAD_COUNT);
+            .map_or(defaults::FALLBACK_THREAD_COUNT, std::num::NonZero::get);
 
         Self {
             capabilities: Self::detect_capabilities(num_threads),

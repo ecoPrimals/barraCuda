@@ -100,7 +100,7 @@ impl FhePointwiseMul {
 
         // Compute Barrett reduction constant: μ = ⌊2^128 / q⌋
         // For 64-bit approximation: μ ≈ u64::MAX / q
-        let barrett_mu = if modulus > 0 { u64::MAX / modulus } else { 0 };
+        let barrett_mu = u64::MAX.checked_div(modulus).unwrap_or(0);
 
         Ok(Self {
             input_a,

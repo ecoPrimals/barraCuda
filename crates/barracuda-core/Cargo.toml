@@ -8,6 +8,10 @@ repository.workspace = true
 authors.workspace = true
 rust-version.workspace = true
 
+[features]
+default = ["tarpc-transport"]
+tarpc-transport = ["dep:tarpc", "dep:futures", "dep:tokio-util", "dep:tokio-serde"]
+
 [dependencies]
 barracuda = { path = "../barracuda", version = "0.4.0", default-features = true }
 tokio = { workspace = true }
@@ -18,16 +22,16 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 blake3 = { workspace = true }
 clap = { workspace = true }
-tarpc = { workspace = true }
-futures = { workspace = true }
-tokio-util = { workspace = true }
-tokio-serde = { workspace = true }
+rand = { workspace = true }
 chacha20poly1305 = { workspace = true }
 hkdf = { workspace = true }
 hmac = { workspace = true }
-rand = { workspace = true }
 sha2 = { workspace = true }
 base64ct = { workspace = true }
+tarpc = { workspace = true, optional = true }
+futures = { workspace = true, optional = true }
+tokio-util = { workspace = true, optional = true }
+tokio-serde = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile.workspace = true

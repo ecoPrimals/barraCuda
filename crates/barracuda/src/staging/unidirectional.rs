@@ -467,7 +467,7 @@ impl UnidirectionalPipeline {
             .min(self.in_flight.len());
         let mut results = Vec::with_capacity(limit);
 
-        let chunk_size = if limit > 0 { data.len() / limit } else { 0 };
+        let chunk_size = data.len().checked_div(limit).unwrap_or(0);
 
         for i in 0..limit {
             if let Some((id, submitted_at)) = self.in_flight.pop_front() {

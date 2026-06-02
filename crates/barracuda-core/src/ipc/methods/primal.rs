@@ -77,11 +77,12 @@ pub(super) fn capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcRespon
 /// graph and compute routing weights without additional round-trips.
 ///
 /// Schema aligned with biomeOS v3.68+ Neural API (Wave 43).
+/// All composition metadata derived from [`crate::discovery::composition_hints`].
 pub(super) fn announce(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
     let version = env!("CARGO_PKG_VERSION");
     let has_gpu = primal.device().is_some();
-
     let socket = crate::ipc::transport::discovery_socket_path();
+    let hints = crate::discovery::composition_hints();
 
     JsonRpcResponse::success(
         id,
@@ -91,19 +92,11 @@ pub(super) fn announce(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
             "version": version,
             "domain": crate::PRIMAL_DOMAIN,
             "methods": REGISTERED_METHODS,
-            "capabilities": ["math", "shader", "compute"],
-            "signal_tiers": ["node"],
+            "capabilities": hints.capabilities,
+            "signal_tiers": hints.signal_tiers,
             "socket": socket,
-            "cost_hints": {
-                "math": 20.0,
-                "shader": 50.0,
-                "compute": 80.0,
-            },
-            "latency_estimates": {
-                "math": 10,
-                "shader": 100,
-                "compute": 200,
-            },
+            "cost_hints": hints.cost_hints,
+            "latency_estimates": hints.latency_estimates,
             "hardware": {
                 "gpu_available": has_gpu,
             },

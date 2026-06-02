@@ -50,7 +50,8 @@ pub const XDG_RUNTIME_DIR: &str = "XDG_RUNTIME_DIR";
 /// BTSP security-provider socket (composition-injected).
 pub const BTSP_PROVIDER_SOCKET: &str = "BTSP_PROVIDER_SOCKET";
 
-/// Legacy beardog security-provider socket path.
+/// **Deprecated** — use [`BTSP_PROVIDER_SOCKET`]. Retained for migration grace period.
+#[deprecated(since = "0.4.1", note = "use BTSP_PROVIDER_SOCKET")]
 pub const BEARDOG_SOCKET: &str = "BEARDOG_SOCKET";
 
 /// BTSP family seed (preferred).
@@ -59,10 +60,11 @@ pub const BTSP_FAMILY_SEED: &str = "BTSP_FAMILY_SEED";
 /// Generic ecosystem family seed.
 pub const FAMILY_SEED: &str = "FAMILY_SEED";
 
-/// Legacy biomeOS family seed.
+/// Legacy biomeOS family seed — prefer [`BTSP_FAMILY_SEED`] or [`FAMILY_SEED`].
 pub const BIOMEOS_FAMILY_SEED: &str = "BIOMEOS_FAMILY_SEED";
 
-/// Legacy beardog family seed.
+/// **Deprecated** — use [`BTSP_FAMILY_SEED`]. Retained for migration grace period.
+#[deprecated(since = "0.4.1", note = "use BTSP_FAMILY_SEED")]
 pub const BEARDOG_FAMILY_SEED: &str = "BEARDOG_FAMILY_SEED";
 
 /// IPC authentication enforcement mode (`permissive` or `enforced`).

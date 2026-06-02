@@ -2,7 +2,7 @@
 
 # Tensor IPC Wire Contract
 
-**Status**: Sprint 73 — 87 methods, stadial gate compliant, multi-model regression + signal processing + ecology + gamma absorbed from springs
+**Status**: Sprint 73 — 90 methods, stadial gate compliant, multi-model regression + signal processing + ecology + gamma absorbed from springs
 **Version**: 1.6.0
 **Authority**: barraCuda primal (self-knowledge)
 **Implements**: wateringHole `PRIMAL_IPC_PROTOCOL.md` v3.1, `SEMANTIC_METHOD_NAMING_STANDARD.md`

@@ -52,10 +52,9 @@ impl BandwidthTier {
             Self::Network => (1_000, 1_000),
         };
         let mb = bytes / (1024 * 1024);
-        let transfer = if bw_mbps > 0 {
-            mb * 1_000_000 / bw_mbps
-        } else {
-            0
+        let transfer = match (mb * 1_000_000).checked_div(bw_mbps) {
+            Some(v) => v,
+            None => 0,
         };
         latency_us + transfer
     }

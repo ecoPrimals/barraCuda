@@ -9,7 +9,7 @@
 //! form is also accepted and silently normalized.
 
 mod batch;
-mod compute;
+pub(crate) mod compute;
 mod device;
 mod fhe;
 mod graph;
@@ -238,7 +238,7 @@ pub async fn dispatch(
         "compute.dispatch" => compute::compute_dispatch(primal, params, id).await,
         "compute.dispatch.capabilities" => compute::dispatch_capabilities(primal, id),
         "compute.dispatch.submit" => compute::dispatch_submit(primal, params, id).await,
-        "compute.dispatch.result" => compute::dispatch_result(params, id),
+        "compute.dispatch.result" => compute::dispatch_result(primal, params, id),
         // Math & activation (CPU)
         "math.sigmoid" => math::math_sigmoid(params, id),
         "math.log2" => math::math_log2(params, id),

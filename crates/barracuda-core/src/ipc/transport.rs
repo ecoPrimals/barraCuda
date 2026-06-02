@@ -70,6 +70,7 @@ impl IpcServer {
     /// On `AddrInUse`, logs a warning and returns `Ok(())` — the tarpc
     /// endpoint is optional and should not crash the binary when the port
     /// is occupied by another primal.
+    #[cfg(feature = "tarpc-transport")]
     pub async fn serve_tarpc(&self, addr: &str) -> Result<()> {
         use crate::rpc::{BarraCudaServer, BarraCudaService};
         use futures::prelude::*;
@@ -122,7 +123,7 @@ impl IpcServer {
     /// Transport parity with `serve_tarpc` (TCP) — both JSON-RPC and tarpc
     /// are now available on Unix sockets for local composition without TCP
     /// overhead. Uses `serde_transport::new` over a `UnixStream` split.
-    #[cfg(unix)]
+    #[cfg(all(unix, feature = "tarpc-transport"))]
     pub async fn serve_tarpc_unix(&self, path: &std::path::Path) -> Result<()> {
         use crate::rpc::{BarraCudaServer, BarraCudaService};
         use futures::StreamExt;

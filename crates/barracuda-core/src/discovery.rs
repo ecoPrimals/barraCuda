@@ -156,6 +156,55 @@ pub fn discovery_capability_domains() -> Vec<String> {
     domains.into_iter().collect()
 }
 
+/// Composition metadata — single source of truth for announce payloads.
+///
+/// Used by both `primal.announce` (IPC handler) and `neural_announce` (outbound push)
+/// to eliminate duplication of cost hints and latency estimates.
+pub(crate) struct CompositionHints {
+    /// Domain tags derived from the dispatch table.
+    pub capabilities: Vec<String>,
+    /// Relative cost for each capability domain (unitless, lower = cheaper).
+    pub cost_hints: serde_json::Value,
+    /// Estimated latency per domain in milliseconds.
+    pub latency_estimates: serde_json::Value,
+    /// Signal tiers this primal participates in.
+    pub signal_tiers: &'static [&'static str],
+}
+
+/// Build composition metadata from the registered method table.
+///
+/// Cost and latency values are tuned for biomeGate hardware (Threadripper 3970X,
+/// Titan V + K80). They represent *relative* weights for the Neural API routing
+/// heuristic, not absolute measurements.
+#[must_use]
+pub(crate) fn composition_hints() -> CompositionHints {
+    let domains = discovery_capability_domains();
+
+    let mut cost = serde_json::Map::new();
+    let mut latency = serde_json::Map::new();
+
+    for domain in &domains {
+        let (c, l) = match domain.as_str() {
+            "math" | "stats" | "linalg" | "rng" => (20.0, 10),
+            "signal" | "spectral" | "noise" => (30.0, 20),
+            "tensor" => (40.0, 50),
+            "ml" | "nautilus" | "ode" => (60.0, 80),
+            "shader" | "graph" => (50.0, 100),
+            "fhe" => (70.0, 150),
+            _ => (50.0, 50),
+        };
+        cost.insert(domain.clone(), serde_json::json!(c));
+        latency.insert(domain.clone(), serde_json::json!(l));
+    }
+
+    CompositionHints {
+        capabilities: domains,
+        cost_hints: serde_json::Value::Object(cost),
+        latency_estimates: serde_json::Value::Object(latency),
+        signal_tiers: &["node"],
+    }
+}
+
 /// Self-register capabilities with the discovery service via `DISCOVERY_SOCKET`.
 ///
 /// Per Phase 55b: primals self-register at startup so the discovery service can

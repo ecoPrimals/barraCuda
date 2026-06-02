@@ -182,7 +182,7 @@ pub fn rewrite_f64_infix_to_df64(f64_source: &str) -> crate::error::Result<Strin
 
     // Sort back-to-front so byte offsets remain valid during replacement.
     // For overlapping spans (nested ops), take the outermost only.
-    replacements.sort_by(|a, b| b.span_start.cmp(&a.span_start));
+    replacements.sort_by_key(|r| std::cmp::Reverse(r.span_start));
     dedup_overlapping(&mut replacements);
 
     let mut result = f64_source.to_string();

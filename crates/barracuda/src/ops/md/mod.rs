@@ -26,6 +26,7 @@
 //!
 //! **Deep Debt Compliance**: All math in WGSL, zero unsafe
 
+pub mod absorbed_shaders;
 pub mod electrostatics;
 pub mod forces;
 pub mod integrators;
@@ -50,6 +51,9 @@ pub use thermostats::{
     BerendsenThermostat, LangevinParams, LangevinStep, NoseHooverChain, NoseHooverHalfKick,
 };
 pub use vacf::compute_vacf_batch;
+
+// Absorbed hotSpring MD WGSL shaders (Jun 2026)
+pub use absorbed_shaders::*;
 
 // Re-export for convenience
 pub use pbc::PbcDistance as Pbc;

@@ -67,7 +67,7 @@ Prioritized work items, ordered by impact. Updated 2026-06-01.
   (regularized incomplete gamma) — building blocks for drought indices.
   (4) **Signal processing** (healthSpring): new `signal.*` namespace with
   `signal.detect_peaks`, `signal.bandpass`, `signal.derivative` — Pan-Tompkins
-  pipeline stages elevated to universal primitives. 87 methods total.
+  pipeline stages elevated to universal primitives. 90 methods total.
 - **Sprint 72: Universal Shader Absorption & IPC Expansion (May 20)**:
   Cross-spring audit revealed 4 spatial compute shaders in ludoSpring with no
   barraCuda equivalent and 3 stats library functions with no IPC exposure. Resolved:

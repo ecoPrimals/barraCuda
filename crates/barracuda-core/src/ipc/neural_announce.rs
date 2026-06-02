@@ -68,8 +68,11 @@ pub fn resolve_neural_api_socket() -> Option<PathBuf> {
 /// Build the `primal.announce` JSON-RPC request payload.
 ///
 /// Schema aligned with biomeOS v3.68+ Neural API (Wave 43/44).
+/// Capabilities, cost hints, and latency estimates are derived from the
+/// registered method table via [`crate::discovery::composition_hints`].
 fn build_announce_payload(own_socket: &str, version: &str) -> serde_json::Value {
     let methods: Vec<&str> = REGISTERED_METHODS.to_vec();
+    let hints = crate::discovery::composition_hints();
 
     serde_json::json!({
         "jsonrpc": "2.0",
@@ -81,19 +84,11 @@ fn build_announce_payload(own_socket: &str, version: &str) -> serde_json::Value 
             "domain": crate::PRIMAL_DOMAIN,
             "pid": std::process::id(),
             "socket": own_socket,
-            "capabilities": ["math", "shader", "compute"],
+            "capabilities": hints.capabilities,
             "methods": methods,
-            "signal_tiers": ["node"],
-            "cost_hints": {
-                "math": 20.0,
-                "shader": 50.0,
-                "compute": 80.0,
-            },
-            "latency_estimates": {
-                "math": 10,
-                "shader": 100,
-                "compute": 200,
-            },
+            "signal_tiers": hints.signal_tiers,
+            "cost_hints": hints.cost_hints,
+            "latency_estimates": hints.latency_estimates,
             "attestation": null,
         },
         "id": 1
@@ -235,18 +230,17 @@ mod tests {
         assert!(params["pid"].is_number());
 
         let caps = params["capabilities"].as_array().unwrap();
-        assert_eq!(caps.len(), 3);
+        assert!(caps.len() >= 10, "derived capabilities should cover all domains");
+        assert!(caps.contains(&serde_json::json!("math")));
+        assert!(caps.contains(&serde_json::json!("tensor")));
+        assert!(caps.contains(&serde_json::json!("stats")));
 
         let tiers = params["signal_tiers"].as_array().unwrap();
         assert_eq!(tiers[0], "node");
 
         assert_eq!(params["cost_hints"]["math"], 20.0);
-        assert_eq!(params["cost_hints"]["shader"], 50.0);
-        assert_eq!(params["cost_hints"]["compute"], 80.0);
-
-        assert_eq!(params["latency_estimates"]["math"], 10);
-        assert_eq!(params["latency_estimates"]["shader"], 100);
-        assert_eq!(params["latency_estimates"]["compute"], 200);
+        assert!(params["cost_hints"]["tensor"].is_number());
+        assert!(params["latency_estimates"]["math"].is_number());
 
         let methods = params["methods"].as_array().unwrap();
         assert!(methods.len() >= 87);

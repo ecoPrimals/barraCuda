@@ -127,7 +127,7 @@ impl FheNtt {
         }
 
         // Precompute Barrett constant
-        let barrett_mu = if modulus > 0 { u64::MAX / modulus } else { 0 };
+        let barrett_mu = u64::MAX.checked_div(modulus).unwrap_or(0);
 
         // Precompute twiddle factors: ω^0, ω^1, ..., ω^(N-1)
         let twiddle_factors = compute_twiddle_factors(degree, modulus, root_of_unity);

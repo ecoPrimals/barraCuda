@@ -168,8 +168,7 @@ where
         let surrogate_objective = |x: &[f64]| {
             surrogate_ref
                 .predict(&[x.to_vec()])
-                .map(|v| v[0])
-                .unwrap_or(f64::INFINITY)
+                .map_or(f64::INFINITY, |v| v[0])
         };
 
         let iter_seed = config.seed.wrapping_add((iter as u64 + 1) * 10007);

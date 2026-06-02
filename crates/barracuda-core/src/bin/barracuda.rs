@@ -13,6 +13,13 @@ use barracuda_core::lifecycle::PrimalLifecycle;
 use clap::{Parser, Subcommand};
 use std::sync::Arc;
 
+/// Delay before emitting `primal.announce` to the Neural API.
+///
+/// Allows the server socket to fully bind and accept connections before
+/// broadcasting availability to the mesh. Without this, fast consumers
+/// may connect before the listener is ready.
+const ANNOUNCE_DELAY_MS: u64 = 100;
+
 #[derive(Parser)]
 #[command(name = "barracuda")]
 #[command(about = "barraCuda — sovereign GPU compute engine")]
@@ -141,9 +148,7 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
             no_gpu_probe,
         } => {
             if no_gpu_probe {
-                // SAFETY: called at single-threaded program start, before
-                // any other threads are spawned by the tokio runtime.
-                unsafe { std::env::set_var("BARRACUDA_NO_GPU_PROBE", "1") };
+                barracuda_core::set_no_gpu_probe();
             }
             let effective_bind = bind.or_else(|| {
                 port.map(|p| {
@@ -195,6 +200,7 @@ async fn run_server(
 
     let server = barracuda_core::ipc::IpcServer::new(Arc::clone(&primal));
 
+    #[cfg(feature = "tarpc-transport")]
     if let Some(ref tarpc_addr) = tarpc_bind {
         let tarpc_server = barracuda_core::ipc::IpcServer::new(Arc::clone(&primal));
         let tarpc_addr = tarpc_addr.clone();
@@ -206,7 +212,7 @@ async fn run_server(
         });
     }
 
-    #[cfg(unix)]
+    #[cfg(all(unix, feature = "tarpc-transport"))]
     if let Some(ref tarpc_sock) = tarpc_unix {
         let tarpc_server = barracuda_core::ipc::IpcServer::new(Arc::clone(&primal));
         let tarpc_path = std::path::PathBuf::from(tarpc_sock);
@@ -269,14 +275,7 @@ async fn run_server(
             .await;
 
             let announce_socket = sock_path.to_string_lossy().to_string();
-            tokio::spawn(async move {
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                barracuda_core::ipc::neural_announce::announce_to_neural_api(
-                    &announce_socket,
-                    env!("CARGO_PKG_VERSION"),
-                )
-                .await;
-            });
+            spawn_neural_announce(announce_socket);
 
             server.serve_unix(&sock_path, None::<fn()>).await?;
             barracuda_core::ipc::IpcServer::remove_legacy_symlink();
@@ -308,14 +307,7 @@ async fn run_server(
             .await;
 
         let announce_addr = format!("tcp://{effective_addr}");
-        tokio::spawn(async move {
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-            barracuda_core::ipc::neural_announce::announce_to_neural_api(
-                &announce_addr,
-                env!("CARGO_PKG_VERSION"),
-            )
-            .await;
-        });
+        spawn_neural_announce(announce_addr);
 
         server.serve_tcp_listener(listener).await.map_err(|e| {
             barracuda_core::error::BarracudaCoreError::lifecycle(format!(
@@ -597,14 +589,7 @@ async fn run_service_mode() -> Result<(), barracuda_core::error::BarracudaCoreEr
         .await;
 
         let announce_socket = sock_path.to_string_lossy().to_string();
-        tokio::spawn(async move {
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-            barracuda_core::ipc::neural_announce::announce_to_neural_api(
-                &announce_socket,
-                env!("CARGO_PKG_VERSION"),
-            )
-            .await;
-        });
+        spawn_neural_announce(announce_socket);
 
         let on_ready = || notify_systemd_ready();
         server.serve_unix(&sock_path, Some(on_ready)).await?;
@@ -678,6 +663,20 @@ fn notify_systemd_ready() {
     } else {
         tracing::debug!("sent sd_notify READY");
     }
+}
+
+/// Spawn the Neural API announce task with the standard delay.
+///
+/// Consolidates the announce pattern used by both `server` and `service` modes.
+fn spawn_neural_announce(addr: String) {
+    tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_millis(ANNOUNCE_DELAY_MS)).await;
+        barracuda_core::ipc::neural_announce::announce_to_neural_api(
+            &addr,
+            env!("CARGO_PKG_VERSION"),
+        )
+        .await;
+    });
 }
 
 /// The shared discovery directory for all ecoPrimals.

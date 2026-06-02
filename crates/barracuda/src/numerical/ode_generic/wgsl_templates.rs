@@ -161,7 +161,7 @@ pub fn wgsl_rk4_template_universal(n_vars: usize, n_params: usize, derivative_fn
     let unroll_state2_from = |k: &str, coeff: &str| {
         (0..n_vars)
             .map(
-                |i| format!("    state2[{i}u] = op_add(state[{i}u], op_mul({coeff}, {k}[{i}u]));",),
+                |i| format!("    state2[{i}u] = op_add(state[{i}u], op_mul({coeff}, {k}[{i}u]));"),
             )
             .collect::<Vec<_>>()
             .join("\n")

@@ -1,59 +1,51 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// vacf_batch_f64.wgsl — Velocity Autocorrelation Function (f64)
+// Batched VACF — Compute C(lag) for one lag across all time origins.
 //
-// Computes C(τ) = (1/n_origins) Σₜ v(t)·v(t+τ) averaged over time origins.
-// For each lag τ, sums over all valid origins t (t+τ < n_frames) the
-// dot product of system velocity vectors, then normalizes.
+// Each thread handles one particle: iterates over all valid time origins
+// t0 = 0..n_frames-lag, accumulating v(t0) · v(t0+lag). Output is the
+// per-particle sum across all origins, then reduced to one scalar.
 //
-// Layout: vel[frame_idx * stride + particle_idx * 3 + dim]
-//        where stride = n_atoms * 3
+// This replaces n_frames individual dispatches per lag with ONE dispatch.
+// n_lag reductions total instead of n_frames × n_lag.
 //
-// Each thread handles one lag value τ. Output C(τ) for τ = 0..n_lags-1.
+// Bindings:
+//   0: vel_ring  [n_frames * N * 3]  f64, read  — flat ring of velocity snapshots
+//   1: out       [N]                 f64, write — per-particle accumulated dot product
+//   2: params    uniform             — { n: u32, n_frames: u32, lag: u32, stride: u32 }
 //
-// Reference: Allen & Tildesley (1987), Frenkel & Smit (2002)
+// vel_ring layout: snapshot s, particle i, component d → vel_ring[s * stride + i * 3 + d]
+// where stride = N * 3.
 
-struct VacfParams {
-    n_atoms: u32,
+struct Params {
+    n: u32,
     n_frames: u32,
-    n_lags: u32,
-    _pad: u32,
+    lag: u32,
+    stride: u32,  // N * 3
 }
 
-@group(0) @binding(0) var<storage, read> vel: array<f64>;
-@group(0) @binding(1) var<storage, read_write> c_out: array<f64>;
-@group(0) @binding(2) var<uniform> params: VacfParams;
+@group(0) @binding(0) var<storage, read> vel_ring: array<f64>;
+@group(0) @binding(1) var<storage, read_write> out: array<f64>;
+@group(0) @binding(2) var<uniform> params: Params;
 
-@compute @workgroup_size(256)
+@compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let lag = gid.x;
-    if lag >= params.n_lags { return; }
+    let i = gid.x;
+    if (i >= params.n) { return; }
 
-    let n = params.n_atoms;
-    let n_frames = params.n_frames;
-    let stride = n * 3u;
+    let base_i = i * 3u;
+    let n_origins = params.n_frames - params.lag;
 
-    let n_origins = n_frames - lag;
-    if n_origins == 0u {
-        c_out[lag] = f64(0.0);
-        return;
+    var acc = vel_ring[0] - vel_ring[0]; // 0.0 as f64
+
+    for (var t0 = 0u; t0 < n_origins; t0 = t0 + 1u) {
+        let off0 = t0 * params.stride + base_i;
+        let off1 = (t0 + params.lag) * params.stride + base_i;
+
+        acc += vel_ring[off0]      * vel_ring[off1]
+             + vel_ring[off0 + 1u] * vel_ring[off1 + 1u]
+             + vel_ring[off0 + 2u] * vel_ring[off1 + 2u];
     }
 
-    var sum: f64 = f64(0.0);
-    for (var t: u32 = 0u; t < n_origins; t = t + 1u) {
-        let t1 = t + lag;
-        var dot: f64 = f64(0.0);
-        for (var i: u32 = 0u; i < n; i = i + 1u) {
-            let v0_x = vel[t * stride + i * 3u];
-            let v0_y = vel[t * stride + i * 3u + 1u];
-            let v0_z = vel[t * stride + i * 3u + 2u];
-            let v1_x = vel[t1 * stride + i * 3u];
-            let v1_y = vel[t1 * stride + i * 3u + 1u];
-            let v1_z = vel[t1 * stride + i * 3u + 2u];
-            dot = dot + v0_x * v1_x + v0_y * v1_y + v0_z * v1_z;
-        }
-        sum = sum + dot;
-    }
-
-    c_out[lag] = sum / f64(n_origins);
+    out[i] = acc;
 }

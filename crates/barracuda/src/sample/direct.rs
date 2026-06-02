@@ -279,8 +279,7 @@ where
             // Auto-smoothing via LOO-CV
             let smoothing = if config.auto_smoothing {
                 loo_cv_optimal_smoothing(device.clone(), &x_data, &y_data, config.kernel, None)
-                    .map(|r| r.smoothing)
-                    .unwrap_or(1e-6)
+                    .map_or(1e-6, |r| r.smoothing)
             } else {
                 1e-6
             };

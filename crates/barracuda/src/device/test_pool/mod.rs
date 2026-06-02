@@ -90,8 +90,7 @@ fn prefer_gpu() -> bool {
     static CACHED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *CACHED.get_or_init(|| {
         std::env::var("BARRACUDA_TEST_BACKEND")
-            .map(|v| v.eq_ignore_ascii_case("gpu"))
-            .unwrap_or(false)
+            .is_ok_and(|v| v.eq_ignore_ascii_case("gpu"))
     })
 }
 

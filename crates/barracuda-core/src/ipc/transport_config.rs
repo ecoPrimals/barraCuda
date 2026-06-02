@@ -61,8 +61,7 @@ pub fn resolve_socket_dir() -> std::path::PathBuf {
 pub fn validate_insecure_guard() -> crate::error::Result<()> {
     let family_id = resolve_family_id();
     let insecure = std::env::var(env_keys::BIOMEOS_INSECURE)
-        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-        .unwrap_or(false);
+        .is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
     if let Some(ref fid) = family_id {
         if insecure {
             return Err(crate::error::BarracudaCoreError::lifecycle(format!(

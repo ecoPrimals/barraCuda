@@ -24,7 +24,7 @@
 
 Cross-spring evolution follows **Write → Absorb → Lean**: springs implement
 domain-specific primitives, barraCuda absorbs and generalises, springs consume
-the upstream version. All springs are synced to barraCuda v0.3.12 / wgpu 28
+the upstream version. All springs are synced to barraCuda v0.4.0 / wgpu 28
 with zero local WGSL (airSpring and wetSpring fully lean).
 
 ---

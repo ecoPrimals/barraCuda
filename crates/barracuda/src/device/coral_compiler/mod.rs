@@ -70,8 +70,9 @@ pub fn is_coral_available() -> bool {
     tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
-        .map(|r| r.block_on(async { discover_shader_compiler().await.is_some() }))
-        .unwrap_or(false)
+        .is_ok_and(|r| {
+            r.block_on(async { discover_shader_compiler().await.is_some() })
+        })
 }
 
 use jsonrpc::{jsonrpc_call, wgsl_to_spirv};

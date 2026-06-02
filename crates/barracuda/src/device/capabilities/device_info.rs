@@ -185,8 +185,7 @@ pub fn build_device_info(device: Device) -> DeviceInfo {
             capabilities: vec![Capability::Compute, Capability::Memory],
             memory_gb: estimate_system_memory(),
             compute_units: std::thread::available_parallelism()
-                .map(std::num::NonZero::get)
-                .unwrap_or(4),
+                .map_or(4, std::num::NonZero::get),
         },
 
         Device::GPU => DeviceInfo {
@@ -253,8 +252,7 @@ fn is_sovereign_available() -> bool {
     #[cfg(feature = "sovereign-dispatch")]
     {
         crate::device::sovereign_device::SovereignDevice::with_auto_device()
-            .map(|d| d.has_dispatch())
-            .unwrap_or(false)
+            .is_ok_and(|d| d.has_dispatch())
     }
     #[cfg(not(feature = "sovereign-dispatch"))]
     false

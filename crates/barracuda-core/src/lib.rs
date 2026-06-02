@@ -51,8 +51,10 @@ pub mod ipc;
 /// Primal lifecycle management — start, stop, health, and graceful shutdown.
 pub mod lifecycle;
 /// `tarpc` binary RPC service definition and handlers.
+#[cfg(feature = "tarpc-transport")]
 pub mod rpc;
 /// Shared request/response types for the RPC layer.
+#[cfg(feature = "tarpc-transport")]
 pub mod rpc_types;
 
 pub use barracuda;
@@ -77,7 +79,23 @@ use error::BarracudaCoreError;
 use health::{HealthReport, HealthStatus, PrimalHealth};
 use lifecycle::{PrimalLifecycle, PrimalState};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
+
+/// Process-wide flag to skip GPU probe — safe alternative to env var mutation.
+///
+/// Set via [`set_no_gpu_probe`] before spawning async runtime tasks.
+/// Checked by [`BarraCudaPrimal::should_skip_gpu_probe`] alongside the env var.
+static NO_GPU_PROBE_FLAG: AtomicBool = AtomicBool::new(false);
+
+/// Safely signal that GPU probe should be skipped for this process.
+///
+/// Call before creating the tokio runtime or spawning tasks. This avoids
+/// the Rust 2024 `unsafe` requirement for `std::env::set_var` in
+/// potentially multi-threaded contexts.
+pub fn set_no_gpu_probe() {
+    NO_GPU_PROBE_FLAG.store(true, Ordering::Release);
+}
 
 /// CPU-resident tensor for headless hosts without GPU.
 ///
@@ -118,6 +136,7 @@ pub struct BarraCudaPrimal {
     compute: Option<barracuda::device::DiscoveredDevice>,
     tensors: RwLock<HashMap<String, Arc<barracuda::tensor::Tensor>>>,
     cpu_tensors: RwLock<HashMap<String, CpuTensor>>,
+    dispatch_jobs: RwLock<HashMap<String, ipc::methods::compute::DispatchJob>>,
 }
 
 impl BarraCudaPrimal {
@@ -129,6 +148,7 @@ impl BarraCudaPrimal {
             compute: None,
             tensors: RwLock::new(HashMap::new()),
             cpu_tensors: RwLock::new(HashMap::new()),
+            dispatch_jobs: RwLock::new(HashMap::new()),
         }
     }
 
@@ -181,8 +201,8 @@ impl BarraCudaPrimal {
 
     /// Number of tensors currently stored (GPU + CPU).
     pub fn tensor_count(&self) -> usize {
-        let gpu = self.tensors.read().map(|s| s.len()).unwrap_or(0);
-        let cpu = self.cpu_tensors.read().map(|s| s.len()).unwrap_or(0);
+        let gpu = self.tensors.read().map_or(0, |s| s.len());
+        let cpu = self.cpu_tensors.read().map_or(0, |s| s.len());
         gpu + cpu
     }
 
@@ -201,6 +221,25 @@ impl BarraCudaPrimal {
     pub fn get_cpu_tensor(&self, id: &str) -> Option<CpuTensor> {
         self.cpu_tensors.read().ok()?.get(id).cloned()
     }
+
+    /// Store a dispatch job result.
+    pub(crate) fn store_dispatch_job(
+        &self,
+        id: String,
+        job: ipc::methods::compute::DispatchJob,
+    ) {
+        if let Ok(mut store) = self.dispatch_jobs.write() {
+            store.insert(id, job);
+        }
+    }
+
+    /// Retrieve a dispatch job by ID.
+    pub(crate) fn get_dispatch_job(
+        &self,
+        id: &str,
+    ) -> Option<ipc::methods::compute::DispatchJob> {
+        self.dispatch_jobs.read().ok()?.get(id).cloned()
+    }
 }
 
 impl Default for BarraCudaPrimal {
@@ -212,15 +251,15 @@ impl Default for BarraCudaPrimal {
 impl BarraCudaPrimal {
     /// Whether GPU probe should be skipped (instant degraded startup).
     ///
-    /// Checks `BARRACUDA_NO_GPU_PROBE` env var. When set to any truthy value
-    /// (`1`, `true`, `yes`), device enumeration is skipped entirely and the
-    /// primal starts in cpu-shader-only mode. This eliminates the ~30s wgpu
-    /// adapter probe delay on GPU-less hosts (broken DRM, containers, VPS).
+    /// Checks both the process-wide [`NO_GPU_PROBE_FLAG`] (set via
+    /// [`set_no_gpu_probe`]) and the `BARRACUDA_NO_GPU_PROBE` env var.
+    /// When either is truthy, device enumeration is skipped and the primal
+    /// starts in cpu-shader-only mode.
     #[must_use]
     pub fn should_skip_gpu_probe() -> bool {
-        std::env::var(crate::env_keys::BARRACUDA_NO_GPU_PROBE)
-            .map(|v| matches!(v.to_lowercase().as_str(), "1" | "true" | "yes"))
-            .unwrap_or(false)
+        NO_GPU_PROBE_FLAG.load(Ordering::Acquire)
+            || std::env::var(crate::env_keys::BARRACUDA_NO_GPU_PROBE)
+                .is_ok_and(|v| matches!(v.to_lowercase().as_str(), "1" | "true" | "yes"))
     }
 }
 

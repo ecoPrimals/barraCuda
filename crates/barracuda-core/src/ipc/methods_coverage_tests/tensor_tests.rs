@@ -30,7 +30,11 @@ async fn tensor_create_shape_with_non_numeric_filtered() {
         serde_json::json!(11),
     )
     .await;
-    assert!(resp.error.is_some());
+    // Non-numeric values are filtered by parse_shape → empty shape → scalar
+    // tensor created via CPU fallback. This is valid behavior.
+    assert!(resp.error.is_none());
+    let result = resp.result.expect("scalar tensor created via CPU fallback");
+    assert_eq!(result["status"], "completed");
 }
 
 #[tokio::test]
@@ -48,7 +52,7 @@ async fn tensor_create_data_length_mismatch() {
 }
 
 #[tokio::test]
-async fn tensor_create_valid_params_no_gpu() {
+async fn tensor_create_valid_params_cpu_fallback() {
     let primal = test_primal();
     let resp = tensor_create(
         &primal,
@@ -56,8 +60,12 @@ async fn tensor_create_valid_params_no_gpu() {
         serde_json::json!(13),
     )
     .await;
-    let err = resp.error.expect("valid params + no GPU = internal error");
-    assert_eq!(err.code, jsonrpc::INTERNAL_ERROR);
+    // CPU fallback handles tensor creation when no GPU is available.
+    assert!(resp.error.is_none());
+    let result = resp.result.expect("CPU fallback should succeed");
+    assert_eq!(result["status"], "completed");
+    assert_eq!(result["shape"], serde_json::json!([2, 2]));
+    assert_eq!(result["elements"], 4);
 }
 
 // ── tensor.matmul ───────────────────────────────────────────────────

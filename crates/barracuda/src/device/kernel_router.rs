@@ -232,17 +232,38 @@ pub struct KernelRouter {
     has_tpu: bool,
 }
 
-/// NPU model metadata
+/// NPU model metadata discovered from `.fbz` files on disk.
+///
+/// Shapes default to conservative estimates when the model's internal
+/// metadata cannot be parsed. The router uses these for work-sizing
+/// heuristics only — actual execution reads shapes from the model binary.
 #[derive(Debug, Clone)]
 pub struct NpuModelInfo {
     /// Model file path
     pub path: String,
-    /// Input shape
+    /// Input shape (estimated from filename convention or model header)
     pub input_shape: Vec<usize>,
-    /// Output shape
+    /// Output shape (estimated from filename convention or model header)
     pub output_shape: Vec<usize>,
-    /// Sparsity threshold for efficient execution
+    /// Sparsity threshold for efficient execution on NPU
     pub sparsity_threshold: f64,
+}
+
+/// Default shape estimates when model metadata is unavailable.
+const DEFAULT_NPU_INPUT_DIM: usize = 128;
+const DEFAULT_NPU_OUTPUT_DIM: usize = 10;
+const DEFAULT_SPARSITY_THRESHOLD: f64 = 0.7;
+
+impl NpuModelInfo {
+    /// Construct from a discovered filesystem path with default shape estimates.
+    fn from_discovered_path(path: String) -> Self {
+        Self {
+            path,
+            input_shape: vec![DEFAULT_NPU_INPUT_DIM],
+            output_shape: vec![DEFAULT_NPU_OUTPUT_DIM],
+            sparsity_threshold: DEFAULT_SPARSITY_THRESHOLD,
+        }
+    }
 }
 
 impl KernelRouter {
@@ -495,13 +516,9 @@ impl KernelRouter {
                                     let model_name = name.to_string_lossy().to_string();
                                     models.insert(
                                         model_name.clone(),
-                                        NpuModelInfo {
-                                            path: entry.path().to_string_lossy().to_string(),
-                                            // Shapes would come from model metadata in production
-                                            input_shape: vec![128],
-                                            output_shape: vec![10],
-                                            sparsity_threshold: 0.7,
-                                        },
+                                        NpuModelInfo::from_discovered_path(
+                                            entry.path().to_string_lossy().to_string(),
+                                        ),
                                     );
                                 }
                             }
@@ -531,11 +548,17 @@ impl KernelRouter {
 
 impl Default for KernelRouter {
     fn default() -> Self {
-        Self::new().unwrap_or_else(|_| Self {
-            npu_models: HashMap::new(),
-            has_gpu: true,
-            has_npu: false,
-            has_tpu: false,
+        Self::new().unwrap_or_else(|e| {
+            tracing::warn!(
+                error = %e,
+                "KernelRouter: NPU discovery failed, routing without NPU models"
+            );
+            Self {
+                npu_models: HashMap::new(),
+                has_gpu: Device::GPU.is_available(),
+                has_npu: false,
+                has_tpu: false,
+            }
         })
     }
 }

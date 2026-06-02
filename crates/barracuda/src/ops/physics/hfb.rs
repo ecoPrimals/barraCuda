@@ -24,6 +24,9 @@ pub const WGSL_HFB_HAMILTONIAN: &str =
 /// WGSL source for batched HFB potentials.
 pub const WGSL_HFB_POTENTIALS: &str =
     include_str!("../../shaders/science/hfb/batched_hfb_potentials_f64.wgsl");
+/// WGSL source for spin-orbit diagonal add + H pack before eigensolve.
+pub const WGSL_SPIN_ORBIT_PACK: &str =
+    include_str!("../../shaders/physics/spin_orbit_pack_f64.wgsl");
 
 /// Unified spherical HFB pipeline: holds device reference and exposes shader constants.
 ///

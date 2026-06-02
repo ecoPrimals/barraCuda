@@ -17,14 +17,29 @@ const SECURITY_DOMAIN: &str = "crypto";
 
 /// Discover the security-domain socket for BTSP handshake delegation.
 pub(super) fn discover_security_provider() -> Option<std::path::PathBuf> {
-    for var in [env_keys::BTSP_PROVIDER_SOCKET, env_keys::BEARDOG_SOCKET] {
-        if let Ok(path) = std::env::var(var) {
-            let p = std::path::PathBuf::from(&path);
-            if p.exists() {
-                return Some(p);
-            }
-            tracing::debug!("{var}={path} set but socket does not exist, falling through");
+    if let Ok(path) = std::env::var(env_keys::BTSP_PROVIDER_SOCKET) {
+        let p = std::path::PathBuf::from(&path);
+        if p.exists() {
+            return Some(p);
         }
+        tracing::debug!(
+            "{}={path} set but socket does not exist, falling through",
+            env_keys::BTSP_PROVIDER_SOCKET
+        );
+    }
+    #[expect(deprecated, reason = "intentional legacy fallback with deprecation warning")]
+    let legacy_key = env_keys::BEARDOG_SOCKET;
+    if let Ok(path) = std::env::var(legacy_key) {
+        tracing::warn!(
+            "BEARDOG_SOCKET is deprecated — migrate to BTSP_PROVIDER_SOCKET"
+        );
+        let p = std::path::PathBuf::from(&path);
+        if p.exists() {
+            return Some(p);
+        }
+        tracing::debug!(
+            "{legacy_key}={path} set but socket does not exist, falling through"
+        );
     }
 
     let sock_dir = resolve_socket_dir();

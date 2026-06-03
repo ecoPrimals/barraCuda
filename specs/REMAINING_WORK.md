@@ -1,7 +1,7 @@
 # barraCuda — Remaining Work
 
 **Version**: 0.4.0
-**Date**: May 13, 2026
+**Date**: June 3, 2026
 **Status**: Stadial gate release (v0.4.0) — springs convergence version
 
 ---

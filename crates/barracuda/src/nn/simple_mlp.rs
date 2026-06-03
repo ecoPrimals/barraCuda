@@ -15,6 +15,7 @@
 //! let output = mlp.forward(&input);
 //! ```
 
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 /// Activation function applied after each hidden layer.
@@ -72,6 +73,49 @@ impl SimpleMlp {
     /// Create from explicit layer specifications.
     #[must_use]
     pub fn new(layers: Vec<DenseLayer>) -> Self {
+        Self { layers }
+    }
+
+    /// Create from a list of layer dimensions with Xavier-uniform random init.
+    ///
+    /// `dims` specifies the size of each layer including input:
+    /// e.g. `&[36, 16]` creates one layer mapping 36 inputs → 16 outputs.
+    /// `&[36, 64, 16]` creates two layers: 36→64 and 64→16.
+    ///
+    /// All hidden layers use `activation`; the last layer uses `Identity`
+    /// (softmax/sigmoid is applied externally by the consumer).
+    #[must_use]
+    pub fn from_dims(dims: &[usize], activation: Activation) -> Self {
+        let mut rng = rand::rng();
+        let mut layers = Vec::with_capacity(dims.len().saturating_sub(1));
+
+        for i in 0..dims.len().saturating_sub(1) {
+            let in_size = dims[i];
+            let out_size = dims[i + 1];
+            let limit = (6.0_f64 / (in_size + out_size) as f64).sqrt();
+
+            let weight: Vec<Vec<f64>> = (0..out_size)
+                .map(|_| {
+                    (0..in_size)
+                        .map(|_| rng.random_range(-limit..limit))
+                        .collect()
+                })
+                .collect();
+            let bias = vec![0.0; out_size];
+
+            let act = if i + 1 < dims.len().saturating_sub(1) {
+                activation
+            } else {
+                Activation::Identity
+            };
+
+            layers.push(DenseLayer {
+                weight,
+                bias,
+                activation: act,
+            });
+        }
+
         Self { layers }
     }
 
@@ -521,5 +565,47 @@ mod tests {
                 context: "input"
             }
         );
+    }
+
+    #[test]
+    fn test_from_dims_single_layer() {
+        let mlp = SimpleMlp::from_dims(&[36, 16], Activation::Sigmoid);
+        assert_eq!(mlp.layers.len(), 1);
+        assert_eq!(mlp.input_size(), Some(36));
+        assert_eq!(mlp.output_size(), Some(16));
+        assert_eq!(mlp.layers[0].activation, Activation::Identity);
+    }
+
+    #[test]
+    fn test_from_dims_multi_layer() {
+        let mlp = SimpleMlp::from_dims(&[36, 64, 16], Activation::Relu);
+        assert_eq!(mlp.layers.len(), 2);
+        assert_eq!(mlp.input_size(), Some(36));
+        assert_eq!(mlp.output_size(), Some(16));
+        assert_eq!(mlp.layers[0].activation, Activation::Relu);
+        assert_eq!(mlp.layers[1].activation, Activation::Identity);
+    }
+
+    #[test]
+    fn test_from_dims_trains_successfully() {
+        let mut mlp = SimpleMlp::from_dims(&[4, 2], Activation::Sigmoid);
+        let inputs = vec![
+            vec![1.0, 0.0, 0.0, 0.0],
+            vec![0.0, 1.0, 0.0, 0.0],
+            vec![0.0, 0.0, 1.0, 0.0],
+            vec![0.0, 0.0, 0.0, 1.0],
+        ];
+        let targets = vec![
+            vec![1.0, 0.0],
+            vec![1.0, 0.0],
+            vec![0.0, 1.0],
+            vec![0.0, 1.0],
+        ];
+        let config = TrainConfig {
+            learning_rate: 0.1,
+            epochs: 100,
+        };
+        let mse = mlp.train(&inputs, &targets, &config).unwrap();
+        assert!(mse < 0.25, "from_dims should train, got MSE={mse}");
     }
 }

@@ -1,11 +1,19 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-06-01.
+Prioritized work items, ordered by impact. Updated 2026-06-03.
 
 ---
 
 ## Recently Completed
 
+- **Wave 73: Perceptron Training for biomeOS L5 Neural API (Jun 3)**:
+  Evolved `ml.mlp_train` to support dimension-shorthand wire contract:
+  `{"layers": [36, 16], "inputs": [...], "targets": [...]}` auto-initializes
+  Xavier-uniform random weights and trains via SGD backprop. Backwards-compatible
+  with explicit-weights form. Added `SimpleMlp::from_dims()` constructor. 6 new
+  tests covering 36-dim perceptron (batch-256, two-layer, error paths). Matches
+  `NEURAL_API_PERCEPTRON_DESIGN.md` contract exactly. Pure software, zero GPU.
+  Unblocks biomeOS perceptron shadow mode + primalSpring extraction.
 - **Wave 67: Cross-Gate Dispatch Pipeline + Transport Split (Jun 1)**:
   Implemented 3 new IPC methods for hotSpring cross-gate compute dispatch pipeline:
   `compute.dispatch.capabilities` (GPU/CPU capability reporting for routing),

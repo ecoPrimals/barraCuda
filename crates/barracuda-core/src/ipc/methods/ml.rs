@@ -250,62 +250,98 @@ pub(super) fn ml_esn_predict(params: &Value, id: Value) -> JsonRpcResponse {
 /// - `epochs` (integer, optional, default 100)
 ///
 /// Returns trained weights (same format as `ml.mlp_forward` layers) and final MSE.
+/// Train an MLP via SGD backpropagation.
+///
+/// Supports two forms for the `layers` parameter:
+/// - **Shorthand (dims)**: `[36, 16]` — creates a network with Xavier-init random weights.
+///   Optional top-level `"activation"` (default `"sigmoid"`) sets hidden activations.
+/// - **Explicit (weights)**: `[{"weights":..., "biases":..., "activation":...}]` — resumes
+///   training from existing weights (original contract).
 pub(super) fn ml_mlp_train(params: &Value, id: Value) -> JsonRpcResponse {
     let Some(layers_val) = params.get("layers").and_then(|v| v.as_array()) else {
         return JsonRpcResponse::error(
             id,
             INVALID_PARAMS,
-            "Missing required param: layers (array of layer specs)",
+            "Missing required param: layers (array of dims or layer specs)",
         );
     };
     if layers_val.is_empty() {
         return JsonRpcResponse::error(id, INVALID_PARAMS, "layers must be non-empty");
     }
 
-    let mut dense_layers = Vec::with_capacity(layers_val.len());
-    for (i, layer_val) in layers_val.iter().enumerate() {
-        let Some(weights) = extract_matrix(layer_val, "weights") else {
+    let is_dims_shorthand = layers_val[0].is_number();
+
+    let mlp = if is_dims_shorthand {
+        let dims: Vec<usize> = layers_val
+            .iter()
+            .filter_map(|v| v.as_u64().map(|n| n as usize))
+            .collect();
+        if dims.len() < 2 {
             return JsonRpcResponse::error(
                 id,
                 INVALID_PARAMS,
-                format!("Layer {i}: missing weights (2D array)"),
-            );
-        };
-        let Some(biases) = extract_f64_array(layer_val, "biases") else {
-            return JsonRpcResponse::error(
-                id,
-                INVALID_PARAMS,
-                format!("Layer {i}: missing biases (array)"),
-            );
-        };
-        if weights.len() != biases.len() {
-            return JsonRpcResponse::error(
-                id,
-                INVALID_PARAMS,
-                format!(
-                    "Layer {i}: weights rows ({}) != biases length ({})",
-                    weights.len(),
-                    biases.len()
-                ),
+                "Shorthand layers requires at least 2 dimensions [input_dim, output_dim]",
             );
         }
-        let act_str = layer_val
+        let act_str = params
             .get("activation")
             .and_then(|v| v.as_str())
-            .unwrap_or("identity");
+            .unwrap_or("sigmoid");
         let Some(activation) = parse_activation(act_str) else {
             return JsonRpcResponse::error(
                 id,
                 INVALID_PARAMS,
-                format!("Layer {i}: unknown activation \"{act_str}\""),
+                format!("Unknown activation \"{act_str}\""),
             );
         };
-        dense_layers.push(DenseLayer {
-            weight: weights,
-            bias: biases,
-            activation,
-        });
-    }
+        SimpleMlp::from_dims(&dims, activation)
+    } else {
+        let mut dense_layers = Vec::with_capacity(layers_val.len());
+        for (i, layer_val) in layers_val.iter().enumerate() {
+            let Some(weights) = extract_matrix(layer_val, "weights") else {
+                return JsonRpcResponse::error(
+                    id,
+                    INVALID_PARAMS,
+                    format!("Layer {i}: missing weights (2D array)"),
+                );
+            };
+            let Some(biases) = extract_f64_array(layer_val, "biases") else {
+                return JsonRpcResponse::error(
+                    id,
+                    INVALID_PARAMS,
+                    format!("Layer {i}: missing biases (array)"),
+                );
+            };
+            if weights.len() != biases.len() {
+                return JsonRpcResponse::error(
+                    id,
+                    INVALID_PARAMS,
+                    format!(
+                        "Layer {i}: weights rows ({}) != biases length ({})",
+                        weights.len(),
+                        biases.len()
+                    ),
+                );
+            }
+            let act_str = layer_val
+                .get("activation")
+                .and_then(|v| v.as_str())
+                .unwrap_or("identity");
+            let Some(activation) = parse_activation(act_str) else {
+                return JsonRpcResponse::error(
+                    id,
+                    INVALID_PARAMS,
+                    format!("Layer {i}: unknown activation \"{act_str}\""),
+                );
+            };
+            dense_layers.push(DenseLayer {
+                weight: weights,
+                bias: biases,
+                activation,
+            });
+        }
+        SimpleMlp::new(dense_layers)
+    };
 
     let Some(inputs_val) = params.get("inputs").and_then(|v| v.as_array()) else {
         return JsonRpcResponse::error(
@@ -349,7 +385,7 @@ pub(super) fn ml_mlp_train(params: &Value, id: Value) -> JsonRpcResponse {
         epochs,
     };
 
-    let mut mlp = SimpleMlp::new(dense_layers);
+    let mut mlp = mlp;
     match mlp.train(&inputs, &targets, &config) {
         Ok(mse) => {
             let trained_layers: Vec<Value> = mlp

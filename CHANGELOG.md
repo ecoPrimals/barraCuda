@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-12
 
+### Added — Wave 73: Perceptron Training (Jun 3 2026)
+
+- `SimpleMlp::from_dims(&[usize], Activation)` constructor: Xavier-uniform random
+  weight initialization from layer dimensions (no pre-built weight matrices needed)
+- `ml.mlp_train` now supports dimension-shorthand form: `{"layers": [36, 16], ...}`
+  auto-creates network and trains from scratch; explicit-weights form preserved
+- 6 new Wave 73 tests: 36→16 perceptron, 36→64→16 two-layer, batch-256 perf
+  (<1s for 256 samples × 10 epochs), default activation, error paths, compat
+- Wire contract matches `NEURAL_API_PERCEPTRON_DESIGN.md`:
+  ```json
+  {"layers": [36, 16], "inputs": [...], "targets": [...],
+   "learning_rate": 0.01, "epochs": 10}
+  ```
+- 3 new `SimpleMlp` unit tests for `from_dims` (single/multi layer, train)
+
 ### Changed — Wave 67: Sovereign Compute FRAGO (Jun 1 2026)
 
 - Evolved `compute.dispatch.submit` wire contract per hotSpring FRAGO:

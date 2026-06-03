@@ -42,3 +42,70 @@ where
     writer.flush().await?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn write_then_read_roundtrip() {
+        let value = serde_json::json!({"method": "health.liveness", "id": 1});
+        let mut buf = Vec::new();
+        write_ndjson_line(&mut buf, &value).await.unwrap();
+
+        let written = String::from_utf8(buf.clone()).unwrap();
+        assert!(written.ends_with('\n'));
+        assert_eq!(written.matches('\n').count(), 1);
+
+        let mut reader = tokio::io::BufReader::new(buf.as_slice());
+        let line = read_ndjson_line(&mut reader).await.unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&line).unwrap();
+        assert_eq!(parsed, value);
+    }
+
+    #[tokio::test]
+    async fn read_empty_stream_returns_eof() {
+        let empty: &[u8] = &[];
+        let mut reader = tokio::io::BufReader::new(empty);
+        let err = read_ndjson_line(&mut reader).await.unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::UnexpectedEof);
+    }
+
+    #[tokio::test]
+    async fn write_complex_value() {
+        let value = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "compute.dispatch.submit",
+            "params": {"binary_b64": "AQIDBA==", "bindings": [0, 1]},
+            "id": 42
+        });
+        let mut buf = Vec::new();
+        write_ndjson_line(&mut buf, &value).await.unwrap();
+
+        let written = String::from_utf8(buf).unwrap();
+        assert!(written.contains("compute.dispatch.submit"));
+        assert!(written.ends_with('\n'));
+        assert!(!written[..written.len() - 1].contains('\n'));
+    }
+
+    #[tokio::test]
+    async fn multiple_lines_roundtrip() {
+        let values = vec![
+            serde_json::json!({"id": 1}),
+            serde_json::json!({"id": 2}),
+            serde_json::json!({"id": 3}),
+        ];
+
+        let mut buf = Vec::new();
+        for v in &values {
+            write_ndjson_line(&mut buf, v).await.unwrap();
+        }
+
+        let mut reader = tokio::io::BufReader::new(buf.as_slice());
+        for expected in &values {
+            let line = read_ndjson_line(&mut reader).await.unwrap();
+            let parsed: serde_json::Value = serde_json::from_str(&line).unwrap();
+            assert_eq!(&parsed, expected);
+        }
+    }
+}

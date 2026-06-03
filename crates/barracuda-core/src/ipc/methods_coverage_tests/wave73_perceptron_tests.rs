@@ -360,3 +360,64 @@ fn perceptron_pipeline_reward_signal() {
     let mse = result["mse"].as_f64().unwrap();
     assert!(mse.is_finite());
 }
+
+#[test]
+fn perceptron_pipeline_full_feature_fields() {
+    let records = vec![
+        serde_json::json!({
+            "method": "crypto.hash",
+            "owner": "beardog",
+            "latency_ms": 0.5,
+            "success": true,
+            "gate": "strandGate",
+            "param_size_bytes": 1024,
+            "gate_load": 50,
+            "topology_affinity": 0.95
+        }),
+        serde_json::json!({
+            "method": "compute.dispatch",
+            "owner": "songbird",
+            "latency_ms": 15.0,
+            "success": true,
+            "gate": "eastGate",
+            "param_size_bytes": 4096000,
+            "gate_load": 800,
+            "topology_affinity": 0.3
+        }),
+        serde_json::json!({
+            "method": "storage.put",
+            "owner": "beardog",
+            "latency_ms": 2.0,
+            "success": false,
+            "gate": "strandGate",
+            "param_size_bytes": 512,
+            "gate_load": 100,
+            "topology_affinity": 0.0
+        }),
+        serde_json::json!({
+            "method": "crypto.verify",
+            "owner": "songbird",
+            "latency_ms": 0.1,
+            "success": true,
+            "gate": "eastGate",
+            "param_size_bytes": 256,
+            "gate_load": 20,
+            "topology_affinity": 0.85
+        }),
+    ];
+
+    let resp = ml_perceptron_train(
+        &serde_json::json!({"records": records, "epochs": 20, "learning_rate": 0.05}),
+        serde_json::json!(7406),
+    );
+
+    assert!(resp.error.is_none(), "full fields test failed: {:?}", resp.error);
+    let result = resp.result.unwrap();
+    assert_eq!(result["records_processed"].as_u64().unwrap(), 4);
+    assert!(result["mse"].as_f64().unwrap().is_finite());
+
+    let providers = result["providers"].as_array().unwrap();
+    assert_eq!(providers.len(), 2);
+    let domains = result["domains"].as_array().unwrap();
+    assert_eq!(domains.len(), 3);
+}

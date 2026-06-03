@@ -472,6 +472,14 @@ pub(super) fn ml_perceptron_train(params: &Value, id: Value) -> JsonRpcResponse 
         .iter()
         .filter_map(|r| r.get("latency_ms").and_then(|v| v.as_f64()))
         .fold(1.0_f64, f64::max);
+    let max_param_size = records
+        .iter()
+        .filter_map(|r| r.get("param_size_bytes").and_then(|v| v.as_f64()))
+        .fold(1.0_f64, f64::max);
+    let max_gate_load = records
+        .iter()
+        .filter_map(|r| r.get("gate_load").and_then(|v| v.as_f64()))
+        .fold(1.0_f64, f64::max);
 
     for record in records {
         let mut feature = vec![0.0_f64; 36];
@@ -494,10 +502,19 @@ pub(super) fn ml_perceptron_train(params: &Value, id: Value) -> JsonRpcResponse 
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
-        feature[32] = 0.0; // param_size_norm (not in telemetry, default)
-        feature[33] = 0.5; // gate_load_norm (placeholder)
-        feature[34] = latency_ms / max_latency; // latency_ewma_norm
-        feature[35] = if success { 1.0 } else { 0.0 }; // topology_affinity proxy
+        feature[32] = record
+            .get("param_size_bytes")
+            .and_then(|v| v.as_f64())
+            .map_or(0.0, |v| v / max_param_size);
+        feature[33] = record
+            .get("gate_load")
+            .and_then(|v| v.as_f64())
+            .map_or(0.0, |v| v / max_gate_load);
+        feature[34] = latency_ms / max_latency;
+        feature[35] = record
+            .get("topology_affinity")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(if success { 1.0 } else { 0.0 });
 
         inputs.push(feature);
 

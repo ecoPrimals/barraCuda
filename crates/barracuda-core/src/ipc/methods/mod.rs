@@ -16,6 +16,7 @@ mod graph;
 mod health;
 mod linalg;
 mod math;
+mod mesh;
 mod ml;
 mod nautilus;
 mod params;
@@ -152,6 +153,9 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     // ── FHE ───────────────────────────────────────────────────────────
     "fhe.ntt",
     "fhe.pointwise_mul",
+    // ── Mesh (cross-gate trust validation) ─────────────────────────────
+    "mesh.trust_verify",
+    "mesh.health",
     // ── BTSP Phase 3 ─────────────────────────────────────────────────
     "btsp.negotiate",
     "btsp.capabilities",
@@ -319,6 +323,9 @@ pub async fn dispatch(
         // FHE
         "fhe.ntt" => fhe::fhe_ntt(primal, params, id).await,
         "fhe.pointwise_mul" => fhe::fhe_pointwise_mul(primal, params, id).await,
+        // Mesh (cross-gate trust validation)
+        "mesh.trust_verify" => mesh::mesh_trust_verify(params, id),
+        "mesh.health" => mesh::mesh_health(id),
         // BTSP Phase 3 — negotiate handled at transport layer; reaching
         // dispatch means no authenticated session.
         "btsp.negotiate" => JsonRpcResponse::error(

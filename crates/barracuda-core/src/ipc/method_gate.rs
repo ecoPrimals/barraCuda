@@ -30,7 +30,7 @@ pub enum MethodAccessLevel {
 }
 
 /// Methods that are always public (prefix match).
-const PUBLIC_METHOD_PREFIXES: &[&str] = &["health.", "auth."];
+const PUBLIC_METHOD_PREFIXES: &[&str] = &["health.", "auth.", "mesh.", "btsp."];
 
 /// Methods that are always public (exact match).
 const PUBLIC_METHODS: &[&str] = &[

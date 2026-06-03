@@ -21,6 +21,7 @@ mod tensor_tests;
 mod type_validation_tests;
 mod wave53_coverage_tests;
 mod wave73_perceptron_tests;
+mod wave75_ml_inference_tests;
 
 use crate::BarraCudaPrimal;
 

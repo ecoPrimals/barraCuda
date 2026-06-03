@@ -20,7 +20,7 @@
 //! One JSON object per line, terminated by `\n`. Batch requests (JSON arrays)
 //! are supported per JSON-RPC 2.0 §6.
 //!
-//! ## Method Schemas (90 methods)
+//! ## Method Schemas (91 methods)
 //!
 //! All methods follow `{domain}.{operation}` per `SEMANTIC_METHOD_NAMING_STANDARD.md`.
 //! Legacy `barracuda.{domain}.{operation}` prefix accepted for backward compatibility.
@@ -134,6 +134,8 @@
 pub mod btsp;
 mod btsp_discovery;
 pub mod btsp_frame;
+mod btsp_negotiate;
+mod btsp_wire;
 pub mod jsonrpc;
 pub mod method_gate;
 pub mod methods;

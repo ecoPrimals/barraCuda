@@ -516,7 +516,7 @@ pub(super) fn stats_gamma_fit(params: &Value, id: Value) -> JsonRpcResponse {
 // ── Internal helpers ──────────────────────────────────────────────────────
 
 /// Survival function (1 - CDF) of the F-distribution via regularized incomplete beta.
-pub(super) fn f_distribution_sf(x: f64, d1: f64, d2: f64) -> f64 {
+fn f_distribution_sf(x: f64, d1: f64, d2: f64) -> f64 {
     if x <= 0.0 {
         return 1.0;
     }

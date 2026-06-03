@@ -9,6 +9,7 @@ use super::params::{extract_f64_array, extract_matrix};
 use barracuda::nn::esn_classifier::EsnClassifier;
 use barracuda::nn::simple_mlp::{Activation, DenseLayer, SimpleMlp, TrainConfig};
 use serde_json::Value;
+use std::collections::HashMap;
 
 fn parse_activation(s: &str) -> Option<Activation> {
     match s {
@@ -409,5 +410,170 @@ pub(super) fn ml_mlp_train(params: &Value, id: Value) -> JsonRpcResponse {
             )
         }
         Err(e) => JsonRpcResponse::error(id, INVALID_PARAMS, format!("Training failed: {e}")),
+    }
+}
+
+/// End-to-end perceptron training pipeline for biomeOS L5 Neural API routing.
+///
+/// Accepts raw dispatch telemetry records, extracts 36-dim feature vectors per
+/// `NEURAL_API_PERCEPTRON_DESIGN.md`, trains a single-layer perceptron, and
+/// optionally serializes weights to disk for biomeOS consumption.
+///
+/// Wire contract:
+/// ```json
+/// { "records": [{"method":"crypto.hash","owner":"beardog","latency_ms":0.8,"success":true,"gate":"eastGate"},...],
+///   "learning_rate": 0.01, "epochs": 10,
+///   "output_path": "/path/to/neural_routing_perceptron.bin" }
+/// ```
+pub(super) fn ml_perceptron_train(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(records) = params.get("records").and_then(|v| v.as_array()) else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: records (array of dispatch telemetry objects)",
+        );
+    };
+    if records.is_empty() {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "records must be non-empty");
+    }
+
+    let learning_rate = params
+        .get("learning_rate")
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.01);
+    #[expect(clippy::cast_possible_truncation, reason = "epochs is a count")]
+    let epochs = params
+        .get("epochs")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(10) as usize;
+    let output_path = params.get("output_path").and_then(|v| v.as_str());
+
+    let mut domain_index: HashMap<String, usize> = HashMap::new();
+    let mut provider_index: HashMap<String, usize> = HashMap::new();
+
+    for record in records {
+        if let Some(method) = record.get("method").and_then(|v| v.as_str()) {
+            let domain = method.split('.').next().unwrap_or(method);
+            let len = domain_index.len();
+            domain_index.entry(domain.to_string()).or_insert(len);
+        }
+        if let Some(owner) = record.get("owner").and_then(|v| v.as_str()) {
+            let len = provider_index.len();
+            provider_index.entry(owner.to_string()).or_insert(len);
+        }
+    }
+
+    let n_providers = provider_index.len().max(1);
+
+    let mut inputs: Vec<Vec<f64>> = Vec::with_capacity(records.len());
+    let mut targets: Vec<Vec<f64>> = Vec::with_capacity(records.len());
+
+    let max_latency = records
+        .iter()
+        .filter_map(|r| r.get("latency_ms").and_then(|v| v.as_f64()))
+        .fold(1.0_f64, f64::max);
+
+    for record in records {
+        let mut feature = vec![0.0_f64; 36];
+
+        if let Some(method) = record.get("method").and_then(|v| v.as_str()) {
+            let domain = method.split('.').next().unwrap_or(method);
+            if let Some(&idx) = domain_index.get(domain) {
+                if idx < 32 {
+                    feature[idx] = 1.0;
+                }
+            }
+        }
+
+        let latency_ms = record
+            .get("latency_ms")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+        let success = record
+            .get("success")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        feature[32] = 0.0; // param_size_norm (not in telemetry, default)
+        feature[33] = 0.5; // gate_load_norm (placeholder)
+        feature[34] = latency_ms / max_latency; // latency_ewma_norm
+        feature[35] = if success { 1.0 } else { 0.0 }; // topology_affinity proxy
+
+        inputs.push(feature);
+
+        let mut target = vec![0.0_f64; n_providers];
+        if let Some(owner) = record.get("owner").and_then(|v| v.as_str()) {
+            if let Some(&idx) = provider_index.get(owner) {
+                let reward = if success {
+                    1.0 / (1.0 + latency_ms)
+                } else {
+                    0.0
+                };
+                target[idx] = reward;
+            }
+        }
+        targets.push(target);
+    }
+
+    let mut mlp = SimpleMlp::from_dims(&[36, n_providers], Activation::Sigmoid);
+    let config = TrainConfig {
+        learning_rate,
+        epochs,
+    };
+
+    match mlp.train(&inputs, &targets, &config) {
+        Ok(mse) => {
+            let trained_layers: Vec<Value> = mlp
+                .layers
+                .iter()
+                .map(|l| {
+                    serde_json::json!({
+                        "weights": l.weight,
+                        "biases": l.bias,
+                        "activation": format!("{:?}", l.activation).to_lowercase(),
+                    })
+                })
+                .collect();
+
+            let mut domain_list: Vec<(&str, usize)> =
+                domain_index.iter().map(|(k, &v)| (k.as_str(), v)).collect();
+            domain_list.sort_by_key(|&(_, idx)| idx);
+
+            let mut provider_list: Vec<(&str, usize)> =
+                provider_index.iter().map(|(k, &v)| (k.as_str(), v)).collect();
+            provider_list.sort_by_key(|&(_, idx)| idx);
+
+            let serialized = if let Some(path) = output_path {
+                match mlp.to_json() {
+                    Ok(json_str) => match std::fs::write(path, &json_str) {
+                        Ok(()) => Some(path),
+                        Err(_) => None,
+                    },
+                    Err(_) => None,
+                }
+            } else {
+                None
+            };
+
+            let mut response = serde_json::json!({
+                "layers": trained_layers,
+                "mse": mse,
+                "epochs": epochs,
+                "records_processed": records.len(),
+                "providers": provider_list.iter().map(|(k, _)| *k).collect::<Vec<_>>(),
+                "domains": domain_list.iter().map(|(k, _)| *k).collect::<Vec<_>>(),
+            });
+
+            if let Some(path) = serialized {
+                response["output_path"] = Value::String(path.to_string());
+            }
+
+            JsonRpcResponse::success(id, response)
+        }
+        Err(e) => JsonRpcResponse::error(
+            id,
+            INTERNAL_ERROR,
+            format!("Perceptron training failed: {e}"),
+        ),
     }
 }

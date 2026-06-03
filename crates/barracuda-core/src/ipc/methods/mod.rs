@@ -124,6 +124,7 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     // ── ML (CPU inline-data) ──────────────────────────────────────────
     "ml.mlp_forward",
     "ml.mlp_train",
+    "ml.perceptron_train",
     "ml.attention",
     "ml.esn_predict",
     // ── Nautilus (server sessions, Path B) ─────────────────────────────
@@ -290,6 +291,7 @@ pub async fn dispatch(
         // ML (CPU inline-data)
         "ml.mlp_forward" => ml::ml_mlp_forward(params, id),
         "ml.mlp_train" => ml::ml_mlp_train(params, id),
+        "ml.perceptron_train" => ml::ml_perceptron_train(params, id),
         "ml.attention" => ml::ml_attention(params, id),
         "ml.esn_predict" => ml::ml_esn_predict(params, id),
         // Nautilus (server sessions, Path B)

@@ -10,7 +10,7 @@
 
 use crate::ipc::jsonrpc;
 
-use super::super::ml::ml_mlp_train;
+use super::super::ml::{ml_mlp_train, ml_perceptron_train};
 
 #[test]
 fn perceptron_36_16_dims_shorthand() {
@@ -207,4 +207,156 @@ fn perceptron_batch_256_performance() {
     let result = resp.result.unwrap();
     let mse = result["mse"].as_f64().unwrap();
     assert!(mse < 0.5, "MSE should decrease significantly with 256 samples, got {mse}");
+}
+
+// ── ml.perceptron_train pipeline tests ──────────────────────────────
+
+#[test]
+fn perceptron_pipeline_from_telemetry() {
+    let records: Vec<serde_json::Value> = (0..64)
+        .map(|i| {
+            let domains = ["crypto", "compute", "storage", "network"];
+            let providers = ["beardog", "songbird", "toadstool", "coralreef"];
+            serde_json::json!({
+                "method": format!("{}.op{}", domains[i % 4], i),
+                "owner": providers[i % 4],
+                "latency_ms": (i as f64) * 0.5 + 0.1,
+                "success": i % 5 != 0,
+                "gate": "eastGate"
+            })
+        })
+        .collect();
+
+    let resp = ml_perceptron_train(
+        &serde_json::json!({
+            "records": records,
+            "learning_rate": 0.01,
+            "epochs": 10
+        }),
+        serde_json::json!(7400),
+    );
+
+    assert!(resp.error.is_none(), "pipeline failed: {:?}", resp.error);
+    let result = resp.result.unwrap();
+
+    assert_eq!(result["records_processed"].as_u64().unwrap(), 64);
+    assert_eq!(result["epochs"].as_u64().unwrap(), 10);
+    assert!(result["mse"].as_f64().unwrap().is_finite());
+
+    let providers = result["providers"].as_array().unwrap();
+    assert_eq!(providers.len(), 4);
+
+    let domains = result["domains"].as_array().unwrap();
+    assert_eq!(domains.len(), 4);
+
+    let layers = result["layers"].as_array().unwrap();
+    assert_eq!(layers.len(), 1);
+    let weights = layers[0]["weights"].as_array().unwrap();
+    assert_eq!(weights.len(), 4, "output dim = number of providers");
+    assert_eq!(weights[0].as_array().unwrap().len(), 36, "input dim = 36");
+}
+
+#[test]
+fn perceptron_pipeline_with_output_path() {
+    let tmp = std::env::temp_dir().join("barracuda_perceptron_test.json");
+    let records: Vec<serde_json::Value> = (0..16)
+        .map(|i| {
+            serde_json::json!({
+                "method": format!("crypto.hash{}", i),
+                "owner": if i % 2 == 0 { "beardog" } else { "songbird" },
+                "latency_ms": 1.0 + i as f64,
+                "success": true,
+                "gate": "strandGate"
+            })
+        })
+        .collect();
+
+    let resp = ml_perceptron_train(
+        &serde_json::json!({
+            "records": records,
+            "epochs": 5,
+            "output_path": tmp.to_str().unwrap()
+        }),
+        serde_json::json!(7401),
+    );
+
+    assert!(resp.error.is_none(), "pipeline with output failed: {:?}", resp.error);
+    let result = resp.result.unwrap();
+    assert_eq!(
+        result["output_path"].as_str().unwrap(),
+        tmp.to_str().unwrap()
+    );
+
+    assert!(tmp.exists(), "weights file should be written");
+    let contents = std::fs::read_to_string(&tmp).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&contents).unwrap();
+    assert!(parsed["layers"].as_array().unwrap().len() >= 1);
+
+    std::fs::remove_file(&tmp).ok();
+}
+
+#[test]
+fn perceptron_pipeline_empty_records() {
+    let resp = ml_perceptron_train(
+        &serde_json::json!({"records": []}),
+        serde_json::json!(7402),
+    );
+    let err = resp.error.expect("empty records should fail");
+    assert_eq!(err.code, jsonrpc::INVALID_PARAMS);
+}
+
+#[test]
+fn perceptron_pipeline_missing_records() {
+    let resp = ml_perceptron_train(
+        &serde_json::json!({"epochs": 10}),
+        serde_json::json!(7403),
+    );
+    let err = resp.error.expect("missing records should fail");
+    assert_eq!(err.code, jsonrpc::INVALID_PARAMS);
+}
+
+#[test]
+fn perceptron_pipeline_single_provider() {
+    let records: Vec<serde_json::Value> = (0..10)
+        .map(|i| {
+            serde_json::json!({
+                "method": "crypto.hash",
+                "owner": "beardog",
+                "latency_ms": 0.5 + i as f64 * 0.1,
+                "success": true,
+                "gate": "strandGate"
+            })
+        })
+        .collect();
+
+    let resp = ml_perceptron_train(
+        &serde_json::json!({"records": records, "epochs": 5}),
+        serde_json::json!(7404),
+    );
+
+    assert!(resp.error.is_none(), "single provider failed: {:?}", resp.error);
+    let result = resp.result.unwrap();
+    let providers = result["providers"].as_array().unwrap();
+    assert_eq!(providers.len(), 1);
+    assert_eq!(providers[0].as_str().unwrap(), "beardog");
+}
+
+#[test]
+fn perceptron_pipeline_reward_signal() {
+    let records = vec![
+        serde_json::json!({"method":"crypto.hash","owner":"beardog","latency_ms":0.1,"success":true,"gate":"eastGate"}),
+        serde_json::json!({"method":"crypto.hash","owner":"songbird","latency_ms":100.0,"success":true,"gate":"eastGate"}),
+        serde_json::json!({"method":"crypto.hash","owner":"beardog","latency_ms":0.2,"success":true,"gate":"eastGate"}),
+        serde_json::json!({"method":"crypto.hash","owner":"songbird","latency_ms":50.0,"success":false,"gate":"eastGate"}),
+    ];
+
+    let resp = ml_perceptron_train(
+        &serde_json::json!({"records": records, "epochs": 50, "learning_rate": 0.1}),
+        serde_json::json!(7405),
+    );
+
+    assert!(resp.error.is_none(), "reward signal test failed: {:?}", resp.error);
+    let result = resp.result.unwrap();
+    let mse = result["mse"].as_f64().unwrap();
+    assert!(mse.is_finite());
 }

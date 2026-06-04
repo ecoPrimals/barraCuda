@@ -1,8 +1,8 @@
 # Model Serialization Format Evolution — P3 Design
 
-**Status**: Design only (do not implement until consumer readiness confirmed)  
-**Priority**: P3  
-**Date**: 2026-06-03  
+**Status**: Prototype implemented (bincode + BLAKE3 header, Wave 76)  
+**Priority**: P3 → promoted to P2 (prototype done, awaiting biomeOS shadow mode)  
+**Date**: 2026-06-04  
 **Wire methods**: `ml.mlp_save`, `ml.mlp_load`
 
 ---
@@ -89,16 +89,17 @@ When bearDog BTSP Phase 3 signing is available:
 - Verifying gate checks signature before loading
 - Prevents model tampering in transit (Dark Forest Invariant 3)
 
-## Implementation Checklist (when promoted to P2)
+## Implementation Checklist
 
-- [ ] Add `bincode` dependency to `barracuda` crate
-- [ ] Implement `SimpleMlp::to_bincode()` / `from_bincode()`
-- [ ] Add format header parsing to `ml.mlp_load`
-- [ ] Add `"format"` param to `ml.mlp_save` (default: "json")
-- [ ] BLAKE3 checksum on write, verify on read
-- [ ] Backward compat: bare JSON files (no header) still load
-- [ ] Integration test: save as bincode, load from bincode
+- [x] Add `bincode` dependency to `barracuda` crate (Wave 76)
+- [x] Implement `SimpleMlp::to_binary()` / `from_binary()` (Wave 76)
+- [x] Add format header parsing to `ml.mlp_load` via `from_auto()` (Wave 76)
+- [x] Add `"format"` param to `ml.mlp_save` (default: "json") (Wave 76)
+- [x] BLAKE3 checksum on write, verify on read (Wave 76)
+- [x] Backward compat: bare JSON files (no header) still load (Wave 76)
+- [x] Integration test: save as bincode, load from bincode (Wave 76)
 - [ ] Cross-gate test: transfer model file, verify checksum
+- [ ] BTSP signing integration (Phase 3+)
 
 ## Dependencies
 

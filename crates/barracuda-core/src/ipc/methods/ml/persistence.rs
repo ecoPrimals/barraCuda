@@ -8,12 +8,15 @@ use std::path::Path;
 
 /// `ml.mlp_save` — Persist a trained model to disk.
 ///
-/// Serializes the model as JSON and writes to the specified path.
-/// The path must be within allowed directories (no traversal).
+/// Serializes the model and writes to the specified path.
+/// Supports `"format": "json"` (default, human-readable) or
+/// `"format": "bincode"` (compact binary with BLAKE3 integrity header).
 ///
 /// Wire contract:
 /// ```json
-/// { "model": {"layers": [...]}, "path": "/data/gate/neural_routing_perceptron.bin" }
+/// { "model": {"layers": [...]},
+///   "path": "/data/gate/neural_routing_perceptron.bin",
+///   "format": "bincode" }
 /// ```
 pub(in crate::ipc::methods) fn ml_mlp_save(params: &Value, id: Value) -> JsonRpcResponse {
     let Some(model_val) = params.get("model") else {
@@ -32,6 +35,11 @@ pub(in crate::ipc::methods) fn ml_mlp_save(params: &Value, id: Value) -> JsonRpc
         );
     }
 
+    let format = params
+        .get("format")
+        .and_then(|v| v.as_str())
+        .unwrap_or("json");
+
     let mlp: SimpleMlp = match serde_json::from_value(model_val.clone()) {
         Ok(m) => m,
         Err(e) => {
@@ -43,15 +51,27 @@ pub(in crate::ipc::methods) fn ml_mlp_save(params: &Value, id: Value) -> JsonRpc
         }
     };
 
-    let json_str = match mlp.to_json() {
-        Ok(s) => s,
-        Err(e) => {
-            return JsonRpcResponse::error(
-                id,
-                INTERNAL_ERROR,
-                format!("Serialization failed: {e}"),
-            );
-        }
+    let (data, written_format) = match format {
+        "bincode" | "binary" => match mlp.to_binary() {
+            Ok(bytes) => (bytes, "bincode"),
+            Err(e) => {
+                return JsonRpcResponse::error(
+                    id,
+                    INTERNAL_ERROR,
+                    format!("Binary serialization failed: {e}"),
+                );
+            }
+        },
+        _ => match mlp.to_json() {
+            Ok(s) => (s.into_bytes(), "json"),
+            Err(e) => {
+                return JsonRpcResponse::error(
+                    id,
+                    INTERNAL_ERROR,
+                    format!("JSON serialization failed: {e}"),
+                );
+            }
+        },
     };
 
     if let Some(parent) = path.parent() {
@@ -66,13 +86,13 @@ pub(in crate::ipc::methods) fn ml_mlp_save(params: &Value, id: Value) -> JsonRpc
         }
     }
 
-    match std::fs::write(path, &json_str) {
+    match std::fs::write(path, &data) {
         Ok(()) => JsonRpcResponse::success(
             id,
             serde_json::json!({
                 "path": path_str,
-                "bytes_written": json_str.len(),
-                "format": "json",
+                "bytes_written": data.len(),
+                "format": written_format,
             }),
         ),
         Err(e) => JsonRpcResponse::error(
@@ -85,8 +105,9 @@ pub(in crate::ipc::methods) fn ml_mlp_save(params: &Value, id: Value) -> JsonRpc
 
 /// `ml.mlp_load` — Load a persisted model from disk.
 ///
-/// Reads and deserializes a model from the specified path.
-/// Returns the full model structure (layers with weights/biases/activation).
+/// Auto-detects format from file content: if the file starts with `BCML`
+/// magic bytes, loads as bincode with BLAKE3 verification. Otherwise
+/// falls back to JSON parsing. Returns the full model structure.
 ///
 /// Wire contract:
 /// ```json
@@ -114,8 +135,8 @@ pub(in crate::ipc::methods) fn ml_mlp_load(params: &Value, id: Value) -> JsonRpc
         );
     }
 
-    let json_str = match std::fs::read_to_string(path) {
-        Ok(s) => s,
+    let data = match std::fs::read(path) {
+        Ok(d) => d,
         Err(e) => {
             return JsonRpcResponse::error(
                 id,
@@ -125,7 +146,7 @@ pub(in crate::ipc::methods) fn ml_mlp_load(params: &Value, id: Value) -> JsonRpc
         }
     };
 
-    let mlp: SimpleMlp = match SimpleMlp::from_json(&json_str) {
+    let mlp = match SimpleMlp::from_auto(&data) {
         Ok(m) => m,
         Err(e) => {
             return JsonRpcResponse::error(
@@ -134,6 +155,12 @@ pub(in crate::ipc::methods) fn ml_mlp_load(params: &Value, id: Value) -> JsonRpc
                 format!("Invalid model format: {e}"),
             );
         }
+    };
+
+    let detected_format = if data.len() >= 4 && &data[0..4] == b"BCML" {
+        "bincode"
+    } else {
+        "json"
     };
 
     let layers: Vec<Value> = mlp
@@ -154,6 +181,7 @@ pub(in crate::ipc::methods) fn ml_mlp_load(params: &Value, id: Value) -> JsonRpc
             "layers": layers,
             "path": path_str,
             "layer_count": layers.len(),
+            "format": detected_format,
         }),
     )
 }

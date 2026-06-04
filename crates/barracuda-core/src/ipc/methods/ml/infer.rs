@@ -23,8 +23,8 @@ use std::collections::HashMap;
 /// ```
 pub(in crate::ipc::methods) fn ml_mlp_infer(params: &Value, id: Value) -> JsonRpcResponse {
     let mlp = if let Some(path) = params.get("model_path").and_then(|v| v.as_str()) {
-        match std::fs::read_to_string(path) {
-            Ok(json_str) => match SimpleMlp::from_json(&json_str) {
+        match std::fs::read(path) {
+            Ok(data) => match SimpleMlp::from_auto(&data) {
                 Ok(m) => m,
                 Err(e) => {
                     return JsonRpcResponse::error(

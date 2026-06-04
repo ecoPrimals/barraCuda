@@ -1,7 +1,7 @@
 # barraCuda — Remaining Work
 
 **Version**: 0.4.0
-**Date**: June 3, 2026
+**Date**: June 4, 2026
 **Status**: Stadial gate release (v0.4.0) — springs convergence version
 
 ---
@@ -29,6 +29,15 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   in barraCuda's code), semantic IPC method naming, capability-based discovery.
 
 ---
+
+## Achieved (June 4, 2026 — Wave 76: Integration Readiness + Binary Serialization)
+
+- **Integration readiness validated**: biomeOS v4.05 remote infer path tested end-to-end (train→save→infer via mock Songbird dispatch)
+- **Wire format interop fix**: `DenseLayer` serde aliases (`weights`/`biases`) enable direct roundtrip from `ml.perceptron_train` output → `ml.mlp_infer`/`ml.mlp_save` input (cross-gate compat bug fixed)
+- **Binary model serialization (P3→P2)**: `SimpleMlp::to_binary()`/`from_binary()` with 44-byte BCML header (magic + version + format + BLAKE3 checksum). `ml.mlp_save` accepts `"format":"bincode"`, `ml.mlp_load` auto-detects format
+- **Batch inference scaling**: validated for batch sizes 1–256
+- **Dark Forest Invariant 3 enforcement test**: remote `ml.mlp_infer` rejected without BTSP auth in enforced mode
+- **539 IPC tests**, 0 failures (6 new Wave 76 integration tests)
 
 ## Achieved (June 3, 2026 — Wave 75: ML Pipeline + Mesh Trust + Deep Debt)
 

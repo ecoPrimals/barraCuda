@@ -176,6 +176,9 @@ hmac = "0.12"
 sha2 = "0.10"
 base64ct = { version = "1.6", features = ["alloc"] }
 
+# Binary serialization (model persistence evolution — P3 production format)
+bincode = { version = "2", features = ["serde"] }
+
 # Dev/test
 tempfile = "3.8"
 approx = "0.5"

@@ -78,7 +78,7 @@ async fn submit_with_binary_and_no_dispatch_peer_falls_back() {
 #[tokio::test]
 async fn submit_valid_returns_job_id_cpu_fallback() {
     let primal = test_primal();
-    let input_data: Vec<f64> = (0..16).map(|i| i as f64).collect();
+    let input_data: Vec<f64> = (0..16_i32).map(f64::from).collect();
     let params = serde_json::json!({
         "input": {"data": input_data, "format": "f64_array"},
         "binary_b64": "placeholder_binary",
@@ -148,7 +148,7 @@ async fn full_pipeline_roundtrip() {
     let caps_resp = dispatch_capabilities(&primal, serde_json::json!(10));
     assert!(caps_resp.error.is_none());
 
-    let input: Vec<f64> = (0..64).map(|i| i as f64).collect();
+    let input: Vec<f64> = (0..64_i32).map(f64::from).collect();
     let submit_resp = dispatch_submit(
         &primal,
         &serde_json::json!({

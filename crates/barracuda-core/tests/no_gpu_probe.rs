@@ -4,6 +4,7 @@
 //! These tests manipulate environment variables and require process isolation
 //! (nextest default). The `env_set`/`env_remove` helpers encapsulate the
 //! safety invariant (single-threaded per-process under nextest).
+#![allow(clippy::unwrap_used)]
 
 use barracuda_core::BarraCudaPrimal;
 use barracuda_core::lifecycle::PrimalLifecycle;

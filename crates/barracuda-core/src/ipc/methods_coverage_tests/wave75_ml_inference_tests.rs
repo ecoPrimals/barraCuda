@@ -7,8 +7,12 @@ use serde_json::json;
 use super::test_primal;
 
 fn trained_model_json() -> serde_json::Value {
-    let weights: Vec<Vec<f64>> = (0..2)
-        .map(|row| (0..36).map(|col| 0.01 * (row * 36 + col) as f64).collect())
+    let weights: Vec<Vec<f64>> = (0..2_i32)
+        .map(|row| {
+            (0..36_i32)
+                .map(|col| 0.01 * f64::from(row * 36 + col))
+                .collect()
+        })
         .collect();
     json!({
         "layers": [{

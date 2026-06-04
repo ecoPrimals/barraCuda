@@ -99,7 +99,12 @@ fn test_primal_announce_neural_api_schema() {
     );
     let socket = result["socket"].as_str().unwrap();
     assert!(socket.contains("biomeos"), "socket path should contain biomeos dir");
-    assert!(socket.ends_with(".sock"), "socket path should end in .sock");
+    assert!(
+        std::path::Path::new(socket)
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("sock")),
+        "socket path should end in .sock"
+    );
 
     let cost = &result["cost_hints"];
     assert_eq!(cost["math"], 20.0, "math cost from composition_hints");

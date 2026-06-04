@@ -121,8 +121,8 @@ fn ml_esn_predict_happy_path() {
     };
     let mut esn = EsnClassifier::new(config).unwrap();
 
-    let inputs: Vec<Vec<f64>> = (0..20)
-        .map(|i| vec![i as f64 * 0.1, (i as f64 * 0.2).sin()])
+    let inputs: Vec<Vec<f64>> = (0..20_i32)
+        .map(|i| vec![f64::from(i) * 0.1, (f64::from(i) * 0.2).sin()])
         .collect();
     let targets: Vec<Vec<f64>> = inputs.iter().map(|x| vec![x[0] + x[1]]).collect();
     esn.train(&inputs, &targets).unwrap();
@@ -160,7 +160,7 @@ fn ml_esn_predict_with_state_injection() {
         seed: 7,
     };
     let mut esn = EsnClassifier::new(config).unwrap();
-    let inputs: Vec<Vec<f64>> = (0..30).map(|i| vec![i as f64 * 0.05]).collect();
+    let inputs: Vec<Vec<f64>> = (0..30_i32).map(|i| vec![f64::from(i) * 0.05]).collect();
     let targets: Vec<Vec<f64>> = inputs.iter().map(|x| vec![x[0] * 2.0]).collect();
     esn.train(&inputs, &targets).unwrap();
 
@@ -191,7 +191,7 @@ fn ml_esn_predict_state_wrong_size() {
         ..EsnConfig::default()
     };
     let mut esn = EsnClassifier::new(config).unwrap();
-    let inputs: Vec<Vec<f64>> = (0..10).map(|i| vec![i as f64]).collect();
+    let inputs: Vec<Vec<f64>> = (0..10_i32).map(|i| vec![f64::from(i)]).collect();
     let targets: Vec<Vec<f64>> = inputs.iter().map(|x| vec![x[0]]).collect();
     esn.train(&inputs, &targets).unwrap();
 

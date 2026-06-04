@@ -353,11 +353,40 @@ mod tests {
     }
 
     #[test]
-    fn btsp_is_protected() {
+    fn ml_pipeline_methods_are_protected() {
         assert_eq!(
-            classify_method("btsp.negotiate"),
+            classify_method("ml.mlp_train"),
             MethodAccessLevel::Protected
         );
+        assert_eq!(
+            classify_method("ml.mlp_infer"),
+            MethodAccessLevel::Protected
+        );
+        assert_eq!(
+            classify_method("ml.mlp_save"),
+            MethodAccessLevel::Protected
+        );
+        assert_eq!(
+            classify_method("ml.mlp_load"),
+            MethodAccessLevel::Protected
+        );
+        assert_eq!(
+            classify_method("ml.perceptron_train"),
+            MethodAccessLevel::Protected
+        );
+    }
+
+    #[test]
+    fn btsp_and_mesh_are_public() {
+        assert_eq!(
+            classify_method("btsp.negotiate"),
+            MethodAccessLevel::Public
+        );
+        assert_eq!(
+            classify_method("mesh.trust_verify"),
+            MethodAccessLevel::Public
+        );
+        assert_eq!(classify_method("mesh.health"), MethodAccessLevel::Public);
     }
 
     #[test]

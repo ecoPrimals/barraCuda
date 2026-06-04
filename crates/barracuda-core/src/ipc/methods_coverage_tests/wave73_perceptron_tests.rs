@@ -213,15 +213,16 @@ fn perceptron_batch_256_performance() {
 
 #[test]
 fn perceptron_pipeline_from_telemetry() {
-    let records: Vec<serde_json::Value> = (0..64)
+    let records: Vec<serde_json::Value> = (0..64_i32)
         .map(|i| {
             let domains = ["crypto", "compute", "storage", "network"];
             let providers = ["beardog", "songbird", "toadstool", "coralreef"];
+            let idx = i as usize;
             serde_json::json!({
-                "method": format!("{}.op{}", domains[i % 4], i),
-                "owner": providers[i % 4],
-                "latency_ms": (i as f64) * 0.5 + 0.1,
-                "success": i % 5 != 0,
+                "method": format!("{}.op{}", domains[idx % 4], i),
+                "owner": providers[idx % 4],
+                "latency_ms": f64::from(i).mul_add(0.5, 0.1),
+                "success": !idx.is_multiple_of(5),
                 "gate": "eastGate"
             })
         })
@@ -259,12 +260,12 @@ fn perceptron_pipeline_from_telemetry() {
 #[test]
 fn perceptron_pipeline_with_output_path() {
     let tmp = std::env::temp_dir().join("barracuda_perceptron_test.json");
-    let records: Vec<serde_json::Value> = (0..16)
+    let records: Vec<serde_json::Value> = (0..16_i32)
         .map(|i| {
             serde_json::json!({
                 "method": format!("crypto.hash{}", i),
                 "owner": if i % 2 == 0 { "beardog" } else { "songbird" },
-                "latency_ms": 1.0 + i as f64,
+                "latency_ms": 1.0 + f64::from(i),
                 "success": true,
                 "gate": "strandGate"
             })
@@ -290,7 +291,7 @@ fn perceptron_pipeline_with_output_path() {
     assert!(tmp.exists(), "weights file should be written");
     let contents = std::fs::read_to_string(&tmp).unwrap();
     let parsed: serde_json::Value = serde_json::from_str(&contents).unwrap();
-    assert!(parsed["layers"].as_array().unwrap().len() >= 1);
+    assert!(!parsed["layers"].as_array().unwrap().is_empty());
 
     std::fs::remove_file(&tmp).ok();
 }
@@ -317,12 +318,12 @@ fn perceptron_pipeline_missing_records() {
 
 #[test]
 fn perceptron_pipeline_single_provider() {
-    let records: Vec<serde_json::Value> = (0..10)
+    let records: Vec<serde_json::Value> = (0..10_i32)
         .map(|i| {
             serde_json::json!({
                 "method": "crypto.hash",
                 "owner": "beardog",
-                "latency_ms": 0.5 + i as f64 * 0.1,
+                "latency_ms": f64::from(i).mul_add(0.1, 0.5),
                 "success": true,
                 "gate": "strandGate"
             })

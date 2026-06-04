@@ -1,0 +1,220 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//! Stateless ML forward-pass handlers: MLP forward, attention, ESN predict.
+
+use super::super::super::jsonrpc::{INTERNAL_ERROR, INVALID_PARAMS, JsonRpcResponse};
+use super::super::params::{extract_f64_array, extract_matrix};
+use super::parse_activation;
+use barracuda::nn::esn_classifier::EsnClassifier;
+use barracuda::nn::simple_mlp::{DenseLayer, SimpleMlp};
+use serde_json::Value;
+
+/// `ml.mlp_forward` — inline-data MLP forward pass (CPU).
+///
+/// Params: `input` (array), `layers` (array of `{weights, biases, activation}`).
+/// Each layer: `weights` is 2D (out×in), `biases` is 1D (out), `activation` is a string.
+pub(in crate::ipc::methods) fn ml_mlp_forward(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(input) = extract_f64_array(params, "input") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: input (array)");
+    };
+    let Some(layers_val) = params.get("layers").and_then(|v| v.as_array()) else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: layers (array of layer specs)",
+        );
+    };
+    if layers_val.is_empty() {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "layers must be non-empty");
+    }
+
+    let mut dense_layers = Vec::with_capacity(layers_val.len());
+    for (i, layer_val) in layers_val.iter().enumerate() {
+        let Some(weights) = extract_matrix(layer_val, "weights") else {
+            return JsonRpcResponse::error(
+                id,
+                INVALID_PARAMS,
+                format!("Layer {i}: missing weights (2D array)"),
+            );
+        };
+        let Some(biases) = extract_f64_array(layer_val, "biases") else {
+            return JsonRpcResponse::error(
+                id,
+                INVALID_PARAMS,
+                format!("Layer {i}: missing biases (array)"),
+            );
+        };
+        if weights.len() != biases.len() {
+            return JsonRpcResponse::error(
+                id,
+                INVALID_PARAMS,
+                format!(
+                    "Layer {i}: weights rows ({}) != biases length ({})",
+                    weights.len(),
+                    biases.len()
+                ),
+            );
+        }
+        let act_str = layer_val
+            .get("activation")
+            .and_then(|v| v.as_str())
+            .unwrap_or("identity");
+        let Some(activation) = parse_activation(act_str) else {
+            return JsonRpcResponse::error(
+                id,
+                INVALID_PARAMS,
+                format!("Layer {i}: unknown activation \"{act_str}\""),
+            );
+        };
+        dense_layers.push(DenseLayer {
+            weight: weights,
+            bias: biases,
+            activation,
+        });
+    }
+
+    let mlp = SimpleMlp::new(dense_layers);
+    let output = mlp.forward(&input);
+    JsonRpcResponse::success(id, serde_json::json!({ "result": output }))
+}
+
+/// `ml.attention` — inline-data scaled dot-product attention (CPU).
+///
+/// Params: `q` (2D), `k` (2D), `v` (2D). Computes softmax(QK^T / √d_k) · V.
+pub(in crate::ipc::methods) fn ml_attention(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(q) = extract_matrix(params, "q") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: q (2D array)");
+    };
+    let Some(k) = extract_matrix(params, "k") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: k (2D array)");
+    };
+    let Some(v) = extract_matrix(params, "v") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: v (2D array)");
+    };
+
+    if q.is_empty() || k.is_empty() || v.is_empty() {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "q, k, v must be non-empty");
+    }
+
+    let d_k = q[0].len();
+    if d_k == 0 {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Key dimension must be > 0");
+    }
+    let seq_q = q.len();
+    let seq_k = k.len();
+
+    if k.iter().any(|row| row.len() != d_k) || q.iter().any(|row| row.len() != d_k) {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "q and k must have matching inner dimension",
+        );
+    }
+    let d_v = v[0].len();
+    if v.len() != seq_k || v.iter().any(|row| row.len() != d_v) {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "v must have same sequence length as k with consistent column count",
+        );
+    }
+
+    let scale = 1.0 / (d_k as f64).sqrt();
+
+    let mut scores: Vec<Vec<f64>> = Vec::with_capacity(seq_q);
+    for qi in &q {
+        let row: Vec<f64> = k
+            .iter()
+            .map(|ki| qi.iter().zip(ki).map(|(a, b)| a * b).sum::<f64>() * scale)
+            .collect();
+        scores.push(row);
+    }
+
+    for row in &mut scores {
+        let max_val = row.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        let mut sum = 0.0;
+        for val in row.iter_mut() {
+            *val = (*val - max_val).exp();
+            sum += *val;
+        }
+        for val in row.iter_mut() {
+            *val /= sum;
+        }
+    }
+
+    let mut output: Vec<Vec<f64>> = Vec::with_capacity(seq_q);
+    for row in &scores {
+        let mut out_row = vec![0.0; d_v];
+        for (j, &w) in row.iter().enumerate() {
+            for (c, val) in v[j].iter().enumerate() {
+                out_row[c] = w.mul_add(*val, out_row[c]);
+            }
+        }
+        output.push(out_row);
+    }
+
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({
+            "result": output,
+            "seq_q": seq_q,
+            "seq_k": seq_k,
+            "d_k": d_k,
+            "d_v": d_v,
+        }),
+    )
+}
+
+/// `ml.esn_predict` — stateless ESN prediction (Path A, client-managed state).
+///
+/// Accepts serialized ESN weights (JSON string from `EsnClassifier::to_json`),
+/// an optional reservoir state snapshot, and the current input vector.
+/// Returns the prediction and the new reservoir state for the next call.
+pub(in crate::ipc::methods) fn ml_esn_predict(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(weights_json) = params.get("weights_json").and_then(|v| v.as_str()) else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: weights_json (string from EsnClassifier::to_json())",
+        );
+    };
+    let Some(input) = extract_f64_array(params, "input") else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: input (array)");
+    };
+
+    let mut esn = match EsnClassifier::from_json(weights_json) {
+        Ok(e) => e,
+        Err(e) => {
+            return JsonRpcResponse::error(
+                id,
+                INVALID_PARAMS,
+                format!("Failed to parse weights_json: {e}"),
+            );
+        }
+    };
+
+    if let Some(state_arr) = extract_f64_array(params, "state") {
+        if state_arr.len() != esn.config.reservoir_size {
+            return JsonRpcResponse::error(
+                id,
+                INVALID_PARAMS,
+                format!(
+                    "state length ({}) != reservoir_size ({})",
+                    state_arr.len(),
+                    esn.config.reservoir_size
+                ),
+            );
+        }
+        esn.set_state(&state_arr);
+    }
+
+    match esn.predict(&input) {
+        Ok(prediction) => JsonRpcResponse::success(
+            id,
+            serde_json::json!({
+                "prediction": prediction,
+                "state": esn.get_state(),
+            }),
+        ),
+        Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("ESN predict failed: {e}")),
+    }
+}

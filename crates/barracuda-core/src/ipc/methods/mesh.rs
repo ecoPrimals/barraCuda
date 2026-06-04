@@ -36,12 +36,13 @@ pub(super) fn mesh_trust_verify(params: &Value, id: Value) -> JsonRpcResponse {
         .and_then(|b| b.as_str());
 
     let authenticated = bearer.is_some();
+    let gate = crate::ipc::transport_config::resolve_gate_name();
 
     let mut response = serde_json::json!({
         "trusted": authenticated,
         "primal": crate::PRIMAL_NAME,
         "version": env!("CARGO_PKG_VERSION"),
-        "gate": "strandGate",
+        "gate": gate,
         "capabilities": ["math", "compute", "ml", "tensor", "stats"],
         "btsp_phase3": true,
         "cipher_suites": ["chacha20-poly1305", "hmac_plain", "null"],
@@ -67,9 +68,13 @@ pub(super) fn mesh_trust_verify(params: &Value, id: Value) -> JsonRpcResponse {
 /// and peer connectivity metadata. Used by partner gates to confirm this node
 /// is operational in the mesh.
 pub(super) fn mesh_health(id: Value) -> JsonRpcResponse {
-    let socket_dir = crate::ipc::transport_config::resolve_socket_dir();
-    let security_live = has_socket_in(&socket_dir, "beardog");
-    let discovery_live = has_socket_in(&socket_dir, "songbird");
+    use crate::ipc::transport_config;
+
+    let socket_dir = transport_config::resolve_socket_dir();
+    let security_live =
+        has_socket_in(&socket_dir, transport_config::SECURITY_PROVIDER_SOCKET_PREFIX);
+    let discovery_live =
+        has_socket_in(&socket_dir, transport_config::DISCOVERY_SOCKET_PREFIX);
 
     let status = if security_live && discovery_live {
         "healthy"
@@ -79,17 +84,20 @@ pub(super) fn mesh_health(id: Value) -> JsonRpcResponse {
         "offline"
     };
 
+    let gate = transport_config::resolve_gate_name();
+    let federation_port = transport_config::resolve_federation_port();
+
     JsonRpcResponse::success(
         id,
         serde_json::json!({
             "status": status,
-            "gate": "strandGate",
+            "gate": gate,
             "primal": crate::PRIMAL_NAME,
             "services": {
                 "security_provider": security_live,
                 "discovery": discovery_live,
             },
-            "federation_port": 7700,
+            "federation_port": federation_port,
         }),
     )
 }
@@ -123,7 +131,7 @@ mod tests {
         let result = resp.result.unwrap();
         assert_eq!(result["trusted"], false);
         assert_eq!(result["primal"], "barraCuda");
-        assert_eq!(result["gate"], "strandGate");
+        assert!(result["gate"].is_string(), "gate must be resolved at runtime");
         assert!(result["reason"].as_str().unwrap().contains("bearer"));
     }
 
@@ -157,8 +165,8 @@ mod tests {
             ["healthy", "degraded", "offline"].contains(&status),
             "unexpected status: {status}"
         );
-        assert_eq!(result["gate"], "strandGate");
-        assert_eq!(result["federation_port"], 7700);
+        assert!(result["gate"].is_string(), "gate resolved at runtime");
+        assert!(result["federation_port"].is_number(), "federation_port resolved");
         assert!(result["services"].is_object());
     }
 }

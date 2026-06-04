@@ -70,5 +70,11 @@ pub const BEARDOG_FAMILY_SEED: &str = "BEARDOG_FAMILY_SEED";
 /// IPC authentication enforcement mode (`permissive` or `enforced`).
 pub const BARRACUDA_AUTH_MODE: &str = "BARRACUDA_AUTH_MODE";
 
+/// Gate identity — resolved at runtime from environment. No hardcoding.
+pub const GATE_NAME: &str = "GATE_NAME";
+
+/// Mesh federation port override.
+pub const FEDERATION_PORT: &str = "FEDERATION_PORT";
+
 /// systemd `Type=notify` socket for readiness signaling.
 pub const NOTIFY_SOCKET: &str = "NOTIFY_SOCKET";

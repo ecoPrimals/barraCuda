@@ -110,3 +110,31 @@ pub fn discovery_socket_path() -> String {
 pub fn discovery_socket_path() -> String {
     String::from("unsupported")
 }
+
+/// Resolve the gate name this primal is deployed on.
+///
+/// Discovered at runtime via `GATE_NAME` env var. Returns `"unknown"` if unset.
+/// Primals do not hardcode their gate identity — they discover it at runtime.
+#[must_use]
+pub fn resolve_gate_name() -> String {
+    std::env::var(env_keys::GATE_NAME).unwrap_or_else(|_| "unknown".into())
+}
+
+/// Default federation port for Songbird mesh.
+pub const DEFAULT_FEDERATION_PORT: u16 = 7700;
+
+/// Resolve federation port from environment or default.
+#[must_use]
+pub fn resolve_federation_port() -> u16 {
+    std::env::var(env_keys::FEDERATION_PORT)
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(DEFAULT_FEDERATION_PORT)
+}
+
+/// Socket filename prefix for the security provider (e.g. bearDog).
+/// Used for health probing — we look for `{prefix}*.sock` in the socket dir.
+pub const SECURITY_PROVIDER_SOCKET_PREFIX: &str = "beardog";
+
+/// Socket filename prefix for the discovery service (e.g. Songbird).
+pub const DISCOVERY_SOCKET_PREFIX: &str = "songbird";

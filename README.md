@@ -44,7 +44,7 @@ results.
 - **Sovereign shader compilation** — naga 28 IR optimizer, SPIR-V passthrough
 - **NagaExecutor** — CPU interpreter for naga IR, executes WGSL compute shaders without GPU (f32+f64 native, shared memory, barriers, atomics)
 - **coralReef IPC contract** — sovereign CPU compilation (`shader.compile.cpu`, `shader.execute.cpu`) and validation (`shader.validate`) via JSON-RPC
-- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with 91 semantic `{domain}.{operation}` methods; Wire Standard L2 compliant, Neural API announce, BTSP Phase 3 encryption
+- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with 96 semantic `{domain}.{operation}` methods; Wire Standard L2 compliant, Neural API announce, BTSP Phase 3 encryption, full ML pipeline (train→save→load→infer), mesh trust validation
 - **UniBin CLI** — single `barracuda` binary with `server --port <PORT>`, `service`, `doctor`, `validate`, `version`
 
 ### Design principles
@@ -180,7 +180,7 @@ barraCuda/
 ├── crates/
 │   ├── barracuda-core/              # Primal lifecycle wrapper
 │   │   ├── src/lib.rs               # BarraCudaPrimal: start/stop/health
-│   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport (91 methods, Wire Standard L2)
+│   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport (96 methods, Wire Standard L2)
 │   │   ├── src/rpc.rs               # tarpc service definition (16 endpoints, parity with JSON-RPC)
 │   │   └── src/bin/barracuda.rs     # UniBin CLI
 │   └── barracuda/                   # Umbrella crate — all math + GPU

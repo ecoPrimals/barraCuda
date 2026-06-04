@@ -42,7 +42,7 @@ traits are fully internalized.
 - **NagaExecutor** — CPU interpreter for naga IR (shader-first execution without GPU)
 - **Sovereign compiler** — naga IR optimizer with FMA fusion and dead expr elimination
 
-## IPC Method Surface (91 methods)
+## IPC Method Surface (96 methods)
 
 | Domain | Methods |
 |--------|---------|

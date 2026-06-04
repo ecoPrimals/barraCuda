@@ -6,6 +6,21 @@ Prioritized work items, ordered by impact. Updated 2026-06-03.
 
 ## Recently Completed
 
+- **Wave 75 Consolidation: Deep Debt + ML Pipeline + Mesh Trust (Jun 3)**:
+  Full ML pipeline delivered: `ml.mlp_infer` (batch inference on telemetry),
+  `ml.mlp_save`/`ml.mlp_load` (model persistence with path-traversal guards).
+  Mesh trust validation: `mesh.trust_verify` (BTSP session confirmation),
+  `mesh.health` (service liveness with runtime gate discovery).
+  Deep debt pass: split `ml.rs` (838L→4 modules), evolved all hardcoded gate/port
+  to runtime env-resolved values (`GATE_NAME`, `FEDERATION_PORT`), fixed broken
+  `btsp_is_protected` test, resolved 13 clippy lints, P3 model versioning design
+  (bincode+BLAKE3). All `ml.*` methods protected by MethodGate (Dark Forest
+  Invariant 3). Method count 91→96. 533 IPC tests, clippy clean.
+- **Wave 74: End-to-End Perceptron Pipeline (Jun 3)**:
+  Added `ml.perceptron_train` — accepts raw `dispatch_telemetry.jsonl` records,
+  extracts 36-dim features (domain one-hot + normalized latency/load/affinity),
+  trains single-layer perceptron, optionally serializes to disk. Wire-compatible
+  with `NEURAL_API_PERCEPTRON_DESIGN.md`. 6 new pipeline tests.
 - **Wave 73: Perceptron Training for biomeOS L5 Neural API (Jun 3)**:
   Evolved `ml.mlp_train` to support dimension-shorthand wire contract:
   `{"layers": [36, 16], "inputs": [...], "targets": [...]}` auto-initializes

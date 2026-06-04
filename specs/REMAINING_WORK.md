@@ -30,6 +30,18 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 
 ---
 
+## Achieved (June 3, 2026 — Wave 75: ML Pipeline + Mesh Trust + Deep Debt)
+
+- **5 new IPC methods**: `ml.mlp_infer` (batch perceptron inference), `ml.mlp_save`/`ml.mlp_load` (model persistence), `mesh.trust_verify` (cross-gate BTSP validation), `mesh.health` (service liveness)
+- **`ml.perceptron_train`**: end-to-end pipeline from raw dispatch telemetry to trained weights
+- **Smart decomposition**: `ml.rs` (838L) → 4 focused modules (forward/train/infer/persistence)
+- **Hardcoding evolution**: gate name, federation port, socket prefixes → runtime-resolved via env vars
+- **MethodGate enforcement**: all `ml.*` methods Protected (Dark Forest Invariant 3); `mesh.*`/`btsp.*` Public for trust probes
+- **Clippy fully clean** under `-D warnings` for all targets
+- **P3 model versioning design**: bincode format with BLAKE3 integrity headers (specs/MODEL_SERIALIZATION_DESIGN.md)
+- **96 registered IPC methods** across 23 semantic namespaces
+- **533 IPC tests**, 0 failures
+
 ## Achieved (May 20, 2026 — Sprint 73: Cross-Spring Pattern Absorption)
 
 - **9 new IPC methods** spanning 3 springs (airSpring, healthSpring, groundSpring):

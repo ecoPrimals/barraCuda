@@ -23,6 +23,7 @@ mod wave53_coverage_tests;
 mod wave73_perceptron_tests;
 mod wave75_ml_inference_tests;
 mod wave76_integration_tests;
+mod wave79_cpu_edge_tests;
 
 use crate::BarraCudaPrimal;
 

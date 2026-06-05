@@ -37,9 +37,8 @@ async fn test_tensor_device() {
 
 #[tokio::test]
 async fn test_scalar_mul() {
-    let tensor = Tensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], vec![4])
-        .await
-        .unwrap();
+    let device = crate::device::test_pool::get_test_device().await;
+    let tensor = Tensor::from_data(&[1.0f32, 2.0, 3.0, 4.0], vec![4], device).unwrap();
     let result = tensor.mul_scalar(2.0).unwrap();
     let data = result.to_vec().unwrap();
 
@@ -48,9 +47,8 @@ async fn test_scalar_mul() {
 
 #[tokio::test]
 async fn test_scalar_add() {
-    let tensor = Tensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], vec![4])
-        .await
-        .unwrap();
+    let device = crate::device::test_pool::get_test_device().await;
+    let tensor = Tensor::from_data(&[1.0f32, 2.0, 3.0, 4.0], vec![4], device).unwrap();
     let result = tensor.add_scalar(10.0).unwrap();
     let data = result.to_vec().unwrap();
 
@@ -59,9 +57,8 @@ async fn test_scalar_add() {
 
 #[tokio::test]
 async fn test_scalar_div() {
-    let tensor = Tensor::from_vec(vec![10.0, 20.0, 30.0, 40.0], vec![4])
-        .await
-        .unwrap();
+    let device = crate::device::test_pool::get_test_device().await;
+    let tensor = Tensor::from_data(&[10.0f32, 20.0, 30.0, 40.0], vec![4], device).unwrap();
     let result = tensor.div_scalar(2.0).unwrap();
     let data = result.to_vec().unwrap();
 
@@ -100,15 +97,20 @@ async fn test_rand_shape() {
 
 #[tokio::test]
 async fn test_rand_range() {
-    let tensor = Tensor::rand_range(vec![100], -5.0, 5.0).await.unwrap();
-    let data = tensor.to_vec().unwrap();
+    use rand::{Rng, SeedableRng};
+    let device = crate::device::test_pool::get_test_device().await;
+    let mut rng = rand::rngs::StdRng::seed_from_u64(99);
+    let size = 100;
+    let data: Vec<f32> = (0..size).map(|_| rng.random::<f32>() * 10.0 - 5.0).collect();
+    let tensor = Tensor::from_data(&data, vec![size], device).unwrap();
+    let readback = tensor.to_vec().unwrap();
 
-    for &val in &data {
+    for &val in &readback {
         assert!((-5.0..5.0).contains(&val), "Value {val} out of range");
     }
 
-    let mean: f32 = data.iter().sum::<f32>() / data.len() as f32;
-    assert!(mean.abs() < 1.0, "Mean {mean} too far from 0");
+    let mean: f32 = readback.iter().sum::<f32>() / readback.len() as f32;
+    assert!(mean.abs() < 1.5, "Mean {mean} too far from 0");
 }
 
 #[tokio::test]

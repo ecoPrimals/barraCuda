@@ -736,4 +736,143 @@ mod tests {
         let mse = mlp.train(&inputs, &targets, &config).unwrap();
         assert!(mse < 0.25, "from_dims should train, got MSE={mse}");
     }
+
+    // ── Binary serialization tests ──────────────────────────────────────
+
+    #[test]
+    fn binary_roundtrip_single_layer() {
+        let mlp = SimpleMlp::from_dims(&[36, 16], Activation::Sigmoid);
+        let bytes = mlp.to_binary().unwrap();
+        let restored = SimpleMlp::from_binary(&bytes).unwrap();
+        assert_eq!(restored.layers.len(), mlp.layers.len());
+        assert_eq!(restored.layers[0].weight, mlp.layers[0].weight);
+        assert_eq!(restored.layers[0].bias, mlp.layers[0].bias);
+    }
+
+    #[test]
+    fn binary_roundtrip_multi_layer() {
+        let mlp = SimpleMlp::from_dims(&[36, 64, 32, 16], Activation::Relu);
+        let bytes = mlp.to_binary().unwrap();
+        let restored = SimpleMlp::from_binary(&bytes).unwrap();
+        assert_eq!(restored.layers.len(), 3);
+        for (orig, rest) in mlp.layers.iter().zip(restored.layers.iter()) {
+            assert_eq!(orig.weight, rest.weight);
+            assert_eq!(orig.bias, rest.bias);
+            assert_eq!(orig.activation, rest.activation);
+        }
+    }
+
+    #[test]
+    fn binary_smaller_than_json() {
+        let mlp = SimpleMlp::from_dims(&[36, 16], Activation::Sigmoid);
+        let bin_bytes = mlp.to_binary().unwrap();
+        let json_bytes = mlp.to_json().unwrap().into_bytes();
+        assert!(
+            bin_bytes.len() < json_bytes.len(),
+            "binary ({}) should be smaller than JSON ({})",
+            bin_bytes.len(),
+            json_bytes.len()
+        );
+    }
+
+    #[test]
+    fn binary_header_magic_and_version() {
+        let mlp = SimpleMlp::from_dims(&[4, 2], Activation::Sigmoid);
+        let bytes = mlp.to_binary().unwrap();
+        assert_eq!(&bytes[0..4], b"BCML");
+        assert_eq!(bytes[4], 1); // version
+        assert_eq!(bytes[5], 1); // format = bincode
+    }
+
+    #[test]
+    fn binary_checksum_verification_fails_on_tamper() {
+        let mlp = SimpleMlp::from_dims(&[4, 2], Activation::Sigmoid);
+        let mut bytes = mlp.to_binary().unwrap();
+        let payload_start = 44;
+        if bytes.len() > payload_start + 5 {
+            bytes[payload_start + 5] ^= 0xFF;
+        }
+        let result = SimpleMlp::from_binary(&bytes);
+        assert!(result.is_err());
+        assert!(
+            matches!(result.unwrap_err(), ModelBinaryError::ChecksumMismatch),
+            "tampered payload should fail checksum"
+        );
+    }
+
+    #[test]
+    fn binary_too_short_rejected() {
+        let result = SimpleMlp::from_binary(&[0u8; 10]);
+        assert!(matches!(result.unwrap_err(), ModelBinaryError::TooShort(10)));
+    }
+
+    #[test]
+    fn binary_bad_magic_rejected() {
+        let mut data = vec![0u8; 100];
+        data[0..4].copy_from_slice(b"XXXX");
+        let result = SimpleMlp::from_binary(&data);
+        assert!(matches!(result.unwrap_err(), ModelBinaryError::BadMagic));
+    }
+
+    #[test]
+    fn binary_unsupported_version_rejected() {
+        let mlp = SimpleMlp::from_dims(&[4, 2], Activation::Sigmoid);
+        let mut bytes = mlp.to_binary().unwrap();
+        bytes[4] = 99; // bad version
+        let result = SimpleMlp::from_binary(&bytes);
+        assert!(matches!(
+            result.unwrap_err(),
+            ModelBinaryError::UnsupportedVersion(99)
+        ));
+    }
+
+    #[test]
+    fn from_auto_detects_binary() {
+        let mlp = SimpleMlp::from_dims(&[8, 4], Activation::Tanh);
+        let bytes = mlp.to_binary().unwrap();
+        let restored = SimpleMlp::from_auto(&bytes).unwrap();
+        assert_eq!(restored.layers[0].weight, mlp.layers[0].weight);
+    }
+
+    #[test]
+    fn from_auto_detects_json() {
+        let mlp = SimpleMlp::from_dims(&[8, 4], Activation::Tanh);
+        let json = mlp.to_json().unwrap();
+        let restored = SimpleMlp::from_auto(json.as_bytes()).unwrap();
+        assert_eq!(restored.layers[0].weight, mlp.layers[0].weight);
+    }
+
+    #[test]
+    fn serde_alias_weights_biases() {
+        let json = r#"{"layers":[{"weights":[[1.0,2.0],[3.0,4.0]],"biases":[0.1,0.2],"activation":"sigmoid"}]}"#;
+        let mlp: SimpleMlp = serde_json::from_str(json).unwrap();
+        assert_eq!(mlp.layers[0].weight, vec![vec![1.0, 2.0], vec![3.0, 4.0]]);
+        assert_eq!(mlp.layers[0].bias, vec![0.1, 0.2]);
+    }
+
+    #[test]
+    fn serde_canonical_weight_bias() {
+        let json = r#"{"layers":[{"weight":[[1.0,2.0],[3.0,4.0]],"bias":[0.1,0.2],"activation":"relu"}]}"#;
+        let mlp: SimpleMlp = serde_json::from_str(json).unwrap();
+        assert_eq!(mlp.layers[0].weight, vec![vec![1.0, 2.0], vec![3.0, 4.0]]);
+        assert_eq!(mlp.layers[0].activation, Activation::Relu);
+    }
+
+    #[test]
+    fn binary_trained_model_inference_matches() {
+        let mut mlp = SimpleMlp::from_dims(&[4, 2], Activation::Sigmoid);
+        let inputs = vec![vec![1.0, 0.0, 0.5, 0.3]];
+        let targets = vec![vec![0.8, 0.2]];
+        let config = TrainConfig {
+            learning_rate: 0.1,
+            epochs: 50,
+        };
+        mlp.train(&inputs, &targets, &config).unwrap();
+
+        let original_output = mlp.forward(&inputs[0]);
+        let bytes = mlp.to_binary().unwrap();
+        let restored = SimpleMlp::from_binary(&bytes).unwrap();
+        let restored_output = restored.forward(&inputs[0]);
+        assert_eq!(original_output, restored_output);
+    }
 }

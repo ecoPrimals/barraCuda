@@ -1,0 +1,282 @@
+# barraCuda Capability Registry
+# biomeOS-compatible runtime capability overlay.
+# See: wateringHole SPRING_AS_NICHE_DEPLOYMENT_STANDARD
+#
+# biomeOS reads this file to discover barraCuda capabilities
+# without requiring the primal to be running.
+# 96 registered methods across 23 semantic namespaces.
+
+[primal]
+name = "barracuda"
+version = "0.4.0"
+description = "Sovereign math, ML, and GPU compute engine"
+license = "AGPL-3.0-or-later"
+protocol = "jsonrpc-2.0"
+transport = ["uds", "tcp"]
+
+# ─── Capability Domains ──────────────────────────────────────────────────────
+
+[domains.health]
+description = "Ecosystem probes (liveness, readiness, version, GPU validation)"
+methods = ["liveness", "readiness", "check", "version"]
+
+[domains.capabilities]
+description = "Capability discovery (canonical per wateringHole v2.1)"
+methods = ["list"]
+
+[domains.auth]
+description = "Gate introspection (MethodGate JH-0)"
+methods = ["check", "mode", "peer_info"]
+
+[domains.identity]
+description = "Primal identity"
+methods = ["get"]
+
+[domains.primal]
+description = "Primal lifecycle and capability advertisement"
+methods = ["info", "capabilities", "announce"]
+
+[domains.device]
+description = "GPU device enumeration and probing"
+methods = ["list", "probe"]
+
+[domains.tolerances]
+description = "Hardware tolerance advisory"
+methods = ["get"]
+
+[domains.validate]
+description = "GPU stack validation"
+methods = ["gpu_stack"]
+
+[domains.precision]
+description = "Precision routing advisory (F16→DF128 ladder)"
+methods = ["route"]
+
+[domains.compute]
+description = "GPU compute dispatch and result retrieval"
+methods = ["dispatch", "dispatch.capabilities", "dispatch.submit", "dispatch.result"]
+
+[domains.math]
+description = "CPU math functions (sigmoid, log2, ODE)"
+methods = ["sigmoid", "log2"]
+
+[domains.activation]
+description = "Activation functions (CPU inline-data)"
+methods = ["fitts", "hick", "softmax", "gelu"]
+
+[domains.stats]
+description = "Statistical analysis (CPU inline-data)"
+methods = [
+    "mean", "std_dev", "variance", "correlation", "pearson",
+    "spearman", "covariance", "weighted_mean", "chi_squared",
+    "anova_oneway", "shannon", "entropy", "fit_linear",
+    "empirical_spectral_density", "simpson", "bray_curtis", "hill",
+    "fit_quadratic", "fit_exponential", "fit_logarithmic",
+    "rarefaction_curve", "gamma_fit", "gamma_cdf",
+]
+
+[domains.signal]
+description = "Signal processing (CPU)"
+methods = ["detect_peaks", "bandpass", "derivative"]
+
+[domains.linalg]
+description = "Linear algebra (CPU inline-data)"
+methods = ["solve", "eigenvalues", "svd", "qr", "graph_laplacian"]
+
+[domains.ode]
+description = "Numerical ODE integration (CPU)"
+methods = ["step"]
+
+[domains.graph]
+description = "Graph / PGM (CPU inline-data)"
+methods = ["belief_propagation"]
+
+[domains.spectral]
+description = "Spectral analysis (FFT, STFT, power spectrum)"
+methods = ["fft", "power_spectrum", "stft"]
+
+[domains.ml]
+description = "Machine learning (CPU inline-data, perceptron pipeline)"
+methods = ["mlp_forward", "mlp_train", "mlp_infer", "mlp_save", "mlp_load", "perceptron_train", "attention", "esn_predict"]
+
+[domains.nautilus]
+description = "Server-side ML sessions (Path B reservoir computing)"
+methods = ["create", "observe", "train", "predict", "export", "import"]
+
+[domains.noise]
+description = "Procedural noise generation (CPU)"
+methods = ["perlin2d", "perlin3d"]
+
+[domains.rng]
+description = "Random number generation"
+methods = ["uniform"]
+
+[domains.tensor]
+description = "GPU tensor operations (create, matmul, elementwise)"
+methods = ["create", "matmul", "matmul_inline", "add", "scale", "clamp", "reduce", "sigmoid", "batch.submit"]
+
+[domains.fhe]
+description = "Fully homomorphic encryption primitives (GPU)"
+methods = ["ntt", "pointwise_mul"]
+
+[domains.mesh]
+description = "Cross-gate trust validation (Songbird/bearDog mesh)"
+methods = ["trust_verify", "health"]
+
+[domains.btsp]
+description = "Binary Transport Security Protocol (Phase 3)"
+methods = ["negotiate", "capabilities"]
+
+# ─── Access Control ──────────────────────────────────────────────────────────
+
+[access.public_prefixes]
+description = "Methods accessible without BTSP authentication"
+prefixes = ["health.", "capabilities.", "identity.", "primal.", "device.", "tolerances.", "validate.", "btsp.", "mesh.", "auth."]
+
+[access.protected_prefixes]
+description = "Methods requiring BTSP bearer token (Dark Forest Invariant 3)"
+prefixes = ["ml.", "compute.", "tensor.", "fhe.", "nautilus."]
+
+# ─── Consumed Capabilities ───────────────────────────────────────────────────
+
+[consumed]
+description = "Capabilities barraCuda consumes from other primals at runtime"
+
+[consumed.coralreef]
+methods = ["shader.compile.wgsl", "shader.compile.capabilities", "shader.compile.module"]
+optional = true
+
+[consumed.toadstool]
+methods = ["compute.dispatch.submit", "compute.capabilities"]
+optional = true
+
+[consumed.beardog]
+methods = ["btsp.negotiate", "auth.verify_ionic"]
+optional = false
+
+[consumed.songbird]
+methods = ["discovery.register", "discovery.peers", "capability.call"]
+optional = false
+
+# ─── Hardware Requirements ───────────────────────────────────────────────────
+
+[hardware]
+gpu_required = false
+gpu_features = ["wgpu-vulkan", "wgpu-metal", "wgpu-dx12", "f64-shaders", "spirv-passthrough"]
+cpu_features = ["avx2", "fma"]
+minimum_memory_mb = 512
+description = "Pure software (no GPU dependency). GPU optional for tensor/FHE/compute domains."
+
+# ─── Operations Detail ───────────────────────────────────────────────────────
+
+[operations."stats.mean"]
+cost = "low"
+stability = "stable"
+
+[operations."stats.variance"]
+cost = "low"
+stability = "stable"
+
+[operations."stats.std_dev"]
+cost = "low"
+stability = "stable"
+
+[operations."precision.route"]
+cost = "low"
+stability = "stable"
+
+[operations."compute.dispatch.submit"]
+cost = "high"
+stability = "stable"
+depends_on = ["device.list"]
+
+[operations."tensor.create"]
+cost = "medium"
+stability = "stable"
+depends_on = ["device.list"]
+
+[operations."tensor.matmul"]
+cost = "high"
+stability = "stable"
+depends_on = ["tensor.create"]
+
+[operations."tensor.matmul_inline"]
+cost = "medium"
+stability = "stable"
+
+[operations."ml.mlp_forward"]
+cost = "low"
+stability = "stable"
+
+[operations."ml.mlp_train"]
+cost = "high"
+stability = "stable"
+
+[operations."ml.mlp_infer"]
+cost = "medium"
+stability = "stable"
+
+[operations."ml.mlp_save"]
+cost = "low"
+stability = "stable"
+
+[operations."ml.mlp_load"]
+cost = "low"
+stability = "stable"
+
+[operations."ml.perceptron_train"]
+cost = "high"
+stability = "stable"
+
+[operations."ml.attention"]
+cost = "medium"
+stability = "stable"
+
+[operations."ml.esn_predict"]
+cost = "medium"
+stability = "stable"
+
+[operations."fhe.ntt"]
+cost = "high"
+stability = "stable"
+depends_on = ["device.list"]
+
+[operations."mesh.trust_verify"]
+cost = "low"
+stability = "stable"
+
+[operations."mesh.health"]
+cost = "low"
+stability = "stable"
+
+[operations."btsp.negotiate"]
+cost = "low"
+stability = "stable"
+
+[operations."spectral.fft"]
+cost = "medium"
+stability = "stable"
+
+[operations."linalg.solve"]
+cost = "medium"
+stability = "stable"
+
+[operations."linalg.svd"]
+cost = "medium"
+stability = "stable"
+
+[operations."graph.belief_propagation"]
+cost = "high"
+stability = "stable"
+
+[operations."nautilus.create"]
+cost = "low"
+stability = "beta"
+
+[operations."nautilus.train"]
+cost = "high"
+stability = "beta"
+
+[operations."nautilus.predict"]
+cost = "medium"
+stability = "beta"

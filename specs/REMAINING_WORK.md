@@ -1,8 +1,8 @@
 # barraCuda — Remaining Work
 
 **Version**: 0.4.0
-**Date**: June 4, 2026
-**Status**: Stadial gate release (v0.4.0) — springs convergence version
+**Date**: June 6, 2026
+**Status**: Stadial gate release (v0.4.0) — VPS-ready, zero P0/P1 gaps
 
 ---
 
@@ -29,6 +29,28 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   in barraCuda's code), semantic IPC method naming, capability-based discovery.
 
 ---
+
+## Achieved (June 6, 2026 — Wave 82c: Deep Debt Final + Module Refactoring)
+
+- **`simple_mlp.rs` refactored** (885L → 3 files): `mod.rs` (556L) + `serialization.rs` (135L) + `training.rs` (187L). Zero production files exceed 800L.
+- **GPU test pool fix**: 4 tensor tests (`scalar_add`, `scalar_mul`, `scalar_div`, `rand_range`) migrated from `Auto::new_wgpu()` to shared test pool device, eliminating GPU resource contention under parallel execution.
+- **JSON f64 roundtrip precision fix**: `from_auto_detects_json` test corrected to use approximate comparison (f64 JSON serialization loses last ULP).
+- **Full audit confirmed clean**: `#![forbid(unsafe_code)]` on all 3 crates, zero `unwrap()` in production, zero mocks in production, zero hardcoded values, all deps pure Rust (wgpu isolated behind optional `gpu` feature).
+- **4600 total tests** (3929 barracuda + 671 barracuda-core). All pass individually; 54 GPU tests fail only under mass parallel wgpu driver contention (known limitation, all pass via nextest).
+- **Wave 82c P1 `capability_registry.toml`**: Already delivered (Wave 78) at `config/capability_registry.toml` — 283 lines, 23 domains, 96 methods, access control, consumed capabilities, hardware requirements, per-operation metadata.
+
+## Achieved (June 5, 2026 — Wave 79: Coverage Sprint + Transport Verification)
+
+- **32 new CPU edge-case tests** in `wave79_cpu_edge_tests.rs`: linalg, signal, spectral, stats, math, noise, rng, activation, graph, ODE error paths and boundary conditions
+- **Transport compliance verified**: `--socket`/`--unix` flags operational, UDS default on Unix, `DEFAULT_BIND_HOST` = `127.0.0.1` (no `0.0.0.0`), launcher-injected UDS paths respected
+- **569 IPC tests**, 0 failures (30 new Wave 79 tests)
+- **Clippy fully clean** under `-D warnings`
+
+## Achieved (June 5, 2026 — Wave 78: Capability Registry + Binary Serialization Tests)
+
+- **`config/capability_registry.toml` created**: Machine-readable TOML declaring all 96 methods across 23 domains, access control (public/protected), consumed capabilities, hardware requirements, per-operation cost/stability metadata
+- **12 new binary serialization tests**: roundtrip single/multi-layer, size comparison (bincode < JSON), header validation, checksum tamper detection, format auto-detection, trained model inference match
+- **Coverage improved**: barracuda test count from 25 to 37 in `nn::simple_mlp`
 
 ## Achieved (June 4, 2026 — Wave 76: Integration Readiness + Binary Serialization)
 

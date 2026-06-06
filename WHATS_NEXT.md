@@ -1,21 +1,31 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-06-03.
+Prioritized work items, ordered by impact. Updated 2026-06-06.
 
 ---
 
 ## Recently Completed
 
-- **Wave 75 Consolidation: Deep Debt + ML Pipeline + Mesh Trust (Jun 3)**:
-  Full ML pipeline delivered: `ml.mlp_infer` (batch inference on telemetry),
-  `ml.mlp_save`/`ml.mlp_load` (model persistence with path-traversal guards).
-  Mesh trust validation: `mesh.trust_verify` (BTSP session confirmation),
-  `mesh.health` (service liveness with runtime gate discovery).
-  Deep debt pass: split `ml.rs` (838L→4 modules), evolved all hardcoded gate/port
-  to runtime env-resolved values (`GATE_NAME`, `FEDERATION_PORT`), fixed broken
-  `btsp_is_protected` test, resolved 13 clippy lints, P3 model versioning design
-  (bincode+BLAKE3). All `ml.*` methods protected by MethodGate (Dark Forest
-  Invariant 3). Method count 91→96. 533 IPC tests, clippy clean.
+- **Wave 82c: Deep Debt Final + Module Refactoring (Jun 6)**:
+  Refactored `simple_mlp.rs` (885L) into directory module: `mod.rs` (556L) +
+  `serialization.rs` (135L) + `training.rs` (187L). Zero production files >800L.
+  Fixed 4 tensor tests to use shared GPU test pool (eliminated wgpu contention).
+  Full deep debt audit confirmed: `#![forbid(unsafe_code)]` on all crates, zero
+  production unwrap, zero production mocks, zero hardcoding, all deps pure Rust.
+  **Wave 82c P1 capability_registry.toml already delivered** (Wave 78). 4600 tests.
+- **Wave 79: Coverage Sprint + Transport Verification (Jun 5)**:
+  32 new CPU edge-case tests covering linalg/signal/spectral/stats/math/noise/rng/
+  activation/graph/ODE error paths. Transport compliance verified (UDS default,
+  --socket/--unix operational, no 0.0.0.0 bind). 569 IPC tests. Clippy clean.
+- **Wave 78: Capability Registry + Binary Serialization Tests (Jun 5)**:
+  Created `config/capability_registry.toml` (283 lines, 23 domains, 96 methods,
+  access control, consumed capabilities, hardware requirements, per-op metadata).
+  12 new binary serialization tests for BCML format validation.
+- **Wave 76: Integration Readiness + Binary Serialization (Jun 4)**:
+  biomeOS v4.05 remote infer path validated E2E. Wire-format interop fix (serde
+  aliases for `weights`/`biases`). Binary model serialization: `BCML` format with
+  44-byte header (magic + version + format + BLAKE3 checksum). `ml.mlp_save` accepts
+  `"format":"bincode"`, `ml.mlp_load` auto-detects. 539 IPC tests.
 - **Wave 74: End-to-End Perceptron Pipeline (Jun 3)**:
   Added `ml.perceptron_train` — accepts raw `dispatch_telemetry.jsonl` records,
   extracts 36-dim features (domain one-hot + normalized latency/load/affinity),

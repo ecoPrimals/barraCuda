@@ -288,14 +288,14 @@ impl IpcServer {
     where
         F: FnOnce() + Send,
     {
-        if path.exists() {
+        // Remove stale socket files AND broken symlinks before bind().
+        // `path.exists()` follows symlinks (returns false for broken links),
+        // but `symlink_metadata()` detects any filesystem entry at the path.
+        if path.symlink_metadata().is_ok() {
             std::fs::remove_file(path)?;
         }
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
-        }
-        if path.exists() {
-            let _ = std::fs::remove_file(path);
         }
 
         let listener = tokio::net::UnixListener::bind(path)?;
@@ -364,6 +364,9 @@ impl IpcServer {
     /// Per `PRIMAL_SELF_KNOWLEDGE_STANDARD.md` §3 "Legacy compatibility":
     /// during migration, primals MAY symlink `{primal}.sock → {domain}.sock`
     /// so consumers using identity-based discovery can still find the socket.
+    ///
+    /// Skips creation when the legacy path would resolve to the socket path
+    /// itself (e.g., `--socket barracuda-eastgate.sock` with `FAMILY_ID=eastgate`).
     #[cfg(unix)]
     pub fn create_legacy_symlink(socket_path: &std::path::Path) {
         let dir = resolve_socket_dir();
@@ -372,8 +375,33 @@ impl IpcServer {
             Some(family_id) => format!("{ns}-{family_id}.sock"),
             None => format!("{ns}.sock"),
         };
-        let legacy_path = dir.join(legacy_name);
-        if legacy_path.exists() {
+        let legacy_path = dir.join(&legacy_name);
+
+        // Guard: skip if legacy path would be the same file as the socket.
+        // This prevents self-referencing symlinks when the operator passes
+        // `--socket <dir>/barracuda-<family>.sock` explicitly.
+        if let (Ok(canon_legacy_dir), Ok(canon_sock)) = (
+            legacy_path.parent().map_or_else(
+                || std::path::PathBuf::from(".").canonicalize(),
+                |p| p.canonicalize(),
+            ),
+            socket_path.parent().map_or_else(
+                || std::path::PathBuf::from(".").canonicalize(),
+                |p| p.canonicalize(),
+            ),
+        ) {
+            let legacy_file = legacy_path.file_name();
+            let sock_file = socket_path.file_name();
+            if canon_legacy_dir == canon_sock && legacy_file == sock_file {
+                tracing::debug!(
+                    "skip legacy symlink: would self-reference {}",
+                    legacy_path.display()
+                );
+                return;
+            }
+        }
+
+        if legacy_path.exists() || legacy_path.is_symlink() {
             std::fs::remove_file(&legacy_path).ok();
         }
         #[cfg(unix)]

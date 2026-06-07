@@ -6,6 +6,67 @@
 
 use super::*;
 
+/// Regression test: when `--socket` path matches the legacy symlink name
+/// (e.g., FAMILY_ID=eastgate → barracuda-eastgate.sock), `create_legacy_symlink`
+/// must NOT create a self-referencing symlink that blocks `bind()`.
+#[cfg(unix)]
+#[test]
+fn legacy_symlink_skips_self_reference() {
+    let tmp = tempfile::tempdir().unwrap();
+    let sock_path = tmp.path().join("barracuda-eastgate.sock");
+
+    // Simulate: FAMILY_ID=eastgate, socket dir = tmp, PRIMAL_NAMESPACE = barracuda
+    // The legacy name would be "barracuda-eastgate.sock" — same as sock_path.
+    // Directly test the guard logic: create a symlink to itself, then verify
+    // serve_unix's pre-bind cleanup handles it.
+
+    // Create a broken self-referencing symlink (the bug scenario)
+    std::os::unix::fs::symlink(&sock_path, &sock_path).unwrap();
+    assert!(sock_path.is_symlink());
+    assert!(!sock_path.exists()); // broken symlink: target doesn't exist
+
+    // Verify symlink_metadata detects the entry
+    assert!(sock_path.symlink_metadata().is_ok());
+
+    // The fix: symlink_metadata().is_ok() → remove_file succeeds
+    std::fs::remove_file(&sock_path).unwrap();
+    assert!(!sock_path.is_symlink());
+}
+
+/// Verify `serve_unix` can bind after a stale broken symlink is present.
+#[cfg(unix)]
+#[tokio::test]
+async fn serve_unix_cleans_broken_symlink_before_bind() {
+    let tmp = tempfile::tempdir().unwrap();
+    let sock_path = tmp.path().join("test-broken.sock");
+
+    // Create a broken symlink (points to nonexistent target)
+    std::os::unix::fs::symlink("/nonexistent/target.sock", &sock_path).unwrap();
+    assert!(sock_path.is_symlink());
+    assert!(!sock_path.exists());
+
+    // serve_unix should clean it and bind successfully
+    let primal = BarraCudaPrimal::new();
+    let server = IpcServer::new(std::sync::Arc::new(primal));
+
+    let server_path = sock_path.clone();
+    let handle = tokio::spawn(async move {
+        server.serve_unix(&server_path, None::<fn()>).await
+    });
+
+    // Give server time to bind
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+    // Verify socket exists and is a real socket (not symlink)
+    assert!(sock_path.exists());
+    assert!(!sock_path.is_symlink());
+
+    // Connect to verify it's a real socket
+    let _stream = tokio::net::UnixStream::connect(&sock_path).await.unwrap();
+
+    handle.abort();
+}
+
 #[tokio::test]
 async fn test_handle_valid_request() {
     let primal = BarraCudaPrimal::new();

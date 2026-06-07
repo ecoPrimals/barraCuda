@@ -70,6 +70,29 @@ impl SimpleMlp {
         serde_json::to_string_pretty(self)
     }
 
+    /// Serialize to a compact binary format with `BCML` magic header.
+    /// Format: `BCML` (4 bytes) + JSON payload (UTF-8).
+    /// # Errors
+    /// Returns an error if serialization fails.
+    pub fn to_binary(&self) -> Result<Vec<u8>, serde_json::Error> {
+        let json = serde_json::to_string(self)?;
+        let mut buf = Vec::with_capacity(4 + json.len());
+        buf.extend_from_slice(b"BCML");
+        buf.extend_from_slice(json.as_bytes());
+        Ok(buf)
+    }
+
+    /// Deserialize from either binary (BCML header) or JSON format.
+    /// # Errors
+    /// Returns an error if the data is neither valid BCML binary nor valid JSON.
+    pub fn from_auto(data: &[u8]) -> Result<Self, serde_json::Error> {
+        if data.len() >= 4 && &data[0..4] == b"BCML" {
+            serde_json::from_slice(&data[4..])
+        } else {
+            serde_json::from_slice(data)
+        }
+    }
+
     /// Create from explicit layer specifications.
     #[must_use]
     pub fn new(layers: Vec<DenseLayer>) -> Self {

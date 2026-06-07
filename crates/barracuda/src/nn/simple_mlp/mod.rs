@@ -42,8 +42,10 @@ pub enum Activation {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DenseLayer {
     /// Weight matrix (row-major: `out_size` × `in_size`).
+    #[serde(alias = "weights")]
     pub weight: Vec<Vec<f64>>,
     /// Bias vector (length `out_size`).
+    #[serde(alias = "biases")]
     pub bias: Vec<f64>,
     /// Activation applied after affine transform.
     pub activation: Activation,

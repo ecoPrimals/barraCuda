@@ -202,9 +202,7 @@ impl ImproperDihedralF64 {
             Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => {
                 Self::wgsl_shader().to_string()
             }
-            Fp64Strategy::Hybrid => {
-                Self::wgsl_shader().to_string()
-            }
+            Fp64Strategy::Hybrid => Self::wgsl_shader().to_string(),
         }
     }
 

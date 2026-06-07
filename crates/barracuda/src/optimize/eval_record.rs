@@ -250,9 +250,7 @@ impl EvaluationCache {
         match Self::load(&path) {
             Ok(cache) => cache,
             Err(e) => {
-                tracing::debug!(
-                    "EvaluationCache: starting fresh (load failed: {e})"
-                );
+                tracing::debug!("EvaluationCache: starting fresh (load failed: {e})");
                 Self::default()
             }
         }

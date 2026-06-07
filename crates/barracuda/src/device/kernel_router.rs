@@ -41,8 +41,8 @@
 //! # }
 //! ```
 
-use crate::device::{Device, DeviceSelection};
 use crate::device::backend::HardwareHint;
+use crate::device::{Device, DeviceSelection};
 use crate::error::Result;
 use std::collections::HashMap;
 

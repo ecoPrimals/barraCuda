@@ -199,20 +199,14 @@ impl HarmonicAngleF64 {
             Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => {
                 Self::wgsl_shader().to_string()
             }
-            Fp64Strategy::Hybrid => {
-                Self::wgsl_shader().to_string()
-            }
+            Fp64Strategy::Hybrid => Self::wgsl_shader().to_string(),
         }
     }
 
     /// Compute harmonic angle forces for all angles (GPU dispatch).
     /// # Errors
     /// Returns [`Err`] on GPU dispatch or readback failure.
-    pub fn compute_forces(
-        &self,
-        positions: &[f64],
-        angles: &[HarmonicAngle],
-    ) -> Result<Vec<f64>> {
+    pub fn compute_forces(&self, positions: &[f64], angles: &[HarmonicAngle]) -> Result<Vec<f64>> {
         let n_particles = positions.len() / 3;
         if angles.is_empty() {
             return Ok(vec![0.0f64; n_particles * 3]);
@@ -338,8 +332,8 @@ mod tests {
             if rji_len < 1e-10 || rjk_len < 1e-10 {
                 continue;
             }
-            let cos_theta = (rji[0] * rjk[0] + rji[1] * rjk[1] + rji[2] * rjk[2])
-                / (rji_len * rjk_len);
+            let cos_theta =
+                (rji[0] * rjk[0] + rji[1] * rjk[1] + rji[2] * rjk[2]) / (rji_len * rjk_len);
             let cos_clamped = cos_theta.clamp(-1.0, 1.0);
             let theta = cos_clamped.acos();
             let sin_theta = (1.0 - cos_clamped * cos_clamped).sqrt().max(1e-12);
@@ -352,10 +346,8 @@ mod tests {
             let rjk_inv2 = rjk_inv * rjk_inv;
 
             for d in 0..3 {
-                let fi = prefactor
-                    * (rjk[d] * rji_inv * rjk_inv - cos_clamped * rji[d] * rji_inv2);
-                let fk = prefactor
-                    * (rji[d] * rji_inv * rjk_inv - cos_clamped * rjk[d] * rjk_inv2);
+                let fi = prefactor * (rjk[d] * rji_inv * rjk_inv - cos_clamped * rji[d] * rji_inv2);
+                let fk = prefactor * (rji[d] * rji_inv * rjk_inv - cos_clamped * rjk[d] * rjk_inv2);
                 forces[i * 3 + d] += fi;
                 forces[k * 3 + d] += fk;
                 forces[j * 3 + d] += -(fi + fk);
@@ -369,9 +361,15 @@ mod tests {
         let theta0: f64 = std::f64::consts::FRAC_PI_3 * 2.0; // 120°
         let r = 0.15_f64;
         let positions = vec![
-            r * (theta0 / 2.0).cos(), r * (theta0 / 2.0).sin(), 0.0,
-            0.0, 0.0, 0.0,
-            r * (theta0 / 2.0).cos(), -r * (theta0 / 2.0).sin(), 0.0,
+            r * (theta0 / 2.0).cos(),
+            r * (theta0 / 2.0).sin(),
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            r * (theta0 / 2.0).cos(),
+            -r * (theta0 / 2.0).sin(),
+            0.0,
         ];
         let angles = vec![HarmonicAngle {
             i: 0,
@@ -391,11 +389,7 @@ mod tests {
 
     #[test]
     fn test_harmonic_angle_momentum_conservation_cpu() {
-        let positions = vec![
-            0.15, 0.0, 0.0,
-            0.0, 0.0, 0.0,
-            0.0, 0.15, 0.05,
-        ];
+        let positions = vec![0.15, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.15, 0.05];
         let angles = vec![HarmonicAngle {
             i: 0,
             j: 1,
@@ -406,7 +400,10 @@ mod tests {
         let forces = compute_cpu(&positions, &angles);
         for d in 0..3 {
             let total = forces[d] + forces[3 + d] + forces[6 + d];
-            assert!(total.abs() < 1e-10, "momentum not conserved on dim {d}: {total}");
+            assert!(
+                total.abs() < 1e-10,
+                "momentum not conserved on dim {d}: {total}"
+            );
         }
     }
 }

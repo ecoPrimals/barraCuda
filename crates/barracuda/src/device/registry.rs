@@ -296,9 +296,8 @@ impl DeviceRegistry {
             ..Default::default()
         });
 
-        let adapters: Vec<wgpu::Adapter> = crate::runtime::tokio_block_on(
-            instance.enumerate_adapters(wgpu::Backends::all()),
-        );
+        let adapters: Vec<wgpu::Adapter> =
+            crate::runtime::tokio_block_on(instance.enumerate_adapters(wgpu::Backends::all()));
         let adapter_infos: Vec<wgpu::AdapterInfo> =
             adapters.iter().map(wgpu::Adapter::get_info).collect();
         Self::build_from_adapters(adapter_infos)

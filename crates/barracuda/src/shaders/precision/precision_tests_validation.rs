@@ -319,14 +319,12 @@ async fn test_df64_e2e_fma_gpu_dispatch() {
             contents: bytemuck::cast_slice(&c_data),
             usage: wgpu::BufferUsages::STORAGE,
         });
-    let out_buf = device
-        .device()
-        .create_buffer(&wgpu::BufferDescriptor {
-            label: Some("out"),
-            size: (n * 8) as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
+    let out_buf = device.device().create_buffer(&wgpu::BufferDescriptor {
+        label: Some("out"),
+        size: (n * 8) as u64,
+        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+        mapped_at_creation: false,
+    });
 
     ComputeDispatch::new(&*device, "df64_e2e_fma")
         .shader(DF64_E2E_FMA_KERNEL, "main")
@@ -380,14 +378,12 @@ async fn test_df64_e2e_kahan_summation_gpu_dispatch() {
             contents: bytemuck::cast_slice(&input_data),
             usage: wgpu::BufferUsages::STORAGE,
         });
-    let out_buf = device
-        .device()
-        .create_buffer(&wgpu::BufferDescriptor {
-            label: Some("out"),
-            size: 8,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
+    let out_buf = device.device().create_buffer(&wgpu::BufferDescriptor {
+        label: Some("out"),
+        size: 8,
+        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+        mapped_at_creation: false,
+    });
     let n_buf = device
         .device()
         .create_buffer_init(&wgpu::util::BufferInitDescriptor {

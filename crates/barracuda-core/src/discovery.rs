@@ -7,8 +7,8 @@
 //! Method names follow the wateringHole semantic standard (`{domain}.{operation}`)
 //! — the primal only has self-knowledge and discovers others at runtime.
 
-use crate::ipc::methods::REGISTERED_METHODS;
 use crate::env_keys;
+use crate::ipc::methods::REGISTERED_METHODS;
 use std::collections::BTreeSet;
 
 /// Extract the domain (first component) from a semantic method name.

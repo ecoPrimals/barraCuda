@@ -346,7 +346,10 @@ mod tests {
         }];
         let forces = compute_cpu(&positions, &bonds);
         for f in &forces {
-            assert!(f.abs() < 1e-10, "force at equilibrium should be zero, got {f}");
+            assert!(
+                f.abs() < 1e-10,
+                "force at equilibrium should be zero, got {f}"
+            );
         }
     }
 

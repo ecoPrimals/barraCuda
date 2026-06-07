@@ -190,8 +190,7 @@ impl DeviceSelection {
 pub fn sovereign_available() -> bool {
     #[cfg(feature = "sovereign-dispatch")]
     {
-        sovereign_device::SovereignDevice::with_auto_device()
-            .is_ok_and(|d| d.has_dispatch())
+        sovereign_device::SovereignDevice::with_auto_device().is_ok_and(|d| d.has_dispatch())
     }
     #[cfg(not(feature = "sovereign-dispatch"))]
     false

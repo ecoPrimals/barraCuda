@@ -13,7 +13,10 @@ fn test_stats_simpson_uniform() {
     );
     let result = resp.result.expect("simpson should succeed");
     let d = result["result"].as_f64().unwrap();
-    assert!((d - 0.75).abs() < 1e-12, "4 equal species: D = 0.75, got {d}");
+    assert!(
+        (d - 0.75).abs() < 1e-12,
+        "4 equal species: D = 0.75, got {d}"
+    );
 }
 
 #[test]
@@ -131,7 +134,10 @@ fn test_stats_hill_saturation() {
 
 #[test]
 fn test_stats_hill_missing_params() {
-    let resp = stats_hill(&serde_json::json!({"x": 5.0, "k": 1.0}), serde_json::json!(22));
+    let resp = stats_hill(
+        &serde_json::json!({"x": 5.0, "k": 1.0}),
+        serde_json::json!(22),
+    );
     assert!(resp.error.is_some());
     assert_eq!(resp.error.unwrap().code, INVALID_PARAMS);
 }

@@ -122,9 +122,9 @@ async fn send_jsonrpc_uds(
     )
     .await
     .map_err(|_| std::io::Error::new(std::io::ErrorKind::TimedOut, "neural-api read timeout"))?
-    .and_then(|opt| opt.ok_or_else(|| {
-        std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "no response")
-    }))?;
+    .and_then(|opt| {
+        opt.ok_or_else(|| std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "no response"))
+    })?;
 
     serde_json::from_str(&response_line)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
@@ -137,7 +137,10 @@ async fn send_jsonrpc_uds(
 #[cfg(unix)]
 pub async fn announce_to_neural_api(own_socket: &str, version: &str) {
     let Some(neural_socket) = resolve_neural_api_socket() else {
-        tracing::info!(mode = "standalone", "Neural API socket not found — skipping primal.announce");
+        tracing::info!(
+            mode = "standalone",
+            "Neural API socket not found — skipping primal.announce"
+        );
         return;
     };
 
@@ -230,7 +233,10 @@ mod tests {
         assert!(params["pid"].is_number());
 
         let caps = params["capabilities"].as_array().unwrap();
-        assert!(caps.len() >= 10, "derived capabilities should cover all domains");
+        assert!(
+            caps.len() >= 10,
+            "derived capabilities should cover all domains"
+        );
         assert!(caps.contains(&serde_json::json!("math")));
         assert!(caps.contains(&serde_json::json!("tensor")));
         assert!(caps.contains(&serde_json::json!("stats")));

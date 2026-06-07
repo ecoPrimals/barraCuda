@@ -89,8 +89,7 @@ fn release_held_permit() {
 fn prefer_gpu() -> bool {
     static CACHED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *CACHED.get_or_init(|| {
-        std::env::var("BARRACUDA_TEST_BACKEND")
-            .is_ok_and(|v| v.eq_ignore_ascii_case("gpu"))
+        std::env::var("BARRACUDA_TEST_BACKEND").is_ok_and(|v| v.eq_ignore_ascii_case("gpu"))
     })
 }
 
@@ -113,7 +112,9 @@ fn resolve_gpu_adapter_selector() -> String {
         backends: wgpu::Backends::all(),
         ..Default::default()
     });
-    for adapter in crate::runtime::tokio_block_on(instance.enumerate_adapters(wgpu::Backends::all())) {
+    for adapter in
+        crate::runtime::tokio_block_on(instance.enumerate_adapters(wgpu::Backends::all()))
+    {
         let info = adapter.get_info();
         if info.device_type == wgpu::DeviceType::DiscreteGpu
             && adapter.features().contains(wgpu::Features::SHADER_F64)

@@ -7,15 +7,15 @@
 
 use super::super::linalg::linalg_solve;
 use super::super::math::ode_step;
-use super::super::stats::{
-    stats_covariance, stats_empirical_spectral_density, stats_fit_linear, stats_spearman,
-};
 use super::super::ml::{ml_esn_predict, ml_mlp_train};
 use super::super::nautilus::{
     nautilus_create, nautilus_export, nautilus_import, nautilus_observe, nautilus_predict,
     nautilus_train,
 };
 use super::super::spectral::{spectral_fft, spectral_power_spectrum};
+use super::super::stats::{
+    stats_covariance, stats_empirical_spectral_density, stats_fit_linear, stats_spearman,
+};
 use crate::ipc::jsonrpc;
 
 // ── ode.step ────────────────────────────────────────────────────────

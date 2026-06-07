@@ -15,9 +15,9 @@ pub use super::hfb::{
 // ── Axially-deformed HFB (6 + density/energy + gradient) ────────────────
 
 pub use super::hfb_deformed::{
-    WGSL_DEFORMED_BCS, WGSL_DEFORMED_DENSITY, WGSL_DEFORMED_DENSITY_ENERGY,
-    WGSL_DEFORMED_ENERGY, WGSL_DEFORMED_GRADIENT, WGSL_DEFORMED_HAMILTONIAN,
-    WGSL_DEFORMED_POTENTIAL, WGSL_DEFORMED_WAVEFUNCTION,
+    WGSL_DEFORMED_BCS, WGSL_DEFORMED_DENSITY, WGSL_DEFORMED_DENSITY_ENERGY, WGSL_DEFORMED_ENERGY,
+    WGSL_DEFORMED_GRADIENT, WGSL_DEFORMED_HAMILTONIAN, WGSL_DEFORMED_POTENTIAL,
+    WGSL_DEFORMED_WAVEFUNCTION,
 };
 
 // ── SEMF / nuclear EOS L1 (3) ───────────────────────────────────────────
@@ -27,8 +27,7 @@ pub use super::semf::{WGSL_CHI2_BATCH, WGSL_SEMF_BATCH, WGSL_SEMF_PURE_GPU};
 // ── Kinetic plasma / dielectric (4) ───────────────────────────────────
 
 pub use super::plasma::{
-    WGSL_BGK_RELAXATION, WGSL_DIELECTRIC_MERMIN, WGSL_DIELECTRIC_MULTICOMPONENT,
-    WGSL_EULER_HLL,
+    WGSL_BGK_RELAXATION, WGSL_DIELECTRIC_MERMIN, WGSL_DIELECTRIC_MULTICOMPONENT, WGSL_EULER_HLL,
 };
 
 // ── Metadynamics FES (1) ────────────────────────────────────────────────

@@ -209,9 +209,7 @@ impl DihedralTorsionF64 {
             Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => {
                 Self::wgsl_shader().to_string()
             }
-            Fp64Strategy::Hybrid => {
-                Self::wgsl_shader().to_string()
-            }
+            Fp64Strategy::Hybrid => Self::wgsl_shader().to_string(),
         }
     }
 
@@ -413,8 +411,8 @@ mod tests {
 
                 let phi_plus = dihedral_angle(&pos_plus, 0, 1, 2, 3);
                 let phi_minus = dihedral_angle(&pos_minus, 0, 1, 2, 3);
-                let u_plus =
-                    dih.barrier_height * (1.0 + (dih.periodicity * phi_plus - dih.phase_shift).cos());
+                let u_plus = dih.barrier_height
+                    * (1.0 + (dih.periodicity * phi_plus - dih.phase_shift).cos());
                 let u_minus = dih.barrier_height
                     * (1.0 + (dih.periodicity * phi_minus - dih.phase_shift).cos());
                 num_forces[atom * 3 + dim] = -(u_plus - u_minus) / (2.0 * eps);

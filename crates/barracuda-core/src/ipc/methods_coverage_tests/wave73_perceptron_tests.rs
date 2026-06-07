@@ -22,9 +22,9 @@ fn perceptron_36_16_dims_shorthand() {
         let domain_idx = i % 16;
         feature_vec[domain_idx] = 1.0;
         feature_vec[32] = (i as f64) / 32.0; // param_size_norm
-        feature_vec[33] = 0.5;               // gate_load_norm
+        feature_vec[33] = 0.5; // gate_load_norm
         feature_vec[34] = (i as f64) / 100.0; // latency_ewma_norm
-        feature_vec[35] = 0.8;               // topology_affinity
+        feature_vec[35] = 0.8; // topology_affinity
         inputs.push(feature_vec);
 
         let mut target = vec![0.0; 16];
@@ -43,7 +43,11 @@ fn perceptron_36_16_dims_shorthand() {
         serde_json::json!(7300),
     );
 
-    assert!(resp.error.is_none(), "36→16 perceptron train failed: {:?}", resp.error);
+    assert!(
+        resp.error.is_none(),
+        "36→16 perceptron train failed: {:?}",
+        resp.error
+    );
     let result = resp.result.unwrap();
 
     let layers = result["layers"].as_array().unwrap();
@@ -91,7 +95,11 @@ fn perceptron_36_64_16_two_layer() {
         serde_json::json!(7301),
     );
 
-    assert!(resp.error.is_none(), "36→64→16 train failed: {:?}", resp.error);
+    assert!(
+        resp.error.is_none(),
+        "36→64→16 train failed: {:?}",
+        resp.error
+    );
     let result = resp.result.unwrap();
 
     let layers = result["layers"].as_array().unwrap();
@@ -120,7 +128,11 @@ fn perceptron_dims_shorthand_default_sigmoid() {
         serde_json::json!(7302),
     );
 
-    assert!(resp.error.is_none(), "default sigmoid shorthand failed: {:?}", resp.error);
+    assert!(
+        resp.error.is_none(),
+        "default sigmoid shorthand failed: {:?}",
+        resp.error
+    );
     let result = resp.result.unwrap();
     let layers = result["layers"].as_array().unwrap();
     assert_eq!(layers.len(), 1);
@@ -159,7 +171,11 @@ fn perceptron_explicit_still_works() {
         serde_json::json!(7304),
     );
 
-    assert!(resp.error.is_none(), "explicit layers still work: {:?}", resp.error);
+    assert!(
+        resp.error.is_none(),
+        "explicit layers still work: {:?}",
+        resp.error
+    );
     let result = resp.result.unwrap();
     assert!(result["mse"].as_f64().unwrap().is_finite());
 }
@@ -206,7 +222,10 @@ fn perceptron_batch_256_performance() {
 
     let result = resp.result.unwrap();
     let mse = result["mse"].as_f64().unwrap();
-    assert!(mse < 0.5, "MSE should decrease significantly with 256 samples, got {mse}");
+    assert!(
+        mse < 0.5,
+        "MSE should decrease significantly with 256 samples, got {mse}"
+    );
 }
 
 // ── ml.perceptron_train pipeline tests ──────────────────────────────
@@ -281,7 +300,11 @@ fn perceptron_pipeline_with_output_path() {
         serde_json::json!(7401),
     );
 
-    assert!(resp.error.is_none(), "pipeline with output failed: {:?}", resp.error);
+    assert!(
+        resp.error.is_none(),
+        "pipeline with output failed: {:?}",
+        resp.error
+    );
     let result = resp.result.unwrap();
     assert_eq!(
         result["output_path"].as_str().unwrap(),
@@ -298,20 +321,14 @@ fn perceptron_pipeline_with_output_path() {
 
 #[test]
 fn perceptron_pipeline_empty_records() {
-    let resp = ml_perceptron_train(
-        &serde_json::json!({"records": []}),
-        serde_json::json!(7402),
-    );
+    let resp = ml_perceptron_train(&serde_json::json!({"records": []}), serde_json::json!(7402));
     let err = resp.error.expect("empty records should fail");
     assert_eq!(err.code, jsonrpc::INVALID_PARAMS);
 }
 
 #[test]
 fn perceptron_pipeline_missing_records() {
-    let resp = ml_perceptron_train(
-        &serde_json::json!({"epochs": 10}),
-        serde_json::json!(7403),
-    );
+    let resp = ml_perceptron_train(&serde_json::json!({"epochs": 10}), serde_json::json!(7403));
     let err = resp.error.expect("missing records should fail");
     assert_eq!(err.code, jsonrpc::INVALID_PARAMS);
 }
@@ -335,7 +352,11 @@ fn perceptron_pipeline_single_provider() {
         serde_json::json!(7404),
     );
 
-    assert!(resp.error.is_none(), "single provider failed: {:?}", resp.error);
+    assert!(
+        resp.error.is_none(),
+        "single provider failed: {:?}",
+        resp.error
+    );
     let result = resp.result.unwrap();
     let providers = result["providers"].as_array().unwrap();
     assert_eq!(providers.len(), 1);
@@ -356,7 +377,11 @@ fn perceptron_pipeline_reward_signal() {
         serde_json::json!(7405),
     );
 
-    assert!(resp.error.is_none(), "reward signal test failed: {:?}", resp.error);
+    assert!(
+        resp.error.is_none(),
+        "reward signal test failed: {:?}",
+        resp.error
+    );
     let result = resp.result.unwrap();
     let mse = result["mse"].as_f64().unwrap();
     assert!(mse.is_finite());
@@ -412,7 +437,11 @@ fn perceptron_pipeline_full_feature_fields() {
         serde_json::json!(7406),
     );
 
-    assert!(resp.error.is_none(), "full fields test failed: {:?}", resp.error);
+    assert!(
+        resp.error.is_none(),
+        "full fields test failed: {:?}",
+        resp.error
+    );
     let result = resp.result.unwrap();
     assert_eq!(result["records_processed"].as_u64().unwrap(), 4);
     assert!(result["mse"].as_f64().unwrap().is_finite());

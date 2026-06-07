@@ -95,9 +95,9 @@ impl FhePolyAdd {
 
         // Compute Barrett constant μ = ⌊2^128 / q⌋
         // Simplified: μ ≈ 2^64 / q for 64-bit arithmetic
-        let barrett_mu = u64::MAX.checked_div(modulus).ok_or_else(|| {
-            BarracudaError::Device("Modulus must be non-zero".to_string())
-        })?;
+        let barrett_mu = u64::MAX
+            .checked_div(modulus)
+            .ok_or_else(|| BarracudaError::Device("Modulus must be non-zero".to_string()))?;
 
         let device = poly_a.device();
 

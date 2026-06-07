@@ -482,7 +482,12 @@ fn test_kernel_router_small_workloads_to_cpu() {
     // Small workloads should prefer CPU (avoid GPU dispatch overhead).
     // Threshold: DenseMatmul uses m*n*k < 1000; Eigendecomp < 128; LinearSolve < 256.
     let small_workloads = vec![
-        ComputeWorkload::DenseMatmul { m: 9, n: 9, k: 9, precision: None }, // 729 < 1000
+        ComputeWorkload::DenseMatmul {
+            m: 9,
+            n: 9,
+            k: 9,
+            precision: None,
+        }, // 729 < 1000
         ComputeWorkload::Eigendecomp { matrix_size: 32 },
         ComputeWorkload::LinearSolve { system_size: 64 },
     ];

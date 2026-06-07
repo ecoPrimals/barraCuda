@@ -55,7 +55,6 @@ pub struct BatchGuard {
     ctx: Arc<TensorContext>,
 }
 
-
 impl BatchGuard {
     /// Begin a batch session on `device`.
     #[must_use]

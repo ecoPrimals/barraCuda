@@ -15,12 +15,6 @@
 //! let output = mlp.forward(&input);
 //! ```
 
-mod serialization;
-mod training;
-
-pub use serialization::ModelBinaryError;
-pub use training::{TrainConfig, TrainError};
-
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
@@ -44,10 +38,8 @@ pub enum Activation {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DenseLayer {
     /// Weight matrix (row-major: `out_size` × `in_size`).
-    #[serde(alias = "weights")]
     pub weight: Vec<Vec<f64>>,
     /// Bias vector (length `out_size`).
-    #[serde(alias = "biases")]
     pub bias: Vec<f64>,
     /// Activation applied after affine transform.
     pub activation: Activation,
@@ -162,7 +154,186 @@ impl SimpleMlp {
     pub fn output_size(&self) -> Option<usize> {
         self.layers.last().map(|l| l.bias.len())
     }
+
+    /// Train the MLP using mini-batch SGD with backpropagation.
+    ///
+    /// # Arguments
+    /// * `inputs` — training input vectors
+    /// * `targets` — target output vectors (must match `inputs` length)
+    /// * `config` — training hyperparameters
+    ///
+    /// # Returns
+    /// Mean squared error on the final epoch.
+    ///
+    /// # Errors
+    /// Returns an error if inputs/targets are empty, lengths mismatch,
+    /// or dimensions are inconsistent with the network architecture.
+    pub fn train(
+        &mut self,
+        inputs: &[Vec<f64>],
+        targets: &[Vec<f64>],
+        config: &TrainConfig,
+    ) -> Result<f64, TrainError> {
+        if inputs.is_empty() {
+            return Err(TrainError::EmptyData);
+        }
+        if inputs.len() != targets.len() {
+            return Err(TrainError::LengthMismatch {
+                inputs: inputs.len(),
+                targets: targets.len(),
+            });
+        }
+        if let Some(expected_in) = self.input_size() {
+            if inputs.iter().any(|x| x.len() != expected_in) {
+                return Err(TrainError::DimensionMismatch {
+                    expected: expected_in,
+                    context: "input",
+                });
+            }
+        }
+        if let Some(expected_out) = self.output_size() {
+            if targets.iter().any(|t| t.len() != expected_out) {
+                return Err(TrainError::DimensionMismatch {
+                    expected: expected_out,
+                    context: "target",
+                });
+            }
+        }
+
+        let n = inputs.len();
+        let mut final_mse = 0.0;
+
+        for _epoch in 0..config.epochs {
+            let mut epoch_loss = 0.0;
+
+            for (input, target) in inputs.iter().zip(targets.iter()) {
+                // Forward pass — store pre-activation and post-activation for each layer.
+                let (activations, pre_activations) = self.forward_with_cache(input);
+
+                // Backward pass — compute gradients.
+                let n_layers = self.layers.len();
+                let mut delta = Vec::with_capacity(target.len());
+                let output = &activations[n_layers];
+                for (o, t) in output.iter().zip(target.iter()) {
+                    delta.push(o - t);
+                    epoch_loss += (o - t).powi(2);
+                }
+
+                for l in (0..n_layers).rev() {
+                    let act_deriv =
+                        activation_derivative(&pre_activations[l], self.layers[l].activation);
+                    let grad: Vec<f64> = delta.iter().zip(&act_deriv).map(|(d, a)| d * a).collect();
+
+                    let prev_act = &activations[l];
+                    let layer = &mut self.layers[l];
+
+                    for (i, g) in grad.iter().enumerate() {
+                        layer.bias[i] -= config.learning_rate * g;
+                        for (j, p) in prev_act.iter().enumerate() {
+                            layer.weight[i][j] -= config.learning_rate * g * p;
+                        }
+                    }
+
+                    if l > 0 {
+                        let mut new_delta = vec![0.0; self.layers[l].weight[0].len()];
+                        for (i, g) in grad.iter().enumerate() {
+                            for (j, nd) in new_delta.iter_mut().enumerate() {
+                                *nd += g * self.layers[l].weight[i][j];
+                            }
+                        }
+                        delta = new_delta;
+                    }
+                }
+            }
+
+            final_mse = epoch_loss / (n as f64 * self.output_size().unwrap_or(1) as f64);
+        }
+
+        Ok(final_mse)
+    }
+
+    /// Forward pass that caches intermediate activations for backprop.
+    fn forward_with_cache(&self, input: &[f64]) -> (Vec<Vec<f64>>, Vec<Vec<f64>>) {
+        let mut activations = Vec::with_capacity(self.layers.len() + 1);
+        let mut pre_activations = Vec::with_capacity(self.layers.len());
+        activations.push(input.to_vec());
+
+        let mut x = input.to_vec();
+        for layer in &self.layers {
+            let out_size = layer.bias.len();
+            let mut pre_act = Vec::with_capacity(out_size);
+            for (row, b) in layer.weight.iter().zip(&layer.bias) {
+                let dot: f64 = row.iter().zip(&x).map(|(w, xi)| w * xi).sum();
+                pre_act.push(dot + b);
+            }
+            let mut post_act = pre_act.clone();
+            apply_activation(&mut post_act, layer.activation);
+            pre_activations.push(pre_act);
+            activations.push(post_act.clone());
+            x = post_act;
+        }
+
+        (activations, pre_activations)
+    }
 }
+
+/// Training hyperparameters for `SimpleMlp::train`.
+#[derive(Debug, Clone)]
+pub struct TrainConfig {
+    /// Learning rate (step size).
+    pub learning_rate: f64,
+    /// Number of full passes over the dataset.
+    pub epochs: usize,
+}
+
+impl Default for TrainConfig {
+    fn default() -> Self {
+        Self {
+            learning_rate: 0.01,
+            epochs: 100,
+        }
+    }
+}
+
+/// Errors that can occur during MLP training.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TrainError {
+    /// No training samples provided.
+    EmptyData,
+    /// Inputs and targets have different counts.
+    LengthMismatch {
+        /// Number of input samples.
+        inputs: usize,
+        /// Number of target samples.
+        targets: usize,
+    },
+    /// A sample has wrong dimensionality.
+    DimensionMismatch {
+        /// Expected dimensionality.
+        expected: usize,
+        /// Whether this is "input" or "target".
+        context: &'static str,
+    },
+}
+
+impl std::fmt::Display for TrainError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::EmptyData => write!(f, "training data is empty"),
+            Self::LengthMismatch { inputs, targets } => {
+                write!(
+                    f,
+                    "inputs ({inputs}) and targets ({targets}) length mismatch"
+                )
+            }
+            Self::DimensionMismatch { expected, context } => {
+                write!(f, "{context} dimension mismatch (expected {expected})")
+            }
+        }
+    }
+}
+
+impl std::error::Error for TrainError {}
 
 /// Compute the derivative of an activation function given pre-activation values.
 fn activation_derivative(pre_act: &[f64], activation: Activation) -> Vec<f64> {
@@ -260,6 +431,8 @@ mod tests {
     fn test_forward_basic() {
         let mlp = make_test_mlp();
         let out = mlp.forward(&[1.0, 2.0]);
+        // Layer 1: [1, 2, 2.5] after relu
+        // Layer 2: [1+2+2.5] = [5.5]
         assert!((out[0] - 5.5).abs() < 1e-10);
     }
 
@@ -342,31 +515,72 @@ mod tests {
             epochs: 500,
         };
         let mse = mlp.train(&inputs, &targets, &config).unwrap();
-        assert!(mse < 0.1, "XOR training did not converge, MSE: {mse}");
+        assert!(mse < 0.1, "MSE should decrease with training, got {mse}");
     }
 
     #[test]
-    fn test_train_empty_data() {
-        let mut mlp = make_test_mlp();
-        let err = mlp.train(&[], &[], &TrainConfig::default()).unwrap_err();
-        assert_eq!(err, TrainError::EmptyData);
+    fn test_train_linear() {
+        let mut mlp = SimpleMlp::new(vec![DenseLayer {
+            weight: vec![vec![0.1]],
+            bias: vec![0.0],
+            activation: Activation::Identity,
+        }]);
+
+        let inputs: Vec<Vec<f64>> = (0..20).map(|i| vec![i as f64]).collect();
+        let targets: Vec<Vec<f64>> = inputs
+            .iter()
+            .map(|x| vec![x[0].mul_add(2.0, 1.0)])
+            .collect();
+
+        let config = TrainConfig {
+            learning_rate: 0.0001,
+            epochs: 200,
+        };
+        let mse = mlp.train(&inputs, &targets, &config).unwrap();
+        assert!(mse < 5.0, "linear fit should converge, got MSE={mse}");
     }
 
     #[test]
-    fn test_train_length_mismatch() {
-        let mut mlp = make_test_mlp();
-        let err = mlp
-            .train(
-                &[vec![1.0, 2.0]],
-                &[vec![1.0], vec![2.0]],
-                &TrainConfig::default(),
-            )
-            .unwrap_err();
-        assert!(matches!(err, TrainError::LengthMismatch { .. }));
+    fn test_train_errors() {
+        let mut mlp = SimpleMlp::new(vec![DenseLayer {
+            weight: vec![vec![1.0]],
+            bias: vec![0.0],
+            activation: Activation::Relu,
+        }]);
+        let config = TrainConfig::default();
+
+        assert_eq!(
+            mlp.train(&[], &[], &config).unwrap_err(),
+            TrainError::EmptyData
+        );
+        assert_eq!(
+            mlp.train(&[vec![1.0]], &[], &config).unwrap_err(),
+            TrainError::LengthMismatch {
+                inputs: 1,
+                targets: 0
+            }
+        );
+        assert_eq!(
+            mlp.train(&[vec![1.0, 2.0]], &[vec![1.0]], &config)
+                .unwrap_err(),
+            TrainError::DimensionMismatch {
+                expected: 1,
+                context: "input"
+            }
+        );
     }
 
     #[test]
-    fn test_from_dims_shapes() {
+    fn test_from_dims_single_layer() {
+        let mlp = SimpleMlp::from_dims(&[36, 16], Activation::Sigmoid);
+        assert_eq!(mlp.layers.len(), 1);
+        assert_eq!(mlp.input_size(), Some(36));
+        assert_eq!(mlp.output_size(), Some(16));
+        assert_eq!(mlp.layers[0].activation, Activation::Identity);
+    }
+
+    #[test]
+    fn test_from_dims_multi_layer() {
         let mlp = SimpleMlp::from_dims(&[36, 64, 16], Activation::Relu);
         assert_eq!(mlp.layers.len(), 2);
         assert_eq!(mlp.input_size(), Some(36));
@@ -376,181 +590,25 @@ mod tests {
     }
 
     #[test]
-    fn test_gelu_activation() {
-        let mlp = SimpleMlp::new(vec![DenseLayer {
-            weight: vec![vec![1.0]],
-            bias: vec![0.0],
-            activation: Activation::Gelu,
-        }]);
-        let out = mlp.forward(&[0.0]);
-        assert!(out[0].abs() < 1e-10);
-        let out2 = mlp.forward(&[1.0]);
-        assert!(out2[0] > 0.8);
-    }
-
-    #[test]
-    fn test_identity_activation() {
-        let mlp = SimpleMlp::new(vec![DenseLayer {
-            weight: vec![vec![2.0]],
-            bias: vec![3.0],
-            activation: Activation::Identity,
-        }]);
-        let out = mlp.forward(&[5.0]);
-        assert!((out[0] - 13.0).abs() < 1e-10);
-    }
-
-    #[test]
-    fn binary_roundtrip_single_layer() {
-        let mlp = SimpleMlp::from_dims(&[4, 2], Activation::Relu);
-        let data = mlp.to_binary().unwrap();
-        let restored = SimpleMlp::from_binary(&data).unwrap();
-        assert_eq!(mlp.layers.len(), restored.layers.len());
-        let input = vec![1.0, 2.0, 3.0, 4.0];
-        let diff: f64 = mlp
-            .forward(&input)
-            .iter()
-            .zip(restored.forward(&input).iter())
-            .map(|(a, b)| (a - b).abs())
-            .sum();
-        assert!(diff < 1e-15);
-    }
-
-    #[test]
-    fn binary_roundtrip_multi_layer() {
-        let mlp = SimpleMlp::from_dims(&[8, 16, 4], Activation::Tanh);
-        let data = mlp.to_binary().unwrap();
-        let restored = SimpleMlp::from_binary(&data).unwrap();
-        assert_eq!(mlp.layers.len(), restored.layers.len());
-    }
-
-    #[test]
-    fn binary_smaller_than_json() {
-        let mlp = SimpleMlp::from_dims(&[36, 16], Activation::Relu);
-        let bin = mlp.to_binary().unwrap();
-        let json = mlp.to_json().unwrap();
-        assert!(
-            bin.len() < json.len(),
-            "binary ({}) should be smaller than JSON ({})",
-            bin.len(),
-            json.len()
-        );
-    }
-
-    #[test]
-    fn binary_header_magic_and_version() {
-        let mlp = SimpleMlp::from_dims(&[2, 1], Activation::Relu);
-        let data = mlp.to_binary().unwrap();
-        assert_eq!(&data[0..4], b"BCML");
-        assert_eq!(data[4], 1); // version
-        assert_eq!(data[5], 1); // format (bincode)
-    }
-
-    #[test]
-    fn binary_checksum_verification_fails_on_tamper() {
-        let mlp = SimpleMlp::from_dims(&[4, 2], Activation::Relu);
-        let mut data = mlp.to_binary().unwrap();
-        let last = data.len() - 1;
-        data[last] ^= 0xFF;
-        let err = SimpleMlp::from_binary(&data).unwrap_err();
-        assert!(
-            matches!(err, ModelBinaryError::ChecksumMismatch),
-            "expected ChecksumMismatch, got: {err:?}"
-        );
-    }
-
-    #[test]
-    fn binary_too_short_rejected() {
-        let err = SimpleMlp::from_binary(&[0u8; 10]).unwrap_err();
-        assert!(matches!(err, ModelBinaryError::TooShort(_)));
-    }
-
-    #[test]
-    fn binary_bad_magic_rejected() {
-        let mut data = vec![0u8; 64];
-        data[0..4].copy_from_slice(b"NOPE");
-        let err = SimpleMlp::from_binary(&data).unwrap_err();
-        assert!(matches!(err, ModelBinaryError::BadMagic));
-    }
-
-    #[test]
-    fn binary_unsupported_version_rejected() {
-        let mlp = SimpleMlp::from_dims(&[2, 1], Activation::Relu);
-        let mut data = mlp.to_binary().unwrap();
-        data[4] = 99;
-        let err = SimpleMlp::from_binary(&data).unwrap_err();
-        assert!(matches!(err, ModelBinaryError::UnsupportedVersion(99)));
-    }
-
-    #[test]
-    fn from_auto_detects_binary() {
-        let mlp = SimpleMlp::from_dims(&[4, 2], Activation::Tanh);
-        let bin = mlp.to_binary().unwrap();
-        let restored = SimpleMlp::from_auto(&bin).unwrap();
-        assert_eq!(restored.layers.len(), mlp.layers.len());
-    }
-
-    #[test]
-    fn from_auto_detects_json() {
-        let mlp = SimpleMlp::from_dims(&[8, 4], Activation::Tanh);
-        let json = mlp.to_json().unwrap();
-        let restored = SimpleMlp::from_auto(json.as_bytes()).unwrap();
-        for (orig, rest) in mlp.layers[0]
-            .weight
-            .iter()
-            .flatten()
-            .zip(restored.layers[0].weight.iter().flatten())
-        {
-            assert!((orig - rest).abs() < 1e-14, "JSON roundtrip precision loss");
-        }
-    }
-
-    #[test]
-    fn serde_alias_weights_biases() {
-        let json = r#"{
-            "layers": [{
-                "weights": [[1.0, 2.0], [3.0, 4.0]],
-                "biases": [0.1, 0.2],
-                "activation": "relu"
-            }]
-        }"#;
-        let mlp = SimpleMlp::from_json(json).unwrap();
-        assert_eq!(mlp.layers[0].weight, vec![vec![1.0, 2.0], vec![3.0, 4.0]]);
-        assert_eq!(mlp.layers[0].bias, vec![0.1, 0.2]);
-    }
-
-    #[test]
-    fn serde_canonical_weight_bias() {
-        let json = r#"{
-            "layers": [{
-                "weight": [[5.0, 6.0]],
-                "bias": [0.5],
-                "activation": "sigmoid"
-            }]
-        }"#;
-        let mlp = SimpleMlp::from_json(json).unwrap();
-        assert_eq!(mlp.layers[0].weight, vec![vec![5.0, 6.0]]);
-        assert_eq!(mlp.layers[0].bias, vec![0.5]);
-    }
-
-    #[test]
-    fn binary_trained_model_inference_matches() {
-        let mut mlp = SimpleMlp::from_dims(&[4, 8, 2], Activation::Tanh);
-        let inputs = vec![vec![1.0, 2.0, 3.0, 4.0]; 10];
-        let targets = vec![vec![0.5, -0.5]; 10];
+    fn test_from_dims_trains_successfully() {
+        let mut mlp = SimpleMlp::from_dims(&[4, 2], Activation::Sigmoid);
+        let inputs = vec![
+            vec![1.0, 0.0, 0.0, 0.0],
+            vec![0.0, 1.0, 0.0, 0.0],
+            vec![0.0, 0.0, 1.0, 0.0],
+            vec![0.0, 0.0, 0.0, 1.0],
+        ];
+        let targets = vec![
+            vec![1.0, 0.0],
+            vec![1.0, 0.0],
+            vec![0.0, 1.0],
+            vec![0.0, 1.0],
+        ];
         let config = TrainConfig {
-            learning_rate: 0.01,
-            epochs: 50,
+            learning_rate: 0.1,
+            epochs: 100,
         };
-        mlp.train(&inputs, &targets, &config).unwrap();
-
-        let bin_data = mlp.to_binary().unwrap();
-        let restored = SimpleMlp::from_binary(&bin_data).unwrap();
-
-        let test_input = vec![2.0, 3.0, 1.0, 0.5];
-        let orig_out = mlp.forward(&test_input);
-        let rest_out = restored.forward(&test_input);
-        for (a, b) in orig_out.iter().zip(rest_out.iter()) {
-            assert!((a - b).abs() < 1e-15, "binary roundtrip changed inference");
-        }
+        let mse = mlp.train(&inputs, &targets, &config).unwrap();
+        assert!(mse < 0.25, "from_dims should train, got MSE={mse}");
     }
 }

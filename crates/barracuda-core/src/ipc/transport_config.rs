@@ -83,8 +83,8 @@ pub fn resolve_bind_address(explicit: Option<&str>) -> String {
     if let Ok(addr) = std::env::var(env_keys::BARRACUDA_IPC_BIND) {
         return addr;
     }
-    let host =
-        std::env::var(env_keys::BARRACUDA_IPC_HOST).unwrap_or_else(|_| DEFAULT_BIND_HOST.to_string());
+    let host = std::env::var(env_keys::BARRACUDA_IPC_HOST)
+        .unwrap_or_else(|_| DEFAULT_BIND_HOST.to_string());
     std::env::var(env_keys::BARRACUDA_IPC_PORT)
         .map_or_else(|_| format!("{host}:0"), |port| format!("{host}:{port}"))
 }

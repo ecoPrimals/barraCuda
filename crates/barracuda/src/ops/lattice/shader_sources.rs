@@ -8,23 +8,24 @@
 
 use super::absorbed_shaders::{
     WGSL_AXPY_FILE_F64, WGSL_CG_COMPUTE_ALPHA_SHIFTED_F64, WGSL_CG_UPDATE_XR_SHIFTED_F64,
-    WGSL_COMPLEX_DOT_RE_FILE_F64, WGSL_FERMION_ACTION_SUM_F64, WGSL_GAUSSIAN_FERMION_F64, WGSL_GPU_METROPOLIS_F64,
-    WGSL_HAMILTONIAN_ASSEMBLY_F64, WGSL_MS_P_UPDATE_F64, WGSL_MS_X_UPDATE_F64,
-    WGSL_MS_ZETA_UPDATE_F64, WGSL_PRNG_PCG_F64, WGSL_STAGGERED_FERMION_FORCE_F64,
-    WGSL_SU3_FERMION_FORCE_ACCUMULATE_ROP_F64, WGSL_SU3_FORCE_ATOMIC_TO_MOMENTUM_F64,
-    WGSL_SU3_GAUGE_FORCE_DF64, WGSL_SU3_GAUGE_FORCE_F64, WGSL_SU3_KINETIC_ENERGY_DF64,
-    WGSL_SU3_KINETIC_ENERGY_F64, WGSL_SU3_LATTICE_F64, WGSL_SU3_LINK_UPDATE_F64,
-    WGSL_SU3_MATH_F64, WGSL_SU3_MOMENTUM_UPDATE_F64, WGSL_SU3_RANDOM_MOMENTA_F64,
-    WGSL_SU3_RANDOM_MOMENTA_TMU_F64, WGSL_SUM_REDUCE_SUBGROUP_F64, WGSL_XPAY_FILE_F64,
+    WGSL_COMPLEX_DOT_RE_FILE_F64, WGSL_FERMION_ACTION_SUM_F64, WGSL_GAUSSIAN_FERMION_F64,
+    WGSL_GPU_METROPOLIS_F64, WGSL_HAMILTONIAN_ASSEMBLY_F64, WGSL_MS_P_UPDATE_F64,
+    WGSL_MS_X_UPDATE_F64, WGSL_MS_ZETA_UPDATE_F64, WGSL_PRNG_PCG_F64,
+    WGSL_STAGGERED_FERMION_FORCE_F64, WGSL_SU3_FERMION_FORCE_ACCUMULATE_ROP_F64,
+    WGSL_SU3_FORCE_ATOMIC_TO_MOMENTUM_F64, WGSL_SU3_GAUGE_FORCE_DF64, WGSL_SU3_GAUGE_FORCE_F64,
+    WGSL_SU3_KINETIC_ENERGY_DF64, WGSL_SU3_KINETIC_ENERGY_F64, WGSL_SU3_LATTICE_F64,
+    WGSL_SU3_LINK_UPDATE_F64, WGSL_SU3_MATH_F64, WGSL_SU3_MOMENTUM_UPDATE_F64,
+    WGSL_SU3_RANDOM_MOMENTA_F64, WGSL_SU3_RANDOM_MOMENTA_TMU_F64, WGSL_SUM_REDUCE_SUBGROUP_F64,
+    WGSL_XPAY_FILE_F64,
 };
 use super::cg::{
-    WGSL_CG_COMPUTE_ALPHA_F64, WGSL_CG_COMPUTE_BETA_F64, WGSL_CG_KERNELS_F64,
-    WGSL_CG_UPDATE_P_F64, WGSL_CG_UPDATE_XR_F64, WGSL_SUM_REDUCE_F64,
+    WGSL_CG_COMPUTE_ALPHA_F64, WGSL_CG_COMPUTE_BETA_F64, WGSL_CG_KERNELS_F64, WGSL_CG_UPDATE_P_F64,
+    WGSL_CG_UPDATE_XR_F64, WGSL_SUM_REDUCE_F64,
 };
 use super::complex_f64::WGSL_COMPLEX64;
 use super::lcg::WGSL_LCG_F64;
-use super::su3::{su3_df64_preamble, su3_preamble, WGSL_SU3};
-use super::su3_extended::{su3_extended_preamble, WGSL_SU3_EXTENDED};
+use super::su3::{WGSL_SU3, su3_df64_preamble, su3_preamble};
+use super::su3_extended::{WGSL_SU3_EXTENDED, su3_extended_preamble};
 
 const WGSL_WILSON_PLAQUETTE_F64: &str =
     include_str!("../../shaders/lattice/wilson_plaquette_f64.wgsl");
@@ -33,8 +34,7 @@ const WGSL_WILSON_PLAQUETTE_DF64: &str =
 const WGSL_WILSON_ACTION_F64: &str = include_str!("../../shaders/lattice/wilson_action_f64.wgsl");
 const WGSL_WILSON_ACTION_DF64: &str = include_str!("../../shaders/lattice/wilson_action_df64.wgsl");
 const WGSL_SU3_HMC_FORCE_F64: &str = include_str!("../../shaders/lattice/su3_hmc_force_f64.wgsl");
-const WGSL_SU3_HMC_FORCE_DF64: &str =
-    include_str!("../../shaders/lattice/su3_hmc_force_df64.wgsl");
+const WGSL_SU3_HMC_FORCE_DF64: &str = include_str!("../../shaders/lattice/su3_hmc_force_df64.wgsl");
 const WGSL_KINETIC_ENERGY_F64: &str = include_str!("../../shaders/lattice/kinetic_energy_f64.wgsl");
 const WGSL_KINETIC_ENERGY_DF64: &str =
     include_str!("../../shaders/lattice/kinetic_energy_df64.wgsl");
@@ -74,9 +74,7 @@ enum PreambleKind {
 /// reunitarize, random SU(3)).
 #[must_use]
 pub fn lattice_preamble() -> String {
-    format!(
-        "{WGSL_COMPLEX64}\n{WGSL_SU3}\n{WGSL_LCG_F64}\n{WGSL_SU3_EXTENDED}\n"
-    )
+    format!("{WGSL_COMPLEX64}\n{WGSL_SU3}\n{WGSL_LCG_F64}\n{WGSL_SU3_EXTENDED}\n")
 }
 
 /// DF64 lattice preamble: `complex_f64` + `su3` + `df64_core` + `df64_transcendentals` + `su3_df64`.
@@ -187,9 +185,10 @@ fn lookup_shader(name: &str) -> Option<(&'static str, PreambleKind)> {
         "cg_compute_beta_f64" => (WGSL_CG_COMPUTE_BETA_F64, PreambleKind::None),
         "cg_update_xr_f64" => (WGSL_CG_UPDATE_XR_F64, PreambleKind::None),
         "cg_update_p_f64" => (WGSL_CG_UPDATE_P_F64, PreambleKind::None),
-        "su3_fermion_force_accumulate_rop_f64" => {
-            (WGSL_SU3_FERMION_FORCE_ACCUMULATE_ROP_F64, PreambleKind::None)
-        }
+        "su3_fermion_force_accumulate_rop_f64" => (
+            WGSL_SU3_FERMION_FORCE_ACCUMULATE_ROP_F64,
+            PreambleKind::None,
+        ),
         "su3_force_atomic_to_momentum_f64" => {
             (WGSL_SU3_FORCE_ATOMIC_TO_MOMENTUM_F64, PreambleKind::None)
         }
@@ -215,7 +214,9 @@ fn lookup_shader(name: &str) -> Option<(&'static str, PreambleKind)> {
         // ── `su3_extended_preamble` (complex + su3 + lcg + su3_extended) ─
         "hmc_leapfrog_f64" => (WGSL_HMC_LEAPFROG_F64, PreambleKind::Su3Extended),
         "lattice_init_f64" => (WGSL_LATTICE_INIT_F64, PreambleKind::Su3Extended),
-        "pseudofermion_heatbath_f64" => (WGSL_PSEUDOFERMION_HEATBATH_F64, PreambleKind::Su3Extended),
+        "pseudofermion_heatbath_f64" => {
+            (WGSL_PSEUDOFERMION_HEATBATH_F64, PreambleKind::Su3Extended)
+        }
 
         // ── U(1) Higgs: complex arithmetic only ───────────────────────────
         "higgs_u1_hmc_f64" => (WGSL_HIGGS_U1_HMC_F64, PreambleKind::Complex),
@@ -289,8 +290,8 @@ mod tests {
 
     #[test]
     fn tmu_momenta_includes_pcg_preamble() {
-        let src =
-            lattice_shader_source("su3_random_momenta_tmu_f64").expect("su3_random_momenta_tmu_f64");
+        let src = lattice_shader_source("su3_random_momenta_tmu_f64")
+            .expect("su3_random_momenta_tmu_f64");
         assert!(src.contains("uniform_f64"), "must prepend prng_pcg_f64");
     }
 }

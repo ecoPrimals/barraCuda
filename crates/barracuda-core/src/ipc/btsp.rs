@@ -336,7 +336,8 @@ where
     // must use the same socket — the provider associates session state with it.
     let family_seed = resolve_family_seed_raw().ok_or_else(|| {
         HandshakeError::Protocol(
-            "BTSP handshake requires BTSP_FAMILY_SEED, FAMILY_SEED, or BIOMEOS_FAMILY_SEED env var".to_string(),
+            "BTSP handshake requires BTSP_FAMILY_SEED, FAMILY_SEED, or BIOMEOS_FAMILY_SEED env var"
+                .to_string(),
         )
     })?;
 
@@ -550,14 +551,13 @@ fn resolve_family_seed_raw() -> Option<String> {
     let raw = if let Some(val) = preferred {
         val
     } else {
-        #[expect(deprecated, reason = "intentional legacy fallback with deprecation warning")]
+        #[expect(
+            deprecated,
+            reason = "intentional legacy fallback with deprecation warning"
+        )]
         let legacy_key = crate::env_keys::BEARDOG_FAMILY_SEED;
-        let legacy = std::env::var(legacy_key)
-            .ok()
-            .filter(|s| !s.is_empty())?;
-        tracing::warn!(
-            "BEARDOG_FAMILY_SEED is deprecated — migrate to BTSP_FAMILY_SEED"
-        );
+        let legacy = std::env::var(legacy_key).ok().filter(|s| !s.is_empty())?;
+        tracing::warn!("BEARDOG_FAMILY_SEED is deprecated — migrate to BTSP_FAMILY_SEED");
         legacy
     };
 

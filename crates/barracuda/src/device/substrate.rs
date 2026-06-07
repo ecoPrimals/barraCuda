@@ -168,9 +168,8 @@ impl Substrate {
             ..Default::default()
         });
 
-        let adapters = crate::runtime::tokio_block_on(
-            instance.enumerate_adapters(wgpu::Backends::all()),
-        );
+        let adapters =
+            crate::runtime::tokio_block_on(instance.enumerate_adapters(wgpu::Backends::all()));
         Self::build_substrates(adapters)
     }
 

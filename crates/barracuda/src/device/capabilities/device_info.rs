@@ -184,8 +184,7 @@ pub fn build_device_info(device: Device) -> DeviceInfo {
             available: true,
             capabilities: vec![Capability::Compute, Capability::Memory],
             memory_gb: estimate_system_memory(),
-            compute_units: std::thread::available_parallelism()
-                .map_or(4, std::num::NonZero::get),
+            compute_units: std::thread::available_parallelism().map_or(4, std::num::NonZero::get),
         },
 
         Device::GPU => DeviceInfo {

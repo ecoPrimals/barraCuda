@@ -289,7 +289,10 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 
 #[test]
 fn test_f64_precision_vs_f32() {
-    #[expect(clippy::needless_type_cast, reason = "deliberate: f64 source is the point of the test")]
+    #[expect(
+        clippy::needless_type_cast,
+        reason = "deliberate: f64 source is the point of the test"
+    )]
     let val: f64 = 1.0 + 1e-15;
     #[expect(
         clippy::cast_possible_truncation,

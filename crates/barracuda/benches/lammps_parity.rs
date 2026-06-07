@@ -111,33 +111,20 @@ fn bench_yukawa_f64(device: &Arc<WgpuDevice>, n: usize) {
     let box_side = (n as f64 / 0.5).cbrt(); // moderate OCP density
     let positions = cubic_lattice(n, box_side);
 
-    let pos_tensor =
-        Tensor::from_f64_data(&positions, vec![n, 3], Arc::clone(device)).unwrap();
+    let pos_tensor = Tensor::from_f64_data(&positions, vec![n, 3], Arc::clone(device)).unwrap();
 
     for _ in 0..WARMUP_ITERS {
-        let yukawa = YukawaForceF64::new(
-            pos_tensor.clone(),
-            kappa,
-            prefactor,
-            cutoff,
-            box_side,
-            None,
-        )
-        .unwrap();
+        let yukawa =
+            YukawaForceF64::new(pos_tensor.clone(), kappa, prefactor, cutoff, box_side, None)
+                .unwrap();
         let _ = black_box(yukawa.execute().unwrap());
     }
 
     let mut times = Vec::with_capacity(BENCH_ITERS);
     for _ in 0..BENCH_ITERS {
-        let yukawa = YukawaForceF64::new(
-            pos_tensor.clone(),
-            kappa,
-            prefactor,
-            cutoff,
-            box_side,
-            None,
-        )
-        .unwrap();
+        let yukawa =
+            YukawaForceF64::new(pos_tensor.clone(), kappa, prefactor, cutoff, box_side, None)
+                .unwrap();
         let start = Instant::now();
         let result = yukawa.execute().unwrap();
         let elapsed = start.elapsed();
@@ -168,11 +155,7 @@ fn main() {
             );
             println!("Warmup: {WARMUP_ITERS} iters, Measure: {BENCH_ITERS} iters");
 
-            if !dev
-                .device()
-                .features()
-                .contains(wgpu::Features::SHADER_F64)
-            {
+            if !dev.device().features().contains(wgpu::Features::SHADER_F64) {
                 eprintln!("GPU does not support SHADER_F64 — f64 force benchmarks require f64");
                 std::process::exit(1);
             }

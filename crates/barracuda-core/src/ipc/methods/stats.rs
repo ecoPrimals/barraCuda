@@ -318,11 +318,7 @@ pub(super) fn stats_fit_quadratic(params: &Value, id: Value) -> JsonRpcResponse 
                 "rmse": fit.rmse,
             }),
         ),
-        None => JsonRpcResponse::error(
-            id,
-            INVALID_PARAMS,
-            "Quadratic fit failed (need ≥3 points)",
-        ),
+        None => JsonRpcResponse::error(id, INVALID_PARAMS, "Quadratic fit failed (need ≥3 points)"),
     }
 }
 
@@ -409,7 +405,10 @@ pub(super) fn stats_bray_curtis(params: &Value, id: Value) -> JsonRpcResponse {
         );
     }
     let d = barracuda::stats::bray_curtis(&a, &b);
-    JsonRpcResponse::success(id, serde_json::json!({ "result": d, "metric": "bray_curtis" }))
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({ "result": d, "metric": "bray_curtis" }),
+    )
 }
 
 /// `stats.hill` — Hill function (sigmoidal dose-response): x^n / (k^n + x^n).
@@ -424,7 +423,10 @@ pub(super) fn stats_hill(params: &Value, id: Value) -> JsonRpcResponse {
         return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: n (f64)");
     };
     let result = barracuda::stats::hill(x, k, n);
-    JsonRpcResponse::success(id, serde_json::json!({ "result": result, "function": "hill" }))
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({ "result": result, "function": "hill" }),
+    )
 }
 
 /// `stats.rarefaction_curve` — expected species richness E[S] at subsampled depths.
@@ -444,10 +446,7 @@ pub(super) fn stats_rarefaction_curve(params: &Value, id: Value) -> JsonRpcRespo
         );
     };
     let curve = barracuda::stats::rarefaction_curve(&counts, &depths);
-    JsonRpcResponse::success(
-        id,
-        serde_json::json!({ "result": curve, "depths": depths }),
-    )
+    JsonRpcResponse::success(id, serde_json::json!({ "result": curve, "depths": depths }))
 }
 
 // ── Special functions ─────────────────────────────────────────────────────
@@ -458,11 +457,7 @@ pub(super) fn stats_gamma_cdf(params: &Value, id: Value) -> JsonRpcResponse {
         return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: x (f64)");
     };
     let Some(alpha) = params.get("alpha").and_then(|v| v.as_f64()) else {
-        return JsonRpcResponse::error(
-            id,
-            INVALID_PARAMS,
-            "Missing required param: alpha (f64)",
-        );
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: alpha (f64)");
     };
     let beta = params.get("beta").and_then(|v| v.as_f64()).unwrap_or(1.0);
     if x <= 0.0 {
@@ -470,20 +465,14 @@ pub(super) fn stats_gamma_cdf(params: &Value, id: Value) -> JsonRpcResponse {
     }
     match barracuda::special::regularized_gamma_p(alpha, x / beta) {
         Ok(p) => JsonRpcResponse::success(id, serde_json::json!({ "result": p })),
-        Err(e) => {
-            JsonRpcResponse::error(id, INTERNAL_ERROR, format!("gamma_cdf failed: {e}"))
-        }
+        Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("gamma_cdf failed: {e}")),
     }
 }
 
 /// `stats.gamma_fit` — fit Gamma(α,β) parameters via Thom (1958) MLE approximation.
 pub(super) fn stats_gamma_fit(params: &Value, id: Value) -> JsonRpcResponse {
     let Some(data) = extract_f64_array(params, "data") else {
-        return JsonRpcResponse::error(
-            id,
-            INVALID_PARAMS,
-            "Missing required param: data (array)",
-        );
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: data (array)");
     };
     let positive: Vec<f64> = data.iter().copied().filter(|&x| x > 0.0).collect();
     let n = positive.len();
@@ -573,4 +562,3 @@ fn betacf(x: f64, a: f64, b: f64) -> f64 {
     }
     h
 }
-

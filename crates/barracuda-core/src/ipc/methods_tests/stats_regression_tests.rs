@@ -9,11 +9,11 @@ use super::*;
 #[test]
 fn test_stats_fit_quadratic() {
     let x: Vec<f64> = (0..10).map(f64::from).collect();
-    let y: Vec<f64> = x.iter().map(|&xi| (2.0 * xi).mul_add(xi, 3.0f64.mul_add(xi, 1.0))).collect();
-    let resp = stats_fit_quadratic(
-        &serde_json::json!({"x": x, "y": y}),
-        serde_json::json!(1),
-    );
+    let y: Vec<f64> = x
+        .iter()
+        .map(|&xi| (2.0 * xi).mul_add(xi, 3.0f64.mul_add(xi, 1.0)))
+        .collect();
+    let resp = stats_fit_quadratic(&serde_json::json!({"x": x, "y": y}), serde_json::json!(1));
     let result = resp.result.expect("quadratic fit should succeed");
     assert_eq!(result["model"], "quadratic");
     assert!(result["r_squared"].as_f64().unwrap() > 0.999);
@@ -49,10 +49,7 @@ async fn test_dispatch_stats_fit_quadratic() {
 fn test_stats_fit_exponential() {
     let x: Vec<f64> = (1..8).map(f64::from).collect();
     let y: Vec<f64> = x.iter().map(|&xi| 2.0 * (0.5 * xi).exp()).collect();
-    let resp = stats_fit_exponential(
-        &serde_json::json!({"x": x, "y": y}),
-        serde_json::json!(10),
-    );
+    let resp = stats_fit_exponential(&serde_json::json!({"x": x, "y": y}), serde_json::json!(10));
     let result = resp.result.expect("exponential fit should succeed");
     assert_eq!(result["model"], "exponential");
     assert!(result["r_squared"].as_f64().unwrap() > 0.99);
@@ -73,10 +70,7 @@ fn test_stats_fit_exponential_no_positive_y() {
 fn test_stats_fit_logarithmic() {
     let x: Vec<f64> = (1..10).map(f64::from).collect();
     let y: Vec<f64> = x.iter().map(|&xi| 3.0f64.mul_add(xi.ln(), 5.0)).collect();
-    let resp = stats_fit_logarithmic(
-        &serde_json::json!({"x": x, "y": y}),
-        serde_json::json!(20),
-    );
+    let resp = stats_fit_logarithmic(&serde_json::json!({"x": x, "y": y}), serde_json::json!(20));
     let result = resp.result.expect("logarithmic fit should succeed");
     assert_eq!(result["model"], "logarithmic");
     assert!(result["r_squared"].as_f64().unwrap() > 0.999);
@@ -101,7 +95,10 @@ fn test_stats_rarefaction_curve_monotone() {
         .collect();
     assert_eq!(curve.len(), 4);
     for w in curve.windows(2) {
-        assert!(w[1] >= w[0], "rarefaction must be monotonically non-decreasing");
+        assert!(
+            w[1] >= w[0],
+            "rarefaction must be monotonically non-decreasing"
+        );
     }
 }
 
@@ -119,10 +116,7 @@ fn test_stats_rarefaction_curve_missing_params() {
 #[test]
 fn test_stats_gamma_fit() {
     let data = vec![2.1, 3.5, 1.8, 4.2, 2.9, 3.1, 2.5, 1.6, 3.8, 2.7];
-    let resp = stats_gamma_fit(
-        &serde_json::json!({"data": data}),
-        serde_json::json!(40),
-    );
+    let resp = stats_gamma_fit(&serde_json::json!({"data": data}), serde_json::json!(40));
     let result = resp.result.expect("gamma fit should succeed");
     let alpha = result["alpha"].as_f64().unwrap();
     let beta = result["beta"].as_f64().unwrap();

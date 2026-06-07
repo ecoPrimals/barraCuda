@@ -160,7 +160,10 @@ mod tests {
         for (name, src) in [
             ("yukawa_force_f64", WGSL_YUKAWA_FORCE_F64),
             ("yukawa_force_celllist_f64", WGSL_YUKAWA_FORCE_CELLLIST_F64),
-            ("yukawa_force_celllist_v2_f64", WGSL_YUKAWA_FORCE_CELLLIST_V2_F64),
+            (
+                "yukawa_force_celllist_v2_f64",
+                WGSL_YUKAWA_FORCE_CELLLIST_V2_F64,
+            ),
             (
                 "yukawa_force_celllist_indirect_f64",
                 WGSL_YUKAWA_FORCE_CELLLIST_INDIRECT_F64,

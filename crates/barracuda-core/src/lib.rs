@@ -34,14 +34,14 @@
     reason = "BarracudaCoreError carries diagnostic context"
 )]
 
-/// Named constants for environment variable keys.
-pub mod env_keys;
 /// Capability-based self-discovery.
 ///
 /// Derives capabilities and provides from the IPC dispatch table. Peer primals
 /// are discovered at runtime via discovery files and capability scanning, not
 /// hardcoded names.
 pub mod discovery;
+/// Named constants for environment variable keys.
+pub mod env_keys;
 /// Primal-specific error types and conversions.
 pub mod error;
 /// Health-check subsystem — liveness, readiness, and device availability.
@@ -223,21 +223,14 @@ impl BarraCudaPrimal {
     }
 
     /// Store a dispatch job result.
-    pub(crate) fn store_dispatch_job(
-        &self,
-        id: String,
-        job: ipc::methods::compute::DispatchJob,
-    ) {
+    pub(crate) fn store_dispatch_job(&self, id: String, job: ipc::methods::compute::DispatchJob) {
         if let Ok(mut store) = self.dispatch_jobs.write() {
             store.insert(id, job);
         }
     }
 
     /// Retrieve a dispatch job by ID.
-    pub(crate) fn get_dispatch_job(
-        &self,
-        id: &str,
-    ) -> Option<ipc::methods::compute::DispatchJob> {
+    pub(crate) fn get_dispatch_job(&self, id: &str) -> Option<ipc::methods::compute::DispatchJob> {
         self.dispatch_jobs.read().ok()?.get(id).cloned()
     }
 }
@@ -513,5 +506,4 @@ mod tests {
             );
         }
     }
-
 }

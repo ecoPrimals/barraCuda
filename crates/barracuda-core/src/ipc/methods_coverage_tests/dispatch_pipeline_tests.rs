@@ -51,7 +51,10 @@ async fn submit_empty_data_returns_failed_status() {
         "spring": "hotSpring",
     });
     let resp = dispatch_submit(&primal, &params, serde_json::json!(2)).await;
-    assert!(resp.error.is_none(), "should return success envelope with failed status");
+    assert!(
+        resp.error.is_none(),
+        "should return success envelope with failed status"
+    );
     let result = resp.result.expect("should have result");
     assert_eq!(result["status"], "failed");
     assert!(result["error"].as_str().unwrap_or("").contains("non-empty"));
@@ -72,7 +75,12 @@ async fn submit_with_binary_and_no_dispatch_peer_falls_back() {
     let result = resp.result.expect("should have result");
     assert_eq!(result["status"], "completed");
     assert_eq!(result["routed"], false);
-    assert!(result["note"].as_str().unwrap_or("").contains("dispatch peer"));
+    assert!(
+        result["note"]
+            .as_str()
+            .unwrap_or("")
+            .contains("dispatch peer")
+    );
 }
 
 #[tokio::test]
@@ -87,7 +95,11 @@ async fn submit_valid_returns_job_id_cpu_fallback() {
         "dispatch_mode": "passthrough",
     });
     let resp = dispatch_submit(&primal, &params, serde_json::json!(3)).await;
-    assert!(resp.error.is_none(), "submit should succeed: {:?}", resp.error);
+    assert!(
+        resp.error.is_none(),
+        "submit should succeed: {:?}",
+        resp.error
+    );
     let result = resp.result.expect("should have result");
     assert_eq!(result["status"], "completed");
     let job_id = result["job_id"].as_str().expect("should have job_id");
@@ -113,7 +125,10 @@ async fn submit_then_retrieve_result() {
         &serde_json::json!({"job_id": job_id}),
         serde_json::json!(5),
     );
-    assert!(retrieve_resp.error.is_none(), "result retrieval should succeed");
+    assert!(
+        retrieve_resp.error.is_none(),
+        "result retrieval should succeed"
+    );
     let output = retrieve_resp.result.expect("should have output");
     assert_eq!(output["format"], "f32_array");
     assert_eq!(output["substrate"], "cpu_fallback");

@@ -155,12 +155,8 @@ pub(super) fn dispatch_capabilities(primal: &BarraCudaPrimal, id: Value) -> Json
     let mut capabilities: Vec<&str> = Vec::new();
 
     let has_gpu = primal.device().is_some();
-    let has_f64 = primal
-        .compute_device()
-        .is_some_and(|d| d.has_f64_shaders());
-    let has_spirv = primal
-        .device()
-        .is_some_and(|d| d.has_spirv_passthrough());
+    let has_f64 = primal.compute_device().is_some_and(|d| d.has_f64_shaders());
+    let has_spirv = primal.device().is_some_and(|d| d.has_spirv_passthrough());
 
     capabilities.push("gpu.f32");
     if has_gpu {
@@ -373,10 +369,7 @@ async fn dispatch_submit_tensor(
 }
 
 /// Core tensor passthrough logic shared by both shader-fallback and tensor modes.
-async fn dispatch_submit_tensor_inner(
-    primal: &BarraCudaPrimal,
-    data_arr: &[Value],
-) -> DispatchJob {
+async fn dispatch_submit_tensor_inner(primal: &BarraCudaPrimal, data_arr: &[Value]) -> DispatchJob {
     let data: Vec<f32> = data_arr
         .iter()
         .filter_map(|v| v.as_f64().map(|f| f as f32))
@@ -478,8 +471,7 @@ async fn try_forward_to_dispatch_peer(params: &Value) -> Option<ForwardedResult>
         .get("unix")
         .or_else(|| result.get("socket"))
         .and_then(|v| v.as_str())?;
-    let sock_path =
-        std::path::PathBuf::from(unix_addr.trim_start_matches("unix://"));
+    let sock_path = std::path::PathBuf::from(unix_addr.trim_start_matches("unix://"));
     if !sock_path.exists() {
         return None;
     }
@@ -538,10 +530,6 @@ pub(super) fn dispatch_result(
                 job.error.as_deref().unwrap_or("unknown error")
             ),
         ),
-        None => JsonRpcResponse::error(
-            id,
-            INVALID_PARAMS,
-            format!("Job not found: {job_id}"),
-        ),
+        None => JsonRpcResponse::error(id, INVALID_PARAMS, format!("Job not found: {job_id}")),
     }
 }

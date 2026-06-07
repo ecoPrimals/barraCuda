@@ -103,8 +103,10 @@ fn bench_cdist(device: &Arc<WgpuDevice>, m: usize, dim: usize) {
     let b = Tensor::from_vec_on_sync(b_data.clone(), vec![m, dim], Arc::clone(device)).unwrap();
 
     for _ in 0..WARMUP_ITERS {
-        let a_t = Tensor::from_vec_on_sync(a_data.clone(), vec![m, dim], Arc::clone(device)).unwrap();
-        let b_t = Tensor::from_vec_on_sync(b_data.clone(), vec![m, dim], Arc::clone(device)).unwrap();
+        let a_t =
+            Tensor::from_vec_on_sync(a_data.clone(), vec![m, dim], Arc::clone(device)).unwrap();
+        let b_t =
+            Tensor::from_vec_on_sync(b_data.clone(), vec![m, dim], Arc::clone(device)).unwrap();
         let _ = black_box(
             Cdist::new(a_t, b_t, DistanceMetric::Euclidean)
                 .execute()
@@ -114,8 +116,10 @@ fn bench_cdist(device: &Arc<WgpuDevice>, m: usize, dim: usize) {
 
     let mut times = Vec::with_capacity(BENCH_ITERS);
     for _ in 0..BENCH_ITERS {
-        let a_t = Tensor::from_vec_on_sync(a_data.clone(), vec![m, dim], Arc::clone(device)).unwrap();
-        let b_t = Tensor::from_vec_on_sync(b_data.clone(), vec![m, dim], Arc::clone(device)).unwrap();
+        let a_t =
+            Tensor::from_vec_on_sync(a_data.clone(), vec![m, dim], Arc::clone(device)).unwrap();
+        let b_t =
+            Tensor::from_vec_on_sync(b_data.clone(), vec![m, dim], Arc::clone(device)).unwrap();
         let start = Instant::now();
         let result = Cdist::new(a_t, b_t, DistanceMetric::Euclidean)
             .execute()
@@ -150,10 +154,7 @@ fn main() {
             );
             println!("Warmup: {WARMUP_ITERS} iters, Measure: {BENCH_ITERS} iters");
 
-            let has_f64 = dev
-                .device()
-                .features()
-                .contains(wgpu::Features::SHADER_F64);
+            let has_f64 = dev.device().features().contains(wgpu::Features::SHADER_F64);
 
             if has_f64 {
                 println!("\n── numpy.sum (f64 GPU reduction) ──");

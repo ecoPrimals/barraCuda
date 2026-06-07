@@ -20,14 +20,15 @@ pub(super) fn signal_detect_peaks(params: &Value, id: Value) -> JsonRpcResponse 
             "Missing required param: signal (array)",
         );
     };
-    let distance = params
-        .get("distance")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(1) as usize;
+    let distance = params.get("distance").and_then(|v| v.as_u64()).unwrap_or(1) as usize;
     let min_height = params.get("min_height").and_then(|v| v.as_f64());
     let min_prominence = params.get("min_prominence").and_then(|v| v.as_f64());
-    let peaks =
-        barracuda::ops::peak_detect_f64::find_peaks_cpu(&signal, distance, min_height, min_prominence);
+    let peaks = barracuda::ops::peak_detect_f64::find_peaks_cpu(
+        &signal,
+        distance,
+        min_height,
+        min_prominence,
+    );
     let indices: Vec<usize> = peaks.iter().map(|p| p.index).collect();
     let heights: Vec<f64> = peaks.iter().map(|p| p.height).collect();
     JsonRpcResponse::success(
@@ -59,18 +60,10 @@ pub(super) fn signal_bandpass(params: &Value, id: Value) -> JsonRpcResponse {
         );
     };
     let Some(low_hz) = params.get("low_hz").and_then(|v| v.as_f64()) else {
-        return JsonRpcResponse::error(
-            id,
-            INVALID_PARAMS,
-            "Missing required param: low_hz (f64)",
-        );
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: low_hz (f64)");
     };
     let Some(high_hz) = params.get("high_hz").and_then(|v| v.as_f64()) else {
-        return JsonRpcResponse::error(
-            id,
-            INVALID_PARAMS,
-            "Missing required param: high_hz (f64)",
-        );
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: high_hz (f64)");
     };
     if sample_rate <= 0.0 || low_hz < 0.0 || high_hz <= low_hz {
         return JsonRpcResponse::error(
@@ -148,4 +141,3 @@ pub(super) fn signal_derivative(params: &Value, id: Value) -> JsonRpcResponse {
     }
     JsonRpcResponse::success(id, serde_json::json!({ "result": d }))
 }
-

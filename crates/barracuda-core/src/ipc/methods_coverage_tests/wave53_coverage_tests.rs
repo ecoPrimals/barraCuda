@@ -8,9 +8,9 @@
 //! - `auth.*` dispatch integration (previously unit-tested in gate only)
 //! - `stats.correlation` error paths
 
+use crate::BarraCudaPrimal;
 use crate::ipc::jsonrpc;
 use crate::ipc::methods::dispatch;
-use crate::BarraCudaPrimal;
 
 use super::super::ml::{ml_esn_predict, ml_mlp_train};
 use super::super::stats::{stats_correlation, stats_variance};
@@ -41,10 +41,7 @@ fn stats_variance_happy_path() {
 
 #[test]
 fn stats_variance_single_element() {
-    let resp = stats_variance(
-        &serde_json::json!({"data": [5.0]}),
-        serde_json::json!(5302),
-    );
+    let resp = stats_variance(&serde_json::json!({"data": [5.0]}), serde_json::json!(5302));
     let err = resp.error.expect("single element should fail (N-1=0)");
     assert_eq!(err.code, jsonrpc::INTERNAL_ERROR);
 }
@@ -136,7 +133,11 @@ fn ml_esn_predict_happy_path() {
         }),
         serde_json::json!(5320),
     );
-    assert!(resp.error.is_none(), "ESN predict should succeed: {:?}", resp.error);
+    assert!(
+        resp.error.is_none(),
+        "ESN predict should succeed: {:?}",
+        resp.error
+    );
     let result = resp.result.unwrap();
     let prediction = result["prediction"].as_array().unwrap();
     assert_eq!(prediction.len(), 1);
@@ -227,7 +228,11 @@ fn ml_mlp_train_happy_path() {
         }),
         serde_json::json!(5330),
     );
-    assert!(resp.error.is_none(), "mlp_train should succeed: {:?}", resp.error);
+    assert!(
+        resp.error.is_none(),
+        "mlp_train should succeed: {:?}",
+        resp.error
+    );
     let result = resp.result.unwrap();
     let layers = result["layers"].as_array().unwrap();
     assert_eq!(layers.len(), 2);
@@ -270,7 +275,13 @@ fn ml_mlp_train_missing_targets() {
 #[tokio::test]
 async fn auth_check_dispatch_no_token() {
     let primal = BarraCudaPrimal::new();
-    let resp = dispatch(&primal, "auth.check", &serde_json::json!({}), serde_json::json!(5340)).await;
+    let resp = dispatch(
+        &primal,
+        "auth.check",
+        &serde_json::json!({}),
+        serde_json::json!(5340),
+    )
+    .await;
     assert!(resp.error.is_none());
     let result = resp.result.unwrap();
     assert_eq!(result["authenticated"], false);
@@ -280,7 +291,13 @@ async fn auth_check_dispatch_no_token() {
 #[tokio::test]
 async fn auth_mode_dispatch() {
     let primal = BarraCudaPrimal::new();
-    let resp = dispatch(&primal, "auth.mode", &serde_json::json!({}), serde_json::json!(5341)).await;
+    let resp = dispatch(
+        &primal,
+        "auth.mode",
+        &serde_json::json!({}),
+        serde_json::json!(5341),
+    )
+    .await;
     assert!(resp.error.is_none());
     let result = resp.result.unwrap();
     assert!(result.get("mode").is_some());
@@ -290,7 +307,13 @@ async fn auth_mode_dispatch() {
 #[tokio::test]
 async fn auth_peer_info_dispatch() {
     let primal = BarraCudaPrimal::new();
-    let resp = dispatch(&primal, "auth.peer_info", &serde_json::json!({}), serde_json::json!(5342)).await;
+    let resp = dispatch(
+        &primal,
+        "auth.peer_info",
+        &serde_json::json!({}),
+        serde_json::json!(5342),
+    )
+    .await;
     assert!(resp.error.is_none());
     let result = resp.result.unwrap();
     assert!(result.get("origin").is_some());
@@ -305,7 +328,8 @@ async fn auth_check_dispatch_with_bearer() {
         "auth.check",
         &serde_json::json!({"_auth": {"bearer": "test-token-abc"}}),
         serde_json::json!(5343),
-    ).await;
+    )
+    .await;
     assert!(resp.error.is_none());
     let result = resp.result.unwrap();
     assert_eq!(result["authenticated"], true);

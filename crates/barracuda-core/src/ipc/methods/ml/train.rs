@@ -199,10 +199,7 @@ pub(in crate::ipc::methods) fn ml_perceptron_train(params: &Value, id: Value) ->
         .and_then(|v| v.as_f64())
         .unwrap_or(0.01);
     #[expect(clippy::cast_possible_truncation, reason = "epochs is a count")]
-    let epochs = params
-        .get("epochs")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(10) as usize;
+    let epochs = params.get("epochs").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
     let output_path = params.get("output_path").and_then(|v| v.as_str());
 
     let mut domain_index: HashMap<String, usize> = HashMap::new();
@@ -313,8 +310,10 @@ pub(in crate::ipc::methods) fn ml_perceptron_train(params: &Value, id: Value) ->
                 domain_index.iter().map(|(k, &v)| (k.as_str(), v)).collect();
             domain_list.sort_by_key(|&(_, idx)| idx);
 
-            let mut provider_list: Vec<(&str, usize)> =
-                provider_index.iter().map(|(k, &v)| (k.as_str(), v)).collect();
+            let mut provider_list: Vec<(&str, usize)> = provider_index
+                .iter()
+                .map(|(k, &v)| (k.as_str(), v))
+                .collect();
             provider_list.sort_by_key(|&(_, idx)| idx);
 
             let serialized = if let Some(path) = output_path {

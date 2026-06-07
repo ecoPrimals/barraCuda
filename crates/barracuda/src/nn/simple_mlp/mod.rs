@@ -18,6 +18,10 @@
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
+mod serialization;
+
+pub use serialization::ModelBinaryError;
+
 /// Activation function applied after each hidden layer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]

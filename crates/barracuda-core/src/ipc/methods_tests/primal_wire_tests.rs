@@ -101,7 +101,6 @@ fn test_primal_announce_neural_api_schema() {
         "socket field required by biomeOS v3.68+"
     );
     let socket = result["socket"].as_str().unwrap();
-<<<<<<< Updated upstream
     assert!(socket.contains("biomeos"), "socket path should contain biomeos dir");
     assert!(
         std::path::Path::new(socket)
@@ -109,13 +108,6 @@ fn test_primal_announce_neural_api_schema() {
             .is_some_and(|ext| ext.eq_ignore_ascii_case("sock")),
         "socket path should end in .sock"
     );
-=======
-    assert!(
-        socket.contains("biomeos"),
-        "socket path should contain biomeos dir"
-    );
-    assert!(socket.ends_with(".sock"), "socket path should end in .sock");
->>>>>>> Stashed changes
 
     let cost = &result["cost_hints"];
     assert_eq!(cost["math"], 20.0, "math cost from composition_hints");

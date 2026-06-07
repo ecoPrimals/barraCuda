@@ -30,6 +30,12 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 
 ---
 
+## Achieved (June 7, 2026 — Wave 93: Stash Conflict Build Fix)
+
+- **Build break resolved**: Commit `4d4aacff` (stash conflict resolution) dropped `mod serialization;` from `simple_mlp/mod.rs`, making `to_binary()`/`from_auto()` inaccessible from `persistence.rs` (E0599). Remote quick-fix `ac920e50` introduced duplicate simplified stubs conflicting with proper bincode+BLAKE3 implementation. Also lost `#[serde(alias)]` annotations on `DenseLayer`.
+- **Fix**: 3 commits — restored `mod serialization;`, removed simplified stubs (kept full implementation), restored `#[serde(alias = "weights/biases")]`. Dead `training.rs` removed (code already inlined by upstream merge).
+- **Depot-ready**: Full workspace builds clean, 572/574 IPC tests pass (2 known environment-dependent BTSP discovery tests), all 12 `simple_mlp` unit tests pass, all 6 `wave76_integration_tests` pass.
+
 ## Achieved (June 6, 2026 — Wave 82c: Deep Debt Final + Module Refactoring)
 
 - **`simple_mlp.rs` refactored** (885L → 3 files): `mod.rs` (556L) + `serialization.rs` (135L) + `training.rs` (187L). Zero production files exceed 800L.

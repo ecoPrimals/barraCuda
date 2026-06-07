@@ -1,11 +1,21 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-06-06.
+Prioritized work items, ordered by impact. Updated 2026-06-07.
 
 ---
 
 ## Recently Completed
 
+- **Wave 93: Build Fix — Stash Conflict Resolution (Jun 7)**:
+  Commit `4d4aacff` ("resolve stash conflict — accept upstream simple_mlp") broke
+  the build: `to_binary()`/`from_auto()` methods were inaccessible from
+  `persistence.rs` because the stash resolution dropped `mod serialization;` from
+  `simple_mlp/mod.rs`. Also lost `#[serde(alias = "weights/biases")]` annotations
+  on `DenseLayer` (broke `ml.perceptron_train` → `ml.mlp_save` pipeline). Fixed in
+  3 commits: restored serialization submodule, removed duplicate stubs (kept proper
+  bincode+BLAKE3 implementation over simplified JSON-only), restored serde aliases.
+  Removed dead `training.rs` (code already inlined by upstream merge). 572/574 IPC
+  tests pass (2 known environment-dependent BTSP failures). Build depot-ready (13/13).
 - **Wave 82c: Deep Debt Final + Module Refactoring (Jun 6)**:
   Refactored `simple_mlp.rs` (885L) into directory module: `mod.rs` (556L) +
   `serialization.rs` (135L) + `training.rs` (187L). Zero production files >800L.
@@ -829,6 +839,10 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
 
 ## Immediate (P1)
 
+- **2-Gate Mesh Proof (coordination)**: eastGate ↔ strandGate bidirectional mesh
+  validation. Songbird :7700 running on strandGate; eastGate needs NUCLEUS +
+  Songbird on LAN (192.168.1.144). Verify `discovery.peers`, `mesh.health_check`,
+  cross-gate `capability.call`. **Upstream coordination with eastGate operators.**
 - **PrecisionBrain → coralReef → SovereignDevice CI integration**: Mock trio E2E validated
   (Sprint 57). Next: CI with live coralReef instance for full pipeline validation.
 - **DF64 NVK hardware verification**: GPU-dispatched DF64 E2E tests added (Sprint 63, FMA +
@@ -853,6 +867,11 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
   measured via llvm-cov). CI 80% gate blocking (Sprint 3).
   Evolve `--fail-under` from 80 to 90 with real GPU hardware. Remaining gaps
   are exclusively GPU-dependent code paths.
+- **GPU test parallelism (cargo-nextest)**: Mass parallel `cargo test` causes
+  wgpu SIGSEGV under extreme GPU driver contention (process-global state
+  limitation). All tests pass individually. `cargo-nextest` provides process
+  isolation and resolves this. **Upstream: consider nextest as ecosystem CI
+  standard for GPU-bearing primals.**
 - **Kokkos GPU parity benchmarks**: Run barraCuda GPU benchmarks on matching hardware,
   publish comparison data.
 - **Optional tensor encryption via `tensor` purpose key**: Per

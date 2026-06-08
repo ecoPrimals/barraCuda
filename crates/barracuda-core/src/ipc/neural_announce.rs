@@ -104,10 +104,16 @@ async fn send_jsonrpc_uds(
     request: &serde_json::Value,
 ) -> Result<serde_json::Value, std::io::Error> {
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
-    use tokio::net::UnixStream;
 
-    let stream = UnixStream::connect(socket_path).await?;
-    let (reader, mut writer) = stream.into_split();
+    let endpoint = sourdough_core::TransportEndpoint::uds(socket_path.to_string_lossy());
+    let stream = sourdough_core::connect_transport(&endpoint).await?;
+    let sourdough_core::TransportStream::Unix(uds) = stream else {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "expected UDS stream for neural announce",
+        ));
+    };
+    let (reader, mut writer) = uds.into_split();
 
     let mut line = serde_json::to_string(request)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;

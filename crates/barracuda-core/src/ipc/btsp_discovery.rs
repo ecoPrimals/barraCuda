@@ -60,16 +60,15 @@ pub(super) fn discover_security_provider() -> Option<std::path::PathBuf> {
 /// Resolve a capability via Songbird's `DISCOVERY_SOCKET` using `ipc.resolve`.
 pub(super) async fn resolve_via_discovery_socket(capability: &str) -> Option<std::path::PathBuf> {
     let discovery_path = std::env::var(env_keys::DISCOVERY_SOCKET).ok()?;
-    let discovery_path = std::path::Path::new(&discovery_path);
-    if !discovery_path.exists() {
+    if !std::path::Path::new(&discovery_path).exists() {
         tracing::debug!(
-            "DISCOVERY_SOCKET={} set but socket does not exist",
-            discovery_path.display()
+            "DISCOVERY_SOCKET={discovery_path} set but socket does not exist",
         );
         return None;
     }
 
-    let stream = tokio::net::UnixStream::connect(discovery_path).await.ok()?;
+    let endpoint = sourdough_core::TransportEndpoint::uds(&discovery_path);
+    let stream = sourdough_core::connect_transport(&endpoint).await.ok()?;
     let mut reader = tokio::io::BufReader::new(stream);
 
     let request = serde_json::json!({

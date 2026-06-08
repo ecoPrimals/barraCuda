@@ -150,21 +150,19 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
             if no_gpu_probe {
                 barracuda_core::set_no_gpu_probe();
             }
-            let effective_bind = bind.or_else(|| {
-                port.map(|p| {
-                    format!(
-                        "{}:{p}",
-                        barracuda_core::ipc::transport::resolve_bind_host()
-                    )
-                })
-            });
+
+            // Transport injection: TRANSPORT_ENDPOINT takes precedence over
+            // CLI flags when the launcher/Tower provides it.
+            let (effective_bind, effective_unix) =
+                resolve_transport_override(bind, port, unix.as_deref());
+
             run_server(
                 effective_bind,
                 tarpc_bind,
                 #[cfg(unix)]
                 tarpc_unix,
                 #[cfg(unix)]
-                unix,
+                effective_unix,
                 #[cfg(unix)]
                 no_unix,
             )
@@ -182,6 +180,79 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
     }
 
     Ok(())
+}
+
+/// Resolve `TRANSPORT_ENDPOINT` env override for launcher-injected transport.
+///
+/// When the launcher (NUCLEUS/Tower) sets `TRANSPORT_ENDPOINT`, it takes
+/// precedence over CLI `--bind`/`--port`/`--socket` flags. Returns the
+/// resolved (bind, unix) tuple.
+#[cfg(unix)]
+fn resolve_transport_override(
+    bind: Option<String>,
+    port: Option<u16>,
+    unix: Option<&str>,
+) -> (Option<String>, Option<String>) {
+    use sourdough_core::TransportEndpoint;
+
+    if let Ok(raw) = std::env::var("TRANSPORT_ENDPOINT") {
+        match serde_json::from_str::<TransportEndpoint>(&raw) {
+            Ok(TransportEndpoint::Uds { path }) => {
+                tracing::info!("TRANSPORT_ENDPOINT: UDS at {path}");
+                return (None, Some(path));
+            }
+            Ok(TransportEndpoint::Tcp { host, port: p }) => {
+                tracing::info!("TRANSPORT_ENDPOINT: TCP at {host}:{p}");
+                return (Some(format!("{host}:{p}")), unix.map(String::from));
+            }
+            Ok(TransportEndpoint::MeshRelay { peer_id, .. }) => {
+                tracing::warn!(
+                    "TRANSPORT_ENDPOINT: mesh_relay ({peer_id}) not directly bindable, ignoring"
+                );
+            }
+            Err(e) => {
+                tracing::warn!("TRANSPORT_ENDPOINT parse error: {e}, falling back to CLI flags");
+            }
+        }
+    }
+
+    let effective_bind = bind.or_else(|| {
+        port.map(|p| {
+            format!(
+                "{}:{p}",
+                barracuda_core::ipc::transport::resolve_bind_host()
+            )
+        })
+    });
+    (effective_bind, unix.map(String::from))
+}
+
+#[cfg(not(unix))]
+fn resolve_transport_override(
+    bind: Option<String>,
+    port: Option<u16>,
+    _unix: Option<&str>,
+) -> (Option<String>, Option<String>) {
+    use sourdough_core::TransportEndpoint;
+
+    if let Ok(raw) = std::env::var("TRANSPORT_ENDPOINT") {
+        if let Ok(TransportEndpoint::Tcp { host, port: p }) =
+            serde_json::from_str::<TransportEndpoint>(&raw)
+        {
+            tracing::info!("TRANSPORT_ENDPOINT: TCP at {host}:{p}");
+            return (Some(format!("{host}:{p}")), None);
+        }
+    }
+
+    let effective_bind = bind.or_else(|| {
+        port.map(|p| {
+            format!(
+                "{}:{p}",
+                barracuda_core::ipc::transport::resolve_bind_host()
+            )
+        })
+    });
+    (effective_bind, None)
 }
 
 async fn run_server(

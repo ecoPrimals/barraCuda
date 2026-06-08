@@ -235,7 +235,8 @@ pub async fn register_with_discovery(endpoint: &str) {
         "id": 1
     });
 
-    let Ok(stream) = tokio::net::UnixStream::connect(socket_path).await else {
+    let endpoint_desc = sourdough_core::TransportEndpoint::uds(socket_var);
+    let Ok(stream) = sourdough_core::connect_transport(&endpoint_desc).await else {
         tracing::debug!("discovery service connect failed — skipping registration");
         return;
     };

@@ -179,6 +179,9 @@ base64ct = { version = "1.6", features = ["alloc"] }
 # Binary serialization (model persistence evolution — P3 production format)
 bincode = { version = "2", features = ["serde"] }
 
+# Ecosystem shared types (TransportEndpoint, connect_transport, PrimalLifecycle)
+sourdough-core = { path = "../sourDough/crates/sourdough-core" }
+
 # Dev/test
 tempfile = "3.8"
 approx = "0.5"

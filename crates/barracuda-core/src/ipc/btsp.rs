@@ -341,7 +341,9 @@ where
         )
     })?;
 
-    let provider_stream = tokio::net::UnixStream::connect(provider_sock)
+    let provider_endpoint =
+        sourdough_core::TransportEndpoint::uds(provider_sock.to_string_lossy());
+    let provider_stream = sourdough_core::connect_transport(&provider_endpoint)
         .await
         .map_err(|e| {
             HandshakeError::ProviderUnavailable(format!(
@@ -503,8 +505,8 @@ pub(super) use super::btsp_wire::{read_ndjson_line, write_ndjson_line};
 /// `session.verify` MUST use the same connection — the provider associates
 /// session state with it.
 #[cfg(unix)]
-async fn security_provider_rpc(
-    stream: &mut tokio::io::BufReader<tokio::net::UnixStream>,
+async fn security_provider_rpc<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin>(
+    stream: &mut tokio::io::BufReader<S>,
     request: &serde_json::Value,
 ) -> std::result::Result<serde_json::Value, HandshakeError> {
     write_ndjson_line(stream.get_mut(), request)

@@ -14,6 +14,7 @@ tarpc-transport = ["dep:tarpc", "dep:futures", "dep:tokio-util", "dep:tokio-serd
 
 [dependencies]
 barracuda = { path = "../barracuda", version = "0.4.0", default-features = true }
+sourdough-core = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

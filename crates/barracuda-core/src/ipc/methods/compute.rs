@@ -440,14 +440,13 @@ struct ForwardedResult {
 /// No primal name hardcoding — any peer with the capability is accepted.
 async fn try_forward_to_dispatch_peer(params: &Value) -> Option<ForwardedResult> {
     let discovery_path = std::env::var(crate::env_keys::DISCOVERY_SOCKET).ok()?;
-    let discovery_path = std::path::Path::new(&discovery_path);
-    if !discovery_path.exists() {
+    if !std::path::Path::new(&discovery_path).exists() {
         return None;
     }
 
-    let stream = tokio::net::UnixStream::connect(discovery_path).await.ok()?;
-    let (reader, mut writer) = stream.into_split();
-    let mut buf_reader = tokio::io::BufReader::new(reader);
+    let disc_endpoint = sourdough_core::TransportEndpoint::uds(&discovery_path);
+    let stream = sourdough_core::connect_transport(&disc_endpoint).await.ok()?;
+    let mut buf_reader = tokio::io::BufReader::new(stream);
 
     let resolve_req = serde_json::json!({
         "jsonrpc": "2.0",
@@ -457,7 +456,7 @@ async fn try_forward_to_dispatch_peer(params: &Value) -> Option<ForwardedResult>
     });
     let mut line = serde_json::to_string(&resolve_req).ok()?;
     line.push('\n');
-    tokio::io::AsyncWriteExt::write_all(&mut writer, line.as_bytes())
+    tokio::io::AsyncWriteExt::write_all(buf_reader.get_mut(), line.as_bytes())
         .await
         .ok()?;
 
@@ -478,9 +477,9 @@ async fn try_forward_to_dispatch_peer(params: &Value) -> Option<ForwardedResult>
 
     let peer_socket = sock_path.to_string_lossy().into_owned();
 
-    let peer_stream = tokio::net::UnixStream::connect(&sock_path).await.ok()?;
-    let (peer_reader, mut peer_writer) = peer_stream.into_split();
-    let mut peer_buf = tokio::io::BufReader::new(peer_reader);
+    let peer_endpoint = sourdough_core::TransportEndpoint::uds(&peer_socket);
+    let peer_stream = sourdough_core::connect_transport(&peer_endpoint).await.ok()?;
+    let mut peer_buf = tokio::io::BufReader::new(peer_stream);
 
     let forward_req = serde_json::json!({
         "jsonrpc": "2.0",
@@ -490,7 +489,7 @@ async fn try_forward_to_dispatch_peer(params: &Value) -> Option<ForwardedResult>
     });
     let mut fwd_line = serde_json::to_string(&forward_req).ok()?;
     fwd_line.push('\n');
-    tokio::io::AsyncWriteExt::write_all(&mut peer_writer, fwd_line.as_bytes())
+    tokio::io::AsyncWriteExt::write_all(peer_buf.get_mut(), fwd_line.as_bytes())
         .await
         .ok()?;
 

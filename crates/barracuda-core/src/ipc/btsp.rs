@@ -342,8 +342,8 @@ where
     })?;
 
     let provider_endpoint =
-        sourdough_core::TransportEndpoint::uds(provider_sock.to_string_lossy());
-    let provider_stream = sourdough_core::connect_transport(&provider_endpoint)
+        super::transport::TransportEndpoint::uds(provider_sock.to_string_lossy());
+    let provider_stream = super::transport::connect_transport(&provider_endpoint)
         .await
         .map_err(|e| {
             HandshakeError::ProviderUnavailable(format!(

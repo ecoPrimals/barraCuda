@@ -235,8 +235,8 @@ pub async fn register_with_discovery(endpoint: &str) {
         "id": 1
     });
 
-    let endpoint_desc = sourdough_core::TransportEndpoint::uds(socket_var);
-    let Ok(stream) = sourdough_core::connect_transport(&endpoint_desc).await else {
+    let endpoint_desc = crate::ipc::transport::TransportEndpoint::uds(socket_var);
+    let Ok(stream) = crate::ipc::transport::connect_transport(&endpoint_desc).await else {
         tracing::debug!("discovery service connect failed — skipping registration");
         return;
     };

@@ -444,8 +444,8 @@ async fn try_forward_to_dispatch_peer(params: &Value) -> Option<ForwardedResult>
         return None;
     }
 
-    let disc_endpoint = sourdough_core::TransportEndpoint::uds(&discovery_path);
-    let stream = sourdough_core::connect_transport(&disc_endpoint).await.ok()?;
+    let disc_endpoint = crate::ipc::transport::TransportEndpoint::uds(&discovery_path);
+    let stream = crate::ipc::transport::connect_transport(&disc_endpoint).await.ok()?;
     let mut buf_reader = tokio::io::BufReader::new(stream);
 
     let resolve_req = serde_json::json!({
@@ -477,8 +477,8 @@ async fn try_forward_to_dispatch_peer(params: &Value) -> Option<ForwardedResult>
 
     let peer_socket = sock_path.to_string_lossy().into_owned();
 
-    let peer_endpoint = sourdough_core::TransportEndpoint::uds(&peer_socket);
-    let peer_stream = sourdough_core::connect_transport(&peer_endpoint).await.ok()?;
+    let peer_endpoint = crate::ipc::transport::TransportEndpoint::uds(&peer_socket);
+    let peer_stream = crate::ipc::transport::connect_transport(&peer_endpoint).await.ok()?;
     let mut peer_buf = tokio::io::BufReader::new(peer_stream);
 
     let forward_req = serde_json::json!({

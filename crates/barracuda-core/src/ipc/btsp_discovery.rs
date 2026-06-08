@@ -67,8 +67,8 @@ pub(super) async fn resolve_via_discovery_socket(capability: &str) -> Option<std
         return None;
     }
 
-    let endpoint = sourdough_core::TransportEndpoint::uds(&discovery_path);
-    let stream = sourdough_core::connect_transport(&endpoint).await.ok()?;
+    let endpoint = super::transport::TransportEndpoint::uds(&discovery_path);
+    let stream = super::transport::connect_transport(&endpoint).await.ok()?;
     let mut reader = tokio::io::BufReader::new(stream);
 
     let request = serde_json::json!({

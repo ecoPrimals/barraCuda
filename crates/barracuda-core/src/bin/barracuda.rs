@@ -193,7 +193,7 @@ fn resolve_transport_override(
     port: Option<u16>,
     unix: Option<&str>,
 ) -> (Option<String>, Option<String>) {
-    use sourdough_core::TransportEndpoint;
+    use barracuda_core::ipc::transport::TransportEndpoint;
 
     if let Ok(raw) = std::env::var("TRANSPORT_ENDPOINT") {
         match serde_json::from_str::<TransportEndpoint>(&raw) {
@@ -233,7 +233,7 @@ fn resolve_transport_override(
     port: Option<u16>,
     _unix: Option<&str>,
 ) -> (Option<String>, Option<String>) {
-    use sourdough_core::TransportEndpoint;
+    use barracuda_core::ipc::transport::TransportEndpoint;
 
     if let Ok(raw) = std::env::var("TRANSPORT_ENDPOINT") {
         if let Ok(TransportEndpoint::Tcp { host, port: p }) =

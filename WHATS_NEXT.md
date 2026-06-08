@@ -1,11 +1,19 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-06-07.
+Prioritized work items, ordered by impact. Updated 2026-06-08.
 
 ---
 
 ## Recently Completed
 
+- **Wave 100: Transport Injection via sourdough-core (Jun 8)**:
+  Adopted sourDough `TransportEndpoint` as canonical transport standard. Added
+  `sourdough-core` dependency. Binary now accepts `TRANSPORT_ENDPOINT` env var
+  (launcher/Tower injects UDS or TCP endpoint, overriding CLI flags). Evolved 5
+  production outbound paths (discovery, BTSP, neural announce, dispatch peer,
+  capability resolution) to use `connect_transport()`. Re-exported transport
+  types from `ipc::transport`. Self-bind already compliant (127.0.0.1 default,
+  UDS primary, no 0.0.0.0). LOW priority item from ecosystem transport evolution.
 - **Wave 93: Build Fix — Stash Conflict Resolution (Jun 7)**:
   Commit `4d4aacff` ("resolve stash conflict — accept upstream simple_mlp") broke
   the build: `to_binary()`/`from_auto()` methods were inaccessible from

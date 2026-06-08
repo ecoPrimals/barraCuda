@@ -25,10 +25,7 @@ use serde_json::Value;
 /// {"trusted": true, "primal": "barraCuda", "gate": "strandGate", "cipher": "chacha20-poly1305", ...}
 /// ```
 pub(super) fn mesh_trust_verify(params: &Value, id: Value) -> JsonRpcResponse {
-    let caller_nonce = params
-        .get("nonce")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+    let caller_nonce = params.get("nonce").and_then(|v| v.as_str()).unwrap_or("");
 
     let bearer = params
         .get("_auth")
@@ -71,10 +68,11 @@ pub(super) fn mesh_health(id: Value) -> JsonRpcResponse {
     use crate::ipc::transport_config;
 
     let socket_dir = transport_config::resolve_socket_dir();
-    let security_live =
-        has_socket_in(&socket_dir, transport_config::SECURITY_PROVIDER_SOCKET_PREFIX);
-    let discovery_live =
-        has_socket_in(&socket_dir, transport_config::DISCOVERY_SOCKET_PREFIX);
+    let security_live = has_socket_in(
+        &socket_dir,
+        transport_config::SECURITY_PROVIDER_SOCKET_PREFIX,
+    );
+    let discovery_live = has_socket_in(&socket_dir, transport_config::DISCOVERY_SOCKET_PREFIX);
 
     let status = if security_live && discovery_live {
         "healthy"
@@ -108,9 +106,7 @@ fn has_socket_in(dir: &std::path::Path, prefix: &str) -> bool {
             entries.filter_map(Result::ok).any(|e| {
                 let name = e.file_name();
                 let path = std::path::Path::new(&name);
-                let matches_prefix = path
-                    .to_str()
-                    .is_some_and(|n| n.starts_with(prefix));
+                let matches_prefix = path.to_str().is_some_and(|n| n.starts_with(prefix));
                 let is_sock = path
                     .extension()
                     .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"));
@@ -131,16 +127,16 @@ mod tests {
         let result = resp.result.unwrap();
         assert_eq!(result["trusted"], false);
         assert_eq!(result["primal"], "barraCuda");
-        assert!(result["gate"].is_string(), "gate must be resolved at runtime");
+        assert!(
+            result["gate"].is_string(),
+            "gate must be resolved at runtime"
+        );
         assert!(result["reason"].as_str().unwrap().contains("bearer"));
     }
 
     #[test]
     fn trust_verify_with_auth() {
-        let resp = mesh_trust_verify(
-            &json!({"_auth": {"bearer": "test-token-abc"}}),
-            json!(2),
-        );
+        let resp = mesh_trust_verify(&json!({"_auth": {"bearer": "test-token-abc"}}), json!(2));
         let result = resp.result.unwrap();
         assert_eq!(result["trusted"], true);
         assert!(result.get("reason").is_none());
@@ -166,7 +162,10 @@ mod tests {
             "unexpected status: {status}"
         );
         assert!(result["gate"].is_string(), "gate resolved at runtime");
-        assert!(result["federation_port"].is_number(), "federation_port resolved");
+        assert!(
+            result["federation_port"].is_number(),
+            "federation_port resolved"
+        );
         assert!(result["services"].is_object());
     }
 }

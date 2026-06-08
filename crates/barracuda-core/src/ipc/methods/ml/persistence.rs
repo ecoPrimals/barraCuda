@@ -28,11 +28,7 @@ pub(in crate::ipc::methods) fn ml_mlp_save(params: &Value, id: Value) -> JsonRpc
 
     let path = Path::new(path_str);
     if path_str.contains("..") {
-        return JsonRpcResponse::error(
-            id,
-            INVALID_PARAMS,
-            "Path traversal (..) not permitted",
-        );
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Path traversal (..) not permitted");
     }
 
     let format = params
@@ -95,11 +91,7 @@ pub(in crate::ipc::methods) fn ml_mlp_save(params: &Value, id: Value) -> JsonRpc
                 "format": written_format,
             }),
         ),
-        Err(e) => JsonRpcResponse::error(
-            id,
-            INTERNAL_ERROR,
-            format!("Write failed: {e}"),
-        ),
+        Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("Write failed: {e}")),
     }
 }
 
@@ -119,11 +111,7 @@ pub(in crate::ipc::methods) fn ml_mlp_load(params: &Value, id: Value) -> JsonRpc
     };
 
     if path_str.contains("..") {
-        return JsonRpcResponse::error(
-            id,
-            INVALID_PARAMS,
-            "Path traversal (..) not permitted",
-        );
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Path traversal (..) not permitted");
     }
 
     let path = Path::new(path_str);
@@ -138,11 +126,7 @@ pub(in crate::ipc::methods) fn ml_mlp_load(params: &Value, id: Value) -> JsonRpc
     let data = match std::fs::read(path) {
         Ok(d) => d,
         Err(e) => {
-            return JsonRpcResponse::error(
-                id,
-                INTERNAL_ERROR,
-                format!("Read failed: {e}"),
-            );
+            return JsonRpcResponse::error(id, INTERNAL_ERROR, format!("Read failed: {e}"));
         }
     };
 

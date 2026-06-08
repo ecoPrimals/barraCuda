@@ -206,7 +206,10 @@ async fn ml_infer_rejected_without_auth_in_enforced_mode() {
     };
     let id = json!(300);
     let result = gate.check("ml.mlp_infer", &caller, &id);
-    assert!(result.is_err(), "ml.mlp_infer should be rejected without auth");
+    assert!(
+        result.is_err(),
+        "ml.mlp_infer should be rejected without auth"
+    );
 }
 
 /// Mesh health probe is public — accessible without bearer token.
@@ -292,7 +295,10 @@ async fn binary_format_save_load_roundtrip() {
     );
     let load_result = load_resp.result.unwrap();
     assert_eq!(load_result["format"], "bincode");
-    assert_eq!(load_result["layer_count"], trained["layers"].as_array().unwrap().len());
+    assert_eq!(
+        load_result["layer_count"],
+        trained["layers"].as_array().unwrap().len()
+    );
 
     let infer_telemetry = mock_dispatch_telemetry(4);
     let infer_resp = dispatch(

@@ -50,9 +50,7 @@ async fn serve_unix_cleans_broken_symlink_before_bind() {
     let server = IpcServer::new(std::sync::Arc::new(primal));
 
     let server_path = sock_path.clone();
-    let handle = tokio::spawn(async move {
-        server.serve_unix(&server_path, None::<fn()>).await
-    });
+    let handle = tokio::spawn(async move { server.serve_unix(&server_path, None::<fn()>).await });
 
     // Give server time to bind
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;

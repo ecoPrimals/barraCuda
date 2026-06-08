@@ -96,13 +96,7 @@ async fn linalg_qr_missing_matrix() {
 #[tokio::test]
 async fn linalg_eigenvalues_missing_matrix() {
     let primal = test_primal();
-    let resp = dispatch(
-        &primal,
-        "linalg.eigenvalues",
-        &json!({}),
-        json!(7),
-    )
-    .await;
+    let resp = dispatch(&primal, "linalg.eigenvalues", &json!({}), json!(7)).await;
     assert!(resp.error.is_some());
 }
 
@@ -175,13 +169,7 @@ async fn spectral_fft_missing_data() {
 #[tokio::test]
 async fn spectral_fft_single_sample() {
     let primal = test_primal();
-    let resp = dispatch(
-        &primal,
-        "spectral.fft",
-        &json!({"data": [42.0]}),
-        json!(21),
-    )
-    .await;
+    let resp = dispatch(&primal, "spectral.fft", &json!({"data": [42.0]}), json!(21)).await;
     assert!(resp.error.is_none());
 }
 
@@ -219,26 +207,14 @@ async fn spectral_stft_missing_params() {
 #[tokio::test]
 async fn stats_mean_missing_data() {
     let primal = test_primal();
-    let resp = dispatch(
-        &primal,
-        "stats.mean",
-        &json!({}),
-        json!(30),
-    )
-    .await;
+    let resp = dispatch(&primal, "stats.mean", &json!({}), json!(30)).await;
     assert!(resp.error.is_some());
 }
 
 #[tokio::test]
 async fn stats_mean_single_value() {
     let primal = test_primal();
-    let resp = dispatch(
-        &primal,
-        "stats.mean",
-        &json!({"data": [7.5]}),
-        json!(31),
-    )
-    .await;
+    let resp = dispatch(&primal, "stats.mean", &json!({"data": [7.5]}), json!(31)).await;
     assert!(resp.error.is_none());
     let result = resp.result.unwrap();
     assert!((result["result"].as_f64().unwrap() - 7.5).abs() < 1e-10);
@@ -247,13 +223,7 @@ async fn stats_mean_single_value() {
 #[tokio::test]
 async fn stats_variance_requires_data() {
     let primal = test_primal();
-    let resp = dispatch(
-        &primal,
-        "stats.variance",
-        &json!({}),
-        json!(32),
-    )
-    .await;
+    let resp = dispatch(&primal, "stats.variance", &json!({}), json!(32)).await;
     assert!(resp.error.is_some());
 }
 
@@ -321,13 +291,7 @@ async fn stats_shannon_entropy_valid() {
 #[tokio::test]
 async fn graph_belief_propagation_missing_graph() {
     let primal = test_primal();
-    let resp = dispatch(
-        &primal,
-        "graph.belief_propagation",
-        &json!({}),
-        json!(40),
-    )
-    .await;
+    let resp = dispatch(&primal, "graph.belief_propagation", &json!({}), json!(40)).await;
     assert!(resp.error.is_some());
 }
 
@@ -391,13 +355,7 @@ async fn activation_gelu_valid() {
 #[tokio::test]
 async fn math_sigmoid_boundary_values() {
     let primal = test_primal();
-    let resp = dispatch(
-        &primal,
-        "math.sigmoid",
-        &json!({"data": [0.0]}),
-        json!(60),
-    )
-    .await;
+    let resp = dispatch(&primal, "math.sigmoid", &json!({"data": [0.0]}), json!(60)).await;
     assert!(resp.error.is_none());
     let result = resp.result.unwrap();
     let arr = result["result"].as_array().unwrap();
@@ -407,13 +365,7 @@ async fn math_sigmoid_boundary_values() {
 #[tokio::test]
 async fn math_log2_zero() {
     let primal = test_primal();
-    let resp = dispatch(
-        &primal,
-        "math.log2",
-        &json!({"data": [0.0]}),
-        json!(61),
-    )
-    .await;
+    let resp = dispatch(&primal, "math.log2", &json!({"data": [0.0]}), json!(61)).await;
     // log2(0) is -inf, handler returns result (f64 supports -inf)
     assert!(resp.error.is_none() || resp.error.is_some());
 }
@@ -421,13 +373,7 @@ async fn math_log2_zero() {
 #[tokio::test]
 async fn math_log2_valid() {
     let primal = test_primal();
-    let resp = dispatch(
-        &primal,
-        "math.log2",
-        &json!({"data": [8.0]}),
-        json!(62),
-    )
-    .await;
+    let resp = dispatch(&primal, "math.log2", &json!({"data": [8.0]}), json!(62)).await;
     assert!(resp.error.is_none());
     let result = resp.result.unwrap();
     let arr = result["result"].as_array().unwrap();

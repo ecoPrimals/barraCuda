@@ -96,8 +96,7 @@ impl SimpleMlp {
             return Err(ModelBinaryError::UnsupportedFormat(format));
         }
 
-        let payload_len =
-            u32::from_le_bytes([data[8], data[9], data[10], data[11]]) as usize;
+        let payload_len = u32::from_le_bytes([data[8], data[9], data[10], data[11]]) as usize;
         let expected_total = MODEL_HEADER_SIZE + payload_len;
         if data.len() < expected_total {
             return Err(ModelBinaryError::TooShort(data.len()));
@@ -126,10 +125,9 @@ impl SimpleMlp {
         if data.len() >= 4 && &data[0..4] == MODEL_MAGIC {
             Self::from_binary(data)
         } else {
-            let json_str = std::str::from_utf8(data)
-                .map_err(|e| ModelBinaryError::Decode(e.to_string()))?;
-            Self::from_json(json_str)
-                .map_err(|e| ModelBinaryError::Decode(e.to_string()))
+            let json_str =
+                std::str::from_utf8(data).map_err(|e| ModelBinaryError::Decode(e.to_string()))?;
+            Self::from_json(json_str).map_err(|e| ModelBinaryError::Decode(e.to_string()))
         }
     }
 }

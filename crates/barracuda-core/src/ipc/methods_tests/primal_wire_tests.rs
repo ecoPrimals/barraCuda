@@ -101,7 +101,10 @@ fn test_primal_announce_neural_api_schema() {
         "socket field required by biomeOS v3.68+"
     );
     let socket = result["socket"].as_str().unwrap();
-    assert!(socket.contains("biomeos"), "socket path should contain biomeos dir");
+    assert!(
+        socket.contains("biomeos"),
+        "socket path should contain biomeos dir"
+    );
     assert!(
         std::path::Path::new(socket)
             .extension()

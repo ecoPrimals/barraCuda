@@ -41,5 +41,5 @@ workspace = true
 
 [[bin]]
 name = "barracuda"
-path = "src/bin/barracuda.rs"
+path = "src/bin/barracuda/main.rs"
 doc = false

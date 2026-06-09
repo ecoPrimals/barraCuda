@@ -6,6 +6,16 @@ Prioritized work items, ordered by impact. Updated 2026-06-08.
 
 ## Recently Completed
 
+- **Deep Debt: Zero Files Over 800L (Jun 8)**:
+  Refactored the last 2 files exceeding 800 lines. Extracted `TransportEndpoint`,
+  `TransportStream`, `connect_transport()` into dedicated `transport_endpoint.rs`
+  (237L) with 9 unit tests (serde roundtrip, wire compat, connect edge cases).
+  Converted binary from single-file `barracuda.rs` (819L) into directory module:
+  `main.rs` (437L) + `commands.rs` (219L) + `discovery_file.rs` (173L). All
+  production files now under 800 lines. Zero clippy warnings. Full audit confirms:
+  `#![forbid(unsafe_code)]` all crates, zero production unwrap, zero production
+  mocks, zero hardcoding, zero TODOs/FIXMEs, all deps pure Rust. Primal elevated
+  to composition-ready.
 - **Wave 101: Transport Self-Knowledge Fix (Jun 8)**:
   Removed `sourdough-core` path dependency per primal self-knowledge principle.
   Implemented `TransportEndpoint` and `connect_transport()` locally in

@@ -12,13 +12,18 @@ use barracuda_core::env_keys;
 /// IPC methods — no hardcoded values. Per wateringHole capability-based discovery.
 ///
 /// Supports both TCP (`host:port`) and Unix socket (`unix:///path`) transports.
-/// File path: `$XDG_RUNTIME_DIR/biomeos/barracuda-core.json`
+/// The discovery file is co-located with the socket (derived from `unix_path`'s
+/// parent) to avoid `/tmp` pollution. Falls back to `resolve_socket_dir()`.
 pub fn write_discovery_file(
     tcp_addr: Option<&str>,
     tarpc_addr: Option<&str>,
     unix_path: Option<&std::path::Path>,
 ) {
-    let Some(dir) = discovery_dir() else { return };
+    let dir = unix_path
+        .and_then(|p| p.parent())
+        .map(std::path::Path::to_path_buf)
+        .or_else(discovery_dir);
+    let Some(dir) = dir else { return };
     if std::fs::create_dir_all(&dir).is_err() {
         return;
     }
@@ -81,8 +86,14 @@ pub fn write_discovery_file(
 }
 
 /// Remove the discovery file on shutdown.
-pub fn remove_discovery_file() {
-    if let Some(dir) = discovery_dir() {
+///
+/// Derives location from the socket path (consistent with [`write_discovery_file`]).
+pub fn remove_discovery_file(unix_path: Option<&std::path::Path>) {
+    let dir = unix_path
+        .and_then(|p| p.parent())
+        .map(std::path::Path::to_path_buf)
+        .or_else(discovery_dir);
+    if let Some(dir) = dir {
         let filename = format!("{}-core.json", barracuda_core::PRIMAL_NAMESPACE);
         let path = dir.join(&filename);
         if path.exists() {

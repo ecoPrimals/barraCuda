@@ -162,6 +162,8 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     // ── BTSP Phase 3 ─────────────────────────────────────────────────
     "btsp.negotiate",
     "btsp.capabilities",
+    // ── Introspection ─────────────────────────────────────────────────
+    "method.describe",
 ];
 
 /// Normalize a method name: accepts both `{domain}.{operation}` (standard)
@@ -340,6 +342,8 @@ pub async fn dispatch(
             "btsp.negotiate requires an authenticated BTSP session (Phase 1 handshake first)",
         ),
         "btsp.capabilities" => health::btsp_capabilities(id),
+        // Introspection
+        "method.describe" => primal::method_describe(params, id),
         _ => JsonRpcResponse::error(id, METHOD_NOT_FOUND, format!("Unknown method: {method}")),
     }
 }

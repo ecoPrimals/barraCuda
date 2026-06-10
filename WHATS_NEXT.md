@@ -6,6 +6,15 @@ Prioritized work items, ordered by impact. Updated 2026-06-08.
 
 ## Recently Completed
 
+- **Wave 107: Socket Cleanup + method.describe (Jun 10)**:
+  P2 `PRIMAL-SOCKET-CLEANUP`: Discovery file (`barracuda-core.json`) and legacy
+  symlink now derive their directory from the socket path's parent, not from
+  `resolve_socket_dir()` fallback. When `--socket /run/user/1000/biomeos/math.sock`
+  is passed, state goes to `/run/user/1000/biomeos/`, not `/tmp/biomeos/`. Enables
+  `ProtectSystem=strict` systemd hardening. Eliminates stale `/tmp` debris.
+  LOW `BARRACUDA-METHOD-DESCRIBE`: Implemented `method.describe` RPC (76 methods
+  with param schema, description, access level). Callers can self-correct param
+  format mismatches. Registered in dispatch table, included in capabilities.
 - **Deep Debt: Zero Files Over 800L (Jun 8)**:
   Refactored the last 2 files exceeding 800 lines. Extracted `TransportEndpoint`,
   `TransportStream`, `connect_transport()` into dedicated `transport_endpoint.rs`

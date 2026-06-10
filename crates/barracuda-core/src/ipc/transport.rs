@@ -370,7 +370,9 @@ impl IpcServer {
     /// itself (e.g., `--socket barracuda-eastgate.sock` with `FAMILY_ID=eastgate`).
     #[cfg(unix)]
     pub fn create_legacy_symlink(socket_path: &std::path::Path) {
-        let dir = resolve_socket_dir();
+        let dir = socket_path
+            .parent()
+            .map_or_else(resolve_socket_dir, std::path::Path::to_path_buf);
         let ns = crate::PRIMAL_NAMESPACE;
         let legacy_name = match resolve_family_id() {
             Some(family_id) => format!("{ns}-{family_id}.sock"),
@@ -412,9 +414,14 @@ impl IpcServer {
     }
 
     /// Remove the legacy primal-named symlink on shutdown.
+    ///
+    /// Derives the symlink location from the socket path's parent directory,
+    /// consistent with [`Self::create_legacy_symlink`].
     #[cfg(unix)]
-    pub fn remove_legacy_symlink() {
-        let dir = resolve_socket_dir();
+    pub fn remove_legacy_symlink(socket_path: &std::path::Path) {
+        let dir = socket_path
+            .parent()
+            .map_or_else(resolve_socket_dir, std::path::Path::to_path_buf);
         let ns = crate::PRIMAL_NAMESPACE;
         let legacy_name = match resolve_family_id() {
             Some(family_id) => format!("{ns}-{family_id}.sock"),

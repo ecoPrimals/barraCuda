@@ -342,8 +342,8 @@ async fn run_server(
             discovery_file::spawn_neural_announce(announce_socket, ANNOUNCE_DELAY_MS);
 
             server.serve_unix(&sock_path, None::<fn()>).await?;
-            barracuda_core::ipc::IpcServer::remove_legacy_symlink();
-            discovery_file::remove_discovery_file();
+            barracuda_core::ipc::IpcServer::remove_legacy_symlink(&sock_path);
+            discovery_file::remove_discovery_file(Some(&sock_path));
             return Ok(());
         }
     }
@@ -377,7 +377,7 @@ async fn run_server(
                 "TCP server error on {effective_addr}: {e}"
             ))
         })?;
-        discovery_file::remove_discovery_file();
+        discovery_file::remove_discovery_file(None);
     } else {
         return Err(barracuda_core::error::BarracudaCoreError::lifecycle(
             format!(
@@ -421,8 +421,8 @@ async fn run_service_mode() -> Result<(), barracuda_core::error::BarracudaCoreEr
 
         let on_ready = || discovery_file::notify_systemd_ready();
         server.serve_unix(&sock_path, Some(on_ready)).await?;
-        barracuda_core::ipc::IpcServer::remove_legacy_symlink();
-        discovery_file::remove_discovery_file();
+        barracuda_core::ipc::IpcServer::remove_legacy_symlink(&sock_path);
+        discovery_file::remove_discovery_file(Some(&sock_path));
     }
 
     #[cfg(not(unix))]
@@ -430,7 +430,7 @@ async fn run_service_mode() -> Result<(), barracuda_core::error::BarracudaCoreEr
         let bind_addr = barracuda_core::ipc::transport::resolve_bind_address(None);
         discovery_file::write_discovery_file(Some(&bind_addr), None, None);
         server.serve_tcp(&bind_addr).await?;
-        discovery_file::remove_discovery_file();
+        discovery_file::remove_discovery_file(None);
     }
 
     Ok(())

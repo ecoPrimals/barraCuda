@@ -1,8 +1,8 @@
 # barraCuda — Remaining Work
 
 **Version**: 0.4.0
-**Date**: June 6, 2026
-**Status**: Stadial gate release (v0.4.0) — VPS-ready, zero P0/P1 gaps
+**Date**: June 10, 2026
+**Status**: Stadial gate release (v0.4.0) — composition-ready, zero debt, 4-gate mesh operational
 
 ---
 
@@ -29,6 +29,13 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
   in barraCuda's code), semantic IPC method naming, capability-based discovery.
 
 ---
+
+## Achieved (June 10, 2026 — Waves 100-107: Transport Self-Knowledge + Socket Cleanup + Method Introspection)
+
+- **Wave 101 Transport Self-Knowledge**: Removed `sourdough-core` dependency. Implemented `TransportEndpoint`, `TransportStream`, and `connect_transport()` locally in `ipc/transport_endpoint.rs` (237L). Wire format is the contract; primal has self-knowledge. All outbound IPC connections use the local abstraction. `TRANSPORT_ENDPOINT` env var for launcher injection.
+- **Wave 107 `PRIMAL-SOCKET-CLEANUP`**: Discovery file and legacy symlink creation/removal now derives state directory from the socket path's parent. `--socket /custom/path/math.sock` puts state files alongside the socket. No `/tmp` pollution. `ProtectSystem=strict` compatible.
+- **Wave 107 `BARRACUDA-METHOD-DESCRIBE`**: `method.describe(method_name)` RPC implemented. Returns schema (parameters, required/optional), description, access level, and domain for all 97 registered methods. Enables runtime introspection for self-correcting distributed compositions.
+- **Deep Debt Zero**: Binary refactored into directory module (`main.rs` 437L + `commands.rs` 219L + `discovery_file.rs` 173L). `transport.rs` reduced 872L→737L via type extraction. Zero production files exceed 800L. 12-axis deep debt fully confirmed.
 
 ## Achieved (June 7, 2026 — Wave 93: Stash Conflict Build Fix)
 

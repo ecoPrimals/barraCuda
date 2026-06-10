@@ -11,5 +11,3 @@
 .idea/
 *.iml
 lcov.info
-showcase/**/target/
-showcase/**/Cargo.lock

@@ -1,7 +1,7 @@
 # barraCuda
 
 **Version**: 0.4.0
-**Status**: Stadial gate release — springs convergence, zero cross-dependencies, all quality gates passing
+**Status**: Composition-ready — zero debt, 4-gate mesh operational, primal self-knowledge, all quality gates green
 **License**: AGPL-3.0-or-later (scyBorg provenance trio)
 **MSRV**: 1.87
 
@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **826 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,169 Rust source files**, 25 integration test harnesses, 4,393+ tests passing via nextest CI profile
+- **1,169 Rust source files**, 25 integration test harnesses, 4,600+ tests passing via nextest CI profile
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -44,7 +44,8 @@ results.
 - **Sovereign shader compilation** — naga 28 IR optimizer, SPIR-V passthrough
 - **NagaExecutor** — CPU interpreter for naga IR, executes WGSL compute shaders without GPU (f32+f64 native, shared memory, barriers, atomics)
 - **coralReef IPC contract** — sovereign CPU compilation (`shader.compile.cpu`, `shader.execute.cpu`) and validation (`shader.validate`) via JSON-RPC
-- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with 96 semantic `{domain}.{operation}` methods; Wire Standard L2 compliant, Neural API announce, BTSP Phase 3 encryption, full ML pipeline (train→save→load→infer), mesh trust validation
+- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with 97 semantic `{domain}.{operation}` methods; Wire Standard L2 compliant, Neural API announce, BTSP Phase 3 encryption, full ML pipeline (train→save→load→infer), mesh trust validation, runtime method introspection (`method.describe`)
+- **Transport self-knowledge** — local `TransportEndpoint` wire format implementation, `TRANSPORT_ENDPOINT` env var for launcher injection, zero cross-primal dependencies
 - **UniBin CLI** — single `barracuda` binary with `server --port <PORT>`, `service`, `doctor`, `validate`, `version`
 
 ### Design principles
@@ -52,7 +53,7 @@ results.
 1. **Math is universal, precision is silicon** — one WGSL source, any precision
 2. **Vendor-agnostic** — same binary, identical results on any GPU
 3. **Sovereign** — zero external SDK dependency for correctness or performance
-4. **Pure Rust** — `#![forbid(unsafe_code)]` in both crates, zero `unsafe` blocks, zero external C dependencies, zero dependencies on any other primal (lifecycle and health traits internalized from sourDough scaffold)
+4. **Pure Rust** — `#![forbid(unsafe_code)]` in both crates, zero `unsafe` blocks, zero external C dependencies, zero dependencies on any other primal (wire format is the contract, `TransportEndpoint` implemented locally)
 5. **Fully concurrent** — `GuardedDeviceHandle` + atomic encoder barrier prevents wgpu-core races without lock contention; split-lock GPU submission (submit and poll use separate lock acquisitions); fire-and-forget dispatch via `submit_commands` for non-readback ops; wgpu 28 `Device`/`Queue` are `Clone` — zero `Arc` overhead for handle sharing; all tests pass at 16 threads on llvmpipe
 6. **AGPL-3.0** — free as in freedom
 
@@ -60,9 +61,11 @@ results.
 
 ## Recent
 
-- **Sprint 47b: Deep Debt (Apr 28)**: Role-based naming (`register_with_songbird`→`register_with_discovery`, `songbird_capability_domains`→`discovery_capability_domains`). naga-exec silent `_ => 0.0` fallbacks → typed errors. autotune observability. 12-axis audit clean.
-- **Sprint 47: Discovery Self-Registration (Apr 28)**: `ipc.register` to discovery service via `DISCOVERY_SOCKET` at startup — 11 capability domains derived from `REGISTERED_METHODS`. Fire-and-forget. Per Phase 55b.
-- **Sprint 46: NUCLEUS Env Var Wiring + Deep Debt (Apr 28)**: Per Phase 55 two-tier crypto model — `BEARDOG_SOCKET`/`BTSP_PROVIDER_SOCKET` wired as preferred discovery, `DISCOVERY_SOCKET` wired as async `ipc.resolve` fallback, `FAMILY_SEED` error message corrected. Role-based naming evolution (`beardog_*` → `provider_*`/`security_provider_rpc`). 12-axis deep debt audit clean.
+- **Wave 107: Socket Cleanup + method.describe (Jun 10)**: `PRIMAL-SOCKET-CLEANUP` — state files co-locate with socket path. `method.describe` RPC for runtime introspection. All production files <800L. 97 methods. Composition-ready.
+- **Waves 100-101: Transport Self-Knowledge (Jun 8)**: Removed cross-primal `sourdough-core` dep. Local `TransportEndpoint` + `connect_transport()` (237L). Wire format is the contract. `TRANSPORT_ENDPOINT` env var operational.
+- **Wave 93: Build Fix (Jun 7)**: Stash conflict resolution — restored serialization submodule + serde aliases. Depot-ready.
+- **Wave 82c: Deep Debt + Refactoring (Jun 6)**: `simple_mlp.rs` → directory module. GPU test pool fix. 4,600 tests.
+- **Sprints 44-56: IPC + Deep Debt (Apr-May)**: 96 JSON-RPC methods wired, 12-axis deep debt fully clean, BTSP Phase 3, sovereign dispatch, CPU tensor fallback, binary refactoring.
 - **Sprint 45/45b: JSON-RPC Surface Expansion + Deep Debt (Apr 26)**: 11 new method registrations (39→50) for neuralSpring parity — `linalg.svd`, `linalg.qr`, `stats.chi_squared`, `stats.anova_oneway`, `activation.softmax`, `activation.gelu`, `spectral.stft`, `ml.mlp_forward`, `ml.attention` + 2 aliases (`stats.eigh`, `stats.pearson`). New `methods/ml.rs` and `methods/spectral.rs` modules. `math.rs` smart-refactored (819→641L). Shared `params.rs` eliminates DRY violation. 36 new coverage tests. 12-axis deep debt audit clean.
 - **Sprint 44g: BTSP Wire Fix + 12-Axis Audit (Apr 24)**: `security_provider_rpc()` `writer.shutdown()` → `writer.flush()` — fixes BearDog connection loss. 12-axis deep debt audit clean bill. 4,393+ tests, all quality gates green.
 - **Sprint 44f: Smart Refactoring (Apr 20)**: `sovereign_device.rs` 924→773L, `btsp.rs` 815→678L. Zero production files >800L.

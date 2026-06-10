@@ -48,7 +48,7 @@ crates/
     src/
       ipc/             JSON-RPC 2.0 + tarpc transport
       rpc.rs           tarpc service definitions
-      bin/barracuda.rs UniBin entry point
+      bin/barracuda/   UniBin entry point (main.rs + commands.rs + discovery_file.rs)
 
 specs/                 Formal specifications
 ```

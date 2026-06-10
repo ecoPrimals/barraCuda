@@ -1,7 +1,7 @@
 +++
 title = "barraCuda Validation Summary"
-description = "GPU-accelerated scientific computing engine — 4,500+ tests, 96 IPC methods, 15-tier precision ladder, pure safe Rust, A+ grade"
-date = 2026-06-03
+description = "GPU-accelerated scientific computing engine — 4,600+ tests, 97 IPC methods, 15-tier precision ladder, pure safe Rust, A+ grade"
+date = 2026-06-10
 
 [taxonomies]
 primals = ["barracuda"]
@@ -10,15 +10,17 @@ springs = ["hotspring", "primalspring", "wetspring", "airspring"]
 
 ## Status
 
-- **4,500+ tests** (nextest CI profile), 0 failed, 80.54% line / 83.45% function coverage
-- **96 registered IPC methods** across 23 semantic namespaces (added `mesh.*`)
+- **4,600+ tests** (nextest CI profile), 0 failed, 80.54% line / 83.45% function coverage
+- **97 registered IPC methods** across 24 semantic namespaces (added `method.describe` introspection)
 - **1,169+ Rust source files**, zero unsafe in production (`#![forbid(unsafe_code)]`)
 - **v0.4.0** — stadial gate cleared, all checklist items green
 - **A+ grade** — zero unwrap/panic/expect in production, zero println in library, zero `Result<T, String>`, zero mocks in production
-- **Pure Rust** — zero C dependencies (`deny.toml` bans ring, openssl, aws-lc-sys)
+- **Pure Rust** — zero C dependencies (`deny.toml` bans ring, openssl, aws-lc-sys), zero cross-primal dependencies
 - **15-tier precision ladder** — F16 → BF16 → TF32 → F32 → DF64 → F64 → F64Precise → DF128 → QF128 → FP8 → INT2 → Binary → Quantized4 → Quantized8
 - **Compute Trio member** — sovereign pipeline: barraCuda (workload) → coralReef (compiler) → toadStool (hardware)
-- **Mesh peer** — strandGate (192.168.1.132), bearDog + Songbird operational
+- **4-gate mesh collective** — strandGate + eastGate + southGate + ironGate operational
+- **Transport self-knowledge** — local `TransportEndpoint` impl, wire format is the contract, `TRANSPORT_ENDPOINT` env var for launcher injection
+- **Composition-ready** — zero debt, `ProtectSystem=strict` compatible, socket state co-locates with socket path
 
 ## Key Capabilities
 
@@ -27,7 +29,7 @@ springs = ["hotspring", "primalspring", "wetspring", "airspring"]
 | `tensor.*` | 9 | GPU/CPU tensor ops (create, matmul, add, scale, clamp, reduce, sigmoid, batch.submit) |
 | `stats.*` | 22 | Statistics, regression, ecology (mean, variance, correlation, chi_squared, fit_quadratic/exp/log, simpson, bray_curtis, hill, rarefaction, gamma_fit/cdf) |
 | `linalg.*` | 5 | Linear algebra (solve, eigenvalues, svd, qr, graph_laplacian) |
-| `ml.*` | 5 | Machine learning (mlp_forward, mlp_train, perceptron_train, attention, esn_predict) |
+| `ml.*` | 8 | Machine learning (mlp_forward, mlp_train, mlp_infer, mlp_save, mlp_load, perceptron_train, attention, esn_predict) |
 | `spectral.*` | 3 | FFT, power spectrum, STFT |
 | `fhe.*` | 2 | Fully homomorphic encryption (NTT, pointwise_mul) |
 | `precision.*` | 1 | Precision routing advisory with dispatch_path differentiation |
@@ -35,6 +37,7 @@ springs = ["hotspring", "primalspring", "wetspring", "airspring"]
 | `signal.*` | 3 | Signal processing (detect_peaks, bandpass, derivative) |
 | `compute.*` | 3 | Cross-gate dispatch (capabilities, submit, result) |
 | `health.*` | 4 | Liveness, readiness, check, version |
+| `method.*` | 1 | Runtime introspection (describe — params, access, description) |
 | `btsp.*` | 2 | Cipher negotiation + capabilities |
 
 ## Architecture

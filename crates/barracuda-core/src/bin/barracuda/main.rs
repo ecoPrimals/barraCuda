@@ -37,9 +37,9 @@ struct Cli {
 enum Commands {
     /// Start the barraCuda IPC server.
     ///
-    /// Per ecoBin standard, Unix domain sockets are the primary transport
-    /// on Unix platforms. TCP is used as fallback or when `--bind`/`--port`
-    /// is explicitly provided. Use `--no-unix` to force TCP-only mode.
+    /// Per guideStone standard, transport is selected via `--bind-mode` or
+    /// the `PRIMAL_BIND_MODE` env var. Default on Unix: UDS primary with
+    /// optional TCP sidecar. `tcp_only` disables UDS entirely.
     Server {
         /// TCP port for newline-delimited JSON-RPC.
         /// Per UniBin v1.1: `--port` is the universal entry point for
@@ -74,10 +74,11 @@ enum Commands {
         #[arg(long, visible_alias = "socket", num_args = 0..=1, default_missing_value = "__default__")]
         unix: Option<String>,
 
-        /// Disable Unix socket transport (force TCP-only).
-        #[cfg(unix)]
-        #[arg(long)]
-        no_unix: bool,
+        /// Transport bind mode. Overrides `PRIMAL_BIND_MODE` env var.
+        /// Values: `unix` (default on Unix), `tcp_only` (TCP-only, no UDS).
+        /// Standard envelope: `barracuda server --bind-mode $PRIMAL_BIND_MODE --port $PORT`
+        #[arg(long, env = "PRIMAL_BIND_MODE")]
+        bind_mode: Option<String>,
 
         /// Skip GPU/wgpu adapter probe — start immediately in cpu-shader-only
         /// mode. Eliminates ~30s startup delay on GPU-less hosts (broken DRM,
@@ -144,13 +145,14 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
             tarpc_unix,
             #[cfg(unix)]
             unix,
-            #[cfg(unix)]
-            no_unix,
+            bind_mode,
             no_gpu_probe,
         } => {
             if no_gpu_probe {
                 barracuda_core::set_no_gpu_probe();
             }
+
+            let tcp_only = is_tcp_only(bind_mode.as_deref());
 
             let (effective_bind, effective_unix) =
                 resolve_transport_override(bind, port, unix.as_deref());
@@ -163,7 +165,7 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
                 #[cfg(unix)]
                 effective_unix,
                 #[cfg(unix)]
-                no_unix,
+                tcp_only,
             )
             .await?;
         }
@@ -179,6 +181,17 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
     }
 
     Ok(())
+}
+
+/// Determine if the bind mode indicates TCP-only (no UDS).
+///
+/// Reads from `--bind-mode` CLI flag (which also picks up `PRIMAL_BIND_MODE`
+/// env var via clap's `env` attribute). Recognized values:
+/// - `tcp_only` / `tcp-only` / `tcp` → true (no Unix socket)
+/// - `fallback` → true (platform cannot support UDS)
+/// - `unix` / absent / anything else → false (UDS primary)
+fn is_tcp_only(bind_mode: Option<&str>) -> bool {
+    matches!(bind_mode, Some("tcp_only" | "tcp-only" | "tcp" | "fallback"))
 }
 
 /// Resolve `TRANSPORT_ENDPOINT` env override for launcher-injected transport.
@@ -255,7 +268,7 @@ async fn run_server(
     tarpc_bind: Option<String>,
     #[cfg(unix)] tarpc_unix: Option<String>,
     #[cfg(unix)] unix: Option<String>,
-    #[cfg(unix)] no_unix: bool,
+    #[cfg(unix)] tcp_only: bool,
 ) -> Result<(), barracuda_core::error::BarracudaCoreError> {
     barracuda_core::ipc::transport::validate_insecure_guard()?;
     let mut primal = BarraCudaPrimal::new();
@@ -280,18 +293,22 @@ async fn run_server(
 
     #[cfg(all(unix, feature = "tarpc-transport"))]
     if let Some(ref tarpc_sock) = tarpc_unix {
-        let tarpc_server = barracuda_core::ipc::IpcServer::new(Arc::clone(&primal));
-        let tarpc_path = std::path::PathBuf::from(tarpc_sock);
-        tokio::spawn(async move {
-            if let Err(e) = tarpc_server.serve_tarpc_unix(&tarpc_path).await {
-                tracing::error!("tarpc Unix server error: {e}");
-            }
-        });
+        if !tcp_only {
+            let tarpc_server = barracuda_core::ipc::IpcServer::new(Arc::clone(&primal));
+            let tarpc_path = std::path::PathBuf::from(tarpc_sock);
+            tokio::spawn(async move {
+                if let Err(e) = tarpc_server.serve_tarpc_unix(&tarpc_path).await {
+                    tracing::error!("tarpc Unix server error: {e}");
+                }
+            });
+        } else {
+            tracing::info!("tarpc UDS skipped: bind_mode=tcp_only");
+        }
     }
 
     #[cfg(unix)]
     {
-        let use_unix = !no_unix;
+        let use_unix = !tcp_only;
         let explicit_unix = unix.is_some();
 
         if use_unix || explicit_unix {
@@ -348,7 +365,7 @@ async fn run_server(
         }
     }
 
-    // TCP-only fallback (--no-unix or non-Unix platform).
+    // TCP-only fallback (bind_mode=tcp_only or non-Unix platform).
     let bind_addr = bind.unwrap_or_else(|| {
         barracuda_core::ipc::IpcServer::default_tcp_port().map_or_else(
             || barracuda_core::ipc::transport::resolve_bind_address(None),

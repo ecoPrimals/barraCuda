@@ -158,7 +158,7 @@ half = "2.4"
 bytes = "1.9"
 
 # CLI
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive", "env"] }
 
 # RPC
 tarpc = { version = "0.37", features = ["tokio1", "serde-transport", "serde-transport-json", "tcp"] }

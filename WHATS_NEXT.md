@@ -1,11 +1,18 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-06-10.
+Prioritized work items, ordered by impact. Updated 2026-06-11.
 
 ---
 
 ## Recently Completed
 
+- **Wave 109: guideStone Startup Convergence — STARTUP-BC-01 (Jun 11)**:
+  Replaced `--no-unix` flag with `--bind-mode` (reads `PRIMAL_BIND_MODE` env
+  var via clap `env` attribute). Standard startup envelope now:
+  `barracuda server --bind-mode $PRIMAL_BIND_MODE --port $PORT`.
+  Recognized values: `tcp_only`/`tcp-only`/`tcp`/`fallback` → TCP-only (no UDS);
+  `unix`/absent → UDS primary (default). tarpc UDS also skipped when tcp_only.
+  No per-primal case blocks needed in deploy scripts. guideStone P1+P4 compliant.
 - **Wave 107: Socket Cleanup + method.describe (Jun 10)**:
   P2 `PRIMAL-SOCKET-CLEANUP`: Discovery file (`barracuda-core.json`) and legacy
   symlink now derive their directory from the socket path's parent, not from

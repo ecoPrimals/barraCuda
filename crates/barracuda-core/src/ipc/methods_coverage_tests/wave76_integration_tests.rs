@@ -31,12 +31,12 @@ fn mock_dispatch_telemetry(count: usize) -> Vec<serde_json::Value> {
             json!({
                 "method": methods[idx % methods.len()],
                 "owner": providers[idx % providers.len()],
-                "latency_ms": 0.5 + f64::from(i) * 0.3,
-                "success": idx % 7 != 0,
+                "latency_ms": f64::from(i).mul_add(0.3, 0.5),
+                "success": !idx.is_multiple_of(7),
                 "gate": gates[idx % gates.len()],
                 "param_size_bytes": 1024.0 * f64::from(i + 1),
                 "gate_load": 0.1 + f64::from(i % 10) * 0.08,
-                "topology_affinity": if idx % 3 == 0 { 0.9 } else { 0.5 }
+                "topology_affinity": if idx.is_multiple_of(3) { 0.9 } else { 0.5 }
             })
         })
         .collect()

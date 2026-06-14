@@ -749,3 +749,56 @@ async fn negotiate_pipelined_frame_not_lost() {
     drop(client_reader);
     let _ = server_handle.await;
 }
+
+#[tokio::test]
+async fn ribocipher_prefix_stripped_before_json() {
+    use tokio::io::BufReader;
+
+    let payload = b"\xEC\x01{\"jsonrpc\":\"2.0\",\"method\":\"health\",\"id\":1}\n";
+    let cursor = std::io::Cursor::new(payload.to_vec());
+    let mut reader = BufReader::new(cursor);
+
+    let stripped = strip_ribocipher(&mut reader).await;
+    assert!(stripped, "riboCipher prefix should be detected and stripped");
+
+    let mut line = String::new();
+    tokio::io::AsyncBufReadExt::read_line(&mut reader, &mut line)
+        .await
+        .unwrap();
+    assert_eq!(
+        line.trim(),
+        r#"{"jsonrpc":"2.0","method":"health","id":1}"#
+    );
+}
+
+#[tokio::test]
+async fn ribocipher_not_stripped_from_plain_json() {
+    use tokio::io::BufReader;
+
+    let payload = b"{\"jsonrpc\":\"2.0\",\"method\":\"health\",\"id\":1}\n";
+    let cursor = std::io::Cursor::new(payload.to_vec());
+    let mut reader = BufReader::new(cursor);
+
+    let stripped = strip_ribocipher(&mut reader).await;
+    assert!(!stripped, "plain JSON should not trigger riboCipher stripping");
+
+    let mut line = String::new();
+    tokio::io::AsyncBufReadExt::read_line(&mut reader, &mut line)
+        .await
+        .unwrap();
+    assert_eq!(
+        line.trim(),
+        r#"{"jsonrpc":"2.0","method":"health","id":1}"#
+    );
+}
+
+#[tokio::test]
+async fn ribocipher_empty_stream_no_panic() {
+    use tokio::io::BufReader;
+
+    let cursor = std::io::Cursor::new(Vec::<u8>::new());
+    let mut reader = BufReader::new(cursor);
+
+    let stripped = strip_ribocipher(&mut reader).await;
+    assert!(!stripped);
+}

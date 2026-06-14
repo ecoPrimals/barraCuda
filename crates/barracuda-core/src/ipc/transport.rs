@@ -47,6 +47,31 @@ fn max_connections() -> usize {
     *MAX_CONNECTIONS
 }
 
+/// riboCipher signal prefix per guideStone amendment.
+///
+/// cellMembrane/NUCLEUS probers send `[0xEC, 0x01]` before JSON-RPC payloads
+/// to signal riboCipher framing intent. Primals that accept this prefix strip
+/// the 2 bytes and continue with normal JSON-RPC parsing. This enables the
+/// deployment infrastructure to distinguish live primals from stale sockets.
+const RIBOCIPHER_PREFIX: [u8; 2] = [0xEC, 0x01];
+
+/// Strip the riboCipher prefix from a BufReader if present.
+///
+/// Uses `fill_buf()` to peek at buffered bytes without consuming. If the
+/// first 2 bytes match `[0xEC, 0x01]`, consumes (discards) them. Otherwise
+/// the stream remains untouched for normal JSON-RPC parsing. Works for
+/// both TCP and UDS transports without platform-specific peek syscalls.
+async fn strip_ribocipher<R: AsyncRead + Unpin>(reader: &mut BufReader<R>) -> bool {
+    match reader.fill_buf().await {
+        Ok(buf) if buf.len() >= 2 && buf[..2] == RIBOCIPHER_PREFIX => {
+            reader.consume(2);
+            tracing::debug!("riboCipher prefix accepted");
+            true
+        }
+        _ => false,
+    }
+}
+
 /// IPC server for barraCuda primal.
 ///
 /// Serves both JSON-RPC 2.0 (text, newline-delimited) and tarpc (binary,
@@ -480,6 +505,7 @@ async fn handle_connection<R, W>(
         }
     }
     let mut buf_reader = BufReader::new(reader);
+    strip_ribocipher(&mut buf_reader).await;
     loop {
         let line = {
             let mut lines = (&mut buf_reader).lines();

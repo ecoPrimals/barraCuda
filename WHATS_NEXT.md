@@ -1,11 +1,17 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-06-11.
+Prioritized work items, ordered by impact. Updated 2026-06-14.
 
 ---
 
 ## Recently Completed
 
+- **Wave 113: riboCipher Signal Acceptance (Jun 14)**:
+  P2 riboCipher prefix stripping. NUCLEUS probers send `[0xEC, 0x01]` before
+  JSON-RPC payloads to distinguish live primals from stale sockets. barraCuda
+  now detects and strips the 2-byte prefix via `BufReader::fill_buf()` peek
+  before entering the line-reading loop. Works on both UDS and TCP without
+  platform-specific peek syscalls. 3 new unit tests. guideStone compliant.
 - **Wave 109: guideStone Startup Convergence — STARTUP-BC-01 (Jun 11)**:
   Replaced `--no-unix` flag with `--bind-mode` (reads `PRIMAL_BIND_MODE` env
   var via clap `env` attribute). Standard startup envelope now:

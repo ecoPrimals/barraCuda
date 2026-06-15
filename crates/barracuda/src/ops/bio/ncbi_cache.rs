@@ -91,11 +91,10 @@ impl NcbiCache {
 ///
 /// Returns `$XDG_CACHE_HOME` if set, otherwise `$HOME/.cache`.
 fn xdg_cache_dir() -> Result<PathBuf> {
-    if let Ok(xdg) = std::env::var("XDG_CACHE_HOME") {
-        if !xdg.is_empty() {
+    if let Ok(xdg) = std::env::var("XDG_CACHE_HOME")
+        && !xdg.is_empty() {
             return Ok(PathBuf::from(xdg));
         }
-    }
     let home = std::env::var("HOME")
         .map_err(|_| BarracudaError::Internal("HOME not set; cannot resolve cache dir".into()))?;
     Ok(PathBuf::from(home).join(".cache"))

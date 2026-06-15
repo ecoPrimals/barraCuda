@@ -85,8 +85,8 @@ pub fn is_npu_available() -> bool {
     // Check for VFIO-eligible devices (future pure Rust path)
     // Scan IOMMU groups for BrainChip vendor 0x1e7c
     let iommu_groups = std::path::Path::new("/sys/kernel/iommu_groups");
-    if iommu_groups.exists() {
-        if let Ok(entries) = std::fs::read_dir(iommu_groups) {
+    if iommu_groups.exists()
+        && let Ok(entries) = std::fs::read_dir(iommu_groups) {
             for entry in entries.flatten() {
                 let devices_dir = entry.path().join("devices");
                 if let Ok(devices) = std::fs::read_dir(devices_dir) {
@@ -102,7 +102,6 @@ pub fn is_npu_available() -> bool {
                 }
             }
         }
-    }
     false
 }
 

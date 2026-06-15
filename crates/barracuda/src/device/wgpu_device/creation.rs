@@ -291,12 +291,11 @@ impl WgpuDevice {
     /// Returns [`Err`] if adapter selection fails (env override invalid, physical
     /// device index out of bounds), or if device creation fails.
     pub async fn discover_best_adapter() -> Result<Self> {
-        if let Ok(selector) = std::env::var(ADAPTER_ENV_VAR) {
-            if !selector.is_empty() && selector.to_lowercase() != "auto" {
+        if let Ok(selector) = std::env::var(ADAPTER_ENV_VAR)
+            && !selector.is_empty() && selector.to_lowercase() != "auto" {
                 tracing::info!("discover_best_adapter: env override → {selector}");
                 return Self::with_adapter_selector(&selector).await;
             }
-        }
 
         let registry = super::super::registry::DeviceRegistry::global();
         let best = registry

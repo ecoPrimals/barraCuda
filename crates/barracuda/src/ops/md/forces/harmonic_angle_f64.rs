@@ -309,6 +309,10 @@ impl HarmonicAngleF64 {
 }
 
 #[cfg(test)]
+#[expect(
+    clippy::suboptimal_flops,
+    reason = "reference physics math in textbook notation for GPU kernel verification"
+)]
 mod tests {
     use super::*;
 

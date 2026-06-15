@@ -306,13 +306,12 @@ impl CrankNicolson1D {
         self.time += self.heat.config.dt;
 
         // Add source contribution (forward Euler for simplicity)
-        if let Some(src) = source {
-            if src.len() == self.heat.u.len() {
+        if let Some(src) = source
+            && src.len() == self.heat.u.len() {
                 for (u, s) in self.heat.u.iter_mut().zip(src.iter()) {
                     *u += self.heat.config.dt * s;
                 }
             }
-        }
 
         Ok(result)
     }

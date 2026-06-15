@@ -13,7 +13,7 @@ edition = "2024"
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/ecoPrimals/barraCuda"
 authors = ["ecoPrimals Project"]
-rust-version = "1.87"
+rust-version = "1.92"
 
 [workspace.lints.clippy]
 # ─── Lint groups (priority -1 → individual settings below override) ──────

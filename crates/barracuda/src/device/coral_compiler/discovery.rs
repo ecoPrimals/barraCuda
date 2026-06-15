@@ -88,11 +88,10 @@ pub async fn discover_shader_compiler() -> Option<String> {
         return Some(addr);
     }
 
-    if let Some(addr) = discover_from_file().await {
-        if probe_jsonrpc(&addr).await {
+    if let Some(addr) = discover_from_file().await
+        && probe_jsonrpc(&addr).await {
             return Some(addr);
         }
-    }
 
     if let Some(port) = std::env::var(COMPILER_PORT_ENV)
         .ok()
@@ -177,11 +176,10 @@ fn scan_capability(dir: &std::path::Path, capability: &str) -> Option<String> {
     let entries = std::fs::read_dir(dir).ok()?;
     for entry in entries.flatten() {
         let path = entry.path();
-        if path.extension().is_some_and(|e| e == "json") {
-            if let Some(addr) = read_capability_transport(&path, capability) {
+        if path.extension().is_some_and(|e| e == "json")
+            && let Some(addr) = read_capability_transport(&path, capability) {
                 return Some(addr);
             }
-        }
     }
     None
 }
@@ -227,11 +225,10 @@ fn read_jsonrpc_from_value(info: &serde_json::Value) -> Option<String> {
     if let Some(s) = jsonrpc.as_str() {
         return Some(s.to_owned());
     }
-    if let Some(unix_path) = jsonrpc.get("unix").and_then(|v| v.as_str()) {
-        if std::path::Path::new(unix_path).exists() {
+    if let Some(unix_path) = jsonrpc.get("unix").and_then(|v| v.as_str())
+        && std::path::Path::new(unix_path).exists() {
             return Some(format!("unix:{unix_path}"));
         }
-    }
     jsonrpc
         .get("tcp")
         .and_then(|v| v.as_str())
@@ -255,19 +252,17 @@ pub async fn discover_cpu_shader_compiler() -> Option<String> {
     let dirs = [&eco_base, &eco_canonical, &biomeos_base];
 
     for dir in &dirs {
-        if let Some(addr) = scan_capability(dir, "shader.compile.cpu") {
-            if probe_jsonrpc(&addr).await {
+        if let Some(addr) = scan_capability(dir, "shader.compile.cpu")
+            && probe_jsonrpc(&addr).await {
                 return Some(addr);
             }
-        }
     }
 
     for dir in &dirs {
-        if let Some(addr) = scan_capability(dir, "shader.execute.cpu") {
-            if probe_jsonrpc(&addr).await {
+        if let Some(addr) = scan_capability(dir, "shader.execute.cpu")
+            && probe_jsonrpc(&addr).await {
                 return Some(addr);
             }
-        }
     }
 
     None
@@ -287,11 +282,10 @@ pub async fn discover_shader_validator() -> Option<String> {
     let dirs = [&eco_base, &eco_canonical, &biomeos_base];
 
     for dir in &dirs {
-        if let Some(addr) = scan_capability(dir, "shader.validate") {
-            if probe_jsonrpc(&addr).await {
+        if let Some(addr) = scan_capability(dir, "shader.validate")
+            && probe_jsonrpc(&addr).await {
                 return Some(addr);
             }
-        }
     }
 
     None

@@ -1,10 +1,22 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-06-14.
+Prioritized work items, ordered by impact. Updated 2026-06-15.
 
 ---
 
 ## Recently Completed
+
+- **Deep Debt Evolution Pass (Jun 15)**:
+  MSRV bumped to 1.92. All 83 `collapsible_if` lints resolved via let-chain
+  modernization (Rust 2024 idiom). Stale lint (`needless_type_cast`, removed in
+  1.92) cleaned from naga-exec tests. 24 `suboptimal_flops` in MD force test
+  modules suppressed at module level (reference physics math in textbook notation
+  for GPU kernel verification). 2 `useless_vec` evolved to arrays. Dependency
+  tree audited — 100% pure Rust, all patches updated. Coverage expanded: 22 new
+  tests across `transport_config` (10), `btsp_negotiate` (8), `btsp_discovery` (3),
+  plus tensor test `mul_add` fix. Environment-sensitive tests hardened for hosts
+  running live ecosystem services. Test count: 4,970+. 
+  Workspace: zero clippy warnings, zero TODO/FIXME, zero files >800L.
 
 - **Wave 113: riboCipher Signal Acceptance (Jun 14)**:
   P2 riboCipher prefix stripping. NUCLEUS probers send `[0xEC, 0x01]` before

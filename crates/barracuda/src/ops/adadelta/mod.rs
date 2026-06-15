@@ -116,23 +116,21 @@ impl AdaDelta {
         }
 
         // Validate accumulator shapes if provided
-        if let Some(ref ag) = acc_grad {
-            if ag.shape() != weights.shape() {
+        if let Some(ref ag) = acc_grad
+            && ag.shape() != weights.shape() {
                 return Err(BarracudaError::shape_mismatch(
                     ag.shape().to_vec(),
                     weights.shape().to_vec(),
                 ));
             }
-        }
 
-        if let Some(ref ad) = acc_delta {
-            if ad.shape() != weights.shape() {
+        if let Some(ref ad) = acc_delta
+            && ad.shape() != weights.shape() {
                 return Err(BarracudaError::shape_mismatch(
                     ad.shape().to_vec(),
                     weights.shape().to_vec(),
                 ));
             }
-        }
 
         Ok(Self {
             weights,

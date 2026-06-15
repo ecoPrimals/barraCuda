@@ -182,8 +182,8 @@ impl IpcServer {
                             tracing::warn!("BTSP handshake rejected tarpc connection: {outcome:?}");
                             return;
                         }
-                        if let Some(session) = outcome.session() {
-                            if session.cipher.requires_key() {
+                        if let Some(session) = outcome.session()
+                            && session.cipher.requires_key() {
                                 tracing::warn!(
                                     cipher = ?session.cipher,
                                     "tarpc does not support BTSP-encrypted frames — \
@@ -192,7 +192,6 @@ impl IpcServer {
                                 );
                                 return;
                             }
-                        }
                         let transport = tarpc::serde_transport::new(
                             tokio_util::codec::LengthDelimitedCodec::builder()
                                 .max_frame_length(max_frame_bytes())
@@ -286,13 +285,12 @@ impl IpcServer {
                         }
                         let session = outcome.session().cloned();
                         let replay = outcome.consumed_line().map(String::from);
-                        if let Some(ref session) = session {
-                            if session.cipher.requires_key() {
+                        if let Some(ref session) = session
+                            && session.cipher.requires_key() {
                                 let (reader, writer) = stream.into_split();
                                 handle_btsp_connection(primal, reader, writer, session).await;
                                 return;
                             }
-                        }
                         handle_stream(primal, stream, session, replay).await;
                     });
                 }
@@ -345,12 +343,11 @@ impl IpcServer {
                         let session = outcome.session().cloned();
                         let replay = outcome.consumed_line().map(String::from);
                         let (reader, writer) = stream.into_split();
-                        if let Some(ref session) = session {
-                            if session.cipher.requires_key() {
+                        if let Some(ref session) = session
+                            && session.cipher.requires_key() {
                                 handle_btsp_connection(primal, reader, writer, session).await;
                                 return;
                             }
-                        }
                         handle_connection(primal, reader, writer, session, replay).await;
                     });
                 }
@@ -499,11 +496,10 @@ async fn handle_connection<R, W>(
     R: AsyncRead + Unpin + Send,
     W: AsyncWrite + Unpin + Send,
 {
-    if let Some(ref line) = replay {
-        if dispatch_line(&primal, line, &mut writer).await.is_err() {
+    if let Some(ref line) = replay
+        && dispatch_line(&primal, line, &mut writer).await.is_err() {
             return;
         }
-    }
     let mut buf_reader = BufReader::new(reader);
     strip_ribocipher(&mut buf_reader).await;
     loop {

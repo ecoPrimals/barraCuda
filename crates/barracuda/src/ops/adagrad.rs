@@ -94,14 +94,13 @@ impl AdaGrad {
         }
 
         // Validate accumulated shape if provided
-        if let Some(ref acc) = accumulated {
-            if acc.shape() != weights.shape() {
+        if let Some(ref acc) = accumulated
+            && acc.shape() != weights.shape() {
                 return Err(BarracudaError::shape_mismatch(
                     acc.shape().to_vec(),
                     weights.shape().to_vec(),
                 ));
             }
-        }
 
         Ok(Self {
             weights,

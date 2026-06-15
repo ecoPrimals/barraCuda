@@ -278,20 +278,15 @@ fn find_compound_assignments(
     for stmt in block {
         match *stmt {
             Statement::Store { pointer, value } => {
-                if let Expression::Binary { left, .. } = expressions[value] {
-                    if let Expression::Load {
+                if let Expression::Binary { left, .. } = expressions[value]
+                    && let Expression::Load {
                         pointer: load_ptr, ..
                     } = expressions[left]
-                    {
-                        if load_ptr == pointer {
-                            if let Expression::LocalVariable(lv) = expressions[pointer] {
-                                if let Some(name) = local_var_names.get(&lv) {
+                        && load_ptr == pointer
+                            && let Expression::LocalVariable(lv) = expressions[pointer]
+                                && let Some(name) = local_var_names.get(&lv) {
                                     out.insert(value, name.clone());
                                 }
-                            }
-                        }
-                    }
-                }
             }
             Statement::Block(ref inner) => {
                 find_compound_assignments(inner, expressions, local_var_names, out);
@@ -496,19 +491,16 @@ fn resolve_operand(handle: Handle<Expression>, ctx: &RewriteCtx) -> String {
 ///    where the implicit Load has no source span)
 /// 3. Fallback → `f64(0.0)` (safe default that won't break compilation)
 fn leaf_text(handle: Handle<Expression>, ctx: &RewriteCtx) -> String {
-    if let Some(span_range) = ctx.expressions.get_span(handle).to_range() {
-        if span_range.start < span_range.end {
+    if let Some(span_range) = ctx.expressions.get_span(handle).to_range()
+        && span_range.start < span_range.end {
             return format!("__SPAN__{}__{}", span_range.start, span_range.end);
         }
-    }
 
-    if let Expression::Load { pointer, .. } = ctx.expressions[handle] {
-        if let Expression::LocalVariable(lv) = ctx.expressions[pointer] {
-            if let Some(name) = ctx.local_var_names.get(&lv) {
+    if let Expression::Load { pointer, .. } = ctx.expressions[handle]
+        && let Expression::LocalVariable(lv) = ctx.expressions[pointer]
+            && let Some(name) = ctx.local_var_names.get(&lv) {
                 return name.clone();
             }
-        }
-    }
 
     String::from("f64(0.0)")
 }
@@ -561,14 +553,13 @@ pub(crate) fn resolve_spans(rewritten: &str, original: &str) -> String {
                 .unwrap_or(after_mid.len());
             let end_str = &after_mid[..end_len];
 
-            if let (Ok(start), Ok(end)) = (start_str.parse::<usize>(), end_str.parse::<usize>()) {
-                if start <= end && end <= original.len() {
+            if let (Ok(start), Ok(end)) = (start_str.parse::<usize>(), end_str.parse::<usize>())
+                && start <= end && end <= original.len() {
                     let span_text = &original[start..end];
                     let marker_end = pos + 8 + mid + 2 + end_len;
                     result.replace_range(pos..marker_end, span_text);
                     continue;
                 }
-            }
         }
         break; // malformed marker, stop
     }

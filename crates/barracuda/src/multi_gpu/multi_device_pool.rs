@@ -277,12 +277,11 @@ impl MultiDevicePool {
             if self.inner.device_busy[i].load(Ordering::Acquire) {
                 continue;
             }
-            if let Some(score) = requirements.score(info) {
-                if score > best_score {
+            if let Some(score) = requirements.score(info)
+                && score > best_score {
                     best_score = score;
                     best_idx = Some(i);
                 }
-            }
         }
 
         let idx = best_idx

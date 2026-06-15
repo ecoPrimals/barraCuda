@@ -136,3 +136,94 @@ fn hex_decode(hex: &str) -> Vec<u8> {
         })
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_session(key: &[u8]) -> BtspSession {
+        BtspSession {
+            session_id: "sess-001".to_string(),
+            cipher: BtspCipher::Null,
+            session_key: key.to_vec(),
+        }
+    }
+
+    #[test]
+    fn negotiate_rejects_empty_session_id() {
+        let session = test_session(b"key");
+        let params = serde_json::json!({ "session_id": "" });
+        let err = negotiate_phase3(&session, &params).unwrap_err();
+        assert!(matches!(err, NegotiateError::InvalidSession));
+    }
+
+    #[test]
+    fn negotiate_rejects_mismatched_session_id() {
+        let session = test_session(b"key");
+        let params = serde_json::json!({ "session_id": "wrong-id" });
+        let err = negotiate_phase3(&session, &params).unwrap_err();
+        assert!(matches!(err, NegotiateError::InvalidSession));
+    }
+
+    #[test]
+    fn negotiate_null_cipher_when_no_key_material() {
+        let session = test_session(b"");
+        let params = serde_json::json!({ "session_id": "sess-001" });
+        let result = negotiate_phase3(&session, &params).unwrap();
+        assert_eq!(result.response["cipher"], "null");
+    }
+
+    #[test]
+    fn negotiate_null_cipher_when_client_requests_null() {
+        let session = test_session(b"some-key");
+        let params = serde_json::json!({
+            "session_id": "sess-001",
+            "preferred_cipher": "null"
+        });
+        let result = negotiate_phase3(&session, &params).unwrap();
+        assert_eq!(result.response["cipher"], "null");
+    }
+
+    #[test]
+    fn negotiate_chacha_produces_server_nonce() {
+        let key = b"01234567890123456789012345678901"; // 32 bytes
+        let session = test_session(key);
+        let params = serde_json::json!({
+            "session_id": "sess-001",
+            "preferred_cipher": "chacha20-poly1305",
+            "client_nonce": "aabbccddee001122"
+        });
+        let result = negotiate_phase3(&session, &params).unwrap();
+        assert_eq!(result.response["cipher"], "chacha20-poly1305");
+        let nonce = result.response["server_nonce"].as_str().unwrap();
+        assert_eq!(nonce.len(), 24, "12 bytes = 24 hex chars");
+        assert_eq!(result.session.session_key.len(), 32);
+    }
+
+    #[test]
+    fn negotiate_defaults_to_chacha_when_no_preferred() {
+        let key = b"01234567890123456789012345678901";
+        let session = test_session(key);
+        let params = serde_json::json!({
+            "session_id": "sess-001",
+            "client_nonce": "0011223344556677"
+        });
+        let result = negotiate_phase3(&session, &params).unwrap();
+        assert_eq!(result.response["cipher"], "chacha20-poly1305");
+    }
+
+    #[test]
+    fn hex_roundtrip() {
+        let original = [0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0xFF];
+        let encoded = hex_encode(&original);
+        assert_eq!(encoded, "deadbeef00ff");
+        let decoded = hex_decode(&encoded);
+        assert_eq!(decoded, original);
+    }
+
+    #[test]
+    fn hex_decode_empty_string() {
+        assert!(hex_decode("").is_empty());
+        assert!(hex_decode("  ").is_empty());
+    }
+}

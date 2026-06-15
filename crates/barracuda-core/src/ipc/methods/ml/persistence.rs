@@ -70,17 +70,15 @@ pub(in crate::ipc::methods) fn ml_mlp_save(params: &Value, id: Value) -> JsonRpc
         },
     };
 
-    if let Some(parent) = path.parent() {
-        if !parent.exists() {
-            if let Err(e) = std::fs::create_dir_all(parent) {
+    if let Some(parent) = path.parent()
+        && !parent.exists()
+            && let Err(e) = std::fs::create_dir_all(parent) {
                 return JsonRpcResponse::error(
                     id,
                     INTERNAL_ERROR,
                     format!("Cannot create directory {}: {e}", parent.display()),
                 );
             }
-        }
-    }
 
     match std::fs::write(path, &data) {
         Ok(()) => JsonRpcResponse::success(

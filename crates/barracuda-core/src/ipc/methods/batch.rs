@@ -252,11 +252,10 @@ fn validate_batch_ops(ops: &[Value], valid_ops: &[&str]) -> Result<(), BatchErro
             return Err(BatchError::new(format!("ops[{i}]: unknown op '{op_name}'")));
         }
 
-        if let Some(alias) = op_val.get("alias").and_then(|v| v.as_str()) {
-            if !alias.is_empty() {
+        if let Some(alias) = op_val.get("alias").and_then(|v| v.as_str())
+            && !alias.is_empty() {
                 defined_aliases.insert(alias.to_string());
             }
-        }
 
         match op_name {
             "create" => {

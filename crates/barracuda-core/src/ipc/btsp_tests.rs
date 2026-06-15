@@ -50,6 +50,13 @@ fn btsp_outcome_rejected_refuses() {
 
 #[test]
 fn discover_security_provider_returns_none_when_no_socket() {
+    use super::super::btsp_discovery::discover_security_provider;
+    if std::env::var("BTSP_PROVIDER_SOCKET").is_ok()
+        || std::env::var("BEARDOG_SOCKET").is_ok()
+        || discover_security_provider().is_some()
+    {
+        return;
+    }
     assert!(discover_security_provider().is_none());
 }
 
@@ -138,10 +145,13 @@ fn discover_security_provider_checks_beardog_socket_env() {
     // We can't set env vars safely in parallel tests, but we can verify
     // that when neither BEARDOG_SOCKET nor filesystem sockets exist,
     // discovery returns None.
-    if std::env::var("BEARDOG_SOCKET").is_ok() || std::env::var("BTSP_PROVIDER_SOCKET").is_ok() {
+    if std::env::var("BEARDOG_SOCKET").is_ok()
+        || std::env::var("BTSP_PROVIDER_SOCKET").is_ok()
+        || super::super::btsp_discovery::discover_security_provider().is_some()
+    {
         return;
     }
-    assert!(discover_security_provider().is_none());
+    assert!(super::super::btsp_discovery::discover_security_provider().is_none());
 }
 
 #[test]

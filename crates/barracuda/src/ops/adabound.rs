@@ -102,23 +102,21 @@ impl AdaBound {
         }
 
         // Validate m and v shapes if provided
-        if let Some(ref m_tensor) = m {
-            if m_tensor.shape() != params.shape() {
+        if let Some(ref m_tensor) = m
+            && m_tensor.shape() != params.shape() {
                 return Err(BarracudaError::shape_mismatch(
                     m_tensor.shape().to_vec(),
                     params.shape().to_vec(),
                 ));
             }
-        }
 
-        if let Some(ref v_tensor) = v {
-            if v_tensor.shape() != params.shape() {
+        if let Some(ref v_tensor) = v
+            && v_tensor.shape() != params.shape() {
                 return Err(BarracudaError::shape_mismatch(
                     v_tensor.shape().to_vec(),
                     params.shape().to_vec(),
                 ));
             }
-        }
 
         Ok(Self {
             gradients,

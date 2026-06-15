@@ -96,11 +96,10 @@ impl Tensor {
             let mut max_val = f32::NEG_INFINITY;
             for j in 0..axis_size {
                 let idx = base + j * stride;
-                if let Some(&v) = data.get(idx) {
-                    if v > max_val {
+                if let Some(&v) = data.get(idx)
+                    && v > max_val {
                         max_val = v;
                     }
-                }
             }
 
             // exp(x - max) and sum

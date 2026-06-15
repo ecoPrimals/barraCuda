@@ -183,18 +183,16 @@ fn resolve_client_addr(
     if let Some(dir) = super::discovery_file::discovery_dir() {
         let filename = format!("{}-core.json", barracuda_core::PRIMAL_NAMESPACE);
         let path = dir.join(&filename);
-        if let Ok(content) = std::fs::read_to_string(&path) {
-            if let Ok(info) = serde_json::from_str::<serde_json::Value>(&content) {
+        if let Ok(content) = std::fs::read_to_string(&path)
+            && let Ok(info) = serde_json::from_str::<serde_json::Value>(&content) {
                 let transports = info.get("transports");
 
                 if let Some(addr) = transports
                     .and_then(|t| t.get("jsonrpc"))
                     .and_then(|v| v.as_str())
-                {
-                    if !addr.starts_with("unix://") {
+                    && !addr.starts_with("unix://") {
                         return Ok(addr.to_string());
                     }
-                }
 
                 if let Some(unix_addr) = transports
                     .and_then(|t| t.get("unix"))
@@ -210,7 +208,6 @@ fn resolve_client_addr(
                     return Ok(addr.to_string());
                 }
             }
-        }
     }
 
     Err(barracuda_core::error::BarracudaCoreError::ipc(

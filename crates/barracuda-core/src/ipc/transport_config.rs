@@ -33,11 +33,10 @@ pub fn resolve_family_id() -> Option<String> {
         env_keys::BIOMEOS_FAMILY_ID,
     ];
     for key in KEYS {
-        if let Ok(val) = std::env::var(key) {
-            if !val.is_empty() && val != DEFAULT_FAMILY_ID {
+        if let Ok(val) = std::env::var(key)
+            && !val.is_empty() && val != DEFAULT_FAMILY_ID {
                 return Some(val);
             }
-        }
     }
     None
 }
@@ -62,15 +61,14 @@ pub fn validate_insecure_guard() -> crate::error::Result<()> {
     let family_id = resolve_family_id();
     let insecure = std::env::var(env_keys::BIOMEOS_INSECURE)
         .is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
-    if let Some(ref fid) = family_id {
-        if insecure {
+    if let Some(ref fid) = family_id
+        && insecure {
             return Err(crate::error::BarracudaCoreError::lifecycle(format!(
                 "FAMILY_ID={fid} but BIOMEOS_INSECURE=1 — cannot claim a family \
                  and skip authentication. Unset one or the other. \
                  See BTSP_PROTOCOL_STANDARD.md §Compliance."
             )));
         }
-    }
     Ok(())
 }
 

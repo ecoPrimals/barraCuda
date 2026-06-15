@@ -189,22 +189,20 @@ impl SimpleMlp {
                 targets: targets.len(),
             });
         }
-        if let Some(expected_in) = self.input_size() {
-            if inputs.iter().any(|x| x.len() != expected_in) {
+        if let Some(expected_in) = self.input_size()
+            && inputs.iter().any(|x| x.len() != expected_in) {
                 return Err(TrainError::DimensionMismatch {
                     expected: expected_in,
                     context: "input",
                 });
             }
-        }
-        if let Some(expected_out) = self.output_size() {
-            if targets.iter().any(|t| t.len() != expected_out) {
+        if let Some(expected_out) = self.output_size()
+            && targets.iter().any(|t| t.len() != expected_out) {
                 return Err(TrainError::DimensionMismatch {
                     expected: expected_out,
                     context: "target",
                 });
             }
-        }
 
         let n = inputs.len();
         let mut final_mse = 0.0;

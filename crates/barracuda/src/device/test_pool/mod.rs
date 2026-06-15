@@ -98,16 +98,14 @@ fn prefer_gpu() -> bool {
 // ============================================================================
 
 fn resolve_gpu_adapter_selector() -> String {
-    if let Ok(v) = std::env::var("BARRACUDA_GPU_ADAPTER") {
-        if !v.is_empty() {
+    if let Ok(v) = std::env::var("BARRACUDA_GPU_ADAPTER")
+        && !v.is_empty() {
             return v;
         }
-    }
-    if let Ok(v) = std::env::var("HOTSPRING_GPU_ADAPTER") {
-        if !v.is_empty() {
+    if let Ok(v) = std::env::var("HOTSPRING_GPU_ADAPTER")
+        && !v.is_empty() {
             return v.split(',').next().unwrap_or("auto").to_string();
         }
-    }
     let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
         backends: wgpu::Backends::all(),
         ..Default::default()
@@ -245,11 +243,10 @@ fn try_get_cached(pool: &RwLock<Option<Arc<WgpuDevice>>>) -> Option<Arc<WgpuDevi
     let guard = pool
         .read()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
-    if let Some(ref dev) = *guard {
-        if is_device_healthy(dev) {
+    if let Some(ref dev) = *guard
+        && is_device_healthy(dev) {
             return Some(Arc::clone(dev));
         }
-    }
     None
 }
 

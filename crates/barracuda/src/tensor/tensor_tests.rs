@@ -102,7 +102,7 @@ async fn test_rand_range() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(99);
     let size = 100;
     let data: Vec<f32> = (0..size)
-        .map(|_| rng.random::<f32>() * 10.0 - 5.0)
+        .map(|_| rng.random::<f32>().mul_add(10.0, -5.0))
         .collect();
     let tensor = Tensor::from_data(&data, vec![size], device).unwrap();
     let readback = tensor.to_vec().unwrap();

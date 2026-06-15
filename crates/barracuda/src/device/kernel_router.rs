@@ -303,8 +303,8 @@ impl KernelRouter {
             ComputeWorkload::DenseMatmul { m, n, k, precision } => {
                 let size = m * n * k;
 
-                if let Some(prec) = precision {
-                    if prec.is_tensor_core_eligible() && self.has_gpu {
+                if let Some(prec) = precision
+                    && prec.is_tensor_core_eligible() && self.has_gpu {
                         return Ok(KernelTarget::Sovereign {
                             shader: "matmul_mma".to_string(),
                             device: DeviceSelection::Gpu,
@@ -312,7 +312,6 @@ impl KernelRouter {
                             workgroup_size: self.optimal_workgroup_for_matmul(*m, *n, *k),
                         });
                     }
-                }
 
                 let device = self.select_wgsl_device(size);
                 Ok(KernelTarget::Wgsl {
@@ -385,17 +384,15 @@ impl KernelRouter {
                 model_name,
             } => {
                 // NPU: if available AND we have the model AND sparsity is high enough
-                if self.has_npu {
-                    if let Some(model_info) = self.npu_models.get(model_name) {
-                        if *input_sparsity >= model_info.sparsity_threshold {
+                if self.has_npu
+                    && let Some(model_info) = self.npu_models.get(model_name)
+                        && *input_sparsity >= model_info.sparsity_threshold {
                             return Ok(KernelTarget::Npu {
                                 model_id: model_info.path.clone(),
                                 input_shape: model_info.input_shape.clone(),
                                 output_shape: model_info.output_shape.clone(),
                             });
                         }
-                    }
-                }
                 let device = self.select_wgsl_device(CPU_FALLBACK_THRESHOLD * 10);
                 Ok(KernelTarget::Wgsl {
                     shader: format!("snn/{model_name}"),
@@ -409,15 +406,14 @@ impl KernelRouter {
                 input_dim,
             } => {
                 // NPU: natural fit for reservoir computing (event-driven)
-                if self.has_npu {
-                    if let Some(model_info) = self.npu_models.get("reservoir") {
+                if self.has_npu
+                    && let Some(model_info) = self.npu_models.get("reservoir") {
                         return Ok(KernelTarget::Npu {
                             model_id: model_info.path.clone(),
                             input_shape: vec![*input_dim],
                             output_shape: vec![*reservoir_size],
                         });
                     }
-                }
                 // Fallback: WGSL reservoir simulation
                 let device = self.select_wgsl_device(reservoir_size * input_dim);
                 Ok(KernelTarget::Wgsl {
@@ -432,15 +428,14 @@ impl KernelRouter {
                 threshold: _,
             } => {
                 // NPU: ideal for binary pre-screening (ultra-low power)
-                if self.has_npu {
-                    if let Some(model_info) = self.npu_models.get("prescreen") {
+                if self.has_npu
+                    && let Some(model_info) = self.npu_models.get("prescreen") {
                         return Ok(KernelTarget::Npu {
                             model_id: model_info.path.clone(),
                             input_shape: vec![*input_count],
                             output_shape: vec![*input_count],
                         });
                     }
-                }
                 // Fallback: simple threshold on GPU
                 let device = self.select_wgsl_device(*input_count);
                 Ok(KernelTarget::Wgsl {
@@ -506,11 +501,11 @@ impl KernelRouter {
 
         for dir in super::akida::akida_model_dirs() {
             let path = dir.as_path();
-            if path.exists() {
-                if let Ok(entries) = std::fs::read_dir(path) {
+            if path.exists()
+                && let Ok(entries) = std::fs::read_dir(path) {
                     for entry in entries.flatten() {
-                        if let Some(ext) = entry.path().extension() {
-                            if ext == "fbz" {
+                        if let Some(ext) = entry.path().extension()
+                            && ext == "fbz" {
                                 // Found a model - extract metadata
                                 if let Some(name) = entry.path().file_stem() {
                                     let model_name = name.to_string_lossy().to_string();
@@ -522,10 +517,8 @@ impl KernelRouter {
                                     );
                                 }
                             }
-                        }
                     }
                 }
-            }
         }
 
         Ok(models)

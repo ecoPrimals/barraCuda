@@ -240,11 +240,10 @@ pub(in crate::ipc::methods) fn ml_perceptron_train(params: &Value, id: Value) ->
 
         if let Some(method) = record.get("method").and_then(|v| v.as_str()) {
             let domain = method.split('.').next().unwrap_or(method);
-            if let Some(&idx) = domain_index.get(domain) {
-                if idx < 32 {
+            if let Some(&idx) = domain_index.get(domain)
+                && idx < 32 {
                     feature[idx] = 1.0;
                 }
-            }
         }
 
         let latency_ms = record
@@ -273,8 +272,8 @@ pub(in crate::ipc::methods) fn ml_perceptron_train(params: &Value, id: Value) ->
         inputs.push(feature);
 
         let mut target = vec![0.0_f64; n_providers];
-        if let Some(owner) = record.get("owner").and_then(|v| v.as_str()) {
-            if let Some(&idx) = provider_index.get(owner) {
+        if let Some(owner) = record.get("owner").and_then(|v| v.as_str())
+            && let Some(&idx) = provider_index.get(owner) {
                 let reward = if success {
                     1.0 / (1.0 + latency_ms)
                 } else {
@@ -282,7 +281,6 @@ pub(in crate::ipc::methods) fn ml_perceptron_train(params: &Value, id: Value) ->
                 };
                 target[idx] = reward;
             }
-        }
         targets.push(target);
     }
 

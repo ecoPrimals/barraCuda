@@ -56,14 +56,13 @@ impl MultiMarginLoss {
             ));
         }
 
-        if let Some(ref w) = weight {
-            if w.shape().iter().product::<usize>() != num_classes {
+        if let Some(ref w) = weight
+            && w.shape().iter().product::<usize>() != num_classes {
                 return Err(BarracudaError::invalid_op(
                     "multi_margin_loss",
                     "weight must have num_classes elements",
                 ));
             }
-        }
 
         if p != 1 && p != 2 {
             return Err(BarracudaError::invalid_op(

@@ -95,13 +95,11 @@ impl std::fmt::Debug for GpuTestGate {
 
 /// Resolve the GPU test budget from env or device type heuristic.
 fn resolve_budget() -> u32 {
-    if let Ok(val) = std::env::var(GPU_TEST_BUDGET_ENV) {
-        if let Ok(n) = val.parse::<u32>() {
-            if n > 0 {
+    if let Ok(val) = std::env::var(GPU_TEST_BUDGET_ENV)
+        && let Ok(n) = val.parse::<u32>()
+            && n > 0 {
                 return n;
             }
-        }
-    }
 
     let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
         backends: wgpu::Backends::all(),

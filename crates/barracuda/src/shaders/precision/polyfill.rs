@@ -226,14 +226,13 @@ pub fn inject_f64_polyfills(shader_body: &str, extra_preamble: Option<&str>) -> 
         collect_deps(func, &mut all_needed);
     }
     for func_name in F64_FUNCTION_ORDER {
-        if all_needed.contains(*func_name) && !shader_defines_function(shader_body, func_name) {
-            if let Some(func_code) = extract_wgsl_function(&full_lib, func_name) {
+        if all_needed.contains(*func_name) && !shader_defines_function(shader_body, func_name)
+            && let Some(func_code) = extract_wgsl_function(&full_lib, func_name) {
                 // Substitute fossil calls (sqrt_f64, etc.) with native builtins in extracted code
                 let substituted = substitute_fossil_f64(&func_code);
                 preamble.push_str(&substituted);
                 preamble.push_str("\n\n");
             }
-        }
     }
     let (enables, rest) = split_enable_directives(shader_body);
     if enables.is_empty() {
@@ -320,12 +319,11 @@ pub fn math_f64_subset(functions: &[&str]) -> String {
          fn f64_const(x: f64, c: f32) -> f64 {\n    return x - x + f64(c);\n}\n\n",
     );
     for func_name in F64_FUNCTION_ORDER {
-        if needed.contains(*func_name) {
-            if let Some(func_code) = extract_wgsl_function(&full_lib, func_name) {
+        if needed.contains(*func_name)
+            && let Some(func_code) = extract_wgsl_function(&full_lib, func_name) {
                 output.push_str(&func_code);
                 output.push_str("\n\n");
             }
-        }
     }
     output
 }

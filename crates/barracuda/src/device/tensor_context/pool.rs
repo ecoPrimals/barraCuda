@@ -78,11 +78,10 @@ impl Deref for PooledBuffer {
 
 impl Drop for PooledBuffer {
     fn drop(&mut self) {
-        if let Some(buffer) = self.buffer.take() {
-            if let Some(pool) = self.pool.upgrade() {
+        if let Some(buffer) = self.buffer.take()
+            && let Some(pool) = self.pool.upgrade() {
                 pool.defer_return(buffer, self.bucket);
             }
-        }
     }
 }
 

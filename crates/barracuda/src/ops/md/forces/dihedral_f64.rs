@@ -325,6 +325,10 @@ impl DihedralTorsionF64 {
 }
 
 #[cfg(test)]
+#[expect(
+    clippy::suboptimal_flops,
+    reason = "reference physics math in textbook notation for GPU kernel verification"
+)]
 mod tests {
     use super::*;
 
@@ -401,7 +405,7 @@ mod tests {
 
         // Numerical forces via finite differences
         let eps = 1e-7;
-        let mut num_forces = vec![0.0; 12];
+        let mut num_forces = [0.0; 12];
         for atom in 0..4 {
             for dim in 0..3 {
                 let mut pos_plus = positions.clone();

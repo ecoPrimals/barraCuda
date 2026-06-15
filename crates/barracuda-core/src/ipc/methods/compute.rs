@@ -274,8 +274,8 @@ async fn dispatch_submit_shader(
     };
 
     let mut resp = dispatch_submit_tensor_inner(primal, data_arr).await;
-    if let Some(ref mut output) = resp.output {
-        if let Some(obj) = output.as_object_mut() {
+    if let Some(ref mut output) = resp.output
+        && let Some(obj) = output.as_object_mut() {
             obj.insert("routed".into(), Value::Bool(false));
             obj.insert(
                 "note".into(),
@@ -286,7 +286,6 @@ async fn dispatch_submit_shader(
                 ),
             );
         }
-    }
 
     let job_id = generate_job_id();
     let is_completed = resp.status == DispatchStatus::Completed;

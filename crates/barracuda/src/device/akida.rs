@@ -342,8 +342,8 @@ fn query_power_consumption(pcie_address: &str) -> f64 {
             let power_input_path = hwmon_path.join("power1_input");
 
             // power1_input is in microwatts
-            if let Ok(power_str) = fs::read_to_string(&power_input_path) {
-                if let Ok(power_uw) = power_str.trim().parse::<f64>() {
+            if let Ok(power_str) = fs::read_to_string(&power_input_path)
+                && let Ok(power_uw) = power_str.trim().parse::<f64>() {
                     let power_watts = power_uw / 1_000_000.0; // Convert µW to W
                     tracing::debug!(
                         "Akida {}: Measured power = {:.3}W",
@@ -352,7 +352,6 @@ fn query_power_consumption(pcie_address: &str) -> f64 {
                     );
                     return power_watts;
                 }
-            }
         }
     }
 
@@ -379,8 +378,8 @@ fn query_temperature(pcie_address: &str) -> f64 {
             let temp_input_path = hwmon_path.join("temp1_input");
 
             // temp1_input is in millidegrees celsius
-            if let Ok(temp_str) = fs::read_to_string(&temp_input_path) {
-                if let Ok(temp_mdeg) = temp_str.trim().parse::<f64>() {
+            if let Ok(temp_str) = fs::read_to_string(&temp_input_path)
+                && let Ok(temp_mdeg) = temp_str.trim().parse::<f64>() {
                     let temp_celsius = temp_mdeg / 1000.0; // Convert millidegrees to degrees
                     tracing::debug!(
                         "Akida {}: Measured temperature = {:.1}°C",
@@ -389,7 +388,6 @@ fn query_temperature(pcie_address: &str) -> f64 {
                     );
                     return temp_celsius;
                 }
-            }
         }
     }
 

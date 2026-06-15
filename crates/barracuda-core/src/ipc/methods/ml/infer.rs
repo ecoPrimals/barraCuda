@@ -112,11 +112,10 @@ pub(in crate::ipc::methods) fn ml_mlp_infer(params: &Value, id: Value) -> JsonRp
             "best_index": best_idx,
         });
 
-        if let Some(ref prov) = providers {
-            if best_idx < prov.len() {
+        if let Some(ref prov) = providers
+            && best_idx < prov.len() {
                 entry["best_provider"] = Value::String(prov[best_idx].clone());
             }
-        }
 
         results.push(entry);
     }
@@ -144,11 +143,10 @@ pub(super) fn extract_telemetry_feature(
 
     if let Some(method) = record.get("method").and_then(|v| v.as_str()) {
         let domain = method.split('.').next().unwrap_or(method);
-        if let Some(idx) = domain_index.and_then(|di| di.get(domain)).copied() {
-            if idx < 32 {
+        if let Some(idx) = domain_index.and_then(|di| di.get(domain)).copied()
+            && idx < 32 {
                 feature[idx] = 1.0;
             }
-        }
     }
 
     let latency_ms = record

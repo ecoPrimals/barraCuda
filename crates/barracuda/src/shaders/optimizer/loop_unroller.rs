@@ -56,8 +56,8 @@ impl WgslLoopUnroller {
             if let Some(hint_n) = parse_unroll_hint(trimmed) {
                 // Next non-blank line should be the `for (var k = 0u; ...` header
                 let for_start = find_next_for_loop(&lines, i + 1);
-                if let Some(for_idx) = for_start {
-                    if let Some(unrolled) = try_unroll_loop(&lines, for_idx, hint_n) {
+                if let Some(for_idx) = for_start
+                    && let Some(unrolled) = try_unroll_loop(&lines, for_idx, hint_n) {
                         // Emit the hint comment (as documentation)
                         output.push_str(line);
                         output.push('\n');
@@ -68,7 +68,6 @@ impl WgslLoopUnroller {
                         i = loop_end + 1;
                         continue;
                     }
-                }
             }
 
             output.push_str(line);

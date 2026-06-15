@@ -78,13 +78,11 @@ impl Drop for DispatchPermit<'_> {
 /// Respects `BARRACUDA_CONCURRENCY_BUDGET` env override for tuning on
 /// exotic hardware without a code change.
 pub(crate) fn concurrency_budget(device_type: wgpu::DeviceType) -> usize {
-    if let Ok(val) = std::env::var(CONCURRENCY_BUDGET_ENV) {
-        if let Ok(n) = val.parse::<usize>() {
-            if n > 0 {
+    if let Ok(val) = std::env::var(CONCURRENCY_BUDGET_ENV)
+        && let Ok(n) = val.parse::<usize>()
+            && n > 0 {
                 return n;
             }
-        }
-    }
 
     match device_type {
         wgpu::DeviceType::Cpu => CONCURRENCY_BUDGET_CPU,

@@ -295,11 +295,10 @@ pub fn find_peaks_cpu(
             continue;
         }
 
-        if let Some(h) = min_height {
-            if val < h {
+        if let Some(h) = min_height
+            && val < h {
                 continue;
             }
-        }
 
         // Prominence: scan left/right for min valley before higher peak
         let mut left_min = val;
@@ -318,11 +317,10 @@ pub fn find_peaks_cpu(
         }
         let prominence = val - left_min.max(right_min);
 
-        if let Some(mp) = min_prominence {
-            if prominence < mp {
+        if let Some(mp) = min_prominence
+            && prominence < mp {
                 continue;
             }
-        }
 
         let width = PeakDetectF64::compute_width(signal, i, prominence);
 

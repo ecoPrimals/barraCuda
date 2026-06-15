@@ -158,11 +158,10 @@ pub fn extract_wgsl_function(source: &str, name: &str) -> Option<String> {
         for (i, line) in prev_lines.iter().enumerate() {
             let trimmed = line.trim();
             if trimmed.starts_with("///") || trimmed.starts_with("//") || trimmed.is_empty() {
-                if i == 0 {
-                    if let Some(pos) = before.rfind(line) {
+                if i == 0
+                    && let Some(pos) = before.rfind(line) {
                         doc_start = pos;
                     }
-                }
             } else {
                 break;
             }

@@ -162,16 +162,14 @@ impl CrankNicolson {
 
                 // Neumann zero-flux: no extra boundary term (ghost already in u_left/u_right)
                 // Dirichlet: add implicit boundary contribution
-                if i == 0 {
-                    if let BoundaryCondition::Dirichlet(l) = left_bc {
+                if i == 0
+                    && let BoundaryCondition::Dirichlet(l) = left_bc {
                         rhs[i] += (r / 2.0) * l;
                     }
-                }
-                if i == n - 1 {
-                    if let BoundaryCondition::Dirichlet(r_val) = right_bc {
+                if i == n - 1
+                    && let BoundaryCondition::Dirichlet(r_val) = right_bc {
                         rhs[i] += (r / 2.0) * r_val;
                     }
-                }
             }
 
             // Thomas algorithm with Neumann-modified first/last rows

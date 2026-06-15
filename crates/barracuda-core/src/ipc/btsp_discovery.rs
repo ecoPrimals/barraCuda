@@ -16,7 +16,7 @@ use crate::env_keys;
 const SECURITY_DOMAIN: &str = "crypto";
 
 /// Discover the security-domain socket for BTSP handshake delegation.
-pub(super) fn discover_security_provider() -> Option<std::path::PathBuf> {
+pub fn discover_security_provider() -> Option<std::path::PathBuf> {
     if let Ok(path) = std::env::var(env_keys::BTSP_PROVIDER_SOCKET) {
         let p = std::path::PathBuf::from(&path);
         if p.exists() {
@@ -58,7 +58,7 @@ pub(super) fn discover_security_provider() -> Option<std::path::PathBuf> {
 }
 
 /// Resolve a capability via Songbird's `DISCOVERY_SOCKET` using `ipc.resolve`.
-pub(super) async fn resolve_via_discovery_socket(capability: &str) -> Option<std::path::PathBuf> {
+pub async fn resolve_via_discovery_socket(capability: &str) -> Option<std::path::PathBuf> {
     let discovery_path = std::env::var(env_keys::DISCOVERY_SOCKET).ok()?;
     if !std::path::Path::new(&discovery_path).exists() {
         tracing::debug!(
@@ -94,11 +94,10 @@ fn discover_by_capability(sock_dir: &std::path::Path, method: &str) -> Option<st
     let entries = std::fs::read_dir(sock_dir).ok()?;
     for entry in entries.flatten() {
         let path = entry.path();
-        if path.extension().is_some_and(|ext| ext == "json") {
-            if let Some(sock) = check_discovery_file_for_method(&path, method) {
+        if path.extension().is_some_and(|ext| ext == "json")
+            && let Some(sock) = check_discovery_file_for_method(&path, method) {
                 return Some(sock);
             }
-        }
     }
     None
 }

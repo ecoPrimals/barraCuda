@@ -133,12 +133,11 @@ impl ShaderDispatch for CpuShaderDispatch {
             })?;
 
         for b in bindings.iter_mut() {
-            if !b.read_only {
-                if let Some(sim) = sim_bindings.get(&(b.group, b.binding)) {
+            if !b.read_only
+                && let Some(sim) = sim_bindings.get(&(b.group, b.binding)) {
                     let copy_len = b.data.len().min(sim.data.len());
                     b.data[..copy_len].copy_from_slice(&sim.data[..copy_len]);
                 }
-            }
         }
 
         Ok(())

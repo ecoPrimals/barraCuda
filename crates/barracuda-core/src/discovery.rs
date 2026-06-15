@@ -147,11 +147,10 @@ const DISCOVERY_EXCLUDED_DOMAINS: &[&str] = &[
 pub fn discovery_capability_domains() -> Vec<String> {
     let mut domains = BTreeSet::new();
     for method in REGISTERED_METHODS {
-        if let Some(domain) = domain_of(method) {
-            if !DISCOVERY_EXCLUDED_DOMAINS.contains(&domain) {
+        if let Some(domain) = domain_of(method)
+            && !DISCOVERY_EXCLUDED_DOMAINS.contains(&domain) {
                 domains.insert(domain.to_string());
             }
-        }
     }
     domains.into_iter().collect()
 }
@@ -414,11 +413,10 @@ mod tests {
         let caps = discovery_capability_domains();
         let mut expected_domains = BTreeSet::new();
         for method in REGISTERED_METHODS {
-            if let Some(domain) = domain_of(method) {
-                if !DISCOVERY_EXCLUDED_DOMAINS.contains(&domain) {
+            if let Some(domain) = domain_of(method)
+                && !DISCOVERY_EXCLUDED_DOMAINS.contains(&domain) {
                     expected_domains.insert(domain.to_string());
                 }
-            }
         }
         let expected: Vec<String> = expected_domains.into_iter().collect();
         assert_eq!(caps, expected, "discovery caps must match derived domains");

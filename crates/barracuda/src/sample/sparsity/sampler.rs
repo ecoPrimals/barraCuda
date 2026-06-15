@@ -133,13 +133,12 @@ where
         }
 
         // Auto-smoothing via LOO-CV grid search (if enabled)
-        if config.auto_smoothing {
-            if let Ok(result) =
+        if config.auto_smoothing
+            && let Ok(result) =
                 loo_cv_optimal_smoothing(device.clone(), &x_data, &y_data, config.kernel, None)
             {
                 current_smoothing = result.smoothing;
             }
-        }
 
         let Ok(surrogate) = RBFSurrogate::train(
             device.clone(),

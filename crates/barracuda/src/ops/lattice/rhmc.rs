@@ -438,11 +438,10 @@ fn remez_for_poles(sigma: &[f64], power: f64, eval_grid: &[f64]) -> (Vec<f64>, f
                 let last_sign = last.1.signum();
                 if (e.signum() - last_sign).abs() > f64::EPSILON {
                     selected.push((idx, e));
-                } else if selected.last().is_some_and(|l| e.abs() > l.1.abs()) {
-                    if let Some(slot) = selected.last_mut() {
+                } else if selected.last().is_some_and(|l| e.abs() > l.1.abs())
+                    && let Some(slot) = selected.last_mut() {
                         *slot = (idx, e);
                     }
-                }
             }
         }
 

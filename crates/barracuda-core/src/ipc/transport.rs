@@ -47,25 +47,39 @@ fn max_connections() -> usize {
     *MAX_CONNECTIONS
 }
 
-/// riboCipher signal prefix per guideStone amendment.
+/// Genetics-layer signal prefixes per eukaryotic model.
 ///
-/// cellMembrane/NUCLEUS probers send `[0xEC, 0x01]` before JSON-RPC payloads
-/// to signal riboCipher framing intent. Primals that accept this prefix strip
-/// the 2 bytes and continue with normal JSON-RPC parsing. This enables the
-/// deployment infrastructure to distinguish live primals from stale sockets.
-const RIBOCIPHER_PREFIX: [u8; 2] = [0xEC, 0x01];
+/// cellMembrane/NUCLEUS probers send a 2-byte prefix before JSON-RPC payloads
+/// to distinguish live primals from stale sockets and signal transport intent.
+/// Primals strip the prefix and continue with normal JSON-RPC parsing.
+///
+/// | Byte 0 | Stream              | Purpose                              |
+/// |--------|---------------------|--------------------------------------|
+/// | `0xEC` | MitoBeacon v1       | Relay access, mesh, ABG transport    |
+/// | `0xED` | MitoBeacon v2       | Extended mito-beacon (future)        |
+/// | `0xEE` | Nuclear Lineage     | Per-user permissions (BearDog-spawned)|
+///
+/// Byte 1 is a version/sub-type discriminator (currently `0x01`).
+const MITO_BEACON_V1: u8 = 0xEC;
+const MITO_BEACON_V2: u8 = 0xED;
+const NUCLEAR_LINEAGE: u8 = 0xEE;
 
-/// Strip the riboCipher prefix from a BufReader if present.
+/// Strip a genetics-layer signal prefix from a BufReader if present.
 ///
 /// Uses `fill_buf()` to peek at buffered bytes without consuming. If the
-/// first 2 bytes match `[0xEC, 0x01]`, consumes (discards) them. Otherwise
-/// the stream remains untouched for normal JSON-RPC parsing. Works for
-/// both TCP and UDS transports without platform-specific peek syscalls.
-async fn strip_ribocipher<R: AsyncRead + Unpin>(reader: &mut BufReader<R>) -> bool {
+/// first byte matches a known genetics signal (`0xEC`, `0xED`, `0xEE`),
+/// consumes the 2-byte prefix (signal byte + version). Otherwise the stream
+/// remains untouched for normal JSON-RPC parsing. Works for both TCP and UDS
+/// transports without platform-specific peek syscalls.
+async fn strip_genetics_prefix<R: AsyncRead + Unpin>(reader: &mut BufReader<R>) -> bool {
     match reader.fill_buf().await {
-        Ok(buf) if buf.len() >= 2 && buf[..2] == RIBOCIPHER_PREFIX => {
+        Ok(buf)
+            if buf.len() >= 2
+                && matches!(buf[0], MITO_BEACON_V1 | MITO_BEACON_V2 | NUCLEAR_LINEAGE) =>
+        {
+            let signal = buf[0];
             reader.consume(2);
-            tracing::debug!("riboCipher prefix accepted");
+            tracing::debug!(signal = format_args!("0x{signal:02X}"), "genetics prefix accepted");
             true
         }
         _ => false,
@@ -501,7 +515,7 @@ async fn handle_connection<R, W>(
             return;
         }
     let mut buf_reader = BufReader::new(reader);
-    strip_ribocipher(&mut buf_reader).await;
+    strip_genetics_prefix(&mut buf_reader).await;
     loop {
         let line = {
             let mut lines = (&mut buf_reader).lines();

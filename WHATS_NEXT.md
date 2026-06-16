@@ -1,10 +1,18 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-06-15.
+Prioritized work items, ordered by impact. Updated 2026-06-16.
 
 ---
 
 ## Recently Completed
+
+- **Wave 114: Genetics-Layer Wiring — Eukaryotic Model (Jun 16)**:
+  Evolved `strip_ribocipher` → `strip_genetics_prefix` to adopt the centralized
+  mito-beacon accept pattern. Now accepts all genetics-layer signal prefixes:
+  `0xEC` (MitoBeacon v1/riboCipher), `0xED` (MitoBeacon v2), `0xEE` (Nuclear
+  Lineage). 2-byte prefix stripped regardless of sub-type byte. 6 unit tests
+  covering all 3 signal types + plain JSON passthrough + edge cases. Matches
+  petalTongue reference implementation. Release binary rebuilt.
 
 - **Deep Debt Evolution Pass (Jun 15)**:
   MSRV bumped to 1.92. All 83 `collapsible_if` lints resolved via let-chain

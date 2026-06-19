@@ -275,17 +275,18 @@ async fn dispatch_submit_shader(
 
     let mut resp = dispatch_submit_tensor_inner(primal, data_arr).await;
     if let Some(ref mut output) = resp.output
-        && let Some(obj) = output.as_object_mut() {
-            obj.insert("routed".into(), Value::Bool(false));
-            obj.insert(
-                "note".into(),
-                Value::String(
-                    "binary_b64 ignored — no dispatch peer available; \
+        && let Some(obj) = output.as_object_mut()
+    {
+        obj.insert("routed".into(), Value::Bool(false));
+        obj.insert(
+            "note".into(),
+            Value::String(
+                "binary_b64 ignored — no dispatch peer available; \
                      tensor passthrough used"
-                        .into(),
-                ),
-            );
-        }
+                    .into(),
+            ),
+        );
+    }
 
     let job_id = generate_job_id();
     let is_completed = resp.status == DispatchStatus::Completed;
@@ -444,7 +445,9 @@ async fn try_forward_to_dispatch_peer(params: &Value) -> Option<ForwardedResult>
     }
 
     let disc_endpoint = crate::ipc::transport::TransportEndpoint::uds(&discovery_path);
-    let stream = crate::ipc::transport::connect_transport(&disc_endpoint).await.ok()?;
+    let stream = crate::ipc::transport::connect_transport(&disc_endpoint)
+        .await
+        .ok()?;
     let mut buf_reader = tokio::io::BufReader::new(stream);
 
     let resolve_req = serde_json::json!({
@@ -477,7 +480,9 @@ async fn try_forward_to_dispatch_peer(params: &Value) -> Option<ForwardedResult>
     let peer_socket = sock_path.to_string_lossy().into_owned();
 
     let peer_endpoint = crate::ipc::transport::TransportEndpoint::uds(&peer_socket);
-    let peer_stream = crate::ipc::transport::connect_transport(&peer_endpoint).await.ok()?;
+    let peer_stream = crate::ipc::transport::connect_transport(&peer_endpoint)
+        .await
+        .ok()?;
     let mut peer_buf = tokio::io::BufReader::new(peer_stream);
 
     let forward_req = serde_json::json!({

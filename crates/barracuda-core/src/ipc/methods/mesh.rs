@@ -101,19 +101,17 @@ pub(super) fn mesh_health(id: Value) -> JsonRpcResponse {
 }
 
 fn has_socket_in(dir: &std::path::Path, prefix: &str) -> bool {
-    dir.read_dir()
-        .map(|entries| {
-            entries.filter_map(Result::ok).any(|e| {
-                let name = e.file_name();
-                let path = std::path::Path::new(&name);
-                let matches_prefix = path.to_str().is_some_and(|n| n.starts_with(prefix));
-                let is_sock = path
-                    .extension()
-                    .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"));
-                matches_prefix && is_sock
-            })
+    dir.read_dir().is_ok_and(|entries| {
+        entries.filter_map(Result::ok).any(|e| {
+            let name = e.file_name();
+            let path = std::path::Path::new(&name);
+            let matches_prefix = path.to_str().is_some_and(|n| n.starts_with(prefix));
+            let is_sock = path
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"));
+            matches_prefix && is_sock
         })
-        .unwrap_or(false)
+    })
 }
 
 #[cfg(test)]

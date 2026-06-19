@@ -88,7 +88,7 @@ impl NoseHooverChain {
         // dξ/dt = (KE - KE_target) / Q
         // Half-step: ξ += (dt/2) * (KE - KE_target) / Q
         let dxi_dt = (ke_total - ke_target) / self.q_mass;
-        self.xi += 0.5 * self.dt * dxi_dt;
+        self.xi = (0.5 * self.dt).mul_add(dxi_dt, self.xi);
     }
 
     /// Get current thermostat temperature

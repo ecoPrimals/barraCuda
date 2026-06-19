@@ -31,7 +31,7 @@ impl SpectralCsrMatrix {
         for (i, yi) in y.iter_mut().enumerate().take(self.n) {
             let mut sum = 0.0;
             for j in self.row_ptr[i]..self.row_ptr[i + 1] {
-                sum += self.values[j] * x[self.col_idx[j]];
+                sum = self.values[j].mul_add(x[self.col_idx[j]], sum);
             }
             *yi = sum;
         }

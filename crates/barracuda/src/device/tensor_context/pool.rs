@@ -38,6 +38,10 @@ impl PooledBuffer {
     /// Never panics: buffer is `None` only after [`into_buffer`](Self::into_buffer) (consumes self)
     /// or during `Drop`; this method is not used in those states.
     #[must_use]
+    #[expect(
+        clippy::expect_used,
+        reason = "Option::Some invariant: buffer is taken only by into_buffer/Drop, which consume self"
+    )]
     pub fn buffer(&self) -> &wgpu::Buffer {
         // Invariant: buffer is Some from construction until into_buffer/Drop.
         self.buffer
@@ -58,6 +62,10 @@ impl PooledBuffer {
     /// Unreachable by construction: `into_buffer` consumes `self` so it
     /// cannot be called twice.
     #[must_use]
+    #[expect(
+        clippy::expect_used,
+        reason = "into_buffer consumes self; Option::None here means double-call (unreachable)"
+    )]
     pub fn into_buffer(mut self) -> wgpu::Buffer {
         // Invariant: buffer is Some; into_buffer consumes self so only called once.
         self.buffer
@@ -69,6 +77,10 @@ impl PooledBuffer {
 impl Deref for PooledBuffer {
     type Target = wgpu::Buffer;
 
+    #[expect(
+        clippy::expect_used,
+        reason = "Deref requires &T; buffer is Some until into_buffer/Drop consume self"
+    )]
     fn deref(&self) -> &Self::Target {
         self.buffer
             .as_ref()
@@ -79,9 +91,10 @@ impl Deref for PooledBuffer {
 impl Drop for PooledBuffer {
     fn drop(&mut self) {
         if let Some(buffer) = self.buffer.take()
-            && let Some(pool) = self.pool.upgrade() {
-                pool.defer_return(buffer, self.bucket);
-            }
+            && let Some(pool) = self.pool.upgrade()
+        {
+            pool.defer_return(buffer, self.bucket);
+        }
     }
 }
 

@@ -105,7 +105,7 @@ impl BornMayerForceF64 {
                 let r = r_sq.sqrt();
                 let a = (a_params[i] * a_params[j]).sqrt();
                 let rho = (rho_params[i] + rho_params[j]) * 0.5;
-                energy += a * (-r / rho).exp();
+                energy = a.mul_add((-r / rho).exp(), energy);
             }
         }
 
@@ -231,9 +231,9 @@ impl BornMayerForceF64 {
                 let force_mag = (a / rho) * exp_term;
 
                 let inv_r = 1.0 / r;
-                forces[i * 3] += force_mag * r_vec[0] * inv_r;
-                forces[i * 3 + 1] += force_mag * r_vec[1] * inv_r;
-                forces[i * 3 + 2] += force_mag * r_vec[2] * inv_r;
+                forces[i * 3] = (force_mag * r_vec[0]).mul_add(inv_r, forces[i * 3]);
+                forces[i * 3 + 1] = (force_mag * r_vec[1]).mul_add(inv_r, forces[i * 3 + 1]);
+                forces[i * 3 + 2] = (force_mag * r_vec[2]).mul_add(inv_r, forces[i * 3 + 2]);
             }
         }
 
@@ -282,7 +282,7 @@ impl BornMayerForceF64 {
                 let exp_term = (-r / rho).exp();
 
                 // U = A * exp(-r/ρ)
-                energy += a * exp_term;
+                energy = a.mul_add(exp_term, energy);
 
                 // F = (A/ρ) * exp(-r/ρ) * r̂
                 let force_mag = (a / rho) * exp_term;

@@ -169,7 +169,7 @@ fn compute_mean_ipr(eigenvectors: &[f64], n: usize) -> f64 {
         let mut ipr = 0.0;
         for row in 0..n {
             let v = eigenvectors[row * n + col];
-            ipr += v * v * v * v;
+            ipr = (v * v * v).mul_add(v, ipr);
         }
         total_ipr += ipr;
     }
@@ -186,7 +186,7 @@ fn compute_spectral_entropy(eigenvalues: &[f64]) -> f64 {
     for &ev in eigenvalues {
         let p = ev.abs() / total;
         if p > 1e-300 {
-            entropy -= p * p.ln();
+            entropy = p.mul_add(-p.ln(), entropy);
         }
     }
     entropy

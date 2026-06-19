@@ -483,7 +483,7 @@ fn solve_symmetric_positive(m: usize, a: &mut [f64], b: &mut [f64]) {
     for j in 0..m {
         let mut s = a[j * m + j];
         for k in 0..j {
-            s -= a[j * m + k] * a[j * m + k];
+            s = a[j * m + k].mul_add(-a[j * m + k], s);
         }
         if s <= 0.0 {
             // Not positive definite — zero out remaining gammas
@@ -496,7 +496,7 @@ fn solve_symmetric_positive(m: usize, a: &mut [f64], b: &mut [f64]) {
         for i in (j + 1)..m {
             let mut s = a[i * m + j];
             for k in 0..j {
-                s -= a[i * m + k] * a[j * m + k];
+                s = a[i * m + k].mul_add(-a[j * m + k], s);
             }
             a[i * m + j] = s / ljj;
         }
@@ -506,7 +506,7 @@ fn solve_symmetric_positive(m: usize, a: &mut [f64], b: &mut [f64]) {
     for i in 0..m {
         let mut s = b[i];
         for k in 0..i {
-            s -= a[i * m + k] * b[k];
+            s = a[i * m + k].mul_add(-b[k], s);
         }
         b[i] = s / a[i * m + i];
     }
@@ -515,7 +515,7 @@ fn solve_symmetric_positive(m: usize, a: &mut [f64], b: &mut [f64]) {
     for i in (0..m).rev() {
         let mut s = b[i];
         for k in (i + 1)..m {
-            s -= a[k * m + i] * b[k];
+            s = a[k * m + i].mul_add(-b[k], s);
         }
         b[i] = s / a[i * m + i];
     }

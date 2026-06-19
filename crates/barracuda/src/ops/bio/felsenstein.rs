@@ -143,7 +143,7 @@ impl FelsensteinResult {
         for site in 0..self.n_sites {
             let mut site_lik = 0.0_f64;
             for s in 0..self.n_states {
-                site_lik += pi[s] * root[site * self.n_states + s];
+                site_lik = pi[s].mul_add(root[site * self.n_states + s], site_lik);
             }
             log_lik += site_lik.max(f64::MIN_POSITIVE).ln();
         }

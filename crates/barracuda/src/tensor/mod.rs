@@ -42,7 +42,7 @@ use std::sync::Arc;
 /// let y = x.relu()?;
 /// let z = y.softmax(0)?;
 ///
-/// println!("Executed on: {}", x.device().name());
+/// tracing::info!("Executed on: {}", x.device().name());
 /// ```
 pub struct Tensor {
     /// GPU buffer - either owned or pooled

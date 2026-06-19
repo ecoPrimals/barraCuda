@@ -226,8 +226,8 @@ impl HeatEquation1D {
         }
 
         // Add boundary contributions to first and last equations
-        rhs[0] += (self.r / 2.0) * self.config.left_bc;
-        rhs[n - 1] += (self.r / 2.0) * self.config.right_bc;
+        rhs[0] = (self.r / 2.0).mul_add(self.config.left_bc, rhs[0]);
+        rhs[n - 1] = (self.r / 2.0).mul_add(self.config.right_bc, rhs[n - 1]);
 
         // Solve the tridiagonal system
         self.u = tridiagonal_solve(&self.a, &self.b, &self.c, &rhs)?;
@@ -307,11 +307,12 @@ impl CrankNicolson1D {
 
         // Add source contribution (forward Euler for simplicity)
         if let Some(src) = source
-            && src.len() == self.heat.u.len() {
-                for (u, s) in self.heat.u.iter_mut().zip(src.iter()) {
-                    *u += self.heat.config.dt * s;
-                }
+            && src.len() == self.heat.u.len()
+        {
+            for (u, s) in self.heat.u.iter_mut().zip(src.iter()) {
+                *u += self.heat.config.dt * s;
             }
+        }
 
         Ok(result)
     }
@@ -376,8 +377,8 @@ pub fn crank_nicolson_step(
         let u_right = if i == n - 1 { right_bc } else { u[i + 1] };
         rhs[i] = (1.0 - r).mul_add(u[i], (r / 2.0) * (u_left + u_right));
     }
-    rhs[0] += (r / 2.0) * left_bc;
-    rhs[n - 1] += (r / 2.0) * right_bc;
+    rhs[0] = (r / 2.0).mul_add(left_bc, rhs[0]);
+    rhs[n - 1] = (r / 2.0).mul_add(right_bc, rhs[n - 1]);
 
     tridiagonal_solve(&a, &b, &c, &rhs)
 }

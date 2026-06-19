@@ -33,7 +33,7 @@
 //!
 //! // Forecast next 10 steps
 //! let forecast = analyzer.forecast(&history, 10).await?;
-//! println!("Forecast: {:?}", forecast.values);
+//! tracing::info!("Forecast: {:?}", forecast.values);
 //! # Ok(())
 //! # }
 //! ```

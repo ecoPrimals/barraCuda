@@ -51,7 +51,7 @@ impl QrDecomposition {
         let mut qtb = vec![0.0; self.m];
         for (i, qtb_i) in qtb.iter_mut().enumerate() {
             for (j, &b_j) in b.iter().enumerate() {
-                *qtb_i += self.q[j * self.m + i] * b_j; // Q^T
+                *qtb_i = self.q[j * self.m + i].mul_add(b_j, *qtb_i); // Q^T
             }
         }
 
@@ -60,7 +60,7 @@ impl QrDecomposition {
         for i in (0..self.n).rev() {
             let mut sum = qtb[i];
             for (j, &x_j) in x.iter().enumerate().skip(i + 1) {
-                sum -= self.r[i * self.n + j] * x_j;
+                sum = self.r[i * self.n + j].mul_add(-x_j, sum);
             }
             let diag = self.r[i * self.n + i];
             if diag.abs() < 1e-14 {
@@ -127,7 +127,7 @@ pub fn qr_decompose(a: &[f64], m: usize, n: usize) -> Result<QrDecomposition> {
     }
 
     // Initialize Q as identity, R as copy of A
-    let mut q = vec![0.0; m * m];
+    let mut q = vec![0.0_f64; m * m];
     for i in 0..m {
         q[i * m + i] = 1.0;
     }
@@ -144,7 +144,7 @@ pub fn qr_decompose(a: &[f64], m: usize, n: usize) -> Result<QrDecomposition> {
         // Compute Householder vector for column k
         let mut norm_sq = 0.0;
         for i in k..m {
-            norm_sq += r[i * n + k] * r[i * n + k];
+            norm_sq = r[i * n + k].mul_add(r[i * n + k], norm_sq);
         }
         let norm = norm_sq.sqrt();
 
@@ -166,7 +166,7 @@ pub fn qr_decompose(a: &[f64], m: usize, n: usize) -> Result<QrDecomposition> {
         // Normalize v
         let mut v_norm_sq = 0.0;
         for &vi in &v[k..] {
-            v_norm_sq += vi * vi;
+            v_norm_sq = vi.mul_add(vi, v_norm_sq);
         }
 
         if v_norm_sq < 1e-28 {
@@ -180,7 +180,7 @@ pub fn qr_decompose(a: &[f64], m: usize, n: usize) -> Result<QrDecomposition> {
         for j in k..n {
             let mut dot = 0.0;
             for i in k..m {
-                dot += v[i] * r[i * n + j];
+                dot = v[i].mul_add(r[i * n + j], dot);
             }
             dot *= beta;
             for i in k..m {
@@ -190,13 +190,13 @@ pub fn qr_decompose(a: &[f64], m: usize, n: usize) -> Result<QrDecomposition> {
 
         // Apply to Q: Q = Q (I - 2vv^T/‖v‖²) = Q - 2 (Qv) v^T / ‖v‖²
         for i in 0..m {
-            let mut dot = 0.0;
+            let mut dot = 0.0_f64;
             for j in k..m {
-                dot += q[i * m + j] * v[j];
+                dot = q[i * m + j].mul_add(v[j], dot);
             }
             dot *= beta;
             for j in k..m {
-                q[i * m + j] -= dot * v[j];
+                q[i * m + j] = dot.mul_add(-v[j], q[i * m + j]);
             }
         }
     }
@@ -241,7 +241,7 @@ mod tests {
             for j in 0..2 {
                 let mut dot = 0.0;
                 for k in 0..2 {
-                    dot += qr.q[k * 2 + i] * qr.q[k * 2 + j];
+                    dot = qr.q[k * 2 + i].mul_add(qr.q[k * 2 + j], dot);
                 }
                 let expected = if i == j { 1.0 } else { 0.0 };
                 assert!(approx_eq(dot, expected, 1e-10), "Q^TQ[{i},{j}] = {dot}");
@@ -253,7 +253,7 @@ mod tests {
             for j in 0..2 {
                 let mut val = 0.0;
                 for k in 0..2 {
-                    val += qr.q[i * 2 + k] * qr.r[k * 2 + j];
+                    val = qr.q[i * 2 + k].mul_add(qr.r[k * 2 + j], val);
                 }
                 assert!(
                     approx_eq(val, a[i * 2 + j], 1e-10),
@@ -314,7 +314,7 @@ mod tests {
             for j in 0..2 {
                 let mut val = 0.0;
                 for k in 0..2 {
-                    val += qr.q[i * 2 + k] * qr.r[k * 2 + j];
+                    val = qr.q[i * 2 + k].mul_add(qr.r[k * 2 + j], val);
                 }
                 assert!(approx_eq(val, a[i * 2 + j], 1e-10));
             }
@@ -336,7 +336,7 @@ mod tests {
             for j in 0..3 {
                 let mut dot = 0.0;
                 for k in 0..3 {
-                    dot += qr.q[k * 3 + i] * qr.q[k * 3 + j];
+                    dot = qr.q[k * 3 + i].mul_add(qr.q[k * 3 + j], dot);
                 }
                 let expected = if i == j { 1.0 } else { 0.0 };
                 assert!(approx_eq(dot, expected, 1e-10));

@@ -10,6 +10,7 @@
 mod compute_tests;
 mod dispatch_pipeline_tests;
 mod fhe_tests;
+mod linalg_tridiag_tests;
 mod math_stats_tests;
 mod ml_tests;
 mod noise_rng_activation_tests;

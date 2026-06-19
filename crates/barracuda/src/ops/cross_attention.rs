@@ -92,7 +92,7 @@ pub async fn cross_attention(
                             + h * encoder_len * head_dim
                             + j * head_dim
                             + d;
-                        score += query[q_idx] * key[k_idx];
+                        score = query[q_idx].mul_add(key[k_idx], score);
                     }
                     *score_slot = score / scale;
                 }
@@ -116,7 +116,7 @@ pub async fn cross_attention(
                             + h * encoder_len * head_dim
                             + j * head_dim
                             + d;
-                        weighted_sum += s_j * value[v_idx];
+                        weighted_sum = s_j.mul_add(value[v_idx], weighted_sum);
                     }
                     let out_idx = b * num_heads * decoder_len * head_dim
                         + h * decoder_len * head_dim

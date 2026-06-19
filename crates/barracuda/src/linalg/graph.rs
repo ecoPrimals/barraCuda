@@ -47,7 +47,7 @@ pub fn belief_propagation_chain(
         let mut next = vec![0.0; out_dim];
         for j in 0..out_dim {
             for i in 0..in_dim {
-                next[j] += current[i] * trans[i * out_dim + j];
+                next[j] = current[i].mul_add(trans[i * out_dim + j], next[j]);
             }
         }
         let sum: f64 = next.iter().sum();
@@ -77,7 +77,7 @@ pub fn disordered_laplacian(
     let mean: f64 = heterogeneity.iter().sum::<f64>() / n as f64;
     let mut result = laplacian.to_vec();
     for i in 0..n {
-        result[i * n + i] += disorder_strength * (heterogeneity[i] - mean);
+        result[i * n + i] = disorder_strength.mul_add(heterogeneity[i] - mean, result[i * n + i]);
     }
     result
 }
@@ -96,7 +96,7 @@ pub fn effective_rank(eigenvalues: &[f64]) -> f64 {
     for &v in &abs_vals {
         let p = v / total;
         if p > 1e-300 {
-            entropy -= p * p.ln();
+            entropy = p.mul_add(-p.ln(), entropy);
         }
     }
     entropy.exp()

@@ -115,7 +115,7 @@ impl SimpleRng {
 ///     42,
 /// ).unwrap();
 ///
-/// println!("Mean: {}", ci.summary());
+/// tracing::info!("Mean: {}", ci.summary());
 /// assert!(ci.lower < 5.5 && ci.upper > 5.5);  // True mean is 5.5
 /// ```
 pub fn bootstrap_ci<F>(
@@ -208,7 +208,7 @@ where
 ///
 /// let data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
 /// let ci = bootstrap_mean(&data, 1000, 0.95, 42).unwrap();
-/// println!("Mean: {}", ci.summary());
+/// tracing::info!("Mean: {}", ci.summary());
 /// ```
 pub fn bootstrap_mean(
     data: &[f64],
@@ -238,7 +238,7 @@ pub fn bootstrap_mean(
 ///
 /// let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 100.0];  // Outlier
 /// let ci = bootstrap_median(&data, 1000, 0.95, 42).unwrap();
-/// println!("Median: {}", ci.summary());  // Robust to outlier
+/// tracing::info!("Median: {}", ci.summary());  // Robust to outlier
 /// ```
 pub fn bootstrap_median(
     data: &[f64],
@@ -363,7 +363,7 @@ pub fn rawr_mean(
 ///
 /// let data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
 /// let ci = bootstrap_std(&data, 1000, 0.95, 42).unwrap();
-/// println!("Std: {}", ci.summary());
+/// tracing::info!("Std: {}", ci.summary());
 /// ```
 pub fn bootstrap_std(
     data: &[f64],

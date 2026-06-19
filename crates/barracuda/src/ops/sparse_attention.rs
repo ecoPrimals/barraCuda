@@ -48,7 +48,7 @@ pub async fn sparse_attention(
                             + h * seq_len * head_dim
                             + j * head_dim
                             + d;
-                        score += query[q_idx] * key[k_idx];
+                        score = query[q_idx].mul_add(key[k_idx], score);
                     }
                     scores[j] = score / scale;
                 }
@@ -78,7 +78,7 @@ pub async fn sparse_attention(
                             + h * seq_len * head_dim
                             + j * head_dim
                             + d;
-                        weighted_sum += score * value[v_idx];
+                        weighted_sum = score.mul_add(value[v_idx], weighted_sum);
                     }
                     let out_idx = b * num_heads * seq_len * head_dim
                         + h * seq_len * head_dim

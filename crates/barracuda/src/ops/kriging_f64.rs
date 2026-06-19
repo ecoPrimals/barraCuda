@@ -272,14 +272,14 @@ impl KrigingF64 {
             // Interpolate: z* = Σ w_i * z_i
             let mut z_interp = 0.0;
             for i in 0..n {
-                z_interp += weights[i] * known_points[i].2;
+                z_interp = weights[i].mul_add(known_points[i].2, z_interp);
             }
 
             // Kriging variance: σ² = sill - Σ w_i * k_i - λ
             let (_, sill, _, _) = variogram.params();
             let mut variance_sum = 0.0;
             for i in 0..n {
-                variance_sum += weights[i] * k_vec[i];
+                variance_sum = weights[i].mul_add(k_vec[i], variance_sum);
             }
             variance_sum += weights[n]; // Lagrange multiplier
             let variance = sill - variance_sum;
@@ -354,14 +354,14 @@ impl KrigingF64 {
             // Interpolate: z* = μ + Σ w_i * (z_i - μ)
             let mut z_interp = mean;
             for i in 0..n {
-                z_interp += weights[i] * (known_points[i].2 - mean);
+                z_interp = weights[i].mul_add(known_points[i].2 - mean, z_interp);
             }
 
             // Simple kriging variance
             let (_, sill, _, _) = variogram.params();
             let mut variance_sum = 0.0;
             for i in 0..n {
-                variance_sum += weights[i] * k_vec[i];
+                variance_sum = weights[i].mul_add(k_vec[i], variance_sum);
             }
             let variance = sill - variance_sum;
 
@@ -421,7 +421,7 @@ impl KrigingF64 {
             for i in (k + 1)..n {
                 lu[i * n + k] /= lu[k * n + k];
                 for j in (k + 1)..n {
-                    lu[i * n + j] -= lu[i * n + k] * lu[k * n + j];
+                    lu[i * n + j] = lu[i * n + k].mul_add(-lu[k * n + j], lu[i * n + j]);
                 }
             }
         }
@@ -431,7 +431,7 @@ impl KrigingF64 {
         for i in 0..n {
             y[i] = b[perm[i]];
             for j in 0..i {
-                y[i] -= lu[i * n + j] * y[j];
+                y[i] = lu[i * n + j].mul_add(-y[j], y[i]);
             }
         }
 
@@ -440,7 +440,7 @@ impl KrigingF64 {
         for i in (0..n).rev() {
             x[i] = y[i];
             for j in (i + 1)..n {
-                x[i] -= lu[i * n + j] * x[j];
+                x[i] = lu[i * n + j].mul_add(-x[j], x[i]);
             }
             x[i] /= lu[i * n + i];
         }
@@ -476,7 +476,7 @@ impl KrigingF64 {
                 let lag_idx = (h / lag_width).floor() as usize;
                 if lag_idx < n_lags {
                     let diff = known_points[i].2 - known_points[j].2;
-                    lag_semivariances[lag_idx] += diff * diff;
+                    lag_semivariances[lag_idx] = diff.mul_add(diff, lag_semivariances[lag_idx]);
                     lag_distances[lag_idx] += h;
                     lag_counts[lag_idx] += 1;
                 }

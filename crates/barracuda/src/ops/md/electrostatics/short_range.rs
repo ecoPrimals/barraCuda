@@ -221,9 +221,9 @@ pub fn dipole_correction(
     let mut mz = 0.0;
 
     for (pos, &q) in positions.iter().zip(charges.iter()) {
-        mx += q * pos[0];
-        my += q * pos[1];
-        mz += q * pos[2];
+        mx = q.mul_add(pos[0], mx);
+        my = q.mul_add(pos[1], my);
+        mz = q.mul_add(pos[2], mz);
     }
 
     let m_sq = mx * mx + my * my + mz * mz;

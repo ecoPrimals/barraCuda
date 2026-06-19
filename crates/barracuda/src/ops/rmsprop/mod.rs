@@ -112,12 +112,13 @@ impl RMSprop {
 
         // Validate sq_avg shape if provided
         if let Some(ref sq) = sq_avg
-            && sq.shape() != weights.shape() {
-                return Err(BarracudaError::shape_mismatch(
-                    sq.shape().to_vec(),
-                    weights.shape().to_vec(),
-                ));
-            }
+            && sq.shape() != weights.shape()
+        {
+            return Err(BarracudaError::shape_mismatch(
+                sq.shape().to_vec(),
+                weights.shape().to_vec(),
+            ));
+        }
 
         Ok(Self {
             weights,

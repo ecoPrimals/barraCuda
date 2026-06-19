@@ -61,9 +61,7 @@ pub fn discover_security_provider() -> Option<std::path::PathBuf> {
 pub async fn resolve_via_discovery_socket(capability: &str) -> Option<std::path::PathBuf> {
     let discovery_path = std::env::var(env_keys::DISCOVERY_SOCKET).ok()?;
     if !std::path::Path::new(&discovery_path).exists() {
-        tracing::debug!(
-            "DISCOVERY_SOCKET={discovery_path} set but socket does not exist",
-        );
+        tracing::debug!("DISCOVERY_SOCKET={discovery_path} set but socket does not exist",);
         return None;
     }
 
@@ -95,9 +93,10 @@ fn discover_by_capability(sock_dir: &std::path::Path, method: &str) -> Option<st
     for entry in entries.flatten() {
         let path = entry.path();
         if path.extension().is_some_and(|ext| ext == "json")
-            && let Some(sock) = check_discovery_file_for_method(&path, method) {
-                return Some(sock);
-            }
+            && let Some(sock) = check_discovery_file_for_method(&path, method)
+        {
+            return Some(sock);
+        }
     }
     None
 }

@@ -111,7 +111,7 @@ impl GenEighDecompositionGpu {
             let mut ax = vec![0.0; n];
             for row in 0..n {
                 for col in 0..n {
-                    ax[row] += a[row * n + col] * x[col];
+                    ax[row] = a[row * n + col].mul_add(x[col], ax[row]);
                 }
             }
 
@@ -119,7 +119,7 @@ impl GenEighDecompositionGpu {
             let mut lbx = vec![0.0; n];
             for row in 0..n {
                 for col in 0..n {
-                    lbx[row] += lambda * b[row * n + col] * x[col];
+                    lbx[row] = (lambda * b[row * n + col]).mul_add(x[col], lbx[row]);
                 }
             }
 
@@ -333,7 +333,7 @@ fn solve_lower_triangular_matrix(l: &[f64], a: &[f64], n: usize) -> Vec<f64> {
         for i in 0..n {
             let mut sum = y[i];
             for j in 0..i {
-                sum -= l[i * n + j] * y[j];
+                sum = l[i * n + j].mul_add(-y[j], sum);
             }
             let diag = l[i * n + i];
             y[i] = if diag.abs() > 1e-15 { sum / diag } else { 0.0 };
@@ -359,7 +359,7 @@ fn compute_symmetric_transform(l: &[f64], l_inv_a: &[f64], n: usize) -> Vec<f64>
         for row in 0..n {
             let mut sum = if row == i { 1.0 } else { 0.0 };
             for k in 0..row {
-                sum -= l[row * n + k] * x[k];
+                sum = l[row * n + k].mul_add(-x[k], sum);
             }
             let diag = l[row * n + row];
             x[row] = if diag.abs() > 1e-15 { sum / diag } else { 0.0 };
@@ -377,7 +377,7 @@ fn compute_symmetric_transform(l: &[f64], l_inv_a: &[f64], n: usize) -> Vec<f64>
             let mut sum = 0.0;
             for k in 0..n {
                 // Y[i,k] * L⁻ᵀ[k,j] = Y[i,k] * L⁻¹[j,k]
-                sum += l_inv_a[i * n + k] * l_inv[j * n + k];
+                sum = l_inv_a[i * n + k].mul_add(l_inv[j * n + k], sum);
             }
             c[i * n + j] = sum;
         }
@@ -404,7 +404,7 @@ fn back_transform_eigenvectors(l: &[f64], eigenvectors_c: &[f64], n: usize) -> V
             let mut sum = y[i];
             for j in (i + 1)..n {
                 // Lᵀ[i,j] = L[j,i]
-                sum -= l[j * n + i] * x[j];
+                sum = l[j * n + i].mul_add(-x[j], sum);
             }
             let diag = l[i * n + i];
             x[i] = if diag.abs() > 1e-15 { sum / diag } else { 0.0 };

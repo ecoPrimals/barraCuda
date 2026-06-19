@@ -97,7 +97,7 @@ impl ConvergenceDiagnostics {
 ///
 /// let diag = convergence_diagnostics(&history, 5, 0.01, 3).unwrap();
 ///
-/// println!("{}", diag.summary());
+/// tracing::info!("{}", diag.summary());
 /// ```
 ///
 /// # Errors
@@ -220,7 +220,7 @@ fn linear_slope(values: &[f64]) -> f64 {
 
     for (i, &y) in values.iter().enumerate() {
         let x = i as f64;
-        numerator += (x - x_mean) * (y - y_mean);
+        numerator = (x - x_mean).mul_add(y - y_mean, numerator);
         denominator += (x - x_mean).powi(2);
     }
 

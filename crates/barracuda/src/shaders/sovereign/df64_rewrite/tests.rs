@@ -399,7 +399,7 @@ fn test_fault_dedup_removes_nested() {
         },
     ];
     // sorted by span_start descending
-    replacements.sort_by(|a, b| b.span_start.cmp(&a.span_start));
+    replacements.sort_by_key(|r| std::cmp::Reverse(r.span_start));
     dedup_overlapping(&mut replacements);
     assert_eq!(replacements.len(), 1, "nested should be deduped");
     assert_eq!(replacements[0].text, "outer", "outermost should survive");

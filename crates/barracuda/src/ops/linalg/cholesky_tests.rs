@@ -197,7 +197,7 @@ async fn test_cholesky_f64_reconstruction() {
         for j in 0..n {
             let mut sum = 0.0;
             for k in 0..n {
-                sum += l[i * n + k] * l[j * n + k]; // L[i,k] * L[j,k] (Lᵀ[k,j] = L[j,k])
+                sum = l[i * n + k].mul_add(l[j * n + k], sum); // L[i,k] * L[j,k] (Lᵀ[k,j] = L[j,k])
             }
             reconstruction[i * n + j] = sum;
         }
@@ -239,7 +239,7 @@ async fn test_cholesky_f64_3x3() {
         for j in 0..n {
             let mut sum = 0.0;
             for k in 0..n {
-                sum += l[i * n + k] * l[j * n + k];
+                sum = l[i * n + k].mul_add(l[j * n + k], sum);
             }
             recon[i * n + j] = sum;
         }

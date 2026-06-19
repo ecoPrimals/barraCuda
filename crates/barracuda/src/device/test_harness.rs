@@ -97,9 +97,10 @@ impl std::fmt::Debug for GpuTestGate {
 fn resolve_budget() -> u32 {
     if let Ok(val) = std::env::var(GPU_TEST_BUDGET_ENV)
         && let Ok(n) = val.parse::<u32>()
-            && n > 0 {
-                return n;
-            }
+        && n > 0
+    {
+        return n;
+    }
 
     let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
         backends: wgpu::Backends::all(),

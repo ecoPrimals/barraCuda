@@ -19,7 +19,7 @@
 //!
 //! // Get unique physical devices (deduplicated)
 //! for device in registry.physical_devices() {
-//!     println!("{}: {} backends available",
+//!     tracing::info!("{}: {} backends available",
 //!         device.name,
 //!         device.backends.len()
 //!     );

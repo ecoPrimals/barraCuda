@@ -108,9 +108,9 @@ pub fn compute_rdf(snapshots: &[Vec<f64>], n: usize, box_side: f64, n_bins: usiz
                 let mut dz = snap[j * 3 + 2] - zi;
 
                 // PBC minimum image
-                dx -= box_side * (dx / box_side).round();
-                dy -= box_side * (dy / box_side).round();
-                dz -= box_side * (dz / box_side).round();
+                dx = box_side.mul_add(-(dx / box_side).round(), dx);
+                dy = box_side.mul_add(-(dy / box_side).round(), dy);
+                dz = box_side.mul_add(-(dz / box_side).round(), dz);
 
                 let r = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
                 let bin = (r / dr) as usize;
@@ -190,7 +190,7 @@ pub fn compute_vacf(vel_snapshots: &[Vec<f64>], n: usize, dt_dump: f64, max_lag:
     // Diffusion coefficient: D* = (1/3) integral_0^inf C(t) dt
     let mut integral = 0.0;
     for i in 1..n_lag {
-        integral += 0.5 * (c_values[i - 1] + c_values[i]) * dt_dump;
+        integral = (0.5 * (c_values[i - 1] + c_values[i])).mul_add(dt_dump, integral);
     }
     let diffusion_coeff = integral / 3.0;
 
@@ -523,8 +523,8 @@ mod tests {
             // Pseudo-random step based on frame number
             let angle1 = (frame as f64 * mult_phi) % (2.0 * PI);
             let angle2 = (frame as f64 * mult_e) % PI;
-            x += step_size * angle2.sin() * angle1.cos();
-            y += step_size * angle2.sin() * angle1.sin();
+            x = (step_size * angle2.sin()).mul_add(angle1.cos(), x);
+            y = (step_size * angle2.sin()).mul_add(angle1.sin(), y);
             z += step_size * angle2.cos();
         }
 

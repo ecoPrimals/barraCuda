@@ -191,7 +191,10 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
 /// - `fallback` → true (platform cannot support UDS)
 /// - `unix` / absent / anything else → false (UDS primary)
 fn is_tcp_only(bind_mode: Option<&str>) -> bool {
-    matches!(bind_mode, Some("tcp_only" | "tcp-only" | "tcp" | "fallback"))
+    matches!(
+        bind_mode,
+        Some("tcp_only" | "tcp-only" | "tcp" | "fallback")
+    )
 }
 
 /// Resolve `TRANSPORT_ENDPOINT` env override for launcher-injected transport.
@@ -341,11 +344,7 @@ async fn run_server(
                     );
                 }
             } else {
-                discovery_file::write_discovery_file(
-                    None,
-                    tarpc_bind.as_deref(),
-                    Some(&sock_path),
-                );
+                discovery_file::write_discovery_file(None, tarpc_bind.as_deref(), Some(&sock_path));
             }
 
             barracuda_core::ipc::IpcServer::create_legacy_symlink(&sock_path);

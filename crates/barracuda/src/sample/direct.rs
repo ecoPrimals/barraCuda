@@ -209,7 +209,7 @@ impl DirectSamplerResult {
 ///     &config,
 /// )?;
 ///
-/// println!("Best: {:?} = {}", result.x_best, result.f_best);
+/// tracing::info!("Best: {:?} = {}", result.x_best, result.f_best);
 /// ```
 ///
 /// # Errors

@@ -80,7 +80,7 @@ impl EighDecomposition {
                     // A[i,j] = Σₖ V[i,k] * D[k,k] * V[j,k]
                     let vik = self.eigenvectors[i * self.n + k];
                     let vjk = self.eigenvectors[j * self.n + k];
-                    sum += vik * self.eigenvalues[k] * vjk;
+                    sum = (vik * self.eigenvalues[k]).mul_add(vjk, sum);
                 }
                 a[i * self.n + j] = sum;
             }
@@ -392,7 +392,8 @@ mod tests {
         for i in 0..2 {
             for j in 0..2 {
                 for k in 0..2 {
-                    vtv[i * 2 + j] += eig.eigenvectors[k * 2 + i] * eig.eigenvectors[k * 2 + j];
+                    vtv[i * 2 + j] = eig.eigenvectors[k * 2 + i]
+                        .mul_add(eig.eigenvectors[k * 2 + j], vtv[i * 2 + j]);
                 }
             }
         }

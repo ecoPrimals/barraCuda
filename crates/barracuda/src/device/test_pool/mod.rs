@@ -99,13 +99,15 @@ fn prefer_gpu() -> bool {
 
 fn resolve_gpu_adapter_selector() -> String {
     if let Ok(v) = std::env::var("BARRACUDA_GPU_ADAPTER")
-        && !v.is_empty() {
-            return v;
-        }
+        && !v.is_empty()
+    {
+        return v;
+    }
     if let Ok(v) = std::env::var("HOTSPRING_GPU_ADAPTER")
-        && !v.is_empty() {
-            return v.split(',').next().unwrap_or("auto").to_string();
-        }
+        && !v.is_empty()
+    {
+        return v.split(',').next().unwrap_or("auto").to_string();
+    }
     let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
         backends: wgpu::Backends::all(),
         ..Default::default()
@@ -150,7 +152,7 @@ pub const TEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30)
 /// Wraps the entire async test body in `run_gpu_resilient_async` to prevent
 /// indefinite hangs when GPU stalls (e.g., driver lockup, compute shader
 /// deadlock). Exported for use by the test helper infrastructure.
-pub const GPU_TEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
+pub const GPU_TEST_TIMEOUT: std::time::Duration = std::time::Duration::from_mins(1);
 
 async fn create_gpu_device() -> Option<Arc<WgpuDevice>> {
     let create_future = async {
@@ -244,9 +246,10 @@ fn try_get_cached(pool: &RwLock<Option<Arc<WgpuDevice>>>) -> Option<Arc<WgpuDevi
         .read()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
     if let Some(ref dev) = *guard
-        && is_device_healthy(dev) {
-            return Some(Arc::clone(dev));
-        }
+        && is_device_healthy(dev)
+    {
+        return Some(Arc::clone(dev));
+    }
     None
 }
 

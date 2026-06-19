@@ -125,17 +125,18 @@ impl GpuHmcBuffers {
 
         let caps = DeviceCapabilities::from_device(device);
         if let Some(limit) = caps.max_safe_allocation_bytes()
-            && total_estimate > limit {
-                return Err(crate::error::BarracudaError::DeviceLimitExceeded {
-                    message: format!(
-                        "Estimated allocation {:.1} MB exceeds safe limit {:.1} MB",
-                        total_estimate as f64 / 1e6,
-                        limit as f64 / 1e6,
-                    ),
-                    requested_bytes: total_estimate,
-                    safe_limit_bytes: limit,
-                });
-            }
+            && total_estimate > limit
+        {
+            return Err(crate::error::BarracudaError::DeviceLimitExceeded {
+                message: format!(
+                    "Estimated allocation {:.1} MB exceeds safe limit {:.1} MB",
+                    total_estimate as f64 / 1e6,
+                    limit as f64 / 1e6,
+                ),
+                requested_bytes: total_estimate,
+                safe_limit_bytes: limit,
+            });
+        }
 
         let make_link_buf = |label: &str| {
             device.device.create_buffer(&wgpu::BufferDescriptor {

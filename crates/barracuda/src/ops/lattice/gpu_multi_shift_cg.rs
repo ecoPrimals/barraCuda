@@ -380,7 +380,7 @@ pub fn multi_shift_cg_generic(
         matvec(&p[0], &mut ap);
 
         let mut p_ap: f64 = p[0].iter().zip(ap.iter()).map(|(a, b)| a * b).sum();
-        p_ap += shifts[0] * p[0].iter().map(|v| v * v).sum::<f64>();
+        p_ap = shifts[0].mul_add(p[0].iter().map(|v| v * v).sum::<f64>(), p_ap);
 
         if p_ap.abs() < 1e-30 {
             break;
@@ -388,8 +388,8 @@ pub fn multi_shift_cg_generic(
         let alpha = rz / p_ap;
 
         for i in 0..n {
-            x[0][i] += alpha * p[0][i];
-            r[i] -= alpha * shifts[0].mul_add(p[0][i], ap[i]);
+            x[0][i] = alpha.mul_add(p[0][i], x[0][i]);
+            r[i] = alpha.mul_add(-shifts[0].mul_add(p[0][i], ap[i]), r[i]);
         }
 
         let rz_new: f64 = r.iter().map(|v| v * v).sum();

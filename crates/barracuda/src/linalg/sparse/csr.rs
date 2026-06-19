@@ -344,7 +344,7 @@ impl CsrMatrix {
             let row_end = w[1];
 
             for i in row_start..row_end {
-                *y_row += self.values[i] * x[self.col_indices[i]];
+                *y_row = self.values[i].mul_add(x[self.col_indices[i]], *y_row);
             }
         }
 
@@ -373,7 +373,7 @@ impl CsrMatrix {
             let x_row = x[row];
 
             for i in row_start..row_end {
-                y[self.col_indices[i]] += self.values[i] * x_row;
+                y[self.col_indices[i]] = self.values[i].mul_add(x_row, y[self.col_indices[i]]);
             }
         }
 

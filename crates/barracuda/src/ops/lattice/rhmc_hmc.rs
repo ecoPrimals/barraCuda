@@ -169,7 +169,7 @@ pub fn rhmc_fermion_action(
 
     let mut action = approx.alpha_0 * phi.dot(phi).re;
     for (s, x_s) in solutions.iter().enumerate() {
-        action += approx.alpha[s] * phi.dot(x_s).re;
+        action = approx.alpha[s].mul_add(phi.dot(x_s).re, action);
     }
 
     (action, result.iterations)

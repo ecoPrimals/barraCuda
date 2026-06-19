@@ -70,7 +70,7 @@ impl std::fmt::Display for SolverStatus {
 ///
 /// // Check state
 /// let (best_x, best_f) = solver.best();
-/// println!("After 100 evals: f = {}", best_f);
+/// tracing::info!("After 100 evals: f = {}", best_f);
 ///
 /// // Resume for another 100 evaluations
 /// solver.step(&f, 100);

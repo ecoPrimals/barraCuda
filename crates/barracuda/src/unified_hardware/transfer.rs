@@ -295,9 +295,10 @@ impl PcieBridge {
         for (i, a) in links.iter().enumerate() {
             for b in &links[i + 1..] {
                 if let (Some(na), Some(nb)) = (a.numa_node, b.numa_node)
-                    && na == nb {
-                        return true;
-                    }
+                    && na == nb
+                {
+                    return true;
+                }
             }
         }
         false

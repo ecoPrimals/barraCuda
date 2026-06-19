@@ -135,7 +135,7 @@ fn cpu_matmul(a: &[f32], b: &[f32], m: usize, n: usize, k: usize) -> Vec<f32> {
         for p in 0..k {
             let a_val = a[i * k + p];
             for j in 0..n {
-                c[i * n + j] += a_val * b[p * n + j];
+                c[i * n + j] = a_val.mul_add(b[p * n + j], c[i * n + j]);
             }
         }
     }

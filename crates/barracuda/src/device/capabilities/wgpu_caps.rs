@@ -658,17 +658,18 @@ impl DeviceCapabilities {
     /// if the allocation exceeds the safe limit.
     pub fn check_allocation_safe(&self, total_bytes: u64) -> crate::error::Result<()> {
         if let Some(limit) = self.max_safe_allocation_bytes()
-            && total_bytes > limit {
-                return Err(crate::error::BarracudaError::DeviceLimitExceeded {
-                    message: format!(
-                        "Estimated allocation {:.1} MB exceeds safe limit {:.1} MB",
-                        total_bytes as f64 / 1e6,
-                        limit as f64 / 1e6,
-                    ),
-                    requested_bytes: total_bytes,
-                    safe_limit_bytes: limit,
-                });
-            }
+            && total_bytes > limit
+        {
+            return Err(crate::error::BarracudaError::DeviceLimitExceeded {
+                message: format!(
+                    "Estimated allocation {:.1} MB exceeds safe limit {:.1} MB",
+                    total_bytes as f64 / 1e6,
+                    limit as f64 / 1e6,
+                ),
+                requested_bytes: total_bytes,
+                safe_limit_bytes: limit,
+            });
+        }
         Ok(())
     }
 }

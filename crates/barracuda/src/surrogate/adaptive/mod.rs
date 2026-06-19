@@ -162,7 +162,7 @@ pub struct TrainingDiagnostics {
 ///     device, &x_train, &y_train, RBFKernel::ThinPlateSpline, 1e-12, &config
 /// )?;
 ///
-/// println!("Used f32: {}, system size: {}", diag.used_f32_distances, diag.system_size);
+/// tracing::info!("Used f32: {}, system size: {}", diag.used_f32_distances, diag.system_size);
 /// # Ok(())
 /// # }
 /// ```
@@ -261,7 +261,7 @@ pub fn train_adaptive(
 /// ).await?;
 ///
 /// assert!(diag.used_gpu);
-/// println!("Trained with {} points on GPU", diag.n_train);
+/// tracing::info!("Trained with {} points on GPU", diag.n_train);
 /// # Ok(())
 /// # }
 /// ```
@@ -498,7 +498,7 @@ fn compute_distances_f64(x1: &[f64], x2: &[f64], n1: usize, n2: usize, n_dim: us
             let mut dist_sq = 0.0;
             for d in 0..n_dim {
                 let diff = x1[i * n_dim + d] - x2[j * n_dim + d];
-                dist_sq += diff * diff;
+                dist_sq = diff.mul_add(diff, dist_sq);
             }
             distances[i * n2 + j] = dist_sq.sqrt();
         }
@@ -537,7 +537,7 @@ fn compute_distances_f32_promoted(
             let mut dist_sq = 0.0f32;
             for d in 0..n_dim {
                 let diff = x1_f32[i * n_dim + d] - x2_f32[j * n_dim + d];
-                dist_sq += diff * diff;
+                dist_sq = diff.mul_add(diff, dist_sq);
             }
             // Promote result to f64
             distances[i * n2 + j] = (dist_sq.sqrt()) as f64;

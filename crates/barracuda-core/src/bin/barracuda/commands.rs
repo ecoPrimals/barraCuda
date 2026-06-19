@@ -184,30 +184,32 @@ fn resolve_client_addr(
         let filename = format!("{}-core.json", barracuda_core::PRIMAL_NAMESPACE);
         let path = dir.join(&filename);
         if let Ok(content) = std::fs::read_to_string(&path)
-            && let Ok(info) = serde_json::from_str::<serde_json::Value>(&content) {
-                let transports = info.get("transports");
+            && let Ok(info) = serde_json::from_str::<serde_json::Value>(&content)
+        {
+            let transports = info.get("transports");
 
-                if let Some(addr) = transports
-                    .and_then(|t| t.get("jsonrpc"))
-                    .and_then(|v| v.as_str())
-                    && !addr.starts_with("unix://") {
-                        return Ok(addr.to_string());
-                    }
-
-                if let Some(unix_addr) = transports
-                    .and_then(|t| t.get("unix"))
-                    .and_then(|v| v.as_str())
-                {
-                    return Ok(unix_addr.to_string());
-                }
-
-                if let Some(addr) = transports
-                    .and_then(|t| t.get("jsonrpc"))
-                    .and_then(|v| v.as_str())
-                {
-                    return Ok(addr.to_string());
-                }
+            if let Some(addr) = transports
+                .and_then(|t| t.get("jsonrpc"))
+                .and_then(|v| v.as_str())
+                && !addr.starts_with("unix://")
+            {
+                return Ok(addr.to_string());
             }
+
+            if let Some(unix_addr) = transports
+                .and_then(|t| t.get("unix"))
+                .and_then(|v| v.as_str())
+            {
+                return Ok(unix_addr.to_string());
+            }
+
+            if let Some(addr) = transports
+                .and_then(|t| t.get("jsonrpc"))
+                .and_then(|v| v.as_str())
+            {
+                return Ok(addr.to_string());
+            }
+        }
     }
 
     Err(barracuda_core::error::BarracudaCoreError::ipc(

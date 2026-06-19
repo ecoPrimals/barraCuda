@@ -92,8 +92,8 @@ fn bandpass_filter_cpu(signal: &[f64], fs: f64, low_hz: f64, high_hz: f64) -> Ve
         let angle_base = -2.0 * std::f64::consts::PI * (k as f64) / (n as f64);
         for (j, &s) in signal.iter().enumerate() {
             let angle = angle_base * (j as f64);
-            sum_re += s * angle.cos();
-            sum_im += s * angle.sin();
+            sum_re = s.mul_add(angle.cos(), sum_re);
+            sum_im = s.mul_add(angle.sin(), sum_im);
         }
         let freq = (k as f64) * fs / (n as f64);
         if freq >= low_hz && freq <= high_hz {

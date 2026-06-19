@@ -207,7 +207,8 @@ fn random_spd_batch(n: usize, batch: usize) -> Vec<f64> {
             for row in 0..n {
                 for col in 0..n {
                     // A[row,col] += Q[i,row] * di * Q[i,col]
-                    a[row * n + col] += q[i * n + row] * di * q[i * n + col];
+                    a[row * n + col] =
+                        (q[i * n + row] * di).mul_add(q[i * n + col], a[row * n + col]);
                 }
             }
         }

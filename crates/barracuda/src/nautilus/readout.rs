@@ -74,7 +74,7 @@ impl LinearReadout {
                 let y_val = targets[s].get(o).copied().unwrap_or(0.0);
                 let row = &x[s * nf..(s + 1) * nf];
                 for r in 0..nf {
-                    xty[r] += row[r] * y_val;
+                    xty[r] = row[r].mul_add(y_val, xty[r]);
                 }
             }
             let col = solve_f64_cpu(&gram, &xty, nf)?;
@@ -88,7 +88,7 @@ impl LinearReadout {
             if let Some(pred) = self.predict(r) {
                 for (j, &t) in targets[i].iter().enumerate().take(no) {
                     let p = pred.get(j).copied().unwrap_or(0.0);
-                    mse += (p - t) * (p - t);
+                    mse = (p - t).mul_add(p - t, mse);
                 }
             }
         }
@@ -148,7 +148,7 @@ impl LinearReadout {
         let mut out = vec![0.0; no];
         for o in 0..no {
             for r in 0..nf.min(response.len()) {
-                out[o] += w[o * nf + r] * response[r];
+                out[o] = w[o * nf + r].mul_add(response[r], out[o]);
             }
         }
         Some(out)

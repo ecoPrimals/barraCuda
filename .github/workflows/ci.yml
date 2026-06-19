@@ -26,7 +26,7 @@ env:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -42,5 +42,19 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
-      - name: Test
-        run: cargo test --workspace --lib
+      - name: Rustdoc
+        run: cargo doc --workspace --all-features --no-deps
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+
+      - name: Deny (advisories, bans, licenses, sources)
+        run: |
+          cargo install --locked cargo-deny || true
+          cargo deny check
+
+      - name: Install nextest
+        run: |
+          curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
+
+      - name: Test (lib — nextest ci profile)
+        run: cargo nextest run --workspace --lib --profile ci

@@ -156,10 +156,11 @@ impl AutoTuner {
 
         for &wg_size in &CALIBRATION_WG_SIZES {
             if let Some(bw) = self.measure_bandwidth(wgpu_device, wg_size, CALIBRATION_TEST_SIZE)
-                && bw > best_bw {
-                    best_bw = bw;
-                    best_wg = wg_size;
-                }
+                && bw > best_bw
+            {
+                best_bw = bw;
+                best_wg = wg_size;
+            }
         }
 
         // Measure dispatch overhead with optimal WG
@@ -510,9 +511,10 @@ pub static GLOBAL_TUNER: std::sync::LazyLock<AutoTuner> = std::sync::LazyLock::n
         .join("gpu_calibrations.json");
 
     if let Some(parent) = cache_path.parent()
-        && let Err(e) = std::fs::create_dir_all(parent) {
-            tracing::debug!(path = %parent.display(), error = %e, "autotune cache dir creation failed");
-        }
+        && let Err(e) = std::fs::create_dir_all(parent)
+    {
+        tracing::debug!(path = %parent.display(), error = %e, "autotune cache dir creation failed");
+    }
 
     AutoTuner::with_cache(cache_path)
 });

@@ -134,7 +134,7 @@ pub fn ridge_regression(
             let y_val = y[s * n_outputs + o];
             let row = &x[s * nf..(s + 1) * nf];
             for r in 0..nf {
-                xty[r] += row[r] * y_val;
+                xty[r] = row[r].mul_add(y_val, xty[r]);
             }
         }
 
@@ -145,7 +145,7 @@ pub fn ridge_regression(
                 for i in 0..nf {
                     let mut sum = 0.0;
                     for j in 0..i {
-                        sum += l[i * nf + j] * z[j];
+                        sum = l[i * nf + j].mul_add(z[j], sum);
                     }
                     z[i] = (xty[i] - sum) / l[i * nf + i];
                 }
@@ -153,7 +153,7 @@ pub fn ridge_regression(
                 for i in (0..nf).rev() {
                     let mut sum = 0.0;
                     for j in (i + 1)..nf {
-                        sum += l[j * nf + i] * weights[o * nf + j];
+                        sum = l[j * nf + i].mul_add(weights[o * nf + j], sum);
                     }
                     weights[o * nf + i] = (z[i] - sum) / l[i * nf + i];
                 }
@@ -181,12 +181,12 @@ pub fn ridge_regression(
 /// In-place Cholesky factorization. Returns lower triangular L where A = `LLᵀ`,
 /// or `None` if a leading minor is non-positive.
 fn cholesky_factor(a: &[f64], n: usize) -> Option<Vec<f64>> {
-    let mut l = vec![0.0; n * n];
+    let mut l = vec![0.0_f64; n * n];
     for i in 0..n {
         for j in 0..=i {
-            let mut sum = 0.0;
+            let mut sum = 0.0_f64;
             for k in 0..j {
-                sum += l[i * n + k] * l[j * n + k];
+                sum = l[i * n + k].mul_add(l[j * n + k], sum);
             }
             if i == j {
                 let diag = a[i * n + i] - sum;

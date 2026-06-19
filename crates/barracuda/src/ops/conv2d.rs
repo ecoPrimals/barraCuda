@@ -224,7 +224,7 @@ mod tests {
                     for kj in 0..kernel_w {
                         let input_idx = (i + ki) * input_w + (j + kj);
                         let kernel_idx = ki * kernel_w + kj;
-                        sum += input[input_idx] * kernel[kernel_idx];
+                        sum = input[input_idx].mul_add(kernel[kernel_idx], sum);
                     }
                 }
                 result[i * output_w + j] = sum;

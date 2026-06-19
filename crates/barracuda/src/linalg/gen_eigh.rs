@@ -100,7 +100,7 @@ impl GenEighDecomposition {
             let mut ax = vec![0.0; n];
             for row in 0..n {
                 for col in 0..n {
-                    ax[row] += a[row * n + col] * x[col];
+                    ax[row] = a[row * n + col].mul_add(x[col], ax[row]);
                 }
             }
 
@@ -108,7 +108,7 @@ impl GenEighDecomposition {
             let mut lbx = vec![0.0; n];
             for row in 0..n {
                 for col in 0..n {
-                    lbx[row] += lambda * b[row * n + col] * x[col];
+                    lbx[row] = (lambda * b[row * n + col]).mul_add(x[col], lbx[row]);
                 }
             }
 
@@ -246,7 +246,7 @@ fn solve_lower_triangular_matrix(
         for i in 0..n {
             let mut sum = y[i];
             for j in 0..i {
-                sum -= l[i * n + j] * y[j];
+                sum = l[i * n + j].mul_add(-y[j], sum);
             }
             y[i] = sum / l[i * n + i];
         }
@@ -289,7 +289,7 @@ fn compute_symmetric_transform(
         for row in 0..n {
             let mut sum = if row == i { 1.0 } else { 0.0 };
             for k in 0..row {
-                sum -= l[row * n + k] * x[k];
+                sum = l[row * n + k].mul_add(-x[k], sum);
             }
             x[row] = sum / l[row * n + row];
         }
@@ -306,7 +306,7 @@ fn compute_symmetric_transform(
             let mut sum = 0.0;
             for k in 0..n {
                 // Y[i,k] * L⁻ᵀ[k,j] = Y[i,k] * L⁻¹[j,k]
-                sum += l_inv_a[i * n + k] * l_inv[j * n + k];
+                sum = l_inv_a[i * n + k].mul_add(l_inv[j * n + k], sum);
             }
             c[i * n + j] = sum;
         }
@@ -351,7 +351,7 @@ fn back_transform_eigenvectors(
             let mut sum = xi[i];
             for k in i + 1..n {
                 // Lᵀ[i,k] * xi[k] = L[k,i] * xi[k]
-                sum -= l[k * n + i] * xi[k];
+                sum = l[k * n + i].mul_add(-xi[k], sum);
             }
             xi[i] = sum / l[i * n + i];
         }

@@ -1,7 +1,7 @@
 # barraCuda — Remaining Work
 
 **Version**: 0.4.0
-**Date**: June 10, 2026
+**Date**: June 19, 2026
 **Status**: Stadial gate release (v0.4.0) — composition-ready, zero debt, 4-gate mesh operational
 
 ---
@@ -36,6 +36,20 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 - **Wave 107 `PRIMAL-SOCKET-CLEANUP`**: Discovery file and legacy symlink creation/removal now derives state directory from the socket path's parent. `--socket /custom/path/math.sock` puts state files alongside the socket. No `/tmp` pollution. `ProtectSystem=strict` compatible.
 - **Wave 107 `BARRACUDA-METHOD-DESCRIBE`**: `method.describe(method_name)` RPC implemented. Returns schema (parameters, required/optional), description, access level, and domain for all 97 registered methods. Enables runtime introspection for self-correcting distributed compositions.
 - **Deep Debt Zero**: Binary refactored into directory module (`main.rs` 437L + `commands.rs` 219L + `discovery_file.rs` 173L). `transport.rs` reduced 872L→737L via type extraction. Zero production files exceed 800L. 12-axis deep debt fully confirmed.
+
+### Achieved — Waves 109–116 (Jun 2026)
+- **MSRV 1.92**, Edition 2024, let-chain modernization
+- **bincode → postcard** (RUSTSEC-2025-0141 resolved, format tag 2)
+- **238 `suboptimal_flops` → `mul_add`** (fused multiply-add)
+- **`transport.rs` → `transport/` module** (server + connection + dispatch)
+- **`transport_tests.rs` (858L) → `transport_tests/` module** (7 files, max 225L)
+- **`linalg.batched_tridiag_eigh`** IPC method (groundSpring Exp 012 absorption)
+- **98 registered JSON-RPC methods**, capability registry updated
+- **Zero files >800L**; all quality gates green (fmt, clippy, doc, deny)
+- **CI**: cargo deny, cargo doc -D warnings, nextest
+- **`--bind-mode` / `PRIMAL_BIND_MODE`** (Wave 109)
+- **Genetics-layer prefix stripping** (0xEC/0xED/0xEE, Wave 114)
+- **println → tracing** in doc examples, .expect() audit
 
 ## Achieved (June 7, 2026 — Wave 93: Stash Conflict Build Fix)
 

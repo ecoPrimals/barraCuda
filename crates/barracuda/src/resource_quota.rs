@@ -166,20 +166,22 @@ impl ResourceQuota {
     ) -> bool {
         // Check minimum VRAM
         if let Some(min) = self.min_vram_bytes
-            && device_vram_bytes < min {
-                return false;
-            }
+            && device_vram_bytes < min
+        {
+            return false;
+        }
 
         // Device class preference is soft (doesn't disqualify)
         if let Some(pref) = self.preferred_class
-            && pref != device_class {
-                tracing::debug!(
-                    "Quota '{}': device class {:?} doesn't match preference {:?}",
-                    self.name,
-                    device_class,
-                    pref
-                );
-            }
+            && pref != device_class
+        {
+            tracing::debug!(
+                "Quota '{}': device class {:?} doesn't match preference {:?}",
+                self.name,
+                device_class,
+                pref
+            );
+        }
 
         true
     }
@@ -283,9 +285,10 @@ impl QuotaTracker {
     pub fn would_exceed_quota(&self, bytes: u64) -> bool {
         // Check single buffer limit
         if let Some(max_single) = self.quota.max_single_buffer_bytes
-            && bytes > max_single {
-                return true;
-            }
+            && bytes > max_single
+        {
+            return true;
+        }
 
         // Check total VRAM limit
         if let Some(max_vram) = self.quota.max_vram_bytes {
@@ -318,13 +321,14 @@ impl QuotaTracker {
     pub fn try_allocate(&self, bytes: u64) -> Result<()> {
         // Check single buffer limit
         if let Some(max_single) = self.quota.max_single_buffer_bytes
-            && bytes > max_single {
-                self.quota_failures.fetch_add(1, Ordering::Relaxed);
-                return Err(BarracudaError::resource_exhausted(format!(
-                    "Quota '{}': single buffer {} bytes exceeds limit {} bytes",
-                    self.quota.name, bytes, max_single
-                )));
-            }
+            && bytes > max_single
+        {
+            self.quota_failures.fetch_add(1, Ordering::Relaxed);
+            return Err(BarracudaError::resource_exhausted(format!(
+                "Quota '{}': single buffer {} bytes exceeds limit {} bytes",
+                self.quota.name, bytes, max_single
+            )));
+        }
 
         // Check buffer count limit
         if let Some(max_buffers) = self.quota.max_buffers {

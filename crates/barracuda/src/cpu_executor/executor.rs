@@ -251,7 +251,7 @@ impl CpuExecutor {
             for j in 0..n {
                 let mut sum = 0.0;
                 for p in 0..k {
-                    sum += a[i * k + p] * b[p * n + j];
+                    sum = a[i * k + p].mul_add(b[p * n + j], sum);
                 }
                 row[j] = sum;
             }

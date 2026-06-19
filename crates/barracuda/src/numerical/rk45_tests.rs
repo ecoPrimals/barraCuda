@@ -63,7 +63,7 @@ fn test_lotka_volterra() {
         let x = y[0];
         let prey = y[1];
         vec![
-            alpha * x - beta * x * prey,
+            (beta * x).mul_add(-prey, alpha * x),
             (delta * x).mul_add(prey, -(gamma * prey)),
         ]
     };

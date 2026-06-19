@@ -75,7 +75,7 @@ impl WelfordState {
         let delta = x - self.mean;
         self.mean += delta / self.count as f64;
         let delta2 = x - self.mean;
-        self.m2 += delta * delta2;
+        self.m2 = delta.mul_add(delta2, self.m2);
     }
 
     /// Number of data points incorporated.
@@ -196,10 +196,10 @@ impl WelfordCovState {
         let dy = y - self.mean_y;
         self.mean_y += dy / n;
         // co-moment uses the *updated* mean_y but *old* delta_x
-        self.co_moment += dx * (y - self.mean_y);
+        self.co_moment = dx.mul_add(y - self.mean_y, self.co_moment);
         // individual M2 updates (standard Welford)
-        self.m2_x += dx * (x - self.mean_x);
-        self.m2_y += dy * (y - self.mean_y);
+        self.m2_x = dx.mul_add(x - self.mean_x, self.m2_x);
+        self.m2_y = dy.mul_add(y - self.mean_y, self.m2_y);
     }
 
     /// Number of data pairs incorporated.
@@ -282,8 +282,8 @@ impl WelfordCovState {
         self.co_moment += (dx * dy).mul_add(factor, other.co_moment);
         self.m2_x += (dx * dx).mul_add(factor, other.m2_x);
         self.m2_y += (dy * dy).mul_add(factor, other.m2_y);
-        self.mean_x += dx * (other.count as f64 / combined as f64);
-        self.mean_y += dy * (other.count as f64 / combined as f64);
+        self.mean_x = dx.mul_add(other.count as f64 / combined as f64, self.mean_x);
+        self.mean_y = dy.mul_add(other.count as f64 / combined as f64, self.mean_y);
         self.count = combined;
     }
 

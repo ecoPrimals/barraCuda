@@ -5,6 +5,37 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — Waves 109–116 (Jun 19 2026)
+
+### Changed
+- **MSRV raised to 1.92** (Edition 2024, let-chain modernization)
+- **bincode → postcard** for binary serialization (RUSTSEC-2025-0141 resolved, format tag 2)
+- **238 `suboptimal_flops` → `mul_add`** (fused multiply-add for numerical accuracy)
+- **`transport.rs` (780L) → `transport/` module** (server.rs + connection.rs + dispatch.rs)
+- **`transport_tests.rs` (858L) → `transport_tests/` module** (7 semantic test files, max 225L)
+- **`println!()` → `tracing::info!()`** in library doc examples (~37 sites across 25 files)
+- `.expect()` calls audited: 6 ownership-invariant sites annotated with `#[expect(clippy::expect_used)]`
+
+### Added
+- **`linalg.batched_tridiag_eigh`** IPC method — batched tridiagonal symmetric eigendecomposition via QL with Wilkinson shifts (groundSpring Exp 012 absorption)
+- **Genetics-layer prefix stripping** (0xEC mito-beacon v1, 0xED mito-beacon v2, 0xEE nuclear lineage) on all IPC accept loops (Wave 114)
+- **`--bind-mode` / `PRIMAL_BIND_MODE`** CLI flag for launcher-controlled socket/TCP selection (Wave 109)
+- CI: `cargo deny check`, `RUSTDOCFLAGS="-D warnings" cargo doc`, `cargo nextest` installation
+- 12 new tests for `linalg.batched_tridiag_eigh` (happy paths + all error paths)
+- Capability registry entry for `linalg.batched_tridiag_eigh`
+
+### Fixed
+- `needless_type_cast` clippy warning in executor_tests.rs (f64 literal suffix)
+- rustdoc `private-intra-doc-links` error in `should_skip_gpu_probe` docs
+- `sort_by` → `sort_by_key` in df64_rewrite tests
+- `Duration::from_secs(60)` → `Duration::from_mins(1)` in test_pool
+
+### Metrics
+- **98 registered JSON-RPC methods** (97 + method.describe)
+- **4,624 tests** (708 barracuda-core + 3,916 barracuda)
+- **Zero files >800L**
+- **All 5 quality gates green** (fmt, clippy, doc, deny, check)
+
 ## [0.4.0] — 2026-05-12
 
 ### Added — Wave 73: Perceptron Training (Jun 3 2026)

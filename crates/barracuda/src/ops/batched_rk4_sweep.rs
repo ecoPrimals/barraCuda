@@ -81,7 +81,7 @@ impl TrajectoryResult {
 /// let y0_batch = vec![vec![1.0_f64]; 3];
 /// let results = batcher.integrate_fixed(&odes, 0.0, &y0_batch, 5.0, 0.01).unwrap();
 /// for r in &results {
-///     println!("instance {}: final y = {:.4}", r.instance, r.final_state()[0]);
+///     tracing::info!("instance {}: final y = {:.4}", r.instance, r.final_state()[0]);
 /// }
 /// # });
 /// ```

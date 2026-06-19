@@ -72,7 +72,7 @@ mod tests {
         let f = |x: &[f64]| {
             let a = 1.0 - x[0];
             let b = x[0].mul_add(-x[0], x[1]);
-            a * a + 100.0 * b * b
+            (100.0 * b).mul_add(b, a * a)
         };
         let params = vec![1.0, 1.0];
         let h = numerical_hessian(&f, &params, 1e-5);

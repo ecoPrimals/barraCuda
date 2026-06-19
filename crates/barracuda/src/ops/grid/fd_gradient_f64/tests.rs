@@ -45,7 +45,7 @@ async fn test_gradient_2d() {
         for iy in 0..ny {
             let x = ix as f64 * dx;
             let y = iy as f64 * dy;
-            input[ix * ny + iy] = x * x + 2.0 * y;
+            input[ix * ny + iy] = 2.0f64.mul_add(y, x * x);
         }
     }
 

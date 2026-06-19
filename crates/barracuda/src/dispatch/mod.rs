@@ -57,7 +57,7 @@
 //!
 //! let suite = BenchmarkSuite::new(BenchmarkConfig::default());
 //! let results = suite.run_all()?;
-//! println!("{}", results.summary());
+//! tracing::info!("{}", results.summary());
 //!
 //! // Update thresholds based on results
 //! let new_thresholds = results.optimal_thresholds();

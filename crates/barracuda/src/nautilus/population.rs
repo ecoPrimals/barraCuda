@@ -86,9 +86,9 @@ impl Population {
                     for i in 0..n {
                         let dr = r_col[i] - mean_r;
                         let dt = t_col[i] - mean_t;
-                        ss_r += dr * dr;
-                        ss_t += dt * dt;
-                        sp += dr * dt;
+                        ss_r = dr.mul_add(dr, ss_r);
+                        ss_t = dt.mul_add(dt, ss_t);
+                        sp = dr.mul_add(dt, sp);
                     }
                     let denom = (ss_r * ss_t).sqrt();
                     if denom > 1e-15 {

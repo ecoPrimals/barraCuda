@@ -78,7 +78,7 @@ pub fn trapz(y: &[f64], x: &[f64]) -> Result<f64> {
 
     for i in 0..n - 1 {
         let dx = x[i + 1] - x[i];
-        integral += 0.5 * (y[i] + y[i + 1]) * dx;
+        integral = (0.5 * (y[i] + y[i + 1])).mul_add(dx, integral);
     }
 
     Ok(integral)
@@ -152,7 +152,7 @@ pub fn trapz_product(f: &[f64], g1: &[f64], g2: &[f64], x: &[f64], weights: &[f6
         let product_i = f[i] * g1[i] * g2[i] * weights[i];
         let product_i1 = f[i + 1] * g1[i + 1] * g2[i + 1] * weights[i + 1];
         let dx = x[i + 1] - x[i];
-        integral += 0.5 * (product_i + product_i1) * dx;
+        integral = (0.5 * (product_i + product_i1)).mul_add(dx, integral);
     }
 
     Ok(integral)

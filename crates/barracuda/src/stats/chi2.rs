@@ -112,8 +112,8 @@ impl Chi2Decomposed {
 ///
 /// let result = chi2_decomposed(&observed, &expected, 1).unwrap();
 ///
-/// println!("{}", result.summary());
-/// println!("Worst point: index {}", result.worst_n(1)[0]);
+/// tracing::info!("{}", result.summary());
+/// tracing::info!("Worst point: index {}", result.worst_n(1)[0]);
 /// ```
 ///
 /// # Errors
@@ -216,7 +216,7 @@ pub fn chi2_decomposed(
 /// let errors = vec![1.0, 0.5, 0.8];  // Known uncertainties
 ///
 /// let result = chi2_decomposed_weighted(&observed, &expected, &errors, 1).unwrap();
-/// println!("χ²/dof = {:.2}", result.chi2_per_dof);
+/// tracing::info!("χ²/dof = {:.2}", result.chi2_per_dof);
 /// ```
 ///
 /// # Errors

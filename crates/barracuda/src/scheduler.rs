@@ -218,13 +218,13 @@ impl UnifiedScheduler {
 /// let small_desc = TensorDescriptor::new(vec![10, 10], DType::F32);
 /// let small_op = MathOp::ReLU;
 /// let executor = scheduler.select_executor(&small_op, &[small_desc]);
-/// println!("Small ReLU: {}", executor.name()); // → CPU
+/// tracing::info!("Small ReLU: {}", executor.name()); // → CPU
 ///
 /// // Large matrix → GPU chosen
 /// let large_desc = TensorDescriptor::new(vec![4096, 4096], DType::F32);
 /// let large_op = MathOp::MatMul { transpose_a: false, transpose_b: false };
 /// let executor = scheduler.select_executor(&large_op, &[large_desc.clone(), large_desc]);
-/// println!("Large MatMul: {}", executor.name()); // → GPU
+/// tracing::info!("Large MatMul: {}", executor.name()); // → GPU
 /// # Ok(())
 /// # }
 /// ```

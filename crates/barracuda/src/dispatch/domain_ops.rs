@@ -36,7 +36,7 @@ fn matmul_cpu(a: &[f64], b: &[f64], m: usize, k: usize, n: usize) -> Vec<f64> {
         for p in 0..k {
             let a_ip = a[i * k + p];
             for j in 0..n {
-                c[i * n + j] += a_ip * b[p * n + j];
+                c[i * n + j] = a_ip.mul_add(b[p * n + j], c[i * n + j]);
             }
         }
     }
@@ -118,7 +118,7 @@ fn hmm_forward_step_cpu(
     for j in 0..n_states {
         let mut sum = 0.0;
         for i in 0..n_states {
-            sum += alpha_prev[i] * transition[i * n_states + j];
+            sum = alpha_prev[i].mul_add(transition[i * n_states + j], sum);
         }
         raw[j] = sum * emission_col[j];
     }

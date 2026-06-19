@@ -518,7 +518,7 @@ fn cpu_conv1d(input: &[f32], kernel: &[f32]) -> Vec<f32> {
     for i in 0..output_size {
         let mut sum = 0.0f32;
         for j in 0..k {
-            sum += input[i + j] * kernel[j];
+            sum = input[i + j].mul_add(kernel[j], sum);
         }
         output[i] = sum;
     }

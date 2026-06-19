@@ -26,6 +26,10 @@ pub struct GuardedEncoder {
 impl std::ops::Deref for GuardedEncoder {
     type Target = wgpu::CommandEncoder;
 
+    #[expect(
+        clippy::expect_used,
+        reason = "Deref requires &T; encoder is Some until finish() consumes self"
+    )]
     fn deref(&self) -> &Self::Target {
         // Invariant: encoder is Some from construction until finish() consumes self.
         // finish() takes self by value so Deref cannot be called post-finish.
@@ -36,6 +40,10 @@ impl std::ops::Deref for GuardedEncoder {
 }
 
 impl std::ops::DerefMut for GuardedEncoder {
+    #[expect(
+        clippy::expect_used,
+        reason = "DerefMut requires &mut T; encoder is Some until finish() consumes self"
+    )]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.encoder
             .as_mut()
@@ -78,6 +86,10 @@ impl GuardedEncoder {
     /// Unreachable by construction: `finish` consumes `self` so it cannot be
     /// called twice.
     #[must_use]
+    #[expect(
+        clippy::expect_used,
+        reason = "finish consumes self; Option::None here means double-call (unreachable)"
+    )]
     pub fn finish(mut self) -> wgpu::CommandBuffer {
         // Invariant: encoder is Some until take(); finish consumes self so only called once.
         let encoder = self

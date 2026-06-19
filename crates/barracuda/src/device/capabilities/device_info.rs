@@ -86,22 +86,23 @@ pub fn is_npu_available() -> bool {
     // Scan IOMMU groups for BrainChip vendor 0x1e7c
     let iommu_groups = std::path::Path::new("/sys/kernel/iommu_groups");
     if iommu_groups.exists()
-        && let Ok(entries) = std::fs::read_dir(iommu_groups) {
-            for entry in entries.flatten() {
-                let devices_dir = entry.path().join("devices");
-                if let Ok(devices) = std::fs::read_dir(devices_dir) {
-                    for dev in devices.flatten() {
-                        let vendor_path = dev.path().join("vendor");
-                        if let Ok(vendor) = std::fs::read_to_string(vendor_path) {
-                            // BrainChip vendor ID
-                            if vendor.trim() == "0x1e7c" {
-                                return true;
-                            }
+        && let Ok(entries) = std::fs::read_dir(iommu_groups)
+    {
+        for entry in entries.flatten() {
+            let devices_dir = entry.path().join("devices");
+            if let Ok(devices) = std::fs::read_dir(devices_dir) {
+                for dev in devices.flatten() {
+                    let vendor_path = dev.path().join("vendor");
+                    if let Ok(vendor) = std::fs::read_to_string(vendor_path) {
+                        // BrainChip vendor ID
+                        if vendor.trim() == "0x1e7c" {
+                            return true;
                         }
                     }
                 }
             }
         }
+    }
     false
 }
 

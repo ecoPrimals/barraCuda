@@ -97,13 +97,15 @@ impl DeviceRequirements {
             return None;
         }
         if let Some(min_vram) = self.min_vram_bytes
-            && info.vram_bytes < min_vram {
-                return None;
-            }
+            && info.vram_bytes < min_vram
+        {
+            return None;
+        }
         if let Some(min_gflops) = self.min_gflops
-            && info.estimated_gflops < min_gflops {
-                return None;
-            }
+            && info.estimated_gflops < min_gflops
+        {
+            return None;
+        }
 
         const PREFERRED_CLASS_BONUS: i64 = 1000;
         const DISCRETE_BONUS: i64 = 100;
@@ -112,9 +114,10 @@ impl DeviceRequirements {
 
         let mut score: i64 = 0;
         if let Some(pref) = self.preferred_class
-            && info.device_class == pref {
-                score += PREFERRED_CLASS_BONUS;
-            }
+            && info.device_class == pref
+        {
+            score += PREFERRED_CLASS_BONUS;
+        }
         #[expect(
             clippy::cast_possible_wrap,
             reason = "VRAM in GiB always fits in i64 (max ~16 EiB)"

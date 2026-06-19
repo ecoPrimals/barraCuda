@@ -92,10 +92,10 @@ pub struct SolverResult {
 /// )?;
 ///
 /// // Should find a point near the global minimum
-/// println!("Best: f={:.4}, x={:?}", best.f_best, best.x_best);
+/// tracing::info!("Best: f={:.4}, x={:?}", best.f_best, best.x_best);
 ///
 /// // All evaluations captured for surrogate training
-/// println!("Total evaluations: {}", cache.len());
+/// tracing::info!("Total evaluations: {}", cache.len());
 /// assert!(cache.len() > 16); // More evals than starts
 ///
 /// // Individual solver results available

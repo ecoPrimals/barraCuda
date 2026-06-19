@@ -208,7 +208,7 @@ impl LbfgsGpu {
                     continue;
                 }
                 for j in 0..n {
-                    x[b * n + j] += alphas[b] * direction[b * n + j];
+                    x[b * n + j] = alphas[b].mul_add(direction[b * n + j], x[b * n + j]);
                 }
             }
 
@@ -250,7 +250,7 @@ impl LbfgsGpu {
                 {
                     *s_k_j = x_j - xp_j;
                     *y_k_j = g_j - gp_j;
-                    sy += *s_k_j * *y_k_j;
+                    sy = (*s_k_j).mul_add(*y_k_j, sy);
                 }
                 if sy > 1e-30 {
                     *rho_k_b = 1.0 / sy;
@@ -332,7 +332,7 @@ fn two_loop_cpu(
             let alpha_i = rho_history[i][b] * dot;
             alpha_buf[i][b] = alpha_i;
             for j in 0..n {
-                q[b * n + j] -= alpha_i * y_history[i][b * n + j];
+                q[b * n + j] = alpha_i.mul_add(-y_history[i][b * n + j], q[b * n + j]);
             }
         }
     }
@@ -360,7 +360,8 @@ fn two_loop_cpu(
             let dot: f64 = (0..n).map(|j| y_history[i][b * n + j] * q[b * n + j]).sum();
             let beta = rho_history[i][b] * dot;
             for j in 0..n {
-                q[b * n + j] += (alpha_buf[i][b] - beta) * s_history[i][b * n + j];
+                q[b * n + j] =
+                    (alpha_buf[i][b] - beta).mul_add(s_history[i][b * n + j], q[b * n + j]);
             }
         }
     }

@@ -413,7 +413,7 @@ impl SpikingNetwork {
                 // Matrix multiply (sparse)
                 for i in 0..*output_size {
                     for j in 0..*input_size {
-                        output[i] += weights[i * input_size + j] * input[j];
+                        output[i] = weights[i * input_size + j].mul_add(input[j], output[i]);
                     }
                 }
 

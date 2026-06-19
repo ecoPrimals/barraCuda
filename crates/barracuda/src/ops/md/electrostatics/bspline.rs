@@ -73,7 +73,7 @@ pub fn bspline(order: usize, x: f64) -> f64 {
         if xmk > 0.0 {
             let sign = if k % 2 == 0 { 1.0 } else { -1.0 };
             let binom = binomial(p, k) as f64;
-            sum += sign * binom * xmk.powi(pm1);
+            sum = (sign * binom).mul_add(xmk.powi(pm1), sum);
         }
     }
 

@@ -215,7 +215,7 @@ impl EvaluationCache {
     ///
     /// ```ignore
     /// let cache = EvaluationCache::load("results/optimization_cache.json")?;
-    /// println!("Loaded {} evaluations, best: {:?}", cache.len(), cache.best_f());
+    /// tracing::info!("Loaded {} evaluations, best: {:?}", cache.len(), cache.best_f());
     /// ```
     ///
     /// # Errors

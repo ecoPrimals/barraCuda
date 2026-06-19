@@ -254,7 +254,7 @@ mod tests {
                 let col_a = csr.col_indices[j];
                 let val = csr.values[j];
                 for col_b in 0..n {
-                    c[row * n + col_b] += val * b[col_a * n + col_b];
+                    c[row * n + col_b] = val.mul_add(b[col_a * n + col_b], c[row * n + col_b]);
                 }
             }
         }

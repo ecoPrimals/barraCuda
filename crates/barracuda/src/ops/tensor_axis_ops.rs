@@ -97,9 +97,10 @@ impl Tensor {
             for j in 0..axis_size {
                 let idx = base + j * stride;
                 if let Some(&v) = data.get(idx)
-                    && v > max_val {
-                        max_val = v;
-                    }
+                    && v > max_val
+                {
+                    max_val = v;
+                }
             }
 
             // exp(x - max) and sum

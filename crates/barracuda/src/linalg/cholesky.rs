@@ -49,7 +49,7 @@ impl CholeskyDecomposition {
         for i in 0..self.n {
             let mut sum = b[i];
             for (j, &y_j) in y.iter().enumerate().take(i) {
-                sum -= self.l[i * self.n + j] * y_j;
+                sum = self.l[i * self.n + j].mul_add(-y_j, sum);
             }
             let diag = self.l[i * self.n + i];
             if diag.abs() < 1e-14 {
@@ -66,7 +66,7 @@ impl CholeskyDecomposition {
             let mut sum = y[i];
             for (j, &x_j) in x.iter().enumerate().skip(i + 1) {
                 // Lᵀ[i,j] = L[j,i]
-                sum -= self.l[j * self.n + i] * x_j;
+                sum = self.l[j * self.n + i].mul_add(-x_j, sum);
             }
             x[i] = sum / self.l[i * self.n + i];
         }
@@ -181,7 +181,7 @@ pub fn cholesky_f64_cpu(a: &[f64], n: usize) -> Result<CholeskyDecomposition> {
         });
     }
 
-    let mut l = vec![0.0; n * n];
+    let mut l = vec![0.0_f64; n * n];
 
     // Cholesky-Banachiewicz algorithm
     for i in 0..n {
@@ -189,7 +189,7 @@ pub fn cholesky_f64_cpu(a: &[f64], n: usize) -> Result<CholeskyDecomposition> {
             let mut sum = a[i * n + j];
 
             for k in 0..j {
-                sum -= l[i * n + k] * l[j * n + k];
+                sum = l[i * n + k].mul_add(-l[j * n + k], sum);
             }
 
             if i == j {
@@ -279,7 +279,7 @@ mod tests {
         for i in 0..3 {
             for j in 0..3 {
                 for k in 0..3 {
-                    llt[i * 3 + j] += chol.l[i * 3 + k] * chol.l[j * 3 + k];
+                    llt[i * 3 + j] = chol.l[i * 3 + k].mul_add(chol.l[j * 3 + k], llt[i * 3 + j]);
                 }
             }
         }
@@ -306,7 +306,7 @@ mod tests {
         for i in 0..2 {
             for j in 0..2 {
                 for k in 0..2 {
-                    aa_inv[i * 2 + j] += a[i * 2 + k] * inv[k * 2 + j];
+                    aa_inv[i * 2 + j] = a[i * 2 + k].mul_add(inv[k * 2 + j], aa_inv[i * 2 + j]);
                 }
             }
         }

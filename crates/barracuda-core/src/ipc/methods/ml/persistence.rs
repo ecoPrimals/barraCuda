@@ -10,13 +10,13 @@ use std::path::Path;
 ///
 /// Serializes the model and writes to the specified path.
 /// Supports `"format": "json"` (default, human-readable) or
-/// `"format": "bincode"` (compact binary with BLAKE3 integrity header).
+/// `"format": "binary"` (compact postcard-encoded with BLAKE3 integrity header).
 ///
 /// Wire contract:
 /// ```json
 /// { "model": {"layers": [...]},
 ///   "path": "/data/gate/neural_routing_perceptron.bin",
-///   "format": "bincode" }
+///   "format": "binary" }
 /// ```
 pub(in crate::ipc::methods) fn ml_mlp_save(params: &Value, id: Value) -> JsonRpcResponse {
     let Some(model_val) = params.get("model") else {
@@ -48,8 +48,8 @@ pub(in crate::ipc::methods) fn ml_mlp_save(params: &Value, id: Value) -> JsonRpc
     };
 
     let (data, written_format) = match format {
-        "bincode" | "binary" => match mlp.to_binary() {
-            Ok(bytes) => (bytes, "bincode"),
+        "binary" | "bincode" => match mlp.to_binary() {
+            Ok(bytes) => (bytes, "binary"),
             Err(e) => {
                 return JsonRpcResponse::error(
                     id,
@@ -72,13 +72,14 @@ pub(in crate::ipc::methods) fn ml_mlp_save(params: &Value, id: Value) -> JsonRpc
 
     if let Some(parent) = path.parent()
         && !parent.exists()
-            && let Err(e) = std::fs::create_dir_all(parent) {
-                return JsonRpcResponse::error(
-                    id,
-                    INTERNAL_ERROR,
-                    format!("Cannot create directory {}: {e}", parent.display()),
-                );
-            }
+        && let Err(e) = std::fs::create_dir_all(parent)
+    {
+        return JsonRpcResponse::error(
+            id,
+            INTERNAL_ERROR,
+            format!("Cannot create directory {}: {e}", parent.display()),
+        );
+    }
 
     match std::fs::write(path, &data) {
         Ok(()) => JsonRpcResponse::success(
@@ -96,7 +97,7 @@ pub(in crate::ipc::methods) fn ml_mlp_save(params: &Value, id: Value) -> JsonRpc
 /// `ml.mlp_load` — Load a persisted model from disk.
 ///
 /// Auto-detects format from file content: if the file starts with `BCML`
-/// magic bytes, loads as bincode with BLAKE3 verification. Otherwise
+/// magic bytes, loads as binary (postcard) with BLAKE3 verification. Otherwise
 /// falls back to JSON parsing. Returns the full model structure.
 ///
 /// Wire contract:
@@ -140,7 +141,7 @@ pub(in crate::ipc::methods) fn ml_mlp_load(params: &Value, id: Value) -> JsonRpc
     };
 
     let detected_format = if data.len() >= 4 && &data[0..4] == b"BCML" {
-        "bincode"
+        "binary"
     } else {
         "json"
     };

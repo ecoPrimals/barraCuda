@@ -19,7 +19,7 @@
 //!
 //! // Create a pool with all available GPUs
 //! let pool = MultiDevicePool::new().await?;
-//! println!("{}", pool.summary());
+//! tracing::info!("{}", pool.summary());
 //!
 //! // Acquire a device with specific requirements
 //! let reqs = DeviceRequirements::new()

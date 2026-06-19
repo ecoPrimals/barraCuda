@@ -119,7 +119,7 @@ pub fn tridiag_eigenvectors(diagonal: &[f64], off_diag: &[f64]) -> (Vec<f64>, Ve
         for prev in 0..k {
             let dot: f64 = (0..n).map(|i| orth[i] * vecs[i * n + prev]).sum();
             for i in 0..n {
-                orth[i] -= dot * vecs[i * n + prev];
+                orth[i] = dot.mul_add(-vecs[i * n + prev], orth[i]);
             }
         }
 
@@ -172,7 +172,7 @@ fn inverse_iteration_tridiag(diagonal: &[f64], off_diag: &[f64], lambda: f64) ->
         // Forward solve: L y = x  (y stored in-place)
         let mut y = x.clone();
         for i in 1..n {
-            y[i] -= l[i] * y[i - 1];
+            y[i] = l[i].mul_add(-y[i - 1], y[i]);
         }
         // Back solve: U x_new = y
         x[n - 1] = y[n - 1] / u[n - 1];

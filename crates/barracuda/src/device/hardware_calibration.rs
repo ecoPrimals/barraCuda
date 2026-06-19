@@ -14,7 +14,7 @@
 //! let device = WgpuDevice::new().await?;
 //! let cal = HardwareCalibration::from_device(&device);
 //! assert!(cal.tier_safe(PrecisionTier::F32));
-//! println!("{cal}");
+//! tracing::info!("{cal}");
 //! ```
 
 use super::WgpuDevice;

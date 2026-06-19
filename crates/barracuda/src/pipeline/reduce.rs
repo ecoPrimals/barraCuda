@@ -77,13 +77,14 @@ fn shader_for_device(device: &WgpuDevice) -> &'static str {
     }
 
     if let Some(caps) = f64_builtins
-        && !caps.df64_workgroup_reduce {
-            tracing::info!(
-                "DF64 workgroup reduce not verified on {} — using scalar f64 storage reduction",
-                device.adapter_info().name
-            );
-            return SHADER_SCALAR_F64;
-        }
+        && !caps.df64_workgroup_reduce
+    {
+        tracing::info!(
+            "DF64 workgroup reduce not verified on {} — using scalar f64 storage reduction",
+            device.adapter_info().name
+        );
+        return SHADER_SCALAR_F64;
+    }
     static DF64_COMBINED: std::sync::LazyLock<String> =
         std::sync::LazyLock::new(|| format!("{DF64_CORE}\n{SHADER_DF64}"));
     &DF64_COMBINED

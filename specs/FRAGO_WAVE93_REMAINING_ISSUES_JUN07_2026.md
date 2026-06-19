@@ -1,3 +1,5 @@
+> **Superseded**: This FRAGO is a historical Jun 7 snapshot. See FRAGO Wave 113+ and Wave 116 cascade for current state. Issues #1 (BTSP) and #3 (2-gate mesh) are resolved. Issue #2 (GPU SIGSEGV) mitigated by nextest in CI.
+
 # FRAGO: barraCuda Wave 93 — Remaining Issues for Upstream
 
 **Date**: 2026-06-07

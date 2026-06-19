@@ -55,7 +55,7 @@ pub(super) fn linalg_solve(params: &Value, id: Value) -> JsonRpcResponse {
             let factor = a[row][col] / diag;
             let pivot_row_slice: Vec<f64> = a[col][col..n].to_vec();
             for (k, &pivot_val) in pivot_row_slice.iter().enumerate() {
-                a[row][col + k] -= factor * pivot_val;
+                a[row][col + k] = factor.mul_add(-pivot_val, a[row][col + k]);
             }
             let x_col = x[col];
             x[row] = (-factor).mul_add(x_col, x[row]);
@@ -65,7 +65,7 @@ pub(super) fn linalg_solve(params: &Value, id: Value) -> JsonRpcResponse {
         for row in 0..col {
             let factor = a[row][col] / a[col][col];
             let x_col = x[col];
-            x[row] -= factor * x_col;
+            x[row] = factor.mul_add(-x_col, x[row]);
         }
         x[col] /= a[col][col];
     }
@@ -185,6 +185,87 @@ pub(super) fn linalg_svd(params: &Value, id: Value) -> JsonRpcResponse {
         }
         Err(e) => JsonRpcResponse::error(id, INTERNAL_ERROR, format!("SVD failed: {e}")),
     }
+}
+
+/// `linalg.batched_tridiag_eigh` — batched tridiagonal symmetric eigendecomposition.
+///
+/// Solves `n_batches` independent tridiagonal eigenproblems via QL with Wilkinson
+/// shifts. CPU inline-data path (GPU dispatch available via `tensor.create` for
+/// large batch counts). Absorbed from groundSpring Exp 012.
+///
+/// Params: `diagonals` (flat `n_batches × n`), `subdiagonals` (flat `n_batches × (n-1)`),
+/// `n` (matrix dimension), `n_batches` (number of independent systems).
+pub(super) fn linalg_batched_tridiag_eigh(params: &Value, id: Value) -> JsonRpcResponse {
+    let Some(diagonals) = extract_f64_array(params, "diagonals") else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: diagonals (flat f64 array)",
+        );
+    };
+    let Some(subdiagonals) = extract_f64_array(params, "subdiagonals") else {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            "Missing required param: subdiagonals (flat f64 array)",
+        );
+    };
+    let Some(n) = params.get("n").and_then(|v| v.as_u64()).map(|v| v as usize) else {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: n (integer)");
+    };
+    let n_batches = params
+        .get("n_batches")
+        .and_then(|v| v.as_u64())
+        .map_or(1, |v| v as usize);
+
+    if n == 0 {
+        return JsonRpcResponse::error(id, INVALID_PARAMS, "n must be positive");
+    }
+    if diagonals.len() != n_batches * n {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            format!(
+                "diagonals length {} != n_batches({n_batches}) × n({n})",
+                diagonals.len()
+            ),
+        );
+    }
+    let sub_len = n.saturating_sub(1);
+    if subdiagonals.len() != n_batches * sub_len {
+        return JsonRpcResponse::error(
+            id,
+            INVALID_PARAMS,
+            format!(
+                "subdiagonals length {} != n_batches({n_batches}) × (n-1)({})",
+                subdiagonals.len(),
+                sub_len
+            ),
+        );
+    }
+
+    let mut all_eigenvalues = Vec::with_capacity(n_batches * n);
+    let mut all_eigenvectors = Vec::with_capacity(n_batches * n * n);
+
+    for batch in 0..n_batches {
+        let diag_slice = &diagonals[batch * n..(batch + 1) * n];
+        let sub_slice = &subdiagonals[batch * sub_len..(batch + 1) * sub_len];
+
+        let (eigenvalues, eigenvectors) = barracuda::special::tridiagonal_ql(diag_slice, sub_slice);
+
+        all_eigenvalues.extend_from_slice(&eigenvalues);
+        all_eigenvectors.extend_from_slice(&eigenvectors);
+    }
+
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({
+            "eigenvalues": all_eigenvalues,
+            "eigenvectors": all_eigenvectors,
+            "n": n,
+            "n_batches": n_batches,
+        }),
+    )
 }
 
 /// `linalg.qr` — QR decomposition A = QR (Householder reflections).

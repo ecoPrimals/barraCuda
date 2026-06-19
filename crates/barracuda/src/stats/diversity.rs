@@ -54,7 +54,7 @@ pub fn shannon(counts: &[f64]) -> f64 {
     for &c in counts {
         if c > 0.0 {
             let p = c / total;
-            h -= p * p.ln();
+            h = p.mul_add(-p.ln(), h);
         }
     }
     h
@@ -72,7 +72,7 @@ pub fn shannon_from_frequencies(frequencies: &[f64]) -> f64 {
     let mut h = 0.0;
     for &p in frequencies {
         if p > 0.0 {
-            h -= p * p.ln();
+            h = p.mul_add(-p.ln(), h);
         }
     }
     h

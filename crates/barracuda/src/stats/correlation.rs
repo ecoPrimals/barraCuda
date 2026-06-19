@@ -68,9 +68,9 @@ pub fn pearson_correlation(x: &[f64], y: &[f64]) -> Result<f64> {
     for (&xi, &yi) in x.iter().zip(y) {
         let dx = xi - mean_x;
         let dy = yi - mean_y;
-        cov += dx * dy;
-        var_x += dx * dx;
-        var_y += dy * dy;
+        cov = dx.mul_add(dy, cov);
+        var_x = dx.mul_add(dx, var_x);
+        var_y = dy.mul_add(dy, var_y);
     }
 
     let denom = (var_x * var_y).sqrt();

@@ -28,7 +28,7 @@ use std::sync::Arc;
 /// ```ignore
 /// let surrogate = RBFSurrogate::train(&x_data, &y_data, kernel, 1e-12)?;
 /// let loo_rmse = surrogate.loo_cv_rmse()?;
-/// println!("LOO-CV RMSE: {:.6}", loo_rmse);
+/// tracing::info!("LOO-CV RMSE: {:.6}", loo_rmse);
 /// ```
 #[derive(Debug)]
 pub struct RBFSurrogate {
@@ -281,13 +281,13 @@ impl RBFSurrogate {
             for j in 0..self.n_train {
                 let dist = distances[i * self.n_train + j];
                 let phi = self.kernel.eval(dist);
-                pred += self.weights[j] * phi;
+                pred = self.weights[j].mul_add(phi, pred);
             }
 
             // Polynomial contribution
             pred += self.poly_coeffs[0]; // Constant
             for d in 0..self.n_dim {
-                pred += self.poly_coeffs[1 + d] * eval_x[i * self.n_dim + d];
+                pred = self.poly_coeffs[1 + d].mul_add(eval_x[i * self.n_dim + d], pred);
             }
 
             predictions.push(pred);
@@ -310,7 +310,7 @@ impl RBFSurrogate {
     /// ```ignore
     /// let surrogate = RBFSurrogate::train(&x_data, &y_data, kernel, 1e-6)?;
     /// let rmse = surrogate.loo_cv_rmse()?;
-    /// println!("LOO-CV RMSE: {:.6}", rmse);
+    /// tracing::info!("LOO-CV RMSE: {:.6}", rmse);
     /// ```
     /// # Notes
     /// - For exact interpolation (smoothing ≈ 0), `H_ii` ≈ 1 and LOO residuals
@@ -485,7 +485,7 @@ pub struct LooSmoothing {
 ///     RBFKernel::ThinPlateSpline,
 ///     None,  // Use default grid
 /// )?;
-/// println!("Optimal smoothing: {:.2e}, RMSE: {:.6}", result.smoothing, result.rmse);
+/// tracing::info!("Optimal smoothing: {:.2e}, RMSE: {:.6}", result.smoothing, result.rmse);
 /// ```
 ///
 /// # Reference

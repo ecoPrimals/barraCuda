@@ -166,7 +166,7 @@ pub fn solve_f64_cpu(a: &[f64], b: &[f64], n: usize) -> Result<Vec<f64>> {
         let mut sum = aug[i * (n + 1) + n];
 
         for j in (i + 1)..n {
-            sum -= aug[i * (n + 1) + j] * x[j];
+            sum = aug[i * (n + 1) + j].mul_add(-x[j], sum);
         }
 
         x[i] = sum / aug[i * (n + 1) + i];
@@ -336,7 +336,7 @@ mod tests {
         for i in 0..n {
             let mut ax_i = 0.0;
             for j in 0..n {
-                ax_i += a[i * n + j] * x[j];
+                ax_i = a[i * n + j].mul_add(x[j], ax_i);
             }
             assert!(
                 (ax_i - b[i]).abs() < SOL_TOL,

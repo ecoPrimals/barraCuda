@@ -1,25 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Transport layer for barraCuda IPC.
-//!
-//! Transport-agnostic JSON-RPC 2.0 handler over any `AsyncRead + AsyncWrite`.
-//! Supports Unix domain sockets (primary) and TCP (fallback), per
-//! wateringHole `UNIVERSAL_IPC_STANDARD_V3.md` and `ECOBIN_ARCHITECTURE_STANDARD.md`.
-//!
-//! Configuration utilities (bind address resolution, socket paths, env vars) live
-//! in the sibling [`super::transport_config`] module.
-
-use super::jsonrpc::{JsonRpcRequest, JsonRpcResponse};
-use super::methods;
-pub use super::transport_config::{
-    DEFAULT_BIND_HOST, DEFAULT_ECOSYSTEM_SOCKET_DIR, discovery_socket_path, resolve_bind_address,
-    resolve_bind_host, resolve_family_id, resolve_socket_dir, validate_insecure_guard,
-};
-pub use super::transport_endpoint::{TransportEndpoint, TransportStream, connect_transport};
+use super::super::transport_config::{resolve_family_id, resolve_socket_dir};
+use super::connection::{handle_btsp_connection, handle_connection, handle_stream};
 use crate::BarraCudaPrimal;
 use crate::env_keys;
 use barracuda::error::Result;
 use std::sync::Arc;
-use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
 
 const DEFAULT_MAX_FRAME_BYTES: usize = 256 * 1024 * 1024;
@@ -39,51 +24,12 @@ static MAX_CONNECTIONS: std::sync::LazyLock<usize> = std::sync::LazyLock::new(||
         .unwrap_or(DEFAULT_MAX_CONNECTIONS)
 });
 
-fn max_frame_bytes() -> usize {
+pub(super) fn max_frame_bytes() -> usize {
     *MAX_FRAME_BYTES
 }
 
-fn max_connections() -> usize {
+pub(super) fn max_connections() -> usize {
     *MAX_CONNECTIONS
-}
-
-/// Genetics-layer signal prefixes per eukaryotic model.
-///
-/// cellMembrane/NUCLEUS probers send a 2-byte prefix before JSON-RPC payloads
-/// to distinguish live primals from stale sockets and signal transport intent.
-/// Primals strip the prefix and continue with normal JSON-RPC parsing.
-///
-/// | Byte 0 | Stream              | Purpose                              |
-/// |--------|---------------------|--------------------------------------|
-/// | `0xEC` | MitoBeacon v1       | Relay access, mesh, ABG transport    |
-/// | `0xED` | MitoBeacon v2       | Extended mito-beacon (future)        |
-/// | `0xEE` | Nuclear Lineage     | Per-user permissions (BearDog-spawned)|
-///
-/// Byte 1 is a version/sub-type discriminator (currently `0x01`).
-const MITO_BEACON_V1: u8 = 0xEC;
-const MITO_BEACON_V2: u8 = 0xED;
-const NUCLEAR_LINEAGE: u8 = 0xEE;
-
-/// Strip a genetics-layer signal prefix from a BufReader if present.
-///
-/// Uses `fill_buf()` to peek at buffered bytes without consuming. If the
-/// first byte matches a known genetics signal (`0xEC`, `0xED`, `0xEE`),
-/// consumes the 2-byte prefix (signal byte + version). Otherwise the stream
-/// remains untouched for normal JSON-RPC parsing. Works for both TCP and UDS
-/// transports without platform-specific peek syscalls.
-async fn strip_genetics_prefix<R: AsyncRead + Unpin>(reader: &mut BufReader<R>) -> bool {
-    match reader.fill_buf().await {
-        Ok(buf)
-            if buf.len() >= 2
-                && matches!(buf[0], MITO_BEACON_V1 | MITO_BEACON_V2 | NUCLEAR_LINEAGE) =>
-        {
-            let signal = buf[0];
-            reader.consume(2);
-            tracing::debug!(signal = format_args!("0x{signal:02X}"), "genetics prefix accepted");
-            true
-        }
-        _ => false,
-    }
 }
 
 /// IPC server for barraCuda primal.
@@ -191,7 +137,7 @@ impl IpcServer {
                     let (mut stream, _) = result?;
                     let srv = server.clone();
                     tokio::spawn(async move {
-                        let outcome = super::btsp::guard_connection(&mut stream).await;
+                        let outcome = super::super::btsp::guard_connection(&mut stream).await;
                         if !outcome.should_accept() {
                             tracing::warn!("BTSP handshake rejected tarpc connection: {outcome:?}");
                             return;
@@ -292,7 +238,7 @@ impl IpcServer {
                     tracing::debug!("IPC connection from {peer}");
                     let primal = Arc::clone(&self.primal);
                     tokio::spawn(async move {
-                        let outcome = super::btsp::guard_connection(&mut stream).await;
+                        let outcome = super::super::btsp::guard_connection(&mut stream).await;
                         if !outcome.should_accept() {
                             tracing::warn!("BTSP handshake rejected connection from {peer}: {outcome:?}");
                             return;
@@ -349,7 +295,7 @@ impl IpcServer {
                     let (mut stream, _) = result?;
                     let primal = Arc::clone(&self.primal);
                     tokio::spawn(async move {
-                        let outcome = super::btsp::guard_connection(&mut stream).await;
+                        let outcome = super::super::btsp::guard_connection(&mut stream).await;
                         if !outcome.should_accept() {
                             tracing::warn!("BTSP handshake rejected connection: {outcome:?}");
                             return;
@@ -480,193 +426,6 @@ impl IpcServer {
     }
 }
 
-const SERIALIZATION_ERROR: &str =
-    r#"{"jsonrpc":"2.0","error":{"code":-32603,"message":"Serialization error"},"id":null}"#;
-
-/// Transport-agnostic JSON-RPC 2.0 connection handler.
-///
-/// Works over any `AsyncRead + AsyncWrite` stream — TCP, Unix socket,
-/// or future transports (named pipes, abstract sockets). This is the
-/// ecoBin v2.0 transport-agnostic protocol handler: add a new transport
-/// by binding a listener and passing accepted connections here.
-///
-/// Supports both single requests and JSON-RPC 2.0 batch requests (JSON
-/// arrays). Per spec: an empty batch returns a parse error; notifications
-/// within a batch produce no response entries; if all requests are
-/// notifications, no response is sent.
-///
-/// `replay` is an optional first line consumed during the BTSP handshake
-/// guard. When `FAMILY_ID` is set and a legacy (non-BTSP) client connects,
-/// the guard reads the first line looking for a `ClientHello`. If the line
-/// is a plain JSON-RPC request, the guard returns it here for replay so
-/// the request is not silently dropped (LD-10 fix).
-async fn handle_connection<R, W>(
-    primal: Arc<BarraCudaPrimal>,
-    reader: R,
-    mut writer: W,
-    session: Option<super::btsp::BtspSession>,
-    replay: Option<String>,
-) where
-    R: AsyncRead + Unpin + Send,
-    W: AsyncWrite + Unpin + Send,
-{
-    if let Some(ref line) = replay
-        && dispatch_line(&primal, line, &mut writer).await.is_err() {
-            return;
-        }
-    let mut buf_reader = BufReader::new(reader);
-    strip_genetics_prefix(&mut buf_reader).await;
-    loop {
-        let line = {
-            let mut lines = (&mut buf_reader).lines();
-            match lines.next_line().await {
-                Ok(Some(l)) => l,
-                _ => break,
-            }
-        };
-        if let Some(upgraded) = try_negotiate_upgrade(session.as_ref(), &line, &mut writer).await {
-            tracing::info!("Phase 3 negotiate: switching to encrypted framing");
-            handle_btsp_connection(primal, buf_reader, writer, &upgraded).await;
-            return;
-        }
-        if dispatch_line(&primal, &line, &mut writer).await.is_err() {
-            break;
-        }
-    }
-}
-
-/// If `line` is a `btsp.negotiate` request and the session supports it,
-/// write the response and return the upgraded `BtspSession`. Returns `None`
-/// for non-negotiate lines or when the cipher stays NULL.
-async fn try_negotiate_upgrade<W>(
-    session: Option<&super::btsp::BtspSession>,
-    line: &str,
-    writer: &mut W,
-) -> Option<super::btsp::BtspSession>
-where
-    W: AsyncWrite + Unpin + Send,
-{
-    let session = session.as_ref()?;
-    let parsed: serde_json::Value = serde_json::from_str(line.trim()).ok()?;
-    if parsed.get("method")?.as_str()? != "btsp.negotiate" {
-        return None;
-    }
-    let id = parsed.get("id").cloned().unwrap_or(serde_json::Value::Null);
-    let params = parsed
-        .get("params")
-        .cloned()
-        .unwrap_or(serde_json::Value::Null);
-    let (resp, upgraded) = match super::btsp::negotiate_phase3(session, &params) {
-        Ok(nr) => {
-            let keyed = nr.session.cipher.requires_key();
-            (
-                JsonRpcResponse::success(id, nr.response),
-                keyed.then_some(nr.session),
-            )
-        }
-        Err(e) => (JsonRpcResponse::error(id, -32602, e.to_string()), None),
-    };
-    let mut json = serde_json::to_string(&resp).unwrap_or_else(|_| SERIALIZATION_ERROR.to_string());
-    json.push('\n');
-    if writer.write_all(json.as_bytes()).await.is_err() {
-        return None;
-    }
-    if upgraded.is_some() {
-        let _ = writer.flush().await;
-    }
-    upgraded
-}
-
-/// Dispatch a single NDJSON line (single request or batch array) and write
-/// the response. Returns `Err(())` on write failure (caller should close).
-async fn dispatch_line<W>(
-    primal: &Arc<BarraCudaPrimal>,
-    line: &str,
-    writer: &mut W,
-) -> std::result::Result<(), ()>
-where
-    W: AsyncWrite + Unpin + Send,
-{
-    let trimmed = line.trim_start();
-    if trimmed.starts_with('[') {
-        let Some(batch_json) = handle_batch(primal, trimmed).await else {
-            return Ok(());
-        };
-        let mut out = batch_json;
-        out.push('\n');
-        writer.write_all(out.as_bytes()).await.map_err(|e| {
-            tracing::debug!("IPC write failed (batch response): {e}");
-        })?;
-    } else {
-        let Some(response) = handle_line(primal, line).await else {
-            return Ok(());
-        };
-        let mut json =
-            serde_json::to_string(&response).unwrap_or_else(|_| SERIALIZATION_ERROR.to_string());
-        json.push('\n');
-        writer.write_all(json.as_bytes()).await.map_err(|e| {
-            tracing::debug!("IPC write failed (single response): {e}");
-        })?;
-    }
-    Ok(())
-}
-
-/// Handle a single TCP connection (newline-delimited JSON-RPC).
-async fn handle_stream(
-    primal: Arc<BarraCudaPrimal>,
-    stream: tokio::net::TcpStream,
-    session: Option<super::btsp::BtspSession>,
-    replay: Option<String>,
-) {
-    let (reader, writer) = stream.into_split();
-    handle_connection(primal, reader, writer, session, replay).await;
-}
-
-/// Handle a BTSP Phase 3 connection using length-prefixed encrypted frames.
-///
-/// Each frame is decrypted, dispatched as JSON-RPC, and the response
-/// encrypted back. Per `BTSP_PROTOCOL_STANDARD.md` §Wire Framing.
-async fn handle_btsp_connection<R, W>(
-    primal: Arc<BarraCudaPrimal>,
-    reader: R,
-    writer: W,
-    session: &super::btsp::BtspSession,
-) where
-    R: AsyncRead + Unpin + Send,
-    W: AsyncWrite + Unpin + Send,
-{
-    use super::btsp_frame::{
-        BtspFrameReader, BtspFrameWriter, read_frame_as_line, write_line_as_frame,
-    };
-
-    let mut frame_reader = BtspFrameReader::new(reader, session);
-    let mut frame_writer = BtspFrameWriter::new(writer, session);
-
-    while let Some(line) = read_frame_as_line(&mut frame_reader).await {
-        let trimmed = line.trim_start();
-        if trimmed.starts_with('[') {
-            let Some(batch_json) = handle_batch(&primal, trimmed).await else {
-                continue;
-            };
-            if write_line_as_frame(&mut frame_writer, &batch_json)
-                .await
-                .is_err()
-            {
-                break;
-            }
-        } else {
-            let Some(response) = handle_line(&primal, &line).await else {
-                continue;
-            };
-            let json = serde_json::to_string(&response)
-                .unwrap_or_else(|_| SERIALIZATION_ERROR.to_string());
-            if write_line_as_frame(&mut frame_writer, &json).await.is_err() {
-                break;
-            }
-        }
-    }
-}
-
 /// Wait for SIGINT (Ctrl-C) or SIGTERM for graceful shutdown.
 async fn shutdown_signal() {
     let ctrl_c = tokio::signal::ctrl_c();
@@ -692,89 +451,3 @@ async fn shutdown_signal() {
         ctrl_c.await.ok();
     }
 }
-
-/// Validate and dispatch a parsed `JsonRpcRequest`, moving the `id` to avoid
-/// cloning the `serde_json::Value` on every request.
-///
-/// Returns `None` for notifications (requests without `id`), per JSON-RPC 2.0
-/// spec: "The Server MUST NOT reply to a Notification".
-async fn handle_request(
-    primal: &BarraCudaPrimal,
-    request: JsonRpcRequest,
-) -> Option<JsonRpcResponse> {
-    if let Err(err_resp) = request.validate() {
-        return Some(err_resp);
-    }
-
-    let JsonRpcRequest {
-        id, method, params, ..
-    } = request;
-    let id = match id {
-        Some(v) if !v.is_null() => v,
-        _ => return None,
-    };
-    Some(methods::dispatch(primal, &method, &params, id).await)
-}
-
-/// Parse a single line of JSON-RPC and dispatch to the method handler.
-async fn handle_line(primal: &BarraCudaPrimal, line: &str) -> Option<JsonRpcResponse> {
-    let request: JsonRpcRequest = match serde_json::from_str(line) {
-        Ok(r) => r,
-        Err(_) => return Some(JsonRpcResponse::parse_error()),
-    };
-    handle_request(primal, request).await
-}
-
-/// Handle a JSON-RPC 2.0 batch request (JSON array on a single line).
-///
-/// Per JSON-RPC 2.0 spec §6:
-/// - An empty array is an invalid request.
-/// - Each element is processed independently; notifications produce no entry.
-/// - If all elements are notifications, no response is returned (`None`).
-/// - Non-array elements within the batch produce individual parse errors.
-///
-/// Uses `serde_json::from_value` to avoid stringify/re-parse per element.
-async fn handle_batch(primal: &BarraCudaPrimal, line: &str) -> Option<String> {
-    let items: Vec<serde_json::Value> = match serde_json::from_str(line) {
-        Ok(v) => v,
-        Err(_) => {
-            return Some(
-                serde_json::to_string(&JsonRpcResponse::parse_error())
-                    .unwrap_or_else(|_| SERIALIZATION_ERROR.to_string()),
-            );
-        }
-    };
-
-    if items.is_empty() {
-        return Some(
-            serde_json::to_string(&JsonRpcResponse::error(
-                serde_json::Value::Null,
-                super::jsonrpc::INVALID_REQUEST,
-                "empty batch",
-            ))
-            .unwrap_or_else(|_| SERIALIZATION_ERROR.to_string()),
-        );
-    }
-
-    let mut responses = Vec::new();
-    for item in items {
-        match serde_json::from_value::<JsonRpcRequest>(item) {
-            Ok(request) => {
-                if let Some(resp) = handle_request(primal, request).await {
-                    responses.push(resp);
-                }
-            }
-            Err(_) => responses.push(JsonRpcResponse::parse_error()),
-        }
-    }
-
-    if responses.is_empty() {
-        return None;
-    }
-
-    Some(serde_json::to_string(&responses).unwrap_or_else(|_| SERIALIZATION_ERROR.to_string()))
-}
-
-#[cfg(test)]
-#[path = "transport_tests.rs"]
-mod tests;

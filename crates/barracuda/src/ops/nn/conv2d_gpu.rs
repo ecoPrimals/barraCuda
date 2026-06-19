@@ -289,7 +289,7 @@ mod tests {
                                             + ci * k_h * k_w
                                             + ky * k_w
                                             + kx;
-                                        sum += input[i_idx] * kernel[k_idx];
+                                        sum = input[i_idx].mul_add(kernel[k_idx], sum);
                                     }
                                 }
                             }

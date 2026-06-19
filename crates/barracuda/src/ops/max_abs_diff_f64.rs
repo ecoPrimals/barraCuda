@@ -20,7 +20,7 @@
 //! let device = WgpuDevice::new().await?;
 //! let diff = MaxAbsDiffF64::compute(&device, &e_new, &e_old)?;
 //! if diff < 1e-10 {
-//!     println!("Converged!");
+//!     tracing::info!("Converged!");
 //! }
 //! ```
 

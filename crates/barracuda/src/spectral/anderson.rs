@@ -314,7 +314,7 @@ pub fn anderson_3d_correlated(
                             let j = (jx as usize * l + jy as usize) * l + jz as usize;
                             let r = ((dx * dx + dy * dy + dz * dz) as f64).sqrt();
                             let kernel = (-r / xi_corr).exp();
-                            sum += kernel * raw[j];
+                            sum = kernel.mul_add(raw[j], sum);
                             norm += kernel;
                         }
                     }

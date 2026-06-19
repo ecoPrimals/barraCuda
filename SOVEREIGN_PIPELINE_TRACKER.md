@@ -1,6 +1,6 @@
 # Sovereign Pipeline Tracker
 
-**Date**: June 3, 2026
+**Date**: June 19, 2026
 **Version**: 0.4.0
 **Type**: Actionable tracker (updated as work progresses)
 **Scope**: All remaining work for the pure Rust sovereign GPU pipeline

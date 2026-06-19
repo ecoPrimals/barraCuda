@@ -438,8 +438,8 @@ impl YukawaCellListF64 {
                         forces[j * 3 + 2] -= fz;
 
                         // Half energy to each particle
-                        energies[i] += 0.5 * u;
-                        energies[j] += 0.5 * u;
+                        energies[i] = 0.5f64.mul_add(u, energies[i]);
+                        energies[j] = 0.5f64.mul_add(u, energies[j]);
                     }
                 }
             }

@@ -80,9 +80,10 @@ impl Drop for DispatchPermit<'_> {
 pub(crate) fn concurrency_budget(device_type: wgpu::DeviceType) -> usize {
     if let Ok(val) = std::env::var(CONCURRENCY_BUDGET_ENV)
         && let Ok(n) = val.parse::<usize>()
-            && n > 0 {
-                return n;
-            }
+        && n > 0
+    {
+        return n;
+    }
 
     match device_type {
         wgpu::DeviceType::Cpu => CONCURRENCY_BUDGET_CPU,

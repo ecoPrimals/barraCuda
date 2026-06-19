@@ -262,7 +262,7 @@ pub fn multi_shift_cg_solve(
         let ap = apply_dirac_sq(lattice, &p[0], mass);
 
         let mut p_ap = p[0].dot(&ap).re;
-        p_ap += shifts[0] * p[0].dot(&p[0]).re;
+        p_ap = shifts[0].mul_add(p[0].dot(&p[0]).re, p_ap);
 
         if p_ap.abs() < 1e-30 {
             break;
@@ -439,9 +439,10 @@ fn remez_for_poles(sigma: &[f64], power: f64, eval_grid: &[f64]) -> (Vec<f64>, f
                 if (e.signum() - last_sign).abs() > f64::EPSILON {
                     selected.push((idx, e));
                 } else if selected.last().is_some_and(|l| e.abs() > l.1.abs())
-                    && let Some(slot) = selected.last_mut() {
-                        *slot = (idx, e);
-                    }
+                    && let Some(slot) = selected.last_mut()
+                {
+                    *slot = (idx, e);
+                }
             }
         }
 
@@ -499,9 +500,9 @@ fn solve_linear_system(ata: &[f64], atb: &[f64], n: usize) -> Vec<f64> {
         for row in (col + 1)..n {
             let factor = a[row * n + col] / pivot;
             for j in col..n {
-                a[row * n + j] -= factor * a[col * n + j];
+                a[row * n + j] = factor.mul_add(-a[col * n + j], a[row * n + j]);
             }
-            b[row] -= factor * b[col];
+            b[row] = factor.mul_add(-b[col], b[row]);
         }
     }
 
@@ -509,7 +510,7 @@ fn solve_linear_system(ata: &[f64], atb: &[f64], n: usize) -> Vec<f64> {
     for i in (0..n).rev() {
         let mut sum = b[i];
         for j in (i + 1)..n {
-            sum -= a[i * n + j] * x[j];
+            sum = a[i * n + j].mul_add(-x[j], sum);
         }
         let diag = a[i * n + i];
         x[i] = if diag.abs() > 1e-30 { sum / diag } else { 0.0 };

@@ -253,9 +253,10 @@ fn validate_batch_ops(ops: &[Value], valid_ops: &[&str]) -> Result<(), BatchErro
         }
 
         if let Some(alias) = op_val.get("alias").and_then(|v| v.as_str())
-            && !alias.is_empty() {
-                defined_aliases.insert(alias.to_string());
-            }
+            && !alias.is_empty()
+        {
+            defined_aliases.insert(alias.to_string());
+        }
 
         match op_name {
             "create" => {

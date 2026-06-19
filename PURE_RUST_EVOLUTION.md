@@ -1,8 +1,8 @@
 # Pure Rust Evolution — barraCuda
 
-**Date**: June 3, 2026
+**Date**: June 19, 2026
 **Version**: 0.4.0
-**Status**: Layer 1 complete — zero unsafe, zero application C deps, VFIO-primary architecture adopted, GpuBackend trait abstraction, dispatch_binary wired, coral cache → dispatch integrated, PrecisionBrain-coralReef sovereign routing, NagaExecutor CPU shader interpreter (workgroup.rs extracted), coralReef CPU compilation IPC contract, cargo deny fully passing, 80.5% test coverage, 4,393 tests, **BTSP Phase 3 stream encryption** (ChaCha20-Poly1305 + HMAC-SHA256 via pure Rust RustCrypto: `chacha20poly1305`, `hmac`, `sha2`, `base64ct`), **96 IPC methods** including ML pipeline (train→save→load→infer), mesh trust validation, `precision.route` advisory, `signal.*` namespace, multi-model regression, ecology/rarefaction, gamma distribution, **trio contract E2E validated** (F64/DF64/TensorCore paths), **12-axis deep debt clean bill**, ml.rs smart decomposition (838L→4 modules), runtime gate discovery
+**Status**: Layer 1 complete — zero unsafe, zero application C deps, VFIO-primary architecture adopted, GpuBackend trait abstraction, dispatch_binary wired, coral cache → dispatch integrated, PrecisionBrain-coralReef sovereign routing, NagaExecutor CPU shader interpreter (workgroup.rs extracted), coralReef CPU compilation IPC contract, cargo deny fully passing, 80.5% test coverage, 4,624 tests (708 core + 3,916 barracuda), **BTSP Phase 3 stream encryption** (ChaCha20-Poly1305 + HMAC-SHA256 via pure Rust RustCrypto), **98 IPC methods** including ML pipeline, mesh trust, `linalg.batched_tridiag_eigh` (groundSpring absorption), genetics-layer prefix stripping (0xEC/0xED/0xEE), **postcard serialization** (bincode replaced, RUSTSEC-2025-0141 resolved), **transport/ module decomposition** (server + connection + dispatch), **transport_tests/ module** (7 semantic files), **238 mul_add evolutions**, **MSRV 1.92 + Edition 2024**, zero files >800L, all quality gates green
 
 ---
 

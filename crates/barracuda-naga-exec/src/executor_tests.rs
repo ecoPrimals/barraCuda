@@ -289,7 +289,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 
 #[test]
 fn test_f64_precision_vs_f32() {
-    let val: f64 = 1.0 + 1e-15;
+    let val = 1.0_f64 + 1e-15;
     #[expect(
         clippy::cast_possible_truncation,
         reason = "deliberate: testing that f32 cannot represent 1e-15 precision"

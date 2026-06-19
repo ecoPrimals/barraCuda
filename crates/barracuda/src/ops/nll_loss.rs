@@ -48,12 +48,13 @@ impl NLLLoss {
         }
 
         if let Some(ref w) = weights
-            && w.shape().iter().product::<usize>() != num_classes {
-                return Err(BarracudaError::invalid_op(
-                    "nll_loss",
-                    "weights must have num_classes elements",
-                ));
-            }
+            && w.shape().iter().product::<usize>() != num_classes
+        {
+            return Err(BarracudaError::invalid_op(
+                "nll_loss",
+                "weights must have num_classes elements",
+            ));
+        }
 
         Ok(Self {
             log_probs,

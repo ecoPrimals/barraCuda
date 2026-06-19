@@ -236,7 +236,7 @@ mod tests {
         // L_2(x) = (x² - 4x + 2) / 2
         for (i, &v) in result.iter().enumerate() {
             let x = data[i];
-            let expected = f32::midpoint(x * x - 4.0 * x, 2.0);
+            let expected = f32::midpoint(4.0f32.mul_add(-x, x * x), 2.0);
             assert!(
                 (v - expected).abs() < 1e-4,
                 "L_2({x}) = {v}, expected {expected}"

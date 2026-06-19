@@ -105,7 +105,7 @@ fn norm(v: &[f64]) -> f64 {
 /// Vector: y = a*x + y
 fn axpy(a: f64, x: &[f64], y: &mut [f64]) {
     for (yi, &xi) in y.iter_mut().zip(x.iter()) {
-        *yi += a * xi;
+        *yi = a.mul_add(xi, *yi);
     }
 }
 
@@ -539,7 +539,7 @@ pub fn jacobi_solve(a: &CsrMatrix, b: &[f64], tol: f64, max_iter: usize) -> Resu
             for k in row_start..row_end {
                 let j = a.col_indices[k];
                 if j != i {
-                    sum -= a.values[k] * x[j];
+                    sum = a.values[k].mul_add(-x[j], sum);
                 }
             }
             x_new[i] = sum / diag[i];

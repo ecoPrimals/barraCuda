@@ -282,11 +282,12 @@ fn find_compound_assignments(
                     && let Expression::Load {
                         pointer: load_ptr, ..
                     } = expressions[left]
-                        && load_ptr == pointer
-                            && let Expression::LocalVariable(lv) = expressions[pointer]
-                                && let Some(name) = local_var_names.get(&lv) {
-                                    out.insert(value, name.clone());
-                                }
+                    && load_ptr == pointer
+                    && let Expression::LocalVariable(lv) = expressions[pointer]
+                    && let Some(name) = local_var_names.get(&lv)
+                {
+                    out.insert(value, name.clone());
+                }
             }
             Statement::Block(ref inner) => {
                 find_compound_assignments(inner, expressions, local_var_names, out);
@@ -492,15 +493,17 @@ fn resolve_operand(handle: Handle<Expression>, ctx: &RewriteCtx) -> String {
 /// 3. Fallback → `f64(0.0)` (safe default that won't break compilation)
 fn leaf_text(handle: Handle<Expression>, ctx: &RewriteCtx) -> String {
     if let Some(span_range) = ctx.expressions.get_span(handle).to_range()
-        && span_range.start < span_range.end {
-            return format!("__SPAN__{}__{}", span_range.start, span_range.end);
-        }
+        && span_range.start < span_range.end
+    {
+        return format!("__SPAN__{}__{}", span_range.start, span_range.end);
+    }
 
     if let Expression::Load { pointer, .. } = ctx.expressions[handle]
         && let Expression::LocalVariable(lv) = ctx.expressions[pointer]
-            && let Some(name) = ctx.local_var_names.get(&lv) {
-                return name.clone();
-            }
+        && let Some(name) = ctx.local_var_names.get(&lv)
+    {
+        return name.clone();
+    }
 
     String::from("f64(0.0)")
 }
@@ -554,12 +557,14 @@ pub(crate) fn resolve_spans(rewritten: &str, original: &str) -> String {
             let end_str = &after_mid[..end_len];
 
             if let (Ok(start), Ok(end)) = (start_str.parse::<usize>(), end_str.parse::<usize>())
-                && start <= end && end <= original.len() {
-                    let span_text = &original[start..end];
-                    let marker_end = pos + 8 + mid + 2 + end_len;
-                    result.replace_range(pos..marker_end, span_text);
-                    continue;
-                }
+                && start <= end
+                && end <= original.len()
+            {
+                let span_text = &original[start..end];
+                let marker_end = pos + 8 + mid + 2 + end_len;
+                result.replace_range(pos..marker_end, span_text);
+                continue;
+            }
         }
         break; // malformed marker, stop
     }

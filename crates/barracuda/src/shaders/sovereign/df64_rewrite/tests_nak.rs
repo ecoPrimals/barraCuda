@@ -389,12 +389,12 @@ fn test_yukawa_cpu_reference_two_particles() {
             let inv_r = 1.0 / r;
 
             // Force: repulsive (subtract, same sign as shader)
-            fx -= force_mag * dx * inv_r;
-            fy -= force_mag * dy * inv_r;
-            fz -= force_mag * dz * inv_r;
+            fx = (force_mag * dx).mul_add(-inv_r, fx);
+            fy = (force_mag * dy).mul_add(-inv_r, fy);
+            fz = (force_mag * dz).mul_add(-inv_r, fz);
 
             // PE: U = prefactor * exp(-kappa*r) / r * 0.5 (half-counting)
-            pe_i += 0.5 * prefactor * screening * inv_r;
+            pe_i = (0.5 * prefactor * screening).mul_add(inv_r, pe_i);
         }
         forces[i * 3] = fx;
         forces[i * 3 + 1] = fy;

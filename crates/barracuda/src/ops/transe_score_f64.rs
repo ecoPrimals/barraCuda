@@ -272,7 +272,7 @@ mod tests {
                 for d in 0..dim {
                     let diff = entities[h as usize * dim + d] + relations[r as usize * dim + d]
                         - entities[t as usize * dim + d];
-                    sum_sq += diff * diff;
+                    sum_sq = diff.mul_add(diff, sum_sq);
                 }
                 -sum_sq.sqrt()
             })

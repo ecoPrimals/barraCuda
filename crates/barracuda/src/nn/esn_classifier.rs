@@ -206,10 +206,10 @@ impl EsnClassifier {
                 .iter()
                 .enumerate()
             {
-                sum += w * input[j];
+                sum = w.mul_add(input[j], sum);
             }
             for (&w, &s_j) in self.w_res[i * n..(i + 1) * n].iter().zip(self.state.iter()) {
-                sum += w * s_j;
+                sum = w.mul_add(s_j, sum);
             }
             *new_state_i = sum.tanh();
         }
@@ -316,7 +316,7 @@ impl EsnClassifier {
         for j in 0..m {
             let mut sum = 0.0;
             for i in 0..n {
-                sum += w_out[j * n_features + i] * self.state[i];
+                sum = w_out[j * n_features + i].mul_add(self.state[i], sum);
             }
             sum += w_out[j * n_features + n];
             output[j] = sum;
@@ -344,7 +344,7 @@ impl EsnClassifier {
         for j in 0..m {
             let mut sum = 0.0;
             for i in 0..n {
-                sum += w_out[j * n_features + i] * self.state[i];
+                sum = w_out[j * n_features + i].mul_add(self.state[i], sum);
             }
             sum += w_out[j * n_features + n];
             output[j] = sum;

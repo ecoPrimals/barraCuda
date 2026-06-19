@@ -155,7 +155,7 @@ where
         g_prev.copy_from_slice(&g);
 
         for i in 0..n {
-            x[i] += alpha * d[i];
+            x[i] = alpha.mul_add(d[i], x[i]);
         }
         f_val = f_new;
         grad(&x, &mut g);
@@ -167,7 +167,7 @@ where
         for i in 0..n {
             s_k[i] = x[i] - x_prev[i];
             y_k[i] = g[i] - g_prev[i];
-            sy += s_k[i] * y_k[i];
+            sy = s_k[i].mul_add(y_k[i], sy);
         }
 
         if sy > 1e-30 {
@@ -240,7 +240,7 @@ fn two_loop_recursion(
         let dot: f64 = s_history[i].iter().zip(q.iter()).map(|(a, b)| a * b).sum();
         alpha_buf[i] = rho_history[i] * dot;
         for j in 0..n {
-            q[j] -= alpha_buf[i] * y_history[i][j];
+            q[j] = alpha_buf[i].mul_add(-y_history[i][j], q[j]);
         }
     }
 
@@ -266,7 +266,7 @@ fn two_loop_recursion(
         let dot: f64 = y_history[i].iter().zip(q.iter()).map(|(a, b)| a * b).sum();
         let beta = rho_history[i] * dot;
         for j in 0..n {
-            q[j] += (alpha_buf[i] - beta) * s_history[i][j];
+            q[j] = (alpha_buf[i] - beta).mul_add(s_history[i][j], q[j]);
         }
     }
 

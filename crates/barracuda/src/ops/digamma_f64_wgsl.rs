@@ -155,7 +155,7 @@ impl DigammaF64 {
 
         if y < 0.0 {
             let cot_pi_y = (PI * y).cos() / (PI * y).sin();
-            result -= PI * cot_pi_y;
+            result = PI.mul_add(-cot_pi_y, result);
             y = 1.0 - y;
         }
 
@@ -181,17 +181,17 @@ impl DigammaF64 {
         let mut sum = 0.5f64.mul_add(-inv_x, x.ln());
         let mut term = inv_x2;
 
-        sum -= B2 * term;
+        sum = B2.mul_add(-term, sum);
         term *= inv_x2;
-        sum -= B4 * term;
+        sum = B4.mul_add(-term, sum);
         term *= inv_x2;
-        sum -= B6 * term;
+        sum = B6.mul_add(-term, sum);
         term *= inv_x2;
-        sum -= B8 * term;
+        sum = B8.mul_add(-term, sum);
         term *= inv_x2;
-        sum -= B10 * term;
+        sum = B10.mul_add(-term, sum);
         term *= inv_x2;
-        sum -= B12 * term;
+        sum = B12.mul_add(-term, sum);
 
         sum
     }

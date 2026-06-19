@@ -302,7 +302,7 @@ pub fn solve_richards(
                     h_old[i + 1],
                     (0.5 * dt * (coeff_l + coeff_r)).mul_add(
                         -h_old[i],
-                        ci_max * h_old[i] + 0.5 * dt * coeff_l * h_old[i - 1],
+                        (0.5 * dt * coeff_l).mul_add(h_old[i - 1], ci_max * h_old[i]),
                     ),
                 ) + dt * (k_half[i] - k_half[i - 1]) / dz;
 
@@ -319,9 +319,10 @@ pub fn solve_richards(
                     let ci_max = c_buf[0].max(MIN_CAPACITY);
                     b_tri[0] = (0.5 * dt).mul_add(coeff_r, ci_max);
                     c_tri[0] = -0.5 * dt * coeff_r;
-                    d_vec[0] = (0.5 * dt * coeff_r)
-                        .mul_add(h_old[1], ci_max * h_old[0] - 0.5 * dt * coeff_r * h_old[0])
-                        + dt * q_top / dz;
+                    d_vec[0] = (0.5 * dt * coeff_r).mul_add(
+                        h_old[1],
+                        (0.5 * dt * coeff_r).mul_add(-h_old[0], ci_max * h_old[0]),
+                    ) + dt * q_top / dz;
                 }
             }
 
@@ -337,7 +338,7 @@ pub fn solve_richards(
                     b_tri[n - 1] = (0.5 * dt).mul_add(coeff_l, ci_max);
                     d_vec[n - 1] = (0.5 * dt * coeff_l).mul_add(
                         -h_old[n - 1],
-                        ci_max * h_old[n - 1] + 0.5 * dt * coeff_l * h_old[n - 2],
+                        (0.5 * dt * coeff_l).mul_add(h_old[n - 2], ci_max * h_old[n - 1]),
                     ) + dt * q_bot / dz;
                 }
             }

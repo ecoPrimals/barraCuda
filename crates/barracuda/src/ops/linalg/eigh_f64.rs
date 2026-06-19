@@ -63,9 +63,8 @@ impl EighDecompositionF64 {
             for j in 0..n {
                 let mut s = 0.0;
                 for k in 0..n {
-                    s += self.eigenvectors[i * n + k]
-                        * self.eigenvalues[k]
-                        * self.eigenvectors[j * n + k];
+                    s = (self.eigenvectors[i * n + k] * self.eigenvalues[k])
+                        .mul_add(self.eigenvectors[j * n + k], s);
                 }
                 a[i * n + j] = s;
             }
@@ -118,7 +117,7 @@ pub fn eigh_householder_qr(a: &[f64], n: usize) -> EighDecompositionF64 {
         for j in 0..n {
             let mut s = 0.0;
             for k in 0..n {
-                s += q[i * n + k] * z[k * n + j];
+                s = q[i * n + k].mul_add(z[k * n + j], s);
             }
             eigenvectors[i * n + j] = s;
         }
@@ -185,7 +184,7 @@ fn eigh_2x2(a: &[f64]) -> EighDecompositionF64 {
 pub fn householder_tridiag(a: &[f64], n: usize) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
     let mut work = a.to_vec();
 
-    let mut q = vec![0.0; n * n];
+    let mut q = vec![0.0_f64; n * n];
     for i in 0..n {
         q[i * n + i] = 1.0;
     }
@@ -215,10 +214,10 @@ pub fn householder_tridiag(a: &[f64], n: usize) -> (Vec<f64>, Vec<f64>, Vec<f64>
         for j in k..n {
             let mut dot = 0.0;
             for i in 0..m {
-                dot += v[i] * work[(k + 1 + i) * n + j];
+                dot = v[i].mul_add(work[(k + 1 + i) * n + j], dot);
             }
             for i in 0..m {
-                work[(k + 1 + i) * n + j] -= tau * v[i] * dot;
+                work[(k + 1 + i) * n + j] = (tau * v[i]).mul_add(-dot, work[(k + 1 + i) * n + j]);
             }
         }
 
@@ -226,21 +225,21 @@ pub fn householder_tridiag(a: &[f64], n: usize) -> (Vec<f64>, Vec<f64>, Vec<f64>
         for i in 0..n {
             let mut dot = 0.0;
             for j in 0..m {
-                dot += work[i * n + k + 1 + j] * v[j];
+                dot = work[i * n + k + 1 + j].mul_add(v[j], dot);
             }
             for j in 0..m {
-                work[i * n + k + 1 + j] -= tau * dot * v[j];
+                work[i * n + k + 1 + j] = (tau * dot).mul_add(-v[j], work[i * n + k + 1 + j]);
             }
         }
 
         // Q = Q * H (columns k+1..n)
         for i in 0..n {
-            let mut dot = 0.0;
+            let mut dot = 0.0_f64;
             for j in 0..m {
-                dot += q[i * n + k + 1 + j] * v[j];
+                dot = q[i * n + k + 1 + j].mul_add(v[j], dot);
             }
             for j in 0..m {
-                q[i * n + k + 1 + j] -= tau * dot * v[j];
+                q[i * n + k + 1 + j] = (tau * dot).mul_add(-v[j], q[i * n + k + 1 + j]);
             }
         }
     }
@@ -442,7 +441,7 @@ mod tests {
                 let mut s = 0.0;
                 for k in 0..n {
                     for l in 0..n {
-                        s += q[i * n + k] * t[k * n + l] * q[j * n + l];
+                        s = (q[i * n + k] * t[k * n + l]).mul_add(q[j * n + l], s);
                     }
                 }
                 qtq[i * n + j] = s;
@@ -493,7 +492,8 @@ mod tests {
         for i in 0..n {
             for j in 0..n {
                 for k in 0..n {
-                    vtv[i * n + j] += r.eigenvectors[k * n + i] * r.eigenvectors[k * n + j];
+                    vtv[i * n + j] = r.eigenvectors[k * n + i]
+                        .mul_add(r.eigenvectors[k * n + j], vtv[i * n + j]);
                 }
             }
         }

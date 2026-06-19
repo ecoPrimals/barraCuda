@@ -83,20 +83,22 @@ impl RAdam {
 
         // Validate momentum and variance shapes if provided
         if let Some(ref m_tensor) = momentum
-            && m_tensor.shape() != parameters.shape() {
-                return Err(BarracudaError::shape_mismatch(
-                    m_tensor.shape().to_vec(),
-                    parameters.shape().to_vec(),
-                ));
-            }
+            && m_tensor.shape() != parameters.shape()
+        {
+            return Err(BarracudaError::shape_mismatch(
+                m_tensor.shape().to_vec(),
+                parameters.shape().to_vec(),
+            ));
+        }
 
         if let Some(ref v_tensor) = variance
-            && v_tensor.shape() != parameters.shape() {
-                return Err(BarracudaError::shape_mismatch(
-                    v_tensor.shape().to_vec(),
-                    parameters.shape().to_vec(),
-                ));
-            }
+            && v_tensor.shape() != parameters.shape()
+        {
+            return Err(BarracudaError::shape_mismatch(
+                v_tensor.shape().to_vec(),
+                parameters.shape().to_vec(),
+            ));
+        }
 
         Ok(Self {
             parameters,

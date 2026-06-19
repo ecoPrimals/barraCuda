@@ -3,6 +3,9 @@
 //!
 //! Implements the `BCML` (barraCuda ML) binary format with BLAKE3 integrity
 //! verification and automatic format detection (binary vs JSON).
+//!
+//! Uses postcard (pure Rust, `no_std`-capable serde serializer) for the
+//! binary payload. Format tag 2 in the BCML header.
 
 use super::SimpleMlp;
 
@@ -10,8 +13,8 @@ use super::SimpleMlp;
 pub(crate) const MODEL_MAGIC: &[u8; 4] = b"BCML";
 /// Header version (1 = initial release).
 const MODEL_VERSION: u8 = 1;
-/// Format tag for bincode-encoded payload.
-const FORMAT_BINCODE: u8 = 1;
+/// Format tag for postcard-encoded payload (evolved from bincode tag 1).
+const FORMAT_POSTCARD: u8 = 2;
 /// Total header size: magic(4) + version(1) + format(1) + reserved(2) + len(4) + blake3(32).
 pub(crate) const MODEL_HEADER_SIZE: usize = 44;
 
@@ -27,8 +30,10 @@ pub enum ModelBinaryError {
     /// Unsupported header version.
     #[error("unsupported model version {0} (expected {MODEL_VERSION})")]
     UnsupportedVersion(u8),
-    /// Unsupported format tag.
-    #[error("unsupported format tag {0}")]
+    /// Unsupported format tag (legacy bincode format 1 no longer supported — re-save model).
+    #[error(
+        "unsupported format tag {0} (expected {FORMAT_POSTCARD}; re-save if migrating from bincode)"
+    )]
     UnsupportedFormat(u8),
     /// BLAKE3 checksum mismatch — data corrupted or tampered.
     #[error("BLAKE3 checksum mismatch (data integrity failure)")]
@@ -50,16 +55,16 @@ impl SimpleMlp {
     /// File layout (44-byte header + payload):
     /// - Magic: `BCML` (4 bytes)
     /// - Version: u8 (1 = initial)
-    /// - Format: u8 (1 = bincode)
+    /// - Format: u8 (2 = postcard)
     /// - Reserved: 2 bytes
     /// - Payload length: u32 LE
     /// - BLAKE3 checksum of payload: 32 bytes
-    /// - Payload (bincode-encoded `SimpleMlp`)
+    /// - Payload (postcard-encoded `SimpleMlp`)
     /// # Errors
-    /// Returns an error if bincode serialization fails.
+    /// Returns an error if postcard serialization fails.
     pub fn to_binary(&self) -> Result<Vec<u8>, ModelBinaryError> {
-        let payload = bincode::serde::encode_to_vec(self, bincode::config::standard())
-            .map_err(|e| ModelBinaryError::Encode(e.to_string()))?;
+        let payload =
+            postcard::to_allocvec(self).map_err(|e| ModelBinaryError::Encode(e.to_string()))?;
 
         let checksum = blake3::hash(&payload);
         let payload_len = u32::try_from(payload.len())
@@ -68,7 +73,7 @@ impl SimpleMlp {
         let mut buf = Vec::with_capacity(MODEL_HEADER_SIZE + payload.len());
         buf.extend_from_slice(MODEL_MAGIC);
         buf.push(MODEL_VERSION);
-        buf.push(FORMAT_BINCODE);
+        buf.push(FORMAT_POSTCARD);
         buf.extend_from_slice(&[0u8; 2]);
         buf.extend_from_slice(&payload_len.to_le_bytes());
         buf.extend_from_slice(checksum.as_bytes());
@@ -79,7 +84,7 @@ impl SimpleMlp {
     /// Deserialize from binary format, verifying BLAKE3 integrity.
     /// # Errors
     /// Returns an error if the header is invalid, checksum fails, or
-    /// bincode deserialization fails.
+    /// postcard deserialization fails.
     pub fn from_binary(data: &[u8]) -> Result<Self, ModelBinaryError> {
         if data.len() < MODEL_HEADER_SIZE {
             return Err(ModelBinaryError::TooShort(data.len()));
@@ -92,7 +97,7 @@ impl SimpleMlp {
             return Err(ModelBinaryError::UnsupportedVersion(version));
         }
         let format = data[5];
-        if format != FORMAT_BINCODE {
+        if format != FORMAT_POSTCARD {
             return Err(ModelBinaryError::UnsupportedFormat(format));
         }
 
@@ -109,9 +114,8 @@ impl SimpleMlp {
             return Err(ModelBinaryError::ChecksumMismatch);
         }
 
-        let (mlp, _) =
-            bincode::serde::decode_from_slice::<Self, _>(payload, bincode::config::standard())
-                .map_err(|e| ModelBinaryError::Decode(e.to_string()))?;
+        let mlp: Self =
+            postcard::from_bytes(payload).map_err(|e| ModelBinaryError::Decode(e.to_string()))?;
         Ok(mlp)
     }
 

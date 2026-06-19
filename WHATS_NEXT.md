@@ -1,10 +1,23 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-06-16.
+Prioritized work items, ordered by impact. Updated 2026-06-19.
 
 ---
 
 ## Recently Completed
+
+### Wave 116 — Deep Debt + Spring Absorption (Jun 19, 2026)
+- **bincode → postcard migration** (RUSTSEC-2025-0141 resolved, format tag 2)
+- **238 `suboptimal_flops` → `mul_add`** (fused multiply-add for numerical accuracy)
+- **`transport.rs` (780L) → `transport/` module** (server.rs 455L + connection.rs 233L + dispatch.rs 89L)
+- **`transport_tests.rs` (858L) → `transport_tests/` module** (7 semantic test files, max 225L)
+- **`println!()` in doc examples → `tracing::info!()`** (~37 sites across 25 library files)
+- **`.expect()` audit**: 6 ownership-invariant sites annotated with `#[expect(clippy::expect_used)]`
+- **CI evolution**: added `cargo deny`, `cargo doc -D warnings`, `cargo nextest` installation
+- **`linalg.batched_tridiag_eigh` IPC method** — groundSpring Exp 012 absorption, CPU fallback via QL with Wilkinson shifts
+- **98 registered JSON-RPC methods** (capability registry updated)
+- **Zero files >800L** across entire codebase
+- **All 5 quality gates green**: fmt, clippy -D warnings, doc -D warnings, deny, check
 
 - **Wave 114: Genetics-Layer Wiring — Eukaryotic Model (Jun 16)**:
   Evolved `strip_ribocipher` → `strip_genetics_prefix` to adopt the centralized
@@ -919,7 +932,7 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
   `KernelTarget::Sovereign` with `HardwareHint::TensorCore` (Sprint 64). Next: coralReef
   HMMA/WGMMA emission for eigensolvers/preconditioners via mixed-precision iterative refinement.
 - **`BatchedTridiagEigh` GPU op**: groundSpring local QL implicit eigensolver is a candidate
-  for absorption as a batched GPU tridiagonal eigenvector solver.
+  for absorption as a batched GPU tridiagonal eigenvector solver — **IPC handler shipped (Wave 116); GPU batched op optional**.
 - **Multi-GPU OOM automatic migration**: OOM detection flag wired in `WgpuDevice`, `is_oom()`
   + `clear_oom()` API live, `is_retriable()` covers OOM (Sprint 64). Next: automatic workload
   migration when a device hits VRAM quota via `QuotaTracker`.
@@ -937,8 +950,8 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
 - **GPU test parallelism (cargo-nextest)**: Mass parallel `cargo test` causes
   wgpu SIGSEGV under extreme GPU driver contention (process-global state
   limitation). All tests pass individually. `cargo-nextest` provides process
-  isolation and resolves this. **Upstream: consider nextest as ecosystem CI
-  standard for GPU-bearing primals.**
+  isolation and resolves this. **Nextest now installed in barraCuda CI (Wave 116).**
+  Upstream: promote as ecosystem CI standard for GPU-bearing primals.
 - **Kokkos GPU parity benchmarks**: Run barraCuda GPU benchmarks on matching hardware,
   publish comparison data.
 - **Optional tensor encryption via `tensor` purpose key**: Per

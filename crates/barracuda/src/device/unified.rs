@@ -42,7 +42,7 @@
 //!
 //! // Query capabilities
 //! let info = Device::CPU.info();
-//! println!("CPU supports: {:?}", info.capabilities);
+//! tracing::info!("CPU supports: {:?}", info.capabilities);
 //! ```
 
 use crate::device::WgpuDevice;

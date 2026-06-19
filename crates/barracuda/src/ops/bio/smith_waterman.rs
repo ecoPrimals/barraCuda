@@ -97,7 +97,7 @@ pub struct SwResult {
 /// ];
 /// let sw = SmithWatermanGpu::new(&device);
 /// let result = sw.align(&query, &target, &subst, &SwConfig::default()).unwrap();
-/// println!("score = {}", result.score);
+/// tracing::info!("score = {}", result.score);
 /// # });
 /// ```
 pub struct SmithWatermanGpu {

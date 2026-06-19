@@ -58,7 +58,7 @@
 //!
 //! let result = pipeline.run_iterations(&chain, &energy_scalar_buf, 1000)?;
 //! for (i, &e) in result.iter().enumerate() {
-//!     println!("iter {}: E = {e:.6}", i * dump_every);
+//!     tracing::info!("iter {}: E = {e:.6}", i * dump_every);
 //! }
 //! ```
 

@@ -270,7 +270,7 @@ impl MultiHeadEsn {
             for j in 0..n {
                 let mut sum = 0.0;
                 for k in 0..n_samples {
-                    sum += x[i * n_samples + k] * x[j * n_samples + k];
+                    sum = x[i * n_samples + k].mul_add(x[j * n_samples + k], sum);
                 }
                 m_mat[i * n + j] = sum;
             }
@@ -282,7 +282,7 @@ impl MultiHeadEsn {
             for j in 0..m {
                 let mut sum = 0.0;
                 for k in 0..n_samples {
-                    sum += x[i * n_samples + k] * y[j * n_samples + k];
+                    sum = x[i * n_samples + k].mul_add(y[j * n_samples + k], sum);
                 }
                 b_mat[i * m + j] = sum;
             }

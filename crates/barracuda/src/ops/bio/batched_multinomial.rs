@@ -95,7 +95,7 @@ impl BatchedMultinomialGpu {
             let mut cumul = Vec::with_capacity(n_taxa);
             let mut acc = 0.0_f64;
             for &p in probs {
-                acc += p * scale;
+                acc = p.mul_add(scale, acc);
                 cumul.push(acc);
             }
             if !cumul.is_empty() {

@@ -45,7 +45,7 @@
 //! let activated = z.relu()?;
 //! let normalized = activated.softmax(0)?;
 //!
-//! println!("Device: {}", x.device().name());
+//! tracing::info!("Device: {}", x.device().name());
 //! // "NVIDIA GeForce RTX 4090" or "AMD Radeon RX 7900" or "CPU (16 cores)"
 //! ```
 //!

@@ -85,15 +85,15 @@ pub fn boltzmann_sampling(
         let (z1, z2) = box_muller(u1, u2);
 
         let mut proposed = params.clone();
-        proposed[0] += step_size * z1;
+        proposed[0] = step_size.mul_add(z1, proposed[0]);
         if proposed.len() > 1 {
-            proposed[1] += step_size * z2;
+            proposed[1] = step_size.mul_add(z2, proposed[1]);
         }
         for p in proposed.iter_mut().skip(2) {
             let u1 = rng.uniform01();
             let u2 = rng.uniform01();
             let (z, _) = box_muller(u1, u2);
-            *p += step_size * z;
+            *p = step_size.mul_add(z, *p);
         }
 
         let proposed_loss = loss_fn(&proposed);

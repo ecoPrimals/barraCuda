@@ -94,7 +94,7 @@ impl SvdDecomposition {
         let mut x = vec![0.0; self.n];
         for i in 0..self.n {
             for j in 0..self.m {
-                x[i] += pinv[i * self.m + j] * b[j];
+                x[i] = pinv[i * self.m + j].mul_add(b[j], x[i]);
             }
         }
 
@@ -137,8 +137,8 @@ impl SvdDecomposition {
             let sigma = self.s[r];
             for i in 0..self.m {
                 for j in 0..self.n {
-                    approx[i * self.n + j] +=
-                        sigma * self.u[i * self.m + r] * self.vt[r * self.n + j];
+                    approx[i * self.n + j] = (sigma * self.u[i * self.m + r])
+                        .mul_add(self.vt[r * self.n + j], approx[i * self.n + j]);
                 }
             }
         }
@@ -169,7 +169,7 @@ impl SvdDecomposition {
 ///     5.0, 6.0,
 /// ];
 /// let svd = svd_decompose(&a, 3, 2).unwrap();
-/// println!("Singular values: {:?}", svd.s);
+/// tracing::info!("Singular values: {:?}", svd.s);
 /// ```
 ///
 /// # Errors
@@ -200,7 +200,7 @@ pub fn svd_decompose(a: &[f64], m: usize, n: usize) -> Result<SvdDecomposition> 
         for j in 0..n {
             let mut sum = 0.0;
             for k in 0..m {
-                sum += a[k * n + i] * a[k * n + j];
+                sum = a[k * n + i].mul_add(a[k * n + j], sum);
             }
             ata[i * n + j] = sum;
         }
@@ -241,7 +241,7 @@ pub fn svd_decompose(a: &[f64], m: usize, n: usize) -> Result<SvdDecomposition> 
             let mut sum = 0.0;
             for l in 0..n {
                 // V[l,j] = V^T[j,l]
-                sum += a[i * n + l] * vt[j * n + l];
+                sum = a[i * n + l].mul_add(vt[j * n + l], sum);
             }
             av[i * n + j] = sum;
         }
@@ -266,7 +266,7 @@ pub fn svd_decompose(a: &[f64], m: usize, n: usize) -> Result<SvdDecomposition> 
         for prev in 0..j {
             let mut dot = 0.0;
             for i in 0..m {
-                dot += u[i * m + prev] * col[i];
+                dot = u[i * m + prev].mul_add(col[i], dot);
             }
             for i in 0..m {
                 col[i] -= dot * u[i * m + prev];
@@ -276,7 +276,7 @@ pub fn svd_decompose(a: &[f64], m: usize, n: usize) -> Result<SvdDecomposition> 
         // Normalize
         let mut norm = 0.0;
         for &c in &col {
-            norm += c * c;
+            norm = c.mul_add(c, norm);
         }
         norm = norm.sqrt();
 
@@ -412,7 +412,7 @@ mod tests {
             for j in 0..2 {
                 let mut val = 0.0;
                 for k in 0..2 {
-                    val += svd.u[i * 2 + k] * svd.s[k] * svd.vt[k * 2 + j];
+                    val = (svd.u[i * 2 + k] * svd.s[k]).mul_add(svd.vt[k * 2 + j], val);
                 }
                 assert!(
                     approx_eq(val, a[i * 2 + j], 1e-10),
@@ -474,7 +474,7 @@ mod tests {
         for i in 0..2 {
             for j in 0..2 {
                 for k in 0..2 {
-                    aa_pinv[i * 2 + j] += a[i * 2 + k] * pinv[k * 2 + j];
+                    aa_pinv[i * 2 + j] = a[i * 2 + k].mul_add(pinv[k * 2 + j], aa_pinv[i * 2 + j]);
                 }
             }
         }
@@ -484,7 +484,7 @@ mod tests {
         for i in 0..2 {
             for j in 0..2 {
                 for k in 0..2 {
-                    result[i * 2 + j] += aa_pinv[i * 2 + k] * a[k * 2 + j];
+                    result[i * 2 + j] = aa_pinv[i * 2 + k].mul_add(a[k * 2 + j], result[i * 2 + j]);
                 }
             }
         }
@@ -546,7 +546,7 @@ mod tests {
         let mut ax = [0.0; 3];
         for i in 0..3 {
             for j in 0..2 {
-                ax[i] += a[i * 2 + j] * x[j];
+                ax[i] = a[i * 2 + j].mul_add(x[j], ax[i]);
             }
         }
 
@@ -555,7 +555,7 @@ mod tests {
         let mut atr = [0.0; 2];
         for j in 0..2 {
             for i in 0..3 {
-                atr[j] += a[i * 2 + j] * r[i];
+                atr[j] = a[i * 2 + j].mul_add(r[i], atr[j]);
             }
         }
 

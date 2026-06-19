@@ -3,7 +3,7 @@
 **Version**: 0.4.0
 **Status**: Composition-ready — zero debt, 4-gate mesh operational, primal self-knowledge, all quality gates green
 **License**: AGPL-3.0-or-later (scyBorg provenance trio)
-**MSRV**: 1.87
+**MSRV**: 1.92
 
 ---
 
@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **826 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,169 Rust source files**, 25 integration test harnesses, 4,600+ tests passing via nextest CI profile
+- **1,169 Rust source files**, 25 integration test harnesses, 4,624 tests passing via nextest CI profile
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -44,7 +44,7 @@ results.
 - **Sovereign shader compilation** — naga 28 IR optimizer, SPIR-V passthrough
 - **NagaExecutor** — CPU interpreter for naga IR, executes WGSL compute shaders without GPU (f32+f64 native, shared memory, barriers, atomics)
 - **coralReef IPC contract** — sovereign CPU compilation (`shader.compile.cpu`, `shader.execute.cpu`) and validation (`shader.validate`) via JSON-RPC
-- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with 97 semantic `{domain}.{operation}` methods; Wire Standard L2 compliant, Neural API announce, BTSP Phase 3 encryption, full ML pipeline (train→save→load→infer), mesh trust validation, runtime method introspection (`method.describe`)
+- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with 98 semantic `{domain}.{operation}` methods; Wire Standard L2 compliant, Neural API announce, BTSP Phase 3 encryption, full ML pipeline (train→save→load→infer), mesh trust validation, runtime method introspection (`method.describe`)
 - **Transport self-knowledge** — local `TransportEndpoint` wire format implementation, `TRANSPORT_ENDPOINT` env var for launcher injection, zero cross-primal dependencies
 - **UniBin CLI** — single `barracuda` binary with `server --port <PORT>`, `service`, `doctor`, `validate`, `version`
 
@@ -61,11 +61,11 @@ results.
 
 ## Recent
 
-- **Wave 107: Socket Cleanup + method.describe (Jun 10)**: `PRIMAL-SOCKET-CLEANUP` — state files co-locate with socket path. `method.describe` RPC for runtime introspection. All production files <800L. 97 methods. Composition-ready.
+- **Wave 107: Socket Cleanup + method.describe (Jun 10)**: `PRIMAL-SOCKET-CLEANUP` — state files co-locate with socket path. `method.describe` RPC for runtime introspection. All production files <800L. 98 methods. Composition-ready.
 - **Waves 100-101: Transport Self-Knowledge (Jun 8)**: Removed cross-primal `sourdough-core` dep. Local `TransportEndpoint` + `connect_transport()` (237L). Wire format is the contract. `TRANSPORT_ENDPOINT` env var operational.
 - **Wave 93: Build Fix (Jun 7)**: Stash conflict resolution — restored serialization submodule + serde aliases. Depot-ready.
 - **Wave 82c: Deep Debt + Refactoring (Jun 6)**: `simple_mlp.rs` → directory module. GPU test pool fix. 4,600 tests.
-- **Sprints 44-56: IPC + Deep Debt (Apr-May)**: 96 JSON-RPC methods wired, 12-axis deep debt fully clean, BTSP Phase 3, sovereign dispatch, CPU tensor fallback, binary refactoring.
+- **Sprints 44-56: IPC + Deep Debt (Apr-May)**: 98 JSON-RPC methods wired, 12-axis deep debt fully clean, BTSP Phase 3, sovereign dispatch, CPU tensor fallback, binary refactoring.
 - **Sprint 45/45b: JSON-RPC Surface Expansion + Deep Debt (Apr 26)**: 11 new method registrations (39→50) for neuralSpring parity — `linalg.svd`, `linalg.qr`, `stats.chi_squared`, `stats.anova_oneway`, `activation.softmax`, `activation.gelu`, `spectral.stft`, `ml.mlp_forward`, `ml.attention` + 2 aliases (`stats.eigh`, `stats.pearson`). New `methods/ml.rs` and `methods/spectral.rs` modules. `math.rs` smart-refactored (819→641L). Shared `params.rs` eliminates DRY violation. 36 new coverage tests. 12-axis deep debt audit clean.
 - **Sprint 44g: BTSP Wire Fix + 12-Axis Audit (Apr 24)**: `security_provider_rpc()` `writer.shutdown()` → `writer.flush()` — fixes BearDog connection loss. 12-axis deep debt audit clean bill. 4,393+ tests, all quality gates green.
 - **Sprint 44f: Smart Refactoring (Apr 20)**: `sovereign_device.rs` 924→773L, `btsp.rs` 815→678L. Zero production files >800L.
@@ -85,7 +85,7 @@ results.
 - **Sprint 31: Deep Debt Cleanup & Test Stability Hardening (Apr 5)**: Removed deprecated `CoralReefDevice` alias (zero consumers). Evolved `SpirvError` to thiserror derive. Fixed 12 misleading dead_code reason strings on GPU API impls. Gated 11 additional SIGSEGV-prone test binaries behind `stress-tests` feature — `cargo test --workspace` now 100% clean. Comprehensive deep debt audit: zero production unwrap/expect/panic, zero hardcoded primal names, zero mocks in production, zero TODO/FIXME, all files under 845 lines. All quality gates green.
 - **Sprint 30: Deep Debt Audit, Smart Refactoring & Test Stability (Apr 5)**: Smart refactor of `executor.rs` (934→208 lines) + new `invocation.rs` (756 lines) — `DispatchCoords` struct eliminates `too_many_arguments`. SIGSEGV fix via nextest `gpu-serial` test group (chaos/fault/property tests serialized). Disabled `test_nn_vision_integration` evolved to `test_vision_pipeline_preprocessing` (8/8 integration tests pass). All quality gates green.
 - **Sprint 29: Deep Debt Cleanup & Shader-First Evolution (Apr 4)**: Unified magic `256` workgroup size → `WORKGROUP_SIZE_1D` constant across 15+ files (shader_dispatch, jackknife, biosignal, gradient, cpu_executor, perlin_noise, population_pk, hill_dose_response, michaelis_menten_batch, scfa_batch, beat_classify, rop_force_accum). Removed unused `num-traits` from workspace. Smart refactor of `executor.rs` (1,097→932 lines, vector ops extracted to `vector_ops.rs`). `eval_math` decomposed into 4 focused functions (eval.rs 629→527 lines, `too_many_lines` suppression eliminated). Production `expect()` in `wgpu_backend.rs` evolved to safe pattern-match + `Result`. Misleading `nautilus/readout.rs` "no-op" doc corrected. `coralReef` doc references evolved to capability-based discovery language. `"biomeos"` / `"ecoPrimals"` namespace strings consolidated into shared constants. Perlin noise 7× `#[expect]` blocks consolidated to 2 helper functions. All quality gates green (3,815 lib + 16 naga-exec tests, 0 failures).
-- **Sprint 27**: primalSpring downstream audit remediation — hex bitwise literal (`0x3D`), `#[expect]` reason strings, barracuda-core lint promotions (`use_self`/`map_unwrap_or` → warn). All clippy/fmt/deny/doc gates green. 4,600+ tests, zero debt markers.
+- **Sprint 27**: primalSpring downstream audit remediation — hex bitwise literal (`0x3D`), `#[expect]` reason strings, barracuda-core lint promotions (`use_self`/`map_unwrap_or` → warn). All clippy/fmt/deny/doc gates green. 4,624 tests, zero debt markers.
 - **Sprint 26**: Comprehensive audit, executor refactor, cargo deny fix — WorkgroupMemory subsystem extracted (executor.rs 1,020→886 lines). Stale `#[allow]` removed, `#[allow(unused_async)]` → `#[expect]` in core. Full audit confirmed zero production unwrap/panic/expect. 80.54% coverage.
 - **Sprint 25**: Deep debt evolution — zero panics, modern idiomatic Rust, capability-based naming across all production code.
 - **Sprint 24**: WGSL-as-truth test architecture + NagaExecutor + coralReef sovereign compilation — Migrated 337 GPU op test files from `get_test_device_if_gpu_available()` to `get_test_device()`, enabling 2,770 tests to run on CPU/llvmpipe (was ~0 coverage on CI). 17 GPU-exclusive modules correctly identified and re-gated. New crate `barracuda-naga-exec`: pure-Rust CPU interpreter for naga IR with f32/f64 native support, workgroup shared memory, barriers, atomics (16 tests). `assert_shader_math!` and `assert_shader_math_f64!` macros for zero-GPU shader validation. coralReef IPC contract: 10 new wire types, 5 new `CoralCompiler` methods (`compile_cpu`, `execute_cpu`, `validate_shader`), capability discovery for `shader.compile.cpu` and `shader.validate`. `ShaderValidationBackend` enum with coralReef-first fallback chain. 4-layer validation architecture (llvmpipe / NagaExecutor / coralReef CPU / real GPU). All quality gates green. 2,786 total tests, 0 failures.
@@ -183,7 +183,7 @@ barraCuda/
 ├── crates/
 │   ├── barracuda-core/              # Primal lifecycle wrapper
 │   │   ├── src/lib.rs               # BarraCudaPrimal: start/stop/health
-│   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport (96 methods, Wire Standard L2)
+│   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport (98 methods, Wire Standard L2)
 │   │   ├── src/rpc.rs               # tarpc service definition (16 endpoints, parity with JSON-RPC)
 │   │   └── src/bin/barracuda.rs     # UniBin CLI
 │   └── barracuda/                   # Umbrella crate — all math + GPU
@@ -367,7 +367,7 @@ barracuda = { path = "../barraCuda/crates/barracuda", default-features = false }
 
 ### Prerequisites
 
-- **Rust 1.87+** (`rustup update stable`)
+- **Rust 1.92+** (`rustup update stable`)
 - **GPU drivers** (Vulkan-capable: NVIDIA 525+, Mesa 23+, or Apple Metal)
 - **llvmpipe** (optional, for headless CI — `sudo apt install mesa-vulkan-drivers`)
 - **cargo-deny** (`cargo install cargo-deny`)

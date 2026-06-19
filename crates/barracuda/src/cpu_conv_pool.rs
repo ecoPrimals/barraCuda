@@ -162,7 +162,7 @@ pub fn conv2d(
                                     let kernel_idx =
                                         oc * (c_in * k_h * k_w) + ic * (k_h * k_w) + kh * k_w + kw;
 
-                                    sum += input[input_idx] * kernel[kernel_idx];
+                                    sum = input[input_idx].mul_add(kernel[kernel_idx], sum);
                                 }
                             }
                         }

@@ -44,9 +44,9 @@ pub fn compute_cpu(positions: &[f64], charges: &[f64], k: f64, cutoff: f64, eps:
             let force_magnitude = k * qi * qj / r_sq;
             let force_over_r = -force_magnitude / r;
 
-            forces[i * 3] += force_over_r * dx;
-            forces[i * 3 + 1] += force_over_r * dy;
-            forces[i * 3 + 2] += force_over_r * dz;
+            forces[i * 3] = force_over_r.mul_add(dx, forces[i * 3]);
+            forces[i * 3 + 1] = force_over_r.mul_add(dy, forces[i * 3 + 1]);
+            forces[i * 3 + 2] = force_over_r.mul_add(dz, forces[i * 3 + 2]);
         }
     }
 
@@ -100,9 +100,9 @@ pub fn compute_cpu_with_energy(
             let force_magnitude = k * qi * qj / r_sq;
             let force_over_r = -force_magnitude / r;
 
-            forces[i * 3] += force_over_r * dx;
-            forces[i * 3 + 1] += force_over_r * dy;
-            forces[i * 3 + 2] += force_over_r * dz;
+            forces[i * 3] = force_over_r.mul_add(dx, forces[i * 3]);
+            forces[i * 3 + 1] = force_over_r.mul_add(dy, forces[i * 3 + 1]);
+            forces[i * 3 + 2] = force_over_r.mul_add(dz, forces[i * 3 + 2]);
 
             // Half to avoid double counting
             energies[i] += 0.5 * k * qi * qj / r;

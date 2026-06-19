@@ -175,7 +175,7 @@ impl GreensFunction {
             let im = rho_k[i * 2 + 1];
             let rho_sq = re.mul_add(re, im * im);
 
-            energy += g * rho_sq;
+            energy = g.mul_add(rho_sq, energy);
         }
 
         // Factor of 1/2 from double counting, 1/V from normalization

@@ -329,7 +329,7 @@ fn kinetic_energy(momenta: &[Su3Matrix]) -> f64 {
     let mut t = 0.0;
     for p in momenta {
         let p2 = *p * *p;
-        t -= 0.5 * p2.re_trace();
+        t = 0.5f64.mul_add(-p2.re_trace(), t);
     }
     t
 }

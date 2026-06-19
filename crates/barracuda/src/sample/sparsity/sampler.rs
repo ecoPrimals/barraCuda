@@ -136,9 +136,9 @@ where
         if config.auto_smoothing
             && let Ok(result) =
                 loo_cv_optimal_smoothing(device.clone(), &x_data, &y_data, config.kernel, None)
-            {
-                current_smoothing = result.smoothing;
-            }
+        {
+            current_smoothing = result.smoothing;
+        }
 
         let Ok(surrogate) = RBFSurrogate::train(
             device.clone(),

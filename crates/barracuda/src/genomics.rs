@@ -36,8 +36,8 @@
 //! let sequence = b"ATCGATCGATCG";
 //! let report = analyzer.analyze_composition(sequence)?;
 //!
-//! println!("GC Content: {:.1}%", report.gc_content * 100.0);
-//! println!("Length: {}", report.length);
+//! tracing::info!("GC Content: {:.1}%", report.gc_content * 100.0);
+//! tracing::info!("Length: {}", report.length);
 //! # Ok(())
 //! # }
 //! ```

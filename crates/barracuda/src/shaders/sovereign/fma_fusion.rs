@@ -202,9 +202,10 @@ fn find_negate(
             op: naga::UnaryOperator::Negate,
             expr: inner,
         } = *expr
-            && inner == target {
-                return Some(handle);
-            }
+            && inner == target
+        {
+            return Some(handle);
+        }
     }
     None
 }

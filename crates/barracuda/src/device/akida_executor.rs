@@ -288,7 +288,8 @@ impl AkidaExecutor {
             for (&spike, &weight) in input_spikes.iter().zip(weights.iter()) {
                 if spike > 0 {
                     // Event-driven: only compute when spike arrives
-                    membrane_potential[0] += weight * (spike as f32 / time_steps as f32);
+                    membrane_potential[0] =
+                        weight.mul_add(spike as f32 / time_steps as f32, membrane_potential[0]);
                 }
             }
 

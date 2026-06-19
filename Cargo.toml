@@ -176,8 +176,8 @@ hmac = "0.12"
 sha2 = "0.10"
 base64ct = { version = "1.6", features = ["alloc"] }
 
-# Binary serialization (model persistence evolution — P3 production format)
-bincode = { version = "2", features = ["serde"] }
+# Binary serialization (model persistence — postcard: pure Rust, no_std, serde)
+postcard = { version = "1.1", default-features = false, features = ["alloc"] }
 
 # Dev/test
 tempfile = "3.8"

@@ -94,10 +94,10 @@ fn test_large_system() {
     for i in 0..n {
         let mut ax_i = b[i] * x[i];
         if i > 0 {
-            ax_i += a[i] * x[i - 1];
+            ax_i = a[i].mul_add(x[i - 1], ax_i);
         }
         if i < n - 1 {
-            ax_i += c[i] * x[i + 1];
+            ax_i = c[i].mul_add(x[i + 1], ax_i);
         }
         let residual = (ax_i - d[i]).abs();
         assert!(

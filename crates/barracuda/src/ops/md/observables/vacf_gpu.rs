@@ -206,7 +206,7 @@ impl VacfGpu {
         // Green-Kubo integral: D* = (1/3) ∫ C(τ) dτ  (trapezoidal)
         let mut integral = 0.0f64;
         for i in 1..actual_lag {
-            integral += 0.5 * (c_values[i - 1] + c_values[i]) * dt_dump;
+            integral = (0.5 * (c_values[i - 1] + c_values[i])).mul_add(dt_dump, integral);
         }
 
         let t_values: Vec<f64> = (0..actual_lag).map(|i| i as f64 * dt_dump).collect();

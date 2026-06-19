@@ -228,7 +228,7 @@ async fn mesh_health_public_no_auth_needed() {
     assert!(gate.check("mesh.trust_verify", &caller, &id).is_ok());
 }
 
-/// Save as bincode, load with auto-detection, verify roundtrip.
+/// Save as binary (postcard), load with auto-detection, verify roundtrip.
 #[tokio::test]
 async fn binary_format_save_load_roundtrip() {
     let primal = test_primal();
@@ -247,7 +247,7 @@ async fn binary_format_save_load_roundtrip() {
     .await;
     let trained = train_resp.result.unwrap();
 
-    let tmp = std::env::temp_dir().join("barracuda_w76_bincode_model.bin");
+    let tmp = std::env::temp_dir().join("barracuda_w76_binary_model.bin");
     let tmp_str = tmp.to_string_lossy().to_string();
 
     let save_resp = dispatch(
@@ -256,7 +256,7 @@ async fn binary_format_save_load_roundtrip() {
         &json!({
             "model": {"layers": trained["layers"]},
             "path": tmp_str,
-            "format": "bincode",
+            "format": "binary",
             "_auth": {"bearer": "tok"}
         }),
         json!(501),
@@ -265,16 +265,16 @@ async fn binary_format_save_load_roundtrip() {
 
     assert!(
         save_resp.error.is_none(),
-        "bincode save failed: {:?}",
+        "binary save failed: {:?}",
         save_resp.error
     );
     let save_result = save_resp.result.unwrap();
-    assert_eq!(save_result["format"], "bincode");
+    assert_eq!(save_result["format"], "binary");
     let json_size_estimate = serde_json::to_string(&trained["layers"]).unwrap().len();
     let bin_size = save_result["bytes_written"].as_u64().unwrap() as usize;
     assert!(
         bin_size < json_size_estimate,
-        "bincode ({bin_size}) should be smaller than JSON (~{json_size_estimate})"
+        "binary ({bin_size}) should be smaller than JSON (~{json_size_estimate})"
     );
 
     let load_resp = dispatch(
@@ -290,11 +290,11 @@ async fn binary_format_save_load_roundtrip() {
 
     assert!(
         load_resp.error.is_none(),
-        "bincode load failed: {:?}",
+        "binary load failed: {:?}",
         load_resp.error
     );
     let load_result = load_resp.result.unwrap();
-    assert_eq!(load_result["format"], "bincode");
+    assert_eq!(load_result["format"], "binary");
     assert_eq!(
         load_result["layer_count"],
         trained["layers"].as_array().unwrap().len()
@@ -316,7 +316,7 @@ async fn binary_format_save_load_roundtrip() {
 
     assert!(
         infer_resp.error.is_none(),
-        "infer from bincode model failed: {:?}",
+        "infer from binary model failed: {:?}",
         infer_resp.error
     );
     assert_eq!(infer_resp.result.unwrap()["records_processed"], 4);

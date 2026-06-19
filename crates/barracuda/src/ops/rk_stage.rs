@@ -172,8 +172,10 @@ impl RkIntegrator {
 
             // Update
             for i in 0..n {
-                y[i] +=
-                    h_actual / 6.0 * (2.0f64.mul_add(k3[i], 2.0f64.mul_add(k2[i], k1[i])) + k4[i]);
+                y[i] = (h_actual / 6.0).mul_add(
+                    2.0f64.mul_add(k3[i], 2.0f64.mul_add(k2[i], k1[i])) + k4[i],
+                    y[i],
+                );
             }
             t += h_actual;
 
@@ -430,7 +432,7 @@ mod tests {
 
         let f: OdeFunction = Box::new(move |_t, y| {
             vec![
-                alpha * y[0] - beta * y[0] * y[1],
+                (beta * y[0]).mul_add(-y[1], alpha * y[0]),
                 (delta * y[0]).mul_add(y[1], -(gamma * y[1])),
             ]
         });

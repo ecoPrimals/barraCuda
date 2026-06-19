@@ -8,7 +8,7 @@ shaders compiled through wgpu. One source, any GPU, identical results.
 
 ## Prerequisites
 
-- **Rust 1.87+** (check with `rustc --version`)
+- **Rust 1.92+** (check with `rustc --version`)
 - **GPU driver**: Vulkan-capable (NVIDIA, AMD, Intel) or software rasterizer (llvmpipe)
 - **OS**: Linux, macOS, or Windows
 

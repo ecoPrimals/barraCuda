@@ -23,11 +23,11 @@
 //!
 //! // Benchmark specific operation
 //! let result = suite.benchmark_operation("matmul")?;
-//! println!("Optimal threshold for matmul: {}", result.optimal_threshold);
+//! tracing::info!("Optimal threshold for matmul: {}", result.optimal_threshold);
 //!
 //! // Benchmark all operations
 //! let results = suite.run_all()?;
-//! println!("{}", results.summary());
+//! tracing::info!("{}", results.summary());
 //! ```
 
 mod operations;

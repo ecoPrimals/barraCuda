@@ -109,7 +109,7 @@ impl LuDecomposition {
         // Forward substitution: Ly = Pb
         for i in 1..self.n {
             for j in 0..i {
-                y[i] -= self.lu[i * self.n + j] * y[j];
+                y[i] = self.lu[i * self.n + j].mul_add(-y[j], y[i]);
             }
         }
 
@@ -117,7 +117,7 @@ impl LuDecomposition {
         let mut x = y;
         for i in (0..self.n).rev() {
             for j in (i + 1)..self.n {
-                x[i] -= self.lu[i * self.n + j] * x[j];
+                x[i] = self.lu[i * self.n + j].mul_add(-x[j], x[i]);
             }
             if self.lu[i * self.n + i].abs() < 1e-14 {
                 return Err(BarracudaError::Numerical {
@@ -239,7 +239,7 @@ pub fn lu_decompose(a: &[f64], n: usize) -> Result<LuDecomposition> {
                 lu[i * n + k] /= pivot;
             }
             for j in (k + 1)..n {
-                lu[i * n + j] -= lu[i * n + k] * lu[k * n + j];
+                lu[i * n + j] = lu[i * n + k].mul_add(-lu[k * n + j], lu[i * n + j]);
             }
         }
     }

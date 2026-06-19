@@ -151,8 +151,8 @@ pub fn diversity_fusion_cpu(abundances: &[f64], n_species: usize) -> Vec<Diversi
             for &count in sample {
                 if count > 0.0 {
                     let p = count / total;
-                    shannon -= p * p.ln();
-                    simpson_sum += p * p;
+                    shannon = p.mul_add(-p.ln(), shannon);
+                    simpson_sum = p.mul_add(p, simpson_sum);
                     s_obs += 1.0;
                 }
             }

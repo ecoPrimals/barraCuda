@@ -137,12 +137,13 @@ impl SGD {
 
         // Validate velocity shape if provided
         if let Some(ref v) = velocity
-            && v.shape() != weights.shape() {
-                return Err(BarracudaError::shape_mismatch(
-                    v.shape().to_vec(),
-                    weights.shape().to_vec(),
-                ));
-            }
+            && v.shape() != weights.shape()
+        {
+            return Err(BarracudaError::shape_mismatch(
+                v.shape().to_vec(),
+                weights.shape().to_vec(),
+            ));
+        }
 
         Ok(Self {
             weights,

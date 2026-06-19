@@ -110,9 +110,9 @@ pub fn interpolate_forces(
                     let phi = potential.get(mx, my, mz);
                     let [gx, gy, gz] = coeff.gradient_weights(ix, iy, iz);
 
-                    grad_phi[0] += phi * gx * scale[0];
-                    grad_phi[1] += phi * gy * scale[1];
-                    grad_phi[2] += phi * gz * scale[2];
+                    grad_phi[0] = (phi * gx).mul_add(scale[0], grad_phi[0]);
+                    grad_phi[1] = (phi * gy).mul_add(scale[1], grad_phi[1]);
+                    grad_phi[2] = (phi * gz).mul_add(scale[2], grad_phi[2]);
                 }
             }
         }
@@ -177,9 +177,9 @@ pub fn interpolate_forces_from_positions(
                     let phi = potential.get(mx, my, mz);
                     let [gx, gy, gz] = coeff.gradient_weights(ix, iy, iz);
 
-                    grad_phi[0] += phi * gx * scale[0];
-                    grad_phi[1] += phi * gy * scale[1];
-                    grad_phi[2] += phi * gz * scale[2];
+                    grad_phi[0] = (phi * gx).mul_add(scale[0], grad_phi[0]);
+                    grad_phi[1] = (phi * gy).mul_add(scale[1], grad_phi[1]);
+                    grad_phi[2] = (phi * gz).mul_add(scale[2], grad_phi[2]);
                 }
             }
         }

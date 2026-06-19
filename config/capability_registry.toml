@@ -81,7 +81,7 @@ methods = ["detect_peaks", "bandpass", "derivative"]
 
 [domains.linalg]
 description = "Linear algebra (CPU inline-data)"
-methods = ["solve", "eigenvalues", "svd", "qr", "graph_laplacian"]
+methods = ["solve", "eigenvalues", "batched_tridiag_eigh", "svd", "qr", "graph_laplacian"]
 
 [domains.ode]
 description = "Numerical ODE integration (CPU)"
@@ -260,6 +260,11 @@ stability = "stable"
 [operations."linalg.solve"]
 cost = "medium"
 stability = "stable"
+
+[operations."linalg.batched_tridiag_eigh"]
+cost = "medium"
+stability = "stable"
+hardware = "cpu (GPU dispatch available via tensor path)"
 
 [operations."linalg.svd"]
 cost = "medium"

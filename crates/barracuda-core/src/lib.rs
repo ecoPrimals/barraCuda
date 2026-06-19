@@ -244,7 +244,7 @@ impl Default for BarraCudaPrimal {
 impl BarraCudaPrimal {
     /// Whether GPU probe should be skipped (instant degraded startup).
     ///
-    /// Checks both the process-wide [`NO_GPU_PROBE_FLAG`] (set via
+    /// Checks both the process-wide atomic flag (set via
     /// [`set_no_gpu_probe`]) and the `BARRACUDA_NO_GPU_PROBE` env var.
     /// When either is truthy, device enumeration is skipped and the primal
     /// starts in cpu-shader-only mode.

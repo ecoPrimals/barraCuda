@@ -251,7 +251,7 @@ fn matmul(a: &[f64], b: &[f64], c: &mut [f64], m: usize, k: usize, n: usize) {
         for p in 0..k {
             let a_ip = a[i * k + p];
             for j in 0..n {
-                c[i * n + j] += a_ip * b[p * n + j];
+                c[i * n + j] = a_ip.mul_add(b[p * n + j], c[i * n + j]);
             }
         }
     }
@@ -263,7 +263,7 @@ fn matmul_at_b(a: &[f64], b: &[f64], c: &mut [f64], m: usize, k: usize, n: usize
         for p in 0..k {
             let a_ip = a[i * k + p];
             for j in 0..n {
-                c[p * n + j] += a_ip * b[i * n + j];
+                c[p * n + j] = a_ip.mul_add(b[i * n + j], c[p * n + j]);
             }
         }
     }
@@ -275,7 +275,7 @@ fn matmul_a_bt(a: &[f64], b: &[f64], c: &mut [f64], m: usize, n: usize, k: usize
         for p in 0..n {
             let a_ip = a[i * n + p];
             for j in 0..k {
-                c[i * k + j] += a_ip * b[j * n + p];
+                c[i * k + j] = a_ip.mul_add(b[j * n + p], c[i * k + j]);
             }
         }
     }

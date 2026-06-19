@@ -108,6 +108,7 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     "linalg.solve",
     "linalg.eigenvalues",
     "stats.eigh",
+    "linalg.batched_tridiag_eigh",
     "linalg.svd",
     "linalg.qr",
     "linalg.graph_laplacian",
@@ -283,6 +284,7 @@ pub async fn dispatch(
         // Linear algebra (CPU inline-data)
         "linalg.solve" => linalg::linalg_solve(params, id),
         "linalg.eigenvalues" | "stats.eigh" => linalg::linalg_eigenvalues(params, id),
+        "linalg.batched_tridiag_eigh" => linalg::linalg_batched_tridiag_eigh(params, id),
         "linalg.svd" => linalg::linalg_svd(params, id),
         "linalg.qr" => linalg::linalg_qr(params, id),
         "linalg.graph_laplacian" => graph::linalg_graph_laplacian(params, id),

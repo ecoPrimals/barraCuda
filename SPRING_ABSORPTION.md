@@ -1,8 +1,18 @@
 # Spring Absorption Tracker
 
 **Version**: 0.4.0
-**Date**: May 13, 2026
-**Source**: hotSpring v0.6.32, groundSpring V99, neuralSpring S143, wetSpring V107, airSpring v0.7.5, healthSpring V44, ludoSpring V34, primalSpring (Passes 11-14), toadStool S249, coralReef Sprint 5
+**Date**: June 19, 2026
+**Source**: hotSpring v0.6.32, groundSpring V99+Exp012, neuralSpring S143, wetSpring V107, airSpring v0.7.5, healthSpring V44, ludoSpring V34, primalSpring (Passes 11-14), toadStool S249, coralReef Sprint 5
+
+## Wave 116 — groundSpring Exp 012 Absorption (Jun 19 2026)
+
+| # | Item | Source | Module | Status |
+|---|------|--------|--------|--------|
+| GA | Batched tridiagonal symmetric eigensolver (CPU IPC) | groundSpring Exp 012 | `ipc/methods/linalg.rs` → `linalg.batched_tridiag_eigh` | Done |
+| GB | Batched tridiag eigh tests (12 cases: happy + error paths) | groundSpring Exp 012 | `methods_coverage_tests/linalg_tridiag_tests.rs` | Done |
+| GC | Capability registry + method.describe entry | groundSpring Exp 012 | `config/capability_registry.toml` + `methods/primal.rs` | Done |
+
+**Note**: GPU batched op (`spectral/tridiag_eigh_gpu.rs`) exists but is not exposed via IPC — optional P2 follow-up if batch sizes warrant GPU dispatch.
 
 ## Sprint 22g — Cross-Spring Deep Absorption (Mar 29 2026)
 

@@ -111,7 +111,7 @@ pub(super) fn run_cpu_operation(
                 for j in 0..n {
                     let mut sum = 0.0;
                     for k in 0..n {
-                        sum += data[i * n + k] * data[k * n + j];
+                        sum = data[i * n + k].mul_add(data[k * n + j], sum);
                     }
                     c[i * n + j] = sum;
                 }
@@ -162,7 +162,7 @@ pub(super) fn run_cpu_operation(
                     let mut dist = 0.0;
                     for k in 0..d {
                         let diff = data[i * d + k] - data[j * d + k];
-                        dist += diff * diff;
+                        dist = diff.mul_add(diff, dist);
                     }
                     dists[i * n + j] = dist.sqrt();
                 }
@@ -178,7 +178,7 @@ pub(super) fn run_cpu_operation(
                     let mut dist_sq = 0.0;
                     for k in 0..d {
                         let diff = data[i * d + k] - data[j * d + k];
-                        dist_sq += diff * diff;
+                        dist_sq = diff.mul_add(diff, dist_sq);
                     }
                     kernel[i * n + j] = (-epsilon * epsilon * dist_sq).exp();
                 }

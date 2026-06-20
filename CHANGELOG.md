@@ -5,7 +5,7 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — Waves 109–116 (Jun 19 2026)
+## [Unreleased] — Waves 109–119 (Jun 20 2026)
 
 ### Changed
 - **MSRV raised to 1.92** (Edition 2024, let-chain modernization)
@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.expect()` calls audited: 6 ownership-invariant sites annotated with `#[expect(clippy::expect_used)]`
 
 ### Added
+- **Multi-GPU OOM auto-migration** — `MultiDevicePool::execute_with_migration()` with device exclusion, configurable retry, and `WgpuDevice::set_oom()` signaling (Wave 119)
 - **`linalg.batched_tridiag_eigh`** IPC method — batched tridiagonal symmetric eigendecomposition via QL with Wilkinson shifts (groundSpring Exp 012 absorption)
 - **Genetics-layer prefix stripping** (0xEC mito-beacon v1, 0xED mito-beacon v2, 0xEE nuclear lineage) on all IPC accept loops (Wave 114)
 - **`--bind-mode` / `PRIMAL_BIND_MODE`** CLI flag for launcher-controlled socket/TCP selection (Wave 109)

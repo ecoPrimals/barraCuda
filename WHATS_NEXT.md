@@ -1,10 +1,18 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-06-19.
+Prioritized work items, ordered by impact. Updated 2026-06-20.
 
 ---
 
 ## Recently Completed
+
+### Wave 119 — OOM Auto-Migration + Deep Debt Audit (Jun 20, 2026)
+- **`MultiDevicePool::execute_with_migration()`** — automatic workload retry across pool devices on OOM detection, excluded-device tracking, configurable max retries
+- **`WgpuDevice::set_oom()`** — external OOM signaling for migration logic
+- **`acquire_excluding()`** — OOM-aware device selection (skips failed devices)
+- **5 new multi-GPU tests** (first-try success, non-OOM no-retry, OOM retry, all-exhausted, set/clear flag)
+- **Full deep debt audit**: confirmed zero remaining debt (0 files >800L, 0 TODO/FIXME, 0 production unwrap, 0 hardcoded primals, 0 mocks in production, pure Rust deps, all 5 quality gates green)
+- **primalSpring scenario compliance verified** (all node_atomic fragment capabilities present)
 
 ### Wave 116 — Deep Debt + Spring Absorption (Jun 19, 2026)
 - **bincode → postcard migration** (RUSTSEC-2025-0141 resolved, format tag 2)

@@ -125,3 +125,105 @@ fn test_device_requirements_scoring() {
         "Discrete ({discrete_score}) should score higher"
     );
 }
+
+#[tokio::test]
+async fn test_execute_with_migration_succeeds_first_try() {
+    let pool = MultiDevicePool::new().await;
+    let Ok(pool) = pool else { return };
+
+    let result = pool
+        .execute_with_migration(&DeviceRequirements::new(), 2, |_attempt| {
+            |_device: Arc<crate::device::WgpuDevice>| -> crate::error::Result<u64> { Ok(42) }
+        })
+        .await;
+
+    assert_eq!(result.unwrap(), 42);
+}
+
+#[tokio::test]
+async fn test_execute_with_migration_non_oom_error_no_retry() {
+    let pool = MultiDevicePool::new().await;
+    let Ok(pool) = pool else { return };
+
+    let attempts = Arc::new(AtomicUsize::new(0));
+    let attempts_clone = attempts.clone();
+
+    let result = pool
+        .execute_with_migration(&DeviceRequirements::new(), 3, move |_attempt| {
+            let attempts_inner = attempts_clone.clone();
+            move |_device: Arc<crate::device::WgpuDevice>| -> crate::error::Result<u64> {
+                attempts_inner.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                Err(crate::error::BarracudaError::gpu(
+                    "shader compilation error",
+                ))
+            }
+        })
+        .await;
+
+    assert!(result.is_err());
+    assert_eq!(attempts.load(std::sync::atomic::Ordering::Relaxed), 1);
+}
+
+#[tokio::test]
+async fn test_execute_with_migration_oom_triggers_retry() {
+    let pool = MultiDevicePool::new().await;
+    let Ok(pool) = pool else { return };
+    if pool.device_count() < 2 {
+        return;
+    }
+
+    let attempts = Arc::new(AtomicUsize::new(0));
+    let attempts_clone = attempts.clone();
+
+    let result = pool
+        .execute_with_migration(&DeviceRequirements::new(), 3, move |attempt| {
+            let attempts_inner = attempts_clone.clone();
+            move |_device: Arc<crate::device::WgpuDevice>| -> crate::error::Result<u64> {
+                attempts_inner.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                if attempt == 0 {
+                    Err(crate::error::BarracudaError::OutOfMemory(
+                        "GPU VRAM exhausted".into(),
+                    ))
+                } else {
+                    Ok(99)
+                }
+            }
+        })
+        .await;
+
+    assert_eq!(result.unwrap(), 99);
+    assert!(attempts.load(std::sync::atomic::Ordering::Relaxed) >= 2);
+}
+
+#[tokio::test]
+async fn test_execute_with_migration_all_devices_oom() {
+    let pool = MultiDevicePool::new().await;
+    let Ok(pool) = pool else { return };
+
+    let result = pool
+        .execute_with_migration(&DeviceRequirements::new(), 10, |_attempt| {
+            |_device: Arc<crate::device::WgpuDevice>| -> crate::error::Result<u64> {
+                Err(crate::error::BarracudaError::OutOfMemory(
+                    "all devices exhausted".into(),
+                ))
+            }
+        })
+        .await;
+
+    let err = result.unwrap_err();
+    assert!(err.is_oom());
+}
+
+#[tokio::test]
+async fn test_set_oom_and_clear_oom() {
+    let pool = MultiDevicePool::new().await;
+    let Ok(pool) = pool else { return };
+
+    if let Some(device) = pool.device(0) {
+        assert!(!device.is_oom());
+        device.set_oom();
+        assert!(device.is_oom());
+        device.clear_oom();
+        assert!(!device.is_oom());
+    }
+}

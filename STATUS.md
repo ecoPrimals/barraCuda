@@ -63,6 +63,7 @@
 - VFIO-primary architecture adopted: toadStool VFIO is the primary GPU dispatch path (exclusive device access, IOMMU isolation, deterministic scheduling); wgpu demoted to development/fallback
 - VFIO detection moved to toadStool — barraCuda queries hardware capabilities via IPC at runtime
 - Kokkos parity projections: ~4,000 steps/s target (VFIO + DF64) vs 2,630 steps/s Kokkos baseline
+- **Multi-GPU OOM auto-migration**: `MultiDevicePool::execute_with_migration()` — automatic workload retry across pool devices on OOM, excluded-device tracking, configurable retry limit, `set_oom()`/`clear_oom()` device signaling
 - `SOVEREIGN_PIPELINE_TRACKER.md` — tracks P0 (SovereignDevice), VFIO primary dispatch, libc→rustix evolution, cross-primal deps
 - Zero TODOs/FIXMEs/HACKs/`unreachable!()` without messages in codebase
 - Zero "for now" debt language — all 22 instances evolved to proper engineering documentation with performance thresholds

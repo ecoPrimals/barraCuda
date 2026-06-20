@@ -934,8 +934,7 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
 - **`BatchedTridiagEigh` GPU op**: groundSpring local QL implicit eigensolver is a candidate
   for absorption as a batched GPU tridiagonal eigenvector solver — **IPC handler shipped (Wave 116); GPU batched op optional**.
 - **Multi-GPU OOM automatic migration**: OOM detection flag wired in `WgpuDevice`, `is_oom()`
-  + `clear_oom()` API live, `is_retriable()` covers OOM (Sprint 64). Next: automatic workload
-  migration when a device hits VRAM quota via `QuotaTracker`.
+  + `clear_oom()` + `set_oom()` API live, `is_retriable()` covers OOM (Sprint 64). **`execute_with_migration` shipped (Wave 119)**: automatic workload retry across pool devices when OOM detected, excluded-device tracking, configurable retry limit. Remaining: wire `MultiDevicePool` into primal startup when ironGate multi-GPU hardware is enrolled.
 - **Kokkos parity validation baseline**: Document `sarkas_gpu` validation results, extract
   PPPM shader performance numbers for apples-to-apples comparison. Framework parity benchmarks
   added (Sprint 63, LAMMPS + SciPy). Now unblocked by VFIO strategy — projected ~4,000

@@ -146,6 +146,15 @@ impl WgpuDevice {
         self.oom.store(false, Ordering::Release);
     }
 
+    /// Signal that this device has hit an out-of-memory condition.
+    ///
+    /// Called by the multi-GPU pool's migration logic when a workload fails
+    /// with OOM. The flag persists until [`clear_oom`](Self::clear_oom) is
+    /// called after recovery.
+    pub fn set_oom(&self) {
+        self.oom.store(true, Ordering::Release);
+    }
+
     /// Attach a VRAM quota tracker to this device.
     ///
     /// Once set, all buffer allocations through the canonical helpers

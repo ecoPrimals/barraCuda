@@ -331,6 +331,129 @@ impl MultiDevicePool {
             .map_err(|e| BarracudaError::device(format!("Task error: {e}")))?
     }
 
+    /// Execute with automatic OOM migration across pool devices.
+    ///
+    /// If the closure returns an OOM error (detected via [`BarracudaError::is_oom`]),
+    /// the failed device's OOM flag is set, and the workload is retried on the next
+    /// available device (up to `max_retries` attempts). This enables transparent
+    /// VRAM pressure handling in multi-GPU configurations.
+    ///
+    /// The closure factory `make_f` is called for each attempt (since the closure
+    /// is consumed on execution). It receives the attempt index (0-based).
+    ///
+    /// # Errors
+    /// Returns the last OOM error if all devices are exhausted, or any non-OOM error
+    /// immediately (no retry for logic/validation errors).
+    pub async fn execute_with_migration<F, T>(
+        &self,
+        requirements: &DeviceRequirements,
+        max_retries: usize,
+        make_f: impl Fn(usize) -> F,
+    ) -> Result<T>
+    where
+        F: FnOnce(Arc<WgpuDevice>) -> Result<T> + Send + 'static,
+        T: Send + 'static,
+    {
+        let mut excluded: Vec<usize> = Vec::new();
+        let max_attempts = max_retries.saturating_add(1).min(self.device_count());
+        let mut last_error = None;
+
+        for attempt in 0..max_attempts {
+            let lease = self.acquire_excluding(requirements, &excluded).await;
+            let lease = match lease {
+                Ok(l) => l,
+                Err(e) => {
+                    tracing::debug!(
+                        attempt,
+                        "OOM migration: no more devices available — returning last error"
+                    );
+                    return Err(last_error.unwrap_or(e));
+                }
+            };
+
+            let pool_index = lease.info().pool_index;
+            let device_name = lease.info().name.clone();
+            let device = lease.device().clone();
+
+            let f = make_f(attempt);
+            let result = tokio::task::spawn_blocking(move || f(device))
+                .await
+                .map_err(|e| BarracudaError::device(format!("Task error: {e}")))?;
+
+            match result {
+                Ok(v) => return Ok(v),
+                Err(e) if e.is_oom() => {
+                    tracing::warn!(
+                        attempt,
+                        device = %device_name,
+                        "OOM detected — marking device and migrating workload"
+                    );
+                    if let Some(dev) = self.inner.devices.get(pool_index) {
+                        dev.set_oom();
+                    }
+                    excluded.push(pool_index);
+                    last_error = Some(e);
+                }
+                Err(e) => return Err(e),
+            }
+        }
+
+        Err(last_error.unwrap_or_else(|| {
+            BarracudaError::device("OOM migration exhausted all available devices")
+        }))
+    }
+
+    /// Acquire a device matching requirements, excluding specific pool indices.
+    async fn acquire_excluding(
+        &self,
+        requirements: &DeviceRequirements,
+        excluded: &[usize],
+    ) -> Result<DeviceLease> {
+        let permit = self
+            .inner
+            .semaphore
+            .clone()
+            .acquire_owned()
+            .await
+            .map_err(|e| BarracudaError::device(format!("Semaphore error: {e}")))?;
+
+        let _lock = self.inner.selection_lock.lock().await;
+
+        let mut best_idx = None;
+        let mut best_score = i64::MIN;
+
+        for (i, info) in self.inner.info.iter().enumerate() {
+            if excluded.contains(&i) {
+                continue;
+            }
+            if self.inner.device_busy[i].load(Ordering::Acquire) {
+                continue;
+            }
+            if let Some(score) = requirements.score(info)
+                && score > best_score
+            {
+                best_score = score;
+                best_idx = Some(i);
+            }
+        }
+
+        let idx = best_idx.ok_or_else(|| {
+            BarracudaError::device_not_found(
+                "No device matches requirements (excluded OOM devices)",
+            )
+        })?;
+
+        self.inner.device_busy[idx].store(true, Ordering::Release);
+
+        Ok(DeviceLease {
+            device: self.inner.devices[idx].clone(),
+            info: self.inner.info[idx].clone(),
+            pool: self.inner.clone(),
+            quota_tracker: None,
+            _permit: permit,
+        })
+    }
+
     /// Human-readable pool summary.
     #[must_use]
     pub fn summary(&self) -> String {

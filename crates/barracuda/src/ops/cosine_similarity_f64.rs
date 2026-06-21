@@ -154,9 +154,9 @@ impl CosineSimilarityF64 {
         let mut norm_b = 0.0f64;
 
         for (ai, bi) in a.iter().zip(b.iter()) {
-            dot += ai * bi;
-            norm_a += ai * ai;
-            norm_b += bi * bi;
+            dot = ai.mul_add(*bi, dot);
+            norm_a = ai.mul_add(*ai, norm_a);
+            norm_b = bi.mul_add(*bi, norm_b);
         }
 
         let denom = (norm_a * norm_b).sqrt();

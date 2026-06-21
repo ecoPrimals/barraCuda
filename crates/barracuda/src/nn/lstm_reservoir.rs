@@ -272,10 +272,10 @@ fn lstm_gates_into(layer: &LstmLayerWeights, input: &[f64], hidden: &[f64], buf:
             let base = block * n + row_idx;
             let mut sum = layer.bias[base];
             for (w, x) in layer.w_ih[base].iter().zip(input) {
-                sum += w * x;
+                sum = w.mul_add(*x, sum);
             }
             for (w, h) in layer.w_hh[base].iter().zip(hidden) {
-                sum += w * h;
+                sum = w.mul_add(*h, sum);
             }
             *out = sum;
         }

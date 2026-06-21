@@ -310,7 +310,7 @@ impl CrankNicolson1D {
             && src.len() == self.heat.u.len()
         {
             for (u, s) in self.heat.u.iter_mut().zip(src.iter()) {
-                *u += self.heat.config.dt * s;
+                *u = self.heat.config.dt.mul_add(*s, *u);
             }
         }
 

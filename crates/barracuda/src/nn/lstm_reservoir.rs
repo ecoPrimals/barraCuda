@@ -138,45 +138,29 @@ impl LstmReservoir {
     /// Panics if `state.len() != self.config.num_layers` or `input.len() != self.config.input_size`.
     #[must_use]
     pub fn forward(&self, input: &[f64], state: &mut [LstmState]) -> Vec<f64> {
-        assert_eq!(state.len(), self.config.num_layers);
-        assert_eq!(input.len(), self.config.input_size);
+        let mut out = vec![0.0; self.config.hidden_size];
+        self.forward_into(input, state, &mut out);
+        out
+    }
 
-        let hidden_size = self.config.hidden_size;
-
-        for (layer_idx, layer) in self.layers.iter().enumerate() {
-            // Borrow the previous layer's hidden state as a slice to avoid cloning.
-            // First layer uses the input directly; subsequent layers read from the
-            // already-updated hidden state of the previous layer.
-            let (i, f, g, o) = if layer_idx == 0 {
-                lstm_gates(layer, input, &state[layer_idx].hidden)
-            } else {
-                // SAFETY (borrow): We only read `state[layer_idx - 1].hidden` and
-                // mutate `state[layer_idx]` — disjoint indices, so we split the
-                // borrow via index.
-                let (prev, curr) = state.split_at_mut(layer_idx);
-                lstm_gates(layer, &prev[layer_idx - 1].hidden, &curr[0].hidden)
-            };
-
-            for j in 0..hidden_size {
-                state[layer_idx].cell[j] = f[j].mul_add(state[layer_idx].cell[j], i[j] * g[j]);
-                state[layer_idx].hidden[j] = o[j] * state[layer_idx].cell[j].tanh();
-            }
-
-            if layer_idx < self.config.num_layers - 1
-                && self.config.dropout > 0.0
-                && self.config.dropout < 1.0
-            {
-                for h in &mut state[layer_idx].hidden {
-                    *h *= 1.0 - self.config.dropout;
-                }
-            }
-        }
-
-        state[self.config.num_layers - 1].hidden.clone()
+    /// Single step forward, writing the output into a caller-provided buffer.
+    ///
+    /// Avoids the per-timestep allocation of [`forward`]. `output` must have
+    /// length `>= hidden_size`; only the first `hidden_size` elements are written.
+    ///
+    /// # Panics
+    /// Panics if `state.len() != self.config.num_layers`, `input.len() != self.config.input_size`,
+    /// or `output.len() < self.config.hidden_size`.
+    pub fn forward_into(&self, input: &[f64], state: &mut [LstmState], output: &mut [f64]) {
+        let mut gates = GateBuffers::new(self.config.hidden_size);
+        self.forward_core(input, state, output, &mut gates);
     }
 
     /// Full sequence forward.
     /// Returns (outputs per timestep, final state).
+    ///
+    /// Uses pre-allocated gate and output buffers internally to avoid
+    /// per-timestep allocation.
     #[must_use]
     pub fn forward_sequence(
         &self,
@@ -189,33 +173,101 @@ impl LstmReservoir {
                 .collect()
         });
 
+        let hs = self.config.hidden_size;
+        let mut buf = vec![0.0; hs];
+        let mut gates = GateBuffers::new(hs);
         let mut outputs = Vec::with_capacity(inputs.len());
         for input in inputs {
-            let out = self.forward(input, &mut state);
-            outputs.push(out);
+            self.forward_core(input, &mut state, &mut buf, &mut gates);
+            outputs.push(buf[..hs].to_vec());
         }
 
         (outputs, state)
     }
+
+    fn forward_core(
+        &self,
+        input: &[f64],
+        state: &mut [LstmState],
+        output: &mut [f64],
+        gates: &mut GateBuffers,
+    ) {
+        assert_eq!(state.len(), self.config.num_layers);
+        assert_eq!(input.len(), self.config.input_size);
+        assert!(
+            output.len() >= self.config.hidden_size,
+            "output buffer too small: {} < {}",
+            output.len(),
+            self.config.hidden_size
+        );
+
+        let hidden_size = self.config.hidden_size;
+
+        for (layer_idx, layer) in self.layers.iter().enumerate() {
+            if layer_idx == 0 {
+                lstm_gates_into(layer, input, &state[layer_idx].hidden, gates);
+            } else {
+                let (prev, curr) = state.split_at_mut(layer_idx);
+                lstm_gates_into(layer, &prev[layer_idx - 1].hidden, &curr[0].hidden, gates);
+            }
+
+            for j in 0..hidden_size {
+                state[layer_idx].cell[j] =
+                    gates.f[j].mul_add(state[layer_idx].cell[j], gates.i[j] * gates.g[j]);
+                state[layer_idx].hidden[j] = gates.o[j] * state[layer_idx].cell[j].tanh();
+            }
+
+            if layer_idx < self.config.num_layers - 1
+                && self.config.dropout > 0.0
+                && self.config.dropout < 1.0
+            {
+                for h in &mut state[layer_idx].hidden {
+                    *h *= 1.0 - self.config.dropout;
+                }
+            }
+        }
+
+        output[..hidden_size].copy_from_slice(&state[self.config.num_layers - 1].hidden);
+    }
 }
 
-fn lstm_gates(
-    layer: &LstmLayerWeights,
-    input: &[f64],
-    hidden: &[f64],
-) -> (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>) {
+/// Pre-allocated scratch buffers for LSTM gate computation.
+/// Avoids 4 × `Vec<f64>` allocations per layer per timestep.
+struct GateBuffers {
+    i: Vec<f64>,
+    f: Vec<f64>,
+    g: Vec<f64>,
+    o: Vec<f64>,
+}
+
+impl GateBuffers {
+    fn new(hidden_size: usize) -> Self {
+        Self {
+            i: vec![0.0; hidden_size],
+            f: vec![0.0; hidden_size],
+            g: vec![0.0; hidden_size],
+            o: vec![0.0; hidden_size],
+        }
+    }
+
+    fn reset(&mut self) {
+        self.i.fill(0.0);
+        self.f.fill(0.0);
+        self.g.fill(0.0);
+        self.o.fill(0.0);
+    }
+}
+
+fn lstm_gates_into(layer: &LstmLayerWeights, input: &[f64], hidden: &[f64], buf: &mut GateBuffers) {
+    buf.reset();
     let n = hidden.len();
-    let mut i = vec![0.0; n];
-    let mut f = vec![0.0; n];
-    let mut g = vec![0.0; n];
-    let mut o = vec![0.0; n];
 
     for row_idx in 0..n {
         for (block, out) in [
-            (0, &mut i[row_idx]),
-            (1, &mut f[row_idx]),
-            (2, &mut g[row_idx]),
-            (3, &mut o[row_idx]),
+            (0, &mut buf.i[row_idx]),
+            (1, &mut buf.f[row_idx]),
+            (2, &mut buf.g[row_idx]),
+            (3, &mut buf.o[row_idx]),
         ] {
             let base = block * n + row_idx;
             let mut sum = layer.bias[base];
@@ -229,14 +281,12 @@ fn lstm_gates(
         }
     }
 
-    sigmoid(&mut i);
-    sigmoid(&mut f);
-    for v in &mut g {
+    sigmoid(&mut buf.i);
+    sigmoid(&mut buf.f);
+    for v in &mut buf.g {
         *v = v.tanh();
     }
-    sigmoid(&mut o);
-
-    (i, f, g, o)
+    sigmoid(&mut buf.o);
 }
 
 fn sigmoid(x: &mut [f64]) {
@@ -273,6 +323,26 @@ mod tests {
         assert_eq!(out.len(), 4);
         assert_eq!(state[0].hidden.len(), 4);
         assert_eq!(state[0].cell.len(), 4);
+    }
+
+    #[test]
+    fn test_lstm_forward_into_matches_forward() {
+        let lstm = make_test_lstm();
+        let input = vec![1.0, 0.5];
+
+        let mut s1 = vec![LstmState::zeros(4)];
+        let out_alloc = lstm.forward(&input, &mut s1);
+
+        let mut s2 = vec![LstmState::zeros(4)];
+        let mut buf = vec![0.0; 4];
+        lstm.forward_into(&input, &mut s2, &mut buf);
+
+        for (a, b) in out_alloc.iter().zip(&buf) {
+            assert!((a - b).abs() < 1e-15, "forward vs forward_into mismatch");
+        }
+        for (a, b) in s1[0].hidden.iter().zip(&s2[0].hidden) {
+            assert!((a - b).abs() < 1e-15);
+        }
     }
 
     #[test]

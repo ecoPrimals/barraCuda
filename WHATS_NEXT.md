@@ -1,10 +1,20 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-06-20.
+Prioritized work items, ordered by impact. Updated 2026-06-21.
 
 ---
 
 ## Recently Completed
+
+### Wave 120 — LSTM Zero-Copy Evolution + Doc Cleanup (Jun 21, 2026)
+- **LSTM `forward_into` + `GateBuffers`** — zero-copy output via caller-provided buffer,
+  pre-allocated gate scratch buffers. Eliminates per-timestep `Vec<f64>` clone and
+  4×`Vec<f64>` gate allocations per layer per step. `forward_sequence` now reuses single
+  output buffer and gate buffers across all timesteps.
+- **2-Gate Mesh Proof superseded** — 4-node mesh operational (golgi ↔ sporeGate ↔ eastGate ↔ flockGate)
+- **`domain_ops.rs` CPU fallback confirmed clone-free** — GPU f64→f32 conversion inherent
+- **All 5 quality gates green** (fmt, clippy -D warnings across 4 crates, doc, deny, check)
+- **Zero files >800L**, zero `todo!()`, zero production `println!`, zero deep debt
 
 ### Wave 119 — OOM Auto-Migration + Deep Debt Audit (Jun 20, 2026)
 - **`MultiDevicePool::execute_with_migration()`** — automatic workload retry across pool devices on OOM detection, excluded-device tracking, configurable max retries
@@ -927,10 +937,9 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
 
 ## Immediate (P1)
 
-- **2-Gate Mesh Proof (coordination)**: eastGate ↔ strandGate bidirectional mesh
-  validation. Songbird :7700 running on strandGate; eastGate needs NUCLEUS +
-  Songbird on LAN (192.168.1.144). Verify `discovery.peers`, `mesh.health_check`,
-  cross-gate `capability.call`. **Upstream coordination with eastGate operators.**
+- **~~2-Gate Mesh Proof~~**: Superseded — 4-node mesh operational (golgi ↔ sporeGate ↔
+  eastGate ↔ flockGate, all 13/13 NUCLEUS). barraCuda mesh validation will proceed
+  after ironGate SSH enrollment.
 - **PrecisionBrain → coralReef → SovereignDevice CI integration**: Mock trio E2E validated
   (Sprint 57). Next: CI with live coralReef instance for full pipeline validation.
 - **DF64 NVK hardware verification**: GPU-dispatched DF64 E2E tests added (Sprint 63, FMA +
@@ -978,8 +987,10 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
   recompilation through sovereign pipeline.
 - **Zero-copy evolution**: `bytes::Bytes` on I/O boundaries + `CpuTensorStorageSimple` +
   `CosineSimilarityF64` + RBF `assemble_and_solve` + `CpuTensorStorage` → `BytesMut` +
-  `EventCodec` → `Bytes` + `CompileResponse::into_bytes()` done; remaining: pre-allocated
-  buffers for `domain_ops.rs` CPU fallback clones, LSTM hidden state clones.
+  `EventCodec` → `Bytes` + `CompileResponse::into_bytes()` done. **LSTM zero-copy
+  shipped (Wave 120)**: `forward_into` + `GateBuffers` pre-allocated scratch — eliminates
+  per-timestep `Vec<f64>` clone and 4×`Vec<f64>` gate allocations per layer per step.
+  `domain_ops.rs` CPU fallback confirmed clone-free; GPU f64→f32 conversion is inherent.
 
 ## Long-term (P4)
 

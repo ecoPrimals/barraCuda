@@ -5,7 +5,7 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — Waves 109–119 (Jun 20 2026)
+## [Unreleased] — Waves 109–120 (Jun 21 2026)
 
 ### Changed
 - **MSRV raised to 1.92** (Edition 2024, let-chain modernization)
@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`transport_tests.rs` (858L) → `transport_tests/` module** (7 semantic test files, max 225L)
 - **`println!()` → `tracing::info!()`** in library doc examples (~37 sites across 25 files)
 - `.expect()` calls audited: 6 ownership-invariant sites annotated with `#[expect(clippy::expect_used)]`
+- **LSTM zero-copy evolution** — `forward_into` + `GateBuffers` pre-allocated scratch; `forward_sequence` reuses buffers across all timesteps (Wave 120)
 
 ### Added
 - **Multi-GPU OOM auto-migration** — `MultiDevicePool::execute_with_migration()` with device exclusion, configurable retry, and `WgpuDevice::set_oom()` signaling (Wave 119)

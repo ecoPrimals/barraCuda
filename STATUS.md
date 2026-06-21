@@ -1,7 +1,7 @@
 # barraCuda Status
 
 **Version**: 0.4.0
-**Date**: 2026-06-20
+**Date**: 2026-06-21
 **Overall Grade**: A+ (Zero unsafe via `#![forbid(unsafe_code)]`, zero unwrap in production, zero panic in production, zero println in library code, pure safe Rust, AGPL-3.0-or-later, all quality gates green, 4,624 tests (708 barracuda-core + 3,916 barracuda), zero TODO/FIXME/unimplemented, zero `Result<T, String>` in production, zero `.expect()` in IPC handlers, zero `#[allow(]` suppressions (all `#[expect(` with reason), **98 JSON-RPC methods** (97 + `method.describe` introspection, includes `linalg.batched_tridiag_eigh` groundSpring absorption), zero cross-primal dependencies (primal self-knowledge principle), local `TransportEndpoint` implementation (wire format is the contract), `TRANSPORT_ENDPOINT` env var for launcher injection, socket state co-locates with socket path (no `/tmp` pollution), `ProtectSystem=strict` compatible, all production files under 800 lines, 4-gate mesh collective operational, composition-ready, Rust 2024 edition, MSRV 1.92, 100% pure Rust dependency chain)
 
 ---
@@ -64,6 +64,7 @@
 - VFIO detection moved to toadStool — barraCuda queries hardware capabilities via IPC at runtime
 - Kokkos parity projections: ~4,000 steps/s target (VFIO + DF64) vs 2,630 steps/s Kokkos baseline
 - **Multi-GPU OOM auto-migration**: `MultiDevicePool::execute_with_migration()` — automatic workload retry across pool devices on OOM, excluded-device tracking, configurable retry limit, `set_oom()`/`clear_oom()` device signaling
+- **LSTM zero-copy forward**: `LstmReservoir::forward_into()` with caller-provided output buffer + `GateBuffers` pre-allocated scratch (zero per-timestep allocation in `forward_sequence`)
 - `SOVEREIGN_PIPELINE_TRACKER.md` — tracks P0 (SovereignDevice), VFIO primary dispatch, libc→rustix evolution, cross-primal deps
 - Zero TODOs/FIXMEs/HACKs/`unreachable!()` without messages in codebase
 - Zero "for now" debt language — all 22 instances evolved to proper engineering documentation with performance thresholds

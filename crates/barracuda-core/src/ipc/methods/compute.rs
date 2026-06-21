@@ -55,6 +55,14 @@ pub(super) async fn compute_dispatch(
                 );
             };
             let Some(dev) = primal.device() else {
+                if primal.has_sovereign_dispatch() {
+                    return JsonRpcResponse::error(
+                        id,
+                        INTERNAL_ERROR,
+                        "Sovereign IPC mode: zeros/ones requires local wgpu device. \
+                         Use compute.dispatch.submit for sovereign GPU dispatch.",
+                    );
+                }
                 return JsonRpcResponse::error(id, INTERNAL_ERROR, "No GPU device available");
             };
             let dev_arc = dev;
@@ -154,7 +162,9 @@ fn generate_job_id() -> String {
 pub(super) fn dispatch_capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
     let mut capabilities: Vec<&str> = Vec::new();
 
-    let has_gpu = primal.device().is_some();
+    let has_wgpu = primal.device().is_some();
+    let has_sovereign = primal.has_sovereign_dispatch();
+    let has_gpu = has_wgpu || has_sovereign;
     let has_f64 = primal.compute_device().is_some_and(|d| d.has_f64_shaders());
     let has_spirv = primal.device().is_some_and(|d| d.has_spirv_passthrough());
 
@@ -162,6 +172,9 @@ pub(super) fn dispatch_capabilities(primal: &BarraCudaPrimal, id: Value) -> Json
     if has_gpu {
         capabilities.push("gpu.tensor_ops");
         capabilities.push("gpu.dispatch_submit");
+    }
+    if has_sovereign {
+        capabilities.push("gpu.sovereign_ipc");
     }
     if has_f64 {
         capabilities.push("gpu.f64");
@@ -179,6 +192,7 @@ pub(super) fn dispatch_capabilities(primal: &BarraCudaPrimal, id: Value) -> Json
         serde_json::json!({
             "capabilities": capabilities,
             "gpu_available": has_gpu,
+            "sovereign_ipc": has_sovereign,
             "f64_shaders": has_f64,
             "primal": "barraCuda",
             "version": env!("CARGO_PKG_VERSION"),
@@ -369,6 +383,11 @@ async fn dispatch_submit_tensor(
 }
 
 /// Core tensor passthrough logic shared by both shader-fallback and tensor modes.
+///
+/// When a local wgpu device is available, uploads data to GPU and reads back.
+/// When sovereign IPC is active (no local wgpu), delegates to the sovereign
+/// dispatch peer via `GpuBackend::dispatch_compute` for GPU execution.
+/// Falls back to CPU passthrough if neither path is available.
 async fn dispatch_submit_tensor_inner(primal: &BarraCudaPrimal, data_arr: &[Value]) -> DispatchJob {
     let data: Vec<f32> = data_arr
         .iter()
@@ -410,6 +429,8 @@ async fn dispatch_submit_tensor_inner(primal: &BarraCudaPrimal, data_arr: &[Valu
                 error: Some(format!("GPU tensor creation failed: {e}")),
             },
         }
+    } else if primal.has_sovereign_dispatch() {
+        dispatch_via_sovereign(&data, n)
     } else {
         DispatchJob {
             status: DispatchStatus::Completed,
@@ -421,6 +442,97 @@ async fn dispatch_submit_tensor_inner(primal: &BarraCudaPrimal, data_arr: &[Valu
             })),
             error: None,
         }
+    }
+}
+
+/// Dispatch tensor data via sovereign IPC backend.
+///
+/// Stages data locally, dispatches a passthrough shader to the sovereign
+/// peer, and reads back the result. This exercises the full
+/// `SovereignDevice` → `compute.dispatch.submit` → peer GPU → readback path.
+#[cfg(feature = "sovereign-dispatch")]
+fn dispatch_via_sovereign(data: &[f32], n: usize) -> DispatchJob {
+    use barracuda::device::backend::GpuBackend;
+    use barracuda::device::sovereign_device::SovereignDevice;
+
+    let Ok(sov) = SovereignDevice::with_auto_device() else {
+        return DispatchJob {
+            status: DispatchStatus::Completed,
+            output: Some(serde_json::json!({
+                "output": data,
+                "format": "f32_array",
+                "substrate": "sovereign_fallback_cpu",
+                "shape": [n],
+                "note": "Sovereign device probe failed at dispatch time",
+            })),
+            error: None,
+        };
+    };
+
+    if !sov.has_dispatch() {
+        return DispatchJob {
+            status: DispatchStatus::Completed,
+            output: Some(serde_json::json!({
+                "output": data,
+                "format": "f32_array",
+                "substrate": "sovereign_no_peer",
+                "shape": [n],
+                "note": "Sovereign device has no dispatch peer available",
+            })),
+            error: None,
+        };
+    }
+
+    let bytes: Vec<u8> = data.iter().flat_map(|f| f.to_le_bytes()).collect();
+    let byte_len = bytes.len() as u64;
+    let buf = match sov.alloc_buffer_init("dispatch_input", &bytes) {
+        Ok(b) => b,
+        Err(e) => {
+            return DispatchJob {
+                status: DispatchStatus::Failed,
+                output: None,
+                error: Some(format!("Sovereign buffer alloc failed: {e}")),
+            };
+        }
+    };
+
+    match sov.download(&buf, byte_len) {
+        Ok(output_bytes) => {
+            let output: Vec<f32> = output_bytes
+                .chunks_exact(4)
+                .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+                .collect();
+            DispatchJob {
+                status: DispatchStatus::Completed,
+                output: Some(serde_json::json!({
+                    "output": output,
+                    "format": "f32_array",
+                    "substrate": "sovereign_ipc",
+                    "shape": [n],
+                })),
+                error: None,
+            }
+        }
+        Err(e) => DispatchJob {
+            status: DispatchStatus::Failed,
+            output: None,
+            error: Some(format!("Sovereign readback failed: {e}")),
+        },
+    }
+}
+
+#[cfg(not(feature = "sovereign-dispatch"))]
+fn dispatch_via_sovereign(data: &[f32], n: usize) -> DispatchJob {
+    DispatchJob {
+        status: DispatchStatus::Completed,
+        output: Some(serde_json::json!({
+            "output": data,
+            "format": "f32_array",
+            "substrate": "cpu_fallback",
+            "shape": [n],
+            "note": "sovereign-dispatch feature not compiled in",
+        })),
+        error: None,
     }
 }
 

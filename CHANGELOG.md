@@ -16,12 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`println!()` → `tracing::info!()`** in library doc examples (~37 sites across 25 files)
 - `.expect()` calls audited: 6 ownership-invariant sites annotated with `#[expect(clippy::expect_used)]`
 - **LSTM zero-copy evolution** — `forward_into` + `GateBuffers` pre-allocated scratch; `forward_sequence` reuses buffers across all timesteps (Wave 120)
+- **Sovereign-dispatch IPC fully wired** — `barracuda-core` feature passthrough (`sovereign-dispatch = ["barracuda/sovereign-dispatch"]`), `dispatch_capabilities` reports `gpu.sovereign_ipc`, `device.probe` sovereign-aware, `dispatch_submit_tensor_inner` routes through `SovereignDevice` when no local wgpu (Wave 120)
+- **ironGate GPU operational** — RTX 5070 live via glibc local build (SHADER_F64 enabled, 14/9 f64 builtins native), systemd service override pointing to local release binary (Wave 120)
 
 ### Added
 - **Multi-GPU OOM auto-migration** — `MultiDevicePool::execute_with_migration()` with device exclusion, configurable retry, and `WgpuDevice::set_oom()` signaling (Wave 119)
 - **`linalg.batched_tridiag_eigh`** IPC method — batched tridiagonal symmetric eigendecomposition via QL with Wilkinson shifts (groundSpring Exp 012 absorption)
 - **Genetics-layer prefix stripping** (0xEC mito-beacon v1, 0xED mito-beacon v2, 0xEE nuclear lineage) on all IPC accept loops (Wave 114)
 - **`--bind-mode` / `PRIMAL_BIND_MODE`** CLI flag for launcher-controlled socket/TCP selection (Wave 109)
+- **`sovereign-dispatch` feature passthrough** in `barracuda-core/Cargo.toml` — enables building the primal binary with sovereign IPC dispatch to coralReef peer (Wave 120)
+- **`dispatch_via_sovereign()`** — IPC tensor dispatch routing through `SovereignDevice` when musl binary has no local wgpu but sovereign peer is available (Wave 120)
+- **Dual-target depot proposal** — upstream impulse for `x86_64-unknown-linux-gnu` GPU builds (`infra/wateringHole/impulses/active/`) (Wave 120)
 - CI: `cargo deny check`, `RUSTDOCFLAGS="-D warnings" cargo doc`, `cargo nextest` installation
 - 12 new tests for `linalg.batched_tridiag_eigh` (happy paths + all error paths)
 - Capability registry entry for `linalg.batched_tridiag_eigh`

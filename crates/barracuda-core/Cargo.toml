@@ -11,6 +11,7 @@ rust-version.workspace = true
 [features]
 default = ["tarpc-transport"]
 tarpc-transport = ["dep:tarpc", "dep:futures", "dep:tokio-util", "dep:tokio-serde"]
+sovereign-dispatch = ["barracuda/sovereign-dispatch"]
 
 [dependencies]
 barracuda = { path = "../barracuda", version = "0.4.0", default-features = true }

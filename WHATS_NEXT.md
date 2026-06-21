@@ -6,11 +6,24 @@ Prioritized work items, ordered by impact. Updated 2026-06-21.
 
 ## Recently Completed
 
-### Wave 120 — LSTM Zero-Copy Evolution + Doc Cleanup (Jun 21, 2026)
+### Wave 120 — LSTM Zero-Copy Evolution + GPU Depot Strategy (Jun 21, 2026)
 - **LSTM `forward_into` + `GateBuffers`** — zero-copy output via caller-provided buffer,
   pre-allocated gate scratch buffers. Eliminates per-timestep `Vec<f64>` clone and
   4×`Vec<f64>` gate allocations per layer per step. `forward_sequence` now reuses single
   output buffer and gate buffers across all timesteps.
+- **ironGate GPU LIVE** — RTX 5070 operational via glibc local release build. SHADER_F64
+  enabled, 14/9 f64 builtins native. Systemd service override (`ExecStart` → local binary).
+  IPC `health.check` reports healthy, `device.probe` returns wgpu backend with RTX 5070 limits.
+- **Sovereign-dispatch IPC fully wired** — `barracuda-core/Cargo.toml` gains
+  `sovereign-dispatch = ["barracuda/sovereign-dispatch"]` feature passthrough.
+  `dispatch_capabilities` reports `gpu.sovereign_ipc`. `device.probe` returns sovereign
+  backend info. `dispatch_submit_tensor_inner` routes through `SovereignDevice` when
+  musl binary has no local wgpu. 708 lib tests pass on both default and sovereign configs.
+- **Dual-target depot proposal** — upstream impulse written to
+  `infra/wateringHole/impulses/active/` proposing `x86_64-unknown-linux-gnu` build path
+  for GPU primals on compute gates. Pushed to origin + forgejo.
+- **`ecosystem_manifest.toml` updated** — ironGate: `gpu_target`, `wg_ip`, `wg_pubkey`,
+  RTX 5070 notes, 12/12 NUCLEUS enrolled.
 - **2-Gate Mesh Proof superseded** — 4-node mesh operational (golgi ↔ sporeGate ↔ eastGate ↔ flockGate)
 - **`domain_ops.rs` CPU fallback confirmed clone-free** — GPU f64→f32 conversion inherent
 - **All 5 quality gates green** (fmt, clippy -D warnings across 4 crates, doc, deny, check)
@@ -937,9 +950,9 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
 
 ## Immediate (P1)
 
-- **~~2-Gate Mesh Proof~~**: Superseded — 4-node mesh operational (golgi ↔ sporeGate ↔
-  eastGate ↔ flockGate, all 13/13 NUCLEUS). barraCuda mesh validation will proceed
-  after ironGate SSH enrollment.
+- **~~2-Gate Mesh Proof~~**: Superseded — 5-node mesh operational (golgi ↔ sporeGate ↔
+  eastGate ↔ flockGate ↔ ironGate, all 12/12 NUCLEUS on ironGate). RTX 5070 GPU live.
+  Sovereign-dispatch IPC wired for musl-static gates without local GPU access.
 - **PrecisionBrain → coralReef → SovereignDevice CI integration**: Mock trio E2E validated
   (Sprint 57). Next: CI with live coralReef instance for full pipeline validation.
 - **DF64 NVK hardware verification**: GPU-dispatched DF64 E2E tests added (Sprint 63, FMA +

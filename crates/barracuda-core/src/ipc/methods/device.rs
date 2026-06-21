@@ -34,25 +34,37 @@ pub(super) async fn list(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse
 
 /// `barracuda.device.probe` — Probe device capabilities.
 pub(super) async fn probe(primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
-    let Some(dev) = primal.device() else {
+    if let Some(dev) = primal.device() {
+        let limits = dev.device().limits();
         return JsonRpcResponse::success(
             id,
             serde_json::json!({
-                "available": false,
-                "reason": "No GPU device initialized"
+                "available": true,
+                "backend": "wgpu",
+                "max_buffer_size": limits.max_buffer_size,
+                "max_storage_buffers_per_shader_stage": limits.max_storage_buffers_per_shader_stage,
+                "max_compute_workgroup_size_x": limits.max_compute_workgroup_size_x,
+                "max_compute_workgroups_per_dimension": limits.max_compute_workgroups_per_dimension,
             }),
         );
-    };
+    }
 
-    let limits = dev.device().limits();
+    if primal.has_sovereign_dispatch() {
+        return JsonRpcResponse::success(
+            id,
+            serde_json::json!({
+                "available": true,
+                "backend": "sovereign_ipc",
+                "note": "GPU compute via IPC dispatch to peer — limits determined by peer hardware",
+            }),
+        );
+    }
+
     JsonRpcResponse::success(
         id,
         serde_json::json!({
-            "available": true,
-            "max_buffer_size": limits.max_buffer_size,
-            "max_storage_buffers_per_shader_stage": limits.max_storage_buffers_per_shader_stage,
-            "max_compute_workgroup_size_x": limits.max_compute_workgroup_size_x,
-            "max_compute_workgroups_per_dimension": limits.max_compute_workgroups_per_dimension,
+            "available": false,
+            "reason": "No GPU device initialized"
         }),
     )
 }

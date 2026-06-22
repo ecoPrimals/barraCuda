@@ -11,6 +11,12 @@ pub const XDG_RUNTIME_DIR: &str = "XDG_RUNTIME_DIR";
 /// Ecosystem socket directory override.
 pub const BIOMEOS_SOCKET_DIR: &str = "BIOMEOS_SOCKET_DIR";
 
+/// Default ecosystem socket namespace per wateringHole `PRIMAL_IPC_PROTOCOL` v3.0.
+///
+/// All primals place Unix sockets under `$XDG_RUNTIME_DIR/{namespace}/`.
+/// Override at runtime with the [`BIOMEOS_SOCKET_DIR`] environment variable.
+pub const DEFAULT_ECOSYSTEM_SOCKET_NAMESPACE: &str = "biomeos";
+
 /// JSON manifest discovery subdirectory under [`XDG_RUNTIME_DIR`].
 pub const ECOPRIMALS_DISCOVERY_DIR: &str = "ECOPRIMALS_DISCOVERY_DIR";
 

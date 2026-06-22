@@ -39,17 +39,10 @@ const LOCALHOST: &str = "127.0.0.1";
 /// This fallback reads transport info from any remaining pre-capability manifest.
 const LEGACY_DISCOVERY_FILENAME: &str = "shader-compiler.json";
 
-/// Default ecosystem socket namespace per wateringHole `PRIMAL_IPC_PROTOCOL` v3.0.
-///
-/// All primals place Unix sockets under `$XDG_RUNTIME_DIR/{namespace}/`.
-/// Override at runtime with the `BIOMEOS_SOCKET_DIR` environment variable
-/// (consistent with `barracuda-core` `ipc/transport.rs`).
-const DEFAULT_ECOSYSTEM_SOCKET_NAMESPACE: &str = "biomeos";
-
 /// Resolve the ecosystem socket namespace, respecting env override.
 fn resolve_ecosystem_namespace() -> String {
     std::env::var(env_keys::BIOMEOS_SOCKET_DIR)
-        .unwrap_or_else(|_| DEFAULT_ECOSYSTEM_SOCKET_NAMESPACE.to_owned())
+        .unwrap_or_else(|_| env_keys::DEFAULT_ECOSYSTEM_SOCKET_NAMESPACE.to_owned())
 }
 
 /// Default directory name under `XDG_RUNTIME_DIR` for JSON primal manifests
@@ -454,7 +447,7 @@ mod tests {
 
     #[test]
     fn constants_match_expected_values() {
-        assert_eq!(DEFAULT_ECOSYSTEM_SOCKET_NAMESPACE, "biomeos");
+        assert_eq!(env_keys::DEFAULT_ECOSYSTEM_SOCKET_NAMESPACE, "biomeos");
         assert_eq!(SHADER_CAPABILITY_SOCKET, "shader.sock");
         assert_eq!(COMPILER_ADDR_ENV, "BARRACUDA_SHADER_COMPILER_ADDR");
         assert_eq!(COMPILER_PORT_ENV, "BARRACUDA_SHADER_COMPILER_PORT");

@@ -194,7 +194,7 @@ pub(super) fn dispatch_capabilities(primal: &BarraCudaPrimal, id: Value) -> Json
             "gpu_available": has_gpu,
             "sovereign_ipc": has_sovereign,
             "f64_shaders": has_f64,
-            "primal": "barraCuda",
+            "primal": crate::PRIMAL_NAME,
             "version": env!("CARGO_PKG_VERSION"),
         }),
     )

@@ -15,7 +15,10 @@ pub const DEFAULT_BIND_HOST: &str = "127.0.0.1";
 const DEFAULT_FAMILY_ID: &str = "default";
 
 /// Ecosystem socket namespace. Override via `BIOMEOS_SOCKET_DIR`.
-pub const DEFAULT_ECOSYSTEM_SOCKET_DIR: &str = "biomeos";
+///
+/// Re-exported from `barracuda::env_keys` — single source of truth.
+pub const DEFAULT_ECOSYSTEM_SOCKET_DIR: &str =
+    barracuda::env_keys::DEFAULT_ECOSYSTEM_SOCKET_NAMESPACE;
 
 /// Resolve TCP bind host: `BARRACUDA_IPC_HOST` → [`DEFAULT_BIND_HOST`].
 pub fn resolve_bind_host() -> String {
@@ -133,9 +136,16 @@ pub fn resolve_federation_port() -> u16 {
         .unwrap_or(DEFAULT_FEDERATION_PORT)
 }
 
-/// Socket filename prefix for the security provider (e.g. bearDog).
-/// Used for health probing — we look for `{prefix}*.sock` in the socket dir.
+/// Socket filename prefix for the security provider role.
+///
+/// Filesystem-scan fallback for `BTSP_PROVIDER_SOCKET` when the
+/// composition-injected env var is absent. Scans for `{prefix}*.sock`.
+/// Override via `BTSP_PROVIDER_SOCKET` env var (preferred).
 pub const SECURITY_PROVIDER_SOCKET_PREFIX: &str = "beardog";
 
-/// Socket filename prefix for the discovery service (e.g. Songbird).
+/// Socket filename prefix for the discovery service role.
+///
+/// Filesystem-scan fallback for `DISCOVERY_SOCKET` when the
+/// composition-injected env var is absent. Scans for `{prefix}*.sock`.
+/// Override via `DISCOVERY_SOCKET` env var (preferred).
 pub const DISCOVERY_SOCKET_PREFIX: &str = "songbird";

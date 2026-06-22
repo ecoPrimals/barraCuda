@@ -5,7 +5,7 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — Waves 109–120 (Jun 21 2026)
+## [Unreleased] — Waves 109–123 (Jun 22 2026)
 
 ### Changed
 - **MSRV raised to 1.92** (Edition 2024, let-chain modernization)
@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`sovereign-dispatch` feature passthrough** in `barracuda-core/Cargo.toml` — enables building the primal binary with sovereign IPC dispatch to coralReef peer (Wave 120)
 - **`dispatch_via_sovereign()`** — IPC tensor dispatch routing through `SovereignDevice` when musl binary has no local wgpu but sovereign peer is available (Wave 120)
 - **Dual-target depot proposal** — upstream impulse for `x86_64-unknown-linux-gnu` GPU builds (`infra/wateringHole/impulses/active/`) (Wave 120)
+- **Wave 123 GPU pipeline validation** — full train→save→load→infer E2E validated on ironGate RTX 5070; f64 native precision confirmed (SHADER_F64, gpu.f64/df64/spirv_passthrough); coralReef shader IPC operational (shader.compile.wgsl via TCP JSON-RPC, 27ms WGSL→PTX, BLAKE3 provenance); LSTM zero-copy tests 6/6 green; dual-target depot gap reported upstream
 - CI: `cargo deny check`, `RUSTDOCFLAGS="-D warnings" cargo doc`, `cargo nextest` installation
 - 12 new tests for `linalg.batched_tridiag_eigh` (happy paths + all error paths)
 - Capability registry entry for `linalg.batched_tridiag_eigh`

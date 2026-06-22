@@ -1,10 +1,19 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-06-21.
+Prioritized work items, ordered by impact. Updated 2026-06-22.
 
 ---
 
 ## Recently Completed
+
+### Wave 123 — GPU Pipeline Validation on RTX 5070 (Jun 22, 2026)
+- **Full ML pipeline validated** — train→save→load→infer E2E on ironGate RTX 5070.
+  XOR 2→8→1 MLP: MSE 1.11e-30, forward pass [0,0]→0, [0,1]→1, [1,0]→1, [1,1]→0.
+- **f64 native precision confirmed** — `SHADER_F64=true`, `gpu.f64` + `gpu.df64` + `gpu.spirv_passthrough` capabilities live. Mean at f64 range (1e15+1) computed exactly. No f32 downcast.
+- **coralReef shader IPC operational** — `shader.compile.wgsl` compiles WGSL→PTX via TCP JSON-RPC (27ms compile, 14 instructions, BLAKE3 provenance hash). sm_70/sm_120 targets. Multi-compile (`shader.compile.multi`) not yet wired upstream.
+- **LSTM zero-copy tests pass** — 6/6 LSTM tests green including `forward_into` (zero-copy path) and bi-directional LSTM.
+- **Dual-target depot gap identified** — `build-local.sh --target gnu` wired but `x86_64-unknown-linux-gnu/` directory not yet built/synced to depot. barraCuda running from local glibc build; coralReef running musl (acceptable: naga is pure Rust). Report filed upstream.
+- **12/12 NUCLEUS operational** — 5-gate mesh collective, WireGuard latency 36ms to golgi.
 
 ### Wave 120 — LSTM Zero-Copy Evolution + GPU Depot Strategy (Jun 21, 2026)
 - **LSTM `forward_into` + `GateBuffers`** — zero-copy output via caller-provided buffer,

@@ -14,6 +14,10 @@ Prioritized work items, ordered by impact. Updated 2026-06-22.
 - **LSTM zero-copy tests pass** — 6/6 LSTM tests green including `forward_into` (zero-copy path) and bi-directional LSTM.
 - **Dual-target depot gap identified** — `build-local.sh --target gnu` wired but `x86_64-unknown-linux-gnu/` directory not yet built/synced to depot. barraCuda running from local glibc build; coralReef running musl (acceptable: naga is pure Rust). Report filed upstream.
 - **12/12 NUCLEUS operational** — 5-gate mesh collective, WireGuard latency 36ms to golgi.
+- **Deep debt 12-axis audit clean** — zero files >800L, zero TODO/FIXME, zero production
+  unwrap, zero hardcoded primal names (3 `"biomeos"`/`"barraCuda"` literals evolved to
+  shared constants), zero mocks in production, pure Rust deps, all quality gates green.
+  Ecosystem namespace consolidated to `env_keys::DEFAULT_ECOSYSTEM_SOCKET_NAMESPACE`.
 
 ### Wave 120 — LSTM Zero-Copy Evolution + GPU Depot Strategy (Jun 21, 2026)
 - **LSTM `forward_into` + `GateBuffers`** — zero-copy output via caller-provided buffer,

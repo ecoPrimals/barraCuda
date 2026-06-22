@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`dispatch_via_sovereign()`** — IPC tensor dispatch routing through `SovereignDevice` when musl binary has no local wgpu but sovereign peer is available (Wave 120)
 - **Dual-target depot proposal** — upstream impulse for `x86_64-unknown-linux-gnu` GPU builds (`infra/wateringHole/impulses/active/`) (Wave 120)
 - **Wave 123 GPU pipeline validation** — full train→save→load→infer E2E validated on ironGate RTX 5070; f64 native precision confirmed (SHADER_F64, gpu.f64/df64/spirv_passthrough); coralReef shader IPC operational (shader.compile.wgsl via TCP JSON-RPC, 27ms WGSL→PTX, BLAKE3 provenance); LSTM zero-copy tests 6/6 green; dual-target depot gap reported upstream
+- **Wave 123 deep debt evolution** — ecosystem namespace consolidated to single source of truth (`env_keys::DEFAULT_ECOSYSTEM_SOCKET_NAMESPACE`); 3 hardcoded `"biomeos"`/`"barraCuda"` literals evolved to constants; transport_config, neural_announce, coral_compiler/discovery all derive from shared constant; socket prefix docs clarify env var precedence
 - CI: `cargo deny check`, `RUSTDOCFLAGS="-D warnings" cargo doc`, `cargo nextest` installation
 - 12 new tests for `linalg.batched_tridiag_eigh` (happy paths + all error paths)
 - Capability registry entry for `linalg.batched_tridiag_eigh`

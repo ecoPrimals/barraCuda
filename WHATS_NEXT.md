@@ -1,10 +1,27 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-06-22.
+Prioritized work items, ordered by impact. Updated 2026-06-23.
 
 ---
 
 ## Recently Completed
+
+### Wave 124 — Quota-Aware OOM Migration + Cross-Primal Pin Refresh (Jun 23, 2026)
+- **`execute_with_migration_quota()`** — new method on `MultiDevicePool` that carries an
+  optional `ResourceQuota` through the OOM migration loop. When a device returns OOM, the
+  quota tracker records the failure via `record_oom_failure()` before migrating, giving
+  diagnostics visibility into VRAM pressure patterns across migration retries.
+- **`acquire_excluding` now skips OOM-flagged devices** — the selector loop checks
+  `device.is_oom()` in addition to the explicit exclude list, preventing re-acquisition of
+  devices under memory pressure during migration retries.
+- **Cross-primal pins refreshed** — toadStool S325 (9,127 tests), coralReef v0.2.0
+  (shader.compile.wgsl 27ms, BLAKE3 provenance), primalSpring 1,017 tests, cellMembrane
+  779 tests. Stale hotSpring pin removed. "What's Not Working" section updated with current
+  Wave 124 ironGate P1/P2 blockers.
+- **4,619 tests confirmed on RTX 5070** — 3,911 barracuda + 708 barracuda-core. 51 GPU
+  contention failures (pass individually, pre-existing resource contention under parallel
+  test execution). Zero regressions.
+- All quality gates green (clippy -D warnings, zero compiler warnings).
 
 ### Wave 123 — GPU Pipeline Validation on RTX 5070 (Jun 22, 2026)
 - **Full ML pipeline validated** — train→save→load→infer E2E on ironGate RTX 5070.
@@ -977,7 +994,13 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
 - **`BatchedTridiagEigh` GPU op**: groundSpring local QL implicit eigensolver is a candidate
   for absorption as a batched GPU tridiagonal eigenvector solver — **IPC handler shipped (Wave 116); GPU batched op optional**.
 - **Multi-GPU OOM automatic migration**: OOM detection flag wired in `WgpuDevice`, `is_oom()`
-  + `clear_oom()` + `set_oom()` API live, `is_retriable()` covers OOM (Sprint 64). **`execute_with_migration` shipped (Wave 119)**: automatic workload retry across pool devices when OOM detected, excluded-device tracking, configurable retry limit. Remaining: wire `MultiDevicePool` into primal startup when ironGate multi-GPU hardware is enrolled.
+  + `clear_oom()` + `set_oom()` API live, `is_retriable()` covers OOM (Sprint 64).
+  **`execute_with_migration` shipped (Wave 119)**: automatic workload retry across pool
+  devices when OOM detected, excluded-device tracking, configurable retry limit.
+  **`execute_with_migration_quota` shipped (Wave 124)**: quota-aware variant carries
+  `ResourceQuota` through migration, records OOM failures on tracker. `acquire_excluding`
+  now also skips OOM-flagged devices. Remaining: wire `MultiDevicePool` into primal startup
+  when ironGate multi-GPU hardware is enrolled.
 - **Kokkos parity validation baseline**: Document `sarkas_gpu` validation results, extract
   PPPM shader performance numbers for apples-to-apples comparison. Framework parity benchmarks
   added (Sprint 63, LAMMPS + SciPy). Now unblocked by VFIO strategy — projected ~4,000

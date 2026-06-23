@@ -265,6 +265,14 @@ impl QuotaTracker {
         self.quota_failures.load(Ordering::Relaxed)
     }
 
+    /// Record an OOM failure detected during migration.
+    ///
+    /// Called by [`MultiDevicePool::execute_with_migration_quota`] when a device
+    /// returns an OOM error. Increments the failure counter for diagnostics.
+    pub fn record_oom_failure(&self) {
+        self.quota_failures.fetch_add(1, Ordering::Relaxed);
+    }
+
     /// Remaining VRAM budget (None if unlimited)
     pub fn remaining_vram_bytes(&self) -> Option<u64> {
         self.quota.max_vram_bytes.map(|max| {

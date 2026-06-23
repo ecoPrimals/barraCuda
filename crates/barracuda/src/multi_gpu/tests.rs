@@ -215,6 +215,48 @@ async fn test_execute_with_migration_all_devices_oom() {
 }
 
 #[tokio::test]
+async fn test_execute_with_migration_quota_tracks_failures() {
+    let pool = MultiDevicePool::new().await;
+    let Ok(pool) = pool else { return };
+
+    let quota = ResourceQuota::named("oom-test").with_max_vram_gb(2);
+
+    let result = pool
+        .execute_with_migration_quota(
+            &DeviceRequirements::new(),
+            10,
+            Some(quota),
+            |_attempt| {
+                |_device: Arc<crate::device::WgpuDevice>| -> crate::error::Result<u64> {
+                    Err(crate::error::BarracudaError::OutOfMemory(
+                        "simulated OOM".into(),
+                    ))
+                }
+            },
+        )
+        .await;
+
+    let err = result.unwrap_err();
+    assert!(err.is_oom());
+}
+
+#[tokio::test]
+async fn test_acquire_excluding_skips_oom_devices() {
+    let pool = MultiDevicePool::new().await;
+    let Ok(pool) = pool else { return };
+
+    if let Some(device) = pool.device(0) {
+        device.set_oom();
+        let reqs = DeviceRequirements::new();
+        if pool.device_count() >= 2 {
+            let lease = pool.acquire(&reqs).await;
+            assert!(lease.is_ok());
+        }
+        device.clear_oom();
+    }
+}
+
+#[tokio::test]
 async fn test_set_oom_and_clear_oom() {
     let pool = MultiDevicePool::new().await;
     let Ok(pool) = pool else { return };

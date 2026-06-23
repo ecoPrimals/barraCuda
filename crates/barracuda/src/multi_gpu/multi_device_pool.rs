@@ -354,12 +354,40 @@ impl MultiDevicePool {
         F: FnOnce(Arc<WgpuDevice>) -> Result<T> + Send + 'static,
         T: Send + 'static,
     {
+        self.execute_with_migration_quota(requirements, max_retries, None, make_f)
+            .await
+    }
+
+    /// Execute with automatic OOM migration and optional quota enforcement.
+    ///
+    /// Like [`execute_with_migration`](Self::execute_with_migration), but each
+    /// device lease carries the provided [`ResourceQuota`]. When OOM is detected
+    /// the quota tracker records the failure before migrating, giving downstream
+    /// code visibility into which devices hit pressure.
+    ///
+    /// # Errors
+    /// Returns the last OOM error if all devices are exhausted, or any non-OOM error
+    /// immediately (no retry for logic/validation errors).
+    pub async fn execute_with_migration_quota<F, T>(
+        &self,
+        requirements: &DeviceRequirements,
+        max_retries: usize,
+        quota: Option<ResourceQuota>,
+        make_f: impl Fn(usize) -> F,
+    ) -> Result<T>
+    where
+        F: FnOnce(Arc<WgpuDevice>) -> Result<T> + Send + 'static,
+        T: Send + 'static,
+    {
         let mut excluded: Vec<usize> = Vec::new();
         let max_attempts = max_retries.saturating_add(1).min(self.device_count());
         let mut last_error = None;
+        let quota_tracker = quota.map(|q| Arc::new(QuotaTracker::new(q)));
 
         for attempt in 0..max_attempts {
-            let lease = self.acquire_excluding(requirements, &excluded).await;
+            let lease = self
+                .acquire_excluding(requirements, &excluded, quota_tracker.clone())
+                .await;
             let lease = match lease {
                 Ok(l) => l,
                 Err(e) => {
@@ -391,6 +419,9 @@ impl MultiDevicePool {
                     if let Some(dev) = self.inner.devices.get(pool_index) {
                         dev.set_oom();
                     }
+                    if let Some(ref tracker) = quota_tracker {
+                        tracker.record_oom_failure();
+                    }
                     excluded.push(pool_index);
                     last_error = Some(e);
                 }
@@ -403,11 +434,15 @@ impl MultiDevicePool {
         }))
     }
 
-    /// Acquire a device matching requirements, excluding specific pool indices.
+    /// Acquire a device excluding specific indices, with optional quota tracker.
+    ///
+    /// Also skips devices that have their OOM flag set, preventing re-acquisition
+    /// of devices under memory pressure during migration retries.
     async fn acquire_excluding(
         &self,
         requirements: &DeviceRequirements,
         excluded: &[usize],
+        quota_tracker: Option<Arc<QuotaTracker>>,
     ) -> Result<DeviceLease> {
         let permit = self
             .inner
@@ -427,6 +462,9 @@ impl MultiDevicePool {
                 continue;
             }
             if self.inner.device_busy[i].load(Ordering::Acquire) {
+                continue;
+            }
+            if self.inner.devices[i].is_oom() {
                 continue;
             }
             if let Some(score) = requirements.score(info)
@@ -449,7 +487,7 @@ impl MultiDevicePool {
             device: self.inner.devices[idx].clone(),
             info: self.inner.info[idx].clone(),
             pool: self.inner.clone(),
-            quota_tracker: None,
+            quota_tracker,
             _permit: permit,
         })
     }

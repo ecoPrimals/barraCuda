@@ -1,7 +1,7 @@
 # barraCuda Status
 
 **Version**: 0.4.0
-**Date**: 2026-06-22
+**Date**: 2026-06-23
 **Overall Grade**: A+ (Zero unsafe via `#![forbid(unsafe_code)]`, zero unwrap in production, zero panic in production, zero println in library code, pure safe Rust, AGPL-3.0-or-later, all quality gates green, 4,624 tests (708 barracuda-core + 3,916 barracuda), zero TODO/FIXME/unimplemented, zero `Result<T, String>` in production, zero `.expect()` in IPC handlers, zero `#[allow(]` suppressions (all `#[expect(` with reason), **98 JSON-RPC methods** (97 + `method.describe` introspection, includes `linalg.batched_tridiag_eigh` groundSpring absorption), zero cross-primal dependencies (primal self-knowledge principle), local `TransportEndpoint` implementation (wire format is the contract), `TRANSPORT_ENDPOINT` env var for launcher injection, socket state co-locates with socket path (no `/tmp` pollution), `ProtectSystem=strict` compatible, all production files under 800 lines, 5-gate mesh collective operational (ironGate enrolled Wave 120), composition-ready, Rust 2024 edition, MSRV 1.92, 100% pure Rust dependency chain, **ironGate RTX 5070 GPU LIVE** (glibc local build, SHADER_F64 enabled, sovereign-dispatch IPC wired for musl fallback))
 
 ---
@@ -262,18 +262,20 @@
 
 ## What's Not Working Yet
 
-- P0: VFIO dispatch hardware revalidation on Titan V — coralReef Iter 50 applied USERD_TARGET + INST_TARGET fix; 7/7 expected
-- P1: DF64 NVK hardware verification — GPU E2E tests added (Sprint 63); awaiting NVK/NAK on physical silicon
-- P1: coralReef HMMA/WGMMA codegen — `kernel_router` routes tensor-core eligible matmul (Sprint 64); awaiting coralReef emission
-- P1: Multi-GPU OOM automatic migration — detection + `is_retriable()` wired (Sprint 64); next: `QuotaTracker` auto-migrate
-- P2: Test coverage 80%→90% — 80.54% line on llvmpipe; 90% target requires real GPU hardware; 4,393+ tests
-- P2: Kokkos GPU parity benchmarks — framework parity bench infra added (Sprint 63); awaiting hardware run
+- P1: Multi-GPU OOM automatic migration — detection + `is_retriable()` wired; next: `QuotaTracker` auto-migrate on OOM
+- P1: coralReef HMMA/WGMMA codegen — `kernel_router` routes tensor-core eligible matmul; awaiting coralReef emission
+- P1: coralReef `shader.compile.multi` — batch compilation method not yet wired upstream
+- P1: toadStool not enrolled on ironGate (12/12 NUCLEUS, toadStool excluded from composition)
+- P2: Test coverage 80%→90% — 80.54% line on llvmpipe; 90% target requires real GPU hardware; 4,624+ tests
+- P2: sm_120 (Blackwell) codegen — coralReef falls back to sm_70 on RTX 5070
+- P2: Kokkos GPU parity benchmarks — framework parity bench infra added; awaiting hardware run
+- P2: Dual-target depot gnu directory — `build-local.sh --target gnu` wired but not yet built/synced (blocked on sporeGate)
 
-### Cross-Primal Pins (current)
+### Cross-Primal Pins (current — Wave 124)
 
 | Primal | Version/Session | Key capability |
 |--------|-----------------|----------------|
-| toadStool | S249 | Compute trio aligned, VFIO primary dispatch, capability evolution |
-| coralReef | Sprint 5 | Wire contract, HMMA/WGMMA codegen pending, deep debt |
-| hotSpring | v0.6.32 | Trio rewire; VFIO validation; GP_PUT root cause found |
-| primalSpring | — | Passes 11-14 audit drove Sprints 60-65 |
+| toadStool | S325 (9,127 tests) | Fleet dispatch, GPU workload coordination, sentinel coverage |
+| coralReef | v0.2.0 | WGSL→PTX 27ms, sm_70/sm_120, BLAKE3 provenance, shader.compile.wgsl live |
+| primalSpring | 1,017 tests (98 scenarios) | Cross-gate validation, toadStool S325, debt sweep |
+| cellMembrane | 779 tests | Transport resolver, relay.forward wired, typed RPC errors |

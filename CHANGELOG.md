@@ -5,7 +5,7 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — Waves 109–123 (Jun 22 2026)
+## [Unreleased] — Waves 109–124 (Jun 23 2026)
 
 ### Changed
 - **MSRV raised to 1.92** (Edition 2024, let-chain modernization)
@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ironGate GPU operational** — RTX 5070 live via glibc local build (SHADER_F64 enabled, 14/9 f64 builtins native), systemd service override pointing to local release binary (Wave 120)
 
 ### Added
+- **Quota-aware OOM migration** — `MultiDevicePool::execute_with_migration_quota()` carries `ResourceQuota` through migration loop, records OOM failures on tracker; `acquire_excluding` now skips OOM-flagged devices (Wave 124)
 - **Multi-GPU OOM auto-migration** — `MultiDevicePool::execute_with_migration()` with device exclusion, configurable retry, and `WgpuDevice::set_oom()` signaling (Wave 119)
 - **`linalg.batched_tridiag_eigh`** IPC method — batched tridiagonal symmetric eigendecomposition via QL with Wilkinson shifts (groundSpring Exp 012 absorption)
 - **Genetics-layer prefix stripping** (0xEC mito-beacon v1, 0xED mito-beacon v2, 0xEE nuclear lineage) on all IPC accept loops (Wave 114)

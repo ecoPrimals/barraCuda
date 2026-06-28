@@ -5,9 +5,11 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — Waves 109–124 (Jun 23 2026)
+## [Unreleased] — Waves 109–128 (Jun 28 2026)
 
 ### Changed
+- **Clippy pedantic sweep** — 22 library warnings fixed (doc backticks, `#[must_use]`, wildcard import); barracuda-core gains 8 documented `#[expect()]` blocks covering 97 pedantic warnings with domain rationale (Wave 128)
+- **GNU depot validated** — E2E fetch from golgi depot, BLAKE3 checksum verified, glibc binary runs on ironGate RTX 5070 (Wave 128)
 - **MSRV raised to 1.92** (Edition 2024, let-chain modernization)
 - **bincode → postcard** for binary serialization (RUSTSEC-2025-0141 resolved, format tag 2)
 - **238 `suboptimal_flops` → `mul_add`** (fused multiply-add for numerical accuracy)

@@ -33,6 +33,40 @@
     clippy::result_large_err,
     reason = "BarracudaCoreError carries diagnostic context"
 )]
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    reason = "JSON-RPC params arrive as serde_json Number (f64/i64); safe narrowing to u32/usize for array indices"
+)]
+#![expect(
+    clippy::unused_async,
+    reason = "IPC handler signatures are async for framework compatibility"
+)]
+#![expect(
+    clippy::too_many_lines,
+    reason = "IPC dispatch functions aggregate many method registrations"
+)]
+#![expect(
+    clippy::items_after_statements,
+    reason = "handler closures declare helper structs close to their use site"
+)]
+#![expect(
+    clippy::needless_pass_by_value,
+    reason = "IPC handlers receive serde_json::Value by value for deserialization"
+)]
+#![expect(
+    clippy::doc_markdown,
+    reason = "physics notation (k_φ, θ₀), hardware names (PCIe, HBM2e), and code references in prose"
+)]
+#![expect(
+    clippy::similar_names,
+    clippy::many_single_char_names,
+    reason = "IPC method dispatch uses short param names (x, y, n, r) matching JSON-RPC wire contract"
+)]
+#![expect(
+    clippy::single_match_else,
+    reason = "match-based dispatch is clearer than if-let for method routing"
+)]
 
 /// Capability-based self-discovery.
 ///

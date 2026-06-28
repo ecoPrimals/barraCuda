@@ -111,7 +111,7 @@ impl CpuExecutor {
     /// Detect SIMD width at runtime.
     ///
     /// Returns lane count for the widest SIMD ISA available:
-    /// x86_64: AVX2 → 8, SSE2 → 4, fallback → 1.
+    /// `x86_64`: AVX2 → 8, SSE2 → 4, fallback → 1.
     /// aarch64: NEON is mandatory → 4.
     pub(crate) fn detect_simd_width() -> usize {
         #[cfg(target_arch = "x86_64")]

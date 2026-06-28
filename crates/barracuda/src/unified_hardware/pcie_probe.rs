@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Linux sysfs `PCIe` link probing for GPU devices.
 //!
-//! Provides [`PcieLinkInfo`] — runtime-detected PCIe generation, lane width,
+//! Provides [`PcieLinkInfo`] — runtime-detected `PCIe` generation, lane width,
 //! NUMA affinity, and vendor ID for each GPU-class PCI device on the bus.
 //! Used by [`super::transfer::PcieBridge`] for transfer cost estimation.
 

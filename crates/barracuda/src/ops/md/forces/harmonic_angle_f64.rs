@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Harmonic Angle Force (f64) — Three-Body Bonded Interaction
 //!
-//! **Potential**: U(θ) = ½k_θ(θ - θ₀)²
+//! **Potential**: U(θ) = ½`k_θ`(θ - θ₀)²
 //! **Force**: Cartesian gradient of U over atoms i, j (vertex), k
 //!
 //! Three-body term used by all major biomolecular force fields.
@@ -27,7 +27,7 @@ pub struct HarmonicAngle {
     pub j: u32,
     /// Particle index k
     pub k: u32,
-    /// Angular force constant k_θ (kJ/mol/rad²)
+    /// Angular force constant `k_θ` (kJ/mol/rad²)
     pub force_constant: f64,
     /// Equilibrium angle θ₀ (radians)
     pub eq_angle: f64,

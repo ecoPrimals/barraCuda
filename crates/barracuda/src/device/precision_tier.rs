@@ -190,7 +190,7 @@ impl PrecisionTier {
     /// | Tier group | Hardware unit | Rationale |
     /// |------------|---------------|-----------|
     /// | F16, BF16, TF32, FP8×2 | `TensorCore` | MMA-accelerated matrix ops |
-    /// | F32, F64, F64Precise, DF64, QF128, DF128 | `Compute` | Standard ALU / FP64 cores |
+    /// | F32, F64, `F64Precise`, DF64, QF128, DF128 | `Compute` | Standard ALU / FP64 cores |
     /// | Binary, Int2, Q4, Q8 | `Compute` | Bitwise/integer ALU ops |
     ///
     /// Only `TensorCore` and `Compute` appear here because precision routing is
@@ -201,9 +201,9 @@ impl PrecisionTier {
     /// # Compiler support requirements
     ///
     /// Tiers that require `coralReef` compiler involvement (cannot be pure barraCuda dispatch):
-    /// - **TensorCore tiers** (F16, BF16, TF32, FP8): coralReef emits MMA instructions
+    /// - **`TensorCore` tiers** (F16, BF16, TF32, FP8): coralReef emits MMA instructions
     /// - **DF64**: coralReef applies f32-pair rewrite pass
-    /// - **F64Precise**: coralReef disables FMA fusion
+    /// - **`F64Precise`**: coralReef disables FMA fusion
     /// - **QF128/DF128**: coralReef emits multi-word arithmetic expansion
     ///
     /// Tiers that are pure barraCuda dispatch (standard WGSL compute):

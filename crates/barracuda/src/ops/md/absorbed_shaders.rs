@@ -65,7 +65,7 @@ pub const WGSL_VACF_BATCH_F64: &str = include_str!("../../shaders/md/vacf_batch_
 /// Per-particle v(t0) · v(t) dot product for VACF (f64).
 pub const WGSL_VACF_DOT_F64: &str = include_str!("../../shaders/md/vacf_dot_f64.wgsl");
 
-/// Per-particle stress virial σ_xy for Green-Kubo viscosity (f64).
+/// Per-particle stress virial `σ_xy` for Green-Kubo viscosity (f64).
 pub const WGSL_STRESS_VIRIAL_F64: &str = include_str!("../../shaders/md/stress_virial_f64.wgsl");
 
 // ── Verlet neighbor list ─────────────────────────────────────────────
@@ -82,7 +82,7 @@ pub const WGSL_VERLET_COPY_REF: &str = include_str!("../../shaders/md/verlet_cop
 
 // ── ESN (Echo State Network) ─────────────────────────────────────────
 
-/// ESN reservoir update (f32) — fused W_in·input + W_res·state → leaky tanh.
+/// ESN reservoir update (f32) — fused `W_in`·input + `W_res`·state → leaky tanh.
 pub const WGSL_ESN_RESERVOIR_UPDATE: &str =
     include_str!("../../shaders/md/esn_reservoir_update.wgsl");
 

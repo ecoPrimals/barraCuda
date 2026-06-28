@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Periodic Dihedral Torsion Force (f64) — Four-Body Bonded Interaction
 //!
-//! **Potential**: U(φ) = k_φ [1 + cos(nφ - δ)]
+//! **Potential**: U(φ) = `k_φ` \[1 + cos(nφ - δ)\]
 //! **Force**: Cartesian gradient using Blondel-Karplus decomposition
 //!
 //! Standard periodic (proper) dihedral used by GROMOS, AMBER, CHARMM, OPLS.
@@ -29,7 +29,7 @@ pub struct DihedralTorsion {
     pub k: u32,
     /// Particle index l
     pub l: u32,
-    /// Barrier height k_φ (kJ/mol)
+    /// Barrier height `k_φ` (kJ/mol)
     pub barrier_height: f64,
     /// Periodicity n (integer, stored as f64 for GPU uniform compatibility)
     pub periodicity: f64,

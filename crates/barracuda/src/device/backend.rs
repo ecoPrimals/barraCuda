@@ -58,7 +58,7 @@ pub enum DriverKind {
     IntelMesa,
     /// Sovereign IPC backend (toadStool hardware dispatch).
     Sovereign,
-    /// Software rasterizer (llvmpipe, lavapipe, SwiftShader).
+    /// Software rasterizer (llvmpipe, lavapipe, `SwiftShader`).
     Software,
     /// Unknown / unrecognized driver.
     Unknown,
@@ -83,9 +83,9 @@ impl std::fmt::Display for Vendor {
 pub enum MemoryKind {
     /// GDDR5 (Kepler, older AMD).
     Gddr5,
-    /// HBM2 / HBM2e (datacenter).
+    /// HBM2 / `HBM2e` (datacenter).
     Hbm2,
-    /// HBM3 / HBM3e (datacenter).
+    /// HBM3 / `HBM3e` (datacenter).
     Hbm3,
     /// GDDR6 (Turing, RDNA).
     Gddr6,
@@ -123,6 +123,7 @@ pub struct BackendCapabilities {
 
 impl BackendCapabilities {
     /// Conservative defaults for unknown hardware.
+    #[must_use]
     pub fn unknown() -> Self {
         Self {
             vendor: Vendor::Unknown,
@@ -136,6 +137,7 @@ impl BackendCapabilities {
     }
 
     /// Whether this is an open-source Mesa driver (NVK, RADV, ANV).
+    #[must_use]
     pub fn is_mesa(&self) -> bool {
         matches!(
             self.driver_kind,
@@ -144,11 +146,13 @@ impl BackendCapabilities {
     }
 
     /// Whether this is the NVK/nouveau open-source NVIDIA Vulkan stack.
+    #[must_use]
     pub fn is_nvk(&self) -> bool {
         matches!(self.driver_kind, DriverKind::NvkMesa)
     }
 
     /// Whether this is the NVIDIA proprietary driver.
+    #[must_use]
     pub fn is_nvidia_proprietary(&self) -> bool {
         matches!(self.driver_kind, DriverKind::NvidiaProprietary)
     }

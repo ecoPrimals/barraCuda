@@ -1,10 +1,22 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-06-23.
+Prioritized work items, ordered by impact. Updated 2026-06-28.
 
 ---
 
 ## Recently Completed
+
+### Wave 128 — GNU Depot Validation + Clippy Pedantic Sweep (Jun 28, 2026)
+- **GNU depot fetch validated E2E** — golgi depot has 2 glibc binaries (barracuda 14.8MB,
+  coralreef 11.7MB) with BLAKE3 checksums. Fetched to ironGate via SCP, checksum verified,
+  binary runs and discovers RTX 5070 with SHADER_F64 enabled, 14/9 f64 builtins native.
+  Depot path: `/opt/ecoPrimals/plasmidBin/primals/x86_64-unknown-linux-gnu/`.
+- **Clippy pedantic sweep** — 22 library warnings fixed (17 doc backtick, 4 `#[must_use]`,
+  1 wildcard import). barracuda-core evolved from 0 to 8 documented `#[expect()]` blocks
+  covering 97 pedantic warnings (casts, unused_async, too_many_lines, items_after_statements,
+  needless_pass_by_value, doc_markdown, similar_names, single_match_else). All quality
+  gates green: `cargo clippy --workspace -- -D warnings` zero warnings.
+- 4,619 tests stable. 708 barracuda-core tests pass.
 
 ### Wave 124 — Quota-Aware OOM Migration + Cross-Primal Pin Refresh (Jun 23, 2026)
 - **`execute_with_migration_quota()`** — new method on `MultiDevicePool` that carries an

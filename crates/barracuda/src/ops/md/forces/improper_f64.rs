@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Improper Dihedral Force (f64) — Planarity Restraint
 //!
-//! **Potential**: U(ψ) = ½k_ψ(ψ - ψ₀)²
+//! **Potential**: U(ψ) = ½`k_ψ`(ψ - ψ₀)²
 //! **Force**: Cartesian gradient using Blondel-Karplus decomposition
 //!
 //! Harmonic improper dihedral for enforcing planarity at sp2 centers and
@@ -30,7 +30,7 @@ pub struct ImproperDihedral {
     pub k: u32,
     /// Particle index l
     pub l: u32,
-    /// Force constant k_ψ (kJ/mol/rad²)
+    /// Force constant `k_ψ` (kJ/mol/rad²)
     pub force_constant: f64,
     /// Equilibrium angle ψ₀ (radians, typically 0 for planar)
     pub eq_angle: f64,

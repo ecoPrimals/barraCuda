@@ -262,7 +262,7 @@
 
 ## What's Not Working Yet
 
-- P1: Multi-GPU OOM automatic migration — detection + `is_retriable()` wired; next: `QuotaTracker` auto-migrate on OOM
+- ~~P1: Multi-GPU OOM automatic migration~~ — ✅ DONE: `execute_with_migration()` (Wave 119) + `execute_with_migration_quota()` (Wave 124) shipped. `QuotaTracker` records OOM failures, `acquire_excluding` skips OOM-flagged devices.
 - P1: coralReef HMMA/WGMMA codegen — `kernel_router` routes tensor-core eligible matmul; awaiting coralReef emission
 - P1: coralReef `shader.compile.multi` — batch compilation method not yet wired upstream
 - P1: toadStool not enrolled on ironGate (12/12 NUCLEUS, toadStool excluded from composition)
@@ -271,7 +271,7 @@
 - P2: Kokkos GPU parity benchmarks — framework parity bench infra added; awaiting hardware run
 - ~~P2: Dual-target depot gnu directory~~ — ✅ DONE: 15/15 built on sporeGate, synced to golgi, fetch validated on ironGate (BLAKE3 verified, binary runs on RTX 5070)
 
-### Cross-Primal Pins (current — Wave 124)
+### Cross-Primal Pins (current — Wave 129)
 
 | Primal | Version/Session | Key capability |
 |--------|-----------------|----------------|

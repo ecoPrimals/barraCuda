@@ -141,6 +141,10 @@ pub fn resolve_federation_port() -> u16 {
 /// Filesystem-scan fallback for `BTSP_PROVIDER_SOCKET` when the
 /// composition-injected env var is absent. Scans for `{prefix}*.sock`.
 /// Override via `BTSP_PROVIDER_SOCKET` env var (preferred).
+///
+/// The prefix is the ecosystem socket name of whichever primal provides the
+/// `btsp.session.create` capability. Today that is the `beardog` primal;
+/// if the role moves, update this constant (or — preferred — set the env var).
 pub const SECURITY_PROVIDER_SOCKET_PREFIX: &str = "beardog";
 
 /// Socket filename prefix for the discovery service role.
@@ -148,4 +152,8 @@ pub const SECURITY_PROVIDER_SOCKET_PREFIX: &str = "beardog";
 /// Filesystem-scan fallback for `DISCOVERY_SOCKET` when the
 /// composition-injected env var is absent. Scans for `{prefix}*.sock`.
 /// Override via `DISCOVERY_SOCKET` env var (preferred).
+///
+/// The prefix is the ecosystem socket name of whichever primal provides the
+/// `ipc.register` capability. Today that is the `songbird` primal;
+/// if the role moves, update this constant (or — preferred — set the env var).
 pub const DISCOVERY_SOCKET_PREFIX: &str = "songbird";

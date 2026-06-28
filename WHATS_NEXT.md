@@ -6,6 +6,22 @@ Prioritized work items, ordered by impact. Updated 2026-06-28.
 
 ## Recently Completed
 
+### Wave 129 — 12-Axis Deep Debt Audit + Evolution Validation (Jun 28, 2026)
+- **Comprehensive 12-axis audit** — all evolution targets assessed:
+  - **Large files >800L**: CLEAN (max 783L, `surrogate/adaptive/tests.rs`)
+  - **Unsafe code**: 1 production site (`barracuda-spirv` wgpu passthrough, unavoidable until wgpu#4854), 23 in integration tests (env var manipulation, Rust 2024 safety)
+  - **Hardcoding**: Socket prefixes (`beardog`/`songbird`) documented with role-based rationale; env var override is primary path; `SpringDomain` provenance is metadata, not runtime dependency
+  - **Production mocks**: CLEAN (1 feature-gated compile stub is legitimate feature gating)
+  - **External deps**: ALL pure Rust, zero C bindings (`blake3 pure`, wgpu is GPU driver boundary)
+  - **TODO/FIXME/HACK**: ZERO across entire codebase
+  - **`Result<T,String>`**: ZERO in production
+  - **Production unwrap/expect**: 8 sites, all ownership-invariant RAII (Deref/finish guards), properly documented
+  - **Production println**: ZERO in library code
+  - **`#[allow(`**: ZERO — all evolved to `#[expect(` with reason
+  - **Idiomatic Rust**: Edition 2024, resolver 3, MSRV 1.92, let-chains, typed errors, `thiserror`
+  - **Self-knowledge**: All env access via `env_keys::` constants; primal discovers others at runtime
+- 3,857+ tests pass (708 barracuda-core). All quality gates green.
+
 ### Wave 128 — GNU Depot Validation + Clippy Pedantic Sweep (Jun 28, 2026)
 - **GNU depot fetch validated E2E** — golgi depot has 2 glibc binaries (barracuda 14.8MB,
   coralreef 11.7MB) with BLAKE3 checksums. Fetched to ironGate via SCP, checksum verified,

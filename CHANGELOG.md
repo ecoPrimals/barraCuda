@@ -5,9 +5,10 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — Waves 109–128 (Jun 28 2026)
+## [Unreleased] — Waves 109–129 (Jun 28 2026)
 
 ### Changed
+- **12-axis deep debt audit** — comprehensive codebase-wide audit (Wave 129): zero files >800L (max 783L), zero unsafe in production (1 wgpu passthrough in barracuda-spirv, unavoidable), zero TODO/FIXME/HACK, zero `Result<T,String>`, zero production println/eprintln, zero mocks in production, zero `#[allow(` (all `#[expect(`), all deps pure Rust (zero C bindings, blake3 `pure`), all 8 production `.expect()` are ownership-invariant RAII guards. Socket prefix docs enriched with role-based rationale (beardog/songbird are capability role prefixes, not primal identity bindings).
 - **Clippy pedantic sweep** — 22 library warnings fixed (doc backticks, `#[must_use]`, wildcard import); barracuda-core gains 8 documented `#[expect()]` blocks covering 97 pedantic warnings with domain rationale (Wave 128)
 - **GNU depot validated** — E2E fetch from golgi depot, BLAKE3 checksum verified, glibc binary runs on ironGate RTX 5070 (Wave 128)
 - **MSRV raised to 1.92** (Edition 2024, let-chain modernization)

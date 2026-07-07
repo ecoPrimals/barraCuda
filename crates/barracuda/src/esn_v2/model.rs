@@ -101,9 +101,23 @@ impl ESN {
     /// connectivity, leak rate, or regularization), if device creation fails, if
     /// reservoir or input weight initialization fails, or if buffer allocation fails.
     pub async fn new(config: ESNConfig) -> BarracudaResult<Self> {
-        validate_config(&config)?;
-
         let device = Auto::new_wgpu().await?;
+        Self::with_device(config, device).await
+    }
+
+    /// Create an ESN with an explicit device `Arc`.
+    ///
+    /// Use this in tests (shared pool device) or when the caller already holds
+    /// a device reference, avoiding redundant adapter enumeration.
+    /// # Errors
+    /// Returns [`Err`] if config validation fails (invalid sizes, spectral radius,
+    /// connectivity, leak rate, or regularization), if reservoir or input weight
+    /// initialization fails, or if buffer allocation fails.
+    pub async fn with_device(
+        config: ESNConfig,
+        device: Arc<WgpuDevice>,
+    ) -> BarracudaResult<Self> {
+        validate_config(&config)?;
 
         let w_res = Self::init_reservoir(&config, &device).await?;
         let w_in = Self::init_input_weights(&config, &device).await?;

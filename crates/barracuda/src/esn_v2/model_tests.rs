@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 use super::*;
+use crate::device::test_pool::get_test_device;
 use crate::device::{Device, WorkloadHint};
+
+async fn esn_with_pool(config: ESNConfig) -> ESN {
+    let device = get_test_device().await;
+    ESN::with_device(config, device).await.unwrap()
+}
 
 #[tokio::test]
 async fn test_esn_creation() {
-    let config = ESNConfig::default();
-    let esn = ESN::new(config).await.unwrap();
+    let esn = esn_with_pool(ESNConfig::default()).await;
     assert!(!esn.is_trained());
     assert_eq!(esn.state().shape(), &[100, 1]);
 }
@@ -16,27 +21,25 @@ async fn test_esn_invalid_config() {
         input_size: 0,
         ..Default::default()
     };
-    assert!(ESN::new(config).await.is_err());
+    let device = get_test_device().await;
+    assert!(ESN::with_device(config, device).await.is_err());
 }
 
 #[tokio::test]
 async fn test_esn_device_preference() {
-    let config = ESNConfig::default();
-    let esn = ESN::new(config).await.unwrap();
+    let esn = esn_with_pool(ESNConfig::default()).await;
     let _esn_gpu = esn.prefer_device(Device::GPU);
 }
 
 #[tokio::test]
 async fn test_esn_workload_hint() {
-    let config = ESNConfig::default();
-    let esn = ESN::new(config).await.unwrap();
+    let esn = esn_with_pool(ESNConfig::default()).await;
     let _esn_large = esn.with_hint(WorkloadHint::LargeMatrices);
 }
 
 #[tokio::test]
 async fn test_esn_device_query() {
-    let config = ESNConfig::default();
-    let esn = ESN::new(config).await.unwrap();
+    let esn = esn_with_pool(ESNConfig::default()).await;
     let device = esn.query_device();
     assert!(matches!(device, Device::CPU | Device::GPU | Device::Auto));
 }
@@ -55,7 +58,7 @@ async fn test_esn_train_simple() {
         ..Default::default()
     };
 
-    let mut esn = ESN::new(config).await.unwrap();
+    let mut esn = esn_with_pool(config).await;
 
     let inputs = vec![vec![0.0], vec![1.0], vec![2.0], vec![3.0], vec![4.0]];
     let targets = vec![vec![1.0], vec![2.0], vec![3.0], vec![4.0], vec![5.0]];
@@ -80,7 +83,7 @@ async fn test_esn_predict_after_train() {
         ..Default::default()
     };
 
-    let mut esn = ESN::new(config).await.unwrap();
+    let mut esn = esn_with_pool(config).await;
 
     let inputs = vec![vec![0.0], vec![1.0], vec![2.0], vec![3.0]];
     let targets = vec![vec![2.0], vec![3.0], vec![4.0], vec![5.0]];
@@ -94,8 +97,7 @@ async fn test_esn_predict_after_train() {
 
 #[tokio::test]
 async fn test_esn_train_mismatched_lengths() {
-    let config = ESNConfig::default();
-    let mut esn = ESN::new(config).await.unwrap();
+    let mut esn = esn_with_pool(ESNConfig::default()).await;
 
     let inputs = vec![vec![0.0], vec![1.0]];
     let targets = vec![vec![1.0]];
@@ -107,8 +109,7 @@ async fn test_esn_train_mismatched_lengths() {
 
 #[tokio::test]
 async fn test_esn_train_empty_data() {
-    let config = ESNConfig::default();
-    let mut esn = ESN::new(config).await.unwrap();
+    let mut esn = esn_with_pool(ESNConfig::default()).await;
 
     let inputs: Vec<Vec<f32>> = vec![];
     let targets: Vec<Vec<f32>> = vec![];
@@ -120,8 +121,7 @@ async fn test_esn_train_empty_data() {
 
 #[tokio::test]
 async fn test_esn_predict_untrained() {
-    let config = ESNConfig::default();
-    let mut esn = ESN::new(config).await.unwrap();
+    let mut esn = esn_with_pool(ESNConfig::default()).await;
 
     let result = esn.predict(&[1.0]).await;
     assert!(result.is_err());
@@ -136,7 +136,7 @@ async fn test_esn_predict_wrong_input_size() {
         ..Default::default()
     };
 
-    let mut esn = ESN::new(config).await.unwrap();
+    let mut esn = esn_with_pool(config).await;
 
     let inputs = vec![vec![0.0, 0.0], vec![1.0, 1.0]];
     let targets = vec![vec![1.0], vec![2.0]];
@@ -160,7 +160,7 @@ async fn test_esn_multiple_outputs() {
         ..Default::default()
     };
 
-    let mut esn = ESN::new(config).await.unwrap();
+    let mut esn = esn_with_pool(config).await;
 
     let inputs = vec![
         vec![0.0, 0.0],
@@ -192,7 +192,7 @@ async fn test_esn_predict_return_state() {
         ..Default::default()
     };
 
-    let mut esn = ESN::new(config).await.unwrap();
+    let mut esn = esn_with_pool(config).await;
 
     let inputs = vec![vec![1.0], vec![2.0], vec![3.0]];
     let targets = vec![vec![2.0], vec![3.0], vec![4.0]];
@@ -216,7 +216,7 @@ async fn test_esn_set_readout_weights() {
         ..Default::default()
     };
 
-    let mut esn = ESN::new(config).await.unwrap();
+    let mut esn = esn_with_pool(config).await;
 
     let inputs = vec![vec![1.0], vec![2.0]];
     let targets = vec![vec![2.0], vec![3.0]];
@@ -249,7 +249,7 @@ async fn test_esn_state_persistence() {
         ..Default::default()
     };
 
-    let mut esn = ESN::new(config).await.unwrap();
+    let mut esn = esn_with_pool(config).await;
 
     let inputs = vec![vec![1.0], vec![2.0], vec![3.0]];
     let targets = vec![vec![2.0], vec![3.0], vec![4.0]];
@@ -270,7 +270,7 @@ async fn test_esn_to_npu_weights() {
         ..Default::default()
     };
 
-    let mut esn = ESN::new(config).await.unwrap();
+    let mut esn = esn_with_pool(config).await;
     let inputs = vec![vec![1.0], vec![2.0], vec![3.0]];
     let targets = vec![vec![2.0], vec![3.0], vec![4.0]];
     esn.train(&inputs, &targets).await.unwrap();
@@ -284,8 +284,7 @@ async fn test_esn_to_npu_weights() {
 
 #[tokio::test]
 async fn test_esn_to_npu_weights_untrained() {
-    let config = ESNConfig::default();
-    let esn = ESN::new(config).await.unwrap();
+    let esn = esn_with_pool(ESNConfig::default()).await;
     assert!(esn.to_npu_weights().is_err());
 }
 
@@ -298,7 +297,7 @@ async fn test_esn_train_ridge_regression_linear() {
         ..Default::default()
     };
 
-    let mut esn = ESN::new(config).await.unwrap();
+    let mut esn = esn_with_pool(config).await;
 
     let n_samples = 10;
     let mut states = vec![0.0; 4 * n_samples];
@@ -330,8 +329,8 @@ async fn test_esn_train_ridge_regression_regularization() {
         ..Default::default()
     };
 
-    let mut esn_small = ESN::new(config.clone()).await.unwrap();
-    let mut esn_large = ESN::new(config).await.unwrap();
+    let mut esn_small = esn_with_pool(config.clone()).await;
+    let mut esn_large = esn_with_pool(config).await;
 
     let n_samples = 8;
     let mut states = vec![0.0; 5 * n_samples];
@@ -371,7 +370,7 @@ async fn test_esn_export_import_weights() {
         ..Default::default()
     };
 
-    let mut esn = ESN::new(config.clone()).await.unwrap();
+    let mut esn = esn_with_pool(config.clone()).await;
     let inputs = vec![vec![1.0], vec![2.0], vec![3.0]];
     let targets = vec![vec![2.0], vec![3.0], vec![4.0]];
     esn.train(&inputs, &targets).await.unwrap();
@@ -382,7 +381,7 @@ async fn test_esn_export_import_weights() {
     assert!(exported.w_out.is_some());
     assert_eq!(exported.w_out.as_ref().unwrap().len(), 20);
 
-    let mut esn2 = ESN::new(config.clone()).await.unwrap();
+    let mut esn2 = esn_with_pool(config.clone()).await;
     esn2.import_weights(&exported.w_in, &exported.w_res, exported.w_out.as_deref())
         .unwrap();
     assert!(esn2.is_trained());
@@ -420,6 +419,6 @@ async fn test_esn_reservoir_shape() {
         ..Default::default()
     };
 
-    let esn = ESN::new(config).await.unwrap();
+    let esn = esn_with_pool(config).await;
     assert_eq!(esn.state().shape(), &[16, 1]);
 }

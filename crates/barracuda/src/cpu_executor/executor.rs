@@ -189,14 +189,14 @@ impl CpuExecutor {
 
     pub(crate) fn execute_binary_cpu(&self, op: &MathOp, a: &[f32], b: &[f32]) -> Result<Vec<f32>> {
         use MathOp::{Add, Div, Max, Min, Mul, Pow, Sub};
-        let f: Box<dyn Fn(f32, f32) -> f32 + Sync> = match op {
-            Add => Box::new(|x, y| x + y),
-            Sub => Box::new(|x, y| x - y),
-            Mul => Box::new(|x, y| x * y),
-            Div => Box::new(|x, y| x / y),
-            Pow => Box::new(f32::powf),
-            Max => Box::new(f32::max),
-            Min => Box::new(f32::min),
+        let f: fn(f32, f32) -> f32 = match op {
+            Add => |x, y| x + y,
+            Sub => |x, y| x - y,
+            Mul => |x, y| x * y,
+            Div => |x, y| x / y,
+            Pow => f32::powf,
+            Max => f32::max,
+            Min => f32::min,
             other => {
                 return Err(crate::error::BarracudaError::invalid_op(
                     format!("{other:?}"),
@@ -219,12 +219,12 @@ impl CpuExecutor {
             ReduceMean { .. } => input.par_iter().sum::<f32>() / input.len() as f32,
             ReduceMax { .. } => input
                 .par_iter()
-                .cloned()
+                .copied()
                 .fold(|| f32::NEG_INFINITY, f32::max)
                 .reduce(|| f32::NEG_INFINITY, f32::max),
             ReduceMin { .. } => input
                 .par_iter()
-                .cloned()
+                .copied()
                 .fold(|| f32::INFINITY, f32::min)
                 .reduce(|| f32::INFINITY, f32::min),
             ReduceProd { .. } => input.par_iter().product(),

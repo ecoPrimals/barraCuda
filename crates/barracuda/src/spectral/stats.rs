@@ -146,10 +146,10 @@ pub fn analyze_weight_matrix(
     let mut sorted_evals = decomp.eigenvalues.clone();
     sorted_evals.sort_by(f64::total_cmp);
 
-    let spectral = SpectralAnalysis::from_eigenvalues(sorted_evals.clone(), gamma);
     let lsr = level_spacing_ratio(&sorted_evals);
     let mean_ipr = compute_mean_ipr(&decomp.eigenvectors, n);
     let spectral_entropy = compute_spectral_entropy(&sorted_evals);
+    let spectral = SpectralAnalysis::from_eigenvalues(sorted_evals, gamma);
 
     Ok(WeightMatrixAnalysis {
         spectral,

@@ -136,24 +136,22 @@ pub fn resolve_federation_port() -> u16 {
         .unwrap_or(DEFAULT_FEDERATION_PORT)
 }
 
-/// Socket filename prefix for the security provider role.
+/// Capability-domain prefix for security-provider socket scan.
 ///
 /// Filesystem-scan fallback for `BTSP_PROVIDER_SOCKET` when the
-/// composition-injected env var is absent. Scans for `{prefix}*.sock`.
+/// composition-injected env var is absent. Scans for `{domain}*.sock`.
 /// Override via `BTSP_PROVIDER_SOCKET` env var (preferred).
 ///
-/// The prefix is the ecosystem socket name of whichever primal provides the
-/// `btsp.session.create` capability. Today that is the `beardog` primal;
-/// if the role moves, update this constant (or — preferred — set the env var).
-pub const SECURITY_PROVIDER_SOCKET_PREFIX: &str = "beardog";
+/// Uses the capability domain (`"crypto"`) rather than a primal name, so the
+/// scan works regardless of which primal fills the security-provider role.
+pub const SECURITY_PROVIDER_SOCKET_PREFIX: &str = "crypto";
 
-/// Socket filename prefix for the discovery service role.
+/// Capability-domain prefix for discovery-service socket scan.
 ///
 /// Filesystem-scan fallback for `DISCOVERY_SOCKET` when the
-/// composition-injected env var is absent. Scans for `{prefix}*.sock`.
+/// composition-injected env var is absent. Scans for `{domain}*.sock`.
 /// Override via `DISCOVERY_SOCKET` env var (preferred).
 ///
-/// The prefix is the ecosystem socket name of whichever primal provides the
-/// `ipc.register` capability. Today that is the `songbird` primal;
-/// if the role moves, update this constant (or — preferred — set the env var).
-pub const DISCOVERY_SOCKET_PREFIX: &str = "songbird";
+/// Uses the capability domain (`"discovery"`) rather than a primal name, so the
+/// scan works regardless of which primal fills the discovery role.
+pub const DISCOVERY_SOCKET_PREFIX: &str = "discovery";

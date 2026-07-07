@@ -53,18 +53,24 @@ impl EighDecomposition {
     /// Sort eigenvalues and eigenvectors in descending order.
     /// Useful for PCA where largest eigenvalues matter most.
     pub fn sort_descending(&mut self) {
-        let mut indexed: Vec<(usize, f64)> = self.eigenvalues.iter().copied().enumerate().collect();
-        indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        let n = self.n;
+        let mut perm: Vec<usize> = (0..n).collect();
+        perm.sort_by(|&a, &b| {
+            self.eigenvalues[b]
+                .partial_cmp(&self.eigenvalues[a])
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
-        let old_vals = self.eigenvalues.clone();
-        let old_vecs = self.eigenvectors.clone();
-
-        for (new_idx, (old_idx, _)) in indexed.iter().enumerate() {
-            self.eigenvalues[new_idx] = old_vals[*old_idx];
-            for row in 0..self.n {
-                self.eigenvectors[row * self.n + new_idx] = old_vecs[row * self.n + old_idx];
+        let new_vals: Vec<f64> = perm.iter().map(|&i| self.eigenvalues[i]).collect();
+        let mut new_vecs = vec![0.0; n * n];
+        for (new_col, &old_col) in perm.iter().enumerate() {
+            for row in 0..n {
+                new_vecs[row * n + new_col] = self.eigenvectors[row * n + old_col];
             }
         }
+
+        self.eigenvalues = new_vals;
+        self.eigenvectors = new_vecs;
     }
 
     /// Reconstruct A = V·D·Vᵀ.

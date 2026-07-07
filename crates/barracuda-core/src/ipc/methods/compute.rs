@@ -66,10 +66,11 @@ pub(super) async fn compute_dispatch(
                 return JsonRpcResponse::error(id, INTERNAL_ERROR, "No GPU device available");
             };
             let dev_arc = dev;
+            let alloc_shape = shape_vec.clone();
             let result = if op == "zeros" {
-                barracuda::tensor::Tensor::zeros_on(shape_vec.clone(), dev_arc).await
+                barracuda::tensor::Tensor::zeros_on(alloc_shape, dev_arc).await
             } else {
-                barracuda::tensor::Tensor::ones_on(shape_vec.clone(), dev_arc).await
+                barracuda::tensor::Tensor::ones_on(alloc_shape, dev_arc).await
             };
             match result {
                 Ok(t) => {
@@ -256,16 +257,17 @@ async fn dispatch_submit_shader(
             output: Some(forwarded.result),
             error: None,
         };
-        primal.store_dispatch_job(job_id.clone(), job);
-        return JsonRpcResponse::success(
+        let resp = JsonRpcResponse::success(
             id,
             serde_json::json!({
-                "job_id": job_id,
+                "job_id": &job_id,
                 "status": "completed",
                 "routed": true,
                 "routed_to": forwarded.peer_socket,
             }),
         );
+        primal.store_dispatch_job(job_id, job);
+        return resp;
     }
 
     tracing::debug!(

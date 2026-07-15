@@ -209,8 +209,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_random_affine() {
+        let device = crate::device::test_pool::get_test_device().await;
         let image_data = vec![1.0; 3 * 64 * 64];
-        let tensor = Tensor::from_vec(image_data.clone(), vec![3, 64, 64])
+        let tensor = Tensor::from_vec_on(image_data.clone(), vec![3, 64, 64], device)
             .await
             .unwrap();
         let transformed_tensor = tensor

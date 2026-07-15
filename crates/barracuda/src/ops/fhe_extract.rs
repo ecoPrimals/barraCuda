@@ -289,16 +289,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_extract_validation() {
+        let device = crate::device::test_pool::get_test_device().await;
+        let t = || Tensor::zeros_on(vec![8], device.clone());
+
         // Test invalid degree
-        let result = FheExtract::new(Tensor::zeros(vec![8]).await.unwrap(), 3, 0);
+        let result = FheExtract::new(t().await.unwrap(), 3, 0);
         assert!(result.is_err());
 
         // Test index out of bounds
-        let result = FheExtract::new(Tensor::zeros(vec![8]).await.unwrap(), 4, 4);
+        let result = FheExtract::new(t().await.unwrap(), 4, 4);
         assert!(result.is_err());
 
         // Test index >= degree
-        let result = FheExtract::new(Tensor::zeros(vec![8]).await.unwrap(), 4, 5);
+        let result = FheExtract::new(t().await.unwrap(), 4, 5);
         assert!(result.is_err());
     }
 

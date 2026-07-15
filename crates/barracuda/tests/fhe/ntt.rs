@@ -3,11 +3,10 @@
 
 #![expect(clippy::unwrap_used, reason = "tests")]
 use super::helpers::*;
-use barracuda::device::WgpuDevice;
+use barracuda::device::test_pool::get_test_device;
 use barracuda::ops::fhe_intt::{FheIntt, compute_inverse_root};
 use barracuda::ops::fhe_ntt::FheNtt;
 use barracuda::ops::fhe_poly_add::create_fhe_poly_tensor;
-use std::sync::Arc;
 
 #[tokio::test]
 async fn test_ntt_basic_known_vector() {
@@ -20,11 +19,7 @@ async fn test_ntt_basic_known_vector() {
         let root = 4u64;
         let input = vec![1u64, 2, 3, 4];
 
-        let device = Arc::new(
-            WgpuDevice::new()
-                .await
-                .expect("Failed to create GPU device"),
-        );
+        let device = get_test_device().await;
         let input_tensor = create_fhe_poly_tensor(&input, device.clone())
             .await
             .unwrap();
@@ -51,11 +46,7 @@ async fn test_ntt_all_power_of_two_degrees() {
         // Use modulus 97: supports degree ≤ 16 (97-1=96 divisible by 2*16=32)
         // 12289 supports degree ≤ 2048 but has known issues with some degree/root combos
 
-        let device = Arc::new(
-            WgpuDevice::new()
-                .await
-                .expect("Failed to create GPU device"),
-        );
+        let device = get_test_device().await;
         let modulus = 97u64;
 
         for &degree in &[4usize, 8, 16] {
@@ -96,11 +87,7 @@ async fn test_ntt_round_trip_identity() {
         // Use (17, 4) and (257, 8), (257, 16): proven in fhe_properties
         // 17 ≡ 1 mod 8, 257 ≡ 1 mod 16 and mod 32
 
-        let device = Arc::new(
-            WgpuDevice::new()
-                .await
-                .expect("Failed to create GPU device"),
-        );
+        let device = get_test_device().await;
 
         for &(degree, modulus) in &[(4u32, 17u64)] {
             let input = random_polynomial(degree as usize, modulus);
@@ -137,11 +124,7 @@ async fn test_ntt_different_moduli() {
     if !crate::common::run_gpu_resilient_async(|| async {
         // Test with different FHE-friendly primes
 
-        let device = Arc::new(
-            WgpuDevice::new()
-                .await
-                .expect("Failed to create GPU device"),
-        );
+        let device = get_test_device().await;
 
         // Only test moduli with known roots for degree 4 (17, 97)
         for &modulus in &[17u64, 97u64] {
@@ -176,11 +159,7 @@ async fn test_ntt_zero_polynomial() {
         let root = find_root_of_unity(degree, modulus).expect("Should find root");
         let input = vec![0u64; degree as usize];
 
-        let device = Arc::new(
-            WgpuDevice::new()
-                .await
-                .expect("Failed to create GPU device"),
-        );
+        let device = get_test_device().await;
         let input_tensor = create_fhe_poly_tensor(&input, device.clone())
             .await
             .unwrap();
@@ -209,11 +188,7 @@ async fn test_ntt_max_coefficients() {
         let root = find_root_of_unity(degree, modulus).expect("Should find root");
         let input = vec![modulus - 1; degree as usize];
 
-        let device = Arc::new(
-            WgpuDevice::new()
-                .await
-                .expect("Failed to create GPU device"),
-        );
+        let device = get_test_device().await;
         let input_tensor = create_fhe_poly_tensor(&input, device.clone())
             .await
             .unwrap();

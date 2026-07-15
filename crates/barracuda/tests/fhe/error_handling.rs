@@ -2,21 +2,16 @@
 //! Error handling tests for FHE validation.
 
 #![expect(clippy::unwrap_used, reason = "tests")]
-use barracuda::device::WgpuDevice;
+use barracuda::device::test_pool::get_test_device;
 use barracuda::ops::fhe_ntt::FheNtt;
 use barracuda::ops::fhe_poly_add::create_fhe_poly_tensor;
-use std::sync::Arc;
 
 #[tokio::test]
 async fn test_ntt_invalid_degree_error() {
     if !crate::common::run_gpu_resilient_async(|| async {
         // Non-power-of-two should error gracefully
 
-        let device = Arc::new(
-            WgpuDevice::new()
-                .await
-                .expect("Failed to create GPU device"),
-        );
+        let device = get_test_device().await;
         let modulus = 12289u64;
         let root = 11u64; // Placeholder root
 
@@ -42,11 +37,7 @@ async fn test_ntt_degree_zero_error() {
     if !crate::common::run_gpu_resilient_async(|| async {
         // Degree 0 should error
 
-        let device = Arc::new(
-            WgpuDevice::new()
-                .await
-                .expect("Failed to create GPU device"),
-        );
+        let device = get_test_device().await;
         let modulus = 12289u64;
         let root = 11u64;
 
@@ -66,11 +57,7 @@ async fn test_ntt_degree_too_large_error() {
     if !crate::common::run_gpu_resilient_async(|| async {
         // Degree > 65536 should error (reasonable limit)
 
-        let device = Arc::new(
-            WgpuDevice::new()
-                .await
-                .expect("Failed to create GPU device"),
-        );
+        let device = get_test_device().await;
         let modulus = 12289u64;
         let root = 11u64;
 

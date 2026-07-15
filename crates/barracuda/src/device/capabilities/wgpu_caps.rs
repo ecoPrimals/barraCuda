@@ -631,22 +631,20 @@ impl DeviceCapabilities {
     /// - All others → conservative model (safe over-estimate)
     ///
     /// When runtime-measured latency data is available (via `bench_f64_builtins`),
-    /// callers should prefer `MeasuredModel` directly.
+    /// callers should prefer `LatencyModel::measured()` directly.
     #[must_use]
-    pub fn latency_model(&self) -> Box<dyn crate::device::latency::LatencyModel> {
-        use crate::device::latency::{
-            AppleMLatencyModel, ConservativeModel, Rdna2LatencyModel, Sm70LatencyModel,
-        };
+    pub fn latency_model(&self) -> crate::device::latency::LatencyModel {
+        use crate::device::latency::LatencyModel;
         use crate::device::vendor::{VENDOR_AMD, VENDOR_APPLE, VENDOR_NVIDIA};
 
         match self.device_type {
             wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::IntegratedGpu => match self.vendor {
-                VENDOR_NVIDIA => Box::new(Sm70LatencyModel),
-                VENDOR_AMD => Box::new(Rdna2LatencyModel),
-                VENDOR_APPLE => Box::new(AppleMLatencyModel),
-                _ => Box::new(ConservativeModel),
+                VENDOR_NVIDIA => LatencyModel::Sm70,
+                VENDOR_AMD => LatencyModel::Rdna2,
+                VENDOR_APPLE => LatencyModel::AppleM,
+                _ => LatencyModel::Conservative,
             },
-            _ => Box::new(ConservativeModel),
+            _ => LatencyModel::Conservative,
         }
     }
 

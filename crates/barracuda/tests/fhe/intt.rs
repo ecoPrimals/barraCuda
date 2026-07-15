@@ -3,11 +3,10 @@
 
 #![expect(clippy::unwrap_used, reason = "tests")]
 use super::helpers::*;
-use barracuda::device::WgpuDevice;
+use barracuda::device::test_pool::get_test_device;
 use barracuda::ops::fhe_intt::{FheIntt, compute_inverse_root};
 use barracuda::ops::fhe_ntt::FheNtt;
 use barracuda::ops::fhe_poly_add::create_fhe_poly_tensor;
-use std::sync::Arc;
 
 #[tokio::test]
 async fn test_intt_basic() {
@@ -21,11 +20,7 @@ async fn test_intt_basic() {
         let inv_root = compute_inverse_root(degree, modulus, root);
         let input = random_polynomial(degree as usize, modulus);
 
-        let device = Arc::new(
-            WgpuDevice::new()
-                .await
-                .expect("Failed to create GPU device"),
-        );
+        let device = get_test_device().await;
         let input_tensor = create_fhe_poly_tensor(&input, device.clone())
             .await
             .unwrap();
@@ -66,11 +61,7 @@ async fn test_intt_scaling() {
         // Create a polynomial with all coefficients = 1
         let input = vec![1u64; degree as usize];
 
-        let device = Arc::new(
-            WgpuDevice::new()
-                .await
-                .expect("Failed to create GPU device"),
-        );
+        let device = get_test_device().await;
         let input_tensor = create_fhe_poly_tensor(&input, device.clone())
             .await
             .unwrap();

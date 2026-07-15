@@ -17,7 +17,7 @@ use crate::ipc::methods::REGISTERED_METHODS;
 use crate::ipc::transport_config::DEFAULT_ECOSYSTEM_SOCKET_DIR;
 use std::path::PathBuf;
 
-const DEFAULT_FAMILY: &str = "ecoPrimal";
+const DEFAULT_FAMILY: &str = "default";
 
 /// Resolve the biomeOS Neural API socket path via tiered lookup.
 ///

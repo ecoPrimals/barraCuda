@@ -179,7 +179,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_where_basic() {
-        let device = crate::device::Auto::new_wgpu().await.unwrap();
+        let device = crate::device::test_pool::get_test_device().await;
 
         let condition = Tensor::from_vec_on(vec![1.0, 0.0, 1.0], vec![3], device.clone())
             .await

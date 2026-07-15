@@ -24,9 +24,9 @@
 //! ## Usage
 //!
 //! ```rust
-//! use barracuda::device::latency::{Sm70LatencyModel, LatencyModel, WgslOpClass};
+//! use barracuda::device::latency::{LatencyModel, WgslOpClass};
 //!
-//! let model = Sm70LatencyModel;
+//! let model = LatencyModel::Sm70;
 //! let ilp_window = model.raw_latency(WgslOpClass::F64Fma);
 //! // ilp_window == 8 → place 8 independent ops in the Jacobi rotation kernel
 //! ```
@@ -68,255 +68,157 @@ pub enum WgslOpClass {
 
 /// GPU instruction latency model.
 ///
-/// Implementors provide per-operation cycle counts that the WGSL optimizer
-/// uses to schedule independent instructions into latency windows.
-pub trait LatencyModel: Send + Sync {
-    /// Cycles between a write and the first valid dependent read (RAW latency).
-    ///
-    /// Place this many independent instructions between a producing `let`
-    /// binding and its first use to avoid a scoreboard stall.
-    fn raw_latency(&self, op: WgslOpClass) -> u32;
-
-    /// Cycles between a read and the next overwrite of the same register (WAR).
-    ///
-    /// Typically 0 on register-renamed pipelines; relevant on simpler cores.
-    fn war_latency(&self, op: WgslOpClass) -> u32;
-
-    /// Whether this operation goes through a scoreboard (true) or a fixed
-    /// pipeline with a known latency slot (false).
-    ///
-    /// When `true`, out-of-order dispatch can hide the latency. When `false`
-    /// (fixed pipeline), the hardware stalls if the window is not filled.
-    fn needs_scoreboard(&self, op: WgslOpClass) -> bool;
-
-    /// Recommended ILP fill width: how many independent FP64 FMAs to
-    /// interleave before issuing the dependent instruction.
-    ///
-    /// Convenience wrapper: `raw_latency(F64Fma)`.
-    fn f64_ilp_fill_width(&self) -> u32 {
-        self.raw_latency(WgslOpClass::F64Fma)
-    }
-}
-
-// ─── Concrete models ──────────────────────────────────────────────────────────
-
-/// SM70 (Volta) latency model.
+/// Enum dispatch over a closed set of GPU microarchitectures. Each variant
+/// provides per-operation cycle counts that the WGSL optimizer uses to
+/// schedule independent instructions into latency windows.
 ///
-/// Source: arXiv:1804.06826 — "Dissecting the NVIDIA Volta GPU Architecture
-/// via Microbenchmarking" (Jia et al., 2018).
-///
-/// Applies to: Titan V, V100, Quadro GV100.
-/// Also applies to SM75 (Turing), SM80/86 (Ampere), SM89 (Ada) —
-/// all share the same DFMA=8cy pipeline.
-pub struct Sm70LatencyModel;
-
-impl LatencyModel for Sm70LatencyModel {
-    fn raw_latency(&self, op: WgslOpClass) -> u32 {
-        match op {
-            WgslOpClass::F64Fma => 8,
-            WgslOpClass::F64MulAdd => 16, // 2 × 8
-            WgslOpClass::F64Transcend => 20,
-            WgslOpClass::F32Fma => 4,
-            WgslOpClass::I32Arith => 6,
-            WgslOpClass::SharedMem => 25,
-            WgslOpClass::GlobalMem => 300,
-        }
-    }
-
-    fn war_latency(&self, _op: WgslOpClass) -> u32 {
-        0 // Volta uses register renaming; WAR latency is zero
-    }
-
-    fn needs_scoreboard(&self, op: WgslOpClass) -> bool {
-        matches!(
-            op,
-            WgslOpClass::F64Fma
-                | WgslOpClass::F64MulAdd
-                | WgslOpClass::F64Transcend
-                | WgslOpClass::SharedMem
-                | WgslOpClass::GlobalMem
-        )
-    }
-}
-
-/// RDNA2 latency model.
-///
-/// Source: AMD RDNA2 ISA documentation + empirical measurement via
-/// `bench_f64_builtins` on RX 6950 XT.
-///
-/// Applies to: RX 6000 series, RX 6x50 XT refresh. RDNA3 is similar.
-pub struct Rdna2LatencyModel;
-
-impl LatencyModel for Rdna2LatencyModel {
-    fn raw_latency(&self, op: WgslOpClass) -> u32 {
-        match op {
-            WgslOpClass::F64Fma => 4,
-            WgslOpClass::F64MulAdd => 8,
-            WgslOpClass::F64Transcend => 16, // software sequence
-            WgslOpClass::F32Fma => 4,
-            WgslOpClass::I32Arith => 4,
-            WgslOpClass::SharedMem => 20,
-            WgslOpClass::GlobalMem => 200,
-        }
-    }
-
-    fn war_latency(&self, _op: WgslOpClass) -> u32 {
-        0
-    }
-
-    fn needs_scoreboard(&self, op: WgslOpClass) -> bool {
-        matches!(
-            op,
-            WgslOpClass::F64Fma
-                | WgslOpClass::F64MulAdd
-                | WgslOpClass::F64Transcend
-                | WgslOpClass::SharedMem
-                | WgslOpClass::GlobalMem
-        )
-    }
-}
-
-/// Conservative latency model — uses the maximum observed latency across
-/// all supported GPU families.
-///
-/// Safe to use when the target GPU is unknown. Will over-schedule (insert
-/// more filler ops than necessary) but will never under-schedule (leave
-/// stall cycles unfilled).
-pub struct ConservativeModel;
-
-impl LatencyModel for ConservativeModel {
-    fn raw_latency(&self, op: WgslOpClass) -> u32 {
-        match op {
-            WgslOpClass::F64Fma => 8, // SM70 worst case
-            WgslOpClass::F64MulAdd => 16,
-            WgslOpClass::F64Transcend => 20,
-            WgslOpClass::F32Fma => 4,
-            WgslOpClass::I32Arith => 6,
-            WgslOpClass::SharedMem => 30,
-            WgslOpClass::GlobalMem => 800, // cache miss worst case
-        }
-    }
-
-    fn war_latency(&self, _op: WgslOpClass) -> u32 {
-        0
-    }
-
-    fn needs_scoreboard(&self, _op: WgslOpClass) -> bool {
-        true // conservative: assume everything uses a scoreboard
-    }
-}
-
-/// Measured latency model populated from `bench_f64_builtins` output.
-///
-/// `bench_f64_builtins` runs a micro-benchmark on the actual target GPU and
-/// derives empirical cycle counts. Those values are stored here and used
-/// for precise ILP scheduling.
-///
-/// When measurements are not available for a specific operation, falls back
-/// to `ConservativeModel`.
+/// 4 of 5 variants are zero-sized (no data); `Measured` carries 3 empirical
+/// cycle counts from `bench_f64_builtins`. The enum is `Copy` when all
+/// variants are data-free; with `Measured` it is `Clone` only.
 #[derive(Debug, Clone)]
-pub struct MeasuredModel {
-    /// Empirical FP64 FMA latency in cycles.
-    pub dfma_cycles: u32,
-    /// Empirical FP32 FMA latency in cycles.
-    pub ffma_cycles: u32,
-    /// Empirical shared memory load latency.
-    pub smem_cycles: u32,
+pub enum LatencyModel {
+    /// SM70 (Volta) — 8-cycle DFMA pipeline.
+    /// Applies to SM75 (Turing), SM80/86 (Ampere), SM89 (Ada), SM100+ (Blackwell).
+    Sm70,
+
+    /// RDNA2 — 4-cycle VFMA64 pipeline.
+    /// Applies to RDNA3 and CDNA2 as well.
+    Rdna2,
+
+    /// Conservative — maximum observed latency across all families.
+    /// Safe for unknown GPUs; over-schedules but never under-schedules.
+    Conservative,
+
+    /// Apple M-series — software-emulated f64 (~16cy FMA).
+    AppleM,
+
+    /// Measured model from `bench_f64_builtins` output.
+    /// Empirical cycle counts for the actual target GPU.
+    Measured {
+        /// FP64 FMA latency in cycles.
+        dfma_cycles: u32,
+        /// FP32 FMA latency in cycles.
+        ffma_cycles: u32,
+        /// Shared memory load latency in cycles.
+        smem_cycles: u32,
+    },
 }
 
-impl MeasuredModel {
+impl LatencyModel {
     /// Create a measured model from benchmark results.
     #[must_use]
-    pub fn new(dfma_cycles: u32, ffma_cycles: u32, smem_cycles: u32) -> Self {
-        Self {
+    pub const fn measured(dfma_cycles: u32, ffma_cycles: u32, smem_cycles: u32) -> Self {
+        Self::Measured {
             dfma_cycles,
             ffma_cycles,
             smem_cycles,
         }
     }
-}
 
-impl LatencyModel for MeasuredModel {
-    fn raw_latency(&self, op: WgslOpClass) -> u32 {
-        match op {
-            WgslOpClass::F64Fma => self.dfma_cycles,
-            WgslOpClass::F64MulAdd => self.dfma_cycles * 2,
-            WgslOpClass::F64Transcend => self.dfma_cycles + 12, // software overhead
-            WgslOpClass::F32Fma => self.ffma_cycles,
-            WgslOpClass::I32Arith => ConservativeModel.raw_latency(op),
-            WgslOpClass::SharedMem => self.smem_cycles,
-            WgslOpClass::GlobalMem => ConservativeModel.raw_latency(op),
+    /// Cycles between a write and the first valid dependent read (RAW latency).
+    ///
+    /// Place this many independent instructions between a producing `let`
+    /// binding and its first use to avoid a scoreboard stall.
+    #[must_use]
+    pub fn raw_latency(&self, op: WgslOpClass) -> u32 {
+        match self {
+            Self::Sm70 => match op {
+                WgslOpClass::F64Fma => 8,
+                WgslOpClass::F64MulAdd => 16,
+                WgslOpClass::F64Transcend => 20,
+                WgslOpClass::F32Fma => 4,
+                WgslOpClass::I32Arith => 6,
+                WgslOpClass::SharedMem => 25,
+                WgslOpClass::GlobalMem => 300,
+            },
+            Self::Rdna2 => match op {
+                WgslOpClass::F64Fma => 4,
+                WgslOpClass::F64MulAdd => 8,
+                WgslOpClass::F64Transcend => 16,
+                WgslOpClass::F32Fma => 4,
+                WgslOpClass::I32Arith => 4,
+                WgslOpClass::SharedMem => 20,
+                WgslOpClass::GlobalMem => 200,
+            },
+            Self::Conservative => match op {
+                WgslOpClass::F64Fma => 8,
+                WgslOpClass::F64MulAdd => 16,
+                WgslOpClass::F64Transcend => 20,
+                WgslOpClass::F32Fma => 4,
+                WgslOpClass::I32Arith => 6,
+                WgslOpClass::SharedMem => 30,
+                WgslOpClass::GlobalMem => 800,
+            },
+            Self::AppleM => match op {
+                WgslOpClass::F64Fma => 16,
+                WgslOpClass::F64MulAdd => 32,
+                WgslOpClass::F64Transcend => 40,
+                WgslOpClass::F32Fma => 4,
+                WgslOpClass::I32Arith => 4,
+                WgslOpClass::SharedMem => 20,
+                WgslOpClass::GlobalMem => 250,
+            },
+            Self::Measured {
+                dfma_cycles,
+                ffma_cycles,
+                smem_cycles,
+            } => match op {
+                WgslOpClass::F64Fma => *dfma_cycles,
+                WgslOpClass::F64MulAdd => dfma_cycles * 2,
+                WgslOpClass::F64Transcend => dfma_cycles + 12,
+                WgslOpClass::F32Fma => *ffma_cycles,
+                WgslOpClass::I32Arith => Self::Conservative.raw_latency(op),
+                WgslOpClass::SharedMem => *smem_cycles,
+                WgslOpClass::GlobalMem => Self::Conservative.raw_latency(op),
+            },
         }
     }
 
-    fn war_latency(&self, _op: WgslOpClass) -> u32 {
+    /// Cycles between a read and the next overwrite of the same register (WAR).
+    ///
+    /// Typically 0 on register-renamed pipelines; relevant on simpler cores.
+    #[must_use]
+    pub fn war_latency(&self, _op: WgslOpClass) -> u32 {
         0
     }
 
-    fn needs_scoreboard(&self, op: WgslOpClass) -> bool {
-        ConservativeModel.needs_scoreboard(op)
-    }
-}
-
-/// Apple M-series GPU latency model.
-///
-/// Apple Silicon GPUs do not expose hardware FP64 — all f64 operations are
-/// executed as software multi-instruction sequences. The effective latency for
-/// an f64 FMA is empirically ~16 cycles (4× the f32 FFMA pipeline).
-///
-/// Source: Apple GPU ISA (internal; approximated from `bench_f64_builtins` patterns).
-/// Status: to be calibrated with `bench_f64_builtins` on macOS / Metal.
-pub struct AppleMLatencyModel;
-
-impl LatencyModel for AppleMLatencyModel {
-    fn raw_latency(&self, op: WgslOpClass) -> u32 {
-        match op {
-            WgslOpClass::F64Fma => 16, // software-emulated: 4× f32 pipeline
-            WgslOpClass::F64MulAdd => 32,
-            WgslOpClass::F64Transcend => 40,
-            WgslOpClass::F32Fma => 4,
-            WgslOpClass::I32Arith => 4,
-            WgslOpClass::SharedMem => 20,
-            WgslOpClass::GlobalMem => 250,
+    /// Whether this operation goes through a scoreboard (true) or a fixed
+    /// pipeline with a known latency slot (false).
+    #[must_use]
+    pub fn needs_scoreboard(&self, op: WgslOpClass) -> bool {
+        match self {
+            Self::Conservative | Self::Measured { .. } => true,
+            Self::Sm70 | Self::Rdna2 | Self::AppleM => matches!(
+                op,
+                WgslOpClass::F64Fma
+                    | WgslOpClass::F64MulAdd
+                    | WgslOpClass::F64Transcend
+                    | WgslOpClass::SharedMem
+                    | WgslOpClass::GlobalMem
+            ),
         }
     }
 
-    fn war_latency(&self, _op: WgslOpClass) -> u32 {
-        0
-    }
-
-    fn needs_scoreboard(&self, op: WgslOpClass) -> bool {
-        matches!(
-            op,
-            WgslOpClass::F64Fma
-                | WgslOpClass::F64MulAdd
-                | WgslOpClass::F64Transcend
-                | WgslOpClass::SharedMem
-                | WgslOpClass::GlobalMem
-        )
+    /// Recommended ILP fill width: how many independent FP64 FMAs to
+    /// interleave before issuing the dependent instruction.
+    #[must_use]
+    pub fn f64_ilp_fill_width(&self) -> u32 {
+        self.raw_latency(WgslOpClass::F64Fma)
     }
 }
 
 /// Select the appropriate `LatencyModel` from a `GpuArch`.
-///
-/// Returns a `Box<dyn LatencyModel>` — caller decides whether to keep it
-/// as a trait object or downcast.
 #[must_use]
-pub fn model_for_arch(arch: super::driver_profile::GpuArch) -> Box<dyn LatencyModel> {
+pub fn model_for_arch(arch: super::driver_profile::GpuArch) -> LatencyModel {
     use super::driver_profile::GpuArch;
     match arch {
-        // All NVIDIA SM7x–SM12x share the 8-cycle DFMA pipeline
         GpuArch::Volta | GpuArch::Turing | GpuArch::Ampere | GpuArch::Ada | GpuArch::Blackwell => {
-            Box::new(Sm70LatencyModel)
+            LatencyModel::Sm70
         }
-        // AMD RDNA2 / RDNA3 — similar 4-cycle VFMA64 pipeline
-        GpuArch::Rdna2 | GpuArch::Rdna3 | GpuArch::Cdna2 => Box::new(Rdna2LatencyModel),
-        // Intel Xe — to be measured empirically; conservative safe
-        GpuArch::IntelArc => Box::new(ConservativeModel),
-        // Apple M-series: hardware f64 is software-emulated so FMA latency is high;
-        // f32 pipeline is ~4cy (similar to RDNA2). Use measured 16cy f64 estimate.
-        GpuArch::AppleM => Box::new(AppleMLatencyModel),
-        GpuArch::Software | GpuArch::Unknown => Box::new(ConservativeModel),
+        GpuArch::Rdna2 | GpuArch::Rdna3 | GpuArch::Cdna2 => LatencyModel::Rdna2,
+        GpuArch::IntelArc => LatencyModel::Conservative,
+        GpuArch::AppleM => LatencyModel::AppleM,
+        GpuArch::Software | GpuArch::Unknown => LatencyModel::Conservative,
     }
 }
 
@@ -326,7 +228,7 @@ mod tests {
 
     #[test]
     fn test_sm70_dfma_latency() {
-        let m = Sm70LatencyModel;
+        let m = LatencyModel::Sm70;
         assert_eq!(m.raw_latency(WgslOpClass::F64Fma), 8);
         assert_eq!(m.raw_latency(WgslOpClass::F32Fma), 4);
         assert_eq!(m.f64_ilp_fill_width(), 8);
@@ -334,7 +236,7 @@ mod tests {
 
     #[test]
     fn test_rdna2_dfma_latency() {
-        let m = Rdna2LatencyModel;
+        let m = LatencyModel::Rdna2;
         assert_eq!(m.raw_latency(WgslOpClass::F64Fma), 4);
         assert_eq!(m.raw_latency(WgslOpClass::F32Fma), 4);
         assert_eq!(m.f64_ilp_fill_width(), 4);
@@ -342,9 +244,9 @@ mod tests {
 
     #[test]
     fn test_conservative_is_max() {
-        let conservative = ConservativeModel;
-        let sm70 = Sm70LatencyModel;
-        let rdna2 = Rdna2LatencyModel;
+        let conservative = LatencyModel::Conservative;
+        let sm70 = LatencyModel::Sm70;
+        let rdna2 = LatencyModel::Rdna2;
         for op in [
             WgslOpClass::F64Fma,
             WgslOpClass::F32Fma,
@@ -364,7 +266,7 @@ mod tests {
 
     #[test]
     fn test_measured_model() {
-        let m = MeasuredModel::new(8, 4, 25);
+        let m = LatencyModel::measured(8, 4, 25);
         assert_eq!(m.raw_latency(WgslOpClass::F64Fma), 8);
         assert_eq!(m.raw_latency(WgslOpClass::F32Fma), 4);
         assert_eq!(m.raw_latency(WgslOpClass::F64MulAdd), 16);
@@ -374,20 +276,17 @@ mod tests {
     #[test]
     fn test_model_for_arch() {
         use super::super::driver_profile::GpuArch;
-        // Volta → SM70 model → 8-cycle DFMA
         let model = model_for_arch(GpuArch::Volta);
         assert_eq!(model.raw_latency(WgslOpClass::F64Fma), 8);
-        // RDNA2 → 4-cycle VFMA64
         let model = model_for_arch(GpuArch::Rdna2);
         assert_eq!(model.raw_latency(WgslOpClass::F64Fma), 4);
-        // Unknown → conservative → 8-cycle
         let model = model_for_arch(GpuArch::Unknown);
         assert_eq!(model.raw_latency(WgslOpClass::F64Fma), 8);
     }
 
     #[test]
     fn test_scoreboard_classification() {
-        let m = Sm70LatencyModel;
+        let m = LatencyModel::Sm70;
         assert!(m.needs_scoreboard(WgslOpClass::F64Fma));
         assert!(m.needs_scoreboard(WgslOpClass::GlobalMem));
         assert!(!m.needs_scoreboard(WgslOpClass::F32Fma));
@@ -397,8 +296,8 @@ mod tests {
     #[test]
     fn test_war_latency_zero_on_register_renamed_gpus() {
         for op in [WgslOpClass::F64Fma, WgslOpClass::SharedMem] {
-            assert_eq!(Sm70LatencyModel.war_latency(op), 0);
-            assert_eq!(Rdna2LatencyModel.war_latency(op), 0);
+            assert_eq!(LatencyModel::Sm70.war_latency(op), 0);
+            assert_eq!(LatencyModel::Rdna2.war_latency(op), 0);
         }
     }
 }

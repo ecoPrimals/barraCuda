@@ -7,12 +7,7 @@ use barracuda::device::WgpuDevice;
 use std::sync::Arc;
 
 pub fn create_device_sync() -> Option<Arc<WgpuDevice>> {
-    barracuda::device::test_pool::tokio_block_on(async {
-        match WgpuDevice::new_f64_capable().await {
-            Ok(d) => Some(Arc::new(d)),
-            Err(_) => None,
-        }
-    })
+    barracuda::device::test_pool::get_test_device_if_f64_gpu_available_sync()
 }
 
 /// Tolerance appropriate for the device: tight on known-good f64 hardware,

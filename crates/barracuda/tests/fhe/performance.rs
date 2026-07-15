@@ -7,11 +7,10 @@
 
 #![expect(clippy::unwrap_used, reason = "tests")]
 use super::helpers::*;
-use barracuda::device::WgpuDevice;
+use barracuda::device::test_pool::get_test_device;
 use barracuda::ops::fhe_fast_poly_mul::FheFastPolyMul;
 use barracuda::ops::fhe_ntt::FheNtt;
 use barracuda::ops::fhe_poly_add::create_fhe_poly_tensor;
-use std::sync::Arc;
 use std::time::Duration;
 
 /// Cold-start budget for NTT(N=4096): includes shader compilation on
@@ -31,11 +30,7 @@ async fn test_ntt_performance_n4096() {
         let root = find_root_of_unity(degree, modulus).expect("65537 supports N=4096");
         let input = random_polynomial(degree as usize, modulus);
 
-        let device = Arc::new(
-            WgpuDevice::new()
-                .await
-                .expect("Failed to create GPU device"),
-        );
+        let device = get_test_device().await;
         let input_tensor = create_fhe_poly_tensor(&input, device.clone())
             .await
             .unwrap();
@@ -65,11 +60,7 @@ async fn test_fast_poly_mul_performance_n4096() {
         let a = random_polynomial(degree as usize, modulus);
         let b = random_polynomial(degree as usize, modulus);
 
-        let device = Arc::new(
-            WgpuDevice::new()
-                .await
-                .expect("Failed to create GPU device"),
-        );
+        let device = get_test_device().await;
         let a_tensor = create_fhe_poly_tensor(&a, device.clone()).await.unwrap();
         let b_tensor = create_fhe_poly_tensor(&b, device.clone()).await.unwrap();
 

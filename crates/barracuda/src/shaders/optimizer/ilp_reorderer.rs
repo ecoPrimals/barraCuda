@@ -75,7 +75,7 @@ impl IlpReorderer {
     ///
     /// Returns a `Vec` of source lines in the scheduled order.
     #[must_use]
-    pub fn reorder(graph: &WgslDependencyGraph, model: &dyn LatencyModel) -> Vec<String> {
+    pub fn reorder(graph: &WgslDependencyGraph, model: &LatencyModel) -> Vec<String> {
         let n = graph.nodes.len();
         if n == 0 {
             return vec![];
@@ -172,7 +172,7 @@ impl IlpReorderer {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-fn node_latency(node: &Node, model: &dyn LatencyModel) -> u32 {
+fn node_latency(node: &Node, model: &LatencyModel) -> u32 {
     match node {
         Node::Binding(b) => model.raw_latency(b.op_class),
         Node::Passthrough(_) => 0,
@@ -206,7 +206,7 @@ fn resolve_passthrough_deps(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::latency::Sm70LatencyModel;
+    use crate::device::latency::LatencyModel;
     use crate::shaders::optimizer::dependency_graph::WgslDependencyGraph;
 
     #[test]
@@ -223,7 +223,7 @@ mod tests {
         let new_q = s * a_kp + c * a_kq;\n";
 
         let graph = WgslDependencyGraph::parse(region);
-        let model = Sm70LatencyModel;
+        let model = LatencyModel::Sm70;
         let scheduled = IlpReorderer::reorder(&graph, &model);
         assert_eq!(scheduled.len(), graph.nodes.len());
 
@@ -258,7 +258,7 @@ mod tests {
         output[0] = b;\n";
 
         let graph = WgslDependencyGraph::parse(region);
-        let model = Sm70LatencyModel;
+        let model = LatencyModel::Sm70;
         let scheduled = IlpReorderer::reorder(&graph, &model);
 
         let pos_b = scheduled
@@ -275,7 +275,7 @@ mod tests {
     #[test]
     fn test_empty_region() {
         let graph = WgslDependencyGraph::parse("");
-        let model = Sm70LatencyModel;
+        let model = LatencyModel::Sm70;
         let scheduled = IlpReorderer::reorder(&graph, &model);
         assert!(scheduled.is_empty());
     }
@@ -288,7 +288,7 @@ mod tests {
         let b = a * 2.0;\n\
         let c = b + 1.0;\n";
         let graph = WgslDependencyGraph::parse(region);
-        let model = Sm70LatencyModel;
+        let model = LatencyModel::Sm70;
         let scheduled = IlpReorderer::reorder(&graph, &model);
         let pos_a = scheduled
             .iter()
@@ -317,7 +317,7 @@ mod tests {
         let cc = c * c;\n\
         let new_p = c * a_kp - s * a_kq;\n";
         let graph = WgslDependencyGraph::parse(region);
-        let model = Sm70LatencyModel;
+        let model = LatencyModel::Sm70;
         let scheduled = IlpReorderer::reorder(&graph, &model);
         // All 4 bindings should be present
         assert_eq!(scheduled.len(), 4);

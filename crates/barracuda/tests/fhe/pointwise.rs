@@ -3,11 +3,10 @@
 
 #![expect(clippy::unwrap_used, reason = "tests")]
 use super::helpers::*;
-use barracuda::device::WgpuDevice;
+use barracuda::device::test_pool::get_test_device;
 use barracuda::ops::fhe_ntt::FheNtt;
 use barracuda::ops::fhe_pointwise_mul::FhePointwiseMul;
 use barracuda::ops::fhe_poly_add::create_fhe_poly_tensor;
-use std::sync::Arc;
 
 #[tokio::test]
 async fn test_pointwise_mul_basic() {
@@ -21,11 +20,7 @@ async fn test_pointwise_mul_basic() {
         let a = vec![1u64, 2, 3, 4];
         let b = vec![5u64, 6, 7, 8];
 
-        let device = Arc::new(
-            WgpuDevice::new()
-                .await
-                .expect("Failed to create GPU device"),
-        );
+        let device = get_test_device().await;
 
         // Convert to NTT domain first
         let a_tensor = create_fhe_poly_tensor(&a, device.clone()).await.unwrap();
@@ -64,11 +59,7 @@ async fn test_pointwise_mul_identity() {
         let mut ones = vec![0u64; degree as usize];
         ones[0] = 1;
 
-        let device = Arc::new(
-            WgpuDevice::new()
-                .await
-                .expect("Failed to create GPU device"),
-        );
+        let device = get_test_device().await;
 
         let input_tensor = create_fhe_poly_tensor(&input, device.clone())
             .await
@@ -120,11 +111,7 @@ async fn test_pointwise_mul_zero() {
         let input = random_polynomial(degree as usize, modulus);
         let zeros = vec![0u64; degree as usize];
 
-        let device = Arc::new(
-            WgpuDevice::new()
-                .await
-                .expect("Failed to create GPU device"),
-        );
+        let device = get_test_device().await;
 
         let input_tensor = create_fhe_poly_tensor(&input, device.clone())
             .await

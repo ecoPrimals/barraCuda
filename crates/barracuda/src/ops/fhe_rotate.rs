@@ -192,16 +192,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_rotate_validation() {
+        let device = crate::device::test_pool::get_test_device().await;
+        let t = || Tensor::zeros_on(vec![8], device.clone());
+
         // Test invalid degree
-        let result = FheRotate::new(Tensor::zeros(vec![8]).await.unwrap(), 3, 1, 12_289);
+        let result = FheRotate::new(t().await.unwrap(), 3, 1, 12_289);
         assert!(result.is_err());
 
         // Test rotation out of range
-        let result = FheRotate::new(Tensor::zeros(vec![8]).await.unwrap(), 4, 3, 12_289);
+        let result = FheRotate::new(t().await.unwrap(), 4, 3, 12_289);
         assert!(result.is_err()); // Max rotation for degree 4 is 2
 
         // Test negative rotation out of range
-        let result = FheRotate::new(Tensor::zeros(vec![8]).await.unwrap(), 4, -3, 12289);
+        let result = FheRotate::new(t().await.unwrap(), 4, -3, 12289);
         assert!(result.is_err());
     }
 

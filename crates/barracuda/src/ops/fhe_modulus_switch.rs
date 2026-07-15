@@ -180,9 +180,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_modulus_switch_validation() {
+        let device = crate::device::test_pool::get_test_device().await;
+        let t = || Tensor::zeros_on(vec![8], device.clone());
+
         // Test invalid degree
         let result = FheModulusSwitch::new(
-            Tensor::zeros(vec![8]).await.unwrap(),
+            t().await.unwrap(),
             3, // Not power of 2
             12_289,
             6145,
@@ -191,7 +194,7 @@ mod tests {
 
         // Test new modulus >= old modulus
         let result = FheModulusSwitch::new(
-            Tensor::zeros(vec![8]).await.unwrap(),
+            t().await.unwrap(),
             4,
             12_289,
             12_289, // Equal (should fail)

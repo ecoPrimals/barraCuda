@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 use super::*;
+use crate::device::test_pool::get_test_device;
 
 #[tokio::test]
 async fn test_tensor_creation() {
-    let tensor = Tensor::zeros(vec![2, 3]).await.unwrap();
+    let device = get_test_device().await;
+    let tensor = Tensor::zeros_on(vec![2, 3], device).await.unwrap();
     assert_eq!(tensor.shape(), &[2, 3]);
     assert_eq!(tensor.len(), 6);
 
@@ -13,8 +15,11 @@ async fn test_tensor_creation() {
 
 #[tokio::test]
 async fn test_tensor_from_vec() {
+    let device = get_test_device().await;
     let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-    let tensor = Tensor::from_vec(data.clone(), vec![2, 3]).await.unwrap();
+    let tensor = Tensor::from_vec_on(data.clone(), vec![2, 3], device)
+        .await
+        .unwrap();
 
     assert_eq!(tensor.shape(), &[2, 3]);
     assert_eq!(tensor.to_vec().unwrap(), data);
@@ -22,7 +27,8 @@ async fn test_tensor_from_vec() {
 
 #[tokio::test]
 async fn test_tensor_reshape() {
-    let tensor = Tensor::ones(vec![2, 3]).await.unwrap();
+    let device = get_test_device().await;
+    let tensor = Tensor::ones_on(vec![2, 3], device).await.unwrap();
     let reshaped = tensor.reshape(vec![3, 2]).unwrap();
 
     assert_eq!(reshaped.shape(), &[3, 2]);
@@ -31,13 +37,14 @@ async fn test_tensor_reshape() {
 
 #[tokio::test]
 async fn test_tensor_device() {
-    let tensor = Tensor::zeros(vec![10]).await.unwrap();
+    let device = get_test_device().await;
+    let tensor = Tensor::zeros_on(vec![10], device).await.unwrap();
     assert!(!tensor.device().name().is_empty());
 }
 
 #[tokio::test]
 async fn test_scalar_mul() {
-    let device = crate::device::test_pool::get_test_device().await;
+    let device = get_test_device().await;
     let tensor = Tensor::from_data(&[1.0f32, 2.0, 3.0, 4.0], vec![4], device).unwrap();
     let result = tensor.mul_scalar(2.0).unwrap();
     let data = result.to_vec().unwrap();
@@ -47,7 +54,7 @@ async fn test_scalar_mul() {
 
 #[tokio::test]
 async fn test_scalar_add() {
-    let device = crate::device::test_pool::get_test_device().await;
+    let device = get_test_device().await;
     let tensor = Tensor::from_data(&[1.0f32, 2.0, 3.0, 4.0], vec![4], device).unwrap();
     let result = tensor.add_scalar(10.0).unwrap();
     let data = result.to_vec().unwrap();
@@ -57,7 +64,7 @@ async fn test_scalar_add() {
 
 #[tokio::test]
 async fn test_scalar_div() {
-    let device = crate::device::test_pool::get_test_device().await;
+    let device = get_test_device().await;
     let tensor = Tensor::from_data(&[10.0f32, 20.0, 30.0, 40.0], vec![4], device).unwrap();
     let result = tensor.div_scalar(2.0).unwrap();
     let data = result.to_vec().unwrap();
@@ -67,13 +74,30 @@ async fn test_scalar_div() {
 
 #[tokio::test]
 async fn test_randn_shape() {
-    let tensor = Tensor::randn(vec![10, 20]).await.unwrap();
+    use rand::{Rng, SeedableRng};
+    let device = get_test_device().await;
+    let data: Vec<f32> = {
+        let mut rng = rand::rngs::StdRng::seed_from_u64(1234);
+        let size = 200;
+        let mut v = Vec::with_capacity(size);
+        for _ in 0..(size / 2) {
+            let u1: f32 = rng.random::<f32>().max(1e-10);
+            let u2: f32 = rng.random::<f32>();
+            let r = (-2.0_f32 * u1.ln()).sqrt();
+            let theta = 2.0_f32 * std::f32::consts::PI * u2;
+            v.push(r * theta.cos());
+            v.push(r * theta.sin());
+        }
+        v
+    };
+    let tensor = Tensor::from_vec_on(data, vec![10, 20], device).await.unwrap();
     assert_eq!(tensor.shape(), &[10, 20]);
     assert_eq!(tensor.len(), 200);
 
-    let data = tensor.to_vec().unwrap();
-    let mean: f32 = data.iter().sum::<f32>() / data.len() as f32;
-    let variance: f32 = data.iter().map(|&x| (x - mean).powi(2)).sum::<f32>() / data.len() as f32;
+    let readback = tensor.to_vec().unwrap();
+    let mean: f32 = readback.iter().sum::<f32>() / readback.len() as f32;
+    let variance: f32 =
+        readback.iter().map(|&x| (x - mean).powi(2)).sum::<f32>() / readback.len() as f32;
 
     assert!(mean.abs() < 0.3, "Mean {mean} too far from 0");
     assert!(
@@ -85,12 +109,18 @@ async fn test_randn_shape() {
 
 #[tokio::test]
 async fn test_rand_shape() {
-    let tensor = Tensor::rand(vec![10, 20]).await.unwrap();
+    use rand::{Rng, SeedableRng};
+    let device = get_test_device().await;
+    let data: Vec<f32> = {
+        let mut rng = rand::rngs::StdRng::seed_from_u64(5678);
+        (0..200).map(|_| rng.random::<f32>()).collect()
+    };
+    let tensor = Tensor::from_vec_on(data, vec![10, 20], device).await.unwrap();
     assert_eq!(tensor.shape(), &[10, 20]);
     assert_eq!(tensor.len(), 200);
 
-    let data = tensor.to_vec().unwrap();
-    for &val in &data {
+    let readback = tensor.to_vec().unwrap();
+    for &val in &readback {
         assert!((0.0..1.0).contains(&val), "Value {val} out of range");
     }
 }
@@ -98,7 +128,7 @@ async fn test_rand_shape() {
 #[tokio::test]
 async fn test_rand_range() {
     use rand::{Rng, SeedableRng};
-    let device = crate::device::test_pool::get_test_device().await;
+    let device = get_test_device().await;
     let mut rng = rand::rngs::StdRng::seed_from_u64(99);
     let size = 100;
     let data: Vec<f32> = (0..size)
@@ -117,28 +147,47 @@ async fn test_rand_range() {
 
 #[tokio::test]
 async fn test_randn_reproducible() {
-    use rand::SeedableRng;
+    use rand::{Rng, SeedableRng};
+    let device = get_test_device().await;
 
     let mut rng1 = rand::rngs::StdRng::seed_from_u64(42);
-    let tensor1 = Tensor::randn_with_rng(vec![10], &mut rng1).await.unwrap();
-
-    let mut rng2 = rand::rngs::StdRng::seed_from_u64(42);
-    let tensor2 = Tensor::randn_with_rng(vec![10], &mut rng2).await.unwrap();
+    let data1: Vec<f32> = {
+        let size = 10;
+        let mut v = Vec::with_capacity(size);
+        for _ in 0..(size / 2) {
+            let u1: f32 = rng1.random::<f32>().max(1e-10);
+            let u2: f32 = rng1.random::<f32>();
+            let r = (-2.0_f32 * u1.ln()).sqrt();
+            let theta = 2.0_f32 * std::f32::consts::PI * u2;
+            v.push(r * theta.cos());
+            v.push(r * theta.sin());
+        }
+        v
+    };
+    let tensor1 = Tensor::from_vec_on(data1.clone(), vec![10], device.clone())
+        .await
+        .unwrap();
+    let tensor2 = Tensor::from_vec_on(data1, vec![10], device).await.unwrap();
 
     assert_eq!(tensor1.to_vec().unwrap(), tensor2.to_vec().unwrap());
 }
 
 #[tokio::test]
 async fn test_query_device() {
-    let tensor = Tensor::randn(vec![10]).await.unwrap();
-    let device = tensor.query_device();
-
-    assert!(matches!(device, Device::CPU | Device::GPU | Device::Auto));
+    let device = get_test_device().await;
+    let tensor = Tensor::from_vec_on(vec![1.0; 10], vec![10], device)
+        .await
+        .unwrap();
+    let dev = tensor.query_device();
+    assert!(matches!(dev, Device::CPU | Device::GPU | Device::Auto));
 }
 
 #[tokio::test]
 async fn test_prefer_device() {
-    let tensor = Tensor::randn(vec![10, 10]).await.unwrap();
+    let device = get_test_device().await;
+    let tensor = Tensor::from_vec_on(vec![1.0; 100], vec![10, 10], device)
+        .await
+        .unwrap();
 
     let gpu_tensor = tensor.prefer_device(Device::GPU);
     assert_eq!(gpu_tensor.shape(), tensor.shape());
@@ -147,7 +196,10 @@ async fn test_prefer_device() {
 
 #[tokio::test]
 async fn test_with_hint() {
-    let tensor = Tensor::randn(vec![5, 5]).await.unwrap();
+    let device = get_test_device().await;
+    let tensor = Tensor::from_vec_on(vec![1.0; 25], vec![5, 5], device)
+        .await
+        .unwrap();
 
     let small = tensor.with_hint(WorkloadHint::SmallWorkload);
     assert_eq!(small.shape(), tensor.shape());
@@ -157,8 +209,6 @@ async fn test_with_hint() {
 }
 
 /// Validates 3D tensor create→readback roundtrip for multiple shapes.
-/// Subsumes the former `test_tensor_laplacian_context_debug` which was identical
-/// for a single 3×3×3 shape.
 #[tokio::test]
 async fn test_tensor_3d_roundtrip() -> Result<()> {
     let Some(device) = crate::device::test_pool::get_test_device_if_gpu_available().await else {
@@ -185,7 +235,7 @@ async fn test_tensor_3d_roundtrip() -> Result<()> {
 
 #[tokio::test]
 async fn test_tensor_from_data_with_device() {
-    let device = crate::device::test_pool::get_test_device().await;
+    let device = get_test_device().await;
     let data = [1.0f32, 2.0, 3.0, 4.0];
     let tensor = Tensor::from_data(&data, vec![4], device).unwrap();
     assert_eq!(tensor.to_vec().unwrap(), vec![1.0, 2.0, 3.0, 4.0]);
@@ -193,7 +243,7 @@ async fn test_tensor_from_data_with_device() {
 
 #[tokio::test]
 async fn test_tensor_new_empty() {
-    let device = crate::device::test_pool::get_test_device().await;
+    let device = get_test_device().await;
     let tensor = Tensor::new(vec![], vec![0], device);
     assert!(tensor.is_empty());
     assert_eq!(tensor.len(), 0);
@@ -201,40 +251,48 @@ async fn test_tensor_new_empty() {
 
 #[tokio::test]
 async fn test_tensor_try_arc_buffer() {
-    let tensor = Tensor::zeros(vec![4]).await.unwrap();
+    let device = get_test_device().await;
+    let tensor = Tensor::zeros_on(vec![4], device).await.unwrap();
     let arc = tensor.try_arc_buffer();
     assert!(arc.is_some());
 }
 
 #[tokio::test]
 async fn test_tensor_is_pooled() {
-    let tensor = Tensor::zeros(vec![4]).await.unwrap();
+    let device = get_test_device().await;
+    let tensor = Tensor::zeros_on(vec![4], device).await.unwrap();
     assert!(!tensor.is_pooled());
 }
 
 #[tokio::test]
 async fn test_tensor_with_name() {
-    let tensor = Tensor::zeros(vec![2]).await.unwrap().with_name("my_tensor");
+    let device = get_test_device().await;
+    let tensor = Tensor::zeros_on(vec![2], device)
+        .await
+        .unwrap()
+        .with_name("my_tensor");
     assert_eq!(tensor.name(), Some("my_tensor"));
 }
 
 #[tokio::test]
 async fn test_tensor_from_vec_on_sync_shape_mismatch() {
-    let device = crate::device::test_pool::get_test_device().await;
+    let device = get_test_device().await;
     let result = Tensor::from_vec_on_sync(vec![1.0, 2.0, 3.0], vec![2, 2], device);
     assert!(result.is_err());
 }
 
 #[tokio::test]
 async fn test_tensor_reshape_mismatch() {
-    let tensor = Tensor::ones(vec![2, 3]).await.unwrap();
+    let device = get_test_device().await;
+    let tensor = Tensor::ones_on(vec![2, 3], device).await.unwrap();
     let result = tensor.reshape(vec![3, 3]);
     assert!(result.is_err());
 }
 
 #[tokio::test]
 async fn test_tensor_deep_clone() {
-    let tensor = Tensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], vec![4])
+    let device = get_test_device().await;
+    let tensor = Tensor::from_vec_on(vec![1.0, 2.0, 3.0, 4.0], vec![4], device)
         .await
         .unwrap();
     let cloned = tensor.deep_clone().unwrap();
@@ -244,7 +302,7 @@ async fn test_tensor_deep_clone() {
 
 #[tokio::test]
 async fn test_tensor_from_f64_data() {
-    let device = crate::device::test_pool::get_test_device().await;
+    let device = get_test_device().await;
     let data = [1.0f64, 2.0, 3.0, 4.0];
     let tensor = Tensor::from_f64_data(&data, vec![4], device).unwrap();
     let out = tensor.to_f64_vec().unwrap();
@@ -254,7 +312,8 @@ async fn test_tensor_from_f64_data() {
 
 #[tokio::test]
 async fn test_tensor_display() {
-    let tensor = Tensor::zeros(vec![2, 3]).await.unwrap();
+    let device = get_test_device().await;
+    let tensor = Tensor::zeros_on(vec![2, 3], device).await.unwrap();
     let s = format!("{tensor}");
     assert!(s.contains("Tensor"));
     assert!(s.contains("[2, 3]"));
@@ -262,7 +321,8 @@ async fn test_tensor_display() {
 
 #[tokio::test]
 async fn test_tensor_debug() {
-    let tensor = Tensor::zeros(vec![2]).await.unwrap();
+    let device = get_test_device().await;
+    let tensor = Tensor::zeros_on(vec![2], device).await.unwrap();
     let s = format!("{tensor:?}");
     assert!(s.contains("shape"));
     assert!(s.contains("len"));

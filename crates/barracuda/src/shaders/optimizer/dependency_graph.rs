@@ -90,7 +90,7 @@ pub struct BindingNode {
 
 impl BindingNode {
     /// Number of cycles this node takes before its result is available.
-    pub fn latency(&self, model: &dyn LatencyModel) -> u32 {
+    pub fn latency(&self, model: &LatencyModel) -> u32 {
         model.raw_latency(self.op_class)
     }
 }

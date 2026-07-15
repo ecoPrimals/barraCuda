@@ -139,7 +139,7 @@ pub async fn connect_transport(endpoint: &TransportEndpoint) -> std::io::Result<
         }
         TransportEndpoint::MeshRelay { peer_id, .. } => Err(std::io::Error::new(
             std::io::ErrorKind::Unsupported,
-            format!("mesh_relay ({peer_id}) requires Songbird routing, not direct connect"),
+            format!("mesh_relay ({peer_id}) requires mesh relay routing, not direct connect"),
         )),
     }
 }

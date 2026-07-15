@@ -3,10 +3,9 @@
 
 #![expect(clippy::unwrap_used, reason = "tests")]
 use super::helpers::*;
-use barracuda::device::WgpuDevice;
+use barracuda::device::test_pool::get_test_device;
 use barracuda::ops::fhe_fast_poly_mul::FheFastPolyMul;
 use barracuda::ops::fhe_poly_add::create_fhe_poly_tensor;
-use std::sync::Arc;
 
 /// Naive polynomial multiplication mod (X^N - 1) — cyclic convolution.
 /// Standard NTT implements cyclic convolution, not negacyclic (X^N+1).
@@ -35,11 +34,7 @@ async fn test_fast_poly_mul_vs_naive() {
         // Fast multiply should match naive multiply
         // Use (257, 4): 257 ≡ 1 mod 8; larger modulus avoids Barrett edge cases
 
-        let device = Arc::new(
-            WgpuDevice::new()
-                .await
-                .expect("Failed to create GPU device"),
-        );
+        let device = get_test_device().await;
         let modulus = 12289u64;
 
         for &degree in &[4u32] {
@@ -88,11 +83,7 @@ async fn test_fast_poly_mul_commutativity() {
         let a = random_polynomial(degree as usize, modulus);
         let b = random_polynomial(degree as usize, modulus);
 
-        let device = Arc::new(
-            WgpuDevice::new()
-                .await
-                .expect("Failed to create GPU device"),
-        );
+        let device = get_test_device().await;
 
         let a_tensor = create_fhe_poly_tensor(&a, device.clone()).await.unwrap();
         let b_tensor = create_fhe_poly_tensor(&b, device.clone()).await.unwrap();
@@ -131,11 +122,7 @@ async fn test_fast_poly_mul_distributivity() {
         let b = random_polynomial(degree as usize, modulus);
         let c = random_polynomial(degree as usize, modulus);
 
-        let device = Arc::new(
-            WgpuDevice::new()
-                .await
-                .expect("Failed to create GPU device"),
-        );
+        let device = get_test_device().await;
 
         // Compute b + c (polynomial addition)
         let b_plus_c: Vec<u64> = b

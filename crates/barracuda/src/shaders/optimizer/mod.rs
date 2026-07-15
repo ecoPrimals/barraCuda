@@ -30,9 +30,9 @@
 //!
 //! ```rust,ignore
 //! use barracuda::shaders::optimizer::WgslOptimizer;
-//! use barracuda::device::latency::Sm70LatencyModel;
+//! use barracuda::device::latency::LatencyModel;
 //!
-//! let optimizer = WgslOptimizer::new(Box::new(Sm70LatencyModel));
+//! let optimizer = WgslOptimizer::new(LatencyModel::Sm70);
 //! let optimized = optimizer.optimize(my_shader_source);
 //! ```
 //!
@@ -65,7 +65,7 @@ pub mod dependency_graph;
 pub mod ilp_reorderer;
 pub mod loop_unroller;
 
-use crate::device::latency::{ConservativeModel, LatencyModel, model_for_arch};
+use crate::device::latency::{LatencyModel, model_for_arch};
 use dependency_graph::WgslDependencyGraph;
 use ilp_reorderer::IlpReorderer;
 pub use loop_unroller::WgslLoopUnroller;
@@ -80,13 +80,13 @@ const ILP_END: &str = "// @ilp_region end";
 ///
 /// Instantiate with the target GPU's `LatencyModel`, then call `optimize()`.
 pub struct WgslOptimizer {
-    model: Box<dyn LatencyModel>,
+    model: LatencyModel,
 }
 
 impl WgslOptimizer {
     /// Create an optimizer using a specific `LatencyModel`.
     #[must_use]
-    pub fn new(model: Box<dyn LatencyModel>) -> Self {
+    pub fn new(model: LatencyModel) -> Self {
         Self { model }
     }
 
@@ -171,7 +171,7 @@ impl WgslOptimizer {
         if graph.is_empty() {
             return region_body.to_string();
         }
-        let scheduled_lines = IlpReorderer::reorder(&graph, self.model.as_ref());
+        let scheduled_lines = IlpReorderer::reorder(&graph, &self.model);
         let mut out = String::new();
         for line in &scheduled_lines {
             out.push_str(line);
@@ -184,19 +184,17 @@ impl WgslOptimizer {
 }
 
 impl Default for WgslOptimizer {
-    /// Default optimizer uses `ConservativeModel` — safe on any hardware.
+    /// Default optimizer uses `Conservative` — safe on any hardware.
     fn default() -> Self {
-        Self::new(Box::new(ConservativeModel))
+        Self::new(LatencyModel::Conservative)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::latency::Sm70LatencyModel;
-
     fn make_optimizer() -> WgslOptimizer {
-        WgslOptimizer::new(Box::new(Sm70LatencyModel))
+        WgslOptimizer::new(LatencyModel::Sm70)
     }
 
     #[test]

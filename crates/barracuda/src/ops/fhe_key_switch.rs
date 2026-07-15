@@ -349,18 +349,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_key_switch_validation() {
+        let device = crate::device::test_pool::get_test_device().await;
+        let t = || Tensor::zeros_on(vec![8], device.clone());
+
         // Test invalid degree
-        let result =
-            FheKeySwitch::new(Tensor::zeros(vec![8]).await.unwrap(), 3, 12_289, 1 << 16, 3);
+        let result = FheKeySwitch::new(t().await.unwrap(), 3, 12_289, 1 << 16, 3);
         assert!(result.is_err());
 
         // Test invalid decomposition base
-        let result = FheKeySwitch::new(Tensor::zeros(vec![8]).await.unwrap(), 4, 12_289, 1, 3);
+        let result = FheKeySwitch::new(t().await.unwrap(), 4, 12_289, 1, 3);
         assert!(result.is_err());
 
         // Test invalid decomposition levels
-        let result =
-            FheKeySwitch::new(Tensor::zeros(vec![8]).await.unwrap(), 4, 12_289, 1 << 16, 0);
+        let result = FheKeySwitch::new(t().await.unwrap(), 4, 12_289, 1 << 16, 0);
         assert!(result.is_err());
     }
 

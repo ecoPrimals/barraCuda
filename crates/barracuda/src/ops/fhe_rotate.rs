@@ -208,6 +208,5 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // NOTE: Full integration tests require GPU + CKKS setup
-    // See examples/fhe_rotate_validation.rs for round-trip tests
+    // Full integration tests in tests/fhe_shader_unit_tests.rs
 }

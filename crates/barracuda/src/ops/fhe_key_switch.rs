@@ -365,6 +365,5 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // NOTE: Full integration tests require switching keys
-    // See examples/fhe_key_switch_validation.rs for complete tests
+    // Full integration tests in tests/fhe_shader_unit_tests.rs
 }

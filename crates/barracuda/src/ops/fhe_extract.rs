@@ -305,6 +305,5 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // NOTE: Full integration tests require GPU + encryption setup
-    // See examples/fhe_extract_validation.rs for round-trip tests
+    // Full integration tests in tests/fhe_shader_unit_tests.rs
 }

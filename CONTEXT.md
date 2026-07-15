@@ -23,9 +23,9 @@ traits are fully internalized.
 - **Architecture:** 4-crate workspace (barracuda, barracuda-core, barracuda-spirv, barracuda-naga-exec)
 - **Communication:** JSON-RPC 2.0 + tarpc over Unix socket and TCP
 - **License:** AGPL-3.0-or-later (scyBorg provenance trio)
-- **Tests:** 4,600+ passing (3,929 barracuda + 671 barracuda-core)
+- **Tests:** 4,632 passing (3,924 barracuda + 708 barracuda-core)
 - **Coverage:** 80.54% line on llvmpipe (80% CI gate, 90% target with GPU hardware)
-- **MSRV:** 1.87
+- **MSRV:** 1.92
 - **Crate count:** 4 workspace crates
 - **Shaders:** 826 WGSL compute shaders with SPDX license headers
 - **Rust files:** 1,169 source files, 42 integration test files
@@ -42,7 +42,7 @@ traits are fully internalized.
 - **NagaExecutor** — CPU interpreter for naga IR (shader-first execution without GPU)
 - **Sovereign compiler** — naga IR optimizer with FMA fusion and dead expr elimination
 
-## IPC Method Surface (96 methods)
+## IPC Method Surface (98 methods)
 
 | Domain | Methods |
 |--------|---------|
@@ -72,7 +72,7 @@ traits are fully internalized.
 | `fhe.*` | `ntt`, `pointwise_mul` |
 | `btsp.*` | `negotiate`, `capabilities` |
 
-90 methods following wateringHole `{domain}.{operation}` Semantic Method Naming Standard. Wire Standard L2 compliant. Neural API announce on startup. BTSP Phase 3 encryption.
+98 methods following wateringHole `{domain}.{operation}` Semantic Method Naming Standard. Wire Standard L2 compliant. Neural API announce on startup. BTSP Phase 3 encryption.
 
 ## Deployment Constraints
 

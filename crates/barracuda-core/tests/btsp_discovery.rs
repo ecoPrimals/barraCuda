@@ -4,6 +4,9 @@
 //! These tests manipulate process environment variables (which is `unsafe` in
 //! Rust 1.86+) so they live in an integration test binary outside the
 //! `#![forbid(unsafe_code)]` lib crate.
+//!
+//! Unix-only: discovery relies on Unix domain sockets for provider probing.
+#![cfg(unix)]
 #![expect(clippy::unwrap_used, reason = "test assertions")]
 
 use std::io::Write;

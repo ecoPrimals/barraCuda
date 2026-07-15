@@ -279,8 +279,9 @@ fn btsp_outcome_rejected_refuses_connection() {
     );
 }
 
-// ── Full relay integration (mock security provider) ─────────────────
+// ── Full relay integration (mock security provider, Unix-only) ───────
 
+#[cfg(unix)]
 /// Spawn a mock security-domain provider that accepts one connection and
 /// handles `btsp.session.create` + `btsp.session.verify` sequentially
 /// on the same stream (per SOURDOUGH_BTSP_RELAY_PATTERN).
@@ -335,6 +336,7 @@ async fn spawn_mock_provider(sock_path: &std::path::Path) -> tokio::task::JoinHa
     })
 }
 
+#[cfg(unix)]
 #[tokio::test]
 async fn btsp_full_relay_authenticated_null_cipher() {
     let tmp = tempfile::tempdir().unwrap();
@@ -409,6 +411,7 @@ async fn btsp_full_relay_authenticated_null_cipher() {
     provider_handle.await.unwrap();
 }
 
+#[cfg(unix)]
 #[tokio::test]
 async fn btsp_full_relay_rejected_by_provider() {
     let tmp = tempfile::tempdir().unwrap();

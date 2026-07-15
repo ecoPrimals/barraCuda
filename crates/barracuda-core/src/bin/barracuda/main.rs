@@ -152,10 +152,17 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
                 barracuda_core::set_no_gpu_probe();
             }
 
+            #[cfg(unix)]
             let tcp_only = is_tcp_only(bind_mode.as_deref());
+            #[cfg(not(unix))]
+            let _ = is_tcp_only(bind_mode.as_deref());
 
+            #[cfg(unix)]
             let (effective_bind, effective_unix) =
                 resolve_transport_override(bind, port, unix.as_deref());
+            #[cfg(not(unix))]
+            let (effective_bind, _) =
+                resolve_transport_override(bind, port, None);
 
             run_server(
                 effective_bind,

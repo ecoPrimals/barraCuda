@@ -205,7 +205,9 @@ fn is_tcp_only(bind_mode: Option<&str>) -> bool {
 }
 
 /// Resolve `TRANSPORT_ENDPOINT` env override for launcher-injected transport.
-#[cfg(unix)]
+///
+/// Returns `(effective_tcp_bind, effective_unix_socket_path)`.
+/// On non-Unix platforms, the Unix socket path is always `None`.
 fn resolve_transport_override(
     bind: Option<String>,
     port: Option<u16>,
@@ -216,8 +218,15 @@ fn resolve_transport_override(
     if let Ok(raw) = std::env::var("TRANSPORT_ENDPOINT") {
         match serde_json::from_str::<TransportEndpoint>(&raw) {
             Ok(TransportEndpoint::Uds { path }) => {
-                tracing::info!("TRANSPORT_ENDPOINT: UDS at {path}");
-                return (None, Some(path));
+                #[cfg(unix)]
+                {
+                    tracing::info!("TRANSPORT_ENDPOINT: UDS at {path}");
+                    return (None, Some(path));
+                }
+                #[cfg(not(unix))]
+                tracing::warn!(
+                    "TRANSPORT_ENDPOINT: UDS ({path}) not supported on this platform, ignoring"
+                );
             }
             Ok(TransportEndpoint::Tcp { host, port: p }) => {
                 tracing::info!("TRANSPORT_ENDPOINT: TCP at {host}:{p}");
@@ -243,34 +252,6 @@ fn resolve_transport_override(
         })
     });
     (effective_bind, unix.map(String::from))
-}
-
-#[cfg(not(unix))]
-fn resolve_transport_override(
-    bind: Option<String>,
-    port: Option<u16>,
-    _unix: Option<&str>,
-) -> (Option<String>, Option<String>) {
-    use barracuda_core::ipc::transport::TransportEndpoint;
-
-    if let Ok(raw) = std::env::var("TRANSPORT_ENDPOINT") {
-        if let Ok(TransportEndpoint::Tcp { host, port: p }) =
-            serde_json::from_str::<TransportEndpoint>(&raw)
-        {
-            tracing::info!("TRANSPORT_ENDPOINT: TCP at {host}:{p}");
-            return (Some(format!("{host}:{p}")), None);
-        }
-    }
-
-    let effective_bind = bind.or_else(|| {
-        port.map(|p| {
-            format!(
-                "{}:{p}",
-                barracuda_core::ipc::transport::resolve_bind_host()
-            )
-        })
-    });
-    (effective_bind, None)
 }
 
 async fn run_server(
@@ -388,7 +369,6 @@ async fn run_server(
     {
         let effective_addr = local_addr.to_string();
         discovery_file::write_discovery_file(Some(&effective_addr), tarpc_bind.as_deref(), None);
-        #[cfg(unix)]
         barracuda_core::discovery::register_with_discovery(&format!("tcp://{effective_addr}"))
             .await;
 
@@ -415,8 +395,11 @@ async fn run_server(
 
 /// Run the server in service mode (systemd/init).
 ///
-/// Per genomeBin: Unix socket default, PID file, `NOTIFY_SOCKET`, no banner.
+/// Per genomeBin: Unix socket default (on Unix), TCP fallback (on non-Unix),
+/// PID file, `NOTIFY_SOCKET`, no banner.
 async fn run_service_mode() -> Result<(), barracuda_core::error::BarracudaCoreError> {
+    use barracuda_core::ipc::transport::TransportListener;
+
     barracuda_core::ipc::transport::validate_insecure_guard()?;
     let _pid_guard = discovery_file::write_pid_file();
 
@@ -429,32 +412,53 @@ async fn run_service_mode() -> Result<(), barracuda_core::error::BarracudaCoreEr
     let server = barracuda_core::ipc::IpcServer::new(Arc::clone(&primal));
 
     #[cfg(unix)]
-    {
+    let (listener, sock_path) = {
         let sock_path = barracuda_core::ipc::IpcServer::default_socket_path();
-        discovery_file::write_discovery_file(None, None, Some(&sock_path));
-        barracuda_core::ipc::IpcServer::create_legacy_symlink(&sock_path);
-        barracuda_core::discovery::register_with_discovery(&format!(
-            "unix://{}",
-            sock_path.display()
-        ))
-        .await;
-
-        let announce_socket = sock_path.to_string_lossy().to_string();
-        discovery_file::spawn_neural_announce(announce_socket, ANNOUNCE_DELAY_MS);
-
-        let on_ready = || discovery_file::notify_systemd_ready();
-        server.serve_unix(&sock_path, Some(on_ready)).await?;
-        barracuda_core::ipc::IpcServer::remove_legacy_symlink(&sock_path);
-        discovery_file::remove_discovery_file(Some(&sock_path));
-    }
+        let l = TransportListener::bind_unix(&sock_path).map_err(|e| {
+            barracuda_core::error::BarracudaCoreError::ipc(format!(
+                "bind {}: {e}",
+                sock_path.display()
+            ))
+        })?;
+        (l, Some(sock_path))
+    };
 
     #[cfg(not(unix))]
-    {
+    let (listener, sock_path) = {
         let bind_addr = barracuda_core::ipc::transport::resolve_bind_address(None);
-        discovery_file::write_discovery_file(Some(&bind_addr), None, None);
-        server.serve_tcp(&bind_addr).await?;
-        discovery_file::remove_discovery_file(None);
+        let tcp = tokio::net::TcpListener::bind(&bind_addr).await.map_err(|e| {
+            barracuda_core::error::BarracudaCoreError::ipc(format!("bind {bind_addr}: {e}"))
+        })?;
+        (TransportListener::from_tcp(tcp), None::<std::path::PathBuf>)
+    };
+
+    discovery_file::write_discovery_file(
+        listener.local_tcp_addr().map(|a| a.to_string()).as_deref(),
+        None,
+        sock_path.as_deref(),
+    );
+
+    #[cfg(unix)]
+    if let Some(ref sp) = sock_path {
+        barracuda_core::ipc::IpcServer::create_legacy_symlink(sp);
+        barracuda_core::discovery::register_with_discovery(&format!("unix://{}", sp.display()))
+            .await;
+        let announce_addr = sp.to_string_lossy().to_string();
+        discovery_file::spawn_neural_announce(announce_addr, ANNOUNCE_DELAY_MS);
     }
+
+    #[cfg(unix)]
+    let on_ready: Option<fn()> = Some(discovery_file::notify_systemd_ready);
+    #[cfg(not(unix))]
+    let on_ready: Option<fn()> = None;
+
+    server.serve_listener(listener, on_ready).await?;
+
+    #[cfg(unix)]
+    if let Some(ref sp) = sock_path {
+        barracuda_core::ipc::IpcServer::remove_legacy_symlink(sp);
+    }
+    discovery_file::remove_discovery_file(sock_path.as_deref());
 
     Ok(())
 }

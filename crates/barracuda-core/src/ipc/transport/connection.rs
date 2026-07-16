@@ -176,17 +176,6 @@ where
     Ok(())
 }
 
-/// Handle a single TCP connection (newline-delimited JSON-RPC).
-pub(super) async fn handle_stream(
-    primal: Arc<BarraCudaPrimal>,
-    stream: tokio::net::TcpStream,
-    session: Option<super::super::btsp::BtspSession>,
-    replay: Option<String>,
-) {
-    let (reader, writer) = stream.into_split();
-    handle_connection(primal, reader, writer, session, replay).await;
-}
-
 /// Handle a BTSP Phase 3 connection using length-prefixed encrypted frames.
 ///
 /// Each frame is decrypted, dispatched as JSON-RPC, and the response

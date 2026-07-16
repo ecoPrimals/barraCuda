@@ -144,6 +144,99 @@ pub async fn connect_transport(endpoint: &TransportEndpoint) -> std::io::Result<
     }
 }
 
+/// Transport-agnostic server listener.
+///
+/// Phase 2 evolution: pairs with [`TransportStream`] on the accept side,
+/// just as [`connect_transport`] pairs with it on the connect side.
+/// Unifies `serve_unix` and `serve_tcp_listener` accept loops.
+#[derive(Debug)]
+pub enum TransportListener {
+    /// Unix domain socket listener.
+    #[cfg(unix)]
+    Unix {
+        /// The bound listener.
+        listener: tokio::net::UnixListener,
+        /// Socket path for display and post-shutdown cleanup.
+        path: std::path::PathBuf,
+    },
+    /// TCP listener.
+    Tcp(tokio::net::TcpListener),
+}
+
+impl TransportListener {
+    /// Bind a Unix domain socket listener.
+    ///
+    /// Removes stale socket files and broken symlinks before bind,
+    /// and creates parent directories if needed.
+    #[cfg(unix)]
+    pub fn bind_unix(path: &std::path::Path) -> std::io::Result<Self> {
+        if path.symlink_metadata().is_ok() {
+            std::fs::remove_file(path)?;
+        }
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let listener = tokio::net::UnixListener::bind(path)?;
+        Ok(Self::Unix {
+            listener,
+            path: path.to_path_buf(),
+        })
+    }
+
+    /// Wrap a pre-bound TCP listener.
+    #[must_use]
+    pub fn from_tcp(listener: tokio::net::TcpListener) -> Self {
+        Self::Tcp(listener)
+    }
+
+    /// Accept a connection, returning a transport-agnostic stream and peer label.
+    pub async fn accept(&self) -> std::io::Result<(TransportStream, String)> {
+        match self {
+            #[cfg(unix)]
+            Self::Unix { listener, .. } => {
+                let (stream, _) = listener.accept().await?;
+                Ok((TransportStream::Unix(stream), "unix-peer".into()))
+            }
+            Self::Tcp(listener) => {
+                let (stream, peer) = listener.accept().await?;
+                Ok((TransportStream::Tcp(stream), peer.to_string()))
+            }
+        }
+    }
+
+    /// Display-friendly listening address.
+    #[must_use]
+    pub fn display_address(&self) -> String {
+        match self {
+            #[cfg(unix)]
+            Self::Unix { path, .. } => format!("unix://{}", path.display()),
+            Self::Tcp(l) => l.local_addr().map_or_else(
+                |_| "tcp://unknown".into(),
+                |a| format!("tcp://{a}"),
+            ),
+        }
+    }
+
+    /// Socket path for Unix listeners (cleanup on shutdown).
+    #[cfg(unix)]
+    #[must_use]
+    pub fn unix_path(&self) -> Option<&std::path::Path> {
+        match self {
+            Self::Unix { path, .. } => Some(path),
+            Self::Tcp(_) => None,
+        }
+    }
+
+    /// TCP local address if this is a TCP listener.
+    pub fn local_tcp_addr(&self) -> Option<std::net::SocketAddr> {
+        match self {
+            #[cfg(unix)]
+            Self::Unix { .. } => None,
+            Self::Tcp(l) => l.local_addr().ok(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

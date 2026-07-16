@@ -89,7 +89,7 @@ impl MovingWindowStats {
 
         let params = MovingWindowParams {
             n,
-            window: window_size as u32,
+            window: crate::utils::checked_u32(window_size, "moving_window window_size")?,
             n_out,
             _pad: 0,
         };

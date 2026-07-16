@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+#[cfg(unix)]
 use super::super::transport_config::{resolve_family_id, resolve_socket_dir};
-use super::connection::{handle_btsp_connection, handle_connection, handle_stream};
+use super::super::transport_endpoint::TransportListener;
+use super::connection::{handle_btsp_connection, handle_connection};
 use crate::BarraCudaPrimal;
 use crate::env_keys;
 use barracuda::error::Result;
@@ -227,40 +229,8 @@ impl IpcServer {
     /// serving. This two-step pattern allows writing the discovery file
     /// between bind and serve — only advertising TCP if the bind succeeded.
     pub async fn serve_tcp_listener(&self, listener: TcpListener) -> Result<()> {
-        if let Ok(addr) = listener.local_addr() {
-            tracing::info!("barraCuda IPC listening on tcp://{addr}");
-        }
-
-        loop {
-            tokio::select! {
-                result = listener.accept() => {
-                    let (mut stream, peer) = result?;
-                    tracing::debug!("IPC connection from {peer}");
-                    let primal = Arc::clone(&self.primal);
-                    tokio::spawn(async move {
-                        let outcome = super::super::btsp::guard_connection(&mut stream).await;
-                        if !outcome.should_accept() {
-                            tracing::warn!("BTSP handshake rejected connection from {peer}: {outcome:?}");
-                            return;
-                        }
-                        let session = outcome.session().cloned();
-                        let replay = outcome.consumed_line().map(String::from);
-                        if let Some(ref session) = session
-                            && session.cipher.requires_key() {
-                                let (reader, writer) = stream.into_split();
-                                handle_btsp_connection(primal, reader, writer, session).await;
-                                return;
-                            }
-                        handle_stream(primal, stream, session, replay).await;
-                    });
-                }
-                () = shutdown_signal() => {
-                    tracing::info!("Shutdown signal received, stopping TCP server");
-                    break;
-                }
-            }
-        }
-        Ok(())
+        self.serve_listener(TransportListener::from_tcp(listener), None::<fn()>)
+            .await
     }
 
     /// Start listening on a Unix domain socket with graceful shutdown.
@@ -272,18 +242,28 @@ impl IpcServer {
     where
         F: FnOnce() + Send,
     {
-        // Remove stale socket files AND broken symlinks before bind().
-        // `path.exists()` follows symlinks (returns false for broken links),
-        // but `symlink_metadata()` detects any filesystem entry at the path.
-        if path.symlink_metadata().is_ok() {
-            std::fs::remove_file(path)?;
+        let listener = TransportListener::bind_unix(path)?;
+        self.serve_listener(listener, on_ready).await?;
+        if path.exists() {
+            std::fs::remove_file(path).ok();
         }
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
+        Ok(())
+    }
 
-        let listener = tokio::net::UnixListener::bind(path)?;
-        tracing::info!("barraCuda IPC listening on unix://{}", path.display());
+    /// Serve JSON-RPC 2.0 over any transport with graceful shutdown.
+    ///
+    /// Phase 2 evolution: unified accept loop for all transport types.
+    /// Both [`serve_unix`](Self::serve_unix) and
+    /// [`serve_tcp_listener`](Self::serve_tcp_listener) delegate here.
+    pub async fn serve_listener<F>(
+        &self,
+        listener: TransportListener,
+        on_ready: Option<F>,
+    ) -> Result<()>
+    where
+        F: FnOnce() + Send,
+    {
+        tracing::info!("barraCuda IPC listening on {}", listener.display_address());
 
         if let Some(f) = on_ready {
             f();
@@ -292,34 +272,34 @@ impl IpcServer {
         loop {
             tokio::select! {
                 result = listener.accept() => {
-                    let (mut stream, _) = result?;
+                    let (mut stream, peer) = result?;
+                    tracing::debug!("IPC connection from {peer}");
                     let primal = Arc::clone(&self.primal);
                     tokio::spawn(async move {
                         let outcome = super::super::btsp::guard_connection(&mut stream).await;
                         if !outcome.should_accept() {
-                            tracing::warn!("BTSP handshake rejected connection: {outcome:?}");
+                            tracing::warn!(
+                                "BTSP handshake rejected connection from {peer}: {outcome:?}"
+                            );
                             return;
                         }
                         let session = outcome.session().cloned();
                         let replay = outcome.consumed_line().map(String::from);
-                        let (reader, writer) = stream.into_split();
+                        let (reader, writer) = tokio::io::split(stream);
                         if let Some(ref session) = session
-                            && session.cipher.requires_key() {
-                                handle_btsp_connection(primal, reader, writer, session).await;
-                                return;
-                            }
+                            && session.cipher.requires_key()
+                        {
+                            handle_btsp_connection(primal, reader, writer, session).await;
+                            return;
+                        }
                         handle_connection(primal, reader, writer, session, replay).await;
                     });
                 }
                 () = shutdown_signal() => {
-                    tracing::info!("Shutdown signal received, stopping Unix server");
+                    tracing::info!("Shutdown signal received, stopping server");
                     break;
                 }
             }
-        }
-
-        if path.exists() {
-            std::fs::remove_file(path).ok();
         }
         Ok(())
     }

@@ -68,7 +68,7 @@ impl PartialOrd for Schedulable {
 // ─── IlpReorderer ─────────────────────────────────────────────────────────────
 
 /// Reorders WGSL `let` bindings within `@ilp_region` blocks for ILP.
-pub struct IlpReorderer;
+pub(super) struct IlpReorderer;
 
 impl IlpReorderer {
     /// Reorder the nodes of `graph` according to `model`'s latency tables.

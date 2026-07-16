@@ -73,8 +73,11 @@ impl MovingWindowStats {
     }
 
     fn compute_gpu(&self, input: &[f32], window_size: usize) -> Result<MovingWindowResult> {
-        let n = input.len() as u32;
-        let n_out = (input.len() - window_size + 1) as u32;
+        let n = crate::utils::checked_u32(input.len(), "moving_window input_len")?;
+        let n_out = crate::utils::checked_u32(
+            input.len() - window_size + 1,
+            "moving_window output_len",
+        )?;
 
         let d = self.device.device();
         let q = self.device.queue();

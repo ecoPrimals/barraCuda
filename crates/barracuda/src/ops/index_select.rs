@@ -101,13 +101,16 @@ impl IndexSelect {
             _pad2: u32,
         }
 
-        let input_size = input_shape.iter().product::<usize>() as u32;
+        let input_size = crate::utils::checked_u32(
+            input_shape.iter().product::<usize>(),
+            "index_select input_size",
+        )?;
         let params = Params {
-            total_size: output_size as u32,
+            total_size: crate::utils::checked_u32(output_size, "index_select output_size")?,
             dim_size: input_size,
             outer_size: 1,
             inner_size: 1,
-            num_indices: num_indices as u32,
+            num_indices: crate::utils::checked_u32(num_indices, "index_select num_indices")?,
             _pad0: 0,
             _pad1: 0,
             _pad2: 0,

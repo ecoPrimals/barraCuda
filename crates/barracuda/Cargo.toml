@@ -113,7 +113,6 @@ domain-timeseries = ["domain-esn"]
 domain-vision = []
 
 serde = []
-parallel = []
 benchmarks = []
 debug-pppm = []
 # GPU stress tests that SIGSEGV under parallel execution (Mesa llvmpipe

@@ -23,7 +23,7 @@
 //! All other statement forms (var, assignments, function calls not in a let)
 //! are treated as "passthrough" nodes with no outgoing dependencies.
 
-use crate::device::latency::{LatencyModel, WgslOpClass};
+use crate::device::latency::WgslOpClass;
 
 // ─── Op classification ────────────────────────────────────────────────────────
 
@@ -33,7 +33,7 @@ use crate::device::latency::{LatencyModel, WgslOpClass};
 /// It returns the op class of the *slowest* (highest latency) operation
 /// visible in the expression string.
 #[must_use]
-pub fn classify_op(expr: &str) -> WgslOpClass {
+pub(super) fn classify_op(expr: &str) -> WgslOpClass {
     // Global memory loads are always the most expensive — detect pointer dereferences
     // and array indexing that references storage buffers.
     if expr.contains("_batch[") || expr.contains("_buffer[") || expr.contains("global[") {
@@ -75,10 +75,11 @@ pub fn classify_op(expr: &str) -> WgslOpClass {
 
 /// A single `let` binding node in the dependency graph.
 #[derive(Debug, Clone)]
-pub struct BindingNode {
+pub(super) struct BindingNode {
     /// The binding name (left-hand side of `let name = expr;`).
     pub name: String,
-    /// The full RHS expression.
+    /// The full RHS expression — retained for future cost estimation.
+    #[expect(dead_code, reason = "graph data model: stored during parse, available for analysis")]
     pub expr: String,
     /// The raw source line (including indentation and semicolon).
     pub source_line: String,
@@ -88,19 +89,12 @@ pub struct BindingNode {
     pub deps: Vec<usize>,
 }
 
-impl BindingNode {
-    /// Number of cycles this node takes before its result is available.
-    pub fn latency(&self, model: &LatencyModel) -> u32 {
-        model.raw_latency(self.op_class)
-    }
-}
-
 // ─── Passthrough node ─────────────────────────────────────────────────────────
 
 /// Non-`let` statement that must be preserved in order (stores, assignments,
 /// control flow, comments, blank lines).
 #[derive(Debug, Clone)]
-pub struct PassthroughNode {
+pub(super) struct PassthroughNode {
     /// The raw source line.
     pub source_line: String,
     /// If this store references a named binding, record the dep so the
@@ -112,7 +106,7 @@ pub struct PassthroughNode {
 
 /// Node in the dependency graph: either a let binding or passthrough statement.
 #[derive(Debug, Clone)]
-pub enum Node {
+pub(super) enum Node {
     /// A `let name = expr;` binding.
     Binding(BindingNode),
     /// A non-let statement (store, assignment, control flow).
@@ -138,7 +132,7 @@ impl Node {
 /// Edges represent data dependencies: a binding node points to all other nodes
 /// whose results it consumes in its RHS expression.
 #[derive(Debug)]
-pub struct WgslDependencyGraph {
+pub(super) struct WgslDependencyGraph {
     /// All nodes (bindings and passthroughs) in parse order.
     pub nodes: Vec<Node>,
 }
@@ -188,6 +182,7 @@ impl WgslDependencyGraph {
 
     /// Return the number of nodes (bindings + passthroughs).
     #[must_use]
+    #[expect(dead_code, reason = "API completeness — callers use nodes.len() directly today")]
     pub fn len(&self) -> usize {
         self.nodes.len()
     }

@@ -14,6 +14,28 @@ pub(crate) fn chunk_to_array<const N: usize>(chunk: &[u8]) -> Result<[u8; N]> {
     })
 }
 
+/// Checked conversion from `usize` to `u32` for GPU uniform/dispatch values.
+///
+/// Returns `BarracudaError::InvalidInput` if the value exceeds `u32::MAX`,
+/// preventing silent truncation for large tensors.
+#[inline]
+pub(crate) fn checked_u32(value: usize, context: &str) -> Result<u32> {
+    u32::try_from(value).map_err(|_| BarracudaError::InvalidInput {
+        message: format!("{context}: {value} exceeds u32::MAX ({max})", max = u32::MAX),
+    })
+}
+
+/// Convert a shape slice to `Vec<u32>` for GPU uniform buffers.
+///
+/// Returns `BarracudaError::InvalidInput` if any dimension exceeds `u32::MAX`.
+#[inline]
+#[expect(dead_code, reason = "public API for incremental migration of shape casts")]
+pub(crate) fn shape_to_u32(dims: &[usize]) -> Result<Vec<u32>> {
+    dims.iter()
+        .map(|&d| checked_u32(d, "shape dimension"))
+        .collect()
+}
+
 /// Read f32 buffer data from GPU back to CPU.
 /// Delegates to `WgpuDevice::read_buffer` which holds the submit guard.
 ///

@@ -96,7 +96,7 @@ pub fn sparse_matmul_quantized(
         });
     }
 
-    let nnz = sparse_values.len() as u32;
+    let nnz = crate::utils::checked_u32(sparse_values.len(), "sparse_matmul nnz")?;
     let d = device.device();
     let q = device.queue();
 

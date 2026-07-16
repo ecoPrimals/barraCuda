@@ -1,7 +1,7 @@
 # barraCuda
 
 **Version**: 0.4.0
-**Status**: Composition-ready — zero debt, 4-gate mesh operational, primal self-knowledge, all quality gates green
+**Status**: Composition-ready — zero debt, 5-gate mesh operational, primal self-knowledge, all quality gates green
 **License**: AGPL-3.0-or-later (scyBorg provenance trio)
 **MSRV**: 1.92
 
@@ -26,8 +26,8 @@ results.
 
 ### Key capabilities
 
-- **826 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,169 Rust source files**, 25 integration test harnesses, 4,624 tests passing via nextest CI profile
+- **860 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
+- **1,211 Rust source files**, 25 integration test harnesses, 5,153 tests passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -123,7 +123,7 @@ GPU work to a coralReef+toadStool peer running on a glibc host with GPU access.
 
 barraCuda is a 4-crate workspace:
 
-- **`barracuda`** — the math engine (826 WGSL shaders, 15-tier precision, all GPU ops)
+- **`barracuda`** — the math engine (860 WGSL shaders, 15-tier precision, all GPU ops)
 - **`barracuda-core`** — primal lifecycle (JSON-RPC, tarpc, UniBin CLI)
 - **`barracuda-spirv`** — SPIR-V passthrough bridge (isolates the single `unsafe` call)
 - **`barracuda-naga-exec`** — CPU interpreter for naga IR (shader-first CPU execution + GPU validation)
@@ -184,8 +184,8 @@ barraCuda/
 │   ├── barracuda-core/              # Primal lifecycle wrapper
 │   │   ├── src/lib.rs               # BarraCudaPrimal: start/stop/health
 │   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport (98 methods, Wire Standard L2)
-│   │   ├── src/rpc.rs               # tarpc service definition (16 endpoints, parity with JSON-RPC)
-│   │   └── src/bin/barracuda.rs     # UniBin CLI
+│   │   ├── src/rpc.rs               # tarpc service definition (15 endpoints, parity with JSON-RPC)
+│   │   └── src/bin/barracuda/       # UniBin CLI
 │   └── barracuda/                   # Umbrella crate — all math + GPU
 │       ├── src/
 │       │   ├── lib.rs               # Module declarations + prelude
@@ -198,7 +198,7 @@ barraCuda/
 │       │   ├── sample/              # LHS, Sobol, Metropolis, sparsity
 │       │   ├── ops/                 # GPU ops (matmul, softmax, FHE, bio)
 │       │   ├── tensor/              # GPU tensor type
-│       │   ├── shaders/             # 826 WGSL shaders (see shaders/README.md)
+│       │   ├── shaders/             # 860 WGSL shaders (see shaders/README.md)
 │       │   ├── device/              # GpuBackend trait, WgpuDevice, SovereignDevice, concurrency
 │       │   ├── staging/             # Ring buffers, unidirectional pipelines
 │       │   ├── pipeline/            # ComputeDispatch, batched pipelines
@@ -247,7 +247,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo nextest run --workspace --profile ci  # 4,393+ tests via nextest
+cargo nextest run --workspace --profile ci  # 5,153+ tests via nextest
 cargo llvm-cov --workspace --lib        # 80% CI gate (blocking), 90% target (requires GPU hardware)
 ```
 
@@ -286,7 +286,7 @@ barraCuda exposes a dual-protocol IPC interface per wateringHole standards:
 | `fhe.*` | `fhe.ntt`, `fhe.pointwise_mul` |
 | `btsp.*` | `btsp.negotiate` — Phase 3 cipher upgrade (ChaCha20-Poly1305 / NULL fallback) |
 
-90 methods follow the wateringHole `{domain}.{operation}` Semantic Method Naming
+98 methods follow the wateringHole `{domain}.{operation}` Semantic Method Naming
 Standard v2.2.0. Wire Standard L2 compliant: `capabilities.list` returns the
 `{primal, version, methods}` envelope with `provided_capabilities` grouping.
 `health.liveness`, `health.readiness`, `health.check`, and `capabilities.list`
@@ -295,7 +295,7 @@ format accepted for backward compatibility.
 
 **tarpc** (optional, binary, high-throughput primal-to-primal):
 
-Same 16 endpoints with strongly-typed Rust signatures and full parameter
+Same 15 endpoints with strongly-typed Rust signatures and full parameter
 parity with the JSON-RPC handlers. Enabled via
 `barracuda server --tarpc-bind 127.0.0.1:9001`.
 
@@ -346,7 +346,6 @@ barracuda version
 | `domain-timeseries` | via umbrella | Time series analysis (implies `domain-esn`). |
 | `sovereign-dispatch` | No | Sovereign GPU dispatch via IPC to coralReef + toadStool (bypasses wgpu/Vulkan). |
 | `serde` | No | Serde derive support. |
-| `parallel` | No | Rayon parallelism hints. |
 
 ### Common dependency configurations
 

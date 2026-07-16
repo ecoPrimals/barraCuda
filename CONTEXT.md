@@ -27,14 +27,14 @@ traits are fully internalized.
 - **Coverage:** 80.54% line on llvmpipe (80% CI gate, 90% target with GPU hardware)
 - **MSRV:** 1.92
 - **Crate count:** 4 workspace crates
-- **Shaders:** 826 WGSL compute shaders with SPDX license headers
-- **Rust files:** 1,169 source files, 42 integration test files
+- **Shaders:** 860 WGSL compute shaders with SPDX license headers
+- **Rust files:** 1,211 source files, 25 integration test harnesses
 - **Unsafe code:** Zero — `#![forbid(unsafe_code)]` in barracuda and barracuda-core
 - **Clippy:** Pedantic + nursery, zero warnings, `-D warnings` enforced
 
 ## Key Capabilities
 
-- **826 WGSL shaders** spanning: linear algebra, statistics, spectral analysis,
+- **860 WGSL shaders** spanning: linear algebra, statistics, spectral analysis,
   molecular dynamics, lattice QCD, FHE (NTT/INTT), pharmacometrics,
   bioinformatics, ML ops, health/biosignal, procedural generation
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64

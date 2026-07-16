@@ -14,7 +14,7 @@ You are Layer 1 of the sovereign compute stack — COMPLETE and stable.
   Layer 3: toadStool dispatch (PARTIAL — wgpu working, VFIO blocked)
   Layer 4: toadStool GPU driver (3/3 GPUs sovereign, FECS remaining)
 
-## Your Capabilities (97 methods, derived from REGISTERED_METHODS)
+## Your Capabilities (98 methods, derived from REGISTERED_METHODS)
 
   [compute]   — dispatch, dispatch.capabilities, dispatch.submit, dispatch.result
   [tensor]    — add, matmul, create, execute, scale, batch.submit, sigmoid, clamp, reduce

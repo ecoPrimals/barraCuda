@@ -19,7 +19,7 @@ VFIO dispatch requires toadStool's VFIO GPU backend and IOMMU-capable hardware.
 ## Quick Start
 
 ```bash
-# Prerequisites: Rust 1.87+, GPU drivers or llvmpipe, cargo-deny
+# Prerequisites: Rust 1.92+, GPU drivers or llvmpipe, cargo-deny
 git clone https://github.com/ecoPrimals/barraCuda.git
 cd barraCuda
 

@@ -2,7 +2,7 @@
 
 **Date**: June 19, 2026
 **Version**: 0.4.0
-**Status**: Layer 1 complete — zero unsafe, zero application C deps, VFIO-primary architecture adopted, GpuBackend trait abstraction, dispatch_binary wired, coral cache → dispatch integrated, PrecisionBrain-coralReef sovereign routing, NagaExecutor CPU shader interpreter (workgroup.rs extracted), coralReef CPU compilation IPC contract, cargo deny fully passing, 80.5% test coverage, 4,624 tests (708 core + 3,916 barracuda), **BTSP Phase 3 stream encryption** (ChaCha20-Poly1305 + HMAC-SHA256 via pure Rust RustCrypto), **98 IPC methods** including ML pipeline, mesh trust, `linalg.batched_tridiag_eigh` (groundSpring absorption), genetics-layer prefix stripping (0xEC/0xED/0xEE), **postcard serialization** (bincode replaced, RUSTSEC-2025-0141 resolved), **transport/ module decomposition** (server + connection + dispatch), **transport_tests/ module** (7 semantic files), **238 mul_add evolutions**, **MSRV 1.92 + Edition 2024**, zero files >800L, all quality gates green
+**Status**: Layer 1 complete — zero unsafe, zero application C deps, VFIO-primary architecture adopted, GpuBackend trait abstraction, dispatch_binary wired, coral cache → dispatch integrated, PrecisionBrain-coralReef sovereign routing, NagaExecutor CPU shader interpreter (workgroup.rs extracted), coralReef CPU compilation IPC contract, cargo deny fully passing, 80.5% test coverage, 5,153 tests (760 core + 4,377 barracuda + 16 naga-exec), **BTSP Phase 3 stream encryption** (ChaCha20-Poly1305 + HMAC-SHA256 via pure Rust RustCrypto), **98 IPC methods** including ML pipeline, mesh trust, `linalg.batched_tridiag_eigh` (groundSpring absorption), genetics-layer prefix stripping (0xEC/0xED/0xEE), **postcard serialization** (bincode replaced, RUSTSEC-2025-0141 resolved), **transport/ module decomposition** (server + connection + dispatch), **transport_tests/ module** (7 semantic files), **238 mul_add evolutions**, **MSRV 1.92 + Edition 2024**, zero files >800L, all quality gates green
 
 ---
 
@@ -39,7 +39,7 @@ Layer 4  toadStool    █████████░  S163 complete  All infra g
 
 | Milestone | Status | Date |
 |-----------|--------|------|
-| 826 WGSL shaders, 15-tier precision continuum (Binary→DF128) | Done | Mar 30, 2026 |
+| 860 WGSL shaders, 15-tier precision continuum (Binary→DF128) | Done | Mar 30, 2026 |
 | Sovereign compiler (FMA fusion, dead expr) | Done | Mar 5, 2026 |
 | SPIR-V passthrough → safe WGSL roundtrip | Done | Mar 6, 2026 |
 | Pipeline cache unsafe → deferred | Done | Mar 6, 2026 |

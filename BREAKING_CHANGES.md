@@ -224,7 +224,7 @@ consumers migrating from toadStool should know:
 | `is_npu_available()` | Checks hardware | Use `detect_akida_boards()` (returns empty if none) |
 | GPU access | Direct `device.device()` / `device.queue()` calls common | All access via synchronized `WgpuDevice` methods with atomic encoder barrier |
 | Device creation | Unguarded | Serialized via global `DEVICE_CREATION_LOCK` |
-| MSRV | 1.80 | 1.87 |
+| MSRV | 1.80 | 1.92 |
 
 ### Migration path for Springs
 

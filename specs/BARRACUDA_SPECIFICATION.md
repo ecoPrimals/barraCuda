@@ -1,8 +1,12 @@
 # barraCuda Specification
 
+> **SUPERSEDED** — This spec dates from May 2026 (31 IPC methods, pre-Wave 120).
+> Authoritative current state: see `CONTEXT.md` (98 methods, MSRV 1.92, 5,153 tests)
+> and `STATUS.md`. Retained as architectural fossil record.
+
 **Version**: 0.4.0
 **Date**: May 13, 2026
-**Status**: Active — standalone primal, fully untangled from toadStool (S89), compute trio aligned (Sprint 64)
+**Status**: Superseded — see CONTEXT.md for current posture
 **Origin**: toadStool S88 budding proposal
 
 ---
@@ -83,7 +87,6 @@ domain-pde = []
 domain-genomics = []
 domain-vision = []
 domain-timeseries = ["domain-esn"]
-parallel = ["rayon"]
 serde = ["dep:serde"]
 ```
 

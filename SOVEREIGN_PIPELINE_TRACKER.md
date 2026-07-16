@@ -10,7 +10,7 @@
 ## Pipeline Status
 
 ```
-Layer 1  barraCuda    ██████████  COMPLETE       v0.4.0 stadial gate, 96 IPC methods, ML pipeline, mesh trust, trio E2E validated
+Layer 1  barraCuda    ██████████  COMPLETE       v0.4.0 stadial gate, 98 IPC methods, ML pipeline, mesh trust, trio E2E validated
 Layer 2  coralReef    █████████░  Sprint 5       bind_stat timeout, FECS cold init, naga::Module direct ingest (Pass 12)
 Layer 3  Standalone   ██░░░░░░░░  Planned        Standalone coral-reef crate, multi-arch ISA
 Layer 4  Sovereign HW █████████░  S249 complete  toadStool Phase C landed (S245-S249, 415 cylinder tests); Phase D remaining

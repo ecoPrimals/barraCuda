@@ -6,7 +6,7 @@ the sourDough scaffold. barraCuda owns its own standards.
 ## Quick Reference
 
 - **Edition**: 2024
-- **MSRV**: 1.87
+- **MSRV**: 1.92
 - **GPU stack**: wgpu 28, naga 28 — `Device` and `Queue` are `Clone` (no `Arc` wrappers)
 - **Linting**: `warn(clippy::all, clippy::pedantic, clippy::nursery)` — configured in `Cargo.toml` `[lints]`
 - **Promoted lints**: pedantic + nursery (blanket) + `missing_errors_doc` + `missing_panics_doc` + cast lints in `barracuda-core` + `suboptimal_flops` + `use_self` + `tuple_array_conversions` + `needless_range_loop` — all enforced via `-D warnings`. Scientific/GPU false positives (`missing_const_for_fn`, `suspicious_operation_groupings`, `future_not_send`, etc.) selectively allowed with rationale in `Cargo.toml`.

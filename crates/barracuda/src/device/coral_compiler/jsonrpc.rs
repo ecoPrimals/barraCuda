@@ -49,6 +49,10 @@ async fn jsonrpc_call_ndjson_tcp<P: Serialize, R: for<'de> Deserialize<'de>>(
 }
 
 /// Newline-delimited JSON-RPC 2.0 over a Unix socket.
+///
+/// Phase 2 note: this remains cfg-gated because `barracuda` (GPU compute lib)
+/// intentionally does not depend on `barracuda-core` (IPC service layer).
+/// The `connect_transport` abstraction lives in barracuda-core.
 #[cfg(unix)]
 async fn jsonrpc_call_unix<P: Serialize, R: for<'de> Deserialize<'de>>(
     path: &str,

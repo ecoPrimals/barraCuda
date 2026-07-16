@@ -102,7 +102,7 @@ impl RkIntegrator {
     /// Returns [`Err`] if state vector is empty.
     pub fn integrate_adaptive(
         &self,
-        f: &OdeFunction,
+        f: &(impl Fn(f64, &[f64]) -> Vec<f64> + Send + Sync),
         t0: f64,
         y0: &[f64],
         t_end: f64,
@@ -124,7 +124,7 @@ impl RkIntegrator {
     /// Returns [`Err`] if state vector is empty.
     pub fn integrate_fixed(
         &self,
-        f: &OdeFunction,
+        f: &impl Fn(f64, &[f64]) -> Vec<f64>,
         t0: f64,
         y0: &[f64],
         t_end: f64,
@@ -193,7 +193,7 @@ impl RkIntegrator {
     /// CPU RK45 with adaptive stepping
     fn integrate_cpu(
         &self,
-        f: &OdeFunction,
+        f: &impl Fn(f64, &[f64]) -> Vec<f64>,
         t0: f64,
         y0: &[f64],
         t_end: f64,
@@ -336,7 +336,7 @@ impl RkIntegrator {
     /// Hybrid GPU/CPU integration (GPU for stage prep, CPU for f evaluation)
     fn integrate_hybrid(
         &self,
-        f: &OdeFunction,
+        f: &(impl Fn(f64, &[f64]) -> Vec<f64> + Send + Sync),
         t0: f64,
         y0: &[f64],
         t_end: f64,
@@ -371,7 +371,7 @@ mod tests {
         let integrator = RkIntegrator::new(device).unwrap();
 
         // dy/dt = -y, y(0) = 1 → y(t) = e^(-t)
-        let f: OdeFunction = Box::new(|_t, y| vec![-y[0]]);
+        let f = |_t: f64, y: &[f64]| vec![-y[0]];
 
         let (times, states) = integrator
             .integrate_adaptive(&f, 0.0, &[1.0], 2.0, 0.1, 1e-6)
@@ -395,7 +395,7 @@ mod tests {
         // d²x/dt² = -x → x'' + x = 0
         // y = [x, x'] → y' = [x', -x]
         // x(0) = 1, x'(0) = 0 → x(t) = cos(t)
-        let f: OdeFunction = Box::new(|_t, y| vec![y[1], -y[0]]);
+        let f = |_t: f64, y: &[f64]| vec![y[1], -y[0]];
 
         let (times, states) = integrator
             .integrate_fixed(&f, 0.0, &[1.0, 0.0], std::f64::consts::PI, 0.01)
@@ -430,12 +430,12 @@ mod tests {
         let delta = 0.1;
         let gamma = 0.4;
 
-        let f: OdeFunction = Box::new(move |_t, y| {
+        let f = move |_t: f64, y: &[f64]| {
             vec![
                 (beta * y[0]).mul_add(-y[1], alpha * y[0]),
                 (delta * y[0]).mul_add(y[1], -(gamma * y[1])),
             ]
-        });
+        };
 
         let (times, states) = integrator
             .integrate_adaptive(&f, 0.0, &[10.0, 10.0], 50.0, 0.1, 1e-4)

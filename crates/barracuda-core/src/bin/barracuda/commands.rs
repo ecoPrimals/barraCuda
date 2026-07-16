@@ -103,42 +103,34 @@ pub async fn run_client(
     let mut line = serde_json::to_string(&request)?;
     line.push('\n');
 
-    let response_line = if let Some(sock_path) = server_addr.strip_prefix("unix://") {
-        #[cfg(unix)]
-        {
-            let stream = tokio::net::UnixStream::connect(sock_path)
-                .await
-                .map_err(|e| {
-                    barracuda_core::error::BarracudaCoreError::ipc(format!(
-                        "connect to unix://{sock_path}: {e}"
-                    ))
-                })?;
-            let (reader, mut writer) = stream.into_split();
-            writer.write_all(line.as_bytes()).await?;
-            writer.shutdown().await?;
-            tokio::io::BufReader::new(reader).lines().next_line().await
-        }
-
-        #[cfg(not(unix))]
-        {
-            let _ = sock_path;
-            return Err(barracuda_core::error::BarracudaCoreError::ipc(
-                "Unix sockets not supported on this platform",
-            ));
-        }
+    let endpoint = if let Some(sock_path) = server_addr.strip_prefix("unix://") {
+        barracuda_core::ipc::transport::TransportEndpoint::uds(sock_path)
     } else {
-        let stream = tokio::net::TcpStream::connect(&server_addr)
-            .await
-            .map_err(|e| {
-                barracuda_core::error::BarracudaCoreError::ipc(format!(
-                    "connect to {server_addr}: {e}"
-                ))
-            })?;
-        let (reader, mut writer) = stream.into_split();
-        writer.write_all(line.as_bytes()).await?;
-        writer.shutdown().await?;
-        tokio::io::BufReader::new(reader).lines().next_line().await
+        let addr = server_addr.trim_start_matches("tcp://");
+        let (host, port_str) = addr.rsplit_once(':').ok_or_else(|| {
+            barracuda_core::error::BarracudaCoreError::ipc(format!(
+                "invalid server address (expected host:port): {server_addr}"
+            ))
+        })?;
+        let port: u16 = port_str.parse().map_err(|_| {
+            barracuda_core::error::BarracudaCoreError::ipc(format!(
+                "invalid port in {server_addr}"
+            ))
+        })?;
+        barracuda_core::ipc::transport::TransportEndpoint::tcp(host, port)
     };
+
+    let stream = barracuda_core::ipc::transport::connect_transport(&endpoint)
+        .await
+        .map_err(|e| {
+            barracuda_core::error::BarracudaCoreError::ipc(format!(
+                "connect to {server_addr}: {e}"
+            ))
+        })?;
+    let (reader, mut writer) = tokio::io::split(stream);
+    writer.write_all(line.as_bytes()).await?;
+    writer.shutdown().await?;
+    let response_line = tokio::io::BufReader::new(reader).lines().next_line().await;
 
     if let Ok(Some(resp)) = response_line {
         let response: serde_json::Value =

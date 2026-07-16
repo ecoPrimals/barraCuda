@@ -210,7 +210,10 @@ pub(crate) fn composition_hints() -> CompositionHints {
 /// Per Phase 55b: primals self-register at startup so the discovery service can
 /// resolve capabilities for other primals via `ipc.resolve`. Fire-and-forget —
 /// any failure is logged at debug level and does not block startup.
-#[cfg(unix)]
+///
+/// Transport-agnostic: uses `connect_transport` internally. On platforms
+/// without UDS the `DISCOVERY_SOCKET` path will not exist, so this returns
+/// immediately.
 pub async fn register_with_discovery(endpoint: &str) {
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 

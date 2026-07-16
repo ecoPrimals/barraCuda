@@ -100,25 +100,18 @@ fn build_announce_payload(own_socket: &str, version: &str) -> serde_json::Value 
     })
 }
 
-/// Send a JSON-RPC request over a Unix domain socket (newline-delimited).
+/// Send a JSON-RPC request via `connect_transport` (newline-delimited).
 ///
 /// Returns the parsed response or an IO error. Applies a 5-second read timeout.
-#[cfg(unix)]
-async fn send_jsonrpc_uds(
-    socket_path: &std::path::Path,
+/// Transport-agnostic: works over any `TransportEndpoint` (UDS, TCP, etc.).
+async fn send_jsonrpc_transport(
+    endpoint: &super::transport::TransportEndpoint,
     request: &serde_json::Value,
 ) -> Result<serde_json::Value, std::io::Error> {
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
 
-    let endpoint = super::transport::TransportEndpoint::uds(socket_path.to_string_lossy());
-    let stream = super::transport::connect_transport(&endpoint).await?;
-    let super::transport::TransportStream::Unix(uds) = stream else {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::Unsupported,
-            "expected UDS stream for neural announce",
-        ));
-    };
-    let (reader, mut writer) = uds.into_split();
+    let stream = super::transport::connect_transport(endpoint).await?;
+    let (reader, mut writer) = tokio::io::split(stream);
 
     let mut line = serde_json::to_string(request)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
@@ -145,7 +138,10 @@ async fn send_jsonrpc_uds(
 ///
 /// Fire-and-forget: logs success or warns on failure. Non-fatal — barraCuda
 /// operates standalone when biomeOS is absent.
-#[cfg(unix)]
+///
+/// Transport-agnostic: resolves the Neural API socket path and connects via
+/// `connect_transport`. On platforms without UDS the socket path will not
+/// exist, so this returns gracefully in standalone mode.
 pub async fn announce_to_neural_api(own_socket: &str, version: &str) {
     let Some(neural_socket) = resolve_neural_api_socket() else {
         tracing::info!(
@@ -160,9 +156,11 @@ pub async fn announce_to_neural_api(own_socket: &str, version: &str) {
         "pushing primal.announce to Neural API"
     );
 
+    let endpoint =
+        super::transport::TransportEndpoint::uds(neural_socket.to_string_lossy());
     let payload = build_announce_payload(own_socket, version);
 
-    match send_jsonrpc_uds(&neural_socket, &payload).await {
+    match send_jsonrpc_transport(&endpoint, &payload).await {
         Ok(response) => {
             if response.get("error").is_some() {
                 tracing::warn!(
@@ -180,11 +178,6 @@ pub async fn announce_to_neural_api(own_socket: &str, version: &str) {
             );
         }
     }
-}
-
-#[cfg(not(unix))]
-pub async fn announce_to_neural_api(_own_socket: &str, _version: &str) {
-    tracing::debug!("primal.announce: Unix sockets not supported on this platform");
 }
 
 #[cfg(test)]

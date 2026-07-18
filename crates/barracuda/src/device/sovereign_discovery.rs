@@ -51,10 +51,10 @@ fn scan_dispatch_capability(dir: &std::path::Path) -> Option<String> {
     let entries = std::fs::read_dir(dir).ok()?;
     for entry in entries.flatten() {
         let path = entry.path();
-        if path.extension().is_some_and(|e| e == "json") {
-            if let Some(addr) = read_dispatch_transport(&path) {
-                return Some(addr);
-            }
+        if path.extension().is_some_and(|e| e == "json")
+            && let Some(addr) = read_dispatch_transport(&path)
+        {
+            return Some(addr);
         }
     }
     None

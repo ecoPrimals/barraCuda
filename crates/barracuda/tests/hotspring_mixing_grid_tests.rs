@@ -277,7 +277,7 @@ mod grid_unit {
                 let x = i as f64 * dx;
                 let expected = x.cos();
                 let error = (val - expected).abs();
-                assert!(error < 0.01, "At i={i}: expected {expected}, got {val}",);
+                assert!(error < 0.01, "At i={i}: expected {expected}, got {val}");
             }
         }) {
             return;

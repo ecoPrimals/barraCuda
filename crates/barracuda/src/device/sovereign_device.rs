@@ -477,13 +477,13 @@ impl GpuBackend for SovereignDevice {
 
     #[cfg(feature = "sovereign-dispatch")]
     fn upload(&self, buffer: &SovereignBuffer, offset: u64, data: &[u8]) {
-        if let Ok(mut staged) = self.staged_buffers.lock() {
-            if let Some(buf) = staged.get_mut(&buffer.id) {
-                let start = offset as usize;
-                let end = start + data.len();
-                if end <= buf.len() {
-                    buf[start..end].copy_from_slice(data);
-                }
+        if let Ok(mut staged) = self.staged_buffers.lock()
+            && let Some(buf) = staged.get_mut(&buffer.id)
+        {
+            let start = offset as usize;
+            let end = start + data.len();
+            if end <= buf.len() {
+                buf[start..end].copy_from_slice(data);
             }
         }
     }

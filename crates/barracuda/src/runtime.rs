@@ -24,7 +24,10 @@ where
 {
     static RT: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
 
-    #[expect(clippy::expect_used, reason = "unrecoverable: no tokio runtime → cannot serve")]
+    #[expect(
+        clippy::expect_used,
+        reason = "unrecoverable: no tokio runtime → cannot serve"
+    )]
     fn get_or_create_rt() -> &'static tokio::runtime::Runtime {
         RT.get_or_init(|| tokio::runtime::Runtime::new().expect("Failed to create tokio runtime"))
     }
@@ -37,7 +40,10 @@ where
                 tokio::task::block_in_place(|| handle.block_on(f))
             } else {
                 std::thread::scope(|s| {
-                    #[expect(clippy::expect_used, reason = "propagates thread panic — unrecoverable")]
+                    #[expect(
+                        clippy::expect_used,
+                        reason = "propagates thread panic — unrecoverable"
+                    )]
                     s.spawn(|| get_or_create_rt().block_on(f))
                         .join()
                         .expect("tokio_block_on: spawned thread panicked")

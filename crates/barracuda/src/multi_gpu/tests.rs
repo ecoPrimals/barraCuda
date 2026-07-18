@@ -222,18 +222,13 @@ async fn test_execute_with_migration_quota_tracks_failures() {
     let quota = ResourceQuota::named("oom-test").with_max_vram_gb(2);
 
     let result = pool
-        .execute_with_migration_quota(
-            &DeviceRequirements::new(),
-            10,
-            Some(quota),
-            |_attempt| {
-                |_device: Arc<crate::device::WgpuDevice>| -> crate::error::Result<u64> {
-                    Err(crate::error::BarracudaError::OutOfMemory(
-                        "simulated OOM".into(),
-                    ))
-                }
-            },
-        )
+        .execute_with_migration_quota(&DeviceRequirements::new(), 10, Some(quota), |_attempt| {
+            |_device: Arc<crate::device::WgpuDevice>| -> crate::error::Result<u64> {
+                Err(crate::error::BarracudaError::OutOfMemory(
+                    "simulated OOM".into(),
+                ))
+            }
+        })
         .await;
 
     let err = result.unwrap_err();

@@ -341,13 +341,13 @@ impl Auto {
             return Ok(DiscoveredDevice::Wgpu(Arc::new(dev)));
         }
         #[cfg(feature = "sovereign-dispatch")]
-        if sovereign_available() {
-            if let Ok(sov) = sovereign_device::SovereignDevice::with_auto_device() {
-                tracing::info!(
-                    "wgpu unavailable, using sovereign IPC dispatch via shader.compile+compute.dispatch peers"
-                );
-                return Ok(DiscoveredDevice::Sovereign(Arc::new(sov)));
-            }
+        if sovereign_available()
+            && let Ok(sov) = sovereign_device::SovereignDevice::with_auto_device()
+        {
+            tracing::info!(
+                "wgpu unavailable, using sovereign IPC dispatch via shader.compile+compute.dispatch peers"
+            );
+            return Ok(DiscoveredDevice::Sovereign(Arc::new(sov)));
         }
         Err(BarracudaError::device(
             "No compute device available (GPU, CPU software rasterizer, \

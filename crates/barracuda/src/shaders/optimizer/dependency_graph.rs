@@ -79,7 +79,10 @@ pub(super) struct BindingNode {
     /// The binding name (left-hand side of `let name = expr;`).
     pub name: String,
     /// The full RHS expression — retained for future cost estimation.
-    #[expect(dead_code, reason = "graph data model: stored during parse, available for analysis")]
+    #[expect(
+        dead_code,
+        reason = "graph data model: stored during parse, available for analysis"
+    )]
     pub expr: String,
     /// The raw source line (including indentation and semicolon).
     pub source_line: String,
@@ -182,7 +185,10 @@ impl WgslDependencyGraph {
 
     /// Return the number of nodes (bindings + passthroughs).
     #[must_use]
-    #[expect(dead_code, reason = "API completeness — callers use nodes.len() directly today")]
+    #[expect(
+        dead_code,
+        reason = "API completeness — callers use nodes.len() directly today"
+    )]
     pub fn len(&self) -> usize {
         self.nodes.len()
     }

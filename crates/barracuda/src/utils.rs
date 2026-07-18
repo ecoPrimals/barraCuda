@@ -21,7 +21,10 @@ pub(crate) fn chunk_to_array<const N: usize>(chunk: &[u8]) -> Result<[u8; N]> {
 #[inline]
 pub(crate) fn checked_u32(value: usize, context: &str) -> Result<u32> {
     u32::try_from(value).map_err(|_| BarracudaError::InvalidInput {
-        message: format!("{context}: {value} exceeds u32::MAX ({max})", max = u32::MAX),
+        message: format!(
+            "{context}: {value} exceeds u32::MAX ({max})",
+            max = u32::MAX
+        ),
     })
 }
 
@@ -29,7 +32,10 @@ pub(crate) fn checked_u32(value: usize, context: &str) -> Result<u32> {
 ///
 /// Returns `BarracudaError::InvalidInput` if any dimension exceeds `u32::MAX`.
 #[inline]
-#[expect(dead_code, reason = "public API for incremental migration of shape casts")]
+#[expect(
+    dead_code,
+    reason = "public API for incremental migration of shape casts"
+)]
 pub(crate) fn shape_to_u32(dims: &[usize]) -> Result<Vec<u32>> {
     dims.iter()
         .map(|&d| checked_u32(d, "shape dimension"))

@@ -161,8 +161,7 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
             let (effective_bind, effective_unix) =
                 resolve_transport_override(bind, port, unix.as_deref());
             #[cfg(not(unix))]
-            let (effective_bind, _) =
-                resolve_transport_override(bind, port, None);
+            let (effective_bind, _) = resolve_transport_override(bind, port, None);
 
             run_server(
                 effective_bind,
@@ -426,9 +425,11 @@ async fn run_service_mode() -> Result<(), barracuda_core::error::BarracudaCoreEr
     #[cfg(not(unix))]
     let (listener, sock_path) = {
         let bind_addr = barracuda_core::ipc::transport::resolve_bind_address(None);
-        let tcp = tokio::net::TcpListener::bind(&bind_addr).await.map_err(|e| {
-            barracuda_core::error::BarracudaCoreError::ipc(format!("bind {bind_addr}: {e}"))
-        })?;
+        let tcp = tokio::net::TcpListener::bind(&bind_addr)
+            .await
+            .map_err(|e| {
+                barracuda_core::error::BarracudaCoreError::ipc(format!("bind {bind_addr}: {e}"))
+            })?;
         (TransportListener::from_tcp(tcp), None::<std::path::PathBuf>)
     };
 

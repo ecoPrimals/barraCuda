@@ -113,9 +113,7 @@ pub async fn run_client(
             ))
         })?;
         let port: u16 = port_str.parse().map_err(|_| {
-            barracuda_core::error::BarracudaCoreError::ipc(format!(
-                "invalid port in {server_addr}"
-            ))
+            barracuda_core::error::BarracudaCoreError::ipc(format!("invalid port in {server_addr}"))
         })?;
         barracuda_core::ipc::transport::TransportEndpoint::tcp(host, port)
     };
@@ -123,9 +121,7 @@ pub async fn run_client(
     let stream = barracuda_core::ipc::transport::connect_transport(&endpoint)
         .await
         .map_err(|e| {
-            barracuda_core::error::BarracudaCoreError::ipc(format!(
-                "connect to {server_addr}: {e}"
-            ))
+            barracuda_core::error::BarracudaCoreError::ipc(format!("connect to {server_addr}: {e}"))
         })?;
     let (reader, mut writer) = tokio::io::split(stream);
     writer.write_all(line.as_bytes()).await?;

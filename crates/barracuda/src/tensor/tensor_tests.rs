@@ -90,7 +90,9 @@ async fn test_randn_shape() {
         }
         v
     };
-    let tensor = Tensor::from_vec_on(data, vec![10, 20], device).await.unwrap();
+    let tensor = Tensor::from_vec_on(data, vec![10, 20], device)
+        .await
+        .unwrap();
     assert_eq!(tensor.shape(), &[10, 20]);
     assert_eq!(tensor.len(), 200);
 
@@ -115,7 +117,9 @@ async fn test_rand_shape() {
         let mut rng = rand::rngs::StdRng::seed_from_u64(5678);
         (0..200).map(|_| rng.random::<f32>()).collect()
     };
-    let tensor = Tensor::from_vec_on(data, vec![10, 20], device).await.unwrap();
+    let tensor = Tensor::from_vec_on(data, vec![10, 20], device)
+        .await
+        .unwrap();
     assert_eq!(tensor.shape(), &[10, 20]);
     assert_eq!(tensor.len(), 200);
 

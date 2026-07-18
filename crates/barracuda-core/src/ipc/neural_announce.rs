@@ -156,8 +156,7 @@ pub async fn announce_to_neural_api(own_socket: &str, version: &str) {
         "pushing primal.announce to Neural API"
     );
 
-    let endpoint =
-        super::transport::TransportEndpoint::uds(neural_socket.to_string_lossy());
+    let endpoint = super::transport::TransportEndpoint::uds(neural_socket.to_string_lossy());
     let payload = build_announce_payload(own_socket, version);
 
     match send_jsonrpc_transport(&endpoint, &payload).await {

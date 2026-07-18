@@ -210,10 +210,9 @@ impl TransportListener {
         match self {
             #[cfg(unix)]
             Self::Unix { path, .. } => format!("unix://{}", path.display()),
-            Self::Tcp(l) => l.local_addr().map_or_else(
-                |_| "tcp://unknown".into(),
-                |a| format!("tcp://{a}"),
-            ),
+            Self::Tcp(l) => l
+                .local_addr()
+                .map_or_else(|_| "tcp://unknown".into(), |a| format!("tcp://{a}")),
         }
     }
 

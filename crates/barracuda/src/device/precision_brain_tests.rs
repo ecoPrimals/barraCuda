@@ -352,7 +352,7 @@ fn precision_advice_serializes_to_coral_wire_format() {
         tier: advice.tier.clone(),
         needs_transcendental_lowering: advice.needs_transcendental_lowering,
         df64_naga_poisoned: advice.df64_naga_poisoned,
-        domain: advice.domain.clone(),
+        domain: advice.domain,
     };
     let json = serde_json::to_string(&wire).unwrap();
     assert!(json.contains("\"tier\":\"F64\""));

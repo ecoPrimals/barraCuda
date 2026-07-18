@@ -159,34 +159,28 @@ pub(super) fn submit_dispatch(
                 )));
             }
 
-            if let Some(result) = rpc_response.get("result") {
-                if let Some(output_buffers) = result.get("output_buffers") {
-                    if let Some(arr) = output_buffers.as_array() {
-                        let mut staged = staged_buffers.lock().map_err(|e| {
-                            BarracudaError::Device(format!(
-                                "SovereignDevice: staged lock poisoned: {e}"
-                            ))
-                        })?;
-                        for entry in arr {
-                            let Some(buf_id) =
-                                entry.get("buffer_id").and_then(serde_json::Value::as_u64)
-                            else {
-                                continue;
-                            };
-                            let Some(data) =
-                                entry.get("data").and_then(serde_json::Value::as_array)
-                            else {
-                                continue;
-                            };
-                            let bytes: Vec<u8> = data
-                                .iter()
-                                .filter_map(|b| b.as_u64().map(|v| v as u8))
-                                .collect();
-                            if let Some(buf) = staged.get_mut(&buf_id) {
-                                let copy_len = bytes.len().min(buf.len());
-                                buf[..copy_len].copy_from_slice(&bytes[..copy_len]);
-                            }
-                        }
+            if let Some(result) = rpc_response.get("result")
+                && let Some(output_buffers) = result.get("output_buffers")
+                && let Some(arr) = output_buffers.as_array()
+            {
+                let mut staged = staged_buffers.lock().map_err(|e| {
+                    BarracudaError::Device(format!("SovereignDevice: staged lock poisoned: {e}"))
+                })?;
+                for entry in arr {
+                    let Some(buf_id) = entry.get("buffer_id").and_then(serde_json::Value::as_u64)
+                    else {
+                        continue;
+                    };
+                    let Some(data) = entry.get("data").and_then(serde_json::Value::as_array) else {
+                        continue;
+                    };
+                    let bytes: Vec<u8> = data
+                        .iter()
+                        .filter_map(|b| b.as_u64().map(|v| v as u8))
+                        .collect();
+                    if let Some(buf) = staged.get_mut(&buf_id) {
+                        let copy_len = bytes.len().min(buf.len());
+                        buf[..copy_len].copy_from_slice(&bytes[..copy_len]);
                     }
                 }
             }
@@ -382,9 +376,11 @@ mod tests {
             );
 
             assert!(result.is_ok(), "dispatch should succeed: {:?}", result.err());
-            let locked = staged.lock().unwrap();
-            let buf = locked.get(&42).unwrap();
-            assert_eq!(&buf[..4], &[1, 2, 3, 4]);
+            {
+                let locked = staged.lock().unwrap();
+                let buf = locked.get(&42).unwrap();
+                assert_eq!(&buf[..4], &[1, 2, 3, 4]);
+            }
             server_task.await.ok();
         });
     }

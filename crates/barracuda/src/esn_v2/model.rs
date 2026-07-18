@@ -113,10 +113,7 @@ impl ESN {
     /// Returns [`Err`] if config validation fails (invalid sizes, spectral radius,
     /// connectivity, leak rate, or regularization), if reservoir or input weight
     /// initialization fails, or if buffer allocation fails.
-    pub async fn with_device(
-        config: ESNConfig,
-        device: Arc<WgpuDevice>,
-    ) -> BarracudaResult<Self> {
+    pub async fn with_device(config: ESNConfig, device: Arc<WgpuDevice>) -> BarracudaResult<Self> {
         validate_config(&config)?;
 
         let w_res = Self::init_reservoir(&config, &device).await?;

@@ -90,15 +90,15 @@ impl AutoTuner {
 
         // Try to load existing calibrations
         #[cfg(feature = "serde")]
-        if let Ok(contents) = std::fs::read_to_string(&cache_path) {
-            if let Ok(cals) = serde_json::from_str::<Vec<GpuCalibration>>(&contents) {
-                let mut map = tuner
-                    .calibrations
-                    .write()
-                    .unwrap_or_else(std::sync::PoisonError::into_inner);
-                for cal in cals {
-                    map.insert(cal.device_name.clone(), cal);
-                }
+        if let Ok(contents) = std::fs::read_to_string(&cache_path)
+            && let Ok(cals) = serde_json::from_str::<Vec<GpuCalibration>>(&contents)
+        {
+            let mut map = tuner
+                .calibrations
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            for cal in cals {
+                map.insert(cal.device_name.clone(), cal);
             }
         }
         #[cfg(not(feature = "serde"))]
@@ -461,10 +461,10 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
                 .read()
                 .unwrap_or_else(std::sync::PoisonError::into_inner);
             let cal_vec: Vec<&GpuCalibration> = cals.values().collect();
-            if let Ok(json) = serde_json::to_string_pretty(&cal_vec) {
-                if let Err(e) = std::fs::write(path, &json) {
-                    tracing::debug!(path = %path.display(), error = %e, "autotune cache write failed");
-                }
+            if let Ok(json) = serde_json::to_string_pretty(&cal_vec)
+                && let Err(e) = std::fs::write(path, &json)
+            {
+                tracing::debug!(path = %path.display(), error = %e, "autotune cache write failed");
             }
         }
     }

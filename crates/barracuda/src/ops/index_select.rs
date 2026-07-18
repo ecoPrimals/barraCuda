@@ -238,8 +238,8 @@ impl IndexSelect {
             // Deep Debt Evolution: Capability-based dispatch
             let caps = DeviceCapabilities::from_device(device);
             let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::ElementWise);
-            let workgroups =
-                crate::utils::checked_u32(output_size, "index_select dispatch")?.div_ceil(optimal_wg_size);
+            let workgroups = crate::utils::checked_u32(output_size, "index_select dispatch")?
+                .div_ceil(optimal_wg_size);
             compute_pass.dispatch_workgroups(workgroups, 1, 1);
         }
 

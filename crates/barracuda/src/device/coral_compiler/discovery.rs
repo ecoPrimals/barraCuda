@@ -55,6 +55,7 @@ pub const DEFAULT_ECOPRIMALS_DISCOVERY_DIR: &str = "ecoPrimals";
 ///
 /// Per wateringHole `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.1, the shader
 /// compiler primal creates `shader.sock` as a symlink to its instance socket.
+#[cfg(any(unix, test))]
 const SHADER_CAPABILITY_SOCKET: &str = "shader.sock";
 
 /// Discover a shader-compiler primal's JSON-RPC endpoint via capability-based

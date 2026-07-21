@@ -150,6 +150,7 @@ impl BtspOutcome {
 ///
 /// Accepts both the legacy `{"type":"ClientHello",...}` format and
 /// primalSpring's JSON-line format `{"protocol":"btsp","version":1,...}`.
+#[cfg(unix)]
 fn is_btsp_client_hello(msg: &serde_json::Value) -> bool {
     let is_type_hello = msg.get("type").and_then(|v| v.as_str()) == Some("ClientHello");
     let is_protocol_btsp = msg.get("protocol").and_then(|v| v.as_str()) == Some("btsp");
@@ -232,7 +233,15 @@ where
 }
 
 /// Internal error type for the handshake relay — not exposed to callers.
+///
+/// On non-Unix platforms, only `Protocol` is constructed (the relay stub
+/// returns it immediately). The other variants exist for the full Unix
+/// relay implementation.
 #[derive(Debug, thiserror::Error)]
+#[cfg_attr(
+    not(unix),
+    expect(dead_code, reason = "relay stub only uses Protocol variant")
+)]
 enum HandshakeError {
     /// Client didn't send ClientHello (legacy/plain JSON-RPC client).
     #[error("legacy client: {reason}")]
@@ -255,6 +264,7 @@ enum HandshakeError {
 
 /// Time limit for the client to send ClientHello before we fall back
 /// to treating the connection as a legacy (non-BTSP) client.
+#[cfg(unix)]
 const CLIENT_HELLO_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
 
 /// Full handshake relay between client stream and security-domain provider.
@@ -543,6 +553,7 @@ async fn security_provider_rpc<S: tokio::io::AsyncRead + tokio::io::AsyncWrite +
 /// → `BEARDOG_FAMILY_SEED` (deprecated). The security provider
 /// base64-decodes the `family_seed` parameter in `btsp.session.create`
 /// to recover raw key bytes, so we must encode the env string's bytes.
+#[cfg(unix)]
 fn resolve_family_seed_raw() -> Option<String> {
     let preferred = std::env::var(crate::env_keys::BTSP_FAMILY_SEED)
         .or_else(|_| std::env::var(crate::env_keys::FAMILY_SEED))

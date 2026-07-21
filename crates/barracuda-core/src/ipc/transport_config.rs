@@ -109,6 +109,10 @@ pub fn discovery_socket_path() -> String {
     dir.join(sock_name).to_string_lossy().into_owned()
 }
 
+/// Non-Unix stub: returns `"unsupported"` since UDS is not available.
+///
+/// Callers (e.g. `primal.announce`) check the return value and skip
+/// socket-based discovery on non-Unix platforms.
 #[cfg(not(unix))]
 #[must_use]
 pub fn discovery_socket_path() -> String {

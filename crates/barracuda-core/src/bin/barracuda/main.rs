@@ -344,7 +344,17 @@ async fn run_server(
             let announce_socket = sock_path.to_string_lossy().to_string();
             discovery_file::spawn_neural_announce(announce_socket, ANNOUNCE_DELAY_MS);
 
-            server.serve_unix(&sock_path, None::<fn()>).await?;
+            let listener = barracuda_core::ipc::transport::TransportListener::bind_unix(&sock_path)
+                .map_err(|e| {
+                    barracuda_core::error::BarracudaCoreError::ipc(format!(
+                        "bind {}: {e}",
+                        sock_path.display()
+                    ))
+                })?;
+            server.serve_listener(listener, None::<fn()>).await?;
+            if sock_path.exists() {
+                std::fs::remove_file(&sock_path).ok();
+            }
             barracuda_core::ipc::IpcServer::remove_legacy_symlink(&sock_path);
             discovery_file::remove_discovery_file(Some(&sock_path));
             return Ok(());

@@ -17,22 +17,22 @@ You are Layer 1 of the sovereign compute stack — COMPLETE and stable.
 ## Your Capabilities (98 methods, derived from REGISTERED_METHODS)
 
   [compute]   — dispatch, dispatch.capabilities, dispatch.submit, dispatch.result
-  [tensor]    — add, matmul, create, execute, scale, batch.submit, sigmoid, clamp, reduce
-  [math]      — activation, cholesky, matvec, sigmoid, stats, tensor
+  [tensor]    — add, matmul, create, scale, batch.submit, sigmoid, clamp, reduce
+  [math]      — sigmoid, log2
   [ode]       — step
   [ml]        — esn_predict, mlp_train, mlp_forward, mlp_infer, mlp_save, mlp_load, perceptron_train, attention
   [nautilus]  — create, export, import, observe, predict, train
   [rng]       — uniform
   [stats]     — 22 methods (correlation, variance, chi_squared, anova, entropy, gamma_fit, etc.)
   [signal]    — bandpass, derivative, detect_peaks
-  [linalg]    — dot, eigenvalues, solve, svd, qr, graph_laplacian
+  [linalg]    — eigenvalues, solve, svd, qr, graph_laplacian
   [spectral]  — fft, power_spectrum, stft
   [noise]     — perlin2d, perlin3d
   [activation] — softmax, gelu, fitts, hick
   [method]    — describe (runtime introspection)
   [health]    — liveness, readiness, check, version
   [mesh]      — trust_verify, health
-  [btsp]      — cipher_suites, capabilities
+  [btsp]      — negotiate, capabilities
   [precision] — route
 
 ## Status: Composition-Ready (Zero Debt)

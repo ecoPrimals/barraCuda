@@ -1,5 +1,9 @@
 # barraCuda — Remaining Work
 
+> **HISTORICAL** — This roadmap dates from June 2026 (v0.4.0 release).
+> Most P1-P3 items have landed (Wave 141a-150t). Authoritative current state:
+> see `CONTEXT.md`, `STATUS.md`, and `WHATS_NEXT.md`. Retained as fossil record.
+
 **Version**: 0.4.0
 **Date**: June 19, 2026
 **Status**: Stadial gate release (v0.4.0) — composition-ready, zero debt, 4-gate mesh operational
@@ -96,7 +100,7 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 - **Hardcoding evolution**: gate name, federation port, socket prefixes → runtime-resolved via env vars
 - **MethodGate enforcement**: all `ml.*` methods Protected (Dark Forest Invariant 3); `mesh.*`/`btsp.*` Public for trust probes
 - **Clippy fully clean** under `-D warnings` for all targets
-- **P3 model versioning design**: bincode format with BLAKE3 integrity headers (specs/MODEL_SERIALIZATION_DESIGN.md)
+- **P3 model versioning design**: bincode format with BLAKE3 integrity headers (fossilized to wateringHole/fossilRecord/wave142b_barracuda_deep_debt/)
 - **96 registered IPC methods** across 23 semantic namespaces
 - **533 IPC tests**, 0 failures
 
@@ -529,7 +533,7 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 - `cargo clippy --workspace --all-features --all-targets -- -D warnings`: Pass
 - `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps`: Pass
 - `cargo nextest run --workspace --profile ci`: 4,207 pass, 0 fail, 14 skipped
-- 826 WGSL shaders, 1,169 Rust source files
+- 860 WGSL shaders, 1,211 Rust source files
 
 ---
 

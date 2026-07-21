@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **860 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,211 Rust source files**, 25 integration test harnesses, 5,153 tests passing
+- **1,211 Rust source files**, 25 integration test harnesses, 5,035 tests passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -207,7 +207,7 @@ barraCuda/
 │       │   ├── unified_hardware/    # Unified CPU/GPU/NPU abstraction
 │       │   └── ...                  # + nn, snn, esn, pde, genomics, vision
 │       ├── examples/                # Runnable examples
-│       ├── tests/                   # 42 integration test files (25 harnesses + submodules)
+│       ├── tests/                   # 48 integration test files (25 harnesses + submodules)
 │       └── src/bin/                 # validate_gpu, bench_*
 └── specs/
     ├── BARRACUDA_SPECIFICATION.md       # Crate architecture + IPC contract
@@ -247,7 +247,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo nextest run --workspace --profile ci  # 5,153+ tests via nextest
+cargo nextest run --workspace --profile ci  # 5,035+ tests via nextest
 cargo llvm-cov --workspace --lib        # 80% CI gate (blocking), 90% target (requires GPU hardware)
 ```
 

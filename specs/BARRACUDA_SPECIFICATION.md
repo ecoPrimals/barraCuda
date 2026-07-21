@@ -1,7 +1,7 @@
 # barraCuda Specification
 
 > **SUPERSEDED** — This spec dates from May 2026 (31 IPC methods, pre-Wave 120).
-> Authoritative current state: see `CONTEXT.md` (98 methods, MSRV 1.92, 5,153 tests)
+> Authoritative current state: see `CONTEXT.md` (98 methods, MSRV 1.92, 5,035 tests)
 > and `STATUS.md`. Retained as architectural fossil record.
 
 **Version**: 0.4.0

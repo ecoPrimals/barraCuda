@@ -13,7 +13,7 @@ the sourDough scaffold. barraCuda owns its own standards.
 - **Suppressions**: `#[expect(clippy::lint, reason = "...")]` — compile-time verified; `#[allow]` only for context-dependent lints in the main `barracuda` crate (e.g. `suspicious_arithmetic_impl` in complex division, `unwrap_used` in integration tests outside `cfg_attr(test)` scope). Zero `#[allow(` in `barracuda-naga-exec` or `barracuda-core` (all evolved to `#[expect(` with reason).
 - **Docs**: `#![warn(missing_docs, missing_errors_doc, missing_panics_doc)]` — `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` clean
 - **Unsafe**: `#![forbid(unsafe_code)]`
-- **Max file size**: 1000 LOC
+- **Max file size**: 800 LOC
 - **Test coverage**: 90%+ target (currently ~80.5% line / ~83% function on llvmpipe; GPU hardware needed for 90%)
 
 ## Error Handling

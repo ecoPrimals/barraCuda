@@ -178,7 +178,7 @@ pub(in crate::ipc::methods) fn ml_mlp_train(params: &Value, id: Value) -> JsonRp
 ///
 /// Wire contract:
 /// ```json
-/// { "records": [{"method":"crypto.hash","owner":"beardog","latency_ms":0.8,"success":true,"gate":"eastGate"},...],
+/// { "records": [{"method":"crypto.hash","owner":"security-provider","latency_ms":0.8,"success":true,"gate":"eastGate"},...],
 ///   "learning_rate": 0.01, "epochs": 10,
 ///   "output_path": "/path/to/neural_routing_perceptron.bin" }
 /// ```

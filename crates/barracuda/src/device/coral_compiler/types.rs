@@ -189,7 +189,7 @@ impl CompileResponse {
 /// Health response from `shader.compile.status`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthResponse {
-    /// Primal name as reported by the endpoint (e.g. a reference implementation may use `"coralReef"`).
+    /// Primal name as reported by the endpoint (e.g. a shader compiler may report its service name).
     pub name: String,
     /// Version string
     pub version: String,

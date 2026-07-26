@@ -366,7 +366,7 @@ where
 
     // Consumer-side BTSP: authenticate to security provider before RPCs
     if super::btsp_client::btsp_strict_mode_expected()
-        && let Err(e) = super::btsp_client::perform_client_handshake(&mut provider).await
+        && let Err(e) = super::btsp_client::perform_bootstrap_handshake(&mut provider).await
     {
         tracing::warn!("BTSP client handshake to provider failed: {e} — proceeding");
     }

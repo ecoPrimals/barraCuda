@@ -4,6 +4,7 @@
 //! Tests the `BtspClient::handshake()` flow against a mock security provider
 //! and a mock BTSP-enforced target server — both spawned locally on UDS.
 #![cfg(unix)]
+#![expect(clippy::unwrap_used, reason = "test assertions")]
 
 use barracuda_core::ipc::btsp_client::BtspClient;
 use barracuda_core::ipc::transport::TransportEndpoint;

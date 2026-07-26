@@ -378,9 +378,137 @@ pub async fn try_connect_with_btsp(
     }
 }
 
+// ── Bootstrap handshake (local HMAC, no security provider needed) ────
+
+/// Whether bearDog strict mode is expected (rejects plain JSON-RPC).
+///
+/// Checks `BEARDOG_UDS_REQUIRE_BTSP=1` or `BTSP_STRICT_MODE=1`.
+pub fn btsp_strict_mode_expected() -> bool {
+    std::env::var("BEARDOG_UDS_REQUIRE_BTSP")
+        .or_else(|_| std::env::var("BTSP_STRICT_MODE"))
+        .is_ok_and(|v| v.trim() == "1")
+}
+
+/// Perform the bootstrap BTSP handshake using LOCAL HMAC-SHA256.
+///
+/// Used when connecting TO bearDog itself — avoids the chicken-and-egg of
+/// needing bearDog's crypto to authenticate with bearDog. Computes the
+/// challenge response locally using `FAMILY_SEED`.
+///
+/// After success, the stream is ready for JSON-RPC traffic.
+pub async fn perform_bootstrap_handshake<S>(stream: &mut tokio::io::BufReader<S>) -> Result<()>
+where
+    S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
+{
+    use super::btsp_wire::{read_ndjson_line, write_ndjson_line};
+
+    let family_seed = resolve_family_seed_for_hmac().ok_or_else(|| {
+        BarracudaCoreError::ipc("FAMILY_SEED not available for BTSP bootstrap handshake")
+    })?;
+
+    let ephemeral_key: [u8; 32] = rand::random();
+
+    // Step 1: Send ClientHello.
+    let hello = serde_json::json!({
+        "protocol": "btsp",
+        "version": 1,
+        "client_ephemeral_pub": base64ct::Base64::encode_string(&ephemeral_key)
+    });
+    write_ndjson_line(stream.get_mut(), &hello)
+        .await
+        .map_err(|e| BarracudaCoreError::ipc(format!("BTSP bootstrap: ClientHello write: {e}")))?;
+
+    tracing::debug!("BTSP bootstrap: sent ClientHello");
+
+    // Step 2: Read ServerHello.
+    let response_line = read_ndjson_line(stream)
+        .await
+        .map_err(|e| BarracudaCoreError::ipc(format!("BTSP bootstrap: ServerHello read: {e}")))?;
+
+    let server_hello: serde_json::Value = serde_json::from_str(response_line.trim())
+        .map_err(|e| BarracudaCoreError::ipc(format!("BTSP bootstrap: ServerHello parse: {e}")))?;
+
+    if server_hello.get("error").is_some() {
+        let reason = server_hello
+            .get("reason")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
+        return Err(BarracudaCoreError::ipc(format!(
+            "BTSP bootstrap: server rejected ClientHello: {reason}"
+        )));
+    }
+
+    let challenge = server_hello["challenge"]
+        .as_str()
+        .ok_or_else(|| BarracudaCoreError::ipc("BTSP bootstrap: ServerHello missing challenge"))?;
+
+    // Step 3: Compute HMAC-SHA256(family_seed, challenge) locally.
+    use base64ct::{Base64, Encoding};
+    use hmac::{Hmac, Mac};
+    use sha2::Sha256;
+
+    let challenge_bytes = Base64::decode_vec(challenge)
+        .map_err(|e| BarracudaCoreError::ipc(format!("BTSP bootstrap: challenge decode: {e}")))?;
+
+    let mut mac = <Hmac<Sha256>>::new_from_slice(family_seed.as_bytes())
+        .map_err(|_| BarracudaCoreError::ipc("BTSP bootstrap: HMAC key creation failed"))?;
+    mac.update(&challenge_bytes);
+    let hmac_result = mac.finalize().into_bytes();
+
+    let response = serde_json::json!({
+        "response": Base64::encode_string(&hmac_result),
+        "preferred_cipher": "chacha20_poly1305"
+    });
+    write_ndjson_line(stream.get_mut(), &response)
+        .await
+        .map_err(|e| {
+            BarracudaCoreError::ipc(format!("BTSP bootstrap: ChallengeResponse write: {e}"))
+        })?;
+
+    // Step 4: Read HandshakeComplete.
+    let complete_line = read_ndjson_line(stream).await.map_err(|e| {
+        BarracudaCoreError::ipc(format!("BTSP bootstrap: HandshakeComplete read: {e}"))
+    })?;
+
+    let complete: serde_json::Value = serde_json::from_str(complete_line.trim()).map_err(|e| {
+        BarracudaCoreError::ipc(format!("BTSP bootstrap: HandshakeComplete parse: {e}"))
+    })?;
+
+    if complete.get("error").is_some() {
+        let reason = complete
+            .get("reason")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
+        return Err(BarracudaCoreError::ipc(format!(
+            "BTSP bootstrap: server rejected ChallengeResponse: {reason}"
+        )));
+    }
+
+    let cipher = complete["cipher"].as_str().unwrap_or("null");
+    tracing::debug!(cipher, "BTSP bootstrap: handshake COMPLETE");
+    Ok(())
+}
+
+/// Resolve raw family seed for LOCAL HMAC computation.
+///
+/// Checks: `BTSP_FAMILY_SEED` → `FAMILY_SEED` → `BIOMEOS_FAMILY_SEED`.
+fn resolve_family_seed_for_hmac() -> Option<String> {
+    std::env::var(crate::env_keys::BTSP_FAMILY_SEED)
+        .or_else(|_| std::env::var(crate::env_keys::FAMILY_SEED))
+        .or_else(|_| std::env::var(crate::env_keys::BIOMEOS_FAMILY_SEED))
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn strict_mode_default_off() {
+        assert!(!btsp_strict_mode_expected());
+    }
 
     #[test]
     fn btsp_client_explicit_endpoint() {

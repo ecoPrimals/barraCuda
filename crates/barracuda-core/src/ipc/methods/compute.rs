@@ -594,9 +594,19 @@ async fn try_forward_to_dispatch_peer(params: &Value) -> Option<ForwardedResult>
     let peer_socket = sock_path.to_string_lossy().into_owned();
 
     let peer_endpoint = crate::ipc::transport::TransportEndpoint::uds(&peer_socket);
-    let peer_stream = crate::ipc::transport::connect_transport(&peer_endpoint)
-        .await
-        .ok()?;
+
+    // Attempt BTSP handshake for inter-primal connection (Wave 151b).
+    // Falls back to plain connection if no security provider is available.
+    let peer_stream =
+        match crate::ipc::btsp_client::try_connect_with_btsp(&peer_endpoint, "null").await {
+            Ok(Some(result)) => {
+                tracing::debug!("BTSP authenticated connection to peer {peer_socket}");
+                result.stream
+            }
+            _ => crate::ipc::transport::connect_transport(&peer_endpoint)
+                .await
+                .ok()?,
+        };
     let mut peer_buf = tokio::io::BufReader::new(peer_stream);
 
     let forward_req = serde_json::json!({

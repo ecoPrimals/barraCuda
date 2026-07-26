@@ -118,11 +118,25 @@ pub async fn run_client(
         barracuda_core::ipc::transport::TransportEndpoint::tcp(host, port)
     };
 
-    let stream = barracuda_core::ipc::transport::connect_transport(&endpoint)
-        .await
-        .map_err(|e| {
-            barracuda_core::error::BarracudaCoreError::ipc(format!("connect to {server_addr}: {e}"))
-        })?;
+    // Attempt BTSP handshake if security provider is available (Wave 151b).
+    // Falls back to plain connection for non-BTSP servers or when no provider exists.
+    let stream =
+        match barracuda_core::ipc::btsp_client::try_connect_with_btsp(&endpoint, "null").await {
+            Ok(Some(result)) => {
+                eprintln!(
+                    "BTSP: authenticated (cipher={})",
+                    result.session.cipher.wire_name()
+                );
+                result.stream
+            }
+            _ => barracuda_core::ipc::transport::connect_transport(&endpoint)
+                .await
+                .map_err(|e| {
+                    barracuda_core::error::BarracudaCoreError::ipc(format!(
+                        "connect to {server_addr}: {e}"
+                    ))
+                })?,
+        };
     let (reader, mut writer) = tokio::io::split(stream);
     writer.write_all(line.as_bytes()).await?;
     writer.shutdown().await?;

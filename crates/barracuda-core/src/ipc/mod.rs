@@ -146,6 +146,7 @@ pub mod transport_config;
 pub mod transport_endpoint;
 
 pub use btsp::{BtspCipher, BtspSession};
+pub use btsp_client::{BtspClient, BtspHandshakeResult};
 pub use btsp_frame::{BtspFrameError, BtspFrameReader, BtspFrameWriter};
 pub use jsonrpc::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
 pub use method_gate::{CallerContext, MethodGate};

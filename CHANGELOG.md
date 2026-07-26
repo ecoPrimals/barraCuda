@@ -5,9 +5,20 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — Waves 109–129 (Jun 28 2026)
+## [Unreleased] — Waves 109–151b (Jul 26 2026)
 
 ### Changed
+- **BTSP client-side handshake** (Wave 151b) — consumer-side ClientHello for bearDog strict mode. Two modes: bootstrap (local HMAC-SHA256 for authenticating TO bearDog) and general (delegated crypto via security provider for any BTSP-enforced peer). Integrated into compute.rs peer dispatch and CLI client.
+- **Phase 2 transport abstraction** (Wave 143b) — `TransportListener` enum unifies UDS + TCP server-side bind/accept. `run_server` UDS path uses `bind_unix + serve_listener` directly. 5 `#[cfg(unix)]` gates removed.
+- **LatencyModel enum dispatch** (Wave 141a) — `trait → enum` conversion eliminates `Box<dyn LatencyModel>` heap allocation on every shader compilation.
+- **ODE integrator generics** (Wave 142b) — `&impl Fn` replaces `Box<dyn Fn>` for ODE function parameters, enabling unboxed closures.
+- **Deep debt: safe `u32` casts** (Wave 142b) — `checked_u32()` / `shape_to_u32()` utilities for overflow-safe `usize → u32` GPU parameter conversion; 3 highest-risk sites migrated.
+- **Visibility tightening** (Wave 142b) — 6 internal shader optimizer types/functions changed from `pub` to `pub(super)`.
+- **Dead feature removal** (Wave 142b) — removed dead `parallel` feature from `Cargo.toml`.
+- **Clone reduction** (Wave 141a) — eliminated unnecessary `Vec` and matrix clones in spectral stats, eigenvalue sort, IPC compute.
+- **Function pointer evolution** (Wave 141a) — CPU binary ops use `fn(f32,f32)->f32` pointers instead of `Box<dyn Fn>`.
+- **Hardcoding → capability-based** (Wave 141a–151b) — socket prefixes, method wire examples, doc references all evolved from primal names to capability-domain strings.
+- **Cross-architecture adoption** (Wave 141a) — full `x86_64-pc-windows-gnu` cross-compile support; platform-agnostic transport with conditional Unix/TCP dispatch.
 - **12-axis deep debt audit** — comprehensive codebase-wide audit (Wave 129): zero files >800L (max 783L), zero unsafe in production (1 wgpu passthrough in barracuda-spirv, unavoidable), zero TODO/FIXME/HACK, zero `Result<T,String>`, zero production println/eprintln, zero mocks in production, zero `#[allow(` (all `#[expect(`), all deps pure Rust (zero C bindings, blake3 `pure`), all 8 production `.expect()` are ownership-invariant RAII guards. Socket prefix docs enriched with role-based rationale (beardog/songbird are capability role prefixes, not primal identity bindings).
 - **Clippy pedantic sweep** — 22 library warnings fixed (doc backticks, `#[must_use]`, wildcard import); barracuda-core gains 8 documented `#[expect()]` blocks covering 97 pedantic warnings with domain rationale (Wave 128)
 - **GNU depot validated** — E2E fetch from golgi depot, BLAKE3 checksum verified, glibc binary runs on ironGate RTX 5070 (Wave 128)

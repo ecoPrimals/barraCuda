@@ -364,6 +364,13 @@ where
         })?;
     let mut provider = tokio::io::BufReader::new(provider_stream);
 
+    // Consumer-side BTSP: authenticate to security provider before RPCs
+    if super::btsp_client::btsp_strict_mode_expected()
+        && let Err(e) = super::btsp_client::perform_client_handshake(&mut provider).await
+    {
+        tracing::warn!("BTSP client handshake to provider failed: {e} — proceeding");
+    }
+
     // Step 2a: btsp.session.create on security provider connection
     let create_request = serde_json::json!({
         "jsonrpc": "2.0",

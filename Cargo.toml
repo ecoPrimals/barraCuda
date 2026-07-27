@@ -14,6 +14,8 @@ license = "AGPL-3.0-or-later"
 repository = "https://github.com/ecoPrimals/barraCuda"
 authors = ["ecoPrimals Project"]
 rust-version = "1.92"
+homepage = "https://sporeprint.primals.eco"
+documentation = "https://sporeprint.primals.eco/lab/"
 
 [workspace.lints.clippy]
 # ─── Lint groups (priority -1 → individual settings below override) ──────

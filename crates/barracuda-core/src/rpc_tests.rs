@@ -481,6 +481,7 @@ async fn tarpc_fhe_pointwise_mul_degree_overflow() {
 
 #[tokio::test]
 async fn tarpc_health_readiness_after_start() {
+    let _gpu_guard = crate::test_util::GPU_TEST_GUARD.lock().await;
     let mut primal = crate::BarraCudaPrimal::new();
     let _ = crate::lifecycle::PrimalLifecycle::start(&mut primal).await;
     let primal = std::sync::Arc::new(primal);

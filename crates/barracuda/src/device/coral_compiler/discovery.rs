@@ -31,7 +31,7 @@ const COMPILER_ADDR_ENV: &str = "BARRACUDA_SHADER_COMPILER_ADDR";
 const COMPILER_PORT_ENV: &str = "BARRACUDA_SHADER_COMPILER_PORT";
 
 /// Loopback address for localhost-only discovery probes.
-const LOCALHOST: &str = "127.0.0.1";
+const LOCALHOST: &str = env_keys::DEFAULT_LOOPBACK;
 
 /// Legacy discovery filename for pre-Phase 10 backward compatibility.
 ///

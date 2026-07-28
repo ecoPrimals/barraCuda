@@ -36,6 +36,7 @@
 //!     KernelTarget::Npu { model_id: _, .. } => {}
 //!     KernelTarget::Wgsl { shader: _, device: _, .. } => {}
 //!     KernelTarget::Hybrid { .. } => {}
+//!     KernelTarget::Sovereign { .. } => {}
 //! }
 //! # Ok(())
 //! # }

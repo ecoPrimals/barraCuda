@@ -1,10 +1,56 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-06-28.
+Prioritized work items, ordered by impact. Updated 2026-07-28.
 
 ---
 
 ## Recently Completed
+
+### Wave 155f — Deep Debt Sweep + Bug Fixes + Dependency Evolution (Jul 28, 2026)
+- **SIGSEGV in barracuda-core tests FIXED** — root-caused Mesa llvmpipe crash during
+  process teardown when multiple wgpu devices existed simultaneously. Added crate-level
+  `GPU_TEST_GUARD` (`tokio::sync::Mutex` in `test_util`) that serializes all GPU-touching
+  tests. `start_primal_guarded()` returns primal + guard so the lock is held for the full
+  test lifetime. 5/5 runs clean, previously 2/3 crashed.
+- **ESN BindGroupLayout crash FIXED** — `TimeSeriesAnalyzer::build()` called `ESN::new()`
+  which created a second independent wgpu device, causing wgpu resource handle collisions
+  under llvmpipe. Fixed to use `ESN::with_device()` sharing the caller's device.
+  `test_concurrent_apis` also fixed to pass pool device directly.
+- **BTSP env var race conditions FIXED** — `btsp_socket_compliance.rs`, `no_gpu_probe.rs`,
+  `btsp_discovery.rs`, and `transport_config.rs` all mutated process-global env vars without
+  serialization. Under `cargo test` (shared process, parallel threads), concurrent tests
+  clobbered each other's env. Added `ENV_MUTEX` to each integration test binary;
+  `clear_family_env()` returns `MutexGuard` held for full test scope.
+- **KernelTarget::Sovereign doctest FIXED** — incomplete `match` arm in `kernel_router.rs`
+  doc example.
+- **BatchError → thiserror** — hand-rolled `Display` impl in `batch.rs` evolved to
+  `#[derive(thiserror::Error)]`, eliminating the last manual error type in the codebase.
+- **BEARDOG_UDS_REQUIRE_BTSP → BTSP_STRICT_MODE** — hardcoded bearDog env var string in
+  `btsp_client.rs` evolved to proper `env_keys::BTSP_STRICT_MODE` constant with legacy
+  fallback + deprecation warning. All three bearDog legacy env keys now have `#[deprecated]`
+  constants with `#[expect(deprecated)]` migration paths.
+- **Duplicate LOCALHOST constant eliminated** — `coral_compiler/discovery.rs` local
+  `LOCALHOST` constant now references shared `env_keys::DEFAULT_LOOPBACK`. `DEFAULT_BIND_HOST`
+  in `barracuda-core` also re-exports from `barracuda::env_keys`. Single source of truth
+  for loopback address.
+- **wgpu backend target-gating** — workspace-level wgpu dependency trimmed to base features
+  (`wgsl`, `spirv`). Platform-specific backends (`vulkan` on Linux, `metal` on macOS, `dx12`
+  on Windows) now gated via `[target.'cfg(...)'.dependencies]` in consuming crates. Eliminates
+  cross-platform compilation bloat (no more compiling metal/dx12 on Linux).
+- **env_keys consolidation** — new constants: `BTSP_STRICT_MODE`,
+  `BEARDOG_UDS_REQUIRE_BTSP` (deprecated), `DEFAULT_LOOPBACK`. All test code evolved from
+  raw string literals to `env_keys::` constants with proper `#[expect(deprecated)]` annotations.
+- **Deep audit findings** (all axes assessed):
+  - `Result<T, String>`: ZERO in production (was already 0, confirmed)
+  - Production `unwrap()`: ZERO (all 3,000+ unwrap calls are in `#[cfg(test)]` or bench code)
+  - Mocks: CLEAN (all `mock_` functions inside `#[cfg(test)]` modules only)
+  - Unsafe: 1 justified site (`barracuda-spirv` passthrough, wgpu#4854 still not landed)
+  - Overstep: HTTP fallback is IPC transport, mesh methods are client-facing. Clean.
+  - SpringDomain: Correctly designed as runtime-extensible metadata, not coupling
+  - Large files: max 763L (`ops/mod.rs` barrel), all under 800L, well-structured
+  - External deps: `tarpc-transport` already opt-in (default=on), `blake3 pure` confirmed
+- **4,957 total tests pass (workspace).** Zero SIGSEGV. Zero failures. All quality gates green:
+  `cargo clippy --workspace --all-targets --all-features` zero warnings, `cargo fmt --check` clean.
 
 ### Wave 129 — 12-Axis Deep Debt Audit + Evolution Validation (Jun 28, 2026)
 - **Comprehensive 12-axis audit** — all evolution targets assessed:

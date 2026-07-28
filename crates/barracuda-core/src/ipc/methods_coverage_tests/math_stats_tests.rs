@@ -13,6 +13,7 @@ use super::super::stats::{stats_mean, stats_std_dev, stats_weighted_mean};
 
 #[tokio::test]
 async fn health_readiness_after_start() {
+    let _guard = crate::test_util::GPU_TEST_GUARD.lock().await;
     let mut primal = test_primal();
     primal.start().await.unwrap();
     let resp = health_readiness(&primal, serde_json::json!(50));

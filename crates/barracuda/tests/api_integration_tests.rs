@@ -267,23 +267,25 @@ async fn test_error_handling() {
 /// Multiple APIs running simultaneously
 #[tokio::test]
 async fn test_concurrent_apis() {
-    let Some(_device) = barracuda::device::test_pool::get_test_device_if_gpu_available().await
+    let Some(device) = barracuda::device::test_pool::get_test_device_if_gpu_available().await
     else {
         return;
     };
 
-    // Create multiple APIs (ESN is hardware-agnostic!)
-    let mut esn = ESN::new(ESNConfig {
-        input_size: 1,
-        reservoir_size: 50,
-        output_size: 1,
-        spectral_radius: 0.9,
-        connectivity: 0.1,
-        leak_rate: 0.3,
-        regularization: 1e-6,
-        seed: 42,
-        ..Default::default()
-    })
+    let mut esn = ESN::with_device(
+        ESNConfig {
+            input_size: 1,
+            reservoir_size: 50,
+            output_size: 1,
+            spectral_radius: 0.9,
+            connectivity: 0.1,
+            leak_rate: 0.3,
+            regularization: 1e-6,
+            seed: 42,
+            ..Default::default()
+        },
+        device,
+    )
     .await
     .unwrap();
 

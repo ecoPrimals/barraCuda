@@ -12,5 +12,14 @@ rust-version.workspace = true
 wgpu = { workspace = true }
 thiserror = { workspace = true }
 
+[target.'cfg(target_os = "linux")'.dependencies]
+wgpu = { workspace = true, features = ["vulkan", "vulkan-portability"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+wgpu = { workspace = true, features = ["metal"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+wgpu = { workspace = true, features = ["dx12", "vulkan"] }
+
 [lints]
 workspace = true

@@ -9,7 +9,9 @@
 use crate::env_keys;
 
 /// Default TCP bind host (`127.0.0.1` = localhost-only).
-pub const DEFAULT_BIND_HOST: &str = "127.0.0.1";
+///
+/// Re-exported from `barracuda::env_keys` — single source of truth.
+pub const DEFAULT_BIND_HOST: &str = barracuda::env_keys::DEFAULT_LOOPBACK;
 
 /// Default family ID when no `FAMILY_ID` env var is set.
 const DEFAULT_FAMILY_ID: &str = "default";

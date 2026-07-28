@@ -135,13 +135,10 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # GPU compute (vendor-agnostic via WebGPU)
+# Base features only — each consuming crate adds platform-specific backends.
+# Vulkan on Linux, Metal on macOS, DX12 on Windows; no cross-platform bloat.
 wgpu = { version = "28", default-features = false, features = [
     "wgsl",
-    "vulkan",
-    "vulkan-portability",
-    "dx12",
-    "metal",
-    "webgpu",
     "spirv",
 ] }
 bytemuck = { version = "1.25", features = ["derive"] }

@@ -26,8 +26,8 @@ results.
 
 ### Key capabilities
 
-- **860 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,213 Rust source files**, 25 integration test harnesses, 5,044 tests passing
+- **859 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
+- **1,208 Rust source files**, 25 integration test harnesses, 4,957 tests passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -54,13 +54,14 @@ results.
 2. **Vendor-agnostic** — same binary, identical results on any GPU
 3. **Sovereign** — zero external SDK dependency for correctness or performance
 4. **Pure Rust** — `#![forbid(unsafe_code)]` in both crates, zero `unsafe` blocks, zero external C dependencies, zero dependencies on any other primal (wire format is the contract, `TransportEndpoint` implemented locally)
-5. **Fully concurrent** — `GuardedDeviceHandle` + atomic encoder barrier prevents wgpu-core races without lock contention; split-lock GPU submission (submit and poll use separate lock acquisitions); fire-and-forget dispatch via `submit_commands` for non-readback ops; wgpu 28 `Device`/`Queue` are `Clone` — zero `Arc` overhead for handle sharing; all tests pass at 16 threads on llvmpipe
+5. **Fully concurrent** — `GuardedDeviceHandle` + atomic encoder barrier prevents wgpu-core races without lock contention; split-lock GPU submission (submit and poll use separate lock acquisitions); fire-and-forget dispatch via `submit_commands` for non-readback ops; wgpu 28 `Device`/`Queue` are `Clone` — zero `Arc` overhead for handle sharing; `GPU_TEST_GUARD` serializes device lifecycle in tests; all 4,957 tests pass at full parallelism on llvmpipe
 6. **AGPL-3.0** — free as in freedom
 
 ---
 
 ## Recent
 
+- **Wave 155f: Deep Debt Sweep + Bug Fixes (Jul 28)**: SIGSEGV in barracuda-core tests fixed (GPU_TEST_GUARD serializes wgpu device lifecycle). ESN BindGroupLayout crash fixed (TimeSeriesAnalyzer reuses caller's device). BTSP env var race conditions fixed (ENV_MUTEX in all integration test binaries). BatchError → thiserror. BTSP_STRICT_MODE env key. wgpu backend target-gating. 4,957 tests pass, zero SIGSEGV, zero failures, all quality gates green.
 - **Wave 107: Socket Cleanup + method.describe (Jun 10)**: `PRIMAL-SOCKET-CLEANUP` — state files co-locate with socket path. `method.describe` RPC for runtime introspection. All production files <800L. 98 methods. Composition-ready.
 - **Waves 100-101: Transport Self-Knowledge (Jun 8)**: Removed cross-primal `sourdough-core` dep. Local `TransportEndpoint` + `connect_transport()` (237L). Wire format is the contract. `TRANSPORT_ENDPOINT` env var operational.
 - **Wave 93: Build Fix (Jun 7)**: Stash conflict resolution — restored serialization submodule + serde aliases. Depot-ready.
@@ -123,7 +124,7 @@ GPU work to a coralReef+toadStool peer running on a glibc host with GPU access.
 
 barraCuda is a 4-crate workspace:
 
-- **`barracuda`** — the math engine (860 WGSL shaders, 15-tier precision, all GPU ops)
+- **`barracuda`** — the math engine (859 WGSL shaders, 15-tier precision, all GPU ops)
 - **`barracuda-core`** — primal lifecycle (JSON-RPC, tarpc, UniBin CLI)
 - **`barracuda-spirv`** — SPIR-V passthrough bridge (isolates the single `unsafe` call)
 - **`barracuda-naga-exec`** — CPU interpreter for naga IR (shader-first CPU execution + GPU validation)
@@ -198,7 +199,7 @@ barraCuda/
 │       │   ├── sample/              # LHS, Sobol, Metropolis, sparsity
 │       │   ├── ops/                 # GPU ops (matmul, softmax, FHE, bio)
 │       │   ├── tensor/              # GPU tensor type
-│       │   ├── shaders/             # 860 WGSL shaders (see shaders/README.md)
+│       │   ├── shaders/             # 859 WGSL shaders (see shaders/README.md)
 │       │   ├── device/              # GpuBackend trait, WgpuDevice, SovereignDevice, concurrency
 │       │   ├── staging/             # Ring buffers, unidirectional pipelines
 │       │   ├── pipeline/            # ComputeDispatch, batched pipelines

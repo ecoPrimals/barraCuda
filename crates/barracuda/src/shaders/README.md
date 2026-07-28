@@ -1,6 +1,6 @@
 # BarraCuda WGSL Shader Library
 
-**749 Production WGSL Shaders** (826 total including ops/) | 15-Tier Precision Continuum (Binary→DF128) | Cross-Vendor Compatible
+**780 Production WGSL Shaders** (859 total including ops/) | 15-Tier Precision Continuum (Binary→DF128) | Cross-Vendor Compatible
 
 ---
 
@@ -14,7 +14,7 @@ src/shaders/
 ├── attention/        19  Attention mechanisms (MHA, GQA, Flash, Causal, etc.)
 ├── audio/             9  Audio/signal processing (STFT, MFCC, Mel, Griffin-Lim, etc.)
 ├── augmentation/     10  Data augmentation (CutMix, Mixup, Random transforms, etc.)
-├── bio/              39  Bioinformatics (Smith-Waterman, HMM, phylogenetics, etc.)
+├── bio/              42  Bioinformatics (Smith-Waterman, HMM, phylogenetics, etc.)
 ├── conv/             11  Convolution operations (1D/2D/3D, Depthwise, Dilated, etc.)
 ├── detection/         5  Object detection primitives (NMS, Anchors, BBox, IoU, etc.)
 ├── dropout/           2  Regularization (Dropout, Spatial dropout)
@@ -23,30 +23,43 @@ src/shaders/
 ├── gradient/          1  Gradient manipulation (Clip norm, clip value)
 ├── grid/              9  Grid/mesh operations
 ├── interpolation/     3  Interpolation kernels (RBF, LOO-CV)
-├── lattice/          36  Lattice QCD (SU(3), Wilson, Dirac, HMC)
+├── lattice/          48  Lattice QCD (SU(3), Wilson, Dirac, HMC)
 ├── linalg/           32  Linear algebra (Cholesky, Eigh, LinSolve, Inverse, etc.)
 ├── loss/             34  Loss functions (Focal, Dice, IoU, BCE, MSE, etc.)
-├── math/            106  Element-wise math (Trig, Exp, Log, Floor, Sqrt, etc.)
-├── md/                5  Molecular dynamics (forces, integrators, PBC)
-├── misc/             74  Utilities (MatMul, Embedding, Quantize, etc.)
+├── math/            107  Element-wise math (Trig, Exp, Log, Floor, Sqrt, etc.)
+├── md/               23  Molecular dynamics (forces, integrators, PBC)
+├── misc/             73  Utilities (MatMul, Embedding, Quantize, etc.)
 ├── ml/                8  Machine learning (ESN, reservoir, etc.)
 ├── norm/             28  Normalization (BatchNorm, LayerNorm, GroupNorm, etc.)
-├── numerical/         7  Numerical methods (ODE, integration)
+├── numerical/         8  Numerical methods (ODE, integration)
 ├── optimizer/        18  Weight update rules (Adam, SGD, RMSProp, etc.)
 ├── pooling/          17  Spatial reduction (MaxPool, AvgPool, Adaptive, etc.)
-├── reduce/           28  Tensor reduction (Sum, Mean, Argmax, Logsumexp, etc.)
+├── reduce/           38  Tensor reduction (Sum, Mean, Argmax, Logsumexp, etc.)
 ├── rnn/               4  Recurrent networks (LSTM, GRU, BiLSTM)
 ├── sample/            4  Sampling methods (LHS, Sobol, etc.)
-├── science/          16  Scientific compute (batched elementwise, hydrology, etc.)
+├── science/          22  Scientific compute (batched elementwise, hydrology, etc.)
 ├── sparse/            5  Sparse linear algebra (SpMV, CG)
-├── special/          40  Special functions (Bessel, Gamma, Erf, etc.)
-├── spectral/          3  Spectral analysis (Anderson, Lanczos)
-├── stats/             5  Statistical operations (bootstrap, diversity, etc.)
-└── tensor/           43  Shape manipulation (Concat, Slice, Reshape, Transpose, etc.)
+├── special/          42  Special functions (Bessel, Gamma, Erf, etc.)
+├── spectral/          5  Spectral analysis (Anderson, Lanczos)
+├── stats/             8  Statistical operations (bootstrap, diversity, etc.)
+├── tensor/           43  Shape manipulation (Concat, Slice, Reshape, Transpose, etc.)
+├── health/            8  Health/medical (PK, SCFA, beat classification, EDA stress)
+├── pharma/            2  Pharmacometrics (dose-response, population PK)
+├── physics/           7  Classical physics (N-body, gravity, wave equation)
+├── nuclear/           7  Nuclear/particle physics (cross-sections, fission)
+├── pde/               2  Partial differential equations
+├── spatial/           4  Spatial operations (distance, nearest-neighbor)
+├── quantized/         4  Quantized operations (INT8, mixed-precision)
+├── procedural/        3  Procedural generation (terrain, noise)
+├── signal/            1  Signal processing
+├── optimize/          1  Optimization (L-BFGS, line search)
+├── mixing/            1  Mixing operations
+└── esn/               1  Echo state network kernels
 ```
 
-**2 additional tooling directories** (`precision/`, `sovereign/`)
-contain precision infrastructure and DF64 rewrite tooling rather than standalone shaders.
+**3 additional tooling directories** (`precision/`, `sovereign/`, `provenance/`)
+contain precision infrastructure, DF64 rewrite tooling, and provenance metadata
+rather than standalone shaders.
 
 ---
 

@@ -41,6 +41,7 @@
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result as BarracudaResult};
 use crate::esn_v2::{ESN, ESNConfig};
+use std::sync::Arc;
 
 /// Time series model types (capability-based, runtime-configured).
 #[derive(Debug, Clone)]
@@ -214,7 +215,8 @@ impl TimeSeriesAnalyzer {
                     ..Default::default()
                 };
 
-                self.esn_instance = Some(ESN::new(config).await?);
+                self.esn_instance =
+                    Some(ESN::with_device(config, Arc::new(self.device.clone())).await?);
                 break; // Only create one ESN instance
             }
         }

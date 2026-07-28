@@ -12,7 +12,7 @@ springs = ["hotspring", "primalspring", "wetspring", "airspring"]
 
 - **5,044 tests** (nextest CI profile), 0 failed, 80.54% line / 83.45% function coverage
 - **98 registered IPC methods** across 24 semantic namespaces (includes `method.describe` introspection)
-- **1,213 Rust source files**, zero unsafe in production (`#![forbid(unsafe_code)]`)
+- **1,208 Rust source files**, zero unsafe in production (`#![forbid(unsafe_code)]`)
 - **v0.4.0** — stadial gate cleared, all checklist items green
 - **A+ grade** — zero unwrap/panic/expect in production, zero println in library, zero `Result<T, String>`, zero mocks in production, zero `#[allow(` (all `#[expect(` with reason)
 - **Pure Rust** — zero C dependencies (`deny.toml` bans ring, openssl, aws-lc-sys), zero cross-primal dependencies

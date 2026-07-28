@@ -93,6 +93,29 @@ pub mod rpc_types;
 
 pub use barracuda;
 
+/// Test utilities shared across all test modules in this crate.
+#[cfg(test)]
+pub(crate) mod test_util {
+    use crate::lifecycle::PrimalLifecycle;
+
+    /// Serialize GPU-touching tests so only one wgpu device exists at a time.
+    /// Mesa's llvmpipe SIGSEGV during process teardown when multiple wgpu
+    /// devices are dropped concurrently. The guard must be held for the
+    /// entire test lifetime — not just during initialization — to ensure
+    /// the device is dropped before the next test creates one.
+    pub(crate) static GPU_TEST_GUARD: std::sync::LazyLock<tokio::sync::Mutex<()>> =
+        std::sync::LazyLock::new(|| tokio::sync::Mutex::new(()));
+
+    /// Start a primal AND return the GPU guard so it's held for the test's lifetime.
+    pub(crate) async fn start_primal_guarded()
+    -> (super::BarraCudaPrimal, tokio::sync::MutexGuard<'static, ()>) {
+        let guard = GPU_TEST_GUARD.lock().await;
+        let mut primal = super::BarraCudaPrimal::new();
+        primal.start().await.unwrap();
+        (primal, guard)
+    }
+}
+
 /// Canonical primal identity — single source of truth for self-knowledge.
 pub const PRIMAL_NAME: &str = "barraCuda";
 
@@ -373,8 +396,11 @@ impl PrimalHealth for BarraCudaPrimal {
 mod tests {
     use super::*;
 
+    use super::test_util::{GPU_TEST_GUARD, start_primal_guarded};
+
     #[tokio::test]
     async fn test_lifecycle() {
+        let _guard = GPU_TEST_GUARD.lock().await;
         let mut primal = BarraCudaPrimal::new();
 
         assert_eq!(primal.state(), PrimalState::Created);
@@ -390,8 +416,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_health() {
-        let mut primal = BarraCudaPrimal::new();
-        primal.start().await.unwrap();
+        let (primal, _guard) = start_primal_guarded().await;
 
         let report = primal.health_check().await.unwrap();
         assert_eq!(report.name, "barraCuda");
@@ -399,8 +424,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_device_available_after_start() {
-        let mut primal = BarraCudaPrimal::new();
-        primal.start().await.unwrap();
+        let (primal, _guard) = start_primal_guarded().await;
 
         if primal.device().is_some() {
             assert!(primal.health_status().is_healthy());
@@ -425,8 +449,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_status_running_no_gpu() {
-        let mut primal = BarraCudaPrimal::new();
-        primal.start().await.unwrap();
+        let (primal, _guard) = start_primal_guarded().await;
         if primal.device().is_none() {
             let status = primal.health_status();
             assert!(
@@ -440,8 +463,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_status_after_stop() {
-        let mut primal = BarraCudaPrimal::new();
-        primal.start().await.unwrap();
+        let (mut primal, _guard) = start_primal_guarded().await;
         primal.stop().await.unwrap();
         assert_eq!(primal.health_status(), HealthStatus::Unknown);
         assert!(!primal.is_ready());
@@ -449,8 +471,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_check_report_fields() {
-        let mut primal = BarraCudaPrimal::new();
-        primal.start().await.unwrap();
+        let (primal, _guard) = start_primal_guarded().await;
         let report = primal.health_check().await.unwrap();
         assert_eq!(report.name, PRIMAL_NAME);
         assert_eq!(report.version, env!("CARGO_PKG_VERSION"));
@@ -469,8 +490,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cannot_start_while_running() {
-        let mut primal = BarraCudaPrimal::new();
-        primal.start().await.unwrap();
+        let (mut primal, _guard) = start_primal_guarded().await;
         let err = primal.start().await;
         assert!(err.is_err(), "should not start while already running");
     }
@@ -485,6 +505,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_restart_after_stop() {
+        let _guard = GPU_TEST_GUARD.lock().await;
         let mut primal = BarraCudaPrimal::new();
         primal.start().await.unwrap();
         primal.stop().await.unwrap();
@@ -494,16 +515,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_reload() {
-        let mut primal = BarraCudaPrimal::new();
-        primal.start().await.unwrap();
+        let (mut primal, _guard) = start_primal_guarded().await;
         primal.reload().await.unwrap();
         assert_eq!(primal.state(), PrimalState::Running);
     }
 
     #[tokio::test]
     async fn test_shutdown() {
-        let mut primal = BarraCudaPrimal::new();
-        primal.start().await.unwrap();
+        let (mut primal, _guard) = start_primal_guarded().await;
         primal.shutdown().await.unwrap();
         assert_eq!(primal.state(), PrimalState::Stopped);
     }
@@ -529,8 +548,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_compute_device_consistent_with_device() {
-        let mut primal = BarraCudaPrimal::new();
-        let _ = primal.start().await;
+        let (primal, _guard) = start_primal_guarded().await;
         if primal.device().is_some() {
             assert!(primal.compute_device().is_some());
         } else {

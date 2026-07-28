@@ -78,3 +78,10 @@ pub const FEDERATION_PORT: &str = "FEDERATION_PORT";
 
 /// systemd `Type=notify` socket for readiness signaling.
 pub const NOTIFY_SOCKET: &str = "NOTIFY_SOCKET";
+
+/// BTSP strict mode — rejects plain JSON-RPC when set to `1`.
+pub const BTSP_STRICT_MODE: &str = "BTSP_STRICT_MODE";
+
+/// **Deprecated** — use [`BTSP_STRICT_MODE`]. Retained for migration grace period.
+#[deprecated(since = "0.4.1", note = "use BTSP_STRICT_MODE")]
+pub const BEARDOG_UDS_REQUIRE_BTSP: &str = "BEARDOG_UDS_REQUIRE_BTSP";

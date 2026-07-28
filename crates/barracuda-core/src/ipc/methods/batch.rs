@@ -43,15 +43,10 @@ use crate::BarraCudaPrimal;
 use serde_json::Value;
 use std::collections::HashMap;
 
-/// Typed validation error for batch operations — avoids `Result<T, String>`.
-#[derive(Debug)]
+/// Typed validation error for batch operations.
+#[derive(Debug, thiserror::Error)]
+#[error("{0}")]
 struct BatchError(String);
-
-impl std::fmt::Display for BatchError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
-    }
-}
 
 impl BatchError {
     fn new(msg: impl Into<String>) -> Self {

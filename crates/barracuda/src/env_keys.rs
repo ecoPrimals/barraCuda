@@ -34,3 +34,6 @@ pub const BARRACUDA_POLL_TIMEOUT_SECS: &str = "BARRACUDA_POLL_TIMEOUT_SECS";
 
 /// Require GPU adapter in validation binaries (`1` or `true`).
 pub const BARRACUDA_REQUIRE_GPU: &str = "BARRACUDA_REQUIRE_GPU";
+
+/// Default loopback address for localhost-only IPC and discovery probes.
+pub const DEFAULT_LOOPBACK: &str = "127.0.0.1";

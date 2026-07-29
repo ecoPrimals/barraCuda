@@ -6,6 +6,22 @@ Prioritized work items, ordered by impact. Updated 2026-07-28.
 
 ## Recently Completed
 
+### Wave 155i — strandGate RTX 3090 GPU Compute Profiling (Jul 29, 2026)
+- **First real GPU compute on strandGate** — built glibc binary from source (musl-static
+  cannot `dlopen` Vulkan drivers). RTX 3090 discovered: DiscreteGpu, Vulkan, SHADER_F64,
+  14/9 f64 builtins native, 24GB VRAM, driver 580.126.18.
+- **Two discrete GPUs discovered** — RTX 3090 (NVIDIA GA102) + RX 6950 XT (AMD NAVI21).
+  Both have strong native FP64 hardware (~100 TFLOPS FP64). DF64 emulation unnecessary.
+- **FP64 profiling**: RTX 3090 delivers 103.97 TFLOPS FP64 / 96.37 TFLOPS FP32 (FP64 > FP32,
+  unusual). RX 6950 XT: 99.28 TFLOPS FP64 / 85.33 TFLOPS FP32. Both consumer GPUs with
+  non-crippled FP64 — rare and ideal for scientific compute.
+- **GPU validation**: FHE NTT bit-perfect, DF64 precision OK, tensor matmul verified.
+  `validate_gpu` 6/6 PASS.
+- **SciPy parity**: cdist Euclidean 1K×1K at 1.3B pairs/s — **65x faster** than single-thread
+  SciPy CPU. Reduction/variance upload-dominated at small N.
+- **4,957 tests pass on RTX 3090** — zero SIGSEGV, zero failures, 3m 52s wall time.
+- Installed `barracuda-glibc` alongside musl depot binary. Awaiting sporeGate depot rebuild.
+
 ### Wave 155f — Deep Debt Sweep + Bug Fixes + Dependency Evolution (Jul 28, 2026)
 - **SIGSEGV in barracuda-core tests FIXED** — root-caused Mesa llvmpipe crash during
   process teardown when multiple wgpu devices existed simultaneously. Added crate-level

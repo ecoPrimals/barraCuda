@@ -6,7 +6,7 @@ Prioritized work items, ordered by impact. Updated 2026-07-28.
 
 ## Recently Completed
 
-### Wave 155i — strandGate RTX 3090 GPU Compute Profiling (Jul 29, 2026)
+### Wave 155i — RTX 3090 Profiling + Deep Debt Sweep + Self-Knowledge (Jul 29, 2026)
 - **First real GPU compute on strandGate** — built glibc binary from source (musl-static
   cannot `dlopen` Vulkan drivers). RTX 3090 discovered: DiscreteGpu, Vulkan, SHADER_F64,
   14/9 f64 builtins native, 24GB VRAM, driver 580.126.18.
@@ -23,6 +23,19 @@ Prioritized work items, ordered by impact. Updated 2026-07-28.
   SciPy CPU. Reduction/variance upload-dominated at small N.
 - **4,957 tests pass on RTX 3090** — zero SIGSEGV, zero failures, 3m 52s wall time.
 - Installed `barracuda-glibc` alongside musl depot binary. Awaiting sporeGate depot rebuild.
+- **Deep debt sweep** — 12-axis audit confirmed clean bill:
+  - `ShaderValidationBackend::CoralReef` → `SovereignCpu` — capability-based naming,
+    no longer references the providing primal by name.
+  - 10 batch functions formally `#[deprecated(since = "0.4.1")]`: bessel (4), erf (2),
+    activation (4). All have WGSL shader paths via cpu-shader; native Rust removal at 0.5.0.
+  - `#![allow(` → `#![expect(` with reason strings in test files.
+  - Confirmed: zero production `unwrap()`, zero `Result<T, String>`, zero `todo!()`,
+    zero `Box<dyn Error>`, zero cross-primal compile deps, zero production mocks,
+    zero `println!` in library code, zero files > 800L.
+- **Compute Trio silicon utilization AAR** written for overwatch coordination — maps all
+  GPU execution units (shader, tensor, RT, TMU, copy engine) across barraCuda + toadStool
+  + coralReef. DF64 thesis: every consumer GPU is a science GPU.
+- **4,957 tests pass.** Zero clippy warnings. All quality gates green.
 
 ### Wave 155f — Deep Debt Sweep + Bug Fixes + Dependency Evolution (Jul 28, 2026)
 - **SIGSEGV in barracuda-core tests FIXED** — root-caused Mesa llvmpipe crash during

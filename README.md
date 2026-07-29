@@ -61,6 +61,7 @@ results.
 
 ## Recent
 
+- **Wave 155i: RTX 3090 Profiling + Deep Debt (Jul 29)**: First real GPU compute on strandGate — RTX 3090 + RX 6950 XT both detected. 103.97 TFLOPS FP64, FHE NTT bit-perfect, cdist 65x faster than SciPy CPU. ShaderValidationBackend::CoralReef → SovereignCpu (self-knowledge). 10 batch functions #[deprecated]. Compute Trio silicon utilization AAR. 4,957 tests, zero warnings.
 - **Wave 155f: Deep Debt Sweep + Bug Fixes (Jul 28)**: SIGSEGV in barracuda-core tests fixed (GPU_TEST_GUARD serializes wgpu device lifecycle). ESN BindGroupLayout crash fixed (TimeSeriesAnalyzer reuses caller's device). BTSP env var race conditions fixed (ENV_MUTEX in all integration test binaries). BatchError → thiserror. BTSP_STRICT_MODE env key. wgpu backend target-gating. 4,957 tests pass, zero SIGSEGV, zero failures, all quality gates green.
 - **Wave 107: Socket Cleanup + method.describe (Jun 10)**: `PRIMAL-SOCKET-CLEANUP` — state files co-locate with socket path. `method.describe` RPC for runtime introspection. All production files <800L. 98 methods. Composition-ready.
 - **Waves 100-101: Transport Self-Knowledge (Jun 8)**: Removed cross-primal `sourdough-core` dep. Local `TransportEndpoint` + `connect_transport()` (237L). Wire format is the contract. `TRANSPORT_ENDPOINT` env var operational.
@@ -248,7 +249,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo nextest run --workspace --profile ci  # 5,044+ tests via nextest
+cargo nextest run --workspace --profile ci  # 4,957+ tests via nextest
 cargo llvm-cov --workspace --lib        # 80% CI gate (blocking), 90% target (requires GPU hardware)
 ```
 

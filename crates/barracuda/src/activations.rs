@@ -90,6 +90,7 @@ pub fn leaky_relu(x: f64, alpha: f64) -> f64 {
 ///
 /// With `cpu-shader`, dispatches through `relu_f64.wgsl` via naga-exec.
 /// The native Rust fallback is deprecated and will be removed in 0.5.0.
+#[deprecated(since = "0.4.1", note = "use WGSL shader path (cpu-shader feature)")]
 #[must_use]
 pub fn relu_batch(input: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]
@@ -125,6 +126,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 ///
 /// With `cpu-shader`, dispatches through inline WGSL via naga-exec.
 /// The native Rust fallback is deprecated and will be removed in 0.5.0.
+#[deprecated(since = "0.4.1", note = "use WGSL shader path (cpu-shader feature)")]
 #[must_use]
 pub fn sigmoid_batch(input: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]
@@ -158,6 +160,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 ///
 /// With `cpu-shader`, dispatches through inline WGSL via naga-exec.
 /// The native Rust fallback is deprecated and will be removed in 0.5.0.
+#[deprecated(since = "0.4.1", note = "use WGSL shader path (cpu-shader feature)")]
 #[must_use]
 pub fn gelu_batch(input: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]
@@ -190,6 +193,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 ///
 /// With `cpu-shader`, dispatches through inline WGSL via naga-exec.
 /// The native Rust fallback is deprecated and will be removed in 0.5.0.
+#[deprecated(since = "0.4.1", note = "use WGSL shader path (cpu-shader feature)")]
 #[must_use]
 pub fn swish_batch(input: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]
@@ -259,6 +263,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(deprecated, reason = "testing deprecated batch functions until 0.5.0 removal")]
     fn batch_lengths() {
         let input = vec![1.0, -1.0, 0.0, 2.0];
         assert_eq!(relu_batch(&input).len(), 4);

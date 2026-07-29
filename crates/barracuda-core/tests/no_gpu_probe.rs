@@ -4,7 +4,7 @@
 //! These tests manipulate environment variables and require serialization
 //! when run via `cargo test` (shared process). Under nextest (one test per
 //! process) the mutex is uncontended.
-#![allow(clippy::unwrap_used)]
+#![expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
 #![expect(
     clippy::await_holding_lock,
     reason = "env-mutex guard held across .await is safe under #[tokio::test] current_thread"

@@ -147,6 +147,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 ///
 /// With `cpu-shader`, dispatches through inline WGSL via naga-exec.
 /// The native Rust fallback is deprecated and will be removed in 0.5.0.
+#[deprecated(since = "0.4.1", note = "use WGSL shader path (cpu-shader feature)")]
 #[must_use]
 pub fn erf_batch(x: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]
@@ -192,6 +193,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 ///
 /// With `cpu-shader`, dispatches through inline WGSL via naga-exec.
 /// The native Rust fallback is deprecated and will be removed in 0.5.0.
+#[deprecated(since = "0.4.1", note = "use WGSL shader path (cpu-shader feature)")]
 #[must_use]
 pub fn erfc_batch(x: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]
@@ -264,6 +266,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(deprecated, reason = "testing deprecated batch function until 0.5.0 removal")]
     fn test_erf_batch() {
         let x = vec![0.0, 0.5, 1.0, 1.5, 2.0];
         let result = erf_batch(&x);

@@ -246,6 +246,7 @@ pub fn bessel_k0(x: f64) -> f64 {
 ///
 /// With `cpu-shader`, dispatches through `bessel_j0_f64.wgsl` via naga-exec.
 /// The native Rust fallback is deprecated and will be removed in 0.5.0.
+#[deprecated(since = "0.4.1", note = "use WGSL shader path (cpu-shader feature)")]
 #[must_use]
 pub fn bessel_j0_batch(x: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]
@@ -263,6 +264,7 @@ pub fn bessel_j0_batch(x: &[f64]) -> Vec<f64> {
 ///
 /// With `cpu-shader`, dispatches through `bessel_j1_f64.wgsl` via naga-exec.
 /// The native Rust fallback is deprecated and will be removed in 0.5.0.
+#[deprecated(since = "0.4.1", note = "use WGSL shader path (cpu-shader feature)")]
 #[must_use]
 pub fn bessel_j1_batch(x: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]
@@ -280,6 +282,7 @@ pub fn bessel_j1_batch(x: &[f64]) -> Vec<f64> {
 ///
 /// With `cpu-shader`, dispatches through `bessel_i0_f64.wgsl` via naga-exec.
 /// The native Rust fallback is deprecated and will be removed in 0.5.0.
+#[deprecated(since = "0.4.1", note = "use WGSL shader path (cpu-shader feature)")]
 #[must_use]
 pub fn bessel_i0_batch(x: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]
@@ -297,6 +300,7 @@ pub fn bessel_i0_batch(x: &[f64]) -> Vec<f64> {
 ///
 /// With `cpu-shader`, dispatches through `bessel_k0_f64.wgsl` via naga-exec.
 /// The native Rust fallback is deprecated and will be removed in 0.5.0.
+#[deprecated(since = "0.4.1", note = "use WGSL shader path (cpu-shader feature)")]
 #[must_use]
 pub fn bessel_k0_batch(x: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]
@@ -401,8 +405,8 @@ mod tests {
         assert!(bessel_k0(10.0) < 1e-4);
     }
 
-    // Batch tests
     #[test]
+    #[expect(deprecated, reason = "testing deprecated batch functions until 0.5.0 removal")]
     fn test_batch_functions() {
         let x = vec![0.0, 1.0, 2.0];
 

@@ -199,8 +199,9 @@ static CORAL_VALIDATE_AVAILABLE: OnceLock<bool> = OnceLock::new();
 /// Phase 2 will insert a naga interpreter between coralReef and llvmpipe.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ShaderValidationBackend {
-    /// coralReef `shader.execute.cpu` — sovereign compiled CPU execution.
-    CoralReef,
+    /// Sovereign CPU execution via `shader.execute.cpu` IPC — compiled by
+    /// whichever primal advertises the `shader.execute.cpu` capability.
+    SovereignCpu,
     /// llvmpipe / software Vulkan via wgpu — always available on CI.
     Llvmpipe,
 }
@@ -222,7 +223,7 @@ pub async fn shader_validation_backend() -> ShaderValidationBackend {
     };
 
     if coral_cpu {
-        ShaderValidationBackend::CoralReef
+        ShaderValidationBackend::SovereignCpu
     } else {
         ShaderValidationBackend::Llvmpipe
     }

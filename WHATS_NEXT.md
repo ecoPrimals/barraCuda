@@ -11,10 +11,12 @@ Prioritized work items, ordered by impact. Updated 2026-07-28.
   cannot `dlopen` Vulkan drivers). RTX 3090 discovered: DiscreteGpu, Vulkan, SHADER_F64,
   14/9 f64 builtins native, 24GB VRAM, driver 580.126.18.
 - **Two discrete GPUs discovered** — RTX 3090 (NVIDIA GA102) + RX 6950 XT (AMD NAVI21).
-  Both have strong native FP64 hardware (~100 TFLOPS FP64). DF64 emulation unnecessary.
-- **FP64 profiling**: RTX 3090 delivers 103.97 TFLOPS FP64 / 96.37 TFLOPS FP32 (FP64 > FP32,
-  unusual). RX 6950 XT: 99.28 TFLOPS FP64 / 85.33 TFLOPS FP32. Both consumer GPUs with
-  non-crippled FP64 — rare and ideal for scientific compute.
+  Both have strong native FP64 hardware (~100 TFLOPS FP64) — rare consumer GPUs with 1:2
+  FP64:FP32 ratio. DF64 at ~0.9× native on this hardware; on consumer GPUs with 1:64 ratio
+  (3060/4070 class), DF64 is **25× faster** than native f64 — every consumer GPU becomes
+  a science GPU with ~14-digit precision at ~0.4× FP32 throughput.
+- **FP64 profiling**: RTX 3090 delivers 103.97 TFLOPS FP64 / 96.37 TFLOPS FP32 / 91.89
+  TFLOPS DF64. RX 6950 XT: 99.28 / 85.33 / 83.87. Full 15-tier precision continuum validated.
 - **GPU validation**: FHE NTT bit-perfect, DF64 precision OK, tensor matmul verified.
   `validate_gpu` 6/6 PASS.
 - **SciPy parity**: cdist Euclidean 1K×1K at 1.3B pairs/s — **65x faster** than single-thread

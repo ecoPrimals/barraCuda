@@ -1,6 +1,6 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-07-28.
+Prioritized work items, ordered by impact. Updated 2026-07-29.
 
 ---
 
@@ -35,7 +35,14 @@ Prioritized work items, ordered by impact. Updated 2026-07-28.
 - **Compute Trio silicon utilization AAR** written for overwatch coordination — maps all
   GPU execution units (shader, tensor, RT, TMU, copy engine) across barraCuda + toadStool
   + coralReef. DF64 thesis: every consumer GPU is a science GPU.
-- **4,957 tests pass.** Zero clippy warnings. All quality gates green.
+- **Multi-GPU pool wired into primal startup** — `MultiDevicePool` auto-discovers all
+  GPUs during `BarraCudaPrimal::start()`. Pool summary logged on startup, pool dropped
+  on `stop()`. New `device.pool` IPC method (99th registered) returns per-device status
+  (name, class, GFLOPS, VRAM, f64 builtins, allocations, usage %). Health report includes
+  `gpu_pool` and `gpu_pool_devices` details. strandGate validates with RTX 3090 + RX 6950 XT.
+- **P1/P2 cleanup** — marked completed: 2-Gate Mesh Proof (10-gate fleet), BatchedTridiagEigh
+  (IPC shipped), Multi-GPU pool wiring (done), GPU test parallelism (SIGSEGV fixed).
+- **4,959 tests pass.** Zero clippy warnings. All quality gates green.
 
 ### Wave 155f — Deep Debt Sweep + Bug Fixes + Dependency Evolution (Jul 28, 2026)
 - **SIGSEGV in barracuda-core tests FIXED** — root-caused Mesa llvmpipe crash during
@@ -1085,31 +1092,26 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
 
 ## Immediate (P1)
 
-- **~~2-Gate Mesh Proof~~**: Superseded — 5-node mesh operational (golgi ↔ sporeGate ↔
-  eastGate ↔ flockGate ↔ ironGate, all 12/12 NUCLEUS on ironGate). RTX 5070 GPU live.
-  Sovereign-dispatch IPC wired for musl-static gates without local GPU access.
+- **~~2-Gate Mesh Proof~~**: ~~Superseded — 10-gate fleet operational, NUCLEUS convergence.~~
+  DONE.
 - **PrecisionBrain → coralReef → SovereignDevice CI integration**: Mock trio E2E validated
   (Sprint 57). Next: CI with live coralReef instance for full pipeline validation.
-- **DF64 NVK hardware verification**: GPU-dispatched DF64 E2E tests added (Sprint 63, FMA +
-  Kahan summation). Remaining: run Yukawa force kernels through NVK/NAK on physical hardware
-  to validate sovereign compiler numerical correctness on real silicon.
+- **DF64 hardware verification**: GPU-dispatched DF64 E2E tests validated on RTX 3090
+  (Wave 155i). DF64 at 91.89 TFLOPS on strandGate. Remaining: Yukawa force kernels
+  through coralReef-compiled ISA on physical hardware.
 - **Tensor core GEMM codegen**: `kernel_router` routes F16/BF16/TF32 `DenseMatmul` to
   `KernelTarget::Sovereign` with `HardwareHint::TensorCore` (Sprint 64). Next: coralReef
   HMMA/WGMMA emission for eigensolvers/preconditioners via mixed-precision iterative refinement.
-- **`BatchedTridiagEigh` GPU op**: groundSpring local QL implicit eigensolver is a candidate
-  for absorption as a batched GPU tridiagonal eigenvector solver — **IPC handler shipped (Wave 116); GPU batched op optional**.
-- **Multi-GPU OOM automatic migration**: OOM detection flag wired in `WgpuDevice`, `is_oom()`
-  + `clear_oom()` + `set_oom()` API live, `is_retriable()` covers OOM (Sprint 64).
-  **`execute_with_migration` shipped (Wave 119)**: automatic workload retry across pool
-  devices when OOM detected, excluded-device tracking, configurable retry limit.
-  **`execute_with_migration_quota` shipped (Wave 124)**: quota-aware variant carries
-  `ResourceQuota` through migration, records OOM failures on tracker. `acquire_excluding`
-  now also skips OOM-flagged devices. Remaining: wire `MultiDevicePool` into primal startup
-  when ironGate multi-GPU hardware is enrolled.
-- **Kokkos parity validation baseline**: Document `sarkas_gpu` validation results, extract
-  PPPM shader performance numbers for apples-to-apples comparison. Framework parity benchmarks
-  added (Sprint 63, LAMMPS + SciPy). Now unblocked by VFIO strategy — projected ~4,000
-  steps/s vs Kokkos 2,630 steps/s.
+- **~~`BatchedTridiagEigh` GPU op~~**: IPC handler shipped (Wave 116). GPU batched op optional.
+  DONE.
+- **~~Multi-GPU pool wiring~~**: `MultiDevicePool` wired into `BarraCudaPrimal::start()`
+  (Wave 155i). Pool auto-discovers all GPUs, exposes `device.pool` IPC method. strandGate
+  validates with RTX 3090 + RX 6950 XT. OOM migration API (`execute_with_migration`,
+  `execute_with_migration_quota`) live since Wave 119/124. **99 registered IPC methods.**
+  DONE.
+- **Kokkos parity validation baseline**: Framework parity benchmarks added (Sprint 63,
+  LAMMPS + SciPy). SciPy cdist 65x faster on strandGate RTX 3090. Remaining: document
+  `sarkas_gpu` PPPM shader comparison numbers.
 
 ## Near-term (P2)
 
@@ -1117,13 +1119,11 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
   measured via llvm-cov). CI 80% gate blocking (Sprint 3).
   Evolve `--fail-under` from 80 to 90 with real GPU hardware. Remaining gaps
   are exclusively GPU-dependent code paths.
-- **GPU test parallelism (cargo-nextest)**: Mass parallel `cargo test` causes
-  wgpu SIGSEGV under extreme GPU driver contention (process-global state
-  limitation). All tests pass individually. `cargo-nextest` provides process
-  isolation and resolves this. **Nextest now installed in barraCuda CI (Wave 116).**
-  Upstream: promote as ecosystem CI standard for GPU-bearing primals.
+- **~~GPU test parallelism~~**: SIGSEGV resolved via `GPU_TEST_GUARD` (Wave 155f).
+  4,957 tests pass on strandGate with `cargo test --workspace`. Nextest available
+  for process isolation in CI. DONE.
 - **Kokkos GPU parity benchmarks**: Run barraCuda GPU benchmarks on matching hardware,
-  publish comparison data.
+  publish comparison data. SciPy cdist baseline established (65x on RTX 3090).
 - **Optional tensor encryption via `tensor` purpose key**: Per
   `NUCLEUS_TWO_TIER_CRYPTO_MODEL.md` — encrypt sensitive tensor data in transit
   using BearDog ChaCha20-Poly1305 delegation. Not all tensor ops need encryption;

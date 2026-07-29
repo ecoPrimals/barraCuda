@@ -191,6 +191,7 @@ pub struct CpuTensor {
 pub struct BarraCudaPrimal {
     state: PrimalState,
     compute: Option<barracuda::device::DiscoveredDevice>,
+    gpu_pool: Option<barracuda::multi_gpu::MultiDevicePool>,
     tensors: RwLock<HashMap<String, Arc<barracuda::tensor::Tensor>>>,
     cpu_tensors: RwLock<HashMap<String, CpuTensor>>,
     dispatch_jobs: RwLock<HashMap<String, ipc::methods::compute::DispatchJob>>,
@@ -203,6 +204,7 @@ impl BarraCudaPrimal {
         Self {
             state: PrimalState::Created,
             compute: None,
+            gpu_pool: None,
             tensors: RwLock::new(HashMap::new()),
             cpu_tensors: RwLock::new(HashMap::new()),
             dispatch_jobs: RwLock::new(HashMap::new()),
@@ -235,6 +237,12 @@ impl BarraCudaPrimal {
     #[must_use]
     pub fn compute_device(&self) -> Option<&barracuda::device::DiscoveredDevice> {
         self.compute.as_ref()
+    }
+
+    /// Access the multi-GPU device pool (available after `start()` when >=1 GPU found).
+    #[must_use]
+    pub fn gpu_pool(&self) -> Option<&barracuda::multi_gpu::MultiDevicePool> {
+        self.gpu_pool.as_ref()
     }
 
     /// Store a tensor and return its handle ID.
@@ -345,6 +353,19 @@ impl PrimalLifecycle for BarraCudaPrimal {
                     );
                 }
             }
+
+            match barracuda::multi_gpu::MultiDevicePool::new().await {
+                Ok(pool) => {
+                    tracing::info!(
+                        "barraCuda: multi-GPU pool ready — {}",
+                        pool.summary()
+                    );
+                    self.gpu_pool = Some(pool);
+                }
+                Err(e) => {
+                    tracing::debug!("barraCuda: multi-GPU pool not available ({e})");
+                }
+            }
         }
 
         self.state = PrimalState::Running;
@@ -357,6 +378,7 @@ impl PrimalLifecycle for BarraCudaPrimal {
                 "Cannot stop from current state",
             ));
         }
+        self.gpu_pool = None;
         self.compute = None;
         self.state = PrimalState::Stopped;
         Ok(())
@@ -386,6 +408,11 @@ impl PrimalHealth for BarraCudaPrimal {
                 let info = wgpu.adapter_info();
                 report = report.with_detail("device_type", format!("{:?}", info.device_type));
             }
+        }
+
+        if let Some(pool) = &self.gpu_pool {
+            report = report.with_detail("gpu_pool", pool.summary());
+            report = report.with_detail("gpu_pool_devices", pool.device_count().to_string());
         }
 
         Ok(report)

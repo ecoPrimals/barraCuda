@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **859 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,208 Rust source files**, 25 integration test harnesses, 4,957 tests passing
+- **1,208 Rust source files**, 25 integration test harnesses, 4,959 tests passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -185,7 +185,7 @@ barraCuda/
 ├── crates/
 │   ├── barracuda-core/              # Primal lifecycle wrapper
 │   │   ├── src/lib.rs               # BarraCudaPrimal: start/stop/health
-│   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport (98 methods, Wire Standard L2)
+│   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport (99 methods, Wire Standard L2)
 │   │   ├── src/rpc.rs               # tarpc service definition (15 endpoints, parity with JSON-RPC)
 │   │   └── src/bin/barracuda/       # UniBin CLI
 │   └── barracuda/                   # Umbrella crate — all math + GPU
@@ -249,7 +249,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo nextest run --workspace --profile ci  # 4,957+ tests via nextest
+cargo nextest run --workspace --profile ci  # 4,959+ tests via nextest
 cargo llvm-cov --workspace --lib        # 80% CI gate (blocking), 90% target (requires GPU hardware)
 ```
 
@@ -288,7 +288,7 @@ barraCuda exposes a dual-protocol IPC interface per wateringHole standards:
 | `fhe.*` | `fhe.ntt`, `fhe.pointwise_mul` |
 | `btsp.*` | `btsp.negotiate` — Phase 3 cipher upgrade (ChaCha20-Poly1305 / NULL fallback) |
 
-98 methods follow the wateringHole `{domain}.{operation}` Semantic Method Naming
+99 methods follow the wateringHole `{domain}.{operation}` Semantic Method Naming
 Standard v2.2.0. Wire Standard L2 compliant: `capabilities.list` returns the
 `{primal, version, methods}` envelope with `provided_capabilities` grouping.
 `health.liveness`, `health.readiness`, `health.check`, and `capabilities.list`

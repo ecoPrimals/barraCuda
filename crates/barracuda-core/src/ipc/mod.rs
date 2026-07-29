@@ -46,6 +46,7 @@
 //! | Method | Params | Result | GPU |
 //! |--------|--------|--------|-----|
 //! | `device.list` | none | `{"devices": [{"name", "vendor", "device_type", "backend", "driver", "driver_info"}]}` | no |
+//! | `device.pool` | none | `{"available": bool, "device_count": usize, "summary": str, "devices": [...]}` | no |
 //! | `device.probe` | none | `{"available": bool, "max_buffer_size": u64, ...}` or `{"available": false, "reason": str}` | no |
 //! | `tolerances.get` | `{"name": str}` (optional, default `"default"`) | `{"name": str, "abs_tol": f64, "rel_tol": f64}` | no |
 //! | `validate.gpu_stack` | none | `{"gpu_available": true, "status": str, "tests": [{"test": str, "pass": bool}]}` | yes |

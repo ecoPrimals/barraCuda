@@ -62,6 +62,7 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     "primal.announce",
     // ── Device ────────────────────────────────────────────────────────
     "device.list",
+    "device.pool",
     "device.probe",
     "tolerances.get",
     "validate.gpu_stack",
@@ -240,6 +241,7 @@ pub async fn dispatch(
         "primal.announce" => primal::announce(primal, id),
         // Device
         "device.list" => device::list(primal, id).await,
+        "device.pool" => device::pool(primal, id).await,
         "device.probe" => device::probe(primal, id).await,
         "tolerances.get" => health::tolerances_get(params, id),
         "validate.gpu_stack" => health::validate_gpu_stack(primal, id).await,

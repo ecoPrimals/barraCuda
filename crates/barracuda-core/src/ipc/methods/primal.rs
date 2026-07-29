@@ -198,6 +198,11 @@ fn method_descriptor(method: &str) -> Value {
             serde_json::json!({}),
             "public",
         ),
+        "device.pool" => (
+            "Multi-GPU pool status and per-device diagnostics",
+            serde_json::json!({}),
+            "public",
+        ),
         "device.probe" => ("Probe GPU capabilities", serde_json::json!({}), "public"),
         "tolerances.get" => (
             "Get precision tolerances for an operation",

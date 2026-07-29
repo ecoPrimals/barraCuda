@@ -23,6 +23,31 @@ async fn test_device_probe_no_gpu() {
     assert!(result["reason"].is_string());
 }
 
+// ── device.pool ─────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_device_pool_no_gpu() {
+    let primal = test_primal();
+    let resp = device_pool(&primal, serde_json::json!(2)).await;
+    let result = resp.result.expect("device.pool always returns success");
+    assert_eq!(result["available"], false);
+    assert!(result["reason"].is_string());
+}
+
+#[tokio::test]
+async fn test_dispatch_device_pool() {
+    let primal = test_primal();
+    let resp = dispatch(
+        &primal,
+        "device.pool",
+        &serde_json::json!({}),
+        serde_json::json!(250),
+    )
+    .await;
+    let result = resp.result.expect("device.pool dispatch");
+    assert_eq!(result["available"], false);
+}
+
 // ── health and tolerances ───────────────────────────────────────────────
 
 #[test]

@@ -7,7 +7,7 @@
 use super::super::jsonrpc::{INTERNAL_ERROR, INVALID_PARAMS, METHOD_NOT_FOUND};
 use super::batch::tensor_batch_submit;
 use super::compute::{compute_dispatch, parse_shape};
-use super::device::{list as device_list, probe as device_probe};
+use super::device::{list as device_list, pool as device_pool, probe as device_probe};
 use super::dispatch;
 use super::fhe::{fhe_ntt, fhe_pointwise_mul};
 use super::health::{

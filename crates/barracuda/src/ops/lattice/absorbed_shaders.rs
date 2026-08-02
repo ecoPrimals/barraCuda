@@ -255,13 +255,19 @@ mod tests {
             ("tmu_momenta", WGSL_SU3_RANDOM_MOMENTA_TMU_F64),
             ("rop_force", WGSL_SU3_FERMION_FORCE_ACCUMULATE_ROP_F64),
             ("atomic_to_momentum", WGSL_SU3_FORCE_ATOMIC_TO_MOMENTUM_F64),
-            ("subgroup_reduce", WGSL_SUM_REDUCE_SUBGROUP_F64),
         ] {
             assert_non_empty(name, src);
             assert_has_entry_point(name, src);
             assert_no_enable_f64(name, src);
             assert_agpl_header(name, src);
         }
+        assert_non_empty("subgroup_reduce", WGSL_SUM_REDUCE_SUBGROUP_F64);
+        assert!(
+            WGSL_SUM_REDUCE_SUBGROUP_F64.contains("fn sum_reduce_f64("),
+            "subgroup_reduce must use fn sum_reduce_f64() to match ReduceScalarPipeline entry_point"
+        );
+        assert_no_enable_f64("subgroup_reduce", WGSL_SUM_REDUCE_SUBGROUP_F64);
+        assert_agpl_header("subgroup_reduce", WGSL_SUM_REDUCE_SUBGROUP_F64);
     }
 
     #[test]

@@ -27,7 +27,7 @@ struct ReduceParams {
 var<workgroup> wg_partial: array<f64, 8>;
 
 @compute @workgroup_size(256)
-fn main(
+fn sum_reduce_f64(
     @builtin(global_invocation_id) global_id: vec3<u32>,
     @builtin(local_invocation_id) local_id: vec3<u32>,
     @builtin(workgroup_id) workgroup_id: vec3<u32>,

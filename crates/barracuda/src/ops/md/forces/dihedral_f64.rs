@@ -8,7 +8,7 @@
 //! Two-pass GPU dispatch: per-dihedral forces → reduce to per-particle.
 
 use crate::device::WgpuDevice;
-use crate::device::capabilities::{DeviceCapabilities, Fp64Strategy, WORKGROUP_SIZE_1D};
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use std::sync::Arc;
@@ -203,14 +203,8 @@ impl DihedralTorsionF64 {
         include_str!("dihedral_f64.wgsl")
     }
 
-    fn wgsl_shader_for_device(device: &WgpuDevice) -> String {
-        let caps = DeviceCapabilities::from_device(device);
-        match caps.fp64_strategy() {
-            Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => {
-                Self::wgsl_shader().to_string()
-            }
-            Fp64Strategy::Hybrid => Self::wgsl_shader().to_string(),
-        }
+    fn wgsl_shader_for_device(_device: &WgpuDevice) -> String {
+        Self::wgsl_shader().to_string()
     }
 
     /// Compute dihedral torsion forces (GPU dispatch).

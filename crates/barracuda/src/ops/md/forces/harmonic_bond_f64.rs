@@ -8,7 +8,7 @@
 //! Two-pass GPU dispatch following the Morse f64 pattern.
 
 use crate::device::WgpuDevice;
-use crate::device::capabilities::{DeviceCapabilities, Fp64Strategy, WORKGROUP_SIZE_1D};
+use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use std::sync::Arc;
@@ -189,17 +189,8 @@ impl HarmonicBondF64 {
         include_str!("harmonic_bond_f64.wgsl")
     }
 
-    fn wgsl_shader_for_device(device: &WgpuDevice) -> String {
-        let caps = DeviceCapabilities::from_device(device);
-        match caps.fp64_strategy() {
-            Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => {
-                Self::wgsl_shader().to_string()
-            }
-            Fp64Strategy::Hybrid => {
-                // Harmonic bond uses only sqrt — no exp/log needed
-                Self::wgsl_shader().to_string()
-            }
-        }
+    fn wgsl_shader_for_device(_device: &WgpuDevice) -> String {
+        Self::wgsl_shader().to_string()
     }
 
     /// Compute harmonic bond forces for all bonds (GPU dispatch).

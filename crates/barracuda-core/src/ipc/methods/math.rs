@@ -254,42 +254,43 @@ pub(super) fn ode_step(params: &Value, id: Value) -> JsonRpcResponse {
     let n_steps = params.get("n_steps").and_then(|v| v.as_u64()).unwrap_or(1) as usize;
     let t0 = params.get("t0").and_then(|v| v.as_f64()).unwrap_or(0.0);
 
-    let deriv = |_t: f64, y: &[f64]| -> Vec<f64> {
-        let mut dy = b.clone();
-        for (i, row) in a_matrix.iter().enumerate() {
-            for (j, &a_ij) in row.iter().enumerate() {
-                dy[i] = a_ij.mul_add(y[j], dy[i]);
-            }
-        }
-        dy
-    };
-
     let mut y = state;
     let mut t = t0;
 
-    for _ in 0..n_steps {
-        let k1 = deriv(t, &y);
-        let y2: Vec<f64> = y
-            .iter()
-            .zip(&k1)
-            .map(|(&yi, &k)| (0.5 * dt).mul_add(k, yi))
-            .collect();
-        let t_mid = 0.5f64.mul_add(dt, t);
-        let k2 = deriv(t_mid, &y2);
-        let y3: Vec<f64> = y
-            .iter()
-            .zip(&k2)
-            .map(|(&yi, &k)| (0.5 * dt).mul_add(k, yi))
-            .collect();
-        let k3 = deriv(t_mid, &y3);
-        let y4: Vec<f64> = y
-            .iter()
-            .zip(&k3)
-            .map(|(&yi, &k)| dt.mul_add(k, yi))
-            .collect();
-        let k4 = deriv(t + dt, &y4);
+    let mut k1 = vec![0.0_f64; n_vars];
+    let mut k2 = vec![0.0_f64; n_vars];
+    let mut k3 = vec![0.0_f64; n_vars];
+    let mut k4 = vec![0.0_f64; n_vars];
+    let mut y_tmp = vec![0.0_f64; n_vars];
 
-        let sixth = 1.0 / 6.0;
+    let eval_deriv = |dst: &mut [f64], src: &[f64]| {
+        dst.copy_from_slice(&b);
+        for (i, row) in a_matrix.iter().enumerate() {
+            for (j, &a_ij) in row.iter().enumerate() {
+                dst[i] = a_ij.mul_add(src[j], dst[i]);
+            }
+        }
+    };
+
+    let sixth = 1.0 / 6.0;
+    for _ in 0..n_steps {
+        eval_deriv(&mut k1, &y);
+
+        for i in 0..n_vars {
+            y_tmp[i] = (0.5 * dt).mul_add(k1[i], y[i]);
+        }
+        eval_deriv(&mut k2, &y_tmp);
+
+        for i in 0..n_vars {
+            y_tmp[i] = (0.5 * dt).mul_add(k2[i], y[i]);
+        }
+        eval_deriv(&mut k3, &y_tmp);
+
+        for i in 0..n_vars {
+            y_tmp[i] = dt.mul_add(k3[i], y[i]);
+        }
+        eval_deriv(&mut k4, &y_tmp);
+
         for i in 0..n_vars {
             y[i] = (dt * sixth).mul_add(
                 2.0f64.mul_add(k3[i], 2.0f64.mul_add(k2[i], k1[i])) + k4[i],

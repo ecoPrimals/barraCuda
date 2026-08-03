@@ -1,10 +1,36 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-07-29.
+Prioritized work items, ordered by impact. Updated 2026-08-03.
 
 ---
 
 ## Recently Completed
+
+### Wave 155n — Idiom Evolution Sweep (Aug 3, 2026)
+- **RK4 ODE solver zero-alloc inner loop** — `math.ode_solve_rk4` derivative closure
+  previously cloned bias vector `b` on every evaluation (4× per step × n_steps).
+  Pre-allocates k1/k2/k3/k4/y_tmp buffers once outside the loop, eliminating
+  7·n_steps heap allocations.
+- **MD force module dead-code collapse** — 4 force modules (`harmonic_bond_f64`,
+  `harmonic_angle_f64`, `dihedral_f64`, `improper_f64`) had identical match arms
+  for all `Fp64Strategy` variants. Collapsed to direct `wgsl_shader()` call,
+  removed unused `DeviceCapabilities` + `Fp64Strategy` imports.
+- **Full 12-axis deep debt scan** confirmed clean bill:
+  - Files >800L: **0** (max 783L)
+  - Production unsafe: **1** (barracuda-spirv passthrough)
+  - Production unwrap: **0** in src/
+  - todo/unimplemented: **0**
+  - Bare `#[allow(`: **0**
+  - Hardcoded primal names: **0**
+  - Production mocks: **0**
+  - Cross-primal deps: **0**
+  - `Result<T, String>`: **0**
+  - println in lib: **0**
+  - Hardcoded paths/ports: **0**
+- **Identified LazyLock\<String\> evolution opportunity** — ~70 shader source statics
+  heap-allocate `include_str!` via `.to_string()`. Tracked for systematic `&'static str`
+  / `Cow<'static, str>` evolution when pipeline API can accept `&str` directly.
+- Zero clippy warnings. 5,037 tests pass. All quality gates green.
 
 ### Wave 155i — RTX 3090 Profiling + Deep Debt Sweep + Self-Knowledge (Jul 29, 2026)
 - **First real GPU compute on strandGate** — built glibc binary from source (musl-static

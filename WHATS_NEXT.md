@@ -6,7 +6,25 @@ Prioritized work items, ordered by impact. Updated 2026-08-03.
 
 ## Recently Completed
 
-### Wave 155p — PRNG Validation + Half-Range Fix (Aug 3, 2026)
+### Wave 155p — PRNG Validation + Shader Static Evolution + Magic Numbers (Aug 3, 2026)
+- **LazyLock\<String\> → const &str** — Converted 51 shader statics across 18
+  files from heap-allocating `LazyLock<String>` to zero-cost `const &str`.
+  Eliminates ~51 one-time heap allocations and `LazyLock` synchronization
+  overhead on the shader compilation hot path. `format!` concatenation
+  instances (Pattern C) intentionally preserved.
+- **Protocol version unified** — `"jsonrpc-2.0"` vs `"json-rpc-2.0"` inconsistency
+  in `primal.info` vs `primal.capabilities` resolved. Single `PROTOCOL_ID` constant.
+- **Magic numbers extracted** — `BTSP_WIRE_VERSION` (was inline `1` in 3 locations),
+  `IPC_PROBE_TIMEOUT` (was `Duration::from_secs(5)` inline).
+- **Dependency analysis** — confirmed 100% RustCrypto, no openssl/ring, blake3 `pure`
+  feature enabled, no build.rs in workspace, tarpc optional (default-on for binary).
+- **Production stubs audited** — 3 stubs all correctly feature-gated with documentation.
+  SPIRV passthrough exists behind feature. BTSP relay is Unix-only by design. Discovery
+  socket returns sentinel on non-Unix.
+- **12-axis deep debt scan** confirmed clean (0 critical findings).
+- Net -182 LOC. Zero clippy warnings. 4,970 tests pass.
+
+#### PRNG Fixes (same wave)
 - **CPU PRNG half-range bug FIXED** — `state_to_f64()` extracted 31 bits (>> 33)
   but divided by `u32::MAX` (2^32-1), producing values in [0, 0.5) instead of
   [0, 1). Fixed to 53-bit extraction matching `LcgRng::uniform()` and lattice

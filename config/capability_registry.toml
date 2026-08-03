@@ -38,7 +38,7 @@ methods = ["info", "capabilities", "announce"]
 
 [domains.device]
 description = "GPU device enumeration and probing"
-methods = ["list", "probe"]
+methods = ["list", "probe", "pool"]
 
 [domains.tolerances]
 description = "Hardware tolerance advisory"

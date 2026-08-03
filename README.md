@@ -44,7 +44,7 @@ results.
 - **Sovereign shader compilation** — naga 28 IR optimizer, SPIR-V passthrough
 - **NagaExecutor** — CPU interpreter for naga IR, executes WGSL compute shaders without GPU (f32+f64 native, shared memory, barriers, atomics)
 - **coralReef IPC contract** — sovereign CPU compilation (`shader.compile.cpu`, `shader.execute.cpu`) and validation (`shader.validate`) via JSON-RPC
-- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with 98 semantic `{domain}.{operation}` methods; Wire Standard L2 compliant, Neural API announce, BTSP Phase 3 encryption, full ML pipeline (train→save→load→infer), mesh trust validation, runtime method introspection (`method.describe`)
+- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with 99 semantic `{domain}.{operation}` methods; Wire Standard L2 compliant, Neural API announce, BTSP Phase 3 encryption, full ML pipeline (train→save→load→infer), mesh trust validation, runtime method introspection (`method.describe`)
 - **Transport self-knowledge** — local `TransportEndpoint` wire format implementation, `TRANSPORT_ENDPOINT` env var for launcher injection, zero cross-primal dependencies
 - **UniBin CLI** — single `barracuda` binary with `server --port <PORT>`, `service`, `doctor`, `validate`, `version`
 
@@ -61,7 +61,9 @@ results.
 
 ## Recent
 
-- **Wave 155i: RTX 3090 Profiling + Deep Debt (Jul 29)**: First real GPU compute on strandGate — RTX 3090 + RX 6950 XT both detected. 103.97 TFLOPS FP64, FHE NTT bit-perfect, cdist 65x faster than SciPy CPU. ShaderValidationBackend::CoralReef → SovereignCpu (self-knowledge). 10 batch functions #[deprecated]. Compute Trio silicon utilization AAR. 4,957 tests, zero warnings.
+- **Wave 155n: Idiom Evolution Sweep (Aug 3)**: RK4 ODE solver zero-alloc inner loop (7·n_steps allocations eliminated). MD force dead-code collapse (4 modules, unused imports removed). Full 12-axis deep debt scan confirmed clean. Zero clippy warnings.
+- **Wave 155n: Subgroup Reduction + Diversity Self-Recursion (Jul 31)**: Subgroup reduce entry point fixed, diversity self-recursion eliminated, SU(3) labels corrected. 5,037 tests.
+- **Wave 155i: RTX 3090 Profiling + Deep Debt (Jul 29)**: First real GPU compute on strandGate — RTX 3090 + RX 6950 XT both detected. 103.97 TFLOPS FP64, FHE NTT bit-perfect, cdist 65x faster than SciPy CPU. ShaderValidationBackend::CoralReef → SovereignCpu (self-knowledge). 10 batch functions #[deprecated]. Compute Trio silicon utilization AAR. MultiDevicePool wired into primal startup. device.pool IPC method (99th). 5,037 tests, zero warnings.
 - **Wave 155f: Deep Debt Sweep + Bug Fixes (Jul 28)**: SIGSEGV in barracuda-core tests fixed (GPU_TEST_GUARD serializes wgpu device lifecycle). ESN BindGroupLayout crash fixed (TimeSeriesAnalyzer reuses caller's device). BTSP env var race conditions fixed (ENV_MUTEX in all integration test binaries). BatchError → thiserror. BTSP_STRICT_MODE env key. wgpu backend target-gating. 4,957 tests pass, zero SIGSEGV, zero failures, all quality gates green.
 - **Wave 107: Socket Cleanup + method.describe (Jun 10)**: `PRIMAL-SOCKET-CLEANUP` — state files co-locate with socket path. `method.describe` RPC for runtime introspection. All production files <800L. 98 methods. Composition-ready.
 - **Waves 100-101: Transport Self-Knowledge (Jun 8)**: Removed cross-primal `sourdough-core` dep. Local `TransportEndpoint` + `connect_transport()` (237L). Wire format is the contract. `TRANSPORT_ENDPOINT` env var operational.

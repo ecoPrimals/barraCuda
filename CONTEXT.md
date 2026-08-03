@@ -51,7 +51,7 @@ traits are fully internalized.
 | `identity.*` | `get` |
 | `primal.*` | `info`, `capabilities`, `announce` |
 | `capabilities.*` | `list` |
-| `device.*` | `list`, `probe` |
+| `device.*` | `list`, `probe`, `pool` |
 | `tolerances.*` | `get` |
 | `validate.*` | `gpu_stack` |
 | `precision.*` | `route` |

@@ -4,7 +4,7 @@
 #
 # biomeOS reads this file to discover barraCuda capabilities
 # without requiring the primal to be running.
-# 98 registered methods across 24 semantic namespaces.
+# 99 registered methods across 24 semantic namespaces.
 
 [primal]
 name = "barracuda"

@@ -5,9 +5,13 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — Waves 109–151b (Jul 26 2026)
+## [Unreleased] — Waves 109–155n (Aug 3 2026)
 
 ### Changed
+- **Subgroup reduction entry point fix** (Wave 155n) — `sum_reduce_subgroup_f64.wgsl` had `fn main()` but Rust dispatches `"sum_reduce_f64"`. Pipeline creation silently failed on SM100+ (Blackwell), returning 0.0 for all scalar readbacks. Blocks hotSpring QCD production on biomeGate.
+- **Diversity shader self-recursion fix** (Wave 155n) — inline `log_f64()` in `diversity_f64.wgsl` caused infinite recursion when `compile_shader_f64` rewrites `log()` → `log_f64()`. Removed inline definition; native `log()` with auto-injected polyfill is correct.
+- **SU(3) gauge group disambiguation** (Wave 155n) — 6 docs that said "lattice QCD" without specifying gauge group now explicitly say "SU(3) lattice QCD". Code confirmed SU(3) throughout with zero SU(2) references.
+- **MultiDevicePool wired into primal startup** — `device.pool` IPC method for multi-GPU pool management.
 - **BTSP client-side handshake** (Wave 151b) — consumer-side ClientHello for bearDog strict mode. Two modes: bootstrap (local HMAC-SHA256 for authenticating TO bearDog) and general (delegated crypto via security provider for any BTSP-enforced peer). Integrated into compute.rs peer dispatch and CLI client.
 - **Phase 2 transport abstraction** (Wave 143b) — `TransportListener` enum unifies UDS + TCP server-side bind/accept. `run_server` UDS path uses `bind_unix + serve_listener` directly. 5 `#[cfg(unix)]` gates removed.
 - **LatencyModel enum dispatch** (Wave 141a) — `trait → enum` conversion eliminates `Box<dyn LatencyModel>` heap allocation on every shader compilation.
